@@ -1,0 +1,1163 @@
+ca65 V2.19 - Git 1d1dd42
+Main file   : os_main.s
+Current file: os_main.s
+
+000000r 1               .debuginfo
+000000r 1               .segment "OS_MAIN"
+000000r 1               
+000000r 1               .include "defines.s"
+000000r 2               .debuginfo
+000000r 2               .macpack        cpu
+000000r 3               ; CPU bitmask constants
+000000r 3               CPU_ISET_NONE      = $0001
+000000r 3               CPU_ISET_6502      = $0002
+000000r 3               CPU_ISET_6502X     = $0004
+000000r 3               CPU_ISET_6502DTV   = $0008
+000000r 3               CPU_ISET_65SC02    = $0010
+000000r 3               CPU_ISET_65C02     = $0020
+000000r 3               CPU_ISET_65816     = $0040
+000000r 3               CPU_ISET_SWEET16   = $0080
+000000r 3               CPU_ISET_HUC6280   = $0100
+000000r 3               ;CPU_ISET_M740     = $0200 not actually implemented
+000000r 3               CPU_ISET_4510      = $0400
+000000r 3               
+000000r 3               ; CPU capabilities
+000000r 3               CPU_NONE           = CPU_ISET_NONE
+000000r 3               CPU_6502           = CPU_ISET_6502
+000000r 3               CPU_6502X          = CPU_ISET_6502|CPU_ISET_6502X
+000000r 3               CPU_6502DTV        = CPU_ISET_6502|CPU_ISET_6502DTV
+000000r 3               CPU_65SC02         = CPU_ISET_6502|CPU_ISET_65SC02
+000000r 3               CPU_65C02          = CPU_ISET_6502|CPU_ISET_65SC02|CPU_ISET_65C02
+000000r 3               CPU_65816          = CPU_ISET_6502|CPU_ISET_65SC02|CPU_ISET_65816
+000000r 3               CPU_SWEET16        = CPU_ISET_SWEET16
+000000r 3               CPU_HUC6280        = CPU_ISET_6502|CPU_ISET_65SC02|CPU_ISET_65C02|CPU_ISET_HUC6280
+000000r 3               CPU_4510           = CPU_ISET_6502|CPU_ISET_65SC02|CPU_ISET_65C02|CPU_ISET_4510
+000000r 3               
+000000r 2               
+000000r 2               ZP_VAR_START    = $10
+000000r 2               
+000000r 2               ZP_READ_PTR        = ZP_VAR_START
+000000r 2               ZP_WRITE_PTR       = ZP_READ_PTR + 1
+000000r 2               
+000000r 2               ZP_TEMP         = ZP_WRITE_PTR + 1
+000000r 2               ZP_TEMP_2       = ZP_TEMP + 1
+000000r 2               
+000000r 2               ZP_SPI_DATA_IN  = ZP_TEMP_2 + 1
+000000r 2               ZP_SPI_DATA_OUT = ZP_SPI_DATA_IN + 1
+000000r 2               
+000000r 2               ZP_TEMP_VEC_L   = ZP_SPI_DATA_OUT + 1
+000000r 2               ZP_TEMP_VEC_H   = ZP_TEMP_VEC_L + 1
+000000r 2               
+000000r 2               ZP_A_SAVE       = ZP_TEMP_VEC_H + 1
+000000r 2               
+000000r 2               ZP_LAST_USED    = ZP_A_SAVE
+000000r 2               
+000000r 2               IO_PORT_BASE    = $FF00
+000000r 2               INPUT_BUFFER    = $7F00
+000000r 2               
+000000r 2               ROCKWELL_ACIA   = 0
+000000r 2               
+000000r 2               SR_19200        = $0F
+000000r 2               SR_115200       = $00
+000000r 2               
+000000r 2               SWT_19200       = 180
+000000r 2               SWT_115200      = SWT_19200 / 6
+000000r 2               
+000000r 2               SR_SELECT       = SR_115200
+000000r 2               
+000000r 2               .if SR_SELECT = SR_19200
+000000r 2               SWT_SELECT      = SWT_19200
+000000r 2               .else
+000000r 2               SWT_SELECT      = SWT_115200
+000000r 2               .endif
+000000r 2               
+000000r 2               .if ROCKWELL_ACIA = 1
+000000r 2               ZP_SERIAL_SEND_BUSY = $08
+000000r 2               .endif
+000000r 2               
+000000r 2               .struct IO_Port
+000000r 2                   Bytes       .byte $10
+000000r 2               .endstruct
+000000r 2               
+000000r 2               .struct IO_Port_10_Bytes
+000000r 2                   Bytes       .byte 10
+000000r 2               .endstruct
+000000r 2               
+000000r 2               .define IO_PORT_BYTE(port, byte) port + IO_Port::Bytes + byte
+000000r 2               
+000000r 2               VIA1            = IO_PORT_0
+000000r 2               ACIA            = IO_PORT_1
+000000r 2               
+000000r 2               VIA_PORTB       = IO_PORT_BYTE VIA1, 0
+000000r 2               VIA_PORTA       = IO_PORT_BYTE VIA1, 1
+000000r 2               VIA_DDRB        = IO_PORT_BYTE VIA1, 2
+000000r 2               VIA_DDRA        = IO_PORT_BYTE VIA1, 3
+000000r 2               
+000000r 2               VIA_AUX_CTRL    = IO_PORT_BYTE VIA1, $B
+000000r 2               VIA_PER_CTRL    = IO_PORT_BYTE VIA1, $C
+000000r 2               VIA_INT_FLAGS   = IO_PORT_BYTE VIA1, $D
+000000r 2               VIA_INT_ENABLE  = IO_PORT_BYTE VIA1, $E
+000000r 2               
+000000r 2               ACIA_DATA       = IO_PORT_BYTE ACIA, 0
+000000r 2               ACIA_STATUS     = IO_PORT_BYTE ACIA, 1
+000000r 2               ACIA_CMD        = IO_PORT_BYTE ACIA, 2
+000000r 2               ACIA_CTRL       = IO_PORT_BYTE ACIA, 3
+000000r 2               
+000000r 2               ACIA_STATUS_BIT_IRQ  =  $80
+000000r 2               ACIA_STATUS_BIT_DSRB =  $40
+000000r 2               ACIA_STATUS_BIT_DCD =   $20
+000000r 2               ACIA_STATUS_BIT_TDRE =  $10     ; for WDC 65C51, this is never 1 during transmission
+000000r 2               ACIA_STATUS_BIT_RDRF =  $08
+000000r 2               ACIA_STATUS_BIT_OVR =   $04
+000000r 2               ACIA_STATUS_BIT_FE =    $02
+000000r 2               ACIA_STATUS_BIT_PE =    $01
+000000r 2               
+000000r 2               ; SPI Defines
+000000r 2               
+000000r 2               IOR_SPI_DATA        = VIA_PORTB
+000000r 2               IOR_SPI_DDR         = VIA_DDRB
+000000r 2               
+000000r 2               ; SPI DATA BITS
+000000r 2               SPI_BIT_CLK     = 1     ; bit 0, so INC/DEC cycle the clock
+000000r 2               SPI_BIT_CSB     = 2     ; bit 1
+000000r 2               SPI_BIT_MOSI    = 4     ; bit 2
+000000r 2               SPI_BIT_CS_1    = 8     ; bit 3
+000000r 2               SPI_BIT_CS_2    = $10   ; bit 4
+000000r 2               SPI_BIT_CS_4    = $20   ; bit 5
+000000r 2               SPI_BIT_CS_8    = $40   ; bit 6
+000000r 2               SPI_BIT_MISO    = $80   ; bit 7, so BIT opcode stores MISO in N
+000000r 2               
+000000r 2               SPI_DEV_0       = 0
+000000r 2               SPI_DEV_1       = SPI_BIT_CS_1
+000000r 2               SPI_DEV_2       = SPI_BIT_CS_2
+000000r 2               SPI_DEV_3       = SPI_BIT_CS_2 | SPI_BIT_CS_1
+000000r 2               SPI_DEV_4       = SPI_BIT_CS_4
+000000r 2               SPI_DEV_5       = SPI_BIT_CS_4 | SPI_BIT_CS_1
+000000r 2               SPI_DEV_6       = SPI_BIT_CS_4 | SPI_BIT_CS_2
+000000r 2               SPI_DEV_7       = SPI_BIT_CS_4 | SPI_BIT_CS_2 | SPI_BIT_CS_1
+000000r 2               
+000000r 2               SPI_DEV_8       = SPI_BIT_CS_8 | SPI_DEV_0
+000000r 2               SPI_DEV_9       = SPI_BIT_CS_8 | SPI_DEV_1
+000000r 2               SPI_DEV_A       = SPI_BIT_CS_8 | SPI_DEV_2
+000000r 2               SPI_DEV_B       = SPI_BIT_CS_8 | SPI_DEV_3
+000000r 2               SPI_DEV_C       = SPI_BIT_CS_8 | SPI_DEV_4
+000000r 2               SPI_DEV_D       = SPI_BIT_CS_8 | SPI_DEV_5
+000000r 2               SPI_DEV_E       = SPI_BIT_CS_8 | SPI_DEV_6
+000000r 2               SPI_DEV_F       = SPI_BIT_CS_8 | SPI_DEV_7
+000000r 2               
+000000r 2               SPI_DDR_BITS    = SPI_BIT_CLK | SPI_BIT_CSB | SPI_BIT_MOSI | SPI_DEV_F
+000000r 2               
+000000r 2               SPI_INIT_DELAY_CYCLES = 80
+000000r 2               
+000000r 2               ; max task idle
+000000r 2               MAX_TASK_NUMBER = $0F           ; 16 tasks, numbered 0-F
+000000r 2               
+000000r 2               ; write a byte in A to the IO PORT
+000000r 2               .macro IO_PORT_WRITE    port, byte, imm
+000000r 2               .ifnblank       imm
+000000r 2                               lda     #imm
+000000r 2               .endif
+000000r 2               .ifblank        byte
+000000r 2                               sta     port
+000000r 2               .else
+000000r 2                               sta     IO_PORT_BYTE port, byte
+000000r 2               .endif
+000000r 2               .endmacro
+000000r 2               
+000000r 2               ; read a byte into A from the IO PORT/Byte (PORT_N | BYTE_M)
+000000r 2               .macro IO_PORT_READ     port, byte
+000000r 2               .ifblank        byte
+000000r 2                               lda     port
+000000r 2               .else
+000000r 2                               lda     IO_PORT_BYTE port, byte
+000000r 2               .endif
+000000r 2               .endmacro
+000000r 2               
+000000r 2               
+000000r 2               ; Register save macros
+000000r 2               ; Modifies: A (if not in 65C02 mode)
+000000r 2               .macro  PUSH_X
+000000r 2               .ifpc02
+000000r 2                               phx
+000000r 2               .else
+000000r 2                               sta ZP_A_SAVE
+000000r 2                               txa
+000000r 2                               pha
+000000r 2                               lda ZP_A_SAVE
+000000r 2               .endif
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  PULL_X
+000000r 2               .ifpc02
+000000r 2                               plx
+000000r 2               .else
+000000r 2                               sta ZP_A_SAVE
+000000r 2                               pla
+000000r 2                               tax
+000000r 2                               lda ZP_A_SAVE
+000000r 2               .endif
+000000r 2               .endmacro
+000000r 2               
+000000r 2               ; Register restore macros
+000000r 2               ; Modifies: A (if not in 65C02 mode)
+000000r 2               .macro  PUSH_Y
+000000r 2               .ifpc02
+000000r 2                               phy
+000000r 2               .else
+000000r 2                               sta ZP_A_SAVE
+000000r 2                               tya
+000000r 2                               pha
+000000r 2                               lda ZP_A_SAVE
+000000r 2               .endif
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  PULL_Y
+000000r 2               .ifpc02
+000000r 2                               ply
+000000r 2               .else
+000000r 2                               sta ZP_A_SAVE
+000000r 2                               pla
+000000r 2                               tay
+000000r 2                               lda ZP_A_SAVE
+000000r 2               .endif
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro PUSH_AX
+000000r 2               .ifpc02
+000000r 2                               pha
+000000r 2                               phx
+000000r 2               .else
+000000r 2                               pha
+000000r 2                               txa
+000000r 2                               pha
+000000r 2               .endif
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  PULL_XA
+000000r 2               .ifpc02
+000000r 2                               plx
+000000r 2                               pla
+000000r 2               .else
+000000r 2                               pla
+000000r 2                               tax
+000000r 2                               pla
+000000r 2               .endif
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro PUSH_AY
+000000r 2               .ifpc02
+000000r 2                               pha
+000000r 2                               phy
+000000r 2               .else
+000000r 2                               pha
+000000r 2                               tya
+000000r 2                               pha
+000000r 2               .endif
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  PULL_YA
+000000r 2               .ifpc02
+000000r 2                               ply
+000000r 2                               pla
+000000r 2               .else
+000000r 2                               pla
+000000r 2                               tay
+000000r 2                               pla
+000000r 2               .endif
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro PUSH_XY
+000000r 2               .ifpc02
+000000r 2                               phx
+000000r 2                               phy
+000000r 2               .else
+000000r 2                               sta ZP_A_SAVE
+000000r 2                               txa
+000000r 2                               pha
+000000r 2                               tya
+000000r 2                               pha
+000000r 2                               lda ZP_A_SAVE
+000000r 2               .endif
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  PULL_YX
+000000r 2               .ifpc02
+000000r 2                               ply
+000000r 2                               plx
+000000r 2               .else
+000000r 2                               sta ZP_A_SAVE
+000000r 2                               pla
+000000r 2                               tay
+000000r 2                               pla
+000000r 2                               tax
+000000r 2                               lda ZP_A_SAVE
+000000r 2               .endif
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro PUSH_AXY
+000000r 2               .ifpc02
+000000r 2                               pha
+000000r 2                               phx
+000000r 2                               phy
+000000r 2               .else
+000000r 2                               pha
+000000r 2                               txa
+000000r 2                               pha
+000000r 2                               tya
+000000r 2                               pha
+000000r 2               .endif
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  PULL_YXA
+000000r 2               .ifpc02
+000000r 2                               ply
+000000r 2                               plx
+000000r 2                               pla
+000000r 2               .else
+000000r 2                               pla
+000000r 2                               tay
+000000r 2                               pla
+000000r 2                               tax
+000000r 2                               pla
+000000r 2               .endif
+000000r 2               .endmacro
+000000r 2               
+000000r 2               ; convenience macros
+000000r 2               
+000000r 2               ; MOV
+000000r 2               ; Modifies: A
+000000r 2               .macro MOV              addr1, addr2
+000000r 2                               lda     addr1
+000000r 2                               sta     addr2
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  SJMP            addr
+000000r 2               .ifpc02
+000000r 2                               bra     addr
+000000r 2               .else
+000000r 2                               jmp     addr
+000000r 2               .endif
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  INC16           addr
+000000r 2               .local  @no_carry
+000000r 2                               inc     addr
+000000r 2                               bcc     @no_carry
+000000r 2                               inc     addr + 1
+000000r 2               @no_carry:
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  DEC16           addr
+000000r 2               .local  @no_borrow
+000000r 2                               cmp     addr
+000000r 2                               bne     @no_borrow
+000000r 2                               dec     addr + 1
+000000r 2               @no_borrow:
+000000r 2                               dec     addr
+000000r 2               .endmacro
+000000r 2               
+000000r 2               
+000000r 1               OS_MAIN:
+000000r 1  A9 00                    lda     #0
+000002r 1  8D rr rr                 sta     TASK_NUM_PORT
+000005r 1  85 00                    sta     $00                                 ; Init RAM Bank selector
+000007r 1  85 01                    sta     $01                                 ; Init ROM Bank selector
+000009r 1  A2 FF                    ldx     #$FF                                ; Init stack pointer
+00000Br 1  9A                       txs
+00000Cr 1  20 rr rr                 jsr     MMU_INIT
+00000Fr 1  20 rr rr                 jsr     TASKS_INIT
+000012r 1                           ;jsr     SPI_INIT
+000012r 1                           ;jsr     SPI_TEST
+000012r 1  20 rr rr                 jsr     SHELL_MAIN
+000015r 1  00                       brk                                         ; Halt and catch fire!
+000016r 1               
+000016r 1               .include "bios.s"
+000016r 2               .debuginfo
+000016r 2               
+000016r 2               .segment "BIOS"
+000000r 2               
+000000r 2               .macro SPI_SEND_CMD b0, b1, b2, b3, b4, crc
+000000r 2                               lda             #b0 | $40
+000000r 2                               jsr             SPI_SEND
+000000r 2                               lda             #b1
+000000r 2                               jsr             SPI_TRANSCEIVE
+000000r 2                               sta             ZP_TEMP_2
+000000r 2                               lda             #b2
+000000r 2                               jsr             SPI_TRANSCEIVE
+000000r 2                               lda             #b3
+000000r 2                               jsr             SPI_TRANSCEIVE
+000000r 2                               lda             #b4
+000000r 2                               jsr             SPI_TRANSCEIVE
+000000r 2               .ifnblank       crc
+000000r 2                               lda             #(crc << 1)+1
+000000r 2               .else
+000000r 2                               lda             #$FF
+000000r 2               .endif
+000000r 2                               jsr             SPI_TRANSCEIVE
+000000r 2                               jsr             SPI_RECV
+000000r 2                               sta             ZP_TEMP
+000000r 2               .endmacro
+000000r 2               
+000000r 2               SERIAL_INIT:
+000000r 2  A9 10                        lda             #$10 | SR_SELECT    ; 8-N-1
+000002r 2  8D rr rr                     sta             ACIA_CTRL
+000005r 2               .if ROCKWELL_ACIA = 1
+000005r 2                               lda             #$0B                ; No parity, no echo, tx & rx interrupts.
+000005r 2               .else
+000005r 2  A9 09                        lda             #$09                ; No parity, no echo, rx interrupts.
+000007r 2               .endif
+000007r 2  8D rr rr                     sta             ACIA_CMD
+00000Ar 2               .if ROCKWELL_ACIA = 1
+00000Ar 2                   .ifpc02
+00000Ar 2                               stz             ZP_SERIAL_SEND_BUSY
+00000Ar 2                   .else
+00000Ar 2                               lda             #0
+00000Ar 2                               sta             ZP_SERIAL_SEND_BUSY
+00000Ar 2                   .endif
+00000Ar 2               .else
+00000Ar 2  20 rr rr                     jsr             WRITE_DELAY
+00000Dr 2               .endif
+00000Dr 2  60                           rts
+00000Er 2               
+00000Er 2               ; Input a character from the serial interface.
+00000Er 2               ; On return, carry flag indicates whether a key was pressed
+00000Er 2               ; If a key was pressed, the key value will be in the A register
+00000Er 2               ;
+00000Er 2               ; Modifies: flags, A
+00000Er 2               ; TODO: select the appropriate read stream for the current task
+00000Er 2               READCHAR:
+00000Er 2               SERIAL_READ:
+00000Er 2  20 rr rr                     jsr             BUFFER_SIZE
+000011r 2  F0 19                        beq             @no_keypressed
+000013r 2  85 18 8A 48                  PUSH_X
+000017r 2  A5 18        
+000019r 2  A6 10                        ldx             ZP_READ_PTR
+00001Br 2  BD 00 7F                     lda             INPUT_BUFFER, X
+00001Er 2  E6 10                        inc             ZP_READ_PTR
+000020r 2  85 18 68 AA                  PULL_X
+000024r 2  A5 18        
+000026r 2  20 rr rr                     jsr             WRITECHAR           ; echo
+000029r 2  38                           sec
+00002Ar 2  B0 01                        bcs             @rc_cleanup
+00002Cr 2               
+00002Cr 2               @no_keypressed:
+00002Cr 2  18                           clc
+00002Dr 2               
+00002Dr 2               @rc_cleanup:
+00002Dr 2  60                           rts
+00002Er 2               
+00002Er 2               
+00002Er 2               ; Output a character (from the A register) to the serial interface.
+00002Er 2               ;
+00002Er 2               ; Modifies: flags
+00002Er 2               ; TODO: select appropriate output stream for the given task
+00002Er 2               WRITECHAR:
+00002Er 2               SERIAL_WRITE:
+00002Er 2  8D rr rr                     IO_PORT_WRITE   ACIA_DATA
+000031r 2               
+000031r 2               WRITE_DELAY:
+000031r 2               .ifpc02
+000031r 2                   .if ROCKWELL_ACIA = 1
+000031r 2                               lda             #1
+000031r 2                               sta             ZP_SERIAL_SEND_BUSY
+000031r 2                   .else
+000031r 2                               lda             #SWT_SELECT
+000031r 2                   .endif
+000031r 2               .else
+000031r 2  85 18 8A 48                  PUSH_X
+000035r 2  A5 18        
+000037r 2                   .if ROCKWELL_ACIA = 1
+000037r 2                               ldx             #1
+000037r 2                               stx             ZP_SERIAL_SEND_BUSY
+000037r 2                   .else
+000037r 2  A2 1E                        ldx             #SWT_SELECT
+000039r 2                   .endif
+000039r 2               .endif
+000039r 2               
+000039r 2               @txdelay:
+000039r 2               .ifpc02
+000039r 2                   .if ROCKWELL_ACIA = 1
+000039r 2                               lda             ZP_SERIAL_SEND_BUSY
+000039r 2                   .else
+000039r 2                               dec
+000039r 2                   .endif
+000039r 2               .else
+000039r 2                   .if ROCKWELL_ACIA = 1
+000039r 2                               ldx             ZP_SERIAL_SEND_BUSY
+000039r 2                   .else
+000039r 2  CA                           dex
+00003Ar 2                   .endif
+00003Ar 2               .endif
+00003Ar 2               
+00003Ar 2  D0 FD                        bne             @txdelay
+00003Cr 2               
+00003Cr 2               .ifpc02
+00003Cr 2               .else
+00003Cr 2  85 18 68 AA                  PULL_X
+000040r 2  A5 18        
+000042r 2               .endif
+000042r 2  60                           rts
+000043r 2               
+000043r 2               ; Convenience method to write CR/LF to output stream
+000043r 2               WRITE_CRLF:
+000043r 2  A9 0D                        lda             #ASCII_CR
+000045r 2  20 rr rr                     jsr             WRITECHAR
+000048r 2  A9 0A                        lda             #ASCII_LF
+00004Ar 2  20 rr rr                     jsr             WRITECHAR
+00004Dr 2  60                           rts
+00004Er 2               
+00004Er 2               ; Initialize the circular input buffer
+00004Er 2               ; Modifies: flags, A
+00004Er 2               INIT_BUFFER:
+00004Er 2  A5 10 85 11                  MOV             ZP_READ_PTR, ZP_WRITE_PTR
+000052r 2  60                           rts
+000053r 2               
+000053r 2               ; Set up the SPI interface registers on the VIA
+000053r 2               SPI_INIT:
+000053r 2  48                           pha
+000054r 2  A9 00 8D rr                  IO_PORT_WRITE   VIA_AUX_CTRL, , 0
+000058r 2  rr           
+000059r 2  8D rr rr                     IO_PORT_WRITE   VIA_INT_ENABLE
+00005Cr 2  A9 FF 8D rr                  IO_PORT_WRITE   VIA_PER_CTRL, , $FF
+000060r 2  rr           
+000061r 2  A9 7F 8D rr                  IO_PORT_WRITE   IOR_SPI_DDR, , SPI_DDR_BITS
+000065r 2  rr           
+000066r 2  A9 02 8D rr                  IO_PORT_WRITE   IOR_SPI_DATA, , SPI_BIT_CSB   ; de-select all SPI devices
+00006Ar 2  rr           
+00006Br 2  68                           pla
+00006Cr 2  60                           rts
+00006Dr 2               
+00006Dr 2               ; Macro to remove essentially duplicate code
+00006Dr 2               .macro          SPI_SEND_SETUP mode
+00006Dr 2                               sta             ZP_SPI_DATA_OUT
+00006Dr 2                               PUSH_Y
+00006Dr 2                               txa
+00006Dr 2                               ora             #SPI_BIT_MOSI
+00006Dr 2                               tay
+00006Dr 2                               lda             ZP_SPI_DATA_OUT
+00006Dr 2                               sei
+00006Dr 2               .ifblank        mode
+00006Dr 2                               asl             ZP_SPI_DATA_IN
+00006Dr 2               .endif
+00006Dr 2                               sec
+00006Dr 2                               rol
+00006Dr 2               .endmacro
+00006Dr 2               
+00006Dr 2               ; Write and Read SPI data
+00006Dr 2               ; Uses two ZP registers for data_in and data_out
+00006Dr 2               ; A: data to send
+00006Dr 2               ; X: device ID to send to/receive from
+00006Dr 2               ; Returns input data in A
+00006Dr 2               ; Modifies A, ZP_TEMP, ZP_SPI_DATA_IN, ZP_SPI_DATA_OUT
+00006Dr 2               SPI_TRANSCEIVE:
+00006Dr 2  85 15 85 18                  SPI_SEND_SETUP
+000071r 2  98 48 A5 18  
+000075r 2  8A 09 04 A8  
+000080r 2  B0 06                        bcs             @spi_send_1
+000082r 2               @spi_send_0:
+000082r 2  8E rr rr                     stx             IOR_SPI_DATA
+000085r 2  4C rr rr                     SJMP            @spi_send
+000088r 2               @spi_send_1:
+000088r 2  8C rr rr                     sty             IOR_SPI_DATA
+00008Br 2               @spi_send:
+00008Br 2  EE rr rr                     inc             IOR_SPI_DATA        ; SPI_CLK = 1
+00008Er 2  2C rr rr                     bit             IOR_SPI_DATA        ; MISO (bit 7) => N flag
+000091r 2  10 02                        bpl             @spi_recv
+000093r 2  E6 14                        inc             ZP_SPI_DATA_IN      ; incoming bit was a 1 (set LSb = 1)
+000095r 2               @spi_recv:
+000095r 2  0A                           asl
+000096r 2  F0 0C                        beq             SPI_OPERATION_DONE
+000098r 2  B0 05                        bcs             @had_1
+00009Ar 2  06 14                        asl             ZP_SPI_DATA_IN
+00009Cr 2  4C rr rr                     SJMP            @spi_send_0
+00009Fr 2               @had_1:
+00009Fr 2  06 14                        asl             ZP_SPI_DATA_IN
+0000A1r 2  4C rr rr                     SJMP            @spi_send_1
+0000A4r 2               SPI_OPERATION_DONE:
+0000A4r 2  A9 02                        lda             #SPI_BIT_CSB        ; de-select all SPI devices
+0000A6r 2               .ifpc02
+0000A6r 2                               tsb             IOR_SPI_DATA
+0000A6r 2               .else
+0000A6r 2  0D rr rr                     ora             IOR_SPI_DATA
+0000A9r 2  8D rr rr                     sta             IOR_SPI_DATA
+0000ACr 2               .endif
+0000ACr 2  85 18 68 A8                  PULL_Y
+0000B0r 2  A5 18        
+0000B2r 2  A5 14                        lda             ZP_SPI_DATA_IN      ; load the input for return in A
+0000B4r 2  58                           cli
+0000B5r 2  60                           rts
+0000B6r 2               
+0000B6r 2               ; Write SPI data
+0000B6r 2               ; Uses two ZP registers for data_in and data_out
+0000B6r 2               ; A: data to send
+0000B6r 2               ; X: device ID to send to
+0000B6r 2               ; Modifies A, ZP_SPI_DATA_OUT
+0000B6r 2               SPI_SEND:
+0000B6r 2  85 15 85 18                  SPI_SEND_SETUP  1
+0000BAr 2  98 48 A5 18  
+0000BEr 2  8A 09 04 A8  
+0000C7r 2               @send_loop:
+0000C7r 2  B0 06                        bcs             @spi_send_1
+0000C9r 2  8E rr rr                     stx             IOR_SPI_DATA
+0000CCr 2  4C rr rr                     SJMP            @spi_send
+0000CFr 2               @spi_send_1:
+0000CFr 2  8C rr rr                     sty             IOR_SPI_DATA
+0000D2r 2               @spi_send:
+0000D2r 2  EE rr rr                     inc             IOR_SPI_DATA        ; SPI_CLK = 1
+0000D5r 2  0A                           asl
+0000D6r 2  D0 EF                        bne             @send_loop
+0000D8r 2  4C rr rr                     jmp             SPI_OPERATION_DONE
+0000DBr 2               
+0000DBr 2               ; Read from the SPI device
+0000DBr 2               ; X: device to read from
+0000DBr 2               ; Result returned in A
+0000DBr 2               SPI_RECV:
+0000DBr 2  85 18 98 48                  PUSH_Y
+0000DFr 2  A5 18        
+0000E1r 2  A0 08                        ldy             #8
+0000E3r 2  8A                           txa
+0000E4r 2  09 06                        ora             #SPI_BIT_MOSI | SPI_BIT_CSB
+0000E6r 2  8D rr rr                     sta             IOR_SPI_DATA        ; Select the device to receive from
+0000E9r 2  78                           sei
+0000EAr 2               @recv_loop:
+0000EAr 2  0A                           asl                                 ; Shift in 0 to LSb of result
+0000EBr 2  EE rr rr                     inc             IOR_SPI_DATA
+0000EEr 2  2C rr rr                     bit             IOR_SPI_DATA        ; MISO (bit 7) => N flag
+0000F1r 2  10 02                        bpl             @spi_recv_2
+0000F3r 2                                                                   ; Set LSb = 1
+0000F3r 2               .ifpc02
+0000F3r 2                               inc
+0000F3r 2               .else
+0000F3r 2  09 01                        ora             #1
+0000F5r 2               .endif
+0000F5r 2               @spi_recv_2:
+0000F5r 2  88                           dey
+0000F6r 2  D0 F2                        bne             @recv_loop
+0000F8r 2  85 14                        sta             ZP_SPI_DATA_IN
+0000FAr 2  4C rr rr                     jmp             SPI_OPERATION_DONE
+0000FDr 2               
+0000FDr 2               ; Delay for some number of cycles to ensure SPI device is ready to start working
+0000FDr 2               SPI_INIT_DELAY:
+0000FDr 2  48 8A 48 98                  PUSH_AXY
+000101r 2  48           
+000102r 2  8A                           txa                                         ; set SPI device
+000103r 2  09 06                        ora             #SPI_BIT_CSB | SPI_BIT_MOSI ; de-select all devices
+000105r 2  AA                           tax
+000106r 2  09 01                        ora             #SPI_BIT_CLK
+000108r 2  A0 50                        ldy             #SPI_INIT_DELAY_CYCLES
+00010Ar 2               @loop:
+00010Ar 2  8D rr rr                     sta             IOR_SPI_DATA
+00010Dr 2  8E rr rr                     stx             IOR_SPI_DATA
+000110r 2  88                           dey
+000111r 2  D0 F7                        bne             @loop
+000113r 2  68 A8 68 AA                  PULL_YXA
+000117r 2  68           
+000118r 2  60                           rts
+000119r 2               
+000119r 2               ; Return (in A) the number of unread bytes in the circular input buffer as an unsigned byte
+000119r 2               ; Modifies: flags, A
+000119r 2               BUFFER_SIZE:
+000119r 2  A5 11                        lda             ZP_WRITE_PTR
+00011Br 2  38                           sec
+00011Cr 2  E5 10                        sbc             ZP_READ_PTR
+00011Er 2  60                           rts
+00011Fr 2               
+00011Fr 2               ; Non-maskable interrupt handler (same as maskable interrupt handler for now)
+00011Fr 2               NMI_HANDLER:
+00011Fr 2               ; Maskable interrupt request handler
+00011Fr 2               IRQ_HANDLER:
+00011Fr 2  2C rr rr                     bit             ACIA_STATUS
+000122r 2  10 18                        bpl             @not_acia 	            ; bit 7 not set, so N is not set
+000124r 2  48                           pha
+000125r 2               
+000125r 2               .if ROCKWELL_ACIA = 1
+000125r 2                               IO_PORT_READ    ACIA_STATUS
+000125r 2                               and             ACIA_STATUS_BIT_TDRE    ; transmit register empty?
+000125r 2                               beq             @check_recv
+000125r 2                   .ifpc02
+000125r 2                               stz             ZP_SERIAL_SEND_BUSY
+000125r 2                   .else
+000125r 2                               lda             #0
+000125r 2                               sta             ZP_SERIAL_SEND_BUSY
+000125r 2                   .endif
+000125r 2               
+000125r 2               @check_recv:
+000125r 2                               IO_PORT_READ    ACIA_STATUS
+000125r 2                               and             ACIA_STATUS_BIT_RDRF    ; is read register full?
+000125r 2                               beq             @skip_read
+000125r 2               .endif
+000125r 2               
+000125r 2  AD rr rr                     IO_PORT_READ    ACIA_DATA
+000128r 2  85 18 8A 48                  PUSH_X
+00012Cr 2  A5 18        
+00012Er 2  A6 11                        ldx             ZP_WRITE_PTR
+000130r 2  9D 00 7F                     sta             INPUT_BUFFER, X
+000133r 2  E6 11                        inc             ZP_WRITE_PTR
+000135r 2  85 18 68 AA                  PULL_X
+000139r 2  A5 18        
+00013Br 2                               ;jsr             WRITE_BUFFER
+00013Br 2               
+00013Br 2               @skip_read:
+00013Br 2  68                           pla
+00013Cr 2               
+00013Cr 2               @not_acia:
+00013Cr 2               @int_done:
+00013Cr 2  40                           rti
+00013Dr 2               
+00013Dr 2               .segment "IO_PORTS"
+000000r 2  xx xx xx xx  IO_PORT_0:      .tag IO_Port
+000004r 2  xx xx xx xx  
+000008r 2  xx xx xx xx  
+000010r 2  xx xx xx xx  IO_PORT_1:      .tag IO_Port
+000014r 2  xx xx xx xx  
+000018r 2  xx xx xx xx  
+000020r 2  xx xx xx xx  IO_PORT_2:      .tag IO_Port
+000024r 2  xx xx xx xx  
+000028r 2  xx xx xx xx  
+000030r 2  xx xx xx xx  IO_PORT_3:      .tag IO_Port
+000034r 2  xx xx xx xx  
+000038r 2  xx xx xx xx  
+000040r 2  xx xx xx xx  IO_PORT_4:      .tag IO_Port
+000044r 2  xx xx xx xx  
+000048r 2  xx xx xx xx  
+000050r 2  xx xx xx xx  IO_PORT_5:      .tag IO_Port
+000054r 2  xx xx xx xx  
+000058r 2  xx xx xx xx  
+000060r 2  xx xx xx xx  IO_PORT_6:      .tag IO_Port
+000064r 2  xx xx xx xx  
+000068r 2  xx xx xx xx  
+000070r 2  xx xx xx xx  IO_PORT_7:      .tag IO_Port
+000074r 2  xx xx xx xx  
+000078r 2  xx xx xx xx  
+000080r 2  xx xx xx xx  IO_PORT_8:      .tag IO_Port
+000084r 2  xx xx xx xx  
+000088r 2  xx xx xx xx  
+000090r 2  xx xx xx xx  IO_PORT_9:      .tag IO_Port
+000094r 2  xx xx xx xx  
+000098r 2  xx xx xx xx  
+0000A0r 2  xx xx xx xx  IO_PORT_A:      .tag IO_Port
+0000A4r 2  xx xx xx xx  
+0000A8r 2  xx xx xx xx  
+0000B0r 2  xx xx xx xx  IO_PORT_B:      .tag IO_Port
+0000B4r 2  xx xx xx xx  
+0000B8r 2  xx xx xx xx  
+0000C0r 2  xx xx xx xx  IO_PORT_C:      .tag IO_Port
+0000C4r 2  xx xx xx xx  
+0000C8r 2  xx xx xx xx  
+0000D0r 2  xx xx xx xx  IO_PORT_D:      .tag IO_Port
+0000D4r 2  xx xx xx xx  
+0000D8r 2  xx xx xx xx  
+0000E0r 2  xx xx xx xx  IO_PORT_E:      .tag IO_Port
+0000E4r 2  xx xx xx xx  
+0000E8r 2  xx xx xx xx  
+0000F0r 2  xx xx xx xx  IO_PORT_F:      .tag IO_Port_10_Bytes
+0000F4r 2  xx xx xx xx  
+0000F8r 2  xx xx        
+0000FAr 2               
+0000FAr 2               .segment "RESETVEC"
+000000r 2  rr rr                        .word   NMI_HANDLER     ; NMI vector
+000002r 2  rr rr                        .word   OS_MAIN         ; RESET vector
+000004r 2  rr rr                        .word   IRQ_HANDLER     ; IRQ vector
+000006r 2               
+000006r 1               .include "wozmon.s"
+000006r 2               .segment "WOZMON"
+000000r 2               
+000000r 2               XAML            = ZP_LAST_USED + 1      ; Last "opened" location Low
+000000r 2               XAMH            = XAML + 1              ; Last "opened" location High
+000000r 2               STL             = XAMH + 1              ; Store address Low
+000000r 2               STH             = STL + 1               ; Store address High
+000000r 2               L               = STH + 1               ; Hex value parsing Low
+000000r 2               H               = L + 1                 ; Hex value parsing High
+000000r 2               YSAV            = H + 1                 ; Used to see if hex value is given
+000000r 2               MODE            = YSAV + 1              ; $00=XAM, $7F=STOR, $AE=BLOCK XAM
+000000r 2               
+000000r 2               ASCII_BACKSPACE = $08
+000000r 2               ASCII_LF        = $0A
+000000r 2               ASCII_CR        = $0D
+000000r 2               ASCII_ESC       = $1B
+000000r 2               ASCII_SPACE     = $20
+000000r 2               ASCII_PERIOD    = $2E
+000000r 2               ASCII_0         = $30
+000000r 2               ASCII_COLON     = $3A
+000000r 2               ASCII_R         = $52
+000000r 2               ASCII_BACKSLASH = $5C
+000000r 2               
+000000r 2               IN              = $7E00
+000000r 2               
+000000r 2               ; WOZMON Entrypoint
+000000r 2               MON_START:
+000000r 2  D8                           cld                     ; Clear decimal arithmetic mode.
+000001r 2  58                           cli                     ; Enable interrupts
+000002r 2  20 rr rr                     jsr     SERIAL_INIT
+000005r 2  4C rr rr                     SJMP    @is_escape
+000008r 2               
+000008r 2               @not_cr:
+000008r 2  C9 08                        cmp     #ASCII_BACKSPACE
+00000Ar 2  F0 11                        beq     @is_backspace
+00000Cr 2  C9 1B                        cmp     #ASCII_ESC
+00000Er 2  F0 03                        beq     @is_escape
+000010r 2  C8                           iny                     ; Advance text index.
+000011r 2  10 0D                        bpl     @get_next_char  ; Auto ESC if line longer than 127.
+000013r 2               
+000013r 2               @is_escape:
+000013r 2  A9 5C                        lda     #ASCII_BACKSLASH
+000015r 2  20 rr rr                     jsr     WRITECHAR
+000018r 2               
+000018r 2               @get_line:
+000018r 2  20 rr rr                     jsr     WRITE_CRLF
+00001Br 2  A0 01                        ldy     #1              ; Initialize text index.
+00001Dr 2               
+00001Dr 2  88           @is_backspace:  dey                     ; Back up text index.
+00001Er 2  30 F8                        bmi     @get_line       ; Beyond start of line, reinitialize.
+000020r 2               
+000020r 2               @get_next_char:
+000020r 2  20 rr rr                     jsr     READCHAR
+000023r 2  90 FB                        bcc     @get_next_char
+000025r 2  99 00 7E                     sta     IN,Y            ; Add to text buffer.
+000028r 2  C9 0D                        cmp     #ASCII_CR
+00002Ar 2  D0 DC                        bne     @not_cr
+00002Cr 2  A0 FF                        ldy     #$FF            ; Reset text index.  Will iny shortly...
+00002Er 2  A9 00                        lda     #$00            ; For XAM mode.
+000030r 2  AA                           tax                     ; X=0.
+000031r 2               
+000031r 2               @set_block:
+000031r 2  0A                           asl
+000032r 2               
+000032r 2               @set_store:
+000032r 2  0A                           asl                     ; Leaves $7B if setting STOR mode.
+000033r 2               
+000033r 2               @set_mode:
+000033r 2  85 20                        sta     MODE            ; $00 = XAM, $74 = STOR, $B8 = BLOK XAM.
+000035r 2               
+000035r 2               @skip_delim:
+000035r 2  C8                           iny                     ; Advance text index.
+000036r 2               
+000036r 2               @next_item:
+000036r 2  B9 00 7E                     lda     IN,Y            ; Get character.
+000039r 2  C9 0D                        cmp     #ASCII_CR       ; CR?
+00003Br 2  F0 DB                        beq     @get_line       ; Yes, done this line.
+00003Dr 2  C9 2E                        cmp     #ASCII_PERIOD
+00003Fr 2  90 F4                        bcc     @skip_delim     ; Skip delimiter.
+000041r 2  F0 EE                        beq     @set_block      ; Set BLOCK XAM mode.
+000043r 2  C9 3A                        cmp     #ASCII_COLON
+000045r 2  F0 EB                        beq     @set_store      ; Yes, set STOR mode.
+000047r 2  C9 52                        cmp     #ASCII_R
+000049r 2  F0 3B                        beq     @run_prog       ; Yes, run user program.
+00004Br 2  86 1D                        stx     L               ; $00 -> L.
+00004Dr 2  86 1E                        stx     H               ;    and H.
+00004Fr 2  84 1F                        sty     YSAV            ; Save Y for comparison
+000051r 2               
+000051r 2               @next_hex:
+000051r 2  B9 00 7E                     lda     IN,Y            ; Get character for hex test.
+000054r 2  49 30                        eor     #ASCII_0        ; Map digits to $0-9.
+000056r 2  C9 0A                        cmp     #10             ; Digit?
+000058r 2  90 06                        bcc     @is_digit       ; Yes.
+00005Ar 2  69 88                        adc     #$88            ; Map letter "A"-"F" to $FA-FF.
+00005Cr 2  C9 FA                        cmp     #$FA            ; Hex letter?
+00005Er 2  90 11                        bcc     @not_hex        ; No, character not hex.
+000060r 2               
+000060r 2               @is_digit:
+000060r 2  0A                           asl                     ; LSD to MSD of A.
+000061r 2  0A                           asl
+000062r 2  0A                           asl
+000063r 2  0A                           asl
+000064r 2  A2 04                        ldx     #4              ; Shift count.
+000066r 2               
+000066r 2               @hex_shift:
+000066r 2  0A                           asl                     ; Hex digit left, MSB to carry.
+000067r 2  26 1D                        rol     L               ; Rotate into LSD.
+000069r 2  26 1E                        rol     H               ; Rotate into MSD's.
+00006Br 2  CA                           dex                     ; Done 4 shifts?
+00006Cr 2  D0 F8                        bne     @hex_shift      ; No, loop.
+00006Er 2  C8                           iny                     ; Advance text index.
+00006Fr 2  D0 E0                        bne     @next_hex       ; Always taken. Check next character for hex.
+000071r 2               
+000071r 2               @not_hex:
+000071r 2  C4 1F                        cpy     YSAV            ; Check if L, H empty (no hex digits).
+000073r 2  F0 9E                        beq     @is_escape      ; Yes, generate ESC sequence.
+000075r 2  24 20                        bit     MODE            ; Test MODE byte.
+000077r 2  50 10                        bvc     @not_store      ; B6=0 is STOR, 1 is XAM and BLOCK XAM.
+000079r 2  A5 1D                        lda     L               ; LSD's of hex data.
+00007Br 2  81 1B                        sta     (STL,X)         ; Store current 'store index'.
+00007Dr 2  E6 1B                        inc     STL             ; Increment store index.
+00007Fr 2  D0 B5                        bne     @next_item      ; Get next item (no carry).
+000081r 2  E6 1C                        inc     STH             ; Add carry to 'store index' high order.
+000083r 2               
+000083r 2               @to_next_item:
+000083r 2  4C rr rr                     jmp     @next_item      ; Get next command item.
+000086r 2               
+000086r 2               @run_prog:
+000086r 2  6C 19 00                     jmp     (XAML)          ; Run at current XAM index.
+000089r 2               
+000089r 2               @not_store:
+000089r 2  30 30                        bmi     @examine_next   ; B7 = 0 for XAM, 1 for BLOCK XAM.
+00008Br 2  A2 02                        ldx     #2              ; Byte count.
+00008Dr 2               
+00008Dr 2               @set_addr:
+00008Dr 2  B5 1C                        lda     L-1,X           ; Copy hex data to
+00008Fr 2  95 1A                        sta     STL-1,X         ;  'store index'.
+000091r 2  95 18                        sta     XAML-1,X        ; And to 'XAM index'.
+000093r 2  CA                           dex                     ; Next of 2 bytes.
+000094r 2  D0 F7                        bne     @set_addr       ; Loop unless X = 0.
+000096r 2               
+000096r 2               @print_next:
+000096r 2  D0 19                        bne     @print_data     ; NE means no address to print.
+000098r 2  A9 0D                        lda     #ASCII_CR
+00009Ar 2  20 rr rr                     jsr     WRITECHAR       ; Output it.
+00009Dr 2  A9 0A                        lda     #ASCII_LF
+00009Fr 2  20 rr rr                     jsr     WRITECHAR       ; Output it.
+0000A2r 2  A5 1A                        lda     XAMH            ; 'Examine index' high-order byte.
+0000A4r 2  20 rr rr                     jsr     @print_byte     ; Output it in hex format.
+0000A7r 2  A5 19                        lda     XAML            ; Low-order 'examine index' byte.
+0000A9r 2  20 rr rr                     jsr     @print_byte     ; Output it in hex format.
+0000ACr 2  A9 3A                        lda     #ASCII_COLON
+0000AEr 2  20 rr rr                     jsr     WRITECHAR       ; Output it.
+0000B1r 2               
+0000B1r 2               @print_data:
+0000B1r 2  A9 20                        lda     #ASCII_SPACE
+0000B3r 2  20 rr rr                     jsr     WRITECHAR       ; Output it.
+0000B6r 2  A1 19                        lda     (XAML,X)        ; Get data byte at 'examine index'.
+0000B8r 2  20 rr rr                     jsr     @print_byte     ; Output it in hex format.
+0000BBr 2               
+0000BBr 2               @examine_next:
+0000BBr 2  86 20                        stx     MODE            ; 0 -> MODE (XAM mode).
+0000BDr 2  A5 19                        lda     XAML
+0000BFr 2  C5 1D                        cmp     L               ; Compare 'examine index' to hex data.
+0000C1r 2  A5 1A                        lda     XAMH
+0000C3r 2  E5 1E                        SBC     H
+0000C5r 2  B0 BC                        bcs     @to_next_item   ; Not less, so no more data to output.
+0000C7r 2  E6 19                        inc     XAML
+0000C9r 2  D0 02                        bne     @mod_8_check    ; Increment 'examine index'.
+0000CBr 2  E6 1A                        inc     XAMH
+0000CDr 2               
+0000CDr 2               @mod_8_check:
+0000CDr 2  A5 19                        lda     XAML            ; Check low-order 'examine index' byte
+0000CFr 2  29 07                        and     #7              ; For MOD 8 = 0
+0000D1r 2  10 C3                        bpl     @print_next     ; Always taken.
+0000D3r 2               
+0000D3r 2               @print_byte:
+0000D3r 2  48                           pha                     ; Save A for LSD.
+0000D4r 2  4A                           lsr
+0000D5r 2  4A                           lsr
+0000D6r 2  4A                           lsr                     ; MSD to LSD position.
+0000D7r 2  4A                           lsr
+0000D8r 2  20 rr rr                     jsr     @print_hex      ; Output hex digit.
+0000DBr 2  68                           pla                     ; Restore A.
+0000DCr 2               
+0000DCr 2               @print_hex:
+0000DCr 2  29 0F                        and     #$0F            ; Mask LSD for hex print.
+0000DEr 2  09 30                        ora     #ASCII_0        ; Add "0".
+0000E0r 2  C9 3A                        cmp     #$3A            ; Digit?
+0000E2r 2  90 02                        bcc     @echo           ; Yes, output it.
+0000E4r 2  69 06                        adc     #6              ; Add offset for letter.
+0000E6r 2               
+0000E6r 2               @echo:
+0000E6r 2  20 rr rr                     jsr     WRITECHAR
+0000E9r 2  60                           rts
+0000EAr 2               
+0000EAr 1               .include "mmu.s"
+0000EAr 2               .debuginfo
+0000EAr 2               .segment "OS_MAIN"
+000016r 2               
+000016r 2               MMU_INIT:
+000016r 2                   ;
+000016r 2                           ;jsr     MEM_TEST
+000016r 2  60                       rts
+000017r 2               
+000017r 2               MEM_TEST:
+000017r 2  48 8A 48                 PUSH_AX
+00001Ar 2  A2 00                    ldx     #0
+00001Cr 2               @loop:
+00001Cr 2  A9 EA                    lda     #$EA
+00001Er 2  9D 00 02                 sta     $0200,X
+000021r 2  BD 00 02                 lda     $0200,X
+000024r 2  CA                       dex
+000025r 2  D0 F5                    bne     @loop
+000027r 2  68 AA 68                 PULL_XA
+00002Ar 2  60                       rts
+00002Br 2               
+00002Br 2               
+00002Br 1               .include "tasks.s"
+00002Br 2               .debuginfo
+00002Br 2               .segment "TASKS"
+000000r 2               
+000000r 2               TASK_0_VECTOR           = $E000
+000000r 2               RAM_BANK_REG            = $00
+000000r 2               ROM_BANK_REG            = $01
+000000r 2               TASK_STATUS_REG         = $02
+000000r 2               TASK_PARENT             = $03
+000000r 2               STACK_SAVE_REG          = $0100
+000000r 2               TASK_VECTOR_BASE        = $7E00
+000000r 2               TASK_NUM_PORT           = IO_PORT_BYTE IO_PORT_F, 0
+000000r 2               
+000000r 2               TASK_BUSY_FLAG          = 1
+000000r 2               
+000000r 2               ; TASK STATUS REGISTER BITS
+000000r 2               ;   0: 0 = Available, 1 = In Use
+000000r 2               
+000000r 2               ; Initialize the tasks, their stacks, etc.
+000000r 2               TASKS_INIT:
+000000r 2  78                       sei                                     ; Turn off interrupts
+000001r 2  AD rr rr                 lda     TASK_NUM_PORT
+000004r 2  D0 1B                    bne     @cleanup                        ; Only support task init when on task 0
+000006r 2  A2 0F                    ldx     #MAX_TASK_NUMBER
+000008r 2               
+000008r 2               @loop:
+000008r 2  A9 00                    lda     #0
+00000Ar 2  8E rr rr                 stx     TASK_NUM_PORT                   ; Quick switch to task X
+00000Dr 2  85 00                    sta     RAM_BANK_REG
+00000Fr 2  85 01                    sta     ROM_BANK_REG
+000011r 2  85 02                    sta     TASK_STATUS_REG
+000013r 2  85 03                    sta     TASK_PARENT
+000015r 2  A9 FF                    lda     #$FF
+000017r 2  8D 00 01                 sta     STACK_SAVE_REG
+00001Ar 2  A5 10 85 11              MOV     ZP_READ_PTR, ZP_WRITE_PTR             ; Do INIT_BUFFER, without the stack
+00001Er 2  CA                       dex
+00001Fr 2  10 E7                    bpl     @loop                           ; Loop back as long as X >= 0
+000021r 2                           ; Will fall through when X = $FF, leaving us in Task 0, as required
+000021r 2               
+000021r 2               @cleanup:
+000021r 2  58                       cli                                     ; Turn interrupts back on
+000022r 2  60                       rts
+000023r 2               
+000023r 2               ; TASK # Passed In A
+000023r 2               ; Modifies A
+000023r 2               TASK_SWITCH:
+000023r 2                           ; check to see if we are trying to switch to the current task, and if so, just RTS
+000023r 2  CD rr rr                 cmp     TASK_NUM_PORT;
+000026r 2  D0 01                    bne     @save_state
+000028r 2                           ; clc
+000028r 2                           ; sta #REQ_TASK_0
+000028r 2  60                       rts
+000029r 2               
+000029r 2               @save_state:
+000029r 2  78                       sei
+00002Ar 2  08                       php                                     ; Push the processor status flag so RTI at the end will do the right thing
+00002Br 2  BA                       tsx                                     ; Save the stack pointer
+00002Cr 2  8E 00 01                 stx     STACK_SAVE_REG                  ; ...
+00002Fr 2                           ; LDX     TASK_NUM_PORT                   ; Store which task we switched from so we can resume to it once we finish
+00002Fr 2                           ; STX     TASK_PARENT                     ; ...
+00002Fr 2               
+00002Fr 2               @task_switch:
+00002Fr 2  8D rr rr                 sta     TASK_NUM_PORT                   ; do the task switch
+000032r 2  0A                       asl                                     ; multiply task # in A by 2 to get status register and vector addr offsets
+000033r 2  AA                       tax                                     ; Transfer to X for task vector indexing
+000034r 2  A9 01                    lda     #1
+000036r 2  24 02                    bit     TASK_STATUS_REG
+000038r 2  D0 23                    bne     @resume                         ; If not running (STATUS BIT 0 = 0 when idle)
+00003Ar 2               
+00003Ar 2               @start_task:
+00003Ar 2  A2 FF                    ldx     #$FF                            ; RESET THE STACK POINTER
+00003Cr 2  9A                       txs                                     ; ...
+00003Dr 2  09 01                    ora     #1
+00003Fr 2  25 02                    and     TASK_STATUS_REG                 ; SET THE TASK AS RUNNING
+000041r 2  85 02                    sta     TASK_STATUS_REG
+000043r 2  8A                       txa
+000044r 2  20 rr rr                 jsr     @jmp_point
+000047r 2               
+000047r 2               @task_complete:
+000047r 2  A9 01                    lda     #TASK_BUSY_FLAG
+000049r 2                           ; trb     TASK_STATUS_REG
+000049r 2  49 FF                    eor     #$FF
+00004Br 2  25 02                    and     TASK_STATUS_REG                 ; Set the task to no longer running
+00004Dr 2  85 02                    sta     TASK_STATUS_REG
+00004Fr 2                           ; LDA     TASK_PARENT                     ; Restore the task that was running when this task was started
+00004Fr 2                           ; LDX     #$FF
+00004Fr 2                           ; STX     TASK_PARENT                     ; ...and reset the resume-to register to #$FF (invalid)
+00004Fr 2  4C rr rr                 jmp     @task_switch
+000052r 2               
+000052r 2               @jmp_point:
+000052r 2  68                       pla                                     ; fix up the "return" point for the task
+000053r 2  68                       pla
+000054r 2  A9 rr                    lda     #<@task_complete
+000056r 2  48                       pha
+000057r 2  A9 rr                    lda     #>@task_complete
+000059r 2  48                       pha
+00005Ar 2  6C 16 00                 jmp     (ZP_TEMP_VEC_L)
+00005Dr 2               
+00005Dr 2               
+00005Dr 2               @resume:
+00005Dr 2  AE 00 01                 ldx     STACK_SAVE_REG                  ; Restore the stack pointer
+000060r 2  9A                       txs                                     ; ...
+000061r 2  68                       pla                                     ; ...and the registers
+000062r 2  A8                       tay
+000063r 2  68                       pla
+000064r 2  AA                       tax
+000065r 2  40                       rti
+000066r 2               
+000066r 2               ; Find an available task
+000066r 2               ; Modifies: A, CNZ Flags
+000066r 2               ; Returns C = 1 AND A = TaskNumber (when found)
+000066r 2               ; Returns C = 0 AND A = 0          (when not found)
+000066r 2               RESERVE_TASK:
+000066r 2  78                       sei                                     ; Disable interrupts
+000067r 2  85 18 8A 48              PUSH_XY
+00006Br 2  98 48 A5 18  
+00006Fr 2               
+00006Fr 2               ; !! NO STACK MANIPULATIONS UNTIL SWITCHING BACK TO ORIGINAL TASK !!
+00006Fr 2  A9 00                    lda     #0
+000071r 2  AC rr rr                 ldy     TASK_NUM_PORT
+000074r 2  8D rr rr                 sta     TASK_NUM_PORT
+000077r 2  86 03                    stx     TASK_PARENT
+000079r 2  A9 01                    lda     #1
+00007Br 2  A2 07                    ldx     #7
+00007Dr 2               
+00007Dr 2               @task_busy:
+00007Dr 2  8E rr rr                 stx     TASK_NUM_PORT                   ; Quick task switch to task X
+000080r 2  24 02                    bit     TASK_STATUS_REG                 ; Is Bit 1 set?
+000082r 2  D0 08                    bne     @task_found
+000084r 2  CA                       dex                                     ; Not found, so DEC X
+000085r 2  D0 F6                    bne     @task_busy                      ; Until X is zero, loop
+000087r 2  18                       clc                                     ; Not found
+000088r 2  A9 00                    lda     #0                              ; Return 0 in A
+00008Ar 2  90 08                    bcc     @cleanup
+00008Cr 2               
+00008Cr 2               @task_found:
+00008Cr 2  A5 02                    lda     TASK_STATUS_REG
+00008Er 2  09 01                    ora     #TASK_BUSY_FLAG
+000090r 2  85 02                    sta     TASK_STATUS_REG                 ; SET the Task Busy flag (bit 1) to 1
+000092r 2  8A                       txa                                     ; Return the task number in A
+000093r 2  38                       sec                                     ; Found
+000094r 2               
+000094r 2               @cleanup:
+000094r 2  8C rr rr                 sty     TASK_NUM_PORT                   ; Switch back to the original task
+000097r 2               
+000097r 2               ; Back on the original task, so restore the registers
+000097r 2  85 18 68 A8              PULL_YX
+00009Br 2  68 AA A5 18  
+00009Fr 2  58                       cli                                     ; Re-enable interrupts
+0000A0r 2  60                       rts
+0000A1r 2               
+0000A1r 2               
+0000A1r 2               
+0000A1r 1               .include "shell.s"
+0000A1r 2               .debuginfo
+0000A1r 2               .segment "SHELL"
+000000r 2               
+000000r 2               SHELL_MAIN:
+000000r 2  20 rr rr                 jsr     MON_START
+000003r 2  60                       rts
+000004r 2               
+000004r 2               .segment "STACK"
+000000r 2               
+000000r 1               
+000000r 1               .segment "OS_MAIN"
+00002Br 1               SPI_TEST:
+00002Br 1  A2 00                    ldx     #SPI_DEV_0
+00002Dr 1  20 rr rr                 jsr     SPI_INIT_DELAY
+000030r 1  A9 40 20 rr              SPI_SEND_CMD 0,    0, 0, 0,   0, $4A        ; CMD0
+000034r 1  rr A9 00 20  
+000038r 1  rr rr 85 13  
+000055r 1  A9 48 20 rr              SPI_SEND_CMD 8,    0, 0, 1, $AA, $43        ; CMD8
+000059r 1  rr A9 00 20  
+00005Dr 1  rr rr 85 13  
+00007Ar 1               @loop:
+00007Ar 1  A9 7A 20 rr              SPI_SEND_CMD 58,   0, 0, 0,   0             ; CMD58
+00007Er 1  rr A9 00 20  
+000082r 1  rr rr 85 13  
+00009Fr 1  A9 69 20 rr              SPI_SEND_CMD 41, $40, 0, 0,   0             ; ACMD41
+0000A3r 1  rr A9 40 20  
+0000A7r 1  rr rr 85 13  
+0000C4r 1  D0 B4                    bne     @loop
+0000C6r 1  60                       rts
+0000C6r 1               
