@@ -111,6 +111,7 @@ WRITE_CRLF:
                 lda             #ASCII_LF
                 jmp             WRITECHAR                   ; WRITECHAR will rts, so jmp instead of jsr
 
+; Taken from Wozmon
 WRITE_BYTE:
                 pha                                         ; Save A for LSD.
                 lsr
@@ -124,7 +125,7 @@ WRITE_BYTE:
 @print_hex:
                 cmp             #10                         ; Digit?
                 bcc             @echo                       ; Yes, output it.
-                adc             #6                          ; Add offset for letter.
+                adc             #ASCII_LETTER_OFFSET-1      ; Add offset for letter, -1 because carry is set.
 
 @echo:
                 adc             #ASCII_0                    ; Add "0".
@@ -148,7 +149,7 @@ SPI_INIT:
                 rts
 
 ; Macro to remove essentially duplicate code
-.macro          SPI_SEND_SETUP mode
+.macro          SPI_SEND_SETUP  mode
                 sta             ZP_SPI_DATA_OUT
                 PUSH_Y
                 txa
@@ -168,7 +169,7 @@ SPI_INIT:
 ; A: data to send
 ; X: device ID to send to/receive from
 ; Returns input data in A
-; Modifies A, ZP_TEMP, ZP_SPI_DATA_IN, ZP_SPI_DATA_OUT
+; Modifies A, ZP_SPI_DATA_IN, ZP_SPI_DATA_OUT
 SPI_TRANSCEIVE:
                 SPI_SEND_SETUP
                 bcs             @spi_send_1
@@ -191,6 +192,7 @@ SPI_TRANSCEIVE:
 @had_1:
                 asl             ZP_SPI_DATA_IN
                 SJMP            @spi_send_1
+
 SPI_OPERATION_DONE:
                 lda             #SPI_BIT_CSB        ; de-select all SPI devices
 .ifpc02

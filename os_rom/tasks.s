@@ -6,8 +6,7 @@ RAM_BANK_REG            = $0
 ROM_BANK_REG            = $1
 TASK_STATUS_REG         = $2
 TASK_PARENT             = $3
-STACK_SAVE_REG          = $0100
-TASK_VECTOR_BASE        = $7E00
+STACK_SAVE_REG          = $4
 TASK_NUM_PORT           = IO_PORT_BYTE IO_PORT_F, 0
 
 TASK_BUSY_FLAG          = $01
@@ -15,6 +14,20 @@ TASK_PAUSED_FLAG        = $02
 
 ; TASK STATUS REGISTER BITS
 ;   0: 0 = Available, 1 = In Use
+
+.macro SELECT_TASK      task
+                lda     TASK_NUM_PORT
+                and     #$F0
+                ora     task & $0F
+                sta     TASK_NUM_PORT
+.endmacro
+
+.macro SELECT_SHARED_BANK bank
+                lda     TASK_NUM_PORT
+                and     #$0F
+                ora     bank << 4
+                sta     TASK_NUM_PORT
+.endmacro
 
 ; Initialize the tasks, their stacks, etc.
 TASKS_INIT:

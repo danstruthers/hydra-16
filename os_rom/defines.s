@@ -146,9 +146,12 @@ ASCII_BANG      = $21
 ASCII_STAR      = $2A
 ASCII_PERIOD    = $2E
 ASCII_0         = $30
+ASCII_A         = $41
 ASCII_COLON     = $3A
 ASCII_R         = $52
 ASCII_BACKSLASH = $5C
+
+ASCII_LETTER_OFFSET = ASCII_A-ASCII_0+10
 
 ; write a byte in A to the IO PORT
 .macro IO_PORT_WRITE    port, byte, imm
@@ -329,6 +332,82 @@ ASCII_BACKSLASH = $5C
                 sta     addr2
 .endmacro
 
+.macro MOVA             addr1, addr2
+                MOV     addr1, addr2
+.endmacro
+
+.macro MOVX             addr1, addr2
+                ldx     addr1
+                stx     addr2
+.endmacro
+
+.macro MOVY             addr1, addr2
+                ldy     addr1
+                sty     addr2
+.endmacro
+
+.macro MOV16            addr1, addr2
+                lda     addr1
+                sta     addr2
+                lda     addr1+1
+                sta     addr2+1
+.endmacro
+
+.macro MOVA16           addr1, addr2
+                MOV16   addr1, addr2
+.endmacro
+
+.macro MOVX16           addr1, addr2
+                ldx     addr1
+                stx     addr2
+                ldx     addr1+1
+                stx     addr2+1
+.endmacro
+
+.macro MOVY16           addr1, addr2
+                ldy     addr1
+                sty     addr2
+                ldy     addr1+1
+                sty     addr2+1
+.endmacro
+
+.macro MOVAX            addr1, addr2
+                lda     addr1,x
+                sta     addr2,x
+.endmacro
+
+.macro MOVAY            addr1, addr2
+                lda     addr1,y
+                sta     addr2,y
+.endmacro
+
+.macro MOVAY16          addr1, addr2
+                lda     addr1,y
+                sta     addr2,y
+                lda     addr1+1,y
+                sta     addr2+1,y
+.endmacro
+
+; X: # of bytes to move
+; Clobbers A, X
+.macro BLKMOVX          addr1, addr2
+@:
+                dex
+                lda     addr1,x
+                sta     addr2,x
+                bne @-
+.endmacro
+
+; Y: # of bytes to move
+; Clobbers A, Y
+.macro BLKMOVY          addr1, addr2
+@:
+                dey
+                lda     addr1,y
+                sta     addr2,y
+                bne @-
+.endmacro
+
 .macro  SJMP            addr
 .ifpc02
                 bra     addr
@@ -338,19 +417,101 @@ ASCII_BACKSLASH = $5C
 .endmacro
 
 .macro  INC16           addr
-.local  @no_carry
                 inc     addr
-                bcc     @no_carry
-                inc     addr + 1
-@no_carry:
+                bne     @+
+                inc     addr+1
+                SJMP    @++
+@:
+                lda     addr+1
+@:
+.endmacro
+
+.macro  INC32           addr
+                inc     addr
+                bne     @+
+                inc     addr+1
+                bne     @+
+                INC16   addr+2
 .endmacro
 
 .macro  DEC16           addr
-.local  @no_borrow
-                cmp     addr
-                bne     @no_borrow
-                dec     addr + 1
-@no_borrow:
+                lda     addr
+                bne     @+
                 dec     addr
+                dec     addr+1
+                SJMP    @+++
+@:
+                dec     addr
+                bne     @+      ; if Z not set, don't take Z from HOB
+                lda     addr+1  ; sets Z and N from HOB
+                SJMP    @++
+@:
+                lda     addr+1
+                ora     #1      ; reset Z, if set, without affecting N
+@:
+
 .endmacro
 
+.macro  DEC32           addr
+                lda     addr
+                bne     @+++
+                cmp     addr+1
+                bne     @++
+                cmp     addr+2
+                bne     @+
+                dec     addr+3
+@:
+                dec     addr+2
+@:
+                dec     addr+1
+@:
+                dec     addr
+
+.endmacro
+
+; No-clobber (NC) macros to wrap another macro that overwrites one or more registers
+.macro  NC_A            MAC, p1, p2
+                pha
+                MAC     p1, p2
+                pla
+.endmacro
+
+.macro  NC_X            MAC, p1, p2
+                PUSH_X
+                MAC     p1, p2
+                PULL_X
+.endmacro
+
+.macro  NC_Y            MAC, p1, p2
+                PUSH_Y
+                MAC     p1, p2
+                PULL_Y
+.endmacro
+
+.macro  NC_AX           MAC, p1, p2
+                PUSH_AX
+                MAC     p1, p2
+                PULL_XA
+.endmacro
+
+.macro  NC_AY           MAC, p1, p2
+                PUSH_AY
+                MAC     p1, p2
+                PULL_YA
+.endmacro
+
+.macro  NC_XY           MAC, p1, p2
+                PUSH_XY
+                MAC     p1, p2
+                PULL_YX
+.endmacro
+
+.macro  NC_AXY          MAC, p1, p2
+                PUSH_AXY
+                MAC     p1, p2
+                PULL_YXA
+.endmacro
+
+.macro  DEC16_NC_A      addr
+                NC_A    DEC16, addr
+.endmacro

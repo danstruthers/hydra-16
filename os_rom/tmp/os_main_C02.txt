@@ -179,9 +179,12 @@ Current file: os_main.s
 000000r 2               ASCII_STAR      = $2A
 000000r 2               ASCII_PERIOD    = $2E
 000000r 2               ASCII_0         = $30
+000000r 2               ASCII_A         = $41
 000000r 2               ASCII_COLON     = $3A
 000000r 2               ASCII_R         = $52
 000000r 2               ASCII_BACKSLASH = $5C
+000000r 2               
+000000r 2               ASCII_LETTER_OFFSET = ASCII_A-ASCII_0+10
 000000r 2               
 000000r 2               ; write a byte in A to the IO PORT
 000000r 2               .macro IO_PORT_WRITE    port, byte, imm
@@ -362,6 +365,82 @@ Current file: os_main.s
 000000r 2                               sta     addr2
 000000r 2               .endmacro
 000000r 2               
+000000r 2               .macro MOVA             addr1, addr2
+000000r 2                               MOV     addr1, addr2
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro MOVX             addr1, addr2
+000000r 2                               ldx     addr1
+000000r 2                               stx     addr2
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro MOVY             addr1, addr2
+000000r 2                               ldy     addr1
+000000r 2                               sty     addr2
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro MOV16            addr1, addr2
+000000r 2                               lda     addr1
+000000r 2                               sta     addr2
+000000r 2                               lda     addr1+1
+000000r 2                               sta     addr2+1
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro MOVA16           addr1, addr2
+000000r 2                               MOV16   addr1, addr2
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro MOVX16           addr1, addr2
+000000r 2                               ldx     addr1
+000000r 2                               stx     addr2
+000000r 2                               ldx     addr1+1
+000000r 2                               stx     addr2+1
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro MOVY16           addr1, addr2
+000000r 2                               ldy     addr1
+000000r 2                               sty     addr2
+000000r 2                               ldy     addr1+1
+000000r 2                               sty     addr2+1
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro MOVAX            addr1, addr2
+000000r 2                               lda     addr1,x
+000000r 2                               sta     addr2,x
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro MOVAY            addr1, addr2
+000000r 2                               lda     addr1,y
+000000r 2                               sta     addr2,y
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro MOVAY16          addr1, addr2
+000000r 2                               lda     addr1,y
+000000r 2                               sta     addr2,y
+000000r 2                               lda     addr1+1,y
+000000r 2                               sta     addr2+1,y
+000000r 2               .endmacro
+000000r 2               
+000000r 2               ; X: # of bytes to move
+000000r 2               ; Clobbers A, X
+000000r 2               .macro BLKMOVX          addr1, addr2
+000000r 2               @:
+000000r 2                               dex
+000000r 2                               lda     addr1,x
+000000r 2                               sta     addr2,x
+000000r 2                               bne @-
+000000r 2               .endmacro
+000000r 2               
+000000r 2               ; Y: # of bytes to move
+000000r 2               ; Clobbers A, Y
+000000r 2               .macro BLKMOVY          addr1, addr2
+000000r 2               @:
+000000r 2                               dey
+000000r 2                               lda     addr1,y
+000000r 2                               sta     addr2,y
+000000r 2                               bne @-
+000000r 2               .endmacro
+000000r 2               
 000000r 2               .macro  SJMP            addr
 000000r 2               .ifpc02
 000000r 2                               bra     addr
@@ -371,22 +450,66 @@ Current file: os_main.s
 000000r 2               .endmacro
 000000r 2               
 000000r 2               .macro  INC16           addr
-000000r 2               .local  @no_carry
 000000r 2                               inc     addr
-000000r 2                               bcc     @no_carry
-000000r 2                               inc     addr + 1
-000000r 2               @no_carry:
+000000r 2                               bcc     @+
+000000r 2                               inc     addr+1
+000000r 2               @:
 000000r 2               .endmacro
 000000r 2               
 000000r 2               .macro  DEC16           addr
-000000r 2               .local  @no_borrow
+000000r 2                               lda     #0
 000000r 2                               cmp     addr
-000000r 2                               bne     @no_borrow
-000000r 2                               dec     addr + 1
-000000r 2               @no_borrow:
+000000r 2                               bne     @+
+000000r 2                               dec     addr+1
+000000r 2               @:
 000000r 2                               dec     addr
 000000r 2               .endmacro
 000000r 2               
+000000r 2               .macro  NC_A            MAC, p1, p2
+000000r 2                               pha
+000000r 2                               MAC p1, p2
+000000r 2                               pla
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  NC_X            MAC, p1, p2
+000000r 2                               PUSH_X
+000000r 2                               MAC p1, p2
+000000r 2                               PULL_X
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  NC_Y            MAC, p1, p2
+000000r 2                               PUSH_Y
+000000r 2                               MAC p1, p2
+000000r 2                               PULL_Y
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  NC_AX           MAC, p1, p2
+000000r 2                               PUSH_AX
+000000r 2                               MAC p1, p2
+000000r 2                               PULL_XA
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  NC_AY           MAC, p1, p2
+000000r 2                               PUSH_AY
+000000r 2                               MAC p1, p2
+000000r 2                               PULL_YA
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  NC_XY           MAC, p1, p2
+000000r 2                               PUSH_XY
+000000r 2                               MAC p1, p2
+000000r 2                               PULL_YX
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  NC_AXY          MAC, p1, p2
+000000r 2                               PUSH_AXY
+000000r 2                               MAC p1, p2
+000000r 2                               PULL_YXA
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  DEC16_NC_A      addr
+000000r 2                               NC_A DEC16, addr
+000000r 2               .endmacro
 000000r 2               
 000000r 1               OS_MAIN:
 000000r 1  A9 00                    lda     #0
@@ -518,6 +641,7 @@ Current file: os_main.s
 000039r 2  A9 0A                        lda             #ASCII_LF
 00003Br 2  4C rr rr                     jmp             WRITECHAR                   ; WRITECHAR will rts, so jmp instead of jsr
 00003Er 2               
+00003Er 2               ; Taken from Wozmon
 00003Er 2               WRITE_BYTE:
 00003Er 2  48                           pha                                         ; Save A for LSD.
 00003Fr 2  4A                           lsr
@@ -531,7 +655,7 @@ Current file: os_main.s
 000049r 2               @print_hex:
 000049r 2  C9 0A                        cmp             #10                         ; Digit?
 00004Br 2  90 02                        bcc             @echo                       ; Yes, output it.
-00004Dr 2  69 06                        adc             #6                          ; Add offset for letter.
+00004Dr 2  69 1A                        adc             #ASCII_LETTER_OFFSET-1      ; Add offset for letter, -1 because carry is set.
 00004Fr 2               
 00004Fr 2               @echo:
 00004Fr 2  69 30                        adc             #ASCII_0                    ; Add "0".
@@ -559,7 +683,7 @@ Current file: os_main.s
 000072r 2  60                           rts
 000073r 2               
 000073r 2               ; Macro to remove essentially duplicate code
-000073r 2               .macro          SPI_SEND_SETUP mode
+000073r 2               .macro          SPI_SEND_SETUP  mode
 000073r 2                               sta             ZP_SPI_DATA_OUT
 000073r 2                               PUSH_Y
 000073r 2                               txa
@@ -579,7 +703,7 @@ Current file: os_main.s
 000073r 2               ; A: data to send
 000073r 2               ; X: device ID to send to/receive from
 000073r 2               ; Returns input data in A
-000073r 2               ; Modifies A, ZP_TEMP, ZP_SPI_DATA_IN, ZP_SPI_DATA_OUT
+000073r 2               ; Modifies A, ZP_SPI_DATA_IN, ZP_SPI_DATA_OUT
 000073r 2               SPI_TRANSCEIVE:
 000073r 2  85 15 5A 8A                  SPI_SEND_SETUP
 000077r 2  09 04 A8 A5  
@@ -604,6 +728,7 @@ Current file: os_main.s
 00009Er 2               @had_1:
 00009Er 2  06 14                        asl             ZP_SPI_DATA_IN
 0000A0r 2  80 E6                        SJMP            @spi_send_1
+0000A2r 2               
 0000A2r 2               SPI_OPERATION_DONE:
 0000A2r 2  A9 02                        lda             #SPI_BIT_CSB        ; de-select all SPI devices
 0000A4r 2               .ifpc02
