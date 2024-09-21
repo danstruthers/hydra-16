@@ -2,7 +2,7 @@
 	(version 20231120)
 	(generator "eeschema")
 	(generator_version "8.0")
-	(uuid "dfd840b8-f545-4cb2-b8ed-4cc186a2ac9a")
+	(uuid "e523ccbe-25e3-4937-83f2-a14ac0d57190")
 	(paper "A4")
 	(lib_symbols
 		(symbol "Connector:Bus_Hydra_8bit"
