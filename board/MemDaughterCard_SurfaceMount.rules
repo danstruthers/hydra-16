@@ -1,0 +1,100 @@
+
+(rules PCB MemDaughterCard_SurfaceMount
+  (snap_angle 
+    fortyfive_degree
+  )
+  (autoroute_settings
+    (fanout off)
+    (autoroute on)
+    (postroute on)
+    (vias on)
+    (via_costs 50)
+    (plane_via_costs 5)
+    (start_ripup_costs 100)
+    (start_pass_no 257)
+    (layer_rule F.Cu
+      (active on)
+      (preferred_direction horizontal)
+      (preferred_direction_trace_costs 1.0)
+      (against_preferred_direction_trace_costs 1.5)
+    )
+    (layer_rule B.Cu
+      (active on)
+      (preferred_direction vertical)
+      (preferred_direction_trace_costs 1.0)
+      (against_preferred_direction_trace_costs 1.2)
+    )
+  )
+  (rule
+    (width 200.0)
+    (clear 200.0)
+    (clear 0.0 (type smd_to_turn_gap))
+    (clear 50.0 (type smd_smd))
+  )
+  (padstack "Via[0-1]_600:400_um"
+    (shape
+      (circle F.Cu 600.0 0.0 0.0)
+    )
+    (shape
+      (circle B.Cu 600.0 0.0 0.0)
+    )
+    (attach off)
+  )
+  (via 
+    "Via[0-1]_600:400_um" "Via[0-1]_600:400_um" default
+  )
+  (via 
+    "Via[0-1]_600:400_um-kicad_default" "Via[0-1]_600:400_um" "kicad_default"
+  )
+  (via 
+    "Via[0-1]_600:400_um-PWR" "Via[0-1]_600:400_um" PWR
+  )
+  (via_rule
+    default "Via[0-1]_600:400_um"
+  )
+  (via_rule
+    "kicad_default" "Via[0-1]_600:400_um-kicad_default"
+  )
+  (via_rule
+    PWR "Via[0-1]_600:400_um-PWR"
+  )
+  (class default
+    (clearance_class default)
+    (via_rule default)
+    (rule
+      (width 200.0)
+    )
+    (circuit 
+      (use_layer F.Cu B.Cu)
+    )
+  )
+  (class "kicad_default"
+    A8 A6 D7 A0 D0 A7 D5 "unconnected-(J1-Pin_3-Pad3)"
+    A9 A5 A2 RAMB0 A4 D1 RWB !RWB
+    A12 D6 A11 A3 RAMB1 "Net-(IC1-~{CS})" D4 D3
+    A1 "unconnected-(J1-Pin_2-Pad2)" D2 "unconnected-(J1-Pin_4-Pad4)" A10 "unconnected-(J1-Pin_1-Pad1)" "Net-(IC2-~{CS})" "Net-(IC3-~{CS})"
+    "Net-(IC4-~{CS})" "nBRC14_S" T0 RAMB2 T2 T3 "nBRC5_S" "nBRC13_S"
+    "nBRC7_S" "nBRC10_S" "nBRC4_S" "nBRC3_S" "nBRC2_S" "nBRC11_S" "nBRC9_S" "nBRC0_S"
+    "nBRC6_S" RAMB3 T1 "nBRC12_S" "nBRC8_S" "nBRC1_S" "Net-(J3-Pin_10)" "Net-(IC5-~{CS})"
+    "Net-(IC6-~{CS})" "Net-(IC7-~{CS})" "Net-(IC8-~{CS})" "Net-(J4-Pin_1)"
+    (clearance_class "kicad_default")
+    (via_rule kicad_default)
+    (rule
+      (width 200.0)
+    )
+    (circuit 
+      (use_layer F.Cu B.Cu)
+    )
+  )
+  (class PWR
+    GND +5v
+    (clearance_class PWR)
+    (via_rule PWR)
+    (rule
+      (width 400.0)
+    )
+    (circuit 
+      (use_layer F.Cu B.Cu)
+    )
+  )
+)

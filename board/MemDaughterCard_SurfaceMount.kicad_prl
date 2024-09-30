@@ -1,6 +1,6 @@
 {
   "board": {
-    "active_layer": 44,
+    "active_layer": 0,
     "active_layer_preset": "",
     "auto_track_width": true,
     "hidden_netclasses": [],
@@ -58,7 +58,7 @@
       34,
       35
     ],
-    "visible_layers": "00010a0_80000001",
+    "visible_layers": "800d03f_ffffffff",
     "zone_display_mode": 0
   },
   "git": {
@@ -68,7 +68,7 @@
     "ssh_key": ""
   },
   "meta": {
-    "filename": "hydra-16.kicad_prl",
+    "filename": "MemDaughterCard_SurfaceMount.kicad_prl",
     "version": 3
   },
   "project": {
