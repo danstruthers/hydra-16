@@ -1,0 +1,133 @@
+
+(rules PCB Hydra16
+  (snap_angle 
+    fortyfive_degree
+  )
+  (autoroute_settings
+    (fanout on)
+    (autoroute on)
+    (postroute on)
+    (vias on)
+    (via_costs 60)
+    (plane_via_costs 5)
+    (start_ripup_costs 100)
+    (start_pass_no 20770)
+    (layer_rule F.Cu
+      (active on)
+      (preferred_direction horizontal)
+      (preferred_direction_trace_costs 1.0)
+      (against_preferred_direction_trace_costs 1.8)
+    )
+    (layer_rule B.Cu
+      (active on)
+      (preferred_direction vertical)
+      (preferred_direction_trace_costs 1.0)
+      (against_preferred_direction_trace_costs 1.5)
+    )
+  )
+  (rule
+    (width 200.0)
+    (clear 200.0)
+    (clear 0.0 (type smd_to_turn_gap))
+    (clear 50.0 (type smd_smd))
+  )
+  (padstack "Via[0-1]_600:300_um"
+    (shape
+      (circle F.Cu 600.0 0.0 0.0)
+    )
+    (shape
+      (circle B.Cu 600.0 0.0 0.0)
+    )
+    (attach off)
+  )
+  (via 
+    "Via[0-1]_600:300_um" "Via[0-1]_600:300_um" default
+  )
+  (via 
+    "Via[0-1]_600:300_um-kicad_default" "Via[0-1]_600:300_um" "kicad_default"
+  )
+  (via 
+    "Via[0-1]_600:300_um-Power" "Via[0-1]_600:300_um" Power
+  )
+  (via_rule
+    default "Via[0-1]_600:300_um"
+  )
+  (via_rule
+    "kicad_default" "Via[0-1]_600:300_um-kicad_default"
+  )
+  (via_rule
+    Power "Via[0-1]_600:300_um-Power"
+  )
+  (class default
+    (clearance_class default)
+    (via_rule default)
+    (rule
+      (width 200.0)
+    )
+    (circuit 
+      (use_layer F.Cu B.Cu)
+    )
+  )
+  (class "kicad_default"
+    "Net-(U7-C1-)" "Net-(U7-C1+)" "Net-(U7-VS+)" "Net-(U7-VS-)" "Net-(U7-C2-)" "Net-(U7-C2+)" nRAMB3 T2
+    T3 T0 D0 nRAMB2 T1 "Net-(IC1-R{slash}~{W})" nRAMB0 nRAMB1
+    nRAMB4 nRAMB7 nRAMB6 nRAMB5 nROMB2 nROMB3 nROMB1 nROMB0
+    "Net-(IC3-R{slash}~{W})" nROMB5 nROMB4 nROMB6 nROMB7 T7 !RWB T5
+    T4 RWB T6 A8 A9 A12 A7 A5
+    A1 A4 A11 A10 A2 A0 A3 A6
+    "unconnected-(J3-Pad1)" "unconnected-(J3-Pad4)" "Net-(U7-T2OUT)" "Net-(U7-R1IN)" "Net-(U7-T1OUT)" "Net-(U7-R2IN)" "unconnected-(J3-Pad6)" "unconnected-(J3-Pad9)"
+    "FFF0_L" "nFFF0_S" "nOSR_S" NMIB RESB PHI1O PHI2O "unconnected-(U4-nc-Pad35)"
+    +5VA IRQB A15 SOB A14 PHI2 A13 "SPI_MOSI"
+    "unconnected-(U5-PA1-Pad3)" "Net-(U5-PB1)" "unconnected-(U5-PA3-Pad5)" "Net-(U5-PB6)" "unconnected-(U5-PA2-Pad4)" "unconnected-(U5-PA0-Pad2)" "nIOP0_S" "unconnected-(U5-CA2-Pad39)"
+    "SPI_SCLK" "unconnected-(U5-PA7-Pad9)" "SPI_MISO" "Net-(U5-PB4)" "unconnected-(U5-CB1-Pad18)" "unconnected-(U5-PA4-Pad6)" "unconnected-(U5-CA1-Pad40)" "unconnected-(U5-PA5-Pad7)"
+    "Net-(U5-PB3)" "unconnected-(U5-CB2-Pad19)" "unconnected-(U5-PA6-Pad8)" "Net-(U5-PB5)" "unconnected-(U6-~{DTR}-Pad11)" "unconnected-(U6-RxC-Pad5)" "Net-(U6-~{RTS})" "Net-(U6-~{CTS})"
+    "nIOP1_S" "Net-(C44-Pad1)" "Net-(U37-Cp)" "Net-(U6-TxD)" "unconnected-(U6-XTAL2-Pad7)" "Net-(U6-RxD)" "SPI_CS2" "SPI_CS13"
+    "SPI_CS14" "SPI_CS8" "SPI_CS11" "SPI_CS1" "SPI_CS10" "SPI_CS9" "SPI_CS0" "SPI_CS15"
+    "SPI_CS4" "SPI_CS6" "SPI_CS3" "SPI_CS7" "SPI_CS5" "SPI_CS12" "nIOP13_S" "nIOP3_S"
+    "nIOP5_S" "nIOP6_S" "nIOP12_S" "nIOP11_S" "nIOP15_S" "nIOP10_S" "nIOP2_S" "nIOP9_S"
+    "nIOP8_S" "nIOP7_S" "HS_CLK" "nIOP4_S" "nIOP14_S" "Net-(U11-Pad9)" "nBRO_S" "Net-(U11-Pad12)"
+    "Net-(U11-Pad5)" "nBRA_S" "Net-(U11-Pad2)" "Net-(U11-Pad1)" "Net-(U11-Pad13)" "nDPR_S" "Net-(U12-Pad5)" "Net-(U12-Pad10)"
+    "Net-(U12-Pad11)" "Net-(U12-Pad13)" "Net-(U13-Pad8)" "Net-(U13-Pad10)" "Net-(U13-Pad2)" "Net-(U13-Pad9)" "nIOB0_S" "unconnected-(J1-Pin_4-Pad4)"
+    "nIOB15_S" "nIOB12_S" "nIOB7_S" "nIOB13_S" "nIOB14_S" "nIOB4_S" "nIOB6_S" "nIOB1_S"
+    "nIOB11_S" "nIOB2_S" "nIOB5_S" "nIOB9_S" "nIOB3_S" "nIOB8_S" "nIOB10_S" "DPR_S"
+    !A0 "Net-(U19-~{CS})" "SER_CLK" "Net-(U37-Q1)" "Net-(U20-~{CS})" "Net-(U21-~{CS})" "Net-(U22-~{CS})" "Net-(J4-Pad1)"
+    "nBRC0_S" "Net-(U24-Pad10)" "nBRC8_S" "nBRC14_S" "nBRC5_S" "nBRC1_S" "nBRC10_S" "nBRC2_S"
+    "nBRC7_S" "nBRC11_S" "nBRC9_S" "nBRC6_S" "nBRC3_S" "nBRC12_S" "nBRC15_S" "nBRC13_S"
+    "nBRC4_S" "nBROMC2_S" "nBROMC1_S" "nBROMC0_S" "nBROMC4_S" "nBROMC7_S" "nBROMC6_S" "nBROMC5_S"
+    "nBROMC3_S" D2 D3 D1 D6 D4 D5 D7
+    "Net-(J6-Pad1)" RDY "SND_CLK" "Net-(U40-COM)" "Net-(U37-Q2)" "Net-(R3-Pad2)" "Net-(U37-Q0)" "unconnected-(U37-Rc-Pad13)"
+    "unconnected-(U37-Tc-Pad12)" "unconnected-(J5-NC-Pad20)" SYNC "Net-(U37-Q3)" "Net-(U40-CH2)" "Net-(U40-BC)" "Net-(U40-RB)" "Net-(U40-CH1)"
+    "Net-(U40-ToBUFF)" "Net-(U40-MP)" "unconnected-(U39A-CT1-Pad8)" "Net-(U39A-SH1)" "Net-(U39A-DAC_CLK)" "Net-(U39A-SO)" "Net-(U39A-SH2)" "unconnected-(U39A-CT2-Pad9)"
+    "-5V" "SPI_CLK" "~{nSPI_CS}" MLB BE VPB IRQ0B IRQ1B
+    "nIO_S" q2 q0 q1 q3 "Net-(J17-Pin_15)" "Net-(J17-Pin_13)" "SND_CR"
+    nIRQ2 "I2C_SCL" "SND_CL" "I2C_SDA" nIRQ3 nBROMD nIRQ10 nIRQ5
+    nIRQ6 nIRQ11 nIRQ7 nIRQ12 nIRQ14 nIRQ9 nIRQ8 nIRQ13
+    "Net-(J17-Pin_16)" "unconnected-(J17-Pin_1-Pad1)" "unconnected-(J17-Pin_5-Pad5)" "unconnected-(J17-Pin_2-Pad2)" "unconnected-(J17-Pin_4-Pad4)" "unconnected-(J17-Pin_3-Pad3)" "unconnected-(J17-Pin_6-Pad6)" "unconnected-(J17-Pin_10-Pad10)"
+    "unconnected-(J17-Pin_8-Pad8)" "unconnected-(J17-Pin_7-Pad7)" BROMD "Net-(U45-~{GS})" "Net-(U44-~{GS})" "Net-(U42-A{slash}B)" "Net-(U42-I1c)" "Net-(U42-Qc)"
+    "Net-(U42-I1a)" "Net-(U42-I0c)" "Net-(U42-I1b)" "Net-(U42-Qb)" "Net-(U42-I0b)" "Net-(U42-Qd)" "Net-(U42-Qa)" "Net-(U42-I0a)"
+    nIRQ0 nIRQ4 "Net-(U44-~{EO})" nIRQ1 nIRQ15 "Net-(IC5-~{S})" "Net-(IC7-~{S})" "unconnected-(J1-Pin_1-Pad1)"
+    "unconnected-(U25-Pad13)" "unconnected-(U25-Pad11)" "unconnected-(U25-Pad12)" "unconnected-(J1-Pin_3-Pad3)" "unconnected-(J1-Pin_2-Pad2)" "Net-(U14-Pad6)" "Net-(J15-PadT)" "Net-(J15-PadR)"
+    "FFF1_L" "Net-(U18-Pad11)" U0 U6 U5 U3 U1 U4
+    U2 U7 "nFFF1_S" "FFF2_L" "nFFF2_S" "Net-(U51-Pad11)" V0 V1
+    V3 V2 V4 V7 V6 V5
+    (clearance_class "kicad_default")
+    (via_rule kicad_default)
+    (rule
+      (width 200.0)
+    )
+    (circuit 
+      (use_layer F.Cu B.Cu)
+    )
+  )
+  (class Power
+    +5V +3.3V +12V "-12V" GND
+    (clearance_class Power)
+    (via_rule Power)
+    (rule
+      (width 500.0)
+    )
+    (circuit 
+      (use_layer F.Cu B.Cu)
+    )
+  )
+)
