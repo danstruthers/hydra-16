@@ -7557,7 +7557,7 @@
 			)
 		)
 	)
-	(global_label "nDPR_S"
+	(global_label "nBRA_S"
 		(shape input)
 		(at 223.52 52.07 180)
 		(fields_autoplaced yes)
@@ -7569,7 +7569,7 @@
 		)
 		(uuid "cc7eb43a-7d31-4b68-adb8-630780651302")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 213.3987 52.07 0)
+			(at 213.5801 52.07 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8001,7 +8001,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Package_DIP:DIP-16_W7.62mm_LongPads"
+		(property "Footprint" "Package_DIP:DIP-16_W7.62mm_Socket_LongPads"
 			(at 184.15 158.42 0)
 			(effects
 				(font
@@ -8575,7 +8575,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Package_DIP:DIP-16_W7.62mm_LongPads"
+		(property "Footprint" "Package_DIP:DIP-16_W7.62mm_Socket_LongPads"
 			(at 184.15 122.86 0)
 			(effects
 				(font
@@ -9625,7 +9625,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Package_DIP:DIP-16_W7.62mm_LongPads"
+		(property "Footprint" "Package_DIP:DIP-16_W7.62mm_Socket_LongPads"
 			(at 184.15 230.81 0)
 			(effects
 				(font
@@ -10578,7 +10578,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Package_DIP:DIP-16_W7.62mm_LongPads"
+		(property "Footprint" "Package_DIP:DIP-16_W7.62mm_Socket_LongPads"
 			(at 184.15 195.25 0)
 			(effects
 				(font

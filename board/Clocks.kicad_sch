@@ -973,8 +973,8 @@
 			(exclude_from_sim no)
 			(in_bom yes)
 			(on_board yes)
-			(property "Reference" "J5"
-				(at 0 17.78 0)
+			(property "Reference" "J"
+				(at -8.89 13.97 0)
 				(effects
 					(font
 						(size 1.27 1.27)
@@ -982,14 +982,14 @@
 				)
 			)
 			(property "Value" "ATX-24"
-				(at 0 15.24 0)
+				(at 6.35 13.97 0)
 				(effects
 					(font
 						(size 1.27 1.27)
 					)
 				)
 			)
-			(property "Footprint" "MolexATX24:CON_39299247"
+			(property "Footprint" ""
 				(at 0 -2.54 0)
 				(effects
 					(font
@@ -1336,9 +1336,9 @@
 						)
 					)
 				)
-				(pin power_out line
+				(pin passive line
 					(at 0 -15.24 90)
-					(length 2.54)
+					(length 2.54) hide
 					(name "GND"
 						(effects
 							(font
@@ -1355,9 +1355,9 @@
 					)
 				)
 				(pin power_out line
-					(at -5.08 -15.24 90)
+					(at 0 -15.24 90)
 					(length 2.54)
-					(name "AGND"
+					(name "GND"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -5408,6 +5408,12 @@
 		)
 	)
 	(junction
+		(at 207.01 76.2)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "01b47a1a-2a0f-4731-a5cc-97d7bd2b3a35")
+	)
+	(junction
 		(at 120.65 24.13)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -5420,6 +5426,18 @@
 		(uuid "06bd052d-7020-4307-a763-14d8e9282b60")
 	)
 	(junction
+		(at 224.79 76.2)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "132ebcc1-a678-433b-a5d9-d51613471e65")
+	)
+	(junction
+		(at 198.12 59.69)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "16948693-3504-454a-aab4-02e4cabb01c0")
+	)
+	(junction
 		(at 226.06 119.38)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -5430,6 +5448,12 @@
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "27cec3f7-3ac4-4a5e-823f-6105183e62a6")
+	)
+	(junction
+		(at 191.77 71.12)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "29fdacbd-0dd1-4c82-b98c-ba9fac0c49ec")
 	)
 	(junction
 		(at 125.73 50.8)
@@ -5648,6 +5672,12 @@
 		(uuid "d40d72e3-6c42-4662-9b45-a82eba4ced43")
 	)
 	(junction
+		(at 194.31 76.2)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "d62a2673-3358-43a0-8886-fba9556f9c81")
+	)
+	(junction
 		(at 201.93 130.81)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -5670,6 +5700,12 @@
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "e006d05d-a2c6-4fe0-90d9-10eb02551031")
+	)
+	(junction
+		(at 217.17 62.23)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "eae5a298-cb7c-4efe-9a22-4689acc84849")
 	)
 	(junction
 		(at 91.44 147.32)
@@ -5992,6 +6028,16 @@
 			(type default)
 		)
 		(uuid "1a901d30-484e-4a38-8d00-20d43b205b46")
+	)
+	(wire
+		(pts
+			(xy 191.77 71.12) (xy 191.77 86.36)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "1bc51270-5905-4292-ac87-b3b229e09f43")
 	)
 	(wire
 		(pts
@@ -6415,6 +6461,16 @@
 	)
 	(wire
 		(pts
+			(xy 224.79 76.2) (xy 232.41 76.2)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "40a308ef-383b-40bf-aafd-3dc8af91333e")
+	)
+	(wire
+		(pts
 			(xy 138.43 130.81) (xy 143.51 130.81)
 		)
 		(stroke
@@ -6432,6 +6488,16 @@
 			(type default)
 		)
 		(uuid "433d2a61-e59c-4a40-b571-5f3e620f219e")
+	)
+	(wire
+		(pts
+			(xy 194.31 76.2) (xy 189.23 76.2)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "43e1e03e-3464-4cc4-930e-aaf4ef169298")
 	)
 	(wire
 		(pts
@@ -6575,6 +6641,16 @@
 	)
 	(wire
 		(pts
+			(xy 207.01 59.69) (xy 198.12 59.69)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "52c15fad-f984-4da8-97ec-6bcd922f9bfa")
+	)
+	(wire
+		(pts
 			(xy 137.16 128.27) (xy 137.16 130.81)
 		)
 		(stroke
@@ -6682,6 +6758,16 @@
 			(type default)
 		)
 		(uuid "5c377021-0dc2-429e-bd7e-7f4d8ed6dfb7")
+	)
+	(wire
+		(pts
+			(xy 224.79 71.12) (xy 224.79 62.23)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "5e178e93-ad0b-44a6-8391-d88544830afb")
 	)
 	(wire
 		(pts
@@ -7105,6 +7191,16 @@
 	)
 	(wire
 		(pts
+			(xy 207.01 71.12) (xy 207.01 59.69)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "8b68f752-e8af-4db9-a8f4-a2e70ee5d1c2")
+	)
+	(wire
+		(pts
 			(xy 88.9 151.13) (xy 92.71 151.13)
 		)
 		(stroke
@@ -7145,7 +7241,7 @@
 	)
 	(wire
 		(pts
-			(xy 215.9 76.2) (xy 200.66 76.2)
+			(xy 215.9 76.2) (xy 207.01 76.2)
 		)
 		(stroke
 			(width 0)
@@ -7325,6 +7421,16 @@
 	)
 	(wire
 		(pts
+			(xy 191.77 71.12) (xy 194.31 71.12)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "9b55a46c-be01-4192-a0bb-13f1bdfd7033")
+	)
+	(wire
+		(pts
 			(xy 193.04 93.98) (xy 193.04 88.9)
 		)
 		(stroke
@@ -7362,6 +7468,16 @@
 			(type default)
 		)
 		(uuid "a248d3c6-d0bc-4ebc-ba7e-8b179776b269")
+	)
+	(wire
+		(pts
+			(xy 207.01 76.2) (xy 200.66 76.2)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "a3dca5c0-e54c-48ca-be09-ab8d8e756fda")
 	)
 	(wire
 		(pts
@@ -7535,7 +7651,7 @@
 	)
 	(wire
 		(pts
-			(xy 191.77 57.15) (xy 191.77 86.36)
+			(xy 191.77 57.15) (xy 191.77 71.12)
 		)
 		(stroke
 			(width 0)
@@ -7652,6 +7768,16 @@
 			(type default)
 		)
 		(uuid "c603cb43-fe81-471b-89d9-3d95ce22aea7")
+	)
+	(wire
+		(pts
+			(xy 224.79 62.23) (xy 217.17 62.23)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "c768647a-7218-4232-835b-4c43aae50d74")
 	)
 	(wire
 		(pts
@@ -7955,7 +8081,7 @@
 	)
 	(wire
 		(pts
-			(xy 200.66 76.2) (xy 189.23 76.2)
+			(xy 200.66 76.2) (xy 194.31 76.2)
 		)
 		(stroke
 			(width 0)
@@ -8012,6 +8138,16 @@
 			(type default)
 		)
 		(uuid "efd59e2e-3856-42e5-91b2-ffd62d28dd16")
+	)
+	(wire
+		(pts
+			(xy 224.79 76.2) (xy 215.9 76.2)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "f11cf5a5-5df5-46d3-9c04-c944ed990084")
 	)
 	(wire
 		(pts
@@ -8102,16 +8238,6 @@
 			(type default)
 		)
 		(uuid "f7fb100a-8a9d-446c-a35c-b36ac8ae2f08")
-	)
-	(wire
-		(pts
-			(xy 232.41 76.2) (xy 215.9 76.2)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "f81763a2-3517-49b3-b616-2800b597f71b")
 	)
 	(wire
 		(pts
@@ -8207,7 +8333,7 @@
 			)
 		)
 	)
-	(global_label "IRQB"
+	(global_label "nIRQ4"
 		(shape output)
 		(at 142.24 142.24 0)
 		(fields_autoplaced yes)
@@ -8219,7 +8345,7 @@
 		)
 		(uuid "2bac34f6-9d41-4dc5-8f81-e76bebe729ac")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 149.7005 142.24 0)
+			(at 150.789 142.24 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8785,7 +8911,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Package_DIP:DIP-14_W7.62mm_Socket_LongPads"
+		(property "Footprint" "Package_DIP:DIP-16_W7.62mm_Socket_LongPads"
 			(at 222.25 114.3 0)
 			(effects
 				(font
@@ -9008,7 +9134,7 @@
 				(hide yes)
 			)
 		)
-		(property "Datasheet" "http://www.ti.com/lit/gpn/sn74ACT14"
+		(property "Datasheet" "http://www.ti.com/lit/gpn/sn74HC14"
 			(at 78.74 101.6 0)
 			(effects
 				(font
@@ -9114,7 +9240,7 @@
 				(hide yes)
 			)
 		)
-		(property "Datasheet" "http://www.ti.com/lit/gpn/sn74F191"
+		(property "Datasheet" "http://www.ti.com/lit/gpn/sn74LS191"
 			(at 80.01 58.42 0)
 			(effects
 				(font
@@ -9422,7 +9548,7 @@
 				(hide yes)
 			)
 		)
-		(property "Datasheet" "http://www.ti.com/lit/gpn/sn74ACT14"
+		(property "Datasheet" "http://www.ti.com/lit/gpn/sn74HC14"
 			(at 111.76 63.5 0)
 			(effects
 				(font
@@ -9525,7 +9651,7 @@
 				(hide yes)
 			)
 		)
-		(property "Datasheet" "http://www.ti.com/lit/gpn/sn74ACT14"
+		(property "Datasheet" "http://www.ti.com/lit/gpn/sn74HC14"
 			(at 111.76 88.9 0)
 			(effects
 				(font
@@ -9694,7 +9820,7 @@
 				(hide yes)
 			)
 		)
-		(property "Datasheet" "http://www.ti.com/lit/gpn/sn74ACT14"
+		(property "Datasheet" "http://www.ti.com/lit/gpn/sn74HC14"
 			(at 111.76 76.2 0)
 			(effects
 				(font
@@ -9926,6 +10052,76 @@
 		)
 	)
 	(symbol
+		(lib_id "Device:C_Polarized_Small_US")
+		(at 207.01 73.66 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "1b15a02e-09e5-4f4e-a178-4046d47ed796")
+		(property "Reference" "C68"
+			(at 209.55 71.9581 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "100uF"
+			(at 209.55 74.4981 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_THT:CP_Radial_D5.0mm_P2.50mm"
+			(at 207.01 73.66 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 207.01 73.66 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Polarized capacitor, small US symbol"
+			(at 207.01 73.66 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "690a2a7c-b655-4868-9ff3-4a6e47b50bb5")
+		)
+		(pin "2"
+			(uuid "39f5e34e-ad09-4eff-93e3-39432dea0ee4")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9a593a77-f18f-43cb-9fdd-893618b7b90a"
+					(reference "C68")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "power:GND")
 		(at 80.01 83.82 0)
 		(unit 1)
@@ -10150,7 +10346,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Package_DIP:DIP-14_W7.62mm_Socket_LongPads"
+		(property "Footprint" "Package_DIP:DIP-16_W7.62mm_Socket_LongPads"
 			(at 198.12 93.98 0)
 			(effects
 				(font
@@ -10670,7 +10866,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Package_DIP:DIP-14_W7.62mm_Socket_LongPads"
+		(property "Footprint" "Package_DIP:DIP-16_W7.62mm_Socket_LongPads"
 			(at 222.25 99.06 0)
 			(effects
 				(font
@@ -11259,7 +11455,7 @@
 				(hide yes)
 			)
 		)
-		(property "Datasheet" "http://www.ti.com/lit/gpn/sn74ACT14"
+		(property "Datasheet" "http://www.ti.com/lit/gpn/sn74HC14"
 			(at 111.76 50.8 0)
 			(effects
 				(font
@@ -11356,7 +11552,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Package_TO_SOT_THT:TO-92L_Inline_Wide"
+		(property "Footprint" "Package_TO_SOT_THT:TO-92_Inline_Wide"
 			(at 237.49 52.07 0)
 			(effects
 				(font
@@ -11366,7 +11562,7 @@
 				(hide yes)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "http://www.ti.com/general/docs/suppproductinfo.tsp?distId=10&gotoUrl=http%3A%2F%2Fwww.ti.com%2Flit%2Fgpn%2Flm134"
 			(at 237.49 49.53 0)
 			(effects
 				(font
@@ -11376,7 +11572,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "IC CURRENT SOURCE 3% TO92-3"
 			(at 232.41 57.15 0)
 			(effects
 				(font
@@ -11385,7 +11581,7 @@
 				(hide yes)
 			)
 		)
-		(property "Digi-Key_PN" ""
+		(property "Digi-Key_PN" "LM334ZNS/NOPB-ND"
 			(at 237.49 46.99 0)
 			(effects
 				(font
@@ -11395,7 +11591,7 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" ""
+		(property "MPN" "LM334Z/NOPB"
 			(at 237.49 44.45 0)
 			(effects
 				(font
@@ -11415,7 +11611,7 @@
 				(hide yes)
 			)
 		)
-		(property "Family" "P"
+		(property "Family" "PMIC - Current Regulation/Management"
 			(at 237.49 39.37 0)
 			(effects
 				(font
@@ -11425,7 +11621,7 @@
 				(hide yes)
 			)
 		)
-		(property "DK_Datasheet_Link" ""
+		(property "DK_Datasheet_Link" "http://www.ti.com/general/docs/suppproductinfo.tsp?distId=10&gotoUrl=http%3A%2F%2Fwww.ti.com%2Flit%2Fgpn%2Flm134"
 			(at 237.49 36.83 0)
 			(effects
 				(font
@@ -11435,7 +11631,7 @@
 				(hide yes)
 			)
 		)
-		(property "DK_Detail_Page" ""
+		(property "DK_Detail_Page" "/product-detail/en/texas-instruments/LM334Z-NOPB/LM334ZNS-NOPB-ND/6215"
 			(at 237.49 34.29 0)
 			(effects
 				(font
@@ -11445,7 +11641,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description_1" "AnalogDevices DM1813 Reset Monitor"
+		(property "Description_1" "IC CURRENT SOURCE 3% TO92-3"
 			(at 237.49 31.75 0)
 			(effects
 				(font
@@ -11455,7 +11651,7 @@
 				(hide yes)
 			)
 		)
-		(property "Manufacturer" "AnalogDevices"
+		(property "Manufacturer" "Texas Instruments"
 			(at 237.49 29.21 0)
 			(effects
 				(font
@@ -11824,7 +12020,7 @@
 				(hide yes)
 			)
 		)
-		(property "Datasheet" "http://www.ti.com/lit/gpn/sn74ACT14"
+		(property "Datasheet" "http://www.ti.com/lit/gpn/sn74HC14"
 			(at 55.88 96.52 0)
 			(effects
 				(font
@@ -11921,7 +12117,7 @@
 				(justify right)
 			)
 		)
-		(property "Footprint" "Connector_Audio:Jack_3.5mm_CUI_SJ1-3523N_Horizontal"
+		(property "Footprint" "Connector_Audio:Jack_3.5mm_CUI_SJ1-3524N_Horizontal"
 			(at 247.65 130.81 0)
 			(effects
 				(font
@@ -12264,7 +12460,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Package_DIP:DIP-24_W15.24mm_Socket_LongPads"
+		(property "Footprint" "Package_DIP:DIP-24_W15.24mm"
 			(at 92.71 161.29 0)
 			(effects
 				(font
@@ -12436,6 +12632,76 @@
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9a593a77-f18f-43cb-9fdd-893618b7b90a"
 					(reference "C47")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C_Polarized_Small_US")
+		(at 224.79 73.66 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "b8f5ac8c-e030-470b-86ef-7e63c0349af3")
+		(property "Reference" "C69"
+			(at 227.33 71.9581 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "100uF"
+			(at 227.33 74.4981 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_THT:CP_Radial_D5.0mm_P2.50mm"
+			(at 224.79 73.66 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 224.79 73.66 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Polarized capacitor, small US symbol"
+			(at 224.79 73.66 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "63f5feae-5531-441c-8b31-d64aa93ee863")
+		)
+		(pin "2"
+			(uuid "b71bf187-09cc-48e4-80c2-0bf9e74d64f3")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9a593a77-f18f-43cb-9fdd-893618b7b90a"
+					(reference "C69")
 					(unit 1)
 				)
 			)
@@ -12644,6 +12910,76 @@
 		)
 	)
 	(symbol
+		(lib_id "Device:C_Polarized_Small_US")
+		(at 194.31 73.66 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "cbbe2357-c830-4e79-92d5-0b2eb54d0d43")
+		(property "Reference" "C67"
+			(at 196.85 71.9581 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "100uF"
+			(at 196.85 74.4981 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_THT:CP_Radial_D5.0mm_P2.50mm"
+			(at 194.31 73.66 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 194.31 73.66 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Polarized capacitor, small US symbol"
+			(at 194.31 73.66 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "5678762b-fe59-4e7a-a326-045a34e9b006")
+		)
+		(pin "2"
+			(uuid "83792ccc-36a5-49ca-8a7e-6005b330827f")
+		)
+		(instances
+			(project ""
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9a593a77-f18f-43cb-9fdd-893618b7b90a"
+					(reference "C67")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "power:GND")
 		(at 40.64 43.18 0)
 		(unit 1)
@@ -12735,7 +13071,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Package_DIP:DIP-24_W15.24mm_Socket_LongPads"
+		(property "Footprint" "Package_DIP:DIP-24_W15.24mm"
 			(at 36.83 195.58 0)
 			(effects
 				(font
@@ -13081,7 +13417,7 @@
 				(hide yes)
 			)
 		)
-		(property "Datasheet" "http://www.ti.com/lit/gpn/sn74ACT14"
+		(property "Datasheet" "http://www.ti.com/lit/gpn/sn74HC14"
 			(at 45.72 57.15 0)
 			(effects
 				(font
@@ -13175,7 +13511,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Package_DIP:DIP-14_W7.62mm_Socket_LongPads"
+		(property "Footprint" "Package_DIP:DIP-16_W7.62mm_Socket_LongPads"
 			(at 198.12 125.73 0)
 			(effects
 				(font

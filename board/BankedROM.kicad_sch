@@ -147,8 +147,16 @@
 			(exclude_from_sim no)
 			(in_bom yes)
 			(on_board yes)
-			(property "Reference" "U28"
-				(at 2.1941 35.56 0)
+			(property "Reference" "U"
+				(at -7.62 31.75 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Value" "27C040"
+				(at 2.54 -31.75 0)
 				(effects
 					(font
 						(size 1.27 1.27)
@@ -156,16 +164,7 @@
 					(justify left)
 				)
 			)
-			(property "Value" "AT29C040"
-				(at 2.1941 33.02 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify left)
-				)
-			)
-			(property "Footprint" "Package_DIP:DIP-32_W15.24mm_Socket"
+			(property "Footprint" ""
 				(at 0 0 0)
 				(effects
 					(font
@@ -174,7 +173,7 @@
 					(hide yes)
 				)
 			)
-			(property "Datasheet" ""
+			(property "Datasheet" "http://ww1.microchip.com/downloads/en/devicedoc/doc0189.pdf"
 				(at 0 0 0)
 				(effects
 					(font
@@ -183,7 +182,7 @@
 					(hide yes)
 				)
 			)
-			(property "Description" "Atmel Flash 4 MiBit (512 Ki x 8)"
+			(property "Description" "OTP EPROM 4 MiBit (512 Ki x 8)"
 				(at 0 0 0)
 				(effects
 					(font
@@ -223,9 +222,9 @@
 					)
 				)
 				(pin input line
-					(at -10.16 -17.78 0)
+					(at -10.16 -22.86 0)
 					(length 2.54)
-					(name "A18"
+					(name "VPP"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -601,9 +600,9 @@
 					)
 				)
 				(pin input line
-					(at -10.16 -22.86 0)
+					(at -10.16 -7.62 0)
 					(length 2.54)
-					(name "RWB"
+					(name "A14"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -619,9 +618,9 @@
 					)
 				)
 				(pin input line
-					(at -10.16 -7.62 0)
+					(at -10.16 -10.16 0)
 					(length 2.54)
-					(name "A14"
+					(name "A15"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -655,9 +654,9 @@
 					)
 				)
 				(pin input line
-					(at -10.16 -10.16 0)
+					(at -10.16 -17.78 0)
 					(length 2.54)
-					(name "A15"
+					(name "A18"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -9364,7 +9363,7 @@
 				(hide yes)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "http://ww1.microchip.com/downloads/en/devicedoc/doc0189.pdf"
 			(at 48.26 148.59 0)
 			(effects
 				(font
@@ -9373,7 +9372,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Atmel Flash 4 MiBit (512 Ki x 8)"
+		(property "Description" "OTP EPROM 4 MiBit (512 Ki x 8)"
 			(at 48.26 148.59 0)
 			(effects
 				(font
@@ -9590,7 +9589,7 @@
 				(hide yes)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "http://ww1.microchip.com/downloads/en/devicedoc/doc0189.pdf"
 			(at 48.26 59.69 0)
 			(effects
 				(font
@@ -9599,7 +9598,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Atmel Flash 4 MiBit (512 Ki x 8)"
+		(property "Description" "OTP EPROM 4 MiBit (512 Ki x 8)"
 			(at 48.26 59.69 0)
 			(effects
 				(font
@@ -10145,7 +10144,7 @@
 				(hide yes)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "http://ww1.microchip.com/downloads/en/devicedoc/doc0189.pdf"
 			(at 85.09 59.69 0)
 			(effects
 				(font
@@ -10154,7 +10153,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Atmel Flash 4 MiBit (512 Ki x 8)"
+		(property "Description" "OTP EPROM 4 MiBit (512 Ki x 8)"
 			(at 85.09 59.69 0)
 			(effects
 				(font
@@ -10305,7 +10304,7 @@
 				(hide yes)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "http://ww1.microchip.com/downloads/en/devicedoc/doc0189.pdf"
 			(at 85.09 148.59 0)
 			(effects
 				(font
@@ -10314,7 +10313,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Atmel Flash 4 MiBit (512 Ki x 8)"
+		(property "Description" "OTP EPROM 4 MiBit (512 Ki x 8)"
 			(at 85.09 148.59 0)
 			(effects
 				(font
@@ -10465,7 +10464,7 @@
 				(hide yes)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "http://ww1.microchip.com/downloads/en/devicedoc/doc0189.pdf"
 			(at 158.75 59.69 0)
 			(effects
 				(font
@@ -10474,7 +10473,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Atmel Flash 4 MiBit (512 Ki x 8)"
+		(property "Description" "OTP EPROM 4 MiBit (512 Ki x 8)"
 			(at 158.75 59.69 0)
 			(effects
 				(font
@@ -10695,7 +10694,7 @@
 				(hide yes)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "http://ww1.microchip.com/downloads/en/devicedoc/doc0189.pdf"
 			(at 158.75 148.59 0)
 			(effects
 				(font
@@ -10704,7 +10703,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Atmel Flash 4 MiBit (512 Ki x 8)"
+		(property "Description" "OTP EPROM 4 MiBit (512 Ki x 8)"
 			(at 158.75 148.59 0)
 			(effects
 				(font
@@ -11331,7 +11330,7 @@
 				(hide yes)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "http://ww1.microchip.com/downloads/en/devicedoc/doc0189.pdf"
 			(at 121.92 59.69 0)
 			(effects
 				(font
@@ -11340,7 +11339,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Atmel Flash 4 MiBit (512 Ki x 8)"
+		(property "Description" "OTP EPROM 4 MiBit (512 Ki x 8)"
 			(at 121.92 59.69 0)
 			(effects
 				(font
@@ -11757,7 +11756,7 @@
 				(hide yes)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "http://ww1.microchip.com/downloads/en/devicedoc/doc0189.pdf"
 			(at 121.92 148.59 0)
 			(effects
 				(font
@@ -11766,7 +11765,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Atmel Flash 4 MiBit (512 Ki x 8)"
+		(property "Description" "OTP EPROM 4 MiBit (512 Ki x 8)"
 			(at 121.92 148.59 0)
 			(effects
 				(font
