@@ -2565,6 +2565,12 @@
 		(uuid "6c3f52c1-caf4-427f-acaa-89bdbc1babbd")
 	)
 	(junction
+		(at 186.69 120.65)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "729bd180-dac9-49d8-bc81-e19e285bbeac")
+	)
+	(junction
 		(at 130.81 99.06)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -2629,12 +2635,6 @@
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "bdf180af-a1f2-472c-b548-fe5835777ce5")
-	)
-	(junction
-		(at 186.69 125.73)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "ca5fa7be-32d4-4314-8cca-60cefb939992")
 	)
 	(junction
 		(at 68.58 20.32)
@@ -3332,6 +3332,16 @@
 	)
 	(wire
 		(pts
+			(xy 186.69 120.65) (xy 186.69 132.08)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "5318773e-c34d-464b-8cd8-0d6c9d9c4513")
+	)
+	(wire
+		(pts
 			(xy 123.19 36.83) (xy 123.19 73.66)
 		)
 		(stroke
@@ -3812,7 +3822,7 @@
 	)
 	(wire
 		(pts
-			(xy 195.58 125.73) (xy 186.69 125.73)
+			(xy 195.58 120.65) (xy 186.69 120.65)
 		)
 		(stroke
 			(width 0)
@@ -3889,16 +3899,6 @@
 			(type default)
 		)
 		(uuid "a6a11983-79e9-4e73-aa5a-19b534855c78")
-	)
-	(wire
-		(pts
-			(xy 186.69 120.65) (xy 186.69 125.73)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "a6e9012d-2cfe-43cc-8dc5-86bb710ed8b8")
 	)
 	(wire
 		(pts
@@ -4232,16 +4232,6 @@
 	)
 	(wire
 		(pts
-			(xy 186.69 125.73) (xy 186.69 132.08)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "dc1161c2-aaa1-415c-badf-0183cdb78add")
-	)
-	(wire
-		(pts
 			(xy 152.4 177.8) (xy 157.48 177.8)
 		)
 		(stroke
@@ -4272,7 +4262,7 @@
 	)
 	(wire
 		(pts
-			(xy 195.58 128.27) (xy 195.58 125.73)
+			(xy 195.58 128.27) (xy 195.58 120.65)
 		)
 		(stroke
 			(width 0)
@@ -6515,7 +6505,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Package_DIP:DIP-16_W7.62mm_LongPads"
+		(property "Footprint" "Package_DIP:DIP-16_W7.62mm_Socket_LongPads"
 			(at 156.21 76.2 0)
 			(effects
 				(font
@@ -6960,7 +6950,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Package_DIP:DIP-16_W7.62mm_LongPads"
+		(property "Footprint" "Package_DIP:DIP-16_W7.62mm_Socket_LongPads"
 			(at 102.87 44.45 0)
 			(effects
 				(font
@@ -9186,7 +9176,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Package_DIP:DIP-16_W7.62mm_LongPads"
+		(property "Footprint" "Package_DIP:DIP-16_W7.62mm_Socket_LongPads"
 			(at 54.61 46.99 0)
 			(effects
 				(font
@@ -9297,7 +9287,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Package_DIP:DIP-16_W7.62mm_LongPads"
+		(property "Footprint" "Package_DIP:DIP-16_W7.62mm_Socket_LongPads"
 			(at 218.44 78.74 0)
 			(effects
 				(font
