@@ -16885,7 +16885,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "6522"
+		(property "Value" "65C22"
 			(at 84.7441 119.38 0)
 			(effects
 				(font
@@ -17201,7 +17201,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "6551"
+		(property "Value" "65C51"
 			(at 110.1441 21.59 0)
 			(effects
 				(font
@@ -20106,7 +20106,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "W65C02SxP"
+		(property "Value" "W65C02S"
 			(at 41.5641 114.3 0)
 			(effects
 				(font

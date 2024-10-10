@@ -9612,7 +9612,7 @@
 				)
 			)
 		)
-		(property "Value" "3.3k"
+		(property "Value" "332"
 			(at 236.474 114.3 90)
 			(effects
 				(font

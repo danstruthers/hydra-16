@@ -1686,7 +1686,7 @@
 		(descr "16-lead though-hole mounted DIP package, row spacing 7.62 mm (300 mils), Socket, LongPads")
 		(tags "THT DIP DIL PDIP 2.54mm 7.62mm 300mil Socket LongPads")
 		(property "Reference" "IC2"
-			(at -0.1455 -2.4839 180)
+			(at 3.7915 21.7731 180)
 			(layer "F.SilkS")
 			(uuid "d45d9b41-d826-4f42-aaad-d80ad94e75bb")
 			(effects
@@ -3063,7 +3063,7 @@
 				)
 			)
 		)
-		(property "Value" "W65C02SxP"
+		(property "Value" "W65C02S"
 			(at 7.62 50.59 180)
 			(layer "F.SilkS")
 			(uuid "172b5894-befd-405c-8f15-47f7d5cbc6df")
@@ -7388,7 +7388,7 @@
 				)
 			)
 		)
-		(property "Value" "6551"
+		(property "Value" "65C51"
 			(at 7.62 35.35 0)
 			(layer "F.SilkS")
 			(uuid "a6ac533c-396d-491b-a50d-e84b73786f0a")
@@ -8402,7 +8402,7 @@
 		(descr "16-lead though-hole mounted DIP package, row spacing 7.62 mm (300 mils), Socket, LongPads")
 		(tags "THT DIP DIL PDIP 2.54mm 7.62mm 300mil Socket LongPads")
 		(property "Reference" "U23"
-			(at -0.381 -2.667 0)
+			(at 3.673 21.854 0)
 			(layer "F.SilkS")
 			(uuid "49f73472-aa47-47aa-8959-173ff461f606")
 			(effects
@@ -17771,7 +17771,7 @@
 		(descr "9-pin Resistor SIP pack")
 		(tags "R")
 		(property "Reference" "RN2"
-			(at -2.794 0 180)
+			(at -4.064 0 180)
 			(layer "F.SilkS")
 			(uuid "2788cdb2-5e0b-4497-9ebb-44b43ab6fa2d")
 			(effects
@@ -17781,8 +17781,8 @@
 				)
 			)
 		)
-		(property "Value" "3.3k"
-			(at 22.86 0 180)
+		(property "Value" "332"
+			(at -2.54 0 180)
 			(layer "F.SilkS")
 			(uuid "aeb76706-4800-4cad-a63e-7794186fd068")
 			(effects
@@ -29925,7 +29925,7 @@
 		(descr "9-pin Resistor SIP pack")
 		(tags "R")
 		(property "Reference" "RN3"
-			(at -2.794 0 180)
+			(at -4.064 0 180)
 			(layer "F.SilkS")
 			(uuid "74c32432-c76e-4f4f-8513-910a54171f36")
 			(effects
@@ -29936,7 +29936,7 @@
 			)
 		)
 		(property "Value" "332"
-			(at 22.86 0 180)
+			(at -2.54 0 180)
 			(layer "F.SilkS")
 			(uuid "845b5ffa-457d-4648-bc0e-8d69bb74f9ee")
 			(effects
@@ -60391,7 +60391,7 @@
 		(descr "9-pin Resistor SIP pack")
 		(tags "R")
 		(property "Reference" "RN1"
-			(at 11.43 4.064 90)
+			(at 10.16 4.064 90)
 			(layer "F.SilkS")
 			(uuid "0bded78c-162b-4823-a28c-9612273f27eb")
 			(effects
@@ -60402,7 +60402,7 @@
 			)
 		)
 		(property "Value" "332"
-			(at 11.43 2.413 90)
+			(at 10.16 2.413 90)
 			(layer "F.SilkS")
 			(uuid "99f0a2c3-369b-4c9f-b591-76edad8ab21b")
 			(effects
@@ -62413,7 +62413,7 @@
 				)
 			)
 		)
-		(property "Value" "6522"
+		(property "Value" "65C22"
 			(at 7.62 50.59 180)
 			(layer "F.SilkS")
 			(uuid "46ab72cd-020a-4bff-9e49-5dc0a773acf7")

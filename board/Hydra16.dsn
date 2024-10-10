@@ -24,6 +24,10 @@
       (path pcb 0  -19.2 -269240  -304800 -269240  -304800 -25400  -19.2 -25400
             -19.2 -269240)
     )
+    (plane GND (polygon B.Cu 0  -1270 -26670  -303530 -26670  -303530 -267970  -1270 -267970
+            -1270 -26670))
+    (plane +5V (polygon F.Cu 0  -303530 -26670  -303530 -267970  -1270 -267970  -1270 -26670
+            -303530 -26670))
     (via "Via[0-1]_600:300_um")
     (rule
       (width 250)
@@ -46,7 +50,7 @@
       (place RN3 -152400.000000 -64770.000000 front 90.000000 (PN 332))
     )
     (component Resistor_THT:R_Array_SIP9::1
-      (place RN2 -184150.000000 -64770.000000 front 90.000000 (PN 3.3k))
+      (place RN2 -184150.000000 -64770.000000 front 90.000000 (PN 332))
     )
     (component MountingHole:MountingHole_4mm
       (place H1 -26670.000000 -166370.000000 front 0.000000 (PN MountingHole))
@@ -137,15 +141,17 @@
       (place U7 -92710.000000 -50800.000000 front 90.000000 (PN MAX232))
     )
     (component "Package_DIP:DIP-28_W15.24mm_Socket_LongPads"
-      (place U6 -92588.000000 -100330.000000 front 0.000000 (PN 6551))
+      (place U6 -92588.000000 -100330.000000 front 0.000000 (PN 65C51))
       (place U3 -157353.000000 -101600.000000 front 0.000000 (PN AT28C64B))
     )
     (component "Package_DIP:DIP-40_W15.24mm_Socket_LongPads"
-      (place U5 -54615.000000 -148590.000000 front 180.000000 (PN 6522))
-      (place U4 -166370.000000 -149860.000000 front 180.000000 (PN W65C02SxP))
+      (place U5 -54615.000000 -148590.000000 front 180.000000 (PN 65C22))
+      (place U4 -166370.000000 -149860.000000 front 180.000000 (PN W65C02S))
     )
     (component "Package_DIP:DIP-20_W7.62mm_Socket_LongPads::1"
       (place U2 -290830.000000 -144780.000000 front 90.000000 (PN 74F541))
+    )
+    (component "Package_DIP:DIP-20_W7.62mm_Socket_LongPads::2"
       (place U1 -290830.000000 -157480.000000 front 90.000000 (PN 74F573))
     )
     (component "Package_DIP:DIP-32_W15.24mm_Socket_LongPads"
@@ -231,7 +237,7 @@
       (place C34 -142276.900000 -177800.000000 front 180.000000 (PN 104))
       (place C16 -73681.900000 -177800.000000 front 180.000000 (PN 104))
       (place C7 -59730.000000 -177800.000000 front 180.000000 (PN 104))
-      (place C12 -294640.000000 -137160.000000 front 180.000000 (PN 104))
+      (place C12 -294640.000000 -137160.000000 front -90.000000 (PN 104))
       (place C33 -115629.300000 -177822.000000 front 180.000000 (PN 104))
       (place C23 -240070.000000 -211963.000000 front 180.000000 (PN 104))
       (place C14 -87666.900000 -177800.000000 front 180.000000 (PN 104))
@@ -261,7 +267,7 @@
     )
     (component Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm::5
       (place C15 -101633.200000 -177800.000000 front 180.000000 (PN 104))
-      (place C35 -294680.000000 -149860.000000 front 180.000000 (PN 104))
+      (place C35 -294680.000000 -149860.000000 front -90.000000 (PN 104))
     )
     (component "Package_DIP:DIP-32_W15.24mm_Socket_LongPads::2"
       (place U8 -228600.000000 -187833.000000 front 90.000000 (PN "HM628512LP-5"))
@@ -1792,6 +1798,60 @@
       (pin Oval[A]Pad_2400x1600_um 18 7620 -5080)
       (pin Oval[A]Pad_2400x1600_um 19 7620 -2540)
       (pin Oval[A]Pad_2400x1600_um 20 7620 0)
+    )
+    (image "Package_DIP:DIP-20_W7.62mm_Socket_LongPads::2"
+      (outline (path signal 100  8890 -24190  8890 1330))
+      (outline (path signal 100  8890 1330  -1270 1330))
+      (outline (path signal 100  6985 -24130  635 -24130))
+      (outline (path signal 100  6985 1270  6985 -24130))
+      (outline (path signal 100  1635 1270  6985 1270))
+      (outline (path signal 100  635 -24130  635 270))
+      (outline (path signal 100  635 270  1635 1270))
+      (outline (path signal 100  -1270 -24190  8890 -24190))
+      (outline (path signal 100  -1270 1330  -1270 -24190))
+      (outline (path signal 50  9150 -24450  9150 1600))
+      (outline (path signal 50  9150 1600  -1550 1600))
+      (outline (path signal 50  -1550 -24450  9150 -24450))
+      (outline (path signal 50  -1550 1600  -1550 -24450))
+      (outline (path signal 0  4851.95 1135.23  4798.42 947.084  4711.23 771.982  4593.35 615.883
+            4448.79 484.102  4282.48 381.127  4100.08 310.465  3907.8 274.522
+            3712.2 274.522  3519.92 310.465  3337.52 381.127  3171.21 484.102
+            3026.65 615.883  2908.77 771.982  2821.58 947.084  2768.05 1135.23
+            2750 1330  2767.57 1372.43  2810 1390  2852.43 1372.43  2870 1330
+            2888.06 1146.62  2941.55 970.278  3028.42 807.764  3145.32 665.32
+            3287.76 548.419  3450.28 461.553  3626.61 408.062  3810 390
+            3993.39 408.062  4169.72 461.553  4332.24 548.419  4474.68 665.32
+            4591.58 807.764  4678.45 970.278  4731.94 1146.62  4750 1330
+            4767.57 1372.43  4810 1390  4852.43 1372.43  4870 1330))
+      (outline (path signal 120  9060 -24250  9060 1390))
+      (outline (path signal 120  9060 1390  -1440 1390))
+      (outline (path signal 120  6060 -24190  6060 1330))
+      (outline (path signal 120  6060 1330  4810 1330))
+      (outline (path signal 120  2810 1330  1560 1330))
+      (outline (path signal 120  1560 -24190  6060 -24190))
+      (outline (path signal 120  1560 1330  1560 -24190))
+      (outline (path signal 120  -1440 -24250  9060 -24250))
+      (outline (path signal 120  -1440 1390  -1440 -24250))
+      (pin Oval[A]Pad_2400x1600_um 20 7620 0)
+      (pin Oval[A]Pad_2400x1600_um 19 7620 -2540)
+      (pin Oval[A]Pad_2400x1600_um 18 7620 -5080)
+      (pin Oval[A]Pad_2400x1600_um 17 7620 -7620)
+      (pin Oval[A]Pad_2400x1600_um 16 7620 -10160)
+      (pin Oval[A]Pad_2400x1600_um 15 7620 -12700)
+      (pin Oval[A]Pad_2400x1600_um 14 7620 -15240)
+      (pin Oval[A]Pad_2400x1600_um 13 7620 -17780)
+      (pin Oval[A]Pad_2400x1600_um 12 7620 -20320)
+      (pin Oval[A]Pad_2400x1600_um 11 7620 -22860)
+      (pin Oval[A]Pad_2400x1600_um 10 0 -22860)
+      (pin Oval[A]Pad_2400x1600_um 9 0 -20320)
+      (pin Oval[A]Pad_2400x1600_um 8 0 -17780)
+      (pin Oval[A]Pad_2400x1600_um 7 0 -15240)
+      (pin Oval[A]Pad_2400x1600_um 6 0 -12700)
+      (pin Oval[A]Pad_2400x1600_um 5 0 -10160)
+      (pin Oval[A]Pad_2400x1600_um 4 0 -7620)
+      (pin Oval[A]Pad_2400x1600_um 3 0 -5080)
+      (pin Oval[A]Pad_2400x1600_um 2 0 -2540)
+      (pin Rect[A]Pad_2400x1600_um 1 0 0)
     )
     (image "Package_DIP:DIP-32_W15.24mm_Socket_LongPads"
       (outline (path signal 120  -1440 -39490  16680 -39490))
@@ -3883,7 +3943,7 @@
         U44-8 U43-8 U43-15 U42-8 U42-11 U42-15 U52-7 U51-7 U50-10 U49-1 U49-10 U48-10
         U47-1 U47-10 U39-1 U39-11 U37-1 U37-4 U37-5 U37-8 U37-9 U37-10 U37-15 U36-7
         U27-8 U26-12 U25-7 U24-7 U23-8 U18-7 U17-12 U16-4 U16-7 U15-7 U14-7 U13-7
-        U11-7 U10-12 U9-12 U9-18 U7-15 U6-1 U6-16 U6-17 U5-1 U4-21 U2-10 U1-1 U1-10
+        U11-7 U10-12 U9-12 U9-18 U7-15 U6-1 U6-16 U6-17 U5-1 U4-21 U2-10 U1-10 U1-1
         U20-16 IC2-2 IC2-8 C61-2 IC1-2 IC1-8 U34-16 J21-6 J9-1 J9-19 J9-61 C50-2 U19-16
         C24-2 C20-2 C38-2 J18-6 C58-2 C18-2 C9-2 J3-5 C19-2 C41-2 IC5-8 C39-2 C30-2
         C25-2 IC3-2 IC3-8 C62-1 C29-2 C56-2 IC8-8 IC4-2 IC4-8 C42-2 J13-1 J13-19 J13-61
