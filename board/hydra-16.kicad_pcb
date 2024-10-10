@@ -14722,11 +14722,11 @@
 	(footprint "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"
 		(layer "F.Cu")
 		(uuid "2f70bc1f-4973-4bca-aa99-5ce36246e6a9")
-		(at -261.62 138.43 90)
+		(at -261.62 138.43)
 		(descr "C, Disc series, Radial, pin pitch=5.00mm, , diameter*width=5*2.5mm^2, Capacitor, http://cdn-reichelt.de/documents/datenblatt/B300/DS_KERKO_TC.pdf")
 		(tags "C Disc series Radial pin pitch 5.00mm  diameter 5mm width 2.5mm Capacitor")
 		(property "Reference" "C41"
-			(at 2.413 3.81 90)
+			(at 2.413 -3.81 360)
 			(layer "F.SilkS")
 			(uuid "5dddec30-3c9c-4de1-9ce2-0af870396dcd")
 			(effects
@@ -14737,7 +14737,7 @@
 			)
 		)
 		(property "Value" "104"
-			(at 2.54 2.286 90)
+			(at 2.54 -2.286 360)
 			(layer "F.SilkS")
 			(uuid "b3b9505e-c07d-4b1d-83fa-225ac994925e")
 			(effects
@@ -14748,7 +14748,7 @@
 			)
 		)
 		(property "Footprint" "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"
-			(at 0 0 90)
+			(at 0 0 0)
 			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
@@ -14761,7 +14761,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 0 0 90)
+			(at 0 0 0)
 			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
@@ -14774,7 +14774,7 @@
 			)
 		)
 		(property "Description" "Unpolarized capacitor, small symbol"
-			(at 0 0 90)
+			(at 0 0 0)
 			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
@@ -14792,26 +14792,6 @@
 		(sheetfile "BankedROM.kicad_sch")
 		(attr through_hole)
 		(fp_line
-			(start 5.12 -1.37)
-			(end 5.12 -1.055)
-			(stroke
-				(width 0.12)
-				(type solid)
-			)
-			(layer "F.SilkS")
-			(uuid "2b417654-cd0d-4db0-94cf-8d2e266ef2a0")
-		)
-		(fp_line
-			(start -0.12 -1.37)
-			(end 5.12 -1.37)
-			(stroke
-				(width 0.12)
-				(type solid)
-			)
-			(layer "F.SilkS")
-			(uuid "010cc4f2-9d1b-4680-95a8-85991939b5ab")
-		)
-		(fp_line
 			(start -0.12 -1.37)
 			(end -0.12 -1.055)
 			(stroke
@@ -14822,14 +14802,14 @@
 			(uuid "f7631783-952c-4e49-8bd9-ea0bb1e98a4c")
 		)
 		(fp_line
-			(start 5.12 1.055)
-			(end 5.12 1.37)
+			(start -0.12 -1.37)
+			(end 5.12 -1.37)
 			(stroke
 				(width 0.12)
 				(type solid)
 			)
 			(layer "F.SilkS")
-			(uuid "930ed776-fa9e-4205-8316-98482e1e3617")
+			(uuid "010cc4f2-9d1b-4680-95a8-85991939b5ab")
 		)
 		(fp_line
 			(start -0.12 1.055)
@@ -14852,14 +14832,24 @@
 			(uuid "8ce6ffcb-8869-463b-8f9c-86651005bbbc")
 		)
 		(fp_line
-			(start 6.05 -1.5)
-			(end -1.05 -1.5)
+			(start 5.12 -1.37)
+			(end 5.12 -1.055)
 			(stroke
-				(width 0.05)
+				(width 0.12)
 				(type solid)
 			)
-			(layer "F.CrtYd")
-			(uuid "fa541b87-932e-4e11-b500-0ef61bfa6927")
+			(layer "F.SilkS")
+			(uuid "2b417654-cd0d-4db0-94cf-8d2e266ef2a0")
+		)
+		(fp_line
+			(start 5.12 1.055)
+			(end 5.12 1.37)
+			(stroke
+				(width 0.12)
+				(type solid)
+			)
+			(layer "F.SilkS")
+			(uuid "930ed776-fa9e-4205-8316-98482e1e3617")
 		)
 		(fp_line
 			(start -1.05 -1.5)
@@ -14872,16 +14862,6 @@
 			(uuid "679c57c4-05ee-4248-ade1-96edd4a325ee")
 		)
 		(fp_line
-			(start 6.05 1.5)
-			(end 6.05 -1.5)
-			(stroke
-				(width 0.05)
-				(type solid)
-			)
-			(layer "F.CrtYd")
-			(uuid "5616ae1f-6ea2-42e3-ad17-e32f1bee09b2")
-		)
-		(fp_line
 			(start -1.05 1.5)
 			(end 6.05 1.5)
 			(stroke
@@ -14892,14 +14872,24 @@
 			(uuid "aaa1b91f-733f-4a17-9fcb-03dcdd5b482d")
 		)
 		(fp_line
-			(start 5 -1.25)
-			(end 0 -1.25)
+			(start 6.05 -1.5)
+			(end -1.05 -1.5)
 			(stroke
-				(width 0.1)
+				(width 0.05)
 				(type solid)
 			)
-			(layer "F.Fab")
-			(uuid "438bf00c-ee15-44fb-ad1f-5aa22a79b6c7")
+			(layer "F.CrtYd")
+			(uuid "fa541b87-932e-4e11-b500-0ef61bfa6927")
+		)
+		(fp_line
+			(start 6.05 1.5)
+			(end 6.05 -1.5)
+			(stroke
+				(width 0.05)
+				(type solid)
+			)
+			(layer "F.CrtYd")
+			(uuid "5616ae1f-6ea2-42e3-ad17-e32f1bee09b2")
 		)
 		(fp_line
 			(start 0 -1.25)
@@ -14912,16 +14902,6 @@
 			(uuid "5c782c74-f130-4d4d-81fd-fba1588b5781")
 		)
 		(fp_line
-			(start 5 1.25)
-			(end 5 -1.25)
-			(stroke
-				(width 0.1)
-				(type solid)
-			)
-			(layer "F.Fab")
-			(uuid "3ba03f38-f773-4613-8ab1-ba69d2f1e1cc")
-		)
-		(fp_line
 			(start 0 1.25)
 			(end 5 1.25)
 			(stroke
@@ -14931,8 +14911,28 @@
 			(layer "F.Fab")
 			(uuid "0dda9245-7b34-4945-8901-130075760797")
 		)
+		(fp_line
+			(start 5 -1.25)
+			(end 0 -1.25)
+			(stroke
+				(width 0.1)
+				(type solid)
+			)
+			(layer "F.Fab")
+			(uuid "438bf00c-ee15-44fb-ad1f-5aa22a79b6c7")
+		)
+		(fp_line
+			(start 5 1.25)
+			(end 5 -1.25)
+			(stroke
+				(width 0.1)
+				(type solid)
+			)
+			(layer "F.Fab")
+			(uuid "3ba03f38-f773-4613-8ab1-ba69d2f1e1cc")
+		)
 		(fp_text user "${REFERENCE}"
-			(at 2.5 0 90)
+			(at 2.5 0 360)
 			(layer "F.Fab")
 			(uuid "527924a1-a0dd-4fe5-a9e8-fa25c8f9d339")
 			(effects
@@ -14943,7 +14943,7 @@
 			)
 		)
 		(pad "1" thru_hole circle
-			(at 0 0 90)
+			(at 0 0)
 			(size 1.6 1.6)
 			(drill 0.8)
 			(layers "*.Cu" "*.Mask")
@@ -14953,7 +14953,7 @@
 			(uuid "a68eaa5f-fe91-4c78-aaa5-fcc26b484f78")
 		)
 		(pad "2" thru_hole circle
-			(at 5 0 90)
+			(at 5 0)
 			(size 1.6 1.6)
 			(drill 0.8)
 			(layers "*.Cu" "*.Mask")
@@ -33372,7 +33372,7 @@
 		(descr "20-lead though-hole mounted DIP package, row spacing 7.62 mm (300 mils), Socket, LongPads")
 		(tags "THT DIP DIL PDIP 2.54mm 7.62mm 300mil Socket LongPads")
 		(property "Reference" "U2"
-			(at 0 -2.413 90)
+			(at 3.683 26.67 90)
 			(layer "F.SilkS")
 			(uuid "8bf09bf4-edd1-4945-8491-fdee467221ed")
 			(effects
@@ -48289,7 +48289,7 @@
 		(descr "20-lead though-hole mounted DIP package, row spacing 7.62 mm (300 mils), Socket, LongPads")
 		(tags "THT DIP DIL PDIP 2.54mm 7.62mm 300mil Socket LongPads")
 		(property "Reference" "U1"
-			(at 0 -2.286 90)
+			(at 3.937 26.67 90)
 			(layer "F.SilkS")
 			(uuid "060a8abd-29d7-404b-93d6-32026adba13c")
 			(effects
@@ -53367,7 +53367,7 @@
 		(descr "24-lead though-hole mounted DIP package, row spacing 15.24 mm (600 mils), Socket, LongPads")
 		(tags "THT DIP DIL PDIP 2.54mm 15.24mm 600mil Socket LongPads")
 		(property "Reference" "U10"
-			(at 7.62 -2.33 90)
+			(at 7.62 31.75 90)
 			(layer "F.SilkS")
 			(uuid "57ba8df4-8855-4a20-a05a-322bdb0d8995")
 			(effects
