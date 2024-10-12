@@ -6316,7 +6316,7 @@
 	)
 	(wire
 		(pts
-			(xy 196.85 138.43) (xy 237.49 138.43)
+			(xy 196.85 138.43) (xy 229.87 138.43)
 		)
 		(stroke
 			(width 0)
@@ -6333,16 +6333,6 @@
 			(type default)
 		)
 		(uuid "3085f4cd-005d-45a8-8fde-be4f2a52b26e")
-	)
-	(wire
-		(pts
-			(xy 237.49 135.89) (xy 232.41 135.89)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "30ae0372-12ca-4e77-88d6-3abef9a4ca7a")
 	)
 	(wire
 		(pts
@@ -6583,6 +6573,16 @@
 			(type default)
 		)
 		(uuid "41e97d28-f027-41d8-98d6-589add6f89a8")
+	)
+	(wire
+		(pts
+			(xy 229.87 135.89) (xy 237.49 135.89)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "42f5735f-3d3b-41f6-b563-6e6c628df904")
 	)
 	(wire
 		(pts
@@ -7116,6 +7116,16 @@
 	)
 	(wire
 		(pts
+			(xy 229.87 135.89) (xy 229.87 138.43)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "78e4455c-6229-4e46-a7fa-349a2039fb0d")
+	)
+	(wire
+		(pts
 			(xy 86.36 173.99) (xy 134.62 173.99)
 		)
 		(stroke
@@ -7616,7 +7626,7 @@
 	)
 	(wire
 		(pts
-			(xy 232.41 135.89) (xy 232.41 127)
+			(xy 232.41 127) (xy 232.41 138.43)
 		)
 		(stroke
 			(width 0)
@@ -7783,6 +7793,16 @@
 			(type default)
 		)
 		(uuid "b1f1cc15-061e-4dba-b4fd-7480432615e8")
+	)
+	(wire
+		(pts
+			(xy 232.41 138.43) (xy 237.49 138.43)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "b1fb88c4-d053-4d7a-95be-1b9d46e58500")
 	)
 	(wire
 		(pts
@@ -12206,7 +12226,7 @@
 				(justify right)
 			)
 		)
-		(property "Footprint" "Connector_Audio:Jack_3.5mm_CUI_SJ1-3524N_Horizontal"
+		(property "Footprint" "Connector_Audio:Jack_3.5mm_CUI_SJ1-3523N_Horizontal"
 			(at 242.57 138.43 0)
 			(effects
 				(font
@@ -12821,7 +12841,7 @@
 				)
 			)
 		)
-		(property "Footprint" "MolexATX24:CON_39299247"
+		(property "Footprint" "Connector_Molex:Molex_Mini-Fit_Jr_5566-24A2_2x12_P4.20mm_Vertical"
 			(at 167.64 69.85 0)
 			(effects
 				(font
