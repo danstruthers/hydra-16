@@ -8809,6 +8809,7 @@
 	)
 	(label "nROMB3"
 		(at 25.4 172.72 0)
+		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -8896,6 +8897,7 @@
 	)
 	(label "D6"
 		(at 55.88 144.78 0)
+		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -9038,6 +9040,7 @@
 	)
 	(label "D4"
 		(at 55.88 139.7 0)
+		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -9235,6 +9238,7 @@
 	)
 	(label "nROMB1"
 		(at 25.4 167.64 0)
+		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -9432,6 +9436,7 @@
 	)
 	(label "D7"
 		(at 55.88 147.32 0)
+		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -9849,6 +9854,7 @@
 	)
 	(label "nROMB0"
 		(at 25.4 165.1 0)
+		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -10277,6 +10283,7 @@
 	)
 	(label "D0"
 		(at 55.88 129.54 0)
+		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -10375,6 +10382,7 @@
 	)
 	(label "D5"
 		(at 55.88 142.24 0)
+		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -10440,6 +10448,7 @@
 	)
 	(label "D2"
 		(at 55.88 134.62 0)
+		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -10549,6 +10558,7 @@
 	)
 	(label "nROMB2"
 		(at 25.4 170.18 0)
+		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -10790,6 +10800,7 @@
 	)
 	(label "nROMB4"
 		(at 25.4 175.26 0)
+		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -10800,6 +10811,7 @@
 	)
 	(label "D3"
 		(at 55.88 137.16 0)
+		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -10876,6 +10888,7 @@
 	)
 	(label "D1"
 		(at 55.88 132.08 0)
+		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)

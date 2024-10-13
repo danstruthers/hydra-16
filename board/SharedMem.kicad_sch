@@ -5156,6 +5156,7 @@
 	)
 	(label "nRAMB2"
 		(at 24.13 123.19 0)
+		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -5166,6 +5167,7 @@
 	)
 	(label "nRAMB0"
 		(at 172.72 90.17 0)
+		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -5231,6 +5233,7 @@
 	)
 	(label "nRAMB1"
 		(at 172.72 92.71 0)
+		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -5296,6 +5299,7 @@
 	)
 	(label "nRAMB1"
 		(at 22.86 92.71 0)
+		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -5427,6 +5431,7 @@
 	)
 	(label "nRAMB3"
 		(at 24.13 130.81 0)
+		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -5657,6 +5662,7 @@
 	)
 	(label "nRAMB0"
 		(at 120.65 90.17 0)
+		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -6041,6 +6047,7 @@
 	)
 	(label "nRAMB1"
 		(at 120.65 92.71 0)
+		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -6073,6 +6080,7 @@
 	)
 	(label "nRAMB0"
 		(at 22.86 90.17 0)
+		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)

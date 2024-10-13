@@ -2812,6 +2812,12 @@
 		(uuid "9f35a973-2335-4735-8eaa-bd3c648c939a")
 	)
 	(junction
+		(at 156.21 26.67)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "a35e7d7a-cf3b-4c8e-9c0f-669d7456c742")
+	)
+	(junction
 		(at 78.74 49.53)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -2876,12 +2882,6 @@
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "e3312b3e-73d6-4b54-a70b-275d3ca79c0a")
-	)
-	(junction
-		(at 156.21 33.02)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "e98cf892-7b52-41d0-828e-5d64c5ac437f")
 	)
 	(junction
 		(at 209.55 95.25)
@@ -3584,6 +3584,16 @@
 			(type default)
 		)
 		(uuid "01c6b40b-9fc4-48f4-a834-320fdd7990dc")
+	)
+	(wire
+		(pts
+			(xy 148.59 31.75) (xy 148.59 33.02)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "022f465d-20b0-463b-8d3f-690bcf3b79a4")
 	)
 	(wire
 		(pts
@@ -4387,16 +4397,6 @@
 	)
 	(wire
 		(pts
-			(xy 151.13 33.02) (xy 156.21 33.02)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "3e7e3ef7-a193-4d60-950b-016a02328c48")
-	)
-	(wire
-		(pts
 			(xy 73.66 130.81) (xy 90.17 130.81)
 		)
 		(stroke
@@ -4517,7 +4517,7 @@
 	)
 	(wire
 		(pts
-			(xy 156.21 24.13) (xy 156.21 33.02)
+			(xy 156.21 24.13) (xy 156.21 26.67)
 		)
 		(stroke
 			(width 0)
@@ -4837,6 +4837,16 @@
 	)
 	(wire
 		(pts
+			(xy 148.59 27.94) (xy 148.59 26.67)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "67c30600-7dfd-47da-b970-d7b1dd578842")
+	)
+	(wire
+		(pts
 			(xy 34.29 49.53) (xy 44.45 49.53)
 		)
 		(stroke
@@ -4964,16 +4974,6 @@
 			(type default)
 		)
 		(uuid "725fdd0f-04ad-4b61-8e26-9d756fc80883")
-	)
-	(wire
-		(pts
-			(xy 146.05 33.02) (xy 146.05 34.29)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "73fa92e2-9021-4dfe-a424-43fc5c915c9b")
 	)
 	(wire
 		(pts
@@ -5567,16 +5567,6 @@
 	)
 	(wire
 		(pts
-			(xy 156.21 33.02) (xy 156.21 34.29)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "b14cc069-c210-4b86-b5ab-1ee9eaca2a7c")
-	)
-	(wire
-		(pts
 			(xy 129.54 57.15) (xy 143.51 57.15)
 		)
 		(stroke
@@ -5704,6 +5694,16 @@
 			(type default)
 		)
 		(uuid "bfcfcfa2-5134-4321-bd37-4069aacbfffe")
+	)
+	(wire
+		(pts
+			(xy 156.21 26.67) (xy 156.21 34.29)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "c0a40424-ad89-46aa-877e-af3a72dd0dea")
 	)
 	(wire
 		(pts
@@ -6064,6 +6064,16 @@
 			(type default)
 		)
 		(uuid "e3828221-30ea-4bb2-a81c-7e8cfea128b0")
+	)
+	(wire
+		(pts
+			(xy 148.59 26.67) (xy 156.21 26.67)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e39d388d-64f1-4d7f-85ae-e911d06aaec1")
 	)
 	(wire
 		(pts
@@ -8505,72 +8515,6 @@
 		)
 	)
 	(symbol
-		(lib_id "power:GND")
-		(at 209.55 100.33 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "33c07255-2bb8-4772-b194-75acc59caf0e")
-		(property "Reference" "#PWR088"
-			(at 209.55 106.68 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Value" "GND"
-			(at 209.55 105.41 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" ""
-			(at 209.55 100.33 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" ""
-			(at 209.55 100.33 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 209.55 100.33 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "c40ffd95-caff-4df2-bdf5-f6211906a210")
-		)
-		(instances
-			(project "hydra-16"
-				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9c3f9893-75ea-4823-afb7-35bb324a2c9f"
-					(reference "#PWR088")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "power:+5V")
 		(at 102.87 24.13 0)
 		(unit 1)
@@ -9398,7 +9342,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 146.05 34.29 0)
+		(at 148.59 31.75 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -9407,7 +9351,7 @@
 		(fields_autoplaced yes)
 		(uuid "58fa058e-0bb8-4f0f-a065-539bf244eab0")
 		(property "Reference" "#PWR081"
-			(at 146.05 40.64 0)
+			(at 148.59 38.1 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9416,7 +9360,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 146.05 39.37 0)
+			(at 148.59 36.83 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9424,7 +9368,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 146.05 34.29 0)
+			(at 148.59 31.75 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9433,7 +9377,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 146.05 34.29 0)
+			(at 148.59 31.75 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9442,7 +9386,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 146.05 34.29 0)
+			(at 148.59 31.75 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10289,76 +10233,6 @@
 	)
 	(symbol
 		(lib_id "Device:C_Small")
-		(at 209.55 97.79 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "948ead1d-4890-4998-877e-22ff45abbc7a")
-		(property "Reference" "C65"
-			(at 212.09 96.5262 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "104"
-			(at 212.09 99.0662 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"
-			(at 209.55 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 209.55 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Unpolarized capacitor, small symbol"
-			(at 209.55 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "52f5d491-8a04-4406-a315-57e9b040f1b8")
-		)
-		(pin "2"
-			(uuid "b635eac8-214a-473a-846b-d12444f56c3b")
-		)
-		(instances
-			(project "hydra-16"
-				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9c3f9893-75ea-4823-afb7-35bb324a2c9f"
-					(reference "C65")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:C_Small")
 		(at 241.3 128.27 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -10751,32 +10625,34 @@
 	)
 	(symbol
 		(lib_id "Device:C_Small")
-		(at 148.59 33.02 270)
+		(at 148.59 30.48 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
 		(dnp no)
 		(fields_autoplaced yes)
-		(uuid "b3d60ff7-84cf-4282-b509-7d4960319c74")
-		(property "Reference" "C59"
-			(at 148.5836 26.67 90)
+		(uuid "c3bdf24e-12fc-4b6c-8edf-d4df8f233274")
+		(property "Reference" "C65"
+			(at 151.13 29.2162 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
+				(justify left)
 			)
 		)
 		(property "Value" "104"
-			(at 148.5836 29.21 90)
+			(at 151.13 31.7562 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
+				(justify left)
 			)
 		)
 		(property "Footprint" "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"
-			(at 148.59 33.02 0)
+			(at 148.59 30.48 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10785,7 +10661,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 148.59 33.02 0)
+			(at 148.59 30.48 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10794,7 +10670,7 @@
 			)
 		)
 		(property "Description" "Unpolarized capacitor, small symbol"
-			(at 148.59 33.02 0)
+			(at 148.59 30.48 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10803,15 +10679,15 @@
 			)
 		)
 		(pin "1"
-			(uuid "5d3a6f51-789f-4b11-848a-8b0bed5a6efd")
+			(uuid "f7262410-c81f-40e6-857b-71cdff9ac651")
 		)
 		(pin "2"
-			(uuid "1784cba8-aaf9-4df0-abd6-d194e784cd7c")
+			(uuid "689d0985-1c42-4b8d-a7a8-9435d214e981")
 		)
 		(instances
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9c3f9893-75ea-4823-afb7-35bb324a2c9f"
-					(reference "C59")
+					(reference "C65")
 					(unit 1)
 				)
 			)
@@ -10820,15 +10696,15 @@
 	(symbol
 		(lib_id "74xx_IEEE:7404")
 		(at 204.47 148.59 0)
-		(unit 1)
+		(unit 4)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
 		(dnp no)
 		(fields_autoplaced yes)
-		(uuid "c0cca99f-f270-4bd2-88a4-dc8977205b0a")
-		(property "Reference" "U52"
-			(at 215.9 142.2714 0)
+		(uuid "e38002d6-60a2-42c9-b0d1-978f1d1c81e0")
+		(property "Reference" "U18"
+			(at 214.63 142.2714 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10836,7 +10712,7 @@
 			)
 		)
 		(property "Value" "74F04"
-			(at 215.9 144.8114 0)
+			(at 214.63 144.8114 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10871,52 +10747,52 @@
 			)
 		)
 		(pin "14"
-			(uuid "91dace2f-d6bb-4b9d-a072-56eb0bc1a6fc")
+			(uuid "6cef1556-c531-484f-ac8a-c26a1e45658a")
 		)
 		(pin "12"
-			(uuid "d11c532c-1219-4b9a-86f6-dc925b3c54eb")
+			(uuid "d11c532c-1219-4b9a-86f6-dc925b3c54ed")
 		)
 		(pin "2"
-			(uuid "4d6c4b96-0b26-4bb0-9b67-2d1db0a09423")
+			(uuid "85087eff-93f8-4406-8bdc-d374f92183ac")
 		)
 		(pin "9"
-			(uuid "6bf4149c-ec30-47ba-bfde-0afd4037c850")
+			(uuid "a1a78154-e175-49e0-b117-1b9d2c0bcbad")
 		)
 		(pin "4"
-			(uuid "f790557c-aa1c-45dc-9230-508f0e328875")
+			(uuid "f790557c-aa1c-45dc-9230-508f0e328877")
 		)
 		(pin "11"
-			(uuid "64861eba-3663-4c77-82ae-3c29ce079922")
+			(uuid "64861eba-3663-4c77-82ae-3c29ce079924")
 		)
 		(pin "8"
-			(uuid "7da3e29e-8b24-4341-a22a-4aaef6cd3f76")
+			(uuid "81195552-108c-4aa7-b53a-d90bc96f3638")
 		)
 		(pin "6"
-			(uuid "9bc1277b-fed7-479d-8c19-635d112ee977")
+			(uuid "9bc1277b-fed7-479d-8c19-635d112ee979")
 		)
 		(pin "5"
-			(uuid "5e5bb80d-127b-4d67-bfa7-0b8603c70cd8")
+			(uuid "5e5bb80d-127b-4d67-bfa7-0b8603c70cda")
 		)
 		(pin "13"
-			(uuid "57c69eeb-e83e-43eb-9a78-013d7400b6c3")
+			(uuid "57c69eeb-e83e-43eb-9a78-013d7400b6c5")
 		)
 		(pin "1"
-			(uuid "d5ac8147-cc10-4e36-a04e-6bd1f4583453")
+			(uuid "38b15cea-8a90-42aa-acf7-1365d984ae54")
 		)
 		(pin "10"
-			(uuid "43d17ad5-7ccf-46e2-8b30-e78c6010becd")
+			(uuid "43d17ad5-7ccf-46e2-8b30-e78c6010becf")
 		)
 		(pin "7"
-			(uuid "7dd26017-8613-48fc-a787-404dfbf54b6b")
+			(uuid "513e8439-21a1-4964-894e-97cd402d52c3")
 		)
 		(pin "3"
-			(uuid "8e577bec-e60b-4692-97b7-f2ca03de29e3")
+			(uuid "8e577bec-e60b-4692-97b7-f2ca03de29e5")
 		)
 		(instances
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9c3f9893-75ea-4823-afb7-35bb324a2c9f"
-					(reference "U52")
-					(unit 1)
+					(reference "U18")
+					(unit 4)
 				)
 			)
 		)
