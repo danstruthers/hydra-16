@@ -8571,7 +8571,7 @@
 	(symbol
 		(lib_id "74xx:74LS32")
 		(at 34.29 107.95 0)
-		(unit 4)
+		(unit 3)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
@@ -8667,7 +8667,7 @@
 			(project ""
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9e82ed5b-af5c-4fee-b6ce-87e97255963b/1bce60c3-d882-492e-9aec-170cf0780040"
 					(reference "U46")
-					(unit 4)
+					(unit 3)
 				)
 			)
 		)
