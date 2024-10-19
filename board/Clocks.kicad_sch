@@ -7,7 +7,7 @@
 	(title_block
 		(title "Sound, Clocks, and Power")
 		(date "2024-10-09")
-		(rev "0.1A")
+		(rev "0.3B")
 		(company "Data Tuning")
 		(comment 1 "Hydra 16")
 	)
@@ -5425,6 +5425,12 @@
 		(uuid "4aa618e4-3a2c-414c-9c60-647442c7ddc8")
 	)
 	(junction
+		(at 226.06 138.43)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "4c3ec23f-291e-4ab9-b3b4-cab687b0fa2c")
+	)
+	(junction
 		(at 184.15 83.82)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -5447,6 +5453,12 @@
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "696243f2-678a-4b17-84bc-731d78072865")
+	)
+	(junction
+		(at 226.06 127)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "6b4ac405-b0f3-4cfa-b848-301a95be2f8a")
 	)
 	(junction
 		(at 35.56 45.72)
@@ -5840,7 +5852,7 @@
 	)
 	(wire
 		(pts
-			(xy 232.41 127) (xy 220.98 127)
+			(xy 232.41 127) (xy 226.06 127)
 		)
 		(stroke
 			(width 0)
@@ -5917,6 +5929,16 @@
 			(type default)
 		)
 		(uuid "1542a584-380d-4d9d-ad87-3b076a2d4ce4")
+	)
+	(wire
+		(pts
+			(xy 227.33 142.24) (xy 226.06 142.24)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "159975cd-348a-47aa-b3df-cddced3d0307")
 	)
 	(wire
 		(pts
@@ -6210,7 +6232,7 @@
 	)
 	(wire
 		(pts
-			(xy 196.85 138.43) (xy 229.87 138.43)
+			(xy 196.85 138.43) (xy 226.06 138.43)
 		)
 		(stroke
 			(width 0)
@@ -7060,6 +7082,16 @@
 	)
 	(wire
 		(pts
+			(xy 227.33 123.19) (xy 226.06 123.19)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "7aac84b8-fd48-433e-992c-1733b8ab1321")
+	)
+	(wire
+		(pts
 			(xy 152.4 57.15) (xy 152.4 44.45)
 		)
 		(stroke
@@ -7450,6 +7482,16 @@
 	)
 	(wire
 		(pts
+			(xy 226.06 123.19) (xy 226.06 127)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "9858f8b1-2a7d-4440-bd10-375a65c7c8b3")
+	)
+	(wire
+		(pts
 			(xy 121.92 29.21) (xy 118.11 29.21)
 		)
 		(stroke
@@ -7637,6 +7679,16 @@
 			(type default)
 		)
 		(uuid "a97b127c-4162-4cc3-9e58-1f93df5f8d5c")
+	)
+	(wire
+		(pts
+			(xy 226.06 127) (xy 220.98 127)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "a98f1c9f-8ab1-45ce-90e5-ef295494a811")
 	)
 	(wire
 		(pts
@@ -7867,6 +7919,16 @@
 			(type default)
 		)
 		(uuid "c7e63e6a-3828-4d0d-b161-937ef12b0350")
+	)
+	(wire
+		(pts
+			(xy 226.06 138.43) (xy 229.87 138.43)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "c814057d-16b4-45f2-95d9-29ca17aa2520")
 	)
 	(wire
 		(pts
@@ -8160,6 +8222,16 @@
 	)
 	(wire
 		(pts
+			(xy 226.06 142.24) (xy 226.06 138.43)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e9e50a90-a6ed-41f0-823e-ed2811e708d4")
+	)
+	(wire
+		(pts
 			(xy 121.92 44.45) (xy 120.65 44.45)
 		)
 		(stroke
@@ -8436,6 +8508,28 @@
 		)
 		(uuid "ea482a8e-b3db-4e87-b61e-aea82023fb00")
 	)
+	(global_label "BD6"
+		(shape input)
+		(at 227.33 123.19 0)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "07f04b13-4ed1-4cde-954d-8065977eccb9")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 234.0647 123.19 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+				(hide yes)
+			)
+		)
+	)
 	(global_label "SND_CLK"
 		(shape output)
 		(at 124.46 58.42 0)
@@ -8564,6 +8658,28 @@
 					(size 1.27 1.27)
 				)
 				(justify right)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "BD5"
+		(shape input)
+		(at 227.33 142.24 0)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "5a0f778d-9651-409c-926e-2f52d52e0e72")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 234.0647 142.24 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
 				(hide yes)
 			)
 		)

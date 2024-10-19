@@ -7,7 +7,7 @@
 	(title_block
 		(title "FFFx Registers and Logic")
 		(date "2024-10-09")
-		(rev "0.1A")
+		(rev "0.3B")
 		(company "Data Tuning")
 		(comment 1 "Hydra 16")
 	)
@@ -3349,6 +3349,12 @@
 		(uuid "6fb85ab3-4ce5-4ce6-8e5d-ab5fffd4ad8b")
 	)
 	(junction
+		(at 140.97 90.17)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "759ecd7a-357f-425b-8f35-0662d39aef77")
+	)
+	(junction
 		(at 60.96 106.68)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -4662,7 +4668,7 @@
 	)
 	(wire
 		(pts
-			(xy 140.97 83.82) (xy 146.05 83.82)
+			(xy 140.97 87.63) (xy 146.05 87.63)
 		)
 		(stroke
 			(width 0)
@@ -4909,16 +4915,6 @@
 			(type default)
 		)
 		(uuid "399eb067-e2c2-4203-87f9-ecfe18d507ce")
-	)
-	(bus
-		(pts
-			(xy 226.06 62.23) (xy 226.06 83.82)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "3a61fd9f-7a0b-428c-85a8-899c009e3dde")
 	)
 	(wire
 		(pts
@@ -5360,16 +5356,6 @@
 		)
 		(uuid "5fd04ca8-b424-4a7f-b444-5e2311463999")
 	)
-	(bus
-		(pts
-			(xy 130.81 83.82) (xy 226.06 83.82)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "606fd629-b41b-4efc-b995-5492715754ec")
-	)
 	(wire
 		(pts
 			(xy 170.18 31.75) (xy 170.18 41.91)
@@ -5550,6 +5536,16 @@
 		)
 		(uuid "725fdd0f-04ad-4b61-8e26-9d756fc80883")
 	)
+	(bus
+		(pts
+			(xy 130.81 83.82) (xy 226.06 83.82)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "743e7746-236d-4f96-8a47-4fb9af1202ac")
+	)
 	(wire
 		(pts
 			(xy 129.54 44.45) (xy 143.51 44.45)
@@ -5699,6 +5695,16 @@
 			(type default)
 		)
 		(uuid "81e566c4-b27c-4ae1-b7dc-b03813181e99")
+	)
+	(wire
+		(pts
+			(xy 146.05 91.44) (xy 146.05 92.71)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "81ef55d9-ba5f-40f4-9899-1f627db6cdb3")
 	)
 	(bus
 		(pts
@@ -6032,6 +6038,16 @@
 	)
 	(wire
 		(pts
+			(xy 140.97 90.17) (xy 140.97 92.71)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "a69d7aee-fc30-4a89-b02c-aaacddb86532")
+	)
+	(wire
+		(pts
 			(xy 74.93 115.57) (xy 93.98 115.57)
 		)
 		(stroke
@@ -6172,6 +6188,16 @@
 	)
 	(wire
 		(pts
+			(xy 106.68 90.17) (xy 140.97 90.17)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "b42bf233-2abd-4571-a168-f52fbe452ab7")
+	)
+	(wire
+		(pts
 			(xy 187.96 59.69) (xy 189.23 59.69)
 		)
 		(stroke
@@ -6309,6 +6335,16 @@
 			(type default)
 		)
 		(uuid "c7656514-0fbd-441b-9024-65e2181acf30")
+	)
+	(bus
+		(pts
+			(xy 226.06 62.23) (xy 226.06 83.82)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "c8a49fde-c34a-4c31-807f-f04edd8d9106")
 	)
 	(wire
 		(pts
@@ -6652,7 +6688,7 @@
 	)
 	(wire
 		(pts
-			(xy 140.97 83.82) (xy 140.97 92.71)
+			(xy 140.97 87.63) (xy 140.97 90.17)
 		)
 		(stroke
 			(width 0)
@@ -8228,7 +8264,7 @@
 	)
 	(symbol
 		(lib_id "Device:C_Small")
-		(at 146.05 86.36 0)
+		(at 146.05 90.17 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -8237,7 +8273,7 @@
 		(fields_autoplaced yes)
 		(uuid "0a47dc48-5014-4582-9b23-00d79ccc1780")
 		(property "Reference" "C18"
-			(at 148.59 85.0962 0)
+			(at 148.59 88.9062 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8246,7 +8282,7 @@
 			)
 		)
 		(property "Value" "104"
-			(at 148.59 87.6362 0)
+			(at 148.59 91.4462 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8255,7 +8291,7 @@
 			)
 		)
 		(property "Footprint" "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"
-			(at 146.05 86.36 0)
+			(at 146.05 90.17 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8264,7 +8300,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 146.05 86.36 0)
+			(at 146.05 90.17 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8273,7 +8309,7 @@
 			)
 		)
 		(property "Description" "Unpolarized capacitor, small symbol"
-			(at 146.05 86.36 0)
+			(at 146.05 90.17 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10829,7 +10865,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 146.05 88.9 0)
+		(at 146.05 91.44 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -10838,7 +10874,7 @@
 		(fields_autoplaced yes)
 		(uuid "f86ffb6f-58d6-42a0-8e73-8887c39ee7db")
 		(property "Reference" "#PWR018"
-			(at 146.05 95.25 0)
+			(at 146.05 97.79 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10847,7 +10883,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 146.05 93.98 0)
+			(at 146.05 96.52 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10855,7 +10891,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 146.05 88.9 0)
+			(at 146.05 91.44 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10864,7 +10900,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 146.05 88.9 0)
+			(at 146.05 91.44 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10873,7 +10909,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 146.05 88.9 0)
+			(at 146.05 91.44 0)
 			(effects
 				(font
 					(size 1.27 1.27)

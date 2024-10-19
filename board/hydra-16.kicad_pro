@@ -462,7 +462,7 @@
         "pcb_color": "rgba(0, 0, 0, 0.000)",
         "schematic_color": "rgba(0, 0, 0, 0.000)",
         "track_width": 0.25,
-        "via_diameter": 0.6,
+        "via_diameter": 0.45,
         "via_drill": 0.3,
         "wire_width": 6
       },
@@ -478,8 +478,8 @@
         "name": "Power",
         "pcb_color": "rgba(0, 0, 0, 0.000)",
         "schematic_color": "rgba(0, 0, 0, 0.000)",
-        "track_width": 0.5,
-        "via_diameter": 0.6,
+        "track_width": 0.45,
+        "via_diameter": 0.45,
         "via_drill": 0.3,
         "wire_width": 6
       }
@@ -525,9 +525,9 @@
       "gencad": "",
       "idf": "",
       "netlist": "D:/KiCad/8.0/bin/",
-      "plot": "",
+      "plot": "Hydra-16-Gerber/",
       "pos_files": "",
-      "specctra_dsn": "Hydra16.dsn",
+      "specctra_dsn": "Hydra16-0-3C.dsn",
       "step": "",
       "svg": "",
       "vrml": ""

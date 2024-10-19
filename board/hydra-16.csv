@@ -1,65 +1,69 @@
-Id,Designator,Footprint,Quantity,Designation,Supplier and ref
-52,C40,C_Disc_D4.3mm_W1.9mm_P5.00mm,1,.1uF,
-28,"C61,C60",C_Disc_D5.0mm_W2.5mm_P2.50mm,2,3300pF,
-41,"C46,C47",C_Disc_D5.0mm_W2.5mm_P2.50mm,2,.1uF,
-48,"C3,C2,C1,C4,C5",C_Disc_D5.0mm_W2.5mm_P2.50mm,5,1uF,
-59,"C45,C44",C_Disc_D5.0mm_W2.5mm_P2.50mm,2,33pF,
-1,"C70,C50,C24,C20,C38,C58,C18,C9,C19,C41,C39,C30,C25,C62,C29,C56,C42,C53,C54,C34,C16,C13,C15,C7,C10,C63,C55,C12,C66,C33,C23,C21,C31,C14,C26,C52,C65,C51,C43,C22,C6,C36,C27,C8,C32,C59,C35,C64,C28,C17,C11,C57,C37",C_Disc_D5.0mm_W2.5mm_P5.00mm,53,.1uF,
-62,J5,CON_39299247,1,ATX-24,
-33,"C48,C68,C49,C69,C67",CP_Radial_D5.0mm_P2.50mm,5,100uF,
-47,Y1,Crystal_HC18-U_Vertical,1,14.31818MHz,
-45,U12,DIP-14_W7.62mm_Socket_LongPads,1,74F02,
-46,U46,DIP-14_W7.62mm_Socket_LongPads,1,74F32,
-2,U53,DIP-14_W7.62mm_Socket_LongPads,1,74F86,
-6,"U52,U18",DIP-14_W7.62mm_Socket_LongPads,2,74F04,
-7,"U51,U14",DIP-14_W7.62mm_Socket_LongPads,2,74F32,
-12,U36,DIP-14_W7.62mm_Socket_LongPads,1,74ACT14,
-15,U25,DIP-14_W7.62mm_Socket_LongPads,1,74F02,
-16,U24,DIP-14_W7.62mm_Socket_LongPads,1,74F20,
-18,U16,DIP-14_W7.62mm_Socket_LongPads,1,74LS260,
-19,U15,DIP-14_W7.62mm_Socket_LongPads,1,74F30,
-20,U13,DIP-14_W7.62mm_Socket_LongPads,1,74F08,
-21,U11,DIP-14_W7.62mm_Socket_LongPads,1,74F00,
-4,"U45,U44",DIP-16_W7.62mm_Socket_LongPads,2,74LS148,
-5,"U43,U42",DIP-16_W7.62mm_Socket_LongPads,2,74F157,
-11,U37,DIP-16_W7.62mm_Socket_LongPads,1,74F191,
-13,U27,DIP-16_W7.62mm_Socket_LongPads,1,74F138,
-17,U23,DIP-16_W7.62mm_Socket_LongPads,1,74F139,
-22,U7,DIP-16_W7.62mm_Socket_LongPads,1,MAX232,
-27,"IC2,IC1,IC3,IC4",DIP-16_W7.62mm_Socket_LongPads,4,74LS189,
-36,"IC5,IC8,IC6,IC7",DIP-16_W7.62mm_Socket_LongPads,4,74LS219,
-42,U40,DIP-16_W7.62mm_Socket_LongPads,1,YM3012,
-50,U38,DIP-16_W7.62mm_Socket_LongPads,1,TL074,
-8,"U50,U48,U2",DIP-20_W7.62mm_Socket_LongPads,3,74F541,
-9,"U49,U47,U1",DIP-20_W7.62mm_Socket_LongPads,3,74F573,
-10,U39,DIP-24_W15.24mm_Socket_LongPads,1,YM2151,
-14,"U26,U17,U10,U9",DIP-24_W15.24mm_Socket_LongPads,4,74LS154,
-23,U6,DIP-28_W15.24mm_Socket_LongPads,1,6551,
-49,U3,DIP-28_W15.24mm_Socket_LongPads,1,AT28C64B,
-26,"U20,U19,U8,U22,U21",DIP-32_W15.24mm_Socket_LongPads,5,628512_DIP32,
-29,"U34,U30,U29,U35,U31,U28,U33,U32",DIP-32_W15.24mm_Socket_LongPads,8,AT29C040,
-24,U5,DIP-40_W15.24mm_Socket_LongPads,1,6522,
-25,U4,DIP-40_W15.24mm_Socket_LongPads,1,W65C02SxP,
-35,J3,DSUB-9_Male_Horizontal_P2.77x2.54mm_EdgePinOffset9.40mm,1,DE9_Plug,
-3,J15,Jack_3.5mm_CUI_SJ1-3524N_Horizontal,1,AudioJack3,
-61,J2,PinHeader_1x24_P2.54mm_Vertical,1,Conn_01x24,
-44,J1,PinHeader_1x32_P2.54mm_Vertical,1,Conn_01x32,
-37,J7,PinHeader_2x01_P2.54mm_Vertical,1,1.7897725MHz,
-39,J8,PinHeader_2x01_P2.54mm_Vertical,1,3.579545MHz,
-43,J4,PinHeader_2x01_P2.54mm_Vertical,1,7.15909MHz,
-63,J6,PinHeader_2x01_P2.54mm_Vertical,1,0.89488625MHz,
-64,J17,PinHeader_2x08_P2.54mm_Vertical,1,Front Panel,
-30,J21,PinSocket_1x06_P2.54mm_Vertical,1,SPI_Dev4,
-32,J18,PinSocket_1x06_P2.54mm_Vertical,1,SPI_Dev1,
-38,J16,PinSocket_1x06_P2.54mm_Vertical,1,SPI_Dev0,
-51,J22,PinSocket_1x06_P2.54mm_Vertical,1,SPI_Dev5,
-53,J19,PinSocket_1x06_P2.54mm_Vertical,1,SPI_Dev2,
-54,J24,PinSocket_1x06_P2.54mm_Vertical,1,SPI_Dev7,
-56,J20,PinSocket_1x06_P2.54mm_Vertical,1,SPI_Dev3,
-60,J23,PinSocket_1x06_P2.54mm_Vertical,1,SPI_Dev6,
-57,RN1,R_Array_SIP9,1,3.3k,
-34,R1,R_Axial_DIN0204_L3.6mm_D1.6mm_P5.08mm_Horizontal,1,1M,
-55,R2,R_Axial_DIN0204_L3.6mm_D1.6mm_P5.08mm_Horizontal,1,470,
-58,R3,R_Axial_DIN0204_L3.6mm_D1.6mm_P5.08mm_Horizontal,1,100,
-31,"J9,J13,J11,J10,J14,J12",TE_7-5530843-0,6,Bus_Hydra_8bit,
-40,U41,TO-92_Inline_Wide,1,DM1813-10,
+"Id";"Designator";"Footprint";"Quantity";"Designation";"Supplier and ref";
+1;"J15";"Jack_3.5mm_CUI_SJ1-3523N_Horizontal";1;"AudioJack3";;;
+2;"U20,U21,U22,U19";"DIP-32_W15.24mm_Socket_LongPads";4;"HM628512LP-5";;;
+3;"U49,U47,U1";"DIP-20_W7.62mm_Socket_LongPads";3;"74F573";;;
+4;"IC2,IC1,IC3,IC4";"DIP-16_W7.62mm_Socket_LongPads";4;"74LS189";;;
+5;"C61,C60";"C_Disc_D5.0mm_W2.5mm_P2.50mm";2;"332";;;
+6;"U4";"DIP-40_W15.24mm_Socket_LongPads";1;"W65C02S";;;
+7;"U51,U46,U14";"DIP-14_W7.62mm_Socket_LongPads";3;"74F32";;;
+8;"U34,U30,U29,U35,U31,U28,U33,U32";"DIP-32_W15.24mm_Socket_LongPads";8;"AT29C040";;;
+9;"J21";"PinSocket_1x06_P2.54mm_Vertical";1;"SPI Device 4";;;
+10;"U36";"DIP-14_W7.62mm_Socket_LongPads";1;"74ACT14";;;
+11;"J9";"TE_7-5530843-0";1;"SLOT 0";;;
+12;"U6";"DIP-28_W15.24mm_Socket_LongPads";1;"65C51";;;
+13;"C50,C24,C20,C38,C58,C18,C9,C19,C41,C39,C30,C25,C62,C29,C56,C42,C46,C53,C54,C34,C16,C13,C15,C7,C10,C63,C55,C12,C66,C33,C23,C21,C31,C14,C26,C52,C65,C51,C47,C43,C22,C6,C36,C27,C8,C32,C35,C64,C28,C17,C11,C57,C37";"C_Disc_D5.0mm_W2.5mm_P5.00mm";53;"104";;;
+14;"U23";"DIP-16_W7.62mm_Socket_LongPads";1;"74F139";;;
+15;"J18";"PinSocket_1x06_P2.54mm_Vertical";1;"SPI Device 1";;;
+16;"C48,C68,C49,C69,C67";"CP_Radial_D6.3mm_P2.50mm";5;"107";;;
+17;"U24";"DIP-14_W7.62mm_Socket_LongPads";1;"74F20";;;
+18;"R1";"R_Axial_DIN0204_L3.6mm_D1.6mm_P5.08mm_Horizontal";1;"105";;;
+19;"J3";"DSUB-9_Male_Horizontal_P2.77x2.54mm_EdgePinOffset9.40mm";1;"DE9_Plug";;;
+20;"IC5,IC8,IC6,IC7";"DIP-16_W7.62mm_Socket_LongPads";4;"74LS219";;;
+21;"U39";"DIP-24_W15.24mm_Socket_LongPads";1;"YM2151";;;
+22;"J7";"PinHeader_2x01_P2.54mm_Vertical";1;"1.78977MHz";;;
+23;"U25,U16";"DIP-14_W7.62mm_Socket_LongPads";2;"74LS260";;;
+24;"RN2,RN3,RN1";"R_Array_SIP9";3;"332";;;
+25;"U48,U2,U50";"DIP-20_W7.62mm_Socket_LongPads";3;"74F541";;;
+26;"J13";"TE_7-5530843-0";1;"SLOT 4";;;
+27;"J16";"PinSocket_1x06_P2.54mm_Vertical";1;"SPI Device 0";;;
+28;"U17,U10,U26";"DIP-24_W15.24mm_Socket_LongPads";3;"74LS154";;;
+29;"J8";"PinHeader_2x01_P2.54mm_Vertical";1;"3.57955MHz";;;
+30;"U41";"TO-92_Inline_Wide";1;"DM1813-10";;;
+31;"U11";"DIP-14_W7.62mm_Socket_LongPads";1;"74F00";;;
+32;"U40";"DIP-16_W7.62mm_Socket_LongPads";1;"YM3012";;;
+33;"U18";"DIP-14_W7.62mm_Socket_LongPads";1;"74F02";;;
+34;"J4";"PinHeader_2x01_P2.54mm_Vertical";1;"7.15909MHz";;;
+35;"U9,U27";"DIP-16_W7.62mm_Socket_LongPads";2;"74F138";;;
+36;"U8";"DIP-32_W15.24mm_Socket_LongPads";1;"Task RAM";;;
+37;"J11";"TE_7-5530843-0";1;"SLOT 2";;;
+38;"J1";"PinSocket_1x32_P2.54mm_Vertical";1;"Conn_01x32";;;
+39;"U12";"DIP-14_W7.62mm_Socket_LongPads";1;"74F86";;;
+40;"Y1";"Crystal_HC18-U_Vertical";1;"14.31818MHz";;;
+41;"C3,C2,C1,C4,C5";"C_Disc_D5.0mm_W2.5mm_P2.50mm";5;"105";;;
+42;"U3";"DIP-28_W15.24mm_Socket_LongPads";1;"AT28C64B";;;
+43;"U15";"DIP-14_W7.62mm_Socket_LongPads";1;"74F30";;;
+44;"U38";"CERDIP-14_W7.62mm_SideBrazed_LongPads_Socket";1;"TL074";;;
+45;"J10";"TE_7-5530843-0";1;"SLOT 1";;;
+46;"U7";"DIP-16_W7.62mm_Socket_LongPads";1;"MAX232";;;
+47;"J14";"TE_7-5530843-0";1;"SLOT 5";;;
+48;"J12";"TE_7-5530843-0";1;"SLOT 3";;;
+49;"J22";"PinSocket_1x06_P2.54mm_Vertical";1;"SPI Device 5";;;
+50;"C40";"C_Disc_D4.3mm_W1.9mm_P5.00mm";1;"104";;;
+51;"J25";"PinHeader_2x06_P2.54mm_Vertical";1;"VIA Port A";;;
+52;"J19";"PinSocket_1x06_P2.54mm_Vertical";1;"SPI Device 2";;;
+53;"J24";"PinSocket_1x06_P2.54mm_Vertical";1;"SPI Device 7";;;
+54;"U42,U43";"DIP-16_W7.62mm_Socket_LongPads";2;"74F157";;;
+55;"R2";"R_Axial_DIN0204_L3.6mm_D1.6mm_P5.08mm_Horizontal";1;"471";;;
+56;"J20";"PinSocket_1x06_P2.54mm_Vertical";1;"SPI Device 3";;;
+57;"U5";"DIP-40_W15.24mm_Socket_LongPads";1;"65C22";;;
+58;"U13";"DIP-14_W7.62mm_Socket_LongPads";1;"74F08";;;
+59;"U37";"DIP-16_W7.62mm_Socket_LongPads";1;"74F191";;;
+60;"R3";"R_Axial_DIN0204_L3.6mm_D1.6mm_P5.08mm_Horizontal";1;"101";;;
+61;"J26";"DIP-16_W7.62mm_Socket_LongPads";1;"SP720APP";;;
+62;"C45,C44";"C_Disc_D5.0mm_W2.5mm_P2.50mm";2;"330";;;
+63;"J23";"PinSocket_1x06_P2.54mm_Vertical";1;"SPI Device 6";;;
+64;"J2";"PinSocket_1x24_P2.54mm_Vertical";1;"Conn_01x24";;;
+65;"J5";"Molex_Mini-Fit_Jr_5566-24A2_2x12_P4.20mm_Vertical";1;"ATX-24";;;
+66;"J6";"PinHeader_2x01_P2.54mm_Vertical";1;"0.89489MHz";;;
+67;"U44,U45";"DIP-16_W7.62mm_Socket_LongPads";2;"74LS148";;;
+68;"J17";"PinHeader_2x06_P2.54mm_Vertical";1;"Front Panel";;;

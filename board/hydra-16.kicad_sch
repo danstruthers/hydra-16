@@ -7,7 +7,7 @@
 	(title_block
 		(title "CPU, VIA, ACIA, O/S ROM, Task RAM and Banked RAM Connector")
 		(date "2024-10-09")
-		(rev "0.1A")
+		(rev "0.3B")
 		(company "Data Tuning")
 		(comment 1 "Hydra 16")
 	)
@@ -7605,7 +7605,7 @@
 		(uuid "0ffda813-b531-4830-bf66-3d1f34ab0a53")
 	)
 	(junction
-		(at 196.85 16.51)
+		(at 168.91 16.51)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "16422f63-1d1b-45a0-9729-eb09d6fe103e")
@@ -9395,7 +9395,7 @@
 	)
 	(wire
 		(pts
-			(xy 176.53 26.67) (xy 173.99 26.67)
+			(xy 186.69 26.67) (xy 173.99 26.67)
 		)
 		(stroke
 			(width 0)
@@ -10445,7 +10445,7 @@
 	)
 	(wire
 		(pts
-			(xy 176.53 39.37) (xy 172.72 39.37)
+			(xy 186.69 39.37) (xy 172.72 39.37)
 		)
 		(stroke
 			(width 0)
@@ -10715,7 +10715,17 @@
 	)
 	(wire
 		(pts
-			(xy 176.53 36.83) (xy 171.45 36.83)
+			(xy 143.51 16.51) (xy 168.91 16.51)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "7076a38f-89e2-4275-b0a5-b8c63a150961")
+	)
+	(wire
+		(pts
+			(xy 186.69 36.83) (xy 171.45 36.83)
 		)
 		(stroke
 			(width 0)
@@ -11115,7 +11125,7 @@
 	)
 	(wire
 		(pts
-			(xy 196.85 16.51) (xy 200.66 16.51)
+			(xy 168.91 16.51) (xy 200.66 16.51)
 		)
 		(stroke
 			(width 0)
@@ -11282,16 +11292,6 @@
 			(type default)
 		)
 		(uuid "9127a9ec-afbe-45ab-a718-87743c5803dc")
-	)
-	(wire
-		(pts
-			(xy 143.51 16.51) (xy 196.85 16.51)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "91794bc4-8aa2-4d14-a238-c777fff27c74")
 	)
 	(wire
 		(pts
@@ -11985,7 +11985,7 @@
 	)
 	(wire
 		(pts
-			(xy 176.53 34.29) (xy 170.18 34.29)
+			(xy 186.69 34.29) (xy 170.18 34.29)
 		)
 		(stroke
 			(width 0)
@@ -12625,16 +12625,6 @@
 	)
 	(wire
 		(pts
-			(xy 157.48 41.91) (xy 176.53 41.91)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "e165a250-f080-4383-91d6-08c0c3e9089d")
-	)
-	(wire
-		(pts
 			(xy 215.9 87.63) (xy 214.63 87.63)
 		)
 		(stroke
@@ -12992,6 +12982,16 @@
 			(type default)
 		)
 		(uuid "f436ff9e-2ad8-4b04-b193-908ed44f7684")
+	)
+	(wire
+		(pts
+			(xy 157.48 41.91) (xy 186.69 41.91)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "f4e6ca43-f990-4592-a4ac-81c51170d2a2")
 	)
 	(wire
 		(pts
@@ -17533,7 +17533,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 196.85 21.59 0)
+		(at 168.91 21.59 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -17542,7 +17542,7 @@
 		(fields_autoplaced yes)
 		(uuid "22d7cb6e-85c5-40e5-b8a1-47bf441974b9")
 		(property "Reference" "#PWR09"
-			(at 196.85 27.94 0)
+			(at 168.91 27.94 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -17551,7 +17551,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 196.85 26.67 0)
+			(at 168.91 26.67 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -17559,7 +17559,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 196.85 21.59 0)
+			(at 168.91 21.59 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -17568,7 +17568,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 196.85 21.59 0)
+			(at 168.91 21.59 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -17577,7 +17577,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 196.85 21.59 0)
+			(at 168.91 21.59 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -18138,16 +18138,15 @@
 	)
 	(symbol
 		(lib_id "Connector:DE9_Plug")
-		(at 184.15 36.83 0)
+		(at 194.31 36.83 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
 		(dnp no)
-		(fields_autoplaced yes)
 		(uuid "44cdc021-0552-4b95-9136-0286a84c4bf1")
 		(property "Reference" "J3"
-			(at 189.23 35.5599 0)
+			(at 192.786 51.308 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -18156,7 +18155,7 @@
 			)
 		)
 		(property "Value" "DE9_Plug"
-			(at 189.23 38.0999 0)
+			(at 188.722 20.828 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -18165,7 +18164,7 @@
 			)
 		)
 		(property "Footprint" "Connector_Dsub:DSUB-9_Male_Horizontal_P2.77x2.54mm_EdgePinOffset9.40mm"
-			(at 184.15 36.83 0)
+			(at 194.31 36.83 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -18174,7 +18173,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 184.15 36.83 0)
+			(at 194.31 36.83 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -18183,7 +18182,7 @@
 			)
 		)
 		(property "Description" "9-pin male plug pin D-SUB connector"
-			(at 184.15 36.83 0)
+			(at 194.31 36.83 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -19740,7 +19739,7 @@
 	)
 	(symbol
 		(lib_id "Device:C_Small")
-		(at 196.85 19.05 0)
+		(at 168.91 19.05 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -19748,7 +19747,7 @@
 		(dnp no)
 		(uuid "db68d0a5-a199-4510-9f92-f456a6d019c2")
 		(property "Reference" "C12"
-			(at 190.246 18.796 0)
+			(at 162.306 18.796 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -19757,7 +19756,7 @@
 			)
 		)
 		(property "Value" "104"
-			(at 190.246 21.336 0)
+			(at 162.306 21.336 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -19766,7 +19765,7 @@
 			)
 		)
 		(property "Footprint" "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"
-			(at 196.85 19.05 0)
+			(at 168.91 19.05 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -19775,7 +19774,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 196.85 19.05 0)
+			(at 168.91 19.05 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -19784,7 +19783,7 @@
 			)
 		)
 		(property "Description" "Unpolarized capacitor, small symbol"
-			(at 196.85 19.05 0)
+			(at 168.91 19.05 0)
 			(effects
 				(font
 					(size 1.27 1.27)

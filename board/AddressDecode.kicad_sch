@@ -7,7 +7,7 @@
 	(title_block
 		(title "Address Decode Logic")
 		(date "2024-10-09")
-		(rev "0.1A")
+		(rev "0.3B")
 		(company "Data Tuning")
 		(comment 1 "Hydra 16")
 	)
@@ -6625,6 +6625,12 @@
 		(uuid "74d7bac5-445c-4140-8c39-5864e30bdfea")
 	)
 	(junction
+		(at 77.47 153.67)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "75d7dbbf-5bc0-4550-814a-05bf8610928d")
+	)
+	(junction
 		(at 17.78 26.67)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -7087,7 +7093,7 @@
 		(uuid "f972157b-49ea-4724-a56c-6575056a91a1")
 	)
 	(bus_entry
-		(at 35.56 142.24)
+		(at 35.56 143.51)
 		(size 2.54 2.54)
 		(stroke
 			(width 0)
@@ -7127,7 +7133,7 @@
 	)
 	(wire
 		(pts
-			(xy 80.01 173.99) (xy 81.28 173.99)
+			(xy 80.01 142.24) (xy 83.82 142.24)
 		)
 		(stroke
 			(width 0)
@@ -7287,7 +7293,7 @@
 	)
 	(bus
 		(pts
-			(xy 35.56 138.43) (xy 35.56 142.24)
+			(xy 35.56 138.43) (xy 35.56 143.51)
 		)
 		(stroke
 			(width 0)
@@ -7317,7 +7323,7 @@
 	)
 	(bus
 		(pts
-			(xy 35.56 142.24) (xy 35.56 163.83)
+			(xy 35.56 143.51) (xy 35.56 163.83)
 		)
 		(stroke
 			(width 0)
@@ -7535,16 +7541,6 @@
 		)
 		(uuid "2e026bc4-e5b5-49e9-84e8-822b66289fc0")
 	)
-	(wire
-		(pts
-			(xy 39.37 146.05) (xy 41.91 146.05)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "2f097422-38a9-45e0-868c-7e6e38dfed71")
-	)
 	(bus
 		(pts
 			(xy 115.57 40.64) (xy 115.57 35.56)
@@ -7744,6 +7740,16 @@
 			(type default)
 		)
 		(uuid "4529a9c5-aa58-4006-90a7-d982c146bb6e")
+	)
+	(wire
+		(pts
+			(xy 80.01 142.24) (xy 80.01 173.99)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "4530df29-ff77-445b-af65-ef9235b5fd40")
 	)
 	(wire
 		(pts
@@ -8177,6 +8183,16 @@
 	)
 	(wire
 		(pts
+			(xy 77.47 153.67) (xy 77.47 154.94)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "7e424eac-a8ae-46af-9ab1-0a9381144be2")
+	)
+	(wire
+		(pts
 			(xy 194.31 45.72) (xy 191.77 45.72)
 		)
 		(stroke
@@ -8194,6 +8210,16 @@
 			(type default)
 		)
 		(uuid "811711a8-9d63-42f9-a986-19150ac21c09")
+	)
+	(wire
+		(pts
+			(xy 77.47 153.67) (xy 60.96 153.67)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "812077a6-2dfa-4bf8-992a-0fc8d4cfad53")
 	)
 	(bus
 		(pts
@@ -8737,16 +8763,6 @@
 	)
 	(wire
 		(pts
-			(xy 39.37 144.78) (xy 39.37 146.05)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "bbac92d0-8590-4b0c-a057-2b94399e6fa0")
-	)
-	(wire
-		(pts
 			(xy 158.75 149.86) (xy 157.48 149.86)
 		)
 		(stroke
@@ -8787,7 +8803,7 @@
 	)
 	(wire
 		(pts
-			(xy 104.14 153.67) (xy 60.96 153.67)
+			(xy 104.14 153.67) (xy 77.47 153.67)
 		)
 		(stroke
 			(width 0)
@@ -9017,7 +9033,7 @@
 	)
 	(wire
 		(pts
-			(xy 38.1 144.78) (xy 39.37 144.78)
+			(xy 38.1 146.05) (xy 41.91 146.05)
 		)
 		(stroke
 			(width 0)
@@ -10314,7 +10330,7 @@
 	)
 	(global_label "nDPR_S2"
 		(shape output)
-		(at 81.28 173.99 0)
+		(at 83.82 142.24 0)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -10324,7 +10340,7 @@
 		)
 		(uuid "74cfe678-7b8d-47ad-aa95-77f020fa4a66")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 92.6108 173.99 0)
+			(at 95.1508 142.24 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13171,6 +13187,76 @@
 		)
 	)
 	(symbol
+		(lib_id "Device:C_Small")
+		(at 77.47 157.48 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "95ea78b3-acc2-418d-806a-a0f0f762526f")
+		(property "Reference" "C33"
+			(at 80.01 156.2162 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "104"
+			(at 80.01 158.7562 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"
+			(at 77.47 157.48 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 77.47 157.48 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Unpolarized capacitor, small symbol"
+			(at 77.47 157.48 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "5d92ff0a-16b8-44b8-aec1-82e1e37771e5")
+		)
+		(pin "2"
+			(uuid "d4d074e9-be15-48ed-ad84-5349005cc80b")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/e447d2ea-fe27-4cfd-bb5f-eaf105a9519f"
+					(reference "C33")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "74xx:74LS32")
 		(at 151.13 109.22 0)
 		(unit 4)
@@ -13820,6 +13906,72 @@
 			(project "6502_x256"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/e447d2ea-fe27-4cfd-bb5f-eaf105a9519f"
 					(reference "U16")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 77.47 160.02 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "bf683cb0-2c9b-4269-8288-9457f4f6d450")
+		(property "Reference" "#PWR021"
+			(at 77.47 166.37 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 77.47 165.1 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 77.47 160.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 77.47 160.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 77.47 160.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "e8adf04c-6c11-4bcd-8b81-9639af21c04c")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/e447d2ea-fe27-4cfd-bb5f-eaf105a9519f"
+					(reference "#PWR021")
 					(unit 1)
 				)
 			)

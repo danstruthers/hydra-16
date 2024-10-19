@@ -1,4 +1,4 @@
-23917945124117610
+23921403357017161
 Audio_Module
 Reverb_BTDR-1H
 Digital Reverberation Unit, http://www.belton.co.kr/inc/downfile.php?seq=17&file=pdf (footprint from http://www.uk-electronic.de/PDF/BTDR-1.pdf)
@@ -24037,6 +24037,20 @@ BUS ISA AT Edge connector
 0
 98
 98
+Connector_PCBEdge
+BUS_AT_8Bit
+AT ISA 16 bits Bus Edge Connector
+BUS ISA AT Edge connector
+0
+62
+62
+Connector_PCBEdge
+BUS_Hydra_8Bit
+AT ISA 16 bits Bus Edge Connector
+BUS ISA AT Edge connector
+0
+62
+62
 Connector_PCBEdge
 BUS_PCI
 PCI bus Edge Connector

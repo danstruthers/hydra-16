@@ -7,7 +7,7 @@
 	(title_block
 		(title "Shared RAM Banks")
 		(date "2024-10-09")
-		(rev "0.1A")
+		(rev "0.3B")
 		(company "Data Tuning")
 		(comment 1 "Hydra 16")
 	)
