@@ -1,0 +1,9 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP L77SDE09SA4CH3R
+D Dsub, Stamped Signal 3A, Right Angle PCB Through Hole, FP=8.08mm (0.318in), Row Pitch 2.84mm, 09 Socket, Flash Gold, Bright Tin Shell, M3 Rear Insert, Ground Tab with Boardlock
+K
+F https://cdn.amphenol-cs.com/media/wysiwyg/files/drawing/l77sdxxxsa4ch3r.pdf
+$ENDCMP
+#
+#End Doc Library

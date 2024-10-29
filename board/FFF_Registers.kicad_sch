@@ -6,8 +6,8 @@
 	(paper "USLetter")
 	(title_block
 		(title "FFFx Registers and Logic")
-		(date "2024-10-09")
-		(rev "0.3B")
+		(date "2024-10-21")
+		(rev "0.4A")
 		(company "Data Tuning")
 		(comment 1 "Hydra 16")
 	)

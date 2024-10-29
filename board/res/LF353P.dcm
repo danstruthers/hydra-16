@@ -1,0 +1,9 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP LF353P
+D Dual General-Purpose JFET-input Operational Amplifier
+K
+F http://www.ti.com/lit/ds/symlink/lf353.pdf
+$ENDCMP
+#
+#End Doc Library

@@ -6,8 +6,8 @@
 	(paper "USLetter")
 	(title_block
 		(title "Card-edge and SPI Device Connectors")
-		(date "2024-10-09")
-		(rev "0.3B")
+		(date "2024-10-21")
+		(rev "0.4A")
 		(company "Data Tuning")
 		(comment 1 "Hydra 16")
 	)
@@ -1191,6 +1191,188 @@
 						)
 					)
 					(number "9"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+		)
+		(symbol "Connector_Audio:AudioJack3"
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "J"
+				(at 0 8.89 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Value" "AudioJack3"
+				(at 0 6.35 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" ""
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Datasheet" "~"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Description" "Audio Jack, 3 Poles (Stereo / TRS)"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_keywords" "audio jack receptacle stereo headphones phones TRS connector"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_fp_filters" "Jack*"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(symbol "AudioJack3_0_1"
+				(rectangle
+					(start -5.08 -5.08)
+					(end -6.35 -2.54)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0 -2.54) (xy 0.635 -3.175) (xy 1.27 -2.54) (xy 2.54 -2.54)
+					)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -1.905 -2.54) (xy -1.27 -3.175) (xy -0.635 -2.54) (xy -0.635 0) (xy 2.54 0)
+					)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 2.54 2.54) (xy -2.54 2.54) (xy -2.54 -2.54) (xy -3.175 -3.175) (xy -3.81 -2.54)
+					)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(rectangle
+					(start 2.54 3.81)
+					(end -5.08 -5.08)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type background)
+					)
+				)
+			)
+			(symbol "AudioJack3_1_1"
+				(pin passive line
+					(at 5.08 0 180)
+					(length 2.54)
+					(name "~"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "R"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 5.08 2.54 180)
+					(length 2.54)
+					(name "~"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "S"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 5.08 -2.54 180)
+					(length 2.54)
+					(name "~"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "T"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -6494,6 +6676,16 @@
 	)
 	(wire
 		(pts
+			(xy 137.16 167.64) (xy 140.97 167.64)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "624505e9-bf63-451e-b27f-59648d7a002d")
+	)
+	(wire
+		(pts
 			(xy 29.21 171.45) (xy 30.48 171.45)
 		)
 		(stroke
@@ -7231,6 +7423,16 @@
 			(type default)
 		)
 		(uuid "7da64a06-eeeb-4c29-b00b-4e6859814ab8")
+	)
+	(wire
+		(pts
+			(xy 137.16 165.1) (xy 140.97 165.1)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "7de32dcc-1f0c-49d4-ab45-861ef089bc6b")
 	)
 	(wire
 		(pts
@@ -12014,7 +12216,7 @@
 			)
 		)
 	)
-	(global_label "SND_CR"
+	(global_label "SND_CR4"
 		(shape output)
 		(at 57.15 143.51 0)
 		(fields_autoplaced yes)
@@ -12026,7 +12228,7 @@
 		)
 		(uuid "07d3f360-94c4-47c6-ab13-34b9996e9fbc")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 67.4528 143.51 0)
+			(at 68.6623 143.51 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12080,6 +12282,28 @@
 			)
 		)
 	)
+	(global_label "PA1"
+		(shape bidirectional)
+		(at 137.16 167.64 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "0f22d711-f11b-4d82-8ec6-857ff07c5178")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 144.8246 167.64 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+				(hide yes)
+			)
+		)
+	)
 	(global_label "nIO_S"
 		(shape input)
 		(at 86.36 55.88 180)
@@ -12102,7 +12326,7 @@
 			)
 		)
 	)
-	(global_label "SND_CL"
+	(global_label "SND_CL5"
 		(shape output)
 		(at 114.3 144.78 0)
 		(fields_autoplaced yes)
@@ -12114,7 +12338,7 @@
 		)
 		(uuid "10588d71-1533-41b9-9f30-2ce95939c8e8")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 124.3609 144.78 0)
+			(at 125.5704 144.78 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12169,7 +12393,7 @@
 		)
 	)
 	(global_label "I2C_SCL"
-		(shape input)
+		(shape bidirectional)
 		(at 114.3 60.96 0)
 		(fields_autoplaced yes)
 		(effects
@@ -12609,7 +12833,7 @@
 		)
 	)
 	(global_label "I2C_SCL"
-		(shape input)
+		(shape bidirectional)
 		(at 175.26 60.96 0)
 		(fields_autoplaced yes)
 		(effects
@@ -12960,7 +13184,7 @@
 			)
 		)
 	)
-	(global_label "SND_CR"
+	(global_label "SND_CR3"
 		(shape output)
 		(at 234.95 53.34 0)
 		(fields_autoplaced yes)
@@ -12972,7 +13196,7 @@
 		)
 		(uuid "2fb8a12b-2198-4138-91a7-371d6d9055e3")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 245.2528 53.34 0)
+			(at 246.4623 53.34 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13027,7 +13251,7 @@
 		)
 	)
 	(global_label "I2C_SCL"
-		(shape input)
+		(shape bidirectional)
 		(at 234.95 60.96 0)
 		(fields_autoplaced yes)
 		(effects
@@ -13203,7 +13427,7 @@
 		)
 	)
 	(global_label "I2C_SCL"
-		(shape input)
+		(shape bidirectional)
 		(at 57.15 60.96 0)
 		(fields_autoplaced yes)
 		(effects
@@ -13488,7 +13712,7 @@
 			)
 		)
 	)
-	(global_label "SND_CL"
+	(global_label "SND_CL4"
 		(shape output)
 		(at 57.15 146.05 0)
 		(fields_autoplaced yes)
@@ -13500,7 +13724,7 @@
 		)
 		(uuid "466868b7-a9ec-4b8d-a800-1874cd6db73f")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 67.2109 146.05 0)
+			(at 68.4204 146.05 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13950,7 +14174,7 @@
 			)
 		)
 	)
-	(global_label "SND_CL"
+	(global_label "SND_CL3"
 		(shape output)
 		(at 234.95 55.88 0)
 		(fields_autoplaced yes)
@@ -13962,7 +14186,7 @@
 		)
 		(uuid "581fcc3f-0948-4487-9594-27759318bdb1")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 245.0109 55.88 0)
+			(at 246.2204 55.88 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -14148,7 +14372,7 @@
 			)
 		)
 	)
-	(global_label "SND_CL"
+	(global_label "SND_CL2"
 		(shape output)
 		(at 175.26 55.88 0)
 		(fields_autoplaced yes)
@@ -14160,7 +14384,7 @@
 		)
 		(uuid "60b33499-32f6-4c3a-aead-dc49c43dc984")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 185.3209 55.88 0)
+			(at 186.5304 55.88 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -14413,7 +14637,7 @@
 		)
 	)
 	(global_label "I2C_SCL"
-		(shape input)
+		(shape bidirectional)
 		(at 57.15 151.13 0)
 		(fields_autoplaced yes)
 		(effects
@@ -14447,6 +14671,28 @@
 		(uuid "6d9d53e1-edb5-47e3-8f49-4376f752f72c")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 77.6295 71.12 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "GND"
+		(shape input)
+		(at 190.5 170.18 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "6e571c01-ad62-47ca-a77b-7fb80ec0be3e")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 183.6443 170.18 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -14720,7 +14966,7 @@
 			)
 		)
 	)
-	(global_label "SND_CR"
+	(global_label "SND_CR2"
 		(shape output)
 		(at 175.26 53.34 0)
 		(fields_autoplaced yes)
@@ -14732,7 +14978,7 @@
 		)
 		(uuid "76484c84-96a4-4201-ac30-eb154518209b")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 185.5628 53.34 0)
+			(at 186.7723 53.34 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15226,7 +15472,7 @@
 			)
 		)
 	)
-	(global_label "SND_CR"
+	(global_label "SND_CR5"
 		(shape output)
 		(at 114.3 142.24 0)
 		(fields_autoplaced yes)
@@ -15238,7 +15484,7 @@
 		)
 		(uuid "903f1136-f795-402a-8250-527c4d0a8108")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 124.6028 142.24 0)
+			(at 125.8123 142.24 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15644,7 +15890,7 @@
 			)
 		)
 	)
-	(global_label "SND_CL"
+	(global_label "SND_CL1"
 		(shape output)
 		(at 114.3 55.88 0)
 		(fields_autoplaced yes)
@@ -15656,7 +15902,7 @@
 		)
 		(uuid "a8152659-e4bc-45e7-b538-928f280a5c08")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 124.3609 55.88 0)
+			(at 125.5704 55.88 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15732,7 +15978,7 @@
 			)
 		)
 	)
-	(global_label "SND_CR"
+	(global_label "SND_CR1"
 		(shape output)
 		(at 114.3 53.34 0)
 		(fields_autoplaced yes)
@@ -15744,7 +15990,7 @@
 		)
 		(uuid "a9fe1173-f82a-4364-887e-25825014fee0")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 124.6028 53.34 0)
+			(at 125.8123 53.34 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -16129,7 +16375,7 @@
 		)
 	)
 	(global_label "I2C_SCL"
-		(shape input)
+		(shape bidirectional)
 		(at 114.3 149.86 0)
 		(fields_autoplaced yes)
 		(effects
@@ -16141,6 +16387,28 @@
 		(uuid "bafac351-c653-4944-a481-63b00b85d3e1")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 124.8447 149.86 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "PA0"
+		(shape bidirectional)
+		(at 137.16 165.1 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "be25ba60-43f4-4c27-9584-5324dd5ec6a1")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 144.8246 165.1 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -16471,6 +16739,28 @@
 		(uuid "cc02d08e-5916-4184-b12d-f87a7d0e8057")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 156.6552 78.74 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "I2C_SDA"
+		(shape bidirectional)
+		(at 140.97 167.64 0)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "cc65ccba-7fa3-4df5-81d4-9bcc7ab779f0")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 152.6865 167.64 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -16964,6 +17254,28 @@
 			)
 		)
 	)
+	(global_label "AUDIO_L"
+		(shape input)
+		(at 190.5 167.64 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "e0d7bac8-52a3-4245-99e7-242687419553")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 179.8947 167.64 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+				(hide yes)
+			)
+		)
+	)
 	(global_label "GND"
 		(shape input)
 		(at 86.36 190.5 180)
@@ -17074,7 +17386,7 @@
 			)
 		)
 	)
-	(global_label "SND_CR"
+	(global_label "SND_CR0"
 		(shape output)
 		(at 57.15 53.34 0)
 		(fields_autoplaced yes)
@@ -17086,7 +17398,7 @@
 		)
 		(uuid "e4bb33f9-0a51-4322-bba0-5161b8ee094f")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 67.4528 53.34 0)
+			(at 68.6623 53.34 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -17250,7 +17562,7 @@
 			)
 		)
 	)
-	(global_label "SND_CL"
+	(global_label "SND_CL0"
 		(shape output)
 		(at 57.15 55.88 0)
 		(fields_autoplaced yes)
@@ -17262,7 +17574,7 @@
 		)
 		(uuid "ea77bca2-0364-4aec-ae89-5d20c64cb92e")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 67.2109 55.88 0)
+			(at 68.4204 55.88 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -17312,6 +17624,28 @@
 					(size 1.27 1.27)
 				)
 				(justify left)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "AUDIO_R"
+		(shape input)
+		(at 190.5 165.1 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "ed273ef4-0f98-415b-9158-3c171904e583")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 179.6528 165.1 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
 				(hide yes)
 			)
 		)
@@ -17620,6 +17954,28 @@
 					(size 1.27 1.27)
 				)
 				(justify right)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "I2C_SCL"
+		(shape input)
+		(at 140.97 165.1 0)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "fb705551-13b0-4bd7-96c7-9f0118d0beaa")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 151.5147 165.1 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
 				(hide yes)
 			)
 		)
@@ -19130,6 +19486,79 @@
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9e82ed5b-af5c-4fee-b6ce-87e97255963b"
 					(reference "J20")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector_Audio:AudioJack3")
+		(at 195.58 167.64 180)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "e6e42bda-d6cf-4ceb-9892-c39a660b72c8")
+		(property "Reference" "J15"
+			(at 203.2 165.7349 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Value" "AudioJack3"
+			(at 203.2 168.2749 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Footprint" "Connector_Audio:Jack_3.5mm_CUI_SJ1-3523N_Horizontal"
+			(at 195.58 167.64 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 195.58 167.64 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Audio Jack, 3 Poles (Stereo / TRS)"
+			(at 195.58 167.64 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "S"
+			(uuid "a7e25385-74c1-4f50-bfce-8c31a83aa750")
+		)
+		(pin "R"
+			(uuid "894dd5eb-9bca-454d-87a6-3f85b05da171")
+		)
+		(pin "T"
+			(uuid "4f90aa3f-1b33-4170-aa07-8704d8a10fbc")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9e82ed5b-af5c-4fee-b6ce-87e97255963b"
+					(reference "J15")
 					(unit 1)
 				)
 			)
