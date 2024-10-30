@@ -527,7 +527,7 @@
       "netlist": "D:/KiCad/8.0/bin/",
       "plot": "Hydra-16-Gerber/",
       "pos_files": "",
-      "specctra_dsn": "Hydra16-0-4C.dsn",
+      "specctra_dsn": "Hydra16-0-4C-Partial.dsn",
       "step": "",
       "svg": "",
       "vrml": ""

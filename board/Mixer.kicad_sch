@@ -2,7 +2,7 @@
 	(version 20231120)
 	(generator "eeschema")
 	(generator_version "8.0")
-	(uuid "54362d11-7481-4094-a8c6-9e1eb7ba5329")
+	(uuid "596e3a2e-fae0-4c1c-8d0a-e0a071e92544")
 	(paper "A4")
 	(title_block
 		(title "Audio Mixer Circuitry")
