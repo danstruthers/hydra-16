@@ -7,7 +7,7 @@
 	(title_block
 		(title "Shared RAM Banks")
 		(date "2024-10-21")
-		(rev "0.4A")
+		(rev "0.5A")
 		(company "Data Tuning")
 		(comment 1 "Hydra 16")
 	)
@@ -1438,6 +1438,12 @@
 		(uuid "4ae34334-5554-4578-a9a4-528aa93a70db")
 	)
 	(junction
+		(at 91.44 107.95)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "4c8c1f3d-c284-4125-b3bd-fcba354b98f0")
+	)
+	(junction
 		(at 130.81 34.29)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -1468,10 +1474,22 @@
 		(uuid "973e47a4-8b2c-42aa-939b-f4ef4bb029f0")
 	)
 	(junction
+		(at 83.82 161.29)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "a1cf02ff-c1f8-4a1c-bf26-688811fb7707")
+	)
+	(junction
 		(at 146.05 36.83)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "a2125b3d-cf4c-43cb-b4b1-7290281e97ef")
+	)
+	(junction
+		(at 50.8 107.95)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "bcdfb3f1-dc76-4981-a8e8-a05af3252a90")
 	)
 	(junction
 		(at 154.94 102.87)
@@ -1520,6 +1538,30 @@
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "fa6c30a3-c066-4fd6-8adf-ec7040d48480")
+	)
+	(no_connect
+		(at 135.89 162.56)
+		(uuid "01419d31-acb1-454a-bda5-e186a929f7e1")
+	)
+	(no_connect
+		(at 135.89 180.34)
+		(uuid "2de99429-15ec-4512-ad21-f93a5e9e26d4")
+	)
+	(no_connect
+		(at 135.89 187.96)
+		(uuid "2fd2e85a-d206-49d9-b0ca-697dea5cbcb6")
+	)
+	(no_connect
+		(at 95.25 170.18)
+		(uuid "668f68de-37fe-48b8-94f2-7de1852b502c")
+	)
+	(no_connect
+		(at 95.25 162.56)
+		(uuid "74e2042e-45e7-453d-a968-6af4a596519c")
+	)
+	(no_connect
+		(at 135.89 170.18)
+		(uuid "b9d9789e-7ea0-4817-aaeb-50a30f56a360")
 	)
 	(bus_entry
 		(at 78.74 74.93)
@@ -2659,6 +2701,16 @@
 	)
 	(wire
 		(pts
+			(xy 91.44 107.95) (xy 50.8 107.95)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "201db770-0c8b-4021-9d36-a23723fcc446")
+	)
+	(wire
+		(pts
 			(xy 133.35 62.23) (xy 142.24 62.23)
 		)
 		(stroke
@@ -2739,6 +2791,26 @@
 	)
 	(wire
 		(pts
+			(xy 83.82 200.66) (xy 115.57 200.66)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "288b6315-fa62-4429-b2d1-234525291027")
+	)
+	(wire
+		(pts
+			(xy 115.57 149.86) (xy 115.57 107.95)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "2bcb6314-75bb-4980-a45b-bad583ee429e")
+	)
+	(wire
+		(pts
 			(xy 154.94 36.83) (xy 146.05 36.83)
 		)
 		(stroke
@@ -2746,6 +2818,16 @@
 			(type default)
 		)
 		(uuid "2c028ba7-8d2f-4c52-854a-5b4fca329c6d")
+	)
+	(wire
+		(pts
+			(xy 83.82 161.29) (xy 83.82 200.66)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "2de4375c-5a10-4724-be4e-4124269ffe64")
 	)
 	(bus
 		(pts
@@ -2979,6 +3061,16 @@
 	)
 	(wire
 		(pts
+			(xy 115.57 107.95) (xy 91.44 107.95)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "486c80dd-5169-4fe2-9068-f2e0fce3f40d")
+	)
+	(wire
+		(pts
 			(xy 81.28 64.77) (xy 90.17 64.77)
 		)
 		(stroke
@@ -3016,6 +3108,16 @@
 			(type default)
 		)
 		(uuid "4beedf28-bb2a-4415-96c2-be0f7f719dd8")
+	)
+	(wire
+		(pts
+			(xy 95.25 187.96) (xy 91.44 187.96)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "4c5d0c3f-4e93-49d5-9291-3063c33638f0")
 	)
 	(bus
 		(pts
@@ -4126,6 +4228,16 @@
 			(type default)
 		)
 		(uuid "ab68bb53-ef40-4459-923d-9524bd4a3969")
+	)
+	(wire
+		(pts
+			(xy 91.44 187.96) (xy 91.44 107.95)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "abcc4dad-8fd6-4cb8-a98a-e94666cfde3e")
 	)
 	(wire
 		(pts
@@ -7586,6 +7698,118 @@
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/0b66303c-ed46-41df-a285-d041c923c3ce"
 					(reference "C25")
 					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "74xx_IEEE:74LS139")
+		(at 115.57 175.26 0)
+		(unit 2)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "9d372777-905b-40ea-8f0c-d6fe4046733d")
+		(property "Reference" "U23"
+			(at 117.7641 149.86 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "74F139"
+			(at 117.7641 152.4 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Package_DIP:DIP-16_W7.62mm_Socket_LongPads"
+			(at 115.57 175.26 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "http://www.ti.com/lit/ds/symlink/sn74ls139a.pdf"
+			(at 115.57 175.26 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Dual Decoder 1 of 4, Active low outputs"
+			(at 115.57 175.26 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "96ab4b31-5e8f-4f0d-930d-cf131aee736a")
+		)
+		(pin "2"
+			(uuid "d4104f6a-8894-4ac1-a403-af436ec15d55")
+		)
+		(pin "5"
+			(uuid "53654fd6-cfe9-44ff-b552-18b5bfaf3013")
+		)
+		(pin "16"
+			(uuid "3ff31845-6b9d-451c-b8bf-716252e03216")
+		)
+		(pin "13"
+			(uuid "33fb7951-9868-4e9d-9d51-a105f17cee21")
+		)
+		(pin "3"
+			(uuid "aacaabb8-8053-4ec6-be74-6bee04e3b09f")
+		)
+		(pin "4"
+			(uuid "533fbe62-725b-42ed-b396-2244a361a849")
+		)
+		(pin "10"
+			(uuid "89b281f8-6891-497a-bca7-4c00b663dca1")
+		)
+		(pin "11"
+			(uuid "75495c31-6f9a-4f11-9b5f-ef209940a87e")
+		)
+		(pin "8"
+			(uuid "856ac1d3-8b86-49c0-abe5-9c5c5174b523")
+		)
+		(pin "6"
+			(uuid "5b1c1b0a-282b-4d9d-8ec2-2365f82fcf2d")
+		)
+		(pin "12"
+			(uuid "90968992-f2ea-4adc-9724-e3d2c2365e1b")
+		)
+		(pin "14"
+			(uuid "561d8655-6606-4e2e-9e39-265feb984ee2")
+		)
+		(pin "15"
+			(uuid "8ec9dfd4-895c-4537-8d08-88a733fe8a83")
+		)
+		(pin "7"
+			(uuid "12ab3bc8-036b-41a8-bb3d-03839bcaafcd")
+		)
+		(pin "9"
+			(uuid "6a1d3400-915d-45bb-9110-a559c9fc9706")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/0b66303c-ed46-41df-a285-d041c923c3ce"
+					(reference "U23")
+					(unit 2)
 				)
 			)
 		)

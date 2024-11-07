@@ -316,6 +316,165 @@ IRQ_HANDLER:
 @int_done:
                 rti
 
+;; *****************************************************************
+.if 0
+; I2C
+
+I2C_SCL = $01
+I2C_SDA = $02
+I2C_CTRL_PORT = VIA_PORTA
+I2C_DATA_PORT = VIA_DDRA
+
+.macro I2C_ON val
+            tay
+            lda #val
+            ora I2C_DATA_PORT
+            sta I2C_DATA_PORT
+            tya
+.endmacro
+
+.macro I2C_OFF val
+            tay
+            lda #~val
+            and I2C_DATA_PORT
+            sta I2C_DATA_PORT
+            tya
+.endmacro
+
+.macro SDA_LOW
+            I2C_OFF I2C_SDA
+.endmacro
+
+.macro SCL_LOW
+            I2C_OFF I2C_SCL
+.endmacro
+
+.macro SDA_HIGH
+            I2C_ON I2C_SDA
+.endmacro
+
+.macro SCL_HIGH
+            I2C_ON I2C_SDA
+.endmacro
+
+.macro SCL_PULSE
+            inc I2C_DATA_PORT
+            dec I2C_DATA_PORT
+.endmacro
+
+; A: Byte to send
+; Return (in A): 1 = SUCCESS, 0 = FAILURE
+I2C_SEND:
+            ldx #$00
+            stx I2C_CTRL_PORT
+            ldx #$09
+@loop:
+            dex
+            beq @ack
+            rol
+            jsr I2C_SEND_BIT
+            SJMP @loop
+@ack:
+            jsr I2C_RECV_BIT    ; ack in A, 0 = success
+            eor #$01            ; return 1 on success, 0 on fail
+@end:
+            rts
+
+
+I2C_RECV:	lda #$00
+			sta I2C_CTRL_PORT
+			pha
+			ldx #$09
+@loop:		dex
+			beq @end
+			jsr rec_bit
+			ror
+			pla
+			rol
+			pha
+			jmp @loop
+@end:
+			pla
+			rts
+
+; A: Bit to send
+I2C_SEND_BIT:
+            bcc @send_one
+            SDA_LOW
+            SJMP @clock_out
+@send_one:
+            SDA_HIGH
+
+@clock_out:	
+            SCL_PULSE
+            SDA_LOW
+            rts
+
+I2C_RECV_BIT:
+            SDA_HIGH
+            SCL_HIGH
+            lda I2C_CTRL_PORT
+            and #I2C_SDA
+            bne @is_one
+            lda #$00
+            jmp @end
+@is_one:
+            lda #$01
+@end:
+            SCL_LOW
+            SDA_LOW
+            rts
+
+
+I2C_START:
+            SDA_LOW
+            SCL_LOW
+            rts
+
+
+I2C_STOP:
+            SCL_HIGH
+            SDA_HIGH
+            rts
+
+
+I2C_ACK:
+            pha
+            lda #$00
+            jsr I2C_SEND_BIT
+            pla
+            rts
+
+I2C_NACK:
+            pha
+            lda #$01
+            jsr I2C_SEND_BIT
+            pla
+            rts
+.endif
+
+; ****************************************************************************
+
+IRQ_VECTOR_INIT:
+            sei
+            ldy     #$0F
+            lda     #<IRQ_HANDLER
+@loop:
+            sty     IRQ_VECTOR_NUM_PORT
+            sta     $FFFE
+            dey
+            bpl     @loop
+            ldy     #$0F
+            lda     #>IRQ_HANDLER
+@loop2:
+            sty     IRQ_VECTOR_NUM_PORT
+            sta     $FFFF
+            dey
+            bpl     @loop2
+            cli
+            rts
+
+
 .segment "IO_PORTS"
 IO_PORT_0:      .tag IO_Port
 IO_PORT_1:      .tag IO_Port

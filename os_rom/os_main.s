@@ -9,6 +9,7 @@ OS_MAIN:
             sta     $01                                 ; Init ROM Bank selector
             ldx     #$FF                                ; Init stack pointer
             txs
+            jsr     IRQ_VECTOR_INIT
             jsr     TASKS_INIT
             jsr     SERIAL_INIT
             jsr     MMU_INIT

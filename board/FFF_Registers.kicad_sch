@@ -7,7 +7,7 @@
 	(title_block
 		(title "FFFx Registers and Logic")
 		(date "2024-10-21")
-		(rev "0.4A")
+		(rev "0.5A")
 		(company "Data Tuning")
 		(comment 1 "Hydra 16")
 	)
@@ -9681,109 +9681,6 @@
 	)
 	(symbol
 		(lib_id "74xx:74LS32")
-		(at 185.42 144.78 0)
-		(unit 4)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "86229a9c-db8f-4555-934c-2ac86720f557")
-		(property "Reference" "U46"
-			(at 185.42 135.89 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "74F32"
-			(at 185.42 138.43 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Package_DIP:DIP-14_W7.62mm_Socket_LongPads"
-			(at 185.42 144.78 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "http://www.ti.com/lit/gpn/sn74LS32"
-			(at 185.42 144.78 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Quad 2-input OR"
-			(at 185.42 144.78 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "10"
-			(uuid "26725198-8bff-4e3c-90c4-508b602432fe")
-		)
-		(pin "3"
-			(uuid "95ba414c-175a-4ea4-a5e9-4ec0ab62d3d9")
-		)
-		(pin "11"
-			(uuid "52245f49-9697-48d4-be45-7778398fa169")
-		)
-		(pin "12"
-			(uuid "e4e08f61-9227-4ed1-b094-84d08b40ceb3")
-		)
-		(pin "2"
-			(uuid "a5ba69ee-617a-448c-9586-8845a31c4579")
-		)
-		(pin "1"
-			(uuid "8d46c76c-b6e9-4f3f-a058-0f30e70c73d3")
-		)
-		(pin "14"
-			(uuid "f33ebfc8-42c7-46b7-86f8-6567528549a9")
-		)
-		(pin "13"
-			(uuid "fd3d93cb-8a30-43d5-be35-24c226c98a24")
-		)
-		(pin "4"
-			(uuid "e96baff1-ba55-4d35-a345-302c7d8e762e")
-		)
-		(pin "9"
-			(uuid "8095cf97-0b2a-43b0-a569-f1185423903e")
-		)
-		(pin "7"
-			(uuid "f4e27221-1d9b-4cc3-8538-b15455b57f8a")
-		)
-		(pin "5"
-			(uuid "39ae248d-7c0b-4dc7-a5d6-c30eac319928")
-		)
-		(pin "6"
-			(uuid "520e6d74-40dd-4c62-915d-a6825f2db985")
-		)
-		(pin "8"
-			(uuid "fc4edce1-2abd-40a3-943f-cdcde7da7d66")
-		)
-		(instances
-			(project "hydra-16"
-				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9c3f9893-75ea-4823-afb7-35bb324a2c9f"
-					(reference "U46")
-					(unit 4)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "74xx:74LS32")
 		(at 184.15 104.14 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -10365,6 +10262,110 @@
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9c3f9893-75ea-4823-afb7-35bb324a2c9f"
 					(reference "#PWR086")
 					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "74xx:74LS32")
+		(at 185.42 144.78 0)
+		(unit 4)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "adca6c70-e5c7-4a4e-88ce-e230afcfb179")
+		(property "Reference" "U14"
+			(at 185.42 135.89 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "74F32"
+			(at 185.42 138.43 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Package_DIP:DIP-14_W7.62mm_Socket_LongPads"
+			(at 185.42 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "http://www.ti.com/lit/gpn/sn74LS32"
+			(at 185.42 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Quad 2-input OR"
+			(at 185.42 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "10"
+			(uuid "5376f03c-9a0b-4b73-b7a3-e7755b7522ff")
+		)
+		(pin "3"
+			(uuid "ed20d2ff-dc58-4c34-b5b5-91a038cef441")
+		)
+		(pin "11"
+			(uuid "77dfffe4-ec53-4068-9f41-3942a64906bc")
+		)
+		(pin "12"
+			(uuid "59898709-2ef0-4842-9061-fff2f7b705d8")
+		)
+		(pin "2"
+			(uuid "bde7924a-4cf5-4005-a2fc-e2d305ee9c77")
+		)
+		(pin "1"
+			(uuid "a3823dc3-2104-493a-bf71-4284d7d6bd9f")
+		)
+		(pin "14"
+			(uuid "f33ebfc8-42c7-46b7-86f8-6567528549a7")
+		)
+		(pin "13"
+			(uuid "d83eebd1-2456-48d1-a452-8f99e5cb39eb")
+		)
+		(pin "4"
+			(uuid "e96baff1-ba55-4d35-a345-302c7d8e762c")
+		)
+		(pin "9"
+			(uuid "6517ff68-3000-4de6-b3e2-94a9fbb11bb1")
+		)
+		(pin "7"
+			(uuid "f4e27221-1d9b-4cc3-8538-b15455b57f88")
+		)
+		(pin "5"
+			(uuid "39ae248d-7c0b-4dc7-a5d6-c30eac319926")
+		)
+		(pin "6"
+			(uuid "520e6d74-40dd-4c62-915d-a6825f2db983")
+		)
+		(pin "8"
+			(uuid "7c422bc4-1908-4bc4-b401-260bcfa3c588")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9c3f9893-75ea-4823-afb7-35bb324a2c9f"
+					(reference "U14")
+					(unit 4)
 				)
 			)
 		)

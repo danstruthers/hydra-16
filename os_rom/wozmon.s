@@ -32,7 +32,8 @@ MON_START:
                 jsr     WRITE_CRLF
                 ldy     #1              ; Initialize text index.
 
-@is_backspace:  dey                     ; Back up text index.
+@is_backspace:
+                dey                     ; Back up text index.
                 bmi     @get_line       ; Beyond start of line, reinitialize.
 
 @get_next_char:

@@ -7,7 +7,7 @@
 	(title_block
 		(title "CPU, VIA, ACIA, O/S ROM, Task RAM and Banked RAM Header")
 		(date "2024-10-21")
-		(rev "0.4A")
+		(rev "0.5A")
 		(company "Data Tuning")
 		(comment 1 "Hydra 16")
 	)
@@ -7765,6 +7765,18 @@
 		(uuid "f7b6a99b-b0e4-4186-8b31-27e58f5bd625")
 	)
 	(no_connect
+		(at 119.38 57.15)
+		(uuid "1b9a3d9f-61fb-4bff-a9fe-edb8285580e8")
+	)
+	(no_connect
+		(at 119.38 31.75)
+		(uuid "3bd109b2-1517-451f-bbb0-9b45fd0f5643")
+	)
+	(no_connect
+		(at 119.38 36.83)
+		(uuid "4e8e1cc4-7b6e-429f-b92e-f3204c77b4b2")
+	)
+	(no_connect
 		(at 191.77 24.13)
 		(uuid "6bc0ff0f-1ab8-47f1-ae21-aa33d2ffe6b9")
 	)
@@ -12463,6 +12475,16 @@
 	)
 	(wire
 		(pts
+			(xy 119.38 31.75) (xy 118.11 31.75)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "d8e5276d-8005-4a18-9065-22666c202498")
+	)
+	(wire
+		(pts
 			(xy 46.99 26.67) (xy 55.88 26.67)
 		)
 		(stroke
@@ -13103,6 +13125,16 @@
 	)
 	(wire
 		(pts
+			(xy 119.38 57.15) (xy 118.11 57.15)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "f8788e9b-6bad-49f1-a4ed-a2cd20b8d145")
+	)
+	(wire
+		(pts
 			(xy 193.04 83.82) (xy 193.04 87.63)
 		)
 		(stroke
@@ -13120,6 +13152,16 @@
 			(type default)
 		)
 		(uuid "f8d0f461-1410-46fb-878e-6f286cf9a880")
+	)
+	(wire
+		(pts
+			(xy 119.38 36.83) (xy 118.11 36.83)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "f97d42e8-b6e9-4540-aa1f-caa1f3d37b2f")
 	)
 	(wire
 		(pts
