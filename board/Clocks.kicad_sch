@@ -6,8 +6,8 @@
 	(paper "USLetter")
 	(title_block
 		(title "Sound, Clocks, and Power")
-		(date "2024-10-21")
-		(rev "0.5A")
+		(date "2024-11-21")
+		(rev "0.5C")
 		(company "Data Tuning")
 		(comment 1 "Hydra 16")
 	)

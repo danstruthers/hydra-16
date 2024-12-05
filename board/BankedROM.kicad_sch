@@ -6,8 +6,8 @@
 	(paper "USLetter")
 	(title_block
 		(title "Shared ROM Banks")
-		(date "2024-10-21")
-		(rev "0.5A")
+		(date "2024-11-21")
+		(rev "0.5C")
 		(company "Data Tuning")
 		(comment 1 "Hydra 16")
 	)
@@ -8576,7 +8576,7 @@
 		)
 		(uuid "0088beab-af9b-433a-9501-4a3ca75decb5")
 	)
-	(label "nROMB2"
+	(label "ROMB2"
 		(at 33.02 76.2 0)
 		(fields_autoplaced yes)
 		(effects
@@ -8642,7 +8642,7 @@
 		)
 		(uuid "0d10548b-80d9-45bd-8c0c-e25c293591ce")
 	)
-	(label "nROMB4"
+	(label "ROMB4"
 		(at 64.77 175.26 0)
 		(fields_autoplaced yes)
 		(effects
@@ -8664,7 +8664,7 @@
 		)
 		(uuid "105be47c-81b2-401b-af25-f4c719caa940")
 	)
-	(label "nROMB1"
+	(label "ROMB1"
 		(at 158.75 73.66 0)
 		(fields_autoplaced yes)
 		(effects
@@ -8675,7 +8675,7 @@
 		)
 		(uuid "1082b8d1-537f-4c38-8721-04be6d73946c")
 	)
-	(label "nROMB2"
+	(label "ROMB2"
 		(at 73.66 76.2 0)
 		(fields_autoplaced yes)
 		(effects
@@ -8807,7 +8807,7 @@
 		)
 		(uuid "1888e988-0db8-498c-a364-7fef6c78c995")
 	)
-	(label "nROMB3"
+	(label "ROMB3"
 		(at 25.4 172.72 0)
 		(fields_autoplaced yes)
 		(effects
@@ -8851,7 +8851,7 @@
 		)
 		(uuid "1ce3f033-2175-420f-9f4a-ad02bdec9211")
 	)
-	(label "nROMB3"
+	(label "ROMB3"
 		(at 105.41 172.72 0)
 		(fields_autoplaced yes)
 		(effects
@@ -8950,7 +8950,7 @@
 		)
 		(uuid "2e182ccd-b924-4f8c-846a-6d4e53201d15")
 	)
-	(label "nROMB2"
+	(label "ROMB2"
 		(at 105.41 170.18 0)
 		(fields_autoplaced yes)
 		(effects
@@ -9049,7 +9049,7 @@
 		)
 		(uuid "33a5d7dd-4320-42c6-b7f0-c55f237bb15f")
 	)
-	(label "nROMB3"
+	(label "ROMB3"
 		(at 33.02 78.74 0)
 		(fields_autoplaced yes)
 		(effects
@@ -9082,7 +9082,7 @@
 		)
 		(uuid "35b6aa54-e27e-4522-8b01-da113cebeeb6")
 	)
-	(label "nROMB4"
+	(label "ROMB4"
 		(at 73.66 81.28 0)
 		(fields_autoplaced yes)
 		(effects
@@ -9115,7 +9115,7 @@
 		)
 		(uuid "37c54287-c050-4f5e-9016-9f95dade45bc")
 	)
-	(label "nROMB1"
+	(label "ROMB1"
 		(at 214.63 73.66 0)
 		(fields_autoplaced yes)
 		(effects
@@ -9148,7 +9148,7 @@
 		)
 		(uuid "3db829db-75a4-4e80-92d2-87dabfff44fd")
 	)
-	(label "nROMB3"
+	(label "ROMB3"
 		(at 214.63 78.74 0)
 		(fields_autoplaced yes)
 		(effects
@@ -9225,7 +9225,7 @@
 		)
 		(uuid "45d5a3c7-6cb8-41d3-9943-09bfa0736e0b")
 	)
-	(label "nROMB1"
+	(label "ROMB1"
 		(at 64.77 167.64 0)
 		(fields_autoplaced yes)
 		(effects
@@ -9236,7 +9236,7 @@
 		)
 		(uuid "468ed18e-8c1f-4401-ad01-2adbc89e3c0e")
 	)
-	(label "nROMB1"
+	(label "ROMB1"
 		(at 25.4 167.64 0)
 		(fields_autoplaced yes)
 		(effects
@@ -9313,7 +9313,7 @@
 		)
 		(uuid "4df349c2-a1a3-4ffd-a28c-a9e6ff124214")
 	)
-	(label "nROMB2"
+	(label "ROMB2"
 		(at 158.75 76.2 0)
 		(fields_autoplaced yes)
 		(effects
@@ -9324,7 +9324,7 @@
 		)
 		(uuid "4ee50668-ca71-4150-981e-baf304999fdd")
 	)
-	(label "nROMB1"
+	(label "ROMB1"
 		(at 105.41 167.64 0)
 		(fields_autoplaced yes)
 		(effects
@@ -9533,7 +9533,7 @@
 		)
 		(uuid "6735ec93-d323-422a-bece-523ce709a748")
 	)
-	(label "nROMB1"
+	(label "ROMB1"
 		(at 33.02 73.66 0)
 		(fields_autoplaced yes)
 		(effects
@@ -9588,7 +9588,7 @@
 		)
 		(uuid "6dc9b808-fe98-4b08-a8b1-4b19c8dd52bd")
 	)
-	(label "nROMB0"
+	(label "ROMB0"
 		(at 158.75 71.12 0)
 		(fields_autoplaced yes)
 		(effects
@@ -9610,7 +9610,7 @@
 		)
 		(uuid "7380f4f2-0b27-4783-b875-e8d0edf361c6")
 	)
-	(label "nROMB2"
+	(label "ROMB2"
 		(at 116.84 76.2 0)
 		(fields_autoplaced yes)
 		(effects
@@ -9687,7 +9687,7 @@
 		)
 		(uuid "7d09f7c5-9e0c-4511-a8af-a7b5482a5346")
 	)
-	(label "nROMB4"
+	(label "ROMB4"
 		(at 158.75 81.28 0)
 		(fields_autoplaced yes)
 		(effects
@@ -9709,7 +9709,7 @@
 		)
 		(uuid "80cb6b29-423f-4a41-8708-433f99ad1898")
 	)
-	(label "nROMB0"
+	(label "ROMB0"
 		(at 116.84 71.12 0)
 		(fields_autoplaced yes)
 		(effects
@@ -9731,7 +9731,7 @@
 		)
 		(uuid "832f271d-5ce6-4b7d-b646-422bea97b756")
 	)
-	(label "nROMB0"
+	(label "ROMB0"
 		(at 214.63 71.12 0)
 		(fields_autoplaced yes)
 		(effects
@@ -9764,7 +9764,7 @@
 		)
 		(uuid "85eedb7e-8a17-4ea4-b813-52511d74750e")
 	)
-	(label "nROMB3"
+	(label "ROMB3"
 		(at 73.66 78.74 0)
 		(fields_autoplaced yes)
 		(effects
@@ -9830,7 +9830,7 @@
 		)
 		(uuid "8ccb4844-b3f2-4076-b314-7319d23fc704")
 	)
-	(label "nROMB3"
+	(label "ROMB3"
 		(at 158.75 78.74 0)
 		(fields_autoplaced yes)
 		(effects
@@ -9852,7 +9852,7 @@
 		)
 		(uuid "8d026347-5ad3-47b0-9645-3cb41069846e")
 	)
-	(label "nROMB0"
+	(label "ROMB0"
 		(at 25.4 165.1 0)
 		(fields_autoplaced yes)
 		(effects
@@ -9907,7 +9907,7 @@
 		)
 		(uuid "97c4b09b-5c29-4da2-a51d-c2c10c265b57")
 	)
-	(label "nROMB1"
+	(label "ROMB1"
 		(at 116.84 73.66 0)
 		(fields_autoplaced yes)
 		(effects
@@ -9929,7 +9929,7 @@
 		)
 		(uuid "9a521444-adc1-4662-827e-74883b84c9d4")
 	)
-	(label "nROMB1"
+	(label "ROMB1"
 		(at 73.66 73.66 0)
 		(fields_autoplaced yes)
 		(effects
@@ -10061,7 +10061,7 @@
 		)
 		(uuid "a336c940-56c5-4442-aa05-56da56117433")
 	)
-	(label "nROMB2"
+	(label "ROMB2"
 		(at 64.77 170.18 0)
 		(fields_autoplaced yes)
 		(effects
@@ -10083,7 +10083,7 @@
 		)
 		(uuid "a4536804-0770-4398-8305-c78a3eea7d73")
 	)
-	(label "nROMB2"
+	(label "ROMB2"
 		(at 214.63 76.2 0)
 		(fields_autoplaced yes)
 		(effects
@@ -10094,7 +10094,7 @@
 		)
 		(uuid "a6ccacb6-c28d-4f8a-94f3-94772670c863")
 	)
-	(label "nROMB0"
+	(label "ROMB0"
 		(at 73.66 71.12 0)
 		(fields_autoplaced yes)
 		(effects
@@ -10171,7 +10171,7 @@
 		)
 		(uuid "affbdfcc-0a26-4141-830b-7a69ba1d0337")
 	)
-	(label "nROMB4"
+	(label "ROMB4"
 		(at 105.41 175.26 0)
 		(fields_autoplaced yes)
 		(effects
@@ -10193,7 +10193,7 @@
 		)
 		(uuid "b0f2314a-41e8-4df4-95ac-3b46822bb1f7")
 	)
-	(label "nROMB0"
+	(label "ROMB0"
 		(at 64.77 165.1 0)
 		(fields_autoplaced yes)
 		(effects
@@ -10204,7 +10204,7 @@
 		)
 		(uuid "b34671af-cf6d-440f-945e-07e09bb62568")
 	)
-	(label "nROMB4"
+	(label "ROMB4"
 		(at 116.84 81.28 0)
 		(fields_autoplaced yes)
 		(effects
@@ -10248,7 +10248,7 @@
 		)
 		(uuid "bbda20ce-0af3-44ae-89f6-0aef15a8598f")
 	)
-	(label "nROMB0"
+	(label "ROMB0"
 		(at 33.02 71.12 0)
 		(fields_autoplaced yes)
 		(effects
@@ -10424,7 +10424,7 @@
 		)
 		(uuid "d01da124-ab69-4064-a212-9d6b6ce4c02e")
 	)
-	(label "nROMB4"
+	(label "ROMB4"
 		(at 33.02 81.28 0)
 		(fields_autoplaced yes)
 		(effects
@@ -10556,7 +10556,7 @@
 		)
 		(uuid "dd92ed6a-de88-4aaa-beff-cd323f0c34fa")
 	)
-	(label "nROMB2"
+	(label "ROMB2"
 		(at 25.4 170.18 0)
 		(fields_autoplaced yes)
 		(effects
@@ -10578,7 +10578,7 @@
 		)
 		(uuid "de983f67-0206-4347-813a-7e40eb28e7de")
 	)
-	(label "nROMB3"
+	(label "ROMB3"
 		(at 116.84 78.74 0)
 		(fields_autoplaced yes)
 		(effects
@@ -10622,7 +10622,7 @@
 		)
 		(uuid "e215d6b2-1589-4c84-86b6-e02e3d3ec892")
 	)
-	(label "nROMB3"
+	(label "ROMB3"
 		(at 64.77 172.72 0)
 		(fields_autoplaced yes)
 		(effects
@@ -10743,7 +10743,7 @@
 		)
 		(uuid "f0f2c957-be6f-4f1d-8d93-fe5836fe6014")
 	)
-	(label "nROMB0"
+	(label "ROMB0"
 		(at 105.41 165.1 0)
 		(fields_autoplaced yes)
 		(effects
@@ -10776,7 +10776,7 @@
 		)
 		(uuid "f38a5a71-4ff9-4e77-aa29-c16a3733ecc9")
 	)
-	(label "nROMB4"
+	(label "ROMB4"
 		(at 214.63 81.28 0)
 		(fields_autoplaced yes)
 		(effects
@@ -10798,7 +10798,7 @@
 		)
 		(uuid "f44dd4e5-941d-4f25-86fa-d2118f0ea2d2")
 	)
-	(label "nROMB4"
+	(label "ROMB4"
 		(at 25.4 175.26 0)
 		(fields_autoplaced yes)
 		(effects
@@ -11304,7 +11304,7 @@
 			)
 		)
 	)
-	(global_label "nROMB[0..7]"
+	(global_label "ROMB[0..7]"
 		(shape input)
 		(at 237.49 106.68 0)
 		(fields_autoplaced yes)
@@ -11316,12 +11316,12 @@
 		)
 		(uuid "8463179d-5f14-4fb5-826b-656654130288")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 226.8244 106.68 0)
+			(at 251.1191 106.68 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(justify right)
+				(justify left)
 				(hide yes)
 			)
 		)

@@ -6,8 +6,8 @@
 	(paper "USLetter")
 	(title_block
 		(title "Shared RAM Banks")
-		(date "2024-10-21")
-		(rev "0.5A")
+		(date "2024-11-21")
+		(rev "0.5C")
 		(company "Data Tuning")
 		(comment 1 "Hydra 16")
 	)
@@ -5189,7 +5189,7 @@
 		)
 		(uuid "fe076b3d-c18a-4972-9805-6509c24a4183")
 	)
-	(label "nRAMB0"
+	(label "RAMB0"
 		(at 68.58 90.17 0)
 		(fields_autoplaced yes)
 		(effects
@@ -5266,7 +5266,7 @@
 		)
 		(uuid "0b72e36e-5c1e-4353-9e44-6d214cf5d1d3")
 	)
-	(label "nRAMB2"
+	(label "RAMB2"
 		(at 24.13 123.19 0)
 		(fields_autoplaced yes)
 		(effects
@@ -5277,7 +5277,7 @@
 		)
 		(uuid "100000e8-648e-42f8-8aa7-04d7f81f2fda")
 	)
-	(label "nRAMB0"
+	(label "RAMB0"
 		(at 172.72 90.17 0)
 		(fields_autoplaced yes)
 		(effects
@@ -5343,7 +5343,7 @@
 		)
 		(uuid "1ce0dbe6-1681-4eb5-8b65-771343b864c6")
 	)
-	(label "nRAMB1"
+	(label "RAMB1"
 		(at 172.72 92.71 0)
 		(fields_autoplaced yes)
 		(effects
@@ -5409,7 +5409,7 @@
 		)
 		(uuid "24ec92e6-5a2d-4a27-b97a-8ed2db752316")
 	)
-	(label "nRAMB1"
+	(label "RAMB1"
 		(at 22.86 92.71 0)
 		(fields_autoplaced yes)
 		(effects
@@ -5541,7 +5541,7 @@
 		)
 		(uuid "47e31cc7-27cd-4758-b46e-09bf4bce9d20")
 	)
-	(label "nRAMB3"
+	(label "RAMB3"
 		(at 24.13 130.81 0)
 		(fields_autoplaced yes)
 		(effects
@@ -5772,7 +5772,7 @@
 		)
 		(uuid "9da47aa6-f951-4f53-8328-46af4576009b")
 	)
-	(label "nRAMB0"
+	(label "RAMB0"
 		(at 120.65 90.17 0)
 		(fields_autoplaced yes)
 		(effects
@@ -6091,7 +6091,7 @@
 		)
 		(uuid "df0eb3e2-a47c-4b0b-b4ba-11bcaf12b5be")
 	)
-	(label "nRAMB1"
+	(label "RAMB1"
 		(at 68.58 92.71 0)
 		(fields_autoplaced yes)
 		(effects
@@ -6157,7 +6157,7 @@
 		)
 		(uuid "e82b7dd3-922d-4edc-9f06-625014187a67")
 	)
-	(label "nRAMB1"
+	(label "RAMB1"
 		(at 120.65 92.71 0)
 		(fields_autoplaced yes)
 		(effects
@@ -6190,7 +6190,7 @@
 		)
 		(uuid "ede9e944-bc34-42e6-b92d-1f3f2f10fc65")
 	)
-	(label "nRAMB0"
+	(label "RAMB0"
 		(at 22.86 90.17 0)
 		(fields_autoplaced yes)
 		(effects
@@ -6355,7 +6355,7 @@
 			)
 		)
 	)
-	(global_label "nRAMB[0..7]"
+	(global_label "RAMB[0..7]"
 		(shape input)
 		(at 236.22 105.41 0)
 		(fields_autoplaced yes)
@@ -6367,7 +6367,7 @@
 		)
 		(uuid "2ceaca17-be48-40b3-9819-1502443301df")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 250.7562 105.41 0)
+			(at 249.6072 105.41 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8471,7 +8471,7 @@
 			(uuid "fb7f2215-dc0a-4702-afaf-e5e662dcf9a3")
 		)
 		(pin "13"
-			(uuid "33fb7951-9868-4e9d-9d51-a105f17cee21")
+			(uuid "33fb7951-9868-4e9d-9d51-a105f17cee22")
 		)
 		(pin "3"
 			(uuid "76fa792c-7c87-487b-a002-9d941d0a7eb0")
@@ -8480,10 +8480,10 @@
 			(uuid "255938a2-caf2-4b02-b272-e085c277ef7e")
 		)
 		(pin "10"
-			(uuid "89b281f8-6891-497a-bca7-4c00b663dca1")
+			(uuid "89b281f8-6891-497a-bca7-4c00b663dca2")
 		)
 		(pin "11"
-			(uuid "75495c31-6f9a-4f11-9b5f-ef209940a87e")
+			(uuid "75495c31-6f9a-4f11-9b5f-ef209940a87f")
 		)
 		(pin "8"
 			(uuid "8d3fabf0-6dd2-4664-b4de-d9fe895e50b8")
@@ -8492,19 +8492,19 @@
 			(uuid "c7fefe06-1d2f-44bb-8fba-a4955d61469f")
 		)
 		(pin "12"
-			(uuid "90968992-f2ea-4adc-9724-e3d2c2365e1b")
+			(uuid "90968992-f2ea-4adc-9724-e3d2c2365e1c")
 		)
 		(pin "14"
-			(uuid "561d8655-6606-4e2e-9e39-265feb984ee2")
+			(uuid "561d8655-6606-4e2e-9e39-265feb984ee3")
 		)
 		(pin "15"
-			(uuid "8ec9dfd4-895c-4537-8d08-88a733fe8a83")
+			(uuid "8ec9dfd4-895c-4537-8d08-88a733fe8a84")
 		)
 		(pin "7"
 			(uuid "b11e8cd3-5ce9-4dae-8b32-e857978fbaeb")
 		)
 		(pin "9"
-			(uuid "6a1d3400-915d-45bb-9110-a559c9fc9706")
+			(uuid "6a1d3400-915d-45bb-9110-a559c9fc9707")
 		)
 		(instances
 			(project ""

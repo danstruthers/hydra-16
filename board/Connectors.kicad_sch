@@ -6,8 +6,8 @@
 	(paper "USLetter")
 	(title_block
 		(title "Card-edge and SPI Device Connectors")
-		(date "2024-10-21")
-		(rev "0.5A")
+		(date "2024-11-21")
+		(rev "0.5C")
 		(company "Data Tuning")
 		(comment 1 "Hydra 16")
 	)
@@ -13096,7 +13096,7 @@
 			)
 		)
 	)
-	(global_label "-5V"
+	(global_label "+5VA"
 		(shape input)
 		(at 86.36 124.46 180)
 		(fields_autoplaced yes)
@@ -13108,7 +13108,7 @@
 		)
 		(uuid "2aae0356-5d2d-4936-a205-67d37cea2749")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 79.5043 124.46 0)
+			(at 78.4157 124.46 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13580,7 +13580,7 @@
 			)
 		)
 	)
-	(global_label "-5V"
+	(global_label "+5VA"
 		(shape input)
 		(at 29.21 35.56 180)
 		(fields_autoplaced yes)
@@ -13592,7 +13592,7 @@
 		)
 		(uuid "420440ad-7d99-4eb6-9f75-36f9c839bf95")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 22.3543 35.56 0)
+			(at 21.2657 35.56 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -14130,7 +14130,7 @@
 			)
 		)
 	)
-	(global_label "-5V"
+	(global_label "+5VA"
 		(shape input)
 		(at 86.36 35.56 180)
 		(fields_autoplaced yes)
@@ -14142,7 +14142,7 @@
 		)
 		(uuid "57880263-e9fd-4148-90cf-0b087d6cd2db")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 79.5043 35.56 0)
+			(at 78.4157 35.56 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -14702,7 +14702,7 @@
 			)
 		)
 	)
-	(global_label "-5V"
+	(global_label "+5VA"
 		(shape input)
 		(at 207.01 35.56 180)
 		(fields_autoplaced yes)
@@ -14714,7 +14714,7 @@
 		)
 		(uuid "6f1e84cd-9e02-4cc1-acbe-ecf55bd16d71")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 200.1543 35.56 0)
+			(at 199.0657 35.56 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -16330,7 +16330,7 @@
 			)
 		)
 	)
-	(global_label "-5V"
+	(global_label "+5VA"
 		(shape input)
 		(at 29.21 125.73 180)
 		(fields_autoplaced yes)
@@ -16342,7 +16342,7 @@
 		)
 		(uuid "b784422c-a4be-48c7-b18d-ae7bbbec4302")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 22.3543 125.73 0)
+			(at 21.2657 125.73 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -17584,7 +17584,7 @@
 			)
 		)
 	)
-	(global_label "-5V"
+	(global_label "+5VA"
 		(shape input)
 		(at 147.32 35.56 180)
 		(fields_autoplaced yes)
@@ -17596,7 +17596,7 @@
 		)
 		(uuid "eb378183-3538-4bbb-88fd-66ff601e7052")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 140.4643 35.56 0)
+			(at 139.3757 35.56 0)
 			(effects
 				(font
 					(size 1.27 1.27)

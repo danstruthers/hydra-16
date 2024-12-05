@@ -6,8 +6,8 @@
 	(paper "USLetter")
 	(title_block
 		(title "CPU, VIA, ACIA, O/S ROM, Task RAM and Banked RAM Header")
-		(date "2024-10-21")
-		(rev "0.5A")
+		(date "2024-11-21")
+		(rev "0.5C")
 		(company "Data Tuning")
 		(comment 1 "Hydra 16")
 	)
@@ -7651,6 +7651,12 @@
 		(uuid "a05f8143-ad89-4350-bfd0-0baa8c77100e")
 	)
 	(junction
+		(at 82.55 104.14)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "ab29590f-a369-4a0e-a843-d5ae3543e0f6")
+	)
+	(junction
 		(at 152.4 127)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -7818,6 +7824,15 @@
 			(type default)
 		)
 		(uuid "062e391c-3029-430f-a813-60c7af32eb73")
+	)
+	(bus_entry
+		(at 85.09 52.07)
+		(size -2.54 2.54)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "08130199-b1c0-4395-bb2c-61be1249e984")
 	)
 	(bus_entry
 		(at 59.69 167.64)
@@ -8619,6 +8634,15 @@
 			(type default)
 		)
 		(uuid "e341198a-0514-430f-9826-2b55c533d287")
+	)
+	(bus_entry
+		(at 85.09 54.61)
+		(size -2.54 2.54)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e38142f5-5c85-4b0a-837c-7dc7204faac9")
 	)
 	(bus_entry
 		(at 182.88 93.98)
@@ -9612,6 +9636,26 @@
 			(type default)
 		)
 		(uuid "2fc8d9c3-9d00-4aa5-9eb6-94b6d48dbb60")
+	)
+	(bus
+		(pts
+			(xy 82.55 104.14) (xy 142.24 104.14)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "30e8979b-5e64-4573-9752-779ee9ac3237")
+	)
+	(wire
+		(pts
+			(xy 85.09 52.07) (xy 97.79 52.07)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "31b793ef-80d2-4397-b01c-17a9593fd9d4")
 	)
 	(bus
 		(pts
@@ -11033,6 +11077,16 @@
 		)
 		(uuid "7fa48ffe-7b4c-42d0-8c5a-e41d130c8441")
 	)
+	(wire
+		(pts
+			(xy 85.09 54.61) (xy 97.79 54.61)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "807f0f1e-c9a7-4975-ac02-6b82e699d335")
+	)
 	(bus
 		(pts
 			(xy 86.36 67.31) (xy 86.36 69.85)
@@ -11645,7 +11699,7 @@
 	)
 	(bus
 		(pts
-			(xy 58.42 104.14) (xy 142.24 104.14)
+			(xy 58.42 104.14) (xy 82.55 104.14)
 		)
 		(stroke
 			(width 0)
@@ -11892,6 +11946,16 @@
 			(type default)
 		)
 		(uuid "aef8f211-cc4c-45d8-a433-f1b719bdefcb")
+	)
+	(bus
+		(pts
+			(xy 82.55 57.15) (xy 82.55 104.14)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "af21a1ab-d9d3-4f8b-a7f0-720ceca0a68d")
 	)
 	(wire
 		(pts
@@ -12262,16 +12326,6 @@
 			(type default)
 		)
 		(uuid "ce62b4a3-36f9-415e-bb2c-5b21375b3a1c")
-	)
-	(wire
-		(pts
-			(xy 95.25 54.61) (xy 97.79 54.61)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "ce6ab740-8189-4d3e-b11d-cf0eff342991")
 	)
 	(wire
 		(pts
@@ -12785,16 +12839,6 @@
 	)
 	(wire
 		(pts
-			(xy 95.25 52.07) (xy 97.79 52.07)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "e6b4d783-2480-48fb-8483-db732b0ccabf")
-	)
-	(wire
-		(pts
 			(xy 68.58 129.54) (xy 69.85 129.54)
 		)
 		(stroke
@@ -13263,6 +13307,16 @@
 		)
 		(uuid "fd932952-0f65-4ee5-99e6-aa8f3ca7bf57")
 	)
+	(bus
+		(pts
+			(xy 82.55 54.61) (xy 82.55 57.15)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "ff0f7332-84c2-47d9-9066-01292492abe4")
+	)
 	(wire
 		(pts
 			(xy 226.06 74.93) (xy 226.06 77.47)
@@ -13691,6 +13745,7 @@
 	)
 	(label "A9"
 		(at 52.07 67.31 0)
+		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -13698,6 +13753,17 @@
 			(justify left bottom)
 		)
 		(uuid "62fa01a2-700a-4aec-af61-c7444ddc2e7e")
+	)
+	(label "A0"
+		(at 91.44 52.07 0)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "636d3143-cefb-4494-ba0e-cbee3679eafc")
 	)
 	(label "A4"
 		(at 207.01 34.29 0)
@@ -13877,6 +13943,7 @@
 	)
 	(label "A9"
 		(at 146.05 114.3 0)
+		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -13909,6 +13976,7 @@
 	)
 	(label "A9"
 		(at 52.07 144.78 0)
+		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -14235,6 +14303,17 @@
 			(justify left bottom)
 		)
 		(uuid "cba59f96-6d1c-4233-bb7a-3097b5fbf94c")
+	)
+	(label "A1"
+		(at 91.44 54.61 0)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "cde3e69d-9dc1-4a5c-a82c-8b60be2e0fc5")
 	)
 	(label "A5"
 		(at 146.05 104.14 0)
@@ -14599,28 +14678,6 @@
 			)
 		)
 	)
-	(global_label "A0"
-		(shape input)
-		(at 95.25 52.07 180)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right)
-		)
-		(uuid "0a57a3df-0dbe-436e-b2fc-bf57b19a6ec8")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 89.9667 52.07 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-				(hide yes)
-			)
-		)
-	)
 	(global_label "CA2"
 		(shape output)
 		(at 90.17 152.4 0)
@@ -14700,28 +14757,6 @@
 		(uuid "115c0fa6-e818-44b7-9d7b-c4213123c17c")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 205.6577 62.23 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-				(hide yes)
-			)
-		)
-	)
-	(global_label "A1"
-		(shape input)
-		(at 95.25 54.61 180)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right)
-		)
-		(uuid "14f7f1a9-cb52-4851-9fb3-834e67e475fe")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 89.9667 54.61 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -14885,7 +14920,7 @@
 			)
 		)
 	)
-	(global_label "nRAMB1"
+	(global_label "RAMB1"
 		(shape input)
 		(at 33.02 40.64 180)
 		(fields_autoplaced yes)
@@ -14897,7 +14932,7 @@
 		)
 		(uuid "2693c167-96a2-41fd-a75d-1f217cec2d79")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 22.5963 40.64 0)
+			(at 23.7453 40.64 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15479,7 +15514,7 @@
 			)
 		)
 	)
-	(global_label "nRAMB0"
+	(global_label "RAMB0"
 		(shape input)
 		(at 33.02 38.1 180)
 		(fields_autoplaced yes)
@@ -15491,7 +15526,7 @@
 		)
 		(uuid "74ecb885-5744-4927-86b9-28d5ff4642c6")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 22.5963 38.1 0)
+			(at 23.7453 38.1 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -16359,7 +16394,7 @@
 			)
 		)
 	)
-	(global_label "nRAMB2"
+	(global_label "RAMB2"
 		(shape input)
 		(at 33.02 43.18 180)
 		(fields_autoplaced yes)
@@ -16371,7 +16406,7 @@
 		)
 		(uuid "dc2a5446-0ce7-4517-9487-667504f2ba08")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 22.5963 43.18 0)
+			(at 23.7453 43.18 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -16689,7 +16724,7 @@
 			)
 		)
 	)
-	(global_label "nRAMB3"
+	(global_label "RAMB3"
 		(shape input)
 		(at 33.02 45.72 180)
 		(fields_autoplaced yes)
@@ -16701,7 +16736,7 @@
 		)
 		(uuid "fe4db6fb-32c3-4a4d-b002-ac5bb2327d6a")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 22.5963 45.72 0)
+			(at 23.7453 45.72 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -18254,7 +18289,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "Task RAM"
+		(property "Value" "HM628512LP-5"
 			(at 228.2541 19.05 0)
 			(effects
 				(font
