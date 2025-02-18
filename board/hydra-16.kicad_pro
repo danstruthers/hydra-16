@@ -37,9 +37,9 @@
         "other_text_thickness": 0.15,
         "other_text_upright": false,
         "pads": {
-          "drill": 1.0,
-          "height": 1.7,
-          "width": 1.7
+          "drill": 1.0922,
+          "height": 1.6383,
+          "width": 1.6383
         },
         "silk_line_width": 0.1,
         "silk_text_italic": false,
@@ -544,7 +544,7 @@
       "netlist": "D:/KiCad/8.0/bin/",
       "plot": "Hydra-16-Gerber/",
       "pos_files": "",
-      "specctra_dsn": "Hydra16-0-8A.dsn",
+      "specctra_dsn": "Hydra16-0-9G1.dsn",
       "step": "",
       "svg": "",
       "vrml": ""
@@ -768,12 +768,12 @@
       "AddressDecode"
     ],
     [
-      "0b66303c-ed46-41df-a285-d041c923c3ce",
-      "SharedMemory"
-    ],
-    [
       "b525633b-f72d-4f83-aa63-6fabb8850756",
       "ZPMirrorRAM"
+    ],
+    [
+      "0b66303c-ed46-41df-a285-d041c923c3ce",
+      "SharedMemory"
     ],
     [
       "c97ceaa3-8b33-4987-b818-7b9f0353a344",
