@@ -2522,7 +2522,7 @@
 	)
 	(wire
 		(pts
-			(xy 116.84 107.95) (xy 121.92 107.95)
+			(xy 116.84 110.49) (xy 121.92 110.49)
 		)
 		(stroke
 			(width 0)
@@ -2532,7 +2532,7 @@
 	)
 	(wire
 		(pts
-			(xy 91.44 119.38) (xy 121.92 119.38)
+			(xy 88.9 119.38) (xy 121.92 119.38)
 		)
 		(stroke
 			(width 0)
@@ -2582,7 +2582,7 @@
 	)
 	(wire
 		(pts
-			(xy 121.92 107.95) (xy 121.92 119.38)
+			(xy 121.92 110.49) (xy 121.92 119.38)
 		)
 		(stroke
 			(width 0)
@@ -2678,7 +2678,7 @@
 	)
 	(global_label "SND_CL4"
 		(shape input)
-		(at 81.28 116.84 180)
+		(at 78.74 116.84 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -2688,7 +2688,7 @@
 		)
 		(uuid "6d7b6cc7-8546-42aa-bbfa-8251bd01e260")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 70.0096 116.84 0)
+			(at 67.4696 116.84 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2700,7 +2700,7 @@
 	)
 	(global_label "YM_AUDIO_L"
 		(shape input)
-		(at 109.22 107.95 180)
+		(at 109.22 110.49 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -2710,7 +2710,7 @@
 		)
 		(uuid "765307b6-ada4-4848-a234-07d6b9a0bdec")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 123.3329 107.95 0)
+			(at 123.3329 110.49 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2722,7 +2722,7 @@
 	)
 	(global_label "SND_CL2"
 		(shape input)
-		(at 81.28 111.76 180)
+		(at 78.74 111.76 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -2732,7 +2732,7 @@
 		)
 		(uuid "7b1d1f19-e729-48e1-a9ac-51e1e6655997")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 70.0096 111.76 0)
+			(at 67.4696 111.76 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2766,7 +2766,7 @@
 	)
 	(global_label "SND_CL3"
 		(shape input)
-		(at 81.28 114.3 180)
+		(at 78.74 114.3 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -2776,7 +2776,7 @@
 		)
 		(uuid "7f536c93-57a5-4cd1-abc3-72af101dce56")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 70.0096 114.3 0)
+			(at 67.4696 114.3 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2810,7 +2810,7 @@
 	)
 	(global_label "SND_CL1"
 		(shape input)
-		(at 81.28 109.22 180)
+		(at 78.74 109.22 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -2820,7 +2820,7 @@
 		)
 		(uuid "9317ad85-702d-4004-8da3-eb083641c688")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 70.0096 109.22 0)
+			(at 67.4696 109.22 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2832,7 +2832,7 @@
 	)
 	(global_label "SND_CL5"
 		(shape input)
-		(at 81.28 119.38 180)
+		(at 78.74 119.38 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -2842,7 +2842,7 @@
 		)
 		(uuid "a25143c9-2170-4f1d-8e35-bba438bb8a9d")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 70.0096 119.38 0)
+			(at 67.4696 119.38 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2854,7 +2854,7 @@
 	)
 	(global_label "SND_CL0"
 		(shape input)
-		(at 81.28 106.68 180)
+		(at 78.74 106.68 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -2864,7 +2864,7 @@
 		)
 		(uuid "aa9e9e6f-198a-45f6-a21b-30d76dfde606")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 70.0096 106.68 0)
+			(at 67.4696 106.68 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2964,7 +2964,7 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 113.03 107.95 90)
+		(at 113.03 110.49 90)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -2972,7 +2972,7 @@
 		(dnp no)
 		(uuid "0d0433f8-46b0-483e-a32b-56b4468aa8ef")
 		(property "Reference" "R6"
-			(at 113.03 103.886 90)
+			(at 113.03 106.426 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2980,7 +2980,7 @@
 			)
 		)
 		(property "Value" "103"
-			(at 113.03 105.664 90)
+			(at 113.03 108.204 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2988,7 +2988,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_THT:R_Axial_DIN0204_L3.6mm_D1.6mm_P5.08mm_Horizontal"
-			(at 113.03 109.728 90)
+			(at 113.03 112.268 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2997,7 +2997,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 113.03 107.95 0)
+			(at 113.03 110.49 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3006,7 +3006,7 @@
 			)
 		)
 		(property "Description" "Resistor"
-			(at 113.03 107.95 0)
+			(at 113.03 110.49 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3235,7 +3235,7 @@
 	)
 	(symbol
 		(lib_id "Device:R_Network08_US")
-		(at 86.36 109.22 270)
+		(at 83.82 109.22 270)
 		(mirror x)
 		(unit 1)
 		(exclude_from_sim no)
@@ -3245,7 +3245,7 @@
 		(fields_autoplaced yes)
 		(uuid "1c41c59e-27b8-4641-93b7-3758c51ad95a")
 		(property "Reference" "RN5"
-			(at 86.106 95.25 90)
+			(at 83.566 95.25 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3253,7 +3253,7 @@
 			)
 		)
 		(property "Value" "103"
-			(at 86.106 97.79 90)
+			(at 83.566 97.79 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3261,7 +3261,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_THT:R_Array_SIP9"
-			(at 86.36 97.155 90)
+			(at 83.82 97.155 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3270,7 +3270,7 @@
 			)
 		)
 		(property "Datasheet" "http://www.vishay.com/docs/31509/csc.pdf"
-			(at 86.36 109.22 0)
+			(at 83.82 109.22 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3279,7 +3279,7 @@
 			)
 		)
 		(property "Description" "8 resistor network, star topology, bussed resistors, small US symbol"
-			(at 86.36 109.22 0)
+			(at 83.82 109.22 0)
 			(effects
 				(font
 					(size 1.27 1.27)
