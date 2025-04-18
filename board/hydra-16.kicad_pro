@@ -37,9 +37,9 @@
         "other_text_thickness": 0.15,
         "other_text_upright": false,
         "pads": {
-          "drill": 1.0922,
-          "height": 1.6383,
-          "width": 1.6383
+          "drill": 0.8,
+          "height": 1.6,
+          "width": 2.4
         },
         "silk_line_width": 0.1,
         "silk_text_italic": false,
@@ -483,7 +483,7 @@
         "priority": 2147483647,
         "schematic_color": "rgba(0, 0, 0, 0.000)",
         "track_width": 0.254,
-        "via_diameter": 0.45,
+        "via_diameter": 0.6,
         "via_drill": 0.3,
         "wire_width": 6
       },
@@ -497,12 +497,26 @@
         "microvia_drill": 0.1,
         "name": "GND",
         "pcb_color": "rgba(0, 0, 0, 0.000)",
-        "priority": 0,
+        "priority": 1,
         "schematic_color": "rgba(0, 0, 0, 0.000)",
         "track_width": 0.762,
         "via_diameter": 0.762,
         "via_drill": 0.4,
         "wire_width": 6
+      },
+      {
+        "clearance": 0.762,
+        "diff_pair_gap": 0.25,
+        "diff_pair_width": 0.25,
+        "microvia_diameter": 0.3,
+        "microvia_drill": 0.1,
+        "name": "GNDA",
+        "pcb_color": "rgba(0, 0, 0, 0.000)",
+        "priority": 0,
+        "schematic_color": "rgba(0, 0, 0, 0.000)",
+        "track_width": 0.762,
+        "via_diameter": 0.762,
+        "via_drill": 0.4
       },
       {
         "clearance": 0.2,
@@ -512,10 +526,10 @@
         "microvia_drill": 0.1,
         "name": "MajorSignals",
         "pcb_color": "rgba(0, 0, 0, 0.000)",
-        "priority": 2,
+        "priority": 3,
         "schematic_color": "rgba(0, 0, 0, 0.000)",
         "track_width": 0.381,
-        "via_diameter": 0.45,
+        "via_diameter": 0.6,
         "via_drill": 0.3
       },
       {
@@ -528,7 +542,7 @@
         "microvia_drill": 0.1,
         "name": "Power",
         "pcb_color": "rgba(0, 0, 0, 0.000)",
-        "priority": 1,
+        "priority": 2,
         "schematic_color": "rgba(0, 0, 0, 0.000)",
         "track_width": 0.762,
         "via_diameter": 0.762,
@@ -548,7 +562,7 @@
       },
       {
         "netclass": "GND",
-        "pattern": "A?GND"
+        "pattern": "GND"
       },
       {
         "netclass": "Power",
@@ -569,6 +583,10 @@
       {
         "netclass": "MajorSignals",
         "pattern": "PHI2"
+      },
+      {
+        "netclass": "GNDA",
+        "pattern": "GNDA"
       }
     ]
   },
@@ -577,9 +595,9 @@
       "gencad": "",
       "idf": "",
       "netlist": "D:/KiCad/8.0/bin/",
-      "plot": "Hydra-16-Gerber/",
+      "plot": "Hydra-16-Gerber-1-2A/",
       "pos_files": "",
-      "specctra_dsn": "Hydra16-1-1H.dsn",
+      "specctra_dsn": "Hydra16-1-3B.dsn",
       "step": "",
       "svg": "",
       "vrml": ""
@@ -783,6 +801,14 @@
       "version": 1
     },
     "net_format_name": "",
+    "ngspice": {
+      "fix_include_paths": true,
+      "meta": {
+        "version": 0
+      },
+      "model_mode": 4,
+      "workbook_filename": ""
+    },
     "page_layout_descr_file": "",
     "plot_directory": "",
     "space_save_all_events": true,
