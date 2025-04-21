@@ -7,7 +7,7 @@
 	(title_block
 		(title "FFFx Registers and Logic")
 		(date "2025-03-04")
-		(rev "1.3B")
+		(rev "1.2B")
 		(company "Data Tuning")
 		(comment 1 "Hydra 16")
 	)
