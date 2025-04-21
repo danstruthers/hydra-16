@@ -6,8 +6,8 @@
 	(paper "USLetter")
 	(title_block
 		(title "ZeroPage $00/$01 Mirror Memory and RAM/ROM Bank Logic")
-		(date "2025-03-04")
-		(rev "1.3B")
+		(date "2025-04-15")
+		(rev "1.3")
 		(company "Data Tuning")
 		(comment 1 "Hydra 16")
 	)

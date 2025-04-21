@@ -6,8 +6,8 @@
 	(paper "A4")
 	(title_block
 		(title "Audio Mixer Circuitry")
-		(date "2025-03-04")
-		(rev "1.3B")
+		(date "2025-04-15")
+		(rev "1.3")
 		(company "Data Tuning")
 		(comment 1 "Hydra 16")
 	)
