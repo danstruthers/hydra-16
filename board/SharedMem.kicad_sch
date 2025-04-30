@@ -6,8 +6,8 @@
 	(paper "USLetter")
 	(title_block
 		(title "Shared RAM Banks")
-		(date "2025-04-15")
-		(rev "1.3")
+		(date "2025-04-23")
+		(rev "1.3C")
 		(company "Data Tuning")
 		(comment 1 "Hydra 16")
 	)
@@ -3448,7 +3448,7 @@
 	)
 	(wire
 		(pts
-			(xy 232.41 148.59) (xy 232.41 69.85)
+			(xy 236.22 148.59) (xy 236.22 69.85)
 		)
 		(stroke
 			(width 0)
@@ -3868,7 +3868,7 @@
 	)
 	(wire
 		(pts
-			(xy 71.12 148.59) (xy 232.41 148.59)
+			(xy 71.12 148.59) (xy 236.22 148.59)
 		)
 		(stroke
 			(width 0)
@@ -4798,7 +4798,7 @@
 	)
 	(wire
 		(pts
-			(xy 219.71 69.85) (xy 232.41 69.85)
+			(xy 219.71 69.85) (xy 236.22 69.85)
 		)
 		(stroke
 			(width 0)
@@ -4898,7 +4898,7 @@
 	)
 	(bus
 		(pts
-			(xy 170.18 105.41) (xy 236.22 105.41)
+			(xy 170.18 105.41) (xy 241.3 105.41)
 		)
 		(stroke
 			(width 0)
@@ -6280,7 +6280,7 @@
 	)
 	(global_label "RAMB[0..7]"
 		(shape input)
-		(at 236.22 105.41 0)
+		(at 241.3 105.41 0)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -6290,7 +6290,7 @@
 		)
 		(uuid "2ceaca17-be48-40b3-9819-1502443301df")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 249.6072 105.41 0)
+			(at 254.6872 105.41 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6322,7 +6322,7 @@
 			)
 		)
 	)
-	(global_label "RWB"
+	(global_label "RWB_M"
 		(shape input)
 		(at 119.38 74.93 0)
 		(fields_autoplaced yes)
@@ -6334,12 +6334,12 @@
 		)
 		(uuid "374c8396-7313-469b-811e-c03f0f408d5b")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 112.4034 74.93 0)
+			(at 128.7756 74.93 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(justify right)
+				(justify left)
 				(hide yes)
 			)
 		)
@@ -6366,7 +6366,7 @@
 			)
 		)
 	)
-	(global_label "!RWB"
+	(global_label "!RWB_M"
 		(shape input)
 		(at 119.38 72.39 0)
 		(fields_autoplaced yes)
@@ -6378,7 +6378,7 @@
 		)
 		(uuid "47fc6fd6-2d62-412b-9c81-7cd53d0e21dc")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 126.9614 72.39 0)
+			(at 129.3804 72.39 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6388,7 +6388,7 @@
 			)
 		)
 	)
-	(global_label "!RWB"
+	(global_label "!RWB_M"
 		(shape input)
 		(at 223.52 72.39 0)
 		(fields_autoplaced yes)
@@ -6400,7 +6400,7 @@
 		)
 		(uuid "4d6e3390-91c9-46cb-b9a5-1594143dea8a")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 231.1014 72.39 0)
+			(at 233.5204 72.39 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6410,7 +6410,7 @@
 			)
 		)
 	)
-	(global_label "RWB"
+	(global_label "RWB_M"
 		(shape input)
 		(at 171.45 74.93 0)
 		(fields_autoplaced yes)
@@ -6422,12 +6422,12 @@
 		)
 		(uuid "6e1d275f-b7f9-4236-af36-f90c5f7f589c")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 164.4734 74.93 0)
+			(at 180.8456 74.93 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(justify right)
+				(justify left)
 				(hide yes)
 			)
 		)
@@ -6476,7 +6476,7 @@
 			)
 		)
 	)
-	(global_label "!RWB"
+	(global_label "!RWB_M"
 		(shape input)
 		(at 171.45 72.39 0)
 		(fields_autoplaced yes)
@@ -6488,7 +6488,7 @@
 		)
 		(uuid "8aa9813c-4326-4f6b-9b32-42bb7e1b0b47")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 179.0314 72.39 0)
+			(at 181.4504 72.39 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6696,7 +6696,7 @@
 			)
 		)
 	)
-	(global_label "!RWB"
+	(global_label "!RWB_M"
 		(shape input)
 		(at 67.31 72.39 0)
 		(fields_autoplaced yes)
@@ -6708,7 +6708,7 @@
 		)
 		(uuid "d75cab94-3ad8-4dd3-9fd4-f33c7aae0ff6")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 74.8914 72.39 0)
+			(at 77.3104 72.39 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6718,7 +6718,7 @@
 			)
 		)
 	)
-	(global_label "RWB"
+	(global_label "RWB_M"
 		(shape input)
 		(at 67.31 74.93 0)
 		(fields_autoplaced yes)
@@ -6730,17 +6730,17 @@
 		)
 		(uuid "f3818bf0-dc9e-4fbf-bfd6-16329a6c4ec8")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 60.3334 74.93 0)
+			(at 76.7056 74.93 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(justify right)
+				(justify left)
 				(hide yes)
 			)
 		)
 	)
-	(global_label "RWB"
+	(global_label "RWB_M"
 		(shape input)
 		(at 223.52 74.93 0)
 		(fields_autoplaced yes)
@@ -6752,12 +6752,12 @@
 		)
 		(uuid "fc656232-2ef4-4205-bf0a-6a5ccae0024c")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 216.5434 74.93 0)
+			(at 232.9156 74.93 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(justify right)
+				(justify left)
 				(hide yes)
 			)
 		)
