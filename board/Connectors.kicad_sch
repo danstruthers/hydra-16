@@ -10553,7 +10553,7 @@
 		)
 		(uuid "ffabba7a-87ab-49ce-ab61-969d77c02e2c")
 	)
-	(label "D_SLOTS0"
+	(label "D0"
 		(at 231.14 43.18 0)
 		(effects
 			(font
@@ -10563,7 +10563,7 @@
 		)
 		(uuid "02a2415c-206b-471c-a1c2-a5aa6b222844")
 	)
-	(label "A_SLOTS0"
+	(label "A0"
 		(at 120.65 189.23 180)
 		(effects
 			(font
@@ -10573,7 +10573,7 @@
 		)
 		(uuid "04a63f64-16c0-4d7f-a3fb-0ed4f05101c6")
 	)
-	(label "A_SLOTS9"
+	(label "A9"
 		(at 63.5 166.37 180)
 		(effects
 			(font
@@ -10583,7 +10583,7 @@
 		)
 		(uuid "0db5fbb3-e7ab-40a8-bb6c-265b5f58be4f")
 	)
-	(label "A_SLOTS9"
+	(label "A9"
 		(at 180.34 76.2 180)
 		(effects
 			(font
@@ -10593,7 +10593,7 @@
 		)
 		(uuid "11128f0c-deb3-42e1-8de8-818ed67d8044")
 	)
-	(label "D_SLOTS6"
+	(label "D6"
 		(at 111.76 118.11 0)
 		(effects
 			(font
@@ -10603,7 +10603,7 @@
 		)
 		(uuid "12c6f293-ed82-4905-88c4-44c72fd62863")
 	)
-	(label "A_SLOTS1"
+	(label "A1"
 		(at 240.03 96.52 180)
 		(effects
 			(font
@@ -10613,7 +10613,7 @@
 		)
 		(uuid "13acc94d-6cfe-4404-97de-2986dbc8f31e")
 	)
-	(label "A_SLOTS5"
+	(label "A5"
 		(at 180.34 86.36 180)
 		(effects
 			(font
@@ -10623,7 +10623,7 @@
 		)
 		(uuid "13e1930b-7647-4eec-b449-4c4b0545a7fd")
 	)
-	(label "A_SLOTS11"
+	(label "A11"
 		(at 121.92 161.29 180)
 		(effects
 			(font
@@ -10633,7 +10633,7 @@
 		)
 		(uuid "15e280b1-a0a4-42ea-95e5-1445bcd1589e")
 	)
-	(label "A_SLOTS5"
+	(label "A5"
 		(at 120.65 176.53 180)
 		(effects
 			(font
@@ -10643,7 +10643,7 @@
 		)
 		(uuid "1600db0c-974b-4c36-b302-bff756558eda")
 	)
-	(label "A_SLOTS6"
+	(label "A6"
 		(at 180.34 83.82 180)
 		(effects
 			(font
@@ -10653,7 +10653,7 @@
 		)
 		(uuid "1d840b4b-f51d-483e-a929-b185f198795b")
 	)
-	(label "A_SLOTS9"
+	(label "A9"
 		(at 120.65 76.2 180)
 		(effects
 			(font
@@ -10663,7 +10663,7 @@
 		)
 		(uuid "1e34baef-8257-43f6-997b-e5b4ce015355")
 	)
-	(label "D_SLOTS7"
+	(label "D7"
 		(at 54.61 25.4 0)
 		(effects
 			(font
@@ -10673,7 +10673,7 @@
 		)
 		(uuid "1ed1f813-cc74-4d80-9bf0-a38e8f358d6c")
 	)
-	(label "A_SLOTS2"
+	(label "A2"
 		(at 63.5 184.15 180)
 		(effects
 			(font
@@ -10683,7 +10683,7 @@
 		)
 		(uuid "25e791e9-93e9-4b31-a383-af00e87874d2")
 	)
-	(label "A_SLOTS6"
+	(label "A6"
 		(at 120.65 83.82 180)
 		(effects
 			(font
@@ -10693,7 +10693,7 @@
 		)
 		(uuid "270bb9aa-b237-4f5f-94f7-69ae77acce73")
 	)
-	(label "A_SLOTS10"
+	(label "A10"
 		(at 241.3 73.66 180)
 		(effects
 			(font
@@ -10703,7 +10703,7 @@
 		)
 		(uuid "285169cc-823b-4d6a-a2c0-2c85559bc0e1")
 	)
-	(label "A_SLOTS12"
+	(label "A12"
 		(at 121.92 68.58 180)
 		(effects
 			(font
@@ -10713,7 +10713,7 @@
 		)
 		(uuid "2c131ad4-b7cb-470e-918c-f80eec620057")
 	)
-	(label "A_SLOTS2"
+	(label "A2"
 		(at 240.03 93.98 180)
 		(effects
 			(font
@@ -10723,7 +10723,7 @@
 		)
 		(uuid "2daf3d98-5aab-4ca7-8d1a-c18ac3ebd662")
 	)
-	(label "A_SLOTS4"
+	(label "A4"
 		(at 120.65 179.07 180)
 		(effects
 			(font
@@ -10733,7 +10733,7 @@
 		)
 		(uuid "2f954281-7458-4f36-a796-8dea4b558455")
 	)
-	(label "A_SLOTS11"
+	(label "A11"
 		(at 241.3 71.12 180)
 		(effects
 			(font
@@ -10743,7 +10743,7 @@
 		)
 		(uuid "2fb2897f-eda5-4768-b23b-79df0b21432b")
 	)
-	(label "D_SLOTS4"
+	(label "D4"
 		(at 171.45 33.02 0)
 		(effects
 			(font
@@ -10753,7 +10753,7 @@
 		)
 		(uuid "3057ded4-028d-4bc1-a5ea-4be61eb35f55")
 	)
-	(label "A_SLOTS14"
+	(label "A14"
 		(at 121.92 63.5 180)
 		(effects
 			(font
@@ -10763,7 +10763,7 @@
 		)
 		(uuid "330922ed-07ee-47e2-9a0b-0b8ff17b8975")
 	)
-	(label "D_SLOTS2"
+	(label "D2"
 		(at 54.61 128.27 0)
 		(effects
 			(font
@@ -10773,7 +10773,7 @@
 		)
 		(uuid "3a484a54-e4af-481f-889a-4ce5759a3888")
 	)
-	(label "D_SLOTS1"
+	(label "D1"
 		(at 231.14 40.64 0)
 		(effects
 			(font
@@ -10783,7 +10783,7 @@
 		)
 		(uuid "3a4e9d02-5c5f-4dbf-a395-a560179548fb")
 	)
-	(label "D_SLOTS1"
+	(label "D1"
 		(at 111.76 40.64 0)
 		(effects
 			(font
@@ -10793,7 +10793,7 @@
 		)
 		(uuid "3a8665a8-809b-4905-b342-e853283e74ae")
 	)
-	(label "D_SLOTS6"
+	(label "D6"
 		(at 54.61 27.94 0)
 		(effects
 			(font
@@ -10803,7 +10803,7 @@
 		)
 		(uuid "3c95079f-ac9b-4756-bb10-54b935c80fed")
 	)
-	(label "A_SLOTS0"
+	(label "A0"
 		(at 63.5 99.06 180)
 		(effects
 			(font
@@ -10813,7 +10813,7 @@
 		)
 		(uuid "3d532f7e-2c80-476f-b4b1-67b9fe9cb737")
 	)
-	(label "D_SLOTS2"
+	(label "D2"
 		(at 171.45 38.1 0)
 		(effects
 			(font
@@ -10823,7 +10823,7 @@
 		)
 		(uuid "3e08f16a-681d-446c-ac2c-99f595da6c21")
 	)
-	(label "A_SLOTS3"
+	(label "A3"
 		(at 63.5 91.44 180)
 		(effects
 			(font
@@ -10833,7 +10833,7 @@
 		)
 		(uuid "418587f5-ce2c-491d-a3a2-57ff646a26aa")
 	)
-	(label "A_SLOTS5"
+	(label "A5"
 		(at 63.5 86.36 180)
 		(effects
 			(font
@@ -10843,7 +10843,7 @@
 		)
 		(uuid "42f64d24-cba0-484d-8b46-df1b58b3de51")
 	)
-	(label "A_SLOTS6"
+	(label "A6"
 		(at 240.03 83.82 180)
 		(effects
 			(font
@@ -10853,7 +10853,7 @@
 		)
 		(uuid "435991f6-6f49-4a0c-b99d-f5490ab035d7")
 	)
-	(label "D_SLOTS5"
+	(label "D5"
 		(at 111.76 30.48 0)
 		(effects
 			(font
@@ -10863,7 +10863,7 @@
 		)
 		(uuid "44666981-e638-4428-a0c5-f868cf48153e")
 	)
-	(label "A_SLOTS12"
+	(label "A12"
 		(at 64.77 158.75 180)
 		(effects
 			(font
@@ -10873,7 +10873,7 @@
 		)
 		(uuid "456120bb-d3b3-4772-b63f-458cfb57267b")
 	)
-	(label "A_SLOTS8"
+	(label "A8"
 		(at 63.5 168.91 180)
 		(effects
 			(font
@@ -10883,7 +10883,7 @@
 		)
 		(uuid "48d26ef0-2dcf-4549-9473-9c814f3bdfb0")
 	)
-	(label "D_SLOTS5"
+	(label "D5"
 		(at 171.45 30.48 0)
 		(effects
 			(font
@@ -10893,7 +10893,7 @@
 		)
 		(uuid "4a6331e5-18dd-4a3d-8307-dbc0eaba58f5")
 	)
-	(label "A_SLOTS3"
+	(label "A3"
 		(at 180.34 91.44 180)
 		(effects
 			(font
@@ -10903,7 +10903,7 @@
 		)
 		(uuid "4b05cb6f-4618-4c21-90e6-5359b8a47272")
 	)
-	(label "A_SLOTS6"
+	(label "A6"
 		(at 63.5 173.99 180)
 		(effects
 			(font
@@ -10913,7 +10913,7 @@
 		)
 		(uuid "4b3b0fb4-8ee1-4764-bea6-81f6c29ec5ad")
 	)
-	(label "D_SLOTS3"
+	(label "D3"
 		(at 111.76 125.73 0)
 		(effects
 			(font
@@ -10923,7 +10923,7 @@
 		)
 		(uuid "4bd5caa5-2e69-4a5e-b3eb-92226b01d5ad")
 	)
-	(label "A_SLOTS13"
+	(label "A13"
 		(at 181.61 66.04 180)
 		(effects
 			(font
@@ -10933,7 +10933,7 @@
 		)
 		(uuid "4d4ff021-a222-4bb0-9be7-bc1ca9a4e3d9")
 	)
-	(label "A_SLOTS6"
+	(label "A6"
 		(at 120.65 173.99 180)
 		(effects
 			(font
@@ -10943,7 +10943,7 @@
 		)
 		(uuid "4fbde07d-af6c-48c1-8b87-1610327f36e8")
 	)
-	(label "D_SLOTS5"
+	(label "D5"
 		(at 54.61 120.65 0)
 		(effects
 			(font
@@ -10953,7 +10953,7 @@
 		)
 		(uuid "512e5e68-43dd-4c98-97db-b50507dc0ad9")
 	)
-	(label "D_SLOTS6"
+	(label "D6"
 		(at 231.14 27.94 0)
 		(effects
 			(font
@@ -10963,7 +10963,7 @@
 		)
 		(uuid "53fa42c6-50f8-4bbd-b399-8b9299652352")
 	)
-	(label "A_SLOTS1"
+	(label "A1"
 		(at 180.34 96.52 180)
 		(effects
 			(font
@@ -10973,7 +10973,7 @@
 		)
 		(uuid "5510fc58-5883-4c52-bc1b-b0b96010869c")
 	)
-	(label "A_SLOTS11"
+	(label "A11"
 		(at 181.61 71.12 180)
 		(effects
 			(font
@@ -10983,7 +10983,7 @@
 		)
 		(uuid "56e5ff17-8f39-469f-9ca4-09b500b2c6a5")
 	)
-	(label "A_SLOTS15"
+	(label "A15"
 		(at 64.77 151.13 180)
 		(effects
 			(font
@@ -10993,7 +10993,7 @@
 		)
 		(uuid "57c1fad4-6ff7-4bc6-b157-f8349f7180ab")
 	)
-	(label "A_SLOTS10"
+	(label "A10"
 		(at 181.61 73.66 180)
 		(effects
 			(font
@@ -11003,7 +11003,7 @@
 		)
 		(uuid "58a26699-a84d-4457-8f52-2bdb3c0dd386")
 	)
-	(label "D_SLOTS1"
+	(label "D1"
 		(at 54.61 40.64 0)
 		(effects
 			(font
@@ -11013,7 +11013,7 @@
 		)
 		(uuid "58d00499-eb05-49a3-816c-d31990e85807")
 	)
-	(label "A_SLOTS4"
+	(label "A4"
 		(at 120.65 88.9 180)
 		(effects
 			(font
@@ -11023,7 +11023,7 @@
 		)
 		(uuid "5a3e7a60-6f11-4db8-a122-4faf5e3cd0ce")
 	)
-	(label "D_SLOTS4"
+	(label "D4"
 		(at 111.76 123.19 0)
 		(effects
 			(font
@@ -11033,7 +11033,7 @@
 		)
 		(uuid "5ac0baf1-9856-452e-9770-1fb29143e4e9")
 	)
-	(label "A_SLOTS14"
+	(label "A14"
 		(at 64.77 153.67 180)
 		(effects
 			(font
@@ -11043,7 +11043,7 @@
 		)
 		(uuid "5b34d8f1-03e3-4b3f-8aaa-0863cb4eabaa")
 	)
-	(label "A_SLOTS15"
+	(label "A15"
 		(at 121.92 60.96 180)
 		(effects
 			(font
@@ -11053,7 +11053,7 @@
 		)
 		(uuid "5c02c762-d383-4446-aafe-c24ce05fccb3")
 	)
-	(label "D_SLOTS1"
+	(label "D1"
 		(at 54.61 130.81 0)
 		(effects
 			(font
@@ -11063,7 +11063,7 @@
 		)
 		(uuid "5d8123c7-76e0-42ff-8081-6c4e8396d114")
 	)
-	(label "A_SLOTS1"
+	(label "A1"
 		(at 63.5 186.69 180)
 		(effects
 			(font
@@ -11073,7 +11073,7 @@
 		)
 		(uuid "60395bf0-acc2-438d-873b-f694477ca9f4")
 	)
-	(label "A_SLOTS1"
+	(label "A1"
 		(at 120.65 96.52 180)
 		(effects
 			(font
@@ -11083,7 +11083,7 @@
 		)
 		(uuid "60ebc221-c4c0-4f46-ac1f-9ece56168b81")
 	)
-	(label "D_SLOTS7"
+	(label "D7"
 		(at 171.45 25.4 0)
 		(effects
 			(font
@@ -11093,7 +11093,7 @@
 		)
 		(uuid "62105d84-7f8b-4e46-a406-a9baf5a93e6c")
 	)
-	(label "A_SLOTS1"
+	(label "A1"
 		(at 63.5 96.52 180)
 		(effects
 			(font
@@ -11103,7 +11103,7 @@
 		)
 		(uuid "675cb200-28b1-40d8-be70-ae76a920c1c9")
 	)
-	(label "D_SLOTS7"
+	(label "D7"
 		(at 231.14 25.4 0)
 		(effects
 			(font
@@ -11113,7 +11113,7 @@
 		)
 		(uuid "683da48f-61bb-438f-bc04-69607f271e9b")
 	)
-	(label "A_SLOTS11"
+	(label "A11"
 		(at 121.92 71.12 180)
 		(effects
 			(font
@@ -11123,7 +11123,7 @@
 		)
 		(uuid "6905ed69-5371-4f50-a4fd-751d581317e8")
 	)
-	(label "A_SLOTS3"
+	(label "A3"
 		(at 120.65 181.61 180)
 		(effects
 			(font
@@ -11133,7 +11133,7 @@
 		)
 		(uuid "69136f4f-4866-45d7-a45b-2762953372e0")
 	)
-	(label "A_SLOTS15"
+	(label "A15"
 		(at 241.3 60.96 180)
 		(effects
 			(font
@@ -11143,7 +11143,7 @@
 		)
 		(uuid "6953fee7-2bdd-4596-b625-37538cfe7ab2")
 	)
-	(label "A_SLOTS12"
+	(label "A12"
 		(at 241.3 68.58 180)
 		(effects
 			(font
@@ -11153,7 +11153,7 @@
 		)
 		(uuid "69609921-e06b-470d-a938-24e28c81b54f")
 	)
-	(label "D_SLOTS3"
+	(label "D3"
 		(at 171.45 35.56 0)
 		(effects
 			(font
@@ -11163,7 +11163,7 @@
 		)
 		(uuid "6a318003-9ff9-413a-b51a-d67bec15eafc")
 	)
-	(label "A_SLOTS12"
+	(label "A12"
 		(at 64.77 68.58 180)
 		(effects
 			(font
@@ -11173,7 +11173,7 @@
 		)
 		(uuid "6b657e07-1860-4678-968c-3fb34a3e39e3")
 	)
-	(label "D_SLOTS3"
+	(label "D3"
 		(at 54.61 125.73 0)
 		(effects
 			(font
@@ -11183,7 +11183,7 @@
 		)
 		(uuid "6b8e8b59-8cf5-48be-a5bc-bbcde7e6c697")
 	)
-	(label "D_SLOTS7"
+	(label "D7"
 		(at 111.76 115.57 0)
 		(effects
 			(font
@@ -11193,7 +11193,7 @@
 		)
 		(uuid "6e1a0aef-6f75-4b95-b8db-37033b7c1aae")
 	)
-	(label "A_SLOTS7"
+	(label "A7"
 		(at 240.03 81.28 180)
 		(effects
 			(font
@@ -11203,7 +11203,7 @@
 		)
 		(uuid "6f0b1788-e39a-456c-9dd0-c26aaf2dbb04")
 	)
-	(label "A_SLOTS5"
+	(label "A5"
 		(at 120.65 86.36 180)
 		(effects
 			(font
@@ -11213,7 +11213,7 @@
 		)
 		(uuid "6f885d7f-1849-4399-bf1d-27bf85488655")
 	)
-	(label "A_SLOTS15"
+	(label "A15"
 		(at 64.77 60.96 180)
 		(effects
 			(font
@@ -11223,7 +11223,7 @@
 		)
 		(uuid "70585862-10ee-449a-9cba-7fb9521ce184")
 	)
-	(label "A_SLOTS9"
+	(label "A9"
 		(at 120.65 166.37 180)
 		(effects
 			(font
@@ -11233,7 +11233,7 @@
 		)
 		(uuid "7268bd97-6df1-4e86-9c8b-82c2bbec6b5b")
 	)
-	(label "A_SLOTS10"
+	(label "A10"
 		(at 64.77 73.66 180)
 		(effects
 			(font
@@ -11243,7 +11243,7 @@
 		)
 		(uuid "72703faf-9a8c-47fd-b6ca-873dbfbcf91c")
 	)
-	(label "A_SLOTS13"
+	(label "A13"
 		(at 121.92 156.21 180)
 		(effects
 			(font
@@ -11253,7 +11253,7 @@
 		)
 		(uuid "745f3b9d-f1d4-4127-a01a-99546f3fdf84")
 	)
-	(label "A_SLOTS3"
+	(label "A3"
 		(at 63.5 181.61 180)
 		(effects
 			(font
@@ -11263,7 +11263,7 @@
 		)
 		(uuid "778b0e55-0638-4aa1-afc1-56083cf29d08")
 	)
-	(label "A_SLOTS9"
+	(label "A9"
 		(at 63.5 76.2 180)
 		(effects
 			(font
@@ -11273,7 +11273,7 @@
 		)
 		(uuid "7851d10c-b364-4456-ae93-1ff54d58cb08")
 	)
-	(label "A_SLOTS8"
+	(label "A8"
 		(at 180.34 78.74 180)
 		(effects
 			(font
@@ -11283,7 +11283,7 @@
 		)
 		(uuid "7ec3dd53-f6c2-412b-8c48-ebdd026b717e")
 	)
-	(label "A_SLOTS15"
+	(label "A15"
 		(at 121.92 151.13 180)
 		(effects
 			(font
@@ -11293,7 +11293,7 @@
 		)
 		(uuid "804332e5-fe9b-44d7-b2ae-9b041af4703f")
 	)
-	(label "A_SLOTS7"
+	(label "A7"
 		(at 120.65 81.28 180)
 		(effects
 			(font
@@ -11303,7 +11303,7 @@
 		)
 		(uuid "82f3730c-c92a-42a8-a981-85d6fa29565e")
 	)
-	(label "A_SLOTS2"
+	(label "A2"
 		(at 180.34 93.98 180)
 		(effects
 			(font
@@ -11313,7 +11313,7 @@
 		)
 		(uuid "835cdb30-8a22-4aa1-beb9-02c797483a6c")
 	)
-	(label "A_SLOTS7"
+	(label "A7"
 		(at 180.34 81.28 180)
 		(effects
 			(font
@@ -11323,7 +11323,7 @@
 		)
 		(uuid "8e5ebfb0-cd3b-4d8e-bdff-e48d13ff667a")
 	)
-	(label "D_SLOTS2"
+	(label "D2"
 		(at 111.76 128.27 0)
 		(effects
 			(font
@@ -11333,7 +11333,7 @@
 		)
 		(uuid "9186238e-99ee-41b3-8026-b82047737ad2")
 	)
-	(label "A_SLOTS4"
+	(label "A4"
 		(at 180.34 88.9 180)
 		(effects
 			(font
@@ -11343,7 +11343,7 @@
 		)
 		(uuid "91940a90-0b06-4e92-ae4d-47068eb8164e")
 	)
-	(label "D_SLOTS4"
+	(label "D4"
 		(at 54.61 33.02 0)
 		(effects
 			(font
@@ -11353,7 +11353,7 @@
 		)
 		(uuid "9439e716-318d-43d8-8b18-7e71aa51cb7e")
 	)
-	(label "A_SLOTS13"
+	(label "A13"
 		(at 64.77 156.21 180)
 		(effects
 			(font
@@ -11363,7 +11363,7 @@
 		)
 		(uuid "94952448-79cf-4e26-9700-a114f953bcbb")
 	)
-	(label "D_SLOTS6"
+	(label "D6"
 		(at 111.76 27.94 0)
 		(effects
 			(font
@@ -11373,7 +11373,7 @@
 		)
 		(uuid "9dfd3fc2-1481-4921-b109-0f0c11588948")
 	)
-	(label "D_SLOTS5"
+	(label "D5"
 		(at 54.61 30.48 0)
 		(effects
 			(font
@@ -11383,7 +11383,7 @@
 		)
 		(uuid "9e5f36ce-1c87-42fe-bef7-cc79334a4a54")
 	)
-	(label "A_SLOTS0"
+	(label "A0"
 		(at 63.5 189.23 180)
 		(effects
 			(font
@@ -11393,7 +11393,7 @@
 		)
 		(uuid "a4be8518-a421-41c3-8281-c6550a8e14f4")
 	)
-	(label "D_SLOTS4"
+	(label "D4"
 		(at 111.76 33.02 0)
 		(effects
 			(font
@@ -11403,7 +11403,7 @@
 		)
 		(uuid "a63c854d-7412-42db-addc-2775af1fea86")
 	)
-	(label "D_SLOTS4"
+	(label "D4"
 		(at 231.14 33.02 0)
 		(effects
 			(font
@@ -11413,7 +11413,7 @@
 		)
 		(uuid "a6aa7624-dd5c-4b0f-8e8f-d97cd058704a")
 	)
-	(label "A_SLOTS4"
+	(label "A4"
 		(at 63.5 88.9 180)
 		(effects
 			(font
@@ -11423,7 +11423,7 @@
 		)
 		(uuid "a842555d-6d3d-4a69-9d58-a8ebf43e79ea")
 	)
-	(label "A_SLOTS0"
+	(label "A0"
 		(at 120.65 99.06 180)
 		(effects
 			(font
@@ -11433,7 +11433,7 @@
 		)
 		(uuid "a8e3648a-6e2b-4ae4-b1f4-688eb1366fe3")
 	)
-	(label "A_SLOTS7"
+	(label "A7"
 		(at 120.65 171.45 180)
 		(effects
 			(font
@@ -11443,7 +11443,7 @@
 		)
 		(uuid "aa367cc6-b5a9-4ada-a0e1-83124fa6757d")
 	)
-	(label "A_SLOTS11"
+	(label "A11"
 		(at 64.77 161.29 180)
 		(effects
 			(font
@@ -11453,7 +11453,7 @@
 		)
 		(uuid "aac9fcba-e9f0-4359-b491-6c1f86413004")
 	)
-	(label "A_SLOTS1"
+	(label "A1"
 		(at 120.65 186.69 180)
 		(effects
 			(font
@@ -11463,7 +11463,7 @@
 		)
 		(uuid "ab8d9da2-b2e0-445a-bce3-744b131cef53")
 	)
-	(label "D_SLOTS5"
+	(label "D5"
 		(at 111.76 120.65 0)
 		(effects
 			(font
@@ -11473,7 +11473,7 @@
 		)
 		(uuid "acbc5bda-38a4-419b-bf12-991f1256ead1")
 	)
-	(label "A_SLOTS6"
+	(label "A6"
 		(at 63.5 83.82 180)
 		(effects
 			(font
@@ -11483,7 +11483,7 @@
 		)
 		(uuid "af8d7dc6-d864-4c1d-b138-4f0c6d993fb3")
 	)
-	(label "A_SLOTS8"
+	(label "A8"
 		(at 120.65 168.91 180)
 		(effects
 			(font
@@ -11493,7 +11493,7 @@
 		)
 		(uuid "b2d9712e-bc86-4b4d-9733-d33c349f6e06")
 	)
-	(label "D_SLOTS6"
+	(label "D6"
 		(at 54.61 118.11 0)
 		(effects
 			(font
@@ -11503,7 +11503,7 @@
 		)
 		(uuid "b3104522-11a5-4fb5-9083-b03eb3e3bb08")
 	)
-	(label "D_SLOTS0"
+	(label "D0"
 		(at 54.61 133.35 0)
 		(effects
 			(font
@@ -11513,7 +11513,7 @@
 		)
 		(uuid "ba133dd9-d88d-4406-b1ee-aebde9924b92")
 	)
-	(label "D_SLOTS4"
+	(label "D4"
 		(at 54.61 123.19 0)
 		(effects
 			(font
@@ -11523,7 +11523,7 @@
 		)
 		(uuid "bcf5a800-882f-4513-97c0-fa92340c9040")
 	)
-	(label "D_SLOTS0"
+	(label "D0"
 		(at 111.76 43.18 0)
 		(effects
 			(font
@@ -11533,7 +11533,7 @@
 		)
 		(uuid "c0e06743-c1c9-4059-86a9-3a325a4d9e2a")
 	)
-	(label "D_SLOTS7"
+	(label "D7"
 		(at 54.61 115.57 0)
 		(effects
 			(font
@@ -11543,7 +11543,7 @@
 		)
 		(uuid "c1564a67-e969-4aca-868b-6e0e0f6636ad")
 	)
-	(label "A_SLOTS2"
+	(label "A2"
 		(at 120.65 93.98 180)
 		(effects
 			(font
@@ -11553,7 +11553,7 @@
 		)
 		(uuid "c1827d40-6da0-4ee1-8ff6-c7638154011b")
 	)
-	(label "A_SLOTS2"
+	(label "A2"
 		(at 120.65 184.15 180)
 		(effects
 			(font
@@ -11563,7 +11563,7 @@
 		)
 		(uuid "c596dff1-3547-4746-848f-6c0b922dfdfc")
 	)
-	(label "D_SLOTS3"
+	(label "D3"
 		(at 231.14 35.56 0)
 		(effects
 			(font
@@ -11573,7 +11573,7 @@
 		)
 		(uuid "c6770c0d-e358-42e2-a287-153c0654ffea")
 	)
-	(label "A_SLOTS13"
+	(label "A13"
 		(at 241.3 66.04 180)
 		(effects
 			(font
@@ -11583,7 +11583,7 @@
 		)
 		(uuid "c6d50fb1-1d40-41d4-82d4-94f1dc7e59ab")
 	)
-	(label "D_SLOTS0"
+	(label "D0"
 		(at 171.45 43.18 0)
 		(effects
 			(font
@@ -11593,7 +11593,7 @@
 		)
 		(uuid "c78cd408-9ea3-4967-82f9-5dc3b0650f38")
 	)
-	(label "A_SLOTS14"
+	(label "A14"
 		(at 181.61 63.5 180)
 		(effects
 			(font
@@ -11603,7 +11603,7 @@
 		)
 		(uuid "c888e6af-5b04-4e66-8fdd-8939d6f81da3")
 	)
-	(label "A_SLOTS13"
+	(label "A13"
 		(at 121.92 66.04 180)
 		(effects
 			(font
@@ -11613,7 +11613,7 @@
 		)
 		(uuid "ca5bae57-1137-406a-a0b0-694f4c5fa777")
 	)
-	(label "D_SLOTS0"
+	(label "D0"
 		(at 111.76 133.35 0)
 		(effects
 			(font
@@ -11623,7 +11623,7 @@
 		)
 		(uuid "cbc538ae-b184-4f08-a58b-ace026338139")
 	)
-	(label "A_SLOTS8"
+	(label "A8"
 		(at 63.5 78.74 180)
 		(effects
 			(font
@@ -11633,7 +11633,7 @@
 		)
 		(uuid "ce1f7339-1f05-44b1-9cba-e192b760e650")
 	)
-	(label "D_SLOTS2"
+	(label "D2"
 		(at 231.14 38.1 0)
 		(effects
 			(font
@@ -11643,7 +11643,7 @@
 		)
 		(uuid "cf2475b6-3a52-4282-8635-575dd1f5ff73")
 	)
-	(label "A_SLOTS3"
+	(label "A3"
 		(at 240.03 91.44 180)
 		(effects
 			(font
@@ -11653,7 +11653,7 @@
 		)
 		(uuid "d1037b90-df49-4b2a-9991-ec20a93c5552")
 	)
-	(label "A_SLOTS2"
+	(label "A2"
 		(at 63.5 93.98 180)
 		(effects
 			(font
@@ -11663,7 +11663,7 @@
 		)
 		(uuid "d173937b-3746-4a21-8490-54afd7f73b4b")
 	)
-	(label "A_SLOTS3"
+	(label "A3"
 		(at 120.65 91.44 180)
 		(effects
 			(font
@@ -11673,7 +11673,7 @@
 		)
 		(uuid "d3216fe7-ca2d-48ed-bfe8-03c5f96782e3")
 	)
-	(label "A_SLOTS4"
+	(label "A4"
 		(at 63.5 179.07 180)
 		(effects
 			(font
@@ -11683,7 +11683,7 @@
 		)
 		(uuid "d4cdd170-a992-443a-b305-bb98929f660e")
 	)
-	(label "A_SLOTS14"
+	(label "A14"
 		(at 121.92 153.67 180)
 		(effects
 			(font
@@ -11693,7 +11693,7 @@
 		)
 		(uuid "d5be418d-5e81-4145-83fb-1c22224ed5d4")
 	)
-	(label "A_SLOTS14"
+	(label "A14"
 		(at 64.77 63.5 180)
 		(effects
 			(font
@@ -11703,7 +11703,7 @@
 		)
 		(uuid "d7369fe5-398c-4310-8d27-8a44c684c75a")
 	)
-	(label "D_SLOTS6"
+	(label "D6"
 		(at 171.45 27.94 0)
 		(effects
 			(font
@@ -11713,7 +11713,7 @@
 		)
 		(uuid "d75d7e18-8436-4dec-b102-8df9551c2b3c")
 	)
-	(label "D_SLOTS0"
+	(label "D0"
 		(at 54.61 43.18 0)
 		(effects
 			(font
@@ -11723,7 +11723,7 @@
 		)
 		(uuid "d77cfc05-6520-48ba-afb9-5767cea36202")
 	)
-	(label "A_SLOTS10"
+	(label "A10"
 		(at 64.77 163.83 180)
 		(effects
 			(font
@@ -11733,7 +11733,7 @@
 		)
 		(uuid "d918aef7-2cc1-4121-90c8-363e6d404fb1")
 	)
-	(label "A_SLOTS11"
+	(label "A11"
 		(at 64.77 71.12 180)
 		(effects
 			(font
@@ -11743,7 +11743,7 @@
 		)
 		(uuid "d93ab987-1f33-47ef-8ba5-901766666e2c")
 	)
-	(label "D_SLOTS3"
+	(label "D3"
 		(at 111.76 35.56 0)
 		(effects
 			(font
@@ -11753,7 +11753,7 @@
 		)
 		(uuid "db5975c4-4871-467d-abf5-8fce612bfecb")
 	)
-	(label "A_SLOTS5"
+	(label "A5"
 		(at 63.5 176.53 180)
 		(effects
 			(font
@@ -11763,7 +11763,7 @@
 		)
 		(uuid "db76350e-c1d5-418c-b29a-e9b67a60f869")
 	)
-	(label "A_SLOTS7"
+	(label "A7"
 		(at 63.5 81.28 180)
 		(effects
 			(font
@@ -11773,7 +11773,7 @@
 		)
 		(uuid "ddc741aa-27b0-4bc9-aa00-b1c5bf8044c1")
 	)
-	(label "D_SLOTS2"
+	(label "D2"
 		(at 54.61 38.1 0)
 		(effects
 			(font
@@ -11783,7 +11783,7 @@
 		)
 		(uuid "e16f9b0e-2c67-4250-a0fa-f81cb68848c8")
 	)
-	(label "A_SLOTS8"
+	(label "A8"
 		(at 240.03 78.74 180)
 		(effects
 			(font
@@ -11793,7 +11793,7 @@
 		)
 		(uuid "e1ff231c-fa0d-46bb-a314-a5813e038af5")
 	)
-	(label "D_SLOTS7"
+	(label "D7"
 		(at 111.76 25.4 0)
 		(effects
 			(font
@@ -11803,7 +11803,7 @@
 		)
 		(uuid "e33d5dc1-3bf4-4fce-8307-b8d3d799b1c7")
 	)
-	(label "D_SLOTS1"
+	(label "D1"
 		(at 171.45 40.64 0)
 		(effects
 			(font
@@ -11813,7 +11813,7 @@
 		)
 		(uuid "e62d11b7-aa7b-4da0-9943-a983496613e2")
 	)
-	(label "D_SLOTS5"
+	(label "D5"
 		(at 231.14 30.48 0)
 		(effects
 			(font
@@ -11823,7 +11823,7 @@
 		)
 		(uuid "e6d4c3bf-0568-4e9f-be98-798ab7f2a6cb")
 	)
-	(label "A_SLOTS13"
+	(label "A13"
 		(at 64.77 66.04 180)
 		(effects
 			(font
@@ -11833,7 +11833,7 @@
 		)
 		(uuid "e9ba75ec-0692-4093-9a49-bacef66efc8e")
 	)
-	(label "A_SLOTS0"
+	(label "A0"
 		(at 180.34 99.06 180)
 		(effects
 			(font
@@ -11843,7 +11843,7 @@
 		)
 		(uuid "eb76d392-12d3-422b-b82f-b1869840dbc7")
 	)
-	(label "A_SLOTS12"
+	(label "A12"
 		(at 181.61 68.58 180)
 		(effects
 			(font
@@ -11853,7 +11853,7 @@
 		)
 		(uuid "ed393547-db3f-40c1-bfe1-12006f9aef82")
 	)
-	(label "A_SLOTS10"
+	(label "A10"
 		(at 121.92 163.83 180)
 		(effects
 			(font
@@ -11863,7 +11863,7 @@
 		)
 		(uuid "ed720ae6-7ce8-4b14-8bc4-50357af5c34a")
 	)
-	(label "A_SLOTS9"
+	(label "A9"
 		(at 240.03 76.2 180)
 		(effects
 			(font
@@ -11873,7 +11873,7 @@
 		)
 		(uuid "f07eccb2-8873-475f-bacd-fc3fbf627c1a")
 	)
-	(label "A_SLOTS8"
+	(label "A8"
 		(at 120.65 78.74 180)
 		(effects
 			(font
@@ -11883,7 +11883,7 @@
 		)
 		(uuid "f145ac75-4fe8-4204-ad0d-46b0a9bfdf18")
 	)
-	(label "A_SLOTS5"
+	(label "A5"
 		(at 240.03 86.36 180)
 		(effects
 			(font
@@ -11893,7 +11893,7 @@
 		)
 		(uuid "f15a04c4-665d-47b5-819b-2b08337249de")
 	)
-	(label "A_SLOTS0"
+	(label "A0"
 		(at 240.03 99.06 180)
 		(effects
 			(font
@@ -11903,7 +11903,7 @@
 		)
 		(uuid "f186ca64-a6f9-433e-8ea1-5ed0ed7c3089")
 	)
-	(label "A_SLOTS14"
+	(label "A14"
 		(at 241.3 63.5 180)
 		(effects
 			(font
@@ -11913,7 +11913,7 @@
 		)
 		(uuid "f4c1c930-b5ff-4507-9ba8-11fce89af379")
 	)
-	(label "A_SLOTS4"
+	(label "A4"
 		(at 240.03 88.9 180)
 		(effects
 			(font
@@ -11923,7 +11923,7 @@
 		)
 		(uuid "f664a0d3-3c6e-478c-a67a-af22b48f948a")
 	)
-	(label "D_SLOTS3"
+	(label "D3"
 		(at 54.61 35.56 0)
 		(effects
 			(font
@@ -11933,7 +11933,7 @@
 		)
 		(uuid "f6660d18-34e1-427d-ba84-95781a337eb4")
 	)
-	(label "D_SLOTS1"
+	(label "D1"
 		(at 111.76 130.81 0)
 		(effects
 			(font
@@ -11943,7 +11943,7 @@
 		)
 		(uuid "f69eddaa-1e7d-4b13-a2bb-8caee94a7650")
 	)
-	(label "A_SLOTS15"
+	(label "A15"
 		(at 181.61 60.96 180)
 		(effects
 			(font
@@ -11953,7 +11953,7 @@
 		)
 		(uuid "f871a48a-d3c2-4419-94a5-7fce903bab12")
 	)
-	(label "A_SLOTS7"
+	(label "A7"
 		(at 63.5 171.45 180)
 		(effects
 			(font
@@ -11963,7 +11963,7 @@
 		)
 		(uuid "faa56b8f-c6e5-4001-a9aa-982dfbf24363")
 	)
-	(label "A_SLOTS12"
+	(label "A12"
 		(at 121.92 158.75 180)
 		(effects
 			(font
@@ -11973,7 +11973,7 @@
 		)
 		(uuid "fb1a572c-ba8a-41a6-b2d3-c3b1ae01f05c")
 	)
-	(label "A_SLOTS10"
+	(label "A10"
 		(at 121.92 73.66 180)
 		(effects
 			(font
@@ -11983,7 +11983,7 @@
 		)
 		(uuid "fc0aac57-39b6-4442-8481-8d3b86330823")
 	)
-	(label "D_SLOTS2"
+	(label "D2"
 		(at 111.76 38.1 0)
 		(effects
 			(font
@@ -13929,7 +13929,7 @@
 			)
 		)
 	)
-	(global_label "D_SLOTS[0..7]"
+	(global_label "D[0..7]"
 		(shape tri_state)
 		(at 246.38 106.68 0)
 		(fields_autoplaced yes)
@@ -13941,7 +13941,7 @@
 		)
 		(uuid "567cf53e-8548-44a3-aeff-e9ab7d117e0f")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 263.7813 106.68 0)
+			(at 257.0685 106.68 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -14677,7 +14677,7 @@
 			)
 		)
 	)
-	(global_label "A_SLOTS[0..15]"
+	(global_label "A[0..15]"
 		(shape tri_state)
 		(at 246.38 104.14 0)
 		(fields_autoplaced yes)
@@ -14689,7 +14689,7 @@
 		)
 		(uuid "70da4e2b-49bb-4908-a9cb-2aac80aac105")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 264.8094 104.14 0)
+			(at 258.0966 104.14 0)
 			(effects
 				(font
 					(size 1.27 1.27)

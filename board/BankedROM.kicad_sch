@@ -8050,6 +8050,16 @@
 		)
 		(uuid "e253cc83-d48d-461f-9434-d1ec0cd1e78e")
 	)
+	(wire
+		(pts
+			(xy 147.32 118.11) (xy 147.32 119.38)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e260a15d-8855-4d7e-92fe-804d3fb5aac9")
+	)
 	(bus
 		(pts
 			(xy 116.84 134.62) (xy 116.84 137.16)
@@ -11460,7 +11470,7 @@
 	)
 	(symbol
 		(lib_id "power:+5V")
-		(at 147.32 119.38 0)
+		(at 147.32 118.11 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -11468,7 +11478,7 @@
 		(dnp no)
 		(uuid "09495fd0-3d2a-4094-b5d3-5f0958469492")
 		(property "Reference" "#PWR042"
-			(at 147.32 123.19 0)
+			(at 147.32 121.92 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11477,7 +11487,7 @@
 			)
 		)
 		(property "Value" "+5V"
-			(at 150.114 117.602 0)
+			(at 150.114 116.332 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11485,7 +11495,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 147.32 119.38 0)
+			(at 147.32 118.11 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11494,7 +11504,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 147.32 119.38 0)
+			(at 147.32 118.11 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11503,7 +11513,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"+5V\""
-			(at 147.32 119.38 0)
+			(at 147.32 118.11 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11533,7 +11543,7 @@
 		(dnp no)
 		(uuid "0b3cda69-edcc-4e45-851c-87da7146c4a3")
 		(property "Reference" "U28"
-			(at 45.72 27.94 0)
+			(at 46.482 26.67 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11542,7 +11552,7 @@
 			)
 		)
 		(property "Value" "SST39SF040"
-			(at 45.72 30.48 0)
+			(at 46.482 29.21 0)
 			(effects
 				(font
 					(size 1.27 1.27)

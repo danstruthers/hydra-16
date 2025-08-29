@@ -108,6 +108,7 @@
         "solder_mask_bridge": "error",
         "starved_thermal": "warning",
         "text_height": "warning",
+        "text_on_edge_cuts": "error",
         "text_thickness": "warning",
         "through_hole_pad_without_hole": "error",
         "too_many_vias": "error",
@@ -471,7 +472,7 @@
     "classes": [
       {
         "bus_width": 12,
-        "clearance": 0.2,
+        "clearance": 0.254,
         "diff_pair_gap": 0.25,
         "diff_pair_via_gap": 0.25,
         "diff_pair_width": 0.25,
@@ -483,13 +484,13 @@
         "priority": 2147483647,
         "schematic_color": "rgba(0, 0, 0, 0.000)",
         "track_width": 0.254,
-        "via_diameter": 0.6,
+        "via_diameter": 0.5,
         "via_drill": 0.3,
         "wire_width": 6
       },
       {
         "bus_width": 12,
-        "clearance": 0.381,
+        "clearance": 0.508,
         "diff_pair_gap": 0.25,
         "diff_pair_width": 0.25,
         "line_style": 0,
@@ -501,11 +502,11 @@
         "schematic_color": "rgba(0, 0, 0, 0.000)",
         "track_width": 0.762,
         "via_diameter": 0.762,
-        "via_drill": 0.4,
+        "via_drill": 0.3,
         "wire_width": 6
       },
       {
-        "clearance": 0.762,
+        "clearance": 0.508,
         "diff_pair_gap": 0.25,
         "diff_pair_width": 0.25,
         "microvia_diameter": 0.3,
@@ -516,25 +517,11 @@
         "schematic_color": "rgba(0, 0, 0, 0.000)",
         "track_width": 0.762,
         "via_diameter": 0.762,
-        "via_drill": 0.4
-      },
-      {
-        "clearance": 0.2,
-        "diff_pair_gap": 0.25,
-        "diff_pair_width": 0.25,
-        "microvia_diameter": 0.3,
-        "microvia_drill": 0.1,
-        "name": "MajorSignals",
-        "pcb_color": "rgba(0, 0, 0, 0.000)",
-        "priority": 3,
-        "schematic_color": "rgba(0, 0, 0, 0.000)",
-        "track_width": 0.381,
-        "via_diameter": 0.6,
         "via_drill": 0.3
       },
       {
         "bus_width": 12,
-        "clearance": 0.381,
+        "clearance": 0.508,
         "diff_pair_gap": 0.25,
         "diff_pair_width": 0.25,
         "line_style": 0,
@@ -546,7 +533,7 @@
         "schematic_color": "rgba(0, 0, 0, 0.000)",
         "track_width": 0.762,
         "via_diameter": 0.762,
-        "via_drill": 0.4,
+        "via_drill": 0.3,
         "wire_width": 6
       }
     ],
@@ -565,7 +552,7 @@
         "pattern": "GND"
       },
       {
-        "netclass": "Power",
+        "netclass": "Default",
         "pattern": "[-+]12V"
       },
       {
@@ -573,15 +560,11 @@
         "pattern": "+3.3V"
       },
       {
-        "netclass": "MajorSignals",
-        "pattern": "(A|D)?\\d{1,2}"
-      },
-      {
-        "netclass": "MajorSignals",
+        "netclass": "Default",
         "pattern": "!?RWB"
       },
       {
-        "netclass": "MajorSignals",
+        "netclass": "Default",
         "pattern": "PHI2"
       },
       {
@@ -597,7 +580,7 @@
       "netlist": "D:/KiCad/8.0/bin/",
       "plot": "Hydra-16-Gerber-1-2A/",
       "pos_files": "",
-      "specctra_dsn": "Hydra16-1-3C.dsn",
+      "specctra_dsn": "Hydra16-1-4E.dsn",
       "step": "",
       "svg": "",
       "vrml": ""
