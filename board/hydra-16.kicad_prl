@@ -1,7 +1,7 @@
 {
   "board": {
-    "active_layer": 10,
-    "active_layer_preset": "All Layers",
+    "active_layer": 2,
+    "active_layer_preset": "",
     "auto_track_width": true,
     "hidden_netclasses": [],
     "hidden_nets": [],
@@ -9,11 +9,11 @@
     "net_color_mode": 1,
     "opacity": {
       "images": 0.0,
-      "pads": 0.8100000023841858,
+      "pads": 0.7200000286102295,
       "shapes": 0.0,
       "tracks": 1.0,
       "vias": 1.0,
-      "zones": 0.2800000011920929
+      "zones": 0.25999999046325684
     },
     "selection_filter": {
       "dimensions": false,
@@ -23,10 +23,10 @@
       "lockedItems": false,
       "otherItems": false,
       "pads": false,
-      "text": true,
+      "text": false,
       "tracks": true,
-      "vias": true,
-      "zones": true
+      "vias": false,
+      "zones": false
     },
     "visible_items": [
       "vias",
@@ -104,7 +104,7 @@
       91,
       91,
       91,
-      979
+      1757
     ],
     "custom_group_rules": [],
     "expanded_rows": [],
@@ -115,8 +115,8 @@
     "group_by_netclass": false,
     "show_unconnected_nets": false,
     "show_zero_pad_nets": false,
-    "sort_ascending": false,
-    "sorting_column": 3
+    "sort_ascending": true,
+    "sorting_column": 0
   },
   "open_jobsets": [],
   "project": {
