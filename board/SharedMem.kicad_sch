@@ -6,8 +6,8 @@
 	(paper "USLetter")
 	(title_block
 		(title "Shared RAM Banks")
-		(date "2025-09-18")
-		(rev "1.7A")
+		(date "2025-10-01")
+		(rev "1.7C")
 		(company "Data Tuning")
 		(comment 1 "Hydra 16")
 	)
@@ -1491,12 +1491,6 @@
 		(uuid "a2125b3d-cf4c-43cb-b4b1-7290281e97ef")
 	)
 	(junction
-		(at 50.8 107.95)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "bcdfb3f1-dc76-4981-a8e8-a05af3252a90")
-	)
-	(junction
 		(at 154.94 102.87)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -1533,7 +1527,7 @@
 		(uuid "eba9ef80-55b7-4706-886f-af4c4bc58851")
 	)
 	(junction
-		(at 20.32 105.41)
+		(at 17.78 105.41)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "efa1542c-e905-4215-a0c3-8415a4704b64")
@@ -1626,7 +1620,7 @@
 		(uuid "16d2d4cd-0669-4f89-80c4-96b993e9f00d")
 	)
 	(bus_entry
-		(at 20.32 120.65)
+		(at 17.78 120.65)
 		(size 2.54 2.54)
 		(stroke
 			(width 0)
@@ -1761,7 +1755,7 @@
 		(uuid "43a686b1-46b6-487c-a29e-39d2e877f95e")
 	)
 	(bus_entry
-		(at 20.32 128.27)
+		(at 17.78 128.27)
 		(size 2.54 2.54)
 		(stroke
 			(width 0)
@@ -1959,7 +1953,7 @@
 		(uuid "70b11443-3277-4be1-b51c-5acddf3fb3eb")
 	)
 	(bus_entry
-		(at 20.32 92.71)
+		(at 17.78 92.71)
 		(size 2.54 -2.54)
 		(stroke
 			(width 0)
@@ -2049,7 +2043,7 @@
 		(uuid "8ee2bb23-4c93-4c58-9d55-d1159a4222c5")
 	)
 	(bus_entry
-		(at 20.32 95.25)
+		(at 17.78 95.25)
 		(size 2.54 -2.54)
 		(stroke
 			(width 0)
@@ -2512,7 +2506,7 @@
 	)
 	(wire
 		(pts
-			(xy 22.86 92.71) (xy 38.1 92.71)
+			(xy 20.32 92.71) (xy 38.1 92.71)
 		)
 		(stroke
 			(width 0)
@@ -2682,7 +2676,7 @@
 	)
 	(bus
 		(pts
-			(xy 20.32 120.65) (xy 20.32 128.27)
+			(xy 17.78 120.65) (xy 17.78 128.27)
 		)
 		(stroke
 			(width 0)
@@ -2882,7 +2876,7 @@
 	)
 	(bus
 		(pts
-			(xy 20.32 95.25) (xy 20.32 105.41)
+			(xy 17.78 95.25) (xy 17.78 105.41)
 		)
 		(stroke
 			(width 0)
@@ -3032,16 +3026,6 @@
 	)
 	(wire
 		(pts
-			(xy 50.8 107.95) (xy 115.57 107.95)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "486c80dd-5169-4fe2-9068-f2e0fce3f40d")
-	)
-	(wire
-		(pts
 			(xy 81.28 64.77) (xy 90.17 64.77)
 		)
 		(stroke
@@ -3122,7 +3106,7 @@
 	)
 	(wire
 		(pts
-			(xy 22.86 90.17) (xy 38.1 90.17)
+			(xy 20.32 90.17) (xy 38.1 90.17)
 		)
 		(stroke
 			(width 0)
@@ -3302,7 +3286,7 @@
 	)
 	(bus
 		(pts
-			(xy 20.32 92.71) (xy 20.32 95.25)
+			(xy 17.78 92.71) (xy 17.78 95.25)
 		)
 		(stroke
 			(width 0)
@@ -3472,7 +3456,7 @@
 	)
 	(bus
 		(pts
-			(xy 20.32 105.41) (xy 66.04 105.41)
+			(xy 17.78 105.41) (xy 66.04 105.41)
 		)
 		(stroke
 			(width 0)
@@ -3712,7 +3696,7 @@
 	)
 	(wire
 		(pts
-			(xy 22.86 123.19) (xy 30.48 123.19)
+			(xy 20.32 123.19) (xy 30.48 123.19)
 		)
 		(stroke
 			(width 0)
@@ -4192,7 +4176,7 @@
 	)
 	(wire
 		(pts
-			(xy 22.86 130.81) (xy 30.48 130.81)
+			(xy 20.32 130.81) (xy 30.48 130.81)
 		)
 		(stroke
 			(width 0)
@@ -4632,7 +4616,7 @@
 	)
 	(bus
 		(pts
-			(xy 20.32 105.41) (xy 20.32 120.65)
+			(xy 17.78 105.41) (xy 17.78 120.65)
 		)
 		(stroke
 			(width 0)
@@ -5110,7 +5094,7 @@
 		)
 		(uuid "fe076b3d-c18a-4972-9805-6509c24a4183")
 	)
-	(label "RAMB0"
+	(label "RAMB_M0"
 		(at 68.58 90.17 0)
 		(effects
 			(font
@@ -5180,7 +5164,7 @@
 		)
 		(uuid "0b72e36e-5c1e-4353-9e44-6d214cf5d1d3")
 	)
-	(label "RAMB2"
+	(label "RAMB_M2"
 		(at 24.13 123.19 0)
 		(effects
 			(font
@@ -5190,7 +5174,7 @@
 		)
 		(uuid "100000e8-648e-42f8-8aa7-04d7f81f2fda")
 	)
-	(label "RAMB0"
+	(label "RAMB_M0"
 		(at 172.72 90.17 0)
 		(effects
 			(font
@@ -5250,7 +5234,7 @@
 		)
 		(uuid "1ce0dbe6-1681-4eb5-8b65-771343b864c6")
 	)
-	(label "RAMB1"
+	(label "RAMB_M1"
 		(at 172.72 92.71 0)
 		(effects
 			(font
@@ -5310,8 +5294,8 @@
 		)
 		(uuid "24ec92e6-5a2d-4a27-b97a-8ed2db752316")
 	)
-	(label "RAMB1"
-		(at 22.86 92.71 0)
+	(label "RAMB_M1"
+		(at 20.32 92.71 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -5430,7 +5414,7 @@
 		)
 		(uuid "47e31cc7-27cd-4758-b46e-09bf4bce9d20")
 	)
-	(label "RAMB3"
+	(label "RAMB_M3"
 		(at 24.13 130.81 0)
 		(effects
 			(font
@@ -5640,7 +5624,7 @@
 		)
 		(uuid "9da47aa6-f951-4f53-8328-46af4576009b")
 	)
-	(label "RAMB0"
+	(label "RAMB_M0"
 		(at 120.65 90.17 0)
 		(effects
 			(font
@@ -5930,7 +5914,7 @@
 		)
 		(uuid "df0eb3e2-a47c-4b0b-b4ba-11bcaf12b5be")
 	)
-	(label "RAMB1"
+	(label "RAMB_M1"
 		(at 68.58 92.71 0)
 		(effects
 			(font
@@ -5990,7 +5974,7 @@
 		)
 		(uuid "e82b7dd3-922d-4edc-9f06-625014187a67")
 	)
-	(label "RAMB1"
+	(label "RAMB_M1"
 		(at 120.65 92.71 0)
 		(effects
 			(font
@@ -6020,8 +6004,8 @@
 		)
 		(uuid "ede9e944-bc34-42e6-b92d-1f3f2f10fc65")
 	)
-	(label "RAMB0"
-		(at 22.86 90.17 0)
+	(label "RAMB_M0"
+		(at 20.32 90.17 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -6182,7 +6166,7 @@
 			)
 		)
 	)
-	(global_label "RAMB[0..7]"
+	(global_label "RAMB_M[0..3]"
 		(shape input)
 		(at 241.3 105.41 0)
 		(fields_autoplaced yes)
@@ -6194,7 +6178,7 @@
 		)
 		(uuid "2ceaca17-be48-40b3-9819-1502443301df")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 254.6872 105.41 0)
+			(at 257.1062 105.41 0)
 			(effects
 				(font
 					(size 1.27 1.27)

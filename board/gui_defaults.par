@@ -10,13 +10,13 @@
     (color_manager
       not_visible
       (bounds
-        0 600 1126 143
+        0 600 1126 211
       )
     )
     (layer_visibility
       not_visible
       (bounds
-        0 450 359 173
+        0 450 359 277
       )
     )
     (object_visibility
@@ -40,7 +40,7 @@
     (select_parameter
       not_visible
       (bounds
-        0 0 208 495
+        0 0 208 521
       )
     )
     (route_parameter
@@ -70,7 +70,7 @@
     (clearance_matrix
       not_visible
       (bounds
-        0 150 576 284
+        0 150 876 332
       )
     )
     (via_rules
@@ -82,13 +82,13 @@
     (edit_vias
       not_visible
       (bounds
-        100 150 419 130
+        100 150 419 258
       )
     )
     (edit_net_rules
       not_visible
       (bounds
-        100 200 919 146
+        100 200 919 178
       )
     )
     (assign_net_rules
@@ -162,32 +162,64 @@
     (traces 0.4
       255 153 0
       153 153 255
+      255 153 0
+      153 153 255
+      255 153 0
+      153 153 255
     )
     (fixed_traces 0.4
+      204 153 0
+      102 102 255
+      204 153 0
+      102 102 255
       204 153 0
       102 102 255
     )
     (vias 0.6
       200 200 0
       200 200 0
+      200 200 0
+      200 200 0
+      200 200 0
+      200 200 0
     )
     (fixed_vias 0.6
+      200 200 0
+      200 200 0
+      200 200 0
+      200 200 0
       200 200 0
       200 200 0
     )
     (pins 0.6
       150 50 0
       160 80 0
+      150 50 0
+      160 80 0
+      150 50 0
+      160 80 0
     )
     (conduction 0.2
+      0 150 0
+      100 100 0
+      0 150 0
+      100 100 0
       0 150 0
       100 100 0
     )
     (keepout 0.2
       0 110 110
       0 100 160
+      0 110 110
+      0 100 160
+      0 110 110
+      0 100 160
     )
     (via_keepout 0.2
+      100 100 100
+      100 100 100
+      100 100 100
+      100 100 100
       100 100 100
       100 100 100
     )
@@ -209,10 +241,10 @@
       on
     )
     (drag_components_enabled 
-      on
+      off
     )
     (hilight_routing_obstacle 
-      off
+      on
     )
     (pull_tight_region 
       2147483647

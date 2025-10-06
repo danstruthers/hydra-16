@@ -564,7 +564,7 @@
       "netlist": "D:/KiCad/8.0/bin/",
       "plot": "Hydra-16-Gerber-1-6C/",
       "pos_files": "",
-      "specctra_dsn": "Hydra16-1-7A-Partial.dsn",
+      "specctra_dsn": "Hydra16-1-7C-2.dsn",
       "step": "",
       "svg": "",
       "vrml": ""
@@ -818,7 +818,7 @@
       "Connectors"
     ],
     [
-      "1bce60c3-d882-492e-9aec-170cf0780040",
+      "fe0e8ec7-a78c-48fc-a3b0-2611c8b506ac",
       "IRQ_Priorty_Encoder"
     ],
     [

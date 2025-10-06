@@ -6,8 +6,8 @@
 	(paper "USLetter")
 	(title_block
 		(title "CPU, VIA, ACIA, O/S ROM, Task RAM and Banked RAM Header")
-		(date "2025-09-18")
-		(rev "1.7A")
+		(date "2025-10-01")
+		(rev "1.7C")
 		(company "Data Tuning")
 		(comment 1 "Hydra 16")
 	)
@@ -16678,7 +16678,7 @@
 			)
 		)
 	)
-	(global_label "T0_M"
+	(global_label "T_M0"
 		(shape input)
 		(at 212.09 62.23 180)
 		(fields_autoplaced yes)
@@ -16722,7 +16722,7 @@
 			)
 		)
 	)
-	(global_label "T3_M"
+	(global_label "T_M3"
 		(shape input)
 		(at 212.09 69.85 180)
 		(fields_autoplaced yes)
@@ -16898,7 +16898,29 @@
 			)
 		)
 	)
-	(global_label "RAMB1_M"
+	(global_label "nBROMD"
+		(shape input)
+		(at 209.55 97.79 0)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "25613469-6648-428a-ac5a-ba5ef60d9b16")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 220.2761 97.79 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "RAMB_M1"
 		(shape input)
 		(at 33.02 40.64 180)
 		(fields_autoplaced yes)
@@ -17228,7 +17250,7 @@
 			)
 		)
 	)
-	(global_label "T1_M"
+	(global_label "T_M2"
 		(shape input)
 		(at 212.09 67.31 180)
 		(fields_autoplaced yes)
@@ -17360,7 +17382,7 @@
 			)
 		)
 	)
-	(global_label "T2_M"
+	(global_label "T_M2"
 		(shape input)
 		(at 33.02 33.02 180)
 		(fields_autoplaced yes)
@@ -17404,7 +17426,7 @@
 			)
 		)
 	)
-	(global_label "T0_M"
+	(global_label "T_M0"
 		(shape input)
 		(at 33.02 27.94 180)
 		(fields_autoplaced yes)
@@ -17444,28 +17466,6 @@
 					(size 1.27 1.27)
 				)
 				(justify right)
-				(hide yes)
-			)
-		)
-	)
-	(global_label "DMAB"
-		(shape input)
-		(at 209.55 90.17 0)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left)
-		)
-		(uuid "6e637563-5599-469f-a002-5c223f55fa17")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 217.6152 90.17 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
 				(hide yes)
 			)
 		)
@@ -17558,7 +17558,7 @@
 			)
 		)
 	)
-	(global_label "RAMB0_M"
+	(global_label "RAMB_M0"
 		(shape input)
 		(at 33.02 38.1 180)
 		(fields_autoplaced yes)
@@ -17593,28 +17593,6 @@
 		(uuid "7697f4fe-cbc0-4e9f-ab06-13017e5f22af")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 101.3422 129.54 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-				(hide yes)
-			)
-		)
-	)
-	(global_label "nBROMD"
-		(shape input)
-		(at 209.55 95.25 0)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left)
-		)
-		(uuid "7de467e9-5feb-4953-ae31-721ac3861b68")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 220.2761 95.25 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -17844,7 +17822,7 @@
 			)
 		)
 	)
-	(global_label "T1_M"
+	(global_label "T_M1"
 		(shape input)
 		(at 212.09 64.77 180)
 		(fields_autoplaced yes)
@@ -17857,28 +17835,6 @@
 		(uuid "a36c6871-5790-4dec-a655-695350b011aa")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 204.5087 64.77 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-				(hide yes)
-			)
-		)
-	)
-	(global_label "BE"
-		(shape bidirectional)
-		(at 209.55 97.79 0)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left)
-		)
-		(uuid "a51eadd6-4eea-43c8-ac64-70477b5ec488")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 203.0345 97.79 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -17910,7 +17866,7 @@
 			)
 		)
 	)
-	(global_label "T1_M"
+	(global_label "T_M1"
 		(shape input)
 		(at 33.02 30.48 180)
 		(fields_autoplaced yes)
@@ -17954,6 +17910,28 @@
 			)
 		)
 	)
+	(global_label "BE"
+		(shape bidirectional)
+		(at 209.55 92.71 0)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "b0bca7b8-1e07-402f-a0f0-ecdcff704ec7")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 203.0345 92.71 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+				(hide yes)
+			)
+		)
+	)
 	(global_label "SPI_A3"
 		(shape output)
 		(at 110.49 135.89 0)
@@ -17976,7 +17954,7 @@
 			)
 		)
 	)
-	(global_label "T3_M"
+	(global_label "T_M3"
 		(shape input)
 		(at 33.02 35.56 180)
 		(fields_autoplaced yes)
@@ -18284,28 +18262,6 @@
 			)
 		)
 	)
-	(global_label "NMIB"
-		(shape input)
-		(at 209.55 92.71 0)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left)
-		)
-		(uuid "cdd91fa5-f263-40b4-bbb9-73d8a879bec8")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 201.9081 92.71 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-				(hide yes)
-			)
-		)
-	)
 	(global_label "nBRC11_S"
 		(shape input)
 		(at 33.02 88.9 180)
@@ -18438,7 +18394,7 @@
 			)
 		)
 	)
-	(global_label "RAMB2_M"
+	(global_label "RAMB_M2"
 		(shape input)
 		(at 33.02 43.18 180)
 		(fields_autoplaced yes)
@@ -18592,6 +18548,28 @@
 			)
 		)
 	)
+	(global_label "DMAB"
+		(shape input)
+		(at 209.55 95.25 0)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "e3d9810f-7bae-4160-b8ec-6fb8685ee327")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 217.6152 95.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+				(hide yes)
+			)
+		)
+	)
 	(global_label "SOB"
 		(shape input)
 		(at 209.55 83.82 0)
@@ -18724,6 +18702,28 @@
 			)
 		)
 	)
+	(global_label "NMIB"
+		(shape input)
+		(at 209.55 90.17 0)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "f7bbaaa2-5eeb-4b10-a4f2-5d0186c9571f")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 201.9081 90.17 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+				(hide yes)
+			)
+		)
+	)
 	(global_label "IRQB"
 		(shape input)
 		(at 25.4 137.16 180)
@@ -18768,7 +18768,7 @@
 			)
 		)
 	)
-	(global_label "RAMB3_M"
+	(global_label "RAMB_M3"
 		(shape input)
 		(at 33.02 45.72 180)
 		(fields_autoplaced yes)
@@ -22637,7 +22637,7 @@
 		)
 	)
 	(sheet
-		(at 127 179.07)
+		(at 127 181.61)
 		(size 16.51 6.35)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -22653,7 +22653,7 @@
 		)
 		(uuid "9a593a77-f18f-43cb-9fdd-893618b7b90a")
 		(property "Sheetname" "Clocks"
-			(at 127 178.3584 0)
+			(at 127 180.8984 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -22662,7 +22662,7 @@
 			)
 		)
 		(property "Sheetfile" "Clocks.kicad_sch"
-			(at 127 186.0046 0)
+			(at 127 188.5446 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -22805,7 +22805,7 @@
 		)
 	)
 	(sheet
-		(at 100.33 181.61)
+		(at 100.33 184.15)
 		(size 15.24 3.81)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -22821,7 +22821,7 @@
 		)
 		(uuid "be1fd2da-2765-4044-ae46-297533c36c50")
 		(property "Sheetname" "Buffers"
-			(at 100.33 180.8984 0)
+			(at 100.33 183.4384 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -22830,7 +22830,7 @@
 			)
 		)
 		(property "Sheetfile" "Buffers.kicad_sch"
-			(at 100.33 186.0046 0)
+			(at 100.33 188.5446 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -22926,6 +22926,48 @@
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c"
 					(page "2")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 127 169.545)
+		(size 15.24 5.08)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "fe0e8ec7-a78c-48fc-a3b0-2611c8b506ac")
+		(property "Sheetname" "IRQ_Priorty_Encoder"
+			(at 127 168.8334 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "IRQ_P_E.kicad_sch"
+			(at 127 175.2096 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c"
+					(page "8")
 				)
 			)
 		)

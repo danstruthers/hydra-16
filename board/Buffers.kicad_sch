@@ -6,8 +6,8 @@
 	(paper "A")
 	(title_block
 		(title "Buffers & Mixer")
-		(date "2025-09-18")
-		(rev "1.7A")
+		(date "2025-10-01")
+		(rev "1.7C")
 		(company "Data Tuning")
 		(comment 1 "Hydra 16")
 	)
@@ -2344,6 +2344,231 @@
 			)
 			(embedded_fonts no)
 		)
+		(symbol "dk_Rectangular-Connectors-Headers-Male-Pins:22-23-2021"
+			(pin_names
+				(offset 1.016)
+			)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "J"
+				(at -2.54 1.27 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify right)
+				)
+			)
+			(property "Value" "22-23-2021"
+				(at 1.27 -3.81 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" "digikey-footprints:PinHeader_1x2_P2.54mm_Drill1.02mm"
+				(at 5.08 5.08 0)
+				(effects
+					(font
+						(size 1.524 1.524)
+					)
+					(justify left)
+					(hide yes)
+				)
+			)
+			(property "Datasheet" "https://media.digikey.com/pdf/Data%20Sheets/Molex%20PDFs/A-6373-N_Series_Dwg_2010-12-03.pdf"
+				(at 5.08 7.62 0)
+				(effects
+					(font
+						(size 1.524 1.524)
+					)
+					(justify left)
+					(hide yes)
+				)
+			)
+			(property "Description" "CONN HEADER VERT 2POS 2.54MM"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Digi-Key_PN" "WM4200-ND"
+				(at 5.08 10.16 0)
+				(effects
+					(font
+						(size 1.524 1.524)
+					)
+					(justify left)
+					(hide yes)
+				)
+			)
+			(property "MPN" "22-23-2021"
+				(at 5.08 12.7 0)
+				(effects
+					(font
+						(size 1.524 1.524)
+					)
+					(justify left)
+					(hide yes)
+				)
+			)
+			(property "Category" "Connectors, Interconnects"
+				(at 5.08 15.24 0)
+				(effects
+					(font
+						(size 1.524 1.524)
+					)
+					(justify left)
+					(hide yes)
+				)
+			)
+			(property "Family" "Rectangular Connectors - Headers, Male Pins"
+				(at 5.08 17.78 0)
+				(effects
+					(font
+						(size 1.524 1.524)
+					)
+					(justify left)
+					(hide yes)
+				)
+			)
+			(property "DK_Datasheet_Link" "https://media.digikey.com/pdf/Data%20Sheets/Molex%20PDFs/A-6373-N_Series_Dwg_2010-12-03.pdf"
+				(at 5.08 20.32 0)
+				(effects
+					(font
+						(size 1.524 1.524)
+					)
+					(justify left)
+					(hide yes)
+				)
+			)
+			(property "DK_Detail_Page" "/product-detail/en/molex/22-23-2021/WM4200-ND/26667"
+				(at 5.08 22.86 0)
+				(effects
+					(font
+						(size 1.524 1.524)
+					)
+					(justify left)
+					(hide yes)
+				)
+			)
+			(property "Description_1" "CONN HEADER VERT 2POS 2.54MM"
+				(at 5.08 25.4 0)
+				(effects
+					(font
+						(size 1.524 1.524)
+					)
+					(justify left)
+					(hide yes)
+				)
+			)
+			(property "Manufacturer" "Molex"
+				(at 5.08 27.94 0)
+				(effects
+					(font
+						(size 1.524 1.524)
+					)
+					(justify left)
+					(hide yes)
+				)
+			)
+			(property "Status" "Active"
+				(at 5.08 30.48 0)
+				(effects
+					(font
+						(size 1.524 1.524)
+					)
+					(justify left)
+					(hide yes)
+				)
+			)
+			(property "ki_keywords" "WM4200-ND KK 6373"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(symbol "22-23-2021_1_1"
+				(rectangle
+					(start -1.27 0)
+					(end 3.81 -2.54)
+					(stroke
+						(width 0)
+						(type solid)
+					)
+					(fill
+						(type background)
+					)
+				)
+				(rectangle
+					(start -0.254 -1.143)
+					(end 0.254 -1.651)
+					(stroke
+						(width 0)
+						(type solid)
+					)
+					(fill
+						(type outline)
+					)
+				)
+				(rectangle
+					(start 2.286 -1.143)
+					(end 2.794 -1.651)
+					(stroke
+						(width 0)
+						(type solid)
+					)
+					(fill
+						(type outline)
+					)
+				)
+				(pin passive line
+					(at 0 2.54 270)
+					(length 2.54)
+					(name "~"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 2.54 2.54 270)
+					(length 2.54)
+					(name "~"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
 		(symbol "power:+12V"
 			(power)
 			(pin_numbers
@@ -2981,12 +3206,6 @@
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "933e9667-5000-49e1-a6ef-b6efca74f48b")
-	)
-	(junction
-		(at 101.6 139.7)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "94955298-f27c-4cd2-81e4-6f9447221400")
 	)
 	(junction
 		(at 34.29 87.63)
@@ -3692,16 +3911,6 @@
 	)
 	(wire
 		(pts
-			(xy 77.47 139.7) (xy 101.6 139.7)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "18b0d22b-5682-434f-bb04-620e8b7f79aa")
-	)
-	(wire
-		(pts
 			(xy 203.2 68.58) (xy 204.47 68.58)
 		)
 		(stroke
@@ -3982,6 +4191,16 @@
 	)
 	(wire
 		(pts
+			(xy 77.47 140.97) (xy 77.47 139.7)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "46c140f0-fe9e-49eb-9df3-09780dd3e665")
+	)
+	(wire
+		(pts
 			(xy 208.28 73.66) (xy 210.82 73.66)
 		)
 		(stroke
@@ -4089,6 +4308,16 @@
 			(type default)
 		)
 		(uuid "5ccd2e38-7bb7-43c6-b9aa-efd811f6d2ab")
+	)
+	(wire
+		(pts
+			(xy 85.09 140.97) (xy 77.47 140.97)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "5ceba254-48c2-433e-817b-0c6ced52f5c1")
 	)
 	(wire
 		(pts
@@ -4620,6 +4849,16 @@
 		)
 		(uuid "9fcb6dc7-c7ef-4665-8d3d-2aceeae452f4")
 	)
+	(wire
+		(pts
+			(xy 170.18 91.44) (xy 193.04 91.44)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "a382264e-a136-4288-ad18-bc7e3723953a")
+	)
 	(bus
 		(pts
 			(xy 105.41 82.55) (xy 107.95 82.55)
@@ -4679,6 +4918,16 @@
 			(type default)
 		)
 		(uuid "ade8d597-db32-41bf-ad5b-3162ad311059")
+	)
+	(wire
+		(pts
+			(xy 167.64 49.53) (xy 167.64 68.58)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "ae09511a-9783-41d9-ba5c-f42e9df47491")
 	)
 	(bus
 		(pts
@@ -4769,6 +5018,16 @@
 			(type default)
 		)
 		(uuid "bb589344-fb98-4814-885d-e86e2c302b8c")
+	)
+	(wire
+		(pts
+			(xy 170.18 49.53) (xy 170.18 91.44)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "bc0b497f-acc3-40fa-a482-474f637afb80")
 	)
 	(bus
 		(pts
@@ -4999,6 +5258,16 @@
 			(type default)
 		)
 		(uuid "db3b85eb-8306-47c0-a7d7-b0b3c96911be")
+	)
+	(wire
+		(pts
+			(xy 193.04 68.58) (xy 167.64 68.58)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "dc1ea0d1-9aac-401a-8f9d-d2738a7c1ec5")
 	)
 	(bus
 		(pts
@@ -5752,6 +6021,94 @@
 			)
 		)
 	)
+	(global_label "SND_CR5"
+		(shape input)
+		(at 193.04 66.04 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "0c9a059b-165d-4367-8c46-3d0207af5e8f")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 181.5277 66.04 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "SND_CR3"
+		(shape input)
+		(at 193.04 60.96 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "0f8ffa65-1b25-4386-9f5d-072926229ca7")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 181.5277 60.96 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "SND_CR1"
+		(shape input)
+		(at 193.04 55.88 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "18215246-8c02-47b0-8b53-d4cd85f49965")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 181.5277 55.88 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "DMA"
+		(shape input)
+		(at 85.09 140.97 0)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "1d8cb713-e964-4e72-a686-dd9113d253a7")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 91.8852 140.97 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+				(hide yes)
+			)
+		)
+	)
 	(global_label "SND_CL1"
 		(shape input)
 		(at 193.04 96.52 180)
@@ -5950,7 +6307,29 @@
 			)
 		)
 	)
-	(global_label "SND_CR1"
+	(global_label "SND_CR4"
+		(shape input)
+		(at 193.04 63.5 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "4c0c485f-612e-4c7e-b3c9-618fecf035ea")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 181.5277 63.5 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "SND_CR2"
 		(shape input)
 		(at 193.04 58.42 180)
 		(fields_autoplaced yes)
@@ -5960,53 +6339,9 @@
 			)
 			(justify right)
 		)
-		(uuid "6a02e68a-e17e-4c49-ba02-2d6d022382cc")
+		(uuid "864d5570-691d-4b20-8205-5ddbc30248ac")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 181.5277 58.42 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-				(hide yes)
-			)
-		)
-	)
-	(global_label "SND_CR5"
-		(shape input)
-		(at 193.04 68.58 180)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right)
-		)
-		(uuid "6fecc52c-d255-40cc-9323-763956b48e53")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 181.5277 68.58 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-				(hide yes)
-			)
-		)
-	)
-	(global_label "SND_CR4"
-		(shape input)
-		(at 193.04 66.04 180)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right)
-		)
-		(uuid "7bbeb89c-a1ac-427c-a1a9-4d2f5faa3798")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 181.5277 66.04 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6056,28 +6391,6 @@
 					(size 1.27 1.27)
 				)
 				(justify left)
-				(hide yes)
-			)
-		)
-	)
-	(global_label "SND_CR3"
-		(shape input)
-		(at 193.04 63.5 180)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right)
-		)
-		(uuid "a135ee2e-feb9-4818-b917-c5c655ada3d0")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 181.5277 63.5 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
 				(hide yes)
 			)
 		)
@@ -6170,28 +6483,6 @@
 			)
 		)
 	)
-	(global_label "SND_CR0"
-		(shape input)
-		(at 193.04 55.88 180)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right)
-		)
-		(uuid "ce074f67-df28-490b-89bb-5d287fd83d1d")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 181.5277 55.88 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-				(hide yes)
-			)
-		)
-	)
 	(global_label "SND_CL5"
 		(shape input)
 		(at 193.04 106.68 180)
@@ -6205,6 +6496,28 @@
 		(uuid "d7e99006-dd6e-4af6-9be7-16b63e26196f")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 181.7696 106.68 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "SND_CR0"
+		(shape input)
+		(at 193.04 53.34 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "da35b064-015f-41b5-a70a-d9e7c07c3eb0")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 181.5277 53.34 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6293,28 +6606,6 @@
 		(uuid "e5255032-b1fe-4860-9ca1-18d6ed740933")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 181.7696 93.98 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-				(hide yes)
-			)
-		)
-	)
-	(global_label "SND_CR2"
-		(shape input)
-		(at 193.04 60.96 180)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right)
-		)
-		(uuid "e537f1c6-207e-42d6-aecd-2185a5fdc419")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 181.5277 60.96 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8236,6 +8527,167 @@
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/be1fd2da-2765-4044-ae46-297533c36c50"
 					(reference "C78")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "dk_Rectangular-Connectors-Headers-Male-Pins:22-23-2021")
+		(at 170.18 46.99 180)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "f30e661b-e06f-40c0-b07d-c14d8470431c")
+		(property "Reference" "J29"
+			(at 167.132 43.434 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Value" "Audio In 6"
+			(at 172.212 45.466 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_2x01_P2.54mm_Vertical"
+			(at 165.1 52.07 0)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+				(justify left)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "https://media.digikey.com/pdf/Data%20Sheets/Molex%20PDFs/A-6373-N_Series_Dwg_2010-12-03.pdf"
+			(at 165.1 54.61 0)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+				(justify left)
+				(hide yes)
+			)
+		)
+		(property "Description" "CONN HEADER VERT 2POS 2.54MM"
+			(at 170.18 46.99 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Digi-Key_PN" "WM4200-ND"
+			(at 165.1 57.15 0)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+				(justify left)
+				(hide yes)
+			)
+		)
+		(property "MPN" "22-23-2021"
+			(at 165.1 59.69 0)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+				(justify left)
+				(hide yes)
+			)
+		)
+		(property "Category" "Connectors, Interconnects"
+			(at 165.1 62.23 0)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+				(justify left)
+				(hide yes)
+			)
+		)
+		(property "Family" "Rectangular Connectors - Headers, Male Pins"
+			(at 165.1 64.77 0)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+				(justify left)
+				(hide yes)
+			)
+		)
+		(property "DK_Datasheet_Link" "https://media.digikey.com/pdf/Data%20Sheets/Molex%20PDFs/A-6373-N_Series_Dwg_2010-12-03.pdf"
+			(at 165.1 67.31 0)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+				(justify left)
+				(hide yes)
+			)
+		)
+		(property "DK_Detail_Page" "/product-detail/en/molex/22-23-2021/WM4200-ND/26667"
+			(at 165.1 69.85 0)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+				(justify left)
+				(hide yes)
+			)
+		)
+		(property "Description_1" "CONN HEADER VERT 2POS 2.54MM"
+			(at 165.1 72.39 0)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+				(justify left)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer" "Molex"
+			(at 165.1 74.93 0)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+				(justify left)
+				(hide yes)
+			)
+		)
+		(property "Status" "Active"
+			(at 165.1 77.47 0)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+				(justify left)
+				(hide yes)
+			)
+		)
+		(pin "2"
+			(uuid "cc97da1e-9cf2-431e-9ab8-2f2d2643aecf")
+		)
+		(pin "1"
+			(uuid "fa9b6a8b-af46-444d-a5d3-c526730aaee5")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/be1fd2da-2765-4044-ae46-297533c36c50"
+					(reference "J29")
 					(unit 1)
 				)
 			)

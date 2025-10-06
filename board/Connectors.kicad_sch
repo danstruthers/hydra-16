@@ -6,8 +6,8 @@
 	(paper "USLetter")
 	(title_block
 		(title "Card-edge and SPI Device Connectors")
-		(date "2025-09-18")
-		(rev "1.7A")
+		(date "2025-10-01")
+		(rev "1.7C")
 		(company "Data Tuning")
 		(comment 1 "Hydra 16")
 	)
@@ -26334,48 +26334,6 @@
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9e82ed5b-af5c-4fee-b6ce-87e97255963b"
 					(reference "J28")
 					(unit 1)
-				)
-			)
-		)
-	)
-	(sheet
-		(at 132.08 176.53)
-		(size 15.24 5.08)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(stroke
-			(width 0.1524)
-			(type solid)
-		)
-		(fill
-			(color 0 0 0 0.0000)
-		)
-		(uuid "1bce60c3-d882-492e-9aec-170cf0780040")
-		(property "Sheetname" "IRQ_Priorty_Encoder"
-			(at 132.08 175.8184 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left bottom)
-			)
-		)
-		(property "Sheetfile" "IRQ_P_E.kicad_sch"
-			(at 132.08 182.1946 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left top)
-			)
-		)
-		(instances
-			(project "hydra-16"
-				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9e82ed5b-af5c-4fee-b6ce-87e97255963b"
-					(page "8")
 				)
 			)
 		)
