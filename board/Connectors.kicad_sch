@@ -7,7 +7,7 @@
 	(title_block
 		(title "Card-edge and SPI Device Connectors")
 		(date "2025-10-01")
-		(rev "1.7C")
+		(rev "1.8A")
 		(company "Data Tuning")
 		(comment 1 "Hydra 16")
 	)
@@ -23835,7 +23835,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "0268805c-1d3d-437e-a61e-d3b105c15455")
-		(property "Reference" "J20"
+		(property "Reference" "J23"
 			(at 174.498 139.446 0)
 			(effects
 				(font
@@ -23901,7 +23901,7 @@
 		(instances
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9e82ed5b-af5c-4fee-b6ce-87e97255963b"
-					(reference "J20")
+					(reference "J23")
 					(unit 1)
 				)
 			)
@@ -23998,7 +23998,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "3fd861e0-f9ab-4467-a832-73994e98a3c7")
-		(property "Reference" "J14"
+		(property "Reference" "J13"
 			(at 97.79 15.24 0)
 			(effects
 				(font
@@ -24230,7 +24230,7 @@
 		(instances
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9e82ed5b-af5c-4fee-b6ce-87e97255963b"
-					(reference "J14")
+					(reference "J13")
 					(unit 1)
 				)
 			)
@@ -24245,7 +24245,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "4747924b-ef4e-4eea-9ed0-3d6ad4328b4b")
-		(property "Reference" "J18"
+		(property "Reference" "J22"
 			(at 155.702 139.446 0)
 			(effects
 				(font
@@ -24311,7 +24311,7 @@
 		(instances
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9e82ed5b-af5c-4fee-b6ce-87e97255963b"
-					(reference "J18")
+					(reference "J22")
 					(unit 1)
 				)
 			)
@@ -24326,7 +24326,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "6da7f701-2bc9-4a0d-9740-a78d24f9c756")
-		(property "Reference" "J17"
+		(property "Reference" "J18"
 			(at 155.702 115.316 0)
 			(effects
 				(font
@@ -24392,7 +24392,7 @@
 		(instances
 			(project ""
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9e82ed5b-af5c-4fee-b6ce-87e97255963b"
-					(reference "J17")
+					(reference "J18")
 					(unit 1)
 				)
 			)
@@ -24408,7 +24408,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "836093f4-d10d-46c7-8739-86dbab793f00")
-		(property "Reference" "J13"
+		(property "Reference" "J16"
 			(at 40.894 105.41 0)
 			(effects
 				(font
@@ -24640,7 +24640,7 @@
 		(instances
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9e82ed5b-af5c-4fee-b6ce-87e97255963b"
-					(reference "J13")
+					(reference "J16")
 					(unit 1)
 				)
 			)
@@ -24736,7 +24736,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "a2497942-3cc8-4de2-a7c0-a32b0e138d2a")
-		(property "Reference" "J23"
+		(property "Reference" "J24"
 			(at 193.802 139.446 0)
 			(effects
 				(font
@@ -24802,7 +24802,7 @@
 		(instances
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9e82ed5b-af5c-4fee-b6ce-87e97255963b"
-					(reference "J23")
+					(reference "J24")
 					(unit 1)
 				)
 			)
@@ -24915,7 +24915,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "a871f305-48e1-4705-80f5-1d2fa72a1d96")
-		(property "Reference" "J22"
+		(property "Reference" "J20"
 			(at 193.548 115.316 0)
 			(effects
 				(font
@@ -24981,7 +24981,7 @@
 		(instances
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9e82ed5b-af5c-4fee-b6ce-87e97255963b"
-					(reference "J22")
+					(reference "J20")
 					(unit 1)
 				)
 			)
@@ -25245,7 +25245,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "cfa65e9f-0d19-4d68-8150-d93c416b6a2d")
-		(property "Reference" "J24"
+		(property "Reference" "J21"
 			(at 212.852 115.316 0)
 			(effects
 				(font
@@ -25311,7 +25311,7 @@
 		(instances
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9e82ed5b-af5c-4fee-b6ce-87e97255963b"
-					(reference "J24")
+					(reference "J21")
 					(unit 1)
 				)
 			)
@@ -25327,7 +25327,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "e6e42bda-d6cf-4ceb-9892-c39a660b72c8")
-		(property "Reference" "J21"
+		(property "Reference" "J26"
 			(at 200.66 163.1949 0)
 			(effects
 				(font
@@ -25384,7 +25384,7 @@
 		(instances
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9e82ed5b-af5c-4fee-b6ce-87e97255963b"
-					(reference "J21")
+					(reference "J26")
 					(unit 1)
 				)
 			)
@@ -25401,7 +25401,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "e7d4bb61-ebad-4d84-af00-5f7231f9e8aa")
-		(property "Reference" "J16"
+		(property "Reference" "J14"
 			(at 157.48 15.24 0)
 			(effects
 				(font
@@ -25633,7 +25633,7 @@
 		(instances
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9e82ed5b-af5c-4fee-b6ce-87e97255963b"
-					(reference "J16")
+					(reference "J14")
 					(unit 1)
 				)
 			)
@@ -25650,7 +25650,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "eae2a861-cd8f-484c-9dc7-29f8ea355bbd")
-		(property "Reference" "J26"
+		(property "Reference" "J15"
 			(at 217.17 15.24 0)
 			(effects
 				(font
@@ -25882,7 +25882,7 @@
 		(instances
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9e82ed5b-af5c-4fee-b6ce-87e97255963b"
-					(reference "J26")
+					(reference "J15")
 					(unit 1)
 				)
 			)
@@ -25898,7 +25898,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "edac8a8c-359e-4ee8-b867-a5e56f721dba")
-		(property "Reference" "J15"
+		(property "Reference" "J17"
 			(at 103.886 109.22 0)
 			(effects
 				(font
@@ -26130,7 +26130,7 @@
 		(instances
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9e82ed5b-af5c-4fee-b6ce-87e97255963b"
-					(reference "J15")
+					(reference "J17")
 					(unit 1)
 				)
 			)

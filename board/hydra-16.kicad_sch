@@ -7,7 +7,7 @@
 	(title_block
 		(title "CPU, VIA, ACIA, O/S ROM, Task RAM and Banked RAM Header")
 		(date "2025-10-01")
-		(rev "1.7C")
+		(rev "1.8A")
 		(company "Data Tuning")
 		(comment 1 "Hydra 16")
 	)
@@ -22632,6 +22632,48 @@
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c"
 					(page "4")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 207.01 163.83)
+		(size 12.7 3.81)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "18057e61-facc-4a14-82c5-5f534ac6d8bb")
+		(property "Sheetname" "Sound"
+			(at 207.01 163.1184 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "Sound.kicad_sch"
+			(at 207.01 168.2246 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c"
+					(page "11")
 				)
 			)
 		)

@@ -7,7 +7,7 @@
 	(title_block
 		(title "FFFx Registers and Logic")
 		(date "2025-10-01")
-		(rev "1.7C")
+		(rev "1.8A")
 		(company "Data Tuning")
 		(comment 1 "Hydra 16")
 	)
@@ -10224,7 +10224,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "2557148e-f09d-4743-8a9d-a9727e58c0fe")
-		(property "Reference" "U54"
+		(property "Reference" "U56"
 			(at 195.58 120.65 0)
 			(effects
 				(font
@@ -10312,7 +10312,7 @@
 		(instances
 			(project ""
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9c3f9893-75ea-4823-afb7-35bb324a2c9f"
-					(reference "U54")
+					(reference "U56")
 					(unit 3)
 				)
 			)
@@ -10597,8 +10597,8 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "3975af99-3496-4143-9e99-98c0d20b2b77")
-		(property "Reference" "U55"
-			(at 154.5941 34.29 0)
+		(property "Reference" "U50"
+			(at 154.5433 34.29 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10607,7 +10607,7 @@
 			)
 		)
 		(property "Value" "74F573"
-			(at 154.5941 36.83 0)
+			(at 154.5433 36.83 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10705,7 +10705,7 @@
 		(instances
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9c3f9893-75ea-4823-afb7-35bb324a2c9f"
-					(reference "U55")
+					(reference "U50")
 					(unit 1)
 				)
 			)
@@ -10789,7 +10789,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "4d88be38-20e5-4868-aaf1-8c25cf04b7a4")
-		(property "Reference" "U54"
+		(property "Reference" "U56"
 			(at 195.58 90.17 0)
 			(effects
 				(font
@@ -10877,7 +10877,7 @@
 		(instances
 			(project ""
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9c3f9893-75ea-4823-afb7-35bb324a2c9f"
-					(reference "U54")
+					(reference "U56")
 					(unit 1)
 				)
 			)
@@ -10958,8 +10958,8 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "5731a401-6e8e-4f9c-a536-9cfacbb79da0")
-		(property "Reference" "U51"
-			(at 105.0641 34.29 0)
+		(property "Reference" "U49"
+			(at 105.0133 34.29 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10968,7 +10968,7 @@
 			)
 		)
 		(property "Value" "74F541"
-			(at 105.0641 36.83 0)
+			(at 105.0133 36.83 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11066,7 +11066,7 @@
 		(instances
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9c3f9893-75ea-4823-afb7-35bb324a2c9f"
-					(reference "U51")
+					(reference "U49")
 					(unit 1)
 				)
 			)
@@ -11321,8 +11321,8 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "67018139-42c2-4b0b-a0fa-6611d493665a")
-		(property "Reference" "U52"
-			(at 108.8741 100.33 0)
+		(property "Reference" "U53"
+			(at 108.8233 100.33 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11331,7 +11331,7 @@
 			)
 		)
 		(property "Value" "74F541"
-			(at 108.8741 102.87 0)
+			(at 108.8233 102.87 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11429,7 +11429,7 @@
 		(instances
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9c3f9893-75ea-4823-afb7-35bb324a2c9f"
-					(reference "U52")
+					(reference "U53")
 					(unit 1)
 				)
 			)
@@ -11549,7 +11549,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "8220f88e-10fe-488b-819a-244496670a7a")
-		(property "Reference" "U54"
+		(property "Reference" "U56"
 			(at 154.94 165.0999 0)
 			(effects
 				(font
@@ -11639,7 +11639,7 @@
 		(instances
 			(project ""
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9c3f9893-75ea-4823-afb7-35bb324a2c9f"
-					(reference "U54")
+					(reference "U56")
 					(unit 5)
 				)
 			)
@@ -11723,8 +11723,8 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "8dd5001b-7718-4827-8cf2-99533d6ab369")
-		(property "Reference" "U49"
-			(at 63.1541 100.33 0)
+		(property "Reference" "U52"
+			(at 63.1033 100.33 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11733,7 +11733,7 @@
 			)
 		)
 		(property "Value" "74F573"
-			(at 63.1541 102.87 0)
+			(at 63.1033 102.87 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11831,7 +11831,7 @@
 		(instances
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9c3f9893-75ea-4823-afb7-35bb324a2c9f"
-					(reference "U49")
+					(reference "U52")
 					(unit 1)
 				)
 			)
@@ -11977,7 +11977,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "9ea3ce42-636c-453f-84f7-bb03ac201fcc")
-		(property "Reference" "U54"
+		(property "Reference" "U56"
 			(at 195.58 105.41 0)
 			(effects
 				(font
@@ -12065,7 +12065,7 @@
 		(instances
 			(project ""
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9c3f9893-75ea-4823-afb7-35bb324a2c9f"
-					(reference "U54")
+					(reference "U56")
 					(unit 2)
 				)
 			)
@@ -12081,8 +12081,8 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "9f4554f1-753e-4bf7-84a5-b52de8c45278")
-		(property "Reference" "U56"
-			(at 204.1241 34.29 0)
+		(property "Reference" "U51"
+			(at 204.0733 34.29 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12091,7 +12091,7 @@
 			)
 		)
 		(property "Value" "74F541"
-			(at 204.1241 36.83 0)
+			(at 204.0733 36.83 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12189,7 +12189,7 @@
 		(instances
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9c3f9893-75ea-4823-afb7-35bb324a2c9f"
-					(reference "U56")
+					(reference "U51")
 					(unit 1)
 				)
 			)
@@ -12309,7 +12309,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "a175e957-e8b2-434c-bf46-4b75f1ddf76b")
-		(property "Reference" "U54"
+		(property "Reference" "U56"
 			(at 195.58 135.89 0)
 			(effects
 				(font
@@ -12397,7 +12397,7 @@
 		(instances
 			(project ""
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9c3f9893-75ea-4823-afb7-35bb324a2c9f"
-					(reference "U54")
+					(reference "U56")
 					(unit 4)
 				)
 			)
@@ -12647,8 +12647,8 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "bf3a8579-bbca-4091-82c8-fdd66cb76e08")
-		(property "Reference" "U50"
-			(at 63.1541 152.4 0)
+		(property "Reference" "U54"
+			(at 63.1033 152.4 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12657,7 +12657,7 @@
 			)
 		)
 		(property "Value" "74F573"
-			(at 63.1541 154.94 0)
+			(at 63.1033 154.94 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12755,7 +12755,7 @@
 		(instances
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9c3f9893-75ea-4823-afb7-35bb324a2c9f"
-					(reference "U50")
+					(reference "U54")
 					(unit 1)
 				)
 			)
@@ -12839,8 +12839,8 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "dbc7f5ea-11b3-4bb9-bea3-2734a0bb6851")
-		(property "Reference" "U53"
-			(at 108.8741 152.4 0)
+		(property "Reference" "U55"
+			(at 108.8233 152.4 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12849,7 +12849,7 @@
 			)
 		)
 		(property "Value" "74F541"
-			(at 108.8741 154.94 0)
+			(at 108.8233 154.94 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12947,7 +12947,7 @@
 		(instances
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9c3f9893-75ea-4823-afb7-35bb324a2c9f"
-					(reference "U53")
+					(reference "U55")
 					(unit 1)
 				)
 			)

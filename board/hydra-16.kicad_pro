@@ -562,9 +562,9 @@
       "gencad": "",
       "idf": "",
       "netlist": "D:/KiCad/8.0/bin/",
-      "plot": "Hydra-16-Gerber-1-6C/",
+      "plot": "Hydra-16-Gerber-1-8C/",
       "pos_files": "",
-      "specctra_dsn": "Hydra16-1-7C-2.dsn",
+      "specctra_dsn": "Hydra16-1-8C.dsn",
       "step": "",
       "svg": "",
       "vrml": ""
@@ -828,6 +828,10 @@
     [
       "be1fd2da-2765-4044-ae46-297533c36c50",
       "Buffers"
+    ],
+    [
+      "18057e61-facc-4a14-82c5-5f534ac6d8bb",
+      "Sound"
     ]
   ],
   "text_variables": {}
