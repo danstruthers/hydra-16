@@ -24,7 +24,89 @@
                 sta             ZP_TEMP
 .endmacro
 
+
+.define LOADA(arg)      lda     arg
+
+.macro  LDA_CORA    CharOrAddr
+.ifnblank   CharOrAddr
+        LOADA CharOrAddr
+.endif
+.endmacro
+
+.macro  PRINT_CHAR      C1, C2, C3, C4, C5, C6, C7, C8, C9
+.ifblank    C1
+    .exitmacro
+.else
+                LDA_CORA        {C1}
+                jsr             WRITE_CHAR
+.endif
+                PRINT_CHAR C2, C3, C4, C5, C6, C7, C8, C9
+.endmacro
+
+.macro  PRINT_CHAR_JMP  C1, C2, C3, C4, C5, C6, C7, C8, C9
+.ifblank    C1
+    .exitmacro
+.else
+                LDA_CORA        {C1}
+    .ifblank    C2
+                jmp             WRITE_CHAR
+                .exitmacro
+    .else
+                jsr             WRITE_CHAR
+    .endif
+.endif
+                PRINT_CHAR_JMP C2, C3, C4, C5, C6, C7, C8, C9
+.endmacro
+
+.macro  PRINT_ESC_SEQ   C1, C2, C3, C4, C5, C6, C7, C8
+                PRINT_CHAR #ASCII_ESC, C1, C2, C3, C4, C5, C6, C7, C8
+.endmacro
+
+.macro  PRINT_ESC_SEQ_JMP   C1, C2, C3, C4, C5, C6, C7, C8
+                PRINT_CHAR_JMP #ASCII_ESC, C1, C2, C3, C4, C5, C6, C7, C8
+.endmacro
+
+.macro  PRINT_BYTE      CharOrAddr
+                LDA_CORA        {CharOrAddr}
+                jsr             WRITE_BYTE
+.endmacro
+
+.macro  PRINT_BYTE_JMP  CharOrAddr
+                LDA_CORA        {CharOrAddr}
+                jmp             WRITE_BYTE
+.endmacro
+
+.macro  PRINT_HEX       CharOrAddr
+                LDA_CORA        {CharOrAddr}
+                jsr             WRITE_HEX
+.endmacro
+
+.macro  PRINT_HEX_MASK  CharOrAddr
+                LDA_CORA        {CharOrAddr}
+                jsr             WRITE_HEX_MASK
+.endmacro
+
+.macro  PRINT_CRLF
+                jsr             WRITE_CRLF
+.endmacro
+
+.macro  PRINT_CRLF_JMP
+                jmp             WRITE_CRLF
+.endmacro
+
+.macro  JSRR    addrTo, addrFrom
+                lda             #>addrFrom
+                pha
+                lda             #<addrFrom
+                pha
+                jmp             (addrTo)
+.endmacro
+
+HEX_MAP: .byte "0123456789ABCDEF"
+HYDRA_WELCOME: HString "Welcome to the HYDRA-16!"
+
 SERIAL_INIT:
+                sei
                 lda             #$10 | SR_SELECT    ; 8-N-1
                 sta             ACIA_CTRL
 .if ROCKWELL_ACIA = 1
@@ -34,15 +116,15 @@ SERIAL_INIT:
 .endif
                 sta             ACIA_CMD
 .if ROCKWELL_ACIA = 1
-    .ifpc02
                 stz             ZP_SERIAL_SEND_BUSY
-    .else
-                lda             #0
-                sta             ZP_SERIAL_SEND_BUSY
-    .endif
 .else
                 jsr             WRITE_DELAY
 .endif
+                lda             #IRQ_NUMBER_ONBOARD_SERIAL
+                ldx             #<SERIAL_IRQ_HANDLER
+                ldy             #>SERIAL_IRQ_HANDLER
+                jsr             IRQ_SET_VECTOR
+                cli
                 rts
 
 ; Input a character from the serial interface.
@@ -51,16 +133,19 @@ SERIAL_INIT:
 ;
 ; Modifies: flags, A
 ; TODO: select the appropriate read stream for the current task
-READCHAR:
+READ_CHAR:
 SERIAL_READ:
                 jsr             BUFFER_SIZE
                 beq             @no_keypressed
-                PUSH_X
+                phx
                 ldx             ZP_READ_PTR
-                lda             INPUT_BUFFER, X
+                lda             INPUT_BUFFER,x
                 inc             ZP_READ_PTR
-                PULL_X
-                jsr             WRITECHAR           ; echo
+                plx
+                ;cmp             #ASCII_ESC           ; do not echo 'ESC'
+                ;beq             @no_echo
+                jsr             WRITE_CHAR           ; echo
+@no_echo:
                 sec
                 bcs             @rc_cleanup
 
@@ -75,17 +160,87 @@ SERIAL_READ:
 ;
 ; Modifies: flags
 ; TODO: select appropriate output stream for the given task
-WRITECHAR:
+WRITE_DEC:
+                phx
+                ldx             #0
+                cmp             #0
+                bcs             @do_hund
+                pha
+                PRINT_CHAR      #ASCII_MINUS
+                pla
+                cmp             #80                         ; special case for -128
+                beq             @is_max
+                jsr             NEGATE
+
+@do_hund:
+                cmp             #100
+                bcc             @do_tens
+                pha
+                PRINT_CHAR      #ASCII_1                    ; must be 100-127
+                pla
+                sec
+                sbc             #100
+                cmp             #10                         ; special case for 100-109..need to print the 0 in tens
+                bcc             @out_tens
+
+@do_tens:
+                cmp             #10
+                bcc             @do_ones
+
+@gt_ten:
+                inx
+                cmp             #10
+                bcc             @out_tens
+                sbc             #10
+                bpl             @gt_ten
+
+@out_tens:
+                pha
+                txa
+                adc             #ASCII_0
+                jsr             WRITE_CHAR
+                pla
+
+@do_ones:
+                plx
+                jmp             WRITE_HEX
+
+@is_max:
+                PRINT_CHAR      #ASCII_1
+                lda             #28
+                bpl             @do_tens
+
+WRITE_BYTE_MIN:
+                cmp             #$10
+                bcc             WRITE_HEX
+
+WRITE_BYTE:
+                pha                                         ; Save A for LSD.
+                lsr
+                lsr
+                lsr
+                lsr                                         ; MSD to LSD position.
+                jsr             WRITE_HEX                   ; Output hex digit.
+                pla                                         ; Restore A.
+WRITE_HEX_MASK:
+                and             #$0F                        ; Mask LSD for hex print.
+
+WRITE_HEX:
+                phx
+                tax
+                lda             HEX_MAP,x
+                plx
+                ; Then fall through to WRITE_CHAR below.
+
+WRITE_CHAR:
 SERIAL_WRITE:
 .if ROCKWELL_ACIA = 1
-                PUSH_X
+                phx
 WRITE_DELAY:
                 ldx             ZP_SERIAL_SEND_BUSY
                 beq             @do_write
-    .ifpc02
-                wai
-    .endif
-                bne             WRITE_DELAY
+                wai                                         ; Leave this in, even if RDY has a pull-up
+                bra            WRITE_DELAY
 .endif
 @do_write:
                 IO_PORT_WRITE   ACIA_DATA
@@ -95,47 +250,48 @@ WRITE_DELAY:
                 stx             ZP_SERIAL_SEND_BUSY
 .else
 WRITE_DELAY:
-                PUSH_X
+                phx
                 ldx             #SWT_SELECT
 @txdelay:
                 dex
                 bne             @txdelay
 .endif
-                PULL_X
+                plx
                 rts
 
 ; Convenience method to write CR/LF to output stream
 WRITE_CRLF:
-                lda             #ASCII_CR
-                jsr             WRITECHAR
-                lda             #ASCII_LF
-                jmp             WRITECHAR                   ; WRITECHAR will rts, so jmp instead of jsr
+                PRINT_CHAR      #ASCII_CR
+                PRINT_CHAR_JMP  #ASCII_LF
 
-; Taken from Wozmon
-WRITE_BYTE:
-                pha                                         ; Save A for LSD.
-                lsr
-                lsr
-                lsr
-                lsr                                         ; MSD to LSD position.
-                jsr             @print_hex                  ; Output hex digit.
-                pla                                         ; Restore A.
-                and             #$0F                        ; Mask LSD for hex print.
+WRITE_PROMPT:
+                PRINT_CRLF
+                PRINT_CHAR      #ASCII_T
+                PRINT_HEX_MASK  $FFF0
+                PRINT_CHAR      #ASCII_SPACE
+                PRINT_BYTE      $0
+                lda             $0
+                cmp             #$F0
+                bcc             @not_shared
+                PRINT_CHAR      #ASCII_LPAREN
+                PRINT_HEX_MASK  $FFF1                       ; Shared RAM sub-bank
+                PRINT_CHAR      #ASCII_RPAREN
 
-@print_hex:
-                cmp             #10                         ; Digit?
-                bcc             @echo                       ; Yes, output it.
-                adc             #ASCII_LETTER_OFFSET-1      ; Add offset for letter, -1 because carry is set.
-
-@echo:
-                adc             #ASCII_0                    ; Add "0".
-                jmp             WRITECHAR                   ; WRITECHAR will rts, so jmp instead of jsr
+@not_shared:
+                PRINT_CHAR      #ASCII_COLON
+                PRINT_BYTE      $1
+                PRINT_CHAR_JMP  #ASCII_GT
 
 ; Initialize the circular input buffer
 ; Modifies: flags, A
 INIT_BUFFER:
                 MOV             ZP_READ_PTR, ZP_WRITE_PTR
                 rts
+
+; Escape sequences
+CLEAR_SCR:
+                PRINT_ESC_SEQ #ASCII_LBRACKET, #ASCII_2, #ASCII_J
+                PRINT_ESC_SEQ_JMP #ASCII_LBRACKET, #ASCII_0, #ASCII_SEMI, #ASCII_0, #ASCII_f
 
 ; Set up the SPI interface registers on the VIA
 SPI_INIT:
@@ -151,7 +307,7 @@ SPI_INIT:
 ; Macro to remove essentially duplicate code
 .macro          SPI_SEND_SETUP  mode
                 sta             ZP_SPI_DATA_OUT
-                PUSH_Y
+                phy
                 txa
                 ora             #SPI_BIT_MOSI
                 tay
@@ -175,7 +331,7 @@ SPI_TRANSCEIVE:
                 bcs             @spi_send_1
 @spi_send_0:
                 stx             IOR_SPI_DATA
-                SJMP            @spi_send
+                bra             @spi_send
 @spi_send_1:
                 sty             IOR_SPI_DATA
 @spi_send:
@@ -188,20 +344,15 @@ SPI_TRANSCEIVE:
                 beq             SPI_OPERATION_DONE
                 bcs             @had_1
                 asl             ZP_SPI_DATA_IN
-                SJMP            @spi_send_0
+                bra             @spi_send_0
 @had_1:
                 asl             ZP_SPI_DATA_IN
-                SJMP            @spi_send_1
+                bra             @spi_send_1
 
 SPI_OPERATION_DONE:
                 lda             #SPI_BIT_CSB        ; de-select all SPI devices
-.ifpc02
                 tsb             IOR_SPI_DATA
-.else
-                ora             IOR_SPI_DATA
-                sta             IOR_SPI_DATA
-.endif
-                PULL_Y
+                ply
                 lda             ZP_SPI_DATA_IN      ; load the input for return in A
                 cli
                 rts
@@ -216,7 +367,7 @@ SPI_SEND:
 @send_loop:
                 bcs             @spi_send_1
                 stx             IOR_SPI_DATA
-                SJMP            @spi_send
+                bra             @spi_send
 @spi_send_1:
                 sty             IOR_SPI_DATA
 @spi_send:
@@ -229,7 +380,7 @@ SPI_SEND:
 ; X: device to read from
 ; Result returned in A
 SPI_RECV:
-                PUSH_Y
+                phy
                 ldy             #8
                 txa
                 ora             #SPI_BIT_MOSI | SPI_BIT_CSB
@@ -241,11 +392,7 @@ SPI_RECV:
                 bit             IOR_SPI_DATA        ; MISO (bit 7) => N flag
                 bpl             @spi_recv_2
                                                     ; Set LSb = 1
-.ifpc02
                 inc
-.else
-                ora             #1
-.endif
 @spi_recv_2:
                 dey
                 bne             @recv_loop
@@ -276,44 +423,41 @@ BUFFER_SIZE:
                 sbc             ZP_READ_PTR
                 rts
 
-; Maskable interrupt request handler
+; Maskable interrupt request handler; by default, do nothing
 IRQ_HANDLER:
-.if ROCKWELL_ACIA = 1
+                rti
+
+
+SERIAL_IRQ_HANDLER:
                 pha
+
+.if ROCKWELL_ACIA = 1
                 lda             #ACIA_STATUS_BIT_TDRE
 .endif
+
                 bit             ACIA_STATUS
-                bpl             @not_acia 	            ; bit 7 not set, so N is not set
+                bpl             @int_done 	            ; bit 7 not set, so not ACIA IRQ
+
 .if ROCKWELL_ACIA = 1
                 beq             @do_recv                ; if not Tx, then must be Rx
-    .ifpc02
                 stz             ZP_SERIAL_SEND_BUSY
-    .else
-                lda             #0
-                sta             ZP_SERIAL_SEND_BUSY
-    .endif
 
 @check_recv:
                 lda             #ACIA_STATUS_BIT_RDRF   ; is read register full?
                 bit             ACIA_STATUS
-                beq             @skip_read
-.else
-                pha
+                beq             @int_done
 .endif
 
 @do_recv:
                 IO_PORT_READ    ACIA_DATA
-                PUSH_X
+                phx
                 ldx             ZP_WRITE_PTR
                 sta             INPUT_BUFFER, X
                 inc             ZP_WRITE_PTR
-                PULL_X
+                plx
 
-@skip_read:
-                pla
-
-@not_acia:
 @int_done:
+                pla
                 rti
 
 ;; *****************************************************************
@@ -325,19 +469,19 @@ I2C_SDA = $02
 I2C_CTRL_PORT = VIA_PORTA
 I2C_DATA_PORT = VIA_DDRA
 
-.macro I2C_ON val
+.macro I2C_ON       val
             tay
-            lda #val
-            ora I2C_DATA_PORT
-            sta I2C_DATA_PORT
+            lda     #val
+            ora     I2C_DATA_PORT
+            sta     I2C_DATA_PORT
             tya
 .endmacro
 
-.macro I2C_OFF val
+.macro I2C_OFF      val
             tay
-            lda #~val
-            and I2C_DATA_PORT
-            sta I2C_DATA_PORT
+            lda     #~val
+            and     I2C_DATA_PORT
+            sta     I2C_DATA_PORT
             tya
 .endmacro
 
@@ -350,58 +494,58 @@ I2C_DATA_PORT = VIA_DDRA
 .endmacro
 
 .macro SDA_HIGH
-            I2C_ON I2C_SDA
+            I2C_ON  I2C_SDA
 .endmacro
 
 .macro SCL_HIGH
-            I2C_ON I2C_SDA
+            I2C_ON  I2C_SDA
 .endmacro
 
 .macro SCL_PULSE
-            inc I2C_DATA_PORT
-            dec I2C_DATA_PORT
+            inc     I2C_DATA_PORT
+            dec     I2C_DATA_PORT
 .endmacro
 
 ; A: Byte to send
 ; Return (in A): 1 = SUCCESS, 0 = FAILURE
 I2C_SEND:
-            ldx #$00
-            stx I2C_CTRL_PORT
-            ldx #$09
+            ldx     #$00
+            stx     I2C_CTRL_PORT
+            ldx     #$09
 @loop:
             dex
-            beq @ack
+            beq     @ack
             rol
-            jsr I2C_SEND_BIT
-            SJMP @loop
+            jsr     I2C_SEND_BIT
+            bra    @loop
 @ack:
-            jsr I2C_RECV_BIT    ; ack in A, 0 = success
-            eor #$01            ; return 1 on success, 0 on fail
+            jsr     I2C_RECV_BIT    ; ack in A, 0 = success
+            eor     #$01            ; return 1 on success, 0 on fail
 @end:
             rts
 
 
-I2C_RECV:	lda #$00
-			sta I2C_CTRL_PORT
-			pha
-			ldx #$09
-@loop:		dex
-			beq @end
-			jsr rec_bit
-			ror
-			pla
-			rol
-			pha
-			jmp @loop
+I2C_RECV:   lda     #$00
+            sta     I2C_CTRL_PORT
+            pha
+            ldx     #$09
+@loop:      dex
+            beq     @end
+            jsr     rec_bit
+            ror
+            pla
+            rol
+            pha
+            jmp     @loop
 @end:
-			pla
-			rts
+            pla
+            rts
 
 ; A: Bit to send
 I2C_SEND_BIT:
-            bcc @send_one
+            bcc     @send_one
             SDA_LOW
-            SJMP @clock_out
+            bra    @clock_out
 @send_one:
             SDA_HIGH
 
@@ -413,13 +557,13 @@ I2C_SEND_BIT:
 I2C_RECV_BIT:
             SDA_HIGH
             SCL_HIGH
-            lda I2C_CTRL_PORT
-            and #I2C_SDA
-            bne @is_one
-            lda #$00
-            jmp @end
+            lda     I2C_CTRL_PORT
+            and     #I2C_SDA
+            bne     @is_one
+            lda     #$00
+            jmp     @end
 @is_one:
-            lda #$01
+            lda     #$01
 @end:
             SCL_LOW
             SDA_LOW
@@ -440,15 +584,15 @@ I2C_STOP:
 
 I2C_ACK:
             pha
-            lda #$00
-            jsr I2C_SEND_BIT
+            lda     #$00
+            jsr     I2C_SEND_BIT
             pla
             rts
 
 I2C_NACK:
             pha
-            lda #$01
-            jsr I2C_SEND_BIT
+            lda     #$01
+            jsr     I2C_SEND_BIT
             pla
             rts
 .endif
@@ -457,23 +601,38 @@ I2C_NACK:
 
 IRQ_VECTOR_INIT:
             sei
-            ldy     #$0F
-            lda     #<IRQ_HANDLER
+            PUSH_AX
+            ldx     #$0F
 @loop:
-            sty     IRQ_VECTOR_NUM_PORT
+            stx     V_REGISTER
+            lda     #<SERIAL_IRQ_HANDLER
             sta     $FFFE
-            dey
-            bpl     @loop
-            ldy     #$0F
-            lda     #>IRQ_HANDLER
-@loop2:
-            sty     IRQ_VECTOR_NUM_PORT
+            lda     #>SERIAL_IRQ_HANDLER
             sta     $FFFF
-            dey
-            bpl     @loop2
+            dex
+            bpl     @loop
+            PULL_XA
             cli
             rts
 
+; A: IRQ#, X: L, Y: H
+IRQ_SET_VECTOR:
+            pha
+            lda     V_REGISTER
+            sta     ZP_A_SAVE
+            pla
+            sta     V_REGISTER
+            stx     $FFFE
+            sty     $FFFF
+            lda     ZP_A_SAVE
+            sta     V_REGISTER
+            rts
+
+.macro SWAP_AX
+            pha
+            txa
+            plx
+.endmacro
 
 .segment "IO_PORTS"
 IO_PORT_0:      .tag IO_Port

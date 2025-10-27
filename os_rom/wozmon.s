@@ -14,7 +14,7 @@ IN              = $7E00
 MON_START:
                 cld                     ; Clear decimal arithmetic mode.
                 cli                     ; Enable interrupts
-                SJMP    @is_escape
+                bra    @is_start
 
 @not_cr:
                 cmp     #ASCII_BACKSPACE
@@ -25,11 +25,12 @@ MON_START:
                 bpl     @get_next_char  ; Auto ESC if line longer than 127.
 
 @is_escape:
-                lda     #ASCII_BACKSLASH
-                jsr     WRITECHAR
+                PRINT_CHAR      #ASCII_BACKSLASH
+@is_start:
+                PRINT_CRLF
 
 @get_line:
-                jsr     WRITE_CRLF
+                jsr     WRITE_PROMPT
                 ldy     #1              ; Initialize text index.
 
 @is_backspace:
@@ -37,9 +38,9 @@ MON_START:
                 bmi     @get_line       ; Beyond start of line, reinitialize.
 
 @get_next_char:
-                jsr     READCHAR
+                jsr     READ_CHAR
                 bcc     @get_next_char
-                sta     IN,Y            ; Add to text buffer.
+                sta     IN,y            ; Add to text buffer.
                 cmp     #ASCII_CR
                 bne     @not_cr
                 ldy     #$FF            ; Reset text index.  Will iny shortly...
@@ -59,7 +60,7 @@ MON_START:
                 iny                     ; Advance text index.
 
 @next_item:
-                lda     IN,Y            ; Get character.
+                lda     IN,y            ; Get character.
                 cmp     #ASCII_CR       ; CR?
                 beq     @get_line       ; Yes, done this line.
                 cmp     #ASCII_PERIOD
@@ -68,13 +69,25 @@ MON_START:
                 cmp     #ASCII_COLON
                 beq     @set_store      ; Yes, set STOR mode.
                 cmp     #ASCII_R
-                beq     @run_prog       ; Yes, run user program.
-                stx     L               ; $00 -> L.
-                stx     H               ;    and H.
+                beq     @run_prog       ; Yes, run user program
+                cmp     #ASCII_T        ; T, U, V, or W registers?
+                bcc     @not_tuvw       ;
+                cmp     #ASCII_X        ;
+                bcs     @not_tuvw       ;
+                adc     #($F0-ASCII_T)  ; T=FFF0, U=FFF1, V=FFF2, W=FFF3
+                sta     L               ;
+                lda     #$FF            ;
+                sta     H               ;
+                iny                     ; skip the mnemonic
+                bra     @not_hex_or_escape
+
+@not_tuvw:
                 sty     ZP_Y_SAVE       ; Save Y for comparison
+                stx     L               ; $00 -> L
+                stx     H               ; ...and H.
 
 @next_hex:
-                lda     IN,Y            ; Get character for hex test.
+                lda     IN,y            ; Get character for hex test.
                 eor     #ASCII_0        ; Map digits to $0-9.
                 cmp     #10             ; Digit?
                 bcc     @is_digit       ; Yes.
@@ -101,10 +114,12 @@ MON_START:
 @not_hex:
                 cpy     ZP_Y_SAVE       ; Check if L, H empty (no hex digits).
                 beq     @is_escape      ; Yes, generate ESC sequence.
+
+@not_hex_or_escape:
                 bit     MODE            ; Test MODE byte.
                 bvc     @not_store      ; B6=0 is STOR, 1 is XAM and BLOCK XAM.
                 lda     L               ; LSD's of hex data.
-                sta     (STL,X)         ; Store current 'store index'.
+                sta     (STL)           ; Store current 'store index'.
                 inc     STL             ; Increment store index.
                 bne     @next_item      ; Get next item (no carry).
                 inc     STH             ; Add carry to 'store index' high order.
@@ -113,38 +128,29 @@ MON_START:
                 jmp     @next_item      ; Get next command item.
 
 @run_prog:
-                lda     #>MON_START
-                pha
-                lda     #<MON_START
-                pha
-                jmp     (XAML)
+                JSRR    XAML, MON_START
 
 @not_store:
                 bmi     @examine_next   ; B7 = 0 for XAM, 1 for BLOCK XAM.
                 ldx     #2              ; Byte count.
 
 @set_addr:
-                lda     L-1,X           ; Copy hex data to
-                sta     STL-1,X         ;  'store index'.
-                sta     XAML-1,X        ; And to 'XAM index'.
+                lda     L-1,x           ; Copy hex data to
+                sta     STL-1,x         ;  'store index'.
+                sta     XAML-1,x        ; And to 'XAM index'.
                 dex                     ; Next of 2 bytes.
                 bne     @set_addr       ; Loop unless X = 0.
 
 @print_next:
                 bne     @print_data     ; NE means no address to print.
-                jsr     WRITE_CRLF
-                lda     XAMH            ; 'Examine index' high-order byte.
-                jsr     WRITE_BYTE      ; Output it in hex format.
-                lda     XAML            ; Low-order 'examine index' byte.
-                jsr     WRITE_BYTE      ; Output it in hex format.
-                lda     #ASCII_COLON
-                jsr     WRITECHAR       ; Output it.
+                PRINT_CRLF
+                PRINT_BYTE  XAMH        ; Print 'Examine index' high-order byte.
+                PRINT_BYTE  XAML        ; Print 'Examine index' low-order byte.
+                PRINT_CHAR  #ASCII_COLON; Print a ':'.
 
 @print_data:
-                lda     #ASCII_SPACE
-                jsr     WRITECHAR       ; Output it.
-                lda     (XAML,X)        ; Get data byte at 'examine index'.
-                jsr     WRITE_BYTE      ; Output it in hex format.
+                PRINT_CHAR  #ASCII_SPACE; Print a ' '.
+                PRINT_BYTE  {(XAML,x)}  ; Print the byte at 'examine index'.
 
 @examine_next:
                 stx     MODE            ; 0 -> MODE (XAM mode).

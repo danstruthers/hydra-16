@@ -47,23 +47,52 @@ SWT_SELECT      = SWT_115200
 .endif
 
 .struct IO_Port
-    Bytes       .byte $10
+    Bytes       .byte 16
 .endstruct
 
 .struct IO_Port_10_Bytes
     Bytes       .byte 10
 .endstruct
 
+.macro HString Str
+    .byte .strlen(Str), Str
+.endmacro
+
+;.struct SerialInfo
+;    .byte   IOPort_IRQ
+;    .byte   Read_Ptr_L
+;    .byte   Read_Ptr_H
+;    .byte   Write_Ptr_L
+;    .byte   Write_Ptr_H
+;.endstruct
+
+;.macro SERIAL_INFO port, irq, task, buff_addr
+;.endmacro
+
+;.macro Serial_Buffer_Advance info
+;.endmacro
+
 .define IO_PORT_BYTE(port, byte) port + IO_Port::Bytes + byte
 
 VIA1            = IO_PORT_0
 ACIA            = IO_PORT_1
+YM_SOUND        = IO_PORT_4
 
 VIA_PORTB       = IO_PORT_BYTE VIA1, 0
 VIA_PORTA       = IO_PORT_BYTE VIA1, 1
+VIA_PORTA_NOHS  = IO_PORT_BYTE VIA1, $F
 VIA_DDRB        = IO_PORT_BYTE VIA1, 2
 VIA_DDRA        = IO_PORT_BYTE VIA1, 3
 
+VIA_T1C_L       = IO_PORT_BYTE VIA1, 4
+VIA_T1C_H       = IO_PORT_BYTE VIA1, 5
+VIA_T1L_L       = IO_PORT_BYTE VIA1, 6
+VIA_T1L_H       = IO_PORT_BYTE VIA1, 7
+
+VIA_T2C_L       = IO_PORT_BYTE VIA1, 8
+VIA_T2C_H       = IO_PORT_BYTE VIA1, 9
+
+VIA_SHIFT_REG   = IO_PORT_BYTE VIA1, $A
 VIA_AUX_CTRL    = IO_PORT_BYTE VIA1, $B
 VIA_PER_CTRL    = IO_PORT_BYTE VIA1, $C
 VIA_INT_FLAGS   = IO_PORT_BYTE VIA1, $D
@@ -74,10 +103,40 @@ ACIA_STATUS     = IO_PORT_BYTE ACIA, 1
 ACIA_CMD        = IO_PORT_BYTE ACIA, 2
 ACIA_CTRL       = IO_PORT_BYTE ACIA, 3
 
+; IRQs, from highest priority (0) to lowest (15)
+IRQ_NUMBER_HIGHEST_PRI = 0
+IRQ_NUMBER_ONBOARD_VIA = 0         ; System timers, etc
+IRQ_NUMBER_ONBOARD_SERIAL = 1      ; On-board serial
+
+IRQ_NUMBER_SLOT_0_L = 2
+IRQ_NUMBER_SLOT_0_H = 3
+
+IRQ_NUMBER_ONBOARD_SOUND = 4       ; YM-2151
+
+; SLOT-assigned IRQs, low (higher-priority)
+IRQ_NUMBER_SLOT_1_L = 5
+IRQ_NUMBER_SLOT_2_L = 6
+IRQ_NUMBER_SLOT_3_L = 7
+IRQ_NUMBER_SLOT_4_L = 8
+IRQ_NUMBER_SLOT_5_L = 9
+
+; SLOT-assigned IRQs, high (lower-priority)
+IRQ_NUMBER_SLOT_1_H = 10
+IRQ_NUMBER_SLOT_2_H = 11
+IRQ_NUMBER_SLOT_3_H = 12
+IRQ_NUMBER_SLOT_4_H = 13
+IRQ_NUMBER_SLOT_5_H = 14
+
+IRQ_NUMBER_15 = 15                  ; not assigned to any hardware or slot
+IRQ_NUMBER_LOWEST_PRI = 15
+
+YM_REG          = IO_PORT_BYTE YM_SOUND, 0
+YM_DATA         = IO_PORT_BYTE YM_SOUND, 1
+
 ACIA_STATUS_BIT_IRQ  =  $80
 ACIA_STATUS_BIT_DSRB =  $40
 ACIA_STATUS_BIT_DCD =   $20
-ACIA_STATUS_BIT_TDRE =  $10     ; for WDC 65C51, this is never 1 during transmission
+ACIA_STATUS_BIT_TDRE =  $10         ; for WDC 65C51, this is never 1 during transmission
 ACIA_STATUS_BIT_RDRF =  $08
 ACIA_STATUS_BIT_OVR =   $04
 ACIA_STATUS_BIT_FE =    $02
@@ -130,31 +189,85 @@ SPI_INIT_DELAY_CYCLES = 80
 
 ; max task idle
 MAX_TASK_NUMBER = $0F           ; 16 tasks, numbered 0-F
-NUM_RAM_MODULES = $01           ; 
-NUM_RAM_BANKS   = NUM_RAM_MODULES * 16
+NUM_RAM_MODULES = 15            ;
+NUM_BANKS_PER_MODULE = 16
+NUM_RAM_BANKS   = NUM_RAM_MODULES * NUM_BANKS_PER_MODULE
 
-SHARED_UBER_BANK_NUM_PORT = IO_PORT_BYTE IO_PORT_F, 1
-IRQ_VECTOR_NUM_PORT = IO_PORT_BYTE IO_PORT_F, 2
+T_REGISTER = $FFF0 ; IO_PORT_BYTE IO_PORT_F, 0
+U_REGISTER = $FFF1 ; IO_PORT_BYTE IO_PORT_F, 1
+V_REGISTER = $FFF2 ; IO_PORT_BYTE IO_PORT_F, 2
+W_REGISTER = $FFF3 ; IO_PORT_BYTE IO_PORT_F, 3
 
 ; ERROR CODES
 ERR_NO_TASKS_AVAILABLE = $F1
+
+; TIMING
+CLK_CPS = 3579545   ; ~3.58 MHz
+CLK_CPMS = CLK_CPS/1000
+
+; Task switcher interrupt timer (one interrupt per 5ms or so, with 64 cycles for INT Handler overhead)
+TIMER_TASK_INT_H = 69
+TIMER_TASK_INT_L = 169
 
 ; ASCII CODES
 ASCII_BACKSPACE = $08
 ASCII_LF        = $0A
 ASCII_CR        = $0D
 ASCII_ESC       = $1B
-ASCII_SPACE     = $20
-ASCII_BANG      = $21
-ASCII_STAR      = $2A
-ASCII_PERIOD    = $2E
-ASCII_0         = $30
-ASCII_A         = $41
-ASCII_COLON     = $3A
-ASCII_R         = $52
-ASCII_BACKSLASH = $5C
+ASCII_SPACE     = ' '
+ASCII_BANG      = '!'
+ASCII_DQUOTE    = '"'
+ASCII_HASH      = '#'
+ASCII_DOLLAR    = '$'
+ASCII_PERCENT   = '%'
+ASCII_CARET     = '^'
+ASCII_AMP       = '&'
+ASCII_SQOUTE    = '''
+ASCII_LPAREN    = '('
+ASCII_RPAREN    = ')'
+ASCII_STAR      = '*'
+ASCII_PLUS      = '+'
+ASCII_COMMA     = ','
+ASCII_MINUS     = '-'
+ASCII_DASH      = ASCII_MINUS
+ASCII_HYPHEN    = ASCII_MINUS
+ASCII_PERIOD    = '.'
+ASCII_SLASH     = '/'
+ASCII_0         = '0'
+ASCII_1         = '1'
+ASCII_2         = '2'
+ASCII_3         = '3'
+ASCII_4         = '4'
+ASCII_5         = '5'
+ASCII_6         = '6'
+ASCII_7         = '7'
+ASCII_8         = '8'
+ASCII_9         = '9'
+ASCII_COLON     = ':'
+ASCII_SEMI      = ':'
+ASCII_LT        = '<'
+ASCII_EQ        = '='
+ASCII_GT        = '>'
+ASCII_QUESTION  = '?'
+ASCII_A         = 'A'
+ASCII_J         = 'J'
+ASCII_R         = 'R'
+ASCII_S         = 'S'
+ASCII_T         = 'T'
+ASCII_U         = 'U'
+ASCII_V         = 'V'
+ASCII_W         = 'W'
+ASCII_X         = 'X'
+ASCII_Y         = 'Y'
+ASCII_Z         = 'Z'
+ASCII_f         = 'f'
+ASCII_LBRACKET  = '['
+ASCII_BACKSLASH = '\'
+ASCII_RBRACKET  = ']'
+ASCII_LBRACE    = '{'
+ASCII_RBRACE    = '}'
 
-ASCII_LETTER_OFFSET = ASCII_A-ASCII_0+10
+ASCII_LETTER_OFFSET = ASCII_A-ASCII_0-10
 
 ; write a byte in A to the IO PORT
 .macro IO_PORT_WRITE    port, byte, imm
@@ -177,153 +290,46 @@ ASCII_LETTER_OFFSET = ASCII_A-ASCII_0+10
 .endif
 .endmacro
 
-
-; Register save macros
-; Modifies: A (if not in 65C02 mode)
-.macro  PUSH_X
-.ifpc02
-                phx
-.else
-                sta ZP_A_SAVE
-                txa
-                pha
-                lda ZP_A_SAVE
-.endif
-.endmacro
-
-.macro  PULL_X
-.ifpc02
-                plx
-.else
-                sta ZP_A_SAVE
-                pla
-                tax
-                lda ZP_A_SAVE
-.endif
-.endmacro
-
-; Register restore macros
-; Modifies: A (if not in 65C02 mode)
-.macro  PUSH_Y
-.ifpc02
-                phy
-.else
-                sta ZP_A_SAVE
-                tya
-                pha
-                lda ZP_A_SAVE
-.endif
-.endmacro
-
-.macro  PULL_Y
-.ifpc02
-                ply
-.else
-                sta ZP_A_SAVE
-                pla
-                tay
-                lda ZP_A_SAVE
-.endif
-.endmacro
-
 .macro PUSH_AX
-.ifpc02
                 pha
                 phx
-.else
-                pha
-                txa
-                pha
-.endif
 .endmacro
 
 .macro  PULL_XA
-.ifpc02
                 plx
                 pla
-.else
-                pla
-                tax
-                pla
-.endif
 .endmacro
 
 .macro PUSH_AY
-.ifpc02
                 pha
                 phy
-.else
-                pha
-                tya
-                pha
-.endif
 .endmacro
 
 .macro  PULL_YA
-.ifpc02
                 ply
                 pla
-.else
-                pla
-                tay
-                pla
-.endif
 .endmacro
 
 .macro PUSH_XY
-.ifpc02
                 phx
                 phy
-.else
-                sta ZP_A_SAVE
-                txa
-                pha
-                tya
-                pha
-                lda ZP_A_SAVE
-.endif
 .endmacro
 
 .macro  PULL_YX
-.ifpc02
                 ply
                 plx
-.else
-                sta ZP_A_SAVE
-                pla
-                tay
-                pla
-                tax
-                lda ZP_A_SAVE
-.endif
 .endmacro
 
 .macro PUSH_AXY
-.ifpc02
                 pha
                 phx
                 phy
-.else
-                pha
-                txa
-                pha
-                tya
-                pha
-.endif
 .endmacro
 
 .macro  PULL_YXA
-.ifpc02
                 ply
                 plx
                 pla
-.else
-                pla
-                tay
-                pla
-                tax
-                pla
-.endif
 .endmacro
 
 ; convenience macros
@@ -398,7 +404,7 @@ ASCII_LETTER_OFFSET = ASCII_A-ASCII_0+10
                 dex
                 lda     addr1,x
                 sta     addr2,x
-                bne @-
+                bne     @-
 .endmacro
 
 ; Y: # of bytes to move
@@ -408,22 +414,15 @@ ASCII_LETTER_OFFSET = ASCII_A-ASCII_0+10
                 dey
                 lda     addr1,y
                 sta     addr2,y
-                bne @-
+                bne     @-
 .endmacro
 
-.macro  SJMP            addr
-.ifpc02
-                bra     addr
-.else
-                jmp     addr
-.endif
-.endmacro
 
 .macro  INC16           addr
                 inc     addr
                 bne     @+
                 inc     addr+1
-                SJMP    @++
+                bra     @++
 @:
                 lda     addr+1
 @:
@@ -442,17 +441,16 @@ ASCII_LETTER_OFFSET = ASCII_A-ASCII_0+10
                 bne     @+
                 dec     addr
                 dec     addr+1
-                SJMP    @+++
+                bra     @+++
 @:
                 dec     addr
                 bne     @+      ; if Z not set, don't take Z from HOB
                 lda     addr+1  ; sets Z and N from HOB
-                SJMP    @++
+                bra     @++
 @:
                 lda     addr+1
                 ora     #1      ; reset Z, if set, without affecting N
 @:
-
 .endmacro
 
 .macro  DEC32           addr
@@ -480,15 +478,15 @@ ASCII_LETTER_OFFSET = ASCII_A-ASCII_0+10
 .endmacro
 
 .macro  NC_X            MAC, p1, p2
-                PUSH_X
+                phx
                 MAC     p1, p2
-                PULL_X
+                plx
 .endmacro
 
 .macro  NC_Y            MAC, p1, p2
-                PUSH_Y
+                phy
                 MAC     p1, p2
-                PULL_Y
+                ply
 .endmacro
 
 .macro  NC_AX           MAC, p1, p2
@@ -500,19 +498,19 @@ ASCII_LETTER_OFFSET = ASCII_A-ASCII_0+10
 .macro  NC_AY           MAC, p1, p2
                 PUSH_AY
                 MAC     p1, p2
-                PULL_YA
+                plyA
 .endmacro
 
 .macro  NC_XY           MAC, p1, p2
                 PUSH_XY
                 MAC     p1, p2
-                PULL_YX
+                plyX
 .endmacro
 
 .macro  NC_AXY          MAC, p1, p2
                 PUSH_AXY
                 MAC     p1, p2
-                PULL_YXA
+                plyXA
 .endmacro
 
 .macro  DEC16_NC_A      addr

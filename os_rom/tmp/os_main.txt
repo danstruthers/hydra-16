@@ -176,7 +176,7 @@ Current file: os_main.s
 000000r 2               
 000000r 2               ; Register save macros
 000000r 2               ; Modifies: A (if not in 65C02 mode)
-000000r 2               .macro  PUSH_X
+000000r 2               .macro  phx
 000000r 2               .ifpc02
 000000r 2                               phx
 000000r 2               .else
@@ -187,7 +187,7 @@ Current file: os_main.s
 000000r 2               .endif
 000000r 2               .endmacro
 000000r 2               
-000000r 2               .macro  PULL_X
+000000r 2               .macro  plx
 000000r 2               .ifpc02
 000000r 2                               plx
 000000r 2               .else
@@ -200,7 +200,7 @@ Current file: os_main.s
 000000r 2               
 000000r 2               ; Register restore macros
 000000r 2               ; Modifies: A (if not in 65C02 mode)
-000000r 2               .macro  PUSH_Y
+000000r 2               .macro  phy
 000000r 2               .ifpc02
 000000r 2                               phy
 000000r 2               .else
@@ -211,7 +211,7 @@ Current file: os_main.s
 000000r 2               .endif
 000000r 2               .endmacro
 000000r 2               
-000000r 2               .macro  PULL_Y
+000000r 2               .macro  ply
 000000r 2               .ifpc02
 000000r 2                               ply
 000000r 2               .else
@@ -255,7 +255,7 @@ Current file: os_main.s
 000000r 2               .endif
 000000r 2               .endmacro
 000000r 2               
-000000r 2               .macro  PULL_YA
+000000r 2               .macro  plyA
 000000r 2               .ifpc02
 000000r 2                               ply
 000000r 2                               pla
@@ -280,7 +280,7 @@ Current file: os_main.s
 000000r 2               .endif
 000000r 2               .endmacro
 000000r 2               
-000000r 2               .macro  PULL_YX
+000000r 2               .macro  plyX
 000000r 2               .ifpc02
 000000r 2                               ply
 000000r 2                               plx
@@ -308,7 +308,7 @@ Current file: os_main.s
 000000r 2               .endif
 000000r 2               .endmacro
 000000r 2               
-000000r 2               .macro  PULL_YXA
+000000r 2               .macro  plyXA
 000000r 2               .ifpc02
 000000r 2                               ply
 000000r 2                               plx
@@ -331,7 +331,7 @@ Current file: os_main.s
 000000r 2                               sta     addr2
 000000r 2               .endmacro
 000000r 2               
-000000r 2               .macro  SJMP            addr
+000000r 2               .macro  bra            addr
 000000r 2               .ifpc02
 000000r 2                               bra     addr
 000000r 2               .else
@@ -425,18 +425,18 @@ Current file: os_main.s
 00000Er 2               ;
 00000Er 2               ; Modifies: flags, A
 00000Er 2               ; TODO: select the appropriate read stream for the current task
-00000Er 2               READCHAR:
+00000Er 2               READ_CHAR:
 00000Er 2               SERIAL_READ:
 00000Er 2  20 rr rr                     jsr             BUFFER_SIZE
 000011r 2  F0 19                        beq             @no_keypressed
-000013r 2  85 18 8A 48                  PUSH_X
+000013r 2  85 18 8A 48                  phx
 000017r 2  A5 18        
 000019r 2  A6 10                        ldx             ZP_READ_PTR
 00001Br 2  BD 00 7F                     lda             INPUT_BUFFER, X
 00001Er 2  E6 10                        inc             ZP_READ_PTR
-000020r 2  85 18 68 AA                  PULL_X
+000020r 2  85 18 68 AA                  plx
 000024r 2  A5 18        
-000026r 2  20 rr rr                     jsr             WRITECHAR           ; echo
+000026r 2  20 rr rr                     jsr             WRITE_CHAR           ; echo
 000029r 2  38                           sec
 00002Ar 2  B0 01                        bcs             @rc_cleanup
 00002Cr 2               
@@ -451,7 +451,7 @@ Current file: os_main.s
 00002Er 2               ;
 00002Er 2               ; Modifies: flags
 00002Er 2               ; TODO: select appropriate output stream for the given task
-00002Er 2               WRITECHAR:
+00002Er 2               WRITE_CHAR:
 00002Er 2               SERIAL_WRITE:
 00002Er 2  8D rr rr                     IO_PORT_WRITE   ACIA_DATA
 000031r 2               
@@ -464,7 +464,7 @@ Current file: os_main.s
 000031r 2                               lda             #SWT_SELECT
 000031r 2                   .endif
 000031r 2               .else
-000031r 2  85 18 8A 48                  PUSH_X
+000031r 2  85 18 8A 48                  phx
 000035r 2  A5 18        
 000037r 2                   .if ROCKWELL_ACIA = 1
 000037r 2                               ldx             #1
@@ -493,7 +493,7 @@ Current file: os_main.s
 00003Cr 2               
 00003Cr 2               .ifpc02
 00003Cr 2               .else
-00003Cr 2  85 18 68 AA                  PULL_X
+00003Cr 2  85 18 68 AA                  plx
 000040r 2  A5 18        
 000042r 2               .endif
 000042r 2  60                           rts
@@ -501,9 +501,9 @@ Current file: os_main.s
 000043r 2               ; Convenience method to write CR/LF to output stream
 000043r 2               WRITE_CRLF:
 000043r 2  A9 0D                        lda             #ASCII_CR
-000045r 2  20 rr rr                     jsr             WRITECHAR
+000045r 2  20 rr rr                     jsr             WRITE_CHAR
 000048r 2  A9 0A                        lda             #ASCII_LF
-00004Ar 2  20 rr rr                     jsr             WRITECHAR
+00004Ar 2  20 rr rr                     jsr             WRITE_CHAR
 00004Dr 2  60                           rts
 00004Er 2               
 00004Er 2               ; Initialize the circular input buffer
@@ -530,7 +530,7 @@ Current file: os_main.s
 00006Dr 2               ; Macro to remove essentially duplicate code
 00006Dr 2               .macro          SPI_SEND_SETUP mode
 00006Dr 2                               sta             ZP_SPI_DATA_OUT
-00006Dr 2                               PUSH_Y
+00006Dr 2                               phy
 00006Dr 2                               txa
 00006Dr 2                               ora             #SPI_BIT_MOSI
 00006Dr 2                               tay
@@ -556,7 +556,7 @@ Current file: os_main.s
 000080r 2  B0 06                        bcs             @spi_send_1
 000082r 2               @spi_send_0:
 000082r 2  8E rr rr                     stx             IOR_SPI_DATA
-000085r 2  4C rr rr                     SJMP            @spi_send
+000085r 2  4C rr rr                     bra            @spi_send
 000088r 2               @spi_send_1:
 000088r 2  8C rr rr                     sty             IOR_SPI_DATA
 00008Br 2               @spi_send:
@@ -569,10 +569,10 @@ Current file: os_main.s
 000096r 2  F0 0C                        beq             SPI_OPERATION_DONE
 000098r 2  B0 05                        bcs             @had_1
 00009Ar 2  06 14                        asl             ZP_SPI_DATA_IN
-00009Cr 2  4C rr rr                     SJMP            @spi_send_0
+00009Cr 2  4C rr rr                     bra            @spi_send_0
 00009Fr 2               @had_1:
 00009Fr 2  06 14                        asl             ZP_SPI_DATA_IN
-0000A1r 2  4C rr rr                     SJMP            @spi_send_1
+0000A1r 2  4C rr rr                     bra            @spi_send_1
 0000A4r 2               SPI_OPERATION_DONE:
 0000A4r 2  A9 02                        lda             #SPI_BIT_CSB        ; de-select all SPI devices
 0000A6r 2               .ifpc02
@@ -581,7 +581,7 @@ Current file: os_main.s
 0000A6r 2  0D rr rr                     ora             IOR_SPI_DATA
 0000A9r 2  8D rr rr                     sta             IOR_SPI_DATA
 0000ACr 2               .endif
-0000ACr 2  85 18 68 A8                  PULL_Y
+0000ACr 2  85 18 68 A8                  ply
 0000B0r 2  A5 18        
 0000B2r 2  A5 14                        lda             ZP_SPI_DATA_IN      ; load the input for return in A
 0000B4r 2  58                           cli
@@ -599,7 +599,7 @@ Current file: os_main.s
 0000C7r 2               @send_loop:
 0000C7r 2  B0 06                        bcs             @spi_send_1
 0000C9r 2  8E rr rr                     stx             IOR_SPI_DATA
-0000CCr 2  4C rr rr                     SJMP            @spi_send
+0000CCr 2  4C rr rr                     bra            @spi_send
 0000CFr 2               @spi_send_1:
 0000CFr 2  8C rr rr                     sty             IOR_SPI_DATA
 0000D2r 2               @spi_send:
@@ -612,7 +612,7 @@ Current file: os_main.s
 0000DBr 2               ; X: device to read from
 0000DBr 2               ; Result returned in A
 0000DBr 2               SPI_RECV:
-0000DBr 2  85 18 98 48                  PUSH_Y
+0000DBr 2  85 18 98 48                  phy
 0000DFr 2  A5 18        
 0000E1r 2  A0 08                        ldy             #8
 0000E3r 2  8A                           txa
@@ -650,7 +650,7 @@ Current file: os_main.s
 00010Dr 2  8E rr rr                     stx             IOR_SPI_DATA
 000110r 2  88                           dey
 000111r 2  D0 F7                        bne             @loop
-000113r 2  68 A8 68 AA                  PULL_YXA
+000113r 2  68 A8 68 AA                  plyXA
 000117r 2  68           
 000118r 2  60                           rts
 000119r 2               
@@ -688,12 +688,12 @@ Current file: os_main.s
 000125r 2               .endif
 000125r 2               
 000125r 2  AD rr rr                     IO_PORT_READ    ACIA_DATA
-000128r 2  85 18 8A 48                  PUSH_X
+000128r 2  85 18 8A 48                  phx
 00012Cr 2  A5 18        
 00012Er 2  A6 11                        ldx             ZP_WRITE_PTR
 000130r 2  9D 00 7F                     sta             INPUT_BUFFER, X
 000133r 2  E6 11                        inc             ZP_WRITE_PTR
-000135r 2  85 18 68 AA                  PULL_X
+000135r 2  85 18 68 AA                  plx
 000139r 2  A5 18        
 00013Br 2                               ;jsr             WRITE_BUFFER
 00013Br 2               
@@ -789,7 +789,7 @@ Current file: os_main.s
 000000r 2  D8                           cld                     ; Clear decimal arithmetic mode.
 000001r 2  58                           cli                     ; Enable interrupts
 000002r 2  20 rr rr                     jsr     SERIAL_INIT
-000005r 2  4C rr rr                     SJMP    @is_escape
+000005r 2  4C rr rr                     bra    @is_escape
 000008r 2               
 000008r 2               @not_cr:
 000008r 2  C9 08                        cmp     #ASCII_BACKSPACE
@@ -801,7 +801,7 @@ Current file: os_main.s
 000013r 2               
 000013r 2               @is_escape:
 000013r 2  A9 5C                        lda     #ASCII_BACKSLASH
-000015r 2  20 rr rr                     jsr     WRITECHAR
+000015r 2  20 rr rr                     jsr     WRITE_CHAR
 000018r 2               
 000018r 2               @get_line:
 000018r 2  20 rr rr                     jsr     WRITE_CRLF
@@ -811,7 +811,7 @@ Current file: os_main.s
 00001Er 2  30 F8                        bmi     @get_line       ; Beyond start of line, reinitialize.
 000020r 2               
 000020r 2               @get_next_char:
-000020r 2  20 rr rr                     jsr     READCHAR
+000020r 2  20 rr rr                     jsr     READ_CHAR
 000023r 2  90 FB                        bcc     @get_next_char
 000025r 2  99 00 7E                     sta     IN,Y            ; Add to text buffer.
 000028r 2  C9 0D                        cmp     #ASCII_CR
@@ -903,19 +903,19 @@ Current file: os_main.s
 000096r 2               @print_next:
 000096r 2  D0 19                        bne     @print_data     ; NE means no address to print.
 000098r 2  A9 0D                        lda     #ASCII_CR
-00009Ar 2  20 rr rr                     jsr     WRITECHAR       ; Output it.
+00009Ar 2  20 rr rr                     jsr     WRITE_CHAR       ; Output it.
 00009Dr 2  A9 0A                        lda     #ASCII_LF
-00009Fr 2  20 rr rr                     jsr     WRITECHAR       ; Output it.
+00009Fr 2  20 rr rr                     jsr     WRITE_CHAR       ; Output it.
 0000A2r 2  A5 1A                        lda     XAMH            ; 'Examine index' high-order byte.
 0000A4r 2  20 rr rr                     jsr     @print_byte     ; Output it in hex format.
 0000A7r 2  A5 19                        lda     XAML            ; Low-order 'examine index' byte.
 0000A9r 2  20 rr rr                     jsr     @print_byte     ; Output it in hex format.
 0000ACr 2  A9 3A                        lda     #ASCII_COLON
-0000AEr 2  20 rr rr                     jsr     WRITECHAR       ; Output it.
+0000AEr 2  20 rr rr                     jsr     WRITE_CHAR       ; Output it.
 0000B1r 2               
 0000B1r 2               @print_data:
 0000B1r 2  A9 20                        lda     #ASCII_SPACE
-0000B3r 2  20 rr rr                     jsr     WRITECHAR       ; Output it.
+0000B3r 2  20 rr rr                     jsr     WRITE_CHAR       ; Output it.
 0000B6r 2  A1 19                        lda     (XAML,X)        ; Get data byte at 'examine index'.
 0000B8r 2  20 rr rr                     jsr     @print_byte     ; Output it in hex format.
 0000BBr 2               
@@ -952,7 +952,7 @@ Current file: os_main.s
 0000E4r 2  69 06                        adc     #6              ; Add offset for letter.
 0000E6r 2               
 0000E6r 2               @echo:
-0000E6r 2  20 rr rr                     jsr     WRITECHAR
+0000E6r 2  20 rr rr                     jsr     WRITE_CHAR
 0000E9r 2  60                           rts
 0000EAr 2               
 0000EAr 1               .include "mmu.s"
@@ -1123,7 +1123,7 @@ Current file: os_main.s
 000094r 2  8C rr rr                 sty     TASK_NUM_PORT                   ; Switch back to the original task
 000097r 2               
 000097r 2               ; Back on the original task, so restore the registers
-000097r 2  85 18 68 A8              PULL_YX
+000097r 2  85 18 68 A8              plyX
 00009Br 2  68 AA A5 18  
 00009Fr 2  58                       cli                                     ; Re-enable interrupts
 0000A0r 2  60                       rts
