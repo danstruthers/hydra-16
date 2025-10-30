@@ -70,18 +70,17 @@ MON_START:
                 beq     @set_store      ; Yes, set STOR mode.
                 cmp     #ASCII_R
                 beq     @run_prog       ; Yes, run user program
-                cmp     #ASCII_T        ; T, U, V, or W registers?
-                bcc     @not_tuvw       ;
-                cmp     #ASCII_X        ;
-                bcs     @not_tuvw       ;
-                adc     #($F0-ASCII_T)  ; T=FFF0, U=FFF1, V=FFF2, W=FFF3
+                bcc     @not_rstuvw
+                cmp     #ASCII_X
+                bcs     @not_rstuvw
+                adc     #($F0-ASCII_S)  ; S=FFF0, T=FFF1, ...
                 sta     L               ;
                 lda     #$FF            ;
                 sta     H               ;
                 iny                     ; skip the mnemonic
                 bra     @not_hex_or_escape
 
-@not_tuvw:
+@not_rstuvw:
                 sty     ZP_Y_SAVE       ; Save Y for comparison
                 stx     L               ; $00 -> L
                 stx     H               ; ...and H.
@@ -128,7 +127,7 @@ MON_START:
                 jmp     @next_item      ; Get next command item.
 
 @run_prog:
-                JSRR    XAML, MON_START
+                JSRR_NS XAML, MON_START
 
 @not_store:
                 bmi     @examine_next   ; B7 = 0 for XAM, 1 for BLOCK XAM.

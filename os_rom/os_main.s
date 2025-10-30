@@ -4,12 +4,23 @@
 .include "defines.s"
 OS_MAIN:
             lda     #0
+            sta     W_REGISTER
+            jmp     _MAIN_START
+; THUNK Addresses
+MAIN_START: 
+OSR_JSR:
+            sta     ZP_A_SAVE
+            lda     W_REGISTER
+            pha
+            lda     ZP_A_SAVE
+
+_MAIN_START:
             sta     T_REGISTER
             sta     $00                                 ; Init RAM Bank selector
             sta     $01                                 ; Init ROM Bank selector
             ldx     #$FF                                ; Init stack pointer
             txs
-            MOV     ZP_READ_PTR, ZP_WRITE_PTR                 ; remove when tasks_init is used
+            MOV     ZP_READ_PTR, ZP_WRITE_PTR           ; remove when tasks_init is used
 
             jsr     IRQ_VECTOR_INIT
             jsr     TASKS_INIT
@@ -21,7 +32,14 @@ OS_MAIN:
             ;jsr     SOUND_TEST
             jsr     DO_WELCOME
             jsr     SHELL_MAIN
-            brk                                         ; Halt and catch fire!
+
+            lda     #$F                                 ; Software interrupt 15 (F)
+
+; A: Interrupt vector to invoke
+SOFTWARE_INTERRUPT:
+            sta     V_REGISTER
+            brk
+            rts
 
 .include "bios.s"
 .include "math.s"

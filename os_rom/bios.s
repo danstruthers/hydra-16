@@ -94,11 +94,22 @@
                 jmp             WRITE_CRLF
 .endmacro
 
+.macro PUSH_ADDR addr
+                lda             #>addr
+                pha
+                lda             #<addr
+                pha
+.endmacro
+
 .macro  JSRR    addrTo, addrFrom
-                lda             #>addrFrom
-                pha
-                lda             #<addrFrom
-                pha
+                sta             ZP_A_SAVE
+                PUSH_ADDR       addrFrom
+                lda             ZP_A_SAVE
+                jmp             (addrTo)
+.endmacro
+
+.macro  JSRR_NS addrTo, addrFrom
+                PUSH_ADDR       addrFrom
                 jmp             (addrTo)
 .endmacro
 

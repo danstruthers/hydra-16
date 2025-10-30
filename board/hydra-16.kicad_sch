@@ -7,7 +7,7 @@
 	(title_block
 		(title "CPU, VIA, ACIA, O/S ROM, Task RAM and Banked RAM Header")
 		(date "2025-10-27")
-		(rev "1.8C")
+		(rev "2.0A")
 		(company "Data Tuning")
 		(comment 1 "Hydra 16")
 	)
@@ -16744,7 +16744,7 @@
 			)
 		)
 	)
-	(global_label "nBRC12_S"
+	(global_label "nBRAMC12_S"
 		(shape input)
 		(at 33.02 91.44 180)
 		(fields_autoplaced yes)
@@ -16810,7 +16810,7 @@
 			)
 		)
 	)
-	(global_label "nBRC2_S"
+	(global_label "nBRAMC2_S"
 		(shape input)
 		(at 33.02 66.04 180)
 		(fields_autoplaced yes)
@@ -16964,7 +16964,7 @@
 			)
 		)
 	)
-	(global_label "nBRC8_S"
+	(global_label "nBRAMC8_S"
 		(shape input)
 		(at 33.02 81.28 180)
 		(fields_autoplaced yes)
@@ -17008,7 +17008,7 @@
 			)
 		)
 	)
-	(global_label "nBRC14_S"
+	(global_label "nBRAMC14_S"
 		(shape input)
 		(at 33.02 96.52 180)
 		(fields_autoplaced yes)
@@ -17074,7 +17074,7 @@
 			)
 		)
 	)
-	(global_label "nBRC1_S"
+	(global_label "nBRAMC1_S"
 		(shape input)
 		(at 33.02 63.5 180)
 		(fields_autoplaced yes)
@@ -17272,7 +17272,7 @@
 			)
 		)
 	)
-	(global_label "nBRC13_S"
+	(global_label "nBRAMC13_S"
 		(shape input)
 		(at 33.02 93.98 180)
 		(fields_autoplaced yes)
@@ -17360,7 +17360,7 @@
 			)
 		)
 	)
-	(global_label "nBRC0_S"
+	(global_label "nBRAMC0_S"
 		(shape input)
 		(at 33.02 60.96 180)
 		(fields_autoplaced yes)
@@ -17404,7 +17404,7 @@
 			)
 		)
 	)
-	(global_label "nBRC10_S"
+	(global_label "nBRAMC10_S"
 		(shape input)
 		(at 33.02 86.36 180)
 		(fields_autoplaced yes)
@@ -17602,7 +17602,7 @@
 			)
 		)
 	)
-	(global_label "nBRC3_S"
+	(global_label "nBRAMC3_S"
 		(shape input)
 		(at 33.02 68.58 180)
 		(fields_autoplaced yes)
@@ -17668,7 +17668,7 @@
 			)
 		)
 	)
-	(global_label "nBRC5_S"
+	(global_label "nBRAMC5_S"
 		(shape input)
 		(at 33.02 73.66 180)
 		(fields_autoplaced yes)
@@ -17712,7 +17712,7 @@
 			)
 		)
 	)
-	(global_label "nBRC9_S"
+	(global_label "nBRAMC9_S"
 		(shape input)
 		(at 33.02 83.82 180)
 		(fields_autoplaced yes)
@@ -17734,7 +17734,7 @@
 			)
 		)
 	)
-	(global_label "nBRC4_S"
+	(global_label "nBRAMC4_S"
 		(shape input)
 		(at 33.02 71.12 180)
 		(fields_autoplaced yes)
@@ -18262,7 +18262,7 @@
 			)
 		)
 	)
-	(global_label "nBRC11_S"
+	(global_label "nBRAMC11_S"
 		(shape input)
 		(at 33.02 88.9 180)
 		(fields_autoplaced yes)
@@ -18372,7 +18372,7 @@
 			)
 		)
 	)
-	(global_label "nBRC6_S"
+	(global_label "nBRAMC6_S"
 		(shape input)
 		(at 33.02 76.2 180)
 		(fields_autoplaced yes)
@@ -18680,7 +18680,7 @@
 			)
 		)
 	)
-	(global_label "nBRC7_S"
+	(global_label "nBRAMC7_S"
 		(shape input)
 		(at 33.02 78.74 180)
 		(fields_autoplaced yes)

@@ -7,7 +7,7 @@
 	(title_block
 		(title "Card-edge and SPI Device Connectors")
 		(date "2025-10-27")
-		(rev "1.8C")
+		(rev "2.0A")
 		(company "Data Tuning")
 		(comment 1 "Hydra 16")
 	)
@@ -8926,6 +8926,10 @@
 		(color 0 0 0 0)
 		(uuid "f7d3e24a-3c47-4539-82a6-3cdcac71f616")
 	)
+	(no_connect
+		(at 247.65 157.48)
+		(uuid "5019dcc7-79f2-41e6-8721-ab27c1439913")
+	)
 	(bus_entry
 		(at 247.65 27.94)
 		(size -2.54 -2.54)
@@ -12504,7 +12508,7 @@
 	)
 	(wire
 		(pts
-			(xy 144.78 166.37) (xy 148.59 166.37)
+			(xy 144.78 165.1) (xy 148.59 165.1)
 		)
 		(stroke
 			(width 0)
@@ -13234,7 +13238,7 @@
 	)
 	(wire
 		(pts
-			(xy 144.78 163.83) (xy 148.59 163.83)
+			(xy 144.78 162.56) (xy 148.59 162.56)
 		)
 		(stroke
 			(width 0)
@@ -18108,7 +18112,7 @@
 	)
 	(global_label "PP_A1"
 		(shape bidirectional)
-		(at 144.78 166.37 180)
+		(at 144.78 165.1 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -18118,7 +18122,7 @@
 		)
 		(uuid "0f22d711-f11b-4d82-8ec6-857ff07c5178")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 134.8778 166.37 0)
+			(at 134.8778 165.1 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -22222,7 +22226,7 @@
 	)
 	(global_label "PP_A0"
 		(shape bidirectional)
-		(at 144.78 163.83 180)
+		(at 144.78 162.56 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -22232,7 +22236,7 @@
 		)
 		(uuid "be25ba60-43f4-4c27-9584-5324dd5ec6a1")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 134.8778 163.83 0)
+			(at 134.8778 162.56 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -22574,7 +22578,7 @@
 	)
 	(global_label "I2C_SDA"
 		(shape bidirectional)
-		(at 148.59 166.37 0)
+		(at 148.59 165.1 0)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -22584,7 +22588,7 @@
 		)
 		(uuid "cc65ccba-7fa3-4df5-81d4-9bcc7ab779f0")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 160.3065 166.37 0)
+			(at 160.3065 165.1 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -23762,7 +23766,7 @@
 	)
 	(global_label "I2C_SCL"
 		(shape input)
-		(at 148.59 163.83 0)
+		(at 148.59 162.56 0)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -23772,7 +23776,7 @@
 		)
 		(uuid "fb705551-13b0-4bd7-96c7-9f0118d0beaa")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 159.1347 163.83 0)
+			(at 159.1347 162.56 0)
 			(effects
 				(font
 					(size 1.27 1.27)
