@@ -2,27 +2,6 @@
 .segment "OS_MAIN"
 
 .include "defines.s"
-OS_MAIN:
-            lda     #0
-            sta     T_REGISTER
-            sta     $00                                 ; Init RAM Bank selector
-            sta     $01                                 ; Init ROM Bank selector
-            ldx     #$FF                                ; Init stack pointer
-            txs
-            MOV     ZP_READ_PTR, ZP_WRITE_PTR                 ; remove when tasks_init is used
-
-            jsr     IRQ_VECTOR_INIT
-            jsr     TASKS_INIT
-            jsr     SERIAL_INIT
-            jsr     MMU_INIT
-            ;jsr     SPI_INIT
-            ;jsr     SPI_TEST
-            ;jsr     SOUND_INIT
-            ;jsr     SOUND_TEST
-            jsr     DO_WELCOME
-            jsr     SHELL_MAIN
-            brk                                         ; Halt and catch fire!
-
 .include "bios.s"
 .include "math.s"
 .include "sound.s"
@@ -31,7 +10,27 @@ OS_MAIN:
 .include "tasks.s"
 .include "shell.s"
 
-.segment "OS_MAIN"
+OS_MAIN:
+            stz     W_REGISTER
+            stz     T_REGISTER
+            stz     $00                                 ; Init RAM Bank selector
+            stz     $01                                 ; Init ROM Bank selector
+            ldx     #$FF                                ; Init stack pointer
+            txs
+            ; MOV     ZP_READ_PTR, ZP_WRITE_PTR                 ; remove when tasks_init is used
+
+            jsr     IRQ_VECTOR_INIT
+            jsr     TASKS_INIT
+            jsr     SERIAL_INIT
+            ;jsr     MMU_INIT
+            ;jsr     SPI_INIT
+            ;jsr     SPI_TEST
+            jsr     SOUND_INIT
+            jsr     SOUND_TEST
+            jsr     DO_WELCOME
+            jsr     SHELL_MAIN
+            brk                                         ; Halt and catch fire!
+
 DO_WELCOME:
             phx
             jsr     CLEAR_SCR

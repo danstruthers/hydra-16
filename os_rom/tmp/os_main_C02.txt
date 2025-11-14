@@ -4,7 +4,6 @@ Current file: os_main.s
 
 000000r 1               .debuginfo
 000000r 1               .segment "OS_MAIN"
-000000r 1               
 000000r 1               .include "defines.s"
 000000r 2               .debuginfo
 000000r 2               .macpack        cpu
@@ -229,6 +228,7 @@ Current file: os_main.s
 000000r 2               T_REGISTER = $FFF0 ; IO_PORT_BYTE IO_PORT_F, 0
 000000r 2               U_REGISTER = $FFF1 ; IO_PORT_BYTE IO_PORT_F, 1
 000000r 2               V_REGISTER = $FFF2 ; IO_PORT_BYTE IO_PORT_F, 2
+000000r 2               W_REGISTER = $FFF3 ; IO_PORT_BYTE IO_PORT_F, 3
 000000r 2               
 000000r 2               ; ERROR CODES
 000000r 2               ERR_NO_TASKS_AVAILABLE = $F1
@@ -549,19 +549,21 @@ Current file: os_main.s
 000000r 2                               NC_A    DEC16, addr
 000000r 2               .endmacro
 000000r 2               
+000000r 1               
 000000r 1               OS_MAIN:
 000000r 1  A9 00                    lda     #0
-000002r 1  8D F0 FF                 sta     T_REGISTER
-000005r 1  85 00                    sta     $00                                 ; Init RAM Bank selector
-000007r 1  85 01                    sta     $01                                 ; Init ROM Bank selector
-000009r 1  A2 FF                    ldx     #$FF                                ; Init stack pointer
-00000Br 1  9A                       txs
-00000Cr 1  A5 10 85 11              MOV     ZP_READ_PTR, ZP_WRITE_PTR                 ; remove when tasks_init is used
-000010r 1               
-000010r 1  20 rr rr                 jsr     IRQ_VECTOR_INIT
-000013r 1  20 rr rr                 jsr     TASKS_INIT
-000016r 1  20 rr rr                 jsr     SERIAL_INIT
-000019r 1  20 rr rr                 jsr     MMU_INIT
+000002r 1  8D F3 FF                 sta     W_REGISTER
+000005r 1  8D F0 FF                 sta     T_REGISTER
+000008r 1  85 00                    sta     $00                                 ; Init RAM Bank selector
+00000Ar 1  85 01                    sta     $01                                 ; Init ROM Bank selector
+00000Cr 1  A2 FF                    ldx     #$FF                                ; Init stack pointer
+00000Er 1  9A                       txs
+00000Fr 1  A5 10 85 11              MOV     ZP_READ_PTR, ZP_WRITE_PTR                 ; remove when tasks_init is used
+000013r 1               
+000013r 1  20 rr rr                 jsr     IRQ_VECTOR_INIT
+000016r 1  20 rr rr                 jsr     TASKS_INIT
+000019r 1  20 rr rr                 jsr     SERIAL_INIT
+00001Cr 1                           ;jsr     MMU_INIT
 00001Cr 1                           ;jsr     SPI_INIT
 00001Cr 1                           ;jsr     SPI_TEST
 00001Cr 1                           ;jsr     SOUND_INIT
@@ -1829,18 +1831,18 @@ Current file: os_main.s
 000044r 2  F0 EB                        beq     @set_store      ; Yes, set STOR mode.
 000046r 2  C9 52                        cmp     #ASCII_R
 000048r 2  F0 4E                        beq     @run_prog       ; Yes, run user program
-00004Ar 2  C9 54                        cmp     #ASCII_T        ; T, U, V registers?
-00004Cr 2  90 0F                        bcc     @not_tuv        ;
-00004Er 2  C9 57                        cmp     #ASCII_W        ;
-000050r 2  B0 0B                        bcs     @not_tuv        ;
-000052r 2  69 9C                        adc     #($F0-ASCII_T)  ; T=FFF0, U=FFF1, V=FFF2
+00004Ar 2  C9 54                        cmp     #ASCII_T        ; T, U, V, or W registers?
+00004Cr 2  90 0F                        bcc     @not_tuvw       ;
+00004Er 2  C9 58                        cmp     #ASCII_X        ;
+000050r 2  B0 0B                        bcs     @not_tuvw       ;
+000052r 2  69 9C                        adc     #($F0-ASCII_T)  ; T=FFF0, U=FFF1, V=FFF2, W=FFF3
 000054r 2  85 1F                        sta     L               ;
 000056r 2  A9 FF                        lda     #$FF            ;
 000058r 2  85 20                        sta     H               ;
 00005Ar 2  C8                           iny                     ; skip the mnemonic
 00005Br 2  80 2A                        bra     @not_hex_or_escape
 00005Dr 2               
-00005Dr 2               @not_tuv:
+00005Dr 2               @not_tuvw:
 00005Dr 2  84 1A                        sty     ZP_Y_SAVE       ; Save Y for comparison
 00005Fr 2  86 1F                        stx     L               ; $00 -> L
 000061r 2  86 20                        stx     H               ; ...and H.

@@ -30,6 +30,7 @@ al 00E038 .@ram_bank_loop
 al 00E087 .TEST_PAGE_RANGE
 al 00E02F .@task_num_loop
 al 00E024 .MEM_TEST
+al 00E023 .MMU_INIT
 al 00FEDE .@mod_8_check
 al 00FEC2 .@print_data
 al 00FEAE .@print_next
@@ -42,7 +43,7 @@ al 00FE83 .@not_hex
 al 00FE72 .@is_digit
 al 00FE63 .@next_hex
 al 00FE87 .@not_hex_or_escape
-al 00FE5D .@not_tuv
+al 00FE5D .@not_tuvw
 al 00FE98 .@run_prog
 al 00FE35 .@next_item
 al 00FE34 .@skip_delim
@@ -172,7 +173,6 @@ al 00F810 .HYDRA_WELCOME
 al 00F800 .HEX_MAP
 al 00E1B8 .SHELL_MAIN
 al 00E0CE .DO_WELCOME
-al 00E023 .MMU_INIT
 al 00F829 .SERIAL_INIT
 al 00E1BC .TASKS_INIT
 al 00FA12 .IRQ_VECTOR_INIT
