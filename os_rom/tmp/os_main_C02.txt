@@ -3,7 +3,7 @@ Main file   : os_main.s
 Current file: os_main.s
 
 000000r 1               .debuginfo
-000000r 1               .segment "OS_MAIN"
+000000r 1               
 000000r 1               .include "defines.s"
 000000r 2               .debuginfo
 000000r 2               .macpack        cpu
@@ -549,33 +549,10 @@ Current file: os_main.s
 000000r 2                               NC_A    DEC16, addr
 000000r 2               .endmacro
 000000r 2               
-000000r 1               
-000000r 1               OS_MAIN:
-000000r 1  A9 00                    lda     #0
-000002r 1  8D F3 FF                 sta     W_REGISTER
-000005r 1  8D F0 FF                 sta     T_REGISTER
-000008r 1  85 00                    sta     $00                                 ; Init RAM Bank selector
-00000Ar 1  85 01                    sta     $01                                 ; Init ROM Bank selector
-00000Cr 1  A2 FF                    ldx     #$FF                                ; Init stack pointer
-00000Er 1  9A                       txs
-00000Fr 1  A5 10 85 11              MOV     ZP_READ_PTR, ZP_WRITE_PTR                 ; remove when tasks_init is used
-000013r 1               
-000013r 1  20 rr rr                 jsr     IRQ_VECTOR_INIT
-000016r 1  20 rr rr                 jsr     TASKS_INIT
-000019r 1  20 rr rr                 jsr     SERIAL_INIT
-00001Cr 1                           ;jsr     MMU_INIT
-00001Cr 1                           ;jsr     SPI_INIT
-00001Cr 1                           ;jsr     SPI_TEST
-00001Cr 1                           ;jsr     SOUND_INIT
-00001Cr 1                           ;jsr     SOUND_TEST
-00001Cr 1  20 rr rr                 jsr     DO_WELCOME
-00001Fr 1  20 rr rr                 jsr     SHELL_MAIN
-000022r 1  00                       brk                                         ; Halt and catch fire!
-000023r 1               
-000023r 1               .include "bios.s"
-000023r 2               .debuginfo
-000023r 2               
-000023r 2               .segment "BIOS"
+000000r 1               .include "bios.s"
+000000r 2               .debuginfo
+000000r 2               
+000000r 2               .segment "BIOS"
 000000r 2               
 000000r 2               .macro SPI_SEND_CMD b0, b1, b2, b3, b4, crc
 000000r 2                               lda             #b0 | $40
@@ -1939,109 +1916,109 @@ Current file: os_main.s
 0000E4r 1               .include "mmu.s"
 0000E4r 2               .debuginfo
 0000E4r 2               .segment "OS_MAIN"
-000023r 2               
-000023r 2               MMU_INIT:
-000023r 2  60                       rts
-000024r 2               
-000024r 2               MEM_TEST:
-000024r 2  48 DA                    PUSH_AX
-000026r 2  20 rr rr                 PRINT_CRLF
-000029r 2  9C 00 00                 stz         RAM_BANK_REG
-00002Cr 2  9C F0 FF                 stz         T_REGISTER
-00002Fr 2               
-00002Fr 2               @task_num_loop:
-00002Fr 2  A9 02                    lda         #$02
-000031r 2  A2 7D                    ldx         #$7D                ; exclude the task serial buffers @ $7E00 && $7F00
-000033r 2  20 rr rr                 jsr         TEST_PAGE_RANGE
-000036r 2  A2 A0                    ldx         #$A0                ; end of banked RAM
-000038r 2               
-000038r 2               @ram_bank_loop:
-000038r 2  AD 00 00 20              PRINT_BYTE  RAM_BANK_REG
-00003Cr 2  rr rr        
-00003Er 2  A9 2E 20 rr              PRINT_CHAR  #ASCII_PERIOD
-000042r 2  rr           
-000043r 2  A9 80                    lda         #$80
-000045r 2  20 rr rr                 jsr         TEST_PAGE_RANGE
-000048r 2  EE 00 00                 inc         RAM_BANK_REG
-00004Br 2  A9 F0                    lda         #NUM_RAM_BANKS
-00004Dr 2  CD 00 00                 cmp         RAM_BANK_REG
-000050r 2  D0 E6                    bne         @ram_bank_loop
-000052r 2                           ;inc        T_REGISTER
-000052r 2                           ;lda        #$10
-000052r 2                           ;cmp        T_REGISTER
-000052r 2                           ;bne         @task_num_loop
-000052r 2  9C F1 FF                 stz         U_REGISTER
-000055r 2               
-000055r 2               @shared_banks_loop:
-000055r 2  A9 F0                    lda         #$F0
-000057r 2  8D 00 00                 sta         RAM_BANK_REG
-00005Ar 2               
-00005Ar 2               @shared_bank_loop:
-00005Ar 2  AD F1 FF 20              PRINT_BYTE  U_REGISTER
-00005Er 2  rr rr        
-000060r 2  A9 2E 20 rr              PRINT_CHAR  #ASCII_PERIOD
-000064r 2  rr           
-000065r 2  AD 00 00 20              PRINT_BYTE  RAM_BANK_REG
-000069r 2  rr rr        
-00006Br 2  A9 2E 20 rr              PRINT_CHAR  #ASCII_PERIOD
-00006Fr 2  rr           
-000070r 2  A9 80                    lda         #$80
-000072r 2  20 rr rr                 jsr         TEST_PAGE_RANGE
-000075r 2  EE 00 00                 inc         RAM_BANK_REG        ; increment shared bank
-000078r 2  D0 E0                    bne         @shared_bank_loop
-00007Ar 2  EE F1 FF                 inc         U_REGISTER
-00007Dr 2  AD F1 FF                 lda         U_REGISTER
-000080r 2  C9 10                    cmp         #$10
-000082r 2  90 D1                    bcc         @shared_banks_loop
-000084r 2  FA 68                    PULL_XA
-000086r 2  60                       rts
-000087r 2               
-000087r 2               ; Pass HOB of first page to test in A, HOB of last page + 1 in X
-000087r 2               TEST_PAGE_RANGE:
-000087r 2  85 17                    sta         ZP_TEMP_VEC_H
-000089r 2  20 rr rr                 PRINT_BYTE
-00008Cr 2  A9 00 20 rr              PRINT_BYTE  #0
-000090r 2  rr           
-000091r 2  A9 2E 20 rr              PRINT_CHAR  #ASCII_PERIOD
-000095r 2  rr           
-000096r 2  8A                       txa
-000097r 2  18                       clc
-000098r 2  E9 00                    sbc         #0
-00009Ar 2  20 rr rr                 PRINT_BYTE
-00009Dr 2  A9 FF 20 rr              PRINT_BYTE  #$FF
-0000A1r 2  rr           
-0000A2r 2  A9 3A 20 rr              PRINT_CHAR  #ASCII_COLON
-0000A6r 2  rr           
-0000A7r 2  20 rr rr                 PRINT_CRLF
-0000AAr 2  64 16                    stz         ZP_TEMP_VEC_L
-0000ACr 2  64 12                    stz         ZP_TEMP
-0000AEr 2               
-0000AEr 2               @loop_init:
-0000AEr 2  A9 EA                    lda         #$EA                ; NOP test pattern
-0000B0r 2               
-0000B0r 2               @loop:
-0000B0r 2  92 16                    sta         (ZP_TEMP_VEC_L)
-0000B2r 2  D2 16                    cmp         (ZP_TEMP_VEC_L)
-0000B4r 2  F0 04                    beq         @next
-0000B6r 2  A9 21                    lda         #ASCII_BANG
-0000B8r 2  80 06                    bra         @write
-0000BAr 2               
-0000BAr 2               @next:
-0000BAr 2  E6 16                    inc         ZP_TEMP_VEC_L
-0000BCr 2  D0 F2                    bne         @loop
-0000BEr 2  A9 2E                    lda         #ASCII_PERIOD
-0000C0r 2               
-0000C0r 2               @write:
-0000C0r 2  20 rr rr                 jsr         WRITE_CHAR
-0000C3r 2  64 12                    stz         ZP_TEMP
-0000C5r 2  E6 17                    inc         ZP_TEMP_VEC_H
-0000C7r 2  E4 17                    cpx         ZP_TEMP_VEC_H
-0000C9r 2  D0 E3                    bne         @loop_init
-0000CBr 2  4C rr rr                 PRINT_CRLF_JMP
-0000CEr 2               
-0000CEr 1               .include "tasks.s"
-0000CEr 2               .debuginfo
-0000CEr 2               .segment "TASKS"
+000000r 2               
+000000r 2               MMU_INIT:
+000000r 2  60                       rts
+000001r 2               
+000001r 2               MEM_TEST:
+000001r 2  48 DA                    PUSH_AX
+000003r 2  20 rr rr                 PRINT_CRLF
+000006r 2  9C 00 00                 stz         RAM_BANK_REG
+000009r 2  9C F0 FF                 stz         T_REGISTER
+00000Cr 2               
+00000Cr 2               @task_num_loop:
+00000Cr 2  A9 02                    lda         #$02
+00000Er 2  A2 7D                    ldx         #$7D                ; exclude the task serial buffers @ $7E00 && $7F00
+000010r 2  20 rr rr                 jsr         TEST_PAGE_RANGE
+000013r 2  A2 A0                    ldx         #$A0                ; end of banked RAM
+000015r 2               
+000015r 2               @ram_bank_loop:
+000015r 2  AD 00 00 20              PRINT_BYTE  RAM_BANK_REG
+000019r 2  rr rr        
+00001Br 2  A9 2E 20 rr              PRINT_CHAR  #ASCII_PERIOD
+00001Fr 2  rr           
+000020r 2  A9 80                    lda         #$80
+000022r 2  20 rr rr                 jsr         TEST_PAGE_RANGE
+000025r 2  EE 00 00                 inc         RAM_BANK_REG
+000028r 2  A9 F0                    lda         #NUM_RAM_BANKS
+00002Ar 2  CD 00 00                 cmp         RAM_BANK_REG
+00002Dr 2  D0 E6                    bne         @ram_bank_loop
+00002Fr 2                           ;inc        T_REGISTER
+00002Fr 2                           ;lda        #$10
+00002Fr 2                           ;cmp        T_REGISTER
+00002Fr 2                           ;bne         @task_num_loop
+00002Fr 2  9C F1 FF                 stz         U_REGISTER
+000032r 2               
+000032r 2               @shared_banks_loop:
+000032r 2  A9 F0                    lda         #$F0
+000034r 2  8D 00 00                 sta         RAM_BANK_REG
+000037r 2               
+000037r 2               @shared_bank_loop:
+000037r 2  AD F1 FF 20              PRINT_BYTE  U_REGISTER
+00003Br 2  rr rr        
+00003Dr 2  A9 2E 20 rr              PRINT_CHAR  #ASCII_PERIOD
+000041r 2  rr           
+000042r 2  AD 00 00 20              PRINT_BYTE  RAM_BANK_REG
+000046r 2  rr rr        
+000048r 2  A9 2E 20 rr              PRINT_CHAR  #ASCII_PERIOD
+00004Cr 2  rr           
+00004Dr 2  A9 80                    lda         #$80
+00004Fr 2  20 rr rr                 jsr         TEST_PAGE_RANGE
+000052r 2  EE 00 00                 inc         RAM_BANK_REG        ; increment shared bank
+000055r 2  D0 E0                    bne         @shared_bank_loop
+000057r 2  EE F1 FF                 inc         U_REGISTER
+00005Ar 2  AD F1 FF                 lda         U_REGISTER
+00005Dr 2  C9 10                    cmp         #$10
+00005Fr 2  90 D1                    bcc         @shared_banks_loop
+000061r 2  FA 68                    PULL_XA
+000063r 2  60                       rts
+000064r 2               
+000064r 2               ; Pass HOB of first page to test in A, HOB of last page + 1 in X
+000064r 2               TEST_PAGE_RANGE:
+000064r 2  85 17                    sta         ZP_TEMP_VEC_H
+000066r 2  20 rr rr                 PRINT_BYTE
+000069r 2  A9 00 20 rr              PRINT_BYTE  #0
+00006Dr 2  rr           
+00006Er 2  A9 2E 20 rr              PRINT_CHAR  #ASCII_PERIOD
+000072r 2  rr           
+000073r 2  8A                       txa
+000074r 2  18                       clc
+000075r 2  E9 00                    sbc         #0
+000077r 2  20 rr rr                 PRINT_BYTE
+00007Ar 2  A9 FF 20 rr              PRINT_BYTE  #$FF
+00007Er 2  rr           
+00007Fr 2  A9 3A 20 rr              PRINT_CHAR  #ASCII_COLON
+000083r 2  rr           
+000084r 2  20 rr rr                 PRINT_CRLF
+000087r 2  64 16                    stz         ZP_TEMP_VEC_L
+000089r 2  64 12                    stz         ZP_TEMP
+00008Br 2               
+00008Br 2               @loop_init:
+00008Br 2  A9 EA                    lda         #$EA                ; NOP test pattern
+00008Dr 2               
+00008Dr 2               @loop:
+00008Dr 2  92 16                    sta         (ZP_TEMP_VEC_L)
+00008Fr 2  D2 16                    cmp         (ZP_TEMP_VEC_L)
+000091r 2  F0 04                    beq         @next
+000093r 2  A9 21                    lda         #ASCII_BANG
+000095r 2  80 06                    bra         @write
+000097r 2               
+000097r 2               @next:
+000097r 2  E6 16                    inc         ZP_TEMP_VEC_L
+000099r 2  D0 F2                    bne         @loop
+00009Br 2  A9 2E                    lda         #ASCII_PERIOD
+00009Dr 2               
+00009Dr 2               @write:
+00009Dr 2  20 rr rr                 jsr         WRITE_CHAR
+0000A0r 2  64 12                    stz         ZP_TEMP
+0000A2r 2  E6 17                    inc         ZP_TEMP_VEC_H
+0000A4r 2  E4 17                    cpx         ZP_TEMP_VEC_H
+0000A6r 2  D0 E3                    bne         @loop_init
+0000A8r 2  4C rr rr                 PRINT_CRLF_JMP
+0000ABr 2               
+0000ABr 1               .include "tasks.s"
+0000ABr 2               .debuginfo
+0000ABr 2               .segment "TASKS"
 000000r 2               
 000000r 2               TASK_0_VECTOR           = $E000
 000000r 2               RAM_BANK_REG            = $0
@@ -2251,6 +2228,28 @@ Current file: os_main.s
 000000r 2               
 000000r 1               
 000000r 1               .segment "OS_MAIN"
+0000ABr 1               
+0000ABr 1               OS_MAIN:
+0000ABr 1  9C F3 FF                 stz     W_REGISTER
+0000AEr 1  9C F0 FF                 stz     T_REGISTER
+0000B1r 1  64 00                    stz     $00                                 ; Init RAM Bank selector
+0000B3r 1  64 01                    stz     $01                                 ; Init ROM Bank selector
+0000B5r 1  A2 FF                    ldx     #$FF                                ; Init stack pointer
+0000B7r 1  9A                       txs
+0000B8r 1                           ; MOV     ZP_READ_PTR, ZP_WRITE_PTR                 ; remove when tasks_init is used
+0000B8r 1               
+0000B8r 1  20 rr rr                 jsr     IRQ_VECTOR_INIT
+0000BBr 1  20 rr rr                 jsr     TASKS_INIT
+0000BEr 1  20 rr rr                 jsr     SERIAL_INIT
+0000C1r 1                           ;jsr     MMU_INIT
+0000C1r 1                           ;jsr     SPI_INIT
+0000C1r 1                           ;jsr     SPI_TEST
+0000C1r 1  20 rr rr                 jsr     SOUND_INIT
+0000C4r 1  20 rr rr                 jsr     SOUND_TEST
+0000C7r 1  20 rr rr                 jsr     DO_WELCOME
+0000CAr 1  20 rr rr                 jsr     SHELL_MAIN
+0000CDr 1  00                       brk                                         ; Halt and catch fire!
+0000CEr 1               
 0000CEr 1               DO_WELCOME:
 0000CEr 1  DA                       phx
 0000CFr 1  20 rr rr                 jsr     CLEAR_SCR

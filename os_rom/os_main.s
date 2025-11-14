@@ -1,5 +1,4 @@
 .debuginfo
-.segment "OS_MAIN"
 
 .include "defines.s"
 .include "bios.s"
@@ -9,6 +8,8 @@
 .include "mmu.s"
 .include "tasks.s"
 .include "shell.s"
+
+.segment "OS_MAIN"
 
 OS_MAIN:
             stz     W_REGISTER
