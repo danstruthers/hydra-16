@@ -129,6 +129,7 @@ IRQ_NUMBER_SLOT_5_H = 14
 
 IRQ_NUMBER_15 = 15                  ; not assigned to any hardware or slot
 IRQ_NUMBER_LOWEST_PRI = 15
+IRQ_NUMBER_SW = 15
 
 YM_REG          = IO_PORT_BYTE YM_SOUND, 0
 YM_DATA         = IO_PORT_BYTE YM_SOUND, 1

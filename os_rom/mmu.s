@@ -1,5 +1,5 @@
 .debuginfo
-.segment "OS_MAIN"
+.segment "MMU"
 
 MMU_INIT:
             rts
