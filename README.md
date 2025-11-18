@@ -23,9 +23,9 @@ The code is built with **cc65** (https://cc65.github.io/).  The board schematics
 
 | Start | End  | Description |
 | :---- | :--- | :---------- |
-| $E000 | $FFFF | BIOS/OS ROM paged area (indexed by the W register, below) |
-| $E000 | $FEFF | Effective BIOS paged area |
-| $E000 | | RESET Vector entry point, replicated on each BIOS page.  Code saves `W` register to `ZP_W_SAVE` and then resets W to zero. |
+| $E000 | $FFFF | BIOS/OS ROM paged area (indexed by the W register; see below) |
+| $E000 | $E009 | RESET Vector entry point. Code saves `W` register to `ZP_W_SAVE` and then resets W to zero. This is replicated at the beginning of each BIOS page so that arbitrary W register values at startup/RESET result in the correct entry point being executed. |
+| $E00A | $FEFF | Effective BIOS paged area.  Compiler segments `BIOS_P1 - BIOS_PF` are available for BIOS implementers to add more BIOS calls, corresponding to `W` register values of `$01 - $0F`, respectively. |
 |  | | **I/O Ports** `$00-$0E` |
 | $FF00 | $FF0F | Onboard VIA (65C22) |
 | $FF10 | FF13 | Onboard ACIA (65C51) Serial |
@@ -40,6 +40,7 @@ The code is built with **cc65** (https://cc65.github.io/).  The board schematics
 | $FFF2 | | V Register (interrupt vector selector) |
 | $FFF3 | | W Register (BOIS page selection register) |
 | $FFF4 | $FFF9 | Unused (future pseudo-register expansion) |
+| | | **Vectors** (replicated on each BIOS page) |
 | $FFFA | $FFFB | NMI Interrupt handler vector |
 | $FFFC | $FFFD | Reset Vector (Set to `$E000`) |
 | $FFFE | $FFFF | Interrupt Vector (16-entry pseudo-register indexed by either `V` register bits 0-3 if no hardware interrupt is active when `BRK` is called, or indexed by lowest numbered active interrupt request line if one or more is active)
