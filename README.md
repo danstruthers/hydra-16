@@ -5,18 +5,19 @@ Project to create a multi-tasking 6502-based computer and basic operating system
 The code is built with **cc65** (https://cc65.github.io/).  The board schematics and PCB layouts are done in **KiCAD 9.0**.
 
 **Memory Map**
-* PER-TASK memory map (each task has its own copy of this memory space, except for shared RAM pages, as discussed below)  
-| Range | Description |
-| ----- | ----------- |
-| $00 | RAM Page selection register (Pages $00-$EF are task-specific.  Pages $F0-$FF are shared between all tasks, and are further indexed using the U register, below) |
-| $01  |ROM Page selection register |
-| $02-$0F | Reserved Zero-page entries for future use |
-| $10-$FF | Remaining Zero-page |
-| $0100-01FF | Hardware Stack |
-| $0200-7EFF | Availabe Task RAM space |
-| $7F00-7FFF | Serial input buffer (256 bytes) |
-| $8000-9FFF | Paged RAM (8K pages; task-specific and shared pages all show up here) |
-| $A000-DFFF | Paged ROM (16K pages; ROMs are shared between all tasks, but the page selection is per-task, see `$01` above) |
+* PER-TASK memory map (each task has its own copy of this memory space, except for shared RAM pages, as discussed below)
+
+| Start | End  | Description |
+| :---- | :--- | :---------- |
+| $00 | $00 | RAM Page selection register (Pages $00-$EF are task-specific.  Pages $F0-$FF are shared between all tasks, and are further indexed using the U register, below) |
+| $01  | $01 | ROM Page selection register |
+| $02 | $0F | Reserved Zero-page entries for future use |
+| $10 | $FF | Remaining Zero-page |
+| $0100 | $01FF | Hardware Stack |
+| $0200 | $7EFF | Availabe Task RAM space |
+| $7F00 | $7FFF | Serial input buffer (256 bytes) |
+| $8000 | $9FFF | Paged RAM (8K pages; task-specific and shared pages all show up here) |
+| $A000 | $DFFF | Paged ROM (16K pages; ROMs are shared between all tasks, but the page selection is per-task, see `$01` above) |
 
 * SHARED memory map (all tasks see the following areas the same)
   * $E000-$FFFF:  BIOS/OS ROM paged area (indexed by the W register, below)
