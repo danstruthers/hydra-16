@@ -9,8 +9,8 @@ The code is built with **cc65** (https://cc65.github.io/).  The board schematics
 
 | Start | End  | Description |
 | :---- | :--- | :---------- |
-| $00 | $00 | RAM Page selection register (Pages `$00-$EF` are task-specific.  Pages `$F0-$FF` are shared between all tasks, and are further indexed using the U register, below) |
-| $01  | $01 | ROM Page selection register |
+| $00 | | RAM Page selection register (Pages `$00-$EF` are task-specific.  Pages `$F0-$FF` are shared between all tasks, and are further indexed using the U register, below) |
+| $01  | | ROM Page selection register |
 | $02 | $0F | Reserved Zero-page entries for future use |
 | $10 | $FF | Remaining Zero-page |
 | $0100 | $01FF | Hardware Stack |
@@ -26,7 +26,16 @@ The code is built with **cc65** (https://cc65.github.io/).  The board schematics
 | :---- | :--- | :---------- |
 | $E000 | $FFFF | BIOS/OS ROM paged area (indexed by the W register; see below) |
 | $E000 | $E009 | RESET Vector entry point. Code saves `W` register to `ZP_W_SAVE` and then resets W to zero. This is replicated at the beginning of each BIOS page so that arbitrary W register values at startup/RESET result in the correct entry point being executed. |
-| $E00A | $FEFF | Effective BIOS paged area.  Compiler segments `BIOS_P1 - BIOS_PF` are available for BIOS implementers to add more BIOS calls, corresponding to `W` register values of `$01 - $0F`, respectively. |
+| $E00A | $FEFF | Effective BIOS paged area.  Compiler segments (pages) `BIOS_P1 - BIOS_PF` are available for BIOS implementers to add more BIOS calls, corresponding to `W` register values of `$01 - $0F`, respectively. |
+
+### **I/O Ports**
+
+There are 15 I/O ports on the Hydra, 16 1-byte registers per port, located from $FFF0-$FFEF.  Some ports are taken by the on-board devices.  Others are reserved for specific add-on cards (ports 2 & 3 for video, for example).  Still others are assigned to card slots, usually to correspond with the assigned IRQ numbers, with two I/O ports per slot.  I/O port assignment currently matches IRQ assignment for devices, but that is not a requirement, but it does make things easier.
+
+The area from $FFF0 to $FFFF (that would have been reserved for I/O port 15) is the System port, where pseudo-registers T-W ($FFF0-$FFF3) and the interrupt vector addresses ($FFFA-$FFFF) live.  There are 6 unused bytes ($FFF4-$FFF9) that are reserved for future System expansion.
+
+| Start | End  | Description |
+| :---- | :--- | :---------- |
 |  | | **I/O Ports** `$00-$0E` |
 | $FF00 | $FF0F | Onboard VIA (65C22) |
 | $FF10 | FF13 | Onboard ACIA (65C51) Serial |
@@ -45,6 +54,7 @@ The code is built with **cc65** (https://cc65.github.io/).  The board schematics
 | $FFFA | $FFFB | NMI Interrupt handler vector |
 | $FFFC | $FFFD | Reset Vector (Set to `$E000`) |
 | $FFFE | $FFFF | Interrupt Vector (see below) |
+
 
 ### **Interrupts**
 
