@@ -5,7 +5,7 @@ Project to create a multi-tasking 6502-based computer and basic operating system
 The code is built with **cc65** (https://cc65.github.io/).  The board schematics and PCB layouts are done in **KiCAD 9.0**.
 
 **Memory Map**
-* PER-TASK memory map (each task has its own copy of this memory space, except for shared RAM pages, as discussed below)
+* PER-TASK memory map (each task has its own copy of this memory space, except for shared RAM pages, as discussed below)  
 | Range | Description |
 | ----- | ----------- |
 | $00 | RAM Page selection register (Pages $00-$EF are task-specific.  Pages $F0-$FF are shared between all tasks, and are further indexed using the U register, below) |
