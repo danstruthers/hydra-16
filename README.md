@@ -6,20 +6,21 @@ The code is built with **cc65** (https://cc65.github.io/).  The board schematics
 
 **Memory Map**
 * PER-TASK memory map (each task has its own copy of this memory space, except for shared RAM pages, as discussed below)
-  * $00:        RAM Page selection register (Pages $00-$EF are task-specific.  Pages $F0-$FF are shared between all tasks, and are further indexed using the U register, below)
-  * $01:        ROM Page selection register
-  * $02-$0F:    Reserved Zero-page entries for future use
-  * $10-$FF:    Remaining Zero-page
-  * $0100-01FF: Hardware Stack
-  * $0200-7FFF: Task RAM
-  * $8000-9FFF: Paged RAM (8K pages; task-specific and shared pages all show up here)
-  * $A000-DFFF: Paged ROM (16K pages; ROMs are shared between all tasks, but the page selection is per-task)
+  * $00:          RAM Page selection register (Pages $00-$EF are task-specific.  Pages $F0-$FF are shared between all tasks, and are further indexed using the U register, below)
+  * $01:          ROM Page selection register
+  * $02-$0F:      Reserved Zero-page entries for future use
+  * $10-$FF:      Remaining Zero-page
+  * $0100-01FF:   Hardware Stack
+  * $0200-7FFF:   Task RAM
+    * $7F00-7FFF: Serial input buffer (256 bytes)
+  * $8000-9FFF:   Paged RAM (8K pages; task-specific and shared pages all show up here)
+  * $A000-DFFF:   Paged ROM (16K pages; ROMs are shared between all tasks, but the page selection is per-task)
 
 * SHARED memory map (all tasks see the following areas the same)
   * $E000-$FFFF:  BIOS/OS ROM paged area (indexed by the W register, below)
     * $E000-FEFF: Effective BIOS paged area
-    * $E000:    RESET Vector entry point, replicated on each BIOS page.  Code effectively saves W register and then resets W to zero.
-  * $FF00-FEFF: I/O Ports $00-$0E
+    * $E000:      RESET Vector entry point, replicated on each BIOS page.  Code effectively saves W register and then resets W to zero.
+  * $FF00-FEFF:   I/O Ports $00-$0E
     * $FF00-FF0F: Onboard VIA (65C22)
     * $FF10-FF13: Onboard ACIA (65C51) Serial
     * $FF14-FF1F: Unused
