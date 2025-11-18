@@ -14,8 +14,9 @@ The code is built with **cc65** (https://cc65.github.io/).  The board schematics
 | $02 | $0F | Reserved Zero-page entries for future use |
 | $10 | $FF | Remaining Zero-page |
 | $0100 | $01FF | Hardware Stack |
-| $0200 | $7EFF | Availabe Task RAM space |
-| $7F00 | $7FFF | Serial input buffer (256 bytes) |
+| $0200 | $7DFF | Availabe Task RAM space |
+| $7E00 | $7EFF | Monitor input buffer (256 bytes) |
+| $7F00 | $7FFF | Onboard serial driver input buffer (256 bytes) |
 | $8000 | $9FFF | Paged RAM (8K pages; task-specific and shared pages all show up here) |
 | $A000 | $DFFF | Paged ROM (16K pages; ROMs are shared between all tasks, but the page selection is per-task, see `$01` above) |
 
@@ -35,20 +36,23 @@ The code is built with **cc65** (https://cc65.github.io/).  The board schematics
 | $FF42 | $FF4F | Unused |
 | $FF50 | $FFEF | Unused (future I/O ports, expansion cards) |
 |  | | **Pseudo-registers** |
-| $FFF0 | | T Register (current task selector) |
-| $FFF1 | | U Register (current shared memory macro-page) |
-| $FFF2 | | V Register (interrupt vector selector) |
-| $FFF3 | | W Register (BOIS page selection register) |
+| $FFF0 | | `T` Register (current task selector) |
+| $FFF1 | | `U` Register (current shared memory macro-page) |
+| $FFF2 | | `V` Register (interrupt vector selector) |
+| $FFF3 | | `W` Register (BOIS page selection register) |
 | $FFF4 | $FFF9 | Unused (future pseudo-register expansion) |
 | | | **Vectors** (replicated on each BIOS page) |
 | $FFFA | $FFFB | NMI Interrupt handler vector |
 | $FFFC | $FFFD | Reset Vector (Set to `$E000`) |
-| $FFFE | $FFFF | Interrupt Vector (16-entry pseudo-register indexed by either `V` register bits 0-3 if no hardware interrupt is active when `BRK` is called, or indexed by lowest numbered active interrupt request line if one or more is active)
+| $FFFE | $FFFF | Interrupt Vector (see below) |
 
 ### **Interrupts**
 
 Interrupt priority is lowest number == highest priority, so the S/W interrupt vector (#15) is the lowest priority.  
-**_All_** interrupts can be called via the S/W interrupt mechanism by setting `V` to the IRQ #, and then calling `BRK`.  Just remember that `V` is a shared, pseudo-register, so should be saved and restored (preferrably to `ZP_V_SAVE`) whenever used.
+The interrupt vector (`$FFFE & $FFFF`) is actually a 16-entry pseudo-register indexed by either a) `V` register bits 0-3 if no hardware interrupt is active when a `BRK` instruction is executed, or b) the lowest numbered active interrupt request line (via the IRQ priority decoder circuit) if one or more H/W IRQs is active.  It is also indexed on write by `V` register bits 0-3, which is how the interrupt vectors are set by driver initialization functions.  
+Hardware interrupts ignore `V` register bits 4-7, but sub-functions could be S/W triggered by setting those bits and calling `BRK`, and then checking them in the H/W interrupt vector, similar to how the S/W vector _will eventually_ work.  
+An unused H/W interrupt could be used by S/W to add another S/W interrupt handler, giving another 16 S/W interrupts per IRQ, so long as those are not used by other H/W; _see IRQ Slot assignments, below_.  
+**_All_** interrupts can be called via the S/W interrupt mechanism by setting `V` to the IRQ #, and then calling `BRK`.  Just remember that `V` is a shared, pseudo-register, so should be saved and restored (preferrably to `ZP_V_SAVE`) by each task whenever used.
 
 | IRQ # | Description |
 | --- | --- |
