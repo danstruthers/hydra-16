@@ -46,6 +46,9 @@ The code is built with **cc65** (https://cc65.github.io/).  The board schematics
 
 ### **Interrupts**
 
+Interrupt priority is lowest number == highest priority, so the S/W interrupt vector (#15) is the lowest priority.  
+**_All_** interrupts can be called via the S/W interrupt mechanism by setting `V` to the IRQ #, and then calling `BRK`.  Just remember that `V` is a shared, pseudo-register, so should be saved and restored (preferrably to `ZP_V_SAVE`) whenever used.
+
 | IRQ # | Description |
 | --- | --- |
 | 0 | On-board VIA |
