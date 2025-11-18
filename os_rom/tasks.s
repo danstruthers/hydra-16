@@ -2,11 +2,11 @@
 .segment "TASKS"
 
 TASK_0_VECTOR           = $E000
-RAM_BANK_REG            = $0
-ROM_BANK_REG            = $1
-TASK_STATUS_REG         = $2
-TASK_PARENT             = $3
-STACK_SAVE_REG          = $4
+RAM_BANK_REG            = $00
+ROM_BANK_REG            = $01
+TASK_STATUS_REG         = $02
+TASK_PARENT             = $03
+STACK_SAVE_REG          = $04
 
 TASK_BUSY_FLAG          = $01
 TASK_PAUSED_FLAG        = $02

@@ -9,11 +9,19 @@
 .include "tasks.s"
 .include "shell.s"
 
-.segment "OS_MAIN"
-
-OS_MAIN:
+.macro W_SAVE_AND_RESET
+            sta     ZP_A_SAVE
+            lda     W_REGISTER
+            sta     ZP_W_SAVE
             stz     W_REGISTER
-            stz     T_REGISTER
+.endmacro
+
+.segment "BIOS_P0"
+
+RESET_ENTRY:
+            W_SAVE_AND_RESET                            ; Effectively a NOP, since we wouldn't be here if it was non-zero
+                                                        ;   but kept for consistency across all OS ROM pages
+            stz     T_REGISTER                          ; Make sure task 0 is selected
             stz     $00                                 ; Init RAM Bank selector
             stz     $01                                 ; Init ROM Bank selector
             ldx     #$FF                                ; Init stack pointer
@@ -66,12 +74,69 @@ DO_WELCOME:
             PRINT_CRLF_JMP
 
 SPI_TEST:
-            ldx     #SPI_DEV_0
-            jsr     SPI_INIT_DELAY
+            ldx         #SPI_DEV_0
+            jsr         SPI_INIT_DELAY
             SPI_SEND_CMD 0,    0, 0, 0,   0, $4A        ; CMD0
             SPI_SEND_CMD 8,    0, 0, 1, $AA, $43        ; CMD8
 @loop:
             SPI_SEND_CMD 58,   0, 0, 0,   0             ; CMD58
             SPI_SEND_CMD 41, $40, 0, 0,   0             ; ACMD41
-            bne     @loop
+            bne         @loop
             rts
+
+; A: S/W interrupt number
+SW_INT:
+            asl                                         ; move int# to V[4..7]
+            asl
+            asl
+            asl
+            ora         #$F
+            sta         V_REGISTER
+            brk                                         ; force an interrupt
+            rts
+
+.segment "BIOS_P1"
+            W_SAVE_AND_RESET
+
+.segment "BIOS_P2"
+            W_SAVE_AND_RESET
+
+.segment "BIOS_P3"
+            W_SAVE_AND_RESET
+            
+.segment "BIOS_P4"
+            W_SAVE_AND_RESET
+
+.segment "BIOS_P5"
+            W_SAVE_AND_RESET
+
+.segment "BIOS_P6"
+            W_SAVE_AND_RESET
+
+.segment "BIOS_P7"
+            W_SAVE_AND_RESET
+
+.segment "BIOS_P8"
+            W_SAVE_AND_RESET
+
+.segment "BIOS_P9"
+            W_SAVE_AND_RESET
+
+.segment "BIOS_PA"
+            W_SAVE_AND_RESET
+
+.segment "BIOS_PB"
+            W_SAVE_AND_RESET
+
+.segment "BIOS_PC"
+            W_SAVE_AND_RESET
+
+.segment "BIOS_PD"
+            W_SAVE_AND_RESET
+
+.segment "BIOS_PE"
+            W_SAVE_AND_RESET
+
+.segment "BIOS_PF"
+            W_SAVE_AND_RESET
+

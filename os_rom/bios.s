@@ -603,6 +603,13 @@ IRQ_VECTOR_INIT:
             sei
             PUSH_AX
             ldx     #$0F
+            stx     V_REGISTER
+            lda     #<SW_IRQ_HANDLER
+            sta     $FFFE
+            lda     #>SW_IRQ_HANDLER
+            sta     $FFFF
+            dex
+
 @loop:
             stx     V_REGISTER
             lda     #<SERIAL_IRQ_HANDLER
@@ -617,22 +624,27 @@ IRQ_VECTOR_INIT:
 
 ; A: IRQ#, X: L, Y: H
 IRQ_SET_VECTOR:
+            sei
             pha
             lda     V_REGISTER
-            sta     ZP_A_SAVE
+            sta     ZP_V_SAVE
             pla
             sta     V_REGISTER
             stx     $FFFE
             sty     $FFFF
-            lda     ZP_A_SAVE
+            lda     ZP_V_SAVE
             sta     V_REGISTER
+            cli
             rts
 
-.macro SWAP_AX
+SW_IRQ_HANDLER:
             pha
-            txa
-            plx
-.endmacro
+            lsr
+            lsr
+            lsr
+            lsr
+            pla
+            rti
 
 .segment "IO_PORTS"
 IO_PORT_0:      .tag IO_Port
@@ -652,7 +664,60 @@ IO_PORT_D:      .tag IO_Port
 IO_PORT_E:      .tag IO_Port
 IO_PORT_F:      .tag IO_Port_10_Bytes
 
-.segment "RESETVEC"
+.macro VECTORS
                 .word   NMI_HANDLER     ; NMI vector
-                .word   OS_MAIN         ; RESET vector
+                .word   RESET_ENTRY     ; RESET vector
                 .word   IRQ_HANDLER     ; IRQ vector
+                ;       will actually be pulled from the Vector RAM, depending on lowest priority IRQ currently triggered,
+                ;       or vector for IRQ# set in V[0..3] if none are triggered.  Can trigger S/W IRQs by setting V and then
+                ;       calling BRK.  S/W IRQ# is $F, so setting V[0..3] to $F and v[4..7] to a different number, you can 
+                ;       have up to 16 unique S/W IRQs.  You can invoke a hardware device IRQ handler in the same way
+.endmacro
+
+.segment "RESETVEC_P0"
+    VECTORS
+
+.segment "RESETVEC_P1"
+    VECTORS
+
+.segment "RESETVEC_P2"
+    VECTORS
+
+.segment "RESETVEC_P3"
+    VECTORS
+
+.segment "RESETVEC_P4"
+    VECTORS
+
+.segment "RESETVEC_P5"
+    VECTORS
+
+.segment "RESETVEC_P6"
+    VECTORS
+
+.segment "RESETVEC_P7"
+    VECTORS
+
+.segment "RESETVEC_P8"
+    VECTORS
+
+.segment "RESETVEC_P9"
+    VECTORS
+
+.segment "RESETVEC_PA"
+    VECTORS
+
+.segment "RESETVEC_PB"
+    VECTORS
+
+.segment "RESETVEC_PC"
+    VECTORS
+
+.segment "RESETVEC_PD"
+    VECTORS
+
+.segment "RESETVEC_PE"
+    VECTORS
+
+.segment "RESETVEC_PF"
+    VECTORS

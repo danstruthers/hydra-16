@@ -18,14 +18,18 @@ ZP_TEMP_VEC_H   = ZP_TEMP_VEC_L + 1
 ZP_A_SAVE       = ZP_TEMP_VEC_H + 1
 ZP_X_SAVE       = ZP_A_SAVE + 1
 ZP_Y_SAVE       = ZP_X_SAVE + 1
+ZP_T_SAVE       = ZP_Y_SAVE + 1
+ZP_U_SAVE       = ZP_T_SAVE + 1
+ZP_V_SAVE       = ZP_U_SAVE + 1
+ZP_W_SAVE       = ZP_V_SAVE + 1
 
-ZP_LAST_USED    = ZP_Y_SAVE
+ZP_LAST_USED    = ZP_W_SAVE
 
 IO_PORT_BASE    = $FF00
 INPUT_BUFFER    = $7F00
 
 ROCKWELL_ACIA   = 1
-MHZ_CLOCK       = 2
+KHZ_CLOCK       = 3579
 
 SR_19200        = $0F
 SR_115200       = $00
@@ -36,7 +40,7 @@ SR_SELECT       = SR_115200
 ZP_SERIAL_SEND_BUSY = $08
 .else
 SWT_19200_BASE  = 90
-SWT_19200       = SWT_19200_BASE * MHZ_CLOCK
+SWT_19200       = ((SWT_19200_BASE * KHZ_CLOCK) / 1000) + 1
 SWT_115200      = SWT_19200 / 6
 
     .if SR_SELECT = SR_19200
@@ -499,21 +503,33 @@ ASCII_LETTER_OFFSET = ASCII_A-ASCII_0-10
 .macro  NC_AY           MAC, p1, p2
                 PUSH_AY
                 MAC     p1, p2
-                plyA
+                PULL_YA
 .endmacro
 
 .macro  NC_XY           MAC, p1, p2
                 PUSH_XY
                 MAC     p1, p2
-                plyX
+                PULL_YX
 .endmacro
 
 .macro  NC_AXY          MAC, p1, p2
                 PUSH_AXY
                 MAC     p1, p2
-                plyXA
+                PULL_YXA
 .endmacro
 
 .macro  DEC16_NC_A      addr
                 NC_A    DEC16, addr
+.endmacro
+
+.macro SWAP_AX
+            pha
+            txa
+            plx
+.endmacro
+
+.macro SWAP_AY
+            pha
+            tya
+            ply
 .endmacro
