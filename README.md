@@ -2,7 +2,7 @@
 
 Project to create a multi-tasking 6502-based computer and basic operating system.
 
-The code is built with **cc65** (https://cc65.github.io/).  The board schematics and PCB layouts are done in **KiCAD 9.0** (https://www.kicad.org).
+The code is built with the **cc65** suite (https://cc65.github.io/).  The board schematics and PCB layouts are done in **KiCAD 9.0** (https://www.kicad.org).
 
 ### **Memory Map**
 * PER-TASK memory map (each task has its own copy of this memory space, except for shared RAM pages, as discussed below)
@@ -30,7 +30,7 @@ The code is built with **cc65** (https://cc65.github.io/).  The board schematics
 
 #### **I/O Ports**
 
-There are 15 shared I/O ports on the Hydra, 16 1-byte registers per port, located from $FFF0-$FFEF.  Some ports are taken by the on-board devices.  Others are reserved for specific add-on cards (ports 2 & 3 for video, for example).  Still others are assigned to card slots, usually to correspond with the assigned IRQ numbers, with two I/O ports per slot.  I/O port assignment currently matches IRQ assignment for devices, but that is not a requirement, but it does make things easier.
+There are 15 shared I/O ports on the Hydra, with 16 1-byte registers per port, located from $FFF0-$FFEF.  Some ports are taken by the on-board devices.  Others are reserved for specific add-on cards (ports 2 & 3 for video, for example).  Still others are assigned to card slots, usually to correspond with the assigned IRQ numbers, with two I/O ports per slot.  I/O port assignment currently matches IRQ assignment for devices.  Though this arrangement is not a requirement, it does make things easier to track if followed.
 
 The area from $FFF0 to $FFFF (that would have been reserved for I/O port 15) is the System port, where pseudo-registers T-W ($FFF0-$FFF3) and the interrupt vector addresses ($FFFA-$FFFF) live.  There are 6 unused bytes ($FFF4-$FFF9) that are reserved for future System expansion.
 
@@ -65,7 +65,7 @@ An unused H/W interrupt could be used by S/W to add another S/W interrupt handle
 **_All_** interrupts can be called via the S/W interrupt mechanism by setting `V` to the IRQ #, and then calling `BRK`.  Just remember that `V` is a shared, pseudo-register, so should be saved and restored (preferrably to `ZP_V_SAVE`) by each task whenever used.
 
 | IRQ # | Description |
-| --- | --- |
+| ---: | :--- |
 | 0 | On-board VIA |
 | 1 | On-board ACIA (Serial) |
 | 2 | Card Slot 0 (low) |
