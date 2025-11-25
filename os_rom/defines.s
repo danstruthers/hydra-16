@@ -28,8 +28,11 @@ ZP_LAST_USED    = ZP_W_SAVE
 IO_PORT_BASE    = $FF00
 INPUT_BUFFER    = $7F00
 
+; TIMING
+CLK_CPS = 3579545   ; ~3.58 MHz
+CLK_CPMS = (CLK_CPS/1000) + 1
+
 ROCKWELL_ACIA   = 1
-KHZ_CLOCK       = 3579
 
 SR_19200        = $0F
 SR_115200       = $00
@@ -40,7 +43,7 @@ SR_SELECT       = SR_115200
 ZP_SERIAL_SEND_BUSY = $08
 .else
 SWT_19200_BASE  = 90
-SWT_19200       = ((SWT_19200_BASE * KHZ_CLOCK) / 1000) + 1
+SWT_19200       = ((SWT_19200_BASE * CLK_CPMS) / 1000) + 1
 SWT_115200      = SWT_19200 / 6
 
     .if SR_SELECT = SR_19200
@@ -205,10 +208,6 @@ W_REGISTER = $FFF3 ; IO_PORT_BYTE IO_PORT_F, 3
 
 ; ERROR CODES
 ERR_NO_TASKS_AVAILABLE = $F1
-
-; TIMING
-CLK_CPS = 3579545   ; ~3.58 MHz
-CLK_CPMS = CLK_CPS/1000
 
 ; Task switcher interrupt timer (one interrupt per 5ms or so, with 64 cycles for INT Handler overhead)
 TIMER_TASK_INT_H = 69

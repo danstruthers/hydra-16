@@ -3,6 +3,8 @@ SOUND_INIT:
                 pha
                 phx
                 lda         #0
+                ldx         #$14        ; turn off the clocks
+                jsr         YM_WRITE
                 ldx         #$28
 
 @write_z:
@@ -286,11 +288,11 @@ YM_LOADPATCH:
                 jsr YM_WRITE
                 bcs @fail
                 ldy #0
-                txa      ; YM_WRITE preserves X (YM register)
+                txa         ; YM_WRITE preserves X (YM register)
                 ; Now skip over $28 and $30 by adding $10 to the register address.
                 ; C guaranteed clear by successful ym_write
                 adc #$10
-                tax      ; set up for loop
+                tax         ; set up for loop
 @next:
                 txa
                 ; C guaranteed clear by successful YM_WRITE
@@ -299,16 +301,16 @@ YM_LOADPATCH:
                 iny
                 tax
                 lda (AZP0L),y
-                phy      ; YM_WRITE clobbers .Y
+                phy         ; YM_WRITE clobbers .Y
                 jsr YM_WRITE
                 ply
                 bcc @next
 @fail:
-                plp ; restore interrupt flag
+                plp         ; restore interrupt flag
                 sec
-                rts      ; return C set as failed patch write.
+                rts         ; return C set as failed patch write.
 @success:
-                plp ; restore interrupt flag
+                plp         ; restore interrupt flag
                 clc
                 rts
 

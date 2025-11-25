@@ -8803,12 +8803,6 @@
 		(uuid "0ffda813-b531-4830-bf66-3d1f34ab0a53")
 	)
 	(junction
-		(at 168.91 16.51)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "16422f63-1d1b-45a0-9729-eb09d6fe103e")
-	)
-	(junction
 		(at 128.27 83.82)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -8957,12 +8951,6 @@
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "8a6415bd-78af-4c9b-bfd8-6a57865ab106")
-	)
-	(junction
-		(at 173.99 26.67)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "8db650ec-1bed-49e6-afbe-78337496a919")
 	)
 	(junction
 		(at 205.74 152.4)
@@ -11334,16 +11322,6 @@
 		)
 		(uuid "39ed498c-ebf2-4017-af48-e346beda44cb")
 	)
-	(wire
-		(pts
-			(xy 168.91 21.59) (xy 168.91 26.67)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "3a880b4b-5e23-4b04-9e34-233a38a53df3")
-	)
 	(bus
 		(pts
 			(xy 148.59 121.92) (xy 148.59 124.46)
@@ -11386,16 +11364,6 @@
 	)
 	(wire
 		(pts
-			(xy 173.99 22.86) (xy 173.99 26.67)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "3cbcf335-81c8-4896-9de3-e5ff689c892d")
-	)
-	(wire
-		(pts
 			(xy 133.35 162.56) (xy 137.16 162.56)
 		)
 		(stroke
@@ -11413,16 +11381,6 @@
 			(type default)
 		)
 		(uuid "3d4311f1-1466-43fc-ad0b-88715bed97e8")
-	)
-	(wire
-		(pts
-			(xy 168.91 26.67) (xy 173.99 26.67)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "3dd15226-d8a2-464b-b1ee-6ee0b31fd43e")
 	)
 	(wire
 		(pts
@@ -11656,7 +11614,7 @@
 	)
 	(wire
 		(pts
-			(xy 170.18 158.75) (xy 189.23 158.75)
+			(xy 170.18 158.75) (xy 185.42 158.75)
 		)
 		(stroke
 			(width 0)
@@ -11866,7 +11824,7 @@
 	)
 	(wire
 		(pts
-			(xy 173.99 26.67) (xy 173.99 36.83)
+			(xy 173.99 22.86) (xy 173.99 36.83)
 		)
 		(stroke
 			(width 0)
@@ -12414,16 +12372,6 @@
 		)
 		(uuid "7013bade-efcd-412c-8a44-d7938dc31b23")
 	)
-	(wire
-		(pts
-			(xy 143.51 16.51) (xy 168.91 16.51)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "7076a38f-89e2-4275-b0a5-b8c63a150961")
-	)
 	(bus
 		(pts
 			(xy 203.2 57.15) (xy 203.2 59.69)
@@ -12906,7 +12854,7 @@
 	)
 	(wire
 		(pts
-			(xy 168.91 16.51) (xy 200.66 16.51)
+			(xy 143.51 16.51) (xy 200.66 16.51)
 		)
 		(stroke
 			(width 0)
@@ -13356,7 +13304,7 @@
 	)
 	(wire
 		(pts
-			(xy 189.23 158.75) (xy 189.23 152.4)
+			(xy 185.42 158.75) (xy 185.42 152.4)
 		)
 		(stroke
 			(width 0)
@@ -15016,7 +14964,7 @@
 	)
 	(wire
 		(pts
-			(xy 189.23 152.4) (xy 196.85 152.4)
+			(xy 185.42 152.4) (xy 196.85 152.4)
 		)
 		(stroke
 			(width 0)
@@ -22003,75 +21951,6 @@
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c"
 					(reference "#PWR01")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:C_Small")
-		(at 168.91 19.05 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "db68d0a5-a199-4510-9f92-f456a6d019c2")
-		(property "Reference" "C11"
-			(at 162.306 18.796 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "104"
-			(at 162.306 21.336 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"
-			(at 168.91 19.05 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 168.91 19.05 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Unpolarized capacitor, small symbol"
-			(at 168.91 19.05 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "7fb57be4-479e-4cbb-87df-0f498afb1553")
-		)
-		(pin "2"
-			(uuid "0d809db2-ba33-468f-b371-90bd89882635")
-		)
-		(instances
-			(project "hydra-16"
-				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c"
-					(reference "C11")
 					(unit 1)
 				)
 			)

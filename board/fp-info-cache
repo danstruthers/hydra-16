@@ -1,4 +1,4 @@
-26080317936080573
+26083844146545333
 Audio_Module
 Reverb_BTDR-1H
 Digital Reverberation Unit, http://www.belton.co.kr/inc/downfile.php?seq=17&file=pdf (footprint from http://www.uk-electronic.de/PDF/BTDR-1.pdf)
@@ -57707,6 +57707,20 @@ ceramic
 0
 3
 3
+CustomLibrary
+36-Pin Card-Edge Socket
+Highspeed card edge connector for 1.6mm PCB's with 40 contacts (polarized)
+conn samtec card-edge high-speed
+0
+36
+36
+CustomLibrary
+Bus_Hydra_Mem
+AT ISA 16 bits Bus Edge Connector
+BUS ISA AT Edge connector
+0
+36
+36
 Diode_SMD
 D_0201_0603Metric
 Diode SMD 0201 (0603 Metric), square (rectangular) end terminal, IPC-7351 nominal, (Body size source: https://www.vishay.com/docs/20052/crcw0201e3.pdf), generated with kicad-footprint-generator

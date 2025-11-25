@@ -3421,6 +3421,12 @@
 		(uuid "946ca43e-98f1-46c2-af8a-fd64ed1f1a08")
 	)
 	(junction
+		(at 97.79 67.31)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "969e67f2-4835-4374-b8a7-eeefd08e8ad1")
+	)
+	(junction
 		(at 260.35 67.31)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -3804,16 +3810,6 @@
 	)
 	(wire
 		(pts
-			(xy 36.83 67.31) (xy 102.87 67.31)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "1b6e57f8-4d33-4434-9de4-8a6522ff3a06")
-	)
-	(wire
-		(pts
 			(xy 34.29 69.85) (xy 93.98 69.85)
 		)
 		(stroke
@@ -3841,6 +3837,16 @@
 			(type default)
 		)
 		(uuid "1c57b86e-9333-494e-a904-000076978e13")
+	)
+	(wire
+		(pts
+			(xy 101.6 81.28) (xy 97.79 81.28)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "1cfc4338-e829-47d1-9caa-06d9d1e4e86b")
 	)
 	(wire
 		(pts
@@ -4954,6 +4960,26 @@
 	)
 	(wire
 		(pts
+			(xy 97.79 72.39) (xy 97.79 81.28)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "adb97c41-dacb-470e-893d-3ba416d77504")
+	)
+	(wire
+		(pts
+			(xy 36.83 67.31) (xy 97.79 67.31)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "adfc68a2-8716-4b8b-9665-55df964ae884")
+	)
+	(wire
+		(pts
 			(xy 213.36 54.61) (xy 217.17 54.61)
 		)
 		(stroke
@@ -4981,6 +5007,16 @@
 			(type default)
 		)
 		(uuid "b21aa972-df11-4717-8c46-27c095793c73")
+	)
+	(wire
+		(pts
+			(xy 97.79 67.31) (xy 102.87 67.31)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "b3285beb-04ad-4a54-b644-c2df3d461f1c")
 	)
 	(wire
 		(pts
@@ -6875,6 +6911,75 @@
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
 					(reference "U42")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C_Small")
+		(at 97.79 69.85 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "464a8e06-cd04-4308-b7d5-72ec5b01918a")
+		(property "Reference" "C49"
+			(at 100.076 71.882 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "475"
+			(at 100.076 69.85 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P2.50mm"
+			(at 97.79 69.85 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 97.79 69.85 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Unpolarized capacitor, small symbol"
+			(at 97.79 69.85 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "2"
+			(uuid "677ad466-811f-4937-9378-b5ff0ddc5ace")
+		)
+		(pin "1"
+			(uuid "7e037f79-4275-4877-83b3-5720da93b6c3")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "C49")
 					(unit 1)
 				)
 			)
@@ -8860,7 +8965,6 @@
 					(size 1.27 1.27)
 				)
 				(justify left)
-				(hide yes)
 			)
 		)
 		(property "Footprint" "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P2.50mm"

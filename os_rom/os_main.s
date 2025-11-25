@@ -14,6 +14,14 @@
             lda     W_REGISTER
             sta     ZP_W_SAVE
             stz     W_REGISTER
+            lda     ZP_A_SAVE
+.endmacro
+
+.macro W_RESTORE
+            sta     ZP_A_SAVE
+            lda     ZP_W_SAVE
+            sta     W_REGISTER
+            lda     ZP_A_SAVE
 .endmacro
 
 .segment "BIOS_P0"
@@ -29,7 +37,7 @@ RESET_ENTRY:
             ; MOV     ZP_READ_PTR, ZP_WRITE_PTR                 ; remove when tasks_init is used
 
             jsr     IRQ_VECTOR_INIT
-            jsr     TASKS_INIT
+            jsr     TASKS_INIT                          ; Must be called before SERIAL_INIT
             jsr     SERIAL_INIT
             ;jsr     MMU_INIT
             ;jsr     SPI_INIT
@@ -37,8 +45,7 @@ RESET_ENTRY:
             jsr     SOUND_INIT
             jsr     SOUND_TEST
             jsr     DO_WELCOME
-            jsr     SHELL_MAIN
-            brk                                         ; Halt and catch fire!
+            jmp     SHELL_MAIN
 
 DO_WELCOME:
             phx

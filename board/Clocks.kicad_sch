@@ -7231,7 +7231,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "7a537707-a2a0-4ef8-9327-1bbc3b54237c")
-		(property "Reference" "C49"
+		(property "Reference" "C64"
 			(at 62.484 73.66 0)
 			(effects
 				(font
@@ -7285,7 +7285,7 @@
 		(instances
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9a593a77-f18f-43cb-9fdd-893618b7b90a"
-					(reference "C49")
+					(reference "C64")
 					(unit 1)
 				)
 			)
