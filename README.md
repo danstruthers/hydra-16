@@ -30,7 +30,7 @@ The code is built with the **cc65** suite (https://cc65.github.io/).  The board 
 
 #### **I/O Ports**
 
-There are 15 shared I/O ports on the Hydra, with 16 1-byte registers per port, located from $FFF0-$FFEF.  Some ports are taken by the on-board devices.  Others are reserved for specific add-on cards (ports 2 & 3 for video, for example).  Still others are assigned to card slots, usually to correspond with the assigned IRQ numbers, with two I/O ports per slot.  I/O port assignment currently matches IRQ assignment for devices.  Though this arrangement is not a requirement, it does make things easier to track if followed.
+There are 15 shared I/O ports on the Hydra, with 16 1-byte registers per port, located from $FF00-$FFEF.  Some ports are taken by the on-board devices.  Others are reserved for specific add-on cards (ports 2 & 3 for video, for example).  Still others are assigned to card slots, usually to correspond with the assigned IRQ numbers, with two I/O ports per slot.  I/O port assignment currently matches IRQ assignment for devices.  Though this arrangement is not a requirement, it does make things easier to track if followed.
 
 The area from $FFF0 to $FFFF (that would have been reserved for I/O port 15) is the System port, where pseudo-registers T-W ($FFF0-$FFF3) and the interrupt vector addresses ($FFFA-$FFFF) live.  There are 6 unused bytes ($FFF4-$FFF9) that are reserved for future System expansion.
 
