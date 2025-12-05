@@ -16,7 +16,7 @@
 .endmacro
 
 .segment "BIOS_P0"
-.org RESET_ENTRY
+RESET_VECTOR_START:
             W_SAVE_AND_RESET                            ; Effectively a NOP, since we wouldn't be here if it was non-zero
                                                         ;   but kept for consistency across all OS ROM pages
             stz     T_REGISTER                          ; Make sure task 0 is selected

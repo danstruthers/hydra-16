@@ -1,6 +1,7 @@
 .debuginfo
 .macpack        cpu
 .setcpu     "65C02"
+
 .include "defines.s"
 .include "zero.s"
 .include "math.s"

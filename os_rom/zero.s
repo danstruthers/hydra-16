@@ -1,7 +1,5 @@
 .debuginfo
-.zeropage
-.org $00
-
+.segment "ZEROPAGE"
 RAM_BANK_REG:
     .res 1
 ROM_BANK_REG:
@@ -14,9 +12,7 @@ TASK_PARENT:
     .res 1
 TASK_SAVE_REG:
     .res 1
-
-.org $10
-
+    .res $11
 ZP_READ_PTR:
     .res 1
 ZP_WRITE_PTR:
