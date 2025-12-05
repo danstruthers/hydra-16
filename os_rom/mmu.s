@@ -53,7 +53,7 @@ MEM_TEST:
 
 ; Pass HOB of first page to test in A, HOB of last page + 1 in X
 TEST_PAGE_RANGE:
-            sta         ZP_TEMP_VEC_H
+            sta         ZP_TEMP_VEC + 1
             PRINT_BYTE
             PRINT_BYTE  #0
             PRINT_CHAR  #ASCII_PERIOD
@@ -64,28 +64,28 @@ TEST_PAGE_RANGE:
             PRINT_BYTE  #$FF
             PRINT_CHAR  #ASCII_COLON
             PRINT_CRLF
-            stz         ZP_TEMP_VEC_L
+            stz         ZP_TEMP_VEC
             stz         ZP_TEMP
 
 @loop_init:
             lda         #$EA                ; NOP test pattern
 
 @loop:
-            sta         (ZP_TEMP_VEC_L)
-            cmp         (ZP_TEMP_VEC_L)
+            sta         (ZP_TEMP_VEC)
+            cmp         (ZP_TEMP_VEC)
             beq         @next
             lda         #ASCII_BANG
             bra         @write
 
 @next:
-            inc         ZP_TEMP_VEC_L
+            inc         ZP_TEMP_VEC
             bne         @loop
             lda         #ASCII_PERIOD
 
 @write:
             jsr         WRITE_CHAR 
             stz         ZP_TEMP
-            inc         ZP_TEMP_VEC_H
-            cpx         ZP_TEMP_VEC_H
+            inc         ZP_TEMP_VEC + 1
+            cpx         ZP_TEMP_VEC + 1
             bne         @loop_init
             PRINT_CRLF_JMP

@@ -2,11 +2,6 @@
 .segment "TASKS"
 
 TASK_0_VECTOR           = $E000
-RAM_BANK_REG            = $00
-ROM_BANK_REG            = $01
-TASK_STATUS_REG         = $02
-TASK_PARENT             = $03
-STACK_SAVE_REG          = $04
 
 TASK_BUSY_FLAG          = $01
 TASK_PAUSED_FLAG        = $02
@@ -91,8 +86,8 @@ TASK_START:
             sty     T_REGISTER
             sta     TASK_PARENT
             sta     T_REGISTER                      ; get the new task start addr in A/X
-            lda     ZP_TEMP_VEC_L
-            ldx     ZP_TEMP_VEC_H
+            lda     ZP_TEMP_VEC
+            ldx     ZP_TEMP_VEC + 1
             sty     T_REGISTER                      ; do the task switch
             stx     ZP_X_SAVE                       ; new task ZP
             ldx     #$FF                            ; Reset the stack pointer
@@ -195,4 +190,5 @@ NMI_HANDLER:
             rti
 
 @switch:
-            jmp SWITCH_TO_NO_PHP
+            jmp     SWITCH_TO_NO_PHP
+            

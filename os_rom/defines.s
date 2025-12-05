@@ -1,29 +1,6 @@
 .debuginfo
-.macpack        cpu
 
-ZP_VAR_START    = $10
-
-ZP_READ_PTR     = ZP_VAR_START
-ZP_WRITE_PTR    = ZP_READ_PTR + 1
-
-ZP_TEMP         = ZP_WRITE_PTR + 1
-ZP_TEMP_2       = ZP_TEMP + 1
-
-ZP_SPI_DATA_IN  = ZP_TEMP_2 + 1
-ZP_SPI_DATA_OUT = ZP_SPI_DATA_IN + 1
-
-ZP_TEMP_VEC_L   = ZP_SPI_DATA_OUT + 1
-ZP_TEMP_VEC_H   = ZP_TEMP_VEC_L + 1
-
-ZP_A_SAVE       = ZP_TEMP_VEC_H + 1
-ZP_X_SAVE       = ZP_A_SAVE + 1
-ZP_Y_SAVE       = ZP_X_SAVE + 1
-ZP_T_SAVE       = ZP_Y_SAVE + 1
-ZP_U_SAVE       = ZP_T_SAVE + 1
-ZP_V_SAVE       = ZP_U_SAVE + 1
-ZP_W_SAVE       = ZP_V_SAVE + 1
-
-ZP_LAST_USED    = ZP_W_SAVE
+RESET_ENTRY     = $E000
 
 IO_PORT_BASE    = $FF00
 INPUT_BUFFER    = $7F00
@@ -531,4 +508,106 @@ ASCII_LETTER_OFFSET = ASCII_A-ASCII_0-10
             pha
             tya
             ply
+.endmacro
+
+; SPI
+.macro SPI_SEND_CMD b0, b1, b2, b3, b4, crc
+                lda             #b0 | $40
+                jsr             SPI_SEND
+                lda             #b1
+                jsr             SPI_TRANSCEIVE
+                sta             ZP_TEMP_2
+                lda             #b2
+                jsr             SPI_TRANSCEIVE
+                lda             #b3
+                jsr             SPI_TRANSCEIVE
+                lda             #b4
+                jsr             SPI_TRANSCEIVE
+.ifnblank       crc
+                lda             #(crc << 1)+1
+.else
+                lda             #$FF
+.endif
+                jsr             SPI_TRANSCEIVE
+                jsr             SPI_RECV
+                sta             ZP_TEMP
+.endmacro
+
+; PRINT HELPERS
+.define LOADA(arg)      lda     arg
+
+.macro  LDA_CORA    CharOrAddr
+.ifnblank   CharOrAddr
+        LOADA CharOrAddr
+.endif
+.endmacro
+
+.macro  PRINT_CHAR      C1, C2, C3, C4, C5, C6, C7, C8, C9
+.ifblank    C1
+    .exitmacro
+.else
+                LDA_CORA        {C1}
+                jsr             WRITE_CHAR
+.endif
+                PRINT_CHAR C2, C3, C4, C5, C6, C7, C8, C9
+.endmacro
+
+.macro  PRINT_CHAR_JMP  C1, C2, C3, C4, C5, C6, C7, C8, C9
+.ifblank    C1
+    .exitmacro
+.else
+                LDA_CORA        {C1}
+    .ifblank    C2
+                jmp             WRITE_CHAR
+                .exitmacro
+    .else
+                jsr             WRITE_CHAR
+    .endif
+.endif
+                PRINT_CHAR_JMP C2, C3, C4, C5, C6, C7, C8, C9
+.endmacro
+
+.macro  PRINT_ESC_SEQ   C1, C2, C3, C4, C5, C6, C7, C8
+                PRINT_CHAR #ASCII_ESC, C1, C2, C3, C4, C5, C6, C7, C8
+.endmacro
+
+.macro  PRINT_ESC_SEQ_JMP   C1, C2, C3, C4, C5, C6, C7, C8
+                PRINT_CHAR_JMP #ASCII_ESC, C1, C2, C3, C4, C5, C6, C7, C8
+.endmacro
+
+.macro  PRINT_BYTE      CharOrAddr
+                LDA_CORA        {CharOrAddr}
+                jsr             WRITE_BYTE
+.endmacro
+
+.macro  PRINT_BYTE_JMP  CharOrAddr
+                LDA_CORA        {CharOrAddr}
+                jmp             WRITE_BYTE
+.endmacro
+
+.macro  PRINT_HEX       CharOrAddr
+                LDA_CORA        {CharOrAddr}
+                jsr             WRITE_HEX
+.endmacro
+
+.macro  PRINT_HEX_MASK  CharOrAddr
+                LDA_CORA        {CharOrAddr}
+                jsr             WRITE_HEX_MASK
+.endmacro
+
+.macro  PRINT_CRLF
+                jsr             WRITE_CRLF
+.endmacro
+
+.macro  PRINT_CRLF_JMP
+                jmp             WRITE_CRLF
+.endmacro
+
+; JSR using JMP
+.macro  JSRR    addrTo, addrFrom
+                lda             #>addrFrom
+                pha
+                lda             #<addrFrom
+                pha
+                jmp             (addrTo)
 .endmacro

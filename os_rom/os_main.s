@@ -1,32 +1,22 @@
 .debuginfo
 
-.include "defines.s"
-.include "bios.s"
-.include "math.s"
-.include "sound.s"
-.include "wozmon.s"
-.include "mmu.s"
-.include "tasks.s"
-.include "shell.s"
-
 .macro W_SAVE_AND_RESET
-            sta     ZP_A_SAVE
+            pha
             lda     W_REGISTER
             sta     ZP_W_SAVE
             stz     W_REGISTER
-            lda     ZP_A_SAVE
+            pla
 .endmacro
 
 .macro W_RESTORE
-            sta     ZP_A_SAVE
+            pha
             lda     ZP_W_SAVE
             sta     W_REGISTER
-            lda     ZP_A_SAVE
+            pla
 .endmacro
 
 .segment "BIOS_P0"
-
-RESET_ENTRY:
+.org RESET_ENTRY
             W_SAVE_AND_RESET                            ; Effectively a NOP, since we wouldn't be here if it was non-zero
                                                         ;   but kept for consistency across all OS ROM pages
             stz     T_REGISTER                          ; Make sure task 0 is selected
