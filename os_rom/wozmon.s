@@ -1,6 +1,9 @@
 .debuginfo
+.segment "BUFFERS"
+IN:
+                .res 256
+
 .segment "WOZMON"
-IN              = $7E00
 
 ; WOZMON Entrypoint
 MON_START:

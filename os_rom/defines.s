@@ -3,7 +3,6 @@
 RESET_ENTRY     = $E000
 
 IO_PORT_BASE    = $FF00
-INPUT_BUFFER    = $7F00
 
 ; TIMING
 CLK_CPS = 3579545   ; ~3.58 MHz
@@ -337,10 +336,8 @@ ASCII_LETTER_OFFSET = ASCII_A-ASCII_0-10
 .endmacro
 
 .macro MOV16            addr1, addr2
-                lda     addr1
-                sta     addr2
-                lda     addr1+1
-                sta     addr2+1
+                MOV     addr1, addr2
+                MOV     addr1 + 1, addr2 + 1
 .endmacro
 
 .macro MOVA16           addr1, addr2
@@ -348,17 +345,13 @@ ASCII_LETTER_OFFSET = ASCII_A-ASCII_0-10
 .endmacro
 
 .macro MOVX16           addr1, addr2
-                ldx     addr1
-                stx     addr2
-                ldx     addr1+1
-                stx     addr2+1
+                MOVX    addr1, addr2
+                MOVX    addr1 + 1, addr2 + 2
 .endmacro
 
 .macro MOVY16           addr1, addr2
-                ldy     addr1
-                sty     addr2
-                ldy     addr1+1
-                sty     addr2+1
+                MOVY    addr1, addr2
+                MOVY    addr1 + 1, addr2 + 2
 .endmacro
 
 .macro MOVAX            addr1, addr2
@@ -371,42 +364,53 @@ ASCII_LETTER_OFFSET = ASCII_A-ASCII_0-10
                 sta     addr2,y
 .endmacro
 
+.macro MOVAX16          addr1, addr2
+                MOVAX   addr1, addr2
+                inx
+                MOVAX   addr1, addr2
+.endmacro
+
 .macro MOVAY16          addr1, addr2
-                lda     addr1,y
-                sta     addr2,y
-                lda     addr1+1,y
-                sta     addr2+1,y
+                MOVAY   addr1, addr2
+                iny
+                MOVAY   addr1, addr2
 .endmacro
 
 ; X: # of bytes to move
 ; Clobbers A, X
 .macro BLKMOVX          addr1, addr2
-@:
+.scope
+MV_START:
                 dex
                 lda     addr1,x
                 sta     addr2,x
-                bne     @-
+                bne     MV_START
+.endscope
 .endmacro
 
 ; Y: # of bytes to move
 ; Clobbers A, Y
 .macro BLKMOVY          addr1, addr2
-@:
+.scope
+MV_START:
                 dey
                 lda     addr1,y
                 sta     addr2,y
-                bne     @-
+                bne     MV_START
+.endscope
 .endmacro
 
 
 .macro  INC16           addr
+.scope
                 inc     addr
-                bne     @+
+                bne     INC16_A
                 inc     addr+1
-                bra     @++
-@:
+                bra     INC16_B
+INC16_A:
                 lda     addr+1
-@:
+INC16_B:
+.endscope
 .endmacro
 
 .macro  INC32           addr
@@ -418,37 +422,40 @@ ASCII_LETTER_OFFSET = ASCII_A-ASCII_0-10
 .endmacro
 
 .macro  DEC16           addr
+.scope
                 lda     addr
-                bne     @+
+                bne     DEC16_A
                 dec     addr
                 dec     addr+1
-                bra     @+++
-@:
+                bra     DEC16_C
+DEC16_A:
                 dec     addr
-                bne     @+      ; if Z not set, don't take Z from HOB
-                lda     addr+1  ; sets Z and N from HOB
-                bra     @++
-@:
+                bne     DEC_16_B ; if Z not set, don't take Z from HOB
+                lda     addr+1   ; sets Z and N from HOB
+                bra     DEC_16_C
+DEC16_B:
                 lda     addr+1
                 ora     #1      ; reset Z, if set, without affecting N
-@:
+DEC16_C:
+.endscope
 .endmacro
 
 .macro  DEC32           addr
+.scope
                 lda     addr
-                bne     @+++
+                bne     DEC32_C
                 cmp     addr+1
-                bne     @++
+                bne     DEC32_B
                 cmp     addr+2
-                bne     @+
+                bne     DEC32_A
                 dec     addr+3
-@:
+DEC32_A:
                 dec     addr+2
-@:
+DEC32_B:
                 dec     addr+1
-@:
+DEC32_C:
                 dec     addr
-
+.endscope
 .endmacro
 
 ; No-clobber (NC) macros to wrap another macro that overwrites one or more registers

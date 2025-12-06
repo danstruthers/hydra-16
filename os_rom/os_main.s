@@ -1,27 +1,15 @@
 .debuginfo
-
-.macro W_SAVE_AND_RESET
-            pha
-            lda     W_REGISTER
-            sta     ZP_W_SAVE
-            stz     W_REGISTER
-            pla
-.endmacro
-
-.macro W_RESTORE
-            pha
-            lda     ZP_W_SAVE
+.macro ZERO_W
+            lda     #0
             sta     W_REGISTER
-            pla
 .endmacro
 
 .segment "BIOS_P0"
 RESET_VECTOR_START:
-            W_SAVE_AND_RESET                            ; Effectively a NOP, since we wouldn't be here if it was non-zero
-                                                        ;   but kept for consistency across all OS ROM pages
-            stz     T_REGISTER                          ; Make sure task 0 is selected
-            stz     $00                                 ; Init RAM Bank selector
-            stz     $01                                 ; Init ROM Bank selector
+            ZERO_W
+            sta     T_REGISTER                          ; Make sure task 0 is selected
+            sta     $00                                 ; Init RAM Bank selector
+            sta     $01                                 ; Init ROM Bank selector
             ldx     #$FF                                ; Init stack pointer
             txs
             ; MOV     ZP_READ_PTR, ZP_WRITE_PTR                 ; remove when tasks_init is used
@@ -29,11 +17,11 @@ RESET_VECTOR_START:
             jsr     IRQ_VECTOR_INIT
             jsr     TASKS_INIT                          ; Must be called before SERIAL_INIT
             jsr     SERIAL_INIT
-            ;jsr     MMU_INIT
+            jsr     MMU_INIT
             ;jsr     SPI_INIT
             ;jsr     SPI_TEST
             jsr     SOUND_INIT
-            jsr     SOUND_TEST
+            ;jsr     SOUND_TEST
             jsr     DO_WELCOME
             jmp     SHELL_MAIN
 
@@ -92,48 +80,39 @@ SW_INT:
             brk                                         ; force an interrupt
             rts
 
+.macro OTHER_PAGE_FILLER
+            ZERO_W
+            .res    $1FF2, $EA
+            jmp     RESET_VECTOR_START
+.endmacro
+
 .segment "BIOS_P1"
-            W_SAVE_AND_RESET
-
+            OTHER_PAGE_FILLER
 .segment "BIOS_P2"
-            W_SAVE_AND_RESET
-
+            OTHER_PAGE_FILLER
 .segment "BIOS_P3"
-            W_SAVE_AND_RESET
-            
+            OTHER_PAGE_FILLER
 .segment "BIOS_P4"
-            W_SAVE_AND_RESET
-
+            OTHER_PAGE_FILLER
 .segment "BIOS_P5"
-            W_SAVE_AND_RESET
-
+            OTHER_PAGE_FILLER
 .segment "BIOS_P6"
-            W_SAVE_AND_RESET
-
+            OTHER_PAGE_FILLER
 .segment "BIOS_P7"
-            W_SAVE_AND_RESET
-
+            OTHER_PAGE_FILLER
 .segment "BIOS_P8"
-            W_SAVE_AND_RESET
-
+            OTHER_PAGE_FILLER
 .segment "BIOS_P9"
-            W_SAVE_AND_RESET
-
+            OTHER_PAGE_FILLER
 .segment "BIOS_PA"
-            W_SAVE_AND_RESET
-
+            OTHER_PAGE_FILLER
 .segment "BIOS_PB"
-            W_SAVE_AND_RESET
-
+            OTHER_PAGE_FILLER
 .segment "BIOS_PC"
-            W_SAVE_AND_RESET
-
+            OTHER_PAGE_FILLER
 .segment "BIOS_PD"
-            W_SAVE_AND_RESET
-
+            OTHER_PAGE_FILLER
 .segment "BIOS_PE"
-            W_SAVE_AND_RESET
-
+            OTHER_PAGE_FILLER
 .segment "BIOS_PF"
-            W_SAVE_AND_RESET
-
+            OTHER_PAGE_FILLER

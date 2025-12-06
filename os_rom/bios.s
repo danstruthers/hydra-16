@@ -1,5 +1,9 @@
 .debuginfo
 
+.segment "BUFFERS"
+INPUT_BUFFER:
+                .res 256
+
 .segment "BIOS"
 
 HEX_MAP: .byte "0123456789ABCDEF"
