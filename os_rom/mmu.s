@@ -11,8 +11,8 @@ MEM_TEST:
             stz         T_REGISTER
 
 @task_num_loop:
-            lda         #$02
-            ldx         #$7D                ; exclude the task serial buffers @ $7E00 && $7F00
+            lda         #$04
+            ldx         #$80                ; exclude the task serial buffers @ $0200 && $0300
             jsr         TEST_PAGE_RANGE
             ldx         #$A0                ; end of banked RAM
 
