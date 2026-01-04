@@ -374,7 +374,7 @@ SERIAL_IRQ_HANDLER:
 
 @check_recv:
                 lda             #ACIA_STATUS_BIT_RDRF   ; is read register full?
-                bit             ACIA_STATUS
+                bit             ACIA_R_STATUS
                 beq             @int_done
 .endif
 
