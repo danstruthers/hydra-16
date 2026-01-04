@@ -1,5 +1,5 @@
 .debuginfo
-.segment "ZEROPAGE"
+.zeropage
 RAM_BANK_REG:
     .res 1
 ROM_BANK_REG:
@@ -12,7 +12,7 @@ TASK_PARENT:
     .res 1
 TASK_SAVE_REG:
     .res 1
-    .res $11
+    .res $10
 ZP_READ_PTR:
     .res 1
 ZP_WRITE_PTR:
@@ -41,15 +41,5 @@ ZP_V_SAVE:
     .res 1
 ZP_W_SAVE:
     .res 1
-
-; WOZMON
-XAM:
-    .res 2
-ST:
-    .res 2
-HVP:
-    .res 2     ; Hex value parsing
-MODE:
-    .res 2     ; $00=XAM, $7F=STOR, $AE=BLOCK XAM
 
 .segment "STACK"

@@ -1,0 +1,3082 @@
+ca65 V2.19 - Git 1d1dd42
+Main file   : all.s
+Current file: all.s
+
+000000r 1               .debuginfo
+000000r 1               .macpack        cpu
+000000r 2               ; CPU bitmask constants
+000000r 2               CPU_ISET_NONE      = $0001
+000000r 2               CPU_ISET_6502      = $0002
+000000r 2               CPU_ISET_6502X     = $0004
+000000r 2               CPU_ISET_6502DTV   = $0008
+000000r 2               CPU_ISET_65SC02    = $0010
+000000r 2               CPU_ISET_65C02     = $0020
+000000r 2               CPU_ISET_65816     = $0040
+000000r 2               CPU_ISET_SWEET16   = $0080
+000000r 2               CPU_ISET_HUC6280   = $0100
+000000r 2               ;CPU_ISET_M740     = $0200 not actually implemented
+000000r 2               CPU_ISET_4510      = $0400
+000000r 2               
+000000r 2               ; CPU capabilities
+000000r 2               CPU_NONE           = CPU_ISET_NONE
+000000r 2               CPU_6502           = CPU_ISET_6502
+000000r 2               CPU_6502X          = CPU_ISET_6502|CPU_ISET_6502X
+000000r 2               CPU_6502DTV        = CPU_ISET_6502|CPU_ISET_6502DTV
+000000r 2               CPU_65SC02         = CPU_ISET_6502|CPU_ISET_65SC02
+000000r 2               CPU_65C02          = CPU_ISET_6502|CPU_ISET_65SC02|CPU_ISET_65C02
+000000r 2               CPU_65816          = CPU_ISET_6502|CPU_ISET_65SC02|CPU_ISET_65816
+000000r 2               CPU_SWEET16        = CPU_ISET_SWEET16
+000000r 2               CPU_HUC6280        = CPU_ISET_6502|CPU_ISET_65SC02|CPU_ISET_65C02|CPU_ISET_HUC6280
+000000r 2               CPU_4510           = CPU_ISET_6502|CPU_ISET_65SC02|CPU_ISET_65C02|CPU_ISET_4510
+000000r 2               
+000000r 1               .setcpu     "65C02"
+000000r 1               
+000000r 1               .include "defines.s"
+000000r 2               .debuginfo
+000000r 2               
+000000r 2               SYSTEM_TASK_NUM     = 0
+000000r 2               
+000000r 2               ; ERROR VALUES
+000000r 2               ERR_SUCCESS         = $00
+000000r 2               ERR_NOT_SYSTEM_TASK = $01
+000000r 2               ERR_OUT_OF_MEMORY   = $02
+000000r 2               
+000000r 2               RESET_ENTRY     = $E000
+000000r 2               
+000000r 2               IO_PORT_BASE    = $FF00
+000000r 2               
+000000r 2               ; TIMING
+000000r 2               CLK_CPS         = 3579545   ; ~3.58 MHz
+000000r 2               CLK_CPMS        = (CLK_CPS / 1000) + 1
+000000r 2               
+000000r 2               ROCKWELL_ACIA   = 0
+000000r 2               ACIA_USE_VIA_TIMER = 1
+000000r 2               
+000000r 2               SR_19200        = $0F
+000000r 2               SR_115200       = $00
+000000r 2               
+000000r 2               SR_SELECT       = SR_115200
+000000r 2               
+000000r 2               .if ROCKWELL_ACIA <> 1
+000000r 2               SWT_INNER_LOOP_CYCLES = 5
+000000r 2               BITS_PER_CHAR = 12          ; 8 + start + stop + 2 for inter-character delay.
+000000r 2               SWT_19200_LOOPS = ((((1000000 / 19200) + 1) * BITS_PER_CHAR) / SWT_INNER_LOOP_CYCLES) + 1   ; number of loop iterations to send one byte at 1MHz
+000000r 2               ; SWT_19200       = ((SWT_19200_LOOPS * CLK_CPMS) / 1000) + 1                                 ; number of loop iterations to send one byte at the selected clock speed
+000000r 2               SWT_19200       = 440
+000000r 2               SWT_115200      = (SWT_19200 / 6) + 1
+000000r 2               
+000000r 2                   .if SR_SELECT = SR_19200
+000000r 2               SWT_SELECT_L    = SWT_19200 .MOD 256
+000000r 2               SWT_SELECT_H    = SWT_19200 / 256
+000000r 2                   .else
+000000r 2               SWT_SELECT_L    = SWT_115200 .MOD 256
+000000r 2               SWT_SELECT_H    = SWT_115200 / 256
+000000r 2                   .endif
+000000r 2               .endif
+000000r 2               
+000000r 2               .struct IO_Port
+000000r 2                   Bytes       .byte 16
+000000r 2               .endstruct
+000000r 2               
+000000r 2               .struct IO_Port_10_Bytes
+000000r 2                   Bytes       .byte 10
+000000r 2               .endstruct
+000000r 2               
+000000r 2               .macro HString Str
+000000r 2                   .byte       .strlen(Str), Str
+000000r 2               .endmacro
+000000r 2               
+000000r 2               ;.struct SerialInfo
+000000r 2               ;    .byte   IOPort_IRQ
+000000r 2               ;    .byte   Read_Ptr_L
+000000r 2               ;    .byte   Read_Ptr_H
+000000r 2               ;    .byte   Write_Ptr_L
+000000r 2               ;    .byte   Write_Ptr_H
+000000r 2               ;.endstruct
+000000r 2               
+000000r 2               ;.macro SERIAL_INFO port, irq, task, buff_addr
+000000r 2               ;.endmacro
+000000r 2               
+000000r 2               ;.macro Serial_Buffer_Advance info
+000000r 2               ;.endmacro
+000000r 2               
+000000r 2               .define IO_PORT_BYTE(port, byte)    port + IO_Port::Bytes + byte
+000000r 2               
+000000r 2               VIA1            = IO_PORT_0
+000000r 2               ACIA            = IO_PORT_1
+000000r 2               YM_SOUND        = IO_PORT_4
+000000r 2               
+000000r 2               VIA_R_PORTB         = IO_PORT_BYTE VIA1, 0
+000000r 2               VIA_R_PORTA         = IO_PORT_BYTE VIA1, 1
+000000r 2               VIA_R_PORTA_NOHS    = IO_PORT_BYTE VIA1, $F
+000000r 2               VIA_R_DDRB          = IO_PORT_BYTE VIA1, 2
+000000r 2               VIA_R_DDRA          = IO_PORT_BYTE VIA1, 3
+000000r 2               
+000000r 2               VIA_R_T1C_L         = IO_PORT_BYTE VIA1, 4
+000000r 2               VIA_R_T1C_H         = IO_PORT_BYTE VIA1, 5
+000000r 2               VIA_R_T1L_L         = IO_PORT_BYTE VIA1, 6
+000000r 2               VIA_R_T1L_H         = IO_PORT_BYTE VIA1, 7
+000000r 2               
+000000r 2               VIA_R_T2C_L         = IO_PORT_BYTE VIA1, 8
+000000r 2               VIA_R_T2C_H         = IO_PORT_BYTE VIA1, 9
+000000r 2               
+000000r 2               VIA_R_SHIFT_REG     = IO_PORT_BYTE VIA1, $A
+000000r 2               VIA_R_AUX_CTRL      = IO_PORT_BYTE VIA1, $B
+000000r 2               VIA_R_PER_CTRL      = IO_PORT_BYTE VIA1, $C
+000000r 2               VIA_R_INT_FLAGS     = IO_PORT_BYTE VIA1, $D
+000000r 2               VIA_R_INT_ENABLE    = IO_PORT_BYTE VIA1, $E
+000000r 2               
+000000r 2               ACIA_R_DATA         = IO_PORT_BYTE ACIA, 0
+000000r 2               ACIA_R_STATUS       = IO_PORT_BYTE ACIA, 1
+000000r 2               ACIA_R_CMD          = IO_PORT_BYTE ACIA, 2
+000000r 2               ACIA_R_CTRL         = IO_PORT_BYTE ACIA, 3
+000000r 2               
+000000r 2               .define  IRQ_NUMBER(num)    (num ^ 7)
+000000r 2               
+000000r 2               ; IRQs, from highest priority (0) to lowest (15)
+000000r 2               IRQ_NUMBER_HIGHEST_PRI = IRQ_NUMBER(0)
+000000r 2               IRQ_NUMBER_ONBOARD_VIA = IRQ_NUMBER(0)         ; System timers, etc
+000000r 2               IRQ_NUMBER_ONBOARD_SERIAL = IRQ_NUMBER(1)      ; On-board serial
+000000r 2               
+000000r 2               IRQ_NUMBER_SLOT_0_L = IRQ_NUMBER(2)
+000000r 2               IRQ_NUMBER_SLOT_0_H = IRQ_NUMBER(3)
+000000r 2               
+000000r 2               IRQ_NUMBER_ONBOARD_SOUND = IRQ_NUMBER(4)       ; YM-2151
+000000r 2               
+000000r 2               ; SLOT-assigned IRQs, low (higher-priority)
+000000r 2               IRQ_NUMBER_SLOT_1_L = IRQ_NUMBER(5)
+000000r 2               IRQ_NUMBER_SLOT_2_L = IRQ_NUMBER(6)
+000000r 2               IRQ_NUMBER_SLOT_3_L = IRQ_NUMBER(7)
+000000r 2               IRQ_NUMBER_SLOT_4_L = IRQ_NUMBER(8)
+000000r 2               IRQ_NUMBER_SLOT_5_L = IRQ_NUMBER(9)
+000000r 2               
+000000r 2               ; SLOT-assigned IRQs, high (lower-priority)
+000000r 2               IRQ_NUMBER_SLOT_1_H = IRQ_NUMBER(10)
+000000r 2               IRQ_NUMBER_SLOT_2_H = IRQ_NUMBER(11)
+000000r 2               IRQ_NUMBER_SLOT_3_H = IRQ_NUMBER(12)
+000000r 2               IRQ_NUMBER_SLOT_4_H = IRQ_NUMBER(13)
+000000r 2               IRQ_NUMBER_SLOT_5_H = IRQ_NUMBER(14)
+000000r 2               
+000000r 2               IRQ_NUMBER_15 = IRQ_NUMBER(15)                   ; not assigned to any hardware or slot
+000000r 2               IRQ_NUMBER_LOWEST_PRI = IRQ_NUMBER_15
+000000r 2               IRQ_NUMBER_SW = IRQ_NUMBER_LOWEST_PRI
+000000r 2               
+000000r 2               YM_REG          = IO_PORT_BYTE YM_SOUND, 0
+000000r 2               YM_DATA         = IO_PORT_BYTE YM_SOUND, 1
+000000r 2               
+000000r 2               ACIA_STATUS_BIT_IRQ  =  $80
+000000r 2               ACIA_STATUS_BIT_DSRB =  $40
+000000r 2               ACIA_STATUS_BIT_DCD =   $20
+000000r 2               ACIA_STATUS_BIT_TDRE =  $10         ; for WDC 65C51, this is never 1 during transmission
+000000r 2               ACIA_STATUS_BIT_RDRF =  $08
+000000r 2               ACIA_STATUS_BIT_OVR =   $04
+000000r 2               ACIA_STATUS_BIT_FE =    $02
+000000r 2               ACIA_STATUS_BIT_PE =    $01
+000000r 2               
+000000r 2               ACIA_CMD_BIT_PME =      $20
+000000r 2               ACIA_CMD_BIT_RECHO =    $10
+000000r 2               ACIA_CMD_BIT_TLID =     $08
+000000r 2               ACIA_CMD_BIT_TLIE =     $04
+000000r 2               ACIA_CMD_BIT_RID  =     $02
+000000r 2               ACIA_CMD_BIT_RIE  =     $00
+000000r 2               ACIA_CMD_BIT_DTRL =     $01
+000000r 2               
+000000r 2               ; SPI Defines
+000000r 2               
+000000r 2               IOR_SPI_DATA        = VIA_R_PORTB
+000000r 2               IOR_SPI_DDR         = VIA_R_DDRB
+000000r 2               
+000000r 2               ; SPI DATA BITS
+000000r 2               SPI_BIT_CLK     = 1     ; bit 0, so INC/DEC cycle the clock
+000000r 2               SPI_BIT_CSB     = 2     ; bit 1
+000000r 2               SPI_BIT_MOSI    = 4     ; bit 2
+000000r 2               SPI_BIT_CS_1    = 8     ; bit 3
+000000r 2               SPI_BIT_CS_2    = $10   ; bit 4
+000000r 2               SPI_BIT_CS_4    = $20   ; bit 5
+000000r 2               SPI_BIT_CS_8    = $40   ; bit 6
+000000r 2               SPI_BIT_MISO    = $80   ; bit 7, so BIT opcode stores MISO in N
+000000r 2               
+000000r 2               SPI_DEV_0       = 0
+000000r 2               SPI_DEV_1       = SPI_BIT_CS_1
+000000r 2               SPI_DEV_2       = SPI_BIT_CS_2
+000000r 2               SPI_DEV_3       = SPI_BIT_CS_2 | SPI_BIT_CS_1
+000000r 2               SPI_DEV_4       = SPI_BIT_CS_4
+000000r 2               SPI_DEV_5       = SPI_BIT_CS_4 | SPI_BIT_CS_1
+000000r 2               SPI_DEV_6       = SPI_BIT_CS_4 | SPI_BIT_CS_2
+000000r 2               SPI_DEV_7       = SPI_BIT_CS_4 | SPI_BIT_CS_2 | SPI_BIT_CS_1
+000000r 2               
+000000r 2               SPI_DEV_8       = SPI_BIT_CS_8 | SPI_DEV_0
+000000r 2               SPI_DEV_9       = SPI_BIT_CS_8 | SPI_DEV_1
+000000r 2               SPI_DEV_A       = SPI_BIT_CS_8 | SPI_DEV_2
+000000r 2               SPI_DEV_B       = SPI_BIT_CS_8 | SPI_DEV_3
+000000r 2               SPI_DEV_C       = SPI_BIT_CS_8 | SPI_DEV_4
+000000r 2               SPI_DEV_D       = SPI_BIT_CS_8 | SPI_DEV_5
+000000r 2               SPI_DEV_E       = SPI_BIT_CS_8 | SPI_DEV_6
+000000r 2               SPI_DEV_F       = SPI_BIT_CS_8 | SPI_DEV_7
+000000r 2               
+000000r 2               SPI_DDR_BITS    = SPI_BIT_CLK | SPI_BIT_CSB | SPI_BIT_MOSI | SPI_DEV_F
+000000r 2               
+000000r 2               SPI_INIT_DELAY_CYCLES = 80
+000000r 2               
+000000r 2               ; max task idle
+000000r 2               MAX_TASK_NUMBER = $0F           ; 16 tasks, numbered 0-F
+000000r 2               NUM_RAM_MODULES = 15            ;
+000000r 2               NUM_BANKS_PER_MODULE = 16
+000000r 2               NUM_RAM_BANKS   = NUM_RAM_MODULES * NUM_BANKS_PER_MODULE
+000000r 2               
+000000r 2               T_REGISTER = $FFF0 ; IO_PORT_BYTE IO_PORT_F, 0
+000000r 2               U_REGISTER = $FFF1 ; IO_PORT_BYTE IO_PORT_F, 1
+000000r 2               V_REGISTER = $FFF2 ; IO_PORT_BYTE IO_PORT_F, 2
+000000r 2               W_REGISTER = $FFF3 ; IO_PORT_BYTE IO_PORT_F, 3
+000000r 2               
+000000r 2               ; ERROR CODES
+000000r 2               ERR_NO_TASKS_AVAILABLE = $F1
+000000r 2               
+000000r 2               ; Task switcher interrupt timer (one interrupt per 5ms or so, with 64 cycles for INT Handler overhead)
+000000r 2               TIMER_TASK_INT_H = 69
+000000r 2               TIMER_TASK_INT_L = 169
+000000r 2               
+000000r 2               ; ASCII CODES
+000000r 2               ASCII_BACKSPACE = $08
+000000r 2               ASCII_LF        = $0A
+000000r 2               ASCII_CR        = $0D
+000000r 2               ASCII_ESC       = $1B
+000000r 2               ASCII_SPACE     = ' '
+000000r 2               ASCII_BANG      = '!'
+000000r 2               ASCII_DQUOTE    = '"'
+000000r 2               ASCII_HASH      = '#'
+000000r 2               ASCII_DOLLAR    = '$'
+000000r 2               ASCII_PERCENT   = '%'
+000000r 2               ASCII_CARET     = '^'
+000000r 2               ASCII_AMP       = '&'
+000000r 2               ASCII_SQOUTE    = '''
+000000r 2               ASCII_LPAREN    = '('
+000000r 2               ASCII_RPAREN    = ')'
+000000r 2               ASCII_STAR      = '*'
+000000r 2               ASCII_PLUS      = '+'
+000000r 2               ASCII_COMMA     = ','
+000000r 2               ASCII_MINUS     = '-'
+000000r 2               ASCII_DASH      = ASCII_MINUS
+000000r 2               ASCII_HYPHEN    = ASCII_MINUS
+000000r 2               ASCII_PERIOD    = '.'
+000000r 2               ASCII_SLASH     = '/'
+000000r 2               ASCII_0         = '0'
+000000r 2               ASCII_1         = '1'
+000000r 2               ASCII_2         = '2'
+000000r 2               ASCII_3         = '3'
+000000r 2               ASCII_4         = '4'
+000000r 2               ASCII_5         = '5'
+000000r 2               ASCII_6         = '6'
+000000r 2               ASCII_7         = '7'
+000000r 2               ASCII_8         = '8'
+000000r 2               ASCII_9         = '9'
+000000r 2               ASCII_COLON     = ':'
+000000r 2               ASCII_SEMI      = ':'
+000000r 2               ASCII_LT        = '<'
+000000r 2               ASCII_EQ        = '='
+000000r 2               ASCII_GT        = '>'
+000000r 2               ASCII_QUESTION  = '?'
+000000r 2               ASCII_A         = 'A'
+000000r 2               ASCII_J         = 'J'
+000000r 2               ASCII_L         = 'L'
+000000r 2               ASCII_M         = 'M'
+000000r 2               ASCII_N         = 'N'
+000000r 2               ASCII_O         = 'O'
+000000r 2               ASCII_P         = 'P'
+000000r 2               ASCII_Q         = 'Q'
+000000r 2               ASCII_R         = 'R'
+000000r 2               ASCII_S         = 'S'
+000000r 2               ASCII_T         = 'T'
+000000r 2               ASCII_U         = 'U'
+000000r 2               ASCII_V         = 'V'
+000000r 2               ASCII_W         = 'W'
+000000r 2               ASCII_X         = 'X'
+000000r 2               ASCII_Y         = 'Y'
+000000r 2               ASCII_Z         = 'Z'
+000000r 2               ASCII_f         = 'f'
+000000r 2               ASCII_LBRACKET  = '['
+000000r 2               ASCII_BACKSLASH = '\'
+000000r 2               ASCII_RBRACKET  = ']'
+000000r 2               ASCII_LBRACE    = '{'
+000000r 2               ASCII_RBRACE    = '}'
+000000r 2               
+000000r 2               ASCII_LETTER_OFFSET = ASCII_A-ASCII_0-10
+000000r 2               
+000000r 2               ; write a byte in A to the IO PORT
+000000r 2               .macro IO_PORT_WRITE    port, byte, imm
+000000r 2               .ifnblank       imm
+000000r 2                               lda     #imm
+000000r 2               .endif
+000000r 2               .ifblank        byte
+000000r 2                               sta     port
+000000r 2               .else
+000000r 2                               sta     IO_PORT_BYTE port, byte
+000000r 2               .endif
+000000r 2               .endmacro
+000000r 2               
+000000r 2               ; read a byte into A from the IO PORT/Byte (PORT_N | BYTE_M)
+000000r 2               .macro IO_PORT_READ     port, byte
+000000r 2               .ifblank        byte
+000000r 2                               lda     port
+000000r 2               .else
+000000r 2                               lda     IO_PORT_BYTE port, byte
+000000r 2               .endif
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro PUSH_AX
+000000r 2                               pha
+000000r 2                               phx
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  PULL_XA
+000000r 2                               plx
+000000r 2                               pla
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro PUSH_AY
+000000r 2                               pha
+000000r 2                               phy
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  PULL_YA
+000000r 2                               ply
+000000r 2                               pla
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro PUSH_XY
+000000r 2                               phx
+000000r 2                               phy
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  PULL_YX
+000000r 2                               ply
+000000r 2                               plx
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro PUSH_AXY
+000000r 2                               pha
+000000r 2                               phx
+000000r 2                               phy
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  PULL_YXA
+000000r 2                               ply
+000000r 2                               plx
+000000r 2                               pla
+000000r 2               .endmacro
+000000r 2               
+000000r 2               ; convenience macros
+000000r 2               
+000000r 2               ; MOV
+000000r 2               ; Modifies: A
+000000r 2               .macro MOV              addr1, addr2
+000000r 2                               lda     addr1
+000000r 2                               sta     addr2
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro MOVA             addr1, addr2
+000000r 2                               MOV     addr1, addr2
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro MOVX             addr1, addr2
+000000r 2                               ldx     addr1
+000000r 2                               stx     addr2
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro MOVY             addr1, addr2
+000000r 2                               ldy     addr1
+000000r 2                               sty     addr2
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro MOV16            addr1, addr2
+000000r 2                               MOV     addr1, addr2
+000000r 2                               MOV     addr1 + 1, addr2 + 1
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro MOVA16           addr1, addr2
+000000r 2                               MOV16   addr1, addr2
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro MOVX16           addr1, addr2
+000000r 2                               MOVX    addr1, addr2
+000000r 2                               MOVX    addr1 + 1, addr2 + 1
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro MOVY16           addr1, addr2
+000000r 2                               MOVY    addr1, addr2
+000000r 2                               MOVY    addr1 + 1, addr2 + 1
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro MOVAX            addr1, addr2
+000000r 2                               lda     addr1,X
+000000r 2                               sta     addr2,X
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro MOVAY            addr1, addr2
+000000r 2                               lda     addr1,Y
+000000r 2                               sta     addr2,Y
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro MOVAX16          addr1, addr2
+000000r 2                               MOVAX   addr1, addr2
+000000r 2                               inx
+000000r 2                               MOVAX   addr1, addr2
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro MOVAY16          addr1, addr2
+000000r 2                               MOVAY   addr1, addr2
+000000r 2                               iny
+000000r 2                               MOVAY   addr1, addr2
+000000r 2               .endmacro
+000000r 2               
+000000r 2               ; X: # of bytes to move
+000000r 2               ; Clobbers A, X
+000000r 2               .macro BLKMOVX          addr1, addr2
+000000r 2               :
+000000r 2                               dex
+000000r 2                               lda     addr1,X
+000000r 2                               sta     addr2,X
+000000r 2                               bne     :-
+000000r 2               .endmacro
+000000r 2               
+000000r 2               ; Y: # of bytes to move
+000000r 2               ; Clobbers A, Y
+000000r 2               .macro BLKMOVY          addr1, addr2
+000000r 2               :
+000000r 2                               dey
+000000r 2                               lda     addr1,Y
+000000r 2                               sta     addr2,Y
+000000r 2                               bne     :-
+000000r 2               .endmacro
+000000r 2               
+000000r 2               ; _M_INCC: inc and set C/V if rollover.  Clobbers .A, C
+000000r 2               .macro  _M_INCC    addr
+000000r 2                               sec
+000000r 2                               lda     #0
+000000r 2                               adc     addr
+000000r 2                               sta     addr
+000000r 2               
+000000r 2               .macro  _M_INCC16          addr
+000000r 2                               inc     addr
+000000r 2                               bne     :+
+000000r 2                               _M_INCC    addr + 1
+000000r 2                               bra     :++
+000000r 2               :
+000000r 2                               lda     addr + 1
+000000r 2                               ora     #1
+000000r 2               :
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  _M_INCC32          addr
+000000r 2                               inc     addr
+000000r 2                               bne     :+
+000000r 2                               inc     addr+1
+000000r 2                               bne     :+
+000000r 2                               _M_INCC16  addr+2
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  INC16           addr
+000000r 2                               inc     addr
+000000r 2                               bne     :+
+000000r 2                               inc     addr + 1
+000000r 2                               bra     :++
+000000r 2               :
+000000r 2                               lda     addr + 1
+000000r 2                               ora     #1
+000000r 2               :
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  INC32           addr
+000000r 2                               inc     addr
+000000r 2                               bne     :+
+000000r 2                               inc     addr+1
+000000r 2                               bne     :+
+000000r 2                               INC16   addr+2
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  DEC16           addr
+000000r 2                               lda     addr
+000000r 2                               bne     :+
+000000r 2                               dec     addr
+000000r 2                               dec     addr+1
+000000r 2                               bra     :+++
+000000r 2               :
+000000r 2                               dec     addr
+000000r 2                               bne     :+
+000000r 2                               lda     addr+1      ; LOB is zero, so use Z and N from HOB
+000000r 2                               bra     :++
+000000r 2               :
+000000r 2                               lda     addr+1
+000000r 2                               ora     #1          ; reset Z, if set, without affecting N
+000000r 2               :
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  DEC32           addr
+000000r 2                               lda     addr
+000000r 2                               bne     :+++
+000000r 2                               cmp     addr+1
+000000r 2                               bne     :++
+000000r 2                               cmp     addr+2
+000000r 2                               bne     :+
+000000r 2                               dec     addr+3
+000000r 2               :
+000000r 2                               dec     addr+2
+000000r 2               :
+000000r 2                               dec     addr+1
+000000r 2               :
+000000r 2                               dec     addr
+000000r 2               
+000000r 2               .endmacro
+000000r 2               
+000000r 2               ; No-clobber (NC) macros to wrap another macro that overwrites one or more registers
+000000r 2               .macro  NC_A            MAC, p1, p2
+000000r 2                               pha
+000000r 2                               MAC     p1, p2
+000000r 2                               pla
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  NC_X            MAC, p1, p2
+000000r 2                               phx
+000000r 2                               MAC     p1, p2
+000000r 2                               plx
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  NC_Y            MAC, p1, p2
+000000r 2                               phy
+000000r 2                               MAC     p1, p2
+000000r 2                               ply
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  NC_AX           MAC, p1, p2
+000000r 2                               PUSH_AX
+000000r 2                               MAC     p1, p2
+000000r 2                               PULL_XA
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  NC_AY           MAC, p1, p2
+000000r 2                               PUSH_AY
+000000r 2                               MAC     p1, p2
+000000r 2                               PULL_YA
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  NC_XY           MAC, p1, p2
+000000r 2                               PUSH_XY
+000000r 2                               MAC     p1, p2
+000000r 2                               PULL_YX
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  NC_AXY          MAC, p1, p2
+000000r 2                               PUSH_AXY
+000000r 2                               MAC     p1, p2
+000000r 2                               PULL_YXA
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  DEC16_NC_A      addr
+000000r 2                               NC_A    DEC16, addr
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro SWAP_AX
+000000r 2                           pha
+000000r 2                           txa
+000000r 2                           plx
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro SWAP_AY
+000000r 2                           pha
+000000r 2                           tya
+000000r 2                           ply
+000000r 2               .endmacro
+000000r 2               
+000000r 2               ; SPI
+000000r 2               .macro SPI_SEND_CMD b0, b1, b2, b3, b4, crc
+000000r 2                               lda             #b0 | $40
+000000r 2                               jsr             SPI_SEND
+000000r 2                               lda             #b1
+000000r 2                               jsr             SPI_TRANSCEIVE
+000000r 2                               sta             ZP_TEMP_2
+000000r 2                               lda             #b2
+000000r 2                               jsr             SPI_TRANSCEIVE
+000000r 2                               lda             #b3
+000000r 2                               jsr             SPI_TRANSCEIVE
+000000r 2                               lda             #b4
+000000r 2                               jsr             SPI_TRANSCEIVE
+000000r 2               .ifnblank       crc
+000000r 2                               lda             #(crc << 1)+1
+000000r 2               .else
+000000r 2                               lda             #$FF
+000000r 2               .endif
+000000r 2                               jsr             SPI_TRANSCEIVE
+000000r 2                               jsr             SPI_RECV
+000000r 2                               sta             ZP_TEMP
+000000r 2               .endmacro
+000000r 2               
+000000r 2               ; PRINT HELPERS
+000000r 2               .define LOADA(arg)      lda arg
+000000r 2               
+000000r 2               .macro  LDA_CORA    CharOrAddr
+000000r 2               .ifnblank   CharOrAddr
+000000r 2                               LOADA           CharOrAddr
+000000r 2               .endif
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  PRINT_CHAR      C1, C2, C3, C4, C5, C6, C7, C8, C9
+000000r 2               .ifblank    C1
+000000r 2                   .exitmacro
+000000r 2               .else
+000000r 2                               lda             C1
+000000r 2                               jsr             WRITE_CHAR
+000000r 2               .endif
+000000r 2                               PRINT_CHAR      C2, C3, C4, C5, C6, C7, C8, C9
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  PRINT_CHAR_JMP  C1, C2, C3, C4, C5, C6, C7, C8, C9
+000000r 2               .ifblank    C1
+000000r 2                   .exitmacro
+000000r 2               .else
+000000r 2                               lda             C1
+000000r 2                   .ifblank    C2
+000000r 2                               jmp             WRITE_CHAR
+000000r 2                               .exitmacro
+000000r 2                   .else
+000000r 2                               jsr             WRITE_CHAR
+000000r 2                   .endif
+000000r 2               .endif
+000000r 2                               PRINT_CHAR_JMP  C2, C3, C4, C5, C6, C7, C8, C9
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  PRINT_ESC_SEQ   C1, C2, C3, C4, C5, C6, C7, C8
+000000r 2                               PRINT_CHAR      #ASCII_ESC, C1, C2, C3, C4, C5, C6, C7, C8
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  PRINT_ESC_SEQ_JMP   C1, C2, C3, C4, C5, C6, C7, C8
+000000r 2                               PRINT_CHAR_JMP  #ASCII_ESC, C1, C2, C3, C4, C5, C6, C7, C8
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  PRINT_BYTE      CharOrAddr
+000000r 2                               LDA_CORA        {CharOrAddr}
+000000r 2                               jsr             WRITE_BYTE
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  PRINT_BYTE_JMP  CharOrAddr
+000000r 2                               LDA_CORA        {CharOrAddr}
+000000r 2                               jmp             WRITE_BYTE
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  PRINT_HEX       CharOrAddr
+000000r 2                               LDA_CORA        {CharOrAddr}
+000000r 2                               jsr             WRITE_HEX
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  PRINT_HEX_MASK  CharOrAddr
+000000r 2                               LDA_CORA        {CharOrAddr}
+000000r 2                               jsr             WRITE_HEX_MASK
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  PRINT_CRLF
+000000r 2                               jsr             WRITE_CRLF
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  PRINT_CRLF_JMP
+000000r 2                               jmp             WRITE_CRLF
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  _M_WRITE_HSTRING        addr
+000000r 2                               lda             #<addr
+000000r 2                               ldy             #>addr
+000000r 2                               jsr             WRITE_HSTRING
+000000r 2               .endmacro
+000000r 2               
+000000r 2               ; JSR using JMP
+000000r 2               .macro  _M_JSRR                 addrTo, addrFrom
+000000r 2                               lda             #>addrFrom
+000000r 2                               pha
+000000r 2                               lda             #<addrFrom
+000000r 2                               pha
+000000r 2                               jmp             (addrTo)
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro _M_JSRR_NC_A             addrFrom, addrTo
+000000r 2                               NC_A            _M_JSRR, addrFrom, addrTo
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro SL_N     n
+000000r 2                   .if     n > 0
+000000r 2                               asl
+000000r 2                               SL_N    n-1
+000000r 2                   .endif
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro SR_N     n
+000000r 2                   .if     n > 0
+000000r 2                               lsr
+000000r 2                               SR_N    n-1
+000000r 2                   .endif
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro SKIPNEXT
+000000r 2                   .byte   $22     ; Undocumented 2-byte NOP, 2 cycles, uses 1 byte to skip the next byte
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro SKIPNEXT2
+000000r 2                   .byte   $DC     ; Undocumented 3-byte NOP, 4 cycles, reads absolute address IP+1, IP+2, uses 1 byte to skip two bytes
+000000r 2               .endmacro
+000000r 2               
+000000r 1               .include "zero.s"       ; this should always be after defines.s
+000000r 2               .debuginfo
+000000r 2               .zeropage
+000000r 2               RAM_BANK_REG:
+000000r 2  xx               .res 1
+000001r 2               ROM_BANK_REG:
+000001r 2  xx               .res 1
+000002r 2               STACK_SAVE_REG:
+000002r 2  xx               .res 1
+000003r 2               TASK_STATUS_REG:
+000003r 2  xx               .res 1
+000004r 2               TASK_PARENT:
+000004r 2  xx               .res 1
+000005r 2               TASK_SAVE_REG:
+000005r 2  xx               .res 1
+000006r 2  xx xx xx xx      .res $10
+00000Ar 2  xx xx xx xx  
+00000Er 2  xx xx xx xx  
+000016r 2               ZP_READ_PTR:
+000016r 2  xx               .res 1
+000017r 2               ZP_WRITE_PTR:
+000017r 2  xx               .res 1
+000018r 2               ZP_TEMP:
+000018r 2  xx               .res 1
+000019r 2               ZP_TEMP_2:
+000019r 2  xx               .res 1
+00001Ar 2               ZP_SPI_DATA_IN:
+00001Ar 2  xx               .res 1
+00001Br 2               ZP_SPI_DATA_OUT:
+00001Br 2  xx               .res 1
+00001Cr 2               ZP_TEMP_VEC:
+00001Cr 2  xx xx            .res 2
+00001Er 2               ZP_A_SAVE:
+00001Er 2  xx               .res 1
+00001Fr 2               ZP_X_SAVE:
+00001Fr 2  xx               .res 1
+000020r 2               ZP_Y_SAVE:
+000020r 2  xx               .res 1
+000021r 2               ZP_T_SAVE:
+000021r 2  xx               .res 1
+000022r 2               ZP_U_SAVE:
+000022r 2  xx               .res 1
+000023r 2               ZP_V_SAVE:
+000023r 2  xx               .res 1
+000024r 2               ZP_W_SAVE:
+000024r 2  xx               .res 1
+000025r 2               
+000025r 2               .segment "STACK"
+000000r 2               
+000000r 1               .include "bios.s"
+000000r 2               .debuginfo
+000000r 2               
+000000r 2               .zeropage
+000025r 2               ZP_HS_TEMP:
+000025r 2  xx xx                        .res            2
+000027r 2               ZP_SERIAL_SEND_BUSY:
+000027r 2  xx                           .res            1
+000028r 2               
+000028r 2               .segment "BUFFERS"
+000000r 2               INPUT_BUFFER:
+000000r 2  xx xx xx xx                  .res            256
+000004r 2  xx xx xx xx  
+000008r 2  xx xx xx xx  
+000100r 2               
+000100r 2               .segment "BIOS"
+000000r 2               
+000000r 2  30 31 32 33  HEX_MAP: .byte "0123456789ABCDEF"
+000004r 2  34 35 36 37  
+000008r 2  38 39 41 42  
+000010r 2  18 57 65 6C  HYDRA_WELCOME: HString "Welcome to the HYDRA-16!"
+000014r 2  63 6F 6D 65  
+000018r 2  20 74 6F 20  
+000029r 2               
+000029r 2               SERIAL_INIT:
+000029r 2  78                           sei
+00002Ar 2  A9 10                        lda             #$10 | SR_SELECT    ; 8-N-1
+00002Cr 2  8D rr rr                     sta             ACIA_R_CTRL
+00002Fr 2               .if ROCKWELL_ACIA = 1
+00002Fr 2                               lda             #ACIA_CMD_BIT_DTRL | ACIA_CMD_BIT_TLIE  ; No parity, no echo, tx & rx interrupts.
+00002Fr 2               .else
+00002Fr 2  A9 09                        lda             #ACIA_CMD_BIT_DTRL | ACIA_CMD_BIT_TLID  ; No parity, no echo, rx interrupts.
+000031r 2               .endif
+000031r 2  8D rr rr                     sta             ACIA_R_CMD
+000034r 2  64 rr                        stz             ZP_SERIAL_SEND_BUSY
+000036r 2  A2 06                        ldx             #IRQ_NUMBER_ONBOARD_SERIAL
+000038r 2  A9 rr                        lda             #<SERIAL_IRQ_HANDLER
+00003Ar 2  A0 rr                        ldy             #>SERIAL_IRQ_HANDLER
+00003Cr 2  20 rr rr                     jsr             IRQ_SET_VECTOR
+00003Fr 2  58                           cli
+000040r 2  60                           rts
+000041r 2               
+000041r 2               ; Input a character from the serial interface.
+000041r 2               ; On return, carry flag indicates whether a key was pressed
+000041r 2               ; If a key was pressed, the key value will be in the A register
+000041r 2               ;
+000041r 2               ; Modifies: flags, A
+000041r 2               ; TODO: select the appropriate read stream for the current task
+000041r 2               READ_CHAR:
+000041r 2               SERIAL_READ:
+000041r 2  20 rr rr                     jsr             BUFFER_SIZE
+000044r 2  D0 02                        bne             :+
+000046r 2  18                           clc
+000047r 2  60                           rts
+000048r 2               :
+000048r 2  DA                           phx
+000049r 2  A6 rr                        ldx             ZP_READ_PTR
+00004Br 2  BD rr rr                     lda             INPUT_BUFFER,X
+00004Er 2  E6 rr                        inc             ZP_READ_PTR
+000050r 2  FA                           plx
+000051r 2  20 rr rr                     jsr             WRITE_CHAR           ; echo
+000054r 2  38                           sec
+000055r 2  60                           rts
+000056r 2               
+000056r 2               
+000056r 2               
+000056r 2               ; Output a character (from the A register) to the serial interface.
+000056r 2               ;
+000056r 2               ; Modifies: flags
+000056r 2               ; TODO: select appropriate output stream for the given task
+000056r 2               WRITE_DEC:
+000056r 2  DA                           phx
+000057r 2  A2 00                        ldx             #0
+000059r 2  C9 00                        cmp             #0
+00005Br 2  B0 0E                        bcs             @do_hund
+00005Dr 2  48                           pha
+00005Er 2  A9 2D 20 rr                  PRINT_CHAR      #ASCII_MINUS
+000062r 2  rr           
+000063r 2  68                           pla
+000064r 2  C9 50                        cmp             #80                         ; special case for -128
+000066r 2  F0 2E                        beq             @is_max
+000068r 2  20 rr rr                     jsr             NEGATE
+00006Br 2               
+00006Br 2               @do_hund:
+00006Br 2  C9 64                        cmp             #100
+00006Dr 2  90 0E                        bcc             @do_tens
+00006Fr 2  48                           pha
+000070r 2  A9 31 20 rr                  PRINT_CHAR      #ASCII_1                    ; must be 100-127
+000074r 2  rr           
+000075r 2  68                           pla
+000076r 2  38                           sec
+000077r 2  E9 64                        sbc             #100
+000079r 2  C9 0A                        cmp             #10                         ; special case for 100-109..need to print the 0 in tens
+00007Br 2  90 0D                        bcc             @out_tens
+00007Dr 2               
+00007Dr 2               @do_tens:
+00007Dr 2  C9 0A                        cmp             #10
+00007Fr 2  90 11                        bcc             @do_ones
+000081r 2               
+000081r 2               @gt_ten:
+000081r 2  E8                           inx
+000082r 2  C9 0A                        cmp             #10
+000084r 2  90 04                        bcc             @out_tens
+000086r 2  E9 0A                        sbc             #10
+000088r 2  10 F7                        bpl             @gt_ten
+00008Ar 2               
+00008Ar 2               @out_tens:
+00008Ar 2  48                           pha
+00008Br 2  8A                           txa
+00008Cr 2  69 30                        adc             #ASCII_0
+00008Er 2  20 rr rr                     jsr             WRITE_CHAR
+000091r 2  68                           pla
+000092r 2               
+000092r 2               @do_ones:
+000092r 2  FA                           plx
+000093r 2  4C rr rr                     jmp             WRITE_HEX
+000096r 2               
+000096r 2               @is_max:
+000096r 2  A9 31 20 rr                  PRINT_CHAR      #ASCII_1
+00009Ar 2  rr           
+00009Br 2  A9 1C                        lda             #28
+00009Dr 2  10 DE                        bpl             @do_tens
+00009Fr 2               
+00009Fr 2               WRITE_BYTE_MIN:
+00009Fr 2  C9 10                        cmp             #$10
+0000A1r 2  90 0B                        bcc             WRITE_HEX
+0000A3r 2               
+0000A3r 2               WRITE_BYTE:
+0000A3r 2  48                           pha                                         ; Save A for LSD.
+0000A4r 2  4A                           lsr
+0000A5r 2  4A                           lsr
+0000A6r 2  4A                           lsr
+0000A7r 2  4A                           lsr                                         ; MSD to LSD position.
+0000A8r 2  20 rr rr                     jsr             WRITE_HEX                   ; Output hex digit.
+0000ABr 2  68                           pla                                         ; Restore A.
+0000ACr 2               WRITE_HEX_MASK:
+0000ACr 2  29 0F                        and             #$0F                        ; Mask LSD for hex print.
+0000AEr 2               
+0000AEr 2               WRITE_HEX:
+0000AEr 2  DA                           phx
+0000AFr 2  AA                           tax
+0000B0r 2  BD rr rr                     lda             HEX_MAP,x
+0000B3r 2  FA                           plx
+0000B4r 2                               ; Then fall through to WRITE_CHAR below.
+0000B4r 2               
+0000B4r 2               WRITE_CHAR:
+0000B4r 2               SERIAL_WRITE:
+0000B4r 2  DA                           phx
+0000B5r 2               .if ROCKWELL_ACIA <> 1
+0000B5r 2  5A                           phy
+0000B6r 2               .endif
+0000B6r 2               WRITE_DELAY:
+0000B6r 2  A6 rr                        ldx             ZP_SERIAL_SEND_BUSY
+0000B8r 2  F0 03                        beq             @do_write
+0000BAr 2  CB                           wai                                         ; Leave this in, even if RDY has a pull-up
+0000BBr 2  80 F9                        bra             WRITE_DELAY
+0000BDr 2               @do_write:
+0000BDr 2  8D rr rr                     IO_PORT_WRITE   ACIA_R_DATA
+0000C0r 2  E6 rr                        inc             ZP_SERIAL_SEND_BUSY
+0000C2r 2               .if ROCKWELL_ACIA <> 1
+0000C2r 2                   .if ACIA_USE_VIA_TIMER = 1
+0000C2r 2  48                           pha
+0000C3r 2  A9 4B                        lda             #SWT_SELECT_L + 1
+0000C5r 2                   .else
+0000C5r 2                               ldx             #SWT_SELECT_L + 1
+0000C5r 2                   .endif
+0000C5r 2  A0 01                        ldy             #SWT_SELECT_H + 1
+0000C7r 2                   .if ACIA_USE_VIA_TIMER = 1
+0000C7r 2  20 rr rr                     jsr             VIA_START_T2
+0000CAr 2  68                           pla
+0000CBr 2                   .else
+0000CBr 2               :
+0000CBr 2                                   dex
+0000CBr 2                               bne             :-
+0000CBr 2                               dey
+0000CBr 2                               bne             :-
+0000CBr 2                               dec             ZP_SERIAL_SEND_BUSY
+0000CBr 2                   .endif
+0000CBr 2  7A                           ply
+0000CCr 2               .endif
+0000CCr 2  FA                           plx
+0000CDr 2  60                           rts
+0000CEr 2               
+0000CEr 2               ; Convenience method to write CR/LF to output stream
+0000CEr 2               WRITE_CRLF:
+0000CEr 2  A9 0D 20 rr                  PRINT_CHAR      #ASCII_CR
+0000D2r 2  rr           
+0000D3r 2  A9 0A 4C rr                  PRINT_CHAR_JMP  #ASCII_LF
+0000D7r 2  rr           
+0000D8r 2               
+0000D8r 2               WRITE_PROMPT:
+0000D8r 2  20 rr rr                     PRINT_CRLF
+0000DBr 2  A9 54 20 rr                  PRINT_CHAR      #ASCII_T
+0000DFr 2  rr           
+0000E0r 2  AD F0 FF 20                  PRINT_HEX_MASK  $FFF0
+0000E4r 2  rr rr        
+0000E6r 2  A9 20 20 rr                  PRINT_CHAR      #ASCII_SPACE
+0000EAr 2  rr           
+0000EBr 2  A5 00 20 rr                  PRINT_BYTE      $0
+0000EFr 2  rr           
+0000F0r 2  A5 00                        lda             $0
+0000F2r 2  C9 F0                        cmp             #$F0
+0000F4r 2  90 10                        bcc             @not_shared
+0000F6r 2  A9 28 20 rr                  PRINT_CHAR      #ASCII_LPAREN
+0000FAr 2  rr           
+0000FBr 2  AD F1 FF 20                  PRINT_HEX_MASK  $FFF1                       ; Shared RAM sub-bank
+0000FFr 2  rr rr        
+000101r 2  A9 29 20 rr                  PRINT_CHAR      #ASCII_RPAREN
+000105r 2  rr           
+000106r 2               
+000106r 2               @not_shared:
+000106r 2  A9 3A 20 rr                  PRINT_CHAR      #ASCII_COLON
+00010Ar 2  rr           
+00010Br 2  A5 01 20 rr                  PRINT_BYTE      $1
+00010Fr 2  rr           
+000110r 2  A9 3E 4C rr                  PRINT_CHAR_JMP  #ASCII_GT
+000114r 2  rr           
+000115r 2               
+000115r 2               ; .A, .Y hold the addr of HString to write
+000115r 2               ; Clobbers .A, .Y; Preserves .X
+000115r 2               WRITE_HSTRING:
+000115r 2  DA                           phx
+000116r 2  85 rr                        sta             ZP_HS_TEMP
+000118r 2  84 rr                        sty             ZP_HS_TEMP + 1
+00011Ar 2  B2 rr                        lda             (ZP_HS_TEMP)                ; Length of HString
+00011Cr 2  AA                           tax
+00011Dr 2  A4 00                        ldy             0
+00011Fr 2               @write_loop:
+00011Fr 2  C8                           iny
+000120r 2  B1 rr                        lda             (ZP_HS_TEMP),Y
+000122r 2  20 rr rr                     jsr             WRITE_CHAR
+000125r 2  CA                           dex
+000126r 2  D0 F7                        bne             @write_loop
+000128r 2  FA                           plx
+000129r 2  60                           rts
+00012Ar 2               
+00012Ar 2               ; Initialize the circular input buffer
+00012Ar 2               ; Modifies: flags, A
+00012Ar 2               INIT_BUFFER:
+00012Ar 2  A5 rr 85 rr                  MOV             ZP_READ_PTR, ZP_WRITE_PTR
+00012Er 2  60                           rts
+00012Fr 2               
+00012Fr 2               ; Escape sequences
+00012Fr 2               CLEAR_SCR:
+00012Fr 2  A9 1B 20 rr                  PRINT_ESC_SEQ #ASCII_LBRACKET, #ASCII_2, #ASCII_J
+000133r 2  rr A9 5B 20  
+000137r 2  rr rr A9 32  
+000143r 2  A9 1B 20 rr                  PRINT_ESC_SEQ_JMP #ASCII_LBRACKET, #ASCII_0, #ASCII_SEMI, #ASCII_0, #ASCII_f
+000147r 2  rr A9 5B 20  
+00014Br 2  rr rr A9 30  
+000161r 2               
+000161r 2               ; Set up the SPI interface registers on the VIA
+000161r 2               SPI_INIT:
+000161r 2  48                           pha
+000162r 2  A9 00 8D rr                  IO_PORT_WRITE   VIA_R_AUX_CTRL, , 0
+000166r 2  rr           
+000167r 2  8D rr rr                     IO_PORT_WRITE   VIA_R_INT_ENABLE
+00016Ar 2  A9 FF 8D rr                  IO_PORT_WRITE   VIA_R_PER_CTRL, , $FF
+00016Er 2  rr           
+00016Fr 2  A9 7F 8D rr                  IO_PORT_WRITE   IOR_SPI_DDR,  , SPI_DDR_BITS
+000173r 2  rr           
+000174r 2  A9 02 8D rr                  IO_PORT_WRITE   IOR_SPI_DATA, , SPI_BIT_CSB   ; de-select all SPI devices
+000178r 2  rr           
+000179r 2  68                           pla
+00017Ar 2  60                           rts
+00017Br 2               
+00017Br 2               ; Macro to remove essentially duplicate code
+00017Br 2               .macro          SPI_SEND_SETUP  mode
+00017Br 2                               sta             ZP_SPI_DATA_OUT
+00017Br 2                               phy
+00017Br 2                               txa
+00017Br 2                               ora             #SPI_BIT_MOSI
+00017Br 2                               tay
+00017Br 2                               lda             ZP_SPI_DATA_OUT
+00017Br 2                               sei
+00017Br 2               .ifblank        mode
+00017Br 2                               asl             ZP_SPI_DATA_IN
+00017Br 2               .endif
+00017Br 2                               sec
+00017Br 2                               rol
+00017Br 2               .endmacro
+00017Br 2               
+00017Br 2               ; Write and Read SPI data
+00017Br 2               ; Uses two ZP registers for data_in and data_out
+00017Br 2               ; A: data to send
+00017Br 2               ; X: device ID to send to/receive from
+00017Br 2               ; Returns input data in A
+00017Br 2               ; Modifies A, ZP_SPI_DATA_IN, ZP_SPI_DATA_OUT
+00017Br 2               SPI_TRANSCEIVE:
+00017Br 2  85 rr 5A 8A                  SPI_SEND_SETUP
+00017Fr 2  09 04 A8 A5  
+000183r 2  rr 78 06 rr  
+000189r 2  B0 05                        bcs             @spi_send_1
+00018Br 2               @spi_send_0:
+00018Br 2  8E rr rr                     stx             IOR_SPI_DATA
+00018Er 2  80 03                        bra             @spi_send
+000190r 2               @spi_send_1:
+000190r 2  8C rr rr                     sty             IOR_SPI_DATA
+000193r 2               @spi_send:
+000193r 2  EE rr rr                     inc             IOR_SPI_DATA        ; SPI_CLK = 1
+000196r 2  2C rr rr                     bit             IOR_SPI_DATA        ; MISO (bit 7) => N flag
+000199r 2  10 02                        bpl             @spi_recv
+00019Br 2  E6 rr                        inc             ZP_SPI_DATA_IN      ; incoming bit was a 1 (set LSb = 1)
+00019Dr 2               @spi_recv:
+00019Dr 2  0A                           asl
+00019Er 2  F0 0A                        beq             SPI_OPERATION_DONE
+0001A0r 2  B0 04                        bcs             @had_1
+0001A2r 2  06 rr                        asl             ZP_SPI_DATA_IN
+0001A4r 2  80 E5                        bra             @spi_send_0
+0001A6r 2               @had_1:
+0001A6r 2  06 rr                        asl             ZP_SPI_DATA_IN
+0001A8r 2  80 E6                        bra             @spi_send_1
+0001AAr 2               
+0001AAr 2               SPI_OPERATION_DONE:
+0001AAr 2  A9 02                        lda             #SPI_BIT_CSB        ; de-select all SPI devices
+0001ACr 2  0C rr rr                     tsb             IOR_SPI_DATA
+0001AFr 2  7A                           ply
+0001B0r 2  A5 rr                        lda             ZP_SPI_DATA_IN      ; load the input for return in A
+0001B2r 2  58                           cli
+0001B3r 2  60                           rts
+0001B4r 2               
+0001B4r 2               ; Write SPI data
+0001B4r 2               ; Uses two ZP registers for data_in and data_out
+0001B4r 2               ; A: data to send
+0001B4r 2               ; X: device ID to send to
+0001B4r 2               ; Modifies A, ZP_SPI_DATA_OUT
+0001B4r 2               SPI_SEND:
+0001B4r 2  85 rr 5A 8A                  SPI_SEND_SETUP  1
+0001B8r 2  09 04 A8 A5  
+0001BCr 2  rr 78 38 2A  
+0001C0r 2               @send_loop:
+0001C0r 2  B0 05                        bcs             @spi_send_1
+0001C2r 2  8E rr rr                     stx             IOR_SPI_DATA
+0001C5r 2  80 03                        bra             @spi_send
+0001C7r 2               @spi_send_1:
+0001C7r 2  8C rr rr                     sty             IOR_SPI_DATA
+0001CAr 2               @spi_send:
+0001CAr 2  EE rr rr                     inc             IOR_SPI_DATA        ; SPI_CLK = 1
+0001CDr 2  0A                           asl
+0001CEr 2  D0 F0                        bne             @send_loop
+0001D0r 2  4C rr rr                     jmp             SPI_OPERATION_DONE
+0001D3r 2               
+0001D3r 2               ; Read from the SPI device
+0001D3r 2               ; X: device to read from
+0001D3r 2               ; Result returned in A
+0001D3r 2               SPI_RECV:
+0001D3r 2  5A                           phy
+0001D4r 2  A0 08                        ldy             #8
+0001D6r 2  8A                           txa
+0001D7r 2  09 06                        ora             #SPI_BIT_MOSI | SPI_BIT_CSB
+0001D9r 2  8D rr rr                     sta             IOR_SPI_DATA        ; Select the device to receive from
+0001DCr 2  78                           sei
+0001DDr 2               @recv_loop:
+0001DDr 2  0A                           asl                                 ; Shift in 0 to LSb of result
+0001DEr 2  EE rr rr                     inc             IOR_SPI_DATA
+0001E1r 2  2C rr rr                     bit             IOR_SPI_DATA        ; MISO (bit 7) => N flag
+0001E4r 2  10 01                        bpl             @spi_recv_2
+0001E6r 2                                                                   ; Set LSb = 1
+0001E6r 2  1A                           inc
+0001E7r 2               @spi_recv_2:
+0001E7r 2  88                           dey
+0001E8r 2  D0 F3                        bne             @recv_loop
+0001EAr 2  85 rr                        sta             ZP_SPI_DATA_IN
+0001ECr 2  4C rr rr                     jmp             SPI_OPERATION_DONE
+0001EFr 2               
+0001EFr 2               ; Delay for some number of cycles to ensure SPI device is ready to start working
+0001EFr 2               SPI_INIT_DELAY:
+0001EFr 2  48 DA 5A                     PUSH_AXY
+0001F2r 2  8A                           txa                                         ; set SPI device
+0001F3r 2  09 06                        ora             #SPI_BIT_CSB | SPI_BIT_MOSI ; de-select all devices
+0001F5r 2  AA                           tax
+0001F6r 2  09 01                        ora             #SPI_BIT_CLK
+0001F8r 2  A0 50                        ldy             #SPI_INIT_DELAY_CYCLES
+0001FAr 2               @loop:
+0001FAr 2  8D rr rr                     sta             IOR_SPI_DATA
+0001FDr 2  8E rr rr                     stx             IOR_SPI_DATA
+000200r 2  88                           dey
+000201r 2  D0 F7                        bne             @loop
+000203r 2  7A FA 68                     PULL_YXA
+000206r 2  60                           rts
+000207r 2               
+000207r 2               ; Return (in A) the number of unread bytes in the circular input buffer as an unsigned byte
+000207r 2               ; Modifies: flags, A
+000207r 2               BUFFER_SIZE:
+000207r 2  A5 rr                        lda             ZP_WRITE_PTR
+000209r 2  38                           sec
+00020Ar 2  E5 rr                        sbc             ZP_READ_PTR
+00020Cr 2  60                           rts
+00020Dr 2               
+00020Dr 2               ; Maskable interrupt request handler; by default, do nothing
+00020Dr 2               IRQ_HANDLER:
+00020Dr 2  40                           rti
+00020Er 2               
+00020Er 2               
+00020Er 2               SERIAL_IRQ_HANDLER:
+00020Er 2  48                           pha
+00020Fr 2               
+00020Fr 2               .if ROCKWELL_ACIA = 1
+00020Fr 2                               lda             #ACIA_STATUS_BIT_TDRE
+00020Fr 2               .endif
+00020Fr 2               
+00020Fr 2  2C rr rr                     bit             ACIA_R_STATUS
+000212r 2  10 0C                        bpl             @int_done 	            ; bit 7 not set, so not ACIA IRQ
+000214r 2               
+000214r 2               .if ROCKWELL_ACIA = 1
+000214r 2                               beq             @do_recv                ; if not Tx, then must be Rx
+000214r 2                               stz             ZP_SERIAL_SEND_BUSY
+000214r 2               
+000214r 2               @check_recv:
+000214r 2                               lda             #ACIA_STATUS_BIT_RDRF   ; is read register full?
+000214r 2                               bit             ACIA_STATUS
+000214r 2                               beq             @int_done
+000214r 2               .endif
+000214r 2               
+000214r 2               @do_recv:
+000214r 2  AD rr rr                     IO_PORT_READ    ACIA_R_DATA
+000217r 2  DA                           phx
+000218r 2  A6 rr                        ldx             ZP_WRITE_PTR
+00021Ar 2  9D rr rr                     sta             INPUT_BUFFER, X
+00021Dr 2  E6 rr                        inc             ZP_WRITE_PTR
+00021Fr 2  FA                           plx
+000220r 2               
+000220r 2               @int_done:
+000220r 2  68                           pla
+000221r 2  40                           rti
+000222r 2               
+000222r 2               ;; *****************************************************************
+000222r 2               .if 0
+000222r 2               ; I2C
+000222r 2               
+000222r 2               I2C_SCL = $01
+000222r 2               I2C_SDA = $02
+000222r 2               I2C_CTRL_PORT = VIA_R_PORTA
+000222r 2               I2C_DATA_PORT = VIA_R_DDRA
+000222r 2               
+000222r 2               .macro I2C_ON       val
+000222r 2                           tay
+000222r 2                           lda     #val
+000222r 2                           ora     I2C_DATA_PORT
+000222r 2                           sta     I2C_DATA_PORT
+000222r 2                           tya
+000222r 2               .endmacro
+000222r 2               
+000222r 2               .macro I2C_OFF      val
+000222r 2                           tay
+000222r 2                           lda     #~val
+000222r 2                           and     I2C_DATA_PORT
+000222r 2                           sta     I2C_DATA_PORT
+000222r 2                           tya
+000222r 2               .endmacro
+000222r 2               
+000222r 2               .macro SDA_LOW
+000222r 2                           I2C_OFF I2C_SDA
+000222r 2               .endmacro
+000222r 2               
+000222r 2               .macro SCL_LOW
+000222r 2                           I2C_OFF I2C_SCL
+000222r 2               .endmacro
+000222r 2               
+000222r 2               .macro SDA_HIGH
+000222r 2                           I2C_ON  I2C_SDA
+000222r 2               .endmacro
+000222r 2               
+000222r 2               .macro SCL_HIGH
+000222r 2                           I2C_ON  I2C_SDA
+000222r 2               .endmacro
+000222r 2               
+000222r 2               .macro SCL_PULSE
+000222r 2                           inc     I2C_DATA_PORT
+000222r 2                           dec     I2C_DATA_PORT
+000222r 2               .endmacro
+000222r 2               
+000222r 2               ; A: Byte to send
+000222r 2               ; Return (in A): 1 = SUCCESS, 0 = FAILURE
+000222r 2               I2C_SEND:
+000222r 2                           ldx     #$00
+000222r 2                           stx     I2C_CTRL_PORT
+000222r 2                           ldx     #$09
+000222r 2               @loop:
+000222r 2                           dex
+000222r 2                           beq     @ack
+000222r 2                           rol
+000222r 2                           jsr     I2C_SEND_BIT
+000222r 2                           bra    @loop
+000222r 2               @ack:
+000222r 2                           jsr     I2C_RECV_BIT    ; ack in A, 0 = success
+000222r 2                           eor     #$01            ; return 1 on success, 0 on fail
+000222r 2               @end:
+000222r 2                           rts
+000222r 2               
+000222r 2               
+000222r 2               I2C_RECV:   lda     #$00
+000222r 2                           sta     I2C_CTRL_PORT
+000222r 2                           pha
+000222r 2                           ldx     #$09
+000222r 2               @loop:      dex
+000222r 2                           beq     @end
+000222r 2                           jsr     rec_bit
+000222r 2                           ror
+000222r 2                           pla
+000222r 2                           rol
+000222r 2                           pha
+000222r 2                           jmp     @loop
+000222r 2               @end:
+000222r 2                           pla
+000222r 2                           rts
+000222r 2               
+000222r 2               ; A: Bit to send
+000222r 2               I2C_SEND_BIT:
+000222r 2                           bcc     @send_one
+000222r 2                           SDA_LOW
+000222r 2                           bra    @clock_out
+000222r 2               @send_one:
+000222r 2                           SDA_HIGH
+000222r 2               
+000222r 2               @clock_out:
+000222r 2                           SCL_PULSE
+000222r 2                           SDA_LOW
+000222r 2                           rts
+000222r 2               
+000222r 2               I2C_RECV_BIT:
+000222r 2                           SDA_HIGH
+000222r 2                           SCL_HIGH
+000222r 2                           lda     I2C_CTRL_PORT
+000222r 2                           and     #I2C_SDA
+000222r 2                           bne     @is_one
+000222r 2                           lda     #$00
+000222r 2                           jmp     @end
+000222r 2               @is_one:
+000222r 2                           lda     #$01
+000222r 2               @end:
+000222r 2                           SCL_LOW
+000222r 2                           SDA_LOW
+000222r 2                           rts
+000222r 2               
+000222r 2               
+000222r 2               I2C_START:
+000222r 2                           SDA_LOW
+000222r 2                           SCL_LOW
+000222r 2                           rts
+000222r 2               
+000222r 2               
+000222r 2               I2C_STOP:
+000222r 2                           SCL_HIGH
+000222r 2                           SDA_HIGH
+000222r 2                           rts
+000222r 2               
+000222r 2               
+000222r 2               I2C_ACK:
+000222r 2                           pha
+000222r 2                           lda     #$00
+000222r 2                           jsr     I2C_SEND_BIT
+000222r 2                           pla
+000222r 2                           rts
+000222r 2               
+000222r 2               I2C_NACK:
+000222r 2                           pha
+000222r 2                           lda     #$01
+000222r 2                           jsr     I2C_SEND_BIT
+000222r 2                           pla
+000222r 2                           rts
+000222r 2               .endif
+000222r 2               
+000222r 2               VIA_T2_INT_BIT = $20
+000222r 2               VIA_T1_INT_BIT = $40
+000222r 2               VIA_INT_ENABLE = $80
+000222r 2               
+000222r 2               
+000222r 2               VIA_INIT:
+000222r 2               .if ROCKWELL_ACIA <> 1 .AND ACIA_USE_VIA_TIMER = 1
+000222r 2  48                       pha
+000223r 2  A9 00                    lda     #0
+000225r 2  8D rr rr                 sta     VIA_R_AUX_CTRL
+000228r 2  68                       pla
+000229r 2               .endif
+000229r 2  60                       rts
+00022Ar 2               
+00022Ar 2               VIA_ENABLE_T1_INT:
+00022Ar 2  A9 40                    lda     #VIA_T1_INT_BIT
+00022Cr 2  09 80                    ora     #VIA_INT_ENABLE
+00022Er 2  8D rr rr                 sta     VIA_R_INT_ENABLE
+000231r 2  60                       rts
+000232r 2               
+000232r 2               VIA_ENABLE_T2_INT:
+000232r 2  A9 20                    lda     #VIA_T2_INT_BIT
+000234r 2  09 80                    ora     #VIA_INT_ENABLE
+000236r 2  8D rr rr                 sta     VIA_R_INT_ENABLE
+000239r 2  60                       rts
+00023Ar 2               
+00023Ar 2               VIA_DISABLE_T1_INT:
+00023Ar 2  48                       pha
+00023Br 2  A9 40                    lda     #VIA_T1_INT_BIT
+00023Dr 2  8D rr rr                 sta     VIA_R_INT_ENABLE
+000240r 2  68                       pla
+000241r 2  60                       rts
+000242r 2               
+000242r 2               VIA_DISABLE_T2_INT:
+000242r 2  48                       pha
+000243r 2  A9 20                    lda     #VIA_T2_INT_BIT
+000245r 2  8D rr rr                 sta     VIA_R_INT_ENABLE
+000248r 2  68                       pla
+000249r 2  60                       rts
+00024Ar 2               
+00024Ar 2               ; .A.Y = Timer value
+00024Ar 2               VIA_START_T2:
+00024Ar 2  8D rr rr                 sta     VIA_R_T2C_L
+00024Dr 2  8C rr rr                 sty     VIA_R_T2C_H
+000250r 2  4C rr rr                 jmp     VIA_ENABLE_T2_INT
+000253r 2               
+000253r 2               VIA_STOP_T2:
+000253r 2  4C rr rr                 jmp     VIA_DISABLE_T2_INT
+000256r 2               
+000256r 2               ; .A = Sub-component interrupt flag to test
+000256r 2               VIA_IS_INT:
+000256r 2  18                       clc
+000257r 2  2D rr rr                 and     VIA_R_INT_FLAGS
+00025Ar 2  F0 01                    beq     :+
+00025Cr 2  38                       sec
+00025Dr 2               :
+00025Dr 2  60                       rts
+00025Er 2               
+00025Er 2               ; OUT: C = 1 if T2 timer set the IRQ, 0 if not
+00025Er 2               VIA_IS_T1_INT:
+00025Er 2  A9 40                    lda     #VIA_T1_INT_BIT
+000260r 2  80 F4                    bra     VIA_IS_INT
+000262r 2               
+000262r 2               VIA_IS_T2_INT:
+000262r 2  A9 20                    lda     #VIA_T2_INT_BIT
+000264r 2  80 F0                    bra     VIA_IS_INT
+000266r 2               
+000266r 2               VIA_CLEAR_T1_INT:       ; READ LOB OF T1 Counter
+000266r 2  AD rr rr                 lda     VIA_R_T1C_L
+000269r 2  60                       rts
+00026Ar 2               
+00026Ar 2               VIA_CLEAR_T2_INT:       ; READ LOB OF T2 Counter
+00026Ar 2  AD rr rr                 lda     VIA_R_T2C_L
+00026Dr 2  60                       rts
+00026Er 2               
+00026Er 2               ; ****************************************************************************
+00026Er 2               
+00026Er 2               IRQ_VECTOR_INIT:
+00026Er 2  78                       sei
+00026Fr 2  38                       sec
+000270r 2  48 DA 5A                 PUSH_AXY
+000273r 2  A2 0F                    ldx     #$F
+000275r 2  A9 rr                    lda     #<SERIAL_IRQ_HANDLER
+000277r 2  A0 rr                    ldy     #>SERIAL_IRQ_HANDLER
+000279r 2               
+000279r 2               @loop:
+000279r 2  20 rr rr                 jsr     IRQ_SET_VEC1
+00027Cr 2  CA                       dex
+00027Dr 2  10 FA                    bpl     @loop
+00027Fr 2               
+00027Fr 2  A2 08                    ldx     #IRQ_NUMBER_SW
+000281r 2  A9 rr                    lda     #<SW_IRQ_HANDLER
+000283r 2  A0 rr                    ldy     #>SW_IRQ_HANDLER
+000285r 2  20 rr rr                 jsr     IRQ_SET_VEC1
+000288r 2               
+000288r 2  A2 07                    ldx     #IRQ_NUMBER_ONBOARD_VIA
+00028Ar 2  A9 rr                    lda     #<VIA_IRQ_HANDLER
+00028Cr 2  A0 rr                    ldy     #>VIA_IRQ_HANDLER
+00028Er 2  20 rr rr                 jsr     IRQ_SET_VEC1
+000291r 2               
+000291r 2  7A FA 68                 PULL_YXA
+000294r 2  18                       clc
+000295r 2  58                       cli
+000296r 2  60                       rts
+000297r 2               
+000297r 2               ; X: IRQ#, .A.Y: Vector Addr
+000297r 2               IRQ_SET_VECTOR:
+000297r 2  78                       sei
+000298r 2  48                       pha
+000299r 2  AD F2 FF                 lda     V_REGISTER
+00029Cr 2  85 rr                    sta     ZP_V_SAVE
+00029Er 2  68                       pla
+00029Fr 2               
+00029Fr 2               IRQ_SET_VEC1:
+00029Fr 2  8E F2 FF                 stx     V_REGISTER
+0002A2r 2  8D FE FF                 sta     $FFFE
+0002A5r 2  8C FF FF                 sty     $FFFF
+0002A8r 2  90 01                    bcc     :+
+0002AAr 2  60                       rts
+0002ABr 2               :
+0002ABr 2  A5 rr                    lda     ZP_V_SAVE
+0002ADr 2  8D F2 FF                 sta     V_REGISTER
+0002B0r 2  58                       cli
+0002B1r 2  60                       rts
+0002B2r 2               
+0002B2r 2               SW_IRQ_HANDLER:
+0002B2r 2  48                       pha
+0002B3r 2  4A                       lsr
+0002B4r 2  4A                       lsr
+0002B5r 2  4A                       lsr
+0002B6r 2  4A                       lsr
+0002B7r 2  68                       pla
+0002B8r 2  40                       rti
+0002B9r 2               
+0002B9r 2               VIA_IRQ_HANDLER:
+0002B9r 2               ; check which sub-device is triggering the IRQ
+0002B9r 2  48                       pha
+0002BAr 2  A9 20                    lda     #VIA_T2_INT_BIT
+0002BCr 2  2D rr rr                 and     VIA_R_INT_FLAGS
+0002BFr 2  F0 0C                    beq     :+
+0002C1r 2  64 rr                    stz     ZP_SERIAL_SEND_BUSY     ; signals serial send buffer is ready for another byte
+0002C3r 2  AD rr rr                 lda     VIA_R_T2C_L             ; clear the interrupt
+0002C6r 2  A9 20                    lda     #VIA_T2_INT_BIT         ; disable the T2 interrupt
+0002C8r 2  8D rr rr                 sta     VIA_R_INT_ENABLE
+0002CBr 2  80 0A                    bra     :++
+0002CDr 2               
+0002CDr 2               :
+0002CDr 2  A9 20                    lda     #VIA_T2_INT_BIT
+0002CFr 2  2D rr rr                 and     VIA_R_INT_FLAGS
+0002D2r 2  F0 03                    beq     :+
+0002D4r 2                                                           ; Do whatever T1 timer would do
+0002D4r 2  AD rr rr                 lda     VIA_R_T1C_L             ; clear the interrupt
+0002D7r 2               
+0002D7r 2               :
+0002D7r 2  68                       pla
+0002D8r 2  40                       rti
+0002D9r 2               
+0002D9r 2               
+0002D9r 2               .segment "IO_PORTS"
+000000r 2  xx xx xx xx  IO_PORT_0:      .tag IO_Port
+000004r 2  xx xx xx xx  
+000008r 2  xx xx xx xx  
+000010r 2  xx xx xx xx  IO_PORT_1:      .tag IO_Port
+000014r 2  xx xx xx xx  
+000018r 2  xx xx xx xx  
+000020r 2  xx xx xx xx  IO_PORT_2:      .tag IO_Port
+000024r 2  xx xx xx xx  
+000028r 2  xx xx xx xx  
+000030r 2  xx xx xx xx  IO_PORT_3:      .tag IO_Port
+000034r 2  xx xx xx xx  
+000038r 2  xx xx xx xx  
+000040r 2  xx xx xx xx  IO_PORT_4:      .tag IO_Port
+000044r 2  xx xx xx xx  
+000048r 2  xx xx xx xx  
+000050r 2  xx xx xx xx  IO_PORT_5:      .tag IO_Port
+000054r 2  xx xx xx xx  
+000058r 2  xx xx xx xx  
+000060r 2  xx xx xx xx  IO_PORT_6:      .tag IO_Port
+000064r 2  xx xx xx xx  
+000068r 2  xx xx xx xx  
+000070r 2  xx xx xx xx  IO_PORT_7:      .tag IO_Port
+000074r 2  xx xx xx xx  
+000078r 2  xx xx xx xx  
+000080r 2  xx xx xx xx  IO_PORT_8:      .tag IO_Port
+000084r 2  xx xx xx xx  
+000088r 2  xx xx xx xx  
+000090r 2  xx xx xx xx  IO_PORT_9:      .tag IO_Port
+000094r 2  xx xx xx xx  
+000098r 2  xx xx xx xx  
+0000A0r 2  xx xx xx xx  IO_PORT_A:      .tag IO_Port
+0000A4r 2  xx xx xx xx  
+0000A8r 2  xx xx xx xx  
+0000B0r 2  xx xx xx xx  IO_PORT_B:      .tag IO_Port
+0000B4r 2  xx xx xx xx  
+0000B8r 2  xx xx xx xx  
+0000C0r 2  xx xx xx xx  IO_PORT_C:      .tag IO_Port
+0000C4r 2  xx xx xx xx  
+0000C8r 2  xx xx xx xx  
+0000D0r 2  xx xx xx xx  IO_PORT_D:      .tag IO_Port
+0000D4r 2  xx xx xx xx  
+0000D8r 2  xx xx xx xx  
+0000E0r 2  xx xx xx xx  IO_PORT_E:      .tag IO_Port
+0000E4r 2  xx xx xx xx  
+0000E8r 2  xx xx xx xx  
+0000F0r 2  xx xx xx xx  IO_PORT_F:      .tag IO_Port_10_Bytes
+0000F4r 2  xx xx xx xx  
+0000F8r 2  xx xx        
+0000FAr 2               
+0000FAr 2               .macro VECTORS
+0000FAr 2                               .word   NMI_HANDLER     ; NMI vector
+0000FAr 2                               .word   RESET_ENTRY     ; RESET vector
+0000FAr 2                               .word   IRQ_HANDLER     ; IRQ vector
+0000FAr 2                               ;       will actually be pulled from the Vector RAM, depending on lowest priority IRQ currently triggered,
+0000FAr 2                               ;       or vector for IRQ# set in V[0..3] if none are triggered.  Can trigger S/W IRQs by setting V and then
+0000FAr 2                               ;       calling BRK.  S/W IRQ# is $F, so setting V[0..3] to $F and v[4..7] to a different number, you can
+0000FAr 2                               ;       have up to 16 unique S/W IRQs.  You can invoke a hardware device IRQ handler in the same way
+0000FAr 2               .endmacro
+0000FAr 2               
+0000FAr 2               .segment "RESETVEC_P0"
+000000r 2  rr rr 00 E0      VECTORS
+000004r 2  rr rr        
+000006r 2               
+000006r 2               .segment "RESETVEC_P1"
+000000r 2  rr rr 00 E0      VECTORS
+000004r 2  rr rr        
+000006r 2               
+000006r 2               .segment "RESETVEC_P2"
+000000r 2  rr rr 00 E0      VECTORS
+000004r 2  rr rr        
+000006r 2               
+000006r 2               .segment "RESETVEC_P3"
+000000r 2  rr rr 00 E0      VECTORS
+000004r 2  rr rr        
+000006r 2               
+000006r 2               .segment "RESETVEC_P4"
+000000r 2  rr rr 00 E0      VECTORS
+000004r 2  rr rr        
+000006r 2               
+000006r 2               .segment "RESETVEC_P5"
+000000r 2  rr rr 00 E0      VECTORS
+000004r 2  rr rr        
+000006r 2               
+000006r 2               .segment "RESETVEC_P6"
+000000r 2  rr rr 00 E0      VECTORS
+000004r 2  rr rr        
+000006r 2               
+000006r 2               .segment "RESETVEC_P7"
+000000r 2  rr rr 00 E0      VECTORS
+000004r 2  rr rr        
+000006r 2               
+000006r 2               .segment "RESETVEC_P8"
+000000r 2  rr rr 00 E0      VECTORS
+000004r 2  rr rr        
+000006r 2               
+000006r 2               .segment "RESETVEC_P9"
+000000r 2  rr rr 00 E0      VECTORS
+000004r 2  rr rr        
+000006r 2               
+000006r 2               .segment "RESETVEC_PA"
+000000r 2  rr rr 00 E0      VECTORS
+000004r 2  rr rr        
+000006r 2               
+000006r 2               .segment "RESETVEC_PB"
+000000r 2  rr rr 00 E0      VECTORS
+000004r 2  rr rr        
+000006r 2               
+000006r 2               .segment "RESETVEC_PC"
+000000r 2  rr rr 00 E0      VECTORS
+000004r 2  rr rr        
+000006r 2               
+000006r 2               .segment "RESETVEC_PD"
+000000r 2  rr rr 00 E0      VECTORS
+000004r 2  rr rr        
+000006r 2               
+000006r 2               .segment "RESETVEC_PE"
+000000r 2  rr rr 00 E0      VECTORS
+000004r 2  rr rr        
+000006r 2               
+000006r 2               .segment "RESETVEC_PF"
+000000r 2  rr rr 00 E0      VECTORS
+000004r 2  rr rr        
+000006r 2               
+000006r 1               .include "math.s"
+000006r 2               .debuginfo
+000006r 2               
+000006r 2               .zeropage
+000028r 2               ZP_MATH_TEMP:
+000028r 2  xx xx                    .res 2
+00002Ar 2               
+00002Ar 2               .segment "BIOS"
+0002D9r 2               ; MATH
+0002D9r 2               MOD_10:
+0002D9r 2  C9 00                    cmp             #0
+0002DBr 2  30 10                    bmi             @negative
+0002DDr 2  C9 64                    cmp             #100
+0002DFr 2  30 02                    bmi             @positive
+0002E1r 2  E9 64                    sbc             #100
+0002E3r 2               
+0002E3r 2               @positive:
+0002E3r 2  38                       sec
+0002E4r 2               
+0002E4r 2               @pos_loop:
+0002E4r 2  E9 0A                    sbc             #10
+0002E6r 2  F0 04                    beq             @pos_end
+0002E8r 2  10 FA                    bpl             @pos_loop
+0002EAr 2  69 0A                    adc             #10
+0002ECr 2               
+0002ECr 2               @pos_end:
+0002ECr 2  60                       rts
+0002EDr 2               
+0002EDr 2               @negative:
+0002EDr 2  C9 A6                    cmp             #$A6            ; -90
+0002EFr 2  10 02                    bpl             @neg_start
+0002F1r 2  69 A6                    adc             #$A6
+0002F3r 2               
+0002F3r 2               @neg_start:
+0002F3r 2  18                       clc
+0002F4r 2               
+0002F4r 2               @neg_loop:
+0002F4r 2  69 0A                    adc             #10
+0002F6r 2  30 FC                    bmi             @neg_loop
+0002F8r 2  60                       rts
+0002F9r 2               
+0002F9r 2               REM_10:
+0002F9r 2  A2 00                    ldx             #0
+0002FBr 2  C9 00                    cmp             #0
+0002FDr 2  30 14                    bmi             @negative
+0002FFr 2  C9 64                    cmp             #100
+000301r 2  30 04                    bmi             @positive
+000303r 2  E9 64                    sbc             #100
+000305r 2  A2 0A                    ldx             #10
+000307r 2               
+000307r 2               @positive:
+000307r 2  38                       sec
+000308r 2               
+000308r 2               @pos_loop:
+000308r 2  E8                       inx
+000309r 2  E9 0A                    sbc             #10
+00030Br 2  F0 05                    beq             @pos_end
+00030Dr 2  10 F9                    bpl             @pos_loop
+00030Fr 2  CA                       dex
+000310r 2  69 0A                    adc             #10
+000312r 2               
+000312r 2               @pos_end:
+000312r 2  60                       rts
+000313r 2               
+000313r 2               @negative:
+000313r 2  C9 9B                    cmp             #$9B            ; -99
+000315r 2  10 04                    bpl             @neg_start
+000317r 2  69 9B                    adc             #$9B
+000319r 2  A2 F6                    ldx             #$F6            ; -10
+00031Br 2               
+00031Br 2               @neg_start:
+00031Br 2  18                       clc
+00031Cr 2               
+00031Cr 2               @neg_loop:
+00031Cr 2  CA                       dex
+00031Dr 2  69 0A                    adc             #10
+00031Fr 2  30 FB                    bmi             @neg_loop
+000321r 2  F0 04                    beq             @neg_end
+000323r 2  E8                       inx
+000324r 2  38                       sec
+000325r 2  E9 0A                    sbc             #10
+000327r 2               
+000327r 2               @neg_end:
+000327r 2  60                       rts
+000328r 2               
+000328r 2               DIV_10:
+000328r 2  20 rr rr                 jsr             REM_10
+00032Br 2  48 8A FA                 SWAP_AX
+00032Er 2  60                       rts
+00032Fr 2               
+00032Fr 2               ABS:
+00032Fr 2  C9 00                    cmp             #0
+000331r 2  B0 03                    bcs             INV_DONE
+000333r 2               
+000333r 2               NEGATE:
+000333r 2  1A                       inc
+000334r 2               
+000334r 2               INVERT:
+000334r 2  49 FF                    eor             #$FF
+000336r 2               
+000336r 2               INV_DONE:
+000336r 2  60                       rts
+000337r 2               
+000337r 2               ; .A, .Y hold ADDR of LOB to increment, .X holds the length of the value in bytes
+000337r 2               ; Incremets an x-byte value at addr, addr + 1 and sets Z, N properly based on HOB
+000337r 2               .macro _M_ADD_BYTE_X           byteVal
+000337r 2                           sta             ZP_MATH_TEMP
+000337r 2                           sty             ZP_MATH_TEMP + 1
+000337r 2               .ifblank    byteVal
+000337r 2                           pha
+000337r 2               .else
+000337r 2                           lda             #byteVal
+000337r 2               .endif
+000337r 2                           ldy             #0
+000337r 2                           dex
+000337r 2                           phx
+000337r 2                           bra             ADD_X_LOOP
+000337r 2               .endmacro
+000337r 2               
+000337r 2               ADD_X_LOOP:
+000337r 2  71 rr                    adc             (ZP_MATH_TEMP),Y
+000339r 2  91 rr                    sta             (ZP_MATH_TEMP),Y
+00033Br 2  CA                       dex
+00033Cr 2  30 05                    bmi             :+
+00033Er 2  A2 00                    ldx             #0
+000340r 2  C8                       iny
+000341r 2  B0 F4                    bcs             ADD_X_LOOP
+000343r 2               :
+000343r 2  7A                       ply
+000344r 2  B1 rr                    lda             (ZP_MATH_TEMP),Y  ; set Z and N from HOB
+000346r 2  90 02                    bcc             :+
+000348r 2  09 01                    ora             #1                ; reset Z since LOB is not zero, but preserve other flags
+00034Ar 2               :
+00034Ar 2  60                       rts
+00034Br 2               
+00034Br 2               ;  Adds a byte passed on the stack to a .X-byte long integer where the LOB address is in .A, .Y
+00034Br 2               ADD_STACK_BYTE_X:
+00034Br 2  85 rr 84 rr              _M_ADD_BYTE_X
+00034Fr 2  48 A0 00 CA  
+000353r 2  DA 80 E1     
+000356r 2               
+000356r 2               INC_X:
+000356r 2  85 rr 84 rr              _M_ADD_BYTE_X   1
+00035Ar 2  A9 01 A0 00  
+00035Er 2  CA DA 80 D5  
+000362r 2               .macro  _M_INCX_C  xval
+000362r 2                           phx
+000362r 2                           ldx             #xval
+000362r 2               .endmacro
+000362r 2               
+000362r 2               .macro  _M_INCX  xval
+000362r 2                           _M_INCX_C       {xval}
+000362r 2                           bra             INCX_CONTINUE
+000362r 2               .endmacro
+000362r 2               
+000362r 2               INC_8:
+000362r 2  DA A2 01 80              _M_INCX         1
+000366r 2  0D           
+000367r 2               
+000367r 2               INC_16:
+000367r 2  DA A2 02 80              _M_INCX         2
+00036Br 2  08           
+00036Cr 2               
+00036Cr 2               INC_24:
+00036Cr 2  DA A2 03 80              _M_INCX         3
+000370r 2  03           
+000371r 2               
+000371r 2               INC_32:
+000371r 2  DA A2 04                 _M_INCX_C       4
+000374r 2               
+000374r 2               INCX_CONTINUE:
+000374r 2  20 rr rr                 jsr             INC_X
+000377r 2  08                       php                             ; save the flags
+000378r 2  68                       pla                             ; move them to .A for restore later
+000379r 2  FA                       plx                             ; retrieve saved .X (which modifies N, Z)
+00037Ar 2  48                       pha                             ; push old flags to stack
+00037Br 2  28                       plp                             ;    and restore them to the flags register
+00037Cr 2  60                       rts
+00037Dr 2               
+00037Dr 2               INC_40:
+00037Dr 2  DA A2 05 80              _M_INCX         5
+000381r 2  F2           
+000382r 2               
+000382r 2               INC_48:
+000382r 2  DA A2 06 80              _M_INCX         6
+000386r 2  ED           
+000387r 2               
+000387r 2               INC_56:
+000387r 2  DA A2 07 80              _M_INCX         7
+00038Br 2  E8           
+00038Cr 2               
+00038Cr 2               INC_64:
+00038Cr 2  DA A2 08 80              _M_INCX         8
+000390r 2  E3           
+000391r 2               
+000391r 2               
+000391r 1               .include "tasks.s"
+000391r 2               .debuginfo
+000391r 2               .segment "TASKS"
+000000r 2               
+000000r 2               TASK_0_VECTOR           = $E000
+000000r 2               
+000000r 2               TASK_BUSY_FLAG          = $01
+000000r 2               TASK_PAUSED_FLAG        = $02
+000000r 2               
+000000r 2               ; TASK STATUS REGISTER BITS
+000000r 2               ;   0: 0 = Available, 1 = In Use
+000000r 2               
+000000r 2               .macro SELECT_TASK      task
+000000r 2                               lda     T_REGISTER
+000000r 2                               and     #$F0
+000000r 2                               ora     task & $0F
+000000r 2                               sta     T_REGISTER
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro SELECT_SHARED_BANK bank
+000000r 2                               lda     T_REGISTER
+000000r 2                               and     #$0F
+000000r 2                               ora     bank << 4
+000000r 2                               sta     T_REGISTER
+000000r 2               .endmacro
+000000r 2               
+000000r 2               ; Initialize the tasks, their stacks, etc.
+000000r 2               TASKS_INIT:
+000000r 2  78                       sei                                     ; Turn off interrupts
+000001r 2  AD F0 FF                 lda     T_REGISTER
+000004r 2  D0 1A                    bne     @cleanup                        ; Only support task init when on task 0
+000006r 2  A2 0F                    ldx     #MAX_TASK_NUMBER
+000008r 2               
+000008r 2               @loop:
+000008r 2  A9 00                    lda     #0
+00000Ar 2  8E F0 FF                 stx     T_REGISTER                      ; Quick switch to task X
+00000Dr 2  85 rr                    sta     RAM_BANK_REG
+00000Fr 2  85 rr                    sta     ROM_BANK_REG
+000011r 2  85 rr                    sta     TASK_STATUS_REG
+000013r 2  85 rr                    sta     TASK_PARENT
+000015r 2  A9 FF                    lda     #$FF
+000017r 2  85 rr                    sta     STACK_SAVE_REG
+000019r 2  A5 rr 85 rr              MOV     ZP_READ_PTR, ZP_WRITE_PTR       ; Do INIT_BUFFER, without the stack
+00001Dr 2  CA                       dex
+00001Er 2  10 E8                    bpl     @loop                           ; Loop back as long as X >= 0
+000020r 2               
+000020r 2                           ; setup interrupt handler and interrupt timer
+000020r 2               
+000020r 2                           ; Will fall through when X = $FF, leaving us in Task 0, as required
+000020r 2               
+000020r 2               @cleanup:
+000020r 2  58                       cli                                     ; Turn interrupts back on
+000021r 2  60                       rts
+000022r 2               
+000022r 2               ;  Task switch
+000022r 2               ;  Task# to switch to in A
+000022r 2               SWITCH_TO:
+000022r 2  68                       pla                                     ; need to change return addr from RTS style (IP - 1) to RTI style (IP)
+000023r 2  1A                       inc
+000024r 2  48                       pha
+000025r 2  08                       php
+000026r 2               
+000026r 2               SWITCH_TO_NO_PHP:
+000026r 2  48 DA 5A                 PUSH_AXY
+000029r 2  9A                       txs
+00002Ar 2  86 rr                    stx     STACK_SAVE_REG
+00002Cr 2               
+00002Cr 2               SWITCH_TO_NSS:
+00002Cr 2  8D F0 FF                 sta     T_REGISTER
+00002Fr 2  A6 rr                    ldx     STACK_SAVE_REG                  ; Restore the stack pointer
+000031r 2  9A                       txs                                     ; ...
+000032r 2  7A FA 68                 PULL_YXA
+000035r 2  40                       rti
+000036r 2               
+000036r 2               ; Find a task that is idle and start it executing at the address in ZP_TEMP_VEC_L && ZP_TEMP_VEC_H
+000036r 2               ; Return task # in A and C == 1
+000036r 2               ;   OR error in A and C == 0 (if no task available)
+000036r 2               TASK_START:
+000036r 2  20 rr rr                 jsr     RESERVE_TASK
+000039r 2  B0 03                    bcs     @start_task
+00003Br 2  A9 F1                    lda     #ERR_NO_TASKS_AVAILABLE
+00003Dr 2  60                       rts
+00003Er 2               
+00003Er 2               @start_task:
+00003Er 2  A8                       tay
+00003Fr 2  AD F0 FF                 lda     T_REGISTER                      ; save current task as new task's parent
+000042r 2  8C F0 FF                 sty     T_REGISTER
+000045r 2  85 rr                    sta     TASK_PARENT
+000047r 2  8D F0 FF                 sta     T_REGISTER                      ; get the new task start addr in A/X
+00004Ar 2  A5 rr                    lda     ZP_TEMP_VEC
+00004Cr 2  A6 rr                    ldx     ZP_TEMP_VEC + 1
+00004Er 2  8C F0 FF                 sty     T_REGISTER                      ; do the task switch
+000051r 2  86 rr                    stx     ZP_X_SAVE                       ; new task ZP
+000053r 2  A2 FF                    ldx     #$FF                            ; Reset the stack pointer
+000055r 2  9A                       txs
+000056r 2  A6 rr                    ldx     ZP_X_SAVE
+000058r 2  20 rr rr                 jsr     @task_start
+00005Br 2               
+00005Br 2               @task_complete:
+00005Br 2  A9 01                    lda     #TASK_BUSY_FLAG
+00005Dr 2  14 rr                    trb     TASK_STATUS_REG
+00005Fr 2  A2 FF                    ldx     #$FF
+000061r 2  86 rr                    stx     TASK_PARENT                     ; ...and reset the resume-to register to #$FF (invalid)
+000063r 2  20 rr rr                 jsr     NEXT_TASK
+000066r 2  4C rr rr                 jmp     SWITCH_TO_NSS
+000069r 2               
+000069r 2               @task_start:
+000069r 2  DA                       phx                                     ; push the start address onto the stack
+00006Ar 2  48                       pha                                     ; ...
+00006Br 2  60                       rts                                     ; start executing
+00006Cr 2               
+00006Cr 2               
+00006Cr 2               ; Find an available task
+00006Cr 2               ; Modifies: A, CNZ Flags
+00006Cr 2               ; Returns C = 1 AND A = TaskNumber (when found)
+00006Cr 2               ; Returns C = 0 AND A = $FF        (when not found)
+00006Cr 2               RESERVE_TASK:
+00006Cr 2  78                       sei                                     ; Disable interrupts
+00006Dr 2  DA 5A                    PUSH_XY
+00006Fr 2               
+00006Fr 2               ; !! NO STACK MANIPULATIONS UNTIL SWITCHING BACK TO ORIGINAL TASK !!
+00006Fr 2  A9 00                    lda     #0
+000071r 2  AC F0 FF                 ldy     T_REGISTER
+000074r 2  A9 01                    lda     #TASK_BUSY_FLAG
+000076r 2  A2 0F                    ldx     #$F                             ; Start search with Task $F
+000078r 2               
+000078r 2               @task_busy:
+000078r 2  8E F0 FF                 stx     T_REGISTER                      ; Quick task switch to task X
+00007Br 2  24 rr                    bit     TASK_STATUS_REG                 ; Is Bit 1 set?
+00007Dr 2  D0 07                    bne     @task_found
+00007Fr 2  CA                       dex                                     ; Not found, so DEC X
+000080r 2  D0 F6                    bne     @task_busy                      ; Until X is zero, loop
+000082r 2  18                       clc                                     ; Not found
+000083r 2  CA                       dex                                     ; X == $FF
+000084r 2  90 05                    bcc     @cleanup
+000086r 2               
+000086r 2               @task_found:
+000086r 2  A9 03                    lda     #TASK_BUSY_FLAG|TASK_PAUSED_FLAG
+000088r 2  85 rr                    sta     TASK_STATUS_REG                 ; SET the Task as Busy and Paused
+00008Ar 2  38                       sec                                     ; Found
+00008Br 2               
+00008Br 2               @cleanup:
+00008Br 2  8A                       txa                                     ; Return the task number in A (OR $FF if not found)
+00008Cr 2  8C F0 FF                 sty     T_REGISTER                      ; Switch back to the original task
+00008Fr 2               
+00008Fr 2               ; Back on the original task, so restore the registers
+00008Fr 2  7A FA                    PULL_YX
+000091r 2  58                       cli                                     ; Re-enable interrupts
+000092r 2  60                       rts
+000093r 2               
+000093r 2               ; Find the next task that is paused
+000093r 2               ; Return task # to switch to in A.  C == 0, none found; C == 1, found
+000093r 2               NEXT_TASK:
+000093r 2  48 DA                    PUSH_AX
+000095r 2  AD F0 FF                 lda     T_REGISTER
+000098r 2  85 rr                    sta     ZP_X_SAVE
+00009Ar 2  29 0F                    and     #$0F                            ; mask off the shared memory "bank of banks"
+00009Cr 2  85 rr                    sta     ZP_A_SAVE
+00009Er 2  AA                       tax
+00009Fr 2               
+00009Fr 2               @test_next:
+00009Fr 2  E8                       inx
+0000A0r 2  8A                       txa
+0000A1r 2  29 0F                    and     #$0F                            ; masking again since we could have carried
+0000A3r 2  C5 rr                    cmp     ZP_A_SAVE                       ; are we back where we started?
+0000A5r 2  F0 0C                    beq     @not_found
+0000A7r 2  8D F0 FF                 sta     T_REGISTER                      ; switch to the next task
+0000AAr 2  A9 02                    lda     #TASK_PAUSED_FLAG
+0000ACr 2  25 rr                    and     TASK_STATUS_REG                 ; is this task paused?
+0000AEr 2  F0 EF                    beq     @test_next                      ; no? try the next one
+0000B0r 2  38                       sec
+0000B1r 2  B0 01                    bcs     @done
+0000B3r 2               
+0000B3r 2               @not_found:
+0000B3r 2  18                       clc
+0000B4r 2               
+0000B4r 2               @done:
+0000B4r 2  A6 rr                    ldx     ZP_X_SAVE                       ; switch back to the original task
+0000B6r 2  8E F0 FF                 stx     T_REGISTER
+0000B9r 2  FA 68                    PULL_XA
+0000BBr 2  60                       rts
+0000BCr 2               
+0000BCr 2               ; Non-maskable interrupt handler (same as maskable interrupt handler for now)
+0000BCr 2               NMI_HANDLER:
+0000BCr 2  48                       pha
+0000BDr 2  A9 2A                    lda     #ASCII_STAR
+0000BFr 2  20 rr rr                 jsr     WRITE_CHAR
+0000C2r 2  68                       pla
+0000C3r 2  20 rr rr                 jsr     NEXT_TASK
+0000C6r 2  B0 01                    bcs     @switch
+0000C8r 2  40                       rti
+0000C9r 2               
+0000C9r 2               @switch:
+0000C9r 2  4C rr rr                 jmp     SWITCH_TO_NO_PHP
+0000CCr 2               
+0000CCr 2               
+0000CCr 1               ;.include "disasm.s"
+0000CCr 1               .include "wozmon.s"
+0000CCr 2               ;
+0000CCr 2               ;   Taken mostly from Steve Wozniak's Apple 1 Monitor for the 6502, or WOZMON
+0000CCr 2               ;
+0000CCr 2               .debuginfo
+0000CCr 2               .zeropage
+00002Ar 2               ZP_XAM:
+00002Ar 2  xx xx            .res 2
+00002Cr 2               ZP_WM_ST:
+00002Cr 2  xx xx            .res 2      ; STore address
+00002Er 2               ZP_WM_HVP:
+00002Er 2  xx xx            .res 2      ; Hex Value Parsing
+000030r 2               ZP_WM_MODE:
+000030r 2  xx               .res 1      ; $00=ZP_XAM, $7F=STOR, $AE=BLOCK ZP_XAM
+000031r 2               ;ZP_WM_DASTATE:
+000031r 2               ;    .res 1
+000031r 2               
+000031r 2               .segment "BUFFERS"
+000100r 2               IN:
+000100r 2  xx xx xx xx                  .res 256
+000104r 2  xx xx xx xx  
+000108r 2  xx xx xx xx  
+000200r 2               
+000200r 2               .segment "WOZMON"
+000000r 2               
+000000r 2               ; WOZMON Entrypoint
+000000r 2               MON_START:
+000000r 2  D8                           cld                             ; Clear decimal arithmetic mode.
+000001r 2  58                           cli                             ; Enable interrupts
+000002r 2               ;                stz             ZP_WM_DASTATE
+000002r 2  80 10                        bra             @is_start
+000004r 2               
+000004r 2               @not_cr:
+000004r 2  C9 08                        cmp             #ASCII_BACKSPACE
+000006r 2  F0 14                        beq             @is_backspace
+000008r 2  C9 1B                        cmp             #ASCII_ESC
+00000Ar 2  F0 03                        beq             @is_escape
+00000Cr 2  C8                           iny                             ; Advance text index.
+00000Dr 2  10 10                        bpl             @get_next_char  ; Auto ESC if line longer than 127.
+00000Fr 2               
+00000Fr 2               @is_escape:
+00000Fr 2  A9 5C 20 rr                  PRINT_CHAR      #ASCII_BACKSLASH
+000013r 2  rr           
+000014r 2               @is_start:
+000014r 2  20 rr rr                     PRINT_CRLF
+000017r 2               
+000017r 2               @get_line:
+000017r 2  20 rr rr                     jsr             WRITE_PROMPT
+00001Ar 2  A0 01                        ldy             #1              ; Initialize text index.
+00001Cr 2               
+00001Cr 2               @is_backspace:
+00001Cr 2  88                           dey                     ; Back up text index.
+00001Dr 2  30 F8                        bmi             @get_line       ; Beyond start of line, reinitialize.
+00001Fr 2               
+00001Fr 2               @get_next_char:
+00001Fr 2  20 rr rr                     jsr             READ_CHAR
+000022r 2  90 FB                        bcc             @get_next_char
+000024r 2  99 rr rr                     sta             IN,y            ; Add to text buffer.
+000027r 2  C9 0D                        cmp             #ASCII_CR
+000029r 2  D0 D9                        bne             @not_cr
+00002Br 2  A0 FF                        ldy             #$FF            ; Reset text index.  Will iny shortly...
+00002Dr 2  A9 00                        lda             #$00            ; For ZP_XAM mode.
+00002Fr 2  AA                           tax                             ; .X=0.
+000030r 2               
+000030r 2               @set_block:
+000030r 2  0A                           asl
+000031r 2               
+000031r 2               @set_store:
+000031r 2  0A                           asl                             ; Leaves $7B if setting STOR mode.
+000032r 2               
+000032r 2               @set_mode:
+000032r 2  85 rr                        sta             ZP_WM_MODE      ; $00 = ZP_XAM, $74 = STOR, $B8 = BLOK ZP_XAM.
+000034r 2               
+000034r 2               @skip_delim:
+000034r 2  C8                           iny                             ; Advance text index.
+000035r 2               
+000035r 2               @next_item:
+000035r 2  B9 rr rr                     lda             IN,y            ; Get character.
+000038r 2  C9 0D                        cmp             #ASCII_CR       ; CR?
+00003Ar 2  F0 DB                        beq             @get_line       ; Yes, done with this line.
+00003Cr 2  C9 2E                        cmp             #ASCII_PERIOD
+00003Er 2  90 F4                        bcc             @skip_delim     ; Skip delimiter.
+000040r 2  F0 EE                        beq             @set_block      ; Set BLOCK ZP_XAM mode.
+000042r 2  C9 3A                        cmp             #ASCII_COLON
+000044r 2  F0 EB                        beq             @set_store      ; Yes, set STOR mode.
+000046r 2                               ;cmp             #ASCII_L
+000046r 2                               ;beq             @disassemble    ; Disassemble 1 or more instructions at current address/range
+000046r 2  C9 52                        cmp             #ASCII_R
+000048r 2  F0 4D                        beq             @run_prog       ; Yes, run user program
+00004Ar 2  C9 54                        cmp             #ASCII_T        ; T, U, V, or W registers?
+00004Cr 2  90 0F                        bcc             @not_tuvw       ;
+00004Er 2  C9 58                        cmp             #ASCII_X        ;
+000050r 2  B0 0B                        bcs             @not_tuvw       ;
+000052r 2  69 9C                        adc             #($F0-ASCII_T)  ; T=FFF0, U=FFF1, V=FFF2, W=FFF3
+000054r 2  85 rr                        sta             ZP_WM_HVP       ;
+000056r 2  A9 FF                        lda             #$FF            ;
+000058r 2  85 rr                        sta             ZP_WM_HVP + 1   ;
+00005Ar 2  C8                           iny                             ; skip the mnemonic
+00005Br 2  80 2A                        bra             @not_hex_or_escape
+00005Dr 2               
+00005Dr 2               @not_tuvw:
+00005Dr 2  84 rr                        sty             ZP_Y_SAVE       ; Save Y for comparison
+00005Fr 2  86 rr                        stx             ZP_WM_HVP       ; $00 -> Low byte of HPV
+000061r 2  86 rr                        stx             ZP_WM_HVP + 1   ; ...and High byte.
+000063r 2               
+000063r 2               @next_hex:
+000063r 2  B9 rr rr                     lda             IN,y            ; Get character for hex test.
+000066r 2  49 30                        eor             #ASCII_0        ; Map digits to $0-9.
+000068r 2  C9 0A                        cmp             #10             ; Digit?
+00006Ar 2  90 06                        bcc             @is_digit       ; Yes.
+00006Cr 2  69 88                        adc             #$88            ; Map letter "A"-"F" to $FA-FF.
+00006Er 2  C9 FA                        cmp             #$FA            ; Hex letter?
+000070r 2  90 11                        bcc             @not_hex        ; No, character not hex.
+000072r 2               
+000072r 2               @is_digit:
+000072r 2  0A                           asl                             ; LSD to MSD of A.
+000073r 2  0A                           asl
+000074r 2  0A                           asl
+000075r 2  0A                           asl
+000076r 2  A2 04                        ldx             #4              ; Shift count.
+000078r 2               
+000078r 2               @hex_shift:
+000078r 2  0A                           asl                             ; Hex digit left, MSB to carry.
+000079r 2  26 rr                        rol             ZP_WM_HVP       ; Rotate into LSD.
+00007Br 2  26 rr                        rol             ZP_WM_HVP + 1   ; Rotate into MSD's.
+00007Dr 2  CA                           dex                             ; Done 4 shifts?
+00007Er 2  D0 F8                        bne             @hex_shift      ; No, loop.
+000080r 2  C8                           iny                             ; Advance text index.
+000081r 2  D0 E0                        bne             @next_hex       ; Always taken. Check next character for hex.
+000083r 2               
+000083r 2               @not_hex:
+000083r 2  C4 rr                        cpy             ZP_Y_SAVE       ; Check if HPV empty (no hex digits).
+000085r 2  F0 88                        beq             @is_escape      ; Yes, generate ESC sequence.
+000087r 2               
+000087r 2               @not_hex_or_escape:
+000087r 2  24 rr                        bit             ZP_WM_MODE      ; Test ZP_WM_MODE byte.
+000089r 2  50 15                        bvc             @not_store      ; B6=0 is STOR, 1 is ZP_XAM and BLOCK ZP_XAM.
+00008Br 2  A5 rr                        lda             ZP_WM_HVP       ; LSD's of hex data.
+00008Dr 2  92 rr                        sta             (ZP_WM_ST)      ; Store to current 'store index'.
+00008Fr 2  E6 rr                        inc             ZP_WM_ST        ; Increment store index.
+000091r 2  D0 A2                        bne             @next_item      ; Get next item (no carry).
+000093r 2  E6 rr                        inc             ZP_WM_ST + 1    ; Add carry to 'store index' high order.
+000095r 2               
+000095r 2               @to_next_item:
+000095r 2  80 9E                        bra             @next_item      ; Get next command item.
+000097r 2               
+000097r 2               @run_prog:
+000097r 2  A9 rr 48 A9                  _M_JSRR         ZP_XAM, MON_START
+00009Br 2  rr 48 6C rr  
+00009Fr 2  rr           
+0000A0r 2               
+0000A0r 2               ;@disassemble:
+0000A0r 2               ;                lda             #1
+0000A0r 2               ;                sta             ZP_WM_DASTATE
+0000A0r 2               
+0000A0r 2               @not_store:
+0000A0r 2  30 29                        bmi             @examine_next   ; B7 = 0 for ZP_XAM, 1 for BLOCK ZP_XAM.
+0000A2r 2  A2 02                        ldx             #2              ; Byte count.
+0000A4r 2               
+0000A4r 2               @set_addr:
+0000A4r 2  B5 rr                        lda             ZP_WM_HVP - 1,x ; Copy hex data to
+0000A6r 2  95 rr                        sta             ZP_WM_ST - 1,x  ;   'store index'.
+0000A8r 2  95 rr                        sta             ZP_XAM - 1,x    ; And to 'ZP_XAM index'.
+0000AAr 2  CA                           dex                             ; Next of 2 bytes.
+0000ABr 2  D0 F7                        bne             @set_addr       ; Loop unless X = 0.
+0000ADr 2               
+0000ADr 2               @print_next:
+0000ADr 2  D0 12                        bne             @print_data     ; NE means no address to print.
+0000AFr 2  20 rr rr                     PRINT_CRLF
+0000B2r 2  A5 rr 20 rr                  PRINT_BYTE      ZP_XAM + 1      ; Print 'examine index' high-order byte.
+0000B6r 2  rr           
+0000B7r 2  A5 rr 20 rr                  PRINT_BYTE      ZP_XAM          ; Print 'examine index' low-order byte.
+0000BBr 2  rr           
+0000BCr 2  A9 3A 20 rr                  PRINT_CHAR      #ASCII_COLON    ; Print a ':'.
+0000C0r 2  rr           
+0000C1r 2               
+0000C1r 2               @print_data:
+0000C1r 2               ;                lda             ZP_WM_DASTATE
+0000C1r 2               ;                beq             @print_bytes
+0000C1r 2               ;                jsr             DISASM
+0000C1r 2               ;                bra             @examine_next
+0000C1r 2               
+0000C1r 2               ;@print_bytes:
+0000C1r 2  A9 20 20 rr                  PRINT_CHAR      #ASCII_SPACE    ; Print a ' '.
+0000C5r 2  rr           
+0000C6r 2  A1 rr 20 rr                  PRINT_BYTE      {(ZP_XAM,x)}    ; Print the byte at 'examine index'.
+0000CAr 2  rr           
+0000CBr 2               
+0000CBr 2               @examine_next:
+0000CBr 2  86 rr                        stx             ZP_WM_MODE      ; 0 -> ZP_WM_MODE (ZP_XAM mode).
+0000CDr 2  A5 rr                        lda             ZP_XAM
+0000CFr 2  C5 rr                        cmp             ZP_WM_HVP       ; Compare 'examine index' to hex data.
+0000D1r 2  A5 rr                        lda             ZP_XAM + 1
+0000D3r 2  E5 rr                        sbc             ZP_WM_HVP + 1
+0000D5r 2  B0 BE                        bcs             @to_next_item   ; Not less, so no more data to output.
+0000D7r 2  E6 rr                        inc             ZP_XAM
+0000D9r 2  D0 02                        bne             @mod_8_check    ; Increment 'examine index'.
+0000DBr 2  E6 rr                        inc             ZP_XAM + 1
+0000DDr 2               
+0000DDr 2               @mod_8_check:
+0000DDr 2  A5 rr                        lda             ZP_XAM          ; Check low-order 'examine index' byte
+0000DFr 2  29 07                        and             #7              ; For MOD 8 = 0
+0000E1r 2  10 CA                        bpl             @print_next     ; Always taken.
+0000E3r 2               
+0000E3r 1               .include "mmu.s"
+0000E3r 2               .debuginfo
+0000E3r 2               
+0000E3r 2               .zeropage
+000031r 2               ZP_M_BI_START:
+000031r 2  xx xx                    .res        2
+000033r 2               ZP_M_SP1:
+000033r 2  xx xx                    .res        2
+000035r 2               ZP_M_SP2:
+000035r 2  xx xx                    .res        2
+000037r 2               ZP_M_SZ1:
+000037r 2  xx                       .res        1
+000038r 2               ZP_M_TEMP:
+000038r 2  xx                       .res        1
+000039r 2               
+000039r 2               .segment "MMU"
+000000r 2               
+000000r 2               .struct     Address
+000000r 2                           l           .byte
+000000r 2                           h           .byte
+000000r 2               .endstruct
+000000r 2               
+000000r 2               .struct     PageAddress
+000000r 2                           page        .byte
+000000r 2                           addr        .tag Address
+000000r 2               .endstruct
+000000r 2               
+000000r 2               ; status byte =>
+000000r 2               ; Bit 0: Allocated (1=Allocated, 0=Free)        Is the memory free or allocated
+000000r 2               ; Bit 1: Paged (1=Paged, 0=Task)                Points to Paged RAM
+000000r 2               ; Bit 2: Shared (1=Shared, 0=Task)              Points to Shared RAM when Shared == 1 && Paged == 1
+000000r 2               ; Bit 3: Block (1=sz in Pages, 0=sz in Bytes)
+000000r 2               ; Bit 4-6: RESERVED
+000000r 2               ; Bit 7: IsValid (1=Yes, 0=NO)              Is this structure in use?
+000000r 2               
+000000r 2               AI_ALLOCATED = $01
+000000r 2               AI_PAGED     = $02
+000000r 2               AI_SHARED    = $04
+000000r 2               AI_BLOCK     = $08
+000000r 2               AI_VALID     = $80
+000000r 2               
+000000r 2               AI_DEFAULT   = AI_VALID
+000000r 2               ALLOC_TASK   = AI_VALID | AI_ALLOCATED
+000000r 2               ALLOC_PAGED  = ALLOC_TASK | AI_PAGED
+000000r 2               ALLOC_SHARED = ALLOC_PAGED | AI_SHARED
+000000r 2               
+000000r 2               MSG_IN_BUFFER_BASE  = $8000
+000000r 2               MSG_OUT_BUFFER_BASE = $9000
+000000r 2               
+000000r 2               MSG_BUFFER_BANK = $F0
+000000r 2               
+000000r 2               .struct     BlockAllocInfo
+000000r 2                           status      .byte
+000000r 2                           pages       .word                               ; 256-byte pages in this block
+000000r 2                           next        .tag Address
+000000r 2                           addr        .tag PageAddress
+000000r 2               .endstruct
+000000r 2               
+000000r 2               PI_VALID = $01
+000000r 2               
+000000r 2               .struct     BlockInfo
+000000r 2                           status      .byte
+000000r 2               .endstruct
+000000r 2               
+000000r 2               MMU_INIT:
+000000r 2  20 rr rr                 jsr         TASK_RAM_INIT
+000003r 2  4C rr rr                 jmp         SHARED_RAM_INIT
+000006r 2               
+000006r 2               TASK_RAM_INIT:
+000006r 2  AD F0 FF                 lda         T_REGISTER
+000009r 2  C9 00                    cmp         #SYSTEM_TASK_NUM
+00000Br 2  F0 03                    beq         :+
+00000Dr 2  4C rr rr                 jmp         ERROR_NOT_SYSTEM_TASK
+000010r 2               
+000010r 2               :
+000010r 2  DA                       phx
+000011r 2  A2 0F                    ldx         #MAX_TASK_NUMBER
+000013r 2               
+000013r 2               @task_loop:
+000013r 2  8E F0 FF                 stx         T_REGISTER
+000016r 2               
+000016r 2               ; Initialize the Task RAM for the current task
+000016r 2                           ; start at $0400-$7FFF
+000016r 2               
+000016r 2               ; Initiazize the Paged RAM space for the current task
+000016r 2               
+000016r 2               ; Initialize Message buffer pointers
+000016r 2  A0 0F                    ldy         #MAX_TASK_NUMBER
+000018r 2               
+000018r 2               :
+000018r 2                           ;lda         ZP_MSG_INP,Y
+000018r 2                           ;sta         ZP_MSG_OUTP,Y
+000018r 2  88                       dey
+000019r 2  10 FD                    bpl         :-
+00001Br 2  CA                       dex
+00001Cr 2  10 F5                    bpl         @task_loop
+00001Er 2  80 05                    bra         :+
+000020r 2  A9 00                    lda         #SYSTEM_TASK_NUM
+000022r 2  8D F0 FF                 sta         T_REGISTER
+000025r 2               
+000025r 2               :
+000025r 2  FA                       plx
+000026r 2  60                       rts
+000027r 2               
+000027r 2               ; .X = To Task#, .A = Byte to write
+000027r 2               MSG_SEND_BYTE:
+000027r 2  78                       sei
+000028r 2  5A                       phy                                             ; Save Y, RAM_BANK and U
+000029r 2  A4 rr                    ldy         RAM_BANK_REG
+00002Br 2  5A                       phy
+00002Cr 2  AC F1 FF                 ldy         U_REGISTER
+00002Fr 2  5A                       phy
+000030r 2  48                       pha
+000031r 2  AD F0 FF                 lda         T_REGISTER
+000034r 2  0A 0A 0A 0A              SL_N        4
+000038r 2  86 rr                    stx         ZP_M_TEMP
+00003Ar 2  05 rr                    ora         ZP_M_TEMP
+00003Cr 2  AA                       tax
+00003Dr 2                           ;lda
+00003Dr 2  68                       pla
+00003Er 2  8D F1 FF                 sta         U_REGISTER
+000041r 2  68                       pla
+000042r 2  85 rr                    sta         RAM_BANK_REG
+000044r 2  7A                       ply
+000045r 2  58                       cli
+000046r 2  60                       rts
+000047r 2               
+000047r 2               .macro _M_ERROR_RETURN  errno
+000047r 2                           lda         #errno
+000047r 2                           sec
+000047r 2                           rts
+000047r 2               .endmacro
+000047r 2               
+000047r 2               ERROR_NOT_SYSTEM_TASK:
+000047r 2  A9 01 38 60              _M_ERROR_RETURN     ERR_NOT_SYSTEM_TASK
+00004Br 2               
+00004Br 2               ERROR_OUT_OF_MEMORY:
+00004Br 2  A9 02 38 60              _M_ERROR_RETURN     ERR_OUT_OF_MEMORY
+00004Fr 2               
+00004Fr 2               ; IN: .A.Y = Bytes to allocate
+00004Fr 2               ; OUT (success): .A.Y = Address of allocation, C = 0
+00004Fr 2               ; OUT (failure): .A = ERROR, C = 1
+00004Fr 2               TASK_ALLOC:
+00004Fr 2  C0 00                    cpy         #0                                  ; Is this a byte alloc or block alloc
+000051r 2  F0 07                    beq         TASK_BYTE_ALLOC
+000053r 2  C9 00                    cmp         #0                                  ; Is this a whole-block allocation?
+000055r 2  F0 02                    beq         TASK_BLOCK_ALLOC
+000057r 2  C8                       iny                                             ; Allocate one more page to cover the extra bytes
+000058r 2  98                       tya                                             ; ...and then fall through to do a block allocation
+000059r 2               
+000059r 2               ; IN: .A = Pages to allocate for current task
+000059r 2               ; OUT (success): .A.Y = Address of the allocation structure, C = 0
+000059r 2               ; OUT (failure): .A = ERROR, C = 1
+000059r 2               TASK_BLOCK_ALLOC:
+000059r 2  60                       rts
+00005Ar 2               
+00005Ar 2               ; IN: .A = Bytes to allocate for current task
+00005Ar 2               ; OUT (success): .A.Y = Address of the allocation structure, C = 0
+00005Ar 2               ; OUT (failure): .A = ERROR, C = 1
+00005Ar 2               TASK_BYTE_ALLOC:
+00005Ar 2  60                       rts
+00005Br 2               
+00005Br 2               TASK_FREE:
+00005Br 2  60                       rts
+00005Cr 2               
+00005Cr 2               ; IN: .A.Y = Bytes to allocate, T must be 0
+00005Cr 2               ; OUT (success): .A.Y = Address of shared allocation structure, C = 0
+00005Cr 2               ; OUT (out of memory): .A = ERR_OUT_OF_MEMORY, C = 1
+00005Cr 2               ;           If T <> 0, .A = ERR_NOT_SYSTEM_TASK, C = 1
+00005Cr 2               SHARED_ALLOC:
+00005Cr 2  DA                       phx
+00005Dr 2  AE F0 FF                 ldx         T_REGISTER
+000060r 2  E0 00                    cpx         #SYSTEM_TASK_NUM
+000062r 2  F0 04                    beq         :+
+000064r 2  FA                       plx
+000065r 2  4C rr rr                 jmp         ERROR_NOT_SYSTEM_TASK
+000068r 2               
+000068r 2               :
+000068r 2                                                                           ; Do the allocation
+000068r 2               
+000068r 2  FA                       plx
+000069r 2  60                       rts
+00006Ar 2               
+00006Ar 2               ; IN: .A.Y = Address of PageAddress struct that points to location in shared memory to free
+00006Ar 2               SHARED_FREE:
+00006Ar 2  60                       rts
+00006Br 2               
+00006Br 2               SHARED_RAM_INIT:
+00006Br 2  60                       rts
+00006Cr 2               
+00006Cr 2               ; IN: .X = Byte to write, .A.Y = Address of PageAddress struct that points to read location in shared memory
+00006Cr 2               SHARED_WRITE:
+00006Cr 2  78                       sei
+00006Dr 2  DA                       phx                                             ; Push the byte to write
+00006Er 2  20 rr rr                 jsr         SHARED_RW_PAGE_SETUP                ; Clobbers .X.  After, .X = old RAM_BANK, .Y = old U
+000071r 2  68                       pla                                             ; Get it back
+000072r 2  92 rr                    sta         (ZP_M_SP1)                          ; Do the write
+000074r 2  86 rr                    stx         RAM_BANK_REG                        ; Restore prior RAM_BANK
+000076r 2  8C F1 FF                 sty         U_REGISTER                          ; Restore prior Shared RAM Macro-page
+000079r 2  58                       cli
+00007Ar 2  60                       rts
+00007Br 2               
+00007Br 2               ; IN: .A.Y = Address of PageAddress struct that points to shared memory location to write to
+00007Br 2               ; OUT: .A = Byte read at address
+00007Br 2               SHARED_READ:
+00007Br 2  78                       sei
+00007Cr 2  DA                       phx                                             ; Don't clobber .X
+00007Dr 2  20 rr rr                 jsr         SHARED_RW_PAGE_SETUP                ; Clobbers .X.  After, .X = old RAM_BANK, .Y = old U
+000080r 2  B2 rr                    lda         (ZP_M_SP1)                          ; Do the read
+000082r 2  86 rr                    stx         RAM_BANK_REG                        ; Restore prior RAM_BANK
+000084r 2  8C F1 FF                 sty         U_REGISTER                          ; Restore prior Shared RAM Macro-page
+000087r 2  FA                       plx
+000088r 2  58                       cli
+000089r 2  60                       rts
+00008Ar 2               
+00008Ar 2               SHARED_RW_PAGE_SETUP:
+00008Ar 2  85 rr                    sta         ZP_M_SP1
+00008Cr 2  84 rr                    sty         ZP_M_SP1 + 1
+00008Er 2  A4 01                    ldy         PageAddress::addr + Address::l
+000090r 2  B1 rr                    lda         (ZP_M_SP1),Y                        ; Get the LOB of the address
+000092r 2  AA                       tax
+000093r 2  C8                       iny                                             ; Now the HOB
+000094r 2  B1 rr                    lda         (ZP_M_SP1),Y
+000096r 2  A8                       tay
+000097r 2  B2 rr                    lda         (ZP_M_SP1)                          ; Load the page
+000099r 2  86 rr                    stx         ZP_M_SP1
+00009Br 2  84 rr                    sty         ZP_M_SP1 + 1
+00009Dr 2  A8                       tay                                             ; Save the page for use later
+00009Er 2  09 F0                    ora         #$F0                                ; Shared Bank transform
+0000A0r 2  A6 rr                    ldx         RAM_BANK_REG                        ; Save bank for restore
+0000A2r 2  85 rr                    sta         RAM_BANK_REG                        ; Update the RAM_BANK to new Shared bank
+0000A4r 2  98                       tya                                             ; Get the original page back
+0000A5r 2  4A                       lsr                                             ; Shift right 4-bits
+0000A6r 2  4A                       lsr
+0000A7r 2  4A                       lsr
+0000A8r 2  4A                       lsr
+0000A9r 2  AC F1 FF                 ldy         U_REGISTER                          ; Save macro-page for restore
+0000ACr 2  8D F1 FF                 sta         U_REGISTER                          ; Update macro-page[0..3] from PageAddress::page[4..7]
+0000AFr 2  60                       rts
+0000B0r 2               
+0000B0r 2               MEM_TEST:
+0000B0r 2  48 DA 5A                 PUSH_AXY
+0000B3r 2  20 rr rr                 PRINT_CRLF
+0000B6r 2  64 rr                    stz         RAM_BANK_REG
+0000B8r 2  9C F0 FF                 stz         T_REGISTER
+0000BBr 2               
+0000BBr 2               @task_num_loop:
+0000BBr 2  A9 02                    lda         #$02
+0000BDr 2  A2 80                    ldx         #$80                                ; exclude the task serial buffers @ $0200 && $0300
+0000BFr 2  20 rr rr                 jsr         TEST_PAGE_RANGE
+0000C2r 2  A2 A0                    ldx         #$A0                                ; end of banked RAM
+0000C4r 2               
+0000C4r 2               @ram_bank_loop:
+0000C4r 2  A5 rr 20 rr              PRINT_BYTE  RAM_BANK_REG
+0000C8r 2  rr           
+0000C9r 2  A9 2E 20 rr              PRINT_CHAR  #ASCII_PERIOD
+0000CDr 2  rr           
+0000CEr 2  A9 80                    lda         #$80
+0000D0r 2  20 rr rr                 jsr         TEST_PAGE_RANGE
+0000D3r 2  E6 rr                    inc         RAM_BANK_REG
+0000D5r 2  A9 F0                    lda         #NUM_RAM_BANKS
+0000D7r 2  C5 rr                    cmp         RAM_BANK_REG
+0000D9r 2  D0 E9                    bne         @ram_bank_loop
+0000DBr 2                           ;inc         T_REGISTER
+0000DBr 2                           ;lda         #$10
+0000DBr 2                           ;cmp         T_REGISTER
+0000DBr 2                           ;bne         @task_num_loop
+0000DBr 2  9C F1 FF                 stz         U_REGISTER
+0000DEr 2               
+0000DEr 2               @shared_banks_loop:
+0000DEr 2  A9 F0                    lda         #$F0
+0000E0r 2  85 rr                    sta         RAM_BANK_REG
+0000E2r 2               
+0000E2r 2               @shared_bank_loop:
+0000E2r 2  AD F1 FF 20              PRINT_BYTE  U_REGISTER
+0000E6r 2  rr rr        
+0000E8r 2  A9 2E 20 rr              PRINT_CHAR  #ASCII_PERIOD
+0000ECr 2  rr           
+0000EDr 2  A5 rr 20 rr              PRINT_BYTE  RAM_BANK_REG
+0000F1r 2  rr           
+0000F2r 2  A9 2E 20 rr              PRINT_CHAR  #ASCII_PERIOD
+0000F6r 2  rr           
+0000F7r 2  A9 80                    lda         #$80
+0000F9r 2  20 rr rr                 jsr         TEST_PAGE_RANGE
+0000FCr 2  E6 rr                    inc         RAM_BANK_REG                        ; increment shared bank
+0000FEr 2  D0 E2                    bne         @shared_bank_loop
+000100r 2  EE F1 FF                 inc         U_REGISTER
+000103r 2  AD F1 FF                 lda         U_REGISTER
+000106r 2  C9 10                    cmp         #$10
+000108r 2  90 D4                    bcc         @shared_banks_loop
+00010Ar 2  7A FA 68                 PULL_YXA
+00010Dr 2  60                       rts
+00010Er 2               
+00010Er 2               ; .A = HOB of first page to test, .X = HOB of last page + 1
+00010Er 2               TEST_PAGE_RANGE:
+00010Er 2  85 rr                    sta         ZP_TEMP_VEC + 1
+000110r 2  20 rr rr                 PRINT_BYTE
+000113r 2  A9 00 20 rr              PRINT_BYTE  #0
+000117r 2  rr           
+000118r 2  A9 2E 20 rr              PRINT_CHAR  #ASCII_PERIOD
+00011Cr 2  rr           
+00011Dr 2  8A                       txa
+00011Er 2  3A                       dec
+00011Fr 2  20 rr rr                 PRINT_BYTE
+000122r 2  A9 FF 20 rr              PRINT_BYTE  #$FF
+000126r 2  rr           
+000127r 2  A9 3A 20 rr              PRINT_CHAR  #ASCII_COLON
+00012Br 2  rr           
+00012Cr 2  64 rr                    stz         ZP_TEMP_VEC
+00012Er 2  64 rr                    stz         ZP_TEMP
+000130r 2               
+000130r 2               @loop_init:
+000130r 2  A0 00                    ldy         #0
+000132r 2               
+000132r 2               @loop:
+000132r 2  B1 rr                    lda         (ZP_TEMP_VEC),Y                     ; save what is in memory (non-descructive)
+000134r 2  85 rr                    sta         ZP_M_TEMP
+000136r 2  A9 EA                    lda         #$EA
+000138r 2  91 rr                    sta         (ZP_TEMP_VEC),Y
+00013Ar 2  D1 rr                    cmp         (ZP_TEMP_VEC),Y
+00013Cr 2  F0 04                    beq         @next
+00013Er 2  A9 21                    lda         #ASCII_BANG
+000140r 2  80 09                    bra         @write                              ; always, no need to restore value since it isn't storing properly anyway
+000142r 2               
+000142r 2               @next:
+000142r 2  A5 rr                    lda         ZP_M_TEMP                           ; restore saved value
+000144r 2  91 rr                    sta         (ZP_TEMP_VEC),Y
+000146r 2  C8                       iny
+000147r 2  D0 E9                    bne         @loop
+000149r 2  A9 2E                    lda         #ASCII_PERIOD
+00014Br 2               
+00014Br 2               @write:
+00014Br 2  20 rr rr                 jsr         WRITE_CHAR
+00014Er 2  64 rr                    stz         ZP_TEMP
+000150r 2  E6 rr                    inc         ZP_TEMP_VEC + 1
+000152r 2  E4 rr                    cpx         ZP_TEMP_VEC + 1
+000154r 2  D0 DA                    bne         @loop_init
+000156r 2  4C rr rr                 PRINT_CRLF_JMP
+000159r 2               
+000159r 1               .include "shell.s"
+000159r 2               .debuginfo
+000159r 2               .segment "SHELL"
+000000r 2               
+000000r 2               SHELL_MAIN:
+000000r 2  20 rr rr                 jsr     MON_START
+000003r 2               
+000003r 1               .include "sound.s"
+000003r 2               ; zero out all YM-2151 registers $28-$FF
+000003r 2               SOUND_INIT:
+000003r 2  48                           pha
+000004r 2  DA                           phx
+000005r 2  A9 00                        lda         #0
+000007r 2  A2 14                        ldx         #$14        ; turn off the clocks
+000009r 2  20 rr rr                     jsr         YM_WRITE
+00000Cr 2  A2 28                        ldx         #$28
+00000Er 2               
+00000Er 2               @write_z:
+00000Er 2  20 rr rr                     jsr         YM_WRITE
+000011r 2  B0 0D                        bcs         @error
+000013r 2  E8                           inx
+000014r 2  D0 F8                        bne         @write_z
+000016r 2  A2 03                        ldx         #IRQ_NUMBER_ONBOARD_SOUND
+000018r 2  A9 rr                        lda         #<SOUND_IRQ_HANDLER
+00001Ar 2  A0 rr                        ldy         #>SOUND_IRQ_HANDLER
+00001Cr 2  20 rr rr                     jsr         IRQ_SET_VECTOR
+00001Fr 2  18                           clc
+000020r 2               
+000020r 2               @error:
+000020r 2  FA                           plx
+000021r 2  68                           pla
+000022r 2  60                           rts
+000023r 2               
+000023r 2               
+000023r 2               SOUND_IRQ_HANDLER:
+000023r 2                               ; check which
+000023r 2  60                           rts
+000024r 2               
+000024r 2               YMN0L = $A0
+000024r 2               YMN0H = YMN0L + 1
+000024r 2               YMN1L = YMN0L + 2
+000024r 2               YMN1H = YMN0L + 3
+000024r 2               
+000024r 2               AZP0L = $B0
+000024r 2               AZP0H = AZP0L + 1
+000024r 2               YMTMP1 = AZP0L + 2
+000024r 2               YMTMP2 = AZP0L + 3
+000024r 2               
+000024r 2               ;C# = 0
+000024r 2               ;D  = 1
+000024r 2               ;D# = 2
+000024r 2               ;E  = 4
+000024r 2               ;F  = 5
+000024r 2               ;F# = 6
+000024r 2               ;G  = 8
+000024r 2               ;G# = 9
+000024r 2               ;A  = A
+000024r 2               ;A# = C
+000024r 2               ;B  = D
+000024r 2               ;C  = E
+000024r 2               
+000024r 2               ;$20+C, $38+C
+000024r 2               ;$40+C - $78+C
+000024r 2               ;$80+C - $B8+C
+000024r 2               ;$C0+C - $F8+C
+000024r 2               
+000024r 2               M027_Electric_Clean_Guitar:
+000024r 2  F8 00        	.byte $F8,$00
+000026r 2  29 31 21 31  	.byte $29,$31,$21,$31,$2E,$1E,$0F,$00
+00002Ar 2  2E 1E 0F 00  
+00002Er 2  1F 1F 1F 1F  	.byte $1F,$1F,$1F,$1F,$10,$04,$08,$09
+000032r 2  10 04 08 09  
+000036r 2  00 00 00 00  	.byte $00,$00,$00,$00,$F9,$B1,$F4,$FB
+00003Ar 2  F9 B1 F4 FB  
+00003Er 2               
+00003Er 2               M028_Electric_Muted_Guitar:
+00003Er 2  E2 00        	.byte $E2,$00
+000040r 2  54 51 01 01  	.byte $54,$51,$01,$01,$20,$21,$32,$00
+000044r 2  20 21 32 00  
+000048r 2  1C 1F 1F 1F  	.byte $1C,$1F,$1F,$1F,$15,$02,$03,$0A
+00004Cr 2  15 02 03 0A  
+000050r 2  00 00 00 00  	.byte $00,$00,$00,$00,$FF,$B1,$F4,$F9
+000054r 2  FF B1 F4 F9  
+000058r 2               
+000058r 2               M029_Electric_Overdriven_Guitar:
+000058r 2  FA 00        	.byte $FA,$00
+00005Ar 2  33 11 32 33  	.byte $33,$11,$32,$33,$10,$16,$21,$00
+00005Er 2  10 16 21 00  
+000062r 2  1F 1F 1F 1F  	.byte $1F,$1F,$1F,$1F,$17,$08,$02,$03
+000066r 2  17 08 02 03  
+00006Ar 2  00 00 00 00  	.byte $00,$00,$00,$00,$FF,$B1,$F4,$FB
+00006Er 2  FF B1 F4 FB  
+000072r 2               
+000072r 2               M030_Electric_Distorted_Guitar:
+000072r 2  FA 00        	.byte $FA,$00
+000074r 2  33 11 31 33  	.byte $33,$11,$31,$33,$09,$0B,$1A,$00
+000078r 2  09 0B 1A 00  
+00007Cr 2  1F 1F 1F 1F  	.byte $1F,$1F,$1F,$1F,$17,$00,$00,$07
+000080r 2  17 00 00 07  
+000084r 2  00 00 00 00  	.byte $00,$00,$00,$00,$FF,$B1,$F4,$FB
+000088r 2  FF B1 F4 FB  
+00008Cr 2               
+00008Cr 2               GUITAR_PATCH = M029_Electric_Overdriven_Guitar
+00008Cr 2               
+00008Cr 2               ; Note data for Sweet Child o' Mine (first 4 bars)
+00008Cr 2               SCOM_NOTES_0:   ;            D4,  D4,  E4,  E4,  G4,  G4,  D4,  D4
+00008Cr 2                               ;.byte       $41, $41, $44, $44, $48, $48, $41, $41
+00008Cr 2  40 40 42 42                  .byte       $40, $40, $42, $42, $46, $46, $40, $40 ; half-note flat, just like Slash
+000090r 2  46 46 40 40  
+000094r 2               
+000094r 2               SCOM_NOTES_1:
+000094r 2                               ;            D5,  A4,  G4,  G5,  A4, F#5,  A4
+000094r 2                               ;.byte       $51, $4A, $48, $58, $4A, $56, $4A
+000094r 2  50 49 46 56                  .byte       $50, $49, $46, $56, $49, $55, $49   ; half-note flat
+000098r 2  49 55 49     
+00009Br 2               
+00009Br 2               SOUND_TEST:
+00009Br 2                               ; Set basic FM patch (simple sine-like sound)
+00009Br 2  A2 20                        ldx         #$20
+00009Dr 2  A9 C7                        lda         #$C7
+00009Fr 2  20 rr rr                     jsr         YM_WRITE
+0000A2r 2               
+0000A2r 2  A2 80                        ldx         #$80
+0000A4r 2  A9 1F                        lda         #$1F
+0000A6r 2  20 rr rr                     jsr         YM_WRITE
+0000A9r 2               
+0000A9r 2  A2 E0                        ldx         #$E0
+0000ABr 2  A9 0F                        lda         #$0F
+0000ADr 2  20 rr rr                     jsr         YM_WRITE
+0000B0r 2               
+0000B0r 2  A2 21                        ldx         #$21
+0000B2r 2  A9 C7                        lda         #$C7
+0000B4r 2  20 rr rr                     jsr         YM_WRITE
+0000B7r 2               
+0000B7r 2  A2 81                        ldx         #$81
+0000B9r 2  A9 1F                        lda         #$1F
+0000BBr 2  20 rr rr                     jsr         YM_WRITE
+0000BEr 2               
+0000BEr 2  A2 E1                        ldx         #$E1
+0000C0r 2  A9 0F                        lda         #$0F
+0000C2r 2  20 rr rr                     jsr         YM_WRITE
+0000C5r 2               
+0000C5r 2  A9 00                        lda         #$00    ; Channel 0
+0000C7r 2  A2 rr                        ldx         #<GUITAR_PATCH
+0000C9r 2  A0 rr                        ldy         #>GUITAR_PATCH
+0000CBr 2  20 rr rr                     jsr         YM_LOADPATCH
+0000CEr 2               
+0000CEr 2  A9 01                        lda         #$01    ; Channel 1
+0000D0r 2  A2 rr                        ldx         #<GUITAR_PATCH
+0000D2r 2  A0 rr                        ldy         #>GUITAR_PATCH
+0000D4r 2  20 rr rr                     jsr         YM_LOADPATCH
+0000D7r 2               
+0000D7r 2  A2 60                        ldx         #$60    ; Total Level (volume) for operator 1, Channel 0
+0000D9r 2  A9 00                        lda         #$00    ; Max Volume
+0000DBr 2  20 rr rr                     jsr         YM_WRITE
+0000DEr 2               
+0000DEr 2  A2 61                        ldx         #$61    ; Total Level (volume) for operator 1, Channel 1
+0000E0r 2  A9 00                        lda         #$00    ; Max Volume
+0000E2r 2  20 rr rr                     jsr         YM_WRITE
+0000E5r 2               
+0000E5r 2  A9 rr                        lda         #<SCOM_NOTES_0
+0000E7r 2  85 A0                        sta         YMN0L
+0000E9r 2  A9 rr                        lda         #>SCOM_NOTES_0
+0000EBr 2  85 A1                        sta         YMN0H
+0000EDr 2               
+0000EDr 2  A9 rr                        lda         #<SCOM_NOTES_1
+0000EFr 2  85 A2                        sta         YMN1L
+0000F1r 2  A9 rr                        lda         #>SCOM_NOTES_1
+0000F3r 2  85 A3                        sta         YMN1H
+0000F5r 2               
+0000F5r 2  A0 00                        ldy         #0          ; counter for channel 0
+0000F7r 2               @play_loop:
+0000F7r 2                               ; 0. set outer counter to 0
+0000F7r 2                               ; 1. key off channel 0
+0000F7r 2                               ; 1a.  key off on channel 1
+0000F7r 2                               ; 2. set note to next note in channel 0 list
+0000F7r 2                               ; 3. key on on channel 0
+0000F7r 2                               ; 4. one delay
+0000F7r 2                               ; 5. notes for rest of sequence on channel 1
+0000F7r 2                               ; 5a.  reset counter to 0
+0000F7r 2                               ; 5b.  key off on channel 1
+0000F7r 2                               ; 5c.  set note on channel 1
+0000F7r 2                               ; 5d.  key on on channel 1
+0000F7r 2                               ; 5e.  one delay
+0000F7r 2                               ; 5f.  increment counter
+0000F7r 2                               ; 5g.  loop until 7 notes have been played on channel 1
+0000F7r 2                               ; 6.  increment outer counter to play next start note on channel 0
+0000F7r 2                               ; 7.  loop back to 1 until outer count reaches 8 (8 sequences have played)
+0000F7r 2                               ; Key Off (silence previous note)
+0000F7r 2               
+0000F7r 2  A2 08                        ldx         #$08    ; Key On/Off register
+0000F9r 2  A9 00                        lda         #$00    ; CH0 off
+0000FBr 2  20 rr rr                     jsr         YM_WRITE
+0000FEr 2               
+0000FEr 2  A2 08                        ldx         #$08    ; Key On/Off register
+000100r 2  A9 01                        lda         #$01    ; CH1 off
+000102r 2  20 rr rr                     jsr         YM_WRITE
+000105r 2               
+000105r 2                               ; Set frequency (KC)
+000105r 2  A2 28                        ldx         #$28    ; KC register for CH0
+000107r 2  B1 A0                        lda         (YMN0L),y
+000109r 2  20 rr rr                     jsr         YM_WRITE
+00010Cr 2               
+00010Cr 2                               ; Key On
+00010Cr 2  A2 08                        ldx         #$08    ; Key On/Off register
+00010Er 2  A9 78                        lda         #$78    ; CH0 on
+000110r 2  20 rr rr                     jsr         YM_WRITE
+000113r 2               
+000113r 2                               ; Delay 8 64th notes in length
+000113r 2  A9 08                        lda         #8
+000115r 2  20 rr rr                     jsr         YM_DELAY_64
+000118r 2               
+000118r 2  5A                           phy
+000119r 2  A0 00                        ldy         #0
+00011Br 2  80 07                        bra         @skip_ch1_off   ; already off at the start of the loop
+00011Dr 2               
+00011Dr 2               @next_ch1:
+00011Dr 2  A2 08                        ldx         #$08    ; Key On/Off register
+00011Fr 2  A9 01                        lda         #$01    ; CH1 off
+000121r 2  20 rr rr                     jsr         YM_WRITE
+000124r 2               
+000124r 2               @skip_ch1_off:
+000124r 2                               ; Set frequency (KC)
+000124r 2  A2 29                        ldx         #$29    ; KC register for CH1
+000126r 2  B1 A2                        lda         (YMN1L),y
+000128r 2  20 rr rr                     jsr         YM_WRITE
+00012Br 2               
+00012Br 2                               ; Key On
+00012Br 2  A2 08                        ldx         #$08    ; Key On/Off register
+00012Dr 2  A9 79                        lda         #$79    ; CH1 on
+00012Fr 2  20 rr rr                     jsr         YM_WRITE
+000132r 2               
+000132r 2                               ; Delay 8 64th notes in length
+000132r 2  A9 08                        lda         #8
+000134r 2  20 rr rr                     jsr         YM_DELAY_64
+000137r 2               
+000137r 2  C8                           iny
+000138r 2  C0 07                        cpy         #7
+00013Ar 2  D0 E1                        bne         @next_ch1
+00013Cr 2               
+00013Cr 2                               ; Next note on CH0
+00013Cr 2  7A                           ply                 ; pull CH0 count
+00013Dr 2  C8                           iny
+00013Er 2  C0 08                        cpy         #8      ; 8 bars
+000140r 2  D0 B5                        bne         @play_loop
+000142r 2               
+000142r 2                               ; Stop sound
+000142r 2  A2 08                        ldx         #$08
+000144r 2  A9 00                        lda         #$00
+000146r 2  20 rr rr                     jsr         YM_WRITE
+000149r 2               
+000149r 2  A2 08                        ldx         #$08
+00014Br 2  A9 01                        lda         #$01
+00014Dr 2  4C rr rr                     jmp         YM_WRITE
+000150r 2               
+000150r 2               YM_TIMEOUT = 64
+000150r 2               
+000150r 2               ; Write value in A to YM-2151 register in X
+000150r 2               YM_WRITE:
+000150r 2  78                           sei
+000151r 2  5A                           phy
+000152r 2  A0 40                        ldy         #YM_TIMEOUT
+000154r 2               
+000154r 2               @ym_wait1:
+000154r 2  88                           dey
+000155r 2  30 18                        bmi         @timeout
+000157r 2  2C rr rr                     bit         YM_DATA
+00015Ar 2  30 F8                        bmi         @ym_wait1
+00015Cr 2  8E rr rr                     stx         YM_REG
+00015Fr 2  A0 40                        ldy         #YM_TIMEOUT
+000161r 2               
+000161r 2               @ym_wait2:
+000161r 2  88                           dey
+000162r 2  30 0B                        bmi         @timeout
+000164r 2  2C rr rr                     bit         YM_DATA
+000167r 2  30 F8                        bmi         @ym_wait2
+000169r 2  8D rr rr                     sta         YM_DATA
+00016Cr 2  18                           clc
+00016Dr 2  80 01                        bra         @cleanup
+00016Fr 2               
+00016Fr 2               @timeout:
+00016Fr 2  38                           sec
+000170r 2               
+000170r 2               @cleanup:
+000170r 2  7A                           ply
+000171r 2  58                           cli
+000172r 2  60                           rts
+000173r 2               
+000173r 2               YM_LOADPATCH:
+000173r 2                               ; Make re-entrant safe by protecting tmp and pointer variables from interrupt
+000173r 2  08                           php
+000174r 2  78                           sei
+000175r 2               
+000175r 2                               ; and #$07 ; mask channel to range 0..7
+000175r 2  86 B0                        stx AZP0L
+000177r 2  84 B1                        sty AZP0H
+000179r 2  18                           clc
+00017Ar 2  69 20                        adc #$20 ; first byte of patch goes to YM:$20+channel
+00017Cr 2  AA                           tax
+00017Dr 2               
+00017Dr 2  B2 B0                        lda (AZP0L)
+00017Fr 2  29 3F                        and #$3F
+000181r 2               
+000181r 2                               ;sta ymtmp1
+000181r 2                               ;lda ymshadow,x
+000181r 2                               ;and #$C0 ; L+R bits for YM channel
+000181r 2                               ;ora ymtmp1 ; Add the patch byte without L+R
+000181r 2  09 C0                        ora #$C0;
+000183r 2               
+000183r 2  20 rr rr                     jsr YM_WRITE
+000186r 2  B0 16                        bcs @fail
+000188r 2  A0 00                        ldy #0
+00018Ar 2  8A                           txa         ; YM_WRITE preserves X (YM register)
+00018Br 2                               ; Now skip over $28 and $30 by adding $10 to the register address.
+00018Br 2                               ; C guaranteed clear by successful ym_write
+00018Br 2  69 10                        adc #$10
+00018Dr 2  AA                           tax         ; set up for loop
+00018Er 2               @next:
+00018Er 2  8A                           txa
+00018Fr 2                               ; C guaranteed clear by successful YM_WRITE
+00018Fr 2  69 08                        adc #$08
+000191r 2  B0 0E                        bcs @success
+000193r 2  C8                           iny
+000194r 2  AA                           tax
+000195r 2  B1 B0                        lda (AZP0L),y
+000197r 2  5A                           phy         ; YM_WRITE clobbers .Y
+000198r 2  20 rr rr                     jsr YM_WRITE
+00019Br 2  7A                           ply
+00019Cr 2  90 F0                        bcc @next
+00019Er 2               @fail:
+00019Er 2  28                           plp         ; restore interrupt flag
+00019Fr 2  38                           sec
+0001A0r 2  60                           rts         ; return C set as failed patch write.
+0001A1r 2               @success:
+0001A1r 2  28                           plp         ; restore interrupt flag
+0001A2r 2  18                           clc
+0001A3r 2  60                           rts
+0001A4r 2               
+0001A4r 2               ; YM_DELAY_64 - Delay subroutine for musical note lengths
+0001A4r 2               ; A: number of 64th-note delays to wait (a 64th note @120 BPM = ~ 111,861 clock cycles @ 3.57955 MHz)
+0001A4r 2               YM_DELAY_64:
+0001A4r 2  DA 5A                        PUSH_XY
+0001A6r 2  85 B2                        sta         YMTMP1
+0001A8r 2               
+0001A8r 2               @far_outer:
+0001A8r 2  A9 01                        lda         #1          ; 2 cycles
+0001AAr 2  A2 4B                        ldx         #75
+0001ACr 2  A0 8E                        ldy         #142
+0001AEr 2  80 04                        bra         @inner
+0001B0r 2               
+0001B0r 2               @outer:
+0001B0r 2  A2 00                        ldx         #0          ; 2 cycles
+0001B2r 2               
+0001B2r 2               @mid:
+0001B2r 2  A0 00                        ldy         #0          ; 2 cycles
+0001B4r 2               
+0001B4r 2               @inner:
+0001B4r 2  88                           dey                     ; 2 cycles
+0001B5r 2  D0 FD                        bne         @inner      ; 3 cycles when branching, 2 when not
+0001B7r 2  CA                           dex                     ; 2 cycles
+0001B8r 2  D0 F8                        bne         @mid        ; 3 cycles when branching, 2 when not
+0001BAr 2               
+0001BAr 2                               ; Fine-tuning at end of inner loop
+0001BAr 2  3A                           dec                     ; 2 cycles
+0001BBr 2  D0 F3                        bne         @outer      ; 3 cycles when branching, 2 when not
+0001BDr 2  C6 B2                        dec         YMTMP1      ; 3 cycles
+0001BFr 2  D0 E7                        bne         @far_outer  ; 3 cycles when branching, 2 when not
+0001C1r 2  7A FA                        PULL_YX
+0001C3r 2  60                           rts                     ; 6 cycles
+0001C4r 2               
+0001C4r 1               .include "os_main.s"
+0001C4r 2               .debuginfo
+0001C4r 2               .macro ZERO_W
+0001C4r 2                           lda     #0
+0001C4r 2                           sta     W_REGISTER
+0001C4r 2               .endmacro
+0001C4r 2               
+0001C4r 2               .segment "BIOS_P0"
+000000r 2               RESET_VECTOR_START:
+000000r 2  A9 00 8D F3              ZERO_W
+000004r 2  FF           
+000005r 2  D8                       cld                                                     ; We don't like decimal mode
+000006r 2  8D F0 FF                 sta                 T_REGISTER                          ; Make sure task 0 is selected
+000009r 2  85 00                    sta                 $00                                 ; Init RAM Bank selector
+00000Br 2  85 01                    sta                 $01                                 ; Init ROM Bank selector
+00000Dr 2  A2 FF                    ldx                 #$FF                                ; Init stack pointer
+00000Fr 2  9A                       txs
+000010r 2                           ; MOV                 ZP_READ_PTR, ZP_WRITE_PTR           ; remove when tasks_init is used
+000010r 2               
+000010r 2  20 rr rr                 jsr                 IRQ_VECTOR_INIT
+000013r 2  20 rr rr                 jsr                 TASKS_INIT                          ; Must be called before SERIAL_INIT and MMU_INIT
+000016r 2                           ;jsr                 MMU_INIT
+000016r 2  20 rr rr                 jsr                 VIA_INIT
+000019r 2  20 rr rr                 jsr                 SERIAL_INIT
+00001Cr 2                           ;jsr                 SPI_INIT
+00001Cr 2                           ;jsr                 SPI_TEST
+00001Cr 2  20 rr rr                 jsr                 SOUND_INIT
+00001Fr 2                           ;jsr                 SOUND_TEST
+00001Fr 2  20 rr rr                 jsr                 DO_WELCOME
+000022r 2  4C rr rr                 jmp                 SHELL_MAIN
+000025r 2               
+000025r 2               DO_WELCOME:
+000025r 2  20 rr rr                 jsr                 CLEAR_SCR
+000028r 2  A9 rr A0 rr              _M_WRITE_HSTRING    HYDRA_WELCOME
+00002Cr 2  20 rr rr     
+00002Fr 2  20 rr rr                 PRINT_CRLF
+000032r 2  A2 00                    ldx     #0
+000034r 2               
+000034r 2               @vector_loop:
+000034r 2  8E F2 FF                 stx                 V_REGISTER
+000037r 2  DA                       phx
+000038r 2  AD F2 FF 20              PRINT_HEX           V_REGISTER
+00003Cr 2  rr rr        
+00003Er 2  A9 08 20 rr              PRINT_CHAR          #ASCII_BACKSPACE
+000042r 2  rr           
+000043r 2  AD F2 FF                 lda                 V_REGISTER
+000046r 2  20 rr rr                 PRINT_HEX
+000049r 2  A9 3A 20 rr              PRINT_CHAR          #ASCII_COLON
+00004Dr 2  rr           
+00004Er 2  AD FF FF 20              PRINT_BYTE          $FFFF
+000052r 2  rr rr        
+000054r 2  AD FE FF 20              PRINT_BYTE          $FFFE
+000058r 2  rr rr        
+00005Ar 2  A9 20 20 rr              PRINT_CHAR          #ASCII_SPACE
+00005Er 2  rr           
+00005Fr 2  FA                       plx
+000060r 2  E8                       inx
+000061r 2  E0 10                    cpx                 #$10
+000063r 2  90 CF                    bcc                 @vector_loop
+000065r 2  4C rr rr                 PRINT_CRLF_JMP
+000068r 2               
+000068r 2               SPI_TEST:
+000068r 2  A2 00                    ldx                 #SPI_DEV_0
+00006Ar 2  20 rr rr                 jsr                 SPI_INIT_DELAY
+00006Dr 2  A9 40 20 rr              SPI_SEND_CMD        0, 0, 0, 0,   0, $4A                ; CMD0
+000071r 2  rr A9 00 20  
+000075r 2  rr rr 85 rr  
+000092r 2  A9 48 20 rr              SPI_SEND_CMD        8, 0, 0, 1, $AA, $43                ; CMD8
+000096r 2  rr A9 00 20  
+00009Ar 2  rr rr 85 rr  
+0000B7r 2               @loop:
+0000B7r 2  A9 7A 20 rr              SPI_SEND_CMD        58, 0, 0, 0,   0                    ; CMD58
+0000BBr 2  rr A9 00 20  
+0000BFr 2  rr rr 85 rr  
+0000DCr 2  A9 69 20 rr              SPI_SEND_CMD        41, $40, 0, 0,   0                  ; ACMD41
+0000E0r 2  rr A9 40 20  
+0000E4r 2  rr rr 85 rr  
+000101r 2  D0 B4                    bne                 @loop
+000103r 2  60                       rts
+000104r 2               
+000104r 2               ; A: S/W interrupt number
+000104r 2               SW_INT:
+000104r 2  0A                       asl                                                     ; move int# to V[4..7]
+000105r 2  0A                       asl
+000106r 2  0A                       asl
+000107r 2  0A                       asl
+000108r 2  09 0F                    ora                 #$F
+00010Ar 2  8D F2 FF                 sta                 V_REGISTER
+00010Dr 2  00                       brk                                                     ; force an interrupt
+00010Er 2  60                       rts
+00010Fr 2               
+00010Fr 2               .macro OTHER_PAGE_FILLER
+00010Fr 2                           ZERO_W
+00010Fr 2                           .res                $1FF2, $EA
+00010Fr 2                           jmp                 RESET_VECTOR_START
+00010Fr 2               .endmacro
+00010Fr 2               
+00010Fr 2               .segment "BIOS_P1"
+000000r 2  A9 00 8D F3              OTHER_PAGE_FILLER
+000004r 2  FF EA EA EA  
+000008r 2  EA EA EA EA  
+001FFAr 2               .segment "BIOS_P2"
+000000r 2  A9 00 8D F3              OTHER_PAGE_FILLER
+000004r 2  FF EA EA EA  
+000008r 2  EA EA EA EA  
+001FFAr 2               .segment "BIOS_P3"
+000000r 2  A9 00 8D F3              OTHER_PAGE_FILLER
+000004r 2  FF EA EA EA  
+000008r 2  EA EA EA EA  
+001FFAr 2               .segment "BIOS_P4"
+000000r 2  A9 00 8D F3              OTHER_PAGE_FILLER
+000004r 2  FF EA EA EA  
+000008r 2  EA EA EA EA  
+001FFAr 2               .segment "BIOS_P5"
+000000r 2  A9 00 8D F3              OTHER_PAGE_FILLER
+000004r 2  FF EA EA EA  
+000008r 2  EA EA EA EA  
+001FFAr 2               .segment "BIOS_P6"
+000000r 2  A9 00 8D F3              OTHER_PAGE_FILLER
+000004r 2  FF EA EA EA  
+000008r 2  EA EA EA EA  
+001FFAr 2               .segment "BIOS_P7"
+000000r 2  A9 00 8D F3              OTHER_PAGE_FILLER
+000004r 2  FF EA EA EA  
+000008r 2  EA EA EA EA  
+001FFAr 2               .segment "BIOS_P8"
+000000r 2  A9 00 8D F3              OTHER_PAGE_FILLER
+000004r 2  FF EA EA EA  
+000008r 2  EA EA EA EA  
+001FFAr 2               .segment "BIOS_P9"
+000000r 2  A9 00 8D F3              OTHER_PAGE_FILLER
+000004r 2  FF EA EA EA  
+000008r 2  EA EA EA EA  
+001FFAr 2               .segment "BIOS_PA"
+000000r 2  A9 00 8D F3              OTHER_PAGE_FILLER
+000004r 2  FF EA EA EA  
+000008r 2  EA EA EA EA  
+001FFAr 2               .segment "BIOS_PB"
+000000r 2  A9 00 8D F3              OTHER_PAGE_FILLER
+000004r 2  FF EA EA EA  
+000008r 2  EA EA EA EA  
+001FFAr 2               .segment "BIOS_PC"
+000000r 2  A9 00 8D F3              OTHER_PAGE_FILLER
+000004r 2  FF EA EA EA  
+000008r 2  EA EA EA EA  
+001FFAr 2               .segment "BIOS_PD"
+000000r 2  A9 00 8D F3              OTHER_PAGE_FILLER
+000004r 2  FF EA EA EA  
+000008r 2  EA EA EA EA  
+001FFAr 2               .segment "BIOS_PE"
+000000r 2  A9 00 8D F3              OTHER_PAGE_FILLER
+000004r 2  FF EA EA EA  
+000008r 2  EA EA EA EA  
+001FFAr 2               .segment "BIOS_PF"
+000000r 2  A9 00 8D F3              OTHER_PAGE_FILLER
+000004r 2  FF EA EA EA  
+000008r 2  EA EA EA EA  
+001FFAr 2               
+001FFAr 1               

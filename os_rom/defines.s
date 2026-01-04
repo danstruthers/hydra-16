@@ -1,31 +1,42 @@
 .debuginfo
 
+SYSTEM_TASK_NUM     = 0
+
+; ERROR VALUES
+ERR_SUCCESS         = $00
+ERR_NOT_SYSTEM_TASK = $01
+ERR_OUT_OF_MEMORY   = $02
+
 RESET_ENTRY     = $E000
 
 IO_PORT_BASE    = $FF00
 
 ; TIMING
-CLK_CPS = 3579545   ; ~3.58 MHz
-CLK_CPMS = (CLK_CPS/1000) + 1
+CLK_CPS         = 3579545   ; ~3.58 MHz
+CLK_CPMS        = (CLK_CPS / 1000) + 1
 
 ROCKWELL_ACIA   = 0
+ACIA_USE_VIA_TIMER = 1
 
 SR_19200        = $0F
 SR_115200       = $00
 
 SR_SELECT       = SR_115200
 
-.if ROCKWELL_ACIA = 1
-ZP_SERIAL_SEND_BUSY = $08
-.else
-SWT_19200_BASE  = 120
-SWT_19200       = ((SWT_19200_BASE * CLK_CPMS) / 1000) + 1
-SWT_115200      = SWT_19200 / 6
+.if ROCKWELL_ACIA <> 1
+SWT_INNER_LOOP_CYCLES = 5
+BITS_PER_CHAR = 12          ; 8 + start + stop + 2 for inter-character delay.
+SWT_19200_LOOPS = ((((1000000 / 19200) + 1) * BITS_PER_CHAR) / SWT_INNER_LOOP_CYCLES) + 1   ; number of loop iterations to send one byte at 1MHz
+; SWT_19200       = ((SWT_19200_LOOPS * CLK_CPMS) / 1000) + 1                                 ; number of loop iterations to send one byte at the selected clock speed
+SWT_19200       = 440
+SWT_115200      = (SWT_19200 / 6) + 1
 
     .if SR_SELECT = SR_19200
-SWT_SELECT      = SWT_19200
+SWT_SELECT_L    = SWT_19200 .MOD 256
+SWT_SELECT_H    = SWT_19200 / 256
     .else
-SWT_SELECT      = SWT_115200
+SWT_SELECT_L    = SWT_115200 .MOD 256
+SWT_SELECT_H    = SWT_115200 / 256
     .endif
 .endif
 
@@ -38,7 +49,7 @@ SWT_SELECT      = SWT_115200
 .endstruct
 
 .macro HString Str
-    .byte .strlen(Str), Str
+    .byte       .strlen(Str), Str
 .endmacro
 
 ;.struct SerialInfo
@@ -55,64 +66,66 @@ SWT_SELECT      = SWT_115200
 ;.macro Serial_Buffer_Advance info
 ;.endmacro
 
-.define IO_PORT_BYTE(port, byte) port + IO_Port::Bytes + byte
+.define IO_PORT_BYTE(port, byte)    port + IO_Port::Bytes + byte
 
 VIA1            = IO_PORT_0
 ACIA            = IO_PORT_1
 YM_SOUND        = IO_PORT_4
 
-VIA_PORTB       = IO_PORT_BYTE VIA1, 0
-VIA_PORTA       = IO_PORT_BYTE VIA1, 1
-VIA_PORTA_NOHS  = IO_PORT_BYTE VIA1, $F
-VIA_DDRB        = IO_PORT_BYTE VIA1, 2
-VIA_DDRA        = IO_PORT_BYTE VIA1, 3
+VIA_R_PORTB         = IO_PORT_BYTE VIA1, 0
+VIA_R_PORTA         = IO_PORT_BYTE VIA1, 1
+VIA_R_PORTA_NOHS    = IO_PORT_BYTE VIA1, $F
+VIA_R_DDRB          = IO_PORT_BYTE VIA1, 2
+VIA_R_DDRA          = IO_PORT_BYTE VIA1, 3
 
-VIA_T1C_L       = IO_PORT_BYTE VIA1, 4
-VIA_T1C_H       = IO_PORT_BYTE VIA1, 5
-VIA_T1L_L       = IO_PORT_BYTE VIA1, 6
-VIA_T1L_H       = IO_PORT_BYTE VIA1, 7
+VIA_R_T1C_L         = IO_PORT_BYTE VIA1, 4
+VIA_R_T1C_H         = IO_PORT_BYTE VIA1, 5
+VIA_R_T1L_L         = IO_PORT_BYTE VIA1, 6
+VIA_R_T1L_H         = IO_PORT_BYTE VIA1, 7
 
-VIA_T2C_L       = IO_PORT_BYTE VIA1, 8
-VIA_T2C_H       = IO_PORT_BYTE VIA1, 9
+VIA_R_T2C_L         = IO_PORT_BYTE VIA1, 8
+VIA_R_T2C_H         = IO_PORT_BYTE VIA1, 9
 
-VIA_SHIFT_REG   = IO_PORT_BYTE VIA1, $A
-VIA_AUX_CTRL    = IO_PORT_BYTE VIA1, $B
-VIA_PER_CTRL    = IO_PORT_BYTE VIA1, $C
-VIA_INT_FLAGS   = IO_PORT_BYTE VIA1, $D
-VIA_INT_ENABLE  = IO_PORT_BYTE VIA1, $E
+VIA_R_SHIFT_REG     = IO_PORT_BYTE VIA1, $A
+VIA_R_AUX_CTRL      = IO_PORT_BYTE VIA1, $B
+VIA_R_PER_CTRL      = IO_PORT_BYTE VIA1, $C
+VIA_R_INT_FLAGS     = IO_PORT_BYTE VIA1, $D
+VIA_R_INT_ENABLE    = IO_PORT_BYTE VIA1, $E
 
-ACIA_DATA       = IO_PORT_BYTE ACIA, 0
-ACIA_STATUS     = IO_PORT_BYTE ACIA, 1
-ACIA_CMD        = IO_PORT_BYTE ACIA, 2
-ACIA_CTRL       = IO_PORT_BYTE ACIA, 3
+ACIA_R_DATA         = IO_PORT_BYTE ACIA, 0
+ACIA_R_STATUS       = IO_PORT_BYTE ACIA, 1
+ACIA_R_CMD          = IO_PORT_BYTE ACIA, 2
+ACIA_R_CTRL         = IO_PORT_BYTE ACIA, 3
+
+.define  IRQ_NUMBER(num)    (num ^ 7)
 
 ; IRQs, from highest priority (0) to lowest (15)
-IRQ_NUMBER_HIGHEST_PRI = 0
-IRQ_NUMBER_ONBOARD_VIA = 0         ; System timers, etc
-IRQ_NUMBER_ONBOARD_SERIAL = 1      ; On-board serial
+IRQ_NUMBER_HIGHEST_PRI = IRQ_NUMBER(0)
+IRQ_NUMBER_ONBOARD_VIA = IRQ_NUMBER(0)         ; System timers, etc
+IRQ_NUMBER_ONBOARD_SERIAL = IRQ_NUMBER(1)      ; On-board serial
 
-IRQ_NUMBER_SLOT_0_L = 2
-IRQ_NUMBER_SLOT_0_H = 3
+IRQ_NUMBER_SLOT_0_L = IRQ_NUMBER(2)
+IRQ_NUMBER_SLOT_0_H = IRQ_NUMBER(3)
 
-IRQ_NUMBER_ONBOARD_SOUND = 4       ; YM-2151
+IRQ_NUMBER_ONBOARD_SOUND = IRQ_NUMBER(4)       ; YM-2151
 
 ; SLOT-assigned IRQs, low (higher-priority)
-IRQ_NUMBER_SLOT_1_L = 5
-IRQ_NUMBER_SLOT_2_L = 6
-IRQ_NUMBER_SLOT_3_L = 7
-IRQ_NUMBER_SLOT_4_L = 8
-IRQ_NUMBER_SLOT_5_L = 9
+IRQ_NUMBER_SLOT_1_L = IRQ_NUMBER(5)
+IRQ_NUMBER_SLOT_2_L = IRQ_NUMBER(6)
+IRQ_NUMBER_SLOT_3_L = IRQ_NUMBER(7)
+IRQ_NUMBER_SLOT_4_L = IRQ_NUMBER(8)
+IRQ_NUMBER_SLOT_5_L = IRQ_NUMBER(9)
 
 ; SLOT-assigned IRQs, high (lower-priority)
-IRQ_NUMBER_SLOT_1_H = 10
-IRQ_NUMBER_SLOT_2_H = 11
-IRQ_NUMBER_SLOT_3_H = 12
-IRQ_NUMBER_SLOT_4_H = 13
-IRQ_NUMBER_SLOT_5_H = 14
+IRQ_NUMBER_SLOT_1_H = IRQ_NUMBER(10)
+IRQ_NUMBER_SLOT_2_H = IRQ_NUMBER(11)
+IRQ_NUMBER_SLOT_3_H = IRQ_NUMBER(12)
+IRQ_NUMBER_SLOT_4_H = IRQ_NUMBER(13)
+IRQ_NUMBER_SLOT_5_H = IRQ_NUMBER(14)
 
-IRQ_NUMBER_15 = 15                  ; not assigned to any hardware or slot
-IRQ_NUMBER_LOWEST_PRI = 15
-IRQ_NUMBER_SW = 15
+IRQ_NUMBER_15 = IRQ_NUMBER(15)                   ; not assigned to any hardware or slot
+IRQ_NUMBER_LOWEST_PRI = IRQ_NUMBER_15
+IRQ_NUMBER_SW = IRQ_NUMBER_LOWEST_PRI
 
 YM_REG          = IO_PORT_BYTE YM_SOUND, 0
 YM_DATA         = IO_PORT_BYTE YM_SOUND, 1
@@ -136,8 +149,8 @@ ACIA_CMD_BIT_DTRL =     $01
 
 ; SPI Defines
 
-IOR_SPI_DATA        = VIA_PORTB
-IOR_SPI_DDR         = VIA_DDRB
+IOR_SPI_DATA        = VIA_R_PORTB
+IOR_SPI_DDR         = VIA_R_DDRB
 
 ; SPI DATA BITS
 SPI_BIT_CLK     = 1     ; bit 0, so INC/DEC cycle the clock
@@ -231,6 +244,12 @@ ASCII_GT        = '>'
 ASCII_QUESTION  = '?'
 ASCII_A         = 'A'
 ASCII_J         = 'J'
+ASCII_L         = 'L'
+ASCII_M         = 'M'
+ASCII_N         = 'N'
+ASCII_O         = 'O'
+ASCII_P         = 'P'
+ASCII_Q         = 'Q'
 ASCII_R         = 'R'
 ASCII_S         = 'S'
 ASCII_T         = 'T'
@@ -346,22 +365,22 @@ ASCII_LETTER_OFFSET = ASCII_A-ASCII_0-10
 
 .macro MOVX16           addr1, addr2
                 MOVX    addr1, addr2
-                MOVX    addr1 + 1, addr2 + 2
+                MOVX    addr1 + 1, addr2 + 1
 .endmacro
 
 .macro MOVY16           addr1, addr2
                 MOVY    addr1, addr2
-                MOVY    addr1 + 1, addr2 + 2
+                MOVY    addr1 + 1, addr2 + 1
 .endmacro
 
 .macro MOVAX            addr1, addr2
-                lda     addr1,x
-                sta     addr2,x
+                lda     addr1,X
+                sta     addr2,X
 .endmacro
 
 .macro MOVAY            addr1, addr2
-                lda     addr1,y
-                sta     addr2,y
+                lda     addr1,Y
+                sta     addr2,Y
 .endmacro
 
 .macro MOVAX16          addr1, addr2
@@ -379,83 +398,100 @@ ASCII_LETTER_OFFSET = ASCII_A-ASCII_0-10
 ; X: # of bytes to move
 ; Clobbers A, X
 .macro BLKMOVX          addr1, addr2
-.scope
-MV_START:
+:
                 dex
-                lda     addr1,x
-                sta     addr2,x
-                bne     MV_START
-.endscope
+                lda     addr1,X
+                sta     addr2,X
+                bne     :-
 .endmacro
 
 ; Y: # of bytes to move
 ; Clobbers A, Y
 .macro BLKMOVY          addr1, addr2
-.scope
-MV_START:
+:
                 dey
-                lda     addr1,y
-                sta     addr2,y
-                bne     MV_START
-.endscope
+                lda     addr1,Y
+                sta     addr2,Y
+                bne     :-
 .endmacro
 
+; _M_INCC: inc and set C/V if rollover.  Clobbers .A, C
+.macro  _M_INCC    addr
+                sec
+                lda     #0
+                adc     addr
+                sta     addr
+
+.macro  _M_INCC16          addr
+                inc     addr
+                bne     :+
+                _M_INCC    addr + 1
+                bra     :++
+:
+                lda     addr + 1
+                ora     #1
+:
+.endmacro
+
+.macro  _M_INCC32          addr
+                inc     addr
+                bne     :+
+                inc     addr+1
+                bne     :+
+                _M_INCC16  addr+2
+.endmacro
 
 .macro  INC16           addr
-.scope
                 inc     addr
-                bne     INC16_A
-                inc     addr+1
-                bra     INC16_B
-INC16_A:
-                lda     addr+1
-INC16_B:
-.endscope
+                bne     :+
+                inc     addr + 1
+                bra     :++
+:
+                lda     addr + 1
+                ora     #1
+:
 .endmacro
 
 .macro  INC32           addr
                 inc     addr
-                bne     @+
+                bne     :+
                 inc     addr+1
-                bne     @+
+                bne     :+
                 INC16   addr+2
 .endmacro
 
 .macro  DEC16           addr
-.scope
                 lda     addr
-                bne     DEC16_A
+                bne     :+
                 dec     addr
                 dec     addr+1
-                bra     DEC16_C
-DEC16_A:
+                bra     :+++
+:
                 dec     addr
-                bne     DEC_16_B ; if Z not set, don't take Z from HOB
-                lda     addr+1   ; sets Z and N from HOB
-                bra     DEC_16_C
-DEC16_B:
+                bne     :+
+                lda     addr+1      ; LOB is zero, so use Z and N from HOB
+                bra     :++
+:
                 lda     addr+1
-                ora     #1      ; reset Z, if set, without affecting N
-DEC16_C:
-.endscope
+                ora     #1          ; reset Z, if set, without affecting N
+:
 .endmacro
 
 .macro  DEC32           addr
-.scope
                 lda     addr
-                bne     DEC32_C
+                bne     :+++
                 cmp     addr+1
-                bne     DEC32_B
+                bne     :++
                 cmp     addr+2
-                bne     DEC32_A
+                bne     :+
                 dec     addr+3
-DEC32_A:
+:
                 dec     addr+2
-DEC32_B:
+:
                 dec     addr+1
-DEC32_C:
+:
                 dec     addr
-.endscope
+
 .endmacro
 
 ; No-clobber (NC) macros to wrap another macro that overwrites one or more registers
@@ -541,11 +577,11 @@ DEC32_C:
 .endmacro
 
 ; PRINT HELPERS
-.define LOADA(arg)      lda     arg
+.define LOADA(arg)      lda arg
 
 .macro  LDA_CORA    CharOrAddr
 .ifnblank   CharOrAddr
-        LOADA CharOrAddr
+                LOADA           CharOrAddr
 .endif
 .endmacro
 
@@ -553,17 +589,17 @@ DEC32_C:
 .ifblank    C1
     .exitmacro
 .else
-                LDA_CORA        {C1}
+                lda             C1
                 jsr             WRITE_CHAR
 .endif
-                PRINT_CHAR C2, C3, C4, C5, C6, C7, C8, C9
+                PRINT_CHAR      C2, C3, C4, C5, C6, C7, C8, C9
 .endmacro
 
 .macro  PRINT_CHAR_JMP  C1, C2, C3, C4, C5, C6, C7, C8, C9
 .ifblank    C1
     .exitmacro
 .else
-                LDA_CORA        {C1}
+                lda             C1
     .ifblank    C2
                 jmp             WRITE_CHAR
                 .exitmacro
@@ -571,15 +607,15 @@ DEC32_C:
                 jsr             WRITE_CHAR
     .endif
 .endif
-                PRINT_CHAR_JMP C2, C3, C4, C5, C6, C7, C8, C9
+                PRINT_CHAR_JMP  C2, C3, C4, C5, C6, C7, C8, C9
 .endmacro
 
 .macro  PRINT_ESC_SEQ   C1, C2, C3, C4, C5, C6, C7, C8
-                PRINT_CHAR #ASCII_ESC, C1, C2, C3, C4, C5, C6, C7, C8
+                PRINT_CHAR      #ASCII_ESC, C1, C2, C3, C4, C5, C6, C7, C8
 .endmacro
 
 .macro  PRINT_ESC_SEQ_JMP   C1, C2, C3, C4, C5, C6, C7, C8
-                PRINT_CHAR_JMP #ASCII_ESC, C1, C2, C3, C4, C5, C6, C7, C8
+                PRINT_CHAR_JMP  #ASCII_ESC, C1, C2, C3, C4, C5, C6, C7, C8
 .endmacro
 
 .macro  PRINT_BYTE      CharOrAddr
@@ -610,11 +646,43 @@ DEC32_C:
                 jmp             WRITE_CRLF
 .endmacro
 
+.macro  _M_WRITE_HSTRING        addr
+                lda             #<addr
+                ldy             #>addr
+                jsr             WRITE_HSTRING
+.endmacro
+
 ; JSR using JMP
-.macro  JSRR    addrTo, addrFrom
+.macro  _M_JSRR                 addrTo, addrFrom
                 lda             #>addrFrom
                 pha
                 lda             #<addrFrom
                 pha
                 jmp             (addrTo)
+.endmacro
+
+.macro _M_JSRR_NC_A             addrFrom, addrTo
+                NC_A            _M_JSRR, addrFrom, addrTo
+.endmacro
+
+.macro SL_N     n
+    .if     n > 0
+                asl
+                SL_N    n-1
+    .endif
+.endmacro
+
+.macro SR_N     n
+    .if     n > 0
+                lsr
+                SR_N    n-1
+    .endif
+.endmacro
+
+.macro SKIPNEXT
+    .byte   $22     ; Undocumented 2-byte NOP, 2 cycles, uses 1 byte to skip the next byte
+.endmacro
+
+.macro SKIPNEXT2
+    .byte   $DC     ; Undocumented 3-byte NOP, 4 cycles, reads absolute address IP+1, IP+2, uses 1 byte to skip two bytes
 .endmacro

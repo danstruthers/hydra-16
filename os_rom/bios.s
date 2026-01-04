@@ -1,8 +1,14 @@
 .debuginfo
 
+.zeropage
+ZP_HS_TEMP:
+                .res            2
+ZP_SERIAL_SEND_BUSY:
+                .res            1
+
 .segment "BUFFERS"
 INPUT_BUFFER:
-                .res 256
+                .res            256
 
 .segment "BIOS"
 
@@ -12,20 +18,16 @@ HYDRA_WELCOME: HString "Welcome to the HYDRA-16!"
 SERIAL_INIT:
                 sei
                 lda             #$10 | SR_SELECT    ; 8-N-1
-                sta             ACIA_CTRL
+                sta             ACIA_R_CTRL
 .if ROCKWELL_ACIA = 1
                 lda             #ACIA_CMD_BIT_DTRL | ACIA_CMD_BIT_TLIE  ; No parity, no echo, tx & rx interrupts.
 .else
                 lda             #ACIA_CMD_BIT_DTRL | ACIA_CMD_BIT_TLID  ; No parity, no echo, rx interrupts.
 .endif
-                sta             ACIA_CMD
-.if ROCKWELL_ACIA = 1
+                sta             ACIA_R_CMD
                 stz             ZP_SERIAL_SEND_BUSY
-.else
-                jsr             WRITE_DELAY
-.endif
-                lda             #IRQ_NUMBER_ONBOARD_SERIAL
-                ldx             #<SERIAL_IRQ_HANDLER
+                ldx             #IRQ_NUMBER_ONBOARD_SERIAL
+                lda             #<SERIAL_IRQ_HANDLER
                 ldy             #>SERIAL_IRQ_HANDLER
                 jsr             IRQ_SET_VECTOR
                 cli
@@ -40,24 +42,19 @@ SERIAL_INIT:
 READ_CHAR:
 SERIAL_READ:
                 jsr             BUFFER_SIZE
-                beq             @no_keypressed
+                bne             :+
+                clc
+                rts
+:
                 phx
                 ldx             ZP_READ_PTR
-                lda             INPUT_BUFFER,x
+                lda             INPUT_BUFFER,X
                 inc             ZP_READ_PTR
                 plx
-                ;cmp             #ASCII_ESC           ; do not echo 'ESC'
-                ;beq             @no_echo
                 jsr             WRITE_CHAR           ; echo
-@no_echo:
                 sec
-                bcs             @rc_cleanup
-
-@no_keypressed:
-                clc
-
-@rc_cleanup:
                 rts
+
 
 
 ; Output a character (from the A register) to the serial interface.
@@ -138,27 +135,38 @@ WRITE_HEX:
 
 WRITE_CHAR:
 SERIAL_WRITE:
-.if ROCKWELL_ACIA = 1
                 phx
+.if ROCKWELL_ACIA <> 1
+                phy
+.endif
 WRITE_DELAY:
                 ldx             ZP_SERIAL_SEND_BUSY
                 beq             @do_write
                 wai                                         ; Leave this in, even if RDY has a pull-up
-                bra            WRITE_DELAY
-.endif
+                bra             WRITE_DELAY
 @do_write:
-                IO_PORT_WRITE   ACIA_DATA
-
-.if ROCKWELL_ACIA = 1
-                ldx             #1
-                stx             ZP_SERIAL_SEND_BUSY
-.else
-WRITE_DELAY:
-                phx
-                ldx             #SWT_SELECT
-@txdelay:
-                dex
-                bne             @txdelay
+                IO_PORT_WRITE   ACIA_R_DATA
+                inc             ZP_SERIAL_SEND_BUSY
+.if ROCKWELL_ACIA <> 1
+    .if ACIA_USE_VIA_TIMER = 1
+                pha
+                lda             #SWT_SELECT_L + 1
+    .else
+                ldx             #SWT_SELECT_L + 1
+    .endif
+                ldy             #SWT_SELECT_H + 1
+    .if ACIA_USE_VIA_TIMER = 1
+                jsr             VIA_START_T2
+                pla
+    .else
+:
+                    dex
+                bne             :-
+                dey
+                bne             :-
+                dec             ZP_SERIAL_SEND_BUSY
+    .endif
+                ply
 .endif
                 plx
                 rts
@@ -186,6 +194,24 @@ WRITE_PROMPT:
                 PRINT_BYTE      $1
                 PRINT_CHAR_JMP  #ASCII_GT
 
+; .A, .Y hold the addr of HString to write
+; Clobbers .A, .Y; Preserves .X
+WRITE_HSTRING:
+                phx
+                sta             ZP_HS_TEMP
+                sty             ZP_HS_TEMP + 1
+                lda             (ZP_HS_TEMP)                ; Length of HString
+                tax
+                ldy             0
+@write_loop:
+                iny
+                lda             (ZP_HS_TEMP),Y
+                jsr             WRITE_CHAR
+                dex
+                bne             @write_loop
+                plx
+                rts
+
 ; Initialize the circular input buffer
 ; Modifies: flags, A
 INIT_BUFFER:
@@ -200,9 +226,9 @@ CLEAR_SCR:
 ; Set up the SPI interface registers on the VIA
 SPI_INIT:
                 pha
-                IO_PORT_WRITE   VIA_AUX_CTRL, , 0
-                IO_PORT_WRITE   VIA_INT_ENABLE
-                IO_PORT_WRITE   VIA_PER_CTRL, , $FF
+                IO_PORT_WRITE   VIA_R_AUX_CTRL, , 0
+                IO_PORT_WRITE   VIA_R_INT_ENABLE
+                IO_PORT_WRITE   VIA_R_PER_CTRL, , $FF
                 IO_PORT_WRITE   IOR_SPI_DDR,  , SPI_DDR_BITS
                 IO_PORT_WRITE   IOR_SPI_DATA, , SPI_BIT_CSB   ; de-select all SPI devices
                 pla
@@ -339,7 +365,7 @@ SERIAL_IRQ_HANDLER:
                 lda             #ACIA_STATUS_BIT_TDRE
 .endif
 
-                bit             ACIA_STATUS
+                bit             ACIA_R_STATUS
                 bpl             @int_done 	            ; bit 7 not set, so not ACIA IRQ
 
 .if ROCKWELL_ACIA = 1
@@ -353,7 +379,7 @@ SERIAL_IRQ_HANDLER:
 .endif
 
 @do_recv:
-                IO_PORT_READ    ACIA_DATA
+                IO_PORT_READ    ACIA_R_DATA
                 phx
                 ldx             ZP_WRITE_PTR
                 sta             INPUT_BUFFER, X
@@ -370,8 +396,8 @@ SERIAL_IRQ_HANDLER:
 
 I2C_SCL = $01
 I2C_SDA = $02
-I2C_CTRL_PORT = VIA_PORTA
-I2C_DATA_PORT = VIA_DDRA
+I2C_CTRL_PORT = VIA_R_PORTA
+I2C_DATA_PORT = VIA_R_DDRA
 
 .macro I2C_ON       val
             tay
@@ -501,41 +527,126 @@ I2C_NACK:
             rts
 .endif
 
+VIA_T2_INT_BIT = $20
+VIA_T1_INT_BIT = $40
+VIA_INT_ENABLE = $80
+
+
+VIA_INIT:
+.if ROCKWELL_ACIA <> 1 .AND ACIA_USE_VIA_TIMER = 1
+            pha
+            lda     #0
+            sta     VIA_R_AUX_CTRL
+            pla
+.endif
+            rts
+
+VIA_ENABLE_T1_INT:
+            lda     #VIA_T1_INT_BIT
+            ora     #VIA_INT_ENABLE
+            sta     VIA_R_INT_ENABLE
+            rts
+
+VIA_ENABLE_T2_INT:
+            lda     #VIA_T2_INT_BIT
+            ora     #VIA_INT_ENABLE
+            sta     VIA_R_INT_ENABLE
+            rts
+
+VIA_DISABLE_T1_INT:
+            pha
+            lda     #VIA_T1_INT_BIT
+            sta     VIA_R_INT_ENABLE
+            pla
+            rts
+
+VIA_DISABLE_T2_INT:
+            pha
+            lda     #VIA_T2_INT_BIT
+            sta     VIA_R_INT_ENABLE
+            pla
+            rts
+
+; .A.Y = Timer value
+VIA_START_T2:
+            sta     VIA_R_T2C_L
+            sty     VIA_R_T2C_H
+            jmp     VIA_ENABLE_T2_INT
+
+VIA_STOP_T2:
+            jmp     VIA_DISABLE_T2_INT
+
+; .A = Sub-component interrupt flag to test
+VIA_IS_INT:
+            clc
+            and     VIA_R_INT_FLAGS
+            beq     :+
+            sec
+:
+            rts
+
+; OUT: C = 1 if T2 timer set the IRQ, 0 if not
+VIA_IS_T1_INT:
+            lda     #VIA_T1_INT_BIT
+            bra     VIA_IS_INT
+
+VIA_IS_T2_INT:
+            lda     #VIA_T2_INT_BIT
+            bra     VIA_IS_INT
+
+VIA_CLEAR_T1_INT:       ; READ LOB OF T1 Counter
+            lda     VIA_R_T1C_L
+            rts
+
+VIA_CLEAR_T2_INT:       ; READ LOB OF T2 Counter
+            lda     VIA_R_T2C_L
+            rts
+
 ; ****************************************************************************
 
 IRQ_VECTOR_INIT:
             sei
-            PUSH_AX
-            ldx     #$0F
-            stx     V_REGISTER
-            lda     #<SW_IRQ_HANDLER
-            sta     $FFFE
-            lda     #>SW_IRQ_HANDLER
-            sta     $FFFF
-            dex
+            sec
+            PUSH_AXY
+            ldx     #$F
+            lda     #<SERIAL_IRQ_HANDLER
+            ldy     #>SERIAL_IRQ_HANDLER
 
 @loop:
-            stx     V_REGISTER
-            lda     #<SERIAL_IRQ_HANDLER
-            sta     $FFFE
-            lda     #>SERIAL_IRQ_HANDLER
-            sta     $FFFF
+            jsr     IRQ_SET_VEC1
             dex
             bpl     @loop
-            PULL_XA
+
+            ldx     #IRQ_NUMBER_SW
+            lda     #<SW_IRQ_HANDLER
+            ldy     #>SW_IRQ_HANDLER
+            jsr     IRQ_SET_VEC1
+
+            ldx     #IRQ_NUMBER_ONBOARD_VIA
+            lda     #<VIA_IRQ_HANDLER
+            ldy     #>VIA_IRQ_HANDLER
+            jsr     IRQ_SET_VEC1
+
+            PULL_YXA
+            clc
             cli
             rts
 
-; A: IRQ#, X: L, Y: H
+; X: IRQ#, .A.Y: Vector Addr
 IRQ_SET_VECTOR:
             sei
             pha
             lda     V_REGISTER
             sta     ZP_V_SAVE
             pla
-            sta     V_REGISTER
-            stx     $FFFE
+
+IRQ_SET_VEC1:
+            stx     V_REGISTER
+            sta     $FFFE
             sty     $FFFF
+            bcc     :+
+            rts
+:
             lda     ZP_V_SAVE
             sta     V_REGISTER
             cli
@@ -547,6 +658,29 @@ SW_IRQ_HANDLER:
             lsr
             lsr
             lsr
+            pla
+            rti
+
+VIA_IRQ_HANDLER:
+; check which sub-device is triggering the IRQ
+            pha
+            lda     #VIA_T2_INT_BIT
+            and     VIA_R_INT_FLAGS
+            beq     :+
+            stz     ZP_SERIAL_SEND_BUSY     ; signals serial send buffer is ready for another byte
+            lda     VIA_R_T2C_L             ; clear the interrupt
+            lda     #VIA_T2_INT_BIT         ; disable the T2 interrupt
+            sta     VIA_R_INT_ENABLE
+            bra     :++
+
+:
+            lda     #VIA_T2_INT_BIT
+            and     VIA_R_INT_FLAGS
+            beq     :+
+                                            ; Do whatever T1 timer would do
+            lda     VIA_R_T1C_L             ; clear the interrupt
+
+:
             pla
             rti
 

@@ -12,8 +12,8 @@ SOUND_INIT:
                 bcs         @error
                 inx
                 bne         @write_z
-                lda         #IRQ_NUMBER_ONBOARD_SOUND
-                ldx         #<SOUND_IRQ_HANDLER
+                ldx         #IRQ_NUMBER_ONBOARD_SOUND
+                lda         #<SOUND_IRQ_HANDLER
                 ldy         #>SOUND_IRQ_HANDLER
                 jsr         IRQ_SET_VECTOR
                 clc

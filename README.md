@@ -81,7 +81,13 @@ An unused H/W interrupt could be used by S/W to add another S/W interrupt handle
 | 12 | Card Slot 3 (high) |
 | 13 | Card Slot 4 (high) |
 | 14 | Card Slot 5 (high) |
-| 15 | S/W interrupt (Set Register `V[0..3]` = `$F`, Set `V[4..7]` = S/W Interrupt number)\* |
+| 15 | S/W interrupt (Set Register `V[0..3]` = `IRQ_NUMBER(15)`, Set `V[4..7]` = S/W Interrupt number)\* |
+
+To reference an IRQ, use the `IRQ_NUMBER(num)` macro, i.e.: `lda     #IRQ_NUMBER(0)`
+
+or reference the defines for each IRQ, i.e. `IRQ_NUMBER_ONBOARD_VIA`.
+
+This will ensure that the proper IRQ mapping occurs (see Errata for more information).
 
 \* Call `jsr SW_INT` after loading S/W interrupt number ($0-F) into A
 
