@@ -15,30 +15,47 @@ IO_PORT_BASE    = $FF00
 CLK_CPS         = 3579545   ; ~3.58 MHz
 CLK_CPMS        = (CLK_CPS / 1000) + 1
 
-ROCKWELL_ACIA   = 1
-ACIA_USE_VIA_TIMER = 0
+; ***  ONBOARD SERIAL ADAPTER, 65C51  ***
 
+ROCKWELL_ACIA   = 0
+ACIA_USE_VIA_TIMER = 1
+
+SR_2400         = $0A
+SR_4800         = $0C
+SR_9600         = $0E
 SR_19200        = $0F
 SR_115200       = $00
 
-SR_SELECT       = SR_19200
+SR_SELECT       = SR_115200
 
-.if ROCKWELL_ACIA <> 1
-SWT_INNER_LOOP_CYCLES = 5
-BITS_PER_CHAR = 12          ; 8 + start + stop + 2 for inter-character delay.
-SWT_19200_LOOPS = ((((1000000 / 19200) + 1) * BITS_PER_CHAR) / SWT_INNER_LOOP_CYCLES) + 1   ; number of loop iterations to send one byte at 1MHz
-; SWT_19200       = ((SWT_19200_LOOPS * CLK_CPMS) / 1000) + 1                                 ; number of loop iterations to send one byte at the selected clock speed
-SWT_19200       = 440
-SWT_115200      = (SWT_19200 / 6) + 1
-
-    .if SR_SELECT = SR_19200
-SWT_SELECT_L    = SWT_19200 .MOD 256
-SWT_SELECT_H    = SWT_19200 / 256
-    .else
-SWT_SELECT_L    = SWT_115200 .MOD 256
-SWT_SELECT_H    = SWT_115200 / 256
-    .endif
+.if SR_SELECT = SR_2400
+SERIAL_RATE     = 2400
+.elseif SR_SELECT = SR_4800
+SERIAL_RATE     = 4800
+.elseif SR_SELECT = SR_9600
+SERIAL_RATE     = 9600
+.elseif SR_SELECT = SR_19200
+SERIAL_RATE     = 19200
+.else
+SERIAL_RATE     = 115200
 .endif
+
+.if ROCKWELL_ACIA = 0
+    .if ACIA_USE_VIA_TIMER = 0
+SWT_INNER_LOOP_CYCLES = 5
+BITS_PER_CHAR   = 10          ; 8 + start + stop.
+SWT             = ((((CLK_CPS / SERIAL_RATE) + 1) * BITS_PER_CHAR) / SWT_INNER_LOOP_CYCLES) + 1
+    .else
+BITS_PER_CHAR   = 10          ; 8 + start + stop.
+HWT_OVERHEAD    = 50
+SWT             = (((CLK_CPS / SERIAL_RATE) + 1) * BITS_PER_CHAR) - HWT_OVERHEAD
+    .endif
+
+SWT_SELECT_L    = SWT .MOD 256
+SWT_SELECT_H    = SWT / 256
+.endif
+
+; ***  END OF ONBOARD SERIAL ADAPTER  ***
 
 .struct IO_Port
     Bytes       .byte 16

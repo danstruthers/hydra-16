@@ -7,7 +7,7 @@
 .include "bios.s"
 .include "math.s"
 .include "tasks.s"
-;.include "disasm.s"
+.include "disasm.s"
 .include "wozmon.s"
 .include "mmu.s"
 .include "shell.s"

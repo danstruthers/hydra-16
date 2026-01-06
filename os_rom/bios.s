@@ -3,8 +3,15 @@
 .zeropage
 ZP_HS_TEMP:
                 .res            2
-ZP_SERIAL_SEND_BUSY:
+
+.if ROCKWELL_ACIA = 1 .OR ACIA_USE_VIA_TIMER = 1
+ZP_SER_SEND_STATUS:
                 .res            1
+.endif
+
+SER_SEND_STATUS_READY = 0
+SER_SEND_STATUS_BUSY = 1
+SER_SEND_STATUS_ERROR = $FF
 
 .segment "BUFFERS"
 INPUT_BUFFER:
@@ -25,7 +32,10 @@ SERIAL_INIT:
                 lda             #ACIA_CMD_BIT_DTRL | ACIA_CMD_BIT_TLID  ; No parity, no echo, rx interrupts.
 .endif
                 sta             ACIA_R_CMD
-                stz             ZP_SERIAL_SEND_BUSY
+.if ROCKWELL_ACIA = 1 .OR ACIA_USE_VIA_TIMER = 1
+                lda             #SER_SEND_STATUS_READY
+                sta             ZP_SER_SEND_STATUS
+.endif
                 ldx             #IRQ_NUMBER_ONBOARD_SERIAL
                 lda             #<SERIAL_IRQ_HANDLER
                 ldy             #>SERIAL_IRQ_HANDLER
@@ -136,38 +146,44 @@ WRITE_HEX:
 WRITE_CHAR:
 SERIAL_WRITE:
                 phx
-.if ROCKWELL_ACIA <> 1
+.if ROCKWELL_ACIA = 0
                 phy
 .endif
 WRITE_DELAY:
-                ldx             ZP_SERIAL_SEND_BUSY
+.if ROCKWELL_ACIA = 1 .OR ACIA_USE_VIA_TIMER = 1
+                ldx             ZP_SER_SEND_STATUS
+                cpx             #SER_SEND_STATUS_READY
                 beq             @do_write
                 wai                                         ; Leave this in, even if RDY has a pull-up
                 bra             WRITE_DELAY
 @do_write:
+.endif
                 IO_PORT_WRITE   ACIA_R_DATA
-                inc             ZP_SERIAL_SEND_BUSY
-.if ROCKWELL_ACIA <> 1
+
+.if ROCKWELL_ACIA = 1 .OR ACIA_USE_VIA_TIMER = 1
+                ldx             #SER_SEND_STATUS_BUSY
+                stx             ZP_SER_SEND_STATUS
+.endif
+
+.if ROCKWELL_ACIA = 0
     .if ACIA_USE_VIA_TIMER = 1
                 pha
-                lda             #SWT_SELECT_L + 1
-    .else
-                ldx             #SWT_SELECT_L + 1
-    .endif
-                ldy             #SWT_SELECT_H + 1
-    .if ACIA_USE_VIA_TIMER = 1
+                lda             #SWT_SELECT_L
+                ldy             #SWT_SELECT_H
                 jsr             VIA_START_T2
                 pla
     .else
+                ldx             #SWT_SELECT_L + 1
+                ldy             #SWT_SELECT_H + 1
 :
-                    dex
+                dex
                 bne             :-
                 dey
                 bne             :-
-                dec             ZP_SERIAL_SEND_BUSY
     .endif
                 ply
 .endif
+
                 plx
                 rts
 
@@ -370,7 +386,8 @@ SERIAL_IRQ_HANDLER:
 
 .if ROCKWELL_ACIA = 1
                 beq             @do_recv                ; if not Tx, then must be Rx
-                stz             ZP_SERIAL_SEND_BUSY
+                lda             #SER_SEND_STATUS_READY
+                sta             ZP_SER_SEND_STATUS
 
 @check_recv:
                 lda             #ACIA_STATUS_BIT_RDRF   ; is read register full?
@@ -667,7 +684,10 @@ VIA_IRQ_HANDLER:
             lda     #VIA_T2_INT_BIT
             and     VIA_R_INT_FLAGS
             beq     :+
-            stz     ZP_SERIAL_SEND_BUSY     ; signals serial send buffer is ready for another byte
+.if ROCKWELL_ACIA = 1 .OR ACIA_USE_VIA_TIMER = 1
+            lda     #SER_SEND_STATUS_READY
+            sta     ZP_SER_SEND_STATUS     ; signals serial send buffer is ready for another byte
+.endif
             lda     VIA_R_T2C_L             ; clear the interrupt
             lda     #VIA_T2_INT_BIT         ; disable the T2 interrupt
             sta     VIA_R_INT_ENABLE

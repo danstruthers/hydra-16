@@ -3,16 +3,14 @@
 ;
 .debuginfo
 .zeropage
-ZP_XAM:
-    .res 2
 ZP_WM_ST:
     .res 2      ; STore address
 ZP_WM_HVP:
     .res 2      ; Hex Value Parsing
 ZP_WM_MODE:
     .res 1      ; $00=ZP_XAM, $7F=STOR, $AE=BLOCK ZP_XAM
-;ZP_WM_DASTATE:
-;    .res 1
+ZP_WM_DASTATE:
+    .res 1
 
 .segment "BUFFERS"
 IN:
@@ -24,7 +22,7 @@ IN:
 MON_START:
                 cld                             ; Clear decimal arithmetic mode.
                 cli                             ; Enable interrupts
-;                stz             ZP_WM_DASTATE
+                stz             ZP_WM_DASTATE
                 bra             @is_start
 
 @not_cr:
@@ -79,8 +77,8 @@ MON_START:
                 beq             @set_block      ; Set BLOCK ZP_XAM mode.
                 cmp             #ASCII_COLON
                 beq             @set_store      ; Yes, set STOR mode.
-                ;cmp             #ASCII_L
-                ;beq             @disassemble    ; Disassemble 1 or more instructions at current address/range
+                cmp             #ASCII_L
+                beq             @disassemble    ; Disassemble 1 or more instructions at current address/range
                 cmp             #ASCII_R
                 beq             @run_prog       ; Yes, run user program
                 cmp             #ASCII_T        ; T, U, V, or W registers?
@@ -143,9 +141,9 @@ MON_START:
 @run_prog:
                 _M_JSRR         ZP_XAM, MON_START
 
-;@disassemble:
-;                lda             #1
-;                sta             ZP_WM_DASTATE
+@disassemble:
+                lda             #1
+                sta             ZP_WM_DASTATE
 
 @not_store:
                 bmi             @examine_next   ; B7 = 0 for ZP_XAM, 1 for BLOCK ZP_XAM.
@@ -166,12 +164,12 @@ MON_START:
                 PRINT_CHAR      #ASCII_COLON    ; Print a ':'.
 
 @print_data:
-;                lda             ZP_WM_DASTATE
-;                beq             @print_bytes
-;                jsr             DISASM
-;                bra             @examine_next
+                lda             ZP_WM_DASTATE
+                beq             @print_bytes
+                jsr             DISASM
+                bra             @examine_next
 
-;@print_bytes:
+@print_bytes:
                 PRINT_CHAR      #ASCII_SPACE    ; Print a ' '.
                 PRINT_BYTE      {(ZP_XAM,x)}    ; Print the byte at 'examine index'.
 
