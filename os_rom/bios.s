@@ -399,7 +399,7 @@ SERIAL_IRQ_HANDLER:
                 IO_PORT_READ    ACIA_R_DATA
                 phx
                 ldx             ZP_WRITE_PTR
-                sta             INPUT_BUFFER, X
+                sta             INPUT_BUFFER,X
                 inc             ZP_WRITE_PTR
                 plx
 

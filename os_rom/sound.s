@@ -26,7 +26,7 @@ SOUND_INIT:
 
 SOUND_IRQ_HANDLER:
                 ; check which 
-                rts
+                rti
 
 YMN0L = $A0
 YMN0H = YMN0L + 1

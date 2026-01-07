@@ -17,8 +17,8 @@ CLK_CPMS        = (CLK_CPS / 1000) + 1
 
 ; ***  ONBOARD SERIAL ADAPTER, 65C51  ***
 
-ROCKWELL_ACIA   = 0
-ACIA_USE_VIA_TIMER = 1
+ROCKWELL_ACIA   = 1
+ACIA_USE_VIA_TIMER = 0
 
 SR_2400         = $0A
 SR_4800         = $0C
@@ -26,7 +26,7 @@ SR_9600         = $0E
 SR_19200        = $0F
 SR_115200       = $00
 
-SR_SELECT       = SR_115200
+SR_SELECT       = SR_19200
 
 .if SR_SELECT = SR_2400
 SERIAL_RATE     = 2400

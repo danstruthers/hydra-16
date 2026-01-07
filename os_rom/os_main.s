@@ -19,10 +19,10 @@ RESET_VECTOR_START:
             jsr                 TASKS_INIT                          ; Must be called before SERIAL_INIT and MMU_INIT
             ;jsr                 MMU_INIT
             jsr                 VIA_INIT
-            jsr                 SERIAL_INIT
             ;jsr                 SPI_INIT
-            ;jsr                 SPI_TEST
             jsr                 SOUND_INIT
+            jsr                 SERIAL_INIT
+            ;jsr                 SPI_TEST
             ;jsr                 SOUND_TEST
             jsr                 DO_WELCOME
             jmp                 SHELL_MAIN
