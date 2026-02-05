@@ -10369,7 +10369,7 @@
 		)
 		(uuid "2036a121-7521-449f-be0a-3e0ba1ba1363")
 	)
-	(label "Q17"
+	(label "Q15"
 		(at 114.3 163.83 0)
 		(effects
 			(font
@@ -10689,7 +10689,7 @@
 		)
 		(uuid "97e607cf-6f8a-4972-982a-0746653a8354")
 	)
-	(label "Q9"
+	(label "Q6"
 		(at 114.3 162.56 0)
 		(effects
 			(font
@@ -10749,7 +10749,7 @@
 		)
 		(uuid "b096376b-4e60-4a58-8b57-85095205c81c")
 	)
-	(label "Q15"
+	(label "Q17"
 		(at 182.88 143.51 0)
 		(effects
 			(font
@@ -10929,7 +10929,7 @@
 		)
 		(uuid "f228bd38-d0e4-4d9e-a868-bc29a956409a")
 	)
-	(label "Q6"
+	(label "Q9"
 		(at 148.59 166.37 0)
 		(effects
 			(font

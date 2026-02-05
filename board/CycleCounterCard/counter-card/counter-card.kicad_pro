@@ -511,7 +511,7 @@
       "netlist": "",
       "plot": "Gerber/",
       "pos_files": "",
-      "specctra_dsn": "counter-card.dsn",
+      "specctra_dsn": "counter-card-4layer.dsn",
       "step": "",
       "svg": "",
       "vrml": ""

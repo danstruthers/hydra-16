@@ -12998,7 +12998,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "f3765bb2-7113-4232-afd0-38d33e0507d7")
-		(property "Reference" "J7"
+		(property "Reference" "IOPortSel"
 			(at 36.83 175.2599 0)
 			(effects
 				(font
@@ -13055,7 +13055,7 @@
 		(instances
 			(project ""
 				(path "/57d288fb-0573-473e-905d-e34f81a4c3e2"
-					(reference "J7")
+					(reference "IOPortSel")
 					(unit 1)
 				)
 			)
