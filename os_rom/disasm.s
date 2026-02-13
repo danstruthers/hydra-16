@@ -1,6 +1,8 @@
 .zeropage
 ZP_D_ICOUNT:
     .res        1
+ZP_D_INST:
+    .res        1
 ZP_D_MODE:
     .res        1
 ZP_XAM:
@@ -109,25 +111,36 @@ OPCODES: .byte $00
 ;   x11x = Indexed by Y
 ;1xxx = Indirect (xxx != 000 and xxx != 1x0)
 
-; ACC = 0                       %0000
-; IMM = 1   #$ii                %0001
-; ABS = 2   $aaaa               %0010
-; ZP  = 3   $zz                 %0011
-; ABSX = 4  $aaaa,X             %0100
-; ZPX = 5   $zz,X               %0101
-; ABSY = 6  $aaaa,Y             %0110
-; ZPY = 7   $zz,Y               %0111
-; IMP = 8                       %1000
-; REL = 9   $rr[$aaaa]          %1001
-; IND = A   ($aaaa)             %1010
-; ZPIND = B ($zz)               %1011
-; ZPREL = C n,$zz,$rr[$aaaa]    %1100   (where n = OPCODE>>4)
-; ZPIX = D  ($zz,X)             %1101
-; ZP2 = E   n,$zz               %1110   (where n = OPCODE>>4)
-; ZPIY = F  ($zz),Y             %1111
-ADDRESS_MODES: .byte $00
+AM_ACC = 0     ;                     %0000
+AM_REL = 1     ; $rr[$aaaa]          %0001
+AM_ZPREL = 2   ; $zz,$rr[$aaaa]      %0010
+AM_ZP  = 3     ; $zz                 %0011
+AM_ABSX = 4    ; $aaaa,X             %0100
+AM_ZPX = 5     ; $zz,X               %0101
+AM_ABSY = 6    ; $aaaa,Y             %0110
+AM_ZPY = 7     ; $zz,Y               %0111
+AM_IMP = 8     ;                     %1000
+AM_IMM = 9     ; #$ii                %1001
+AM_IND = $A    ; ($aaaa)             %1010
+AM_ZPIND = $B  ; ($zz)               %1011
+AM_ZPIX = $D   ; ($zz,X)             %1101
+AM_ZPIY = $F   ; ($zz),Y             %1111
 
-MNEMONIC_STR: .byte "BRADCLCLDECLINCMPHPHASLSRTSMBNEORANDEYBBROROLDABBSBCLVBCSECPXBCCPYBITRBPLPLABVSEDEXSTAXSTXSTYARMBMINYTSBEQJSRTINXJMPHXNOPHYBRKBVCLDXLDYSTPLXPLYSEISTZTAYTSXTXAWAI"
+; x000: one byte
+; xxx1: two byte
+; xxx0 (!x000): three byte
+; x10x == ,X
+; x11x == ,Y
+.define _AM_(this,that) this+that*16
+
+ADDRESS_MODES:
+    .byte _AM_(AM_ACC, AM_ACC)
+
+ZZ_MNEM:
+    .byte "BRKBPLJSRBMIRTIBVCRTSBVSBRABCCLDYBCSCPYBNECPXBEQPHPCLCPLPSECPHACLIPLASEIDEYTYATAYCLVINYCLDINXSED"
+
+MNEMONIC_STR:
+    .byte "BRADCLCLDECLINCMPHPHASLSRTSMBNEORANDEYBBROROLDABBSBCLVBCSECPXBCCPYBITRBPLPLABVSEDEXSTAXSTXSTYARMBMINYTSBEQJSRTINXJMPHXNOPHYBRKBVCLDXLDYSTPLXPLYSEISTZTAYTSXTXAWAI"
 
 ; ZP_XAM, ZP_XAM+1: Address to Disassemble
 ; .A.Y: Address at which to start disassembly
@@ -153,8 +166,47 @@ DISASM1:
 NEXT_INST:
     lda         (ZP_XAM),Y
                                     ; do the disasm magic here
-
+    sta         ZP_D_INST
+    and         #7
+    bne         ZZ_DEC
+    cmp         #7
+    beq         BIT_DEC
+    cmp         #3
+    beq         NOP_DEC
                                     ; decrement I count and go on to next inst if necessary
+
+ZZ_DEC:
+BIT_DEC:
+    bbs7        ZP_D_INST, @is_bb
+    sec
+    bra         @cont_bit
+
+@is_bb:
+    lda         #ASCII_B
+    jsr         WRITE_CHAR
+    jsr         WRITE_CHAR
+
+@cont_bit:
+    lda         #ASCII_R
+    bbs0        ZP_D_INST, :+
+    inc
+
+:
+    jsr         WRITE_BYTE
+    bbs7        ZP_D_INST, @bit_num
+    lda         #ASCII_M
+    jsr         WRITE_CHAR
+    lda         #ASCII_B
+    jsr         WRITE_CHAR
+
+@bit_num:
+    lda         ZP_D_INST
+    lsr
+    lsr
+    lsr
+    lsr
+    and         #7
+
     iny
     bne         DISASMDECX          ; Y overflow?
     inc         ZP_XAM              ; increment LOB of addr
@@ -164,6 +216,15 @@ NEXT_INST:
 DISASMDECX:
     dec         ZP_D_ICOUNT
     bne         NEXT_INST
+    tya
+    adc         ZP_XAM
+    sta         ZP_XAM
+    bcc         :+
+    inc         ZP_XAM + 1
+:
+    rts
+
+NOP_DEC:
     rts
 
 ;IMM:

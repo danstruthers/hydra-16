@@ -4,20 +4,19 @@
 ZP_HS_TEMP:
                 .res            2
 
-.if ROCKWELL_ACIA = 1 .OR ACIA_USE_VIA_TIMER = 1
-ZP_SER_SEND_STATUS:
-                .res            1
-.endif
-
 SER_SEND_STATUS_READY = 0
-SER_SEND_STATUS_BUSY = 1
+SER_SEND_STATUS_BUSY  = 1
 SER_SEND_STATUS_ERROR = $FF
 
 .segment "BUFFERS"
 INPUT_BUFFER:
-                .res            256
+                .res            $100
 
 .segment "BIOS"
+TH_READCHAR:
+                jmp             READ_CHAR
+TH_WRITECHAR:
+                jmp             WRITE_CHAR
 
 HEX_MAP: .byte "0123456789ABCDEF"
 HYDRA_WELCOME: HString "Welcome to the HYDRA-16!"
@@ -65,61 +64,46 @@ SERIAL_READ:
                 sec
                 rts
 
-
-
-; Output a character (from the A register) to the serial interface.
-;
-; Modifies: flags
-; TODO: select appropriate output stream for the given task
+; Write decimal value of .A to output
 WRITE_DEC:
-                phx
-                ldx             #0
                 cmp             #0
-                bcs             @do_hund
+                bpl             WRITE_DEC_U
                 pha
                 PRINT_CHAR      #ASCII_MINUS
                 pla
-                cmp             #80                         ; special case for -128
-                beq             @is_max
+                cmp             #$80                        ; special case for -128
+                bne             :+
+                PRINT_CHAR      #ASCII_1
+                lda             #$28
+                jmp             WRITE_BYTE
+:
                 jsr             NEGATE
 
-@do_hund:
-                cmp             #100
-                bcc             @do_tens
-                pha
-                PRINT_CHAR      #ASCII_1                    ; must be 100-127
-                pla
-                sec
-                sbc             #100
-                cmp             #10                         ; special case for 100-109..need to print the 0 in tens
-                bcc             @out_tens
-
-@do_tens:
-                cmp             #10
-                bcc             @do_ones
-
-@gt_ten:
-                inx
-                cmp             #10
-                bcc             @out_tens
-                sbc             #10
-                bpl             @gt_ten
-
-@out_tens:
+WRITE_DEC_U:
+                jsr             MOD_10
+                cpx             #0
+                beq             :++++
+                phy
+                tay
+                txa
+                jsr             MOD_10
+                cpx             #0
+                bne             :+
+                cmp             #0
+                bne             :++
+                bra             :+++
+:
                 pha
                 txa
-                adc             #ASCII_0
-                jsr             WRITE_CHAR
+                jsr             WRITE_HEX
                 pla
-
-@do_ones:
-                plx
+:
+                jsr             WRITE_HEX
+:
+                tya
+                ply
+:
                 jmp             WRITE_HEX
-
-@is_max:
-                PRINT_CHAR      #ASCII_1
-                lda             #28
-                bpl             @do_tens
 
 WRITE_BYTE_MIN:
                 cmp             #$10
@@ -133,6 +117,7 @@ WRITE_BYTE:
                 lsr                                         ; MSD to LSD position.
                 jsr             WRITE_HEX                   ; Output hex digit.
                 pla                                         ; Restore A.
+
 WRITE_HEX_MASK:
                 and             #$0F                        ; Mask LSD for hex print.
 
@@ -140,12 +125,16 @@ WRITE_HEX:
                 phx
                 tax
                 lda             HEX_MAP,x
-                plx
-                ; Then fall through to WRITE_CHAR below.
+                SKIPNEXT
 
+; Output a character (from the A register) to the serial interface.
+;
+; Modifies: flags
+; TODO: select appropriate output stream for the given task
 WRITE_CHAR:
 SERIAL_WRITE:
                 phx
+
 .if ROCKWELL_ACIA = 0
                 phy
 .endif
@@ -153,10 +142,10 @@ WRITE_DELAY:
 .if ROCKWELL_ACIA = 1 .OR ACIA_USE_VIA_TIMER = 1
                 ldx             ZP_SER_SEND_STATUS
                 cpx             #SER_SEND_STATUS_READY
-                beq             @do_write
+                beq             :+
                 wai                                         ; Leave this in, even if RDY has a pull-up
                 bra             WRITE_DELAY
-@do_write:
+:
 .endif
                 IO_PORT_WRITE   ACIA_R_DATA
 
@@ -196,7 +185,7 @@ WRITE_PROMPT:
                 PRINT_CRLF
                 PRINT_CHAR      #ASCII_T
                 PRINT_HEX_MASK  $FFF0
-                PRINT_CHAR      #ASCII_SPACE
+                PRINT_SPACE
                 PRINT_BYTE      $0
                 lda             $0
                 cmp             #$F0

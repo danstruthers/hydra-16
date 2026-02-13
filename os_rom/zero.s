@@ -12,10 +12,12 @@ TASK_PARENT:
     .res 1
 TASK_SAVE_REG:
     .res 1
-    .res $10
+    .res 10
 ZP_READ_PTR:
     .res 1
 ZP_WRITE_PTR:
+    .res 1
+ZP_SER_SEND_STATUS:
     .res 1
 ZP_TEMP:
     .res 1

@@ -43,7 +43,7 @@ DO_WELCOME:
             PRINT_CHAR          #ASCII_COLON
             PRINT_BYTE          $FFFF
             PRINT_BYTE          $FFFE
-            PRINT_CHAR          #ASCII_SPACE
+            PRINT_SPACE
             plx
             inx
             cpx                 #$10

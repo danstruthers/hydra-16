@@ -26,7 +26,7 @@ SR_9600         = $0E
 SR_19200        = $0F
 SR_115200       = $00
 
-SR_SELECT       = SR_19200
+SR_SELECT       = SR_115200
 
 .if SR_SELECT = SR_2400
 SERIAL_RATE     = 2400
@@ -260,7 +260,16 @@ ASCII_EQ        = '='
 ASCII_GT        = '>'
 ASCII_QUESTION  = '?'
 ASCII_A         = 'A'
+ASCII_B         = 'B'
+ASCII_C         = 'C'
+ASCII_D         = 'D'
+ASCII_E         = 'E'
+ASCII_F         = 'F'
+ASCII_G         = 'G'
+ASCII_H         = 'H'
+ASCII_I         = 'I'
 ASCII_J         = 'J'
+ASCII_K         = 'K'
 ASCII_L         = 'L'
 ASCII_M         = 'M'
 ASCII_N         = 'N'
@@ -625,6 +634,10 @@ ASCII_LETTER_OFFSET = ASCII_A-ASCII_0-10
     .endif
 .endif
                 PRINT_CHAR_JMP  C2, C3, C4, C5, C6, C7, C8, C9
+.endmacro
+
+.macro  PRINT_SPACE
+                PRINT_CHAR      #ASCII_SPACE
 .endmacro
 
 .macro  PRINT_ESC_SEQ   C1, C2, C3, C4, C5, C6, C7, C8

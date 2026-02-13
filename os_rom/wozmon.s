@@ -14,10 +14,9 @@ ZP_WM_DASTATE:
 
 .segment "BUFFERS"
 IN:
-                .res 256
+                .res            $100
 
 .segment "WOZMON"
-
 ; WOZMON Entrypoint
 MON_START:
                 cld                             ; Clear decimal arithmetic mode.
@@ -170,7 +169,7 @@ MON_START:
                 bra             @examine_next
 
 @print_bytes:
-                PRINT_CHAR      #ASCII_SPACE    ; Print a ' '.
+                PRINT_SPACE                     ; Print a ' '.
                 PRINT_BYTE      {(ZP_XAM,x)}    ; Print the byte at 'examine index'.
 
 @examine_next:

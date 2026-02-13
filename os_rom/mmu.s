@@ -4,12 +4,22 @@
 ZP_M_BI_START:
             .res        2
 ZP_M_SP1:
-            .res        2
+ZP_M_SP1_L:
+            .res        1
+ZP_M_SP1_H:
+            .res        1
 ZP_M_SP2:
-            .res        2
+ZP_M_SP2_L:
+            .res        1
+ZP_M_SP2_H:
+            .res        1
 ZP_M_SZ1:
             .res        1
 ZP_M_TEMP:
+            .res        1
+ZP_M_TEMP2:
+            .res        1
+ZP_M_SV:
             .res        1
 
 .segment "MMU"
@@ -303,8 +313,10 @@ TEST_PAGE_RANGE:
 
 @loop:
             lda         (ZP_TEMP_VEC),Y                     ; save what is in memory (non-descructive)
-            sta         ZP_M_TEMP
-            lda         #$EA
+            sta         ZP_M_SV
+            lda         #$AA
+@test_it:
+            eor         #$FF
             sta         (ZP_TEMP_VEC),Y
             cmp         (ZP_TEMP_VEC),Y
             beq         @next
@@ -312,7 +324,9 @@ TEST_PAGE_RANGE:
             bra         @write                              ; always, no need to restore value since it isn't storing properly anyway
 
 @next:
-            lda         ZP_M_TEMP                           ; restore saved value
+            cmp         #$AA
+            bne         @test_it
+            lda         ZP_M_SV                             ; restore saved value
             sta         (ZP_TEMP_VEC),Y
             iny
             bne         @loop
@@ -325,3 +339,76 @@ TEST_PAGE_RANGE:
             cpx         ZP_TEMP_VEC + 1
             bne         @loop_init
             PRINT_CRLF_JMP
+
+; test memory pages, start page in .A, end page in .X
+DEEP_PAGE_TEST_RANGE_AX:
+            stx         ZP_M_SP2_H
+            sta         ZP_M_SP1_H
+            bra         DEEP_PAGE_TEST_RANGE
+
+; test a single page in .A
+DEEP_PAGE_TEST_A:
+            sta         ZP_M_SP1_H
+
+; test a single page in ZP_M_SP1_H
+DEEP_PAGE_TEST:
+            lda         ZP_M_SP1_H
+            sta         ZP_M_SP2_H
+
+; test a range of pages, start in ZP_M_SP1_H, end in ZP_M_SP2_H
+DEEP_PAGE_TEST_RANGE:
+            PUSH_XY
+            stz         ZP_M_SP1_L
+@next_page:
+            lda         ZP_M_SP1_H
+            PRINT_BYTE
+            PRINT_BYTE  #0
+            PRINT_CHAR  #ASCII_COLON
+            PRINT_CRLF
+            ldy         #0
+            ldx         #0
+@next_cell:
+            stz         ZP_M_TEMP
+            lda         (ZP_M_SP1),Y
+            sta         ZP_M_SV                             ; save the old value
+            lda         #1
+            sta         ZP_M_TEMP2
+@loop_start:
+            lda         ZP_M_TEMP2
+            sta         (ZP_M_SP1),Y                     ; store it
+            cmp         (ZP_M_SP1),Y                     ; test it
+            bne         :+
+            eor         #$FF                                ; test the inverse
+            sta         (ZP_M_SP1),Y                     ; store it
+            cmp         (ZP_M_SP1),Y                     ; test it
+            beq         @shift
+:
+            lda         ZP_M_TEMP2
+            ora         ZP_M_TEMP                           ; add bit to set of bad bits found
+            sta         ZP_M_TEMP
+@shift:
+            asl         ZP_M_TEMP2                          ; Walk the bit forward
+            bne         @loop_start
+            lda         ZP_M_TEMP                           ; get the set of bad bits we found
+            PRINT_BYTE
+            inx
+            cpx         #$10
+            beq         :+
+            PRINT_SPACE
+            bra         :++
+:
+            PRINT_CRLF
+            ldx         #0
+:
+            lda         ZP_M_SV
+            sta         (ZP_M_SP1),Y                     ; restore the old value
+            iny
+            bne         @next_cell
+            lda         ZP_M_SP1_H
+            cmp         ZP_M_SP2_H
+            beq         @done
+            inc         ZP_M_SP1_H
+            jmp         @next_page
+@done:
+            PULL_YX
+            rts

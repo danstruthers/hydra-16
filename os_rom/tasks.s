@@ -3,24 +3,24 @@
 
 TASK_0_VECTOR           = $E000
 
-TASK_BUSY_FLAG          = $01
-TASK_PAUSED_FLAG        = $02
+TASK_BUSY_FLAG          = 1
+TASK_PAUSED_FLAG        = 2
 
 ; TASK STATUS REGISTER BITS
 ;   0: 0 = Available, 1 = In Use
 
 .macro SELECT_TASK      task
-                lda     T_REGISTER
-                and     #$F0
-                ora     task & $0F
-                sta     T_REGISTER
+            lda     T_REGISTER
+            and     #$F0
+            ora     task & $0F
+            sta     T_REGISTER
 .endmacro
 
 .macro SELECT_SHARED_BANK bank
-                lda     T_REGISTER
-                and     #$0F
-                ora     bank << 4
-                sta     T_REGISTER
+            lda     T_REGISTER
+            and     #$0F
+            ora     bank << 4
+            sta     T_REGISTER
 .endmacro
 
 ; Initialize the tasks, their stacks, etc.
@@ -54,10 +54,19 @@ TASKS_INIT:
 ;  Task switch
 ;  Task# to switch to in A
 SWITCH_TO:
+            sta     ZP_A_SAVE
             pla                                     ; need to change return addr from RTS style (IP - 1) to RTI style (IP)
             inc
+            bne     :+                              ; page boundary?
+            stx     ZP_X_SAVE
+            plx
+            inx
+            phx
+            ldx     ZP_X_SAVE
+:
             pha
             php
+            lda     ZP_A_SAVE
 
 SWITCH_TO_NO_PHP:
             PUSH_AXY
@@ -71,7 +80,7 @@ SWITCH_TO_NSS:
             PULL_YXA
             rti
 
-; Find a task that is idle and start it executing at the address in ZP_TEMP_VEC_L && ZP_TEMP_VEC_H
+; Find a task that is idle and start it executing at the address in ZP_TEMP_VEC && ZP_TEMP_VEC + 1
 ; Return task # in A and C == 1
 ;   OR error in A and C == 0 (if no task available)
 TASK_START:
@@ -118,20 +127,17 @@ RESERVE_TASK:
             PUSH_XY
 
 ; !! NO STACK MANIPULATIONS UNTIL SWITCHING BACK TO ORIGINAL TASK !!
-            lda     #0
             ldy     T_REGISTER
-            lda     #TASK_BUSY_FLAG
             ldx     #$F                             ; Start search with Task $F
 
 @task_busy:
-            stx     T_REGISTER                      ; Quick task switch to task X
-            bit     TASK_STATUS_REG                 ; Is Bit 1 set?
-            bne     @task_found
-            dex                                     ; Not found, so DEC X
-            bne     @task_busy                      ; Until X is zero, loop
+            stx     T_REGISTER                      ; Quick task switch to task in .X
+            bbr0    TASK_STATUS_REG, @task_found    ; Is Bit 0 (TASK_BUSY_FLAG) reset/clear?
+            dex                                     ; Not found, so DEC .X
+            bne     @task_busy                      ; Until .X is zero, loop
             clc                                     ; Not found
-            dex                                     ; X == $FF
-            bcc     @cleanup
+            dex                                     ; .X == $FF
+            bra     @cleanup
 
 @task_found:
             lda     #TASK_BUSY_FLAG|TASK_PAUSED_FLAG
@@ -150,23 +156,19 @@ RESERVE_TASK:
 ; Find the next task that is paused
 ; Return task # to switch to in A.  C == 0, none found; C == 1, found
 NEXT_TASK:
-            PUSH_AX
+            PUSH_AXY
             lda     T_REGISTER
-            sta     ZP_X_SAVE
-            and     #$0F                            ; mask off the shared memory "bank of banks"
-            sta     ZP_A_SAVE
-            tax
+            and     #$0F
+            tay
 
 @test_next:
-            inx
-            txa
-            and     #$0F                            ; masking again since we could have carried
-            cmp     ZP_A_SAVE                       ; are we back where we started?
+            inc
+            and     #$0F                            ; masking since we could have carried
+            sta     ZP_TEMP
+            cpy     ZP_TEMP                         ; are we back where we started?
             beq     @not_found
             sta     T_REGISTER                      ; switch to the next task
-            lda     #TASK_PAUSED_FLAG
-            and     TASK_STATUS_REG                 ; is this task paused?
-            beq     @test_next                      ; no? try the next one
+            bbr1    TASK_STATUS_REG, @test_next     ; Is bit 1 clear (TASK_PAUSED_FLAG)? if so, try next task
             sec
             bcs     @done
 
@@ -174,13 +176,14 @@ NEXT_TASK:
             clc
 
 @done:
-            ldx     ZP_X_SAVE                       ; switch back to the original task
-            stx     T_REGISTER
-            PULL_XA
+            sty     T_REGISTER
+            PULL_YXA
             rts
 
 ; Non-maskable interrupt handler (same as maskable interrupt handler for now)
 NMI_HANDLER:
+            rti
+
             pha
             lda     #ASCII_STAR
             jsr     WRITE_CHAR
@@ -191,4 +194,3 @@ NMI_HANDLER:
 
 @switch:
             jmp     SWITCH_TO_NO_PHP
-            
