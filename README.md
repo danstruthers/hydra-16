@@ -26,7 +26,8 @@ The code is built with the **cc65** suite (https://cc65.github.io/).  The board 
 | :---- | :--- | :---------- |
 | $E000 | $FFFF | BIOS/OS ROM paged area (indexed by the W register; see below) |
 | $E000 | $E009 | RESET Vector entry point. Code saves `W` register to `ZP_W_SAVE` and then resets W to zero. This is replicated at the beginning of each BIOS page so that arbitrary W register values at startup/RESET result in the correct entry point being executed. |
-| $E00A | $FEFF | Effective BIOS paged area.  Compiler segments (pages) `BIOS_P1 - BIOS_PF` are available for BIOS implementers to add more BIOS calls, corresponding to `W` register values of `$01 - $0F`, respectively. |
+| $E00A | $FDFF | Effective BIOS paged area.  Compiler segments (pages) `BIOS_P1 - BIOS_PF` are available for BIOS implementers to add more BIOS calls, corresponding to `W` register values of `$01 - $0F`, respectively. |
+| $FE00 | $FEFF | "WOZMON" monitor page
 
 #### **I/O Ports**
 
