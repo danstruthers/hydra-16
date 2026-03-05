@@ -625,28 +625,36 @@ F_RETURN_SIZE   := 24 * F_CELL
 .endif
 .endmacro
 
-.macro  PRINT_CHAR      C1, C2, C3, C4, C5, C6, C7, C8, C9
+.macro META_CALL       call, C1, C2, C3, C4, C5, C6, C7, C8, C9
     .ifblank C2
                 LDA_CORA        {C1}
-                jsr             WRITE_CHAR
+                jsr             call
                 .exitmacro
     .else
                 lda             C1
-                jsr             WRITE_CHAR
+                jsr             call
     .endif
-                PRINT_CHAR      C2, C3, C4, C5, C6, C7, C8, C9
+                META_CALL      {call}, {C2}, {C3}, {C4}, {C5}, {C6}, {C7}, {C8}, {C9}
+.endmacro
+
+.macro META_JMP    call, C1, C2, C3, C4, C5, C6, C7, C8, C9
+    .ifblank C2
+                LDA_CORA        {C1}
+                jmp             call
+                .exitmacro
+    .else
+                lda             C1
+                jsr             call
+    .endif
+                META_JMP {call}, {C2}, {C3}, {C4}, {C5}, {C6}, {C7}, {C8}, {C9}
+.endmacro
+
+.macro  PRINT_CHAR      C1, C2, C3, C4, C5, C6, C7, C8, C9
+                META_CALL       WRITE_CHAR, {C1}, {C2}, {C3}, {C4}, {C5}, {C6}, {C7}, {C8}, {C9}
 .endmacro
 
 .macro  PRINT_CHAR_JMP  C1, C2, C3, C4, C5, C6, C7, C8, C9
-    .ifblank    C2
-                LDA_CORA        {C1}
-                jmp             WRITE_CHAR
-                .exitmacro
-    .else
-                lda             C1
-                jsr             WRITE_CHAR
-    .endif
-                PRINT_CHAR_JMP  C2, C3, C4, C5, C6, C7, C8, C9
+                META_JMP        WRITE_CHAR, {C1}, {C2}, {C3}, {C4}, {C5}, {C6}, {C7}, {C8}, {C9}
 .endmacro
 
 .macro  PRINT_SPACE
@@ -654,45 +662,31 @@ F_RETURN_SIZE   := 24 * F_CELL
 .endmacro
 
 .macro  PRINT_ESC_SEQ   C1, C2, C3, C4, C5, C6, C7, C8
-                PRINT_CHAR      #ASCII_ESC, C1, C2, C3, C4, C5, C6, C7, C8
+                PRINT_CHAR      #ASCII_ESC, {C1}, {C2}, {C3}, {C4}, {C5}, {C6}, {C7}, {C8}
 .endmacro
 
 .macro  PRINT_ESC_SEQ_JMP   C1, C2, C3, C4, C5, C6, C7, C8
-                PRINT_CHAR_JMP  #ASCII_ESC, C1, C2, C3, C4, C5, C6, C7, C8
+                PRINT_CHAR_JMP  #ASCII_ESC, {C1}, {C2}, {C3}, {C4}, {C5}, {C6}, {C7}, {C8}
 .endmacro
 
 .macro  PRINT_BYTE      C1, C2, C3, C4, C5, C6, C7, C8, C9
-    .ifblank C2
-                LDA_CORA        {C1}
-                jsr             WRITE_BYTE
-                .exitmacro
-    .else
-                lda             C1
-                jsr             WRITE_BYTE
-    .endif
-                PRINT_BYTE      C2, C3, C4, C5, C6, C7, C8, C9
+                META_CALL      WRITE_BYTE, {C1}, {C2}, {C3}, {C4}, {C5}, {C6}, {C7}, {C8}, {C9}
 .endmacro
 
 .macro  PRINT_BYTE_JMP  C1, C2, C3, C4, C5, C6, C7, C8, C9
-    .ifblank C2
-                LDA_CORA        {C1}
-                jmp             WRITE_BYTE
-                .exitmacro
-    .else
-                lda             C1
-                jsr             WRITE_BYTE
-    .endif
-                PRINT_BYTE_JMP  C2, C3, C4, C5, C6, C7, C8, C9
+                META_JMP  WRITE_BYTE, {C1}, {C2}, {C3}, {C4}, {C5}, {C6}, {C7}, {C8}, {C9}
 .endmacro
 
-.macro  PRINT_HEX       CharOrAddr
-                LDA_CORA        {CharOrAddr}
-                jsr             WRITE_HEX
+.macro  PRINT_HEX  C1, C2, C3, C4, C5, C6, C7, C8, C9
+                META_CALL      WRITE_HEX, {C1}, {C2}, {C3}, {C4}, {C5}, {C6}, {C7}, {C8}, {C9}
 .endmacro
 
-.macro  PRINT_HEX_MASK  CharOrAddr
-                LDA_CORA        {CharOrAddr}
-                jsr             WRITE_HEX_MASK
+.macro  PRINT_HEX_JMP  C1, C2, C3, C4, C5, C6, C7, C8, C9
+                META_JMP  WRITE_HEX, {C1}, {C2}, {C3}, {C4}, {C5}, {C6}, {C7}, {C8}, {C9}
+.endmacro
+
+.macro  PRINT_HEX_MASK  C1, C2, C3, C4, C5, C6, C7, C8, C9
+                META_CALL      WRITE_HEX_MASK, {C1}, {C2}, {C3}, {C4}, {C5}, {C6}, {C7}, {C8}, {C9}
 .endmacro
 
 .macro  PRINT_CRLF
