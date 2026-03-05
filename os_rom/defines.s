@@ -661,14 +661,28 @@ F_RETURN_SIZE   := 24 * F_CELL
                 PRINT_CHAR_JMP  #ASCII_ESC, C1, C2, C3, C4, C5, C6, C7, C8
 .endmacro
 
-.macro  PRINT_BYTE      CharOrAddr
-                LDA_CORA        {CharOrAddr}
+.macro  PRINT_BYTE      C1, C2, C3, C4, C5, C6, C7, C8, C9
+    .ifblank C2
+                LDA_CORA        {C1}
                 jsr             WRITE_BYTE
+                .exitmacro
+    .else
+                lda             C1
+                jsr             WRITE_BYTE
+    .endif
+                PRINT_BYTE      C2, C3, C4, C5, C6, C7, C8, C9
 .endmacro
 
-.macro  PRINT_BYTE_JMP  CharOrAddr
-                LDA_CORA        {CharOrAddr}
+.macro  PRINT_BYTE_JMP  C1, C2, C3, C4, C5, C6, C7, C8, C9
+    .ifblank C2
+                LDA_CORA        {C1}
                 jmp             WRITE_BYTE
+                .exitmacro
+    .else
+                lda             C1
+                jsr             WRITE_BYTE
+    .endif
+                PRINT_BYTE_JMP  C2, C3, C4, C5, C6, C7, C8, C9
 .endmacro
 
 .macro  PRINT_HEX       CharOrAddr
@@ -722,6 +736,7 @@ F_RETURN_SIZE   := 24 * F_CELL
     .endif
 .endmacro
 
+; save a byte on branching, when small in necessary
 .macro SKIPNEXT
     .byte   $22     ; Undocumented 2-byte NOP, 2 cycles; uses 1 byte to skip the next byte
 .endmacro
