@@ -26,7 +26,7 @@ SR_9600         = $0E
 SR_19200        = $0F
 SR_115200       = $00
 
-SR_SELECT       = SR_115200
+SR_SELECT       = SR_19200
 
 .if SR_SELECT = SR_2400
 SERIAL_RATE     = 2400
@@ -242,6 +242,7 @@ ASCII_MINUS     = '-'
 ASCII_DASH      = ASCII_MINUS
 ASCII_HYPHEN    = ASCII_MINUS
 ASCII_PERIOD    = '.'
+ASCII_DOT       = ASCII_PERIOD
 ASCII_SLASH     = '/'
 ASCII_0         = '0'
 ASCII_1         = '1'
@@ -293,6 +294,19 @@ ASCII_LBRACE    = '{'
 ASCII_RBRACE    = '}'
 
 ASCII_LETTER_OFFSET = ASCII_A-ASCII_0-10
+
+; FORTH Defines
+
+F_CELL          := 2
+; data stack, 24 cells,
+; moves backwards, push decreases before copy
+F_DATA_SIZE     := 24 * F_CELL
+
+; return stack, 24 cells, 
+; moves backwards, push decreases before copy
+F_RETURN_SIZE   := 24 * F_CELL
+
+
 
 ; write a byte in A to the IO PORT
 .macro IO_PORT_WRITE    port, byte, imm
@@ -612,27 +626,26 @@ ASCII_LETTER_OFFSET = ASCII_A-ASCII_0-10
 .endmacro
 
 .macro  PRINT_CHAR      C1, C2, C3, C4, C5, C6, C7, C8, C9
-.ifblank    C1
-    .exitmacro
-.else
+    .ifblank C2
+                LDA_CORA        {C1}
+                jsr             WRITE_CHAR
+                .exitmacro
+    .else
                 lda             C1
                 jsr             WRITE_CHAR
-.endif
+    .endif
                 PRINT_CHAR      C2, C3, C4, C5, C6, C7, C8, C9
 .endmacro
 
 .macro  PRINT_CHAR_JMP  C1, C2, C3, C4, C5, C6, C7, C8, C9
-.ifblank    C1
-    .exitmacro
-.else
-                lda             C1
     .ifblank    C2
+                LDA_CORA        {C1}
                 jmp             WRITE_CHAR
                 .exitmacro
     .else
+                lda             C1
                 jsr             WRITE_CHAR
     .endif
-.endif
                 PRINT_CHAR_JMP  C2, C3, C4, C5, C6, C7, C8, C9
 .endmacro
 
@@ -684,9 +697,9 @@ ASCII_LETTER_OFFSET = ASCII_A-ASCII_0-10
 
 ; JSR using JMP
 .macro  _M_JSRR                 addrTo, addrFrom
-                lda             #>addrFrom
+                lda             #>(addrFrom-1)
                 pha
-                lda             #<addrFrom
+                lda             #<(addrFrom-1)
                 pha
                 jmp             (addrTo)
 .endmacro
@@ -710,9 +723,25 @@ ASCII_LETTER_OFFSET = ASCII_A-ASCII_0-10
 .endmacro
 
 .macro SKIPNEXT
-    .byte   $22     ; Undocumented 2-byte NOP, 2 cycles, uses 1 byte to skip the next byte
+    .byte   $22     ; Undocumented 2-byte NOP, 2 cycles; uses 1 byte to skip the next byte
 .endmacro
 
 .macro SKIPNEXT2
-    .byte   $DC     ; Undocumented 3-byte NOP, 4 cycles, reads absolute address IP+1, IP+2, uses 1 byte to skip two bytes
+    .byte   $DC     ; Undocumented 3-byte NOP, 4 cycles, reads absolute address IP+1, IP+2; uses 1 byte to skip two bytes
+.endmacro
+
+.macro MEMCP addrFrom, addrTo, size
+            PUSH_AY
+            lda         #<addrFrom
+            sta         ZP_TEMP_VEC
+            lda         #>addrFrom
+            sta         ZP_TEMP_VEC+1
+            lda         #<addrTo
+            sta         ZP_TEMP_VEC2
+            lda         #>addrTo
+            sta         ZP_TEMP_VEC2+1
+            lda         #<size
+            ldy         #>size
+            jsr         MEM_COPY
+            PULL_YA
 .endmacro

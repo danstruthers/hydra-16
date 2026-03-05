@@ -12,11 +12,13 @@ SER_SEND_STATUS_ERROR = $FF
 INPUT_BUFFER:
                 .res            $100
 
-.segment "BIOS"
+.segment "BIOS_THUNKS"
 TH_READCHAR:
                 jmp             READ_CHAR
 TH_WRITECHAR:
                 jmp             WRITE_CHAR
+
+.segment "BIOS"
 
 HEX_MAP: .byte "0123456789ABCDEF"
 HYDRA_WELCOME: HString "Welcome to the HYDRA-16!"
@@ -60,7 +62,7 @@ SERIAL_READ:
                 lda             INPUT_BUFFER,X
                 inc             ZP_READ_PTR
                 plx
-                jsr             WRITE_CHAR           ; echo
+                PRINT_CHAR                                  ; echo
                 sec
                 rts
 
@@ -74,8 +76,7 @@ WRITE_DEC:
                 cmp             #$80                        ; special case for -128
                 bne             :+
                 PRINT_CHAR      #ASCII_1
-                lda             #$28
-                jmp             WRITE_BYTE
+                PRINT_BYTE_JMP  #$28
 :
                 jsr             NEGATE
 
@@ -211,7 +212,7 @@ WRITE_HSTRING:
 @write_loop:
                 iny
                 lda             (ZP_HS_TEMP),Y
-                jsr             WRITE_CHAR
+                PRINT_CHAR
                 dex
                 bne             @write_loop
                 plx

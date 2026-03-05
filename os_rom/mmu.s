@@ -247,14 +247,55 @@ SHARED_RW_PAGE_SETUP:
             sta         U_REGISTER                          ; Update macro-page[0..3] from PageAddress::page[4..7]
             rts
 
+; Memory Copy
+; ZP_TEMP_VEC: From, ZP_TEMP_VEC2: To, .A.Y: Size
+MEM_COPY:
+            phx
+            tax
+            bne         :+
+            tya
+            beq         @done                               ; copy zero bytes?  Done!
+:
+            PRINT_CRLF
+            PRINT_BYTE  ZP_TEMP_VEC + 1
+            PRINT_BYTE  ZP_TEMP_VEC
+            PRINT_CHAR  #ASCII_DASH, #ASCII_GT
+            PRINT_BYTE  ZP_TEMP_VEC2 + 1
+            PRINT_BYTE  ZP_TEMP_VEC2
+
+@loop:
+            lda         (ZP_TEMP_VEC)
+            sta         (ZP_TEMP_VEC2)
+            PRINT_CHAR  #ASCII_DOT
+            dex
+            bne         :+
+            tya
+            beq         @done
+            dey
+:
+            inc         ZP_TEMP_VEC
+            bne         :+
+            inc         ZP_TEMP_VEC + 1
+:
+            inc         ZP_TEMP_VEC2
+            bne         :+
+            inc         ZP_TEMP_VEC2 + 1
+:
+            bra         @loop
+
+@done:
+            plx
+            rts
+
+; TESTS
 MEM_TEST:
             PUSH_AXY
             PRINT_CRLF
-            stz         RAM_BANK_REG
-            stz         T_REGISTER
+            ;stz         T_REGISTER
 
 @task_num_loop:
-            lda         #$02
+            stz         RAM_BANK_REG
+            lda         #$04
             ldx         #$80                                ; exclude the task serial buffers @ $0200 && $0300
             jsr         TEST_PAGE_RANGE
             ldx         #$A0                                ; end of banked RAM
@@ -333,7 +374,7 @@ TEST_PAGE_RANGE:
             lda         #ASCII_PERIOD
 
 @write:
-            jsr         WRITE_CHAR 
+            PRINT_CHAR 
             stz         ZP_TEMP
             inc         ZP_TEMP_VEC + 1
             cpx         ZP_TEMP_VEC + 1

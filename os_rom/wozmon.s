@@ -42,7 +42,7 @@ MON_START:
                 ldy             #1              ; Initialize text index.
 
 @is_backspace:
-                dey                     ; Back up text index.
+                dey                             ; Back up text index.
                 bmi             @get_line       ; Beyond start of line, reinitialize.
 
 @get_next_char:
@@ -76,11 +76,17 @@ MON_START:
                 beq             @set_block      ; Set BLOCK ZP_XAM mode.
                 cmp             #ASCII_COLON
                 beq             @set_store      ; Yes, set STOR mode.
-                cmp             #ASCII_L
-                beq             @disassemble    ; Disassemble 1 or more instructions at current address/range
+                ;cmp             #ASCII_L
+                ;beq             @disassemble    ; Disassemble 1 or more instructions at current address/range
                 cmp             #ASCII_R
                 beq             @run_prog       ; Yes, run user program
-                cmp             #ASCII_T        ; T, U, V, or W registers?
+                cmp             #ASCII_S        ; S OR T, U, V, or W registers?
+                bne             :+
+                lda             ZP_XAM
+                ldy             ZP_XAM+1
+                jsr             SPAWN_TASK
+                bra             @is_escape
+:
                 bcc             @not_tuvw       ;
                 cmp             #ASCII_X        ;
                 bcs             @not_tuvw       ;
@@ -90,6 +96,9 @@ MON_START:
                 sta             ZP_WM_HVP + 1   ;
                 iny                             ; skip the mnemonic
                 bra             @not_hex_or_escape
+
+@bra_is_escape:
+                bra             @is_escape
 
 @not_tuvw:
                 sty             ZP_Y_SAVE       ; Save Y for comparison
@@ -123,7 +132,7 @@ MON_START:
 
 @not_hex:
                 cpy             ZP_Y_SAVE       ; Check if HPV empty (no hex digits).
-                beq             @is_escape      ; Yes, generate ESC sequence.
+                beq             @bra_is_escape  ; Yes, generate ESC sequence.
 
 @not_hex_or_escape:
                 bit             ZP_WM_MODE      ; Test ZP_WM_MODE byte.
@@ -140,9 +149,9 @@ MON_START:
 @run_prog:
                 _M_JSRR         ZP_XAM, MON_START
 
-@disassemble:
-                lda             #1
-                sta             ZP_WM_DASTATE
+;@disassemble:
+;                lda             #1
+;                sta             ZP_WM_DASTATE
 
 @not_store:
                 bmi             @examine_next   ; B7 = 0 for ZP_XAM, 1 for BLOCK ZP_XAM.

@@ -182,9 +182,8 @@ BIT_DEC:
     bra         @cont_bit
 
 @is_bb:
-    lda         #ASCII_B
-    jsr         WRITE_CHAR
-    jsr         WRITE_CHAR
+    PRINT_CHAR  #ASCII_B
+    PRINT_CHAR
 
 @cont_bit:
     lda         #ASCII_R
@@ -192,12 +191,10 @@ BIT_DEC:
     inc
 
 :
-    jsr         WRITE_BYTE
+    PRINT_BYTE
     bbs7        ZP_D_INST, @bit_num
-    lda         #ASCII_M
-    jsr         WRITE_CHAR
-    lda         #ASCII_B
-    jsr         WRITE_CHAR
+    PRINT_CHAR  #ASCII_M
+    PRINT_CHAR  #ASCII_B
 
 @bit_num:
     lda         ZP_D_INST

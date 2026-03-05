@@ -12,7 +12,6 @@ TASK_PARENT:
     .res 1
 TASK_SAVE_REG:
     .res 1
-    .res 10
 ZP_READ_PTR:
     .res 1
 ZP_WRITE_PTR:
@@ -28,6 +27,12 @@ ZP_SPI_DATA_IN:
 ZP_SPI_DATA_OUT:
     .res 1
 ZP_TEMP_VEC:
+    .res 2
+ZP_TEMP_VEC2:
+    .res 2
+ZP_TEMP_VEC3:
+    .res 2
+ZP_TEMP_VEC4:
     .res 2
 ZP_A_SAVE:
     .res 1

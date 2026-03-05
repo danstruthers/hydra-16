@@ -12,14 +12,14 @@ TASK_PAUSED_FLAG        = 2
 .macro SELECT_TASK      task
             lda     T_REGISTER
             and     #$F0
-            ora     task & $0F
+            ora     #(task & $0F)
             sta     T_REGISTER
 .endmacro
 
 .macro SELECT_SHARED_BANK bank
             lda     T_REGISTER
             and     #$0F
-            ora     bank << 4
+            ora     #(bank << 4)
             sta     T_REGISTER
 .endmacro
 
@@ -27,16 +27,15 @@ TASK_PAUSED_FLAG        = 2
 TASKS_INIT:
             sei                                     ; Turn off interrupts
             lda     T_REGISTER
-            bne     @cleanup                        ; Only support task init when on task 0
+            bne     @cleanup                        ; Only support tasks init when on task 0
             ldx     #MAX_TASK_NUMBER
 
 @loop:
-            lda     #0
             stx     T_REGISTER                      ; Quick switch to task X
-            sta     RAM_BANK_REG
-            sta     ROM_BANK_REG
-            sta     TASK_STATUS_REG
-            sta     TASK_PARENT
+            stz     RAM_BANK_REG
+            stz     ROM_BANK_REG
+            stz     TASK_STATUS_REG
+            stz     TASK_PARENT
             lda     #$FF
             sta     STACK_SAVE_REG
             MOV     ZP_READ_PTR, ZP_WRITE_PTR       ; Do INIT_BUFFER, without the stack
@@ -70,7 +69,7 @@ SWITCH_TO:
 
 SWITCH_TO_NO_PHP:
             PUSH_AXY
-            txs
+            tsx
             stx     STACK_SAVE_REG
 
 SWITCH_TO_NSS:
@@ -79,6 +78,11 @@ SWITCH_TO_NSS:
             txs                                     ; ...
             PULL_YXA
             rti
+
+; .A.Y: Address of task entrypoint
+SPAWN_TASK:
+            sta     ZP_TEMP_VEC
+            sty     ZP_TEMP_VEC+1
 
 ; Find a task that is idle and start it executing at the address in ZP_TEMP_VEC && ZP_TEMP_VEC + 1
 ; Return task # in A and C == 1
@@ -90,18 +94,22 @@ TASK_START:
             rts
 
 @start_task:
-            tay
-            lda     T_REGISTER                      ; save current task as new task's parent
+            ldy     T_REGISTER
+            sta     T_REGISTER
+            sty     TASK_PARENT
             sty     T_REGISTER
-            sta     TASK_PARENT
-            sta     T_REGISTER                      ; get the new task start addr in A/X
-            lda     ZP_TEMP_VEC
             ldx     ZP_TEMP_VEC + 1
-            sty     T_REGISTER                      ; do the task switch
+            ldy     ZP_TEMP_VEC
+            bne     :+
+            dex                                     ; update entrypoint to rts-style addr-1
+:
+            dey                                     ; update LO byte
+            sta     T_REGISTER                      ; do the task switch
             stx     ZP_X_SAVE                       ; new task ZP
             ldx     #$FF                            ; Reset the stack pointer
             txs
             ldx     ZP_X_SAVE
+            tya
             jsr     @task_start
 
 @task_complete:
@@ -170,7 +178,7 @@ NEXT_TASK:
             sta     T_REGISTER                      ; switch to the next task
             bbr1    TASK_STATUS_REG, @test_next     ; Is bit 1 clear (TASK_PAUSED_FLAG)? if so, try next task
             sec
-            bcs     @done
+            SKIPNEXT
 
 @not_found:
             clc
@@ -185,8 +193,7 @@ NMI_HANDLER:
             rti
 
             pha
-            lda     #ASCII_STAR
-            jsr     WRITE_CHAR
+            PRINT_CHAR  #ASCII_STAR
             pla
             jsr     NEXT_TASK
             bcs     @switch
