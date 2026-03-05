@@ -26,7 +26,8 @@ The code is built with the **cc65** suite (https://cc65.github.io/).  The board 
 | :---- | :--- | :---------- |
 | $E000 | $FFFF | BIOS/OS ROM paged area (indexed by the W register; see below) |
 | $E000 | $E009 | RESET Vector entry point. Code saves `W` register to `ZP_W_SAVE` and then resets W to zero. This is replicated at the beginning of each BIOS page so that arbitrary W register values at startup/RESET result in the correct entry point being executed. |
-| $E00A | $FEFF | Effective BIOS paged area.  Compiler segments (pages) `BIOS_P1 - BIOS_PF` are available for BIOS implementers to add more BIOS calls, corresponding to `W` register values of `$01 - $0F`, respectively. |
+| $E00A | $FDFF | Effective BIOS paged area.  Compiler segments (pages) `BIOS_P1 - BIOS_PF` are available for BIOS implementers to add more BIOS calls, corresponding to `W` register values of `$01 - $0F`, respectively. |
+| $FE00 | $FEFF | "WOZMON" monitor page
 
 #### **I/O Ports**
 
@@ -59,7 +60,7 @@ The area from $FFF0 to $FFFF (that would have been reserved for I/O port 15) is 
 ### **Interrupts**
 
 Interrupt priority is lowest number == highest priority, so the S/W interrupt vector (#15) is the lowest priority.  
-The interrupt vector (`$FFFE & $FFFF`) is actually a 16-entry pseudo-register indexed by either a) `V` register bits 0-3 if no hardware interrupt is active when a `BRK` instruction is executed, or b) the lowest numbered active interrupt request line (via the IRQ priority decoder circuit) if one or more H/W IRQs is active.  It is also indexed on write by `V` register bits 0-3, which is how the interrupt vectors are set by driver initialization functions.  
+The interrupt vector (`$FFFE & $FFFF`) is actually a 16-entry pseudo-register indexed by either a) `V` register bits 0-3 if no hardware interrupt is active OR when a `BRK` instruction is executed, or b) the lowest numbered active interrupt request line (via the IRQ priority decoder circuit) if one or more H/W IRQs is active.  It is also indexed on write by `V` register bits 0-3, which is how the interrupt vectors are set by driver initialization functions.  
 Hardware interrupts ignore `V` register bits 4-7, but sub-functions could be S/W triggered by setting those bits and calling `BRK`, and then checking them in the H/W interrupt vector, similar to how the S/W vector _will eventually_ work.  
 An unused H/W interrupt could be used by S/W to add another S/W interrupt handler, giving another 16 S/W interrupts per IRQ, so long as those are not used by other H/W; _see IRQ Slot assignments, below_.  
 **_All_** interrupts can be called via the S/W interrupt mechanism by setting `V` to the IRQ #, and then calling `BRK`.  Just remember that `V` is a shared, pseudo-register, so should be saved and restored (preferrably to `ZP_V_SAVE`) by each task whenever used.
