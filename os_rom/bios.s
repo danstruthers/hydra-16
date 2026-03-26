@@ -17,6 +17,10 @@ TH_READCHAR:
                 jmp             READ_CHAR
 TH_WRITECHAR:
                 jmp             WRITE_CHAR
+TH_WRITEBYTE:
+                jmp             WRITE_BYTE
+TH_CLEARSCR:
+                jmp             CLEAR_SCR
 
 .segment "BIOS"
 
@@ -179,8 +183,7 @@ WRITE_DELAY:
 
 ; Convenience method to write CR/LF to output stream
 WRITE_CRLF:
-                PRINT_CHAR      #ASCII_CR
-                PRINT_CHAR_JMP  #ASCII_LF
+                PRINT_CHAR_JMP  #ASCII_CR, #ASCII_LF
 
 WRITE_PROMPT:
                 PRINT_CRLF

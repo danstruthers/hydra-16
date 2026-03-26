@@ -7,6 +7,11 @@ ERR_SUCCESS         = $00
 ERR_NOT_SYSTEM_TASK = $01
 ERR_OUT_OF_MEMORY   = $02
 
+ERR_MATH_INVD       = $31       ; invalid digit
+ERR_MATH_INVB       = $32       ; invalid base
+ERR_MATH_OVF        = $33       ; overflow
+ERR_MATH_UNF        = $34       ; underflow
+
 RESET_ENTRY     = $E000
 
 IO_PORT_BASE    = $FF00
@@ -227,6 +232,7 @@ ASCII_ESC       = $1B
 ASCII_SPACE     = ' '
 ASCII_BANG      = '!'
 ASCII_DQUOTE    = '"'
+ASCII_SQUOTE    = '''
 ASCII_HASH      = '#'
 ASCII_DOLLAR    = '$'
 ASCII_PERCENT   = '%'
@@ -713,7 +719,7 @@ F_RETURN_SIZE   := 24 * F_CELL
 .endmacro
 
 .macro _M_JSRR_NC_A             addrFrom, addrTo
-                NC_A            _M_JSRR, addrFrom, addrTo
+                NC_A            _M_JSRR, {addrFrom}, {addrTo}
 .endmacro
 
 .macro SL_N     n
@@ -739,16 +745,25 @@ F_RETURN_SIZE   := 24 * F_CELL
     .byte   $DC     ; Undocumented 3-byte NOP, 4 cycles, reads absolute address IP+1, IP+2; uses 1 byte to skip two bytes
 .endmacro
 
-.macro MEMCP addrFrom, addrTo, size
+.macro BYTECOPY fm, to
+            lda         fm
+            sta         to
+.endmacro
+
+.macro WORDCOPY fm, to
+            BYTECOPY    {fm + 1}, {to + 1}
+            BYTECOPY    {fm}, {to}
+.endmacro
+
+.macro LOAD_ADDR    addr, to
+            BYTECOPY    {#>addr}, {to + 1}
+            BYTECOPY    {#<addr}, {to}
+.endmacro
+
+.macro MEMCP    addrFrom, addrTo, size
             PUSH_AY
-            lda         #<addrFrom
-            sta         ZP_TEMP_VEC
-            lda         #>addrFrom
-            sta         ZP_TEMP_VEC+1
-            lda         #<addrTo
-            sta         ZP_TEMP_VEC2
-            lda         #>addrTo
-            sta         ZP_TEMP_VEC2+1
+            LOAD_ADDR   {addrFrom}, ZP_TEMP_VEC
+            LOAD_ADDR   {addrTo}, ZP_TEMP_VEC2
             lda         #<size
             ldy         #>size
             jsr         MEM_COPY

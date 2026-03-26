@@ -9,6 +9,7 @@
 .include "tasks.s"
 .include "disasm.s"
 .include "wozmon.s"
+.include "forth/sector-forth-hy.s"
 .include "mmu.s"
 .include "shell.s"
 .include "sound.s"

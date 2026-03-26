@@ -198,17 +198,14 @@ BIT_DEC:
 
 @bit_num:
     lda         ZP_D_INST
-    lsr
-    lsr
-    lsr
-    lsr
+    SR_N        4
     and         #7
 
     iny
     bne         DISASMDECX          ; Y overflow?
     inc         ZP_XAM              ; increment LOB of addr
     bne         DISASMDECX          ; End of page?
-    inc         ZP_XAM              ; increment HOB of addr
+    inc         ZP_XAM+1            ; increment HOB of addr
 
 DISASMDECX:
     dec         ZP_D_ICOUNT
@@ -225,28 +222,27 @@ NOP_DEC:
     rts
 
 ;IMM:
-;    WRITE_CHAR ASCII_HASH
+;    PRINT_CHAR #ASCII_HASH
 ;    bra ZP
 
 ;ZPREL:
 ;    sec
 
 ;ZP2:
-;    WRITE_HEX <operand> >> 4
-;    WRITE_BYTE ASCII_COMMA
+;    PRINT_CHAR <operand> >> 4
+;    PRINT_BYTE #ASCII_COMMA
 
 ;ZP:
-;    WRITE_CHAR ASCII_DOLLAR
-;    WRITE_BYTE <<NextByte>>
+;    PRINT_CHAR #ASCII_DOLLAR
+;    PRINT_BYTE <<NextByte>>
 ;    ; IF not ZPREL, return
 ;    bcc REL
 ;    rts
 
 ;REL:
     ; output "," and fall through to REL, else done
-;    WRITE_CHAR ASCII_COMMA
-;    WRITE_CHAR ASCII_DOLLAR
-;    WRITE_BYTE <<NextByte>>
+;    PRINT_CHAR #ASCII_COMMA
+;    PRINT_CHAR #ASCII_DOLLAR
+;    PRINT_BYTE <<NextByte>>
 
-;REL:
 ;    rts

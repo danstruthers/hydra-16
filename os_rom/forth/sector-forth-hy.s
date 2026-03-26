@@ -160,13 +160,25 @@
 ; the entry point for dictionary is h_~name~
 ; the entry point for code is ~name~
 .macro def_word name, label, flag
-makelabel "h_", label
+makelabel "forth_p_", label
 .ident(.sprintf("H%04X", hcount + 1)) = *
 .word .ident (.sprintf ("H%04X", hcount))
 hcount .set hcount + 1
 .byte .strlen(name) + flag ; nice trick !
 .byte name
 makelabel "", label
+.endmacro
+
+.macro COPYFROM zpfrom, zpto
+    ldx     #zpfrom
+    ldy     #zpto
+    jsr     forth_copy_from
+.endmacro
+
+.macro COPYINTO zpinto, zpfrom
+    ldx     #zpinto
+    ldy     #zpfrom
+    jsr     forth_copy_into
 .endmacro
 
 ;---------------------------------------------------------------------
@@ -193,8 +205,10 @@ NOTES:
 ;
 ; alias
 
-; highlander, immediate flag.
-FLAG_IMM = 1<<7
+; Flags
+FLAG_IMM  = $80         ; immediate
+FLAG_CODE = $40         ; assembly, not word list
+FLAG_LIT  = $20         ; literal
 
 ; "all in" page $400
 
@@ -208,6 +222,7 @@ XF_SP0:     .res    128
 F_SP0:                      ; stacks go down
 XF_RP0:     .res    128
 F_RP0:                      ; stacks go down
+start_of_user_words:
 
 .zeropage
 ; FORTH ZP
@@ -262,19 +277,16 @@ ZP_F_BACK: .word   0  ; hold 'here while compile
 forth_main:
 forth_cold_start:
 ; copy primitives to RAM
-    jsr         forth_copy_primitives
     jsr         CLEAR_SCR
     cld
 
 ;----------------------------------------------------------------------
 forth_warm_start:
 ; link list of headers
-    LOAD_ADDR   h_exit, ZP_F_LAST
+    LOAD_ADDR   forth_p_exit, ZP_F_LAST
 
 ; next heap free cell, same as init:
-    lda         #>forth_primitives_end + 1
-    sta         ZP_F_HERE + 1
-    stz         ZP_F_HERE
+    LOAD_ADDR   start_of_user_words, ZP_F_HERE
 
 ;---------------------------------------------------------------------
 forth_reset:
@@ -328,10 +340,10 @@ forth_find:
     ora         ZP_F_2ND + 1
     bne         @find_each
 
-;   maybe to place a code for forth_number? 
-;   but not for now.
+; maybe to place a code for forth_number? 
+; but not for now.
 
-;;   uncomment for feedback, comment out "beq abort" above
+; uncomment for feedback, comment out "beq abort" above
     PRINT_CHAR  #ASCII_QUESTION
     PRINT_CHAR               ; another '?'
     PRINT_CRLF
@@ -342,13 +354,10 @@ forth_find:
     BYTECOPY    ZP_F_2ND + 1, ZP_F_WRD + 1
 
 ; update next link 
-    ldx         #ZP_F_WRD ; from 
-    ldy         #ZP_F_2ND ; into
-    jsr         forth_copy_from
+    COPYFROM    ZP_F_WRD, ZP_F_2ND
 
 ; save the flag, first byte is (size and flag) 
-    lda         (ZP_F_WRD)
-    sta         ZP_F_STAT + 1
+    BYTECOPY    {(ZP_F_WRD)}, ZP_F_STAT + 1
 
 ; compare words
     ldy         #0
@@ -361,7 +370,7 @@ forth_find:
     beq         @find_done
 ; verify 
     sec
-    sbc         (ZP_F_WRD), y     
+    sbc         (ZP_F_WRD), y
 ; clean 7-bit ascii
     asl
     bne         @find_loop
@@ -389,8 +398,8 @@ forth_eval:
 forth_compile:
     ;PRINT_CHAR  #ASCII_C
 
-    jsr         wcomma
-    bcc         forth_resolve
+    jsr         forth_wcomma
+    bra         forth_resolve
 
 forth_immediate:
 forth_execute:
@@ -398,7 +407,7 @@ forth_execute:
 
     LOAD_ADDR   resolvept, ZP_F_IPT
     jmp         forth_pick
-    
+
 ;---------------------------------------------------------------------
 forth_try:
     lda         F_TIB, y
@@ -426,23 +435,29 @@ forth_getline:
 ;    cpy #F_TIB_END
 ;    beq @getline_end
 ; then 
+@getline_again:
     jsr         forth_getchar
 ; would be better with 
 ; 7-bit ascii only
 ;    and #$7F
 ; compare with LF
     cmp         #ASCII_CR
+    beq         @getline_end
+; handle backspace
+    cmp         #ASCII_BACKSPACE
     bne         @getline_loop
+    dey
+    bne         @getline_again          ; make sure we don't underflow
+    iny
+    bra         @getline_again
+; clear all if y eq \0
+@getline_end:
 ; eat the LF?
     PRINT_CRLF
 ; would be better with 
 ; no controls
 ;    cmp #' '
 ;    bmi @loop
-
-; clear all if y eq \0
-@getline_end:
-; grace \b
     BYTECOPY    F_TIB, {F_TIB, y}      ; starts and ends with space
 ; mark eol with \0
     BYTECOPY    #0, {F_TIB + 1, y}
@@ -467,11 +482,11 @@ forth_token:
     sty         ZP_F_TOUT
 
 @getline_scan:
-; scan spaces
+; scan for trailing space
     jsr         forth_try
     bne         @getline_scan
 
-; keep y == stop + 1  
+; y == end of token + 1  
     dey
     sty         ZP_F_TIN 
 
@@ -497,25 +512,21 @@ forth_byes:
 ;---------------------------------------------------------------------
 ; classic heap moves always forward
 ;
-forth_stawrd:
-    sta         ZP_F_WRD + 1
-
-wcomma:
+forth_wcomma:
     ldy         #ZP_F_WRD
 
-comma: 
+forth_comma: 
     ldx         #ZP_F_HERE
+    ;PRINT_CHAR  #ASCII_COMMA
     ; fall through
 
 ;---------------------------------------------------------------------
 ; from a page zero address indexed by Y
 ; into a page zero indirect address indexed by X
-copyinto:
-    lda         0, y
-    sta         (0, x)
+forth_copy_into:
+    BYTECOPY    {0, y}, {(0, x)}
     jsr         forth_incwx
-    lda         1, y
-    sta         (0, x)
+    BYTECOPY    {1, y}, {(0, x)}
     jmp         forth_incwx
 
 ;---------------------------------------------------------------------
@@ -524,17 +535,20 @@ copyinto:
 ;
 ;---------------------------------------------------------------------
 ; push a cell to .S
-forth_s_push:
-; bounds check SPI
-    ldx         #ZP_F_SPI
+forth_s_push_1:
     ldy         #ZP_F_1ST
+; bounds check SPI
+forth_s_push:
+    ldx         #ZP_F_SPI
     bra         forth_push
 
 ; push a cell to .R
 ; classic stack backwards
+forth_r_push_ipt:
+    ldy         #ZP_F_IPT
+
 forth_r_push:
     ldx         #ZP_F_RPI
-    ldy         #ZP_F_IPT
 
 forth_push:
 ; stack overflow check
@@ -558,10 +572,10 @@ forth_decwx:
     dec         0, x
     rts
 
-forth_stack_underflow:
+forth_stack_overflow:
     sec
 
-forth_stack_overflow:
+forth_stack_underflow:
     PRINT_CHAR  #ASCII_DOT
     lda         #ASCII_R
     cpx         #ZP_F_RPI
@@ -580,8 +594,9 @@ forth_stack_overflow:
 
 ;---------------------------------------------------------------------
 forth_s_pull_2:
+    jsr         forth_s_pull_1
     ldy         #ZP_F_2ND
-    jsr         forth_s_pull
+    jmp         forth_s_pull
     ; fall through
 
 ;---------------------------------------------------------------------
@@ -597,9 +612,11 @@ forth_s_pull:
     bra         forth_pull
 
 ; pull a cell from .R
-forth_r_pull:
 ; bounds check RPI
+forth_r_pull_ipt:
     ldy         #ZP_F_IPT
+
+forth_r_pull:
     ldx         #ZP_F_RPI
 
 ;---------------------------------------------------------------------
@@ -607,7 +624,7 @@ forth_r_pull:
 ; into a page zero address indexed by y
 forth_pull:
     lda         0, x
-    and         #$7F
+    and         #$7f
     beq         forth_stack_underflow
 
 forth_copy_from:
@@ -638,561 +655,7 @@ forth_getchar:
     bcc         forth_getchar
     rts
 
-PRIM_LEN :=     forth_primitives_end - forth_primitives_begin
-
-forth_copy_primitives:
-    MEMCP       start_of_f_primitives, forth_primitives_begin, PRIM_LEN
-    rts
-
-start_of_f_primitives:
-*=$0600
-;---------------------------------------------------------------------
-;
-; the primitives, 
-; for stacks uses
-; a address, c byte ascii, w signed word, u unsigned word 
-; cs counted string < 256, sz string with nul ends
-; 
-;----------------------------------------------------------------------
-
-forth_primitives_begin:
-.ifdef use_extras
-;----------------------------------------------------------------------
-; extras
-;----------------------------------------------------------------------
-; ( -- ) ae exit forth
-def_word "bye", "bye", 0
-    jmp         forth_byes
-
-;----------------------------------------------------------------------
-; ( -- ) ae abort
-def_word "abort", "abort", 0
-    jmp         forth_abort
-
-;----------------------------------------------------------------------
-; ( -- ) ae list of data stack
-def_word ".S", "splist", 0
-    WORDCOPY    ZP_F_SPI, ZP_F_1ST
-    ;PRINT_CHAR  #ASCII_S
-    lda         #<F_SP0
-    jsr         forth_list
-    PRINT_CRLF
-    jmp         forth_next
-
-;----------------------------------------------------------------------
-; ( -- ) ae list of return stack
-def_word ".R", "rplist", 0
-    WORDCOPY    ZP_F_RPI, ZP_F_1ST
-    ;PRINT_CHAR  #ASCII_R
-    lda         #<F_RP0
-    jsr         forth_list
-    PRINT_CRLF
-    jmp         forth_next
-
-_f_print_fst:
-    PRINT_SPACE
-    PRINT_BYTE_JMP  ZP_F_1ST + 1, ZP_F_1ST
-
-_f_print_fst_val:
-    PRINT_SPACE
-    iny
-    PRINT_BYTE      {(ZP_F_1ST),y}
-    dey
-    PRINT_BYTE_JMP  {(ZP_F_1ST),y}
-    
-
-;----------------------------------------------------------------------
-;  ae list a sequence of references
-forth_list:
-    sec
-    sbc         ZP_F_1ST
-    lsr
-
-    tax
-    jsr         _f_print_fst
-
-    PRINT_SPACE
-
-    txa
-    PRINT_BYTE
-    PRINT_SPACE
-
-    txa
-    beq         @list_end
-    ldy         #0
-
-@list_loop:
-    jsr         _f_print_fst_val
-    iny
-    iny
-    dex
-    bne         @list_loop
-
-@list_end:
-    rts
-
-;----------------------------------------------------------------------
-; ( -- ) dumps the user dictionary
-def_word "dump", "dump", 0
-    lda         #>forth_primitives_end + 1
-    sta         ZP_F_1ST + 1
-    stz         ZP_F_1ST
-    ldx         #ZP_F_1ST
-
-@dump_loop:
-    lda         ZP_F_1ST
-    cmp         ZP_F_HERE
-    bne         :+
-
-    lda         ZP_F_1ST + 1
-    cmp         ZP_F_HERE + 1
-    bne         :+
-
-    clc
-    jmp         forth_next 
-
-:
-    PRINT_BYTE  {(ZP_F_1ST)}
-    jsr         forth_incwx
-    bra         @dump_loop
-
-;----------------------------------------------------------------------
-; ( -- ) words in dictionary, 
-def_word "words", "words", 0
-; load ZP_F_LAST
-    WORDCOPY    ZP_F_LAST, ZP_F_2ND
-
-; load ZP_F_HERE
-    WORDCOPY    ZP_F_HERE, ZP_F_3RD
-
-@words_loop:
-; lsb linked list
-    BYTECOPY    ZP_F_2ND, ZP_F_1ST
-
-; verify \0x0
-    ora         ZP_F_2ND + 1
-    beq         @words_end
-
-; msb linked list
-    BYTECOPY    ZP_F_2ND + 1, ZP_F_1ST + 1
-    PRINT_CRLF
-
-; put address
-    jsr         _f_print_fst
-
-; put link
-    ldy         #0
-    jsr         _f_print_fst_val
-
-    ldx         #ZP_F_1ST
-    lda         #2
-    jsr         forth_addwx
-
-; put size + flag, name
-    jsr         show_name
-
-; update
-    iny
-    tya
-    ldx         #ZP_F_1ST
-    jsr         forth_addwx
-
-; show CFA
-    jsr         _f_print_fst
-
-; check if is a primitive
-    lda         ZP_F_1ST + 1
-    cmp         #>forth_primitives_end + 1
-    bmi         @words_continue
-
-; list references
-    ldy         #0
-; ae put references PFA ... 
-    ldx         #ZP_F_1ST
-
-@refer_loop:
-    jsr         _f_print_fst
-    PRINT_CHAR  #ASCII_COLON
-    jsr         _f_print_fst_val
-
-    lda         #2
-    jsr         forth_addwx
-
-; check if ends
-    lda         ZP_F_1ST
-    cmp         ZP_F_3RD
-    bne         @refer_loop
-    lda         ZP_F_1ST + 1
-    cmp         ZP_F_3RD + 1
-    bne         @refer_loop
-
-@words_continue:
-    WORDCOPY    ZP_F_2ND, ZP_F_3RD
-
-    BYTECOPY    {(ZP_F_3RD)}, ZP_F_2ND
-    ldy         #1
-    BYTECOPY    {(ZP_F_3RD), y}, ZP_F_2ND + 1
-
-    ldx         #ZP_F_3RD
-    lda         #2
-    jsr         forth_addwx
-
-    bra         @words_loop 
-
-@words_end:
-    clc
-    jmp         forth_next
-
-;----------------------------------------------------------------------
-; ae put size and name 
-show_name:
-    PRINT_SPACE
-    PRINT_BYTE  {(ZP_F_1ST), y}
-    PRINT_SPACE
-    lda         (ZP_F_1ST), y
-    and         #$7F
-    tax
-
- @show_name_loop:
-    iny
-    PRINT_CHAR  {(ZP_F_1ST), y}
-    dex
-    bne         @show_name_loop
-
-@show_name_end:
-    rts
-
-;----------------------------------------------------------------------
-; ( u -- u ) print tos in hexadecimal, swaps order
-def_word ".", "dot", 0
-    PRINT_SPACE
-    ldy         #1
-    PRINT_BYTE {(ZP_F_SPI)}, {(ZP_F_SPI), y}
-    jmp         forth_next
-
-.endif
-; .ifdef use_extras
-
-.ifdef numbers
-;----------------------------------------------------------------------
-; code a ASCII $FFFF hexadecimal in a word
-;  
-forth_number:
-    ldy         #0
-
-    jsr         @number_partial
-    asl
-    asl
-    asl
-    asl
-    sta         ZP_F_1ST + 1
-
-    iny 
-    jsr         @number_partial
-    ora         ZP_F_1ST + 1
-    sta         ZP_F_1ST + 1
-    
-    iny 
-    jsr         @number_partial
-    asl
-    asl
-    asl
-    asl
-    sta         ZP_F_1ST
-
-    iny 
-    jsr         @number_partial
-    ora         ZP_F_1ST
-    sta         ZP_F_1ST
-
-    clc
-    rts
-
-@number_partial:
-    lda         (ZP_F_TOUT), y
-    sec
-    sbc         #$30
-    bmi         @number_err
-    cmp         #10
-    bcc         @number_end
-    sbc         #7
-    ; any valid digit, A-F, do not care
-    ; should check for >F, at least
-@number_end:
-    rts
-
-@number_err:
-    pla
-    pla
-    rts
-
-.endif
-; .ifdef numbers
-
-;---------------------------------------------------------------------
-;
-; extensions
-;
-;---------------------------------------------------------------------
-.ifdef use_extensions
-
-;---------------------------------------------------------------------
-; ( -- 1 ) ; shift right
-def_word "1", "one", 0
-    lda         #1
-    sta         ZP_F_1ST
-    stz         ZP_F_1ST + 1
-    jmp         this
-
-; ( -- 1 ) ; shift right
-def_word "-1", "negative_one", 0
-    lda         #$FF
-    sta         ZP_F_1ST
-    jmp         keeps
-
-; ( -- 1 ) ; shift right
-def_word "0", "zero", 0
-    stz         ZP_F_1ST
-    stz         ZP_F_1ST + 1
-    jmp         this
-
-;---------------------------------------------------------------------
-; ( w -- w/2 ) ; shift right
-def_word "2/", "shr", 0
-    ldy         #1
-    lda         (ZP_F_SPI), y
-    lsr
-    sta         (ZP_F_SPI), y
-    lda         (ZP_F_SPI)
-    ror
-    sta         (ZP_F_SPI)
-    jmp         jmpnext
-
-;---------------------------------------------------------------------
-; ( w -- w*2 ) ; shift right
-def_word "2*", "shl", 0
-    lda         (ZP_F_SPI)
-    asl
-    sta         (ZP_F_SPI)
-    ldy         #1
-    lda         (ZP_F_SPI), y
-    rol
-    sta         (ZP_F_SPI), y
-    ; bcs       ERROR_OVERFLOW          ; if carry is set, you get an overflow
-    jmp         jmpnext
-
-;---------------------------------------------------------------------
-; ( a -- ) execute a jump to a reference at top of data stack
-def_word "exec", "exec", 0 
-    jsr         forth_s_pull_1
-    jmp         (ZP_F_1ST)
-
-;---------------------------------------------------------------------
-; ( -- ) execute a jump to a reference at IP
-def_word ":$", "docode", 0 
-    jmp         (ZP_F_IPT)
-
-;---------------------------------------------------------------------
-; ( -- ) execute a jump to forth_next
-def_word ";$", "donext", 0 
-    jmp         jmpnext
-
-.endif
-; .ifdef use_extensions
-
-;---------------------------------------------------------------------
-; core primitives minimal 
-; start of dictionary
-;---------------------------------------------------------------------
-; ( -- u ) ; tos + 1 unchanged
-def_word "key", "key", 0
-    jsr         forth_getchar
-    sta         ZP_F_1ST
-    stz         ZP_F_1ST + 1
-    jmp         this
-
-;---------------------------------------------------------------------
-; ( u -- ) ; tos + 1 unchanged
-def_word "emit", "emit", 0
-    jsr         forth_s_pull_1
-    PRINT_CHAR  ZP_F_1ST
-    jmp        jmpnext
-
-;---------------------------------------------------------------------
-; ( a w -- ) ; [a] = w
-def_word "!", "store", 0
-    jsr         forth_s_pull_2
-    ldx         #ZP_F_2ND 
-    ldy         #ZP_F_1ST 
-    jsr         copyinto
-    jmp         jmpnext
-
-;---------------------------------------------------------------------
-; ( w1 -- INVERT(w1) )
-def_word "~", "invert", 0
-    lda         (ZP_F_SPI)
-    eor         #$ff
-    sta         (ZP_F_SPI)
-    ldy         #1
-    lda         (ZP_F_SPI), y
-    eor         #$ff
-    sta         (ZP_F_SPI), y
-    jmp         jmpnext
-
-forth_and:
-    jsr         forth_s_pull_2
-    lda         ZP_F_2ND
-    and         ZP_F_1ST
-    sta         ZP_F_1ST
-    lda         ZP_F_2ND + 1
-    and         ZP_F_1ST + 1
-    rts
-
-; ( w1 w2 -- INVERT(w1 BAND w2) )
-def_word "nand", "nand", 0
-    jsr         forth_and
-    eor         #$ff
-    sta         ZP_F_1ST + 1
-    lda         ZP_F_1ST
-    eor         #$ff
-    sta         ZP_F_1ST
-    jmp         this
-
-;---------------------------------------------------------------------
-; ( w1 w2 -- w1 BAND w2 )
-def_word "and", "band", 0
-    jsr         forth_and
-    bra         keeps
-
-;---------------------------------------------------------------------
-; ( w1 w2 -- w1 BOR w2 )
-def_word "or", "bor", 0
-    jsr         forth_s_pull_2
-    lda         ZP_F_2ND
-    ora         ZP_F_1ST
-    sta         ZP_F_1ST
-    lda         ZP_F_2ND + 1
-    ora         ZP_F_1ST + 1
-    bra         keeps
-
-;---------------------------------------------------------------------
-; ( w1 w2 -- w1 BXOR w2 )
-def_word "xor", "bxor", 0
-    jsr         forth_s_pull_2
-    lda         ZP_F_2ND
-    eor         ZP_F_1ST
-    sta         ZP_F_1ST
-    lda         ZP_F_2ND + 1
-    eor         ZP_F_1ST + 1
-    bra         keeps
-
-;---------------------------------------------------------------------
-; ( w1 w2 -- w1+w2 )
-def_word "+", "plus", 0
-    jsr         forth_s_pull_2
-    clc
-    lda         ZP_F_2ND
-    adc         ZP_F_1ST
-    sta         ZP_F_1ST
-    lda         ZP_F_2ND + 1
-    adc         ZP_F_1ST + 1
-    ; bvs err_overflow?
-    clc
-    bra         keeps
-
-; ( w1 w2 -- w2-w1 )
-def_word "-", "minus", 0
-    jsr         forth_s_pull_2
-    sec
-    lda         ZP_F_1ST
-    sbc         ZP_F_2ND
-    sta         ZP_F_1ST
-    lda         ZP_F_1ST + 1
-    sbc         ZP_F_2ND + 1
-    clc
-    bra         keeps
-
-;---------------------------------------------------------------------
-; ( a -- w ) ; w = [a]
-def_word "@", "fetch", 0
-    jsr         forth_s_pull_1
-    ldx         #ZP_F_1ST
-    ldy         #ZP_F_2ND
-    jsr         forth_copy_from
-    ; fall through
-
-;---------------------------------------------------------------------
-copys:
-    lda         0, y
-    sta         ZP_F_1ST
-    lda         1, y
-
-keeps:
-    sta         ZP_F_1ST + 1
-
-this:
-    jsr         forth_s_push
-
-jmpnext:
-    jmp         forth_next
-
-;---------------------------------------------------------------------
-; ( 0 -- $0000) | ( n -- $FFFF) not zero at top ?
-def_word "0#", "zeroq", 0
-    ldy         #1
-    lda         (ZP_F_SPI)
-    ora         (ZP_F_SPI), y
-    beq         isfalse  ; is \0 ?
-
-istrue:
-    lda         #$ff
-    sta         (ZP_F_SPI)
-    sta         (ZP_F_SPI), y
-
-isfalse:
-    bra         this
-
-.macro ZPA_PUSH zpa
-    BYTECOPY    #<zpa, ZP_F_1ST
-    lda         #>zpa
-    bra         keeps
-.endmacro
-
-;---------------------------------------------------------------------
-; ( -- state ) a variable return an reference
-def_word "s@", "state", 0 
-    ZPA_PUSH    ZP_F_STAT
-
-def_word ">in", "input_ptr", 0
-    ZPA_PUSH    ZP_F_TIN
-
-def_word "latest", "last_ptr", 0
-    ZPA_PUSH    ZP_F_LAST
-
-def_word "here", "here_ptr", 0
-    ZPA_PUSH    ZP_F_HERE
-
-def_word "sp", "stack_ptr", 0
-    ZPA_PUSH    ZP_F_SPI
-
-def_word "rp", "rstack_ptr", 0
-    ZPA_PUSH    ZP_F_RPI
-
-def_word "dup", "duplicate", 0
-    ldy         #0
-    BYTECOPY    {(ZP_F_SPI), y}, ZP_F_1ST
-    iny
-    lda         (ZP_F_SPI), y
-    jmp         keeps
-
-def_word "drop", "drop", 0
-    lda         #2
-    ldx         #ZP_F_SPI
-    jsr         forth_addwx
-    jmp         forth_next
-
-;def_word "", "", 0
-;def_word "", "", 0
+.include "forth_primitives.s"
 
 ;---------------------------------------------------------------------
 def_word ";", "semis",  FLAG_IMM
@@ -1205,7 +668,7 @@ def_word ";", "semis",  FLAG_IMM
 ; compound words must ends with exit
 semis_finish:
     LOAD_ADDR   exit, ZP_F_WRD
-    jsr         wcomma
+    jsr         forth_wcomma
     jmp         forth_next
 
 ;---------------------------------------------------------------------
@@ -1214,13 +677,12 @@ def_word ":", "colon", 0
     WORDCOPY    ZP_F_HERE, ZP_F_BACK
 
 ; ZP_F_STAT of 1 is 'compile'
-    lda         #1
-    sta         ZP_F_STAT
+    BYTECOPY    #1, ZP_F_STAT
 
 @colon_header:
 ; copy ZP_F_LAST into (ZP_F_HERE)
     ldy         #ZP_F_LAST
-    jsr         comma
+    jsr         forth_comma
 
 ; get following token
     jsr         forth_token
@@ -1258,26 +720,24 @@ def_word ":", "colon", 0
 def_word "exit", "exit", 0
 unnest: ; exit
 ; forth_pull, ZP_F_IPT = (ZP_F_RPI), Z_F_RPI += 2 
-    jsr         forth_r_pull
+    jsr         forth_r_pull_ipt
 
 forth_next:
 ; ZP_F_WRD = (ZP_F_IPT) ; ZP_F_IPT += 2
-    ldx         #ZP_F_IPT
-    ldy         #ZP_F_WRD
-    jsr         forth_copy_from
+    COPYFROM    ZP_F_IPT, ZP_F_WRD
 
 forth_pick:
 ; compare pages (MSBs)
     lda         ZP_F_WRD + 1
-    cmp         #>forth_primitives_end + 1
     bpl         forth_nest
     jmp         (ZP_F_WRD)
 
 forth_nest:   ; enter
-; forth_push, *rp = ZP_F_IPT, rp -=2
-    jsr         forth_r_push
+; forth_push, (ZP_F_RPI) = ZP_F_IPT, ZP_F_RPI -=2
+    jsr         forth_r_push_ipt
 
     WORDCOPY    ZP_F_WRD, ZP_F_IPT
     bra         forth_next
 ;~~~~~~~~
-forth_primitives_end:
+
+end_of_primitives:

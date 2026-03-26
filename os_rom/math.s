@@ -1,8 +1,18 @@
 .debuginfo
 
 .zeropage
-ZP_MATH_TEMP:
-            .res 2
+ZP_MATH_TEMP:           ; temp space, parse output base
+            .res 4      
+ZP_MATH_TEMP2:          ; temp space, parse output base
+            .res 4      
+ZP_MATH_PST:            ; parse state
+            .byte 0
+ZP_MATH_PB:             ; parse base
+            .byte 0
+ZP_MATH_PNS:            ; parse number size
+            .byte 0
+ZP_MATH_OA:             ; parse output address
+            .word 0
 
 .segment "BIOS"
 ; MATH
@@ -185,3 +195,112 @@ INC_56:
 INC_64:
             _M_INCX         8
 
+.feature c_comments
+MATH_PS_ACCEPT_BYTES    := 0
+MATH_PS_BASE_NEG        := 1
+MATH_PS_BASE_CHANGE     := 2
+MATH_PS_CAN_CHANGE_BASE := 3
+MATH_PS_VAL_NEG         := $80
+
+ValidBases:
+            HString         "bdhtwx"
+BaseSize:
+            .byte           2, 10, 16, 3, 12, 36
+BasePlaceValues:
+            .byte           "0123456789ABCDEFGHIJKLMNOPQRSTUVWZYZ"
+BalanceTerneryValues:
+            .byte           "-0+"
+
+; Number parsing
+
+MATH_PARSE_DEC_TO_WORD:
+            ldy             #2
+
+MATH_PARSE_DEC:
+            phx
+            lda             #10
+
+; .A = initial base, .Y = size in bytes
+MATH_PARSE_INIT:
+            sta             ZP_MATH_PB
+            sty             ZP_MATH_PNS
+            lda             #MATH_PS_CAN_CHANGE_BASE
+            stz             ZP_MATH_PST
+            rts
+
+; .A = byte to parse
+MATH_PARSE_BYTE:
+; if state = INIT, can get % or digit
+            pha
+            lda             #$7f
+            and             ZP_MATH_PST
+            beq             @parse_byte
+            cmp             #MATH_PS_CAN_CHANGE_BASE
+
+@parse_byte:
+            jsr             MATH_PARSE_VALID_BYTE     ; leaves place value in .A
+            bcc             @base_mult
+            rts
+
+@base_mult:
+            ldx             0
+; save the place value in y
+            tay
+@copy_loop:
+            lda             ZP_MATH_TEMP, x
+            sta             ZP_MATH_TEMP2, x
+            inx
+            cpx             ZP_MATH_PNS
+            bmi             @copy_loop
+            jsr             @shift_one
+            jsr             @shift_one
+            ldx             0
+            clc
+            php
+@add_loop:
+            plp
+            lda             ZP_MATH_TEMP, x
+            adc             ZP_MATH_TEMP2, x
+            php
+            inx
+            cpx             ZP_MATH_PNS
+            bpl             @shift_one
+            plp
+            ;bcs             @err_overflow
+
+@shift_one:
+            ldx             0
+            clc
+            php
+
+@shift_loop:
+            php
+            rol             ZP_MATH_TEMP, x
+            inx
+            cpx             ZP_MATH_PNS
+            bmi             @shift_loop
+
+@add_one:
+
+MATH_PARSE_VALID_BYTE:
+            cmp             #ASCII_0
+            bmi             @ret_invalid_byte_err
+            sec
+            sbc             #ASCII_0
+            cmp             #10
+            bmi             :+
+            sec
+            sbc             #(ASCII_A - ASCII_0)
+:
+            cmp             ZP_MATH_PB
+            bpl             @ret_invalid_byte_err
+            clc
+            rts
+
+@ret_invalid_byte_err:
+            sec
+            lda             ERR_MATH_INVD
+            rts
+
+; .A.Y: output address
+MATH_PARSE_END:
