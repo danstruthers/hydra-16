@@ -196,6 +196,7 @@ INC_64:
             _M_INCX         8
 
 .feature c_comments
+/*
 MATH_PS_ACCEPT_BYTES    := 0
 MATH_PS_BASE_NEG        := 1
 MATH_PS_BASE_CHANGE     := 2
@@ -304,3 +305,4 @@ MATH_PARSE_VALID_BYTE:
 
 ; .A.Y: output address
 MATH_PARSE_END:
+*/

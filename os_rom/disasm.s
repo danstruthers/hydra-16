@@ -1,106 +1,144 @@
 .zeropage
-ZP_D_ICOUNT:
+ZP_D_STATE:
+    .byte       0
+ZP_D_EXBYTES:
     .res        1
 ZP_D_INST:
-    .res        1
+    .res        3
 ZP_D_MODE:
     .res        1
 ZP_XAM:
     .res 2      ; eXAMine address
-ZP_D_ADDR:
-    .res        2
 
-.segment "BIOS"
+.segment "DISASM"
 
 ; Offsets into MNEMONIC_STR
-; ADC = $02
-; AND = $21
-; ASL = $14
-; BBR = $26
-; BBS = $2F
-; BCC = $3D
-; BCS = $36
-; BEQ = $67
-; BIT = $42
-; BMI = $60
-; BNE = $1C
-; BPL = $46
-; BRA = $00
-; BRK = $7B
-; BVC = $7E
-; BVS = $4C
-; CLC = $04
-; CLD = $06
-; CLI = $0A
-; CLV = $33
-; CMP = $0E
-; CPX = $3A
-; CPY = $3F
-; STP = $87
-; DEC = $08
-; DEX = $50
-; DEY = $23
-; EOR = $1E
-; INC = $0C
-; INX = $6E
-; INY = $62
-; JMP = $71
-; JSR = $6A
-; LDA = $2C
-; LDX = $81
-; LDY = $84
-; LSR = $16
-; NOP = $76
-; ORA = $1F
-; PHA = $12
-; PHP = $10
-; PHX = $73
-; PHY = $78
-; PLA = $49
-; PLP = $47
-; PLX = $89
-; PLY = $8C
-; RMB = $5E
-; ROL = $2A
-; ROR = $28
-; RTI = $6C
-; RTS = $18
-; SBC = $31
-; SEC = $38
-; SED = $4E
-; SEI = $8F
-; SMB = $1A
-; STA = $53
-; STX = $57
-; STY = $5A
-; STZ = $92
-; TAX = $54
-; TAY = $95
-; TRB = $44
-; TSB = $65
-; TSX = $98
-; TXA = $9B
-; TXS = $58
-; TYA = $5B
-; WAI = $9E
+MN_adc := $2B
+MN_and := $24
+MN_asl := $10
+MN_bbr := $90
+MN_bbs := $66
+MN_bcc := $71
+MN_bcs := $38
+MN_beq := $84
+MN_bit := $57
+MN_bmi := $52
+MN_bne := $6B
+MN_bpl := $45
+MN_bra := $0E
+MN_brk := $91
+MN_bvc := $61
+MN_bvs := $09
+MN_clc := $2D
+MN_cld := $2F
+MN_cli := $89
+MN_clv := $78
+MN_cmp := $19
+MN_cpx := $73
+MN_cpy := $63
+MN_stp := $7B
+MN_dec := $76
+MN_dex := $04
+MN_dey := $26
+MN_eor := $6D
+MN_inc := $17
+MN_inx := $54
+MN_iny := $8B
+MN_jmp := $94
+MN_jsr := $4D
+MN_lda := $22
+MN_ldx := $30
+MN_ldy := $12
+MN_lsr := $1E
+MN_nop := $5C
+MN_ora := $6E
+MN_pha := $7F
+MN_php := $7D
+MN_phx := $5E
+MN_phy := $98
+MN_pla := $29
+MN_plp := $96
+MN_plx := $46
+MN_ply := $1B
+MN_rmb := $82
+MN_rol := $20
+MN_ror := $33
+MN_rti := $4F
+MN_rts := $35
+MN_sbc := $37
+MN_sec := $87
+MN_sed := $02
+MN_sei := $0B
+MN_smb := $8E
+MN_sta := $49
+MN_stx := $41
+MN_sty := $3A
+MN_stz := $68
+MN_tax := $4A
+MN_tay := $59
+MN_trb := $07
+MN_tsb := $36
+MN_tsx := $3E
+MN_txa := $42
+MN_txs := $00
+MN_tya := $3B
+MN_wai := $15
 
-OPCODES: .byte $00
-    ;/* 0 */    ; brk,  ora,  nop,  nop,  tsb,  ora,  asl, rmb0,  php,  ora,  asl,  nop,  tsb,  ora,  asl, bbr0, /* 0 */
-    ;/* 1 */    ; bpl,  ora,  ora,  nop,  trb,  ora,  asl, rmb1,  clc,  ora,  inc,  nop,  trb,  ora,  asl, bbr1, /* 1 */
-    ;/* 2 */    ; jsr,  and,  nop,  nop,  bit,  and,  rol, rmb2,  plp,  and,  rol,  nop,  bit,  and,  rol, bbr2, /* 2 */
-    ;/* 3 */    ; bmi,  and,  and,  nop,  bit,  and,  rol, rmb3,  sec,  and,  dec,  nop,  bit,  and,  rol, bbr3, /* 3 */
-    ;/* 4 */    ; rti,  eor,  nop,  nop,  nop,  eor,  lsr, rmb4,  pha,  eor,  lsr,  nop,  jmp,  eor,  lsr, bbr4, /* 4 */
-    ;/* 5 */    ; bvc,  eor,  eor,  nop,  nop,  eor,  lsr, rmb5,  cli,  eor,  phy,  nop,  nop,  eor,  lsr, bbr5, /* 5 */
-    ;/* 6 */    ; rts,  adc,  nop,  nop,  stz,  adc,  ror, rmb6,  pla,  adc,  ror,  nop,  jmp,  adc,  ror, bbr6, /* 6 */
-    ;/* 7 */    ; bvs,  adc,  adc,  nop,  stz,  adc,  ror, rmb7,  sei,  adc,  ply,  nop,  jmp,  adc,  ror, bbr7, /* 7 */
-    ;/* 8 */    ; bra,  sta,  nop,  nop,  sty,  sta,  stx, smb0,  dey,  bit,  txa,  nop,  sty,  sta,  stx, bbs0, /* 8 */
-    ;/* 9 */    ; bcc,  sta,  sta,  nop,  sty,  sta,  stx, smb1,  tya,  sta,  txs,  nop,  stz,  sta,  stz, bbs1, /* 9 */
-    ;/* A */    ; ldy,  lda,  ldx,  nop,  ldy,  lda,  ldx, smb2,  tay,  lda,  tax,  nop,  ldy,  lda,  ldx, bbs2, /* A */
-    ;/* B */    ; bcs,  lda,  lda,  nop,  ldy,  lda,  ldx, smb3,  clv,  lda,  tsx,  nop,  ldy,  lda,  ldx, bbs3, /* B */
-    ;/* C */    ; cpy,  cmp,  nop,  nop,  cpy,  cmp,  dec, smb4,  iny,  cmp,  dex,  wai,  cpy,  cmp,  dec, bbs4, /* C */
-    ;/* D */    ; bne,  cmp,  cmp,  nop,  nop,  cmp,  dec, smb5,  cld,  cmp,  phx,  stp,  nop,  cmp,  dec, bbs5, /* D */
-    ;/* E */    ; cpx,  sbc,  nop,  nop,  cpx,  sbc,  inc, smb6,  inx,  sbc,  nop,  nop,  cpx,  sbc,  inc, bbs6, /* E */
-    ;/* F */    ; beq,  sbc,  sbc,  nop,  nop,  sbc,  inc, smb7,  sed,  sbc,  plx,  nop,  nop,  sbc,  inc, bbs7  /* F */
+AM_ACC   := 0     ;                     %0000
+AM_REL   := 1     ; $rr => $aaaa        %0001
+AM_ZPREL := 2     ; $zz,$rr => $aaaa    %0010
+AM_ZP    := 3     ; $zz                 %0011
+AM_ABSX  := 4     ; $aaaa,X             %0100
+AM_ZPX   := 5     ; $zz,X               %0101
+AM_ABSY  := 6     ; $aaaa,Y             %0110
+AM_ZPY   := 7     ; $zz,Y               %0111
+AM_IMP   := 8     ;                     %1000
+AM_IMM   := 9     ; #$ii                %1001
+AM_IND   := $A    ; ($aaaa)             %1010
+AM_ZPIND := $B    ; ($zz)               %1011
+AM_ABSIX := $C    ; ($aaaa,X)           %1110 
+AM_ZPIX  := $D    ; ($zz,X)             %1101
+AM_ABS   := $E    ; $aaaa               %1100
+AM_ZPIY  := $F    ; ($zz),Y             %1111
+
+.define M2(even, odd) (even + (odd*16))
+
+MN_OFFSETS:
+    .byte MN_brk, MN_ora, MN_nop, MN_nop, MN_tsb, MN_ora, MN_asl, MN_rmb, MN_php, MN_ora, MN_asl, MN_nop, MN_tsb, MN_ora, MN_asl, MN_bbr
+    .byte MN_bpl, MN_ora, MN_ora, MN_nop, MN_trb, MN_ora, MN_asl, MN_rmb, MN_clc, MN_ora, MN_inc, MN_nop, MN_trb, MN_ora, MN_asl, MN_bbr
+    .byte MN_jsr, MN_and, MN_nop, MN_nop, MN_bit, MN_and, MN_rol, MN_rmb, MN_plp, MN_and, MN_rol, MN_nop, MN_bit, MN_and, MN_rol, MN_bbr
+    .byte MN_bmi, MN_and, MN_and, MN_nop, MN_bit, MN_and, MN_rol, MN_rmb, MN_sec, MN_and, MN_dec, MN_nop, MN_bit, MN_and, MN_rol, MN_bbr
+    .byte MN_rti, MN_eor, MN_nop, MN_nop, MN_nop, MN_eor, MN_lsr, MN_rmb, MN_pha, MN_eor, MN_lsr, MN_nop, MN_jmp, MN_eor, MN_lsr, MN_bbr
+    .byte MN_bvc, MN_eor, MN_eor, MN_nop, MN_nop, MN_eor, MN_lsr, MN_rmb, MN_cli, MN_eor, MN_phy, MN_nop, MN_nop, MN_eor, MN_lsr, MN_bbr
+    .byte MN_rts, MN_adc, MN_nop, MN_nop, MN_stz, MN_adc, MN_ror, MN_rmb, MN_pla, MN_adc, MN_ror, MN_nop, MN_jmp, MN_adc, MN_ror, MN_bbr
+    .byte MN_bvs, MN_adc, MN_adc, MN_nop, MN_stz, MN_adc, MN_ror, MN_rmb, MN_sei, MN_adc, MN_ply, MN_nop, MN_jmp, MN_adc, MN_ror, MN_bbr
+    .byte MN_bra, MN_sta, MN_nop, MN_nop, MN_sty, MN_sta, MN_stx, MN_smb, MN_dey, MN_bit, MN_txa, MN_nop, MN_sty, MN_sta, MN_stx, MN_bbs
+    .byte MN_bcc, MN_sta, MN_sta, MN_nop, MN_sty, MN_sta, MN_stx, MN_smb, MN_tya, MN_sta, MN_txs, MN_nop, MN_stz, MN_sta, MN_stz, MN_bbs
+    .byte MN_ldy, MN_lda, MN_ldx, MN_nop, MN_ldy, MN_lda, MN_ldx, MN_smb, MN_tay, MN_lda, MN_tax, MN_nop, MN_ldy, MN_lda, MN_ldx, MN_bbs
+    .byte MN_bcs, MN_lda, MN_lda, MN_nop, MN_ldy, MN_lda, MN_ldx, MN_smb, MN_clv, MN_lda, MN_tsx, MN_nop, MN_ldy, MN_lda, MN_ldx, MN_bbs
+    .byte MN_cpy, MN_cmp, MN_nop, MN_nop, MN_cpy, MN_cmp, MN_dec, MN_smb, MN_iny, MN_cmp, MN_dex, MN_wai, MN_cpy, MN_cmp, MN_dec, MN_bbs
+    .byte MN_bne, MN_cmp, MN_cmp, MN_nop, MN_nop, MN_cmp, MN_dec, MN_smb, MN_cld, MN_cmp, MN_phx, MN_stp, MN_nop, MN_cmp, MN_dec, MN_bbs
+    .byte MN_cpx, MN_sbc, MN_nop, MN_nop, MN_cpx, MN_sbc, MN_inc, MN_smb, MN_inx, MN_sbc, MN_nop, MN_nop, MN_cpx, MN_sbc, MN_inc, MN_bbs
+    .byte MN_beq, MN_sbc, MN_sbc, MN_nop, MN_nop, MN_sbc, MN_inc, MN_smb, MN_sed, MN_sbc, MN_plx, MN_nop, MN_nop, MN_sbc, MN_inc, MN_bbs
+
+MN_AMODE:
+.byte $D8,$88,$33,$33,$98,$80,$EE,$2E
+.byte $F1,$8B,$53,$35,$68,$80,$4E,$24
+.byte $DE,$88,$33,$33,$98,$80,$EE,$2E
+.byte $F1,$8B,$55,$35,$68,$80,$44,$24
+.byte $D8,$88,$38,$33,$98,$80,$EE,$2E
+.byte $F1,$8B,$58,$35,$68,$88,$48,$24
+.byte $D8,$88,$33,$33,$98,$80,$EA,$2E
+.byte $F1,$8B,$55,$35,$68,$88,$4C,$24
+.byte $D1,$88,$33,$33,$98,$88,$EE,$2E
+.byte $F1,$8B,$55,$37,$68,$88,$4E,$24
+.byte $D9,$89,$33,$33,$98,$88,$EE,$2E
+.byte $F1,$8B,$55,$37,$68,$88,$44,$26
+.byte $D9,$88,$33,$33,$98,$88,$EE,$2E
+.byte $F1,$8B,$58,$35,$68,$88,$48,$24
+.byte $D9,$88,$33,$33,$98,$88,$EE,$2E
+.byte $F1,$8B,$58,$35,$68,$88,$48,$24
+
 ; 0..3 = even indexes, 4..7 = odd
 ;extra bytes:
 ;x000 = 0
@@ -111,36 +149,14 @@ OPCODES: .byte $00
 ;   x11x = Indexed by Y
 ;1xxx = Indirect (xxx != 000 and xxx != 1x0)
 
-AM_ACC = 0     ;                     %0000
-AM_REL = 1     ; $rr[$aaaa]          %0001
-AM_ZPREL = 2   ; $zz,$rr[$aaaa]      %0010
-AM_ZP  = 3     ; $zz                 %0011
-AM_ABSX = 4    ; $aaaa,X             %0100
-AM_ZPX = 5     ; $zz,X               %0101
-AM_ABSY = 6    ; $aaaa,Y             %0110
-AM_ZPY = 7     ; $zz,Y               %0111
-AM_IMP = 8     ;                     %1000
-AM_IMM = 9     ; #$ii                %1001
-AM_IND = $A    ; ($aaaa)             %1010
-AM_ZPIND = $B  ; ($zz)               %1011
-AM_ZPIX = $D   ; ($zz,X)             %1101
-AM_ZPIY = $F   ; ($zz),Y             %1111
-
 ; x000: one byte
 ; xxx1: two byte
 ; xxx0 (!x000): three byte
 ; x10x == ,X
 ; x11x == ,Y
-.define _AM_(this,that) this+that*16
-
-ADDRESS_MODES:
-    .byte _AM_(AM_ACC, AM_ACC)
-
-ZZ_MNEM:
-    .byte "BRKBPLJSRBMIRTIBVCRTSBVSBRABCCLDYBCSCPYBNECPXBEQPHPCLCPLPSECPHACLIPLASEIDEYTYATAYCLVINYCLDINXSED"
 
 MNEMONIC_STR:
-    .byte "BRADCLCLDECLINCMPHPHASLSRTSMBNEORANDEYBBROROLDABBSBCLVBCSECPXBCCPYBITRBPLPLABVSEDEXSTAXSTXSTYARMBMINYTSBEQJSRTINXJMPHXNOPHYBRKBVCLDXLDYSTPLXPLYSEISTZTAYTSXTXAWAI"
+    .byte "TXSEDEXTRBVSEIBRASLDYWAINCMPLYLSROLDANDEYPLADCLCLDXRORTSBCSTYATSXSTXABPLXSTAXJSRTIBMINXBITAYNOPHXBVCPYBBSTZBNEORABCCPXDECLVSTPHPHARMBEQSECLINYSMBBRKJMPLPHY"
 
 ; ZP_XAM, ZP_XAM+1: Address to Disassemble
 ; .A.Y: Address at which to start disassembly
@@ -149,100 +165,245 @@ MNEMONIC_STR:
 DISASM_AY:
     sta         ZP_XAM
     sty         ZP_XAM + 1
-    bcs         DISASM_X
 
 DISASM:
-    stz         ZP_D_ICOUNT
-    inc         ZP_D_ICOUNT
-    bra         DISASM1
-
-; .X: Instruction count
-DISASM_X:
-    stx         ZP_D_ICOUNT
-
-DISASM1:
-    ldy         #0
-
-NEXT_INST:
-    lda         (ZP_XAM),Y
-                                    ; do the disasm magic here
-    sta         ZP_D_INST
-    and         #7
-    bne         ZZ_DEC
-    cmp         #7
-    beq         BIT_DEC
-    cmp         #3
-    beq         NOP_DEC
-                                    ; decrement I count and go on to next inst if necessary
-
-ZZ_DEC:
-BIT_DEC:
-    bbs7        ZP_D_INST, @is_bb
-    sec
-    bra         @cont_bit
-
-@is_bb:
-    PRINT_CHAR  #ASCII_B
-    PRINT_CHAR
-
-@cont_bit:
-    lda         #ASCII_R
-    bbs0        ZP_D_INST, :+
-    inc
+    jsr         _disasm_load_inst
+    jsr         _disasm_print_inst_bytes
+    lda         ZP_D_STATE
+    bne         :+
+    rts
 
 :
-    PRINT_BYTE
-    bbs7        ZP_D_INST, @bit_num
-    PRINT_CHAR  #ASCII_M
-    PRINT_CHAR  #ASCII_B
+    ldy         #0
+    jsr         _disasm_print_padding
+    PRINT_SPACE
+    ldx         ZP_D_INST
+    lda         MN_OFFSETS, x
+    tax
+    PRINT_CHAR  {MNEMONIC_STR, x}, {MNEMONIC_STR + 1, x}, {MNEMONIC_STR + 2, x}
+    lda         ZP_D_EXBYTES
+    bne         :+
+    jmp         @end_of_print       ; one-byte inst prints only mnemonic
 
-@bit_num:
+:
     lda         ZP_D_INST
+    tax
+    and         #7
+    cmp         #7                  ; BBR, BBS, RMB, SMB
+    bne         @ex_space
+    txa
     SR_N        4
     and         #7
+    PRINT_HEX
+    bra         @skip_ex_space      ; skip one space
 
-    iny
-    bne         DISASMDECX          ; Y overflow?
-    inc         ZP_XAM              ; increment LOB of addr
-    bne         DISASMDECX          ; End of page?
-    inc         ZP_XAM+1            ; increment HOB of addr
+@ex_space:
+    PRINT_SPACE
 
-DISASMDECX:
-    dec         ZP_D_ICOUNT
-    bne         NEXT_INST
-    tya
+@skip_ex_space:
+    PRINT_SPACE
+    ldx         ZP_D_MODE
+    cpx         #AM_IND             ; indirect
+    bcc         @not_indirect
+    cpx         #AM_ABS             ; but not absolute
+    beq         @not_indirect
+    PRINT_CHAR  #ASCII_LPAREN
+
+@not_indirect:
+    cpx         #AM_IMM
+    bne         @not_immediate
+    jsr         _disasm_immediate
+    jmp         @end_of_print
+
+@not_immediate:
+    cpx         #AM_ZP              ; relative?
+    bcs         @not_relative
+    jsr         _disasm_zeropage
+    txa
+    lsr                             ; shift LOb to C
+    bcs         @not_zprel          ; AM_REL = 1, AM_ZPREL = 2, so skip ZP part if LOb is 1
+    PRINT_CHAR  #ASCII_COMMA
+    PRINT_SPACE
+    jsr         _disasm_zeropage
+
+@not_zprel:
+    PRINT_SPACE
+    PRINT_CHAR  #ASCII_EQ, #ASCII_GT, #ASCII_SPACE, #ASCII_DOLLAR
+    clc
+    ldy         ZP_D_EXBYTES
+    stz         ZP_TEMP
+    lda         ZP_D_INST, y
+    bpl         @skip_ff_set
+    dec         ZP_TEMP                             ; $FF => ZP_TEMP
+
+@skip_ff_set:
     adc         ZP_XAM
-    sta         ZP_XAM
-    bcc         :+
-    inc         ZP_XAM + 1
+    tax
+    lda         ZP_XAM + 1
+    adc         ZP_TEMP
+    PRINT_BYTE
+    txa
+    PRINT_BYTE
+    bra         @end_of_print
+
+@not_relative:
+    lda         ZP_D_EXBYTES
+    cmp         #1
+    beq         @two_byte_inst      ; inst is two bytes (vs three)?
+    jsr         _disasm_absolute
+    bra         @continue_multibyte
+
+@two_byte_inst:
+    jsr         _disasm_zeropage
+
+@continue_multibyte:
+    cpx         #AM_ABS             ; absolute?
+    beq         @end_of_print
+    cpx         #AM_ZPIY
+    bne         @not_zpiy
+
+    PRINT_CHAR  #ASCII_RPAREN
+
+@not_zpiy:
+    bbr2        ZP_D_MODE, @not_indexed ; indexed?
+    txa
+    lsr
+    lsr                             ; shift LOb to C
+    jsr         _disasm_commaXY
+
+@not_indexed:
+    cpx         #AM_IND
+    bmi         @end_of_print
+    cpx         #AM_ABS
+    bcs         @end_of_print           ; AM_ABS or AM_ZPIY?  Skip trailing RPAREN
+    PRINT_CHAR  #ASCII_RPAREN
+
+@end_of_print:
+    ;PRINT_CRLF
+    rts
+
+
+;---------------------------------------
+; Helper procedures
+
+_disasm_load_inst:
+    ldy         #0
+    ldx         ZP_D_STATE
+    beq         @done               ; if not in DISASM mode, just print one byte
+    lda         (ZP_XAM)
+    lsr                             ; /2 and shift LOb to C
+    tax
+    lda         MN_AMODE, x
+    bcc         @even_bytecode      ; is even bytecode?
+    SR_N        4
+
+@even_bytecode:
+    and         #$0F
+    sta         ZP_D_MODE
+    and         #7                  ; test if bits 0..2 are zeros (one-byte inst)
+    beq         @done
+    iny
+    and         #1
+    bne         @done               ; odd modes are 2-byte inst
+    iny
+
+@done:
+    sty         ZP_D_EXBYTES
+    ldy         #0
+
+:
+    jsr         _disasm_inst_byte
+    cpy         ZP_D_EXBYTES
+    beq         :+
+    iny
+    bra         :-
+
 :
     rts
 
-NOP_DEC:
+;AM_ACC   := 0     ;                     %0000
+;AM_REL   := 1     ; $rr => $aaaa        %0001
+;AM_ZPREL := 2     ; $zz,$rr => $aaaa    %0010
+;AM_ZP    := 3     ; $zz                 %0011
+;AM_ABSX  := 4     ; $aaaa,X             %0100
+;AM_ZPX   := 5     ; $zz,X               %0101
+;AM_ABSY  := 6     ; $aaaa,Y             %0110
+;AM_ZPY   := 7     ; $zz,Y               %0111
+;AM_IMP   := 8     ;                     %1000
+;AM_IMM   := 9     ; #$ii                %1001
+;AM_IND   := $A    ; ($aaaa)             %1010
+;AM_ZPIND := $B    ; ($zz)               %1011
+;AM_ABSIX := $C    ; ($aaaa,X)           %1100 
+;AM_ZPIX  := $D    ; ($zz,X)             %1101
+;AM_ABS   := $E    ; $aaaa               %1110
+;AM_ZPIY  := $F    ; ($zz),Y             %1111
+
+_disasm_inst_byte:
+    lda         (ZP_XAM)
+    sta         ZP_D_INST, y
+    inc         ZP_XAM
+    bne         :+
+    inc         ZP_XAM + 1
+
+:
     rts
 
-;IMM:
-;    PRINT_CHAR #ASCII_HASH
-;    bra ZP
+_disasm_print_inst_bytes:
+    ldy         #0
+    bra         :++
 
-;ZPREL:
-;    sec
+:
+    iny
 
-;ZP2:
-;    PRINT_CHAR <operand> >> 4
-;    PRINT_BYTE #ASCII_COMMA
+:
+    PRINT_SPACE
+    PRINT_BYTE  {ZP_D_INST, y}
+    cpy         ZP_D_EXBYTES
+    bcc         :--
+    rts
 
-;ZP:
-;    PRINT_CHAR #ASCII_DOLLAR
-;    PRINT_BYTE <<NextByte>>
-;    ; IF not ZPREL, return
-;    bcc REL
-;    rts
+_disasm_print_padding:
+    lda         ZP_D_EXBYTES
+    cmp         #1
+    beq         :+
+    eor         #2
+    beq         :+++
 
-;REL:
-    ; output "," and fall through to REL, else done
-;    PRINT_CHAR #ASCII_COMMA
-;    PRINT_CHAR #ASCII_DOLLAR
-;    PRINT_BYTE <<NextByte>>
+:
+    tax
 
-;    rts
+:
+    PRINT_SPACE
+    PRINT_SPACE
+    PRINT_SPACE
+    dex
+    bne         :-
+
+:
+    rts
+
+; Carry: 1 = Y, Carry: 0 = X
+_disasm_commaXY:
+    PRINT_CHAR  #ASCII_COMMA
+    lda         #ASCII_X
+    bcc         :+
+    inc
+:
+    PRINT_CHAR_JMP
+
+_disasm_absolute:
+    iny
+    jsr         _disasm_zeropage
+    dey
+    bra         _disasm_zp_byte
+
+_disasm_immediate:
+    PRINT_CHAR  #ASCII_HASH
+    ; fall through
+
+_disasm_zeropage:
+    iny
+    PRINT_CHAR  #ASCII_DOLLAR
+
+_disasm_zp_byte:
+    PRINT_BYTE_JMP  {ZP_D_INST, y}

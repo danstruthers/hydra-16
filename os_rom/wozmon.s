@@ -9,8 +9,6 @@ ZP_WM_HVP:
     .res 2      ; Hex Value Parsing
 ZP_WM_MODE:
     .res 1      ; $00=ZP_XAM, $7F=STOR, $AE=BLOCK ZP_XAM
-ZP_WM_DASTATE:
-    .res 1
 
 .segment "BUFFERS"
 IN:
@@ -21,7 +19,6 @@ IN:
 MON_START:
                 cld                             ; Clear decimal arithmetic mode.
                 cli                             ; Enable interrupts
-                stz             ZP_WM_DASTATE
                 bra             @is_start
 
 @not_cr:
@@ -34,7 +31,9 @@ MON_START:
 
 @is_escape:
                 PRINT_CHAR      #ASCII_BACKSLASH
+
 @is_start:
+                stz             ZP_D_STATE
                 PRINT_CRLF
 
 @get_line:
@@ -76,21 +75,31 @@ MON_START:
                 beq             @set_block      ; Set BLOCK ZP_XAM mode.
                 cmp             #ASCII_COLON
                 beq             @set_store      ; Yes, set STOR mode.
-                ;cmp             #ASCII_L
-                ;beq             @disassemble    ; Disassemble 1 or more instructions at current address/range
+                cmp             #ASCII_M
+                bpl             @check_rtow
+                cmp             #ASCII_K
+                bmi             @not_tuvw
+                eor             #ASCII_K        ; 'K' resets DASTATE to 0
+                sta             ZP_D_STATE
+                bra             @skip_delim
+
+@check_rtow:
                 cmp             #ASCII_R
-                beq             @run_prog       ; Yes, run user program
-                cmp             #ASCII_S        ; S OR T, U, V, or W registers?
-                bne             :+
+                bcc             @not_tuvw
+                cmp             #ASCII_X        ; R, S, T, U, V, or W
+                bcs             @not_tuvw
+                sbc             #ASCII_R-1      ; R - 1, since C == 0
+                beq             @run_prog
+                dec
+                bne             @not_spawn
                 lda             ZP_XAM
                 ldy             ZP_XAM+1
                 jsr             SPAWN_TASK
-                bra             @is_escape
-:
-                bcc             @not_tuvw       ;
-                cmp             #ASCII_X        ;
-                bcs             @not_tuvw       ;
-                adc             #($F0-ASCII_T)  ; T=FFF0, U=FFF1, V=FFF2, W=FFF3
+                bra             MON_START
+
+@not_spawn:
+                dec
+                adc             #$F0            ; T=FFF0, U=FFF1, V=FFF2, W=FFF3
                 sta             ZP_WM_HVP       ;
                 lda             #$FF            ;
                 sta             ZP_WM_HVP + 1   ;
@@ -149,10 +158,6 @@ MON_START:
 @run_prog:
                 _M_JSRR         ZP_XAM, MON_START
 
-;@disassemble:
-;                lda             #1
-;                sta             ZP_WM_DASTATE
-
 @not_store:
                 bmi             @examine_next   ; B7 = 0 for ZP_XAM, 1 for BLOCK ZP_XAM.
                 ldx             #2              ; Byte count.
@@ -164,35 +169,28 @@ MON_START:
                 dex                             ; Next of 2 bytes.
                 bne             @set_addr       ; Loop unless X = 0.
 
-@print_next:
-                bne             @print_data     ; NE means no address to print.
+@print_next_addr:
                 PRINT_CRLF
                 PRINT_BYTE      ZP_XAM + 1      ; Print 'examine index' high-order byte.
                 PRINT_BYTE      ZP_XAM          ; Print 'examine index' low-order byte.
                 PRINT_CHAR      #ASCII_COLON    ; Print a ':'.
 
 @print_data:
-                lda             ZP_WM_DASTATE
-                beq             @print_bytes
+                PUSH_XY
                 jsr             DISASM
-                bra             @examine_next
-
-@print_bytes:
-                PRINT_SPACE                     ; Print a ' '.
-                PRINT_BYTE      {(ZP_XAM,x)}    ; Print the byte at 'examine index'.
+                PULL_YX
 
 @examine_next:
-                stx             ZP_WM_MODE      ; 0 -> ZP_WM_MODE (ZP_XAM mode).
+                stz             ZP_WM_MODE      ; 0 -> ZP_WM_MODE (ZP_XAM mode).
                 lda             ZP_XAM
+                dec
                 cmp             ZP_WM_HVP       ; Compare 'examine index' to hex data.
                 lda             ZP_XAM + 1
                 sbc             ZP_WM_HVP + 1
                 bcs             @to_next_item   ; Not less, so no more data to output.
-                inc             ZP_XAM
-                bne             @mod_8_check    ; Increment 'examine index'.
-                inc             ZP_XAM + 1
-
-@mod_8_check:
+                lda             ZP_D_STATE      ; if disassembling, always print the address
+                bne             @print_next_addr
                 lda             ZP_XAM          ; Check low-order 'examine index' byte
                 and             #7              ; For MOD 8 = 0
-                bpl             @print_next     ; Always taken.
+                beq             @print_next_addr
+                bra             @print_data

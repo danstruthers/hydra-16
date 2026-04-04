@@ -82,7 +82,7 @@ SWITCH_TO_NSS:
 ; .A.Y: Address of task entrypoint
 SPAWN_TASK:
             sta     ZP_TEMP_VEC
-            sty     ZP_TEMP_VEC+1
+            sty     ZP_TEMP_VEC + 1
 
 ; Find a task that is idle and start it executing at the address in ZP_TEMP_VEC && ZP_TEMP_VEC + 1
 ; Return task # in A and C == 1

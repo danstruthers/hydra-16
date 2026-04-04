@@ -264,10 +264,9 @@ def_word "2*", "shl", 0
 ;---------------------------------------------------------------------
 ; Take next word value and push it on DS, and increment RPI
 def_word "[']", "quot_lit", 0
-    bra         forth_lit
+    bra         forth_p_lit
 
 def_word "lit", "lit", 0
-forth_lit:
 ; ZP_F_1ST = (ZP_F_IPT) ; ZP_F_IPT += 2
     COPYFROM    ZP_F_IPT, ZP_F_1ST
     jmp         this
@@ -334,7 +333,7 @@ def_word "!", "store", 0
 
 ;---------------------------------------------------------------------
 ; (w -- | -- w) Top of DS moved to top of RS
-def_word ">r", "ds_to_rs", 0
+def_word ">r", "to_rs", 0
     jsr         forth_s_pull_1
     ldy         #ZP_F_1ST
     jsr         forth_r_push
@@ -342,7 +341,7 @@ def_word ">r", "ds_to_rs", 0
 
 ;---------------------------------------------------------------------
 ; ( -- w | w -- ) Top of RS moved to top of DS
-def_word "<r", "rs_to_ds", 0
+def_word "<r", "from_rs", 0
     ldy         #ZP_F_1ST
     jsr         forth_r_pull
     jmp         this
@@ -457,7 +456,24 @@ jmpnext:
 
 ;---------------------------------------------------------------------
 ; ( 0 -- $0000) | ( n -- $FFFF) not zero at top ?
-def_word "0#", "zeroq", 0
+;def_word "0=", "eq0", 0
+; TODO: stack item count > 0 check
+;    ldy         #1
+;    lda         (ZP_F_SPI)
+;    ora         (ZP_F_SPI), y
+;    beq         istrue  ; is \0 ?
+;    BYTECOPY    #0, {(ZP_F_SPI)}
+;    sta         (ZP_F_SPI), y
+;    bra         jmpnext
+
+;---------------------------------------------------------------------
+; ( 0 -- $0000) | ( n -- $FFFF) normalize bool (same as 0#)
+def_word "nb", "norm_bool", 0
+    bra         forth_p_neq0
+
+;---------------------------------------------------------------------
+; ( 0 -- $0000) | ( n -- $FFFF) not zero at top ?
+def_word "0#", "neq0", 0
 ; TODO: stack item count > 0 check
     ldy         #1
     lda         (ZP_F_SPI)
