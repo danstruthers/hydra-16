@@ -19,21 +19,18 @@ IN:
 MON_START:
                 cld                             ; Clear decimal arithmetic mode.
                 cli                             ; Enable interrupts
+                stz             ZP_D_STATE      ; Byte mode, not DISAM mode
                 bra             @is_start
 
 @not_cr:
                 cmp             #ASCII_BACKSPACE
                 beq             @is_backspace
                 cmp             #ASCII_ESC
-                beq             @is_escape
+                beq             @is_start
                 iny                             ; Advance text index.
                 bpl             @get_next_char  ; Auto ESC if line longer than 127.
 
-@is_escape:
-                PRINT_CHAR      #ASCII_BACKSLASH
-
 @is_start:
-                stz             ZP_D_STATE
                 PRINT_CRLF
 
 @get_line:
@@ -88,12 +85,12 @@ MON_START:
                 bcc             @not_tuvw
                 cmp             #ASCII_X        ; R, S, T, U, V, or W
                 bcs             @not_tuvw
-                sbc             #ASCII_R-1      ; R - 1, since C == 0
+                sbc             #ASCII_R - 1    ; R - 1, since C == 0
                 beq             @run_prog
                 dec
                 bne             @not_spawn
                 lda             ZP_XAM
-                ldy             ZP_XAM+1
+                ldy             ZP_XAM + 1
                 jsr             SPAWN_TASK
                 bra             MON_START
 
@@ -106,8 +103,8 @@ MON_START:
                 iny                             ; skip the mnemonic
                 bra             @not_hex_or_escape
 
-@bra_is_escape:
-                bra             @is_escape
+@bra_is_start:
+                bra             @is_start      ; unrecognized
 
 @not_tuvw:
                 sty             ZP_Y_SAVE       ; Save Y for comparison
@@ -117,7 +114,7 @@ MON_START:
 @next_hex:
                 lda             IN,y            ; Get character for hex test.
                 eor             #ASCII_0        ; Map digits to $0-9.
-                cmp             #10             ; Digit?
+                cmp             #$0A            ; Digit?
                 bcc             @is_digit       ; Yes.
                 adc             #$88            ; Map letter "A"-"F" to $FA-FF.
                 cmp             #$FA            ; Hex letter?
@@ -141,7 +138,7 @@ MON_START:
 
 @not_hex:
                 cpy             ZP_Y_SAVE       ; Check if HPV empty (no hex digits).
-                beq             @bra_is_escape  ; Yes, generate ESC sequence.
+                beq             @bra_is_start   ; Yes, back to start.
 
 @not_hex_or_escape:
                 bit             ZP_WM_MODE      ; Test ZP_WM_MODE byte.
@@ -168,6 +165,7 @@ MON_START:
                 sta             ZP_XAM - 1,x    ; And to 'ZP_XAM index'.
                 dex                             ; Next of 2 bytes.
                 bne             @set_addr       ; Loop unless X = 0.
+                phy                             ; Save .Y until after printing is done
 
 @print_next_addr:
                 PRINT_CRLF
@@ -176,18 +174,21 @@ MON_START:
                 PRINT_CHAR      #ASCII_COLON    ; Print a ':'.
 
 @print_data:
-                PUSH_XY
-                jsr             DISASM
-                PULL_YX
+                jsr             DISASM          ; DISASM increments ZP_XAM appropriately
 
 @examine_next:
                 stz             ZP_WM_MODE      ; 0 -> ZP_WM_MODE (ZP_XAM mode).
-                lda             ZP_XAM
-                dec
-                cmp             ZP_WM_HVP       ; Compare 'examine index' to hex data.
-                lda             ZP_XAM + 1
-                sbc             ZP_WM_HVP + 1
-                bcs             @to_next_item   ; Not less, so no more data to output.
+                sec
+                lda             ZP_WM_HVP
+                sbc             ZP_XAM
+                lda             ZP_WM_HVP + 1
+                sbc             ZP_XAM + 1
+                bpl             :+
+                ply                             ; restore .Y
+                ldx             #0              ; restore .X to exptected 0 value
+                bra             @to_next_item   ; Not less, so no more data to output.
+
+:
                 lda             ZP_D_STATE      ; if disassembling, always print the address
                 bne             @print_next_addr
                 lda             ZP_XAM          ; Check low-order 'examine index' byte

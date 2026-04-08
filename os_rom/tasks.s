@@ -41,6 +41,8 @@ TASKS_INIT:
             MOV     ZP_READ_PTR, ZP_WRITE_PTR       ; Do INIT_BUFFER, without the stack
             dex
             bpl     @loop                           ; Loop back as long as X >= 0
+            lda     #TASK_BUSY_FLAG
+            sta     TASK_STATUS_REG                 ; Mark task zero as "busy"
 
             ; setup interrupt handler and interrupt timer
 
@@ -115,9 +117,9 @@ TASK_START:
 @task_complete:
             lda     #TASK_BUSY_FLAG
             trb     TASK_STATUS_REG
+            lda     TASK_PARENT
             ldx     #$FF
             stx     TASK_PARENT                     ; ...and reset the resume-to register to #$FF (invalid)
-            jsr     NEXT_TASK
             jmp     SWITCH_TO_NSS
 
 @task_start:

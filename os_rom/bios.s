@@ -25,7 +25,7 @@ TH_CLEARSCR:
 .segment "BIOS"
 
 HEX_MAP: .byte "0123456789ABCDEF"
-HYDRA_WELCOME: HString "Welcome to the HYDRA-16!"
+NamedHString HYDRA_WELCOME, "Welcome to the HYDRA-16!"
 
 SERIAL_INIT:
                 sei

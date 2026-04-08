@@ -74,6 +74,11 @@ SWT_SELECT_H    = SWT / 256
     .byte       .strlen(Str), Str
 .endmacro
 
+.macro NamedHString Name, Str
+Name:
+    HString Str
+.endmacro
+
 ;.struct SerialInfo
 ;    .byte   IOPort_IRQ
 ;    .byte   Read_Ptr_L

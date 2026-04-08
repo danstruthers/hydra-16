@@ -1,4 +1,6 @@
+.debuginfo
 .zeropage
+
 ZP_D_STATE:
     .byte       0
 ZP_D_EXBYTES:
@@ -121,23 +123,26 @@ MN_OFFSETS:
     .byte MN_cpx, MN_sbc, MN_nop, MN_nop, MN_cpx, MN_sbc, MN_inc, MN_smb, MN_inx, MN_sbc, MN_nop, MN_nop, MN_cpx, MN_sbc, MN_inc, MN_bbs
     .byte MN_beq, MN_sbc, MN_sbc, MN_nop, MN_nop, MN_sbc, MN_inc, MN_smb, MN_sed, MN_sbc, MN_plx, MN_nop, MN_nop, MN_sbc, MN_inc, MN_bbs
 
-MN_AMODE:
-.byte $D8,$88,$33,$33,$98,$80,$EE,$2E
-.byte $F1,$8B,$53,$35,$68,$80,$4E,$24
-.byte $DE,$88,$33,$33,$98,$80,$EE,$2E
-.byte $F1,$8B,$55,$35,$68,$80,$44,$24
-.byte $D8,$88,$38,$33,$98,$80,$EE,$2E
-.byte $F1,$8B,$58,$35,$68,$88,$48,$24
-.byte $D8,$88,$33,$33,$98,$80,$EA,$2E
-.byte $F1,$8B,$55,$35,$68,$88,$4C,$24
-.byte $D1,$88,$33,$33,$98,$88,$EE,$2E
-.byte $F1,$8B,$55,$37,$68,$88,$4E,$24
-.byte $D9,$89,$33,$33,$98,$88,$EE,$2E
-.byte $F1,$8B,$55,$37,$68,$88,$44,$26
-.byte $D9,$88,$33,$33,$98,$88,$EE,$2E
-.byte $F1,$8B,$58,$35,$68,$88,$48,$24
-.byte $D9,$88,$33,$33,$98,$88,$EE,$2E
-.byte $F1,$8B,$58,$35,$68,$88,$48,$24
+MN_AMODE_EVEN:
+    .byte $88,$33,$08,$EE	; %0000xxx0
+    .byte $B1,$53,$08,$4E	; %0001xxx0
+    .byte $8E,$33,$08,$EE	; %0010xxx0
+    .byte $B1,$55,$08,$44	; %0011xxx0
+    .byte $88,$38,$08,$EE	; %0100xxx0
+    .byte $B1,$58,$88,$48	; %0101xxx0
+    .byte $88,$33,$08,$EA	; %0110xxx0
+    .byte $B1,$55,$88,$4C	; %0111xxx0
+    .byte $81,$33,$88,$EE	; %1000xxx0
+    .byte $B1,$75,$88,$4E	; %1001xxx0
+    .byte $99,$33,$88,$EE	; %1010xxx0
+    .byte $B1,$75,$88,$64	; %1011xxx0
+    .byte $89,$33,$88,$EE	; %1100xxx0
+    .byte $B1,$58,$88,$48	; %1101xxx0
+    .byte $89,$33,$88,$EE	; %1110xxx0
+    .byte $B1,$58,$88,$48	; %1111xxx0
+; 
+    .byte $8D,$33,$89,$2E	; %xxx0xxx1
+    .byte $8F,$35,$86,$24	; %xxx1xxx1
 
 ; 0..3 = even indexes, 4..7 = odd
 ;extra bytes:
@@ -158,13 +163,15 @@ MN_AMODE:
 MNEMONIC_STR:
     .byte "TXSEDEXTRBVSEIBRASLDYWAINCMPLYLSROLDANDEYPLADCLCLDXRORTSBCSTYATSXSTXABPLXSTAXJSRTIBMINXBITAYNOPHXBVCPYBBSTZBNEORABCCPXDECLVSTPHPHARMBEQSECLINYSMBBRKJMPLPHY"
 
+NamedHString HS_RelPrefix, " => $"
+
+.segment "DISASM_CODE"
+
 ; ZP_XAM, ZP_XAM+1: Address to Disassemble
-; .A.Y: Address at which to start disassembly
-; C = 0, only disassemble one instruction
-; C = 1, .X contains instruction count to disassemble, 0 means 256
+; .A.Y: Start address of instruction to disassemble
 DISASM_AY:
-    sta         ZP_XAM
     sty         ZP_XAM + 1
+    sta         ZP_XAM
 
 DISASM:
     jsr         _disasm_load_inst
@@ -227,8 +234,7 @@ DISASM:
     jsr         _disasm_zeropage
 
 @not_zprel:
-    PRINT_SPACE
-    PRINT_CHAR  #ASCII_EQ, #ASCII_GT, #ASCII_SPACE, #ASCII_DOLLAR
+    _M_WRITE_HSTRING HS_RelPrefix
     clc
     ldy         ZP_D_EXBYTES
     stz         ZP_TEMP
@@ -292,12 +298,18 @@ _disasm_load_inst:
     beq         @done               ; if not in DISASM mode, just print one byte
     lda         (ZP_XAM)
     lsr                             ; /2 and shift LOb to C
+    bcc         @shift_mode         ; is even bytecode?
+    and         #$0F
+    ora         #$80
+
+@shift_mode:
+    lsr
     tax
-    lda         MN_AMODE, x
-    bcc         @even_bytecode      ; is even bytecode?
+    lda         MN_AMODE_EVEN, x
+    bcc         @no_shift
     SR_N        4
 
-@even_bytecode:
+@no_shift:
     and         #$0F
     sta         ZP_D_MODE
     and         #7                  ; test if bits 0..2 are zeros (one-byte inst)
@@ -374,8 +386,8 @@ _disasm_print_padding:
 
 :
     PRINT_SPACE
-    PRINT_SPACE
-    PRINT_SPACE
+    PRINT_CHAR
+    PRINT_CHAR
     dex
     bne         :-
 
