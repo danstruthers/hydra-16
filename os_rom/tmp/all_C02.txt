@@ -890,8 +890,10 @@ Current file: all.s
 000006r 2  4C rr rr                     jmp             WRITE_BYTE
 000009r 2               TH_CLEARSCR:
 000009r 2  4C rr rr                     jmp             CLEAR_SCR
-00000Cr 2               
-00000Cr 2               .segment "BIOS"
+00000Cr 2               TH_DISASMAY:
+00000Cr 2  4C rr rr                     jmp             DISASM_AY
+00000Fr 2               
+00000Fr 2               .segment "BIOS"
 000000r 2               
 000000r 2  30 31 32 33  HEX_MAP: .byte "0123456789ABCDEF"
 000004r 2  34 35 36 37  

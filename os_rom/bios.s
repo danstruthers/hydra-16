@@ -21,6 +21,8 @@ TH_WRITEBYTE:
                 jmp             WRITE_BYTE
 TH_CLEARSCR:
                 jmp             CLEAR_SCR
+TH_DISASMAY:
+                jmp             DISASM_AY
 
 .segment "BIOS"
 
