@@ -82,12 +82,11 @@ MON_START:
 
 @check_rtow:
                 cmp             #ASCII_R
+                beq             @run_prog
                 bcc             @not_tuvw
                 cmp             #ASCII_X        ; R, S, T, U, V, or W
                 bcs             @not_tuvw
-                sbc             #ASCII_R - 1    ; R - 1, since C == 0
-                beq             @run_prog
-                dec
+                cmp             #ASCII_S
                 bne             @not_spawn
                 lda             ZP_XAM
                 ldy             ZP_XAM + 1
@@ -95,8 +94,7 @@ MON_START:
                 bra             MON_START
 
 @not_spawn:
-                dec
-                adc             #$F0            ; T=FFF0, U=FFF1, V=FFF2, W=FFF3
+                adc             #($F0 - ASCII_T); T=FFF0, U=FFF1, V=FFF2, W=FFF3
                 sta             ZP_WM_HVP       ;
                 lda             #$FF            ;
                 sta             ZP_WM_HVP + 1   ;

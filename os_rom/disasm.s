@@ -10,7 +10,9 @@ ZP_D_INST:
 ZP_D_MODE:
     .res        1
 ZP_XAM:
-    .res 2      ; eXAMine address
+    .res        2      ; eXAMine address
+ZP_D_ICOUNT:
+    .res        1
 
 .segment "DISASM"
 
@@ -169,16 +171,27 @@ NamedHString HS_RelPrefix, " => $"
 
 ; ZP_XAM, ZP_XAM+1: Address to Disassemble
 ; .A.Y: Start address of instruction to disassemble
+; C=0 means single instruction, C=1 means number of instructions/bytes to print in .X
+; set ZP_D_STATE=1 to print disassembly, ZP_D_STATE=0 to print bytes
 DISASM_AY:
     sty         ZP_XAM + 1
     sta         ZP_XAM
+    bcc         DISASM
+    clc
+    stx         ZP_D_ICOUNT
+    bne         DISASM_LOOP
+    rts
 
 DISASM:
+    stz         ZP_D_ICOUNT
+    inc         ZP_D_ICOUNT
+
+DISASM_LOOP:
     jsr         _disasm_load_inst
     jsr         _disasm_print_inst_bytes
     lda         ZP_D_STATE
     bne         :+
-    rts
+    jmp         @end_of_print
 
 :
     ldy         #0
@@ -267,8 +280,7 @@ DISASM:
     beq         @end_of_print
     cpx         #AM_ZPIY
     bne         @not_zpiy
-
-    PRINT_CHAR  #ASCII_RPAREN
+   PRINT_CHAR   #ASCII_RPAREN
 
 @not_zpiy:
     bbr2        ZP_D_MODE, @not_indexed ; indexed?
@@ -285,9 +297,12 @@ DISASM:
     PRINT_CHAR  #ASCII_RPAREN
 
 @end_of_print:
-    ;PRINT_CRLF
-    rts
+    dec         ZP_D_ICOUNT
+    beq         @done
+    jmp         DISASM_LOOP
 
+@done:
+    rts
 
 ;---------------------------------------
 ; Helper procedures
