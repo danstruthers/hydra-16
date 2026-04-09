@@ -94,6 +94,7 @@ MON_START:
                 bra             MON_START
 
 @not_spawn:
+                clc
                 adc             #($F0 - ASCII_T); T=FFF0, U=FFF1, V=FFF2, W=FFF3
                 sta             ZP_WM_HVP       ;
                 lda             #$FF            ;
