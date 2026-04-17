@@ -8,6 +8,13 @@ TASK_PAUSED_FLAG        = 2
 
 ; TASK STATUS REGISTER BITS
 ;   0: 0 = Available, 1 = In Use
+;   1: 0 = Active, 1 = Paused
+;   2: 0 = , 1 = 
+;   3: 0 = , 1 = 
+;   4: 0 = , 1 = 
+;   5: 0 = , 1 = 
+;   6: 0 = , 1 = 
+;   7: 0 = , 1 = 
 
 .macro SELECT_TASK      task
             lda     T_REGISTER
@@ -96,16 +103,23 @@ TASK_START:
             rts
 
 @start_task:
+            cmp     T_REGISTER
+            bne     :+                              ; task is current task, so just bail out
+            rts
+
+:
             ldy     T_REGISTER
             sta     T_REGISTER
             sty     TASK_PARENT
             sty     T_REGISTER
             ldx     ZP_TEMP_VEC + 1
             ldy     ZP_TEMP_VEC
-            bne     :+
+            bne     :+                              ; skip HOB of addr if LOB <> 0
             dex                                     ; update entrypoint to rts-style addr-1
+
 :
-            dey                                     ; update LO byte
+            dey                                     ; update LOB
+            smb1    TASK_STATUS_REG                 ; mark parent task state as PAUSED
             sta     T_REGISTER                      ; do the task switch
             stx     ZP_X_SAVE                       ; new task ZP
             ldx     #$FF                            ; Reset the stack pointer
@@ -115,14 +129,14 @@ TASK_START:
             jsr     @task_start
 
 @task_complete:
-            lda     #TASK_BUSY_FLAG
-            trb     TASK_STATUS_REG
+            stz     TASK_STATUS_REG
             lda     TASK_PARENT
             ldx     #$FF
             stx     TASK_PARENT                     ; ...and reset the resume-to register to #$FF (invalid)
             jmp     SWITCH_TO_NSS
 
 @task_start:
+            rmb1    TASK_STATUS_REG                 ; remove the PAUSED flag
             phx                                     ; push the start address onto the stack
             pha                                     ; ...
             rts                                     ; start executing
@@ -143,15 +157,15 @@ RESERVE_TASK:
 @task_busy:
             stx     T_REGISTER                      ; Quick task switch to task in .X
             bbr0    TASK_STATUS_REG, @task_found    ; Is Bit 0 (TASK_BUSY_FLAG) reset/clear?
-            dex                                     ; Not found, so DEC .X
-            bne     @task_busy                      ; Until .X is zero, loop
+            dex                                     ; Not found, so check next
+            bne     @task_busy                      ; Until we reach the system task (0), loop
             clc                                     ; Not found
             dex                                     ; .X == $FF
             bra     @cleanup
 
 @task_found:
-            lda     #TASK_BUSY_FLAG|TASK_PAUSED_FLAG
-            sta     TASK_STATUS_REG                 ; SET the Task as Busy and Paused
+            smb0    TASK_STATUS_REG
+            smb1    TASK_STATUS_REG
             sec                                     ; Found
 
 @cleanup:

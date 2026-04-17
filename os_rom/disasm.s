@@ -9,7 +9,7 @@ ZP_D_INST:
     .res        3
 ZP_D_MODE:
     .res        1
-ZP_XAM:
+ZP_D_XAM:
     .res        2      ; eXAMine address
 ZP_D_ICOUNT:
     .res        1
@@ -169,13 +169,13 @@ NamedHString HS_RelPrefix, " => $"
 
 .segment "DISASM_CODE"
 
-; ZP_XAM, ZP_XAM+1: Address to Disassemble
+; ZP_D_XAM, ZP_D_XAM+1: Address to Disassemble
 ; .A.Y: Start address of instruction to disassemble
 ; C=0 means single instruction, C=1 means number of instructions/bytes to print in .X
 ; set ZP_D_STATE=1 to print disassembly, ZP_D_STATE=0 to print bytes
 DISASM_AY:
-    sty         ZP_XAM + 1
-    sta         ZP_XAM
+    sty         ZP_D_XAM + 1
+    sta         ZP_D_XAM
     bcc         DISASM
     clc
     stx         ZP_D_ICOUNT
@@ -256,9 +256,9 @@ DISASM_LOOP:
     dec         ZP_TEMP                             ; $FF => ZP_TEMP
 
 @skip_ff_set:
-    adc         ZP_XAM
+    adc         ZP_D_XAM
     tax
-    lda         ZP_XAM + 1
+    lda         ZP_D_XAM + 1
     adc         ZP_TEMP
     PRINT_BYTE
     txa
@@ -311,7 +311,7 @@ _disasm_load_inst:
     ldy         #0
     ldx         ZP_D_STATE
     beq         @done               ; if not in DISASM mode, just print one byte
-    lda         (ZP_XAM)
+    lda         (ZP_D_XAM)
     lsr                             ; /2 and shift LOb to C
     bcc         @shift_mode         ; is even bytecode?
     and         #$0F
@@ -366,11 +366,11 @@ _disasm_load_inst:
 ;AM_ZPIY  := $F    ; ($zz),Y             %1111
 
 _disasm_inst_byte:
-    lda         (ZP_XAM)
+    lda         (ZP_D_XAM)
     sta         ZP_D_INST, y
-    inc         ZP_XAM
+    inc         ZP_D_XAM
     bne         :+
-    inc         ZP_XAM + 1
+    inc         ZP_D_XAM + 1
 
 :
     rts
