@@ -9,7 +9,7 @@ TASK_PAUSED_FLAG        = 2
 ; TASK STATUS REGISTER BITS
 ;   0: 0 = Available, 1 = In Use
 ;   1: 0 = Active, 1 = Paused
-;   2: 0 = , 1 = 
+;   2: 0 = Not Waiting, 1 = Awaiting I/O
 ;   3: 0 = , 1 = 
 ;   4: 0 = , 1 = 
 ;   5: 0 = , 1 = 

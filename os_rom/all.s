@@ -5,11 +5,11 @@
 .include "defines.s"
 .include "zero.s"       ; this should always be after defines.s
 .include "bios.s"
+.include "thunks.s"
 .include "math.s"
 .include "tasks.s"
 .include "disasm.s"
 .include "wozmon.s"
-.include "forth/sector-forth-hy.s"
 .include "mmu.s"
 .include "shell.s"
 .include "sound.s"

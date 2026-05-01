@@ -2,14 +2,6 @@
 ;   Taken mostly from Steve Wozniak's Apple 1 Monitor for the 6502, or WOZMON
 ;
 .debuginfo
-.zeropage
-ZP_WM_ST:
-    .res 2      ; STore address
-ZP_WM_HVP:
-    .res 2      ; Hex Value Parsing
-ZP_WM_MODE:
-    .res 1      ; $00=ZP_D_XAM, $7F=STOR, $AE=BLOCK ZP_D_XAM
-
 .segment "BUFFERS"
 IN:
                 .res            $100

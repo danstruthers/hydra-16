@@ -1,27 +1,5 @@
 .debuginfo
 
-.zeropage
-ZP_M_BI_START:
-            .res        2
-ZP_M_SP1:
-ZP_M_SP1_L:
-            .res        1
-ZP_M_SP1_H:
-            .res        1
-ZP_M_SP2:
-ZP_M_SP2_L:
-            .res        1
-ZP_M_SP2_H:
-            .res        1
-ZP_M_SZ1:
-            .res        1
-ZP_M_TEMP:
-            .res        1
-ZP_M_TEMP2:
-            .res        1
-ZP_M_SV:
-            .res        1
-
 .segment "MMU"
 
 .struct     Address

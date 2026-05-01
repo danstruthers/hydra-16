@@ -1,19 +1,5 @@
 .debuginfo
 
-.zeropage
-ZP_MATH_TEMP:           ; temp space, parse output base
-            .res 4      
-ZP_MATH_TEMP2:          ; temp space, parse output base
-            .res 4      
-ZP_MATH_PST:            ; parse state
-            .byte 0
-ZP_MATH_PB:             ; parse base
-            .byte 0
-ZP_MATH_PNS:            ; parse number size
-            .byte 0
-ZP_MATH_OA:             ; parse output address
-            .word 0
-
 .segment "BIOS"
 ; MATH
 MOD_10:
@@ -244,7 +230,7 @@ MATH_PARSE_BYTE:
             rts
 
 @base_mult:
-            ldx             0
+            ldx             #0
 ; save the place value in y
             tay
 @copy_loop:
@@ -255,7 +241,7 @@ MATH_PARSE_BYTE:
             bmi             @copy_loop
             jsr             @shift_one
             jsr             @shift_one
-            ldx             0
+            ldx             #0
             clc
             php
 @add_loop:
@@ -270,7 +256,7 @@ MATH_PARSE_BYTE:
             ;bcs             @err_overflow
 
 @shift_one:
-            ldx             0
+            ldx             #0
             clc
             php
 
@@ -300,7 +286,7 @@ MATH_PARSE_VALID_BYTE:
 
 @ret_invalid_byte_err:
             sec
-            lda             ERR_MATH_INVD
+            lda             #ERR_MATH_INVD
             rts
 
 ; .A.Y: output address

@@ -310,14 +310,6 @@ ASCII_LETTER_OFFSET = ASCII_A-ASCII_0-10
 ; FORTH Defines
 
 F_CELL          := 2
-; data stack, 24 cells,
-; moves backwards, push decreases before copy
-F_DATA_SIZE     := 24 * F_CELL
-
-; return stack, 24 cells, 
-; moves backwards, push decreases before copy
-F_RETURN_SIZE   := 24 * F_CELL
-
 
 
 ; write a byte in A to the IO PORT
@@ -448,13 +440,17 @@ F_RETURN_SIZE   := 24 * F_CELL
 .endmacro
 
 ; X: # of bytes to move
-; Clobbers A, X
+; Clobbers A
 .macro BLKMOVX          addr1, addr2
+                phy
+                txa
+                tay
 :
-                dex
-                lda     addr1,X
-                sta     addr2,X
+                dey
+                lda     addr1,Y
+                sta     addr2,Y
                 bne     :-
+                ply
 .endmacro
 
 ; Y: # of bytes to move
@@ -467,17 +463,22 @@ F_RETURN_SIZE   := 24 * F_CELL
                 bne     :-
 .endmacro
 
+.macro  _M_ADDTO        addr
+                adc     addr
+                sta     addr
+.endmacro
+
 ; _M_INCC: inc and set C/V if rollover.  Clobbers .A, C
 .macro  _M_INCC    addr
                 sec
                 lda     #0
-                adc     addr
-                sta     addr
+                _M_ADDTO    {addr}
+.endmacro
 
-.macro  _M_INCC16          addr
+.macro  _M_INCC16       addr
                 inc     addr
                 bne     :+
-                _M_INCC    addr + 1
+                _M_INCC     addr + 1
                 bra     :++
 :
                 lda     addr + 1
@@ -485,12 +486,12 @@ F_RETURN_SIZE   := 24 * F_CELL
 :
 .endmacro
 
-.macro  _M_INCC32          addr
+.macro  _M_INCC32       addr
                 inc     addr
                 bne     :+
                 inc     addr+1
                 bne     :+
-                _M_INCC16  addr+2
+                _M_INCC16   addr+2
 .endmacro
 
 .macro  INC16           addr
@@ -594,15 +595,15 @@ F_RETURN_SIZE   := 24 * F_CELL
 .endmacro
 
 .macro SWAP_AX
-            pha
-            txa
-            plx
+                pha
+                txa
+                plx
 .endmacro
 
 .macro SWAP_AY
-            pha
-            tya
-            ply
+                pha
+                tya
+                ply
 .endmacro
 
 ; SPI
@@ -662,11 +663,11 @@ F_RETURN_SIZE   := 24 * F_CELL
 .endmacro
 
 .macro  PRINT_CHAR      C1, C2, C3, C4, C5, C6, C7, C8, C9
-                META_CALL       WRITE_CHAR, {C1}, {C2}, {C3}, {C4}, {C5}, {C6}, {C7}, {C8}, {C9}
+                META_CALL       TH_WRITE_CHAR, {C1}, {C2}, {C3}, {C4}, {C5}, {C6}, {C7}, {C8}, {C9}
 .endmacro
 
 .macro  PRINT_CHAR_JMP  C1, C2, C3, C4, C5, C6, C7, C8, C9
-                META_JMP        WRITE_CHAR, {C1}, {C2}, {C3}, {C4}, {C5}, {C6}, {C7}, {C8}, {C9}
+                META_JMP        TH_WRITE_CHAR, {C1}, {C2}, {C3}, {C4}, {C5}, {C6}, {C7}, {C8}, {C9}
 .endmacro
 
 .macro  PRINT_SPACE
@@ -682,37 +683,37 @@ F_RETURN_SIZE   := 24 * F_CELL
 .endmacro
 
 .macro  PRINT_BYTE      C1, C2, C3, C4, C5, C6, C7, C8, C9
-                META_CALL       WRITE_BYTE, {C1}, {C2}, {C3}, {C4}, {C5}, {C6}, {C7}, {C8}, {C9}
+                META_CALL       TH_WRITE_BYTE, {C1}, {C2}, {C3}, {C4}, {C5}, {C6}, {C7}, {C8}, {C9}
 .endmacro
 
 .macro  PRINT_BYTE_JMP  C1, C2, C3, C4, C5, C6, C7, C8, C9
-                META_JMP        WRITE_BYTE, {C1}, {C2}, {C3}, {C4}, {C5}, {C6}, {C7}, {C8}, {C9}
+                META_JMP        TH_WRITE_BYTE, {C1}, {C2}, {C3}, {C4}, {C5}, {C6}, {C7}, {C8}, {C9}
 .endmacro
 
 .macro  PRINT_HEX  C1, C2, C3, C4, C5, C6, C7, C8, C9
-                META_CALL       WRITE_HEX, {C1}, {C2}, {C3}, {C4}, {C5}, {C6}, {C7}, {C8}, {C9}
+                META_CALL       TH_WRITE_HEX, {C1}, {C2}, {C3}, {C4}, {C5}, {C6}, {C7}, {C8}, {C9}
 .endmacro
 
 .macro  PRINT_HEX_JMP  C1, C2, C3, C4, C5, C6, C7, C8, C9
-                META_JMP        WRITE_HEX, {C1}, {C2}, {C3}, {C4}, {C5}, {C6}, {C7}, {C8}, {C9}
+                META_JMP        TH_WRITE_HEX, {C1}, {C2}, {C3}, {C4}, {C5}, {C6}, {C7}, {C8}, {C9}
 .endmacro
 
 .macro  PRINT_HEX_MASK  C1, C2, C3, C4, C5, C6, C7, C8, C9
-                META_CALL       WRITE_HEX_MASK, {C1}, {C2}, {C3}, {C4}, {C5}, {C6}, {C7}, {C8}, {C9}
+                META_CALL       TH_WRITE_HEX_MASK, {C1}, {C2}, {C3}, {C4}, {C5}, {C6}, {C7}, {C8}, {C9}
 .endmacro
 
 .macro  PRINT_CRLF
-                jsr             WRITE_CRLF
+                jsr             TH_WRITE_CRLF
 .endmacro
 
 .macro  PRINT_CRLF_JMP
-                jmp             WRITE_CRLF
+                jmp             TH_WRITE_CRLF
 .endmacro
 
 .macro  _M_WRITE_HSTRING        addr
                 lda             #<addr
                 ldy             #>addr
-                jsr             WRITE_HSTRING
+                jsr             TH_WRITE_HSTRING
 .endmacro
 
 ; JSR using JMP
@@ -744,34 +745,34 @@ F_RETURN_SIZE   := 24 * F_CELL
 
 ; save a byte on branching, when small in necessary
 .macro SKIPNEXT
-    .byte   $22     ; Undocumented 2-byte NOP, 2 cycles; uses 1 byte to skip the next byte
+                .byte   $22     ; Undocumented 2-byte NOP, 2 cycles; uses 1 byte to skip the next byte
 .endmacro
 
 .macro SKIPNEXT2
-    .byte   $DC     ; Undocumented 3-byte NOP, 4 cycles, reads absolute address IP+1, IP+2; uses 1 byte to skip two bytes
+                .byte   $DC     ; Undocumented 3-byte NOP, 4 cycles, reads absolute address IP+1, IP+2; uses 1 byte to skip two bytes
 .endmacro
 
 .macro BYTECOPY fm, to
-            lda         fm
-            sta         to
+                lda         fm
+                sta         to
 .endmacro
 
 .macro WORDCOPY fm, to
-            BYTECOPY    {fm + 1}, {to + 1}
-            BYTECOPY    {fm}, {to}
+                BYTECOPY    {fm + 1}, {to + 1}
+                BYTECOPY    {fm}, {to}
 .endmacro
 
 .macro LOAD_ADDR    addr, to
-            BYTECOPY    {#>addr}, {to + 1}
-            BYTECOPY    {#<addr}, {to}
+                BYTECOPY    {#>addr}, {to + 1}
+                BYTECOPY    {#<addr}, {to}
 .endmacro
 
 .macro MEMCP    addrFrom, addrTo, size
-            PUSH_AY
-            LOAD_ADDR   {addrFrom}, ZP_TEMP_VEC
-            LOAD_ADDR   {addrTo}, ZP_TEMP_VEC2
-            lda         #<size
-            ldy         #>size
-            jsr         MEM_COPY
-            PULL_YA
+                PUSH_AY
+                LOAD_ADDR   {addrFrom}, ZP_TEMP_VEC
+                LOAD_ADDR   {addrTo}, ZP_TEMP_VEC2
+                lda         #<size
+                ldy         #>size
+                jsr         TH_MEM_COPY
+                PULL_YA
 .endmacro

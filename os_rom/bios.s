@@ -1,9 +1,5 @@
 .debuginfo
 
-.zeropage
-ZP_HS_TEMP:
-                .res            2
-
 SER_SEND_STATUS_READY = 0
 SER_SEND_STATUS_BUSY  = 1
 SER_SEND_STATUS_ERROR = $FF
@@ -11,18 +7,6 @@ SER_SEND_STATUS_ERROR = $FF
 .segment "BUFFERS"
 INPUT_BUFFER:
                 .res            $100
-
-.segment "BIOS_THUNKS"
-TH_READCHAR:
-                jmp             READ_CHAR
-TH_WRITECHAR:
-                jmp             WRITE_CHAR
-TH_WRITEBYTE:
-                jmp             WRITE_BYTE
-TH_CLEARSCR:
-                jmp             CLEAR_SCR
-TH_DISASMAY:
-                jmp             DISASM_AY
 
 .segment "BIOS"
 
@@ -192,8 +176,7 @@ WRITE_PROMPT:
                 PRINT_CHAR      #ASCII_T
                 PRINT_HEX_MASK  $FFF0
                 PRINT_SPACE
-                PRINT_BYTE      $0
-                lda             $0
+                PRINT_BYTE      RAM_BANK_REG
                 cmp             #$F0
                 bcc             @not_shared
                 PRINT_CHAR      #ASCII_LPAREN
@@ -202,7 +185,7 @@ WRITE_PROMPT:
 
 @not_shared:
                 PRINT_CHAR      #ASCII_COLON
-                PRINT_BYTE      $1
+                PRINT_BYTE      ROM_BANK_REG
                 PRINT_CHAR_JMP  #ASCII_GT
 
 ; .A, .Y hold the addr of HString to write
@@ -213,7 +196,7 @@ WRITE_HSTRING:
                 sty             ZP_HS_TEMP + 1
                 lda             (ZP_HS_TEMP)                ; Length of HString
                 tax
-                ldy             0
+                ldy             #0
 @write_loop:
                 iny
                 lda             (ZP_HS_TEMP),Y

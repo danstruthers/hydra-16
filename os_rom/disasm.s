@@ -1,19 +1,4 @@
 .debuginfo
-.zeropage
-
-ZP_D_STATE:
-    .byte       0
-ZP_D_EXBYTES:
-    .res        1
-ZP_D_INST:
-    .res        3
-ZP_D_MODE:
-    .res        1
-ZP_D_XAM:
-    .res        2      ; eXAMine address
-ZP_D_ICOUNT:
-    .res        1
-
 .segment "DISASM"
 
 ; Offsets into MNEMONIC_STR
@@ -88,25 +73,6 @@ MN_txs := $00
 MN_tya := $3B
 MN_wai := $15
 
-AM_ACC   := 0     ;                     %0000
-AM_REL   := 1     ; $rr => $aaaa        %0001
-AM_ZPREL := 2     ; $zz,$rr => $aaaa    %0010
-AM_ZP    := 3     ; $zz                 %0011
-AM_ABSX  := 4     ; $aaaa,X             %0100
-AM_ZPX   := 5     ; $zz,X               %0101
-AM_ABSY  := 6     ; $aaaa,Y             %0110
-AM_ZPY   := 7     ; $zz,Y               %0111
-AM_IMP   := 8     ;                     %1000
-AM_IMM   := 9     ; #$ii                %1001
-AM_IND   := $A    ; ($aaaa)             %1010
-AM_ZPIND := $B    ; ($zz)               %1011
-AM_ABSIX := $C    ; ($aaaa,X)           %1110 
-AM_ZPIX  := $D    ; ($zz,X)             %1101
-AM_ABS   := $E    ; $aaaa               %1100
-AM_ZPIY  := $F    ; ($zz),Y             %1111
-
-.define M2(even, odd) (even + (odd*16))
-
 MN_OFFSETS:
     .byte MN_brk, MN_ora, MN_nop, MN_nop, MN_tsb, MN_ora, MN_asl, MN_rmb, MN_php, MN_ora, MN_asl, MN_nop, MN_tsb, MN_ora, MN_asl, MN_bbr
     .byte MN_bpl, MN_ora, MN_ora, MN_nop, MN_trb, MN_ora, MN_asl, MN_rmb, MN_clc, MN_ora, MN_inc, MN_nop, MN_trb, MN_ora, MN_asl, MN_bbr
@@ -125,42 +91,62 @@ MN_OFFSETS:
     .byte MN_cpx, MN_sbc, MN_nop, MN_nop, MN_cpx, MN_sbc, MN_inc, MN_smb, MN_inx, MN_sbc, MN_nop, MN_nop, MN_cpx, MN_sbc, MN_inc, MN_bbs
     .byte MN_beq, MN_sbc, MN_sbc, MN_nop, MN_nop, MN_sbc, MN_inc, MN_smb, MN_sed, MN_sbc, MN_plx, MN_nop, MN_nop, MN_sbc, MN_inc, MN_bbs
 
-MN_AMODE_EVEN:
-    .byte $88,$33,$08,$EE	; %0000xxx0
-    .byte $B1,$53,$08,$4E	; %0001xxx0
-    .byte $8E,$33,$08,$EE	; %0010xxx0
-    .byte $B1,$55,$08,$44	; %0011xxx0
-    .byte $88,$38,$08,$EE	; %0100xxx0
-    .byte $B1,$58,$88,$48	; %0101xxx0
-    .byte $88,$33,$08,$EA	; %0110xxx0
-    .byte $B1,$55,$88,$4C	; %0111xxx0
-    .byte $81,$33,$88,$EE	; %1000xxx0
-    .byte $B1,$75,$88,$4E	; %1001xxx0
-    .byte $99,$33,$88,$EE	; %1010xxx0
-    .byte $B1,$75,$88,$64	; %1011xxx0
-    .byte $89,$33,$88,$EE	; %1100xxx0
-    .byte $B1,$58,$88,$48	; %1101xxx0
-    .byte $89,$33,$88,$EE	; %1110xxx0
-    .byte $B1,$58,$88,$48	; %1111xxx0
-; 
-    .byte $8D,$33,$89,$2E	; %xxx0xxx1
-    .byte $8F,$35,$86,$24	; %xxx1xxx1
-
 ; 0..3 = even indexes, 4..7 = odd
-;extra bytes:
-;x000 = 0
-;xxx1 = 1
-;xyy0 = 2 (yy != 00)
-;x1xx = Indexed
-;   x10x = Indexed by X
-;   x11x = Indexed by Y
-;1xxx = Indirect (xxx != 000 and xxx != 1x0)
-
 ; x000: one byte
 ; xxx1: two byte
 ; xxx0 (!x000): three byte
-; x10x == ,X
-; x11x == ,Y
+
+;x1xx = Indexed
+;   x10x = Indexed by X
+;   x11x (!1110) = Indexed by Y
+;1xxx = Indirect (!100x && !1110)
+
+; INDEXED SUFFIXES
+; 010x == ,X
+; 110x == ,X)
+; 011x == ,Y
+; 1111 == ),Y
+
+AM_ACC   := 0     ;                     %0000
+AM_REL   := 1     ; $rr => $aaaa        %0001
+AM_ZPREL := 2     ; $zz,$rr => $aaaa    %0010
+AM_ZP    := 3     ; $zz                 %0011
+AM_ABSX  := 4     ; $aaaa,X             %0100
+AM_ZPX   := 5     ; $zz,X               %0101
+AM_ABSY  := 6     ; $aaaa,Y             %0110
+AM_ZPY   := 7     ; $zz,Y               %0111
+AM_IMP   := 8     ;                     %1000
+AM_IMM   := 9     ; #$ii                %1001
+AM_IND   := $A    ; ($aaaa)             %1010
+AM_ZPIND := $B    ; ($zz)               %1011
+AM_ABSIX := $C    ; ($aaaa,X)           %1100 
+AM_ZPIX  := $D    ; ($zz,X)             %1101
+AM_ABS   := $E    ; $aaaa               %1110
+AM_ZPIY  := $F    ; ($zz),Y             %1111
+
+; ADDRESSING MODES
+; Even Opcode Modes (%xxxxyyz0), xxxx = row, yy = column, z = 0 (low nibble), z = 1 (hi nibble)
+MN_AMODE_EVEN:
+    .byte $88,$33,$08,$EE	; %0000yyz0
+    .byte $B1,$53,$08,$4E	; %0001yyz0
+    .byte $8E,$33,$08,$EE	; %0010yyz0
+    .byte $B1,$55,$08,$44	; %0011yyz0
+    .byte $88,$38,$08,$EE	; %0100yyz0
+    .byte $B1,$58,$88,$48	; %0101yyz0
+    .byte $88,$33,$08,$EA	; %0110yyz0
+    .byte $B1,$55,$88,$4C	; %0111yyz0
+    .byte $81,$33,$88,$EE	; %1000yyz0
+    .byte $B1,$75,$88,$4E	; %1001yyz0
+    .byte $99,$33,$88,$EE	; %1010yyz0
+    .byte $B1,$75,$88,$64	; %1011yyz0
+    .byte $89,$33,$88,$EE	; %1100yyz0
+    .byte $B1,$58,$88,$48	; %1101yyz0
+    .byte $89,$33,$88,$EE	; %1110yyz0
+    .byte $B1,$58,$88,$48	; %1111yyz0
+
+; ODD Opcode Modes (%xxxayyz1), a = row, yy = column, z = 0 (low nibble), z = 1 (hi nibble)
+    .byte $8D,$33,$89,$2E	; %xxx0yyz1
+    .byte $8F,$35,$86,$24	; %xxx1yyz1
 
 MNEMONIC_STR:
     .byte "TXSEDEXTRBVSEIBRASLDYWAINCMPLYLSROLDANDEYPLADCLCLDXRORTSBCSTYATSXSTXABPLXSTAXJSRTIBMINXBITAYNOPHXBVCPYBBSTZBNEORABCCPXDECLVSTPHPHARMBEQSECLINYSMBBRKJMPLPHY"
@@ -415,6 +401,7 @@ _disasm_commaXY:
     lda         #ASCII_X
     bcc         :+
     inc
+
 :
     PRINT_CHAR_JMP
 
