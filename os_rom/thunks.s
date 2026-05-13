@@ -10,7 +10,7 @@ TH_WRITE_BYTE:
 TH_WRITE_HEX:
                 jmp             WRITE_HEX           ; $F809
 TH_WRITE_HEX_MASK:
-                jmp             WRITE_HEX_MASK      ; $F80C 
+                jmp             WRITE_HEX_MASK      ; $F80C
 TH_WRITE_HSTRING:
                 jmp             WRITE_HSTRING       ; $F80F
 TH_WRITE_CRLF:

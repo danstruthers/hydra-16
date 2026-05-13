@@ -165,7 +165,7 @@ MON_START:
                 PRINT_CHAR      #ASCII_COLON    ; Print a ':'.
 
 @print_data:
-                jsr             DISASM          ; DISASM increments ZP_D_XAM appropriately
+                jsr             TH_DISASM       ; TH_DISASM increments ZP_D_XAM appropriately
 
 @examine_next:
                 stz             ZP_WM_MODE      ; 0 -> ZP_WM_MODE (ZP_D_XAM mode).

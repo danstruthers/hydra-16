@@ -9,6 +9,7 @@
 .include "math.s"
 .include "tasks.s"
 .include "disasm.s"
+.include "hyforth/hyforth.s"
 .include "wozmon.s"
 .include "mmu.s"
 .include "shell.s"

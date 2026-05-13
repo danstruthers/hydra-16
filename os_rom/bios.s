@@ -199,8 +199,7 @@ WRITE_HSTRING:
                 ldy             #0
 @write_loop:
                 iny
-                lda             (ZP_HS_TEMP),Y
-                PRINT_CHAR
+                PRINT_CHAR      {(ZP_HS_TEMP),Y}
                 dex
                 bne             @write_loop
                 plx
@@ -474,7 +473,7 @@ I2C_SEND_BIT:
 @send_one:
             SDA_HIGH
 
-@clock_out:	
+@clock_out:
             SCL_PULSE
             SDA_LOW
             rts
@@ -707,7 +706,7 @@ IO_PORT_F:      .tag IO_Port_10_Bytes
                 .word   IRQ_HANDLER     ; IRQ vector
                 ;       will actually be pulled from the Vector RAM, depending on lowest priority IRQ currently triggered,
                 ;       or vector for IRQ# set in V[0..3] if none are triggered.  Can trigger S/W IRQs by setting V and then
-                ;       calling BRK.  S/W IRQ# is $F, so setting V[0..3] to $F and v[4..7] to a different number, you can 
+                ;       calling BRK.  S/W IRQ# is $F, so setting V[0..3] to $F and v[4..7] to a different number, you can
                 ;       have up to 16 unique S/W IRQs.  You can invoke a hardware device IRQ handler in the same way
 .endmacro
 

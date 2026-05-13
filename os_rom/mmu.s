@@ -12,11 +12,11 @@
             addr        .tag Address
 .endstruct
 
-; status byte => 
+; status byte =>
 ; Bit 0: Allocated (1=Allocated, 0=Free)        Is the memory free or allocated
 ; Bit 1: Paged (1=Paged, 0=Task)                Points to Paged RAM
 ; Bit 2: Shared (1=Shared, 0=Task)              Points to Shared RAM when Shared == 1 && Paged == 1
-; Bit 3: Block (1=sz in Pages, 0=sz in Bytes)   
+; Bit 3: Block (1=sz in Pages, 0=sz in Bytes)
 ; Bit 4-6: RESERVED
 ; Bit 7: IsValid (1=Yes, 0=NO)              Is this structure in use?
 
@@ -244,7 +244,7 @@ MEM_COPY:
 @loop:
             lda         (ZP_TEMP_VEC)
             sta         (ZP_TEMP_VEC2)
-            PRINT_CHAR  #ASCII_DOT
+            PRINT_CHAR  #ASCII_PERIOD
             dex
             bne         :+
             tya
@@ -352,7 +352,7 @@ TEST_PAGE_RANGE:
             lda         #ASCII_PERIOD
 
 @write:
-            PRINT_CHAR 
+            PRINT_CHAR
             stz         ZP_TEMP
             inc         ZP_TEMP_VEC + 1
             cpx         ZP_TEMP_VEC + 1

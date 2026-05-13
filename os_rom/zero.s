@@ -106,7 +106,7 @@ ZP_D_EXBYTES:
 ZP_D_INST:
     .res    3
 ZP_D_MODE:
-     .res   1
+    .res   1
 ZP_D_XAM:
     .res    2       ; eXAMine address
 ZP_D_ICOUNT:

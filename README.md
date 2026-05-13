@@ -10,13 +10,13 @@ The code is built with the **cc65** suite (https://cc65.github.io/).  The board 
 | Start | End  | Description |
 | :---- | :--- | :---------- |
 | $00 | | RAM Page selection register (Pages `$00-$EF` are task-specific.  Pages `$F0-$FF` are shared between all tasks, and are further indexed using the U register, below) |
-| $01  | | ROM Page selection register |
+| $01 | | ROM Page selection register |
 | $02 | $0F | Reserved Zero-page entries for future use |
 | $10 | $FF | Remaining Zero-page |
 | $0100 | $01FF | Hardware Stack |
-| $0200 | $7DFF | Availabe Task RAM space |
-| $7E00 | $7EFF | Monitor input buffer (256 bytes) |
-| $7F00 | $7FFF | Onboard serial driver input buffer (256 bytes) |
+| $0200 | $02FF | Monitor input buffer (256 bytes) |
+| $0300 | $03FF | Onboard serial driver input buffer (256 bytes) |
+| $0400 | $7FFF | Availabe Task RAM space |
 | $8000 | $9FFF | Paged RAM (8K pages; task-specific and shared pages all show up here) |
 | $A000 | $DFFF | Paged ROM (16K pages; ROMs are shared between all tasks, but the page selection is per-task, see `$01` above) |
 

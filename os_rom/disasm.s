@@ -119,7 +119,7 @@ AM_IMP   := 8     ;                     %1000
 AM_IMM   := 9     ; #$ii                %1001
 AM_IND   := $A    ; ($aaaa)             %1010
 AM_ZPIND := $B    ; ($zz)               %1011
-AM_ABSIX := $C    ; ($aaaa,X)           %1100 
+AM_ABSIX := $C    ; ($aaaa,X)           %1100
 AM_ZPIX  := $D    ; ($zz,X)             %1101
 AM_ABS   := $E    ; $aaaa               %1110
 AM_ZPIY  := $F    ; ($zz),Y             %1111
@@ -266,7 +266,7 @@ DISASM_LOOP:
     beq         @end_of_print
     cpx         #AM_ZPIY
     bne         @not_zpiy
-   PRINT_CHAR   #ASCII_RPAREN
+    PRINT_CHAR   #ASCII_RPAREN
 
 @not_zpiy:
     bbr2        ZP_D_MODE, @not_indexed ; indexed?
@@ -346,7 +346,7 @@ _disasm_load_inst:
 ;AM_IMM   := 9     ; #$ii                %1001
 ;AM_IND   := $A    ; ($aaaa)             %1010
 ;AM_ZPIND := $B    ; ($zz)               %1011
-;AM_ABSIX := $C    ; ($aaaa,X)           %1100 
+;AM_ABSIX := $C    ; ($aaaa,X)           %1100
 ;AM_ZPIX  := $D    ; ($zz,X)             %1101
 ;AM_ABS   := $E    ; $aaaa               %1110
 ;AM_ZPIY  := $F    ; ($zz),Y             %1111

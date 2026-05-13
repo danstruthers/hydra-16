@@ -25,7 +25,7 @@ SOUND_INIT:
 
 
 SOUND_IRQ_HANDLER:
-                ; check which 
+                ; check which
                 rti
 
 YMN0L = $A0
@@ -157,7 +157,7 @@ SOUND_TEST:
                 ; 5. notes for rest of sequence on channel 1
                 ; 5a.  reset counter to 0
                 ; 5b.  key off on channel 1
-                ; 5c.  set note on channel 1 
+                ; 5c.  set note on channel 1
                 ; 5d.  key on on channel 1
                 ; 5e.  one delay
                 ; 5f.  increment counter
@@ -337,7 +337,7 @@ YM_DELAY_64:
                 bne         @inner      ; 3 cycles when branching, 2 when not
                 dex                     ; 2 cycles
                 bne         @mid        ; 3 cycles when branching, 2 when not
-    
+
                 ; Fine-tuning at end of inner loop
                 dec                     ; 2 cycles
                 bne         @outer      ; 3 cycles when branching, 2 when not

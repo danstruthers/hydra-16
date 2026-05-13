@@ -297,7 +297,14 @@ ASCII_W         = 'W'
 ASCII_X         = 'X'
 ASCII_Y         = 'Y'
 ASCII_Z         = 'Z'
+ASCII_a         = 'a'
 ASCII_f         = 'f'
+ASCII_m         = 'm'
+ASCII_q         = 'q'
+ASCII_s         = 's'
+ASCII_t         = 't'
+ASCII_x         = 'x'
+ASCII_z         = 'z'
 ASCII_PIPE      = '|'
 ASCII_LBRACKET  = '['
 ASCII_BACKSLASH = '\'
@@ -663,11 +670,11 @@ F_CELL          := 2
 .endmacro
 
 .macro  PRINT_CHAR      C1, C2, C3, C4, C5, C6, C7, C8, C9
-                META_CALL       TH_WRITE_CHAR, {C1}, {C2}, {C3}, {C4}, {C5}, {C6}, {C7}, {C8}, {C9}
+                META_CALL       WRITE_CHAR, {C1}, {C2}, {C3}, {C4}, {C5}, {C6}, {C7}, {C8}, {C9}
 .endmacro
 
 .macro  PRINT_CHAR_JMP  C1, C2, C3, C4, C5, C6, C7, C8, C9
-                META_JMP        TH_WRITE_CHAR, {C1}, {C2}, {C3}, {C4}, {C5}, {C6}, {C7}, {C8}, {C9}
+                META_JMP        WRITE_CHAR, {C1}, {C2}, {C3}, {C4}, {C5}, {C6}, {C7}, {C8}, {C9}
 .endmacro
 
 .macro  PRINT_SPACE
@@ -682,38 +689,46 @@ F_CELL          := 2
                 PRINT_CHAR_JMP  #ASCII_ESC, {C1}, {C2}, {C3}, {C4}, {C5}, {C6}, {C7}, {C8}
 .endmacro
 
+.macro  PRINT_ANSI_ESC_SEQ   C1, C2, C3, C4, C5, C6, C7
+                PRINT_CHAR      #ASCII_ESC, #ASCII_LBRACKET, {C1}, {C2}, {C3}, {C4}, {C5}, {C6}, {C7}
+.endmacro
+
+.macro  PRINT_ANSI_ESC_SEQ_JMP   C1, C2, C3, C4, C5, C6, C7
+                PRINT_CHAR_JMP  #ASCII_ESC, #ASCII_LBRACKET, {C1}, {C2}, {C3}, {C4}, {C5}, {C6}, {C7}
+.endmacro
+
 .macro  PRINT_BYTE      C1, C2, C3, C4, C5, C6, C7, C8, C9
-                META_CALL       TH_WRITE_BYTE, {C1}, {C2}, {C3}, {C4}, {C5}, {C6}, {C7}, {C8}, {C9}
+                META_CALL       WRITE_BYTE, {C1}, {C2}, {C3}, {C4}, {C5}, {C6}, {C7}, {C8}, {C9}
 .endmacro
 
 .macro  PRINT_BYTE_JMP  C1, C2, C3, C4, C5, C6, C7, C8, C9
-                META_JMP        TH_WRITE_BYTE, {C1}, {C2}, {C3}, {C4}, {C5}, {C6}, {C7}, {C8}, {C9}
+                META_JMP        WRITE_BYTE, {C1}, {C2}, {C3}, {C4}, {C5}, {C6}, {C7}, {C8}, {C9}
 .endmacro
 
 .macro  PRINT_HEX  C1, C2, C3, C4, C5, C6, C7, C8, C9
-                META_CALL       TH_WRITE_HEX, {C1}, {C2}, {C3}, {C4}, {C5}, {C6}, {C7}, {C8}, {C9}
+                META_CALL       WRITE_HEX, {C1}, {C2}, {C3}, {C4}, {C5}, {C6}, {C7}, {C8}, {C9}
 .endmacro
 
 .macro  PRINT_HEX_JMP  C1, C2, C3, C4, C5, C6, C7, C8, C9
-                META_JMP        TH_WRITE_HEX, {C1}, {C2}, {C3}, {C4}, {C5}, {C6}, {C7}, {C8}, {C9}
+                META_JMP        WRITE_HEX, {C1}, {C2}, {C3}, {C4}, {C5}, {C6}, {C7}, {C8}, {C9}
 .endmacro
 
 .macro  PRINT_HEX_MASK  C1, C2, C3, C4, C5, C6, C7, C8, C9
-                META_CALL       TH_WRITE_HEX_MASK, {C1}, {C2}, {C3}, {C4}, {C5}, {C6}, {C7}, {C8}, {C9}
+                META_CALL       WRITE_HEX_MASK, {C1}, {C2}, {C3}, {C4}, {C5}, {C6}, {C7}, {C8}, {C9}
 .endmacro
 
 .macro  PRINT_CRLF
-                jsr             TH_WRITE_CRLF
+                jsr             WRITE_CRLF
 .endmacro
 
 .macro  PRINT_CRLF_JMP
-                jmp             TH_WRITE_CRLF
+                jmp             WRITE_CRLF
 .endmacro
 
 .macro  _M_WRITE_HSTRING        addr
                 lda             #<addr
                 ldy             #>addr
-                jsr             TH_WRITE_HSTRING
+                jsr             WRITE_HSTRING
 .endmacro
 
 ; JSR using JMP
@@ -773,6 +788,6 @@ F_CELL          := 2
                 LOAD_ADDR   {addrTo}, ZP_TEMP_VEC2
                 lda         #<size
                 ldy         #>size
-                jsr         TH_MEM_COPY
+                jsr         MEM_COPY
                 PULL_YA
 .endmacro
