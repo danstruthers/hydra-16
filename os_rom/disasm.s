@@ -189,19 +189,19 @@ DISASM_LOOP:
     PRINT_CHAR  {MNEMONIC_STR, x}, {MNEMONIC_STR + 1, x}, {MNEMONIC_STR + 2, x}
     lda         ZP_D_EXBYTES
     bne         :+
-    jmp         @end_of_print       ; one-byte inst prints only mnemonic
+    jmp         @end_of_print               ; one-byte inst prints only mnemonic
 
 :
     lda         ZP_D_INST
     tax
     and         #7
-    cmp         #7                  ; BBR, BBS, RMB, SMB
+    cmp         #7                          ; BBR, BBS, RMB, SMB
     bne         @ex_space
     txa
     SR_N        4
     and         #7
     PRINT_HEX
-    bra         @skip_ex_space      ; skip one space
+    bra         @skip_ex_space              ; skip one space
 
 @ex_space:
     PRINT_SPACE
@@ -209,9 +209,9 @@ DISASM_LOOP:
 @skip_ex_space:
     PRINT_SPACE
     ldx         ZP_D_MODE
-    cpx         #AM_IND             ; indirect
+    cpx         #AM_IND                     ; indirect
     bcc         @not_indirect
-    cpx         #AM_ABS             ; but not absolute
+    cpx         #AM_ABS                     ; but not absolute
     beq         @not_indirect
     PRINT_CHAR  #ASCII_LPAREN
 
@@ -222,12 +222,12 @@ DISASM_LOOP:
     jmp         @end_of_print
 
 @not_immediate:
-    cpx         #AM_ZP              ; relative?
+    cpx         #AM_ZP                      ; relative?
     bcs         @not_relative
     jsr         _disasm_zeropage
     txa
-    lsr                             ; shift LOb to C
-    bcs         @not_zprel          ; AM_REL = 1, AM_ZPREL = 2, so skip ZP part if LOb is 1
+    lsr                                     ; shift LOb to C
+    bcs         @not_zprel                  ; AM_REL = 1, AM_ZPREL = 2, so skip ZP part if LOb is 1
     PRINT_CHAR  #ASCII_COMMA
     PRINT_SPACE
     jsr         _disasm_zeropage
@@ -239,7 +239,7 @@ DISASM_LOOP:
     stz         ZP_TEMP
     lda         ZP_D_INST, y
     bpl         @skip_ff_set
-    dec         ZP_TEMP                             ; $FF => ZP_TEMP
+    dec         ZP_TEMP                     ; $FF => ZP_TEMP
 
 @skip_ff_set:
     adc         ZP_D_XAM
@@ -254,7 +254,7 @@ DISASM_LOOP:
 @not_relative:
     lda         ZP_D_EXBYTES
     cmp         #1
-    beq         @two_byte_inst      ; inst is two bytes (vs three)?
+    beq         @two_byte_inst              ; inst is two bytes (vs three)?
     jsr         _disasm_absolute
     bra         @continue_multibyte
 
@@ -262,29 +262,30 @@ DISASM_LOOP:
     jsr         _disasm_zeropage
 
 @continue_multibyte:
-    cpx         #AM_ABS             ; absolute?
+    cpx         #AM_ABS                     ; absolute?
     beq         @end_of_print
     cpx         #AM_ZPIY
     bne         @not_zpiy
     PRINT_CHAR   #ASCII_RPAREN
 
 @not_zpiy:
-    bbr2        ZP_D_MODE, @not_indexed ; indexed?
+    bbr2        ZP_D_MODE, @not_indexed     ; indexed?
     txa
     lsr
-    lsr                             ; shift LOb to C
+    lsr                                     ; shift LOb to C
     jsr         _disasm_commaXY
 
 @not_indexed:
     cpx         #AM_IND
     bmi         @end_of_print
     cpx         #AM_ABS
-    bcs         @end_of_print           ; AM_ABS or AM_ZPIY?  Skip trailing RPAREN
+    bcs         @end_of_print               ; AM_ABS or AM_ZPIY?  Skip trailing RPAREN
     PRINT_CHAR  #ASCII_RPAREN
 
 @end_of_print:
     dec         ZP_D_ICOUNT
     beq         @done
+    PRINT_CRLF
     jmp         DISASM_LOOP
 
 @done:
@@ -296,10 +297,10 @@ DISASM_LOOP:
 _disasm_load_inst:
     ldy         #0
     ldx         ZP_D_STATE
-    beq         @done               ; if not in DISASM mode, just print one byte
+    beq         @done                       ; if not in DISASM mode, just print one byte
     lda         (ZP_D_XAM)
-    lsr                             ; /2 and shift LOb to C
-    bcc         @shift_mode         ; is even bytecode?
+    lsr                                     ; /2 and shift LOb to C
+    bcc         @shift_mode                 ; is even bytecode?
     and         #$0F
     ora         #$80
 
@@ -313,11 +314,11 @@ _disasm_load_inst:
 @no_shift:
     and         #$0F
     sta         ZP_D_MODE
-    and         #7                  ; test if bits 0..2 are zeros (one-byte inst)
+    and         #7                          ; test if bits 0..2 are zeros (one-byte inst)
     beq         @done
     iny
     and         #1
-    bne         @done               ; odd modes are 2-byte inst
+    bne         @done                       ; odd modes are 2-byte inst
     iny
 
 @done:
@@ -325,11 +326,17 @@ _disasm_load_inst:
     ldy         #0
 
 :
-    jsr         _disasm_inst_byte
+    lda         (ZP_D_XAM)
+    sta         ZP_D_INST, y
+    inc         ZP_D_XAM
+    bne         :+
+    inc         ZP_D_XAM + 1
+
+:
     cpy         ZP_D_EXBYTES
     beq         :+
     iny
-    bra         :-
+    bra         :--
 
 :
     rts
@@ -350,16 +357,6 @@ _disasm_load_inst:
 ;AM_ZPIX  := $D    ; ($zz,X)             %1101
 ;AM_ABS   := $E    ; $aaaa               %1110
 ;AM_ZPIY  := $F    ; ($zz),Y             %1111
-
-_disasm_inst_byte:
-    lda         (ZP_D_XAM)
-    sta         ZP_D_INST, y
-    inc         ZP_D_XAM
-    bne         :+
-    inc         ZP_D_XAM + 1
-
-:
-    rts
 
 _disasm_print_inst_bytes:
     ldy         #0

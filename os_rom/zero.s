@@ -57,6 +57,8 @@ ZP_HS_TEMP:
 ;  WAZMON
 ZP_WM_ST:
     .res  2      ; STore address
+ZP_WM_XAM:
+    .res  2
 ZP_WM_HVP:
     .res  2      ; Hex Value Parsing
 ZP_WM_MODE:

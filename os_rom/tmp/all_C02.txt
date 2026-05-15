@@ -886,63 +886,65 @@ Current file: all.s
 00001Er 2               ;  WAZMON
 00001Er 2               ZP_WM_ST:
 00001Er 2  xx xx            .res  2      ; STore address
-000020r 2               ZP_WM_HVP:
-000020r 2  xx xx            .res  2      ; Hex Value Parsing
-000022r 2               ZP_WM_MODE:
-000022r 2  xx               .res  1      ; $00=ZP_D_XAM, $7F=STOR, $AE=BLOCK ZP_D_XAM
-000023r 2               
-000023r 2               ; MMU
-000023r 2               ZP_M_BI_START:
-000023r 2  xx xx            .res  2
-000025r 2               ZP_M_SP1:
-000025r 2               ZP_M_SP1_L:
-000025r 2  xx               .res  1
-000026r 2               ZP_M_SP1_H:
-000026r 2  xx               .res  1
-000027r 2               ZP_M_SP2:
-000027r 2               ZP_M_SP2_L:
+000020r 2               ZP_WM_XAM:
+000020r 2  xx xx            .res  2
+000022r 2               ZP_WM_HVP:
+000022r 2  xx xx            .res  2      ; Hex Value Parsing
+000024r 2               ZP_WM_MODE:
+000024r 2  xx               .res  1      ; $00=ZP_D_XAM, $7F=STOR, $AE=BLOCK ZP_D_XAM
+000025r 2               
+000025r 2               ; MMU
+000025r 2               ZP_M_BI_START:
+000025r 2  xx xx            .res  2
+000027r 2               ZP_M_SP1:
+000027r 2               ZP_M_SP1_L:
 000027r 2  xx               .res  1
-000028r 2               ZP_M_SP2_H:
+000028r 2               ZP_M_SP1_H:
 000028r 2  xx               .res  1
-000029r 2               ZP_M_SZ1:
+000029r 2               ZP_M_SP2:
+000029r 2               ZP_M_SP2_L:
 000029r 2  xx               .res  1
-00002Ar 2               ZP_M_TEMP:
+00002Ar 2               ZP_M_SP2_H:
 00002Ar 2  xx               .res  1
-00002Br 2               ZP_M_TEMP2:
+00002Br 2               ZP_M_SZ1:
 00002Br 2  xx               .res  1
-00002Cr 2               ZP_M_SV:
+00002Cr 2               ZP_M_TEMP:
 00002Cr 2  xx               .res  1
-00002Dr 2               
-00002Dr 2               ; MATH
-00002Dr 2               ZP_MATH_TEMP:           ; temp space, parse output base
-00002Dr 2  xx xx xx xx      .res  4
-000031r 2               ;ZP_MATH_TEMP2:          ; temp space, parse output base
-000031r 2               ;    .res  4
-000031r 2               ;ZP_MATH_PST:            ; parse state
-000031r 2               ;    .res  1
-000031r 2               ;ZP_MATH_PB:             ; parse base
-000031r 2               ;    .res  1
-000031r 2               ;ZP_MATH_PNS:            ; parse number size
-000031r 2               ;    .res  1
-000031r 2               ;ZP_MATH_OA:             ; parse output address
-000031r 2               ;    .res  2
-000031r 2               
-000031r 2               ; DISASM
-000031r 2               ZP_D_STATE:
-000031r 2  xx               .res    1
-000032r 2               ZP_D_EXBYTES:
-000032r 2  xx               .res    1
-000033r 2               ZP_D_INST:
-000033r 2  xx xx xx         .res    3
-000036r 2               ZP_D_MODE:
-000036r 2  xx               .res   1
-000037r 2               ZP_D_XAM:
-000037r 2  xx xx            .res    2       ; eXAMine address
-000039r 2               ZP_D_ICOUNT:
-000039r 2  xx               .res    1
-00003Ar 2               
-00003Ar 2               .feature org_per_seg
-00003Ar 2               .segment "STACK"
+00002Dr 2               ZP_M_TEMP2:
+00002Dr 2  xx               .res  1
+00002Er 2               ZP_M_SV:
+00002Er 2  xx               .res  1
+00002Fr 2               
+00002Fr 2               ; MATH
+00002Fr 2               ZP_MATH_TEMP:           ; temp space, parse output base
+00002Fr 2  xx xx xx xx      .res  4
+000033r 2               ;ZP_MATH_TEMP2:          ; temp space, parse output base
+000033r 2               ;    .res  4
+000033r 2               ;ZP_MATH_PST:            ; parse state
+000033r 2               ;    .res  1
+000033r 2               ;ZP_MATH_PB:             ; parse base
+000033r 2               ;    .res  1
+000033r 2               ;ZP_MATH_PNS:            ; parse number size
+000033r 2               ;    .res  1
+000033r 2               ;ZP_MATH_OA:             ; parse output address
+000033r 2               ;    .res  2
+000033r 2               
+000033r 2               ; DISASM
+000033r 2               ZP_D_STATE:
+000033r 2  xx               .res    1
+000034r 2               ZP_D_EXBYTES:
+000034r 2  xx               .res    1
+000035r 2               ZP_D_INST:
+000035r 2  xx xx xx         .res    3
+000038r 2               ZP_D_MODE:
+000038r 2  xx               .res   1
+000039r 2               ZP_D_XAM:
+000039r 2  xx xx            .res    2       ; eXAMine address
+00003Br 2               ZP_D_ICOUNT:
+00003Br 2  xx               .res    1
+00003Cr 2               
+00003Cr 2               .feature org_per_seg
+00003Cr 2               .segment "STACK"
 000000r 2               
 000000r 1               .include "bios.s"
 000000r 2               .debuginfo
@@ -2573,19 +2575,19 @@ Current file: all.s
 000035r 2  rr 20 rr rr  
 00003Fr 2  A5 rr            lda         ZP_D_EXBYTES
 000041r 2  D0 03            bne         :+
-000043r 2  4C rr rr         jmp         @end_of_print       ; one-byte inst prints only mnemonic
+000043r 2  4C rr rr         jmp         @end_of_print               ; one-byte inst prints only mnemonic
 000046r 2               
 000046r 2               :
 000046r 2  A5 rr            lda         ZP_D_INST
 000048r 2  AA               tax
 000049r 2  29 07            and         #7
-00004Br 2  C9 07            cmp         #7                  ; BBR, BBS, RMB, SMB
+00004Br 2  C9 07            cmp         #7                          ; BBR, BBS, RMB, SMB
 00004Dr 2  D0 0C            bne         @ex_space
 00004Fr 2  8A               txa
 000050r 2  4A 4A 4A 4A      SR_N        4
 000054r 2  29 07            and         #7
 000056r 2  20 rr rr         PRINT_HEX
-000059r 2  80 05            bra         @skip_ex_space      ; skip one space
+000059r 2  80 05            bra         @skip_ex_space              ; skip one space
 00005Br 2               
 00005Br 2               @ex_space:
 00005Br 2  A9 20 20 rr      PRINT_SPACE
@@ -2595,9 +2597,9 @@ Current file: all.s
 000060r 2  A9 20 20 rr      PRINT_SPACE
 000064r 2  rr           
 000065r 2  A6 rr            ldx         ZP_D_MODE
-000067r 2  E0 0A            cpx         #AM_IND             ; indirect
+000067r 2  E0 0A            cpx         #AM_IND                     ; indirect
 000069r 2  90 09            bcc         @not_indirect
-00006Br 2  E0 0E            cpx         #AM_ABS             ; but not absolute
+00006Br 2  E0 0E            cpx         #AM_ABS                     ; but not absolute
 00006Dr 2  F0 05            beq         @not_indirect
 00006Fr 2  A9 28 20 rr      PRINT_CHAR  #ASCII_LPAREN
 000073r 2  rr           
@@ -2609,12 +2611,12 @@ Current file: all.s
 00007Br 2  4C rr rr         jmp         @end_of_print
 00007Er 2               
 00007Er 2               @not_immediate:
-00007Er 2  E0 03            cpx         #AM_ZP              ; relative?
+00007Er 2  E0 03            cpx         #AM_ZP                      ; relative?
 000080r 2  B0 37            bcs         @not_relative
 000082r 2  20 rr rr         jsr         _disasm_zeropage
 000085r 2  8A               txa
-000086r 2  4A               lsr                             ; shift LOb to C
-000087r 2  B0 0D            bcs         @not_zprel          ; AM_REL = 1, AM_ZPREL = 2, so skip ZP part if LOb is 1
+000086r 2  4A               lsr                                     ; shift LOb to C
+000087r 2  B0 0D            bcs         @not_zprel                  ; AM_REL = 1, AM_ZPREL = 2, so skip ZP part if LOb is 1
 000089r 2  A9 2C 20 rr      PRINT_CHAR  #ASCII_COMMA
 00008Dr 2  rr           
 00008Er 2  A9 20 20 rr      PRINT_SPACE
@@ -2629,7 +2631,7 @@ Current file: all.s
 0000A0r 2  64 rr            stz         ZP_TEMP
 0000A2r 2  B9 rr rr         lda         ZP_D_INST, y
 0000A5r 2  10 02            bpl         @skip_ff_set
-0000A7r 2  C6 rr            dec         ZP_TEMP                             ; $FF => ZP_TEMP
+0000A7r 2  C6 rr            dec         ZP_TEMP                     ; $FF => ZP_TEMP
 0000A9r 2               
 0000A9r 2               @skip_ff_set:
 0000A9r 2  65 rr            adc         ZP_D_XAM
@@ -2644,7 +2646,7 @@ Current file: all.s
 0000B9r 2               @not_relative:
 0000B9r 2  A5 rr            lda         ZP_D_EXBYTES
 0000BBr 2  C9 01            cmp         #1
-0000BDr 2  F0 05            beq         @two_byte_inst      ; inst is two bytes (vs three)?
+0000BDr 2  F0 05            beq         @two_byte_inst              ; inst is two bytes (vs three)?
 0000BFr 2  20 rr rr         jsr         _disasm_absolute
 0000C2r 2  80 03            bra         @continue_multibyte
 0000C4r 2               
@@ -2652,7 +2654,7 @@ Current file: all.s
 0000C4r 2  20 rr rr         jsr         _disasm_zeropage
 0000C7r 2               
 0000C7r 2               @continue_multibyte:
-0000C7r 2  E0 0E            cpx         #AM_ABS             ; absolute?
+0000C7r 2  E0 0E            cpx         #AM_ABS                     ; absolute?
 0000C9r 2  F0 1F            beq         @end_of_print
 0000CBr 2  E0 0F            cpx         #AM_ZPIY
 0000CDr 2  D0 05            bne         @not_zpiy
@@ -2660,412 +2662,409 @@ Current file: all.s
 0000D3r 2  rr           
 0000D4r 2               
 0000D4r 2               @not_zpiy:
-0000D4r 2  2F rr 06         bbr2        ZP_D_MODE, @not_indexed ; indexed?
+0000D4r 2  2F rr 06         bbr2        ZP_D_MODE, @not_indexed     ; indexed?
 0000D7r 2  8A               txa
 0000D8r 2  4A               lsr
-0000D9r 2  4A               lsr                             ; shift LOb to C
+0000D9r 2  4A               lsr                                     ; shift LOb to C
 0000DAr 2  20 rr rr         jsr         _disasm_commaXY
 0000DDr 2               
 0000DDr 2               @not_indexed:
 0000DDr 2  E0 0A            cpx         #AM_IND
 0000DFr 2  30 09            bmi         @end_of_print
 0000E1r 2  E0 0E            cpx         #AM_ABS
-0000E3r 2  B0 05            bcs         @end_of_print           ; AM_ABS or AM_ZPIY?  Skip trailing RPAREN
+0000E3r 2  B0 05            bcs         @end_of_print               ; AM_ABS or AM_ZPIY?  Skip trailing RPAREN
 0000E5r 2  A9 29 20 rr      PRINT_CHAR  #ASCII_RPAREN
 0000E9r 2  rr           
 0000EAr 2               
 0000EAr 2               @end_of_print:
 0000EAr 2  C6 rr            dec         ZP_D_ICOUNT
-0000ECr 2  F0 03            beq         @done
-0000EEr 2  4C rr rr         jmp         DISASM_LOOP
-0000F1r 2               
-0000F1r 2               @done:
-0000F1r 2  60               rts
-0000F2r 2               
-0000F2r 2               ;---------------------------------------
-0000F2r 2               ; Helper procedures
-0000F2r 2               
-0000F2r 2               _disasm_load_inst:
-0000F2r 2  A0 00            ldy         #0
-0000F4r 2  A6 rr            ldx         ZP_D_STATE
-0000F6r 2  F0 22            beq         @done               ; if not in DISASM mode, just print one byte
-0000F8r 2  B2 rr            lda         (ZP_D_XAM)
-0000FAr 2  4A               lsr                             ; /2 and shift LOb to C
-0000FBr 2  90 04            bcc         @shift_mode         ; is even bytecode?
-0000FDr 2  29 0F            and         #$0F
-0000FFr 2  09 80            ora         #$80
-000101r 2               
-000101r 2               @shift_mode:
-000101r 2  4A               lsr
-000102r 2  AA               tax
-000103r 2  BD rr rr         lda         MN_AMODE_EVEN, x
-000106r 2  90 04            bcc         @no_shift
-000108r 2  4A 4A 4A 4A      SR_N        4
-00010Cr 2               
-00010Cr 2               @no_shift:
-00010Cr 2  29 0F            and         #$0F
-00010Er 2  85 rr            sta         ZP_D_MODE
-000110r 2  29 07            and         #7                  ; test if bits 0..2 are zeros (one-byte inst)
-000112r 2  F0 06            beq         @done
-000114r 2  C8               iny
-000115r 2  29 01            and         #1
-000117r 2  D0 01            bne         @done               ; odd modes are 2-byte inst
-000119r 2  C8               iny
-00011Ar 2               
-00011Ar 2               @done:
-00011Ar 2  84 rr            sty         ZP_D_EXBYTES
-00011Cr 2  A0 00            ldy         #0
-00011Er 2               
-00011Er 2               :
-00011Er 2  20 rr rr         jsr         _disasm_inst_byte
-000121r 2  C4 rr            cpy         ZP_D_EXBYTES
-000123r 2  F0 03            beq         :+
-000125r 2  C8               iny
-000126r 2  80 F6            bra         :-
-000128r 2               
-000128r 2               :
-000128r 2  60               rts
-000129r 2               
-000129r 2               ;AM_ACC   := 0     ;                     %0000
-000129r 2               ;AM_REL   := 1     ; $rr => $aaaa        %0001
-000129r 2               ;AM_ZPREL := 2     ; $zz,$rr => $aaaa    %0010
-000129r 2               ;AM_ZP    := 3     ; $zz                 %0011
-000129r 2               ;AM_ABSX  := 4     ; $aaaa,X             %0100
-000129r 2               ;AM_ZPX   := 5     ; $zz,X               %0101
-000129r 2               ;AM_ABSY  := 6     ; $aaaa,Y             %0110
-000129r 2               ;AM_ZPY   := 7     ; $zz,Y               %0111
-000129r 2               ;AM_IMP   := 8     ;                     %1000
-000129r 2               ;AM_IMM   := 9     ; #$ii                %1001
-000129r 2               ;AM_IND   := $A    ; ($aaaa)             %1010
-000129r 2               ;AM_ZPIND := $B    ; ($zz)               %1011
-000129r 2               ;AM_ABSIX := $C    ; ($aaaa,X)           %1100
-000129r 2               ;AM_ZPIX  := $D    ; ($zz,X)             %1101
-000129r 2               ;AM_ABS   := $E    ; $aaaa               %1110
-000129r 2               ;AM_ZPIY  := $F    ; ($zz),Y             %1111
-000129r 2               
-000129r 2               _disasm_inst_byte:
-000129r 2  B2 rr            lda         (ZP_D_XAM)
-00012Br 2  99 rr rr         sta         ZP_D_INST, y
-00012Er 2  E6 rr            inc         ZP_D_XAM
-000130r 2  D0 02            bne         :+
-000132r 2  E6 rr            inc         ZP_D_XAM + 1
+0000ECr 2  F0 06            beq         @done
+0000EEr 2  20 rr rr         PRINT_CRLF
+0000F1r 2  4C rr rr         jmp         DISASM_LOOP
+0000F4r 2               
+0000F4r 2               @done:
+0000F4r 2  60               rts
+0000F5r 2               
+0000F5r 2               ;---------------------------------------
+0000F5r 2               ; Helper procedures
+0000F5r 2               
+0000F5r 2               _disasm_load_inst:
+0000F5r 2  A0 00            ldy         #0
+0000F7r 2  A6 rr            ldx         ZP_D_STATE
+0000F9r 2  F0 22            beq         @done                       ; if not in DISASM mode, just print one byte
+0000FBr 2  B2 rr            lda         (ZP_D_XAM)
+0000FDr 2  4A               lsr                                     ; /2 and shift LOb to C
+0000FEr 2  90 04            bcc         @shift_mode                 ; is even bytecode?
+000100r 2  29 0F            and         #$0F
+000102r 2  09 80            ora         #$80
+000104r 2               
+000104r 2               @shift_mode:
+000104r 2  4A               lsr
+000105r 2  AA               tax
+000106r 2  BD rr rr         lda         MN_AMODE_EVEN, x
+000109r 2  90 04            bcc         @no_shift
+00010Br 2  4A 4A 4A 4A      SR_N        4
+00010Fr 2               
+00010Fr 2               @no_shift:
+00010Fr 2  29 0F            and         #$0F
+000111r 2  85 rr            sta         ZP_D_MODE
+000113r 2  29 07            and         #7                          ; test if bits 0..2 are zeros (one-byte inst)
+000115r 2  F0 06            beq         @done
+000117r 2  C8               iny
+000118r 2  29 01            and         #1
+00011Ar 2  D0 01            bne         @done                       ; odd modes are 2-byte inst
+00011Cr 2  C8               iny
+00011Dr 2               
+00011Dr 2               @done:
+00011Dr 2  84 rr            sty         ZP_D_EXBYTES
+00011Fr 2  A0 00            ldy         #0
+000121r 2               
+000121r 2               :
+000121r 2  B2 rr            lda         (ZP_D_XAM)
+000123r 2  99 rr rr         sta         ZP_D_INST, y
+000126r 2  E6 rr            inc         ZP_D_XAM
+000128r 2  D0 02            bne         :+
+00012Ar 2  E6 rr            inc         ZP_D_XAM + 1
+00012Cr 2               
+00012Cr 2               :
+00012Cr 2  C4 rr            cpy         ZP_D_EXBYTES
+00012Er 2  F0 03            beq         :+
+000130r 2  C8               iny
+000131r 2  80 EE            bra         :--
+000133r 2               
+000133r 2               :
+000133r 2  60               rts
 000134r 2               
-000134r 2               :
-000134r 2  60               rts
-000135r 2               
-000135r 2               _disasm_print_inst_bytes:
-000135r 2  A0 00            ldy         #0
-000137r 2  80 01            bra         :++
+000134r 2               ;AM_ACC   := 0     ;                     %0000
+000134r 2               ;AM_REL   := 1     ; $rr => $aaaa        %0001
+000134r 2               ;AM_ZPREL := 2     ; $zz,$rr => $aaaa    %0010
+000134r 2               ;AM_ZP    := 3     ; $zz                 %0011
+000134r 2               ;AM_ABSX  := 4     ; $aaaa,X             %0100
+000134r 2               ;AM_ZPX   := 5     ; $zz,X               %0101
+000134r 2               ;AM_ABSY  := 6     ; $aaaa,Y             %0110
+000134r 2               ;AM_ZPY   := 7     ; $zz,Y               %0111
+000134r 2               ;AM_IMP   := 8     ;                     %1000
+000134r 2               ;AM_IMM   := 9     ; #$ii                %1001
+000134r 2               ;AM_IND   := $A    ; ($aaaa)             %1010
+000134r 2               ;AM_ZPIND := $B    ; ($zz)               %1011
+000134r 2               ;AM_ABSIX := $C    ; ($aaaa,X)           %1100
+000134r 2               ;AM_ZPIX  := $D    ; ($zz,X)             %1101
+000134r 2               ;AM_ABS   := $E    ; $aaaa               %1110
+000134r 2               ;AM_ZPIY  := $F    ; ($zz),Y             %1111
+000134r 2               
+000134r 2               _disasm_print_inst_bytes:
+000134r 2  A0 00            ldy         #0
+000136r 2  80 01            bra         :++
+000138r 2               
+000138r 2               :
+000138r 2  C8               iny
 000139r 2               
 000139r 2               :
-000139r 2  C8               iny
-00013Ar 2               
-00013Ar 2               :
-00013Ar 2  A9 20 20 rr      PRINT_SPACE
-00013Er 2  rr           
-00013Fr 2  B9 rr rr 20      PRINT_BYTE  {ZP_D_INST, y}
-000143r 2  rr rr        
-000145r 2  C4 rr            cpy         ZP_D_EXBYTES
-000147r 2  90 F0            bcc         :--
-000149r 2  60               rts
-00014Ar 2               
-00014Ar 2               _disasm_print_padding:
-00014Ar 2  A5 rr            lda         ZP_D_EXBYTES
-00014Cr 2  C9 01            cmp         #1
-00014Er 2  F0 04            beq         :+
-000150r 2  49 02            eor         #2
-000152r 2  F0 0F            beq         :+++
+000139r 2  A9 20 20 rr      PRINT_SPACE
+00013Dr 2  rr           
+00013Er 2  B9 rr rr 20      PRINT_BYTE  {ZP_D_INST, y}
+000142r 2  rr rr        
+000144r 2  C4 rr            cpy         ZP_D_EXBYTES
+000146r 2  90 F0            bcc         :--
+000148r 2  60               rts
+000149r 2               
+000149r 2               _disasm_print_padding:
+000149r 2  A5 rr            lda         ZP_D_EXBYTES
+00014Br 2  C9 01            cmp         #1
+00014Dr 2  F0 04            beq         :+
+00014Fr 2  49 02            eor         #2
+000151r 2  F0 0F            beq         :+++
+000153r 2               
+000153r 2               :
+000153r 2  AA               tax
 000154r 2               
 000154r 2               :
-000154r 2  AA               tax
-000155r 2               
-000155r 2               :
-000155r 2  A9 20 20 rr      PRINT_SPACE
-000159r 2  rr           
-00015Ar 2  20 rr rr         PRINT_CHAR
-00015Dr 2  20 rr rr         PRINT_CHAR
-000160r 2  CA               dex
-000161r 2  D0 F2            bne         :-
+000154r 2  A9 20 20 rr      PRINT_SPACE
+000158r 2  rr           
+000159r 2  20 rr rr         PRINT_CHAR
+00015Cr 2  20 rr rr         PRINT_CHAR
+00015Fr 2  CA               dex
+000160r 2  D0 F2            bne         :-
+000162r 2               
+000162r 2               :
+000162r 2  60               rts
 000163r 2               
-000163r 2               :
-000163r 2  60               rts
-000164r 2               
-000164r 2               ; Carry: 1 = Y, Carry: 0 = X
-000164r 2               _disasm_commaXY:
-000164r 2  A9 2C 20 rr      PRINT_CHAR  #ASCII_COMMA
-000168r 2  rr           
-000169r 2  A9 58            lda         #ASCII_X
-00016Br 2  90 01            bcc         :+
-00016Dr 2  1A               inc
-00016Er 2               
-00016Er 2               :
-00016Er 2  4C rr rr         PRINT_CHAR_JMP
-000171r 2               
-000171r 2               _disasm_absolute:
-000171r 2  C8               iny
-000172r 2  20 rr rr         jsr         _disasm_zeropage
-000175r 2  88               dey
-000176r 2  80 0B            bra         _disasm_zp_byte
-000178r 2               
-000178r 2               _disasm_immediate:
-000178r 2  A9 23 20 rr      PRINT_CHAR  #ASCII_HASH
-00017Cr 2  rr           
-00017Dr 2                   ; fall through
-00017Dr 2               
-00017Dr 2               _disasm_zeropage:
-00017Dr 2  C8               iny
-00017Er 2  A9 24 20 rr      PRINT_CHAR  #ASCII_DOLLAR
-000182r 2  rr           
-000183r 2               
-000183r 2               _disasm_zp_byte:
-000183r 2  B9 rr rr 4C      PRINT_BYTE_JMP  {ZP_D_INST, y}
-000187r 2  rr rr        
-000189r 2               
-000189r 1               .include "hyforth/hyforth.s"
-000189r 2               ;----------------------------------------------------------------------
-000189r 2               ;
-000189r 2               ;  Patrick Struthers - March 2026
-000189r 2               ;      - THANKS to AGSB for the starting point here....
-000189r 2               ;
-000189r 2               ;  The HyForth project starts here with AGSB's core Forth engine;
-000189r 2               ;  the engine will be moved to ROM and the heap will be copied to RAM
-000189r 2               ;  on cold start.
-000189r 2               ;
-000189r 2               ;  The ulitmate purpose of working this port through is to develop a
-000189r 2               ;  flexible and powerful operating system for the Hydra-16 of reasonable
-000189r 2               ;  efficiency and minimal memory footprint.  HyForth will grow and
-000189r 2               ;  shrink in RAM footprint according to context.
-000189r 2               ;
-000189r 2               ; ---------------------------------------------------------------------
-000189r 2               ;
-000189r 2               .debuginfo
-000189r 2               .setcpu "65C02"
-000189r 2               
-000189r 2               ;---------------------------------------------------------------------
-000189r 2               ; macros for dictionary, creates code as follows:
-000189r 2               ;
-000189r 2               ;   h_name:
-000189r 2               ;   .word  link_to_previous_entry
-000189r 2               ;   .byte  strlen(name) + flags
-000189r 2               ;   .byte  name
-000189r 2               ;   name:
-000189r 2               ;
-000189r 2               ; label for primitives
-000189r 2               ;
-000189r 2               .macro makelabel arg1, arg2
-000189r 2               .ident (.concat (arg1, arg2)):
-000189r 2               .endmacro
-000189r 2               ;
-000189r 2               ; header for primitives
-000189r 2               ; the entry point for dictionary is h_~name~
-000189r 2               ; the entry point for code is ~name~
-000189r 2               ;
-000189r 2               .macro def_word name, label, flag
-000189r 2               makelabel "h_", label
-000189r 2               .ident(.sprintf("H%04X", hcount + 1)):
-000189r 2                 .word .ident (.sprintf ("H%04X", hcount))
-000189r 2               hcount .set hcount + 1
-000189r 2                 .byte .strlen(name) + flag + 0 ; nice trick !
-000189r 2                 .byte name
-000189r 2               makelabel "", label
-000189r 2               .endmacro
-000189r 2               ;---------------------------------------------------------------------
-000189r 2               ;  macros for PGS stuff
-000189r 2               ;
-000189r 2               .macro WCRLF_np                ; no push of A
-000189r 2                   PRINT_CRLF
-000189r 2               .endmacro
-000189r 2               
-000189r 2               .macro WCRLF
-000189r 2                   pha
-000189r 2                   WCRLF_np
-000189r 2                   pla
-000189r 2               .endmacro
-000189r 2               
-000189r 2               .macro  WSEQ_np  strlbl
-000189r 2                   phy
-000189r 2                   ldy #0
-000189r 2               :
-000189r 2                   lda strlbl, y
-000189r 2                   beq :+
-000189r 2                   iny
-000189r 2                   PRINT_CHAR
-000189r 2                   bra :-
-000189r 2               :
-000189r 2                   WCRLF_np
-000189r 2                   ply
-000189r 2               .endmacro
-000189r 2               
-000189r 2               
-000189r 2               .macro  WSEQ_raw  strlbl
-000189r 2                   phy
-000189r 2                   ldy #0
-000189r 2               :
-000189r 2                   lda strlbl, y
-000189r 2                   beq :+
-000189r 2                   iny
-000189r 2                   PRINT_CHAR
-000189r 2                   bra :-
-000189r 2               :
-000189r 2                   ply
-000189r 2               .endmacro
-000189r 2               
-000189r 2               .macro WSEQ  strlbl
-000189r 2                   pha
-000189r 2                   WSEQ_np  strlbl
-000189r 2                   pla
-000189r 2               .endmacro
-000189r 2               
-000189r 2               ;
-000189r 2               ;   ANSI screen stuff
-000189r 2               ; <rr>;<cc>f move cursor to rr,cc
-000189r 2               ; <cc>m for color/attributes
-000189r 2               ; 2J for clear screen
-000189r 2               ; H for 'home'
-000189r 2               ; <cc>[ABCD] screen moves
-000189r 2               ;
-000189r 2               .macro ANSI b1,b2,b3,b4,b5,b6,b7
-000189r 2                   pha
-000189r 2                   PRINT_ANSI_ESC_SEQ b1, b2, b3, b4, b5, b6, b7
-000189r 2                   pla
-000189r 2               .endmacro
-000189r 2               
-000189r 2               ;---------------------------------------------------------------------
-000189r 2               ;  for error messages
-000189r 2               ;
-000189r 2               .macro ERR_entry errmsg
-000189r 2                   .byte <errmsg
-000189r 2                   .byte >errmsg
-000189r 2                   emcount .set emcount + 1
-000189r 2               .endmacro
-000189r 2               
-000189r 2               .macro WERR errptr
-000189r 2               ;.macro WERR
-000189r 2                   .local werrloop, werrend
-000189r 2                   WCRLF_np
-000189r 2                   ldy #0
-000189r 2                   lda (errptr),y
-000189r 2                   sta TEMP0
-000189r 2                   iny
-000189r 2                   lda (errptr),y
-000189r 2                   sta TEMP0+1
-000189r 2                   ldy #0
-000189r 2               werrloop:
-000189r 2                   lda (TEMP0),y
-000189r 2                   beq werrend
-000189r 2                   iny
-000189r 2                   PRINT_CHAR
-000189r 2                   bra werrloop
-000189r 2               werrend:
-000189r 2                   WCRLF_np
-000189r 2                   rts
-000189r 2               .endmacro
-000189r 2               
-000189r 2               ;---------------------------------------------------------------------
-000189r 2               ; variables for macros
-000189r 2               
-000189r 2               hcount .set 0
-000189r 2               emcount .set 0             ; # of error messages set up
-000189r 2               
-000189r 2               H0000 = 0
-000189r 2               
-000189r 2               ;---------------------------------------------------------------------
-000189r 2               ;               CONFIGURATION OPTIONS
-000189r 2               ;---------------------------------------------------------------------
-000189r 2               
-000189r 2               ; number conversion
-000189r 2               numbers := 1      ; include DEC/BIN/HEX conversion
-000189r 2               
-000189r 2               SINGLE := 1     ; single digits hard coded?
-000189r 2               
-000189r 2               DEBUG := 1        ; enable inclusion of debug code
-000189r 2               
-000189r 2               HYWORDS := 1      ; add in additional hardcoded words / logic
-000189r 2               
-000189r 2               ANSIOK := 1         ; add ANSI screen stuff
-000189r 2               
-000189r 2               YSOUND := 1        ; add sound support
-000189r 2               
-000189r 2               ;TXT2STACK := 1     ; use old TXTGET instead of new
-000189r 2               
-000189r 2               ;---------------------------------------------------------------------
-000189r 2               ;              for PGS hyforth stuff
-000189r 2               ;
-000189r 2               ; error codes
-000189r 2               ;
-000189r 2               ERR_RPTR := $01    ; return stack pointer error
-000189r 2               ERR_SPTR := $02    ; data stack pointer error
-000189r 2               ERR_DIV0 := $03    ; divide by zero
-000189r 2               ERR_MEM := $04     ; memory not-avail
-000189r 2               ERR_UKW := $05     ; unknown word
-000189r 2               ERR_SEC := $06     ; security error, ie dangerous address write
-000189r 2               ERR_SYS := $07     ; return from system call error
-000189r 2                 ; warnings
-000189r 2               WRN_SEC := $86     ; security
-000189r 2               WRN_MEM := $84     ; memory alloc
-000189r 2               ;
-000189r 2               ;---------------------------------------------------------------------
-000189r 2               ;                 CORE ENGINE CONSTANTS
-000189r 2               ;
-000189r 2               CELL = 2         ; cell size, two bytes, 16-bit
-000189r 2               FLAG_IMM = 1<<7  ; immediate flag
-000189r 2               FLAG_COM = 1<<6  ; compiled flag
-000189r 2               MAXSTR = 100
-000189r 2               
-000189r 2               ; terminal input buffer, forward
-000189r 2               ; getline, token, skip, scan, depends on page boundary
-000189r 2               ; INBUF = $0400  (see segment STACKS below)
-000189r 2               ; moves forwards
-000189r 2               INBUF_end = $FD
-000189r 2               
-000189r 2               ; data stacks
-000189r 2               ; moves backwards, push decreases before copy
-000189r 2               DSEND = $7E
-000189r 2               
-000189r 2               ; return stack
-000189r 2               ; moves backwards, push decreases before copy
-000189r 2               RTEND = $FE
-000189r 2               
-000189r 2               ; malloc stack
-000189r 2               ; moves backwards
-000189r 2               MEMEND = $01FE
-000189r 2               MEM_SZ = $04
-000189r 2               
-000189r 2               ;
-000189r 2               ; spi
-000189r 2               ;F9E8 SPI_INIT_DELAY
-000189r 2               ;F9CC SPI_RECV
-000189r 2               ;F9AD SPI_SEND
-000189r 2               ;F9A3 SPI_OPERATION_DONE
-000189r 2               ;F974 SPI_TRANSCEIVE
-000189r 2               
-000189r 2               ALTBUF = $6000
-000189r 2               ALTBUF_end = $6FFF
-000189r 2               MEMTOP = $8000            ; malloc allocates DOWN from MEMTOP
-000189r 2               
-000189r 2               ;----------------------------------------------------------------------
-000189r 2               ;       Look closely at hyforth.cfg and the output of ca65/ld65 after
-000189r 2               ;  a build; the RAM and ROM code is carefully arranged when the binary
-000189r 2               ;  is created, to make initialization easier and optimize RAM use.
-000189r 2               ;  The main program engine starts at $A000 in ROM and is only about 500 bytes
-000189r 2               ;  long.  Additional functions, then initialization and debug code,
-000189r 2               ;  then the dictionary follow in the binary, and these stay in ROM.
-000189r 2               ;
-000189r 2               ;       The dictionary has a particular structure, with 'bye' and 'abort'
-000189r 2               ;  at the beginning; there are some core words,
-000189r 2               ;  then contents of 'primitives.s', then 'hywords.s', followed by
-000189r 2               ;  the end of the dictionary with critical items such as 'fetch', 'store',
-000189r 2               ;  'immediate', 'compile, 'semis', 'exit, and ancillary stuff.
-000189r 2               ;
-000189r 2               ;       When $A003 is run from WozMon, a jump instruction to 'main' is
-000189r 2               ;  copied to $0600, followed by the dictionary, with 'exit' at the end.
-000189r 2               ;  HyForth is start by running '600R' or 'A000R'.
-000189r 2               ;
-000189r 2               ;----------------------------------------------------------------------
-000189r 2               ;                   ZERO PAGE USAGE
-000189r 2               ;----------------------------------------------------------------------
-000189r 2               .segment "ZEROPAGE"
-00003Ar 2               .org $C8
+000163r 2               ; Carry: 1 = Y, Carry: 0 = X
+000163r 2               _disasm_commaXY:
+000163r 2  A9 2C 20 rr      PRINT_CHAR  #ASCII_COMMA
+000167r 2  rr           
+000168r 2  A9 58            lda         #ASCII_X
+00016Ar 2  90 01            bcc         :+
+00016Cr 2  1A               inc
+00016Dr 2               
+00016Dr 2               :
+00016Dr 2  4C rr rr         PRINT_CHAR_JMP
+000170r 2               
+000170r 2               _disasm_absolute:
+000170r 2  C8               iny
+000171r 2  20 rr rr         jsr         _disasm_zeropage
+000174r 2  88               dey
+000175r 2  80 0B            bra         _disasm_zp_byte
+000177r 2               
+000177r 2               _disasm_immediate:
+000177r 2  A9 23 20 rr      PRINT_CHAR  #ASCII_HASH
+00017Br 2  rr           
+00017Cr 2                   ; fall through
+00017Cr 2               
+00017Cr 2               _disasm_zeropage:
+00017Cr 2  C8               iny
+00017Dr 2  A9 24 20 rr      PRINT_CHAR  #ASCII_DOLLAR
+000181r 2  rr           
+000182r 2               
+000182r 2               _disasm_zp_byte:
+000182r 2  B9 rr rr 4C      PRINT_BYTE_JMP  {ZP_D_INST, y}
+000186r 2  rr rr        
+000188r 2               
+000188r 1               .include "hyforth/hyforth.s"
+000188r 2               ;----------------------------------------------------------------------
+000188r 2               ;
+000188r 2               ;  Patrick Struthers - March 2026
+000188r 2               ;      - THANKS to AGSB for the starting point here....
+000188r 2               ;
+000188r 2               ;  The HyForth project starts here with AGSB's core Forth engine;
+000188r 2               ;  the engine will be moved to ROM and the heap will be copied to RAM
+000188r 2               ;  on cold start.
+000188r 2               ;
+000188r 2               ;  The ulitmate purpose of working this port through is to develop a
+000188r 2               ;  flexible and powerful operating system for the Hydra-16 of reasonable
+000188r 2               ;  efficiency and minimal memory footprint.  HyForth will grow and
+000188r 2               ;  shrink in RAM footprint according to context.
+000188r 2               ;
+000188r 2               ; ---------------------------------------------------------------------
+000188r 2               ;
+000188r 2               .debuginfo
+000188r 2               .setcpu "65C02"
+000188r 2               
+000188r 2               ;---------------------------------------------------------------------
+000188r 2               ; macros for dictionary, creates code as follows:
+000188r 2               ;
+000188r 2               ;   h_name:
+000188r 2               ;   .word  link_to_previous_entry
+000188r 2               ;   .byte  strlen(name) + flags
+000188r 2               ;   .byte  name
+000188r 2               ;   name:
+000188r 2               ;
+000188r 2               ; label for primitives
+000188r 2               ;
+000188r 2               .macro makelabel arg1, arg2
+000188r 2               .ident (.concat (arg1, arg2)):
+000188r 2               .endmacro
+000188r 2               ;
+000188r 2               ; header for primitives
+000188r 2               ; the entry point for dictionary is h_~name~
+000188r 2               ; the entry point for code is ~name~
+000188r 2               ;
+000188r 2               .macro def_word name, label, flag
+000188r 2               makelabel "h_", label
+000188r 2               .ident(.sprintf("H%04X", hcount + 1)):
+000188r 2                 .word .ident (.sprintf ("H%04X", hcount))
+000188r 2               hcount .set hcount + 1
+000188r 2                 .byte .strlen(name) + flag + 0 ; nice trick !
+000188r 2                 .byte name
+000188r 2               makelabel "", label
+000188r 2               .endmacro
+000188r 2               ;---------------------------------------------------------------------
+000188r 2               ;  macros for PGS stuff
+000188r 2               ;
+000188r 2               .macro WCRLF_np                ; no push of A
+000188r 2                   PRINT_CRLF
+000188r 2               .endmacro
+000188r 2               
+000188r 2               .macro WCRLF
+000188r 2                   pha
+000188r 2                   WCRLF_np
+000188r 2                   pla
+000188r 2               .endmacro
+000188r 2               
+000188r 2               .macro  WSEQ_np  strlbl
+000188r 2                   phy
+000188r 2                   ldy #0
+000188r 2               :
+000188r 2                   lda strlbl, y
+000188r 2                   beq :+
+000188r 2                   iny
+000188r 2                   PRINT_CHAR
+000188r 2                   bra :-
+000188r 2               :
+000188r 2                   WCRLF_np
+000188r 2                   ply
+000188r 2               .endmacro
+000188r 2               
+000188r 2               
+000188r 2               .macro  WSEQ_raw  strlbl
+000188r 2                   phy
+000188r 2                   ldy #0
+000188r 2               :
+000188r 2                   lda strlbl, y
+000188r 2                   beq :+
+000188r 2                   iny
+000188r 2                   PRINT_CHAR
+000188r 2                   bra :-
+000188r 2               :
+000188r 2                   ply
+000188r 2               .endmacro
+000188r 2               
+000188r 2               .macro WSEQ  strlbl
+000188r 2                   pha
+000188r 2                   WSEQ_np  strlbl
+000188r 2                   pla
+000188r 2               .endmacro
+000188r 2               
+000188r 2               ;
+000188r 2               ;   ANSI screen stuff
+000188r 2               ; <rr>;<cc>f move cursor to rr,cc
+000188r 2               ; <cc>m for color/attributes
+000188r 2               ; 2J for clear screen
+000188r 2               ; H for 'home'
+000188r 2               ; <cc>[ABCD] screen moves
+000188r 2               ;
+000188r 2               .macro ANSI b1,b2,b3,b4,b5,b6,b7
+000188r 2                   pha
+000188r 2                   PRINT_ANSI_ESC_SEQ b1, b2, b3, b4, b5, b6, b7
+000188r 2                   pla
+000188r 2               .endmacro
+000188r 2               
+000188r 2               ;---------------------------------------------------------------------
+000188r 2               ;  for error messages
+000188r 2               ;
+000188r 2               .macro ERR_entry errmsg
+000188r 2                   .byte <errmsg
+000188r 2                   .byte >errmsg
+000188r 2                   emcount .set emcount + 1
+000188r 2               .endmacro
+000188r 2               
+000188r 2               .macro WERR errptr
+000188r 2               ;.macro WERR
+000188r 2                   .local werrloop, werrend
+000188r 2                   WCRLF_np
+000188r 2                   ldy #0
+000188r 2                   lda (errptr),y
+000188r 2                   sta TEMP0
+000188r 2                   iny
+000188r 2                   lda (errptr),y
+000188r 2                   sta TEMP0+1
+000188r 2                   ldy #0
+000188r 2               werrloop:
+000188r 2                   lda (TEMP0),y
+000188r 2                   beq werrend
+000188r 2                   iny
+000188r 2                   PRINT_CHAR
+000188r 2                   bra werrloop
+000188r 2               werrend:
+000188r 2                   WCRLF_np
+000188r 2                   rts
+000188r 2               .endmacro
+000188r 2               
+000188r 2               ;---------------------------------------------------------------------
+000188r 2               ; variables for macros
+000188r 2               
+000188r 2               hcount .set 0
+000188r 2               emcount .set 0             ; # of error messages set up
+000188r 2               
+000188r 2               H0000 = 0
+000188r 2               
+000188r 2               ;---------------------------------------------------------------------
+000188r 2               ;               CONFIGURATION OPTIONS
+000188r 2               ;---------------------------------------------------------------------
+000188r 2               
+000188r 2               ; number conversion
+000188r 2               numbers := 1      ; include DEC/BIN/HEX conversion
+000188r 2               
+000188r 2               SINGLE := 1     ; single digits hard coded?
+000188r 2               
+000188r 2               DEBUG := 1        ; enable inclusion of debug code
+000188r 2               
+000188r 2               HYWORDS := 1      ; add in additional hardcoded words / logic
+000188r 2               
+000188r 2               ANSIOK := 1         ; add ANSI screen stuff
+000188r 2               
+000188r 2               YSOUND := 1        ; add sound support
+000188r 2               
+000188r 2               ;TXT2STACK := 1     ; use old TXTGET instead of new
+000188r 2               
+000188r 2               ;---------------------------------------------------------------------
+000188r 2               ;              for PGS hyforth stuff
+000188r 2               ;
+000188r 2               ; error codes
+000188r 2               ;
+000188r 2               ERR_RPTR := $01    ; return stack pointer error
+000188r 2               ERR_SPTR := $02    ; data stack pointer error
+000188r 2               ERR_DIV0 := $03    ; divide by zero
+000188r 2               ERR_MEM := $04     ; memory not-avail
+000188r 2               ERR_UKW := $05     ; unknown word
+000188r 2               ERR_SEC := $06     ; security error, ie dangerous address write
+000188r 2               ERR_SYS := $07     ; return from system call error
+000188r 2                 ; warnings
+000188r 2               WRN_SEC := $86     ; security
+000188r 2               WRN_MEM := $84     ; memory alloc
+000188r 2               ;
+000188r 2               ;---------------------------------------------------------------------
+000188r 2               ;                 CORE ENGINE CONSTANTS
+000188r 2               ;
+000188r 2               CELL = 2         ; cell size, two bytes, 16-bit
+000188r 2               FLAG_IMM = 1<<7  ; immediate flag
+000188r 2               FLAG_COM = 1<<6  ; compiled flag
+000188r 2               MAXSTR = 100
+000188r 2               
+000188r 2               ; terminal input buffer, forward
+000188r 2               ; getline, token, skip, scan, depends on page boundary
+000188r 2               ; INBUF = $0400  (see segment STACKS below)
+000188r 2               ; moves forwards
+000188r 2               INBUF_end = $FD
+000188r 2               
+000188r 2               ; data stacks
+000188r 2               ; moves backwards, push decreases before copy
+000188r 2               DSEND = $7E
+000188r 2               
+000188r 2               ; return stack
+000188r 2               ; moves backwards, push decreases before copy
+000188r 2               RTEND = $FE
+000188r 2               
+000188r 2               ; malloc stack
+000188r 2               ; moves backwards
+000188r 2               MEMEND = $01FE
+000188r 2               MEM_SZ = $04
+000188r 2               
+000188r 2               ;
+000188r 2               ; spi
+000188r 2               ;F9E8 SPI_INIT_DELAY
+000188r 2               ;F9CC SPI_RECV
+000188r 2               ;F9AD SPI_SEND
+000188r 2               ;F9A3 SPI_OPERATION_DONE
+000188r 2               ;F974 SPI_TRANSCEIVE
+000188r 2               
+000188r 2               ALTBUF = $6000
+000188r 2               ALTBUF_end = $6FFF
+000188r 2               MEMTOP = $8000            ; malloc allocates DOWN from MEMTOP
+000188r 2               
+000188r 2               ;----------------------------------------------------------------------
+000188r 2               ;       Look closely at hyforth.cfg and the output of ca65/ld65 after
+000188r 2               ;  a build; the RAM and ROM code is carefully arranged when the binary
+000188r 2               ;  is created, to make initialization easier and optimize RAM use.
+000188r 2               ;  The main program engine starts at $A000 in ROM and is only about 500 bytes
+000188r 2               ;  long.  Additional functions, then initialization and debug code,
+000188r 2               ;  then the dictionary follow in the binary, and these stay in ROM.
+000188r 2               ;
+000188r 2               ;       The dictionary has a particular structure, with 'bye' and 'abort'
+000188r 2               ;  at the beginning; there are some core words,
+000188r 2               ;  then contents of 'primitives.s', then 'hywords.s', followed by
+000188r 2               ;  the end of the dictionary with critical items such as 'fetch', 'store',
+000188r 2               ;  'immediate', 'compile, 'semis', 'exit, and ancillary stuff.
+000188r 2               ;
+000188r 2               ;       When $A003 is run from WozMon, a jump instruction to 'main' is
+000188r 2               ;  copied to $0600, followed by the dictionary, with 'exit' at the end.
+000188r 2               ;  HyForth is start by running '600R' or 'A000R'.
+000188r 2               ;
+000188r 2               ;----------------------------------------------------------------------
+000188r 2               ;                   ZERO PAGE USAGE
+000188r 2               ;----------------------------------------------------------------------
+000188r 2               .segment "ZEROPAGE"
+00003Cr 2               .org $C8
 0000C8  2               ZPSTART:
 0000C8  2               ;
 0000C8  2               ;                   HyForth setup stuff
@@ -6761,7 +6760,7 @@ Current file: all.s
 000C6Cr 3               BLOADMSG:
 000C6Cr 3  62 6C 6F 61     .byte "bload:"
 000C70r 3  64 3A        
-000C72r 3  0D 0A 00        .byte $0D, $0A, 0
+000C72r 3  0D 0A 00        .byte ASCII_CR, ASCII_LF, 0
 000C75r 3               ;
 000C75r 3               ; ( -- )     autoload a list of scripts
 000C75r 3  rr rr 08 61  def_word "autoload", "autoload", 0
@@ -7561,7 +7560,7 @@ Current file: all.s
 000024r 2  C9 0D                        cmp             #ASCII_CR
 000026r 2  D0 DE                        bne             @not_cr
 000028r 2  A0 FF                        ldy             #$FF            ; Reset text index.  Will iny shortly...
-00002Ar 2  A9 00                        lda             #$00            ; For ZP_D_XAM mode.
+00002Ar 2  A9 00                        lda             #$00            ; For ZP_WM_XAM mode.
 00002Cr 2  AA                           tax                             ; .X=0.
 00002Dr 2               
 00002Dr 2               @set_block:
@@ -7571,7 +7570,7 @@ Current file: all.s
 00002Er 2  0A                           asl                             ; Leaves $7B if setting STOR mode.
 00002Fr 2               
 00002Fr 2               @set_mode:
-00002Fr 2  85 rr                        sta             ZP_WM_MODE      ; $00 = ZP_D_XAM, $74 = STOR, $B8 = BLOK ZP_D_XAM.
+00002Fr 2  85 rr                        sta             ZP_WM_MODE      ; $00 = ZP_WM_XAM, $74 = STOR, $B8 = BLOK ZP_WM_XAM.
 000031r 2               
 000031r 2               @skip_delim:
 000031r 2  C8                           iny                             ; Advance text index.
@@ -7582,141 +7581,145 @@ Current file: all.s
 000037r 2  F0 DB                        beq             @get_line       ; Yes, done with this line.
 000039r 2  C9 2E                        cmp             #ASCII_PERIOD
 00003Br 2  90 F4                        bcc             @skip_delim     ; Skip delimiter.
-00003Dr 2  F0 EE                        beq             @set_block      ; Set BLOCK ZP_D_XAM mode.
+00003Dr 2  F0 EE                        beq             @set_block      ; Set BLOCK ZP_WM_XAM mode.
 00003Fr 2  C9 3A                        cmp             #ASCII_COLON
 000041r 2  F0 EB                        beq             @set_store      ; Yes, set STOR mode.
 000043r 2  C9 4D                        cmp             #ASCII_M
 000045r 2  10 0A                        bpl             @check_rtow
 000047r 2  C9 4B                        cmp             #ASCII_K
-000049r 2  30 2B                        bmi             @not_tuvw
+000049r 2  30 24                        bmi             @not_tuvw
 00004Br 2  49 4B                        eor             #ASCII_K        ; 'K' resets DASTATE to 0
 00004Dr 2  85 rr                        sta             ZP_D_STATE
 00004Fr 2  80 E0                        bra             @skip_delim
 000051r 2               
 000051r 2               @check_rtow:
 000051r 2  C9 52                        cmp             #ASCII_R
-000053r 2  F0 5B                        beq             @run_prog
-000055r 2  90 1F                        bcc             @not_tuvw
+000053r 2  F0 54                        beq             @run_prog
+000055r 2  90 18                        bcc             @not_tuvw
 000057r 2  C9 58                        cmp             #ASCII_X        ; R, S, T, U, V, or W
-000059r 2  B0 1B                        bcs             @not_tuvw
+000059r 2  B0 14                        bcs             @not_tuvw
 00005Br 2  C9 53                        cmp             #ASCII_S
-00005Dr 2  D0 09                        bne             @not_spawn
-00005Fr 2  A5 rr                        lda             ZP_D_XAM
-000061r 2  A4 rr                        ldy             ZP_D_XAM + 1
-000063r 2  20 rr rr                     jsr             SPAWN_TASK
-000066r 2  80 98                        bra             MON_START
-000068r 2               
-000068r 2               @not_spawn:
-000068r 2  18                           clc
-000069r 2  69 9C                        adc             #($F0 - ASCII_T); T=FFF0, U=FFF1, V=FFF2, W=FFF3
-00006Br 2  85 rr                        sta             ZP_WM_HVP       ;
-00006Dr 2  A9 FF                        lda             #$FF            ;
-00006Fr 2  85 rr                        sta             ZP_WM_HVP + 1   ;
-000071r 2  C8                           iny                             ; skip the mnemonic
-000072r 2  80 2C                        bra             @not_hex_or_escape
-000074r 2               
-000074r 2               @bra_is_start:
-000074r 2  80 9B                        bra             @is_start       ; unrecognized
-000076r 2               
-000076r 2               @not_tuvw:
-000076r 2  84 rr                        sty             ZP_Y_SAVE       ; Save Y for comparison
-000078r 2  86 rr                        stx             ZP_WM_HVP       ; $00 -> Low byte of HPV
-00007Ar 2  86 rr                        stx             ZP_WM_HVP + 1   ; ...and High byte.
-00007Cr 2               
-00007Cr 2               @next_hex:
-00007Cr 2  B9 rr rr                     lda             IN,y            ; Get character for hex test.
-00007Fr 2  49 30                        eor             #ASCII_0        ; Map digits to $0-9.
-000081r 2  C9 0A                        cmp             #$0A            ; Digit?
-000083r 2  90 06                        bcc             @is_digit       ; Yes.
-000085r 2  69 88                        adc             #$88            ; Map letter "A"-"F" to $FA-FF.
-000087r 2  C9 FA                        cmp             #$FA            ; Hex letter?
-000089r 2  90 11                        bcc             @not_hex        ; No, character not hex.
-00008Br 2               
-00008Br 2               @is_digit:
-00008Br 2  0A                           asl                             ; LSD to MSD of A.
-00008Cr 2  0A                           asl
-00008Dr 2  0A                           asl
-00008Er 2  0A                           asl
-00008Fr 2  A2 04                        ldx             #4              ; Shift count.
-000091r 2               
-000091r 2               @hex_shift:
-000091r 2  0A                           asl                             ; Hex digit left, MSB to carry.
-000092r 2  26 rr                        rol             ZP_WM_HVP       ; Rotate into LSD.
-000094r 2  26 rr                        rol             ZP_WM_HVP + 1   ; Rotate into MSD's.
-000096r 2  CA                           dex                             ; Done 4 shifts?
-000097r 2  D0 F8                        bne             @hex_shift      ; No, loop.
-000099r 2  C8                           iny                             ; Advance text index.
-00009Ar 2  D0 E0                        bne             @next_hex       ; Always taken. Check next character for hex.
-00009Cr 2               
-00009Cr 2               @not_hex:
-00009Cr 2  C4 rr                        cpy             ZP_Y_SAVE       ; Check if HPV empty (no hex digits).
-00009Er 2  F0 D4                        beq             @bra_is_start   ; Yes, back to start.
-0000A0r 2               
-0000A0r 2               @not_hex_or_escape:
-0000A0r 2  24 rr                        bit             ZP_WM_MODE      ; Test ZP_WM_MODE byte.
-0000A2r 2  50 15                        bvc             @not_store      ; B6=0 is STOR, 1 is ZP_D_XAM and BLOCK ZP_D_XAM.
-0000A4r 2  A5 rr                        lda             ZP_WM_HVP       ; LSD's of hex data.
-0000A6r 2  92 rr                        sta             (ZP_WM_ST)      ; Store to current 'store index'.
-0000A8r 2  E6 rr                        inc             ZP_WM_ST        ; Increment store index.
-0000AAr 2  D0 86                        bne             @next_item      ; Get next item (no carry).
-0000ACr 2  E6 rr                        inc             ZP_WM_ST + 1    ; Add carry to 'store index' high order.
-0000AEr 2               
-0000AEr 2               @to_next_item:
-0000AEr 2  80 82                        bra             @next_item      ; Get next command item.
-0000B0r 2               
-0000B0r 2               @run_prog:
-0000B0r 2  A9 rr 48 A9                  _M_JSRR         ZP_D_XAM, MON_START
-0000B4r 2  rr 48 6C rr  
-0000B8r 2  rr           
-0000B9r 2               
-0000B9r 2               @not_store:
-0000B9r 2  30 21                        bmi             @examine_next   ; B7 = 0 for ZP_D_XAM, 1 for BLOCK ZP_D_XAM.
-0000BBr 2  A2 02                        ldx             #2              ; Byte count.
-0000BDr 2               
-0000BDr 2               @set_addr:
-0000BDr 2  B5 rr                        lda             ZP_WM_HVP - 1,x ; Copy hex data to
-0000BFr 2  95 rr                        sta             ZP_WM_ST - 1,x  ;   'store index'.
-0000C1r 2  95 rr                        sta             ZP_D_XAM - 1,x  ; And to 'ZP_D_XAM index'.
-0000C3r 2  CA                           dex                             ; Next of 2 bytes.
-0000C4r 2  D0 F7                        bne             @set_addr       ; Loop unless X = 0.
-0000C6r 2  5A                           phy                             ; Save .Y until after printing is done
-0000C7r 2               
-0000C7r 2               @print_next_addr:
-0000C7r 2  20 rr rr                     PRINT_CRLF
-0000CAr 2  A5 rr 20 rr                  PRINT_BYTE      ZP_D_XAM + 1    ; Print 'examine index' high-order byte.
-0000CEr 2  rr           
-0000CFr 2  A5 rr 20 rr                  PRINT_BYTE      ZP_D_XAM        ; Print 'examine index' low-order byte.
-0000D3r 2  rr           
-0000D4r 2  A9 3A 20 rr                  PRINT_CHAR      #ASCII_COLON    ; Print a ':'.
-0000D8r 2  rr           
-0000D9r 2               
-0000D9r 2               @print_data:
-0000D9r 2  20 rr rr                     jsr             TH_DISASM       ; TH_DISASM increments ZP_D_XAM appropriately
-0000DCr 2               
-0000DCr 2               @examine_next:
-0000DCr 2  64 rr                        stz             ZP_WM_MODE      ; 0 -> ZP_WM_MODE (ZP_D_XAM mode).
-0000DEr 2  38                           sec
-0000DFr 2  A5 rr                        lda             ZP_WM_HVP
-0000E1r 2  E5 rr                        sbc             ZP_D_XAM
-0000E3r 2  A5 rr                        lda             ZP_WM_HVP + 1
-0000E5r 2  E5 rr                        sbc             ZP_D_XAM + 1
-0000E7r 2  10 05                        bpl             :+
-0000E9r 2  7A                           ply                             ; restore .Y
-0000EAr 2  A2 00                        ldx             #0              ; restore .X to exptected 0 value
-0000ECr 2  80 C0                        bra             @to_next_item   ; Not less, so no more data to output.
-0000EEr 2               
-0000EEr 2               :
-0000EEr 2  A5 rr                        lda             ZP_D_STATE      ; if disassembling, always print the address
-0000F0r 2  D0 D5                        bne             @print_next_addr
-0000F2r 2  A5 rr                        lda             ZP_D_XAM        ; Check low-order 'examine index' byte
-0000F4r 2  29 07                        and             #7              ; For MOD 8 = 0
-0000F6r 2  F0 CF                        beq             @print_next_addr
-0000F8r 2  80 DF                        bra             @print_data
-0000FAr 2               
-0000FAr 1               .include "mmu.s"
-0000FAr 2               .debuginfo
-0000FAr 2               
-0000FAr 2               .segment "MMU"
+00005Dr 2  D0 02                        bne             @not_spawn
+00005Fr 2                               ;lda             ZP_WM_XAM
+00005Fr 2                               ;ldy             ZP_WM_XAM + 1
+00005Fr 2                               ;jsr             SPAWN_TASK
+00005Fr 2  80 9F                        bra             MON_START
+000061r 2               
+000061r 2               @not_spawn:
+000061r 2  18                           clc
+000062r 2  69 9C                        adc             #($F0 - ASCII_T); T=FFF0, U=FFF1, V=FFF2, W=FFF3
+000064r 2  85 rr                        sta             ZP_WM_HVP       ;
+000066r 2  A9 FF                        lda             #$FF            ;
+000068r 2  85 rr                        sta             ZP_WM_HVP + 1   ;
+00006Ar 2  C8                           iny                             ; skip the mnemonic
+00006Br 2  80 2C                        bra             @not_hex_or_escape
+00006Dr 2               
+00006Dr 2               @bra_is_start:
+00006Dr 2  80 A2                        bra             @is_start       ; unrecognized
+00006Fr 2               
+00006Fr 2               @not_tuvw:
+00006Fr 2  84 rr                        sty             ZP_Y_SAVE       ; Save Y for comparison
+000071r 2  86 rr                        stx             ZP_WM_HVP       ; $00 -> Low byte of HPV
+000073r 2  86 rr                        stx             ZP_WM_HVP + 1   ; ...and High byte.
+000075r 2               
+000075r 2               @next_hex:
+000075r 2  B9 rr rr                     lda             IN,y            ; Get character for hex test.
+000078r 2  49 30                        eor             #ASCII_0        ; Map digits to $0-9.
+00007Ar 2  C9 0A                        cmp             #$0A            ; Digit?
+00007Cr 2  90 06                        bcc             @is_digit       ; Yes.
+00007Er 2  69 88                        adc             #$88            ; Map letter "A"-"F" to $FA-FF.
+000080r 2  C9 FA                        cmp             #$FA            ; Hex letter?
+000082r 2  90 11                        bcc             @not_hex        ; No, character not hex.
+000084r 2               
+000084r 2               @is_digit:
+000084r 2  0A                           asl                             ; LSD to MSD of A.
+000085r 2  0A                           asl
+000086r 2  0A                           asl
+000087r 2  0A                           asl
+000088r 2  A2 04                        ldx             #4              ; Shift count.
+00008Ar 2               
+00008Ar 2               @hex_shift:
+00008Ar 2  0A                           asl                             ; Hex digit left, MSB to carry.
+00008Br 2  26 rr                        rol             ZP_WM_HVP       ; Rotate into LSD.
+00008Dr 2  26 rr                        rol             ZP_WM_HVP + 1   ; Rotate into MSD's.
+00008Fr 2  CA                           dex                             ; Done 4 shifts?
+000090r 2  D0 F8                        bne             @hex_shift      ; No, loop.
+000092r 2  C8                           iny                             ; Advance text index.
+000093r 2  D0 E0                        bne             @next_hex       ; Always taken. Check next character for hex.
+000095r 2               
+000095r 2               @not_hex:
+000095r 2  C4 rr                        cpy             ZP_Y_SAVE       ; Check if HPV empty (no hex digits).
+000097r 2  F0 D4                        beq             @bra_is_start   ; Yes, back to start.
+000099r 2               
+000099r 2               @not_hex_or_escape:
+000099r 2  24 rr                        bit             ZP_WM_MODE      ; Test ZP_WM_MODE byte.
+00009Br 2  50 15                        bvc             @not_store      ; B6=0 is STOR, 1 is XAM and BLOCK XAM.
+00009Dr 2  A5 rr                        lda             ZP_WM_HVP       ; LSD's of hex data.
+00009Fr 2  92 rr                        sta             (ZP_WM_ST)      ; Store to current 'store index'.
+0000A1r 2  E6 rr                        inc             ZP_WM_ST        ; Increment store index.
+0000A3r 2  D0 8D                        bne             @next_item      ; Get next item (no carry).
+0000A5r 2  E6 rr                        inc             ZP_WM_ST + 1    ; Add carry to 'store index' high order.
+0000A7r 2               
+0000A7r 2               @to_next_item:
+0000A7r 2  80 89                        bra             @next_item      ; Get next command item.
+0000A9r 2               
+0000A9r 2               @run_prog:
+0000A9r 2  A9 rr 48 A9                  _M_JSRR         ZP_WM_XAM, MON_START
+0000ADr 2  rr 48 6C rr  
+0000B1r 2  rr           
+0000B2r 2               
+0000B2r 2               @not_store:
+0000B2r 2  30 27                        bmi             @examine_next   ; B7 = 0 for XAM, 1 for BLOCK XAM.
+0000B4r 2  A2 02                        ldx             #2              ; Byte count.
+0000B6r 2               
+0000B6r 2               @set_addr:
+0000B6r 2  B5 rr                        lda             ZP_WM_HVP - 1,x ; Copy hex data to
+0000B8r 2  95 rr                        sta             ZP_WM_ST - 1,x  ;   'store index'.
+0000BAr 2  95 rr                        sta             ZP_WM_XAM - 1,x ; And to 'ZP_WM_XAM index'.
+0000BCr 2  CA                           dex                             ; Next of 2 bytes.
+0000BDr 2  D0 F7                        bne             @set_addr       ; Loop unless X = 0.
+0000BFr 2               
+0000BFr 2               @print_next_addr:
+0000BFr 2  20 rr rr                     PRINT_CRLF
+0000C2r 2  A5 rr 20 rr                  PRINT_BYTE      ZP_WM_XAM + 1, ZP_WM_XAM   ; Print 'examine index'
+0000C6r 2  rr A5 rr 20  
+0000CAr 2  rr rr        
+0000CCr 2  A9 3A 20 rr                  PRINT_CHAR      #ASCII_COLON    ; ...+ COLON
+0000D0r 2  rr           
+0000D1r 2               
+0000D1r 2               @print_data:
+0000D1r 2  18                           clc
+0000D2r 2  A5 rr                        lda             ZP_WM_XAM
+0000D4r 2  5A                           phy
+0000D5r 2  A4 rr                        ldy             ZP_WM_XAM + 1
+0000D7r 2  20 rr rr                     jsr             DISASM_AY       ; DISASM
+0000DAr 2  7A                           ply
+0000DBr 2               
+0000DBr 2               @examine_next:
+0000DBr 2  64 rr                        stz             ZP_WM_MODE      ; 0 -> ZP_WM_MODE (XAM mode).
+0000DDr 2  A5 rr                        lda             ZP_WM_XAM
+0000DFr 2  C5 rr                        cmp             ZP_WM_HVP       ; Compare 'examine index' to hex data.
+0000E1r 2  A5 rr                        lda             ZP_WM_XAM + 1
+0000E3r 2  E5 rr                        sbc             ZP_WM_HVP + 1
+0000E5r 2  B0 C0                        bcs             @to_next_item   ; Not less, so no more data to output.
+0000E7r 2  38                           sec
+0000E8r 2  A5 rr                        lda             ZP_D_EXBYTES
+0000EAr 2  65 rr                        adc             ZP_WM_XAM
+0000ECr 2  85 rr                        sta             ZP_WM_XAM
+0000EEr 2  90 02                        bcc             :+
+0000F0r 2  E6 rr                        inc             ZP_WM_XAM + 1
+0000F2r 2               :
+0000F2r 2  A5 rr                        lda             ZP_D_STATE      ; if disassembling, always print the address
+0000F4r 2  D0 C9                        bne             @print_next_addr
+0000F6r 2  A5 rr                        lda             ZP_WM_XAM       ; Check low-order 'examine index' byte
+0000F8r 2  29 07                        and             #7              ; For MOD 8 = 0
+0000FAr 2  F0 C3                        beq             @print_next_addr
+0000FCr 2  80 D3                        bra             @print_data
+0000FEr 2               
+0000FEr 1               .include "mmu.s"
+0000FEr 2               .debuginfo
+0000FEr 2               
+0000FEr 2               .segment "MMU"
 000000r 2               
 000000r 2               .struct     Address
 000000r 2                           l           .byte
