@@ -80,9 +80,9 @@ MON_START:
                 bcs             @not_tuvw
                 cmp             #ASCII_S
                 bne             @not_spawn
-                ;lda             ZP_WM_XAM
-                ;ldy             ZP_WM_XAM + 1
-                ;jsr             SPAWN_TASK
+                lda             ZP_WM_XAM
+                ldy             ZP_WM_XAM + 1
+                jsr             SPAWN_TASK
                 bra             MON_START
 
 @not_spawn:
@@ -163,11 +163,8 @@ MON_START:
                 PRINT_CHAR      #ASCII_COLON    ; ...+ COLON
 
 @print_data:
-                clc
-                lda             ZP_WM_XAM
                 phy
-                ldy             ZP_WM_XAM + 1
-                jsr             DISASM_AY       ; DISASM
+                jsr             DISASM_WM       ; DISASM
                 ply
 
 @examine_next:

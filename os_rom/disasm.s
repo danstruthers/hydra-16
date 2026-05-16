@@ -168,6 +168,12 @@ DISASM_AY:
     bne         DISASM_LOOP
     rts
 
+DISASM_WM:
+    lda         ZP_WM_XAM
+    sta         ZP_D_XAM
+    lda         ZP_WM_XAM + 1
+    sta         ZP_D_XAM + 1
+
 DISASM:
     stz         ZP_D_ICOUNT
     inc         ZP_D_ICOUNT
