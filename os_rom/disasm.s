@@ -165,7 +165,7 @@ DISASM_AY:
     bcc         DISASM
     clc
     stx         ZP_D_ICOUNT
-    bne         DISASM_LOOP
+    bne         DISASM_SAVEY
     rts
 
 DISASM_WM:
@@ -178,7 +178,13 @@ DISASM:
     stz         ZP_D_ICOUNT
     inc         ZP_D_ICOUNT
 
+DISASM_SAVEY:
+    phy
+
 DISASM_LOOP:
+    PRINT_CRLF
+    PRINT_BYTE  ZP_D_XAM + 1, ZP_D_XAM
+    PRINT_CHAR  #ASCII_COLON
     jsr         _disasm_load_inst
     jsr         _disasm_print_inst_bytes
     lda         ZP_D_STATE
@@ -291,10 +297,10 @@ DISASM_LOOP:
 @end_of_print:
     dec         ZP_D_ICOUNT
     beq         @done
-    PRINT_CRLF
     jmp         DISASM_LOOP
 
 @done:
+    ply
     rts
 
 ;---------------------------------------

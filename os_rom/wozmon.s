@@ -158,14 +158,12 @@ MON_START:
                 bne             @set_addr       ; Loop unless X = 0.
 
 @print_next_addr:
-                PRINT_CRLF
-                PRINT_BYTE      ZP_WM_XAM + 1, ZP_WM_XAM   ; Print 'examine index'
-                PRINT_CHAR      #ASCII_COLON    ; ...+ COLON
+                jsr             DISASM_WM       ; DISASM
+                bra             @examine_next
 
 @print_data:
-                phy
-                jsr             DISASM_WM       ; DISASM
-                ply
+                PRINT_SPACE
+                PRINT_BYTE      {(ZP_WM_XAM)}
 
 @examine_next:
                 stz             ZP_WM_MODE      ; 0 -> ZP_WM_MODE (XAM mode).
@@ -180,6 +178,7 @@ MON_START:
                 sta             ZP_WM_XAM
                 bcc             :+
                 inc             ZP_WM_XAM + 1
+
 :
                 lda             ZP_D_STATE      ; if disassembling, always print the address
                 bne             @print_next_addr

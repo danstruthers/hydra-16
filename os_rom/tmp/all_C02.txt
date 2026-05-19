@@ -2548,7 +2548,7 @@ Current file: all.s
 000004r 2  90 0E            bcc         DISASM
 000006r 2  18               clc
 000007r 2  86 rr            stx         ZP_D_ICOUNT
-000009r 2  D0 0D            bne         DISASM_LOOP
+000009r 2  D0 0D            bne         DISASM_SAVEY
 00000Br 2  60               rts
 00000Cr 2               
 00000Cr 2               DISASM_WM:
@@ -2561,515 +2561,524 @@ Current file: all.s
 000014r 2  64 rr            stz         ZP_D_ICOUNT
 000016r 2  E6 rr            inc         ZP_D_ICOUNT
 000018r 2               
-000018r 2               DISASM_LOOP:
-000018r 2  20 rr rr         jsr         _disasm_load_inst
-00001Br 2  20 rr rr         jsr         _disasm_print_inst_bytes
-00001Er 2  A5 rr            lda         ZP_D_STATE
-000020r 2  D0 03            bne         :+
-000022r 2  4C rr rr         jmp         @end_of_print
-000025r 2               
-000025r 2               :
-000025r 2  A0 00            ldy         #0
-000027r 2  20 rr rr         jsr         _disasm_print_padding
-00002Ar 2  A9 20 20 rr      PRINT_SPACE
-00002Er 2  rr           
-00002Fr 2  A6 rr            ldx         ZP_D_INST
-000031r 2  BD rr rr         lda         MN_OFFSETS, x
-000034r 2  AA               tax
-000035r 2  BD rr rr 20      PRINT_CHAR  {MNEMONIC_STR, x}, {MNEMONIC_STR + 1, x}, {MNEMONIC_STR + 2, x}
-000039r 2  rr rr BD rr  
-00003Dr 2  rr 20 rr rr  
-000047r 2  A5 rr            lda         ZP_D_EXBYTES
-000049r 2  D0 03            bne         :+
-00004Br 2  4C rr rr         jmp         @end_of_print               ; one-byte inst prints only mnemonic
-00004Er 2               
-00004Er 2               :
-00004Er 2  A5 rr            lda         ZP_D_INST
-000050r 2  AA               tax
-000051r 2  29 07            and         #7
-000053r 2  C9 07            cmp         #7                          ; BBR, BBS, RMB, SMB
-000055r 2  D0 0C            bne         @ex_space
-000057r 2  8A               txa
-000058r 2  4A 4A 4A 4A      SR_N        4
-00005Cr 2  29 07            and         #7
-00005Er 2  20 rr rr         PRINT_HEX
-000061r 2  80 05            bra         @skip_ex_space              ; skip one space
-000063r 2               
-000063r 2               @ex_space:
-000063r 2  A9 20 20 rr      PRINT_SPACE
-000067r 2  rr           
-000068r 2               
-000068r 2               @skip_ex_space:
-000068r 2  A9 20 20 rr      PRINT_SPACE
-00006Cr 2  rr           
-00006Dr 2  A6 rr            ldx         ZP_D_MODE
-00006Fr 2  E0 0A            cpx         #AM_IND                     ; indirect
-000071r 2  90 09            bcc         @not_indirect
-000073r 2  E0 0E            cpx         #AM_ABS                     ; but not absolute
-000075r 2  F0 05            beq         @not_indirect
-000077r 2  A9 28 20 rr      PRINT_CHAR  #ASCII_LPAREN
-00007Br 2  rr           
-00007Cr 2               
-00007Cr 2               @not_indirect:
-00007Cr 2  E0 09            cpx         #AM_IMM
-00007Er 2  D0 06            bne         @not_immediate
-000080r 2  20 rr rr         jsr         _disasm_immediate
-000083r 2  4C rr rr         jmp         @end_of_print
-000086r 2               
-000086r 2               @not_immediate:
-000086r 2  E0 03            cpx         #AM_ZP                      ; relative?
-000088r 2  B0 37            bcs         @not_relative
-00008Ar 2  20 rr rr         jsr         _disasm_zeropage
-00008Dr 2  8A               txa
-00008Er 2  4A               lsr                                     ; shift LOb to C
-00008Fr 2  B0 0D            bcs         @not_zprel                  ; AM_REL = 1, AM_ZPREL = 2, so skip ZP part if LOb is 1
-000091r 2  A9 2C 20 rr      PRINT_CHAR  #ASCII_COMMA
-000095r 2  rr           
-000096r 2  A9 20 20 rr      PRINT_SPACE
-00009Ar 2  rr           
-00009Br 2  20 rr rr         jsr         _disasm_zeropage
-00009Er 2               
-00009Er 2               @not_zprel:
-00009Er 2  A9 rr A0 rr      _M_WRITE_HSTRING HS_RelPrefix
-0000A2r 2  20 rr rr     
-0000A5r 2  18               clc
-0000A6r 2  A4 rr            ldy         ZP_D_EXBYTES
-0000A8r 2  64 rr            stz         ZP_TEMP
-0000AAr 2  B9 rr rr         lda         ZP_D_INST, y
-0000ADr 2  10 02            bpl         @skip_ff_set
-0000AFr 2  C6 rr            dec         ZP_TEMP                     ; $FF => ZP_TEMP
+000018r 2               DISASM_SAVEY:
+000018r 2  5A               phy
+000019r 2               
+000019r 2               DISASM_LOOP:
+000019r 2  20 rr rr         PRINT_CRLF
+00001Cr 2  A5 rr 20 rr      PRINT_BYTE  ZP_D_XAM + 1, ZP_D_XAM
+000020r 2  rr A5 rr 20  
+000024r 2  rr rr        
+000026r 2  A9 3A 20 rr      PRINT_CHAR  #ASCII_COLON
+00002Ar 2  rr           
+00002Br 2  20 rr rr         jsr         _disasm_load_inst
+00002Er 2  20 rr rr         jsr         _disasm_print_inst_bytes
+000031r 2  A5 rr            lda         ZP_D_STATE
+000033r 2  D0 03            bne         :+
+000035r 2  4C rr rr         jmp         @end_of_print
+000038r 2               
+000038r 2               :
+000038r 2  A0 00            ldy         #0
+00003Ar 2  20 rr rr         jsr         _disasm_print_padding
+00003Dr 2  A9 20 20 rr      PRINT_SPACE
+000041r 2  rr           
+000042r 2  A6 rr            ldx         ZP_D_INST
+000044r 2  BD rr rr         lda         MN_OFFSETS, x
+000047r 2  AA               tax
+000048r 2  BD rr rr 20      PRINT_CHAR  {MNEMONIC_STR, x}, {MNEMONIC_STR + 1, x}, {MNEMONIC_STR + 2, x}
+00004Cr 2  rr rr BD rr  
+000050r 2  rr 20 rr rr  
+00005Ar 2  A5 rr            lda         ZP_D_EXBYTES
+00005Cr 2  D0 03            bne         :+
+00005Er 2  4C rr rr         jmp         @end_of_print               ; one-byte inst prints only mnemonic
+000061r 2               
+000061r 2               :
+000061r 2  A5 rr            lda         ZP_D_INST
+000063r 2  AA               tax
+000064r 2  29 07            and         #7
+000066r 2  C9 07            cmp         #7                          ; BBR, BBS, RMB, SMB
+000068r 2  D0 0C            bne         @ex_space
+00006Ar 2  8A               txa
+00006Br 2  4A 4A 4A 4A      SR_N        4
+00006Fr 2  29 07            and         #7
+000071r 2  20 rr rr         PRINT_HEX
+000074r 2  80 05            bra         @skip_ex_space              ; skip one space
+000076r 2               
+000076r 2               @ex_space:
+000076r 2  A9 20 20 rr      PRINT_SPACE
+00007Ar 2  rr           
+00007Br 2               
+00007Br 2               @skip_ex_space:
+00007Br 2  A9 20 20 rr      PRINT_SPACE
+00007Fr 2  rr           
+000080r 2  A6 rr            ldx         ZP_D_MODE
+000082r 2  E0 0A            cpx         #AM_IND                     ; indirect
+000084r 2  90 09            bcc         @not_indirect
+000086r 2  E0 0E            cpx         #AM_ABS                     ; but not absolute
+000088r 2  F0 05            beq         @not_indirect
+00008Ar 2  A9 28 20 rr      PRINT_CHAR  #ASCII_LPAREN
+00008Er 2  rr           
+00008Fr 2               
+00008Fr 2               @not_indirect:
+00008Fr 2  E0 09            cpx         #AM_IMM
+000091r 2  D0 06            bne         @not_immediate
+000093r 2  20 rr rr         jsr         _disasm_immediate
+000096r 2  4C rr rr         jmp         @end_of_print
+000099r 2               
+000099r 2               @not_immediate:
+000099r 2  E0 03            cpx         #AM_ZP                      ; relative?
+00009Br 2  B0 37            bcs         @not_relative
+00009Dr 2  20 rr rr         jsr         _disasm_zeropage
+0000A0r 2  8A               txa
+0000A1r 2  4A               lsr                                     ; shift LOb to C
+0000A2r 2  B0 0D            bcs         @not_zprel                  ; AM_REL = 1, AM_ZPREL = 2, so skip ZP part if LOb is 1
+0000A4r 2  A9 2C 20 rr      PRINT_CHAR  #ASCII_COMMA
+0000A8r 2  rr           
+0000A9r 2  A9 20 20 rr      PRINT_SPACE
+0000ADr 2  rr           
+0000AEr 2  20 rr rr         jsr         _disasm_zeropage
 0000B1r 2               
-0000B1r 2               @skip_ff_set:
-0000B1r 2  65 rr            adc         ZP_D_XAM
-0000B3r 2  AA               tax
-0000B4r 2  A5 rr            lda         ZP_D_XAM + 1
-0000B6r 2  65 rr            adc         ZP_TEMP
-0000B8r 2  20 rr rr         PRINT_BYTE
-0000BBr 2  8A               txa
-0000BCr 2  20 rr rr         PRINT_BYTE
-0000BFr 2  80 31            bra         @end_of_print
-0000C1r 2               
-0000C1r 2               @not_relative:
-0000C1r 2  A5 rr            lda         ZP_D_EXBYTES
-0000C3r 2  C9 01            cmp         #1
-0000C5r 2  F0 05            beq         @two_byte_inst              ; inst is two bytes (vs three)?
-0000C7r 2  20 rr rr         jsr         _disasm_absolute
-0000CAr 2  80 03            bra         @continue_multibyte
-0000CCr 2               
-0000CCr 2               @two_byte_inst:
-0000CCr 2  20 rr rr         jsr         _disasm_zeropage
-0000CFr 2               
-0000CFr 2               @continue_multibyte:
-0000CFr 2  E0 0E            cpx         #AM_ABS                     ; absolute?
-0000D1r 2  F0 1F            beq         @end_of_print
-0000D3r 2  E0 0F            cpx         #AM_ZPIY
-0000D5r 2  D0 05            bne         @not_zpiy
-0000D7r 2  A9 29 20 rr      PRINT_CHAR   #ASCII_RPAREN
-0000DBr 2  rr           
-0000DCr 2               
-0000DCr 2               @not_zpiy:
-0000DCr 2  2F rr 06         bbr2        ZP_D_MODE, @not_indexed     ; indexed?
-0000DFr 2  8A               txa
-0000E0r 2  4A               lsr
-0000E1r 2  4A               lsr                                     ; shift LOb to C
-0000E2r 2  20 rr rr         jsr         _disasm_commaXY
-0000E5r 2               
-0000E5r 2               @not_indexed:
-0000E5r 2  E0 0A            cpx         #AM_IND
-0000E7r 2  30 09            bmi         @end_of_print
-0000E9r 2  E0 0E            cpx         #AM_ABS
-0000EBr 2  B0 05            bcs         @end_of_print               ; AM_ABS or AM_ZPIY?  Skip trailing RPAREN
-0000EDr 2  A9 29 20 rr      PRINT_CHAR  #ASCII_RPAREN
-0000F1r 2  rr           
-0000F2r 2               
-0000F2r 2               @end_of_print:
-0000F2r 2  C6 rr            dec         ZP_D_ICOUNT
-0000F4r 2  F0 06            beq         @done
-0000F6r 2  20 rr rr         PRINT_CRLF
-0000F9r 2  4C rr rr         jmp         DISASM_LOOP
-0000FCr 2               
-0000FCr 2               @done:
-0000FCr 2  60               rts
-0000FDr 2               
-0000FDr 2               ;---------------------------------------
-0000FDr 2               ; Helper procedures
-0000FDr 2               
-0000FDr 2               _disasm_load_inst:
-0000FDr 2  A0 00            ldy         #0
-0000FFr 2  A6 rr            ldx         ZP_D_STATE
-000101r 2  F0 22            beq         @done                       ; if not in DISASM mode, just print one byte
-000103r 2  B2 rr            lda         (ZP_D_XAM)
-000105r 2  4A               lsr                                     ; /2 and shift LOb to C
-000106r 2  90 04            bcc         @shift_mode                 ; is even bytecode?
-000108r 2  29 0F            and         #$0F
-00010Ar 2  09 80            ora         #$80
+0000B1r 2               @not_zprel:
+0000B1r 2  A9 rr A0 rr      _M_WRITE_HSTRING HS_RelPrefix
+0000B5r 2  20 rr rr     
+0000B8r 2  18               clc
+0000B9r 2  A4 rr            ldy         ZP_D_EXBYTES
+0000BBr 2  64 rr            stz         ZP_TEMP
+0000BDr 2  B9 rr rr         lda         ZP_D_INST, y
+0000C0r 2  10 02            bpl         @skip_ff_set
+0000C2r 2  C6 rr            dec         ZP_TEMP                     ; $FF => ZP_TEMP
+0000C4r 2               
+0000C4r 2               @skip_ff_set:
+0000C4r 2  65 rr            adc         ZP_D_XAM
+0000C6r 2  AA               tax
+0000C7r 2  A5 rr            lda         ZP_D_XAM + 1
+0000C9r 2  65 rr            adc         ZP_TEMP
+0000CBr 2  20 rr rr         PRINT_BYTE
+0000CEr 2  8A               txa
+0000CFr 2  20 rr rr         PRINT_BYTE
+0000D2r 2  80 31            bra         @end_of_print
+0000D4r 2               
+0000D4r 2               @not_relative:
+0000D4r 2  A5 rr            lda         ZP_D_EXBYTES
+0000D6r 2  C9 01            cmp         #1
+0000D8r 2  F0 05            beq         @two_byte_inst              ; inst is two bytes (vs three)?
+0000DAr 2  20 rr rr         jsr         _disasm_absolute
+0000DDr 2  80 03            bra         @continue_multibyte
+0000DFr 2               
+0000DFr 2               @two_byte_inst:
+0000DFr 2  20 rr rr         jsr         _disasm_zeropage
+0000E2r 2               
+0000E2r 2               @continue_multibyte:
+0000E2r 2  E0 0E            cpx         #AM_ABS                     ; absolute?
+0000E4r 2  F0 1F            beq         @end_of_print
+0000E6r 2  E0 0F            cpx         #AM_ZPIY
+0000E8r 2  D0 05            bne         @not_zpiy
+0000EAr 2  A9 29 20 rr      PRINT_CHAR   #ASCII_RPAREN
+0000EEr 2  rr           
+0000EFr 2               
+0000EFr 2               @not_zpiy:
+0000EFr 2  2F rr 06         bbr2        ZP_D_MODE, @not_indexed     ; indexed?
+0000F2r 2  8A               txa
+0000F3r 2  4A               lsr
+0000F4r 2  4A               lsr                                     ; shift LOb to C
+0000F5r 2  20 rr rr         jsr         _disasm_commaXY
+0000F8r 2               
+0000F8r 2               @not_indexed:
+0000F8r 2  E0 0A            cpx         #AM_IND
+0000FAr 2  30 09            bmi         @end_of_print
+0000FCr 2  E0 0E            cpx         #AM_ABS
+0000FEr 2  B0 05            bcs         @end_of_print               ; AM_ABS or AM_ZPIY?  Skip trailing RPAREN
+000100r 2  A9 29 20 rr      PRINT_CHAR  #ASCII_RPAREN
+000104r 2  rr           
+000105r 2               
+000105r 2               @end_of_print:
+000105r 2  C6 rr            dec         ZP_D_ICOUNT
+000107r 2  F0 03            beq         @done
+000109r 2  4C rr rr         jmp         DISASM_LOOP
 00010Cr 2               
-00010Cr 2               @shift_mode:
-00010Cr 2  4A               lsr
-00010Dr 2  AA               tax
-00010Er 2  BD rr rr         lda         MN_AMODE_EVEN, x
-000111r 2  90 04            bcc         @no_shift
-000113r 2  4A 4A 4A 4A      SR_N        4
-000117r 2               
-000117r 2               @no_shift:
-000117r 2  29 0F            and         #$0F
-000119r 2  85 rr            sta         ZP_D_MODE
-00011Br 2  29 07            and         #7                          ; test if bits 0..2 are zeros (one-byte inst)
-00011Dr 2  F0 06            beq         @done
-00011Fr 2  C8               iny
-000120r 2  29 01            and         #1
-000122r 2  D0 01            bne         @done                       ; odd modes are 2-byte inst
-000124r 2  C8               iny
-000125r 2               
-000125r 2               @done:
-000125r 2  84 rr            sty         ZP_D_EXBYTES
-000127r 2  A0 00            ldy         #0
-000129r 2               
-000129r 2               :
-000129r 2  B2 rr            lda         (ZP_D_XAM)
-00012Br 2  99 rr rr         sta         ZP_D_INST, y
-00012Er 2  E6 rr            inc         ZP_D_XAM
-000130r 2  D0 02            bne         :+
-000132r 2  E6 rr            inc         ZP_D_XAM + 1
-000134r 2               
-000134r 2               :
-000134r 2  C4 rr            cpy         ZP_D_EXBYTES
-000136r 2  F0 03            beq         :+
-000138r 2  C8               iny
-000139r 2  80 EE            bra         :--
-00013Br 2               
-00013Br 2               :
-00013Br 2  60               rts
-00013Cr 2               
-00013Cr 2               ;AM_ACC   := 0     ;                     %0000
-00013Cr 2               ;AM_REL   := 1     ; $rr => $aaaa        %0001
-00013Cr 2               ;AM_ZPREL := 2     ; $zz,$rr => $aaaa    %0010
-00013Cr 2               ;AM_ZP    := 3     ; $zz                 %0011
-00013Cr 2               ;AM_ABSX  := 4     ; $aaaa,X             %0100
-00013Cr 2               ;AM_ZPX   := 5     ; $zz,X               %0101
-00013Cr 2               ;AM_ABSY  := 6     ; $aaaa,Y             %0110
-00013Cr 2               ;AM_ZPY   := 7     ; $zz,Y               %0111
-00013Cr 2               ;AM_IMP   := 8     ;                     %1000
-00013Cr 2               ;AM_IMM   := 9     ; #$ii                %1001
-00013Cr 2               ;AM_IND   := $A    ; ($aaaa)             %1010
-00013Cr 2               ;AM_ZPIND := $B    ; ($zz)               %1011
-00013Cr 2               ;AM_ABSIX := $C    ; ($aaaa,X)           %1100
-00013Cr 2               ;AM_ZPIX  := $D    ; ($zz,X)             %1101
-00013Cr 2               ;AM_ABS   := $E    ; $aaaa               %1110
-00013Cr 2               ;AM_ZPIY  := $F    ; ($zz),Y             %1111
-00013Cr 2               
-00013Cr 2               _disasm_print_inst_bytes:
-00013Cr 2  A0 00            ldy         #0
-00013Er 2  80 01            bra         :++
-000140r 2               
-000140r 2               :
-000140r 2  C8               iny
-000141r 2               
-000141r 2               :
-000141r 2  A9 20 20 rr      PRINT_SPACE
-000145r 2  rr           
-000146r 2  B9 rr rr 20      PRINT_BYTE  {ZP_D_INST, y}
-00014Ar 2  rr rr        
-00014Cr 2  C4 rr            cpy         ZP_D_EXBYTES
-00014Er 2  90 F0            bcc         :--
-000150r 2  60               rts
+00010Cr 2               @done:
+00010Cr 2  7A               ply
+00010Dr 2  60               rts
+00010Er 2               
+00010Er 2               ;---------------------------------------
+00010Er 2               ; Helper procedures
+00010Er 2               
+00010Er 2               _disasm_load_inst:
+00010Er 2  A0 00            ldy         #0
+000110r 2  A6 rr            ldx         ZP_D_STATE
+000112r 2  F0 22            beq         @done                       ; if not in DISASM mode, just print one byte
+000114r 2  B2 rr            lda         (ZP_D_XAM)
+000116r 2  4A               lsr                                     ; /2 and shift LOb to C
+000117r 2  90 04            bcc         @shift_mode                 ; is even bytecode?
+000119r 2  29 0F            and         #$0F
+00011Br 2  09 80            ora         #$80
+00011Dr 2               
+00011Dr 2               @shift_mode:
+00011Dr 2  4A               lsr
+00011Er 2  AA               tax
+00011Fr 2  BD rr rr         lda         MN_AMODE_EVEN, x
+000122r 2  90 04            bcc         @no_shift
+000124r 2  4A 4A 4A 4A      SR_N        4
+000128r 2               
+000128r 2               @no_shift:
+000128r 2  29 0F            and         #$0F
+00012Ar 2  85 rr            sta         ZP_D_MODE
+00012Cr 2  29 07            and         #7                          ; test if bits 0..2 are zeros (one-byte inst)
+00012Er 2  F0 06            beq         @done
+000130r 2  C8               iny
+000131r 2  29 01            and         #1
+000133r 2  D0 01            bne         @done                       ; odd modes are 2-byte inst
+000135r 2  C8               iny
+000136r 2               
+000136r 2               @done:
+000136r 2  84 rr            sty         ZP_D_EXBYTES
+000138r 2  A0 00            ldy         #0
+00013Ar 2               
+00013Ar 2               :
+00013Ar 2  B2 rr            lda         (ZP_D_XAM)
+00013Cr 2  99 rr rr         sta         ZP_D_INST, y
+00013Fr 2  E6 rr            inc         ZP_D_XAM
+000141r 2  D0 02            bne         :+
+000143r 2  E6 rr            inc         ZP_D_XAM + 1
+000145r 2               
+000145r 2               :
+000145r 2  C4 rr            cpy         ZP_D_EXBYTES
+000147r 2  F0 03            beq         :+
+000149r 2  C8               iny
+00014Ar 2  80 EE            bra         :--
+00014Cr 2               
+00014Cr 2               :
+00014Cr 2  60               rts
+00014Dr 2               
+00014Dr 2               ;AM_ACC   := 0     ;                     %0000
+00014Dr 2               ;AM_REL   := 1     ; $rr => $aaaa        %0001
+00014Dr 2               ;AM_ZPREL := 2     ; $zz,$rr => $aaaa    %0010
+00014Dr 2               ;AM_ZP    := 3     ; $zz                 %0011
+00014Dr 2               ;AM_ABSX  := 4     ; $aaaa,X             %0100
+00014Dr 2               ;AM_ZPX   := 5     ; $zz,X               %0101
+00014Dr 2               ;AM_ABSY  := 6     ; $aaaa,Y             %0110
+00014Dr 2               ;AM_ZPY   := 7     ; $zz,Y               %0111
+00014Dr 2               ;AM_IMP   := 8     ;                     %1000
+00014Dr 2               ;AM_IMM   := 9     ; #$ii                %1001
+00014Dr 2               ;AM_IND   := $A    ; ($aaaa)             %1010
+00014Dr 2               ;AM_ZPIND := $B    ; ($zz)               %1011
+00014Dr 2               ;AM_ABSIX := $C    ; ($aaaa,X)           %1100
+00014Dr 2               ;AM_ZPIX  := $D    ; ($zz,X)             %1101
+00014Dr 2               ;AM_ABS   := $E    ; $aaaa               %1110
+00014Dr 2               ;AM_ZPIY  := $F    ; ($zz),Y             %1111
+00014Dr 2               
+00014Dr 2               _disasm_print_inst_bytes:
+00014Dr 2  A0 00            ldy         #0
+00014Fr 2  80 01            bra         :++
 000151r 2               
-000151r 2               _disasm_print_padding:
-000151r 2  A5 rr            lda         ZP_D_EXBYTES
-000153r 2  C9 01            cmp         #1
-000155r 2  F0 04            beq         :+
-000157r 2  49 02            eor         #2
-000159r 2  F0 0F            beq         :+++
-00015Br 2               
-00015Br 2               :
-00015Br 2  AA               tax
-00015Cr 2               
-00015Cr 2               :
-00015Cr 2  A9 20 20 rr      PRINT_SPACE
-000160r 2  rr           
-000161r 2  20 rr rr         PRINT_CHAR
-000164r 2  20 rr rr         PRINT_CHAR
-000167r 2  CA               dex
-000168r 2  D0 F2            bne         :-
-00016Ar 2               
-00016Ar 2               :
-00016Ar 2  60               rts
-00016Br 2               
-00016Br 2               ; Carry: 1 = Y, Carry: 0 = X
-00016Br 2               _disasm_commaXY:
-00016Br 2  A9 2C 20 rr      PRINT_CHAR  #ASCII_COMMA
-00016Fr 2  rr           
-000170r 2  A9 58            lda         #ASCII_X
-000172r 2  90 01            bcc         :+
-000174r 2  1A               inc
-000175r 2               
-000175r 2               :
-000175r 2  4C rr rr         PRINT_CHAR_JMP
-000178r 2               
-000178r 2               _disasm_absolute:
-000178r 2  C8               iny
-000179r 2  20 rr rr         jsr         _disasm_zeropage
-00017Cr 2  88               dey
-00017Dr 2  80 0B            bra         _disasm_zp_byte
-00017Fr 2               
-00017Fr 2               _disasm_immediate:
-00017Fr 2  A9 23 20 rr      PRINT_CHAR  #ASCII_HASH
-000183r 2  rr           
-000184r 2                   ; fall through
-000184r 2               
-000184r 2               _disasm_zeropage:
-000184r 2  C8               iny
-000185r 2  A9 24 20 rr      PRINT_CHAR  #ASCII_DOLLAR
-000189r 2  rr           
-00018Ar 2               
-00018Ar 2               _disasm_zp_byte:
-00018Ar 2  B9 rr rr 4C      PRINT_BYTE_JMP  {ZP_D_INST, y}
-00018Er 2  rr rr        
+000151r 2               :
+000151r 2  C8               iny
+000152r 2               
+000152r 2               :
+000152r 2  A9 20 20 rr      PRINT_SPACE
+000156r 2  rr           
+000157r 2  B9 rr rr 20      PRINT_BYTE  {ZP_D_INST, y}
+00015Br 2  rr rr        
+00015Dr 2  C4 rr            cpy         ZP_D_EXBYTES
+00015Fr 2  90 F0            bcc         :--
+000161r 2  60               rts
+000162r 2               
+000162r 2               _disasm_print_padding:
+000162r 2  A5 rr            lda         ZP_D_EXBYTES
+000164r 2  C9 01            cmp         #1
+000166r 2  F0 04            beq         :+
+000168r 2  49 02            eor         #2
+00016Ar 2  F0 0F            beq         :+++
+00016Cr 2               
+00016Cr 2               :
+00016Cr 2  AA               tax
+00016Dr 2               
+00016Dr 2               :
+00016Dr 2  A9 20 20 rr      PRINT_SPACE
+000171r 2  rr           
+000172r 2  20 rr rr         PRINT_CHAR
+000175r 2  20 rr rr         PRINT_CHAR
+000178r 2  CA               dex
+000179r 2  D0 F2            bne         :-
+00017Br 2               
+00017Br 2               :
+00017Br 2  60               rts
+00017Cr 2               
+00017Cr 2               ; Carry: 1 = Y, Carry: 0 = X
+00017Cr 2               _disasm_commaXY:
+00017Cr 2  A9 2C 20 rr      PRINT_CHAR  #ASCII_COMMA
+000180r 2  rr           
+000181r 2  A9 58            lda         #ASCII_X
+000183r 2  90 01            bcc         :+
+000185r 2  1A               inc
+000186r 2               
+000186r 2               :
+000186r 2  4C rr rr         PRINT_CHAR_JMP
+000189r 2               
+000189r 2               _disasm_absolute:
+000189r 2  C8               iny
+00018Ar 2  20 rr rr         jsr         _disasm_zeropage
+00018Dr 2  88               dey
+00018Er 2  80 0B            bra         _disasm_zp_byte
 000190r 2               
-000190r 1               .include "hyforth/hyforth.s"
-000190r 2               ;----------------------------------------------------------------------
-000190r 2               ;
-000190r 2               ;  Patrick Struthers - March 2026
-000190r 2               ;      - THANKS to AGSB for the starting point here....
-000190r 2               ;
-000190r 2               ;  The HyForth project starts here with AGSB's core Forth engine;
-000190r 2               ;  the engine will be moved to ROM and the heap will be copied to RAM
-000190r 2               ;  on cold start.
-000190r 2               ;
-000190r 2               ;  The ulitmate purpose of working this port through is to develop a
-000190r 2               ;  flexible and powerful operating system for the Hydra-16 of reasonable
-000190r 2               ;  efficiency and minimal memory footprint.  HyForth will grow and
-000190r 2               ;  shrink in RAM footprint according to context.
-000190r 2               ;
-000190r 2               ; ---------------------------------------------------------------------
-000190r 2               ;
-000190r 2               .debuginfo
-000190r 2               .setcpu "65C02"
-000190r 2               
-000190r 2               ;---------------------------------------------------------------------
-000190r 2               ; macros for dictionary, creates code as follows:
-000190r 2               ;
-000190r 2               ;   h_name:
-000190r 2               ;   .word  link_to_previous_entry
-000190r 2               ;   .byte  strlen(name) + flags
-000190r 2               ;   .byte  name
-000190r 2               ;   name:
-000190r 2               ;
-000190r 2               ; label for primitives
-000190r 2               ;
-000190r 2               .macro makelabel arg1, arg2
-000190r 2               .ident (.concat (arg1, arg2)):
-000190r 2               .endmacro
-000190r 2               ;
-000190r 2               ; header for primitives
-000190r 2               ; the entry point for dictionary is h_~name~
-000190r 2               ; the entry point for code is ~name~
-000190r 2               ;
-000190r 2               .macro def_word name, label, flag
-000190r 2               makelabel "h_", label
-000190r 2               .ident(.sprintf("H%04X", hcount + 1)):
-000190r 2                 .word .ident (.sprintf ("H%04X", hcount))
-000190r 2               hcount .set hcount + 1
-000190r 2                 .byte .strlen(name) + flag + 0 ; nice trick !
-000190r 2                 .byte name
-000190r 2               makelabel "", label
-000190r 2               .endmacro
-000190r 2               ;---------------------------------------------------------------------
-000190r 2               ;  macros for PGS stuff
-000190r 2               ;
-000190r 2               .macro WCRLF_np                ; no push of A
-000190r 2                   PRINT_CRLF
-000190r 2               .endmacro
-000190r 2               
-000190r 2               .macro WCRLF
-000190r 2                   pha
-000190r 2                   WCRLF_np
-000190r 2                   pla
-000190r 2               .endmacro
-000190r 2               
-000190r 2               .macro  WSEQ_np  strlbl
-000190r 2                   phy
-000190r 2                   ldy #0
-000190r 2               :
-000190r 2                   lda strlbl, y
-000190r 2                   beq :+
-000190r 2                   iny
-000190r 2                   PRINT_CHAR
-000190r 2                   bra :-
-000190r 2               :
-000190r 2                   WCRLF_np
-000190r 2                   ply
-000190r 2               .endmacro
-000190r 2               
-000190r 2               
-000190r 2               .macro  WSEQ_raw  strlbl
-000190r 2                   phy
-000190r 2                   ldy #0
-000190r 2               :
-000190r 2                   lda strlbl, y
-000190r 2                   beq :+
-000190r 2                   iny
-000190r 2                   PRINT_CHAR
-000190r 2                   bra :-
-000190r 2               :
-000190r 2                   ply
-000190r 2               .endmacro
-000190r 2               
-000190r 2               .macro WSEQ  strlbl
-000190r 2                   pha
-000190r 2                   WSEQ_np  strlbl
-000190r 2                   pla
-000190r 2               .endmacro
-000190r 2               
-000190r 2               ;
-000190r 2               ;   ANSI screen stuff
-000190r 2               ; <rr>;<cc>f move cursor to rr,cc
-000190r 2               ; <cc>m for color/attributes
-000190r 2               ; 2J for clear screen
-000190r 2               ; H for 'home'
-000190r 2               ; <cc>[ABCD] screen moves
-000190r 2               ;
-000190r 2               .macro ANSI b1,b2,b3,b4,b5,b6,b7
-000190r 2                   pha
-000190r 2                   PRINT_ANSI_ESC_SEQ b1, b2, b3, b4, b5, b6, b7
-000190r 2                   pla
-000190r 2               .endmacro
-000190r 2               
-000190r 2               ;---------------------------------------------------------------------
-000190r 2               ;  for error messages
-000190r 2               ;
-000190r 2               .macro ERR_entry errmsg
-000190r 2                   .byte <errmsg
-000190r 2                   .byte >errmsg
-000190r 2                   emcount .set emcount + 1
-000190r 2               .endmacro
-000190r 2               
-000190r 2               .macro WERR errptr
-000190r 2               ;.macro WERR
-000190r 2                   .local werrloop, werrend
-000190r 2                   WCRLF_np
-000190r 2                   ldy #0
-000190r 2                   lda (errptr),y
-000190r 2                   sta TEMP0
-000190r 2                   iny
-000190r 2                   lda (errptr),y
-000190r 2                   sta TEMP0+1
-000190r 2                   ldy #0
-000190r 2               werrloop:
-000190r 2                   lda (TEMP0),y
-000190r 2                   beq werrend
-000190r 2                   iny
-000190r 2                   PRINT_CHAR
-000190r 2                   bra werrloop
-000190r 2               werrend:
-000190r 2                   WCRLF_np
-000190r 2                   rts
-000190r 2               .endmacro
-000190r 2               
-000190r 2               ;---------------------------------------------------------------------
-000190r 2               ; variables for macros
-000190r 2               
-000190r 2               hcount .set 0
-000190r 2               emcount .set 0             ; # of error messages set up
-000190r 2               
-000190r 2               H0000 = 0
-000190r 2               
-000190r 2               ;---------------------------------------------------------------------
-000190r 2               ;               CONFIGURATION OPTIONS
-000190r 2               ;---------------------------------------------------------------------
-000190r 2               
-000190r 2               ; number conversion
-000190r 2               numbers := 1      ; include DEC/BIN/HEX conversion
-000190r 2               
-000190r 2               SINGLE := 1     ; single digits hard coded?
-000190r 2               
-000190r 2               DEBUG := 1        ; enable inclusion of debug code
-000190r 2               
-000190r 2               HYWORDS := 1      ; add in additional hardcoded words / logic
-000190r 2               
-000190r 2               ANSIOK := 1         ; add ANSI screen stuff
-000190r 2               
-000190r 2               YSOUND := 1        ; add sound support
-000190r 2               
-000190r 2               ;TXT2STACK := 1     ; use old TXTGET instead of new
-000190r 2               
-000190r 2               ;---------------------------------------------------------------------
-000190r 2               ;              for PGS hyforth stuff
-000190r 2               ;
-000190r 2               ; error codes
-000190r 2               ;
-000190r 2               ERR_RPTR := $01    ; return stack pointer error
-000190r 2               ERR_SPTR := $02    ; data stack pointer error
-000190r 2               ERR_DIV0 := $03    ; divide by zero
-000190r 2               ERR_MEM := $04     ; memory not-avail
-000190r 2               ERR_UKW := $05     ; unknown word
-000190r 2               ERR_SEC := $06     ; security error, ie dangerous address write
-000190r 2               ERR_SYS := $07     ; return from system call error
-000190r 2                 ; warnings
-000190r 2               WRN_SEC := $86     ; security
-000190r 2               WRN_MEM := $84     ; memory alloc
-000190r 2               ;
-000190r 2               ;---------------------------------------------------------------------
-000190r 2               ;                 CORE ENGINE CONSTANTS
-000190r 2               ;
-000190r 2               CELL = 2         ; cell size, two bytes, 16-bit
-000190r 2               FLAG_IMM = 1<<7  ; immediate flag
-000190r 2               FLAG_COM = 1<<6  ; compiled flag
-000190r 2               MAXSTR = 100
-000190r 2               
-000190r 2               ; terminal input buffer, forward
-000190r 2               ; getline, token, skip, scan, depends on page boundary
-000190r 2               ; INBUF = $0400  (see segment STACKS below)
-000190r 2               ; moves forwards
-000190r 2               INBUF_end = $FD
-000190r 2               
-000190r 2               ; data stacks
-000190r 2               ; moves backwards, push decreases before copy
-000190r 2               DSEND = $7E
-000190r 2               
-000190r 2               ; return stack
-000190r 2               ; moves backwards, push decreases before copy
-000190r 2               RTEND = $FE
-000190r 2               
-000190r 2               ; malloc stack
-000190r 2               ; moves backwards
-000190r 2               MEMEND = $01FE
-000190r 2               MEM_SZ = $04
-000190r 2               
-000190r 2               ;
-000190r 2               ; spi
-000190r 2               ;F9E8 SPI_INIT_DELAY
-000190r 2               ;F9CC SPI_RECV
-000190r 2               ;F9AD SPI_SEND
-000190r 2               ;F9A3 SPI_OPERATION_DONE
-000190r 2               ;F974 SPI_TRANSCEIVE
-000190r 2               
-000190r 2               ALTBUF = $6000
-000190r 2               ALTBUF_end = $6FFF
-000190r 2               MEMTOP = $8000            ; malloc allocates DOWN from MEMTOP
-000190r 2               
-000190r 2               ;----------------------------------------------------------------------
-000190r 2               ;       Look closely at hyforth.cfg and the output of ca65/ld65 after
-000190r 2               ;  a build; the RAM and ROM code is carefully arranged when the binary
-000190r 2               ;  is created, to make initialization easier and optimize RAM use.
-000190r 2               ;  The main program engine starts at $A000 in ROM and is only about 500 bytes
-000190r 2               ;  long.  Additional functions, then initialization and debug code,
-000190r 2               ;  then the dictionary follow in the binary, and these stay in ROM.
-000190r 2               ;
-000190r 2               ;       The dictionary has a particular structure, with 'bye' and 'abort'
-000190r 2               ;  at the beginning; there are some core words,
-000190r 2               ;  then contents of 'primitives.s', then 'hywords.s', followed by
-000190r 2               ;  the end of the dictionary with critical items such as 'fetch', 'store',
-000190r 2               ;  'immediate', 'compile, 'semis', 'exit, and ancillary stuff.
-000190r 2               ;
-000190r 2               ;       When $A003 is run from WozMon, a jump instruction to 'main' is
-000190r 2               ;  copied to $0600, followed by the dictionary, with 'exit' at the end.
-000190r 2               ;  HyForth is start by running '600R' or 'A000R'.
-000190r 2               ;
-000190r 2               ;----------------------------------------------------------------------
-000190r 2               ;                   ZERO PAGE USAGE
-000190r 2               ;----------------------------------------------------------------------
-000190r 2               .segment "ZEROPAGE"
+000190r 2               _disasm_immediate:
+000190r 2  A9 23 20 rr      PRINT_CHAR  #ASCII_HASH
+000194r 2  rr           
+000195r 2                   ; fall through
+000195r 2               
+000195r 2               _disasm_zeropage:
+000195r 2  C8               iny
+000196r 2  A9 24 20 rr      PRINT_CHAR  #ASCII_DOLLAR
+00019Ar 2  rr           
+00019Br 2               
+00019Br 2               _disasm_zp_byte:
+00019Br 2  B9 rr rr 4C      PRINT_BYTE_JMP  {ZP_D_INST, y}
+00019Fr 2  rr rr        
+0001A1r 2               
+0001A1r 1               .include "hyforth/hyforth.s"
+0001A1r 2               ;----------------------------------------------------------------------
+0001A1r 2               ;
+0001A1r 2               ;  Patrick Struthers - March 2026
+0001A1r 2               ;      - THANKS to AGSB for the starting point here....
+0001A1r 2               ;
+0001A1r 2               ;  The HyForth project starts here with AGSB's core Forth engine;
+0001A1r 2               ;  the engine will be moved to ROM and the heap will be copied to RAM
+0001A1r 2               ;  on cold start.
+0001A1r 2               ;
+0001A1r 2               ;  The ulitmate purpose of working this port through is to develop a
+0001A1r 2               ;  flexible and powerful operating system for the Hydra-16 of reasonable
+0001A1r 2               ;  efficiency and minimal memory footprint.  HyForth will grow and
+0001A1r 2               ;  shrink in RAM footprint according to context.
+0001A1r 2               ;
+0001A1r 2               ; ---------------------------------------------------------------------
+0001A1r 2               ;
+0001A1r 2               .debuginfo
+0001A1r 2               .setcpu "65C02"
+0001A1r 2               
+0001A1r 2               ;---------------------------------------------------------------------
+0001A1r 2               ; macros for dictionary, creates code as follows:
+0001A1r 2               ;
+0001A1r 2               ;   h_name:
+0001A1r 2               ;   .word  link_to_previous_entry
+0001A1r 2               ;   .byte  strlen(name) + flags
+0001A1r 2               ;   .byte  name
+0001A1r 2               ;   name:
+0001A1r 2               ;
+0001A1r 2               ; label for primitives
+0001A1r 2               ;
+0001A1r 2               .macro makelabel arg1, arg2
+0001A1r 2               .ident (.concat (arg1, arg2)):
+0001A1r 2               .endmacro
+0001A1r 2               ;
+0001A1r 2               ; header for primitives
+0001A1r 2               ; the entry point for dictionary is h_~name~
+0001A1r 2               ; the entry point for code is ~name~
+0001A1r 2               ;
+0001A1r 2               .macro def_word name, label, flag
+0001A1r 2               makelabel "h_", label
+0001A1r 2               .ident(.sprintf("H%04X", hcount + 1)):
+0001A1r 2                 .word .ident (.sprintf ("H%04X", hcount))
+0001A1r 2               hcount .set hcount + 1
+0001A1r 2                 .byte .strlen(name) + flag + 0 ; nice trick !
+0001A1r 2                 .byte name
+0001A1r 2               makelabel "", label
+0001A1r 2               .endmacro
+0001A1r 2               ;---------------------------------------------------------------------
+0001A1r 2               ;  macros for PGS stuff
+0001A1r 2               ;
+0001A1r 2               .macro WCRLF_np                ; no push of A
+0001A1r 2                   PRINT_CRLF
+0001A1r 2               .endmacro
+0001A1r 2               
+0001A1r 2               .macro WCRLF
+0001A1r 2                   pha
+0001A1r 2                   WCRLF_np
+0001A1r 2                   pla
+0001A1r 2               .endmacro
+0001A1r 2               
+0001A1r 2               .macro  WSEQ_np  strlbl
+0001A1r 2                   phy
+0001A1r 2                   ldy #0
+0001A1r 2               :
+0001A1r 2                   lda strlbl, y
+0001A1r 2                   beq :+
+0001A1r 2                   iny
+0001A1r 2                   PRINT_CHAR
+0001A1r 2                   bra :-
+0001A1r 2               :
+0001A1r 2                   WCRLF_np
+0001A1r 2                   ply
+0001A1r 2               .endmacro
+0001A1r 2               
+0001A1r 2               
+0001A1r 2               .macro  WSEQ_raw  strlbl
+0001A1r 2                   phy
+0001A1r 2                   ldy #0
+0001A1r 2               :
+0001A1r 2                   lda strlbl, y
+0001A1r 2                   beq :+
+0001A1r 2                   iny
+0001A1r 2                   PRINT_CHAR
+0001A1r 2                   bra :-
+0001A1r 2               :
+0001A1r 2                   ply
+0001A1r 2               .endmacro
+0001A1r 2               
+0001A1r 2               .macro WSEQ  strlbl
+0001A1r 2                   pha
+0001A1r 2                   WSEQ_np  strlbl
+0001A1r 2                   pla
+0001A1r 2               .endmacro
+0001A1r 2               
+0001A1r 2               ;
+0001A1r 2               ;   ANSI screen stuff
+0001A1r 2               ; <rr>;<cc>f move cursor to rr,cc
+0001A1r 2               ; <cc>m for color/attributes
+0001A1r 2               ; 2J for clear screen
+0001A1r 2               ; H for 'home'
+0001A1r 2               ; <cc>[ABCD] screen moves
+0001A1r 2               ;
+0001A1r 2               .macro ANSI b1,b2,b3,b4,b5,b6,b7
+0001A1r 2                   pha
+0001A1r 2                   PRINT_ANSI_ESC_SEQ b1, b2, b3, b4, b5, b6, b7
+0001A1r 2                   pla
+0001A1r 2               .endmacro
+0001A1r 2               
+0001A1r 2               ;---------------------------------------------------------------------
+0001A1r 2               ;  for error messages
+0001A1r 2               ;
+0001A1r 2               .macro ERR_entry errmsg
+0001A1r 2                   .byte <errmsg
+0001A1r 2                   .byte >errmsg
+0001A1r 2                   emcount .set emcount + 1
+0001A1r 2               .endmacro
+0001A1r 2               
+0001A1r 2               .macro WERR errptr
+0001A1r 2               ;.macro WERR
+0001A1r 2                   .local werrloop, werrend
+0001A1r 2                   WCRLF_np
+0001A1r 2                   ldy #0
+0001A1r 2                   lda (errptr),y
+0001A1r 2                   sta TEMP0
+0001A1r 2                   iny
+0001A1r 2                   lda (errptr),y
+0001A1r 2                   sta TEMP0+1
+0001A1r 2                   ldy #0
+0001A1r 2               werrloop:
+0001A1r 2                   lda (TEMP0),y
+0001A1r 2                   beq werrend
+0001A1r 2                   iny
+0001A1r 2                   PRINT_CHAR
+0001A1r 2                   bra werrloop
+0001A1r 2               werrend:
+0001A1r 2                   WCRLF_np
+0001A1r 2                   rts
+0001A1r 2               .endmacro
+0001A1r 2               
+0001A1r 2               ;---------------------------------------------------------------------
+0001A1r 2               ; variables for macros
+0001A1r 2               
+0001A1r 2               hcount .set 0
+0001A1r 2               emcount .set 0             ; # of error messages set up
+0001A1r 2               
+0001A1r 2               H0000 = 0
+0001A1r 2               
+0001A1r 2               ;---------------------------------------------------------------------
+0001A1r 2               ;               CONFIGURATION OPTIONS
+0001A1r 2               ;---------------------------------------------------------------------
+0001A1r 2               
+0001A1r 2               ; number conversion
+0001A1r 2               numbers := 1      ; include DEC/BIN/HEX conversion
+0001A1r 2               
+0001A1r 2               SINGLE := 1     ; single digits hard coded?
+0001A1r 2               
+0001A1r 2               DEBUG := 1        ; enable inclusion of debug code
+0001A1r 2               
+0001A1r 2               HYWORDS := 1      ; add in additional hardcoded words / logic
+0001A1r 2               
+0001A1r 2               ANSIOK := 1         ; add ANSI screen stuff
+0001A1r 2               
+0001A1r 2               YSOUND := 1        ; add sound support
+0001A1r 2               
+0001A1r 2               ;TXT2STACK := 1     ; use old TXTGET instead of new
+0001A1r 2               
+0001A1r 2               ;---------------------------------------------------------------------
+0001A1r 2               ;              for PGS hyforth stuff
+0001A1r 2               ;
+0001A1r 2               ; error codes
+0001A1r 2               ;
+0001A1r 2               ERR_RPTR := $01    ; return stack pointer error
+0001A1r 2               ERR_SPTR := $02    ; data stack pointer error
+0001A1r 2               ERR_DIV0 := $03    ; divide by zero
+0001A1r 2               ERR_MEM := $04     ; memory not-avail
+0001A1r 2               ERR_UKW := $05     ; unknown word
+0001A1r 2               ERR_SEC := $06     ; security error, ie dangerous address write
+0001A1r 2               ERR_SYS := $07     ; return from system call error
+0001A1r 2                 ; warnings
+0001A1r 2               WRN_SEC := $86     ; security
+0001A1r 2               WRN_MEM := $84     ; memory alloc
+0001A1r 2               ;
+0001A1r 2               ;---------------------------------------------------------------------
+0001A1r 2               ;                 CORE ENGINE CONSTANTS
+0001A1r 2               ;
+0001A1r 2               CELL = 2         ; cell size, two bytes, 16-bit
+0001A1r 2               FLAG_IMM = 1<<7  ; immediate flag
+0001A1r 2               FLAG_COM = 1<<6  ; compiled flag
+0001A1r 2               MAXSTR = 100
+0001A1r 2               
+0001A1r 2               ; terminal input buffer, forward
+0001A1r 2               ; getline, token, skip, scan, depends on page boundary
+0001A1r 2               ; INBUF = $0400  (see segment STACKS below)
+0001A1r 2               ; moves forwards
+0001A1r 2               INBUF_end = $FD
+0001A1r 2               
+0001A1r 2               ; data stacks
+0001A1r 2               ; moves backwards, push decreases before copy
+0001A1r 2               DSEND = $7E
+0001A1r 2               
+0001A1r 2               ; return stack
+0001A1r 2               ; moves backwards, push decreases before copy
+0001A1r 2               RTEND = $FE
+0001A1r 2               
+0001A1r 2               ; malloc stack
+0001A1r 2               ; moves backwards
+0001A1r 2               MEMEND = $01FE
+0001A1r 2               MEM_SZ = $04
+0001A1r 2               
+0001A1r 2               ;
+0001A1r 2               ; spi
+0001A1r 2               ;F9E8 SPI_INIT_DELAY
+0001A1r 2               ;F9CC SPI_RECV
+0001A1r 2               ;F9AD SPI_SEND
+0001A1r 2               ;F9A3 SPI_OPERATION_DONE
+0001A1r 2               ;F974 SPI_TRANSCEIVE
+0001A1r 2               
+0001A1r 2               ALTBUF = $6000
+0001A1r 2               ALTBUF_end = $6FFF
+0001A1r 2               MEMTOP = $8000            ; malloc allocates DOWN from MEMTOP
+0001A1r 2               
+0001A1r 2               ;----------------------------------------------------------------------
+0001A1r 2               ;       Look closely at hyforth.cfg and the output of ca65/ld65 after
+0001A1r 2               ;  a build; the RAM and ROM code is carefully arranged when the binary
+0001A1r 2               ;  is created, to make initialization easier and optimize RAM use.
+0001A1r 2               ;  The main program engine starts at $A000 in ROM and is only about 500 bytes
+0001A1r 2               ;  long.  Additional functions, then initialization and debug code,
+0001A1r 2               ;  then the dictionary follow in the binary, and these stay in ROM.
+0001A1r 2               ;
+0001A1r 2               ;       The dictionary has a particular structure, with 'bye' and 'abort'
+0001A1r 2               ;  at the beginning; there are some core words,
+0001A1r 2               ;  then contents of 'primitives.s', then 'hywords.s', followed by
+0001A1r 2               ;  the end of the dictionary with critical items such as 'fetch', 'store',
+0001A1r 2               ;  'immediate', 'compile, 'semis', 'exit, and ancillary stuff.
+0001A1r 2               ;
+0001A1r 2               ;       When $A003 is run from WozMon, a jump instruction to 'main' is
+0001A1r 2               ;  copied to $0600, followed by the dictionary, with 'exit' at the end.
+0001A1r 2               ;  HyForth is start by running '600R' or 'A000R'.
+0001A1r 2               ;
+0001A1r 2               ;----------------------------------------------------------------------
+0001A1r 2               ;                   ZERO PAGE USAGE
+0001A1r 2               ;----------------------------------------------------------------------
+0001A1r 2               .segment "ZEROPAGE"
 00003Cr 2               .org $C8
 0000C8  2               ZPSTART:
 0000C8  2               ;
@@ -7675,7 +7684,7 @@ Current file: all.s
 0000B8r 2  rr           
 0000B9r 2               
 0000B9r 2               @not_store:
-0000B9r 2  30 22                        bmi             @examine_next   ; B7 = 0 for XAM, 1 for BLOCK XAM.
+0000B9r 2  30 1A                        bmi             @examine_next   ; B7 = 0 for XAM, 1 for BLOCK XAM.
 0000BBr 2  A2 02                        ldx             #2              ; Byte count.
 0000BDr 2               
 0000BDr 2               @set_addr:
@@ -7686,43 +7695,41 @@ Current file: all.s
 0000C4r 2  D0 F7                        bne             @set_addr       ; Loop unless X = 0.
 0000C6r 2               
 0000C6r 2               @print_next_addr:
-0000C6r 2  20 rr rr                     PRINT_CRLF
-0000C9r 2  A5 rr 20 rr                  PRINT_BYTE      ZP_WM_XAM + 1, ZP_WM_XAM   ; Print 'examine index'
-0000CDr 2  rr A5 rr 20  
-0000D1r 2  rr rr        
-0000D3r 2  A9 3A 20 rr                  PRINT_CHAR      #ASCII_COLON    ; ...+ COLON
-0000D7r 2  rr           
-0000D8r 2               
-0000D8r 2               @print_data:
-0000D8r 2  5A                           phy
-0000D9r 2  20 rr rr                     jsr             DISASM_WM       ; DISASM
-0000DCr 2  7A                           ply
-0000DDr 2               
-0000DDr 2               @examine_next:
-0000DDr 2  64 rr                        stz             ZP_WM_MODE      ; 0 -> ZP_WM_MODE (XAM mode).
-0000DFr 2  A5 rr                        lda             ZP_WM_XAM
-0000E1r 2  C5 rr                        cmp             ZP_WM_HVP       ; Compare 'examine index' to hex data.
-0000E3r 2  A5 rr                        lda             ZP_WM_XAM + 1
-0000E5r 2  E5 rr                        sbc             ZP_WM_HVP + 1
-0000E7r 2  B0 C5                        bcs             @to_next_item   ; Not less, so no more data to output.
-0000E9r 2  38                           sec
-0000EAr 2  A5 rr                        lda             ZP_D_EXBYTES
-0000ECr 2  65 rr                        adc             ZP_WM_XAM
-0000EEr 2  85 rr                        sta             ZP_WM_XAM
-0000F0r 2  90 02                        bcc             :+
-0000F2r 2  E6 rr                        inc             ZP_WM_XAM + 1
-0000F4r 2               :
-0000F4r 2  A5 rr                        lda             ZP_D_STATE      ; if disassembling, always print the address
-0000F6r 2  D0 CE                        bne             @print_next_addr
-0000F8r 2  A5 rr                        lda             ZP_WM_XAM       ; Check low-order 'examine index' byte
-0000FAr 2  29 07                        and             #7              ; For MOD 8 = 0
-0000FCr 2  F0 C8                        beq             @print_next_addr
-0000FEr 2  80 D8                        bra             @print_data
-000100r 2               
-000100r 1               .include "mmu.s"
-000100r 2               .debuginfo
-000100r 2               
-000100r 2               .segment "MMU"
+0000C6r 2  20 rr rr                     jsr             DISASM_WM       ; DISASM
+0000C9r 2  80 0A                        bra             @examine_next
+0000CBr 2               
+0000CBr 2               @print_data:
+0000CBr 2  A9 20 20 rr                  PRINT_SPACE
+0000CFr 2  rr           
+0000D0r 2  B2 rr 20 rr                  PRINT_BYTE      {(ZP_WM_XAM)}
+0000D4r 2  rr           
+0000D5r 2               
+0000D5r 2               @examine_next:
+0000D5r 2  64 rr                        stz             ZP_WM_MODE      ; 0 -> ZP_WM_MODE (XAM mode).
+0000D7r 2  A5 rr                        lda             ZP_WM_XAM
+0000D9r 2  C5 rr                        cmp             ZP_WM_HVP       ; Compare 'examine index' to hex data.
+0000DBr 2  A5 rr                        lda             ZP_WM_XAM + 1
+0000DDr 2  E5 rr                        sbc             ZP_WM_HVP + 1
+0000DFr 2  B0 CD                        bcs             @to_next_item   ; Not less, so no more data to output.
+0000E1r 2  38                           sec
+0000E2r 2  A5 rr                        lda             ZP_D_EXBYTES
+0000E4r 2  65 rr                        adc             ZP_WM_XAM
+0000E6r 2  85 rr                        sta             ZP_WM_XAM
+0000E8r 2  90 02                        bcc             :+
+0000EAr 2  E6 rr                        inc             ZP_WM_XAM + 1
+0000ECr 2               
+0000ECr 2               :
+0000ECr 2  A5 rr                        lda             ZP_D_STATE      ; if disassembling, always print the address
+0000EEr 2  D0 D6                        bne             @print_next_addr
+0000F0r 2  A5 rr                        lda             ZP_WM_XAM       ; Check low-order 'examine index' byte
+0000F2r 2  29 07                        and             #7              ; For MOD 8 = 0
+0000F4r 2  F0 D0                        beq             @print_next_addr
+0000F6r 2  80 D3                        bra             @print_data
+0000F8r 2               
+0000F8r 1               .include "mmu.s"
+0000F8r 2               .debuginfo
+0000F8r 2               
+0000F8r 2               .segment "MMU"
 000000r 2               
 000000r 2               .struct     Address
 000000r 2                           l           .byte
@@ -8179,379 +8186,382 @@ Current file: all.s
 000219r 2               .segment "SHELL"
 000000r 2               
 000000r 2               SHELL_MAIN:
-000000r 2  20 rr rr                 jsr     MON_START
-000003r 2               
-000003r 1               .include "sound.s"
-000003r 2               ; zero out all YM-2151 registers $28-$FF
-000003r 2               SOUND_INIT:
-000003r 2  48                           pha
-000004r 2  DA                           phx
-000005r 2  A9 00                        lda         #0
-000007r 2  A2 14                        ldx         #$14        ; turn off the clocks
-000009r 2  20 rr rr                     jsr         YM_WRITE
-00000Cr 2  A2 28                        ldx         #$28
-00000Er 2               
-00000Er 2               @write_z:
-00000Er 2  20 rr rr                     jsr         YM_WRITE
-000011r 2  B0 0D                        bcs         @error
-000013r 2  E8                           inx
-000014r 2  D0 F8                        bne         @write_z
-000016r 2  A2 03                        ldx         #IRQ_NUMBER_ONBOARD_SOUND
-000018r 2  A9 rr                        lda         #<SOUND_IRQ_HANDLER
-00001Ar 2  A0 rr                        ldy         #>SOUND_IRQ_HANDLER
-00001Cr 2  20 rr rr                     jsr         IRQ_SET_VECTOR
-00001Fr 2  18                           clc
-000020r 2               
-000020r 2               @error:
-000020r 2  FA                           plx
-000021r 2  68                           pla
-000022r 2  60                           rts
-000023r 2               
-000023r 2               
-000023r 2               SOUND_IRQ_HANDLER:
-000023r 2                               ; check which
-000023r 2  40                           rti
-000024r 2               
-000024r 2               YMN0L = $A0
-000024r 2               YMN0H = YMN0L + 1
-000024r 2               YMN1L = YMN0L + 2
-000024r 2               YMN1H = YMN0L + 3
-000024r 2               
-000024r 2               AZP0L = $B0
-000024r 2               AZP0H = AZP0L + 1
-000024r 2               YMTMP1 = AZP0L + 2
-000024r 2               YMTMP2 = AZP0L + 3
-000024r 2               
-000024r 2               ;C# = 0
-000024r 2               ;D  = 1
-000024r 2               ;D# = 2
-000024r 2               ;E  = 4
-000024r 2               ;F  = 5
-000024r 2               ;F# = 6
-000024r 2               ;G  = 8
-000024r 2               ;G# = 9
-000024r 2               ;A  = A
-000024r 2               ;A# = C
-000024r 2               ;B  = D
-000024r 2               ;C  = E
-000024r 2               
-000024r 2               ;$20+C, $38+C
-000024r 2               ;$40+C - $78+C
-000024r 2               ;$80+C - $B8+C
-000024r 2               ;$C0+C - $F8+C
-000024r 2               
-000024r 2               M027_Electric_Clean_Guitar:
-000024r 2  F8 00        	.byte $F8,$00
-000026r 2  29 31 21 31  	.byte $29,$31,$21,$31,$2E,$1E,$0F,$00
-00002Ar 2  2E 1E 0F 00  
-00002Er 2  1F 1F 1F 1F  	.byte $1F,$1F,$1F,$1F,$10,$04,$08,$09
-000032r 2  10 04 08 09  
-000036r 2  00 00 00 00  	.byte $00,$00,$00,$00,$F9,$B1,$F4,$FB
-00003Ar 2  F9 B1 F4 FB  
-00003Er 2               
-00003Er 2               M028_Electric_Muted_Guitar:
-00003Er 2  E2 00        	.byte $E2,$00
-000040r 2  54 51 01 01  	.byte $54,$51,$01,$01,$20,$21,$32,$00
-000044r 2  20 21 32 00  
-000048r 2  1C 1F 1F 1F  	.byte $1C,$1F,$1F,$1F,$15,$02,$03,$0A
-00004Cr 2  15 02 03 0A  
-000050r 2  00 00 00 00  	.byte $00,$00,$00,$00,$FF,$B1,$F4,$F9
-000054r 2  FF B1 F4 F9  
-000058r 2               
-000058r 2               M029_Electric_Overdriven_Guitar:
-000058r 2  FA 00        	.byte $FA,$00
-00005Ar 2  33 11 32 33  	.byte $33,$11,$32,$33,$10,$16,$21,$00
-00005Er 2  10 16 21 00  
-000062r 2  1F 1F 1F 1F  	.byte $1F,$1F,$1F,$1F,$17,$08,$02,$03
-000066r 2  17 08 02 03  
-00006Ar 2  00 00 00 00  	.byte $00,$00,$00,$00,$FF,$B1,$F4,$FB
-00006Er 2  FF B1 F4 FB  
-000072r 2               
-000072r 2               M030_Electric_Distorted_Guitar:
-000072r 2  FA 00        	.byte $FA,$00
-000074r 2  33 11 31 33  	.byte $33,$11,$31,$33,$09,$0B,$1A,$00
-000078r 2  09 0B 1A 00  
-00007Cr 2  1F 1F 1F 1F  	.byte $1F,$1F,$1F,$1F,$17,$00,$00,$07
-000080r 2  17 00 00 07  
-000084r 2  00 00 00 00  	.byte $00,$00,$00,$00,$FF,$B1,$F4,$FB
-000088r 2  FF B1 F4 FB  
-00008Cr 2               
-00008Cr 2               GUITAR_PATCH = M029_Electric_Overdriven_Guitar
-00008Cr 2               
-00008Cr 2               ; Note data for Sweet Child o' Mine (first 4 bars)
-00008Cr 2               SCOM_NOTES_0:   ;            D4,  D4,  E4,  E4,  G4,  G4,  D4,  D4
-00008Cr 2                               ;.byte       $41, $41, $44, $44, $48, $48, $41, $41
-00008Cr 2  40 40 42 42                  .byte       $40, $40, $42, $42, $46, $46, $40, $40 ; half-note flat, just like Slash
-000090r 2  46 46 40 40  
-000094r 2               
-000094r 2               SCOM_NOTES_1:
-000094r 2                               ;            D5,  A4,  G4,  G5,  A4, F#5,  A4
-000094r 2                               ;.byte       $51, $4A, $48, $58, $4A, $56, $4A
-000094r 2  50 49 46 56                  .byte       $50, $49, $46, $56, $49, $55, $49   ; half-note flat
-000098r 2  49 55 49     
-00009Br 2               
-00009Br 2               SOUND_TEST:
-00009Br 2                               ; Set basic FM patch (simple sine-like sound)
-00009Br 2  A2 20                        ldx         #$20
-00009Dr 2  A9 C7                        lda         #$C7
-00009Fr 2  20 rr rr                     jsr         YM_WRITE
-0000A2r 2               
-0000A2r 2  A2 80                        ldx         #$80
-0000A4r 2  A9 1F                        lda         #$1F
-0000A6r 2  20 rr rr                     jsr         YM_WRITE
-0000A9r 2               
-0000A9r 2  A2 E0                        ldx         #$E0
-0000ABr 2  A9 0F                        lda         #$0F
-0000ADr 2  20 rr rr                     jsr         YM_WRITE
-0000B0r 2               
-0000B0r 2  A2 21                        ldx         #$21
-0000B2r 2  A9 C7                        lda         #$C7
-0000B4r 2  20 rr rr                     jsr         YM_WRITE
-0000B7r 2               
-0000B7r 2  A2 81                        ldx         #$81
-0000B9r 2  A9 1F                        lda         #$1F
-0000BBr 2  20 rr rr                     jsr         YM_WRITE
-0000BEr 2               
-0000BEr 2  A2 E1                        ldx         #$E1
-0000C0r 2  A9 0F                        lda         #$0F
-0000C2r 2  20 rr rr                     jsr         YM_WRITE
-0000C5r 2               
-0000C5r 2  A9 00                        lda         #$00    ; Channel 0
-0000C7r 2  A2 rr                        ldx         #<GUITAR_PATCH
-0000C9r 2  A0 rr                        ldy         #>GUITAR_PATCH
-0000CBr 2  20 rr rr                     jsr         YM_LOADPATCH
+000000r 2  20 rr rr                 jsr     COPYTORAM
+000003r 2  20 rr rr                 jsr     CLEAR_SCR
+000006r 2  20 rr rr                 jsr     forth_main
+000009r 2  20 rr rr                 jsr     MON_START
+00000Cr 2               
+00000Cr 1               .include "sound.s"
+00000Cr 2               ; zero out all YM-2151 registers $28-$FF
+00000Cr 2               SOUND_INIT:
+00000Cr 2  48                           pha
+00000Dr 2  DA                           phx
+00000Er 2  A9 00                        lda         #0
+000010r 2  A2 14                        ldx         #$14        ; turn off the clocks
+000012r 2  20 rr rr                     jsr         YM_WRITE
+000015r 2  A2 28                        ldx         #$28
+000017r 2               
+000017r 2               @write_z:
+000017r 2  20 rr rr                     jsr         YM_WRITE
+00001Ar 2  B0 0D                        bcs         @error
+00001Cr 2  E8                           inx
+00001Dr 2  D0 F8                        bne         @write_z
+00001Fr 2  A2 03                        ldx         #IRQ_NUMBER_ONBOARD_SOUND
+000021r 2  A9 rr                        lda         #<SOUND_IRQ_HANDLER
+000023r 2  A0 rr                        ldy         #>SOUND_IRQ_HANDLER
+000025r 2  20 rr rr                     jsr         IRQ_SET_VECTOR
+000028r 2  18                           clc
+000029r 2               
+000029r 2               @error:
+000029r 2  FA                           plx
+00002Ar 2  68                           pla
+00002Br 2  60                           rts
+00002Cr 2               
+00002Cr 2               
+00002Cr 2               SOUND_IRQ_HANDLER:
+00002Cr 2                               ; check which
+00002Cr 2  40                           rti
+00002Dr 2               
+00002Dr 2               YMN0L = $A0
+00002Dr 2               YMN0H = YMN0L + 1
+00002Dr 2               YMN1L = YMN0L + 2
+00002Dr 2               YMN1H = YMN0L + 3
+00002Dr 2               
+00002Dr 2               AZP0L = $B0
+00002Dr 2               AZP0H = AZP0L + 1
+00002Dr 2               YMTMP1 = AZP0L + 2
+00002Dr 2               YMTMP2 = AZP0L + 3
+00002Dr 2               
+00002Dr 2               ;C# = 0
+00002Dr 2               ;D  = 1
+00002Dr 2               ;D# = 2
+00002Dr 2               ;E  = 4
+00002Dr 2               ;F  = 5
+00002Dr 2               ;F# = 6
+00002Dr 2               ;G  = 8
+00002Dr 2               ;G# = 9
+00002Dr 2               ;A  = A
+00002Dr 2               ;A# = C
+00002Dr 2               ;B  = D
+00002Dr 2               ;C  = E
+00002Dr 2               
+00002Dr 2               ;$20+C, $38+C
+00002Dr 2               ;$40+C - $78+C
+00002Dr 2               ;$80+C - $B8+C
+00002Dr 2               ;$C0+C - $F8+C
+00002Dr 2               
+00002Dr 2               M027_Electric_Clean_Guitar:
+00002Dr 2  F8 00        	.byte $F8,$00
+00002Fr 2  29 31 21 31  	.byte $29,$31,$21,$31,$2E,$1E,$0F,$00
+000033r 2  2E 1E 0F 00  
+000037r 2  1F 1F 1F 1F  	.byte $1F,$1F,$1F,$1F,$10,$04,$08,$09
+00003Br 2  10 04 08 09  
+00003Fr 2  00 00 00 00  	.byte $00,$00,$00,$00,$F9,$B1,$F4,$FB
+000043r 2  F9 B1 F4 FB  
+000047r 2               
+000047r 2               M028_Electric_Muted_Guitar:
+000047r 2  E2 00        	.byte $E2,$00
+000049r 2  54 51 01 01  	.byte $54,$51,$01,$01,$20,$21,$32,$00
+00004Dr 2  20 21 32 00  
+000051r 2  1C 1F 1F 1F  	.byte $1C,$1F,$1F,$1F,$15,$02,$03,$0A
+000055r 2  15 02 03 0A  
+000059r 2  00 00 00 00  	.byte $00,$00,$00,$00,$FF,$B1,$F4,$F9
+00005Dr 2  FF B1 F4 F9  
+000061r 2               
+000061r 2               M029_Electric_Overdriven_Guitar:
+000061r 2  FA 00        	.byte $FA,$00
+000063r 2  33 11 32 33  	.byte $33,$11,$32,$33,$10,$16,$21,$00
+000067r 2  10 16 21 00  
+00006Br 2  1F 1F 1F 1F  	.byte $1F,$1F,$1F,$1F,$17,$08,$02,$03
+00006Fr 2  17 08 02 03  
+000073r 2  00 00 00 00  	.byte $00,$00,$00,$00,$FF,$B1,$F4,$FB
+000077r 2  FF B1 F4 FB  
+00007Br 2               
+00007Br 2               M030_Electric_Distorted_Guitar:
+00007Br 2  FA 00        	.byte $FA,$00
+00007Dr 2  33 11 31 33  	.byte $33,$11,$31,$33,$09,$0B,$1A,$00
+000081r 2  09 0B 1A 00  
+000085r 2  1F 1F 1F 1F  	.byte $1F,$1F,$1F,$1F,$17,$00,$00,$07
+000089r 2  17 00 00 07  
+00008Dr 2  00 00 00 00  	.byte $00,$00,$00,$00,$FF,$B1,$F4,$FB
+000091r 2  FF B1 F4 FB  
+000095r 2               
+000095r 2               GUITAR_PATCH = M029_Electric_Overdriven_Guitar
+000095r 2               
+000095r 2               ; Note data for Sweet Child o' Mine (first 4 bars)
+000095r 2               SCOM_NOTES_0:   ;            D4,  D4,  E4,  E4,  G4,  G4,  D4,  D4
+000095r 2                               ;.byte       $41, $41, $44, $44, $48, $48, $41, $41
+000095r 2  40 40 42 42                  .byte       $40, $40, $42, $42, $46, $46, $40, $40 ; half-note flat, just like Slash
+000099r 2  46 46 40 40  
+00009Dr 2               
+00009Dr 2               SCOM_NOTES_1:
+00009Dr 2                               ;            D5,  A4,  G4,  G5,  A4, F#5,  A4
+00009Dr 2                               ;.byte       $51, $4A, $48, $58, $4A, $56, $4A
+00009Dr 2  50 49 46 56                  .byte       $50, $49, $46, $56, $49, $55, $49   ; half-note flat
+0000A1r 2  49 55 49     
+0000A4r 2               
+0000A4r 2               SOUND_TEST:
+0000A4r 2                               ; Set basic FM patch (simple sine-like sound)
+0000A4r 2  A2 20                        ldx         #$20
+0000A6r 2  A9 C7                        lda         #$C7
+0000A8r 2  20 rr rr                     jsr         YM_WRITE
+0000ABr 2               
+0000ABr 2  A2 80                        ldx         #$80
+0000ADr 2  A9 1F                        lda         #$1F
+0000AFr 2  20 rr rr                     jsr         YM_WRITE
+0000B2r 2               
+0000B2r 2  A2 E0                        ldx         #$E0
+0000B4r 2  A9 0F                        lda         #$0F
+0000B6r 2  20 rr rr                     jsr         YM_WRITE
+0000B9r 2               
+0000B9r 2  A2 21                        ldx         #$21
+0000BBr 2  A9 C7                        lda         #$C7
+0000BDr 2  20 rr rr                     jsr         YM_WRITE
+0000C0r 2               
+0000C0r 2  A2 81                        ldx         #$81
+0000C2r 2  A9 1F                        lda         #$1F
+0000C4r 2  20 rr rr                     jsr         YM_WRITE
+0000C7r 2               
+0000C7r 2  A2 E1                        ldx         #$E1
+0000C9r 2  A9 0F                        lda         #$0F
+0000CBr 2  20 rr rr                     jsr         YM_WRITE
 0000CEr 2               
-0000CEr 2  A9 01                        lda         #$01    ; Channel 1
+0000CEr 2  A9 00                        lda         #$00    ; Channel 0
 0000D0r 2  A2 rr                        ldx         #<GUITAR_PATCH
 0000D2r 2  A0 rr                        ldy         #>GUITAR_PATCH
 0000D4r 2  20 rr rr                     jsr         YM_LOADPATCH
 0000D7r 2               
-0000D7r 2  A2 60                        ldx         #$60    ; Total Level (volume) for operator 1, Channel 0
-0000D9r 2  A9 00                        lda         #$00    ; Max Volume
-0000DBr 2  20 rr rr                     jsr         YM_WRITE
-0000DEr 2               
-0000DEr 2  A2 61                        ldx         #$61    ; Total Level (volume) for operator 1, Channel 1
-0000E0r 2  A9 00                        lda         #$00    ; Max Volume
-0000E2r 2  20 rr rr                     jsr         YM_WRITE
-0000E5r 2               
-0000E5r 2  A9 rr                        lda         #<SCOM_NOTES_0
-0000E7r 2  85 A0                        sta         YMN0L
-0000E9r 2  A9 rr                        lda         #>SCOM_NOTES_0
-0000EBr 2  85 A1                        sta         YMN0H
-0000EDr 2               
-0000EDr 2  A9 rr                        lda         #<SCOM_NOTES_1
-0000EFr 2  85 A2                        sta         YMN1L
-0000F1r 2  A9 rr                        lda         #>SCOM_NOTES_1
-0000F3r 2  85 A3                        sta         YMN1H
-0000F5r 2               
-0000F5r 2  A0 00                        ldy         #0          ; counter for channel 0
-0000F7r 2               @play_loop:
-0000F7r 2                               ; 0. set outer counter to 0
-0000F7r 2                               ; 1. key off channel 0
-0000F7r 2                               ; 1a.  key off on channel 1
-0000F7r 2                               ; 2. set note to next note in channel 0 list
-0000F7r 2                               ; 3. key on on channel 0
-0000F7r 2                               ; 4. one delay
-0000F7r 2                               ; 5. notes for rest of sequence on channel 1
-0000F7r 2                               ; 5a.  reset counter to 0
-0000F7r 2                               ; 5b.  key off on channel 1
-0000F7r 2                               ; 5c.  set note on channel 1
-0000F7r 2                               ; 5d.  key on on channel 1
-0000F7r 2                               ; 5e.  one delay
-0000F7r 2                               ; 5f.  increment counter
-0000F7r 2                               ; 5g.  loop until 7 notes have been played on channel 1
-0000F7r 2                               ; 6.  increment outer counter to play next start note on channel 0
-0000F7r 2                               ; 7.  loop back to 1 until outer count reaches 8 (8 sequences have played)
-0000F7r 2                               ; Key Off (silence previous note)
-0000F7r 2               
-0000F7r 2  A2 08                        ldx         #$08    ; Key On/Off register
-0000F9r 2  A9 00                        lda         #$00    ; CH0 off
-0000FBr 2  20 rr rr                     jsr         YM_WRITE
+0000D7r 2  A9 01                        lda         #$01    ; Channel 1
+0000D9r 2  A2 rr                        ldx         #<GUITAR_PATCH
+0000DBr 2  A0 rr                        ldy         #>GUITAR_PATCH
+0000DDr 2  20 rr rr                     jsr         YM_LOADPATCH
+0000E0r 2               
+0000E0r 2  A2 60                        ldx         #$60    ; Total Level (volume) for operator 1, Channel 0
+0000E2r 2  A9 00                        lda         #$00    ; Max Volume
+0000E4r 2  20 rr rr                     jsr         YM_WRITE
+0000E7r 2               
+0000E7r 2  A2 61                        ldx         #$61    ; Total Level (volume) for operator 1, Channel 1
+0000E9r 2  A9 00                        lda         #$00    ; Max Volume
+0000EBr 2  20 rr rr                     jsr         YM_WRITE
+0000EEr 2               
+0000EEr 2  A9 rr                        lda         #<SCOM_NOTES_0
+0000F0r 2  85 A0                        sta         YMN0L
+0000F2r 2  A9 rr                        lda         #>SCOM_NOTES_0
+0000F4r 2  85 A1                        sta         YMN0H
+0000F6r 2               
+0000F6r 2  A9 rr                        lda         #<SCOM_NOTES_1
+0000F8r 2  85 A2                        sta         YMN1L
+0000FAr 2  A9 rr                        lda         #>SCOM_NOTES_1
+0000FCr 2  85 A3                        sta         YMN1H
 0000FEr 2               
-0000FEr 2  A2 08                        ldx         #$08    ; Key On/Off register
-000100r 2  A9 01                        lda         #$01    ; CH1 off
-000102r 2  20 rr rr                     jsr         YM_WRITE
-000105r 2               
-000105r 2                               ; Set frequency (KC)
-000105r 2  A2 28                        ldx         #$28    ; KC register for CH0
-000107r 2  B1 A0                        lda         (YMN0L),y
-000109r 2  20 rr rr                     jsr         YM_WRITE
-00010Cr 2               
-00010Cr 2                               ; Key On
-00010Cr 2  A2 08                        ldx         #$08    ; Key On/Off register
-00010Er 2  A9 78                        lda         #$78    ; CH0 on
-000110r 2  20 rr rr                     jsr         YM_WRITE
-000113r 2               
-000113r 2                               ; Delay 8 64th notes in length
-000113r 2  A9 08                        lda         #8
-000115r 2  20 rr rr                     jsr         YM_DELAY_64
-000118r 2               
-000118r 2  5A                           phy
-000119r 2  A0 00                        ldy         #0
-00011Br 2  80 07                        bra         @skip_ch1_off   ; already off at the start of the loop
-00011Dr 2               
-00011Dr 2               @next_ch1:
-00011Dr 2  A2 08                        ldx         #$08    ; Key On/Off register
-00011Fr 2  A9 01                        lda         #$01    ; CH1 off
-000121r 2  20 rr rr                     jsr         YM_WRITE
-000124r 2               
-000124r 2               @skip_ch1_off:
-000124r 2                               ; Set frequency (KC)
-000124r 2  A2 29                        ldx         #$29    ; KC register for CH1
-000126r 2  B1 A2                        lda         (YMN1L),y
-000128r 2  20 rr rr                     jsr         YM_WRITE
-00012Br 2               
-00012Br 2                               ; Key On
-00012Br 2  A2 08                        ldx         #$08    ; Key On/Off register
-00012Dr 2  A9 79                        lda         #$79    ; CH1 on
-00012Fr 2  20 rr rr                     jsr         YM_WRITE
-000132r 2               
-000132r 2                               ; Delay 8 64th notes in length
-000132r 2  A9 08                        lda         #8
-000134r 2  20 rr rr                     jsr         YM_DELAY_64
-000137r 2               
-000137r 2  C8                           iny
-000138r 2  C0 07                        cpy         #7
-00013Ar 2  D0 E1                        bne         @next_ch1
-00013Cr 2               
-00013Cr 2                               ; Next note on CH0
-00013Cr 2  7A                           ply                 ; pull CH0 count
-00013Dr 2  C8                           iny
-00013Er 2  C0 08                        cpy         #8      ; 8 bars
-000140r 2  D0 B5                        bne         @play_loop
-000142r 2               
-000142r 2                               ; Stop sound
-000142r 2  A2 08                        ldx         #$08
-000144r 2  A9 00                        lda         #$00
-000146r 2  20 rr rr                     jsr         YM_WRITE
-000149r 2               
-000149r 2  A2 08                        ldx         #$08
-00014Br 2  A9 01                        lda         #$01
-00014Dr 2  4C rr rr                     jmp         YM_WRITE
-000150r 2               
-000150r 2               YM_TIMEOUT = 64
-000150r 2               
-000150r 2               ; Write value in A to YM-2151 register in X
-000150r 2               YM_WRITE:
-000150r 2  78                           sei
-000151r 2  5A                           phy
-000152r 2  A0 40                        ldy         #YM_TIMEOUT
-000154r 2               
-000154r 2               @ym_wait1:
-000154r 2  88                           dey
-000155r 2  30 18                        bmi         @timeout
-000157r 2  2C rr rr                     bit         YM_DATA
-00015Ar 2  30 F8                        bmi         @ym_wait1
-00015Cr 2  8E rr rr                     stx         YM_REG
-00015Fr 2  A0 40                        ldy         #YM_TIMEOUT
-000161r 2               
-000161r 2               @ym_wait2:
-000161r 2  88                           dey
-000162r 2  30 0B                        bmi         @timeout
-000164r 2  2C rr rr                     bit         YM_DATA
-000167r 2  30 F8                        bmi         @ym_wait2
-000169r 2  8D rr rr                     sta         YM_DATA
-00016Cr 2  18                           clc
-00016Dr 2  80 01                        bra         @cleanup
-00016Fr 2               
-00016Fr 2               @timeout:
-00016Fr 2  38                           sec
-000170r 2               
-000170r 2               @cleanup:
-000170r 2  7A                           ply
-000171r 2  58                           cli
-000172r 2  60                           rts
-000173r 2               
-000173r 2               YM_LOADPATCH:
-000173r 2                               ; Make re-entrant safe by protecting tmp and pointer variables from interrupt
-000173r 2  08                           php
-000174r 2  78                           sei
-000175r 2               
-000175r 2                               ; and #$07 ; mask channel to range 0..7
-000175r 2  86 B0                        stx AZP0L
-000177r 2  84 B1                        sty AZP0H
-000179r 2  18                           clc
-00017Ar 2  69 20                        adc #$20 ; first byte of patch goes to YM:$20+channel
-00017Cr 2  AA                           tax
-00017Dr 2               
-00017Dr 2  B2 B0                        lda (AZP0L)
-00017Fr 2  29 3F                        and #$3F
-000181r 2               
-000181r 2                               ;sta ymtmp1
-000181r 2                               ;lda ymshadow,x
-000181r 2                               ;and #$C0 ; L+R bits for YM channel
-000181r 2                               ;ora ymtmp1 ; Add the patch byte without L+R
-000181r 2  09 C0                        ora #$C0;
-000183r 2               
-000183r 2  20 rr rr                     jsr YM_WRITE
-000186r 2  B0 16                        bcs @fail
-000188r 2  A0 00                        ldy #0
-00018Ar 2  8A                           txa         ; YM_WRITE preserves X (YM register)
-00018Br 2                               ; Now skip over $28 and $30 by adding $10 to the register address.
-00018Br 2                               ; C guaranteed clear by successful ym_write
-00018Br 2  69 10                        adc #$10
-00018Dr 2  AA                           tax         ; set up for loop
-00018Er 2               @next:
-00018Er 2  8A                           txa
-00018Fr 2                               ; C guaranteed clear by successful YM_WRITE
-00018Fr 2  69 08                        adc #$08
-000191r 2  B0 0E                        bcs @success
-000193r 2  C8                           iny
-000194r 2  AA                           tax
-000195r 2  B1 B0                        lda (AZP0L),y
-000197r 2  5A                           phy         ; YM_WRITE clobbers .Y
-000198r 2  20 rr rr                     jsr YM_WRITE
-00019Br 2  7A                           ply
-00019Cr 2  90 F0                        bcc @next
-00019Er 2               @fail:
-00019Er 2  28                           plp         ; restore interrupt flag
-00019Fr 2  38                           sec
-0001A0r 2  60                           rts         ; return C set as failed patch write.
-0001A1r 2               @success:
-0001A1r 2  28                           plp         ; restore interrupt flag
-0001A2r 2  18                           clc
-0001A3r 2  60                           rts
-0001A4r 2               
-0001A4r 2               ; YM_DELAY_64 - Delay subroutine for musical note lengths
-0001A4r 2               ; A: number of 64th-note delays to wait (a 64th note @120 BPM = ~ 111,861 clock cycles @ 3.57955 MHz)
-0001A4r 2               YM_DELAY_64:
-0001A4r 2  DA 5A                        PUSH_XY
-0001A6r 2  85 B2                        sta         YMTMP1
-0001A8r 2               
-0001A8r 2               @far_outer:
-0001A8r 2  A9 01                        lda         #1          ; 2 cycles
-0001AAr 2  A2 4B                        ldx         #75
-0001ACr 2  A0 8E                        ldy         #142
-0001AEr 2  80 04                        bra         @inner
-0001B0r 2               
-0001B0r 2               @outer:
-0001B0r 2  A2 00                        ldx         #0          ; 2 cycles
-0001B2r 2               
-0001B2r 2               @mid:
-0001B2r 2  A0 00                        ldy         #0          ; 2 cycles
-0001B4r 2               
-0001B4r 2               @inner:
-0001B4r 2  88                           dey                     ; 2 cycles
-0001B5r 2  D0 FD                        bne         @inner      ; 3 cycles when branching, 2 when not
-0001B7r 2  CA                           dex                     ; 2 cycles
-0001B8r 2  D0 F8                        bne         @mid        ; 3 cycles when branching, 2 when not
-0001BAr 2               
-0001BAr 2                               ; Fine-tuning at end of inner loop
-0001BAr 2  3A                           dec                     ; 2 cycles
-0001BBr 2  D0 F3                        bne         @outer      ; 3 cycles when branching, 2 when not
-0001BDr 2  C6 B2                        dec         YMTMP1      ; 3 cycles
-0001BFr 2  D0 E7                        bne         @far_outer  ; 3 cycles when branching, 2 when not
-0001C1r 2  7A FA                        PULL_YX
-0001C3r 2  60                           rts                     ; 6 cycles
-0001C4r 2               
-0001C4r 1               .include "os_main.s"
-0001C4r 2               .debuginfo
-0001C4r 2               .macro ZERO_W
-0001C4r 2                           lda     #0
-0001C4r 2                           sta     W_REGISTER
-0001C4r 2               .endmacro
-0001C4r 2               
-0001C4r 2               .segment "BIOS_P0"
+0000FEr 2  A0 00                        ldy         #0          ; counter for channel 0
+000100r 2               @play_loop:
+000100r 2                               ; 0. set outer counter to 0
+000100r 2                               ; 1. key off channel 0
+000100r 2                               ; 1a.  key off on channel 1
+000100r 2                               ; 2. set note to next note in channel 0 list
+000100r 2                               ; 3. key on on channel 0
+000100r 2                               ; 4. one delay
+000100r 2                               ; 5. notes for rest of sequence on channel 1
+000100r 2                               ; 5a.  reset counter to 0
+000100r 2                               ; 5b.  key off on channel 1
+000100r 2                               ; 5c.  set note on channel 1
+000100r 2                               ; 5d.  key on on channel 1
+000100r 2                               ; 5e.  one delay
+000100r 2                               ; 5f.  increment counter
+000100r 2                               ; 5g.  loop until 7 notes have been played on channel 1
+000100r 2                               ; 6.  increment outer counter to play next start note on channel 0
+000100r 2                               ; 7.  loop back to 1 until outer count reaches 8 (8 sequences have played)
+000100r 2                               ; Key Off (silence previous note)
+000100r 2               
+000100r 2  A2 08                        ldx         #$08    ; Key On/Off register
+000102r 2  A9 00                        lda         #$00    ; CH0 off
+000104r 2  20 rr rr                     jsr         YM_WRITE
+000107r 2               
+000107r 2  A2 08                        ldx         #$08    ; Key On/Off register
+000109r 2  A9 01                        lda         #$01    ; CH1 off
+00010Br 2  20 rr rr                     jsr         YM_WRITE
+00010Er 2               
+00010Er 2                               ; Set frequency (KC)
+00010Er 2  A2 28                        ldx         #$28    ; KC register for CH0
+000110r 2  B1 A0                        lda         (YMN0L),y
+000112r 2  20 rr rr                     jsr         YM_WRITE
+000115r 2               
+000115r 2                               ; Key On
+000115r 2  A2 08                        ldx         #$08    ; Key On/Off register
+000117r 2  A9 78                        lda         #$78    ; CH0 on
+000119r 2  20 rr rr                     jsr         YM_WRITE
+00011Cr 2               
+00011Cr 2                               ; Delay 8 64th notes in length
+00011Cr 2  A9 08                        lda         #8
+00011Er 2  20 rr rr                     jsr         YM_DELAY_64
+000121r 2               
+000121r 2  5A                           phy
+000122r 2  A0 00                        ldy         #0
+000124r 2  80 07                        bra         @skip_ch1_off   ; already off at the start of the loop
+000126r 2               
+000126r 2               @next_ch1:
+000126r 2  A2 08                        ldx         #$08    ; Key On/Off register
+000128r 2  A9 01                        lda         #$01    ; CH1 off
+00012Ar 2  20 rr rr                     jsr         YM_WRITE
+00012Dr 2               
+00012Dr 2               @skip_ch1_off:
+00012Dr 2                               ; Set frequency (KC)
+00012Dr 2  A2 29                        ldx         #$29    ; KC register for CH1
+00012Fr 2  B1 A2                        lda         (YMN1L),y
+000131r 2  20 rr rr                     jsr         YM_WRITE
+000134r 2               
+000134r 2                               ; Key On
+000134r 2  A2 08                        ldx         #$08    ; Key On/Off register
+000136r 2  A9 79                        lda         #$79    ; CH1 on
+000138r 2  20 rr rr                     jsr         YM_WRITE
+00013Br 2               
+00013Br 2                               ; Delay 8 64th notes in length
+00013Br 2  A9 08                        lda         #8
+00013Dr 2  20 rr rr                     jsr         YM_DELAY_64
+000140r 2               
+000140r 2  C8                           iny
+000141r 2  C0 07                        cpy         #7
+000143r 2  D0 E1                        bne         @next_ch1
+000145r 2               
+000145r 2                               ; Next note on CH0
+000145r 2  7A                           ply                 ; pull CH0 count
+000146r 2  C8                           iny
+000147r 2  C0 08                        cpy         #8      ; 8 bars
+000149r 2  D0 B5                        bne         @play_loop
+00014Br 2               
+00014Br 2                               ; Stop sound
+00014Br 2  A2 08                        ldx         #$08
+00014Dr 2  A9 00                        lda         #$00
+00014Fr 2  20 rr rr                     jsr         YM_WRITE
+000152r 2               
+000152r 2  A2 08                        ldx         #$08
+000154r 2  A9 01                        lda         #$01
+000156r 2  4C rr rr                     jmp         YM_WRITE
+000159r 2               
+000159r 2               YM_TIMEOUT = 64
+000159r 2               
+000159r 2               ; Write value in A to YM-2151 register in X
+000159r 2               YM_WRITE:
+000159r 2  78                           sei
+00015Ar 2  5A                           phy
+00015Br 2  A0 40                        ldy         #YM_TIMEOUT
+00015Dr 2               
+00015Dr 2               @ym_wait1:
+00015Dr 2  88                           dey
+00015Er 2  30 18                        bmi         @timeout
+000160r 2  2C rr rr                     bit         YM_DATA
+000163r 2  30 F8                        bmi         @ym_wait1
+000165r 2  8E rr rr                     stx         YM_REG
+000168r 2  A0 40                        ldy         #YM_TIMEOUT
+00016Ar 2               
+00016Ar 2               @ym_wait2:
+00016Ar 2  88                           dey
+00016Br 2  30 0B                        bmi         @timeout
+00016Dr 2  2C rr rr                     bit         YM_DATA
+000170r 2  30 F8                        bmi         @ym_wait2
+000172r 2  8D rr rr                     sta         YM_DATA
+000175r 2  18                           clc
+000176r 2  80 01                        bra         @cleanup
+000178r 2               
+000178r 2               @timeout:
+000178r 2  38                           sec
+000179r 2               
+000179r 2               @cleanup:
+000179r 2  7A                           ply
+00017Ar 2  58                           cli
+00017Br 2  60                           rts
+00017Cr 2               
+00017Cr 2               YM_LOADPATCH:
+00017Cr 2                               ; Make re-entrant safe by protecting tmp and pointer variables from interrupt
+00017Cr 2  08                           php
+00017Dr 2  78                           sei
+00017Er 2               
+00017Er 2                               ; and #$07 ; mask channel to range 0..7
+00017Er 2  86 B0                        stx AZP0L
+000180r 2  84 B1                        sty AZP0H
+000182r 2  18                           clc
+000183r 2  69 20                        adc #$20 ; first byte of patch goes to YM:$20+channel
+000185r 2  AA                           tax
+000186r 2               
+000186r 2  B2 B0                        lda (AZP0L)
+000188r 2  29 3F                        and #$3F
+00018Ar 2               
+00018Ar 2                               ;sta ymtmp1
+00018Ar 2                               ;lda ymshadow,x
+00018Ar 2                               ;and #$C0 ; L+R bits for YM channel
+00018Ar 2                               ;ora ymtmp1 ; Add the patch byte without L+R
+00018Ar 2  09 C0                        ora #$C0;
+00018Cr 2               
+00018Cr 2  20 rr rr                     jsr YM_WRITE
+00018Fr 2  B0 16                        bcs @fail
+000191r 2  A0 00                        ldy #0
+000193r 2  8A                           txa         ; YM_WRITE preserves X (YM register)
+000194r 2                               ; Now skip over $28 and $30 by adding $10 to the register address.
+000194r 2                               ; C guaranteed clear by successful ym_write
+000194r 2  69 10                        adc #$10
+000196r 2  AA                           tax         ; set up for loop
+000197r 2               @next:
+000197r 2  8A                           txa
+000198r 2                               ; C guaranteed clear by successful YM_WRITE
+000198r 2  69 08                        adc #$08
+00019Ar 2  B0 0E                        bcs @success
+00019Cr 2  C8                           iny
+00019Dr 2  AA                           tax
+00019Er 2  B1 B0                        lda (AZP0L),y
+0001A0r 2  5A                           phy         ; YM_WRITE clobbers .Y
+0001A1r 2  20 rr rr                     jsr YM_WRITE
+0001A4r 2  7A                           ply
+0001A5r 2  90 F0                        bcc @next
+0001A7r 2               @fail:
+0001A7r 2  28                           plp         ; restore interrupt flag
+0001A8r 2  38                           sec
+0001A9r 2  60                           rts         ; return C set as failed patch write.
+0001AAr 2               @success:
+0001AAr 2  28                           plp         ; restore interrupt flag
+0001ABr 2  18                           clc
+0001ACr 2  60                           rts
+0001ADr 2               
+0001ADr 2               ; YM_DELAY_64 - Delay subroutine for musical note lengths
+0001ADr 2               ; A: number of 64th-note delays to wait (a 64th note @120 BPM = ~ 111,861 clock cycles @ 3.57955 MHz)
+0001ADr 2               YM_DELAY_64:
+0001ADr 2  DA 5A                        PUSH_XY
+0001AFr 2  85 B2                        sta         YMTMP1
+0001B1r 2               
+0001B1r 2               @far_outer:
+0001B1r 2  A9 01                        lda         #1          ; 2 cycles
+0001B3r 2  A2 4B                        ldx         #75
+0001B5r 2  A0 8E                        ldy         #142
+0001B7r 2  80 04                        bra         @inner
+0001B9r 2               
+0001B9r 2               @outer:
+0001B9r 2  A2 00                        ldx         #0          ; 2 cycles
+0001BBr 2               
+0001BBr 2               @mid:
+0001BBr 2  A0 00                        ldy         #0          ; 2 cycles
+0001BDr 2               
+0001BDr 2               @inner:
+0001BDr 2  88                           dey                     ; 2 cycles
+0001BEr 2  D0 FD                        bne         @inner      ; 3 cycles when branching, 2 when not
+0001C0r 2  CA                           dex                     ; 2 cycles
+0001C1r 2  D0 F8                        bne         @mid        ; 3 cycles when branching, 2 when not
+0001C3r 2               
+0001C3r 2                               ; Fine-tuning at end of inner loop
+0001C3r 2  3A                           dec                     ; 2 cycles
+0001C4r 2  D0 F3                        bne         @outer      ; 3 cycles when branching, 2 when not
+0001C6r 2  C6 B2                        dec         YMTMP1      ; 3 cycles
+0001C8r 2  D0 E7                        bne         @far_outer  ; 3 cycles when branching, 2 when not
+0001CAr 2  7A FA                        PULL_YX
+0001CCr 2  60                           rts                     ; 6 cycles
+0001CDr 2               
+0001CDr 1               .include "os_main.s"
+0001CDr 2               .debuginfo
+0001CDr 2               .macro ZERO_W
+0001CDr 2                           lda     #0
+0001CDr 2                           sta     W_REGISTER
+0001CDr 2               .endmacro
+0001CDr 2               
+0001CDr 2               .segment "BIOS_P0"
 000000r 2               RESET_VECTOR_START:
 000000r 2  A9 00 8D F3              ZERO_W
 000004r 2  FF           
