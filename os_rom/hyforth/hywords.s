@@ -786,15 +786,10 @@ def_word "pick", "xpick", 0
     sta TEMP8
     cmp #DSEND           ; boundary check
     bcs PICKPTRERR
-    sta TEMP8
-    lda DSPTR+1
-    sta TEMP8+1
-    ldy #0
-    lda (TEMP8),y
-    sta TEMP1
-    iny
-    lda (TEMP8),y
-    sta TEMP1+1
+    MOV DSPTR+1, TEMP8+1
+    MOV (TEMP8), TEMP1
+    ldy #1
+    MOV {(TEMP8),y}, TEMP1+1
     jsr spush_0
     jmp next
 PICKPTRERR:
@@ -806,31 +801,19 @@ def_word "snip", "snip", 0
     lda DSPTR
     cmp #DSEND
     beq SNIPERR
-    lda DSPTR+1
-    sta TEMP2+1
+    MOV DSPTR+1, TEMP2+1
     sta TEMP1+1
     lda #DSEND
     sta TEMP2
-    lda #DSEND
-    sta TEMP1
 SNIPLOOP:
-    lda TEMP1
     sec
     sbc #2
     sta TEMP1
     ldy #0
-    lda (TEMP1),y
-    sta (TEMP2),y
-    iny
-    lda (TEMP1),y
-    sta (TEMP2),y
-    lda TEMP1+1
-    sta TEMP2+1
-    lda TEMP1
-    sta TEMP2
+    MOVAY16 (TEMP1), (TEMP2)
+    MOV16_HL TEMP1, TEMP2
     cmp #DSEND
-    beq SNIPEND
-    bra SNIPLOOP
+    bne SNIPLOOP
 SNIPEND:
     ldx #DSPTR
     lda #2

@@ -9,27 +9,12 @@ COPYTORAM:                     ; copies from mainoff thru endsoff to ramstart
     WCRLF_np
     WCRLF_np
     stz supprint               ; let it print
-    lda #>COPYMAIN
-    sta mainoff+1
-    lda #<COPYMAIN
-    sta mainoff
-    ;
-    lda #<COPYENDS
-    sta endsoff
-    lda #>COPYENDS
-    sta endsoff+1
-    ;
-    lda #>RAMST
-    sta ramstart+1
-    PRINT_BYTE
-    lda #<RAMST
-    sta ramstart
-    PRINT_BYTE
+    STORE_LABEL COPYMAIN, mainoff
+    STORE_LABEL COPYENDS, endsoff
+    STORE_LABEL RAMST, ramstart
+    PRINT_ADDR  ramstart
     jsr MEMCPY
-    lda ramstart+1
-    PRINT_BYTE
-    lda ramstart
-    PRINT_BYTE
+    PRINT_ADDR  ramstart
     WCRLF_np
     jsr MEMCPY
     rts

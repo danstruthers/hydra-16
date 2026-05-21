@@ -392,7 +392,7 @@ F_CELL          := 2
 .endmacro
 
 .macro MOVA             addr1, addr2
-                MOV     addr1, addr2
+                MOV     {addr1}, {addr2}
 .endmacro
 
 .macro MOVX             addr1, addr2
@@ -406,44 +406,63 @@ F_CELL          := 2
 .endmacro
 
 .macro MOV16            addr1, addr2
-                MOV     addr1, addr2
-                MOV     addr1 + 1, addr2 + 1
+                MOV     {addr1}, {addr2}
+                MOV     {addr1 + 1}, {addr2 + 1}
+.endmacro
+
+.macro MOV16_HL         addr1, addr2
+                MOV     {addr1 + 1}, {addr2 + 1}
+                MOV     {addr1}, {addr2}
 .endmacro
 
 .macro MOVA16           addr1, addr2
-                MOV16   addr1, addr2
+                MOV16   {addr1}, {addr2}
+.endmacro
+
+.macro MOVA16_HL        addr1, addr2
+                MOV16_HL   {addr1}, {addr2}
 .endmacro
 
 .macro MOVX16           addr1, addr2
-                MOVX    addr1, addr2
-                MOVX    addr1 + 1, addr2 + 1
+                MOVX    {addr1}, {addr2}
+                MOVX    {addr1 + 1}, {addr2 + 1}
+.endmacro
+
+.macro MOVX16_HL        addr1, addr2
+                MOVX    {addr1 + 1}, {addr2 + 1}
+                MOVX    {addr1}, {addr2}
 .endmacro
 
 .macro MOVY16           addr1, addr2
-                MOVY    addr1, addr2
-                MOVY    addr1 + 1, addr2 + 1
+                MOVY    {addr1}, {addr2}
+                MOVY    {addr1 + 1}, {addr2 + 1}
+.endmacro
+
+.macro MOVY16_HL        addr1, addr2
+                MOVY    {addr1 + 1}, {addr2 + 1}
+                MOVY    {addr1}, {addr2}
 .endmacro
 
 .macro MOVAX            addr1, addr2
-                lda     addr1,X
-                sta     addr2,X
+                lda     addr1, X
+                sta     addr2, X
 .endmacro
 
 .macro MOVAY            addr1, addr2
-                lda     addr1,Y
-                sta     addr2,Y
+                lda     addr1, Y
+                sta     addr2, Y
 .endmacro
 
 .macro MOVAX16          addr1, addr2
-                MOVAX   addr1, addr2
+                MOVAX   {addr1}, {addr2}
                 inx
-                MOVAX   addr1, addr2
+                MOVAX   {addr1}, {addr2}
 .endmacro
 
 .macro MOVAY16          addr1, addr2
-                MOVAY   addr1, addr2
+                MOVAY   {addr1}, {addr2}
                 iny
-                MOVAY   addr1, addr2
+                MOVAY   {addr1}, {addr2}
 .endmacro
 
 ; X: # of bytes to move
@@ -454,8 +473,8 @@ F_CELL          := 2
                 tay
 :
                 dey
-                lda     addr1,Y
-                sta     addr2,Y
+                lda     addr1, Y
+                sta     addr2, Y
                 bne     :-
                 ply
 .endmacro
@@ -465,14 +484,14 @@ F_CELL          := 2
 .macro BLKMOVY          addr1, addr2
 :
                 dey
-                lda     addr1,Y
-                sta     addr2,Y
+                lda     addr1, Y
+                sta     addr2, Y
                 bne     :-
 .endmacro
 
 .macro  _M_ADDTO        addr
-                adc     addr
-                sta     addr
+                adc     {addr}
+                sta     {addr}
 .endmacro
 
 ; _M_INCC: inc and set C/V if rollover.  Clobbers .A, C
@@ -485,7 +504,7 @@ F_CELL          := 2
 .macro  _M_INCC16       addr
                 inc     addr
                 bne     :+
-                _M_INCC     addr + 1
+                _M_INCC addr + 1
                 bra     :++
 :
                 lda     addr + 1
@@ -499,6 +518,21 @@ F_CELL          := 2
                 inc     addr+1
                 bne     :+
                 _M_INCC16   addr+2
+.endmacro
+
+.macro  INC16_BARE      addr
+                inc     addr
+                bne     :+
+                inc     addr + 1
+:
+.endmacro
+
+.macro  DEC16_BARE      addr
+                lda     addr
+                bne     :+
+                dec     addr+1
+:
+                dec     addr
 .endmacro
 
 .macro  INC16           addr
@@ -523,9 +557,7 @@ F_CELL          := 2
 .macro  DEC16           addr
                 lda     addr
                 bne     :+
-                dec     addr
                 dec     addr+1
-                bra     :+++
 :
                 dec     addr
                 bne     :+
@@ -552,6 +584,15 @@ F_CELL          := 2
 :
                 dec     addr
 
+.endmacro
+
+.macro BNE16    addr1, addr2, dest
+                lda     addr1
+                cmp     addr2
+                bne     dest
+                lda     addr1 + 1
+                cmp     addr2 + 1
+                bne     dest
 .endmacro
 
 ; No-clobber (NC) macros to wrap another macro that overwrites one or more registers
@@ -723,6 +764,30 @@ F_CELL          := 2
 
 .macro  PRINT_CRLF_JMP
                 jmp             WRITE_CRLF
+.endmacro
+
+.macro  PRINT_ADDR  addr_lob
+                META_CALL       WRITE_BYTE, {addr_lob+1}, {addr_lob}
+.endmacro
+
+.macro  STORE_LABEL_H   label, addr
+                lda     #>label
+                sta     addr
+.endmacro
+
+.macro  STORE_LABEL_L   label, addr
+                lda     #<label
+                sta     addr
+.endmacro
+
+.macro  STORE_LABEL  label, addr
+                STORE_LABEL_L {label}, {addr}
+                STORE_LABEL_H {label}, {addr+1}
+.endmacro
+
+.macro  STORE_LABEL_HL  label, addr
+                STORE_LABEL_H {label}, {addr+1}
+                STORE_LABEL_L {label}, {addr}
 .endmacro
 
 .macro  _M_WRITE_HSTRING        addr

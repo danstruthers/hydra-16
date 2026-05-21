@@ -222,7 +222,7 @@ MALCONT:                   ; now store MEMLAST at MEMPTR
 MALLOCEND:
     rts    
 ; 
-MEMLEN:           ; address in TEMP2
+MEMLEN:              ; address in TEMP2
      ldy #0
      lda (TEMP2),y
      sta TEMP3
@@ -354,7 +354,7 @@ TEXTGET:
     ldy #1                          ; skip len of first token
 TX2SKSPC:
     lda (NXTTOK),y
-    cmp #ASCII_SPACE                        ; skip leading spaces
+    cmp #ASCII_SPACE                ; skip leading spaces
     bne TX2SK00
     iny
     bra TX2SKSPC
@@ -446,7 +446,7 @@ TEXTGET:
     ldy #1                          ; skip len
 TXTSKIPSPC:
     lda (NXTTOK),y
-    cmp #ASCII_SPACE                        ; skip leading spaces
+    cmp #ASCII_SPACE                ; skip leading spaces
     bne TXTSPCS
     iny
     bra TXTSKIPSPC
@@ -1003,31 +1003,19 @@ DUMPSTKEND:
 ;     Set 'supprint' <> 0 (TEMP5 $FC) to suppress printing of progress bar.
 ;
 MEMCPY:
-    ldy  #0
 COPYLOOP:
-    lda (mainoff),y
-    sta (ramstart),y
-    lda mainoff
-    cmp endsoff
-    bne SKIP1
-    lda mainoff+1
-    cmp endsoff+1
-    beq CPRTS
+    MOV (mainoff), (ramstart)
+    BNE16 mainoff, endsoff, SKIP1
+    rts
+
 SKIP1:
     lda supprint
     bne SKIP01
     PRINT_CHAR #ASCII_PERIOD
+
 SKIP01:
-    inc mainoff
-    bne SKIP2
-    inc mainoff + 1
-SKIP2:
-    inc ramstart
-    bne SKIP3
-    inc ramstart+1
-SKIP3:
+    INC16_BARE mainoff
+    INC16_BARE ramstart
     bra COPYLOOP
-CPRTS:
-    rts
 ; ---------------- end of upper.s
 ;

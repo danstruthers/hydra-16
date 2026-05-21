@@ -183,7 +183,7 @@ DISASM_SAVEY:
 
 DISASM_LOOP:
     PRINT_CRLF
-    PRINT_BYTE  ZP_D_XAM + 1, ZP_D_XAM
+    PRINT_ADDR  ZP_D_XAM
     PRINT_CHAR  #ASCII_COLON
     jsr         _disasm_load_inst
     jsr         _disasm_print_inst_bytes

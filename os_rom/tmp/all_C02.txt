@@ -426,7 +426,7 @@ Current file: all.s
 000000r 2               .endmacro
 000000r 2               
 000000r 2               .macro MOVA             addr1, addr2
-000000r 2                               MOV     addr1, addr2
+000000r 2                               MOV     {addr1}, {addr2}
 000000r 2               .endmacro
 000000r 2               
 000000r 2               .macro MOVX             addr1, addr2
@@ -440,44 +440,63 @@ Current file: all.s
 000000r 2               .endmacro
 000000r 2               
 000000r 2               .macro MOV16            addr1, addr2
-000000r 2                               MOV     addr1, addr2
-000000r 2                               MOV     addr1 + 1, addr2 + 1
+000000r 2                               MOV     {addr1}, {addr2}
+000000r 2                               MOV     {addr1 + 1}, {addr2 + 1}
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro MOV16_HL         addr1, addr2
+000000r 2                               MOV     {addr1 + 1}, {addr2 + 1}
+000000r 2                               MOV     {addr1}, {addr2}
 000000r 2               .endmacro
 000000r 2               
 000000r 2               .macro MOVA16           addr1, addr2
-000000r 2                               MOV16   addr1, addr2
+000000r 2                               MOV16   {addr1}, {addr2}
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro MOVA16_HL        addr1, addr2
+000000r 2                               MOV16_HL   {addr1}, {addr2}
 000000r 2               .endmacro
 000000r 2               
 000000r 2               .macro MOVX16           addr1, addr2
-000000r 2                               MOVX    addr1, addr2
-000000r 2                               MOVX    addr1 + 1, addr2 + 1
+000000r 2                               MOVX    {addr1}, {addr2}
+000000r 2                               MOVX    {addr1 + 1}, {addr2 + 1}
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro MOVX16_HL        addr1, addr2
+000000r 2                               MOVX    {addr1 + 1}, {addr2 + 1}
+000000r 2                               MOVX    {addr1}, {addr2}
 000000r 2               .endmacro
 000000r 2               
 000000r 2               .macro MOVY16           addr1, addr2
-000000r 2                               MOVY    addr1, addr2
-000000r 2                               MOVY    addr1 + 1, addr2 + 1
+000000r 2                               MOVY    {addr1}, {addr2}
+000000r 2                               MOVY    {addr1 + 1}, {addr2 + 1}
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro MOVY16_HL        addr1, addr2
+000000r 2                               MOVY    {addr1 + 1}, {addr2 + 1}
+000000r 2                               MOVY    {addr1}, {addr2}
 000000r 2               .endmacro
 000000r 2               
 000000r 2               .macro MOVAX            addr1, addr2
-000000r 2                               lda     addr1,X
-000000r 2                               sta     addr2,X
+000000r 2                               lda     addr1, X
+000000r 2                               sta     addr2, X
 000000r 2               .endmacro
 000000r 2               
 000000r 2               .macro MOVAY            addr1, addr2
-000000r 2                               lda     addr1,Y
-000000r 2                               sta     addr2,Y
+000000r 2                               lda     addr1, Y
+000000r 2                               sta     addr2, Y
 000000r 2               .endmacro
 000000r 2               
 000000r 2               .macro MOVAX16          addr1, addr2
-000000r 2                               MOVAX   addr1, addr2
+000000r 2                               MOVAX   {addr1}, {addr2}
 000000r 2                               inx
-000000r 2                               MOVAX   addr1, addr2
+000000r 2                               MOVAX   {addr1}, {addr2}
 000000r 2               .endmacro
 000000r 2               
 000000r 2               .macro MOVAY16          addr1, addr2
-000000r 2                               MOVAY   addr1, addr2
+000000r 2                               MOVAY   {addr1}, {addr2}
 000000r 2                               iny
-000000r 2                               MOVAY   addr1, addr2
+000000r 2                               MOVAY   {addr1}, {addr2}
 000000r 2               .endmacro
 000000r 2               
 000000r 2               ; X: # of bytes to move
@@ -488,8 +507,8 @@ Current file: all.s
 000000r 2                               tay
 000000r 2               :
 000000r 2                               dey
-000000r 2                               lda     addr1,Y
-000000r 2                               sta     addr2,Y
+000000r 2                               lda     addr1, Y
+000000r 2                               sta     addr2, Y
 000000r 2                               bne     :-
 000000r 2                               ply
 000000r 2               .endmacro
@@ -499,14 +518,14 @@ Current file: all.s
 000000r 2               .macro BLKMOVY          addr1, addr2
 000000r 2               :
 000000r 2                               dey
-000000r 2                               lda     addr1,Y
-000000r 2                               sta     addr2,Y
+000000r 2                               lda     addr1, Y
+000000r 2                               sta     addr2, Y
 000000r 2                               bne     :-
 000000r 2               .endmacro
 000000r 2               
 000000r 2               .macro  _M_ADDTO        addr
-000000r 2                               adc     addr
-000000r 2                               sta     addr
+000000r 2                               adc     {addr}
+000000r 2                               sta     {addr}
 000000r 2               .endmacro
 000000r 2               
 000000r 2               ; _M_INCC: inc and set C/V if rollover.  Clobbers .A, C
@@ -519,7 +538,7 @@ Current file: all.s
 000000r 2               .macro  _M_INCC16       addr
 000000r 2                               inc     addr
 000000r 2                               bne     :+
-000000r 2                               _M_INCC     addr + 1
+000000r 2                               _M_INCC addr + 1
 000000r 2                               bra     :++
 000000r 2               :
 000000r 2                               lda     addr + 1
@@ -533,6 +552,21 @@ Current file: all.s
 000000r 2                               inc     addr+1
 000000r 2                               bne     :+
 000000r 2                               _M_INCC16   addr+2
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  INC16_BARE      addr
+000000r 2                               inc     addr
+000000r 2                               bne     :+
+000000r 2                               inc     addr + 1
+000000r 2               :
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  DEC16_BARE      addr
+000000r 2                               lda     addr
+000000r 2                               bne     :+
+000000r 2                               dec     addr+1
+000000r 2               :
+000000r 2                               dec     addr
 000000r 2               .endmacro
 000000r 2               
 000000r 2               .macro  INC16           addr
@@ -557,9 +591,7 @@ Current file: all.s
 000000r 2               .macro  DEC16           addr
 000000r 2                               lda     addr
 000000r 2                               bne     :+
-000000r 2                               dec     addr
 000000r 2                               dec     addr+1
-000000r 2                               bra     :+++
 000000r 2               :
 000000r 2                               dec     addr
 000000r 2                               bne     :+
@@ -586,6 +618,15 @@ Current file: all.s
 000000r 2               :
 000000r 2                               dec     addr
 000000r 2               
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro BNE16    addr1, addr2, dest
+000000r 2                               lda     addr1
+000000r 2                               cmp     addr2
+000000r 2                               bne     dest
+000000r 2                               lda     addr1 + 1
+000000r 2                               cmp     addr2 + 1
+000000r 2                               bne     dest
 000000r 2               .endmacro
 000000r 2               
 000000r 2               ; No-clobber (NC) macros to wrap another macro that overwrites one or more registers
@@ -757,6 +798,30 @@ Current file: all.s
 000000r 2               
 000000r 2               .macro  PRINT_CRLF_JMP
 000000r 2                               jmp             WRITE_CRLF
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  PRINT_ADDR  addr_lob
+000000r 2                               META_CALL       WRITE_BYTE, {addr_lob+1}, {addr_lob}
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  STORE_LABEL_H   label, addr
+000000r 2                               lda     #>label
+000000r 2                               sta     addr
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  STORE_LABEL_L   label, addr
+000000r 2                               lda     #<label
+000000r 2                               sta     addr
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  STORE_LABEL  label, addr
+000000r 2                               STORE_LABEL_L {label}, {addr}
+000000r 2                               STORE_LABEL_H {label}, {addr+1}
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro  STORE_LABEL_HL  label, addr
+000000r 2                               STORE_LABEL_H {label}, {addr+1}
+000000r 2                               STORE_LABEL_L {label}, {addr}
 000000r 2               .endmacro
 000000r 2               
 000000r 2               .macro  _M_WRITE_HSTRING        addr
@@ -2566,7 +2631,7 @@ Current file: all.s
 000019r 2               
 000019r 2               DISASM_LOOP:
 000019r 2  20 rr rr         PRINT_CRLF
-00001Cr 2  A5 rr 20 rr      PRINT_BYTE  ZP_D_XAM + 1, ZP_D_XAM
+00001Cr 2  A5 rr 20 rr      PRINT_ADDR  ZP_D_XAM
 000020r 2  rr A5 rr 20  
 000024r 2  rr rr        
 000026r 2  A9 3A 20 rr      PRINT_CHAR  #ASCII_COLON
@@ -3943,7 +4008,7 @@ Current file: all.s
 0003C7r 3               MALLOCEND:
 0003C7r 3  60               rts
 0003C8r 3               ;
-0003C8r 3               MEMLEN:           ; address in TEMP2
+0003C8r 3               MEMLEN:              ; address in TEMP2
 0003C8r 3  A0 00             ldy #0
 0003CAr 3  B1 F2             lda (TEMP2),y
 0003CCr 3  85 F4             sta TEMP3
@@ -4075,7 +4140,7 @@ Current file: all.s
 00045Dr 3  A0 01            ldy #1                          ; skip len of first token
 00045Fr 3               TX2SKSPC:
 00045Fr 3  B1 F8            lda (NXTTOK),y
-000461r 3  C9 20            cmp #ASCII_SPACE                        ; skip leading spaces
+000461r 3  C9 20            cmp #ASCII_SPACE                ; skip leading spaces
 000463r 3  D0 03            bne TX2SK00
 000465r 3  C8               iny
 000466r 3  80 F7            bra TX2SKSPC
@@ -4167,7 +4232,7 @@ Current file: all.s
 0004D1r 3                   ldy #1                          ; skip len
 0004D1r 3               TXTSKIPSPC:
 0004D1r 3                   lda (NXTTOK),y
-0004D1r 3                   cmp #ASCII_SPACE                        ; skip leading spaces
+0004D1r 3                   cmp #ASCII_SPACE                ; skip leading spaces
 0004D1r 3                   bne TXTSPCS
 0004D1r 3                   iny
 0004D1r 3                   bra TXTSKIPSPC
@@ -4742,60 +4807,52 @@ Current file: all.s
 0007F3r 3               ;     Set 'supprint' <> 0 (TEMP5 $FC) to suppress printing of progress bar.
 0007F3r 3               ;
 0007F3r 3               MEMCPY:
-0007F3r 3  A0 00            ldy  #0
-0007F5r 3               COPYLOOP:
-0007F5r 3  B1 F0            lda (mainoff),y
-0007F7r 3  91 F4            sta (ramstart),y
-0007F9r 3  A5 F0            lda mainoff
-0007FBr 3  C5 F2            cmp endsoff
-0007FDr 3  D0 06            bne SKIP1
-0007FFr 3  A5 F1            lda mainoff+1
-000801r 3  C5 F3            cmp endsoff+1
-000803r 3  F0 17            beq CPRTS
-000805r 3               SKIP1:
-000805r 3  A5 FC            lda supprint
-000807r 3  D0 05            bne SKIP01
-000809r 3  A9 2E 20 rr      PRINT_CHAR #ASCII_PERIOD
-00080Dr 3  rr           
-00080Er 3               SKIP01:
-00080Er 3  E6 F0            inc mainoff
-000810r 3  D0 02            bne SKIP2
-000812r 3  E6 F1            inc mainoff + 1
-000814r 3               SKIP2:
-000814r 3  E6 F4            inc ramstart
-000816r 3  D0 02            bne SKIP3
-000818r 3  E6 F5            inc ramstart+1
-00081Ar 3               SKIP3:
-00081Ar 3  80 D9            bra COPYLOOP
-00081Cr 3               CPRTS:
-00081Cr 3  60               rts
-00081Dr 3               ; ---------------- end of upper.s
-00081Dr 3               ;
-00081Dr 3               
-00081Dr 2               UPPER_END:
-00081Dr 2               ;
-00081Dr 2               ;
-00081Dr 2               YSOUND_START:
-00081Dr 2               ;.ifdef YSOUND
-00081Dr 2               ;   .include "sound_os.s"
-00081Dr 2               ;.endif
-00081Dr 2               YSOUND_END:
-00081Dr 2               ;
-00081Dr 2               ;
-00081Dr 2               ROMCODEEND:                         ; end of all code
-00081Dr 2               ;
-00081Dr 2               ;  end of hyforth.s
-00081Dr 2               ;
-00081Dr 2               ;-----------------------------------------------------------------------
-00081Dr 2  xx xx xx xx      .res 16                    ; just a visible buffer in binary
-000821r 2  xx xx xx xx  
-000825r 2  xx xx xx xx  
-00082Dr 2                                              ; to make easier to identify different
-00082Dr 2                                              ; code segments.
-00082Dr 2               ;-----------------------------------------------------------------------
-00082Dr 2               ;                            BELOW ENDS UP IN RAM
-00082Dr 2               ;-----------------------------------------------------------------------
-00082Dr 2               .segment "FORTH_PAGED_ROM"
+0007F3r 3               COPYLOOP:
+0007F3r 3  B2 F0 92 F4      MOV (mainoff), (ramstart)
+0007F7r 3  A5 F0 C5 F2      BNE16 mainoff, endsoff, SKIP1
+0007FBr 3  D0 07 A5 F1  
+0007FFr 3  C5 F3 D0 01  
+000803r 3  60               rts
+000804r 3               
+000804r 3               SKIP1:
+000804r 3  A5 FC            lda supprint
+000806r 3  D0 05            bne SKIP01
+000808r 3  A9 2E 20 rr      PRINT_CHAR #ASCII_PERIOD
+00080Cr 3  rr           
+00080Dr 3               
+00080Dr 3               SKIP01:
+00080Dr 3  E6 F0 D0 02      INC16_BARE mainoff
+000811r 3  E6 F1        
+000813r 3  E6 F4 D0 02      INC16_BARE ramstart
+000817r 3  E6 F5        
+000819r 3  80 D8            bra COPYLOOP
+00081Br 3               ; ---------------- end of upper.s
+00081Br 3               ;
+00081Br 3               
+00081Br 2               UPPER_END:
+00081Br 2               ;
+00081Br 2               ;
+00081Br 2               YSOUND_START:
+00081Br 2               ;.ifdef YSOUND
+00081Br 2               ;   .include "sound_os.s"
+00081Br 2               ;.endif
+00081Br 2               YSOUND_END:
+00081Br 2               ;
+00081Br 2               ;
+00081Br 2               ROMCODEEND:                         ; end of all code
+00081Br 2               ;
+00081Br 2               ;  end of hyforth.s
+00081Br 2               ;
+00081Br 2               ;-----------------------------------------------------------------------
+00081Br 2  xx xx xx xx      .res 16                    ; just a visible buffer in binary
+00081Fr 2  xx xx xx xx  
+000823r 2  xx xx xx xx  
+00082Br 2                                              ; to make easier to identify different
+00082Br 2                                              ; code segments.
+00082Br 2               ;-----------------------------------------------------------------------
+00082Br 2               ;                            BELOW ENDS UP IN RAM
+00082Br 2               ;-----------------------------------------------------------------------
+00082Br 2               .segment "FORTH_PAGED_ROM"
 000000r 2               ;------------------------------------------------------------------------
 000000r 2               ;
 000000r 2               ;    hyf_rom.s -- COPYTORAM
@@ -4812,84 +4869,76 @@ Current file: all.s
 000000r 3  20 rr rr         WCRLF_np
 000003r 3  20 rr rr         WCRLF_np
 000006r 3  64 FC            stz supprint               ; let it print
-000008r 3  A9 A1            lda #>COPYMAIN
-00000Ar 3  85 F1            sta mainoff+1
-00000Cr 3  A9 00            lda #<COPYMAIN
-00000Er 3  85 F0            sta mainoff
-000010r 3                   ;
-000010r 3  A9 A0            lda #<COPYENDS
-000012r 3  85 F2            sta endsoff
-000014r 3  A9 B1            lda #>COPYENDS
-000016r 3  85 F3            sta endsoff+1
-000018r 3                   ;
-000018r 3  A9 rr            lda #>RAMST
-00001Ar 3  85 F5            sta ramstart+1
-00001Cr 3  20 rr rr         PRINT_BYTE
-00001Fr 3  A9 rr            lda #<RAMST
-000021r 3  85 F4            sta ramstart
-000023r 3  20 rr rr         PRINT_BYTE
-000026r 3  20 rr rr         jsr MEMCPY
-000029r 3  A5 F5            lda ramstart+1
-00002Br 3  20 rr rr         PRINT_BYTE
-00002Er 3  A5 F4            lda ramstart
-000030r 3  20 rr rr         PRINT_BYTE
-000033r 3  20 rr rr         WCRLF_np
-000036r 3  20 rr rr         jsr MEMCPY
-000039r 3  60               rts
-00003Ar 3               ;;
-00003Ar 3               ;
-00003Ar 3               ;     scan for beginning / end of code to copy
-00003Ar 3               ;      WRT, not even sure best way to proceed (5/9/26)
-00003Ar 3               ;;
-00003Ar 3               ;CPSCANEND:
-00003Ar 3               ;    lda #>ROMSTART
-00003Ar 3               ;    sta mainoff
-00003Ar 3               ;    sta endsoff
-00003Ar 3               ;    lda #<ROMSTART
-00003Ar 3               ;    sta mainoff+1
-00003Ar 3               ;    sta endsoff+1
-00003Ar 3               ;    ldy #0
-00003Ar 3               ;CPSCANLOOP:
-00003Ar 3               ;    lda (mainoff),y
-00003Ar 3               ;    cmp REMARKER,y
-00003Ar 3               ;    beq CPSC_HIT
-00003Ar 3               ;    lda mainoff
-00003Ar 3               ;    sta endsoff
-00003Ar 3               ;    lda mainoff+1
-00003Ar 3               ;    sta endsoff+1
-00003Ar 3               ;    ldy #0
-00003Ar 3               ;    inc mainoff
-00003Ar 3               ;    bne CPSC_SKIP
-00003Ar 3               ;    inc mainoff+1
-00003Ar 3               ;CPSC_SKIP:
-00003Ar 3               ;    lda mainoff+1
-00003Ar 3               ;    cmp #>something    ; bounds limit on scan
-00003Ar 3               ;    bcs CPSC_ERR
-00003Ar 3               ;    sta endsoff+1
-00003Ar 3               ;
-00003Ar 3               ;    bra CPSCANLOOP
-00003Ar 3               ;
-00003Ar 3               ;CPSC_HIT:
-00003Ar 3               ;    lda REMARKER,y
-00003Ar 3               ;    beq CPSC_FOUND
-00003Ar 3               ;    iny
-00003Ar 3               ;    bra CPSCANLOOP
-00003Ar 3               ;
-00003Ar 3               ;CPSC_FOUND:
-00003Ar 3               ;    clc
-00003Ar 3               ;    bra CPSC_END
-00003Ar 3               ;CPSC_ERR:
-00003Ar 3               ;    sec
-00003Ar 3               ;CPSC_END:
-00003Ar 3               ;    rts
-00003Ar 3               ;
-00003Ar 3               ;
-00003Ar 3               
-00003Ar 3               
-00003Ar 2               ;
-00003Ar 2               ;
-00003Ar 2               COPYSTART := $A100              ; marks beginning of copy in ROM space
-00003Ar 2               .segment "FORTH_CODE"
+000008r 3  A9 00 85 F0      STORE_LABEL COPYMAIN, mainoff
+00000Cr 3  A9 A1 85 F1  
+000010r 3  A9 95 85 F2      STORE_LABEL COPYENDS, endsoff
+000014r 3  A9 B1 85 F3  
+000018r 3  A9 rr 85 F4      STORE_LABEL RAMST, ramstart
+00001Cr 3  A9 rr 85 F5  
+000020r 3  A5 F5 20 rr      PRINT_ADDR  ramstart
+000024r 3  rr A5 F4 20  
+000028r 3  rr rr        
+00002Ar 3  20 rr rr         jsr MEMCPY
+00002Dr 3  A5 F5 20 rr      PRINT_ADDR  ramstart
+000031r 3  rr A5 F4 20  
+000035r 3  rr rr        
+000037r 3  20 rr rr         WCRLF_np
+00003Ar 3  20 rr rr         jsr MEMCPY
+00003Dr 3  60               rts
+00003Er 3               ;;
+00003Er 3               ;
+00003Er 3               ;     scan for beginning / end of code to copy
+00003Er 3               ;      WRT, not even sure best way to proceed (5/9/26)
+00003Er 3               ;;
+00003Er 3               ;CPSCANEND:
+00003Er 3               ;    lda #>ROMSTART
+00003Er 3               ;    sta mainoff
+00003Er 3               ;    sta endsoff
+00003Er 3               ;    lda #<ROMSTART
+00003Er 3               ;    sta mainoff+1
+00003Er 3               ;    sta endsoff+1
+00003Er 3               ;    ldy #0
+00003Er 3               ;CPSCANLOOP:
+00003Er 3               ;    lda (mainoff),y
+00003Er 3               ;    cmp REMARKER,y
+00003Er 3               ;    beq CPSC_HIT
+00003Er 3               ;    lda mainoff
+00003Er 3               ;    sta endsoff
+00003Er 3               ;    lda mainoff+1
+00003Er 3               ;    sta endsoff+1
+00003Er 3               ;    ldy #0
+00003Er 3               ;    inc mainoff
+00003Er 3               ;    bne CPSC_SKIP
+00003Er 3               ;    inc mainoff+1
+00003Er 3               ;CPSC_SKIP:
+00003Er 3               ;    lda mainoff+1
+00003Er 3               ;    cmp #>something    ; bounds limit on scan
+00003Er 3               ;    bcs CPSC_ERR
+00003Er 3               ;    sta endsoff+1
+00003Er 3               ;
+00003Er 3               ;    bra CPSCANLOOP
+00003Er 3               ;
+00003Er 3               ;CPSC_HIT:
+00003Er 3               ;    lda REMARKER,y
+00003Er 3               ;    beq CPSC_FOUND
+00003Er 3               ;    iny
+00003Er 3               ;    bra CPSCANLOOP
+00003Er 3               ;
+00003Er 3               ;CPSC_FOUND:
+00003Er 3               ;    clc
+00003Er 3               ;    bra CPSC_END
+00003Er 3               ;CPSC_ERR:
+00003Er 3               ;    sec
+00003Er 3               ;CPSC_END:
+00003Er 3               ;    rts
+00003Er 3               ;
+00003Er 3               ;
+00003Er 3               
+00003Er 3               
+00003Er 2               ;
+00003Er 2               ;
+00003Er 2               COPYSTART := $A100              ; marks beginning of copy in ROM space
+00003Er 2               .segment "FORTH_CODE"
 000000r 2               RAMSTART:
 000000r 2  4C rr rr         jmp forth_main             ; MAIN program start
 000003r 2  4C rr rr         jmp COPYTORAM
@@ -6710,832 +6759,818 @@ Current file: all.s
 000BF3r 3  65 E8            adc DSPTR
 000BF5r 3  85 CA            sta TEMP8
 000BF7r 3  C9 7E            cmp #DSEND           ; boundary check
-000BF9r 3  B0 17            bcs PICKPTRERR
-000BFBr 3  85 CA            sta TEMP8
-000BFDr 3  A5 E9            lda DSPTR+1
-000BFFr 3  85 CB            sta TEMP8+1
-000C01r 3  A0 00            ldy #0
-000C03r 3  B1 CA            lda (TEMP8),y
-000C05r 3  85 F0            sta TEMP1
-000C07r 3  C8               iny
-000C08r 3  B1 CA            lda (TEMP8),y
-000C0Ar 3  85 F1            sta TEMP1+1
-000C0Cr 3  20 rr rr         jsr spush_0
-000C0Fr 3  4C rr rr         jmp next
-000C12r 3               PICKPTRERR:
-000C12r 3  A9 02            lda #ERR_SPTR
-000C14r 3  85 D7            sta ERRFLAG
-000C16r 3  4C rr rr         jmp errrtn
-000C19r 3               ;
-000C19r 3  rr rr 04 73  def_word "snip", "snip", 0
-000C1Dr 3  6E 69 70     
-000C20r 3  A5 E8            lda DSPTR
-000C22r 3  C9 7E            cmp #DSEND
-000C24r 3  F0 38            beq SNIPERR
-000C26r 3  A5 E9            lda DSPTR+1
-000C28r 3  85 F3            sta TEMP2+1
-000C2Ar 3  85 F1            sta TEMP1+1
-000C2Cr 3  A9 7E            lda #DSEND
-000C2Er 3  85 F2            sta TEMP2
-000C30r 3  A9 7E            lda #DSEND
-000C32r 3  85 F0            sta TEMP1
-000C34r 3               SNIPLOOP:
-000C34r 3  A5 F0            lda TEMP1
-000C36r 3  38               sec
-000C37r 3  E9 02            sbc #2
-000C39r 3  85 F0            sta TEMP1
-000C3Br 3  A0 00            ldy #0
-000C3Dr 3  B1 F0            lda (TEMP1),y
-000C3Fr 3  91 F2            sta (TEMP2),y
-000C41r 3  C8               iny
-000C42r 3  B1 F0            lda (TEMP1),y
-000C44r 3  91 F2            sta (TEMP2),y
-000C46r 3  A5 F1            lda TEMP1+1
-000C48r 3  85 F3            sta TEMP2+1
-000C4Ar 3  A5 F0            lda TEMP1
-000C4Cr 3  85 F2            sta TEMP2
-000C4Er 3  C9 7E            cmp #DSEND
-000C50r 3  F0 02            beq SNIPEND
-000C52r 3  80 E0            bra SNIPLOOP
-000C54r 3               SNIPEND:
-000C54r 3  A2 E8            ldx #DSPTR
-000C56r 3  A9 02            lda #2
-000C58r 3  20 rr rr         jsr addwx
-000C5Br 3  4C rr rr         jmp next
-000C5Er 3               SNIPERR:
-000C5Er 3  A9 02            lda #ERR_SPTR
-000C60r 3  85 D7            sta ERRFLAG
-000C62r 3  4C rr rr         jmp errrtn
-000C65r 3               ;
-000C65r 3               ;-------------------------AUTOLOAD and CLOAD----------------------
-000C65r 3               CLOADMSG:
-000C65r 3  63 6C 6F 61     .byte "cload>"
-000C69r 3  64 3E        
-000C6Br 3  00              .byte 0
-000C6Cr 3               BLOADMSG:
-000C6Cr 3  62 6C 6F 61     .byte "bload:"
-000C70r 3  64 3A        
-000C72r 3  0D 0A 00        .byte ASCII_CR, ASCII_LF, 0
-000C75r 3               ;
-000C75r 3               ; ( -- )     autoload a list of scripts
-000C75r 3  rr rr 08 61  def_word "autoload", "autoload", 0
-000C79r 3  75 74 6F 6C  
-000C7Dr 3  6F 61 64     
-000C80r 3  20 rr rr         jsr spull_0   ; get end of list
-000C83r 3  A5 F0            lda TEMP1
-000C85r 3  85 FE            sta TEMP7
-000C87r 3  A5 F1            lda TEMP1+1
-000C89r 3  85 FF            sta TEMP7+1
-000C8Br 3  A9 01            lda #1
-000C8Dr 3  85 DF            sta ALFLAG
-000C8Fr 3  4C rr rr         jmp next
-000C92r 3               
-000C92r 3               ; (a -- )       load a compile-able script from memory, zero term'd
-000C92r 3  rr rr 05 63  def_word "cload", "cload", 0
-000C96r 3  6C 6F 61 64  
-000C9Ar 3                   ;stz ALFLAG         ; clear autoload flag
-000C9Ar 3               CLOAD_IN:
-000C9Ar 3  5A A0 00 B9      WSEQ_raw CLOADMSG
-000C9Er 3  rr rr F0 06  
-000CA2r 3  C8 20 rr rr  
-000CA9r 3  20 rr rr         jsr spull_0  ; address from stack to TEMP1
-000CACr 3  A0 00            ldy #0
-000CAEr 3  A9 20            lda #ASCII_SPACE
-000CB0r 3  91 D2            sta (TIB), y   ; put space at start
-000CB2r 3               CLOAD_LP:
-000CB2r 3  B1 F0            lda (TEMP1), y
-000CB4r 3  F0 08            beq CLOAD_CONT     ; stops at first 0
-000CB6r 3  20 rr rr         PRINT_CHAR     ; echo char out so can see what's being pulled in
-000CB9r 3  C8               iny           ; yep, skip
-000CBAr 3  91 D2            sta (TIB), y
-000CBCr 3  80 F4            bra CLOAD_LP
-000CBEr 3               CLOAD_CONT:
-000CBEr 3  C8               iny
-000CBFr 3  A9 20            lda #ASCII_SPACE
-000CC1r 3  91 D2            sta (TIB),y     ; not sure but won't hurt to add a space
-000CC3r 3  20 rr rr         PRINT_CRLF
-000CC6r 3  A9 20            lda #ASCII_SPACE
-000CC8r 3  5A               phy
-000CC9r 3  A0 00            ldy #0
-000CCBr 3  91 D2            sta (TIB), y       ; start with space
-000CCDr 3  7A               ply
-000CCEr 3  91 D2            sta (TIB), y        ; ends with space
-000CD0r 3  A9 00            lda #0            ; mark eol with 0
-000CD2r 3  C8               iny
-000CD3r 3  91 D2            sta (TIB), y
-000CD5r 3  88               dey
-000CD6r 3               ; start it
-000CD6r 3  85 E2            sta CURBUF
-000CD8r 3  98               tya                ; calc next address if want to load more
-000CD9r 3  18               clc
-000CDAr 3  65 F0            adc TEMP1
-000CDCr 3  85 F0            sta TEMP1
-000CDEr 3  90 02            bcc CLSKIP
-000CE0r 3  E6 F1            inc TEMP1+1
-000CE2r 3               CLSKIP:
-000CE2r 3  20 rr rr         jsr spush_0        ; push next addr on stack if wanted
-000CE5r 3               .ifdef DEBUG
-000CE5r 3  20 rr rr         jsr DUMPREG
-000CE8r 3               .endif
-000CE8r 3  20 rr rr         jsr token            ; massage the buffer, oh yeah
-000CEBr 3  4C rr rr         jmp RESFIND           ; works perfectly!
-000CEEr 3               ;
-000CEEr 3               ;
-000CEEr 3               ;  BLOAD  -- see example in 'bload.s'
-000CEEr 3               ;
-000CEEr 3               ;   note, only loads ONE word at the moment
-000CEEr 3               ;
-000CEEr 3               ; (a -- )       load native code from memory, zero term'd
-000CEEr 3  rr rr 05 62  def_word "bload", "bload", 0
-000CF2r 3  6C 6F 61 64  
-000CF6r 3               BLOAD_IN:
-000CF6r 3  5A A0 00 B9      WSEQ_raw BLOADMSG
-000CFAr 3  rr rr F0 06  
-000CFEr 3  C8 20 rr rr  
-000D05r 3  20 rr rr         jsr spull_0          ; address from stack to TEMP1
-000D08r 3               
-000D08r 3               BLAGAIN:
-000D08r 3  A5 E6            lda NEXTHEAP
-000D0Ar 3  85 FA            sta BACKHEAP                ; backup NEXTHEAP to BACKHEAP
-000D0Cr 3  A5 E7            lda NEXTHEAP + 1
-000D0Er 3  85 FB            sta BACKHEAP + 1
-000D10r 3               
-000D10r 3               BLHEAD:
-000D10r 3  A0 E4            ldy #LASTHEAP
-000D12r 3  20 rr rr         jsr comma                    ; change NEXTHEAP to point to LASTHEAP  ('here' <= 'last')
-000D15r 3  A0 00            ldy #0                       ; copy it to heap: length and name
-000D17r 3                                                ; code field comes with later proc
-000D17r 3                                                ;
-000D17r 3                                                ; NOTE:  This cannot pull more than 255 bytes including
-000D17r 3                                                ;  leading or trailing zeros!
-000D17r 3                                                ;
-000D17r 3               BLZEROSKIP:
-000D17r 3  B1 F0            lda (TEMP1), y
-000D19r 3  D0 03            bne BLNSK1                  ; skip any LEADING zeros
-000D1Br 3  C8               iny
-000D1Cr 3  80 F9            bra BLZEROSKIP
-000D1Er 3               BLNSK1:
-000D1Er 3  98               tya
-000D1Fr 3  A2 F0            ldx #TEMP1
-000D21r 3  20 rr rr         jsr addwx
-000D24r 3  A0 00            ldy #0
-000D26r 3               BLNLOOP:
-000D26r 3  B1 F0            lda (TEMP1), y
-000D28r 3  D0 0E            bne BLCOPY
-000D2Ar 3  C8               iny
-000D2Br 3  B1 F0            lda (TEMP1), y
-000D2Dr 3  F0 05            beq BLSKIP0
-000D2Fr 3  88               dey
-000D30r 3  A9 00            lda #0
-000D32r 3  80 04            bra BLCOPY
-000D34r 3               BLSKIP0:
-000D34r 3  88               dey
-000D35r 3  88               dey
-000D36r 3  80 05            bra BLEND
-000D38r 3               BLCOPY:
-000D38r 3  91 E6            sta (NEXTHEAP), y
+000BF9r 3  B0 14            bcs PICKPTRERR
+000BFBr 3  A5 E9 85 CB      MOV DSPTR+1, TEMP8+1
+000BFFr 3  B2 CA 85 F0      MOV (TEMP8), TEMP1
+000C03r 3  A0 01            ldy #1
+000C05r 3  B1 CA 85 F1      MOV {(TEMP8),y}, TEMP1+1
+000C09r 3  20 rr rr         jsr spush_0
+000C0Cr 3  4C rr rr         jmp next
+000C0Fr 3               PICKPTRERR:
+000C0Fr 3  A9 02            lda #ERR_SPTR
+000C11r 3  85 D7            sta ERRFLAG
+000C13r 3  4C rr rr         jmp errrtn
+000C16r 3               ;
+000C16r 3  rr rr 04 73  def_word "snip", "snip", 0
+000C1Ar 3  6E 69 70     
+000C1Dr 3  A5 E8            lda DSPTR
+000C1Fr 3  C9 7E            cmp #DSEND
+000C21r 3  F0 30            beq SNIPERR
+000C23r 3  A5 E9 85 F3      MOV DSPTR+1, TEMP2+1
+000C27r 3  85 F1            sta TEMP1+1
+000C29r 3  A9 7E            lda #DSEND
+000C2Br 3  85 F2            sta TEMP2
+000C2Dr 3               SNIPLOOP:
+000C2Dr 3  38               sec
+000C2Er 3  E9 02            sbc #2
+000C30r 3  85 F0            sta TEMP1
+000C32r 3  A0 00            ldy #0
+000C34r 3  B1 F0 91 F2      MOVAY16 (TEMP1), (TEMP2)
+000C38r 3  C8 B1 F0 91  
+000C3Cr 3  F2           
+000C3Dr 3  A5 F1 85 F3      MOV16_HL TEMP1, TEMP2
+000C41r 3  A5 F0 85 F2  
+000C45r 3  C9 7E            cmp #DSEND
+000C47r 3  D0 E4            bne SNIPLOOP
+000C49r 3               SNIPEND:
+000C49r 3  A2 E8            ldx #DSPTR
+000C4Br 3  A9 02            lda #2
+000C4Dr 3  20 rr rr         jsr addwx
+000C50r 3  4C rr rr         jmp next
+000C53r 3               SNIPERR:
+000C53r 3  A9 02            lda #ERR_SPTR
+000C55r 3  85 D7            sta ERRFLAG
+000C57r 3  4C rr rr         jmp errrtn
+000C5Ar 3               ;
+000C5Ar 3               ;-------------------------AUTOLOAD and CLOAD----------------------
+000C5Ar 3               CLOADMSG:
+000C5Ar 3  63 6C 6F 61     .byte "cload>"
+000C5Er 3  64 3E        
+000C60r 3  00              .byte 0
+000C61r 3               BLOADMSG:
+000C61r 3  62 6C 6F 61     .byte "bload:"
+000C65r 3  64 3A        
+000C67r 3  0D 0A 00        .byte ASCII_CR, ASCII_LF, 0
+000C6Ar 3               ;
+000C6Ar 3               ; ( -- )     autoload a list of scripts
+000C6Ar 3  rr rr 08 61  def_word "autoload", "autoload", 0
+000C6Er 3  75 74 6F 6C  
+000C72r 3  6F 61 64     
+000C75r 3  20 rr rr         jsr spull_0   ; get end of list
+000C78r 3  A5 F0            lda TEMP1
+000C7Ar 3  85 FE            sta TEMP7
+000C7Cr 3  A5 F1            lda TEMP1+1
+000C7Er 3  85 FF            sta TEMP7+1
+000C80r 3  A9 01            lda #1
+000C82r 3  85 DF            sta ALFLAG
+000C84r 3  4C rr rr         jmp next
+000C87r 3               
+000C87r 3               ; (a -- )       load a compile-able script from memory, zero term'd
+000C87r 3  rr rr 05 63  def_word "cload", "cload", 0
+000C8Br 3  6C 6F 61 64  
+000C8Fr 3                   ;stz ALFLAG         ; clear autoload flag
+000C8Fr 3               CLOAD_IN:
+000C8Fr 3  5A A0 00 B9      WSEQ_raw CLOADMSG
+000C93r 3  rr rr F0 06  
+000C97r 3  C8 20 rr rr  
+000C9Er 3  20 rr rr         jsr spull_0  ; address from stack to TEMP1
+000CA1r 3  A0 00            ldy #0
+000CA3r 3  A9 20            lda #ASCII_SPACE
+000CA5r 3  91 D2            sta (TIB), y   ; put space at start
+000CA7r 3               CLOAD_LP:
+000CA7r 3  B1 F0            lda (TEMP1), y
+000CA9r 3  F0 08            beq CLOAD_CONT     ; stops at first 0
+000CABr 3  20 rr rr         PRINT_CHAR     ; echo char out so can see what's being pulled in
+000CAEr 3  C8               iny           ; yep, skip
+000CAFr 3  91 D2            sta (TIB), y
+000CB1r 3  80 F4            bra CLOAD_LP
+000CB3r 3               CLOAD_CONT:
+000CB3r 3  C8               iny
+000CB4r 3  A9 20            lda #ASCII_SPACE
+000CB6r 3  91 D2            sta (TIB),y     ; not sure but won't hurt to add a space
+000CB8r 3  20 rr rr         PRINT_CRLF
+000CBBr 3  A9 20            lda #ASCII_SPACE
+000CBDr 3  5A               phy
+000CBEr 3  A0 00            ldy #0
+000CC0r 3  91 D2            sta (TIB), y       ; start with space
+000CC2r 3  7A               ply
+000CC3r 3  91 D2            sta (TIB), y        ; ends with space
+000CC5r 3  A9 00            lda #0            ; mark eol with 0
+000CC7r 3  C8               iny
+000CC8r 3  91 D2            sta (TIB), y
+000CCAr 3  88               dey
+000CCBr 3               ; start it
+000CCBr 3  85 E2            sta CURBUF
+000CCDr 3  98               tya                ; calc next address if want to load more
+000CCEr 3  18               clc
+000CCFr 3  65 F0            adc TEMP1
+000CD1r 3  85 F0            sta TEMP1
+000CD3r 3  90 02            bcc CLSKIP
+000CD5r 3  E6 F1            inc TEMP1+1
+000CD7r 3               CLSKIP:
+000CD7r 3  20 rr rr         jsr spush_0        ; push next addr on stack if wanted
+000CDAr 3               .ifdef DEBUG
+000CDAr 3  20 rr rr         jsr DUMPREG
+000CDDr 3               .endif
+000CDDr 3  20 rr rr         jsr token            ; massage the buffer, oh yeah
+000CE0r 3  4C rr rr         jmp RESFIND           ; works perfectly!
+000CE3r 3               ;
+000CE3r 3               ;
+000CE3r 3               ;  BLOAD  -- see example in 'bload.s'
+000CE3r 3               ;
+000CE3r 3               ;   note, only loads ONE word at the moment
+000CE3r 3               ;
+000CE3r 3               ; (a -- )       load native code from memory, zero term'd
+000CE3r 3  rr rr 05 62  def_word "bload", "bload", 0
+000CE7r 3  6C 6F 61 64  
+000CEBr 3               BLOAD_IN:
+000CEBr 3  5A A0 00 B9      WSEQ_raw BLOADMSG
+000CEFr 3  rr rr F0 06  
+000CF3r 3  C8 20 rr rr  
+000CFAr 3  20 rr rr         jsr spull_0          ; address from stack to TEMP1
+000CFDr 3               
+000CFDr 3               BLAGAIN:
+000CFDr 3  A5 E6            lda NEXTHEAP
+000CFFr 3  85 FA            sta BACKHEAP                ; backup NEXTHEAP to BACKHEAP
+000D01r 3  A5 E7            lda NEXTHEAP + 1
+000D03r 3  85 FB            sta BACKHEAP + 1
+000D05r 3               
+000D05r 3               BLHEAD:
+000D05r 3  A0 E4            ldy #LASTHEAP
+000D07r 3  20 rr rr         jsr comma                    ; change NEXTHEAP to point to LASTHEAP  ('here' <= 'last')
+000D0Ar 3  A0 00            ldy #0                       ; copy it to heap: length and name
+000D0Cr 3                                                ; code field comes with later proc
+000D0Cr 3                                                ;
+000D0Cr 3                                                ; NOTE:  This cannot pull more than 255 bytes including
+000D0Cr 3                                                ;  leading or trailing zeros!
+000D0Cr 3                                                ;
+000D0Cr 3               BLZEROSKIP:
+000D0Cr 3  B1 F0            lda (TEMP1), y
+000D0Er 3  D0 03            bne BLNSK1                  ; skip any LEADING zeros
+000D10r 3  C8               iny
+000D11r 3  80 F9            bra BLZEROSKIP
+000D13r 3               BLNSK1:
+000D13r 3  98               tya
+000D14r 3  A2 F0            ldx #TEMP1
+000D16r 3  20 rr rr         jsr addwx
+000D19r 3  A0 00            ldy #0
+000D1Br 3               BLNLOOP:
+000D1Br 3  B1 F0            lda (TEMP1), y
+000D1Dr 3  D0 0E            bne BLCOPY
+000D1Fr 3  C8               iny
+000D20r 3  B1 F0            lda (TEMP1), y
+000D22r 3  F0 05            beq BLSKIP0
+000D24r 3  88               dey
+000D25r 3  A9 00            lda #0
+000D27r 3  80 04            bra BLCOPY
+000D29r 3               BLSKIP0:
+000D29r 3  88               dey
+000D2Ar 3  88               dey
+000D2Br 3  80 05            bra BLEND
+000D2Dr 3               BLCOPY:
+000D2Dr 3  91 E6            sta (NEXTHEAP), y
+000D2Fr 3  C8               iny
+000D30r 3  D0 E9            bne BLNLOOP
+000D32r 3               BLEND:
+000D32r 3  C8               iny
+000D33r 3  98               tya                          ; and update NEXTHEAP  :  'here' incremented by length
+000D34r 3  A2 E6            ldx #NEXTHEAP
+000D36r 3  20 rr rr         jsr addwx
+000D39r 3  C8               iny
 000D3Ar 3  C8               iny
-000D3Br 3  D0 E9            bne BLNLOOP
-000D3Dr 3               BLEND:
-000D3Dr 3  C8               iny
-000D3Er 3  98               tya                          ; and update NEXTHEAP  :  'here' incremented by length
-000D3Fr 3  A2 E6            ldx #NEXTHEAP
-000D41r 3  20 rr rr         jsr addwx
-000D44r 3  C8               iny
-000D45r 3  C8               iny
-000D46r 3  98               tya
-000D47r 3  A2 F0            ldx #TEMP1
-000D49r 3  20 rr rr         jsr addwx
-000D4Cr 3               BLFINISH:
-000D4Cr 3  A5 FA            lda BACKHEAP
-000D4Er 3  85 E4            sta LASTHEAP                ; bring back BACKHEAP to LASTHEAP
-000D50r 3  A5 FB            lda BACKHEAP + 1
-000D52r 3  85 E5            sta LASTHEAP + 1
-000D54r 3  20 rr rr         jsr BLTESTEND
-000D57r 3  B0 03            bcs BLENDEND
-000D59r 3  4C rr rr         jmp BLAGAIN                  ; next word
-000D5Cr 3               ;    jsr spush_0                 ; push next/last address?
-000D5Cr 3               BLENDEND:
-000D5Cr 3  4C rr rr         jmp next
-000D5Fr 3               
-000D5Fr 3               BLTESTEND:
-000D5Fr 3  5A               phy
-000D60r 3  A0 00            ldy #0
-000D62r 3  B1 F0            lda (TEMP1), y
-000D64r 3  C9 45            cmp #'E'
-000D66r 3  D0 11            bne BLNOEND
-000D68r 3  C8               iny
-000D69r 3  B1 F0            lda (TEMP1), y
-000D6Br 3  C9 4E            cmp #'N'
-000D6Dr 3  D0 0A            bne BLNOEND
-000D6Fr 3  C8               iny
-000D70r 3  B1 F0            lda (TEMP1), y
-000D72r 3  C9 44            cmp #'D'
-000D74r 3  D0 03            bne BLNOEND
-000D76r 3  38               sec
-000D77r 3  B0 01            bcs BLTEND
-000D79r 3               BLNOEND:
-000D79r 3  18               clc
-000D7Ar 3               BLTEND:
-000D7Ar 3  7A               ply
-000D7Br 3  60               rts
-000D7Cr 3               ;
-000D7Cr 3               ;
-000D7Cr 3               ;
-000D7Cr 3               ; ( -- )   ANSI clear screen
-000D7Cr 3               .ifdef ANSIOK
-000D7Cr 3  rr rr 04 41  def_word "Acls", "Acls", 0
-000D80r 3  63 6C 73     
-000D83r 3  20 rr rr         jsr CLEAR_SCR
-000D86r 3  4C rr rr         jmp next
-000D89r 3               ;
-000D89r 3               ; (c r -- )      ANSI screen position ESC[<r>;<c>f
-000D89r 3  rr rr 04 41  def_word "Ascr", "Ascr", 0
-000D8Dr 3  73 63 72     
-000D90r 3  A9 1B 20 rr      PRINT_ANSI_ESC_SEQ
-000D94r 3  rr A9 5B 20  
-000D98r 3  rr rr        
-000D9Ar 3  20 rr rr         jsr spull_0
-000D9Dr 3  A6 F0            ldx TEMP1
-000D9Fr 3  20 rr rr         jsr DEC2ASCII
-000DA2r 3  A5 F5            lda TEMP3+1
-000DA4r 3  C9 30            cmp #ASCII_0
-000DA6r 3  F0 03            beq ASCRNXT1
-000DA8r 3  20 rr rr         PRINT_CHAR
-000DABr 3               ASCRNXT1:
-000DABr 3  A5 F4 20 rr      PRINT_CHAR TEMP3, #ASCII_SEMI
-000DAFr 3  rr A9 3A 20  
-000DB3r 3  rr rr        
-000DB5r 3  20 rr rr         jsr spull_0
-000DB8r 3  A6 F0            ldx TEMP1
-000DBAr 3  20 rr rr         jsr DEC2ASCII
-000DBDr 3  A5 F5            lda TEMP3+1
-000DBFr 3  C9 30            cmp #ASCII_0
-000DC1r 3  F0 03            beq ASCRNXT2
-000DC3r 3  20 rr rr         PRINT_CHAR
-000DC6r 3               ASCRNXT2:
-000DC6r 3  A5 F4 20 rr      PRINT_CHAR TEMP3, #ASCII_f
-000DCAr 3  rr A9 66 20  
-000DCEr 3  rr rr        
-000DD0r 3  4C rr rr         jmp next
-000DD3r 3               ;
-000DD3r 3               ; (c -- )      ANSI attributes ESC[<c>m
-000DD3r 3  rr rr 04 41  def_word "Acol", "Acol", 0
-000DD7r 3  63 6F 6C     
-000DDAr 3  A9 1B 20 rr      PRINT_ANSI_ESC_SEQ
-000DDEr 3  rr A9 5B 20  
-000DE2r 3  rr rr        
-000DE4r 3  20 rr rr         jsr spull_0
-000DE7r 3  A6 F0            ldx TEMP1
-000DE9r 3  20 rr rr         jsr DEC2ASCII
-000DECr 3  A5 F5            lda TEMP3+1
-000DEEr 3  C9 30            cmp #ASCII_0
-000DF0r 3  F0 03            beq ACOLNXT2
-000DF2r 3  20 rr rr         PRINT_CHAR
-000DF5r 3               ACOLNXT2:
-000DF5r 3  A5 F4 20 rr      PRINT_CHAR TEMP3, #ASCII_m
-000DF9r 3  rr A9 6D 20  
-000DFDr 3  rr rr        
-000DFFr 3  4C rr rr         jmp next
-000E02r 3               .endif   ; ANSIOK
-000E02r 3               
-000E02r 3               ;
-000E02r 3               ;--------------------------RANDOM #'s
-000E02r 3               ; ( s s -- )   random #
-000E02r 3  rr rr 05 72  def_word "rseed", "rseed", 0
-000E06r 3  73 65 65 64  
+000D3Br 3  98               tya
+000D3Cr 3  A2 F0            ldx #TEMP1
+000D3Er 3  20 rr rr         jsr addwx
+000D41r 3               BLFINISH:
+000D41r 3  A5 FA            lda BACKHEAP
+000D43r 3  85 E4            sta LASTHEAP                ; bring back BACKHEAP to LASTHEAP
+000D45r 3  A5 FB            lda BACKHEAP + 1
+000D47r 3  85 E5            sta LASTHEAP + 1
+000D49r 3  20 rr rr         jsr BLTESTEND
+000D4Cr 3  B0 03            bcs BLENDEND
+000D4Er 3  4C rr rr         jmp BLAGAIN                  ; next word
+000D51r 3               ;    jsr spush_0                 ; push next/last address?
+000D51r 3               BLENDEND:
+000D51r 3  4C rr rr         jmp next
+000D54r 3               
+000D54r 3               BLTESTEND:
+000D54r 3  5A               phy
+000D55r 3  A0 00            ldy #0
+000D57r 3  B1 F0            lda (TEMP1), y
+000D59r 3  C9 45            cmp #'E'
+000D5Br 3  D0 11            bne BLNOEND
+000D5Dr 3  C8               iny
+000D5Er 3  B1 F0            lda (TEMP1), y
+000D60r 3  C9 4E            cmp #'N'
+000D62r 3  D0 0A            bne BLNOEND
+000D64r 3  C8               iny
+000D65r 3  B1 F0            lda (TEMP1), y
+000D67r 3  C9 44            cmp #'D'
+000D69r 3  D0 03            bne BLNOEND
+000D6Br 3  38               sec
+000D6Cr 3  B0 01            bcs BLTEND
+000D6Er 3               BLNOEND:
+000D6Er 3  18               clc
+000D6Fr 3               BLTEND:
+000D6Fr 3  7A               ply
+000D70r 3  60               rts
+000D71r 3               ;
+000D71r 3               ;
+000D71r 3               ;
+000D71r 3               ; ( -- )   ANSI clear screen
+000D71r 3               .ifdef ANSIOK
+000D71r 3  rr rr 04 41  def_word "Acls", "Acls", 0
+000D75r 3  63 6C 73     
+000D78r 3  20 rr rr         jsr CLEAR_SCR
+000D7Br 3  4C rr rr         jmp next
+000D7Er 3               ;
+000D7Er 3               ; (c r -- )      ANSI screen position ESC[<r>;<c>f
+000D7Er 3  rr rr 04 41  def_word "Ascr", "Ascr", 0
+000D82r 3  73 63 72     
+000D85r 3  A9 1B 20 rr      PRINT_ANSI_ESC_SEQ
+000D89r 3  rr A9 5B 20  
+000D8Dr 3  rr rr        
+000D8Fr 3  20 rr rr         jsr spull_0
+000D92r 3  A6 F0            ldx TEMP1
+000D94r 3  20 rr rr         jsr DEC2ASCII
+000D97r 3  A5 F5            lda TEMP3+1
+000D99r 3  C9 30            cmp #ASCII_0
+000D9Br 3  F0 03            beq ASCRNXT1
+000D9Dr 3  20 rr rr         PRINT_CHAR
+000DA0r 3               ASCRNXT1:
+000DA0r 3  A5 F4 20 rr      PRINT_CHAR TEMP3, #ASCII_SEMI
+000DA4r 3  rr A9 3A 20  
+000DA8r 3  rr rr        
+000DAAr 3  20 rr rr         jsr spull_0
+000DADr 3  A6 F0            ldx TEMP1
+000DAFr 3  20 rr rr         jsr DEC2ASCII
+000DB2r 3  A5 F5            lda TEMP3+1
+000DB4r 3  C9 30            cmp #ASCII_0
+000DB6r 3  F0 03            beq ASCRNXT2
+000DB8r 3  20 rr rr         PRINT_CHAR
+000DBBr 3               ASCRNXT2:
+000DBBr 3  A5 F4 20 rr      PRINT_CHAR TEMP3, #ASCII_f
+000DBFr 3  rr A9 66 20  
+000DC3r 3  rr rr        
+000DC5r 3  4C rr rr         jmp next
+000DC8r 3               ;
+000DC8r 3               ; (c -- )      ANSI attributes ESC[<c>m
+000DC8r 3  rr rr 04 41  def_word "Acol", "Acol", 0
+000DCCr 3  63 6F 6C     
+000DCFr 3  A9 1B 20 rr      PRINT_ANSI_ESC_SEQ
+000DD3r 3  rr A9 5B 20  
+000DD7r 3  rr rr        
+000DD9r 3  20 rr rr         jsr spull_0
+000DDCr 3  A6 F0            ldx TEMP1
+000DDEr 3  20 rr rr         jsr DEC2ASCII
+000DE1r 3  A5 F5            lda TEMP3+1
+000DE3r 3  C9 30            cmp #ASCII_0
+000DE5r 3  F0 03            beq ACOLNXT2
+000DE7r 3  20 rr rr         PRINT_CHAR
+000DEAr 3               ACOLNXT2:
+000DEAr 3  A5 F4 20 rr      PRINT_CHAR TEMP3, #ASCII_m
+000DEEr 3  rr A9 6D 20  
+000DF2r 3  rr rr        
+000DF4r 3  4C rr rr         jmp next
+000DF7r 3               .endif   ; ANSIOK
+000DF7r 3               
+000DF7r 3               ;
+000DF7r 3               ;--------------------------RANDOM #'s
+000DF7r 3               ; ( s s -- )   random #
+000DF7r 3  rr rr 05 72  def_word "rseed", "rseed", 0
+000DFBr 3  73 65 65 64  
+000DFFr 3  20 rr rr         jsr spull_0
+000E02r 3  A5 F0            lda TEMP1
+000E04r 3  85 DB            sta RSEED
+000E06r 3  A5 F1            lda TEMP1+1
+000E08r 3  85 DC            sta RSEED+1
 000E0Ar 3  20 rr rr         jsr spull_0
 000E0Dr 3  A5 F0            lda TEMP1
-000E0Fr 3  85 DB            sta RSEED
+000E0Fr 3  85 DD            sta RSEED+2
 000E11r 3  A5 F1            lda TEMP1+1
-000E13r 3  85 DC            sta RSEED+1
-000E15r 3  20 rr rr         jsr spull_0
-000E18r 3  A5 F0            lda TEMP1
-000E1Ar 3  85 DD            sta RSEED+2
-000E1Cr 3  A5 F1            lda TEMP1+1
-000E1Er 3  85 DE            sta RSEED+3
-000E20r 3  4C rr rr         jmp next
-000E23r 3               ; ( -- r)          16 bit rand -> stack
-000E23r 3               ;
-000E23r 3  rr rr 04 72  def_word "rand", "rand", 0
-000E27r 3  61 6E 64     
-000E2Ar 3  20 rr rr         jsr galois32o
-000E2Dr 3  4C rr rr         jmp RAND32IN
-000E30r 3               ;
-000E30r 3               ; ( -- r r)          32 bit rand -> stack
-000E30r 3  rr rr 06 72  def_word "rand32", "rand32", 0
-000E34r 3  61 6E 64 33  
-000E38r 3  32           
-000E39r 3  20 rr rr         jsr galois32o
-000E3Cr 3  A5 DD            lda RSEED+2
+000E13r 3  85 DE            sta RSEED+3
+000E15r 3  4C rr rr         jmp next
+000E18r 3               ; ( -- r)          16 bit rand -> stack
+000E18r 3               ;
+000E18r 3  rr rr 04 72  def_word "rand", "rand", 0
+000E1Cr 3  61 6E 64     
+000E1Fr 3  20 rr rr         jsr galois32o
+000E22r 3  4C rr rr         jmp RAND32IN
+000E25r 3               ;
+000E25r 3               ; ( -- r r)          32 bit rand -> stack
+000E25r 3  rr rr 06 72  def_word "rand32", "rand32", 0
+000E29r 3  61 6E 64 33  
+000E2Dr 3  32           
+000E2Er 3  20 rr rr         jsr galois32o
+000E31r 3  A5 DD            lda RSEED+2
+000E33r 3  85 F0            sta TEMP1
+000E35r 3  A5 DE            lda RSEED+3
+000E37r 3  85 F1            sta TEMP1+1
+000E39r 3  20 rr rr         jsr spush_0
+000E3Cr 3               RAND32IN:
+000E3Cr 3  A5 DB            lda RSEED
 000E3Er 3  85 F0            sta TEMP1
-000E40r 3  A5 DE            lda RSEED+3
+000E40r 3  A5 DC            lda RSEED+1
 000E42r 3  85 F1            sta TEMP1+1
 000E44r 3  20 rr rr         jsr spush_0
-000E47r 3               RAND32IN:
-000E47r 3  A5 DB            lda RSEED
-000E49r 3  85 F0            sta TEMP1
-000E4Br 3  A5 DC            lda RSEED+1
-000E4Dr 3  85 F1            sta TEMP1+1
-000E4Fr 3  20 rr rr         jsr spush_0
-000E52r 3  4C rr rr         jmp next
-000E55r 3               ;
-000E55r 3               ; (u1 u2 -- ux um)  min
-000E55r 3               ; (u1 u2 -- um ux)  max
-000E55r 3  rr rr 03 6D  def_word "min", "min16", 0
-000E59r 3  69 6E        
-000E5Br 3  20 rr rr         jsr spull_1
-000E5Er 3  20 rr rr         jsr spull_0
-000E61r 3               MININ16:
-000E61r 3  A5 F1            lda TEMP1+1
-000E63r 3  C5 F3            cmp TEMP2+1
-000E65r 3  90 09            bcc MINSWAP
-000E67r 3  A5 F0            lda TEMP1
-000E69r 3  C5 F2            cmp TEMP2
-000E6Br 3  90 03            bcc MINSWAP
-000E6Dr 3  4C rr rr         jmp MINDONE
-000E70r 3               MINSWAP:
-000E70r 3  20 rr rr         jsr spush_1
-000E73r 3  20 rr rr         jsr spush_0
-000E76r 3  4C rr rr         jmp next
-000E79r 3               MINDONE:
-000E79r 3  20 rr rr         jsr spush_0
-000E7Cr 3  20 rr rr         jsr spush_1
-000E7Fr 3  4C rr rr         jmp next
-000E82r 3               
-000E82r 3  rr rr 03 6D  def_word "max", "max16", 0
-000E86r 3  61 78        
-000E88r 3  20 rr rr         jsr spull_1
-000E8Br 3  20 rr rr         jsr spull_0
-000E8Er 3  A5 F1            lda TEMP1+1
-000E90r 3  C5 F3            cmp TEMP2+1
-000E92r 3  90 E5            bcc MINDONE
-000E94r 3  A5 F0            lda TEMP1
-000E96r 3  C5 F2            cmp TEMP2
-000E98r 3  90 DF            bcc MINDONE
-000E9Ar 3  4C rr rr         jmp MINSWAP
-000E9Dr 3               
-000E9Dr 3               ;
-000E9Dr 3               ; (ux um -- rh rl)      16x16 multiply, result in reverse order
-000E9Dr 3               ; faster if TEMP2 (um) is smaller of two.  Need a MIN/MAX swap routine!
-000E9Dr 3               ;
-000E9Dr 3  rr rr 01 2A  def_word "*", "mult16", 0
-000EA1r 3  20 rr rr         jsr spull_1
-000EA4r 3  20 rr rr         jsr spull_0
-000EA7r 3  A5 F0            lda TEMP1            ; handle zeros  3/22 1320
-000EA9r 3  05 F1            ora TEMP1+1
-000EABr 3  F0 0B            beq m16zero          ; if either is 0-0, can skip to end
-000EADr 3  A5 F2            lda TEMP2
-000EAFr 3  05 F3            ora TEMP2+1
-000EB1r 3  F0 05            beq m16zero          ; TEMP2 is zero?  same deal.
-000EB3r 3  20 rr rr         jsr MULT16
-000EB6r 3  80 08            bra m16push
-000EB8r 3               m16zero:
-000EB8r 3  64 F0            stz TEMP1
-000EBAr 3  64 F1            stz TEMP1+1
-000EBCr 3  64 F4            stz TEMP3
-000EBEr 3  64 F5            stz TEMP3+1
-000EC0r 3               m16push:
-000EC0r 3  20 rr rr         jsr spush_2           ; MSbyte
-000EC3r 3  20 rr rr         jsr spush_0           ; push LSbyte in TEMP1 on top
-000EC6r 3  4C rr rr         jmp next
-000EC9r 3               
-000EC9r 3               ;
-000EC9r 3               ; (ux um -- r m)      16x16 divide, result + MOD
-000EC9r 3               ;
-000EC9r 3  rr rr 01 2F  def_word "/", "div16", 0
-000ECDr 3  20 rr rr         jsr spull_1
-000ED0r 3  20 rr rr         jsr spull_0
-000ED3r 3  A5 F0            lda TEMP1            ; handle zeros  3/22 1320
-000ED5r 3  05 F1            ora TEMP1+1
-000ED7r 3  F0 1B            beq d16zero         ; shortcut!
-000ED9r 3  A5 F2            lda TEMP2
-000EDBr 3  D0 07            bne d16skip0
-000EDDr 3  05 F3            ora TEMP2+1
-000EDFr 3  D0 0D            bne d16skip1
-000EE1r 3  4C rr rr         jmp div0err                     ; divide by zero error
-000EE4r 3               d16skip0:
-000EE4r 3  C9 01            cmp #1
-000EE6r 3  D0 06            bne d16skip1
-000EE8r 3  A5 F3            lda TEMP2+1
-000EEAr 3  D0 02            bne d16skip1
-000EECr 3  80 0A            bra d16rzero                   ; dividing by 1, just return TEMP1
-000EEEr 3               d16skip1:
-000EEEr 3  20 rr rr         jsr DIV16                      ; results TEMP2, remainder TEMP3
-000EF1r 3  4C rr rr         jmp d16done
-000EF4r 3               d16zero:
-000EF4r 3  64 F0            stz TEMP1
-000EF6r 3  64 F1            stz TEMP1+1
-000EF8r 3               d16rzero:
-000EF8r 3  64 F4            stz TEMP3
-000EFAr 3  64 F5            stz TEMP3+1
-000EFCr 3               d16done:
-000EFCr 3  20 rr rr         jsr spush_2        ; remainder first
-000EFFr 3  20 rr rr         jsr spush_0        ; result on top
-000F02r 3  4C rr rr         jmp next
-000F05r 3               ;
-000F05r 3               ;                      divide by zero error
-000F05r 3               div0err:                      ; pop jsr off stack, throw error
-000F05r 3  A9 03            lda #ERR_DIV0
-000F07r 3  85 D7            sta ERRFLAG
-000F09r 3  4C rr rr         jmp errrtn
-000F0Cr 3               ;
-000F0Cr 3               ; ( hex -- d1 d2 d3 d4 d5 )
-000F0Cr 3  rr rr 04 78  def_word "xdrv", "xdrv", 0
-000F10r 3  64 72 76     
-000F13r 3  20 rr rr         jsr spull_0
-000F16r 3  A5 F0            lda TEMP1
-000F18r 3  A4 F1            ldy TEMP1+1
-000F1Ar 3  20 rr rr         jsr HEX2DEC
-000F1Dr 3  4C rr rr         jmp next
-000F20r 3               ;
-000F20r 3               ;------------------------------MEMORY OPERATIONS----------------------------
-000F20r 3               ;
-000F20r 3               ; (as ae ad -- )    copy from $as thru $ae to $ad
-000F20r 3  rr rr 06 6D  def_word "memcpy", "memcpy", 0
-000F24r 3  65 6D 63 70  
-000F28r 3  79           
-000F29r 3  20 rr rr         jsr spull_2              ; dest addr
-000F2Cr 3  20 rr rr         jsr spull_1              ; end
-000F2Fr 3  20 rr rr         jsr spull_0              ; start
-000F32r 3  A5 F1            lda TEMP1+1
-000F34r 3  C5 F3            cmp TEMP2+1
-000F36r 3  90 08            bcc MEMCPYDOIT
-000F38r 3  D0 0F            bne MEMCPYEND
-000F3Ar 3  A5 F0            lda TEMP1
-000F3Cr 3  C5 F2            cmp TEMP2
-000F3Er 3  B0 09            bcs MEMCPYEND
-000F40r 3               MEMCPYDOIT:
-000F40r 3  A9 01            lda #1
-000F42r 3  85 FC            sta supprint
-000F44r 3  20 rr rr         jsr MEMCPY
-000F47r 3  64 FC            stz supprint
-000F49r 3               MEMCPYEND:
-000F49r 3  4C rr rr         jmp next
-000F4Cr 3               ;
-000F4Cr 3               ;                   free memory between BACKHEAP and MEMPTR
-000F4Cr 3  rr rr 04 66  def_word "free", "free", 0
-000F50r 3  72 65 65     
-000F53r 3  A5 D0            lda MEMLAST
-000F55r 3  38               sec
-000F56r 3  E5 E6            sbc NEXTHEAP
-000F58r 3  85 F0            sta TEMP1
-000F5Ar 3  A5 D1            lda MEMLAST+1
-000F5Cr 3  E5 E7            sbc NEXTHEAP+1
-000F5Er 3  85 F1            sta TEMP1+1
-000F60r 3  20 rr rr         jsr spush_0
-000F63r 3  4C rr rr         jmp next
-000F66r 3               ;
-000F66r 3               ; (daddr n -- ) start disassembly from daddr, do it
-000F66r 3               ; $F600 is entry point --A+Y for starting address, C=1 for multiple opcodes, X for # of codes
-000F66r 3  rr rr 06 64  def_word "disasm", "disasm", 0
-000F6Ar 3  69 73 61 73  
-000F6Er 3  6D           
-000F6Fr 3  20 rr rr         jsr spull_1    ; # of instructions (??)
-000F72r 3  20 rr rr         jsr spull_0    ; addr
-000F75r 3  A6 F2            ldx TEMP2
-000F77r 3  E0 FE            cpx #$FE
-000F79r 3  B0 17            bcs DISEND
-000F7Br 3  A9 01            lda #1           ; and ZP_D_STATE has to be =1 in order to show mnemonics etc
-000F7Dr 3  85 rr            sta ZP_D_STATE
-000F7Fr 3  A5 F0            lda TEMP1
-000F81r 3  A4 F1            ldy TEMP1+1
-000F83r 3  38               sec              ; set the carry to make sure multiple ops returned
-000F84r 3  20 rr rr         jsr DISASM_AY
-000F87r 3  A5 rr            lda ZP_D_XAM
-000F89r 3  85 F0            sta TEMP1
-000F8Br 3  A4 rr            ldy ZP_D_XAM+1
-000F8Dr 3  84 F1            sty TEMP1+1
-000F8Fr 3  20 rr rr         jsr spush_0     ; push last address on stack?
-000F92r 3               DISEND:
-000F92r 3  4C rr rr         jmp next
-000F95r 3               
-000F95r 3               ; (jsaddr 0a 0y-- 0x) jump to external code with parms passed via A,Y, result in X
-000F95r 3  rr rr 07 73  def_word "syscall", "syscall", 0
-000F99r 3  79 73 63 61  
-000F9Dr 3  6C 6C        
-000F9Fr 3  20 rr rr         jsr spull_2    ; parm to pass to y
-000FA2r 3  20 rr rr         jsr spull_1    ; parm to pass to a
-000FA5r 3  20 rr rr         jsr spull_0    ; addr
-000FA8r 3  A5 F0            lda TEMP1
-000FAAr 3  8D rr rr         sta SYSCALL+1
-000FADr 3  A5 F1            lda TEMP1+1
-000FAFr 3  8D rr rr         sta SYSCALL+2
-000FB2r 3  A4 F4            ldy TEMP3
-000FB4r 3  A5 F2            lda TEMP2
-000FB6r 3  20 rr rr         jsr SYSCALL
-000FB9r 3  4C rr rr         jmp next
-000FBCr 3               ;
-000FBCr 3               ;  below must be in RAM to work
-000FBCr 3               ;
-000FBCr 3               SYSCALL:
-000FBCr 3  20 rr rr         jsr SCDUMMY        ; store into SYSCALL+1, +2 to customize jump
-000FBFr 3  8A               txa                ; returned stuff in X
-000FC0r 3  F0 08            beq SCSKIP         ; if returns zero, don't do anything else
-000FC2r 3  85 F0            sta TEMP1          ; otherwise...
-000FC4r 3  64 F1            stz TEMP1+1
-000FC6r 3  20 rr rr         jsr spush_0        ; push result onto stack
-000FC9r 3  60               rts
-000FCAr 3               SCSKIP:
-000FCAr 3  68               pla
-000FCBr 3  68               pla
-000FCCr 3  4C rr rr         jmp errrtn
-000FCFr 3               SCDUMMY:
-000FCFr 3  A2 00            ldx #0
-000FD1r 3  60               rts
-000FD2r 3               ;
-000FD2r 3               ;
-000FD2r 3               ; ( paddr -- )
-000FD2r 3  rr rr 06 6D  def_word "mktemp", "mktemp", 0
-000FD6r 3  6B 74 65 6D  
-000FDAr 3  70           
-000FDBr 3  20 rr rr         jsr spull_1       ; get mptr in TEMP2
-000FDEr 3  20 rr rr         jsr MEMLEN        ; len in TEMP1, maddr in TEMP3
-000FE1r 3  A0 00            ldy #0
-000FE3r 3  B1 F4            lda (TEMP3),y
-000FE5r 3  09 80            ora #$80          ; set high bit on type byte
-000FE7r 3  91 F4            sta (TEMP3),y
-000FE9r 3  4C rr rr         jmp next
-000FECr 3               ;
-000FECr 3               ;   ( -- )  --- 'deallocate' last memory item in stack if marked 'temp'
-000FECr 3               ;
-000FECr 3  rr rr 06 70  def_word "purge0", "purge0", 0
-000FF0r 3  75 72 67 65  
-000FF4r 3  30           
-000FF5r 3  A5 CE            lda MEMPTR
-000FF7r 3  85 F2            sta TEMP2
-000FF9r 3  A5 CF            lda MEMPTR+1
-000FFBr 3  85 F3            sta TEMP2+1
-000FFDr 3  C9 rr            cmp #>(MEMSTK+MEMEND)
-000FFFr 3  90 08            bcc PURGECONT
-001001r 3  D0 2A            bne PURGEEND
-001003r 3  A5 F2            lda TEMP2
-001005r 3  C9 rr            cmp #<(MEMSTK+MEMEND)
-001007r 3  B0 24            bcs PURGEEND
-001009r 3               PURGECONT:
-001009r 3  A5 F2            lda TEMP2
-00100Br 3  18               clc
-00100Cr 3  69 02            adc #2
-00100Er 3  90 02            bcc  PURGESK00
-001010r 3  E6 F3            inc TEMP2+1
-001012r 3               PURGESK00:
-001012r 3  20 rr rr         jsr MEMLEN        ; len in TEMP1, maddr in TEMP3
-001015r 3  A0 00            ldy #0
-001017r 3  B1 F4            lda (TEMP3),y
-001019r 3  29 80            and #$80          ; mask off all but temp bit
-00101Br 3  F0 10            beq  PURGEEND
-00101Dr 3  A5 F2            lda TEMP2         ; change pointers if temp
-00101Fr 3  85 CE            sta MEMPTR
-001021r 3  A5 F3            lda TEMP2+1
-001023r 3  85 CF            sta MEMPTR+1
-001025r 3  A5 F4            lda TEMP3
-001027r 3               ;    clc
-001027r 3               ;    adc #3
-001027r 3               ;    bcc  PURGESK01
-001027r 3               ;    inc TEMP3+1
-001027r 3               ;PURGESK01:
-001027r 3               ;    clc
-001027r 3               ;    adc TEMP1
-001027r 3  85 D0            sta MEMLAST
-001029r 3  A5 F5            lda TEMP3+1
-00102Br 3               ;    adc TEMP1+1
-00102Br 3  85 D1            sta MEMLAST+1
-00102Dr 3               PURGEEND:
-00102Dr 3  4C rr rr         jmp next
-001030r 3               ;
-001030r 3               ;
-001030r 3               ; ( bytes type -- staddr )
-001030r 3  rr rr 06 6D  def_word "malloc", "malloc", 0
-001034r 3  61 6C 6C 6F  
-001038r 3  63           
-001039r 3  20 rr rr         jsr spull_1       ; type ( word ($00), char ($01), words ($02), bytes ($03), sz ($04) ..)
-00103Cr 3  20 rr rr         jsr spull_0       ; # bytes
-00103Fr 3  20 rr rr         jsr MALLOC        ; will return address in TEMP1
-001042r 3  20 rr rr         jsr spush_0       ; push ptr address to new record on stack
-001045r 3  4C rr rr         jmp next
-001048r 3               
-001048r 3               ;
-001048r 3               ; ( maddr -- len )
-001048r 3  rr rr 04 6D  def_word "mlen", "mlen", 0
-00104Cr 3  6C 65 6E     
-00104Fr 3  20 rr rr         jsr spull_1
-001052r 3  20 rr rr         jsr MEMLEN   ; returns length in TEMP1, maddr in TEMP3
-001055r 3  20 rr rr         jsr spush_0
-001058r 3  4C rr rr         jmp next
-00105Br 3               ;
-00105Br 3               ;
-00105Br 3               .ifdef YSOUND
-00105Br 3               ;
-00105Br 3               ;                        word definitions for Yamaha 2151 sound chip
-00105Br 3               ;
-00105Br 3  rr rr 07 73  def_word "sndinit", "sndinit", 0
-00105Fr 3  6E 64 69 6E  
-001063r 3  69 74        
-001065r 3  20 rr rr         jsr SOUND_INIT
-001068r 3  4C rr rr         jmp next
-00106Br 3               
-00106Br 3  rr rr 07 73  def_word "sndtest", "sndtest", 0
-00106Fr 3  6E 64 74 65  
-001073r 3  73 74        
-001075r 3  20 rr rr         jsr SOUND_TEST
-001078r 3  4C rr rr         jmp next
-00107Br 3               
-00107Br 3               ; ( xxaa -- )    send byte(a) to register(x) on yamaha 2151
-00107Br 3  rr rr 06 79  def_word "ywrite", "ywrite", 0
-00107Fr 3  77 72 69 74  
-001083r 3  65           
-001084r 3  20 rr rr         jsr spull_0
-001087r 3  A6 F1            ldx TEMP1+1
-001089r 3  A5 F0            lda TEMP1
-00108Br 3  20 rr rr         jsr YM_WRITE
-00108Er 3  90 03            bcc YMGOOD
-001090r 3  4C rr rr         jmp PUSHFALSE
-001093r 3               YMGOOD:
-001093r 3  4C rr rr         jmp PUSHTRUE
-001096r 3               .endif
-001096r 3               ;
-001096r 3               ;
-001096r 3               ;----------------------------------------------------------------------------
-001096r 3               HYWORDS_END:
-001096r 3               ;  end hywords.s
-001096r 3               ;----------------------------------------------------------------------------
-001096r 3               
-001096r 2               .endif
-001096r 2               ;---------------------------------------------------------------------
-001096r 2               ; Thread Code Engine
-001096r 2               ;
-001096r 2               ;   INSTPTR is IP, WORKREG is W
-001096r 2               ;
-001096r 2               ;     unnest, next, pick, nest, and jump
-001096r 2               ;
-001096r 2               ;   nest aka ENTER or DOCOL  (do colon?)
-001096r 2               ;   unnest aka EXIT or semis?
-001096r 2               ;
-001096r 2               ;---------------------------------------------------------------------
-001096r 2               ; ( -- )
-001096r 2  rr rr 04 65  def_word "exit", "exit", 0
-00109Ar 2  78 69 74     
-00109Dr 2  4C rr rr         jmp EXIT
-0010A0r 2               
-0010A0r 2               ; mark end of ROM IMAGE
-0010A0r 2               ;
-0010A0r 2               ;.byte "\CODEEND/"
-0010A0r 2               ;.byte 0
-0010A0r 2               ;-----------------------------------------------------------------------
-0010A0r 2               ; BEWARE, MUST BE AT END! MINIMAL THREAD CODE DEPENDS ON IT!
-0010A0r 2               ;
-0010A0r 2               ends:                            ; end marker of hardcoded primitives
-0010A0r 2               ;
-0010A0r 2               ;-----------------------------------------------------------------------
-0010A0r 2               ;
-0010A0r 2               ;
-0010A0r 2               
-0010A0r 2               ;-----------------------------------------------------------------------
-0010A0r 2               ;                            TRAINING DATA
-0010A0r 2               ;
-0010A0r 2               ; include training data
-0010A0r 2               
-0010A0r 2  2A 2A 2A 48  .byte "***HEAPEND***"
-0010A4r 2  45 41 50 45  
-0010A8r 2  4E 44 2A 2A  
-0010ADr 2               ;.org $C000
-0010ADr 2  46 54 52 41      .byte "FTRAIN"
-0010B1r 2  49 4E        
-0010B3r 2  00 00            .byte 0,0
-0010B5r 2               .include "ftrain.s"
-0010B5r 3               ;
-0010B5r 3               ;  training data
-0010B5r 3               ;
-0010B5r 3               ftrain_0:
-0010B5r 3  3A 20 32 2A  .byte ": 2* dup + ;"
-0010B9r 3  20 64 75 70  
-0010BDr 3  20 2B 20 3B  
-0010C1r 3  00           .byte 0
-0010C2r 3  3A 20 3F 62  .byte ": ?branch bool not rp @ @ @ 2 - and rp @ @ + 2 + rp @ ! ;  : branch rp @ @ dup @ + rp @ ! ;"
-0010C6r 3  72 61 6E 63  
-0010CAr 3  68 20 62 6F  
-00111Dr 3  00           .byte 0
-00111Er 3  3A 20 69 66  .byte ": if lit ?branch , here @ 0 , ; I"
-001122r 3  20 6C 69 74  
-001126r 3  20 3F 62 72  
-00113Fr 3  00           .byte 0
-001140r 3  3A 20 74 68  .byte ": then dup here @ swap - swap ! ; I"
-001144r 3  65 6E 20 64  
-001148r 3  75 70 20 68  
-001163r 3  00           .byte 0
-001164r 3  3A 20 65 6C  .byte ": else lit branch , here @ 0 , swap dup here @ swap - swap ! ; I"
-001168r 3  73 65 20 6C  
-00116Cr 3  69 74 20 62  
-0011A4r 3  00           .byte 0
-0011A5r 3  3A 20 62 65  .byte ": begin here @ ; I"
-0011A9r 3  67 69 6E 20  
-0011ADr 3  68 65 72 65  
-0011B7r 3  00           .byte 0
-0011B8r 3  3A 20 61 67  .byte ": again lit branch , here @ - , ; I"
-0011BCr 3  61 69 6E 20  
-0011C0r 3  6C 69 74 20  
-0011DBr 3  00           .byte 0
-0011DCr 3  3A 20 75 6E  .byte ": until lit ?branch , here @ - , ; I"
-0011E0r 3  74 69 6C 20  
-0011E4r 3  6C 69 74 20  
-001200r 3  00           .byte 0
-001201r 3  3A 20 77 68  .byte ": while lit ?branch , here @ 0 , ; I"
-001205r 3  69 6C 65 20  
-001209r 3  6C 69 74 20  
-001225r 3  00           .byte 0
-001226r 3  3A 20 72 65  .byte ": repeat swap lit branch , here @ - , dup here @ swap - swap ! ; I"
-00122Ar 3  70 65 61 74  
-00122Er 3  20 73 77 61  
-001268r 3  00           .byte 0
-001269r 3  3A 20 64 6F  .byte ": do here @ lit >r , lit >r , ; I"
-00126Dr 3  20 68 65 72  
-001271r 3  65 20 40 20  
-00128Ar 3  00           .byte 0
-00128Br 3  3A 20 6C 6F  .byte ": loop lit r> , lit r> , lit lit , 1 , lit + , lit 2dup , lit = , lit ?branch , here @ - , lit 2drop , ; I"
-00128Fr 3  6F 70 20 6C  
-001293r 3  69 74 20 72  
-0012F5r 3  00           .byte 0
-0012F6r 3  3A 20 69 20  .byte ": i rp @ 4 + @ ;  : j rp @ 8 + @ ;  : k rp @ lit [ 12 , ] + @ ;"
-0012FAr 3  72 70 20 40  
-0012FEr 3  20 34 20 2B  
-001335r 3  00           .byte 0
-001336r 3  3A 20 6D 64  .byte ": mdump memptr 2 + @ 1 dump ;"
-00133Ar 3  75 6D 70 20  
-00133Er 3  6D 65 6D 70  
-001353r 3  00           .byte 0
-001354r 3  3A 20 64 65  .byte ": decsz! xdrv 6 4 malloc decs! ;"
-001358r 3  63 73 7A 21  
-00135Cr 3  20 78 64 72  
-001374r 3  00           .byte 0
-001375r 3  3A 20 7C 20  .byte ": | lit [ 256 , ] / ;"
-001379r 3  6C 69 74 20  
-00137Dr 3  5B 20 32 35  
-00138Ar 3  00 00        .byte 0, 0                               ; to mark end?
-00138Cr 3               ftrain_end0:
-00138Cr 3               
-00138Cr 2               ;
-00138Cr 2               ;                            BINARY LOAD
-00138Cr 2               ;
-00138Cr 2  xx xx xx xx      .res 16
-001390r 2  xx xx xx xx  
-001394r 2  xx xx xx xx  
-00139Cr 2  42 4C 4F 41      .byte "BLOAD"
-0013A0r 2  44           
-0013A1r 2  00 00            .byte 0,0
-0013A3r 2               .include "bload.s"
-0013A3r 3               ;
-0013A3r 3               ;  BLOAD test code
-0013A3r 3               ;
-0013A3r 3               ;  ALL binary libraries loadable with 'bload' MUST be Forth words,
-0013A3r 3               ;   (not jsr subroutines), fully relocatable.  That means NO jumps
-0013A3r 3               ;   or branches to labels!  Calculate all jumps and branches accordingly
-0013A3r 3               ;   and use numercal offsets.  jsr's and jmp's to core primitive labels
-0013A3r 3               ;   (next, keeps, this, etc) or ROM locations will work fine.
-0013A3r 3               ;
-0013A3r 3               ;  Format below must be rigidly followed, with length of name followed
-0013A3r 3               ;   by that many bytes for the name.  'bit #0' ($89 $00) must be
-0013A3r 3               ;   the first instruction in any native code word loaded past
-0013A3r 3               ;   'exit'.  Termination must be $00 $00 for each word, with "END"
-0013A3r 3               ;   to designate the end of a 'library'.
-0013A3r 3               ;
-0013A3r 3               test00:
-0013A3r 3  06           .byte 6
-0013A4r 3  42 4C 74 65  .byte "BLtest"
-0013A8r 3  73 74        
-0013AAr 3  22                SKIPNEXT
-0013ABr 3  00                .byte 0
-0013ACr 3  20 rr rr          PRINT_CRLF
-0013AFr 3  A9 54 20 rr       PRINT_CHAR #'T', #'E', #'S', #'T'
-0013B3r 3  rr A9 45 20  
-0013B7r 3  rr rr A9 53  
-0013C3r 3  20 rr rr          PRINT_CRLF
-0013C6r 3  4C rr rr          jmp next
-0013C9r 3  00 00        .byte 0, 0
-0013CBr 3  07           .byte 7
-0013CCr 3  42 4C 74 65  .byte "BLtest2"
-0013D0r 3  73 74 32     
-0013D3r 3  22                SKIPNEXT
-0013D4r 3  00                .byte 0
-0013D5r 3  20 rr rr          PRINT_CRLF
-0013D8r 3  A9 54 20 rr       PRINT_CHAR #'T', #'E', #'S', #'T', #'Y'
-0013DCr 3  rr A9 45 20  
-0013E0r 3  rr rr A9 53  
-0013F1r 3  20 rr rr          PRINT_CRLF
-0013F4r 3  4C rr rr          jmp next
-0013F7r 3  00 00        .byte 0, 0
-0013F9r 3  45 4E 44     .byte "END"
-0013FCr 3               bload0_end:
-0013FCr 3               
-0013FCr 2               ;
-0013FCr 2               ;  end of hyforth.s
-0013FCr 2               ;
-0013FCr 2               
-0013FCr 1               .include "wozmon.s"
-0013FCr 2               ;
-0013FCr 2               ;   Taken mostly from Steve Wozniak's Apple 1 Monitor for the 6502, or WOZMON
-0013FCr 2               ;
-0013FCr 2               .debuginfo
-0013FCr 2               .segment "BUFFERS"
+000E47r 3  4C rr rr         jmp next
+000E4Ar 3               ;
+000E4Ar 3               ; (u1 u2 -- ux um)  min
+000E4Ar 3               ; (u1 u2 -- um ux)  max
+000E4Ar 3  rr rr 03 6D  def_word "min", "min16", 0
+000E4Er 3  69 6E        
+000E50r 3  20 rr rr         jsr spull_1
+000E53r 3  20 rr rr         jsr spull_0
+000E56r 3               MININ16:
+000E56r 3  A5 F1            lda TEMP1+1
+000E58r 3  C5 F3            cmp TEMP2+1
+000E5Ar 3  90 09            bcc MINSWAP
+000E5Cr 3  A5 F0            lda TEMP1
+000E5Er 3  C5 F2            cmp TEMP2
+000E60r 3  90 03            bcc MINSWAP
+000E62r 3  4C rr rr         jmp MINDONE
+000E65r 3               MINSWAP:
+000E65r 3  20 rr rr         jsr spush_1
+000E68r 3  20 rr rr         jsr spush_0
+000E6Br 3  4C rr rr         jmp next
+000E6Er 3               MINDONE:
+000E6Er 3  20 rr rr         jsr spush_0
+000E71r 3  20 rr rr         jsr spush_1
+000E74r 3  4C rr rr         jmp next
+000E77r 3               
+000E77r 3  rr rr 03 6D  def_word "max", "max16", 0
+000E7Br 3  61 78        
+000E7Dr 3  20 rr rr         jsr spull_1
+000E80r 3  20 rr rr         jsr spull_0
+000E83r 3  A5 F1            lda TEMP1+1
+000E85r 3  C5 F3            cmp TEMP2+1
+000E87r 3  90 E5            bcc MINDONE
+000E89r 3  A5 F0            lda TEMP1
+000E8Br 3  C5 F2            cmp TEMP2
+000E8Dr 3  90 DF            bcc MINDONE
+000E8Fr 3  4C rr rr         jmp MINSWAP
+000E92r 3               
+000E92r 3               ;
+000E92r 3               ; (ux um -- rh rl)      16x16 multiply, result in reverse order
+000E92r 3               ; faster if TEMP2 (um) is smaller of two.  Need a MIN/MAX swap routine!
+000E92r 3               ;
+000E92r 3  rr rr 01 2A  def_word "*", "mult16", 0
+000E96r 3  20 rr rr         jsr spull_1
+000E99r 3  20 rr rr         jsr spull_0
+000E9Cr 3  A5 F0            lda TEMP1            ; handle zeros  3/22 1320
+000E9Er 3  05 F1            ora TEMP1+1
+000EA0r 3  F0 0B            beq m16zero          ; if either is 0-0, can skip to end
+000EA2r 3  A5 F2            lda TEMP2
+000EA4r 3  05 F3            ora TEMP2+1
+000EA6r 3  F0 05            beq m16zero          ; TEMP2 is zero?  same deal.
+000EA8r 3  20 rr rr         jsr MULT16
+000EABr 3  80 08            bra m16push
+000EADr 3               m16zero:
+000EADr 3  64 F0            stz TEMP1
+000EAFr 3  64 F1            stz TEMP1+1
+000EB1r 3  64 F4            stz TEMP3
+000EB3r 3  64 F5            stz TEMP3+1
+000EB5r 3               m16push:
+000EB5r 3  20 rr rr         jsr spush_2           ; MSbyte
+000EB8r 3  20 rr rr         jsr spush_0           ; push LSbyte in TEMP1 on top
+000EBBr 3  4C rr rr         jmp next
+000EBEr 3               
+000EBEr 3               ;
+000EBEr 3               ; (ux um -- r m)      16x16 divide, result + MOD
+000EBEr 3               ;
+000EBEr 3  rr rr 01 2F  def_word "/", "div16", 0
+000EC2r 3  20 rr rr         jsr spull_1
+000EC5r 3  20 rr rr         jsr spull_0
+000EC8r 3  A5 F0            lda TEMP1            ; handle zeros  3/22 1320
+000ECAr 3  05 F1            ora TEMP1+1
+000ECCr 3  F0 1B            beq d16zero         ; shortcut!
+000ECEr 3  A5 F2            lda TEMP2
+000ED0r 3  D0 07            bne d16skip0
+000ED2r 3  05 F3            ora TEMP2+1
+000ED4r 3  D0 0D            bne d16skip1
+000ED6r 3  4C rr rr         jmp div0err                     ; divide by zero error
+000ED9r 3               d16skip0:
+000ED9r 3  C9 01            cmp #1
+000EDBr 3  D0 06            bne d16skip1
+000EDDr 3  A5 F3            lda TEMP2+1
+000EDFr 3  D0 02            bne d16skip1
+000EE1r 3  80 0A            bra d16rzero                   ; dividing by 1, just return TEMP1
+000EE3r 3               d16skip1:
+000EE3r 3  20 rr rr         jsr DIV16                      ; results TEMP2, remainder TEMP3
+000EE6r 3  4C rr rr         jmp d16done
+000EE9r 3               d16zero:
+000EE9r 3  64 F0            stz TEMP1
+000EEBr 3  64 F1            stz TEMP1+1
+000EEDr 3               d16rzero:
+000EEDr 3  64 F4            stz TEMP3
+000EEFr 3  64 F5            stz TEMP3+1
+000EF1r 3               d16done:
+000EF1r 3  20 rr rr         jsr spush_2        ; remainder first
+000EF4r 3  20 rr rr         jsr spush_0        ; result on top
+000EF7r 3  4C rr rr         jmp next
+000EFAr 3               ;
+000EFAr 3               ;                      divide by zero error
+000EFAr 3               div0err:                      ; pop jsr off stack, throw error
+000EFAr 3  A9 03            lda #ERR_DIV0
+000EFCr 3  85 D7            sta ERRFLAG
+000EFEr 3  4C rr rr         jmp errrtn
+000F01r 3               ;
+000F01r 3               ; ( hex -- d1 d2 d3 d4 d5 )
+000F01r 3  rr rr 04 78  def_word "xdrv", "xdrv", 0
+000F05r 3  64 72 76     
+000F08r 3  20 rr rr         jsr spull_0
+000F0Br 3  A5 F0            lda TEMP1
+000F0Dr 3  A4 F1            ldy TEMP1+1
+000F0Fr 3  20 rr rr         jsr HEX2DEC
+000F12r 3  4C rr rr         jmp next
+000F15r 3               ;
+000F15r 3               ;------------------------------MEMORY OPERATIONS----------------------------
+000F15r 3               ;
+000F15r 3               ; (as ae ad -- )    copy from $as thru $ae to $ad
+000F15r 3  rr rr 06 6D  def_word "memcpy", "memcpy", 0
+000F19r 3  65 6D 63 70  
+000F1Dr 3  79           
+000F1Er 3  20 rr rr         jsr spull_2              ; dest addr
+000F21r 3  20 rr rr         jsr spull_1              ; end
+000F24r 3  20 rr rr         jsr spull_0              ; start
+000F27r 3  A5 F1            lda TEMP1+1
+000F29r 3  C5 F3            cmp TEMP2+1
+000F2Br 3  90 08            bcc MEMCPYDOIT
+000F2Dr 3  D0 0F            bne MEMCPYEND
+000F2Fr 3  A5 F0            lda TEMP1
+000F31r 3  C5 F2            cmp TEMP2
+000F33r 3  B0 09            bcs MEMCPYEND
+000F35r 3               MEMCPYDOIT:
+000F35r 3  A9 01            lda #1
+000F37r 3  85 FC            sta supprint
+000F39r 3  20 rr rr         jsr MEMCPY
+000F3Cr 3  64 FC            stz supprint
+000F3Er 3               MEMCPYEND:
+000F3Er 3  4C rr rr         jmp next
+000F41r 3               ;
+000F41r 3               ;                   free memory between BACKHEAP and MEMPTR
+000F41r 3  rr rr 04 66  def_word "free", "free", 0
+000F45r 3  72 65 65     
+000F48r 3  A5 D0            lda MEMLAST
+000F4Ar 3  38               sec
+000F4Br 3  E5 E6            sbc NEXTHEAP
+000F4Dr 3  85 F0            sta TEMP1
+000F4Fr 3  A5 D1            lda MEMLAST+1
+000F51r 3  E5 E7            sbc NEXTHEAP+1
+000F53r 3  85 F1            sta TEMP1+1
+000F55r 3  20 rr rr         jsr spush_0
+000F58r 3  4C rr rr         jmp next
+000F5Br 3               ;
+000F5Br 3               ; (daddr n -- ) start disassembly from daddr, do it
+000F5Br 3               ; $F600 is entry point --A+Y for starting address, C=1 for multiple opcodes, X for # of codes
+000F5Br 3  rr rr 06 64  def_word "disasm", "disasm", 0
+000F5Fr 3  69 73 61 73  
+000F63r 3  6D           
+000F64r 3  20 rr rr         jsr spull_1    ; # of instructions (??)
+000F67r 3  20 rr rr         jsr spull_0    ; addr
+000F6Ar 3  A6 F2            ldx TEMP2
+000F6Cr 3  E0 FE            cpx #$FE
+000F6Er 3  B0 17            bcs DISEND
+000F70r 3  A9 01            lda #1           ; and ZP_D_STATE has to be =1 in order to show mnemonics etc
+000F72r 3  85 rr            sta ZP_D_STATE
+000F74r 3  A5 F0            lda TEMP1
+000F76r 3  A4 F1            ldy TEMP1+1
+000F78r 3  38               sec              ; set the carry to make sure multiple ops returned
+000F79r 3  20 rr rr         jsr DISASM_AY
+000F7Cr 3  A5 rr            lda ZP_D_XAM
+000F7Er 3  85 F0            sta TEMP1
+000F80r 3  A4 rr            ldy ZP_D_XAM+1
+000F82r 3  84 F1            sty TEMP1+1
+000F84r 3  20 rr rr         jsr spush_0     ; push last address on stack?
+000F87r 3               DISEND:
+000F87r 3  4C rr rr         jmp next
+000F8Ar 3               
+000F8Ar 3               ; (jsaddr 0a 0y-- 0x) jump to external code with parms passed via A,Y, result in X
+000F8Ar 3  rr rr 07 73  def_word "syscall", "syscall", 0
+000F8Er 3  79 73 63 61  
+000F92r 3  6C 6C        
+000F94r 3  20 rr rr         jsr spull_2    ; parm to pass to y
+000F97r 3  20 rr rr         jsr spull_1    ; parm to pass to a
+000F9Ar 3  20 rr rr         jsr spull_0    ; addr
+000F9Dr 3  A5 F0            lda TEMP1
+000F9Fr 3  8D rr rr         sta SYSCALL+1
+000FA2r 3  A5 F1            lda TEMP1+1
+000FA4r 3  8D rr rr         sta SYSCALL+2
+000FA7r 3  A4 F4            ldy TEMP3
+000FA9r 3  A5 F2            lda TEMP2
+000FABr 3  20 rr rr         jsr SYSCALL
+000FAEr 3  4C rr rr         jmp next
+000FB1r 3               ;
+000FB1r 3               ;  below must be in RAM to work
+000FB1r 3               ;
+000FB1r 3               SYSCALL:
+000FB1r 3  20 rr rr         jsr SCDUMMY        ; store into SYSCALL+1, +2 to customize jump
+000FB4r 3  8A               txa                ; returned stuff in X
+000FB5r 3  F0 08            beq SCSKIP         ; if returns zero, don't do anything else
+000FB7r 3  85 F0            sta TEMP1          ; otherwise...
+000FB9r 3  64 F1            stz TEMP1+1
+000FBBr 3  20 rr rr         jsr spush_0        ; push result onto stack
+000FBEr 3  60               rts
+000FBFr 3               SCSKIP:
+000FBFr 3  68               pla
+000FC0r 3  68               pla
+000FC1r 3  4C rr rr         jmp errrtn
+000FC4r 3               SCDUMMY:
+000FC4r 3  A2 00            ldx #0
+000FC6r 3  60               rts
+000FC7r 3               ;
+000FC7r 3               ;
+000FC7r 3               ; ( paddr -- )
+000FC7r 3  rr rr 06 6D  def_word "mktemp", "mktemp", 0
+000FCBr 3  6B 74 65 6D  
+000FCFr 3  70           
+000FD0r 3  20 rr rr         jsr spull_1       ; get mptr in TEMP2
+000FD3r 3  20 rr rr         jsr MEMLEN        ; len in TEMP1, maddr in TEMP3
+000FD6r 3  A0 00            ldy #0
+000FD8r 3  B1 F4            lda (TEMP3),y
+000FDAr 3  09 80            ora #$80          ; set high bit on type byte
+000FDCr 3  91 F4            sta (TEMP3),y
+000FDEr 3  4C rr rr         jmp next
+000FE1r 3               ;
+000FE1r 3               ;   ( -- )  --- 'deallocate' last memory item in stack if marked 'temp'
+000FE1r 3               ;
+000FE1r 3  rr rr 06 70  def_word "purge0", "purge0", 0
+000FE5r 3  75 72 67 65  
+000FE9r 3  30           
+000FEAr 3  A5 CE            lda MEMPTR
+000FECr 3  85 F2            sta TEMP2
+000FEEr 3  A5 CF            lda MEMPTR+1
+000FF0r 3  85 F3            sta TEMP2+1
+000FF2r 3  C9 rr            cmp #>(MEMSTK+MEMEND)
+000FF4r 3  90 08            bcc PURGECONT
+000FF6r 3  D0 2A            bne PURGEEND
+000FF8r 3  A5 F2            lda TEMP2
+000FFAr 3  C9 rr            cmp #<(MEMSTK+MEMEND)
+000FFCr 3  B0 24            bcs PURGEEND
+000FFEr 3               PURGECONT:
+000FFEr 3  A5 F2            lda TEMP2
+001000r 3  18               clc
+001001r 3  69 02            adc #2
+001003r 3  90 02            bcc  PURGESK00
+001005r 3  E6 F3            inc TEMP2+1
+001007r 3               PURGESK00:
+001007r 3  20 rr rr         jsr MEMLEN        ; len in TEMP1, maddr in TEMP3
+00100Ar 3  A0 00            ldy #0
+00100Cr 3  B1 F4            lda (TEMP3),y
+00100Er 3  29 80            and #$80          ; mask off all but temp bit
+001010r 3  F0 10            beq  PURGEEND
+001012r 3  A5 F2            lda TEMP2         ; change pointers if temp
+001014r 3  85 CE            sta MEMPTR
+001016r 3  A5 F3            lda TEMP2+1
+001018r 3  85 CF            sta MEMPTR+1
+00101Ar 3  A5 F4            lda TEMP3
+00101Cr 3               ;    clc
+00101Cr 3               ;    adc #3
+00101Cr 3               ;    bcc  PURGESK01
+00101Cr 3               ;    inc TEMP3+1
+00101Cr 3               ;PURGESK01:
+00101Cr 3               ;    clc
+00101Cr 3               ;    adc TEMP1
+00101Cr 3  85 D0            sta MEMLAST
+00101Er 3  A5 F5            lda TEMP3+1
+001020r 3               ;    adc TEMP1+1
+001020r 3  85 D1            sta MEMLAST+1
+001022r 3               PURGEEND:
+001022r 3  4C rr rr         jmp next
+001025r 3               ;
+001025r 3               ;
+001025r 3               ; ( bytes type -- staddr )
+001025r 3  rr rr 06 6D  def_word "malloc", "malloc", 0
+001029r 3  61 6C 6C 6F  
+00102Dr 3  63           
+00102Er 3  20 rr rr         jsr spull_1       ; type ( word ($00), char ($01), words ($02), bytes ($03), sz ($04) ..)
+001031r 3  20 rr rr         jsr spull_0       ; # bytes
+001034r 3  20 rr rr         jsr MALLOC        ; will return address in TEMP1
+001037r 3  20 rr rr         jsr spush_0       ; push ptr address to new record on stack
+00103Ar 3  4C rr rr         jmp next
+00103Dr 3               
+00103Dr 3               ;
+00103Dr 3               ; ( maddr -- len )
+00103Dr 3  rr rr 04 6D  def_word "mlen", "mlen", 0
+001041r 3  6C 65 6E     
+001044r 3  20 rr rr         jsr spull_1
+001047r 3  20 rr rr         jsr MEMLEN   ; returns length in TEMP1, maddr in TEMP3
+00104Ar 3  20 rr rr         jsr spush_0
+00104Dr 3  4C rr rr         jmp next
+001050r 3               ;
+001050r 3               ;
+001050r 3               .ifdef YSOUND
+001050r 3               ;
+001050r 3               ;                        word definitions for Yamaha 2151 sound chip
+001050r 3               ;
+001050r 3  rr rr 07 73  def_word "sndinit", "sndinit", 0
+001054r 3  6E 64 69 6E  
+001058r 3  69 74        
+00105Ar 3  20 rr rr         jsr SOUND_INIT
+00105Dr 3  4C rr rr         jmp next
+001060r 3               
+001060r 3  rr rr 07 73  def_word "sndtest", "sndtest", 0
+001064r 3  6E 64 74 65  
+001068r 3  73 74        
+00106Ar 3  20 rr rr         jsr SOUND_TEST
+00106Dr 3  4C rr rr         jmp next
+001070r 3               
+001070r 3               ; ( xxaa -- )    send byte(a) to register(x) on yamaha 2151
+001070r 3  rr rr 06 79  def_word "ywrite", "ywrite", 0
+001074r 3  77 72 69 74  
+001078r 3  65           
+001079r 3  20 rr rr         jsr spull_0
+00107Cr 3  A6 F1            ldx TEMP1+1
+00107Er 3  A5 F0            lda TEMP1
+001080r 3  20 rr rr         jsr YM_WRITE
+001083r 3  90 03            bcc YMGOOD
+001085r 3  4C rr rr         jmp PUSHFALSE
+001088r 3               YMGOOD:
+001088r 3  4C rr rr         jmp PUSHTRUE
+00108Br 3               .endif
+00108Br 3               ;
+00108Br 3               ;
+00108Br 3               ;----------------------------------------------------------------------------
+00108Br 3               HYWORDS_END:
+00108Br 3               ;  end hywords.s
+00108Br 3               ;----------------------------------------------------------------------------
+00108Br 3               
+00108Br 2               .endif
+00108Br 2               ;---------------------------------------------------------------------
+00108Br 2               ; Thread Code Engine
+00108Br 2               ;
+00108Br 2               ;   INSTPTR is IP, WORKREG is W
+00108Br 2               ;
+00108Br 2               ;     unnest, next, pick, nest, and jump
+00108Br 2               ;
+00108Br 2               ;   nest aka ENTER or DOCOL  (do colon?)
+00108Br 2               ;   unnest aka EXIT or semis?
+00108Br 2               ;
+00108Br 2               ;---------------------------------------------------------------------
+00108Br 2               ; ( -- )
+00108Br 2  rr rr 04 65  def_word "exit", "exit", 0
+00108Fr 2  78 69 74     
+001092r 2  4C rr rr         jmp EXIT
+001095r 2               
+001095r 2               ; mark end of ROM IMAGE
+001095r 2               ;
+001095r 2               ;.byte "\CODEEND/"
+001095r 2               ;.byte 0
+001095r 2               ;-----------------------------------------------------------------------
+001095r 2               ; BEWARE, MUST BE AT END! MINIMAL THREAD CODE DEPENDS ON IT!
+001095r 2               ;
+001095r 2               ends:                            ; end marker of hardcoded primitives
+001095r 2               ;
+001095r 2               ;-----------------------------------------------------------------------
+001095r 2               ;
+001095r 2               ;
+001095r 2               
+001095r 2               ;-----------------------------------------------------------------------
+001095r 2               ;                            TRAINING DATA
+001095r 2               ;
+001095r 2               ; include training data
+001095r 2               
+001095r 2  2A 2A 2A 48  .byte "***HEAPEND***"
+001099r 2  45 41 50 45  
+00109Dr 2  4E 44 2A 2A  
+0010A2r 2               ;.org $C000
+0010A2r 2  46 54 52 41      .byte "FTRAIN"
+0010A6r 2  49 4E        
+0010A8r 2  00 00            .byte 0,0
+0010AAr 2               .include "ftrain.s"
+0010AAr 3               ;
+0010AAr 3               ;  training data
+0010AAr 3               ;
+0010AAr 3               ftrain_0:
+0010AAr 3  3A 20 32 2A  .byte ": 2* dup + ;"
+0010AEr 3  20 64 75 70  
+0010B2r 3  20 2B 20 3B  
+0010B6r 3  00           .byte 0
+0010B7r 3  3A 20 3F 62  .byte ": ?branch bool not rp @ @ @ 2 - and rp @ @ + 2 + rp @ ! ;  : branch rp @ @ dup @ + rp @ ! ;"
+0010BBr 3  72 61 6E 63  
+0010BFr 3  68 20 62 6F  
+001112r 3  00           .byte 0
+001113r 3  3A 20 69 66  .byte ": if lit ?branch , here @ 0 , ; I"
+001117r 3  20 6C 69 74  
+00111Br 3  20 3F 62 72  
+001134r 3  00           .byte 0
+001135r 3  3A 20 74 68  .byte ": then dup here @ swap - swap ! ; I"
+001139r 3  65 6E 20 64  
+00113Dr 3  75 70 20 68  
+001158r 3  00           .byte 0
+001159r 3  3A 20 65 6C  .byte ": else lit branch , here @ 0 , swap dup here @ swap - swap ! ; I"
+00115Dr 3  73 65 20 6C  
+001161r 3  69 74 20 62  
+001199r 3  00           .byte 0
+00119Ar 3  3A 20 62 65  .byte ": begin here @ ; I"
+00119Er 3  67 69 6E 20  
+0011A2r 3  68 65 72 65  
+0011ACr 3  00           .byte 0
+0011ADr 3  3A 20 61 67  .byte ": again lit branch , here @ - , ; I"
+0011B1r 3  61 69 6E 20  
+0011B5r 3  6C 69 74 20  
+0011D0r 3  00           .byte 0
+0011D1r 3  3A 20 75 6E  .byte ": until lit ?branch , here @ - , ; I"
+0011D5r 3  74 69 6C 20  
+0011D9r 3  6C 69 74 20  
+0011F5r 3  00           .byte 0
+0011F6r 3  3A 20 77 68  .byte ": while lit ?branch , here @ 0 , ; I"
+0011FAr 3  69 6C 65 20  
+0011FEr 3  6C 69 74 20  
+00121Ar 3  00           .byte 0
+00121Br 3  3A 20 72 65  .byte ": repeat swap lit branch , here @ - , dup here @ swap - swap ! ; I"
+00121Fr 3  70 65 61 74  
+001223r 3  20 73 77 61  
+00125Dr 3  00           .byte 0
+00125Er 3  3A 20 64 6F  .byte ": do here @ lit >r , lit >r , ; I"
+001262r 3  20 68 65 72  
+001266r 3  65 20 40 20  
+00127Fr 3  00           .byte 0
+001280r 3  3A 20 6C 6F  .byte ": loop lit r> , lit r> , lit lit , 1 , lit + , lit 2dup , lit = , lit ?branch , here @ - , lit 2drop , ; I"
+001284r 3  6F 70 20 6C  
+001288r 3  69 74 20 72  
+0012EAr 3  00           .byte 0
+0012EBr 3  3A 20 69 20  .byte ": i rp @ 4 + @ ;  : j rp @ 8 + @ ;  : k rp @ lit [ 12 , ] + @ ;"
+0012EFr 3  72 70 20 40  
+0012F3r 3  20 34 20 2B  
+00132Ar 3  00           .byte 0
+00132Br 3  3A 20 6D 64  .byte ": mdump memptr 2 + @ 1 dump ;"
+00132Fr 3  75 6D 70 20  
+001333r 3  6D 65 6D 70  
+001348r 3  00           .byte 0
+001349r 3  3A 20 64 65  .byte ": decsz! xdrv 6 4 malloc decs! ;"
+00134Dr 3  63 73 7A 21  
+001351r 3  20 78 64 72  
+001369r 3  00           .byte 0
+00136Ar 3  3A 20 7C 20  .byte ": | lit [ 256 , ] / ;"
+00136Er 3  6C 69 74 20  
+001372r 3  5B 20 32 35  
+00137Fr 3  00 00        .byte 0, 0                               ; to mark end?
+001381r 3               ftrain_end0:
+001381r 3               
+001381r 2               ;
+001381r 2               ;                            BINARY LOAD
+001381r 2               ;
+001381r 2  xx xx xx xx      .res 16
+001385r 2  xx xx xx xx  
+001389r 2  xx xx xx xx  
+001391r 2  42 4C 4F 41      .byte "BLOAD"
+001395r 2  44           
+001396r 2  00 00            .byte 0,0
+001398r 2               .include "bload.s"
+001398r 3               ;
+001398r 3               ;  BLOAD test code
+001398r 3               ;
+001398r 3               ;  ALL binary libraries loadable with 'bload' MUST be Forth words,
+001398r 3               ;   (not jsr subroutines), fully relocatable.  That means NO jumps
+001398r 3               ;   or branches to labels!  Calculate all jumps and branches accordingly
+001398r 3               ;   and use numercal offsets.  jsr's and jmp's to core primitive labels
+001398r 3               ;   (next, keeps, this, etc) or ROM locations will work fine.
+001398r 3               ;
+001398r 3               ;  Format below must be rigidly followed, with length of name followed
+001398r 3               ;   by that many bytes for the name.  'bit #0' ($89 $00) must be
+001398r 3               ;   the first instruction in any native code word loaded past
+001398r 3               ;   'exit'.  Termination must be $00 $00 for each word, with "END"
+001398r 3               ;   to designate the end of a 'library'.
+001398r 3               ;
+001398r 3               test00:
+001398r 3  06           .byte 6
+001399r 3  42 4C 74 65  .byte "BLtest"
+00139Dr 3  73 74        
+00139Fr 3  22                SKIPNEXT
+0013A0r 3  00                .byte 0
+0013A1r 3  20 rr rr          PRINT_CRLF
+0013A4r 3  A9 54 20 rr       PRINT_CHAR #'T', #'E', #'S', #'T'
+0013A8r 3  rr A9 45 20  
+0013ACr 3  rr rr A9 53  
+0013B8r 3  20 rr rr          PRINT_CRLF
+0013BBr 3  4C rr rr          jmp next
+0013BEr 3  00 00        .byte 0, 0
+0013C0r 3  07           .byte 7
+0013C1r 3  42 4C 74 65  .byte "BLtest2"
+0013C5r 3  73 74 32     
+0013C8r 3  22                SKIPNEXT
+0013C9r 3  00                .byte 0
+0013CAr 3  20 rr rr          PRINT_CRLF
+0013CDr 3  A9 54 20 rr       PRINT_CHAR #'T', #'E', #'S', #'T', #'Y'
+0013D1r 3  rr A9 45 20  
+0013D5r 3  rr rr A9 53  
+0013E6r 3  20 rr rr          PRINT_CRLF
+0013E9r 3  4C rr rr          jmp next
+0013ECr 3  00 00        .byte 0, 0
+0013EEr 3  45 4E 44     .byte "END"
+0013F1r 3               bload0_end:
+0013F1r 3               
+0013F1r 2               ;
+0013F1r 2               ;  end of hyforth.s
+0013F1r 2               ;
+0013F1r 2               
+0013F1r 1               .include "wozmon.s"
+0013F1r 2               ;
+0013F1r 2               ;   Taken mostly from Steve Wozniak's Apple 1 Monitor for the 6502, or WOZMON
+0013F1r 2               ;
+0013F1r 2               .debuginfo
+0013F1r 2               .segment "BUFFERS"
 000500r 2               IN:
 000500r 2  xx xx xx xx                  .res            $100
 000504r 2  xx xx xx xx  
