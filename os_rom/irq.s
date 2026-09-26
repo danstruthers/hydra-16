@@ -162,6 +162,18 @@ IRQ_DISPATCH:
             jsr         IRQ_CALL_ENTRY
 
 @done:
+            lda         ZP_IRQ_RESCHED                      ; A handler asked for a task switch (timer tick)?
+            beq         IRQ_RESTORE
+            stz         ZP_IRQ_RESCHED
+            jsr         SCHED_CAN_PREEMPT
+            bcc         IRQ_RESTORE
+            lda         U_REGISTER                          ; Complete the task's frame (tasks.s) and switch
+            pha
+            jmp         SCHED_SWITCH
+
+; Unwind the dispatcher's part of a task's frame and return to the interrupted code (also the end of
+; SCHED_RESUME)
+IRQ_RESTORE:
             pla
             sta         ZP_TC_TASK
             pla
@@ -186,6 +198,18 @@ IRQ_CALL_ENTRY:
             sta         ZP_TC_VEC + 1
             lda         ZP_IRQ_NUM
             jsr         TASK_CALL
+            bcc         @done                               ; Not claimed
+            cmp         #SCHED_RESCHED_A                    ; Claimed; a task switch asked for?
+            bne         @claimed
+            cpy         #SCHED_RESCHED_Y
+            bne         @claimed
+            lda         #1
+            sta         ZP_IRQ_RESCHED
+
+@claimed:
+            sec
+
+@done:
             ldx         ZP_IRQ_TMP
             rts
 

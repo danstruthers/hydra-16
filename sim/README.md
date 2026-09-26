@@ -20,6 +20,7 @@ node hydrasim.js [options]
 | `--shared-u N` | Shared RAM installed for `U` macro-pages 0 to N-1 (default 16; each 512K chip is 4 macro-pages) |
 | `--acia-line N` | IRQ line the ACIA interrupts on (default 1) |
 | `--stuck-irq N` | Hold IRQ line N active the whole time |
+| `--ram-fault BANK:An:high\|low` | Address line An (0-12) stuck high or low on the RAM chip holding BANK (a shared chip holds 4 bank IDs, e.g. `F0-F3`; a task RAM module 16 banks), e.g. `F0:A0:high`.  The POST `RAM` line should report it |
 | `--model M` | Hardware what-ifs: `sharedlow`, `nostack`, `zponly`, `noshared` |
 | `--raw` | Print serial output as-is (by default ESC shows as `<ESC>`) |
 | `--trace N` | Show the last N instructions (default 25) |
@@ -50,7 +51,9 @@ The report shows the serial output, the last instructions executed (`W T PC A X 
   of the lowest active IRQ line, or `V[0..3]` when no line is active (and for `BRK`).
 * Rockwell 65C51 ACIA at `$FF10` on IRQ line 1: transmit and receive with interrupts, output captured,
   input from `--input`.
-* YM2151 status always reads "not busy". VIA registers are plain storage (no timers or interrupts).
+* VIA timer 1 (one-shot and free-running, latches, interrupt flag and enable registers) on IRQ line 0: the
+  scheduler's tick.  The other VIA registers are plain storage (no timer 2, ports or shift register).
+* YM2151 status always reads "not busy".
 * RAM and the pseudo-registers power up with random values, like the hardware.
 
 It is a model, not the hardware: anything it doesn't simulate (timers, the SPI bus, sound, card slots,

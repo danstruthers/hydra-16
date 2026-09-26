@@ -57,3 +57,41 @@ TH_MM_FIND:
                 jmp             MM_FIND             ; $F84E
 TH_MM_SET_FLOOR:
                 jmp             MM_SET_FLOOR        ; $F851
+TH_YIELD:
+                jmp             YIELD               ; $F854
+TH_NO_PREEMPT:
+                jmp             NO_PREEMPT          ; $F857
+TH_PREEMPT:
+                jmp             PREEMPT             ; $F85A
+TH_TASK_WAIT:
+                jmp             TASK_WAIT           ; $F85D
+TH_IO_WAKE:
+                jmp             IO_WAKE             ; $F860
+TH_TASK_RUN:
+                jmp             TASK_RUN            ; $F863
+TH_TASK_STATUS:
+                jmp             TASK_STATUS         ; $F866
+TH_SCHED_TEST:
+                jmp             SCHED_TEST          ; $F869
+TH_IO_OPEN:
+                jmp             IO_OPEN             ; $F86C
+TH_IO_CLOSE:
+                jmp             IO_CLOSE            ; $F86F
+TH_IO_READ:
+                jmp             IO_READ             ; $F872
+TH_IO_WRITE:
+                jmp             IO_WRITE            ; $F875
+TH_IO_GETC:
+                jmp             IO_GETC             ; $F878
+TH_IO_PUTC:
+                jmp             IO_PUTC             ; $F87B
+TH_IO_SEEK:
+                jmp             IO_SEEK             ; $F87E
+TH_IO_STAT:
+                jmp             IO_STAT             ; $F881
+TH_IO_CTL:
+                jmp             IO_CTL              ; $F884
+TH_DEV_REGISTER:
+                jmp             DEV_REGISTER        ; $F887
+TH_IO_TEST:
+                jmp             IO_TEST             ; $F88A

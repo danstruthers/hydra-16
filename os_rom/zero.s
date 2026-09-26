@@ -92,6 +92,52 @@ ZP_IRQ_H:               ; registration: handler address
 ZP_DRV_PTR:             ; DriverInfo pointer
     .res  2
 
+; SCHEDULER (see tasks.s)
+ZP_TASK_ENTRY:          ; task entry point (TASK_TRAMPOLINE)
+    .res  2
+ZP_TASK_PAGE:           ; ROM page of the entry point
+    .res  1
+ZP_NO_PREEMPT:          ; NO_PREEMPT nesting count
+    .res  1
+ZP_PREEMPT_DUE:         ; a task switch came due while NO_PREEMPT was held
+    .res  1
+ZP_TC_GUEST:            ; > 0 while running a TASK_CALL routine for another task
+    .res  1
+ZP_IRQ_RESCHED:         ; an IRQ handler asked for a task switch
+    .res  1
+ZP_SCHED_CNT:           ; SCHED_PICK loop count
+    .res  1
+
+; IO (see io.s)
+ZP_IO_BUF:              ; caller's buffer / name (IO_OPEN, IO_READ, IO_WRITE, IO_STAT)
+    .res  2
+ZP_IO_CNT:              ; byte count: requested (in), done (out)
+    .res  2
+ZP_IO_OFS:              ; offset (IO_SEEK)
+    .res  4
+ZP_IO_FD:               ; fd being worked on
+    .res  1
+ZP_IO_MODE:             ; open mode
+    .res  1
+ZP_IO_XFER:             ; the current task's transfer area (request block)
+    .res  2
+ZP_IO_DATA:             ; the current task's transfer area data
+    .res  2
+ZP_IO_LEFT:             ; bytes still to transfer
+    .res  2
+ZP_IO_CHUNK:            ; this transfer's size (<= IO_UNIT)
+    .res  2
+ZP_IO_BYTE:             ; one-byte buffer (IO_GETC / IO_PUTC)
+    .res  1
+ZP_IO_TMP:              ; scratch
+    .res  1
+ZP_IO_REQ:              ; server side: the client's request block (IO_SRV_MAP)
+    .res  2
+ZP_IO_SAVEB:            ; server side: RAM bank / U before IO_SRV_MAP
+    .res  1
+ZP_IO_SAVEU:
+    .res  1
+
 ; MESSAGES (see msg.s)
 ZP_MSG_PTR:             ; ring byte pointer
     .res  2

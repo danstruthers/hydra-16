@@ -653,8 +653,9 @@ VIA_IRQ_HANDLER:
             lda     #VIA_T1_INT_BIT
             and     VIA_R_INT_FLAGS
             beq     :+
-                                            ; Do whatever T1 timer would do
             lda     VIA_R_T1C_L             ; clear the interrupt
+            lda     #SCHED_RESCHED_A        ; T1 is the scheduler's tick: ask the dispatcher for a task switch
+            ldy     #SCHED_RESCHED_Y
             sec
             rts
 

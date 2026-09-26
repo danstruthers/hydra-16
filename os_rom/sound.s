@@ -253,7 +253,7 @@ SOUND_TEST:
                 lda         #$01
                 jmp         YM_WRITE
 
-YM_TIMEOUT = 64
+YM_TIMEOUT = 64 * CPU_CLOCK_MULT    ; Busy-wait loop count (<= 128: the loop ends when .Y goes negative)
 
 ; Write value in A to YM-2151 register in X
 YM_WRITE:
@@ -338,7 +338,15 @@ YM_LOADPATCH:
 
 ; YM_DELAY_64 - Delay subroutine for musical note lengths
 ; A: number of 64th-note delays to wait (a 64th note @120 BPM = ~ 111,861 clock cycles @ 3.57955 MHz)
+; The loop below is tuned for 3.58 MHz; at a faster CPU clock it runs CPU_CLOCK_MULT times.
 YM_DELAY_64:
+.if CPU_CLOCK_MULT > 1
+                pha
+                jsr         YM_DELAY_64_1
+                pla
+.endif
+
+YM_DELAY_64_1:
                 PUSH_XY
                 sta         YMTMP1
 

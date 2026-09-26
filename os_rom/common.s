@@ -76,6 +76,29 @@ name:
             CLABEL      FAR_JMP_VEC
             jmp         (ZP_FAR_VEC)
 
+; Compact far call: `jsr FAR_INLINE` followed by `.word routine` and `.byte page` (FAR_GATE_INLINE).
+; Reads the inline data (on the caller's page), then continues as FAR_CALL_A.
+            CLABEL      FAR_INLINE
+            sta         ZP_FAR_A
+            pla                                             ; Address of the inline data - 1
+            sta         ZP_FAR_VEC
+            pla
+            sta         ZP_FAR_VEC + 1
+            phy
+            ldy         #3
+            lda         (ZP_FAR_VEC),Y                      ; Page
+            sta         ZP_FAR_PAGE
+            dey
+            lda         (ZP_FAR_VEC),Y                      ; Routine, high
+            pha
+            dey
+            lda         (ZP_FAR_VEC),Y                      ; Routine, low
+            sta         ZP_FAR_VEC
+            pla
+            sta         ZP_FAR_VEC + 1
+            ply
+            jmp         FAR_CALL_A                          ; Returns to the gate's caller
+
 ; .A = byte at (ZP_D_XAM), with ROM page ZP_D_PAGE selected (only $E000-$FDFF is paged).
 ; For the disassembler, which runs on page 1 but usually examines the BIOS (page 0).
 ; Preserves .X, .Y, C; N/Z reflect .A
@@ -146,6 +169,14 @@ name:
             lda         #page
             sta         ZP_FAR_PAGE
             jmp         FAR_CALL_A
+.endmacro
+
+; Compact version of FAR_GATE (6 bytes instead of 15; a little slower): .A, .X, .Y and C pass through
+.macro FAR_GATE_INLINE  name, target, page
+name:
+            jsr         FAR_INLINE
+            .word       target
+            .byte       page
 .endmacro
 
 ; Gate into a driver task: runs target in task (via TASK_CALL, see tasks.s).

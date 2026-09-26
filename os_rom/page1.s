@@ -37,6 +37,26 @@ FAR_GATE        MM_TASK_RESET,  ::MM_TASK_RESET,        0
 FAR_GATE        MM_FIND,        ::MM_FIND,              0
 FAR_GATE        MM_SET_FLOOR,   ::MM_SET_FLOOR,         0
 FAR_GATE        MM_TASK_INIT,   ::MM_TASK_INIT,         0   ; Reset the current task's MMU area (HyForth cold)
+FAR_GATE        YIELD,          ::YIELD,                0
+FAR_GATE        NO_PREEMPT,     ::NO_PREEMPT,           0
+FAR_GATE        PREEMPT,        ::PREEMPT,              0
+FAR_GATE        TASK_WAIT,      ::TASK_WAIT,            0
+FAR_GATE        IO_WAKE,        ::IO_WAKE,              0
+FAR_GATE        TASK_RUN,       ::TASK_RUN,             0
+FAR_GATE        TASK_STATUS,    ::TASK_STATUS,          0
+
+; Gates from page 1 to the IO layer (page 2) and DEV_REGISTER (page 0)
+FAR_GATE_INLINE IO_OPEN,        PAGE2::IO_OPEN,         2
+FAR_GATE_INLINE IO_CLOSE,       PAGE2::IO_CLOSE,        2
+FAR_GATE_INLINE IO_READ,        PAGE2::IO_READ,         2
+FAR_GATE_INLINE IO_WRITE,       PAGE2::IO_WRITE,        2
+FAR_GATE_INLINE IO_GETC,        PAGE2::IO_GETC,         2
+FAR_GATE_INLINE IO_PUTC,        PAGE2::IO_PUTC,         2
+FAR_GATE_INLINE IO_SEEK,        PAGE2::IO_SEEK,         2
+FAR_GATE_INLINE IO_STAT,        PAGE2::IO_STAT,         2
+FAR_GATE_INLINE IO_CTL,         PAGE2::IO_CTL,          2
+FAR_GATE_INLINE IO_TEST,        PAGE2::IO_TEST,         2
+FAR_GATE_INLINE DEV_REGISTER,   ::DEV_REGISTER,         0
 
 ; Sound routines run in the sound task (through the page 0 SND_CALL_* task gates)
 FAR_GATE        SOUND_INIT,     ::SND_CALL_INIT,        0
@@ -97,4 +117,23 @@ WRITE_HSTRING:
                 jmp             MM_TASK_RESET       ; $F84B
                 jmp             MM_FIND             ; $F84E
                 jmp             MM_SET_FLOOR        ; $F851
-.assert     * = ::TH_MM_SET_FLOOR + 3, lderror, "BIOS_THUNKS_P1 must match BIOS_THUNKS"
+                jmp             YIELD               ; $F854
+                jmp             NO_PREEMPT          ; $F857
+                jmp             PREEMPT             ; $F85A
+                jmp             TASK_WAIT           ; $F85D
+                jmp             IO_WAKE             ; $F860
+                jmp             TASK_RUN            ; $F863
+                jmp             TASK_STATUS         ; $F866
+                jmp             SCHED_TEST          ; $F869
+                jmp             IO_OPEN             ; $F86C
+                jmp             IO_CLOSE            ; $F86F
+                jmp             IO_READ             ; $F872
+                jmp             IO_WRITE            ; $F875
+                jmp             IO_GETC             ; $F878
+                jmp             IO_PUTC             ; $F87B
+                jmp             IO_SEEK             ; $F87E
+                jmp             IO_STAT             ; $F881
+                jmp             IO_CTL              ; $F884
+                jmp             DEV_REGISTER        ; $F887
+                jmp             IO_TEST             ; $F88A
+.assert     * = ::TH_IO_TEST + 3, lderror, "BIOS_THUNKS_P1 must match BIOS_THUNKS"

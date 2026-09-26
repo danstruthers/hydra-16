@@ -1,0 +1,154 @@
+.debuginfo
+
+.segment "IO_P0"
+
+; ****************************************************************************
+; IO subsystem, the BIOS ROM page 0 part (see IO_PLAN.md; the IO layer itself is io.s, on page 2).
+; Drivers (on page 0) use these: DEV_REGISTER, and IO_SRV_MAP / IO_SRV_UNMAP in their serve routines.
+
+; The IO layer's calls, for page 0 callers and the $F8xx thunks (compact gates into page 2)
+FAR_GATE_INLINE     IO_OPEN,        PAGE2::IO_OPEN,         2
+FAR_GATE_INLINE     IO_CLOSE,       PAGE2::IO_CLOSE,        2
+FAR_GATE_INLINE     IO_READ,        PAGE2::IO_READ,         2
+FAR_GATE_INLINE     IO_WRITE,       PAGE2::IO_WRITE,        2
+FAR_GATE_INLINE     IO_GETC,        PAGE2::IO_GETC,         2
+FAR_GATE_INLINE     IO_PUTC,        PAGE2::IO_PUTC,         2
+FAR_GATE_INLINE     IO_SEEK,        PAGE2::IO_SEEK,         2
+FAR_GATE_INLINE     IO_STAT,        PAGE2::IO_STAT,         2
+FAR_GATE_INLINE     IO_CTL,         PAGE2::IO_CTL,          2
+FAR_GATE_INLINE     IO_TEST,        PAGE2::IO_TEST,         2
+
+; Serve routines must be page 0 addresses (TASK_CALL runs them on page 0): gates to the page 2 servers
+FAR_GATE_INLINE     NULL_SERVE,     PAGE2::NULL_SERVE,      2
+FAR_GATE_INLINE     ZERO_SERVE,     PAGE2::ZERO_SERVE,      2
+
+NULL_NAME:  .byte   "null", 0
+ZERO_NAME:  .byte   "zero", 0
+
+; Register the IO layer's own devices.  Called at boot, after SHARED_RAM_INIT (which clears the table).
+IO_INIT:
+            LOAD_ADDR   NULL_SERVE, ZP_TC_VEC
+            lda         #<NULL_NAME
+            ldy         #>NULL_NAME
+            ldx         #IO_DEV_CALLER_TASK
+            jsr         DEV_REGISTER
+            LOAD_ADDR   ZERO_SERVE, ZP_TC_VEC
+            lda         #<ZERO_NAME
+            ldy         #>ZERO_NAME
+            ldx         #IO_DEV_CALLER_TASK
+            jmp         DEV_REGISTER
+
+; Register a device (a file server): /dev/<name> is served by the serve routine, running in a task.
+; Drivers call it from their init (which runs in the driver's task).
+; IN: .A.Y = name (zero-terminated, 1-8 characters; in RAM or on ROM page 0), .X = task the serve routine
+;     runs in (IO_DEV_CALLER_TASK = the task making each request), ZP_TC_VEC = serve routine (page 0)
+; OUT (success): .A = device index, C = 0
+; OUT (failure): .A = ERR_IO_NAME (empty or too long) or ERR_IO_NO_DEVS, C = 1
+; Preserves .X, .Y
+DEV_REGISTER:
+            php                                             ; Save caller's I flag
+            sei
+            PUSH_XY
+            sta         ZP_IO_BUF                           ; The name
+            sty         ZP_IO_BUF + 1
+            stx         ZP_IO_TMP                           ; The task
+            _M_MSG_ENTER                                    ; Select shared bank ID $00 (device table)
+            lda         (ZP_IO_BUF)
+            beq         @empty_name
+            ldx         #0                                  ; Device table offset
+
+@find:
+            lda         IO_DEV_TABLE + IO_DEV_NAME,X
+            beq         @free                               ; Free entry
+            txa
+            clc
+            adc         #IO_DEV_SIZE
+            tax
+            bcc         @find                               ; (16 entries x 16 bytes: ends at 256)
+            lda         #ERR_IO_NO_DEVS
+            bra         @fail
+
+@free:
+            stx         ZP_IO_CNT                           ; The entry's offset
+            ldy         #0                                  ; Copy the name, zero-padded
+
+@name:
+            lda         (ZP_IO_BUF),Y
+            beq         @pad
+            cpy         #IO_DEV_NAME_LEN
+            bcs         @bad_name                           ; Too long
+            sta         IO_DEV_TABLE + IO_DEV_NAME,X
+            inx
+            iny
+            bra         @name
+
+@pad:
+            cpy         #IO_DEV_NAME_LEN
+            bcs         @padded
+            stz         IO_DEV_TABLE + IO_DEV_NAME,X
+            inx
+            iny
+            bra         @pad
+
+@padded:
+            ldx         ZP_IO_CNT                           ; Back to the entry's start
+            lda         ZP_IO_TMP
+            sta         IO_DEV_TABLE + IO_DEV_TASK,X
+            lda         ZP_TC_VEC
+            sta         IO_DEV_TABLE + IO_DEV_SERVE,X
+            lda         ZP_TC_VEC + 1
+            sta         IO_DEV_TABLE + IO_DEV_SERVE + 1,X
+            txa                                             ; Device index = offset / 16
+            lsr
+            lsr
+            lsr
+            lsr
+            clc
+            bra         @done
+
+@bad_name:
+            ldx         ZP_IO_CNT
+            stz         IO_DEV_TABLE + IO_DEV_NAME,X        ; Leave the entry free
+
+@empty_name:
+            lda         #ERR_IO_NAME
+
+@fail:
+            sec
+
+@done:
+            _M_MSG_LEAVE
+            PULL_YX
+            jmp         MM_RETURN
+
+; Server side: map the client's request block (in its IO transfer area) into $8000-$9FFF, in the
+; server's task.  Undo with IO_SRV_UNMAP before returning from the serve routine.
+; IN: .X = client task.  OUT: ZP_IO_REQ = the request block (data at ZP_IO_REQ + IO_BLK_DATA)
+; Preserves .A, .X, .Y
+IO_SRV_MAP:
+            pha
+            lda         RAM_BANK_REG
+            sta         ZP_IO_SAVEB
+            lda         U_REGISTER
+            sta         ZP_IO_SAVEU
+            stz         U_REGISTER
+            lda         #IO_XFER_BANK
+            sta         RAM_BANK_REG
+            stz         ZP_IO_REQ
+            txa
+            and         #$0F
+            asl                                             ; $8000 + task * $200
+            ora         #>PAGED_RAM_BASE
+            sta         ZP_IO_REQ + 1
+            pla
+            rts
+
+; Undo IO_SRV_MAP.  Preserves .A, .X, .Y and C
+IO_SRV_UNMAP:
+            pha
+            lda         ZP_IO_SAVEU
+            sta         U_REGISTER
+            lda         ZP_IO_SAVEB
+            sta         RAM_BANK_REG
+            pla
+            rts

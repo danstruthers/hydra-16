@@ -43,10 +43,20 @@ TASKS_INIT:
             stz     RAM_BANK_REG
             stz     ROM_BANK_REG
             stz     TASK_STATUS_REG
-            stz     TASK_PARENT
             stz     ZP_D_PAGE                       ; Disassembler reads the BIOS page by default
+            stz     ZP_NO_PREEMPT                   ; Scheduler
+            stz     ZP_PREEMPT_DUE
+            stz     ZP_TC_GUEST
+            stz     ZP_IRQ_RESCHED
             lda     #$FF
+            sta     TASK_PARENT                     ; No parent
             sta     STACK_SAVE_REG
+            ldy     #IO_MAX_FDS * IO_FD_SIZE        ; All fds closed
+
+@fds:
+            dey
+            sta     IO_FD_TABLE,Y
+            bne     @fds
             dex
             bpl     @loop                           ; Loop back as long as X >= 0
             lda     #TASK_BUSY_FLAG
@@ -60,110 +70,365 @@ TASKS_INIT:
             cli                                     ; Turn interrupts back on
             rts
 
-;  Task switch
-;  Task# to switch to in A
-SWITCH_TO:
-            sta     ZP_A_SAVE
-            pla                                     ; need to change return addr from RTS style (IP - 1) to RTI style (IP)
-            inc
-            bne     :+                              ; page boundary?
-            stx     ZP_X_SAVE
-            plx
-            inx
-            phx
-            ldx     ZP_X_SAVE
-:
-            pha
-            php
-            lda     ZP_A_SAVE
+; ****************************************************************************
+; Scheduler (see IO_PLAN.md, Phase 1)
+;
+;   Every task that isn't running keeps the same frame on its own stack: the one IRQ_DISPATCH builds
+;   (interrupt frame, A, X, W, Y, the TASK_CALL scratch bytes), plus U.  Top of stack first:
+;       U, ZP_TC_TASK, ZP_TC_VEC + 1, ZP_TC_VEC, Y, W, X, A, P, PCL, PCH
+;   and STACK_SAVE_REG is the SP below it.  So a task switch is always the same: save SP, pick a task,
+;   load its SP, unwind its frame (SCHED_RESUME), whether the task stopped for the timer tick (IRQ),
+;   YIELD, or to wait for IO.  W and U are in the frame because they're global pseudo-registers.
+;
+;   Runnable: busy, and not paused, waiting or resident.  Round-robin over tasks 1-15; task 0 is the
+;   idle task and only runs when nothing else can.
 
-SWITCH_TO_NO_PHP:
-            sei                                     ; No IRQs between the task and stack switch (RTI restores I)
-            PUSH_AXY
+TASK_WAITING_FLAG       = 4                         ; Bit 2: awaiting IO (TASK_WAIT / IO_WAKE)
+TASK_RUN_MASK           = TASK_BUSY_FLAG | TASK_PAUSED_FLAG | TASK_WAITING_FLAG | TASK_RESIDENT_FLAG
+TASK_FRAME_SP           = $F4                       ; STACK_SAVE_REG of a new task (11-byte frame at $01F5)
+SCHED_RESCHED_A         = $A5                       ; An IRQ handler returns C = 1, .A and .Y = these
+SCHED_RESCHED_Y         = $5A                       ;   to ask for a task switch (the timer tick)
+
+; Switch tasks.  IRQs off, and the current task's full frame (including U) on its stack.
+SCHED_SWITCH:
             tsx
-            stx     STACK_SAVE_REG
+            stx     STACK_SAVE_REG                  ; The current task's SP
+            jsr     SCHED_PICK                      ; .A = next task (maybe the same one)
+            sta     T_REGISTER                      ; Its ZP and stack
+            ldx     STACK_SAVE_REG
+            txs
 
-SWITCH_TO_NSS:
+; Unwind a task's frame and continue it
+SCHED_RESUME:
+            pla
+            sta     U_REGISTER
+            jmp     IRQ_RESTORE                     ; The rest is the IRQ frame (irq.s)
+
+; Pick the next task to run: the next runnable task after the current one (1-15, round-robin); else
+; the current one if it's runnable; else task 0 (idle).  No stack use while looking at other tasks.
+; OUT: .A = task
+; Modifies: .A, .X, .Y
+SCHED_PICK:
+            lda     T_REGISTER
+            and     #$0F
+            tay                                     ; .Y = current task
+            tax                                     ; .X = candidate
+            lda     #MAX_TASK_NUMBER
+            sta     ZP_SCHED_CNT
+
+@next:
+            inx
+            txa
+            and     #$0F
+            tax
+            beq     @skip                           ; Task 0 isn't in the rotation
+            stx     T_REGISTER                      ; Quick look at the candidate (no stack use!)
+            lda     TASK_STATUS_REG
+            sty     T_REGISTER
+            and     #TASK_RUN_MASK
+            cmp     #TASK_BUSY_FLAG
+            beq     @found
+
+@skip:
+            dec     ZP_SCHED_CNT
+            bne     @next
+            lda     TASK_STATUS_REG                 ; Nobody else: keep going if we can
+            and     #TASK_RUN_MASK
+            cmp     #TASK_BUSY_FLAG
+            beq     @stay
+            lda     #SYSTEM_TASK_NUM                ; Idle
+            rts
+
+@stay:
+            tya
+            rts
+
+@found:
+            txa
+            rts
+
+; Can the interrupted (current) task be preempted?  Not if it's running a TASK_CALL routine for another
+; task (a guest), isn't runnable (e.g. a resident driver task), or holds NO_PREEMPT (then the switch is
+; noted, for PREEMPT).
+; OUT: C = 1 switch, C = 0 don't
+SCHED_CAN_PREEMPT:
+            lda     ZP_TC_GUEST
+            bne     @no
+            lda     TASK_STATUS_REG
+            and     #TASK_RUN_MASK
+            cmp     #TASK_BUSY_FLAG
+            bne     @no
+            lda     ZP_NO_PREEMPT
+            beq     @yes
+            lda     #1
+            sta     ZP_PREEMPT_DUE                  ; Switch at PREEMPT
+
+@no:
+            clc
+            rts
+
+@yes:
+            sec
+            rts
+
+; Give up the CPU: switch to the next runnable task.  Returns when this task is picked again (at once
+; if nothing else can run).
+; Preserves .A, .X, .Y and the flags
+YIELD:
+            php
             sei
-            sta     T_REGISTER
-            ldx     STACK_SAVE_REG                  ; Restore the stack pointer
-            txs                                     ; ...
-            PULL_YXA
-            rti
+            pha                                     ; Build the frame an IRQ would: P is there already,
+            phx                                     ;   under it the return address (made RTI-style below)
+            tsx
+            inc     $0104,X                         ; Return address (S+4 = PCL, S+5 = PCH) + 1
+            bne     :+
+            inc     $0105,X
+:
+            lda     W_REGISTER
+            pha
+            phy
+            lda     ZP_TC_VEC
+            pha
+            lda     ZP_TC_VEC + 1
+            pha
+            lda     ZP_TC_TASK
+            pha
+            lda     U_REGISTER
+            pha
+            stz     ZP_PREEMPT_DUE
+            jmp     SCHED_SWITCH
+
+; Hold the CPU: no task switches until the matching PREEMPT (nestable).  IRQs and their handlers keep
+; running.  For short sections, sei / cli also works (but holds off all IRQs).
+; Preserves .A, .X, .Y
+NO_PREEMPT:
+            inc     ZP_NO_PREEMPT
+            rts
+
+; Undo NO_PREEMPT; if a task switch came due meanwhile (and this was the outermost), switch now.
+; Preserves .A, .X, .Y
+PREEMPT:
+            php
+            sei
+            pha
+            lda     ZP_NO_PREEMPT
+            beq     @done                           ; Not holding it
+            dec     ZP_NO_PREEMPT
+            bne     @done                           ; Still nested
+            lda     ZP_PREEMPT_DUE
+            beq     @done
+            pla
+            plp
+            jmp     YIELD                           ; (YIELD clears ZP_PREEMPT_DUE)
+
+@done:
+            pla
+            plp
+            rts
+
+; Wait for IO: the task isn't run again until IO_WAKE.
+; Preserves .A, .X, .Y
+TASK_WAIT:
+            php
+            sei
+            smb2    TASK_STATUS_REG                 ; TASK_WAITING_FLAG
+            jsr     YIELD
+            plp
+            rts
+
+; Let a task waiting for IO (TASK_WAIT) run again.  Can be called from IRQ handlers.
+; IN: .A = task
+; Preserves .A, .X, .Y
+IO_WAKE:
+            php
+            sei
+            phy
+            pha
+            ldy     T_REGISTER
+            and     #$0F
+            sta     T_REGISTER                      ; Quick switch to the task (no stack use!)
+            rmb2    TASK_STATUS_REG                 ; TASK_WAITING_FLAG
+            sty     T_REGISTER
+            pla
+            ply
+            plp
+            rts
+
+; A task's status (TASK_STATUS_REG).
+; IN: .A = task.  OUT: .A = status
+; Preserves .X, .Y
+TASK_STATUS:
+            php
+            sei
+            phy
+            ldy     T_REGISTER
+            and     #$0F
+            sta     T_REGISTER                      ; Quick switch to the task (no stack use!)
+            lda     TASK_STATUS_REG
+            sty     T_REGISTER
+            ply
+            plp
+            rts
+
+; Start the scheduler's tick: VIA T1 free-running, one IRQ every TIMER_TASK_INT_H/L cycles (~5 ms).
+; VIA_IRQ_HANDLER turns each tick into a task switch.
+SCHED_START:
+            php
+            sei
+            lda     VIA_R_AUX_CTRL
+            and     #$3F
+            ora     #$40                            ; T1 continuous, no PB7 output
+            sta     VIA_R_AUX_CTRL
+            lda     #TIMER_TASK_INT_L
+            sta     VIA_R_T1C_L                     ; Latch low
+            lda     #TIMER_TASK_INT_H
+            sta     VIA_R_T1C_H                     ; Latch high, load and start
+            lda     #VIA_INT_ENABLE | VIA_T1_INT_BIT
+            sta     VIA_R_INT_ENABLE
+            plp
+            rts
+
+; ****************************************************************************
+; Starting tasks
+
+; Build a new task's starting frame: it starts in TASK_TRAMPOLINE, which calls its entry point (on ROM
+; page ZP_TEMP) and ends the task when that returns.  IRQs must be off; .X must not be the current task.
+; IN: ZP_TEMP_VEC = entry point, ZP_TEMP = its ROM page, .X = task
+; Modifies: .A, .Y
+TASK_BUILD_FRAME:
+            ldy     T_REGISTER                      ; .Y = current task, .X = new task
+
+; !! NO STACK MANIPULATIONS WHILE IN THE NEW TASK !!
+            lda     ZP_TEMP_VEC
+            stx     T_REGISTER
+            sta     ZP_TASK_ENTRY
+            sty     T_REGISTER
+            lda     ZP_TEMP_VEC + 1
+            stx     T_REGISTER
+            sta     ZP_TASK_ENTRY + 1
+            sty     T_REGISTER
+            lda     ZP_TEMP
+            stx     T_REGISTER
+            sta     ZP_TASK_PAGE
+            lda     #>TASK_TRAMPOLINE               ; RTI frame: PCH, PCL, P (IRQs on)
+            sta     $01FF
+            lda     #<TASK_TRAMPOLINE
+            sta     $01FE
+            lda     #0
+            sta     $01FD                           ; P
+            sta     $01FC                           ; A
+            sta     $01FB                           ; X
+            sta     $01FA                           ; W
+            sta     $01F9                           ; Y
+            sta     $01F8                           ; ZP_TC_VEC
+            sta     $01F7                           ; ZP_TC_VEC + 1
+            sta     $01F6                           ; ZP_TC_TASK
+            sta     $01F5                           ; U
+            lda     #TASK_FRAME_SP
+            sta     STACK_SAVE_REG
+            stz     ZP_NO_PREEMPT
+            stz     ZP_PREEMPT_DUE
+            stz     ZP_TC_GUEST
+            stz     ZP_IRQ_RESCHED
+            lda     #$FF
+            sta     TASK_PARENT                     ; No parent to wake (TASK_START sets one)
+            sty     T_REGISTER                      ; Back to the current task
+            rts
+
+; Every task started with TASK_BUILD_FRAME begins here (ROM page 0, IRQs on)
+TASK_TRAMPOLINE:
+            lda     ZP_TASK_ENTRY
+            sta     ZP_FAR_VEC
+            lda     ZP_TASK_ENTRY + 1
+            sta     ZP_FAR_VEC + 1
+            lda     ZP_TASK_PAGE
+            sta     ZP_FAR_PAGE
+            jsr     FAR_CALL_A                      ; Run the task
+
+; The task's entry point returned: free everything it had, wake its parent, and never run again
+TASK_EXIT:
+            sei
+            lda     T_REGISTER
+            jsr     MM_TASK_RESET
+            lda     TASK_PARENT
+            cmp     #MAX_TASK_NUMBER + 1
+            bcs     @no_parent
+            ldy     T_REGISTER
+            sta     T_REGISTER                      ; Quick switch to the parent (no stack use!)
+            rmb1    TASK_STATUS_REG                 ; TASK_PAUSED_FLAG: it's waiting for us (TASK_START)
+            sty     T_REGISTER
+
+@no_parent:
+            stz     TASK_STATUS_REG                 ; Free: never picked again
+            jsr     YIELD
+
+@halt:
+            bra     @halt                           ; (not reached)
+
+; Start a task in the background: it runs alongside the caller, and ends when its entry point returns.
+; IN: .A.Y = entry point, .X = its ROM page (0 for RAM or page 0 code)
+; OUT (success): .A = task, C = 0
+; OUT (failure): .A = ERR_NO_TASKS_AVAILABLE, C = 1
+; Preserves .X, .Y
+TASK_RUN:
+            php
+            sei
+            PUSH_XY
+            sta     ZP_TEMP_VEC
+            sty     ZP_TEMP_VEC + 1
+            stx     ZP_TEMP
+            jsr     RESERVE_TASK                    ; C = 1: .A = task (busy + paused)
+            bcc     @none
+            tax
+            jsr     TASK_BUILD_FRAME
+            ldy     T_REGISTER
+            stx     T_REGISTER                      ; Quick switch to the new task (no stack use!)
+            rmb1    TASK_STATUS_REG                 ; Runnable
+            sty     T_REGISTER
+            txa
+            clc
+            bra     @done
+
+@none:
+            lda     #ERR_NO_TASKS_AVAILABLE
+            sec
+
+@done:
+            PULL_YX
+            jmp     MM_RETURN
 
 ; .A.Y: Address of task entrypoint
 SPAWN_TASK:
             sta     ZP_TEMP_VEC
             sty     ZP_TEMP_VEC + 1
 
-; Find a task that is idle and start it executing at the address in ZP_TEMP_VEC && ZP_TEMP_VEC + 1
+; Start a task at the address in ZP_TEMP_VEC (RAM or ROM page 0), and wait for it to finish.
 ; Return task # in A and C == 1
 ;   OR error in A and C == 0 (if no task available)
 TASK_START:
-            jsr     RESERVE_TASK
+            php
+            sei
+            stz     ZP_TEMP                         ; ROM page 0
+            jsr     RESERVE_TASK                    ; C = 1: .A = task (busy + paused)
             bcs     @start_task
+            plp
             lda     #ERR_NO_TASKS_AVAILABLE
+            clc
             rts
 
 @start_task:
-            cmp     T_REGISTER
-            bne     :+                              ; task is current task, so just bail out
-            rts
-
-:
+            sta     TASK_SAVE_REG                   ; Child task #, returned when it's done
+            tax
+            jsr     TASK_BUILD_FRAME
             ldy     T_REGISTER
-            sta     T_REGISTER
-            sty     TASK_PARENT
+            stx     T_REGISTER                      ; Quick switch to the child (no stack use!)
+            sty     TASK_PARENT                     ; It wakes us when it's done (TASK_EXIT)
+            rmb1    TASK_STATUS_REG                 ; Runnable
             sty     T_REGISTER
-
-; Save the parent's context the way SWITCH_TO does, so SWITCH_TO_NSS can resume it at @resume when the
-; child completes
-            sta     TASK_SAVE_REG                   ; Child task #, returned when the parent resumes
-            lda     #>@resume                       ; RTI frame: PCH, PCL, P...
-            pha
-            lda     #<@resume
-            pha
-            php
-            PUSH_AXY                                ; ...and the PULL_YXA frame
-            tsx
-            stx     STACK_SAVE_REG
-            ldx     ZP_TEMP_VEC + 1
-            ldy     ZP_TEMP_VEC
-            bne     :+                              ; skip HOB of addr if LOB <> 0
-            dex                                     ; update entrypoint to rts-style addr-1
-
-:
-            dey                                     ; update LOB
-            smb1    TASK_STATUS_REG                 ; mark parent task state as PAUSED
-            lda     TASK_SAVE_REG                   ; Child task #
-            sei                                     ; No IRQs between the task and stack switch
-            sta     T_REGISTER                      ; do the task switch
-            stx     ZP_X_SAVE                       ; new task ZP
-            ldx     #$FF                            ; Reset the stack pointer
-            txs
-            ldx     ZP_X_SAVE
-            tya
-            jsr     @task_start
-
-@task_complete:
-            lda     T_REGISTER
-            jsr     MM_TASK_RESET                   ; Free everything the task allocated
-            stz     TASK_STATUS_REG
-            lda     TASK_PARENT
-            ldx     #$FF
-            stx     TASK_PARENT                     ; ...and reset the resume-to register to #$FF (invalid)
-            jmp     SWITCH_TO_NSS
-
-@task_start:
-            rmb1    TASK_STATUS_REG                 ; remove the PAUSED flag
-            phx                                     ; push the start address onto the stack
-            pha                                     ; ...
-            cli                                     ; The child runs with IRQs on
-            rts                                     ; start executing
-
-; The parent resumes here (from SWITCH_TO_NSS) when the child completes
-@resume:
-            lda     TASK_SAVE_REG                   ; The child's task #
+            smb1    TASK_STATUS_REG                 ; We're paused until then
+            jsr     YIELD
+            plp
+            lda     TASK_SAVE_REG
             sec
             rts
 
@@ -202,33 +467,6 @@ RESERVE_TASK:
 ; Back on the original task, so restore the registers
             PULL_YX
             jmp     MM_RETURN                       ; Restore caller's I flag, keep C
-
-; Find the next task that is paused
-; Return task # to switch to in A.  C == 0, none found; C == 1, found
-NEXT_TASK:
-            PUSH_AXY
-            lda     T_REGISTER
-            and     #$0F
-            tay
-
-@test_next:
-            inc
-            and     #$0F                            ; masking since we could have carried
-            sta     ZP_TEMP
-            cpy     ZP_TEMP                         ; are we back where we started?
-            beq     @not_found
-            sta     T_REGISTER                      ; switch to the next task
-            bbr1    TASK_STATUS_REG, @test_next     ; Is bit 1 clear (TASK_PAUSED_FLAG)? if so, try next task
-            sec
-            SKIPNEXT
-
-@not_found:
-            clc
-
-@done:
-            sty     T_REGISTER
-            PULL_YXA
-            rts
 
 ; ****************************************************************************
 ; Run a routine in another task's context: its ZP, stack (below its saved SP), RAM bank and MMU area.
@@ -291,6 +529,7 @@ TASK_CALL:
             sty     T_REGISTER                      ; Switch to the target task
             ldx     STACK_SAVE_REG                  ; ...and its stack
             txs
+            inc     ZP_TC_GUEST                     ; Running for another task: the scheduler mustn't switch
             lda     ZP_TC_FROM
             pha                                     ; Keep the calling task # on the target's stack
             lda     ZP_TC_P
@@ -302,6 +541,7 @@ TASK_CALL:
             jsr     @call
             php
             sei
+            dec     ZP_TC_GUEST
             sta     ZP_TC_A
             stx     ZP_TC_X
             sty     ZP_TC_Y
@@ -333,9 +573,8 @@ TASK_CALL:
             jmp     (ZP_TC_VEC)
 
 ; ****************************************************************************
-; Make a free task ready to run from an entry point: marks it busy and builds the frame SWITCH_TO
-; resumes from on its stack (A/X/Y = 0, IRQs enabled).  Start it with SWITCH_TO.
-; The entry routine must never return (there is nothing to return to).
+; Make a free task (a specific one) ready to run from an entry point on ROM page 0: marks it busy and
+; runnable, so the scheduler starts it.  (The shell task at boot.)
 ; IN: .A.Y = entry point, .X = task#
 ; OUT (success): C = 0
 ; OUT (failure): .A = ERR_BAD_TASK or ERR_TASK_BUSY, C = 1
@@ -350,27 +589,15 @@ TASK_PREPARE:
             sta     ZP_TEMP_VEC
             sty     ZP_TEMP_VEC + 1
             ldy     T_REGISTER                      ; .Y = calling task, .X = new task
-
-; !! NO STACK MANIPULATIONS WHILE IN THE NEW TASK !!
-            stx     T_REGISTER                      ; Quick switch to the new task
+            stx     T_REGISTER                      ; Quick look at the new task (no stack use!)
             lda     TASK_STATUS_REG
             sty     T_REGISTER
             bne     @busy
-            lda     ZP_TEMP_VEC + 1
-            stx     T_REGISTER
-            sta     $01FF                           ; RTI frame: PCH, PCL, P
-            sty     T_REGISTER
-            lda     ZP_TEMP_VEC
-            stx     T_REGISTER
-            sta     $01FE
-            lda     #0
-            sta     $01FD                           ; P: IRQs enabled, decimal off
-            sta     $01FC                           ; PULL_YXA frame: A, X, Y
-            sta     $01FB
-            sta     $01FA
-            lda     #$F9
-            sta     STACK_SAVE_REG
-            lda     #TASK_BUSY_FLAG
+            stz     ZP_TEMP                         ; ROM page 0
+            jsr     TASK_BUILD_FRAME
+            ldy     T_REGISTER
+            stx     T_REGISTER                      ; Quick switch to the new task (no stack use!)
+            lda     #TASK_BUSY_FLAG                 ; Busy and runnable
             sta     TASK_STATUS_REG
             sty     T_REGISTER                      ; Back to the calling task
             clc
@@ -454,13 +681,3 @@ DRV_START:
 ; Non-maskable interrupt handler, called from NMI_ENTRY (COMMON block) on ROM page 0
 NMI_HANDLER:
             rts
-
-            pha
-            PRINT_CHAR  #ASCII_STAR
-            pla
-            jsr     NEXT_TASK
-            bcs     @switch
-            rti
-
-@switch:
-            jmp     SWITCH_TO_NO_PHP

@@ -12,7 +12,9 @@
 //   * IRQ vector RAM ($FFFE/F): written at index V[0..3]; read at index IRQ_NUMBER(n) = n ^ 7 of the lowest
 //     active IRQ line, or V[0..3] when no line is active (and for BRK)
 //   * Rockwell 65C51 ACIA at $FF10 (IRQ line 1): TX/RX with IRQs, output captured, input from --input
-//   * YM2151 status always "not busy"; VIA registers are plain storage (no timers)
+//   * VIA timer 1 (one-shot / free-running, IFR/IER) on IRQ line 0: the scheduler's tick; other VIA
+//     registers are plain storage
+//   * YM2151 status always "not busy"
 //   RAM and the pseudo-registers power up random, like the hardware.
 //
 // Usage: node hydrasim.js [options]
@@ -23,6 +25,8 @@
 //   --shared-u N        Shared RAM installed for U macro-pages 0 - N-1 (default 16; 4 per 512K chip)
 //   --acia-line N       IRQ line the ACIA interrupts on (default 1)
 //   --stuck-irq N       Hold IRQ line N active all the time
+//   --ram-fault BANK:An:high|low   Address line An (0-12) stuck high/low on the RAM chip holding BANK (a
+//                       shared chip holds 4 bank IDs, e.g. F0-F3; a task RAM module 16 banks), e.g. F0:A0:high
 //   --model M           Hardware what-ifs: sharedlow (T doesn't switch $0000-$7FFF), nostack (stack page
 //                       not per task), zponly (only ZP per task), noshared (no shared RAM)
 //   --raw               Print serial output as-is (default shows ESC as <ESC>)
@@ -40,7 +44,7 @@ const path = require('path');
 
 // ---- options
 const opt = { rom: path.join(__dirname, '..', 'os_rom', 'tmp'), cycles: 20000000, input: '', modules: 3,
-  aciaLine: 1, stuckIrq: -1, model: '', raw: false, trace: 25, dumps: [], watches: [], pcWatches: [], sharedU: 16 };
+  aciaLine: 1, stuckIrq: -1, model: '', raw: false, trace: 25, dumps: [], watches: [], pcWatches: [], sharedU: 16, ramFault: null };
 const argv = process.argv.slice(2);
 for (let i = 0; i < argv.length; i++) {
   const a = argv[i], next = () => argv[++i];
@@ -53,6 +57,7 @@ for (let i = 0; i < argv.length; i++) {
     case '--acia-line': opt.aciaLine = +next(); break;
     case '--stuck-irq': opt.stuckIrq = +next(); break;
     case '--model': opt.model = next(); break;
+    case '--ram-fault': { const m = /^([0-9A-Fa-f]{1,2}):A(\d+):(high|low)$/i.exec(next()); opt.ramFault = { bank: parseInt(m[1], 16), mask: 1 << +m[2], high: m[3].toLowerCase() === 'high' }; break; }
     case '--raw': opt.raw = true; break;
     case '--trace': opt.trace = +next(); break;
     case '--dump': opt.dumps.push(next()); break;
@@ -75,6 +80,33 @@ let out = '';
 let aciaCmd = 0, aciaCtrl = 0, aciaTdre = 1, aciaTxTimer = 0, aciaIrq = 0, aciaRdrf = 0, aciaRx = 0;
 const rxQueue = [...opt.input]; let rxDelay = 200000;
 const via = new Uint8Array(16);
+// VIA timer 1 (the scheduler's tick): counter, latch, IFR/IER; one-shot or free-running (ACR bit 6)
+let viaT1 = 0xFFFF, viaT1Latch = 0xFFFF, viaT1On = false, viaIFR = 0, viaIER = 0;
+function viaRead(r) {
+  if (r === 4) { viaIFR &= ~0x40; return viaT1 & 0xFF; }       // T1C-L: clears the T1 flag
+  if (r === 5) return viaT1 >> 8;
+  if (r === 6) return viaT1Latch & 0xFF;
+  if (r === 7) return viaT1Latch >> 8;
+  if (r === 0x0D) return viaIFR | ((viaIFR & viaIER & 0x7F) ? 0x80 : 0);
+  if (r === 0x0E) return viaIER | 0x80;
+  return via[r];
+}
+function viaWrite(r, v) {
+  if (r === 4 || r === 6) viaT1Latch = (viaT1Latch & 0xFF00) | v;
+  else if (r === 5) { viaT1Latch = (viaT1Latch & 0xFF) | (v << 8); viaT1 = viaT1Latch; viaT1On = true; viaIFR &= ~0x40; }
+  else if (r === 7) { viaT1Latch = (viaT1Latch & 0xFF) | (v << 8); viaIFR &= ~0x40; }
+  else if (r === 0x0D) viaIFR &= ~(v & 0x7F);
+  else if (r === 0x0E) { if (v & 0x80) viaIER |= v & 0x7F; else viaIER &= ~(v & 0x7F); }
+  else via[r] = v;
+}
+function viaTick(n) {
+  if (!viaT1On) return;
+  viaT1 -= n;
+  if (viaT1 < 0) {
+    viaIFR |= 0x40;
+    if (via[0x0B] & 0x40) viaT1 += viaT1Latch + 2; else { viaT1 = 0xFFFF; viaT1On = false; }
+  }
+}
 const ACIA_TX_CYCLES = 1860;                                // ~one character at 19200 baud, 3.58 MHz
 
 // Which task's copy of $0000-$7FFF an access uses (the --model what-ifs change this)
@@ -85,9 +117,16 @@ function bankMem(b) {
   if (b >= 0xF0) { const k = U * 16 + (b & 15); return sharedBank[k] || (sharedBank[k] = new Uint8Array(0x2000)); }
   const k = T * 256 + b; return taskBank[k] || (taskBank[k] = new Uint8Array(0x2000));
 }
+// --ram-fault: the offset in the window that the chip holding bank b actually sees
+const sameChip = (b, f) => b >= 0xF0 ? f >= 0xF0 && ((b ^ f) & 0x0C) === 0 : f < 0xF0 && (b >> 4) === (f >> 4);
+function ramOfs(b, a) {
+  const o = a - 0x8000, f = opt.ramFault;
+  if (!f || !sameChip(b, f.bank)) return o;
+  return f.high ? o | f.mask : o & ~f.mask;
+}
 function rd(a) {
   if (a < 0x8000) return taskRam[tsel(a)][a];
-  if (a < 0xA000) { const b = taskRam[tsel(0)][0]; return bankInstalled(b) ? bankMem(b)[a - 0x8000] : (a >> 8); }  // floating bus
+  if (a < 0xA000) { const b = taskRam[tsel(0)][0]; return bankInstalled(b) ? bankMem(b)[ramOfs(b, a)] : (a >> 8); }  // floating bus
   if (a < 0xE000) { const off = taskRam[tsel(1)][1] * 0x4000 + ((a - 0xA000) ^ 0x2000); return off < pagedrom.length ? pagedrom[off] : 0xFF; }
   if (a >= 0xFF00 && a < 0xFFF0) {
     if (a >= 0xFF10 && a < 0xFF14) {
@@ -96,7 +135,7 @@ function rd(a) {
       if (r === 1) { const s = (aciaIrq ? 0x80 : 0) | (aciaTdre ? 0x10 : 0) | (aciaRdrf ? 0x08 : 0); aciaIrq = 0; return s; }
       return r === 2 ? aciaCmd : aciaCtrl;
     }
-    if (a < 0xFF10) return via[a - 0xFF00];
+    if (a < 0xFF10) return viaRead(a - 0xFF00);
     if (a === 0xFF41) return 0x00;                          // YM2151 status: not busy
     return 0xFF;
   }
@@ -111,7 +150,7 @@ function wr(a, v) {
       console.log('watch: $' + hx(a, 4) + ' (task ' + hx(tsel(a), 1) + ') ' + hx(taskRam[tsel(a)][a]) + ' -> ' + hx(v) + ' by ' + hx(W, 1) + ':' + hx(lastPC, 4) + ' at cycle ' + cyc);
     taskRam[tsel(a)][a] = v; return;
   }
-  if (a < 0xA000) { const b = taskRam[tsel(0)][0]; if (bankInstalled(b)) bankMem(b)[a - 0x8000] = v; return; }
+  if (a < 0xA000) { const b = taskRam[tsel(0)][0]; if (bankInstalled(b)) bankMem(b)[ramOfs(b, a)] = v; return; }
   if (a < 0xFF00) return;
   if (a >= 0xFF10 && a < 0xFF14) {
     const r = a - 0xFF10;
@@ -121,7 +160,7 @@ function wr(a, v) {
     else aciaCtrl = v;
     return;
   }
-  if (a < 0xFF10) { via[a - 0xFF00] = v; return; }
+  if (a < 0xFF10) { viaWrite(a - 0xFF00, v); return; }
   if (a === 0xFFF0) { T = v & 15; return; } if (a === 0xFFF1) { U = v & 15; return; }
   if (a === 0xFFF2) { V = v; return; } if (a === 0xFFF3) { W = v & 15; return; }
   if (a === 0xFFFE) { vecRam[V & 15] = (vecRam[V & 15] & 0xFF00) | v; return; }
@@ -132,6 +171,7 @@ function irqLine() {
   const acia = aciaIrq && (((aciaCmd & 0x0C) === 0x04 && aciaTdre) || (!(aciaCmd & 2) && aciaRdrf));
   const lines = [];
   if (acia) lines.push(opt.aciaLine);
+  if (viaIFR & viaIER & 0x7F) lines.push(0);                      // VIA: IRQ line 0
   if (opt.stuckIrq >= 0) lines.push(opt.stuckIrq);
   return lines.length ? Math.min(...lines) : -1;
 }
@@ -168,7 +208,9 @@ function interrupt(vec, brk) { push(PC >> 8); push(PC & 0xFF); push((P | 0x20) &
 
 const trace = [], pcHist = new Map();
 PC = rd16(0xFFFC); P |= I;                                  // RESET
+let lastCyc = 0;
 while (cyc < opt.cycles && !halted) {
+  viaTick(cyc - lastCyc); lastCyc = cyc;
   if (aciaTxTimer > 0 && --aciaTxTimer === 0) { aciaTdre = 1; if ((aciaCmd & 0x0C) === 0x04) aciaIrq = 1; }
   if (rxQueue.length && --rxDelay <= 0 && !aciaRdrf) { aciaRx = rxQueue.shift().charCodeAt(0); aciaRdrf = 1; if (!(aciaCmd & 2)) aciaIrq = 1; rxDelay = 20000; }
   if (irqLine() >= 0) { waiting = false; if (!(P & I)) { interrupt(irqVector(), false); cyc += 7; continue; } }

@@ -11,7 +11,9 @@
 ;       $8200-$821F  SH_MAP     shared bank bitmap (1 = in use)
 ;       $8220-$823F  SH_ENDS    run-end bitmap (last bank of each allocation)
 ;       $8400-$87FF  SH_HANDLES shared handle table: 255 entries of ShHandle
-;   Bank IDs $00 (system) and $01-$08 (message rings) are reserved, as are the banks of any U macro-page
+;       $8800-$88FF  IO_DEV_TABLE the IO device table (io.s)
+;   Bank IDs $00 (system), $01-$08 (message rings) and $09 (IO transfer areas) are reserved, as are the
+;   banks of any U macro-page
 ;   whose RAM isn't installed.
 ;
 ;   A shared handle is a 1-byte index (1-255) that any task can use, so it can be sent in a message.
@@ -23,7 +25,7 @@ SH_MAP              = $8200
 SH_ENDS             = $8220
 SH_HANDLES          = $8400
 SH_MAX_HANDLES      = 255
-SH_FIRST_FREE_ID    = $09                                   ; Below: system data and message rings
+SH_FIRST_FREE_ID    = $0A                                   ; Below: system data, message rings, IO transfers
 SH_WINDOW           = PAGED_RAM_BASE                        ; Where SH_LOCK maps a shared allocation
 SH_PROBE_ADDR       = $9FFF                                 ; Probe byte (bank $F0 of each U)
 SH_PROBE_MARK       = $50                                   ; Probe marker: SH_PROBE_MARK + U
@@ -93,6 +95,7 @@ SHARED_RAM_INIT:
             sta         SH_HANDLES + $100,Y
             sta         SH_HANDLES + $200,Y
             sta         SH_HANDLES + $300,Y
+            sta         IO_DEV_TABLE,Y                      ; The IO device table ($8800, io.s)
             iny
             bne         @clear
             ldx         #0                                  ; Reserve the banks of missing macro-pages
@@ -110,10 +113,10 @@ SHARED_RAM_INIT:
             inx
             cpx         #32
             bne         @macro_pages
-            lda         #$FF                                ; Reserve bank IDs $00-$08
+            lda         #$FF                                ; Reserve bank IDs $00-$09
             ora         SH_MAP
             sta         SH_MAP
-            lda         #$01
+            lda         #$03
             ora         SH_MAP + 1
             sta         SH_MAP + 1
             _M_MSG_LEAVE

@@ -19,6 +19,7 @@ RESET_VECTOR_START:
             jsr                 TASKS_INIT                          ; Must be called before the drivers and MMU_INIT
             jsr                 MMU_INIT
             jsr                 MSG_INIT                            ; Message ring pointers (shared RAM)
+            jsr                 IO_INIT                             ; The IO layer's devices (/dev/null, /dev/zero)
             jsr                 VIA_INIT
             ;jsr                 SPI_INIT
             lda                 #<SOUND_DRIVER                      ; Sound driver in its own (Resident) task
@@ -33,15 +34,16 @@ RESET_VECTOR_START:
             ;jsr                 SND_CALL_TEST
             jsr                 DO_WELCOME
 
-; Start the shell in its own task (the default serial-capture task) and hand the CPU to it
+; Start the shell in its own task (the default serial-capture task), start the scheduler's tick, and
+; hand the CPU over
             lda                 #<SHELL_MAIN
             ldy                 #>SHELL_MAIN
             ldx                 #SHELL_TASK_NUM
             jsr                 TASK_PREPARE
-            lda                 #SHELL_TASK_NUM
-            jsr                 SWITCH_TO
+            jsr                 SCHED_START
+            jsr                 YIELD
 
-; The system task only runs again if something switches back to it
+; The system task is the idle task: the scheduler only runs it when no other task can run
 @idle:
             wai
             bra                 @idle
@@ -53,17 +55,18 @@ RESET_VECTOR_START:
 ;   ZP/ST/LO/7D: $0080 / $0180 / $0280 / $7D80 are per-Task (T) or common to all tasks (C)
 ;   SH: shared RAM bank $F0 (U = 0) is Shared between tasks (S) or not (X)
 ;   P1: byte at $EA00 on ROM page 1 (4C expected: the jmp at forth_main)
+; and a second line of paged RAM line tests (hex masks of bad lines, all 0 when good):
+;       RAM U:0 F0:0/00/0000 F4:0/00/0000 F8:0/00/0000 FC:0/00/0000 00:0/00/0000 10:0/00/0000 ...
+;   U:x      U lines U0-U3 (bit n = Un), tested on shared bank $F0
+;   bb:x/dd/aaaa  bank bb at $8000-$9FFF: bank register lines 0-3 (bb ^ 1/2/4/8), data lines D0-D7 and
+;            address lines A0-A12.  Tested: the first bank of each shared RAM chip ($F0, $F4, $F8, $FC, with
+;            U = 0; a missing chip shows as bad lines) and of each installed task RAM module.
+;   Destructive: run before anything is kept in paged RAM.
 POST_ACIA_CMD   = ACIA_CMD_BIT_DTRL | ACIA_CMD_BIT_TLID | ACIA_CMD_BIT_RID    ; No IRQs
 
 .macro _M_POST_TASK_TEST    addr, label
-            ldx                 #0
-:
-            lda                 label,X
-            beq                 :+
-            jsr                 POST_PUTC
-            inx
-            bra                 :-
-:
+            ldx                 #label - POST_STRINGS
+            jsr                 POST_PUTS
             lda                 #$A5
             stz                 T_REGISTER                          ; Task 0 (no stack use until back in task 0)
             sta                 addr
@@ -94,14 +97,8 @@ POST:
             _M_POST_TASK_TEST   $0280, POST_S_LO
             _M_POST_TASK_TEST   $7D80, POST_S_7D
 
-            ldx                 #0
-:
-            lda                 POST_S_SH,X
-            beq                 :+
-            jsr                 POST_PUTC
-            inx
-            bra                 :-
-:
+            ldx                 #POST_S_SH - POST_STRINGS
+            jsr                 POST_PUTS
             stz                 U_REGISTER
             ldx                 #$F0
             stz                 T_REGISTER                          ; Task 0: shared bank $F0
@@ -123,19 +120,33 @@ POST:
             txa
             jsr                 POST_PUTC
 
-            ldx                 #0
-:
-            lda                 POST_S_P1,X
-            beq                 :+
-            jsr                 POST_PUTC
-            inx
-            bra                 :-
-:
+            ldx                 #POST_S_P1 - POST_STRINGS
+            jsr                 POST_PUTS
             LOAD_ADDR           $EA00, ZP_D_XAM
             lda                 #1
             sta                 ZP_D_PAGE
             jsr                 PEEK_D_XAM                          ; Byte at $EA00 on ROM page 1
             stz                 ZP_D_PAGE
+            jsr                 POST_PUTBYTE
+
+            jsr                 POST_RAM_TEST                       ; Paged RAM lines (page 2, post_ram.s)
+            ldx                 #POST_S_CRLF - POST_STRINGS
+            jsr                 POST_PUTS
+            plp
+            rts
+
+; Print the POST string at offset .X in POST_STRINGS.  Modifies: .A, .X, .Y
+POST_PUTS:
+            lda                 POST_STRINGS,X
+            beq                 :+
+            jsr                 POST_PUTC
+            inx
+            bra                 POST_PUTS
+:
+            rts
+
+; Modifies: .X, .Y
+POST_PUTBYTE:
             pha
             lsr
             lsr
@@ -143,13 +154,6 @@ POST:
             lsr
             jsr                 POST_PUTHEX
             pla
-            jsr                 POST_PUTHEX
-            lda                 #ASCII_CR
-            jsr                 POST_PUTC
-            lda                 #ASCII_LF
-            jsr                 POST_PUTC
-            plp
-            rts
 
 POST_PUTHEX:
             and                 #$0F
@@ -177,12 +181,14 @@ POST_PUTC:
             bne                 :-
             rts
 
+POST_STRINGS:
 POST_S_ZP:  .byte ASCII_CR, ASCII_LF, "POST ZP:", 0
 POST_S_ST:  .byte " ST:", 0
 POST_S_LO:  .byte " LO:", 0
 POST_S_7D:  .byte " 7D:", 0
 POST_S_SH:  .byte " SH:", 0
 POST_S_P1:  .byte " P1:", 0
+POST_S_CRLF: .byte ASCII_CR, ASCII_LF, 0
 
 DO_WELCOME:
             jsr                 CLEAR_SCR
@@ -221,6 +227,8 @@ SPI_TEST:
 ; A: S/W interrupt number
 ; Preserves .X and V
 SW_INT:
+            php                                                     ; No task switch while V is ours (BRK runs
+            sei                                                     ;   even with IRQs off)
             phx
             ldx                 V_REGISTER                          ; Save V (shared pseudo-register)
             asl                                                     ; move int# to V[4..7]
@@ -233,6 +241,7 @@ SW_INT:
             .byte               $00                                 ; BRK signature byte (RTI returns past it)
             stx                 V_REGISTER                          ; Restore prior V
             plx
+            plp
             rts
 
 ; Start of every other BIOS page: the RESET entry at $E000 zeroes W, and execution continues on page 0

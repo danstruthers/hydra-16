@@ -19,10 +19,55 @@ Most changes affect **both** images (HyForth's RAM image calls ROM addresses dir
 
 ### **Startup**
 
-1. **POST** (power-on self test): checks that zero page, the stack page and task RAM are per-task, that shared RAM is shared, and that ROM page 1 is present, using polled serial output with IRQs off.  It prints one line, e.g. `POST ZP:T ST:T LO:T 7D:T SH:S P1:4C`.
+1. **POST** (power-on self test): checks the memory mapping and the paged RAM's address, data and bank lines, and prints two lines (see **POST** below).
 2. IRQ tables and vectors, tasks, MMU (including detection of the installed RAM modules), message rings, VIA.
 3. The sound and serial drivers start in their own tasks, then the welcome message is printed.
-4. The shell (HyForth, then WOZMON on `bye`) starts in task 1, which receives the serial input.  Task 0 then idles.
+4. The shell (HyForth, then WOZMON on `bye`) starts in task 1, which receives the serial input.  The scheduler's tick starts, and task 0 becomes the idle task.
+
+The scheduler is preemptive: the VIA timer 1 interrupt (about every 5 ms) switches between runnable tasks, round-robin.  A task can hold the CPU with `NO_PREEMPT`/`PREEMPT` (interrupts keep running), or with `sei`/`cli` for very short sections.  `TASK_RUN` starts a task in the background, `TASK_START` starts one and waits for it, and `TASK_WAIT`/`IO_WAKE` block and wake a task.  `$F869` (`F869R` in WOZMON) runs the scheduler self test.
+
+### **POST**
+
+The power-on self test runs first thing at every reset, in task 0 with IRQs off, using polled serial output (no drivers), so it works even when little else does.  The code is `POST` in `os_rom/os_main.s` (first line) and `os_rom/post_ram.s` on BIOS page 2 (second line).  A good board prints:
+
+```
+POST ZP:T ST:T LO:T 7D:T SH:S P1:4C
+RAM U:0 F0:0/00/0000 F4:0/00/0000 F8:0/00/0000 FC:0/00/0000 00:0/00/0000 10:0/00/0000 20:0/00/0000
+```
+
+**First line: the memory mapping** the task system depends on.
+
+| Field | Good | Checks |
+| :---- | :--- | :----- |
+| `ZP:` | `T` | `$0080` (zero page) is per-Task (`T`), not Common to all tasks (`C`) |
+| `ST:` | `T` | `$0180` (stack page) is per-task |
+| `LO:` | `T` | `$0280` (task RAM) is per-task |
+| `7D:` | `T` | `$7D80` (top of task RAM, the task system page) is per-task |
+| `SH:` | `S` | Shared bank `$F0` (U = 0) is Shared between tasks (`S`), or not (`X`) |
+| `P1:` | `4C` | The byte at `$EA00` on BIOS ROM page 1 (the `jmp` at `forth_main`): page 1 is present and current |
+
+**Second line: the paged RAM lines.**  Each value is a hex mask of **bad** lines (bit n set = line n bad), so all zeros is good.
+
+* `U:x`: the U register lines U0-U3, tested on shared bank `$F0`.
+* `bb:x/dd/aaaa`: bank `bb`, tested at `$8000-$9FFF`:
+  * `x`: bank register lines 0-3 (the byte at `$8000` of bank `bb` XOR 1, 2, 4 and 8)
+  * `dd`: data lines D0-D7 (walking one at `$8000`)
+  * `aaaa`: address lines A0-A12 (`$8000 + 2^n` for each line n; also catches a write landing on `$8000`, i.e. a line stuck high)
+
+The banks tested are the first bank of each shared RAM chip (U = 0), then the first bank of each installed task RAM module (`00`, `10`, `20`, ...).  A missing chip shows up as bad lines.  The tests are destructive, which is fine at reset: nothing is kept in paged RAM yet.
+
+Shared RAM chips (`board/SharedMem.kicad_sch`, HM628512).  On the V1 board, bank register bits 2 and 3 are swapped (as are bits 6 and 7, and the same bits of the ROM bank register), so bank IDs `$04-$07` are on U28 and `$08-$0B` on U27:
+
+| POST | Bank IDs | Chip |
+| :--- | :------- | :--- |
+| `F0` | `$F0-$F3` | U25 |
+| `F4` | `$F4-$F7` | U28 |
+| `F8` | `$F8-$FB` | U27 |
+| `FC` | `$FC-$FF` | U29 |
+
+HM628512 pins, for tracking down a bad line: A0 12, A1 11, A2 10, A3 9, A4 8, A5 7, A6 6, A7 5, A8 27, A9 26, A10 23, A11 25, A12 4; U0-U3 on A13-A16 (pins 28, 3, 31, 2); bank lines 0 and 1 (RAMB_M0/M1) on A17 and A18 (pins 30, 1); D0-D7 on pins 13-15 and 17-21.  For example, `F0:0/00/0001` is A0 (pin 12) on U25, and `F8:2/00/0000` is bank line 1 (A18, pin 1) on U27.
+
+The emulator can inject a stuck address line to check the test (`--ram-fault`, see `sim/README.md`).
 
 ### **Tasks**
 
@@ -30,7 +75,7 @@ There are 16 tasks (`T` = `$0-$F`), each with its own `$0000-$7FFF` (zero page, 
 
 | Task | Use |
 | :--- | :-- |
-| `$0` | System task: boot, then idle |
+| `$0` | System task: boot, then the idle task (runs only when no other task can) |
 | `$1` | Shell (HyForth / WOZMON); the default serial-capture task |
 | `$E` | Sound driver (Resident) |
 | `$F` | Serial driver (Resident) |
@@ -59,10 +104,10 @@ Drivers run in **Resident** tasks, which only run from IRQs and from calls into 
 
 | Start | End  | Description |
 | :---- | :--- | :---------- |
-| $E000 | $FFFF | BIOS/OS ROM paged area (indexed by the W register; see below).  Page 0: BIOS and OS.  Page 1: HyForth and the disassembler.  Pages 2-F: unused |
+| $E000 | $FFFF | BIOS/OS ROM paged area (indexed by the W register; see below).  Page 0: BIOS and OS.  Page 1: HyForth and the disassembler.  Page 2: the IO layer and the POST RAM line tests.  Pages 3-F: unused |
 | $E000 | $E004 | RESET Vector entry point: sets W to zero.  This is replicated at the beginning of each BIOS page, so that an arbitrary W register value at startup/RESET continues on page 0, right after the page 0 copy. |
 | $E005 | $FCFF | Effective BIOS paged area.  Compiler segments (pages) `BIOS_P1 - BIOS_PF` correspond to `W` register values of `$01 - $0F`, respectively.  Code on different pages calls each other through far-call gates. |
-| $F800 | $F853 | BIOS thunks (`jmp` table of BIOS, MMU and shared memory entry points), on page 0 and page 1.  `$F833` (`F833R` in WOZMON, `mmtest` in HyForth) runs the MMU self test |
+| $F800 | $F88C | BIOS thunks (`jmp` table of BIOS, MMU, shared memory, scheduler and IO entry points), on page 0 and page 1.  `$F833` (`F833R` in WOZMON, `mmtest` in HyForth) runs the MMU self test; `$F869` the scheduler self test; `$F88A` the IO self test |
 | $FD00 | $FDFF | COMMON block, the same on every page: IRQ entry stubs and exit, NMI entry, far-call trampolines |
 | $FE00 | $FEFF | "WOZMON" monitor page (page 0) |
 

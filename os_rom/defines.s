@@ -29,12 +29,79 @@ ERR_IRQ_NOT_FOUND   = $51
 ERR_MSG_FULL        = $60
 ERR_MSG_EMPTY       = $61
 
+ERR_IO_NOT_FOUND    = $70       ; no such file / device
+ERR_IO_BAD_FD       = $71       ; fd not open (or out of range)
+ERR_IO_MODE         = $72       ; not opened for that (e.g. write on a read-only fd)
+ERR_IO_WOULD_BLOCK  = $73       ; no data yet (non-blocking fd; servers return it to make the IO layer wait)
+ERR_IO_EOF          = $74       ; end of file (IO_GETC)
+ERR_IO_NO_FDS       = $75       ; all of the task's fds are open
+ERR_IO_NO_DEVS      = $76       ; the device table is full
+ERR_IO_NAME         = $77       ; bad or duplicate device name
+ERR_IO_BAD_REQ      = $78       ; the server doesn't support that request
+
+; ***  IO (see IO_PLAN.md)  ***
+
+; File descriptors: per task, in the task system page after the IRQ tables (IRQ_SPURIOUS ends at $7D9F)
+IO_MAX_FDS          = 12
+IO_FD_SIZE          = 8
+IO_FD_TABLE         = $7DA0     ; IO_MAX_FDS x IO_FD_SIZE
+IO_FD_SERVER        = IO_FD_TABLE + 0   ; device table index ($FF = fd not open)
+IO_FD_FID           = IO_FD_TABLE + 1   ; the server's handle for the open file
+IO_FD_MODE          = IO_FD_TABLE + 2   ; IO_MODE_* bits
+IO_FD_OFS           = IO_FD_TABLE + 4   ; 32-bit offset
+IO_FD_CLOSED        = $FF
+
+IO_MODE_READ        = $01
+IO_MODE_WRITE       = $02
+IO_MODE_RDWR        = IO_MODE_READ | IO_MODE_WRITE
+IO_MODE_NONBLOCK    = $80       ; reads return ERR_IO_WOULD_BLOCK instead of waiting
+
+; Device table: in shared bank ID $00 (see shared.s)
+IO_MAX_DEVS         = 16
+IO_DEV_SIZE         = 16
+IO_DEV_TABLE        = $8800     ; IO_MAX_DEVS x IO_DEV_SIZE
+IO_DEV_NAME         = 0         ; 8 bytes, zero-padded (free entry: first byte 0)
+IO_DEV_NAME_LEN     = 8
+IO_DEV_TASK         = 8         ; task the serve routine runs in ($FF = the calling task)
+IO_DEV_SERVE        = 9         ; serve routine (ROM page 0 address)
+IO_DEV_CALLER_TASK  = $FF
+
+; IO transfer areas: shared bank ID $09 (U = 0, bank $F9), 512 bytes per task at $8000 + task * $200:
+; the request block, then (at + $100) up to IO_UNIT bytes of data
+IO_XFER_BANK_ID     = $09
+IO_XFER_BANK        = $F0 | IO_XFER_BANK_ID
+IO_UNIT             = 256
+IO_BLK_TYPE         = 0         ; H9_* request
+IO_BLK_FID          = 1
+IO_BLK_MODE         = 2         ; open mode
+IO_BLK_CLIENT       = 3         ; the task making the request
+IO_BLK_OFS          = 4         ; 32-bit offset (read / write)
+IO_BLK_COUNT        = 8         ; 16-bit byte count: requested (in), done (out)
+IO_BLK_CTL_CODE     = 11        ; H9_CTL
+IO_BLK_CTL_ARG      = 12
+IO_BLK_DATA         = $100
+
+; H9P requests (serve routine: .A = request, .X = client task, .Y = fid; the request block is in the
+; client's transfer area, see IO_SRV_MAP.  OUT: C = 0 (.A = fid for H9_OPEN), or C = 1 and .A = error)
+H9_OPEN             = 1         ; name remainder (after the device name) in the data area -> fid
+H9_READ             = 2         ; offset, count -> data, count done
+H9_WRITE            = 3         ; offset, count, data -> count done
+H9_CLUNK            = 4         ; close fid
+H9_STAT             = 5         ; -> 16-byte stat block in the data area
+H9_CTL              = 6         ; device-specific control: code, arg
+
 RESET_ENTRY     = $E000
 
 IO_PORT_BASE    = $FF00
 
 ; TIMING
-CLK_CPS         = 3579545   ; ~3.58 MHz
+; CPU clock: a build-time setting for now (board V2 will have a clock jumper register to read).  Timing
+; constants are derived from it.  Above 3.58 MHz the YM2151 (on its own 3.58 MHz clock) needs bus wait
+; states, which need the V2 RDY hold hardware (see IO_PLAN.md), so don't use the sound chip until then.
+CPU_CLOCK_MULT  = 1         ; 1 = 3.58 MHz, 2 = 7.16 MHz
+.assert     CPU_CLOCK_MULT = 1 .or CPU_CLOCK_MULT = 2, error, "CPU_CLOCK_MULT must be 1 (3.58 MHz) or 2 (7.16 MHz)"
+CLK_BASE_CPS    = 3579545   ; ~3.58 MHz (the 14.318 MHz crystal / 4)
+CLK_CPS         = CLK_BASE_CPS * CPU_CLOCK_MULT
 CLK_CPMS        = (CLK_CPS / 1000) + 1
 
 ; ***  ONBOARD SERIAL ADAPTER, 65C51  ***
@@ -271,8 +338,11 @@ name = task_zp_top
 .endmacro
 
 ; Task switcher interrupt timer (one interrupt per 5ms or so, with 64 cycles for INT Handler overhead)
-TIMER_TASK_INT_H = 69
-TIMER_TASK_INT_L = 169
+SCHED_TICK_HZ   = 200
+TIMER_TASK_INT  = (CLK_CPS / SCHED_TICK_HZ) - 64           ; 17833 at 3.58 MHz
+.assert     TIMER_TASK_INT < $10000, error, "Scheduler tick doesn't fit VIA T1: raise SCHED_TICK_HZ"
+TIMER_TASK_INT_H = >TIMER_TASK_INT
+TIMER_TASK_INT_L = <TIMER_TASK_INT
 
 ; ASCII CODES
 ASCII_BACKSPACE = $08
