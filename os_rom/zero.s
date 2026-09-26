@@ -147,6 +147,16 @@ ZP_M_HP:                ; handle table entry pointer
     .res  2
 ZP_M_HANDLE:            ; handle being worked on
     .res  1
+ZP_M_CP:                ; chunk page pointer (low byte always 0)
+    .res  2
+ZP_M_CPREV:             ; chunk page pointer: previous page in a class list (low byte always 0)
+    .res  2
+ZP_M_CLS:               ; chunk size class index
+    .res  1
+ZP_M_CSZ:               ; chunk size
+    .res  1
+ZP_M_COFS:              ; chunk offset in its page
+    .res  1
 
 ; MATH
 ZP_MATH_TEMP:           ; temp space, parse output base

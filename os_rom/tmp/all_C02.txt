@@ -1086,39 +1086,49 @@ Current file: all.s
 00004Fr 2  xx xx            .res  2
 000051r 2               ZP_M_HANDLE:            ; handle being worked on
 000051r 2  xx               .res  1
-000052r 2               
-000052r 2               ; MATH
-000052r 2               ZP_MATH_TEMP:           ; temp space, parse output base
-000052r 2  xx xx xx xx      .res  4
-000056r 2               ;ZP_MATH_TEMP2:          ; temp space, parse output base
-000056r 2               ;    .res  4
-000056r 2               ;ZP_MATH_PST:            ; parse state
-000056r 2               ;    .res  1
-000056r 2               ;ZP_MATH_PB:             ; parse base
-000056r 2               ;    .res  1
-000056r 2               ;ZP_MATH_PNS:            ; parse number size
-000056r 2               ;    .res  1
-000056r 2               ;ZP_MATH_OA:             ; parse output address
-000056r 2               ;    .res  2
-000056r 2               
-000056r 2               ; DISASM
-000056r 2               ZP_D_STATE:
-000056r 2  xx               .res    1
-000057r 2               ZP_D_EXBYTES:
-000057r 2  xx               .res    1
-000058r 2               ZP_D_INST:
-000058r 2  xx xx xx         .res    3
-00005Br 2               ZP_D_MODE:
-00005Br 2  xx               .res   1
-00005Cr 2               ZP_D_XAM:
-00005Cr 2  xx xx            .res    2       ; eXAMine address
-00005Er 2               ZP_D_ICOUNT:
+000052r 2               ZP_M_CP:                ; chunk page pointer (low byte always 0)
+000052r 2  xx xx            .res  2
+000054r 2               ZP_M_CPREV:             ; chunk page pointer: previous page in a class list (low byte always 0)
+000054r 2  xx xx            .res  2
+000056r 2               ZP_M_CLS:               ; chunk size class index
+000056r 2  xx               .res  1
+000057r 2               ZP_M_CSZ:               ; chunk size
+000057r 2  xx               .res  1
+000058r 2               ZP_M_COFS:              ; chunk offset in its page
+000058r 2  xx               .res  1
+000059r 2               
+000059r 2               ; MATH
+000059r 2               ZP_MATH_TEMP:           ; temp space, parse output base
+000059r 2  xx xx xx xx      .res  4
+00005Dr 2               ;ZP_MATH_TEMP2:          ; temp space, parse output base
+00005Dr 2               ;    .res  4
+00005Dr 2               ;ZP_MATH_PST:            ; parse state
+00005Dr 2               ;    .res  1
+00005Dr 2               ;ZP_MATH_PB:             ; parse base
+00005Dr 2               ;    .res  1
+00005Dr 2               ;ZP_MATH_PNS:            ; parse number size
+00005Dr 2               ;    .res  1
+00005Dr 2               ;ZP_MATH_OA:             ; parse output address
+00005Dr 2               ;    .res  2
+00005Dr 2               
+00005Dr 2               ; DISASM
+00005Dr 2               ZP_D_STATE:
+00005Dr 2  xx               .res    1
+00005Er 2               ZP_D_EXBYTES:
 00005Er 2  xx               .res    1
-00005Fr 2               ZP_D_PAGE:              ; ROM page (W) the disassembler reads $E000-$FDFF from (0 = BIOS, set by TASKS_INIT)
-00005Fr 2  xx               .res    1
-000060r 2               
-000060r 2               .feature org_per_seg
-000060r 2               .segment "STACK"
+00005Fr 2               ZP_D_INST:
+00005Fr 2  xx xx xx         .res    3
+000062r 2               ZP_D_MODE:
+000062r 2  xx               .res   1
+000063r 2               ZP_D_XAM:
+000063r 2  xx xx            .res    2       ; eXAMine address
+000065r 2               ZP_D_ICOUNT:
+000065r 2  xx               .res    1
+000066r 2               ZP_D_PAGE:              ; ROM page (W) the disassembler reads $E000-$FDFF from (0 = BIOS, set by TASKS_INIT)
+000066r 2  xx               .res    1
+000067r 2               
+000067r 2               .feature org_per_seg
+000067r 2               .segment "STACK"
 000000r 2               
 000000r 1               .include "common.s"     ; COMMON block (every ROM page) and gate macros
 000000r 2               .debuginfo
@@ -8517,6 +8527,24 @@ Current file: all.s
 000000r 2               MMU_BANK_ENDS    = MMU_HDR + MmuHeader::bank_ends
 000000r 2               MMU_HANDLE_TBL   = MMU_HDR + MmuHeader::handles             ; Entry for handle h: MMU_HANDLE_TBL + (h - 1) * 4
 000000r 2               MMU_MAX_HANDLES  = ($8000 - MMU_HANDLE_TBL) / .sizeof(Handle)   ; 103 for 2 pages
+000000r 2               MMU_CHUNK_HEADS  = MMU_HDR + MmuHeader::chunk_heads         ; First chunk page of each size class (0 = none)
+000000r 2               
+000000r 2               ; Chunk pages: a 256-byte task RAM page split into chunks of one size (4, 8, 16, 32 or 64 bytes).  The
+000000r 2               ; first chunk holds the page header; free chunks are linked through their first byte (the in-page offset
+000000r 2               ; of the next free chunk, 0 = none).
+000000r 2               MMU_CHUNK_MIN    = 4                                        ; Smallest chunk (class 0)
+000000r 2               MMU_CHUNK_MAX    = 64                                       ; Largest chunk; bigger allocations take whole pages
+000000r 2               MMU_CHUNK_CLASSES = 5                                       ; 4, 8, 16, 32, 64
+000000r 2               
+000000r 2               .struct     ChunkPage
+000000r 2                           size        .byte                               ; Chunk size
+000000r 2                           free_count  .byte                               ; Free chunks in this page
+000000r 2                           free_head   .byte                               ; Offset of the first free chunk (0 = none)
+000000r 2                           next_page   .byte                               ; Next chunk page of the same size (0 = none)
+000000r 2               .endstruct
+000000r 2               
+000000r 2               .assert     .sizeof(ChunkPage) <= MMU_CHUNK_MIN, error, "Chunk page header must fit in the first chunk"
+000000r 2               .assert     MMU_CHUNK_CLASSES <= 6, error, "MmuHeader::chunk_heads has 6 entries"
 000000r 2               
 000000r 2               MMU_BIT_MASKS:
 000000r 2  01 02 04 08              .byte       $01, $02, $04, $08, $10, $20, $40, $80
@@ -8959,9 +8987,10 @@ Current file: all.s
 00021Fr 2               ; Handles (per task).  A handle is a 1-byte index (1 - MMU_MAX_HANDLES) into the current task's handle
 00021Fr 2               ; table; 0 is never a valid handle.  All calls: C = 0 on success, C = 1 with the error in .A.
 00021Fr 2               ;
-00021Fr 2               ;   Allocation tiers (stage 2; 4-128 byte chunks come in stage 3):
+00021Fr 2               ;   Allocation tiers:
 00021Fr 2               ;       1-3 bytes       AI_SMALL: the bytes are kept in the handle entry itself
-00021Fr 2               ;       4+ bytes        AI_BLOCK: a run of 256-byte task RAM pages ($0800-$7CFF, top-down)
+00021Fr 2               ;       4-64 bytes      Chunk (no tier bit): a 4, 8, 16, 32 or 64-byte chunk of a shared chunk page
+00021Fr 2               ;       65+ bytes       AI_BLOCK: a run of 256-byte task RAM pages ($0800-$7CFF, top-down)
 00021Fr 2               ;       .X = AI_PAGED   AI_PAGED: a run of 8K RAM banks, seen at $8000-$9FFF (MM_LOCK selects the bank)
 00021Fr 2               
 00021Fr 2               ; Allocate memory for the current task.
@@ -8977,821 +9006,1122 @@ Current file: all.s
 000225r 2  84 rr                    sty         ZP_M_TEMP2                          ; Size high
 000227r 2  86 rr                    stx         ZP_M_SV                             ; Flags
 000229r 2  05 rr                    ora         ZP_M_TEMP2
-00022Br 2  F0 77                    beq         @bad_arg                            ; Zero bytes
-00022Dr 2  20 rr rr                 jsr         MM_NEW_HANDLE                       ; Free entry -> ZP_M_HP, ZP_M_HANDLE
-000230r 2  B0 6D                    bcs         @done
-000232r 2  A5 rr                    lda         ZP_M_SV
-000234r 2  29 01                    and         #AI_PAGED
-000236r 2  D0 3C                    bne         @banks
-000238r 2  A5 rr                    lda         ZP_M_TEMP2
-00023Ar 2  D0 1A                    bne         @pages
-00023Cr 2  A5 rr                    lda         ZP_M_SZ1
-00023Er 2  C9 04                    cmp         #AI_SMALL_LEN + 1
-000240r 2  B0 14                    bcs         @pages
-000242r 2               
-000242r 2               ; 1-3 bytes: kept in the entry itself
-000242r 2  09 98                    ora         #AI_IN_USE | AI_SMALL               ; Status = length + flags
-000244r 2  A0 03                    ldy         #Handle::status
-000246r 2  91 rr                    sta         (ZP_M_HP),Y
-000248r 2  A9 00                    lda         #0
-00024Ar 2  A0 00                    ldy         #Handle::addr_l                     ; Clear the data bytes
+00022Br 2  D0 03                    bne         :+
+00022Dr 2  4C rr rr                 jmp         @bad_arg                            ; Zero bytes
+000230r 2               :
+000230r 2  20 rr rr                 jsr         MM_NEW_HANDLE                       ; Free entry -> ZP_M_HP, ZP_M_HANDLE
+000233r 2  90 03                    bcc         :+
+000235r 2  4C rr rr                 jmp         @done
+000238r 2               :
+000238r 2  A5 rr                    lda         ZP_M_SV
+00023Ar 2  29 01                    and         #AI_PAGED
+00023Cr 2  D0 59                    bne         @banks
+00023Er 2  A5 rr                    lda         ZP_M_TEMP2
+000240r 2  D0 37                    bne         @pages
+000242r 2  A5 rr                    lda         ZP_M_SZ1
+000244r 2  C9 04                    cmp         #AI_SMALL_LEN + 1
+000246r 2  B0 14                    bcs         @not_small
+000248r 2               
+000248r 2               ; 1-3 bytes: kept in the entry itself
+000248r 2  09 98                    ora         #AI_IN_USE | AI_SMALL               ; Status = length + flags
+00024Ar 2  A0 03                    ldy         #Handle::status
 00024Cr 2  91 rr                    sta         (ZP_M_HP),Y
-00024Er 2  C8                       iny
-00024Fr 2  91 rr                    sta         (ZP_M_HP),Y
-000251r 2  C8                       iny
+00024Er 2  A9 00                    lda         #0
+000250r 2  A0 00                    ldy         #Handle::addr_l                     ; Clear the data bytes
 000252r 2  91 rr                    sta         (ZP_M_HP),Y
-000254r 2  80 46                    bra         @ok
-000256r 2               
-000256r 2               ; 4+ bytes: whole task RAM pages
-000256r 2               @pages:
-000256r 2  A5 rr                    lda         ZP_M_TEMP2                          ; Pages = size high + (size low <> 0)
-000258r 2  A6 rr                    ldx         ZP_M_SZ1
-00025Ar 2  F0 01                    beq         :+
-00025Cr 2  1A                       inc                                             ; ($FFxx wraps to 0: rejected as a bad size)
-00025Dr 2               :
-00025Dr 2  20 rr rr                 jsr         MM_PAGE_ALLOC                       ; .A = first page
-000260r 2  B0 3D                    bcs         @done
-000262r 2  A0 01                    ldy         #Handle::addr_h
-000264r 2  91 rr                    sta         (ZP_M_HP),Y
-000266r 2  A9 00                    lda         #0
-000268r 2  A0 00                    ldy         #Handle::addr_l
-00026Ar 2  91 rr                    sta         (ZP_M_HP),Y
-00026Cr 2  A0 02                    ldy         #Handle::bank
+000254r 2  C8                       iny
+000255r 2  91 rr                    sta         (ZP_M_HP),Y
+000257r 2  C8                       iny
+000258r 2  91 rr                    sta         (ZP_M_HP),Y
+00025Ar 2  80 63                    bra         @ok
+00025Cr 2               
+00025Cr 2               ; 4-64 bytes: a chunk of a chunk page
+00025Cr 2               @not_small:
+00025Cr 2  C9 41                    cmp         #MMU_CHUNK_MAX + 1
+00025Er 2  B0 19                    bcs         @pages
+000260r 2  20 rr rr                 jsr         MM_CHUNK_ALLOC                      ; ZP_M_CP + 1 = page, ZP_M_COFS = offset
+000263r 2  B0 5D                    bcs         @done
+000265r 2  A0 00                    ldy         #Handle::addr_l
+000267r 2  A5 rr                    lda         ZP_M_COFS
+000269r 2  91 rr                    sta         (ZP_M_HP),Y
+00026Br 2  C8                       iny
+00026Cr 2  A5 rr                    lda         ZP_M_CP + 1
 00026Er 2  91 rr                    sta         (ZP_M_HP),Y
-000270r 2  A9 94                    lda         #AI_IN_USE | AI_BLOCK
-000272r 2  80 24                    bra         @set_status
-000274r 2               
-000274r 2               ; AI_PAGED: whole 8K RAM banks
-000274r 2               @banks:
-000274r 2  A5 rr                    lda         ZP_M_SZ1                            ; Banks = ((size - 1) >> 13) + 1
-000276r 2  C9 01                    cmp         #1
-000278r 2  A5 rr                    lda         ZP_M_TEMP2
-00027Ar 2  E9 00                    sbc         #0                                  ; High byte of size - 1
-00027Cr 2  4A                       lsr
-00027Dr 2  4A                       lsr
-00027Er 2  4A                       lsr
-00027Fr 2  4A                       lsr
-000280r 2  4A                       lsr
-000281r 2  1A                       inc
-000282r 2  20 rr rr                 jsr         MM_BANK_ALLOC                       ; .A = first bank
-000285r 2  B0 18                    bcs         @done
-000287r 2  A0 02                    ldy         #Handle::bank
-000289r 2  91 rr                    sta         (ZP_M_HP),Y
-00028Br 2  A9 00                    lda         #<PAGED_RAM_BASE
-00028Dr 2  A0 00                    ldy         #Handle::addr_l
-00028Fr 2  91 rr                    sta         (ZP_M_HP),Y
-000291r 2  A9 80                    lda         #>PAGED_RAM_BASE
-000293r 2  C8                       iny
-000294r 2  91 rr                    sta         (ZP_M_HP),Y
-000296r 2  A9 91                    lda         #AI_IN_USE | AI_PAGED
-000298r 2               
-000298r 2               @set_status:
-000298r 2  A0 03                    ldy         #Handle::status                     ; Status last: it makes the entry live
-00029Ar 2  91 rr                    sta         (ZP_M_HP),Y
-00029Cr 2               
-00029Cr 2               @ok:
-00029Cr 2  A5 rr                    lda         ZP_M_HANDLE
-00029Er 2  18                       clc
-00029Fr 2               
-00029Fr 2               @done:
-00029Fr 2  7A FA                    PULL_YX
-0002A1r 2  4C rr rr                 jmp         MM_RETURN
-0002A4r 2               
-0002A4r 2               @bad_arg:
-0002A4r 2  A9 43                    lda         #ERR_MEM_BAD_ARG
-0002A6r 2  38                       sec
-0002A7r 2  80 F6                    bra         @done
-0002A9r 2               
-0002A9r 2               ; Free an allocation and its handle.
-0002A9r 2               ; IN: .A = handle
-0002A9r 2               ; OUT (success): C = 0
-0002A9r 2               ; OUT (failure): .A = ERR_MEM_NOT_VALID or ERR_MEM_LOCKED, C = 1
-0002A9r 2               ; Preserves .X, .Y
-0002A9r 2               MM_FREE:
-0002A9r 2  08                       php                                             ; Save caller's I flag
-0002AAr 2  78                       sei
-0002ABr 2  DA 5A                    PUSH_XY
-0002ADr 2  20 rr rr                 jsr         MM_HANDLE_PTR                       ; .A = status
-0002B0r 2  B0 27                    bcs         @done
-0002B2r 2  89 40                    bit         #AI_LOCKED
-0002B4r 2  D0 28                    bne         @locked
-0002B6r 2  89 01                    bit         #AI_PAGED
-0002B8r 2  F0 0B                    beq         :+
-0002BAr 2  A0 02                    ldy         #Handle::bank
-0002BCr 2  B1 rr                    lda         (ZP_M_HP),Y
-0002BEr 2  20 rr rr                 jsr         MM_BANK_FREE
-0002C1r 2  B0 16                    bcs         @done
-0002C3r 2  80 0D                    bra         @free_entry
-0002C5r 2               :
-0002C5r 2  89 04                    bit         #AI_BLOCK
-0002C7r 2  F0 09                    beq         @free_entry                         ; AI_SMALL: nothing else to free
-0002C9r 2  A0 01                    ldy         #Handle::addr_h
-0002CBr 2  B1 rr                    lda         (ZP_M_HP),Y
-0002CDr 2  20 rr rr                 jsr         MM_PAGE_FREE
-0002D0r 2  B0 07                    bcs         @done
-0002D2r 2               
-0002D2r 2               @free_entry:
-0002D2r 2  A9 00                    lda         #0
-0002D4r 2  A0 03                    ldy         #Handle::status
-0002D6r 2  91 rr                    sta         (ZP_M_HP),Y
-0002D8r 2  18                       clc
-0002D9r 2               
-0002D9r 2               @done:
-0002D9r 2  7A FA                    PULL_YX
-0002DBr 2  4C rr rr                 jmp         MM_RETURN
-0002DEr 2               
-0002DEr 2               @locked:
-0002DEr 2  A9 45                    lda         #ERR_MEM_LOCKED
-0002E0r 2  38                       sec
-0002E1r 2  80 F6                    bra         @done
-0002E3r 2               
-0002E3r 2               ; Read a byte of an allocation.
-0002E3r 2               ; IN: .A = handle, .Y = offset (0-255; within the allocation's size for AI_SMALL)
-0002E3r 2               ; OUT (success): .A = byte, C = 0
-0002E3r 2               ; OUT (failure): .A = ERR_MEM_NOT_VALID or ERR_MEM_BAD_ARG, C = 1
-0002E3r 2               ; Preserves .X, .Y
-0002E3r 2               MM_READ:
-0002E3r 2  08                       php                                             ; Save caller's I flag
-0002E4r 2  78                       sei
-0002E5r 2  DA 5A                    PUSH_XY
-0002E7r 2  84 rr                    sty         ZP_M_TEMP                           ; Offset
-0002E9r 2  20 rr rr                 jsr         MM_HANDLE_PTR                       ; .A = status
-0002ECr 2  B0 0E                    bcs         @done
-0002EEr 2  20 rr rr                 jsr         MM_ACCESS_SETUP                     ; ZP_M_SP1 = data, bank selected
-0002F1r 2  B0 09                    bcs         @done
-0002F3r 2  A4 rr                    ldy         ZP_M_TEMP
-0002F5r 2  B1 rr                    lda         (ZP_M_SP1),Y
-0002F7r 2  A4 rr                    ldy         ZP_M_SV
-0002F9r 2  84 rr                    sty         RAM_BANK_REG                        ; Restore the RAM bank
-0002FBr 2  18                       clc
-0002FCr 2               
-0002FCr 2               @done:
-0002FCr 2  7A FA                    PULL_YX
-0002FEr 2  4C rr rr                 jmp         MM_RETURN
-000301r 2               
-000301r 2               ; Write a byte of an allocation.
-000301r 2               ; IN: .A = handle, .Y = offset (0-255; within the allocation's size for AI_SMALL), .X = byte
-000301r 2               ; OUT (success): C = 0
-000301r 2               ; OUT (failure): .A = ERR_MEM_NOT_VALID or ERR_MEM_BAD_ARG, C = 1
-000301r 2               ; Preserves .X, .Y
-000301r 2               MM_WRITE:
-000301r 2  08                       php                                             ; Save caller's I flag
-000302r 2  78                       sei
-000303r 2  DA 5A                    PUSH_XY
-000305r 2  84 rr                    sty         ZP_M_TEMP                           ; Offset
-000307r 2  20 rr rr                 jsr         MM_HANDLE_PTR                       ; .A = status
-00030Ar 2  B0 0F                    bcs         @done
-00030Cr 2  20 rr rr                 jsr         MM_ACCESS_SETUP                     ; ZP_M_SP1 = data, bank selected
-00030Fr 2  B0 0A                    bcs         @done
-000311r 2  A4 rr                    ldy         ZP_M_TEMP
-000313r 2  8A                       txa
-000314r 2  91 rr                    sta         (ZP_M_SP1),Y
-000316r 2  A4 rr                    ldy         ZP_M_SV
-000318r 2  84 rr                    sty         RAM_BANK_REG                        ; Restore the RAM bank
-00031Ar 2  18                       clc
+000270r 2  C8                       iny
+000271r 2  A9 00                    lda         #0
+000273r 2  91 rr                    sta         (ZP_M_HP),Y
+000275r 2  A9 90                    lda         #AI_IN_USE                          ; No tier bit: a chunk
+000277r 2  80 42                    bra         @set_status
+000279r 2               
+000279r 2               ; 65+ bytes: whole task RAM pages
+000279r 2               @pages:
+000279r 2  A5 rr                    lda         ZP_M_TEMP2                          ; Pages = size high + (size low <> 0)
+00027Br 2  A6 rr                    ldx         ZP_M_SZ1
+00027Dr 2  F0 01                    beq         :+
+00027Fr 2  1A                       inc                                             ; ($FFxx wraps to 0: rejected as a bad size)
+000280r 2               :
+000280r 2  20 rr rr                 jsr         MM_PAGE_ALLOC                       ; .A = first page
+000283r 2  B0 3D                    bcs         @done
+000285r 2  A0 01                    ldy         #Handle::addr_h
+000287r 2  91 rr                    sta         (ZP_M_HP),Y
+000289r 2  A9 00                    lda         #0
+00028Br 2  A0 00                    ldy         #Handle::addr_l
+00028Dr 2  91 rr                    sta         (ZP_M_HP),Y
+00028Fr 2  A0 02                    ldy         #Handle::bank
+000291r 2  91 rr                    sta         (ZP_M_HP),Y
+000293r 2  A9 94                    lda         #AI_IN_USE | AI_BLOCK
+000295r 2  80 24                    bra         @set_status
+000297r 2               
+000297r 2               ; AI_PAGED: whole 8K RAM banks
+000297r 2               @banks:
+000297r 2  A5 rr                    lda         ZP_M_SZ1                            ; Banks = ((size - 1) >> 13) + 1
+000299r 2  C9 01                    cmp         #1
+00029Br 2  A5 rr                    lda         ZP_M_TEMP2
+00029Dr 2  E9 00                    sbc         #0                                  ; High byte of size - 1
+00029Fr 2  4A                       lsr
+0002A0r 2  4A                       lsr
+0002A1r 2  4A                       lsr
+0002A2r 2  4A                       lsr
+0002A3r 2  4A                       lsr
+0002A4r 2  1A                       inc
+0002A5r 2  20 rr rr                 jsr         MM_BANK_ALLOC                       ; .A = first bank
+0002A8r 2  B0 18                    bcs         @done
+0002AAr 2  A0 02                    ldy         #Handle::bank
+0002ACr 2  91 rr                    sta         (ZP_M_HP),Y
+0002AEr 2  A9 00                    lda         #<PAGED_RAM_BASE
+0002B0r 2  A0 00                    ldy         #Handle::addr_l
+0002B2r 2  91 rr                    sta         (ZP_M_HP),Y
+0002B4r 2  A9 80                    lda         #>PAGED_RAM_BASE
+0002B6r 2  C8                       iny
+0002B7r 2  91 rr                    sta         (ZP_M_HP),Y
+0002B9r 2  A9 91                    lda         #AI_IN_USE | AI_PAGED
+0002BBr 2               
+0002BBr 2               @set_status:
+0002BBr 2  A0 03                    ldy         #Handle::status                     ; Status last: it makes the entry live
+0002BDr 2  91 rr                    sta         (ZP_M_HP),Y
+0002BFr 2               
+0002BFr 2               @ok:
+0002BFr 2  A5 rr                    lda         ZP_M_HANDLE
+0002C1r 2  18                       clc
+0002C2r 2               
+0002C2r 2               @done:
+0002C2r 2  7A FA                    PULL_YX
+0002C4r 2  4C rr rr                 jmp         MM_RETURN
+0002C7r 2               
+0002C7r 2               @bad_arg:
+0002C7r 2  A9 43                    lda         #ERR_MEM_BAD_ARG
+0002C9r 2  38                       sec
+0002CAr 2  80 F6                    bra         @done
+0002CCr 2               
+0002CCr 2               ; Free an allocation and its handle.
+0002CCr 2               ; IN: .A = handle
+0002CCr 2               ; OUT (success): C = 0
+0002CCr 2               ; OUT (failure): .A = ERR_MEM_NOT_VALID or ERR_MEM_LOCKED, C = 1
+0002CCr 2               ; Preserves .X, .Y
+0002CCr 2               MM_FREE:
+0002CCr 2  08                       php                                             ; Save caller's I flag
+0002CDr 2  78                       sei
+0002CEr 2  DA 5A                    PUSH_XY
+0002D0r 2  20 rr rr                 jsr         MM_HANDLE_PTR                       ; .A = status
+0002D3r 2  B0 3C                    bcs         @done
+0002D5r 2  89 40                    bit         #AI_LOCKED
+0002D7r 2  D0 3D                    bne         @locked
+0002D9r 2  89 01                    bit         #AI_PAGED
+0002DBr 2  F0 0B                    beq         :+
+0002DDr 2  A0 02                    ldy         #Handle::bank
+0002DFr 2  B1 rr                    lda         (ZP_M_HP),Y
+0002E1r 2  20 rr rr                 jsr         MM_BANK_FREE
+0002E4r 2  B0 2B                    bcs         @done
+0002E6r 2  80 22                    bra         @free_entry
+0002E8r 2               :
+0002E8r 2  89 08                    bit         #AI_SMALL
+0002EAr 2  D0 1E                    bne         @free_entry                         ; AI_SMALL: nothing else to free
+0002ECr 2  89 04                    bit         #AI_BLOCK
+0002EEr 2  F0 0B                    beq         @chunk
+0002F0r 2  A0 01                    ldy         #Handle::addr_h
+0002F2r 2  B1 rr                    lda         (ZP_M_HP),Y
+0002F4r 2  20 rr rr                 jsr         MM_PAGE_FREE
+0002F7r 2  B0 18                    bcs         @done
+0002F9r 2  80 0F                    bra         @free_entry
+0002FBr 2               
+0002FBr 2               @chunk:
+0002FBr 2  A0 01                    ldy         #Handle::addr_h
+0002FDr 2  B1 rr                    lda         (ZP_M_HP),Y
+0002FFr 2  85 rr                    sta         ZP_M_CP + 1                         ; Chunk page
+000301r 2  A0 00                    ldy         #Handle::addr_l
+000303r 2  B1 rr                    lda         (ZP_M_HP),Y                         ; Chunk offset
+000305r 2  20 rr rr                 jsr         MM_CHUNK_FREE
+000308r 2  B0 07                    bcs         @done
+00030Ar 2               
+00030Ar 2               @free_entry:
+00030Ar 2  A9 00                    lda         #0
+00030Cr 2  A0 03                    ldy         #Handle::status
+00030Er 2  91 rr                    sta         (ZP_M_HP),Y
+000310r 2  18                       clc
+000311r 2               
+000311r 2               @done:
+000311r 2  7A FA                    PULL_YX
+000313r 2  4C rr rr                 jmp         MM_RETURN
+000316r 2               
+000316r 2               @locked:
+000316r 2  A9 45                    lda         #ERR_MEM_LOCKED
+000318r 2  38                       sec
+000319r 2  80 F6                    bra         @done
 00031Br 2               
-00031Br 2               @done:
-00031Br 2  7A FA                    PULL_YX
-00031Dr 2  4C rr rr                 jmp         MM_RETURN
-000320r 2               
-000320r 2               ; Get a raw pointer to an allocation, for speed.  For AI_PAGED allocations this also selects the
-000320r 2               ; allocation's first RAM bank; the old bank is returned for MM_UNLOCK.  A locked allocation can't be
-000320r 2               ; freed.  The pointer stays valid until MM_UNLOCK (allocations don't move).
-000320r 2               ; IN: .A = handle
-000320r 2               ; OUT (success): .A.Y = pointer (.A = low byte), .X = previous RAM bank (pass it to MM_UNLOCK), C = 0
-000320r 2               ; OUT (failure): .A = ERR_MEM_NOT_VALID, C = 1
-000320r 2               MM_LOCK:
-000320r 2  08                       php                                             ; Save caller's I flag
-000321r 2  78                       sei
-000322r 2  20 rr rr                 jsr         MM_HANDLE_PTR                       ; .A = status
-000325r 2  B0 12                    bcs         @done
-000327r 2  09 40                    ora         #AI_LOCKED
-000329r 2  A0 03                    ldy         #Handle::status
-00032Br 2  91 rr                    sta         (ZP_M_HP),Y
-00032Dr 2  64 rr                    stz         ZP_M_TEMP                           ; Offset 0 (always valid)
-00032Fr 2  20 rr rr                 jsr         MM_ACCESS_SETUP                     ; ZP_M_SP1 = data, bank selected
-000332r 2  A6 rr                    ldx         ZP_M_SV                             ; Previous RAM bank
-000334r 2  A5 rr                    lda         ZP_M_SP1
-000336r 2  A4 rr                    ldy         ZP_M_SP1 + 1
-000338r 2  18                       clc
+00031Br 2               ; Read a byte of an allocation.
+00031Br 2               ; IN: .A = handle, .Y = offset (0-255; within the allocation's size for AI_SMALL)
+00031Br 2               ; OUT (success): .A = byte, C = 0
+00031Br 2               ; OUT (failure): .A = ERR_MEM_NOT_VALID or ERR_MEM_BAD_ARG, C = 1
+00031Br 2               ; Preserves .X, .Y
+00031Br 2               MM_READ:
+00031Br 2  08                       php                                             ; Save caller's I flag
+00031Cr 2  78                       sei
+00031Dr 2  DA 5A                    PUSH_XY
+00031Fr 2  84 rr                    sty         ZP_M_TEMP                           ; Offset
+000321r 2  20 rr rr                 jsr         MM_HANDLE_PTR                       ; .A = status
+000324r 2  B0 0E                    bcs         @done
+000326r 2  20 rr rr                 jsr         MM_ACCESS_SETUP                     ; ZP_M_SP1 = data, bank selected
+000329r 2  B0 09                    bcs         @done
+00032Br 2  A4 rr                    ldy         ZP_M_TEMP
+00032Dr 2  B1 rr                    lda         (ZP_M_SP1),Y
+00032Fr 2  A4 rr                    ldy         ZP_M_SV
+000331r 2  84 rr                    sty         RAM_BANK_REG                        ; Restore the RAM bank
+000333r 2  18                       clc
+000334r 2               
+000334r 2               @done:
+000334r 2  7A FA                    PULL_YX
+000336r 2  4C rr rr                 jmp         MM_RETURN
 000339r 2               
-000339r 2               @done:
-000339r 2  4C rr rr                 jmp         MM_RETURN
-00033Cr 2               
-00033Cr 2               ; Release a pointer from MM_LOCK and restore the RAM bank.
-00033Cr 2               ; IN: .A = handle, .X = RAM bank to restore (from MM_LOCK)
-00033Cr 2               ; OUT (success): C = 0
-00033Cr 2               ; OUT (failure): .A = ERR_MEM_NOT_VALID, C = 1 (the RAM bank is restored anyway)
-00033Cr 2               ; Preserves .X, .Y
-00033Cr 2               MM_UNLOCK:
-00033Cr 2  08                       php                                             ; Save caller's I flag
-00033Dr 2  78                       sei
-00033Er 2  5A                       phy
-00033Fr 2  86 rr                    stx         RAM_BANK_REG
-000341r 2  20 rr rr                 jsr         MM_HANDLE_PTR                       ; .A = status
-000344r 2  B0 07                    bcs         @done
-000346r 2  29 BF                    and         #<~AI_LOCKED
-000348r 2  A0 03                    ldy         #Handle::status
-00034Ar 2  91 rr                    sta         (ZP_M_HP),Y
-00034Cr 2  18                       clc
-00034Dr 2               
-00034Dr 2               @done:
-00034Dr 2  7A                       ply
-00034Er 2  4C rr rr                 jmp         MM_RETURN
-000351r 2               
-000351r 2               ; Find a free handle table entry in the current task.
-000351r 2               ; OUT (success): ZP_M_HANDLE = handle, ZP_M_HP = its entry, C = 0
-000351r 2               ; OUT (failure): .A = ERR_MEM_NO_HANDLES, C = 1
-000351r 2               ; Modifies: .A, .Y
-000351r 2               MM_NEW_HANDLE:
-000351r 2  A9 7E 85 rr              LOAD_ADDR   MMU_HANDLE_TBL, ZP_M_HP
-000355r 2  A9 64 85 rr  
-000359r 2  A9 01                    lda         #1
-00035Br 2  85 rr                    sta         ZP_M_HANDLE
-00035Dr 2  A0 03                    ldy         #Handle::status
-00035Fr 2               
-00035Fr 2               @loop:
-00035Fr 2  B1 rr                    lda         (ZP_M_HP),Y
-000361r 2  F0 17                    beq         @found
-000363r 2  A5 rr                    lda         ZP_M_HP                             ; Next entry
-000365r 2  18                       clc
-000366r 2  69 04                    adc         #.sizeof(Handle)
-000368r 2  85 rr                    sta         ZP_M_HP
-00036Ar 2  90 02                    bcc         :+
-00036Cr 2  E6 rr                    inc         ZP_M_HP + 1
-00036Er 2               :
-00036Er 2  E6 rr                    inc         ZP_M_HANDLE
-000370r 2  A5 rr                    lda         ZP_M_HANDLE
-000372r 2  C9 68                    cmp         #MMU_MAX_HANDLES + 1
-000374r 2  D0 E9                    bne         @loop
-000376r 2  A9 44                    lda         #ERR_MEM_NO_HANDLES
-000378r 2  38                       sec
-000379r 2  60                       rts
-00037Ar 2               
-00037Ar 2               @found:
-00037Ar 2  18                       clc
-00037Br 2  60                       rts
-00037Cr 2               
-00037Cr 2               ; Point ZP_M_HP at a handle's entry, and check that it's in use.
-00037Cr 2               ; IN: .A = handle
-00037Cr 2               ; OUT (success): .A = entry status, ZP_M_HP = entry, ZP_M_HANDLE = handle, C = 0
-00037Cr 2               ; OUT (failure): .A = ERR_MEM_NOT_VALID, C = 1
-00037Cr 2               ; Modifies: .A, .Y
-00037Cr 2               MM_HANDLE_PTR:
-00037Cr 2  85 rr                    sta         ZP_M_HANDLE
-00037Er 2  C9 00                    cmp         #0
-000380r 2  F0 26                    beq         @bad
-000382r 2  C9 68                    cmp         #MMU_MAX_HANDLES + 1
-000384r 2  B0 22                    bcs         @bad
-000386r 2  3A                       dec                                             ; Entry = MMU_HANDLE_TBL + (handle - 1) * 4
-000387r 2  64 rr                    stz         ZP_M_HP + 1
-000389r 2  0A                       asl
-00038Ar 2  26 rr                    rol         ZP_M_HP + 1
-00038Cr 2  0A                       asl
-00038Dr 2  26 rr                    rol         ZP_M_HP + 1
-00038Fr 2  18                       clc
-000390r 2  69 64                    adc         #<MMU_HANDLE_TBL
-000392r 2  85 rr                    sta         ZP_M_HP
-000394r 2  A5 rr                    lda         ZP_M_HP + 1
-000396r 2  69 7E                    adc         #>MMU_HANDLE_TBL
-000398r 2  85 rr                    sta         ZP_M_HP + 1
-00039Ar 2  A0 03                    ldy         #Handle::status
-00039Cr 2  B1 rr                    lda         (ZP_M_HP),Y
-00039Er 2  29 90                    and         #AI_IN_USE
-0003A0r 2  C9 90                    cmp         #AI_IN_USE
-0003A2r 2  D0 04                    bne         @bad
-0003A4r 2  B1 rr                    lda         (ZP_M_HP),Y
-0003A6r 2  18                       clc
-0003A7r 2  60                       rts
-0003A8r 2               
-0003A8r 2               @bad:
-0003A8r 2  A9 41                    lda         #ERR_MEM_NOT_VALID
-0003AAr 2  38                       sec
-0003ABr 2  60                       rts
-0003ACr 2               
-0003ACr 2               ; Point ZP_M_SP1 at an allocation's data and select its RAM bank (AI_PAGED).  The current RAM bank is
-0003ACr 2               ; saved in ZP_M_SV, for the caller to restore.
-0003ACr 2               ; IN: .A = entry status, ZP_M_HP = entry, ZP_M_TEMP = offset to check (AI_SMALL: must be < length)
-0003ACr 2               ; OUT (success): C = 0
-0003ACr 2               ; OUT (failure): .A = ERR_MEM_BAD_ARG, C = 1
-0003ACr 2               ; Modifies: .A, .Y; preserves .X
-0003ACr 2               MM_ACCESS_SETUP:
-0003ACr 2  A4 rr                    ldy         RAM_BANK_REG
-0003AEr 2  84 rr                    sty         ZP_M_SV
-0003B0r 2  89 08                    bit         #AI_SMALL
-0003B2r 2  F0 12                    beq         @not_small
-0003B4r 2  29 03                    and         #AI_SMALL_LEN
-0003B6r 2  C5 rr                    cmp         ZP_M_TEMP
-0003B8r 2  F0 23                    beq         @bad_arg                            ; Offset >= length
-0003BAr 2  90 21                    bcc         @bad_arg
-0003BCr 2  A5 rr                    lda         ZP_M_HP                             ; The data is in the entry itself
-0003BEr 2  85 rr                    sta         ZP_M_SP1
-0003C0r 2  A5 rr                    lda         ZP_M_HP + 1
-0003C2r 2  85 rr                    sta         ZP_M_SP1 + 1
-0003C4r 2  18                       clc
-0003C5r 2  60                       rts
-0003C6r 2               
-0003C6r 2               @not_small:
-0003C6r 2  89 01                    bit         #AI_PAGED
-0003C8r 2  F0 06                    beq         :+
-0003CAr 2  A0 02                    ldy         #Handle::bank
-0003CCr 2  B1 rr                    lda         (ZP_M_HP),Y
-0003CEr 2  85 rr                    sta         RAM_BANK_REG
-0003D0r 2               :
-0003D0r 2  A0 00                    ldy         #Handle::addr_l
-0003D2r 2  B1 rr                    lda         (ZP_M_HP),Y
-0003D4r 2  85 rr                    sta         ZP_M_SP1
-0003D6r 2  C8                       iny
-0003D7r 2  B1 rr                    lda         (ZP_M_HP),Y
-0003D9r 2  85 rr                    sta         ZP_M_SP1 + 1
-0003DBr 2  18                       clc
-0003DCr 2  60                       rts
-0003DDr 2               
-0003DDr 2               @bad_arg:
-0003DDr 2  A9 43                    lda         #ERR_MEM_BAD_ARG
-0003DFr 2  38                       sec
-0003E0r 2  60                       rts
-0003E1r 2               
-0003E1r 2               ; IN: .A.Y = Bytes to allocate, T must be 0
-0003E1r 2               ; OUT (success): .A.Y = Address of shared allocation structure, C = 0
-0003E1r 2               ; OUT (out of memory): .A = ERR_OUT_OF_MEMORY, C = 1
-0003E1r 2               ;           If T <> 0, .A = ERR_NOT_SYSTEM_TASK, C = 1
-0003E1r 2               SHARED_ALLOC:
-0003E1r 2  DA                       phx
-0003E2r 2  AE F0 FF                 ldx         T_REGISTER
-0003E5r 2  E0 00                    cpx         #SYSTEM_TASK_NUM
-0003E7r 2  F0 04                    beq         :+
-0003E9r 2  FA                       plx
-0003EAr 2  4C rr rr                 jmp         ERROR_NOT_SYSTEM_TASK
+000339r 2               ; Write a byte of an allocation.
+000339r 2               ; IN: .A = handle, .Y = offset (0-255; within the allocation's size for AI_SMALL), .X = byte
+000339r 2               ; OUT (success): C = 0
+000339r 2               ; OUT (failure): .A = ERR_MEM_NOT_VALID or ERR_MEM_BAD_ARG, C = 1
+000339r 2               ; Preserves .X, .Y
+000339r 2               MM_WRITE:
+000339r 2  08                       php                                             ; Save caller's I flag
+00033Ar 2  78                       sei
+00033Br 2  DA 5A                    PUSH_XY
+00033Dr 2  84 rr                    sty         ZP_M_TEMP                           ; Offset
+00033Fr 2  20 rr rr                 jsr         MM_HANDLE_PTR                       ; .A = status
+000342r 2  B0 0F                    bcs         @done
+000344r 2  20 rr rr                 jsr         MM_ACCESS_SETUP                     ; ZP_M_SP1 = data, bank selected
+000347r 2  B0 0A                    bcs         @done
+000349r 2  A4 rr                    ldy         ZP_M_TEMP
+00034Br 2  8A                       txa
+00034Cr 2  91 rr                    sta         (ZP_M_SP1),Y
+00034Er 2  A4 rr                    ldy         ZP_M_SV
+000350r 2  84 rr                    sty         RAM_BANK_REG                        ; Restore the RAM bank
+000352r 2  18                       clc
+000353r 2               
+000353r 2               @done:
+000353r 2  7A FA                    PULL_YX
+000355r 2  4C rr rr                 jmp         MM_RETURN
+000358r 2               
+000358r 2               ; Get a raw pointer to an allocation, for speed.  For AI_PAGED allocations this also selects the
+000358r 2               ; allocation's first RAM bank; the old bank is returned for MM_UNLOCK.  A locked allocation can't be
+000358r 2               ; freed.  The pointer stays valid until MM_UNLOCK (allocations don't move).
+000358r 2               ; IN: .A = handle
+000358r 2               ; OUT (success): .A.Y = pointer (.A = low byte), .X = previous RAM bank (pass it to MM_UNLOCK), C = 0
+000358r 2               ; OUT (failure): .A = ERR_MEM_NOT_VALID, C = 1
+000358r 2               MM_LOCK:
+000358r 2  08                       php                                             ; Save caller's I flag
+000359r 2  78                       sei
+00035Ar 2  20 rr rr                 jsr         MM_HANDLE_PTR                       ; .A = status
+00035Dr 2  B0 12                    bcs         @done
+00035Fr 2  09 40                    ora         #AI_LOCKED
+000361r 2  A0 03                    ldy         #Handle::status
+000363r 2  91 rr                    sta         (ZP_M_HP),Y
+000365r 2  64 rr                    stz         ZP_M_TEMP                           ; Offset 0 (always valid)
+000367r 2  20 rr rr                 jsr         MM_ACCESS_SETUP                     ; ZP_M_SP1 = data, bank selected
+00036Ar 2  A6 rr                    ldx         ZP_M_SV                             ; Previous RAM bank
+00036Cr 2  A5 rr                    lda         ZP_M_SP1
+00036Er 2  A4 rr                    ldy         ZP_M_SP1 + 1
+000370r 2  18                       clc
+000371r 2               
+000371r 2               @done:
+000371r 2  4C rr rr                 jmp         MM_RETURN
+000374r 2               
+000374r 2               ; Release a pointer from MM_LOCK and restore the RAM bank.
+000374r 2               ; IN: .A = handle, .X = RAM bank to restore (from MM_LOCK)
+000374r 2               ; OUT (success): C = 0
+000374r 2               ; OUT (failure): .A = ERR_MEM_NOT_VALID, C = 1 (the RAM bank is restored anyway)
+000374r 2               ; Preserves .X, .Y
+000374r 2               MM_UNLOCK:
+000374r 2  08                       php                                             ; Save caller's I flag
+000375r 2  78                       sei
+000376r 2  5A                       phy
+000377r 2  86 rr                    stx         RAM_BANK_REG
+000379r 2  20 rr rr                 jsr         MM_HANDLE_PTR                       ; .A = status
+00037Cr 2  B0 07                    bcs         @done
+00037Er 2  29 BF                    and         #<~AI_LOCKED
+000380r 2  A0 03                    ldy         #Handle::status
+000382r 2  91 rr                    sta         (ZP_M_HP),Y
+000384r 2  18                       clc
+000385r 2               
+000385r 2               @done:
+000385r 2  7A                       ply
+000386r 2  4C rr rr                 jmp         MM_RETURN
+000389r 2               
+000389r 2               ; Allocate a chunk from the current task's chunk pages, starting a new chunk page if the size class has
+000389r 2               ; no free chunk.
+000389r 2               ; IN: .A = bytes (MMU_CHUNK_MIN - MMU_CHUNK_MAX)
+000389r 2               ; OUT (success): ZP_M_CP + 1 = chunk page, ZP_M_COFS = chunk offset, C = 0
+000389r 2               ; OUT (failure): .A = ERR_OUT_OF_MEMORY, C = 1
+000389r 2               ; Modifies: .A, .X, .Y
+000389r 2               MM_CHUNK_ALLOC:
+000389r 2  20 rr rr                 jsr         MM_CHUNK_CLASS                      ; ZP_M_CLS, ZP_M_CSZ
+00038Cr 2  64 rr                    stz         ZP_M_CP
+00038Er 2  A6 rr                    ldx         ZP_M_CLS
+000390r 2  BD 2F 7E                 lda         MMU_CHUNK_HEADS,X                   ; First chunk page of the class
+000393r 2               
+000393r 2               @find_page:
+000393r 2  F0 0E                    beq         @new_page                           ; No page with a free chunk
+000395r 2  85 rr                    sta         ZP_M_CP + 1
+000397r 2  A0 01                    ldy         #ChunkPage::free_count
+000399r 2  B1 rr                    lda         (ZP_M_CP),Y
+00039Br 2  D0 3B                    bne         @take
+00039Dr 2  A0 03                    ldy         #ChunkPage::next_page
+00039Fr 2  B1 rr                    lda         (ZP_M_CP),Y
+0003A1r 2  80 F0                    bra         @find_page
+0003A3r 2               
+0003A3r 2               @new_page:
+0003A3r 2  A9 01                    lda         #1
+0003A5r 2  20 rr rr                 jsr         MM_PAGE_ALLOC                       ; .A = page
+0003A8r 2  B0 43                    bcs         @done
+0003AAr 2  85 rr                    sta         ZP_M_CP + 1
+0003ACr 2  A5 rr                    lda         ZP_M_CSZ
+0003AEr 2  92 rr                    sta         (ZP_M_CP)                           ; ChunkPage::size
+0003B0r 2  A0 02                    ldy         #ChunkPage::free_head
+0003B2r 2  91 rr                    sta         (ZP_M_CP),Y                         ; The first chunk after the header
+0003B4r 2  A2 00                    ldx         #0                                  ; Free chunk count
+0003B6r 2               
+0003B6r 2               @link:                                                      ; .A = this chunk's offset
+0003B6r 2  A8                       tay
+0003B7r 2  18                       clc
+0003B8r 2  65 rr                    adc         ZP_M_CSZ                            ; Next chunk (C = 1 past the end of the page)
+0003BAr 2  90 02                    bcc         :+
+0003BCr 2  A9 00                    lda         #0                                  ; Last chunk: end of the list
+0003BEr 2               :
+0003BEr 2  91 rr                    sta         (ZP_M_CP),Y
+0003C0r 2  E8                       inx
+0003C1r 2  C9 00                    cmp         #0
+0003C3r 2  D0 F1                    bne         @link
+0003C5r 2  8A                       txa
+0003C6r 2  A0 01                    ldy         #ChunkPage::free_count
+0003C8r 2  91 rr                    sta         (ZP_M_CP),Y
+0003CAr 2  A6 rr                    ldx         ZP_M_CLS                            ; Put the page at the head of the class list
+0003CCr 2  BD 2F 7E                 lda         MMU_CHUNK_HEADS,X
+0003CFr 2  A0 03                    ldy         #ChunkPage::next_page
+0003D1r 2  91 rr                    sta         (ZP_M_CP),Y
+0003D3r 2  A5 rr                    lda         ZP_M_CP + 1
+0003D5r 2  9D 2F 7E                 sta         MMU_CHUNK_HEADS,X
+0003D8r 2               
+0003D8r 2               @take:
+0003D8r 2  A0 02                    ldy         #ChunkPage::free_head
+0003DAr 2  B1 rr                    lda         (ZP_M_CP),Y
+0003DCr 2  85 rr                    sta         ZP_M_COFS                           ; The chunk
+0003DEr 2  A8                       tay
+0003DFr 2  B1 rr                    lda         (ZP_M_CP),Y                         ; Its link: the next free chunk
+0003E1r 2  A0 02                    ldy         #ChunkPage::free_head
+0003E3r 2  91 rr                    sta         (ZP_M_CP),Y
+0003E5r 2  A0 01                    ldy         #ChunkPage::free_count
+0003E7r 2  B1 rr                    lda         (ZP_M_CP),Y
+0003E9r 2  3A                       dec
+0003EAr 2  91 rr                    sta         (ZP_M_CP),Y
+0003ECr 2  18                       clc
 0003EDr 2               
-0003EDr 2               :
-0003EDr 2                                                                           ; Do the allocation
-0003EDr 2               
-0003EDr 2  FA                       plx
-0003EEr 2  60                       rts
-0003EFr 2               
-0003EFr 2               ; IN: .A.Y = Address of PageAddress struct that points to location in shared memory to free
-0003EFr 2               SHARED_FREE:
-0003EFr 2  60                       rts
-0003F0r 2               
-0003F0r 2               SHARED_RAM_INIT:
-0003F0r 2  60                       rts
-0003F1r 2               
-0003F1r 2               ; IN: .X = Byte to write, .A.Y = Address of PageAddress struct that points to shared memory location to write to
-0003F1r 2               SHARED_WRITE:
-0003F1r 2  08                       php                                             ; Save caller's I flag
-0003F2r 2  78                       sei
-0003F3r 2  DA                       phx                                             ; Push the byte to write
-0003F4r 2  20 rr rr                 jsr         SHARED_RW_PAGE_SETUP                ; Clobbers .X.  After, .X = old RAM_BANK, .Y = old U
-0003F7r 2  68                       pla                                             ; Get it back
-0003F8r 2  92 rr                    sta         (ZP_M_SP1)                          ; Do the write
-0003FAr 2  86 rr                    stx         RAM_BANK_REG                        ; Restore prior RAM_BANK
-0003FCr 2  8C F1 FF                 sty         U_REGISTER                          ; Restore prior Shared RAM Macro-page
-0003FFr 2  28                       plp                                             ; Restore caller's I flag
-000400r 2  60                       rts
-000401r 2               
-000401r 2               ; IN: .A.Y = Address of PageAddress struct that points to read location in shared memory
-000401r 2               ; OUT: .A = Byte read at address
-000401r 2               SHARED_READ:
-000401r 2  08                       php                                             ; Save caller's I flag
-000402r 2  78                       sei
-000403r 2  DA                       phx                                             ; Don't clobber .X
-000404r 2  20 rr rr                 jsr         SHARED_RW_PAGE_SETUP                ; Clobbers .X.  After, .X = old RAM_BANK, .Y = old U
-000407r 2  B2 rr                    lda         (ZP_M_SP1)                          ; Do the read
-000409r 2  86 rr                    stx         RAM_BANK_REG                        ; Restore prior RAM_BANK
-00040Br 2  8C F1 FF                 sty         U_REGISTER                          ; Restore prior Shared RAM Macro-page
-00040Er 2  FA                       plx
-00040Fr 2  28                       plp                                             ; Restore caller's I flag
-000410r 2  60                       rts
-000411r 2               
-000411r 2               SHARED_RW_PAGE_SETUP:
-000411r 2  85 rr                    sta         ZP_M_SP1
-000413r 2  84 rr                    sty         ZP_M_SP1 + 1
-000415r 2  A0 02                    ldy         #PageAddress::page
-000417r 2  B1 rr                    lda         (ZP_M_SP1),Y                        ; Load the page
-000419r 2  48                       pha                                             ; ...and save it for use later
-00041Ar 2  A0 01                    ldy         #PageAddress::addr + Address::h
-00041Cr 2  B1 rr                    lda         (ZP_M_SP1),Y                        ; Get the HOB of the address
-00041Er 2  AA                       tax
-00041Fr 2  A0 00                    ldy         #PageAddress::addr + Address::l
-000421r 2  B1 rr                    lda         (ZP_M_SP1),Y                        ; Now the LOB
-000423r 2  85 rr                    sta         ZP_M_SP1
-000425r 2  86 rr                    stx         ZP_M_SP1 + 1
-000427r 2  68                       pla                                             ; Get the page back
-000428r 2  A8                       tay                                             ; Save the page for use later
-000429r 2  09 F0                    ora         #$F0                                ; Shared Bank transform
-00042Br 2  A6 rr                    ldx         RAM_BANK_REG                        ; Save bank for restore
-00042Dr 2  85 rr                    sta         RAM_BANK_REG                        ; Update the RAM_BANK to new Shared bank
-00042Fr 2  98                       tya                                             ; Get the original page back
-000430r 2  4A                       lsr                                             ; Shift right 4-bits
-000431r 2  4A                       lsr
-000432r 2  4A                       lsr
-000433r 2  4A                       lsr
-000434r 2  AC F1 FF                 ldy         U_REGISTER                          ; Save macro-page for restore
-000437r 2  8D F1 FF                 sta         U_REGISTER                          ; Update macro-page[0..3] from PageAddress::page[4..7]
-00043Ar 2  60                       rts
-00043Br 2               
-00043Br 2               ; Memory Copy
-00043Br 2               ; ZP_TEMP_VEC: From, ZP_TEMP_VEC2: To, .A.Y: Size
-00043Br 2               MEM_COPY:
-00043Br 2  DA                       phx
-00043Cr 2  AA                       tax
-00043Dr 2  F0 01                    beq         :+                                  ; Whole pages?  .Y is already the pass count
-00043Fr 2  C8                       iny                                             ; Partial page counts as one more pass of .X
-000440r 2               :
-000440r 2  98                       tya
-000441r 2  F0 3C                    beq         @done                               ; copy zero bytes?  Done!
-000443r 2  20 rr rr                 PRINT_CRLF
-000446r 2  A5 rr 20 rr              PRINT_BYTE  ZP_TEMP_VEC + 1
-00044Ar 2  rr           
-00044Br 2  A5 rr 20 rr              PRINT_BYTE  ZP_TEMP_VEC
-00044Fr 2  rr           
-000450r 2  A9 2D 20 rr              PRINT_CHAR  #ASCII_DASH, #ASCII_GT
-000454r 2  rr A9 3E 20  
-000458r 2  rr rr        
-00045Ar 2  A5 rr 20 rr              PRINT_BYTE  ZP_TEMP_VEC2 + 1
-00045Er 2  rr           
-00045Fr 2  A5 rr 20 rr              PRINT_BYTE  ZP_TEMP_VEC2
-000463r 2  rr           
-000464r 2               
-000464r 2               @loop:
-000464r 2  B2 rr                    lda         (ZP_TEMP_VEC)
-000466r 2  92 rr                    sta         (ZP_TEMP_VEC2)
-000468r 2  A9 2E 20 rr              PRINT_CHAR  #ASCII_PERIOD
-00046Cr 2  rr           
-00046Dr 2  E6 rr                    inc         ZP_TEMP_VEC
-00046Fr 2  D0 02                    bne         :+
-000471r 2  E6 rr                    inc         ZP_TEMP_VEC + 1
-000473r 2               :
-000473r 2  E6 rr                    inc         ZP_TEMP_VEC2
-000475r 2  D0 02                    bne         :+
-000477r 2  E6 rr                    inc         ZP_TEMP_VEC2 + 1
-000479r 2               :
-000479r 2  CA                       dex
-00047Ar 2  D0 E8                    bne         @loop
-00047Cr 2  88                       dey
-00047Dr 2  D0 E5                    bne         @loop
-00047Fr 2               
-00047Fr 2               @done:
-00047Fr 2  FA                       plx
-000480r 2  60                       rts
-000481r 2               
-000481r 2               ; TESTS
-000481r 2               MEM_TEST:
-000481r 2  48 DA 5A                 PUSH_AXY
-000484r 2  20 rr rr                 PRINT_CRLF
-000487r 2                           ;stz         T_REGISTER
-000487r 2               
-000487r 2               @task_num_loop:
-000487r 2  64 rr                    stz         RAM_BANK_REG
-000489r 2  A9 04                    lda         #$04
-00048Br 2  A2 80                    ldx         #$80                                ; exclude the task serial buffers @ $0200 && $0300
-00048Dr 2  20 rr rr                 jsr         TEST_PAGE_RANGE
-000490r 2  A2 A0                    ldx         #$A0                                ; end of banked RAM
-000492r 2               
-000492r 2               @ram_bank_loop:
-000492r 2  A5 rr 20 rr              PRINT_BYTE  RAM_BANK_REG
-000496r 2  rr           
-000497r 2  A9 2E 20 rr              PRINT_CHAR  #ASCII_PERIOD
-00049Br 2  rr           
-00049Cr 2  A9 80                    lda         #$80
-00049Er 2  20 rr rr                 jsr         TEST_PAGE_RANGE
-0004A1r 2  E6 rr                    inc         RAM_BANK_REG
-0004A3r 2  A9 F0                    lda         #NUM_RAM_BANKS
-0004A5r 2  C5 rr                    cmp         RAM_BANK_REG
-0004A7r 2  D0 E9                    bne         @ram_bank_loop
-0004A9r 2                           ;inc         T_REGISTER
-0004A9r 2                           ;lda         #$10
-0004A9r 2                           ;cmp         T_REGISTER
-0004A9r 2                           ;bne         @task_num_loop
-0004A9r 2  9C F1 FF                 stz         U_REGISTER
-0004ACr 2               
-0004ACr 2               @shared_banks_loop:
-0004ACr 2  A9 F0                    lda         #$F0
-0004AEr 2  85 rr                    sta         RAM_BANK_REG
-0004B0r 2               
-0004B0r 2               @shared_bank_loop:
-0004B0r 2  AD F1 FF 20              PRINT_BYTE  U_REGISTER
-0004B4r 2  rr rr        
-0004B6r 2  A9 2E 20 rr              PRINT_CHAR  #ASCII_PERIOD
-0004BAr 2  rr           
-0004BBr 2  A5 rr 20 rr              PRINT_BYTE  RAM_BANK_REG
-0004BFr 2  rr           
-0004C0r 2  A9 2E 20 rr              PRINT_CHAR  #ASCII_PERIOD
-0004C4r 2  rr           
-0004C5r 2  A9 80                    lda         #$80
-0004C7r 2  20 rr rr                 jsr         TEST_PAGE_RANGE
-0004CAr 2  E6 rr                    inc         RAM_BANK_REG                        ; increment shared bank
-0004CCr 2  D0 E2                    bne         @shared_bank_loop
-0004CEr 2  EE F1 FF                 inc         U_REGISTER
-0004D1r 2  AD F1 FF                 lda         U_REGISTER
-0004D4r 2  C9 10                    cmp         #$10
-0004D6r 2  90 D4                    bcc         @shared_banks_loop
-0004D8r 2  7A FA 68                 PULL_YXA
-0004DBr 2  60                       rts
-0004DCr 2               
-0004DCr 2               ; .A = HOB of first page to test, .X = HOB of last page + 1
-0004DCr 2               TEST_PAGE_RANGE:
-0004DCr 2  85 rr                    sta         ZP_TEMP_VEC + 1
-0004DEr 2  20 rr rr                 PRINT_BYTE
-0004E1r 2  A9 00 20 rr              PRINT_BYTE  #0
-0004E5r 2  rr           
-0004E6r 2  A9 2E 20 rr              PRINT_CHAR  #ASCII_PERIOD
-0004EAr 2  rr           
-0004EBr 2  8A                       txa
-0004ECr 2  3A                       dec
-0004EDr 2  20 rr rr                 PRINT_BYTE
-0004F0r 2  A9 FF 20 rr              PRINT_BYTE  #$FF
-0004F4r 2  rr           
-0004F5r 2  A9 3A 20 rr              PRINT_CHAR  #ASCII_COLON
-0004F9r 2  rr           
-0004FAr 2  64 rr                    stz         ZP_TEMP_VEC
-0004FCr 2  64 rr                    stz         ZP_TEMP
-0004FEr 2               
-0004FEr 2               @loop_init:
-0004FEr 2  A0 00                    ldy         #0
-000500r 2               
-000500r 2               @loop:
-000500r 2  B1 rr                    lda         (ZP_TEMP_VEC),Y                     ; save what is in memory (non-descructive)
-000502r 2  85 rr                    sta         ZP_M_SV
-000504r 2  A9 AA                    lda         #$AA
-000506r 2               @test_it:
-000506r 2  49 FF                    eor         #$FF
-000508r 2  91 rr                    sta         (ZP_TEMP_VEC),Y
-00050Ar 2  D1 rr                    cmp         (ZP_TEMP_VEC),Y
-00050Cr 2  F0 04                    beq         @next
-00050Er 2  A9 21                    lda         #ASCII_BANG
-000510r 2  80 0D                    bra         @write                              ; always, no need to restore value since it isn't storing properly anyway
-000512r 2               
-000512r 2               @next:
-000512r 2  C9 AA                    cmp         #$AA
-000514r 2  D0 F0                    bne         @test_it
-000516r 2  A5 rr                    lda         ZP_M_SV                             ; restore saved value
-000518r 2  91 rr                    sta         (ZP_TEMP_VEC),Y
-00051Ar 2  C8                       iny
-00051Br 2  D0 E3                    bne         @loop
-00051Dr 2  A9 2E                    lda         #ASCII_PERIOD
-00051Fr 2               
-00051Fr 2               @write:
-00051Fr 2  20 rr rr                 PRINT_CHAR
-000522r 2  64 rr                    stz         ZP_TEMP
-000524r 2  E6 rr                    inc         ZP_TEMP_VEC + 1
-000526r 2  E4 rr                    cpx         ZP_TEMP_VEC + 1
-000528r 2  D0 D4                    bne         @loop_init
-00052Ar 2  4C rr rr                 PRINT_CRLF_JMP
-00052Dr 2               
-00052Dr 2               ; test memory pages, start page in .A, end page in .X
-00052Dr 2               DEEP_PAGE_TEST_RANGE_AX:
-00052Dr 2  86 rr                    stx         ZP_M_SP2_H
-00052Fr 2  85 rr                    sta         ZP_M_SP1_H
-000531r 2  80 06                    bra         DEEP_PAGE_TEST_RANGE
-000533r 2               
-000533r 2               ; test a single page in .A
-000533r 2               DEEP_PAGE_TEST_A:
-000533r 2  85 rr                    sta         ZP_M_SP1_H
-000535r 2               
-000535r 2               ; test a single page in ZP_M_SP1_H
-000535r 2               DEEP_PAGE_TEST:
-000535r 2  A5 rr                    lda         ZP_M_SP1_H
-000537r 2  85 rr                    sta         ZP_M_SP2_H
-000539r 2               
-000539r 2               ; test a range of pages, start in ZP_M_SP1_H, end in ZP_M_SP2_H
-000539r 2               DEEP_PAGE_TEST_RANGE:
-000539r 2  DA 5A                    PUSH_XY
-00053Br 2  64 rr                    stz         ZP_M_SP1_L
-00053Dr 2               @next_page:
-00053Dr 2  A5 rr                    lda         ZP_M_SP1_H
-00053Fr 2  20 rr rr                 PRINT_BYTE
-000542r 2  A9 00 20 rr              PRINT_BYTE  #0
-000546r 2  rr           
-000547r 2  A9 3A 20 rr              PRINT_CHAR  #ASCII_COLON
-00054Br 2  rr           
-00054Cr 2  20 rr rr                 PRINT_CRLF
-00054Fr 2  A0 00                    ldy         #0
-000551r 2  A2 00                    ldx         #0
-000553r 2               @next_cell:
-000553r 2  64 rr                    stz         ZP_M_TEMP
-000555r 2  B1 rr                    lda         (ZP_M_SP1),Y
-000557r 2  85 rr                    sta         ZP_M_SV                             ; save the old value
-000559r 2  A9 01                    lda         #1
-00055Br 2  85 rr                    sta         ZP_M_TEMP2
-00055Dr 2               @loop_start:
-00055Dr 2  A5 rr                    lda         ZP_M_TEMP2
-00055Fr 2  91 rr                    sta         (ZP_M_SP1),Y                     ; store it
-000561r 2  D1 rr                    cmp         (ZP_M_SP1),Y                     ; test it
-000563r 2  D0 08                    bne         :+
-000565r 2  49 FF                    eor         #$FF                                ; test the inverse
-000567r 2  91 rr                    sta         (ZP_M_SP1),Y                     ; store it
-000569r 2  D1 rr                    cmp         (ZP_M_SP1),Y                     ; test it
-00056Br 2  F0 06                    beq         @shift
-00056Dr 2               :
-00056Dr 2  A5 rr                    lda         ZP_M_TEMP2
-00056Fr 2  05 rr                    ora         ZP_M_TEMP                           ; add bit to set of bad bits found
-000571r 2  85 rr                    sta         ZP_M_TEMP
-000573r 2               @shift:
-000573r 2  06 rr                    asl         ZP_M_TEMP2                          ; Walk the bit forward
-000575r 2  D0 E6                    bne         @loop_start
-000577r 2  A5 rr                    lda         ZP_M_TEMP                           ; get the set of bad bits we found
-000579r 2  20 rr rr                 PRINT_BYTE
-00057Cr 2  E8                       inx
-00057Dr 2  E0 10                    cpx         #$10
-00057Fr 2  F0 07                    beq         :+
-000581r 2  A9 20 20 rr              PRINT_SPACE
+0003EDr 2               @done:
+0003EDr 2  60                       rts
+0003EEr 2               
+0003EEr 2               ; Free a chunk.  A chunk page that becomes completely free goes back to the page allocator.
+0003EEr 2               ; IN: ZP_M_CP + 1 = chunk page, .A = chunk offset
+0003EEr 2               ; OUT (success): C = 0
+0003EEr 2               ; OUT (failure): .A = ERROR, C = 1
+0003EEr 2               ; Modifies: .A, .X, .Y
+0003EEr 2               MM_CHUNK_FREE:
+0003EEr 2  64 rr                    stz         ZP_M_CP
+0003F0r 2  85 rr                    sta         ZP_M_COFS
+0003F2r 2  A0 02                    ldy         #ChunkPage::free_head               ; Link the chunk in at the head of the free list
+0003F4r 2  B1 rr                    lda         (ZP_M_CP),Y
+0003F6r 2  A4 rr                    ldy         ZP_M_COFS
+0003F8r 2  91 rr                    sta         (ZP_M_CP),Y
+0003FAr 2  A5 rr                    lda         ZP_M_COFS
+0003FCr 2  A0 02                    ldy         #ChunkPage::free_head
+0003FEr 2  91 rr                    sta         (ZP_M_CP),Y
+000400r 2  A0 01                    ldy         #ChunkPage::free_count
+000402r 2  B1 rr                    lda         (ZP_M_CP),Y
+000404r 2  1A                       inc
+000405r 2  91 rr                    sta         (ZP_M_CP),Y
+000407r 2  85 rr                    sta         ZP_M_COFS                           ; Free chunks now
+000409r 2  B2 rr                    lda         (ZP_M_CP)                           ; ChunkPage::size
+00040Br 2  85 rr                    sta         ZP_M_CSZ
+00040Dr 2  A2 00                    ldx         #0                                  ; Chunks in a page (after the header)
+00040Fr 2               
+00040Fr 2               @count:
+00040Fr 2  E8                       inx
+000410r 2  18                       clc
+000411r 2  65 rr                    adc         ZP_M_CSZ
+000413r 2  90 FA                    bcc         @count
+000415r 2  E4 rr                    cpx         ZP_M_COFS
+000417r 2  F0 02                    beq         @release                            ; Every chunk is free
+000419r 2  18                       clc
+00041Ar 2  60                       rts
+00041Br 2               
+00041Br 2               ; Take the page off its class list and give it back
+00041Br 2               @release:
+00041Br 2  A5 rr                    lda         ZP_M_CSZ
+00041Dr 2  20 rr rr                 jsr         MM_CHUNK_CLASS                      ; ZP_M_CLS
+000420r 2  A6 rr                    ldx         ZP_M_CLS
+000422r 2  A0 03                    ldy         #ChunkPage::next_page
+000424r 2  BD 2F 7E                 lda         MMU_CHUNK_HEADS,X
+000427r 2  C5 rr                    cmp         ZP_M_CP + 1
+000429r 2  D0 07                    bne         @find_prev
+00042Br 2  B1 rr                    lda         (ZP_M_CP),Y                         ; It's the first page of the list
+00042Dr 2  9D 2F 7E                 sta         MMU_CHUNK_HEADS,X
+000430r 2  80 14                    bra         @give_back
+000432r 2               
+000432r 2               @find_prev:
+000432r 2  64 rr                    stz         ZP_M_CPREV
+000434r 2  C9 00                    cmp         #0
+000436r 2  F0 0E                    beq         @give_back                          ; Empty list (shouldn't happen)
+000438r 2               
+000438r 2               @next_prev:                                                 ; .A = a page on the list
+000438r 2  85 rr                    sta         ZP_M_CPREV + 1
+00043Ar 2  B1 rr                    lda         (ZP_M_CPREV),Y                      ; Its next page
+00043Cr 2  F0 08                    beq         @give_back                          ; Not on the list (shouldn't happen)
+00043Er 2  C5 rr                    cmp         ZP_M_CP + 1
+000440r 2  D0 F6                    bne         @next_prev
+000442r 2  B1 rr                    lda         (ZP_M_CP),Y                         ; prev.next_page = page.next_page
+000444r 2  91 rr                    sta         (ZP_M_CPREV),Y
+000446r 2               
+000446r 2               @give_back:
+000446r 2  A5 rr                    lda         ZP_M_CP + 1
+000448r 2  4C rr rr                 jmp         MM_PAGE_FREE
+00044Br 2               
+00044Br 2               ; Chunk size class for a size.
+00044Br 2               ; IN: .A = bytes (MMU_CHUNK_MIN - MMU_CHUNK_MAX)
+00044Br 2               ; OUT: ZP_M_CLS = class index, ZP_M_CSZ = chunk size
+00044Br 2               ; Modifies: .X, .Y; preserves .A
+00044Br 2               MM_CHUNK_CLASS:
+00044Br 2  A2 00                    ldx         #0
+00044Dr 2  A0 04                    ldy         #MMU_CHUNK_MIN
+00044Fr 2               
+00044Fr 2               @loop:
+00044Fr 2  84 rr                    sty         ZP_M_CSZ
+000451r 2  C5 rr                    cmp         ZP_M_CSZ
+000453r 2  F0 0A                    beq         @found
+000455r 2  90 08                    bcc         @found
+000457r 2  48                       pha
+000458r 2  98                       tya
+000459r 2  0A                       asl
+00045Ar 2  A8                       tay
+00045Br 2  68                       pla
+00045Cr 2  E8                       inx
+00045Dr 2  80 F0                    bra         @loop
+00045Fr 2               
+00045Fr 2               @found:
+00045Fr 2  86 rr                    stx         ZP_M_CLS
+000461r 2  60                       rts
+000462r 2               
+000462r 2               ; Find a free handle table entry in the current task.
+000462r 2               ; OUT (success): ZP_M_HANDLE = handle, ZP_M_HP = its entry, C = 0
+000462r 2               ; OUT (failure): .A = ERR_MEM_NO_HANDLES, C = 1
+000462r 2               ; Modifies: .A, .Y
+000462r 2               MM_NEW_HANDLE:
+000462r 2  A9 7E 85 rr              LOAD_ADDR   MMU_HANDLE_TBL, ZP_M_HP
+000466r 2  A9 64 85 rr  
+00046Ar 2  A9 01                    lda         #1
+00046Cr 2  85 rr                    sta         ZP_M_HANDLE
+00046Er 2  A0 03                    ldy         #Handle::status
+000470r 2               
+000470r 2               @loop:
+000470r 2  B1 rr                    lda         (ZP_M_HP),Y
+000472r 2  F0 17                    beq         @found
+000474r 2  A5 rr                    lda         ZP_M_HP                             ; Next entry
+000476r 2  18                       clc
+000477r 2  69 04                    adc         #.sizeof(Handle)
+000479r 2  85 rr                    sta         ZP_M_HP
+00047Br 2  90 02                    bcc         :+
+00047Dr 2  E6 rr                    inc         ZP_M_HP + 1
+00047Fr 2               :
+00047Fr 2  E6 rr                    inc         ZP_M_HANDLE
+000481r 2  A5 rr                    lda         ZP_M_HANDLE
+000483r 2  C9 68                    cmp         #MMU_MAX_HANDLES + 1
+000485r 2  D0 E9                    bne         @loop
+000487r 2  A9 44                    lda         #ERR_MEM_NO_HANDLES
+000489r 2  38                       sec
+00048Ar 2  60                       rts
+00048Br 2               
+00048Br 2               @found:
+00048Br 2  18                       clc
+00048Cr 2  60                       rts
+00048Dr 2               
+00048Dr 2               ; Point ZP_M_HP at a handle's entry, and check that it's in use.
+00048Dr 2               ; IN: .A = handle
+00048Dr 2               ; OUT (success): .A = entry status, ZP_M_HP = entry, ZP_M_HANDLE = handle, C = 0
+00048Dr 2               ; OUT (failure): .A = ERR_MEM_NOT_VALID, C = 1
+00048Dr 2               ; Modifies: .A, .Y
+00048Dr 2               MM_HANDLE_PTR:
+00048Dr 2  85 rr                    sta         ZP_M_HANDLE
+00048Fr 2  C9 00                    cmp         #0
+000491r 2  F0 26                    beq         @bad
+000493r 2  C9 68                    cmp         #MMU_MAX_HANDLES + 1
+000495r 2  B0 22                    bcs         @bad
+000497r 2  3A                       dec                                             ; Entry = MMU_HANDLE_TBL + (handle - 1) * 4
+000498r 2  64 rr                    stz         ZP_M_HP + 1
+00049Ar 2  0A                       asl
+00049Br 2  26 rr                    rol         ZP_M_HP + 1
+00049Dr 2  0A                       asl
+00049Er 2  26 rr                    rol         ZP_M_HP + 1
+0004A0r 2  18                       clc
+0004A1r 2  69 64                    adc         #<MMU_HANDLE_TBL
+0004A3r 2  85 rr                    sta         ZP_M_HP
+0004A5r 2  A5 rr                    lda         ZP_M_HP + 1
+0004A7r 2  69 7E                    adc         #>MMU_HANDLE_TBL
+0004A9r 2  85 rr                    sta         ZP_M_HP + 1
+0004ABr 2  A0 03                    ldy         #Handle::status
+0004ADr 2  B1 rr                    lda         (ZP_M_HP),Y
+0004AFr 2  29 90                    and         #AI_IN_USE
+0004B1r 2  C9 90                    cmp         #AI_IN_USE
+0004B3r 2  D0 04                    bne         @bad
+0004B5r 2  B1 rr                    lda         (ZP_M_HP),Y
+0004B7r 2  18                       clc
+0004B8r 2  60                       rts
+0004B9r 2               
+0004B9r 2               @bad:
+0004B9r 2  A9 41                    lda         #ERR_MEM_NOT_VALID
+0004BBr 2  38                       sec
+0004BCr 2  60                       rts
+0004BDr 2               
+0004BDr 2               ; Point ZP_M_SP1 at an allocation's data and select its RAM bank (AI_PAGED).  The current RAM bank is
+0004BDr 2               ; saved in ZP_M_SV, for the caller to restore.
+0004BDr 2               ; IN: .A = entry status, ZP_M_HP = entry, ZP_M_TEMP = offset to check (AI_SMALL: must be < length)
+0004BDr 2               ; OUT (success): C = 0
+0004BDr 2               ; OUT (failure): .A = ERR_MEM_BAD_ARG, C = 1
+0004BDr 2               ; Modifies: .A, .Y; preserves .X
+0004BDr 2               MM_ACCESS_SETUP:
+0004BDr 2  A4 rr                    ldy         RAM_BANK_REG
+0004BFr 2  84 rr                    sty         ZP_M_SV
+0004C1r 2  89 08                    bit         #AI_SMALL
+0004C3r 2  F0 12                    beq         @not_small
+0004C5r 2  29 03                    and         #AI_SMALL_LEN
+0004C7r 2  C5 rr                    cmp         ZP_M_TEMP
+0004C9r 2  F0 39                    beq         @bad_arg                            ; Offset >= length
+0004CBr 2  90 37                    bcc         @bad_arg
+0004CDr 2  A5 rr                    lda         ZP_M_HP                             ; The data is in the entry itself
+0004CFr 2  85 rr                    sta         ZP_M_SP1
+0004D1r 2  A5 rr                    lda         ZP_M_HP + 1
+0004D3r 2  85 rr                    sta         ZP_M_SP1 + 1
+0004D5r 2  18                       clc
+0004D6r 2  60                       rts
+0004D7r 2               
+0004D7r 2               @not_small:
+0004D7r 2  89 01                    bit         #AI_PAGED
+0004D9r 2  F0 06                    beq         :+
+0004DBr 2  A0 02                    ldy         #Handle::bank
+0004DDr 2  B1 rr                    lda         (ZP_M_HP),Y
+0004DFr 2  85 rr                    sta         RAM_BANK_REG
+0004E1r 2               :
+0004E1r 2  85 rr                    sta         ZP_M_CLS                            ; Keep the status (.X must be preserved)
+0004E3r 2  A0 00                    ldy         #Handle::addr_l
+0004E5r 2  B1 rr                    lda         (ZP_M_HP),Y
+0004E7r 2  85 rr                    sta         ZP_M_SP1
+0004E9r 2  C8                       iny
+0004EAr 2  B1 rr                    lda         (ZP_M_HP),Y
+0004ECr 2  85 rr                    sta         ZP_M_SP1 + 1
+0004EEr 2  A5 rr                    lda         ZP_M_CLS
+0004F0r 2  29 05                    and         #AI_PAGED | AI_BLOCK
+0004F2r 2  D0 0E                    bne         @ok                                 ; Pages and banks: any 8-bit offset is inside
+0004F4r 2  A5 rr                    lda         ZP_M_SP1 + 1                        ; Chunk: offset must be < the chunk size
+0004F6r 2  85 rr                    sta         ZP_M_CP + 1
+0004F8r 2  64 rr                    stz         ZP_M_CP
+0004FAr 2  B2 rr                    lda         (ZP_M_CP)                           ; ChunkPage::size
+0004FCr 2  C5 rr                    cmp         ZP_M_TEMP
+0004FEr 2  F0 04                    beq         @bad_arg
+000500r 2  90 02                    bcc         @bad_arg
+000502r 2               
+000502r 2               @ok:
+000502r 2  18                       clc
+000503r 2  60                       rts
+000504r 2               
+000504r 2               @bad_arg:
+000504r 2  A9 43                    lda         #ERR_MEM_BAD_ARG
+000506r 2  38                       sec
+000507r 2  60                       rts
+000508r 2               
+000508r 2               ; IN: .A.Y = Bytes to allocate, T must be 0
+000508r 2               ; OUT (success): .A.Y = Address of shared allocation structure, C = 0
+000508r 2               ; OUT (out of memory): .A = ERR_OUT_OF_MEMORY, C = 1
+000508r 2               ;           If T <> 0, .A = ERR_NOT_SYSTEM_TASK, C = 1
+000508r 2               SHARED_ALLOC:
+000508r 2  DA                       phx
+000509r 2  AE F0 FF                 ldx         T_REGISTER
+00050Cr 2  E0 00                    cpx         #SYSTEM_TASK_NUM
+00050Er 2  F0 04                    beq         :+
+000510r 2  FA                       plx
+000511r 2  4C rr rr                 jmp         ERROR_NOT_SYSTEM_TASK
+000514r 2               
+000514r 2               :
+000514r 2                                                                           ; Do the allocation
+000514r 2               
+000514r 2  FA                       plx
+000515r 2  60                       rts
+000516r 2               
+000516r 2               ; IN: .A.Y = Address of PageAddress struct that points to location in shared memory to free
+000516r 2               SHARED_FREE:
+000516r 2  60                       rts
+000517r 2               
+000517r 2               SHARED_RAM_INIT:
+000517r 2  60                       rts
+000518r 2               
+000518r 2               ; IN: .X = Byte to write, .A.Y = Address of PageAddress struct that points to shared memory location to write to
+000518r 2               SHARED_WRITE:
+000518r 2  08                       php                                             ; Save caller's I flag
+000519r 2  78                       sei
+00051Ar 2  DA                       phx                                             ; Push the byte to write
+00051Br 2  20 rr rr                 jsr         SHARED_RW_PAGE_SETUP                ; Clobbers .X.  After, .X = old RAM_BANK, .Y = old U
+00051Er 2  68                       pla                                             ; Get it back
+00051Fr 2  92 rr                    sta         (ZP_M_SP1)                          ; Do the write
+000521r 2  86 rr                    stx         RAM_BANK_REG                        ; Restore prior RAM_BANK
+000523r 2  8C F1 FF                 sty         U_REGISTER                          ; Restore prior Shared RAM Macro-page
+000526r 2  28                       plp                                             ; Restore caller's I flag
+000527r 2  60                       rts
+000528r 2               
+000528r 2               ; IN: .A.Y = Address of PageAddress struct that points to read location in shared memory
+000528r 2               ; OUT: .A = Byte read at address
+000528r 2               SHARED_READ:
+000528r 2  08                       php                                             ; Save caller's I flag
+000529r 2  78                       sei
+00052Ar 2  DA                       phx                                             ; Don't clobber .X
+00052Br 2  20 rr rr                 jsr         SHARED_RW_PAGE_SETUP                ; Clobbers .X.  After, .X = old RAM_BANK, .Y = old U
+00052Er 2  B2 rr                    lda         (ZP_M_SP1)                          ; Do the read
+000530r 2  86 rr                    stx         RAM_BANK_REG                        ; Restore prior RAM_BANK
+000532r 2  8C F1 FF                 sty         U_REGISTER                          ; Restore prior Shared RAM Macro-page
+000535r 2  FA                       plx
+000536r 2  28                       plp                                             ; Restore caller's I flag
+000537r 2  60                       rts
+000538r 2               
+000538r 2               SHARED_RW_PAGE_SETUP:
+000538r 2  85 rr                    sta         ZP_M_SP1
+00053Ar 2  84 rr                    sty         ZP_M_SP1 + 1
+00053Cr 2  A0 02                    ldy         #PageAddress::page
+00053Er 2  B1 rr                    lda         (ZP_M_SP1),Y                        ; Load the page
+000540r 2  48                       pha                                             ; ...and save it for use later
+000541r 2  A0 01                    ldy         #PageAddress::addr + Address::h
+000543r 2  B1 rr                    lda         (ZP_M_SP1),Y                        ; Get the HOB of the address
+000545r 2  AA                       tax
+000546r 2  A0 00                    ldy         #PageAddress::addr + Address::l
+000548r 2  B1 rr                    lda         (ZP_M_SP1),Y                        ; Now the LOB
+00054Ar 2  85 rr                    sta         ZP_M_SP1
+00054Cr 2  86 rr                    stx         ZP_M_SP1 + 1
+00054Er 2  68                       pla                                             ; Get the page back
+00054Fr 2  A8                       tay                                             ; Save the page for use later
+000550r 2  09 F0                    ora         #$F0                                ; Shared Bank transform
+000552r 2  A6 rr                    ldx         RAM_BANK_REG                        ; Save bank for restore
+000554r 2  85 rr                    sta         RAM_BANK_REG                        ; Update the RAM_BANK to new Shared bank
+000556r 2  98                       tya                                             ; Get the original page back
+000557r 2  4A                       lsr                                             ; Shift right 4-bits
+000558r 2  4A                       lsr
+000559r 2  4A                       lsr
+00055Ar 2  4A                       lsr
+00055Br 2  AC F1 FF                 ldy         U_REGISTER                          ; Save macro-page for restore
+00055Er 2  8D F1 FF                 sta         U_REGISTER                          ; Update macro-page[0..3] from PageAddress::page[4..7]
+000561r 2  60                       rts
+000562r 2               
+000562r 2               ; Memory Copy
+000562r 2               ; ZP_TEMP_VEC: From, ZP_TEMP_VEC2: To, .A.Y: Size
+000562r 2               MEM_COPY:
+000562r 2  DA                       phx
+000563r 2  AA                       tax
+000564r 2  F0 01                    beq         :+                                  ; Whole pages?  .Y is already the pass count
+000566r 2  C8                       iny                                             ; Partial page counts as one more pass of .X
+000567r 2               :
+000567r 2  98                       tya
+000568r 2  F0 3C                    beq         @done                               ; copy zero bytes?  Done!
+00056Ar 2  20 rr rr                 PRINT_CRLF
+00056Dr 2  A5 rr 20 rr              PRINT_BYTE  ZP_TEMP_VEC + 1
+000571r 2  rr           
+000572r 2  A5 rr 20 rr              PRINT_BYTE  ZP_TEMP_VEC
+000576r 2  rr           
+000577r 2  A9 2D 20 rr              PRINT_CHAR  #ASCII_DASH, #ASCII_GT
+00057Br 2  rr A9 3E 20  
+00057Fr 2  rr rr        
+000581r 2  A5 rr 20 rr              PRINT_BYTE  ZP_TEMP_VEC2 + 1
 000585r 2  rr           
-000586r 2  80 05                    bra         :++
-000588r 2               :
-000588r 2  20 rr rr                 PRINT_CRLF
-00058Br 2  A2 00                    ldx         #0
-00058Dr 2               :
-00058Dr 2  A5 rr                    lda         ZP_M_SV
-00058Fr 2  91 rr                    sta         (ZP_M_SP1),Y                     ; restore the old value
-000591r 2  C8                       iny
-000592r 2  D0 BF                    bne         @next_cell
-000594r 2  A5 rr                    lda         ZP_M_SP1_H
-000596r 2  C5 rr                    cmp         ZP_M_SP2_H
-000598r 2  F0 05                    beq         @done
-00059Ar 2  E6 rr                    inc         ZP_M_SP1_H
-00059Cr 2  4C rr rr                 jmp         @next_page
-00059Fr 2               @done:
-00059Fr 2  7A FA                    PULL_YX
-0005A1r 2  60                       rts
-0005A2r 2               
-0005A2r 2               ; ****************************************************************************
-0005A2r 2               ; MMU self test (TH_MMU_TEST, $F833; from WOZMON: F833R).  Runs the handle calls in the current task and
-0005A2r 2               ; prints "MMU test: ok", or "MMU test: FAIL x ee" (x = failing step, ee = error code or value read).
-0005A2r 2               ; Allocates and frees 2 task RAM pages (at the top of the free area) and 2 RAM banks.
-0005A2r 2               
-0005A2r 2               .macro _M_MT_FAIL_IF_C  step                                ; Fail if the call returned an error
-0005A2r 2                           bcc         :+
-0005A2r 2                           ldx         #step
-0005A2r 2                           jmp         @fail
-0005A2r 2               :
-0005A2r 2               .endmacro
-0005A2r 2               
-0005A2r 2               .macro _M_MT_FAIL_IF_NC step                                ; Fail if the call should have failed but didn't
-0005A2r 2                           bcs         :+
-0005A2r 2                           ldx         #step
-0005A2r 2                           jmp         @fail
-0005A2r 2               :
-0005A2r 2               .endmacro
-0005A2r 2               
-0005A2r 2               .macro _M_MT_EXPECT     step, value                         ; Fail if .A <> value
-0005A2r 2                           cmp         #value
-0005A2r 2                           beq         :+
-0005A2r 2                           ldx         #step
-0005A2r 2                           jmp         @fail
-0005A2r 2               :
-0005A2r 2               .endmacro
-0005A2r 2               
-0005A2r 2  0A 4D 4D 55  NamedHString    S_MMU_TEST, "MMU test: "
-0005A6r 2  20 74 65 73  
-0005AAr 2  74 3A 20     
-0005ADr 2               
-0005ADr 2               MMU_TEST:
-0005ADr 2  48 DA 5A                 PUSH_AXY
-0005B0r 2  A9 rr A0 rr              _M_WRITE_HSTRING    S_MMU_TEST
-0005B4r 2  20 rr rr     
-0005B7r 2               
-0005B7r 2               ; Small (in-entry) allocation
-0005B7r 2  A9 02                    lda         #2                                  ; 2 bytes
-0005B9r 2  A0 00                    ldy         #0
-0005BBr 2  A2 00                    ldx         #0
-0005BDr 2  20 rr rr                 jsr         MM_ALLOC
-0005C0r 2  90 05 A2 61              _M_MT_FAIL_IF_C     'a'
-0005C4r 2  4C rr rr     
-0005C7r 2  85 rr                    sta         ZP_TEMP                             ; h1
-0005C9r 2  A2 5A                    ldx         #$5A
-0005CBr 2  A0 01                    ldy         #1
-0005CDr 2  20 rr rr                 jsr         MM_WRITE
-0005D0r 2  90 05 A2 62              _M_MT_FAIL_IF_C     'b'
-0005D4r 2  4C rr rr     
-0005D7r 2  A5 rr                    lda         ZP_TEMP
-0005D9r 2  A0 01                    ldy         #1
-0005DBr 2  20 rr rr                 jsr         MM_READ
-0005DEr 2  90 05 A2 63              _M_MT_FAIL_IF_C     'c'
-0005E2r 2  4C rr rr     
-0005E5r 2  C9 5A F0 05              _M_MT_EXPECT        'c', $5A
-0005E9r 2  A2 63 4C rr  
-0005EDr 2  rr           
-0005EEr 2  A5 rr                    lda         ZP_TEMP
-0005F0r 2  A0 02                    ldy         #2                                  ; Past the end
-0005F2r 2  20 rr rr                 jsr         MM_READ
-0005F5r 2  B0 05 A2 64              _M_MT_FAIL_IF_NC    'd'
-0005F9r 2  4C rr rr     
-0005FCr 2               
-0005FCr 2               ; Task RAM pages
-0005FCr 2  A9 2C                    lda         #<300                               ; 2 pages
-0005FEr 2  A0 01                    ldy         #>300
-000600r 2  A2 00                    ldx         #0
-000602r 2  20 rr rr                 jsr         MM_ALLOC
-000605r 2  90 05 A2 65              _M_MT_FAIL_IF_C     'e'
-000609r 2  4C rr rr     
-00060Cr 2  85 rr                    sta         ZP_TEMP_2                           ; h2
-00060Er 2  20 rr rr                 jsr         MM_LOCK
-000611r 2  90 05 A2 66              _M_MT_FAIL_IF_C     'f'
-000615r 2  4C rr rr     
-000618r 2  85 rr                    sta         ZP_TEMP_VEC3
-00061Ar 2  84 rr                    sty         ZP_TEMP_VEC3 + 1
-00061Cr 2  C9 00 F0 05              _M_MT_EXPECT        'f', 0                      ; Page aligned
-000620r 2  A2 66 4C rr  
-000624r 2  rr           
-000625r 2  98                       tya
-000626r 2  CD 63 7E                 cmp         MMU_HDR + MmuHeader::low_water      ; Lowest allocated page
-000629r 2  F0 05                    beq         :+
-00062Br 2  A2 66                    ldx         #'f'
-00062Dr 2  4C rr rr                 jmp         @fail
-000630r 2               :
-000630r 2  A9 A5                    lda         #$A5                                ; Write through the raw pointer
-000632r 2  A0 FF                    ldy         #255
-000634r 2  91 rr                    sta         (ZP_TEMP_VEC3),Y
-000636r 2  A5 rr                    lda         ZP_TEMP_2
-000638r 2  20 rr rr                 jsr         MM_FREE                             ; Locked: must fail (preserves .X = old bank)
-00063Br 2  B0 05 A2 67              _M_MT_FAIL_IF_NC    'g'
-00063Fr 2  4C rr rr     
-000642r 2  A5 rr                    lda         ZP_TEMP_2
-000644r 2  20 rr rr                 jsr         MM_UNLOCK
-000647r 2  90 05 A2 68              _M_MT_FAIL_IF_C     'h'
-00064Br 2  4C rr rr     
-00064Er 2  A5 rr                    lda         ZP_TEMP_2
-000650r 2  A0 FF                    ldy         #255
-000652r 2  20 rr rr                 jsr         MM_READ
-000655r 2  90 05 A2 69              _M_MT_FAIL_IF_C     'i'
-000659r 2  4C rr rr     
-00065Cr 2  C9 A5 F0 05              _M_MT_EXPECT        'i', $A5
-000660r 2  A2 69 4C rr  
-000664r 2  rr           
-000665r 2               
-000665r 2               ; RAM banks
-000665r 2  A9 01                    lda         #<$2001                             ; 2 banks
-000667r 2  A0 20                    ldy         #>$2001
-000669r 2  A2 01                    ldx         #AI_PAGED
-00066Br 2  20 rr rr                 jsr         MM_ALLOC
-00066Er 2  90 05 A2 6A              _M_MT_FAIL_IF_C     'j'
-000672r 2  4C rr rr     
-000675r 2  85 rr                    sta         ZP_TEMP_VEC4                        ; h3
-000677r 2  A2 3C                    ldx         #$3C
-000679r 2  A0 07                    ldy         #7
-00067Br 2  20 rr rr                 jsr         MM_WRITE
-00067Er 2  90 05 A2 6B              _M_MT_FAIL_IF_C     'k'
-000682r 2  4C rr rr     
-000685r 2  A5 rr                    lda         ZP_TEMP_VEC4
-000687r 2  A0 07                    ldy         #7
-000689r 2  20 rr rr                 jsr         MM_READ
-00068Cr 2  90 05 A2 6B              _M_MT_FAIL_IF_C     'k'
-000690r 2  4C rr rr     
-000693r 2  C9 3C F0 05              _M_MT_EXPECT        'k', $3C
-000697r 2  A2 6B 4C rr  
-00069Br 2  rr           
-00069Cr 2               
-00069Cr 2               ; Free everything; the page map must be back where it started
-00069Cr 2  A5 rr                    lda         ZP_TEMP
-00069Er 2  20 rr rr                 jsr         MM_FREE
-0006A1r 2  90 05 A2 6C              _M_MT_FAIL_IF_C     'l'
-0006A5r 2  4C rr rr     
-0006A8r 2  A5 rr                    lda         ZP_TEMP_2
-0006AAr 2  20 rr rr                 jsr         MM_FREE
-0006ADr 2  90 05 A2 6C              _M_MT_FAIL_IF_C     'l'
-0006B1r 2  4C rr rr     
-0006B4r 2  A5 rr                    lda         ZP_TEMP_VEC4
-0006B6r 2  20 rr rr                 jsr         MM_FREE
-0006B9r 2  90 05 A2 6C              _M_MT_FAIL_IF_C     'l'
-0006BDr 2  4C rr rr     
-0006C0r 2  AD 63 7E                 lda         MMU_HDR + MmuHeader::low_water
-0006C3r 2  C9 7D F0 05              _M_MT_EXPECT        'm', MMU_SYS_PAGE
-0006C7r 2  A2 6D 4C rr  
-0006CBr 2  rr           
-0006CCr 2  A5 rr                    lda         ZP_TEMP_2
-0006CEr 2  20 rr rr                 jsr         MM_FREE                             ; Already freed: must fail
-0006D1r 2  B0 05 A2 6E              _M_MT_FAIL_IF_NC    'n'
-0006D5r 2  4C rr rr     
-0006D8r 2               
-0006D8r 2  A9 6F 20 rr              PRINT_CHAR  #'o', #'k'
-0006DCr 2  rr A9 6B 20  
-0006E0r 2  rr rr        
-0006E2r 2  80 28                    bra         @end
-0006E4r 2               
-0006E4r 2               @fail:                                                      ; .X = step, .A = error / value
-0006E4r 2  48                       pha
-0006E5r 2  DA                       phx
-0006E6r 2  A9 46 20 rr              PRINT_CHAR  #'F', #'A', #'I', #'L', #' '
-0006EAr 2  rr A9 41 20  
-0006EEr 2  rr rr A9 49  
-0006FFr 2  68                       pla
-000700r 2  20 rr rr                 PRINT_CHAR
-000703r 2  A9 20 20 rr              PRINT_SPACE
-000707r 2  rr           
-000708r 2  68                       pla
-000709r 2  20 rr rr                 PRINT_BYTE
-00070Cr 2               
-00070Cr 2               @end:
-00070Cr 2  20 rr rr                 PRINT_CRLF
-00070Fr 2  7A FA 68                 PULL_YXA
-000712r 2  60                       rts
-000713r 2               
-000713r 1               .include "irq.s"
-000713r 2               .debuginfo
-000713r 2               
-000713r 2               .segment "IRQ"
+000586r 2  A5 rr 20 rr              PRINT_BYTE  ZP_TEMP_VEC2
+00058Ar 2  rr           
+00058Br 2               
+00058Br 2               @loop:
+00058Br 2  B2 rr                    lda         (ZP_TEMP_VEC)
+00058Dr 2  92 rr                    sta         (ZP_TEMP_VEC2)
+00058Fr 2  A9 2E 20 rr              PRINT_CHAR  #ASCII_PERIOD
+000593r 2  rr           
+000594r 2  E6 rr                    inc         ZP_TEMP_VEC
+000596r 2  D0 02                    bne         :+
+000598r 2  E6 rr                    inc         ZP_TEMP_VEC + 1
+00059Ar 2               :
+00059Ar 2  E6 rr                    inc         ZP_TEMP_VEC2
+00059Cr 2  D0 02                    bne         :+
+00059Er 2  E6 rr                    inc         ZP_TEMP_VEC2 + 1
+0005A0r 2               :
+0005A0r 2  CA                       dex
+0005A1r 2  D0 E8                    bne         @loop
+0005A3r 2  88                       dey
+0005A4r 2  D0 E5                    bne         @loop
+0005A6r 2               
+0005A6r 2               @done:
+0005A6r 2  FA                       plx
+0005A7r 2  60                       rts
+0005A8r 2               
+0005A8r 2               ; TESTS
+0005A8r 2               MEM_TEST:
+0005A8r 2  48 DA 5A                 PUSH_AXY
+0005ABr 2  20 rr rr                 PRINT_CRLF
+0005AEr 2                           ;stz         T_REGISTER
+0005AEr 2               
+0005AEr 2               @task_num_loop:
+0005AEr 2  64 rr                    stz         RAM_BANK_REG
+0005B0r 2  A9 04                    lda         #$04
+0005B2r 2  A2 80                    ldx         #$80                                ; exclude the task serial buffers @ $0200 && $0300
+0005B4r 2  20 rr rr                 jsr         TEST_PAGE_RANGE
+0005B7r 2  A2 A0                    ldx         #$A0                                ; end of banked RAM
+0005B9r 2               
+0005B9r 2               @ram_bank_loop:
+0005B9r 2  A5 rr 20 rr              PRINT_BYTE  RAM_BANK_REG
+0005BDr 2  rr           
+0005BEr 2  A9 2E 20 rr              PRINT_CHAR  #ASCII_PERIOD
+0005C2r 2  rr           
+0005C3r 2  A9 80                    lda         #$80
+0005C5r 2  20 rr rr                 jsr         TEST_PAGE_RANGE
+0005C8r 2  E6 rr                    inc         RAM_BANK_REG
+0005CAr 2  A9 F0                    lda         #NUM_RAM_BANKS
+0005CCr 2  C5 rr                    cmp         RAM_BANK_REG
+0005CEr 2  D0 E9                    bne         @ram_bank_loop
+0005D0r 2                           ;inc         T_REGISTER
+0005D0r 2                           ;lda         #$10
+0005D0r 2                           ;cmp         T_REGISTER
+0005D0r 2                           ;bne         @task_num_loop
+0005D0r 2  9C F1 FF                 stz         U_REGISTER
+0005D3r 2               
+0005D3r 2               @shared_banks_loop:
+0005D3r 2  A9 F0                    lda         #$F0
+0005D5r 2  85 rr                    sta         RAM_BANK_REG
+0005D7r 2               
+0005D7r 2               @shared_bank_loop:
+0005D7r 2  AD F1 FF 20              PRINT_BYTE  U_REGISTER
+0005DBr 2  rr rr        
+0005DDr 2  A9 2E 20 rr              PRINT_CHAR  #ASCII_PERIOD
+0005E1r 2  rr           
+0005E2r 2  A5 rr 20 rr              PRINT_BYTE  RAM_BANK_REG
+0005E6r 2  rr           
+0005E7r 2  A9 2E 20 rr              PRINT_CHAR  #ASCII_PERIOD
+0005EBr 2  rr           
+0005ECr 2  A9 80                    lda         #$80
+0005EEr 2  20 rr rr                 jsr         TEST_PAGE_RANGE
+0005F1r 2  E6 rr                    inc         RAM_BANK_REG                        ; increment shared bank
+0005F3r 2  D0 E2                    bne         @shared_bank_loop
+0005F5r 2  EE F1 FF                 inc         U_REGISTER
+0005F8r 2  AD F1 FF                 lda         U_REGISTER
+0005FBr 2  C9 10                    cmp         #$10
+0005FDr 2  90 D4                    bcc         @shared_banks_loop
+0005FFr 2  7A FA 68                 PULL_YXA
+000602r 2  60                       rts
+000603r 2               
+000603r 2               ; .A = HOB of first page to test, .X = HOB of last page + 1
+000603r 2               TEST_PAGE_RANGE:
+000603r 2  85 rr                    sta         ZP_TEMP_VEC + 1
+000605r 2  20 rr rr                 PRINT_BYTE
+000608r 2  A9 00 20 rr              PRINT_BYTE  #0
+00060Cr 2  rr           
+00060Dr 2  A9 2E 20 rr              PRINT_CHAR  #ASCII_PERIOD
+000611r 2  rr           
+000612r 2  8A                       txa
+000613r 2  3A                       dec
+000614r 2  20 rr rr                 PRINT_BYTE
+000617r 2  A9 FF 20 rr              PRINT_BYTE  #$FF
+00061Br 2  rr           
+00061Cr 2  A9 3A 20 rr              PRINT_CHAR  #ASCII_COLON
+000620r 2  rr           
+000621r 2  64 rr                    stz         ZP_TEMP_VEC
+000623r 2  64 rr                    stz         ZP_TEMP
+000625r 2               
+000625r 2               @loop_init:
+000625r 2  A0 00                    ldy         #0
+000627r 2               
+000627r 2               @loop:
+000627r 2  B1 rr                    lda         (ZP_TEMP_VEC),Y                     ; save what is in memory (non-descructive)
+000629r 2  85 rr                    sta         ZP_M_SV
+00062Br 2  A9 AA                    lda         #$AA
+00062Dr 2               @test_it:
+00062Dr 2  49 FF                    eor         #$FF
+00062Fr 2  91 rr                    sta         (ZP_TEMP_VEC),Y
+000631r 2  D1 rr                    cmp         (ZP_TEMP_VEC),Y
+000633r 2  F0 04                    beq         @next
+000635r 2  A9 21                    lda         #ASCII_BANG
+000637r 2  80 0D                    bra         @write                              ; always, no need to restore value since it isn't storing properly anyway
+000639r 2               
+000639r 2               @next:
+000639r 2  C9 AA                    cmp         #$AA
+00063Br 2  D0 F0                    bne         @test_it
+00063Dr 2  A5 rr                    lda         ZP_M_SV                             ; restore saved value
+00063Fr 2  91 rr                    sta         (ZP_TEMP_VEC),Y
+000641r 2  C8                       iny
+000642r 2  D0 E3                    bne         @loop
+000644r 2  A9 2E                    lda         #ASCII_PERIOD
+000646r 2               
+000646r 2               @write:
+000646r 2  20 rr rr                 PRINT_CHAR
+000649r 2  64 rr                    stz         ZP_TEMP
+00064Br 2  E6 rr                    inc         ZP_TEMP_VEC + 1
+00064Dr 2  E4 rr                    cpx         ZP_TEMP_VEC + 1
+00064Fr 2  D0 D4                    bne         @loop_init
+000651r 2  4C rr rr                 PRINT_CRLF_JMP
+000654r 2               
+000654r 2               ; test memory pages, start page in .A, end page in .X
+000654r 2               DEEP_PAGE_TEST_RANGE_AX:
+000654r 2  86 rr                    stx         ZP_M_SP2_H
+000656r 2  85 rr                    sta         ZP_M_SP1_H
+000658r 2  80 06                    bra         DEEP_PAGE_TEST_RANGE
+00065Ar 2               
+00065Ar 2               ; test a single page in .A
+00065Ar 2               DEEP_PAGE_TEST_A:
+00065Ar 2  85 rr                    sta         ZP_M_SP1_H
+00065Cr 2               
+00065Cr 2               ; test a single page in ZP_M_SP1_H
+00065Cr 2               DEEP_PAGE_TEST:
+00065Cr 2  A5 rr                    lda         ZP_M_SP1_H
+00065Er 2  85 rr                    sta         ZP_M_SP2_H
+000660r 2               
+000660r 2               ; test a range of pages, start in ZP_M_SP1_H, end in ZP_M_SP2_H
+000660r 2               DEEP_PAGE_TEST_RANGE:
+000660r 2  DA 5A                    PUSH_XY
+000662r 2  64 rr                    stz         ZP_M_SP1_L
+000664r 2               @next_page:
+000664r 2  A5 rr                    lda         ZP_M_SP1_H
+000666r 2  20 rr rr                 PRINT_BYTE
+000669r 2  A9 00 20 rr              PRINT_BYTE  #0
+00066Dr 2  rr           
+00066Er 2  A9 3A 20 rr              PRINT_CHAR  #ASCII_COLON
+000672r 2  rr           
+000673r 2  20 rr rr                 PRINT_CRLF
+000676r 2  A0 00                    ldy         #0
+000678r 2  A2 00                    ldx         #0
+00067Ar 2               @next_cell:
+00067Ar 2  64 rr                    stz         ZP_M_TEMP
+00067Cr 2  B1 rr                    lda         (ZP_M_SP1),Y
+00067Er 2  85 rr                    sta         ZP_M_SV                             ; save the old value
+000680r 2  A9 01                    lda         #1
+000682r 2  85 rr                    sta         ZP_M_TEMP2
+000684r 2               @loop_start:
+000684r 2  A5 rr                    lda         ZP_M_TEMP2
+000686r 2  91 rr                    sta         (ZP_M_SP1),Y                     ; store it
+000688r 2  D1 rr                    cmp         (ZP_M_SP1),Y                     ; test it
+00068Ar 2  D0 08                    bne         :+
+00068Cr 2  49 FF                    eor         #$FF                                ; test the inverse
+00068Er 2  91 rr                    sta         (ZP_M_SP1),Y                     ; store it
+000690r 2  D1 rr                    cmp         (ZP_M_SP1),Y                     ; test it
+000692r 2  F0 06                    beq         @shift
+000694r 2               :
+000694r 2  A5 rr                    lda         ZP_M_TEMP2
+000696r 2  05 rr                    ora         ZP_M_TEMP                           ; add bit to set of bad bits found
+000698r 2  85 rr                    sta         ZP_M_TEMP
+00069Ar 2               @shift:
+00069Ar 2  06 rr                    asl         ZP_M_TEMP2                          ; Walk the bit forward
+00069Cr 2  D0 E6                    bne         @loop_start
+00069Er 2  A5 rr                    lda         ZP_M_TEMP                           ; get the set of bad bits we found
+0006A0r 2  20 rr rr                 PRINT_BYTE
+0006A3r 2  E8                       inx
+0006A4r 2  E0 10                    cpx         #$10
+0006A6r 2  F0 07                    beq         :+
+0006A8r 2  A9 20 20 rr              PRINT_SPACE
+0006ACr 2  rr           
+0006ADr 2  80 05                    bra         :++
+0006AFr 2               :
+0006AFr 2  20 rr rr                 PRINT_CRLF
+0006B2r 2  A2 00                    ldx         #0
+0006B4r 2               :
+0006B4r 2  A5 rr                    lda         ZP_M_SV
+0006B6r 2  91 rr                    sta         (ZP_M_SP1),Y                     ; restore the old value
+0006B8r 2  C8                       iny
+0006B9r 2  D0 BF                    bne         @next_cell
+0006BBr 2  A5 rr                    lda         ZP_M_SP1_H
+0006BDr 2  C5 rr                    cmp         ZP_M_SP2_H
+0006BFr 2  F0 05                    beq         @done
+0006C1r 2  E6 rr                    inc         ZP_M_SP1_H
+0006C3r 2  4C rr rr                 jmp         @next_page
+0006C6r 2               @done:
+0006C6r 2  7A FA                    PULL_YX
+0006C8r 2  60                       rts
+0006C9r 2               
+0006C9r 2               ; ****************************************************************************
+0006C9r 2               ; MMU self test (TH_MMU_TEST, $F833; from WOZMON: F833R).  Runs the handle calls in the current task and
+0006C9r 2               ; prints "MMU test: ok", or "MMU test: FAIL x ee" (x = failing step, ee = error code or value read).
+0006C9r 2               ; Allocates and frees 2 task RAM pages (at the top of the free area) and 2 RAM banks.
+0006C9r 2               
+0006C9r 2               .macro _M_MT_FAIL_IF_C  step                                ; Fail if the call returned an error
+0006C9r 2                           bcc         :+
+0006C9r 2                           ldx         #step
+0006C9r 2                           jmp         @fail
+0006C9r 2               :
+0006C9r 2               .endmacro
+0006C9r 2               
+0006C9r 2               .macro _M_MT_FAIL_IF_NC step                                ; Fail if the call should have failed but didn't
+0006C9r 2                           bcs         :+
+0006C9r 2                           ldx         #step
+0006C9r 2                           jmp         @fail
+0006C9r 2               :
+0006C9r 2               .endmacro
+0006C9r 2               
+0006C9r 2               .macro _M_MT_EXPECT     step, value                         ; Fail if .A <> value
+0006C9r 2                           cmp         #value
+0006C9r 2                           beq         :+
+0006C9r 2                           ldx         #step
+0006C9r 2                           jmp         @fail
+0006C9r 2               :
+0006C9r 2               .endmacro
+0006C9r 2               
+0006C9r 2  0A 4D 4D 55  NamedHString    S_MMU_TEST, "MMU test: "
+0006CDr 2  20 74 65 73  
+0006D1r 2  74 3A 20     
+0006D4r 2               
+0006D4r 2               MMU_TEST:
+0006D4r 2  48 DA 5A                 PUSH_AXY
+0006D7r 2  A9 rr A0 rr              _M_WRITE_HSTRING    S_MMU_TEST
+0006DBr 2  20 rr rr     
+0006DEr 2               
+0006DEr 2               ; Small (in-entry) allocation
+0006DEr 2  A9 02                    lda         #2                                  ; 2 bytes
+0006E0r 2  A0 00                    ldy         #0
+0006E2r 2  A2 00                    ldx         #0
+0006E4r 2  20 rr rr                 jsr         MM_ALLOC
+0006E7r 2  90 05 A2 61              _M_MT_FAIL_IF_C     'a'
+0006EBr 2  4C rr rr     
+0006EEr 2  85 rr                    sta         ZP_TEMP                             ; h1
+0006F0r 2  A2 5A                    ldx         #$5A
+0006F2r 2  A0 01                    ldy         #1
+0006F4r 2  20 rr rr                 jsr         MM_WRITE
+0006F7r 2  90 05 A2 62              _M_MT_FAIL_IF_C     'b'
+0006FBr 2  4C rr rr     
+0006FEr 2  A5 rr                    lda         ZP_TEMP
+000700r 2  A0 01                    ldy         #1
+000702r 2  20 rr rr                 jsr         MM_READ
+000705r 2  90 05 A2 63              _M_MT_FAIL_IF_C     'c'
+000709r 2  4C rr rr     
+00070Cr 2  C9 5A F0 05              _M_MT_EXPECT        'c', $5A
+000710r 2  A2 63 4C rr  
+000714r 2  rr           
+000715r 2  A5 rr                    lda         ZP_TEMP
+000717r 2  A0 02                    ldy         #2                                  ; Past the end
+000719r 2  20 rr rr                 jsr         MM_READ
+00071Cr 2  B0 05 A2 64              _M_MT_FAIL_IF_NC    'd'
+000720r 2  4C rr rr     
+000723r 2               
+000723r 2               ; Task RAM pages
+000723r 2  A9 2C                    lda         #<300                               ; 2 pages
+000725r 2  A0 01                    ldy         #>300
+000727r 2  A2 00                    ldx         #0
+000729r 2  20 rr rr                 jsr         MM_ALLOC
+00072Cr 2  90 05 A2 65              _M_MT_FAIL_IF_C     'e'
+000730r 2  4C rr rr     
+000733r 2  85 rr                    sta         ZP_TEMP_2                           ; h2
+000735r 2  20 rr rr                 jsr         MM_LOCK
+000738r 2  90 05 A2 66              _M_MT_FAIL_IF_C     'f'
+00073Cr 2  4C rr rr     
+00073Fr 2  85 rr                    sta         ZP_TEMP_VEC3
+000741r 2  84 rr                    sty         ZP_TEMP_VEC3 + 1
+000743r 2  C9 00 F0 05              _M_MT_EXPECT        'f', 0                      ; Page aligned
+000747r 2  A2 66 4C rr  
+00074Br 2  rr           
+00074Cr 2  98                       tya
+00074Dr 2  CD 63 7E                 cmp         MMU_HDR + MmuHeader::low_water      ; Lowest allocated page
+000750r 2  F0 05                    beq         :+
+000752r 2  A2 66                    ldx         #'f'
+000754r 2  4C rr rr                 jmp         @fail
+000757r 2               :
+000757r 2  A9 A5                    lda         #$A5                                ; Write through the raw pointer
+000759r 2  A0 FF                    ldy         #255
+00075Br 2  91 rr                    sta         (ZP_TEMP_VEC3),Y
+00075Dr 2  A5 rr                    lda         ZP_TEMP_2
+00075Fr 2  20 rr rr                 jsr         MM_FREE                             ; Locked: must fail (preserves .X = old bank)
+000762r 2  B0 05 A2 67              _M_MT_FAIL_IF_NC    'g'
+000766r 2  4C rr rr     
+000769r 2  A5 rr                    lda         ZP_TEMP_2
+00076Br 2  20 rr rr                 jsr         MM_UNLOCK
+00076Er 2  90 05 A2 68              _M_MT_FAIL_IF_C     'h'
+000772r 2  4C rr rr     
+000775r 2  A5 rr                    lda         ZP_TEMP_2
+000777r 2  A0 FF                    ldy         #255
+000779r 2  20 rr rr                 jsr         MM_READ
+00077Cr 2  90 05 A2 69              _M_MT_FAIL_IF_C     'i'
+000780r 2  4C rr rr     
+000783r 2  C9 A5 F0 05              _M_MT_EXPECT        'i', $A5
+000787r 2  A2 69 4C rr  
+00078Br 2  rr           
+00078Cr 2               
+00078Cr 2               ; RAM banks
+00078Cr 2  A9 01                    lda         #<$2001                             ; 2 banks
+00078Er 2  A0 20                    ldy         #>$2001
+000790r 2  A2 01                    ldx         #AI_PAGED
+000792r 2  20 rr rr                 jsr         MM_ALLOC
+000795r 2  90 05 A2 6A              _M_MT_FAIL_IF_C     'j'
+000799r 2  4C rr rr     
+00079Cr 2  85 rr                    sta         ZP_TEMP_VEC4                        ; h3
+00079Er 2  A2 3C                    ldx         #$3C
+0007A0r 2  A0 07                    ldy         #7
+0007A2r 2  20 rr rr                 jsr         MM_WRITE
+0007A5r 2  90 05 A2 6B              _M_MT_FAIL_IF_C     'k'
+0007A9r 2  4C rr rr     
+0007ACr 2  A5 rr                    lda         ZP_TEMP_VEC4
+0007AEr 2  A0 07                    ldy         #7
+0007B0r 2  20 rr rr                 jsr         MM_READ
+0007B3r 2  90 05 A2 6B              _M_MT_FAIL_IF_C     'k'
+0007B7r 2  4C rr rr     
+0007BAr 2  C9 3C F0 05              _M_MT_EXPECT        'k', $3C
+0007BEr 2  A2 6B 4C rr  
+0007C2r 2  rr           
+0007C3r 2               
+0007C3r 2               ; Chunks: two 16-byte chunks share a page
+0007C3r 2  A9 0A                    lda         #10                                 ; 16-byte class
+0007C5r 2  A0 00                    ldy         #0
+0007C7r 2  A2 00                    ldx         #0
+0007C9r 2  20 rr rr                 jsr         MM_ALLOC
+0007CCr 2  90 05 A2 6F              _M_MT_FAIL_IF_C     'o'
+0007D0r 2  4C rr rr     
+0007D3r 2  85 rr                    sta         ZP_TEMP_VEC3                        ; c1
+0007D5r 2  A9 10                    lda         #16
+0007D7r 2  A0 00                    ldy         #0
+0007D9r 2  A2 00                    ldx         #0
+0007DBr 2  20 rr rr                 jsr         MM_ALLOC
+0007DEr 2  90 05 A2 6F              _M_MT_FAIL_IF_C     'o'
+0007E2r 2  4C rr rr     
+0007E5r 2  85 rr                    sta         ZP_TEMP_VEC3 + 1                    ; c2
+0007E7r 2  A5 rr                    lda         ZP_TEMP_VEC3
+0007E9r 2  20 rr rr                 jsr         MM_LOCK
+0007ECr 2  90 05 A2 70              _M_MT_FAIL_IF_C     'p'
+0007F0r 2  4C rr rr     
+0007F3r 2  85 rr                    sta         ZP_TEMP_VEC                         ; c1's address
+0007F5r 2  84 rr                    sty         ZP_TEMP_VEC + 1
+0007F7r 2  A5 rr                    lda         ZP_TEMP_VEC3
+0007F9r 2  20 rr rr                 jsr         MM_UNLOCK
+0007FCr 2  A5 rr                    lda         ZP_TEMP_VEC3 + 1
+0007FEr 2  20 rr rr                 jsr         MM_LOCK
+000801r 2  90 05 A2 70              _M_MT_FAIL_IF_C     'p'
+000805r 2  4C rr rr     
+000808r 2  C4 rr                    cpy         ZP_TEMP_VEC + 1                     ; Same page...
+00080Ar 2  F0 06                    beq         :+
+00080Cr 2  98                       tya
+00080Dr 2  A2 70                    ldx         #'p'
+00080Fr 2  4C rr rr                 jmp         @fail
+000812r 2               :
+000812r 2  C5 rr                    cmp         ZP_TEMP_VEC                         ; ...different chunk
+000814r 2  D0 05                    bne         :+
+000816r 2  A2 70                    ldx         #'p'
+000818r 2  4C rr rr                 jmp         @fail
+00081Br 2               :
+00081Br 2  A5 rr                    lda         ZP_TEMP_VEC3 + 1
+00081Dr 2  20 rr rr                 jsr         MM_UNLOCK
+000820r 2  A5 rr                    lda         ZP_TEMP_VEC3
+000822r 2  A2 77                    ldx         #$77
+000824r 2  A0 0F                    ldy         #15                                 ; Last byte of the chunk
+000826r 2  20 rr rr                 jsr         MM_WRITE
+000829r 2  90 05 A2 71              _M_MT_FAIL_IF_C     'q'
+00082Dr 2  4C rr rr     
+000830r 2  A5 rr                    lda         ZP_TEMP_VEC3
+000832r 2  A0 0F                    ldy         #15
+000834r 2  20 rr rr                 jsr         MM_READ
+000837r 2  90 05 A2 71              _M_MT_FAIL_IF_C     'q'
+00083Br 2  4C rr rr     
+00083Er 2  C9 77 F0 05              _M_MT_EXPECT        'q', $77
+000842r 2  A2 71 4C rr  
+000846r 2  rr           
+000847r 2  A5 rr                    lda         ZP_TEMP_VEC3
+000849r 2  A0 10                    ldy         #16                                 ; Past the end of the chunk
+00084Br 2  20 rr rr                 jsr         MM_READ
+00084Er 2  B0 05 A2 72              _M_MT_FAIL_IF_NC    'r'
+000852r 2  4C rr rr     
+000855r 2               
+000855r 2               ; Chunks: four 64-byte chunks need two chunk pages (3 per page)
+000855r 2  A2 03                    ldx         #3
+000857r 2               
+000857r 2               @alloc_64:
+000857r 2  DA                       phx
+000858r 2  A9 40                    lda         #64
+00085Ar 2  A0 00                    ldy         #0
+00085Cr 2  A2 00                    ldx         #0
+00085Er 2  20 rr rr                 jsr         MM_ALLOC
+000861r 2  FA                       plx
+000862r 2  90 05 A2 73              _M_MT_FAIL_IF_C     's'
+000866r 2  4C rr rr     
+000869r 2  95 rr                    sta         ZP_TEMP_VEC,X                       ; ZP_TEMP_VEC .. ZP_TEMP_VEC2 + 1
+00086Br 2  CA                       dex
+00086Cr 2  10 E9                    bpl         @alloc_64
+00086Er 2  A2 03                    ldx         #3
+000870r 2               
+000870r 2               @free_64:
+000870r 2  B5 rr                    lda         ZP_TEMP_VEC,X
+000872r 2  20 rr rr                 jsr         MM_FREE
+000875r 2  90 05 A2 74              _M_MT_FAIL_IF_C     't'
+000879r 2  4C rr rr     
+00087Cr 2  CA                       dex
+00087Dr 2  10 F1                    bpl         @free_64
+00087Fr 2  A5 rr                    lda         ZP_TEMP_VEC3
+000881r 2  20 rr rr                 jsr         MM_FREE
+000884r 2  90 05 A2 75              _M_MT_FAIL_IF_C     'u'
+000888r 2  4C rr rr     
+00088Br 2  A5 rr                    lda         ZP_TEMP_VEC3 + 1
+00088Dr 2  20 rr rr                 jsr         MM_FREE
+000890r 2  90 05 A2 75              _M_MT_FAIL_IF_C     'u'
+000894r 2  4C rr rr     
+000897r 2               
+000897r 2               ; Free everything; the page map must be back where it started
+000897r 2  A5 rr                    lda         ZP_TEMP
+000899r 2  20 rr rr                 jsr         MM_FREE
+00089Cr 2  90 05 A2 6C              _M_MT_FAIL_IF_C     'l'
+0008A0r 2  4C rr rr     
+0008A3r 2  A5 rr                    lda         ZP_TEMP_2
+0008A5r 2  20 rr rr                 jsr         MM_FREE
+0008A8r 2  90 05 A2 6C              _M_MT_FAIL_IF_C     'l'
+0008ACr 2  4C rr rr     
+0008AFr 2  A5 rr                    lda         ZP_TEMP_VEC4
+0008B1r 2  20 rr rr                 jsr         MM_FREE
+0008B4r 2  90 05 A2 6C              _M_MT_FAIL_IF_C     'l'
+0008B8r 2  4C rr rr     
+0008BBr 2  AD 63 7E                 lda         MMU_HDR + MmuHeader::low_water
+0008BEr 2  C9 7D F0 05              _M_MT_EXPECT        'm', MMU_SYS_PAGE
+0008C2r 2  A2 6D 4C rr  
+0008C6r 2  rr           
+0008C7r 2  A5 rr                    lda         ZP_TEMP_2
+0008C9r 2  20 rr rr                 jsr         MM_FREE                             ; Already freed: must fail
+0008CCr 2  B0 05 A2 6E              _M_MT_FAIL_IF_NC    'n'
+0008D0r 2  4C rr rr     
+0008D3r 2               
+0008D3r 2  A9 6F 20 rr              PRINT_CHAR  #'o', #'k'
+0008D7r 2  rr A9 6B 20  
+0008DBr 2  rr rr        
+0008DDr 2  80 28                    bra         @end
+0008DFr 2               
+0008DFr 2               @fail:                                                      ; .X = step, .A = error / value
+0008DFr 2  48                       pha
+0008E0r 2  DA                       phx
+0008E1r 2  A9 46 20 rr              PRINT_CHAR  #'F', #'A', #'I', #'L', #' '
+0008E5r 2  rr A9 41 20  
+0008E9r 2  rr rr A9 49  
+0008FAr 2  68                       pla
+0008FBr 2  20 rr rr                 PRINT_CHAR
+0008FEr 2  A9 20 20 rr              PRINT_SPACE
+000902r 2  rr           
+000903r 2  68                       pla
+000904r 2  20 rr rr                 PRINT_BYTE
+000907r 2               
+000907r 2               @end:
+000907r 2  20 rr rr                 PRINT_CRLF
+00090Ar 2  7A FA 68                 PULL_YXA
+00090Dr 2  60                       rts
+00090Er 2               
+00090Er 1               .include "irq.s"
+00090Er 2               .debuginfo
+00090Er 2               
+00090Er 2               .segment "IRQ"
 000000r 2               
 000000r 2               ; ****************************************************************************
 000000r 2               ; IRQ dispatch (see MMU_PLAN.md, IO subsystem)

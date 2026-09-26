@@ -80,6 +80,24 @@ MMU_BANK_MAP     = MMU_HDR + MmuHeader::bank_map
 MMU_BANK_ENDS    = MMU_HDR + MmuHeader::bank_ends
 MMU_HANDLE_TBL   = MMU_HDR + MmuHeader::handles             ; Entry for handle h: MMU_HANDLE_TBL + (h - 1) * 4
 MMU_MAX_HANDLES  = ($8000 - MMU_HANDLE_TBL) / .sizeof(Handle)   ; 103 for 2 pages
+MMU_CHUNK_HEADS  = MMU_HDR + MmuHeader::chunk_heads         ; First chunk page of each size class (0 = none)
+
+; Chunk pages: a 256-byte task RAM page split into chunks of one size (4, 8, 16, 32 or 64 bytes).  The
+; first chunk holds the page header; free chunks are linked through their first byte (the in-page offset
+; of the next free chunk, 0 = none).
+MMU_CHUNK_MIN    = 4                                        ; Smallest chunk (class 0)
+MMU_CHUNK_MAX    = 64                                       ; Largest chunk; bigger allocations take whole pages
+MMU_CHUNK_CLASSES = 5                                       ; 4, 8, 16, 32, 64
+
+.struct     ChunkPage
+            size        .byte                               ; Chunk size
+            free_count  .byte                               ; Free chunks in this page
+            free_head   .byte                               ; Offset of the first free chunk (0 = none)
+            next_page   .byte                               ; Next chunk page of the same size (0 = none)
+.endstruct
+
+.assert     .sizeof(ChunkPage) <= MMU_CHUNK_MIN, error, "Chunk page header must fit in the first chunk"
+.assert     MMU_CHUNK_CLASSES <= 6, error, "MmuHeader::chunk_heads has 6 entries"
 
 MMU_BIT_MASKS:
             .byte       $01, $02, $04, $08, $10, $20, $40, $80
@@ -516,9 +534,10 @@ ERROR_OUT_OF_MEMORY:
 ; Handles (per task).  A handle is a 1-byte index (1 - MMU_MAX_HANDLES) into the current task's handle
 ; table; 0 is never a valid handle.  All calls: C = 0 on success, C = 1 with the error in .A.
 ;
-;   Allocation tiers (stage 2; 4-128 byte chunks come in stage 3):
+;   Allocation tiers:
 ;       1-3 bytes       AI_SMALL: the bytes are kept in the handle entry itself
-;       4+ bytes        AI_BLOCK: a run of 256-byte task RAM pages ($0800-$7CFF, top-down)
+;       4-64 bytes      Chunk (no tier bit): a 4, 8, 16, 32 or 64-byte chunk of a shared chunk page
+;       65+ bytes       AI_BLOCK: a run of 256-byte task RAM pages ($0800-$7CFF, top-down)
 ;       .X = AI_PAGED   AI_PAGED: a run of 8K RAM banks, seen at $8000-$9FFF (MM_LOCK selects the bank)
 
 ; Allocate memory for the current task.
@@ -534,9 +553,13 @@ MM_ALLOC:
             sty         ZP_M_TEMP2                          ; Size high
             stx         ZP_M_SV                             ; Flags
             ora         ZP_M_TEMP2
-            beq         @bad_arg                            ; Zero bytes
+            bne         :+
+            jmp         @bad_arg                            ; Zero bytes
+:
             jsr         MM_NEW_HANDLE                       ; Free entry -> ZP_M_HP, ZP_M_HANDLE
-            bcs         @done
+            bcc         :+
+            jmp         @done
+:
             lda         ZP_M_SV
             and         #AI_PAGED
             bne         @banks
@@ -544,7 +567,7 @@ MM_ALLOC:
             bne         @pages
             lda         ZP_M_SZ1
             cmp         #AI_SMALL_LEN + 1
-            bcs         @pages
+            bcs         @not_small
 
 ; 1-3 bytes: kept in the entry itself
             ora         #AI_IN_USE | AI_SMALL               ; Status = length + flags
@@ -559,7 +582,25 @@ MM_ALLOC:
             sta         (ZP_M_HP),Y
             bra         @ok
 
-; 4+ bytes: whole task RAM pages
+; 4-64 bytes: a chunk of a chunk page
+@not_small:
+            cmp         #MMU_CHUNK_MAX + 1
+            bcs         @pages
+            jsr         MM_CHUNK_ALLOC                      ; ZP_M_CP + 1 = page, ZP_M_COFS = offset
+            bcs         @done
+            ldy         #Handle::addr_l
+            lda         ZP_M_COFS
+            sta         (ZP_M_HP),Y
+            iny
+            lda         ZP_M_CP + 1
+            sta         (ZP_M_HP),Y
+            iny
+            lda         #0
+            sta         (ZP_M_HP),Y
+            lda         #AI_IN_USE                          ; No tier bit: a chunk
+            bra         @set_status
+
+; 65+ bytes: whole task RAM pages
 @pages:
             lda         ZP_M_TEMP2                          ; Pages = size high + (size low <> 0)
             ldx         ZP_M_SZ1
@@ -640,11 +681,23 @@ MM_FREE:
             bcs         @done
             bra         @free_entry
 :
+            bit         #AI_SMALL
+            bne         @free_entry                         ; AI_SMALL: nothing else to free
             bit         #AI_BLOCK
-            beq         @free_entry                         ; AI_SMALL: nothing else to free
+            beq         @chunk
             ldy         #Handle::addr_h
             lda         (ZP_M_HP),Y
             jsr         MM_PAGE_FREE
+            bcs         @done
+            bra         @free_entry
+
+@chunk:
+            ldy         #Handle::addr_h
+            lda         (ZP_M_HP),Y
+            sta         ZP_M_CP + 1                         ; Chunk page
+            ldy         #Handle::addr_l
+            lda         (ZP_M_HP),Y                         ; Chunk offset
+            jsr         MM_CHUNK_FREE
             bcs         @done
 
 @free_entry:
@@ -756,6 +809,167 @@ MM_UNLOCK:
             ply
             jmp         MM_RETURN
 
+; Allocate a chunk from the current task's chunk pages, starting a new chunk page if the size class has
+; no free chunk.
+; IN: .A = bytes (MMU_CHUNK_MIN - MMU_CHUNK_MAX)
+; OUT (success): ZP_M_CP + 1 = chunk page, ZP_M_COFS = chunk offset, C = 0
+; OUT (failure): .A = ERR_OUT_OF_MEMORY, C = 1
+; Modifies: .A, .X, .Y
+MM_CHUNK_ALLOC:
+            jsr         MM_CHUNK_CLASS                      ; ZP_M_CLS, ZP_M_CSZ
+            stz         ZP_M_CP
+            ldx         ZP_M_CLS
+            lda         MMU_CHUNK_HEADS,X                   ; First chunk page of the class
+
+@find_page:
+            beq         @new_page                           ; No page with a free chunk
+            sta         ZP_M_CP + 1
+            ldy         #ChunkPage::free_count
+            lda         (ZP_M_CP),Y
+            bne         @take
+            ldy         #ChunkPage::next_page
+            lda         (ZP_M_CP),Y
+            bra         @find_page
+
+@new_page:
+            lda         #1
+            jsr         MM_PAGE_ALLOC                       ; .A = page
+            bcs         @done
+            sta         ZP_M_CP + 1
+            lda         ZP_M_CSZ
+            sta         (ZP_M_CP)                           ; ChunkPage::size
+            ldy         #ChunkPage::free_head
+            sta         (ZP_M_CP),Y                         ; The first chunk after the header
+            ldx         #0                                  ; Free chunk count
+
+@link:                                                      ; .A = this chunk's offset
+            tay
+            clc
+            adc         ZP_M_CSZ                            ; Next chunk (C = 1 past the end of the page)
+            bcc         :+
+            lda         #0                                  ; Last chunk: end of the list
+:
+            sta         (ZP_M_CP),Y
+            inx
+            cmp         #0
+            bne         @link
+            txa
+            ldy         #ChunkPage::free_count
+            sta         (ZP_M_CP),Y
+            ldx         ZP_M_CLS                            ; Put the page at the head of the class list
+            lda         MMU_CHUNK_HEADS,X
+            ldy         #ChunkPage::next_page
+            sta         (ZP_M_CP),Y
+            lda         ZP_M_CP + 1
+            sta         MMU_CHUNK_HEADS,X
+
+@take:
+            ldy         #ChunkPage::free_head
+            lda         (ZP_M_CP),Y
+            sta         ZP_M_COFS                           ; The chunk
+            tay
+            lda         (ZP_M_CP),Y                         ; Its link: the next free chunk
+            ldy         #ChunkPage::free_head
+            sta         (ZP_M_CP),Y
+            ldy         #ChunkPage::free_count
+            lda         (ZP_M_CP),Y
+            dec
+            sta         (ZP_M_CP),Y
+            clc
+
+@done:
+            rts
+
+; Free a chunk.  A chunk page that becomes completely free goes back to the page allocator.
+; IN: ZP_M_CP + 1 = chunk page, .A = chunk offset
+; OUT (success): C = 0
+; OUT (failure): .A = ERROR, C = 1
+; Modifies: .A, .X, .Y
+MM_CHUNK_FREE:
+            stz         ZP_M_CP
+            sta         ZP_M_COFS
+            ldy         #ChunkPage::free_head               ; Link the chunk in at the head of the free list
+            lda         (ZP_M_CP),Y
+            ldy         ZP_M_COFS
+            sta         (ZP_M_CP),Y
+            lda         ZP_M_COFS
+            ldy         #ChunkPage::free_head
+            sta         (ZP_M_CP),Y
+            ldy         #ChunkPage::free_count
+            lda         (ZP_M_CP),Y
+            inc
+            sta         (ZP_M_CP),Y
+            sta         ZP_M_COFS                           ; Free chunks now
+            lda         (ZP_M_CP)                           ; ChunkPage::size
+            sta         ZP_M_CSZ
+            ldx         #0                                  ; Chunks in a page (after the header)
+
+@count:
+            inx
+            clc
+            adc         ZP_M_CSZ
+            bcc         @count
+            cpx         ZP_M_COFS
+            beq         @release                            ; Every chunk is free
+            clc
+            rts
+
+; Take the page off its class list and give it back
+@release:
+            lda         ZP_M_CSZ
+            jsr         MM_CHUNK_CLASS                      ; ZP_M_CLS
+            ldx         ZP_M_CLS
+            ldy         #ChunkPage::next_page
+            lda         MMU_CHUNK_HEADS,X
+            cmp         ZP_M_CP + 1
+            bne         @find_prev
+            lda         (ZP_M_CP),Y                         ; It's the first page of the list
+            sta         MMU_CHUNK_HEADS,X
+            bra         @give_back
+
+@find_prev:
+            stz         ZP_M_CPREV
+            cmp         #0
+            beq         @give_back                          ; Empty list (shouldn't happen)
+
+@next_prev:                                                 ; .A = a page on the list
+            sta         ZP_M_CPREV + 1
+            lda         (ZP_M_CPREV),Y                      ; Its next page
+            beq         @give_back                          ; Not on the list (shouldn't happen)
+            cmp         ZP_M_CP + 1
+            bne         @next_prev
+            lda         (ZP_M_CP),Y                         ; prev.next_page = page.next_page
+            sta         (ZP_M_CPREV),Y
+
+@give_back:
+            lda         ZP_M_CP + 1
+            jmp         MM_PAGE_FREE
+
+; Chunk size class for a size.
+; IN: .A = bytes (MMU_CHUNK_MIN - MMU_CHUNK_MAX)
+; OUT: ZP_M_CLS = class index, ZP_M_CSZ = chunk size
+; Modifies: .X, .Y; preserves .A
+MM_CHUNK_CLASS:
+            ldx         #0
+            ldy         #MMU_CHUNK_MIN
+
+@loop:
+            sty         ZP_M_CSZ
+            cmp         ZP_M_CSZ
+            beq         @found
+            bcc         @found
+            pha
+            tya
+            asl
+            tay
+            pla
+            inx
+            bra         @loop
+
+@found:
+            stx         ZP_M_CLS
+            rts
+
 ; Find a free handle table entry in the current task.
 ; OUT (success): ZP_M_HANDLE = handle, ZP_M_HP = its entry, C = 0
 ; OUT (failure): .A = ERR_MEM_NO_HANDLES, C = 1
@@ -854,12 +1068,25 @@ MM_ACCESS_SETUP:
             lda         (ZP_M_HP),Y
             sta         RAM_BANK_REG
 :
+            sta         ZP_M_CLS                            ; Keep the status (.X must be preserved)
             ldy         #Handle::addr_l
             lda         (ZP_M_HP),Y
             sta         ZP_M_SP1
             iny
             lda         (ZP_M_HP),Y
             sta         ZP_M_SP1 + 1
+            lda         ZP_M_CLS
+            and         #AI_PAGED | AI_BLOCK
+            bne         @ok                                 ; Pages and banks: any 8-bit offset is inside
+            lda         ZP_M_SP1 + 1                        ; Chunk: offset must be < the chunk size
+            sta         ZP_M_CP + 1
+            stz         ZP_M_CP
+            lda         (ZP_M_CP)                           ; ChunkPage::size
+            cmp         ZP_M_TEMP
+            beq         @bad_arg
+            bcc         @bad_arg
+
+@ok:
             clc
             rts
 
@@ -1255,6 +1482,86 @@ MMU_TEST:
             jsr         MM_READ
             _M_MT_FAIL_IF_C     'k'
             _M_MT_EXPECT        'k', $3C
+
+; Chunks: two 16-byte chunks share a page
+            lda         #10                                 ; 16-byte class
+            ldy         #0
+            ldx         #0
+            jsr         MM_ALLOC
+            _M_MT_FAIL_IF_C     'o'
+            sta         ZP_TEMP_VEC3                        ; c1
+            lda         #16
+            ldy         #0
+            ldx         #0
+            jsr         MM_ALLOC
+            _M_MT_FAIL_IF_C     'o'
+            sta         ZP_TEMP_VEC3 + 1                    ; c2
+            lda         ZP_TEMP_VEC3
+            jsr         MM_LOCK
+            _M_MT_FAIL_IF_C     'p'
+            sta         ZP_TEMP_VEC                         ; c1's address
+            sty         ZP_TEMP_VEC + 1
+            lda         ZP_TEMP_VEC3
+            jsr         MM_UNLOCK
+            lda         ZP_TEMP_VEC3 + 1
+            jsr         MM_LOCK
+            _M_MT_FAIL_IF_C     'p'
+            cpy         ZP_TEMP_VEC + 1                     ; Same page...
+            beq         :+
+            tya
+            ldx         #'p'
+            jmp         @fail
+:
+            cmp         ZP_TEMP_VEC                         ; ...different chunk
+            bne         :+
+            ldx         #'p'
+            jmp         @fail
+:
+            lda         ZP_TEMP_VEC3 + 1
+            jsr         MM_UNLOCK
+            lda         ZP_TEMP_VEC3
+            ldx         #$77
+            ldy         #15                                 ; Last byte of the chunk
+            jsr         MM_WRITE
+            _M_MT_FAIL_IF_C     'q'
+            lda         ZP_TEMP_VEC3
+            ldy         #15
+            jsr         MM_READ
+            _M_MT_FAIL_IF_C     'q'
+            _M_MT_EXPECT        'q', $77
+            lda         ZP_TEMP_VEC3
+            ldy         #16                                 ; Past the end of the chunk
+            jsr         MM_READ
+            _M_MT_FAIL_IF_NC    'r'
+
+; Chunks: four 64-byte chunks need two chunk pages (3 per page)
+            ldx         #3
+
+@alloc_64:
+            phx
+            lda         #64
+            ldy         #0
+            ldx         #0
+            jsr         MM_ALLOC
+            plx
+            _M_MT_FAIL_IF_C     's'
+            sta         ZP_TEMP_VEC,X                       ; ZP_TEMP_VEC .. ZP_TEMP_VEC2 + 1
+            dex
+            bpl         @alloc_64
+            ldx         #3
+
+@free_64:
+            lda         ZP_TEMP_VEC,X
+            jsr         MM_FREE
+            _M_MT_FAIL_IF_C     't'
+            dex
+            bpl         @free_64
+            lda         ZP_TEMP_VEC3
+            jsr         MM_FREE
+            _M_MT_FAIL_IF_C     'u'
+            lda         ZP_TEMP_VEC3 + 1
+            jsr         MM_FREE
+            _M_MT_FAIL_IF_C     'u'
 
 ; Free everything; the page map must be back where it started
             lda         ZP_TEMP

@@ -11,7 +11,7 @@
 | Tier | Size | Source | Tracking |
 | :--- | :--- | :----- | :------- |
 | Small | 1-3 bytes | Stored inside the handle entry itself (`AI_SMALL`) | Handle table |
-| Chunk | 4-128 bytes | Fixed-size chunk allocators (4, 8, 16, 32, 64, 128) carved from 256-byte pages | Chunk page header + free list |
+| Chunk | 4-64 bytes | Fixed-size chunk allocators (4, 8, 16, 32, 64) carved from 256-byte pages (no 128: with the header in the first chunk, a 128-byte chunk page would hold only one chunk) | Chunk page header + free list |
 | Page | 129 bytes - ~16K | Contiguous 256-byte pages in `$0800-$7CFF`, allocated top-down | Page bitmap (16 bytes) |
 | Bank | 8K units | Task banks `$00-$EF`, seen through `$8000-$9FFF` | Bank bitmap (30 bytes) |
 
@@ -127,7 +127,7 @@ Every task has its own zero page, so ZP only has to be divided up **within one t
 
 **Phase 3 - Rest of the MMU**
 10. **(Done, stage 2)** Handle table plus `MM_ALLOC`/`MM_FREE` for the small, page and bank tiers, then `MM_READ`/`WRITE`/`LOCK`/`UNLOCK`, the `$F821-$F835` thunks and `MMU_TEST`.  Until chunks exist (step 11), 4+ byte allocations take whole pages.
-11. Chunk allocators.
+11. **(Done, stage 3)** Chunk allocators: 4, 8, 16, 32 and 64-byte chunks; 65+ bytes take whole pages.  A chunk page that becomes empty goes back to the page allocator.
 12. Shared bank allocator and shared handles (the message ring banks are pre-reserved).
 13. `MM_TASK_RESET`, hooked into `@task_complete` (it also unregisters IRQs and calls driver `stop`).
 14. HyForth: MMU arena, large-block `malloc`, `ALTBUF`, the low-water dictionary limit, then the `halloc` words.
