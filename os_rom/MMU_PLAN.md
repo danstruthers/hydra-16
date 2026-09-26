@@ -128,8 +128,8 @@ Every task has its own zero page, so ZP only has to be divided up **within one t
 **Phase 3 - Rest of the MMU**
 10. **(Done, stage 2)** Handle table plus `MM_ALLOC`/`MM_FREE` for the small, page and bank tiers, then `MM_READ`/`WRITE`/`LOCK`/`UNLOCK`, the `$F821-$F835` thunks and `MMU_TEST`.  Until chunks exist (step 11), 4+ byte allocations take whole pages.
 11. **(Done, stage 3)** Chunk allocators: 4, 8, 16, 32 and 64-byte chunks; 65+ bytes take whole pages.  A chunk page that becomes empty goes back to the page allocator.
-12. Shared bank allocator and shared handles (the message ring banks are pre-reserved).
-13. `MM_TASK_RESET`, hooked into `@task_complete` (it also unregisters IRQs and calls driver `stop`).
+12. **(Done, stage 4)** Shared bank allocator and shared handles (`shared.s`): whole 8K banks, tables in shared bank ID `$00` (`$8200` bitmaps, `$8400` handle table of 255 entries). Each entry keeps a mask of the tasks holding a reference instead of a count, so a task reset drops exactly that task's references. `SH_ALLOC`, `SH_ATTACH`, `SH_DETACH`, `SH_READ`, `SH_WRITE`, `SH_LOCK`, `SH_UNLOCK` (`$F836-$F848`). Bank IDs `$00-$08` and missing `U` macro-pages are reserved at boot. 256-byte pages inside a shared bank are left for the IO subsystem.
+13. **(Done, stage 4)** `MM_TASK_RESET` (`$F84B`): resets the task's MMU area, drops its shared references, empties its message rings, and unregisters its IRQ/SWI handlers. Hooked into task completion; `TASK_START` now saves the parent's context so the parent resumes correctly. Driver `stop` is still to come (no driver task completes yet).
 14. HyForth: MMU arena, large-block `malloc`, `ALTBUF`, the low-water dictionary limit, then the `halloc` words.
 15. Tests in the style of `MEM_TEST` that you can run from WOZMON or Forth.
 

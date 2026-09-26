@@ -17,6 +17,7 @@ node hydrasim.js [options]
 | `--cycles N` | CPU cycles to run (default 20,000,000; about 5.6 seconds at 3.58 MHz) |
 | `--input TEXT` | Serial input to type after a short delay; `\r` = CR |
 | `--modules N` | RAM modules installed: banks `$00` to `N*16-1` (default 3) |
+| `--shared-u N` | Shared RAM installed for `U` macro-pages 0 to N-1 (default 16; each 512K chip is 4 macro-pages) |
 | `--acia-line N` | IRQ line the ACIA interrupts on (default 1) |
 | `--stuck-irq N` | Hold IRQ line N active the whole time |
 | `--model M` | Hardware what-ifs: `sharedlow`, `nostack`, `zponly`, `noshared` |

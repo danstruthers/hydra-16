@@ -20,6 +20,7 @@
 //   --cycles N          CPU cycles to run (default 20000000; ~5.6 s at 3.58 MHz)
 //   --input TEXT        Serial input to type, after a short delay; "\r" = CR (e.g. --input "1 2 + .\r")
 //   --modules N         RAM modules installed: banks $00 - N*16-1 (default 3)
+//   --shared-u N        Shared RAM installed for U macro-pages 0 - N-1 (default 16; 4 per 512K chip)
 //   --acia-line N       IRQ line the ACIA interrupts on (default 1)
 //   --stuck-irq N       Hold IRQ line N active all the time
 //   --model M           Hardware what-ifs: sharedlow (T doesn't switch $0000-$7FFF), nostack (stack page
@@ -39,7 +40,7 @@ const path = require('path');
 
 // ---- options
 const opt = { rom: path.join(__dirname, '..', 'os_rom', 'tmp'), cycles: 20000000, input: '', modules: 3,
-  aciaLine: 1, stuckIrq: -1, model: '', raw: false, trace: 25, dumps: [], watches: [], pcWatches: [] };
+  aciaLine: 1, stuckIrq: -1, model: '', raw: false, trace: 25, dumps: [], watches: [], pcWatches: [], sharedU: 16 };
 const argv = process.argv.slice(2);
 for (let i = 0; i < argv.length; i++) {
   const a = argv[i], next = () => argv[++i];
@@ -48,6 +49,7 @@ for (let i = 0; i < argv.length; i++) {
     case '--cycles': opt.cycles = +next(); break;
     case '--input': opt.input = next().replace(/\\r/g, '\r').replace(/\\n/g, '\n'); break;
     case '--modules': opt.modules = +next(); break;
+    case '--shared-u': opt.sharedU = +next(); break;
     case '--acia-line': opt.aciaLine = +next(); break;
     case '--stuck-irq': opt.stuckIrq = +next(); break;
     case '--model': opt.model = next(); break;
@@ -78,7 +80,7 @@ const ACIA_TX_CYCLES = 1860;                                // ~one character at
 // Which task's copy of $0000-$7FFF an access uses (the --model what-ifs change this)
 const tsel = a => opt.model === 'sharedlow' ? 0 : (opt.model === 'zponly' && a >= 0x200) ? 0
   : (opt.model === 'nostack' && a >= 0x100 && a < 0x200) ? 0 : T;
-const bankInstalled = b => b >= 0xF0 ? opt.model !== 'noshared' : b < opt.modules * 16;
+const bankInstalled = b => b >= 0xF0 ? (opt.model !== 'noshared' && U < opt.sharedU) : b < opt.modules * 16;
 function bankMem(b) {
   if (b >= 0xF0) { const k = U * 16 + (b & 15); return sharedBank[k] || (sharedBank[k] = new Uint8Array(0x2000)); }
   const k = T * 256 + b; return taskBank[k] || (taskBank[k] = new Uint8Array(0x2000));

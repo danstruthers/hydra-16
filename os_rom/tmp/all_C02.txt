@@ -1395,49 +1395,73 @@ Current file: all.s
 0000DDr 2  85 rr A9 rr  FAR_GATE        MM_UNLOCK,      ::MM_UNLOCK,            0
 0000E1r 2  85 rr A9 rr  
 0000E5r 2  85 rr A9 00  
-0000EEr 2  85 rr A9 rr  FAR_GATE        MMU_TEST,       ::MMU_TEST,             0
+0000EEr 2  85 rr A9 rr  FAR_GATE        TASK_CALL,      ::TASK_CALL,            0
 0000F2r 2  85 rr A9 rr  
 0000F6r 2  85 rr A9 00  
-0000FFr 2               
-0000FFr 2               ; Sound routines run in the sound task (through the page 0 SND_CALL_* task gates)
-0000FFr 2  85 rr A9 rr  FAR_GATE        SOUND_INIT,     ::SND_CALL_INIT,        0
+0000FFr 2  85 rr A9 rr  FAR_GATE        SH_ALLOC,       ::SH_ALLOC,             0
 000103r 2  85 rr A9 rr  
 000107r 2  85 rr A9 00  
-000110r 2  85 rr A9 rr  FAR_GATE        SOUND_TEST,     ::SND_CALL_TEST,        0
+000110r 2  85 rr A9 rr  FAR_GATE        SH_ATTACH,      ::SH_ATTACH,            0
 000114r 2  85 rr A9 rr  
 000118r 2  85 rr A9 00  
-000121r 2  85 rr A9 rr  FAR_GATE        YM_WRITE,       ::SND_CALL_YM_WRITE,    0
+000121r 2  85 rr A9 rr  FAR_GATE        SH_DETACH,      ::SH_DETACH,            0
 000125r 2  85 rr A9 rr  
 000129r 2  85 rr A9 00  
-000132r 2               
-000132r 2  A9 rr 85 rr  FAR_JMP_GATE    MON_START,      ::MON_START,            0
-000136r 2  A9 rr 85 rr  
-00013Ar 2  A9 00 85 rr  
-000141r 2               
-000141r 2               ; Page 1 copy of WRITE_HSTRING: the HString has to be read from page 1, where the caller's strings are.
-000141r 2               ; .A, .Y hold the addr of HString to write
-000141r 2               ; Clobbers .A, .Y; Preserves .X
-000141r 2               WRITE_HSTRING:
-000141r 2  DA                           phx
-000142r 2  85 rr                        sta             ZP_HS_TEMP
-000144r 2  84 rr                        sty             ZP_HS_TEMP + 1
-000146r 2  B2 rr                        lda             (ZP_HS_TEMP)                ; Length of HString
-000148r 2  F0 0C                        beq             @done
-00014Ar 2  AA                           tax
-00014Br 2  A0 00                        ldy             #0
-00014Dr 2               @write_loop:
-00014Dr 2  C8                           iny
-00014Er 2  B1 rr 20 rr                  PRINT_CHAR      {(ZP_HS_TEMP),Y}
-000152r 2  rr           
-000153r 2  CA                           dex
-000154r 2  D0 F7                        bne             @write_loop
-000156r 2               @done:
-000156r 2  FA                           plx
-000157r 2  60                           rts
-000158r 2               
-000158r 2               ; Page 1 copy of the BIOS thunk table, at the same address as the page 0 one ($F800), so code running
-000158r 2               ; on page 1 (e.g. Forth's syscall) can use the documented thunk addresses.
-000158r 2               .segment "BIOS_THUNKS_P1"
+000132r 2  85 rr A9 rr  FAR_GATE        SH_READ,        ::SH_READ,              0
+000136r 2  85 rr A9 rr  
+00013Ar 2  85 rr A9 00  
+000143r 2  85 rr A9 rr  FAR_GATE        SH_WRITE,       ::SH_WRITE,             0
+000147r 2  85 rr A9 rr  
+00014Br 2  85 rr A9 00  
+000154r 2  85 rr A9 rr  FAR_GATE        SH_LOCK,        ::SH_LOCK,              0
+000158r 2  85 rr A9 rr  
+00015Cr 2  85 rr A9 00  
+000165r 2  85 rr A9 rr  FAR_GATE        SH_UNLOCK,      ::SH_UNLOCK,            0
+000169r 2  85 rr A9 rr  
+00016Dr 2  85 rr A9 00  
+000176r 2  85 rr A9 rr  FAR_GATE        MM_TASK_RESET,  ::MM_TASK_RESET,        0
+00017Ar 2  85 rr A9 rr  
+00017Er 2  85 rr A9 00  
+000187r 2               
+000187r 2               ; Sound routines run in the sound task (through the page 0 SND_CALL_* task gates)
+000187r 2  85 rr A9 rr  FAR_GATE        SOUND_INIT,     ::SND_CALL_INIT,        0
+00018Br 2  85 rr A9 rr  
+00018Fr 2  85 rr A9 00  
+000198r 2  85 rr A9 rr  FAR_GATE        SOUND_TEST,     ::SND_CALL_TEST,        0
+00019Cr 2  85 rr A9 rr  
+0001A0r 2  85 rr A9 00  
+0001A9r 2  85 rr A9 rr  FAR_GATE        YM_WRITE,       ::SND_CALL_YM_WRITE,    0
+0001ADr 2  85 rr A9 rr  
+0001B1r 2  85 rr A9 00  
+0001BAr 2               
+0001BAr 2  A9 rr 85 rr  FAR_JMP_GATE    MON_START,      ::MON_START,            0
+0001BEr 2  A9 rr 85 rr  
+0001C2r 2  A9 00 85 rr  
+0001C9r 2               
+0001C9r 2               ; Page 1 copy of WRITE_HSTRING: the HString has to be read from page 1, where the caller's strings are.
+0001C9r 2               ; .A, .Y hold the addr of HString to write
+0001C9r 2               ; Clobbers .A, .Y; Preserves .X
+0001C9r 2               WRITE_HSTRING:
+0001C9r 2  DA                           phx
+0001CAr 2  85 rr                        sta             ZP_HS_TEMP
+0001CCr 2  84 rr                        sty             ZP_HS_TEMP + 1
+0001CEr 2  B2 rr                        lda             (ZP_HS_TEMP)                ; Length of HString
+0001D0r 2  F0 0C                        beq             @done
+0001D2r 2  AA                           tax
+0001D3r 2  A0 00                        ldy             #0
+0001D5r 2               @write_loop:
+0001D5r 2  C8                           iny
+0001D6r 2  B1 rr 20 rr                  PRINT_CHAR      {(ZP_HS_TEMP),Y}
+0001DAr 2  rr           
+0001DBr 2  CA                           dex
+0001DCr 2  D0 F7                        bne             @write_loop
+0001DEr 2               @done:
+0001DEr 2  FA                           plx
+0001DFr 2  60                           rts
+0001E0r 2               
+0001E0r 2               ; Page 1 copy of the BIOS thunk table, at the same address as the page 0 one ($F800), so code running
+0001E0r 2               ; on page 1 (e.g. Forth's syscall) can use the documented thunk addresses.
+0001E0r 2               .segment "BIOS_THUNKS_P1"
 000000r 2               .assert     * = ::TH_READ_CHAR, lderror, "BIOS_THUNKS_P1 must line up with BIOS_THUNKS"
 000000r 2  4C rr rr                     jmp             READ_CHAR           ; $F800
 000003r 2  4C rr rr                     jmp             WRITE_CHAR          ; $F803
@@ -1457,11 +1481,404 @@ Current file: all.s
 00002Dr 2  4C rr rr                     jmp             MM_LOCK             ; $F82D
 000030r 2  4C rr rr                     jmp             MM_UNLOCK           ; $F830
 000033r 2  4C rr rr                     jmp             MMU_TEST            ; $F833
-000036r 2               .assert     * = ::TH_MMU_TEST + 3, lderror, "BIOS_THUNKS_P1 must match BIOS_THUNKS"
-000036r 2               
-000036r 1               .include "disasm.s"
-000036r 2               .debuginfo
-000036r 2               .segment "DISASM"
+000036r 2  4C rr rr                     jmp             SH_ALLOC            ; $F836
+000039r 2  4C rr rr                     jmp             SH_ATTACH           ; $F839
+00003Cr 2  4C rr rr                     jmp             SH_DETACH           ; $F83C
+00003Fr 2  4C rr rr                     jmp             SH_READ             ; $F83F
+000042r 2  4C rr rr                     jmp             SH_WRITE            ; $F842
+000045r 2  4C rr rr                     jmp             SH_LOCK             ; $F845
+000048r 2  4C rr rr                     jmp             SH_UNLOCK           ; $F848
+00004Br 2  4C rr rr                     jmp             MM_TASK_RESET       ; $F84B
+00004Er 2               .assert     * = ::TH_MM_TASK_RESET + 3, lderror, "BIOS_THUNKS_P1 must match BIOS_THUNKS"
+00004Er 2               
+00004Er 1               .include "mmu_test.s"
+00004Er 2               .debuginfo
+00004Er 2               
+00004Er 2               ; ****************************************************************************
+00004Er 2               ; BIOS ROM page 1: included inside `.scope PAGE1` (see all.s), so MM_* / SH_* / TASK_CALL calls go through
+00004Er 2               ; the page 1 gates (page1.s).  Routines passed to TASK_CALL are named with :: (their page 0 addresses),
+00004Er 2               ; because TASK_CALL runs them on page 0.
+00004Er 2               
+00004Er 2               .segment "TESTS_P1"
+000000r 2               
+000000r 2               ; ****************************************************************************
+000000r 2               ; MMU self test (TH_MMU_TEST, $F833; from WOZMON: F833R; runs on ROM page 1).  Runs the handle calls in the current task and
+000000r 2               ; prints "MMU test: ok", or "MMU test: FAIL x ee" (x = failing step, ee = error code or value read).
+000000r 2               ; Allocates and frees task RAM pages (at the top of the free area), chunks, 2 RAM banks and shared memory,
+000000r 2               ; and borrows (and resets) task MMU_TEST_TASK.
+000000r 2               
+000000r 2               .macro _M_MT_FAIL_IF_C  step                                ; Fail if the call returned an error
+000000r 2                           bcc         :+
+000000r 2                           ldx         #step
+000000r 2                           jmp         @fail
+000000r 2               :
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro _M_MT_FAIL_IF_NC step                                ; Fail if the call should have failed but didn't
+000000r 2                           bcs         :+
+000000r 2                           ldx         #step
+000000r 2                           jmp         @fail
+000000r 2               :
+000000r 2               .endmacro
+000000r 2               
+000000r 2               .macro _M_MT_EXPECT     step, value                         ; Fail if .A <> value
+000000r 2                           cmp         #value
+000000r 2                           beq         :+
+000000r 2                           ldx         #step
+000000r 2                           jmp         @fail
+000000r 2               :
+000000r 2               .endmacro
+000000r 2               
+000000r 2  0A 4D 4D 55  NamedHString    S_MMU_TEST, "MMU test: "
+000004r 2  20 74 65 73  
+000008r 2  74 3A 20     
+00000Br 2               
+00000Br 2               MMU_TEST_TASK   = 2                                         ; An idle task the test borrows (and resets)
+00000Br 2               
+00000Br 2               MMU_TEST:
+00000Br 2  48 DA 5A                 PUSH_AXY
+00000Er 2  A9 rr A0 rr              _M_WRITE_HSTRING    S_MMU_TEST
+000012r 2  20 rr rr     
+000015r 2               
+000015r 2               ; Small (in-entry) allocation
+000015r 2  A9 02                    lda         #2                                  ; 2 bytes
+000017r 2  A0 00                    ldy         #0
+000019r 2  A2 00                    ldx         #0
+00001Br 2  20 rr rr                 jsr         MM_ALLOC
+00001Er 2  90 05 A2 61              _M_MT_FAIL_IF_C     'a'
+000022r 2  4C rr rr     
+000025r 2  85 rr                    sta         ZP_TEMP                             ; h1
+000027r 2  A2 5A                    ldx         #$5A
+000029r 2  A0 01                    ldy         #1
+00002Br 2  20 rr rr                 jsr         MM_WRITE
+00002Er 2  90 05 A2 62              _M_MT_FAIL_IF_C     'b'
+000032r 2  4C rr rr     
+000035r 2  A5 rr                    lda         ZP_TEMP
+000037r 2  A0 01                    ldy         #1
+000039r 2  20 rr rr                 jsr         MM_READ
+00003Cr 2  90 05 A2 63              _M_MT_FAIL_IF_C     'c'
+000040r 2  4C rr rr     
+000043r 2  C9 5A F0 05              _M_MT_EXPECT        'c', $5A
+000047r 2  A2 63 4C rr  
+00004Br 2  rr           
+00004Cr 2  A5 rr                    lda         ZP_TEMP
+00004Er 2  A0 02                    ldy         #2                                  ; Past the end
+000050r 2  20 rr rr                 jsr         MM_READ
+000053r 2  B0 05 A2 64              _M_MT_FAIL_IF_NC    'd'
+000057r 2  4C rr rr     
+00005Ar 2               
+00005Ar 2               ; Task RAM pages
+00005Ar 2  A9 2C                    lda         #<300                               ; 2 pages
+00005Cr 2  A0 01                    ldy         #>300
+00005Er 2  A2 00                    ldx         #0
+000060r 2  20 rr rr                 jsr         MM_ALLOC
+000063r 2  90 05 A2 65              _M_MT_FAIL_IF_C     'e'
+000067r 2  4C rr rr     
+00006Ar 2  85 rr                    sta         ZP_TEMP_2                           ; h2
+00006Cr 2  20 rr rr                 jsr         MM_LOCK
+00006Fr 2  90 05 A2 66              _M_MT_FAIL_IF_C     'f'
+000073r 2  4C rr rr     
+000076r 2  85 rr                    sta         ZP_TEMP_VEC3
+000078r 2  84 rr                    sty         ZP_TEMP_VEC3 + 1
+00007Ar 2  C9 00 F0 05              _M_MT_EXPECT        'f', 0                      ; Page aligned
+00007Er 2  A2 66 4C rr  
+000082r 2  rr           
+000083r 2  98                       tya
+000084r 2  CD 63 7E                 cmp         MMU_LOW_WATER                       ; Lowest allocated page
+000087r 2  F0 05                    beq         :+
+000089r 2  A2 66                    ldx         #'f'
+00008Br 2  4C rr rr                 jmp         @fail
+00008Er 2               :
+00008Er 2  A9 A5                    lda         #$A5                                ; Write through the raw pointer
+000090r 2  A0 FF                    ldy         #255
+000092r 2  91 rr                    sta         (ZP_TEMP_VEC3),Y
+000094r 2  A5 rr                    lda         ZP_TEMP_2
+000096r 2  20 rr rr                 jsr         MM_FREE                             ; Locked: must fail (preserves .X = old bank)
+000099r 2  B0 05 A2 67              _M_MT_FAIL_IF_NC    'g'
+00009Dr 2  4C rr rr     
+0000A0r 2  A5 rr                    lda         ZP_TEMP_2
+0000A2r 2  20 rr rr                 jsr         MM_UNLOCK
+0000A5r 2  90 05 A2 68              _M_MT_FAIL_IF_C     'h'
+0000A9r 2  4C rr rr     
+0000ACr 2  A5 rr                    lda         ZP_TEMP_2
+0000AEr 2  A0 FF                    ldy         #255
+0000B0r 2  20 rr rr                 jsr         MM_READ
+0000B3r 2  90 05 A2 69              _M_MT_FAIL_IF_C     'i'
+0000B7r 2  4C rr rr     
+0000BAr 2  C9 A5 F0 05              _M_MT_EXPECT        'i', $A5
+0000BEr 2  A2 69 4C rr  
+0000C2r 2  rr           
+0000C3r 2               
+0000C3r 2               ; RAM banks
+0000C3r 2  A9 01                    lda         #<$2001                             ; 2 banks
+0000C5r 2  A0 20                    ldy         #>$2001
+0000C7r 2  A2 01                    ldx         #AI_PAGED
+0000C9r 2  20 rr rr                 jsr         MM_ALLOC
+0000CCr 2  90 05 A2 6A              _M_MT_FAIL_IF_C     'j'
+0000D0r 2  4C rr rr     
+0000D3r 2  85 rr                    sta         ZP_TEMP_VEC4                        ; h3
+0000D5r 2  A2 3C                    ldx         #$3C
+0000D7r 2  A0 07                    ldy         #7
+0000D9r 2  20 rr rr                 jsr         MM_WRITE
+0000DCr 2  90 05 A2 6B              _M_MT_FAIL_IF_C     'k'
+0000E0r 2  4C rr rr     
+0000E3r 2  A5 rr                    lda         ZP_TEMP_VEC4
+0000E5r 2  A0 07                    ldy         #7
+0000E7r 2  20 rr rr                 jsr         MM_READ
+0000EAr 2  90 05 A2 6B              _M_MT_FAIL_IF_C     'k'
+0000EEr 2  4C rr rr     
+0000F1r 2  C9 3C F0 05              _M_MT_EXPECT        'k', $3C
+0000F5r 2  A2 6B 4C rr  
+0000F9r 2  rr           
+0000FAr 2               
+0000FAr 2               ; Chunks: two 16-byte chunks share a page
+0000FAr 2  A9 0A                    lda         #10                                 ; 16-byte class
+0000FCr 2  A0 00                    ldy         #0
+0000FEr 2  A2 00                    ldx         #0
+000100r 2  20 rr rr                 jsr         MM_ALLOC
+000103r 2  90 05 A2 6F              _M_MT_FAIL_IF_C     'o'
+000107r 2  4C rr rr     
+00010Ar 2  85 rr                    sta         ZP_TEMP_VEC3                        ; c1
+00010Cr 2  A9 10                    lda         #16
+00010Er 2  A0 00                    ldy         #0
+000110r 2  A2 00                    ldx         #0
+000112r 2  20 rr rr                 jsr         MM_ALLOC
+000115r 2  90 05 A2 6F              _M_MT_FAIL_IF_C     'o'
+000119r 2  4C rr rr     
+00011Cr 2  85 rr                    sta         ZP_TEMP_VEC3 + 1                    ; c2
+00011Er 2  A5 rr                    lda         ZP_TEMP_VEC3
+000120r 2  20 rr rr                 jsr         MM_LOCK
+000123r 2  90 05 A2 70              _M_MT_FAIL_IF_C     'p'
+000127r 2  4C rr rr     
+00012Ar 2  85 rr                    sta         ZP_TEMP_VEC                         ; c1's address
+00012Cr 2  84 rr                    sty         ZP_TEMP_VEC + 1
+00012Er 2  A5 rr                    lda         ZP_TEMP_VEC3
+000130r 2  20 rr rr                 jsr         MM_UNLOCK
+000133r 2  A5 rr                    lda         ZP_TEMP_VEC3 + 1
+000135r 2  20 rr rr                 jsr         MM_LOCK
+000138r 2  90 05 A2 70              _M_MT_FAIL_IF_C     'p'
+00013Cr 2  4C rr rr     
+00013Fr 2  C4 rr                    cpy         ZP_TEMP_VEC + 1                     ; Same page...
+000141r 2  F0 06                    beq         :+
+000143r 2  98                       tya
+000144r 2  A2 70                    ldx         #'p'
+000146r 2  4C rr rr                 jmp         @fail
+000149r 2               :
+000149r 2  C5 rr                    cmp         ZP_TEMP_VEC                         ; ...different chunk
+00014Br 2  D0 05                    bne         :+
+00014Dr 2  A2 70                    ldx         #'p'
+00014Fr 2  4C rr rr                 jmp         @fail
+000152r 2               :
+000152r 2  A5 rr                    lda         ZP_TEMP_VEC3 + 1
+000154r 2  20 rr rr                 jsr         MM_UNLOCK
+000157r 2  A5 rr                    lda         ZP_TEMP_VEC3
+000159r 2  A2 77                    ldx         #$77
+00015Br 2  A0 0F                    ldy         #15                                 ; Last byte of the chunk
+00015Dr 2  20 rr rr                 jsr         MM_WRITE
+000160r 2  90 05 A2 71              _M_MT_FAIL_IF_C     'q'
+000164r 2  4C rr rr     
+000167r 2  A5 rr                    lda         ZP_TEMP_VEC3
+000169r 2  A0 0F                    ldy         #15
+00016Br 2  20 rr rr                 jsr         MM_READ
+00016Er 2  90 05 A2 71              _M_MT_FAIL_IF_C     'q'
+000172r 2  4C rr rr     
+000175r 2  C9 77 F0 05              _M_MT_EXPECT        'q', $77
+000179r 2  A2 71 4C rr  
+00017Dr 2  rr           
+00017Er 2  A5 rr                    lda         ZP_TEMP_VEC3
+000180r 2  A0 10                    ldy         #16                                 ; Past the end of the chunk
+000182r 2  20 rr rr                 jsr         MM_READ
+000185r 2  B0 05 A2 72              _M_MT_FAIL_IF_NC    'r'
+000189r 2  4C rr rr     
+00018Cr 2               
+00018Cr 2               ; Chunks: four 64-byte chunks need two chunk pages (3 per page)
+00018Cr 2  A2 03                    ldx         #3
+00018Er 2               
+00018Er 2               @alloc_64:
+00018Er 2  DA                       phx
+00018Fr 2  A9 40                    lda         #64
+000191r 2  A0 00                    ldy         #0
+000193r 2  A2 00                    ldx         #0
+000195r 2  20 rr rr                 jsr         MM_ALLOC
+000198r 2  FA                       plx
+000199r 2  90 05 A2 73              _M_MT_FAIL_IF_C     's'
+00019Dr 2  4C rr rr     
+0001A0r 2  95 rr                    sta         ZP_TEMP_VEC,X                       ; ZP_TEMP_VEC .. ZP_TEMP_VEC2 + 1
+0001A2r 2  CA                       dex
+0001A3r 2  10 E9                    bpl         @alloc_64
+0001A5r 2  A2 03                    ldx         #3
+0001A7r 2               
+0001A7r 2               @free_64:
+0001A7r 2  B5 rr                    lda         ZP_TEMP_VEC,X
+0001A9r 2  20 rr rr                 jsr         MM_FREE
+0001ACr 2  90 05 A2 74              _M_MT_FAIL_IF_C     't'
+0001B0r 2  4C rr rr     
+0001B3r 2  CA                       dex
+0001B4r 2  10 F1                    bpl         @free_64
+0001B6r 2  A5 rr                    lda         ZP_TEMP_VEC3
+0001B8r 2  20 rr rr                 jsr         MM_FREE
+0001BBr 2  90 05 A2 75              _M_MT_FAIL_IF_C     'u'
+0001BFr 2  4C rr rr     
+0001C2r 2  A5 rr                    lda         ZP_TEMP_VEC3 + 1
+0001C4r 2  20 rr rr                 jsr         MM_FREE
+0001C7r 2  90 05 A2 75              _M_MT_FAIL_IF_C     'u'
+0001CBr 2  4C rr rr     
+0001CEr 2               
+0001CEr 2               ; Free everything; the page map must be back where it started
+0001CEr 2  A5 rr                    lda         ZP_TEMP
+0001D0r 2  20 rr rr                 jsr         MM_FREE
+0001D3r 2  90 05 A2 6C              _M_MT_FAIL_IF_C     'l'
+0001D7r 2  4C rr rr     
+0001DAr 2  A5 rr                    lda         ZP_TEMP_2
+0001DCr 2  20 rr rr                 jsr         MM_FREE
+0001DFr 2  90 05 A2 6C              _M_MT_FAIL_IF_C     'l'
+0001E3r 2  4C rr rr     
+0001E6r 2  A5 rr                    lda         ZP_TEMP_VEC4
+0001E8r 2  20 rr rr                 jsr         MM_FREE
+0001EBr 2  90 05 A2 6C              _M_MT_FAIL_IF_C     'l'
+0001EFr 2  4C rr rr     
+0001F2r 2  AD 63 7E                 lda         MMU_LOW_WATER
+0001F5r 2  C9 7D F0 05              _M_MT_EXPECT        'm', MMU_SYS_PAGE
+0001F9r 2  A2 6D 4C rr  
+0001FDr 2  rr           
+0001FEr 2  A5 rr                    lda         ZP_TEMP_2
+000200r 2  20 rr rr                 jsr         MM_FREE                             ; Already freed: must fail
+000203r 2  B0 05 A2 6E              _M_MT_FAIL_IF_NC    'n'
+000207r 2  4C rr rr     
+00020Ar 2               
+00020Ar 2               ; Shared memory
+00020Ar 2  A9 64                    lda         #100
+00020Cr 2  A0 00                    ldy         #0
+00020Er 2  20 rr rr                 jsr         SH_ALLOC
+000211r 2  90 05 A2 76              _M_MT_FAIL_IF_C     'v'
+000215r 2  4C rr rr     
+000218r 2  85 rr                    sta         ZP_TEMP                             ; sh
+00021Ar 2  A2 C3                    ldx         #$C3
+00021Cr 2  A0 05                    ldy         #5
+00021Er 2  20 rr rr                 jsr         SH_WRITE
+000221r 2  90 05 A2 77              _M_MT_FAIL_IF_C     'w'
+000225r 2  4C rr rr     
+000228r 2  A5 rr                    lda         ZP_TEMP
+00022Ar 2  A0 05                    ldy         #5
+00022Cr 2  20 rr rr                 jsr         SH_READ
+00022Fr 2  90 05 A2 77              _M_MT_FAIL_IF_C     'w'
+000233r 2  4C rr rr     
+000236r 2  C9 C3 F0 05              _M_MT_EXPECT        'w', $C3
+00023Ar 2  A2 77 4C rr  
+00023Er 2  rr           
+00023Fr 2  A5 rr                    lda         ZP_TEMP
+000241r 2  20 rr rr                 jsr         SH_LOCK                             ; .X = old bank, .Y = old U
+000244r 2  90 05 A2 78              _M_MT_FAIL_IF_C     'x'
+000248r 2  4C rr rr     
+00024Br 2  AD 05 80                 lda         SH_WINDOW + 5
+00024Er 2  20 rr rr                 jsr         SH_UNLOCK
+000251r 2  C9 C3 F0 05              _M_MT_EXPECT        'x', $C3
+000255r 2  A2 78 4C rr  
+000259r 2  rr           
+00025Ar 2               
+00025Ar 2               ; ...a second task (MMU_TEST_TASK) takes a reference; ours goes
+00025Ar 2  A9 rr 85 rr              LOAD_ADDR   ::SH_ATTACH, ZP_TC_VEC
+00025Er 2  A9 rr 85 rr  
+000262r 2  A9 02                    lda         #MMU_TEST_TASK
+000264r 2  85 rr                    sta         ZP_TC_TASK
+000266r 2  A5 rr                    lda         ZP_TEMP
+000268r 2  20 rr rr                 jsr         TASK_CALL                           ; SH_ATTACH in the other task
+00026Br 2  90 05 A2 79              _M_MT_FAIL_IF_C     'y'
+00026Fr 2  4C rr rr     
+000272r 2  A5 rr                    lda         ZP_TEMP
+000274r 2  20 rr rr                 jsr         SH_DETACH
+000277r 2  90 05 A2 7A              _M_MT_FAIL_IF_C     'z'
+00027Br 2  4C rr rr     
+00027Er 2  A5 rr                    lda         ZP_TEMP
+000280r 2  A0 05                    ldy         #5
+000282r 2  20 rr rr                 jsr         SH_READ                             ; No reference any more: must fail
+000285r 2  B0 05 A2 7A              _M_MT_FAIL_IF_NC    'z'
+000289r 2  4C rr rr     
+00028Cr 2  A9 rr 85 rr              LOAD_ADDR   ::SH_READ, ZP_TC_VEC
+000290r 2  A9 rr 85 rr  
+000294r 2  A9 02                    lda         #MMU_TEST_TASK
+000296r 2  85 rr                    sta         ZP_TC_TASK
+000298r 2  A5 rr                    lda         ZP_TEMP
+00029Ar 2  A0 05                    ldy         #5
+00029Cr 2  20 rr rr                 jsr         TASK_CALL                           ; The other task can still read it
+00029Fr 2  90 05 A2 31              _M_MT_FAIL_IF_C     '1'
+0002A3r 2  4C rr rr     
+0002A6r 2  C9 C3 F0 05              _M_MT_EXPECT        '1', $C3
+0002AAr 2  A2 31 4C rr  
+0002AEr 2  rr           
+0002AFr 2               
+0002AFr 2               ; ...resetting the other task drops its reference: the shared memory is freed
+0002AFr 2  A9 02                    lda         #MMU_TEST_TASK
+0002B1r 2  20 rr rr                 jsr         MM_TASK_RESET
+0002B4r 2  A5 rr                    lda         ZP_TEMP
+0002B6r 2  20 rr rr                 jsr         SH_ATTACH                           ; Freed: must fail
+0002B9r 2  B0 05 A2 32              _M_MT_FAIL_IF_NC    '2'
+0002BDr 2  4C rr rr     
+0002C0r 2               
+0002C0r 2               ; MM_TASK_RESET frees a task's own allocations (its handles start over at 1)
+0002C0r 2  A9 rr 85 rr              LOAD_ADDR   ::MM_ALLOC, ZP_TC_VEC
+0002C4r 2  A9 rr 85 rr  
+0002C8r 2  A9 02                    lda         #MMU_TEST_TASK
+0002CAr 2  85 rr                    sta         ZP_TC_TASK
+0002CCr 2  A9 02                    lda         #2
+0002CEr 2  A0 00                    ldy         #0
+0002D0r 2  A2 00                    ldx         #0
+0002D2r 2  20 rr rr                 jsr         TASK_CALL                           ; Handle 1 in the other task
+0002D5r 2  90 05 A2 33              _M_MT_FAIL_IF_C     '3'
+0002D9r 2  4C rr rr     
+0002DCr 2  A9 02                    lda         #2
+0002DEr 2  A0 00                    ldy         #0
+0002E0r 2  A2 00                    ldx         #0
+0002E2r 2  20 rr rr                 jsr         TASK_CALL                           ; Handle 2
+0002E5r 2  90 05 A2 33              _M_MT_FAIL_IF_C     '3'
+0002E9r 2  4C rr rr     
+0002ECr 2  C9 02 F0 05              _M_MT_EXPECT        '3', 2
+0002F0r 2  A2 33 4C rr  
+0002F4r 2  rr           
+0002F5r 2  A9 02                    lda         #MMU_TEST_TASK
+0002F7r 2  20 rr rr                 jsr         MM_TASK_RESET
+0002FAr 2  A9 rr 85 rr              LOAD_ADDR   ::MM_ALLOC, ZP_TC_VEC
+0002FEr 2  A9 rr 85 rr  
+000302r 2  A9 02                    lda         #MMU_TEST_TASK
+000304r 2  85 rr                    sta         ZP_TC_TASK
+000306r 2  A9 02                    lda         #2
+000308r 2  A0 00                    ldy         #0
+00030Ar 2  A2 00                    ldx         #0
+00030Cr 2  20 rr rr                 jsr         TASK_CALL
+00030Fr 2  90 05 A2 34              _M_MT_FAIL_IF_C     '4'
+000313r 2  4C rr rr     
+000316r 2  C9 01 F0 05              _M_MT_EXPECT        '4', 1
+00031Ar 2  A2 34 4C rr  
+00031Er 2  rr           
+00031Fr 2  A9 02                    lda         #MMU_TEST_TASK
+000321r 2  20 rr rr                 jsr         MM_TASK_RESET
+000324r 2               
+000324r 2  A9 6F 20 rr              PRINT_CHAR  #'o', #'k'
+000328r 2  rr A9 6B 20  
+00032Cr 2  rr rr        
+00032Er 2  80 28                    bra         @end
+000330r 2               
+000330r 2               @fail:                                                      ; .X = step, .A = error / value
+000330r 2  48                       pha
+000331r 2  DA                       phx
+000332r 2  A9 46 20 rr              PRINT_CHAR  #'F', #'A', #'I', #'L', #' '
+000336r 2  rr A9 41 20  
+00033Ar 2  rr rr A9 49  
+00034Br 2  68                       pla
+00034Cr 2  20 rr rr                 PRINT_CHAR
+00034Fr 2  A9 20 20 rr              PRINT_SPACE
+000353r 2  rr           
+000354r 2  68                       pla
+000355r 2  20 rr rr                 PRINT_BYTE
+000358r 2               
+000358r 2               @end:
+000358r 2  20 rr rr                 PRINT_CRLF
+00035Br 2  7A FA 68                 PULL_YXA
+00035Er 2  60                       rts
+00035Fr 2               
+00035Fr 1               .include "disasm.s"
+00035Fr 2               .debuginfo
+00035Fr 2               .segment "DISASM"
 000000r 2               
 000000r 2               ; Offsets into MNEMONIC_STR
 000000r 2               MN_adc := $2B
@@ -7472,11 +7889,27 @@ Current file: all.s
 000030r 2  4C rr rr                     jmp             MM_UNLOCK           ; $F830
 000033r 2               TH_MMU_TEST:
 000033r 2  4C rr rr                     jmp             MMU_TEST            ; $F833
-000036r 2               
-000036r 1               .include "math.s"
-000036r 2               .debuginfo
-000036r 2               
-000036r 2               .segment "BIOS"
+000036r 2               TH_SH_ALLOC:
+000036r 2  4C rr rr                     jmp             SH_ALLOC            ; $F836
+000039r 2               TH_SH_ATTACH:
+000039r 2  4C rr rr                     jmp             SH_ATTACH           ; $F839
+00003Cr 2               TH_SH_DETACH:
+00003Cr 2  4C rr rr                     jmp             SH_DETACH           ; $F83C
+00003Fr 2               TH_SH_READ:
+00003Fr 2  4C rr rr                     jmp             SH_READ             ; $F83F
+000042r 2               TH_SH_WRITE:
+000042r 2  4C rr rr                     jmp             SH_WRITE            ; $F842
+000045r 2               TH_SH_LOCK:
+000045r 2  4C rr rr                     jmp             SH_LOCK             ; $F845
+000048r 2               TH_SH_UNLOCK:
+000048r 2  4C rr rr                     jmp             SH_UNLOCK           ; $F848
+00004Br 2               TH_MM_TASK_RESET:
+00004Br 2  4C rr rr                     jmp             MM_TASK_RESET       ; $F84B
+00004Er 2               
+00004Er 1               .include "math.s"
+00004Er 2               .debuginfo
+00004Er 2               
+00004Er 2               .segment "BIOS"
 0002C5r 2               ; MATH
 0002C5r 2               MOD_10:
 0002C5r 2  A2 00                    ldx             #0
@@ -7898,362 +8331,385 @@ Current file: all.s
 00005Ar 2  8D F0 FF                 sta     T_REGISTER
 00005Dr 2  84 rr                    sty     TASK_PARENT
 00005Fr 2  8C F0 FF                 sty     T_REGISTER
-000062r 2  A6 rr                    ldx     ZP_TEMP_VEC + 1
-000064r 2  A4 rr                    ldy     ZP_TEMP_VEC
-000066r 2  D0 01                    bne     :+                              ; skip HOB of addr if LOB <> 0
-000068r 2  CA                       dex                                     ; update entrypoint to rts-style addr-1
-000069r 2               
-000069r 2               :
-000069r 2  88                       dey                                     ; update LOB
-00006Ar 2  97 rr                    smb1    TASK_STATUS_REG                 ; mark parent task state as PAUSED
-00006Cr 2  8D F0 FF                 sta     T_REGISTER                      ; do the task switch
-00006Fr 2  86 rr                    stx     ZP_X_SAVE                       ; new task ZP
-000071r 2  A2 FF                    ldx     #$FF                            ; Reset the stack pointer
-000073r 2  9A                       txs
-000074r 2  A6 rr                    ldx     ZP_X_SAVE
-000076r 2  98                       tya
-000077r 2  20 rr rr                 jsr     @task_start
-00007Ar 2               
-00007Ar 2               @task_complete:
-00007Ar 2  64 rr                    stz     TASK_STATUS_REG
-00007Cr 2  A5 rr                    lda     TASK_PARENT
-00007Er 2  A2 FF                    ldx     #$FF
-000080r 2  86 rr                    stx     TASK_PARENT                     ; ...and reset the resume-to register to #$FF (invalid)
-000082r 2  4C rr rr                 jmp     SWITCH_TO_NSS
-000085r 2               
-000085r 2               @task_start:
-000085r 2  17 rr                    rmb1    TASK_STATUS_REG                 ; remove the PAUSED flag
-000087r 2  DA                       phx                                     ; push the start address onto the stack
-000088r 2  48                       pha                                     ; ...
-000089r 2  60                       rts                                     ; start executing
-00008Ar 2               
-00008Ar 2               
-00008Ar 2               ; Find an available task
-00008Ar 2               ; Modifies: A, CNZ Flags
-00008Ar 2               ; Returns C = 1 AND A = TaskNumber (when found)
-00008Ar 2               ; Returns C = 0 AND A = $FF        (when not found)
-00008Ar 2               RESERVE_TASK:
-00008Ar 2  08                       php                                     ; Save caller's I flag
-00008Br 2  78                       sei                                     ; Disable interrupts
-00008Cr 2  DA 5A                    PUSH_XY
-00008Er 2               
-00008Er 2               ; !! NO STACK MANIPULATIONS UNTIL SWITCHING BACK TO ORIGINAL TASK !!
-00008Er 2  AC F0 FF                 ldy     T_REGISTER
-000091r 2  A2 0F                    ldx     #$F                             ; Start search with Task $F
-000093r 2               
-000093r 2               @task_busy:
-000093r 2  8E F0 FF                 stx     T_REGISTER                      ; Quick task switch to task in .X
-000096r 2  0F rr 07                 bbr0    TASK_STATUS_REG, @task_found    ; Is Bit 0 (TASK_BUSY_FLAG) reset/clear?
-000099r 2  CA                       dex                                     ; Not found, so check next
-00009Ar 2  D0 F7                    bne     @task_busy                      ; Until we reach the system task (0), loop
-00009Cr 2  18                       clc                                     ; Not found
-00009Dr 2  CA                       dex                                     ; .X == $FF
-00009Er 2  80 05                    bra     @cleanup
-0000A0r 2               
-0000A0r 2               @task_found:
-0000A0r 2  87 rr                    smb0    TASK_STATUS_REG
-0000A2r 2  97 rr                    smb1    TASK_STATUS_REG
-0000A4r 2  38                       sec                                     ; Found
-0000A5r 2               
-0000A5r 2               @cleanup:
-0000A5r 2  8A                       txa                                     ; Return the task number in A (OR $FF if not found)
-0000A6r 2  8C F0 FF                 sty     T_REGISTER                      ; Switch back to the original task
-0000A9r 2               
-0000A9r 2               ; Back on the original task, so restore the registers
-0000A9r 2  7A FA                    PULL_YX
-0000ABr 2  4C rr rr                 jmp     MM_RETURN                       ; Restore caller's I flag, keep C
-0000AEr 2               
-0000AEr 2               ; Find the next task that is paused
-0000AEr 2               ; Return task # to switch to in A.  C == 0, none found; C == 1, found
-0000AEr 2               NEXT_TASK:
-0000AEr 2  48 DA 5A                 PUSH_AXY
-0000B1r 2  AD F0 FF                 lda     T_REGISTER
-0000B4r 2  29 0F                    and     #$0F
-0000B6r 2  A8                       tay
-0000B7r 2               
-0000B7r 2               @test_next:
-0000B7r 2  1A                       inc
-0000B8r 2  29 0F                    and     #$0F                            ; masking since we could have carried
-0000BAr 2  85 rr                    sta     ZP_TEMP
-0000BCr 2  C4 rr                    cpy     ZP_TEMP                         ; are we back where we started?
-0000BEr 2  F0 08                    beq     @not_found
-0000C0r 2  8D F0 FF                 sta     T_REGISTER                      ; switch to the next task
-0000C3r 2  1F rr F1                 bbr1    TASK_STATUS_REG, @test_next     ; Is bit 1 clear (TASK_PAUSED_FLAG)? if so, try next task
-0000C6r 2  38                       sec
-0000C7r 2  22                       SKIPNEXT
-0000C8r 2               
-0000C8r 2               @not_found:
-0000C8r 2  18                       clc
-0000C9r 2               
-0000C9r 2               @done:
-0000C9r 2  8C F0 FF                 sty     T_REGISTER
-0000CCr 2  7A FA 68                 PULL_YXA
-0000CFr 2  60                       rts
-0000D0r 2               
-0000D0r 2               ; ****************************************************************************
-0000D0r 2               ; Run a routine in another task's context: its ZP, stack (below its saved SP), RAM bank and MMU area.
-0000D0r 2               ; Used by the IRQ dispatcher and DRV_START, and by gates into driver tasks.
-0000D0r 2               ;
-0000D0r 2               ; IN:  ZP_TC_VEC = routine, ZP_TC_TASK = task to run it in, .A/.X/.Y/C = routine's inputs
-0000D0r 2               ; OUT: .A/.X/.Y/flags as returned by the routine
-0000D0r 2               ; The routine runs with the caller's I flag.  The target task must not be running, or it's the
-0000D0r 2               ; current task (then this is a plain call).
-0000D0r 2               ; The calling task # is kept on the target task's stack, so IRQs during the routine are safe.
-0000D0r 2               .macro _M_TC_COPY_TO    zp                  ; ZP byte: calling task (.X) -> target task (.Y); ends in calling task
-0000D0r 2                           lda     zp
-0000D0r 2                           sty     T_REGISTER
-0000D0r 2                           sta     zp
-0000D0r 2                           stx     T_REGISTER
-0000D0r 2               .endmacro
-0000D0r 2               
-0000D0r 2               .macro _M_TC_COPY_BACK  zp                  ; ZP byte: target task (.Y) -> calling task (.X); ends in target task
-0000D0r 2                           lda     zp
-0000D0r 2                           stx     T_REGISTER
-0000D0r 2                           sta     zp
-0000D0r 2                           sty     T_REGISTER
-0000D0r 2               .endmacro
-0000D0r 2               
-0000D0r 2               TASK_CALL:
-0000D0r 2  08                       php
-0000D1r 2  78                       sei
-0000D2r 2  85 rr                    sta     ZP_TC_A
-0000D4r 2  68                       pla
-0000D5r 2  85 rr                    sta     ZP_TC_P                         ; Caller's flags (C in, I state)
-0000D7r 2  86 rr                    stx     ZP_TC_X
-0000D9r 2  84 rr                    sty     ZP_TC_Y
-0000DBr 2  A5 rr                    lda     ZP_TC_TASK
-0000DDr 2  CD F0 FF                 cmp     T_REGISTER
-0000E0r 2  D0 09                    bne     @switch
-0000E2r 2  A5 rr                    lda     ZP_TC_P                         ; Same task: restore flags and tail-call
-0000E4r 2  48                       pha
-0000E5r 2  A5 rr                    lda     ZP_TC_A
-0000E7r 2  28                       plp
-0000E8r 2  6C rr rr                 jmp     (ZP_TC_VEC)
-0000EBr 2               
-0000EBr 2               @switch:
-0000EBr 2  A5 rr                    lda     STACK_SAVE_REG                  ; Preserve the calling task's saved SP
-0000EDr 2  48                       pha
-0000EEr 2  BA                       tsx
-0000EFr 2  86 rr                    stx     STACK_SAVE_REG
-0000F1r 2  AD F0 FF                 lda     T_REGISTER
-0000F4r 2  85 rr                    sta     ZP_TC_FROM
-0000F6r 2  AA                       tax                                     ; .X = calling task
-0000F7r 2  A4 rr                    ldy     ZP_TC_TASK                      ; .Y = target task
-0000F9r 2  A5 rr 8C F0              _M_TC_COPY_TO   ZP_TC_VEC
-0000FDr 2  FF 85 rr 8E  
-000101r 2  F0 FF        
-000103r 2  A5 rr 8C F0              _M_TC_COPY_TO   ZP_TC_VEC + 1
-000107r 2  FF 85 rr 8E  
-00010Br 2  F0 FF        
-00010Dr 2  A5 rr 8C F0              _M_TC_COPY_TO   ZP_TC_A
-000111r 2  FF 85 rr 8E  
-000115r 2  F0 FF        
-000117r 2  A5 rr 8C F0              _M_TC_COPY_TO   ZP_TC_X
-00011Br 2  FF 85 rr 8E  
-00011Fr 2  F0 FF        
-000121r 2  A5 rr 8C F0              _M_TC_COPY_TO   ZP_TC_Y
-000125r 2  FF 85 rr 8E  
-000129r 2  F0 FF        
-00012Br 2  A5 rr 8C F0              _M_TC_COPY_TO   ZP_TC_P
-00012Fr 2  FF 85 rr 8E  
-000133r 2  F0 FF        
-000135r 2  A5 rr 8C F0              _M_TC_COPY_TO   ZP_TC_FROM
-000139r 2  FF 85 rr 8E  
-00013Dr 2  F0 FF        
-00013Fr 2               
-00013Fr 2               ; !! NO STACK MANIPULATIONS UNTIL THE TARGET TASK'S STACK IS SELECTED !!
-00013Fr 2  8C F0 FF                 sty     T_REGISTER                      ; Switch to the target task
-000142r 2  A6 rr                    ldx     STACK_SAVE_REG                  ; ...and its stack
-000144r 2  9A                       txs
-000145r 2  A5 rr                    lda     ZP_TC_FROM
-000147r 2  48                       pha                                     ; Keep the calling task # on the target's stack
-000148r 2  A5 rr                    lda     ZP_TC_P
-00014Ar 2  48                       pha
-00014Br 2  A6 rr                    ldx     ZP_TC_X
-00014Dr 2  A4 rr                    ldy     ZP_TC_Y
-00014Fr 2  A5 rr                    lda     ZP_TC_A
-000151r 2  28                       plp                                     ; Caller's flags
-000152r 2  20 rr rr                 jsr     @call
-000155r 2  08                       php
-000156r 2  78                       sei
-000157r 2  85 rr                    sta     ZP_TC_A
-000159r 2  86 rr                    stx     ZP_TC_X
-00015Br 2  84 rr                    sty     ZP_TC_Y
-00015Dr 2  68                       pla
-00015Er 2  85 rr                    sta     ZP_TC_P                         ; Routine's result flags
-000160r 2  68                       pla
-000161r 2  AA                       tax                                     ; .X = calling task
-000162r 2  AC F0 FF                 ldy     T_REGISTER                      ; .Y = target task
-000165r 2  A5 rr 8E F0              _M_TC_COPY_BACK ZP_TC_A
-000169r 2  FF 85 rr 8C  
-00016Dr 2  F0 FF        
-00016Fr 2  A5 rr 8E F0              _M_TC_COPY_BACK ZP_TC_X
-000173r 2  FF 85 rr 8C  
-000177r 2  F0 FF        
-000179r 2  A5 rr 8E F0              _M_TC_COPY_BACK ZP_TC_Y
-00017Dr 2  FF 85 rr 8C  
-000181r 2  F0 FF        
-000183r 2  A5 rr 8E F0              _M_TC_COPY_BACK ZP_TC_P
-000187r 2  FF 85 rr 8C  
-00018Br 2  F0 FF        
-00018Dr 2               
-00018Dr 2               ; !! NO STACK MANIPULATIONS UNTIL THE CALLING TASK'S STACK IS SELECTED !!
-00018Dr 2  8E F0 FF                 stx     T_REGISTER                      ; Back to the calling task
-000190r 2  A6 rr                    ldx     STACK_SAVE_REG                  ; ...and its stack
-000192r 2  9A                       txs
-000193r 2  68                       pla
-000194r 2  85 rr                    sta     STACK_SAVE_REG                  ; Restore the calling task's saved SP
-000196r 2  A6 rr                    ldx     ZP_TC_X
-000198r 2  A4 rr                    ldy     ZP_TC_Y
-00019Ar 2  A5 rr                    lda     ZP_TC_P
-00019Cr 2  48                       pha
-00019Dr 2  A5 rr                    lda     ZP_TC_A
-00019Fr 2  28                       plp                                     ; Routine's result flags
-0001A0r 2  60                       rts
-0001A1r 2               
-0001A1r 2               @call:
-0001A1r 2  6C rr rr                 jmp     (ZP_TC_VEC)
-0001A4r 2               
-0001A4r 2               ; ****************************************************************************
-0001A4r 2               ; Make a free task ready to run from an entry point: marks it busy and builds the frame SWITCH_TO
-0001A4r 2               ; resumes from on its stack (A/X/Y = 0, IRQs enabled).  Start it with SWITCH_TO.
-0001A4r 2               ; The entry routine must never return (there is nothing to return to).
-0001A4r 2               ; IN: .A.Y = entry point, .X = task#
-0001A4r 2               ; OUT (success): C = 0
-0001A4r 2               ; OUT (failure): .A = ERR_BAD_TASK or ERR_TASK_BUSY, C = 1
-0001A4r 2               ; Modifies: .A, .Y
-0001A4r 2               TASK_PREPARE:
-0001A4r 2  08                       php                                     ; Save caller's I flag
-0001A5r 2  78                       sei
-0001A6r 2  E0 10                    cpx     #MAX_TASK_NUMBER + 1
-0001A8r 2  B0 4C                    bcs     @bad_task
-0001AAr 2  EC F0 FF                 cpx     T_REGISTER
-0001ADr 2  F0 47                    beq     @bad_task
-0001AFr 2  85 rr                    sta     ZP_TEMP_VEC
-0001B1r 2  84 rr                    sty     ZP_TEMP_VEC + 1
-0001B3r 2  AC F0 FF                 ldy     T_REGISTER                      ; .Y = calling task, .X = new task
-0001B6r 2               
-0001B6r 2               ; !! NO STACK MANIPULATIONS WHILE IN THE NEW TASK !!
-0001B6r 2  8E F0 FF                 stx     T_REGISTER                      ; Quick switch to the new task
-0001B9r 2  A5 rr                    lda     TASK_STATUS_REG
-0001BBr 2  8C F0 FF                 sty     T_REGISTER
-0001BEr 2  D0 30                    bne     @busy
-0001C0r 2  A5 rr                    lda     ZP_TEMP_VEC + 1
-0001C2r 2  8E F0 FF                 stx     T_REGISTER
-0001C5r 2  8D FF 01                 sta     $01FF                           ; RTI frame: PCH, PCL, P
-0001C8r 2  8C F0 FF                 sty     T_REGISTER
-0001CBr 2  A5 rr                    lda     ZP_TEMP_VEC
-0001CDr 2  8E F0 FF                 stx     T_REGISTER
-0001D0r 2  8D FE 01                 sta     $01FE
-0001D3r 2  A9 00                    lda     #0
-0001D5r 2  8D FD 01                 sta     $01FD                           ; P: IRQs enabled, decimal off
-0001D8r 2  8D FC 01                 sta     $01FC                           ; PULL_YXA frame: A, X, Y
-0001DBr 2  8D FB 01                 sta     $01FB
-0001DEr 2  8D FA 01                 sta     $01FA
-0001E1r 2  A9 F9                    lda     #$F9
-0001E3r 2  85 rr                    sta     STACK_SAVE_REG
-0001E5r 2  A9 01                    lda     #TASK_BUSY_FLAG
-0001E7r 2  85 rr                    sta     TASK_STATUS_REG
-0001E9r 2  8C F0 FF                 sty     T_REGISTER                      ; Back to the calling task
-0001ECr 2  18                       clc
-0001EDr 2  4C rr rr                 jmp     MM_RETURN
-0001F0r 2               
-0001F0r 2               @busy:
-0001F0r 2  A9 F2                    lda     #ERR_TASK_BUSY
-0001F2r 2  38                       sec
-0001F3r 2  4C rr rr                 jmp     MM_RETURN
-0001F6r 2               
-0001F6r 2               @bad_task:
-0001F6r 2  A9 F3                    lda     #ERR_BAD_TASK
-0001F8r 2  38                       sec
-0001F9r 2  4C rr rr                 jmp     MM_RETURN
-0001FCr 2               
-0001FCr 2               ; ****************************************************************************
-0001FCr 2               ; Drivers
-0001FCr 2               
-0001FCr 2               .struct     DriverInfo
-0001FCr 2                           init        .word                       ; Runs in the driver's task.  OUT: C = 0 OK, or C = 1 and .A = error
-0001FCr 2                           stop        .word                       ; (future) Runs in the driver's task before the task is reset
-0001FCr 2                           name        .word                       ; HString
-0001FCr 2               .endstruct
-0001FCr 2               
-0001FCr 2               ; Start a driver in a (free) task, as a Resident task: its init runs in that task, so the driver's
-0001FCr 2               ; state lives in that task's ZP/RAM, and IRQ handlers it registers run in that task.
-0001FCr 2               ; IN: .A.Y = DriverInfo, .X = task#
-0001FCr 2               ; OUT (success): .A = task#, C = 0
-0001FCr 2               ; OUT (failure): .A = ERROR, C = 1 (the task is left free)
-0001FCr 2               ; Modifies: .A, .X, .Y
-0001FCr 2               DRV_START:
-0001FCr 2  08                       php                                     ; Save caller's I flag
-0001FDr 2  78                       sei
-0001FEr 2  85 rr                    sta     ZP_DRV_PTR
-000200r 2  84 rr                    sty     ZP_DRV_PTR + 1
-000202r 2  E0 10                    cpx     #MAX_TASK_NUMBER + 1
-000204r 2  B0 4A                    bcs     @bad_task
-000206r 2  EC F0 FF                 cpx     T_REGISTER
-000209r 2  F0 45                    beq     @bad_task
-00020Br 2  86 rr                    stx     ZP_TC_TASK
-00020Dr 2  AC F0 FF                 ldy     T_REGISTER
-000210r 2  8E F0 FF                 stx     T_REGISTER                      ; Quick switch to the driver task (no stack use!)
-000213r 2  A5 rr                    lda     TASK_STATUS_REG
-000215r 2  D0 30                    bne     @busy
-000217r 2  A9 09                    lda     #TASK_BUSY_FLAG | TASK_RESIDENT_FLAG
-000219r 2  85 rr                    sta     TASK_STATUS_REG
-00021Br 2  8C F0 FF                 sty     T_REGISTER                      ; Back to the calling task
-00021Er 2  A0 00                    ldy     #DriverInfo::init
-000220r 2  B1 rr                    lda     (ZP_DRV_PTR),Y
-000222r 2  85 rr                    sta     ZP_TC_VEC
-000224r 2  C8                       iny
-000225r 2  B1 rr                    lda     (ZP_DRV_PTR),Y
-000227r 2  85 rr                    sta     ZP_TC_VEC + 1
-000229r 2  A5 rr                    lda     ZP_TC_TASK                      ; init gets its task# in .A
-00022Br 2  20 rr rr                 jsr     TASK_CALL
-00022Er 2  B0 06                    bcs     @init_failed
-000230r 2  A5 rr                    lda     ZP_TC_TASK
-000232r 2  18                       clc
-000233r 2  4C rr rr                 jmp     MM_RETURN
-000236r 2               
-000236r 2               @init_failed:
-000236r 2  A6 rr                    ldx     ZP_TC_TASK
-000238r 2  AC F0 FF                 ldy     T_REGISTER
-00023Br 2  8E F0 FF                 stx     T_REGISTER                      ; Quick switch to the driver task (no stack use!)
-00023Er 2  64 rr                    stz     TASK_STATUS_REG                 ; Leave it free
-000240r 2  8C F0 FF                 sty     T_REGISTER
-000243r 2  38                       sec                                     ; .A = error from init
-000244r 2  4C rr rr                 jmp     MM_RETURN
-000247r 2               
-000247r 2               @busy:
-000247r 2  8C F0 FF                 sty     T_REGISTER                      ; Back to the calling task
-00024Ar 2  A9 F2                    lda     #ERR_TASK_BUSY
-00024Cr 2  38                       sec
-00024Dr 2  4C rr rr                 jmp     MM_RETURN
-000250r 2               
-000250r 2               @bad_task:
-000250r 2  A9 F3                    lda     #ERR_BAD_TASK
-000252r 2  38                       sec
-000253r 2  4C rr rr                 jmp     MM_RETURN
-000256r 2               
-000256r 2               ; Non-maskable interrupt handler, called from NMI_ENTRY (COMMON block) on ROM page 0
-000256r 2               NMI_HANDLER:
-000256r 2  60                       rts
-000257r 2               
-000257r 2  48                       pha
-000258r 2  A9 2A 20 rr              PRINT_CHAR  #ASCII_STAR
-00025Cr 2  rr           
-00025Dr 2  68                       pla
-00025Er 2  20 rr rr                 jsr     NEXT_TASK
-000261r 2  B0 01                    bcs     @switch
-000263r 2  40                       rti
+000062r 2               
+000062r 2               ; Save the parent's context the way SWITCH_TO does, so SWITCH_TO_NSS can resume it at @resume when the
+000062r 2               ; child completes
+000062r 2  85 rr                    sta     TASK_SAVE_REG                   ; Child task #, returned when the parent resumes
+000064r 2  A9 rr                    lda     #>@resume                       ; RTI frame: PCH, PCL, P...
+000066r 2  48                       pha
+000067r 2  A9 rr                    lda     #<@resume
+000069r 2  48                       pha
+00006Ar 2  08                       php
+00006Br 2  48 DA 5A                 PUSH_AXY                                ; ...and the PULL_YXA frame
+00006Er 2  BA                       tsx
+00006Fr 2  86 rr                    stx     STACK_SAVE_REG
+000071r 2  A6 rr                    ldx     ZP_TEMP_VEC + 1
+000073r 2  A4 rr                    ldy     ZP_TEMP_VEC
+000075r 2  D0 01                    bne     :+                              ; skip HOB of addr if LOB <> 0
+000077r 2  CA                       dex                                     ; update entrypoint to rts-style addr-1
+000078r 2               
+000078r 2               :
+000078r 2  88                       dey                                     ; update LOB
+000079r 2  97 rr                    smb1    TASK_STATUS_REG                 ; mark parent task state as PAUSED
+00007Br 2  A5 rr                    lda     TASK_SAVE_REG                   ; Child task #
+00007Dr 2  78                       sei                                     ; No IRQs between the task and stack switch
+00007Er 2  8D F0 FF                 sta     T_REGISTER                      ; do the task switch
+000081r 2  86 rr                    stx     ZP_X_SAVE                       ; new task ZP
+000083r 2  A2 FF                    ldx     #$FF                            ; Reset the stack pointer
+000085r 2  9A                       txs
+000086r 2  A6 rr                    ldx     ZP_X_SAVE
+000088r 2  98                       tya
+000089r 2  20 rr rr                 jsr     @task_start
+00008Cr 2               
+00008Cr 2               @task_complete:
+00008Cr 2  AD F0 FF                 lda     T_REGISTER
+00008Fr 2  20 rr rr                 jsr     MM_TASK_RESET                   ; Free everything the task allocated
+000092r 2  64 rr                    stz     TASK_STATUS_REG
+000094r 2  A5 rr                    lda     TASK_PARENT
+000096r 2  A2 FF                    ldx     #$FF
+000098r 2  86 rr                    stx     TASK_PARENT                     ; ...and reset the resume-to register to #$FF (invalid)
+00009Ar 2  4C rr rr                 jmp     SWITCH_TO_NSS
+00009Dr 2               
+00009Dr 2               @task_start:
+00009Dr 2  17 rr                    rmb1    TASK_STATUS_REG                 ; remove the PAUSED flag
+00009Fr 2  DA                       phx                                     ; push the start address onto the stack
+0000A0r 2  48                       pha                                     ; ...
+0000A1r 2  58                       cli                                     ; The child runs with IRQs on
+0000A2r 2  60                       rts                                     ; start executing
+0000A3r 2               
+0000A3r 2               ; The parent resumes here (from SWITCH_TO_NSS) when the child completes
+0000A3r 2               @resume:
+0000A3r 2  A5 rr                    lda     TASK_SAVE_REG                   ; The child's task #
+0000A5r 2  38                       sec
+0000A6r 2  60                       rts
+0000A7r 2               
+0000A7r 2               
+0000A7r 2               ; Find an available task
+0000A7r 2               ; Modifies: A, CNZ Flags
+0000A7r 2               ; Returns C = 1 AND A = TaskNumber (when found)
+0000A7r 2               ; Returns C = 0 AND A = $FF        (when not found)
+0000A7r 2               RESERVE_TASK:
+0000A7r 2  08                       php                                     ; Save caller's I flag
+0000A8r 2  78                       sei                                     ; Disable interrupts
+0000A9r 2  DA 5A                    PUSH_XY
+0000ABr 2               
+0000ABr 2               ; !! NO STACK MANIPULATIONS UNTIL SWITCHING BACK TO ORIGINAL TASK !!
+0000ABr 2  AC F0 FF                 ldy     T_REGISTER
+0000AEr 2  A2 0F                    ldx     #$F                             ; Start search with Task $F
+0000B0r 2               
+0000B0r 2               @task_busy:
+0000B0r 2  8E F0 FF                 stx     T_REGISTER                      ; Quick task switch to task in .X
+0000B3r 2  0F rr 07                 bbr0    TASK_STATUS_REG, @task_found    ; Is Bit 0 (TASK_BUSY_FLAG) reset/clear?
+0000B6r 2  CA                       dex                                     ; Not found, so check next
+0000B7r 2  D0 F7                    bne     @task_busy                      ; Until we reach the system task (0), loop
+0000B9r 2  18                       clc                                     ; Not found
+0000BAr 2  CA                       dex                                     ; .X == $FF
+0000BBr 2  80 05                    bra     @cleanup
+0000BDr 2               
+0000BDr 2               @task_found:
+0000BDr 2  87 rr                    smb0    TASK_STATUS_REG
+0000BFr 2  97 rr                    smb1    TASK_STATUS_REG
+0000C1r 2  38                       sec                                     ; Found
+0000C2r 2               
+0000C2r 2               @cleanup:
+0000C2r 2  8A                       txa                                     ; Return the task number in A (OR $FF if not found)
+0000C3r 2  8C F0 FF                 sty     T_REGISTER                      ; Switch back to the original task
+0000C6r 2               
+0000C6r 2               ; Back on the original task, so restore the registers
+0000C6r 2  7A FA                    PULL_YX
+0000C8r 2  4C rr rr                 jmp     MM_RETURN                       ; Restore caller's I flag, keep C
+0000CBr 2               
+0000CBr 2               ; Find the next task that is paused
+0000CBr 2               ; Return task # to switch to in A.  C == 0, none found; C == 1, found
+0000CBr 2               NEXT_TASK:
+0000CBr 2  48 DA 5A                 PUSH_AXY
+0000CEr 2  AD F0 FF                 lda     T_REGISTER
+0000D1r 2  29 0F                    and     #$0F
+0000D3r 2  A8                       tay
+0000D4r 2               
+0000D4r 2               @test_next:
+0000D4r 2  1A                       inc
+0000D5r 2  29 0F                    and     #$0F                            ; masking since we could have carried
+0000D7r 2  85 rr                    sta     ZP_TEMP
+0000D9r 2  C4 rr                    cpy     ZP_TEMP                         ; are we back where we started?
+0000DBr 2  F0 08                    beq     @not_found
+0000DDr 2  8D F0 FF                 sta     T_REGISTER                      ; switch to the next task
+0000E0r 2  1F rr F1                 bbr1    TASK_STATUS_REG, @test_next     ; Is bit 1 clear (TASK_PAUSED_FLAG)? if so, try next task
+0000E3r 2  38                       sec
+0000E4r 2  22                       SKIPNEXT
+0000E5r 2               
+0000E5r 2               @not_found:
+0000E5r 2  18                       clc
+0000E6r 2               
+0000E6r 2               @done:
+0000E6r 2  8C F0 FF                 sty     T_REGISTER
+0000E9r 2  7A FA 68                 PULL_YXA
+0000ECr 2  60                       rts
+0000EDr 2               
+0000EDr 2               ; ****************************************************************************
+0000EDr 2               ; Run a routine in another task's context: its ZP, stack (below its saved SP), RAM bank and MMU area.
+0000EDr 2               ; Used by the IRQ dispatcher and DRV_START, and by gates into driver tasks.
+0000EDr 2               ;
+0000EDr 2               ; IN:  ZP_TC_VEC = routine, ZP_TC_TASK = task to run it in, .A/.X/.Y/C = routine's inputs
+0000EDr 2               ; OUT: .A/.X/.Y/flags as returned by the routine
+0000EDr 2               ; The routine runs with the caller's I flag.  The target task must not be running, or it's the
+0000EDr 2               ; current task (then this is a plain call).
+0000EDr 2               ; The calling task # is kept on the target task's stack, so IRQs during the routine are safe.
+0000EDr 2               .macro _M_TC_COPY_TO    zp                  ; ZP byte: calling task (.X) -> target task (.Y); ends in calling task
+0000EDr 2                           lda     zp
+0000EDr 2                           sty     T_REGISTER
+0000EDr 2                           sta     zp
+0000EDr 2                           stx     T_REGISTER
+0000EDr 2               .endmacro
+0000EDr 2               
+0000EDr 2               .macro _M_TC_COPY_BACK  zp                  ; ZP byte: target task (.Y) -> calling task (.X); ends in target task
+0000EDr 2                           lda     zp
+0000EDr 2                           stx     T_REGISTER
+0000EDr 2                           sta     zp
+0000EDr 2                           sty     T_REGISTER
+0000EDr 2               .endmacro
+0000EDr 2               
+0000EDr 2               TASK_CALL:
+0000EDr 2  08                       php
+0000EEr 2  78                       sei
+0000EFr 2  85 rr                    sta     ZP_TC_A
+0000F1r 2  68                       pla
+0000F2r 2  85 rr                    sta     ZP_TC_P                         ; Caller's flags (C in, I state)
+0000F4r 2  86 rr                    stx     ZP_TC_X
+0000F6r 2  84 rr                    sty     ZP_TC_Y
+0000F8r 2  A5 rr                    lda     ZP_TC_TASK
+0000FAr 2  CD F0 FF                 cmp     T_REGISTER
+0000FDr 2  D0 09                    bne     @switch
+0000FFr 2  A5 rr                    lda     ZP_TC_P                         ; Same task: restore flags and tail-call
+000101r 2  48                       pha
+000102r 2  A5 rr                    lda     ZP_TC_A
+000104r 2  28                       plp
+000105r 2  6C rr rr                 jmp     (ZP_TC_VEC)
+000108r 2               
+000108r 2               @switch:
+000108r 2  A5 rr                    lda     STACK_SAVE_REG                  ; Preserve the calling task's saved SP
+00010Ar 2  48                       pha
+00010Br 2  BA                       tsx
+00010Cr 2  86 rr                    stx     STACK_SAVE_REG
+00010Er 2  AD F0 FF                 lda     T_REGISTER
+000111r 2  85 rr                    sta     ZP_TC_FROM
+000113r 2  AA                       tax                                     ; .X = calling task
+000114r 2  A4 rr                    ldy     ZP_TC_TASK                      ; .Y = target task
+000116r 2  A5 rr 8C F0              _M_TC_COPY_TO   ZP_TC_VEC
+00011Ar 2  FF 85 rr 8E  
+00011Er 2  F0 FF        
+000120r 2  A5 rr 8C F0              _M_TC_COPY_TO   ZP_TC_VEC + 1
+000124r 2  FF 85 rr 8E  
+000128r 2  F0 FF        
+00012Ar 2  A5 rr 8C F0              _M_TC_COPY_TO   ZP_TC_A
+00012Er 2  FF 85 rr 8E  
+000132r 2  F0 FF        
+000134r 2  A5 rr 8C F0              _M_TC_COPY_TO   ZP_TC_X
+000138r 2  FF 85 rr 8E  
+00013Cr 2  F0 FF        
+00013Er 2  A5 rr 8C F0              _M_TC_COPY_TO   ZP_TC_Y
+000142r 2  FF 85 rr 8E  
+000146r 2  F0 FF        
+000148r 2  A5 rr 8C F0              _M_TC_COPY_TO   ZP_TC_P
+00014Cr 2  FF 85 rr 8E  
+000150r 2  F0 FF        
+000152r 2  A5 rr 8C F0              _M_TC_COPY_TO   ZP_TC_FROM
+000156r 2  FF 85 rr 8E  
+00015Ar 2  F0 FF        
+00015Cr 2               
+00015Cr 2               ; !! NO STACK MANIPULATIONS UNTIL THE TARGET TASK'S STACK IS SELECTED !!
+00015Cr 2  8C F0 FF                 sty     T_REGISTER                      ; Switch to the target task
+00015Fr 2  A6 rr                    ldx     STACK_SAVE_REG                  ; ...and its stack
+000161r 2  9A                       txs
+000162r 2  A5 rr                    lda     ZP_TC_FROM
+000164r 2  48                       pha                                     ; Keep the calling task # on the target's stack
+000165r 2  A5 rr                    lda     ZP_TC_P
+000167r 2  48                       pha
+000168r 2  A6 rr                    ldx     ZP_TC_X
+00016Ar 2  A4 rr                    ldy     ZP_TC_Y
+00016Cr 2  A5 rr                    lda     ZP_TC_A
+00016Er 2  28                       plp                                     ; Caller's flags
+00016Fr 2  20 rr rr                 jsr     @call
+000172r 2  08                       php
+000173r 2  78                       sei
+000174r 2  85 rr                    sta     ZP_TC_A
+000176r 2  86 rr                    stx     ZP_TC_X
+000178r 2  84 rr                    sty     ZP_TC_Y
+00017Ar 2  68                       pla
+00017Br 2  85 rr                    sta     ZP_TC_P                         ; Routine's result flags
+00017Dr 2  68                       pla
+00017Er 2  AA                       tax                                     ; .X = calling task
+00017Fr 2  AC F0 FF                 ldy     T_REGISTER                      ; .Y = target task
+000182r 2  A5 rr 8E F0              _M_TC_COPY_BACK ZP_TC_A
+000186r 2  FF 85 rr 8C  
+00018Ar 2  F0 FF        
+00018Cr 2  A5 rr 8E F0              _M_TC_COPY_BACK ZP_TC_X
+000190r 2  FF 85 rr 8C  
+000194r 2  F0 FF        
+000196r 2  A5 rr 8E F0              _M_TC_COPY_BACK ZP_TC_Y
+00019Ar 2  FF 85 rr 8C  
+00019Er 2  F0 FF        
+0001A0r 2  A5 rr 8E F0              _M_TC_COPY_BACK ZP_TC_P
+0001A4r 2  FF 85 rr 8C  
+0001A8r 2  F0 FF        
+0001AAr 2               
+0001AAr 2               ; !! NO STACK MANIPULATIONS UNTIL THE CALLING TASK'S STACK IS SELECTED !!
+0001AAr 2  8E F0 FF                 stx     T_REGISTER                      ; Back to the calling task
+0001ADr 2  A6 rr                    ldx     STACK_SAVE_REG                  ; ...and its stack
+0001AFr 2  9A                       txs
+0001B0r 2  68                       pla
+0001B1r 2  85 rr                    sta     STACK_SAVE_REG                  ; Restore the calling task's saved SP
+0001B3r 2  A6 rr                    ldx     ZP_TC_X
+0001B5r 2  A4 rr                    ldy     ZP_TC_Y
+0001B7r 2  A5 rr                    lda     ZP_TC_P
+0001B9r 2  48                       pha
+0001BAr 2  A5 rr                    lda     ZP_TC_A
+0001BCr 2  28                       plp                                     ; Routine's result flags
+0001BDr 2  60                       rts
+0001BEr 2               
+0001BEr 2               @call:
+0001BEr 2  6C rr rr                 jmp     (ZP_TC_VEC)
+0001C1r 2               
+0001C1r 2               ; ****************************************************************************
+0001C1r 2               ; Make a free task ready to run from an entry point: marks it busy and builds the frame SWITCH_TO
+0001C1r 2               ; resumes from on its stack (A/X/Y = 0, IRQs enabled).  Start it with SWITCH_TO.
+0001C1r 2               ; The entry routine must never return (there is nothing to return to).
+0001C1r 2               ; IN: .A.Y = entry point, .X = task#
+0001C1r 2               ; OUT (success): C = 0
+0001C1r 2               ; OUT (failure): .A = ERR_BAD_TASK or ERR_TASK_BUSY, C = 1
+0001C1r 2               ; Modifies: .A, .Y
+0001C1r 2               TASK_PREPARE:
+0001C1r 2  08                       php                                     ; Save caller's I flag
+0001C2r 2  78                       sei
+0001C3r 2  E0 10                    cpx     #MAX_TASK_NUMBER + 1
+0001C5r 2  B0 4C                    bcs     @bad_task
+0001C7r 2  EC F0 FF                 cpx     T_REGISTER
+0001CAr 2  F0 47                    beq     @bad_task
+0001CCr 2  85 rr                    sta     ZP_TEMP_VEC
+0001CEr 2  84 rr                    sty     ZP_TEMP_VEC + 1
+0001D0r 2  AC F0 FF                 ldy     T_REGISTER                      ; .Y = calling task, .X = new task
+0001D3r 2               
+0001D3r 2               ; !! NO STACK MANIPULATIONS WHILE IN THE NEW TASK !!
+0001D3r 2  8E F0 FF                 stx     T_REGISTER                      ; Quick switch to the new task
+0001D6r 2  A5 rr                    lda     TASK_STATUS_REG
+0001D8r 2  8C F0 FF                 sty     T_REGISTER
+0001DBr 2  D0 30                    bne     @busy
+0001DDr 2  A5 rr                    lda     ZP_TEMP_VEC + 1
+0001DFr 2  8E F0 FF                 stx     T_REGISTER
+0001E2r 2  8D FF 01                 sta     $01FF                           ; RTI frame: PCH, PCL, P
+0001E5r 2  8C F0 FF                 sty     T_REGISTER
+0001E8r 2  A5 rr                    lda     ZP_TEMP_VEC
+0001EAr 2  8E F0 FF                 stx     T_REGISTER
+0001EDr 2  8D FE 01                 sta     $01FE
+0001F0r 2  A9 00                    lda     #0
+0001F2r 2  8D FD 01                 sta     $01FD                           ; P: IRQs enabled, decimal off
+0001F5r 2  8D FC 01                 sta     $01FC                           ; PULL_YXA frame: A, X, Y
+0001F8r 2  8D FB 01                 sta     $01FB
+0001FBr 2  8D FA 01                 sta     $01FA
+0001FEr 2  A9 F9                    lda     #$F9
+000200r 2  85 rr                    sta     STACK_SAVE_REG
+000202r 2  A9 01                    lda     #TASK_BUSY_FLAG
+000204r 2  85 rr                    sta     TASK_STATUS_REG
+000206r 2  8C F0 FF                 sty     T_REGISTER                      ; Back to the calling task
+000209r 2  18                       clc
+00020Ar 2  4C rr rr                 jmp     MM_RETURN
+00020Dr 2               
+00020Dr 2               @busy:
+00020Dr 2  A9 F2                    lda     #ERR_TASK_BUSY
+00020Fr 2  38                       sec
+000210r 2  4C rr rr                 jmp     MM_RETURN
+000213r 2               
+000213r 2               @bad_task:
+000213r 2  A9 F3                    lda     #ERR_BAD_TASK
+000215r 2  38                       sec
+000216r 2  4C rr rr                 jmp     MM_RETURN
+000219r 2               
+000219r 2               ; ****************************************************************************
+000219r 2               ; Drivers
+000219r 2               
+000219r 2               .struct     DriverInfo
+000219r 2                           init        .word                       ; Runs in the driver's task.  OUT: C = 0 OK, or C = 1 and .A = error
+000219r 2                           stop        .word                       ; (future) Runs in the driver's task before the task is reset
+000219r 2                           name        .word                       ; HString
+000219r 2               .endstruct
+000219r 2               
+000219r 2               ; Start a driver in a (free) task, as a Resident task: its init runs in that task, so the driver's
+000219r 2               ; state lives in that task's ZP/RAM, and IRQ handlers it registers run in that task.
+000219r 2               ; IN: .A.Y = DriverInfo, .X = task#
+000219r 2               ; OUT (success): .A = task#, C = 0
+000219r 2               ; OUT (failure): .A = ERROR, C = 1 (the task is left free)
+000219r 2               ; Modifies: .A, .X, .Y
+000219r 2               DRV_START:
+000219r 2  08                       php                                     ; Save caller's I flag
+00021Ar 2  78                       sei
+00021Br 2  85 rr                    sta     ZP_DRV_PTR
+00021Dr 2  84 rr                    sty     ZP_DRV_PTR + 1
+00021Fr 2  E0 10                    cpx     #MAX_TASK_NUMBER + 1
+000221r 2  B0 4A                    bcs     @bad_task
+000223r 2  EC F0 FF                 cpx     T_REGISTER
+000226r 2  F0 45                    beq     @bad_task
+000228r 2  86 rr                    stx     ZP_TC_TASK
+00022Ar 2  AC F0 FF                 ldy     T_REGISTER
+00022Dr 2  8E F0 FF                 stx     T_REGISTER                      ; Quick switch to the driver task (no stack use!)
+000230r 2  A5 rr                    lda     TASK_STATUS_REG
+000232r 2  D0 30                    bne     @busy
+000234r 2  A9 09                    lda     #TASK_BUSY_FLAG | TASK_RESIDENT_FLAG
+000236r 2  85 rr                    sta     TASK_STATUS_REG
+000238r 2  8C F0 FF                 sty     T_REGISTER                      ; Back to the calling task
+00023Br 2  A0 00                    ldy     #DriverInfo::init
+00023Dr 2  B1 rr                    lda     (ZP_DRV_PTR),Y
+00023Fr 2  85 rr                    sta     ZP_TC_VEC
+000241r 2  C8                       iny
+000242r 2  B1 rr                    lda     (ZP_DRV_PTR),Y
+000244r 2  85 rr                    sta     ZP_TC_VEC + 1
+000246r 2  A5 rr                    lda     ZP_TC_TASK                      ; init gets its task# in .A
+000248r 2  20 rr rr                 jsr     TASK_CALL
+00024Br 2  B0 06                    bcs     @init_failed
+00024Dr 2  A5 rr                    lda     ZP_TC_TASK
+00024Fr 2  18                       clc
+000250r 2  4C rr rr                 jmp     MM_RETURN
+000253r 2               
+000253r 2               @init_failed:
+000253r 2  A6 rr                    ldx     ZP_TC_TASK
+000255r 2  AC F0 FF                 ldy     T_REGISTER
+000258r 2  8E F0 FF                 stx     T_REGISTER                      ; Quick switch to the driver task (no stack use!)
+00025Br 2  64 rr                    stz     TASK_STATUS_REG                 ; Leave it free
+00025Dr 2  8C F0 FF                 sty     T_REGISTER
+000260r 2  38                       sec                                     ; .A = error from init
+000261r 2  4C rr rr                 jmp     MM_RETURN
 000264r 2               
-000264r 2               @switch:
-000264r 2  4C rr rr                 jmp     SWITCH_TO_NO_PHP
-000267r 2               
-000267r 1               .include "wozmon.s"
-000267r 2               ;
-000267r 2               ;   Taken mostly from Steve Wozniak's Apple 1 Monitor for the 6502, or WOZMON
-000267r 2               ;
-000267r 2               .debuginfo
-000267r 2               .segment "BUFFERS"
+000264r 2               @busy:
+000264r 2  8C F0 FF                 sty     T_REGISTER                      ; Back to the calling task
+000267r 2  A9 F2                    lda     #ERR_TASK_BUSY
+000269r 2  38                       sec
+00026Ar 2  4C rr rr                 jmp     MM_RETURN
+00026Dr 2               
+00026Dr 2               @bad_task:
+00026Dr 2  A9 F3                    lda     #ERR_BAD_TASK
+00026Fr 2  38                       sec
+000270r 2  4C rr rr                 jmp     MM_RETURN
+000273r 2               
+000273r 2               ; Non-maskable interrupt handler, called from NMI_ENTRY (COMMON block) on ROM page 0
+000273r 2               NMI_HANDLER:
+000273r 2  60                       rts
+000274r 2               
+000274r 2  48                       pha
+000275r 2  A9 2A 20 rr              PRINT_CHAR  #ASCII_STAR
+000279r 2  rr           
+00027Ar 2  68                       pla
+00027Br 2  20 rr rr                 jsr     NEXT_TASK
+00027Er 2  B0 01                    bcs     @switch
+000280r 2  40                       rti
+000281r 2               
+000281r 2               @switch:
+000281r 2  4C rr rr                 jmp     SWITCH_TO_NO_PHP
+000284r 2               
+000284r 1               .include "wozmon.s"
+000284r 2               ;
+000284r 2               ;   Taken mostly from Steve Wozniak's Apple 1 Monitor for the 6502, or WOZMON
+000284r 2               ;
+000284r 2               .debuginfo
+000284r 2               .segment "BUFFERS"
 000400r 2               IN:
 000400r 2  xx xx xx xx                  .res            $100
 000404r 2  xx xx xx xx  
@@ -8449,16 +8905,6 @@ Current file: all.s
 0000F8r 2               
 0000F8r 2               .segment "MMU"
 000000r 2               
-000000r 2               .struct     Address
-000000r 2                           l           .byte
-000000r 2                           h           .byte
-000000r 2               .endstruct
-000000r 2               
-000000r 2               .struct     PageAddress
-000000r 2                           addr        .tag Address
-000000r 2                           page        .byte
-000000r 2               .endstruct
-000000r 2               
 000000r 2               ; Handle table entry status byte =>
 000000r 2               ; Bit 0: Paged      (1=Paged, 0=Task)               Points to Paged RAM (8K banks at $8000)
 000000r 2               ; Bit 1: Shared     (1=Shared, 0=Task)              Points to Shared RAM when Shared == 1 && Paged == 1
@@ -8525,6 +8971,7 @@ Current file: all.s
 000000r 2               MMU_PAGE_ENDS    = MMU_HDR + MmuHeader::page_ends
 000000r 2               MMU_BANK_MAP     = MMU_HDR + MmuHeader::bank_map
 000000r 2               MMU_BANK_ENDS    = MMU_HDR + MmuHeader::bank_ends
+000000r 2               MMU_LOW_WATER    = MMU_HDR + MmuHeader::low_water
 000000r 2               MMU_HANDLE_TBL   = MMU_HDR + MmuHeader::handles             ; Entry for handle h: MMU_HANDLE_TBL + (h - 1) * 4
 000000r 2               MMU_MAX_HANDLES  = ($8000 - MMU_HANDLE_TBL) / .sizeof(Handle)   ; 103 for 2 pages
 000000r 2               MMU_CHUNK_HEADS  = MMU_HDR + MmuHeader::chunk_heads         ; First chunk page of each size class (0 = none)
@@ -9549,579 +9996,261 @@ Current file: all.s
 000506r 2  38                       sec
 000507r 2  60                       rts
 000508r 2               
-000508r 2               ; IN: .A.Y = Bytes to allocate, T must be 0
-000508r 2               ; OUT (success): .A.Y = Address of shared allocation structure, C = 0
-000508r 2               ; OUT (out of memory): .A = ERR_OUT_OF_MEMORY, C = 1
-000508r 2               ;           If T <> 0, .A = ERR_NOT_SYSTEM_TASK, C = 1
-000508r 2               SHARED_ALLOC:
-000508r 2  DA                       phx
-000509r 2  AE F0 FF                 ldx         T_REGISTER
-00050Cr 2  E0 00                    cpx         #SYSTEM_TASK_NUM
-00050Er 2  F0 04                    beq         :+
-000510r 2  FA                       plx
-000511r 2  4C rr rr                 jmp         ERROR_NOT_SYSTEM_TASK
-000514r 2               
-000514r 2               :
-000514r 2                                                                           ; Do the allocation
-000514r 2               
-000514r 2  FA                       plx
-000515r 2  60                       rts
-000516r 2               
-000516r 2               ; IN: .A.Y = Address of PageAddress struct that points to location in shared memory to free
-000516r 2               SHARED_FREE:
-000516r 2  60                       rts
-000517r 2               
-000517r 2               SHARED_RAM_INIT:
-000517r 2  60                       rts
-000518r 2               
-000518r 2               ; IN: .X = Byte to write, .A.Y = Address of PageAddress struct that points to shared memory location to write to
-000518r 2               SHARED_WRITE:
-000518r 2  08                       php                                             ; Save caller's I flag
-000519r 2  78                       sei
-00051Ar 2  DA                       phx                                             ; Push the byte to write
-00051Br 2  20 rr rr                 jsr         SHARED_RW_PAGE_SETUP                ; Clobbers .X.  After, .X = old RAM_BANK, .Y = old U
-00051Er 2  68                       pla                                             ; Get it back
-00051Fr 2  92 rr                    sta         (ZP_M_SP1)                          ; Do the write
-000521r 2  86 rr                    stx         RAM_BANK_REG                        ; Restore prior RAM_BANK
-000523r 2  8C F1 FF                 sty         U_REGISTER                          ; Restore prior Shared RAM Macro-page
-000526r 2  28                       plp                                             ; Restore caller's I flag
-000527r 2  60                       rts
-000528r 2               
-000528r 2               ; IN: .A.Y = Address of PageAddress struct that points to read location in shared memory
-000528r 2               ; OUT: .A = Byte read at address
-000528r 2               SHARED_READ:
-000528r 2  08                       php                                             ; Save caller's I flag
-000529r 2  78                       sei
-00052Ar 2  DA                       phx                                             ; Don't clobber .X
-00052Br 2  20 rr rr                 jsr         SHARED_RW_PAGE_SETUP                ; Clobbers .X.  After, .X = old RAM_BANK, .Y = old U
-00052Er 2  B2 rr                    lda         (ZP_M_SP1)                          ; Do the read
-000530r 2  86 rr                    stx         RAM_BANK_REG                        ; Restore prior RAM_BANK
-000532r 2  8C F1 FF                 sty         U_REGISTER                          ; Restore prior Shared RAM Macro-page
-000535r 2  FA                       plx
-000536r 2  28                       plp                                             ; Restore caller's I flag
-000537r 2  60                       rts
-000538r 2               
-000538r 2               SHARED_RW_PAGE_SETUP:
-000538r 2  85 rr                    sta         ZP_M_SP1
-00053Ar 2  84 rr                    sty         ZP_M_SP1 + 1
-00053Cr 2  A0 02                    ldy         #PageAddress::page
-00053Er 2  B1 rr                    lda         (ZP_M_SP1),Y                        ; Load the page
-000540r 2  48                       pha                                             ; ...and save it for use later
-000541r 2  A0 01                    ldy         #PageAddress::addr + Address::h
-000543r 2  B1 rr                    lda         (ZP_M_SP1),Y                        ; Get the HOB of the address
-000545r 2  AA                       tax
-000546r 2  A0 00                    ldy         #PageAddress::addr + Address::l
-000548r 2  B1 rr                    lda         (ZP_M_SP1),Y                        ; Now the LOB
-00054Ar 2  85 rr                    sta         ZP_M_SP1
-00054Cr 2  86 rr                    stx         ZP_M_SP1 + 1
-00054Er 2  68                       pla                                             ; Get the page back
-00054Fr 2  A8                       tay                                             ; Save the page for use later
-000550r 2  09 F0                    ora         #$F0                                ; Shared Bank transform
-000552r 2  A6 rr                    ldx         RAM_BANK_REG                        ; Save bank for restore
-000554r 2  85 rr                    sta         RAM_BANK_REG                        ; Update the RAM_BANK to new Shared bank
-000556r 2  98                       tya                                             ; Get the original page back
-000557r 2  4A                       lsr                                             ; Shift right 4-bits
-000558r 2  4A                       lsr
-000559r 2  4A                       lsr
-00055Ar 2  4A                       lsr
-00055Br 2  AC F1 FF                 ldy         U_REGISTER                          ; Save macro-page for restore
-00055Er 2  8D F1 FF                 sta         U_REGISTER                          ; Update macro-page[0..3] from PageAddress::page[4..7]
-000561r 2  60                       rts
-000562r 2               
-000562r 2               ; Memory Copy
-000562r 2               ; ZP_TEMP_VEC: From, ZP_TEMP_VEC2: To, .A.Y: Size
-000562r 2               MEM_COPY:
-000562r 2  DA                       phx
-000563r 2  AA                       tax
-000564r 2  F0 01                    beq         :+                                  ; Whole pages?  .Y is already the pass count
-000566r 2  C8                       iny                                             ; Partial page counts as one more pass of .X
-000567r 2               :
-000567r 2  98                       tya
-000568r 2  F0 3C                    beq         @done                               ; copy zero bytes?  Done!
-00056Ar 2  20 rr rr                 PRINT_CRLF
-00056Dr 2  A5 rr 20 rr              PRINT_BYTE  ZP_TEMP_VEC + 1
-000571r 2  rr           
-000572r 2  A5 rr 20 rr              PRINT_BYTE  ZP_TEMP_VEC
-000576r 2  rr           
-000577r 2  A9 2D 20 rr              PRINT_CHAR  #ASCII_DASH, #ASCII_GT
-00057Br 2  rr A9 3E 20  
-00057Fr 2  rr rr        
-000581r 2  A5 rr 20 rr              PRINT_BYTE  ZP_TEMP_VEC2 + 1
-000585r 2  rr           
-000586r 2  A5 rr 20 rr              PRINT_BYTE  ZP_TEMP_VEC2
-00058Ar 2  rr           
-00058Br 2               
-00058Br 2               @loop:
-00058Br 2  B2 rr                    lda         (ZP_TEMP_VEC)
-00058Dr 2  92 rr                    sta         (ZP_TEMP_VEC2)
-00058Fr 2  A9 2E 20 rr              PRINT_CHAR  #ASCII_PERIOD
-000593r 2  rr           
-000594r 2  E6 rr                    inc         ZP_TEMP_VEC
-000596r 2  D0 02                    bne         :+
-000598r 2  E6 rr                    inc         ZP_TEMP_VEC + 1
-00059Ar 2               :
-00059Ar 2  E6 rr                    inc         ZP_TEMP_VEC2
-00059Cr 2  D0 02                    bne         :+
-00059Er 2  E6 rr                    inc         ZP_TEMP_VEC2 + 1
-0005A0r 2               :
-0005A0r 2  CA                       dex
-0005A1r 2  D0 E8                    bne         @loop
-0005A3r 2  88                       dey
-0005A4r 2  D0 E5                    bne         @loop
-0005A6r 2               
-0005A6r 2               @done:
-0005A6r 2  FA                       plx
-0005A7r 2  60                       rts
-0005A8r 2               
-0005A8r 2               ; TESTS
-0005A8r 2               MEM_TEST:
-0005A8r 2  48 DA 5A                 PUSH_AXY
-0005ABr 2  20 rr rr                 PRINT_CRLF
-0005AEr 2                           ;stz         T_REGISTER
-0005AEr 2               
-0005AEr 2               @task_num_loop:
-0005AEr 2  64 rr                    stz         RAM_BANK_REG
-0005B0r 2  A9 04                    lda         #$04
-0005B2r 2  A2 80                    ldx         #$80                                ; exclude the task serial buffers @ $0200 && $0300
-0005B4r 2  20 rr rr                 jsr         TEST_PAGE_RANGE
-0005B7r 2  A2 A0                    ldx         #$A0                                ; end of banked RAM
-0005B9r 2               
-0005B9r 2               @ram_bank_loop:
-0005B9r 2  A5 rr 20 rr              PRINT_BYTE  RAM_BANK_REG
-0005BDr 2  rr           
-0005BEr 2  A9 2E 20 rr              PRINT_CHAR  #ASCII_PERIOD
-0005C2r 2  rr           
-0005C3r 2  A9 80                    lda         #$80
-0005C5r 2  20 rr rr                 jsr         TEST_PAGE_RANGE
-0005C8r 2  E6 rr                    inc         RAM_BANK_REG
-0005CAr 2  A9 F0                    lda         #NUM_RAM_BANKS
-0005CCr 2  C5 rr                    cmp         RAM_BANK_REG
-0005CEr 2  D0 E9                    bne         @ram_bank_loop
-0005D0r 2                           ;inc         T_REGISTER
-0005D0r 2                           ;lda         #$10
-0005D0r 2                           ;cmp         T_REGISTER
-0005D0r 2                           ;bne         @task_num_loop
-0005D0r 2  9C F1 FF                 stz         U_REGISTER
-0005D3r 2               
-0005D3r 2               @shared_banks_loop:
-0005D3r 2  A9 F0                    lda         #$F0
-0005D5r 2  85 rr                    sta         RAM_BANK_REG
-0005D7r 2               
-0005D7r 2               @shared_bank_loop:
-0005D7r 2  AD F1 FF 20              PRINT_BYTE  U_REGISTER
-0005DBr 2  rr rr        
-0005DDr 2  A9 2E 20 rr              PRINT_CHAR  #ASCII_PERIOD
-0005E1r 2  rr           
-0005E2r 2  A5 rr 20 rr              PRINT_BYTE  RAM_BANK_REG
-0005E6r 2  rr           
-0005E7r 2  A9 2E 20 rr              PRINT_CHAR  #ASCII_PERIOD
-0005EBr 2  rr           
-0005ECr 2  A9 80                    lda         #$80
-0005EEr 2  20 rr rr                 jsr         TEST_PAGE_RANGE
-0005F1r 2  E6 rr                    inc         RAM_BANK_REG                        ; increment shared bank
-0005F3r 2  D0 E2                    bne         @shared_bank_loop
-0005F5r 2  EE F1 FF                 inc         U_REGISTER
-0005F8r 2  AD F1 FF                 lda         U_REGISTER
-0005FBr 2  C9 10                    cmp         #$10
-0005FDr 2  90 D4                    bcc         @shared_banks_loop
-0005FFr 2  7A FA 68                 PULL_YXA
-000602r 2  60                       rts
+000508r 2               ; ****************************************************************************
+000508r 2               ; Reset a task's memory: everything it allocated is freed, without walking its handles.
+000508r 2               ;   1. Its MMU area is re-initialized (all its task pages, chunks, banks and handles are freed)
+000508r 2               ;   2. Its shared memory references are dropped (banks nobody else references are freed)
+000508r 2               ;   3. The message rings it sends or receives on are emptied
+000508r 2               ;   4. Its IRQ / S/W interrupt handlers are unregistered
+000508r 2               ; Called when a task completes (TASK_START).  The task must not be running (or be the calling task).
+000508r 2               ; IN: .A = task
+000508r 2               ; Preserves .A, .X, .Y
+000508r 2               MM_TASK_RESET:
+000508r 2  08                       php                                             ; Save caller's I flag
+000509r 2  78                       sei
+00050Ar 2  48 DA 5A                 PUSH_AXY
+00050Dr 2  29 0F                    and         #$0F
+00050Fr 2  85 rr                    sta         ZP_TC_TASK
+000511r 2  A9 rr 85 rr              LOAD_ADDR   MM_TASK_INIT, ZP_TC_VEC
+000515r 2  A9 rr 85 rr  
+000519r 2  20 rr rr                 jsr         TASK_CALL                           ; Re-initialize its MMU area, in the task
+00051Cr 2  A5 rr                    lda         ZP_TC_TASK
+00051Er 2  20 rr rr                 jsr         SH_RESET_TASK
+000521r 2  20 rr rr                 jsr         MSG_RESET_TASK
+000524r 2  20 rr rr                 jsr         IRQ_UNREGISTER_TASK
+000527r 2  7A FA 68                 PULL_YXA
+00052Ar 2  28                       plp                                             ; Restore caller's I flag
+00052Br 2  60                       rts
+00052Cr 2               
+00052Cr 2               ; Memory Copy
+00052Cr 2               ; ZP_TEMP_VEC: From, ZP_TEMP_VEC2: To, .A.Y: Size
+00052Cr 2               MEM_COPY:
+00052Cr 2  DA                       phx
+00052Dr 2  AA                       tax
+00052Er 2  F0 01                    beq         :+                                  ; Whole pages?  .Y is already the pass count
+000530r 2  C8                       iny                                             ; Partial page counts as one more pass of .X
+000531r 2               :
+000531r 2  98                       tya
+000532r 2  F0 3C                    beq         @done                               ; copy zero bytes?  Done!
+000534r 2  20 rr rr                 PRINT_CRLF
+000537r 2  A5 rr 20 rr              PRINT_BYTE  ZP_TEMP_VEC + 1
+00053Br 2  rr           
+00053Cr 2  A5 rr 20 rr              PRINT_BYTE  ZP_TEMP_VEC
+000540r 2  rr           
+000541r 2  A9 2D 20 rr              PRINT_CHAR  #ASCII_DASH, #ASCII_GT
+000545r 2  rr A9 3E 20  
+000549r 2  rr rr        
+00054Br 2  A5 rr 20 rr              PRINT_BYTE  ZP_TEMP_VEC2 + 1
+00054Fr 2  rr           
+000550r 2  A5 rr 20 rr              PRINT_BYTE  ZP_TEMP_VEC2
+000554r 2  rr           
+000555r 2               
+000555r 2               @loop:
+000555r 2  B2 rr                    lda         (ZP_TEMP_VEC)
+000557r 2  92 rr                    sta         (ZP_TEMP_VEC2)
+000559r 2  A9 2E 20 rr              PRINT_CHAR  #ASCII_PERIOD
+00055Dr 2  rr           
+00055Er 2  E6 rr                    inc         ZP_TEMP_VEC
+000560r 2  D0 02                    bne         :+
+000562r 2  E6 rr                    inc         ZP_TEMP_VEC + 1
+000564r 2               :
+000564r 2  E6 rr                    inc         ZP_TEMP_VEC2
+000566r 2  D0 02                    bne         :+
+000568r 2  E6 rr                    inc         ZP_TEMP_VEC2 + 1
+00056Ar 2               :
+00056Ar 2  CA                       dex
+00056Br 2  D0 E8                    bne         @loop
+00056Dr 2  88                       dey
+00056Er 2  D0 E5                    bne         @loop
+000570r 2               
+000570r 2               @done:
+000570r 2  FA                       plx
+000571r 2  60                       rts
+000572r 2               
+000572r 2               ; TESTS
+000572r 2               MEM_TEST:
+000572r 2  48 DA 5A                 PUSH_AXY
+000575r 2  20 rr rr                 PRINT_CRLF
+000578r 2                           ;stz         T_REGISTER
+000578r 2               
+000578r 2               @task_num_loop:
+000578r 2  64 rr                    stz         RAM_BANK_REG
+00057Ar 2  A9 04                    lda         #$04
+00057Cr 2  A2 80                    ldx         #$80                                ; exclude the task serial buffers @ $0200 && $0300
+00057Er 2  20 rr rr                 jsr         TEST_PAGE_RANGE
+000581r 2  A2 A0                    ldx         #$A0                                ; end of banked RAM
+000583r 2               
+000583r 2               @ram_bank_loop:
+000583r 2  A5 rr 20 rr              PRINT_BYTE  RAM_BANK_REG
+000587r 2  rr           
+000588r 2  A9 2E 20 rr              PRINT_CHAR  #ASCII_PERIOD
+00058Cr 2  rr           
+00058Dr 2  A9 80                    lda         #$80
+00058Fr 2  20 rr rr                 jsr         TEST_PAGE_RANGE
+000592r 2  E6 rr                    inc         RAM_BANK_REG
+000594r 2  A9 F0                    lda         #NUM_RAM_BANKS
+000596r 2  C5 rr                    cmp         RAM_BANK_REG
+000598r 2  D0 E9                    bne         @ram_bank_loop
+00059Ar 2                           ;inc         T_REGISTER
+00059Ar 2                           ;lda         #$10
+00059Ar 2                           ;cmp         T_REGISTER
+00059Ar 2                           ;bne         @task_num_loop
+00059Ar 2  9C F1 FF                 stz         U_REGISTER
+00059Dr 2               
+00059Dr 2               @shared_banks_loop:
+00059Dr 2  A9 F0                    lda         #$F0
+00059Fr 2  85 rr                    sta         RAM_BANK_REG
+0005A1r 2               
+0005A1r 2               @shared_bank_loop:
+0005A1r 2  AD F1 FF 20              PRINT_BYTE  U_REGISTER
+0005A5r 2  rr rr        
+0005A7r 2  A9 2E 20 rr              PRINT_CHAR  #ASCII_PERIOD
+0005ABr 2  rr           
+0005ACr 2  A5 rr 20 rr              PRINT_BYTE  RAM_BANK_REG
+0005B0r 2  rr           
+0005B1r 2  A9 2E 20 rr              PRINT_CHAR  #ASCII_PERIOD
+0005B5r 2  rr           
+0005B6r 2  A9 80                    lda         #$80
+0005B8r 2  20 rr rr                 jsr         TEST_PAGE_RANGE
+0005BBr 2  E6 rr                    inc         RAM_BANK_REG                        ; increment shared bank
+0005BDr 2  D0 E2                    bne         @shared_bank_loop
+0005BFr 2  EE F1 FF                 inc         U_REGISTER
+0005C2r 2  AD F1 FF                 lda         U_REGISTER
+0005C5r 2  C9 10                    cmp         #$10
+0005C7r 2  90 D4                    bcc         @shared_banks_loop
+0005C9r 2  7A FA 68                 PULL_YXA
+0005CCr 2  60                       rts
+0005CDr 2               
+0005CDr 2               ; .A = HOB of first page to test, .X = HOB of last page + 1
+0005CDr 2               TEST_PAGE_RANGE:
+0005CDr 2  85 rr                    sta         ZP_TEMP_VEC + 1
+0005CFr 2  20 rr rr                 PRINT_BYTE
+0005D2r 2  A9 00 20 rr              PRINT_BYTE  #0
+0005D6r 2  rr           
+0005D7r 2  A9 2E 20 rr              PRINT_CHAR  #ASCII_PERIOD
+0005DBr 2  rr           
+0005DCr 2  8A                       txa
+0005DDr 2  3A                       dec
+0005DEr 2  20 rr rr                 PRINT_BYTE
+0005E1r 2  A9 FF 20 rr              PRINT_BYTE  #$FF
+0005E5r 2  rr           
+0005E6r 2  A9 3A 20 rr              PRINT_CHAR  #ASCII_COLON
+0005EAr 2  rr           
+0005EBr 2  64 rr                    stz         ZP_TEMP_VEC
+0005EDr 2  64 rr                    stz         ZP_TEMP
+0005EFr 2               
+0005EFr 2               @loop_init:
+0005EFr 2  A0 00                    ldy         #0
+0005F1r 2               
+0005F1r 2               @loop:
+0005F1r 2  B1 rr                    lda         (ZP_TEMP_VEC),Y                     ; save what is in memory (non-descructive)
+0005F3r 2  85 rr                    sta         ZP_M_SV
+0005F5r 2  A9 AA                    lda         #$AA
+0005F7r 2               @test_it:
+0005F7r 2  49 FF                    eor         #$FF
+0005F9r 2  91 rr                    sta         (ZP_TEMP_VEC),Y
+0005FBr 2  D1 rr                    cmp         (ZP_TEMP_VEC),Y
+0005FDr 2  F0 04                    beq         @next
+0005FFr 2  A9 21                    lda         #ASCII_BANG
+000601r 2  80 0D                    bra         @write                              ; always, no need to restore value since it isn't storing properly anyway
 000603r 2               
-000603r 2               ; .A = HOB of first page to test, .X = HOB of last page + 1
-000603r 2               TEST_PAGE_RANGE:
-000603r 2  85 rr                    sta         ZP_TEMP_VEC + 1
-000605r 2  20 rr rr                 PRINT_BYTE
-000608r 2  A9 00 20 rr              PRINT_BYTE  #0
-00060Cr 2  rr           
-00060Dr 2  A9 2E 20 rr              PRINT_CHAR  #ASCII_PERIOD
-000611r 2  rr           
-000612r 2  8A                       txa
-000613r 2  3A                       dec
-000614r 2  20 rr rr                 PRINT_BYTE
-000617r 2  A9 FF 20 rr              PRINT_BYTE  #$FF
-00061Br 2  rr           
-00061Cr 2  A9 3A 20 rr              PRINT_CHAR  #ASCII_COLON
-000620r 2  rr           
-000621r 2  64 rr                    stz         ZP_TEMP_VEC
-000623r 2  64 rr                    stz         ZP_TEMP
-000625r 2               
-000625r 2               @loop_init:
-000625r 2  A0 00                    ldy         #0
-000627r 2               
-000627r 2               @loop:
-000627r 2  B1 rr                    lda         (ZP_TEMP_VEC),Y                     ; save what is in memory (non-descructive)
-000629r 2  85 rr                    sta         ZP_M_SV
-00062Br 2  A9 AA                    lda         #$AA
-00062Dr 2               @test_it:
-00062Dr 2  49 FF                    eor         #$FF
-00062Fr 2  91 rr                    sta         (ZP_TEMP_VEC),Y
-000631r 2  D1 rr                    cmp         (ZP_TEMP_VEC),Y
-000633r 2  F0 04                    beq         @next
-000635r 2  A9 21                    lda         #ASCII_BANG
-000637r 2  80 0D                    bra         @write                              ; always, no need to restore value since it isn't storing properly anyway
-000639r 2               
-000639r 2               @next:
-000639r 2  C9 AA                    cmp         #$AA
-00063Br 2  D0 F0                    bne         @test_it
-00063Dr 2  A5 rr                    lda         ZP_M_SV                             ; restore saved value
-00063Fr 2  91 rr                    sta         (ZP_TEMP_VEC),Y
-000641r 2  C8                       iny
-000642r 2  D0 E3                    bne         @loop
-000644r 2  A9 2E                    lda         #ASCII_PERIOD
-000646r 2               
-000646r 2               @write:
-000646r 2  20 rr rr                 PRINT_CHAR
-000649r 2  64 rr                    stz         ZP_TEMP
-00064Br 2  E6 rr                    inc         ZP_TEMP_VEC + 1
-00064Dr 2  E4 rr                    cpx         ZP_TEMP_VEC + 1
-00064Fr 2  D0 D4                    bne         @loop_init
-000651r 2  4C rr rr                 PRINT_CRLF_JMP
-000654r 2               
-000654r 2               ; test memory pages, start page in .A, end page in .X
-000654r 2               DEEP_PAGE_TEST_RANGE_AX:
-000654r 2  86 rr                    stx         ZP_M_SP2_H
-000656r 2  85 rr                    sta         ZP_M_SP1_H
-000658r 2  80 06                    bra         DEEP_PAGE_TEST_RANGE
-00065Ar 2               
-00065Ar 2               ; test a single page in .A
-00065Ar 2               DEEP_PAGE_TEST_A:
-00065Ar 2  85 rr                    sta         ZP_M_SP1_H
-00065Cr 2               
-00065Cr 2               ; test a single page in ZP_M_SP1_H
-00065Cr 2               DEEP_PAGE_TEST:
-00065Cr 2  A5 rr                    lda         ZP_M_SP1_H
-00065Er 2  85 rr                    sta         ZP_M_SP2_H
-000660r 2               
-000660r 2               ; test a range of pages, start in ZP_M_SP1_H, end in ZP_M_SP2_H
-000660r 2               DEEP_PAGE_TEST_RANGE:
-000660r 2  DA 5A                    PUSH_XY
-000662r 2  64 rr                    stz         ZP_M_SP1_L
-000664r 2               @next_page:
-000664r 2  A5 rr                    lda         ZP_M_SP1_H
-000666r 2  20 rr rr                 PRINT_BYTE
-000669r 2  A9 00 20 rr              PRINT_BYTE  #0
-00066Dr 2  rr           
-00066Er 2  A9 3A 20 rr              PRINT_CHAR  #ASCII_COLON
-000672r 2  rr           
-000673r 2  20 rr rr                 PRINT_CRLF
-000676r 2  A0 00                    ldy         #0
-000678r 2  A2 00                    ldx         #0
-00067Ar 2               @next_cell:
-00067Ar 2  64 rr                    stz         ZP_M_TEMP
-00067Cr 2  B1 rr                    lda         (ZP_M_SP1),Y
-00067Er 2  85 rr                    sta         ZP_M_SV                             ; save the old value
-000680r 2  A9 01                    lda         #1
-000682r 2  85 rr                    sta         ZP_M_TEMP2
-000684r 2               @loop_start:
-000684r 2  A5 rr                    lda         ZP_M_TEMP2
-000686r 2  91 rr                    sta         (ZP_M_SP1),Y                     ; store it
-000688r 2  D1 rr                    cmp         (ZP_M_SP1),Y                     ; test it
-00068Ar 2  D0 08                    bne         :+
-00068Cr 2  49 FF                    eor         #$FF                                ; test the inverse
-00068Er 2  91 rr                    sta         (ZP_M_SP1),Y                     ; store it
-000690r 2  D1 rr                    cmp         (ZP_M_SP1),Y                     ; test it
-000692r 2  F0 06                    beq         @shift
-000694r 2               :
-000694r 2  A5 rr                    lda         ZP_M_TEMP2
-000696r 2  05 rr                    ora         ZP_M_TEMP                           ; add bit to set of bad bits found
-000698r 2  85 rr                    sta         ZP_M_TEMP
-00069Ar 2               @shift:
-00069Ar 2  06 rr                    asl         ZP_M_TEMP2                          ; Walk the bit forward
-00069Cr 2  D0 E6                    bne         @loop_start
-00069Er 2  A5 rr                    lda         ZP_M_TEMP                           ; get the set of bad bits we found
-0006A0r 2  20 rr rr                 PRINT_BYTE
-0006A3r 2  E8                       inx
-0006A4r 2  E0 10                    cpx         #$10
-0006A6r 2  F0 07                    beq         :+
-0006A8r 2  A9 20 20 rr              PRINT_SPACE
-0006ACr 2  rr           
-0006ADr 2  80 05                    bra         :++
-0006AFr 2               :
-0006AFr 2  20 rr rr                 PRINT_CRLF
-0006B2r 2  A2 00                    ldx         #0
-0006B4r 2               :
-0006B4r 2  A5 rr                    lda         ZP_M_SV
-0006B6r 2  91 rr                    sta         (ZP_M_SP1),Y                     ; restore the old value
-0006B8r 2  C8                       iny
-0006B9r 2  D0 BF                    bne         @next_cell
-0006BBr 2  A5 rr                    lda         ZP_M_SP1_H
-0006BDr 2  C5 rr                    cmp         ZP_M_SP2_H
-0006BFr 2  F0 05                    beq         @done
-0006C1r 2  E6 rr                    inc         ZP_M_SP1_H
-0006C3r 2  4C rr rr                 jmp         @next_page
-0006C6r 2               @done:
-0006C6r 2  7A FA                    PULL_YX
-0006C8r 2  60                       rts
-0006C9r 2               
-0006C9r 2               ; ****************************************************************************
-0006C9r 2               ; MMU self test (TH_MMU_TEST, $F833; from WOZMON: F833R).  Runs the handle calls in the current task and
-0006C9r 2               ; prints "MMU test: ok", or "MMU test: FAIL x ee" (x = failing step, ee = error code or value read).
-0006C9r 2               ; Allocates and frees 2 task RAM pages (at the top of the free area) and 2 RAM banks.
-0006C9r 2               
-0006C9r 2               .macro _M_MT_FAIL_IF_C  step                                ; Fail if the call returned an error
-0006C9r 2                           bcc         :+
-0006C9r 2                           ldx         #step
-0006C9r 2                           jmp         @fail
-0006C9r 2               :
-0006C9r 2               .endmacro
-0006C9r 2               
-0006C9r 2               .macro _M_MT_FAIL_IF_NC step                                ; Fail if the call should have failed but didn't
-0006C9r 2                           bcs         :+
-0006C9r 2                           ldx         #step
-0006C9r 2                           jmp         @fail
-0006C9r 2               :
-0006C9r 2               .endmacro
-0006C9r 2               
-0006C9r 2               .macro _M_MT_EXPECT     step, value                         ; Fail if .A <> value
-0006C9r 2                           cmp         #value
-0006C9r 2                           beq         :+
-0006C9r 2                           ldx         #step
-0006C9r 2                           jmp         @fail
-0006C9r 2               :
-0006C9r 2               .endmacro
-0006C9r 2               
-0006C9r 2  0A 4D 4D 55  NamedHString    S_MMU_TEST, "MMU test: "
-0006CDr 2  20 74 65 73  
-0006D1r 2  74 3A 20     
-0006D4r 2               
-0006D4r 2               MMU_TEST:
-0006D4r 2  48 DA 5A                 PUSH_AXY
-0006D7r 2  A9 rr A0 rr              _M_WRITE_HSTRING    S_MMU_TEST
-0006DBr 2  20 rr rr     
-0006DEr 2               
-0006DEr 2               ; Small (in-entry) allocation
-0006DEr 2  A9 02                    lda         #2                                  ; 2 bytes
-0006E0r 2  A0 00                    ldy         #0
-0006E2r 2  A2 00                    ldx         #0
-0006E4r 2  20 rr rr                 jsr         MM_ALLOC
-0006E7r 2  90 05 A2 61              _M_MT_FAIL_IF_C     'a'
-0006EBr 2  4C rr rr     
-0006EEr 2  85 rr                    sta         ZP_TEMP                             ; h1
-0006F0r 2  A2 5A                    ldx         #$5A
-0006F2r 2  A0 01                    ldy         #1
-0006F4r 2  20 rr rr                 jsr         MM_WRITE
-0006F7r 2  90 05 A2 62              _M_MT_FAIL_IF_C     'b'
-0006FBr 2  4C rr rr     
-0006FEr 2  A5 rr                    lda         ZP_TEMP
-000700r 2  A0 01                    ldy         #1
-000702r 2  20 rr rr                 jsr         MM_READ
-000705r 2  90 05 A2 63              _M_MT_FAIL_IF_C     'c'
-000709r 2  4C rr rr     
-00070Cr 2  C9 5A F0 05              _M_MT_EXPECT        'c', $5A
-000710r 2  A2 63 4C rr  
-000714r 2  rr           
-000715r 2  A5 rr                    lda         ZP_TEMP
-000717r 2  A0 02                    ldy         #2                                  ; Past the end
-000719r 2  20 rr rr                 jsr         MM_READ
-00071Cr 2  B0 05 A2 64              _M_MT_FAIL_IF_NC    'd'
-000720r 2  4C rr rr     
-000723r 2               
-000723r 2               ; Task RAM pages
-000723r 2  A9 2C                    lda         #<300                               ; 2 pages
-000725r 2  A0 01                    ldy         #>300
-000727r 2  A2 00                    ldx         #0
-000729r 2  20 rr rr                 jsr         MM_ALLOC
-00072Cr 2  90 05 A2 65              _M_MT_FAIL_IF_C     'e'
-000730r 2  4C rr rr     
-000733r 2  85 rr                    sta         ZP_TEMP_2                           ; h2
-000735r 2  20 rr rr                 jsr         MM_LOCK
-000738r 2  90 05 A2 66              _M_MT_FAIL_IF_C     'f'
-00073Cr 2  4C rr rr     
-00073Fr 2  85 rr                    sta         ZP_TEMP_VEC3
-000741r 2  84 rr                    sty         ZP_TEMP_VEC3 + 1
-000743r 2  C9 00 F0 05              _M_MT_EXPECT        'f', 0                      ; Page aligned
-000747r 2  A2 66 4C rr  
-00074Br 2  rr           
-00074Cr 2  98                       tya
-00074Dr 2  CD 63 7E                 cmp         MMU_HDR + MmuHeader::low_water      ; Lowest allocated page
-000750r 2  F0 05                    beq         :+
-000752r 2  A2 66                    ldx         #'f'
-000754r 2  4C rr rr                 jmp         @fail
-000757r 2               :
-000757r 2  A9 A5                    lda         #$A5                                ; Write through the raw pointer
-000759r 2  A0 FF                    ldy         #255
-00075Br 2  91 rr                    sta         (ZP_TEMP_VEC3),Y
-00075Dr 2  A5 rr                    lda         ZP_TEMP_2
-00075Fr 2  20 rr rr                 jsr         MM_FREE                             ; Locked: must fail (preserves .X = old bank)
-000762r 2  B0 05 A2 67              _M_MT_FAIL_IF_NC    'g'
-000766r 2  4C rr rr     
-000769r 2  A5 rr                    lda         ZP_TEMP_2
-00076Br 2  20 rr rr                 jsr         MM_UNLOCK
-00076Er 2  90 05 A2 68              _M_MT_FAIL_IF_C     'h'
-000772r 2  4C rr rr     
-000775r 2  A5 rr                    lda         ZP_TEMP_2
-000777r 2  A0 FF                    ldy         #255
-000779r 2  20 rr rr                 jsr         MM_READ
-00077Cr 2  90 05 A2 69              _M_MT_FAIL_IF_C     'i'
-000780r 2  4C rr rr     
-000783r 2  C9 A5 F0 05              _M_MT_EXPECT        'i', $A5
-000787r 2  A2 69 4C rr  
-00078Br 2  rr           
-00078Cr 2               
-00078Cr 2               ; RAM banks
-00078Cr 2  A9 01                    lda         #<$2001                             ; 2 banks
-00078Er 2  A0 20                    ldy         #>$2001
-000790r 2  A2 01                    ldx         #AI_PAGED
-000792r 2  20 rr rr                 jsr         MM_ALLOC
-000795r 2  90 05 A2 6A              _M_MT_FAIL_IF_C     'j'
-000799r 2  4C rr rr     
-00079Cr 2  85 rr                    sta         ZP_TEMP_VEC4                        ; h3
-00079Er 2  A2 3C                    ldx         #$3C
-0007A0r 2  A0 07                    ldy         #7
-0007A2r 2  20 rr rr                 jsr         MM_WRITE
-0007A5r 2  90 05 A2 6B              _M_MT_FAIL_IF_C     'k'
-0007A9r 2  4C rr rr     
-0007ACr 2  A5 rr                    lda         ZP_TEMP_VEC4
-0007AEr 2  A0 07                    ldy         #7
-0007B0r 2  20 rr rr                 jsr         MM_READ
-0007B3r 2  90 05 A2 6B              _M_MT_FAIL_IF_C     'k'
-0007B7r 2  4C rr rr     
-0007BAr 2  C9 3C F0 05              _M_MT_EXPECT        'k', $3C
-0007BEr 2  A2 6B 4C rr  
-0007C2r 2  rr           
-0007C3r 2               
-0007C3r 2               ; Chunks: two 16-byte chunks share a page
-0007C3r 2  A9 0A                    lda         #10                                 ; 16-byte class
-0007C5r 2  A0 00                    ldy         #0
-0007C7r 2  A2 00                    ldx         #0
-0007C9r 2  20 rr rr                 jsr         MM_ALLOC
-0007CCr 2  90 05 A2 6F              _M_MT_FAIL_IF_C     'o'
-0007D0r 2  4C rr rr     
-0007D3r 2  85 rr                    sta         ZP_TEMP_VEC3                        ; c1
-0007D5r 2  A9 10                    lda         #16
-0007D7r 2  A0 00                    ldy         #0
-0007D9r 2  A2 00                    ldx         #0
-0007DBr 2  20 rr rr                 jsr         MM_ALLOC
-0007DEr 2  90 05 A2 6F              _M_MT_FAIL_IF_C     'o'
-0007E2r 2  4C rr rr     
-0007E5r 2  85 rr                    sta         ZP_TEMP_VEC3 + 1                    ; c2
-0007E7r 2  A5 rr                    lda         ZP_TEMP_VEC3
-0007E9r 2  20 rr rr                 jsr         MM_LOCK
-0007ECr 2  90 05 A2 70              _M_MT_FAIL_IF_C     'p'
-0007F0r 2  4C rr rr     
-0007F3r 2  85 rr                    sta         ZP_TEMP_VEC                         ; c1's address
-0007F5r 2  84 rr                    sty         ZP_TEMP_VEC + 1
-0007F7r 2  A5 rr                    lda         ZP_TEMP_VEC3
-0007F9r 2  20 rr rr                 jsr         MM_UNLOCK
-0007FCr 2  A5 rr                    lda         ZP_TEMP_VEC3 + 1
-0007FEr 2  20 rr rr                 jsr         MM_LOCK
-000801r 2  90 05 A2 70              _M_MT_FAIL_IF_C     'p'
-000805r 2  4C rr rr     
-000808r 2  C4 rr                    cpy         ZP_TEMP_VEC + 1                     ; Same page...
-00080Ar 2  F0 06                    beq         :+
-00080Cr 2  98                       tya
-00080Dr 2  A2 70                    ldx         #'p'
-00080Fr 2  4C rr rr                 jmp         @fail
-000812r 2               :
-000812r 2  C5 rr                    cmp         ZP_TEMP_VEC                         ; ...different chunk
-000814r 2  D0 05                    bne         :+
-000816r 2  A2 70                    ldx         #'p'
-000818r 2  4C rr rr                 jmp         @fail
-00081Br 2               :
-00081Br 2  A5 rr                    lda         ZP_TEMP_VEC3 + 1
-00081Dr 2  20 rr rr                 jsr         MM_UNLOCK
-000820r 2  A5 rr                    lda         ZP_TEMP_VEC3
-000822r 2  A2 77                    ldx         #$77
-000824r 2  A0 0F                    ldy         #15                                 ; Last byte of the chunk
-000826r 2  20 rr rr                 jsr         MM_WRITE
-000829r 2  90 05 A2 71              _M_MT_FAIL_IF_C     'q'
-00082Dr 2  4C rr rr     
-000830r 2  A5 rr                    lda         ZP_TEMP_VEC3
-000832r 2  A0 0F                    ldy         #15
-000834r 2  20 rr rr                 jsr         MM_READ
-000837r 2  90 05 A2 71              _M_MT_FAIL_IF_C     'q'
-00083Br 2  4C rr rr     
-00083Er 2  C9 77 F0 05              _M_MT_EXPECT        'q', $77
-000842r 2  A2 71 4C rr  
-000846r 2  rr           
-000847r 2  A5 rr                    lda         ZP_TEMP_VEC3
-000849r 2  A0 10                    ldy         #16                                 ; Past the end of the chunk
-00084Br 2  20 rr rr                 jsr         MM_READ
-00084Er 2  B0 05 A2 72              _M_MT_FAIL_IF_NC    'r'
-000852r 2  4C rr rr     
-000855r 2               
-000855r 2               ; Chunks: four 64-byte chunks need two chunk pages (3 per page)
-000855r 2  A2 03                    ldx         #3
-000857r 2               
-000857r 2               @alloc_64:
-000857r 2  DA                       phx
-000858r 2  A9 40                    lda         #64
-00085Ar 2  A0 00                    ldy         #0
-00085Cr 2  A2 00                    ldx         #0
-00085Er 2  20 rr rr                 jsr         MM_ALLOC
-000861r 2  FA                       plx
-000862r 2  90 05 A2 73              _M_MT_FAIL_IF_C     's'
-000866r 2  4C rr rr     
-000869r 2  95 rr                    sta         ZP_TEMP_VEC,X                       ; ZP_TEMP_VEC .. ZP_TEMP_VEC2 + 1
-00086Br 2  CA                       dex
-00086Cr 2  10 E9                    bpl         @alloc_64
-00086Er 2  A2 03                    ldx         #3
-000870r 2               
-000870r 2               @free_64:
-000870r 2  B5 rr                    lda         ZP_TEMP_VEC,X
-000872r 2  20 rr rr                 jsr         MM_FREE
-000875r 2  90 05 A2 74              _M_MT_FAIL_IF_C     't'
-000879r 2  4C rr rr     
-00087Cr 2  CA                       dex
-00087Dr 2  10 F1                    bpl         @free_64
-00087Fr 2  A5 rr                    lda         ZP_TEMP_VEC3
-000881r 2  20 rr rr                 jsr         MM_FREE
-000884r 2  90 05 A2 75              _M_MT_FAIL_IF_C     'u'
-000888r 2  4C rr rr     
-00088Br 2  A5 rr                    lda         ZP_TEMP_VEC3 + 1
-00088Dr 2  20 rr rr                 jsr         MM_FREE
-000890r 2  90 05 A2 75              _M_MT_FAIL_IF_C     'u'
-000894r 2  4C rr rr     
-000897r 2               
-000897r 2               ; Free everything; the page map must be back where it started
-000897r 2  A5 rr                    lda         ZP_TEMP
-000899r 2  20 rr rr                 jsr         MM_FREE
-00089Cr 2  90 05 A2 6C              _M_MT_FAIL_IF_C     'l'
-0008A0r 2  4C rr rr     
-0008A3r 2  A5 rr                    lda         ZP_TEMP_2
-0008A5r 2  20 rr rr                 jsr         MM_FREE
-0008A8r 2  90 05 A2 6C              _M_MT_FAIL_IF_C     'l'
-0008ACr 2  4C rr rr     
-0008AFr 2  A5 rr                    lda         ZP_TEMP_VEC4
-0008B1r 2  20 rr rr                 jsr         MM_FREE
-0008B4r 2  90 05 A2 6C              _M_MT_FAIL_IF_C     'l'
-0008B8r 2  4C rr rr     
-0008BBr 2  AD 63 7E                 lda         MMU_HDR + MmuHeader::low_water
-0008BEr 2  C9 7D F0 05              _M_MT_EXPECT        'm', MMU_SYS_PAGE
-0008C2r 2  A2 6D 4C rr  
-0008C6r 2  rr           
-0008C7r 2  A5 rr                    lda         ZP_TEMP_2
-0008C9r 2  20 rr rr                 jsr         MM_FREE                             ; Already freed: must fail
-0008CCr 2  B0 05 A2 6E              _M_MT_FAIL_IF_NC    'n'
-0008D0r 2  4C rr rr     
-0008D3r 2               
-0008D3r 2  A9 6F 20 rr              PRINT_CHAR  #'o', #'k'
-0008D7r 2  rr A9 6B 20  
-0008DBr 2  rr rr        
-0008DDr 2  80 28                    bra         @end
-0008DFr 2               
-0008DFr 2               @fail:                                                      ; .X = step, .A = error / value
-0008DFr 2  48                       pha
-0008E0r 2  DA                       phx
-0008E1r 2  A9 46 20 rr              PRINT_CHAR  #'F', #'A', #'I', #'L', #' '
-0008E5r 2  rr A9 41 20  
-0008E9r 2  rr rr A9 49  
-0008FAr 2  68                       pla
-0008FBr 2  20 rr rr                 PRINT_CHAR
-0008FEr 2  A9 20 20 rr              PRINT_SPACE
-000902r 2  rr           
-000903r 2  68                       pla
-000904r 2  20 rr rr                 PRINT_BYTE
-000907r 2               
-000907r 2               @end:
-000907r 2  20 rr rr                 PRINT_CRLF
-00090Ar 2  7A FA 68                 PULL_YXA
-00090Dr 2  60                       rts
-00090Er 2               
-00090Er 1               .include "irq.s"
-00090Er 2               .debuginfo
-00090Er 2               
-00090Er 2               .segment "IRQ"
+000603r 2               @next:
+000603r 2  C9 AA                    cmp         #$AA
+000605r 2  D0 F0                    bne         @test_it
+000607r 2  A5 rr                    lda         ZP_M_SV                             ; restore saved value
+000609r 2  91 rr                    sta         (ZP_TEMP_VEC),Y
+00060Br 2  C8                       iny
+00060Cr 2  D0 E3                    bne         @loop
+00060Er 2  A9 2E                    lda         #ASCII_PERIOD
+000610r 2               
+000610r 2               @write:
+000610r 2  20 rr rr                 PRINT_CHAR
+000613r 2  64 rr                    stz         ZP_TEMP
+000615r 2  E6 rr                    inc         ZP_TEMP_VEC + 1
+000617r 2  E4 rr                    cpx         ZP_TEMP_VEC + 1
+000619r 2  D0 D4                    bne         @loop_init
+00061Br 2  4C rr rr                 PRINT_CRLF_JMP
+00061Er 2               
+00061Er 2               ; test memory pages, start page in .A, end page in .X
+00061Er 2               DEEP_PAGE_TEST_RANGE_AX:
+00061Er 2  86 rr                    stx         ZP_M_SP2_H
+000620r 2  85 rr                    sta         ZP_M_SP1_H
+000622r 2  80 06                    bra         DEEP_PAGE_TEST_RANGE
+000624r 2               
+000624r 2               ; test a single page in .A
+000624r 2               DEEP_PAGE_TEST_A:
+000624r 2  85 rr                    sta         ZP_M_SP1_H
+000626r 2               
+000626r 2               ; test a single page in ZP_M_SP1_H
+000626r 2               DEEP_PAGE_TEST:
+000626r 2  A5 rr                    lda         ZP_M_SP1_H
+000628r 2  85 rr                    sta         ZP_M_SP2_H
+00062Ar 2               
+00062Ar 2               ; test a range of pages, start in ZP_M_SP1_H, end in ZP_M_SP2_H
+00062Ar 2               DEEP_PAGE_TEST_RANGE:
+00062Ar 2  DA 5A                    PUSH_XY
+00062Cr 2  64 rr                    stz         ZP_M_SP1_L
+00062Er 2               @next_page:
+00062Er 2  A5 rr                    lda         ZP_M_SP1_H
+000630r 2  20 rr rr                 PRINT_BYTE
+000633r 2  A9 00 20 rr              PRINT_BYTE  #0
+000637r 2  rr           
+000638r 2  A9 3A 20 rr              PRINT_CHAR  #ASCII_COLON
+00063Cr 2  rr           
+00063Dr 2  20 rr rr                 PRINT_CRLF
+000640r 2  A0 00                    ldy         #0
+000642r 2  A2 00                    ldx         #0
+000644r 2               @next_cell:
+000644r 2  64 rr                    stz         ZP_M_TEMP
+000646r 2  B1 rr                    lda         (ZP_M_SP1),Y
+000648r 2  85 rr                    sta         ZP_M_SV                             ; save the old value
+00064Ar 2  A9 01                    lda         #1
+00064Cr 2  85 rr                    sta         ZP_M_TEMP2
+00064Er 2               @loop_start:
+00064Er 2  A5 rr                    lda         ZP_M_TEMP2
+000650r 2  91 rr                    sta         (ZP_M_SP1),Y                     ; store it
+000652r 2  D1 rr                    cmp         (ZP_M_SP1),Y                     ; test it
+000654r 2  D0 08                    bne         :+
+000656r 2  49 FF                    eor         #$FF                                ; test the inverse
+000658r 2  91 rr                    sta         (ZP_M_SP1),Y                     ; store it
+00065Ar 2  D1 rr                    cmp         (ZP_M_SP1),Y                     ; test it
+00065Cr 2  F0 06                    beq         @shift
+00065Er 2               :
+00065Er 2  A5 rr                    lda         ZP_M_TEMP2
+000660r 2  05 rr                    ora         ZP_M_TEMP                           ; add bit to set of bad bits found
+000662r 2  85 rr                    sta         ZP_M_TEMP
+000664r 2               @shift:
+000664r 2  06 rr                    asl         ZP_M_TEMP2                          ; Walk the bit forward
+000666r 2  D0 E6                    bne         @loop_start
+000668r 2  A5 rr                    lda         ZP_M_TEMP                           ; get the set of bad bits we found
+00066Ar 2  20 rr rr                 PRINT_BYTE
+00066Dr 2  E8                       inx
+00066Er 2  E0 10                    cpx         #$10
+000670r 2  F0 07                    beq         :+
+000672r 2  A9 20 20 rr              PRINT_SPACE
+000676r 2  rr           
+000677r 2  80 05                    bra         :++
+000679r 2               :
+000679r 2  20 rr rr                 PRINT_CRLF
+00067Cr 2  A2 00                    ldx         #0
+00067Er 2               :
+00067Er 2  A5 rr                    lda         ZP_M_SV
+000680r 2  91 rr                    sta         (ZP_M_SP1),Y                     ; restore the old value
+000682r 2  C8                       iny
+000683r 2  D0 BF                    bne         @next_cell
+000685r 2  A5 rr                    lda         ZP_M_SP1_H
+000687r 2  C5 rr                    cmp         ZP_M_SP2_H
+000689r 2  F0 05                    beq         @done
+00068Br 2  E6 rr                    inc         ZP_M_SP1_H
+00068Dr 2  4C rr rr                 jmp         @next_page
+000690r 2               @done:
+000690r 2  7A FA                    PULL_YX
+000692r 2  60                       rts
+000693r 2               
+000693r 1               .include "irq.s"
+000693r 2               .debuginfo
+000693r 2               
+000693r 2               .segment "IRQ"
 000000r 2               
 000000r 2               ; ****************************************************************************
 000000r 2               ; IRQ dispatch (see MMU_PLAN.md, IO subsystem)
@@ -10477,41 +10606,73 @@ Current file: all.s
 0001A4r 2  18                       clc
 0001A5r 2  60                       rts
 0001A6r 2               
-0001A6r 2               ; Z = 1 if table entry .X is (current task, ZP_IRQ_H).  Preserves .X, .Y
-0001A6r 2               IRQ_MATCH:
-0001A6r 2  BD 00 7D                 lda         IRQ_TABLE,X
-0001A9r 2  CD F0 FF                 cmp         T_REGISTER
-0001ACr 2  D0 0C                    bne         @done
-0001AEr 2  BD 01 7D                 lda         IRQ_TABLE + 1,X
-0001B1r 2  C5 rr                    cmp         ZP_IRQ_H
-0001B3r 2  D0 05                    bne         @done
-0001B5r 2  BD 02 7D                 lda         IRQ_TABLE + 2,X
-0001B8r 2  C5 rr                    cmp         ZP_IRQ_H + 1
-0001BAr 2               
-0001BAr 2               @done:
-0001BAr 2  60                       rts
-0001BBr 2               
-0001BBr 2               ; Write .A to IRQ_TABLE + .Y in every task's system page.  I flag must be set.
-0001BBr 2               ; Preserves .A, .Y
-0001BBr 2               IRQ_REPLICATE:
-0001BBr 2  AE F0 FF                 ldx         T_REGISTER                          ; Task 0 holds the home task # during the loop
-0001BEr 2  9C F0 FF                 stz         T_REGISTER
-0001C1r 2  86 rr                    stx         ZP_IRQ_HOME
-0001C3r 2  A2 0F                    ldx         #MAX_TASK_NUMBER
-0001C5r 2               
-0001C5r 2               @loop:
-0001C5r 2  8E F0 FF                 stx         T_REGISTER                          ; Quick switch to task X (no stack use!)
-0001C8r 2  99 00 7D                 sta         IRQ_TABLE,Y
-0001CBr 2  CA                       dex
-0001CCr 2  10 F7                    bpl         @loop                               ; Ends in task 0
-0001CEr 2  A6 rr                    ldx         ZP_IRQ_HOME
-0001D0r 2  8E F0 FF                 stx         T_REGISTER                          ; Back to the home task
-0001D3r 2  60                       rts
-0001D4r 2               
-0001D4r 1               .include "msg.s"
-0001D4r 2               .debuginfo
-0001D4r 2               
-0001D4r 2               .segment "MSG"
+0001A6r 2               ; Unregister every IRQ and S/W interrupt handler of a task (for MM_TASK_RESET).
+0001A6r 2               ; IN: .A = task
+0001A6r 2               ; Preserves .A, .X, .Y
+0001A6r 2               IRQ_UNREGISTER_TASK:
+0001A6r 2  08                       php                                             ; Save caller's I flag
+0001A7r 2  78                       sei
+0001A8r 2  48 DA 5A                 PUSH_AXY
+0001ABr 2  29 0F                    and         #$0F
+0001ADr 2  85 rr                    sta         ZP_IRQ_TMP
+0001AFr 2  A2 00                    ldx         #0
+0001B1r 2               
+0001B1r 2               @loop:
+0001B1r 2  BD 00 7D                 lda         IRQ_TABLE,X
+0001B4r 2  C5 rr                    cmp         ZP_IRQ_TMP
+0001B6r 2  D0 09                    bne         @next
+0001B8r 2  DA                       phx
+0001B9r 2  8A                       txa
+0001BAr 2  A8                       tay                                             ; .Y = entry offset
+0001BBr 2  A9 FF                    lda         #IRQ_NO_TASK
+0001BDr 2  20 rr rr                 jsr         IRQ_REPLICATE
+0001C0r 2  FA                       plx
+0001C1r 2               
+0001C1r 2               @next:
+0001C1r 2  E8                       inx
+0001C2r 2  E8                       inx
+0001C3r 2  E8                       inx
+0001C4r 2  E0 90                    cpx         #IRQ_TABLE_SIZE
+0001C6r 2  D0 E9                    bne         @loop
+0001C8r 2  7A FA 68                 PULL_YXA
+0001CBr 2  28                       plp                                             ; Restore caller's I flag
+0001CCr 2  60                       rts
+0001CDr 2               
+0001CDr 2               ; Z = 1 if table entry .X is (current task, ZP_IRQ_H).  Preserves .X, .Y
+0001CDr 2               IRQ_MATCH:
+0001CDr 2  BD 00 7D                 lda         IRQ_TABLE,X
+0001D0r 2  CD F0 FF                 cmp         T_REGISTER
+0001D3r 2  D0 0C                    bne         @done
+0001D5r 2  BD 01 7D                 lda         IRQ_TABLE + 1,X
+0001D8r 2  C5 rr                    cmp         ZP_IRQ_H
+0001DAr 2  D0 05                    bne         @done
+0001DCr 2  BD 02 7D                 lda         IRQ_TABLE + 2,X
+0001DFr 2  C5 rr                    cmp         ZP_IRQ_H + 1
+0001E1r 2               
+0001E1r 2               @done:
+0001E1r 2  60                       rts
+0001E2r 2               
+0001E2r 2               ; Write .A to IRQ_TABLE + .Y in every task's system page.  I flag must be set.
+0001E2r 2               ; Preserves .A, .Y
+0001E2r 2               IRQ_REPLICATE:
+0001E2r 2  AE F0 FF                 ldx         T_REGISTER                          ; Task 0 holds the home task # during the loop
+0001E5r 2  9C F0 FF                 stz         T_REGISTER
+0001E8r 2  86 rr                    stx         ZP_IRQ_HOME
+0001EAr 2  A2 0F                    ldx         #MAX_TASK_NUMBER
+0001ECr 2               
+0001ECr 2               @loop:
+0001ECr 2  8E F0 FF                 stx         T_REGISTER                          ; Quick switch to task X (no stack use!)
+0001EFr 2  99 00 7D                 sta         IRQ_TABLE,Y
+0001F2r 2  CA                       dex
+0001F3r 2  10 F7                    bpl         @loop                               ; Ends in task 0
+0001F5r 2  A6 rr                    ldx         ZP_IRQ_HOME
+0001F7r 2  8E F0 FF                 stx         T_REGISTER                          ; Back to the home task
+0001FAr 2  60                       rts
+0001FBr 2               
+0001FBr 1               .include "msg.s"
+0001FBr 2               .debuginfo
+0001FBr 2               
+0001FBr 2               .segment "MSG"
 000000r 2               
 000000r 2               ; ****************************************************************************
 000000r 2               ; Message rings (see MMU_PLAN.md, Messaging)
@@ -10820,9 +10981,540 @@ Current file: all.s
 0001A3r 2  85 rr                    sta         RAM_BANK_REG
 0001A5r 2  60                       rts
 0001A6r 2               
-0001A6r 1               .include "shell.s"
+0001A6r 1               .include "shared.s"
 0001A6r 2               .debuginfo
-0001A6r 2               .segment "SHELL"
+0001A6r 2               
+0001A6r 2               .segment "SHARED"
+000000r 2               
+000000r 2               ; ****************************************************************************
+000000r 2               ; Shared memory (see MMU_PLAN.md)
+000000r 2               ;
+000000r 2               ;   256 shared 8K banks: shared bank ID = U << 4 | (bank & $0F), seen at $8000-$9FFF with RAM_BANK_REG =
+000000r 2               ;   $F0-$FF.  The system data lives in shared bank ID $00 (U = 0, bank $F0):
+000000r 2               ;       $8000-$81FF  message ring pointers (msg.s)
+000000r 2               ;       $8200-$821F  SH_MAP     shared bank bitmap (1 = in use)
+000000r 2               ;       $8220-$823F  SH_ENDS    run-end bitmap (last bank of each allocation)
+000000r 2               ;       $8400-$87FF  SH_HANDLES shared handle table: 255 entries of ShHandle
+000000r 2               ;   Bank IDs $00 (system) and $01-$08 (message rings) are reserved, as are the banks of any U macro-page
+000000r 2               ;   whose RAM isn't installed.
+000000r 2               ;
+000000r 2               ;   A shared handle is a 1-byte index (1-255) that any task can use, so it can be sent in a message.
+000000r 2               ;   Each task that uses it holds a reference (SH_ALLOC / SH_ATTACH); the banks are freed when the last
+000000r 2               ;   reference goes (SH_DETACH, or MM_TASK_RESET of the task).  Only tasks holding a reference can read or
+000000r 2               ;   write through the handle.  All calls: C = 0 on success, C = 1 with the error in .A.
+000000r 2               
+000000r 2               SH_MAP              = $8200
+000000r 2               SH_ENDS             = $8220
+000000r 2               SH_HANDLES          = $8400
+000000r 2               SH_MAX_HANDLES      = 255
+000000r 2               SH_FIRST_FREE_ID    = $09                                   ; Below: system data and message rings
+000000r 2               SH_WINDOW           = PAGED_RAM_BASE                        ; Where SH_LOCK maps a shared allocation
+000000r 2               SH_PROBE_ADDR       = $9FFF                                 ; Probe byte (bank $F0 of each U)
+000000r 2               SH_PROBE_MARK       = $50                                   ; Probe marker: SH_PROBE_MARK + U
+000000r 2               
+000000r 2               .struct     ShHandle
+000000r 2                           bank        .byte                               ; First shared bank ID
+000000r 2                           count       .byte                               ; Banks (0 = free entry)
+000000r 2                           mask_lo     .byte                               ; Tasks $0-$7 holding a reference (bit = task)
+000000r 2                           mask_hi     .byte                               ; Tasks $8-$F
+000000r 2               .endstruct
+000000r 2               
+000000r 2               ; Set up the shared memory tables: find which U macro-pages have RAM, clear the bitmaps and handle
+000000r 2               ; table, and reserve the system and message ring banks.  Called by MMU_INIT at boot.
+000000r 2               SHARED_RAM_INIT:
+000000r 2  08                       php                                             ; Save caller's I flag
+000001r 2  78                       sei
+000002r 2  48 DA 5A                 PUSH_AXY
+000005r 2  A4 rr 5A AC              _M_MSG_ENTER                                    ; Save RAM bank / U; select shared bank ID $00
+000009r 2  F1 FF 5A A0  
+00000Dr 2  00 8C F1 FF  
+000015r 2               
+000015r 2               ; Probe: write a marker into every U's bank $F0, highest U first, so if U decoding aliases, the
+000015r 2               ; lower (real) macro-page's marker wins and the alias reads back the wrong marker.
+000015r 2  A2 0F                    ldx         #15
+000017r 2               
+000017r 2               @mark:
+000017r 2  8E F1 FF                 stx         U_REGISTER
+00001Ar 2  8A                       txa
+00001Br 2  09 50                    ora         #SH_PROBE_MARK
+00001Dr 2  8D FF 9F                 sta         SH_PROBE_ADDR
+000020r 2  CA                       dex
+000021r 2  10 F4                    bpl         @mark
+000023r 2  64 rr                    stz         ZP_TEMP_VEC                         ; Present macro-pages, bit = U
+000025r 2  64 rr                    stz         ZP_TEMP_VEC + 1
+000027r 2  A2 0F                    ldx         #15
+000029r 2               
+000029r 2               @check:
+000029r 2  8E F1 FF                 stx         U_REGISTER
+00002Cr 2  8A                       txa
+00002Dr 2  09 50                    ora         #SH_PROBE_MARK
+00002Fr 2  CD FF 9F                 cmp         SH_PROBE_ADDR
+000032r 2  D0 14                    bne         @next                               ; Missing (or an alias)
+000034r 2  DA                       phx
+000035r 2  8A                       txa
+000036r 2  4A                       lsr
+000037r 2  4A                       lsr
+000038r 2  4A                       lsr
+000039r 2  A8                       tay                                             ; .Y = mask byte
+00003Ar 2  8A                       txa
+00003Br 2  29 07                    and         #7
+00003Dr 2  AA                       tax
+00003Er 2  BD rr rr                 lda         MMU_BIT_MASKS,X
+000041r 2  19 rr rr                 ora         ZP_TEMP_VEC,Y
+000044r 2  99 rr rr                 sta         ZP_TEMP_VEC,Y
+000047r 2  FA                       plx
+000048r 2               
+000048r 2               @next:
+000048r 2  CA                       dex
+000049r 2  10 DE                    bpl         @check
+00004Br 2  A0 00                    ldy         #MSG_SHARED_U
+00004Dr 2  8C F1 FF                 sty         U_REGISTER                          ; Back to shared bank ID $00
+000050r 2               
+000050r 2  A9 00                    lda         #0                                  ; Clear the bitmaps and handle table
+000052r 2  A8                       tay
+000053r 2               
+000053r 2               @clear:
+000053r 2  99 00 82                 sta         SH_MAP,Y
+000056r 2  99 00 84                 sta         SH_HANDLES,Y
+000059r 2  99 00 85                 sta         SH_HANDLES + $100,Y
+00005Cr 2  99 00 86                 sta         SH_HANDLES + $200,Y
+00005Fr 2  99 00 87                 sta         SH_HANDLES + $300,Y
+000062r 2  C8                       iny
+000063r 2  D0 EE                    bne         @clear
+000065r 2  A2 00                    ldx         #0                                  ; Reserve the banks of missing macro-pages
+000067r 2               
+000067r 2               @macro_pages:
+000067r 2  46 rr                    lsr         ZP_TEMP_VEC + 1                     ; C = this U's present bit
+000069r 2  66 rr                    ror         ZP_TEMP_VEC
+00006Br 2  B0 08                    bcs         @present
+00006Dr 2  A9 FF                    lda         #$FF
+00006Fr 2  9D 00 82                 sta         SH_MAP,X
+000072r 2  9D 01 82                 sta         SH_MAP + 1,X
+000075r 2               
+000075r 2               @present:
+000075r 2  E8                       inx
+000076r 2  E8                       inx
+000077r 2  E0 20                    cpx         #32
+000079r 2  D0 EC                    bne         @macro_pages
+00007Br 2  A9 FF                    lda         #$FF                                ; Reserve bank IDs $00-$08
+00007Dr 2  0D 00 82                 ora         SH_MAP
+000080r 2  8D 00 82                 sta         SH_MAP
+000083r 2  A9 01                    lda         #$01
+000085r 2  0D 01 82                 ora         SH_MAP + 1
+000088r 2  8D 01 82                 sta         SH_MAP + 1
+00008Br 2  7A 8C F1 FF              _M_MSG_LEAVE
+00008Fr 2  7A 84 rr     
+000092r 2  7A FA 68                 PULL_YXA
+000095r 2  28                       plp                                             ; Restore caller's I flag
+000096r 2  60                       rts
+000097r 2               
+000097r 2               ; Allocate shared memory (whole 8K banks); the calling task holds the first reference.
+000097r 2               ; IN: .A.Y = size in bytes (1 - $FFFF; .A = low byte)
+000097r 2               ; OUT (success): .A = shared handle, C = 0
+000097r 2               ; OUT (failure): .A = ERR_MEM_BAD_ARG, ERR_MEM_NO_HANDLES or ERR_OUT_OF_MEMORY, C = 1
+000097r 2               ; Preserves .X, .Y
+000097r 2               SH_ALLOC:
+000097r 2  08                       php                                             ; Save caller's I flag
+000098r 2  78                       sei
+000099r 2  DA 5A                    PUSH_XY
+00009Br 2  85 rr                    sta         ZP_M_SZ1                            ; Size low
+00009Dr 2  84 rr                    sty         ZP_M_TEMP2                          ; Size high
+00009Fr 2  05 rr                    ora         ZP_M_TEMP2
+0000A1r 2  F0 5B                    beq         @bad_arg                            ; Zero bytes
+0000A3r 2  A4 rr 5A AC              _M_MSG_ENTER                                    ; Select shared bank ID $00
+0000A7r 2  F1 FF 5A A0  
+0000ABr 2  00 8C F1 FF  
+0000B3r 2  20 rr rr                 jsr         SH_NEW_HANDLE                       ; Free entry -> ZP_M_HP, ZP_M_HANDLE
+0000B6r 2  B0 3A                    bcs         @leave
+0000B8r 2  A5 rr                    lda         ZP_M_SZ1                            ; Banks = ((size - 1) >> 13) + 1
+0000BAr 2  C9 01                    cmp         #1
+0000BCr 2  A5 rr                    lda         ZP_M_TEMP2
+0000BEr 2  E9 00                    sbc         #0
+0000C0r 2  4A                       lsr
+0000C1r 2  4A                       lsr
+0000C2r 2  4A                       lsr
+0000C3r 2  4A                       lsr
+0000C4r 2  4A                       lsr
+0000C5r 2  1A                       inc
+0000C6r 2  85 rr                    sta         ZP_M_SV
+0000C8r 2  20 rr rr                 jsr         SH_MAPS_SETUP
+0000CBr 2  A2 FF                    ldx         #$FF
+0000CDr 2  A0 09                    ldy         #SH_FIRST_FREE_ID
+0000CFr 2  20 rr rr                 jsr         BM_ALLOC_RUN                        ; .A = first bank ID
+0000D2r 2  B0 1E                    bcs         @leave
+0000D4r 2  A0 00                    ldy         #ShHandle::bank
+0000D6r 2  91 rr                    sta         (ZP_M_HP),Y
+0000D8r 2  A9 00                    lda         #0
+0000DAr 2  A0 02                    ldy         #ShHandle::mask_lo
+0000DCr 2  91 rr                    sta         (ZP_M_HP),Y
+0000DEr 2  C8                       iny
+0000DFr 2  91 rr                    sta         (ZP_M_HP),Y
+0000E1r 2  AD F0 FF                 lda         T_REGISTER
+0000E4r 2  85 rr                    sta         ZP_M_TEMP
+0000E6r 2  20 rr rr                 jsr         SH_SET_TASK_BIT                     ; The caller's reference
+0000E9r 2  A5 rr                    lda         ZP_M_SV
+0000EBr 2  A0 01                    ldy         #ShHandle::count                    ; Count last: it makes the entry live
+0000EDr 2  91 rr                    sta         (ZP_M_HP),Y
+0000EFr 2  A5 rr                    lda         ZP_M_HANDLE
+0000F1r 2  18                       clc
+0000F2r 2               
+0000F2r 2               @leave:
+0000F2r 2  7A 8C F1 FF              _M_MSG_LEAVE
+0000F6r 2  7A 84 rr     
+0000F9r 2               
+0000F9r 2               @done:
+0000F9r 2  7A FA                    PULL_YX
+0000FBr 2  4C rr rr                 jmp         MM_RETURN
+0000FEr 2               
+0000FEr 2               @bad_arg:
+0000FEr 2  A9 43                    lda         #ERR_MEM_BAD_ARG
+000100r 2  38                       sec
+000101r 2  80 F6                    bra         @done
+000103r 2               
+000103r 2               ; Take a reference to a shared allocation for the calling task (e.g. a handle received in a message).
+000103r 2               ; IN: .A = shared handle
+000103r 2               ; OUT (success): C = 0
+000103r 2               ; OUT (failure): .A = ERR_MEM_NOT_VALID, C = 1
+000103r 2               ; Preserves .X, .Y
+000103r 2               SH_ATTACH:
+000103r 2  08                       php                                             ; Save caller's I flag
+000104r 2  78                       sei
+000105r 2  DA 5A                    PUSH_XY
+000107r 2  A4 rr 5A AC              _M_MSG_ENTER                                    ; Select shared bank ID $00
+00010Br 2  F1 FF 5A A0  
+00010Fr 2  00 8C F1 FF  
+000117r 2  20 rr rr                 jsr         SH_HANDLE_PTR
+00011Ar 2  B0 09                    bcs         @leave
+00011Cr 2  AD F0 FF                 lda         T_REGISTER
+00011Fr 2  85 rr                    sta         ZP_M_TEMP
+000121r 2  20 rr rr                 jsr         SH_SET_TASK_BIT
+000124r 2  18                       clc
+000125r 2               
+000125r 2               @leave:
+000125r 2  7A 8C F1 FF              _M_MSG_LEAVE
+000129r 2  7A 84 rr     
+00012Cr 2  7A FA                    PULL_YX
+00012Er 2  4C rr rr                 jmp         MM_RETURN
+000131r 2               
+000131r 2               ; Drop the calling task's reference; the banks are freed when no task holds a reference.
+000131r 2               ; IN: .A = shared handle
+000131r 2               ; OUT (success): C = 0
+000131r 2               ; OUT (failure): .A = ERR_MEM_NOT_VALID, C = 1 (no such handle, or the task has no reference)
+000131r 2               ; Preserves .X, .Y
+000131r 2               SH_DETACH:
+000131r 2  08                       php                                             ; Save caller's I flag
+000132r 2  78                       sei
+000133r 2  DA 5A                    PUSH_XY
+000135r 2  A4 rr 5A AC              _M_MSG_ENTER                                    ; Select shared bank ID $00
+000139r 2  F1 FF 5A A0  
+00013Dr 2  00 8C F1 FF  
+000145r 2  20 rr rr                 jsr         SH_HANDLE_PTR
+000148r 2  B0 08                    bcs         @leave
+00014Ar 2  AD F0 FF                 lda         T_REGISTER
+00014Dr 2  85 rr                    sta         ZP_M_TEMP
+00014Fr 2  20 rr rr                 jsr         SH_DROP_TASK_REF
+000152r 2               
+000152r 2               @leave:
+000152r 2  7A 8C F1 FF              _M_MSG_LEAVE
+000156r 2  7A 84 rr     
+000159r 2  7A FA                    PULL_YX
+00015Br 2  4C rr rr                 jmp         MM_RETURN
+00015Er 2               
+00015Er 2               ; Read a byte of a shared allocation (the calling task must hold a reference).
+00015Er 2               ; IN: .A = shared handle, .Y = offset (0-255, in the first bank)
+00015Er 2               ; OUT (success): .A = byte, C = 0
+00015Er 2               ; OUT (failure): .A = ERR_MEM_NOT_VALID, C = 1
+00015Er 2               ; Preserves .X, .Y
+00015Er 2               SH_READ:
+00015Er 2  08                       php                                             ; Save caller's I flag
+00015Fr 2  78                       sei
+000160r 2  DA 5A                    PUSH_XY
+000162r 2  84 rr                    sty         ZP_M_COFS
+000164r 2  A4 rr 5A AC              _M_MSG_ENTER                                    ; Select shared bank ID $00
+000168r 2  F1 FF 5A A0  
+00016Cr 2  00 8C F1 FF  
+000174r 2  20 rr rr                 jsr         SH_ACCESS_SETUP                     ; Selects the allocation's first bank
+000177r 2  B0 06                    bcs         @leave
+000179r 2  A4 rr                    ldy         ZP_M_COFS
+00017Br 2  B9 00 80                 lda         SH_WINDOW,Y
+00017Er 2  18                       clc
+00017Fr 2               
+00017Fr 2               @leave:
+00017Fr 2  7A 8C F1 FF              _M_MSG_LEAVE                                    ; Restores the RAM bank and U
+000183r 2  7A 84 rr     
+000186r 2  7A FA                    PULL_YX
+000188r 2  4C rr rr                 jmp         MM_RETURN
+00018Br 2               
+00018Br 2               ; Write a byte of a shared allocation (the calling task must hold a reference).
+00018Br 2               ; IN: .A = shared handle, .Y = offset (0-255, in the first bank), .X = byte
+00018Br 2               ; OUT (success): C = 0
+00018Br 2               ; OUT (failure): .A = ERR_MEM_NOT_VALID, C = 1
+00018Br 2               ; Preserves .X, .Y
+00018Br 2               SH_WRITE:
+00018Br 2  08                       php                                             ; Save caller's I flag
+00018Cr 2  78                       sei
+00018Dr 2  DA 5A                    PUSH_XY
+00018Fr 2  84 rr                    sty         ZP_M_COFS
+000191r 2  86 rr                    stx         ZP_M_SZ1                            ; The byte (SH_ACCESS_SETUP uses .X)
+000193r 2  A4 rr 5A AC              _M_MSG_ENTER                                    ; Select shared bank ID $00
+000197r 2  F1 FF 5A A0  
+00019Br 2  00 8C F1 FF  
+0001A3r 2  20 rr rr                 jsr         SH_ACCESS_SETUP                     ; Selects the allocation's first bank
+0001A6r 2  B0 08                    bcs         @leave
+0001A8r 2  A4 rr                    ldy         ZP_M_COFS
+0001AAr 2  A5 rr                    lda         ZP_M_SZ1
+0001ACr 2  99 00 80                 sta         SH_WINDOW,Y
+0001AFr 2  18                       clc
+0001B0r 2               
+0001B0r 2               @leave:
+0001B0r 2  7A 8C F1 FF              _M_MSG_LEAVE                                    ; Restores the RAM bank and U
+0001B4r 2  7A 84 rr     
+0001B7r 2  7A FA                    PULL_YX
+0001B9r 2  4C rr rr                 jmp         MM_RETURN
+0001BCr 2               
+0001BCr 2               ; Map a shared allocation's first bank into the $8000-$9FFF window (SH_WINDOW), for speed.  The calling
+0001BCr 2               ; task must hold a reference.  Undo with SH_UNLOCK.
+0001BCr 2               ; IN: .A = shared handle
+0001BCr 2               ; OUT (success): .X = previous RAM bank, .Y = previous U (pass both to SH_UNLOCK), C = 0
+0001BCr 2               ; OUT (failure): .A = ERR_MEM_NOT_VALID, C = 1 (.X, .Y preserved)
+0001BCr 2               SH_LOCK:
+0001BCr 2  08                       php                                             ; Save caller's I flag
+0001BDr 2  78                       sei
+0001BEr 2  DA 5A                    PUSH_XY
+0001C0r 2  A4 rr 5A AC              _M_MSG_ENTER                                    ; Select shared bank ID $00
+0001C4r 2  F1 FF 5A A0  
+0001C8r 2  00 8C F1 FF  
+0001D0r 2  20 rr rr                 jsr         SH_HANDLE_PTR
+0001D3r 2  B0 14                    bcs         @fail
+0001D5r 2  20 rr rr                 jsr         SH_CHECK_REF
+0001D8r 2  B0 0F                    bcs         @fail
+0001DAr 2  A0 00                    ldy         #ShHandle::bank
+0001DCr 2  B1 rr                    lda         (ZP_M_HP),Y
+0001DEr 2  7A                       ply                                             ; Previous U        } Don't restore them:
+0001DFr 2  FA                       plx                                             ; Previous RAM bank } they're returned
+0001E0r 2  20 rr rr                 jsr         SH_SELECT_BANK                      ; Map the allocation
+0001E3r 2  68                       pla                                             ; Drop the caller's .Y
+0001E4r 2  68                       pla                                             ; Drop the caller's .X
+0001E5r 2  18                       clc
+0001E6r 2  4C rr rr                 jmp         MM_RETURN
+0001E9r 2               
+0001E9r 2               @fail:
+0001E9r 2  7A 8C F1 FF              _M_MSG_LEAVE
+0001EDr 2  7A 84 rr     
+0001F0r 2  7A FA                    PULL_YX
+0001F2r 2  4C rr rr                 jmp         MM_RETURN
+0001F5r 2               
+0001F5r 2               ; Undo SH_LOCK.
+0001F5r 2               ; IN: .X = RAM bank, .Y = U (from SH_LOCK)
+0001F5r 2               ; OUT: C = 0
+0001F5r 2               ; Preserves .A, .X, .Y
+0001F5r 2               SH_UNLOCK:
+0001F5r 2  86 rr                    stx         RAM_BANK_REG
+0001F7r 2  8C F1 FF                 sty         U_REGISTER
+0001FAr 2  18                       clc
+0001FBr 2  60                       rts
+0001FCr 2               
+0001FCr 2               ; Drop all of a task's shared references, freeing banks nobody else references.  For MM_TASK_RESET.
+0001FCr 2               ; IN: .A = task
+0001FCr 2               ; Preserves .A, .X, .Y
+0001FCr 2               SH_RESET_TASK:
+0001FCr 2  08                       php                                             ; Save caller's I flag
+0001FDr 2  78                       sei
+0001FEr 2  48 DA 5A                 PUSH_AXY
+000201r 2  29 0F                    and         #$0F
+000203r 2  85 rr                    sta         ZP_M_TEMP
+000205r 2  A4 rr 5A AC              _M_MSG_ENTER                                    ; Select shared bank ID $00
+000209r 2  F1 FF 5A A0  
+00020Dr 2  00 8C F1 FF  
+000215r 2  A9 01                    lda         #1
+000217r 2               
+000217r 2               @loop:
+000217r 2  85 rr                    sta         ZP_M_HANDLE
+000219r 2  20 rr rr                 jsr         SH_HANDLE_PTR
+00021Cr 2  B0 03                    bcs         @next                               ; Free entry
+00021Er 2  20 rr rr                 jsr         SH_DROP_TASK_REF                    ; C = 1 if the task had no reference: fine
+000221r 2               
+000221r 2               @next:
+000221r 2  A5 rr                    lda         ZP_M_HANDLE
+000223r 2  1A                       inc
+000224r 2  D0 F1                    bne         @loop                               ; Handles 1-255
+000226r 2  7A 8C F1 FF              _M_MSG_LEAVE
+00022Ar 2  7A 84 rr     
+00022Dr 2  7A FA 68                 PULL_YXA
+000230r 2  28                       plp                                             ; Restore caller's I flag
+000231r 2  60                       rts
+000232r 2               
+000232r 2               ; ---- helpers (shared bank ID $00 selected, IRQs off)
+000232r 2               
+000232r 2               ; Point ZP_M_BM / ZP_M_BE at the shared bank maps.  Preserves .A
+000232r 2               SH_MAPS_SETUP:
+000232r 2  48                       pha
+000233r 2  A9 82 85 rr              LOAD_ADDR   SH_MAP, ZP_M_BM
+000237r 2  A9 00 85 rr  
+00023Br 2  A9 82 85 rr              LOAD_ADDR   SH_ENDS, ZP_M_BE
+00023Fr 2  A9 20 85 rr  
+000243r 2  68                       pla
+000244r 2  60                       rts
+000245r 2               
+000245r 2               ; Find a free shared handle.  OUT: ZP_M_HANDLE, ZP_M_HP = its entry, C = 0; or .A = ERR_MEM_NO_HANDLES, C = 1
+000245r 2               SH_NEW_HANDLE:
+000245r 2  A9 01                    lda         #1
+000247r 2               
+000247r 2               @loop:
+000247r 2  85 rr                    sta         ZP_M_HANDLE
+000249r 2  20 rr rr                 jsr         SH_ENTRY_ADDR
+00024Cr 2  A0 01                    ldy         #ShHandle::count
+00024Er 2  B1 rr                    lda         (ZP_M_HP),Y
+000250r 2  F0 09                    beq         @found
+000252r 2  A5 rr                    lda         ZP_M_HANDLE
+000254r 2  1A                       inc
+000255r 2  D0 F0                    bne         @loop
+000257r 2  A9 44                    lda         #ERR_MEM_NO_HANDLES
+000259r 2  38                       sec
+00025Ar 2  60                       rts
+00025Br 2               
+00025Br 2               @found:
+00025Br 2  18                       clc
+00025Cr 2  60                       rts
+00025Dr 2               
+00025Dr 2               ; ZP_M_HP = entry of shared handle ZP_M_HANDLE: SH_HANDLES + (handle - 1) * 4.  Modifies: .A
+00025Dr 2               SH_ENTRY_ADDR:
+00025Dr 2  A5 rr                    lda         ZP_M_HANDLE
+00025Fr 2  3A                       dec
+000260r 2  64 rr                    stz         ZP_M_HP + 1
+000262r 2  0A                       asl
+000263r 2  26 rr                    rol         ZP_M_HP + 1
+000265r 2  0A                       asl
+000266r 2  26 rr                    rol         ZP_M_HP + 1
+000268r 2  18                       clc
+000269r 2  69 00                    adc         #<SH_HANDLES
+00026Br 2  85 rr                    sta         ZP_M_HP
+00026Dr 2  A5 rr                    lda         ZP_M_HP + 1
+00026Fr 2  69 84                    adc         #>SH_HANDLES
+000271r 2  85 rr                    sta         ZP_M_HP + 1
+000273r 2  60                       rts
+000274r 2               
+000274r 2               ; Point ZP_M_HP at a shared handle's entry and check it's allocated.
+000274r 2               ; IN: .A = shared handle.  OUT: C = 0; or .A = ERR_MEM_NOT_VALID, C = 1.  Modifies: .A, .Y
+000274r 2               SH_HANDLE_PTR:
+000274r 2  85 rr                    sta         ZP_M_HANDLE
+000276r 2  C9 00                    cmp         #0
+000278r 2  F0 0B                    beq         @bad
+00027Ar 2  20 rr rr                 jsr         SH_ENTRY_ADDR
+00027Dr 2  A0 01                    ldy         #ShHandle::count
+00027Fr 2  B1 rr                    lda         (ZP_M_HP),Y
+000281r 2  F0 02                    beq         @bad
+000283r 2  18                       clc
+000284r 2  60                       rts
+000285r 2               
+000285r 2               @bad:
+000285r 2  A9 41                    lda         #ERR_MEM_NOT_VALID
+000287r 2  38                       sec
+000288r 2  60                       rts
+000289r 2               
+000289r 2               ; Task ZP_M_TEMP's bit in an entry's mask.  OUT: .Y = ShHandle::mask_lo or mask_hi, .A = bit.  Modifies: .X
+000289r 2               SH_TASK_BIT:
+000289r 2  A5 rr                    lda         ZP_M_TEMP
+00028Br 2  29 07                    and         #7
+00028Dr 2  AA                       tax
+00028Er 2  A0 02                    ldy         #ShHandle::mask_lo
+000290r 2  A5 rr                    lda         ZP_M_TEMP
+000292r 2  29 08                    and         #$08
+000294r 2  F0 01                    beq         :+
+000296r 2  C8                       iny                                             ; mask_hi
+000297r 2               :
+000297r 2  BD rr rr                 lda         MMU_BIT_MASKS,X
+00029Ar 2  60                       rts
+00029Br 2               
+00029Br 2               ; Give task ZP_M_TEMP a reference to entry ZP_M_HP.  Modifies: .A, .X, .Y
+00029Br 2               SH_SET_TASK_BIT:
+00029Br 2  20 rr rr                 jsr         SH_TASK_BIT
+00029Er 2  11 rr                    ora         (ZP_M_HP),Y
+0002A0r 2  91 rr                    sta         (ZP_M_HP),Y
+0002A2r 2  60                       rts
+0002A3r 2               
+0002A3r 2               ; C = 0 if the calling task holds a reference to entry ZP_M_HP; else .A = ERR_MEM_NOT_VALID, C = 1.
+0002A3r 2               ; Modifies: .A, .X, .Y
+0002A3r 2               SH_CHECK_REF:
+0002A3r 2  AD F0 FF                 lda         T_REGISTER
+0002A6r 2  85 rr                    sta         ZP_M_TEMP
+0002A8r 2  20 rr rr                 jsr         SH_TASK_BIT
+0002ABr 2  31 rr                    and         (ZP_M_HP),Y
+0002ADr 2  F0 02                    beq         @no_ref
+0002AFr 2  18                       clc
+0002B0r 2  60                       rts
+0002B1r 2               
+0002B1r 2               @no_ref:
+0002B1r 2  A9 41                    lda         #ERR_MEM_NOT_VALID
+0002B3r 2  38                       sec
+0002B4r 2  60                       rts
+0002B5r 2               
+0002B5r 2               ; Drop task ZP_M_TEMP's reference to entry ZP_M_HP; free the banks if it was the last reference.
+0002B5r 2               ; OUT: C = 0; or .A = ERR_MEM_NOT_VALID, C = 1 if the task had no reference.  Modifies: .A, .X, .Y
+0002B5r 2               SH_DROP_TASK_REF:
+0002B5r 2  20 rr rr                 jsr         SH_TASK_BIT
+0002B8r 2  85 rr                    sta         ZP_M_SV
+0002BAr 2  31 rr                    and         (ZP_M_HP),Y
+0002BCr 2  F0 25                    beq         @no_ref
+0002BEr 2  A5 rr                    lda         ZP_M_SV                             ; Clear the task's bit
+0002C0r 2  49 FF                    eor         #$FF
+0002C2r 2  31 rr                    and         (ZP_M_HP),Y
+0002C4r 2  91 rr                    sta         (ZP_M_HP),Y
+0002C6r 2  A0 02                    ldy         #ShHandle::mask_lo
+0002C8r 2  B1 rr                    lda         (ZP_M_HP),Y
+0002CAr 2  C8                       iny
+0002CBr 2  11 rr                    ora         (ZP_M_HP),Y
+0002CDr 2  D0 12                    bne         @done                               ; Still referenced
+0002CFr 2  20 rr rr                 jsr         SH_MAPS_SETUP                       ; Last reference: free the banks
+0002D2r 2  A0 00                    ldy         #ShHandle::bank
+0002D4r 2  B1 rr                    lda         (ZP_M_HP),Y
+0002D6r 2  A2 FF                    ldx         #$FF
+0002D8r 2  20 rr rr                 jsr         BM_FREE_RUN
+0002DBr 2  A9 00                    lda         #0
+0002DDr 2  A0 01                    ldy         #ShHandle::count                    ; Free the entry
+0002DFr 2  91 rr                    sta         (ZP_M_HP),Y
+0002E1r 2               
+0002E1r 2               @done:
+0002E1r 2  18                       clc
+0002E2r 2  60                       rts
+0002E3r 2               
+0002E3r 2               @no_ref:
+0002E3r 2  A9 41                    lda         #ERR_MEM_NOT_VALID
+0002E5r 2  38                       sec
+0002E6r 2  60                       rts
+0002E7r 2               
+0002E7r 2               ; Check the calling task's reference to shared handle .A and map its first bank.
+0002E7r 2               ; OUT: C = 0; or .A = ERR_MEM_NOT_VALID, C = 1.  Modifies: .A, .X, .Y
+0002E7r 2               SH_ACCESS_SETUP:
+0002E7r 2  20 rr rr                 jsr         SH_HANDLE_PTR
+0002EAr 2  B0 0D                    bcs         @done
+0002ECr 2  20 rr rr                 jsr         SH_CHECK_REF
+0002EFr 2  B0 08                    bcs         @done
+0002F1r 2  A0 00                    ldy         #ShHandle::bank
+0002F3r 2  B1 rr                    lda         (ZP_M_HP),Y
+0002F5r 2  20 rr rr                 jsr         SH_SELECT_BANK
+0002F8r 2  18                       clc
+0002F9r 2               
+0002F9r 2               @done:
+0002F9r 2  60                       rts
+0002FAr 2               
+0002FAr 2               ; Map shared bank ID .A at $8000-$9FFF: U = ID >> 4, RAM bank = $F0 | (ID & $0F).  Preserves .X, .Y
+0002FAr 2               SH_SELECT_BANK:
+0002FAr 2  48                       pha
+0002FBr 2  29 0F                    and         #$0F
+0002FDr 2  09 F0                    ora         #$F0
+0002FFr 2  85 rr                    sta         RAM_BANK_REG
+000301r 2  68                       pla
+000302r 2  4A                       lsr
+000303r 2  4A                       lsr
+000304r 2  4A                       lsr
+000305r 2  4A                       lsr
+000306r 2  8D F1 FF                 sta         U_REGISTER
+000309r 2  60                       rts
+00030Ar 2               
+00030Ar 1               .include "shell.s"
+00030Ar 2               .debuginfo
+00030Ar 2               .segment "SHELL"
 000000r 2               
 000000r 2               SHELL_MAIN:
 000000r 2  20 rr rr                 jsr     COPYTORAM
@@ -11569,5 +12261,8 @@ Current file: all.s
 000044r 2  85 rr A9 rr  FAR_GATE        DISASM_WM,      PAGE1::DISASM_WM,       1
 000048r 2  85 rr A9 rr  
 00004Cr 2  85 rr A9 01  
-000055r 2               
-000055r 1               
+000055r 2  85 rr A9 rr  FAR_GATE        MMU_TEST,       PAGE1::MMU_TEST,        1
+000059r 2  85 rr A9 rr  
+00005Dr 2  85 rr A9 01  
+000066r 2               
+000066r 1               

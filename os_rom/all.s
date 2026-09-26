@@ -9,6 +9,7 @@
 ; BIOS ROM page 1 (W = 1).  Its own scope, so page 1 code binds to the page 1 gates in page1.s
 .scope PAGE1
 .include "page1.s"      ; must be first in the scope
+.include "mmu_test.s"
 .include "disasm.s"
 .include "hyforth/hyforth.s"
 .endscope
@@ -22,6 +23,7 @@
 .include "mmu.s"
 .include "irq.s"
 .include "msg.s"
+.include "shared.s"
 .include "shell.s"
 .include "sound.s"
 .include "os_main.s"

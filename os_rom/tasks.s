@@ -115,6 +115,18 @@ TASK_START:
             sta     T_REGISTER
             sty     TASK_PARENT
             sty     T_REGISTER
+
+; Save the parent's context the way SWITCH_TO does, so SWITCH_TO_NSS can resume it at @resume when the
+; child completes
+            sta     TASK_SAVE_REG                   ; Child task #, returned when the parent resumes
+            lda     #>@resume                       ; RTI frame: PCH, PCL, P...
+            pha
+            lda     #<@resume
+            pha
+            php
+            PUSH_AXY                                ; ...and the PULL_YXA frame
+            tsx
+            stx     STACK_SAVE_REG
             ldx     ZP_TEMP_VEC + 1
             ldy     ZP_TEMP_VEC
             bne     :+                              ; skip HOB of addr if LOB <> 0
@@ -123,6 +135,8 @@ TASK_START:
 :
             dey                                     ; update LOB
             smb1    TASK_STATUS_REG                 ; mark parent task state as PAUSED
+            lda     TASK_SAVE_REG                   ; Child task #
+            sei                                     ; No IRQs between the task and stack switch
             sta     T_REGISTER                      ; do the task switch
             stx     ZP_X_SAVE                       ; new task ZP
             ldx     #$FF                            ; Reset the stack pointer
@@ -132,6 +146,8 @@ TASK_START:
             jsr     @task_start
 
 @task_complete:
+            lda     T_REGISTER
+            jsr     MM_TASK_RESET                   ; Free everything the task allocated
             stz     TASK_STATUS_REG
             lda     TASK_PARENT
             ldx     #$FF
@@ -142,7 +158,14 @@ TASK_START:
             rmb1    TASK_STATUS_REG                 ; remove the PAUSED flag
             phx                                     ; push the start address onto the stack
             pha                                     ; ...
+            cli                                     ; The child runs with IRQs on
             rts                                     ; start executing
+
+; The parent resumes here (from SWITCH_TO_NSS) when the child completes
+@resume:
+            lda     TASK_SAVE_REG                   ; The child's task #
+            sec
+            rts
 
 
 ; Find an available task

@@ -355,6 +355,38 @@ IRQ_UNREG_AT:
             clc
             rts
 
+; Unregister every IRQ and S/W interrupt handler of a task (for MM_TASK_RESET).
+; IN: .A = task
+; Preserves .A, .X, .Y
+IRQ_UNREGISTER_TASK:
+            php                                             ; Save caller's I flag
+            sei
+            PUSH_AXY
+            and         #$0F
+            sta         ZP_IRQ_TMP
+            ldx         #0
+
+@loop:
+            lda         IRQ_TABLE,X
+            cmp         ZP_IRQ_TMP
+            bne         @next
+            phx
+            txa
+            tay                                             ; .Y = entry offset
+            lda         #IRQ_NO_TASK
+            jsr         IRQ_REPLICATE
+            plx
+
+@next:
+            inx
+            inx
+            inx
+            cpx         #IRQ_TABLE_SIZE
+            bne         @loop
+            PULL_YXA
+            plp                                             ; Restore caller's I flag
+            rts
+
 ; Z = 1 if table entry .X is (current task, ZP_IRQ_H).  Preserves .X, .Y
 IRQ_MATCH:
             lda         IRQ_TABLE,X

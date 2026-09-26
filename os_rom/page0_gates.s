@@ -11,3 +11,4 @@ FAR_GATE        COPYTORAM,      PAGE1::COPYTORAM,       1
 FAR_GATE        DISASM,         PAGE1::DISASM,          1
 FAR_GATE        DISASM_AY,      PAGE1::DISASM_AY,       1
 FAR_GATE        DISASM_WM,      PAGE1::DISASM_WM,       1
+FAR_GATE        MMU_TEST,       PAGE1::MMU_TEST,        1

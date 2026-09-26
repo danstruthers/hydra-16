@@ -2,16 +2,6 @@
 
 .segment "MMU"
 
-.struct     Address
-            l           .byte
-            h           .byte
-.endstruct
-
-.struct     PageAddress
-            addr        .tag Address
-            page        .byte
-.endstruct
-
 ; Handle table entry status byte =>
 ; Bit 0: Paged      (1=Paged, 0=Task)               Points to Paged RAM (8K banks at $8000)
 ; Bit 1: Shared     (1=Shared, 0=Task)              Points to Shared RAM when Shared == 1 && Paged == 1
@@ -78,6 +68,7 @@ MMU_PAGE_MAP     = MMU_HDR + MmuHeader::page_map
 MMU_PAGE_ENDS    = MMU_HDR + MmuHeader::page_ends
 MMU_BANK_MAP     = MMU_HDR + MmuHeader::bank_map
 MMU_BANK_ENDS    = MMU_HDR + MmuHeader::bank_ends
+MMU_LOW_WATER    = MMU_HDR + MmuHeader::low_water
 MMU_HANDLE_TBL   = MMU_HDR + MmuHeader::handles             ; Entry for handle h: MMU_HANDLE_TBL + (h - 1) * 4
 MMU_MAX_HANDLES  = ($8000 - MMU_HANDLE_TBL) / .sizeof(Handle)   ; 103 for 2 pages
 MMU_CHUNK_HEADS  = MMU_HDR + MmuHeader::chunk_heads         ; First chunk page of each size class (0 = none)
@@ -1095,83 +1086,29 @@ MM_ACCESS_SETUP:
             sec
             rts
 
-; IN: .A.Y = Bytes to allocate, T must be 0
-; OUT (success): .A.Y = Address of shared allocation structure, C = 0
-; OUT (out of memory): .A = ERR_OUT_OF_MEMORY, C = 1
-;           If T <> 0, .A = ERR_NOT_SYSTEM_TASK, C = 1
-SHARED_ALLOC:
-            phx
-            ldx         T_REGISTER
-            cpx         #SYSTEM_TASK_NUM
-            beq         :+
-            plx
-            jmp         ERROR_NOT_SYSTEM_TASK
-
-:
-                                                            ; Do the allocation
-
-            plx
-            rts
-
-; IN: .A.Y = Address of PageAddress struct that points to location in shared memory to free
-SHARED_FREE:
-            rts
-
-SHARED_RAM_INIT:
-            rts
-
-; IN: .X = Byte to write, .A.Y = Address of PageAddress struct that points to shared memory location to write to
-SHARED_WRITE:
+; ****************************************************************************
+; Reset a task's memory: everything it allocated is freed, without walking its handles.
+;   1. Its MMU area is re-initialized (all its task pages, chunks, banks and handles are freed)
+;   2. Its shared memory references are dropped (banks nobody else references are freed)
+;   3. The message rings it sends or receives on are emptied
+;   4. Its IRQ / S/W interrupt handlers are unregistered
+; Called when a task completes (TASK_START).  The task must not be running (or be the calling task).
+; IN: .A = task
+; Preserves .A, .X, .Y
+MM_TASK_RESET:
             php                                             ; Save caller's I flag
             sei
-            phx                                             ; Push the byte to write
-            jsr         SHARED_RW_PAGE_SETUP                ; Clobbers .X.  After, .X = old RAM_BANK, .Y = old U
-            pla                                             ; Get it back
-            sta         (ZP_M_SP1)                          ; Do the write
-            stx         RAM_BANK_REG                        ; Restore prior RAM_BANK
-            sty         U_REGISTER                          ; Restore prior Shared RAM Macro-page
+            PUSH_AXY
+            and         #$0F
+            sta         ZP_TC_TASK
+            LOAD_ADDR   MM_TASK_INIT, ZP_TC_VEC
+            jsr         TASK_CALL                           ; Re-initialize its MMU area, in the task
+            lda         ZP_TC_TASK
+            jsr         SH_RESET_TASK
+            jsr         MSG_RESET_TASK
+            jsr         IRQ_UNREGISTER_TASK
+            PULL_YXA
             plp                                             ; Restore caller's I flag
-            rts
-
-; IN: .A.Y = Address of PageAddress struct that points to read location in shared memory
-; OUT: .A = Byte read at address
-SHARED_READ:
-            php                                             ; Save caller's I flag
-            sei
-            phx                                             ; Don't clobber .X
-            jsr         SHARED_RW_PAGE_SETUP                ; Clobbers .X.  After, .X = old RAM_BANK, .Y = old U
-            lda         (ZP_M_SP1)                          ; Do the read
-            stx         RAM_BANK_REG                        ; Restore prior RAM_BANK
-            sty         U_REGISTER                          ; Restore prior Shared RAM Macro-page
-            plx
-            plp                                             ; Restore caller's I flag
-            rts
-
-SHARED_RW_PAGE_SETUP:
-            sta         ZP_M_SP1
-            sty         ZP_M_SP1 + 1
-            ldy         #PageAddress::page
-            lda         (ZP_M_SP1),Y                        ; Load the page
-            pha                                             ; ...and save it for use later
-            ldy         #PageAddress::addr + Address::h
-            lda         (ZP_M_SP1),Y                        ; Get the HOB of the address
-            tax
-            ldy         #PageAddress::addr + Address::l
-            lda         (ZP_M_SP1),Y                        ; Now the LOB
-            sta         ZP_M_SP1
-            stx         ZP_M_SP1 + 1
-            pla                                             ; Get the page back
-            tay                                             ; Save the page for use later
-            ora         #$F0                                ; Shared Bank transform
-            ldx         RAM_BANK_REG                        ; Save bank for restore
-            sta         RAM_BANK_REG                        ; Update the RAM_BANK to new Shared bank
-            tya                                             ; Get the original page back
-            lsr                                             ; Shift right 4-bits
-            lsr
-            lsr
-            lsr
-            ldy         U_REGISTER                          ; Save macro-page for restore
-            sta         U_REGISTER                          ; Update macro-page[0..3] from PageAddress::page[4..7]
             rts
 
 ; Memory Copy
@@ -1377,222 +1314,4 @@ DEEP_PAGE_TEST_RANGE:
             jmp         @next_page
 @done:
             PULL_YX
-            rts
-
-; ****************************************************************************
-; MMU self test (TH_MMU_TEST, $F833; from WOZMON: F833R).  Runs the handle calls in the current task and
-; prints "MMU test: ok", or "MMU test: FAIL x ee" (x = failing step, ee = error code or value read).
-; Allocates and frees 2 task RAM pages (at the top of the free area) and 2 RAM banks.
-
-.macro _M_MT_FAIL_IF_C  step                                ; Fail if the call returned an error
-            bcc         :+
-            ldx         #step
-            jmp         @fail
-:
-.endmacro
-
-.macro _M_MT_FAIL_IF_NC step                                ; Fail if the call should have failed but didn't
-            bcs         :+
-            ldx         #step
-            jmp         @fail
-:
-.endmacro
-
-.macro _M_MT_EXPECT     step, value                         ; Fail if .A <> value
-            cmp         #value
-            beq         :+
-            ldx         #step
-            jmp         @fail
-:
-.endmacro
-
-NamedHString    S_MMU_TEST, "MMU test: "
-
-MMU_TEST:
-            PUSH_AXY
-            _M_WRITE_HSTRING    S_MMU_TEST
-
-; Small (in-entry) allocation
-            lda         #2                                  ; 2 bytes
-            ldy         #0
-            ldx         #0
-            jsr         MM_ALLOC
-            _M_MT_FAIL_IF_C     'a'
-            sta         ZP_TEMP                             ; h1
-            ldx         #$5A
-            ldy         #1
-            jsr         MM_WRITE
-            _M_MT_FAIL_IF_C     'b'
-            lda         ZP_TEMP
-            ldy         #1
-            jsr         MM_READ
-            _M_MT_FAIL_IF_C     'c'
-            _M_MT_EXPECT        'c', $5A
-            lda         ZP_TEMP
-            ldy         #2                                  ; Past the end
-            jsr         MM_READ
-            _M_MT_FAIL_IF_NC    'd'
-
-; Task RAM pages
-            lda         #<300                               ; 2 pages
-            ldy         #>300
-            ldx         #0
-            jsr         MM_ALLOC
-            _M_MT_FAIL_IF_C     'e'
-            sta         ZP_TEMP_2                           ; h2
-            jsr         MM_LOCK
-            _M_MT_FAIL_IF_C     'f'
-            sta         ZP_TEMP_VEC3
-            sty         ZP_TEMP_VEC3 + 1
-            _M_MT_EXPECT        'f', 0                      ; Page aligned
-            tya
-            cmp         MMU_HDR + MmuHeader::low_water      ; Lowest allocated page
-            beq         :+
-            ldx         #'f'
-            jmp         @fail
-:
-            lda         #$A5                                ; Write through the raw pointer
-            ldy         #255
-            sta         (ZP_TEMP_VEC3),Y
-            lda         ZP_TEMP_2
-            jsr         MM_FREE                             ; Locked: must fail (preserves .X = old bank)
-            _M_MT_FAIL_IF_NC    'g'
-            lda         ZP_TEMP_2
-            jsr         MM_UNLOCK
-            _M_MT_FAIL_IF_C     'h'
-            lda         ZP_TEMP_2
-            ldy         #255
-            jsr         MM_READ
-            _M_MT_FAIL_IF_C     'i'
-            _M_MT_EXPECT        'i', $A5
-
-; RAM banks
-            lda         #<$2001                             ; 2 banks
-            ldy         #>$2001
-            ldx         #AI_PAGED
-            jsr         MM_ALLOC
-            _M_MT_FAIL_IF_C     'j'
-            sta         ZP_TEMP_VEC4                        ; h3
-            ldx         #$3C
-            ldy         #7
-            jsr         MM_WRITE
-            _M_MT_FAIL_IF_C     'k'
-            lda         ZP_TEMP_VEC4
-            ldy         #7
-            jsr         MM_READ
-            _M_MT_FAIL_IF_C     'k'
-            _M_MT_EXPECT        'k', $3C
-
-; Chunks: two 16-byte chunks share a page
-            lda         #10                                 ; 16-byte class
-            ldy         #0
-            ldx         #0
-            jsr         MM_ALLOC
-            _M_MT_FAIL_IF_C     'o'
-            sta         ZP_TEMP_VEC3                        ; c1
-            lda         #16
-            ldy         #0
-            ldx         #0
-            jsr         MM_ALLOC
-            _M_MT_FAIL_IF_C     'o'
-            sta         ZP_TEMP_VEC3 + 1                    ; c2
-            lda         ZP_TEMP_VEC3
-            jsr         MM_LOCK
-            _M_MT_FAIL_IF_C     'p'
-            sta         ZP_TEMP_VEC                         ; c1's address
-            sty         ZP_TEMP_VEC + 1
-            lda         ZP_TEMP_VEC3
-            jsr         MM_UNLOCK
-            lda         ZP_TEMP_VEC3 + 1
-            jsr         MM_LOCK
-            _M_MT_FAIL_IF_C     'p'
-            cpy         ZP_TEMP_VEC + 1                     ; Same page...
-            beq         :+
-            tya
-            ldx         #'p'
-            jmp         @fail
-:
-            cmp         ZP_TEMP_VEC                         ; ...different chunk
-            bne         :+
-            ldx         #'p'
-            jmp         @fail
-:
-            lda         ZP_TEMP_VEC3 + 1
-            jsr         MM_UNLOCK
-            lda         ZP_TEMP_VEC3
-            ldx         #$77
-            ldy         #15                                 ; Last byte of the chunk
-            jsr         MM_WRITE
-            _M_MT_FAIL_IF_C     'q'
-            lda         ZP_TEMP_VEC3
-            ldy         #15
-            jsr         MM_READ
-            _M_MT_FAIL_IF_C     'q'
-            _M_MT_EXPECT        'q', $77
-            lda         ZP_TEMP_VEC3
-            ldy         #16                                 ; Past the end of the chunk
-            jsr         MM_READ
-            _M_MT_FAIL_IF_NC    'r'
-
-; Chunks: four 64-byte chunks need two chunk pages (3 per page)
-            ldx         #3
-
-@alloc_64:
-            phx
-            lda         #64
-            ldy         #0
-            ldx         #0
-            jsr         MM_ALLOC
-            plx
-            _M_MT_FAIL_IF_C     's'
-            sta         ZP_TEMP_VEC,X                       ; ZP_TEMP_VEC .. ZP_TEMP_VEC2 + 1
-            dex
-            bpl         @alloc_64
-            ldx         #3
-
-@free_64:
-            lda         ZP_TEMP_VEC,X
-            jsr         MM_FREE
-            _M_MT_FAIL_IF_C     't'
-            dex
-            bpl         @free_64
-            lda         ZP_TEMP_VEC3
-            jsr         MM_FREE
-            _M_MT_FAIL_IF_C     'u'
-            lda         ZP_TEMP_VEC3 + 1
-            jsr         MM_FREE
-            _M_MT_FAIL_IF_C     'u'
-
-; Free everything; the page map must be back where it started
-            lda         ZP_TEMP
-            jsr         MM_FREE
-            _M_MT_FAIL_IF_C     'l'
-            lda         ZP_TEMP_2
-            jsr         MM_FREE
-            _M_MT_FAIL_IF_C     'l'
-            lda         ZP_TEMP_VEC4
-            jsr         MM_FREE
-            _M_MT_FAIL_IF_C     'l'
-            lda         MMU_HDR + MmuHeader::low_water
-            _M_MT_EXPECT        'm', MMU_SYS_PAGE
-            lda         ZP_TEMP_2
-            jsr         MM_FREE                             ; Already freed: must fail
-            _M_MT_FAIL_IF_NC    'n'
-
-            PRINT_CHAR  #'o', #'k'
-            bra         @end
-
-@fail:                                                      ; .X = step, .A = error / value
-            pha
-            phx
-            PRINT_CHAR  #'F', #'A', #'I', #'L', #' '
-            pla
-            PRINT_CHAR
-            PRINT_SPACE
-            pla
-            PRINT_BYTE
-
-@end:
-            PRINT_CRLF
-            PULL_YXA
             rts

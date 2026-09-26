@@ -37,3 +37,19 @@ TH_MM_UNLOCK:
                 jmp             MM_UNLOCK           ; $F830
 TH_MMU_TEST:
                 jmp             MMU_TEST            ; $F833
+TH_SH_ALLOC:
+                jmp             SH_ALLOC            ; $F836
+TH_SH_ATTACH:
+                jmp             SH_ATTACH           ; $F839
+TH_SH_DETACH:
+                jmp             SH_DETACH           ; $F83C
+TH_SH_READ:
+                jmp             SH_READ             ; $F83F
+TH_SH_WRITE:
+                jmp             SH_WRITE            ; $F842
+TH_SH_LOCK:
+                jmp             SH_LOCK             ; $F845
+TH_SH_UNLOCK:
+                jmp             SH_UNLOCK           ; $F848
+TH_MM_TASK_RESET:
+                jmp             MM_TASK_RESET       ; $F84B
