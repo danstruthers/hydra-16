@@ -34,6 +34,9 @@ FAR_GATE        SH_WRITE,       ::SH_WRITE,             0
 FAR_GATE        SH_LOCK,        ::SH_LOCK,              0
 FAR_GATE        SH_UNLOCK,      ::SH_UNLOCK,            0
 FAR_GATE        MM_TASK_RESET,  ::MM_TASK_RESET,        0
+FAR_GATE        MM_FIND,        ::MM_FIND,              0
+FAR_GATE        MM_SET_FLOOR,   ::MM_SET_FLOOR,         0
+FAR_GATE        MM_TASK_INIT,   ::MM_TASK_INIT,         0   ; Reset the current task's MMU area (HyForth cold)
 
 ; Sound routines run in the sound task (through the page 0 SND_CALL_* task gates)
 FAR_GATE        SOUND_INIT,     ::SND_CALL_INIT,        0
@@ -92,4 +95,6 @@ WRITE_HSTRING:
                 jmp             SH_LOCK             ; $F845
                 jmp             SH_UNLOCK           ; $F848
                 jmp             MM_TASK_RESET       ; $F84B
-.assert     * = ::TH_MM_TASK_RESET + 3, lderror, "BIOS_THUNKS_P1 must match BIOS_THUNKS"
+                jmp             MM_FIND             ; $F84E
+                jmp             MM_SET_FLOOR        ; $F851
+.assert     * = ::TH_MM_SET_FLOOR + 3, lderror, "BIOS_THUNKS_P1 must match BIOS_THUNKS"

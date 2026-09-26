@@ -60,6 +60,7 @@ PAGED_RAM_BASE   = $8000                                    ; RAM bank window ($
             page_ends   .res 16                             ; 1 bit per page, marks the last page of each run
             bank_ends   .res 30                             ; 1 bit per bank, marks the last bank of each run
             low_water   .byte                               ; Lowest allocated page (MMU_SYS_PAGE when empty)
+            page_floor  .byte                               ; Lowest page MM_PAGE_ALLOC may hand out (MM_SET_FLOOR)
             handles     .byte                               ; Start of the handle table (rest of the MMU area)
 .endstruct
 
@@ -206,6 +207,8 @@ MM_TASK_INIT:
             sta         MMU_HDR + MmuHeader::page_map + 15
             lda         #MMU_SYS_PAGE
             sta         MMU_HDR + MmuHeader::low_water
+            lda         #MMU_PAGE_BOTTOM
+            sta         MMU_HDR + MmuHeader::page_floor
             lda         ZP_M_MODS                           ; Mark the banks of missing modules in use
             sta         ZP_M_TEMP
             lda         ZP_M_MODS + 1
@@ -243,8 +246,10 @@ MM_PAGE_ALLOC:
             sei
             PUSH_XY
             jsr         MM_PAGE_MAPS_SETUP
+            ldy         MMU_HDR + MmuHeader::page_floor     ; Never below the page floor
+            cpy         #MMU_PAGE_TOP + 1
+            bcs         @no_mem                             ; (BM_ALLOC_RUN needs lowest <= highest)
             ldx         #MMU_PAGE_TOP
-            ldy         #MMU_PAGE_BOTTOM
             jsr         BM_ALLOC_RUN
             bcs         @done
             cmp         MMU_HDR + MmuHeader::low_water      ; New lowest page?
@@ -256,6 +261,39 @@ MM_PAGE_ALLOC:
 
 @done:
             PULL_YX
+            jmp         MM_RETURN
+
+@no_mem:
+            lda         #ERR_OUT_OF_MEMORY
+            sec
+            bra         @done
+
+; Set the page floor: MM_PAGE_ALLOC (and so chunk and page allocations) will only hand out pages at or
+; above it.  Lets a task keep the space above its own data free to grow into (HyForth's dictionary).
+; The floor can't go above the lowest page already allocated.
+; IN: .A = page (raised to MMU_PAGE_BOTTOM if below it)
+; OUT (success): C = 0
+; OUT (failure): .A = ERR_OUT_OF_MEMORY, C = 1 (pages below .A are already allocated; floor unchanged)
+; Preserves .X, .Y
+MM_SET_FLOOR:
+            php                                             ; Save caller's I flag
+            sei
+            cmp         #MMU_PAGE_BOTTOM
+            bcs         :+
+            lda         #MMU_PAGE_BOTTOM
+:
+            cmp         MMU_HDR + MmuHeader::low_water
+            beq         @set
+            bcs         @no_mem
+
+@set:
+            sta         MMU_HDR + MmuHeader::page_floor
+            clc
+            jmp         MM_RETURN
+
+@no_mem:
+            lda         #ERR_OUT_OF_MEMORY
+            sec
             jmp         MM_RETURN
 
 ; Free a run of task pages allocated with MM_PAGE_ALLOC.
@@ -960,6 +998,59 @@ MM_CHUNK_CLASS:
 @found:
             stx         ZP_M_CLS
             rts
+
+; Find the handle of the current task's chunk or page allocation that starts at an address.
+; (Not for AI_SMALL or AI_PAGED allocations: they have no unique address.)
+; IN: .A.Y = address (.A = low byte)
+; OUT (success): .A = handle, C = 0
+; OUT (failure): .A = ERR_MEM_NOT_VALID, C = 1
+; Preserves .X, .Y
+MM_FIND:
+            php                                             ; Save caller's I flag
+            sei
+            PUSH_XY
+            sta         ZP_M_SP1                            ; The address
+            sty         ZP_M_SP1 + 1
+            LOAD_ADDR   MMU_HANDLE_TBL, ZP_M_HP
+            lda         #1
+            sta         ZP_M_HANDLE
+
+@loop:
+            ldy         #Handle::status
+            lda         (ZP_M_HP),Y
+            and         #AI_IN_USE | AI_SMALL | AI_PAGED
+            cmp         #AI_IN_USE                          ; In use, and a chunk or page run
+            bne         @next
+            ldy         #Handle::addr_l
+            lda         (ZP_M_HP),Y
+            cmp         ZP_M_SP1
+            bne         @next
+            iny
+            lda         (ZP_M_HP),Y
+            cmp         ZP_M_SP1 + 1
+            bne         @next
+            lda         ZP_M_HANDLE
+            clc
+            bra         @done
+
+@next:
+            lda         ZP_M_HP                             ; Next entry
+            clc
+            adc         #.sizeof(Handle)
+            sta         ZP_M_HP
+            bcc         :+
+            inc         ZP_M_HP + 1
+:
+            inc         ZP_M_HANDLE
+            lda         ZP_M_HANDLE
+            cmp         #MMU_MAX_HANDLES + 1
+            bne         @loop
+            lda         #ERR_MEM_NOT_VALID
+            sec
+
+@done:
+            PULL_YX
+            jmp         MM_RETURN
 
 ; Find a free handle table entry in the current task.
 ; OUT (success): ZP_M_HANDLE = handle, ZP_M_HP = its entry, C = 0

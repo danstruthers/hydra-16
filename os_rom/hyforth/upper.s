@@ -152,26 +152,74 @@ ALNOTDONE:
 ;
 ;-------- malloc and mlen
 
+MALFAIL:
+    clc                   ; out of memory
+    rts
 MALLOC:
     ;  TEMP1 and TEMP2 should have bytes / record type if 'jsr MALLOC'
-    ;  uses TEMP3, y, x, a
+    ;  OUT: C = 1 and TEMP1 = memory stack slot (holds the record address); C = 0 if out of memory
+    ;  Records smaller than FORTH_LARGE_MIN go in the arena (MEMLAST grows down, not below MEMBOT);
+    ;  bigger ones get their own MMU block, marked with MEM_MMU in the type byte.
+    ;  uses TEMP3, TEMP4, y, x, a
+    lda MEMPTR           ; memory stack full?
+    cmp #<MEMSTK
+    lda MEMPTR+1
+    sbc #>MEMSTK
+    bcc MALFAIL
+    lda TEMP1+1
+    bne MALLARGE
+                        ; arena: new record at MEMLAST - 3 - bytes, into TEMP4
     lda MEMLAST
     sec
     sbc #3
-    sta MEMLAST
-    bcs MALSK00
-    dec MEMLAST+1
-MALSK00:
+    sta TEMP4
+    lda MEMLAST+1
+    sbc #0
+    sta TEMP4+1
+    lda TEMP4
     sec
     sbc TEMP1
-    sta MEMLAST
-    lda MEMLAST+1
+    sta TEMP4
+    lda TEMP4+1
     sbc TEMP1+1
-    sta MEMLAST+1
-                        ;MEMLAST updated to start of new record
-    lda MEMLAST
+    sta TEMP4+1
+    bcc MALFAIL         ; wrapped
+    lda TEMP4
+    cmp MEMBOT
+    lda TEMP4+1
+    sbc MEMBOT+1
+    bcc MALFAIL         ; below the arena
+    lda TEMP4
+    sta MEMLAST
+    lda TEMP4+1
+    sta MEMLAST+1        ;MEMLAST updated to start of new record
+    bra MALHDR
+MALLARGE:               ; its own MMU block: bytes + 3 for the header
+    lda TEMP1
+    clc
+    adc #3
+    pha
+    lda TEMP1+1
+    adc #0
+    tay
+    pla
+    bcs MALFAIL          ; more than $FFFF
+    ldx #0
+    jsr MM_ALLOC         ; .A = handle
+    bcs MALFAIL
+    pha
+    jsr MM_LOCK          ; .A.Y = address (page blocks don't move), .X = RAM bank
+    sta TEMP4
+    sty TEMP4+1
+    pla
+    jsr MM_UNLOCK
+    lda TEMP2
+    ora #MEM_MMU
+    sta TEMP2
+MALHDR:
+    lda TEMP4
     sta TEMP3
-    lda MEMLAST+1
+    lda TEMP4+1
     sta TEMP3+1         ; use TEMP3 to walk through clearing of memory
     ldy #0
     lda TEMP2            ; write type first
@@ -185,34 +233,32 @@ MALSK00:
     ldx #TEMP3
     lda #3
     jsr addwx            ; increment TEMP3 by 3
-MALLOOP:
-    lda #0
-    ldy #0
-    sta (TEMP3),y
-    dec TEMP1
-    bne MALSK02    
-    lda TEMP1+1
-    beq MALCONT
+MALLOOP:                 ; clear TEMP1 bytes at TEMP3
     lda TEMP1
-    cmp #$FF
-    bne MALSK02       
-    dec TEMP1+1
-MALSK02:
+    ora TEMP1+1
+    beq MALCONT
+    lda #0
+    sta (TEMP3)
     inc TEMP3
     bne MALSK01
     inc TEMP3+1
-MALSK01:    
+MALSK01:
+    lda TEMP1
+    bne MALSK02
+    dec TEMP1+1
+MALSK02:
+    dec TEMP1
     bra MALLOOP
-MALCONT:                   ; now store MEMLAST at MEMPTR
+MALCONT:                   ; now store the record address at MEMPTR
     ldy #0
-    lda MEMLAST
+    lda TEMP4
     sta (MEMPTR),y
     iny
-    lda MEMLAST+1
+    lda TEMP4+1
     sta (MEMPTR),y
     lda MEMPTR+1
     sta TEMP1+1
-    lda MEMPTR           
+    lda MEMPTR
     sta TEMP1             ; copy to TEMP1 before incrementing
     sec                   ; MEMPTR + 2
     sbc #2
@@ -220,7 +266,41 @@ MALCONT:                   ; now store MEMLAST at MEMPTR
     bcs MALLOCEND
     dec MEMPTR+1
 MALLOCEND:
-    rts    
+    sec                   ; OK
+    rts
+;
+;  Keep the MMU from handing out the pages the dictionary grows into: raise the MMU page floor
+;  (DICTLIM) to FORTH_DICT_MARGIN pages above 'here' when needed.
+;  OUT: C = 1 OK; C = 0 the dictionary is full (the MMU has allocated those pages)
+;  uses a, x, y
+DICTCHK:
+    lda NEXTHEAP+1
+    clc
+    adc #FORTH_DICT_MARGIN + 1   ; floor wanted: page of 'here' + margin + 1
+    cmp DICTLIM
+    bcc DICTOK                   ; already at or above it
+    beq DICTOK
+    pha
+    jsr MM_SET_FLOOR             ; MMU: C = 0 OK
+    pla
+    bcs DICTNO
+    sta DICTLIM
+DICTOK:
+    sec
+    rts
+DICTNO:
+    clc
+    rts
+;
+;  Free a large (MEM_MMU) record's MMU block.  IN: TEMP3 = record address.  uses a, x, y
+MMUFREE:
+    lda TEMP3
+    ldy TEMP3+1
+    jsr MM_FIND                  ; .A = handle
+    bcs MMUFREEND
+    jsr MM_FREE
+MMUFREEND:
+    rts
 ; 
 MEMLEN:              ; address in TEMP2
      ldy #0
@@ -388,6 +468,11 @@ TX2FOUND:
     inc TEMP1                       ; and add one for zero at end
 
     jsr MALLOC                      ; TEMP1 now has address on mem stack
+    bcs TX2ROOM
+    lda #ERR_MEM                    ; out of memory: reported when the token isn't found
+    sta ERRFLAG
+    jmp TX2NOGOOD
+TX2ROOM:
 
     ldy #0
     lda (TEMP1),y

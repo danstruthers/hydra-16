@@ -53,3 +53,7 @@ TH_SH_UNLOCK:
                 jmp             SH_UNLOCK           ; $F848
 TH_MM_TASK_RESET:
                 jmp             MM_TASK_RESET       ; $F84B
+TH_MM_FIND:
+                jmp             MM_FIND             ; $F84E
+TH_MM_SET_FLOOR:
+                jmp             MM_SET_FLOOR        ; $F851

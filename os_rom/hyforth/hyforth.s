@@ -206,6 +206,13 @@ RTEND = $FE
 ; moves backwards
 MEMEND = $01FE
 MEM_SZ = $04
+MEM_MMU = $40             ; record type flag: the record is its own MMU block (large records)
+
+; malloc records (see MALLOC): small ones go in an arena the MMU allocates at 'cold'; records of
+; FORTH_LARGE_MIN bytes or more get their own MMU block
+FORTH_ARENA_SIZE = $0800  ; 2K arena for small records
+FORTH_LARGE_MIN = $0100   ; records this big or bigger get their own MMU block
+FORTH_DICT_MARGIN = 2     ; pages above 'here' the MMU must keep free (see DICTCHK)
 
 ;
 ; spi
@@ -217,7 +224,7 @@ MEM_SZ = $04
 
 ALTBUF = $6000
 ALTBUF_end = $6FFF
-MEMTOP = $7D00            ; malloc allocates DOWN from MEMTOP (below the task system page and MMU area)
+; malloc allocates DOWN from the top of the arena (MEMTOPV), set up at 'cold'
 
 ;----------------------------------------------------------------------
 ;       Look closely at hyforth.cfg and the output of ca65/ld65 after
@@ -294,7 +301,15 @@ TASK_ZP MEMPTR, 2      ;   malloc                              $CE
 TASK_ZP TEMP9, 2       ;   Imm                                 $CC
 TASK_ZP TEMP8, 2       ;  Hstring macro                        $CA
 TASK_ZP TEMP0, 2       ;  DUMPREG                              $C8
-ZPSTART = TEMP0
+ZPSTART = TEMP0        ; CLEAR zeroes ZPSTART-$FF; the MMU variables below are set up by 'cold'
+;
+;                   MMU (not cleared by CLEAR)
+;
+TASK_ZP MEMBOT, 2      ; malloc arena bottom                   $C6
+TASK_ZP MEMTOPV, 2     ; malloc arena top (MEMLAST starts here) $C4
+TASK_ZP MEMHND, 1      ; MMU handle of the arena               $C3
+TASK_ZP DICTLIM, 1     ; MMU page floor: 'here' stays below it $C2
+TASK_ZP HLBANK, 1      ; RAM bank saved by hlock               $C1
 TASK_ZP_END
 ;
 ; *** $DO-$FF total usage in ZP, including TEMP vars ***
@@ -349,6 +364,34 @@ cold:
     cld
     jsr CLEAR          ; zero out zero page, INBUF, DS, and RT
 
+; Forth owns this task's MMU memory: free anything left from before (only the MMU area: typed-ahead
+; input in the message rings is kept), then get the malloc arena
+    jsr MM_TASK_INIT
+    stz MEMBOT                 ; no arena (every small malloc fails) unless MM_ALLOC works
+    stz MEMBOT+1
+    stz MEMTOPV
+    stz MEMTOPV+1
+    stz DICTLIM
+    lda #<FORTH_ARENA_SIZE
+    ldy #>FORTH_ARENA_SIZE
+    ldx #0
+    jsr MM_ALLOC               ; whole pages at the top of task RAM
+    bcs NOARENA
+    sta MEMHND
+    jsr MM_LOCK                ; .A.Y = address (page blocks don't move), .X = RAM bank
+    sta MEMBOT
+    sty MEMBOT+1
+    lda MEMHND
+    jsr MM_UNLOCK
+    lda MEMBOT
+    clc
+    adc #<FORTH_ARENA_SIZE
+    sta MEMTOPV
+    lda MEMBOT+1
+    adc #>FORTH_ARENA_SIZE
+    sta MEMTOPV+1
+NOARENA:
+
 warm:
 ; link list of headers
     lda #>h_exit               ; initialize HEAP pointers
@@ -367,10 +410,11 @@ warm:
     sty MEMPTR + 1
     ldy #<(MEMSTK+MEMEND)
     sty MEMPTR
-    ldy #<MEMTOP
+    ldy MEMTOPV                 ; malloc records grow down from the top of the arena
     sty MEMLAST
-    ldy #>MEMTOP
+    ldy MEMTOPV+1
     sty MEMLAST+1
+    jsr DICTCHK                 ; keep the MMU out of the pages above 'here'
 
 ;---------------------------------------------------------------------
 ; various reinitialization points
@@ -444,9 +488,17 @@ RESLOOP:              ; lsb linked list
     bne RESEACH              ; PGS - did he forget this?
 
 WORDNOTFOUND:
+    lda ERRFLAG            ; keep an error already raised (e.g. out of memory for a q^...^ string)
+    bne WNFERR
     lda #ERR_UKW           ; UNKNOWN WORD error
     sta ERRFLAG
+WNFERR:
     jmp errrtn ; end of dictionary, no more words to search, abort
+;
+DICTFULL:                  ; the dictionary would grow into memory the MMU has allocated
+    lda #ERR_MEM
+    sta ERRFLAG
+    jmp errrtn
 
 RESEACH:                        ; msb linked list
     lda TEMP2 + 1
@@ -499,6 +551,10 @@ compile:          ; otherwise compile
     PRINT_CHAR
 CMPSKIP:
 .endif
+    jsr DICTCHK         ; room for the dictionary to grow?
+    bcs CMPROOM
+    jmp DICTFULL
+CMPROOM:
     jsr wcomma          ; copy W into NEXTHEAP ('here'), increment NEXTHEAP
     bcs immediate
     jmp resolve         ; if not 'immediate' go on to next token
@@ -1001,6 +1057,10 @@ finish:                         ; compiled words must end with exit
 ;
 ;------------------------------------------COMPILE------------------
 def_word ":", "colon", 0
+    jsr DICTCHK                 ; room for the dictionary to grow?
+    bcs COLONROOM
+    jmp DICTFULL
+COLONROOM:
     lda NEXTHEAP
     sta BACKHEAP                ; backup NEXTHEAP to BACKHEAP
     lda NEXTHEAP + 1

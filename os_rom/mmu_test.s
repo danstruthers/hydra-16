@@ -42,6 +42,8 @@ MMU_TEST_TASK   = 2                                         ; An idle task the t
 MMU_TEST:
             PUSH_AXY
             _M_WRITE_HSTRING    S_MMU_TEST
+            lda         MMU_LOW_WATER                       ; Lowest allocated page before the test
+            sta         ZP_TEMP_VEC4 + 1                    ; (e.g. HyForth's arena)
 
 ; Small (in-entry) allocation
             lda         #2                                  ; 2 bytes
@@ -204,8 +206,12 @@ MMU_TEST:
             lda         ZP_TEMP_VEC4
             jsr         MM_FREE
             _M_MT_FAIL_IF_C     'l'
-            lda         MMU_LOW_WATER
-            _M_MT_EXPECT        'm', MMU_SYS_PAGE
+            lda         MMU_LOW_WATER                       ; Back to where it was
+            cmp         ZP_TEMP_VEC4 + 1
+            beq         :+
+            ldx         #'m'
+            jmp         @fail
+:
             lda         ZP_TEMP_2
             jsr         MM_FREE                             ; Already freed: must fail
             _M_MT_FAIL_IF_NC    'n'

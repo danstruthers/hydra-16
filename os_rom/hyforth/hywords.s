@@ -139,6 +139,10 @@ def_word "lit", "literal", 0
 ;
 ; ( -- )
 def_word "var", "var", 0
+    jsr DICTCHK                 ; room for the dictionary to grow?
+    bcs VARROOM
+    jmp DICTFULL
+VARROOM:
     lda NEXTHEAP
     sta BACKHEAP                ; backup NEXTHEAP to BACKHEAP
     lda NEXTHEAP + 1
@@ -227,6 +231,10 @@ VCEND0:
 ;
 ; ( cv -- )
 def_word "cons", "cons", 0
+    jsr DICTCHK                 ; room for the dictionary to grow?
+    bcs CONSROOM
+    jmp DICTFULL
+CONSROOM:
     lda NEXTHEAP
     sta BACKHEAP                ; backup NEXTHEAP to BACKHEAP
     lda NEXTHEAP + 1
@@ -902,6 +910,10 @@ BLOAD_IN:
     jsr spull_0          ; address from stack to TEMP1
 
 BLAGAIN:
+    jsr DICTCHK                 ; room for the dictionary to grow?
+    bcs BLROOM
+    jmp DICTFULL
+BLROOM:
     lda NEXTHEAP
     sta BACKHEAP                ; backup NEXTHEAP to BACKHEAP
     lda NEXTHEAP + 1
@@ -1200,11 +1212,11 @@ MEMCPYEND:
 ;
 ;                   free memory between BACKHEAP and MEMPTR
 def_word "free", "free", 0
-    lda MEMLAST
+    lda #0                     ; room between 'here' and the lowest page the MMU has allocated
     sec
     sbc NEXTHEAP
     sta TEMP1
-    lda MEMLAST+1
+    lda MMU_LOW_WATER
     sbc NEXTHEAP+1
     sta TEMP1+1
     jsr spush_0
@@ -1292,6 +1304,7 @@ PURGECONT:
     lda TEMP2
     clc
     adc #2
+    sta TEMP2         ; TEMP2 = the last record's slot
     bcc  PURGESK00
     inc TEMP2+1
 PURGESK00:
@@ -1304,6 +1317,12 @@ PURGESK00:
     sta MEMPTR
     lda TEMP2+1
     sta MEMPTR+1
+    lda (TEMP3)       ; large record (its own MMU block)?
+    and #MEM_MMU
+    beq PURGEARENA
+    jsr MMUFREE       ; free its block; the arena (MEMLAST) is unchanged
+    bra PURGEEND
+PURGEARENA:
     lda TEMP3
 ;    clc
 ;    adc #3
@@ -1325,6 +1344,11 @@ def_word "malloc", "malloc", 0
     jsr spull_1       ; type ( word ($00), char ($01), words ($02), bytes ($03), sz ($04) ..)
     jsr spull_0       ; # bytes
     jsr MALLOC        ; will return address in TEMP1
+    bcs MALLOCOK
+    lda #ERR_MEM      ; out of memory
+    sta ERRFLAG
+    jmp errrtn
+MALLOCOK:
     jsr spush_0       ; push ptr address to new record on stack
     jmp next
 
@@ -1334,6 +1358,61 @@ def_word "mlen", "mlen", 0
     jsr spull_1
     jsr MEMLEN   ; returns length in TEMP1, maddr in TEMP3
     jsr spush_0
+    jmp next
+;
+;-------- MMU handles (see os_rom MMU_PLAN.md)
+;
+; ( bytes flags -- h )  allocate MMU memory; flags 0 = task RAM, 1 = 8K RAM banks (AI_PAGED)
+def_word "halloc", "halloc", 0
+    jsr spull_1       ; flags
+    jsr spull_0       ; bytes
+    lda TEMP1
+    ldy TEMP1+1
+    ldx TEMP2
+    jsr MM_ALLOC      ; .A = handle
+    bcs HMERR
+    sta TEMP1
+    stz TEMP1+1
+    jsr spush_0
+    jmp next
+HMERR:
+    lda #ERR_MEM      ; out of memory (or a bad handle)
+    sta ERRFLAG
+    jmp errrtn
+;
+; ( h -- )  free MMU memory
+def_word "hfree", "hfree", 0
+    jsr spull_0
+    lda TEMP1
+    jsr MM_FREE
+    bcs HMERR
+    jmp next
+;
+; ( h -- addr )  raw address of MMU memory (8K RAM bank allocations: selects the bank at $8000);
+;               can't be freed until hunlock.  One hlock at a time.
+def_word "hlock", "hlock", 0
+    jsr spull_0
+    lda TEMP1
+    jsr MM_LOCK       ; .A.Y = address, .X = previous RAM bank
+    bcs HMERR
+    stx HLBANK
+    sta TEMP1
+    sty TEMP1+1
+    jsr spush_0
+    jmp next
+;
+; ( h -- )  undo hlock (restores the RAM bank)
+def_word "hunlock", "hunlock", 0
+    jsr spull_0
+    lda TEMP1
+    ldx HLBANK
+    jsr MM_UNLOCK
+    bcs HMERR
+    jmp next
+;
+; ( -- )  run the MMU self test
+def_word "mmtest", "mmtest", 0
+    jsr MMU_TEST
     jmp next
 ;
 ;
