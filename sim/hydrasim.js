@@ -27,6 +27,8 @@
 //   --raw               Print serial output as-is (default shows ESC as <ESC>)
 //   --trace N           Show the last N instructions (default 25)
 //   --dump ADDR[:LEN][@TASK]   Hex dump task RAM after the run (e.g. --dump 7D90:16@1)
+//   --watch ADDR[@TASK] Report every write to task RAM address ADDR (value, and the PC that wrote it)
+//   --pc [PAGE:]ADDR    Report the registers every time the PC reaches ADDR (on ROM page PAGE, if given)
 //
 // Output: serial output, the last instructions (W T PC A X Y S P), the hottest PCs (useful to find a
 // loop the code is stuck in), and final state.
@@ -37,7 +39,7 @@ const path = require('path');
 
 // ---- options
 const opt = { rom: path.join(__dirname, '..', 'os_rom', 'tmp'), cycles: 20000000, input: '', modules: 3,
-  aciaLine: 1, stuckIrq: -1, model: '', raw: false, trace: 25, dumps: [] };
+  aciaLine: 1, stuckIrq: -1, model: '', raw: false, trace: 25, dumps: [], watches: [], pcWatches: [] };
 const argv = process.argv.slice(2);
 for (let i = 0; i < argv.length; i++) {
   const a = argv[i], next = () => argv[++i];
@@ -52,6 +54,8 @@ for (let i = 0; i < argv.length; i++) {
     case '--raw': opt.raw = true; break;
     case '--trace': opt.trace = +next(); break;
     case '--dump': opt.dumps.push(next()); break;
+    case '--pc': { const m = /^(?:([0-9A-Fa-f]):)?([0-9A-Fa-f]+)$/.exec(next()); opt.pcWatches.push({ pc: parseInt(m[2], 16), page: m[1] === undefined ? -1 : parseInt(m[1], 16) }); break; }
+    case '--watch': { const m = /^([0-9A-Fa-f]+)(?:@([0-9A-Fa-f]))?$/.exec(next()); opt.watches.push({ addr: parseInt(m[1], 16), task: m[2] === undefined ? -1 : parseInt(m[2], 16) }); break; }
     default: console.error('Unknown option: ' + a + ' (see the header of hydrasim.js)'); process.exit(1);
   }
 }
@@ -100,7 +104,11 @@ function rd(a) {
 }
 function wr(a, v) {
   v &= 0xFF;
-  if (a < 0x8000) { taskRam[tsel(a)][a] = v; return; }
+  if (a < 0x8000) {
+    for (const w of opt.watches) if (w.addr === a && (w.task < 0 || w.task === tsel(a)))
+      console.log('watch: $' + hx(a, 4) + ' (task ' + hx(tsel(a), 1) + ') ' + hx(taskRam[tsel(a)][a]) + ' -> ' + hx(v) + ' by ' + hx(W, 1) + ':' + hx(lastPC, 4) + ' at cycle ' + cyc);
+    taskRam[tsel(a)][a] = v; return;
+  }
   if (a < 0xA000) { const b = taskRam[tsel(0)][0]; if (bankInstalled(b)) bankMem(b)[a - 0x8000] = v; return; }
   if (a < 0xFF00) return;
   if (a >= 0xFF10 && a < 0xFF14) {
@@ -128,7 +136,7 @@ function irqLine() {
 const irqVector = () => { const n = irqLine(); return vecRam[n >= 0 ? (n ^ 7) : (V & 15)]; };
 
 // ---- CPU
-let A = 0, X = 0, Y = 0, S = 0xFD, P = 0x34, PC = 0, cyc = 0, waiting = false, halted = '';
+let A = 0, X = 0, Y = 0, S = 0xFD, P = 0x34, PC = 0, lastPC = 0, cyc = 0, waiting = false, halted = '';
 const C = 1, Z = 2, I = 4, D = 8, B = 0x10, Vf = 0x40, N = 0x80;
 const setNZ = v => { P = (P & ~(N | Z)) | (v & 0x80) | (v ? 0 : Z); return v; };
 const push = v => { wr(0x100 + S, v); S = (S - 1) & 0xFF; };
@@ -164,6 +172,9 @@ while (cyc < opt.cycles && !halted) {
   if (irqLine() >= 0) { waiting = false; if (!(P & I)) { interrupt(irqVector(), false); cyc += 7; continue; } }
   if (waiting) { cyc++; continue; }
   trace.push([W, T, PC, A, X, Y, S, P]); if (trace.length > opt.trace) trace.shift();
+  lastPC = PC;
+  for (const w of opt.pcWatches) if (w.pc === PC && (w.page < 0 || w.page === W))
+    console.log('pc: ' + hx(W, 1) + ':' + hx(PC, 4) + ' T=' + hx(T, 1) + ' A=' + hx(A) + ' X=' + hx(X) + ' Y=' + hx(Y) + ' S=' + hx(S) + ' P=' + hx(P) + ' at cycle ' + cyc);
   const op = fetch(); cyc += 3;
   let a, v, t;
   const zp = () => fetch(), zpx = () => (fetch() + X) & 0xFF, zpy = () => (fetch() + Y) & 0xFF;

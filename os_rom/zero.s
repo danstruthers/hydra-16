@@ -143,6 +143,10 @@ ZP_M_LO:                ; bitmap lowest / highest bit bound / scratch
     .res  1
 ZP_M_MODS:              ; installed RAM modules, bit m = module m (banks m*16 - m*16+15)
     .res  2
+ZP_M_HP:                ; handle table entry pointer
+    .res  2
+ZP_M_HANDLE:            ; handle being worked on
+    .res  1
 
 ; MATH
 ZP_MATH_TEMP:           ; temp space, parse output base

@@ -84,13 +84,14 @@ Called from `TASK_START`'s `@task_complete`. It frees all of the task's memory w
 
 | Call | In | Out |
 | :--- | :- | :-- |
-| `MM_ALLOC` | .A.Y = size, .X = flags | .A = handle |
-| `MM_FREE` | .A = handle | |
+| `MM_ALLOC` ($F821) | .A.Y = size (.A = low), .X = 0 or `AI_PAGED` | .A = handle |
+| `MM_FREE` ($F824) | .A = handle | fails if locked |
 | `MM_FIND` | .A.Y = block address | .A = handle |
 | `MM_LOWWATER` | | .A = lowest allocated page |
-| `MM_READ` / `MM_WRITE` | .A = handle, .Y = offset (.X = byte for write) | .A = byte |
-| `MM_LOCK` | .A = handle | ZP pointer set, bank selected; pins the block |
-| `MM_UNLOCK` | .A = handle | restores bank |
+| `MM_READ` / `MM_WRITE` ($F827 / $F82A) | .A = handle, .Y = offset 0-255 (.X = byte for write) | .A = byte |
+| `MM_LOCK` ($F82D) | .A = handle | .A.Y = pointer, .X = previous RAM bank; selects the bank (`AI_PAGED`); pins the block |
+| `MM_UNLOCK` ($F830) | .A = handle, .X = bank from `MM_LOCK` | restores the bank |
+| `MMU_TEST` ($F833) | | runs the handle calls in the current task and prints `MMU test: ok` or `FAIL x ee` (WOZMON: `F833R`) |
 | `SH_ALLOC` / `SH_FREE` / `SH_READ` / `SH_WRITE` / `SH_LOCK` | same shapes, shared handles | |
 | `MSG_SEND_BYTE` | .A = byte, .X = receiving task (sender = current task) | C = 1 if the ring is full |
 | `MSG_RECV_BYTE` | .X = sending task, or `$FF` for any | .A = byte, .X = sender; C = 1 if empty |
@@ -125,7 +126,7 @@ Every task has its own zero page, so ZP only has to be divided up **within one t
 9. **(Done) Shell in its own task (task 1, via `TASK_PREPARE` + `SWITCH_TO`):** task 0 finishes boot, starts the shell task (Forth/WOZMON) as the serial-capture task, and hands over to it with `SWITCH_TO`. This needs no preemptive scheduler: the only running task is the shell, and the drivers run from IRQs.
 
 **Phase 3 - Rest of the MMU**
-10. Handle table plus `MM_ALLOC`/`MM_FREE` for the small and page tiers, then `MM_READ`/`WRITE`/`LOCK`.
+10. **(Done, stage 2)** Handle table plus `MM_ALLOC`/`MM_FREE` for the small, page and bank tiers, then `MM_READ`/`WRITE`/`LOCK`/`UNLOCK`, the `$F821-$F835` thunks and `MMU_TEST`.  Until chunks exist (step 11), 4+ byte allocations take whole pages.
 11. Chunk allocators.
 12. Shared bank allocator and shared handles (the message ring banks are pre-reserved).
 13. `MM_TASK_RESET`, hooked into `@task_complete` (it also unregisters IRQs and calls driver `stop`).

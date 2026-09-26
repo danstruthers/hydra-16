@@ -12,50 +12,35 @@
             page        .byte
 .endstruct
 
-; status byte =>
-; Bit 0: Paged      (1=Paged, 0=Task)               Points to Paged RAM
+; Handle table entry status byte =>
+; Bit 0: Paged      (1=Paged, 0=Task)               Points to Paged RAM (8K banks at $8000)
 ; Bit 1: Shared     (1=Shared, 0=Task)              Points to Shared RAM when Shared == 1 && Paged == 1
-; Bit 2: Block      (1=sz in Pages, 0=sz in Bytes)  Points to 256-byte blocks instead of bytes
-; Bit 3: Small      (1=3 or fewer bytes, 0=4+ bytes (or 1+ pages))  Bytes are stored in the allocation structure itself, not in a separate allocation, only valid if bits 0-2 are 0
+; Bit 2: Block      (1=Pages, 0=other)              Points to a run of 256-byte task RAM pages
+; Bit 3: Small      (1=3 or fewer bytes)            Bytes are stored in the handle entry itself, not in a separate
+;                                                   allocation; bits 0-1 then hold the length (1-3)
 ; Bit 4: Allocated  (1=Allocated, 0=Free)           Is the memory free or allocated
 ; Bit 5: Readonly   (1=not writable, 0=writable)    Allocation is read-only
-; Bit 6: RESERVED
+; Bit 6: Locked     (1=Locked)                      MM_LOCK handed out a raw pointer; can't be freed
 ; Bit 7: IsValid    (1=Yes, 0=NO)                   Is this structure in use?
 
 AI_PAGED     = $01
 AI_SHARED    = $02
 AI_BLOCK     = $04
-AI_SMALL     = $08      ; No actual allocation: bytes are stored in addr, offset in bits 0..1 of status
+AI_SMALL     = $08      ; No actual allocation: bytes are stored in the entry, length in bits 0..1 of status
 AI_ALLOCATED = $10
 AI_READONLY  = $20
+AI_LOCKED    = $40
 AI_VALID     = $80
 
-AI_DEFAULT   = AI_VALID
-ALLOC_TASK   = AI_VALID    | AI_ALLOCATED
-ALLOC_PAGED  = ALLOC_TASK  | AI_PAGED
-ALLOC_SHARED = ALLOC_PAGED | AI_SHARED
-ALLOC_SMALL  = ALLOC_TASK  | AI_SMALL
+AI_SMALL_LEN = $03      ; Length mask for AI_SMALL entries
+AI_IN_USE    = AI_VALID | AI_ALLOCATED
 
-.struct     SmallAllocInfo
-            addr        .tag PageAddress
-            status      .byte
-.endstruct
-
-.struct     AllocInfo
-            .tag        SmallAllocInfo
-            pages       .word                               ; 256-byte pages in this block
-            offset      .word                               ; 
-.endstruct
-
-.struct     PageAllocInfo
-            block_size  .byte                               ; minimum 2
-            next_free   .byte                               ; zero means no further blocks are free
-.endstruct
-
-PI_VALID = $01
-
-.struct     BlockInfo
-            status      .byte
+; Handle table entry (4 bytes).  Small allocations keep their data in addr_l, addr_h, bank.
+.struct     Handle
+            addr_l      .byte                               ; Start address of the allocation
+            addr_h      .byte
+            bank        .byte                               ; First RAM bank (AI_PAGED)
+            status      .byte                               ; AI_* bits; 0 = free entry
 .endstruct
 
 ; ****************************************************************************
@@ -93,6 +78,8 @@ MMU_PAGE_MAP     = MMU_HDR + MmuHeader::page_map
 MMU_PAGE_ENDS    = MMU_HDR + MmuHeader::page_ends
 MMU_BANK_MAP     = MMU_HDR + MmuHeader::bank_map
 MMU_BANK_ENDS    = MMU_HDR + MmuHeader::bank_ends
+MMU_HANDLE_TBL   = MMU_HDR + MmuHeader::handles             ; Entry for handle h: MMU_HANDLE_TBL + (h - 1) * 4
+MMU_MAX_HANDLES  = ($8000 - MMU_HANDLE_TBL) / .sizeof(Handle)   ; 103 for 2 pages
 
 MMU_BIT_MASKS:
             .byte       $01, $02, $04, $08, $10, $20, $40, $80
@@ -370,16 +357,20 @@ MM_UPDATE_LOW_WATER:
             stx         MMU_HDR + MmuHeader::low_water
             rts
 
-; Point ZP_M_BM / ZP_M_BE at the current task's page map / page run-end map
+; Point ZP_M_BM / ZP_M_BE at the current task's page map / page run-end map.  Preserves .A
 MM_PAGE_MAPS_SETUP:
+            pha
             LOAD_ADDR   MMU_PAGE_MAP, ZP_M_BM
             LOAD_ADDR   MMU_PAGE_ENDS, ZP_M_BE
+            pla
             rts
 
-; Point ZP_M_BM / ZP_M_BE at the current task's bank map / bank run-end map
+; Point ZP_M_BM / ZP_M_BE at the current task's bank map / bank run-end map.  Preserves .A
 MM_BANK_MAPS_SETUP:
+            pha
             LOAD_ADDR   MMU_BANK_MAP, ZP_M_BM
             LOAD_ADDR   MMU_BANK_ENDS, ZP_M_BE
+            pla
             rts
 
 ; ****************************************************************************
@@ -509,56 +500,6 @@ BM_FREE_RUN:
             sec
             rts
 
-;
-;   .A.Y = MemAlloc addr
-;   .X   = Byte offset
-;   C    = 1 = Use offset, 0 = Read byte at .A.Y
-MEM_READ:
-            ; .A.Y 
-            ; If IS_SMALL, check to see if C && .X < 3
-            php                                             ; Save caller's I flag (and C)
-            sei
-            sta         ZP_M_SP1_L
-            sty         ZP_M_SP1_H
-            ldy         #SmallAllocInfo::status
-            lda         (ZP_M_SP1), y
-            sta         ZP_M_TEMP
-            bbr7        ZP_M_TEMP, @err_not_valid
-            bbr4        ZP_M_TEMP, @err_not_alloc
-            bbs3        ZP_M_TEMP, @is_small
-            lda         #ERR_MEM_NOT_SUPPORTED              ; TODO: non-small reads
-            bra         @ret_err
-
-@is_small:
-            bcs         @x_offset_small
-            lda         #3
-            and         ZP_M_TEMP
-            SKIPNEXT
-
-@x_offset_small:
-            txa
-
-@do_read_small:
-            tay
-            lda         (ZP_M_SP1), y
-
-@ret_ok:
-            plp                                             ; Restore caller's I flag
-            clc
-            rts
-
-@err_not_alloc:
-            lda         #ERR_MEM_NOT_ALLOC
-            bra         @ret_err
-
-@err_not_valid:
-            lda         #ERR_MEM_NOT_VALID
-
-@ret_err:
-            plp                                             ; Restore caller's I flag
-            sec
-            rts
-
 .macro _M_ERROR_RETURN  errno
             lda         #errno
             sec
@@ -571,30 +512,360 @@ ERROR_NOT_SYSTEM_TASK:
 ERROR_OUT_OF_MEMORY:
             _M_ERROR_RETURN     ERR_OUT_OF_MEMORY
 
-; IN: .A.Y = Bytes to allocate
-; OUT (success): .A.Y = Address of allocation, C = 0
-; OUT (failure): .A = ERROR, C = 1
-TASK_ALLOC:
-            cpy         #0                                  ; Is this a byte alloc or block alloc
-            beq         TASK_BYTE_ALLOC
-            cmp         #0                                  ; Is this a whole-block allocation?
-            beq         TASK_BLOCK_ALLOC
-            iny                                             ; Allocate one more page to cover the extra bytes
-            tya                                             ; ...and then fall through to do a block allocation
+; ****************************************************************************
+; Handles (per task).  A handle is a 1-byte index (1 - MMU_MAX_HANDLES) into the current task's handle
+; table; 0 is never a valid handle.  All calls: C = 0 on success, C = 1 with the error in .A.
+;
+;   Allocation tiers (stage 2; 4-128 byte chunks come in stage 3):
+;       1-3 bytes       AI_SMALL: the bytes are kept in the handle entry itself
+;       4+ bytes        AI_BLOCK: a run of 256-byte task RAM pages ($0800-$7CFF, top-down)
+;       .X = AI_PAGED   AI_PAGED: a run of 8K RAM banks, seen at $8000-$9FFF (MM_LOCK selects the bank)
 
-; IN: .A = Pages to allocate for current task
-; OUT (success): .A.Y = Address of the allocation structure, C = 0
-; OUT (failure): .A = ERROR, C = 1
-TASK_BLOCK_ALLOC:
+; Allocate memory for the current task.
+; IN: .A.Y = size in bytes (1 - $FFFF; .A = low byte), .X = 0 or AI_PAGED (8K RAM banks)
+; OUT (success): .A = handle, C = 0
+; OUT (failure): .A = ERR_MEM_BAD_ARG, ERR_MEM_NO_HANDLES or ERR_OUT_OF_MEMORY, C = 1
+; Preserves .X, .Y
+MM_ALLOC:
+            php                                             ; Save caller's I flag
+            sei
+            PUSH_XY
+            sta         ZP_M_SZ1                            ; Size low
+            sty         ZP_M_TEMP2                          ; Size high
+            stx         ZP_M_SV                             ; Flags
+            ora         ZP_M_TEMP2
+            beq         @bad_arg                            ; Zero bytes
+            jsr         MM_NEW_HANDLE                       ; Free entry -> ZP_M_HP, ZP_M_HANDLE
+            bcs         @done
+            lda         ZP_M_SV
+            and         #AI_PAGED
+            bne         @banks
+            lda         ZP_M_TEMP2
+            bne         @pages
+            lda         ZP_M_SZ1
+            cmp         #AI_SMALL_LEN + 1
+            bcs         @pages
+
+; 1-3 bytes: kept in the entry itself
+            ora         #AI_IN_USE | AI_SMALL               ; Status = length + flags
+            ldy         #Handle::status
+            sta         (ZP_M_HP),Y
+            lda         #0
+            ldy         #Handle::addr_l                     ; Clear the data bytes
+            sta         (ZP_M_HP),Y
+            iny
+            sta         (ZP_M_HP),Y
+            iny
+            sta         (ZP_M_HP),Y
+            bra         @ok
+
+; 4+ bytes: whole task RAM pages
+@pages:
+            lda         ZP_M_TEMP2                          ; Pages = size high + (size low <> 0)
+            ldx         ZP_M_SZ1
+            beq         :+
+            inc                                             ; ($FFxx wraps to 0: rejected as a bad size)
+:
+            jsr         MM_PAGE_ALLOC                       ; .A = first page
+            bcs         @done
+            ldy         #Handle::addr_h
+            sta         (ZP_M_HP),Y
+            lda         #0
+            ldy         #Handle::addr_l
+            sta         (ZP_M_HP),Y
+            ldy         #Handle::bank
+            sta         (ZP_M_HP),Y
+            lda         #AI_IN_USE | AI_BLOCK
+            bra         @set_status
+
+; AI_PAGED: whole 8K RAM banks
+@banks:
+            lda         ZP_M_SZ1                            ; Banks = ((size - 1) >> 13) + 1
+            cmp         #1
+            lda         ZP_M_TEMP2
+            sbc         #0                                  ; High byte of size - 1
+            lsr
+            lsr
+            lsr
+            lsr
+            lsr
+            inc
+            jsr         MM_BANK_ALLOC                       ; .A = first bank
+            bcs         @done
+            ldy         #Handle::bank
+            sta         (ZP_M_HP),Y
+            lda         #<PAGED_RAM_BASE
+            ldy         #Handle::addr_l
+            sta         (ZP_M_HP),Y
+            lda         #>PAGED_RAM_BASE
+            iny
+            sta         (ZP_M_HP),Y
+            lda         #AI_IN_USE | AI_PAGED
+
+@set_status:
+            ldy         #Handle::status                     ; Status last: it makes the entry live
+            sta         (ZP_M_HP),Y
+
+@ok:
+            lda         ZP_M_HANDLE
+            clc
+
+@done:
+            PULL_YX
+            jmp         MM_RETURN
+
+@bad_arg:
+            lda         #ERR_MEM_BAD_ARG
+            sec
+            bra         @done
+
+; Free an allocation and its handle.
+; IN: .A = handle
+; OUT (success): C = 0
+; OUT (failure): .A = ERR_MEM_NOT_VALID or ERR_MEM_LOCKED, C = 1
+; Preserves .X, .Y
+MM_FREE:
+            php                                             ; Save caller's I flag
+            sei
+            PUSH_XY
+            jsr         MM_HANDLE_PTR                       ; .A = status
+            bcs         @done
+            bit         #AI_LOCKED
+            bne         @locked
+            bit         #AI_PAGED
+            beq         :+
+            ldy         #Handle::bank
+            lda         (ZP_M_HP),Y
+            jsr         MM_BANK_FREE
+            bcs         @done
+            bra         @free_entry
+:
+            bit         #AI_BLOCK
+            beq         @free_entry                         ; AI_SMALL: nothing else to free
+            ldy         #Handle::addr_h
+            lda         (ZP_M_HP),Y
+            jsr         MM_PAGE_FREE
+            bcs         @done
+
+@free_entry:
+            lda         #0
+            ldy         #Handle::status
+            sta         (ZP_M_HP),Y
+            clc
+
+@done:
+            PULL_YX
+            jmp         MM_RETURN
+
+@locked:
+            lda         #ERR_MEM_LOCKED
+            sec
+            bra         @done
+
+; Read a byte of an allocation.
+; IN: .A = handle, .Y = offset (0-255; within the allocation's size for AI_SMALL)
+; OUT (success): .A = byte, C = 0
+; OUT (failure): .A = ERR_MEM_NOT_VALID or ERR_MEM_BAD_ARG, C = 1
+; Preserves .X, .Y
+MM_READ:
+            php                                             ; Save caller's I flag
+            sei
+            PUSH_XY
+            sty         ZP_M_TEMP                           ; Offset
+            jsr         MM_HANDLE_PTR                       ; .A = status
+            bcs         @done
+            jsr         MM_ACCESS_SETUP                     ; ZP_M_SP1 = data, bank selected
+            bcs         @done
+            ldy         ZP_M_TEMP
+            lda         (ZP_M_SP1),Y
+            ldy         ZP_M_SV
+            sty         RAM_BANK_REG                        ; Restore the RAM bank
+            clc
+
+@done:
+            PULL_YX
+            jmp         MM_RETURN
+
+; Write a byte of an allocation.
+; IN: .A = handle, .Y = offset (0-255; within the allocation's size for AI_SMALL), .X = byte
+; OUT (success): C = 0
+; OUT (failure): .A = ERR_MEM_NOT_VALID or ERR_MEM_BAD_ARG, C = 1
+; Preserves .X, .Y
+MM_WRITE:
+            php                                             ; Save caller's I flag
+            sei
+            PUSH_XY
+            sty         ZP_M_TEMP                           ; Offset
+            jsr         MM_HANDLE_PTR                       ; .A = status
+            bcs         @done
+            jsr         MM_ACCESS_SETUP                     ; ZP_M_SP1 = data, bank selected
+            bcs         @done
+            ldy         ZP_M_TEMP
+            txa
+            sta         (ZP_M_SP1),Y
+            ldy         ZP_M_SV
+            sty         RAM_BANK_REG                        ; Restore the RAM bank
+            clc
+
+@done:
+            PULL_YX
+            jmp         MM_RETURN
+
+; Get a raw pointer to an allocation, for speed.  For AI_PAGED allocations this also selects the
+; allocation's first RAM bank; the old bank is returned for MM_UNLOCK.  A locked allocation can't be
+; freed.  The pointer stays valid until MM_UNLOCK (allocations don't move).
+; IN: .A = handle
+; OUT (success): .A.Y = pointer (.A = low byte), .X = previous RAM bank (pass it to MM_UNLOCK), C = 0
+; OUT (failure): .A = ERR_MEM_NOT_VALID, C = 1
+MM_LOCK:
+            php                                             ; Save caller's I flag
+            sei
+            jsr         MM_HANDLE_PTR                       ; .A = status
+            bcs         @done
+            ora         #AI_LOCKED
+            ldy         #Handle::status
+            sta         (ZP_M_HP),Y
+            stz         ZP_M_TEMP                           ; Offset 0 (always valid)
+            jsr         MM_ACCESS_SETUP                     ; ZP_M_SP1 = data, bank selected
+            ldx         ZP_M_SV                             ; Previous RAM bank
+            lda         ZP_M_SP1
+            ldy         ZP_M_SP1 + 1
+            clc
+
+@done:
+            jmp         MM_RETURN
+
+; Release a pointer from MM_LOCK and restore the RAM bank.
+; IN: .A = handle, .X = RAM bank to restore (from MM_LOCK)
+; OUT (success): C = 0
+; OUT (failure): .A = ERR_MEM_NOT_VALID, C = 1 (the RAM bank is restored anyway)
+; Preserves .X, .Y
+MM_UNLOCK:
+            php                                             ; Save caller's I flag
+            sei
+            phy
+            stx         RAM_BANK_REG
+            jsr         MM_HANDLE_PTR                       ; .A = status
+            bcs         @done
+            and         #<~AI_LOCKED
+            ldy         #Handle::status
+            sta         (ZP_M_HP),Y
+            clc
+
+@done:
+            ply
+            jmp         MM_RETURN
+
+; Find a free handle table entry in the current task.
+; OUT (success): ZP_M_HANDLE = handle, ZP_M_HP = its entry, C = 0
+; OUT (failure): .A = ERR_MEM_NO_HANDLES, C = 1
+; Modifies: .A, .Y
+MM_NEW_HANDLE:
+            LOAD_ADDR   MMU_HANDLE_TBL, ZP_M_HP
+            lda         #1
+            sta         ZP_M_HANDLE
+            ldy         #Handle::status
+
+@loop:
+            lda         (ZP_M_HP),Y
+            beq         @found
+            lda         ZP_M_HP                             ; Next entry
+            clc
+            adc         #.sizeof(Handle)
+            sta         ZP_M_HP
+            bcc         :+
+            inc         ZP_M_HP + 1
+:
+            inc         ZP_M_HANDLE
+            lda         ZP_M_HANDLE
+            cmp         #MMU_MAX_HANDLES + 1
+            bne         @loop
+            lda         #ERR_MEM_NO_HANDLES
+            sec
             rts
 
-; IN: .A = Bytes to allocate for current task
-; OUT (success): .A.Y = Address of the allocation structure, C = 0
-; OUT (failure): .A = ERROR, C = 1
-TASK_BYTE_ALLOC:
+@found:
+            clc
             rts
 
-TASK_FREE:
+; Point ZP_M_HP at a handle's entry, and check that it's in use.
+; IN: .A = handle
+; OUT (success): .A = entry status, ZP_M_HP = entry, ZP_M_HANDLE = handle, C = 0
+; OUT (failure): .A = ERR_MEM_NOT_VALID, C = 1
+; Modifies: .A, .Y
+MM_HANDLE_PTR:
+            sta         ZP_M_HANDLE
+            cmp         #0
+            beq         @bad
+            cmp         #MMU_MAX_HANDLES + 1
+            bcs         @bad
+            dec                                             ; Entry = MMU_HANDLE_TBL + (handle - 1) * 4
+            stz         ZP_M_HP + 1
+            asl
+            rol         ZP_M_HP + 1
+            asl
+            rol         ZP_M_HP + 1
+            clc
+            adc         #<MMU_HANDLE_TBL
+            sta         ZP_M_HP
+            lda         ZP_M_HP + 1
+            adc         #>MMU_HANDLE_TBL
+            sta         ZP_M_HP + 1
+            ldy         #Handle::status
+            lda         (ZP_M_HP),Y
+            and         #AI_IN_USE
+            cmp         #AI_IN_USE
+            bne         @bad
+            lda         (ZP_M_HP),Y
+            clc
+            rts
+
+@bad:
+            lda         #ERR_MEM_NOT_VALID
+            sec
+            rts
+
+; Point ZP_M_SP1 at an allocation's data and select its RAM bank (AI_PAGED).  The current RAM bank is
+; saved in ZP_M_SV, for the caller to restore.
+; IN: .A = entry status, ZP_M_HP = entry, ZP_M_TEMP = offset to check (AI_SMALL: must be < length)
+; OUT (success): C = 0
+; OUT (failure): .A = ERR_MEM_BAD_ARG, C = 1
+; Modifies: .A, .Y; preserves .X
+MM_ACCESS_SETUP:
+            ldy         RAM_BANK_REG
+            sty         ZP_M_SV
+            bit         #AI_SMALL
+            beq         @not_small
+            and         #AI_SMALL_LEN
+            cmp         ZP_M_TEMP
+            beq         @bad_arg                            ; Offset >= length
+            bcc         @bad_arg
+            lda         ZP_M_HP                             ; The data is in the entry itself
+            sta         ZP_M_SP1
+            lda         ZP_M_HP + 1
+            sta         ZP_M_SP1 + 1
+            clc
+            rts
+
+@not_small:
+            bit         #AI_PAGED
+            beq         :+
+            ldy         #Handle::bank
+            lda         (ZP_M_HP),Y
+            sta         RAM_BANK_REG
+:
+            ldy         #Handle::addr_l
+            lda         (ZP_M_HP),Y
+            sta         ZP_M_SP1
+            iny
+            lda         (ZP_M_HP),Y
+            sta         ZP_M_SP1 + 1
+            clc
+            rts
+
+@bad_arg:
+            lda         #ERR_MEM_BAD_ARG
+            sec
             rts
 
 ; IN: .A.Y = Bytes to allocate, T must be 0
@@ -881,19 +1152,140 @@ DEEP_PAGE_TEST_RANGE:
             PULL_YX
             rts
 
-; .A.Y: address of alloc struct
-; .X: byte number
-; C: 0 = read byte at .A.Y, 1 = index block with X
-MEM_READ_BYTE:
-; Test AI_BLOCK and return error if set
-; Test AI_SMALL
-; Test AI_PAGED
-; Test AI_SHARED
+; ****************************************************************************
+; MMU self test (TH_MMU_TEST, $F833; from WOZMON: F833R).  Runs the handle calls in the current task and
+; prints "MMU test: ok", or "MMU test: FAIL x ee" (x = failing step, ee = error code or value read).
+; Allocates and frees 2 task RAM pages (at the top of the free area) and 2 RAM banks.
 
-;AI_ALLOCATED = $01
-;AI_PAGED     = $02
-;AI_SHARED    = $04
-;AI_BLOCK     = $08
-;AI_READONLY  = $10
-;AI_SMALL     = $20      ; No actual allocation: bytes are stored in addr
-;AI_VALID     = $80
+.macro _M_MT_FAIL_IF_C  step                                ; Fail if the call returned an error
+            bcc         :+
+            ldx         #step
+            jmp         @fail
+:
+.endmacro
+
+.macro _M_MT_FAIL_IF_NC step                                ; Fail if the call should have failed but didn't
+            bcs         :+
+            ldx         #step
+            jmp         @fail
+:
+.endmacro
+
+.macro _M_MT_EXPECT     step, value                         ; Fail if .A <> value
+            cmp         #value
+            beq         :+
+            ldx         #step
+            jmp         @fail
+:
+.endmacro
+
+NamedHString    S_MMU_TEST, "MMU test: "
+
+MMU_TEST:
+            PUSH_AXY
+            _M_WRITE_HSTRING    S_MMU_TEST
+
+; Small (in-entry) allocation
+            lda         #2                                  ; 2 bytes
+            ldy         #0
+            ldx         #0
+            jsr         MM_ALLOC
+            _M_MT_FAIL_IF_C     'a'
+            sta         ZP_TEMP                             ; h1
+            ldx         #$5A
+            ldy         #1
+            jsr         MM_WRITE
+            _M_MT_FAIL_IF_C     'b'
+            lda         ZP_TEMP
+            ldy         #1
+            jsr         MM_READ
+            _M_MT_FAIL_IF_C     'c'
+            _M_MT_EXPECT        'c', $5A
+            lda         ZP_TEMP
+            ldy         #2                                  ; Past the end
+            jsr         MM_READ
+            _M_MT_FAIL_IF_NC    'd'
+
+; Task RAM pages
+            lda         #<300                               ; 2 pages
+            ldy         #>300
+            ldx         #0
+            jsr         MM_ALLOC
+            _M_MT_FAIL_IF_C     'e'
+            sta         ZP_TEMP_2                           ; h2
+            jsr         MM_LOCK
+            _M_MT_FAIL_IF_C     'f'
+            sta         ZP_TEMP_VEC3
+            sty         ZP_TEMP_VEC3 + 1
+            _M_MT_EXPECT        'f', 0                      ; Page aligned
+            tya
+            cmp         MMU_HDR + MmuHeader::low_water      ; Lowest allocated page
+            beq         :+
+            ldx         #'f'
+            jmp         @fail
+:
+            lda         #$A5                                ; Write through the raw pointer
+            ldy         #255
+            sta         (ZP_TEMP_VEC3),Y
+            lda         ZP_TEMP_2
+            jsr         MM_FREE                             ; Locked: must fail (preserves .X = old bank)
+            _M_MT_FAIL_IF_NC    'g'
+            lda         ZP_TEMP_2
+            jsr         MM_UNLOCK
+            _M_MT_FAIL_IF_C     'h'
+            lda         ZP_TEMP_2
+            ldy         #255
+            jsr         MM_READ
+            _M_MT_FAIL_IF_C     'i'
+            _M_MT_EXPECT        'i', $A5
+
+; RAM banks
+            lda         #<$2001                             ; 2 banks
+            ldy         #>$2001
+            ldx         #AI_PAGED
+            jsr         MM_ALLOC
+            _M_MT_FAIL_IF_C     'j'
+            sta         ZP_TEMP_VEC4                        ; h3
+            ldx         #$3C
+            ldy         #7
+            jsr         MM_WRITE
+            _M_MT_FAIL_IF_C     'k'
+            lda         ZP_TEMP_VEC4
+            ldy         #7
+            jsr         MM_READ
+            _M_MT_FAIL_IF_C     'k'
+            _M_MT_EXPECT        'k', $3C
+
+; Free everything; the page map must be back where it started
+            lda         ZP_TEMP
+            jsr         MM_FREE
+            _M_MT_FAIL_IF_C     'l'
+            lda         ZP_TEMP_2
+            jsr         MM_FREE
+            _M_MT_FAIL_IF_C     'l'
+            lda         ZP_TEMP_VEC4
+            jsr         MM_FREE
+            _M_MT_FAIL_IF_C     'l'
+            lda         MMU_HDR + MmuHeader::low_water
+            _M_MT_EXPECT        'm', MMU_SYS_PAGE
+            lda         ZP_TEMP_2
+            jsr         MM_FREE                             ; Already freed: must fail
+            _M_MT_FAIL_IF_NC    'n'
+
+            PRINT_CHAR  #'o', #'k'
+            bra         @end
+
+@fail:                                                      ; .X = step, .A = error / value
+            pha
+            phx
+            PRINT_CHAR  #'F', #'A', #'I', #'L', #' '
+            pla
+            PRINT_CHAR
+            PRINT_SPACE
+            pla
+            PRINT_BYTE
+
+@end:
+            PRINT_CRLF
+            PULL_YXA
+            rts

@@ -23,3 +23,17 @@ TH_DISASM_AY:
                 jmp             DISASM_AY           ; $F81B
 TH_MEM_COPY:
                 jmp             MEM_COPY            ; $F81E
+TH_MM_ALLOC:
+                jmp             MM_ALLOC            ; $F821
+TH_MM_FREE:
+                jmp             MM_FREE             ; $F824
+TH_MM_READ:
+                jmp             MM_READ             ; $F827
+TH_MM_WRITE:
+                jmp             MM_WRITE            ; $F82A
+TH_MM_LOCK:
+                jmp             MM_LOCK             ; $F82D
+TH_MM_UNLOCK:
+                jmp             MM_UNLOCK           ; $F830
+TH_MMU_TEST:
+                jmp             MMU_TEST            ; $F833

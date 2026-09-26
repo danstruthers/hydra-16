@@ -23,6 +23,8 @@ node hydrasim.js [options]
 | `--raw` | Print serial output as-is (by default ESC shows as `<ESC>`) |
 | `--trace N` | Show the last N instructions (default 25) |
 | `--dump ADDR[:LEN][@TASK]` | Hex dump task RAM after the run, e.g. `--dump 7D90:16@1` |
+| `--watch ADDR[@TASK]` | Report every write to a task RAM address: the old and new value, and the PC that wrote it |
+| `--pc [PAGE:]ADDR` | Report the registers each time the PC reaches `ADDR` (on BIOS ROM page `PAGE`, if given); addresses are in `os_rom/tmp/os_rom_C02.lbl` |
 
 Example: boot to Forth and run a command (Forth starts after `COPYTORAM`, so allow plenty of cycles):
 

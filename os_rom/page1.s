@@ -19,6 +19,13 @@ FAR_GATE        WRITE_HEX_MASK, ::WRITE_HEX_MASK,       0
 FAR_GATE        WRITE_CRLF,     ::WRITE_CRLF,           0
 FAR_GATE        CLEAR_SCR,      ::CLEAR_SCR,            0
 FAR_GATE        MEM_COPY,       ::MEM_COPY,             0
+FAR_GATE        MM_ALLOC,       ::MM_ALLOC,             0
+FAR_GATE        MM_FREE,        ::MM_FREE,              0
+FAR_GATE        MM_READ,        ::MM_READ,              0
+FAR_GATE        MM_WRITE,       ::MM_WRITE,             0
+FAR_GATE        MM_LOCK,        ::MM_LOCK,              0
+FAR_GATE        MM_UNLOCK,      ::MM_UNLOCK,            0
+FAR_GATE        MMU_TEST,       ::MMU_TEST,             0
 
 ; Sound routines run in the sound task (through the page 0 SND_CALL_* task gates)
 FAR_GATE        SOUND_INIT,     ::SND_CALL_INIT,        0
@@ -62,4 +69,11 @@ WRITE_HSTRING:
                 jmp             DISASM              ; $F818
                 jmp             DISASM_AY           ; $F81B
                 jmp             MEM_COPY            ; $F81E
-.assert     * = ::TH_MEM_COPY + 3, lderror, "BIOS_THUNKS_P1 must match BIOS_THUNKS"
+                jmp             MM_ALLOC            ; $F821
+                jmp             MM_FREE             ; $F824
+                jmp             MM_READ             ; $F827
+                jmp             MM_WRITE            ; $F82A
+                jmp             MM_LOCK             ; $F82D
+                jmp             MM_UNLOCK           ; $F830
+                jmp             MMU_TEST            ; $F833
+.assert     * = ::TH_MMU_TEST + 3, lderror, "BIOS_THUNKS_P1 must match BIOS_THUNKS"
