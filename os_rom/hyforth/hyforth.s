@@ -217,7 +217,7 @@ MEM_SZ = $04
 
 ALTBUF = $6000
 ALTBUF_end = $6FFF
-MEMTOP = $8000            ; malloc allocates DOWN from MEMTOP
+MEMTOP = $7D00            ; malloc allocates DOWN from MEMTOP (below the task system page and MMU area)
 
 ;----------------------------------------------------------------------
 ;       Look closely at hyforth.cfg and the output of ca65/ld65 after
@@ -240,72 +240,62 @@ MEMTOP = $8000            ; malloc allocates DOWN from MEMTOP
 ;----------------------------------------------------------------------
 ;                   ZERO PAGE USAGE
 ;----------------------------------------------------------------------
-.segment "ZEROPAGE"
-.org $C8
-ZPSTART:
+;   Task ZP (see TASK_ZP in defines.s): allocated top-down from $FF, so this
+;   list runs from the top of ZP down.  The addresses are unchanged.
 ;
-;                   HyForth setup stuff
-;
-TEMP0:                        ;  DUMPREG         $C8
-   .res 2
-TEMP8:                        ;  Hstring macro   $CA
-   .res 2
-TEMP9:                        ;   Imm            $CC
-   .res 2
-MEMPTR:                       ;   malloc         $CE
-   .res 2
-MEMLAST:
-   .res 2                      ;  malloc         $D0
-TIB:
-   .res 2          ; pointer to input buffer     $D2
-TIBEND:
-   .res 2          ; pointer to end of TIB       $D4
-DFLAG:
-   .res 1          ; debug flag                  $D6
-ERRFLAG:
-   .res 1          ; error type, 0 = none        $D7
-ERRPTR:
-   .res 2          ; ptr to mitigation/message   $D8
-DIGBASE:
-   .res 1          ; base for number conversion  $DA
-RSEED:
-   .res 4          ; random # seed               $DB
-ALFLAG:            ; autoload flag               $DF
-   .res 1
-;
-;                   internal Forth
-;
-STATUS:     .word $0   ; state at lsb, last size+flag at msb   $E0
-CURBUF:     .word $0   ; CURBUF next free byte in TIB          $E2
-LASTHEAP:   .word $0   ; last link cell                        $E4
-NEXTHEAP:   .word $0   ; next free cell in heap dictionary     $E6
-;
-;                   pointer registers
-;
-DSPTR:      .word $0   ; data stack pointer                    $E8
-RTPTR:      .word $0   ; return stack pointer                  $EA
-INSTPTR:    .word $0   ; instruction pointer                   $EC
-WORKREG:    .word $0   ; working register                      $EE
-;
-;                    TEMP1 - 4
-;
-mainoff:               ; used for COPYTORAM, MEMCPY
-TEMP1:    .word $0     ; first                                 $F0
-endsoff:               ; used for COPYTORAM, MEMCPY
-TEMP2:    .word $0     ; second                                $F2
-ramstart:              ; used for COPYTORAM, MEMCPY
-TEMP3:    .word $0     ; third  (two bytes)                    $F4
-TEMP4:    .word $0     ; fourth  (two bytes)                   $F6
+TASK_ZP_BEGIN
 ;
 ;          NXTTOK, BACKHEAP, TEMP5 - 7
 ;
-NXTTOK:     .word $0   ; next token in tib (INBUF)             $F8
-BACKHEAP:   .word $0   ; hold 'here while compile              $FA
-supprint:              ; suppress printing in MEMCPY
-FFLAG:                 ; 'find flag' for wfind entry point
-TEMP5:   .res 1        ;    WORDS, WFIND                       $FC
-TEMP6:   .res 1        ;    WORDS, DIGCONT, TEXTGET            $FD
-TEMP7:   .res 2        ;    AUTOLOAD                           $FE
+TASK_ZP TEMP7, 2       ;    AUTOLOAD                           $FE
+TASK_ZP TEMP6, 1       ;    WORDS, DIGCONT, TEXTGET            $FD
+TASK_ZP TEMP5, 1       ;    WORDS, WFIND                       $FC
+FFLAG = TEMP5          ; 'find flag' for wfind entry point
+supprint = TEMP5       ; suppress printing in MEMCPY
+TASK_ZP BACKHEAP, 2    ; hold 'here while compile              $FA
+TASK_ZP NXTTOK, 2      ; next token in tib (INBUF)             $F8
+;
+;                    TEMP1 - 4
+;
+TASK_ZP TEMP4, 2       ; fourth  (two bytes)                   $F6
+TASK_ZP TEMP3, 2       ; third  (two bytes)                    $F4
+ramstart = TEMP3       ; used for COPYTORAM, MEMCPY
+TASK_ZP TEMP2, 2       ; second                                $F2
+endsoff = TEMP2        ; used for COPYTORAM, MEMCPY
+TASK_ZP TEMP1, 2       ; first                                 $F0
+mainoff = TEMP1        ; used for COPYTORAM, MEMCPY
+;
+;                   pointer registers
+;
+TASK_ZP WORKREG, 2     ; working register                      $EE
+TASK_ZP INSTPTR, 2     ; instruction pointer                   $EC
+TASK_ZP RTPTR, 2       ; return stack pointer                  $EA
+TASK_ZP DSPTR, 2       ; data stack pointer                    $E8
+;
+;                   internal Forth
+;
+TASK_ZP NEXTHEAP, 2    ; next free cell in heap dictionary     $E6
+TASK_ZP LASTHEAP, 2    ; last link cell                        $E4
+TASK_ZP CURBUF, 2      ; CURBUF next free byte in TIB          $E2
+TASK_ZP STATUS, 2      ; state at lsb, last size+flag at msb   $E0
+;
+;                   HyForth setup stuff
+;
+TASK_ZP ALFLAG, 1      ; autoload flag                         $DF
+TASK_ZP RSEED, 4       ; random # seed                         $DB
+TASK_ZP DIGBASE, 1     ; base for number conversion            $DA
+TASK_ZP ERRPTR, 2      ; ptr to mitigation/message             $D8
+TASK_ZP ERRFLAG, 1     ; error type, 0 = none                  $D7
+TASK_ZP DFLAG, 1       ; debug flag                            $D6
+TASK_ZP TIBEND, 2      ; pointer to end of TIB                 $D4
+TASK_ZP TIB, 2         ; pointer to input buffer               $D2
+TASK_ZP MEMLAST, 2     ;  malloc                               $D0
+TASK_ZP MEMPTR, 2      ;   malloc                              $CE
+TASK_ZP TEMP9, 2       ;   Imm                                 $CC
+TASK_ZP TEMP8, 2       ;  Hstring macro                        $CA
+TASK_ZP TEMP0, 2       ;  DUMPREG                              $C8
+ZPSTART = TEMP0
+TASK_ZP_END
 ;
 ; *** $DO-$FF total usage in ZP, including TEMP vars ***
 ;

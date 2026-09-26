@@ -13,19 +13,176 @@ RESET_VECTOR_START:
             sta                 $01                                 ; Init ROM Bank selector
             ldx                 #$FF                                ; Init stack pointer
             txs
-            ; MOV                 ZP_READ_PTR, ZP_WRITE_PTR           ; remove when tasks_init is used
 
-            jsr                 IRQ_VECTOR_INIT
-            jsr                 TASKS_INIT                          ; Must be called before SERIAL_INIT and MMU_INIT
-            ;jsr                 MMU_INIT
+            jsr                 POST                                ; Power-on self test (polled serial, no IRQs)
+            jsr                 IRQ_INIT                            ; Must be first: IRQ tables and vectors
+            jsr                 TASKS_INIT                          ; Must be called before the drivers and MMU_INIT
+            jsr                 MMU_INIT
+            jsr                 MSG_INIT                            ; Message ring pointers (shared RAM)
             jsr                 VIA_INIT
             ;jsr                 SPI_INIT
-            jsr                 SOUND_INIT
-            jsr                 SERIAL_INIT
+            lda                 #<SOUND_DRIVER                      ; Sound driver in its own (Resident) task
+            ldy                 #>SOUND_DRIVER
+            ldx                 #SOUND_TASK_NUM
+            jsr                 DRV_START
+            lda                 #<SERIAL_DRIVER                     ; Serial driver in its own (Resident) task;
+            ldy                 #>SERIAL_DRIVER                     ; must be started before anything prints
+            ldx                 #SERIAL_TASK_NUM
+            jsr                 DRV_START
             ;jsr                 SPI_TEST
-            ;jsr                 SOUND_TEST
+            ;jsr                 SND_CALL_TEST
             jsr                 DO_WELCOME
-            jmp                 SHELL_MAIN
+
+; Start the shell in its own task (the default serial-capture task) and hand the CPU to it
+            lda                 #<SHELL_MAIN
+            ldy                 #>SHELL_MAIN
+            ldx                 #SHELL_TASK_NUM
+            jsr                 TASK_PREPARE
+            lda                 #SHELL_TASK_NUM
+            jsr                 SWITCH_TO
+
+; The system task only runs again if something switches back to it
+@idle:
+            wai
+            bra                 @idle
+
+; ****************************************************************************
+; Power-on self test.  Checks the memory mapping the task system depends on, using only polled serial
+; output (no IRQs, no drivers) and task switches that don't touch the stack.  Prints e.g.:
+;       POST ZP:T ST:T LO:T 7D:T SH:S P1:4C
+;   ZP/ST/LO/7D: $0080 / $0180 / $0280 / $7D80 are per-Task (T) or common to all tasks (C)
+;   SH: shared RAM bank $F0 (U = 0) is Shared between tasks (S) or not (X)
+;   P1: byte at $EA00 on ROM page 1 (4C expected: the jmp at forth_main)
+POST_ACIA_CMD   = ACIA_CMD_BIT_DTRL | ACIA_CMD_BIT_TLID | ACIA_CMD_BIT_RID    ; No IRQs
+
+.macro _M_POST_TASK_TEST    addr, label
+            ldx                 #0
+:
+            lda                 label,X
+            beq                 :+
+            jsr                 POST_PUTC
+            inx
+            bra                 :-
+:
+            lda                 #$A5
+            stz                 T_REGISTER                          ; Task 0 (no stack use until back in task 0)
+            sta                 addr
+            ldx                 #1
+            stx                 T_REGISTER                          ; Task 1
+            lda                 #$5A
+            sta                 addr
+            stz                 T_REGISTER                          ; Task 0
+            lda                 addr
+            ldx                 #'T'
+            cmp                 #$A5
+            beq                 :+
+            ldx                 #'C'
+:
+            txa
+            jsr                 POST_PUTC
+.endmacro
+
+POST:
+            php
+            sei
+            lda                 #$10 | SR_SELECT                    ; 8-N-1
+            sta                 ACIA_R_CTRL
+            lda                 #POST_ACIA_CMD
+            sta                 ACIA_R_CMD
+            _M_POST_TASK_TEST   $0080, POST_S_ZP
+            _M_POST_TASK_TEST   $0180, POST_S_ST
+            _M_POST_TASK_TEST   $0280, POST_S_LO
+            _M_POST_TASK_TEST   $7D80, POST_S_7D
+
+            ldx                 #0
+:
+            lda                 POST_S_SH,X
+            beq                 :+
+            jsr                 POST_PUTC
+            inx
+            bra                 :-
+:
+            stz                 U_REGISTER
+            ldx                 #$F0
+            stz                 T_REGISTER                          ; Task 0: shared bank $F0
+            stx                 RAM_BANK_REG
+            lda                 #$C3
+            sta                 $8000
+            lda                 #1
+            sta                 T_REGISTER                          ; Task 1: shared bank $F0
+            stx                 RAM_BANK_REG
+            lda                 $8000
+            stz                 RAM_BANK_REG
+            stz                 T_REGISTER                          ; Task 0
+            stz                 RAM_BANK_REG
+            ldx                 #'S'
+            cmp                 #$C3
+            beq                 :+
+            ldx                 #'X'
+:
+            txa
+            jsr                 POST_PUTC
+
+            ldx                 #0
+:
+            lda                 POST_S_P1,X
+            beq                 :+
+            jsr                 POST_PUTC
+            inx
+            bra                 :-
+:
+            LOAD_ADDR           $EA00, ZP_D_XAM
+            lda                 #1
+            sta                 ZP_D_PAGE
+            jsr                 PEEK_D_XAM                          ; Byte at $EA00 on ROM page 1
+            stz                 ZP_D_PAGE
+            pha
+            lsr
+            lsr
+            lsr
+            lsr
+            jsr                 POST_PUTHEX
+            pla
+            jsr                 POST_PUTHEX
+            lda                 #ASCII_CR
+            jsr                 POST_PUTC
+            lda                 #ASCII_LF
+            jsr                 POST_PUTC
+            plp
+            rts
+
+POST_PUTHEX:
+            and                 #$0F
+            tax
+            lda                 HEX_MAP,X
+
+; Polled serial output (Rockwell 65C51: wait for TDRE, with a timeout).  Modifies: .Y
+POST_PUTC:
+            ldy                 #0
+:
+            pha
+            lda                 ACIA_R_STATUS
+            and                 #ACIA_STATUS_BIT_TDRE
+            bne                 :+
+            pla
+            dey
+            bne                 :-
+            pha
+:
+            pla
+            sta                 ACIA_R_DATA
+            ldy                 #0                                  ; Short delay after each byte
+:
+            dey
+            bne                 :-
+            rts
+
+POST_S_ZP:  .byte ASCII_CR, ASCII_LF, "POST ZP:", 0
+POST_S_ST:  .byte " ST:", 0
+POST_S_LO:  .byte " LO:", 0
+POST_S_7D:  .byte " 7D:", 0
+POST_S_SH:  .byte " SH:", 0
+POST_S_P1:  .byte " P1:", 0
 
 DO_WELCOME:
             jsr                 CLEAR_SCR
@@ -62,23 +219,30 @@ SPI_TEST:
             rts
 
 ; A: S/W interrupt number
+; Preserves .X and V
 SW_INT:
+            phx
+            ldx                 V_REGISTER                          ; Save V (shared pseudo-register)
             asl                                                     ; move int# to V[4..7]
             asl
             asl
             asl
-            ora                 #$F
+            ora                 #IRQ_NUMBER_SW                      ; S/W IRQ vector in V[0..3]
             sta                 V_REGISTER
             brk                                                     ; force an interrupt
+            .byte               $00                                 ; BRK signature byte (RTI returns past it)
+            stx                 V_REGISTER                          ; Restore prior V
+            plx
             rts
 
+; Start of every other BIOS page: the RESET entry at $E000 zeroes W, and execution continues on page 0
+; right after RESET_VECTOR_START's ZERO_W.  The rest of each page is filled with NOPs by the linker
+; (fillval), except for the COMMON block and the vectors.
 .macro OTHER_PAGE_FILLER
             ZERO_W
-            .res                $1FF2, $EA
-            jmp                 RESET_VECTOR_START
 .endmacro
 
-.segment "BIOS_P1"
+.segment "BIOS_P1"                                                  ; HyForth and the disassembler follow (page1.s)
             OTHER_PAGE_FILLER
 .segment "BIOS_P2"
             OTHER_PAGE_FILLER

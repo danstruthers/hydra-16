@@ -1,3 +1,19 @@
+; ****************************************************************************
+; Sound driver.  Runs in its own Resident task (SOUND_TASK_NUM, started by DRV_START at boot), so its
+; ZP is task ZP.  Other tasks call it through the SND_CALL_* gates, which run the routine in the
+; sound task with TASK_CALL.
+
+SOUND_DRIVER:
+                .word       SOUND_INIT                  ; DriverInfo::init
+                .word       SOUND_STOP                  ; DriverInfo::stop
+                .word       SOUND_NAME                  ; DriverInfo::name
+NamedHString SOUND_NAME, "SOUND"
+
+; Gates into the sound task: .A/.X/.Y/C pass through to the routine and back
+TASK_GATE           SND_CALL_INIT, SOUND_INIT, SOUND_TASK_NUM
+TASK_GATE           SND_CALL_TEST, SOUND_TEST, SOUND_TASK_NUM
+TASK_GATE           SND_CALL_YM_WRITE, YM_WRITE, SOUND_TASK_NUM
+
 ; zero out all YM-2151 registers $28-$FF
 SOUND_INIT:
                 pha
@@ -15,28 +31,34 @@ SOUND_INIT:
                 ldx         #IRQ_NUMBER_ONBOARD_SOUND
                 lda         #<SOUND_IRQ_HANDLER
                 ldy         #>SOUND_IRQ_HANDLER
-                jsr         IRQ_SET_VECTOR
-                clc
+                jsr         IRQ_REGISTER            ; Handler runs in this (the sound) task
 
 @error:
                 plx
                 pla
                 rts
 
+SOUND_STOP:
+                clc
+                rts
 
+; OUT: C = 1 if the interrupt was claimed
 SOUND_IRQ_HANDLER:
                 ; check which
-                rti
+                clc
+                rts
 
-YMN0L = $A0
+TASK_ZP_BEGIN
+TASK_ZP     YMN0L, 4
 YMN0H = YMN0L + 1
 YMN1L = YMN0L + 2
 YMN1H = YMN0L + 3
 
-AZP0L = $B0
+TASK_ZP     AZP0L, 4
 AZP0H = AZP0L + 1
 YMTMP1 = AZP0L + 2
 YMTMP2 = AZP0L + 3
+TASK_ZP_END
 
 ;C# = 0
 ;D  = 1

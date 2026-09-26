@@ -4,16 +4,31 @@ SER_SEND_STATUS_READY = 0
 SER_SEND_STATUS_BUSY  = 1
 SER_SEND_STATUS_ERROR = $FF
 
-.segment "BUFFERS"
-INPUT_BUFFER:
-                .res            $100
-
 .segment "BIOS"
 
 HEX_MAP: .byte "0123456789ABCDEF"
 NamedHString HYDRA_WELCOME, "Welcome to the HYDRA-16!"
 
+; ****************************************************************************
+; Serial driver.  Runs in its own Resident task (SERIAL_TASK_NUM, started by DRV_START at boot), so
+; its state (ZP_SER_SEND_STATUS, ZP_SER_CAPTURE) lives in that task's ZP.
+;   RX: the IRQ handler sends each received byte to the serial-capture task as a message.
+;   TX: WRITE_CHAR writes the ACIA directly from the calling task, using the send status in the
+;       serial task's ZP.
+
+SERIAL_DRIVER:
+                .word           SERIAL_INIT             ; DriverInfo::init
+                .word           SERIAL_STOP             ; DriverInfo::stop
+                .word           SERIAL_NAME             ; DriverInfo::name
+NamedHString SERIAL_NAME, "SERIAL"
+
+; Gate into the serial task: set the serial-capture task (the task that receives serial input)
+; IN: .A = task
+TASK_GATE       SER_CALL_SET_CAPTURE, SERIAL_SET_CAPTURE, SERIAL_TASK_NUM
+
+; Driver init (runs in the serial task).  OUT: C = 0 on success, or C = 1 and .A = error
 SERIAL_INIT:
+                php                                     ; Save caller's I flag
                 sei
                 lda             #$10 | SR_SELECT    ; 8-N-1
                 sta             ACIA_R_CTRL
@@ -27,31 +42,50 @@ SERIAL_INIT:
                 lda             #SER_SEND_STATUS_READY
                 sta             ZP_SER_SEND_STATUS
 .endif
+                lda             #SHELL_TASK_NUM         ; Serial input goes to the shell by default
+                sta             ZP_SER_CAPTURE
+.if ACIA_USE_VIA_TIMER = 1
+                ldx             #IRQ_NUMBER_ONBOARD_VIA ; VIA T2 paces TX
+                lda             #<SERIAL_VIA_T2_HANDLER
+                ldy             #>SERIAL_VIA_T2_HANDLER
+                jsr             IRQ_REGISTER
+                bcs             @done
+.endif
                 ldx             #IRQ_NUMBER_ONBOARD_SERIAL
                 lda             #<SERIAL_IRQ_HANDLER
                 ldy             #>SERIAL_IRQ_HANDLER
-                jsr             IRQ_SET_VECTOR
-                cli
+                jsr             IRQ_REGISTER            ; Handler runs in this (the serial) task
+
+@done:
+                jmp             MM_RETURN               ; Restore caller's I flag, keep C
+
+SERIAL_STOP:
+                clc
                 rts
 
-; Input a character from the serial interface.
+; Set the serial-capture task (runs in the serial task; use SER_CALL_SET_CAPTURE)
+; IN: .A = task
+SERIAL_SET_CAPTURE:
+                sta             ZP_SER_CAPTURE
+                clc
+                rts
+
+; Input a character from the serial interface: the next byte the serial task has sent to the
+; current task.  Only the serial-capture task receives input.
 ; On return, carry flag indicates whether a key was pressed
 ; If a key was pressed, the key value will be in the A register
 ;
 ; Modifies: flags, A
-; TODO: select the appropriate read stream for the current task
 READ_CHAR:
 SERIAL_READ:
-                jsr             BUFFER_SIZE
-                bne             :+
-                clc
+                phx
+                ldx             #SERIAL_TASK_NUM
+                jsr             MSG_RECV_BYTE           ; C = 0: .A = byte
+                plx
+                bcc             :+
+                clc                                     ; Nothing waiting
                 rts
 :
-                phx
-                ldx             ZP_READ_PTR
-                lda             INPUT_BUFFER,X
-                inc             ZP_READ_PTR
-                plx
                 PRINT_CHAR                                  ; echo
                 sec
                 rts
@@ -121,28 +155,35 @@ WRITE_HEX:
 ; Output a character (from the A register) to the serial interface.
 ;
 ; Modifies: flags
+; Can be called from any task: the send status lives in the serial owner task's ZP.
 ; TODO: select appropriate output stream for the given task
 WRITE_CHAR:
 SERIAL_WRITE:
-                phx
-
-.if ROCKWELL_ACIA = 0
+                phx                                         ; Must stay 1 byte (WRITE_HEX SKIPNEXTs over it)
                 phy
-.endif
+
 WRITE_DELAY:
 .if ROCKWELL_ACIA = 1 .OR ACIA_USE_VIA_TIMER = 1
+                php                                         ; Save caller's I flag
+                sei
+                ldy             T_REGISTER
+                ldx             #SERIAL_OWNER_TASK
+                stx             T_REGISTER                  ; Quick switch to the serial owner task (no stack use!)
                 ldx             ZP_SER_SEND_STATUS
                 cpx             #SER_SEND_STATUS_READY
                 beq             :+
+                sty             T_REGISTER                  ; Back to the calling task
+                plp                                         ; Restore caller's I flag
                 wai                                         ; Leave this in, even if RDY has a pull-up
                 bra             WRITE_DELAY
 :
-.endif
-                IO_PORT_WRITE   ACIA_R_DATA
-
-.if ROCKWELL_ACIA = 1 .OR ACIA_USE_VIA_TIMER = 1
                 ldx             #SER_SEND_STATUS_BUSY
                 stx             ZP_SER_SEND_STATUS
+                IO_PORT_WRITE   ACIA_R_DATA
+                sty             T_REGISTER                  ; Back to the calling task
+                plp                                         ; Restore caller's I flag
+.else
+                IO_PORT_WRITE   ACIA_R_DATA
 .endif
 
 .if ROCKWELL_ACIA = 0
@@ -161,9 +202,9 @@ WRITE_DELAY:
                 dey
                 bne             :-
     .endif
-                ply
 .endif
 
+                ply
                 plx
                 rts
 
@@ -203,12 +244,6 @@ WRITE_HSTRING:
                 dex
                 bne             @write_loop
                 plx
-                rts
-
-; Initialize the circular input buffer
-; Modifies: flags, A
-INIT_BUFFER:
-                MOV             ZP_READ_PTR, ZP_WRITE_PTR
                 rts
 
 ; Escape sequences
@@ -338,28 +373,15 @@ SPI_INIT_DELAY:
                 PULL_YXA
                 rts
 
-; Return (in A) the number of unread bytes in the circular input buffer as an unsigned byte
-; Modifies: flags, A
-BUFFER_SIZE:
-                lda             ZP_WRITE_PTR
-                sec
-                sbc             ZP_READ_PTR
-                rts
-
-; Maskable interrupt request handler; by default, do nothing
-IRQ_HANDLER:
-                rti
-
-
+; Serial IRQ handler (registered with IRQ_REGISTER; runs in the serial task)
+; OUT: C = 1 if the ACIA was interrupting
 SERIAL_IRQ_HANDLER:
-                pha
-
 .if ROCKWELL_ACIA = 1
                 lda             #ACIA_STATUS_BIT_TDRE
 .endif
 
                 bit             ACIA_R_STATUS
-                bpl             @int_done 	            ; bit 7 not set, so not ACIA IRQ
+                bpl             @not_mine 	            ; bit 7 not set, so not ACIA IRQ
 
 .if ROCKWELL_ACIA = 1
                 beq             @do_recv                ; if not Tx, then must be Rx
@@ -374,15 +396,16 @@ SERIAL_IRQ_HANDLER:
 
 @do_recv:
                 IO_PORT_READ    ACIA_R_DATA
-                phx
-                ldx             ZP_WRITE_PTR
-                sta             INPUT_BUFFER,X
-                inc             ZP_WRITE_PTR
-                plx
+                ldx             ZP_SER_CAPTURE
+                jsr             MSG_SEND_BYTE           ; To the capture task (dropped if its ring is full)
 
 @int_done:
-                pla
-                rti
+                sec
+                rts
+
+@not_mine:
+                clc
+                rts
 
 ;; *****************************************************************
 .if 0
@@ -526,6 +549,7 @@ VIA_T1_INT_BIT = $40
 VIA_INT_ENABLE = $80
 
 
+; Must be called from the system task (the VIA handler runs there)
 VIA_INIT:
 .if ROCKWELL_ACIA <> 1 .AND ACIA_USE_VIA_TIMER = 1
             pha
@@ -533,6 +557,12 @@ VIA_INIT:
             sta     VIA_R_AUX_CTRL
             pla
 .endif
+            PUSH_AXY
+            ldx     #IRQ_NUMBER_ONBOARD_VIA
+            lda     #<VIA_IRQ_HANDLER
+            ldy     #>VIA_IRQ_HANDLER
+            jsr     IRQ_REGISTER
+            PULL_YXA
             rts
 
 VIA_ENABLE_T1_INT:
@@ -598,88 +628,39 @@ VIA_CLEAR_T2_INT:       ; READ LOB OF T2 Counter
 
 ; ****************************************************************************
 
-IRQ_VECTOR_INIT:
-            sei
-            sec
-            PUSH_AXY
-            ldx     #$F
-            lda     #<SERIAL_IRQ_HANDLER
-            ldy     #>SERIAL_IRQ_HANDLER
-
-@loop:
-            jsr     IRQ_SET_VEC1
-            dex
-            bpl     @loop
-
-            ldx     #IRQ_NUMBER_SW
-            lda     #<SW_IRQ_HANDLER
-            ldy     #>SW_IRQ_HANDLER
-            jsr     IRQ_SET_VEC1
-
-            ldx     #IRQ_NUMBER_ONBOARD_VIA
-            lda     #<VIA_IRQ_HANDLER
-            ldy     #>VIA_IRQ_HANDLER
-            jsr     IRQ_SET_VEC1
-
-            PULL_YXA
-            clc
-            cli
-            rts
-
-; X: IRQ#, .A.Y: Vector Addr
-IRQ_SET_VECTOR:
-            sei
-            pha
-            lda     V_REGISTER
-            sta     ZP_V_SAVE
-            pla
-
-IRQ_SET_VEC1:
-            stx     V_REGISTER
-            sta     $FFFE
-            sty     $FFFF
-            bcc     :+
-            rts
-:
-            lda     ZP_V_SAVE
-            sta     V_REGISTER
-            cli
-            rts
-
-SW_IRQ_HANDLER:
-            pha
-            lsr
-            lsr
-            lsr
-            lsr
-            pla
-            rti
-
-VIA_IRQ_HANDLER:
-; check which sub-device is triggering the IRQ
-            pha
+; Serial driver's VIA T2 handler (TX pacing; registered by SERIAL_INIT, runs in the serial task)
+; OUT: C = 1 if T2 was interrupting
+SERIAL_VIA_T2_HANDLER:
             lda     #VIA_T2_INT_BIT
             and     VIA_R_INT_FLAGS
             beq     :+
-.if ROCKWELL_ACIA = 1 .OR ACIA_USE_VIA_TIMER = 1
             lda     #SER_SEND_STATUS_READY
             sta     ZP_SER_SEND_STATUS     ; signals serial send buffer is ready for another byte
-.endif
             lda     VIA_R_T2C_L             ; clear the interrupt
             lda     #VIA_T2_INT_BIT         ; disable the T2 interrupt
             sta     VIA_R_INT_ENABLE
-            bra     :++
+            sec
+            rts
 
 :
-            lda     #VIA_T2_INT_BIT
+            clc
+            rts
+
+; VIA IRQ handler (registered by VIA_INIT; runs in the system task).  T2 belongs to the serial driver.
+; OUT: C = 1 if T1 was interrupting
+VIA_IRQ_HANDLER:
+; check which sub-device is triggering the IRQ
+            lda     #VIA_T1_INT_BIT
             and     VIA_R_INT_FLAGS
             beq     :+
                                             ; Do whatever T1 timer would do
             lda     VIA_R_T1C_L             ; clear the interrupt
+            sec
+            rts
 
 :
-            pla
-            rti
+            clc
+            rts
 
 
 .segment "IO_PORTS"
@@ -701,9 +682,9 @@ IO_PORT_E:      .tag IO_Port
 IO_PORT_F:      .tag IO_Port_10_Bytes
 
 .macro VECTORS
-                .word   NMI_HANDLER     ; NMI vector
+                .word   NMI_ENTRY       ; NMI vector (COMMON block, same address on every page)
                 .word   RESET_ENTRY     ; RESET vector
-                .word   IRQ_HANDLER     ; IRQ vector
+                .word   IRQ_STUB_F      ; IRQ vector (COMMON block S/W IRQ stub; unused, see below)
                 ;       will actually be pulled from the Vector RAM, depending on lowest priority IRQ currently triggered,
                 ;       or vector for IRQ# set in V[0..3] if none are triggered.  Can trigger S/W IRQs by setting V and then
                 ;       calling BRK.  S/W IRQ# is $F, so setting V[0..3] to $F and v[4..7] to a different number, you can

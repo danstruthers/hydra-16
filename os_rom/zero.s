@@ -13,11 +13,9 @@ TASK_PARENT:
     .res  1
 TASK_SAVE_REG:
     .res  1
-ZP_READ_PTR:
+ZP_SER_SEND_STATUS:     ; serial driver: TX ready (valid in the serial task's ZP)
     .res  1
-ZP_WRITE_PTR:
-    .res  1
-ZP_SER_SEND_STATUS:
+ZP_SER_CAPTURE:         ; serial driver: task that receives serial input (valid in the serial task's ZP)
     .res  1
 ZP_TEMP:
     .res  1
@@ -54,6 +52,54 @@ ZP_W_SAVE:
 ZP_HS_TEMP:
     .res  2
 
+; FAR CALLS (cross-ROM-page calls, see common.s)
+ZP_FAR_A:               ; .A passed to / returned from the far routine
+    .res  1
+ZP_FAR_VEC:             ; far routine address
+    .res  2
+ZP_FAR_PAGE:            ; ROM page (W) of the far routine
+    .res  1
+
+; TASK_CALL (run a routine in another task, see tasks.s)
+ZP_TC_VEC:              ; routine address
+    .res  2
+ZP_TC_TASK:             ; task to run it in
+    .res  1
+ZP_TC_A:                ; register / flag transfer between tasks
+    .res  1
+ZP_TC_X:
+    .res  1
+ZP_TC_Y:
+    .res  1
+ZP_TC_P:
+    .res  1
+ZP_TC_FROM:             ; calling task
+    .res  1
+
+; IRQ DISPATCH / REGISTRATION (see irq.s)
+ZP_IRQ_NUM:             ; logical IRQ# (or S/W interrupt #) being dispatched
+    .res  1
+ZP_IRQ_TMP:             ; table offset scratch
+    .res  1
+ZP_IRQ_CNT:             ; registration: slots to search
+    .res  1
+ZP_IRQ_HOME:            ; replication: home task (kept in task 0's ZP)
+    .res  1
+ZP_IRQ_H:               ; registration: handler address
+    .res  2
+
+; DRIVERS
+ZP_DRV_PTR:             ; DriverInfo pointer
+    .res  2
+
+; MESSAGES (see msg.s)
+ZP_MSG_PTR:             ; ring byte pointer
+    .res  2
+ZP_MSG_IDX:             ; ring index: receiver * 16 + sender
+    .res  1
+ZP_MSG_BYTE:            ; byte being sent / received
+    .res  1
+
 ;  WAZMON
 ZP_WM_ST:
     .res  2      ; STore address
@@ -85,6 +131,18 @@ ZP_M_TEMP2:
     .res  1
 ZP_M_SV:
     .res  1
+ZP_M_BM:                ; bitmap pointer (allocation map)
+    .res  2
+ZP_M_BE:                ; bitmap pointer (run-end map)
+    .res  2
+ZP_M_CNT:               ; bitmap run length wanted
+    .res  1
+ZP_M_RUN:               ; bitmap run length found / scratch
+    .res  1
+ZP_M_LO:                ; bitmap lowest / highest bit bound / scratch
+    .res  1
+ZP_M_MODS:              ; installed RAM modules, bit m = module m (banks m*16 - m*16+15)
+    .res  2
 
 ; MATH
 ZP_MATH_TEMP:           ; temp space, parse output base
@@ -112,6 +170,8 @@ ZP_D_MODE:
 ZP_D_XAM:
     .res    2       ; eXAMine address
 ZP_D_ICOUNT:
+    .res    1
+ZP_D_PAGE:              ; ROM page (W) the disassembler reads $E000-$FDFF from (0 = BIOS, set by TASKS_INIT)
     .res    1
 
 .feature org_per_seg

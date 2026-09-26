@@ -1,6 +1,10 @@
 .debuginfo
 
 SYSTEM_TASK_NUM     = 0
+SHELL_TASK_NUM      = $01       ; Forth / WOZMON shell (the default serial-capture task)
+SOUND_TASK_NUM      = $0E       ; Sound driver (resident)
+SERIAL_TASK_NUM     = $0F       ; Serial driver (resident)
+SERIAL_OWNER_TASK   = SERIAL_TASK_NUM   ; Task whose ZP holds the serial driver state
 
 ; ERROR VALUES
 ERR_SUCCESS         = $00
@@ -11,6 +15,17 @@ ERR_MATH_INVD       = $31       ; invalid digit
 ERR_MATH_INVB       = $32       ; invalid base
 ERR_MATH_OVF        = $33       ; overflow
 ERR_MATH_UNF        = $34       ; underflow
+
+ERR_MEM_NOT_ALLOC   = $40
+ERR_MEM_NOT_VALID   = $41
+ERR_MEM_NOT_SUPPORTED = $42
+ERR_MEM_BAD_ARG     = $43
+
+ERR_IRQ_CHAIN_FULL  = $50
+ERR_IRQ_NOT_FOUND   = $51
+
+ERR_MSG_FULL        = $60
+ERR_MSG_EMPTY       = $61
 
 RESET_ENTRY     = $E000
 
@@ -224,6 +239,34 @@ W_REGISTER = $FFF3 ; IO_PORT_BYTE IO_PORT_F, 3
 
 ; ERROR CODES
 ERR_NO_TASKS_AVAILABLE = $F1
+ERR_TASK_BUSY       = $F2
+ERR_BAD_TASK        = $F3
+
+; ***  TASK ZERO-PAGE ALLOCATION  ***
+;
+; OS/BIOS ZP grows up from $02 (the ZEROPAGE segment, zero.s) and has the same layout in every task.
+; Task ZP grows down from $FF.  Each task image (shell, sound driver, ...) brackets its ZP with:
+;
+;       TASK_ZP_BEGIN
+;       TASK_ZP     NAME, size      ; NAME = next free address below the previous one
+;       TASK_ZP_END                 ; link-time check that task ZP doesn't collide with OS ZP
+;
+; Task images run in different tasks, so their task ZP may overlap each other.
+
+.import     __ZEROPAGE_RUN__, __ZEROPAGE_SIZE__
+
+.macro TASK_ZP_BEGIN
+task_zp_top .set $100
+.endmacro
+
+.macro TASK_ZP  name, size
+task_zp_top .set task_zp_top - (size)
+name = task_zp_top
+.endmacro
+
+.macro TASK_ZP_END
+.assert     task_zp_top >= __ZEROPAGE_RUN__ + __ZEROPAGE_SIZE__, lderror, "Task ZP overlaps OS ZP"
+.endmacro
 
 ; Task switcher interrupt timer (one interrupt per 5ms or so, with 64 cycles for INT Handler overhead)
 TIMER_TASK_INT_H = 69

@@ -310,7 +310,7 @@ _disasm_load_inst:
     ldy         #0
     ldx         ZP_D_STATE
     beq         @done                       ; if not in DISASM mode, just print one byte
-    lda         (ZP_D_XAM)
+    jsr         PEEK_D_XAM                  ; lda (ZP_D_XAM), from ROM page ZP_D_PAGE
     lsr                                     ; /2 and shift LOb to C
     bcc         @shift_mode                 ; is even bytecode?
     and         #$0F
@@ -338,7 +338,7 @@ _disasm_load_inst:
     ldy         #0
 
 :
-    lda         (ZP_D_XAM)
+    jsr         PEEK_D_XAM                  ; lda (ZP_D_XAM), from ROM page ZP_D_PAGE
     sta         ZP_D_INST, y
     inc         ZP_D_XAM
     bne         :+
