@@ -34,7 +34,8 @@ err_jumptable:
     ERR_entry UKW_ERR               ; no existing word - error $05
     ERR_entry SEC_ERR               ; writing to dangerous RAM areas - error $06
     ERR_entry SYS_ERR               ; error on return from SYSCALL - error $07
-LASTERR = 7
+    ERR_entry IO_ERR                ; IO error (see ioerr) - error $08
+LASTERR = 8
 ;
 ;  error messages
 RPTR_ERR:
@@ -57,6 +58,9 @@ SEC_ERR:
     .byte 0
 SYS_ERR:
     .byte " !SYS ERR!"
+    .byte 0
+IO_ERR:
+    .byte " !IO ERR!"
     .byte 0
 
 ;-------------------------------------------------------------
@@ -977,7 +981,7 @@ DUMPLP1:                        ; print message
     iny
     bra   DUMPLP1
 DREGLP1:
-    jsr   READ_CHAR             ; wait for a key
+    jsr   GET_CHAR              ; wait for a key
     bcc   DREGLP1
     cmp   #ASCII_s              ; print out stacks?
     bne   DREGSK3

@@ -121,6 +121,41 @@ SERIAL_READ:
                 clc
                 rts
 
+; Input a character, waiting for it: from fd 0, so the task sleeps until one comes in (or until it's
+; brought to the foreground, for /dev/cons).  The character is echoed.  A task without an fd 0 (or with a
+; non-blocking one) polls READ_CHAR, yielding in between.
+; OUT: .A = the character, C = 1; or .A = error (e.g. ERR_IO_EOF), C = 0
+; Modifies: flags, A
+GET_CHAR:
+                phx
+                ldx             IO_FD_SERVER            ; fd 0 open?
+                cpx             #IO_FD_CLOSED
+                beq             @poll
+                ldx             #0
+                jsr             IO_GETC                 ; Waits for it
+                bcc             @got
+                cmp             #ERR_IO_WOULD_BLOCK
+                bne             @error                  ; (A non-blocking fd 0: poll)
+
+@poll:
+                jsr             READ_CHAR               ; (Echoes it)
+                bcs             @done
+                jsr             YIELD
+                bra             @poll
+
+@got:
+                PRINT_CHAR                              ; echo
+                sec
+
+@done:
+                plx
+                rts
+
+@error:
+                plx
+                clc
+                rts
+
 ; Write decimal value of .A to output
 WRITE_DEC:
                 cmp             #0

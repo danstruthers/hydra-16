@@ -1415,6 +1415,109 @@ def_word "mmtest", "mmtest", 0
     jsr MMU_TEST
     jmp next
 ;
+;-------- IO: files (see os_rom IO_PLAN.md).  A failed call gives !IO ERR!, and 'ioerr' the IO layer's
+;         error code ($70 not found, $71 bad fd, $72 wrong mode, $73 would block, $75 no fds, ...).
+;         fds 0, 1, 2 are the console (key, emit); buffers must be in task RAM ($0000-$7FFF).
+;
+; ( sz mode -- fd )  open a file: sz = a q^...^ string, e.g. q^/dev/cons^; mode 1 = read, 2 = write,
+;                   3 = both, + $80 = don't wait (reads and writes give ioerr $73 instead)
+def_word "open", "open", 0
+    jsr spull_1       ; mode
+    jsr spull_0       ; the string
+    ldy #0
+    lda (TEMP1),y
+    sta TEMP3
+    iny
+    lda (TEMP1),y
+    sta TEMP3+1       ; TEMP3 = the record
+    lda (TEMP3)
+    and #$7F          ; (the temp flag)
+    cmp #MEM_SZ
+    beq IOPENSZ
+    lda #ERR_IO_NAME  ; not a string
+    bra IOFAIL
+IOPENSZ:
+    lda TEMP3         ; its text, after the 3-byte header
+    clc
+    adc #3
+    pha
+    lda TEMP3+1
+    adc #0
+    tay
+    pla
+    ldx TEMP2
+    jsr IO_OPEN       ; .A = fd
+    bcs IOFAIL
+IOPUSHA:
+    sta TEMP1
+    stz TEMP1+1
+    jmp this
+IOFAIL:
+    sta IOERR
+    lda #ERR_IO
+    sta ERRFLAG
+    jmp errrtn
+;
+; ( fd -- )  close a file
+def_word "close", "close", 0
+    jsr spull_0
+    lda TEMP1
+    jsr IO_CLOSE
+    bcs IOFAIL
+    jmp next
+;
+; ( fd addr n -- n' )  read up to n bytes into addr; n' = bytes read (0 = end of file).  Waits for data
+;                     (the console: at least one key), unless the fd was opened with $80.
+def_word "read", "read", 0
+    jsr IOARGS
+    jsr IO_READ
+IODONE:
+    bcs IOFAIL
+    lda ZP_IO_CNT
+    sta TEMP1
+    lda ZP_IO_CNT+1
+    jmp keeps
+;
+; ( fd addr n -- n' )  write n bytes from addr; n' = bytes written
+def_word "write", "write", 0
+    jsr IOARGS
+    jsr IO_WRITE
+    bra IODONE
+;
+; ( fd code arg -- )  device control, e.g. fd 1 task ioctl: make task the foreground task (the
+;                    console's input goes to it)
+def_word "ioctl", "ioctl", 0
+    jsr spull_2       ; arg
+    jsr spull_1       ; code
+    jsr spull_0       ; fd
+    lda TEMP1
+    ldx TEMP2
+    ldy TEMP3
+    jsr IO_CTL
+    bcs IOFAIL
+    jmp next
+;
+; ( -- n )  the last IO error code
+def_word "ioerr", "ioerr", 0
+    lda IOERR
+    bra IOPUSHA
+;
+; ( fd addr n -- ) -> ZP_IO_BUF = addr, ZP_IO_CNT = n, .A = fd
+IOARGS:
+    jsr spull_2       ; n
+    jsr spull_1       ; addr
+    jsr spull_0       ; fd
+    lda TEMP2
+    sta ZP_IO_BUF
+    lda TEMP2+1
+    sta ZP_IO_BUF+1
+    lda TEMP3
+    sta ZP_IO_CNT
+    lda TEMP3+1
+    sta ZP_IO_CNT+1
+    lda TEMP1
+    rts
+;
 ;
 .ifdef YSOUND
 ;

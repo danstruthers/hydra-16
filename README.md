@@ -94,7 +94,9 @@ All IO goes through **file descriptors**, Plan 9 style (see `os_rom/IO_PLAN.md`)
 | `/dev/ser` | Serial driver | The serial port, for any task |
 | `/dev/null`, `/dev/zero` | IO layer | The usual |
 
-Each task has 12 fds.  The shell opens fds 0, 1 and 2 (stdin, stdout, stderr) on `/dev/cons`, and tasks it starts get copies of its open fds; a task's fds are closed when it ends.  `READ_CHAR` and `WRITE_CHAR` (so WOZMON and HyForth) read fd 0 and write fd 1; tasks without them (the system task and drivers) use the serial port directly.  The serial driver buffers both ways (256-byte RX and TX rings in its task), and sends from its transmit interrupt, so output doesn't busy-wait.  `$F88A` (`F88AR` in WOZMON) runs the IO self test.
+Each task has 12 fds.  The shell opens fds 0, 1 and 2 (stdin, stdout, stderr) on `/dev/cons`, and tasks it starts get copies of its open fds; a task's fds are closed when it ends.  `READ_CHAR` (a key, if there is one) and `WRITE_CHAR` read fd 0 and write fd 1; tasks without them (the system task and drivers) use the serial port directly.  `GET_CHAR` waits for a key on fd 0, sleeping (the task uses no CPU until one comes in); WOZMON and HyForth wait for input with it.
+
+HyForth has the IO words `open ( sz mode -- fd )` (e.g. `q^/dev/zero^ 1 open`; mode 1 = read, 2 = write, 3 = both), `close ( fd -- )`, `read ( fd addr n -- n' )`, `write ( fd addr n -- n' )`, `ioctl ( fd code arg -- )` and `ioerr ( -- n )` (a failed call gives `!IO ERR!`; `ioerr` is the error code).  The serial driver buffers both ways (256-byte RX and TX rings in its task), and sends from its transmit interrupt, so output doesn't busy-wait.  `$F88A` (`F88AR` in WOZMON) runs the IO self test.
 
 ### **Memory Map**
 * PER-TASK memory map (each task has its own copy of this memory space, except for shared RAM pages, as discussed below)
@@ -121,7 +123,7 @@ Each task has 12 fds.  The shell opens fds 0, 1 and 2 (stdin, stdout, stderr) on
 | $E000 | $FFFF | BIOS/OS ROM paged area (indexed by the W register; see below).  Page 0: BIOS and OS.  Page 1: HyForth and the disassembler.  Page 2: the IO layer, the serial driver's file server, the POST RAM line tests and SPI.  Pages 3-F: unused |
 | $E000 | $E004 | RESET Vector entry point: sets W to zero.  This is replicated at the beginning of each BIOS page, so that an arbitrary W register value at startup/RESET continues on page 0, right after the page 0 copy. |
 | $E005 | $FCFF | Effective BIOS paged area.  Compiler segments (pages) `BIOS_P1 - BIOS_PF` correspond to `W` register values of `$01 - $0F`, respectively.  Code on different pages calls each other through far-call gates. |
-| $F800 | $F88C | BIOS thunks (`jmp` table of BIOS, MMU, shared memory, scheduler and IO entry points), on page 0 and page 1.  `$F833` (`F833R` in WOZMON, `mmtest` in HyForth) runs the MMU self test; `$F869` the scheduler self test; `$F88A` the IO self test |
+| $F800 | $F88F | BIOS thunks (`jmp` table of BIOS, MMU, shared memory, scheduler and IO entry points), on page 0 and page 1.  `$F833` (`F833R` in WOZMON, `mmtest` in HyForth) runs the MMU self test; `$F869` the scheduler self test; `$F88A` the IO self test; `$F88D` is `GET_CHAR` (wait for a key) |
 | $FD00 | $FDFF | COMMON block, the same on every page: IRQ entry stubs and exit, NMI entry, far-call trampolines |
 | $FE00 | $FEFF | "WOZMON" monitor page (page 0) |
 

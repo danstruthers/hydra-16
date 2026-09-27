@@ -34,7 +34,7 @@ MON_START:
                 bmi             @get_line       ; Beyond start of line, reinitialize.
 
 @get_next_char:
-                jsr             READ_CHAR
+                jsr             GET_CHAR        ; (Sleeps until a key comes in)
                 bcc             @get_next_char
                 sta             IN,y            ; Add to text buffer.
                 cmp             #ASCII_CR

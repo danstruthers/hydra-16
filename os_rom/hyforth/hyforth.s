@@ -176,6 +176,7 @@ ERR_MEM := $04     ; memory not-avail
 ERR_UKW := $05     ; unknown word
 ERR_SEC := $06     ; security error, ie dangerous address write
 ERR_SYS := $07     ; return from system call error
+ERR_IO := $08      ; IO error (the IO layer's error code: ioerr)
   ; warnings
 WRN_SEC := $86     ; security
 WRN_MEM := $84     ; memory alloc
@@ -310,6 +311,7 @@ TASK_ZP MEMTOPV, 2     ; malloc arena top (MEMLAST starts here) $C4
 TASK_ZP MEMHND, 1      ; MMU handle of the arena               $C3
 TASK_ZP DICTLIM, 1     ; MMU page floor: 'here' stays below it $C2
 TASK_ZP HLBANK, 1      ; RAM bank saved by hlock               $C1
+TASK_ZP IOERR, 1       ; the last IO error (ioerr)             $C0
 TASK_ZP_END
 ;
 ; *** $DO-$FF total usage in ZP, including TEMP vars ***
@@ -611,7 +613,7 @@ GETLOOP:
     bne GETREADLOOP
     ldy #1
 GETREADLOOP:
-    jsr READ_CHAR
+    jsr GET_CHAR      ; (sleeps until a key comes in)
     bcc GETREADLOOP
     cmp #ASCII_CR
     beq GETLNEND

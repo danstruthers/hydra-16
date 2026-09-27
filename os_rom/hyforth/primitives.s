@@ -113,7 +113,7 @@ FDUMPLOOP:
     jsr DUMPPAGE
     inc TEMP0+1
 FDUMPGET:
-    jsr READ_CHAR           ; wait for char to continue to next page
+    jsr GET_CHAR            ; wait for char to continue to next page
     bcc FDUMPGET
     dex
     bne FDUMPLOOP
@@ -631,7 +631,7 @@ core_dict:
 ; ( -- u ) ; tos + 1 unchanged
 def_word "key", "key", 0
 KEYRDLP:
-    jsr READ_CHAR
+    jsr GET_CHAR            ; from fd 0 (sleeps until a key comes in)
     bcc KEYRDLP
     sta TEMP1
     jmp this         ; 'this' includes jsr spush_0 and next

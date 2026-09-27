@@ -148,7 +148,7 @@ All calls: C = 0 on success, C = 1 with the error in .A.  Thunks after `$F853`.
 | `YIELD` | | give up the CPU (scheduler) |
 | `NO_PREEMPT` / `PREEMPT` | | hold the CPU (nestable) while IRQs keep running; see Critical paths |
 
-**HyForth words:** `open ( addr len mode -- fd )`, `close ( fd -- )`, `read ( fd addr n -- n' )`, `write ( fd addr n -- n' )`, `emit`/`key`/`type` on fds 1 and 0, and a `redirect ( fd -- )` for output to a file.
+**HyForth words:** `open ( sz mode -- fd )` (the name is a HyForth `q^...^` string, e.g. `q^/dev/cons^ 3 open`), `close ( fd -- )`, `read ( fd addr n -- n' )`, `write ( fd addr n -- n' )`, `ioctl ( fd code arg -- )`, `ioerr ( -- n )` (a failed call gives `!IO ERR!`; `ioerr` is the IO layer's error code); `emit`/`key` on fds 1 and 0.  Later: `type`, and a `redirect ( fd -- )` for output to a file.
 
 ### **Build order**
 **Phase 1 - Scheduler (done)**
@@ -159,7 +159,7 @@ All calls: C = 0 on success, C = 1 with the error in .A.  Thunks after `$F853`.
 3. **(Done)** BIOS ROM page 2 (`page2.s`, `io.s`) with its gates and thunks (`$F86C-$F88A`); compact 6-byte gates (`FAR_GATE_INLINE`, via `FAR_INLINE` in the COMMON block); the IO transfer bank (`$09`); the fd tables (`$7DA0`, set up by `TASKS_INIT`); the device table (`$8800`) and `DEV_REGISTER`, `IO_SRV_MAP`/`IO_SRV_UNMAP`, `IO_INIT` (`io_p0.s`, page 0).  Page 0 is nearly full (about 55 bytes left): converting its older 15-byte gates to compact ones would free a few hundred bytes.
 4. **(Done)** `IO_OPEN`/`CLOSE`/`READ`/`WRITE`/`GETC`/`PUTC`/`SEEK`/`STAT`/`CTL`, H9P dispatch with race-free blocking (the task marks itself waiting before calling the server), `/dev/null` and `/dev/zero`, and `IO_TEST` (`$F88A`).
 5. **(Done)** The serial driver as the `cons`/`ser` server (`bios.s`: init, IRQ handler, `SER_TX_TRY`; `ser_srv.s` on page 2: the requests), with 256-byte RX and TX rings in its task and IRQ-driven TX (Rockwell TDRE interrupt); `cons` reads only for the foreground task (`SER_CTL_FOREGROUND`, `SER_CALL_SET_CAPTURE`), others wait; readers and writers wait (not spin) on an empty RX / full TX ring.  `READ_CHAR` (non-blocking, as before) / `WRITE_CHAR` on fds 0 and 1, or the rings directly for tasks without them; `IO_STD_OPEN` gives the shell fds 0-2; `TASK_BUILD_FRAME` copies the parent's open fds (`IO_INHERIT`); `MM_TASK_RESET` closes fds (`IO_CLOSE_ALL`).  `IO_WRITE` now offers a server the rest after a short write.  The serial-capture message ring is gone.  To make room on page 0, SPI moved to page 2.  Not done yet: `/dev/serctl`, `H9_DUP` (no server counts references yet), and making blocking reads the default for `key` (step 6).
-6. HyForth words `open`, `close`, `read`, `write`; `emit`/`key` through fds.
+6. **(Done)** HyForth words `open`, `close`, `read`, `write`, `ioctl`, `ioerr` (error `!IO ERR!`); `emit`/`key` through fds 1 and 0.  `GET_CHAR` (`$F88D`): wait for a key on fd 0 (echoed), sleeping instead of polling; HyForth's line input and `key`, and WOZMON, use it, so an idle shell doesn't use the CPU.
 
 **Phase 3 - More servers and names**
 7. `/dev/snd`, then pipes and `IO_DUP2` redirection.

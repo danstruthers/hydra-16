@@ -95,3 +95,5 @@ TH_DEV_REGISTER:
                 jmp             DEV_REGISTER        ; $F887
 TH_IO_TEST:
                 jmp             IO_TEST             ; $F88A
+TH_GET_CHAR:
+                jmp             GET_CHAR            ; $F88D
