@@ -14,7 +14,8 @@
 ;       $8800-$88FF  IO_DEV_TABLE the IO device table (io.s)
 ;   Bank IDs $00 (system), $01-$08 (message rings) and $09 (IO transfer areas) are reserved, as are the
 ;   banks of any U macro-page
-;   whose RAM isn't installed.
+;   whose RAM isn't installed, and the banks of any RAM chip that failed the POST (ZP_M_BAD_SH: chip c
+;   holds bank IDs 4c - 4c+3 of every U).
 ;
 ;   A shared handle is a 1-byte index (1-255) that any task can use, so it can be sent in a message.
 ;   Each task that uses it holds a reference (SH_ALLOC / SH_ATTACH); the banks are freed when the last
@@ -98,17 +99,33 @@ SHARED_RAM_INIT:
             sta         IO_DEV_TABLE,Y                      ; The IO device table ($8800, io.s)
             iny
             bne         @clear
-            ldx         #0                                  ; Reserve the banks of missing macro-pages
+            lda         ZP_M_BAD_SH                         ; Chips that failed the POST (post_ram.s): chip c
+            and         #$03                                ;   = bank IDs 4c - 4c+3 of every U, so a nibble
+            tax                                             ;   of each U's two SH_MAP bytes
+            lda         SH_CHIP_MASKS,X
+            sta         ZP_TEMP_VEC2                        ; Bank IDs $x0-$x7: chips 0, 1
+            lda         ZP_M_BAD_SH
+            lsr
+            lsr
+            and         #$03
+            tax
+            lda         SH_CHIP_MASKS,X
+            sta         ZP_TEMP_VEC2 + 1                    ; Bank IDs $x8-$xF: chips 2, 3
+            ldx         #0                                  ; Reserve the banks of missing macro-pages and bad chips
 
 @macro_pages:
+            lda         #$FF
+            tay
             lsr         ZP_TEMP_VEC + 1                     ; C = this U's present bit
             ror         ZP_TEMP_VEC
-            bcs         @present
-            lda         #$FF
-            sta         SH_MAP,X
-            sta         SH_MAP + 1,X
+            bcc         @reserve                            ; Missing: all of its banks
+            lda         ZP_TEMP_VEC2                        ; Present: the banks on bad chips
+            ldy         ZP_TEMP_VEC2 + 1
 
-@present:
+@reserve:
+            sta         SH_MAP,X
+            tya
+            sta         SH_MAP + 1,X
             inx
             inx
             cpx         #32
@@ -123,6 +140,8 @@ SHARED_RAM_INIT:
             PULL_YXA
             plp                                             ; Restore caller's I flag
             rts
+
+SH_CHIP_MASKS:  .byte   $00, $0F, $F0, $FF                  ; 2 chips' bad bits -> SH_MAP byte (4 bank IDs each)
 
 ; Allocate shared memory (whole 8K banks); the calling task holds the first reference.
 ; IN: .A.Y = size in bytes (1 - $FFFF; .A = low byte)

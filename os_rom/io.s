@@ -549,7 +549,8 @@ IO_READ:
             PULL_YX
             rts
 
-; Write to an fd.  Returns when the count is done, or when the server takes less.
+; Write to an fd.  Returns when the count is done, or when the server takes nothing (a server that takes
+; less than offered, like the console when its TX ring fills up, is offered the rest again).
 ; IN: .A = fd, ZP_IO_BUF = buffer, ZP_IO_CNT = bytes to write
 ; OUT (success): ZP_IO_CNT = bytes written, C = 0
 ; OUT (failure): .A = error, C = 1 (ZP_IO_CNT = bytes written before the error)
@@ -579,41 +580,17 @@ IO_WRITE:
             beq         @ok
             jsr         IO_SET_CHUNK
             jsr         IO_COPY_IN
-            lda         ZP_IO_CHUNK                 ; Keep the size offered
-            pha
-            lda         ZP_IO_CHUNK + 1
-            pha
             jsr         IO_SET_OFS
             lda         #H9_WRITE
             jsr         IO_SERVE
-            bcs         @error
+            bcs         @unmap
             jsr         IO_GET_DONE
-            beq         @none                       ; The server took nothing
+            beq         @ok                         ; The server took nothing
             jsr         IO_ADVANCE
-            pla                                     ; Less than offered: done
-            cmp         ZP_IO_CHUNK + 1
-            bne         @short
-            pla
-            cmp         ZP_IO_CHUNK
-            bne         @ok
             bra         @loop
-
-@short:
-            pla
-            bra         @ok
-
-@none:
-            pla
-            pla
 
 @ok:
             clc
-            bra         @unmap
-
-@error:
-            ply                                     ; (keep the error in .A)
-            ply
-            sec
 
 @unmap:
             _M_IO_UNMAP
@@ -741,6 +718,105 @@ IO_CTL:
 
 @done:
             PULL_YX
+            rts
+
+; ****************************************************************************
+; Task support: standard fds, closing everything, and fds inherited by new tasks
+
+S_DEV_CONS:     .byte "/dev/cons", 0
+
+; Open fds 0, 1 and 2 (stdin, stdout, stderr) on /dev/cons, for a shell.  The task's fds must be closed.
+; OUT: C = 0; or .A = error, C = 1
+IO_STD_OPEN:
+            PUSH_XY
+            ldy         #3
+
+@open:
+            phy
+            lda         #<S_DEV_CONS
+            ldy         #>S_DEV_CONS
+            ldx         #IO_MODE_RDWR
+            jsr         IO_OPEN
+            ply
+            bcs         @done
+            dey
+            bne         @open
+
+@done:
+            PULL_YX
+            rts
+
+; Close all of the task's fds (MM_TASK_RESET, when a task ends).  Modifies: .A, .X
+IO_CLOSE_ALL:
+            ldx         #IO_MAX_FDS - 1
+
+@close:
+            txa
+            jsr         IO_CLOSE                    ; (Closed fds: ERR_IO_BAD_FD, ignored)
+            dex
+            bpl         @close
+            clc
+            rts
+
+; Give a new task copies of the current task's open fds (TASK_BUILD_FRAME).  The fd table goes through
+; the current task's IO transfer area (tasks can't see each other's RAM), and the new task copies it in
+; (IO_ADOPT_FDS, run in it with TASK_CALL).  IRQs must be off.
+; (No server counts references yet; when one does, this will send it an H9_DUP for each fd.)
+; IN: .A = the new task.  Preserves .X, .Y
+IO_INHERIT:
+            PUSH_XY
+            sta         ZP_IO_TMP
+            ldx         #(IO_MAX_FDS - 1) * IO_FD_SIZE
+
+@any:
+            lda         IO_FD_SERVER,X              ; Any open?  (If not, the new task's are all closed
+            cmp         #IO_FD_CLOSED               ;   already: it's a free task)
+            bne         @copy
+            txa
+            sec
+            sbc         #IO_FD_SIZE
+            tax
+            bcs         @any
+            bra         @done
+
+@copy:
+            jsr         IO_XFER_SETUP
+            _M_IO_MAP_XFER
+            ldy         #IO_MAX_FDS * IO_FD_SIZE - 1
+
+@byte:
+            lda         IO_FD_TABLE,Y
+            sta         (ZP_IO_DATA),Y
+            dey
+            bpl         @byte
+            lda         ZP_IO_TMP
+            sta         ZP_TC_TASK
+            LOAD_ADDR   ::IO_ADOPT_FDS, ZP_TC_VEC   ; (Its page 0 gate)
+            lda         T_REGISTER
+            and         #$0F                        ; .A = this task
+            jsr         TASK_CALL
+            _M_IO_UNMAP
+
+@done:
+            PULL_YX
+            rts
+
+; Runs in the new task: copy the fd table from the parent's IO transfer area.  IN: .A = the parent
+IO_ADOPT_FDS:
+            asl                                     ; Its data area: $8000 + task * $200 + $100
+            ora         #>(PAGED_RAM_BASE + IO_BLK_DATA)
+            sta         ZP_IO_DATA + 1
+            stz         ZP_IO_DATA
+            _M_IO_MAP_XFER
+            ldy         #IO_MAX_FDS * IO_FD_SIZE - 1
+
+@byte:
+            lda         (ZP_IO_DATA),Y
+            sta         IO_FD_TABLE,Y
+            dey
+            bpl         @byte
+            _M_IO_UNMAP
+            clc
             rts
 
 ; ****************************************************************************

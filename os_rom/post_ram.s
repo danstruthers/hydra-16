@@ -11,6 +11,8 @@
 ;            address lines A0-A12.  Tested: the first bank of each shared RAM chip ($F0, $F4, $F8, $FC, with
 ;            U = 0; a missing chip shows as bad lines) and of each installed task RAM module.
 ;   Destructive: run before anything is kept in paged RAM.  Leaves RAM_BANK_REG and U at 0.
+;   Records the chips that failed, for the MMU to leave unused (in task 0): ZP_M_BAD_SH (shared RAM chips,
+;   used by SHARED_RAM_INIT) and ZP_M_BAD_MODS (task RAM modules, used by TASK_RAM_INIT).
 
 .segment "POST_P2"
 
@@ -35,30 +37,48 @@ POST_RAM_TEST:
             lda                 #$F0                                ; Shared RAM (U = 0): each chip's first bank
 
 @shared:
-            jsr                 POST_BANK_TEST
+            ldx                 #$03                                ; Bank lines 2-3 pick the chip: only lines
+            stx                 ZP_M_TEMP                           ;   0-1 count against this one
+            jsr                 POST_BANK_TEST                      ; Z = 0: bad
+            clc
+            beq                 :+
+            sec
+:
+            ror                 ZP_M_BAD_SH                         ; Chip c -> bit 4 + c
             clc
             adc                 #4
             bcc                 @shared
+            lsr                 ZP_M_BAD_SH                         ; Chip c -> bit c
+            lsr                 ZP_M_BAD_SH
+            lsr                 ZP_M_BAD_SH
+            lsr                 ZP_M_BAD_SH
             jsr                 MMU_PROBE_MODULES                   ; Task RAM: each installed module's first bank
             lda                 #0
 
 @module:
             lsr                 ZP_M_MODS + 1
             ror                 ZP_M_MODS
-            bcc                 :+
-            jsr                 POST_BANK_TEST
+            bcc                 :+                                  ; Not installed (C = 0: not bad)
+            ldx                 #$0F                                ; All 4 bank lines are the module's
+            stx                 ZP_M_TEMP
+            jsr                 POST_BANK_TEST                      ; Z = 0: bad
+            clc
+            beq                 :+
+            sec
 :
+            ror                 ZP_M_BAD_MODS + 1                   ; Module m -> bit m (after all 16)
+            ror                 ZP_M_BAD_MODS
             clc
             adc                 #$10
-            cmp                 #$F0
-            bne                 @module
-            stz                 RAM_BANK_REG
+            bcc                 @module                             ; (Module 15 is the shared banks: never
+            stz                 RAM_BANK_REG                        ;   installed, so never tested)
             stz                 U_REGISTER
             rts
 
 ; Test paged RAM bank .A ($8000-$9FFF) and print " bb:x/dd/aaaa": the bad bank lines (x, see
 ; POST_LINE_TEST), data lines (dd: D0-D7) and address lines (aaaa: A0-A12); bit set = bad line.
-; ZP_TEMP_VEC2 must point at RAM_BANK_REG.  Leaves the bank selected.  Preserves .A
+; ZP_TEMP_VEC2 must point at RAM_BANK_REG.  Leaves the bank selected.
+; IN: ZP_M_TEMP = the bank lines that count against this bank.  OUT: Z = 0 if any line is bad.  Preserves .A
 POST_BANK_TEST:
             pha
             pha
@@ -71,6 +91,10 @@ POST_BANK_TEST:
             pla
             pha
             jsr                 POST_LINE_TEST
+            pha
+            and                 ZP_M_TEMP
+            sta                 ZP_M_TEMP                           ; ZP_M_TEMP = all of this bank's bad lines
+            pla
             jsr                 POST_PUTHEX
             lda                 #'/'
             jsr                 POST_PUTC
@@ -86,6 +110,7 @@ POST_BANK_TEST:
             tax
             bne                 :-
             lda                 ZP_TEMP
+            tsb                 ZP_M_TEMP
             jsr                 POST_PUTBYTE
             lda                 #'/'
             jsr                 POST_PUTC
@@ -137,10 +162,13 @@ POST_BANK_TEST:
             cpx                 #2
             bne                 @pass
             lda                 ZP_TEMP_VEC + 1
+            tsb                 ZP_M_TEMP
             jsr                 POST_PUTBYTE
             lda                 ZP_TEMP_VEC
+            tsb                 ZP_M_TEMP
             jsr                 POST_PUTBYTE
             pla
+            ldx                 ZP_M_TEMP                           ; Z = 0: bad
             rts
 
 ; Bank line test: the byte at $8000, with the register at (ZP_TEMP_VEC2) (RAM_BANK_REG or U) set to

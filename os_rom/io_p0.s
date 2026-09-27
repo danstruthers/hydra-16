@@ -17,6 +17,10 @@ FAR_GATE_INLINE     IO_SEEK,        PAGE2::IO_SEEK,         2
 FAR_GATE_INLINE     IO_STAT,        PAGE2::IO_STAT,         2
 FAR_GATE_INLINE     IO_CTL,         PAGE2::IO_CTL,          2
 FAR_GATE_INLINE     IO_TEST,        PAGE2::IO_TEST,         2
+FAR_GATE_INLINE     IO_STD_OPEN,    PAGE2::IO_STD_OPEN,     2
+FAR_GATE_INLINE     IO_CLOSE_ALL,   PAGE2::IO_CLOSE_ALL,    2
+FAR_GATE_INLINE     IO_INHERIT,     PAGE2::IO_INHERIT,      2
+FAR_GATE_INLINE     IO_ADOPT_FDS,   PAGE2::IO_ADOPT_FDS,    2  ; (Run in a new task by IO_INHERIT)
 
 ; Serve routines must be page 0 addresses (TASK_CALL runs them on page 0): gates to the page 2 servers
 FAR_GATE_INLINE     NULL_SERVE,     PAGE2::NULL_SERVE,      2

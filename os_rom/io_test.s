@@ -3,8 +3,8 @@
 ; ****************************************************************************
 ; IO self test (TH_IO_TEST, $F88A; from WOZMON: F88AR).  BIOS ROM page 2, included inside `.scope PAGE2`
 ; (see all.s).  Runs in the current task and prints "IO test: ok", or "IO test: FAIL x ee" (x = failing
-; step, ee = error code or value).  Uses /dev/null and /dev/zero, and a 300-byte buffer from the MMU.
-; Needs all of the task's fds to be free.
+; step, ee = error code or value).  Uses /dev/null, /dev/zero and /dev/cons (it writes "cons "), and a
+; 300-byte buffer from the MMU.  The task's other fds (e.g. stdin, stdout, stderr) are left alone.
 
 .segment "IO_P2"
 
@@ -15,6 +15,9 @@ S_DEV_ZERO_SUB: .byte "/dev/zero/sub", 0
 S_DEV_NOTHERE:  .byte "/dev/nothere", 0
 S_DEV_ZEROO:    .byte "/dev/zeroo", 0
 S_NOT_DEV:      .byte "/foo", 0
+S_DEV_CONS_T:   .byte "/dev/cons", 0
+S_CONS_MSG:     .byte "cons "
+CONS_MSG_LEN    = * - S_CONS_MSG
 
 IT_BUF_SIZE     = 300
 
@@ -89,7 +92,7 @@ IO_TEST:
 ; /dev/null: writes take everything (split over two transfers), reads are empty
             _M_IT_OPEN  S_DEV_NULL, IO_MODE_RDWR
             _M_IT_FAIL_IF_C     'a'
-            sta         ZP_TEMP                             ; fd 1
+            sta         ZP_TEMP                             ; (The first free fd)
             _M_IT_COUNT ZP_TEMP, IT_BUF_SIZE
             jsr         IO_WRITE
             _M_IT_FAIL_IF_C     'b'
@@ -115,7 +118,7 @@ IO_TEST:
             dec         ZP_TEMP_VEC3 + 1
             _M_IT_OPEN  S_DEV_ZERO, IO_MODE_READ
             _M_IT_FAIL_IF_C     'd'
-            sta         ZP_TEMP_2                           ; fd 2
+            sta         ZP_TEMP_2                           ; (The next one)
             _M_IT_COUNT ZP_TEMP_2, IT_BUF_SIZE
             jsr         IO_READ
             _M_IT_FAIL_IF_C     'e'
@@ -190,26 +193,66 @@ IO_TEST:
             jsr         IO_CLOSE
             _M_IT_FAIL_IF_C     'l'
 
-; Running out of fds
-            lda         #IO_MAX_FDS
+; /dev/cons: writes show up; an unknown control code is refused
+            _M_IT_OPEN  S_DEV_CONS_T, IO_MODE_WRITE
+            _M_IT_FAIL_IF_C     'q'
             sta         ZP_TEMP
+            ldy         #CONS_MSG_LEN - 1                   ; The message, into the buffer (in task RAM)
+:
+            lda         S_CONS_MSG,Y
+            sta         (ZP_TEMP_VEC3),Y
+            dey
+            bpl         :-
+            _M_IT_COUNT ZP_TEMP, CONS_MSG_LEN
+            jsr         IO_WRITE
+            _M_IT_FAIL_IF_C     'r'
+            _M_IT_EXPECT_CNT    'r', CONS_MSG_LEN
+            lda         ZP_TEMP
+            ldx         #$7F
+            jsr         IO_CTL
+            _M_IT_FAIL_IF_NC    's', ERR_IO_BAD_REQ
+            lda         ZP_TEMP
+            jsr         IO_CLOSE
+            _M_IT_FAIL_IF_C     's'
+
+; Running out of fds: fill the free ones (ZP_TEMP_VEC: bit n = fd n was free), then close them again
+            stz         ZP_TEMP_VEC
+            stz         ZP_TEMP_VEC + 1
+            ldy         #(IO_MAX_FDS - 1) * IO_FD_SIZE
+
+@scan:
+            lda         IO_FD_SERVER,Y
+            cmp         #IO_FD_CLOSED                       ; C = 1: free
+            rol         ZP_TEMP_VEC
+            rol         ZP_TEMP_VEC + 1
+            tya
+            sec
+            sbc         #IO_FD_SIZE
+            tay
+            bcs         @scan
 
 @open_all:
             _M_IT_OPEN  S_DEV_NULL, IO_MODE_RDWR
-            _M_IT_FAIL_IF_C     'm'
-            dec         ZP_TEMP
-            bne         @open_all
-            _M_IT_OPEN  S_DEV_NULL, IO_MODE_RDWR
-            _M_IT_FAIL_IF_NC    'n', ERR_IO_NO_FDS
-            lda         #IO_MAX_FDS - 1
-            sta         ZP_TEMP
+            bcc         @open_all
+            cmp         #ERR_IO_NO_FDS
+            beq         :+
+            ldx         #'n'
+            jmp         @fail
+:
+            ldx         #0
 
 @close_all:
-            lda         ZP_TEMP
+            lsr         ZP_TEMP_VEC + 1
+            ror         ZP_TEMP_VEC
+            bcc         @next_fd
+            txa
             jsr         IO_CLOSE
             _M_IT_FAIL_IF_C     'o'
-            dec         ZP_TEMP
-            bpl         @close_all
+
+@next_fd:
+            inx
+            cpx         #IO_MAX_FDS
+            bne         @close_all
 
             lda         ZP_TEMP_VEC4
             jsr         MM_FREE

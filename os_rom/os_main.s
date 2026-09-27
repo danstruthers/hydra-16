@@ -213,17 +213,6 @@ DO_WELCOME:
             bcc                 @vector_loop
             PRINT_CRLF_JMP
 
-SPI_TEST:
-            ldx                 #SPI_DEV_0
-            jsr                 SPI_INIT_DELAY
-            SPI_SEND_CMD        0, 0, 0, 0,   0, $4A                ; CMD0
-            SPI_SEND_CMD        8, 0, 0, 1, $AA, $43                ; CMD8
-@loop:
-            SPI_SEND_CMD        58, 0, 0, 0,   0                    ; CMD58
-            SPI_SEND_CMD        41, $40, 0, 0,   0                  ; ACMD41
-            bne                 @loop
-            rts
-
 ; A: S/W interrupt number
 ; Preserves .X and V
 SW_INT:

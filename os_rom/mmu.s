@@ -115,6 +115,10 @@ TASK_RAM_INIT:
             sei                                             ; No IRQs while switching tasks
             phx
             jsr         MMU_PROBE_MODULES                   ; Installed RAM modules -> ZP_M_MODS (task 0)
+            lda         ZP_M_BAD_MODS                       ; Leave out the ones that failed the POST
+            trb         ZP_M_MODS
+            lda         ZP_M_BAD_MODS + 1
+            trb         ZP_M_MODS + 1
             ldx         #MAX_TASK_NUMBER
 
 @task_loop:
@@ -1183,6 +1187,7 @@ MM_ACCESS_SETUP:
 ;   2. Its shared memory references are dropped (banks nobody else references are freed)
 ;   3. The message rings it sends or receives on are emptied
 ;   4. Its IRQ / S/W interrupt handlers are unregistered
+; Its fds are closed first.
 ; Called when a task completes (TASK_START).  The task must not be running (or be the calling task).
 ; IN: .A = task
 ; Preserves .A, .X, .Y
@@ -1191,7 +1196,12 @@ MM_TASK_RESET:
             sei
             PUSH_AXY
             and         #$0F
+            pha
             sta         ZP_TC_TASK
+            LOAD_ADDR   IO_CLOSE_ALL, ZP_TC_VEC
+            jsr         TASK_CALL                           ; Close its fds, in the task
+            pla                                             ; (Its requests to the servers change
+            sta         ZP_TC_TASK                          ;   ZP_TC_TASK when it's this task)
             LOAD_ADDR   MM_TASK_INIT, ZP_TC_VEC
             jsr         TASK_CALL                           ; Re-initialize its MMU area, in the task
             lda         ZP_TC_TASK

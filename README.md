@@ -56,6 +56,8 @@ RAM U:0 F0:0/00/0000 F4:0/00/0000 F8:0/00/0000 FC:0/00/0000 00:0/00/0000 10:0/00
 
 The banks tested are the first bank of each shared RAM chip (U = 0), then the first bank of each installed task RAM module (`00`, `10`, `20`, ...).  A missing chip shows up as bad lines.  The tests are destructive, which is fine at reset: nothing is kept in paged RAM yet.
 
+A chip that fails is left unused: the MMU reserves every bank ID on a bad shared RAM chip (in all 16 U macro-pages) and treats a bad task RAM module as not installed.  (A shared chip's bank lines 2-3 select between chips, so only its lines 0-1 count against it.)  The system banks (IDs `$00-$09`) can't be moved, so a fault on the `F0`, `F4` or `F8` chip still needs fixing.
+
 Shared RAM chips (`board/SharedMem.kicad_sch`, HM628512).  On the V1 board, bank register bits 2 and 3 are swapped (as are bits 6 and 7, and the same bits of the ROM bank register), so bank IDs `$04-$07` are on U28 and `$08-$0B` on U27:
 
 | POST | Bank IDs | Chip |
@@ -76,11 +78,23 @@ There are 16 tasks (`T` = `$0-$F`), each with its own `$0000-$7FFF` (zero page, 
 | Task | Use |
 | :--- | :-- |
 | `$0` | System task: boot, then the idle task (runs only when no other task can) |
-| `$1` | Shell (HyForth / WOZMON); the default serial-capture task |
+| `$1` | Shell (HyForth / WOZMON); the foreground task (it gets the console input) to start with |
 | `$E` | Sound driver (Resident) |
 | `$F` | Serial driver (Resident) |
 
-Drivers run in **Resident** tasks, which only run from IRQs and from calls into the driver (`TASK_CALL`).  Tasks send each other data through **message rings** in shared RAM: one 256-byte ring per receiver/sender pair (`MSG_SEND_BYTE`, `MSG_RECV_BYTE`, `MSG_PEEK`).  Serial input is delivered this way: the serial driver sends each received byte to the serial-capture task, and `READ_CHAR` reads it from there.
+Drivers run in **Resident** tasks, which only run from IRQs and from calls into the driver (`TASK_CALL`).  Tasks send each other data through **message rings** in shared RAM: one 256-byte ring per receiver/sender pair (`MSG_SEND_BYTE`, `MSG_RECV_BYTE`, `MSG_PEEK`).
+
+### **IO**
+
+All IO goes through **file descriptors**, Plan 9 style (see `os_rom/IO_PLAN.md`): a task opens a name (`IO_OPEN "/dev/cons"`), gets an fd, and reads and writes it (`IO_READ`, `IO_WRITE`, `IO_GETC`, `IO_PUTC`, `IO_CTL`, `IO_CLOSE`).  Devices are **file servers**: a driver registers its names (`DEV_REGISTER`), and each request runs its serve routine in the driver's task.  A read with no data yet makes the task wait (it doesn't use the CPU) until the driver wakes it.  The IO layer is on BIOS ROM page 2.
+
+| Name | Server | |
+| :--- | :----- | :- |
+| `/dev/cons` | Serial driver (task `$F`) | The console: reads get the keyboard input, but only for the **foreground task** (the shell to start with; `IO_CTL` code `SER_CTL_FOREGROUND` changes it); other readers wait |
+| `/dev/ser` | Serial driver | The serial port, for any task |
+| `/dev/null`, `/dev/zero` | IO layer | The usual |
+
+Each task has 12 fds.  The shell opens fds 0, 1 and 2 (stdin, stdout, stderr) on `/dev/cons`, and tasks it starts get copies of its open fds; a task's fds are closed when it ends.  `READ_CHAR` and `WRITE_CHAR` (so WOZMON and HyForth) read fd 0 and write fd 1; tasks without them (the system task and drivers) use the serial port directly.  The serial driver buffers both ways (256-byte RX and TX rings in its task), and sends from its transmit interrupt, so output doesn't busy-wait.  `$F88A` (`F88AR` in WOZMON) runs the IO self test.
 
 ### **Memory Map**
 * PER-TASK memory map (each task has its own copy of this memory space, except for shared RAM pages, as discussed below)
@@ -104,7 +118,7 @@ Drivers run in **Resident** tasks, which only run from IRQs and from calls into 
 
 | Start | End  | Description |
 | :---- | :--- | :---------- |
-| $E000 | $FFFF | BIOS/OS ROM paged area (indexed by the W register; see below).  Page 0: BIOS and OS.  Page 1: HyForth and the disassembler.  Page 2: the IO layer and the POST RAM line tests.  Pages 3-F: unused |
+| $E000 | $FFFF | BIOS/OS ROM paged area (indexed by the W register; see below).  Page 0: BIOS and OS.  Page 1: HyForth and the disassembler.  Page 2: the IO layer, the serial driver's file server, the POST RAM line tests and SPI.  Pages 3-F: unused |
 | $E000 | $E004 | RESET Vector entry point: sets W to zero.  This is replicated at the beginning of each BIOS page, so that an arbitrary W register value at startup/RESET continues on page 0, right after the page 0 copy. |
 | $E005 | $FCFF | Effective BIOS paged area.  Compiler segments (pages) `BIOS_P1 - BIOS_PF` correspond to `W` register values of `$01 - $0F`, respectively.  Code on different pages calls each other through far-call gates. |
 | $F800 | $F88C | BIOS thunks (`jmp` table of BIOS, MMU, shared memory, scheduler and IO entry points), on page 0 and page 1.  `$F833` (`F833R` in WOZMON, `mmtest` in HyForth) runs the MMU self test; `$F869` the scheduler self test; `$F88A` the IO self test |

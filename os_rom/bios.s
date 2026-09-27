@@ -10,21 +10,32 @@ HEX_MAP: .byte "0123456789ABCDEF"
 NamedHString HYDRA_WELCOME, "Welcome to the HYDRA-16!"
 
 ; ****************************************************************************
-; Serial driver.  Runs in its own Resident task (SERIAL_TASK_NUM, started by DRV_START at boot), so
-; its state (ZP_SER_SEND_STATUS, ZP_SER_CAPTURE) lives in that task's ZP.
-;   RX: the IRQ handler sends each received byte to the serial-capture task as a message.
-;   TX: WRITE_CHAR writes the ACIA directly from the calling task, using the send status in the
-;       serial task's ZP.
+; Serial driver: the file server for /dev/cons and /dev/ser (see IO_PLAN.md).  Runs in its own Resident
+; task (SERIAL_TASK_NUM, started by DRV_START at boot), so its state (ZP_SER_SEND_STATUS, ZP_SER_CAPTURE,
+; the SER_* task ZP in zero.s) and its RX and TX rings (SER_RX_BUF, SER_TX_BUF) live in that task.
+;   RX: the IRQ handler puts each received byte into the RX ring, and wakes the tasks waiting to read.
+;   TX: bytes go into the TX ring (or straight to the ACIA when it's idle); the IRQ handler sends the
+;       next one each time the ACIA's transmit register empties (Rockwell 65C51 TDRE interrupt).
+;   /dev/cons reads only for the foreground task (ZP_SER_CAPTURE: the shell to start with); others
+;   wait until they're brought to the foreground.  /dev/ser is the raw port.  The requests themselves
+;   are handled on ROM page 2 (ser_srv.s).
+;   READ_CHAR / WRITE_CHAR use the task's fd 0 / fd 1, or the rings directly if the task has none.
 
 SERIAL_DRIVER:
                 .word           SERIAL_INIT             ; DriverInfo::init
                 .word           SERIAL_STOP             ; DriverInfo::stop
                 .word           SERIAL_NAME             ; DriverInfo::name
 NamedHString SERIAL_NAME, "SERIAL"
+CONS_NAME:      .byte           "cons", 0
+SER_NAME:       .byte           "ser", 0
 
-; Gate into the serial task: set the serial-capture task (the task that receives serial input)
+; Gate into the serial task: set the foreground task (the one /dev/cons reads for)
 ; IN: .A = task
 TASK_GATE       SER_CALL_SET_CAPTURE, SERIAL_SET_CAPTURE, SERIAL_TASK_NUM
+
+; Serve routines (page 2, ser_srv.s)
+FAR_GATE_INLINE CONS_SERVE,     PAGE2::CONS_SERVE,      2
+FAR_GATE_INLINE SER_SERVE,      PAGE2::SER_SERVE,       2
 
 ; Driver init (runs in the serial task).  OUT: C = 0 on success, or C = 1 and .A = error
 SERIAL_INIT:
@@ -32,46 +43,55 @@ SERIAL_INIT:
                 sei
                 lda             #$10 | SR_SELECT    ; 8-N-1
                 sta             ACIA_R_CTRL
-.if ROCKWELL_ACIA = 1
                 lda             #ACIA_CMD_BIT_DTRL | ACIA_CMD_BIT_TLIE  ; No parity, no echo, tx & rx interrupts.
-.else
-                lda             #ACIA_CMD_BIT_DTRL | ACIA_CMD_BIT_TLID  ; No parity, no echo, rx interrupts.
-.endif
                 sta             ACIA_R_CMD
-.if ROCKWELL_ACIA = 1 .OR ACIA_USE_VIA_TIMER = 1
                 lda             #SER_SEND_STATUS_READY
                 sta             ZP_SER_SEND_STATUS
-.endif
-                lda             #SHELL_TASK_NUM         ; Serial input goes to the shell by default
+                lda             #SHELL_TASK_NUM         ; The shell is in the foreground to start with
                 sta             ZP_SER_CAPTURE
-.if ACIA_USE_VIA_TIMER = 1
-                ldx             #IRQ_NUMBER_ONBOARD_VIA ; VIA T2 paces TX
-                lda             #<SERIAL_VIA_T2_HANDLER
-                ldy             #>SERIAL_VIA_T2_HANDLER
-                jsr             IRQ_REGISTER
-                bcs             @done
-.endif
+                ldx             #SER_RX_HEAD - SER_WR_WAIT
+:
+                stz             SER_WR_WAIT,X           ; Empty rings, nobody waiting
+                dex
+                bpl             :-
                 ldx             #IRQ_NUMBER_ONBOARD_SERIAL
                 lda             #<SERIAL_IRQ_HANDLER
                 ldy             #>SERIAL_IRQ_HANDLER
                 jsr             IRQ_REGISTER            ; Handler runs in this (the serial) task
+                bcs             @done
+                LOAD_ADDR       CONS_SERVE, ZP_TC_VEC   ; The files
+                lda             #<CONS_NAME
+                ldy             #>CONS_NAME
+                ldx             #SERIAL_TASK_NUM
+                jsr             DEV_REGISTER
+                bcs             @done
+                LOAD_ADDR       SER_SERVE, ZP_TC_VEC
+                lda             #<SER_NAME
+                ldy             #>SER_NAME
+                jsr             DEV_REGISTER
 
 @done:
                 jmp             MM_RETURN               ; Restore caller's I flag, keep C
+
+.assert         SER_RX_HEAD - SER_WR_WAIT = 7, error, "SERIAL_INIT clears the serial task ZP as one block"
 
 SERIAL_STOP:
                 clc
                 rts
 
-; Set the serial-capture task (runs in the serial task; use SER_CALL_SET_CAPTURE)
-; IN: .A = task
+; Set the foreground task: /dev/cons reads for it (runs in the serial task; use SER_CALL_SET_CAPTURE,
+; or IO_CTL SER_CTL_FOREGROUND on a /dev/cons fd).  Wakes the tasks waiting to read, so the new
+; foreground task gets its input and the others go back to waiting.
+; IN: .A = task.  Modifies: .A, .X, .Y
 SERIAL_SET_CAPTURE:
                 sta             ZP_SER_CAPTURE
+                ldx             #SER_RD_WAIT
+                jsr             SER_WAKE
                 clc
                 rts
 
-; Input a character from the serial interface: the next byte the serial task has sent to the
-; current task.  Only the serial-capture task receives input.
+; Input a character, if there is one: from fd 0 (stdin), without waiting.  (A task without an fd 0
+; gets nothing.)  The character is echoed.
 ; On return, carry flag indicates whether a key was pressed
 ; If a key was pressed, the key value will be in the A register
 ;
@@ -79,15 +99,26 @@ SERIAL_SET_CAPTURE:
 READ_CHAR:
 SERIAL_READ:
                 phx
-                ldx             #SERIAL_TASK_NUM
-                jsr             MSG_RECV_BYTE           ; C = 0: .A = byte
+                ldx             IO_FD_SERVER            ; fd 0 open?
+                cpx             #IO_FD_CLOSED
+                beq             @none
+                lda             IO_FD_MODE              ; Just this once, don't wait
+                pha
+                ora             #IO_MODE_NONBLOCK
+                sta             IO_FD_MODE
+                ldx             #0
+                jsr             IO_GETC                 ; C = 0: .A = byte
                 plx
-                bcc             :+
-                clc                                     ; Nothing waiting
-                rts
-:
+                stx             IO_FD_MODE
+                bcs             @none
+                plx
                 PRINT_CHAR                                  ; echo
                 sec
+                rts
+
+@none:
+                plx
+                clc
                 rts
 
 ; Write decimal value of .A to output
@@ -152,60 +183,95 @@ WRITE_HEX:
                 lda             HEX_MAP,x
                 SKIPNEXT
 
-; Output a character (from the A register) to the serial interface.
+; Output a character (from the A register): to fd 1 (stdout), or straight to the serial port if the
+; task has no fd 1 (system and driver tasks).  Not with IRQs off: it may have to wait for the TX IRQ.
 ;
 ; Modifies: flags
-; Can be called from any task: the send status lives in the serial owner task's ZP.
-; TODO: select appropriate output stream for the given task
 WRITE_CHAR:
 SERIAL_WRITE:
                 phx                                         ; Must stay 1 byte (WRITE_HEX SKIPNEXTs over it)
                 phy
-
-WRITE_DELAY:
-.if ROCKWELL_ACIA = 1 .OR ACIA_USE_VIA_TIMER = 1
-                php                                         ; Save caller's I flag
-                sei
-                ldy             T_REGISTER
-                ldx             #SERIAL_OWNER_TASK
-                stx             T_REGISTER                  ; Quick switch to the serial owner task (no stack use!)
-                ldx             ZP_SER_SEND_STATUS
-                cpx             #SER_SEND_STATUS_READY
-                beq             :+
-                sty             T_REGISTER                  ; Back to the calling task
-                plp                                         ; Restore caller's I flag
-                wai                                         ; Leave this in, even if RDY has a pull-up
-                bra             WRITE_DELAY
-:
-                ldx             #SER_SEND_STATUS_BUSY
-                stx             ZP_SER_SEND_STATUS
-                IO_PORT_WRITE   ACIA_R_DATA
-                sty             T_REGISTER                  ; Back to the calling task
-                plp                                         ; Restore caller's I flag
-.else
-                IO_PORT_WRITE   ACIA_R_DATA
-.endif
-
-.if ROCKWELL_ACIA = 0
-    .if ACIA_USE_VIA_TIMER = 1
+                ldx             IO_FD_SERVER + IO_FD_SIZE   ; fd 1 open?
+                cpx             #IO_FD_CLOSED
+                beq             @direct
                 pha
-                lda             #SWT_SELECT_L
-                ldy             #SWT_SELECT_H
-                jsr             VIA_START_T2
+                ldx             #1
+                jsr             IO_PUTC
                 pla
-    .else
-                ldx             #SWT_SELECT_L + 1
-                ldy             #SWT_SELECT_H + 1
-:
-                dex
-                bne             :-
-                dey
-                bne             :-
-    .endif
-.endif
+                bcc             @done
 
+@direct:
+                jsr             SER_TX_TRY
+                bcc             @done
+                wai                                         ; The TX ring is full: wait for the TX IRQ
+                bra             @direct
+
+@done:
                 ply
                 plx
+                rts
+
+; Queue a byte for the serial port, from any task: into the TX ring, or straight to the ACIA when it's
+; idle (the ring is empty then).  IN: .A = byte.  OUT: C = 0, or C = 1 if the ring is full
+; Preserves .A, .X; modifies .Y
+SER_TX_TRY:
+                php                                         ; Save caller's I flag
+                sei
+                phx
+                ldx             T_REGISTER
+                ldy             #SERIAL_TASK_NUM
+                sty             T_REGISTER                  ; Quick switch to the serial task (no stack use!)
+                ldy             ZP_SER_SEND_STATUS
+                bne             @queue                      ; Busy: the TX IRQ sends it
+                IO_PORT_WRITE   ACIA_R_DATA
+                inc             ZP_SER_SEND_STATUS          ; SER_SEND_STATUS_BUSY
+                bra             @ok
+
+@queue:
+                ldy             SER_TX_HEAD
+                sta             SER_TX_BUF,Y
+                iny
+                cpy             SER_TX_TAIL
+                beq             @full                       ; (The byte stored isn't counted: head stays)
+                sty             SER_TX_HEAD
+
+@ok:
+                stx             T_REGISTER                  ; Back to the calling task
+                plx
+                plp
+                clc
+                rts
+
+@full:
+                stx             T_REGISTER                  ; Back to the calling task
+                plx
+                plp
+                sec
+                rts
+
+; Wake every task in a wait mask of the serial task (SER_RD_WAIT or SER_WR_WAIT), and clear the mask.
+; Runs in the serial task.  IN: .X = the mask's ZP address.  Modifies: .A, .Y
+SER_WAKE:
+                php
+                sei
+                lda             0,X
+                ora             1,X
+                beq             @done
+                ldy             #0
+
+@loop:
+                lsr             1,X
+                ror             0,X
+                bcc             :+
+                tya
+                jsr             IO_WAKE
+:
+                iny
+                cpy             #16
+                bne             @loop
+
+@done:
+                plp
                 rts
 
 ; Convenience method to write CR/LF to output stream
@@ -251,153 +317,42 @@ CLEAR_SCR:
                 PRINT_ESC_SEQ #ASCII_LBRACKET, #ASCII_2, #ASCII_J
                 PRINT_ESC_SEQ_JMP #ASCII_LBRACKET, #ASCII_0, #ASCII_SEMI, #ASCII_0, #ASCII_f
 
-; Set up the SPI interface registers on the VIA
-SPI_INIT:
-                pha
-                IO_PORT_WRITE   VIA_R_AUX_CTRL, , 0
-                IO_PORT_WRITE   VIA_R_INT_ENABLE
-                IO_PORT_WRITE   VIA_R_PER_CTRL, , $FF
-                IO_PORT_WRITE   IOR_SPI_DDR,  , SPI_DDR_BITS
-                IO_PORT_WRITE   IOR_SPI_DATA, , SPI_BIT_CSB   ; de-select all SPI devices
-                pla
-                rts
-
-; Macro to remove essentially duplicate code
-.macro          SPI_SEND_SETUP  mode
-                sta             ZP_SPI_DATA_OUT
-                phy
-                txa
-                ora             #SPI_BIT_MOSI
-                tay
-                lda             ZP_SPI_DATA_OUT
-                sei
-.ifblank        mode
-                asl             ZP_SPI_DATA_IN
-.endif
-                sec
-                rol
-.endmacro
-
-; Write and Read SPI data
-; Uses two ZP registers for data_in and data_out
-; A: data to send
-; X: device ID to send to/receive from
-; Returns input data in A
-; Modifies A, ZP_SPI_DATA_IN, ZP_SPI_DATA_OUT
-SPI_TRANSCEIVE:
-                SPI_SEND_SETUP
-                bcs             @spi_send_1
-@spi_send_0:
-                stx             IOR_SPI_DATA
-                bra             @spi_send
-@spi_send_1:
-                sty             IOR_SPI_DATA
-@spi_send:
-                inc             IOR_SPI_DATA        ; SPI_CLK = 1
-                bit             IOR_SPI_DATA        ; MISO (bit 7) => N flag
-                bpl             @spi_recv
-                inc             ZP_SPI_DATA_IN      ; incoming bit was a 1 (set LSb = 1)
-@spi_recv:
-                asl
-                beq             SPI_OPERATION_DONE
-                bcs             @had_1
-                asl             ZP_SPI_DATA_IN
-                bra             @spi_send_0
-@had_1:
-                asl             ZP_SPI_DATA_IN
-                bra             @spi_send_1
-
-SPI_OPERATION_DONE:
-                lda             #SPI_BIT_CSB        ; de-select all SPI devices
-                tsb             IOR_SPI_DATA
-                ply
-                lda             ZP_SPI_DATA_IN      ; load the input for return in A
-                cli
-                rts
-
-; Write SPI data
-; Uses two ZP registers for data_in and data_out
-; A: data to send
-; X: device ID to send to
-; Modifies A, ZP_SPI_DATA_OUT
-SPI_SEND:
-                SPI_SEND_SETUP  1
-@send_loop:
-                bcs             @spi_send_1
-                stx             IOR_SPI_DATA
-                bra             @spi_send
-@spi_send_1:
-                sty             IOR_SPI_DATA
-@spi_send:
-                inc             IOR_SPI_DATA        ; SPI_CLK = 1
-                asl
-                bne             @send_loop
-                jmp             SPI_OPERATION_DONE
-
-; Read from the SPI device
-; X: device to read from
-; Result returned in A
-SPI_RECV:
-                phy
-                ldy             #8
-                txa
-                ora             #SPI_BIT_MOSI | SPI_BIT_CSB
-                sta             IOR_SPI_DATA        ; Select the device to receive from
-                sei
-@recv_loop:
-                asl                                 ; Shift in 0 to LSb of result
-                inc             IOR_SPI_DATA
-                bit             IOR_SPI_DATA        ; MISO (bit 7) => N flag
-                bpl             @spi_recv_2
-                                                    ; Set LSb = 1
-                inc
-@spi_recv_2:
-                dey
-                bne             @recv_loop
-                sta             ZP_SPI_DATA_IN
-                jmp             SPI_OPERATION_DONE
-
-; Delay for some number of cycles to ensure SPI device is ready to start working
-SPI_INIT_DELAY:
-                PUSH_AXY
-                txa                                         ; set SPI device
-                ora             #SPI_BIT_CSB | SPI_BIT_MOSI ; de-select all devices
-                tax
-                ora             #SPI_BIT_CLK
-                ldy             #SPI_INIT_DELAY_CYCLES
-@loop:
-                sta             IOR_SPI_DATA
-                stx             IOR_SPI_DATA
-                dey
-                bne             @loop
-                PULL_YXA
-                rts
-
 ; Serial IRQ handler (registered with IRQ_REGISTER; runs in the serial task)
 ; OUT: C = 1 if the ACIA was interrupting
 SERIAL_IRQ_HANDLER:
-.if ROCKWELL_ACIA = 1
-                lda             #ACIA_STATUS_BIT_TDRE
-.endif
-
-                bit             ACIA_R_STATUS
-                bpl             @not_mine 	            ; bit 7 not set, so not ACIA IRQ
-
-.if ROCKWELL_ACIA = 1
-                beq             @do_recv                ; if not Tx, then must be Rx
-                lda             #SER_SEND_STATUS_READY
-                sta             ZP_SER_SEND_STATUS
+                lda             ACIA_R_STATUS           ; Read once: it clears the IRQ flag, so a second
+                bpl             @not_mine 	            ;   read could lose a TDRE that came in between
+                pha
+                and             #ACIA_STATUS_BIT_TDRE
+                beq             @check_recv             ; Transmit register still full
+                lda             ZP_SER_SEND_STATUS
+                beq             @check_recv             ; Idle: nothing to send
+                ldy             SER_TX_TAIL             ; The next byte from the TX ring
+                cpy             SER_TX_HEAD
+                bne             :+
+                stz             ZP_SER_SEND_STATUS      ; SER_SEND_STATUS_READY: the ring is empty
+                bra             @check_recv
+:
+                lda             SER_TX_BUF,Y
+                IO_PORT_WRITE   ACIA_R_DATA
+                iny
+                sty             SER_TX_TAIL
+                ldx             #SER_WR_WAIT            ; There's room: wake the waiting writers
+                jsr             SER_WAKE
 
 @check_recv:
-                lda             #ACIA_STATUS_BIT_RDRF   ; is read register full?
-                bit             ACIA_R_STATUS
+                pla
+                and             #ACIA_STATUS_BIT_RDRF   ; is read register full?
                 beq             @int_done
-.endif
-
-@do_recv:
                 IO_PORT_READ    ACIA_R_DATA
-                ldx             ZP_SER_CAPTURE
-                jsr             MSG_SEND_BYTE           ; To the capture task (dropped if its ring is full)
+                ldy             SER_RX_HEAD             ; Into the RX ring
+                sta             SER_RX_BUF,Y
+                iny
+                cpy             SER_RX_TAIL
+                beq             @int_done               ; The ring is full: the byte is dropped
+                sty             SER_RX_HEAD
+                ldx             #SER_RD_WAIT            ; Wake the waiting readers
+                jsr             SER_WAKE
 
 @int_done:
                 sec
@@ -628,25 +583,7 @@ VIA_CLEAR_T2_INT:       ; READ LOB OF T2 Counter
 
 ; ****************************************************************************
 
-; Serial driver's VIA T2 handler (TX pacing; registered by SERIAL_INIT, runs in the serial task)
-; OUT: C = 1 if T2 was interrupting
-SERIAL_VIA_T2_HANDLER:
-            lda     #VIA_T2_INT_BIT
-            and     VIA_R_INT_FLAGS
-            beq     :+
-            lda     #SER_SEND_STATUS_READY
-            sta     ZP_SER_SEND_STATUS     ; signals serial send buffer is ready for another byte
-            lda     VIA_R_T2C_L             ; clear the interrupt
-            lda     #VIA_T2_INT_BIT         ; disable the T2 interrupt
-            sta     VIA_R_INT_ENABLE
-            sec
-            rts
-
-:
-            clc
-            rts
-
-; VIA IRQ handler (registered by VIA_INIT; runs in the system task).  T2 belongs to the serial driver.
+; VIA IRQ handler (registered by VIA_INIT; runs in the system task).
 ; OUT: C = 1 if T1 was interrupting
 VIA_IRQ_HANDLER:
 ; check which sub-device is triggering the IRQ

@@ -189,6 +189,10 @@ ZP_M_LO:                ; bitmap lowest / highest bit bound / scratch
     .res  1
 ZP_M_MODS:              ; installed RAM modules, bit m = module m (banks m*16 - m*16+15)
     .res  2
+ZP_M_BAD_MODS:          ; RAM modules that failed the POST line tests (post_ram.s; task 0): not used
+    .res  2
+ZP_M_BAD_SH:            ; shared RAM chips that failed the POST (task 0), bit c = bank IDs 4c - 4c+3 of every U
+    .res  1
 ZP_M_HP:                ; handle table entry pointer
     .res  2
 ZP_M_HANDLE:            ; handle being worked on
@@ -233,6 +237,17 @@ ZP_D_ICOUNT:
     .res    1
 ZP_D_PAGE:              ; ROM page (W) the disassembler reads $E000-$FDFF from (0 = BIOS, set by TASKS_INIT)
     .res    1
+
+; Serial driver task ZP (valid in the serial task; see bios.s).  Here, so page 2 (ser_srv.s) sees them
+; as zero page addresses.  The rings (SER_RX_BUF, SER_TX_BUF) are empty when head = tail.
+TASK_ZP_BEGIN
+TASK_ZP     SER_RX_HEAD, 1          ; RX ring: next byte in (the IRQ handler)
+TASK_ZP     SER_RX_TAIL, 1          ;   next byte out (reads)
+TASK_ZP     SER_TX_HEAD, 1          ; TX ring: next byte in (writes)
+TASK_ZP     SER_TX_TAIL, 1          ;   next byte out (the IRQ handler)
+TASK_ZP     SER_RD_WAIT, 2          ; Tasks waiting to read (bit = task), woken when a byte arrives
+TASK_ZP     SER_WR_WAIT, 2          ; Tasks waiting to write, woken when the TX ring has room
+TASK_ZP_END
 
 .feature org_per_seg
 .segment "STACK"

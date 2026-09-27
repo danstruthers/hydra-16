@@ -292,7 +292,8 @@ SCHED_START:
 ; Starting tasks
 
 ; Build a new task's starting frame: it starts in TASK_TRAMPOLINE, which calls its entry point (on ROM
-; page ZP_TEMP) and ends the task when that returns.  IRQs must be off; .X must not be the current task.
+; page ZP_TEMP) and ends the task when that returns.  It gets copies of the current task's open fds.
+; IRQs must be off; .X must not be the current task.
 ; IN: ZP_TEMP_VEC = entry point, ZP_TEMP = its ROM page, .X = task
 ; Modifies: .A, .Y
 TASK_BUILD_FRAME:
@@ -333,7 +334,8 @@ TASK_BUILD_FRAME:
             lda     #$FF
             sta     TASK_PARENT                     ; No parent to wake (TASK_START sets one)
             sty     T_REGISTER                      ; Back to the current task
-            rts
+            txa
+            jmp     IO_INHERIT                      ; The fds (preserves .X)
 
 ; Every task started with TASK_BUILD_FRAME begins here (ROM page 0, IRQs on)
 TASK_TRAMPOLINE:

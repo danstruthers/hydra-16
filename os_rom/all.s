@@ -11,8 +11,10 @@
 .scope PAGE2
 .include "page2.s"      ; must be first in the scope
 .include "io.s"
+.include "ser_srv.s"    ; The serial driver's file server (/dev/cons, /dev/ser)
 .include "io_test.s"
 .include "post_ram.s"   ; POST paged RAM line tests
+.include "spi.s"        ; SPI (for the SD card server, later)
 .endscope
 
 ; BIOS ROM page 1 (W = 1).  Its own scope, so page 1 code binds to the page 1 gates in page1.s

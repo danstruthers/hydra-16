@@ -90,6 +90,13 @@ H9_CLUNK            = 4         ; close fid
 H9_STAT             = 5         ; -> 16-byte stat block in the data area
 H9_CTL              = 6         ; device-specific control: code, arg
 
+; Serial driver: the /dev/cons and /dev/ser server (bios.s, ser_srv.s)
+SER_RX_BUF          = $0200     ; 256-byte RX ring, in the serial task's RAM
+SER_TX_BUF          = $0300     ; 256-byte TX ring, in the serial task's RAM
+SER_FID_CONS        = 0         ; /dev/cons: reads only for the foreground task
+SER_FID_SER         = 1         ; /dev/ser: the raw port, for any task
+SER_CTL_FOREGROUND  = 1         ; IO_CTL code: .Y = the new foreground task (it gets the console input)
+
 RESET_ENTRY     = $E000
 
 IO_PORT_BASE    = $FF00
@@ -108,6 +115,7 @@ CLK_CPMS        = (CLK_CPS / 1000) + 1
 
 ROCKWELL_ACIA   = 1
 ACIA_USE_VIA_TIMER = 0
+.assert     ROCKWELL_ACIA = 1, error, "Serial TX is driven by the Rockwell 65C51's TDRE interrupt (the WDC 65C51 isn't supported)"
 
 SR_2400         = $0A
 SR_4800         = $0C
