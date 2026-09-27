@@ -1,18 +1,31 @@
 ; ****************************************************************************
 ; Sound driver.  Runs in its own Resident task (SOUND_TASK_NUM, started by DRV_START at boot), so its
 ; ZP is task ZP.  Other tasks call it through the SND_CALL_* gates, which run the routine in the
-; sound task with TASK_CALL.
+; sound task with TASK_CALL, or through its file, /dev/snd (snd_srv.s, on ROM page 2).
 
 SOUND_DRIVER:
-                .word       SOUND_INIT                  ; DriverInfo::init
+                .word       SOUND_DRV_INIT              ; DriverInfo::init
                 .word       SOUND_STOP                  ; DriverInfo::stop
                 .word       SOUND_NAME                  ; DriverInfo::name
 NamedHString SOUND_NAME, "SOUND"
+SND_NAME:       .byte       "snd", 0
 
 ; Gates into the sound task: .A/.X/.Y/C pass through to the routine and back
 TASK_GATE           SND_CALL_INIT, SOUND_INIT, SOUND_TASK_NUM
 TASK_GATE           SND_CALL_TEST, SOUND_TEST, SOUND_TASK_NUM
 TASK_GATE           SND_CALL_YM_WRITE, YM_WRITE, SOUND_TASK_NUM
+
+; The serve routine (page 2, snd_srv.s)
+FAR_GATE_INLINE     SND_SERVE,      PAGE2::SND_SERVE,       2
+
+; Driver init (runs in the sound task): the chip, then the file.  OUT: C = 0, or C = 1 and .A = error
+SOUND_DRV_INIT:
+                jsr         SOUND_INIT
+                LOAD_ADDR   SND_SERVE, ZP_TC_VEC
+                lda         #<SND_NAME
+                ldy         #>SND_NAME
+                ldx         #SOUND_TASK_NUM
+                jmp         DEV_REGISTER
 
 ; zero out all YM-2151 registers $28-$FF
 SOUND_INIT:

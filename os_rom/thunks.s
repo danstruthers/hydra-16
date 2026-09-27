@@ -97,3 +97,7 @@ TH_IO_TEST:
                 jmp             IO_TEST             ; $F88A
 TH_GET_CHAR:
                 jmp             GET_CHAR            ; $F88D
+TH_IO_DUP2:
+                jmp             IO_DUP2             ; $F890
+TH_IO_PIPE:
+                jmp             IO_PIPE             ; $F893

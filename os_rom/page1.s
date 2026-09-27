@@ -58,6 +58,8 @@ FAR_GATE_INLINE IO_CTL,         PAGE2::IO_CTL,          2
 FAR_GATE_INLINE IO_TEST,        PAGE2::IO_TEST,         2
 FAR_GATE_INLINE DEV_REGISTER,   ::DEV_REGISTER,         0
 FAR_GATE_INLINE GET_CHAR,       ::GET_CHAR,             0
+FAR_GATE_INLINE IO_DUP2,        PAGE2::IO_DUP2,         2
+FAR_GATE_INLINE IO_PIPE,        PAGE2::IO_PIPE,         2
 
 ; Sound routines run in the sound task (through the page 0 SND_CALL_* task gates)
 FAR_GATE        SOUND_INIT,     ::SND_CALL_INIT,        0
@@ -138,4 +140,6 @@ WRITE_HSTRING:
                 jmp             DEV_REGISTER        ; $F887
                 jmp             IO_TEST             ; $F88A
                 jmp             GET_CHAR            ; $F88D
-.assert     * = ::TH_GET_CHAR + 3, lderror, "BIOS_THUNKS_P1 must match BIOS_THUNKS"
+                jmp             IO_DUP2             ; $F890
+                jmp             IO_PIPE             ; $F893
+.assert     * = ::TH_IO_PIPE + 3, lderror, "BIOS_THUNKS_P1 must match BIOS_THUNKS"

@@ -121,10 +121,10 @@ The CPU runs at 3.58 MHz; the board can also run it at 7.16 MHz (the W65C02S goe
 | :--- | :----- | :---- |
 | `/dev/cons` | Serial driver (task `$F`) | The console: read = keyboard, write = screen.  Replaces the "serial-capture task": whoever reads `cons` gets the input |
 | `/dev/ser`, `/dev/serctl` | Serial driver | Raw serial port; control (baud rate, echo) |
-| `/dev/snd`, `/dev/sndctl` | Sound driver (task `$E`) | Write YM2151 register/value pairs; control (init, test) |
+| `/dev/snd` | Sound driver (task `$E`) | Write YM2151 register/value pairs; `IO_CTL` `SND_CTL_INIT` / `SND_CTL_TEST` (instead of a `/dev/sndctl` file) |
 | `/dev/null`, `/dev/zero` | IO layer | The usual |
 | Later: `/sd/...` | SD card FAT filesystem server | Uses `SPI` in the BIOS; first real use of offsets, `H9_CREATE` and directories |
-| Later: `/dev/pipe` | Pipe server | Two fids connected by a ring buffer (in shared RAM); `|` in the shell |
+| `/dev/pipe` | Pipe server (task `$D`) | `IO_PIPE`: two fds on a 255-byte ring in the pipe task's RAM (8 pipes); end of file when the writers are gone.  Later: `|` in the shell |
 | Later: `/proc/<task>/...`, `/env/...` | System servers | Task status, memory use, notes; per-task environment variables |
 
 **Serial driver changes:** it becomes a file server.  RX bytes go into a buffer in its own task RAM (instead of the capture task's message ring); `H9_READ` on `cons` takes from it, blocking when it's empty.  TX goes through a TX buffer drained by the ACIA's transmit IRQ, so `WRITE_CHAR` no longer busy-waits.  `READ_CHAR`/`WRITE_CHAR` (and the `$F800` thunks) become one-byte reads and writes on fd 0 / fd 1, so WOZMON and HyForth work unchanged, and follow redirection.
@@ -162,7 +162,7 @@ All calls: C = 0 on success, C = 1 with the error in .A.  Thunks after `$F853`.
 6. **(Done)** HyForth words `open`, `close`, `read`, `write`, `ioctl`, `ioerr` (error `!IO ERR!`); `emit`/`key` through fds 1 and 0.  `GET_CHAR` (`$F88D`): wait for a key on fd 0 (echoed), sleeping instead of polling; HyForth's line input and `key`, and WOZMON, use it, so an idle shell doesn't use the CPU.
 
 **Phase 3 - More servers and names**
-7. `/dev/snd`, then pipes and `IO_DUP2` redirection.
+7. **(Done)** `/dev/snd` (`snd_srv.s`: register/value pairs, `IO_CTL` init and test).  `H9_DUP`, sent by `IO_DUP2` and `IO_INHERIT`; every request now carries the fd's mode (`IO_BLK_MODE`).  `IO_DUP2` (`$F890`, HyForth `fdup2`) for redirection.  Pipes (`pipe_srv.s`, a Resident task `$D`): `IO_PIPE` (`$F893`, HyForth `pipe`) opens the read end and adds a write end (`IO_FD_COPY` with the write mode); the server counts each end's fds, readers and writers wait for each other, a reader gets end of file when no writers are left, a writer `ERR_IO_BROKEN` when no readers are.  `IO_TEST` checks a pipe between two tasks (a child writes 600 bytes).  Fixed: `IO_SERVE` holds `NO_PREEMPT` from marking the task waiting until it yields or is done; a task switch in between left it waiting with nobody to wake it.  Still to do: `|` in the shell.
 8. Per-task namespaces: `IO_MOUNT`, `IO_BIND`, and servers that walk paths.
 9. The SD card FAT filesystem server (`/sd`).
 10. `/proc` and `/env`; notes.

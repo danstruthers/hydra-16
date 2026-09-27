@@ -12,6 +12,8 @@
 .include "page2.s"      ; must be first in the scope
 .include "io.s"
 .include "ser_srv.s"    ; The serial driver's file server (/dev/cons, /dev/ser)
+.include "snd_srv.s"    ; The sound driver's file server (/dev/snd)
+.include "pipe_srv.s"   ; The pipe server (/dev/pipe)
 .include "io_test.s"
 .include "post_ram.s"   ; POST paged RAM line tests
 .include "spi.s"        ; SPI (for the SD card server, later)

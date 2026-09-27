@@ -2,6 +2,7 @@
 
 SYSTEM_TASK_NUM     = 0
 SHELL_TASK_NUM      = $01       ; Forth / WOZMON shell (the default serial-capture task)
+PIPE_TASK_NUM       = $0D       ; Pipe server (resident)
 SOUND_TASK_NUM      = $0E       ; Sound driver (resident)
 SERIAL_TASK_NUM     = $0F       ; Serial driver (resident)
 SERIAL_OWNER_TASK   = SERIAL_TASK_NUM   ; Task whose ZP holds the serial driver state
@@ -38,6 +39,9 @@ ERR_IO_NO_FDS       = $75       ; all of the task's fds are open
 ERR_IO_NO_DEVS      = $76       ; the device table is full
 ERR_IO_NAME         = $77       ; bad or duplicate device name
 ERR_IO_BAD_REQ      = $78       ; the server doesn't support that request
+ERR_IO_DEVICE       = $79       ; the device didn't respond
+ERR_IO_BROKEN       = $7A       ; write to a pipe nobody reads
+ERR_IO_NO_PIPES     = $7B       ; all pipes are in use
 
 ; ***  IO (see IO_PLAN.md)  ***
 
@@ -89,6 +93,25 @@ H9_WRITE            = 3         ; offset, count, data -> count done
 H9_CLUNK            = 4         ; close fid
 H9_STAT             = 5         ; -> 16-byte stat block in the data area
 H9_CTL              = 6         ; device-specific control: code, arg
+H9_DUP              = 7         ; another fd refers to the fid now (IO_DUP2, or inherited by a new task)
+; Every request also carries the fd's mode (IO_BLK_MODE), so a server can tell the ends of a pipe apart.
+
+; Sound driver: /dev/snd (sound.s, snd_srv.s).  Writes are YM2151 register/value byte pairs.
+SND_CTL_INIT        = 1         ; IO_CTL code: clear the YM2151
+SND_CTL_TEST        = 2         ; IO_CTL code: play the test sound
+
+; Pipe server: /dev/pipe, in its own Resident task (io_p0.s, pipe_srv.s).  Each pipe has a 256-byte ring
+; (255 bytes of data) and counts the fds on each end; the fid is the pipe's index.
+PIPE_MAX            = 8
+PIPE_TABLE          = $0200     ; In the pipe task's RAM: PIPE_MAX x PIPE_ENTRY_SIZE
+PIPE_ENTRY_SIZE     = 8
+PIPE_READERS        = PIPE_TABLE + 0    ; fds on the read end
+PIPE_WRITERS        = PIPE_TABLE + 1    ; fds on the write end (none left: readers get end of file)
+PIPE_HEAD           = PIPE_TABLE + 2    ; next byte in
+PIPE_TAIL           = PIPE_TABLE + 3    ; next byte out (empty: head = tail)
+PIPE_RD_WAIT        = 4         ; (Entry offsets, 2 bytes each) tasks waiting to read (bit = task)
+PIPE_WR_WAIT        = 6         ;   and to write
+PIPE_BUFS           = $0300     ; In the pipe task's RAM: the rings, one page each
 
 ; Serial driver: the /dev/cons and /dev/ser server (bios.s, ser_srv.s)
 SER_RX_BUF          = $0200     ; 256-byte RX ring, in the serial task's RAM

@@ -90,6 +90,9 @@ IO_SERVE:
             lda         IO_FD_FID,X
             ldy         #IO_BLK_FID
             sta         (ZP_IO_XFER),Y
+            lda         IO_FD_MODE,X                ; (A pipe's ends differ only in their modes)
+            ldy         #IO_BLK_MODE
+            sta         (ZP_IO_XFER),Y
             lda         T_REGISTER
             and         #$0F
             ldy         #IO_BLK_CLIENT
@@ -116,7 +119,8 @@ IO_SERVE:
             sty         RAM_BANK_REG
 
 @request:
-            php
+            inc         ZP_NO_PREEMPT               ; No task switch while we're marked waiting but not yet in
+            php                                     ;   the server's wait list: nobody would wake us (NO_PREEMPT)
             sei
             smb2        TASK_STATUS_REG             ; Waiting, until the server says otherwise (TASK_WAITING_FLAG)
             plp
@@ -142,6 +146,7 @@ IO_SERVE:
             lda         IO_FD_MODE,X
             bmi         @no_wait                    ; IO_MODE_NONBLOCK
             jsr         YIELD                       ; Sleep until the server wakes us (at once if it did already)
+            dec         ZP_NO_PREEMPT
             bra         @request
 
 @no_wait:
@@ -150,7 +155,7 @@ IO_SERVE:
 
 @done:
             rmb2        TASK_STATUS_REG             ; Not waiting (rmb doesn't change the flags)
-            rts
+            jmp         PREEMPT                     ; (Preserves .A and the flags; switches if a switch came due)
 
 ; ZP_IO_CHUNK = min(ZP_IO_LEFT, IO_UNIT); also the request's count.  Modifies: .A, .Y
 IO_SET_CHUNK:
@@ -758,26 +763,190 @@ IO_CLOSE_ALL:
             clc
             rts
 
-; Give a new task copies of the current task's open fds (TASK_BUILD_FRAME).  The fd table goes through
-; the current task's IO transfer area (tasks can't see each other's RAM), and the new task copies it in
-; (IO_ADOPT_FDS, run in it with TASK_CALL).  IRQs must be off.
-; (No server counts references yet; when one does, this will send it an H9_DUP for each fd.)
+; Tell fd .A's server that another fd refers to its fid now (H9_DUP).  OUT: C = 0; or .A = error, C = 1
+; Modifies: .A, .X, .Y
+IO_DUP_SEND:
+            sta         ZP_IO_FD
+            jsr         IO_XFER_SETUP
+            _M_IO_MAP_XFER
+            lda         #H9_DUP
+            jsr         IO_SERVE
+            _M_IO_UNMAP
+            rts
+
+; A free fd.  OUT: .A = fd, C = 0; or .A = ERR_IO_NO_FDS, C = 1.  Modifies: .X
+IO_FD_FREE:
+            ldx         #0
+
+@fd:
+            lda         IO_FD_SERVER,X
+            cmp         #IO_FD_CLOSED
+            beq         @free
+            txa
+            clc
+            adc         #IO_FD_SIZE
+            tax
+            cpx         #IO_MAX_FDS * IO_FD_SIZE
+            bne         @fd
+            lda         #ERR_IO_NO_FDS
+            sec
+            rts
+
+@free:
+            txa                                     ; fd = offset / 8
+            lsr
+            lsr
+            lsr
+            clc
+            rts
+
+; Copy fd .A's entry to fd ZP_IO_TMP, with mode .X, and tell the server (H9_DUP).
+; OUT: C = 0; or .A = error, C = 1 (the new fd is closed again)
+IO_FD_COPY:
+            phx
+            asl
+            asl
+            asl
+            tax                                     ; .X = the fd's entry
+            lda         ZP_IO_TMP
+            asl
+            asl
+            asl
+            tay                                     ; .Y = the new fd's entry
+            lda         #IO_FD_SIZE
+            sta         ZP_IO_CHUNK
+
+@copy:
+            lda         IO_FD_TABLE,X
+            sta         IO_FD_TABLE,Y
+            inx
+            iny
+            dec         ZP_IO_CHUNK
+            bne         @copy
+            tya
+            sec
+            sbc         #IO_FD_SIZE
+            tay
+            pla
+            sta         IO_FD_MODE,Y
+            lda         ZP_IO_TMP
+            jsr         IO_DUP_SEND
+            bcc         @done
+            pha
+            lda         ZP_IO_TMP                   ; The server said no: no new fd
+            asl
+            asl
+            asl
+            tax
+            lda         #IO_FD_CLOSED
+            sta         IO_FD_SERVER,X
+            pla
+            sec
+
+@done:
+            rts
+
+; Make fd .X refer to the same file as fd .A (closing .X first if it's open): e.g. .X = 1 redirects
+; stdout.  IN: .A = fd, .X = new fd.  OUT: C = 0; or .A = error, C = 1
+IO_DUP2:
+            PUSH_XY
+            cpx         #IO_MAX_FDS
+            bcs         @bad
+            stx         ZP_IO_TMP
+            pha
+            jsr         IO_FD_CHECK                 ; .X = its entry
+            ply
+            bcs         @done
+            cpy         ZP_IO_TMP
+            bne         :+
+            clc                                     ; The same fd: nothing to do
+            bra         @done
+:
+            lda         IO_FD_MODE,X
+            pha
+            lda         ZP_IO_TMP
+            jsr         IO_CLOSE                    ; (If it's open)
+            plx                                     ; .X = the mode
+            tya
+            jsr         IO_FD_COPY
+            bra         @done
+
+@bad:
+            lda         #ERR_IO_BAD_FD
+            sec
+
+@done:
+            PULL_YX
+            rts
+
+S_DEV_PIPE:     .byte "/dev/pipe", 0
+
+; Make a pipe: what's written to one fd can be read from the other.
+; OUT: .A = the read fd, .X = the write fd, C = 0; or .A = error, C = 1
+IO_PIPE:
+            phy
+            lda         #<S_DEV_PIPE
+            ldy         #>S_DEV_PIPE
+            ldx         #IO_MODE_READ
+            jsr         IO_OPEN                     ; The read end: a new pipe
+            bcs         @done
+            pha
+            jsr         IO_FD_FREE                  ; The write end
+            bcs         @close
+            sta         ZP_IO_TMP
+            pla
+            pha
+            ldx         #IO_MODE_WRITE
+            jsr         IO_FD_COPY
+            bcs         @close
+            ldx         ZP_IO_TMP
+            pla
+            clc
+            bra         @done
+
+@close:
+            tax                                     ; (The error)
+            pla
+            jsr         IO_CLOSE
+            txa
+            sec
+
+@done:
+            ply
+            rts
+
+; Give a new task copies of the current task's open fds (TASK_BUILD_FRAME), telling each server (H9_DUP).
+; The fd table goes through the current task's IO transfer area (tasks can't see each other's RAM), and
+; the new task copies it in (IO_ADOPT_FDS, run in it with TASK_CALL).  IRQs must be off.
 ; IN: .A = the new task.  Preserves .X, .Y
 IO_INHERIT:
             PUSH_XY
-            sta         ZP_IO_TMP
-            ldx         #(IO_MAX_FDS - 1) * IO_FD_SIZE
+            pha
+            ldy         #IO_MAX_FDS - 1             ; Any open?  (If not, the new task's are all closed
+            lda         #IO_FD_CLOSED               ;   already: it's a free task)
+            sta         ZP_IO_TMP                   ; ZP_IO_TMP = $FF: none open yet
 
-@any:
-            lda         IO_FD_SERVER,X              ; Any open?  (If not, the new task's are all closed
-            cmp         #IO_FD_CLOSED               ;   already: it's a free task)
-            bne         @copy
-            txa
-            sec
-            sbc         #IO_FD_SIZE
+@fd:
+            tya
+            asl
+            asl
+            asl
             tax
-            bcs         @any
-            bra         @done
+            lda         IO_FD_SERVER,X
+            cmp         #IO_FD_CLOSED
+            beq         :+
+            sty         ZP_IO_TMP
+            phy
+            tya
+            jsr         IO_DUP_SEND                 ; (A server that says no: the new task has the fd anyway)
+            ply
+:
+            dey
+            bpl         @fd
+            pla
+            ldx         ZP_IO_TMP
+            bmi         @done                       ; None open
+            sta         ZP_IO_TMP
 
 @copy:
             jsr         IO_XFER_SETUP

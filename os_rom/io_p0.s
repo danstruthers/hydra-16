@@ -17,6 +17,8 @@ FAR_GATE_INLINE     IO_SEEK,        PAGE2::IO_SEEK,         2
 FAR_GATE_INLINE     IO_STAT,        PAGE2::IO_STAT,         2
 FAR_GATE_INLINE     IO_CTL,         PAGE2::IO_CTL,          2
 FAR_GATE_INLINE     IO_TEST,        PAGE2::IO_TEST,         2
+FAR_GATE_INLINE     IO_DUP2,        PAGE2::IO_DUP2,         2
+FAR_GATE_INLINE     IO_PIPE,        PAGE2::IO_PIPE,         2
 FAR_GATE_INLINE     IO_STD_OPEN,    PAGE2::IO_STD_OPEN,     2
 FAR_GATE_INLINE     IO_CLOSE_ALL,   PAGE2::IO_CLOSE_ALL,    2
 FAR_GATE_INLINE     IO_INHERIT,     PAGE2::IO_INHERIT,      2
@@ -28,6 +30,33 @@ FAR_GATE_INLINE     ZERO_SERVE,     PAGE2::ZERO_SERVE,      2
 
 NULL_NAME:  .byte   "null", 0
 ZERO_NAME:  .byte   "zero", 0
+
+; The pipe server (pipe_srv.s): a Resident task (PIPE_TASK_NUM), started at boot like the drivers
+PIPE_DRIVER:
+            .word       PIPE_INIT                           ; DriverInfo::init
+            .word       PIPE_STOP                           ; DriverInfo::stop
+            .word       PIPE_DNAME                          ; DriverInfo::name
+NamedHString PIPE_DNAME, "PIPE"
+PIPE_NAME:  .byte   "pipe", 0
+
+FAR_GATE_INLINE     PIPE_SERVE,     PAGE2::PIPE_SERVE,      2
+
+; Runs in the pipe task: no pipes yet, and register /dev/pipe
+PIPE_INIT:
+            ldx         #PIPE_MAX * PIPE_ENTRY_SIZE - 1
+:
+            stz         PIPE_TABLE,X
+            dex
+            bpl         :-
+            LOAD_ADDR   PIPE_SERVE, ZP_TC_VEC
+            lda         #<PIPE_NAME
+            ldy         #>PIPE_NAME
+            ldx         #PIPE_TASK_NUM
+            jmp         DEV_REGISTER
+
+PIPE_STOP:
+            clc
+            rts
 
 ; Register the IO layer's own devices.  Called at boot, after SHARED_RAM_INIT (which clears the table).
 IO_INIT:

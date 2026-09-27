@@ -1497,10 +1497,34 @@ def_word "ioctl", "ioctl", 0
     bcs IOFAIL
     jmp next
 ;
+; ( fd newfd -- )  make newfd refer to the same file as fd (closing newfd first), e.g. fd 1 fdup2
+;                  sends emit's output to fd's file
+def_word "fdup2", "fdup2", 0
+    jsr spull_1       ; newfd
+    jsr spull_0       ; fd
+    lda TEMP1
+    ldx TEMP2
+    jsr IO_DUP2
+    bcs IOFAIL2
+    jmp next
+IOFAIL2:
+    jmp IOFAIL
+;
+; ( -- rfd wfd )  make a pipe: what's written to wfd can be read from rfd
+def_word "pipe", "pipe", 0
+    jsr IO_PIPE       ; .A = read fd, .X = write fd
+    bcs IOFAIL2
+    sta TEMP1
+    stz TEMP1+1
+    stx TEMP2
+    jsr spush_0
+    lda TEMP2
+    jmp IOPUSHA
+;
 ; ( -- n )  the last IO error code
 def_word "ioerr", "ioerr", 0
     lda IOERR
-    bra IOPUSHA
+    jmp IOPUSHA
 ;
 ; ( fd addr n -- ) -> ZP_IO_BUF = addr, ZP_IO_CNT = n, .A = fd
 IOARGS:

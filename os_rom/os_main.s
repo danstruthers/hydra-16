@@ -30,6 +30,10 @@ RESET_VECTOR_START:
             ldy                 #>SERIAL_DRIVER                     ; must be started before anything prints
             ldx                 #SERIAL_TASK_NUM
             jsr                 DRV_START
+            lda                 #<PIPE_DRIVER                       ; Pipe server in its own (Resident) task
+            ldy                 #>PIPE_DRIVER
+            ldx                 #PIPE_TASK_NUM
+            jsr                 DRV_START
             ;jsr                 SPI_TEST
             ;jsr                 SND_CALL_TEST
             jsr                 DO_WELCOME

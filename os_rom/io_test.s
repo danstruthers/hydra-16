@@ -215,6 +215,63 @@ IO_TEST:
             jsr         IO_CLOSE
             _M_IT_FAIL_IF_C     's'
 
+; A pipe between two tasks: a child writes IT_PIPE_SIZE bytes (more than the ring holds, so both sides
+; wait for each other) and ends, which closes its write end; we read to end of file.  The child gets the
+; write end as fd IO_MAX_FDS - 1 (IO_DUP2), and inherits it.
+            jsr         IO_PIPE                             ; .A = read fd, .X = write fd
+            _M_IT_FAIL_IF_C     't'
+            sta         ZP_TEMP_VEC2                        ; (TASK_RUN uses ZP_TEMP and ZP_TEMP_VEC)
+            stx         ZP_TEMP_2
+            txa
+            ldx         #IO_MAX_FDS - 1
+            jsr         IO_DUP2
+            _M_IT_FAIL_IF_C     't'
+            lda         ZP_TEMP_2
+            jsr         IO_CLOSE
+            _M_IT_FAIL_IF_C     't'
+            lda         #<IT_CHILD
+            ldy         #>IT_CHILD
+            ldx         #2                                  ; (ROM page 2)
+            jsr         TASK_RUN
+            _M_IT_FAIL_IF_C     'u'
+            lda         #IO_MAX_FDS - 1                     ; Only the child's write end is left
+            jsr         IO_CLOSE
+            _M_IT_FAIL_IF_C     'u'
+            stz         ZP_TEMP_VEC                         ; Bytes read
+            stz         ZP_TEMP_VEC + 1
+
+@pipe_read:
+            _M_IT_COUNT ZP_TEMP_VEC2, IT_BUF_SIZE
+            jsr         IO_READ
+            _M_IT_FAIL_IF_C     'v'
+            lda         ZP_IO_CNT
+            ora         ZP_IO_CNT + 1
+            beq         @pipe_eof
+            lda         ZP_TEMP_VEC
+            clc
+            adc         ZP_IO_CNT
+            sta         ZP_TEMP_VEC
+            lda         ZP_TEMP_VEC + 1
+            adc         ZP_IO_CNT + 1
+            sta         ZP_TEMP_VEC + 1
+            bra         @pipe_read
+
+@pipe_eof:
+            lda         ZP_TEMP_VEC
+            cmp         #<IT_PIPE_SIZE
+            bne         :+
+            lda         ZP_TEMP_VEC + 1
+            cmp         #>IT_PIPE_SIZE
+            beq         :++
+:
+            lda         ZP_TEMP_VEC
+            ldx         #'w'
+            jmp         @fail
+:
+            lda         ZP_TEMP_VEC2
+            jsr         IO_CLOSE
+            _M_IT_FAIL_IF_C     'w'
+
 ; Running out of fds: fill the free ones (ZP_TEMP_VEC: bit n = fd n was free), then close them again
             stz         ZP_TEMP_VEC
             stz         ZP_TEMP_VEC + 1
@@ -274,3 +331,18 @@ IO_TEST:
             PRINT_CRLF
             PULL_YXA
             rts
+
+; The pipe test's child task: write IT_PIPE_SIZE bytes (any: this ROM page) to fd IO_MAX_FDS - 1, and end
+IT_PIPE_SIZE    = 600
+
+IT_CHILD:
+            lda         #<RESET_ENTRY
+            sta         ZP_IO_BUF
+            lda         #>RESET_ENTRY
+            sta         ZP_IO_BUF + 1
+            lda         #<IT_PIPE_SIZE
+            sta         ZP_IO_CNT
+            lda         #>IT_PIPE_SIZE
+            sta         ZP_IO_CNT + 1
+            lda         #IO_MAX_FDS - 1
+            jmp         IO_WRITE
