@@ -1731,6 +1731,64 @@ WCEND:
     sta TEMP1
     jmp this          ; characters
 ;
+;-------- Tasks: another shell, the foreground, kill, and the task list (/dev/proc)
+;
+; ( -- n )  start another shell (HyForth, in a task of its own); n = its task.  It prints its banner and
+;           waits for input until it's brought to the front (fg, or Ctrl-] then n)
+def_word "shell", "shell", 0
+    lda #<::SHELL_MAIN
+    ldy #>::SHELL_MAIN
+    ldx #0            ; (ROM page 0)
+    jsr TASK_RUN
+    bcc TKPUSH
+    jmp IOFAIL
+TKPUSH:
+    jmp IOPUSHA
+;
+; ( n -- )  bring task n to the front: the console reads for it, and only it (and the tasks it started)
+;           write to it; the others wait.  Ctrl-] then n does the same
+def_word "fg", "fg", 0
+    jsr spull_0
+    lda TEMP1
+    jsr CONS_SET_FG
+    bcc TKOK
+    jmp IOFAIL
+TKOK:
+    jmp next
+;
+; ( n -- )  kill task n, and the tasks it started (as Ctrl-\ does to the foreground task)
+def_word "kill", "kill", 0
+    jsr spull_0
+    ldx TEMP1
+    lda #TASK_KILL_FLAG
+    jsr TASK_SIGNAL
+    bcc TKOK
+    jmp IOFAIL
+;
+; ( -- )  list the tasks (/dev/proc): the task, its state (R runnable, W waiting for IO, P paused, D a
+;         driver) and the task that started it; * = the foreground task
+def_word "ps", "ps", 0
+    lda #<PSNAME      ; (This code, and the name, run from RAM: IO_OPEN can read it)
+    ldy #>PSNAME
+    ldx #IO_MODE_READ
+    jsr IO_OPEN
+    bcc PSOPEN
+    jmp IOFAIL
+PSOPEN:
+    sta TEMP1         ; the fd
+PSLOOP:
+    ldx TEMP1
+    jsr IO_GETC
+    bcs PSEND         ; end of file
+    PRINT_CHAR
+    bra PSLOOP
+PSEND:
+    lda TEMP1
+    jsr IO_CLOSE
+    jmp next
+PSNAME:
+    .byte "/dev/proc", 0
+;
 ;-------- Pipelines: a line  left | right  runs 'left' in a copy of this task (TASK_CLONE), with its
 ;         stdout into a pipe, and 'right' here, with stdin from the pipe.  Called by getline.
 ;
@@ -1875,24 +1933,79 @@ IOARGS:
 ;
 ;                        word definitions for Yamaha 2151 sound chip
 ;
+; They go through the sound driver's file, /dev/snd: IO_CTL codes, and register/value pairs to write
+;
+; ( -- )  clear the YM2151 (and stop the test tune)
 def_word "sndinit", "sndinit", 0
-    jsr SOUND_INIT
-    jmp next
-
+    lda #SND_CTL_INIT
+    jmp SNDCTL
+;
+; ( -- )  play the test tune, in the background: it goes on while you do other things (sndstop ends it)
 def_word "sndtest", "sndtest", 0
-    jsr SOUND_TEST
+    lda #SND_CTL_TEST
+    jmp SNDCTL
+;
+; ( -- )  stop the test tune
+def_word "sndstop", "sndstop", 0
+    lda #SND_CTL_STOP
+SNDCTL:               ; IO_CTL code .A on /dev/snd
+    sta TEMP2
+    jsr SNDOPEN
+    sta TEMP1         ; the fd
+    ldx TEMP2
+    jsr IO_CTL
+SNDCLOSE:            ; close fd TEMP1, keeping .A and C
+    php
+    pha
+    lda TEMP1
+    jsr IO_CLOSE
+    pla
+    plp
+    bcs SNDFAIL
     jmp next
-
-; ( xxaa -- )    send byte(a) to register(x) on yamaha 2151
+SNDFAIL:
+    jmp IOFAIL
+;
+; Open /dev/snd for writing: .A = the fd (a failure: IOFAIL)
+SNDOPEN:
+    lda #<SNDNAME
+    ldy #>SNDNAME
+    ldx #IO_MODE_WRITE
+    jsr IO_OPEN
+    bcs SNDOPENF
+    rts
+SNDOPENF:
+    ply               ; (drop the return: fail from the word)
+    ply
+    jmp IOFAIL
+SNDNAME:
+    .byte "/dev/snd", 0
+;
+; ( xxaa -- f )    send byte(a) to register(x) on yamaha 2151: f = true if it went
 def_word "ywrite", "ywrite", 0
     jsr spull_0
-    ldx TEMP1+1
+    lda TEMP1+1       ; the register, then the value: a pair for /dev/snd
+    sta TEMP3
     lda TEMP1
-    jsr YM_WRITE
-    bcc YMGOOD
-    jmp PUSHFALSE
-YMGOOD:
+    sta TEMP3+1
+    jsr SNDOPEN
+    sta TEMP1
+    lda #<TEMP3
+    sta ZP_IO_BUF
+    stz ZP_IO_BUF+1
+    lda #2
+    sta ZP_IO_CNT
+    stz ZP_IO_CNT+1
+    lda TEMP1
+    jsr IO_WRITE
+    php
+    lda TEMP1
+    jsr IO_CLOSE
+    plp
+    bcs YMBAD
     jmp PUSHTRUE
+YMBAD:
+    jmp PUSHFALSE
 .endif
 ;
 ;

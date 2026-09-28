@@ -1,7 +1,7 @@
 ## **hydrasim**
 
 A minimal Hydra-16 emulator for debugging the OS ROM without the hardware. It boots the real ROM images
-built by `os_rom/makeC02.bat` (`os_rom/tmp/os_rom_C02.bin` and `os_rom/tmp/paged_rom_C02.bin`).
+built by `os_rom/makeC02.bat` (`os_rom/bin/os_rom_C02.bin` and `os_rom/bin/paged_rom_C02.bin`).
 
 Requires [Node.js](https://nodejs.org). No other dependencies.
 
@@ -13,7 +13,7 @@ node hydrasim.js [options]
 
 | Option | Description |
 | :----- | :---------- |
-| `--rom DIR` | ROM images directory (default: `../os_rom/tmp`) |
+| `--rom DIR` | ROM images directory (default: `../os_rom/bin`) |
 | `--cycles N` | CPU cycles to run (default 20,000,000; about 5.6 seconds at 3.58 MHz) |
 | `--input TEXT` | Serial input to type after a short delay; `\r` = CR, `\xNN` = the byte NN (e.g. `\x03` = Ctrl-C), `\w` = wait about 2M cycles before the next key (booting to the HyForth prompt takes about 12 of them) |
 | `--modules N` | RAM modules installed: banks `$00` to `N*16-1` (default 3) |
@@ -28,7 +28,9 @@ node hydrasim.js [options]
 | `--trace N` | Show the last N instructions (default 25) |
 | `--dump ADDR[:LEN][@TASK]` | Hex dump task RAM after the run, e.g. `--dump 7D90:16@1` |
 | `--watch ADDR[@TASK]` | Report every write to a task RAM address: the old and new value, and the PC that wrote it |
-| `--pc [PAGE:]ADDR` | Report the registers each time the PC reaches `ADDR` (on BIOS ROM page `PAGE`, if given); addresses are in `os_rom/tmp/os_rom_C02.lbl` |
+| `--mark TEXT` | Report the cycle each time the serial output ends with `TEXT` (`\r` = CR), e.g. `--mark "HF>"` to time a command from prompt to prompt |
+| `--profile N` | From cycle `N` on, count the instructions each task runs in each routine (named from the build's debug info, `os_rom/obj/os_rom_C02.dbg`), and report the top 30, e.g. `--profile 2800000 --input '\wwords \| wc . . .\r'` |
+| `--pc [PAGE:]ADDR` | Report the registers each time the PC reaches `ADDR` (on BIOS ROM page `PAGE`, if given); addresses are in `os_rom/obj/os_rom_C02.lbl` |
 
 Example: boot to Forth and run a command (Forth starts after `COPYTORAM`, so allow plenty of cycles):
 

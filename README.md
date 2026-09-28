@@ -10,8 +10,10 @@ The OS ROM is built by `os_rom/makeC02.bat` (`ca65` + `ld65` with `os_rom/os_rom
 
 | Image | Chip | Contents |
 | :---- | :--- | :------- |
-| `os_rom/tmp/os_rom_C02.bin` | BIOS/OS ROM (`$E000-$FFFF`, 16 8K pages selected by `W`) | BIOS, OS, WOZMON (page 0); HyForth and the disassembler (page 1) |
-| `os_rom/tmp/paged_rom_C02.bin` | Paged ROM (`$A000-$DFFF`, 16K banks selected by `$01`) | `COPYTORAM` and the HyForth RAM image (copied to `$0800` at startup) |
+| `os_rom/bin/os_rom_C02.bin` | BIOS/OS ROM (`$E000-$FFFF`, 16 8K pages selected by `W`) | BIOS, OS, WOZMON (page 0); HyForth and the disassembler (page 1); the IO layer and file servers (page 2); storage (page 3); the self tests (page 4) |
+| `os_rom/bin/paged_rom_C02.bin` | Paged ROM (`$A000-$DFFF`, 16K banks selected by `$01`) | `COPYTORAM` and the HyForth RAM image (copied to `$0800` at startup) |
+
+Everything else the build makes (the object file, listing, labels, map and debug info) goes in `os_rom/obj/`, which isn't in source control.  The build ends by running `os_rom/tools/check_pages.js` (Node.js) on the debug info: it lists any call from code on one BIOS ROM page to a routine on another that doesn't go through a gate.  The sources are in folders by role: `include/` (constants and macros), `kernel/`, `io/` (the IO layer and file servers), `drivers/`, `tests/`, `monitor/` (WOZMON, the disassembler) and `hyforth/`; `os_rom/all.s` includes them all.
 
 Most changes affect **both** images (HyForth's RAM image calls ROM addresses directly), so burn both.  The paged ROM image is written in chip order: the hardware swaps the 8K halves of each 16K bank (A13), so CPU `$A000` reads ROM offset `$2000` and CPU `$C000` reads ROM offset `$0000`.  Burn it at offset 0.
 
@@ -28,7 +30,7 @@ The scheduler is preemptive: the VIA timer 1 interrupt (about every 5 ms) switch
 
 ### **POST**
 
-The power-on self test runs first thing at every reset, in task 0 with IRQs off, using polled serial output (no drivers), so it works even when little else does.  The code is `POST` in `os_rom/os_main.s` (first line) and `os_rom/post_ram.s` on BIOS page 2 (second line).  A good board prints:
+The power-on self test runs first thing at every reset, in task 0 with IRQs off, using polled serial output (no drivers), so it works even when little else does.  The code is `POST` in `os_rom/kernel/os_main.s` (first line) and `os_rom/tests/post_ram.s` on BIOS page 4 (second line).  A good board prints:
 
 ```
 POST ZP:T ST:T LO:T 7D:T SH:S P1:4C
@@ -44,7 +46,7 @@ RAM U:0 F0:0/00/0000 F4:0/00/0000 F8:0/00/0000 FC:0/00/0000 00:0/00/0000 10:0/00
 | `LO:` | `T` | `$0280` (task RAM) is per-task |
 | `7D:` | `T` | `$7D80` (top of task RAM, the task system page) is per-task |
 | `SH:` | `S` | Shared bank `$F0` (U = 0) is Shared between tasks (`S`), or not (`X`) |
-| `P1:` | `4C` | The byte at `$EA00` on BIOS ROM page 1 (the `jmp` at `forth_main`): page 1 is present and current |
+| `P1:` | `4C` | The byte at `forth_main` on BIOS ROM page 1 (its `jmp`): page 1 is present and current |
 
 **Second line: the paged RAM lines.**  Each value is a hex mask of **bad** lines (bit n set = line n bad), so all zeros is good.
 
@@ -92,16 +94,19 @@ All IO goes through **file descriptors**, Plan 9 style (see `os_rom/IO_PLAN.md`)
 
 | Name | Server | |
 | :--- | :----- | :- |
-| `/dev/cons` | Serial driver (task `$F`) | The console: reads get the keyboard input, but only for the **foreground task** (the shell to start with; `IO_CTL` code `SER_CTL_FOREGROUND` changes it); other readers wait |
+| `/dev/cons` | Serial driver (task `$F`) | The console: reads get the keyboard input, but only for the **foreground task** (the shell to start with; `fg`, Ctrl-] or `IO_CTL` code `SER_CTL_FOREGROUND` changes it); other readers wait, and only the foreground task and the tasks it started write |
 | `/dev/ser` | Serial driver | The serial port, for any task |
-| `/dev/snd` | Sound driver (task `$E`) | Writes are YM2151 register/value byte pairs; `IO_CTL` codes `SND_CTL_INIT` and `SND_CTL_TEST` |
+| `/dev/snd` | Sound driver (task `$E`) | Writes are YM2151 register/value byte pairs.  `IO_CTL` codes: `SND_CTL_INIT` (stop, and clear the chip), `SND_CTL_TEST` (play the test tune in the background, in a player task of the sound driver's: the caller goes on at once; `ERR_TASK_BUSY` if it's playing already), `SND_CTL_STOP` (stop it).  The tune keeps time by the system tick (`TICKS_GET`, 200 a second), not the CPU, and gives the CPU to the other tasks while it waits.  HyForth: `sndinit`, `sndtest`, `sndstop`, `ywrite ( xxaa -- f )` (register xx, value aa), all through `/dev/snd` |
 | `/dev/sd` | Storage task (`$C`) | The SD card (SPI device 0, header J18) as bytes, at the fd's offset (`IO_SEEK`; HyForth `seek`); the card starts at the first open.  Blocks are cached one at a time, and writes go straight to the card |
 | `/dev/pipe` | Pipe server (task `$D`) | `IO_PIPE` makes a pipe (a read fd and a write fd, 255 bytes buffered); readers get end of file once the writers are gone |
+| `/dev/proc` | IO layer (in the reading task) | The tasks, like Plan 9's `/proc`: reading `/dev/proc` gives a line per busy task, `/dev/proc/N` (or `/dev/proc/N/status`) task N's line; writing `kill`, `break` or `fg` to `/dev/proc/N/ctl` kills task N (and the tasks it started), breaks it (as Ctrl-C does) or brings it to the front.  A line is `N S O`: the task, its state (`R` running, `W` waiting for IO, `P` paused: waiting for a task it started, `D` a driver) and the task that started it, then `*` for the foreground task |
 | `/dev/null`, `/dev/zero` | IO layer | The usual |
 
-Each task has 12 fds.  The shell opens fds 0, 1 and 2 (stdin, stdout, stderr) on `/dev/cons`, and tasks it starts get copies of its open fds; a task's fds are closed when it ends.  `READ_CHAR` (a key, if there is one) and `WRITE_CHAR` read fd 0 and write fd 1; tasks without them (the system task and drivers) use the serial port directly.  `GET_CHAR` waits for a key on fd 0, sleeping (the task uses no CPU until one comes in); WOZMON and HyForth wait for input with it.  `/dev/cons` echoes what it reads, like a terminal, so a program reading a pipe doesn't.  `IO_DUP2` makes one fd refer to another's file, e.g. to redirect stdout, and `IO_DUP` gives another fd for the same file.  The serial driver buffers both ways (256-byte RX and TX rings in its task), and sends from its transmit interrupt, so output doesn't busy-wait.  For a WDC W65C51N ACIA instead of the Rockwell R65C51 (the WDC's transmit status and interrupt don't work), build with `SER_ACIA = SER_ACIA_WDC` in `defines.s`: sending is then paced by VIA timer 2.  `$F88A` (`F88AR` in WOZMON) runs the IO self test.
+Each task has 12 fds.  The shell opens fds 0, 1 and 2 (stdin, stdout, stderr) on `/dev/cons`, and tasks it starts get copies of its open fds; a task's fds are closed when it ends.  `READ_CHAR` (a key, if there is one) and `WRITE_CHAR` read fd 0 and write fd 1; tasks without them (the system task and drivers) use the serial port directly.  `GET_CHAR` waits for a key on fd 0, sleeping (the task uses no CPU until one comes in); WOZMON and HyForth wait for input with it.  `/dev/cons` echoes what it reads, like a terminal, so a program reading a pipe doesn't.  Like stdio, `WRITE_CHAR` buffers stdout (128 bytes, at `$0700` in each task) when fd 1 isn't the console, and `GET_CHAR` / `READ_CHAR` read stdin ahead (128 bytes, `$0780`) when fd 0 isn't: a pipe then carries a block per request instead of a byte (`words | wc` runs about 9 times faster).  The buffer is written out when it's full, before reading stdin, before starting a task, and when fd 1 is closed or replaced (so when the task ends); the read-ahead is dropped when fd 0 is.  (So reading fd 0 directly, e.g. HyForth `read` on fd 0, after `GET_CHAR` has read ahead from a pipe, misses what was read ahead.)  The console isn't buffered.  `IO_DUP2` makes one fd refer to another's file, e.g. to redirect stdout, and `IO_DUP` gives another fd for the same file.  The serial driver buffers both ways (256-byte RX and TX rings in its task), and sends from its transmit interrupt, so output doesn't busy-wait.  For a WDC W65C51N ACIA instead of the Rockwell R65C51 (the WDC's transmit status and interrupt don't work), build with `SER_ACIA = SER_ACIA_WDC` in `os_rom/include/hw.inc`: sending is then paced by VIA timer 2.  `$F88A` (`F88AR` in WOZMON) runs the IO self test.
 
-**Console keys.**  **Ctrl-D** or **Ctrl-Z**: end of input (a `/dev/cons` read returns end of file, so `cat`, `wc` or `key` stop).  **Ctrl-C**: break: the foreground task goes to its break handler (`TASK_SET_BREAK`; HyForth's goes back to its prompt with `!BREAK!`, keeping the dictionary), and the tasks it started (e.g. a pipeline's copies) are killed.  **Ctrl-\\**: kill: the foreground task and the tasks it started end; the shell starts again from scratch (a fresh HyForth).  The serial driver acts on Ctrl-C and Ctrl-\\ as they arrive, so they work on a task that's stuck in a loop; the keys typed before them are dropped.  (A task without a break handler is killed by Ctrl-C too.)
+**Console keys.**  **Ctrl-D** or **Ctrl-Z**: end of input (a `/dev/cons` read returns end of file, so `cat`, `wc` or `key` stop).  **Ctrl-C**: break: the foreground task goes to its break handler (`TASK_SET_BREAK`; HyForth's goes back to its prompt with `!BREAK!`, keeping the dictionary), and the tasks it started (e.g. a pipeline's copies) are killed.  **Ctrl-\\**: kill: the foreground task and the tasks it started end; the shell starts again from scratch (a fresh HyForth).  **Ctrl-]** then a task number (`0-F`) brings that task to the front (it prints `[N]`; a bell if it can't be), Ctrl-] then **l** lists the tasks that can be (`[1* B ]`, `*` = the foreground one), and Ctrl-] twice types a Ctrl-].  **The bell:** whenever the console sends a BEL (Ctrl-G), e.g. an echoed Ctrl-G, a console command that failed, or a program's `7 emit`, the YM2151 beeps too (`YM_BEEP`: a short 880 Hz tone on channel 7 that fades by itself; skipped while the sound driver is busy, e.g. playing a tune).  The serial driver acts on Ctrl-C and Ctrl-\\ as they arrive, so they work on a task that's stuck in a loop; the keys typed before them are dropped.  (A task without a break handler is killed by Ctrl-C too.)
+
+**Switching tasks.**  The **foreground task** gets the console input, and only it and the tasks it started (and theirs) write to `/dev/cons`: the others wait until they're brought to the front, like Unix job control, so a task in the background never garbles the screen.  When the foreground task ends, the task that started it gets the console back (or the shell).  In HyForth, `shell ( -- n )` starts another shell in a task of its own (it prints its banner, then waits to be brought to the front), `fg ( n -- )` brings task n to the front, `kill ( n -- )` kills it and the tasks it started, and `ps` lists the tasks (`/dev/proc`).  HyForth reads numbers in decimal (`11 fg` for task `$B`).  The kernel calls are `CONS_SET_FG` (`$F8AE`) and `TASK_SIGNAL` (`$F8AB`: a break or a kill, like a Plan 9 note).
 
 **Namespaces.**  Each task has its own namespace (7 entries), which the tasks it starts inherit: `IO_MOUNT "/z", "zero"` sends names under `/z` to the device `zero` (its server gets the rest of the name, e.g. `/sub`), and `IO_BIND "/tty", "/dev/cons"` makes names under `/tty` stand for names under `/dev/cons`.  `IO_OPEN` applies the entry with the longest matching prefix (whole path elements: `/z` matches `/z/sub`, not `/zz`), then looks again after a bind; a name nothing matches must be `/dev/...`.  `IO_UNMOUNT` removes an entry, `IO_NS_LIST` prints them.
 
@@ -116,7 +121,7 @@ HyForth has the IO words `open ( sz mode -- fd )` (e.g. `q^/dev/zero^ 1 open`; m
 | :---- | :--- | :---------- |
 | $00 | | RAM Page selection register (Pages `$00-$EF` are task-specific.  Pages `$F0-$FF` are shared between all tasks, and are further indexed using the U register, below) |
 | $01 | | ROM Page selection register |
-| $02 | | OS/BIOS zero page, growing up from `$02` (`os_rom/zero.s`); the same layout in every task |
+| $02 | | OS/BIOS zero page, growing up from `$02` (`os_rom/include/zero.s`); the same layout in every task |
 | | $FF | Task zero page, growing down from `$FF` (`TASK_ZP` macros); each task's code has its own, e.g. HyForth `$C8-$FF`, sound driver `$F8-$FF` |
 | $0100 | $01FF | Hardware Stack |
 | $0200 | $06FF | Buffers: HyForth input buffer (`$0200`), data and return stacks (`$0300-$03FF`), memory-manager stack (`$0400-$05FF`); WOZMON input buffer (`$0600`) |
@@ -134,7 +139,7 @@ HyForth has the IO words `open ( sz mode -- fd )` (e.g. `q^/dev/zero^ 1 open`; m
 | $E000 | $FFFF | BIOS/OS ROM paged area (indexed by the W register; see below).  Page 0: BIOS and OS.  Page 1: HyForth and the disassembler.  Page 2: the IO layer and namespaces, the serial, sound and pipe servers, the sound test tune, the POST RAM line tests.  Page 3: storage (SPI, the SD card, `/dev/sd`).  Pages 4-F: unused |
 | $E000 | $E004 | RESET Vector entry point: sets W to zero.  This is replicated at the beginning of each BIOS page, so that an arbitrary W register value at startup/RESET continues on page 0, right after the page 0 copy. |
 | $E005 | $FCFF | Effective BIOS paged area.  Compiler segments (pages) `BIOS_P1 - BIOS_PF` correspond to `W` register values of `$01 - $0F`, respectively.  Code on different pages calls each other through far-call gates. |
-| $F800 | $F8AA | BIOS thunks (`jmp` table of BIOS, MMU, shared memory, scheduler and IO entry points), on page 0 and page 1.  `$F833` (`F833R` in WOZMON, `mmtest` in HyForth) runs the MMU self test; `$F869` the scheduler self test; `$F88A` the IO self test; `$F88D` is `GET_CHAR` (wait for a key), `$F890` `IO_DUP2`, `$F893` `IO_PIPE`, `$F896` `IO_DUP`, `$F899` `TASK_CLONE`, `$F89C-$F8A5` `IO_MOUNT`, `IO_BIND`, `IO_UNMOUNT`, `IO_NS_LIST`, `$F8A8` `TASK_SET_BREAK` |
+| $F800 | $F8B0 | BIOS thunks (`jmp` table of BIOS, MMU, shared memory, scheduler and IO entry points), on page 0 and page 1.  `$F833` (`F833R` in WOZMON, `mmtest` in HyForth) runs the MMU self test; `$F869` the scheduler self test; `$F88A` the IO self test; `$F88D` is `GET_CHAR` (wait for a key), `$F890` `IO_DUP2`, `$F893` `IO_PIPE`, `$F896` `IO_DUP`, `$F899` `TASK_CLONE`, `$F89C-$F8A5` `IO_MOUNT`, `IO_BIND`, `IO_UNMOUNT`, `IO_NS_LIST`, `$F8A8` `TASK_SET_BREAK`, `$F8AB` `TASK_SIGNAL`, `$F8AE` `CONS_SET_FG` |
 | $FD00 | $FDFF | COMMON block, the same on every page: IRQ entry stubs and exit, NMI entry, far-call trampolines |
 | $FE00 | $FEFF | "WOZMON" monitor page (page 0) |
 
@@ -174,7 +179,7 @@ The interrupt vector (`$FFFE & $FFFF`) is actually a 16-entry pseudo-register in
 
 #### **IRQ dispatch**
 
-At startup, `IRQ_INIT` points all 16 vectors at the IRQ entry stubs in the COMMON block, which switch to BIOS page 0 and run the IRQ dispatcher (`os_rom/irq.s`).  Drivers don't set vectors themselves; they register handlers:
+At startup, `IRQ_INIT` points all 16 vectors at the IRQ entry stubs in the COMMON block, which switch to BIOS page 0 and run the IRQ dispatcher (`os_rom/kernel/irq.s`).  Drivers don't set vectors themselves; they register handlers:
 
 * `IRQ_REGISTER` (`.X` = `IRQ_NUMBER(n)`, `.A.Y` = handler) adds a handler for hardware IRQ `n`, up to 2 per IRQ.  The handler runs **in the task that registered it** (its zero page, stack and RAM), whichever task was interrupted.
 * A handler returns with `rts` and C = 1 if it claimed the interrupt (C = 0 passes it to the next handler).  It must not re-enable interrupts.

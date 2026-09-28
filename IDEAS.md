@@ -3,7 +3,7 @@
 Ideas worth coming back to, with the reasoning so far.  Plans that are being built live in `os_rom/MMU_PLAN.md` and `os_rom/IO_PLAN.md`.
 
 ### **Slow devices on a faster CPU clock (board V2)**
-The CPU runs at 3.58 MHz; the board can also run it at 7.16 MHz, and the W65C02S goes to 14 MHz.  Some devices can't keep up with a faster bus: the YM2151 runs on its own 3.58 MHz clock, and slower 65C51/65C22 grades and ROMs have similar limits.  Until there's hardware for this, the CPU clock is a build-time setting (`CPU_CLOCK_MULT` in `os_rom/defines.s`), and above 3.58 MHz the sound chip mustn't be used.
+The CPU runs at 3.58 MHz; the board can also run it at 7.16 MHz, and the W65C02S goes to 14 MHz.  Some devices can't keep up with a faster bus: the YM2151 runs on its own 3.58 MHz clock, and slower 65C51/65C22 grades and ROMs have similar limits.  Until there's hardware for this, the CPU clock is a build-time setting (`CPU_CLOCK_MULT` in `os_rom/include/hw.inc`), and above 3.58 MHz the sound chip mustn't be used.
 
 #### **Planned: RDY wait states**
 The more versatile option, and the plan for board V2 (possibly earlier on an expansion card).

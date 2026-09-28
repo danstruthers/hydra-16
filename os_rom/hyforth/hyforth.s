@@ -238,7 +238,7 @@ FORTH_DICT_MARGIN = 2     ; pages above 'here' the MMU must keep free (see DICTC
 ;----------------------------------------------------------------------
 ;                   ZERO PAGE USAGE
 ;----------------------------------------------------------------------
-;   Task ZP (see TASK_ZP in defines.s): allocated top-down from $FF, so this
+;   Task ZP (see TASK_ZP in include/kernel.inc): allocated top-down from $FF, so this
 ;   list runs from the top of ZP down.  The addresses are unchanged.
 ;
 TASK_ZP_BEGIN

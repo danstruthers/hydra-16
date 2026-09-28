@@ -14,11 +14,11 @@
 //   * Rockwell 65C51 ACIA at $FF10 (IRQ line 1): TX/RX with IRQs, output captured, input from --input
 //   * VIA timer 1 (one-shot / free-running, IFR/IER) on IRQ line 0: the scheduler's tick; other VIA
 //     registers are plain storage
-//   * YM2151 status always "not busy"
+//   * YM2151 status always "not busy"; key-ons (register $08) are counted and reported
 //   RAM and the pseudo-registers power up random, like the hardware.
 //
 // Usage: node hydrasim.js [options]
-//   --rom DIR           ROM images directory (default: ../os_rom/tmp next to this script)
+//   --rom DIR           ROM images directory (default: ../os_rom/bin next to this script)
 //   --cycles N          CPU cycles to run (default 20000000; ~5.6 s at 3.58 MHz)
 //   --input TEXT        Serial input to type, after a short delay; "\r" = CR, "\xNN" = byte NN, e.g. a
 //                       control key; "\w" = wait ~2M cycles before the next key (e.g. --input
@@ -42,6 +42,9 @@
 //   --dump ADDR[:LEN][@TASK]   Hex dump task RAM after the run (e.g. --dump 7D90:16@1)
 //   --watch ADDR[@TASK] Report every write to task RAM address ADDR (value, and the PC that wrote it)
 //   --pc [PAGE:]ADDR    Report the registers every time the PC reaches ADDR (on ROM page PAGE, if given)
+//   --mark TEXT         Report the cycle each time the serial output ends with TEXT ("\r" = CR), e.g. a prompt
+//   --profile N         From cycle N on, count the instructions run in each routine (named from the
+//                       build's debug info, ../os_rom/obj/os_rom_C02.dbg) and in each task, and report them
 //
 // Output: serial output, the last instructions (W T PC A X Y S P), the hottest PCs (useful to find a
 // loop the code is stuck in), and final state.
@@ -51,8 +54,8 @@ const fs = require('fs');
 const path = require('path');
 
 // ---- options
-const opt = { rom: path.join(__dirname, '..', 'os_rom', 'tmp'), cycles: 20000000, input: '', modules: 3,
-  aciaLine: 1, stuckIrq: -1, model: '', raw: false, trace: 25, dumps: [], watches: [], pcWatches: [], sharedU: 16, ramFault: null, sds: [], acia: 'rockwell' };
+const opt = { rom: path.join(__dirname, '..', 'os_rom', 'bin'), cycles: 20000000, input: '', modules: 3,
+  aciaLine: 1, stuckIrq: -1, model: '', raw: false, trace: 25, dumps: [], watches: [], pcWatches: [], sharedU: 16, ramFault: null, sds: [], acia: 'rockwell', marks: [], profile: -1 };
 const argv = process.argv.slice(2);
 for (let i = 0; i < argv.length; i++) {
   const a = argv[i], next = () => argv[++i];
@@ -74,6 +77,8 @@ for (let i = 0; i < argv.length; i++) {
     case '--trace': opt.trace = +next(); break;
     case '--dump': opt.dumps.push(next()); break;
     case '--pc': { const m = /^(?:([0-9A-Fa-f]):)?([0-9A-Fa-f]+)$/.exec(next()); opt.pcWatches.push({ pc: parseInt(m[2], 16), page: m[1] === undefined ? -1 : parseInt(m[1], 16) }); break; }
+    case '--mark': opt.marks.push(next().replace(/\\r/g, '\r').replace(/\\n/g, '\n')); break;
+    case '--profile': opt.profile = +next(); break;
     case '--watch': { const m = /^([0-9A-Fa-f]+)(?:@([0-9A-Fa-f]))?$/.exec(next()); opt.watches.push({ addr: parseInt(m[1], 16), task: m[2] === undefined ? -1 : parseInt(m[2], 16) }); break; }
     default: console.error('Unknown option: ' + a + ' (see the header of hydrasim.js)'); process.exit(1);
   }
@@ -89,6 +94,7 @@ const taskBank = {}, sharedBank = {};
 const vecRam = new Uint16Array(16).map(() => rnd(65536));
 let T = 0, U = rnd(16), V = rnd(256), W = rnd(16);
 let out = '';
+let ymReg = 0; const ymKeyOns = [];                          // YM2151: the register selected, and the key-ons written
 let aciaCmd = 0, aciaCtrl = 0, aciaTdre = 1, aciaTxTimer = 0, aciaIrq = 0, aciaRdrf = 0, aciaRx = 0, aciaOverruns = 0;
 const aciaWdc = opt.acia === 'wdc';
 const rxQueue = [...opt.input]; let rxDelay = 200000;
@@ -242,13 +248,15 @@ function wr(a, v) {
   if (a < 0xFF00) return;
   if (a >= 0xFF10 && a < 0xFF14) {
     const r = a - 0xFF10;
-    if (r === 0) { if (aciaTxTimer > 0) aciaOverruns++; out += String.fromCharCode(v); aciaTdre = 0; aciaTxTimer = ACIA_TX_CYCLES; }
+    if (r === 0) { if (aciaTxTimer > 0) aciaOverruns++; out += String.fromCharCode(v); for (const m of opt.marks) if (out.endsWith(m)) console.log('mark: ' + JSON.stringify(m) + ' at cycle ' + cyc); aciaTdre = 0; aciaTxTimer = ACIA_TX_CYCLES; }
     else if (r === 1) { aciaCmd &= 0xE0; aciaIrq = 0; }                         // programmed reset
     else if (r === 2) { aciaCmd = v; if (!aciaWdc && (v & 0x0C) === 0x04 && aciaTdre) aciaIrq = 1; }
     else aciaCtrl = v;
     return;
   }
   if (a < 0xFF10) { viaWrite(a - 0xFF00, v); return; }
+  if (a === 0xFF40) { ymReg = v; return; }                          // YM2151: register, then data
+  if (a === 0xFF41) { if (ymReg === 0x08 && (v & 0x78)) ymKeyOns.push('ch ' + (v & 7) + ' at cycle ' + cyc); return; }
   if (a === 0xFFF0) { T = v & 15; return; } if (a === 0xFFF1) { U = v & 15; return; }
   if (a === 0xFFF2) { V = v; return; } if (a === 0xFFF3) { W = v & 15; return; }
   if (a === 0xFFFE) { vecRam[V & 15] = (vecRam[V & 15] & 0xFF00) | v; return; }
@@ -294,7 +302,8 @@ function sbc(v) {
 const cmp = (r, v) => { const t = r - v; P = (P & ~C) | (t >= 0 ? C : 0); setNZ(t & 0xFF); };
 function interrupt(vec, brk) { push(PC >> 8); push(PC & 0xFF); push((P | 0x20) & (brk ? 0xFF : ~B)); P = (P | I) & ~D; PC = vec; }
 
-const trace = [], pcHist = new Map();
+const trace = [], pcHist = new Map(), profHist = new Map(), profTask = new Array(16).fill(0);
+let profCount = 0;
 PC = rd16(0xFFFC); P |= I;                                  // RESET
 let lastCyc = 0;
 while (cyc < opt.cycles && !halted) {
@@ -391,6 +400,7 @@ while (cyc < opt.cycles && !halted) {
       bad();
   }
   const k = W * 65536 + PC; pcHist.set(k, (pcHist.get(k) || 0) + 1);
+  if (opt.profile >= 0 && cyc >= opt.profile) { const pk = T * 1048576 + W * 65536 + lastPC; profHist.set(pk, (profHist.get(pk) || 0) + 1); profTask[T]++; profCount++; }
 }
 
 // ---- report
@@ -401,6 +411,8 @@ for (const [w, t, pc, a, x, y, s, p] of trace) console.log(hx(w, 1), hx(t, 1), h
 if (aciaWdc) console.log('--- WDC ACIA: ' + aciaOverruns + ' byte(s) written while one was still being sent (garbled on the chip)');
 console.log('--- hottest PCs (W:PC count) ---');
 for (const [k, c] of [...pcHist.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10)) console.log(hx(k >> 16, 1) + ':' + hx(k & 0xFFFF, 4), c);
+if (ymKeyOns.length) console.log('--- YM2151 key-ons: ' + ymKeyOns.length + ' (' + ymKeyOns.slice(0, 8).join(', ') + (ymKeyOns.length > 8 ? ', ...' : '') + ')');
+if (opt.profile >= 0) profileReport();
 console.log('--- cycles ' + cyc + ', T=' + hx(T, 1) + ' U=' + hx(U, 1) + ' V=' + hx(V) + ' W=' + hx(W, 1) + ', vector RAM: ' + [...vecRam].map(v => hx(v, 4)).join(' '));
 for (const d of opt.dumps) {
   const m = /^([0-9A-Fa-f]+)(?::(\d+))?(?:@([0-9A-Fa-f]))?$/.exec(d);
@@ -409,4 +421,41 @@ for (const d of opt.dumps) {
   console.log('--- task ' + hx(task, 1) + ' $' + hx(start, 4) + ':');
   for (let a = start; a < start + len; a += 16)
     console.log(hx(a, 4) + ': ' + [...taskRam[task].slice(a, Math.min(a + 16, start + len, 0x8000))].map(v => hx(v)).join(' '));
+}
+
+// ---- profile report: instructions per routine (the nearest label at or below the PC, on its ROM page)
+function profileReport() {
+  const dbgFile = path.join(opt.rom, '..', 'obj', 'os_rom_C02.dbg');
+  const lists = {};                                             // 'P0'-'PF' (BIOS ROM pages), 'A' (paged ROM), 'R' (RAM)
+  if (fs.existsSync(dbgFile)) {
+    const segs = {};
+    for (const line of fs.readFileSync(dbgFile, 'utf8').split(/\r?\n/)) {
+      const f = {}; for (const m of line.matchAll(/(\w+)=("[^"]*"|[^,\t]*)/g)) f[m[1]] = m[2].replace(/"/g, '');
+      if (line.startsWith('seg\t')) {
+        let key = null;
+        if (/os_rom_C02\.bin$/.test(f.oname || '')) key = 'P' + hx(Math.floor(+f.ooffs / 0x2000), 1);
+        else if (f.name === 'FORTH_CODE') key = 'R';
+        else if (f.name === 'FORTH_PAGED_ROM') key = 'A';
+        segs[f.id] = key;
+      } else if (line.startsWith('sym\t') && f.type === 'lab' && f.seg !== undefined && !/^@/.test(f.name)) {
+        const key = segs[f.seg]; if (!key) continue;
+        (lists[key] = lists[key] || []).push([parseInt(f.val, 16), f.name]);
+      }
+    }
+    for (const k in lists) lists[k].sort((a, b) => a[0] - b[0]);
+  } else console.log('(no ' + dbgFile + ': routines by address)');
+  const nameOf = (w, pc) => {
+    if (pc >= 0xFD00 && pc < 0xFE00 && w !== 0) return hx(w, 1) + ':' + nameOf(0, pc).slice(2);   // (COMMON: page 0's labels)
+    const key = pc >= 0xE000 ? 'P' + hx(w, 1) : pc >= 0xA000 ? 'A' : pc < 0x8000 ? 'R' : null;
+    const list = key && lists[key];
+    let best = null;
+    if (list) for (const [v, n] of list) { if (v <= pc) best = n; else break; }
+    return (key === 'R' ? 'RAM:' : key === 'A' ? 'PROM:' : hx(w, 1) + ':') + (best || hx(pc, 4));
+  };
+  const byName = new Map();
+  for (const [k, c] of profHist) { const n = "T" + hx(Math.floor(k / 1048576), 1) + " " + nameOf((k >> 16) & 15, k & 0xFFFF); byName.set(n, (byName.get(n) || 0) + c); }
+  console.log('--- profile: ' + profCount + ' instructions from cycle ' + opt.profile + ' (by task: ' +
+    profTask.map((c, t) => c ? hx(t, 1) + ' ' + (100 * c / profCount).toFixed(1) + '%' : '').filter(x => x).join(', ') + ') ---');
+  for (const [n, c] of [...byName.entries()].sort((a, b) => b[1] - a[1]).slice(0, 30))
+    console.log((100 * c / profCount).toFixed(1).padStart(5) + '%  ' + String(c).padStart(9) + '  ' + n);
 }
