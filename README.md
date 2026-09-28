@@ -125,7 +125,7 @@ HyForth has the IO words `open ( sz mode -- fd )` (e.g. `q^/dev/zero^ 1 open`; m
 | | $FF | Task zero page, growing down from `$FF` (`TASK_ZP` macros); each task's code has its own, e.g. HyForth `$C8-$FF`, sound driver `$F8-$FF` |
 | $0100 | $01FF | Hardware Stack |
 | $0200 | $06FF | Buffers: HyForth input buffer (`$0200`), data and return stacks (`$0300-$03FF`), memory-manager stack (`$0400-$05FF`); WOZMON input buffer (`$0600`) |
-| $0700 | $07FF | Unused |
+| $0700 | $07FF | stdio buffers: stdout (`$0700`) and the stdin read-ahead (`$0780`), 128 bytes each, used when fd 1 / fd 0 isn't the console |
 | $0800 | $7CFF | Task RAM.  The shell task's HyForth dictionary grows up from `$0800`; the MMU allocates 256-byte pages top-down from `$7C00` |
 | $7D00 | $7DFF | Task system page: IRQ registration tables (`$7D00-$7D8F`, the same in every task) and unclaimed-IRQ counters (`$7D90-$7D9F`) |
 | $7E00 | $7FFF | MMU area: page and bank allocation maps, handle table |
