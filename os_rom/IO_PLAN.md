@@ -125,7 +125,7 @@ The CPU runs at 3.58 MHz; the board can also run it at 7.16 MHz (the W65C02S goe
 | `/dev/null`, `/dev/zero` | IO layer | The usual |
 | `/dev/sd` | Storage task (`$C`) | The SD card as bytes (block cache, writes straight through) |
 | Later: `/sd/...` | SD card filesystem server (HydraFS) | Uses `SPI` in the BIOS; first real use of offsets, `H9_CREATE` and directories |
-| `/dev/pipe` | Pipe server (task `$D`) | `IO_PIPE`: two fds on a 255-byte ring in the pipe task's RAM (8 pipes); end of file when the writers are gone.  Later: `|` in the shell |
+| `/dev/pipe` | Pipe server (task `$D`) | `IO_PIPE`: two fds on a 255-byte ring in the pipe task's RAM (8 pipes); end of file when the writers are gone.  HyForth's `|` runs a pipeline through them |
 | Later: `/proc/<task>/...`, `/env/...` | System servers | Task status, memory use, notes; per-task environment variables |
 
 **Serial driver changes:** it becomes a file server.  RX bytes go into a buffer in its own task RAM (instead of the capture task's message ring); `H9_READ` on `cons` takes from it, blocking when it's empty.  TX goes through a TX buffer drained by the ACIA's transmit IRQ, so `WRITE_CHAR` no longer busy-waits.  `READ_CHAR`/`WRITE_CHAR` (and the `$F800` thunks) become one-byte reads and writes on fd 0 / fd 1, so WOZMON and HyForth work unchanged, and follow redirection.

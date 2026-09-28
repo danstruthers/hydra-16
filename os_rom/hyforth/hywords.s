@@ -419,7 +419,7 @@ def_word "-1", "negone", 0
     lda #$FF
     sta TEMP1
 DOWITHNEG:
-    ; sta TEMP1+1
+    lda #$FF                        ; high byte (keeps stores .A there)
     jmp keeps
 
 ; ( -- n ) numeral 0

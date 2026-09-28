@@ -316,7 +316,8 @@ const irqVector = () => { const n = irqLine(); return vecRam[n >= 0 ? (n ^ 7) : 
 let A = 0, X = 0, Y = 0, S = 0xFD, P = 0x34, PC = 0, lastPC = 0, cyc = 0, waiting = false, halted = '';
 const C = 1, Z = 2, I = 4, D = 8, B = 0x10, Vf = 0x40, N = 0x80;
 const setNZ = v => { P = (P & ~(N | Z)) | (v & 0x80) | (v ? 0 : Z); return v; };
-const push = v => { wr(0x100 + S, v); S = (S - 1) & 0xFF; };
+const stackLow = new Array(16).fill(0x100), stackLowAt = new Array(16).fill(null);    // Per task: lowest S, and where (W:PC, cycle)
+const push = v => { wr(0x100 + S, v); S = (S - 1) & 0xFF; if (S < stackLow[T & 15]) { stackLow[T & 15] = S; stackLowAt[T & 15] = [W, lastPC, cyc]; } };
 const pull = () => { S = (S + 1) & 0xFF; return rd(0x100 + S); };
 const rd16 = a => rd(a) | (rd((a + 1) & 0xFFFF) << 8);
 const zp16 = a => rd(a & 0xFF) | (rd((a + 1) & 0xFF) << 8);
@@ -491,6 +492,7 @@ if (ymKeyOns.length > 1) { const t = ymKeyOns.map(k => +k.split(' ').pop()); let
   for (let i = 1; i < t.length; i++) if (t[i] - t[i - 1] > g) { g = t[i] - t[i - 1]; at = t[i - 1]; }
   console.log('--- YM2151 longest gap between key-ons: ' + g + ' cycles, after cycle ' + at + '; first to last: ' + (t[t.length - 1] - t[0]) + ' cycles'); }
 if (opt.profile >= 0) profileReport();
+console.log('--- lowest stack pointer by task (free bytes; W:PC at the time): ' + stackLow.map((v, t) => v > 0xFF ? null : hx(t, 1) + ':' + hx(v) + ' (' + (v + 1) + '; ' + hx(stackLowAt[t][0], 1) + ':' + hx(stackLowAt[t][1], 4) + ')').filter(x => x).join(', '));
 if (ymLost) console.log('--- YM2151: ' + ymLost + ' data write(s) while it was busy (lost on the chip)');
 console.log('--- cycles ' + cyc + ' (' + (cyc / (opt.clock * 1e6)).toFixed(3) + ' s at ' + opt.clock.toFixed(2) + ' MHz), T=' + hx(T, 1) + ' U=' + hx(U, 1) + ' V=' + hx(V) + ' W=' + hx(W, 1) + ', vector RAM: ' + [...vecRam].map(v => hx(v, 4)).join(' '));
 for (const d of opt.dumps) {

@@ -42,7 +42,8 @@ node hydrasim.js --cycles 60000000 --input "1 2 + .\r"
 ```
 
 The report shows the serial output, the last instructions executed (`W T PC A X Y S P`), the hottest PCs
-(a stuck loop shows up at the top), and the final pseudo-register and vector RAM state.
+(a stuck loop shows up at the top), each task's lowest stack pointer (its free stack bytes, and the `W:PC`
+that got it there), and the final pseudo-register and vector RAM state.
 
 ### **Regression tests**
 
@@ -63,7 +64,9 @@ node regress.js --verbose    show every test's serial output, not just the failu
 ```
 
 Or from `os_rom`: `makeC02 test` builds the ROM and then runs them.  A failure shows what was missing (or
-found when it shouldn't be), the `hydrasim.js` command that reproduces it, and the serial output.  To add a
+found when it shouldn't be), the `hydrasim.js` command that reproduces it, and the serial output.  Every
+test also fails if a task's stack got within 32 bytes of its bottom, and the summary shows the deepest stack
+of the run (about 70 of the 256 bytes so far, with IRQ frames on top of far calls).  To add a
 test, add an entry to the `TESTS` list at the top of `regress.js` (its header describes the fields).
 
 ### **What it models**

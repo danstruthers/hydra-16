@@ -24,6 +24,9 @@
 //   check   function (serial output, the emulator's whole report, the test's files) returning an error
 //           message, or nothing when it's good
 //   sd      true: a blank 1 MB SD card image on device 0 (files.sd = its path)
+//
+// Every test also fails if a task's stack came within STACK_MARGIN bytes of its bottom (the emulator reports
+// each task's lowest stack pointer); the summary shows the deepest stack of the whole run.
 // ****************************************************************************
 'use strict';
 const fs = require('fs');
@@ -32,6 +35,7 @@ const path = require('path');
 const { execFile } = require('child_process');
 
 const SIM = path.join(__dirname, 'hydrasim.js');
+const STACK_MARGIN = 32;                                        // Free stack bytes a task must keep
 const W = n => '\\w'.repeat(n);                                 // Wait n * ~2M cycles before the next key
 const BOOT = W(1);                                              // Before the first key: to the HyForth prompt
 const TO_MON = BOOT + 'bye\\r' + W(1);                          // To WOZMON
@@ -122,9 +126,10 @@ const TESTS = [
     bootFailOk: true,
   },
   {
-    name: 'forth', about: 'HyForth: arithmetic (decimal in, hex out), typed wc (Ctrl-D ends it)',
-    args: ['--cycles', '60000000', '--input', BOOT + '1 2 + .\\r1000 24 - .\\rwc\\rab c\\r\\x04. . .\\r'],
+    name: 'forth', about: 'HyForth: arithmetic (decimal in, hex out), negatives, $ and % prefixes, typed wc (Ctrl-D ends it)',
+    args: ['--cycles', '60000000', '--input', BOOT + '1 2 + .\\r1000 24 - .\\r-1 . -2 . -9 . -10 . $B . $1F . %101 .\\rwc\\rab c\\r\\x04. . .\\r'],
     expect: ['HF>1 2 + .\n' + num(3) + '\n', num(1000 - 24),
+      ' FFFF FFFE FFF7 FFF6' + num(0xB) + num(0x1F) + num(5) + '\n',
       'HF>. . .\n' + num(5) + num(2) + num(1) + '\n'],
     forbid: ['!DS PTR ERROR!', '!UNK WORD!'],
   },
@@ -276,8 +281,12 @@ function runTest(t) {
       at = found + len;
     }
     for (const f of t.forbid || []) if (f instanceof RegExp ? f.test(out) : out.includes(f)) errors.push('found: ' + show(f));
+    const stacks = [];                                          // [task, free bytes, W:PC]
+    const sl = /--- lowest stack pointer by task .*?\): (.*)/.exec(report);
+    if (sl) for (const e of sl[1].matchAll(/([0-9A-F]):[0-9A-F]{2} \((\d+); ([0-9A-F]:[0-9A-F]{4})\)/g)) stacks.push([e[1], +e[2], e[3]]);
+    for (const [task, free, at] of stacks) if (free < STACK_MARGIN) errors.push('task ' + task + '\'s stack got down to ' + free + ' free bytes (at ' + at + ')');
     if (t.check && !errors.length) { const e = t.check(out, report, files); if (e) errors.push(e); }
-    resolve({ t, errors, out, cmd });
+    resolve({ t, errors, out, cmd, stacks });
   }));
 }
 const show = e => e instanceof RegExp ? String(e) : JSON.stringify(e);
@@ -298,6 +307,8 @@ const show = e => e instanceof RegExp ? String(e) : JSON.stringify(e);
     for (const e of r.errors) console.log('  ' + e);
     console.log('  (cd sim; ' + r.cmd + ')\n--- serial output ---\n' + r.out.replace(/\.{8,}/g, '...'));
   }
+  const deep = results.flatMap(r => r.stacks.map(s => [...s, r.t.name])).sort((a, b) => a[1] - b[1])[0];
+  if (deep) console.log('\nDeepest stack: task ' + deep[0] + ', ' + deep[1] + ' bytes free (at ' + deep[2] + ', test ' + deep[3] + ')');
   fs.rmSync(tmpDir, { recursive: true, force: true });
   console.log('\n' + (tests.length - failed.length) + ' of ' + tests.length + ' tests passed (' +
     ((Date.now() - start) / 1000).toFixed(1) + ' s' + (opt.seed >= 0 ? ', seed ' + opt.seed : ', random power-up') + ')');
