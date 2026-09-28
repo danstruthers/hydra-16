@@ -12,7 +12,8 @@
 .segment "GATES_P4"
 
 ; Gates from page 4 to page 0 routines
-FAR_GATE_INLINE     WRITE_CHAR,     ::WRITE_CHAR,           0
+FAR_GATE_INLINE     WRITE_CHAR_BUF, ::WRITE_CHAR,           0
+FAR_GATE_INLINE     IO_FLUSH,       PAGE2::IO_FLUSH,        2
 FAR_GATE_INLINE     WRITE_BYTE,     ::WRITE_BYTE,           0
 FAR_GATE_INLINE     WRITE_HEX,      ::WRITE_HEX,            0
 FAR_GATE_INLINE     WRITE_CRLF,     ::WRITE_CRLF,           0
@@ -61,6 +62,12 @@ FAR_GATE_INLINE     IO_PIPE,        PAGE2::IO_PIPE,         2
 FAR_GATE_INLINE     IO_MOUNT,       PAGE2::IO_MOUNT,        2
 FAR_GATE_INLINE     IO_BIND,        PAGE2::IO_BIND,         2
 FAR_GATE_INLINE     IO_UNMOUNT,     PAGE2::IO_UNMOUNT,      2
+
+; The tests' output: each character written out at once (stdout is line-buffered for the console), so the
+; scheduler test shows the tasks' turns as they happen.  Preserves .A, .X, .Y
+WRITE_CHAR:
+                jsr             WRITE_CHAR_BUF
+                jmp             IO_FLUSH
 
 ; Page 4 copy of WRITE_HSTRING: the HString has to be read from page 4, where the caller's strings are.
 ; .A, .Y hold the addr of HString to write

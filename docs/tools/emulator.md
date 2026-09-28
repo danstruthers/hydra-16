@@ -1,9 +1,35 @@
-## **hydrasim**
+## **The emulator and tools**
 
 A minimal Hydra-16 emulator for debugging the OS ROM without the hardware. It boots the real ROM images
 built by `os_rom/makeC02.bat` (`os_rom/bin/os_rom_C02.bin` and `os_rom/bin/paged_rom_C02.bin`).
 
-Requires [Node.js](https://nodejs.org). No other dependencies.
+Requires [Node.js](https://nodejs.org). No other dependencies.  The emulator, the regression tests and the card tool are in `sim/`; the commands below are run from there.
+
+### **Using the Hydra from your terminal**
+
+```
+node hydrasim.js -i
+node hydrasim.js -i --sd card.img        with an SD card (a file: see tools/hydrafs.js to make one)
+```
+
+`-i` (`--interactive`) makes the terminal the Hydra's serial terminal.
+- **What happens:** it boots (POST, then the HyForth prompt) and runs in real time. What you type goes to the serial port and the output comes straight back, so it's like sitting at the board.
+- **Keys:** the console keys work as on the board: Ctrl-C breaks, Ctrl-\\ restarts the shell, Ctrl-] then a task number switches tasks, Ctrl-D ends input. `bye` leaves HyForth for WOZMON.
+- **Emulator commands** (Ctrl-A is the emulator's own prefix key, as in QEMU or `screen`):
+
+| Keys | Does |
+| :--- | :--- |
+| Ctrl-A x | Quit |
+| Ctrl-A r | Press the reset button (RAM and the SD cards keep their contents, as on the board) |
+| Ctrl-A s | Show the state: time, task, ROM page, PC |
+| Ctrl-A h | List these |
+| Ctrl-A Ctrl-A | Type a Ctrl-A |
+
+- **Serial speed:** output arrives at the Hydra's serial rate, as on the board: 9600 baud at boot, about 930 characters a second.  `q^b115200^ stty` speeds it up; the emulated terminal follows any rate and format, so nothing needs switching.
+- **Speed:** `--speed N` runs N times real time (`--speed 0`: as fast as the PC can go, about 20 times). Timings the Hydra shows (`sleep`, the test tune's tempo) keep the Hydra's time either way.
+- **Other options:** most options below work too, e.g. `--modules`, `--acia wdc`, `--seed`. `--cycles` stops it after that many cycles.
+- **Piped input:** input can be piped in, e.g. `printf '1 2 + .\n' | node hydrasim.js -i`. Line ends become Enter, and it stops 3 seconds after the input runs out.
+- **Not modelled:** there's no sound; the YM2151 is timed but silent, so the bell only reaches you through the terminal's own BEL.
 
 ### **Usage**
 
@@ -13,6 +39,9 @@ node hydrasim.js [options]
 
 | Option | Description |
 | :----- | :---------- |
+| `-i`, `--interactive` | Use the Hydra from the terminal, in real time (above) |
+| `--speed N` | Interactive: N times real time (default 1; 0 = as fast as it goes) |
+| `--paste` | Type the input at the ACIA's full line rate, back to back like a paste, whether the ROM keeps up or not: bytes that arrive while the last one is still unread are lost, as on the chip, and counted in the report (default: each key waits until the ROM has read the last) |
 | `--rom DIR` | ROM images directory (default: `../os_rom/bin`) |
 | `--cycles N` | CPU cycles to run (default 20,000,000; about 5.6 seconds at 3.58 MHz) |
 | `--input TEXT` | Serial input to type, from cycle 200,000 on, a key every 20,000 cycles; `\r` = CR, `\xNN` = the byte NN (e.g. `\x03` = Ctrl-C), `\w` = wait 2M cycles before the next key (booting to the HyForth prompt takes about 0.9M cycles, so start with one) |
@@ -22,7 +51,8 @@ node hydrasim.js [options]
 | `--acia-line N` | IRQ line the ACIA interrupts on (default 1) |
 | `--acia rockwell\|wdc` | The ACIA chip: the Rockwell R65C51 (default), or the WDC W65C51N with its transmitter bug (TDRE always reads 1, no TX interrupt; for a ROM built with `SER_ACIA = SER_ACIA_WDC`, which paces sending with VIA timer 2).  In WDC mode the emulator counts bytes written while one is still being sent (they'd be garbled on the chip) and reports them at the end.  (VIA timer 2 is modelled too: one-shot) |
 | `--stuck-irq N` | Hold IRQ line N active the whole time |
-| `--sd [N:]FILE` | An SD card (SDHC) on SPI device N (0-7, the board's SPI headers J18-J25; default 0), backed by the image FILE (512-byte blocks; writes go to the file).  Up to 8 cards, one per device, e.g. `--sd card0.img --sd 3:C:/images/card3.img`.  Models the VIA's port B SPI bit by bit (device select as the board's 74HC138 does it), and the SD commands the ROM uses (CMD0, 8, 16, 17, 24, 55, 58, ACMD41) |
+| `--sd [N:]FILE` | An SD card (SDHC) on SPI device N (0-7, the board's SPI headers J18-J25; default 0), backed by the image FILE (512-byte blocks; writes go to the file).  Up to 8 cards, one per device, e.g. `--sd card0.img --sd 3:C:/images/card3.img`.  Models the VIA's port B SPI bit by bit (device select as the board's 74HC138 does it), and the SD commands the ROM uses (CMD0, 8, 9, 16, 17, 24, 55, 58, ACMD41; CMD9's CSD gives the image's size) |
+| `--sdsc N` | Make the card on device N a standard capacity one (SDSC): byte addresses, and a v1 CSD register |
 | `--ram-fault BANK:An:high\|low` | Address line An (0-12) stuck high or low on the RAM chip holding BANK (a shared chip holds 4 bank IDs, e.g. `F0-F3`; a task RAM module 16 banks), e.g. `F0:A0:high`.  The POST `RAM` line should report it |
 | `--model M` | Hardware what-ifs: `sharedlow`, `nostack`, `zponly`, `noshared` |
 | `--raw` | Print serial output as-is (by default ESC shows as `<ESC>`) |
@@ -42,7 +72,8 @@ node hydrasim.js --cycles 60000000 --input "1 2 + .\r"
 ```
 
 The report shows the serial output, the last instructions executed (`W T PC A X Y S P`), the hottest PCs
-(a stuck loop shows up at the top), each task's lowest stack pointer (its free stack bytes, and the `W:PC`
+(a stuck loop shows up at the top), the longest stretches with IRQs off from the first key typed (where
+they start and end: what holds off the serial port), each task's lowest stack pointer (its free stack bytes, and the `W:PC`
 that got it there), and the final pseudo-register and vector RAM state.
 
 ### **Regression tests**
@@ -68,6 +99,24 @@ found when it shouldn't be), the `hydrasim.js` command that reproduces it, and t
 test also fails if a task's stack got within 32 bytes of its bottom, and the summary shows the deepest stack
 of the run (about 70 of the 256 bytes so far, with IRQ frames on top of far calls).  To add a
 test, add an entry to the `TESTS` list at the top of `regress.js` (its header describes the fields).
+
+### **HydraFS card images**
+
+`tools/hydrafs.js` makes and reads HydraFS images (the Hydra's SD card filesystem, [plans/HYDRAFS.md](../plans/HYDRAFS.md)) on
+the PC, for the emulator's `--sd` or for writing to a real card with a disk imager:
+
+```
+node tools/hydrafs.js mkfs card.img 64 GAMES      a new, empty 64 MB image
+node tools/hydrafs.js import card.img myfiles     copy a folder tree in
+node tools/hydrafs.js put card.img star.frt games copy a file into /games
+node tools/hydrafs.js ls card.img games           list a directory
+node tools/hydrafs.js get card.img games/star.frt star.frt
+node tools/hydrafs.js check card.img              check the free map against the files
+```
+
+`node tools/hydrafs.js` alone lists every command.  Card paths start at the card's root; in Git Bash, leave
+out their first `/` (Git Bash turns `/games` into a Windows path).  From Node, `require('./tools/hydrafs.js')`
+gives `mkfs` and `Volume`.
 
 ### **What it models**
 

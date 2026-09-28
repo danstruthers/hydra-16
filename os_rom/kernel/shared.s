@@ -3,7 +3,7 @@
 .segment "SHARED"
 
 ; ****************************************************************************
-; Shared memory (see MMU_PLAN.md)
+; Shared memory (see docs/plans/MMU_PLAN.md)
 ;
 ;   256 shared 8K banks: shared bank ID = U << 4 | (bank & $0F), seen at $8000-$9FFF with RAM_BANK_REG =
 ;   $F0-$FF.  The system data lives in shared bank ID $00 (U = 0, bank $F0: SYS_BANK, _M_SYS_ENTER):
@@ -378,6 +378,14 @@ SH_RESET_TASK:
             jsr         SH_DROP_TASK_REF                    ; C = 1 if the task had no reference: fine
 
 @next:
+            tsx                                             ; A moment for IRQs between the entries, if the
+            lda         $0104,X                             ;   caller had them on (its P, under .A, .X, .Y):
+            and         #$04                                ;   a scan of 255 mustn't hold off a serial byte
+            bne         :+                                  ;   (MM_TASK_RESET holds NO_PREEMPT)
+            cli
+            nop
+            sei
+:
             lda         ZP_M_HANDLE
             inc
             bne         @loop                               ; Handles 1-255

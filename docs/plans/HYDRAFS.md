@@ -1,6 +1,6 @@
 ## **HydraFS: the Hydra's SD card filesystem**
 
-A small filesystem for SD cards, designed for the 65C02 and the Hydra's Plan 9-style IO layer (see `IO_PLAN.md`): directories, files with a Plan 9-style qid, text and binary directory listings.  It replaces FAT32 on the Hydra's cards.  **Draft for review: nothing is built yet.**
+A small filesystem for SD cards, designed for the 65C02 and the Hydra's Plan 9-style IO layer (see `IO_PLAN.md`): directories, files with a Plan 9-style qid, text and binary directory listings.  It replaces FAT32 on the Hydra's cards.  **Build steps 1 and 2 are done** (the SD layer's cards and sizes, and the PC tool); the server itself is next.
 
 ### **Goals and trade-offs**
 * Easy for a 65C02: fixed-size directory entries, contiguous runs of clusters (extents) instead of a FAT chain, 32-bit arithmetic at most.
@@ -116,8 +116,8 @@ HyForth words: `create ( sz mode -- fd )`, `remove ( sz -- )`, `rename ( sz-old 
 * `sim/tools/hydrafs.js` (Node, on the PC): `mkfs <image> <MB> [label]`, `ls <image> [path]`, `put <image> <file> <path>`, `get <image> <path> <file>`, `mkdir`, `rm`, and `import <image> <folder>` (a whole folder tree), for making test cards and moving files to and from the Hydra.
 
 ### **Build order**
-1. The SD layer: CMD9 (the card's size); per-card state for devices 0-7 (`/dev/sd/N/data`, `/dev/sd/N/ctl`).  The emulator: CMD9.
-2. `sim/tools/hydrafs.js` (mkfs, put, ls, get): test images first, from the PC side.
+1. **(Done)** The SD layer: CMD9 (the card's size); per-card state for devices 0-7 (`/dev/sd/N/data`, `/dev/sd/N/ctl`).  The emulator: CMD9 (and `--sdsc N`).
+2. **(Done)** `sim/tools/hydrafs.js` (mkfs, info, ls, put, get, mkdir, rm, import, check): test images first, from the PC side.  (A new directory entry goes in the first free one, else at the end; a file grows its last extent when the next cluster is free; extent blocks take a cluster each, their first block.)
 3. Read-only HydraFS: mount at `/sd`, walk, open, read, both directory formats, stat.
 4. Writing: write and grow, `IO_CREATE`, `IO_REMOVE`, `IO_WSTAT`, `IO_MODE_TRUNC`; `format`.
 5. HyForth words; `check` on the ctl file (recount the free map, find lost clusters).

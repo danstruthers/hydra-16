@@ -1,7 +1,7 @@
 .debuginfo
 
 ; ****************************************************************************
-; Per-task namespaces (see IO_PLAN.md, Phase 3; the entry layout is in include/io.inc).  BIOS ROM page 2,
+; Per-task namespaces (see docs/plans/IO_PLAN.md, Phase 3; the entry layout is in include/io.inc).  BIOS ROM page 2,
 ; included inside `.scope PAGE2` after io.s (see all.s).  Each task's namespace is in its IO transfer
 ; area (IO_BLK_NS), next to the data area IO_OPEN resolves names in, so everything here works with the
 ; IO transfer bank mapped (_M_IO_MAP_XFER).

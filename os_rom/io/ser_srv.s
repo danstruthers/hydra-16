@@ -1,7 +1,8 @@
 .debuginfo
 
 ; ****************************************************************************
-; The serial driver's file server: /dev/cons (fid SER_FID_CONS) and /dev/ser (fid SER_FID_SER).  BIOS ROM
+; The serial driver's file server: /dev/cons (fid SER_FID_CONS), /dev/ser (fid SER_FID_SER) and /dev/ser/ctl
+; (fid SER_FID_CTL: the port's settings, below and in serctl.s).  BIOS ROM
 ; page 2, included inside `.scope PAGE2` (see all.s); the driver itself (init, IRQ handler, rings, and
 ; the page 0 gates to these serve routines) is in drivers/serial.s.  The serve routines run in the serial
 ; task, with a client's request (IO_SRV_MAP); the IRQ handler can come in at any time, and fills the RX
@@ -14,7 +15,8 @@
 ;   Write: as much as fits in the TX ring; if nothing fits, the client waits until there's room.  On
 ;         /dev/cons, only the foreground task and the tasks it started write: others wait until they're
 ;         in front (like Unix job control).
-;   Ctl: SER_CTL_FOREGROUND (.Y = task).  Stat: all zero.
+;   Ctl: SER_CTL_FOREGROUND (.Y = task), SER_CTL_RATE (.Y = SER_RATE_*), SER_CTL_FORMAT (.Y = SER_FMT_*); on
+;         any of the three files.  Stat: all zero.
 ; Server ZP (in the serial task): ZP_IO_TMP = count, ZP_IO_CHUNK = client.
 
 .segment "IO_P2"
@@ -29,23 +31,65 @@ CONS_SERVE:
             clc
             rts
 
-; /dev/ser
+; /dev/ser, and /dev/ser/ctl: the rest of the name is "" or "/ctl"
 SER_SERVE:
             cmp         #H9_OPEN
             bne         SER_REQUEST
+            jsr         IO_SRV_MAP                          ; (.X = the client)
+            inc         ZP_IO_REQ + 1                       ; The data area: the name
+            ldy         #0
+            lda         (ZP_IO_REQ),Y
+            beq         @ser
+
+@ctl:
+            lda         SER_S_CTL,Y
+            cmp         (ZP_IO_REQ),Y
+            bne         @not_found
+            iny
+            ora         #0
+            bne         @ctl                                ; (Both ended: a match)
+            lda         #SER_FID_CTL
+            bra         @open
+
+@ser:
             lda         #SER_FID_SER
+
+@open:
+            dec         ZP_IO_REQ + 1
+            jsr         IO_SRV_UNMAP                        ; (Keeps .A)
             clc
             rts
+
+@not_found:
+            dec         ZP_IO_REQ + 1
+            jsr         IO_SRV_UNMAP
+            lda         #ERR_IO_NOT_FOUND
+            sec
+            rts
+
+SER_S_CTL:  .byte   "/ctl", 0
 
 ; A request on an open fid.  IN: .A = request, .X = client, .Y = fid
 SER_REQUEST:
             stx         ZP_IO_CHUNK
+            cpy         #SER_FID_CTL
+            bne         @data
+            cmp         #H9_READ                            ; /dev/ser/ctl: its text
+            bne         :+
+            jmp         SER_CTL_READ
+:
+            cmp         #H9_WRITE
+            bne         @other
+            jmp         SER_CTL_WRITE
+
+@data:
             cmp         #H9_READ
             beq         SER_READ
             cmp         #H9_WRITE
-            bne         :+
+            bne         @other
             jmp         SER_WRITE
-:
+
+@other:
             cmp         #H9_CTL
             beq         SER_CTL
             cmp         #H9_STAT
@@ -67,6 +111,17 @@ SER_CTL:
             tay                                             ; .Y = argument
             jsr         IO_SRV_UNMAP
             pla
+            cmp         #SER_CTL_RATE
+            bne         :+
+            tya                                             ; The rate, with the format as it is
+            ldy         SER_FORMAT
+            jmp         SER_SET
+:
+            cmp         #SER_CTL_FORMAT
+            bne         :+
+            lda         SER_RATE                            ; The format, with the rate as it is
+            jmp         SER_SET
+:
             cmp         #SER_CTL_FOREGROUND
             bne         @bad
             tya

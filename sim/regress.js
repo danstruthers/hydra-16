@@ -23,7 +23,9 @@
 //           also forbids a driver's boot FAIL, and the emulator halting: a BRK to nowhere, an STP, ...)
 //   check   function (serial output, the emulator's whole report, the test's files) returning an error
 //           message, or nothing when it's good
-//   sd      true: a blank 1 MB SD card image on device 0 (files.sd = its path)
+//   sd      true: a blank 1 MB SD card image on device 0 (files.sd = its path); or a list of cards: { dev (0-7),
+//           mb (default 1), sdsc (true: standard capacity), fill (a function given the image to fill in) }
+//           (files.sds[dev] = each one's path)
 //
 // Every test also fails if a task's stack came within STACK_MARGIN bytes of its bottom (the emulator reports
 // each task's lowest stack pointer); the summary shows the deepest stack of the whole run.
@@ -101,7 +103,7 @@ const TESTS = [
     args: ['--cycles', '60000000', '--input', TO_MON + 'F833R\\r' + W(2) + 'F869R\\r' + W(4) + 'F88AR\\r' + W(1)],
     expect: ['T1 00:00>F833R', 'MMU test: ok',
       'Sched test:\n', /^(?=[abm]*a)(?=[abm]*b)(?=[abm]*m)[abm]+\n/m,  // 1. a, b and m interleave
-      /^\[c{10}\]m+\n/m,                                        // 2. NO_PREEMPT: the c's all together
+      /^m*\[c{10}\]m+\n/m,                                      // 2. NO_PREEMPT: the c's all together
       'wW\n', 'done',                                           // 3. TASK_WAIT, IO_WAKE
       'IO test: cons ok'],
     forbid: ['FAIL'],
@@ -146,16 +148,18 @@ const TESTS = [
     },
   },
   {
-    name: 'io', about: 'open/read /dev/zero, a missing file (ERR 70), mount and ns, /dev/proc',
+    name: 'io', about: 'open/read /dev/zero, a missing file (ERR 70), mount and ns, /dev/proc, a server\'s not found (ERR 70)',
     args: ['--cycles', '90000000', '--input', BOOT +
       'q^/dev/zero^ 1 open here @ 5 read . ioerr .\\r' +
       'q^/dev/nothere^ 1 open\\rioerr .\\r' +
       'q^/z^ q^zero^ mount ns\\rq^/z^ 1 open here @ 3 read .\\r' +
-      'q^/dev/proc^ 1 open here @ 100 read .\\r'],
+      'q^/dev/proc^ 1 open here @ 100 read .\\r' +
+      'q^/dev/proc/z^ 1 open\\rioerr .\\r'],
     expect: ['read . ioerr .\n' + num(5) + num(0) + '\n',
       '!IO ERR!', 'HF>ioerr .\n' + num(0x70) + '\n',
       '/z -> zero\n', 'read .\n' + num(3) + '\n',
-      /\/dev\/proc\^ 1 open here @ 100 read \.\n 00[1-9A-F][0-9A-F]\n/],
+      /\/dev\/proc\^ 1 open here @ 100 read \.\n 00[1-9A-F][0-9A-F]\n/,
+      '!IO ERR!', 'HF>ioerr .\n' + num(0x70) + '\n'],
     forbid: ['!DS PTR ERROR!', '!UNK WORD!'],
   },
   {
@@ -177,9 +181,52 @@ const TESTS = [
     },
   },
   {
-    name: 'sd', about: '/dev/sd: write a byte at offset 512, read it back, and it\'s in the card image',
+    name: 'serial', about: 'serial settings: 9600 8N1 at boot; stty (/dev/ser/ctl), a refused format, IO_CTL rate and format; the ACIA\'s registers',
+    args: ['--cycles', '60000000', '--input', BOOT + 'stty?\\rq^b19200 l7 pe s2^ stty stty?\\rq^l8 pe s2^ stty\\rioerr .\\r' +
+      '1 2 6 ioctl stty?\\r1 3 11 ioctl stty?\\r'],
+    expect: ['HF>stty?\nb9600 l8 pn s1\n', 'stty stty?\nb19200 l7 pe s2\n', '!IO ERR!', 'HF>ioerr .\n' + num(0x78) + '\n',
+      '6 ioctl stty?\nb4800 l7 pe s2\n', '11 ioctl stty?\nb4800 l8 pe s1\n'],
+    forbid: ['!DS PTR ERROR!', '!UNK WORD!'],
+    check: (out, report) => {                                   // 4800 ($0C), 8 bits, 1 stop; even parity ($60) on DTR + IRQs ($05)
+      if (!/ACIA control 1C command 65,/.test(report)) return 'the ACIA isn\'t at 4800 8E1: ' + (/ACIA control \w+ command \w+/.exec(report) || ['?'])[0];
+    },
+  },
+  {
+    name: 'paste', about: 'serial input at the full line rate (--paste): 1000 characters into wc at 57600, none lost',
+    args: ['--cycles', '60000000', '--paste', '--input', BOOT + 'q^b57600^ stty\\r' + W(1) + 'wc . . .\\r' +
+      Array(20).fill('the quick brown fox jumps over the lazy dog 0123 \\r').join('') + '\\x04'],
+    expect: [' 03E8 00C8 0014\n'],                                  // 1000 characters, 200 words, 20 lines
+    forbid: ['!DS PTR ERROR!', '!UNK WORD!'],
+    check: (out, report) => {
+      const m = /ACIA: (\d+) received byte\(s\) lost/.exec(report);
+      if (!m || +m[1]) return (m ? m[1] : '?') + ' received byte(s) lost';
+    },
+  },
+  {
+    name: 'fast-output', about: 'console output at 115200: words (3.5K characters) in well under a second (the fast paths)',
+    args: ['--cycles', '40000000', '--mark', 'HF>words', '--mark', 'HF>', '--input', BOOT + 'q^b115200^ stty\\r' + W(1) + 'words\\r'],
+    expect: ['HF>words\n'],
+    check: (out, report) => {                                   // (The wire alone: about 1.1M cycles; the old IO path: 3.6M)
+      const at = +/mark: "HF>words" at cycle (\d+)/.exec(report)[1];
+      const took = [...report.matchAll(/mark: "HF>" at cycle (\d+)/g)].map(m => +m[1]).find(c => c > at) - at;
+      if (!(took < 2500000)) return 'words took ' + took + ' cycles at 115200, not under 2.5M';
+    },
+  },
+  {
+    name: 'irqs-off', about: 'no long stretch with IRQs off after boot (tasks starting and ending, a pipeline, sound, files): a serial byte can\'t wait long',
+    args: ['--cycles', '90000000', '--input', BOOT + 'words | wc . . .\\rq^/dev/zero^ 1 open here @ 16 read .\\r3 close\\r' +
+      'sndtest\\r' + W(2) + 'sndstop\\rshell .\\r' + W(1) + 'mmtest\\r'],
+    expect: ['MMU test: ok'],
+    check: (out, report) => {
+      const m = /longest with IRQs off.*?at cycle\): (\d+): (\S+) -> (\S+)/.exec(report);
+      if (!m) return 'no IRQs-off report';
+      if (+m[1] > 5000) return 'IRQs were off for ' + m[1] + ' cycles (from ' + m[2] + ' to ' + m[3] + ')';
+    },
+  },
+  {
+    name: 'sd', about: '/dev/sd/0/data: write a byte at offset 512, read it back, and it\'s in the card image',
     sd: true,
-    args: ['--cycles', '90000000', '--input', BOOT + 'q^/dev/sd^ 3 open .\\r90 here @ c!\\r' +
+    args: ['--cycles', '90000000', '--input', BOOT + 'q^/dev/sd/0/data^ 3 open .\\r90 here @ c!\\r' +
       '3 512 0 seek 3 here @ 1 write . ioerr .\\r91 here @ c!\\r3 512 0 seek 3 here @ 1 read . here @ c@ .\\r3 close\\r'],
     expect: ['open .\n' + num(3) + '\n', 'write . ioerr .\n' + num(1) + num(0) + '\n',
       'read . here @ c@ .\n' + num(1) + num(90) + '\n'],
@@ -188,6 +235,28 @@ const TESTS = [
       const img = fs.readFileSync(files.sd);
       if (img[512] !== 90) return 'the card image has $' + img[512].toString(16) + ' at 512, not $5A';
       if (img.some((b, i) => b && i !== 512)) return 'the card image changed somewhere else too';
+    },
+  },
+  {
+    name: 'sd-cards', about: 'SD cards on devices 0 (SDHC) and 1 (SDSC, CSD v1), none on 3: ctl files, SDSC data, init, bad names',
+    sd: [{ dev: 0 }, { dev: 1, mb: 3, sdsc: true, fill: img => img.write('SDSC-BLK1', 512) }],
+    args: ['--cycles', '150000000', '--input', BOOT +
+      'q^/dev/sd/0/ctl^ 1 open 0 fdup2 cat | cat\\rq^/dev/sd/1/ctl^ 1 open 0 fdup2 cat | cat\\r' +
+      'q^/dev/sd/3/ctl^ 1 open 0 fdup2 cat | cat\\r' +
+      'q^/dev/sd/1/data^ 3 open .\\r3 512 0 seek 3 here @ 9 read . here @ 5 + c@ .\\r' +
+      '66 here @ c! 3 1024 0 seek 3 here @ 1 write .\\r3 close\\r' +
+      'q^/dev/sd/9/data^ 1 open\\rioerr .\\rq^/dev/sd/0/nope^ 1 open\\rioerr .\\rq^/dev/sd/3/data^ 1 open\\rioerr .\\r' +
+      'q^/dev/sd/1/ctl^ 3 open .\\r105 here @ c! 110 here @ 1 + c! 105 here @ 2 + c! 116 here @ 3 + c!\\r' +
+      '3 here @ 4 write .\\r3 here @ 2 write\\rioerr .\\r3 close\\r'],
+    expect: ['| cat\nsdhc 1 MB 2048 blocks\n', '| cat\nsdsc 3 MB 6144 blocks\n', '| cat\nnone\n',
+      'open .\n' + num(3) + '\n', 'c@ .\n' + num(9) + num(0x42) + '\n', 'write .\n' + num(1) + '\n',
+      '!IO ERR!', 'HF>ioerr .\n' + num(0x70) + '\n', '!IO ERR!', 'HF>ioerr .\n' + num(0x70) + '\n',
+      '!IO ERR!', 'HF>ioerr .\n' + num(0x79) + '\n',
+      'open .\n' + num(3) + '\n', '4 write .\n' + num(4) + '\n', '!IO ERR!', 'HF>ioerr .\n' + num(0x78) + '\n'],
+    forbid: ['!DS PTR ERROR!', '!UNK WORD!'],
+    check: (out, report, files) => {
+      const img = fs.readFileSync(files.sds[1]);
+      if (img[1024] !== 66) return 'the SDSC card image has $' + img[1024].toString(16) + ' at 1024, not $42';
     },
   },
   {
@@ -204,10 +273,10 @@ const TESTS = [
   {
     name: 'sd-shared', about: 'two shells read /dev/sd at once: the storage server is switched out mid-request, and the other waits for it',
     sd: true,
-    args: ['--cycles', '90000000', '--input', BOOT + 'shell\\r' + W(1) + '\\x1dB' + W(1) + '\\rq^/dev/sd^ 1 open .\\r' + W(1) +
-      '6 here @ 600 read '.repeat(12) + '\\r\\x1d1q^/dev/sd^ 1 open .\\r' + '3 here @ 600 read . '.repeat(6) + '\\r' + W(12) +
+    args: ['--cycles', '90000000', '--input', BOOT + 'shell\\r' + W(1) + '\\x1dB' + W(1) + '\\rq^/dev/sd/0/data^ 1 open .\\r' + W(1) +
+      '6 here @ 600 read '.repeat(12) + '\\r\\x1d1q^/dev/sd/0/data^ 1 open .\\r' + '3 here @ 600 read . '.repeat(6) + '\\r' + W(12) +
       '\\x1dB' + W(1) + '\\r' + '+ '.repeat(11) + '.\\r'],             // (B's 12 counts, added up: 7200 = $1C20)
-    expect: ['HF>q^/dev/sd^ 1 open .\n' + num(6), '[1]q^/dev/sd^ 1 open .\n' + num(3), '[B]', '+ .\n' + num(7200) + '\n'],
+    expect: ['HF>q^/dev/sd/0/data^ 1 open .\n' + num(6), '[1]q^/dev/sd/0/data^ 1 open .\n' + num(3), '[B]', '+ .\n' + num(7200) + '\n'],
     forbid: ['!IO ERR!', '!DS PTR ERROR!', '!UNK WORD!'],
     check: out => {                                             // Shell 1's 6 reads (B's prompt can come out among them)
       const n = (out.slice(out.indexOf('[1]'), out.lastIndexOf('[B]')).match(/0258/g) || []).length;
@@ -253,12 +322,18 @@ function runTest(t) {
     args.push('--rom', dir);
   } else if (opt.rom) args.push('--rom', opt.rom);
   if (opt.seed >= 0) args.push('--seed', String(opt.seed));
-  if (t.sd) {
-    files.sd = path.join(tmpDir, t.name + '.img');
-    fs.writeFileSync(files.sd, Buffer.alloc(1 << 20));
-    args.push('--sd', files.sd);
+  files.sds = [];
+  for (const c of t.sd === true ? [{ dev: 0 }] : t.sd || []) {    // The SD cards
+    const f = path.join(tmpDir, t.name + '-' + c.dev + '.img'), img = Buffer.alloc((c.mb || 1) << 20);
+    if (c.fill) c.fill(img);
+    fs.writeFileSync(f, img);
+    files.sds[c.dev] = f;
+    if (!files.sd) files.sd = f;
+    args.push('--sd', c.dev + ':' + f);
+    if (c.sdsc) args.push('--sdsc', String(c.dev));
   }
-  const cmd = 'node hydrasim.js ' + args.slice(1).map(quote).join(' ').replace(files.sd || '\0', t.name + '.img');
+  let cmd = 'node hydrasim.js ' + args.slice(1).map(quote).join(' ');
+  for (const f of files.sds) if (f) cmd = cmd.split(f).join(path.basename(f));
   return new Promise(resolve => execFile(process.execPath, args, { maxBuffer: 64 << 20 }, (err, stdout, stderr) => {
     const report = stdout.replace(/\r/g, '');
     const m = /--- serial output ---\n([\s\S]*?)\n--- last instructions/.exec(report);

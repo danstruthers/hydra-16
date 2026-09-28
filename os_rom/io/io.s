@@ -1,7 +1,7 @@
 .debuginfo
 
 ; ****************************************************************************
-; The IO layer (see IO_PLAN.md): all IO goes through file descriptors.  BIOS ROM page 2, included inside
+; The IO layer (see docs/plans/IO_PLAN.md): all IO goes through file descriptors.  BIOS ROM page 2, included inside
 ; `.scope PAGE2` (see all.s); page 0 and page 1 reach it through gates.
 ;
 ;   IO_OPEN "/dev/<name>[/<rest>]" finds <name> in the device table (DEV_REGISTER), and the device's
@@ -157,7 +157,7 @@ IO_SERVE:
             jsr         TASK_CALL                   ; The serve routine, in the server's task
             bcc         @done
             cmp         #ERR_IO_WOULD_BLOCK
-            bne         @done
+            bne         @error                      ; (The cmp changed C)
             jsr         IO_FD_ENTRY                 ; No data yet: wait?
             lda         IO_FD_MODE,X
             bmi         @no_wait                    ; IO_MODE_NONBLOCK
@@ -167,6 +167,8 @@ IO_SERVE:
 
 @no_wait:
             lda         #ERR_IO_WOULD_BLOCK
+
+@error:
             sec
 
 @done:
@@ -378,6 +380,7 @@ IO_OPEN_NAME:
             lda         ZP_IO_CNT
             sta         IO_FD_SERVER,X
             stz         IO_FD_FID,X
+            stz         IO_FD_FLAGS,X
             lda         ZP_IO_MODE
             sta         IO_FD_MODE,X
             stz         IO_FD_OFS,X
@@ -394,6 +397,18 @@ IO_OPEN_NAME:
             jsr         IO_FD_ENTRY                 ; .X = the fd's entry
             pla
             sta         IO_FD_FID,X
+            cmp         #SER_FID_CONS               ; /dev/cons?  (WRITE_CHAR's fast path: IO_FDF_CONS)
+            bne         @opened
+            phx
+            lda         IO_FD_SERVER,X
+            tax
+            jsr         IO_DEV_IS_SERIAL            ; C = 1: the serial driver's
+            plx
+            bcc         @opened
+            lda         #IO_FDF_CONS
+            sta         IO_FD_FLAGS,X
+
+@opened:
             lda         ZP_IO_FD
             clc
             bra         @done
@@ -520,6 +535,10 @@ IO_READ:
 ; OUT (failure): .A = error, C = 1 (ZP_IO_CNT = bytes written before the error)
 IO_WRITE:
             PUSH_XY
+            ldx         ZP_OUT_CNT                  ; Our buffered stdout first, so what's written comes
+            beq         :+                          ;   out in order (IO_FLUSH's own IO_WRITE: none left)
+            jsr         IO_WRITE_FLUSH
+:
             jsr         IO_FD_CHECK
             bcs         @done
             lda         IO_FD_MODE,X
@@ -617,29 +636,37 @@ IO_PUTC:
             rts
 
 ; ****************************************************************************
-; stdio buffering (see STDOUT_BUF in io.inc): the console isn't buffered (prompts, echo and the
-; foreground rules work as before); anything else is, a block per request.
+; stdio buffering (see STDOUT_BUF in io.inc): stdout a block per request, or for the console (and /dev/ser)
+; a line at a time, as a terminal is: written out at each LF, before reading stdin, before sleeping
+; (TASK_SLEEP) or starting a task, and when it's full; for /dev/cons from the foreground task straight
+; into the serial TX ring (SER_CONS_PUTS).  stdin is read ahead a block at a time, unless it's the console:
+; then a key at a time, from the foreground task straight from the RX ring (SER_CONS_GETC).
 
-; Write .A to stdout (fd 1, open): WRITE_CHAR.  Into the task's stdout buffer, unless fd 1 is the console.
+; Write .A to stdout (fd 1, open): WRITE_CHAR.  Into the task's stdout buffer.
 ; OUT: C = 0; or .A = error, C = 1.  Preserves .X, .Y
 STDOUT_PUT:
             phx
             phy
             ldy         ZP_OUT_CNT
-            bne         @buffer                     ; (Buffering already: fd 1 isn't the console)
-            ldx         IO_FD_SERVER + IO_FD_SIZE
+            bne         @buffer                     ; (Buffering already)
+            ldx         IO_FD_SERVER + IO_FD_SIZE   ; The first byte: the console (or /dev/ser)?  Then
+            stz         ZP_OUT_LINE                 ;   a line at a time (ZP_OUT_LINE bit 7)
             jsr         IO_DEV_IS_SERIAL
             bcc         @buffer
-            ldx         #1                          ; The console: straight to it
-            jsr         IO_PUTC
-            bra         @done
+            dec         ZP_OUT_LINE
 
 @buffer:
             sta         STDOUT_BUF,Y
             iny
             sty         ZP_OUT_CNT
             cpy         #STDOUT_BUF_SIZE
+            beq         @flush
+            cmp         #ASCII_LF
             bne         @ok
+            bit         ZP_OUT_LINE
+            bpl         @ok
+
+@flush:
             jsr         IO_FLUSH
 
 @ok:
@@ -650,6 +677,27 @@ STDOUT_PUT:
             plx
             rts
 
+; IO_FLUSH for IO_WRITE: keeping IO_WRITE's arguments (ZP_IO_BUF, ZP_IO_CNT).  Preserves .A, .Y.  Modifies: .X
+IO_WRITE_FLUSH:
+            ldx         ZP_IO_BUF
+            phx
+            ldx         ZP_IO_BUF + 1
+            phx
+            ldx         ZP_IO_CNT
+            phx
+            ldx         ZP_IO_CNT + 1
+            phx
+            jsr         IO_FLUSH
+            plx
+            stx         ZP_IO_CNT + 1
+            plx
+            stx         ZP_IO_CNT
+            plx
+            stx         ZP_IO_BUF + 1
+            plx
+            stx         ZP_IO_BUF
+            rts
+
 ; Write out the task's stdout buffer to fd 1, and empty it: when it's full, before reading stdin
 ; (GET_CHAR, READ_CHAR), before fd 1 is closed or replaced (IO_CLOSE: so also when the task ends), and
 ; before starting a task (TASK_RUN, TASK_CLONE).  Preserves .A, .X, .Y.  Uses ZP_IO_BUF, ZP_IO_CNT (as
@@ -658,13 +706,26 @@ IO_FLUSH:
             PUSH_AXY
             lda         ZP_OUT_CNT
             beq         @done
-            stz         ZP_OUT_CNT
-            sta         ZP_IO_CNT
-            stz         ZP_IO_CNT + 1
-            lda         #<STDOUT_BUF
+            ldy         #0
+            lda         IO_FD_FLAGS + IO_FD_SIZE    ; /dev/cons: from the foreground task, straight into
+            beq         :+                          ;   the TX ring (no IO request)
+            jsr         SER_CONS_PUTS               ; .Y = the bytes it took
+:
+            tya
+            clc
+            adc         #<STDOUT_BUF
             sta         ZP_IO_BUF
             lda         #>STDOUT_BUF
+            adc         #0
             sta         ZP_IO_BUF + 1
+            tya
+            eor         #$FF                        ; The rest (ZP_OUT_CNT - .Y): through the IO layer
+            sec
+            adc         ZP_OUT_CNT
+            stz         ZP_OUT_CNT
+            beq         @done
+            sta         ZP_IO_CNT
+            stz         ZP_IO_CNT + 1
             lda         #1
             jsr         IO_WRITE                    ; (An error: the output is lost, as it would be)
 
@@ -679,7 +740,13 @@ STDIN_GET:
             ldx         ZP_IN_POS
             cpx         ZP_IN_CNT
             bcc         @have
-            ldx         IO_FD_SERVER                ; Empty: the console?
+            lda         IO_FD_FLAGS                 ; Empty.  /dev/cons: from the foreground task, a key
+            beq         :+                          ;   straight from the RX ring (no IO request)
+            jsr         SER_CONS_GETC
+            bcs         :+
+            rts                                         ; (C = 0, .A = the key)
+:
+            ldx         IO_FD_SERVER                ; The console?  A key at a time
             jsr         IO_DEV_IS_SERIAL
             bcc         @fill
             ldx         #0
@@ -1134,10 +1201,14 @@ TASK_CLONE_PAGE:
 ; Give a new task copies of the current task's namespace and open fds (TASK_BUILD_FRAME), telling each
 ; fd's server (H9_DUP).
 ; The fd table goes through the current task's IO transfer area (tasks can't see each other's RAM), and
-; the new task copies it in (IO_ADOPT_FDS, run in it with TASK_CALL).  IRQs must be off.
+; the new task copies it in (IO_ADOPT_FDS, run in it with TASK_CALL).  Called with IRQs off (by
+; TASK_BUILD_FRAME, back in the current task); it turns them on while the servers are told, which takes
+; thousands of cycles (the new task is still paused), and restores the caller's I flag.
 ; IN: .A = the new task.  Preserves .X, .Y
 IO_INHERIT:
             PUSH_XY
+            php                                     ; IRQs on while the servers are told (see above)
+            cli
             pha
             jsr         NS_COPY_TO                  ; The namespace
             pla
@@ -1187,6 +1258,7 @@ IO_INHERIT:
             _M_IO_UNMAP
 
 @done:
+            plp
             PULL_YX
             rts
 

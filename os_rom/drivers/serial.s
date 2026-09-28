@@ -7,7 +7,7 @@ SER_SEND_STATUS_ERROR = $FF
 .segment "BIOS"
 
 ; ****************************************************************************
-; Serial driver: the file server for /dev/cons and /dev/ser (see IO_PLAN.md).  Runs in its own Resident
+; Serial driver: the file server for /dev/cons and /dev/ser (see docs/plans/IO_PLAN.md).  Runs in its own Resident
 ; task (SERIAL_TASK_NUM, started by DRV_START at boot), so its state (ZP_SER_SEND_STATUS, ZP_SER_CAPTURE,
 ; the SER_* task ZP in zero.s) and its RX and TX rings (SER_RX_BUF, SER_TX_BUF) live in that task.
 ;   RX: the IRQ handler puts each received byte into the RX ring, and wakes the tasks waiting to read.
@@ -15,8 +15,9 @@ SER_SEND_STATUS_ERROR = $FF
 ;       one each time the ACIA's transmit register empties: the Rockwell 65C51's TDRE interrupt, or for
 ;       the WDC 65C51 (whose TDRE doesn't work) VIA timer 2, a character's time after each byte (SER_ACIA).
 ;   /dev/cons reads only for the foreground task (ZP_SER_CAPTURE: the shell to start with); others
-;   wait until they're brought to the foreground.  /dev/ser is the raw port.  The requests themselves
-;   are handled on ROM page 2 (ser_srv.s).
+;   wait until they're brought to the foreground.  /dev/ser is the raw port, and /dev/ser/ctl its settings
+;   (baud rate, data bits, parity, stop bits: 9600 8-N-1 at boot).  The requests themselves are handled on
+;   ROM page 2 (ser_srv.s, serctl.s).
 ;   READ_CHAR / WRITE_CHAR use the task's fd 0 / fd 1, or the rings directly if the task has none.
 
 SERIAL_DRIVER:
@@ -34,22 +35,19 @@ TASK_GATE       SER_CALL_SET_CAPTURE, SERIAL_SET_CAPTURE, SERIAL_TASK_NUM
 ; Serve routines (page 2, ser_srv.s)
 FAR_GATE_INLINE CONS_SERVE,     PAGE2::CONS_SERVE,      2
 FAR_GATE_INLINE SER_SERVE,      PAGE2::SER_SERVE,       2
+FAR_GATE_INLINE SER_CONFIG,     PAGE2::SER_CONFIG,      2
 
 ; Driver init (runs in the serial task).  OUT: C = 0 on success, or C = 1 and .A = error (only if its IRQ
 ; handler can't be registered: without its files, /dev/cons and /dev/ser, the console still works)
 SERIAL_INIT:
                 php                                     ; Save caller's I flag
                 sei
-                lda             #$10 | SR_SELECT    ; 8-N-1
-                sta             ACIA_R_CTRL
-.if SER_ACIA = SER_ACIA_ROCKWELL
-                lda             #ACIA_CMD_BIT_DTRL | ACIA_CMD_BIT_TLIE  ; No parity, no echo, tx & rx interrupts.
-.else
-                lda             #ACIA_CMD_BIT_DTRL | ACIA_CMD_BIT_TLID  ; No parity, no echo, rx interrupts
-.endif                                                                  ;   (WDC: TX paced by VIA timer 2)
-                sta             ACIA_R_CMD
+                lda             #SER_RATE_BOOT          ; The ACIA: the boot rate, 8-N-1, no echo, IRQs
+                ldy             #SER_FMT_8N1            ;   (SER_CMD_BASE)
+                jsr             SER_CONFIG
                 lda             #SER_SEND_STATUS_READY
                 sta             ZP_SER_SEND_STATUS
+                stz             SER_PEND                ; Nothing for the fast handler's leftovers yet
                 lda             #SHELL_TASK_NUM         ; The shell is in the foreground to start with
                 sta             ZP_SER_CAPTURE
                 ldx             #SER_RX_HEAD - SER_PREFIX
@@ -242,8 +240,8 @@ GET_CHAR:
                 rts
 
 ; Output a character (from the A register): to fd 1 (stdout), or straight to the serial port if the
-; task has no fd 1 (system and driver tasks).  Buffered when fd 1 isn't the console (IO_FLUSH).  If fd 1 fails (e.g. a pipe nobody reads any more), the
-; character is dropped.  Not with IRQs off: it may have to wait for the TX IRQ.
+; task has no fd 1 (system and driver tasks).  Buffered (IO_FLUSH): the console a line at a time.  If fd 1
+; fails (e.g. a pipe nobody reads any more), the character is dropped.  Not with IRQs off: it may have to wait for the TX IRQ.
 ;
 ; Modifies: flags
 WRITE_CHAR:
@@ -255,7 +253,7 @@ SERIAL_WRITE:
                 cpx             #IO_FD_CLOSED
                 beq             @direct
                 pha
-                jsr             STDOUT_PUT                  ; (Buffered, unless it's the console)
+                jsr             STDOUT_PUT                  ; (Buffered; the console a line at a time)
                 pla
                 bra             @done
 
@@ -318,7 +316,8 @@ SER_TX_NEXT:
                 cpy             SER_TX_HEAD
                 bne             :+
                 stz             ZP_SER_SEND_STATUS      ; SER_SEND_STATUS_READY: the ring is empty
-                rts
+                ldx             #SER_WR_WAIT            ; (Wake the writers: a settings change waits for
+                jmp             SER_WAKE                ;   the ring to empty, SER_DRAIN)
 :
                 lda             SER_TX_BUF,Y
                 iny
@@ -340,6 +339,10 @@ SERIAL_T2_HANDLER:
                 beq             @not_mine
                 lda             VIA_R_T2C_L             ; Clears its IRQ
                 jsr             SER_TX_NEXT             ; (Starts it again for the next byte)
+                lda             SER_PEND                ; (The bell; and what the fast handler left)
+                beq             :+
+                jsr             SER_DO_PENDING
+:
                 sec
                 rts
 
@@ -365,6 +368,13 @@ SER_WAKE        = TASK_WAKE_MASK
 ; Serial IRQ handler (registered with IRQ_REGISTER; runs in the serial task)
 ; OUT: C = 1 if the ACIA was interrupting
 SERIAL_IRQ_HANDLER:
+                lda             SER_PEND                ; What the fast handler (SER_IRQ_FAST, which does the
+                beq             @status                 ;   bytes) left: it comes here only for that
+                jsr             SER_DO_PENDING
+                sec
+                rts
+
+@status:
                 lda             ACIA_R_STATUS           ; Read once: it clears the IRQ flag, so a second
                 bpl             @not_mine 	            ;   read could lose a TDRE that came in between
                 pha
@@ -429,6 +439,59 @@ SERIAL_IRQ_HANDLER:
 
 @not_mine:
                 clc
+                rts
+
+; Do what the fast ACIA handler left (SER_PEND, see io/serfast.s), in the serial task, in an IRQ handler:
+; wake the tasks waiting to read or write, a break or kill key, a console command, the bell.
+; OUT: .A.Y = SCHED_RESCHED_A/Y after a break or kill (switch tasks now, so it happens), else .A = 0
+; Modifies: .A, .X, .Y
+SER_DO_PENDING:
+                lda             SER_PEND
+                stz             SER_PEND
+                pha
+                bit             #SER_PEND_CMD
+                beq             :+
+                lda             SER_PEND_KEY
+                jsr             SER_COMMAND
+                pla
+                pha
+:
+                bit             #SER_PEND_WAKE_RD
+                beq             :+
+                ldx             #SER_RD_WAIT
+                jsr             SER_WAKE
+                pla
+                pha
+:
+                bit             #SER_PEND_WAKE_WR
+                beq             :+
+                ldx             #SER_WR_WAIT
+                jsr             SER_WAKE
+                pla
+                pha
+:
+                bit             #SER_PEND_BEEP
+                beq             :+
+                jsr             YM_BEEP
+                pla
+                pha
+:
+                ldx             #TASK_BREAK_FLAG
+                bit             #SER_PEND_BREAK
+                bne             @signal
+                ldx             #TASK_KILL_FLAG
+                bit             #SER_PEND_KILL
+                bne             @signal
+                pla
+                lda             #0
+                rts
+
+@signal:
+                pla
+                txa
+                jsr             SER_BREAK
+                lda             #SCHED_RESCHED_A
+                ldy             #SCHED_RESCHED_Y
                 rts
 
 ; A console command: the key after the prefix key (SER_KEY_PREFIX).  A hex digit brings that task to the

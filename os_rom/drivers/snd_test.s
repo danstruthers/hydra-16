@@ -203,9 +203,9 @@ SOUND_TEST:
                 jmp         YM_WRITE
 
 YM_LOADPATCH:
-                ; Make re-entrant safe by protecting tmp and pointer variables from interrupt
+                ; (Its variables are its task's own, and YM_WRITE keeps IRQs off for each write: IRQs stay on,
+                ; so the 5000 cycles of a patch don't hold off a serial byte)
                 php
-                sei
 
                 ; and #$07 ; mask channel to range 0..7
                 stx AZP0L

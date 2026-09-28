@@ -34,6 +34,7 @@ TASKS_INIT:
             stz     ZP_D_PAGE                       ; Disassembler reads the BIOS page by default
             stz     ZP_NO_PREEMPT                   ; Scheduler
             stz     ZP_PREEMPT_DUE
+            stz     ZP_IN_SCHED
             stz     ZP_TC_GUEST
             stz     ZP_TC_WAITERS
             stz     ZP_TC_WAITERS + 1
@@ -44,6 +45,7 @@ TASKS_INIT:
             stz     ZP_OUT_CNT                      ; No stdio buffering (WRITE_CHAR's fast path
             stz     ZP_IN_CNT                       ;   looks at these even without fds)
             stz     ZP_IN_POS
+            stz     ZP_OUT_LINE
             lda     #$FF
             sta     TASK_PARENT                     ; No parent
             sta     ZP_TASK_OWNER
@@ -68,7 +70,7 @@ TASKS_INIT:
             rts
 
 ; ****************************************************************************
-; Scheduler (see IO_PLAN.md, Phase 1)
+; Scheduler (see docs/plans/IO_PLAN.md, Phase 1)
 ;
 ;   Every task that isn't running keeps the same frame on its own stack: the one IRQ_DISPATCH builds
 ;   (interrupt frame, A, X, W, Y, the TASK_CALL scratch bytes), plus U.  Top of stack first:
@@ -107,7 +109,9 @@ SCHED_SWITCH:
 :                                                   ;   (TASK_GUEST_OUT_FLAG)
             tsx
             stx     STACK_SAVE_REG                  ; The current task's SP
-            jsr     SCHED_PICK                      ; .A = next task (maybe the same one)
+            inc     ZP_IN_SCHED                     ; (IRQs come in during SCHED_PICK: no switch in them)
+            jsr     SCHED_PICK                      ; .A = next task (maybe the same one); IRQs off again
+            stz     ZP_IN_SCHED
             sta     T_REGISTER                      ; Its ZP and stack
             ldx     STACK_SAVE_REG
             txs
@@ -137,8 +141,9 @@ SCHED_RESUME:
             jmp     IRQ_RESTORE                     ; The rest is the IRQ frame (irq.s)
 
 ; Pick the next task to run: the next runnable task after the current one (1-15, round-robin); else
-; the current one if it's runnable; else task 0 (idle).  No stack use while looking at other tasks.
-; OUT: .A = task
+; the current one if it's runnable; else task 0 (idle).  No stack use while looking at other tasks.  IRQs
+; are on between the looks, so a serial byte isn't kept waiting by a scan of 15 tasks (SCHED_SWITCH sets
+; ZP_IN_SCHED, so they don't start a switch of their own).  IN: IRQs off.  OUT: .A = task, IRQs off
 ; Modifies: .A, .X, .Y
 SCHED_PICK:
             lda     T_REGISTER
@@ -154,9 +159,11 @@ SCHED_PICK:
             and     #$0F
             tax
             beq     @skip                           ; Task 0 isn't in the rotation
+            sei
             stx     T_REGISTER                      ; Quick look at the candidate (no stack use!)
             lda     TASK_STATUS_REG
             sty     T_REGISTER
+            cli                                     ; (IRQs between the looks: ZP_IN_SCHED stops a switch)
             bmi     @guest                          ; (SCHED_RUNNABLE, inline: this runs every tick)
             and     #TASK_RUN_MASK
             cmp     #TASK_BUSY_FLAG
@@ -170,6 +177,7 @@ SCHED_PICK:
 @skip:
             dec     ZP_SCHED_CNT
             bne     @next
+            sei
             lda     TASK_STATUS_REG                 ; Nobody else: keep going if we can
             jsr     SCHED_RUNNABLE
             beq     @stay
@@ -181,6 +189,7 @@ SCHED_PICK:
             rts
 
 @found:
+            sei
             txa
             rts
 
@@ -202,6 +211,8 @@ SCHED_RUNNABLE:
 ; be switched out too), or if it holds NO_PREEMPT (then the switch is noted, for PREEMPT).
 ; OUT: C = 1 switch, C = 0 don't
 SCHED_CAN_PREEMPT:
+            lda     ZP_IN_SCHED                     ; An IRQ during SCHED_PICK: already switching
+            bne     @no
             lda     ZP_TC_GUEST
             bne     @guest
             lda     TASK_STATUS_REG
@@ -352,6 +363,7 @@ TASK_SLEEP:
 ; already returns at once).  The system task's tick handler wakes the task (SLEEP_CHECK); a break or kill
 ; ends the sleep too.  Modifies: .A, .Y.  Preserves .X
 TASK_SLEEP_UNTIL:
+            jsr     IO_FLUSH                        ; (Our output first: e.g. a line with no LF yet)
             php
             sei
             phx
@@ -496,6 +508,7 @@ TASK_BUILD_FRAME:
             sta     STACK_SAVE_REG
             stz     ZP_NO_PREEMPT
             stz     ZP_PREEMPT_DUE
+            stz     ZP_IN_SCHED                     ; (RAM powers up random: a stray one stops preemption)
             stz     ZP_TC_GUEST
             stz     ZP_TC_WAITERS                   ; (Left by the task that had the number before)
             stz     ZP_TC_WAITERS + 1
@@ -524,9 +537,9 @@ TASK_TRAMPOLINE:
 ; The task's entry point returned: free everything it had, wake its parent, and never run again
 TASK_EXIT:
             jsr     CONS_RELEASE                    ; (In the foreground: the console goes back)
-            sei
             lda     T_REGISTER
-            jsr     MM_TASK_RESET
+            jsr     MM_TASK_RESET                   ; (IRQs on: it holds NO_PREEMPT)
+            sei
             lda     TASK_PARENT
             cmp     #MAX_TASK_NUMBER + 1
             bcs     @no_parent
@@ -863,6 +876,10 @@ TC_GO:
             _M_TC_COPY_TO   ZP_TC_Y
             _M_TC_COPY_TO   ZP_TC_P
             _M_TC_COPY_TO   ZP_TC_FROM
+            lda     ZP_NO_PREEMPT                   ; The caller holds the CPU (NO_PREEMPT): the call
+            sty     T_REGISTER                      ;   does too, though it runs in the target task
+            sta     ZP_TC_HOLD
+            stx     T_REGISTER
             smb6    TASK_STATUS_REG                 ; In a call (TASK_CALLING_FLAG): not run until it returns
 
 ; !! NO STACK MANIPULATIONS UNTIL THE TARGET TASK'S STACK IS SELECTED !!
@@ -870,6 +887,11 @@ TC_GO:
             ldx     STACK_SAVE_REG                  ; ...and its stack
             txs
             inc     ZP_TC_GUEST                     ; Running for another task: the scheduler mustn't switch
+            lda     ZP_TC_HOLD                      ; (Kept on the target's stack: a nested call can
+            pha                                     ;   change ZP_TC_HOLD)
+            beq     :+
+            inc     ZP_NO_PREEMPT
+:
             lda     ZP_TC_FROM
             pha                                     ; Keep the calling task # on the target's stack
             lda     ZP_TC_P
@@ -893,9 +915,14 @@ TC_GO:
             sta     ZP_TC_P                         ; Routine's result flags
             tsx
             inx
+            inx
             stx     STACK_SAVE_REG                  ; Our SP as it was (a task switch during the call moved it)
             pla
             tax                                     ; .X = calling task
+            pla                                     ; (ZP_TC_HOLD)
+            beq     :+
+            dec     ZP_NO_PREEMPT
+:
             ldy     T_REGISTER                      ; .Y = target task
             _M_TC_COPY_BACK ZP_TC_A
             _M_TC_COPY_BACK ZP_TC_X

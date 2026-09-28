@@ -12,7 +12,7 @@ IO_PORT_BASE    = $FF00
 ; TIMING
 ; CPU clock: a build-time setting for now (board V2 will have a clock jumper register to read).  Timing
 ; constants are derived from it.  Above 3.58 MHz the YM2151 (on its own 3.58 MHz clock) needs bus wait
-; states, which need the V2 RDY hold hardware (see IO_PLAN.md), so don't use the sound chip until then.
+; states, which need the V2 RDY hold hardware (see docs/plans/IO_PLAN.md), so don't use the sound chip until then.
 CPU_CLOCK_MULT  = 1         ; 1 = 3.58 MHz, 2 = 7.16 MHz
 .assert     CPU_CLOCK_MULT = 1 .or CPU_CLOCK_MULT = 2, error, "CPU_CLOCK_MULT must be 1 (3.58 MHz) or 2 (7.16 MHz)"
 CLK_BASE_CPS    = 3579545   ; ~3.58 MHz (the 14.318 MHz crystal / 4)
@@ -21,25 +21,28 @@ CLK_CPMS        = (CLK_CPS / 1000) + 1
 
 ; ***  ONBOARD SERIAL ADAPTER, 65C51  ***
 
+; The ACIA's baud rate codes (control register bits 0-3).  Its clock is SER_CLK, 1.790 MHz (the crystal / 8),
+; not the 1.8432 MHz the codes are named for, so every rate is 2.9% slow (terminals accept it).  Code 0 is
+; the clock / 16: "115200" (111,861).  A rate code's bit time in CPU cycles is 2 * (1843200 / rate) *
+; CPU_CLOCK_MULT (the serial driver's rate table, ser_srv.s).
+SR_115200       = $00
+SR_300          = $06
+SR_600          = $07
+SR_1200         = $08
+SR_1800         = $09
 SR_2400         = $0A
+SR_3600         = $0B
 SR_4800         = $0C
+SR_7200         = $0D
 SR_9600         = $0E
 SR_19200        = $0F
-SR_115200       = $00
 
-SR_SELECT       = SR_19200
-
-.if SR_SELECT = SR_2400
-SERIAL_RATE     = 2400
-.elseif SR_SELECT = SR_4800
-SERIAL_RATE     = 4800
-.elseif SR_SELECT = SR_9600
+; The rate at boot (POST and the serial driver), 8 data bits, no parity, 1 stop bit.  After boot,
+; /dev/ser/ctl or IO_CTL (SER_CTL_RATE, SER_CTL_FORMAT) change it.  SER_RATE_BOOT is its index in the
+; serial driver's rate table (SER_RATE_* in io.inc).
+SR_SELECT       = SR_9600
 SERIAL_RATE     = 9600
-.elseif SR_SELECT = SR_19200
-SERIAL_RATE     = 19200
-.else
-SERIAL_RATE     = 115200
-.endif
+SER_RATE_BOOT   = 8                                         ; (SER_RATE_9600)
 
 ; The ACIA chip (a build option).  The Rockwell R65C51 sends from its transmitter-empty (TDRE) interrupt.
 ; The WDC W65C51N's TDRE status bit and interrupt don't work (a known chip bug), so its sending is paced
@@ -48,7 +51,15 @@ SERIAL_RATE     = 115200
 SER_ACIA_ROCKWELL = 0
 SER_ACIA_WDC    = 1
 SER_ACIA        = SER_ACIA_ROCKWELL
-SER_CHAR_CYCLES = CLK_CPS * 11 / SERIAL_RATE                ; (WDC: the timer 2 count per character)
+
+; The ACIA's command register, as the serial driver sets it (parity bits 5-7 added): DTR on, receive
+; interrupts on, no echo; Rockwell: transmit interrupts on (TDRE); WDC: off (timer 2 paces sending instead)
+.if SER_ACIA = SER_ACIA_WDC
+SER_CMD_BASE    = ACIA_CMD_BIT_DTRL | ACIA_CMD_BIT_TLID
+.else
+SER_CMD_BASE    = ACIA_CMD_BIT_DTRL | ACIA_CMD_BIT_TLIE
+.endif
+SER_CHAR_CYCLES = CLK_CPS * 11 / SERIAL_RATE                ; (A character at the boot rate, with a margin: POST)
 .assert     SER_CHAR_CYCLES < $10000, error, "SER_CHAR_CYCLES must fit VIA timer 2: a faster serial rate"
 
 ; ***  END OF ONBOARD SERIAL ADAPTER  ***
@@ -96,21 +107,23 @@ VIA_T1_INT_BIT      = $40       ; VIA_R_INT_FLAGS / VIA_R_INT_ENABLE: timer 1 (t
 VIA_T2_INT_BIT      = $20       ;   timer 2 (the WDC ACIA's TX pacing)
 VIA_INT_ENABLE      = $80       ; VIA_R_INT_ENABLE: set (1) or clear (0) the bits given
 
-; Send .A to the ACIA (the serial task, IRQs off, the transmitter idle or its last byte just sent), and
-; for the WDC 65C51 start timer 2, which stands in for its missing TDRE interrupt (SER_ACIA); and a BEL beeps on the YM2151.
-; Uses .Y
+; Send .A to the ACIA (in the serial task's ZP, IRQs off, the transmitter idle or its last byte just sent),
+; and for the WDC 65C51 start timer 2, which stands in for its missing TDRE interrupt (SER_ACIA).  A BEL
+; beeps on the YM2151 too: it sets SER_PEND_BEEP, and the driver's handler beeps (SER_DO_PENDING), since
+; this can run with T switched to the serial task and no stack of its own (a quick look).  Uses .Y
 .macro _M_SER_TX_BYTE
             sta         ACIA_R_DATA
 .if ::SER_ACIA = ::SER_ACIA_WDC                             ; (:: so it's constant in the page scopes too)
-            ldy         #<SER_CHAR_CYCLES
+            ldy         SER_T2_CHAR                 ; (A character's time at the current settings)
             sty         VIA_R_T2C_L
-            ldy         #>SER_CHAR_CYCLES
+            ldy         SER_T2_CHAR + 1
             sty         VIA_R_T2C_H                 ; (Starts the one-shot, and clears its IRQ)
 .endif
             cmp         #ASCII_BELL                 ; The bell: the YM2151 beeps too, as the terminal's
-            bne         * + 5                       ;   does (YM_BEEP; no label here: it would end the
-            jsr         YM_BEEP                     ;   caller's @ labels)
+            bne         * + 4                       ;   does (no label here: it would end the caller's
+            smb7        SER_PEND                    ;   @ labels.  SER_PEND_BEEP)
 .endmacro
+.assert     SER_PEND_BEEP = $80, error, "_M_SER_TX_BYTE sets SER_PEND_BEEP with smb7"
 
 .define  IRQ_NUMBER(num)    (num ^ 7)
 

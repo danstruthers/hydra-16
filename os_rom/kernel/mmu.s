@@ -29,7 +29,7 @@ AI_REF_KIND  = $03      ;   holds its address, selector (bank) and kind (FP_*, b
 .assert     FP_KIND = AI_REF_KIND, error, "A reference's status holds the far pointer's kind in bits 0-1"
 
 ; ****************************************************************************
-; Per-task MMU area (see MMU_PLAN.md)
+; Per-task MMU area (see docs/plans/MMU_PLAN.md)
 ;
 ;   Lives at the top of Task RAM, directly below the paged RAM window.  Every
 ;   task has its own copy, so a task switch (T) swaps the tables in for free.
@@ -242,8 +242,8 @@ MM_TASK_INIT:
 ; OUT (failure): .A = ERROR, C = 1
 ; Modifies: .A
 MM_PAGE_ALLOC:
-            php                                             ; Save caller's I flag
-            sei
+            jsr         NO_PREEMPT                          ; Not switched out meanwhile (IRQs stay on:
+            php                                             ;   only this task's own MMU area is touched)
             PUSH_XY
             jsr         MM_PAGE_MAPS_SETUP
             ldy         MMU_HDR + MmuHeader::page_floor     ; Never below the page floor
@@ -261,7 +261,7 @@ MM_PAGE_ALLOC:
 
 @done:
             PULL_YX
-            jmp         MM_RETURN
+            jmp         MM_RETURN_NP
 
 @no_mem:
             lda         #ERR_OUT_OF_MEMORY
@@ -276,8 +276,8 @@ MM_PAGE_ALLOC:
 ; OUT (failure): .A = ERR_OUT_OF_MEMORY, C = 1 (pages below .A are already allocated; floor unchanged)
 ; Preserves .X, .Y
 MM_SET_FLOOR:
-            php                                             ; Save caller's I flag
-            sei
+            jsr         NO_PREEMPT                          ; Not switched out meanwhile (IRQs stay on:
+            php                                             ;   only this task's own MMU area is touched)
             cmp         #MMU_PAGE_BOTTOM
             bcs         :+
             lda         #MMU_PAGE_BOTTOM
@@ -289,12 +289,12 @@ MM_SET_FLOOR:
 @set:
             sta         MMU_HDR + MmuHeader::page_floor
             clc
-            jmp         MM_RETURN
+            jmp         MM_RETURN_NP
 
 @no_mem:
             lda         #ERR_OUT_OF_MEMORY
             sec
-            jmp         MM_RETURN
+            jmp         MM_RETURN_NP
 
 ; Free a run of task pages allocated with MM_PAGE_ALLOC.
 ; IN: .A = first page of the run
@@ -302,8 +302,8 @@ MM_SET_FLOOR:
 ; OUT (failure): .A = ERROR, C = 1
 ; Modifies: .A
 MM_PAGE_FREE:
-            php                                             ; Save caller's I flag
-            sei
+            jsr         NO_PREEMPT                          ; Not switched out meanwhile (IRQs stay on:
+            php                                             ;   only this task's own MMU area is touched)
             PUSH_XY
             cmp         #MMU_PAGE_BOTTOM
             bcc         @bad_arg
@@ -324,7 +324,7 @@ MM_PAGE_FREE:
 
 @done:
             PULL_YX
-            jmp         MM_RETURN
+            jmp         MM_RETURN_NP
 
 @bad_arg:
             lda         #ERR_MEM_BAD_ARG
@@ -337,15 +337,15 @@ MM_PAGE_FREE:
 ; OUT (failure): .A = ERROR, C = 1
 ; Modifies: .A
 MM_BANK_ALLOC:
-            php                                             ; Save caller's I flag
-            sei
+            jsr         NO_PREEMPT                          ; Not switched out meanwhile (IRQs stay on:
+            php                                             ;   only this task's own MMU area is touched)
             PUSH_XY
             jsr         MM_BANK_MAPS_SETUP
             ldx         #MMU_BANK_TOP
             ldy         #0
             jsr         BM_ALLOC_RUN
             PULL_YX
-            jmp         MM_RETURN
+            jmp         MM_RETURN_NP
 
 ; Free a run of task RAM banks allocated with MM_BANK_ALLOC.
 ; IN: .A = first bank of the run
@@ -353,8 +353,8 @@ MM_BANK_ALLOC:
 ; OUT (failure): .A = ERROR, C = 1
 ; Modifies: .A
 MM_BANK_FREE:
-            php                                             ; Save caller's I flag
-            sei
+            jsr         NO_PREEMPT                          ; Not switched out meanwhile (IRQs stay on:
+            php                                             ;   only this task's own MMU area is touched)
             PUSH_XY
             cmp         #MMU_BANK_TOP + 1
             bcs         @bad_arg
@@ -366,12 +366,24 @@ MM_BANK_FREE:
 
 @done:
             PULL_YX
-            jmp         MM_RETURN
+            jmp         MM_RETURN_NP
 
 @bad_arg:
             lda         #ERR_MEM_BAD_ARG
             sec
             bra         @done
+
+; Common exit for the MMU calls that start with NO_PREEMPT and php: restore the caller's flags, keep C,
+; and PREEMPT (it keeps them)
+MM_RETURN_NP:
+            bcs         :+
+            plp
+            clc
+            jmp         PREEMPT
+:
+            plp
+            sec
+            jmp         PREEMPT
 
 ; Common exit for routines that start with php/sei: restore the caller's I flag, keep C
 MM_RETURN:
@@ -575,8 +587,8 @@ ERROR_OUT_OF_MEMORY:
 ; OUT (failure): .A = ERR_MEM_BAD_ARG, ERR_MEM_NO_HANDLES or ERR_OUT_OF_MEMORY, C = 1
 ; Preserves .X, .Y
 MM_ALLOC:
-            php                                             ; Save caller's I flag
-            sei
+            jsr         NO_PREEMPT                          ; Not switched out meanwhile (IRQs stay on:
+            php                                             ;   only this task's own MMU area is touched)
             PUSH_XY
             sta         ZP_M_SZ1                            ; Size low
             sty         ZP_M_TEMP2                          ; Size high
@@ -682,7 +694,7 @@ MM_ALLOC:
 
 @done:
             PULL_YX
-            jmp         MM_RETURN
+            jmp         MM_RETURN_NP
 
 @bad_arg:
             lda         #ERR_MEM_BAD_ARG
@@ -695,8 +707,8 @@ MM_ALLOC:
 ; OUT (failure): .A = ERR_MEM_NOT_VALID or ERR_MEM_LOCKED, C = 1
 ; Preserves .X, .Y
 MM_FREE:
-            php                                             ; Save caller's I flag
-            sei
+            jsr         NO_PREEMPT                          ; Not switched out meanwhile (IRQs stay on:
+            php                                             ;   only this task's own MMU area is touched)
             PUSH_XY
             jsr         MM_HANDLE_PTR                       ; .A = status
             bcs         @done
@@ -739,7 +751,7 @@ MM_FREE:
 
 @done:
             PULL_YX
-            jmp         MM_RETURN
+            jmp         MM_RETURN_NP
 
 @locked:
             lda         #ERR_MEM_LOCKED
@@ -752,8 +764,8 @@ MM_FREE:
 ; OUT (failure): .A = ERR_MEM_NOT_VALID or ERR_MEM_BAD_ARG, C = 1
 ; Preserves .X, .Y
 MM_READ:
-            php                                             ; Save caller's I flag
-            sei
+            jsr         NO_PREEMPT                          ; Not switched out meanwhile (IRQs stay on:
+            php                                             ;   only this task's own MMU area is touched)
             PUSH_XY
             sty         ZP_M_TEMP                           ; Offset
             jsr         MM_HANDLE_PTR                       ; .A = status
@@ -770,7 +782,7 @@ MM_READ:
 
 @done:
             PULL_YX
-            jmp         MM_RETURN
+            jmp         MM_RETURN_NP
 
 @ref:                                                       ; A reference: through its far pointer
             jsr         MM_ENTRY_FP
@@ -784,8 +796,8 @@ MM_READ:
 ; OUT (failure): .A = ERR_MEM_NOT_VALID or ERR_MEM_BAD_ARG, C = 1
 ; Preserves .X, .Y
 MM_WRITE:
-            php                                             ; Save caller's I flag
-            sei
+            jsr         NO_PREEMPT                          ; Not switched out meanwhile (IRQs stay on:
+            php                                             ;   only this task's own MMU area is touched)
             PUSH_XY
             sty         ZP_M_TEMP                           ; Offset
             jsr         MM_HANDLE_PTR                       ; .A = status
@@ -803,7 +815,7 @@ MM_WRITE:
 
 @done:
             PULL_YX
-            jmp         MM_RETURN
+            jmp         MM_RETURN_NP
 
 @ref:                                                       ; A reference: through its far pointer (ROM,
             jsr         MM_ENTRY_FP                         ;   FP_RO: ERR_MEM_NOT_SUPPORTED)
@@ -820,8 +832,8 @@ MM_WRITE:
 ; OUT (success): .A.Y = pointer (.A = low byte), .X = previous RAM bank (pass it to MM_UNLOCK), C = 0
 ; OUT (failure): .A = ERR_MEM_NOT_VALID or ERR_MEM_NOT_SUPPORTED, C = 1
 MM_LOCK:
-            php                                             ; Save caller's I flag
-            sei
+            jsr         NO_PREEMPT                          ; Not switched out meanwhile (IRQs stay on:
+            php                                             ;   only this task's own MMU area is touched)
             jsr         MM_HANDLE_PTR                       ; .A = status
             bcs         @done
             jsr         MM_IS_REF
@@ -840,7 +852,7 @@ MM_LOCK:
             clc
 
 @done:
-            jmp         MM_RETURN
+            jmp         MM_RETURN_NP
 
 ; Release a pointer from MM_LOCK and restore the RAM bank.
 ; IN: .A = handle, .X = RAM bank to restore (from MM_LOCK)
@@ -848,8 +860,8 @@ MM_LOCK:
 ; OUT (failure): .A = ERR_MEM_NOT_VALID, C = 1 (the RAM bank is restored anyway)
 ; Preserves .X, .Y
 MM_UNLOCK:
-            php                                             ; Save caller's I flag
-            sei
+            jsr         NO_PREEMPT                          ; Not switched out meanwhile (IRQs stay on:
+            php                                             ;   only this task's own MMU area is touched)
             phy
             jsr         MM_HANDLE_PTR                       ; .A = status
             bcc         :+
@@ -876,7 +888,7 @@ MM_UNLOCK:
 
 @done:
             ply
-            jmp         MM_RETURN
+            jmp         MM_RETURN_NP
 
 ; Allocate a chunk from the current task's chunk pages, starting a new chunk page if the size class has
 ; no free chunk.
@@ -1046,8 +1058,8 @@ MM_CHUNK_CLASS:
 ; OUT (failure): .A = ERR_MEM_NOT_VALID, C = 1
 ; Preserves .X, .Y
 MM_FIND:
-            php                                             ; Save caller's I flag
-            sei
+            jsr         NO_PREEMPT                          ; Not switched out meanwhile (IRQs stay on:
+            php                                             ;   only this task's own MMU area is touched)
             PUSH_XY
             sta         ZP_M_SP1                            ; The address
             sty         ZP_M_SP1 + 1
@@ -1090,7 +1102,7 @@ MM_FIND:
 
 @done:
             PULL_YX
-            jmp         MM_RETURN
+            jmp         MM_RETURN_NP
 
 ; Find a free handle table entry in the current task.
 ; OUT (success): ZP_M_HANDLE = handle, ZP_M_HP = its entry, C = 0
@@ -1236,8 +1248,8 @@ MM_ACCESS_SETUP:
 ; IN: .A = task
 ; Preserves .A, .X, .Y
 MM_TASK_RESET:
-            php                                             ; Save caller's I flag
-            sei
+            jsr         NO_PREEMPT                          ; (Not switched out halfway; IRQs stay on: its
+            php                                             ;   parts keep them off only for a moment each)
             PUSH_AXY
             and         #$0F
             pha
@@ -1252,8 +1264,8 @@ MM_TASK_RESET:
             jsr         SH_RESET_TASK
             jsr         IRQ_UNREGISTER_TASK
             PULL_YXA
-            plp                                             ; Restore caller's I flag
-            rts
+            plp
+            jmp         PREEMPT
 
 ; Memory Copy
 ; ZP_TEMP_VEC: From, ZP_TEMP_VEC2: To, .A.Y: Size

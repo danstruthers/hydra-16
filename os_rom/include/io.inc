@@ -1,10 +1,10 @@
 .debuginfo
 
 ; ****************************************************************************
-; IO (see IO_PLAN.md): file descriptors, the device table, the transfer areas, namespaces, H9P requests,
+; IO (see docs/plans/IO_PLAN.md): file descriptors, the device table, the transfer areas, namespaces, H9P requests,
 ; and the drivers' and servers' constants
 
-; ***  IO (see IO_PLAN.md)  ***
+; ***  IO (see docs/plans/IO_PLAN.md)  ***
 
 ; File descriptors: per task, in the task system page after the IRQ tables (IRQ_SPURIOUS ends at $7D9F)
 IO_MAX_FDS          = 12
@@ -13,33 +13,42 @@ IO_FD_TABLE         = $7DA0     ; IO_MAX_FDS x IO_FD_SIZE
 IO_FD_SERVER        = IO_FD_TABLE + 0   ; device table index ($FF = fd not open)
 IO_FD_FID           = IO_FD_TABLE + 1   ; the server's handle for the open file
 IO_FD_MODE          = IO_FD_TABLE + 2   ; IO_MODE_* bits
+IO_FD_FLAGS         = IO_FD_TABLE + 3   ; IO_FDF_* bits (set by IO_OPEN; copied with the fd)
 IO_FD_OFS           = IO_FD_TABLE + 4   ; 32-bit offset
 IO_FD_CLOSED        = $FF
+IO_FDF_CONS         = $01      ; The fd is /dev/cons: WRITE_CHAR puts bytes straight into the serial TX ring
+                                ;   when the task is the foreground one (SER_CONS_TRY), with no IO request
 
 IO_MODE_READ        = $01
 IO_MODE_WRITE       = $02
 IO_MODE_RDWR        = IO_MODE_READ | IO_MODE_WRITE
 IO_MODE_NONBLOCK    = $80       ; reads return ERR_IO_WOULD_BLOCK instead of waiting
 
-; stdio buffers, per task (page $07 is free in every task): when fd 1 / fd 0 isn't the console, WRITE_CHAR
-; collects output in STDOUT_BUF, and GET_CHAR / READ_CHAR read ahead into STDIN_BUF (io.s: STDOUT_PUT,
-; STDIN_GET), so a pipe carries a block per request instead of a byte
+; stdio buffers, per task (page $07 is free in every task): WRITE_CHAR collects output in STDOUT_BUF (for
+; the console, a line at a time: then IO_FLUSH puts it straight into the serial TX ring), and when fd 0 isn't
+; the console, GET_CHAR / READ_CHAR read ahead into STDIN_BUF (io.s: STDOUT_PUT, STDIN_GET), so a pipe
+; carries a block per request instead of a byte
 STDOUT_BUF          = $0700
 STDOUT_BUF_SIZE     = 128
 STDIN_BUF           = $0780
 STDIN_BUF_SIZE      = 128
 
 ; WRITE_CHAR's fast path (on pages 0 and 1, so a buffered byte needs no far call): while the stdout buffer
-; is in use (ZP_OUT_CNT > 0: fd 1 isn't the console), .A goes into it (and it's written out when it's
-; full), and this returns.  Otherwise it goes on, to the slow path after it.  Preserves .A, .X, .Y
+; is in use (ZP_OUT_CNT > 0), .A goes into it, and this returns.  It's written out when it's full, and for
+; the console (ZP_OUT_LINE: line-buffered, as a terminal is) at each LF.  Otherwise it goes on, to the slow path after it.  Preserves .A, .X, .Y
 .macro _M_STDOUT_FAST
             phy
             ldy         ZP_OUT_CNT
-            beq         :++
+            beq         :+++
             sta         STDOUT_BUF,Y
             iny
             sty         ZP_OUT_CNT
-            bpl         :+                          ; (Full at 128)
+            bmi         :+                          ; (Full at 128: write it out)
+            cmp         #ASCII_LF
+            bne         :++
+            bit         ZP_OUT_LINE                 ; An LF, and it's the console: write it out
+            bpl         :++
+:
             jsr         IO_FLUSH
 :
             ply
@@ -127,11 +136,17 @@ SND_CTL_TEST        = 2         ; IO_CTL code: play the test tune, in the backgr
                                 ;   ERR_TASK_BUSY if it's playing already
 SND_CTL_STOP        = 3         ; IO_CTL code: stop the player (and key off all channels)
 
-; Storage: /dev/sd (storage.s, spi.s, sd.s, sd_srv.s; ROM page 3)
-SD_SPI_DEVICE       = 0         ; The SD card's SPI device (header J18)
-SD_STATE_SDSC       = 1         ; SD_STATE: 0 = not started; byte addresses
+; Storage: /dev/sd/N/data and /dev/sd/N/ctl (storage.s, spi.s, sd.s, sd_srv.s; ROM page 3), a card on each
+; SPI device N (0-7; the board's SD socket, header J18, is device 0).  A fid is SD_FID_* | the card.
+SD_MAX_CARDS        = 8
+SD_FID_DATA         = $00       ; /dev/sd/N/data: the card as bytes
+SD_FID_CTL          = $10       ; /dev/sd/N/ctl: its details (read) and commands (write)
+SD_STATE_SDSC       = 1         ; A card's state: 0 = not started; byte addresses
 SD_STATE_SDHC       = 2         ;   block addresses (SDHC, SDXC)
 SD_CTL_INIT         = 1         ; IO_CTL code: start the card again (e.g. after changing it)
+SD_CARD_STATE       = $0200     ; In the storage task's RAM: each card's state (SD_MAX_CARDS bytes)
+SD_CARD_BLOCKS      = $0208     ;   and size in blocks (4 bytes each, from its CSD register)
+SD_CSD              = $0228     ; The last CSD register read (16 bytes)
 
 ; Pipe server: /dev/pipe, in its own Resident task (io_p0.s, pipe_srv.s).  Each pipe has a 256-byte ring
 ; (255 bytes of data) and counts the fds on each end; the fid is the pipe's index.
@@ -152,7 +167,40 @@ SER_RX_BUF          = $0200     ; 256-byte RX ring, in the serial task's RAM
 SER_TX_BUF          = $0300     ; 256-byte TX ring, in the serial task's RAM
 SER_FID_CONS        = 0         ; /dev/cons: reads only for the foreground task
 SER_FID_SER         = 1         ; /dev/ser: the raw port, for any task
+SER_PEND_WAKE_RD    = $01      ; SER_PEND (bit 0): wake the tasks waiting to read
+SER_PEND_WAKE_WR    = $02      ;   (bit 1) wake the tasks waiting to write
+SER_PEND_BREAK      = $04      ;   (bit 2) a break key (Ctrl-C)
+SER_PEND_KILL       = $08      ;   (bit 3) a kill key (Ctrl-\)
+SER_PEND_CMD        = $10      ;   (bit 4) a console command: the key after the prefix key (SER_PEND_KEY)
+SER_PEND_BEEP       = $80      ;   (bit 7) a BEL was sent: the YM2151 beeps
+SER_FID_CTL         = 2         ; /dev/ser/ctl: the port's settings, as text: "b9600 l8 pn s1" (read), and
+                                ;   commands to change them (write): bN (rate), lN (data bits 5-8), pX (parity:
+                                ;   n none, o odd, e even, m mark, s space), sN (stop bits 1-2)
 SER_CTL_FOREGROUND  = 1         ; IO_CTL code: .Y = the new foreground task (it gets the console input)
+SER_CTL_RATE        = 2         ; IO_CTL code: .Y = the baud rate (SER_RATE_*)
+SER_CTL_FORMAT      = 3         ; IO_CTL code: .Y = the character format (SER_FMT_*)
+; (A change waits until what's queued has been sent, then takes effect for the next byte both ways.)
+SER_FMT_BITS        = $03       ; Format: data bits - 5 (0-3: 5-8 bits)
+SER_FMT_PARITY      = $1C       ;   parity, shifted left 2: SER_PAR_*
+SER_FMT_STOP2       = $20       ;   2 stop bits (not with 8 data bits and parity; 1.5 with 5 bits, no parity)
+SER_FMT_8N1         = 3         ;   8 data bits, no parity, 1 stop bit (the boot format)
+SER_PAR_NONE        = 0
+SER_PAR_ODD         = 1
+SER_PAR_EVEN        = 2
+SER_PAR_MARK        = 3
+SER_PAR_SPACE       = 4
+SER_RATE_300        = 0         ; Baud rates (index in the serial driver's rate table, ser_srv.s)
+SER_RATE_600        = 1
+SER_RATE_1200       = 2
+SER_RATE_1800       = 3
+SER_RATE_2400       = 4
+SER_RATE_3600       = 5
+SER_RATE_4800       = 6
+SER_RATE_7200       = 7
+SER_RATE_9600       = 8
+SER_RATE_19200      = 9
+SER_RATE_115200     = 10
+SER_RATES           = 11
 ; Console control keys (the serial IRQ handler acts on the break, kill and prefix keys; /dev/cons on the EOF keys)
 SER_KEY_BREAK       = $03       ; Ctrl-C: break the foreground task (back to its prompt: TASK_SET_BREAK)
 SER_KEY_KILL        = $1C       ; Ctrl-\: kill the foreground task (the shell starts again)

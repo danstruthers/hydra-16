@@ -1376,7 +1376,7 @@ def_word "mlen", "mlen", 0
     jsr spush_0
     jmp next
 ;
-;-------- MMU handles (see os_rom MMU_PLAN.md)
+;-------- MMU handles (see docs/plans/MMU_PLAN.md)
 ;
 ; ( bytes flags -- h )  allocate MMU memory; flags 0 = task RAM, 1 = 8K RAM banks (AI_PAGED)
 def_word "halloc", "halloc", 0
@@ -1431,7 +1431,7 @@ def_word "mmtest", "mmtest", 0
     jsr MMU_TEST
     jmp next
 ;
-;-------- IO: files (see os_rom IO_PLAN.md).  A failed call gives !IO ERR!, and 'ioerr' the IO layer's
+;-------- IO: files (see docs/plans/IO_PLAN.md).  A failed call gives !IO ERR!, and 'ioerr' the IO layer's
 ;         error code ($70 not found, $71 bad fd, $72 wrong mode, $73 would block, $75 no fds, ...).
 ;         fds 0, 1, 2 are the console (key, emit); buffers must be in task RAM ($0000-$7FFF).
 ;
@@ -1590,6 +1590,69 @@ def_word "unmount", "unmount", 0
 def_word "ns", "ns", 0
     jsr IO_NS_LIST
     jmp next
+;
+; ( sz -- )  change the serial port's settings: commands for /dev/ser/ctl, e.g. q^b19200^ stty, or
+;            q^l7 pe s1^ stty (b = baud rate, l = data bits, p = parity n/o/e/m/s, s = stop bits).  It
+;            waits until the output so far has gone; then switch the terminal to match
+def_word "stty", "stty", 0
+    jsr spull_0
+    ldx #TEMP1
+    jsr SZTEXT          ; .A.Y = the commands
+    bcs STTYFAIL
+    sta TEMP2
+    sty TEMP2+1
+    lda #<STTY_CTL
+    ldy #>STTY_CTL
+    ldx #IO_MODE_WRITE
+    jsr IO_OPEN
+    bcs STTYFAIL
+    sta TEMP3           ; the fd
+    lda TEMP2
+    sta ZP_IO_BUF
+    lda TEMP2+1
+    sta ZP_IO_BUF+1
+    ldy #0              ; the length
+STTYLEN:
+    lda (TEMP2),y
+    beq STTYWRITE
+    iny
+    bne STTYLEN
+STTYWRITE:
+    sty ZP_IO_CNT
+    stz ZP_IO_CNT+1
+    lda TEMP3
+    jsr IO_WRITE
+    php
+    pha
+    lda TEMP3
+    jsr IO_CLOSE
+    pla
+    plp
+    bcs STTYFAIL
+    jmp next
+STTYFAIL:
+    jmp IOFAIL
+;
+; ( -- )  show the serial port's settings (/dev/ser/ctl), e.g. b9600 l8 pn s1
+def_word "stty?", "sttyq", 0
+    lda #<STTY_CTL
+    ldy #>STTY_CTL
+    ldx #IO_MODE_READ
+    jsr IO_OPEN
+    bcs STTYFAIL
+    sta TEMP3
+STTYSHOW:
+    ldx TEMP3
+    jsr IO_GETC
+    bcs STTYSHOWN       ; (the end)
+    PRINT_CHAR
+    bra STTYSHOW
+STTYSHOWN:
+    lda TEMP3
+    jsr IO_CLOSE
+    jmp next
+STTY_CTL:
+    .byte "/dev/ser/ctl", 0
 ;
 ; ( sz-path sz-2 -- ) -> .A.Y = the path's text, ZP_IO_BUF = the second's (C = 1: not strings)
 NSARGS:

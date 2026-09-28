@@ -50,7 +50,7 @@ The fd table lives in the task system page, after the IRQ tables: **`$7DA0-$7DFF
 | 0 | 1 | Server (device table index; `$FF` = fd not open) |
 | 1 | 1 | Fid: the server's own handle for the open file |
 | 2 | 1 | Mode: read / write / read-write, flags (e.g. append) |
-| 3 | 1 | Reserved |
+| 3 | 1 | Flags: `IO_FDF_CONS` (the fd is `/dev/cons`: `WRITE_CHAR` from the foreground task puts bytes straight into the serial TX ring, `SER_CONS_TRY`) |
 | 4 | 4 | Offset (32-bit, for filesystems; devices ignore it) |
 
 * **fd 0, 1, 2** are stdin, stdout and stderr.  The shell starts with all three on `/dev/cons`.  `SPAWN_TASK`/`TASK_PREPARE` copy the parent's open fds (and tell each server with a `dup`-style H9P request so its reference counts stay right).
@@ -120,10 +120,10 @@ The CPU runs at 3.58 MHz; the board can also run it at 7.16 MHz (the W65C02S goe
 | Name | Server | Notes |
 | :--- | :----- | :---- |
 | `/dev/cons` | Serial driver (task `$F`) | The console: read = keyboard, write = screen.  Replaces the "serial-capture task": whoever reads `cons` gets the input |
-| `/dev/ser`, `/dev/serctl` | Serial driver | Raw serial port; control (baud rate, echo) |
+| `/dev/ser`, `/dev/ser/ctl` | Serial driver (fast paths: `serfast.s`) | Raw serial port; its settings (**done**: `serctl.s`: `b9600 l8 pn s1` read and written as text, `IO_CTL` `SER_CTL_RATE` / `SER_CTL_FORMAT`, HyForth `stty` / `stty?`; 9600 8N1 at boot; a change waits for the queued output to go) |
 | `/dev/snd` | Sound driver (task `$E`) | Write YM2151 register/value pairs; `IO_CTL` `SND_CTL_INIT` / `SND_CTL_TEST` (the test tune, played by a background player task) / `SND_CTL_STOP` (instead of a `/dev/sndctl` file); HyForth's sound words use it |
 | `/dev/null`, `/dev/zero` | IO layer | The usual |
-| `/dev/sd` | Storage task (`$C`) | The SD card as bytes (block cache, writes straight through) |
+| `/dev/sd/N/data`, `/dev/sd/N/ctl` | Storage task (`$C`) | SD card N (SPI device 0-7) as bytes (block cache, writes straight through); its type and size, and `init` |
 | Later: `/sd/...` | SD card filesystem server (HydraFS) | Uses `SPI` in the BIOS; first real use of offsets, `H9_CREATE` and directories |
 | `/dev/pipe` | Pipe server (task `$D`) | `IO_PIPE`: two fds on a 255-byte ring in the pipe task's RAM (8 pipes); end of file when the writers are gone.  HyForth's `|` runs a pipeline through them |
 | Later: `/proc/<task>/...`, `/env/...` | System servers | Task status, memory use, notes; per-task environment variables |
@@ -180,6 +180,7 @@ All calls: C = 0 on success, C = 1 with the error in .A.  Thunks after `$F853`.
 8. **(Done)** Per-task namespaces (`ns.s`): `IO_MOUNT`, `IO_BIND`, `IO_UNMOUNT`, `IO_NS_LIST` (HyForth `mount`, `bind`, `unmount`, `ns`), inherited by new tasks and cleared when a task ends; `IO_OPEN` resolves names through them.  Servers that walk longer paths come with the filesystem (step 9).
 9. The SD card filesystem server (`/sd`): HydraFS (`HYDRAFS.md`).
     * **(Done)** The storage layer, on BIOS ROM page 3 (`page3.s`, `spi.s`, `sd.s`, `sd_srv.s`; `storage.s` on page 0), in a Resident storage task (`$C`) that owns the SPI bus.  SPI: bit-banged on the VIA's port B, mode 0, device select through the board's 74HC138 (device 0 = header J18; `SD_SPI_DEVICE`).  SD card: `SD_INIT` (CMD0, CMD8, ACMD41, CMD58: SDHC/SDXC block addresses or SDSC byte addresses), `SD_READ_BLOCK` / `SD_WRITE_BLOCK` (512-byte blocks, with timeouts).  `/dev/sd`: the card as bytes at the fd's offset (IO_SEEK; the first 4 GB), through a one-block cache, writes straight through; the card starts at the first open (`ERR_IO_DEVICE` without one), `SD_CTL_INIT` starts it again.  The emulator has an SD card on device 0 (`--sd image`).  HyForth `seek`.
+    * **(Done)** HydraFS build steps 1-2 (`HYDRAFS.md`).  Up to 8 cards, one per SPI device: `/dev/sd/N/data` (the card as bytes, as `/dev/sd` was) and `/dev/sd/N/ctl` (read: `sdhc 7580 MB 15523840 blocks`, `sdsc ...` or `none`; write: `init`).  `SD_INIT` reads the card's size from its CSD register (CMD9; v1 and v2), into per-card state in the storage task's RAM (`SD_CARD_STATE`, `SD_CARD_BLOCKS`); the block layer works on card `SD_DEV`, and the cache remembers its card.  The emulator answers CMD9 and can make a card standard capacity (`--sdsc N`: byte addresses, CSD v1).  `sim/tools/hydrafs.js` makes and reads HydraFS images on the PC.  Fixed: `IO_SERVE` returned C = 0 for a server's errors below `ERR_IO_WOULD_BLOCK` (`$70`-`$72`: not found, bad fd, wrong mode), so e.g. opening `/dev/proc/z` "worked".
     * **Next**: the HydraFS server (`HYDRAFS.md`), in the storage task on the block layer (so it reaches the whole card): directories, reading and writing files; mounted at `/sd`.  (HydraFS was chosen over FAT32: see `HYDRAFS.md`.)
 10. `/proc` and `/env`; notes.
     * **(Done)** `/dev/proc` (`proc_srv.s`, page 2, served in the reading task): the task list, `/dev/proc/N/status`, and `/dev/proc/N/ctl` (`kill`, `break`, `fg`).  Notes, so far: `TASK_SIGNAL` (a break or a kill for a task, and a kill for the tasks it started), used by the console keys, the ctl files and HyForth's `kill`.  Task switching: `CONS_SET_FG` brings a task to the front (HyForth `fg`, the ctl files, Ctrl-] then the task); only the foreground task and the tasks it started write to `/dev/cons` (the others wait, like Unix job control); a foreground task that ends hands the console to the task that started it (`CONS_RELEASE`).  HyForth `shell` starts another shell, `ps` lists the tasks.

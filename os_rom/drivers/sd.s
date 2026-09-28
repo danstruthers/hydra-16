@@ -4,6 +4,8 @@
 ; SD card, SPI mode (BIOS ROM page 3, the storage page; included inside `.scope PAGE3`, see all.s).  Block
 ; level: SD_INIT, SD_READ_BLOCK and SD_WRITE_BLOCK move 512-byte blocks (sectors) by number, for the
 ; /dev/sd server and (later) the HydraFS server.  Runs in the storage task (its ZP: SD_* in zero.s).
+;   The card is SPI device SD_DEV (0-7); each has its state in SD_CARD_STATE and its size in blocks in
+;   SD_CARD_BLOCKS (the storage task's RAM, set by SD_INIT).
 ;   SDHC / SDXC cards take block numbers; SDSC (v1, and v2 standard capacity) cards take byte addresses
 ;   (block * 512), set up by SD_INIT.
 ;   Errors: C = 1 with .A = ERR_IO_DEVICE (no card, or it didn't answer), ERR_IO_NOT_READY (SD_INIT not
@@ -13,6 +15,7 @@
 
 SD_CMD0             = 0         ; GO_IDLE_STATE
 SD_CMD8             = 8         ; SEND_IF_COND
+SD_CMD9             = 9         ; SEND_CSD (the card's size)
 SD_CMD16            = 16        ; SET_BLOCKLEN
 SD_CMD17            = 17        ; READ_SINGLE_BLOCK
 SD_CMD24            = 24        ; WRITE_BLOCK
@@ -24,14 +27,15 @@ SD_TOKEN_DATA       = $FE       ; Start of a data block (both ways)
 SD_INIT_TRIES       = 1000      ; ACMD41 tries (about a second at 3.58 MHz)
 SD_TOKEN_TRIES      = 4000      ; Bytes to wait for a data token or the end of busy (about 0.3 s / try)
 
-; Start the card: SDHC/SDXC or SDSC.  OUT: C = 0 (SD_STATE = SD_STATE_SDHC or SD_STATE_SDSC); or C = 1,
-; .A = error.  Modifies: .A, .X, .Y
+; Start card SD_DEV: SDHC/SDXC or SDSC, and read its size.  OUT: C = 0 (its SD_CARD_STATE = SD_STATE_SDHC
+; or SD_STATE_SDSC, and SD_CARD_BLOCKS its size); or C = 1, .A = error.  Modifies: .A, .X, .Y
 SD_INIT:
-            stz         SD_STATE
+            ldx         SD_DEV
+            stz         SD_CARD_STATE,X
             jsr         SPI_INIT
             lda         #10                                 ; 80 clocks, nothing selected
             jsr         SPI_IDLE_CLOCKS
-            lda         #SD_SPI_DEVICE
+            lda         SD_DEV
             jsr         SPI_SELECT
             ldy         #10                                 ; CMD0: to SPI mode, idle
 
@@ -115,7 +119,12 @@ SD_INIT:
             lda         #SD_STATE_SDSC
 
 @done:
-            sta         SD_STATE
+            sta         SD_TMP                              ; (The state)
+            jsr         SD_READ_SIZE
+            bcs         SD_REFUSED
+            lda         SD_TMP
+            ldx         SD_DEV
+            sta         SD_CARD_STATE,X
             jsr         SD_END
             clc
             rts
@@ -140,10 +149,11 @@ SD_NOT_READY:
 ; Read block SD_LBA (32 bits) into the 512 bytes at SD_BUF.  OUT: C = 0; or C = 1, .A = error
 ; Modifies: .A, .X, .Y
 SD_READ_BLOCK:
-            lda         SD_STATE
+            ldx         SD_DEV
+            lda         SD_CARD_STATE,X
             beq         SD_NOT_READY
             jsr         SD_BLOCK_ARG
-            lda         #SD_SPI_DEVICE
+            lda         SD_DEV
             jsr         SPI_SELECT
             lda         #SD_CMD17
             jsr         SD_CMD
@@ -175,10 +185,11 @@ SD_READ_BLOCK:
 ; Write the 512 bytes at SD_BUF to block SD_LBA.  OUT: C = 0; or C = 1, .A = error
 ; Modifies: .A, .X, .Y
 SD_WRITE_BLOCK:
-            lda         SD_STATE
+            ldx         SD_DEV
+            lda         SD_CARD_STATE,X
             beq         SD_NOT_READY
             jsr         SD_BLOCK_ARG
-            lda         #SD_SPI_DEVICE
+            lda         SD_DEV
             jsr         SPI_SELECT
             lda         #SD_CMD24
             jsr         SD_CMD
@@ -265,6 +276,109 @@ SD_CMD:
             ora         #0
             rts
 
+; Read card SD_DEV's CSD register (into SD_CSD) and its size in blocks (into its SD_CARD_BLOCKS).  The
+; card must be selected.  CSD v2 (SDHC, SDXC): (C_SIZE + 1) * 1024 blocks.  CSD v1 (SDSC):
+; (C_SIZE + 1) << (C_SIZE_MULT + 2) bytes of READ_BL_LEN (as a shift), in 512-byte blocks.
+; OUT: C = 0; or C = 1 (no answer, or a CSD version we don't know).  Modifies: .A, .X, SD_LBA, SD_ARG
+SD_READ_SIZE:
+            jsr         SD_ARG_ZERO
+            lda         #SD_CMD9
+            jsr         SD_CMD
+            bne         @fail
+            jsr         SD_TOKEN_WAIT                       ; The data token
+            cmp         #SD_TOKEN_DATA
+            beq         @read
+
+@fail:
+            sec
+            rts
+
+@read:
+            ldx         #0
+
+@csd:                                                       ; 16 bytes, MSB (bit 127) first
+            jsr         SPI_RECV
+            sta         SD_CSD,X
+            inx
+            cpx         #16
+            bne         @csd
+            jsr         SPI_RECV                            ; (The CRC: not checked)
+            jsr         SPI_RECV
+            stz         SD_LBA + 3
+            lda         SD_CSD                              ; CSD_STRUCTURE: bits 127-126
+            and         #$C0
+            beq         @v1
+            cmp         #$40
+            bne         @fail
+
+            lda         SD_CSD + 9                          ; v2: C_SIZE = bits 69-48
+            sta         SD_LBA
+            lda         SD_CSD + 8
+            sta         SD_LBA + 1
+            lda         SD_CSD + 7
+            and         #$3F
+            sta         SD_LBA + 2
+            ldx         #10                                 ; (* 1024)
+            bra         @plus_one
+
+@v1:                                                        ; v1: C_SIZE = bits 73-62
+            lda         SD_CSD + 8
+            sta         SD_LBA
+            lda         SD_CSD + 7
+            sta         SD_LBA + 1
+            lda         SD_CSD + 6
+            and         #$03
+            sta         SD_LBA + 2
+            ldx         #6
+
+@down:
+            lsr         SD_LBA + 2
+            ror         SD_LBA + 1
+            ror         SD_LBA
+            dex
+            bne         @down
+            lda         SD_CSD + 10                         ; C_SIZE_MULT = bits 49-47
+            asl                                             ; (C = bit 47)
+            lda         SD_CSD + 9
+            and         #$03
+            rol                                             ; (C = 0)
+            sta         SD_ARG                              ; (Free: the command is done)
+            lda         SD_CSD + 5                          ; READ_BL_LEN = bits 83-80
+            and         #$0F
+            adc         SD_ARG
+            sec
+            sbc         #7                                  ; Shift: C_SIZE_MULT + 2 + READ_BL_LEN - 9
+            tax
+
+@plus_one:                                                  ; SD_LBA = (C_SIZE + 1) << .X
+            inc         SD_LBA
+            bne         @up
+            inc         SD_LBA + 1
+            bne         @up
+            inc         SD_LBA + 2
+
+@up:
+            asl         SD_LBA
+            rol         SD_LBA + 1
+            rol         SD_LBA + 2
+            rol         SD_LBA + 3
+            dex
+            bne         @up
+            lda         SD_DEV                              ; Its SD_CARD_BLOCKS
+            asl
+            asl
+            tax
+            lda         SD_LBA
+            sta         SD_CARD_BLOCKS,X
+            lda         SD_LBA + 1
+            sta         SD_CARD_BLOCKS + 1,X
+            lda         SD_LBA + 2
+            sta         SD_CARD_BLOCKS + 2,X
+            lda         SD_LBA + 3
+            sta         SD_CARD_BLOCKS + 3,X
+            clc
+            rts
+
 ; SD_ARG = 0.  Preserves .A, .X, .Y
 SD_ARG_ZERO:
             stz         SD_ARG
@@ -273,9 +387,10 @@ SD_ARG_ZERO:
             stz         SD_ARG + 3
             rts
 
-; SD_ARG = block SD_LBA's address: the block number (SDHC), or * 512 (SDSC).  Modifies: .A
+; SD_ARG = block SD_LBA's address: the block number (SDHC), or * 512 (SDSC).  Modifies: .A, .X
 SD_BLOCK_ARG:
-            lda         SD_STATE
+            ldx         SD_DEV
+            lda         SD_CARD_STATE,X
             cmp         #SD_STATE_SDHC
             bne         @bytes
             lda         SD_LBA + 3                          ; (MSB first)

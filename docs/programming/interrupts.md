@@ -1,0 +1,98 @@
+## **Interrupts**
+
+How the OS dispatches interrupts, and how a driver handles one.  Sources: `os_rom/kernel/irq.s`, `os_rom/kernel/common.s`.  The hardware side (16 prioritised lines, the vector RAM, the `n ^ 7` numbering) is in the [Hardware Reference](../hardware.md#interrupts).  Part of the [Programmer's Guide](README.md).
+
+### **IRQ lines**
+
+| IRQ | Source | Registered by |
+| ---: | :----- | :------------ |
+| 0 | VIA: timer 1 (the scheduler's tick), timer 2 | The system task (tick); the serial driver (timer 2, WDC ACIA builds) |
+| 1 | ACIA (serial) | The serial driver (which also registers a VIA handler for timer 2, used in WDC ACIA builds) |
+| 2, 3 | Slot 0, A and B | |
+| 4 | YM2151 | The sound driver (a placeholder: it doesn't use the chip's timers yet, so it claims nothing) |
+| 5-9 | Slots 1-5, A | |
+| 10-14 | Slots 1-5, B | |
+| 15 | Software interrupts | `SWI_REGISTER` |
+
+Line 0 has the highest priority.  In code, name a line with `IRQ_NUMBER(n)`, or with the names in `include/hw.inc` (`IRQ_NUMBER_ONBOARD_VIA`, `IRQ_NUMBER_SLOT_1_L`, ...).  `IRQ_NUMBER(n)` is `n ^ 7`: the vector RAM entry the hardware uses for line n.
+
+### **How an interrupt is handled**
+
+1. **The stub.**  At boot, `IRQ_INIT` points the vectors at the IRQ stubs in the COMMON block (all but the VIA's and the ACIA's: [below](#the-fast-handlers-the-tick-and-the-serial-port)) (`$FD00`, the same on every page).  Each stub loads its line's number, saves `W` and switches to ROM page 0, wherever the CPU was.
+2. **The dispatcher** (`IRQ_DISPATCH`, page 0) looks the line up in the registration table.  It runs each registered handler **in the task that registered it** (`TASK_CALL`): on that task's stack, with its zero page, RAM bank and MMU area.  So a driver's handler sees the driver's own state, whichever task was interrupted.
+3. **Claiming.**  A handler returns C = 1 if it claimed the interrupt, which stops the chain.  An IRQ that none of its handlers claims is counted in the interrupted task's unclaimed-IRQ counters (`$7D90-$7D9F`, by line).  It's then offered to every registered handler, so a misrouted interrupt still gets cleared.
+4. **Returning.**  The dispatcher switches back to the interrupted task, or switches task if the tick asked for one.  It restores `W` and returns with `rti` from the COMMON block.
+
+The registration tables live in the task system page (`$7D00`) and are copied into all 16 tasks.  So the dispatcher reads them from whichever task was interrupted, without switching.  Registering updates all 16 copies.
+
+### **The fast handlers: the tick and the serial port**
+
+The dispatcher and its `TASK_CALL` cost about 650 cycles per interrupt, far too much for the serial port at high rates (at 115200 baud a byte arrives every 320 cycles, and the 65C51 holds only one).  So the two busiest interrupts bypass it (`io/serfast.s`, BIOS page 2):
+* **Their vectors:** `IRQ_INIT` points the VIA's (line 0) and the ACIA's (line 1) vectors at `VIA_IRQ_STUB` and `SER_IRQ_STUB` in the COMMON block, which switch to page 2.
+* **No stack switch:** instead of running in the driver's task, a fast handler briefly switches `T` to it, a "quick look": its zero page and RAM, with no stack use until `T` is back.
+* **`SER_IRQ_FAST`** moves the received byte into the receive ring and the next byte from the transmit ring to the ACIA, and wakes the tasks waiting to read or write.
+  * **Cost:** about 60–90 cycles per byte.
+  * **The rest goes through the dispatcher:** the break and kill keys, console commands and the bell are recorded in `SER_PEND` for the serial driver's own handler (`SER_DO_PENDING`).
+* **`VIA_IRQ_FAST`** counts the tick and wakes the sleepers due, in the system task's zero page.
+  * **Then** it asks the dispatcher for a task switch (`IRQ_TICK`).
+  * **Other VIA sources** (timer 2, in WDC ACIA builds) go to the registered handlers as before.
+* **The registered handlers** for lines 0 and 1 (`VIA_IRQ_HANDLER`, `SERIAL_IRQ_HANDLER`) are still there, and are what the dispatcher calls for that rare work.
+
+### **Registering a handler**
+
+| Call | In | Out |
+| :--- | :- | :-- |
+| `IRQ_REGISTER` | `.X` = `IRQ_NUMBER(n)`, `.A.Y` = handler (page 0) | C = 0; or C = 1, `ERR_IRQ_CHAIN_FULL` (2 handlers per line) |
+| `IRQ_UNREGISTER` | `.X` = `IRQ_NUMBER(n)`, `.A.Y` = handler | C = 0; or C = 1, `ERR_IRQ_NOT_FOUND` |
+| `SWI_REGISTER` | `.X` = software interrupt number (`$0-$F`), `.A.Y` = handler | as above (one handler per number) |
+| `SWI_UNREGISTER` | `.X` = number, `.A.Y` = handler | |
+
+The handler runs in the **calling task**, so call these from the driver's own task: from its `init` (which `DRV_START` runs there).  A task's handlers are removed when it ends.
+
+### **Writing a handler**
+
+```
+; IN: .A = the line (0-14), or the software interrupt number; I flag set
+; OUT: C = 1 claimed, C = 0 not mine
+MY_IRQ_HANDLER:
+            lda     MY_DEVICE_STATUS
+            bpl     @not_mine                   ; (e.g. bit 7 = this device interrupted)
+            ...                                 ; clear the cause, move the data
+            sec
+            rts
+@not_mine:
+            clc
+            rts
+```
+
+**Rules:**
+* **Page 0.**  It must be a page 0 address: the dispatcher calls it on page 0.  A driver whose code is on another page puts a small page 0 handler in front.
+* **Clear the cause** before returning; the IRQ input is level-triggered.
+* **Don't re-enable interrupts**, and don't use far gates, `YIELD`, IO calls or anything else that can wait.
+* **Keep it short:** at 19200 baud a byte arrives about every 1,860 cycles (at 115200, about 320), and the ACIA holds only one.
+* **What it may touch:** `.A`, `.X`, `.Y`.  It may call `IO_WAKE` to wake a task waiting on the device.
+* **Bank registers:** preserve `$00` and `U` if it changes them.  The dispatcher gives it its own task's `$00`, but `U` is global.
+* **Asking for a task switch:** a handler returns C = 1 with `.A` = `SCHED_RESCHED_A` and `.Y` = `SCHED_RESCHED_Y`.  The tick handler does this.
+
+### **Software interrupts**
+
+A software interrupt is a `BRK` with `V` pointing at IRQ 15's vector.  The number (`$0-$F`) goes in `V`'s upper nibble:
+
+```
+            lda     #3                          ; software interrupt 3
+            jsr     SW_INT                      ; saves and restores V, runs the handler, returns
+```
+
+`SW_INT` disables interrupts between setting `V` and its `brk`, so another task can't change `V` in between.  The dispatcher reads the number from `V` and runs the handler registered with `SWI_REGISTER`, in its task.
+
+### **NMI**
+
+The NMI vector points at the COMMON block's `NMI_ENTRY`: it switches to page 0 and calls `NMI_HANDLER`, which does nothing yet.  Nothing on the board drives NMI; a slot card can.
+
+### **Timing notes**
+
+* The dispatcher and the `TASK_CALL` into the handler's task cost about 650 cycles per interrupt; the fast handlers about 60–90.
+* **Keep sections with interrupts off short.**  Anything longer than a character's time holds off the serial port and loses input: about 320 cycles at 115200 baud, 620 at 57600, 3,700 at 9600.
+  * **Instead:** use `NO_PREEMPT` when only a task switch must be prevented, as the MMU calls do.
+  * **For long loops that need interrupts off:** open a moment for them between iterations (`cli`, `nop`, `sei`), as `FP_COPY`, `SH_RESET_TASK` and `SCHED_PICK` do.
+  * **Checked by a test:** the `irqs-off` regression test fails if any stretch after boot exceeds 5,000 cycles, and the emulator's report lists the longest.

@@ -16,7 +16,7 @@
 //   * IRQ vector RAM ($FFFE/F): written at index V[0..3]; read at index IRQ_NUMBER(n) = n ^ 7 of the lowest
 //     active IRQ line, or V[0..3] when no line is active (and for BRK)
 //   * Rockwell 65C51 ACIA at $FF10 (IRQ line 1): TX/RX with IRQs, output captured, input from --input; a
-//     character takes the time its baud rate, word length, parity and stop bits give (1.8432 MHz crystal)
+//     character takes the time its baud rate, word length, parity and stop bits give (its 1.790 MHz clock)
 //   * VIA timer 1 (one-shot / free-running, IFR/IER) on IRQ line 0: the scheduler's tick; timer 2
 //     (one-shot); port B's SPI; other VIA registers are plain storage
 //   * YM2151: busy for 64 of its clocks (3.58 MHz) after each data write (writes while it's busy are
@@ -24,6 +24,13 @@
 //   RAM and the pseudo-registers power up random, like the hardware.
 //
 // Usage: node hydrasim.js [options]
+//   -i, --interactive   Use the Hydra from this terminal: it runs in real time, the keys typed go to its
+//                       serial port and its output comes straight back (no report at the end; runs until
+//                       quit, or --cycles).  Ctrl-A is the emulator's prefix: Ctrl-A x quits, Ctrl-A r
+//                       presses the reset button, Ctrl-A s shows the state, Ctrl-A h lists them, Ctrl-A
+//                       Ctrl-A types a Ctrl-A.  With piped input, it stops 3 s after the input runs out.
+//                       E.g. node hydrasim.js -i --sd card.img
+//   --speed N           Interactive: N times real time (default 1; 0 = as fast as the PC can go)
 //   --rom DIR           ROM images directory (default: ../os_rom/bin next to this script)
 //   --cycles N          CPU cycles to run (default 20000000; ~5.6 s at 3.58 MHz)
 //   --clock 3.58|7.16   The CPU clock in MHz, as the ROM was built for (CPU_CLOCK_MULT; default 3.58): it
@@ -45,6 +52,9 @@
 //   --sd [N:]FILE       An SD card (SDHC) on SPI device N (0-7; default 0), backed by the image FILE
 //                       (512-byte blocks; writes go to the file).  Up to 8, one per device
 //                       (e.g. --sd card0.img --sd 3:C:/images/card3.img)
+//   --paste             Type the --input (and interactive input) at the ACIA's full line rate, back to back like a
+//                       paste, whether the ROM keeps up or not: bytes arriving while the last is still unread are
+//                       lost, as on the chip, and counted in the report (default: the next key waits for it)
 //   --raw               Print serial output as-is (default shows ESC as <ESC>)
 //   --trace N           Show the last N instructions (default 25)
 //   --dump ADDR[:LEN][@TASK]   Hex dump task RAM after the run (e.g. --dump 7D90:16@1)
@@ -66,13 +76,15 @@ const path = require('path');
 
 // ---- options
 const opt = { rom: path.join(__dirname, '..', 'os_rom', 'bin'), cycles: 20000000, input: '', modules: 3,
-  aciaLine: 1, stuckIrq: -1, model: '', raw: false, trace: 25, dumps: [], watches: [], pcWatches: [], sharedU: 16, ramFault: null, sds: [], acia: 'rockwell', marks: [], profile: -1, seed: -1, ymLog: false, clock: 3.579545 };
+  aciaLine: 1, stuckIrq: -1, model: '', raw: false, trace: 25, dumps: [], watches: [], pcWatches: [], sharedU: 16, ramFault: null, sds: [], sdsc: [], interactive: false, speed: 1, acia: 'rockwell', marks: [], profile: -1, seed: -1, ymLog: false, clock: 3.579545 };
 const argv = process.argv.slice(2);
 for (let i = 0; i < argv.length; i++) {
   const a = argv[i], next = () => argv[++i];
   switch (a) {
     case '--rom': opt.rom = next(); break;
-    case '--cycles': opt.cycles = +next(); break;
+    case '--cycles': opt.cycles = +next(); opt.cyclesSet = true; break;
+    case '-i': case '--interactive': opt.interactive = true; break;
+    case '--speed': opt.speed = +next(); if (!(opt.speed >= 0)) { console.error('--speed N (0 = as fast as it goes)'); process.exit(1); } break;
     case '--input': opt.input = next().replace(/\\r/g, '\r').replace(/\\n/g, '\n').replace(/\\x([0-9A-Fa-f]{2})/g, (m, h) => String.fromCharCode(parseInt(h, 16))).replace(/\\w/g, '\u0100'); break;
     case '--modules': opt.modules = +next(); break;
     case '--shared-u': opt.sharedU = +next(); break;
@@ -84,7 +96,9 @@ for (let i = 0; i < argv.length; i++) {
     case '--sd': { const f = next(), m = /^([0-7]):(.+)$/.exec(f), dev = m ? +m[1] : 0;
       if (opt.sds.some(c => c.dev === dev)) { console.error('Two SD cards on device ' + dev); process.exit(1); }
       opt.sds.push({ dev, file: m ? m[2] : f }); break; }
+    case '--sdsc': opt.sdsc.push(+next()); break;
     case '--raw': opt.raw = true; break;
+    case '--paste': opt.paste = true; break;
     case '--trace': opt.trace = +next(); break;
     case '--dump': opt.dumps.push(next()); break;
     case '--pc': { const m = /^(?:([0-9A-Fa-f]):)?([0-9A-Fa-f]+)$/.exec(next()); opt.pcWatches.push({ pc: parseInt(m[2], 16), page: m[1] === undefined ? -1 : parseInt(m[1], 16) }); break; }
@@ -118,18 +132,19 @@ let out = '';
 let ymReg = 0; const ymKeyOns = [];                          // YM2151: the register selected, and the key-ons written
 let aciaCmd = 0, aciaCtrl = 0, aciaTdre = 1, aciaTxTimer = 0, aciaIrq = 0, aciaRdrf = 0, aciaRx = 0, aciaOverruns = 0;
 const aciaWdc = opt.acia === 'wdc';
-const rxQueue = [...opt.input]; let rxDelay = 200000;
+const rxQueue = [...opt.input]; let rxDelay = 200000, rxLost = 0;   // (--paste: bytes lost to overruns)
 const via = new Uint8Array(16);
 // VIA timer 1 (the scheduler's tick): counter, latch, IFR/IER; one-shot or free-running (ACR bit 6)
 let viaT1 = 0xFFFF, viaT1Latch = 0xFFFF, viaT1On = false, viaIFR = 0, viaIER = 0;
 let viaT2 = 0xFFFF, viaT2LatchL = 0xFF, viaT2On = false;         // Timer 2: one-shot
 // SPI on VIA port B (PB0 SCLK, PB1 /CS enable, PB2 MOSI, PB3-PB5 device 0-7, PB6 = 0 for the board's
 // devices, PB7 MISO; mode 0), with up to 8 SD cards (SPI mode, SDHC: block addresses) on devices 0-7,
-// each backed by an image file (--sd [N:]FILE)
+// each backed by an image file (--sd [N:]FILE); --sdsc N makes device N's a standard capacity card (byte
+// addresses, CSD v1)
 const sdCards = [];                                             // By device: a card, or undefined
 for (const { dev, file } of opt.sds) {
   const fd = fs.openSync(file, 'r+');
-  sdCards[dev] = { dev, fd, blocks: Math.floor(fs.fstatSync(fd).size / 512), bit: 0, inB: 0, cur: 0xFF, miso: 1,
+  sdCards[dev] = { dev, fd, blocks: Math.floor(fs.fstatSync(fd).size / 512), sdsc: opt.sdsc.includes(dev), bit: 0, inB: 0, cur: 0xFF, miso: 1,
     q: [], cmd: [], idle: true, app: false, acmd41: 0, writeAt: -1, wr: null };
 }
 let spiSel = null, spiClk = 0;                                  // The selected card (null: none), SCLK
@@ -137,7 +152,9 @@ function sdReset(sd) {                                          // Deselected: i
   sd.bit = 0; sd.cmd = []; sd.q = []; sd.wr = null; sd.writeAt = -1; sd.cur = 0xFF;
 }
 function sdCommand(sd, c) {                                     // One 6-byte command: its answer bytes
-  const idx = c[0] & 0x3F, arg = ((c[1] << 24) | (c[2] << 16) | (c[3] << 8) | c[4]) >>> 0, idle = sd.idle ? 1 : 0;
+  const idx = c[0] & 0x3F, idle = sd.idle ? 1 : 0;
+  let arg = ((c[1] << 24) | (c[2] << 16) | (c[3] << 8) | c[4]) >>> 0;
+  if (sd.sdsc && (idx === 17 || idx === 24)) { if (arg % 512) return [0x20 | idle]; arg /= 512; }   // SDSC: byte addresses (address error)
   if (sd.app) {
     sd.app = false;
     if (idx === 41) { if (++sd.acmd41 >= 3) sd.idle = false; return [sd.idle ? 1 : 0]; }
@@ -147,7 +164,8 @@ function sdCommand(sd, c) {                                     // One 6-byte co
     case 0: sd.idle = true; sd.acmd41 = 0; return [0x01];
     case 8: return [idle, 0x00, 0x00, c[3] & 0x0F, c[4]];        // R7: voltage accepted, the pattern back
     case 55: sd.app = true; return [idle];
-    case 58: return [idle, 0xC0, 0xFF, 0x80, 0x00];              // OCR: powered up, CCS (SDHC)
+    case 58: return [idle, sd.sdsc ? 0x80 : 0xC0, 0xFF, 0x80, 0x00];   // OCR: powered up, CCS (SDHC)
+    case 9: return [idle, 0xFF, 0xFE, ...sdCsd(sd), 0x12, 0x34];  // CSD: R1, a wait, the token, 16 bytes, CRC
     case 16: return [idle];
     case 17: {
       if (sd.idle || arg >= sd.blocks) return [0x40 | idle];     // (Parameter error)
@@ -159,6 +177,19 @@ function sdCommand(sd, c) {                                     // One 6-byte co
       sd.writeAt = arg; return [0x00];                           // Then: the data block
     default: return [0x04 | idle];                               // Illegal command
   }
+}
+function sdCsd(sd) {                                            // The CSD register: the card's size
+  const b = [0x40, 0x0E, 0x00, 0x32, 0x5B, 0x59, 0x00, 0, 0, 0, 0x7F, 0x80, 0x0A, 0x40, 0x00, 0x01];
+  if (!sd.sdsc) {                                               // v2: (C_SIZE + 1) * 1024 blocks
+    const c = Math.max(1, Math.floor(sd.blocks / 1024)) - 1;
+    b[7] = (c >> 16) & 0x3F; b[8] = (c >> 8) & 0xFF; b[9] = c & 0xFF;
+  } else {                                                      // v1: (C_SIZE + 1) << (C_SIZE_MULT + 2) blocks of 2^READ_BL_LEN
+    const len = sd.blocks <= 4096 * 512 ? 9 : sd.blocks <= 4096 * 1024 ? 10 : 11;
+    const c = Math.max(1, Math.floor(sd.blocks / (512 << (len - 9)))) - 1;   // (C_SIZE_MULT 7: * 512)
+    b[0] = 0x00; b[5] = 0x50 | len; b[6] = (c >> 10) & 3; b[7] = (c >> 2) & 0xFF; b[8] = ((c & 3) << 6) | 0x3F;
+    b[9] = 0xE0 | 3; b[10] = 0x80 | 0x7F;
+  }
+  return b;
 }
 function sdByte(sd, b) {                                        // Byte b came in: the next byte out
   if (sd.wr) {                                                  // A block for CMD24: token, 512 bytes, CRC
@@ -223,9 +254,11 @@ function viaTick(n) {                                          // (n can span se
   }
 }
 // The ACIA's character time in CPU cycles: its baud rate (control register: the internal generator, or 0 =
-// the external clock / 16), the word length and stop bits, and parity (command register).  Its crystal
-// (SER_CLK) is 1.8432 MHz: the rates are exact.
-const ACIA_BAUD = [1843200 / 16, 50, 75, 109.92, 134.58, 150, 300, 600, 1200, 1800, 2400, 3600, 4800, 7200, 9600, 19200];
+// the external clock / 16), the word length and stop bits, and parity (command register).  Its clock
+// (SER_CLK) is the board's 14.318 MHz crystal / 8, 1.790 MHz, not the 1.8432 MHz the rates are named for:
+// every rate is 2.9% slow, as on the board.
+const ACIA_BAUD = [1843200 / 16, 50, 75, 109.92, 134.58, 150, 300, 600, 1200, 1800, 2400, 3600, 4800, 7200, 9600, 19200]
+  .map(r => r * (14318180 / 8) / 1843200);
 function aciaCharCycles() {
   const bits = 1 + (8 - ((aciaCtrl >> 5) & 3)) + ((aciaCmd & 0x20) ? 1 : 0) + ((aciaCtrl & 0x80) ? 2 : 1);
   return Math.round(bits * opt.clock * 1e6 / ACIA_BAUD[aciaCtrl & 15]);
@@ -342,6 +375,15 @@ function sbc(v) {
 const cmp = (r, v) => { const t = r - v; P = (P & ~C) | (t >= 0 ? C : 0); setNZ(t & 0xFF); };
 function interrupt(vec, brk) { push(PC >> 8); push(PC & 0xFF); push((P | 0x20) & (brk ? 0xFF : ~B)); P = (P | I) & ~D; PC = vec; }
 
+// The longest stretches with IRQs off (the I flag set), from the first key typed: [cycles, from, to, at]
+let typedAt = -1, iOffAt = -1, iOffFrom = '';
+const iOffTop = [];
+function iOffNote(n, from, to, at) {
+  const k = iOffTop.findIndex(e => e[1] === from);             // (One entry per starting place)
+  if (k >= 0) { if (iOffTop[k][0] < n) iOffTop[k] = [n, from, to, at]; }
+  else iOffTop.push([n, from, to, at]);
+  iOffTop.sort((a, b) => b[0] - a[0]); if (iOffTop.length > 8) iOffTop.pop();
+}
 const trace = [], pcHist = new Map(), profHist = new Map(), profTask = new Array(16).fill(0);
 let profCount = 0;
 PC = rd16(0xFFFC); P |= I;                                  // RESET
@@ -354,10 +396,11 @@ function sync(t) {
   if (aciaTxTimer > 0 && (aciaTxTimer -= d) <= 0) {                // (A character's time)
     aciaTxTimer = 0; aciaTdre = 1; if (!aciaWdc && (aciaCmd & 0x0C) === 0x04) aciaIrq = 1;
   }
-  if (rxQueue.length && (rxDelay -= d) <= 0 && !aciaRdrf) {
+  if (rxQueue.length && (rxDelay -= d) <= 0 && (!aciaRdrf || opt.paste)) {
     const c = rxQueue.shift();
     if (c === '\u0100') rxDelay = 2000000;                  // \w: wait before the next key
-    else { aciaRx = c.charCodeAt(0); aciaRdrf = 1; if (!(aciaCmd & 2)) aciaIrq = 1; rxDelay = 20000; }
+    else if (aciaRdrf) { rxLost++; rxDelay = aciaCharCycles(); }   // (--paste: an overrun: the ACIA keeps the old byte)
+    else { if (typedAt < 0) typedAt = t; aciaRx = c.charCodeAt(0); aciaRdrf = 1; if (!(aciaCmd & 2)) aciaIrq = 1; rxDelay = opt.paste ? aciaCharCycles() : 20000; }
   }
 }
 // Cycles to the next device event (for a WAI: the CPU sleeps until then)
@@ -384,10 +427,16 @@ const DECIMAL_X = new Uint8Array(256);
 for (const o of [0x61, 0x65, 0x69, 0x6D, 0x71, 0x72, 0x75, 0x79, 0x7D, 0xE1, 0xE5, 0xE9, 0xED, 0xF1, 0xF2, 0xF5, 0xF9, 0xFD]) DECIMAL_X[o] = 1;
 let crossed = 0, extra = 0;                                     // This instruction's page crossing and extra cycles
 
-while (cyc < opt.cycles && !halted) {
+// Run until cycle limit (or a halt)
+function run(limit) {
+while (cyc < limit && !halted) {
   sync(cyc);
   if (irqLine() >= 0) { waiting = false; if (!(P & I)) { interrupt(irqVector(), false); cyc += 7; continue; } }
-  if (waiting) { cyc += Math.max(1, Math.min(nextEvent(), opt.cycles - cyc)); continue; }
+  if (waiting) { cyc += Math.max(1, Math.min(nextEvent(), limit - cyc)); continue; }
+  if (typedAt >= 0) {                                          // IRQs-off stretches, from the first key typed
+    if (P & I) { if (iOffAt < 0) { iOffAt = cyc; iOffFrom = hx(W, 1) + ':' + hx(PC, 4); } }
+    else if (iOffAt >= 0) { iOffNote(cyc - iOffAt, iOffFrom, hx(W, 1) + ':' + hx(lastPC, 4), iOffAt); iOffAt = -1; }
+  }
   trace.push([W, T, PC, A, X, Y, S, P]); if (trace.length > opt.trace) trace.shift();
   lastPC = PC;
   for (const w of opt.pcWatches) if (w.pc === PC && (w.page < 0 || w.page === W))
@@ -478,12 +527,17 @@ while (cyc < opt.cycles && !halted) {
   const k = W * 65536 + PC; pcHist.set(k, (pcHist.get(k) || 0) + 1);
   if (opt.profile >= 0 && cyc >= opt.profile) { const pk = T * 1048576 + W * 65536 + lastPC; profHist.set(pk, (profHist.get(pk) || 0) + 1); profTask[T]++; profCount++; }
 }
+}
 
 // ---- report
+function report() {
 console.log('--- serial output ---\n' + (opt.raw ? out : out.replace(/\x1b/g, '<ESC>')));
 if (halted) console.log('--- halted: ' + halted);
 console.log('--- last instructions (W T PC   A  X  Y  S  P) ---');
 for (const [w, t, pc, a, x, y, s, p] of trace) console.log(hx(w, 1), hx(t, 1), hx(pc, 4), hx(a), hx(x), hx(y), hx(s), hx(p));
+if (iOffTop.length) console.log('--- longest with IRQs off, from the first key typed (cycles: from -> to, at cycle): ' +
+  iOffTop.map(([n, a, b, at]) => n + ': ' + a + ' -> ' + b + ' at ' + at).join(', '));
+if (opt.paste) console.log('--- ACIA: ' + rxLost + ' received byte(s) lost (they arrived while the last one was still unread)');
 if (aciaWdc) console.log('--- WDC ACIA: ' + aciaOverruns + ' byte(s) written while one was still being sent (garbled on the chip)');
 console.log('--- hottest PCs (W:PC count) ---');
 for (const [k, c] of [...pcHist.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10)) console.log(hx(k >> 16, 1) + ':' + hx(k & 0xFFFF, 4), c);
@@ -494,7 +548,7 @@ if (ymKeyOns.length > 1) { const t = ymKeyOns.map(k => +k.split(' ').pop()); let
 if (opt.profile >= 0) profileReport();
 console.log('--- lowest stack pointer by task (free bytes; W:PC at the time): ' + stackLow.map((v, t) => v > 0xFF ? null : hx(t, 1) + ':' + hx(v) + ' (' + (v + 1) + '; ' + hx(stackLowAt[t][0], 1) + ':' + hx(stackLowAt[t][1], 4) + ')').filter(x => x).join(', '));
 if (ymLost) console.log('--- YM2151: ' + ymLost + ' data write(s) while it was busy (lost on the chip)');
-console.log('--- cycles ' + cyc + ' (' + (cyc / (opt.clock * 1e6)).toFixed(3) + ' s at ' + opt.clock.toFixed(2) + ' MHz), T=' + hx(T, 1) + ' U=' + hx(U, 1) + ' V=' + hx(V) + ' W=' + hx(W, 1) + ', vector RAM: ' + [...vecRam].map(v => hx(v, 4)).join(' '));
+console.log('--- cycles ' + cyc + ' (' + (cyc / (opt.clock * 1e6)).toFixed(3) + ' s at ' + opt.clock.toFixed(2) + ' MHz), T=' + hx(T, 1) + ' U=' + hx(U, 1) + ' V=' + hx(V) + ' W=' + hx(W, 1) + ', ACIA control ' + hx(aciaCtrl) + ' command ' + hx(aciaCmd) + ', vector RAM: ' + [...vecRam].map(v => hx(v, 4)).join(' '));
 for (const d of opt.dumps) {
   const m = /^([0-9A-Fa-f]+)(?::(\d+))?(?:@([0-9A-Fa-f]))?$/.exec(d);
   if (!m) { console.log('bad --dump ' + d); continue; }
@@ -502,6 +556,7 @@ for (const d of opt.dumps) {
   console.log('--- task ' + hx(task, 1) + ' $' + hx(start, 4) + ':');
   for (let a = start; a < start + len; a += 16)
     console.log(hx(a, 4) + ': ' + [...taskRam[task].slice(a, Math.min(a + 16, start + len, 0x8000))].map(v => hx(v)).join(' '));
+}
 }
 
 // ---- profile report: instructions per routine (the nearest label at or below the PC, on its ROM page)
@@ -539,4 +594,85 @@ function profileReport() {
     profTask.map((c, t) => c ? hx(t, 1) + ' ' + (100 * c / profCount).toFixed(1) + '%' : '').filter(x => x).join(', ') + ') ---');
   for (const [n, c] of [...byName.entries()].sort((a, b) => b[1] - a[1]).slice(0, 30))
     console.log((100 * c / profCount).toFixed(1).padStart(5) + '%  ' + String(c).padStart(9) + '  ' + n);
+}
+
+// ---- run: in one go with a report (batch), or live on the terminal (--interactive)
+if (!opt.interactive) { run(opt.cycles); report(); }
+else interactive();
+
+// Interactive: the terminal is the Hydra's serial terminal.  The machine runs in real time (--speed), keys
+// go to the ACIA as they're typed, and its output goes straight to the terminal.  Ctrl-A is the emulator's
+// own prefix key (as in QEMU or screen): Ctrl-A x quits, Ctrl-A r presses the reset button, Ctrl-A s shows
+// the machine's state, Ctrl-A h lists them, Ctrl-A Ctrl-A types a Ctrl-A.
+function interactive() {
+  const cps = opt.clock * 1e6, stdin = process.stdin, stdout = process.stdout, tty = stdin.isTTY;
+  const now = () => Number(process.hrtime.bigint()) / 1e9;
+  if (!opt.cyclesSet) opt.cycles = Infinity;
+  let sent = 0, prefix = false, quit = '', eof = false, stopAt = Infinity;
+  let baseT = now(), baseC = cyc;
+  const say = t => stdout.write('\r\n[hydrasim] ' + t + '\r\n');
+  const status = () => 'cycle ' + cyc + ' (' + (cyc / cps).toFixed(1) + ' s at ' + opt.clock.toFixed(2) + ' MHz' +
+    (opt.speed ? (opt.speed !== 1 ? ', ' + opt.speed + 'x real time' : '') : ', as fast as it goes') + '), task ' + hx(T, 1) +
+    ', ROM page ' + hx(W, 1) + ', PC ' + hx(PC, 4) + (waiting ? ' (WAI: idle)' : '') +
+    (opt.sds.length ? ', SD: ' + opt.sds.map(c => c.dev + ':' + path.basename(c.file)).join(' ') : '');
+  const help = () => say('Ctrl-A then: x quit, r reset (the reset button), s status, h this help, Ctrl-A a Ctrl-A.  ' +
+    'Everything else goes to the Hydra (Ctrl-C breaks, Ctrl-] switches tasks, Ctrl-D ends input).');
+
+  function onKey(b) {
+    if (prefix) {
+      prefix = false;
+      const k = String.fromCharCode(b).toLowerCase();
+      if (b === 1) rxQueue.push('\x01');
+      else if (k === 'x' || k === 'q') quit = 'quit (Ctrl-A x)';
+      else if (k === 'r') { hwReset(); say('reset'); }
+      else if (k === 's') say(status());
+      else help();
+      return;
+    }
+    if (b === 1) { prefix = true; return; }
+    if (!tty && b === 0x0A) b = 0x0D;                           // (Piped text: a line ends in CR, as Enter sends)
+    rxQueue.push(String.fromCharCode(b));
+  }
+  if (tty) stdin.setRawMode(true);
+  stdin.on('data', buf => { for (const b of buf) if (!(!tty && b === 0x0D)) onKey(b); });
+  stdin.on('end', () => { eof = true; });
+  stdin.resume();
+
+  function flush() {
+    if (sent < out.length) { stdout.write(out.slice(sent)); sent = out.length; }
+    if (out.length > 1 << 16) { out = out.slice(-1024); sent = out.length; }   // (Keep only a tail for --mark)
+  }
+  function finish(why) {
+    flush();
+    say('stopped: ' + why + '; ' + status());
+    if (tty) stdin.setRawMode(false);
+    process.exit(halted ? 1 : 0);
+  }
+  function tick() {
+    const t = now();
+    if (opt.speed > 0) {
+      let target = baseC + (t - baseT) * cps * opt.speed;
+      if (target - cyc > cps * opt.speed * 0.25) { baseT = t; baseC = cyc; target = cyc + cps * opt.speed * 0.01; }   // (A slow host: don't race to catch up)
+      run(Math.min(target, opt.cycles, stopAt));
+    } else while (now() - t < 0.02 && !halted && cyc < Math.min(opt.cycles, stopAt)) run(Math.min(cyc + 200000, opt.cycles, stopAt));
+    flush();
+    if (eof && !rxQueue.length && stopAt === Infinity) stopAt = cyc + cps * 3;   // Piped input used up: 3 s more, then stop
+    if (halted) return finish('halted: ' + halted);
+    if (quit) return finish(quit);
+    if (cyc >= opt.cycles) return finish('--cycles reached');
+    if (cyc >= stopAt) return finish('end of input');
+    setTimeout(tick, opt.speed > 0 ? 4 : 0);
+  }
+  say('interactive: the Hydra\'s serial console.  Ctrl-A x quits, Ctrl-A h for help.');
+  tick();
+}
+
+// The reset button (RESB): the CPU, the VIA, the ACIA and the YM2151 reset; RAM, the pseudo-registers
+// (plain latches) and the SD cards keep their state, as on the board
+function hwReset() {
+  via.fill(0); viaIFR = 0; viaIER = 0; viaT1On = false; viaT2On = false;
+  spiPortB((via[0] & via[2]) | (~via[2] & 0x7F));              // (Port B: all inputs, so nothing is selected)
+  aciaCmd = 0; aciaCtrl = 0; aciaTdre = 1; aciaTxTimer = 0; aciaIrq = 0; aciaRdrf = 0;
+  ymBusyUntil = 0; waiting = false;
+  P = (P | I) & ~D; PC = rd16(0xFFFC);
 }

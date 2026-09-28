@@ -26,11 +26,14 @@
 .include "io/io.s"
 .include "io/ns.s"              ; Per-task namespaces (IO_MOUNT, IO_BIND)
 .include "io/ser_srv.s"         ; The serial driver's file server (/dev/cons, /dev/ser)
+.include "io/serctl.s"          ; Its settings: /dev/ser/ctl, the rate and format IO_CTLs
+.include "io/serfast.s"         ; Its fast paths: the ACIA's interrupt, console output and input
 .include "io/snd_srv.s"         ; The sound driver's file server (/dev/snd)
 .include "drivers/snd_test.s"   ; The sound driver's test tune
 .include "io/pipe_srv.s"        ; The pipe server (/dev/pipe)
 .include "io/proc_srv.s"        ; The tasks (/dev/proc)
 .endscope
+IRQ_FAST_P2     = PAGE2::IRQ_FAST_P2    ; (For the COMMON block's fast IRQ stubs, assembled before page 2)
 
 ; BIOS ROM page 3 (W = 3): storage.  Its own scope, so page 3 code binds to the page 3 gates in page3.s
 .scope PAGE3

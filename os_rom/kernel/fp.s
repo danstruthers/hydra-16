@@ -159,7 +159,17 @@ FP_COPY:
 
 @count:
             cpy         ZP_FP_N
-            bne         @byte                               ; (ZP_FP_N = 0: .Y comes round to 0 after 256)
+            beq         @end                                ; (ZP_FP_N = 0: .Y comes round to 0 after 256)
+            tsx                                             ; A moment for IRQs between the bytes (FP_GET puts
+            lda         $0102,X                             ;   back what it maps), if the caller had them on:
+            and         #$04                                ;   a name copy mustn't hold off a serial byte
+            bne         @byte                               ;   (the caller's P, under the .Y)
+            cli
+            nop
+            sei
+            bra         @byte
+
+@end:
             lda         ZP_FP_MODE
             beq         @copied
             lda         #ERR_MEM_BAD_ARG                    ; A string that doesn't end in time

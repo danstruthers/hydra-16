@@ -3,7 +3,7 @@
 .segment "IRQ"
 
 ; ****************************************************************************
-; IRQ dispatch (see MMU_PLAN.md, IO subsystem)
+; IRQ dispatch (see docs/plans/MMU_PLAN.md, IO subsystem)
 ;
 ;   Every IRQ (and BRK) enters through a stub in the COMMON block, which saves W and switches to ROM
 ;   page 0, then jumps to IRQ_DISPATCH.  The dispatcher looks the IRQ up in the registration table and
@@ -20,6 +20,8 @@
 IRQ_MAX_CHAIN       = 2                                     ; Handlers per hardware IRQ
 IRQ_ENTRY_SIZE      = 3                                     ; {task, handler.w}
 IRQ_LOGICAL_SW      = 15                                    ; Logical IRQ# of the S/W interrupt (IRQ_NUMBER_SW)
+IRQ_TICK            = $10                                   ; Not an IRQ: the fast tick handler's (VIA_IRQ_FAST) "switch
+                                                            ;   tasks if it's time" (IRQ_FAST_SLOW)
 IRQ_NO_TASK         = $FF                                   ; Empty table entry
 
 IRQ_SYS_BASE        = MMU_SYS_PAGE * $100                   ; Task system page ($7D00)
@@ -85,6 +87,14 @@ IRQ_INIT:
             inx
             cpx         #16
             bne         @vector_loop
+            ldx         #IRQ_NUMBER_ONBOARD_SERIAL          ; The ACIA and the VIA: their fast handlers instead
+            lda         #<SER_IRQ_STUB                      ;   (io/serfast.s), which only go through the
+            ldy         #>SER_IRQ_STUB                      ;   dispatcher for the rare work and task switches
+            jsr         IRQ_SET_VECTOR
+            ldx         #IRQ_NUMBER_ONBOARD_VIA
+            lda         #<VIA_IRQ_STUB
+            ldy         #>VIA_IRQ_STUB
+            jsr         IRQ_SET_VECTOR
             PULL_YXA
             plp                                             ; Restore caller's I flag
             clc
@@ -120,6 +130,8 @@ IRQ_DISPATCH:
             phx
             ldx         ZP_TC_TASK
             phx
+            cmp         #IRQ_TICK                           ; From the fast tick handler: a task switch?
+            beq         @tick
             cmp         #IRQ_LOGICAL_SW
             beq         @swi
             sta         ZP_IRQ_NUM
@@ -160,6 +172,11 @@ IRQ_DISPATCH:
             adc         #IRQ_SWI_OFFSET
             tax
             jsr         IRQ_CALL_ENTRY
+            bra         @done
+
+@tick:
+            lda         #1                                  ; (As the tick handler's SCHED_RESCHED would)
+            sta         ZP_IRQ_RESCHED
 
 @done:
             lda         ZP_IRQ_RESCHED                      ; A handler asked for a task switch (timer tick)?

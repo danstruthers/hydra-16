@@ -71,6 +71,12 @@ ZP_TC_P:
     .res  1
 ZP_TC_FROM:             ; calling task
     .res  1
+ZP_TICK_T:              ; the fast tick handler (VIA_IRQ_FAST, in the system task's ZP): the interrupted
+    .res  1             ;   task and ROM page
+ZP_TICK_W:
+    .res  1
+ZP_TC_HOLD:             ; the calling task holds NO_PREEMPT: so does the call (TC_GO)
+    .res  1
 
 ; IRQ DISPATCH / REGISTRATION (see irq.s)
 ZP_IRQ_NUM:             ; logical IRQ# (or S/W interrupt #) being dispatched
@@ -129,6 +135,8 @@ ZP_FP_SAVE:             ; FP_MAP: the RAM bank, paged ROM bank and U it replaced
     .res  3
 ZP_IRQ_RESCHED:         ; an IRQ handler asked for a task switch
     .res  1
+ZP_IN_SCHED:            ; non-zero: this task is in SCHED_SWITCH (IRQs can come in during SCHED_PICK, but
+    .res  1             ;   they mustn't start another switch: SCHED_CAN_PREEMPT)
 ZP_SCHED_CNT:           ; SCHED_PICK loop count
     .res  1
 ZP_TICKS:               ; the tick count (valid in the system task: VIA_IRQ_HANDLER; TICKS_GET)
@@ -178,6 +186,8 @@ ZP_IO_SAVEB:            ; server side: RAM bank / U before IO_SRV_MAP
 ZP_IO_SAVEU:
     .res  1
 ZP_OUT_CNT:             ; bytes in the task's stdout buffer (STDOUT_BUF; STDOUT_PUT)
+    .res  1
+ZP_OUT_LINE:            ; bit 7: stdout is the console, so the buffer is written out at each LF too
     .res  1
 ZP_IN_POS:              ; the task's stdin read-ahead (STDIN_BUF; STDIN_GET): the next byte, and the
     .res  1             ;   bytes in it
@@ -273,6 +283,14 @@ TASK_ZP     SER_RD_WAIT, 2          ; Tasks waiting to read (bit = task), woken 
 TASK_ZP     SER_WR_WAIT, 2          ; Tasks waiting to write, woken when the TX ring has room (or the
                                     ;   foreground changes: background tasks wait to write to /dev/cons)
 TASK_ZP     SER_PREFIX, 1           ; Non-zero: the console prefix key came, the next key is a command
+TASK_ZP     SER_RATE, 1             ; The port's settings (SER_CONFIG): the baud rate (SER_RATE_*)
+TASK_ZP     SER_FORMAT, 1           ;   the character format (SER_FMT_*)
+TASK_ZP     SER_BIT_CYC, 2          ;   a bit's time in CPU cycles
+TASK_ZP     SER_T2_CHAR, 2          ;   a character's time (and a bit's margin): WDC ACIA pacing (VIA timer 2)
+TASK_ZP     SER_IRQ_W, 1            ; The fast ACIA handler (SER_IRQ_FAST): the interrupted ROM page
+TASK_ZP     SER_IRQ_T, 1            ;   and task
+TASK_ZP     SER_PEND, 1             ;   what it left for the driver's handler (SER_PEND_*: SER_DO_PENDING)
+TASK_ZP     SER_PEND_KEY, 1         ;   the console command key (SER_PEND_CMD)
 TASK_ZP_END
 
 ; Storage task ZP (valid in the storage task: SPI, the SD card and its server; spi.s, sd.s, sd_srv.s)
@@ -280,7 +298,7 @@ TASK_ZP_BEGIN
 TASK_ZP     SPI_PORT, 1             ; Port B for the selected device (/CS enable, device, MOSI high)
 TASK_ZP     SPI_IN, 1               ; The byte coming in
 TASK_ZP     SPI_OUT, 1              ; The byte going out
-TASK_ZP     SD_STATE, 1             ; 0 = not started, SD_STATE_SDSC, SD_STATE_SDHC
+TASK_ZP     SD_DEV, 1               ; The card (SPI device 0-7) SD_INIT, SD_READ_BLOCK and SD_WRITE_BLOCK use
 TASK_ZP     SD_R1, 1                ; The card's last answer (for diagnosis)
 TASK_ZP     SD_TMP, 1
 TASK_ZP     SD_COUNT, 2             ; Tries left
@@ -289,8 +307,10 @@ TASK_ZP     SD_LBA, 4               ; Block number (for SD_READ_BLOCK / SD_WRITE
 TASK_ZP     SD_BUF, 2               ;   and its 512 bytes
 TASK_ZP     SD_CACHE, 2             ; The block cache (512 bytes)
 TASK_ZP     SD_CBLOCK, 4            ;   the block in it
+TASK_ZP     SD_CCARD, 1             ;   its card
 TASK_ZP     SD_CVALID, 1            ;   <> 0: it's there
 TASK_ZP     SD_CLIENT, 1            ; The server: the request's task
+TASK_ZP     SD_FID, 1               ;   its fid (SD_FID_* | the card)
 TASK_ZP     SD_OP, 1                ;   H9_READ or H9_WRITE
 TASK_ZP     SD_POS, 4               ;   the offset
 TASK_ZP     SD_LEFT, 2              ;   bytes left

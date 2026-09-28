@@ -1,23 +1,31 @@
 .debuginfo
 
 ; ****************************************************************************
-; The storage task's file server: /dev/sd, the SD card as one big file of bytes (BIOS ROM page 3, the
-; storage page; included inside `.scope PAGE3`, see all.s).  The storage task (STORAGE_TASK_NUM) owns
-; the SPI bus, so its requests run one at a time.  The HydraFS server will live here too, on the same
-; block cache.
-;   Open: starts the card (SD_INIT) if it isn't yet.
-;   Read / write: at the fd's offset (IO_SEEK), through a one-block cache (SD_CACHE, 512 bytes from the
-;         MMU); writes go through to the card at once.  The offset is 32 bits, so /dev/sd reaches the
-;         first 4 GB of the card (the HydraFS server uses block numbers, for all of it).
-;   Ctl: SD_CTL_INIT starts the card again (e.g. after changing it).
-; Server ZP (the storage task's): SD_* (zero.s); ZP_IO_REQ (IO_SRV_MAP).
+; The storage task's file server: /dev/sd, the SD cards (BIOS ROM page 3, the storage page; included
+; inside `.scope PAGE3`, see all.s).  The storage task (STORAGE_TASK_NUM) owns the SPI bus, so its
+; requests run one at a time.  The HydraFS server will live here too, on the same block cache.
+;   /dev/sd/N/data      card N (SPI device 0-7) as one big file of bytes.  Open: starts the card (SD_INIT)
+;                       if it isn't yet.  Read / write: at the fd's offset (IO_SEEK), through a one-block
+;                       cache (SD_CACHE, 512 bytes from the MMU); writes go through to the card at once.
+;                       The offset is 32 bits, so this reaches the first 4 GB of the card (the HydraFS
+;                       server uses block numbers, for all of it).
+;   /dev/sd/N/ctl       read: the card, as a line of text: "sdhc 7580 MB 15523840 blocks" (or sdsc), or
+;                       "none" (it starts the card first if it isn't yet).  Write: a command: "init"
+;                       starts the card again (e.g. after changing it).
+;   Ctl (either file): SD_CTL_INIT starts the card again.
+; Server ZP (the storage task's): SD_* (zero.s); ZP_IO_REQ (IO_SRV_MAP).  Each card's state and size:
+; SD_CARD_STATE, SD_CARD_BLOCKS (the storage task's RAM).
 
 .segment "STORAGE_P3"
 
 ; The storage task's init (from STORAGE_INIT on page 0, in the task): the block cache, SPI idle.
 ; OUT: C = 0; or C = 1, .A = error
 STORAGE_INIT3:
-            stz         SD_STATE                            ; (The card starts at the first open)
+            ldx         #SD_MAX_CARDS - 1                   ; (The cards start at their first open)
+:
+            stz         SD_CARD_STATE,X
+            dex
+            bpl         :-
             stz         SD_CVALID
             jsr         SPI_INIT
             lda         #<512
@@ -36,49 +44,381 @@ STORAGE_INIT3:
 ; IN: .A = request, .X = client, .Y = fid
 SD_SERVE:
             stx         SD_CLIENT
-            cmp         #H9_READ
-            beq         SD_RW
-            cmp         #H9_WRITE
-            beq         SD_RW
+            sty         SD_FID
+            pha
+            tya
+            and         #SD_MAX_CARDS - 1
+            sta         SD_DEV                              ; The card (not for H9_OPEN: it has no fid)
+            pla
             cmp         #H9_OPEN
-            beq         @open
+            beq         SD_OPEN
+            cmp         #H9_READ
+            beq         SD_REQ_RW
+            cmp         #H9_WRITE
+            beq         SD_REQ_RW
             cmp         #H9_CTL
-            beq         @ctl
+            beq         SD_REQ_CTL
             cmp         #H9_STAT
-            beq         @bad
+            beq         SD_BAD
 
-@ok:                                                        ; H9_CLUNK, H9_DUP
+SD_OK:                                                      ; H9_CLUNK, H9_DUP
             lda         #0
             clc
             rts
 
-@open:
-            lda         SD_STATE
-            bne         @ok                                 ; (Started already)
+SD_REQ_RW:
+            ldx         SD_FID
+            cpx         #SD_FID_CTL
+            bcs         :+
+            jmp         SD_RW
+:
+            cmp         #H9_READ
+            bne         :+
+            jmp         SD_CTL_READ
+:
+            jmp         SD_CTL_WRITE
 
-@init:
-            stz         SD_CVALID
-            jsr         SD_INIT
-            bcc         @ok
-            rts
-
-@ctl:
+SD_REQ_CTL:
+            ldx         SD_CLIENT
             jsr         IO_SRV_MAP
             ldy         #IO_BLK_CTL_CODE
             lda         (ZP_IO_REQ),Y
             jsr         IO_SRV_UNMAP
             cmp         #SD_CTL_INIT
-            beq         @init
+            bne         SD_BAD
 
-@bad:
+SD_RESTART:                                                 ; Start card SD_DEV (again)
+            jsr         SD_START
+            bcc         SD_OK
+            rts
+
+SD_BAD:
             lda         #ERR_IO_BAD_REQ
             sec
             rts
 
-; A read or write: .A = H9_READ / H9_WRITE.  Up to 256 bytes at the offset, a block (or two) at a time.
+; Start card SD_DEV (SD_INIT), forgetting the cache.  OUT: C = 0; or C = 1, .A = error
+SD_START:
+            stz         SD_CVALID
+            jmp         SD_INIT
+
+; The rest of the name is in the data area: "/N/data" or "/N/ctl" (N = 0-7)
+SD_OPEN:
+            ldx         SD_CLIENT
+            jsr         IO_SRV_MAP
+            inc         ZP_IO_REQ + 1                       ; The data area
+            ldy         #0
+            lda         (ZP_IO_REQ),Y
+            cmp         #'/'
+            bne         @not_found
+            iny
+            lda         (ZP_IO_REQ),Y
+            sec
+            sbc         #'0'
+            cmp         #SD_MAX_CARDS
+            bcs         @not_found
+            sta         SD_DEV
+            iny
+            lda         (ZP_IO_REQ),Y
+            cmp         #'/'
+            bne         @not_found
+            iny
+            sty         SD_TMP                              ; (Where the file's name starts)
+            ldx         #SD_S_DATA - SD_NAMES
+            jsr         SD_MATCH
+            bcc         @data
+            ldy         SD_TMP
+            ldx         #SD_S_CTL - SD_NAMES
+            jsr         SD_MATCH
+            bcs         @not_found
+            dec         ZP_IO_REQ + 1
+            jsr         IO_SRV_UNMAP
+            lda         #SD_FID_CTL
+            ora         SD_DEV
+            clc
+            rts
+
+@data:
+            dec         ZP_IO_REQ + 1
+            jsr         IO_SRV_UNMAP
+            ldx         SD_DEV
+            lda         SD_CARD_STATE,X
+            bne         :+                                  ; (Started already)
+            jsr         SD_START
+            bcs         @done
+:
+            lda         SD_DEV                              ; (SD_FID_DATA | the card)
+            clc
+
+@done:
+            rts
+
+@not_found:
+            dec         ZP_IO_REQ + 1
+            jsr         IO_SRV_UNMAP
+            lda         #ERR_IO_NOT_FOUND
+            sec
+            rts
+
+; Does the name at (ZP_IO_REQ),Y end with the name at SD_NAMES,X?  OUT: C = 0 yes.  Modifies: .A, .X, .Y
+SD_MATCH:
+            lda         SD_NAMES,X
+            cmp         (ZP_IO_REQ),Y
+            bne         @no
+            inx
+            iny
+            ora         #0
+            bne         SD_MATCH                            ; (Both ended: a match)
+            clc
+            rts
+
+@no:
+            sec
+            rts
+
+SD_NAMES:
+SD_S_DATA:  .byte   "data", 0
+SD_S_CTL:   .byte   "ctl", 0
+
+; Read the ctl file: make its text in the data area, then hand over what's after the fd's offset (up to
+; the count)
+SD_CTL_READ:
+            ldx         SD_DEV
+            lda         SD_CARD_STATE,X
+            bne         :+
+            jsr         SD_START                            ; (Not started yet: try.  C = 1: "none")
+:
+            ldx         SD_CLIENT
+            jsr         IO_SRV_MAP
+            inc         ZP_IO_REQ + 1                       ; The data area
+            stz         SD_N                                ; The text's length
+            ldx         SD_DEV
+            lda         SD_CARD_STATE,X
+            bne         @card
+            ldx         #SD_S_NONE - SD_TEXTS
+            jsr         SD_PUT_TEXT
+            bra         @made
+
+@card:
+            ldx         #SD_S_SDHC - SD_TEXTS
+            cmp         #SD_STATE_SDHC
+            beq         :+
+            ldx         #SD_S_SDSC - SD_TEXTS
+:
+            jsr         SD_PUT_TEXT
+            jsr         SD_CARD_SIZE                        ; The size in MB: blocks >> 11
+            ldx         #11
+:
+            lsr         SD_LBA + 3
+            ror         SD_LBA + 2
+            ror         SD_LBA + 1
+            ror         SD_LBA
+            dex
+            bne         :-
+            jsr         SD_PUT_DEC
+            ldx         #SD_S_MB - SD_TEXTS
+            jsr         SD_PUT_TEXT
+            jsr         SD_CARD_SIZE                        ; And in blocks
+            jsr         SD_PUT_DEC
+            ldx         #SD_S_BLOCKS - SD_TEXTS
+            jsr         SD_PUT_TEXT
+
+@made:                                                      ; The text is SD_N bytes
+            dec         ZP_IO_REQ + 1
+            ldy         #IO_BLK_OFS + 3                     ; Past the end: nothing more (end of file)
+            lda         (ZP_IO_REQ),Y
+            dey
+            ora         (ZP_IO_REQ),Y
+            dey
+            ora         (ZP_IO_REQ),Y
+            bne         @eof
+            dey
+            lda         (ZP_IO_REQ),Y
+            cmp         SD_N
+            bcs         @eof
+            tax                                             ; .X = the offset
+            ldy         #IO_BLK_COUNT
+            lda         (ZP_IO_REQ),Y
+            sta         SD_LEFT                             ; Bytes wanted (1-256; 256 = 0)
+            inc         ZP_IO_REQ + 1
+            ldy         #0                                  ; Move the text after the offset down
+
+@move:
+            phy
+            txa
+            tay
+            lda         (ZP_IO_REQ),Y
+            ply
+            sta         (ZP_IO_REQ),Y
+            iny
+            cpy         SD_LEFT                             ; (256: 0, never reached: the text is shorter)
+            beq         @moved
+            inx
+            cpx         SD_N
+            bne         @move
+
+@moved:
+            dec         ZP_IO_REQ + 1
+            tya                                             ; The count
+            bra         @count
+
+@eof:
+            lda         #0
+
+@count:
+            ldy         #IO_BLK_COUNT
+            sta         (ZP_IO_REQ),Y
+            iny
+            lda         #0
+            sta         (ZP_IO_REQ),Y
+            jsr         IO_SRV_UNMAP
+            jmp         SD_OK
+
+SD_TEXTS:
+SD_S_NONE:  .byte   "none", ASCII_CR, ASCII_LF, 0
+SD_S_SDHC:  .byte   "sdhc ", 0
+SD_S_SDSC:  .byte   "sdsc ", 0
+SD_S_MB:    .byte   " MB ", 0
+SD_S_BLOCKS: .byte  " blocks", ASCII_CR, ASCII_LF, 0
+
+; SD_LBA = card SD_DEV's size in blocks.  Modifies: .A, .X
+SD_CARD_SIZE:
+            lda         SD_DEV
+            asl
+            asl
+            tax
+            lda         SD_CARD_BLOCKS,X
+            sta         SD_LBA
+            lda         SD_CARD_BLOCKS + 1,X
+            sta         SD_LBA + 1
+            lda         SD_CARD_BLOCKS + 2,X
+            sta         SD_LBA + 2
+            lda         SD_CARD_BLOCKS + 3,X
+            sta         SD_LBA + 3
+            rts
+
+; Add the text at SD_TEXTS,X to the ctl file's text.  Modifies: .A, .X, .Y
+SD_PUT_TEXT:
+            lda         SD_TEXTS,X
+            beq         @done
+            jsr         SD_PUT
+            inx
+            bra         SD_PUT_TEXT
+
+@done:
+            rts
+
+; Add SD_LBA (32 bits) in decimal to the ctl file's text.  SD_LBA ends as 0.  Modifies: .A, .X, .Y
+SD_PUT_DEC:
+            ldx         #0                                  ; Digits (on the stack, the last one first)
+
+@digit:                                                     ; SD_LBA /= 10: .A = the remainder
+            lda         #0
+            ldy         #32
+
+@bit:
+            asl         SD_LBA
+            rol         SD_LBA + 1
+            rol         SD_LBA + 2
+            rol         SD_LBA + 3
+            rol
+            cmp         #10
+            bcc         :+
+            sbc         #10                                 ; (C = 1)
+            inc         SD_LBA
+:
+            dey
+            bne         @bit
+            pha
+            inx
+            lda         SD_LBA
+            ora         SD_LBA + 1
+            ora         SD_LBA + 2
+            ora         SD_LBA + 3
+            bne         @digit
+
+@put:
+            pla
+            ora         #'0'
+            jsr         SD_PUT
+            dex
+            bne         @put
+            rts
+
+; Add .A to the ctl file's text (in the data area: ZP_IO_REQ, moved up to it).  Modifies: .Y
+SD_PUT:
+            ldy         SD_N
+            sta         (ZP_IO_REQ),Y
+            inc         SD_N
+            rts
+
+; Write to the ctl file: a command, "init" (a space, CR or LF may follow it).  The whole write is taken.
+SD_CTL_WRITE:
+            ldx         SD_CLIENT
+            jsr         IO_SRV_MAP
+            ldy         #IO_BLK_COUNT
+            lda         (ZP_IO_REQ),Y
+            bne         :+
+            dec                                             ; (256 bytes: look at 255)
+:
+            sta         SD_N
+            inc         ZP_IO_REQ + 1                       ; The data area
+            ldx         #0                                  ; The command: offset in SD_CMDS
+            stz         SD_TMP                              ;   and number
+
+@cmd:
+            lda         SD_CMDS,X
+            beq         @bad                                ; (The end of the table)
+            ldy         #0
+
+@char:
+            lda         SD_CMDS,X
+            beq         @word
+            cpy         SD_N
+            beq         @skip                               ; (The write is shorter)
+            cmp         (ZP_IO_REQ),Y
+            bne         @skip
+            inx
+            iny
+            bra         @char
+
+@word:                                                      ; It matches if the write ends here, or a
+            cpy         SD_N                                ;   space, CR, LF or 0 comes next
+            beq         @match
+            lda         (ZP_IO_REQ),Y
+            beq         @match
+            cmp         #' '
+            beq         @match
+            cmp         #ASCII_CR
+            beq         @match
+            cmp         #ASCII_LF
+            beq         @match
+
+@skip:
+            inx
+            lda         SD_CMDS - 1,X
+            bne         @skip
+            inc         SD_TMP
+            bra         @cmd
+
+@bad:
+            dec         ZP_IO_REQ + 1
+            jsr         IO_SRV_UNMAP
+            jmp         SD_BAD
+
+@match:                                                     ; SD_TMP = the command (0: init)
+            dec         ZP_IO_REQ + 1
+            jsr         IO_SRV_UNMAP                        ; (The count stays: all of it taken)
+            jmp         SD_RESTART
+
+SD_CMDS:    .byte   "init", 0, 0
+
+; A read or write of a data file: .A = H9_READ / H9_WRITE.  Up to 256 bytes at the offset, a block (or two)
+; at a time.
 SD_RW:
             sta         SD_OP
-            lda         SD_STATE
+            ldx         SD_DEV
+            lda         SD_CARD_STATE,X
             bne         :+
             lda         #ERR_IO_NOT_READY
             sec
@@ -234,10 +574,13 @@ SD_POS_TO_LBA:
             stz         SD_LBA + 3
             rts
 
-; Make sure block SD_LBA is in the cache.  OUT: C = 0; or C = 1, .A = error.  Modifies: .A, .X, .Y
+; Make sure block SD_LBA of card SD_DEV is in the cache.  OUT: C = 0; or C = 1, .A = error.  Modifies: .A, .X, .Y
 SD_CACHE_LOAD:
             lda         SD_CVALID
             beq         @read
+            lda         SD_DEV
+            cmp         SD_CCARD
+            bne         @read
             ldx         #3
 
 @same:
@@ -264,6 +607,8 @@ SD_CACHE_LOAD:
             sta         SD_CBLOCK,X
             dex
             bpl         @copy
+            lda         SD_DEV
+            sta         SD_CCARD
             inc         SD_CVALID
             clc
 

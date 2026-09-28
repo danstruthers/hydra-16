@@ -46,6 +46,32 @@ name:
             pla
             rti
 
+; The fast interrupt handlers (IRQ_INIT points the VIA's and the ACIA's vectors here, not at their IRQ
+; stubs): on to page 2, IRQ_FAST_P2 (serfast.s), with no dispatcher.  .Y = which (0 VIA, 1 ACIA), .X = the
+; interrupted page; the interrupted .A, .X and .Y are on the stack.
+            CLABEL      VIA_IRQ_STUB
+            pha
+            lda         #0
+            bra         :+
+            CLABEL      SER_IRQ_STUB
+            pha
+            lda         #1
+:
+            phx
+            phy
+            ldx         W_REGISTER
+            tay
+            lda         #2
+            sta         W_REGISTER                          ; Now on page 2 (this same code)
+            jmp         IRQ_FAST_P2
+
+; From a fast handler, for what it leaves to the dispatcher (the drivers' handlers, or a task switch):
+; .A = the logical IRQ# (or IRQ_TICK), .X = the interrupted page, the interrupted .A and .X on the stack,
+; as an IRQ stub leaves them
+            CLABEL      IRQ_FAST_SLOW
+            stz         W_REGISTER                          ; Now on page 0 (this same code)
+            jmp         IRQ_DISPATCH
+
             CLABEL      NMI_ENTRY
             pha
             lda         W_REGISTER

@@ -3,7 +3,7 @@
 .segment "IO_P0"
 
 ; ****************************************************************************
-; IO subsystem, the BIOS ROM page 0 part (see IO_PLAN.md; the IO layer itself is io.s, on page 2).
+; IO subsystem, the BIOS ROM page 0 part (see docs/plans/IO_PLAN.md; the IO layer itself is io.s, on page 2).
 ; Drivers (on page 0) use these: DEV_REGISTER, and IO_SRV_MAP / IO_SRV_UNMAP in their serve routines.
 
 ; The IO layer's calls, for page 0 callers and the $F8xx thunks (compact gates into page 2)
