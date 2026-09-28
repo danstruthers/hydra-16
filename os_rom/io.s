@@ -277,10 +277,12 @@ IO_COPY_IN:
 ; ****************************************************************************
 ; The calls
 
-; Open a file.
-; IN: .A.Y = name ("/dev/<device>" or "/dev/<device>/<rest>", zero-terminated), .X = IO_MODE_* bits
+; Open a file.  The name goes through the task's namespace first (IO_MOUNT, IO_BIND); a name it doesn't
+; match must be "/dev/<device>" or "/dev/<device>/<rest>".  The server opens the rest of the name.
+; IN: .A.Y = name (zero-terminated, 255 characters at most), .X = IO_MODE_* bits
 ; OUT (success): .A = fd, C = 0
-; OUT (failure): .A = ERR_IO_NOT_FOUND, ERR_IO_NO_FDS or the server's error, C = 1
+; OUT (failure): .A = ERR_IO_NOT_FOUND, ERR_IO_NO_FDS, ERR_IO_NS_LOOP, ERR_IO_NAME or the server's
+;                error, C = 1
 IO_OPEN:
             PUSH_XY
             sta         ZP_IO_BUF
@@ -288,78 +290,51 @@ IO_OPEN:
             stx         ZP_IO_MODE
             jsr         IO_XFER_SETUP
             _M_IO_MAP_XFER
+            ldy         #0                          ; The name -> the data area, where the namespace can
+
+@copy:                                              ;   rewrite it, and the server finds the rest of it
+            lda         (ZP_IO_BUF),Y
+            sta         (ZP_IO_DATA),Y
+            beq         @copied
+            iny
+            bne         @copy
+            dey                                     ; (255 characters at most)
+            lda         #0
+            sta         (ZP_IO_DATA),Y
+
+@copied:
+            jsr         NS_RESOLVE                  ; C = 0: a mount: .A = the device, the rest of the name
+            bcc         @found                      ;   is in the data area
+            tax
+            beq         :+
+            jmp         @fail                       ; (An error)
+:
             ldy         #DEV_PREFIX_LEN - 1         ; "/dev/"?
 
 @prefix:
-            lda         (ZP_IO_BUF),Y
+            lda         (ZP_IO_DATA),Y
             cmp         S_DEV_PREFIX,Y
             bne         @not_found
             dey
             bpl         @prefix
-            lda         ZP_IO_BUF                   ; ZP_IO_LEFT = the device name
+            lda         #DEV_PREFIX_LEN             ; ZP_IO_LEFT = the device name
+            sta         ZP_IO_LEFT
+            lda         ZP_IO_DATA + 1
+            sta         ZP_IO_LEFT + 1
+            jsr         IO_DEV_FIND                 ; .A = the device, .Y = its name's length
+            bcs         @not_found
+            pha
+            tya
             clc
             adc         #DEV_PREFIX_LEN
-            sta         ZP_IO_LEFT
-            lda         ZP_IO_BUF + 1
-            adc         #0
-            sta         ZP_IO_LEFT + 1
-            ldy         #MSG_PTR_BANK               ; Device table (shared bank ID $00)
-            sty         RAM_BANK_REG
-            lda         #<IO_DEV_TABLE
-            sta         ZP_IO_CHUNK                 ; ZP_IO_CHUNK = the entry
-            lda         #>IO_DEV_TABLE
-            sta         ZP_IO_CHUNK + 1
-
-@entry:
-            lda         (ZP_IO_CHUNK)
-            beq         @next_entry                 ; Free entry
-            ldy         #0
-
-@compare:
-            lda         (ZP_IO_LEFT),Y              ; The name's character; '/' or 0 ends it
-            cmp         #'/'
-            bne         :+
-            lda         #0
-:
-            sta         ZP_IO_TMP
-            cpy         #IO_DEV_NAME_LEN
-            beq         @all_8                      ; 8 characters matched
-            cmp         (ZP_IO_CHUNK),Y
-            bne         @next_entry
-            iny
-            lda         ZP_IO_TMP
-            bne         @compare                    ; Both ended: a match
-            dey                                     ; .Y = the name's length
-            bra         @found
-
-@all_8:
-            lda         ZP_IO_TMP
-            bne         @next_entry                 ; The name is longer than 8
+            jsr         NS_CUT                      ; The rest of the name, for the server
+            pla
 
 @found:
-            sty         ZP_IO_TMP                   ; Name length
-            lda         ZP_IO_CHUNK                 ; Device index = (entry - table) / 16
-            sec
-            sbc         #<IO_DEV_TABLE
-            lsr
-            lsr
-            lsr
-            lsr
             sta         ZP_IO_CNT                   ; ZP_IO_CNT = device index
-            ldy         #IO_XFER_BANK
-            sty         RAM_BANK_REG
             bra         @find_fd
 
-@next_entry:
-            lda         ZP_IO_CHUNK
-            clc
-            adc         #IO_DEV_SIZE
-            sta         ZP_IO_CHUNK
-            bne         @entry                      ; 16 entries: $8800-$88FF
-
 @not_found:
-            ldy         #IO_XFER_BANK
-            sty         RAM_BANK_REG
             lda         #ERR_IO_NOT_FOUND
             bra         @fail
 
@@ -397,26 +372,6 @@ IO_OPEN:
             lda         ZP_IO_MODE
             ldy         #IO_BLK_MODE
             sta         (ZP_IO_XFER),Y
-            lda         ZP_IO_LEFT                  ; The rest of the name (after the device name) ->
-            clc                                     ;   the data area, for the server
-            adc         ZP_IO_TMP
-            sta         ZP_IO_LEFT
-            bcc         :+
-            inc         ZP_IO_LEFT + 1
-:
-            ldy         #0
-
-@rest:
-            lda         (ZP_IO_LEFT),Y
-            sta         (ZP_IO_DATA),Y
-            beq         @open
-            iny
-            bne         @rest
-            lda         #0                          ; (255 characters at most)
-            dey
-            sta         (ZP_IO_DATA),Y
-
-@open:
             lda         #H9_OPEN
             jsr         IO_SERVE                    ; .A = fid
             bcs         @open_failed
@@ -751,7 +706,8 @@ IO_STD_OPEN:
             PULL_YX
             rts
 
-; Close all of the task's fds (MM_TASK_RESET, when a task ends).  Modifies: .A, .X
+; Close all of the task's fds, and clear its namespace (MM_TASK_RESET, when a task ends).
+; Modifies: .A, .X, .Y
 IO_CLOSE_ALL:
             ldx         #IO_MAX_FDS - 1
 
@@ -760,6 +716,7 @@ IO_CLOSE_ALL:
             jsr         IO_CLOSE                    ; (Closed fds: ERR_IO_BAD_FD, ignored)
             dex
             bpl         @close
+            jsr         NS_CLEAR
             clc
             rts
 
@@ -915,12 +872,136 @@ IO_PIPE:
             ply
             rts
 
-; Give a new task copies of the current task's open fds (TASK_BUILD_FRAME), telling each server (H9_DUP).
+; Another fd for the same file as fd .A: the lowest free one (e.g. to save stdin before redirecting it).
+; OUT: .A = the new fd, C = 0; or .A = error, C = 1.  Preserves .X, .Y
+IO_DUP:
+            PUSH_XY
+            pha
+            jsr         IO_FD_CHECK                 ; .X = its entry
+            bcs         @fail
+            lda         IO_FD_MODE,X
+            pha
+            jsr         IO_FD_FREE
+            plx                                     ; .X = the mode
+            bcs         @fail
+            sta         ZP_IO_TMP
+            pla
+            jsr         IO_FD_COPY
+            bcs         @done
+            lda         ZP_IO_TMP
+            bra         @done
+
+@fail:
+            ply                                     ; (Keep the error in .A)
+            sec
+
+@done:
+            PULL_YX
+            rts
+
+; Start a copy of the current task, like fork: a new task gets a copy of this task's RAM ($0200-$7CFF, and
+; the MMU area $7E00-$7FFF; not the stack page or the task system page), its task ZP (everything above
+; the OS ZP) and its open fds.  It starts at .A.Y on ROM page .X (a routine: when it returns, the task
+; ends).  The pages between the MMU's page floor (MM_SET_FLOOR) and its lowest allocated page are free,
+; so they aren't copied: a task that keeps data in task RAM outside the MMU keeps it below its page
+; floor (HyForth keeps its floor just above its dictionary).  The copy goes a page at a time through the
+; IO transfer area (TASK_CLONE_PAGE, run in the new task), before the new task runs: about 1/400 second
+; per page at 3.58 MHz.
+; OUT: .A = the new task, C = 0; or .A = ERR_NO_TASKS_AVAILABLE, C = 1.  Preserves .X, .Y
+TASK_CLONE:
+            PUSH_XY
+            sta         ZP_TEMP_VEC                 ; (TASK_BUILD_FRAME's inputs)
+            sty         ZP_TEMP_VEC + 1
+            stx         ZP_TEMP
+            php
+            sei
+            jsr         RESERVE_TASK                ; C = 1: .A = the task (busy, and paused for now)
+            bcs         :+
+            plp
+            lda         #ERR_NO_TASKS_AVAILABLE
+            sec
+            bra         @done
+:
+            tax
+            jsr         TASK_BUILD_FRAME            ; (Its fds too)
+            plp
+            stx         ZP_TC_TASK
+            LOAD_ADDR   ::TASK_CLONE_PAGE, ZP_TC_VEC ; (Its page 0 gate)
+            jsr         IO_XFER_SETUP
+            _M_IO_MAP_XFER
+            ldx         #0                          ; Page
+
+@page:
+            cpx         #$01                        ; Not the stack page
+            beq         @next
+            cpx         #MMU_SYS_PAGE               ; Not the task system page (IRQ tables, fds)
+            beq         @next
+            cpx         MMU_PAGE_FLOOR              ; Not the free pages between the MMU's page floor and
+            bcc         :+                          ;   its lowest allocated page
+            cpx         MMU_LOW_WATER
+            bcc         @next
+:
+            stz         ZP_IO_BUF
+            stx         ZP_IO_BUF + 1
+            ldy         #0
+            txa
+            bne         @byte
+            ldy         #<(__ZEROPAGE_RUN__ + __ZEROPAGE_SIZE__) ; ZP: just the task ZP
+
+@byte:
+            lda         (ZP_IO_BUF),Y               ; This task's page -> its transfer area
+            sta         (ZP_IO_DATA),Y
+            iny
+            bne         @byte
+            lda         T_REGISTER
+            and         #$0F                        ; .A = this task, .X = the page
+            jsr         TASK_CALL                   ; The new task copies it in
+
+@next:
+            inx
+            bpl         @page                       ; Pages $00-$7F
+            _M_IO_UNMAP
+            lda         ZP_TC_TASK
+            jsr         TASK_GO
+            clc
+
+@done:
+            PULL_YX
+            rts
+
+; Runs in the new task: copy page .X from the parent's (.A's) IO transfer area.  Preserves .X
+TASK_CLONE_PAGE:
+            asl                                     ; Its data area: $8000 + task * $200 + $100
+            ora         #>(PAGED_RAM_BASE + IO_BLK_DATA)
+            sta         ZP_IO_DATA + 1
+            stz         ZP_IO_DATA
+            stz         ZP_IO_BUF
+            stx         ZP_IO_BUF + 1
+            _M_IO_MAP_XFER
+            ldy         #0
+            txa
+            bne         @byte
+            ldy         #<(__ZEROPAGE_RUN__ + __ZEROPAGE_SIZE__)
+
+@byte:
+            lda         (ZP_IO_DATA),Y
+            sta         (ZP_IO_BUF),Y
+            iny
+            bne         @byte
+            _M_IO_UNMAP
+            clc
+            rts
+
+; Give a new task copies of the current task's namespace and open fds (TASK_BUILD_FRAME), telling each
+; fd's server (H9_DUP).
 ; The fd table goes through the current task's IO transfer area (tasks can't see each other's RAM), and
 ; the new task copies it in (IO_ADOPT_FDS, run in it with TASK_CALL).  IRQs must be off.
 ; IN: .A = the new task.  Preserves .X, .Y
 IO_INHERIT:
             PUSH_XY
+            pha
+            jsr         NS_COPY_TO                  ; The namespace
+            pla
             pha
             ldy         #IO_MAX_FDS - 1             ; Any open?  (If not, the new task's are all closed
             lda         #IO_FD_CLOSED               ;   already: it's a free task)

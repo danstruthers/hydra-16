@@ -35,7 +35,8 @@ err_jumptable:
     ERR_entry SEC_ERR               ; writing to dangerous RAM areas - error $06
     ERR_entry SYS_ERR               ; error on return from SYSCALL - error $07
     ERR_entry IO_ERR                ; IO error (see ioerr) - error $08
-LASTERR = 8
+    ERR_entry BRK_ERR               ; break from the console - error $09
+LASTERR = 9
 ;
 ;  error messages
 RPTR_ERR:
@@ -61,6 +62,9 @@ SYS_ERR:
     .byte 0
 IO_ERR:
     .byte " !IO ERR!"
+    .byte 0
+BRK_ERR:
+    .byte " !BREAK!"
     .byte 0
 
 ;-------------------------------------------------------------

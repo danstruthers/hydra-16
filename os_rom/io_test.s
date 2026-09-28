@@ -18,6 +18,28 @@ S_NOT_DEV:      .byte "/foo", 0
 S_DEV_CONS_T:   .byte "/dev/cons", 0
 S_CONS_MSG:     .byte "cons "
 CONS_MSG_LEN    = * - S_CONS_MSG
+S_NS_N:         .byte "/n", 0
+S_NS_Z:         .byte "/z", 0
+S_NS_Z_SUB:     .byte "/z/sub", 0
+S_NS_X:         .byte "/x", 0
+S_NS_Y:         .byte "/y", 0
+S_ZERO:         .byte "zero", 0
+
+.macro _M_IT_NS         call, path, other               ; IO_MOUNT / IO_BIND path, other
+            lda         #<other
+            sta         ZP_IO_BUF
+            lda         #>other
+            sta         ZP_IO_BUF + 1
+            lda         #<path
+            ldy         #>path
+            jsr         call
+.endmacro
+
+.macro _M_IT_UNMOUNT    path
+            lda         #<path
+            ldy         #>path
+            jsr         IO_UNMOUNT
+.endmacro
 
 IT_BUF_SIZE     = 300
 
@@ -271,6 +293,34 @@ IO_TEST:
             lda         ZP_TEMP_VEC2
             jsr         IO_CLOSE
             _M_IT_FAIL_IF_C     'w'
+
+; The namespace: a bind, a mount (the server gets the rest of the name), a loop of binds, and unmounting
+            _M_IT_NS    IO_BIND, S_NS_N, S_DEV_NULL
+            _M_IT_FAIL_IF_C     'x'
+            _M_IT_OPEN  S_NS_N, IO_MODE_RDWR
+            _M_IT_FAIL_IF_C     'x'
+            jsr         IO_CLOSE
+            _M_IT_NS    IO_MOUNT, S_NS_Z, S_ZERO
+            _M_IT_FAIL_IF_C     'y'
+            _M_IT_OPEN  S_NS_Z_SUB, IO_MODE_READ
+            _M_IT_FAIL_IF_C     'y'
+            jsr         IO_CLOSE
+            _M_IT_NS    IO_BIND, S_NS_X, S_NS_Y
+            _M_IT_FAIL_IF_C     'z'
+            _M_IT_NS    IO_BIND, S_NS_Y, S_NS_X
+            _M_IT_FAIL_IF_C     'z'
+            _M_IT_OPEN  S_NS_X, IO_MODE_READ
+            _M_IT_FAIL_IF_NC    'z', ERR_IO_NS_LOOP
+            _M_IT_UNMOUNT       S_NS_N
+            _M_IT_FAIL_IF_C     '1'
+            _M_IT_UNMOUNT       S_NS_Z
+            _M_IT_FAIL_IF_C     '1'
+            _M_IT_UNMOUNT       S_NS_X
+            _M_IT_FAIL_IF_C     '1'
+            _M_IT_UNMOUNT       S_NS_Y
+            _M_IT_FAIL_IF_C     '1'
+            _M_IT_OPEN  S_NS_N, IO_MODE_READ
+            _M_IT_FAIL_IF_NC    '1', ERR_IO_NOT_FOUND
 
 ; Running out of fds: fill the free ones (ZP_TEMP_VEC: bit n = fd n was free), then close them again
             stz         ZP_TEMP_VEC

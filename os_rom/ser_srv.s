@@ -8,7 +8,9 @@
 ; TX ring.
 ;   Read: whatever is in the RX ring, up to the count (at least 1 byte); if it's empty, or the client
 ;         isn't in the foreground (/dev/cons only), the client waits (ERR_IO_WOULD_BLOCK) until a byte
-;         arrives or the foreground changes.
+;         arrives or the foreground changes.  /dev/cons echoes what it reads, and returns end of file
+;         for an end-of-input key (SER_KEY_EOF, SER_KEY_EOF2), which isn't echoed.  It turns DEL (many
+;         terminals' Backspace key) into BS, and echoes a BS as BS, space, BS (erasing the character).
 ;   Write: as much as fits in the TX ring; if nothing fits, the client waits until there's room.
 ;   Ctl: SER_CTL_FOREGROUND (.Y = task).  Stat: all zero.
 ; Server ZP (in the serial task): ZP_IO_TMP = count, ZP_IO_CHUNK = client.
@@ -76,6 +78,7 @@ SER_CTL:
             rts
 
 SER_READ:
+            sty         ZP_IO_BYTE                          ; (The fid: /dev/cons echoes what it reads)
             cpy         #SER_FID_CONS
             bne         :+                                  ; /dev/ser: any task
             cpx         ZP_SER_CAPTURE
@@ -93,15 +96,45 @@ SER_READ:
             cpy         SER_RX_HEAD
             beq         @empty
             lda         SER_RX_BUF,Y
+            ldy         ZP_IO_BYTE                          ; /dev/cons: an end-of-input key?
+            bne         @take
+            cmp         #SER_KEY_EOF
+            beq         @eof
+            cmp         #SER_KEY_EOF2
+            beq         @eof
+            cmp         #ASCII_DEL                          ; DEL (many terminals' Backspace key) is a BS
+            bne         @take
+            lda         #ASCII_BACKSPACE
+
+@take:
             inc         SER_RX_TAIL
             pha
             txa
             tay
             pla
             sta         (ZP_IO_REQ),Y
+            ldy         ZP_IO_BYTE
+            .assert     SER_FID_CONS = 0, error, "SER_READ: echo when the fid is 0"
+            bne         :+
+            cmp         #ASCII_BACKSPACE                    ; A backspace: BS, space, BS erases the character
+            bne         @echo
+            jsr         SER_ECHO
+            lda         #ASCII_SPACE
+            jsr         SER_ECHO
+            lda         #ASCII_BACKSPACE
+
+@echo:
+            jsr         SER_ECHO
+:
             inx
             cpx         ZP_IO_TMP
             bne         @next
+
+@eof:                                                       ; End of input: after the bytes read so far,
+            txa                                             ;   or (none) this read is the end of file
+            bne         @done
+            inc         SER_RX_TAIL                         ; (Taken: it's not seen again)
+            bra         @done                               ; (.A = 0 bytes)
 
 @empty:
             txa
@@ -130,7 +163,7 @@ SER_READ:
             lda         #0
             sta         (ZP_IO_REQ),Y
             jsr         IO_SRV_UNMAP
-            bra         SER_OK
+            jmp         SER_OK
 
 @wait:                                                      ; Not in the foreground: wait until it is
             php
@@ -202,6 +235,48 @@ SER_WRITE:
             sta         (ZP_IO_REQ),Y
             jsr         IO_SRV_UNMAP
             jmp         SER_OK
+
+; Echo a byte read from /dev/cons (like a terminal: programs reading from a pipe or a file don't echo):
+; into the TX ring.  If it's full, wait for the TX IRQ to make room (about a character's time), or drop
+; the byte if IRQs are off.  Preserves .A, .X, .Y
+SER_ECHO:
+            phy
+            php
+
+@try:
+            sei
+            ldy         ZP_SER_SEND_STATUS
+            bne         @queue                              ; Busy: the TX IRQ sends it
+            IO_PORT_WRITE   ACIA_R_DATA                     ; Idle (so the ring is empty): send it now
+            inc         ZP_SER_SEND_STATUS                  ; SER_SEND_STATUS_BUSY
+            bra         @done
+
+@queue:
+            ldy         SER_TX_HEAD
+            sta         SER_TX_BUF,Y
+            iny
+            cpy         SER_TX_TAIL
+            beq         @full
+            sty         SER_TX_HEAD
+
+@done:
+            plp
+            ply
+            rts
+
+@full:
+            sta         ZP_IO_LEFT                          ; (The byte)
+            pla                                             ; The caller's flags: IRQs on?
+            pha
+            and         #$04                                ; (I)
+            beq         :+
+            lda         ZP_IO_LEFT                          ; No: drop it
+            bra         @done
+:
+            cli
+            wai                                             ; Until the TX IRQ (or another)
+            lda         ZP_IO_LEFT
+            bra         @try
 
 ; Add a task to a wait mask (SER_RD_WAIT or SER_WR_WAIT).  IRQs must be off.
 ; IN: .X = task, .Y = the mask's ZP address.  Modifies: .A, .Y

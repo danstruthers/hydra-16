@@ -21,10 +21,6 @@ ZP_TEMP:
     .res  1
 ZP_TEMP_2:
     .res  1
-ZP_SPI_DATA_IN:
-    .res  1
-ZP_SPI_DATA_OUT:
-    .res  1
 ZP_TEMP_VEC:
     .res  2
 ZP_TEMP_VEC2:
@@ -96,6 +92,14 @@ ZP_DRV_PTR:             ; DriverInfo pointer
 ZP_TASK_ENTRY:          ; task entry point (TASK_TRAMPOLINE)
     .res  2
 ZP_TASK_PAGE:           ; ROM page of the entry point
+    .res  1
+ZP_TASK_OWNER:          ; the task that started this one ($FF: none; a break kills the foreground task's)
+    .res  1
+ZP_BREAK_VEC:           ; break handler (TASK_SET_BREAK; high byte 0: none), its ROM page and stack pointer
+    .res  2
+ZP_BREAK_PAGE:
+    .res  1
+ZP_BREAK_SP:
     .res  1
 ZP_NO_PREEMPT:          ; NO_PREEMPT nesting count
     .res  1
@@ -247,6 +251,44 @@ TASK_ZP     SER_TX_HEAD, 1          ; TX ring: next byte in (writes)
 TASK_ZP     SER_TX_TAIL, 1          ;   next byte out (the IRQ handler)
 TASK_ZP     SER_RD_WAIT, 2          ; Tasks waiting to read (bit = task), woken when a byte arrives
 TASK_ZP     SER_WR_WAIT, 2          ; Tasks waiting to write, woken when the TX ring has room
+TASK_ZP_END
+
+; Storage task ZP (valid in the storage task: SPI, the SD card and its server; spi.s, sd.s, sd_srv.s)
+TASK_ZP_BEGIN
+TASK_ZP     SPI_PORT, 1             ; Port B for the selected device (/CS enable, device, MOSI high)
+TASK_ZP     SPI_IN, 1               ; The byte coming in
+TASK_ZP     SPI_OUT, 1              ; The byte going out
+TASK_ZP     SD_STATE, 1             ; 0 = not started, SD_STATE_SDSC, SD_STATE_SDHC
+TASK_ZP     SD_R1, 1                ; The card's last answer (for diagnosis)
+TASK_ZP     SD_TMP, 1
+TASK_ZP     SD_COUNT, 2             ; Tries left
+TASK_ZP     SD_ARG, 4               ; A command's argument, MSB first
+TASK_ZP     SD_LBA, 4               ; Block number (for SD_READ_BLOCK / SD_WRITE_BLOCK)
+TASK_ZP     SD_BUF, 2               ;   and its 512 bytes
+TASK_ZP     SD_CACHE, 2             ; The block cache (512 bytes)
+TASK_ZP     SD_CBLOCK, 4            ;   the block in it
+TASK_ZP     SD_CVALID, 1            ;   <> 0: it's there
+TASK_ZP     SD_CLIENT, 1            ; The server: the request's task
+TASK_ZP     SD_OP, 1                ;   H9_READ or H9_WRITE
+TASK_ZP     SD_POS, 4               ;   the offset
+TASK_ZP     SD_LEFT, 2              ;   bytes left
+TASK_ZP     SD_DONE, 1              ;   bytes done (0-255; 256 when finished: then 0)
+TASK_ZP     SD_N, 2                 ;   bytes in this block
+TASK_ZP     SD_SRC, 2               ;   the cache, and ...
+TASK_ZP     SD_DST, 2               ;   the data area, where this block's bytes go
+TASK_ZP_END
+
+; Sound driver task ZP (valid in the sound task; the test tune, snd_test.s)
+TASK_ZP_BEGIN
+TASK_ZP     YMN0L, 4
+YMN0H = YMN0L + 1
+YMN1L = YMN0L + 2
+YMN1H = YMN0L + 3
+
+TASK_ZP     AZP0L, 4
+AZP0H = AZP0L + 1
+YMTMP1 = AZP0L + 2
+YMTMP2 = AZP0L + 3
 TASK_ZP_END
 
 .feature org_per_seg

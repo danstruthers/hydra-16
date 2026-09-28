@@ -19,6 +19,14 @@ FAR_GATE_INLINE     IO_CTL,         PAGE2::IO_CTL,          2
 FAR_GATE_INLINE     IO_TEST,        PAGE2::IO_TEST,         2
 FAR_GATE_INLINE     IO_DUP2,        PAGE2::IO_DUP2,         2
 FAR_GATE_INLINE     IO_PIPE,        PAGE2::IO_PIPE,         2
+FAR_GATE_INLINE     IO_DUP,         PAGE2::IO_DUP,          2
+FAR_GATE_INLINE     TASK_CLONE,     PAGE2::TASK_CLONE,      2
+FAR_GATE_INLINE     TASK_CLONE_PAGE, PAGE2::TASK_CLONE_PAGE, 2  ; (Run in the new task by TASK_CLONE)
+FAR_GATE_INLINE     IO_MOUNT,       PAGE2::IO_MOUNT,        2
+FAR_GATE_INLINE     IO_BIND,        PAGE2::IO_BIND,         2
+FAR_GATE_INLINE     IO_UNMOUNT,     PAGE2::IO_UNMOUNT,      2
+FAR_GATE_INLINE     NS_CLEAR_ALL,   PAGE2::NS_CLEAR_ALL,    2
+FAR_GATE_INLINE     IO_NS_LIST,     PAGE2::IO_NS_LIST,      2
 FAR_GATE_INLINE     IO_STD_OPEN,    PAGE2::IO_STD_OPEN,     2
 FAR_GATE_INLINE     IO_CLOSE_ALL,   PAGE2::IO_CLOSE_ALL,    2
 FAR_GATE_INLINE     IO_INHERIT,     PAGE2::IO_INHERIT,      2
@@ -58,8 +66,10 @@ PIPE_STOP:
             clc
             rts
 
-; Register the IO layer's own devices.  Called at boot, after SHARED_RAM_INIT (which clears the table).
+; Clear the tasks' namespaces, and register the IO layer's own devices.  Called at boot, after
+; SHARED_RAM_INIT (which clears the device table).
 IO_INIT:
+            jsr         NS_CLEAR_ALL
             LOAD_ADDR   NULL_SERVE, ZP_TC_VEC
             lda         #<NULL_NAME
             ldy         #>NULL_NAME

@@ -15,11 +15,12 @@ node hydrasim.js [options]
 | :----- | :---------- |
 | `--rom DIR` | ROM images directory (default: `../os_rom/tmp`) |
 | `--cycles N` | CPU cycles to run (default 20,000,000; about 5.6 seconds at 3.58 MHz) |
-| `--input TEXT` | Serial input to type after a short delay; `\r` = CR |
+| `--input TEXT` | Serial input to type after a short delay; `\r` = CR, `\xNN` = the byte NN (e.g. `\x03` = Ctrl-C), `\w` = wait about 2M cycles before the next key (booting to the HyForth prompt takes about 12 of them) |
 | `--modules N` | RAM modules installed: banks `$00` to `N*16-1` (default 3) |
 | `--shared-u N` | Shared RAM installed for `U` macro-pages 0 to N-1 (default 16; each 512K chip is 4 macro-pages) |
 | `--acia-line N` | IRQ line the ACIA interrupts on (default 1) |
 | `--stuck-irq N` | Hold IRQ line N active the whole time |
+| `--sd [N:]FILE` | An SD card (SDHC) on SPI device N (0-7, the board's SPI headers J18-J25; default 0), backed by the image FILE (512-byte blocks; writes go to the file).  Up to 8 cards, one per device, e.g. `--sd card0.img --sd 3:C:/images/card3.img`.  Models the VIA's port B SPI bit by bit (device select as the board's 74HC138 does it), and the SD commands the ROM uses (CMD0, 8, 16, 17, 24, 55, 58, ACMD41) |
 | `--ram-fault BANK:An:high\|low` | Address line An (0-12) stuck high or low on the RAM chip holding BANK (a shared chip holds 4 bank IDs, e.g. `F0-F3`; a task RAM module 16 banks), e.g. `F0:A0:high`.  The POST `RAM` line should report it |
 | `--model M` | Hardware what-ifs: `sharedlow`, `nostack`, `zponly`, `noshared` |
 | `--raw` | Print serial output as-is (by default ESC shows as `<ESC>`) |

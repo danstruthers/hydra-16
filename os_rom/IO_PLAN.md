@@ -60,7 +60,7 @@ The fd table lives in the task system page, after the IRQ tables: **`$7DA0-$7DFF
 The layout below is Plan 9-style for now.  It may change later: once the base IO system works, the filesystem layout will be revisited (a separate design document will describe the ideas).
 
 * **Phase 1: a global `/dev`.**  `DEV_REGISTER` (called from a driver's `init`, in its task) adds `name -> (task, serve routine)` to the device table in shared bank ID `$00` (`$8800-$88FF`, 16 devices).  `IO_OPEN "/dev/cons"` finds `cons` in the table.  Names are short (up to 8 characters) and case-sensitive.
-* **Phase 3: per-task namespaces.**  A mount table per task (prefix -> server, root fid), inherited on spawn.  `IO_MOUNT` attaches a server at a path (e.g. an SD card FAT server at `/sd`); `IO_BIND` makes one name refer to another.  Paths are then walked by the server that owns the prefix (a directory server can walk `/sd/games/star.frt`).
+* **Phase 3: per-task namespaces (done).**  A mount table per task, inherited on spawn: 7 entries of 32 bytes in the task's IO transfer area (`IO_BLK_NS`, next to the data area names are resolved in; layout in `defines.s`).  `IO_MOUNT` attaches a device's server at a path (e.g. an SD card FAT server at `/sd`); `IO_BIND` makes one name refer to another.  `IO_OPEN` applies the longest matching prefix (whole path elements), rewriting binds (up to 4, `ERR_IO_NS_LOOP` beyond), and falls back to the global `/dev`.  The server that owns a mount gets the rest of the name (`/games/star.frt`) to walk.  (A mount names a device, not a fid within one: mounting a server's subdirectory can come with the filesystem servers.)
 
 ### **H9P: the request block**
 The first 16 bytes of the task's IO transfer area; the data (up to 256 bytes) follows.
@@ -123,6 +123,7 @@ The CPU runs at 3.58 MHz; the board can also run it at 7.16 MHz (the W65C02S goe
 | `/dev/ser`, `/dev/serctl` | Serial driver | Raw serial port; control (baud rate, echo) |
 | `/dev/snd` | Sound driver (task `$E`) | Write YM2151 register/value pairs; `IO_CTL` `SND_CTL_INIT` / `SND_CTL_TEST` (instead of a `/dev/sndctl` file) |
 | `/dev/null`, `/dev/zero` | IO layer | The usual |
+| `/dev/sd` | Storage task (`$C`) | The SD card as bytes (block cache, writes straight through) |
 | Later: `/sd/...` | SD card FAT filesystem server | Uses `SPI` in the BIOS; first real use of offsets, `H9_CREATE` and directories |
 | `/dev/pipe` | Pipe server (task `$D`) | `IO_PIPE`: two fds on a 255-byte ring in the pipe task's RAM (8 pipes); end of file when the writers are gone.  Later: `|` in the shell |
 | Later: `/proc/<task>/...`, `/env/...` | System servers | Task status, memory use, notes; per-task environment variables |
@@ -142,6 +143,14 @@ All calls: C = 0 on success, C = 1 with the error in .A.  Thunks after `$F853`.
 | `IO_SEEK` | .A = fd, `ZP_IO_OFS` = offset | |
 | `IO_STAT` | .A = fd, `ZP_IO_BUF` = 16-byte buffer | stat block |
 | `IO_DUP2` | .A = fd, .X = new fd | redirection (e.g. stdout to a file) |
+| `IO_DUP` | .A = fd | .A = a new fd (the lowest free) for the same file |
+| `IO_PIPE` | | .A = read fd, .X = write fd |
+| `IO_MOUNT` | .A.Y = path, `ZP_IO_BUF` = device name | a mount in the task's namespace |
+| `IO_BIND` | .A.Y = path, `ZP_IO_BUF` = target path | a bind in the task's namespace |
+| `IO_UNMOUNT` | .A.Y = path | removes the path's entry |
+| `IO_NS_LIST` | | prints the task's namespace |
+| `TASK_CLONE` | .A.Y = entry, .X = its ROM page | .A = a new task: a copy of this one (fork) |
+| `GET_CHAR` | | .A = a key from fd 0 (waits) |
 | `IO_CTL` | .A = fd, .X = control code, .Y = argument | device-specific |
 | `DEV_REGISTER` | .A.Y = name, `ZP_TC_VEC` = serve routine | registers the calling (driver) task |
 | `IO_WAKE` | .A = task | server: a blocked request can be retried |
@@ -163,8 +172,12 @@ All calls: C = 0 on success, C = 1 with the error in .A.  Thunks after `$F853`.
 
 **Phase 3 - More servers and names**
 7. **(Done)** `/dev/snd` (`snd_srv.s`: register/value pairs, `IO_CTL` init and test).  `H9_DUP`, sent by `IO_DUP2` and `IO_INHERIT`; every request now carries the fd's mode (`IO_BLK_MODE`).  `IO_DUP2` (`$F890`, HyForth `fdup2`) for redirection.  Pipes (`pipe_srv.s`, a Resident task `$D`): `IO_PIPE` (`$F893`, HyForth `pipe`) opens the read end and adds a write end (`IO_FD_COPY` with the write mode); the server counts each end's fds, readers and writers wait for each other, a reader gets end of file when no writers are left, a writer `ERR_IO_BROKEN` when no readers are.  `IO_TEST` checks a pipe between two tasks (a child writes 600 bytes).  Fixed: `IO_SERVE` holds `NO_PREEMPT` from marking the task waiting until it yields or is done; a task switch in between left it waiting with nobody to wake it.  Still to do: `|` in the shell.
-8. Per-task namespaces: `IO_MOUNT`, `IO_BIND`, and servers that walk paths.
+7b. **(Done)** `|` in the shell: HyForth splits a line at each `|` (outside `q^...^` strings); each stage but the last runs in a copy of the shell's task (`TASK_CLONE`, like fork: task RAM, task ZP, namespace and fds; HyForth's `child_start`) with stdout into a pipe, and ends at the end of its part of the line; the shell runs the last stage with stdin from the pipe, and puts stdin back at the end of the line.  HyForth `cat` and `wc ( -- lines words chars )`; `key` gives -1 at end of file.  `/dev/cons` does the echo now (not `READ_CHAR`/`GET_CHAR`), so piped input isn't echoed; `WRITE_CHAR` drops output when stdout fails (a pipe nobody reads).  `IO_DUP`.
+7c. **(Done)** Console control keys.  Ctrl-D / Ctrl-Z: end of input (`/dev/cons` returns end of file; `SER_KEY_EOF`, `SER_KEY_EOF2`).  Ctrl-C / Ctrl-\: break / kill, acted on by the serial IRQ handler as the key arrives (`SER_BREAK`): the foreground task gets `TASK_BREAK_FLAG` or `TASK_KILL_FLAG` and the tasks it started (`ZP_TASK_OWNER`, set by `TASK_BUILD_FRAME`) the kill flag, and they stop waiting; when the scheduler next resumes a flagged task (`SCHED_RESUME`), it rewrites its frame to continue at `BREAK_ENTRY`, which cleans up (waiting, `NO_PREEMPT`, the RAM bank) and goes to the task's break handler (`TASK_SET_BREAK`, `$F8A8`: HyForth's goes back to the prompt) or ends the task (the shell starts again).  A precursor to Plan 9 notes.  (Page 0 room: the sound test tune moved to page 2, `snd_test.s`.)
+8. **(Done)** Per-task namespaces (`ns.s`): `IO_MOUNT`, `IO_BIND`, `IO_UNMOUNT`, `IO_NS_LIST` (HyForth `mount`, `bind`, `unmount`, `ns`), inherited by new tasks and cleared when a task ends; `IO_OPEN` resolves names through them.  Servers that walk longer paths come with the filesystem (step 9).
 9. The SD card FAT filesystem server (`/sd`).
+    * **(Done)** The storage layer, on BIOS ROM page 3 (`page3.s`, `spi.s`, `sd.s`, `sd_srv.s`; `storage.s` on page 0), in a Resident storage task (`$C`) that owns the SPI bus.  SPI: bit-banged on the VIA's port B, mode 0, device select through the board's 74HC138 (device 0 = header J18; `SD_SPI_DEVICE`).  SD card: `SD_INIT` (CMD0, CMD8, ACMD41, CMD58: SDHC/SDXC block addresses or SDSC byte addresses), `SD_READ_BLOCK` / `SD_WRITE_BLOCK` (512-byte blocks, with timeouts).  `/dev/sd`: the card as bytes at the fd's offset (IO_SEEK; the first 4 GB), through a one-block cache, writes straight through; the card starts at the first open (`ERR_IO_DEVICE` without one), `SD_CTL_INIT` starts it again.  The emulator has an SD card on device 0 (`--sd image`).  HyForth `seek`.
+    * **Next**: the FAT32 server, in the storage task on the block layer (so it reaches the whole card): the MBR partition, the FAT32 boot sector, directories, reading and writing files; mounted at `/sd`.
 10. `/proc` and `/env`; notes.
 
 ### **Decisions**

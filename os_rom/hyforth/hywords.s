@@ -840,7 +840,23 @@ BLOADMSG:
    .byte "bload:"
    .byte ASCII_CR, ASCII_LF, 0
 ;
-; ( -- )     autoload a list of scripts
+; ( -- addr )  the built-in training scripts, for autoload:  ftrain autoload
+;   They're in the paged ROM only: the RAM copy (COPYTORAM) stops at 'ends', and the dictionary grows
+;   over the rest.  (Their RAM address holds whatever the dictionary or old RAM has there.)
+def_word "ftrain", "ftrain", 0
+    lda #<(ftrain_0 - RAMSTART + COPYSTART)
+    sta TEMP1
+    lda #>(ftrain_0 - RAMSTART + COPYSTART)
+    jmp keeps
+;
+; ( -- addr )  the built-in bload test library (BLtest, BLtest2), in the paged ROM:  bltest bload
+def_word "bltest", "bltest", 0
+    lda #<(test00 - RAMSTART + COPYSTART)
+    sta TEMP1
+    lda #>(test00 - RAMSTART + COPYSTART)
+    jmp keeps
+;
+; ( addr -- )     autoload a list of scripts (zero-terminated lines, then an empty one), e.g. ftrain
 def_word "autoload", "autoload", 0
     jsr spull_0   ; get end of list
     lda TEMP1
@@ -1484,6 +1500,26 @@ def_word "write", "write", 0
     jsr IO_WRITE
     bra IODONE
 ;
+; ( fd lo hi -- )  set fd's offset for the next read or write (32 bits: hi * 65536 + lo), e.g. in /dev/sd
+def_word "seek", "seek", 0
+    jsr spull_2       ; hi
+    jsr spull_1       ; lo
+    jsr spull_0       ; fd
+    lda TEMP2
+    sta ZP_IO_OFS
+    lda TEMP2+1
+    sta ZP_IO_OFS+1
+    lda TEMP3
+    sta ZP_IO_OFS+2
+    lda TEMP3+1
+    sta ZP_IO_OFS+3
+    lda TEMP1
+    jsr IO_SEEK
+    bcs SEEKFAIL
+    jmp next
+SEEKFAIL:
+    jmp IOFAIL
+;
 ; ( fd code arg -- )  device control, e.g. fd 1 task ioctl: make task the foreground task (the
 ;                    console's input goes to it)
 def_word "ioctl", "ioctl", 0
@@ -1494,7 +1530,7 @@ def_word "ioctl", "ioctl", 0
     ldx TEMP2
     ldy TEMP3
     jsr IO_CTL
-    bcs IOFAIL
+    bcs SEEKFAIL      ; (IOFAIL, in reach)
     jmp next
 ;
 ; ( fd newfd -- )  make newfd refer to the same file as fd (closing newfd first), e.g. fd 1 fdup2
@@ -1521,10 +1557,302 @@ def_word "pipe", "pipe", 0
     lda TEMP2
     jmp IOPUSHA
 ;
+; ( sz-path sz-dev -- )  mount a device at a path in this task's namespace: names under the path go to
+;                       the device (e.g. q^/z^ q^zero^ mount  then  q^/z^ 1 open)
+def_word "mount", "mount", 0
+    jsr NSARGS
+    bcs NSFAIL
+    jsr IO_MOUNT
+    bra NSDONE
+;
+; ( sz-path sz-target -- )  bind a path to another: names under the path stand for names under the
+;                          target (e.g. q^/tty^ q^/dev/cons^ bind)
+def_word "bind", "bind", 0
+    jsr NSARGS
+    bcs NSFAIL
+    jsr IO_BIND
+NSDONE:
+    bcs NSFAIL
+    jmp next
+NSFAIL:
+    jmp IOFAIL
+;
+; ( sz-path -- )  remove a path's mount or bind
+def_word "unmount", "unmount", 0
+    jsr spull_0
+    ldx #TEMP1
+    jsr SZTEXT
+    bcs NSFAIL
+    jsr IO_UNMOUNT
+    bra NSDONE
+;
+; ( -- )  list this task's namespace
+def_word "ns", "ns", 0
+    jsr IO_NS_LIST
+    jmp next
+;
+; ( sz-path sz-2 -- ) -> .A.Y = the path's text, ZP_IO_BUF = the second's (C = 1: not strings)
+NSARGS:
+    jsr spull_1
+    jsr spull_0
+    ldx #TEMP2
+    jsr SZTEXT
+    bcs NSARGEND
+    sta ZP_IO_BUF
+    sty ZP_IO_BUF+1
+    ldx #TEMP1
+    jmp SZTEXT
+NSARGEND:
+    rts
+;
+; The text of a q^...^ string.  IN: .X = the ZP address of its slot (TEMP1, TEMP2)
+; OUT: .A.Y = its text, C = 0; or .A = ERR_IO_NAME, C = 1.  Uses TEMP3
+SZTEXT:
+    lda 0,x
+    sta TEMP3
+    lda 1,x
+    sta TEMP3+1
+    ldy #0
+    lda (TEMP3),y         ; the record
+    pha
+    iny
+    lda (TEMP3),y
+    sta TEMP3+1
+    pla
+    sta TEMP3
+    lda (TEMP3)
+    and #$7F              ; (the temp flag)
+    cmp #MEM_SZ
+    bne SZBAD
+    lda TEMP3             ; its text, after the 3-byte header
+    clc
+    adc #3
+    pha
+    lda TEMP3+1
+    adc #0
+    tay
+    pla
+    clc
+    rts
+SZBAD:
+    lda #ERR_IO_NAME
+    sec
+    rts
+;
 ; ( -- n )  the last IO error code
 def_word "ioerr", "ioerr", 0
     lda IOERR
     jmp IOPUSHA
+;
+; ( -- )  copy stdin to stdout, to the end of the file (e.g. the right side of a pipeline:  words | cat)
+def_word "cat", "cat", 0
+CATLOOP:
+    jsr GET_CHAR
+    bcc CATEND        ; end of file (or an error)
+    PRINT_CHAR
+    bra CATLOOP
+CATEND:
+    jmp next
+;
+; ( -- lines words chars )  count stdin's lines (ended by CR, LF or CR LF), words (runs of characters
+;                           other than space, tab, CR and LF) and characters, to the end of the file
+;                           (e.g.  words | wc .S; or typed, ended with Ctrl-D)
+def_word "wc", "wc", 0
+    ldx #5
+WCCLR:
+    stz TEMP1,x       ; TEMP1 = characters, TEMP2 = words, TEMP3 = lines
+    dex
+    bpl WCCLR
+    stz TEMP4         ; TEMP4 <> 0: in a word
+    stz TEMP4+1       ; TEMP4+1 <> 0: the last character was a CR
+WCLOOP:
+    jsr GET_CHAR
+    bcc WCEND
+    inc TEMP1         ; a character
+    bne WCSK0
+    inc TEMP1+1
+WCSK0:
+    ldx TEMP4+1       ; (the last one a CR?)
+    stz TEMP4+1
+    cmp #ASCII_CR
+    bne WCNOTCR
+    inc TEMP4+1
+    bra WCLINE
+WCNOTCR:
+    cmp #ASCII_LF
+    bne WCSK1
+    cpx #0
+    bne WCSK1         ; CR LF: one line
+WCLINE:
+    inc TEMP3         ; a line
+    bne WCSK1
+    inc TEMP3+1
+WCSK1:
+    cmp #ASCII_SPACE
+    beq WCGAP
+    cmp #ASCII_TAB
+    beq WCGAP
+    cmp #ASCII_CR
+    beq WCGAP
+    cmp #ASCII_LF
+    beq WCGAP
+    lda TEMP4
+    bne WCLOOP        ; (still in the word)
+    inc TEMP4         ; a new word
+    inc TEMP2
+    bne WCLOOP
+    inc TEMP2+1
+    bra WCLOOP
+WCGAP:
+    stz TEMP4
+    bra WCLOOP
+WCEND:
+    lda TEMP1         ; ( -- lines words chars )
+    pha
+    lda TEMP1+1
+    pha
+    lda TEMP2
+    pha
+    lda TEMP2+1
+    pha
+    lda TEMP3
+    sta TEMP1
+    lda TEMP3+1
+    sta TEMP1+1
+    jsr spush_0       ; lines
+    pla
+    sta TEMP1+1
+    pla
+    sta TEMP1
+    jsr spush_0       ; words
+    pla
+    sta TEMP1+1
+    pla
+    sta TEMP1
+    jmp this          ; characters
+;
+;-------- Pipelines: a line  left | right  runs 'left' in a copy of this task (TASK_CLONE), with its
+;         stdout into a pipe, and 'right' here, with stdin from the pipe.  Called by getline.
+;
+; If the line (TIB) has a '|' with spaces around it (outside q^...^ strings) and we're interpreting,
+; start the left side, and go on after the '|'; and again for each '|' after it (a | b | c: 'b' runs in a
+; copy too, between two pipes).  (No '|': returns with the line untouched.)
+PIPECHK:
+    lda STATUS
+    bne PCNONE        ; compiling
+    ldy CURBUF        ; (What's left of the line)
+    iny
+    ldx #0            ; '^'s so far: odd = inside a string
+PCSCAN:
+    lda (TIB),y
+    beq PCNONE
+    cmp #ASCII_CARET
+    bne PCBAR
+    inx
+    bra PCNEXT
+PCBAR:
+    cmp #ASCII_PIPE
+    bne PCNEXT
+    txa
+    lsr
+    bcs PCNEXT        ; inside a string
+    dey
+    lda (TIB),y
+    iny
+    cmp #ASCII_SPACE
+    bne PCNEXT
+    iny
+    lda (TIB),y
+    dey
+    cmp #ASCII_SPACE
+    beq PCFOUND
+PCNEXT:
+    iny
+    bne PCSCAN
+PCNONE:
+    rts
+PCFOUND:                   ; .Y = the '|'
+    phy
+    jsr IO_PIPE            ; .A = read fd, .X = write fd
+    bcs PCFAIL
+    sta PIPER
+    stx PIPEW
+    ply
+    phy
+    lda #0
+    sta (TIB),y            ; the copy's line ends at the '|'...
+    lda #<child_start
+    ldy #>child_start
+    ldx #1                 ; (HyForth's ROM page)
+    jsr TASK_CLONE
+    ply
+    pha
+    lda #ASCII_SPACE
+    sta (TIB),y            ; ...and this one goes on after it
+    sty CURBUF
+    pla
+    bcs PCNOTASK
+    lda PIPEW              ; the copy has the write end now
+    jsr IO_CLOSE
+    lda PIPEIN
+    bpl PCSAVED            ; (a later '|': stdin is the previous pipe; the new one replaces it)
+    lda #0
+    jsr IO_DUP             ; save stdin
+    bcs PCFAIL2
+    sta PIPEIN
+PCSAVED:
+    lda PIPER
+    ldx #0
+    jsr IO_DUP2            ; stdin from the pipe
+    bcs PCFAIL2
+    lda PIPER
+    jsr IO_CLOSE
+    bra PIPECHK            ; another '|'?
+PCNOTASK:                  ; no task for the copy: no pipeline
+    pha
+    lda PIPEW
+    jsr IO_CLOSE
+    lda PIPER
+    jsr IO_CLOSE
+    pla
+    bra PCFAIL2
+PCFAIL:
+    ply
+PCFAIL2:                   ; drop the returns to getline and 'resolve', then the error
+    ply
+    ply
+    ply
+    ply
+    jmp IOFAIL
+;
+; The end of a pipeline's line (getline): stdin back
+PIPEEND:
+    lda PIPEIN
+    bmi PEDONE             ; ($FF: not redirected)
+    ldx #0
+    jsr IO_DUP2
+    lda PIPEIN
+    jsr IO_CLOSE
+    lda #$FF
+    sta PIPEIN
+PEDONE:
+    rts
+;
+; A pipeline's left side starts here, in a copy of the shell's task (TASK_CLONE, ROM page 1): stdout into
+; the pipe, then run the line, which ends at the '|'.  At its end, getline ends the task (BATCH).
+child_start:
+    tsx
+    stx CHILDSP
+    lda #1
+    sta BATCH
+    lda PIPEW
+    ldx #1
+    jsr IO_DUP2
+    lda PIPEW
+    jsr IO_CLOSE
+    lda PIPER
+    jsr IO_CLOSE
+    jmp resolve
 ;
 ; ( fd addr n -- ) -> ZP_IO_BUF = addr, ZP_IO_CNT = n, .A = fd
 IOARGS:

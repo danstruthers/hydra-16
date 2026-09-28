@@ -133,8 +133,7 @@ werrloop:
     PRINT_CHAR
     bra werrloop
 werrend:
-    WCRLF_np
-    rts
+    WCRLF_np                ; (no rts: wrterror goes on to clear the error)
 .endmacro
 
 ;---------------------------------------------------------------------
@@ -177,6 +176,7 @@ ERR_UKW := $05     ; unknown word
 ERR_SEC := $06     ; security error, ie dangerous address write
 ERR_SYS := $07     ; return from system call error
 ERR_IO := $08      ; IO error (the IO layer's error code: ioerr)
+ERR_BRK := $09     ; break from the console (Ctrl-C)
   ; warnings
 WRN_SEC := $86     ; security
 WRN_MEM := $84     ; memory alloc
@@ -312,6 +312,14 @@ TASK_ZP MEMHND, 1      ; MMU handle of the arena               $C3
 TASK_ZP DICTLIM, 1     ; MMU page floor: 'here' stays below it $C2
 TASK_ZP HLBANK, 1      ; RAM bank saved by hlock               $C1
 TASK_ZP IOERR, 1       ; the last IO error (ioerr)             $C0
+;
+;                   Pipelines (see PIPECHK; set up by 'cold', not cleared by CLEAR)
+;
+TASK_ZP PIPEIN, 1      ; stdin saved while a pipeline runs ($FF: none) $BF
+TASK_ZP BATCH, 1       ; <> 0: a pipeline's left side (a copy)  $BE
+TASK_ZP CHILDSP, 1     ;   its stack pointer, to end the task  $BD
+TASK_ZP PIPER, 1       ; the pipe being set up: read fd        $BC
+TASK_ZP PIPEW, 1       ;   and write fd                        $BB
 TASK_ZP_END
 ;
 ; *** $DO-$FF total usage in ZP, including TEMP vars ***
@@ -365,6 +373,14 @@ WATDISP:
 cold:
     cld
     jsr CLEAR          ; zero out zero page, INBUF, DS, and RT
+    stz BATCH          ; not a pipeline's copy
+    stz IOERR          ; no IO error yet
+    lda #$FF
+    sta PIPEIN         ; stdin not redirected
+    lda #<fbreak       ; Ctrl-C: back to the prompt
+    ldy #>fbreak
+    ldx #1             ; (HyForth's ROM page)
+    jsr TASK_SET_BREAK
 
 ; Forth owns this task's MMU memory: free anything left from before (only the MMU area: typed-ahead
 ; input in the message rings is kept), then get the malloc arena
@@ -418,6 +434,14 @@ warm:
     sty MEMLAST+1
     jsr DICTCHK                 ; keep the MMU out of the pages above 'here'
 
+    bra reset
+;
+; A break from the console (Ctrl-C; see TASK_SET_BREAK in 'cold'): the task comes here, with the stack
+; pointer it had at 'cold', wherever it was: back to the prompt, as for an error
+fbreak:
+    lda #ERR_BRK
+    sta ERRFLAG
+    jmp abort
 ;---------------------------------------------------------------------
 ; various reinitialization points
 ;
@@ -590,6 +614,13 @@ try:
 getline:   ; drop rts of try, fall through to 'token'
     pla
     pla
+    jsr PIPEEND          ; a pipeline's line is done: stdin back from the pipe
+    lda BATCH            ; a pipeline's left side (a copy of the shell): all done, end the task
+    beq GLAUTO
+    ldx CHILDSP
+    txs
+    rts
+GLAUTO:
 ;
 ;   DO AUTOLOAD HERE
 ;      load a space, then copy next line to buffer
@@ -619,10 +650,16 @@ GETREADLOOP:
     beq GETLNEND
     cmp #ASCII_BACKSPACE         ; handle backspace
     bne GETLOOP
+    cpy #2
+    bcc GETBSNONE     ; nothing typed yet: nothing to erase
     dey
     dey
     lda (TIB), y      ; make sure prev char not overwritten
     bra GETLOOP
+GETBSNONE:            ; (/dev/cons's echo erased the prompt's '>': put it back)
+    lda #'>'
+    PRINT_CHAR
+    bra GETREADLOOP
 GETLNEND:                ; clear all if y eq \0
     PRINT_CRLF
 GETLNSKIPCRLF:          ; SKIP to here if don't want CRLF
@@ -638,6 +675,7 @@ GETLNSKIPCRLF:          ; SKIP to here if don't want CRLF
     dey
 ; start it
     sta CURBUF
+    jsr PIPECHK          ; a pipeline ( ... | ... )?  start its left side
 
 ;---------------------------------------------------------------------
 ; in place every token,

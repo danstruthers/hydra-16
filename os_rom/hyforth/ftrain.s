@@ -32,6 +32,6 @@ ftrain_0:
 .byte 0
 .byte ": decsz! xdrv 6 4 malloc decs! ;"
 .byte 0
-.byte ": | lit [ 256 , ] / ;"
+.byte ": 256/ lit [ 256 , ] / ;"
 .byte 0, 0                               ; to mark end?
 ftrain_end0:

@@ -48,8 +48,10 @@ TASKS_INIT:
             stz     ZP_PREEMPT_DUE
             stz     ZP_TC_GUEST
             stz     ZP_IRQ_RESCHED
+            stz     ZP_BREAK_VEC + 1                ; No break handler
             lda     #$FF
             sta     TASK_PARENT                     ; No parent
+            sta     ZP_TASK_OWNER
             sta     STACK_SAVE_REG
             ldy     #IO_MAX_FDS * IO_FD_SIZE        ; All fds closed
 
@@ -84,6 +86,8 @@ TASKS_INIT:
 ;   idle task and only runs when nothing else can.
 
 TASK_WAITING_FLAG       = 4                         ; Bit 2: awaiting IO (TASK_WAIT / IO_WAKE)
+TASK_BREAK_FLAG         = $10                       ; Bit 4: a break is due (console: SER_BREAK)
+TASK_KILL_FLAG          = $20                       ; Bit 5: a kill is due (console: SER_BREAK)
 TASK_RUN_MASK           = TASK_BUSY_FLAG | TASK_PAUSED_FLAG | TASK_WAITING_FLAG | TASK_RESIDENT_FLAG
 TASK_FRAME_SP           = $F4                       ; STACK_SAVE_REG of a new task (11-byte frame at $01F5)
 SCHED_RESCHED_A         = $A5                       ; An IRQ handler returns C = 1, .A and .Y = these
@@ -98,8 +102,22 @@ SCHED_SWITCH:
             ldx     STACK_SAVE_REG
             txs
 
-; Unwind a task's frame and continue it
+; Unwind a task's frame and continue it; or, if a break or kill is due, continue it at BREAK_ENTRY
+; instead (on ROM page 0, IRQs on, U = 0)
 SCHED_RESUME:
+            lda     TASK_STATUS_REG
+            and     #TASK_BREAK_FLAG | TASK_KILL_FLAG
+            beq     @resume
+            tsx                                     ; The frame: $0101,X = U ... $010B,X = PCH
+            stz     $0101,X                         ; U
+            stz     $0106,X                         ; W
+            stz     $0109,X                         ; P
+            lda     #<BREAK_ENTRY
+            sta     $010A,X
+            lda     #>BREAK_ENTRY
+            sta     $010B,X
+
+@resume:
             pla
             sta     U_REGISTER
             jmp     IRQ_RESTORE                     ; The rest is the IRQ frame (irq.s)
@@ -331,6 +349,8 @@ TASK_BUILD_FRAME:
             stz     ZP_PREEMPT_DUE
             stz     ZP_TC_GUEST
             stz     ZP_IRQ_RESCHED
+            stz     ZP_BREAK_VEC + 1                ; No break handler
+            sty     ZP_TASK_OWNER                   ; Started by the current task
             lda     #$FF
             sta     TASK_PARENT                     ; No parent to wake (TASK_START sets one)
             sty     T_REGISTER                      ; Back to the current task
@@ -367,6 +387,69 @@ TASK_EXIT:
 @halt:
             bra     @halt                           ; (not reached)
 
+; A break or kill from the console (SER_BREAK flags the task; SCHED_RESUME continues it here, on ROM page
+; 0 with IRQs on, instead of where it was).  A break goes to the task's break handler (TASK_SET_BREAK),
+; with the stack pointer it had then; a kill, or a break without a handler, ends the task, except the
+; shell, which starts again from scratch.
+BREAK_ENTRY:
+            sei
+            lda     TASK_STATUS_REG
+            tax
+            and     #<~(TASK_BREAK_FLAG | TASK_KILL_FLAG | TASK_WAITING_FLAG)
+            sta     TASK_STATUS_REG                 ; (It may have been waiting for IO)
+            stz     ZP_NO_PREEMPT                   ; (Or holding the CPU, e.g. in IO_SERVE)
+            stz     ZP_PREEMPT_DUE
+            stz     RAM_BANK_REG                    ; (Or in the middle of a bank switch)
+            cli
+            txa
+            and     #TASK_KILL_FLAG
+            bne     @kill
+            lda     ZP_BREAK_VEC + 1
+            beq     @kill                           ; No handler
+            ldx     ZP_BREAK_SP
+            txs
+            lda     ZP_BREAK_VEC
+            sta     ZP_FAR_VEC
+            lda     ZP_BREAK_VEC + 1
+            sta     ZP_FAR_VEC + 1
+            lda     ZP_BREAK_PAGE
+            sta     ZP_FAR_PAGE
+            jmp     FAR_JUMP
+
+@kill:
+            lda     T_REGISTER
+            and     #$0F
+            cmp     #SHELL_TASK_NUM
+            beq     @shell
+            jmp     TASK_EXIT
+
+@shell:                                     ; The shell: free everything, and start it again
+            ldx     #$FF
+            txs
+            jsr     MM_TASK_RESET                   ; (Its fds and namespace too)
+            stz     ZP_BREAK_VEC + 1
+            jmp     TASK_TRAMPOLINE                 ; (Its entry point is still SHELL_MAIN)
+
+; Set the current task's break handler: where a break from the console (SER_KEY_BREAK) sends it, with
+; the stack pointer it has now (the handler never returns).  .A.Y = 0: no handler (a break ends the task).
+; IN: .A.Y = handler, .X = its ROM page.  Preserves .A, .X, .Y
+TASK_SET_BREAK:
+            php
+            sei
+            sta     ZP_BREAK_VEC
+            sty     ZP_BREAK_VEC + 1
+            stx     ZP_BREAK_PAGE
+            phx
+            tsx
+            inx                                     ; (The phx, the php and the return address)
+            inx
+            inx
+            inx
+            stx     ZP_BREAK_SP
+            plx
+            plp
+            rts
+
 ; Start a task in the background: it runs alongside the caller, and ends when its entry point returns.
 ; IN: .A.Y = entry point, .X = its ROM page (0 for RAM or page 0 code)
 ; OUT (success): .A = task, C = 0
@@ -398,6 +481,20 @@ TASK_RUN:
 @done:
             PULL_YX
             jmp     MM_RETURN
+
+; Let a task that RESERVE_TASK left paused run (TASK_CLONE sets it up first).  IN: .A = task
+; Preserves .A, .X, .Y
+TASK_GO:
+            php
+            sei
+            phy
+            ldy     T_REGISTER
+            sta     T_REGISTER                      ; Quick switch to the task (no stack use!)
+            rmb1    TASK_STATUS_REG                 ; Runnable
+            sty     T_REGISTER
+            ply
+            plp
+            rts
 
 ; .A.Y: Address of task entrypoint
 SPAWN_TASK:

@@ -91,7 +91,7 @@ SERIAL_SET_CAPTURE:
                 rts
 
 ; Input a character, if there is one: from fd 0 (stdin), without waiting.  (A task without an fd 0
-; gets nothing.)  The character is echoed.
+; gets nothing.)  /dev/cons echoes it.
 ; On return, carry flag indicates whether a key was pressed
 ; If a key was pressed, the key value will be in the A register
 ;
@@ -112,7 +112,6 @@ SERIAL_READ:
                 stx             IO_FD_MODE
                 bcs             @none
                 plx
-                PRINT_CHAR                                  ; echo
                 sec
                 rts
 
@@ -122,9 +121,9 @@ SERIAL_READ:
                 rts
 
 ; Input a character, waiting for it: from fd 0, so the task sleeps until one comes in (or until it's
-; brought to the foreground, for /dev/cons).  The character is echoed.  A task without an fd 0 (or with a
+; brought to the foreground, for /dev/cons, which echoes it).  A task without an fd 0 (or with a
 ; non-blocking one) polls READ_CHAR, yielding in between.
-; OUT: .A = the character, C = 1; or .A = error (e.g. ERR_IO_EOF), C = 0
+; OUT: .A = the character, C = 1; or .A = error (e.g. ERR_IO_EOF: the end of a pipe), C = 0
 ; Modifies: flags, A
 GET_CHAR:
                 phx
@@ -138,13 +137,12 @@ GET_CHAR:
                 bne             @error                  ; (A non-blocking fd 0: poll)
 
 @poll:
-                jsr             READ_CHAR               ; (Echoes it)
+                jsr             READ_CHAR
                 bcs             @done
                 jsr             YIELD
                 bra             @poll
 
 @got:
-                PRINT_CHAR                              ; echo
                 sec
 
 @done:
@@ -219,7 +217,8 @@ WRITE_HEX:
                 SKIPNEXT
 
 ; Output a character (from the A register): to fd 1 (stdout), or straight to the serial port if the
-; task has no fd 1 (system and driver tasks).  Not with IRQs off: it may have to wait for the TX IRQ.
+; task has no fd 1 (system and driver tasks).  If fd 1 fails (e.g. a pipe nobody reads any more), the
+; character is dropped.  Not with IRQs off: it may have to wait for the TX IRQ.
 ;
 ; Modifies: flags
 WRITE_CHAR:
@@ -233,7 +232,7 @@ SERIAL_WRITE:
                 ldx             #1
                 jsr             IO_PUTC
                 pla
-                bcc             @done
+                bra             @done
 
 @direct:
                 jsr             SER_TX_TRY
@@ -282,6 +281,75 @@ SER_TX_TRY:
                 plx
                 plp
                 sec
+                rts
+
+; A break or kill key (the IRQ handler, in the serial task, IRQs off): the foreground task gets .A
+; (TASK_BREAK_FLAG or TASK_KILL_FLAG), and the tasks it started (and theirs, 4 levels) are killed; they
+; stop waiting, so they run and see it (SCHED_RESUME).  The keys typed before it are dropped.  A killed
+; foreground task other than the shell hands the console back to the shell.
+; Modifies: .A, .X, .Y, ZP_TEMP
+SER_BREAK:
+                pha                                         ; (The foreground task's flag)
+                lda             SER_RX_HEAD                 ; Drop the typed-ahead keys
+                sta             SER_RX_TAIL
+                ldx             #MAX_TASK_NUMBER            ; Tasks 15-1
+
+@task:
+                cpx             ZP_SER_CAPTURE
+                beq             @foreground
+                lda             #4                          ; Started by the foreground task, or by one
+                sta             ZP_TEMP                     ;   of those, ...?
+                txa
+                tay                                         ; .Y = the task, then its owner, ...
+
+@owner:
+                sty             T_REGISTER                  ; Quick look (no stack use!)
+                ldy             ZP_TASK_OWNER
+                lda             #SERIAL_TASK_NUM
+                sta             T_REGISTER
+                cpy             ZP_SER_CAPTURE
+                beq             @child
+                cpy             #MAX_TASK_NUMBER + 1
+                bcs             @next                       ; ($FF: nobody)
+                dec             ZP_TEMP
+                bne             @owner
+                bra             @next
+
+@child:
+                ldy             #TASK_KILL_FLAG
+                bra             @flag
+
+@foreground:
+                pla
+                pha
+                tay
+
+@flag:                                                      ; .Y = the flag for task .X
+                stx             T_REGISTER                  ; Quick switch (no stack use!)
+                lda             TASK_STATUS_REG
+                and             #TASK_BUSY_FLAG | TASK_RESIDENT_FLAG
+                cmp             #TASK_BUSY_FLAG
+                bne             :+                          ; (Free, or a driver)
+                tya
+                tsb             TASK_STATUS_REG
+                rmb2            TASK_STATUS_REG             ; Not waiting any more (TASK_WAITING_FLAG)
+:
+                lda             #SERIAL_TASK_NUM
+                sta             T_REGISTER
+
+@next:
+                dex
+                bne             @task
+                pla
+                cmp             #TASK_KILL_FLAG
+                bne             @done
+                lda             ZP_SER_CAPTURE              ; A killed foreground task: the shell gets the
+                cmp             #SHELL_TASK_NUM             ;   console back
+                beq             @done
+                lda             #SHELL_TASK_NUM
+                sta             ZP_SER_CAPTURE
+
+@done:
                 rts
 
 ; Wake every task in a wait mask of the serial task (SER_RD_WAIT or SER_WR_WAIT), and clear the mask.
@@ -380,6 +448,10 @@ SERIAL_IRQ_HANDLER:
                 and             #ACIA_STATUS_BIT_RDRF   ; is read register full?
                 beq             @int_done
                 IO_PORT_READ    ACIA_R_DATA
+                cmp             #SER_KEY_BREAK          ; Break or kill: act on it now (the task
+                beq             @break                  ;   may not be reading)
+                cmp             #SER_KEY_KILL
+                beq             @kill
                 ldy             SER_RX_HEAD             ; Into the RX ring
                 sta             SER_RX_BUF,Y
                 iny
@@ -390,6 +462,18 @@ SERIAL_IRQ_HANDLER:
                 jsr             SER_WAKE
 
 @int_done:
+                sec
+                rts
+
+@break:
+                lda             #TASK_BREAK_FLAG
+                bra             :+
+@kill:
+                lda             #TASK_KILL_FLAG
+:
+                jsr             SER_BREAK
+                lda             #SCHED_RESCHED_A        ; Switch tasks now, so it happens (SCHED_RESUME)
+                ldy             #SCHED_RESCHED_Y
                 sec
                 rts
 

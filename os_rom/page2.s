@@ -15,6 +15,9 @@ FAR_GATE_INLINE     YIELD,          ::YIELD,                0
 FAR_GATE_INLINE     PREEMPT,        ::PREEMPT,              0
 FAR_GATE_INLINE     IO_WAKE,        ::IO_WAKE,              0
 FAR_GATE_INLINE     TASK_RUN,       ::TASK_RUN,             0
+FAR_GATE_INLINE     RESERVE_TASK,   ::RESERVE_TASK,         0
+FAR_GATE_INLINE     TASK_BUILD_FRAME, ::TASK_BUILD_FRAME,   0
+FAR_GATE_INLINE     TASK_GO,        ::TASK_GO,              0
 FAR_GATE_INLINE     IO_SRV_MAP,     ::IO_SRV_MAP,           0
 FAR_GATE_INLINE     IO_SRV_UNMAP,   ::IO_SRV_UNMAP,         0
 FAR_GATE_INLINE     WRITE_CHAR,     ::WRITE_CHAR,           0
@@ -27,7 +30,6 @@ FAR_GATE_INLINE     MM_UNLOCK,      ::MM_UNLOCK,            0
 FAR_GATE_INLINE     SERIAL_SET_CAPTURE, ::SERIAL_SET_CAPTURE, 0
 FAR_GATE_INLINE     YM_WRITE,       ::YM_WRITE,             0   ; (These run in the current task: the
 FAR_GATE_INLINE     SOUND_INIT,     ::SOUND_INIT,           0   ;   sound task, from its server)
-FAR_GATE_INLINE     SOUND_TEST,     ::SOUND_TEST,           0
 FAR_GATE_INLINE     POST_PUTC,      ::POST_PUTC,            0
 FAR_GATE_INLINE     MMU_PROBE_MODULES, ::MMU_PROBE_MODULES, 0
 

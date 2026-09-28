@@ -20,7 +20,9 @@
 // Usage: node hydrasim.js [options]
 //   --rom DIR           ROM images directory (default: ../os_rom/tmp next to this script)
 //   --cycles N          CPU cycles to run (default 20000000; ~5.6 s at 3.58 MHz)
-//   --input TEXT        Serial input to type, after a short delay; "\r" = CR (e.g. --input "1 2 + .\r")
+//   --input TEXT        Serial input to type, after a short delay; "\r" = CR, "\xNN" = byte NN, e.g. a
+//                       control key; "\w" = wait ~2M cycles before the next key (e.g. --input
+//                       "1 2 + .\r", "cat\rhi\x04", "inf\r\w\x03")
 //   --modules N         RAM modules installed: banks $00 - N*16-1 (default 3)
 //   --shared-u N        Shared RAM installed for U macro-pages 0 - N-1 (default 16; 4 per 512K chip)
 //   --acia-line N       IRQ line the ACIA interrupts on (default 1)
@@ -29,6 +31,9 @@
 //                       shared chip holds 4 bank IDs, e.g. F0-F3; a task RAM module 16 banks), e.g. F0:A0:high
 //   --model M           Hardware what-ifs: sharedlow (T doesn't switch $0000-$7FFF), nostack (stack page
 //                       not per task), zponly (only ZP per task), noshared (no shared RAM)
+//   --sd [N:]FILE       An SD card (SDHC) on SPI device N (0-7; default 0), backed by the image FILE
+//                       (512-byte blocks; writes go to the file).  Up to 8, one per device
+//                       (e.g. --sd card0.img --sd 3:C:/images/card3.img)
 //   --raw               Print serial output as-is (default shows ESC as <ESC>)
 //   --trace N           Show the last N instructions (default 25)
 //   --dump ADDR[:LEN][@TASK]   Hex dump task RAM after the run (e.g. --dump 7D90:16@1)
@@ -44,20 +49,23 @@ const path = require('path');
 
 // ---- options
 const opt = { rom: path.join(__dirname, '..', 'os_rom', 'tmp'), cycles: 20000000, input: '', modules: 3,
-  aciaLine: 1, stuckIrq: -1, model: '', raw: false, trace: 25, dumps: [], watches: [], pcWatches: [], sharedU: 16, ramFault: null };
+  aciaLine: 1, stuckIrq: -1, model: '', raw: false, trace: 25, dumps: [], watches: [], pcWatches: [], sharedU: 16, ramFault: null, sds: [] };
 const argv = process.argv.slice(2);
 for (let i = 0; i < argv.length; i++) {
   const a = argv[i], next = () => argv[++i];
   switch (a) {
     case '--rom': opt.rom = next(); break;
     case '--cycles': opt.cycles = +next(); break;
-    case '--input': opt.input = next().replace(/\\r/g, '\r').replace(/\\n/g, '\n'); break;
+    case '--input': opt.input = next().replace(/\\r/g, '\r').replace(/\\n/g, '\n').replace(/\\x([0-9A-Fa-f]{2})/g, (m, h) => String.fromCharCode(parseInt(h, 16))).replace(/\\w/g, '\u0100'); break;
     case '--modules': opt.modules = +next(); break;
     case '--shared-u': opt.sharedU = +next(); break;
     case '--acia-line': opt.aciaLine = +next(); break;
     case '--stuck-irq': opt.stuckIrq = +next(); break;
     case '--model': opt.model = next(); break;
     case '--ram-fault': { const m = /^([0-9A-Fa-f]{1,2}):A(\d+):(high|low)$/i.exec(next()); opt.ramFault = { bank: parseInt(m[1], 16), mask: 1 << +m[2], high: m[3].toLowerCase() === 'high' }; break; }
+    case '--sd': { const f = next(), m = /^([0-7]):(.+)$/.exec(f), dev = m ? +m[1] : 0;
+      if (opt.sds.some(c => c.dev === dev)) { console.error('Two SD cards on device ' + dev); process.exit(1); }
+      opt.sds.push({ dev, file: m ? m[2] : f }); break; }
     case '--raw': opt.raw = true; break;
     case '--trace': opt.trace = +next(); break;
     case '--dump': opt.dumps.push(next()); break;
@@ -82,7 +90,76 @@ const rxQueue = [...opt.input]; let rxDelay = 200000;
 const via = new Uint8Array(16);
 // VIA timer 1 (the scheduler's tick): counter, latch, IFR/IER; one-shot or free-running (ACR bit 6)
 let viaT1 = 0xFFFF, viaT1Latch = 0xFFFF, viaT1On = false, viaIFR = 0, viaIER = 0;
+// SPI on VIA port B (PB0 SCLK, PB1 /CS enable, PB2 MOSI, PB3-PB5 device 0-7, PB6 = 0 for the board's
+// devices, PB7 MISO; mode 0), with up to 8 SD cards (SPI mode, SDHC: block addresses) on devices 0-7,
+// each backed by an image file (--sd [N:]FILE)
+const sdCards = [];                                             // By device: a card, or undefined
+for (const { dev, file } of opt.sds) {
+  const fd = fs.openSync(file, 'r+');
+  sdCards[dev] = { dev, fd, blocks: Math.floor(fs.fstatSync(fd).size / 512), bit: 0, inB: 0, cur: 0xFF, miso: 1,
+    q: [], cmd: [], idle: true, app: false, acmd41: 0, writeAt: -1, wr: null };
+}
+let spiSel = null, spiClk = 0;                                  // The selected card (null: none), SCLK
+function sdReset(sd) {                                          // Deselected: it forgets the transfer
+  sd.bit = 0; sd.cmd = []; sd.q = []; sd.wr = null; sd.writeAt = -1; sd.cur = 0xFF;
+}
+function sdCommand(sd, c) {                                     // One 6-byte command: its answer bytes
+  const idx = c[0] & 0x3F, arg = ((c[1] << 24) | (c[2] << 16) | (c[3] << 8) | c[4]) >>> 0, idle = sd.idle ? 1 : 0;
+  if (sd.app) {
+    sd.app = false;
+    if (idx === 41) { if (++sd.acmd41 >= 3) sd.idle = false; return [sd.idle ? 1 : 0]; }
+    return [0x04 | idle];
+  }
+  switch (idx) {
+    case 0: sd.idle = true; sd.acmd41 = 0; return [0x01];
+    case 8: return [idle, 0x00, 0x00, c[3] & 0x0F, c[4]];        // R7: voltage accepted, the pattern back
+    case 55: sd.app = true; return [idle];
+    case 58: return [idle, 0xC0, 0xFF, 0x80, 0x00];              // OCR: powered up, CCS (SDHC)
+    case 16: return [idle];
+    case 17: {
+      if (sd.idle || arg >= sd.blocks) return [0x40 | idle];     // (Parameter error)
+      const b = Buffer.alloc(512); fs.readSync(sd.fd, b, 0, 512, arg * 512);
+      return [0x00, 0xFF, 0xFF, 0xFE, ...b, 0x12, 0x34];         // R1, a wait, the token, data, CRC
+    }
+    case 24:
+      if (sd.idle || arg >= sd.blocks) return [0x40 | idle];
+      sd.writeAt = arg; return [0x00];                           // Then: the data block
+    default: return [0x04 | idle];                               // Illegal command
+  }
+}
+function sdByte(sd, b) {                                        // Byte b came in: the next byte out
+  if (sd.wr) {                                                  // A block for CMD24: token, 512 bytes, CRC
+    if (sd.wr.data.length === 0 && b !== 0xFE) return 0xFF;
+    sd.wr.data.push(b);
+    if (sd.wr.data.length === 515) {
+      fs.writeSync(sd.fd, Buffer.from(sd.wr.data.slice(1, 513)), 0, 512, sd.wr.at * 512);
+      sd.wr = null; sd.q = [0x00, 0x00, 0x00, 0xFF];             // (Busy a while, then ready)
+      return 0x05;                                               // Data accepted
+    }
+    return 0xFF;
+  }
+  if (sd.cmd.length || (b & 0xC0) === 0x40) {
+    sd.cmd.push(b);
+    if (sd.cmd.length === 6) { sd.q = [0xFF, ...sdCommand(sd, sd.cmd)]; sd.cmd = []; return sd.q.shift(); }
+    return 0xFF;
+  }
+  if (sd.q.length) return sd.q.shift();
+  if (sd.writeAt >= 0) { sd.wr = { at: sd.writeAt, data: [] }; sd.writeAt = -1; }   // (R1 out: data next)
+  return 0xFF;
+}
+function spiPortB(v) {                                          // Port B's output bits changed
+  const card = !(v & 0x02) && !(v & 0x40) ? sdCards[(v >> 3) & 7] || null : null;
+  if (card !== spiSel) { if (spiSel) sdReset(spiSel); spiSel = card; }
+  const clk = v & 1;
+  if (clk && !spiClk && card) {                                 // Rising edge: both sides sample
+    card.miso = (card.cur >> (7 - card.bit)) & 1;
+    card.inB = ((card.inB << 1) | ((v >> 2) & 1)) & 0xFF;
+    if (++card.bit === 8) { card.bit = 0; card.cur = sdByte(card, card.inB); }
+  }
+  spiClk = clk;
+}
 function viaRead(r) {
+  if (r === 0) { const ddr = via[2], pins = 0x7F | ((spiSel ? spiSel.miso : 1) << 7); return (via[0] & ddr) | (pins & ~ddr); }
   if (r === 4) { viaIFR &= ~0x40; return viaT1 & 0xFF; }       // T1C-L: clears the T1 flag
   if (r === 5) return viaT1 >> 8;
   if (r === 6) return viaT1Latch & 0xFF;
@@ -97,7 +174,7 @@ function viaWrite(r, v) {
   else if (r === 7) { viaT1Latch = (viaT1Latch & 0xFF) | (v << 8); viaIFR &= ~0x40; }
   else if (r === 0x0D) viaIFR &= ~(v & 0x7F);
   else if (r === 0x0E) { if (v & 0x80) viaIER |= v & 0x7F; else viaIER &= ~(v & 0x7F); }
-  else via[r] = v;
+  else { via[r] = v; if (r === 0 || r === 2) spiPortB((via[0] & via[2]) | (~via[2] & 0x7F)); }
 }
 function viaTick(n) {
   if (!viaT1On) return;
@@ -212,7 +289,11 @@ let lastCyc = 0;
 while (cyc < opt.cycles && !halted) {
   viaTick(cyc - lastCyc); lastCyc = cyc;
   if (aciaTxTimer > 0 && --aciaTxTimer === 0) { aciaTdre = 1; if ((aciaCmd & 0x0C) === 0x04) aciaIrq = 1; }
-  if (rxQueue.length && --rxDelay <= 0 && !aciaRdrf) { aciaRx = rxQueue.shift().charCodeAt(0); aciaRdrf = 1; if (!(aciaCmd & 2)) aciaIrq = 1; rxDelay = 20000; }
+  if (rxQueue.length && --rxDelay <= 0 && !aciaRdrf) {
+    const c = rxQueue.shift();
+    if (c === '\u0100') rxDelay = 2000000;                  // \w: wait before the next key
+    else { aciaRx = c.charCodeAt(0); aciaRdrf = 1; if (!(aciaCmd & 2)) aciaIrq = 1; rxDelay = 20000; }
+  }
   if (irqLine() >= 0) { waiting = false; if (!(P & I)) { interrupt(irqVector(), false); cyc += 7; continue; } }
   if (waiting) { cyc++; continue; }
   trace.push([W, T, PC, A, X, Y, S, P]); if (trace.length > opt.trace) trace.shift();

@@ -70,6 +70,7 @@ MMU_PAGE_ENDS    = MMU_HDR + MmuHeader::page_ends
 MMU_BANK_MAP     = MMU_HDR + MmuHeader::bank_map
 MMU_BANK_ENDS    = MMU_HDR + MmuHeader::bank_ends
 MMU_LOW_WATER    = MMU_HDR + MmuHeader::low_water
+MMU_PAGE_FLOOR   = MMU_HDR + MmuHeader::page_floor
 MMU_HANDLE_TBL   = MMU_HDR + MmuHeader::handles             ; Entry for handle h: MMU_HANDLE_TBL + (h - 1) * 4
 MMU_MAX_HANDLES  = ($8000 - MMU_HANDLE_TBL) / .sizeof(Handle)   ; 103 for 2 pages
 MMU_CHUNK_HEADS  = MMU_HDR + MmuHeader::chunk_heads         ; First chunk page of each size class (0 = none)

@@ -3,6 +3,7 @@
 SYSTEM_TASK_NUM     = 0
 SHELL_TASK_NUM      = $01       ; Forth / WOZMON shell (the default serial-capture task)
 PIPE_TASK_NUM       = $0D       ; Pipe server (resident)
+STORAGE_TASK_NUM    = $0C       ; Storage: the SD card (and later FAT32) server (resident)
 SOUND_TASK_NUM      = $0E       ; Sound driver (resident)
 SERIAL_TASK_NUM     = $0F       ; Serial driver (resident)
 SERIAL_OWNER_TASK   = SERIAL_TASK_NUM   ; Task whose ZP holds the serial driver state
@@ -42,6 +43,10 @@ ERR_IO_BAD_REQ      = $78       ; the server doesn't support that request
 ERR_IO_DEVICE       = $79       ; the device didn't respond
 ERR_IO_BROKEN       = $7A       ; write to a pipe nobody reads
 ERR_IO_NO_PIPES     = $7B       ; all pipes are in use
+ERR_IO_NS_FULL      = $7C       ; the task's namespace is full
+ERR_IO_NS_LOOP      = $7D       ; too many binds in a row (a loop?)
+ERR_IO_NOT_READY    = $7E       ; the device isn't started (e.g. the SD card: open /dev/sd first)
+ERR_IO_MEDIA        = $7F       ; the medium refused the command or the data (e.g. the SD card)
 
 ; ***  IO (see IO_PLAN.md)  ***
 
@@ -83,7 +88,26 @@ IO_BLK_OFS          = 4         ; 32-bit offset (read / write)
 IO_BLK_COUNT        = 8         ; 16-bit byte count: requested (in), done (out)
 IO_BLK_CTL_CODE     = 11        ; H9_CTL
 IO_BLK_CTL_ARG      = 12
+IO_BLK_NS           = $20       ; The task's namespace (below)
 IO_BLK_DATA         = $100
+
+; Per-task namespace (IO_MOUNT, IO_BIND): in the task's IO transfer area, after the request block.
+; IO_OPEN applies the entry with the longest matching path prefix: a mount sends the rest of the name to
+; a device's server, a bind rewrites the name (prefix -> target) and looks again.  No match: the global
+; /dev.  New tasks get a copy of their parent's namespace.
+NS_ENTRIES          = 7         ; ($20-$FF of the area)
+NS_ENTRY_SIZE       = 32
+NS_TYPE             = 0         ; NS_FREE, NS_MOUNT or NS_BIND
+NS_DEV              = 1         ; Mount: the device (device table index)
+NS_PREFIX           = 2         ; The path prefix, zero-terminated (13 characters at most)
+NS_PREFIX_MAX       = 13
+NS_TARGET           = 16        ; Bind: what the prefix stands for, zero-terminated (15 at most)
+NS_TARGET_MAX       = 15
+NS_FREE             = 0
+NS_MOUNT            = 1
+NS_BIND             = 2
+NS_MAX_REWRITES     = 4         ; Binds applied to one name, at most
+.assert     IO_BLK_NS + NS_ENTRIES * NS_ENTRY_SIZE <= IO_BLK_DATA, error, "The namespace must fit below the data area"
 
 ; H9P requests (serve routine: .A = request, .X = client task, .Y = fid; the request block is in the
 ; client's transfer area, see IO_SRV_MAP.  OUT: C = 0 (.A = fid for H9_OPEN), or C = 1 and .A = error)
@@ -99,6 +123,12 @@ H9_DUP              = 7         ; another fd refers to the fid now (IO_DUP2, or 
 ; Sound driver: /dev/snd (sound.s, snd_srv.s).  Writes are YM2151 register/value byte pairs.
 SND_CTL_INIT        = 1         ; IO_CTL code: clear the YM2151
 SND_CTL_TEST        = 2         ; IO_CTL code: play the test sound
+
+; Storage: /dev/sd (storage.s, spi.s, sd.s, sd_srv.s; ROM page 3)
+SD_SPI_DEVICE       = 0         ; The SD card's SPI device (header J18)
+SD_STATE_SDSC       = 1         ; SD_STATE: 0 = not started; byte addresses
+SD_STATE_SDHC       = 2         ;   block addresses (SDHC, SDXC)
+SD_CTL_INIT         = 1         ; IO_CTL code: start the card again (e.g. after changing it)
 
 ; Pipe server: /dev/pipe, in its own Resident task (io_p0.s, pipe_srv.s).  Each pipe has a 256-byte ring
 ; (255 bytes of data) and counts the fds on each end; the fid is the pipe's index.
@@ -119,6 +149,11 @@ SER_TX_BUF          = $0300     ; 256-byte TX ring, in the serial task's RAM
 SER_FID_CONS        = 0         ; /dev/cons: reads only for the foreground task
 SER_FID_SER         = 1         ; /dev/ser: the raw port, for any task
 SER_CTL_FOREGROUND  = 1         ; IO_CTL code: .Y = the new foreground task (it gets the console input)
+; Console control keys (the serial IRQ handler acts on the first two; /dev/cons on the EOF keys)
+SER_KEY_BREAK       = $03       ; Ctrl-C: break the foreground task (back to its prompt: TASK_SET_BREAK)
+SER_KEY_KILL        = $1C       ; Ctrl-\: kill the foreground task (the shell starts again)
+SER_KEY_EOF         = $04       ; Ctrl-D: end of input (a /dev/cons read returns end of file)
+SER_KEY_EOF2        = $1A       ; Ctrl-Z: the same
 
 RESET_ENTRY     = $E000
 
@@ -377,6 +412,8 @@ TIMER_TASK_INT_L = <TIMER_TASK_INT
 
 ; ASCII CODES
 ASCII_BACKSPACE = $08
+ASCII_DEL       = $7F       ; (What many terminals send for the Backspace key: /dev/cons makes it a BS)
+ASCII_TAB       = $09
 ASCII_LF        = $0A
 ASCII_CR        = $0D
 ASCII_ESC       = $1B
@@ -798,29 +835,6 @@ F_CELL          := 2
                 pha
                 tya
                 ply
-.endmacro
-
-; SPI
-.macro SPI_SEND_CMD b0, b1, b2, b3, b4, crc
-                lda             #b0 | $40
-                jsr             SPI_SEND
-                lda             #b1
-                jsr             SPI_TRANSCEIVE
-                sta             ZP_TEMP_2
-                lda             #b2
-                jsr             SPI_TRANSCEIVE
-                lda             #b3
-                jsr             SPI_TRANSCEIVE
-                lda             #b4
-                jsr             SPI_TRANSCEIVE
-.ifnblank       crc
-                lda             #(crc << 1)+1
-.else
-                lda             #$FF
-.endif
-                jsr             SPI_TRANSCEIVE
-                jsr             SPI_RECV
-                sta             ZP_TEMP
 .endmacro
 
 ; PRINT HELPERS

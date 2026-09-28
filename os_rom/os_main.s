@@ -21,22 +21,24 @@ RESET_VECTOR_START:
             jsr                 MSG_INIT                            ; Message ring pointers (shared RAM)
             jsr                 IO_INIT                             ; The IO layer's devices (/dev/null, /dev/zero)
             jsr                 VIA_INIT
-            ;jsr                 SPI_INIT
+            lda                 #<SERIAL_DRIVER                     ; Serial driver in its own (Resident) task;
+            ldy                 #>SERIAL_DRIVER                     ;   first: it must be started before
+            ldx                 #SERIAL_TASK_NUM                    ;   anything prints (DRV_BOOT too)
+            jsr                 DRV_START
+            jsr                 DO_WELCOME                          ; (It clears the screen: before DRV_BOOT's reports)
             lda                 #<SOUND_DRIVER                      ; Sound driver in its own (Resident) task
             ldy                 #>SOUND_DRIVER
             ldx                 #SOUND_TASK_NUM
-            jsr                 DRV_START
-            lda                 #<SERIAL_DRIVER                     ; Serial driver in its own (Resident) task;
-            ldy                 #>SERIAL_DRIVER                     ; must be started before anything prints
-            ldx                 #SERIAL_TASK_NUM
-            jsr                 DRV_START
+            jsr                 DRV_BOOT
             lda                 #<PIPE_DRIVER                       ; Pipe server in its own (Resident) task
             ldy                 #>PIPE_DRIVER
             ldx                 #PIPE_TASK_NUM
-            jsr                 DRV_START
-            ;jsr                 SPI_TEST
+            jsr                 DRV_BOOT
+            lda                 #<STORAGE_DRIVER                    ; Storage (/dev/sd) in its own (Resident) task
+            ldy                 #>STORAGE_DRIVER
+            ldx                 #STORAGE_TASK_NUM
+            jsr                 DRV_BOOT
             ;jsr                 SND_CALL_TEST
-            jsr                 DO_WELCOME
 
 ; Start the shell in its own task (the default serial-capture task), start the scheduler's tick, and
 ; hand the CPU over
@@ -193,6 +195,38 @@ POST_S_7D:  .byte " 7D:", 0
 POST_S_SH:  .byte " SH:", 0
 POST_S_P1:  .byte " P1:", 0
 POST_S_CRLF: .byte ASCII_CR, ASCII_LF, 0
+
+; Start a driver at boot (DRV_START), and say so if its init fails: "<NAME> FAIL ee" (ee = the error).
+; The serial driver must be running already.  IN: .A.Y = DriverInfo, .X = task
+DRV_BOOT:
+            pha
+            phy
+            jsr                 DRV_START
+            bcc                 @done
+            ply
+            sty                 ZP_TEMP_VEC + 1                     ; The DriverInfo
+            ply
+            sty                 ZP_TEMP_VEC
+            pha
+            PRINT_CRLF
+            ldy                 #DriverInfo::name + 1
+            lda                 (ZP_TEMP_VEC),Y
+            tax
+            dey
+            lda                 (ZP_TEMP_VEC),Y
+            phx
+            ply
+            jsr                 WRITE_HSTRING                       ; Its name
+            PRINT_CHAR          #' ', #'F', #'A', #'I', #'L', #' '
+            pla
+            PRINT_BYTE
+            PRINT_CRLF
+            rts
+
+@done:
+            ply
+            pla
+            rts
 
 DO_WELCOME:
             jsr                 CLEAR_SCR

@@ -79,6 +79,7 @@ There are 16 tasks (`T` = `$0-$F`), each with its own `$0000-$7FFF` (zero page, 
 | :--- | :-- |
 | `$0` | System task: boot, then the idle task (runs only when no other task can) |
 | `$1` | Shell (HyForth / WOZMON); the foreground task (it gets the console input) to start with |
+| `$C` | Storage: the SD card, `/dev/sd` (Resident) |
 | `$D` | Pipe server (Resident) |
 | `$E` | Sound driver (Resident) |
 | `$F` | Serial driver (Resident) |
@@ -94,12 +95,19 @@ All IO goes through **file descriptors**, Plan 9 style (see `os_rom/IO_PLAN.md`)
 | `/dev/cons` | Serial driver (task `$F`) | The console: reads get the keyboard input, but only for the **foreground task** (the shell to start with; `IO_CTL` code `SER_CTL_FOREGROUND` changes it); other readers wait |
 | `/dev/ser` | Serial driver | The serial port, for any task |
 | `/dev/snd` | Sound driver (task `$E`) | Writes are YM2151 register/value byte pairs; `IO_CTL` codes `SND_CTL_INIT` and `SND_CTL_TEST` |
+| `/dev/sd` | Storage task (`$C`) | The SD card (SPI device 0, header J18) as bytes, at the fd's offset (`IO_SEEK`; HyForth `seek`); the card starts at the first open.  Blocks are cached one at a time, and writes go straight to the card |
 | `/dev/pipe` | Pipe server (task `$D`) | `IO_PIPE` makes a pipe (a read fd and a write fd, 255 bytes buffered); readers get end of file once the writers are gone |
 | `/dev/null`, `/dev/zero` | IO layer | The usual |
 
-Each task has 12 fds.  The shell opens fds 0, 1 and 2 (stdin, stdout, stderr) on `/dev/cons`, and tasks it starts get copies of its open fds; a task's fds are closed when it ends.  `READ_CHAR` (a key, if there is one) and `WRITE_CHAR` read fd 0 and write fd 1; tasks without them (the system task and drivers) use the serial port directly.  `GET_CHAR` waits for a key on fd 0, sleeping (the task uses no CPU until one comes in); WOZMON and HyForth wait for input with it.  `IO_DUP2` makes one fd refer to another's file, e.g. to redirect stdout.  The serial driver buffers both ways (256-byte RX and TX rings in its task), and sends from its transmit interrupt, so output doesn't busy-wait.  `$F88A` (`F88AR` in WOZMON) runs the IO self test.
+Each task has 12 fds.  The shell opens fds 0, 1 and 2 (stdin, stdout, stderr) on `/dev/cons`, and tasks it starts get copies of its open fds; a task's fds are closed when it ends.  `READ_CHAR` (a key, if there is one) and `WRITE_CHAR` read fd 0 and write fd 1; tasks without them (the system task and drivers) use the serial port directly.  `GET_CHAR` waits for a key on fd 0, sleeping (the task uses no CPU until one comes in); WOZMON and HyForth wait for input with it.  `/dev/cons` echoes what it reads, like a terminal, so a program reading a pipe doesn't.  `IO_DUP2` makes one fd refer to another's file, e.g. to redirect stdout, and `IO_DUP` gives another fd for the same file.  The serial driver buffers both ways (256-byte RX and TX rings in its task), and sends from its transmit interrupt, so output doesn't busy-wait.  `$F88A` (`F88AR` in WOZMON) runs the IO self test.
 
-HyForth has the IO words `open ( sz mode -- fd )` (e.g. `q^/dev/zero^ 1 open`; mode 1 = read, 2 = write, 3 = both), `close ( fd -- )`, `read ( fd addr n -- n' )`, `write ( fd addr n -- n' )`, `ioctl ( fd code arg -- )`, `fdup2 ( fd newfd -- )`, `pipe ( -- rfd wfd )` and `ioerr ( -- n )` (a failed call gives `!IO ERR!`; `ioerr` is the error code).
+**Console keys.**  **Ctrl-D** or **Ctrl-Z**: end of input (a `/dev/cons` read returns end of file, so `cat`, `wc` or `key` stop).  **Ctrl-C**: break: the foreground task goes to its break handler (`TASK_SET_BREAK`; HyForth's goes back to its prompt with `!BREAK!`, keeping the dictionary), and the tasks it started (e.g. a pipeline's copies) are killed.  **Ctrl-\\**: kill: the foreground task and the tasks it started end; the shell starts again from scratch (a fresh HyForth).  The serial driver acts on Ctrl-C and Ctrl-\\ as they arrive, so they work on a task that's stuck in a loop; the keys typed before them are dropped.  (A task without a break handler is killed by Ctrl-C too.)
+
+**Namespaces.**  Each task has its own namespace (7 entries), which the tasks it starts inherit: `IO_MOUNT "/z", "zero"` sends names under `/z` to the device `zero` (its server gets the rest of the name, e.g. `/sub`), and `IO_BIND "/tty", "/dev/cons"` makes names under `/tty` stand for names under `/dev/cons`.  `IO_OPEN` applies the entry with the longest matching prefix (whole path elements: `/z` matches `/z/sub`, not `/zz`), then looks again after a bind; a name nothing matches must be `/dev/...`.  `IO_UNMOUNT` removes an entry, `IO_NS_LIST` prints them.
+
+**Starting a copy of a task.**  `TASK_CLONE` starts a new task with a copy of the current one, like `fork`: its task RAM (except the stack page, the task system page and the free pages between the MMU's page floor and its lowest allocated page), its task zero page, its namespace and its open fds.  It takes about 0.1 s for HyForth.
+
+HyForth has the IO words `open ( sz mode -- fd )` (e.g. `q^/dev/zero^ 1 open`; mode 1 = read, 2 = write, 3 = both), `close ( fd -- )`, `read ( fd addr n -- n' )`, `write ( fd addr n -- n' )`, `ioctl ( fd code arg -- )`, `fdup2 ( fd newfd -- )`, `pipe ( -- rfd wfd )`, `seek ( fd lo hi -- )`, `ioerr ( -- n )` (a failed call gives `!IO ERR!`; `ioerr` is the error code), `cat` (copy stdin to stdout to the end), `wc ( -- lines words chars )` (count stdin's lines, words and characters), and for the namespace `mount ( sz-path sz-dev -- )`, `bind ( sz-path sz-target -- )`, `unmount ( sz-path -- )` and `ns`.  `ftrain autoload` loads HyForth's built-in training scripts (`if`/`else`/`then`, `do`/`loop`, `begin`/`until`, `2*`, `256/`, ...; `ftrain` is their address in the paged ROM), and `bltest bload` its sample binary words.  In a definition, a number other than a single digit is written `lit [ 65 , ]` (numbers are converted as they're read, even while compiling).  A line with `|` in it is a **pipeline**: `words | wc .S` runs `words` in a copy of the shell's task (`TASK_CLONE`) with its stdout into a pipe, and `wc .S` in the shell with its stdin from the pipe; `a | b | c` works too.
 
 ### **Memory Map**
 * PER-TASK memory map (each task has its own copy of this memory space, except for shared RAM pages, as discussed below)
@@ -123,10 +131,10 @@ HyForth has the IO words `open ( sz mode -- fd )` (e.g. `q^/dev/zero^ 1 open`; m
 
 | Start | End  | Description |
 | :---- | :--- | :---------- |
-| $E000 | $FFFF | BIOS/OS ROM paged area (indexed by the W register; see below).  Page 0: BIOS and OS.  Page 1: HyForth and the disassembler.  Page 2: the IO layer, the serial driver's file server, the POST RAM line tests and SPI.  Pages 3-F: unused |
+| $E000 | $FFFF | BIOS/OS ROM paged area (indexed by the W register; see below).  Page 0: BIOS and OS.  Page 1: HyForth and the disassembler.  Page 2: the IO layer and namespaces, the serial, sound and pipe servers, the sound test tune, the POST RAM line tests.  Page 3: storage (SPI, the SD card, `/dev/sd`).  Pages 4-F: unused |
 | $E000 | $E004 | RESET Vector entry point: sets W to zero.  This is replicated at the beginning of each BIOS page, so that an arbitrary W register value at startup/RESET continues on page 0, right after the page 0 copy. |
 | $E005 | $FCFF | Effective BIOS paged area.  Compiler segments (pages) `BIOS_P1 - BIOS_PF` correspond to `W` register values of `$01 - $0F`, respectively.  Code on different pages calls each other through far-call gates. |
-| $F800 | $F895 | BIOS thunks (`jmp` table of BIOS, MMU, shared memory, scheduler and IO entry points), on page 0 and page 1.  `$F833` (`F833R` in WOZMON, `mmtest` in HyForth) runs the MMU self test; `$F869` the scheduler self test; `$F88A` the IO self test; `$F88D` is `GET_CHAR` (wait for a key), `$F890` `IO_DUP2`, `$F893` `IO_PIPE` |
+| $F800 | $F8AA | BIOS thunks (`jmp` table of BIOS, MMU, shared memory, scheduler and IO entry points), on page 0 and page 1.  `$F833` (`F833R` in WOZMON, `mmtest` in HyForth) runs the MMU self test; `$F869` the scheduler self test; `$F88A` the IO self test; `$F88D` is `GET_CHAR` (wait for a key), `$F890` `IO_DUP2`, `$F893` `IO_PIPE`, `$F896` `IO_DUP`, `$F899` `TASK_CLONE`, `$F89C-$F8A5` `IO_MOUNT`, `IO_BIND`, `IO_UNMOUNT`, `IO_NS_LIST`, `$F8A8` `TASK_SET_BREAK` |
 | $FD00 | $FDFF | COMMON block, the same on every page: IRQ entry stubs and exit, NMI entry, far-call trampolines |
 | $FE00 | $FEFF | "WOZMON" monitor page (page 0) |
 

@@ -60,6 +60,13 @@ FAR_GATE_INLINE DEV_REGISTER,   ::DEV_REGISTER,         0
 FAR_GATE_INLINE GET_CHAR,       ::GET_CHAR,             0
 FAR_GATE_INLINE IO_DUP2,        PAGE2::IO_DUP2,         2
 FAR_GATE_INLINE IO_PIPE,        PAGE2::IO_PIPE,         2
+FAR_GATE_INLINE IO_DUP,         PAGE2::IO_DUP,          2
+FAR_GATE_INLINE TASK_CLONE,     PAGE2::TASK_CLONE,      2
+FAR_GATE_INLINE IO_MOUNT,       PAGE2::IO_MOUNT,        2
+FAR_GATE_INLINE IO_BIND,        PAGE2::IO_BIND,         2
+FAR_GATE_INLINE IO_UNMOUNT,     PAGE2::IO_UNMOUNT,      2
+FAR_GATE_INLINE IO_NS_LIST,     PAGE2::IO_NS_LIST,      2
+FAR_GATE_INLINE TASK_SET_BREAK, ::TASK_SET_BREAK,       0
 
 ; Sound routines run in the sound task (through the page 0 SND_CALL_* task gates)
 FAR_GATE        SOUND_INIT,     ::SND_CALL_INIT,        0
@@ -142,4 +149,11 @@ WRITE_HSTRING:
                 jmp             GET_CHAR            ; $F88D
                 jmp             IO_DUP2             ; $F890
                 jmp             IO_PIPE             ; $F893
-.assert     * = ::TH_IO_PIPE + 3, lderror, "BIOS_THUNKS_P1 must match BIOS_THUNKS"
+                jmp             IO_DUP              ; $F896
+                jmp             TASK_CLONE          ; $F899
+                jmp             IO_MOUNT            ; $F89C
+                jmp             IO_BIND             ; $F89F
+                jmp             IO_UNMOUNT          ; $F8A2
+                jmp             IO_NS_LIST          ; $F8A5
+                jmp             TASK_SET_BREAK      ; $F8A8
+.assert     * = ::TH_TASK_SET_BREAK + 3, lderror, "BIOS_THUNKS_P1 must match BIOS_THUNKS"

@@ -101,3 +101,17 @@ TH_IO_DUP2:
                 jmp             IO_DUP2             ; $F890
 TH_IO_PIPE:
                 jmp             IO_PIPE             ; $F893
+TH_IO_DUP:
+                jmp             IO_DUP              ; $F896
+TH_TASK_CLONE:
+                jmp             TASK_CLONE          ; $F899
+TH_IO_MOUNT:
+                jmp             IO_MOUNT            ; $F89C
+TH_IO_BIND:
+                jmp             IO_BIND             ; $F89F
+TH_IO_UNMOUNT:
+                jmp             IO_UNMOUNT          ; $F8A2
+TH_IO_NS_LIST:
+                jmp             IO_NS_LIST          ; $F8A5
+TH_TASK_SET_BREAK:
+                jmp             TASK_SET_BREAK      ; $F8A8

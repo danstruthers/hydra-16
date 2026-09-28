@@ -265,18 +265,18 @@ show_refer:
 ;  removed 'seek', was not used in original code
 
 ;----------------------------------------------------------------------
-; ( u -- u ) print top of DS in hexadecimal in MSB:LSB form
+; ( u -- ) print top of DS in hexadecimal in MSB:LSB form, and drop it
 def_word ".", "dot", 0
     PRINT_SPACE
     jsr spull_0
     PRINT_BYTE TEMP1 + 1, TEMP1
-    jmp this      ; 'this' includes jsr spush_0 and next
+    jmp next
 
-; ( u -- u ) print top of DS in ascii, two bytes, msb first
+; ( u -- ) print top of DS in ascii, two bytes, msb first, and drop it
 def_word ".C", "cdot", 0
     jsr spull_0
     PRINT_CHAR TEMP1 + 1, TEMP1
-    jmp this       ; 'this' includes jsr spush_0 and next
+    jmp next
 ;
 ;
 def_word "ord", "ord", 0
@@ -632,7 +632,11 @@ core_dict:
 def_word "key", "key", 0
 KEYRDLP:
     jsr GET_CHAR            ; from fd 0 (sleeps until a key comes in)
-    bcc KEYRDLP
+    stz TEMP1+1
+    bcs KEYGOT
+    lda #$FF                ; end of file (stdin from a pipe): -1
+    sta TEMP1+1
+KEYGOT:
     sta TEMP1
     jmp this         ; 'this' includes jsr spush_0 and next
 
