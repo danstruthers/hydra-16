@@ -30,6 +30,7 @@ node hydrasim.js [options]
 | `--watch ADDR[@TASK]` | Report every write to a task RAM address: the old and new value, and the PC that wrote it |
 | `--mark TEXT` | Report the cycle each time the serial output ends with `TEXT` (`\r` = CR), e.g. `--mark "HF>"` to time a command from prompt to prompt |
 | `--profile N` | From cycle `N` on, count the instructions each task runs in each routine (named from the build's debug info, `os_rom/obj/os_rom_C02.dbg`), and report the top 30, e.g. `--profile 2800000 --input '\wwords \| wc . . .\r'` |
+| `--seed N` | Power up RAM and the pseudo-registers from random number seed `N`, so a run repeats exactly (by default each run powers up differently) |
 | `--pc [PAGE:]ADDR` | Report the registers each time the PC reaches `ADDR` (on BIOS ROM page `PAGE`, if given); addresses are in `os_rom/obj/os_rom_C02.lbl` |
 
 Example: boot to Forth and run a command (Forth starts after `COPYTORAM`, so allow plenty of cycles):
@@ -40,6 +41,26 @@ node hydrasim.js --cycles 60000000 --input "1 2 + .\r"
 
 The report shows the serial output, the last instructions executed (`W T PC A X Y S P`), the hottest PCs
 (a stuck loop shows up at the top), and the final pseudo-register and vector RAM state.
+
+### **Regression tests**
+
+`regress.js` boots the ROM in the emulator once per test, types each test's input, and checks the serial
+output for what it expects: POST, the self tests (MMU, scheduler, IO; also with 1 RAM module and 1 shared
+macro-page), POST with hardware faults, HyForth, pipelines, files and namespaces, tasks and console
+switching, Ctrl-C, background sound and the bell, and `/dev/sd` (on a blank card image).  The emulators
+run in parallel; the whole set takes about 10 seconds.
+
+```
+node regress.js              all the tests (exit code 1 if any fails)
+node regress.js pipes io     only the tests whose names contain "pipes" or "io"
+node regress.js --list       what each test checks
+node regress.js --random     a new random power-up each run (default: --seed 1, so runs repeat exactly)
+node regress.js --verbose    show every test's serial output, not just the failures'
+```
+
+Or from `os_rom`: `makeC02 test` builds the ROM and then runs them.  A failure shows what was missing (or
+found when it shouldn't be), the `hydrasim.js` command that reproduces it, and the serial output.  To add a
+test, add an entry to the `TESTS` list at the top of `regress.js` (its header describes the fields).
 
 ### **What it models**
 

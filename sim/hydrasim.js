@@ -43,6 +43,8 @@
 //   --watch ADDR[@TASK] Report every write to task RAM address ADDR (value, and the PC that wrote it)
 //   --pc [PAGE:]ADDR    Report the registers every time the PC reaches ADDR (on ROM page PAGE, if given)
 //   --mark TEXT         Report the cycle each time the serial output ends with TEXT ("\r" = CR), e.g. a prompt
+//   --seed N            Power up RAM and the pseudo-registers from random number seed N (default: a new
+//                       random power-up each run), so a run can be repeated exactly
 //   --profile N         From cycle N on, count the instructions run in each routine (named from the
 //                       build's debug info, ../os_rom/obj/os_rom_C02.dbg) and in each task, and report them
 //
@@ -55,7 +57,7 @@ const path = require('path');
 
 // ---- options
 const opt = { rom: path.join(__dirname, '..', 'os_rom', 'bin'), cycles: 20000000, input: '', modules: 3,
-  aciaLine: 1, stuckIrq: -1, model: '', raw: false, trace: 25, dumps: [], watches: [], pcWatches: [], sharedU: 16, ramFault: null, sds: [], acia: 'rockwell', marks: [], profile: -1 };
+  aciaLine: 1, stuckIrq: -1, model: '', raw: false, trace: 25, dumps: [], watches: [], pcWatches: [], sharedU: 16, ramFault: null, sds: [], acia: 'rockwell', marks: [], profile: -1, seed: -1 };
 const argv = process.argv.slice(2);
 for (let i = 0; i < argv.length; i++) {
   const a = argv[i], next = () => argv[++i];
@@ -79,13 +81,17 @@ for (let i = 0; i < argv.length; i++) {
     case '--pc': { const m = /^(?:([0-9A-Fa-f]):)?([0-9A-Fa-f]+)$/.exec(next()); opt.pcWatches.push({ pc: parseInt(m[2], 16), page: m[1] === undefined ? -1 : parseInt(m[1], 16) }); break; }
     case '--mark': opt.marks.push(next().replace(/\\r/g, '\r').replace(/\\n/g, '\n')); break;
     case '--profile': opt.profile = +next(); break;
+    case '--seed': opt.seed = +next() >>> 0; break;
     case '--watch': { const m = /^([0-9A-Fa-f]+)(?:@([0-9A-Fa-f]))?$/.exec(next()); opt.watches.push({ addr: parseInt(m[1], 16), task: m[2] === undefined ? -1 : parseInt(m[2], 16) }); break; }
     default: console.error('Unknown option: ' + a + ' (see the header of hydrasim.js)'); process.exit(1);
   }
 }
 const osrom = fs.readFileSync(path.join(opt.rom, 'os_rom_C02.bin'));
 const pagedrom = fs.readFileSync(path.join(opt.rom, 'paged_rom_C02.bin'));
-const rnd = n => (Math.random() * n) | 0;
+let seed = opt.seed;                                            // --seed: a repeatable power-up (mulberry32)
+const random = seed < 0 ? Math.random : () => { seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+const rnd = n => (random() * n) | 0;
 const hx = (v, n = 2) => v.toString(16).toUpperCase().padStart(n, '0');
 
 // ---- memory and devices

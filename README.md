@@ -17,7 +17,7 @@ Everything else the build makes (the object file, listing, labels, map and debug
 
 Most changes affect **both** images (HyForth's RAM image calls ROM addresses directly), so burn both.  The paged ROM image is written in chip order: the hardware swaps the 8K halves of each 16K bank (A13), so CPU `$A000` reads ROM offset `$2000` and CPU `$C000` reads ROM offset `$0000`.  Burn it at offset 0.
 
-`sim/hydrasim.js` is a Hydra-16 emulator (Node.js) that boots these images without the hardware; see `sim/README.md`.  The plan for the memory manager and IO subsystem is in `os_rom/MMU_PLAN.md`.
+`sim/hydrasim.js` is a Hydra-16 emulator (Node.js) that boots these images without the hardware, and `sim/regress.js` runs the regression tests on it (`node sim/regress.js`, or `makeC02 test` to build and then test); see `sim/README.md`.  The plan for the memory manager and IO subsystem is in `os_rom/MMU_PLAN.md`.
 
 ### **Startup**
 

@@ -8,3 +8,5 @@ ld65 -C os_rom_C02.cfg obj\all_C02.o -Ln obj\os_rom_C02.lbl -m obj\os_rom_C02.ma
 @IF ERRORLEVEL 1 EXIT /B 1
 @REM Check for calls to another ROM page that don't go through a gate (needs Node.js)
 node tools\check_pages.js obj\os_rom_C02.dbg
+@REM makeC02 test: then run the regression tests in the emulator (sim\regress.js)
+@IF /I "%1"=="test" node ..\sim\regress.js
