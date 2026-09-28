@@ -38,8 +38,15 @@ FAR_GATE_INLINE     IO_WAKE,        ::IO_WAKE,              0
 FAR_GATE_INLINE     YIELD,          ::YIELD,                0
 FAR_GATE_INLINE     NO_PREEMPT,     ::NO_PREEMPT,           0
 FAR_GATE_INLINE     PREEMPT,        ::PREEMPT,              0
-FAR_GATE_INLINE     POST_PUTC,      ::POST_PUTC,            0
 FAR_GATE_INLINE     MMU_PROBE_MODULES, ::MMU_PROBE_MODULES, 0
+
+; Gates from page 4 to far pointers and references (page 5)
+FAR_GATE_INLINE     FP_MAKE,        PAGE5::FP_MAKE,         5
+FAR_GATE_INLINE     FP_READ,        PAGE5::FP_READ,         5
+FAR_GATE_INLINE     FP_COPY,        PAGE5::FP_COPY,         5
+FAR_GATE_INLINE     MM_REF,         PAGE5::MM_REF,          5
+FAR_GATE_INLINE     MM_FP,          PAGE5::MM_FP,           5
+FAR_GATE_INLINE     SH_REF,         PAGE5::SH_REF,          5
 
 ; Gates from page 4 to the IO layer (page 2)
 FAR_GATE_INLINE     IO_OPEN,        PAGE2::IO_OPEN,         2

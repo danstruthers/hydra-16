@@ -74,7 +74,7 @@ PIPE_INIT:
             lda         #<PIPE_NAME
             ldy         #>PIPE_NAME
             ldx         #PIPE_TASK_NUM
-            jmp         DEV_REGISTER_P0
+            jmp         DEV_REGISTER
 
 @done:
             rts
@@ -91,42 +91,51 @@ IO_INIT:
             lda         #<NULL_NAME
             ldy         #>NULL_NAME
             ldx         #IO_DEV_CALLER_TASK
-            jsr         DEV_REGISTER_P0
+            jsr         DEV_REGISTER
             LOAD_ADDR   ZERO_SERVE, ZP_TC_VEC
             lda         #<ZERO_NAME
             ldy         #>ZERO_NAME
             ldx         #IO_DEV_CALLER_TASK
-            jsr         DEV_REGISTER_P0
+            jsr         DEV_REGISTER
             LOAD_ADDR   PROC_SERVE, ZP_TC_VEC
             lda         #<PROC_NAME
             ldy         #>PROC_NAME
             ldx         #IO_DEV_CALLER_TASK
-            jmp         DEV_REGISTER_P0
+            jmp         DEV_REGISTER
 
 ; Register a device (a file server): /dev/<name> is served by the serve routine, running in a task.
 ; Drivers call it from their init (which runs in the driver's task).
-; IN: .A.Y = name (zero-terminated, 1-8 characters; in RAM), .X = task the serve routine runs in
-;     (IO_DEV_CALLER_TASK = the task making each request), ZP_TC_VEC = serve routine (page 0)
+; IN: .A.Y = name (zero-terminated, 1-8 characters; read as the caller sees it, through a far pointer: in
+;     RAM, the paged ROM, or on its ROM page), .X = task the serve routine runs in (IO_DEV_CALLER_TASK = the
+;     task making each request), ZP_TC_VEC = serve routine (page 0)
 ; OUT (success): .A = device index, C = 0
-; OUT (failure): .A = ERR_IO_NAME (empty, too long, or in the BIOS ROM) or ERR_IO_NO_DEVS, C = 1
+; OUT (failure): .A = ERR_IO_NAME (empty, too long, or unreadable) or ERR_IO_NO_DEVS, C = 1
 ; Preserves .X, .Y
-; A name in the BIOS ROM ($E000-$FFFF) would be read on page 0, not the caller's page, so it's refused;
-; page 0's drivers, whose names are on page 0, call DEV_REGISTER_P0.
-DEV_REGISTER:
-            cpy         #>BIOS_ROM_START
-            bcc         DEV_REGISTER_P0
-            lda         #ERR_IO_NAME
-            rts
+; DEV_REGISTER is for page 0 code (and the thunk); other pages' gates go to DEV_REGISTER_FAR.
+DEV_REGISTER_FAR:
+            stx         ZP_IO_TMP                           ; The task
+            pha
+            tsx
+            lda         $0104,X                             ; The caller's ROM page (FAR_CALL_A pushed it,
+            tax                                             ;   under its return address)
+            pla
+            bra         DEV_REGISTER_NAME
 
-DEV_REGISTER_P0:
+DEV_REGISTER:
+            stx         ZP_IO_TMP                           ; The task
+            ldx         #0                                  ; (Page 0)
+
+DEV_REGISTER_NAME:
+            jsr         FP_MAKE                             ; ZP_FP = the name
+            ldx         ZP_IO_TMP
             php                                             ; Save caller's I flag
             sei
             PUSH_XY
-            sta         ZP_IO_BUF                           ; The name
-            sty         ZP_IO_BUF + 1
-            stx         ZP_IO_TMP                           ; The task
             _M_SYS_ENTER                                    ; Select shared bank ID $00 (device table)
-            lda         (ZP_IO_BUF)
+            ldy         #0
+            jsr         FP_READ                             ; (It maps the name's memory for each byte, and
+            bcs         @empty_name                         ;   puts the device table back)
+            cmp         #0
             beq         @empty_name
             ldx         #0                                  ; Device table offset
 
@@ -146,7 +155,9 @@ DEV_REGISTER_P0:
             ldy         #0                                  ; Copy the name, zero-padded
 
 @name:
-            lda         (ZP_IO_BUF),Y
+            jsr         FP_READ
+            bcs         @bad_name
+            cmp         #0
             beq         @pad
             cpy         #IO_DEV_NAME_LEN
             bcs         @bad_name                           ; Too long

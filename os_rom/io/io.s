@@ -10,9 +10,9 @@
 ;   area in shared RAM (bank ID $09), and the serve routine runs in the server's task (TASK_CALL).
 ;
 ;   All calls: C = 0 on success, C = 1 with the error in .A; they preserve .X and .Y (except where they
-;   return something in them).  Names and buffers must be in task RAM ($0000-$7FFF); a name in the BIOS
-;   ROM ($E000-$FFFF) is refused (ERR_IO_NAME: this page would read it on page 2, not the caller's page),
-;   except from page 2's own code (IO_OPEN_P2).
+;   return something in them).  Names are read as the caller sees them, through far pointers (fp.s):
+;   in RAM, in the paged ROM, or on the caller's own BIOS ROM page.  Buffers (IO_READ, IO_WRITE, ...)
+;   must be in task RAM ($0000-$7FFF).
 ;
 ;   Blocking: a server that has no data yet returns ERR_IO_WOULD_BLOCK, and later wakes the task
 ;   (IO_WAKE).  The task marks itself waiting *before* calling the server, so a wake that comes early
@@ -34,24 +34,16 @@ DEV_PREFIX_LEN  = 5
 
 ; ---- helpers
 
-; A name passed in from another page: not in the BIOS ROM ($E000-$FFFF), which page 2 code would read on
-; page 2 instead of the caller's page.  IO_NAMES_CHECK checks ZP_IO_BUF too (IO_MOUNT, IO_BIND's second name).
-; IN: .A.Y = the name.  OUT: C = 0 (.A kept); or .A = ERR_IO_NAME, C = 1
-IO_NAMES_CHECK:
+; The ROM page of the code that called this call, so its names can be read as it sees them (FP_MAKE: a
+; name on its own ROM page, too).  JSR it right after the call's PUSH_XY, in a call entered through a far
+; gate: FAR_CALL_A pushed the caller's page under the call's return address.
+; OUT: .X = the page.  Preserves .A, .Y
+IO_CALLER_PAGE:
             pha
-            lda         ZP_IO_BUF + 1
-            cmp         #>BIOS_ROM_START
+            tsx
+            lda         $0108,X                     ; (.A, our return address, .Y, .X, FAR_CALL_A's return
+            tax                                     ;   address)
             pla
-            bcs         IO_NAME_IN_ROM
-
-IO_NAME_CHECK:
-            cpy         #>BIOS_ROM_START
-            bcc         IO_NAME_DONE
-
-IO_NAME_IN_ROM:
-            lda         #ERR_IO_NAME
-
-IO_NAME_DONE:
             rts
 
 ; For the servers: set the request's count (done) to .A (0-255), and unmap the client's transfer area
@@ -299,32 +291,31 @@ IO_COPY_IN:
 ; OUT (success): .A = fd, C = 0
 ; OUT (failure): .A = ERR_IO_NOT_FOUND, ERR_IO_NO_FDS, ERR_IO_NS_LOOP, ERR_IO_NAME or the server's
 ;                error, C = 1
-; The name must be in RAM (or the paged ROM, $A000-$DFFF): one in the BIOS ROM ($E000-$FFFF) would be read
-; on page 2, not the caller's page, so it's refused (ERR_IO_NAME).  Page 2's own callers, whose names can
-; be on page 2, call IO_OPEN_P2.
+; The name is read as the caller sees it: in RAM, the paged ROM, or on its own BIOS ROM page (a far
+; pointer: FP_MAKE).  Page 2's own callers, whose names are on page 2, call IO_OPEN_P2.
 IO_OPEN:
-            jsr         IO_NAME_CHECK
-            bcc         IO_OPEN_P2
-            rts
+            PUSH_XY
+            stx         ZP_IO_MODE
+            jsr         IO_CALLER_PAGE              ; .X = the caller's ROM page
+            bra         IO_OPEN_NAME
 
 IO_OPEN_P2:
             PUSH_XY
-            sta         ZP_IO_BUF
-            sty         ZP_IO_BUF + 1
             stx         ZP_IO_MODE
+            ldx         W_REGISTER                  ; (Page 2)
+
+IO_OPEN_NAME:
+            jsr         FP_MAKE                     ; ZP_FP = the name
             jsr         IO_XFER_SETUP
             _M_IO_MAP_XFER
-            ldy         #0                          ; The name -> the data area, where the namespace can
-
-@copy:                                              ;   rewrite it, and the server finds the rest of it
-            lda         (ZP_IO_BUF),Y
-            sta         (ZP_IO_DATA),Y
-            beq         @copied
-            iny
-            bne         @copy
-            dey                                     ; (255 characters at most)
-            lda         #0
-            sta         (ZP_IO_DATA),Y
+            lda         ZP_IO_DATA                  ; The name -> the data area, where the namespace can
+            ldy         ZP_IO_DATA + 1              ;   rewrite it, and the server finds the rest of it
+            ldx         #0                          ; (256 bytes at most, with its 0)
+            sec
+            jsr         FP_COPY
+            bcc         @copied
+            lda         #ERR_IO_NAME                ; Too long, or another task's RAM
+            jmp         @fail
 
 @copied:
             jsr         NS_RESOLVE                  ; C = 0: a mount: .A = the device, the rest of the name

@@ -11,6 +11,7 @@
 ;       $8220-$823F  SH_ENDS    run-end bitmap (last bank of each allocation)
 ;       $8400-$87FF  SH_HANDLES shared handle table: 255 entries of ShHandle
 ;       $8800-$88FF  IO_DEV_TABLE the IO device table (io.s)
+;       $8900-$8CFB  SH_REF_TBL references' far pointers (SH_REF, fp.s), by shared handle
 ;   Bank IDs $00 (system) and $09 (IO transfer areas) are reserved, as are the banks of any U macro-page
 ;   whose RAM isn't installed, and the banks of any RAM chip that failed the POST (ZP_M_BAD_SH: chip c
 ;   holds bank IDs 4c - 4c+3 of every U).
@@ -24,18 +25,14 @@ SH_MAP              = $8200
 SH_ENDS             = $8220
 SH_HANDLES          = $8400
 SH_MAX_HANDLES      = 255
+SH_REF_MARK         = $FF                                   ; ShHandle::count of a reference (SH_REF, fp.s): no
+                                                            ;   banks (no allocation can have 255)
+SH_REF_TBL          = $8900                                 ; References' far pointers: 255 of FarPtr, by handle
 SH_FIRST_FREE_ID    = $01                                   ; (ID $00: system data; $09, the IO transfer
                                                             ;   areas, is reserved in the map)
 SH_WINDOW           = PAGED_RAM_BASE                        ; Where SH_LOCK maps a shared allocation
 SH_PROBE_ADDR       = $9FFF                                 ; Probe byte (bank $F0 of each U)
 SH_PROBE_MARK       = $50                                   ; Probe marker: SH_PROBE_MARK + U
-
-.struct     ShHandle
-            bank        .byte                               ; First shared bank ID
-            count       .byte                               ; Banks (0 = free entry)
-            mask_lo     .byte                               ; Tasks $0-$7 holding a reference (bit = task)
-            mask_hi     .byte                               ; Tasks $8-$F
-.endstruct
 
 ; Set up the shared memory tables: find which U macro-pages have RAM, clear the bitmaps and handle
 ; table, and reserve the system and IO transfer banks.  Called by MMU_INIT at boot.
@@ -258,6 +255,7 @@ SH_READ:
             _M_SYS_ENTER                                    ; Select shared bank ID $00
             jsr         SH_ACCESS_SETUP                     ; Selects the allocation's first bank
             bcs         @leave
+            bvs         @ref
             ldy         ZP_M_COFS
             lda         SH_WINDOW,Y
             clc
@@ -266,6 +264,11 @@ SH_READ:
             _M_SYS_LEAVE                                    ; Restores the RAM bank and U
             PULL_YX
             jmp         MM_RETURN
+
+@ref:                                                       ; A reference: through its far pointer
+            ldy         ZP_M_COFS
+            jsr         FP_READ
+            bra         @leave
 
 ; Write a byte of a shared allocation (the calling task must hold a reference).
 ; IN: .A = shared handle, .Y = offset (0-255, in the first bank), .X = byte
@@ -281,6 +284,7 @@ SH_WRITE:
             _M_SYS_ENTER                                    ; Select shared bank ID $00
             jsr         SH_ACCESS_SETUP                     ; Selects the allocation's first bank
             bcs         @leave
+            bvs         @ref
             ldy         ZP_M_COFS
             lda         ZP_M_SZ1
             sta         SH_WINDOW,Y
@@ -290,6 +294,12 @@ SH_WRITE:
             _M_SYS_LEAVE                                    ; Restores the RAM bank and U
             PULL_YX
             jmp         MM_RETURN
+
+@ref:                                                       ; A reference: through its far pointer (ROM,
+            ldx         ZP_M_SZ1                            ;   FP_RO: ERR_MEM_NOT_SUPPORTED)
+            ldy         ZP_M_COFS
+            jsr         FP_WRITE
+            bra         @leave
 
 ; Map a shared allocation's first bank into the $8000-$9FFF window (SH_WINDOW), for speed.  The calling
 ; task must hold a reference.  Undo with SH_UNLOCK.
@@ -305,8 +315,23 @@ SH_LOCK:
             bcs         @fail
             jsr         SH_CHECK_REF
             bcs         @fail
+            ldy         #ShHandle::count
+            lda         (ZP_M_HP),Y
+            cmp         #SH_REF_MARK
+            bne         @allocation
+            jsr         SH_REF_LOAD                         ; A reference: to shared RAM, its bank (its
+            lda         ZP_FP + FarPtr::space               ;   data is at its address: SH_FP); to ROM,
+            and         #FP_KIND                            ;   nothing to map (SH_READ it)
+            cmp         #FP_SHARED
+            bne         @unsupported
+            lda         ZP_FP + FarPtr::sel
+            bra         @map
+
+@allocation:
             ldy         #ShHandle::bank
             lda         (ZP_M_HP),Y
+
+@map:
             ply                                             ; Previous U        } Don't restore them:
             plx                                             ; Previous RAM bank } they're returned
             jsr         SH_SELECT_BANK                      ; Map the allocation
@@ -314,6 +339,10 @@ SH_LOCK:
             pla                                             ; Drop the caller's .X
             clc
             jmp         MM_RETURN
+
+@unsupported:
+            lda         #ERR_MEM_NOT_SUPPORTED
+            sec
 
 @fail:
             _M_SYS_LEAVE
@@ -476,11 +505,17 @@ SH_DROP_TASK_REF:
             iny
             ora         (ZP_M_HP),Y
             bne         @done                               ; Still referenced
+            ldy         #ShHandle::count
+            lda         (ZP_M_HP),Y
+            cmp         #SH_REF_MARK
+            beq         @free_entry                         ; A reference (SH_REF): no banks
             jsr         SH_MAPS_SETUP                       ; Last reference: free the banks
             ldy         #ShHandle::bank
             lda         (ZP_M_HP),Y
             ldx         #$FF
             jsr         BM_FREE_RUN
+
+@free_entry:
             lda         #0
             ldy         #ShHandle::count                    ; Free the entry
             sta         (ZP_M_HP),Y
@@ -494,19 +529,31 @@ SH_DROP_TASK_REF:
             sec
             rts
 
-; Check the calling task's reference to shared handle .A and map its first bank.
-; OUT: C = 0; or .A = ERR_MEM_NOT_VALID, C = 1.  Modifies: .A, .X, .Y
+; Check the calling task's reference to shared handle .A and map its first bank; or, for a reference
+; (SH_REF, fp.s), load its far pointer instead.
+; OUT: C = 0 and V = 0 (mapped) or V = 1 (a reference: ZP_FP); or .A = ERR_MEM_NOT_VALID, C = 1
+; Modifies: .A, .X, .Y
 SH_ACCESS_SETUP:
             jsr         SH_HANDLE_PTR
             bcs         @done
             jsr         SH_CHECK_REF
             bcs         @done
+            ldy         #ShHandle::count
+            lda         (ZP_M_HP),Y
+            cmp         #SH_REF_MARK
+            beq         @ref
             ldy         #ShHandle::bank
             lda         (ZP_M_HP),Y
             jsr         SH_SELECT_BANK
+            clv
             clc
 
 @done:
+            rts
+
+@ref:
+            jsr         SH_REF_LOAD                         ; ZP_FP (C = 0)
+            bit         MMU_BIT_MASKS + 6                   ; V = 1 ($40)
             rts
 
 ; Map shared bank ID .A at $8000-$9FFF: U = ID >> 4, RAM bank = $F0 | (ID & $0F).  Preserves .X, .Y

@@ -343,18 +343,17 @@ NS_COPY_TO:
 ; rest of the name.  An entry for the same path is replaced.
 ; IN: .A.Y = the path ("/...", 13 characters at most), ZP_IO_BUF = the device's name (e.g. "zero")
 ; OUT: C = 0; or .A = ERR_IO_NAME, ERR_IO_NOT_FOUND (no such device) or ERR_IO_NS_FULL, C = 1
-; (The names must not be in the BIOS ROM: see IO_NAME_CHECK.)
+; (The names are read as the caller sees them: NS_NAMES_IN.)
 IO_MOUNT:
-            jsr         IO_NAMES_CHECK
-            bcc         @ok
-            rts
-
-@ok:
             PUSH_XY
             sta         ZP_IO_OFS                   ; ZP_IO_OFS = the path
             sty         ZP_IO_OFS + 1
+            jsr         IO_CALLER_PAGE              ; .X = the caller's ROM page
             jsr         IO_XFER_SETUP
             _M_IO_MAP_XFER
+            sec                                     ; (Both names)
+            jsr         NS_NAMES_IN
+            bcs         @done
             lda         ZP_IO_BUF
             sta         ZP_IO_LEFT
             lda         ZP_IO_BUF + 1
@@ -385,18 +384,17 @@ IO_MOUNT:
 ; name under the target.  An entry for the same path is replaced.
 ; IN: .A.Y = the path ("/...", 13 characters at most), ZP_IO_BUF = the target ("/...", 15 at most)
 ; OUT: C = 0; or .A = ERR_IO_NAME or ERR_IO_NS_FULL, C = 1
-; (The names must not be in the BIOS ROM: see IO_NAME_CHECK.)
+; (The names are read as the caller sees them: NS_NAMES_IN.)
 IO_BIND:
-            jsr         IO_NAMES_CHECK
-            bcc         @ok
-            rts
-
-@ok:
             PUSH_XY
             sta         ZP_IO_OFS                   ; ZP_IO_OFS = the path
             sty         ZP_IO_OFS + 1
+            jsr         IO_CALLER_PAGE              ; .X = the caller's ROM page
             jsr         IO_XFER_SETUP
             _M_IO_MAP_XFER
+            sec                                     ; (Both names)
+            jsr         NS_NAMES_IN
+            bcs         @done
             lda         (ZP_IO_BUF)                 ; The target: "/...", short enough?
             cmp         #'/'
             bne         @bad_name
@@ -444,18 +442,17 @@ IO_BIND:
             rts
 
 ; Remove the entry for a path (a mount or a bind) from this task's namespace.
-; IN: .A.Y = the path.  OUT: C = 0; or .A = ERR_IO_NOT_FOUND or ERR_IO_NAME (in the BIOS ROM), C = 1
+; IN: .A.Y = the path.  OUT: C = 0; or .A = ERR_IO_NOT_FOUND or ERR_IO_NAME, C = 1
 IO_UNMOUNT:
-            jsr         IO_NAME_CHECK
-            bcc         @ok
-            rts
-
-@ok:
             PUSH_XY
             sta         ZP_IO_OFS                   ; ZP_IO_OFS = the path
             sty         ZP_IO_OFS + 1
+            jsr         IO_CALLER_PAGE              ; .X = the caller's ROM page
             jsr         IO_XFER_SETUP
             _M_IO_MAP_XFER
+            clc                                     ; (Just the path)
+            jsr         NS_NAMES_IN
+            bcs         @done
             jsr         NS_FIND                     ; ZP_IO_CHUNK = its entry
             bcs         @done
             lda         #NS_FREE
@@ -465,6 +462,55 @@ IO_UNMOUNT:
 @done:
             _M_IO_UNMAP
             PULL_YX
+            rts
+
+; Copy a call's names into the IO data area (the IO transfer bank mapped), reading them as the calling
+; code sees them (far pointers: RAM, the paged ROM, or its own ROM page .X): the path (ZP_IO_OFS) to the
+; data area's start and, if C = 1, ZP_IO_BUF's name to its middle; ZP_IO_OFS and ZP_IO_BUF then point at
+; the copies.  OUT: C = 0; or .A = ERR_IO_NAME (unreadable, or 128 bytes with no end), C = 1.
+; Modifies: .A, .Y
+NS_NAMES_IN:
+            php                                     ; (C: the second name too)
+            lda         ZP_IO_OFS
+            ldy         ZP_IO_OFS + 1
+            jsr         FP_MAKE                     ; The path
+            lda         ZP_IO_DATA
+            sta         ZP_IO_OFS
+            ldy         ZP_IO_DATA + 1
+            sty         ZP_IO_OFS + 1
+            jsr         NS_NAME_COPY
+            bcs         @fail
+            plp
+            bcc         @done
+            lda         ZP_IO_BUF
+            ldy         ZP_IO_BUF + 1
+            jsr         FP_MAKE                     ; The second name
+            lda         ZP_IO_DATA
+            ora         #$80
+            sta         ZP_IO_BUF
+            ldy         ZP_IO_DATA + 1
+            sty         ZP_IO_BUF + 1
+            jmp         NS_NAME_COPY
+
+@fail:
+            plp
+            sec
+
+@done:
+            rts
+
+; ZP_FP's string -> .A.Y: 128 bytes at most, with its 0.  OUT: C = 0; or .A = ERR_IO_NAME, C = 1.
+; Preserves .X
+NS_NAME_COPY:
+            phx
+            ldx         #$80
+            sec
+            jsr         FP_COPY
+            plx
+            bcc         @done
+            lda         #ERR_IO_NAME
+
+@done:
             rts
 
 ; The entry for the path at ZP_IO_OFS: the existing one, or a free one with the path filled in (and

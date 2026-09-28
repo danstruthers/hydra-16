@@ -35,6 +35,8 @@ FAR_GATE_INLINE     TASK_SIGNAL,    ::TASK_SIGNAL,          0
 FAR_GATE_INLINE     YM_BEEP,        ::YM_BEEP,              0   ; (The bell: _M_SER_TX_BYTE)
 FAR_GATE_INLINE     YM_WRITE,       ::YM_WRITE,             0   ; (These run in the current task: the
 FAR_GATE_INLINE     SOUND_INIT,     ::SOUND_INIT,           0   ;   sound task, from its server)
+FAR_GATE_INLINE     FP_MAKE,        PAGE5::FP_MAKE,         5   ; Far pointers (page 5): callers' names
+FAR_GATE_INLINE     FP_COPY,        PAGE5::FP_COPY,         5
 
 ; Page 2 copy of WRITE_HSTRING: the HString has to be read from page 2, where the caller's strings are.
 ; .A, .Y hold the addr of HString to write

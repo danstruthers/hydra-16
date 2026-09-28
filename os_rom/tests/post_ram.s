@@ -1,8 +1,8 @@
 .debuginfo
 
 ; ****************************************************************************
-; POST paged RAM line tests (see POST in os_main.s).  BIOS ROM page 4, included inside `.scope PAGE4`
-; (see all.s); POST calls it through a gate, at boot (task 0, IRQs off, polled serial output).
+; POST paged RAM line tests (see POST in post.s).  BIOS ROM page 4, included inside `.scope PAGE4`
+; (see all.s); POST calls it at boot (task 0, IRQs off, polled serial output).
 ; Prints the second POST line:
 ;       RAM U:x bb:x/dd/aaaa bb:x/dd/aaaa ...
 ;   Each is a hex mask of bad lines (bit set = bad; all 0 when good):

@@ -16,6 +16,8 @@ S_DEV_NOTHERE:  .byte "/dev/nothere", 0
 S_DEV_ZEROO:    .byte "/dev/zeroo", 0
 S_NOT_DEV:      .byte "/foo", 0
 S_DEV_CONS_T:   .byte "/dev/cons", 0
+S_ZERO_DEV:     .byte "zero", 0
+S_ROM_PATH:     .byte "/romz", 0
 S_CONS_MSG:     .byte "cons "
 CONS_MSG_LEN    = * - S_CONS_MSG
 S_NS_N:         .byte "/n", 0
@@ -225,10 +227,24 @@ IO_TEST:
             _M_IT_OPEN  S_NOT_DEV, IO_MODE_READ
             _M_IT_FAIL_IF_NC    'k', ERR_IO_NOT_FOUND
             lda         #<S_DEV_NULL                        ; A name straight from the BIOS ROM (this page):
-            ldy         #>S_DEV_NULL                        ;   refused (IO_OPEN would read it on page 2)
+            ldy         #>S_DEV_NULL                        ;   IO_OPEN reads it here (a far pointer)
             ldx         #IO_MODE_READ
             jsr         IO_OPEN
-            _M_IT_FAIL_IF_NC    'k', ERR_IO_NAME
+            _M_IT_FAIL_IF_C     'k'
+            jsr         IO_CLOSE
+            _M_IT_FAIL_IF_C     'k'
+            lda         #<S_ZERO_DEV                        ; IO_MOUNT and IO_UNMOUNT: both names from here too
+            sta         ZP_IO_BUF
+            lda         #>S_ZERO_DEV
+            sta         ZP_IO_BUF + 1
+            lda         #<S_ROM_PATH
+            ldy         #>S_ROM_PATH
+            jsr         IO_MOUNT
+            _M_IT_FAIL_IF_C     'k'
+            lda         #<S_ROM_PATH
+            ldy         #>S_ROM_PATH
+            jsr         IO_UNMOUNT
+            _M_IT_FAIL_IF_C     'k'
             _M_IT_OPEN  S_DEV_ZERO_SUB, IO_MODE_READ            ; A path inside the device: the server's
             _M_IT_FAIL_IF_C     'l'                                 ;   business (zero ignores it)
             jsr         IO_CLOSE

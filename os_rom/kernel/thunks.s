@@ -119,3 +119,19 @@ TH_TASK_SIGNAL:
                 jmp             TASK_SIGNAL         ; $F8AB
 TH_CONS_SET_FG:
                 jmp             CONS_SET_FG         ; $F8AE
+TH_FP_MAKE:
+                jmp             FP_MAKE             ; $F8B1
+TH_FP_READ:
+                jmp             FP_READ             ; $F8B4
+TH_FP_WRITE:
+                jmp             FP_WRITE            ; $F8B7
+TH_FP_COPY:
+                jmp             FP_COPY             ; $F8BA
+TH_MM_REF:
+                jmp             MM_REF              ; $F8BD
+TH_MM_FP:
+                jmp             MM_FP               ; $F8C0
+TH_SH_REF:
+                jmp             SH_REF              ; $F8C3
+TH_SH_FP:
+                jmp             SH_FP               ; $F8C6

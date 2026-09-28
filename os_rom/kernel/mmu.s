@@ -24,14 +24,9 @@ AI_VALID     = $80
 
 AI_SMALL_LEN = $03      ; Length mask for AI_SMALL entries
 AI_IN_USE    = AI_VALID | AI_ALLOCATED
-
-; Handle table entry (4 bytes).  Small allocations keep their data in addr_l, addr_h, bank.
-.struct     Handle
-            addr_l      .byte                               ; Start address of the allocation
-            addr_h      .byte
-            bank        .byte                               ; First RAM bank (AI_PAGED)
-            status      .byte                               ; AI_* bits; 0 = free entry
-.endstruct
+AI_REF       = AI_SMALL | AI_BLOCK  ; A reference (MM_REF, fp.s): a far pointer, not an allocation; the entry
+AI_REF_KIND  = $03      ;   holds its address, selector (bank) and kind (FP_*, bits 0-1)
+.assert     FP_KIND = AI_REF_KIND, error, "A reference's status holds the far pointer's kind in bits 0-1"
 
 ; ****************************************************************************
 ; Per-task MMU area (see MMU_PLAN.md)
@@ -707,6 +702,8 @@ MM_FREE:
             bcs         @done
             bit         #AI_LOCKED
             bne         @locked
+            jsr         MM_IS_REF
+            bcs         @free_entry                         ; A reference: just the handle
             bit         #AI_PAGED
             beq         :+
             ldy         #Handle::bank
@@ -761,6 +758,8 @@ MM_READ:
             sty         ZP_M_TEMP                           ; Offset
             jsr         MM_HANDLE_PTR                       ; .A = status
             bcs         @done
+            jsr         MM_IS_REF
+            bcs         @ref
             jsr         MM_ACCESS_SETUP                     ; ZP_M_SP1 = data, bank selected
             bcs         @done
             ldy         ZP_M_TEMP
@@ -772,6 +771,12 @@ MM_READ:
 @done:
             PULL_YX
             jmp         MM_RETURN
+
+@ref:                                                       ; A reference: through its far pointer
+            jsr         MM_ENTRY_FP
+            ldy         ZP_M_TEMP
+            jsr         FP_READ
+            bra         @done
 
 ; Write a byte of an allocation.
 ; IN: .A = handle, .Y = offset (0-255; within the allocation's size for AI_SMALL), .X = byte
@@ -785,6 +790,8 @@ MM_WRITE:
             sty         ZP_M_TEMP                           ; Offset
             jsr         MM_HANDLE_PTR                       ; .A = status
             bcs         @done
+            jsr         MM_IS_REF
+            bcs         @ref
             jsr         MM_ACCESS_SETUP                     ; ZP_M_SP1 = data, bank selected
             bcs         @done
             ldy         ZP_M_TEMP
@@ -798,17 +805,30 @@ MM_WRITE:
             PULL_YX
             jmp         MM_RETURN
 
+@ref:                                                       ; A reference: through its far pointer (ROM,
+            jsr         MM_ENTRY_FP                         ;   FP_RO: ERR_MEM_NOT_SUPPORTED)
+            ldy         ZP_M_TEMP
+            jsr         FP_WRITE
+            bra         @done
+
 ; Get a raw pointer to an allocation, for speed.  For AI_PAGED allocations this also selects the
 ; allocation's first RAM bank; the old bank is returned for MM_UNLOCK.  A locked allocation can't be
 ; freed.  The pointer stays valid until MM_UNLOCK (allocations don't move).
+; A reference (MM_REF) to task RAM or the paged ROM can be locked too (the paged ROM: its bank is selected,
+; and .X is the previous paged ROM bank); one to shared RAM or the BIOS ROM can't (ERR_MEM_NOT_SUPPORTED).
 ; IN: .A = handle
 ; OUT (success): .A.Y = pointer (.A = low byte), .X = previous RAM bank (pass it to MM_UNLOCK), C = 0
-; OUT (failure): .A = ERR_MEM_NOT_VALID, C = 1
+; OUT (failure): .A = ERR_MEM_NOT_VALID or ERR_MEM_NOT_SUPPORTED, C = 1
 MM_LOCK:
             php                                             ; Save caller's I flag
             sei
             jsr         MM_HANDLE_PTR                       ; .A = status
             bcs         @done
+            jsr         MM_IS_REF
+            bcc         :+
+            jsr         MM_REF_LOCK                         ; A reference (page 5)
+            bra         @done
+:
             ora         #AI_LOCKED
             ldy         #Handle::status
             sta         (ZP_M_HP),Y
@@ -831,11 +851,26 @@ MM_UNLOCK:
             php                                             ; Save caller's I flag
             sei
             phy
-            stx         RAM_BANK_REG
             jsr         MM_HANDLE_PTR                       ; .A = status
-            bcs         @done
-            and         #<~AI_LOCKED
+            bcc         :+
+            stx         RAM_BANK_REG                        ; (Restored anyway; C = 1)
+            bra         @done
+:
+            jsr         MM_IS_REF
+            bcc         @ram_bank
+            and         #AI_REF_KIND
+            cmp         #FP_PROM
+            bne         @ram_bank
+            stx         ROM_BANK_REG                        ; A reference to the paged ROM: its bank
+            bra         @unlock
+
+@ram_bank:
+            stx         RAM_BANK_REG
+
+@unlock:
             ldy         #Handle::status
+            lda         (ZP_M_HP),Y
+            and         #<~AI_LOCKED
             sta         (ZP_M_HP),Y
             clc
 
@@ -1087,6 +1122,14 @@ MM_NEW_HANDLE:
 
 @found:
             clc
+            rts
+
+; C = 1 if entry status .A is a reference (MM_REF, fp.s).  Preserves .A, .X, .Y
+MM_IS_REF:
+            pha
+            and         #AI_REF
+            cmp         #AI_REF                             ; (C = 1 only if both bits are set)
+            pla
             rts
 
 ; Point ZP_M_HP at a handle's entry, and check that it's in use.

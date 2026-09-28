@@ -115,6 +115,18 @@ ZP_SLEEPERS:            ; tasks in TASK_SLEEP (bit = task; valid in the system t
     .res  2             ;   wakes them, SLEEP_CHECK)
 ZP_SLEEP_SCAN:          ; SLEEP_CHECK: the sleepers still to look at
     .res  2
+
+; FAR POINTERS (see fp.s)
+ZP_FP:                  ; the far pointer register (FarPtr): FP_MAKE fills it, FP_READ / FP_WRITE / FP_COPY use it
+    .tag  FarPtr
+ZP_FP_DST:              ; FP_COPY: the destination, bytes to copy, string mode (bit 0)
+    .res  2
+ZP_FP_N:
+    .res  1
+ZP_FP_MODE:
+    .res  1
+ZP_FP_SAVE:             ; FP_MAP: the RAM bank, paged ROM bank and U it replaced
+    .res  3
 ZP_IRQ_RESCHED:         ; an IRQ handler asked for a task switch
     .res  1
 ZP_SCHED_CNT:           ; SCHED_PICK loop count

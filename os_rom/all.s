@@ -13,6 +13,12 @@
 .include "include/zero.s"       ; The OS ZP (after the constants)
 .include "kernel/common.s"      ; COMMON block (every ROM page) and gate macros
 
+; BIOS ROM page 5 (W = 5): far pointers and references.  First: the other pages' gates refer to PAGE5::
+.scope PAGE5
+.include "kernel/page5.s"       ; must be first in the scope
+.include "kernel/fp.s"          ; Far pointers and references
+.endscope
+
 ; BIOS ROM page 2 (W = 2): the IO layer.  Its own scope, so page 2 code binds to the page 2 gates in
 ; page2.s.  Before PAGE1, whose gates refer to PAGE2::
 .scope PAGE2
@@ -41,6 +47,7 @@
 .include "tests/mmu_test.s"
 .include "tests/sched_test.s"
 .include "tests/io_test.s"
+.include "tests/post.s"         ; POST (the power-on self test)
 .include "tests/post_ram.s"     ; POST paged RAM line tests
 .endscope
 

@@ -27,7 +27,7 @@ SOUND_DRV_INIT:
                 lda         #<SND_NAME
                 ldy         #>SND_NAME
                 ldx         #SOUND_TASK_NUM
-                jmp         DEV_REGISTER_P0
+                jmp         DEV_REGISTER
 
 ; zero out all YM-2151 registers $28-$FF
 SOUND_INIT:

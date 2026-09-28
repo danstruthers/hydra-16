@@ -36,6 +36,8 @@
 .endmacro
 
 NamedHString    S_MMU_TEST, "MMU test: "
+S_MT_FP:        .byte "Hydra", 0                            ; (Far pointers: a string on this page)
+PAGED_ROM_TEST  = $A000                                     ; (Far pointers: the paged ROM)
 
 MMU_TEST_TASK   = 2                                         ; An idle task the test borrows (and resets)
 
@@ -296,6 +298,106 @@ MMU_TEST:
             _M_MT_EXPECT        '4', 1
             lda         #MMU_TEST_TASK
             jsr         MM_TASK_RESET
+
+; Far pointers and references (fp.s), to a string on this ROM page ("Hydra")
+; 5: FP_MAKE, FP_READ
+            lda         #<S_MT_FP
+            ldy         #>S_MT_FP
+            ldx         W_REGISTER                          ; (This ROM page)
+            jsr         FP_MAKE                             ; ZP_FP
+            _M_MT_FAIL_IF_C     '5'
+            ldy         #1
+            jsr         FP_READ
+            _M_MT_FAIL_IF_C     '5'
+            _M_MT_EXPECT        '5', 'y'
+
+; 6: FP_COPY (a string) into an allocation
+            lda         #16
+            ldy         #0
+            ldx         #0
+            jsr         MM_ALLOC
+            _M_MT_FAIL_IF_C     '6'
+            sta         ZP_TEMP                             ; The handle
+            jsr         MM_LOCK
+            _M_MT_FAIL_IF_C     '6'
+            sta         ZP_TEMP_VEC                         ; Its address
+            sty         ZP_TEMP_VEC + 1
+            ldx         #16
+            sec
+            jsr         FP_COPY                             ; .X = bytes copied
+            _M_MT_FAIL_IF_C     '6'
+            txa
+            _M_MT_EXPECT        '6', 6                      ; (5 characters and the 0)
+            ldy         #4
+            lda         (ZP_TEMP_VEC),Y
+            _M_MT_EXPECT        '6', 'a'
+            lda         ZP_TEMP
+            jsr         MM_UNLOCK
+            lda         ZP_TEMP
+            jsr         MM_FREE
+            _M_MT_FAIL_IF_C     '6'
+
+; 7: MM_REF: an MMU handle for it, read like an allocation's; writing ROM is refused; MM_FP gives it back
+            jsr         MM_REF
+            _M_MT_FAIL_IF_C     '7'
+            sta         ZP_TEMP
+            ldy         #2
+            jsr         MM_READ
+            _M_MT_FAIL_IF_C     '7'
+            _M_MT_EXPECT        '7', 'd'
+            lda         ZP_TEMP
+            ldy         #0
+            ldx         #'X'
+            jsr         MM_WRITE
+            _M_MT_FAIL_IF_NC    '7'
+            stz         ZP_FP                               ; (MM_FP must fill it in again)
+            lda         ZP_TEMP
+            jsr         MM_FP
+            _M_MT_FAIL_IF_C     '7'
+            lda         ZP_FP
+            _M_MT_EXPECT        '7', <S_MT_FP
+            lda         ZP_TEMP
+            jsr         MM_FREE
+            _M_MT_FAIL_IF_C     '7'
+
+; 8: SH_REF: a shared handle for it (any task could use it)
+            jsr         SH_REF
+            _M_MT_FAIL_IF_C     '8'
+            sta         ZP_TEMP
+            ldy         #3
+            jsr         SH_READ
+            _M_MT_FAIL_IF_C     '8'
+            _M_MT_EXPECT        '8', 'r'
+            lda         ZP_TEMP
+            jsr         SH_DETACH                           ; (The last reference: the handle goes)
+            _M_MT_FAIL_IF_C     '8'
+            lda         ZP_TEMP
+            ldy         #3
+            jsr         SH_READ
+            _M_MT_FAIL_IF_NC    '8'
+
+; 9: the paged ROM ($A000: the bank selected now), and another task's RAM (refused)
+            lda         #<PAGED_ROM_TEST
+            ldy         #>PAGED_ROM_TEST
+            ldx         W_REGISTER
+            jsr         FP_MAKE
+            ldy         #0
+            jsr         FP_READ
+            _M_MT_FAIL_IF_C     '9'
+            cmp         PAGED_ROM_TEST
+            beq         :+
+            ldx         #'9'
+            jmp         @fail
+:
+            lda         #<S_MT_FP                           ; (Any address below $8000)
+            ldy         #$10
+            ldx         W_REGISTER
+            jsr         FP_MAKE                             ; This task's RAM...
+            lda         #MMU_TEST_TASK << 4
+            sta         ZP_FP + FarPtr::space               ; ...made another task's
+            ldy         #0
+            jsr         FP_READ
+            _M_MT_FAIL_IF_NC    '9'
 
             PRINT_CHAR  #'o', #'k'
             bra         @end

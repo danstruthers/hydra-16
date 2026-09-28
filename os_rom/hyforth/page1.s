@@ -66,7 +66,7 @@ FAR_GATE_INLINE IO_PUTC,        PAGE2::IO_PUTC,         2
 FAR_GATE_INLINE IO_SEEK,        PAGE2::IO_SEEK,         2
 FAR_GATE_INLINE IO_STAT,        PAGE2::IO_STAT,         2
 FAR_GATE_INLINE IO_CTL,         PAGE2::IO_CTL,          2
-FAR_GATE_INLINE DEV_REGISTER,   ::DEV_REGISTER,         0
+FAR_GATE_INLINE DEV_REGISTER,   ::DEV_REGISTER_FAR,     0   ; (Reads the name as page 1 sees it)
 FAR_GATE_INLINE IO_DUP2,        PAGE2::IO_DUP2,         2
 FAR_GATE_INLINE IO_PIPE,        PAGE2::IO_PIPE,         2
 FAR_GATE_INLINE IO_DUP,         PAGE2::IO_DUP,          2
@@ -78,6 +78,16 @@ FAR_GATE_INLINE IO_NS_LIST,     PAGE2::IO_NS_LIST,      2
 FAR_GATE_INLINE TASK_SET_BREAK, ::TASK_SET_BREAK,       0
 FAR_GATE_INLINE TASK_SIGNAL,    ::TASK_SIGNAL,          0
 FAR_GATE_INLINE CONS_SET_FG,    ::CONS_SET_FG,          0
+
+; Far pointers and references (page 5)
+FAR_GATE_INLINE FP_MAKE,        PAGE5::FP_MAKE,         5
+FAR_GATE_INLINE FP_READ,        PAGE5::FP_READ,         5
+FAR_GATE_INLINE FP_WRITE,       PAGE5::FP_WRITE,        5
+FAR_GATE_INLINE FP_COPY,        PAGE5::FP_COPY,         5
+FAR_GATE_INLINE MM_REF,         PAGE5::MM_REF,          5
+FAR_GATE_INLINE MM_FP,          PAGE5::MM_FP,           5
+FAR_GATE_INLINE SH_REF,         PAGE5::SH_REF,          5
+FAR_GATE_INLINE SH_FP,          PAGE5::SH_FP,           5
 
 ; The self tests (page 4)
 FAR_GATE_INLINE MMU_TEST,       PAGE4::MMU_TEST,        4
@@ -169,4 +179,12 @@ WRITE_HSTRING:
                 jmp             TASK_SET_BREAK      ; $F8A8
                 jmp             TASK_SIGNAL         ; $F8AB
                 jmp             CONS_SET_FG         ; $F8AE
-.assert     * = ::TH_CONS_SET_FG + 3, lderror, "BIOS_THUNKS_P1 must match BIOS_THUNKS"
+                jmp             FP_MAKE             ; $F8B1
+                jmp             FP_READ             ; $F8B4
+                jmp             FP_WRITE            ; $F8B7
+                jmp             FP_COPY             ; $F8BA
+                jmp             MM_REF              ; $F8BD
+                jmp             MM_FP               ; $F8C0
+                jmp             SH_REF              ; $F8C3
+                jmp             SH_FP               ; $F8C6
+.assert     * = ::TH_SH_FP + 3, lderror, "BIOS_THUNKS_P1 must match BIOS_THUNKS"

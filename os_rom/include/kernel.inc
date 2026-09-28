@@ -64,6 +64,42 @@ NUM_RAM_BANKS   = NUM_RAM_MODULES * NUM_BANKS_PER_MODULE
 SYS_SHARED_U        = 0
 SYS_BANK            = $F0
 
+; MMU handle table entry (kernel/mmu.s), and shared handle table entry (kernel/shared.s).  (Here, so
+; page 5 can use them: fp.s comes before mmu.s and shared.s.)
+; Small allocations keep their data in addr_l, addr_h, bank.
+.struct     Handle
+            addr_l      .byte                               ; Start address of the allocation
+            addr_h      .byte
+            bank        .byte                               ; First RAM bank (AI_PAGED)
+            status      .byte                               ; AI_* bits; 0 = free entry
+.endstruct
+
+.struct     ShHandle
+            bank        .byte                               ; First shared bank ID
+            count       .byte                               ; Banks (0 = free entry)
+            mask_lo     .byte                               ; Tasks $0-$7 holding a reference (bit = task)
+            mask_hi     .byte                               ; Tasks $8-$F
+.endstruct
+
+; Far pointers (kernel/fp.s): an address and what's mapped there, so it can be read from anywhere (any
+; ROM page, any task: except a task's own RAM, which only that task can read)
+.struct     FarPtr
+            addr        .word                   ; The address
+            space       .byte                   ; FP_TASK / FP_PROM / FP_SHARED / FP_BIOS (bits 0-1), FP_RO (bit 2),
+                                                ;   and for FP_TASK the task whose RAM it is (bits 4-7)
+            sel         .byte                   ; FP_TASK: the RAM bank ($00: for $8000-$9FFF); FP_PROM: the
+                                                ;   paged ROM bank ($01); FP_SHARED: the shared bank ID
+                                                ;   (U << 4 | bank & $0F); FP_BIOS: the BIOS ROM page (W)
+.endstruct
+FP_TASK             = 0                         ; A task's RAM: $0000-$7FFF, or its RAM bank at $8000-$9FFF
+FP_PROM             = 1                         ; The paged ROM ($A000-$DFFF), bank sel
+FP_SHARED           = 2                         ; Shared RAM ($8000-$9FFF), shared bank ID sel
+FP_BIOS             = 3                         ; The BIOS ROM ($E000-$FFFF), page sel
+FP_KIND             = $03
+FP_ROM              = $01                       ; (FP_PROM and FP_BIOS have bit 0 set)
+FP_RO               = $04                       ; Read-only (ROM is anyway)
+.assert     (FP_PROM & FP_ROM) <> 0 .and (FP_BIOS & FP_ROM) <> 0 .and (FP_TASK & FP_ROM) = 0 .and (FP_SHARED & FP_ROM) = 0, error, "FP_ROM: bit 0 of the ROM kinds"
+
 ; Save RAM_BANK_REG and U on the stack, and map a bank at $8000 (U = u: for a shared bank $F0-$FF).
 ; Uses .Y.  Undo with _M_BANK_LEAVE
 .macro _M_BANK_ENTER    bank, u

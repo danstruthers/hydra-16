@@ -113,6 +113,18 @@ name:
             ora         #0
             rts
 
+; .A = the byte at (ZP_FP),Y on BIOS ROM page ZP_FP + FarPtr::sel (for FP_BIOS far pointers: fp.s).
+; IRQs off.  Preserves .X, .Y, C
+            CLABEL      FP_PEEK_PAGE
+            phx
+            ldx         W_REGISTER
+            lda         ZP_FP + FarPtr::sel
+            sta         W_REGISTER                          ; Now on that page (this same code)
+            lda         (ZP_FP),Y
+            stx         W_REGISTER                          ; Back on the caller's page (this same code)
+            plx
+            rts
+
 ; Far jump (no return): ZP_FAR_VEC = destination, ZP_FAR_PAGE = its ROM page.  Use FAR_JMP_GATE.
             CLABEL      FAR_JUMP
             lda         ZP_FAR_PAGE

@@ -10,7 +10,7 @@ The OS ROM is built by `os_rom/makeC02.bat` (`ca65` + `ld65` with `os_rom/os_rom
 
 | Image | Chip | Contents |
 | :---- | :--- | :------- |
-| `os_rom/bin/os_rom_C02.bin` | BIOS/OS ROM (`$E000-$FFFF`, 16 8K pages selected by `W`) | BIOS, OS, WOZMON (page 0); HyForth and the disassembler (page 1); the IO layer and file servers (page 2); storage (page 3); the self tests (page 4) |
+| `os_rom/bin/os_rom_C02.bin` | BIOS/OS ROM (`$E000-$FFFF`, 16 8K pages selected by `W`) | BIOS, OS, WOZMON (page 0); HyForth and the disassembler (page 1); the IO layer and file servers (page 2); storage (page 3); the self tests and POST (page 4); far pointers and references (page 5) |
 | `os_rom/bin/paged_rom_C02.bin` | Paged ROM (`$A000-$DFFF`, 16K banks selected by `$01`) | `COPYTORAM` and the HyForth RAM image (copied to `$0800` at startup) |
 
 Everything else the build makes (the object file, listing, labels, map and debug info) goes in `os_rom/obj/`, which isn't in source control.  The build ends by running `os_rom/tools/check_pages.js` (Node.js) on the debug info: it lists any call from code on one BIOS ROM page to a routine on another that doesn't go through a gate.  The sources are in folders by role: `include/` (constants and macros), `kernel/`, `io/` (the IO layer and file servers), `drivers/`, `tests/`, `monitor/` (WOZMON, the disassembler) and `hyforth/`; `os_rom/all.s` includes them all.
@@ -30,7 +30,7 @@ The scheduler is preemptive: the VIA timer 1 interrupt (about every 5 ms) switch
 
 ### **POST**
 
-The power-on self test runs first thing at every reset, in task 0 with IRQs off, using polled serial output (no drivers), so it works even when little else does.  The code is `POST` in `os_rom/kernel/os_main.s` (first line) and `os_rom/tests/post_ram.s` on BIOS page 4 (second line).  A good board prints:
+The power-on self test runs first thing at every reset, in task 0 with IRQs off, using polled serial output (no drivers), so it works even when little else does.  The code is on BIOS page 4, with the other self tests: `POST` in `os_rom/tests/post.s` (first line) and `os_rom/tests/post_ram.s` (second line).  A good board prints:
 
 ```
 POST ZP:T ST:T LO:T 7D:T SH:S P1:4C
@@ -88,7 +88,9 @@ There are 16 tasks (`T` = `$0-$F`), each with its own `$0000-$7FFF` (zero page, 
 
 Drivers run in **Resident** tasks, which only run from IRQs and from calls into the driver (`TASK_CALL`).  Tasks send each other data through **pipes** (`IO_PIPE`, below), or share memory through shared handles (`SH_ALLOC`, `SH_ATTACH`).
 
-**Calling conventions.**  The kernel, MMU, scheduler and IO calls return C = 0 on success, and C = 1 with an error code in `.A` on failure (`os_rom/include/kernel.inc`).  The exceptions keep WOZMON's convention: `READ_CHAR` returns C = 1 with a key in `.A` (C = 0: none), and `GET_CHAR` C = 1 with a key (C = 0: an error, e.g. the end of a pipe).  A name passed to `IO_OPEN`, `IO_MOUNT`, `IO_BIND`, `IO_UNMOUNT` or `DEV_REGISTER` must be in RAM (or the paged ROM, `$A000-$DFFF`): one in the BIOS ROM (`$E000-$FFFF`) would be read on the callee's ROM page, not the caller's, so it's refused with `ERR_IO_NAME`.  The `T` register reads back the task number (the pseudo-registers are 8-bit latches; the OS only writes `$0-$F` to `T`).
+**Calling conventions.**  The kernel, MMU, scheduler and IO calls return C = 0 on success, and C = 1 with an error code in `.A` on failure (`os_rom/include/kernel.inc`).  The exceptions keep WOZMON's convention: `READ_CHAR` returns C = 1 with a key in `.A` (C = 0: none), and `GET_CHAR` C = 1 with a key (C = 0: an error, e.g. the end of a pipe).  A name passed to `IO_OPEN`, `IO_MOUNT`, `IO_BIND`, `IO_UNMOUNT` or `DEV_REGISTER` is read as the caller sees it (through a far pointer, below): in RAM, in the paged ROM, or on the caller's own BIOS ROM page, so code on any page can pass its ROM strings.  Buffers for `IO_READ`, `IO_WRITE` and the like must be in task RAM.  The `T` register reads back the task number (the pseudo-registers are 8-bit latches; the OS only writes `$0-$F` to `T`).
+
+**Far pointers and references.**  A plain address means different memory depending on what's mapped (`T`, the RAM bank and `U`, the paged ROM bank, `W`).  A **far pointer** (`FarPtr`, 4 bytes: the address, its kind, a selector) says what: a task's RAM (and its RAM bank at `$8000`), a shared bank, a paged ROM bank, or a BIOS ROM page.  So it reads the same from any ROM page and any task (a task's own RAM excepted: only that task can read it).  The calls (BIOS ROM page 5, `os_rom/kernel/fp.s`) use the far pointer register `ZP_FP`: `FP_MAKE` (`.A.Y` = an address as the caller sees it, `.X` = its ROM page), `FP_READ` / `FP_WRITE` (a byte at `ZP_FP + .Y`), `FP_COPY` (bytes, or a string up to its 0, into the caller's memory).  A **reference** is a handle for a far pointer, used like an allocation's handle: `MM_REF` gives a task's MMU handle (`MM_READ`, `MM_WRITE`, `MM_LOCK` for task RAM and the paged ROM, `MM_FREE`), and `SH_REF` a shared handle for ROM or shared RAM that any task can use (send it, `SH_ATTACH`, `SH_READ`, `SH_LOCK` for shared RAM, `SH_DETACH`).  `MM_FP` and `SH_FP` give any handle's far pointer back, e.g. to `FP_COPY` from it.  ROM is read-only, and so is a far pointer with `FP_RO`.
 
 ### **IO**
 
@@ -138,10 +140,10 @@ HyForth has the IO words `open ( sz mode -- fd )` (e.g. `q^/dev/zero^ 1 open`; m
 
 | Start | End  | Description |
 | :---- | :--- | :---------- |
-| $E000 | $FFFF | BIOS/OS ROM paged area (indexed by the W register; see below).  Page 0: BIOS and OS.  Page 1: HyForth and the disassembler.  Page 2: the IO layer and namespaces, the serial, sound and pipe servers, the sound test tune, the POST RAM line tests.  Page 3: storage (SPI, the SD card, `/dev/sd`).  Pages 4-F: unused |
+| $E000 | $FFFF | BIOS/OS ROM paged area (indexed by the W register; see below).  Page 0: BIOS and OS.  Page 1: HyForth and the disassembler.  Page 2: the IO layer and namespaces, the serial, sound, pipe and `/dev/proc` servers, the sound test tune.  Page 3: storage (SPI, the SD card, `/dev/sd`).  Page 4: the self tests and POST.  Page 5: far pointers and references.  Pages 6-F: unused |
 | $E000 | $E004 | RESET Vector entry point: sets W to zero.  This is replicated at the beginning of each BIOS page, so that an arbitrary W register value at startup/RESET continues on page 0, right after the page 0 copy. |
 | $E005 | $FCFF | Effective BIOS paged area.  Compiler segments (pages) `BIOS_P1 - BIOS_PF` correspond to `W` register values of `$01 - $0F`, respectively.  Code on different pages calls each other through far-call gates. |
-| $F800 | $F8B0 | BIOS thunks (`jmp` table of BIOS, MMU, shared memory, scheduler and IO entry points), on page 0 and page 1.  `$F833` (`F833R` in WOZMON, `mmtest` in HyForth) runs the MMU self test; `$F869` the scheduler self test; `$F88A` the IO self test; `$F88D` is `GET_CHAR` (wait for a key), `$F890` `IO_DUP2`, `$F893` `IO_PIPE`, `$F896` `IO_DUP`, `$F899` `TASK_CLONE`, `$F89C-$F8A5` `IO_MOUNT`, `IO_BIND`, `IO_UNMOUNT`, `IO_NS_LIST`, `$F8A8` `TASK_SET_BREAK`, `$F8AB` `TASK_SIGNAL`, `$F8AE` `CONS_SET_FG` |
+| $F800 | $F8C8 | BIOS thunks (`jmp` table of BIOS, MMU, shared memory, scheduler and IO entry points), on page 0 and page 1.  `$F833` (`F833R` in WOZMON, `mmtest` in HyForth) runs the MMU self test; `$F869` the scheduler self test; `$F88A` the IO self test; `$F88D` is `GET_CHAR` (wait for a key), `$F890` `IO_DUP2`, `$F893` `IO_PIPE`, `$F896` `IO_DUP`, `$F899` `TASK_CLONE`, `$F89C-$F8A5` `IO_MOUNT`, `IO_BIND`, `IO_UNMOUNT`, `IO_NS_LIST`, `$F8A8` `TASK_SET_BREAK`, `$F8AB` `TASK_SIGNAL`, `$F8AE` `CONS_SET_FG`, `$F8B1-$F8C6` `FP_MAKE`, `FP_READ`, `FP_WRITE`, `FP_COPY`, `MM_REF`, `MM_FP`, `SH_REF`, `SH_FP` |
 | $FD00 | $FDFF | COMMON block, the same on every page: IRQ entry stubs and exit, NMI entry, far-call trampolines |
 | $FE00 | $FEFF | "WOZMON" monitor page (page 0) |
 

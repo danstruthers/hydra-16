@@ -78,11 +78,11 @@ SERIAL_INIT:
                 lda             #<CONS_NAME             ;   no shared RAM for the device table, the console
                 ldy             #>CONS_NAME             ;   still works: tasks without fds use the rings
                 ldx             #SERIAL_TASK_NUM        ;   directly.  It's what reports the other drivers'
-                jsr             DEV_REGISTER_P0         ;   failures, so its init doesn't fail.)
+                jsr             DEV_REGISTER         ;   failures, so its init doesn't fail.)
                 LOAD_ADDR       SER_SERVE, ZP_TC_VEC
                 lda             #<SER_NAME
                 ldy             #>SER_NAME
-                jsr             DEV_REGISTER_P0
+                jsr             DEV_REGISTER
                 clc
 
 @done:
