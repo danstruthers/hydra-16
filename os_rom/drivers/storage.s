@@ -26,7 +26,7 @@ STORAGE_INIT:
             lda         #<SD_NAME
             ldy         #>SD_NAME
             ldx         #STORAGE_TASK_NUM
-            jmp         DEV_REGISTER
+            jmp         DEV_REGISTER_P0
 
 @done:
             rts

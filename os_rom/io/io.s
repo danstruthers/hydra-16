@@ -10,8 +10,9 @@
 ;   area in shared RAM (bank ID $09), and the serve routine runs in the server's task (TASK_CALL).
 ;
 ;   All calls: C = 0 on success, C = 1 with the error in .A; they preserve .X and .Y (except where they
-;   return something in them).  Names and buffers must be in task RAM ($0000-$7FFF); a name can also be on
-;   ROM page 2.
+;   return something in them).  Names and buffers must be in task RAM ($0000-$7FFF); a name in the BIOS
+;   ROM ($E000-$FFFF) is refused (ERR_IO_NAME: this page would read it on page 2, not the caller's page),
+;   except from page 2's own code (IO_OPEN_P2).
 ;
 ;   Blocking: a server that has no data yet returns ERR_IO_WOULD_BLOCK, and later wakes the task
 ;   (IO_WAKE).  The task marks itself waiting *before* calling the server, so a wake that comes early
@@ -32,6 +33,26 @@ S_DEV_PREFIX:   .byte "/dev/"
 DEV_PREFIX_LEN  = 5
 
 ; ---- helpers
+
+; A name passed in from another page: not in the BIOS ROM ($E000-$FFFF), which page 2 code would read on
+; page 2 instead of the caller's page.  IO_NAMES_CHECK checks ZP_IO_BUF too (IO_MOUNT, IO_BIND's second name).
+; IN: .A.Y = the name.  OUT: C = 0 (.A kept); or .A = ERR_IO_NAME, C = 1
+IO_NAMES_CHECK:
+            pha
+            lda         ZP_IO_BUF + 1
+            cmp         #>BIOS_ROM_START
+            pla
+            bcs         IO_NAME_IN_ROM
+
+IO_NAME_CHECK:
+            cpy         #>BIOS_ROM_START
+            bcc         IO_NAME_DONE
+
+IO_NAME_IN_ROM:
+            lda         #ERR_IO_NAME
+
+IO_NAME_DONE:
+            rts
 
 ; For the servers: set the request's count (done) to .A (0-255), and unmap the client's transfer area
 ; (IO_SRV_UNMAP).  OUT: .A = 0.  Modifies: .Y
@@ -145,11 +166,7 @@ IO_SERVE:
             bcc         @done
             cmp         #ERR_IO_WOULD_BLOCK
             bne         @done
-            lda         ZP_IO_FD                    ; No data yet: wait?
-            asl
-            asl
-            asl
-            tax
+            jsr         IO_FD_ENTRY                 ; No data yet: wait?
             lda         IO_FD_MODE,X
             bmi         @no_wait                    ; IO_MODE_NONBLOCK
             jsr         YIELD                       ; Sleep until the server wakes us (at once if it did already)
@@ -282,7 +299,15 @@ IO_COPY_IN:
 ; OUT (success): .A = fd, C = 0
 ; OUT (failure): .A = ERR_IO_NOT_FOUND, ERR_IO_NO_FDS, ERR_IO_NS_LOOP, ERR_IO_NAME or the server's
 ;                error, C = 1
+; The name must be in RAM (or the paged ROM, $A000-$DFFF): one in the BIOS ROM ($E000-$FFFF) would be read
+; on page 2, not the caller's page, so it's refused (ERR_IO_NAME).  Page 2's own callers, whose names can
+; be on page 2, call IO_OPEN_P2.
 IO_OPEN:
+            jsr         IO_NAME_CHECK
+            bcc         IO_OPEN_P2
+            rts
+
+IO_OPEN_P2:
             PUSH_XY
             sta         ZP_IO_BUF
             sty         ZP_IO_BUF + 1
@@ -819,7 +844,7 @@ IO_STD_OPEN:
             lda         #<S_DEV_CONS
             ldy         #>S_DEV_CONS
             ldx         #IO_MODE_RDWR
-            jsr         IO_OPEN
+            jsr         IO_OPEN_P2
             ply
             bcs         @done
             dey
@@ -968,7 +993,7 @@ IO_PIPE:
             lda         #<S_DEV_PIPE
             ldy         #>S_DEV_PIPE
             ldx         #IO_MODE_READ
-            jsr         IO_OPEN                     ; The read end: a new pipe
+            jsr         IO_OPEN_P2                  ; The read end: a new pipe
             bcs         @done
             pha
             jsr         IO_FD_FREE                  ; The write end
@@ -1039,10 +1064,9 @@ TASK_CLONE:
             stx         ZP_TEMP
             php
             sei
-            jsr         RESERVE_TASK                ; C = 1: .A = the task (busy, and paused for now)
-            bcs         :+
-            plp
-            lda         #ERR_NO_TASKS_AVAILABLE
+            jsr         RESERVE_TASK                ; C = 0: .A = the task (busy, and paused for now)
+            bcc         :+
+            plp                                     ; (.A = ERR_NO_TASKS_AVAILABLE)
             sec
             bra         @done
 :

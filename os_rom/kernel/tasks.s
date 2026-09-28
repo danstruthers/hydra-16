@@ -18,22 +18,9 @@ TASK_RESIDENT_FLAG      = 8
 ;   7: 0 = , 1 = Switched out in the middle of another task's call (TASK_GUEST_OUT_FLAG): runnable,
 ;                even resident or paused, to finish it (unless it's waiting)
 
-.macro SELECT_TASK      task
-            lda     T_REGISTER
-            and     #$F0
-            ora     #(task & $0F)
-            sta     T_REGISTER
-.endmacro
-
-.macro SELECT_SHARED_BANK bank
-            lda     T_REGISTER
-            and     #$0F
-            ora     #(bank << 4)
-            sta     T_REGISTER
-.endmacro
-
-; Initialize the tasks, their stacks, etc.
+; Initialize the tasks, their stacks, etc.  Keeps the caller's I flag.
 TASKS_INIT:
+            php
             sei                                     ; Turn off interrupts
             lda     T_REGISTER
             bne     @cleanup                        ; Only support tasks init when on task 0
@@ -77,7 +64,7 @@ TASKS_INIT:
             ; Will fall through when X = $FF, leaving us in Task 0, as required
 
 @cleanup:
-            cli                                     ; Turn interrupts back on
+            plp                                     ; The caller's I flag
             rts
 
 ; ****************************************************************************
@@ -712,8 +699,8 @@ TASK_RUN:
             sta     ZP_TEMP_VEC
             sty     ZP_TEMP_VEC + 1
             stx     ZP_TEMP
-            jsr     RESERVE_TASK                    ; C = 1: .A = task (busy + paused)
-            bcc     @none
+            jsr     RESERVE_TASK                    ; C = 0: .A = task (busy + paused)
+            bcs     @done                           ; (.A = ERR_NO_TASKS_AVAILABLE)
             tax
             jsr     TASK_BUILD_FRAME
             ldy     T_REGISTER
@@ -722,11 +709,6 @@ TASK_RUN:
             sty     T_REGISTER
             txa
             clc
-            bra     @done
-
-@none:
-            lda     #ERR_NO_TASKS_AVAILABLE
-            sec
 
 @done:
             PULL_YX
@@ -752,17 +734,15 @@ SPAWN_TASK:
             sty     ZP_TEMP_VEC + 1
 
 ; Start a task at the address in ZP_TEMP_VEC (RAM or ROM page 0), and wait for it to finish.
-; Return task # in A and C == 1
-;   OR error in A and C == 0 (if no task available)
+; OUT: .A = the task #, C = 0; or .A = ERR_NO_TASKS_AVAILABLE, C = 1
 TASK_START:
             php
             sei
             stz     ZP_TEMP                         ; ROM page 0
-            jsr     RESERVE_TASK                    ; C = 1: .A = task (busy + paused)
-            bcs     @start_task
+            jsr     RESERVE_TASK                    ; C = 0: .A = task (busy + paused)
+            bcc     @start_task
             plp
-            lda     #ERR_NO_TASKS_AVAILABLE
-            clc
+            sec
             rts
 
 @start_task:
@@ -778,14 +758,13 @@ TASK_START:
             jsr     YIELD
             plp
             lda     TASK_SAVE_REG
-            sec
+            clc
             rts
 
 
-; Find an available task
-; Modifies: A, CNZ Flags
-; Returns C = 1 AND A = TaskNumber (when found)
-; Returns C = 0 AND A = $FF        (when not found)
+; Find an available task, and mark it busy and paused
+; OUT: .A = the task, C = 0; or .A = ERR_NO_TASKS_AVAILABLE, C = 1
+; Preserves .X, .Y
 RESERVE_TASK:
             php                                     ; Save caller's I flag
             sei                                     ; Disable interrupts
@@ -800,17 +779,17 @@ RESERVE_TASK:
             bbr0    TASK_STATUS_REG, @task_found    ; Is Bit 0 (TASK_BUSY_FLAG) reset/clear?
             dex                                     ; Not found, so check next
             bne     @task_busy                      ; Until we reach the system task (0), loop
-            clc                                     ; Not found
-            dex                                     ; .X == $FF
+            ldx     #ERR_NO_TASKS_AVAILABLE         ; Not found
+            sec
             bra     @cleanup
 
 @task_found:
             smb0    TASK_STATUS_REG
             smb1    TASK_STATUS_REG
-            sec                                     ; Found
+            clc                                     ; Found
 
 @cleanup:
-            txa                                     ; Return the task number in A (OR $FF if not found)
+            txa                                     ; The task number (or the error)
             sty     T_REGISTER                      ; Switch back to the original task
 
 ; Back on the original task, so restore the registers
@@ -1059,7 +1038,7 @@ TASK_PREPARE:
 ; state lives in that task's ZP/RAM, and IRQ handlers it registers run in that task.
 ; IN: .A.Y = DriverInfo, .X = task#
 ; OUT (success): .A = task#, C = 0
-; OUT (failure): .A = ERROR, C = 1 (the task is left free)
+; OUT (failure): .A = ERROR, C = 1 (the task is left free, with its IRQ handlers and devices removed)
 ; Modifies: .A, .X, .Y
 DRV_START:
             php                                     ; Save caller's I flag
@@ -1092,6 +1071,11 @@ DRV_START:
             jmp     MM_RETURN
 
 @init_failed:
+            pha                                     ; (The error)
+            lda     ZP_TC_TASK                      ; Whatever it registered before failing goes too:
+            jsr     IRQ_UNREGISTER_TASK             ;   nothing may call into a free task
+            jsr     DEV_UNREGISTER_TASK
+            pla
             ldx     ZP_TC_TASK
             ldy     T_REGISTER
             stx     T_REGISTER                      ; Quick switch to the driver task (no stack use!)

@@ -74,7 +74,7 @@ PIPE_INIT:
             lda         #<PIPE_NAME
             ldy         #>PIPE_NAME
             ldx         #PIPE_TASK_NUM
-            jmp         DEV_REGISTER
+            jmp         DEV_REGISTER_P0
 
 @done:
             rts
@@ -91,26 +91,34 @@ IO_INIT:
             lda         #<NULL_NAME
             ldy         #>NULL_NAME
             ldx         #IO_DEV_CALLER_TASK
-            jsr         DEV_REGISTER
+            jsr         DEV_REGISTER_P0
             LOAD_ADDR   ZERO_SERVE, ZP_TC_VEC
             lda         #<ZERO_NAME
             ldy         #>ZERO_NAME
             ldx         #IO_DEV_CALLER_TASK
-            jsr         DEV_REGISTER
+            jsr         DEV_REGISTER_P0
             LOAD_ADDR   PROC_SERVE, ZP_TC_VEC
             lda         #<PROC_NAME
             ldy         #>PROC_NAME
             ldx         #IO_DEV_CALLER_TASK
-            jmp         DEV_REGISTER
+            jmp         DEV_REGISTER_P0
 
 ; Register a device (a file server): /dev/<name> is served by the serve routine, running in a task.
 ; Drivers call it from their init (which runs in the driver's task).
-; IN: .A.Y = name (zero-terminated, 1-8 characters; in RAM or on ROM page 0), .X = task the serve routine
-;     runs in (IO_DEV_CALLER_TASK = the task making each request), ZP_TC_VEC = serve routine (page 0)
+; IN: .A.Y = name (zero-terminated, 1-8 characters; in RAM), .X = task the serve routine runs in
+;     (IO_DEV_CALLER_TASK = the task making each request), ZP_TC_VEC = serve routine (page 0)
 ; OUT (success): .A = device index, C = 0
-; OUT (failure): .A = ERR_IO_NAME (empty or too long) or ERR_IO_NO_DEVS, C = 1
+; OUT (failure): .A = ERR_IO_NAME (empty, too long, or in the BIOS ROM) or ERR_IO_NO_DEVS, C = 1
 ; Preserves .X, .Y
+; A name in the BIOS ROM ($E000-$FFFF) would be read on page 0, not the caller's page, so it's refused;
+; page 0's drivers, whose names are on page 0, call DEV_REGISTER_P0.
 DEV_REGISTER:
+            cpy         #>BIOS_ROM_START
+            bcc         DEV_REGISTER_P0
+            lda         #ERR_IO_NAME
+            rts
+
+DEV_REGISTER_P0:
             php                                             ; Save caller's I flag
             sei
             PUSH_XY
@@ -185,6 +193,33 @@ DEV_REGISTER:
             _M_SYS_LEAVE
             PULL_YX
             jmp         MM_RETURN
+
+; Remove every device a task registered (DRV_START: a driver whose init failed).  IN: .A = task
+; Preserves .A, .X, .Y
+DEV_UNREGISTER_TASK:
+            php                                             ; Save caller's I flag
+            sei
+            PUSH_AXY
+            sta         ZP_IO_TMP
+            _M_SYS_ENTER                                    ; Select shared bank ID $00 (device table)
+            ldx         #0                                  ; Device table offset
+
+@entry:
+            lda         IO_DEV_TABLE + IO_DEV_TASK,X
+            cmp         ZP_IO_TMP
+            bne         @next
+            stz         IO_DEV_TABLE + IO_DEV_NAME,X        ; Free
+
+@next:
+            txa
+            clc
+            adc         #IO_DEV_SIZE
+            tax
+            bcc         @entry                              ; (16 entries x 16 bytes: ends at 256)
+            _M_SYS_LEAVE
+            PULL_YXA
+            plp                                             ; Restore caller's I flag
+            rts
 
 ; Server side: map the client's request block (in its IO transfer area) into $8000-$9FFF, in the
 ; server's task.  Undo with IO_SRV_UNMAP before returning from the serve routine.

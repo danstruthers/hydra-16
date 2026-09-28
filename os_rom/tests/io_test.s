@@ -224,6 +224,11 @@ IO_TEST:
             _M_IT_FAIL_IF_NC    'k', ERR_IO_NOT_FOUND
             _M_IT_OPEN  S_NOT_DEV, IO_MODE_READ
             _M_IT_FAIL_IF_NC    'k', ERR_IO_NOT_FOUND
+            lda         #<S_DEV_NULL                        ; A name straight from the BIOS ROM (this page):
+            ldy         #>S_DEV_NULL                        ;   refused (IO_OPEN would read it on page 2)
+            ldx         #IO_MODE_READ
+            jsr         IO_OPEN
+            _M_IT_FAIL_IF_NC    'k', ERR_IO_NAME
             _M_IT_OPEN  S_DEV_ZERO_SUB, IO_MODE_READ            ; A path inside the device: the server's
             _M_IT_FAIL_IF_C     'l'                                 ;   business (zero ignores it)
             jsr         IO_CLOSE

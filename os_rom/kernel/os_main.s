@@ -17,6 +17,7 @@ RESET_VECTOR_START:
             jsr                 POST                                ; Power-on self test (polled serial, no IRQs)
             jsr                 IRQ_INIT                            ; Must be first: IRQ tables and vectors
             jsr                 TASKS_INIT                          ; Must be called before the drivers and MMU_INIT
+            cli                                                     ; IRQs on: the dispatcher and tasks are ready
             jsr                 MMU_INIT
             jsr                 IO_INIT                             ; The IO layer's devices (/dev/null, /dev/zero)
             jsr                 VIA_INIT

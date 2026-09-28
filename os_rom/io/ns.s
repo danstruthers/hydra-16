@@ -343,7 +343,13 @@ NS_COPY_TO:
 ; rest of the name.  An entry for the same path is replaced.
 ; IN: .A.Y = the path ("/...", 13 characters at most), ZP_IO_BUF = the device's name (e.g. "zero")
 ; OUT: C = 0; or .A = ERR_IO_NAME, ERR_IO_NOT_FOUND (no such device) or ERR_IO_NS_FULL, C = 1
+; (The names must not be in the BIOS ROM: see IO_NAME_CHECK.)
 IO_MOUNT:
+            jsr         IO_NAMES_CHECK
+            bcc         @ok
+            rts
+
+@ok:
             PUSH_XY
             sta         ZP_IO_OFS                   ; ZP_IO_OFS = the path
             sty         ZP_IO_OFS + 1
@@ -379,7 +385,13 @@ IO_MOUNT:
 ; name under the target.  An entry for the same path is replaced.
 ; IN: .A.Y = the path ("/...", 13 characters at most), ZP_IO_BUF = the target ("/...", 15 at most)
 ; OUT: C = 0; or .A = ERR_IO_NAME or ERR_IO_NS_FULL, C = 1
+; (The names must not be in the BIOS ROM: see IO_NAME_CHECK.)
 IO_BIND:
+            jsr         IO_NAMES_CHECK
+            bcc         @ok
+            rts
+
+@ok:
             PUSH_XY
             sta         ZP_IO_OFS                   ; ZP_IO_OFS = the path
             sty         ZP_IO_OFS + 1
@@ -432,8 +444,13 @@ IO_BIND:
             rts
 
 ; Remove the entry for a path (a mount or a bind) from this task's namespace.
-; IN: .A.Y = the path.  OUT: C = 0; or .A = ERR_IO_NOT_FOUND, C = 1
+; IN: .A.Y = the path.  OUT: C = 0; or .A = ERR_IO_NOT_FOUND or ERR_IO_NAME (in the BIOS ROM), C = 1
 IO_UNMOUNT:
+            jsr         IO_NAME_CHECK
+            bcc         @ok
+            rts
+
+@ok:
             PUSH_XY
             sta         ZP_IO_OFS                   ; ZP_IO_OFS = the path
             sty         ZP_IO_OFS + 1

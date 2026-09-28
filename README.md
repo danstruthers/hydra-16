@@ -88,6 +88,8 @@ There are 16 tasks (`T` = `$0-$F`), each with its own `$0000-$7FFF` (zero page, 
 
 Drivers run in **Resident** tasks, which only run from IRQs and from calls into the driver (`TASK_CALL`).  Tasks send each other data through **pipes** (`IO_PIPE`, below), or share memory through shared handles (`SH_ALLOC`, `SH_ATTACH`).
 
+**Calling conventions.**  The kernel, MMU, scheduler and IO calls return C = 0 on success, and C = 1 with an error code in `.A` on failure (`os_rom/include/kernel.inc`).  The exceptions keep WOZMON's convention: `READ_CHAR` returns C = 1 with a key in `.A` (C = 0: none), and `GET_CHAR` C = 1 with a key (C = 0: an error, e.g. the end of a pipe).  A name passed to `IO_OPEN`, `IO_MOUNT`, `IO_BIND`, `IO_UNMOUNT` or `DEV_REGISTER` must be in RAM (or the paged ROM, `$A000-$DFFF`): one in the BIOS ROM (`$E000-$FFFF`) would be read on the callee's ROM page, not the caller's, so it's refused with `ERR_IO_NAME`.  The `T` register reads back the task number (the pseudo-registers are 8-bit latches; the OS only writes `$0-$F` to `T`).
+
 ### **IO**
 
 All IO goes through **file descriptors**, Plan 9 style (see `os_rom/IO_PLAN.md`): a task opens a name (`IO_OPEN "/dev/cons"`), gets an fd, and reads and writes it (`IO_READ`, `IO_WRITE`, `IO_GETC`, `IO_PUTC`, `IO_CTL`, `IO_CLOSE`).  Devices are **file servers**: a driver registers its names (`DEV_REGISTER`), and each request runs its serve routine in the driver's task.  A read with no data yet makes the task wait (it doesn't use the CPU) until the driver wakes it.  The IO layer is on BIOS ROM page 2.

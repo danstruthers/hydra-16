@@ -109,7 +109,11 @@ const hx = (v, n = 2) => v.toString(16).toUpperCase().padStart(n, '0');
 const taskRam = []; for (let i = 0; i < 16; i++) taskRam.push(new Uint8Array(0x8000).map(() => rnd(256)));
 const taskBank = {}, sharedBank = {};
 const vecRam = new Uint16Array(16).map(() => rnd(65536));
-let T = 0, U = rnd(16), V = rnd(256), W = rnd(16);
+// T/U/V/W are 8-bit latches (74F573) read back through a 74F541: a read gives the whole byte written.  Only
+// T0-T3 select the task, U0-U3 the shared macro-page and W0-W3 the BIOS ROM page (the socket wires W0-W5
+// for up to a 512K chip; with a 128K image, W4-W5 fold back, as on a 39SF010)
+let regT = rnd(256), regU = rnd(256), V = rnd(256), regW = rnd(256);
+let T = regT & 15, U = regU & 15, W = regW & 15;
 let out = '';
 let ymReg = 0; const ymKeyOns = [];                          // YM2151: the register selected, and the key-ons written
 let aciaCmd = 0, aciaCtrl = 0, aciaTdre = 1, aciaTxTimer = 0, aciaIrq = 0, aciaRdrf = 0, aciaRx = 0, aciaOverruns = 0;
@@ -262,7 +266,7 @@ function rd(a) {
     if (a === 0xFF41) return ioAt < ymBusyUntil ? 0x80 : 0x00; // YM2151 status: busy after a data write
     return 0xFF;
   }
-  if (a === 0xFFF0) return T; if (a === 0xFFF1) return U; if (a === 0xFFF2) return V; if (a === 0xFFF3) return W;
+  if (a === 0xFFF0) return regT; if (a === 0xFFF1) return regU; if (a === 0xFFF2) return V; if (a === 0xFFF3) return regW;
   if (a === 0xFFFE || a === 0xFFFF) { const v = vecRam[V & 15]; return a === 0xFFFE ? v & 0xFF : v >> 8; }
   return osrom[W * 0x2000 + (a - 0xE000)];
 }
@@ -292,8 +296,8 @@ function wr(a, v) {
     if (ymReg === 0x08 && (v & 0x78)) ymKeyOns.push('ch ' + (v & 7) + ' at cycle ' + ioAt);
     return;
   }
-  if (a === 0xFFF0) { T = v & 15; return; } if (a === 0xFFF1) { U = v & 15; return; }
-  if (a === 0xFFF2) { V = v; return; } if (a === 0xFFF3) { W = v & 15; return; }
+  if (a === 0xFFF0) { regT = v; T = v & 15; return; } if (a === 0xFFF1) { regU = v; U = v & 15; return; }
+  if (a === 0xFFF2) { V = v; return; } if (a === 0xFFF3) { regW = v; W = v & 15; return; }
   if (a === 0xFFFE) { vecRam[V & 15] = (vecRam[V & 15] & 0xFF00) | v; return; }
   if (a === 0xFFFF) { vecRam[V & 15] = (vecRam[V & 15] & 0xFF) | (v << 8); return; }
 }

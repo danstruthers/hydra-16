@@ -35,7 +35,8 @@ TASK_GATE       SER_CALL_SET_CAPTURE, SERIAL_SET_CAPTURE, SERIAL_TASK_NUM
 FAR_GATE_INLINE CONS_SERVE,     PAGE2::CONS_SERVE,      2
 FAR_GATE_INLINE SER_SERVE,      PAGE2::SER_SERVE,       2
 
-; Driver init (runs in the serial task).  OUT: C = 0 on success, or C = 1 and .A = error
+; Driver init (runs in the serial task).  OUT: C = 0 on success, or C = 1 and .A = error (only if its IRQ
+; handler can't be registered: without its files, /dev/cons and /dev/ser, the console still works)
 SERIAL_INIT:
                 php                                     ; Save caller's I flag
                 sei
@@ -73,16 +74,16 @@ SERIAL_INIT:
                 jsr             IRQ_REGISTER            ; (After the scheduler's VIA handler: T1)
                 bcs             @done
 .endif
-                LOAD_ADDR       CONS_SERVE, ZP_TC_VEC   ; The files
-                lda             #<CONS_NAME
-                ldy             #>CONS_NAME
-                ldx             #SERIAL_TASK_NUM
-                jsr             DEV_REGISTER
-                bcs             @done
+                LOAD_ADDR       CONS_SERVE, ZP_TC_VEC   ; The files.  (If they can't be registered, e.g.
+                lda             #<CONS_NAME             ;   no shared RAM for the device table, the console
+                ldy             #>CONS_NAME             ;   still works: tasks without fds use the rings
+                ldx             #SERIAL_TASK_NUM        ;   directly.  It's what reports the other drivers'
+                jsr             DEV_REGISTER_P0         ;   failures, so its init doesn't fail.)
                 LOAD_ADDR       SER_SERVE, ZP_TC_VEC
                 lda             #<SER_NAME
                 ldy             #>SER_NAME
-                jsr             DEV_REGISTER
+                jsr             DEV_REGISTER_P0
+                clc
 
 @done:
                 jmp             MM_RETURN               ; Restore caller's I flag, keep C

@@ -5,6 +5,7 @@
 ; and the T / U / V / W pseudo-registers
 
 RESET_ENTRY     = $E000
+BIOS_ROM_START  = $E000                 ; The BIOS ROM ($E000-$FFFF): paged by W
 
 IO_PORT_BASE    = $FF00
 
@@ -198,6 +199,11 @@ SPI_DDR_BITS    = SPI_BIT_CLK | SPI_BIT_CSB | SPI_BIT_MOSI | SPI_DEV_F
 
 SPI_INIT_DELAY_CYCLES = 80
 
+; The pseudo-registers are 8-bit latches (74F573), read back through 74F541s: a read gives the whole byte
+; last written.  Only T0-T3 (the task), U0-U3 (the shared macro-page) and W0-W5 (the BIOS ROM page; W0-W3
+; with a 128K chip) are wired; V is all 8 bits (IRQ vector index, S/W interrupt #).  The OS only writes
+; task numbers ($0-$F) to T, so a read of T is the task number: no mask needed (the `and #$0F`s some code
+; has are harmless).
 T_REGISTER = $FFF0 ; IO_PORT_BYTE IO_PORT_F, 0
 U_REGISTER = $FFF1 ; IO_PORT_BYTE IO_PORT_F, 1
 V_REGISTER = $FFF2 ; IO_PORT_BYTE IO_PORT_F, 2
