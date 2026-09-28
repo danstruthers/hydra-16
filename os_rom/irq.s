@@ -15,7 +15,7 @@
 ;   Handler convention:
 ;       IN:  .A = logical IRQ# (0-14), or S/W interrupt# (0-15) for S/W interrupts;  I flag set
 ;       OUT: C = 1 if the interrupt was claimed (stops the chain), C = 0 if not
-;       May clobber .A, .X, .Y.  Must not re-enable interrupts, and must not use FAR_GATEs.
+;       May clobber .A, .X, .Y.  Must not re-enable interrupts, and must not use far gates (FAR_GATE_INLINE).
 
 IRQ_MAX_CHAIN       = 2                                     ; Handlers per hardware IRQ
 IRQ_ENTRY_SIZE      = 3                                     ; {task, handler.w}

@@ -57,7 +57,7 @@ name:
             pla
             rti
 
-; Far call: ZP_FAR_A = .A, ZP_FAR_VEC = routine, ZP_FAR_PAGE = its ROM page.  Use FAR_GATE.
+; Far call: ZP_FAR_A = .A, ZP_FAR_VEC = routine, ZP_FAR_PAGE = its ROM page.  Use FAR_GATE_INLINE.
 ; .A, .X, .Y, C and V pass through in both directions; N/Z on return reflect .A.
 ; Not for use from IRQ handlers.
             CLABEL      FAR_CALL_A
@@ -159,19 +159,8 @@ common_define .set 0
 ; Gates: a local label that calls (or jumps to) a routine on another ROM page.
 ; .A, .X, .Y and C pass through to the routine and back (see FAR_CALL_A).
 
-.macro FAR_GATE     name, target, page
-name:
-            sta         ZP_FAR_A
-            lda         #<(target)
-            sta         ZP_FAR_VEC
-            lda         #>(target)
-            sta         ZP_FAR_VEC + 1
-            lda         #page
-            sta         ZP_FAR_PAGE
-            jmp         FAR_CALL_A
-.endmacro
-
-; Compact version of FAR_GATE (6 bytes instead of 15; a little slower): .A, .X, .Y and C pass through
+; A far call: 6 bytes (`jsr FAR_INLINE`, then the routine and its page, see FAR_INLINE).  .A, .X, .Y, C
+; and V pass through; N/Z on return reflect .A.
 .macro FAR_GATE_INLINE  name, target, page
 name:
             jsr         FAR_INLINE

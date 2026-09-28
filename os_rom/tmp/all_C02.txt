@@ -1415,7 +1415,7 @@ Current file: all.s
 000000r 2                           pla
 000000r 2                           rti
 000000r 2               
-000000r 2               ; Far call: ZP_FAR_A = .A, ZP_FAR_VEC = routine, ZP_FAR_PAGE = its ROM page.  Use FAR_GATE.
+000000r 2               ; Far call: ZP_FAR_A = .A, ZP_FAR_VEC = routine, ZP_FAR_PAGE = its ROM page.  Use FAR_GATE_INLINE.
 000000r 2               ; .A, .X, .Y, C and V pass through in both directions; N/Z on return reflect .A.
 000000r 2               ; Not for use from IRQ handlers.
 000000r 2                           CLABEL      FAR_CALL_A
@@ -1549,19 +1549,8 @@ Current file: all.s
 0000D4r 2               ; Gates: a local label that calls (or jumps to) a routine on another ROM page.
 0000D4r 2               ; .A, .X, .Y and C pass through to the routine and back (see FAR_CALL_A).
 0000D4r 2               
-0000D4r 2               .macro FAR_GATE     name, target, page
-0000D4r 2               name:
-0000D4r 2                           sta         ZP_FAR_A
-0000D4r 2                           lda         #<(target)
-0000D4r 2                           sta         ZP_FAR_VEC
-0000D4r 2                           lda         #>(target)
-0000D4r 2                           sta         ZP_FAR_VEC + 1
-0000D4r 2                           lda         #page
-0000D4r 2                           sta         ZP_FAR_PAGE
-0000D4r 2                           jmp         FAR_CALL_A
-0000D4r 2               .endmacro
-0000D4r 2               
-0000D4r 2               ; Compact version of FAR_GATE (6 bytes instead of 15; a little slower): .A, .X, .Y and C pass through
+0000D4r 2               ; A far call: 6 bytes (`jsr FAR_INLINE`, then the routine and its page, see FAR_INLINE).  .A, .X, .Y, C
+0000D4r 2               ; and V pass through; N/Z on return reflect .A.
 0000D4r 2               .macro FAR_GATE_INLINE  name, target, page
 0000D4r 2               name:
 0000D4r 2                           jsr         FAR_INLINE
@@ -6130,189 +6119,153 @@ Current file: all.s
 0003F9r 2               .segment "GATES_P1"
 000000r 2               
 000000r 2               ; Gates from page 1 to page 0 BIOS routines
-000000r 2  85 rr A9 rr  FAR_GATE        READ_CHAR,      ::READ_CHAR,            0
-000004r 2  85 rr A9 rr  
-000008r 2  85 rr A9 00  
-000011r 2  85 rr A9 rr  FAR_GATE        WRITE_CHAR,     ::WRITE_CHAR,           0
-000015r 2  85 rr A9 rr  
-000019r 2  85 rr A9 00  
-000022r 2  85 rr A9 rr  FAR_GATE        WRITE_BYTE,     ::WRITE_BYTE,           0
-000026r 2  85 rr A9 rr  
-00002Ar 2  85 rr A9 00  
-000033r 2  85 rr A9 rr  FAR_GATE        WRITE_HEX,      ::WRITE_HEX,            0
-000037r 2  85 rr A9 rr  
-00003Br 2  85 rr A9 00  
-000044r 2  85 rr A9 rr  FAR_GATE        WRITE_HEX_MASK, ::WRITE_HEX_MASK,       0
-000048r 2  85 rr A9 rr  
-00004Cr 2  85 rr A9 00  
-000055r 2  85 rr A9 rr  FAR_GATE        WRITE_CRLF,     ::WRITE_CRLF,           0
-000059r 2  85 rr A9 rr  
-00005Dr 2  85 rr A9 00  
-000066r 2  85 rr A9 rr  FAR_GATE        CLEAR_SCR,      ::CLEAR_SCR,            0
-00006Ar 2  85 rr A9 rr  
-00006Er 2  85 rr A9 00  
-000077r 2  85 rr A9 rr  FAR_GATE        MEM_COPY,       ::MEM_COPY,             0
-00007Br 2  85 rr A9 rr  
-00007Fr 2  85 rr A9 00  
-000088r 2  85 rr A9 rr  FAR_GATE        MM_ALLOC,       ::MM_ALLOC,             0
-00008Cr 2  85 rr A9 rr  
-000090r 2  85 rr A9 00  
-000099r 2  85 rr A9 rr  FAR_GATE        MM_FREE,        ::MM_FREE,              0
-00009Dr 2  85 rr A9 rr  
-0000A1r 2  85 rr A9 00  
-0000AAr 2  85 rr A9 rr  FAR_GATE        MM_READ,        ::MM_READ,              0
-0000AEr 2  85 rr A9 rr  
-0000B2r 2  85 rr A9 00  
-0000BBr 2  85 rr A9 rr  FAR_GATE        MM_WRITE,       ::MM_WRITE,             0
-0000BFr 2  85 rr A9 rr  
-0000C3r 2  85 rr A9 00  
-0000CCr 2  85 rr A9 rr  FAR_GATE        MM_LOCK,        ::MM_LOCK,              0
-0000D0r 2  85 rr A9 rr  
-0000D4r 2  85 rr A9 00  
-0000DDr 2  85 rr A9 rr  FAR_GATE        MM_UNLOCK,      ::MM_UNLOCK,            0
-0000E1r 2  85 rr A9 rr  
-0000E5r 2  85 rr A9 00  
-0000EEr 2  85 rr A9 rr  FAR_GATE        TASK_CALL,      ::TASK_CALL,            0
-0000F2r 2  85 rr A9 rr  
-0000F6r 2  85 rr A9 00  
-0000FFr 2  85 rr A9 rr  FAR_GATE        SH_ALLOC,       ::SH_ALLOC,             0
-000103r 2  85 rr A9 rr  
-000107r 2  85 rr A9 00  
-000110r 2  85 rr A9 rr  FAR_GATE        SH_ATTACH,      ::SH_ATTACH,            0
-000114r 2  85 rr A9 rr  
-000118r 2  85 rr A9 00  
-000121r 2  85 rr A9 rr  FAR_GATE        SH_DETACH,      ::SH_DETACH,            0
-000125r 2  85 rr A9 rr  
-000129r 2  85 rr A9 00  
-000132r 2  85 rr A9 rr  FAR_GATE        SH_READ,        ::SH_READ,              0
-000136r 2  85 rr A9 rr  
-00013Ar 2  85 rr A9 00  
-000143r 2  85 rr A9 rr  FAR_GATE        SH_WRITE,       ::SH_WRITE,             0
-000147r 2  85 rr A9 rr  
-00014Br 2  85 rr A9 00  
-000154r 2  85 rr A9 rr  FAR_GATE        SH_LOCK,        ::SH_LOCK,              0
-000158r 2  85 rr A9 rr  
-00015Cr 2  85 rr A9 00  
-000165r 2  85 rr A9 rr  FAR_GATE        SH_UNLOCK,      ::SH_UNLOCK,            0
-000169r 2  85 rr A9 rr  
-00016Dr 2  85 rr A9 00  
-000176r 2  85 rr A9 rr  FAR_GATE        MM_TASK_RESET,  ::MM_TASK_RESET,        0
-00017Ar 2  85 rr A9 rr  
-00017Er 2  85 rr A9 00  
-000187r 2  85 rr A9 rr  FAR_GATE        MM_FIND,        ::MM_FIND,              0
-00018Br 2  85 rr A9 rr  
-00018Fr 2  85 rr A9 00  
-000198r 2  85 rr A9 rr  FAR_GATE        MM_SET_FLOOR,   ::MM_SET_FLOOR,         0
-00019Cr 2  85 rr A9 rr  
-0001A0r 2  85 rr A9 00  
-0001A9r 2  85 rr A9 rr  FAR_GATE        MM_TASK_INIT,   ::MM_TASK_INIT,         0   ; Reset the current task's MMU area (HyForth cold)
-0001ADr 2  85 rr A9 rr  
-0001B1r 2  85 rr A9 00  
-0001BAr 2  85 rr A9 rr  FAR_GATE        YIELD,          ::YIELD,                0
-0001BEr 2  85 rr A9 rr  
-0001C2r 2  85 rr A9 00  
-0001CBr 2  85 rr A9 rr  FAR_GATE        NO_PREEMPT,     ::NO_PREEMPT,           0
-0001CFr 2  85 rr A9 rr  
-0001D3r 2  85 rr A9 00  
-0001DCr 2  85 rr A9 rr  FAR_GATE        PREEMPT,        ::PREEMPT,              0
-0001E0r 2  85 rr A9 rr  
-0001E4r 2  85 rr A9 00  
-0001EDr 2  85 rr A9 rr  FAR_GATE        TASK_WAIT,      ::TASK_WAIT,            0
-0001F1r 2  85 rr A9 rr  
-0001F5r 2  85 rr A9 00  
-0001FEr 2  85 rr A9 rr  FAR_GATE        IO_WAKE,        ::IO_WAKE,              0
-000202r 2  85 rr A9 rr  
-000206r 2  85 rr A9 00  
-00020Fr 2  85 rr A9 rr  FAR_GATE        TASK_RUN,       ::TASK_RUN,             0
-000213r 2  85 rr A9 rr  
-000217r 2  85 rr A9 00  
-000220r 2  85 rr A9 rr  FAR_GATE        TASK_STATUS,    ::TASK_STATUS,          0
-000224r 2  85 rr A9 rr  
-000228r 2  85 rr A9 00  
-000231r 2               
-000231r 2               ; Gates from page 1 to the IO layer (page 2) and DEV_REGISTER (page 0)
-000231r 2  20 rr rr rr  FAR_GATE_INLINE IO_OPEN,        PAGE2::IO_OPEN,         2
-000235r 2  rr 02        
-000237r 2  20 rr rr rr  FAR_GATE_INLINE IO_CLOSE,       PAGE2::IO_CLOSE,        2
-00023Br 2  rr 02        
-00023Dr 2  20 rr rr rr  FAR_GATE_INLINE IO_READ,        PAGE2::IO_READ,         2
-000241r 2  rr 02        
-000243r 2  20 rr rr rr  FAR_GATE_INLINE IO_WRITE,       PAGE2::IO_WRITE,        2
-000247r 2  rr 02        
-000249r 2  20 rr rr rr  FAR_GATE_INLINE IO_GETC,        PAGE2::IO_GETC,         2
-00024Dr 2  rr 02        
-00024Fr 2  20 rr rr rr  FAR_GATE_INLINE IO_PUTC,        PAGE2::IO_PUTC,         2
-000253r 2  rr 02        
-000255r 2  20 rr rr rr  FAR_GATE_INLINE IO_SEEK,        PAGE2::IO_SEEK,         2
-000259r 2  rr 02        
-00025Br 2  20 rr rr rr  FAR_GATE_INLINE IO_STAT,        PAGE2::IO_STAT,         2
-00025Fr 2  rr 02        
-000261r 2  20 rr rr rr  FAR_GATE_INLINE IO_CTL,         PAGE2::IO_CTL,          2
-000265r 2  rr 02        
-000267r 2  20 rr rr rr  FAR_GATE_INLINE IO_TEST,        PAGE2::IO_TEST,         2
-00026Br 2  rr 02        
-00026Dr 2  20 rr rr rr  FAR_GATE_INLINE DEV_REGISTER,   ::DEV_REGISTER,         0
-000271r 2  rr 00        
-000273r 2  20 rr rr rr  FAR_GATE_INLINE GET_CHAR,       ::GET_CHAR,             0
-000277r 2  rr 00        
-000279r 2  20 rr rr rr  FAR_GATE_INLINE IO_DUP2,        PAGE2::IO_DUP2,         2
-00027Dr 2  rr 02        
-00027Fr 2  20 rr rr rr  FAR_GATE_INLINE IO_PIPE,        PAGE2::IO_PIPE,         2
-000283r 2  rr 02        
-000285r 2  20 rr rr rr  FAR_GATE_INLINE IO_DUP,         PAGE2::IO_DUP,          2
-000289r 2  rr 02        
-00028Br 2  20 rr rr rr  FAR_GATE_INLINE TASK_CLONE,     PAGE2::TASK_CLONE,      2
-00028Fr 2  rr 02        
-000291r 2  20 rr rr rr  FAR_GATE_INLINE IO_MOUNT,       PAGE2::IO_MOUNT,        2
-000295r 2  rr 02        
-000297r 2  20 rr rr rr  FAR_GATE_INLINE IO_BIND,        PAGE2::IO_BIND,         2
-00029Br 2  rr 02        
-00029Dr 2  20 rr rr rr  FAR_GATE_INLINE IO_UNMOUNT,     PAGE2::IO_UNMOUNT,      2
-0002A1r 2  rr 02        
-0002A3r 2  20 rr rr rr  FAR_GATE_INLINE IO_NS_LIST,     PAGE2::IO_NS_LIST,      2
-0002A7r 2  rr 02        
-0002A9r 2  20 rr rr rr  FAR_GATE_INLINE TASK_SET_BREAK, ::TASK_SET_BREAK,       0
-0002ADr 2  rr 00        
-0002AFr 2               
-0002AFr 2               ; Sound routines run in the sound task (through the page 0 SND_CALL_* task gates)
-0002AFr 2  85 rr A9 rr  FAR_GATE        SOUND_INIT,     ::SND_CALL_INIT,        0
-0002B3r 2  85 rr A9 rr  
-0002B7r 2  85 rr A9 00  
-0002C0r 2  85 rr A9 rr  FAR_GATE        SOUND_TEST,     ::SND_CALL_TEST,        0
-0002C4r 2  85 rr A9 rr  
-0002C8r 2  85 rr A9 00  
-0002D1r 2  85 rr A9 rr  FAR_GATE        YM_WRITE,       ::SND_CALL_YM_WRITE,    0
-0002D5r 2  85 rr A9 rr  
-0002D9r 2  85 rr A9 00  
-0002E2r 2               
-0002E2r 2  A9 rr 85 rr  FAR_JMP_GATE    MON_START,      ::MON_START,            0
-0002E6r 2  A9 rr 85 rr  
-0002EAr 2  A9 00 85 rr  
-0002F1r 2               
-0002F1r 2               ; Page 1 copy of WRITE_HSTRING: the HString has to be read from page 1, where the caller's strings are.
-0002F1r 2               ; .A, .Y hold the addr of HString to write
-0002F1r 2               ; Clobbers .A, .Y; Preserves .X
-0002F1r 2               WRITE_HSTRING:
-0002F1r 2  DA                           phx
-0002F2r 2  85 rr                        sta             ZP_HS_TEMP
-0002F4r 2  84 rr                        sty             ZP_HS_TEMP + 1
-0002F6r 2  B2 rr                        lda             (ZP_HS_TEMP)                ; Length of HString
-0002F8r 2  F0 0C                        beq             @done
-0002FAr 2  AA                           tax
-0002FBr 2  A0 00                        ldy             #0
-0002FDr 2               @write_loop:
-0002FDr 2  C8                           iny
-0002FEr 2  B1 rr 20 rr                  PRINT_CHAR      {(ZP_HS_TEMP),Y}
-000302r 2  rr           
-000303r 2  CA                           dex
-000304r 2  D0 F7                        bne             @write_loop
-000306r 2               @done:
-000306r 2  FA                           plx
-000307r 2  60                           rts
-000308r 2               
-000308r 2               ; Page 1 copy of the BIOS thunk table, at the same address as the page 0 one ($F800), so code running
-000308r 2               ; on page 1 (e.g. Forth's syscall) can use the documented thunk addresses.
-000308r 2               .segment "BIOS_THUNKS_P1"
+000000r 2  20 rr rr rr  FAR_GATE_INLINE READ_CHAR,      ::READ_CHAR,            0
+000004r 2  rr 00        
+000006r 2  20 rr rr rr  FAR_GATE_INLINE WRITE_CHAR,     ::WRITE_CHAR,           0
+00000Ar 2  rr 00        
+00000Cr 2  20 rr rr rr  FAR_GATE_INLINE WRITE_BYTE,     ::WRITE_BYTE,           0
+000010r 2  rr 00        
+000012r 2  20 rr rr rr  FAR_GATE_INLINE WRITE_HEX,      ::WRITE_HEX,            0
+000016r 2  rr 00        
+000018r 2  20 rr rr rr  FAR_GATE_INLINE WRITE_HEX_MASK, ::WRITE_HEX_MASK,       0
+00001Cr 2  rr 00        
+00001Er 2  20 rr rr rr  FAR_GATE_INLINE WRITE_CRLF,     ::WRITE_CRLF,           0
+000022r 2  rr 00        
+000024r 2  20 rr rr rr  FAR_GATE_INLINE CLEAR_SCR,      ::CLEAR_SCR,            0
+000028r 2  rr 00        
+00002Ar 2  20 rr rr rr  FAR_GATE_INLINE MEM_COPY,       ::MEM_COPY,             0
+00002Er 2  rr 00        
+000030r 2  20 rr rr rr  FAR_GATE_INLINE MM_ALLOC,       ::MM_ALLOC,             0
+000034r 2  rr 00        
+000036r 2  20 rr rr rr  FAR_GATE_INLINE MM_FREE,        ::MM_FREE,              0
+00003Ar 2  rr 00        
+00003Cr 2  20 rr rr rr  FAR_GATE_INLINE MM_READ,        ::MM_READ,              0
+000040r 2  rr 00        
+000042r 2  20 rr rr rr  FAR_GATE_INLINE MM_WRITE,       ::MM_WRITE,             0
+000046r 2  rr 00        
+000048r 2  20 rr rr rr  FAR_GATE_INLINE MM_LOCK,        ::MM_LOCK,              0
+00004Cr 2  rr 00        
+00004Er 2  20 rr rr rr  FAR_GATE_INLINE MM_UNLOCK,      ::MM_UNLOCK,            0
+000052r 2  rr 00        
+000054r 2  20 rr rr rr  FAR_GATE_INLINE TASK_CALL,      ::TASK_CALL,            0
+000058r 2  rr 00        
+00005Ar 2  20 rr rr rr  FAR_GATE_INLINE SH_ALLOC,       ::SH_ALLOC,             0
+00005Er 2  rr 00        
+000060r 2  20 rr rr rr  FAR_GATE_INLINE SH_ATTACH,      ::SH_ATTACH,            0
+000064r 2  rr 00        
+000066r 2  20 rr rr rr  FAR_GATE_INLINE SH_DETACH,      ::SH_DETACH,            0
+00006Ar 2  rr 00        
+00006Cr 2  20 rr rr rr  FAR_GATE_INLINE SH_READ,        ::SH_READ,              0
+000070r 2  rr 00        
+000072r 2  20 rr rr rr  FAR_GATE_INLINE SH_WRITE,       ::SH_WRITE,             0
+000076r 2  rr 00        
+000078r 2  20 rr rr rr  FAR_GATE_INLINE SH_LOCK,        ::SH_LOCK,              0
+00007Cr 2  rr 00        
+00007Er 2  20 rr rr rr  FAR_GATE_INLINE SH_UNLOCK,      ::SH_UNLOCK,            0
+000082r 2  rr 00        
+000084r 2  20 rr rr rr  FAR_GATE_INLINE MM_TASK_RESET,  ::MM_TASK_RESET,        0
+000088r 2  rr 00        
+00008Ar 2  20 rr rr rr  FAR_GATE_INLINE MM_FIND,        ::MM_FIND,              0
+00008Er 2  rr 00        
+000090r 2  20 rr rr rr  FAR_GATE_INLINE MM_SET_FLOOR,   ::MM_SET_FLOOR,         0
+000094r 2  rr 00        
+000096r 2  20 rr rr rr  FAR_GATE_INLINE MM_TASK_INIT,   ::MM_TASK_INIT,         0   ; Reset the current task's MMU area (HyForth cold)
+00009Ar 2  rr 00        
+00009Cr 2  20 rr rr rr  FAR_GATE_INLINE YIELD,          ::YIELD,                0
+0000A0r 2  rr 00        
+0000A2r 2  20 rr rr rr  FAR_GATE_INLINE NO_PREEMPT,     ::NO_PREEMPT,           0
+0000A6r 2  rr 00        
+0000A8r 2  20 rr rr rr  FAR_GATE_INLINE PREEMPT,        ::PREEMPT,              0
+0000ACr 2  rr 00        
+0000AEr 2  20 rr rr rr  FAR_GATE_INLINE TASK_WAIT,      ::TASK_WAIT,            0
+0000B2r 2  rr 00        
+0000B4r 2  20 rr rr rr  FAR_GATE_INLINE IO_WAKE,        ::IO_WAKE,              0
+0000B8r 2  rr 00        
+0000BAr 2  20 rr rr rr  FAR_GATE_INLINE TASK_RUN,       ::TASK_RUN,             0
+0000BEr 2  rr 00        
+0000C0r 2  20 rr rr rr  FAR_GATE_INLINE TASK_STATUS,    ::TASK_STATUS,          0
+0000C4r 2  rr 00        
+0000C6r 2               
+0000C6r 2               ; Gates from page 1 to the IO layer (page 2) and DEV_REGISTER (page 0)
+0000C6r 2  20 rr rr rr  FAR_GATE_INLINE IO_OPEN,        PAGE2::IO_OPEN,         2
+0000CAr 2  rr 02        
+0000CCr 2  20 rr rr rr  FAR_GATE_INLINE IO_CLOSE,       PAGE2::IO_CLOSE,        2
+0000D0r 2  rr 02        
+0000D2r 2  20 rr rr rr  FAR_GATE_INLINE IO_READ,        PAGE2::IO_READ,         2
+0000D6r 2  rr 02        
+0000D8r 2  20 rr rr rr  FAR_GATE_INLINE IO_WRITE,       PAGE2::IO_WRITE,        2
+0000DCr 2  rr 02        
+0000DEr 2  20 rr rr rr  FAR_GATE_INLINE IO_GETC,        PAGE2::IO_GETC,         2
+0000E2r 2  rr 02        
+0000E4r 2  20 rr rr rr  FAR_GATE_INLINE IO_PUTC,        PAGE2::IO_PUTC,         2
+0000E8r 2  rr 02        
+0000EAr 2  20 rr rr rr  FAR_GATE_INLINE IO_SEEK,        PAGE2::IO_SEEK,         2
+0000EEr 2  rr 02        
+0000F0r 2  20 rr rr rr  FAR_GATE_INLINE IO_STAT,        PAGE2::IO_STAT,         2
+0000F4r 2  rr 02        
+0000F6r 2  20 rr rr rr  FAR_GATE_INLINE IO_CTL,         PAGE2::IO_CTL,          2
+0000FAr 2  rr 02        
+0000FCr 2  20 rr rr rr  FAR_GATE_INLINE IO_TEST,        PAGE2::IO_TEST,         2
+000100r 2  rr 02        
+000102r 2  20 rr rr rr  FAR_GATE_INLINE DEV_REGISTER,   ::DEV_REGISTER,         0
+000106r 2  rr 00        
+000108r 2  20 rr rr rr  FAR_GATE_INLINE GET_CHAR,       ::GET_CHAR,             0
+00010Cr 2  rr 00        
+00010Er 2  20 rr rr rr  FAR_GATE_INLINE IO_DUP2,        PAGE2::IO_DUP2,         2
+000112r 2  rr 02        
+000114r 2  20 rr rr rr  FAR_GATE_INLINE IO_PIPE,        PAGE2::IO_PIPE,         2
+000118r 2  rr 02        
+00011Ar 2  20 rr rr rr  FAR_GATE_INLINE IO_DUP,         PAGE2::IO_DUP,          2
+00011Er 2  rr 02        
+000120r 2  20 rr rr rr  FAR_GATE_INLINE TASK_CLONE,     PAGE2::TASK_CLONE,      2
+000124r 2  rr 02        
+000126r 2  20 rr rr rr  FAR_GATE_INLINE IO_MOUNT,       PAGE2::IO_MOUNT,        2
+00012Ar 2  rr 02        
+00012Cr 2  20 rr rr rr  FAR_GATE_INLINE IO_BIND,        PAGE2::IO_BIND,         2
+000130r 2  rr 02        
+000132r 2  20 rr rr rr  FAR_GATE_INLINE IO_UNMOUNT,     PAGE2::IO_UNMOUNT,      2
+000136r 2  rr 02        
+000138r 2  20 rr rr rr  FAR_GATE_INLINE IO_NS_LIST,     PAGE2::IO_NS_LIST,      2
+00013Cr 2  rr 02        
+00013Er 2  20 rr rr rr  FAR_GATE_INLINE TASK_SET_BREAK, ::TASK_SET_BREAK,       0
+000142r 2  rr 00        
+000144r 2               
+000144r 2               ; Sound routines run in the sound task (through the page 0 SND_CALL_* task gates)
+000144r 2  20 rr rr rr  FAR_GATE_INLINE SOUND_INIT,     ::SND_CALL_INIT,        0
+000148r 2  rr 00        
+00014Ar 2  20 rr rr rr  FAR_GATE_INLINE SOUND_TEST,     ::SND_CALL_TEST,        0
+00014Er 2  rr 00        
+000150r 2  20 rr rr rr  FAR_GATE_INLINE YM_WRITE,       ::SND_CALL_YM_WRITE,    0
+000154r 2  rr 00        
+000156r 2               
+000156r 2  A9 rr 85 rr  FAR_JMP_GATE    MON_START,      ::MON_START,            0
+00015Ar 2  A9 rr 85 rr  
+00015Er 2  A9 00 85 rr  
+000165r 2               
+000165r 2               ; Page 1 copy of WRITE_HSTRING: the HString has to be read from page 1, where the caller's strings are.
+000165r 2               ; .A, .Y hold the addr of HString to write
+000165r 2               ; Clobbers .A, .Y; Preserves .X
+000165r 2               WRITE_HSTRING:
+000165r 2  DA                           phx
+000166r 2  85 rr                        sta             ZP_HS_TEMP
+000168r 2  84 rr                        sty             ZP_HS_TEMP + 1
+00016Ar 2  B2 rr                        lda             (ZP_HS_TEMP)                ; Length of HString
+00016Cr 2  F0 0C                        beq             @done
+00016Er 2  AA                           tax
+00016Fr 2  A0 00                        ldy             #0
+000171r 2               @write_loop:
+000171r 2  C8                           iny
+000172r 2  B1 rr 20 rr                  PRINT_CHAR      {(ZP_HS_TEMP),Y}
+000176r 2  rr           
+000177r 2  CA                           dex
+000178r 2  D0 F7                        bne             @write_loop
+00017Ar 2               @done:
+00017Ar 2  FA                           plx
+00017Br 2  60                           rts
+00017Cr 2               
+00017Cr 2               ; Page 1 copy of the BIOS thunk table, at the same address as the page 0 one ($F800), so code running
+00017Cr 2               ; on page 1 (e.g. Forth's syscall) can use the documented thunk addresses.
+00017Cr 2               .segment "BIOS_THUNKS_P1"
 000000r 2               .assert     * = ::TH_READ_CHAR, lderror, "BIOS_THUNKS_P1 must line up with BIOS_THUNKS"
 000000r 2  4C rr rr                     jmp             READ_CHAR           ; $F800
 000003r 2  4C rr rr                     jmp             WRITE_CHAR          ; $F803

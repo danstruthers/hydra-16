@@ -11,39 +11,39 @@
 .segment "GATES_P1"
 
 ; Gates from page 1 to page 0 BIOS routines
-FAR_GATE        READ_CHAR,      ::READ_CHAR,            0
-FAR_GATE        WRITE_CHAR,     ::WRITE_CHAR,           0
-FAR_GATE        WRITE_BYTE,     ::WRITE_BYTE,           0
-FAR_GATE        WRITE_HEX,      ::WRITE_HEX,            0
-FAR_GATE        WRITE_HEX_MASK, ::WRITE_HEX_MASK,       0
-FAR_GATE        WRITE_CRLF,     ::WRITE_CRLF,           0
-FAR_GATE        CLEAR_SCR,      ::CLEAR_SCR,            0
-FAR_GATE        MEM_COPY,       ::MEM_COPY,             0
-FAR_GATE        MM_ALLOC,       ::MM_ALLOC,             0
-FAR_GATE        MM_FREE,        ::MM_FREE,              0
-FAR_GATE        MM_READ,        ::MM_READ,              0
-FAR_GATE        MM_WRITE,       ::MM_WRITE,             0
-FAR_GATE        MM_LOCK,        ::MM_LOCK,              0
-FAR_GATE        MM_UNLOCK,      ::MM_UNLOCK,            0
-FAR_GATE        TASK_CALL,      ::TASK_CALL,            0
-FAR_GATE        SH_ALLOC,       ::SH_ALLOC,             0
-FAR_GATE        SH_ATTACH,      ::SH_ATTACH,            0
-FAR_GATE        SH_DETACH,      ::SH_DETACH,            0
-FAR_GATE        SH_READ,        ::SH_READ,              0
-FAR_GATE        SH_WRITE,       ::SH_WRITE,             0
-FAR_GATE        SH_LOCK,        ::SH_LOCK,              0
-FAR_GATE        SH_UNLOCK,      ::SH_UNLOCK,            0
-FAR_GATE        MM_TASK_RESET,  ::MM_TASK_RESET,        0
-FAR_GATE        MM_FIND,        ::MM_FIND,              0
-FAR_GATE        MM_SET_FLOOR,   ::MM_SET_FLOOR,         0
-FAR_GATE        MM_TASK_INIT,   ::MM_TASK_INIT,         0   ; Reset the current task's MMU area (HyForth cold)
-FAR_GATE        YIELD,          ::YIELD,                0
-FAR_GATE        NO_PREEMPT,     ::NO_PREEMPT,           0
-FAR_GATE        PREEMPT,        ::PREEMPT,              0
-FAR_GATE        TASK_WAIT,      ::TASK_WAIT,            0
-FAR_GATE        IO_WAKE,        ::IO_WAKE,              0
-FAR_GATE        TASK_RUN,       ::TASK_RUN,             0
-FAR_GATE        TASK_STATUS,    ::TASK_STATUS,          0
+FAR_GATE_INLINE READ_CHAR,      ::READ_CHAR,            0
+FAR_GATE_INLINE WRITE_CHAR,     ::WRITE_CHAR,           0
+FAR_GATE_INLINE WRITE_BYTE,     ::WRITE_BYTE,           0
+FAR_GATE_INLINE WRITE_HEX,      ::WRITE_HEX,            0
+FAR_GATE_INLINE WRITE_HEX_MASK, ::WRITE_HEX_MASK,       0
+FAR_GATE_INLINE WRITE_CRLF,     ::WRITE_CRLF,           0
+FAR_GATE_INLINE CLEAR_SCR,      ::CLEAR_SCR,            0
+FAR_GATE_INLINE MEM_COPY,       ::MEM_COPY,             0
+FAR_GATE_INLINE MM_ALLOC,       ::MM_ALLOC,             0
+FAR_GATE_INLINE MM_FREE,        ::MM_FREE,              0
+FAR_GATE_INLINE MM_READ,        ::MM_READ,              0
+FAR_GATE_INLINE MM_WRITE,       ::MM_WRITE,             0
+FAR_GATE_INLINE MM_LOCK,        ::MM_LOCK,              0
+FAR_GATE_INLINE MM_UNLOCK,      ::MM_UNLOCK,            0
+FAR_GATE_INLINE TASK_CALL,      ::TASK_CALL,            0
+FAR_GATE_INLINE SH_ALLOC,       ::SH_ALLOC,             0
+FAR_GATE_INLINE SH_ATTACH,      ::SH_ATTACH,            0
+FAR_GATE_INLINE SH_DETACH,      ::SH_DETACH,            0
+FAR_GATE_INLINE SH_READ,        ::SH_READ,              0
+FAR_GATE_INLINE SH_WRITE,       ::SH_WRITE,             0
+FAR_GATE_INLINE SH_LOCK,        ::SH_LOCK,              0
+FAR_GATE_INLINE SH_UNLOCK,      ::SH_UNLOCK,            0
+FAR_GATE_INLINE MM_TASK_RESET,  ::MM_TASK_RESET,        0
+FAR_GATE_INLINE MM_FIND,        ::MM_FIND,              0
+FAR_GATE_INLINE MM_SET_FLOOR,   ::MM_SET_FLOOR,         0
+FAR_GATE_INLINE MM_TASK_INIT,   ::MM_TASK_INIT,         0   ; Reset the current task's MMU area (HyForth cold)
+FAR_GATE_INLINE YIELD,          ::YIELD,                0
+FAR_GATE_INLINE NO_PREEMPT,     ::NO_PREEMPT,           0
+FAR_GATE_INLINE PREEMPT,        ::PREEMPT,              0
+FAR_GATE_INLINE TASK_WAIT,      ::TASK_WAIT,            0
+FAR_GATE_INLINE IO_WAKE,        ::IO_WAKE,              0
+FAR_GATE_INLINE TASK_RUN,       ::TASK_RUN,             0
+FAR_GATE_INLINE TASK_STATUS,    ::TASK_STATUS,          0
 
 ; Gates from page 1 to the IO layer (page 2) and DEV_REGISTER (page 0)
 FAR_GATE_INLINE IO_OPEN,        PAGE2::IO_OPEN,         2
@@ -69,9 +69,9 @@ FAR_GATE_INLINE IO_NS_LIST,     PAGE2::IO_NS_LIST,      2
 FAR_GATE_INLINE TASK_SET_BREAK, ::TASK_SET_BREAK,       0
 
 ; Sound routines run in the sound task (through the page 0 SND_CALL_* task gates)
-FAR_GATE        SOUND_INIT,     ::SND_CALL_INIT,        0
-FAR_GATE        SOUND_TEST,     ::SND_CALL_TEST,        0
-FAR_GATE        YM_WRITE,       ::SND_CALL_YM_WRITE,    0
+FAR_GATE_INLINE SOUND_INIT,     ::SND_CALL_INIT,        0
+FAR_GATE_INLINE SOUND_TEST,     ::SND_CALL_TEST,        0
+FAR_GATE_INLINE YM_WRITE,       ::SND_CALL_YM_WRITE,    0
 
 FAR_JMP_GATE    MON_START,      ::MON_START,            0
 

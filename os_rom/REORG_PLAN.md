@@ -11,8 +11,8 @@ A plan for tidying the OS ROM: less dead code, clearer ROM page roles, a cleaner
 * **Boot noise**: `COPYTORAM`'s progress dots (thousands of characters: about 2 seconds at every boot and shell restart), and `DO_WELCOME`'s IRQ vector dump.
 * **Source clutter**: the I2C `.if 0` block in `bios.s`; the WDC ACIA / software serial timing alternatives in `defines.s`; stale hardcoded ROM addresses in `hyforth.s` comments.
 
-### **2. Page 1's gates**
-* Convert the 36 old 15-byte `FAR_GATE`s in `page1.s` to `FAR_GATE_INLINE` (6 bytes): about 320 bytes.
+### **2. Page 1's gates** (done)
+* *Done: the 36 old 15-byte `FAR_GATE`s in `page1.s` are `FAR_GATE_INLINE`s (6 bytes), and the `FAR_GATE` macro is gone: `GATES_P1` went from 776 to 380 bytes.*
 
 ### **3. Page roles and fixed offsets**
 | Page | Role |
