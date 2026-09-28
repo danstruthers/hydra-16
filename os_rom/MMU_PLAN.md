@@ -56,6 +56,8 @@ The low end of Task RAM is already full: `BUFFERS` packs `$0200-$07FF` (serial i
 * Shared allocations are in banks (8K) or 256-byte pages inside a bank. Chunk allocators aren't needed here.
 
 ### **Messaging and buffered transfers**
+*(The message rings were built (`msg.s`), then removed in the code cleanup: pipes and `/dev/cons` replaced them (see `IO_PLAN.md`), and their shared bank IDs `$01-$08` are free for `SH_ALLOC` now.  The notes below are the original design.)*
+
 * **Message** = `type`, `len`, then up to a few payload bytes, written into the receiver's ring for that sender. The sender is implied by which ring it's in. `MSG_RECV` scans the 16 rings round-robin, or reads one sender's ring directly. Larger data goes in a shared buffer, and the message carries only its **shared handle**.
 * When a task waits on an empty inbox, `TASK_STATUS_REG` bit 2 (Awaiting I/O) is set, and `MSG_SEND` clears it.
 
@@ -121,7 +123,7 @@ Every task has its own zero page, so ZP only has to be divided up **within one t
 6. **(Done for sound; serial in step 8) Resident driver tasks:** `TASK_STATUS_REG` Resident bit, and `DRV_START` (run a driver's `init` in its task). Boot (task 0) starts:
    * the **sound** task: `SOUND_INIT` and the YM IRQ handler.
    * the **serial** task: `SERIAL_INIT` and `SERIAL_IRQ_HANDLER`.
-7. **(Done, msg.s) Message rings (byte streams):** fixed shared banks `$01-$08` with ring pointers in shared bank `$00`, and `MSG_SEND_BYTE`/`MSG_RECV_BYTE`/`MSG_PEEK`, plus `MSG_RESET_TASK` for task reset. Framed messages (type, length) can be layered on top later. This doesn't need the shared allocator.
+7. **(Done, msg.s; removed later: replaced by pipes) Message rings (byte streams):** fixed shared banks `$01-$08` with ring pointers in shared bank `$00`, and `MSG_SEND_BYTE`/`MSG_RECV_BYTE`/`MSG_PEEK`, plus `MSG_RESET_TASK` for task reset. Framed messages (type, length) can be layered on top later. This doesn't need the shared allocator.
 8. **(Done) Serial through messages:** the serial driver runs in task `$F`; the serial task's RX handler writes to the capture task's ring, and `READ_CHAR` reads from the ring. TX stays polled/direct at first. Retire `INPUT_BUFFER`.
 9. **(Done) Shell in its own task (task 1, via `TASK_PREPARE` + `SWITCH_TO`):** task 0 finishes boot, starts the shell task (Forth/WOZMON) as the serial-capture task, and hands over to it with `SWITCH_TO`. This needs no preemptive scheduler: the only running task is the shell, and the drivers run from IRQs.
 

@@ -19,6 +19,7 @@ node hydrasim.js [options]
 | `--modules N` | RAM modules installed: banks `$00` to `N*16-1` (default 3) |
 | `--shared-u N` | Shared RAM installed for `U` macro-pages 0 to N-1 (default 16; each 512K chip is 4 macro-pages) |
 | `--acia-line N` | IRQ line the ACIA interrupts on (default 1) |
+| `--acia rockwell\|wdc` | The ACIA chip: the Rockwell R65C51 (default), or the WDC W65C51N with its transmitter bug (TDRE always reads 1, no TX interrupt; for a ROM built with `SER_ACIA = SER_ACIA_WDC`, which paces sending with VIA timer 2).  In WDC mode the emulator counts bytes written while one is still being sent (they'd be garbled on the chip) and reports them at the end.  (VIA timer 2 is modelled too: one-shot) |
 | `--stuck-irq N` | Hold IRQ line N active the whole time |
 | `--sd [N:]FILE` | An SD card (SDHC) on SPI device N (0-7, the board's SPI headers J18-J25; default 0), backed by the image FILE (512-byte blocks; writes go to the file).  Up to 8 cards, one per device, e.g. `--sd card0.img --sd 3:C:/images/card3.img`.  Models the VIA's port B SPI bit by bit (device select as the board's 74HC138 does it), and the SD commands the ROM uses (CMD0, 8, 16, 17, 24, 55, 58, ACMD41) |
 | `--ram-fault BANK:An:high\|low` | Address line An (0-12) stuck high or low on the RAM chip holding BANK (a shared chip holds 4 bank IDs, e.g. `F0-F3`; a task RAM module 16 banks), e.g. `F0:A0:high`.  The POST `RAM` line should report it |

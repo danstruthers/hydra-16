@@ -26,6 +26,9 @@
 //   --modules N         RAM modules installed: banks $00 - N*16-1 (default 3)
 //   --shared-u N        Shared RAM installed for U macro-pages 0 - N-1 (default 16; 4 per 512K chip)
 //   --acia-line N       IRQ line the ACIA interrupts on (default 1)
+//   --acia rockwell|wdc The ACIA: Rockwell R65C51 (default: TDRE status and TX interrupt), or WDC W65C51N
+//                       (its bug: TDRE always reads 1, no TX interrupt; bytes written while one is still
+//                       being sent are counted: they'd be garbled on the chip)
 //   --stuck-irq N       Hold IRQ line N active all the time
 //   --ram-fault BANK:An:high|low   Address line An (0-12) stuck high/low on the RAM chip holding BANK (a
 //                       shared chip holds 4 bank IDs, e.g. F0-F3; a task RAM module 16 banks), e.g. F0:A0:high
@@ -49,7 +52,7 @@ const path = require('path');
 
 // ---- options
 const opt = { rom: path.join(__dirname, '..', 'os_rom', 'tmp'), cycles: 20000000, input: '', modules: 3,
-  aciaLine: 1, stuckIrq: -1, model: '', raw: false, trace: 25, dumps: [], watches: [], pcWatches: [], sharedU: 16, ramFault: null, sds: [] };
+  aciaLine: 1, stuckIrq: -1, model: '', raw: false, trace: 25, dumps: [], watches: [], pcWatches: [], sharedU: 16, ramFault: null, sds: [], acia: 'rockwell' };
 const argv = process.argv.slice(2);
 for (let i = 0; i < argv.length; i++) {
   const a = argv[i], next = () => argv[++i];
@@ -60,6 +63,7 @@ for (let i = 0; i < argv.length; i++) {
     case '--modules': opt.modules = +next(); break;
     case '--shared-u': opt.sharedU = +next(); break;
     case '--acia-line': opt.aciaLine = +next(); break;
+    case '--acia': opt.acia = next().toLowerCase(); if (!/^(rockwell|wdc)$/.test(opt.acia)) { console.error('--acia rockwell|wdc'); process.exit(1); } break;
     case '--stuck-irq': opt.stuckIrq = +next(); break;
     case '--model': opt.model = next(); break;
     case '--ram-fault': { const m = /^([0-9A-Fa-f]{1,2}):A(\d+):(high|low)$/i.exec(next()); opt.ramFault = { bank: parseInt(m[1], 16), mask: 1 << +m[2], high: m[3].toLowerCase() === 'high' }; break; }
@@ -85,11 +89,13 @@ const taskBank = {}, sharedBank = {};
 const vecRam = new Uint16Array(16).map(() => rnd(65536));
 let T = 0, U = rnd(16), V = rnd(256), W = rnd(16);
 let out = '';
-let aciaCmd = 0, aciaCtrl = 0, aciaTdre = 1, aciaTxTimer = 0, aciaIrq = 0, aciaRdrf = 0, aciaRx = 0;
+let aciaCmd = 0, aciaCtrl = 0, aciaTdre = 1, aciaTxTimer = 0, aciaIrq = 0, aciaRdrf = 0, aciaRx = 0, aciaOverruns = 0;
+const aciaWdc = opt.acia === 'wdc';
 const rxQueue = [...opt.input]; let rxDelay = 200000;
 const via = new Uint8Array(16);
 // VIA timer 1 (the scheduler's tick): counter, latch, IFR/IER; one-shot or free-running (ACR bit 6)
 let viaT1 = 0xFFFF, viaT1Latch = 0xFFFF, viaT1On = false, viaIFR = 0, viaIER = 0;
+let viaT2 = 0xFFFF, viaT2LatchL = 0xFF, viaT2On = false;         // Timer 2: one-shot
 // SPI on VIA port B (PB0 SCLK, PB1 /CS enable, PB2 MOSI, PB3-PB5 device 0-7, PB6 = 0 for the board's
 // devices, PB7 MISO; mode 0), with up to 8 SD cards (SPI mode, SDHC: block addresses) on devices 0-7,
 // each backed by an image file (--sd [N:]FILE)
@@ -162,6 +168,8 @@ function viaRead(r) {
   if (r === 0) { const ddr = via[2], pins = 0x7F | ((spiSel ? spiSel.miso : 1) << 7); return (via[0] & ddr) | (pins & ~ddr); }
   if (r === 4) { viaIFR &= ~0x40; return viaT1 & 0xFF; }       // T1C-L: clears the T1 flag
   if (r === 5) return viaT1 >> 8;
+  if (r === 8) { viaIFR &= ~0x20; return viaT2 & 0xFF; }       // T2C-L: clears the T2 flag
+  if (r === 9) return (viaT2 >> 8) & 0xFF;
   if (r === 6) return viaT1Latch & 0xFF;
   if (r === 7) return viaT1Latch >> 8;
   if (r === 0x0D) return viaIFR | ((viaIFR & viaIER & 0x7F) ? 0x80 : 0);
@@ -172,11 +180,14 @@ function viaWrite(r, v) {
   if (r === 4 || r === 6) viaT1Latch = (viaT1Latch & 0xFF00) | v;
   else if (r === 5) { viaT1Latch = (viaT1Latch & 0xFF) | (v << 8); viaT1 = viaT1Latch; viaT1On = true; viaIFR &= ~0x40; }
   else if (r === 7) { viaT1Latch = (viaT1Latch & 0xFF) | (v << 8); viaIFR &= ~0x40; }
+  else if (r === 8) viaT2LatchL = v;
+  else if (r === 9) { viaT2 = (v << 8) | viaT2LatchL; viaT2On = true; viaIFR &= ~0x20; }   // Load and start
   else if (r === 0x0D) viaIFR &= ~(v & 0x7F);
   else if (r === 0x0E) { if (v & 0x80) viaIER |= v & 0x7F; else viaIER &= ~(v & 0x7F); }
   else { via[r] = v; if (r === 0 || r === 2) spiPortB((via[0] & via[2]) | (~via[2] & 0x7F)); }
 }
 function viaTick(n) {
+  if (viaT2On) { viaT2 -= n; if (viaT2 < 0) { viaIFR |= 0x20; viaT2On = false; viaT2 &= 0xFFFF; } }
   if (!viaT1On) return;
   viaT1 -= n;
   if (viaT1 < 0) {
@@ -209,7 +220,7 @@ function rd(a) {
     if (a >= 0xFF10 && a < 0xFF14) {
       const r = a - 0xFF10;
       if (r === 0) { aciaRdrf = 0; return aciaRx; }
-      if (r === 1) { const s = (aciaIrq ? 0x80 : 0) | (aciaTdre ? 0x10 : 0) | (aciaRdrf ? 0x08 : 0); aciaIrq = 0; return s; }
+      if (r === 1) { const s = (aciaIrq ? 0x80 : 0) | (aciaTdre || aciaWdc ? 0x10 : 0) | (aciaRdrf ? 0x08 : 0); aciaIrq = 0; return s; }
       return r === 2 ? aciaCmd : aciaCtrl;
     }
     if (a < 0xFF10) return viaRead(a - 0xFF00);
@@ -231,9 +242,9 @@ function wr(a, v) {
   if (a < 0xFF00) return;
   if (a >= 0xFF10 && a < 0xFF14) {
     const r = a - 0xFF10;
-    if (r === 0) { out += String.fromCharCode(v); aciaTdre = 0; aciaTxTimer = ACIA_TX_CYCLES; }
+    if (r === 0) { if (aciaTxTimer > 0) aciaOverruns++; out += String.fromCharCode(v); aciaTdre = 0; aciaTxTimer = ACIA_TX_CYCLES; }
     else if (r === 1) { aciaCmd &= 0xE0; aciaIrq = 0; }                         // programmed reset
-    else if (r === 2) { aciaCmd = v; if ((v & 0x0C) === 0x04 && aciaTdre) aciaIrq = 1; }
+    else if (r === 2) { aciaCmd = v; if (!aciaWdc && (v & 0x0C) === 0x04 && aciaTdre) aciaIrq = 1; }
     else aciaCtrl = v;
     return;
   }
@@ -245,7 +256,7 @@ function wr(a, v) {
 }
 // Lowest numbered active IRQ line, or -1
 function irqLine() {
-  const acia = aciaIrq && (((aciaCmd & 0x0C) === 0x04 && aciaTdre) || (!(aciaCmd & 2) && aciaRdrf));
+  const acia = aciaIrq && ((!aciaWdc && (aciaCmd & 0x0C) === 0x04 && aciaTdre) || (!(aciaCmd & 2) && aciaRdrf));
   const lines = [];
   if (acia) lines.push(opt.aciaLine);
   if (viaIFR & viaIER & 0x7F) lines.push(0);                      // VIA: IRQ line 0
@@ -287,8 +298,11 @@ const trace = [], pcHist = new Map();
 PC = rd16(0xFFFC); P |= I;                                  // RESET
 let lastCyc = 0;
 while (cyc < opt.cycles && !halted) {
-  viaTick(cyc - lastCyc); lastCyc = cyc;
-  if (aciaTxTimer > 0 && --aciaTxTimer === 0) { aciaTdre = 1; if ((aciaCmd & 0x0C) === 0x04) aciaIrq = 1; }
+  const dCyc = cyc - lastCyc; lastCyc = cyc;
+  viaTick(dCyc);
+  if (aciaTxTimer > 0 && (aciaTxTimer -= dCyc) <= 0) {            // (In cycles: a character's time)
+    aciaTxTimer = 0; aciaTdre = 1; if (!aciaWdc && (aciaCmd & 0x0C) === 0x04) aciaIrq = 1;
+  }
   if (rxQueue.length && --rxDelay <= 0 && !aciaRdrf) {
     const c = rxQueue.shift();
     if (c === '\u0100') rxDelay = 2000000;                  // \w: wait before the next key
@@ -384,6 +398,7 @@ console.log('--- serial output ---\n' + (opt.raw ? out : out.replace(/\x1b/g, '<
 if (halted) console.log('--- halted: ' + halted);
 console.log('--- last instructions (W T PC   A  X  Y  S  P) ---');
 for (const [w, t, pc, a, x, y, s, p] of trace) console.log(hx(w, 1), hx(t, 1), hx(pc, 4), hx(a), hx(x), hx(y), hx(s), hx(p));
+if (aciaWdc) console.log('--- WDC ACIA: ' + aciaOverruns + ' byte(s) written while one was still being sent (garbled on the chip)');
 console.log('--- hottest PCs (W:PC count) ---');
 for (const [k, c] of [...pcHist.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10)) console.log(hx(k >> 16, 1) + ':' + hx(k & 0xFFFF, 4), c);
 console.log('--- cycles ' + cyc + ', T=' + hx(T, 1) + ' U=' + hx(U, 1) + ' V=' + hx(V) + ' W=' + hx(W, 1) + ', vector RAM: ' + [...vecRam].map(v => hx(v, 4)).join(' '));

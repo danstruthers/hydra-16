@@ -25,7 +25,7 @@ IO_DEV_FIND:
             sta         ZP_IO_CHUNK + 1
 
 @entry:
-            ldx         #MSG_PTR_BANK               ; The device table (shared bank ID $00; U is 0)
+            ldx         #SYS_BANK               ; The device table (shared bank ID $00; U is 0)
             stx         RAM_BANK_REG
             lda         (ZP_IO_CHUNK)
             beq         @next_entry                 ; Free entry
@@ -40,7 +40,7 @@ IO_DEV_FIND:
             lda         #0
 :
             sta         ZP_IO_TMP
-            ldx         #MSG_PTR_BANK
+            ldx         #SYS_BANK
             stx         RAM_BANK_REG
             cpy         #IO_DEV_NAME_LEN
             beq         @all_8                      ; 8 characters matched
@@ -583,7 +583,7 @@ NS_PUT_DEV:
             lda         U_REGISTER
             pha
             stz         U_REGISTER
-            lda         #MSG_PTR_BANK
+            lda         #SYS_BANK
             sta         RAM_BANK_REG
             lda         (ZP_IO_CHUNK),Y
             ply                                     ; (Back: pull without touching .A)

@@ -20,7 +20,7 @@ Most changes affect **both** images (HyForth's RAM image calls ROM addresses dir
 ### **Startup**
 
 1. **POST** (power-on self test): checks the memory mapping and the paged RAM's address, data and bank lines, and prints two lines (see **POST** below).
-2. IRQ tables and vectors, tasks, MMU (including detection of the installed RAM modules), message rings, VIA.
+2. IRQ tables and vectors, tasks, MMU (including detection of the installed RAM modules), the IO layer, VIA.
 3. The sound and serial drivers start in their own tasks, then the welcome message is printed.
 4. The shell (HyForth, then WOZMON on `bye`) starts in task 1, which receives the serial input.  The scheduler's tick starts, and task 0 becomes the idle task.
 
@@ -84,7 +84,7 @@ There are 16 tasks (`T` = `$0-$F`), each with its own `$0000-$7FFF` (zero page, 
 | `$E` | Sound driver (Resident) |
 | `$F` | Serial driver (Resident) |
 
-Drivers run in **Resident** tasks, which only run from IRQs and from calls into the driver (`TASK_CALL`).  Tasks send each other data through **message rings** in shared RAM: one 256-byte ring per receiver/sender pair (`MSG_SEND_BYTE`, `MSG_RECV_BYTE`, `MSG_PEEK`).
+Drivers run in **Resident** tasks, which only run from IRQs and from calls into the driver (`TASK_CALL`).  Tasks send each other data through **pipes** (`IO_PIPE`, below), or share memory through shared handles (`SH_ALLOC`, `SH_ATTACH`).
 
 ### **IO**
 
@@ -99,7 +99,7 @@ All IO goes through **file descriptors**, Plan 9 style (see `os_rom/IO_PLAN.md`)
 | `/dev/pipe` | Pipe server (task `$D`) | `IO_PIPE` makes a pipe (a read fd and a write fd, 255 bytes buffered); readers get end of file once the writers are gone |
 | `/dev/null`, `/dev/zero` | IO layer | The usual |
 
-Each task has 12 fds.  The shell opens fds 0, 1 and 2 (stdin, stdout, stderr) on `/dev/cons`, and tasks it starts get copies of its open fds; a task's fds are closed when it ends.  `READ_CHAR` (a key, if there is one) and `WRITE_CHAR` read fd 0 and write fd 1; tasks without them (the system task and drivers) use the serial port directly.  `GET_CHAR` waits for a key on fd 0, sleeping (the task uses no CPU until one comes in); WOZMON and HyForth wait for input with it.  `/dev/cons` echoes what it reads, like a terminal, so a program reading a pipe doesn't.  `IO_DUP2` makes one fd refer to another's file, e.g. to redirect stdout, and `IO_DUP` gives another fd for the same file.  The serial driver buffers both ways (256-byte RX and TX rings in its task), and sends from its transmit interrupt, so output doesn't busy-wait.  `$F88A` (`F88AR` in WOZMON) runs the IO self test.
+Each task has 12 fds.  The shell opens fds 0, 1 and 2 (stdin, stdout, stderr) on `/dev/cons`, and tasks it starts get copies of its open fds; a task's fds are closed when it ends.  `READ_CHAR` (a key, if there is one) and `WRITE_CHAR` read fd 0 and write fd 1; tasks without them (the system task and drivers) use the serial port directly.  `GET_CHAR` waits for a key on fd 0, sleeping (the task uses no CPU until one comes in); WOZMON and HyForth wait for input with it.  `/dev/cons` echoes what it reads, like a terminal, so a program reading a pipe doesn't.  `IO_DUP2` makes one fd refer to another's file, e.g. to redirect stdout, and `IO_DUP` gives another fd for the same file.  The serial driver buffers both ways (256-byte RX and TX rings in its task), and sends from its transmit interrupt, so output doesn't busy-wait.  For a WDC W65C51N ACIA instead of the Rockwell R65C51 (the WDC's transmit status and interrupt don't work), build with `SER_ACIA = SER_ACIA_WDC` in `defines.s`: sending is then paced by VIA timer 2.  `$F88A` (`F88AR` in WOZMON) runs the IO self test.
 
 **Console keys.**  **Ctrl-D** or **Ctrl-Z**: end of input (a `/dev/cons` read returns end of file, so `cat`, `wc` or `key` stop).  **Ctrl-C**: break: the foreground task goes to its break handler (`TASK_SET_BREAK`; HyForth's goes back to its prompt with `!BREAK!`, keeping the dictionary), and the tasks it started (e.g. a pipeline's copies) are killed.  **Ctrl-\\**: kill: the foreground task and the tasks it started end; the shell starts again from scratch (a fresh HyForth).  The serial driver acts on Ctrl-C and Ctrl-\\ as they arrive, so they work on a task that's stuck in a loop; the keys typed before them are dropped.  (A task without a break handler is killed by Ctrl-C too.)
 

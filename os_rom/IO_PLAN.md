@@ -2,7 +2,7 @@
 
 A Plan 9-style IO subsystem: **all IO goes through file handles.**  Devices, drivers and (later) filesystems are *file servers*; a task opens a name, gets a file descriptor, and reads and writes it.  The console, the serial port and the sound chip are files; so, later, are an SD card filesystem, pipes between tasks, and per-task information.
 
-This plan builds on the MMU work (`MMU_PLAN.md`): tasks, driver tasks, `TASK_CALL`, the IRQ dispatcher, message rings and shared memory.
+This plan builds on the MMU work (`MMU_PLAN.md`): tasks, driver tasks, `TASK_CALL`, the IRQ dispatcher and shared memory.
 
 ### **Goals**
 * One interface for all IO: `open`, `read`, `write`, `close` (plus `stat` and `seek`), the same for every device and file.
@@ -22,7 +22,7 @@ This plan builds on the MMU work (`MMU_PLAN.md`): tasks, driver tasks, `TASK_CAL
 | `iounit`: the largest read/write per message | 256 bytes; `IO_READ`/`IO_WRITE` split bigger transfers |
 | Per-process namespace, `bind` and `mount` | Phase 3: a per-task mount table (inherited on spawn) |
 | A read with no data blocks the process | The task sets "Awaiting I/O" and yields; the server wakes it (needs the scheduler) |
-| Notes (signals) | Later: `interrupt` / `kill` notes delivered through message rings |
+| Notes (signals) | Later: `interrupt` / `kill` notes (the console keys' break and kill are a first step: `TASK_SET_BREAK`) |
 
 ### **Architecture**
 
@@ -91,7 +91,7 @@ The first 16 bytes of the task's IO transfer area; the data (up to 256 bytes) fo
 Servers return C = 0 with the count (or fid), or C = 1 with an error: `ERR_IO_NOT_FOUND`, `ERR_IO_BAD_FD`, `ERR_IO_MODE`, `ERR_IO_WOULD_BLOCK`, `ERR_IO_EOF`, ...  Plan 9 uses `ctl` files for control; a Hydra device can offer both `H9_CTL` and a `/dev/<name>ctl` file.
 
 ### **IO transfer areas**
-Shared bank ID **`$09`** (reserved at boot, like the message ring banks): **512 bytes per task** at `$8000 + task * $200` (16 tasks = 8K).  `$00-$0F` is the request block, `$100-$1FF` the data (256 bytes = the iounit).  Only the IO layer and the server handling the task's request touch a task's area, one request at a time per task.
+Shared bank ID **`$09`** (reserved at boot): **512 bytes per task** at `$8000 + task * $200` (16 tasks = 8K).  `$00-$0F` is the request block, `$100-$1FF` the data (256 bytes = the iounit).  Only the IO layer and the server handling the task's request touch a task's area, one request at a time per task.
 
 ### **Blocking and the scheduler**
 Reads often have to wait (no key pressed yet).  So this plan starts with the scheduler:
@@ -106,7 +106,7 @@ Reads often have to wait (no key pressed yet).  So this plan starts with the sch
 ### **Clock speed and wait states**
 The CPU runs at 3.58 MHz; the board can also run it at 7.16 MHz (the W65C02S goes to 14 MHz).  Some devices can't keep up with a faster bus: the YM2151 runs on its own 3.58 MHz clock, and slow 65C51/65C22 grades and ROMs have similar limits.
 
-* **Now (board V1): a build-time clock setting.**  `CPU_CLOCK_MULT` in `defines.s` (1 = 3.58 MHz, 2 = 7.16 MHz); every timing constant is derived from it: the scheduler tick (`TIMER_TASK_INT` = 5 ms), the serial software timing (`SWT`), `YM_TIMEOUT` and `YM_DELAY_64` (note lengths), and the self test delays.  There is no wait-state hardware, so above 3.58 MHz the sound chip mustn't be used (software can space out accesses, but can't stretch a bus cycle).
+* **Now (board V1): a build-time clock setting.**  `CPU_CLOCK_MULT` in `defines.s` (1 = 3.58 MHz, 2 = 7.16 MHz); every timing constant is derived from it: the scheduler tick (`TIMER_TASK_INT` = 5 ms), `YM_TIMEOUT` and `YM_DELAY_64` (note lengths), and the self test delays.  There is no wait-state hardware, so above 3.58 MHz the sound chip mustn't be used (software can space out accesses, but can't stretch a bus cycle).
     * SPI is bit-banged, so its clock speeds up with the CPU.  At 7.16 MHz the SD card's initialisation clock would be about 600 kHz (the limit is 400 kHz), so the SPI code will need a clock-dependent delay before the SD card server (Phase 3).
 * **Board V2: RDY wait states** (the hardware design, to be finalised with V2; possibly available earlier on an expansion card; see also `IDEAS.md`, which also records the alternative of switching the clock divider):
     * A **wait table per I/O port or memory area**, whose entry for the accessed port/area is copied into a **RDY hold counter**; RDY is held low while the counter counts down, and released at zero.

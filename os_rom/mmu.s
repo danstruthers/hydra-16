@@ -1207,7 +1207,6 @@ MM_TASK_RESET:
             jsr         TASK_CALL                           ; Re-initialize its MMU area, in the task
             lda         ZP_TC_TASK
             jsr         SH_RESET_TASK
-            jsr         MSG_RESET_TASK
             jsr         IRQ_UNREGISTER_TASK
             PULL_YXA
             plp                                             ; Restore caller's I flag

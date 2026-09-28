@@ -142,14 +142,6 @@ ZP_IO_SAVEB:            ; server side: RAM bank / U before IO_SRV_MAP
 ZP_IO_SAVEU:
     .res  1
 
-; MESSAGES (see msg.s)
-ZP_MSG_PTR:             ; ring byte pointer
-    .res  2
-ZP_MSG_IDX:             ; ring index: receiver * 16 + sender
-    .res  1
-ZP_MSG_BYTE:            ; byte being sent / received
-    .res  1
-
 ;  WAZMON
 ZP_WM_ST:
     .res  2      ; STore address
@@ -211,20 +203,6 @@ ZP_M_CSZ:               ; chunk size
     .res  1
 ZP_M_COFS:              ; chunk offset in its page
     .res  1
-
-; MATH
-ZP_MATH_TEMP:           ; temp space, parse output base
-    .res  4
-;ZP_MATH_TEMP2:          ; temp space, parse output base
-;    .res  4
-;ZP_MATH_PST:            ; parse state
-;    .res  1
-;ZP_MATH_PB:             ; parse base
-;    .res  1
-;ZP_MATH_PNS:            ; parse number size
-;    .res  1
-;ZP_MATH_OA:             ; parse output address
-;    .res  2
 
 ; DISASM
 ZP_D_STATE:
@@ -292,4 +270,4 @@ YMTMP2 = AZP0L + 3
 TASK_ZP_END
 
 .feature org_per_seg
-.segment "STACK"
+.segment "STACK"

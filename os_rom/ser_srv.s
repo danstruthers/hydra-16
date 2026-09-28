@@ -193,7 +193,7 @@ SER_WRITE:
             sei
             ldy         ZP_SER_SEND_STATUS
             bne         @queue                              ; Busy: the TX IRQ sends it
-            IO_PORT_WRITE   ACIA_R_DATA                     ; Idle (so the ring is empty): send it now
+            _M_SER_TX_BYTE                                  ; Idle (so the ring is empty): send it now
             inc         ZP_SER_SEND_STATUS                  ; SER_SEND_STATUS_BUSY
             bra         @taken
 
@@ -247,7 +247,7 @@ SER_ECHO:
             sei
             ldy         ZP_SER_SEND_STATUS
             bne         @queue                              ; Busy: the TX IRQ sends it
-            IO_PORT_WRITE   ACIA_R_DATA                     ; Idle (so the ring is empty): send it now
+            _M_SER_TX_BYTE                                  ; Idle (so the ring is empty): send it now
             inc         ZP_SER_SEND_STATUS                  ; SER_SEND_STATUS_BUSY
             bra         @done
 

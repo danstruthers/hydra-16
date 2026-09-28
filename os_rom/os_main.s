@@ -18,7 +18,6 @@ RESET_VECTOR_START:
             jsr                 IRQ_INIT                            ; Must be first: IRQ tables and vectors
             jsr                 TASKS_INIT                          ; Must be called before the drivers and MMU_INIT
             jsr                 MMU_INIT
-            jsr                 MSG_INIT                            ; Message ring pointers (shared RAM)
             jsr                 IO_INIT                             ; The IO layer's devices (/dev/null, /dev/zero)
             jsr                 VIA_INIT
             lda                 #<SERIAL_DRIVER                     ; Serial driver in its own (Resident) task;
@@ -166,7 +165,8 @@ POST_PUTHEX:
             tax
             lda                 HEX_MAP,X
 
-; Polled serial output (Rockwell 65C51: wait for TDRE, with a timeout).  Modifies: .Y
+; Polled serial output (Rockwell 65C51: wait for TDRE, with a timeout; WDC 65C51: its TDRE always says
+; empty, so wait a character's time after each byte).  Modifies: .Y
 POST_PUTC:
             ldy                 #0
 :
@@ -181,10 +181,22 @@ POST_PUTC:
 :
             pla
             sta                 ACIA_R_DATA
+.if SER_ACIA = SER_ACIA_WDC                                         ; Its TDRE always says empty: wait a
+            phx                                                     ;   whole character's time
+            ldx                 #(SER_CHAR_CYCLES + 1279) / 1280    ; (1280 cycles per .X)
+            ldy                 #0
+:
+            dey
+            bne                 :-
+            dex
+            bne                 :-
+            plx
+.else
             ldy                 #0                                  ; Short delay after each byte
 :
             dey
             bne                 :-
+.endif
             rts
 
 POST_STRINGS:
@@ -231,24 +243,6 @@ DRV_BOOT:
 DO_WELCOME:
             jsr                 CLEAR_SCR
             _M_WRITE_HSTRING    HYDRA_WELCOME
-            PRINT_CRLF
-            ldx     #0
-
-@vector_loop:
-            stx                 V_REGISTER
-            phx
-            PRINT_HEX           V_REGISTER
-            PRINT_CHAR          #ASCII_BACKSPACE
-            lda                 V_REGISTER
-            PRINT_HEX
-            PRINT_CHAR          #ASCII_COLON
-            PRINT_BYTE          $FFFF
-            PRINT_BYTE          $FFFE
-            PRINT_SPACE
-            plx
-            inx
-            cpx                 #$10
-            bcc                 @vector_loop
             PRINT_CRLF_JMP
 
 ; A: S/W interrupt number

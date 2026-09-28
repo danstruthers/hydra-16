@@ -6,16 +6,12 @@ RAMST = RAMSTART
 COPYENDS = ends - RAMSTART + COPYSTART
 
 COPYTORAM:                     ; copies from mainoff thru endsoff to ramstart
-    WCRLF_np
-    WCRLF_np
-    stz supprint               ; let it print
+    lda #1
+    sta supprint               ; quietly: no progress dots (a character a byte, at boot)
     STORE_LABEL COPYMAIN, mainoff
     STORE_LABEL COPYENDS, endsoff
     STORE_LABEL RAMST, ramstart
-    PRINT_ADDR  ramstart
     jsr MEMCPY
-    PRINT_ADDR  ramstart
-    WCRLF_np
     jsr MEMCPY
     rts
 ;;

@@ -103,7 +103,7 @@ IO_SERVE:
             asl
             asl
             tax
-            ldy         #MSG_PTR_BANK               ; Device table (shared bank ID $00)
+            ldy         #SYS_BANK               ; Device table (shared bank ID $00)
             sty         RAM_BANK_REG
             lda         IO_DEV_TABLE + IO_DEV_TASK,X
             cmp         #IO_DEV_CALLER_TASK

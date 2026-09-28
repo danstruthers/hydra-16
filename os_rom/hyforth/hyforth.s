@@ -215,16 +215,6 @@ FORTH_ARENA_SIZE = $0800  ; 2K arena for small records
 FORTH_LARGE_MIN = $0100   ; records this big or bigger get their own MMU block
 FORTH_DICT_MARGIN = 2     ; pages above 'here' the MMU must keep free (see DICTCHK)
 
-;
-; spi
-;F9E8 SPI_INIT_DELAY
-;F9CC SPI_RECV
-;F9AD SPI_SEND
-;F9A3 SPI_OPERATION_DONE
-;F974 SPI_TRANSCEIVE
-
-ALTBUF = $6000
-ALTBUF_end = $6FFF
 ; malloc allocates DOWN from the top of the arena (MEMTOPV), set up at 'cold'
 
 ;----------------------------------------------------------------------

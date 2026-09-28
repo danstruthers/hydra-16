@@ -95,7 +95,7 @@ DEV_REGISTER:
             sta         ZP_IO_BUF                           ; The name
             sty         ZP_IO_BUF + 1
             stx         ZP_IO_TMP                           ; The task
-            _M_MSG_ENTER                                    ; Select shared bank ID $00 (device table)
+            _M_SYS_ENTER                                    ; Select shared bank ID $00 (device table)
             lda         (ZP_IO_BUF)
             beq         @empty_name
             ldx         #0                                  ; Device table offset
@@ -160,7 +160,7 @@ DEV_REGISTER:
             sec
 
 @done:
-            _M_MSG_LEAVE
+            _M_SYS_LEAVE
             PULL_YX
             jmp         MM_RETURN
 

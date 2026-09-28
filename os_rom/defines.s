@@ -28,9 +28,6 @@ ERR_MEM_LOCKED      = $45
 ERR_IRQ_CHAIN_FULL  = $50
 ERR_IRQ_NOT_FOUND   = $51
 
-ERR_MSG_FULL        = $60
-ERR_MSG_EMPTY       = $61
-
 ERR_IO_NOT_FOUND    = $70       ; no such file / device
 ERR_IO_BAD_FD       = $71       ; fd not open (or out of range)
 ERR_IO_MODE         = $72       ; not opened for that (e.g. write on a read-only fd)
@@ -64,6 +61,31 @@ IO_MODE_READ        = $01
 IO_MODE_WRITE       = $02
 IO_MODE_RDWR        = IO_MODE_READ | IO_MODE_WRITE
 IO_MODE_NONBLOCK    = $80       ; reads return ERR_IO_WOULD_BLOCK instead of waiting
+
+; The system's data in shared RAM: shared bank ID $00 (U = 0, bank $F0): the shared memory tables
+; (shared.s) and the device table (below)
+SYS_SHARED_U        = 0
+SYS_BANK            = $F0
+
+; Save RAM_BANK_REG and U on the stack and select shared bank ID $00.  Uses .Y
+.macro _M_SYS_ENTER
+            ldy         RAM_BANK_REG
+            phy
+            ldy         U_REGISTER
+            phy
+            ldy         #SYS_SHARED_U
+            sty         U_REGISTER
+            ldy         #SYS_BANK
+            sty         RAM_BANK_REG
+.endmacro
+
+; Restore U and RAM_BANK_REG.  Uses .Y; preserves .A and C
+.macro _M_SYS_LEAVE
+            ply
+            sty         U_REGISTER
+            ply
+            sty         RAM_BANK_REG
+.endmacro
 
 ; Device table: in shared bank ID $00 (see shared.s)
 IO_MAX_DEVS         = 16
@@ -171,10 +193,6 @@ CLK_CPMS        = (CLK_CPS / 1000) + 1
 
 ; ***  ONBOARD SERIAL ADAPTER, 65C51  ***
 
-ROCKWELL_ACIA   = 1
-ACIA_USE_VIA_TIMER = 0
-.assert     ROCKWELL_ACIA = 1, error, "Serial TX is driven by the Rockwell 65C51's TDRE interrupt (the WDC 65C51 isn't supported)"
-
 SR_2400         = $0A
 SR_4800         = $0C
 SR_9600         = $0E
@@ -195,20 +213,15 @@ SERIAL_RATE     = 19200
 SERIAL_RATE     = 115200
 .endif
 
-.if ROCKWELL_ACIA = 0
-    .if ACIA_USE_VIA_TIMER = 0
-SWT_INNER_LOOP_CYCLES = 5
-BITS_PER_CHAR   = 10          ; 8 + start + stop.
-SWT             = ((((CLK_CPS / SERIAL_RATE) + 1) * BITS_PER_CHAR) / SWT_INNER_LOOP_CYCLES) + 1
-    .else
-BITS_PER_CHAR   = 10          ; 8 + start + stop.
-HWT_OVERHEAD    = 50
-SWT             = (((CLK_CPS / SERIAL_RATE) + 1) * BITS_PER_CHAR) - HWT_OVERHEAD
-    .endif
-
-SWT_SELECT_L    = SWT .MOD 256
-SWT_SELECT_H    = SWT / 256
-.endif
+; The ACIA chip (a build option).  The Rockwell R65C51 sends from its transmitter-empty (TDRE) interrupt.
+; The WDC W65C51N's TDRE status bit and interrupt don't work (a known chip bug), so its sending is paced
+; by the VIA's timer 2 instead: a one-shot of one character's time (10 bits, and a margin) per byte, whose
+; interrupt sends the next.  Receiving is the same on both.  (VIA T2 is the serial driver's then.)
+SER_ACIA_ROCKWELL = 0
+SER_ACIA_WDC    = 1
+SER_ACIA        = SER_ACIA_ROCKWELL
+SER_CHAR_CYCLES = CLK_CPS * 11 / SERIAL_RATE                ; (WDC: the timer 2 count per character)
+.assert     SER_CHAR_CYCLES < $10000, error, "SER_CHAR_CYCLES must fit VIA timer 2: a faster serial rate"
 
 ; ***  END OF ONBOARD SERIAL ADAPTER  ***
 
@@ -273,6 +286,22 @@ ACIA_R_DATA         = IO_PORT_BYTE ACIA, 0
 ACIA_R_STATUS       = IO_PORT_BYTE ACIA, 1
 ACIA_R_CMD          = IO_PORT_BYTE ACIA, 2
 ACIA_R_CTRL         = IO_PORT_BYTE ACIA, 3
+
+VIA_T1_INT_BIT      = $40       ; VIA_R_INT_FLAGS / VIA_R_INT_ENABLE: timer 1 (the scheduler's tick)
+VIA_T2_INT_BIT      = $20       ;   timer 2 (the WDC ACIA's TX pacing)
+VIA_INT_ENABLE      = $80       ; VIA_R_INT_ENABLE: set (1) or clear (0) the bits given
+
+; Send .A to the ACIA (the serial task, IRQs off, the transmitter idle or its last byte just sent), and
+; for the WDC 65C51 start timer 2, which stands in for its missing TDRE interrupt (SER_ACIA).  Uses .Y
+.macro _M_SER_TX_BYTE
+            sta         ACIA_R_DATA
+.if ::SER_ACIA = ::SER_ACIA_WDC                             ; (:: so it's constant in the page scopes too)
+            ldy         #<SER_CHAR_CYCLES
+            sty         VIA_R_T2C_L
+            ldy         #>SER_CHAR_CYCLES
+            sty         VIA_R_T2C_H                 ; (Starts the one-shot, and clears its IRQ)
+.endif
+.endmacro
 
 .define  IRQ_NUMBER(num)    (num ^ 7)
 

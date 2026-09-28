@@ -2,7 +2,9 @@
 
 A plan for tidying the OS ROM: less dead code, clearer ROM page roles, a cleaner source tree and build output.  Not started yet; the order below is the agreed one.  (Sizes as of the storage work: page 0 has about 320 bytes free before the thunks, page 1 about 2.3K in gaps and at the end, page 2 about 1.2K, page 3 about 6.9K, pages 4-F nothing used.)
 
-### **1. Remove dead code**
+### **1. Remove dead code** (done)
+*Done: the message rings (`msg.s`; the system-bank macros are `_M_SYS_ENTER` / `_M_SYS_LEAVE` and `SYS_BANK` in `defines.s` now, and shared bank IDs `$01-$08` are free for `SH_ALLOC`), `math.s` and `WRITE_DEC` / `WRITE_BYTE_MIN`, the unused VIA helpers, `COPYTORAM`'s dots and address printing, `DO_WELCOME`'s vector dump (and the shell's second clear screen, so boot messages stay), the I2C block, the old WDC ACIA alternatives (the WDC 65C51 is back as a build option for the new serial driver: `SER_ACIA`, TX paced by VIA timer 2), `ALTBUF` and HyForth's stale address comments.  Page 0: about 560 bytes back before the thunks and 260 in `BIOS`; the OS ZP is 10 bytes smaller.*
+
 * **Message rings** (`msg.s`, 422 bytes of page 0): nothing sends or receives since pipes and `/dev/cons` replaced them; only `MSG_INIT` and `MSG_RESET_TASK` are still called.  Also frees shared bank IDs `$01-$08` (64K of shared RAM), `$8000-$81FF` of bank `$00` and 3 ZP bytes.  Keep the bank 0 map macro (renamed).
 * **`math.s`** (about 300 bytes): only `WRITE_DEC` calls it, and nothing calls `WRITE_DEC`.  `ZP_MATH_TEMP` goes too.
 * **Unused VIA helpers**: the T2 routines, `VIA_IS_*`.
@@ -39,7 +41,7 @@ A plan for tidying the OS ROM: less dead code, clearer ROM page roles, a cleaner
 * **Split big files**: `bios.s` (print routines, serial driver, VIA, dead I2C) into `print.s`, `serial.s`, `via.s`; `defines.s` (1,000 lines) into `hw.inc` (VIA, ACIA, YM registers, IO ports), `kernel.inc` (tasks, IRQs, MMU, errors), `io.inc` (IO, H9P, namespaces, servers), `macros.inc`.  Give `sound.s` its own segment (it has none and lands in `SHELL`); merge the 8-line `shell.s` into `os_main.s`.
 
 ### **5. Shared helpers**
-* One pair of bank mapping macros for the four hand-written variants (`_M_MSG_ENTER`, `_M_IO_MAP_XFER`, and inline in `NS_PUT_DEV`, `IO_DEV_FIND`, `IO_SRV_MAP`).
+* One pair of bank mapping macros for the four hand-written variants (`_M_SYS_ENTER`, `_M_IO_MAP_XFER`, and inline in `NS_PUT_DEV`, `IO_DEV_FIND`, `IO_SRV_MAP`).
 * Macros for the "peek / poke another task's ZP" quick switch (about 8 copies).
 * An `fd * 8` helper in `io.s` (about 10 copies), and an `IO_SRV_COUNT` helper for the servers' "map, set the count, unmap".
 

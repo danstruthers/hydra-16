@@ -6,18 +6,16 @@
 ; Shared memory (see MMU_PLAN.md)
 ;
 ;   256 shared 8K banks: shared bank ID = U << 4 | (bank & $0F), seen at $8000-$9FFF with RAM_BANK_REG =
-;   $F0-$FF.  The system data lives in shared bank ID $00 (U = 0, bank $F0):
-;       $8000-$81FF  message ring pointers (msg.s)
+;   $F0-$FF.  The system data lives in shared bank ID $00 (U = 0, bank $F0: SYS_BANK, _M_SYS_ENTER):
 ;       $8200-$821F  SH_MAP     shared bank bitmap (1 = in use)
 ;       $8220-$823F  SH_ENDS    run-end bitmap (last bank of each allocation)
 ;       $8400-$87FF  SH_HANDLES shared handle table: 255 entries of ShHandle
 ;       $8800-$88FF  IO_DEV_TABLE the IO device table (io.s)
-;   Bank IDs $00 (system), $01-$08 (message rings) and $09 (IO transfer areas) are reserved, as are the
-;   banks of any U macro-page
+;   Bank IDs $00 (system) and $09 (IO transfer areas) are reserved, as are the banks of any U macro-page
 ;   whose RAM isn't installed, and the banks of any RAM chip that failed the POST (ZP_M_BAD_SH: chip c
 ;   holds bank IDs 4c - 4c+3 of every U).
 ;
-;   A shared handle is a 1-byte index (1-255) that any task can use, so it can be sent in a message.
+;   A shared handle is a 1-byte index (1-255) that any task can use, so it can be passed to another task.
 ;   Each task that uses it holds a reference (SH_ALLOC / SH_ATTACH); the banks are freed when the last
 ;   reference goes (SH_DETACH, or MM_TASK_RESET of the task).  Only tasks holding a reference can read or
 ;   write through the handle.  All calls: C = 0 on success, C = 1 with the error in .A.
@@ -26,7 +24,8 @@ SH_MAP              = $8200
 SH_ENDS             = $8220
 SH_HANDLES          = $8400
 SH_MAX_HANDLES      = 255
-SH_FIRST_FREE_ID    = $0A                                   ; Below: system data, message rings, IO transfers
+SH_FIRST_FREE_ID    = $01                                   ; (ID $00: system data; $09, the IO transfer
+                                                            ;   areas, is reserved in the map)
 SH_WINDOW           = PAGED_RAM_BASE                        ; Where SH_LOCK maps a shared allocation
 SH_PROBE_ADDR       = $9FFF                                 ; Probe byte (bank $F0 of each U)
 SH_PROBE_MARK       = $50                                   ; Probe marker: SH_PROBE_MARK + U
@@ -39,12 +38,12 @@ SH_PROBE_MARK       = $50                                   ; Probe marker: SH_P
 .endstruct
 
 ; Set up the shared memory tables: find which U macro-pages have RAM, clear the bitmaps and handle
-; table, and reserve the system and message ring banks.  Called by MMU_INIT at boot.
+; table, and reserve the system and IO transfer banks.  Called by MMU_INIT at boot.
 SHARED_RAM_INIT:
             php                                             ; Save caller's I flag
             sei
             PUSH_AXY
-            _M_MSG_ENTER                                    ; Save RAM bank / U; select shared bank ID $00
+            _M_SYS_ENTER                                    ; Save RAM bank / U; select shared bank ID $00
 
 ; Probe: write a marker into every U's bank $F0, highest U first, so if U decoding aliases, the
 ; lower (real) macro-page's marker wins and the alias reads back the wrong marker.
@@ -84,7 +83,7 @@ SHARED_RAM_INIT:
 @next:
             dex
             bpl         @check
-            ldy         #MSG_SHARED_U
+            ldy         #SYS_SHARED_U
             sty         U_REGISTER                          ; Back to shared bank ID $00
 
             lda         #0                                  ; Clear the bitmaps and handle table
@@ -130,13 +129,13 @@ SHARED_RAM_INIT:
             inx
             cpx         #32
             bne         @macro_pages
-            lda         #$FF                                ; Reserve bank IDs $00-$09
-            ora         SH_MAP
+            lda         #$01                                ; Reserve bank IDs $00 (system data) and
+            ora         SH_MAP                              ;   $09 (IO transfer areas)
             sta         SH_MAP
-            lda         #$03
+            lda         #$02
             ora         SH_MAP + 1
             sta         SH_MAP + 1
-            _M_MSG_LEAVE
+            _M_SYS_LEAVE
             PULL_YXA
             plp                                             ; Restore caller's I flag
             rts
@@ -156,7 +155,7 @@ SH_ALLOC:
             sty         ZP_M_TEMP2                          ; Size high
             ora         ZP_M_TEMP2
             beq         @bad_arg                            ; Zero bytes
-            _M_MSG_ENTER                                    ; Select shared bank ID $00
+            _M_SYS_ENTER                                    ; Select shared bank ID $00
             jsr         SH_NEW_HANDLE                       ; Free entry -> ZP_M_HP, ZP_M_HANDLE
             bcs         @leave
             lda         ZP_M_SZ1                            ; Banks = ((size - 1) >> 13) + 1
@@ -192,7 +191,7 @@ SH_ALLOC:
             clc
 
 @leave:
-            _M_MSG_LEAVE
+            _M_SYS_LEAVE
 
 @done:
             PULL_YX
@@ -212,7 +211,7 @@ SH_ATTACH:
             php                                             ; Save caller's I flag
             sei
             PUSH_XY
-            _M_MSG_ENTER                                    ; Select shared bank ID $00
+            _M_SYS_ENTER                                    ; Select shared bank ID $00
             jsr         SH_HANDLE_PTR
             bcs         @leave
             lda         T_REGISTER
@@ -221,7 +220,7 @@ SH_ATTACH:
             clc
 
 @leave:
-            _M_MSG_LEAVE
+            _M_SYS_LEAVE
             PULL_YX
             jmp         MM_RETURN
 
@@ -234,7 +233,7 @@ SH_DETACH:
             php                                             ; Save caller's I flag
             sei
             PUSH_XY
-            _M_MSG_ENTER                                    ; Select shared bank ID $00
+            _M_SYS_ENTER                                    ; Select shared bank ID $00
             jsr         SH_HANDLE_PTR
             bcs         @leave
             lda         T_REGISTER
@@ -242,7 +241,7 @@ SH_DETACH:
             jsr         SH_DROP_TASK_REF
 
 @leave:
-            _M_MSG_LEAVE
+            _M_SYS_LEAVE
             PULL_YX
             jmp         MM_RETURN
 
@@ -256,7 +255,7 @@ SH_READ:
             sei
             PUSH_XY
             sty         ZP_M_COFS
-            _M_MSG_ENTER                                    ; Select shared bank ID $00
+            _M_SYS_ENTER                                    ; Select shared bank ID $00
             jsr         SH_ACCESS_SETUP                     ; Selects the allocation's first bank
             bcs         @leave
             ldy         ZP_M_COFS
@@ -264,7 +263,7 @@ SH_READ:
             clc
 
 @leave:
-            _M_MSG_LEAVE                                    ; Restores the RAM bank and U
+            _M_SYS_LEAVE                                    ; Restores the RAM bank and U
             PULL_YX
             jmp         MM_RETURN
 
@@ -279,7 +278,7 @@ SH_WRITE:
             PUSH_XY
             sty         ZP_M_COFS
             stx         ZP_M_SZ1                            ; The byte (SH_ACCESS_SETUP uses .X)
-            _M_MSG_ENTER                                    ; Select shared bank ID $00
+            _M_SYS_ENTER                                    ; Select shared bank ID $00
             jsr         SH_ACCESS_SETUP                     ; Selects the allocation's first bank
             bcs         @leave
             ldy         ZP_M_COFS
@@ -288,7 +287,7 @@ SH_WRITE:
             clc
 
 @leave:
-            _M_MSG_LEAVE                                    ; Restores the RAM bank and U
+            _M_SYS_LEAVE                                    ; Restores the RAM bank and U
             PULL_YX
             jmp         MM_RETURN
 
@@ -301,7 +300,7 @@ SH_LOCK:
             php                                             ; Save caller's I flag
             sei
             PUSH_XY
-            _M_MSG_ENTER                                    ; Select shared bank ID $00
+            _M_SYS_ENTER                                    ; Select shared bank ID $00
             jsr         SH_HANDLE_PTR
             bcs         @fail
             jsr         SH_CHECK_REF
@@ -317,7 +316,7 @@ SH_LOCK:
             jmp         MM_RETURN
 
 @fail:
-            _M_MSG_LEAVE
+            _M_SYS_LEAVE
             PULL_YX
             jmp         MM_RETURN
 
@@ -340,7 +339,7 @@ SH_RESET_TASK:
             PUSH_AXY
             and         #$0F
             sta         ZP_M_TEMP
-            _M_MSG_ENTER                                    ; Select shared bank ID $00
+            _M_SYS_ENTER                                    ; Select shared bank ID $00
             lda         #1
 
 @loop:
@@ -353,7 +352,7 @@ SH_RESET_TASK:
             lda         ZP_M_HANDLE
             inc
             bne         @loop                               ; Handles 1-255
-            _M_MSG_LEAVE
+            _M_SYS_LEAVE
             PULL_YXA
             plp                                             ; Restore caller's I flag
             rts

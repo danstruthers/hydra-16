@@ -14,8 +14,9 @@ NamedHString HYDRA_WELCOME, "Welcome to the HYDRA-16!"
 ; task (SERIAL_TASK_NUM, started by DRV_START at boot), so its state (ZP_SER_SEND_STATUS, ZP_SER_CAPTURE,
 ; the SER_* task ZP in zero.s) and its RX and TX rings (SER_RX_BUF, SER_TX_BUF) live in that task.
 ;   RX: the IRQ handler puts each received byte into the RX ring, and wakes the tasks waiting to read.
-;   TX: bytes go into the TX ring (or straight to the ACIA when it's idle); the IRQ handler sends the
-;       next one each time the ACIA's transmit register empties (Rockwell 65C51 TDRE interrupt).
+;   TX: bytes go into the TX ring (or straight to the ACIA when it's idle); SER_TX_NEXT sends the next
+;       one each time the ACIA's transmit register empties: the Rockwell 65C51's TDRE interrupt, or for
+;       the WDC 65C51 (whose TDRE doesn't work) VIA timer 2, a character's time after each byte (SER_ACIA).
 ;   /dev/cons reads only for the foreground task (ZP_SER_CAPTURE: the shell to start with); others
 ;   wait until they're brought to the foreground.  /dev/ser is the raw port.  The requests themselves
 ;   are handled on ROM page 2 (ser_srv.s).
@@ -43,7 +44,11 @@ SERIAL_INIT:
                 sei
                 lda             #$10 | SR_SELECT    ; 8-N-1
                 sta             ACIA_R_CTRL
+.if SER_ACIA = SER_ACIA_ROCKWELL
                 lda             #ACIA_CMD_BIT_DTRL | ACIA_CMD_BIT_TLIE  ; No parity, no echo, tx & rx interrupts.
+.else
+                lda             #ACIA_CMD_BIT_DTRL | ACIA_CMD_BIT_TLID  ; No parity, no echo, rx interrupts
+.endif                                                                  ;   (WDC: TX paced by VIA timer 2)
                 sta             ACIA_R_CMD
                 lda             #SER_SEND_STATUS_READY
                 sta             ZP_SER_SEND_STATUS
@@ -59,6 +64,18 @@ SERIAL_INIT:
                 ldy             #>SERIAL_IRQ_HANDLER
                 jsr             IRQ_REGISTER            ; Handler runs in this (the serial) task
                 bcs             @done
+.if SER_ACIA = SER_ACIA_WDC
+                lda             VIA_R_AUX_CTRL          ; VIA timer 2: one-shot (ACR bit 5 = 0)
+                and             #<~VIA_T2_INT_BIT
+                sta             VIA_R_AUX_CTRL
+                lda             #VIA_INT_ENABLE | VIA_T2_INT_BIT
+                sta             VIA_R_INT_ENABLE        ; Its IRQ on
+                ldx             #IRQ_NUMBER_ONBOARD_VIA
+                lda             #<SERIAL_T2_HANDLER
+                ldy             #>SERIAL_T2_HANDLER
+                jsr             IRQ_REGISTER            ; (After the scheduler's VIA handler: T1)
+                bcs             @done
+.endif
                 LOAD_ADDR       CONS_SERVE, ZP_TC_VEC   ; The files
                 lda             #<CONS_NAME
                 ldy             #>CONS_NAME
@@ -154,50 +171,6 @@ GET_CHAR:
                 clc
                 rts
 
-; Write decimal value of .A to output
-WRITE_DEC:
-                cmp             #0
-                bpl             WRITE_DEC_U
-                pha
-                PRINT_CHAR      #ASCII_MINUS
-                pla
-                cmp             #$80                        ; special case for -128
-                bne             :+
-                PRINT_CHAR      #ASCII_1
-                PRINT_BYTE_JMP  #$28
-:
-                jsr             NEGATE
-
-WRITE_DEC_U:
-                jsr             MOD_10
-                cpx             #0
-                beq             :++++
-                phy
-                tay
-                txa
-                jsr             MOD_10
-                cpx             #0
-                bne             :+
-                cmp             #0
-                bne             :++
-                bra             :+++
-:
-                pha
-                txa
-                jsr             WRITE_HEX
-                pla
-:
-                jsr             WRITE_HEX
-:
-                tya
-                ply
-:
-                jmp             WRITE_HEX
-
-WRITE_BYTE_MIN:
-                cmp             #$10
-                bcc             WRITE_HEX
-
 WRITE_BYTE:
                 pha                                         ; Save A for LSD.
                 lsr
@@ -257,7 +230,7 @@ SER_TX_TRY:
                 sty             T_REGISTER                  ; Quick switch to the serial task (no stack use!)
                 ldy             ZP_SER_SEND_STATUS
                 bne             @queue                      ; Busy: the TX IRQ sends it
-                IO_PORT_WRITE   ACIA_R_DATA
+                _M_SER_TX_BYTE
                 inc             ZP_SER_SEND_STATUS          ; SER_SEND_STATUS_BUSY
                 bra             @ok
 
@@ -282,6 +255,46 @@ SER_TX_TRY:
                 plp
                 sec
                 rts
+
+; The transmitter is free (the Rockwell 65C51's TDRE interrupt, or the WDC 65C51's timer 2 ran out): send
+; the next byte from the TX ring, or go idle.  Runs in the serial task, in an IRQ handler.
+; Modifies: .A, .X, .Y
+SER_TX_NEXT:
+                lda             ZP_SER_SEND_STATUS
+                beq             @done                   ; Idle: nothing to send
+                ldy             SER_TX_TAIL             ; The next byte from the TX ring
+                cpy             SER_TX_HEAD
+                bne             :+
+                stz             ZP_SER_SEND_STATUS      ; SER_SEND_STATUS_READY: the ring is empty
+                rts
+:
+                lda             SER_TX_BUF,Y
+                iny
+                sty             SER_TX_TAIL
+                _M_SER_TX_BYTE
+                ldx             #SER_WR_WAIT            ; There's room: wake the waiting writers
+                jmp             SER_WAKE
+
+@done:
+                rts
+
+.if SER_ACIA = SER_ACIA_WDC
+; The WDC 65C51's TX pacing: VIA timer 2 ran out (a character's time since the last byte went).  Registered
+; by SERIAL_INIT on the VIA's IRQ (after the scheduler's handler); runs in the serial task.
+; OUT: C = 1 if T2 was interrupting
+SERIAL_T2_HANDLER:
+                lda             #VIA_T2_INT_BIT
+                and             VIA_R_INT_FLAGS
+                beq             @not_mine
+                lda             VIA_R_T2C_L             ; Clears its IRQ
+                jsr             SER_TX_NEXT             ; (Starts it again for the next byte)
+                sec
+                rts
+
+@not_mine:
+                clc
+                rts
+.endif
 
 ; A break or kill key (the IRQ handler, in the serial task, IRQs off): the foreground task gets .A
 ; (TASK_BREAK_FLAG or TASK_KILL_FLAG), and the tasks it started (and theirs, 4 levels) are killed; they
@@ -426,22 +439,11 @@ SERIAL_IRQ_HANDLER:
                 lda             ACIA_R_STATUS           ; Read once: it clears the IRQ flag, so a second
                 bpl             @not_mine 	            ;   read could lose a TDRE that came in between
                 pha
+.if SER_ACIA = SER_ACIA_ROCKWELL                        ; (The WDC 65C51's TDRE doesn't work: timer 2 instead)
                 and             #ACIA_STATUS_BIT_TDRE
                 beq             @check_recv             ; Transmit register still full
-                lda             ZP_SER_SEND_STATUS
-                beq             @check_recv             ; Idle: nothing to send
-                ldy             SER_TX_TAIL             ; The next byte from the TX ring
-                cpy             SER_TX_HEAD
-                bne             :+
-                stz             ZP_SER_SEND_STATUS      ; SER_SEND_STATUS_READY: the ring is empty
-                bra             @check_recv
-:
-                lda             SER_TX_BUF,Y
-                IO_PORT_WRITE   ACIA_R_DATA
-                iny
-                sty             SER_TX_TAIL
-                ldx             #SER_WR_WAIT            ; There's room: wake the waiting writers
-                jsr             SER_WAKE
+                jsr             SER_TX_NEXT
+.endif
 
 @check_recv:
                 pla
@@ -481,156 +483,11 @@ SERIAL_IRQ_HANDLER:
                 clc
                 rts
 
-;; *****************************************************************
-.if 0
-; I2C
-
-I2C_SCL = $01
-I2C_SDA = $02
-I2C_CTRL_PORT = VIA_R_PORTA
-I2C_DATA_PORT = VIA_R_DDRA
-
-.macro I2C_ON       val
-            tay
-            lda     #val
-            ora     I2C_DATA_PORT
-            sta     I2C_DATA_PORT
-            tya
-.endmacro
-
-.macro I2C_OFF      val
-            tay
-            lda     #~val
-            and     I2C_DATA_PORT
-            sta     I2C_DATA_PORT
-            tya
-.endmacro
-
-.macro SDA_LOW
-            I2C_OFF I2C_SDA
-.endmacro
-
-.macro SCL_LOW
-            I2C_OFF I2C_SCL
-.endmacro
-
-.macro SDA_HIGH
-            I2C_ON  I2C_SDA
-.endmacro
-
-.macro SCL_HIGH
-            I2C_ON  I2C_SDA
-.endmacro
-
-.macro SCL_PULSE
-            inc     I2C_DATA_PORT
-            dec     I2C_DATA_PORT
-.endmacro
-
-; A: Byte to send
-; Return (in A): 1 = SUCCESS, 0 = FAILURE
-I2C_SEND:
-            ldx     #$00
-            stx     I2C_CTRL_PORT
-            ldx     #$09
-@loop:
-            dex
-            beq     @ack
-            rol
-            jsr     I2C_SEND_BIT
-            bra    @loop
-@ack:
-            jsr     I2C_RECV_BIT    ; ack in A, 0 = success
-            eor     #$01            ; return 1 on success, 0 on fail
-@end:
-            rts
-
-
-I2C_RECV:   lda     #$00
-            sta     I2C_CTRL_PORT
-            pha
-            ldx     #$09
-@loop:      dex
-            beq     @end
-            jsr     rec_bit
-            ror
-            pla
-            rol
-            pha
-            jmp     @loop
-@end:
-            pla
-            rts
-
-; A: Bit to send
-I2C_SEND_BIT:
-            bcc     @send_one
-            SDA_LOW
-            bra    @clock_out
-@send_one:
-            SDA_HIGH
-
-@clock_out:
-            SCL_PULSE
-            SDA_LOW
-            rts
-
-I2C_RECV_BIT:
-            SDA_HIGH
-            SCL_HIGH
-            lda     I2C_CTRL_PORT
-            and     #I2C_SDA
-            bne     @is_one
-            lda     #$00
-            jmp     @end
-@is_one:
-            lda     #$01
-@end:
-            SCL_LOW
-            SDA_LOW
-            rts
-
-
-I2C_START:
-            SDA_LOW
-            SCL_LOW
-            rts
-
-
-I2C_STOP:
-            SCL_HIGH
-            SDA_HIGH
-            rts
-
-
-I2C_ACK:
-            pha
-            lda     #$00
-            jsr     I2C_SEND_BIT
-            pla
-            rts
-
-I2C_NACK:
-            pha
-            lda     #$01
-            jsr     I2C_SEND_BIT
-            pla
-            rts
-.endif
-
-VIA_T2_INT_BIT = $20
-VIA_T1_INT_BIT = $40
-VIA_INT_ENABLE = $80
-
+; ****************************************************************************
+; VIA (the scheduler's tick is its timer 1; see SCHED_START; SPI uses port B, spi.s)
 
 ; Must be called from the system task (the VIA handler runs there)
 VIA_INIT:
-.if ROCKWELL_ACIA <> 1 .AND ACIA_USE_VIA_TIMER = 1
-            pha
-            lda     #0
-            sta     VIA_R_AUX_CTRL
-            pla
-.endif
             PUSH_AXY
             ldx     #IRQ_NUMBER_ONBOARD_VIA
             lda     #<VIA_IRQ_HANDLER
@@ -638,69 +495,6 @@ VIA_INIT:
             jsr     IRQ_REGISTER
             PULL_YXA
             rts
-
-VIA_ENABLE_T1_INT:
-            lda     #VIA_T1_INT_BIT
-            ora     #VIA_INT_ENABLE
-            sta     VIA_R_INT_ENABLE
-            rts
-
-VIA_ENABLE_T2_INT:
-            lda     #VIA_T2_INT_BIT
-            ora     #VIA_INT_ENABLE
-            sta     VIA_R_INT_ENABLE
-            rts
-
-VIA_DISABLE_T1_INT:
-            pha
-            lda     #VIA_T1_INT_BIT
-            sta     VIA_R_INT_ENABLE
-            pla
-            rts
-
-VIA_DISABLE_T2_INT:
-            pha
-            lda     #VIA_T2_INT_BIT
-            sta     VIA_R_INT_ENABLE
-            pla
-            rts
-
-; .A.Y = Timer value
-VIA_START_T2:
-            sta     VIA_R_T2C_L
-            sty     VIA_R_T2C_H
-            jmp     VIA_ENABLE_T2_INT
-
-VIA_STOP_T2:
-            jmp     VIA_DISABLE_T2_INT
-
-; .A = Sub-component interrupt flag to test
-VIA_IS_INT:
-            clc
-            and     VIA_R_INT_FLAGS
-            beq     :+
-            sec
-:
-            rts
-
-; OUT: C = 1 if T2 timer set the IRQ, 0 if not
-VIA_IS_T1_INT:
-            lda     #VIA_T1_INT_BIT
-            bra     VIA_IS_INT
-
-VIA_IS_T2_INT:
-            lda     #VIA_T2_INT_BIT
-            bra     VIA_IS_INT
-
-VIA_CLEAR_T1_INT:       ; READ LOB OF T1 Counter
-            lda     VIA_R_T1C_L
-            rts
-
-VIA_CLEAR_T2_INT:       ; READ LOB OF T2 Counter
-            lda     VIA_R_T2C_L
-            rts
-
-; ****************************************************************************
 
 ; VIA IRQ handler (registered by VIA_INIT; runs in the system task).
 ; OUT: C = 1 if T1 was interrupting

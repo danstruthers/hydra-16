@@ -40,12 +40,10 @@
 ; BIOS ROM page 0 (W = 0)
 .include "bios.s"
 .include "thunks.s"
-.include "math.s"
 .include "tasks.s"
 .include "wozmon.s"
 .include "mmu.s"
 .include "irq.s"
-.include "msg.s"
 .include "shared.s"
 .include "io_p0.s"
 .include "storage.s"    ; The storage task (page 0 part)
