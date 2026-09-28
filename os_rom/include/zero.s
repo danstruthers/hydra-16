@@ -107,6 +107,14 @@ ZP_PREEMPT_DUE:         ; a task switch came due while NO_PREEMPT was held
     .res  1
 ZP_TC_GUEST:            ; > 0 while running a TASK_CALL routine for another task
     .res  1
+ZP_TC_WAITERS:          ; tasks waiting to TASK_CALL this one while it's busy with another's call (bit = task)
+    .res  2
+ZP_SLEEP_UNTIL:         ; TASK_SLEEP: the tick count to wake at
+    .res  2
+ZP_SLEEPERS:            ; tasks in TASK_SLEEP (bit = task; valid in the system task: its tick handler
+    .res  2             ;   wakes them, SLEEP_CHECK)
+ZP_SLEEP_SCAN:          ; SLEEP_CHECK: the sleepers still to look at
+    .res  2
 ZP_IRQ_RESCHED:         ; an IRQ handler asked for a task switch
     .res  1
 ZP_SCHED_CNT:           ; SCHED_PICK loop count

@@ -12,7 +12,7 @@
 ; Gates from page 2 to page 0 routines
 FAR_GATE_INLINE     TASK_CALL,      ::TASK_CALL,            0
 FAR_GATE_INLINE     YIELD,          ::YIELD,                0
-FAR_GATE_INLINE     TICKS_GET,      ::TICKS_GET,            0   ; (The test tune's timing)
+FAR_GATE_INLINE     TASK_SLEEP,     ::TASK_SLEEP,           0   ; (The test tune's timing)
 FAR_GATE_INLINE     PREEMPT,        ::PREEMPT,              0
 FAR_GATE_INLINE     IO_WAKE,        ::IO_WAKE,              0
 FAR_GATE_INLINE     TASK_RUN,       ::TASK_RUN,             0

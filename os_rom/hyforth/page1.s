@@ -54,6 +54,7 @@ FAR_GATE_INLINE TASK_WAIT,      ::TASK_WAIT,            0
 FAR_GATE_INLINE IO_WAKE,        ::IO_WAKE,              0
 FAR_GATE_INLINE TASK_RUN,       ::TASK_RUN,             0
 FAR_GATE_INLINE TASK_STATUS,    ::TASK_STATUS,          0
+FAR_GATE_INLINE TASK_SLEEP,     ::TASK_SLEEP,           0
 
 ; Gates from page 1 to the IO layer (page 2) and DEV_REGISTER (page 0)
 FAR_GATE_INLINE IO_OPEN,        PAGE2::IO_OPEN,         2

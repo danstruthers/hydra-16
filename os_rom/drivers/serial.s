@@ -359,28 +359,7 @@ SER_BREAK:
 
 ; Wake every task in a wait mask of the serial task (SER_RD_WAIT or SER_WR_WAIT), and clear the mask.
 ; Runs in the serial task.  IN: .X = the mask's ZP address.  Modifies: .A, .Y
-SER_WAKE:
-                php
-                sei
-                lda             0,X
-                ora             1,X
-                beq             @done
-                ldy             #0
-
-@loop:
-                lsr             1,X
-                ror             0,X
-                bcc             :+
-                tya
-                jsr             IO_WAKE
-:
-                iny
-                cpy             #16
-                bne             @loop
-
-@done:
-                plp
-                rts
+SER_WAKE        = TASK_WAKE_MASK
 
 ; Serial IRQ handler (registered with IRQ_REGISTER; runs in the serial task)
 ; OUT: C = 1 if the ACIA was interrupting

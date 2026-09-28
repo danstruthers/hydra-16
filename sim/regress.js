@@ -39,7 +39,52 @@ const TO_MON = BOOT + 'bye\\r' + W(1);                          // To WOZMON
 // A Forth number as "." prints it: " 0003"
 const num = n => ' ' + n.toString(16).toUpperCase().padStart(4, '0');
 
+// The CPU cycle test's program: at $E000 on every BIOS page (W powers up random), then STP.  Each
+// instruction with its W65C02S cycles (WDC's table and extras); the test checks the total.
+function cycleTestRom() {
+  const code = [], at = n => 0xE000 + code.length + n;
+  let cycles = 0;
+  const op = (c, ...bytes) => { code.push(...bytes); cycles += c; };
+  op(2, 0xA2, 0xFF);                                            // LDX #$FF
+  op(2, 0xA0, 0x01);                                            // LDY #$01
+  op(5, 0xBD, 0xF0, 0x10);                                      // LDA $10F0,X: crosses a page, +1
+  op(4, 0xB9, 0x00, 0x10);                                      // LDA $1000,Y: doesn't
+  op(5, 0x9D, 0xF0, 0x10);                                      // STA $10F0,X: a store, always 5
+  op(7, 0x1E, 0xF0, 0x10);                                      // ASL $10F0,X: 6, +1 across a page (65C02)
+  op(6, 0x1E, 0x00, 0x10);                                      // ASL $1000,X
+  op(7, 0xFE, 0x00, 0x10);                                      // INC $1000,X: always 7
+  op(2, 0xF8);                                                  // SED
+  op(3, 0x69, 0x01);                                            // ADC #1: +1 in decimal mode
+  op(2, 0xD8);                                                  // CLD
+  op(2, 0xA0, 0x01);                                            // LDY #1 (Z = 0)
+  op(3, 0xD0, 0x00);                                            // BNE: taken, +1
+  op(2, 0xF0, 0x00);                                            // BEQ: not taken
+  const jsr = code.length; op(6 + 6, 0x20, 0, 0);               // JSR sub (and its RTS)
+  op(3, 0x64, 0x10);                                            // STZ $10
+  op(6, 0x0F, 0x10, 0x00);                                      // BBR0 $10: 5, taken +1
+  op(3, 0x4C, 0xFC, 0xE0);                                      // JMP $E0FC
+  const sub = at(0); code.push(0x60);                           // sub: RTS
+  code[jsr + 1] = sub & 0xFF; code[jsr + 2] = sub >> 8;
+  while (code.length < 0xFC) code.push(0xEA);
+  op(4, 0xD0, 0x10);                                            // $E0FC BNE $E10E: taken, to another page, +2
+  while (code.length < 0x10E) code.push(0xEA);
+  op(3, 0xDB);                                                  // $E10E STP
+  const page = Buffer.alloc(0x2000, 0xEA); Buffer.from(code).copy(page);
+  page[0x1FFC] = 0x00; page[0x1FFD] = 0xE0;                     // RESET: $E000
+  return { bios: Buffer.concat(Array(16).fill(page)), cycles };
+}
+
 const TESTS = [
+  {
+    name: 'cpu-cycles', about: 'the W65C02S cycle counts: page crossing, branches, decimal mode, RMW abs,X, JSR/RTS, BBR',
+    romImage: cycleTestRom,
+    args: ['--cycles', '1000'],
+    halts: /STP at [0-9A-F]:E10E/,                              // (On whichever page W powered up as)
+    check: (out, report, files) => {
+      const c = +/--- cycles (\d+)/.exec(report)[1];
+      if (c !== files.expectCycles) return 'the program took ' + c + ' cycles, not ' + files.expectCycles;
+    },
+  },
   {
     name: 'boot', about: 'POST (task mapping, shared RAM, ROM page 1, RAM lines), drivers, HyForth banner',
     args: ['--cycles', '30000000'],
@@ -110,7 +155,7 @@ const TESTS = [
   },
   {
     name: 'tasks', about: 'another shell: ps, Ctrl-] to switch the console, kill; Ctrl-C breaks a read',
-    args: ['--cycles', '150000000', '--input', BOOT + 'shell\\r' + W(1) + 'ps\\r' + W(1) + '\\x1dB' + W(1) + '\\r1 2 + .\\r\\x1d1' + W(1) +
+    args: ['--cycles', '150000000', '--input', BOOT + 'shell\\r' + W(1) + 'ps\\r' + W(1) + '\\x1dB' + W(1) + '\\r1 2 + .\\r' + W(1) + '\\x1d1' + W(1) +
       '\\r11 kill\\rps\\rcat\\r' + W(1) + '\\x03' + W(1) + '3 4 + .\\r'],
     expect: ['HF>ps\n0 R -\n1 R 0 *\nB W 1\n', '[B]', 'HF>1 2 + .\n' + num(3), '[1]',
       'HF>ps\n0 R -\n1 R 0 *\nC D -\n', 'HF>cat\n', '!BREAK!', 'HF>3 4 + .\n' + num(7)],
@@ -119,7 +164,7 @@ const TESTS = [
   {
     name: 'sound', about: 'sndtest plays in a task of its own while the shell runs; sndstop ends it; the bell (Ctrl-G) first',
     args: ['--cycles', '90000000', '--input', BOOT + '\\x07\\r' + W(1) + 'sndtest\\r' + W(1) + 'ps\\r' + W(2) + 'sndstop\\rps\\r'],
-    expect: ['HF>ps\n0 R -\n1 R 0 *\nB R E\n', 'HF>sndstop\n', 'HF>ps\n0 R -\n1 R 0 *\nC D -\n'],
+    expect: ['HF>ps\n0 R -\n1 R 0 *\nB W E\n', 'HF>sndstop\n', 'HF>ps\n0 R -\n1 R 0 *\nC D -\n'],  // (B W: it sleeps between notes)
     check: (out, report) => {
       const m = /--- YM2151 key-ons: (\d+) \((.*)\)/.exec(report);
       if (!m || +m[1] < 5) return 'the tune played ' + (m ? m[1] : 'no') + ' notes';
@@ -138,6 +183,30 @@ const TESTS = [
       const img = fs.readFileSync(files.sd);
       if (img[512] !== 90) return 'the card image has $' + img[512].toString(16) + ' at 512, not $5A';
       if (img.some((b, i) => b && i !== 512)) return 'the card image changed somewhere else too';
+    },
+  },
+  {
+    name: 'sleep', about: 'TASK_SLEEP (HyForth sleep): 400 ticks take 2 s, and Ctrl-C ends a long one',
+    args: ['--cycles', '40000000', '--mark', '400 sleep', '--mark', 'HF>', '--input', BOOT + '400 sleep\\r' + W(5) + '30000 sleep\\r' + W(1) + '\\x03' + W(1) + '1 2 + .\\r'],
+    expect: ['HF>400 sleep\n', 'HF>30000 sleep\n', '!BREAK!', 'HF>1 2 + .\n' + num(3)],
+    forbid: ['!DS PTR ERROR!', '!UNK WORD!'],
+    check: (out, report) => {                                   // The line typed to the prompt: 2 s is 7.16M cycles at 3.58 MHz
+      const typed = +/mark: "400 sleep" at cycle (\d+)/.exec(report)[1];
+      const took = [...report.matchAll(/mark: "HF>" at cycle (\d+)/g)].map(m => +m[1]).find(c => c > typed) - typed;
+      if (!(took > 7100000 && took < 7400000)) return '400 sleep took ' + took + ' cycles, not about 7.16M';
+    },
+  },
+  {
+    name: 'sd-shared', about: 'two shells read /dev/sd at once: the storage server is switched out mid-request, and the other waits for it',
+    sd: true,
+    args: ['--cycles', '90000000', '--input', BOOT + 'shell\\r' + W(1) + '\\x1dB' + W(1) + '\\rq^/dev/sd^ 1 open .\\r' + W(1) +
+      '6 here @ 600 read '.repeat(12) + '\\r\\x1d1q^/dev/sd^ 1 open .\\r' + '3 here @ 600 read . '.repeat(6) + '\\r' + W(12) +
+      '\\x1dB' + W(1) + '\\r' + '+ '.repeat(11) + '.\\r'],             // (B's 12 counts, added up: 7200 = $1C20)
+    expect: ['HF>q^/dev/sd^ 1 open .\n' + num(6), '[1]q^/dev/sd^ 1 open .\n' + num(3), '[B]', '+ .\n' + num(7200) + '\n'],
+    forbid: ['!IO ERR!', '!DS PTR ERROR!', '!UNK WORD!'],
+    check: out => {                                             // Shell 1's 6 reads (B's prompt can come out among them)
+      const n = (out.slice(out.indexOf('[1]'), out.lastIndexOf('[B]')).match(/0258/g) || []).length;
+      if (n !== 6) return 'shell 1 read 600 bytes ($0258) ' + n + ' times, not 6';
     },
   },
 ];
@@ -170,7 +239,14 @@ const quote = s => /^[\w\/.:=-]+$/.test(s) ? s : "'" + s + "'";
 function runTest(t) {
   const files = {};
   const args = [SIM, ...t.args];
-  if (opt.rom) args.push('--rom', opt.rom);
+  if (t.romImage) {                                             // A ROM image of its own
+    const { bios, cycles } = t.romImage(), dir = path.join(tmpDir, t.name);
+    fs.mkdirSync(dir);
+    fs.writeFileSync(path.join(dir, 'os_rom_C02.bin'), bios);
+    fs.writeFileSync(path.join(dir, 'paged_rom_C02.bin'), Buffer.alloc(0x10000, 0xFF));
+    files.expectCycles = cycles;
+    args.push('--rom', dir);
+  } else if (opt.rom) args.push('--rom', opt.rom);
   if (opt.seed >= 0) args.push('--seed', String(opt.seed));
   if (t.sd) {
     files.sd = path.join(tmpDir, t.name + '.img');
@@ -186,7 +262,8 @@ function runTest(t) {
     if (err) errors.push('the emulator failed: ' + (stderr.trim().split('\n').pop() || err.message));
     else if (!m) errors.push('no serial output in the emulator\'s report');
     const halted = /--- halted: (.*)/.exec(report);
-    if (halted) errors.push('the emulator halted: ' + halted[1]);
+    if (t.halts) { if (!halted || !t.halts.test(halted[1])) errors.push('the emulator didn\'t halt as expected (' + t.halts + '): ' + (halted ? halted[1] : 'it ran on')); }
+    else if (halted) errors.push('the emulator halted: ' + halted[1]);
     if (!t.bootFailOk && / FAIL [0-9A-F]{2}\n/.test(out)) errors.push('a driver failed to start: ' + / (\S+ FAIL [0-9A-F]{2})\n/.exec(out)[1]);
     let at = 0;
     for (const e of t.expect || []) {

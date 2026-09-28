@@ -4,7 +4,7 @@
 
 ; ****************************************************************************
 ; The storage task (STORAGE_TASK_NUM): a Resident task, started at boot like the drivers, that owns the
-; SPI bus and serves /dev/sd (and later the FAT32 filesystem).  Its code is on BIOS ROM page 3 (spi.s,
+; SPI bus and serves /dev/sd (and later the HydraFS filesystem).  Its code is on BIOS ROM page 3 (spi.s,
 ; sd.s, sd_srv.s); this is the page 0 part: its DriverInfo, init, and the gates into page 3.
 
 STORAGE_DRIVER:

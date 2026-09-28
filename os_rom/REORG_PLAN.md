@@ -22,7 +22,7 @@ A plan for tidying the OS ROM: less dead code, clearer ROM page roles, a cleaner
 | 0 | Kernel: reset and POST core, IRQ dispatch, scheduler, `TASK_CALL`, MMU and shared memory cores, IRQ handlers, quick-switch code, gates, thunks, COMMON, WOZMON |
 | 1 | HyForth and the disassembler |
 | 2 | IO: the IO layer, namespaces, the file servers (serial, sound, pipes, null, zero) |
-| 3 | Storage: SPI, the SD card, `/dev/sd`, the FAT32 server (being written) |
+| 3 | Storage: SPI, the SD card, `/dev/sd`, the HydraFS server (to come: `HYDRAFS.md`) |
 | 4 | Diagnostics: POST RAM tests, `MMU_TEST`, `SCHED_TEST`, `IO_TEST` (from pages 1 and 2: about 1.5K) |
 | 5+ | Later subsystems |
 | Paged ROM | Read-only data: HyForth training scripts, bload libraries, sound patches and tunes, help text, the disassembler's opcode tables |
@@ -37,7 +37,7 @@ A plan for tidying the OS ROM: less dead code, clearer ROM page roles, a cleaner
   * `kernel/`: boot and POST, tasks and scheduler, IRQs, MMU, shared memory, thunks, gates, COMMON
   * `io/`: the IO layer, namespaces, the file servers
   * `drivers/`: serial, sound, VIA, SPI, SD card
-  * `fs/`: the FAT32 server
+  * `fs/`: the HydraFS server
   * `tests/`: POST RAM, MMU, scheduler and IO tests
   * `monitor/`: WOZMON, the disassembler
   * `hyforth/` (as now)

@@ -253,8 +253,8 @@ YM_LOADPATCH:
                 rts
 
 ; YM_DELAY_64: wait .A 64th notes (at 120 BPM: 1/32 s, 6.25 ticks each; up to 40), by the tick count
-; (TICKS_GET), not by the CPU: the tune keeps time however busy the other tasks are, and gives them the
-; CPU while it waits (YIELD).  Preserves .X, .Y
+; (TASK_SLEEP), not by the CPU: the tune keeps time however busy the other tasks are, and gives them the
+; CPU while it waits (or lets the system idle).  Preserves .X, .Y
 YM_DELAY_64:
                 PUSH_XY
                 sta         YMTMP1                  ; Ticks = .A * 6.25 (.A * 6 + .A / 4)
@@ -269,21 +269,7 @@ YM_DELAY_64:
                 lsr
                 clc
                 adc         YMTMP2
-                sta         YMTMP2
-                jsr         TICKS_GET               ; The time to wait for: now + ticks
-                clc
-                adc         YMTMP2
-                sta         YMTMP1
-                tya
-                adc         #0
-                sta         YMTMP2
-
-@wait:
-                jsr         YIELD
-                jsr         TICKS_GET
-                cmp         YMTMP1                  ; Now - the time: negative until it comes
-                tya
-                sbc         YMTMP2
-                bmi         @wait
+                ldy         #0
+                jsr         TASK_SLEEP              ; (.A.Y = ticks)
                 PULL_YX
                 rts

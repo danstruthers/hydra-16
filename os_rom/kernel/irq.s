@@ -197,7 +197,7 @@ IRQ_CALL_ENTRY:
             lda         IRQ_TABLE + 2,X
             sta         ZP_TC_VEC + 1
             lda         ZP_IRQ_NUM
-            jsr         TASK_CALL
+            jsr         TASK_CALL_IRQ                       ; (Even if the task is busy with another's call)
             bcc         @done                               ; Not claimed
             cmp         #SCHED_RESCHED_A                    ; Claimed; a task switch asked for?
             bne         @claimed

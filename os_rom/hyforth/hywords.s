@@ -1765,7 +1765,16 @@ def_word "kill", "kill", 0
     bcc TKOK
     jmp IOFAIL
 ;
-; ( -- )  list the tasks (/dev/proc): the task, its state (R runnable, W waiting for IO, P paused, D a
+; ( n -- )  sleep for n ticks (200 a second: 200 sleep is 1 second, up to 32767): the other tasks run
+;           meanwhile, or the system idles.  Ctrl-C ends it
+def_word "sleep", "sleep", 0
+    jsr spull_0
+    lda TEMP1
+    ldy TEMP1 + 1
+    jsr TASK_SLEEP
+    jmp next
+;
+; ( -- )  list the tasks (/dev/proc): the task, its state (R runnable, W waiting (IO or sleep), P paused, D a
 ;         driver) and the task that started it; * = the foreground task
 def_word "ps", "ps", 0
     lda #<PSNAME      ; (This code, and the name, run from RAM: IO_OPEN can read it)

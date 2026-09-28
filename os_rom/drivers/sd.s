@@ -3,7 +3,7 @@
 ; ****************************************************************************
 ; SD card, SPI mode (BIOS ROM page 3, the storage page; included inside `.scope PAGE3`, see all.s).  Block
 ; level: SD_INIT, SD_READ_BLOCK and SD_WRITE_BLOCK move 512-byte blocks (sectors) by number, for the
-; /dev/sd server and (later) the FAT32 server.  Runs in the storage task (its ZP: SD_* in zero.s).
+; /dev/sd server and (later) the HydraFS server.  Runs in the storage task (its ZP: SD_* in zero.s).
 ;   SDHC / SDXC cards take block numbers; SDSC (v1, and v2 standard capacity) cards take byte addresses
 ;   (block * 512), set up by SD_INIT.
 ;   Errors: C = 1 with .A = ERR_IO_DEVICE (no card, or it didn't answer), ERR_IO_NOT_READY (SD_INIT not

@@ -6,7 +6,7 @@
 SYSTEM_TASK_NUM     = 0
 SHELL_TASK_NUM      = $01       ; Forth / WOZMON shell (the default serial-capture task)
 PIPE_TASK_NUM       = $0D       ; Pipe server (resident)
-STORAGE_TASK_NUM    = $0C       ; Storage: the SD card (and later FAT32) server (resident)
+STORAGE_TASK_NUM    = $0C       ; Storage: the SD card (and later HydraFS) server (resident)
 SOUND_TASK_NUM      = $0E       ; Sound driver (resident)
 SERIAL_TASK_NUM     = $0F       ; Serial driver (resident)
 SERIAL_OWNER_TASK   = SERIAL_TASK_NUM   ; Task whose ZP holds the serial driver state

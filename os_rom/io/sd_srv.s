@@ -3,12 +3,12 @@
 ; ****************************************************************************
 ; The storage task's file server: /dev/sd, the SD card as one big file of bytes (BIOS ROM page 3, the
 ; storage page; included inside `.scope PAGE3`, see all.s).  The storage task (STORAGE_TASK_NUM) owns
-; the SPI bus, so its requests run one at a time.  The FAT32 server will live here too, on the same
+; the SPI bus, so its requests run one at a time.  The HydraFS server will live here too, on the same
 ; block cache.
 ;   Open: starts the card (SD_INIT) if it isn't yet.
 ;   Read / write: at the fd's offset (IO_SEEK), through a one-block cache (SD_CACHE, 512 bytes from the
 ;         MMU); writes go through to the card at once.  The offset is 32 bits, so /dev/sd reaches the
-;         first 4 GB of the card (the FAT32 server uses block numbers, for all of it).
+;         first 4 GB of the card (the HydraFS server uses block numbers, for all of it).
 ;   Ctl: SD_CTL_INIT starts the card again (e.g. after changing it).
 ; Server ZP (the storage task's): SD_* (zero.s); ZP_IO_REQ (IO_SRV_MAP).
 

@@ -1,7 +1,7 @@
 .debuginfo
 
 ; ****************************************************************************
-; BIOS ROM page 3 (W = 3): storage (SPI, the SD card, its server, and later the FAT32 server).
+; BIOS ROM page 3 (W = 3): storage (SPI, the SD card, its server, and later the HydraFS server).
 ;
 ;   This file is included inside `.scope PAGE3` (see all.s), before the rest of page 3, so the gate labels
 ;   below take precedence over the page 0 routines of the same name for all page 3 code.  Page 3 code

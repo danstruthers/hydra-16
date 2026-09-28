@@ -30,6 +30,7 @@ VIA_IRQ_HANDLER:
             inc     ZP_TICKS + 1
 
 @counted:
+            jsr     SLEEP_CHECK             ; Wake the sleepers whose time has come (TASK_SLEEP)
             lda     #SCHED_RESCHED_A        ; T1 is the scheduler's tick: ask the dispatcher for a task switch
             ldy     #SCHED_RESCHED_Y
             sec

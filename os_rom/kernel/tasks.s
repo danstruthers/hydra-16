@@ -12,10 +12,11 @@ TASK_RESIDENT_FLAG      = 8
 ;   1: 0 = Active, 1 = Paused
 ;   2: 0 = Not Waiting, 1 = Awaiting I/O
 ;   3: 0 = , 1 = Resident (driver task: runs only from IRQs / TASK_CALLs, never scheduled)
-;   4: 0 = , 1 =
-;   5: 0 = , 1 =
-;   6: 0 = , 1 =
-;   7: 0 = , 1 =
+;   4: 0 = , 1 = A break is due (TASK_BREAK_FLAG)
+;   5: 0 = , 1 = A kill is due (TASK_KILL_FLAG)
+;   6: 0 = , 1 = In a TASK_CALL: its call runs in another task, and it goes on when that returns
+;   7: 0 = , 1 = Switched out in the middle of another task's call (TASK_GUEST_OUT_FLAG): runnable,
+;                even resident or paused, to finish it (unless it's waiting)
 
 .macro SELECT_TASK      task
             lda     T_REGISTER
@@ -47,6 +48,10 @@ TASKS_INIT:
             stz     ZP_NO_PREEMPT                   ; Scheduler
             stz     ZP_PREEMPT_DUE
             stz     ZP_TC_GUEST
+            stz     ZP_TC_WAITERS
+            stz     ZP_TC_WAITERS + 1
+            stz     ZP_SLEEPERS                     ; (The system task's: nobody sleeping)
+            stz     ZP_SLEEPERS + 1
             stz     ZP_IRQ_RESCHED
             stz     ZP_BREAK_VEC + 1                ; No break handler
             stz     ZP_OUT_CNT                      ; No stdio buffering (WRITE_CHAR's fast path
@@ -85,19 +90,34 @@ TASKS_INIT:
 ;   load its SP, unwind its frame (SCHED_RESUME), whether the task stopped for the timer tick (IRQ),
 ;   YIELD, or to wait for IO.  W and U are in the frame because they're global pseudo-registers.
 ;
-;   Runnable: busy, and not paused, waiting or resident.  Round-robin over tasks 1-15; task 0 is the
-;   idle task and only runs when nothing else can.
+;   Runnable: busy, and not paused, waiting, resident or in a TASK_CALL; or switched out in the middle of
+;   another task's call (a server), and not waiting.  Round-robin over tasks 1-15; task 0 is the idle
+;   task and only runs when nothing else can.
+;
+;   Servers can be preempted: a TASK_CALL routine (e.g. a file server's serve routine, for a client's
+;   request) runs in the server's task like any other code, so a long request doesn't hold up the other
+;   tasks.  The client is marked in a call (TASK_CALLING_FLAG) and isn't run until the call returns; the
+;   server, switched out mid-call, gets TASK_GUEST_OUT_FLAG, which makes it runnable until it's resumed.
+;   A server serves one call at a time: a task that calls it while it's busy with another's waits
+;   (TC_WAIT_FREE), except the IRQ dispatcher's calls (TASK_CALL_IRQ), which run at once, on its stack
+;   below the switched-out call, as they could always interrupt a call.
 
 TASK_WAITING_FLAG       = 4                         ; Bit 2: awaiting IO (TASK_WAIT / IO_WAKE)
 TASK_BREAK_FLAG         = $10                       ; Bit 4: a break is due (console: SER_BREAK)
 TASK_KILL_FLAG          = $20                       ; Bit 5: a kill is due (console: SER_BREAK)
-TASK_RUN_MASK           = TASK_BUSY_FLAG | TASK_PAUSED_FLAG | TASK_WAITING_FLAG | TASK_RESIDENT_FLAG
+TASK_CALLING_FLAG       = $40                       ; Bit 6: in a TASK_CALL (its call runs in another task)
+TASK_GUEST_OUT_FLAG     = $80                       ; Bit 7: switched out in the middle of another task's call
+TASK_RUN_MASK           = TASK_BUSY_FLAG | TASK_PAUSED_FLAG | TASK_WAITING_FLAG | TASK_RESIDENT_FLAG | TASK_CALLING_FLAG
 TASK_FRAME_SP           = $F4                       ; STACK_SAVE_REG of a new task (11-byte frame at $01F5)
 SCHED_RESCHED_A         = $A5                       ; An IRQ handler returns C = 1, .A and .Y = these
 SCHED_RESCHED_Y         = $5A                       ;   to ask for a task switch (the timer tick)
 
 ; Switch tasks.  IRQs off, and the current task's full frame (including U) on its stack.
 SCHED_SWITCH:
+            lda     ZP_TC_GUEST
+            beq     :+
+            smb7    TASK_STATUS_REG                 ; In another task's call: run it again to finish it
+:                                                   ;   (TASK_GUEST_OUT_FLAG)
             tsx
             stx     STACK_SAVE_REG                  ; The current task's SP
             jsr     SCHED_PICK                      ; .A = next task (maybe the same one)
@@ -106,8 +126,12 @@ SCHED_SWITCH:
             txs
 
 ; Unwind a task's frame and continue it; or, if a break or kill is due, continue it at BREAK_ENTRY
-; instead (on ROM page 0, IRQs on, U = 0)
+; instead (on ROM page 0, IRQs on, U = 0), unless it's in the middle of another task's call (then the
+; break waits until it's back in its own code)
 SCHED_RESUME:
+            rmb7    TASK_STATUS_REG                 ; (TASK_GUEST_OUT_FLAG)
+            lda     ZP_TC_GUEST
+            bne     @resume
             lda     TASK_STATUS_REG
             and     #TASK_BREAK_FLAG | TASK_KILL_FLAG
             beq     @resume
@@ -146,16 +170,21 @@ SCHED_PICK:
             stx     T_REGISTER                      ; Quick look at the candidate (no stack use!)
             lda     TASK_STATUS_REG
             sty     T_REGISTER
+            bmi     @guest                          ; (SCHED_RUNNABLE, inline: this runs every tick)
             and     #TASK_RUN_MASK
             cmp     #TASK_BUSY_FLAG
+            beq     @found
+            bra     @skip
+
+@guest:
+            and     #TASK_WAITING_FLAG | TASK_CALLING_FLAG
             beq     @found
 
 @skip:
             dec     ZP_SCHED_CNT
             bne     @next
             lda     TASK_STATUS_REG                 ; Nobody else: keep going if we can
-            and     #TASK_RUN_MASK
-            cmp     #TASK_BUSY_FLAG
+            jsr     SCHED_RUNNABLE
             beq     @stay
             lda     #SYSTEM_TASK_NUM                ; Idle
             rts
@@ -168,17 +197,32 @@ SCHED_PICK:
             txa
             rts
 
-; Can the interrupted (current) task be preempted?  Not if it's running a TASK_CALL routine for another
-; task (a guest), isn't runnable (e.g. a resident driver task), or holds NO_PREEMPT (then the switch is
-; noted, for PREEMPT).
+; Can a task with status .A run?  OUT: Z = 1 yes.  Modifies: .A
+SCHED_RUNNABLE:
+            bmi     @guest                          ; (TASK_GUEST_OUT_FLAG)
+            and     #TASK_RUN_MASK
+            cmp     #TASK_BUSY_FLAG
+            rts
+
+@guest:
+            and     #TASK_WAITING_FLAG | TASK_CALLING_FLAG
+            rts
+
+.assert     TASK_GUEST_OUT_FLAG = $80, error, "SCHED_RUNNABLE tests TASK_GUEST_OUT_FLAG with bmi"
+
+; Can the interrupted (current) task be preempted?  Not if it isn't runnable (e.g. a resident driver
+; task), unless it's running a TASK_CALL routine for another task (a server serving a request: that can
+; be switched out too), or if it holds NO_PREEMPT (then the switch is noted, for PREEMPT).
 ; OUT: C = 1 switch, C = 0 don't
 SCHED_CAN_PREEMPT:
             lda     ZP_TC_GUEST
-            bne     @no
+            bne     @guest
             lda     TASK_STATUS_REG
             and     #TASK_RUN_MASK
             cmp     #TASK_BUSY_FLAG
             bne     @no
+
+@guest:
             lda     ZP_NO_PREEMPT
             beq     @yes
             lda     #1
@@ -291,6 +335,121 @@ TASK_STATUS:
             plp
             rts
 
+; This task's bit in a 16-bit task mask (e.g. ZP_TC_WAITERS, ZP_SLEEPERS).
+; OUT: .A = the bit, C = 1 if it's in the high byte (tasks 8-15), .X = this task.  Modifies: .Y
+TASK_MY_BIT:
+            lda     T_REGISTER
+            and     #$0F
+            tax
+            and     #7
+            tay
+            lda     MMU_BIT_MASKS,Y
+            cpx     #8
+            rts
+
+; Sleep for .A.Y ticks (the scheduler's tick: SCHED_TICK_HZ a second; up to 32767): the other tasks run
+; meanwhile, or the system idles.  Modifies: .A, .Y.  Preserves .X
+TASK_SLEEP:
+            sta     ZP_SLEEP_UNTIL
+            sty     ZP_SLEEP_UNTIL + 1
+            jsr     TICKS_GET
+            clc
+            adc     ZP_SLEEP_UNTIL
+            pha
+            tya
+            adc     ZP_SLEEP_UNTIL + 1
+            tay
+            pla
+
+; Sleep until the tick count (TICKS_GET) reaches .A.Y (at most 32767 ticks ahead; a time that's come
+; already returns at once).  The system task's tick handler wakes the task (SLEEP_CHECK); a break or kill
+; ends the sleep too.  Modifies: .A, .Y.  Preserves .X
+TASK_SLEEP_UNTIL:
+            php
+            sei
+            phx
+            sta     ZP_SLEEP_UNTIL
+            sty     ZP_SLEEP_UNTIL + 1
+
+@check:
+            lda     ZP_SLEEP_UNTIL
+            ldy     ZP_SLEEP_UNTIL + 1
+            ldx     T_REGISTER
+            stz     T_REGISTER                      ; Quick look at the system task (no stack use!)
+            clc
+            sbc     ZP_TICKS                        ; The time - now - 1: negative once it's come
+            tya
+            sbc     ZP_TICKS + 1
+            stx     T_REGISTER
+            bmi     @done
+            jsr     TASK_MY_BIT
+            stz     T_REGISTER                      ; Quick switch to the system task (no stack use!)
+            bcs     @high
+            tsb     ZP_SLEEPERS                     ; One of its sleepers
+            bra     @joined
+
+@high:
+            tsb     ZP_SLEEPERS + 1
+
+@joined:
+            stx     T_REGISTER
+            smb2    TASK_STATUS_REG                 ; Wait (TASK_WAITING_FLAG), then look again (a wake
+            jsr     YIELD                           ;   can come early: IO_WAKE)
+            bra     @check
+
+@done:
+            plx
+            plp
+            rts
+
+; The tick handler (VIA_IRQ_HANDLER; in the system task, IRQs off): wake the sleepers whose time has come
+; (TASK_SLEEP_UNTIL).  Modifies: .A, .X, .Y
+SLEEP_CHECK:
+            lda     ZP_SLEEPERS
+            sta     ZP_SLEEP_SCAN
+            lda     ZP_SLEEPERS + 1
+            sta     ZP_SLEEP_SCAN + 1
+            ldx     #0                              ; .X = task
+
+@loop:
+            lda     ZP_SLEEP_SCAN                   ; Nobody (else) sleeping: done (usually at once)
+            ora     ZP_SLEEP_SCAN + 1
+            beq     @done
+            lsr     ZP_SLEEP_SCAN + 1
+            ror     ZP_SLEEP_SCAN
+            bcc     @next
+            stx     T_REGISTER                      ; Quick look at the sleeper (no stack use!)
+            lda     ZP_SLEEP_UNTIL
+            ldy     ZP_SLEEP_UNTIL + 1
+            stz     T_REGISTER                      ; (Back in the system task)
+            clc
+            sbc     ZP_TICKS                        ; The time - now - 1: negative once it's come
+            tya
+            sbc     ZP_TICKS + 1
+            bpl     @next
+            txa
+            and     #7
+            tay
+            lda     MMU_BIT_MASKS,Y
+            cpx     #8
+            bcs     @high
+            trb     ZP_SLEEPERS                     ; Not sleeping any more
+            bra     @wake
+
+@high:
+            trb     ZP_SLEEPERS + 1
+
+@wake:
+            txa
+            jsr     IO_WAKE
+
+@next:
+            inx
+            bra     @loop
+
+@done:
+            rts
+
 ; Start the scheduler's tick: VIA T1 free-running, one IRQ every TIMER_TASK_INT_H/L cycles (~5 ms).
 ; VIA_IRQ_HANDLER turns each tick into a task switch.
 SCHED_START:
@@ -351,6 +510,8 @@ TASK_BUILD_FRAME:
             stz     ZP_NO_PREEMPT
             stz     ZP_PREEMPT_DUE
             stz     ZP_TC_GUEST
+            stz     ZP_TC_WAITERS                   ; (Left by the task that had the number before)
+            stz     ZP_TC_WAITERS + 1
             stz     ZP_IRQ_RESCHED
             stz     ZP_BREAK_VEC + 1                ; No break handler
             stz     ZP_OUT_CNT                      ; Nothing buffered for stdout or read ahead
@@ -663,7 +824,9 @@ RESERVE_TASK:
 ; IN:  ZP_TC_VEC = routine, ZP_TC_TASK = task to run it in, .A/.X/.Y/C = routine's inputs
 ; OUT: .A/.X/.Y/flags as returned by the routine
 ; The routine runs with the caller's I flag.  The target task must not be running, or it's the
-; current task (then this is a plain call).
+; current task (then this is a plain call).  If the target is busy with another task's call (switched
+; out in the middle of it), the caller waits until it's done (see the scheduler's notes above).
+; While the routine runs, the caller is in a call (TASK_CALLING_FLAG): the scheduler leaves it alone.
 ; The calling task # is kept on the target task's stack, so IRQs during the routine are safe.
 .macro _M_TC_COPY_TO    zp                  ; ZP byte: calling task (.X) -> target task (.Y); ends in calling task
             lda     zp
@@ -682,6 +845,15 @@ RESERVE_TASK:
 TASK_CALL:
             php
             sei
+            jsr     TC_WAIT_FREE                    ; (Preserves .A, .X, .Y)
+            bra     TC_GO
+
+; TASK_CALL for the IRQ dispatcher (IRQs off): runs the routine at once, even in a task that's busy with
+; another task's call
+TASK_CALL_IRQ:
+            php
+
+TC_GO:
             sta     ZP_TC_A
             pla
             sta     ZP_TC_P                         ; Caller's flags (C in, I state)
@@ -712,6 +884,7 @@ TASK_CALL:
             _M_TC_COPY_TO   ZP_TC_Y
             _M_TC_COPY_TO   ZP_TC_P
             _M_TC_COPY_TO   ZP_TC_FROM
+            smb6    TASK_STATUS_REG                 ; In a call (TASK_CALLING_FLAG): not run until it returns
 
 ; !! NO STACK MANIPULATIONS UNTIL THE TARGET TASK'S STACK IS SELECTED !!
             sty     T_REGISTER                      ; Switch to the target task
@@ -733,8 +906,15 @@ TASK_CALL:
             sta     ZP_TC_A
             stx     ZP_TC_X
             sty     ZP_TC_Y
+            bne     :+                              ; (Z from the dec) Still in a call
+            ldx     #ZP_TC_WAITERS
+            jsr     TASK_WAKE_MASK                  ; Free: the tasks waiting to call us
+:
             pla
             sta     ZP_TC_P                         ; Routine's result flags
+            tsx
+            inx
+            stx     STACK_SAVE_REG                  ; Our SP as it was (a task switch during the call moved it)
             pla
             tax                                     ; .X = calling task
             ldy     T_REGISTER                      ; .Y = target task
@@ -745,6 +925,7 @@ TASK_CALL:
 
 ; !! NO STACK MANIPULATIONS UNTIL THE CALLING TASK'S STACK IS SELECTED !!
             stx     T_REGISTER                      ; Back to the calling task
+            rmb6    TASK_STATUS_REG                 ; (TASK_CALLING_FLAG)
             ldx     STACK_SAVE_REG                  ; ...and its stack
             txs
             pla
@@ -759,6 +940,70 @@ TASK_CALL:
 
 @call:
             jmp     (ZP_TC_VEC)
+
+.assert     TASK_CALLING_FLAG = $40 .and TASK_GUEST_OUT_FLAG = $80, error, "TASK_CALL and SCHED_SWITCH use smb6/rmb6 and smb7/rmb7"
+
+; TASK_CALL: wait while the target task (ZP_TC_TASK) is busy with another task's call, as one of its
+; waiters (TASK_WAKE_MASK wakes them when the call returns).  IRQs off.
+; Preserves .A, .X, .Y
+TC_WAIT_FREE:
+            PUSH_AXY
+
+@check:
+            ldy     ZP_TC_TASK
+            ldx     T_REGISTER
+            sty     T_REGISTER                      ; Quick look at the target (no stack use!)
+            lda     ZP_TC_GUEST
+            stx     T_REGISTER
+            beq     @free
+            tya
+            eor     T_REGISTER
+            and     #$0F
+            beq     @free                           ; (Ourselves: a plain call)
+            jsr     TASK_MY_BIT                     ; Our bit in its ZP_TC_WAITERS
+            ldy     ZP_TC_TASK
+            sty     T_REGISTER                      ; Quick switch to the target (no stack use!)
+            bcs     @high
+            tsb     ZP_TC_WAITERS
+            bra     @joined
+
+@high:
+            tsb     ZP_TC_WAITERS + 1
+
+@joined:
+            stx     T_REGISTER
+            smb2    TASK_STATUS_REG                 ; Wait (TASK_WAITING_FLAG), then look again
+            jsr     YIELD
+            bra     @check
+
+@free:
+            PULL_YXA
+            rts
+
+; Wake every task in a 16-bit wait mask in the current task's ZP (bit = task), and clear the mask.
+; IN: .X = the mask's ZP address.  Modifies: .A, .Y
+TASK_WAKE_MASK:
+            php
+            sei
+            lda     0,X
+            ora     1,X
+            beq     @done
+            ldy     #0
+
+@loop:
+            lsr     1,X
+            ror     0,X
+            bcc     :+
+            tya
+            jsr     IO_WAKE
+:
+            iny
+            cpy     #16
+            bne     @loop
+
+@done:
+            plp
+            rts
 
 ; ****************************************************************************
 ; Make a free task (a specific one) ready to run from an entry point on ROM page 0: marks it busy and
