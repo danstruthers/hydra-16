@@ -82,7 +82,7 @@ that got it there), and the final pseudo-register and vector RAM state.
 output for what it expects: POST, the self tests (MMU, scheduler, IO; also with 1 RAM module and 1 shared
 macro-page), POST with hardware faults, HyForth, pipelines, files and namespaces, tasks and console
 switching, Ctrl-C, background sound and the bell, `sleep`, the serial settings, `/dev/sd` (on a blank card
-image; also two shells reading it at once), HydraFS reading, writing, checking and quick formatting (on cards made by `tools/hydrafs.js`, and checked with it afterwards), and the shell: the volume chosen at boot, `boot.hys`, `cd`, the prompt, the file commands, `include`, and running programs (`.hyx` executables and `.hys` scripts, by name and from `/bin`, Ctrl-C).  One test runs a small program of its own instead of the ROM, and
+image; also two shells reading it at once), HydraFS reading, writing, checking and quick formatting (on fixture card images kept in `sim/cards`, and on cards made by `tools/hydrafs.js`, and checked with it afterwards), and the shell: the volume chosen at boot, `boot.hys`, `cd`, the prompt, the file commands, `include`, and running programs (`.hyx` executables and `.hys` scripts, by name and from `/bin`, Ctrl-C).  One test runs a small program of its own instead of the ROM, and
 checks the CPU's cycle counts against WDC's table.  Four watch timing: a 1000-character paste at 57600 with
 nothing lost, console output at 115200 inside a cycle budget, SD read throughput inside a cycles-a-byte
 budget, and a limit on how long the ROM ever holds interrupts off.  The emulators run in parallel; the whole
@@ -103,7 +103,9 @@ of the run (about 70 of the 256 bytes so far, with IRQ frames on top of far call
 test, add an entry to the `TESTS` list at the top of `regress.js` (its header describes the fields).  A test
 that wants SD cards lists them under `sd`; a card with `hfs` gets a HydraFS made on it (`quick`: as the
 Hydra's quick format makes one), and the function is handed the volume (the `Volume` class below) to put
-files in; `claim` makes a card say it's bigger than its image (`--sd FILE@B`).
+files in; `claim` makes a card say it's bigger than its image (`--sd FILE@B`); `image` starts a card from one
+of the fixture images in `sim/cards` (a copy), cards made before that the ROM must go on reading ([their
+README](../../sim/cards/README.md)).
 
 ### **HydraFS card images**
 

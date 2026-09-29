@@ -29,7 +29,8 @@
 //           image stays mb, for a card that claims more than the test needs) and hfs (a function given a
 //           HydraFS volume made on the card, and the hydrafs module, to put files in it), quick (that HydraFS
 //           as the Hydra's quick format makes one: version 2, no free map written), claim (the card says it
-//           has that many blocks, more than its image: they read as zeros) }
+//           has that many blocks, more than its image: they read as zeros), image (a card image from
+//           sim/cards to start from, instead of a blank one: a copy, so the fixture never changes) }
 //           (files.sds[dev] = each one's path)
 //
 // Every test also fails if a task's stack came within STACK_MARGIN bytes of its bottom (the emulator reports
@@ -44,6 +45,7 @@ const hydrafs = require('./tools/hydrafs.js');            // For the tests that 
 const { hyx } = require('./tools/mkhyx.js');              // ... and Hydra executables on it
 
 const SIM = path.join(__dirname, 'hydrasim.js');
+const CARDS = path.join(__dirname, 'cards');                    // Fixture card images (cards/README.md)
 const STACK_MARGIN = 32;                                        // Free stack bytes a task must keep
 const W = n => '\\w'.repeat(n);                                 // Wait n * ~2M cycles before the next key
 const BOOT = W(1);                                              // Before the first key: to the HyForth prompt
@@ -438,6 +440,37 @@ const TESTS = [
     },
   },
   {
+    name: 'cards', about: 'the fixture card images (sim/cards): a version 1 HydraFS and a quick-formatted version 2 one, read, written and checked',
+    sd: [{ dev: 0, image: 'tests-v1.img', claim: 131072 }, { dev: 1, image: 'quick-v2.img', claim: 131072 }],
+    args: ['--cycles', '150000000', '--input', BOOT + W(1) + ['ls\\r', 'cat hello.txt\\rcat games/star.frt\\r', 'ls many\\r',
+      '"big.bin" 1 open .\\r3 4095 0 seek 3 here @ 4 read . here @ c@ . here @ 1 + c@ .\\r3 close\\r',
+      'mkdir new\\rcp hello.txt new/copy\\rcat new/copy\\r', '0 fsck\\r', 'cd /sd/1\\rls\\rcat note.txt\\rcat docs/list.txt\\r',
+      '"data.bin" 1 open .\\r3 8999 0 seek 3 here @ 1 read . here @ c@ .\\r3 close\\r', 'cp note.txt n2\\rcat n2\\r1 fsck\\r'].join(W(1))],
+    expect: ['hydrafs 0 1\n',
+      '0:/> ls\nhello.txt 13\ngames/\nbig.bin 5000\nmany/\na 16384\nc 4096\ne 4096\ng 4096\n',
+      'cat hello.txt\nhello hydra\n', 'cat games/star.frt\n: star 42 . ;\n',
+      'ls many\n' + Array.from({ length: 10 }, (_, i) => 'f' + i + ' 1\n').join(''),
+      '@ 1 + c@ .\n' + num(4) + num(0xFF) + num(0) + '\n',            // big.bin, over a cluster boundary
+      'cat new/copy\nhello hydra\n',
+      '0 fsck\nsdhc 64 MB 131072 blocks\nhydrafs label=TESTS\nfree 65424 KB of 65532 KB\ncheck: lost 0, unmarked 0, twice 0\n',
+      '1:/> ls\nnote.txt 14\ndocs/\ndata.bin 9000\n', 'cat note.txt\na quick card\n', 'cat docs/list.txt\none\ntwo\nthree\n',
+      '8999 0 seek 3 here @ 1 read . here @ c@ .\n' + num(1) + num(0x11) + '\n',   // (8999 * 7) & $FF
+      'cat n2\na quick card\n',
+      '1 fsck\nsdhc 64 MB 131072 blocks\nhydrafs label=QUICK\nfree 65500 KB of 65532 KB\ncheck: lost 0, unmarked 0, twice 0\n'],
+    forbid: ['!DS PTR ERROR!', '!IO ERR!', '!UNK WORD!'],
+    check: (out, report, files) => {                            // The copies, as the PC tool sees them now
+      for (const [dev, label, version, made] of [[0, 'TESTS', 1, 'new/copy'], [1, 'QUICK', 2, 'n2']]) {
+        const v = new hydrafs.Volume(files.sds[dev]);
+        try {
+          const p = v.check();
+          if (p.length) return 'card ' + dev + ': ' + p[0];
+          if (v.label !== label || v.version !== version) return 'card ' + dev + ': ' + v.label + ', version ' + v.version;
+          if (!v.tryWalk(made)) return 'card ' + dev + ': no ' + made;
+        } finally { v.close(); }
+      }
+    },
+  },
+  {
     name: 'hydrafs-quick', about: 'HydraFS quick format (a 244 GB card in a moment), a volume\'s size, a full format\'s and fsck\'s progress; a free map written as it\'s used',
     sd: [{ dev: 0, claim: 500170752, fill: img => img.fill(0xA5) },   // A 244 GB card, with junk on it
       { dev: 1, mb: 64, label: 'LAZY', quick: true, hfs: v => {  // A quick-formatted card, junk in its free map,
@@ -597,9 +630,13 @@ function runTest(t) {
   if (opt.seed >= 0) args.push('--seed', String(opt.seed));
   files.sds = [];
   for (const c of t.sd === true ? [{ dev: 0 }] : t.sd || []) {    // The SD cards
-    const f = path.join(tmpDir, t.name + '-' + c.dev + '.img'), img = Buffer.alloc((c.mb || 1) << 20);
-    if (c.fill) c.fill(img);
-    fs.writeFileSync(f, img);
+    const f = path.join(tmpDir, t.name + '-' + c.dev + '.img');
+    if (c.image) fs.copyFileSync(path.join(CARDS, c.image), f);  // A fixture card (a copy: it stays as it is)
+    else {
+      const img = Buffer.alloc((c.mb || 1) << 20);
+      if (c.fill) c.fill(img);
+      fs.writeFileSync(f, img);
+    }
     if (c.hfs) {                                                // A HydraFS on it, made with the host tool
       hydrafs.mkfs(f, c.mb || 1, c.label || '', c.blocks, c.quick);   // (blocks: a smaller filesystem)
       const v = new hydrafs.Volume(f);
