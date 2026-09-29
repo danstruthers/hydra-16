@@ -52,6 +52,9 @@ ERR_IO_FULL         = $81       ; the card is full
 ERR_IO_EXISTS       = $82       ; there's a file or directory by that name already
 ERR_IO_NOT_EMPTY    = $83       ; the directory has files in it (remove)
 ERR_IO_BUSY         = $84       ; the file is open (remove)
+ERR_IO_NOT_DIR      = $85       ; not a directory (IO_CHDIR, rmdir)
+ERR_IO_IS_DIR       = $86       ; a directory, where a file was wanted (rm, cp)
+ERR_IO_NOT_EXEC     = $87       ; a Hydra executable whose header doesn't fit task RAM (run)
 
 ; ERROR CODES
 ERR_NO_TASKS_AVAILABLE = $F1

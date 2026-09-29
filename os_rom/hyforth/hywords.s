@@ -1577,82 +1577,543 @@ def_word "create", "create", 0
 FSFAIL:
     jmp IOFAIL
 ;
-; ( sz -- )  make a directory (e.g. q^/sd/0/games^ mkdir)
-def_word "mkdir", "mkdir", 0
-    jsr spull_0
-    ldx #TEMP1
-    jsr SZTEXT
-    bcs FSFAIL
-    ldx #HFS_M_DIR
-    stx ZP_IO_BUF
-    ldx #IO_MODE_READ
-    jsr IO_CREATE
-    bcs FSFAIL
-    jsr IO_CLOSE
+;-------- The shell: the current directory, and commands that take their arguments from the line
+;   A parsing word (cd games) takes the words after it on the line (ARGGET); its stack form, for
+;   definitions, takes q^...^ strings: (cd).  The work is done on BIOS page 7 (shell/shell.s).
+;
+; cd [dir]  change directory (relative, or not; ".." understood); cd alone: the current card's root
+def_word "cd", "cd", 0
+    jsr ARGGET          ; .A.Y = the path; C = 1: none
+    bcc CDGO
+    ldy #0              ; (SH_CD: .Y = 0, no path)
+CDGO:
+    jsr SH_CD
+    bcs SHFAIL
     jmp next
 ;
-; ( sz -- )  remove a file, or an empty directory
-def_word "remove", "remove", 0
-    jsr spull_0
-    ldx #TEMP1
-    jsr SZTEXT
-    bcs FSFAIL
-    jsr IO_REMOVE
-    bcs FSFAIL
+; ( sz -- )  change directory
+def_word "(cd)", "pcd", 0
+    jsr SHARG1          ; .A.Y = the q^...^ string's text
+    bcc CDGO
+SHFAIL:
+    jmp IOFAIL
+;
+; pwd  show the current directory
+def_word "pwd", "pwd", 0
+    jsr SH_PWD
     jmp next
 ;
-; ( sz-old sz-new -- )  rename a file or directory, in its directory: the new name is a name, not a path
-;                      (e.g. q^/sd/0/notes^ q^old-notes^ rename)
-def_word "rename", "rename", 0
-    jsr NSARGS        ; .A.Y = the old name, ZP_IO_BUF = the new one
-    bcs FSFAIL
+; ( sz -- )  set the prompt's format: %v the volume ("0:"), %d the directory on the card (or the whole
+;           path off the cards), %p the whole path, %l the card's label, %t the task, %% a %
+;           (default: "%v%d> " prompt)
+def_word "prompt", "prompt", 0
+    jsr SHARG1
+    bcs SHFAIL
     sta TEMP3
     sty TEMP3+1
-    ldy #0            ; the new name -> the stat record (the server checks it: 31 characters at most)
-RNCOPY:
-    lda (ZP_IO_BUF),y
-    sta RNBUF,y
+    ldy #0
+PROMPTCP:
+    lda (TEMP3),y
+    sta PROMPTFMT,y
+    beq PROMPTDONE
     iny
-    cpy #IO_ST_MODE
-    bne RNCOPY
-    lda #$FF          ; the mode: as it is
-    sta RNBUF+IO_ST_MODE
-    lda TEMP3
-    ldy TEMP3+1
-    ldx #IO_MODE_READ
-    jsr IO_OPEN
-    bcs FSFAIL
-    sta TEMP3         ; the fd
-    lda #<RNBUF
-    sta ZP_IO_BUF
-    lda #>RNBUF
-    sta ZP_IO_BUF+1
-    lda TEMP3
-    jsr IO_WSTAT
-    php
-    pha
-    lda TEMP3
-    jsr IO_CLOSE
-    pla
-    plp
-    bcs FSFAIL2
+    cpy #PROMPTFMT_SIZE - 1
+    bne PROMPTCP
+    lda #0
+    sta PROMPTFMT,y
+PROMPTDONE:
     jmp next
-FSFAIL2:
-    jmp IOFAIL
-RNBUF:
-    .res ::IO_STAT_SIZE
 ;
-; ( sz -- )  list a directory: a line per entry, "name size" or "name/" (e.g. q^/sd/0^ ls)
-def_word "ls", "ls", 0
+; ( sz -- ) -> .A.Y = its text, C = 0; or .A = ERR_IO_NAME, C = 1 (not a string)
+SHARG1:
     jsr spull_0
     ldx #TEMP1
-    jsr SZTEXT
-    bcs FSFAIL2
+    jmp SZTEXT
+;
+; A parsing word's argument: the next word on the line (up to a space, or the line's end), or "a name in
+; quotes" (spaces and all), into ARGBUF, zero-terminated; the interpreter goes on after it.
+; OUT: C = 0: .A.Y = ARGBUF; or C = 1: none.  Uses TEMP6
+ARGGET:
+    ldy CURBUF
+AGSKIP:
+    lda (TIB),y         ; (spaces before it)
+    beq AGNONE
+    cmp #ASCII_SPACE
+    bne AGWORD
+    iny
+    bra AGSKIP
+AGWORD:
+    ldx #ASCII_SPACE    ; (what ends it: a space; or in quotes, the closing '"')
+    cmp #ASCII_DQUOTE
+    bne AGPLAIN
+    iny
+    ldx #ASCII_DQUOTE
+AGPLAIN:
+    stx TEMP6
+    ldx #0
+AGCOPY:
+    lda (TIB),y
+    beq AGEND
+    cmp TEMP6
+    beq AGCLOSE
+    cpx #ARGBUF_SIZE - 1
+    bcs AGLONG          ; (too long: the rest is left out)
+    sta ARGBUF,x
+    inx
+AGLONG:
+    iny
+    bra AGCOPY
+AGCLOSE:
+    cmp #ASCII_DQUOTE   ; (past the closing '"')
+    bne AGEND
+    iny
+AGEND:
+    stz ARGBUF,x
+    sty CURBUF
+    lda #<ARGBUF
+    ldy #>ARGBUF
+    clc
+    rts
+AGNONE:
+    sty CURBUF
+    sec
+    rts
+;
+; include file  read a HyForth script (.hys) into this shell, as if it were typed: its definitions stay.
+;               An error, or Ctrl-C, stops it (and the scripts that include it), with its line number
+def_word "include", "include", 0
+    jsr ARGGET
+    bcc INCGO
+    lda #ERR_IO_NAME
+    bra INCFAIL
+;
+; ( sz -- )  read a script, as include does
+def_word "(include)", "pinclude", 0
+    jsr SHARG1
+    bcs INCFAIL
+INCGO:
+    jsr INCOPEN
+    bcs INCFAIL
+    jmp next
+INCFAIL:
+    jmp IOFAIL
+;
+; Start reading the script at .A.Y (a name): stdin is kept (another fd for it), and the script becomes
+; stdin until its end (INCEND, from the line reader).  OUT: C = 0; or C = 1, .A = error
+INCOPEN:
+    ldx INCDEPTH
+    cpx #INC_MAX
+    bcs INCDEEP
     ldx #IO_MODE_READ
     jsr IO_OPEN
-    bcs FSFAIL2
+    bcs INCODONE
+INCOPENFD:              ; (.A = the script's fd, closed here: stdin has it)
+    sta TEMP5           ; the script's fd
+    lda #0
+    jsr IO_DUP          ; stdin, kept
+    bcs INCOCLOSE
+    ldx INCDEPTH
+    sta INCFD,x
+    asl                 ; (What stdin has read ahead but not used yet goes back: its offset moves back
+    asl                 ;   by that much, as the read-ahead is dropped when stdin changes.  E.g. the
+    asl                 ;   rest of a script that includes this one)
+    tax
+    lda ZP_IN_CNT
+    sec
+    sbc ZP_IN_POS
+    sta TEMP4
+    lda IO_FD_OFS,x
+    sec
+    sbc TEMP4
+    sta IO_FD_OFS,x
+    lda IO_FD_OFS+1,x
+    sbc #0
+    sta IO_FD_OFS+1,x
+    lda IO_FD_OFS+2,x
+    sbc #0
+    sta IO_FD_OFS+2,x
+    lda IO_FD_OFS+3,x
+    sbc #0
+    sta IO_FD_OFS+3,x
+    ldx INCDEPTH
+    txa
+    asl
+    tax
+    stz INCLINE,x
+    stz INCLINE+1,x
+    inc INCDEPTH
+    lda TEMP5
+    ldx #0
+    jsr IO_DUP2         ; stdin = the script
+INCOCLOSE:
+    php
+    pha
+    lda TEMP5
+    jsr IO_CLOSE        ; (its own fd: stdin has it now)
+    pla
+    plp
+INCODONE:
+    rts
+INCDEEP:
+    lda #ERR_IO_NAME
+    sec
+    rts
+;
+; A script's end: stdin back to what it was
+INCEND:
+    dec INCDEPTH
+    ldx INCDEPTH
+    lda INCFD,x
+    pha
+    ldx #0
+    jsr IO_DUP2
+    pla
+    jmp IO_CLOSE
+;
+; The next line of the script being read: count it
+INCCOUNT:
+    lda INCDEPTH
+    asl
+    tax
+    inc INCLINE-2,x
+    bne INCCDONE
+    inc INCLINE-1,x
+INCCDONE:
+    rts
+;
+; An error while a script is read: say which line of it, and stop it and every script that includes it
+INCABORT:
+    lda INCDEPTH
+    beq INCCDONE
+    PRINT_CHAR #'l', #'i', #'n', #'e', #' '
+    lda INCDEPTH
+    asl
+    tax
+    lda INCLINE-1,x
+    PRINT_BYTE
+    lda INCDEPTH
+    asl
+    tax
+    lda INCLINE-2,x
+    PRINT_BYTE
+INCALOOP:
+    jsr INCEND
+    lda INCDEPTH
+    bne INCALOOP
+    rts
+;
+S_BOOTHYS:
+    .byte "boot.hys", 0
+;
+; run file  run a program in a task of its own, and wait for it to end: a Hydra executable (its .hyx
+;           header says so), or else a HyForth script (.hys), read by a copy of this shell (which starts
+;           with its stack and definitions, and takes its own away with it).  It has the console while it
+;           runs: Ctrl-C stops it.  A word HyForth doesn't know runs the program of that name (RUNNAME)
+def_word "run", "run", 0
+    jsr ARGGET
+    bcc RUNGO
+    lda #ERR_IO_NAME
+    bra RUNFAIL
+;
+; ( sz -- )  run a program, as run does
+def_word "(run)", "prun", 0
+    jsr SHARG1
+    bcs RUNFAIL
+RUNGO:
+    ldx #SHC_RUN
+    jsr RUNCMD
+    bcs RUNFAIL
+    jmp next
+RUNFAIL:
+    jmp IOFAIL
+;
+; A program: SH_CMD .X (SHC_RUN, SHC_EXEC) on the name at .A.Y.  An executable has run when it returns;
+; a script runs here: a copy of the shell (TASK_CLONE) reads it from SH_RUN_FD, and we wait for it to end.
+; OUT: C = 0; or C = 1, .A = error
+RUNCMD:
+    jsr SH_CMD
+    bcs RCDONE
+    tax
+    beq RCDONE          ; (an executable: done)
+    lda #<run_start
+    ldy #>run_start
+    ldx #1              ; (HyForth's ROM page)
+    jsr TASK_CLONE      ; .A = the copy
+    php
+    pha
+    lda #SH_RUN_FD
+    jsr IO_CLOSE        ; (the copy has it)
+    pla
+    plp
+    bcs RCDONE
+    ldx #SHC_WAIT
+    jmp SH_CMD
+RCDONE:
+    rts
+;
+; A word HyForth doesn't know (the token at NXTTOK), when interpreting: the program of that name (SH_EXEC:
+; name.hyx or name.hys, here or in the card's /bin), run as run does.
+; OUT: C = 0: it ran; or C = 1, .A = error (ERR_IO_NOT_FOUND: no such program)
+RUNNAME:
+    ldy #0
+    lda (NXTTOK),y      ; (its length, then its characters)
+    cmp #ARGBUF_SIZE
+    bcs RNNONE
+    tax
+RNCOPY:
+    iny
+    lda (NXTTOK),y
+    sta ARGBUF-1,y
+    dex
+    bne RNCOPY
+    lda #0
+    sta ARGBUF,y
+    lda #<ARGBUF
+    ldy #>ARGBUF
+    ldx #SHC_EXEC
+    bra RUNCMD
+RNNONE:
+    lda #ERR_IO_NOT_FOUND
+    sec
+    rts
+;
+; A script's copy of the shell starts here (TASK_CLONE, ROM page 1; see RUNCMD): the scripts this shell
+; was reading aren't the copy's (stdin goes back), the script is its stdin (SH_RUN_FD), and the rest of
+; the line is this shell's.  At the script's end, getline ends the task (BATCH), as for a pipeline's
+; left side.
+run_start:
+    tsx
+    stx CHILDSP
+    lda #1
+    sta BATCH
+RSUNWIND:
+    lda INCDEPTH
+    beq RSOPEN
+    jsr INCEND
+    bra RSUNWIND
+RSOPEN:
+    lda #SH_RUN_FD
+    jsr INCOPENFD
+    bcs RSFAIL          ; (the task ends)
+    ldy CURBUF
+    lda #0
+    sta (TIB),y
+    jmp resolve
+RSFAIL:
+    rts
+;
+;-------- Shell commands: files and the cards.  The work is done on BIOS page 7 (shell/files.s: SH_CMD).
+;   Each has a parsing form, which takes its arguments from the words after it on the line (ls games),
+;   and a stack form in parentheses for definitions, which takes q^...^ strings ((ls))
+;
+; ls [dir]  list a directory: a line per entry, "name size" or "name/" (ls alone: the current one); or
+;           show any file's text (ls /dev/sd/0/ctl)
+def_word "ls", "ls", 0
+    ldx #SHC_LS
+    jmp SHPARSE
+def_word "(ls)", "pls", 0
+    ldx #SHC_LS
+    jmp SHSTACK
+;
+; rm file  remove a file (a directory: rmdir)
+def_word "rm", "rm", 0
+    ldx #SHC_RM
+    jmp SHPARSE
+def_word "(rm)", "prm", 0
+    ldx #SHC_RM
+    jmp SHSTACK
+;
+; rmdir dir  remove an empty directory
+def_word "rmdir", "rmdir", 0
+    ldx #SHC_RMDIR
+    jmp SHPARSE
+def_word "(rmdir)", "prmdir", 0
+    ldx #SHC_RMDIR
+    jmp SHSTACK
+;
+; mkdir dir  make a directory
+def_word "mkdir", "mkdir", 0
+    ldx #SHC_MKDIR
+    jmp SHPARSE
+def_word "(mkdir)", "pmkdir", 0
+    ldx #SHC_MKDIR
+    jmp SHSTACK
+;
+; cp from to  copy a file: to a new name, or into a directory with the same name
+def_word "cp", "cp", 0
+    ldx #SHC_CP
+    jmp SHPARSE2
+def_word "(cp)", "pcp", 0
+    ldx #SHC_CP
+    jmp SHSTACK2
+;
+; mv from to  rename a file or directory (to: a name, in the same directory); or move a file (to: a path,
+;             or a directory to move it into)
+def_word "mv", "mv", 0
+    ldx #SHC_MV
+    jmp SHPARSE2
+def_word "(mv)", "pmv", 0
+    ldx #SHC_MV
+    jmp SHSTACK2
+;
+; ( -- )  the cards: for each of 0-7, what it is (or none), and its HydraFS: label, free space, last check
+def_word "vols", "vols", 0
+    ldx #SHC_VOLS
+    bra SHDO
+;
+; ( n sz-label -- )  make an empty HydraFS on card n (0-7), with that label, and show the card: everything
+;                   that was on it is lost (e.g. 0 "GAMES" mkfs).  A quick format: the free map is written
+;                   as the card fills, so it takes a moment whatever the card's size
+def_word "mkfs", "mkfs", 0
+    stz SHOPT
+MKFSWHOLE:
+    stz SHSIZE          ; (the whole card)
+    stz SHSIZE+1
+MKFSGO:
+    ldx #SHC_MKFS
+    bra SHCARDSZ
+;
+; ( n sz-label -- )  mkfs, with the whole free map written now (a version 1 HydraFS, as older ROMs read);
+;                   a big card takes minutes, and shows its progress (10% 20% ...)
+def_word "mkfs-full", "mkfsfull", 0
+    lda #1
+    sta SHOPT
+    bra MKFSWHOLE
+;
+; ( n sz-label mb -- )  mkfs, making the HydraFS mb megabytes (up to 65535: $FFFF), if the card is bigger:
+;                      the rest of the card isn't used (e.g. 0 "SMALL" 4096 mkfs-size)
+def_word "mkfs-size", "mkfssize", 0
+    jsr spull_0
+    lda TEMP1
+    sta SHSIZE
+    lda TEMP1+1
+    sta SHSIZE+1
+    stz SHOPT
+    bra MKFSGO
+;
+; ( n sz-label -- )  give card n's HydraFS a new label (e.g. 0 q^TOYS^ relabel)
+def_word "relabel", "relabel", 0
+    ldx #SHC_RELABEL
+    bra SHCARDSZ
+;
+; ( n -- )  check card n's HydraFS, and show what it found: clusters lost (marked in use, but nothing uses
+;          them), unmarked (in use, but marked free) and used twice
+def_word "fsck", "fsck", 0
+    ldx #SHC_FSCK
+    bra SHCARD
+;
+; ( n -- )  check it as fsck does, and repair its free map (lost clusters freed, unmarked ones marked; a
+;          cluster used twice needs a person, so it's only shown)
+def_word "fsfix", "fsfix", 0
+    ldx #SHC_FSFIX
+SHCARD:                 ; ( n -- ): .A = the card
+    phx
+    jsr spull_0
+    lda TEMP1
+    plx
+SHDO:                   ; the command .X (SH_CMD, page 7)
+    jsr SH_CMD
+    bcs SHDOFAIL
+    jmp next
+SHDOFAIL:
+    jmp IOFAIL
+SHCARDSZ:               ; ( n sz -- ): .A = the card, SHBUF2 = the text
+    phx
+    jsr spull_1
+    jsr spull_0
+    ldx #TEMP2
+    jsr SZTEXT
+    bcs SHFAILX
+    jsr SHCOPY2
+    lda TEMP1
+    plx
+    bra SHDO
+SHPARSE:                ; the line's next word (none: .Y = 0)
+    phx
+    jsr ARGGET
+    bcc SHPGO
+    ldy #0
+SHPGO:
+    plx
+    bra SHDO
+SHSTACK:                ; ( sz -- )
+    phx
+    jsr SHARG1
+    bcs SHFAILX
+    plx
+    bra SHDO
+SHPARSE2:               ; the line's next two words: the first in SHBUF2
+    phx
+    jsr ARGGET
+    bcs SHP2NONE
+    jsr SHCOPY2
+    jsr ARGGET
+    bcs SHP2NONE
+    plx
+    bra SHDO
+SHP2NONE:
+    lda #ERR_IO_NAME
+SHFAILX:
+    plx
+    bra SHDOFAIL
+SHSTACK2:               ; ( sz1 sz2 -- ): the first in SHBUF2
+    phx
+    jsr NSARGS          ; .A.Y = the first's text, ZP_IO_BUF = the second's
+    bcs SHFAILX
+    jsr SHCOPY2
+    lda ZP_IO_BUF
+    ldy ZP_IO_BUF+1
+    plx
+    bra SHDO
+;
+; SHBUF2 = the text at .A.Y (63 characters at most).  Uses TEMP3
+SHCOPY2:
     sta TEMP3
-    jmp STTYSHOW      ; (it prints the fd to its end, and closes it)
+    sty TEMP3+1
+    ldy #0
+SHC2LP:
+    lda (TEMP3),y
+    sta SHBUF2,y
+    beq SHC2DONE
+    iny
+    cpy #63
+    bne SHC2LP
+    lda #0
+    sta SHBUF2,y
+SHC2DONE:
+    rts
+;
+SDCMD_SIZE = 64
+SHOWBUF_SIZE = 256
+ARGBUF_SIZE = 64
+PROMPTFMT_SIZE = 32
+; The shell's RAM that starts with a value (its buffers are after 'ends': hyforth.s).  The shell's routines,
+; on BIOS page 7, use it too (shell/shell.s)
+PROMPTFMT:              ; the prompt's format (prompt)
+    .byte "%v%d> ", 0
+    .res PROMPTFMT_SIZE - 7
+PROMPTLAST:             ; the prompt's last character (put back when the console's echo erases it)
+    .byte '>'
+BOOTFLAG:               ; <> 0: run boot.hys before the first prompt (the boot shell: page 7's SH_BOOT)
+    .byte 0
+LBLCARD:                ; the card whose label SHLABEL holds ($FF: none yet, or it may have changed)
+    .byte $FF
+SHN:                    ; the shell routines' scratch
+    .byte 0
+SHSEL:
+    .byte 0
+SHFD:
+    .byte 0
+SHFD2:
+    .byte 0
+SHTASK:
+    .byte 0
+INCDEPTH:               ; include: how many scripts deep it is (their fds and lines: INCFD, INCLINE)
+    .byte 0
+ECHOCR:                 ; <> 0: this line is from the console (a CR LF after it, as it's typed)
+    .byte 0
+LASTCR:                 ; <> 0: the last line read ended with a CR (so an LF after it is nothing: CR LF)
+    .byte 0
 ;
 ; ( sz-path sz-dev -- )  mount a device at a path in this task's namespace: names under the path go to
 ;                       the device (e.g. q^/z^ q^zero^ mount  then  q^/z^ 1 open)
@@ -1820,8 +2281,13 @@ def_word "ioerr", "ioerr", 0
     lda IOERR
     jmp IOPUSHA
 ;
-; ( -- )  copy stdin to stdout, to the end of the file (e.g. the right side of a pipeline:  words | cat)
+; cat [file]  show a file; or with none, copy stdin to stdout, to the end of the file (e.g. the right side
+;             of a pipeline:  words | cat)
 def_word "cat", "cat", 0
+    jsr ARGGET          ; cat file: the file
+    bcs CATLOOP
+    ldx #SHC_CAT
+    jmp SHDO
 CATLOOP:
     jsr GET_CHAR
     bcc CATEND        ; end of file (or an error)
@@ -1977,7 +2443,7 @@ PSNAME:
 ;-------- Pipelines: a line  left | right  runs 'left' in a copy of this task (TASK_CLONE), with its
 ;         stdout into a pipe, and 'right' here, with stdin from the pipe.  Called by getline.
 ;
-; If the line (TIB) has a '|' with spaces around it (outside q^...^ strings) and we're interpreting,
+; If the line (TIB) has a '|' with spaces around it (outside q^...^ and "..." strings) and we're interpreting,
 ; start the left side, and go on after the '|'; and again for each '|' after it (a | b | c: 'b' runs in a
 ; copy too, between two pipes).  (No '|': returns with the line untouched.)
 PIPECHK:
@@ -1985,20 +2451,32 @@ PIPECHK:
     bne PCNONE        ; compiling
     ldy CURBUF        ; (What's left of the line)
     iny
-    ldx #0            ; '^'s so far: odd = inside a string
+    ldx #0            ; inside a string: 1 (q^...^) or 2 ("..."); 0: not
 PCSCAN:
     lda (TIB),y
     beq PCNONE
     cmp #ASCII_CARET
+    bne PCQUOTE
+    cpx #2
+    beq PCNEXT        ; (a '^' in a "..." string)
+    txa
+    eor #1
+    tax
+    bra PCNEXT
+PCQUOTE:
+    cmp #ASCII_DQUOTE
     bne PCBAR
-    inx
+    cpx #1
+    beq PCNEXT        ; (a '"' in a q^...^ string)
+    txa
+    eor #2
+    tax
     bra PCNEXT
 PCBAR:
     cmp #ASCII_PIPE
     bne PCNEXT
-    txa
-    lsr
-    bcs PCNEXT        ; inside a string
+    cpx #0
+    bne PCNEXT        ; inside a string
     dey
     lda (TIB),y
     iny
@@ -2050,7 +2528,7 @@ PCSAVED:
     bcs PCFAIL2
     lda PIPER
     jsr IO_CLOSE
-    bra PIPECHK            ; another '|'?
+    jmp PIPECHK            ; another '|'?
 PCNOTASK:                  ; no task for the copy: no pipeline
     pha
     lda PIPEW

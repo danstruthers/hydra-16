@@ -408,7 +408,7 @@ warm:
     sta LASTHEAP
 
 ; next heap free cell
-    lda #>ends + 1
+    lda #>FORTH_BSS_END + 1    ; (after the buffers that follow the RAM image)
     sta NEXTHEAP + 1
     stz NEXTHEAP
     stz ERRFLAG                ; clear ERROR flag
@@ -464,7 +464,13 @@ quit:                             ; clear RT
     ldy #<RTEND
     sty RTPTR
 
+    lda ERRFLAG                  ; (an error while a script is read stops it, and the ones that include it)
+    pha
     jsr wrterror                 ; print any error messages
+    pla
+    beq ERRNOINC
+    jsr INCABORT
+ERRNOINC:
     ldy #0          ; reset INBUF
     lda #0
     sta (TIB),y     ; clear INBUF stuff
@@ -506,6 +512,16 @@ RESLOOP:              ; lsb linked list
 WORDNOTFOUND:
     lda ERRFLAG            ; keep an error already raised (e.g. out of memory for a q^...^ string)
     bne WNFERR
+    lda STATUS             ; interpreting: the program of that name?  (name.hyx or name.hys: RUNNAME)
+    bne WNFUKW
+    jsr RUNNAME
+    bcc WNFRAN
+    cmp #ERR_IO_NOT_FOUND
+    beq WNFUKW
+    jmp IOFAIL
+WNFRAN:
+    jmp resolve
+WNFUKW:
     lda #ERR_UKW           ; UNKNOWN WORD error
     sta ERRFLAG
 WNFERR:
@@ -605,8 +621,10 @@ getline:   ; drop rts of try, fall through to 'token'
     pla
     pla
     jsr PIPEEND          ; a pipeline's line is done: stdin back from the pipe
-    lda BATCH            ; a pipeline's left side (a copy of the shell): all done, end the task
+    lda BATCH            ; a copy of the shell (a pipeline's left side, or run's for a script): all done,
     beq GLAUTO
+    lda INCDEPTH         ;   once the scripts it reads are: end the task
+    bne GLAUTO
     ldx CHILDSP
     txs
     rts
@@ -622,7 +640,31 @@ GLAUTO:
     jmp GETLNSKIPCRLF
 
 GLNORMAL:
-    WSEQ_raw HYPROMPT    ; print prompt
+    lda BOOTFLAG         ; the boot shell's first line: boot.hys first, from the selected volume's root
+    beq GLNOBOOT         ;   (the current directory), if it's there
+    stz BOOTFLAG
+    lda #<S_BOOTHYS
+    ldy #>S_BOOTHYS
+    jsr INCOPEN
+GLNOBOOT:
+    stz ECHOCR           ; (A line read from a script: no prompt, and no CR LF after it)
+    lda INCDEPTH
+    beq GLCONS
+    jsr INCCOUNT         ; (its line number, for an error message)
+    bra GLNOPROMPT
+GLCONS:
+    lda IO_FD_SERVER     ; the prompt (the shell's, page 7), unless input is a file or a pipe.  (No
+    cmp #IO_FD_CLOSED    ;   fd 0 at all: the console, read directly)
+    beq GLPROMPT
+    lda IO_FD_FLAGS      ; (fd 0's flags: IO_FDF_CONS, the console)
+    and #IO_FDF_CONS
+    beq GLNOPROMPT
+GLPROMPT:
+    inc ECHOCR
+    lda #<PROMPTFMT
+    ldy #>PROMPTFMT
+    jsr SH_PROMPT
+GLNOPROMPT:
 ;
     ldy #0   ; leave the first
 GETLOOP:
@@ -635,9 +677,33 @@ GETLOOP:
     ldy #1
 GETREADLOOP:
     jsr GET_CHAR      ; (sleeps until a key comes in)
-    bcc GETREADLOOP
+    bcs GETGOT
+    lda INCDEPTH      ; nothing: the end of a script being read (the console: wait on)
+    beq GETREADLOOP
+    jsr INCEND        ; stdin back to what it was, and what was read of the last line is the line
+    bra GETLNEND
+GETGOT:
+    cmp #ASCII_TAB    ; (a script's tabs are spaces, and its lines may end with LF)
+    bne GETNOTAB
+    lda #ASCII_SPACE
+GETNOTAB:
+    cmp #ASCII_LF
+    bne GETNOTLF
+    cpy #1            ; an LF: the line's end; but not the LF of a CR LF (at the line's start, after
+    bne GETLFEND      ;   a line that ended with CR)
+    lda LASTCR
+    beq GETLFEND
+    stz LASTCR
+    bra GETREADLOOP
+GETLFEND:
+    stz LASTCR
+    bra GETLNEND
+GETNOTLF:
     cmp #ASCII_CR
-    beq GETLNEND
+    bne GETNOTCR
+    sta LASTCR
+    bra GETLNEND
+GETNOTCR:
     cmp #ASCII_BACKSPACE         ; handle backspace
     bne GETLOOP
     cpy #2
@@ -646,11 +712,13 @@ GETREADLOOP:
     dey
     lda (TIB), y      ; make sure prev char not overwritten
     bra GETLOOP
-GETBSNONE:            ; (/dev/cons's echo erased the prompt's '>': put it back)
-    lda #'>'
+GETBSNONE:            ; (/dev/cons's echo erased the prompt's last character: put it back)
+    lda PROMPTLAST
     PRINT_CHAR
     bra GETREADLOOP
 GETLNEND:                ; clear all if y eq \0
+    lda ECHOCR        ; (the console's line: a new line after it)
+    beq GETLNSKIPCRLF
     PRINT_CRLF
 GETLNSKIPCRLF:          ; SKIP to here if don't want CRLF
     lda #ASCII_SPACE
@@ -1152,6 +1220,21 @@ def_word "exit", "exit", 0
 ; BEWARE, MUST BE AT END! MINIMAL THREAD CODE DEPENDS ON IT!
 ;
 ends:                            ; end marker of hardcoded primitives
+;
+; Buffers in the RAM after the image (COPYTORAM copies it up to 'ends'), before the dictionary: nothing
+; in the paged ROM for them.  (Their contents are whatever was there.)
+ARGBUF      = ends                  ; a parsing word's argument (ARGGET)
+SHBUF       = ARGBUF + ARGBUF_SIZE  ; a path: the current directory, a name being made (shell/shell.s)
+SHBUF2      = SHBUF + 64            ; another
+SDCMD       = SHBUF2 + 64           ; a card's ctl command (mkfs, fsck ...)
+SHOWBUF     = SDCMD + SDCMD_SIZE    ; a file being shown (FSHOW)
+INCFD       = SHOWBUF + SHOWBUF_SIZE    ; include: each script's reader's saved stdin (INC_MAX fds) ...
+INCLINE     = INCFD + INC_MAX           ;   and the line it's on (INC_MAX x 2)
+SHLABEL     = INCLINE + INC_MAX * 2     ; the prompt's %l: card LBLCARD's HydraFS label (32 bytes)
+SHOPT       = SHLABEL + 32              ; mkfs: <> 0: a full format (mkfs-full) ...
+SHSIZE      = SHOPT + 1                 ;   and the volume's size in megabytes (0: the whole card) (2)
+FORTH_BSS_END = SHSIZE + 2
+INC_MAX     = 4                     ; Scripts include can nest
 ;
 ;-----------------------------------------------------------------------
 ;

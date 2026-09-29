@@ -113,14 +113,26 @@ IO_BLK_COUNT        = 8         ; 16-bit byte count: requested (in), done (out)
 IO_BLK_CTL_CODE     = 11        ; H9_CTL
 IO_BLK_CTL_ARG      = 12
 IO_BLK_PERM         = 12        ; H9_CREATE: the new file's mode (HFS_M_*)
+IO_BLK_CALL         = 13        ; IO_OPEN and the calls that share its code: which call (H9_OPEN, H9_CREATE,
+                                ;   H9_REMOVE, IO_CALL_CHDIR ...)
+IO_CALL_CHDIR       = $80       ; IO_BLK_CALL: IO_CHDIR (it sends H9_OPEN, to check the directory) ...
+IO_CALL_CHDIR_SET   = $81       ;   the new directory has been set (the old one is at IO_BLK_DATA + $80)
 IO_BLK_NS           = $20       ; The task's namespace (below)
 IO_BLK_DATA         = $100
+
+; Per-task current directory (IO_CHDIR, IO_GETCWD): in the task's IO transfer area, after the namespace, so
+; new tasks get a copy of it with the namespace.  An absolute path with no '/' at its end (empty: "/"),
+; zero-terminated.  IO_OPEN (and IO_CREATE, IO_REMOVE) take a name that doesn't start with '/' as relative to
+; it, and tidy every name first: "." and ".." worked out, "//" and a '/' at the end taken out (NS_ABS).
+IO_BLK_CWD          = $C0
+IO_CWD_MAX          = 64        ; (63 characters, and its 0)
+.assert     IO_BLK_CWD + IO_CWD_MAX <= IO_BLK_DATA, error, "The current directory must fit below the data area"
 
 ; Per-task namespace (IO_MOUNT, IO_BIND): in the task's IO transfer area, after the request block.
 ; IO_OPEN applies the entry with the longest matching path prefix: a mount sends the rest of the name to
 ; a device's server, a bind rewrites the name (prefix -> target) and looks again.  No match: the global
 ; /dev.  New tasks get a copy of their parent's namespace.
-NS_ENTRIES          = 7         ; ($20-$FF of the area)
+NS_ENTRIES          = 5         ; ($20-$BF of the area)
 NS_ENTRY_SIZE       = 32
 NS_TYPE             = 0         ; NS_FREE, NS_MOUNT or NS_BIND
 NS_DEV              = 1         ; Mount: the device (device table index)
@@ -132,7 +144,7 @@ NS_FREE             = 0
 NS_MOUNT            = 1
 NS_BIND             = 2
 NS_MAX_REWRITES     = 4         ; Binds applied to one name, at most
-.assert     IO_BLK_NS + NS_ENTRIES * NS_ENTRY_SIZE <= IO_BLK_DATA, error, "The namespace must fit below the data area"
+.assert     IO_BLK_NS + NS_ENTRIES * NS_ENTRY_SIZE <= IO_BLK_CWD, error, "The namespace must fit below the current directory"
 
 ; H9P requests (serve routine: .A = request, .X = client task, .Y = fid; the request block is in the
 ; client's transfer area, see IO_SRV_MAP.  OUT: C = 0 (.A = fid for H9_OPEN), or C = 1 and .A = error)
@@ -179,7 +191,8 @@ HFS_ENTRY_SIZE      = 64        ; A directory entry (a directory is a file of th
 HFS_NAME_MAX        = 31        ; A name's characters (any byte but '/' and 0; case-sensitive)
 HFS_MAX_OPEN        = 8         ; Files open at once, all cards together (a fid is the slot: 0-7)
 HFS_DEPTH_MAX       = 8         ; Path elements in one walk ("..": back up through them)
-HFS_VERSION         = 1         ; The format this reads
+HFS_VERSION         = 2         ; The newest format this reads (and writes, with a quick format): 2 has a
+HFS_VERSION_FULL    = 1         ;   free map that's written as it's used (HFS_SB_MAPINIT); 1's is all written
 HFS_CSHIFT          = 3         ;   and its cluster size, as a shift (HFS_CLUSTER_BLOCKS)
 
 ; The superblock (block 0)
@@ -194,6 +207,8 @@ HFS_SB_FREE         = 28        ; Free clusters (a hint: "check" recounts it)
 HFS_SB_HINT         = 32        ; Where to look for free clusters next (a hint)
 HFS_SB_NEXT_QID     = 36        ; The next qid id to give out
 HFS_SB_STAMP        = 40        ; The next modification stamp (a counter, until the Hydra has a clock)
+HFS_SB_MAPINIT      = 44        ; Version 2: the free map's blocks written so far (from its first); the rest
+                                ;   haven't been, and read as all free (version 1: ignored, all written)
 HFS_SB_ROOT         = 64        ; The root directory's entry
 HFS_SB_LABEL        = 128       ; The volume label, zero-terminated
 .assert     HFS_SB_ROOT / HFS_ENTRY_SIZE * HFS_ENTRY_SIZE = HFS_SB_ROOT, error, "The root's entry must be entry-aligned in block 0 (HFS_ENT_READ)"
@@ -234,34 +249,50 @@ HFS_V_FREE          = $02C8     ; Free clusters
 HFS_V_HINT          = $02E8     ; Where to look for a free cluster next
 HFS_V_QID           = $0308     ; The next qid id
 HFS_V_STAMP         = $0328     ; The next modification stamp
-.assert     HFS_V_STAMP - HFS_V_CLUSTERS = (HFS_SB_STAMP - HFS_SB_CLUSTERS) * 8, error, "HFS_V_*: 32 apart, in the superblock's order"
-; The server's scratch (RAM: only pointers need to be in its ZP)
-HFS_META            = $0348     ; The metadata buffer (512 bytes from the MMU): the free map, extent blocks,
+HFS_V_MINIT         = $0348     ; The free map's blocks written (HFS_SB_MAPINIT; version 1: HFS_V_MAPSZ)
+.assert     HFS_V_MINIT - HFS_V_CLUSTERS = (HFS_SB_MAPINIT - HFS_SB_CLUSTERS) * 8, error, "HFS_V_*: 32 apart, in the superblock's order"
+.assert     HFS_V_MINIT - HFS_V_FREE < 256, error, "HFS_SB_SAVE reaches HFS_V_FREE ... HFS_V_MINIT with .X (HFS_VOLUME: not HFS_V_MINIT)"
+.assert     HFS_V_MINIT + 32 <= HFS_FHDR, error, "The HFS_V_* arrays must end below HFS_FHDR"
+; The server's scratch (RAM: only pointers need to be in its ZP), in the page the storage task keeps from its
+; MMU (SD_INIT raises its page floor above it: HFS_SCRATCH_FLOOR)
+HFS_META            = $0800     ; The metadata buffer (512 bytes from the MMU): the free map, extent blocks,
                                 ;   entries being written, the superblock; written back when another block
                                 ;   is wanted, and at the end of the request
-HFS_MBLK            = $034A     ;   the block in it (4)
-HFS_MSTATE          = $034E     ;   HFS_MS_* bits
+HFS_MBLK            = $0802     ;   the block in it (4)
+HFS_MSTATE          = $0806     ;   HFS_MS_* bits
 HFS_MS_VALID        = $01       ;     it holds HFS_MBLK
+HFS_MS_FRESH        = $40       ;     it's a free map block that isn't on the card yet: all free (HFS_MAP_BIT)
 HFS_MS_DIRTY        = $80       ;     it's been changed, and not written yet
-HFS_SBDIRTY         = $034F     ; <> 0: the card's counters (HFS_V_FREE ...) changed: HFS_FINISH writes them
-HFS_C               = $0350     ; A cluster being allocated or freed (4)
-HFS_N4              = $0354     ; Clusters left to look at; a count (4)
-HFS_D               = $0358     ; A data cluster while its extent block is allocated; the wanted cluster (4)
-HFS_T4              = $035C     ; A qid or stamp taken; a temporary (4)
-HFS_LASTB           = $0360     ; A file's last extent: the extent block it's in (0: the entry) (4) ...
-HFS_LASTO           = $0364     ;   and its offset there (0: the file has none) (2)
-HFS_DLOC            = $0366     ; Create: the directory's place (block, index: 5) ...
-HFS_NLOC            = $036B     ;   the new entry's (and where a directory scan found one) (5)
-HFS_PLOC            = $0370     ; The place of the directory an entry being opened is in (5)
-HFS_SCAN            = $0375     ; HFS_DIR_SCAN: what it looks for (HFS_SCAN_*)
-HFS_GREW            = $0376     ; Create: <> 0: the directory got a new entry at its end
-HFS_NAMEAT          = $0377     ; Create: where the new name starts in the request's name
-HFS_PERM            = $0378     ; Create: the new file's mode
-HFS_RUN_VEC         = $0379     ; HFS_EACH_RUN: the routine it calls for each run of a file's clusters (2)
-HFS_CK_DEPTH        = $037B     ; Check: how many directories deep its walk is
-HFS_CK_MASK         = $037C     ;   a cluster's bit (marking), or the bits of a map byte that are clusters
-HFS_CK_N            = $037D     ;   clusters of a run left to mark (3)
-.assert     HFS_CK_N + 3 <= HFS_FHDR, error, "The HydraFS scratch must end below HFS_FHDR"
+HFS_SBDIRTY         = $0807     ; <> 0: the card's counters (HFS_V_FREE ...) changed: HFS_FINISH writes them
+HFS_C               = $0808     ; A cluster being allocated or freed (4)
+HFS_N4              = $080C     ; Clusters left to look at; a count (4)
+HFS_D               = $0810     ; A data cluster while its extent block is allocated; the wanted cluster (4)
+HFS_T4              = $0814     ; A qid or stamp taken; a temporary (4)
+HFS_LASTB           = $0818     ; A file's last extent: the extent block it's in (0: the entry) (4) ...
+HFS_LASTO           = $081C     ;   and its offset there (0: the file has none) (2)
+HFS_DLOC            = $081E     ; Create: the directory's place (block, index: 5) ...
+HFS_NLOC            = $0823     ;   the new entry's (and where a directory scan found one) (5)
+HFS_PLOC            = $0828     ; The place of the directory an entry being opened is in (5)
+HFS_SCAN            = $082D     ; HFS_DIR_SCAN: what it looks for (HFS_SCAN_*)
+HFS_GREW            = $082E     ; Create: <> 0: the directory got a new entry at its end
+HFS_NAMEAT          = $082F     ; Create: where the new name starts in the request's name
+HFS_PERM            = $0830     ; Create: the new file's mode
+HFS_RUN_VEC         = $0831     ; HFS_EACH_RUN: the routine it calls for each run of a file's clusters (2)
+HFS_CK_DEPTH        = $0833     ; Check: how many directories deep its walk is
+HFS_CK_MASK         = $0834     ;   a cluster's bit (marking), or the bits of a map byte that are clusters
+HFS_CK_N            = $0835     ;   clusters of a run left to mark (3)
+HFS_ZBUF            = $0838     ; A block of zeros, and the superblock, as a map block goes on the card
+                                ;   (HFS_MAP_WRITTEN: 512 bytes from the MMU) (2)
+HFS_MW              = $083A     ;   the map block being written (4)
+HFS_PG_STEP         = $083E     ; Progress (HFS_PG_*): a tenth of the steps (4) ...
+HFS_PG_LEFT         = $0842     ;   steps left to the next tenth (4) ...
+HFS_PG_TENS         = $0846     ;   tenths done ($FF: not shown)
+HFS_FMT_OPT         = $0847     ; Format: HFS_FMT_FULL, or 0 (a quick format) ...
+HFS_FMT_FULL        = $01       ;   the whole free map written
+HFS_FMT_BLKS        = $0848     ;   the size asked for, in blocks (0: the whole card) (4)
+HFS_CK_MARKS        = $084C     ; Check: <> 0: the pass's bitmap has marks in it (0: it's all clear)
+HFS_SCRATCH_FLOOR   = $09       ; The storage task's MMU page floor: the page above the scratch
+.assert     HFS_CK_MARKS + 1 <= HFS_SCRATCH_FLOOR * 256, error, "The HydraFS scratch must end below HFS_SCRATCH_FLOOR"
 HFS_FHDR            = $0380     ; An open file: HFS_MAX_OPEN headers of HFS_FHDR_SIZE bytes (at the fid * 16)
 HFS_FHDR_SIZE       = 16
 HFS_H_CARD          = 0         ;   its card, or $FF: a free slot

@@ -27,7 +27,9 @@
 //           mb (default 1), sdsc (true: standard capacity), fill (a function given the image to fill in),
 //           label, blocks (a HydraFS of that many blocks: fewer, and the image is cut to it; more, and the
 //           image stays mb, for a card that claims more than the test needs) and hfs (a function given a
-//           HydraFS volume made on the card, and the hydrafs module, to put files in it) }
+//           HydraFS volume made on the card, and the hydrafs module, to put files in it), quick (that HydraFS
+//           as the Hydra's quick format makes one: version 2, no free map written), claim (the card says it
+//           has that many blocks, more than its image: they read as zeros) }
 //           (files.sds[dev] = each one's path)
 //
 // Every test also fails if a task's stack came within STACK_MARGIN bytes of its bottom (the emulator reports
@@ -39,6 +41,7 @@ const os = require('os');
 const path = require('path');
 const { execFile } = require('child_process');
 const hydrafs = require('./tools/hydrafs.js');            // For the tests that want a HydraFS card
+const { hyx } = require('./tools/mkhyx.js');              // ... and Hydra executables on it
 
 const SIM = path.join(__dirname, 'hydrasim.js');
 const STACK_MARGIN = 32;                                        // Free stack bytes a task must keep
@@ -100,7 +103,7 @@ const TESTS = [
     args: ['--cycles', '30000000'],
     expect: ['POST ZP:T ST:T LO:T 7D:T SH:S P1:4C\n',
       /RAM U:0( [0-9A-F]{2}:0\/00\/0000)+\n/,
-      'Welcome to the HYDRA-16!', /HyForth \d/, 'HF>'],
+      'Welcome to the HYDRA-16!', /HyForth \d/, '/> '],
   },
   {
     name: 'selftest', about: 'the ROM self tests from WOZMON: MMU (F833), scheduler (F869), IO (F88A)',
@@ -128,22 +131,22 @@ const TESTS = [
   {
     name: 'post-no-shared', about: 'POST with no shared RAM: SH:X, and the drivers that need it fail',
     args: ['--cycles', '30000000', '--model', 'noshared'],
-    expect: ['SH:X', 'SOUND FAIL', 'HF>'],
+    expect: ['SH:X', 'SOUND FAIL', '/> '],
     bootFailOk: true,
   },
   {
     name: 'forth', about: 'HyForth: arithmetic (decimal in, hex out), negatives, $ and % prefixes, typed wc (Ctrl-D ends it)',
     args: ['--cycles', '60000000', '--input', BOOT + '1 2 + .\\r1000 24 - .\\r-1 . -2 . -9 . -10 . $B . $1F . %101 .\\rwc\\rab c\\r\\x04. . .\\r'],
-    expect: ['HF>1 2 + .\n' + num(3) + '\n', num(1000 - 24),
+    expect: ['/> 1 2 + .\n' + num(3) + '\n', num(1000 - 24),
       ' FFFF FFFE FFF7 FFF6' + num(0xB) + num(0x1F) + num(5) + '\n',
-      'HF>. . .\n' + num(5) + num(2) + num(1) + '\n'],
+      '/> . . .\n' + num(5) + num(2) + num(1) + '\n'],
     forbid: ['!DS PTR ERROR!', '!UNK WORD!'],
   },
   {
     name: 'pipes', about: 'pipelines: words | wc, and through cat (a copy of the shell in the middle) gives the same',
     args: ['--cycles', '150000000', '--input', BOOT + 'words | wc . . .\\rwords | cat | wc . . .\\rwords | cat | cat | wc . . .\\r1 2 + .\\r'],
-    expect: [/HF>words \| wc \. \. \.\n( [0-9A-F]{4}){3}\n/, /HF>words \| cat \| wc \. \. \.\n( [0-9A-F]{4}){3}\n/,
-      /HF>words \| cat \| cat \| wc \. \. \.\n( [0-9A-F]{4}){3}\n/, 'HF>1 2 + .\n' + num(3)],
+    expect: [/\/> words \| wc \. \. \.\n( [0-9A-F]{4}){3}\n/, /\/> words \| cat \| wc \. \. \.\n( [0-9A-F]{4}){3}\n/,
+      /\/> words \| cat \| cat \| wc \. \. \.\n( [0-9A-F]{4}){3}\n/, '/> 1 2 + .\n' + num(3)],
     forbid: ['!DS PTR ERROR!', '!IO ERR!'],
     check: out => {
       const counts = [...out.matchAll(/wc \. \. \.\n((?: [0-9A-F]{4}){3})\n/g)].map(m => m[1]);
@@ -160,24 +163,24 @@ const TESTS = [
       'q^/dev/proc^ 1 open here @ 100 read .\\r' +
       'q^/dev/proc/z^ 1 open\\rioerr .\\r'],
     expect: ['read . ioerr .\n' + num(5) + num(0) + '\n',
-      '!IO ERR!', 'HF>ioerr .\n' + num(0x70) + '\n',
+      '!IO ERR!', '/> ioerr .\n' + num(0x70) + '\n',
       '/z -> zero\n', 'read .\n' + num(3) + '\n',
       /\/dev\/proc\^ 1 open here @ 100 read \.\n 00[1-9A-F][0-9A-F]\n/,
-      '!IO ERR!', 'HF>ioerr .\n' + num(0x70) + '\n'],
+      '!IO ERR!', '/> ioerr .\n' + num(0x70) + '\n'],
     forbid: ['!DS PTR ERROR!', '!UNK WORD!'],
   },
   {
     name: 'tasks', about: 'another shell: ps, Ctrl-] to switch the console, kill; Ctrl-C breaks a read',
     args: ['--cycles', '150000000', '--input', BOOT + 'shell\\r' + W(1) + 'ps\\r' + W(1) + '\\x1dB' + W(1) + '\\r1 2 + .\\r' + W(1) + '\\x1d1' + W(1) +
-      '\\r11 kill\\rps\\rcat\\r' + W(1) + '\\x03' + W(1) + '3 4 + .\\r'],
-    expect: ['HF>ps\n0 R -\n1 R 0 *\nB W 1\n', '[B]', 'HF>1 2 + .\n' + num(3), '[1]',
-      'HF>ps\n0 R -\n1 R 0 *\nC D -\n', 'HF>cat\n', '!BREAK!', 'HF>3 4 + .\n' + num(7)],
+      '\\r11 kill\\r' + W(1) + 'ps\\rcat\\r' + W(1) + '\\x03' + W(1) + '3 4 + .\\r'],   // (kill flags B: it ends when it next runs)
+    expect: ['/> ps\n0 R -\n1 R 0 *\nB W 1\n', '[B]', '/> 1 2 + .\n' + num(3), '[1]',
+      '/> ps\n0 R -\n1 R 0 *\nC D -\n', '/> cat\n', '!BREAK!', '/> 3 4 + .\n' + num(7)],
     forbid: ['!DS PTR ERROR!', '!UNK WORD!'],
   },
   {
     name: 'sound', about: 'sndtest plays in a task of its own while the shell runs; sndstop ends it; the bell (Ctrl-G) first',
     args: ['--cycles', '90000000', '--input', BOOT + '\\x07\\r' + W(1) + 'sndtest\\r' + W(1) + 'ps\\r' + W(2) + 'sndstop\\rps\\r'],
-    expect: ['HF>ps\n0 R -\n1 R 0 *\nB W E\n', 'HF>sndstop\n', 'HF>ps\n0 R -\n1 R 0 *\nC D -\n'],  // (B W: it sleeps between notes)
+    expect: ['/> ps\n0 R -\n1 R 0 *\nB W E\n', '/> sndstop\n', '/> ps\n0 R -\n1 R 0 *\nC D -\n'],  // (B W: it sleeps between notes)
     check: (out, report) => {
       const m = /--- YM2151 key-ons: (\d+) \((.*)\)/.exec(report);
       if (!m || +m[1] < 5) return 'the tune played ' + (m ? m[1] : 'no') + ' notes';
@@ -188,7 +191,7 @@ const TESTS = [
     name: 'serial', about: 'serial settings: 9600 8N1 at boot; stty (/dev/ser/ctl), a refused format, IO_CTL rate and format; the ACIA\'s registers',
     args: ['--cycles', '60000000', '--input', BOOT + 'stty?\\rq^b19200 l7 pe s2^ stty stty?\\rq^l8 pe s2^ stty\\rioerr .\\r' +
       '1 2 6 ioctl stty?\\r1 3 11 ioctl stty?\\r'],
-    expect: ['HF>stty?\nb9600 l8 pn s1\n', 'stty stty?\nb19200 l7 pe s2\n', '!IO ERR!', 'HF>ioerr .\n' + num(0x78) + '\n',
+    expect: ['/> stty?\nb9600 l8 pn s1\n', 'stty stty?\nb19200 l7 pe s2\n', '!IO ERR!', '/> ioerr .\n' + num(0x78) + '\n',
       '6 ioctl stty?\nb4800 l7 pe s2\n', '11 ioctl stty?\nb4800 l8 pe s1\n'],
     forbid: ['!DS PTR ERROR!', '!UNK WORD!'],
     check: (out, report) => {                                   // 4800 ($0C), 8 bits, 1 stop; even parity ($60) on DTR + IRQs ($05)
@@ -208,11 +211,11 @@ const TESTS = [
   },
   {
     name: 'fast-output', about: 'console output at 115200: words (3.5K characters) in well under a second (the fast paths)',
-    args: ['--cycles', '40000000', '--mark', 'HF>words', '--mark', 'HF>', '--input', BOOT + 'q^b115200^ stty\\r' + W(1) + 'words\\r'],
-    expect: ['HF>words\n'],
+    args: ['--cycles', '40000000', '--mark', '/> words', '--mark', '/> ', '--input', BOOT + 'q^b115200^ stty\\r' + W(1) + 'words\\r'],
+    expect: ['/> words\n'],
     check: (out, report) => {                                   // (The wire alone: about 1.1M cycles; the old IO path: 3.6M)
-      const at = +/mark: "HF>words" at cycle (\d+)/.exec(report)[1];
-      const took = [...report.matchAll(/mark: "HF>" at cycle (\d+)/g)].map(m => +m[1]).find(c => c > at) - at;
+      const at = +/mark: "\/> words" at cycle (\d+)/.exec(report)[1];
+      const took = [...report.matchAll(/mark: "\/> " at cycle (\d+)/g)].map(m => +m[1]).find(c => c > at) - at;
       if (!(took < 2500000)) return 'words took ' + took + ' cycles at 115200, not under 2.5M';
     },
   },
@@ -244,14 +247,14 @@ const TESTS = [
   {
     name: 'sd-speed', about: 'SD read throughput: 4K in 256-byte reads, inside a cycle budget (the bit-banged SPI is most of it)',
     sd: true,
-    args: ['--cycles', '200000000', '--mark', 'HF>go', '--mark', 'HF>', '--input', BOOT +
+    args: ['--cycles', '200000000', '--mark', '/> go', '--mark', '/> ', '--input', BOOT +
       'ftrain autoload\\rq^/dev/sd/0/data^ 1 open .\\r' +
       ': go lit [ 16 , ] 0 do 3 here @ lit [ 256 , ] read drop loop ;\\r' + W(1) + 'go\\r' + W(2)],
     expect: ['open .\n' + num(3) + '\n'],
     forbid: ['!IO ERR!', '!DS PTR ERROR!', '!UNK WORD!'],
     check: (out, report) => {                                   // 298 cycles/byte now; SPI_RECV is about 60% of it
-      const at = +/mark: "HF>go" at cycle (\d+)/.exec(report)[1];
-      const took = [...report.matchAll(/mark: "HF>" at cycle (\d+)/g)].map(m => +m[1]).find(c => c > at) - at;
+      const at = +/mark: "\/> go" at cycle (\d+)/.exec(report)[1];
+      const took = [...report.matchAll(/mark: "\/> " at cycle (\d+)/g)].map(m => +m[1]).find(c => c > at) - at;
       const per = Math.round(took / 4096);
       if (per > 330) return 'an SD read took ' + per + ' cycles a byte, over the 330 budget';
     },
@@ -269,9 +272,9 @@ const TESTS = [
       '3 here @ 4 write .\\r3 here @ 2 write\\rioerr .\\r3 close\\r'],
     expect: ['| cat\nsdhc 1 MB 2048 blocks\n', '| cat\nsdsc 3 MB 6144 blocks\n', '| cat\nnone\n',
       'open .\n' + num(3) + '\n', 'c@ .\n' + num(9) + num(0x42) + '\n', 'write .\n' + num(1) + '\n',
-      '!IO ERR!', 'HF>ioerr .\n' + num(0x70) + '\n', '!IO ERR!', 'HF>ioerr .\n' + num(0x70) + '\n',
-      '!IO ERR!', 'HF>ioerr .\n' + num(0x79) + '\n',
-      'open .\n' + num(3) + '\n', '4 write .\n' + num(4) + '\n', '!IO ERR!', 'HF>ioerr .\n' + num(0x78) + '\n'],
+      '!IO ERR!', '/> ioerr .\n' + num(0x70) + '\n', '!IO ERR!', '/> ioerr .\n' + num(0x70) + '\n',
+      '!IO ERR!', '/> ioerr .\n' + num(0x79) + '\n',
+      'open .\n' + num(3) + '\n', '4 write .\n' + num(4) + '\n', '!IO ERR!', '/> ioerr .\n' + num(0x78) + '\n'],
     forbid: ['!DS PTR ERROR!', '!UNK WORD!'],
     check: (out, report, files) => {
       const img = fs.readFileSync(files.sds[1]);
@@ -293,7 +296,7 @@ const TESTS = [
     } }, { dev: 1 }],                                           // And a card with no HydraFS on it
     args: ['--cycles', '400000000', '--input', BOOT +
       'q^/sd/0^ 1 open 0 fdup2 cat | cat\\rq^/sd/0/many^ 1 open 0 fdup2 cat | cat\\r' +
-      'q^/sd/0/./games/../hello.txt^ 1 open 0 fdup2 cat | cat\\rq^/sd/0/..^ 1 open 0 fdup2 cat | cat\\r' +
+      'q^/sd/0/./games/../hello.txt^ 1 open 0 fdup2 cat | cat\\rq^/sd/0/games/..^ 1 open 0 fdup2 cat | cat\\r' +
       'q^/sd/0/a^ 1 open .\\r3 0 0 seek 3 here @ 1 read . here @ c@ .\\r' +
       '3 4096 0 seek 3 here @ 1 read . here @ c@ .\r3 16383 0 seek 3 here @ 4 read . here @ c@ .\r3 close\r' +
       'q^/sd/0/big.bin^ 1 open .\\r3 4095 0 seek 3 here @ 4 read . here @ c@ . here @ 1 + c@ .\\r3 close\\r' +
@@ -303,8 +306,8 @@ const TESTS = [
     expect: [
       '| cat\nhello.txt 13\ngames/\nbig.bin 5000\nmany/\na 16384\nc 4096\ne 4096\ng 4096\n',
       '| cat\nf0 1\nf1 1\nf2 1\nf3 1\nf4 1\nf5 1\nf6 1\nf7 1\nf8 1\nf9 1\n',
-      '| cat\nhello hydra\n',                                   // "." and ".." on the way
-      '| cat\nhello.txt 13\n',                                  // ".." at the root stays there
+      '| cat\nhello hydra\n',                                   // "." and ".." on the way (worked out by the IO layer)
+      '| cat\nhello.txt 13\n',                                  // ".." back to the root
       'open .\n' + num(3) + '\n',                               // The three-extent file, a byte at a time
       'c@ .\n' + num(1) + num(0x61) + '\n',                     // Its first extent ("a")
       'c@ .\n' + num(1) + num(0x5A) + '\n',                     // The second (what was written at 4096)
@@ -313,12 +316,12 @@ const TESTS = [
       '1 + c@ .\n' + num(4) + num(0xFF) + num(0) + '\n',
       'open .\n' + num(3) + '\n',                               // A directory as stat records (IO_MODE_STAT)
       '@ .\n' + num(48) + num(0x66) + num(0) + num(1) + '\n',   // "f0": 48 bytes, mode 0, size 1
-      'HF>ioerr .\n' + num(0x80) + '\n',                        // No HydraFS on the card (ERR_IO_NOT_FS)
-      'HF>ioerr .\n' + num(0x79) + '\n',                        // No card at all
-      'HF>ioerr .\n' + num(0x70) + '\n',                        // Card 8
-      'HF>ioerr .\n' + num(0x70) + '\n',                        // /sd, with no card in it
-      'HF>ioerr .\n' + num(0x72) + '\n',                        // A directory opened for writing
-      'HF>ioerr .\n' + num(0x70) + '\n',                        // A path through a file
+      '0:/> ioerr .\n' + num(0x80) + '\n',                        // No HydraFS on the card (ERR_IO_NOT_FS)
+      '0:/> ioerr .\n' + num(0x79) + '\n',                        // No card at all
+      '0:/> ioerr .\n' + num(0x70) + '\n',                        // Card 8
+      '0:/> ioerr .\n' + num(0x70) + '\n',                        // /sd, with no card in it
+      '0:/> ioerr .\n' + num(0x72) + '\n',                        // A directory opened for writing
+      '0:/> ioerr .\n' + num(0x70) + '\n',                        // A path through a file
     ],
     forbid: ['!DS PTR ERROR!', '!UNK WORD!'],
     check: (out, report, files) => {
@@ -327,7 +330,7 @@ const TESTS = [
     },
   },
   {
-    name: 'hydrafs-write', about: 'HydraFS writing: a file grown into pieces (an extent block), truncate, append-only, create, mkdir, remove, rename, errors, format, a full card',
+    name: 'hydrafs-write', about: 'HydraFS writing: a file grown into pieces (an extent block), truncate, append-only, create; the shell\'s mkdir, rm, rmdir, mv, ls; errors, format, a full card',
     sd: [{ dev: 0, mb: 2, label: 'WRITES', hfs: v => {
       for (const n of 'abcdefg') v.put(n, Buffer.alloc(4096, n.charCodeAt(0)));
       const at = v.extents(v.walk('b'))[0].start;
@@ -339,34 +342,34 @@ const TESTS = [
     args: ['--cycles', '220000000', '--input', BOOT + 'ftrain autoload\\r' + [
       ': wr lit [ 80 , ] 0 do 3 here @ lit [ 256 , ] write drop loop ;\\r' +
       ': fl lit [ 60 , ] 0 do 3 here @ lit [ 256 , ] write drop loop ;\\r' + W(1),
-      'q^/sd/0/big^ 0 create .\\rwr 3 close\\r' + W(18) + 'q^/sd/0^ ls\\r',        // (20 KB: type-ahead would overflow)
+      'q^/sd/0/big^ 0 create .\\rwr 3 close\\r' + W(18) + 'ls /sd/0\\r',           // (20 KB: type-ahead would overflow)
       'q^/sd/0/t^ 0 create .\\r3 here @ 200 write . 3 close\\rq^/sd/0/t^ 10 open . 3 close\\r',
       'q^/sd/0/log^ 64 create .\\r3 here @ 4 write . 3 0 0 seek 3 here @ 4 write . 3 close\\r',
       'q^/sd/0/t^ 2 open .\\r3 100 0 seek 3 here @ 4 write\\rioerr .\\r3 close\\r',
       'q^/sd/0/ro^ 1 create . 3 here @ 4 write . 3 close\\rq^/sd/0/ro^ 2 open\\rioerr .\\r',
-      'q^/sd/0/log^ mkdir\\rioerr .\\rq^/sd/0/sub^ mkdir\\rq^/sd/0/sub^ 0 create\\rioerr .\\r',
-      'q^/sd/0/log^ 1 open .\\rq^/sd/0/log^ remove\\rioerr .\\r3 close\\r',
-      'q^/sd/0/ro^ q^log^ rename\\rioerr .\\rq^/sd/0/log^ q^log2^ rename\\r',
-      'q^/sd/0/sub/x^ 0 create . 3 close\\rq^/sd/0/sub^ remove\\rioerr .\\rq^/sd/0/c^ remove\\rq^/sd/0^ ls\\r',
+      'mkdir /sd/0/log\\rioerr .\\rmkdir sub\\rq^/sd/0/sub^ 0 create\\rioerr .\\r',   // (Names relative to /sd/0)
+      'q^/sd/0/log^ 1 open .\\rrm log\\rioerr .\\r3 close\\r',
+      'mv ro log\\rioerr .\\rmv log log2\\r',
+      'q^/sd/0/sub/x^ 0 create . 3 close\\rrmdir sub\\rioerr .\\rrm c\\rls\\r',
       'q^/dev/sd/1/ctl^ 2 open .\\r3 q^format TEST^ @ 3 + 11 write . 3 close\\r' + W(1),
-      'q^/sd/1/hi^ 0 create .\\r3 here @ 5 write . 3 close\\rq^/sd/1^ ls\\r',
-      'q^/sd/2/fill^ 0 create .\\rfl\\r' + W(14) + 'ioerr .\\r3 close\\rq^/sd/2^ ls\\r'].join(W(2))],
+      'q^/sd/1/hi^ 0 create .\\r3 here @ 5 write . 3 close\\rls /sd/1\\r',
+      'q^/sd/2/fill^ 0 create .\\rfl\\r' + W(14) + 'ioerr .\\r3 close\\rls /sd/2\\r'].join(W(2))],
     expect: [
-      'ls\na 4096\nbig 20480\nc 4096\ne 4096\ng 4096\n',     // 20 KB, in the holes and after
+      'ls /sd/0\na 4096\nbig 20480\nc 4096\ne 4096\ng 4096\n',   // 20 KB, in the holes and after
       '200 write . 3 close\n' + num(200) + '\n',
       '4 write . 3 close\n' + num(4) + num(4) + '\n',          // Append-only: the second write after the first
-      'HF>ioerr .\n' + num(0x78) + '\n',                        // A write past the end (no holes)
-      'HF>ioerr .\n' + num(0x72) + '\n',                        // A read-only file (written as it was made)
-      'HF>ioerr .\n' + num(0x82) + '\n',                        // mkdir where there's a file
-      'HF>ioerr .\n' + num(0x82) + '\n',                        // A file where there's a directory
-      'HF>ioerr .\n' + num(0x84) + '\n',                        // Removing an open file
-      'HF>ioerr .\n' + num(0x82) + '\n',                        // Renaming to a name that's taken
-      'HF>ioerr .\n' + num(0x83) + '\n',                        // Removing a directory with a file in it
-      'ls\na 4096\nbig 20480\nt 0\ne 4096\nlog2 8\ng 4096\nro 4\nsub/\n',   // (Free entries used first)
+      '0:/> ioerr .\n' + num(0x78) + '\n',                        // A write past the end (no holes)
+      '0:/> ioerr .\n' + num(0x72) + '\n',                        // A read-only file (written as it was made)
+      '0:/> ioerr .\n' + num(0x82) + '\n',                        // mkdir where there's a file
+      '0:/> ioerr .\n' + num(0x82) + '\n',                        // A file where there's a directory
+      '0:/> ioerr .\n' + num(0x84) + '\n',                        // Removing an open file
+      '0:/> ioerr .\n' + num(0x82) + '\n',                        // Renaming to a name that's taken
+      '0:/> ioerr .\n' + num(0x83) + '\n',                        // Removing a directory with a file in it
+      '0:/> ls\na 4096\nbig 20480\nt 0\ne 4096\nlog2 8\ng 4096\nro 4\nsub/\n',   // (Free entries used first)
       '11 write . 3 close\n' + num(11) + '\n',                  // format TEST
-      'ls\nhi 5\n',
-      'HF>ioerr .\n' + num(0x81) + '\n',                        // The card is full
-      'ls\nfill 12288\n'],
+      'ls /sd/1\nhi 5\n',
+      '0:/> ioerr .\n' + num(0x81) + '\n',                        // The card is full
+      'ls /sd/2\nfill 12288\n'],
     forbid: ['!DS PTR ERROR!', '!UNK WORD!'],
     check: (out, report, files) => {                            // What the host tool finds on the cards
       const open = (dev, f) => { const v = new hydrafs.Volume(files.sds[dev]); try { return f(v); } finally { v.close(); } };
@@ -398,12 +401,12 @@ const TESTS = [
       e.setExt(0, { start: 70001, len: 1 }); v.writeEntry(e); // Unmarked in the second pass (e's own is lost)
       v.freeCount = 7;                                        // And the free count is wrong
     } }],
-    args: ['--cycles', '120000000', '--input', BOOT + ['ls\\r', 'q^check^ ctl\\r' + W(3), 'ls\\r',
-      'q^check fix^ ctl\\r' + W(3), 'ls\\r', 'q^check^ ctl\\r' + W(3), 'ls\\r'].map(s => 'q^/dev/sd/0/ctl^ ' + s).join('')],
-    expect: ['ls\nsdhc 1 MB 2048 blocks\nhydrafs label=CHECK\nfree 28 KB of 299988 KB\n',
-      'ls\nsdhc 1 MB 2048 blocks\nhydrafs label=CHECK\nfree 299960 KB of 299988 KB\ncheck: lost 3, unmarked 2, twice 1\n',
-      'ls\nsdhc 1 MB 2048 blocks\nhydrafs label=CHECK\nfree 299964 KB of 299988 KB\ncheck: lost 3, unmarked 2, twice 1, fixed\n',
-      'ls\nsdhc 1 MB 2048 blocks\nhydrafs label=CHECK\nfree 299964 KB of 299988 KB\ncheck: lost 0, unmarked 0, twice 1\n'],
+    args: ['--cycles', '120000000', '--input', BOOT + ['ls /dev/sd/0/ctl\\r', 'q^/dev/sd/0/ctl^ q^check^ ctl\\r' + W(3), 'ls /dev/sd/0/ctl\\r',
+      'q^/dev/sd/0/ctl^ q^check fix^ ctl\\r' + W(3), 'ls /dev/sd/0/ctl\\r', 'q^/dev/sd/0/ctl^ q^check^ ctl\\r' + W(3), 'ls /dev/sd/0/ctl\\r'].join('')],
+    expect: ['ctl\nsdhc 1 MB 2048 blocks\nhydrafs label=CHECK\nfree 28 KB of 299988 KB\n',
+      'ctl\nsdhc 1 MB 2048 blocks\nhydrafs label=CHECK\nfree 299960 KB of 299988 KB\ncheck: lost 3, unmarked 2, twice 1\n',
+      'ctl\nsdhc 1 MB 2048 blocks\nhydrafs label=CHECK\nfree 299964 KB of 299988 KB\ncheck: lost 3, unmarked 2, twice 1, fixed\n',
+      'ctl\nsdhc 1 MB 2048 blocks\nhydrafs label=CHECK\nfree 299964 KB of 299988 KB\ncheck: lost 0, unmarked 0, twice 1\n'],
     forbid: ['!IO ERR!', '!DS PTR ERROR!', '!UNK WORD!'],
     check: (out, report, files) => {                            // The host tool agrees: only the shared cluster
       const v = new hydrafs.Volume(files.sds[0]);               //   is wrong (it needs a person), and the free
@@ -414,13 +417,129 @@ const TESTS = [
     },
   },
   {
+    name: 'volumes', about: 'HyForth card words: vols, mkfs on a blank card, relabel, fsck, fsfix, a bad card number',
+    sd: [{ dev: 0 }],
+    args: ['--cycles', '100000000', '--input', BOOT + 'vols\\r' + W(1) + '0 q^GAMES^ mkfs\\r' + W(1) +
+      'q^/sd/0/x^ 0 create . 3 close\\r0 q^TOYS^ relabel\\r0 fsck\\r0 fsfix\\r9 fsck\\rioerr .\\rvols\\r'],
+    expect: ['/> vols\n0: sdhc 1 MB 2048 blocks\n1: none\n', '7: none\n',
+      'mkfs\nsdhc 1 MB 2048 blocks\nhydrafs label=GAMES\nfree 1020 KB of 1020 KB\n',
+      'relabel\nsdhc 1 MB 2048 blocks\nhydrafs label=TOYS\nfree 1016 KB of 1020 KB\n',
+      'fsck\nsdhc 1 MB 2048 blocks\nhydrafs label=TOYS\nfree 1016 KB of 1020 KB\ncheck: lost 0, unmarked 0, twice 0\n',
+      'check: lost 0, unmarked 0, twice 0, fixed\n', '/> ioerr .\n' + num(0x70) + '\n',
+      '/> vols\n0: sdhc 1 MB 2048 blocks\nhydrafs label=TOYS\n'],
+    forbid: ['!DS PTR ERROR!', '!UNK WORD!'],
+    check: (out, report, files) => {                            // The card the Hydra made: as the PC tool makes them
+      const v = new hydrafs.Volume(files.sds[0]);
+      try {
+        const p = v.check();
+        if (p.length) return 'the card: ' + p[0];
+        if (v.label !== 'TOYS' || !v.tryWalk('x')) return 'the card has label "' + v.label + '", and x ' + (v.tryWalk('x') ? '' : 'isn\'t ') + 'on it';
+      } finally { v.close(); }
+    },
+  },
+  {
+    name: 'hydrafs-quick', about: 'HydraFS quick format (a 244 GB card in a moment), a volume\'s size, a full format\'s and fsck\'s progress; a free map written as it\'s used',
+    sd: [{ dev: 0, claim: 500170752, fill: img => img.fill(0xA5) },   // A 244 GB card, with junk on it
+      { dev: 1, mb: 64, label: 'LAZY', quick: true, hfs: v => {  // A quick-formatted card, junk in its free map,
+        for (let j = 0; j < v.mapBlocks; j++) v.writeBlock(v.mapStart + j, Buffer.alloc(512, 0xFF));
+        v.hint = 9000;                                            //   and the next cluster in its third map block
+      } }],
+    args: ['--cycles', '120000000', '--mark', 'QUICK', '--mark', 'of 250077740 KB', '--input', BOOT + [
+      '0 "QUICK" mkfs\\r', '"/sd/0/a" 0 create .\\r3 here @ 5 write . 3 close\\rls /sd/0\\r', '0 "SMALL" 4096 mkfs-size\\r',
+      '0 fsck\\r' + W(2), '"/dev/sd/0/ctl" "format -f -s 1G FULL" ctl\\r' + W(8) + 'ls /dev/sd/0/ctl\\r',
+      '"/sd/1/f" 0 create .\\r3 here @ 5 write . 3 close\\r1 fsck\\r'].join(W(1))],
+    expect: ['hydrafs 1\n',                                      // (Card 0: junk, no HydraFS)
+      '"QUICK" mkfs\nsdhc 244224 MB 500170752 blocks\nhydrafs label=QUICK\nfree 250077740 KB of 250077740 KB\n',
+      'ls /sd/0\na 5\n', 'mkfs-size\nsdhc 244224 MB 500170752 blocks\nhydrafs label=SMALL\nfree 4194172 KB of 4194172 KB\n',
+      '0 fsck\n10% 20% 30% 40% 50% 60% 70% 80% 90% 100%\nsdhc', 'check: lost 0, unmarked 0, twice 0\n',   // 16 passes
+      'ctl\n10% 20% 30% 40% 50% 60% 70% 80% 90% 100%\n',       // A full format's 64 map blocks
+      'ls /dev/sd/0/ctl\nsdhc 244224 MB 500170752 blocks\nhydrafs label=FULL\nfree 1048540 KB of 1048540 KB\n',
+      '1 fsck\nsdhc 64 MB 131072 blocks\nhydrafs label=LAZY\nfree 65524 KB of 65532 KB\ncheck: lost 0, unmarked 0, twice 0\n'],   // (f, and the root's first cluster)
+    forbid: ['!DS PTR ERROR!', '!IO ERR!', '!UNK WORD!'],
+    check: (out, report, files) => {
+      const marks = [...report.matchAll(/mark: "([^"]*)" at cycle (\d+)/g)];
+      const at = t => +(marks.find(m => m[1] === t) || [0, 0, NaN])[2];
+      const took = at('of 250077740 KB') - at('QUICK');   // (From the command's echo)
+      if (!(took < 2000000)) return 'the quick format of 244 GB took ' + took + ' cycles, not under 2M';
+      const open = (dev, f) => { const v = new hydrafs.Volume(files.sds[dev]); try { return f(v); } finally { v.close(); } };
+      return open(0, v => {
+        const p = v.check();
+        if (p.length) return 'card 0: ' + p[0];
+        if (v.version !== 1 || v.label !== 'FULL' || v.mapInit !== 64) return 'card 0: version ' + v.version + ', ' + v.label + ', map ' + v.mapInit;
+      }) || open(1, v => {                                       // Map blocks 0-2 written (the first two zeros),
+        const p = v.check();                                      //   and 3 still the junk it had
+        if (p.length) return 'card 1: ' + p[0];
+        if (v.mapInit !== 3 || !v.used(9000)) return 'card 1: map ' + v.mapInit + ' blocks written, cluster 9000 ' + (v.used(9000) ? 'used' : 'free');
+        if (v.readBlock(v.mapStart)[0] !== 0 || v.readBlock(v.mapStart + 3)[0] !== 0xFF) return 'card 1: the map blocks on the card are wrong';
+      });
+    },
+  },
+  {
+    name: 'shell', about: 'the boot shell: the lowest HydraFS volume selected, boot.hys (and a script it includes); cd, pwd, the prompt\'s format, cp, cat, include\'s error line',
+    sd: [{ dev: 0 }, { dev: 1, label: 'ONE', hfs: v => {        // No HydraFS on card 0: card 1 is selected
+      v.put('boot.hys', Buffer.from(': hi 7 . ;\r\nhi\r\ninclude lib.hys\r\n'));
+      v.put('lib.hys', Buffer.from('q^lib^ drop 9 .\r\n'));
+      v.put('err.hys', Buffer.from('1 .\r\nnope\r\n2 .\r\n'));
+    } }, { dev: 2, label: 'TWO', hfs: () => {} }],
+    args: ['--cycles', '150000000', '--input', BOOT + W(1) + ['hi\\r', 'mkdir games\\rcd games\\rpwd\\r', 'cd ..\\rcd /sd/2\\rpwd\\r',
+      'cd\\rq^%p %t$ ^ prompt\\r', 'q^%v%d> ^ prompt\\rcp /sd/1/lib.hys lib2.hys\\rcat lib2.hys\\r', 'include /sd/1/err.hys\\r',
+      'cd nowhere\\rioerr .\\rcd /sd/1/boot.hys\\rioerr .\\r',
+      '"hello world" .sz\\r"a | b" .sz\\r"" .sz 3 .\\r"x^y" .sz q^p"q^ .sz\\rmkdir "my dir"\\rcd "my dir"\\rpwd\\r"%t> " prompt\\r',
+      '"[%l] %v%d> " prompt\\rcd /\\rcd /sd/1\\r2 "SECOND" relabel\\rcd /sd/2\\r'].join(W(1))],
+    expect: ['hydrafs 1 2\n', num(7) + num(9) + '\n1:/> hi\n' + num(7),   // boot.hys, and the script it includes
+      '1:/games> pwd\n/sd/1/games\n', '2:/> pwd\n/sd/2\n', '/sd/2 1$ q^%v%d> ^ prompt\n',
+      '2:/> cat lib2.hys\nq^lib^ drop 9 .\n', '2:/> include /sd/1/err.hys\n' + num(1) + '\n !UNK WORD!\nline 0002\n2:/> ',
+      '2:/> ioerr .\n' + num(0x70) + '\n', '2:/> ioerr .\n' + num(0x85) + '\n',   // (Not a directory)
+      '2:/> "hello world" .sz\nhello world\n', '2:/> "a | b" .sz\na | b\n',   // "..." strings: not a pipeline
+      '2:/> "" .sz 3 .\n' + num(3) + '\n', 'q^ .sz\nx^yp"q\n',             // (Empty; each delimiter inside the other)
+      '2:/my dir> pwd\n/sd/2/my dir\n', '1> ',                           // A quoted name, spaces and all
+      '[TWO] 2:/my dir> cd /\n', '[] /> cd /sd/1\n', '[ONE] 1:/> 2 "SECOND" relabel\n',   // The label (%l), off the
+      '[ONE] 1:/> cd /sd/2\n', '[SECOND] 2:/> '],                          //   cards none; a relabel is seen
+    forbid: ['!DS PTR ERROR!', /\n 0002\n/],                    // (err.hys stops at its error)
+    check: (out, report, files) => {
+      const v = new hydrafs.Volume(files.sds[1]);
+      try { if (!v.tryWalk('games') || !v.tryWalk('games').isDir) return 'no games directory on card 1'; } finally { v.close(); }
+    },
+  },
+  {
+    name: 'run', about: 'running programs: .hyx executables (run, by name, from /bin), .hys scripts in a copy of the shell, a bad header, a script\'s error, Ctrl-C',
+    sd: [{ dev: 0, label: 'PROGS', hfs: v => {
+      // ldx #0 / lda msg,X / beq +6 / jsr WRITE_CHAR ($F803) / inx / bne -11 / rts / msg: "hyx ok" CR LF 0
+      const hello = hyx(0x0800, [0xA2, 0x00, 0xBD, 0x0E, 0x08, 0xF0, 0x06, 0x20, 0x03, 0xF8, 0xE8, 0xD0, 0xF5, 0x60,
+        ...Buffer.from('hyx ok\r\n', 'latin1'), 0]);
+      v.put('hello.hyx', hello);
+      v.put('loop.hyx', hyx(0x0800, [0x4C, 0x00, 0x08]));     // jmp * (Ctrl-C ends it)
+      const bad = hyx(0x0800, [0x60]);
+      bad.writeUInt16LE(0x0400, 4);                             // Loads below $0800
+      v.put('bad.hyx', bad);
+      v.put('add.hys', Buffer.from('+ .\r\n: sq dup * ; 5 sq .\r\n'));
+      v.put('err.hys', Buffer.from('1 .\r\nnope\r\n2 .\r\n'));
+      v.mkdir('bin');
+      v.put('bin/hi.hyx', hello);
+      v.put('bin/greet.hys', Buffer.from('7 .\r\n'));
+    } }],
+    args: ['--cycles', '200000000', '--input', BOOT + ['run hello.hyx\\r', 'hello\\r', 'mkdir sub\\rcd sub\\rhi\\rgreet\\rcd ..\\r',
+      '3 4 run add.hys\\r. .\\rsq\\r', 'q^hello.hyx^ (run)\\r', 'run bad.hyx\\rioerr .\\r', 'run err.hys\\r5 .\\r', 'run hello.hyx | cat\\r',
+      'run loop.hyx\\r' + W(2) + '\\x03' + W(1) + 'ps\\r', 'nosuch\\r'].join(W(1))],
+    expect: ['0:/> run hello.hyx\nhyx ok\n', '0:/> hello\nhyx ok\n',
+      '0:/sub> hi\nhyx ok\n', '0:/sub> greet\n' + num(7) + '\n',   // From /bin, with the current directory elsewhere
+      '0:/> 3 4 run add.hys\n' + num(7) + num(0x19) + '\n',     // A copy of the shell, with a copy of the stack ...
+      '0:/> . .\n' + num(4) + num(3) + '\n', '0:/> sq\n\n !UNK WORD!\n',   // ... and its definitions go with it
+      '0:/> q^hello.hyx^ (run)\nhyx ok\n', '0:/> ioerr .\n' + num(0x87) + '\n',
+      '0:/> run err.hys\n' + num(1) + '\n !UNK WORD!\nline 0002\n0:/> 5 .\n' + num(5) + '\n',
+      '0:/> run hello.hyx | cat\nhyx ok\n',
+      /0:\/> ps\n0 R -\n1 R 0 \*\n[C-F] D -\n/,                // Nothing left of the programs (the loop, killed)
+      '0:/> nosuch\n\n !UNK WORD!\n'],
+    forbid: ['!DS PTR ERROR!', /\n 0002\n/],
+  },
+  {
     name: 'sleep', about: 'TASK_SLEEP (HyForth sleep): 400 ticks take 2 s, and Ctrl-C ends a long one',
-    args: ['--cycles', '40000000', '--mark', '400 sleep', '--mark', 'HF>', '--input', BOOT + '400 sleep\\r' + W(5) + '30000 sleep\\r' + W(1) + '\\x03' + W(1) + '1 2 + .\\r'],
-    expect: ['HF>400 sleep\n', 'HF>30000 sleep\n', '!BREAK!', 'HF>1 2 + .\n' + num(3)],
+    args: ['--cycles', '40000000', '--mark', '400 sleep', '--mark', '/> ', '--input', BOOT + '400 sleep\\r' + W(5) + '30000 sleep\\r' + W(1) + '\\x03' + W(1) + '1 2 + .\\r'],
+    expect: ['/> 400 sleep\n', '/> 30000 sleep\n', '!BREAK!', '/> 1 2 + .\n' + num(3)],
     forbid: ['!DS PTR ERROR!', '!UNK WORD!'],
     check: (out, report) => {                                   // The line typed to the prompt: 2 s is 7.16M cycles at 3.58 MHz
       const typed = +/mark: "400 sleep" at cycle (\d+)/.exec(report)[1];
-      const took = [...report.matchAll(/mark: "HF>" at cycle (\d+)/g)].map(m => +m[1]).find(c => c > typed) - typed;
+      const took = [...report.matchAll(/mark: "\/> " at cycle (\d+)/g)].map(m => +m[1]).find(c => c > typed) - typed;
       if (!(took > 7100000 && took < 7400000)) return '400 sleep took ' + took + ' cycles, not about 7.16M';
     },
   },
@@ -430,7 +549,7 @@ const TESTS = [
     args: ['--cycles', '90000000', '--input', BOOT + 'shell\\r' + W(1) + '\\x1dB' + W(1) + '\\rq^/dev/sd/0/data^ 1 open .\\r' + W(1) +
       '6 here @ 600 read '.repeat(12) + '\\r\\x1d1q^/dev/sd/0/data^ 1 open .\\r' + '3 here @ 600 read . '.repeat(6) + '\\r' + W(12) +
       '\\x1dB' + W(1) + '\\r' + '+ '.repeat(11) + '.\\r'],             // (B's 12 counts, added up: 7200 = $1C20)
-    expect: ['HF>q^/dev/sd/0/data^ 1 open .\n' + num(6), '[1]q^/dev/sd/0/data^ 1 open .\n' + num(3), '[B]', '+ .\n' + num(7200) + '\n'],
+    expect: ['/> q^/dev/sd/0/data^ 1 open .\n' + num(6), '[1]q^/dev/sd/0/data^ 1 open .\n' + num(3), '[B]', '+ .\n' + num(7200) + '\n'],
     forbid: ['!IO ERR!', '!DS PTR ERROR!', '!UNK WORD!'],
     check: out => {                                             // Shell 1's 6 reads (B's prompt can come out among them)
       const n = (out.slice(out.indexOf('[1]'), out.lastIndexOf('[B]')).match(/0258/g) || []).length;
@@ -482,14 +601,14 @@ function runTest(t) {
     if (c.fill) c.fill(img);
     fs.writeFileSync(f, img);
     if (c.hfs) {                                                // A HydraFS on it, made with the host tool
-      hydrafs.mkfs(f, c.mb || 1, c.label || '', c.blocks);    // (blocks: a smaller filesystem)
+      hydrafs.mkfs(f, c.mb || 1, c.label || '', c.blocks, c.quick);   // (blocks: a smaller filesystem)
       const v = new hydrafs.Volume(f);
       try { c.hfs(v, hydrafs); } finally { v.close(); }
       if (fs.statSync(f).size > (c.mb || 1) << 20) fs.truncateSync(f, (c.mb || 1) << 20);   // (A HydraFS bigger than
     }                                                           //   the card: only its first blocks are used)
     files.sds[c.dev] = f;
     if (!files.sd) files.sd = f;
-    args.push('--sd', c.dev + ':' + f);
+    args.push('--sd', c.dev + ':' + f + (c.claim ? '@' + c.claim : ''));
     if (c.sdsc) args.push('--sdsc', String(c.dev));
   }
   let cmd = 'node hydrasim.js ' + args.slice(1).map(quote).join(' ');

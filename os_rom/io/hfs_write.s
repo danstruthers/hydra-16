@@ -3,7 +3,7 @@
 ; ****************************************************************************
 ; The HydraFS server's writing side (BIOS ROM page 6, with hfs_srv.s, inside `.scope PAGE6`): the metadata
 ; buffer, the free map, growing and freeing files, and the requests that change a card: H9_WRITE,
-; H9_CREATE, H9_REMOVE, H9_WSTAT, and "format" and "label" on /dev/sd/N/ctl.
+; H9_CREATE, H9_REMOVE, H9_WSTAT.  (Format and label are on page 3: hfs_format.s.)
 ;
 ; There's no journal (see docs/plans/HYDRAFS.md), but the writes go in a safe order: a cluster is marked in
 ; use before any entry points at it, and an entry stops pointing at clusters before they're marked free.
@@ -67,10 +67,17 @@ HFS_META_GET:
             rts
 
 ; For a block about to be written whole: block SD_LBA takes the metadata buffer (the one there written back
-; first), all zeros, and it counts as changed.  OUT: C = 0; or C = 1, .A = a card error.  Modifies: .A, .X, .Y
+; first), all zeros, and it counts as changed (HFS_META_NEW); or, for a free map block that isn't on the
+; card yet (HFS_MAP_BIT), all zeros as it reads, and not changed (HFS_META_FRESH).
+; OUT: C = 0; or C = 1, .A = a card error.  Modifies: .A, .X, .Y
 HFS_META_NEW:
+            lda         #HFS_MS_VALID | HFS_MS_DIRTY
+            .byte       $2C                                 ; (bit abs: skips the lda)
+HFS_META_FRESH:
+            lda         #HFS_MS_VALID | HFS_MS_FRESH
+            pha
             jsr         HFS_META_FLUSH
-            bcs         @done
+            bcs         @fail
             stz         HFS_OFS
             stz         HFS_OFS + 1
             jsr         HFS_META_AT
@@ -85,10 +92,13 @@ HFS_META_NEW:
             sta         (HFS_PTR),Y
             iny
             bne         :-
-            lda         #HFS_MS_VALID | HFS_MS_DIRTY
+            pla
             jmp         HFS_META_TAG
 
-@done:
+@fail:
+            tax
+            pla
+            txa
             rts
 
 ; The metadata buffer holds block SD_LBA, in state .A (HFS_MS_*).  OUT: C = 0.  Modifies: .A, .X
@@ -175,8 +185,8 @@ HFS_FINISH:
             sec
             rts
 
-; If the card's counters (HFS_V_FREE, HFS_V_HINT, HFS_V_QID, HFS_V_STAMP) changed, put them in its
-; superblock (in the metadata buffer).  OUT: C = 0; or C = 1, .A = a card error.  Modifies: .A, .X, .Y
+; If the card's counters (HFS_V_FREE, HFS_V_HINT, HFS_V_QID, HFS_V_STAMP, HFS_V_MINIT) changed, put them in
+; its superblock (in the metadata buffer).  OUT: C = 0; or C = 1, .A = a card error.  Modifies: .A, .X, .Y
 HFS_SB_SAVE:
             lda         HFS_SBDIRTY
             bne         :+
@@ -201,7 +211,7 @@ HFS_SB_SAVE:
             clc
             adc         #32 - 4
             tax
-            cpy         #HFS_SB_STAMP + 4
+            cpy         #HFS_SB_MAPINIT + 4
             bne         @number
             jsr         HFS_META_CHANGED
             clc
@@ -372,7 +382,9 @@ HFS_EMPTY:
 ; ****************************************************************************
 ; The free map: 1 bit per cluster (1 = in use), 4096 clusters per map block
 
-; Find cluster HFS_C's bit in the free map (its map block into the metadata buffer).
+; Find cluster HFS_C's bit in the free map (its map block into the metadata buffer).  A map block past the
+; ones written (HFS_V_MINIT: a quick format's) isn't read: it's all free (HFS_META_FRESH), until it changes
+; (HFS_MAP_CHANGED writes it then).
 ; OUT: C = 0: HFS_PTR -> its byte, .A = its bit; or C = 1, .A = a card error.  Modifies: .X, .Y
 HFS_MAP_BIT:
             lda         HFS_C + 1                           ; SD_LBA = the map's first block + HFS_C >> 12
@@ -409,6 +421,15 @@ HFS_MAP_BIT:
             sta         SD_LBA + 2
             stz         SD_LBA + 3
             jsr         HFS_CARD_X
+            lda         SD_LBA                              ; C = 1: a map block not written yet
+            cmp         HFS_V_MINIT,X
+            lda         SD_LBA + 1
+            sbc         HFS_V_MINIT + 1,X
+            lda         SD_LBA + 2
+            sbc         HFS_V_MINIT + 2,X
+            lda         SD_LBA + 3
+            sbc         HFS_V_MINIT + 3,X
+            php
             clc
             lda         SD_LBA
             adc         HFS_V_MAP,X
@@ -422,8 +443,19 @@ HFS_MAP_BIT:
             lda         SD_LBA + 3
             adc         HFS_V_MAP + 3,X
             sta         SD_LBA + 3
+            plp
+            bcs         @fresh
             jsr         HFS_META_GET
             bcs         @done
+            bra         @at
+
+@fresh:
+            jsr         HFS_META_SAME                       ; (In the buffer already: as it is, changed or not)
+            bcc         @at
+            jsr         HFS_META_FRESH
+            bcs         @done
+
+@at:
             lda         HFS_C + 1                           ; HFS_OFS = (HFS_C & 4095) >> 3: its byte
             and         #$0F
             sta         HFS_OFS + 1
@@ -453,6 +485,7 @@ HFS_MAP_SET:
             ora         (HFS_PTR)
             sta         (HFS_PTR)
             jsr         HFS_MAP_CHANGED                     ; (.X = the card * 4)
+            bcs         @done
             sec
             lda         HFS_V_FREE,X
             sbc         #1
@@ -479,6 +512,7 @@ HFS_MAP_CLR:
             and         (HFS_PTR)
             sta         (HFS_PTR)
             jsr         HFS_MAP_CHANGED
+            bcs         @done
             inc         HFS_V_FREE,X
             bne         :+
             inc         HFS_V_FREE + 1,X
@@ -492,12 +526,124 @@ HFS_MAP_CLR:
 @done:
             rts
 
-; (The map block and the free count changed.)  OUT: .X = the card * 4.  Modifies: .A
+; (The map block in the metadata buffer and the free count changed.)  A map block that isn't on the card yet
+; goes on it first (HFS_MAP_WRITTEN); if that fails, the change is dropped.
+; OUT: C = 0: .X = the card * 4; or C = 1, .A = a card error.  Modifies: .A, .Y (writing a map block)
 HFS_MAP_CHANGED:
-            jsr         HFS_META_CHANGED
+            bit         HFS_MSTATE                          ; (V = HFS_MS_FRESH)
+            bvc         :+
+            jsr         HFS_MAP_WRITTEN
+            bcc         :+
+            stz         HFS_MSTATE                          ; (Forgotten: not written)
+            rts
+:
+            jsr         HFS_META_CHANGED                    ; (Not fresh any more)
             lda         #1
             sta         HFS_SBDIRTY
-            jmp         HFS_CARD_X
+            jsr         HFS_CARD_X
+            clc
+            rts
+
+.assert     HFS_MS_FRESH = $40, error, "HFS_MAP_CHANGED tests HFS_MS_FRESH with bit (V)"
+
+; A free map block in the metadata buffer that isn't on the card yet (HFS_MS_FRESH) is about to change: zeros
+; go on the card for it, and for the map blocks before it that aren't there either, and then the superblock's
+; count of map blocks written (HFS_SB_MAPINIT) takes it in, before its change can be written.  So the card
+; never has a map block with bits in it past the count (which would read as free: used twice), and a crash
+; can only leave a block of zeros counted.  Through HFS_ZBUF, so the metadata buffer and the block cache's
+; contents stay as they are.  OUT: C = 0; or C = 1, .A = a card error.  Keeps HFS_PTR, HFS_OFS.
+; Modifies: .A, .X, .Y
+HFS_MAP_WRITTEN:
+            jsr         HFS_CARD_X                          ; HFS_MW = the block's place in the map
+            sec
+            ldy         #0
+:
+            lda         HFS_MBLK,Y
+            sbc         HFS_V_MAP,X
+            sta         HFS_MW,Y
+            inx
+            iny
+            tya                                             ; (Keeps C)
+            eor         #4
+            bne         :-
+            jsr         @zbuf                               ; Zeros
+            ldy         #0
+            tya
+:
+            sta         (SD_BUF),Y
+            iny
+            bne         :-
+            inc         SD_BUF + 1
+:
+            sta         (SD_BUF),Y
+            iny
+            bne         :-
+            dec         SD_BUF + 1
+
+@block:                                                     ; Map blocks HFS_V_MINIT ... HFS_MW
+            jsr         HFS_CARD_X
+            lda         HFS_MW                              ; (Past HFS_MW: done)
+            cmp         HFS_V_MINIT,X
+            lda         HFS_MW + 1
+            sbc         HFS_V_MINIT + 1,X
+            lda         HFS_MW + 2
+            sbc         HFS_V_MINIT + 2,X
+            lda         HFS_MW + 3
+            sbc         HFS_V_MINIT + 3,X
+            bcc         @count
+            clc                                             ; SD_LBA = the map's first block + it
+            ldy         #0
+:
+            lda         HFS_V_MAP,X
+            adc         HFS_V_MINIT,X
+            sta         SD_LBA,Y
+            inx
+            iny
+            tya
+            eor         #4
+            bne         :-
+            jsr         SD_WRITE_BLOCK
+            bcs         @done
+            jsr         HFS_CARD_X                          ; Written: counted
+            inc         HFS_V_MINIT,X
+            bne         @block
+            inc         HFS_V_MINIT + 1,X
+            bne         @block
+            inc         HFS_V_MINIT + 2,X
+            bne         @block
+            inc         HFS_V_MINIT + 3,X
+            bra         @block
+
+@count:                                                     ; The superblock, with the new count: read it,
+            stz         SD_LBA                              ;   put the count in, write it
+            stz         SD_LBA + 1
+            stz         SD_LBA + 2
+            stz         SD_LBA + 3
+            jsr         SD_READ_BLOCK
+            bcs         @done
+            jsr         HFS_CARD_X
+            ldy         #HFS_SB_MAPINIT
+:
+            lda         HFS_V_MINIT,X
+            sta         (SD_BUF),Y
+            inx
+            iny
+            cpy         #HFS_SB_MAPINIT + 4
+            bne         :-
+            jsr         SD_WRITE_BLOCK
+            stz         SD_CVALID                           ; (The cache may have held one of these blocks)
+
+@done:
+            rts
+
+@zbuf:                                                      ; SD_BUF = HFS_ZBUF, SD_DEV = the card
+            lda         HFS_ZBUF
+            sta         SD_BUF
+            lda         HFS_ZBUF + 1
+            sta         SD_BUF + 1
+            lda         HFS_CARD
+            sta         SD_DEV
+            rts
 
 ; Is HFS_C one of the card's clusters (under its count)?  OUT: C = 0: it is.  Modifies: .A, .X
 HFS_C_OK:
@@ -1962,262 +2108,3 @@ HFS_WSTAT_MODE:
 @write:
             jsr         HFS_TOUCH
             jmp         HFS_ENT_PUT
-
-; ****************************************************************************
-; "format [label]" and "label <text>" on /dev/sd/N/ctl (from SD_CTL_FS in the SD server: the card is
-; SD_DEV, and the label is in HFS_STAT, zero-padded to 32 bytes).  OUT: C = 0; or C = 1, .A = error
-
-; Make an empty HydraFS on the whole card: block 0 cleared, the free map (all free), then the superblock,
-; with an empty root directory.  Any HydraFS file open on the card is let go of.  A 32 GB card takes 2050
-; block writes: about a minute and a half at 3.58 MHz.
-HFS_FORMAT:
-            lda         SD_DEV
-            sta         HFS_CARD
-            tax
-            lda         SD_CARD_STATE,X
-            bne         :+
-            jsr         SD_START                            ; (Not started yet)
-            bcc         @far1
-            jmp         @done
-@far1:
-:
-            jsr         HFS_FORGET
-            jsr         SD_CARD_SIZE                        ; SD_LBA = its blocks
-            sec                                             ; HFS_T4 = the clusters the map covers:
-            lda         SD_LBA                              ;   (blocks - 1) / 8
-            sbc         #1
-            sta         HFS_T4
-            lda         SD_LBA + 1
-            sbc         #0
-            sta         HFS_T4 + 1
-            lda         SD_LBA + 2
-            sbc         #0
-            sta         HFS_T4 + 2
-            lda         SD_LBA + 3
-            sbc         #0
-            sta         HFS_T4 + 3
-            ldx         #HFS_T4 - HFS_C
-            ldy         #HFS_CSHIFT
-            jsr         HFS_SHR
-            clc                                             ; HFS_N4 = the map's blocks: (that + 4095) / 4096
-            lda         HFS_T4
-            adc         #<4095
-            sta         HFS_N4
-            lda         HFS_T4 + 1
-            adc         #>4095
-            sta         HFS_N4 + 1
-            lda         HFS_T4 + 2
-            adc         #0
-            sta         HFS_N4 + 2
-            lda         HFS_T4 + 3
-            adc         #0
-            sta         HFS_N4 + 3
-            ldx         #HFS_N4 - HFS_C
-            ldy         #12
-            jsr         HFS_SHR
-            clc                                             ; HFS_D = the data area's first block: after them
-            lda         HFS_N4
-            adc         #1
-            sta         HFS_D
-            lda         HFS_N4 + 1
-            adc         #0
-            sta         HFS_D + 1
-            lda         HFS_N4 + 2
-            adc         #0
-            sta         HFS_D + 2
-            lda         HFS_N4 + 3
-            adc         #0
-            sta         HFS_D + 3
-            sec                                             ; HFS_C = the data area's clusters:
-            lda         SD_LBA                              ;   (blocks - HFS_D) / 8
-            sbc         HFS_D
-            sta         HFS_C
-            lda         SD_LBA + 1
-            sbc         HFS_D + 1
-            sta         HFS_C + 1
-            lda         SD_LBA + 2
-            sbc         HFS_D + 2
-            sta         HFS_C + 2
-            lda         SD_LBA + 3
-            sbc         HFS_D + 3
-            sta         HFS_C + 3
-            bcc         @too_small
-            ldx         #0
-            ldy         #HFS_CSHIFT
-            jsr         HFS_SHR
-            lda         HFS_C + 3                           ; (2 at least)
-            ora         HFS_C + 2
-            ora         HFS_C + 1
-            bne         :+
-            lda         HFS_C
-            cmp         #2
-            bcc         @too_small
-:
-            stz         SD_LBA                              ; Block 0 cleared first: no half-made HydraFS
-            stz         SD_LBA + 1
-            stz         SD_LBA + 2
-            stz         SD_LBA + 3
-            jsr         HFS_META_NEW
-            bcs         @done
-
-@map:                                                       ; The free map, from block 1: all free
-            lda         HFS_N4
-            ora         HFS_N4 + 1
-            ora         HFS_N4 + 2
-            ora         HFS_N4 + 3
-            beq         @super
-            inc         SD_LBA
-            bne         :+
-            inc         SD_LBA + 1
-            bne         :+
-            inc         SD_LBA + 2
-            bne         :+
-            inc         SD_LBA + 3
-:
-            jsr         HFS_META_NEW                        ; (It writes the one before)
-            bcs         @done
-            sec
-            lda         HFS_N4
-            sbc         #1
-            sta         HFS_N4
-            lda         HFS_N4 + 1
-            sbc         #0
-            sta         HFS_N4 + 1
-            lda         HFS_N4 + 2
-            sbc         #0
-            sta         HFS_N4 + 2
-            lda         HFS_N4 + 3
-            sbc         #0
-            sta         HFS_N4 + 3
-            bra         @map
-
-@too_small:
-            lda         #ERR_IO_MEDIA
-            sec
-            bra         @done
-
-@super:
-            jsr         HFS_FORMAT_SB
-            bcs         @done
-            stz         SD_CVALID                           ; (The cache may hold the card's old blocks)
-            lda         #0
-            clc
-
-@done:
-            jmp         HFS_FINISH
-
-; The new superblock: the numbers HFS_FORMAT worked out (HFS_C clusters, HFS_N4 = the map's blocks, which
-; it has counted down to 0 again, so it's worked out again; HFS_D = the data area), an empty root, the label.
-HFS_FORMAT_SB:
-            sec                                             ; (The map's blocks: the data area's first - 1)
-            lda         HFS_D
-            sbc         #1
-            sta         HFS_N4
-            lda         HFS_D + 1
-            sbc         #0
-            sta         HFS_N4 + 1
-            lda         HFS_D + 2
-            sbc         #0
-            sta         HFS_N4 + 2
-            lda         HFS_D + 3
-            sbc         #0
-            sta         HFS_N4 + 3
-            stz         SD_LBA
-            stz         SD_LBA + 1
-            stz         SD_LBA + 2
-            stz         SD_LBA + 3
-            jsr         HFS_META_NEW                        ; (It writes the map's last block)
-            bcs         @done
-            stz         HFS_OFS
-            stz         HFS_OFS + 1
-            jsr         HFS_META_AT
-            ldy         #7
-:
-            lda         HFS_MAGIC,Y
-            sta         (HFS_PTR),Y
-            dey
-            bpl         :-
-            ldy         #HFS_SB_VERSION
-            lda         #HFS_VERSION
-            sta         (HFS_PTR),Y
-            iny
-            lda         #HFS_CSHIFT
-            sta         (HFS_PTR),Y
-            ldy         #HFS_SB_CLUSTERS
-            ldx         #HFS_C - HFS_C
-            jsr         HFS_PUT4
-            ldy         #HFS_SB_MAP                         ; (The map starts at block 1)
-            lda         #1
-            sta         (HFS_PTR),Y
-            ldy         #HFS_SB_MAPSZ
-            ldx         #HFS_N4 - HFS_C
-            jsr         HFS_PUT4
-            ldx         #HFS_D - HFS_C                      ; (.Y = HFS_SB_DATA)
-            jsr         HFS_PUT4
-            ldx         #HFS_C - HFS_C                      ; (.Y = HFS_SB_FREE: all of them)
-            jsr         HFS_PUT4
-            ldy         #HFS_SB_NEXT_QID                    ; (The root's is 1)
-            lda         #2
-            sta         (HFS_PTR),Y
-            ldy         #HFS_SB_STAMP
-            lda         #1
-            sta         (HFS_PTR),Y
-            ldy         #HFS_SB_ROOT + HFS_E_NAME           ; The root: "/", a directory, qid 1, empty
-            lda         #'/'
-            sta         (HFS_PTR),Y
-            ldy         #HFS_SB_ROOT + HFS_E_MODE
-            lda         #HFS_M_DIR
-            sta         (HFS_PTR),Y
-            ldy         #HFS_SB_ROOT + HFS_E_QID
-            lda         #1
-            sta         (HFS_PTR),Y
-            jsr         HFS_LABEL_PUT
-            clc
-
-@done:
-            rts
-
-.assert     HFS_SB_MAPSZ + 4 = HFS_SB_DATA && HFS_SB_DATA + 4 = HFS_SB_FREE, error, "HFS_FORMAT_SB puts them one after another"
-
-; 4 bytes, from HFS_C + .X on, to (HFS_PTR),Y on (.X a multiple of 4).  Modifies: .A, .X, .Y (4 on each)
-HFS_PUT4:
-            lda         HFS_C,X
-            sta         (HFS_PTR),Y
-            inx
-            iny
-            txa
-            and         #3
-            bne         HFS_PUT4
-            rts
-
-.assert     (HFS_N4 - HFS_C) & 3 = 0 && (HFS_D - HFS_C) & 3 = 0 && (HFS_T4 - HFS_C) & 3 = 0, error, "HFS_PUT4 and HFS_SHR: 4-byte numbers 4 apart"
-
-; The label (HFS_STAT, 32 bytes) into the superblock in the metadata buffer.  Modifies: .A, .Y
-HFS_LABEL_PUT:
-            lda         #HFS_SB_LABEL
-            sta         HFS_OFS
-            stz         HFS_OFS + 1
-            jsr         HFS_META_AT
-            ldy         #HFS_NAME_MAX
-:
-            lda         HFS_STAT,Y
-            sta         (HFS_PTR),Y
-            dey
-            bpl         :-
-            rts
-
-; Set a card's HydraFS label
-HFS_LABEL:
-            lda         SD_DEV
-            sta         HFS_CARD
-            jsr         HFS_VOLUME
-            bcs         @done
-            jsr         HFS_SB_GET
-            bcs         @done
-            jsr         HFS_LABEL_PUT
-            jsr         HFS_META_CHANGED
-            lda         #0
-            clc
-
-@done:
-            jmp         HFS_FINISH

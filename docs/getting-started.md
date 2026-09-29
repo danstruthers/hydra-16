@@ -16,7 +16,8 @@ How to build the ROMs, program the chips, connect a terminal and boot the Hydra-
 | Folder | What |
 | :----- | :--- |
 | `os_rom/` | The OS ROM: sources, build script, linker config, and the built images in `os_rom/bin/` |
-| `sim/` | The emulator (`hydrasim.js`), the regression tests (`regress.js`), tools (`tools/hydrafs.js`) |
+| `sim/` | The emulator (`hydrasim.js`), the regression tests (`regress.js`), tools (`tools/hydrafs.js`, `tools/mkhyx.js`) |
+| `programs/` | A sample program for the Hydra (`.hyx`), and what to build others with |
 | `board/` | KiCad schematics and PCBs: the main board, the memory daughter card, the bus breakout card |
 | `docs/` | This documentation |
 
@@ -61,7 +62,7 @@ On Linux or macOS, run the same three commands by hand (with `/` in the paths).
 ### **Connecting a terminal**
 
 * **Cable:** use a **straight-through** RS-232 cable with two female ends (the Hydra's DE-9 is wired like a modem), including pins 7 and 8: the ACIA sends only while CTS is asserted.
-* **Terminal settings:** 9600 baud, 8 data bits, no parity, 1 stop bit.  Once booted, the Hydra can switch to another rate or format (HyForth: `q^b19200^ stty`, then switch the terminal); it comes back up at 9600 after a reset.
+* **Terminal settings:** 9600 baud, 8 data bits, no parity, 1 stop bit.  Once booted, the Hydra can switch to another rate or format (HyForth: `"b19200" stty`, then switch the terminal); it comes back up at 9600 after a reset.
 * **The terminal should:**
   * understand ANSI escape sequences;
   * send CR for Enter;
@@ -81,10 +82,11 @@ Welcome to the HYDRA-16!
 
 HyForth 0.91 05-07-2026
 
-HF>
+/> 
 ```
 
 * **The first two lines are POST**, the power-on self test ([what they mean](using/wozmon.md#post-the-power-on-self-test)).
+* **With a HydraFS card in**, `hydrafs 0` comes before HyForth's banner, and the prompt is `0:/> `: you're at card 0's root ([the shell](using/hyforth.md#the-shell-directories-files-and-programs)).
 * **A driver that fails to start** prints `NAME FAIL ee` (ee = the [error code](programming/rom-layout.md#error-codes)).
 * **Try it:** `1 2 + .` prints ` 0003`.
 
@@ -113,7 +115,7 @@ node sim/tools/hydrafs.js mkfs card.img 64
 node sim/tools/hydrafs.js import card.img myfiles
 ```
 
-The Hydra sees them at `/sd/0`: `q^/sd/0^ 1 open 0 fdup2 cat | cat` lists the card's root.
+The Hydra sees them at `/sd/0`, and starts there: the prompt is `0:/> `, and `ls` lists the card's root.  A `boot.hys` in it runs at boot.
 
 Without `-i`, the emulator runs a fixed number of cycles with scripted input, then prints a report: the serial output, the last instructions, the hottest code, and each task's stack depth.  That's the mode for debugging and the tests.  See [the emulator](tools/emulator.md).
 
@@ -124,7 +126,7 @@ cd os_rom
 makeC02 test
 ```
 
-This builds, then boots the new images in the emulator about 20 times: POST, the self tests, HyForth, pipes, tasks, sound, SD cards and their files, sleeping, fault injection.  It prints `23 of 23 tests passed`, or the failing test's output and the command that reproduces it.  Then try it on the board.
+This builds, then boots the new images in the emulator about 25 times: POST, the self tests, HyForth, pipes, tasks, sound, SD cards and their files, the shell and running programs, sleeping, fault injection.  It prints `27 of 27 tests passed`, or the failing test's output and the command that reproduces it.  Then try it on the board.
 
 ### **Where to go next**
 

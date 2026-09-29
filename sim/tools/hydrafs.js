@@ -4,7 +4,8 @@
 // emulator (--sd), and moves files to and from a real card's image (written or read with a disk imager).
 //
 // Usage: node hydrafs.js COMMAND IMAGE [ARGS]
-//   mkfs IMAGE MB [LABEL]       a new, empty HydraFS image of MB megabytes (an existing file is replaced)
+//   mkfs IMAGE MB [LABEL] [-q]  a new, empty HydraFS image of MB megabytes (an existing file is replaced);
+//                               -q: as the Hydra's quick format makes one (version 2: no free map written)
 //   info IMAGE                  the label, size, and free space
 //   ls IMAGE [PATH]             a directory's entries ("name size", "name/" for a directory), as the
 //                               Hydra's text directory read gives them; or one file's
@@ -25,7 +26,7 @@ const path = require('path');
 
 const BLOCK = 512, CLUSTER_SHIFT = 3, CLUSTER_BLOCKS = 1 << CLUSTER_SHIFT, CLUSTER = BLOCK * CLUSTER_BLOCKS;
 const ENTRY = 64, NAME_MAX = 31, MAP_BITS = BLOCK * 8, EXT_PER_BLOCK = 84, EXT_MAX = 0xFFFF;
-const MAGIC = 'HYDRAFS1', VERSION = 1, ROOT_LOC = { block: 0, off: 64 };
+const MAGIC = 'HYDRAFS1', VERSION_FULL = 1, VERSION = 2, ROOT_LOC = { block: 0, off: 64 };
 const MODE_DIR = 0x80, MODE_APPEND = 0x40, MODE_RO = 0x01;
 
 // A directory entry (64 bytes, at loc: its block and offset)
@@ -45,8 +46,9 @@ class Entry {
   get extBlock() { return this.buf.readUInt32LE(60); } set extBlock(v) { this.buf.writeUInt32LE(v >>> 0, 60); }
 }
 
-// Make an empty HydraFS image: MB megabytes (or blocks, if given), with a label
-function mkfs(file, mb, label = '', blocks = Math.floor(mb * 1024 * 1024 / BLOCK)) {
+// Make an empty HydraFS image: MB megabytes (or blocks, if given), with a label.  quick: as the Hydra's quick
+// format: version 2, with none of the free map written (it reads as all free until it's used)
+function mkfs(file, mb, label = '', blocks = Math.floor(mb * 1024 * 1024 / BLOCK), quick = false) {
   if (label.length > NAME_MAX) throw new Error('the label is longer than ' + NAME_MAX + ' characters');
   const mapBlocks = Math.ceil(Math.floor((blocks - 1) / CLUSTER_BLOCKS) / MAP_BITS);
   const dataStart = 1 + mapBlocks, clusters = Math.floor((blocks - dataStart) / CLUSTER_BLOCKS);
@@ -55,7 +57,7 @@ function mkfs(file, mb, label = '', blocks = Math.floor(mb * 1024 * 1024 / BLOCK
   fs.ftruncateSync(fd, blocks * BLOCK);
   const sb = Buffer.alloc(BLOCK);
   sb.write(MAGIC, 0, 'latin1');
-  sb[8] = VERSION; sb[9] = CLUSTER_SHIFT;
+  sb[8] = quick ? VERSION : VERSION_FULL; sb[9] = CLUSTER_SHIFT;
   sb.writeUInt32LE(clusters, 12); sb.writeUInt32LE(1, 16); sb.writeUInt32LE(mapBlocks, 20);
   sb.writeUInt32LE(dataStart, 24); sb.writeUInt32LE(clusters, 28); sb.writeUInt32LE(0, 32);
   sb.writeUInt32LE(2, 36); sb.writeUInt32LE(1, 40);                 // Next qid (the root has 1), next stamp
@@ -64,7 +66,7 @@ function mkfs(file, mb, label = '', blocks = Math.floor(mb * 1024 * 1024 / BLOCK
   sb.write(label, 128, 'latin1');
   fs.writeSync(fd, sb, 0, BLOCK, 0);
   const zero = Buffer.alloc(BLOCK);                                  // The free map: all free
-  for (let b = 0; b < mapBlocks; b++) fs.writeSync(fd, zero, 0, BLOCK, (1 + b) * BLOCK);
+  if (!quick) for (let b = 0; b < mapBlocks; b++) fs.writeSync(fd, zero, 0, BLOCK, (1 + b) * BLOCK);
   fs.closeSync(fd);
 }
 
@@ -73,7 +75,7 @@ class Volume {
     this.fd = fs.openSync(file, 'r+');
     this.sb = this.readBlock(0);
     if (this.sb.toString('latin1', 0, 8) !== MAGIC) throw new Error(file + ' isn\'t a HydraFS image');
-    if (this.sb[8] !== VERSION || this.sb[9] !== CLUSTER_SHIFT) throw new Error('HydraFS version ' + this.sb[8] + ' isn\'t supported');
+    if (this.sb[8] < VERSION_FULL || this.sb[8] > VERSION || this.sb[9] !== CLUSTER_SHIFT) throw new Error('HydraFS version ' + this.sb[8] + ' isn\'t supported');
     this.map = new Map();                                            // Free map blocks read so far
   }
   close() { this.flush(); fs.closeSync(this.fd); }
@@ -84,6 +86,11 @@ class Volume {
   // The superblock's numbers
   get clusters() { return this.sb.readUInt32LE(12); }
   get mapStart() { return this.sb.readUInt32LE(16); }
+  get mapBlocks() { return this.sb.readUInt32LE(20); }
+  get version() { return this.sb[8]; }
+  // The free map's blocks written (version 2: the rest read as all free; version 1: all of them)
+  get mapInit() { return this.version === VERSION_FULL ? this.mapBlocks : this.sb.readUInt32LE(44); }
+  set mapInit(n) { this.sb.writeUInt32LE(n, 44); }
   get dataStart() { return this.sb.readUInt32LE(24); }
   get freeCount() { return this.sb.readUInt32LE(28); } set freeCount(v) { this.sb.writeUInt32LE(v, 28); }
   get hint() { return this.sb.readUInt32LE(32); } set hint(v) { this.sb.writeUInt32LE(v >>> 0, 32); }
@@ -98,13 +105,27 @@ class Volume {
 
   // The free map: 1 bit per cluster (1 = in use)
   mapBlock(c) {
-    const b = this.mapStart + Math.floor(c / MAP_BITS);
-    if (!this.map.has(b)) this.map.set(b, this.readBlock(b));
+    const i = Math.floor(c / MAP_BITS), b = this.mapStart + i;
+    if (!this.map.has(b)) {                                          // (Not written yet: all free, not read)
+      const buf = i >= this.mapInit ? Object.assign(Buffer.alloc(BLOCK), { fresh: true }) : this.readBlock(b);
+      this.map.set(b, buf);
+    }
     return this.map.get(b);
+  }
+  // A map block about to change that isn't on the card yet: zeros on the card for it and the unwritten ones
+  // before it, and the count takes them in (as the Hydra's HFS_MAP_WRITTEN does)
+  mapWritten(c) {
+    const i = Math.floor(c / MAP_BITS), zero = Buffer.alloc(BLOCK);
+    for (let j = this.mapInit; j <= i; j++) {
+      this.writeBlock(this.mapStart + j, zero);
+      const m = this.map.get(this.mapStart + j); if (m) m.fresh = false;
+    }
+    this.mapInit = i + 1;
   }
   used(c) { return (this.mapBlock(c)[(c % MAP_BITS) >> 3] >> (c & 7)) & 1; }
   setUsed(c, on) {
     const m = this.mapBlock(c), i = (c % MAP_BITS) >> 3;
+    if (m.fresh) this.mapWritten(c);
     m[i] = on ? m[i] | (1 << (c & 7)) : m[i] & ~(1 << (c & 7)); m.dirty = true;
   }
   // A run of up to n free clusters: at `near` if it's free, else the first one from the hint
@@ -333,15 +354,20 @@ function parts(p) {
 // ---- the command line
 function main(argv) {
   const [cmd, image, ...args] = argv;
-  const usage = () => { console.error(fs.readFileSync(__filename, 'utf8').split('\n').slice(4, 18).map(l => l.slice(3)).join('\n')); process.exit(1); };
+  const usage = () => { console.error(fs.readFileSync(__filename, 'utf8').split('\n').slice(4, 19).map(l => l.slice(3)).join('\n')); process.exit(1); };
   if (!cmd || !image) usage();
-  if (cmd === 'mkfs') { if (!(+args[0] > 0)) usage(); mkfs(image, +args[0], args[1] || ''); return; }
+  if (cmd === 'mkfs') {
+    const q = args.includes('-q'), a = args.filter(x => x !== '-q');
+    if (!(+a[0] > 0)) usage();
+    mkfs(image, +a[0], a[1] || '', undefined, q); return;
+  }
   const v = new Volume(image);
   try {
     switch (cmd) {
       case 'info':
         console.log('label "' + v.label + '", ' + v.clusters + ' clusters of ' + CLUSTER + ' bytes (' +
-          (v.clusters * CLUSTER / 1048576).toFixed(1) + ' MB), ' + v.freeCount + ' free (' + (v.freeCount * CLUSTER / 1048576).toFixed(1) + ' MB)');
+          (v.clusters * CLUSTER / 1048576).toFixed(1) + ' MB), ' + v.freeCount + ' free (' + (v.freeCount * CLUSTER / 1048576).toFixed(1) + ' MB); version ' + v.version + ', free map ' +
+          v.mapInit + ' of ' + v.mapBlocks + ' blocks written');
         break;
       case 'ls': process.stdout.write(v.list(v.walk(args[0] || '/'))); break;
       case 'put': if (args.length < 2) usage(); v.put(args[1], fs.readFileSync(args[0]), path.basename(args[0])); break;

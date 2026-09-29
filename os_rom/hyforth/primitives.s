@@ -5,6 +5,12 @@
 ;----------------------------------------------------------------------
 ; ( -- ) ae exit forth
 def_word "bye", "bye", 0
+    lda BATCH                   ; a copy of the shell (run's, a pipeline's): end its task
+    beq BYEMON
+    ldx CHILDSP
+    txs
+    rts
+BYEMON:
     jmp MON_START               ; jump to WOZMON
 
 ;----------------------------------------------------------------------

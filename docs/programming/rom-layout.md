@@ -18,11 +18,12 @@ Both come from one build (`os_rom/all.s`, linked by `os_rom/os_rom_C02.cfg`).  H
 | 0 | (global) | Reset, POST gate, the kernel (tasks, scheduler, IRQ dispatch, MMU, shared memory), serial and sound drivers, the IO layer's page 0 part, printing, WOZMON, thunks | `kernel/`, `drivers/serial.s`, `drivers/sound.s`, `io/io_p0.s`, `monitor/wozmon.s` |
 | 1 | `PAGE1` | HyForth's ROM part, the disassembler, a copy of the thunks | `hyforth/`, `monitor/disasm.s` |
 | 2 | `PAGE2` | The IO layer: fds, namespaces, pipes, `/dev/cons` and `/dev/ser` (its settings, and the fast serial and tick interrupt handlers: `serfast.s`), `/dev/snd`, `/dev/proc`, the sound test tune | `io/`, `drivers/snd_test.s` |
-| 3 | `PAGE3` | Storage: SPI, the SD card's block layer, `/dev/sd` | `drivers/spi.s`, `drivers/sd.s`, `io/sd_srv.s` |
+| 3 | `PAGE3` | Storage: SPI, the SD card's block layer, `/dev/sd`, and HydraFS's format and label | `drivers/spi.s`, `drivers/sd.s`, `io/sd_srv.s`, `io/hfs_format.s` |
 | 4 | `PAGE4` | POST and the self tests (MMU, scheduler, IO) | `tests/` |
 | 5 | `PAGE5` | Far pointers and references | `kernel/fp.s` |
 | 6 | `PAGE6` | The HydraFS server (`/sd/N/...`), in the storage task, on page 3's block layer | `io/page6.s`, `io/hfs_srv.s`, `io/hfs_write.s`, `io/hfs_check.s` |
-| 7-F | | Empty | |
+| 7 | `PAGE7` | The shell: the boot shell's start (the volumes found, one selected), the prompt, the file and card commands HyForth's shell words call (`SH_CMD`), running programs (`run`, the `.hyx` loader) | `shell/` |
+| 8-F | | Empty | |
 
 Page 0 is nearly full (about 40 bytes are left), so new code goes on another page behind gates.  The link map (`os_rom/obj/os_rom_C02.map`) shows each page's segments and free space.
 
@@ -31,7 +32,7 @@ Page 0 is nearly full (about 40 bytes are left), so new code goes on another pag
 | Address | What |
 | :------ | :--- |
 | `$E000` | Reset entry: sets `W` = 0 and continues on page 0.  Every page starts with it, because `W` isn't reset by hardware |
-| `$F800-$F8C8` | The thunk table (pages 0 and 1): `jmp`s to the public calls, below |
+| `$F800-$F8D7` | The thunk table (pages 0 and 1): `jmp`s to the public calls, below |
 | `$FD00-$FDFF` | The COMMON block: IRQ entry stubs and exit, the fast handlers' stubs (VIA, ACIA), NMI entry, far-call trampolines, cross-page peeks.  Identical on every page (the link checks it) |
 | `$FE00` | WOZMON (page 0) |
 | `$FFFA-$FFFD` | NMI vector (the COMMON block's `NMI_ENTRY`) and RESET vector (`$E000`) |
@@ -135,6 +136,9 @@ OS zero-page variables that calls take parameters in (from the current build's `
 | `$82` | `ERR_IO_EXISTS` | There's a file or directory by that name already |
 | `$83` | `ERR_IO_NOT_EMPTY` | The directory has files in it |
 | `$84` | `ERR_IO_BUSY` | The file is open |
+| `$85` | `ERR_IO_NOT_DIR` | Not a directory (`IO_CHDIR`, `rmdir`) |
+| `$86` | `ERR_IO_IS_DIR` | A directory, where a file was wanted (`rm`, `cp`) |
+| `$87` | `ERR_IO_NOT_EXEC` | A Hydra executable whose header doesn't fit task RAM (`run`) |
 | `$F1` | `ERR_NO_TASKS_AVAILABLE` | All 16 tasks are busy |
 | `$F2` | `ERR_TASK_BUSY` | The task (or player) is busy |
 | `$F3` | `ERR_BAD_TASK` | Not a task that can be used that way |
@@ -215,6 +219,8 @@ The thunk table at `$F800` (on BIOS pages 0 and 1) gives every public call a fix
 | `$F8C9` | `IO_CREATE` | `.A.Y` = name, `.X` = mode, `ZP_IO_BUF` = new file's mode bits → `.A` = fd | [io](io.md#the-files-on-a-card) |
 | `$F8CC` | `IO_REMOVE` | `.A.Y` = name | [io](io.md#the-files-on-a-card) |
 | `$F8CF` | `IO_WSTAT` | `.A` = fd, `ZP_IO_BUF` = stat record | [io](io.md#the-files-on-a-card) |
+| `$F8D2` | `IO_CHDIR` | `.A.Y` = a directory's path: the current directory | [io](io.md#the-current-directory) |
+| `$F8D5` | `IO_GETCWD` | `ZP_IO_BUF` = 64-byte buffer ← the current directory | [io](io.md#the-current-directory) |
 
 Calls without a thunk (for ROM code; reached with a gate from other pages): `TASK_SLEEP`, `TASK_SLEEP_UNTIL`, `TICKS_GET`, `TASK_START`, `TASK_CALL`, `IRQ_REGISTER`, `IRQ_UNREGISTER`, `SWI_REGISTER`, `SWI_UNREGISTER`, `SW_INT`, `DRV_START`, `IO_FLUSH`, `YM_BEEP`, and the server helpers `IO_SRV_MAP`, `IO_SRV_UNMAP`, `IO_SRV_COUNT`.
 

@@ -947,10 +947,11 @@ HFS_VOLUME:
             bne         @no
             dey
             bpl         :-
-            ldy         #HFS_SB_VERSION
+            ldy         #HFS_SB_VERSION                     ; (Versions 1 and 2)
             lda         (SD_CACHE),Y
-            cmp         #HFS_VERSION
-            bne         @no
+            beq         @no
+            cmp         #HFS_VERSION + 1
+            bcs         @no
             iny
             lda         (SD_CACHE),Y
             cmp         #HFS_CSHIFT
@@ -975,6 +976,29 @@ HFS_VOLUME:
             tax
             cpy         #HFS_SB_STAMP + 4                   ; (The counters too: HFS_V_FREE ... HFS_V_STAMP)
             bne         @number
+            jsr         HFS_CARD_X                          ; HFS_V_MINIT (256 on from HFS_V_CLUSTERS: out
+            ldy         #HFS_SB_MAPINIT                     ;   of the loop's reach): the superblock's; for
+:                                                           ;   version 1, the map's size (all written)
+            lda         (SD_CACHE),Y
+            sta         HFS_V_MINIT,X
+            inx
+            iny
+            cpy         #HFS_SB_MAPINIT + 4
+            bne         :-
+            ldy         #HFS_SB_VERSION
+            lda         (SD_CACHE),Y
+            cmp         #HFS_VERSION_FULL
+            bne         @counted
+            jsr         HFS_CARD_X
+            ldy         #4
+:
+            lda         HFS_V_MAPSZ,X
+            sta         HFS_V_MINIT,X
+            inx
+            dey
+            bne         :-
+
+@counted:
             ldx         HFS_CARD
             lda         #1
             sta         HFS_V_STATE,X

@@ -49,9 +49,11 @@
 //                       shared chip holds 4 bank IDs, e.g. F0-F3; a task RAM module 16 banks), e.g. F0:A0:high
 //   --model M           Hardware what-ifs: sharedlow (T doesn't switch $0000-$7FFF), nostack (stack page
 //                       not per task), zponly (only ZP per task), noshared (no shared RAM)
-//   --sd [N:]FILE       An SD card (SDHC) on SPI device N (0-7; default 0), backed by the image FILE
+//   --sd [N:]FILE[@B]   An SD card (SDHC) on SPI device N (0-7; default 0), backed by the image FILE
 //                       (512-byte blocks; writes go to the file).  Up to 8, one per device
-//                       (e.g. --sd card0.img --sd 3:C:/images/card3.img)
+//                       (e.g. --sd card0.img --sd 3:C:/images/card3.img).  @B: the card says it has B
+//                       blocks, more than the file (a big card from a small file: blocks past the file's end
+//                       read as zeros, and a write there makes the file longer)
 //   --paste             Type the --input (and interactive input) at the ACIA's full line rate, back to back like a
 //                       paste, whether the ROM keeps up or not: bytes arriving while the last is still unread are
 //                       lost, as on the chip, and counted in the report (default: the next key waits for it)
@@ -93,9 +95,10 @@ for (let i = 0; i < argv.length; i++) {
     case '--stuck-irq': opt.stuckIrq = +next(); break;
     case '--model': opt.model = next(); break;
     case '--ram-fault': { const m = /^([0-9A-Fa-f]{1,2}):A(\d+):(high|low)$/i.exec(next()); opt.ramFault = { bank: parseInt(m[1], 16), mask: 1 << +m[2], high: m[3].toLowerCase() === 'high' }; break; }
-    case '--sd': { const f = next(), m = /^([0-7]):(.+)$/.exec(f), dev = m ? +m[1] : 0;
+    case '--sd': { let f = next(); const b = /^(.+)@(\d+)$/.exec(f); if (b) f = b[1];
+      const m = /^([0-7]):(.+)$/.exec(f), dev = m ? +m[1] : 0;
       if (opt.sds.some(c => c.dev === dev)) { console.error('Two SD cards on device ' + dev); process.exit(1); }
-      opt.sds.push({ dev, file: m ? m[2] : f }); break; }
+      opt.sds.push({ dev, file: m ? m[2] : f, blocks: b ? +b[2] : 0 }); break; }
     case '--sdsc': opt.sdsc.push(+next()); break;
     case '--raw': opt.raw = true; break;
     case '--paste': opt.paste = true; break;
@@ -142,9 +145,9 @@ let viaT2 = 0xFFFF, viaT2LatchL = 0xFF, viaT2On = false;         // Timer 2: one
 // each backed by an image file (--sd [N:]FILE); --sdsc N makes device N's a standard capacity card (byte
 // addresses, CSD v1)
 const sdCards = [];                                             // By device: a card, or undefined
-for (const { dev, file } of opt.sds) {
+for (const { dev, file, blocks } of opt.sds) {
   const fd = fs.openSync(file, 'r+');
-  sdCards[dev] = { dev, fd, blocks: Math.floor(fs.fstatSync(fd).size / 512), sdsc: opt.sdsc.includes(dev), bit: 0, inB: 0, cur: 0xFF, miso: 1,
+  sdCards[dev] = { dev, fd, blocks: blocks || Math.floor(fs.fstatSync(fd).size / 512), sdsc: opt.sdsc.includes(dev), bit: 0, inB: 0, cur: 0xFF, miso: 1,
     q: [], cmd: [], idle: true, app: false, acmd41: 0, writeAt: -1, wr: null };
 }
 let spiSel = null, spiClk = 0;                                  // The selected card (null: none), SCLK

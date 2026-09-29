@@ -28,6 +28,10 @@ Each task has **12 fds** (0-11), in its task system page.  An fd holds the devic
 | `IO_CREATE` (`$F8C9`) | `.A.Y` = name, `.X` = mode, `ZP_IO_BUF` (low byte) = the new file's mode bits | `.A` = fd: a new file or directory, opened ([below](#the-files-on-a-card)) |
 | `IO_REMOVE` (`$F8CC`) | `.A.Y` = name | Removes a file, or an empty directory |
 | `IO_WSTAT` (`$F8CF`) | `.A` = fd, `ZP_IO_BUF` = a 48-byte stat record | Renames the file, sets its mode bits |
+| `IO_CHDIR` (`$F8D2`) | `.A.Y` = a directory's path | It's the current directory ([below](#the-current-directory)) |
+| `IO_GETCWD` (`$F8D5`) | `ZP_IO_BUF` = a 64-byte buffer | The current directory, a zero-terminated absolute path |
+
+**Names** given to `IO_OPEN`, `IO_CREATE`, `IO_REMOVE` and `IO_CHDIR` are relative to the task's current directory unless they start with `/`.
 
 **Modes** (`IO_OPEN`'s `.X`): `IO_MODE_READ` (`$01`), `IO_MODE_WRITE` (`$02`), `IO_MODE_RDWR` (`$03`), plus `IO_MODE_STAT` (`$04`), `IO_MODE_TRUNC` (`$08`) and `IO_MODE_NONBLOCK` (`$80`).  With `IO_MODE_NONBLOCK`, a read with no data yet returns `ERR_IO_WOULD_BLOCK` instead of waiting.  `IO_MODE_STAT` asks a directory for stat records instead of text, and `IO_MODE_TRUNC` (with `IO_MODE_WRITE`) empties a file as it's opened ([below](#the-files-on-a-card)).
 
@@ -164,7 +168,7 @@ The serial port starts at 9600 baud, 8 data bits, no parity, 1 stop bit.  Its se
   * With a WDC ACIA build, rates below about 1200: a character's time must fit VIA timer 2.
 * **After a reset**, the port is back at 9600 8N1.
 
-In HyForth: `q^b19200^ stty`, and `stty?` to show the settings.
+In HyForth: `"b19200" stty`, and `stty?` to show the settings.
 
 #### **Sound: `/dev/snd`**
 
@@ -199,7 +203,7 @@ To connect two tasks, make the pipe, then point the child's stdin or stdout at o
 
 ### **Namespaces**
 
-Each task has its own namespace of up to 7 entries, which the tasks it starts inherit:
+Each task has its own namespace of up to 5 entries, which the tasks it starts inherit:
 
 | Call | Does |
 | :--- | :--- |
@@ -213,6 +217,15 @@ Each task has its own namespace of up to 7 entries, which the tasks it starts in
 * After a bind it looks again, up to 4 times (`ERR_IO_NS_LOOP` beyond).
 * A name no entry matches must be under `/dev`.
 
+### **The current directory**
+
+Each task has a current directory, which the tasks it starts inherit (a copy: changing it later doesn't change theirs).  It's kept in the task's IO transfer area, beside its namespace.
+
+* **Relative names:** before a name is looked up, the IO layer puts the current directory in front of it (unless it starts with `/`) and tidies the result: `.` elements go, `..` takes the element before it away (at `/` it stays at `/`), doubled and trailing `/`s go.  So `../notes` from `/sd/0/games` is `/sd/0/notes`, and a server only ever sees absolute names.  The tidy, absolute name can be up to 63 characters (`ERR_IO_NAME` beyond).
+* **`IO_CHDIR`** makes a path the current directory: a directory on a card (its stat record says so: `ERR_IO_NOT_DIR` otherwise), or `/`.  A failure leaves the current directory as it was.
+* **`IO_GETCWD`** copies it out: `/` at the top.
+* A new task (`TASK_RUN`, `TASK_CLONE`) gets its parent's.  The boot shell sets its own to the first card with a HydraFS on it ([hyforth.md](../using/hyforth.md#the-shell-directories-files-and-programs)).
+
 ### **The files on a card**
 
 The **HydraFS** server (the device `hfs`) serves the files on the SD cards.  The shell mounts it at `/sd` at startup, and the tasks it starts inherit the mount, so `/sd/0` is card 0's root directory and `/sd/0/games/star.frt` is a file on it.  The format, and the host tool that makes cards, are in [plans/HYDRAFS.md](../plans/HYDRAFS.md) and [tools/emulator.md](../tools/emulator.md#hydrafs-card-images).
@@ -220,16 +233,16 @@ The **HydraFS** server (the device `hfs`) serves the files on the SD cards.  The
 * **Names** are case-sensitive, 1-31 characters, any byte but `/` and 0.  `.` and `..` are understood while walking (a path may be up to 8 elements deep); `..` at a card's root stays there.
 * **Reading a file** works as it does on `/dev/sd/N/data`, except that a read stops at the end of the file.
 * **Writing a file** at the fd's offset grows it past its end.  A write can't *start* past the end (`ERR_IO_BAD_REQ`: no holes), and an append-only file is always written at its end.  Writing runs at about 3.5 KB/s.
-* **Reading a directory** gives a line per entry, `name size` (or `name/` for a directory), then CR LF, so `q^/sd/0^ 1 open 0 fdup2 cat | cat` lists it.  Opened with `IO_MODE_STAT` it gives stat records instead; read a multiple of 48 bytes to get whole ones.  Either way the listing is made again from the card at every read, so the server keeps no state for it, and a directory that changes between two reads of one listing can give a torn one.
+* **Reading a directory** gives a line per entry, `name size` (or `name/` for a directory), then CR LF, so `"/sd/0" 1 open 0 fdup2 cat | cat` lists it (as the shell's `ls` does).  Opened with `IO_MODE_STAT` it gives stat records instead; read a multiple of 48 bytes to get whole ones.  Either way the listing is made again from the card at every read, so the server keeps no state for it, and a directory that changes between two reads of one listing can give a torn one.
 * **Making and removing files:**
   * `IO_CREATE` makes a file (mode bits 0; `HFS_M_APPEND` `$40` append-only, `HFS_M_RO` `$01` read-only) or a directory (`HFS_M_DIR` `$80`) in a directory that's there, and opens it; a directory is opened for reading whatever the mode says.  A *file* that's there already is emptied and opened instead, as in Plan 9.
   * `IO_REMOVE` removes a file that isn't open, or an empty directory; it borrows a free fd for the request.
-  * `IO_WSTAT` renames a file in its directory (the record's name: a name, not a path; a 0 first byte keeps it) and sets its mode bits (`HFS_M_APPEND`, `HFS_M_RO`; `$FF` keeps them).  The record's other fields are left alone.  HyForth's `rename` fills in the record for you.
+  * `IO_WSTAT` renames a file in its directory (the record's name: a name, not a path; a 0 first byte keeps it) and sets its mode bits (`HFS_M_APPEND`, `HFS_M_RO`; `$FF` keeps them).  The record's other fields are left alone.  HyForth's `mv` fills in the record for you.
   * The mode bits are checked when a file is opened: a read-only file can't be opened for writing, but the fd that made it can write it.
 * **What reaches the card when:** the data at once; the file's size when the last fd on it is closed, and whenever it gets a new 4 KB cluster.  So close a file you've written before taking the card out.  A crash can leave a file shorter than was written, never a damaged card.
-* **Formatting:** write `format LABEL` to `/dev/sd/N/ctl` to make an empty HydraFS on the card (everything on it is lost), and `label NAME` to change the label.
-* **Checking:** write `check` to `/dev/sd/N/ctl`, then read the file: it counts the clusters marked in use that nothing uses (lost), in use but marked free (unmarked), and used twice, and recounts the free space.  `check fix` also repairs the free map (not a cluster used twice: that's reported for a person to sort out).  In HyForth: `q^/dev/sd/0/ctl^ q^check^ ctl`, then `q^/dev/sd/0/ctl^ ls`.  It takes a pass per 256 MB of card ([plans/HYDRAFS.md](../plans/HYDRAFS.md#the-check)).
-* **Errors:** `ERR_IO_NOT_FS` (`$80`) if the card holds no HydraFS, `ERR_IO_DEVICE` (`$79`) if there's no card, `ERR_IO_NOT_FOUND` (`$70`) for a name that isn't there (or a path through a file), `ERR_IO_NO_FDS` (`$75`) when all 8 HydraFS files are open (they're shared by every task), `ERR_IO_MODE` (`$72`) for writing a directory or a read-only file, `ERR_IO_FULL` (`$81`), `ERR_IO_EXISTS` (`$82`: creating a directory where there's a name already, a file where there's a directory, or renaming to a name that's taken), `ERR_IO_NOT_EMPTY` (`$83`) and `ERR_IO_BUSY` (`$84`: removing an open file).  Any other device refuses these calls with `ERR_IO_BAD_REQ`.
+* **Formatting:** write `format [-f] [-s size] [LABEL]` to `/dev/sd/N/ctl` to make an empty HydraFS on the card (everything on it is lost), and `label NAME` to change the label.  Plain `format` is quick (a version 2 HydraFS, whose free map is written as it's used); `-f` writes the whole map now, printing its progress on the console; `-s` limits the size (megabytes, or `4G`) ([plans/HYDRAFS.md](../plans/HYDRAFS.md#formatting-and-tools)).
+* **Checking:** write `check` to `/dev/sd/N/ctl`, then read the file: it counts the clusters marked in use that nothing uses (lost), in use but marked free (unmarked), and used twice, and recounts the free space.  `check fix` also repairs the free map (not a cluster used twice: that's reported for a person to sort out).  In HyForth: `"/dev/sd/0/ctl" "check" ctl`, then `ls /dev/sd/0/ctl` (or `0 fsck`, which does both).  It takes a pass per 256 MB of card, and with 16 passes or more prints its progress on the console as it goes ([plans/HYDRAFS.md](../plans/HYDRAFS.md#the-check)).
+* **Errors:** `ERR_IO_NOT_FS` (`$80`) if the card holds no HydraFS, `ERR_IO_DEVICE` (`$79`) if there's no card, `ERR_IO_NOT_FOUND` (`$70`) for a name that isn't there (or a path through a file), `ERR_IO_NO_FDS` (`$75`) when all 8 HydraFS files are open (they're shared by every task), `ERR_IO_MODE` (`$72`) for writing a directory or a read-only file, `ERR_IO_FULL` (`$81`), `ERR_IO_EXISTS` (`$82`: creating a directory where there's a name already, a file where there's a directory, or renaming to a name that's taken), `ERR_IO_NOT_EMPTY` (`$83`) and `ERR_IO_BUSY` (`$84`: removing an open file).  The shell's commands add `ERR_IO_NOT_DIR` (`$85`: `cd` or `rmdir` on a file) and `ERR_IO_IS_DIR` (`$86`: `rm` or `cp` on a directory).  Any other device refuses these calls with `ERR_IO_BAD_REQ`.
 
 ### **Stat**
 

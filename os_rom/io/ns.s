@@ -207,6 +207,217 @@ NS_RESOLVE:
             lda         #ERR_IO_NAME
             rts
 
+; (A name with no end within 256 bytes)
+NS_NAME_BAD:
+            lda         #ERR_IO_NAME
+            sec
+            rts
+
+; Make the name in the data area absolute and tidy: a name that doesn't start with '/' is taken as relative
+; to the task's current directory, then "." and ".." are worked out, and "//" and a '/' at the end taken out.
+; OUT: C = 0; or C = 1, .A = ERR_IO_NAME (too long with the directory in front).
+; Modifies: .X, .Y, ZP_IO_TMP, ZP_IO_CNT, ZP_IO_BYTE, ZP_IO_LEFT, ZP_IO_OFS
+NS_ABS:
+            lda         (ZP_IO_DATA)
+            cmp         #'/'
+            beq         NS_TIDY
+            jsr         NS_CWD_PTR                          ; The directory's length: .Y
+            ldy         #0
+:
+            lda         (ZP_IO_LEFT),Y
+            beq         :+
+            iny
+            beq         NS_NAME_BAD                         ; (No end to it)
+            bra         :-
+:
+            iny                                             ; The name moves up to make room for it and a '/'
+            sty         ZP_IO_CNT
+            stz         ZP_IO_TMP
+            jsr         NS_SHIFT
+            bcc         :+
+            lda         #ERR_IO_NAME
+            rts
+:
+            jsr         NS_CWD_PTR                          ; The directory, then '/'
+            ldy         #0
+:
+            lda         (ZP_IO_LEFT),Y
+            beq         :+
+            sta         (ZP_IO_DATA),Y
+            iny
+            beq         NS_NAME_BAD                         ; (No end to it)
+            bra         :-
+:
+            lda         #'/'
+            sta         (ZP_IO_DATA),Y
+
+; Tidy the absolute name in the data area (NS_ABS).  In place: what's written never passes what's read.
+; ZP_IO_TMP = where it reads, ZP_IO_BYTE = where it writes, ZP_IO_OFS = the element's start, then its length.
+; OUT: C = 0
+NS_TIDY:
+            stz         ZP_IO_TMP
+            stz         ZP_IO_BYTE
+
+@element:
+            ldy         ZP_IO_TMP
+:
+            lda         (ZP_IO_DATA),Y                      ; ('/'s before it)
+            cmp         #'/'
+            bne         :+
+            iny
+            beq         NS_NAME_BAD                         ; (No end to it)
+            bra         :-
+:
+            cmp         #0
+            beq         @end
+            sty         ZP_IO_OFS                           ; The element: to the next '/' or the end
+:
+            iny
+            beq         NS_NAME_BAD                         ; (No end to it)
+            lda         (ZP_IO_DATA),Y
+            beq         :+
+            cmp         #'/'
+            bne         :-
+:
+            sty         ZP_IO_TMP
+            tya
+            sec
+            sbc         ZP_IO_OFS
+            sta         ZP_IO_OFS + 1                       ; (Its length)
+            ldy         ZP_IO_OFS
+            lda         (ZP_IO_DATA),Y
+            cmp         #'.'
+            bne         @keep
+            lda         ZP_IO_OFS + 1
+            cmp         #1
+            beq         @element                            ; ".": nothing
+            cmp         #2
+            bne         @keep
+            iny
+            lda         (ZP_IO_DATA),Y
+            cmp         #'.'
+            bne         @keep
+            ldy         ZP_IO_BYTE                          ; "..": back to the last '/' written
+:
+            cpy         #0
+            beq         :+
+            dey
+            lda         (ZP_IO_DATA),Y
+            cmp         #'/'
+            bne         :-
+:
+            sty         ZP_IO_BYTE
+            bra         @element
+
+@keep:
+            ldy         ZP_IO_BYTE                          ; '/', then the element
+            lda         #'/'
+            sta         (ZP_IO_DATA),Y
+            inc         ZP_IO_BYTE
+            ldx         ZP_IO_OFS + 1
+:
+            ldy         ZP_IO_OFS
+            lda         (ZP_IO_DATA),Y
+            inc         ZP_IO_OFS
+            ldy         ZP_IO_BYTE
+            sta         (ZP_IO_DATA),Y
+            inc         ZP_IO_BYTE
+            dex
+            bne         :-
+            bra         @element
+
+@end:
+            ldy         ZP_IO_BYTE                          ; Nothing left: the top, "/"
+            bne         :+
+            lda         #'/'
+            sta         (ZP_IO_DATA),Y
+            iny
+:
+            lda         #0
+            sta         (ZP_IO_DATA),Y
+            clc
+            rts
+
+; ZP_IO_LEFT = the task's current directory (the IO transfer bank mapped).  Modifies: .A
+NS_CWD_PTR:
+            lda         #IO_BLK_CWD
+            sta         ZP_IO_LEFT
+            lda         ZP_IO_XFER + 1
+            sta         ZP_IO_LEFT + 1
+            rts
+
+; IO_CHDIR, with the tidy name in the data area: it's the task's current directory now, and the old one is
+; kept at the data area + $80 (NS_CHDIR_UNDO puts it back if the new one turns out not to be a directory).
+; OUT: C = 1, .A = ERR_IO_NAME (longer than 63 characters); or C = 0 and Z = 1: it's "/", with nothing to
+; check; or C = 0 and Z = 0: open it to check it.  Modifies: .A, .Y, ZP_IO_LEFT, ZP_IO_OFS
+NS_CHDIR_SET:
+            ldy         #0
+:
+            lda         (ZP_IO_DATA),Y
+            beq         :+
+            iny
+            bne         @far1                               ; (No end to it)
+            jmp         NS_NAME_BAD
+@far1:
+            bra         :-
+:
+            cpy         #IO_CWD_MAX
+            bcc         :+
+            lda         #ERR_IO_NAME
+            rts
+:
+            jsr         NS_CWD_PTR
+            cpy         #1
+            bne         @set
+            lda         #0                                  ; "/": an empty directory name (Z = 1)
+            sta         (ZP_IO_LEFT)
+            clc
+            rts
+
+@set:
+            jsr         NS_OLD_PTR
+            ldy         #IO_CWD_MAX - 1                     ; The old one, kept ...
+:
+            lda         (ZP_IO_LEFT),Y
+            sta         (ZP_IO_OFS),Y
+            dey
+            bpl         :-
+            ldy         #0                                  ; ... and the new one
+:
+            lda         (ZP_IO_DATA),Y
+            sta         (ZP_IO_LEFT),Y
+            beq         :+
+            iny
+            bra         :-
+:
+            lda         #IO_CALL_CHDIR_SET                  ; (So a failure puts the old one back)
+            ldy         #IO_BLK_CALL
+            sta         (ZP_IO_XFER),Y                      ; (Z = 0)
+            clc
+            rts
+
+; Put the old current directory back (NS_CHDIR_SET).  Modifies: .A, .Y, ZP_IO_LEFT, ZP_IO_OFS
+NS_CHDIR_UNDO:
+            jsr         NS_CWD_PTR
+            jsr         NS_OLD_PTR
+            ldy         #IO_CWD_MAX - 1
+:
+            lda         (ZP_IO_OFS),Y
+            sta         (ZP_IO_LEFT),Y
+            dey
+            bpl         :-
+            rts
+
+; ZP_IO_OFS = where NS_CHDIR_SET keeps the old directory: the data area + $80.  Modifies: .A
+NS_OLD_PTR:
+            lda         #$80
+            sta         ZP_IO_OFS
+            lda         ZP_IO_DATA + 1
+            sta         ZP_IO_OFS + 1
+            rts
+
+.assert     IO_CWD_MAX - 1 + NS_MAX_REWRITES * NS_TARGET_MAX < $80, error, "A name IO_CHDIR resolves stays below the old directory, at the data area + $80"
+
 ; Move the end of the name in the data area, from offset ZP_IO_TMP to offset ZP_IO_CNT (the terminating
 ; 0 too).  OUT: C = 0; or C = 1 if it wouldn't fit (nothing moved).  Modifies: .A, .Y, ZP_IO_LEFT,
 ; ZP_IO_OFS
@@ -307,8 +518,11 @@ NS_UNMAP_RTS:
             _M_IO_UNMAP
             rts
 
-; (The IO transfer bank mapped; ZP_IO_XFER = the task's area)
+; (The IO transfer bank mapped; ZP_IO_XFER = the task's area.)  The current directory goes back to "/" too
 NS_CLEAR_MAPPED:
+            lda         #0
+            ldy         #IO_BLK_CWD
+            sta         (ZP_IO_XFER),Y
             jsr         NS_FIRST
 
 @entry:
@@ -333,7 +547,7 @@ NS_COPY_TO:
             sta         (ZP_IO_LEFT),Y
             iny
             bne         @copy                       ; (To the end of the request block page)
-            .assert     IO_BLK_NS + NS_ENTRIES * NS_ENTRY_SIZE = $100, error, "NS_COPY_TO copies to $FF"
+            .assert     IO_BLK_CWD + IO_CWD_MAX = $100, error, "NS_COPY_TO copies to $FF: the namespace and the current directory"
             bra         NS_UNMAP_RTS
 
 ; ****************************************************************************

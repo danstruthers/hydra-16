@@ -10,6 +10,7 @@ For programmers writing code for the Hydra-16: ROM code (the OS, drivers, server
 | [Memory](memory.md) | The MMU (handles, allocation), shared memory, far pointers and references |
 | [Input and output](io.md) | fds and the IO calls, stdio, the devices, the console, pipes, namespaces |
 | [Drivers and file servers](servers.md) | Writing a device: registration, the serve routine, the request block, waiting, the storage layer |
+| [Programs](programs.md) | Hydra executables (`.hyx`): the header, what a program gets, building one, putting it on a card, how `run` loads it |
 
 ### **The system in one page**
 
@@ -28,7 +29,7 @@ For programmers writing code for the Hydra-16: ROM code (the OS, drivers, server
 * Reads that have to wait put the task to sleep.
 * Each task has a **namespace** (mount, bind), inherited by the tasks it starts, like its open fds.
 
-**The shell** is HyForth (task 1) with `|` pipelines; it can start more shells in other tasks, and falls back to WOZMON.
+**The shell** is HyForth (task 1) with `|` pipelines, a current directory on the SD cards, file commands (`cd`, `ls`, `cp` ...), scripts (`.hys`) and programs (`.hyx`) run by name; it can start more shells in other tasks, and falls back to WOZMON.
 
 ```
   task 1: HyForth shell      task N: programs, pipeline stages, more shells
@@ -48,12 +49,14 @@ For programmers writing code for the Hydra-16: ROM code (the OS, drivers, server
 | `os_rom/os_rom_C02.cfg` | The linker config: memory areas per ROM page, segments |
 | `os_rom/include/` | Constants and macros: `hw.inc` (hardware), `kernel.inc` (tasks, errors, far pointers), `io.inc` (IO), `zero.s` (the OS zero page), `macros.inc`, `ascii.inc` |
 | `os_rom/kernel/` | Reset and boot (`os_main.s`), tasks and scheduler (`tasks.s`), IRQs (`irq.s`), MMU (`mmu.s`), shared memory (`shared.s`), far pointers (`fp.s`), the COMMON block (`common.s`), gates, thunks, printing |
-| `os_rom/io/` | The IO layer (`io.s`, `io_p0.s`), namespaces (`ns.s`) and the servers: console and serial (`ser_srv.s`), sound (`snd_srv.s`), pipes, `/dev/proc`, `/dev/sd`, HydraFS (`hfs_srv.s`, `hfs_write.s`, `hfs_check.s`, on ROM page 6) |
+| `os_rom/io/` | The IO layer (`io.s`, `io_p0.s`), namespaces (`ns.s`) and the servers: console and serial (`ser_srv.s`), sound (`snd_srv.s`), pipes, `/dev/proc`, `/dev/sd`, HydraFS (`hfs_srv.s`, `hfs_write.s`, `hfs_check.s`, on ROM page 6; `hfs_format.s`, on page 3) |
 | `os_rom/drivers/` | Serial, sound, VIA, SPI, SD card, storage task |
 | `os_rom/monitor/` | WOZMON and the disassembler |
 | `os_rom/hyforth/` | HyForth |
+| `os_rom/shell/` | The shell's page 7 part: boot (the volumes, `boot.hys`), the prompt, the file and card commands, running programs |
 | `os_rom/tests/` | POST and the self tests |
 | `os_rom/tools/check_pages.js` | The cross-page call checker the build runs |
-| `sim/` | The emulator, the regression tests, `tools/hydrafs.js` ([tools](../tools/emulator.md)) |
+| `sim/` | The emulator, the regression tests, `tools/hydrafs.js` and `tools/mkhyx.js` ([tools](../tools/emulator.md)) |
+| `programs/` | A sample program (`.hyx`), and the header and link config for building others ([programs.md](programs.md)) |
 
 The **plans** in [../plans](../plans/) record the design reasoning, and what's still to come.

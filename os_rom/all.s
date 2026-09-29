@@ -10,6 +10,7 @@
 .include "include/io.inc"       ; IO, namespaces, the drivers' and servers' constants
 .include "include/ascii.inc"
 .include "include/macros.inc"
+.include "include/shell.inc"    ; The shell's commands (page 7)
 .include "include/zero.s"       ; The OS ZP (after the constants)
 .include "kernel/common.s"      ; COMMON block (every ROM page) and gate macros
 
@@ -41,6 +42,7 @@ IRQ_FAST_P2     = PAGE2::IRQ_FAST_P2    ; (For the COMMON block's fast IRQ stubs
 .include "drivers/spi.s"        ; SPI (bit-banged on the VIA's port B)
 .include "drivers/sd.s"         ; The SD card (blocks)
 .include "io/sd_srv.s"          ; /dev/sd, and the storage task's init
+.include "io/hfs_format.s"      ; HydraFS: format and label (the rest of it is on page 6)
 .endscope
 
 ; BIOS ROM page 6 (W = 6): the HydraFS server, in the storage task, on page 3's block layer.  After PAGE3,
@@ -48,12 +50,20 @@ IRQ_FAST_P2     = PAGE2::IRQ_FAST_P2    ; (For the COMMON block's fast IRQ stubs
 .scope PAGE6
 .include "io/page6.s"           ; must be first in the scope
 .include "io/hfs_srv.s"         ; The HydraFS server (/sd/N/..., the files on the cards): requests, reading
-.include "io/hfs_write.s"       ;   and writing: allocating, create, remove, wstat, format
+.include "io/hfs_write.s"       ;   and writing: allocating, create, remove, wstat
 .include "io/hfs_check.s"       ;   its check, and a card's details for its ctl file
 .endscope
 HFS_FORGET_P6   = PAGE6::HFS_FORGET     ; (For page 3's gates: PAGE3 is assembled before PAGE6)
-HFS_FORMAT_P6   = PAGE6::HFS_FORMAT
-HFS_LABEL_P6    = PAGE6::HFS_LABEL
+HFS_META_NEW_P6 = PAGE6::HFS_META_NEW    ; (Format and label: io/hfs_format.s)
+HFS_META_AT_P6  = PAGE6::HFS_META_AT
+HFS_META_CHANGED_P6 = PAGE6::HFS_META_CHANGED
+HFS_FINISH_P6   = PAGE6::HFS_FINISH
+HFS_SHR_P6      = PAGE6::HFS_SHR
+HFS_VOLUME_P6   = PAGE6::HFS_VOLUME
+HFS_SB_GET_P6   = PAGE6::HFS_SB_GET
+HFS_PG_START_P6 = PAGE6::HFS_PG_START
+HFS_PG_TICK_P6  = PAGE6::HFS_PG_TICK
+HFS_PG_END_P6   = PAGE6::HFS_PG_END
 HFS_CHECK_P6    = PAGE6::HFS_CHECK
 HFS_CTL_LINES_P6 = PAGE6::HFS_CTL_LINES
 
@@ -74,6 +84,20 @@ HFS_CTL_LINES_P6 = PAGE6::HFS_CTL_LINES
 .include "monitor/disasm.s"
 .include "hyforth/hyforth.s"
 .endscope
+
+; BIOS ROM page 7 (W = 7): the shell: its boot, the prompt, file commands, running programs.  After PAGE1,
+; whose RAM (HyForth's) it uses; page 1 reaches it through the aliases after the scope.
+.scope PAGE7
+.include "shell/page7.s"        ; must be first in the scope
+.include "shell/shell.s"
+.include "shell/files.s"        ; Its file and card commands (SH_CMD)
+.include "shell/run.s"          ; Running programs: run, a program's name, the loader
+.endscope
+SH_BOOT_P7      = PAGE7::SH_BOOT        ; (For page 0 and page 1's gates: PAGE1 is assembled before PAGE7)
+SH_PROMPT_P7    = PAGE7::SH_PROMPT
+SH_CD_P7        = PAGE7::SH_CD
+SH_PWD_P7       = PAGE7::SH_PWD
+SH_CMD_P7       = PAGE7::SH_CMD
 
 ; BIOS ROM page 0 (W = 0)
 .include "kernel/print.s"

@@ -57,7 +57,9 @@ HFS_CHECK:
             ldy         #>HFS_CK_BUF_SIZE
             ldx         #0
             jsr         MM_ALLOC
-            bcs         @done
+            bcc         @far8
+            jmp         @done
+@far8:
             jsr         MM_LOCK                             ; (.A.Y = the address)
             sta         HFS_CK_BUF
             sty         HFS_CK_BUF + 1
@@ -71,6 +73,23 @@ HFS_CHECK:
             stz         HFS_D + 1
             stz         HFS_D + 2
             stz         HFS_D + 3
+            lda         #$FF                                ; (The buffer isn't clear yet)
+            sta         HFS_CK_MARKS
+            jsr         HFS_CARD_X                          ; Its progress: a step per pass, (the clusters
+            clc                                             ;   + 65535) / 65536 of them
+            lda         HFS_V_CLUSTERS,X
+            adc         #$FF
+            lda         HFS_V_CLUSTERS + 1,X
+            adc         #$FF
+            lda         HFS_V_CLUSTERS + 2,X
+            adc         #0
+            sta         HFS_T4
+            lda         HFS_V_CLUSTERS + 3,X
+            adc         #0
+            sta         HFS_T4 + 1
+            stz         HFS_T4 + 2
+            stz         HFS_T4 + 3
+            jsr         HFS_PG_START
 
 @pass:
             jsr         HFS_CARD_X                          ; Past the card's last cluster: that's all
@@ -88,6 +107,7 @@ HFS_CHECK:
             bcs         @done
             jsr         HFS_CK_COMPARE
             bcs         @done
+            jsr         HFS_PG_TICK
             inc         HFS_D + 2                           ; The next HFS_CK_WINDOW clusters
             bne         @pass
             inc         HFS_D + 3
@@ -111,12 +131,17 @@ HFS_CHECK:
             clc
 
 @done:
+            jsr         HFS_PG_END                          ; (Keeps .A and C)
             jmp         HFS_FINISH                          ; (A fixed map block, and the superblock, go now)
 
 .assert     HFS_CK_WINDOW = $10000, error, "HFS_CHECK: a pass is the next 65536 clusters (inc HFS_D + 2)"
 
-; A pass's bitmap all clear, and HFS_N4 = the cluster after the pass's last.  Modifies: .A, .X, .Y
+; A pass's bitmap all clear (unless the last pass marked nothing in it: HFS_CK_MARKS), and HFS_N4 = the
+; cluster after the pass's last.  Modifies: .A, .X, .Y
 HFS_CK_CLEAR:
+            lda         HFS_CK_MARKS
+            beq         @clear                              ; (Nothing marked: clear already)
+            stz         HFS_CK_MARKS
             lda         HFS_CK_BUF
             sta         HFS_PTR
             lda         HFS_CK_BUF + 1
@@ -131,6 +156,8 @@ HFS_CK_CLEAR:
             inc         HFS_PTR + 1
             dex
             bne         :-
+
+@clear:
             lda         HFS_D
             sta         HFS_N4
             lda         HFS_D + 1
@@ -411,6 +438,9 @@ HFS_CK_RUN:
             adc         HFS_OFS + 1
             sta         HFS_PTR + 1
 
+            sta         HFS_CK_MARKS                        ; (The bitmap has marks: .A, the pointer's high
+                                                            ;   byte, is never 0)
+
 @mark:
             lda         (HFS_PTR)
             and         HFS_CK_MASK
@@ -486,6 +516,63 @@ HFS_CK_COMPARE:
             bcc         @far2
             jmp         @done
 @far2:
+            bit         HFS_MSTATE                          ; A map block a quick format hasn't written yet
+            bvc         @bytes                              ;   (HFS_MS_FRESH: all free), a whole one, with
+            lda         HFS_CK_REM + 3                      ;   none of its clusters used: 4096 free ones, at
+            ora         HFS_CK_REM + 2                      ;   once
+            bne         :+
+            lda         HFS_CK_REM + 1
+            cmp         #>(HFS_BLOCK * 8)
+            bcc         @bytes
+:
+            lda         HFS_CK_MARKS                        ; (No marks at all: none of its clusters used)
+            beq         @none
+            ldy         #0                                  ; (The bitmap's 512 bytes for it: all 0?)
+:
+            lda         (HFS_XP),Y
+            bne         @bytes
+            iny
+            bne         :-
+            inc         HFS_XP + 1
+:
+            lda         (HFS_XP),Y
+            bne         @undo
+            iny
+            bne         :-
+            bra         @past
+
+@none:
+            inc         HFS_XP + 1
+
+@past:
+            inc         HFS_XP + 1                          ; (Past them)
+            clc
+            lda         HFS_CK_FREE + 1
+            adc         #>(HFS_BLOCK * 8)
+            sta         HFS_CK_FREE + 1
+            bcc         :+
+            inc         HFS_CK_FREE + 2
+            bne         :+
+            inc         HFS_CK_FREE + 3
+:
+            sec
+            lda         HFS_CK_REM + 1
+            sbc         #>(HFS_BLOCK * 8)
+            sta         HFS_CK_REM + 1
+            bcc         @far9
+            jmp         @next_block
+@far9:
+            lda         HFS_CK_REM + 2
+            bne         :+
+            dec         HFS_CK_REM + 3
+:
+            dec         HFS_CK_REM + 2
+            jmp         @next_block
+
+@undo:
+            dec         HFS_XP + 1
+
+@bytes:
             stz         HFS_CK_CNT
             lda         #>HFS_BLOCK
             sta         HFS_CK_CNT + 1
@@ -526,6 +613,17 @@ HFS_CK_COMPARE:
             sta         HFS_CK_REM + 3
 
 @bits:
+            lda         HFS_CK_MASK                         ; (Quickly: 8 clusters that aren't used, nor
+            eor         #$FF                                ;   marked, are 8 free ones: most of an empty
+            ora         (HFS_XP)                            ;   card)
+            ora         (HFS_PTR)
+            bne         @count
+            ldx         #8
+            ldy         #HFS_CK_FREE - HFS_CK_LOST
+            jsr         HFS_CK_ADD
+            bra         @step
+
+@count:
             lda         (HFS_XP)                            ; In use (the bitmap), and marked (the map)
             and         HFS_CK_MASK
             sta         HFS_CK_S
@@ -554,7 +652,11 @@ HFS_CK_COMPARE:
             beq         @kept
             sta         (HFS_PTR)
             pha
-            jsr         HFS_META_CHANGED
+            jsr         HFS_MAP_CHANGED                     ; (A map block not on the card yet: now it is)
+            bcc         :+
+            plx                                             ; (Failed: .A = the error)
+            jmp         @done
+:
             pla
 
 @kept:
@@ -562,6 +664,7 @@ HFS_CK_COMPARE:
             and         HFS_CK_MASK
             ldy         #HFS_CK_FREE - HFS_CK_LOST
             jsr         HFS_CK_COUNT
+@step:
             inc         HFS_XP                              ; The next byte
             bne         :+
             inc         HFS_XP + 1
@@ -580,6 +683,7 @@ HFS_CK_COMPARE:
             beq         :+
             jmp         @byte
 :
+@next_block:
             lda         HFS_C + 1                           ; The next map block: 4096 clusters on
             clc
             adc         #>(HFS_BLOCK * 8)
@@ -805,3 +909,120 @@ HFS_S_LOST:     .byte   "check: lost ", 0
 HFS_S_UNMARKED: .byte   ", unmarked ", 0
 HFS_S_TWICE:    .byte   ", twice ", 0
 HFS_S_FIXED:    .byte   ", fixed", 0
+
+; ****************************************************************************
+; Progress, for a long card operation (a full format's free map, a check's passes): "10% 20% ... 100%",
+; straight to the console as it goes (the storage task has no fds: WRITE_CHAR sends it to the serial port),
+; then a new line.  Only for HFS_PG_MIN steps or more: a short one shows nothing.
+
+HFS_PG_MIN          = 16
+
+; Start: HFS_T4 = the steps.  HFS_PG_STEP = a tenth of them.  Modifies: .A, .X, .Y, HFS_T4
+HFS_PG_START:
+            lda         #$FF                                ; (Not shown)
+            sta         HFS_PG_TENS
+            lda         HFS_T4 + 3
+            ora         HFS_T4 + 2
+            ora         HFS_T4 + 1
+            bne         :+
+            lda         HFS_T4
+            cmp         #HFS_PG_MIN
+            bcc         @done
+:
+            lda         #0                                  ; HFS_T4 / 10, bit by bit (.A = the remainder)
+            ldx         #32
+@bit:
+            asl         HFS_T4
+            rol         HFS_T4 + 1
+            rol         HFS_T4 + 2
+            rol         HFS_T4 + 3
+            rol
+            cmp         #10
+            bcc         :+
+            sbc         #10
+            inc         HFS_T4                              ; (Its low bit was 0: the quotient's bit)
+:
+            dex
+            bne         @bit
+            ldx         #3
+:
+            lda         HFS_T4,X
+            sta         HFS_PG_STEP,X
+            sta         HFS_PG_LEFT,X
+            dex
+            bpl         :-
+            stz         HFS_PG_TENS
+
+@done:
+            rts
+
+; A step done: every tenth, the next "N0% ".  Preserves .X, .Y.  Modifies: .A
+HFS_PG_TICK:
+            bit         HFS_PG_TENS
+            bmi         @done                               ; (Not shown)
+            lda         HFS_PG_LEFT                         ; One less to the next tenth
+            bne         @dec0
+            lda         HFS_PG_LEFT + 1
+            bne         @dec1
+            lda         HFS_PG_LEFT + 2
+            bne         @dec2
+            dec         HFS_PG_LEFT + 3
+@dec2:
+            dec         HFS_PG_LEFT + 2
+@dec1:
+            dec         HFS_PG_LEFT + 1
+@dec0:
+            dec         HFS_PG_LEFT
+            lda         HFS_PG_LEFT
+            ora         HFS_PG_LEFT + 1
+            ora         HFS_PG_LEFT + 2
+            ora         HFS_PG_LEFT + 3
+            bne         @done
+            phx
+            ldx         #3                                  ; A tenth: the next one's steps
+:
+            lda         HFS_PG_STEP,X
+            sta         HFS_PG_LEFT,X
+            dex
+            bpl         :-
+            plx
+            inc         HFS_PG_TENS
+            lda         HFS_PG_TENS
+            cmp         #10
+            bcs         @done                               ; (100%: HFS_PG_END says it)
+            ora         #'0'
+            jsr         WRITE_CHAR
+            lda         #'0'
+            jsr         WRITE_CHAR
+            lda         #'%'
+            jsr         WRITE_CHAR
+            lda         #' '
+            jmp         WRITE_CHAR
+
+@done:
+            rts
+
+; The end (done, or failed): "100%" and a new line, if progress was shown.  Keeps .A and C (and .X, .Y)
+HFS_PG_END:
+            bit         HFS_PG_TENS
+            bmi         @done
+            php
+            pha
+            lda         #'1'
+            jsr         WRITE_CHAR
+            lda         #'0'
+            jsr         WRITE_CHAR
+            jsr         WRITE_CHAR
+            lda         #'%'
+            jsr         WRITE_CHAR
+            lda         #ASCII_CR
+            jsr         WRITE_CHAR
+            lda         #ASCII_LF
+            jsr         WRITE_CHAR
+            lda         #$FF
+            sta         HFS_PG_TENS
+            pla
+            plp
+
+@done:
+            rts

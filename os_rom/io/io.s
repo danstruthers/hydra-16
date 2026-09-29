@@ -334,14 +334,34 @@ IO_REMOVE:
             stx         ZP_IO_BYTE
             stz         ZP_IO_MODE
             jsr         IO_CALLER_PAGE
+            bra         IO_OPEN_NAME
+
+; Change this task's current directory (the tasks it starts later get a copy).  It has to be a directory
+; on a card (its stat says so), or "/".
+; IN: .A.Y = the path: relative to the current directory, or absolute ("." and ".." understood; the tidy,
+;     absolute path is 63 characters at most)
+; OUT: C = 0; or .A = error, C = 1: ERR_IO_NOT_DIR, ERR_IO_NAME (too long), or IO_OPEN's
+IO_CHDIR:
+            PUSH_XY
+            ldx         #IO_CALL_CHDIR
+            stx         ZP_IO_BYTE
+            ldx         #IO_MODE_READ | IO_MODE_STAT
+            stx         ZP_IO_MODE
+            jsr         IO_CALLER_PAGE
 
 IO_OPEN_NAME:
             jsr         FP_MAKE                     ; ZP_FP = the name
             jsr         IO_XFER_SETUP
             _M_IO_MAP_XFER
-            lda         ZP_IO_BYTE                  ; The request, and for H9_CREATE the new file's mode (the
-            ldy         #IO_BLK_TYPE                ;   namespace uses ZP_IO_BUF and ZP_IO_BYTE: keep them in
-            sta         (ZP_IO_XFER),Y              ;   the request block)
+            lda         ZP_IO_BYTE                  ; The call, the request (IO_CHDIR sends H9_OPEN), and for
+            ldy         #IO_BLK_CALL                ;   H9_CREATE the new file's mode (the namespace uses
+            sta         (ZP_IO_XFER),Y              ;   ZP_IO_BUF and ZP_IO_BYTE: keep them in the request
+            cmp         #IO_CALL_CHDIR              ;   block)
+            bne         :+
+            lda         #H9_OPEN
+:
+            ldy         #IO_BLK_TYPE
+            sta         (ZP_IO_XFER),Y
             lda         ZP_IO_BUF
             ldy         #IO_BLK_PERM
             sta         (ZP_IO_XFER),Y
@@ -355,6 +375,23 @@ IO_OPEN_NAME:
             jmp         @fail
 
 @copied:
+            jsr         NS_ABS                      ; Absolute (the current directory in front), and tidy
+            bcc         :+
+            jmp         @fail
+:
+            ldy         #IO_BLK_CALL
+            lda         (ZP_IO_XFER),Y
+            cmp         #IO_CALL_CHDIR
+            bne         @resolve
+            jsr         NS_CHDIR_SET                ; IO_CHDIR: the directory changes now (it's put back if
+            bcc         :+                          ;   it's not one)
+            jmp         @fail
+:
+            bne         @resolve
+            lda         #0                          ; ("/": nothing to check)
+            jmp         @done
+
+@resolve:
             jsr         NS_RESOLVE                  ; C = 0: a mount: .A = the device, the rest of the name
             bcc         @found                      ;   is in the data area
             tax
@@ -431,7 +468,7 @@ IO_OPEN_NAME:
             bcs         @open_failed
             pha
             jsr         IO_FD_ENTRY                 ; .X = the fd's entry
-            ldy         #IO_BLK_TYPE
+            ldy         #IO_BLK_CALL
             lda         (ZP_IO_XFER),Y
             cmp         #H9_REMOVE
             bne         :+
@@ -440,7 +477,12 @@ IO_OPEN_NAME:
             sta         IO_FD_SERVER,X
             lda         #0
             clc
-            bra         @done
+            jmp         @done
+:
+            cmp         #IO_CALL_CHDIR_SET
+            bne         :+
+            pla
+            jmp         IO_CHDIR_CHECK
 :
             pla
             sta         IO_FD_FID,X
@@ -468,11 +510,93 @@ IO_OPEN_NAME:
             pla
 
 @fail:
+            jmp         IO_OPEN_FAIL
+
+@done:
+            jmp         IO_OPEN_DONE
+
+; IO_CHDIR: the directory opened (.A = its fid, .X = the fd's entry).  Its stat says whether it's a directory;
+; then the fd goes back.  (The IO transfer bank is mapped.)
+IO_CHDIR_CHECK:
+            sta         IO_FD_FID,X
+            lda         #H9_STAT
+            jsr         IO_SERVE
+            bcs         @close
+            ldy         #IO_ST_MODE
+            lda         (ZP_IO_DATA),Y
+            bmi         :+                          ; (HFS_M_DIR)
+            lda         #ERR_IO_NOT_DIR
             sec
+            bra         @close
+:
+            lda         #0
+            clc
+
+@close:
+            php
+            pha
+            lda         #H9_CLUNK
+            jsr         IO_SERVE
+            jsr         IO_FD_ENTRY
+            lda         #IO_FD_CLOSED
+            sta         IO_FD_SERVER,X
+            pla
+            plp
+            bcc         IO_OPEN_DONE
+
+; (IO_OPEN_NAME's failure: after IO_CHDIR has set the new directory, the old one goes back)
+IO_OPEN_FAIL:
+            pha
+            ldy         #IO_BLK_CALL
+            lda         (ZP_IO_XFER),Y
+            cmp         #IO_CALL_CHDIR_SET
+            bne         :+
+            jsr         NS_CHDIR_UNDO
+:
+            pla
+            sec
+
+IO_OPEN_DONE:
+            _M_IO_UNMAP
+            PULL_YX
+            rts
+
+.assert     HFS_M_DIR = $80, error, "IO_CHDIR_CHECK: a directory's mode has bit 7 set"
+
+; This task's current directory: a zero-terminated absolute path ("/" at the top), into the IO_CWD_MAX bytes
+; at ZP_IO_BUF (task RAM).  OUT: C = 0.  Preserves .X, .Y
+IO_GETCWD:
+            PUSH_XY
+            jsr         IO_XFER_SETUP
+            _M_IO_MAP_XFER
+            jsr         NS_CWD_PTR                  ; ZP_IO_LEFT -> it
+            ldy         #0
+            lda         (ZP_IO_LEFT)
+            cmp         #'/'
+            beq         @copy
+            lda         #'/'                        ; (Empty: "/"; and anything but a path, as with no
+                                                    ;   shared RAM)
+            sta         (ZP_IO_BUF)
+            iny
+            lda         #0
+            sta         (ZP_IO_BUF),Y
+            bra         @done
+
+@copy:
+            lda         (ZP_IO_LEFT),Y
+            cpy         #IO_CWD_MAX - 1
+            bcc         :+
+            lda         #0                          ; (No end to it: no shared RAM)
+:
+            sta         (ZP_IO_BUF),Y
+            beq         @done
+            iny
+            bra         @copy
 
 @done:
             _M_IO_UNMAP
             PULL_YX
+            clc
             rts
 
 ; Close an fd (the server's fid too).

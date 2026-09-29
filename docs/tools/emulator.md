@@ -51,7 +51,7 @@ node hydrasim.js [options]
 | `--acia-line N` | IRQ line the ACIA interrupts on (default 1) |
 | `--acia rockwell\|wdc` | The ACIA chip: the Rockwell R65C51 (default), or the WDC W65C51N with its transmitter bug (TDRE always reads 1, no TX interrupt; for a ROM built with `SER_ACIA = SER_ACIA_WDC`, which paces sending with VIA timer 2).  In WDC mode the emulator counts bytes written while one is still being sent (they'd be garbled on the chip) and reports them at the end.  (VIA timer 2 is modelled too: one-shot) |
 | `--stuck-irq N` | Hold IRQ line N active the whole time |
-| `--sd [N:]FILE` | An SD card (SDHC) on SPI device N (0-7, the board's SPI headers J18-J25; default 0), backed by the image FILE (512-byte blocks; writes go to the file).  Up to 8 cards, one per device, e.g. `--sd card0.img --sd 3:C:/images/card3.img`.  Models the VIA's port B SPI bit by bit (device select as the board's 74HC138 does it), and the SD commands the ROM uses (CMD0, 8, 9, 16, 17, 24, 55, 58, ACMD41; CMD9's CSD gives the image's size) |
+| `--sd [N:]FILE[@B]` | An SD card (SDHC) on SPI device N (0-7, the board's SPI headers J18-J25; default 0), backed by the image FILE (512-byte blocks; writes go to the file).  Up to 8 cards, one per device, e.g. `--sd card0.img --sd 3:C:/images/card3.img`.  `@B`: the card says it has B blocks, more than the file (a big card from a small file: blocks past the file's end read as zeros, and writing one makes the file longer), e.g. `--sd card.img@500170752` for a 244 GB card.  Models the VIA's port B SPI bit by bit (device select as the board's 74HC138 does it), and the SD commands the ROM uses (CMD0, 8, 9, 16, 17, 24, 55, 58, ACMD41; CMD9's CSD gives the image's size) |
 | `--sdsc N` | Make the card on device N a standard capacity one (SDSC): byte addresses, and a v1 CSD register |
 | `--ram-fault BANK:An:high\|low` | Address line An (0-12) stuck high or low on the RAM chip holding BANK (a shared chip holds 4 bank IDs, e.g. `F0-F3`; a task RAM module 16 banks), e.g. `F0:A0:high`.  The POST `RAM` line should report it |
 | `--model M` | Hardware what-ifs: `sharedlow`, `nostack`, `zponly`, `noshared` |
@@ -59,7 +59,7 @@ node hydrasim.js [options]
 | `--trace N` | Show the last N instructions (default 25) |
 | `--dump ADDR[:LEN][@TASK]` | Hex dump task RAM after the run, e.g. `--dump 7D90:16@1` |
 | `--watch ADDR[@TASK]` | Report every write to a task RAM address: the old and new value, and the PC that wrote it |
-| `--mark TEXT` | Report the cycle each time the serial output ends with `TEXT` (`\r` = CR), e.g. `--mark "HF>"` to time a command from prompt to prompt |
+| `--mark TEXT` | Report the cycle each time the serial output ends with `TEXT` (`\r` = CR), e.g. `--mark "/> "` to time a command from prompt to prompt |
 | `--profile N` | From cycle `N` on, count the instructions each task runs in each routine (named from the build's debug info, `os_rom/obj/os_rom_C02.dbg`), and report the top 30, e.g. `--profile 2800000 --input '\wwords \| wc . . .\r'` |
 | `--ym-log` | List every YM2151 key-on (channel and cycle) in the report, not just the first 8.  The report also gives the longest gap between key-ons and the time from the first to the last (a late note shows as a long gap) |
 | `--seed N` | Power up RAM and the pseudo-registers from random number seed `N`, so a run repeats exactly (by default each run powers up differently) |
@@ -82,7 +82,7 @@ that got it there), and the final pseudo-register and vector RAM state.
 output for what it expects: POST, the self tests (MMU, scheduler, IO; also with 1 RAM module and 1 shared
 macro-page), POST with hardware faults, HyForth, pipelines, files and namespaces, tasks and console
 switching, Ctrl-C, background sound and the bell, `sleep`, the serial settings, `/dev/sd` (on a blank card
-image; also two shells reading it at once), and HydraFS reading, writing and checking (on cards made by `tools/hydrafs.js`, and checked with it afterwards).  One test runs a small program of its own instead of the ROM, and
+image; also two shells reading it at once), HydraFS reading, writing, checking and quick formatting (on cards made by `tools/hydrafs.js`, and checked with it afterwards), and the shell: the volume chosen at boot, `boot.hys`, `cd`, the prompt, the file commands, `include`, and running programs (`.hyx` executables and `.hys` scripts, by name and from `/bin`, Ctrl-C).  One test runs a small program of its own instead of the ROM, and
 checks the CPU's cycle counts against WDC's table.  Four watch timing: a 1000-character paste at 57600 with
 nothing lost, console output at 115200 inside a cycle budget, SD read throughput inside a cycles-a-byte
 budget, and a limit on how long the ROM ever holds interrupts off.  The emulators run in parallel; the whole
@@ -101,8 +101,9 @@ found when it shouldn't be), the `hydrasim.js` command that reproduces it, and t
 test also fails if a task's stack got within 32 bytes of its bottom, and the summary shows the deepest stack
 of the run (about 70 of the 256 bytes so far, with IRQ frames on top of far calls).  To add a
 test, add an entry to the `TESTS` list at the top of `regress.js` (its header describes the fields).  A test
-that wants SD cards lists them under `sd`; a card with `hfs` gets a HydraFS made on it, and the function is
-handed the volume (the `Volume` class below) to put files in.
+that wants SD cards lists them under `sd`; a card with `hfs` gets a HydraFS made on it (`quick`: as the
+Hydra's quick format makes one), and the function is handed the volume (the `Volume` class below) to put
+files in; `claim` makes a card say it's bigger than its image (`--sd FILE@B`).
 
 ### **HydraFS card images**
 
@@ -110,7 +111,7 @@ handed the volume (the `Volume` class below) to put files in.
 the PC, for the emulator's `--sd` or for writing to a real card with a disk imager:
 
 ```
-node tools/hydrafs.js mkfs card.img 64 GAMES      a new, empty 64 MB image
+node tools/hydrafs.js mkfs card.img 64 GAMES      a new, empty 64 MB image (-q: as the Hydra's quick format)
 node tools/hydrafs.js import card.img myfiles     copy a folder tree in
 node tools/hydrafs.js put card.img star.frt games copy a file into /games
 node tools/hydrafs.js ls card.img games           list a directory
@@ -119,12 +120,27 @@ node tools/hydrafs.js check card.img              check the free map against the
 ```
 
 The Hydra reads the same images through its `hfs` server ([io.md](../programming/io.md#the-files-on-a-card)):
-`node hydrasim.js -i --sd card.img`, then `q^/sd/0^ 1 open 0 fdup2 cat | cat` at the HyForth prompt lists
-the card's root.
+`node hydrasim.js -i --sd card.img` boots with the card's root as the current directory (`0:/> `), and `ls`
+lists it.
 
 `node tools/hydrafs.js` alone lists every command.  Card paths start at the card's root; in Git Bash, leave
 out their first `/` (Git Bash turns `/games` into a Windows path).  From Node, `require('./tools/hydrafs.js')`
 gives `mkfs` and `Volume`.
+
+### **Hydra executables**
+
+`tools/mkhyx.js` puts the 16-byte `.hyx` header on a raw binary linked for a fixed address, so the shell can
+run it ([programs.md](../programming/programs.md)).  (Programs built with ca65 and `programs/hyx.cfg` have
+the header already.)
+
+```
+node tools/mkhyx.js prog.bin prog.hyx $0800        the header on a binary (entry point: the load address)
+node tools/mkhyx.js prog.bin prog.hyx $0800 $0810  ... with another entry point
+node tools/mkhyx.js --info prog.hyx                show a .hyx file's header
+```
+
+From Node, `require('./tools/mkhyx.js')` gives `hyx(load, code, entry)`, which `regress.js` uses for its test
+programs.
 
 ### **What it models**
 

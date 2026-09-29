@@ -12,7 +12,7 @@ A small filesystem for SD cards, designed for the 65C02 and the Hydra's Plan 9-s
 | Name | What it is |
 | :--- | :--------- |
 | `/dev/sd/0/data` ... `/dev/sd/7/data` | Card 0-7 (SPI device 0-7) as raw bytes, at the fd's offset (the first 4 GB) |
-| `/dev/sd/0/ctl` ... `/dev/sd/7/ctl` | Read: the card's details, as text (e.g. `sdhc 7580 MB hydrafs label=GAMES free=6100 MB`).  Write: text commands: `init` (start the card again, e.g. after changing it), `format [label]`, `label <text>` |
+| `/dev/sd/0/ctl` ... `/dev/sd/7/ctl` | Read: the card's details, as text (e.g. `sdhc 7580 MB hydrafs label=GAMES free=6100 MB`).  Write: text commands: `init` (start the card again, e.g. after changing it), `format [-f] [-s size] [label]`, `label <text>`, `check [fix]` |
 | `/sd/0/...` ... `/sd/7/...` | The files on card 0-7: the HydraFS server (device `hfs`), mounted at `/sd` in each task's namespace (the shell mounts it at startup; the tasks it starts inherit it).  `/sd/0` is card 0's root directory |
 
 Both servers run in the storage task (`$C`), which owns the SPI bus and the block cache; the filesystem uses the block layer directly, not `/dev/sd/N/data`.  The whole card is the filesystem: **no partitions** in this version.
@@ -32,7 +32,7 @@ Blocks are the card's 512-byte sectors.  Space is allocated in **clusters of 8 b
 | Offset | Size | Field |
 | :----- | :--- | :---- |
 | 0 | 8 | Magic: `HYDRAFS1` |
-| 8 | 1 | Version: 1 |
+| 8 | 1 | Version: 1 (the whole free map written), or 2 (written as it's used: offset 44) |
 | 9 | 1 | Cluster size, as a shift: 3 (8 blocks) |
 | 10 | 2 | Reserved (0) |
 | 12 | 4 | Clusters in the data area |
@@ -43,7 +43,8 @@ Blocks are the card's 512-byte sectors.  Space is allocated in **clusters of 8 b
 | 32 | 4 | Where to look for free clusters next (a hint) |
 | 36 | 4 | The next qid id to give out |
 | 40 | 4 | The next modification stamp (a counter until the Hydra has a clock) |
-| 44 | 20 | Reserved (0) |
+| 44 | 4 | Version 2: the free map's blocks written so far, from its first; the rest read as all free.  (Version 1: all of them are written; the Hydra keeps the map's size here, and it's ignored) |
+| 48 | 16 | Reserved (0) |
 | 64 | 64 | The root directory's entry (below) |
 | 128 | 32 | The volume label, zero-terminated (31 characters at most) |
 | 160 | 352 | Reserved (0) |
@@ -128,21 +129,29 @@ The filesystem's requests are numbered from `H9_CREATE` (8) on, and every other 
 
 ### **The storage task's state**
 * The one-block cache (512 bytes, shared with `/dev/sd`), for files' data and for reading directories.  A second, the **metadata buffer** (512 bytes), for the free map, extent blocks, entries being written and the superblock, so a file's data and its allocation don't evict each other.  A block is changed there and written back when another block is wanted, and at the end of every request, which also forgets it: nothing is kept in it between requests, so a raw `/dev/sd` write or a changed card can't leave it stale.
-* Per card (8): its state, and the superblock's numbers and counters (`HFS_V_*`, 33 bytes each, as parallel arrays).  `init` on a card's ctl file forgets them, and lets go of any HydraFS file open on it.
+* Per card (8): its state, and the superblock's numbers and counters (`HFS_V_*`, 37 bytes each, as parallel arrays).  The server's scratch variables are in a page (`$0800`) the storage task keeps out of its MMU's reach by raising its page floor.  `init` on a card's ctl file forgets them, and lets go of any HydraFS file open on it.
 * Open files: 8, shared by every task.  Each keeps a 16-byte header (the card, the open mode, how many fds share it, where its directory entry is, and where its directory's entry is, for a rename) and a **copy of the entry itself** (64 bytes), so a read finds the file's extents without an extra block read.  Every copy of one entry is kept the same, and a walk takes an open file's copy over the card's (its size may not be on the card yet).  Reads walk the extent list from the start each time: that's arithmetic alone for the two extents in the entry, and costs a block read per chunk only for a file fragmented into three or more.
 * The allocator takes the cluster after a file's last if it's free (so files stay in one piece), else scans the free map from the hint, a byte (8 clusters) at a time past full ones.
 * A walk keeps the entry it's on (`HFS_ENT`, 64 bytes) and a stack of the directories above it (`HFS_STK`, 8 levels of 5 bytes), so `..` needs no stored path.  A path deeper than that gives `ERR_IO_NAME`.
 
 ### **Formatting and tools**
-* `format [label]` on `/dev/sd/N/ctl` makes an empty HydraFS: from the card's size (its CSD register: the SD layer gets CMD9, and the emulator's card too) it clears block 0, writes the free map, all free, then the superblock (with an empty root directory: size 0, no clusters yet), so a format that's cut short leaves no half-made HydraFS.  The layout is the one `hydrafs.js mkfs` makes.  A 32 GB card's map is 2048 blocks: about a minute and a half at 3.58 MHz.  `label <text>` sets the label (31 characters at most).
-* `sim/tools/hydrafs.js` (Node, on the PC): `mkfs <image> <MB> [label]`, `ls <image> [path]`, `put <image> <file> <path>`, `get <image> <path> <file>`, `mkdir`, `rm`, and `import <image> <folder>` (a whole folder tree), for making test cards and moving files to and from the Hydra.
+
+`format [-f] [-s size] [label]` on `/dev/sd/N/ctl` (the shell's `mkfs`, `mkfs-full` and `mkfs-size`), in `os_rom/io/hfs_format.s` on ROM page 3:
+* **A quick format** (the default) clears block 0, then writes the superblock: a **version 2** volume, with none of its free map written (offset 44 = 0).  It takes a moment whatever the card's size (a 244 GB card: about a quarter of a second).
+* **`-f`, a full format**, writes the whole free map (all free) between the two: a **version 1** volume, as the first ROMs wrote and read.  A 32 GB card's map is 2048 blocks, about a minute and a half at 3.58 MHz; 244 GB, 15,264 blocks and about 13 minutes.  It shows its progress on the console (`10% 20% ... 100%`).
+* **`-s size`** makes the volume that size, in megabytes (`-s 4096`), or gigabytes with a G (`-s 4G`), if the card is bigger: the rest of the card isn't used.
+* The label is the rest of the line (31 characters at most), so it can't start with `-`.
+
+**A version 2 free map is written as it's used.**  The superblock counts the map's blocks written so far (from the first); a block past the count isn't read, and is all free, however the card's old contents read.  When a cluster in such a block is first marked in use (or freed), the server first writes zeros to it and to any unwritten blocks before it, then the superblock with the new count, and only then the block with its change (`HFS_MAP_WRITTEN`).  So the card never has a map block with bits in it past the count, and a crash can at most leave a counted block of zeros.  The allocator works through the card from its hint, so the map is normally written in order, a block for each 16 MB used.  The PC tool reads and writes both versions the same way (`hydrafs.js mkfs ... -q` makes a version 2 image).
+* `format` on `/dev/sd/N/ctl` makes an empty HydraFS (above): from the card's size (its CSD register: the SD layer gets CMD9, and the emulator's card too) it clears block 0, writes the free map (a full format only), then the superblock (with an empty root directory: size 0, no clusters yet), so a format that's cut short leaves no half-made HydraFS.  The layout is the one `hydrafs.js mkfs` makes.  `label <text>` sets the label (31 characters at most).
+* `sim/tools/hydrafs.js` (Node, on the PC): `mkfs <image> <MB> [label] [-q]`, `ls <image> [path]`, `put <image> <file> <path>`, `get <image> <path> <file>`, `mkdir`, `rm`, and `import <image> <folder>` (a whole folder tree), for making test cards and moving files to and from the Hydra.
 
 ### **Build order**
 1. **(Done)** The SD layer: CMD9 (the card's size); per-card state for devices 0-7 (`/dev/sd/N/data`, `/dev/sd/N/ctl`).  The emulator: CMD9 (and `--sdsc N`).
 2. **(Done)** `sim/tools/hydrafs.js` (mkfs, info, ls, put, get, mkdir, rm, import, check): test images first, from the PC side.  (A new directory entry goes in the first free one, else at the end; a file grows its last extent when the next cluster is free; extent blocks take a cluster each, their first block.)
 3. **(Done)** Read-only HydraFS (`os_rom/io/hfs_srv.s`, ROM page 3, the `hfs` device, mounted at `/sd` by the shell): walk (with `.` and `..`), open, read, both directory formats, stat.  `IO_STAT`'s record grew from 16 to 48 bytes and `IO_MODE_STAT` was added; the `hydrafs` regression test covers it.  A card that holds no HydraFS gives the new `ERR_IO_NOT_FS` (`$80`).
 4. **(Done)** Writing (`os_rom/io/hfs_write.s`): write and grow, `IO_CREATE`, `IO_REMOVE`, `IO_WSTAT`, `IO_MODE_TRUNC`; `format` and `label`.  The server moved to its own ROM page (6): page 3 was full.  New errors `ERR_IO_FULL` (`$81`), `ERR_IO_EXISTS` (`$82`), `ERR_IO_NOT_EMPTY` (`$83`), `ERR_IO_BUSY` (`$84`); new thunks `$F8C9`-`$F8CF`.  The `hydrafs-write` regression test covers it, and checks the cards afterwards with the PC tool.
-5. **(Done)** HyForth words (`ls`, `create`, `mkdir`, `remove`, `rename`, written with step 4 to test it, and `ctl`: a command to a ctl file); `check` on the ctl file (`os_rom/io/hfs_check.s`), and the card's HydraFS details in its ctl file's text.  The `hydrafs-check` regression test covers it.
+5. **(Done)** HyForth words (`ls`, `create`, `mkdir`, `remove`, `rename`, written with step 4 to test it, and `ctl`: a command to a ctl file; `remove` and `rename` became the shell's `rm`, `rmdir` and `mv`: [SHELL.md](SHELL.md)), and words for the cards themselves: `vols`, `mkfs`, `relabel`, `fsck`, `fsfix`; `check` on the ctl file (`os_rom/io/hfs_check.s`), and the card's HydraFS details in its ctl file's text.  The `hydrafs-check` regression test covers it.
 
 ### **The check**
 `check` on `/dev/sd/N/ctl` walks every directory from the root, marks in a bitmap every cluster that a file, a directory or an extent block uses, and compares that with the free map:
@@ -161,7 +170,7 @@ check: lost 0, unmarked 0, twice 0
 ```
 (`, fixed` after `check fix`; the check line after a check of that card, until another card is checked.)
 
-How: the bitmap is 8 KB, for 65,536 clusters (256 MB of card) at a time, so a bigger card takes a pass for each 256 MB, each walking the directories again: a 32 GB card takes 128.  The walk keeps a copy of each directory's entry it's in, and where it is in it, after the bitmap, and follows directories 24 deep (deeper: `ERR_IO_NAME`, and no results).  The buffer (about 9.7 KB of the storage task's RAM) is taken from the MMU at the first check, and kept.  Clusters a file claims past the card's end aren't counted (the PC tool's `check` reports them).
+How: the bitmap is 8 KB, for 65,536 clusters (256 MB of card) at a time, so a bigger card takes a pass for each 256 MB, each walking the directories again: a 32 GB card takes 128, and 244 GB 954.  With 16 passes or more it shows its progress on the console (`10% 20% ... 100%`).  Empty space is quick: 8 clusters neither used nor marked are counted free at once, a pass whose walk marked nothing isn't cleared again, and a map block a quick format hasn't written yet (all free) with none of its clusters used is 4096 free clusters at once.  So an empty 4 GB volume checks in under a second, and an empty 244 GB one in about a minute and a half.  The walk keeps a copy of each directory's entry it's in, and where it is in it, after the bitmap, and follows directories 24 deep (deeper: `ERR_IO_NAME`, and no results).  The buffer (about 9.7 KB of the storage task's RAM) is taken from the MMU at the first check, and kept.  Clusters a file claims past the card's end aren't counted (the PC tool's `check` reports them).
 
 ### **Later**
 Partitions (a HydraFS partition next to a small FAT one, for a PC), a real clock for the stamps, fsck-style repair, sparse files.

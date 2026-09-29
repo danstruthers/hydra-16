@@ -96,14 +96,16 @@ So interrupts, above all the serial port's, are rarely held off for long ([inter
 | `TASK_CLONE` (`$F899`) | Like `fork`: a new task with a **copy** of the current one (below), starting at `.A.Y` on page `.X` |
 | `DRV_START` | Start a driver in a given task (below) |
 
-Every new task gets a copy of its parent's **open fds** and **namespace** (each server is told: `H9_DUP`), and records its parent (`ZP_TASK_OWNER`).  So `TASK_RUN` from the shell gives a task that prints on the console and reads the keyboard when it's in front.  Output buffered by the parent is written out first (`IO_FLUSH`), so it comes out in order.
+Every new task gets a copy of its parent's **open fds**, **namespace** and **current directory** (each server is told: `H9_DUP`), and records its parent (`ZP_TASK_OWNER`).  So `TASK_RUN` from the shell gives a task that prints on the console and reads the keyboard when it's in front.  Output buffered by the parent is written out first (`IO_FLUSH`), so it comes out in order.
 
 **`TASK_CLONE`** copies:
 * the task's RAM, `$0200-$7CFF` and the MMU area `$7E00-$7FFF`.  Not copied: the stack page, the task system page, and the free pages between the MMU's page floor and its lowest allocated page;
 * its task zero page (everything above the OS zero page);
 * its fds and namespace.
 
-The copy goes a page at a time through the IO transfer area, about 1/400 s per page at 3.58 MHz, before the new task runs.  HyForth uses it for pipelines: each stage but the last runs in a copy of the shell.
+The copy goes a page at a time through the IO transfer area, about 1/400 s per page at 3.58 MHz, before the new task runs.  HyForth uses it for pipelines (each stage but the last runs in a copy of the shell) and for `run`ning a script.
+
+**Waiting for a task started alongside:** the shell's `run` starts a program with `TASK_RUN` (or `TASK_CLONE`), gives it the console, then makes itself the task's parent (`TASK_PARENT`, in the task's zero page) and pauses, as `TASK_START` does, so the task's end wakes it (`SH_WAIT` in `os_rom/shell/run.s`; [programs.md](programs.md)).
 
 **From WOZMON**, `addrS` starts a task at `addr` and waits for it (`TASK_START`).
 

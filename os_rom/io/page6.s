@@ -24,3 +24,4 @@ FAR_GATE_INLINE     IO_SRV_MAP,     ::IO_SRV_MAP,           0
 FAR_GATE_INLINE     IO_SRV_UNMAP,   ::IO_SRV_UNMAP,         0
 FAR_GATE_INLINE     MM_ALLOC,       ::MM_ALLOC,             0   ; (The check's buffer)
 FAR_GATE_INLINE     MM_LOCK,        ::MM_LOCK,              0
+FAR_GATE_INLINE     WRITE_CHAR,     ::WRITE_CHAR,           0   ; (Progress: straight to the console)

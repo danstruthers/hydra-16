@@ -78,6 +78,14 @@ FAR_GATE_INLINE IO_NS_LIST,     PAGE2::IO_NS_LIST,      2
 FAR_GATE_INLINE IO_CREATE,      PAGE2::IO_CREATE,       2
 FAR_GATE_INLINE IO_REMOVE,      PAGE2::IO_REMOVE,       2
 FAR_GATE_INLINE IO_WSTAT,       PAGE2::IO_WSTAT,        2
+FAR_GATE_INLINE IO_CHDIR,       PAGE2::IO_CHDIR,        2
+FAR_GATE_INLINE IO_GETCWD,      PAGE2::IO_GETCWD,       2
+
+; Gates to the shell's routines (page 7; the aliases are in all.s)
+FAR_GATE_INLINE SH_PROMPT,      ::SH_PROMPT_P7,         7
+FAR_GATE_INLINE SH_CD,          ::SH_CD_P7,             7
+FAR_GATE_INLINE SH_PWD,         ::SH_PWD_P7,            7
+FAR_GATE_INLINE SH_CMD,         ::SH_CMD_P7,            7
 FAR_GATE_INLINE TASK_SET_BREAK, ::TASK_SET_BREAK,       0
 FAR_GATE_INLINE TASK_SIGNAL,    ::TASK_SIGNAL,          0
 FAR_GATE_INLINE CONS_SET_FG,    ::CONS_SET_FG,          0
@@ -193,4 +201,6 @@ WRITE_HSTRING:
                 jmp             IO_CREATE           ; $F8C9
                 jmp             IO_REMOVE           ; $F8CC
                 jmp             IO_WSTAT            ; $F8CF
-.assert     * = ::TH_IO_WSTAT + 3, lderror, "BIOS_THUNKS_P1 must match BIOS_THUNKS"
+                jmp             IO_CHDIR            ; $F8D2
+                jmp             IO_GETCWD           ; $F8D5
+.assert     * = ::TH_IO_GETCWD + 3, lderror, "BIOS_THUNKS_P1 must match BIOS_THUNKS"

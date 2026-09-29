@@ -1,6 +1,6 @@
 ## **HyForth: the Hydra's shell**
 
-HyForth is the Hydra-16's shell and programming language: a small Forth that starts in task 1 at boot and prints `HF>`.  It began as AGSB's Forth engine, adapted by Patrick Struthers for the Hydra.  Sources: `os_rom/hyforth/`.  See also [WOZMON](wozmon.md) and the [Programmer's Guide](../programming/README.md).
+HyForth is the Hydra-16's shell and programming language: a small Forth that starts in task 1 at boot, and prompts with the card and directory it's in (`0:/> `).  It began as AGSB's Forth engine, adapted by Patrick Struthers for the Hydra.  Sources: `os_rom/hyforth/`.  See also [WOZMON](wozmon.md) and the [Programmer's Guide](../programming/README.md).
 
 ### **Contents**
 1. [The basics](#the-basics)
@@ -9,27 +9,29 @@ HyForth is the Hydra-16's shell and programming language: a small Forth that sta
 4. [Defining words](#defining-words)
 5. [Control flow: the training scripts](#control-flow-the-training-scripts)
 6. [Word reference](#word-reference)
-7. [Files and devices](#files-and-devices)
-8. [Pipelines](#pipelines)
-9. [Tasks and the console](#tasks-and-the-console)
-10. [Errors and keys](#errors-and-keys)
-11. [How HyForth uses memory](#how-hyforth-uses-memory)
+7. [The shell: directories, files and programs](#the-shell-directories-files-and-programs)
+8. [Files and devices](#files-and-devices)
+9. [Pipelines](#pipelines)
+10. [Tasks and the console](#tasks-and-the-console)
+11. [Errors and keys](#errors-and-keys)
+12. [How HyForth uses memory](#how-hyforth-uses-memory)
 
 ### **The basics**
 
 HyForth reads a line, then runs each word in it, left to right.  Numbers go on the **data stack**; words take their arguments from it and leave results on it.
 
 ```
-HF>1 2 + .
+0:/> 1 2 + .
  0003
-HF>words
+0:/> words
 ```
 
 * **Words are separated by spaces.**  Names are case-sensitive.
 * **Lines** can be up to 255 characters.
 * **`.`** prints and drops the top of the stack, and **`.S`** shows the whole stack.  The format is `S<address> <depth> <items, top first>`, and `xS` clears it.
 * **`words`** lists every word.
-* **`bye`** leaves HyForth for [WOZMON](wozmon.md).  Ctrl-\\ starts a fresh HyForth.
+* **`bye`** leaves HyForth for [WOZMON](wozmon.md) (in a script that `run` started, it ends the script).  Ctrl-\\ starts a fresh HyForth.
+* **The prompt** shows the current card and directory: `0:/games> ` is `/games` on card 0 ([the shell](#the-shell-directories-files-and-programs)).
 
 Stack effects are written `( before -- after )`, with the top of the stack on the right.
 
@@ -42,19 +44,21 @@ Stack effects are written `( before -- after )`, with the top of the stack on th
 
 ### **Strings**
 
-`q^text^` makes a string (in HyForth's memory records) and pushes its reference:
-* `q^hello^ .sz` prints it.
-* Words that take a name take a string like this: `q^/dev/zero^ 1 open`.
+`"text"` makes a string (in HyForth's memory records) and pushes its reference.  `q^text^` is the same, for text with a `"` in it:
+* `"hello world" .sz` prints it: spaces and all, up to the closing `"`.  `""` is an empty string.
+* Words that take a name take a string like this: `"/dev/zero" 1 open`.
+* A string starts at the start of a word: `"` or `q^` after a space.  There are no escapes: a `"` can't go in a `"..."` string (use `q^...^`), nor a `^` in a `q^...^` one.
+* Like numbers, a string is made as it's read, even while compiling, so it isn't compiled into a definition.
 
 ### **Defining words**
 
 ```
-HF>: sq dup * swap drop ;
-HF>5 sq .
+0:/> : sq dup * swap drop ;
+0:/> 5 sq .
  0019
-HF>var x   7 x !   x @ .
+0:/> var x   7 x !   x @ .
  0007
-HF>9 cons nine   nine .
+0:/> 9 cons nine   nine .
  0009
 ```
 
@@ -75,12 +79,12 @@ HF>9 cons nine   nine .
 The control words aren't built in: they're defined in HyForth itself, by the **training scripts** in the paged ROM.  Load them first:
 
 ```
-HF>ftrain autoload
-HF>: t 3 0 do i . loop ;   t
+0:/> ftrain autoload
+0:/> : t 3 0 do i . loop ;   t
  0000 0001 0002
-HF>: s 3 = if 1 . else 2 . then ;   3 s 4 s
+0:/> : s 3 = if 1 . else 2 . then ;   3 s 4 s
  0001 0002
-HF>: c 0 begin 1 + dup 5 = until . ;   c
+0:/> : c 0 begin 1 + dup 5 = until . ;   c
  0005
 ```
 
@@ -158,7 +162,7 @@ HF>: c 0 begin 1 + dup 5 = until . ;   c
 | `emit` | `( c -- )` | Write a character (stdout) |
 | `cr`, `spc` | | Newline; `spc` pushes 32 |
 | `.`, `.C` | `( u -- )` | Print as hex / as two characters |
-| `.sz` | `( sz -- )` | Print a `q^...^` string |
+| `.sz` | `( sz -- )` | Print a string (`"..."` or `q^...^`) |
 | `Acls`, `Ascr ( c r -- )`, `Acol ( c -- )` | | ANSI: clear the screen, move the cursor, set attributes |
 | `in>`, `reset` | | Read the input buffer; reset it |
 
@@ -173,6 +177,61 @@ HF>: c 0 begin 1 + dup 5 = until . ;   c
 | `bye` | | Leave for WOZMON |
 | `abort` | | Abort to the prompt |
 
+### **The shell: directories, files and programs**
+
+**At boot** the shell looks for HydraFS volumes on the SD cards (`/sd/0` to `/sd/7`), lists the ones it finds (`hydrafs 0 2`), and makes the lowest one's root the **current directory**.  Then it runs **`boot.hys`** from there, if there is one, before the first prompt: a script for your own words and settings.
+
+**Names** are relative to the current directory unless they start with `/`, and `.` and `..` work anywhere in them: `games/star.frt`, `../notes`, `/sd/1/log`.  The current directory is a directory on a card, or `/` (`cd /`); each task has one of its own, and the tasks it starts get a copy.
+
+**Commands** take their arguments from the rest of the line, like a Unix shell's: `cd games`, `cp notes notes.bak`, and `cd "my games"` for a name with spaces in it.  Each also has a **stack form**, in parentheses, which takes strings, for definitions and scripts' Forth code: `"games" (cd)`.  (Inside a definition only the stack form works: the parsing form's argument would be read while compiling.)
+
+| Command | Stack form | Does |
+| :------ | :--------- | :--- |
+| `cd [dir]` | `(cd) ( sz -- )` | Change directory.  `cd` alone: the current card's root |
+| `pwd` | | Show the current directory, as a whole path: `/sd/0/games` |
+| `ls [dir]` | `(ls) ( sz -- )` | List a directory, a line per entry: `name size`, or `name/` for a directory (`ls` alone: the current one).  A file: its text (`ls /dev/sd/0/ctl`) |
+| `cat [file]` | | Show a file; with no name, copy stdin to stdout until end of file |
+| `cp from to` | `(cp) ( sz-from sz-to -- )` | Copy a file: to a new name (a file that's there is replaced), or into a directory, with the same name |
+| `mv from to` | `(mv) ( sz-from sz-to -- )` | Rename a file or directory (`to` a plain name: in the same directory); or move a file (`to` a path, or a directory to move it into: a copy, then the original removed) |
+| `rm file` | `(rm) ( sz -- )` | Remove a file (not a directory) |
+| `mkdir dir` | `(mkdir) ( sz -- )` | Make a directory |
+| `rmdir dir` | `(rmdir) ( sz -- )` | Remove an empty directory |
+| `include file` | `(include) ( sz -- )` | Read a HyForth script into this shell (below) |
+| `run file` | `(run) ( sz -- )` | Run a program in a task of its own, and wait for it (below) |
+| `prompt` | `( sz -- )` | Set the prompt's format (below) |
+
+```
+0:/> ls
+hello.txt 13
+games/
+0:/> cd games
+0:/games> cp star.frt /sd/1
+0:/games> cd ..
+0:/> mv hello.txt hi.txt
+0:/> pwd
+/sd/0
+```
+
+**The prompt** is a format, set with `prompt`: `%v` is the volume (`0:`, or nothing off the cards), `%d` the directory on the card (off the cards, the whole path: `cd /` gives `/> `), `%p` the whole path, `%l` the card's HydraFS label (nothing off the cards), `%t` the task (`0`-`F`), and `%%` a `%`.  The default is `"%v%d> " prompt`; `"%t %p$ " prompt` gives `1 /sd/0/games$ `, and `"[%l] %v%d> " prompt` gives `[GAMES] 0:/games> `.  Up to 31 characters.  The label is read from the card's ctl file when the prompt moves to another card, and again after `mkfs` or `relabel` (a label changed by hand through the ctl file shows once you're on another card and back).
+
+**Scripts** (`.hys` files) are lines of HyForth, as you'd type them.  `include file` reads one into this shell, as if it were typed (no prompts, no echo), so its definitions stay.  An error, or Ctrl-C, stops it and the scripts that include it, and says which line (`line 0002`, in hex).  Scripts nest up to 4 deep; a script's lines may end with CR LF, CR or LF.
+
+**Programs** run in a task of their own, and the shell waits for them: `run file`.
+* A **Hydra executable** (`.hyx`: a file that starts with an `HYX1` header; [writing one](../programming/programs.md)) is loaded into its new task's RAM and run until it returns.
+* **Anything else is a HyForth script**, read by a copy of the shell, as a pipeline's stage is: it starts with this shell's dictionary and stack, and what it defines or leaves on the stack goes away with it.  `bye` in it ends it.
+* A program has the console while it runs (if the shell has it), so **Ctrl-C stops it**, and gets copies of the shell's fds, namespace and current directory: it can be a pipeline's stage (`run hello.hyx | wc`).
+
+**A program by its name:** a word HyForth doesn't know is looked for as a program, `name.hyx` then `name.hys`: in the current directory, then (for a name with no `/`) in `/bin` on the current directory's card.  So `hello` runs `hello.hyx`, and a card's `/bin` works like a path.  Programs don't get the rest of the line as arguments, but a script gets the stack:
+
+```
+0:/> hello
+Hello from task B
+0:/> 3 4 add                    \ add.hys:  + .
+ 0007
+0:/> nosuch
+ !UNK WORD!
+```
+
 ### **Files and devices**
 
 | Word | Stack | Does |
@@ -186,90 +245,100 @@ HF>: c 0 begin 1 + dup 5 = until . ;   c
 | `fdup2` | `( fd newfd -- )` | Make newfd refer to fd's file: `fd 1 fdup2` sends `emit`'s output there |
 | `pipe` | `( -- rfd wfd )` | Make a pipe |
 | `ioerr` | `( -- n )` | The last IO error code |
-| `cat` | | Copy stdin to stdout until end of file |
+| `cat` | | Copy stdin to stdout until end of file (`cat file` shows a file: [the shell](#the-shell-directories-files-and-programs)) |
 | `wc` | `( -- lines words chars )` | Count stdin until end of file |
-| `mount` | `( sz-path sz-dev -- )` | Mount a device at a path: `q^/z^ q^zero^ mount`, then `q^/z^ 1 open` |
-| `bind` | `( sz-path sz-target -- )` | Make a path stand for another: `q^/tty^ q^/dev/cons^ bind` |
+| `mount` | `( sz-path sz-dev -- )` | Mount a device at a path: `"/z" "zero" mount`, then `"/z" 1 open` |
+| `bind` | `( sz-path sz-target -- )` | Make a path stand for another: `"/tty" "/dev/cons" bind` |
 | `unmount` | `( sz-path -- )` | Remove a mount or bind |
 | `ns` | | List the namespace |
-| `stty` | `( sz -- )` | Change the serial port's settings: `q^b19200^ stty`, `q^l7 pe s1^ stty` (b = baud rate, l = data bits, p = parity n/o/e/m/s, s = stop bits).  Output so far goes out first; then switch the terminal |
+| `stty` | `( sz -- )` | Change the serial port's settings: `"b19200" stty`, `"l7 pe s1" stty` (b = baud rate, l = data bits, p = parity n/o/e/m/s, s = stop bits).  Output so far goes out first; then switch the terminal |
 | `stty?` | | Show the serial port's settings, e.g. `b9600 l8 pn s1` |
-| `ctl` | `( sz-file sz-text -- )` | Write a command to a ctl file: `q^/dev/sd/0/ctl^ q^check^ ctl`, `q^/dev/proc/3/ctl^ q^kill^ ctl` |
-| `ls` | `( sz -- )` | List a directory on a card: `q^/sd/0^ ls` |
+| `ctl` | `( sz-file sz-text -- )` | Write a command to a ctl file: `"/dev/sd/0/ctl" "check" ctl`, `"/dev/proc/3/ctl" "kill" ctl` |
 | `create` | `( sz mode -- fd )` | Make a file (mode 0; 64 = append-only, 1 = read-only) and open it for reading and writing; a file that's there is emptied.  Mode 128 makes a directory |
-| `mkdir` | `( sz -- )` | Make a directory: `q^/sd/0/games^ mkdir` |
-| `remove` | `( sz -- )` | Remove a file, or an empty directory |
-| `rename` | `( sz-old sz-new -- )` | Rename, in the same directory: `q^/sd/0/notes^ q^old-notes^ rename` |
+| `vols` | | The cards: for each of 0-7, what it is (or `none`), and its HydraFS label, free space and last check |
+| `mkfs` | `( n sz-label -- )` | Make an empty HydraFS on card n (everything on it is lost): `0 "GAMES" mkfs`.  A quick format: a moment, whatever the card's size |
+| `mkfs-size` | `( n sz-label mb -- )` | The same, `mb` megabytes big (up to 65535, `$FFFF`), if the card is bigger: `0 "SMALL" 4096 mkfs-size` |
+| `mkfs-full` | `( n sz-label -- )` | A full format: the whole free map written now (a version 1 HydraFS), with its progress shown: minutes on a big card |
+| `relabel` | `( n sz-label -- )` | Give card n's HydraFS a new label: `0 "TOYS" relabel` |
+| `fsck` | `( n -- )` | Check card n's HydraFS, and show what it found |
+| `fsfix` | `( n -- )` | Check it, and repair its free map |
 
 **Buffers:** a failed call prints `!IO ERR!`, and `ioerr` gives the code ([error codes](../programming/rom-layout.md#error-codes)).  `here @` is a handy scratch buffer.
 
 ```
-HF>q^/dev/zero^ 1 open .                     \ fd 3
+0:/> "/dev/zero" 1 open .                    \ fd 3
  0003
-HF>3 here @ 16 read .
+0:/> 3 here @ 16 read .
  0010
-HF>q^/dev/sd/0/ctl^ 1 open 0 fdup2 cat | cat
+0:/> "/dev/sd/0/ctl" 1 open 0 fdup2 cat | cat
 sdhc 7580 MB 15523840 blocks
-HF>q^/dev/sd/0/data^ 3 open .                \ the SD card as bytes
-HF>3 512 0 seek   3 here @ 16 read .         \ block 1's first 16 bytes
+0:/> "/dev/sd/0/data" 3 open .               \ the SD card as bytes
+0:/> 3 512 0 seek   3 here @ 16 read .       \ block 1's first 16 bytes
 ```
 
 (`\` isn't a comment word: the examples just annotate.)
 
-**The files on a card** are at `/sd/N` ([io.md](../programming/io.md#the-files-on-a-card)).  Reading a directory gives a line per entry, so `cat` lists it, and a file reads like any other fd:
+**The files on a card** are at `/sd/N` ([io.md](../programming/io.md#the-files-on-a-card)), and [the shell's commands](#the-shell-directories-files-and-programs) cover the everyday work.  Underneath, reading a directory gives a line per entry (so `cat` lists it), and a file reads like any other fd:
 
 ```
-HF>q^/sd/0^ 1 open 0 fdup2 cat | cat
+0:/> "/sd/0" 1 open 0 fdup2 cat | cat
 hello.txt 13
 games/
-HF>q^/sd/0/games^ 1 open 0 fdup2 cat | cat
-star.frt 1234
-HF>q^/sd/0/games/star.frt^ 1 open 0 fdup2 cat | cat
-HF>q^/sd/0/hello.txt^ 1 open .
+0:/> "games/star.frt" 1 open 0 fdup2 cat | cat
+0:/> "hello.txt" 1 open .
  0003
-HF>3 here @ 128 read .
+0:/> 3 here @ 128 read .
  000D
 ```
 
-Writing works as on any fd, and `ls`, `create`, `mkdir`, `remove` and `rename` do the rest:
+Writing works as on any fd, with `create` to make a file:
 
 ```
-HF>q^/sd/0/games^ mkdir
-HF>q^/sd/0/games/hi^ 0 create .              \ fd 3, open for writing
+0:/> mkdir games
+0:/> "games/hi" 0 create .                 \ fd 3, open for writing
  0003
-HF>72 here @ c! 105 here @ 1 + c!
-HF>3 here @ 2 write . 3 close                \ "Hi"
+0:/> 72 here @ c! 105 here @ 1 + c!
+0:/> 3 here @ 2 write . 3 close            \ "Hi"
  0002
-HF>q^/sd/0/games^ ls
+0:/> ls games
 hi 2
-HF>q^/sd/0/games/hi^ q^hello^ rename
-HF>q^/sd/0/games/hello^ remove
+0:/> mv games/hi hello
+0:/> rm games/hello
 ```
 
 **Close what you write** before taking the card out: a file's new size goes to the card when it's closed.
 
-**The card itself** is managed through its ctl file, with `ctl`, and `ls` shows it:
+**The cards themselves** (HydraFS volumes) have words of their own.  They work through each card's ctl file (`/dev/sd/N/ctl`), so `ctl` and `ls` can do the same by hand:
 
 ```
-HF>q^/dev/sd/0/ctl^ q^check^ ctl             \ check the card
-HF>q^/dev/sd/0/ctl^ ls
+0:/> vols                                   \ what's in the sockets
+0: sdhc 7580 MB 15523840 blocks
+hydrafs label=GAMES
+free 6246400 KB of 7761920 KB
+1: none
+...
+0:/> 1 "WORK" mkfs                          \ a new HydraFS on card 1: everything on it is lost
+0:/> 0 fsck                                 \ check card 0
 sdhc 7580 MB 15523840 blocks
 hydrafs label=GAMES
 free 6246400 KB of 7761920 KB
 check: lost 0, unmarked 0, twice 0
-HF>q^/dev/sd/0/ctl^ q^check fix^ ctl         \ ... and repair its free map
-HF>q^/dev/sd/0/ctl^ q^label TOYS^ ctl        \ a new label
-HF>q^/dev/sd/0/ctl^ q^format GAMES^ ctl      \ start afresh: everything on it is lost
+0:/> 0 fsfix                                \ ... and repair its free map
+0:/> 0 "TOYS" relabel                       \ a new label
 ```
+
+`fsck` counts clusters lost (marked in use, but nothing uses them: wasted space), unmarked (in use, but marked free: a new file could be given them) and used twice (two files share them: one is damaged).  `fsfix` frees the lost ones and marks the unmarked ones; a cluster used twice is only shown, as a person has to decide which file keeps it.  A card takes a pass for each 256 MB, so checking a big one takes a while; from 4 GB up, `10% 20% ... 100%` shows how far it's got.  Empty space checks quickly: an empty 244 GB card takes about a minute and a half.
+
+`mkfs` is a **quick format**: it writes just the superblock, and the free map is written as the card fills, so a 244 GB card is ready in a moment.  `mkfs-full` writes the whole map first (about 13 minutes for 244 GB, with its progress shown), for a card an older ROM will read.  `mkfs-size` makes a HydraFS smaller than the card.  By hand, the ctl command is `format [-f] [-s size] [label]` (size in megabytes, or gigabytes with a G: `"/dev/sd/0/ctl" "format -s 8G WORK" ctl`).
 
 ### **Pipelines**
 
-A line with `|` (with spaces around it, outside `q^...^` strings) is a **pipeline**:
+A line with `|` (with spaces around it, outside `"..."` and `q^...^` strings) is a **pipeline**:
 
 ```
-HF>words | wc . . .
+0:/> words | wc . . .
  0DB4 021C 002C
-HF>words | cat | wc .S
+0:/> words | cat | wc .S
 ```
 
 * **Each stage but the last** runs in a copy of the shell's task (`TASK_CLONE`: same dictionary, same stack), with its stdout into a pipe.
@@ -287,9 +356,9 @@ HF>words | cat | wc .S
 | `sleep` | `( n -- )` | Sleep n ticks (200 a second; `200 sleep` is 1 s); Ctrl-C ends it |
 
 ```
-HF>shell .
- 000B                   \ the new shell is task B: Ctrl-] B switches to it, Ctrl-] 1 back
-HF>ps
+0:/> shell .
+ 000B                     \ the new shell is task B: Ctrl-] B switches to it, Ctrl-] 1 back
+0:/> ps
 0 R -
 1 R 0 *
 B W 1
@@ -310,7 +379,7 @@ C D -
 
 | Message | Meaning |
 | :------ | :------ |
-| `!UNK WORD!` | No such word (or a number it can't read) |
+| `!UNK WORD!` | No such word, and no program by that name (or a number it can't read) |
 | `!DS PTR ERROR!`, `!RT PTR ERROR!` | Data / return stack under- or overflow |
 | `!DIV ZERO!` | Division by zero |
 | `!LOW MEM!` | Out of memory (dictionary or records) |
@@ -321,7 +390,7 @@ C D -
 
 | Key | Does |
 | :-- | :--- |
-| Ctrl-C | Break: back to the prompt, keeping the dictionary |
+| Ctrl-C | Break: back to the prompt, keeping the dictionary.  While a program runs (`run`), it stops the program |
 | Ctrl-\\ | Kill: a fresh HyForth (the dictionary is lost) |
 | Ctrl-D / Ctrl-Z | End of input (`cat`, `wc`, `key`) |
 | Ctrl-] then `0-F` | Switch to that task; `l` lists them |
@@ -336,8 +405,9 @@ HyForth runs in task 1, and its RAM image is copied from the paged ROM to `$0800
 | Input buffer | `$0200` |
 | Data and return stacks | `$0300-$03FF` |
 | Record stack | `$0400-$05FF` |
-| Dictionary | Grows up from its end, `here @` |
+| The shell's buffers (names, a block of a file being shown, include's saved fds) | Just after the image: not in the paged ROM |
+| Dictionary | Grows up from the page after them, `here @` |
 | Small records (strings, `malloc`) | A 2K arena from the MMU |
 | Records of 256 bytes or more | Their own MMU blocks |
 
-HyForth keeps the MMU's page floor 2 pages above `here`, so the dictionary and the MMU's allocations never meet: `!LOW MEM!` comes first.  A copy of the shell (a pipeline stage, `TASK_CLONE`) gets all of this copied.
+HyForth keeps the MMU's page floor 2 pages above `here`, so the dictionary and the MMU's allocations never meet: `!LOW MEM!` comes first.  A copy of the shell (a pipeline stage, or a script that `run` started: `TASK_CLONE`) gets all of this copied.

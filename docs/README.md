@@ -6,7 +6,7 @@ The Hydra-16 is a multitasking 65C02 computer: a W65C02S whose address decoding 
 * **[Getting started](getting-started.md)**: build the ROMs, program the chips, connect a terminal, boot, or run it in the emulator.
 
 ### **Using the system**
-* **[HyForth](using/hyforth.md)**: the shell and language: words, files and devices, pipelines, tasks.
+* **[HyForth](using/hyforth.md)**: the shell and language: words, directories and files, scripts and programs, pipelines, tasks.
 * **[WOZMON, POST and the self tests](using/wozmon.md)**: the monitor and disassembler, reading the power-on self test.
 
 ### **Programming it**
@@ -17,17 +17,19 @@ The **[Programmer's Guide](programming/README.md)**, by area:
 * [Memory](programming/memory.md): the MMU, shared memory, far pointers.
 * [Input and output](programming/io.md): fds, devices, the console, pipes, namespaces.
 * [Drivers and file servers](programming/servers.md)
+* [Programs](programming/programs.md): Hydra executables (`.hyx`), and building one.
 
 ### **The hardware**
 * **[Hardware Reference](hardware.md)**: the main board in detail (memory system, address decoding, pseudo-registers, interrupts, clocks, devices, slots, connectors, errata) and the companion cards.
 
 ### **Tools**
-* **[The emulator and tools](tools/emulator.md)**: `hydrasim.js` (interactive and scripted), the regression tests, the HydraFS card tool.
+* **[The emulator and tools](tools/emulator.md)**: `hydrasim.js` (interactive and scripted), the regression tests, the HydraFS card tool, the `.hyx` header tool.
 
 ### **Plans and design notes**
 The reasoning behind the design, and what's planned.  Parts of them are history (marked done).
 * [IO_PLAN.md](plans/IO_PLAN.md): the IO subsystem, scheduler and filesystem steps.
 * [MMU_PLAN.md](plans/MMU_PLAN.md): the memory manager, IRQ dispatch, drivers, zero-page convention.
 * [HYDRAFS.md](plans/HYDRAFS.md): the SD card filesystem (spec).
+* [SHELL.md](plans/SHELL.md): HyForth as a shell: a current directory, commands, running programs (done).
 * [REORG_PLAN.md](plans/REORG_PLAN.md): the ROM reorganisation.
 * [IDEAS.md](plans/IDEAS.md): ideas for later (wait states for board V2, ...).

@@ -11,8 +11,9 @@
 ;                       server uses block numbers, for all of it).
 ;   /dev/sd/N/ctl       read: the card, as a line of text: "sdhc 7580 MB 15523840 blocks" (or sdsc), or
 ;                       "none" (it starts the card first if it isn't yet).  Write: a command: "init"
-;                       starts the card again (e.g. after changing it); "format [label]" makes an empty
-;                       HydraFS on it (HFS_FORMAT); "label <text>" sets its HydraFS label; "check" and
+;                       starts the card again (e.g. after changing it); "format [-f] [-s size] [label]"
+;                       makes an empty HydraFS on it (HFS_FORMAT, hfs_format.s); "label <text>" sets its
+;                       HydraFS label; "check" and
 ;                       "check fix" check its HydraFS (HFS_CHECK).  A HydraFS card's text has lines about
 ;                       it too: its label, its free space, the last check's results (HFS_CTL_LINES).
 ;   Ctl (either file): SD_CTL_INIT starts the card again.
@@ -24,6 +25,11 @@
 ; The storage task's init (from STORAGE_INIT on page 0, in the task): the block cache, SPI idle.
 ; OUT: C = 0; or C = 1, .A = error
 STORAGE_INIT3:
+            lda         #HFS_SCRATCH_FLOOR                  ; HydraFS's scratch page ($0800): not the MMU's
+            jsr         MM_SET_FLOOR
+            bcs         @done
+            lda         #$FF                                ; (No progress being shown)
+            sta         HFS_PG_TENS
             ldx         #SD_MAX_CARDS - 1                   ; (The cards start at their first open)
 :
             stz         SD_CARD_STATE,X
@@ -60,6 +66,14 @@ STORAGE_INIT3:
             jsr         MM_LOCK
             sta         HFS_META
             sty         HFS_META + 1
+            lda         #<512                               ; And the block of zeros a new map block gets
+            ldy         #>512                               ;   (HFS_MAP_WRITTEN)
+            ldx         #0
+            jsr         MM_ALLOC
+            bcs         @done
+            jsr         MM_LOCK
+            sta         HFS_ZBUF
+            sty         HFS_ZBUF + 1
             stz         HFS_MSTATE
             stz         HFS_SBDIRTY
             clc
@@ -445,11 +459,12 @@ SD_CTL_WRITE:
 
 SD_CMDS:    .byte   "init", 0, "format", 0, "label", 0, "check", 0, 0
 
-; "format [label]" (SD_TMP = 1), "label <text>" (2) and "check [fix]" (3), for HydraFS: the text after the
-; word (spaces before it skipped, up to 31 characters, to the end of the line) -> HFS_STAT, zero-padded to 32.
+; "format [options] [label]" (SD_TMP = 1), "label <text>" (2) and "check [fix]" (3), for HydraFS: the text
+; after the word (spaces before it skipped, up to 47 characters, to the end of the line) -> HFS_STAT,
+; zero-padded to 48.  (A label is cut to 31 characters where it's used: HFS_LABEL_CUT.)
 ; IN: .Y = where the word ended, in the data area (mapped); SD_N = the write's length
 SD_CTL_FS:
-            ldx         #HFS_NAME_MAX + 1
+            ldx         #IO_STAT_SIZE
 :
             stz         HFS_STAT - 1,X
             dex
@@ -473,7 +488,7 @@ SD_CTL_FS:
             beq         @copied
             cmp         #ASCII_LF
             beq         @copied
-            cpx         #HFS_NAME_MAX
+            cpx         #IO_STAT_SIZE - 1
             beq         @copied                             ; (Any more is cut off)
             sta         HFS_STAT,X
             inx

@@ -431,6 +431,7 @@ galois32o:
 
 .ifndef TXT2STACK
 ;
+;  a token that starts q^ (ended by the next ^) or " (ended by the next "): its text, spaces and all
 ;  uses TEMP1, TEMP2, TEMP3, TEMP5, TEMP6, X, Y
 ;
 TEXTGET:
@@ -447,18 +448,23 @@ TX2SKSPC:
     iny
     bra TX2SKSPC
 TX2SK00:
-    cmp #ASCII_q
+    cmp #ASCII_DQUOTE               ; "text": ended by a '"'
+    beq TX2OPEN
+    cmp #ASCII_q                    ; q^text^: ended by a '^'
     bne TX2NOGOOD
     iny
     lda (NXTTOK),y
     cmp #ASCII_CARET
     bne TX2NOGOOD
+TX2OPEN:
+    sta TEMP3                       ; temp3 = the delimiter that ends it
     iny
     sty TEMP6                       ; temp6 stores pos of first char
 TX2SCAN:
-    lda (NXTTOK),y                  ; find delimiting '^'
+    lda (NXTTOK),y                  ; find delimiting '^' (or '"')
+    beq TX2NOGOOD                   ; (the line's end: not a string)
     iny
-    cmp #ASCII_CARET
+    cmp TEMP3
     beq TX2FOUND
     tya
     clc
@@ -500,26 +506,24 @@ TX2ROOM:
 TX2SK01:
     clc
     adc #3
+    sta TEMP2
     bcc TX2SK02
     inc TEMP2+1
 TX2SK02:
     ldy TEMP6
 TX2CPYLOOP:
+    cpy TEMP5                       ; (an empty string: nothing to copy)
+    beq TX2SK99
     lda (NXTTOK),y
     sta (TEMP2),y
     iny
-    cpy TEMP5
-    bne TX2CPYLOOP
+    bra TX2CPYLOOP
 TX2SK99:
     lda #0
     sta (TEMP2),y                   ; put zero on end
     jsr spush_0                     ; push address from mem stack on DS
-    lda TEMP5
-    sec
-    sbc TEMP6
-    clc
-    adc #4
-    tax
+    ldx TEMP5                       ; the length byte through the delimiter: blanked by 'token'
+    inx
     clc
     jmp TX2END
 TX2NOGOOD:

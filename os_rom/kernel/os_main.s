@@ -39,10 +39,10 @@ RESET_VECTOR_START:
             ldx                 #STORAGE_TASK_NUM
             jsr                 DRV_BOOT
 
-; Start the shell in its own task (the default serial-capture task), start the scheduler's tick, and
-; hand the CPU over
-            lda                 #<SHELL_MAIN
-            ldy                 #>SHELL_MAIN
+; Start the boot shell in its own task (the default serial-capture task: page 7's SH_BOOT finds the
+; volumes, then starts HyForth), start the scheduler's tick, and hand the CPU over
+            lda                 #<BOOT_SHELL
+            ldy                 #>BOOT_SHELL
             ldx                 #SHELL_TASK_NUM
             jsr                 TASK_PREPARE
             jsr                 SCHED_START
@@ -53,16 +53,12 @@ RESET_VECTOR_START:
             wai
             bra                 @idle
 
-S_SD_PATH:          .byte   "/sd", 0                                ; The HydraFS server's mount point ...
-S_HFS_DEV:          .byte   "hfs", 0                                ;   and the device mounted there
+FAR_GATE_INLINE     BOOT_SHELL,     ::SH_BOOT_P7,           7   ; The boot shell (page 7)
 
-; The shell task: HyForth, then WOZMON when Forth exits (bye)
+; A shell started later (HyForth's shell word): HyForth, then WOZMON when Forth exits (bye).  It inherits
+; its parent's namespace (/sd mounted) and current directory
 SHELL_MAIN:
             jsr                 IO_STD_OPEN                         ; fds 0-2 on /dev/cons (inherited by the tasks the shell starts)
-            LOAD_ADDR           S_HFS_DEV, ZP_IO_BUF                ; The cards' files at /sd (inherited too;
-            lda                 #<S_SD_PATH                         ;   a card is only looked at when one of
-            ldy                 #>S_SD_PATH                         ;   its files is opened)
-            jsr                 IO_MOUNT
             jsr                 COPYTORAM
             jsr                 forth_main                          ; (No clear screen: boot messages, e.g. a driver's FAIL, stay)
             jsr                 MON_START
