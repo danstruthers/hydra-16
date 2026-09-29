@@ -18,12 +18,13 @@ Both come from one build (`os_rom/all.s`, linked by `os_rom/os_rom_C02.cfg`).  H
 | 0 | (global) | Reset, POST gate, the kernel (tasks, scheduler, IRQ dispatch, MMU, shared memory), serial and sound drivers, the IO layer's page 0 part, printing, WOZMON, thunks | `kernel/`, `drivers/serial.s`, `drivers/sound.s`, `io/io_p0.s`, `monitor/wozmon.s` |
 | 1 | `PAGE1` | HyForth's ROM part, the disassembler, a copy of the thunks | `hyforth/`, `monitor/disasm.s` |
 | 2 | `PAGE2` | The IO layer: fds, namespaces, pipes, `/dev/cons` and `/dev/ser` (its settings, and the fast serial and tick interrupt handlers: `serfast.s`), `/dev/snd`, `/dev/proc`, the sound test tune | `io/`, `drivers/snd_test.s` |
-| 3 | `PAGE3` | Storage: SPI, the SD card, `/dev/sd` (the HydraFS server will go here) | `drivers/spi.s`, `drivers/sd.s`, `io/sd_srv.s` |
+| 3 | `PAGE3` | Storage: SPI, the SD card's block layer, `/dev/sd` | `drivers/spi.s`, `drivers/sd.s`, `io/sd_srv.s` |
 | 4 | `PAGE4` | POST and the self tests (MMU, scheduler, IO) | `tests/` |
 | 5 | `PAGE5` | Far pointers and references | `kernel/fp.s` |
-| 6-F | | Empty | |
+| 6 | `PAGE6` | The HydraFS server (`/sd/N/...`), in the storage task, on page 3's block layer | `io/page6.s`, `io/hfs_srv.s`, `io/hfs_write.s`, `io/hfs_check.s` |
+| 7-F | | Empty | |
 
-Page 0 is nearly full, so new code goes on another page behind gates.  The link map (`os_rom/obj/os_rom_C02.map`) shows each page's segments and free space.
+Page 0 is nearly full (about 40 bytes are left), so new code goes on another page behind gates.  The link map (`os_rom/obj/os_rom_C02.map`) shows each page's segments and free space.
 
 **Fixed addresses on every page:**
 
@@ -129,6 +130,11 @@ OS zero-page variables that calls take parameters in (from the current build's `
 | `$7D` | `ERR_IO_NS_LOOP` | Too many binds in a row |
 | `$7E` | `ERR_IO_NOT_READY` | The device isn't started |
 | `$7F` | `ERR_IO_MEDIA` | The medium refused the command or data |
+| `$80` | `ERR_IO_NOT_FS` | The card holds no HydraFS (no superblock, or a version this can't read) |
+| `$81` | `ERR_IO_FULL` | The card is full |
+| `$82` | `ERR_IO_EXISTS` | There's a file or directory by that name already |
+| `$83` | `ERR_IO_NOT_EMPTY` | The directory has files in it |
+| `$84` | `ERR_IO_BUSY` | The file is open |
 | `$F1` | `ERR_NO_TASKS_AVAILABLE` | All 16 tasks are busy |
 | `$F2` | `ERR_TASK_BUSY` | The task (or player) is busy |
 | `$F3` | `ERR_BAD_TASK` | Not a task that can be used that way |
@@ -182,7 +188,7 @@ The thunk table at `$F800` (on BIOS pages 0 and 1) gives every public call a fix
 | `$F878` | `IO_GETC` | `.X` = fd → `.A` = byte | |
 | `$F87B` | `IO_PUTC` | `.X` = fd, `.A` = byte | |
 | `$F87E` | `IO_SEEK` | `.A` = fd, `ZP_IO_OFS` = 32-bit offset | |
-| `$F881` | `IO_STAT` | `.A` = fd, `ZP_IO_BUF` = 16-byte buffer | |
+| `$F881` | `IO_STAT` | `.A` = fd, `ZP_IO_BUF` = 48-byte buffer | [io](io.md#stat) |
 | `$F884` | `IO_CTL` | `.A` = fd, `.X` = code, `.Y` = argument | |
 | `$F887` | `DEV_REGISTER` | `.A.Y` = name, `.X` = task, `ZP_TC_VEC` = serve routine | [servers](servers.md) |
 | `$F88A` | `IO_TEST` | Run the IO self test | |
@@ -206,10 +212,13 @@ The thunk table at `$F800` (on BIOS pages 0 and 1) gives every public call a fix
 | `$F8C0` | `MM_FP` | `.A` = handle → `ZP_FP` | |
 | `$F8C3` | `SH_REF` | `ZP_FP` → `.A` = shared handle for it | |
 | `$F8C6` | `SH_FP` | `.A` = shared handle → `ZP_FP` | |
+| `$F8C9` | `IO_CREATE` | `.A.Y` = name, `.X` = mode, `ZP_IO_BUF` = new file's mode bits → `.A` = fd | [io](io.md#the-files-on-a-card) |
+| `$F8CC` | `IO_REMOVE` | `.A.Y` = name | [io](io.md#the-files-on-a-card) |
+| `$F8CF` | `IO_WSTAT` | `.A` = fd, `ZP_IO_BUF` = stat record | [io](io.md#the-files-on-a-card) |
 
 Calls without a thunk (for ROM code; reached with a gate from other pages): `TASK_SLEEP`, `TASK_SLEEP_UNTIL`, `TICKS_GET`, `TASK_START`, `TASK_CALL`, `IRQ_REGISTER`, `IRQ_UNREGISTER`, `SWI_REGISTER`, `SWI_UNREGISTER`, `SW_INT`, `DRV_START`, `IO_FLUSH`, `YM_BEEP`, and the server helpers `IO_SRV_MAP`, `IO_SRV_UNMAP`, `IO_SRV_COUNT`.
 
-**Adding a thunk:** add the `jmp` at the end of `kernel/thunks.s` (page 0), and the same entry to page 1's copy in `hyforth/page1.s` (page 1's copy jumps to its gates).  The assertion there checks that both tables end at the same address.  Never move existing entries: programs rely on the addresses.
+**Adding a thunk:** add the `jmp` at the end of `kernel/thunks.s` (page 0), and the same entry to page 1's copy in `hyforth/page1.s` (page 1's copy jumps to its gates).  A call that page 0 doesn't use itself can have its gate right after the thunks (as `IO_CREATE` does), since `GATES_P0` is full.  The assertion there checks that both tables end at the same address.  Never move existing entries: programs rely on the addresses.
 
 ### **Adding code**
 

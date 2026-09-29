@@ -16,6 +16,8 @@
 
 ; A request.  IN: .A = request, .X = client, .Y = fid
 PROC_SERVE:
+            cmp         #H9_CREATE
+            bcs         PROC_BAD                            ; (The filesystem's requests)
             cmp         #H9_OPEN
             beq         PROC_OPEN
             cmp         #H9_READ

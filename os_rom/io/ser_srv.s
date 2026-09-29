@@ -90,6 +90,8 @@ SER_REQUEST:
             jmp         SER_WRITE
 
 @other:
+            cmp         #H9_CREATE
+            bcs         SER_REFUSE                          ; (The filesystem's requests)
             cmp         #H9_CTL
             beq         SER_CTL
             cmp         #H9_STAT
@@ -99,6 +101,11 @@ SER_REQUEST:
 SER_OK:
             lda         #0
             clc
+            rts
+
+SER_REFUSE:
+            lda         #ERR_IO_BAD_REQ
+            sec
             rts
 
 SER_CTL:

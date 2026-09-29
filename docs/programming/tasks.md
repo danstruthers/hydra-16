@@ -37,7 +37,7 @@ The software gives each task:
 | `$0` | System task: boot, then the **idle task** (runs `wai` when no other task can run) |
 | `$1` | The shell (HyForth, then WOZMON), the foreground task at boot |
 | `$2-$B` | Free: started with `TASK_RUN`, `TASK_START`, `TASK_CLONE`, HyForth's `shell` or pipelines |
-| `$C` | Storage driver: `/dev/sd` (Resident) |
+| `$C` | Storage driver: `/dev/sd` and HydraFS (`/sd`) (Resident) |
 | `$D` | Pipe server (Resident) |
 | `$E` | Sound driver: `/dev/snd` (Resident) |
 | `$F` | Serial driver: `/dev/cons`, `/dev/ser`, `/dev/ser/ctl` (Resident) |

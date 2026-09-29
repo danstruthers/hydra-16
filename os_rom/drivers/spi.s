@@ -7,10 +7,35 @@
 ;   Port B: PB0 = SCLK, PB1 = /CS enable (low: the device selected by PB3-PB6 is selected), PB2 = MOSI,
 ;   PB3-PB5 = device 0-7 (a 74HC138 on the board: /nSPI_CS0-7, the SPI headers J18-J25), PB6 = 1 for
 ;   devices 8-15 (decoded on the card slots), PB7 = MISO (input).
-;   Mode 0: SCLK idles low, both sides sample on the rising edge.  About 90 kHz for SPI_XFER and 130 kHz
+;   Mode 0: SCLK idles low, both sides sample on the rising edge.  About 108 kHz for SPI_XFER and 199 kHz
 ;   for SPI_RECV at 3.58 MHz: under the 400 kHz an SD card allows while it starts up.
+;   These are the SD card's inner loops (about 64% of a block read), so they're unrolled and kept short:
+;   18 cycles a bit in, 33 out.  At 7.16 MHz (CPU_CLOCK_MULT 2) the receive loop is padded, or its SCLK
+;   would reach 398 kHz, too close to the start-up limit (_M_SPI_PAD).
 
 .segment "STORAGE_P3"
+
+; Pad the receive loop at 7.16 MHz, to keep SCLK at the 3.58 MHz build's rate (about 275 kHz).  Nothing at
+; 3.58 MHz, where 18 cycles a bit is already slow enough.
+.macro _M_SPI_PAD
+.if ::CPU_CLOCK_MULT > 1
+            nop
+            nop
+            nop
+            nop
+.endif
+.endmacro
+
+; One bit in, MSB first: SCLK high (the device presents its bit), sample MISO, SCLK low, shift it into .A.
+; IN: .Y = the port value with SCLK low; .X is the sample.  18 cycles
+.macro _M_SPI_BIT_IN
+            inc         IOR_SPI_DATA                        ; SCLK high: the device presents its bit
+            ldx         IOR_SPI_DATA                        ; MISO = bit 7
+            sty         IOR_SPI_DATA                        ; SCLK low
+            cpx         #$80                                ; C = MISO
+            rol                                             ; ... into the byte
+            _M_SPI_PAD
+.endmacro
 
 ; Set up port B for SPI (nothing selected).  Doesn't touch the VIA's timers or interrupts (T1 is the
 ; scheduler's tick).  Modifies: .A
@@ -43,6 +68,7 @@ SPI_DESELECT:
             rts
 
 ; Send .A and return the byte received at the same time.  Preserves .X, .Y
+; (The bit's store drops SCLK for the next one, so there's no separate SCLK-low write.)
 SPI_XFER:
             phx
             phy
@@ -58,40 +84,40 @@ SPI_XFER:
 @bit:
             asl         SPI_OUT                             ; C = the bit to send
             bcs         @one
-            stx         IOR_SPI_DATA
+            stx         IOR_SPI_DATA                        ; MOSI low, SCLK low
             bra         @clock
 
 @one:
-            sty         IOR_SPI_DATA
+            sty         IOR_SPI_DATA                        ; MOSI high, SCLK low
 
 @clock:
             inc         IOR_SPI_DATA                        ; SCLK high: both sides sample
             lda         IOR_SPI_DATA                        ; (MISO = bit 7)
-            dec         IOR_SPI_DATA                        ; SCLK low
-            asl
+            asl                                             ; C = MISO
             rol         SPI_IN
             bcc         @bit
+            sty         IOR_SPI_DATA                        ; Idle: SCLK low, MOSI high
             ply
             plx
             lda         SPI_IN
             rts
 
-; Receive a byte (sending $FF, MOSI high).  OUT: .A.  Preserves .X, .Y
+; Receive a byte (sending $FF, MOSI high).  OUT: .A, and N/Z from it.  Preserves .X, .Y
 SPI_RECV:
-            lda         SPI_PORT                            ; (MOSI high)
-            sta         IOR_SPI_DATA
-            lda         #1
-            sta         SPI_IN
+            phx
+            phy
+            ldy         SPI_PORT                            ; (SCLK low, MOSI high)
+            sty         IOR_SPI_DATA
+            lda         #0
 
-@bit:
-            inc         IOR_SPI_DATA                        ; SCLK high
-            lda         IOR_SPI_DATA
-            dec         IOR_SPI_DATA                        ; SCLK low
-            asl
-            rol         SPI_IN
-            bcc         @bit
-            lda         SPI_IN
-            rts
+            .repeat     8
+            _M_SPI_BIT_IN
+            .endrepeat
+
+            ply
+            plx
+            ora         #0                                  ; N/Z from the byte (SD_CMD waits for one with bit 7
+            rts                                             ;   clear: its bpl), as the pulls have clobbered them
 
 ; Clock .A * 8 cycles with nothing selected and MOSI high (an SD card needs 74 before it starts).
 ; Modifies: .A

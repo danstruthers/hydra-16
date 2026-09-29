@@ -135,3 +135,14 @@ TH_SH_REF:
                 jmp             SH_REF              ; $F8C3
 TH_SH_FP:
                 jmp             SH_FP               ; $F8C6
+TH_IO_CREATE:
+                jmp             IO_CREATE           ; $F8C9
+TH_IO_REMOVE:
+                jmp             IO_REMOVE           ; $F8CC
+TH_IO_WSTAT:
+                jmp             IO_WSTAT            ; $F8CF
+
+; Gates for the calls above that aren't used on page 0 (here: GATES_P0, before the thunks, is full)
+FAR_GATE_INLINE IO_CREATE,      PAGE2::IO_CREATE,       2
+FAR_GATE_INLINE IO_REMOVE,      PAGE2::IO_REMOVE,       2
+FAR_GATE_INLINE IO_WSTAT,       PAGE2::IO_WSTAT,        2

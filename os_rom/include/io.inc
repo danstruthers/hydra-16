@@ -22,7 +22,21 @@ IO_FDF_CONS         = $01      ; The fd is /dev/cons: WRITE_CHAR puts bytes stra
 IO_MODE_READ        = $01
 IO_MODE_WRITE       = $02
 IO_MODE_RDWR        = IO_MODE_READ | IO_MODE_WRITE
+IO_MODE_STAT        = $04       ; reads of a directory return 48-byte stat records, not text (HydraFS)
+IO_MODE_TRUNC       = $08       ; empty the file as it's opened (with IO_MODE_WRITE; HydraFS)
 IO_MODE_NONBLOCK    = $80       ; reads return ERR_IO_WOULD_BLOCK instead of waiting
+
+; Stat records (IO_STAT, and what a directory read gives per entry with IO_MODE_STAT).  A device that
+; has nothing to say returns all zeros (STAT_ZERO); HydraFS fills them in from the directory entry, whose
+; first 48 bytes have the same layout (except that byte 33 is the card, not a reserved byte).
+IO_STAT_SIZE        = 48
+IO_ST_NAME          = 0         ; 32 bytes, zero-terminated
+IO_ST_MODE          = 32        ; HFS_M_* bits
+IO_ST_CARD          = 33        ; the SD card (0-7)
+IO_ST_QVER          = 34        ; the qid: its version (up by 1 at every change) ...
+IO_ST_QID           = 36        ;   and its id (unique on the card, the same across renames)
+IO_ST_SIZE          = 40        ; the size in bytes
+IO_ST_STAMP         = 44        ; the modification stamp
 
 ; stdio buffers, per task (page $07 is free in every task): WRITE_CHAR collects output in STDOUT_BUF (for
 ; the console, a line at a time: then IO_FLUSH puts it straight into the serial TX ring), and when fd 0 isn't
@@ -98,6 +112,7 @@ IO_BLK_OFS          = 4         ; 32-bit offset (read / write)
 IO_BLK_COUNT        = 8         ; 16-bit byte count: requested (in), done (out)
 IO_BLK_CTL_CODE     = 11        ; H9_CTL
 IO_BLK_CTL_ARG      = 12
+IO_BLK_PERM         = 12        ; H9_CREATE: the new file's mode (HFS_M_*)
 IO_BLK_NS           = $20       ; The task's namespace (below)
 IO_BLK_DATA         = $100
 
@@ -128,6 +143,12 @@ H9_CLUNK            = 4         ; close fid
 H9_STAT             = 5         ; -> 16-byte stat block in the data area
 H9_CTL              = 6         ; device-specific control: code, arg
 H9_DUP              = 7         ; another fd refers to the fid now (IO_DUP2, or inherited by a new task)
+; The filesystem's requests (HydraFS).  Other servers refuse them: requests H9_CREATE and up aren't theirs
+H9_CREATE           = 8         ; name remainder in the data area, the new file's mode (IO_BLK_PERM), the open
+                                ;   mode -> fid (a file that's there is emptied and opened)
+H9_REMOVE           = 9         ; name remainder in the data area (no fid: the IO layer lends it an fd)
+H9_WSTAT            = 10        ; a stat record in the data area: a new name (none: 0 first byte) and mode
+                                ;   bits ($FF: as they are)
 ; Every request also carries the fd's mode (IO_BLK_MODE), so a server can tell the ends of a pipe apart.
 
 ; Sound driver: /dev/snd (sound.s, snd_srv.s).  Writes are YM2151 register/value byte pairs.
@@ -147,6 +168,140 @@ SD_CTL_INIT         = 1         ; IO_CTL code: start the card again (e.g. after 
 SD_CARD_STATE       = $0200     ; In the storage task's RAM: each card's state (SD_MAX_CARDS bytes)
 SD_CARD_BLOCKS      = $0208     ;   and size in blocks (4 bytes each, from its CSD register)
 SD_CSD              = $0228     ; The last CSD register read (16 bytes)
+
+; HydraFS: the files on the cards, /sd/N/... (io/hfs_srv.s, ROM page 3, in the storage task, on the SD
+; driver's block cache).  The device is "hfs"; the shell mounts it at /sd, so /sd/0 is card 0's root
+; directory, and the tasks it starts inherit the mount.  The format is in docs/plans/HYDRAFS.md, and
+; sim/tools/hydrafs.js makes and reads card images on the PC.
+HFS_BLOCK           = 512       ; A block: the card's sector
+HFS_CLUSTER_BLOCKS  = 8         ; A cluster (what space is allocated in): 8 blocks, 4 KB
+HFS_ENTRY_SIZE      = 64        ; A directory entry (a directory is a file of them)
+HFS_NAME_MAX        = 31        ; A name's characters (any byte but '/' and 0; case-sensitive)
+HFS_MAX_OPEN        = 8         ; Files open at once, all cards together (a fid is the slot: 0-7)
+HFS_DEPTH_MAX       = 8         ; Path elements in one walk ("..": back up through them)
+HFS_VERSION         = 1         ; The format this reads
+HFS_CSHIFT          = 3         ;   and its cluster size, as a shift (HFS_CLUSTER_BLOCKS)
+
+; The superblock (block 0)
+HFS_SB_MAGIC        = 0         ; "HYDRAFS1"
+HFS_SB_VERSION      = 8
+HFS_SB_CSHIFT       = 9         ; The cluster size, as a shift
+HFS_SB_CLUSTERS     = 12        ; Clusters in the data area
+HFS_SB_MAP          = 16        ; The free map's first block
+HFS_SB_MAPSZ        = 20        ;   its size in blocks (1 bit per cluster, 1 = in use)
+HFS_SB_DATA         = 24        ; The data area's first block
+HFS_SB_FREE         = 28        ; Free clusters (a hint: "check" recounts it)
+HFS_SB_HINT         = 32        ; Where to look for free clusters next (a hint)
+HFS_SB_NEXT_QID     = 36        ; The next qid id to give out
+HFS_SB_STAMP        = 40        ; The next modification stamp (a counter, until the Hydra has a clock)
+HFS_SB_ROOT         = 64        ; The root directory's entry
+HFS_SB_LABEL        = 128       ; The volume label, zero-terminated
+.assert     HFS_SB_ROOT / HFS_ENTRY_SIZE * HFS_ENTRY_SIZE = HFS_SB_ROOT, error, "The root's entry must be entry-aligned in block 0 (HFS_ENT_READ)"
+
+; A directory entry (HFS_ENTRY_SIZE bytes): the file's metadata, extents and all, so there are no inodes
+HFS_E_NAME          = 0         ; 32 bytes, zero-terminated (a 0 first byte: a free entry)
+HFS_E_MODE          = 32        ; HFS_M_*
+HFS_E_QVER          = 34        ; The qid's version, then its id
+HFS_E_QID           = 36
+HFS_E_SIZE          = 40        ; The size in bytes (up to 4 GB)
+HFS_E_STAMP         = 44
+HFS_E_EXT1          = 48        ; Extent 1: its first cluster (4), its clusters (2)
+HFS_E_EXT2          = 54        ; Extent 2 (0 clusters: unused)
+HFS_E_EXTBLK        = 60        ; The first extent block, for the rest (0 = none)
+HFS_EXT_SIZE        = 6
+HFS_M_DIR           = $80       ; Mode: a directory
+HFS_M_APPEND        = $40       ;   append-only
+HFS_M_RO            = $01       ;   read-only
+.assert     IO_ST_STAMP + 4 = HFS_E_EXT1, error, "A stat record is the entry without its extents (HFS_REC)"
+
+; An extent block (a whole block): more extents for a fragmented file
+HFS_X_NEXT          = 0         ; The next extent block (0 = the last)
+HFS_X_COUNT         = 4         ; Extents used in this one (0-84)
+HFS_X_FIRST         = 8         ; 84 extents, HFS_EXT_SIZE bytes each
+HFS_X_MAX           = 84
+.assert     HFS_X_FIRST + HFS_X_MAX * HFS_EXT_SIZE = HFS_BLOCK, error, "An extent block's extents fill it"
+
+; In the storage task's RAM, next to the SD driver's.  Per card: whether it holds a HydraFS, and the
+; superblock's numbers the server works from (4 bytes each, at the card * 4, in arrays 32 bytes apart in
+; the superblock's order, so that one loop copies them: HFS_VOLUME, HFS_SB_SAVE).  The counters (free,
+; hint, qid, stamp) change in RAM and go back to the superblock at the end of the request (HFS_FINISH)
+HFS_V_STATE         = $0240     ; 0 = not looked at yet, 1 = HydraFS, $FF = not one (SD_MAX_CARDS bytes)
+HFS_V_CLUSTERS      = $0248     ; Clusters in the data area
+HFS_V_MAP           = $0268     ; The free map's first block
+HFS_V_MAPSZ         = $0288     ;   its size in blocks
+HFS_V_DATA          = $02A8     ; The data area's first block
+HFS_V_FREE          = $02C8     ; Free clusters
+HFS_V_HINT          = $02E8     ; Where to look for a free cluster next
+HFS_V_QID           = $0308     ; The next qid id
+HFS_V_STAMP         = $0328     ; The next modification stamp
+.assert     HFS_V_STAMP - HFS_V_CLUSTERS = (HFS_SB_STAMP - HFS_SB_CLUSTERS) * 8, error, "HFS_V_*: 32 apart, in the superblock's order"
+; The server's scratch (RAM: only pointers need to be in its ZP)
+HFS_META            = $0348     ; The metadata buffer (512 bytes from the MMU): the free map, extent blocks,
+                                ;   entries being written, the superblock; written back when another block
+                                ;   is wanted, and at the end of the request
+HFS_MBLK            = $034A     ;   the block in it (4)
+HFS_MSTATE          = $034E     ;   HFS_MS_* bits
+HFS_MS_VALID        = $01       ;     it holds HFS_MBLK
+HFS_MS_DIRTY        = $80       ;     it's been changed, and not written yet
+HFS_SBDIRTY         = $034F     ; <> 0: the card's counters (HFS_V_FREE ...) changed: HFS_FINISH writes them
+HFS_C               = $0350     ; A cluster being allocated or freed (4)
+HFS_N4              = $0354     ; Clusters left to look at; a count (4)
+HFS_D               = $0358     ; A data cluster while its extent block is allocated; the wanted cluster (4)
+HFS_T4              = $035C     ; A qid or stamp taken; a temporary (4)
+HFS_LASTB           = $0360     ; A file's last extent: the extent block it's in (0: the entry) (4) ...
+HFS_LASTO           = $0364     ;   and its offset there (0: the file has none) (2)
+HFS_DLOC            = $0366     ; Create: the directory's place (block, index: 5) ...
+HFS_NLOC            = $036B     ;   the new entry's (and where a directory scan found one) (5)
+HFS_PLOC            = $0370     ; The place of the directory an entry being opened is in (5)
+HFS_SCAN            = $0375     ; HFS_DIR_SCAN: what it looks for (HFS_SCAN_*)
+HFS_GREW            = $0376     ; Create: <> 0: the directory got a new entry at its end
+HFS_NAMEAT          = $0377     ; Create: where the new name starts in the request's name
+HFS_PERM            = $0378     ; Create: the new file's mode
+HFS_RUN_VEC         = $0379     ; HFS_EACH_RUN: the routine it calls for each run of a file's clusters (2)
+HFS_CK_DEPTH        = $037B     ; Check: how many directories deep its walk is
+HFS_CK_MASK         = $037C     ;   a cluster's bit (marking), or the bits of a map byte that are clusters
+HFS_CK_N            = $037D     ;   clusters of a run left to mark (3)
+.assert     HFS_CK_N + 3 <= HFS_FHDR, error, "The HydraFS scratch must end below HFS_FHDR"
+HFS_FHDR            = $0380     ; An open file: HFS_MAX_OPEN headers of HFS_FHDR_SIZE bytes (at the fid * 16)
+HFS_FHDR_SIZE       = 16
+HFS_H_CARD          = 0         ;   its card, or $FF: a free slot
+HFS_H_OMODE         = 1         ;   the open mode (IO_MODE_*)
+HFS_H_REFS          = 2         ;   the fds using it (H9_DUP, H9_CLUNK)
+HFS_H_EIDX          = 3         ;   where its directory entry is: the entry's index in its block ...
+HFS_H_EBLK          = 4         ;     and the block (4 bytes)
+HFS_H_FLAGS         = 8         ;   HFS_HF_* bits
+HFS_HF_WRITTEN      = $01       ;     written since it was opened (the qid version and stamp are new)
+HFS_HF_DIRTY        = $80       ;     the entry (its size) has changed since it was last written
+HFS_H_PIDX          = 9         ;   where its directory's entry is (for a rename; the root: its own place)
+HFS_H_PBLK          = 10        ;     and the block (4 bytes)
+HFS_FILES           = $0400     ; And a copy of its directory entry, HFS_ENTRY_SIZE bytes at the fid * 64,
+                                ;   so a read needs no extra block read to find the file's extents.  Every
+                                ;   copy of one entry is kept the same (HFS_SYNC), and a walk takes an open
+                                ;   file's copy over the card's (its size may not be on the card yet)
+HFS_ENT             = $0600     ; The entry a walk is at (HFS_ENTRY_SIZE bytes)
+HFS_STAT            = $0640     ; A stat record, or a listing's line being made (IO_STAT_SIZE bytes)
+HFS_STK             = $0680     ; A walk's directories, for "..": HFS_DEPTH_MAX places of 5 bytes
+HFS_NEWE            = $06A8     ; A new entry being made; an entry's old extents, while they're freed
+HFS_CK_CARD         = $06E8     ; The last check ("check" on /dev/sd/N/ctl): its card ($FF: none yet) ...
+HFS_CK_FIXED        = $06E9     ;   <> 0: it fixed the free map ("check fix")
+HFS_CK_LOST         = $06EA     ;   clusters marked in use that nothing uses (4) ...
+HFS_CK_UNMARKED     = $06EE     ;   clusters in use, but marked free (4)
+HFS_CK_TWICE        = $06F2     ;   clusters in use twice (4)
+HFS_CK_FREE         = $06F6     ;   free clusters, as it counted them (4)
+HFS_CK_BUF          = $06FA     ; The check's buffer (from the MMU at the first check, then kept): a bitmap of
+                                ;   HFS_CK_WINDOW clusters, then the walk's directories
+HFS_CK_SP           = $06FC     ;   the walk's deepest directory, in it
+HFS_CK_WINDOW       = 65536     ; Clusters one check pass covers (8 KB of bitmap, 256 MB of card)
+HFS_CK_DEPTH_MAX    = 24        ; Directories deep a check can walk (deeper: ERR_IO_NAME)
+HFS_CK_LEVEL        = 68        ; A directory in the walk: its entry, then where the walk is in it (4)
+HFS_CK_BUF_SIZE     = HFS_CK_WINDOW / 8 + (HFS_CK_DEPTH_MAX + 1) * HFS_CK_LEVEL
+.assert     HFS_FILES & $FF = 0, error, "HFS_FILES must start a page: HFS_FILE_PTR"
+.assert     HFS_FHDR + HFS_MAX_OPEN * HFS_FHDR_SIZE <= HFS_FILES, error, "The open file headers must end below HFS_FILES"
+.assert     HFS_STK + HFS_DEPTH_MAX * 5 <= HFS_NEWE, error, "HFS_STK must end below HFS_NEWE"
+.assert     HFS_NEWE + HFS_ENTRY_SIZE <= HFS_CK_CARD, error, "HFS_NEWE must end below the check's results"
+.assert     HFS_CK_SP + 2 <= $0700, error, "The HydraFS tables must fit in the BUFFERS pages"
+.assert     HFS_CK_BUF - HFS_CK_LOST = 16, error, "The check's four counts: 4 bytes each, in a row (HFS_CK_ADD)"
+.assert     HFS_NAME_MAX + 1 + 10 + 2 <= IO_STAT_SIZE, error, "A listing's longest line must fit in HFS_STAT"
 
 ; Pipe server: /dev/pipe, in its own Resident task (io_p0.s, pipe_srv.s).  Each pipe has a 256-byte ring
 ; (255 bytes of data) and counts the fds on each end; the fid is the pipe's index.

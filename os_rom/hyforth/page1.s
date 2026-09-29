@@ -75,6 +75,9 @@ FAR_GATE_INLINE IO_MOUNT,       PAGE2::IO_MOUNT,        2
 FAR_GATE_INLINE IO_BIND,        PAGE2::IO_BIND,         2
 FAR_GATE_INLINE IO_UNMOUNT,     PAGE2::IO_UNMOUNT,      2
 FAR_GATE_INLINE IO_NS_LIST,     PAGE2::IO_NS_LIST,      2
+FAR_GATE_INLINE IO_CREATE,      PAGE2::IO_CREATE,       2
+FAR_GATE_INLINE IO_REMOVE,      PAGE2::IO_REMOVE,       2
+FAR_GATE_INLINE IO_WSTAT,       PAGE2::IO_WSTAT,        2
 FAR_GATE_INLINE TASK_SET_BREAK, ::TASK_SET_BREAK,       0
 FAR_GATE_INLINE TASK_SIGNAL,    ::TASK_SIGNAL,          0
 FAR_GATE_INLINE CONS_SET_FG,    ::CONS_SET_FG,          0
@@ -187,4 +190,7 @@ WRITE_HSTRING:
                 jmp             MM_FP               ; $F8C0
                 jmp             SH_REF              ; $F8C3
                 jmp             SH_FP               ; $F8C6
-.assert     * = ::TH_SH_FP + 3, lderror, "BIOS_THUNKS_P1 must match BIOS_THUNKS"
+                jmp             IO_CREATE           ; $F8C9
+                jmp             IO_REMOVE           ; $F8CC
+                jmp             IO_WSTAT            ; $F8CF
+.assert     * = ::TH_IO_WSTAT + 3, lderror, "BIOS_THUNKS_P1 must match BIOS_THUNKS"

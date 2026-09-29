@@ -73,11 +73,14 @@ STORAGE_INIT:
 | `H9_READ` | 2 | Put up to *count* bytes from *offset* in the data area; set the count to what it gave (0 = end of file) |
 | `H9_WRITE` | 3 | Take up to *count* bytes from the data area at *offset*; set the count to what it took, or leave it for all |
 | `H9_CLUNK` | 4 | The fd is closed: release the fid |
-| `H9_STAT` | 5 | Put a 16-byte stat block in the data area (`STAT_ZERO` for all zeros) |
+| `H9_STAT` | 5 | Put a 48-byte stat record in the data area (`STAT_ZERO` for all zeros; the layout is in [io.md](io.md#stat)) |
 | `H9_CTL` | 6 | Device-specific control: the code and argument are in the request block |
 | `H9_DUP` | 7 | Another fd now refers to the fid (`IO_DUP2`, or a new task inherited it): count it if it keeps counts |
+| `H9_CREATE` | 8 | A filesystem's: make the file named in the data area (its mode bits in the request block's `IO_BLK_PERM`), and open it |
+| `H9_REMOVE` | 9 | A filesystem's: remove the file named in the data area (no fid) |
+| `H9_WSTAT` | 10 | A filesystem's: change the fid's file as the stat record in the data area says |
 
-Return `ERR_IO_BAD_REQ` for requests it doesn't support.
+Return `ERR_IO_BAD_REQ` for requests it doesn't support.  **Refuse the filesystem's requests** (`H9_CREATE` and up) unless it's a filesystem: a server that treats an unknown request as done would make `IO_REMOVE` of its name "succeed", or `IO_CREATE` hand out an fd.  The servers so far start with `cmp #H9_CREATE` / `bcs` to their refusal.
 
 **Fids** are the server's business.  Common patterns:
 * one fid per kind of file (`/dev/cons` 0, `/dev/ser` 1, `/dev/ser/ctl` 2);
@@ -191,4 +194,22 @@ The storage task (`$C`) owns the SPI bus.  Its block layer (`drivers/sd.s`, page
 
 **Errors:** `ERR_IO_DEVICE` (no card, or no answer), `ERR_IO_NOT_READY` (not started), `ERR_IO_MEDIA` (the card refused).
 
-**The cache:** `sd_srv.s` keeps a one-block cache (`SD_CACHE_LOAD`: block `SD_LBA` of card `SD_DEV`).  The HydraFS server ([plans/HYDRAFS.md](../plans/HYDRAFS.md)) will be a second device in the same task, on the same block layer.
+**Throughput** is about 300 CPU cycles a byte (12 KB/s at 3.58 MHz), and roughly 60% of that is the bit-banged SPI receive loop (`SPI_RECV`, 18 cycles a bit).  The VIA's shift register can't help: it uses CB1/CB2, which aren't wired to the SPI lines.  The `sd-speed` regression test holds the figure to a budget.
+
+**The cache:** `sd_srv.s` keeps a one-block cache (`SD_CACHE_LOAD`: block `SD_LBA` of card `SD_DEV`).
+
+### **The HydraFS server**
+
+`io/hfs_srv.s` and `io/hfs_write.s` (ROM page 6: page 3 was full) are a second device, `hfs`, in the same storage task, on the same block layer and cache (through gates to page 3, one far call a block): it serves the **files** on the cards (`/sd/N/...`, the format in [plans/HYDRAFS.md](../plans/HYDRAFS.md); using it is in [io.md](io.md#the-files-on-a-card)).  Worth knowing if you write a server of your own:
+
+* **Two devices, one task.** A server task serves one call at a time, so `hfs_srv.s` borrows the SD server's zero page (`SD_POS`, `SD_LEFT`, `SD_N`, ...) rather than having its own, and uses `SD_LBA` as its block number (`SD_CACHE_LOAD` leaves it alone).  Its own state goes in the storage task's RAM, next to the SD driver's.
+* **Its own fids.** A HydraFS fid is an open-file slot (0-7), shared by every task; `H9_DUP` counts up the fds that share one and `H9_CLUNK` counts down, so an inherited or `IO_DUP2`'d fd doesn't free it early.
+* **Generated text, again.** A directory listing is made from the card at every read and the bytes before the fd's offset thrown away, exactly as `SD_CTL_READ` does for its status line, so the server keeps nothing between reads.
+* **Short reads.** Unlike `/dev/sd`, it can return fewer bytes than asked for (the end of the file), so it writes the count done as *what was wanted, less what's left*.
+* **Every request ends the same way** (`HFS_FINISH`): what it changed in the metadata buffer, and the card's counters, go to the card before the reply, so the card is consistent between requests, and nothing is cached between them that a raw `/dev/sd` write could leave stale.
+* **Several copies of one entry.** Each open file holds a copy of its directory entry; any change to one is copied to the others at once (`HFS_SYNC`), and a walk takes an open file's copy over the card's, since the file's size goes to the card only when it's closed or grows a cluster.
+* **Restarting a card** (`SD_CTL_INIT` on `/dev/sd/N/ctl`) calls `HFS_FORGET`, which drops the card's superblock numbers and frees any HydraFS file open on it, since a different card may be in the socket now.  Those fds give `ERR_IO_BAD_FD` from then on.
+
+Two warnings from writing it:
+* A 32-bit subtraction whose loop ends with `cpx #4` loses the carry between the `sbc`s.  `HFS_TAIL` is unrolled for that reason; check any multi-byte arithmetic in a loop for the same thing.
+* **Scripted input and long commands:** the emulator types a key every 20,000 cycles and the serial task buffers 255 of them, whether the shell is reading or not, so a regression test that types past a long command (a 20 KB write takes about 30 million cycles) loses the rest of its input.  Put `W(n)` waits after anything slow.

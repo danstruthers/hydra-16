@@ -110,7 +110,10 @@ Ctrl-A x quits, and Ctrl-A r presses the reset button.  To make a card image wit
 
 ```
 node sim/tools/hydrafs.js mkfs card.img 64
+node sim/tools/hydrafs.js import card.img myfiles
 ```
+
+The Hydra sees them at `/sd/0`: `q^/sd/0^ 1 open 0 fdup2 cat | cat` lists the card's root.
 
 Without `-i`, the emulator runs a fixed number of cycles with scripted input, then prints a report: the serial output, the last instructions, the hottest code, and each task's stack depth.  That's the mode for debugging and the tests.  See [the emulator](tools/emulator.md).
 
@@ -121,7 +124,7 @@ cd os_rom
 makeC02 test
 ```
 
-This builds, then boots the new images in the emulator about 15 times: POST, the self tests, HyForth, pipes, tasks, sound, SD cards, sleeping, fault injection.  It prints `15 of 15 tests passed`, or the failing test's output and the command that reproduces it.  Then try it on the board.
+This builds, then boots the new images in the emulator about 20 times: POST, the self tests, HyForth, pipes, tasks, sound, SD cards and their files, sleeping, fault injection.  It prints `23 of 23 tests passed`, or the failing test's output and the command that reproduces it.  Then try it on the board.
 
 ### **Where to go next**
 

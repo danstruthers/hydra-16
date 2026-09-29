@@ -47,6 +47,11 @@ ERR_IO_NS_FULL      = $7C       ; the task's namespace is full
 ERR_IO_NS_LOOP      = $7D       ; too many binds in a row (a loop?)
 ERR_IO_NOT_READY    = $7E       ; the device isn't started (e.g. the SD card: open /dev/sd first)
 ERR_IO_MEDIA        = $7F       ; the medium refused the command or the data (e.g. the SD card)
+ERR_IO_NOT_FS       = $80       ; the card holds no HydraFS (no superblock, or a version this can't read)
+ERR_IO_FULL         = $81       ; the card is full
+ERR_IO_EXISTS       = $82       ; there's a file or directory by that name already
+ERR_IO_NOT_EMPTY    = $83       ; the directory has files in it (remove)
+ERR_IO_BUSY         = $84       ; the file is open (remove)
 
 ; ERROR CODES
 ERR_NO_TASKS_AVAILABLE = $F1

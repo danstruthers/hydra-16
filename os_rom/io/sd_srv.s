@@ -11,7 +11,10 @@
 ;                       server uses block numbers, for all of it).
 ;   /dev/sd/N/ctl       read: the card, as a line of text: "sdhc 7580 MB 15523840 blocks" (or sdsc), or
 ;                       "none" (it starts the card first if it isn't yet).  Write: a command: "init"
-;                       starts the card again (e.g. after changing it).
+;                       starts the card again (e.g. after changing it); "format [label]" makes an empty
+;                       HydraFS on it (HFS_FORMAT); "label <text>" sets its HydraFS label; "check" and
+;                       "check fix" check its HydraFS (HFS_CHECK).  A HydraFS card's text has lines about
+;                       it too: its label, its free space, the last check's results (HFS_CTL_LINES).
 ;   Ctl (either file): SD_CTL_INIT starts the card again.
 ; Server ZP (the storage task's): SD_* (zero.s); ZP_IO_REQ (IO_SRV_MAP).  Each card's state and size:
 ; SD_CARD_STATE, SD_CARD_BLOCKS (the storage task's RAM).
@@ -24,7 +27,20 @@ STORAGE_INIT3:
             ldx         #SD_MAX_CARDS - 1                   ; (The cards start at their first open)
 :
             stz         SD_CARD_STATE,X
+            stz         HFS_V_STATE,X                       ; (Nor is a card's superblock read before then)
             dex
+            bpl         :-
+            lda         #$FF                                ; No HydraFS check yet, nor its buffer
+            sta         HFS_CK_CARD
+            stz         HFS_CK_BUF + 1
+            ldx         #(HFS_MAX_OPEN - 1) * HFS_FHDR_SIZE ; No HydraFS files open
+:
+            lda         #$FF
+            sta         HFS_FHDR + HFS_H_CARD,X
+            txa
+            sec
+            sbc         #HFS_FHDR_SIZE
+            tax
             bpl         :-
             stz         SD_CVALID
             jsr         SPI_INIT
@@ -36,6 +52,16 @@ STORAGE_INIT3:
             jsr         MM_LOCK                             ; .A.Y = the address
             sta         SD_CACHE
             sty         SD_CACHE + 1
+            lda         #<512                               ; And HydraFS's metadata buffer
+            ldy         #>512
+            ldx         #0
+            jsr         MM_ALLOC
+            bcs         @done
+            jsr         MM_LOCK
+            sta         HFS_META
+            sty         HFS_META + 1
+            stz         HFS_MSTATE
+            stz         HFS_SBDIRTY
             clc
 
 @done:
@@ -50,6 +76,8 @@ SD_SERVE:
             and         #SD_MAX_CARDS - 1
             sta         SD_DEV                              ; The card (not for H9_OPEN: it has no fid)
             pla
+            cmp         #H9_CREATE
+            bcs         SD_BAD                              ; (The filesystem's requests: that's hfs)
             cmp         #H9_OPEN
             beq         SD_OPEN
             cmp         #H9_READ
@@ -100,6 +128,7 @@ SD_BAD:
 ; Start card SD_DEV (SD_INIT), forgetting the cache.  OUT: C = 0; or C = 1, .A = error
 SD_START:
             stz         SD_CVALID
+            jsr         HFS_FORGET                          ; (It may be a different card now)
             jmp         SD_INIT
 
 ; The rest of the name is in the data area: "/N/data" or "/N/ctl" (N = 0-7)
@@ -222,6 +251,7 @@ SD_CTL_READ:
             jsr         SD_PUT_DEC
             ldx         #SD_S_BLOCKS - SD_TEXTS
             jsr         SD_PUT_TEXT
+            jsr         HFS_CTL_LINES                       ; (HydraFS's, if there's one on it)
 
 @made:                                                      ; The text is SD_N bytes
             dec         ZP_IO_REQ + 1
@@ -407,11 +437,62 @@ SD_CTL_WRITE:
             jmp         SD_BAD
 
 @match:                                                     ; SD_TMP = the command (0: init)
+            lda         SD_TMP
+            bne         SD_CTL_FS
             dec         ZP_IO_REQ + 1
             jsr         IO_SRV_UNMAP                        ; (The count stays: all of it taken)
             jmp         SD_RESTART
 
-SD_CMDS:    .byte   "init", 0, 0
+SD_CMDS:    .byte   "init", 0, "format", 0, "label", 0, "check", 0, 0
+
+; "format [label]" (SD_TMP = 1), "label <text>" (2) and "check [fix]" (3), for HydraFS: the text after the
+; word (spaces before it skipped, up to 31 characters, to the end of the line) -> HFS_STAT, zero-padded to 32.
+; IN: .Y = where the word ended, in the data area (mapped); SD_N = the write's length
+SD_CTL_FS:
+            ldx         #HFS_NAME_MAX + 1
+:
+            stz         HFS_STAT - 1,X
+            dex
+            bne         :-
+
+@space:
+            cpy         SD_N
+            beq         @copied
+            lda         (ZP_IO_REQ),Y
+            cmp         #' '
+            bne         @text
+            iny
+            bra         @space
+
+@text:
+            cpy         SD_N
+            beq         @copied
+            lda         (ZP_IO_REQ),Y
+            beq         @copied
+            cmp         #ASCII_CR
+            beq         @copied
+            cmp         #ASCII_LF
+            beq         @copied
+            cpx         #HFS_NAME_MAX
+            beq         @copied                             ; (Any more is cut off)
+            sta         HFS_STAT,X
+            inx
+            iny
+            bra         @text
+
+@copied:
+            dec         ZP_IO_REQ + 1
+            jsr         IO_SRV_UNMAP                        ; (The count stays: all of it taken)
+            lda         SD_TMP
+            cmp         #1
+            bne         :+
+            jmp         HFS_FORMAT
+:
+            cmp         #2
+            bne         :+
+            jmp         HFS_LABEL
+:
+            jmp         HFS_CHECK
 
 ; A read or write of a data file: .A = H9_READ / H9_WRITE.  Up to 256 bytes at the offset, a block (or two)
 ; at a time.

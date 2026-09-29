@@ -14,6 +14,8 @@
 .segment "IO_P2"
 
 SND_SERVE:
+            cmp         #H9_CREATE
+            bcs         @bad                                ; (The filesystem's requests)
             cmp         #H9_WRITE
             beq         @write
             cmp         #H9_READ

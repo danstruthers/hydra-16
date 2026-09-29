@@ -23,7 +23,7 @@ For programmers writing code for the Hydra-16: ROM code (the OS, drivers, server
 **Drivers** run in **resident tasks** of their own (serial `$F`, sound `$E`, pipes `$D`, storage `$C`).  Their state lives in their task, and they run only from their IRQs and from calls into them.
 
 **IO**, Plan 9 style: everything is a file:
-* Devices are **file servers**; a task opens `/dev/cons`, `/dev/sd/0/data`, ... and reads and writes fds.
+* Devices are **file servers**; a task opens `/dev/cons`, `/dev/sd/0/data`, `/sd/0/games/star.frt`, ... and reads and writes fds.
 * The IO layer (page 2) passes each request to the server's task with `TASK_CALL`, and the data through the client's transfer area in shared RAM.
 * Reads that have to wait put the task to sleep.
 * Each task has a **namespace** (mount, bind), inherited by the tasks it starts, like its open fds.
@@ -48,7 +48,7 @@ For programmers writing code for the Hydra-16: ROM code (the OS, drivers, server
 | `os_rom/os_rom_C02.cfg` | The linker config: memory areas per ROM page, segments |
 | `os_rom/include/` | Constants and macros: `hw.inc` (hardware), `kernel.inc` (tasks, errors, far pointers), `io.inc` (IO), `zero.s` (the OS zero page), `macros.inc`, `ascii.inc` |
 | `os_rom/kernel/` | Reset and boot (`os_main.s`), tasks and scheduler (`tasks.s`), IRQs (`irq.s`), MMU (`mmu.s`), shared memory (`shared.s`), far pointers (`fp.s`), the COMMON block (`common.s`), gates, thunks, printing |
-| `os_rom/io/` | The IO layer (`io.s`, `io_p0.s`), namespaces (`ns.s`) and the servers: console and serial (`ser_srv.s`), sound (`snd_srv.s`), pipes, `/dev/proc`, `/dev/sd` |
+| `os_rom/io/` | The IO layer (`io.s`, `io_p0.s`), namespaces (`ns.s`) and the servers: console and serial (`ser_srv.s`), sound (`snd_srv.s`), pipes, `/dev/proc`, `/dev/sd`, HydraFS (`hfs_srv.s`, `hfs_write.s`, `hfs_check.s`, on ROM page 6) |
 | `os_rom/drivers/` | Serial, sound, VIA, SPI, SD card, storage task |
 | `os_rom/monitor/` | WOZMON and the disassembler |
 | `os_rom/hyforth/` | HyForth |

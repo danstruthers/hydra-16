@@ -43,6 +43,20 @@ IRQ_FAST_P2     = PAGE2::IRQ_FAST_P2    ; (For the COMMON block's fast IRQ stubs
 .include "io/sd_srv.s"          ; /dev/sd, and the storage task's init
 .endscope
 
+; BIOS ROM page 6 (W = 6): the HydraFS server, in the storage task, on page 3's block layer.  After PAGE3,
+; whose names its gates use; page 3 reaches it through the aliases after the scope.
+.scope PAGE6
+.include "io/page6.s"           ; must be first in the scope
+.include "io/hfs_srv.s"         ; The HydraFS server (/sd/N/..., the files on the cards): requests, reading
+.include "io/hfs_write.s"       ;   and writing: allocating, create, remove, wstat, format
+.include "io/hfs_check.s"       ;   its check, and a card's details for its ctl file
+.endscope
+HFS_FORGET_P6   = PAGE6::HFS_FORGET     ; (For page 3's gates: PAGE3 is assembled before PAGE6)
+HFS_FORMAT_P6   = PAGE6::HFS_FORMAT
+HFS_LABEL_P6    = PAGE6::HFS_LABEL
+HFS_CHECK_P6    = PAGE6::HFS_CHECK
+HFS_CTL_LINES_P6 = PAGE6::HFS_CTL_LINES
+
 ; BIOS ROM page 4 (W = 4): the self tests.  Its own scope, so page 4 code binds to the page 4 gates in
 ; page4.s
 .scope PAGE4

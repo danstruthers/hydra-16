@@ -177,7 +177,7 @@ HF>: c 0 begin 1 + dup 5 = until . ;   c
 
 | Word | Stack | Does |
 | :--- | :---- | :--- |
-| `open` | `( sz mode -- fd )` | Open a file: mode 1 = read, 2 = write, 3 = both; + `$80` = don't wait (reads give `ioerr` `$73` instead) |
+| `open` | `( sz mode -- fd )` | Open a file: mode 1 = read, 2 = write, 3 = both; + `$80` = don't wait (reads give `ioerr` `$73` instead); + 4 = a directory as stat records; + 8 (with 2) = empty the file first |
 | `close` | `( fd -- )` | |
 | `read` | `( fd addr n -- n' )` | Read up to n bytes into addr (task RAM); n' = bytes read, 0 = end of file |
 | `write` | `( fd addr n -- n' )` | Write n bytes from addr |
@@ -194,6 +194,12 @@ HF>: c 0 begin 1 + dup 5 = until . ;   c
 | `ns` | | List the namespace |
 | `stty` | `( sz -- )` | Change the serial port's settings: `q^b19200^ stty`, `q^l7 pe s1^ stty` (b = baud rate, l = data bits, p = parity n/o/e/m/s, s = stop bits).  Output so far goes out first; then switch the terminal |
 | `stty?` | | Show the serial port's settings, e.g. `b9600 l8 pn s1` |
+| `ctl` | `( sz-file sz-text -- )` | Write a command to a ctl file: `q^/dev/sd/0/ctl^ q^check^ ctl`, `q^/dev/proc/3/ctl^ q^kill^ ctl` |
+| `ls` | `( sz -- )` | List a directory on a card: `q^/sd/0^ ls` |
+| `create` | `( sz mode -- fd )` | Make a file (mode 0; 64 = append-only, 1 = read-only) and open it for reading and writing; a file that's there is emptied.  Mode 128 makes a directory |
+| `mkdir` | `( sz -- )` | Make a directory: `q^/sd/0/games^ mkdir` |
+| `remove` | `( sz -- )` | Remove a file, or an empty directory |
+| `rename` | `( sz-old sz-new -- )` | Rename, in the same directory: `q^/sd/0/notes^ q^old-notes^ rename` |
 
 **Buffers:** a failed call prints `!IO ERR!`, and `ioerr` gives the code ([error codes](../programming/rom-layout.md#error-codes)).  `here @` is a handy scratch buffer.
 
@@ -209,6 +215,52 @@ HF>3 512 0 seek   3 here @ 16 read .         \ block 1's first 16 bytes
 ```
 
 (`\` isn't a comment word: the examples just annotate.)
+
+**The files on a card** are at `/sd/N` ([io.md](../programming/io.md#the-files-on-a-card)).  Reading a directory gives a line per entry, so `cat` lists it, and a file reads like any other fd:
+
+```
+HF>q^/sd/0^ 1 open 0 fdup2 cat | cat
+hello.txt 13
+games/
+HF>q^/sd/0/games^ 1 open 0 fdup2 cat | cat
+star.frt 1234
+HF>q^/sd/0/games/star.frt^ 1 open 0 fdup2 cat | cat
+HF>q^/sd/0/hello.txt^ 1 open .
+ 0003
+HF>3 here @ 128 read .
+ 000D
+```
+
+Writing works as on any fd, and `ls`, `create`, `mkdir`, `remove` and `rename` do the rest:
+
+```
+HF>q^/sd/0/games^ mkdir
+HF>q^/sd/0/games/hi^ 0 create .              \ fd 3, open for writing
+ 0003
+HF>72 here @ c! 105 here @ 1 + c!
+HF>3 here @ 2 write . 3 close                \ "Hi"
+ 0002
+HF>q^/sd/0/games^ ls
+hi 2
+HF>q^/sd/0/games/hi^ q^hello^ rename
+HF>q^/sd/0/games/hello^ remove
+```
+
+**Close what you write** before taking the card out: a file's new size goes to the card when it's closed.
+
+**The card itself** is managed through its ctl file, with `ctl`, and `ls` shows it:
+
+```
+HF>q^/dev/sd/0/ctl^ q^check^ ctl             \ check the card
+HF>q^/dev/sd/0/ctl^ ls
+sdhc 7580 MB 15523840 blocks
+hydrafs label=GAMES
+free 6246400 KB of 7761920 KB
+check: lost 0, unmarked 0, twice 0
+HF>q^/dev/sd/0/ctl^ q^check fix^ ctl         \ ... and repair its free map
+HF>q^/dev/sd/0/ctl^ q^label TOYS^ ctl        \ a new label
+HF>q^/dev/sd/0/ctl^ q^format GAMES^ ctl      \ start afresh: everything on it is lost
+```
 
 ### **Pipelines**
 

@@ -357,7 +357,7 @@ The ROM's timing (the scheduler's tick, sound note lengths, serial timeouts) is 
 * **Output:** stereo, on the 3.5 mm jack J26.  The schematic has the tip on the right channel and the ring on the left, the reverse of the usual convention (see [V1 errata](#v1-errata)).
 
 #### **SPI bus (VIA port B)**
-SPI is bit-banged on the VIA's port B; a 74F138 (U4) decodes the device select:
+SPI is bit-banged on the VIA's port B (the VIA's shift register uses CB1/CB2, which aren't brought out, so it can't drive these lines); a 74F138 (U4) decodes the device select:
 
 | Port B bit | Signal |
 | :--------- | :----- |

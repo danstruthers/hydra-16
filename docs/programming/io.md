@@ -20,13 +20,16 @@ Each task has **12 fds** (0-11), in its task system page.  An fd holds the devic
 | `IO_GETC` (`$F878`) | `.X` = fd | `.A` = byte; C = 1, `ERR_IO_EOF` at the end |
 | `IO_PUTC` (`$F87B`) | `.X` = fd, `.A` = byte | |
 | `IO_SEEK` (`$F87E`) | `.A` = fd, `ZP_IO_OFS` = 32-bit offset | Sets the offset for the next read or write |
-| `IO_STAT` (`$F881`) | `.A` = fd, `ZP_IO_BUF` = 16-byte buffer | The server's stat block |
+| `IO_STAT` (`$F881`) | `.A` = fd, `ZP_IO_BUF` = 48-byte buffer | The server's stat record ([below](#stat)) |
 | `IO_CTL` (`$F884`) | `.A` = fd, `.X` = control code, `.Y` = argument | `.A` from the server |
 | `IO_DUP` (`$F896`) | `.A` = fd | `.A` = a new fd for the same file |
 | `IO_DUP2` (`$F890`) | `.A` = fd, `.X` = new fd | fd `.X` now refers to fd `.A`'s file (closed first if open) |
 | `IO_PIPE` (`$F893`) | | `.A` = read fd, `.X` = write fd |
+| `IO_CREATE` (`$F8C9`) | `.A.Y` = name, `.X` = mode, `ZP_IO_BUF` (low byte) = the new file's mode bits | `.A` = fd: a new file or directory, opened ([below](#the-files-on-a-card)) |
+| `IO_REMOVE` (`$F8CC`) | `.A.Y` = name | Removes a file, or an empty directory |
+| `IO_WSTAT` (`$F8CF`) | `.A` = fd, `ZP_IO_BUF` = a 48-byte stat record | Renames the file, sets its mode bits |
 
-**Modes** (`IO_OPEN`'s `.X`): `IO_MODE_READ` (`$01`), `IO_MODE_WRITE` (`$02`), `IO_MODE_RDWR` (`$03`), plus `IO_MODE_NONBLOCK` (`$80`).  With `IO_MODE_NONBLOCK`, a read with no data yet returns `ERR_IO_WOULD_BLOCK` instead of waiting.
+**Modes** (`IO_OPEN`'s `.X`): `IO_MODE_READ` (`$01`), `IO_MODE_WRITE` (`$02`), `IO_MODE_RDWR` (`$03`), plus `IO_MODE_STAT` (`$04`), `IO_MODE_TRUNC` (`$08`) and `IO_MODE_NONBLOCK` (`$80`).  With `IO_MODE_NONBLOCK`, a read with no data yet returns `ERR_IO_WOULD_BLOCK` instead of waiting.  `IO_MODE_STAT` asks a directory for stat records instead of text, and `IO_MODE_TRUNC` (with `IO_MODE_WRITE`) empties a file as it's opened ([below](#the-files-on-a-card)).
 
 **Reads and writes:**
 * **Units:** they move up to 256 bytes per request; the IO layer splits bigger ones.
@@ -99,7 +102,8 @@ A program that prints a partial line and then computes for a long time without a
 | `/dev/ser/ctl` | Serial driver | The port's settings: read `b9600 l8 pn s1`; write commands to change them ([below](#the-serial-port-settings)) |
 | `/dev/snd` | Sound driver (`$E`) | The YM2151 (below) |
 | `/dev/sd/N/data` | Storage (`$C`) | SD card on SPI device N (0-7), as bytes at the fd's offset (`IO_SEEK`); the first 4 GB.  The card is started at the first open (`ERR_IO_DEVICE` if there's none) |
-| `/dev/sd/N/ctl` | Storage | Read: the card as a line, e.g. `sdhc 7580 MB 15523840 blocks` (or `sdsc`, or `none`).  Write: `init` starts the card again (e.g. after changing it) |
+| `/dev/sd/N/ctl` | Storage | Read: the card as a line, e.g. `sdhc 7580 MB 15523840 blocks` (or `sdsc`, or `none`), and for a HydraFS card its label, free space and last check.  Write: `init` starts the card again (e.g. after changing it); `format`, `label`, `check` ([below](#the-files-on-a-card)) |
+| `/sd/N/...` | Storage | The **files** on card N: the HydraFS server (the device `hfs`, mounted at `/sd`; [below](#the-files-on-a-card)) |
 | `/dev/pipe` | Pipe server (`$D`) | Made by `IO_PIPE`, not opened by name |
 | `/dev/proc` | IO layer (in the reading task) | The tasks (below) |
 | `/dev/null` | IO layer | Reads give end of file; writes are taken and dropped |
@@ -209,6 +213,36 @@ Each task has its own namespace of up to 7 entries, which the tasks it starts in
 * After a bind it looks again, up to 4 times (`ERR_IO_NS_LOOP` beyond).
 * A name no entry matches must be under `/dev`.
 
+### **The files on a card**
+
+The **HydraFS** server (the device `hfs`) serves the files on the SD cards.  The shell mounts it at `/sd` at startup, and the tasks it starts inherit the mount, so `/sd/0` is card 0's root directory and `/sd/0/games/star.frt` is a file on it.  The format, and the host tool that makes cards, are in [plans/HYDRAFS.md](../plans/HYDRAFS.md) and [tools/emulator.md](../tools/emulator.md#hydrafs-card-images).
+
+* **Names** are case-sensitive, 1-31 characters, any byte but `/` and 0.  `.` and `..` are understood while walking (a path may be up to 8 elements deep); `..` at a card's root stays there.
+* **Reading a file** works as it does on `/dev/sd/N/data`, except that a read stops at the end of the file.
+* **Writing a file** at the fd's offset grows it past its end.  A write can't *start* past the end (`ERR_IO_BAD_REQ`: no holes), and an append-only file is always written at its end.  Writing runs at about 3.5 KB/s.
+* **Reading a directory** gives a line per entry, `name size` (or `name/` for a directory), then CR LF, so `q^/sd/0^ 1 open 0 fdup2 cat | cat` lists it.  Opened with `IO_MODE_STAT` it gives stat records instead; read a multiple of 48 bytes to get whole ones.  Either way the listing is made again from the card at every read, so the server keeps no state for it, and a directory that changes between two reads of one listing can give a torn one.
+* **Making and removing files:**
+  * `IO_CREATE` makes a file (mode bits 0; `HFS_M_APPEND` `$40` append-only, `HFS_M_RO` `$01` read-only) or a directory (`HFS_M_DIR` `$80`) in a directory that's there, and opens it; a directory is opened for reading whatever the mode says.  A *file* that's there already is emptied and opened instead, as in Plan 9.
+  * `IO_REMOVE` removes a file that isn't open, or an empty directory; it borrows a free fd for the request.
+  * `IO_WSTAT` renames a file in its directory (the record's name: a name, not a path; a 0 first byte keeps it) and sets its mode bits (`HFS_M_APPEND`, `HFS_M_RO`; `$FF` keeps them).  The record's other fields are left alone.  HyForth's `rename` fills in the record for you.
+  * The mode bits are checked when a file is opened: a read-only file can't be opened for writing, but the fd that made it can write it.
+* **What reaches the card when:** the data at once; the file's size when the last fd on it is closed, and whenever it gets a new 4 KB cluster.  So close a file you've written before taking the card out.  A crash can leave a file shorter than was written, never a damaged card.
+* **Formatting:** write `format LABEL` to `/dev/sd/N/ctl` to make an empty HydraFS on the card (everything on it is lost), and `label NAME` to change the label.
+* **Checking:** write `check` to `/dev/sd/N/ctl`, then read the file: it counts the clusters marked in use that nothing uses (lost), in use but marked free (unmarked), and used twice, and recounts the free space.  `check fix` also repairs the free map (not a cluster used twice: that's reported for a person to sort out).  In HyForth: `q^/dev/sd/0/ctl^ q^check^ ctl`, then `q^/dev/sd/0/ctl^ ls`.  It takes a pass per 256 MB of card ([plans/HYDRAFS.md](../plans/HYDRAFS.md#the-check)).
+* **Errors:** `ERR_IO_NOT_FS` (`$80`) if the card holds no HydraFS, `ERR_IO_DEVICE` (`$79`) if there's no card, `ERR_IO_NOT_FOUND` (`$70`) for a name that isn't there (or a path through a file), `ERR_IO_NO_FDS` (`$75`) when all 8 HydraFS files are open (they're shared by every task), `ERR_IO_MODE` (`$72`) for writing a directory or a read-only file, `ERR_IO_FULL` (`$81`), `ERR_IO_EXISTS` (`$82`: creating a directory where there's a name already, a file where there's a directory, or renaming to a name that's taken), `ERR_IO_NOT_EMPTY` (`$83`) and `ERR_IO_BUSY` (`$84`: removing an open file).  Any other device refuses these calls with `ERR_IO_BAD_REQ`.
+
 ### **Stat**
 
-`IO_STAT` returns a 16-byte block from the server.  The devices so far return all zeros; the filesystem ([plans/HYDRAFS.md](../plans/HYDRAFS.md)) will define it.
+`IO_STAT` fills a 48-byte record from the server.  A device with nothing to say returns all zeros; HydraFS fills it in from the file's directory entry:
+
+| Offset | Size | Field |
+| :----- | :--- | :---- |
+| 0 | 32 | The name, zero-terminated |
+| 32 | 1 | Mode: bit 7 = a directory, bit 6 = append-only, bit 0 = read-only |
+| 33 | 1 | The card (0-7) |
+| 34 | 2 | The qid's version: up by 1 at every change |
+| 36 | 4 | The qid's id: unique on the card, never reused, and the same across renames |
+| 40 | 4 | The size in bytes |
+| 44 | 4 | The modification stamp (a counter, until the Hydra has a clock) |
+
+A directory read with `IO_MODE_STAT` returns these same records, one per entry.

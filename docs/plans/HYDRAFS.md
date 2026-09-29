@@ -1,6 +1,6 @@
 ## **HydraFS: the Hydra's SD card filesystem**
 
-A small filesystem for SD cards, designed for the 65C02 and the Hydra's Plan 9-style IO layer (see `IO_PLAN.md`): directories, files with a Plan 9-style qid, text and binary directory listings.  It replaces FAT32 on the Hydra's cards.  **Build steps 1 and 2 are done** (the SD layer's cards and sizes, and the PC tool); the server itself is next.
+A small filesystem for SD cards, designed for the 65C02 and the Hydra's Plan 9-style IO layer (see `IO_PLAN.md`): directories, files with a Plan 9-style qid, text and binary directory listings.  It replaces FAT32 on the Hydra's cards.  **All five build steps are done**: the SD layer's cards and sizes, the PC tool, and the server reading, writing and checking, on ROM page 6 (`os_rom/io/hfs_srv.s`, `hfs_write.s`, `hfs_check.s`), with HyForth words.
 
 ### **Goals and trade-offs**
 * Easy for a 65C02: fixed-size directory entries, contiguous runs of clusters (extents) instead of a FAT chain, 32-bit arithmetic at most.
@@ -106,21 +106,62 @@ Existing calls work as they do on devices: `IO_OPEN` walks the path (`IO_MODE_TR
 
 HyForth words: `create ( sz mode -- fd )`, `remove ( sz -- )`, `rename ( sz-old sz-new -- )`, `ls ( sz -- )` (a directory's text listing), `mkdir ( sz -- )`.
 
+The filesystem's requests are numbered from `H9_CREATE` (8) on, and every other server refuses them (`ERR_IO_BAD_REQ`), so `IO_REMOVE` of `/dev/null`, say, is an error, not a no-op.  `IO_REMOVE` borrows a free fd for the request and gives it back.
+
+**How writing behaves** (as built):
+* **Mode bits are checked when a file is opened**, as in Plan 9: opening a read-only file for writing (or with `IO_MODE_TRUNC`) is `ERR_IO_MODE`, and so is opening a directory for writing.  The fd that creates a file can write it even if its mode is read-only, and a file made read-only while it's open for writing can still be written through that fd.
+* **An append-only file** is written at its end, wherever the fd's offset is.
+* **A write can't start past the end of a file** (`ERR_IO_BAD_REQ`): no holes.  Sparse files are for later.
+* **Creating a name that's there**: a file, made again as a file, is emptied and opened; a directory, or a file where a directory was asked for, is `ERR_IO_EXISTS`.  A new directory is opened for reading, whatever the open mode says.
+* **Removing** needs the file not to be open (`ERR_IO_BUSY`) and a directory to be empty (`ERR_IO_NOT_EMPTY`); a card's root can't be removed.
+* **Renaming** is within the file's directory (the name is a name, not a path); a name that's taken is `ERR_IO_EXISTS`.  A 0 first name byte keeps the name, and a mode of `$FF` keeps the mode bits.
+* **A full card** is `ERR_IO_FULL` (`$81`); what was written up to it stays.
+* **Qid versions and stamps** change once per open for writing (at the first write), and at a truncate, create, remove (the directory's) or wstat.
+
+**What reaches the card when**, in an order that's safe without a journal:
+* A file's data goes to the card at once, a block at a time (a 256-byte write is a whole block write: about 1,000 CPU cycles a byte, 3.5 KB/s).  A block that's entirely past the end of the file isn't read first.
+* When a file gets a cluster: the free map (the cluster marked in use), then the extent block if the new extent goes in one, then the entry (with the file's size so far).
+* Its size otherwise changes in RAM, in every open fd's copy of the entry, and goes to the card when the last fd on it is closed.  So after a crash, a file being written can be shorter than what was written, but its clusters are never lost or in use twice.
+* Emptying or removing a file writes its entry first (no extents), then frees its clusters: a crash between leaves lost clusters (`check` will find them), never a cluster in use twice.
+* A new entry is written before its directory's entry (the directory's size, when the entry is at its end), so a crash never leaves a half-made entry in a directory.
+* The superblock's counters (free clusters, the hint, the next qid and stamp) are kept in RAM and written at the end of each request that changes them; the next qid before the entry that uses it.
+
 ### **The storage task's state**
-* The one-block cache (512 bytes, as now), plus a second block buffer for the free map and extent blocks (so a file's data and its allocation don't evict each other).
-* Per card (8): its type and state, and the superblock's numbers the server uses (about 24 bytes each).
-* Open files: 8, about 32 bytes each: the card, where its directory entry is (block, index), its mode, size and qid, the extent the offset is in (its file position and first cluster), and the path depth (for `..`).
+* The one-block cache (512 bytes, shared with `/dev/sd`), for files' data and for reading directories.  A second, the **metadata buffer** (512 bytes), for the free map, extent blocks, entries being written and the superblock, so a file's data and its allocation don't evict each other.  A block is changed there and written back when another block is wanted, and at the end of every request, which also forgets it: nothing is kept in it between requests, so a raw `/dev/sd` write or a changed card can't leave it stale.
+* Per card (8): its state, and the superblock's numbers and counters (`HFS_V_*`, 33 bytes each, as parallel arrays).  `init` on a card's ctl file forgets them, and lets go of any HydraFS file open on it.
+* Open files: 8, shared by every task.  Each keeps a 16-byte header (the card, the open mode, how many fds share it, where its directory entry is, and where its directory's entry is, for a rename) and a **copy of the entry itself** (64 bytes), so a read finds the file's extents without an extra block read.  Every copy of one entry is kept the same, and a walk takes an open file's copy over the card's (its size may not be on the card yet).  Reads walk the extent list from the start each time: that's arithmetic alone for the two extents in the entry, and costs a block read per chunk only for a file fragmented into three or more.
+* The allocator takes the cluster after a file's last if it's free (so files stay in one piece), else scans the free map from the hint, a byte (8 clusters) at a time past full ones.
+* A walk keeps the entry it's on (`HFS_ENT`, 64 bytes) and a stack of the directories above it (`HFS_STK`, 8 levels of 5 bytes), so `..` needs no stored path.  A path deeper than that gives `ERR_IO_NAME`.
 
 ### **Formatting and tools**
-* `format [label]` on `/dev/sd/N/ctl` makes an empty HydraFS: it reads the card's size (its CSD register: the SD layer gets CMD9, and the emulator's card too), writes the superblock (with an empty root directory: size 0, no clusters yet) and the free map, all free (the superblock and the map come before the data area, so they aren't in it).
+* `format [label]` on `/dev/sd/N/ctl` makes an empty HydraFS: from the card's size (its CSD register: the SD layer gets CMD9, and the emulator's card too) it clears block 0, writes the free map, all free, then the superblock (with an empty root directory: size 0, no clusters yet), so a format that's cut short leaves no half-made HydraFS.  The layout is the one `hydrafs.js mkfs` makes.  A 32 GB card's map is 2048 blocks: about a minute and a half at 3.58 MHz.  `label <text>` sets the label (31 characters at most).
 * `sim/tools/hydrafs.js` (Node, on the PC): `mkfs <image> <MB> [label]`, `ls <image> [path]`, `put <image> <file> <path>`, `get <image> <path> <file>`, `mkdir`, `rm`, and `import <image> <folder>` (a whole folder tree), for making test cards and moving files to and from the Hydra.
 
 ### **Build order**
 1. **(Done)** The SD layer: CMD9 (the card's size); per-card state for devices 0-7 (`/dev/sd/N/data`, `/dev/sd/N/ctl`).  The emulator: CMD9 (and `--sdsc N`).
 2. **(Done)** `sim/tools/hydrafs.js` (mkfs, info, ls, put, get, mkdir, rm, import, check): test images first, from the PC side.  (A new directory entry goes in the first free one, else at the end; a file grows its last extent when the next cluster is free; extent blocks take a cluster each, their first block.)
-3. Read-only HydraFS: mount at `/sd`, walk, open, read, both directory formats, stat.
-4. Writing: write and grow, `IO_CREATE`, `IO_REMOVE`, `IO_WSTAT`, `IO_MODE_TRUNC`; `format`.
-5. HyForth words; `check` on the ctl file (recount the free map, find lost clusters).
+3. **(Done)** Read-only HydraFS (`os_rom/io/hfs_srv.s`, ROM page 3, the `hfs` device, mounted at `/sd` by the shell): walk (with `.` and `..`), open, read, both directory formats, stat.  `IO_STAT`'s record grew from 16 to 48 bytes and `IO_MODE_STAT` was added; the `hydrafs` regression test covers it.  A card that holds no HydraFS gives the new `ERR_IO_NOT_FS` (`$80`).
+4. **(Done)** Writing (`os_rom/io/hfs_write.s`): write and grow, `IO_CREATE`, `IO_REMOVE`, `IO_WSTAT`, `IO_MODE_TRUNC`; `format` and `label`.  The server moved to its own ROM page (6): page 3 was full.  New errors `ERR_IO_FULL` (`$81`), `ERR_IO_EXISTS` (`$82`), `ERR_IO_NOT_EMPTY` (`$83`), `ERR_IO_BUSY` (`$84`); new thunks `$F8C9`-`$F8CF`.  The `hydrafs-write` regression test covers it, and checks the cards afterwards with the PC tool.
+5. **(Done)** HyForth words (`ls`, `create`, `mkdir`, `remove`, `rename`, written with step 4 to test it, and `ctl`: a command to a ctl file); `check` on the ctl file (`os_rom/io/hfs_check.s`), and the card's HydraFS details in its ctl file's text.  The `hydrafs-check` regression test covers it.
+
+### **The check**
+`check` on `/dev/sd/N/ctl` walks every directory from the root, marks in a bitmap every cluster that a file, a directory or an extent block uses, and compares that with the free map:
+* **lost**: marked in use, but nothing uses them (harmless, but the space is wasted; a crash while a file was being emptied or removed leaves these);
+* **unmarked**: in use, but marked free (dangerous: a new file could be given them);
+* **twice**: used by two files, or twice by one (one of them is damaged).
+
+It recounts the free clusters into the superblock.  `check fix` also makes the free map say what the files use: lost clusters are freed and unmarked ones marked.  A cluster used twice needs a person to decide which file keeps it, so it's only reported (the PC tool's `check` names the files).
+
+Reading the ctl file then shows the results, after the card's label and free space:
+```
+sdhc 1 MB 2048 blocks
+hydrafs label=GAMES
+free 1012 KB of 1020 KB
+check: lost 0, unmarked 0, twice 0
+```
+(`, fixed` after `check fix`; the check line after a check of that card, until another card is checked.)
+
+How: the bitmap is 8 KB, for 65,536 clusters (256 MB of card) at a time, so a bigger card takes a pass for each 256 MB, each walking the directories again: a 32 GB card takes 128.  The walk keeps a copy of each directory's entry it's in, and where it is in it, after the bitmap, and follows directories 24 deep (deeper: `ERR_IO_NAME`, and no results).  The buffer (about 9.7 KB of the storage task's RAM) is taken from the MMU at the first check, and kept.  Clusters a file claims past the card's end aren't counted (the PC tool's `check` reports them).
 
 ### **Later**
 Partitions (a HydraFS partition next to a small FAT one, for a PC), a real clock for the stamps, fsck-style repair, sparse files.

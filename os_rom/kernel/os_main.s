@@ -53,9 +53,16 @@ RESET_VECTOR_START:
             wai
             bra                 @idle
 
+S_SD_PATH:          .byte   "/sd", 0                                ; The HydraFS server's mount point ...
+S_HFS_DEV:          .byte   "hfs", 0                                ;   and the device mounted there
+
 ; The shell task: HyForth, then WOZMON when Forth exits (bye)
 SHELL_MAIN:
             jsr                 IO_STD_OPEN                         ; fds 0-2 on /dev/cons (inherited by the tasks the shell starts)
+            LOAD_ADDR           S_HFS_DEV, ZP_IO_BUF                ; The cards' files at /sd (inherited too;
+            lda                 #<S_SD_PATH                         ;   a card is only looked at when one of
+            ldy                 #>S_SD_PATH                         ;   its files is opened)
+            jsr                 IO_MOUNT
             jsr                 COPYTORAM
             jsr                 forth_main                          ; (No clear screen: boot messages, e.g. a driver's FAIL, stay)
             jsr                 MON_START

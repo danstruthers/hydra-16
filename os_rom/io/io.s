@@ -298,18 +298,53 @@ IO_COPY_IN:
 IO_OPEN:
             PUSH_XY
             stx         ZP_IO_MODE
+            ldx         #H9_OPEN
+            stx         ZP_IO_BYTE                  ; (The request: IO_CREATE and IO_REMOVE come here too)
             jsr         IO_CALLER_PAGE              ; .X = the caller's ROM page
             bra         IO_OPEN_NAME
 
 IO_OPEN_P2:
             PUSH_XY
             stx         ZP_IO_MODE
+            ldx         #H9_OPEN
+            stx         ZP_IO_BYTE
             ldx         W_REGISTER                  ; (Page 2)
+            bra         IO_OPEN_NAME
+
+; Create a file or directory (HydraFS), and open it.  A file that's there already is emptied and opened, as
+; in Plan 9; a directory is opened for reading, whatever the mode asks for.
+; IN: .A.Y = name (as IO_OPEN), .X = IO_MODE_* bits, ZP_IO_BUF (its low byte) = the new file's mode:
+;     HFS_M_DIR, HFS_M_APPEND, HFS_M_RO
+; OUT: as IO_OPEN; the errors also ERR_IO_EXISTS (a directory there, or a file where a directory was
+;      asked for), ERR_IO_FULL, and ERR_IO_BAD_REQ from a device that isn't a filesystem
+IO_CREATE:
+            PUSH_XY
+            stx         ZP_IO_MODE
+            ldx         #H9_CREATE
+            stx         ZP_IO_BYTE
+            jsr         IO_CALLER_PAGE
+            bra         IO_OPEN_NAME
+
+; Remove a file, or an empty directory (HydraFS).  It needs a free fd for the request, which it gives back.
+; IN: .A.Y = name (as IO_OPEN).  OUT: C = 0; or .A = error, C = 1 (also ERR_IO_NOT_EMPTY, ERR_IO_BUSY: the
+; file is open; ERR_IO_BAD_REQ: a card's root, or a device that isn't a filesystem)
+IO_REMOVE:
+            PUSH_XY
+            ldx         #H9_REMOVE
+            stx         ZP_IO_BYTE
+            stz         ZP_IO_MODE
+            jsr         IO_CALLER_PAGE
 
 IO_OPEN_NAME:
             jsr         FP_MAKE                     ; ZP_FP = the name
             jsr         IO_XFER_SETUP
             _M_IO_MAP_XFER
+            lda         ZP_IO_BYTE                  ; The request, and for H9_CREATE the new file's mode (the
+            ldy         #IO_BLK_TYPE                ;   namespace uses ZP_IO_BUF and ZP_IO_BYTE: keep them in
+            sta         (ZP_IO_XFER),Y              ;   the request block)
+            lda         ZP_IO_BUF
+            ldy         #IO_BLK_PERM
+            sta         (ZP_IO_XFER),Y
             lda         ZP_IO_DATA                  ; The name -> the data area, where the namespace can
             ldy         ZP_IO_DATA + 1              ;   rewrite it, and the server finds the rest of it
             ldx         #0                          ; (256 bytes at most, with its 0)
@@ -353,7 +388,7 @@ IO_OPEN_NAME:
 
 @not_found:
             lda         #ERR_IO_NOT_FOUND
-            bra         @fail
+            jmp         @fail
 
 @find_fd:
             ldx         #0
@@ -390,11 +425,23 @@ IO_OPEN_NAME:
             lda         ZP_IO_MODE
             ldy         #IO_BLK_MODE
             sta         (ZP_IO_XFER),Y
-            lda         #H9_OPEN
+            ldy         #IO_BLK_TYPE
+            lda         (ZP_IO_XFER),Y
             jsr         IO_SERVE                    ; .A = fid
             bcs         @open_failed
             pha
             jsr         IO_FD_ENTRY                 ; .X = the fd's entry
+            ldy         #IO_BLK_TYPE
+            lda         (ZP_IO_XFER),Y
+            cmp         #H9_REMOVE
+            bne         :+
+            pla                                     ; H9_REMOVE: no fid, so the fd was only lent
+            lda         #IO_FD_CLOSED
+            sta         IO_FD_SERVER,X
+            lda         #0
+            clc
+            bra         @done
+:
             pla
             sta         IO_FD_FID,X
             cmp         #SER_FID_CONS               ; /dev/cons?  (WRITE_CHAR's fast path: IO_FDF_CONS)
@@ -839,8 +886,9 @@ IO_SEEK:
             PULL_YX
             rts
 
-; Get a 16-byte stat block from an fd's server.
-; IN: .A = fd, ZP_IO_BUF = 16-byte buffer.  OUT: C = 0; or .A = error, C = 1
+; Get a stat record (IO_STAT_SIZE bytes: the name, mode, qid, size and modification stamp) from an fd's
+; server.  A device that has nothing to say returns all zeros.
+; IN: .A = fd, ZP_IO_BUF = an IO_STAT_SIZE-byte buffer.  OUT: C = 0; or .A = error, C = 1
 IO_STAT:
             PUSH_XY
             jsr         IO_FD_CHECK
@@ -850,12 +898,34 @@ IO_STAT:
             lda         #H9_STAT
             jsr         IO_SERVE
             bcs         @unmap
-            lda         #16
+            lda         #IO_STAT_SIZE
             sta         ZP_IO_CHUNK
             jsr         IO_COPY_OUT
             clc
 
 @unmap:
+            _M_IO_UNMAP
+
+@done:
+            PULL_YX
+            rts
+
+; Change a file's stat (HydraFS): rename it (in its directory), set its mode bits.  The record's other
+; fields are left alone.
+; IN: .A = fd, ZP_IO_BUF = a stat record (IO_STAT_SIZE bytes): the new name (a 0 first byte: keep it), the
+;     mode (HFS_M_APPEND, HFS_M_RO; $FF: keep it)
+; OUT: C = 0; or .A = error, C = 1 (also ERR_IO_EXISTS: the name is taken; ERR_IO_NAME)
+IO_WSTAT:
+            PUSH_XY
+            jsr         IO_FD_CHECK
+            bcs         @done
+            jsr         IO_XFER_SETUP
+            _M_IO_MAP_XFER
+            lda         #IO_STAT_SIZE
+            sta         ZP_IO_CHUNK
+            jsr         IO_COPY_IN
+            lda         #H9_WSTAT
+            jsr         IO_SERVE
             _M_IO_UNMAP
 
 @done:
@@ -1285,6 +1355,8 @@ IO_ADOPT_FDS:
 
 ; /dev/null: reads are empty (end of file), writes take everything
 NULL_SERVE:
+            cmp         #H9_CREATE
+            bcs         @bad                        ; (The filesystem's requests)
             cmp         #H9_READ
             beq         @read
             cmp         #H9_STAT
@@ -1318,6 +1390,8 @@ NULL_SERVE:
 
 ; /dev/zero: reads return zeros, writes take everything
 ZERO_SERVE:
+            cmp         #H9_CREATE
+            bcs         @bad                        ; (The filesystem's requests)
             cmp         #H9_READ
             beq         @read
             cmp         #H9_STAT
@@ -1356,11 +1430,11 @@ ZERO_SERVE:
             sec
             rts
 
-; An all-zero stat block (size 0).  IN: .X = client
+; An all-zero stat record (size 0), for a device with nothing to say.  IN: .X = client
 STAT_ZERO:
             jsr         IO_SRV_MAP
             inc         ZP_IO_REQ + 1               ; The data area
-            ldy         #15
+            ldy         #IO_STAT_SIZE - 1
             lda         #0
 :
             sta         (ZP_IO_REQ),Y

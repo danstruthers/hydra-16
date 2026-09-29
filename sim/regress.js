@@ -24,7 +24,10 @@
 //   check   function (serial output, the emulator's whole report, the test's files) returning an error
 //           message, or nothing when it's good
 //   sd      true: a blank 1 MB SD card image on device 0 (files.sd = its path); or a list of cards: { dev (0-7),
-//           mb (default 1), sdsc (true: standard capacity), fill (a function given the image to fill in) }
+//           mb (default 1), sdsc (true: standard capacity), fill (a function given the image to fill in),
+//           label, blocks (a HydraFS of that many blocks: fewer, and the image is cut to it; more, and the
+//           image stays mb, for a card that claims more than the test needs) and hfs (a function given a
+//           HydraFS volume made on the card, and the hydrafs module, to put files in it) }
 //           (files.sds[dev] = each one's path)
 //
 // Every test also fails if a task's stack came within STACK_MARGIN bytes of its bottom (the emulator reports
@@ -35,6 +38,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { execFile } = require('child_process');
+const hydrafs = require('./tools/hydrafs.js');            // For the tests that want a HydraFS card
 
 const SIM = path.join(__dirname, 'hydrasim.js');
 const STACK_MARGIN = 32;                                        // Free stack bytes a task must keep
@@ -238,6 +242,21 @@ const TESTS = [
     },
   },
   {
+    name: 'sd-speed', about: 'SD read throughput: 4K in 256-byte reads, inside a cycle budget (the bit-banged SPI is most of it)',
+    sd: true,
+    args: ['--cycles', '200000000', '--mark', 'HF>go', '--mark', 'HF>', '--input', BOOT +
+      'ftrain autoload\\rq^/dev/sd/0/data^ 1 open .\\r' +
+      ': go lit [ 16 , ] 0 do 3 here @ lit [ 256 , ] read drop loop ;\\r' + W(1) + 'go\\r' + W(2)],
+    expect: ['open .\n' + num(3) + '\n'],
+    forbid: ['!IO ERR!', '!DS PTR ERROR!', '!UNK WORD!'],
+    check: (out, report) => {                                   // 298 cycles/byte now; SPI_RECV is about 60% of it
+      const at = +/mark: "HF>go" at cycle (\d+)/.exec(report)[1];
+      const took = [...report.matchAll(/mark: "HF>" at cycle (\d+)/g)].map(m => +m[1]).find(c => c > at) - at;
+      const per = Math.round(took / 4096);
+      if (per > 330) return 'an SD read took ' + per + ' cycles a byte, over the 330 budget';
+    },
+  },
+  {
     name: 'sd-cards', about: 'SD cards on devices 0 (SDHC) and 1 (SDSC, CSD v1), none on 3: ctl files, SDSC data, init, bad names',
     sd: [{ dev: 0 }, { dev: 1, mb: 3, sdsc: true, fill: img => img.write('SDSC-BLK1', 512) }],
     args: ['--cycles', '150000000', '--input', BOOT +
@@ -257,6 +276,141 @@ const TESTS = [
     check: (out, report, files) => {
       const img = fs.readFileSync(files.sds[1]);
       if (img[1024] !== 66) return 'the SDSC card image has $' + img[1024].toString(16) + ' at 1024, not $42';
+    },
+  },
+  {
+    name: 'hydrafs', about: 'HydraFS reading: /sd/N, walking, "." and "..", file and directory reads, stat records, errors',
+    sd: [{ dev: 0, mb: 2, label: 'TESTS', hfs: v => {
+      v.put('hello.txt', Buffer.from('hello hydra\r\n'));
+      v.mkdir('games');
+      v.put('games/star.frt', Buffer.from(': star 42 . ;\r\n'));
+      v.put('big.bin', Buffer.from(Array.from({ length: 5000 }, (_, i) => i & 0xFF)));
+      v.mkdir('many');                                          // More entries than one block holds (8)
+      for (let i = 0; i < 10; i++) v.put('many/f' + i, Buffer.from(String(i)));
+      for (const n of 'abcdefg') v.put(n, Buffer.alloc(4096, n.charCodeAt(0)));
+      for (const n of 'bdf') v.remove(n);                       // So "a" grows into three separate runs:
+      v.write(v.walk('a'), 4096, Buffer.alloc(12288, 0x5A));    //   three extents, one in an extent block
+    } }, { dev: 1 }],                                           // And a card with no HydraFS on it
+    args: ['--cycles', '400000000', '--input', BOOT +
+      'q^/sd/0^ 1 open 0 fdup2 cat | cat\\rq^/sd/0/many^ 1 open 0 fdup2 cat | cat\\r' +
+      'q^/sd/0/./games/../hello.txt^ 1 open 0 fdup2 cat | cat\\rq^/sd/0/..^ 1 open 0 fdup2 cat | cat\\r' +
+      'q^/sd/0/a^ 1 open .\\r3 0 0 seek 3 here @ 1 read . here @ c@ .\\r' +
+      '3 4096 0 seek 3 here @ 1 read . here @ c@ .\r3 16383 0 seek 3 here @ 4 read . here @ c@ .\r3 close\r' +
+      'q^/sd/0/big.bin^ 1 open .\\r3 4095 0 seek 3 here @ 4 read . here @ c@ . here @ 1 + c@ .\\r3 close\\r' +
+      'q^/sd/0/many^ 5 open .\\r3 here @ 48 read . here @ c@ . here @ 32 + c@ . here @ 40 + @ .\\r3 close\\r' +
+      'q^/sd/1/x^ 1 open\\rioerr .\\rq^/sd/3/x^ 1 open\\rioerr .\\rq^/sd/8/x^ 1 open\\rioerr .\\r' +
+      'q^/sd^ 1 open\\rioerr .\\rq^/sd/0/games^ 2 open\\rioerr .\\rq^/sd/0/hello.txt/x^ 1 open\\rioerr .\\r'],
+    expect: [
+      '| cat\nhello.txt 13\ngames/\nbig.bin 5000\nmany/\na 16384\nc 4096\ne 4096\ng 4096\n',
+      '| cat\nf0 1\nf1 1\nf2 1\nf3 1\nf4 1\nf5 1\nf6 1\nf7 1\nf8 1\nf9 1\n',
+      '| cat\nhello hydra\n',                                   // "." and ".." on the way
+      '| cat\nhello.txt 13\n',                                  // ".." at the root stays there
+      'open .\n' + num(3) + '\n',                               // The three-extent file, a byte at a time
+      'c@ .\n' + num(1) + num(0x61) + '\n',                     // Its first extent ("a")
+      'c@ .\n' + num(1) + num(0x5A) + '\n',                     // The second (what was written at 4096)
+      'c@ .\n' + num(1) + num(0x5A) + '\n',                     // The third, and 1 byte at the end of file
+      'open .\n' + num(3) + '\n',                               // big.bin, over a cluster boundary
+      '1 + c@ .\n' + num(4) + num(0xFF) + num(0) + '\n',
+      'open .\n' + num(3) + '\n',                               // A directory as stat records (IO_MODE_STAT)
+      '@ .\n' + num(48) + num(0x66) + num(0) + num(1) + '\n',   // "f0": 48 bytes, mode 0, size 1
+      'HF>ioerr .\n' + num(0x80) + '\n',                        // No HydraFS on the card (ERR_IO_NOT_FS)
+      'HF>ioerr .\n' + num(0x79) + '\n',                        // No card at all
+      'HF>ioerr .\n' + num(0x70) + '\n',                        // Card 8
+      'HF>ioerr .\n' + num(0x70) + '\n',                        // /sd, with no card in it
+      'HF>ioerr .\n' + num(0x72) + '\n',                        // A directory opened for writing
+      'HF>ioerr .\n' + num(0x70) + '\n',                        // A path through a file
+    ],
+    forbid: ['!DS PTR ERROR!', '!UNK WORD!'],
+    check: (out, report, files) => {
+      const v = new hydrafs.Volume(files.sds[0]);               // Nothing on the card changed
+      try { const p = v.check(); if (p.length) return 'the card is damaged: ' + p[0]; } finally { v.close(); }
+    },
+  },
+  {
+    name: 'hydrafs-write', about: 'HydraFS writing: a file grown into pieces (an extent block), truncate, append-only, create, mkdir, remove, rename, errors, format, a full card',
+    sd: [{ dev: 0, mb: 2, label: 'WRITES', hfs: v => {
+      for (const n of 'abcdefg') v.put(n, Buffer.alloc(4096, n.charCodeAt(0)));
+      const at = v.extents(v.walk('b'))[0].start;
+      for (const n of 'bdf') v.remove(n);
+      v.hint = at;                                              // So the Hydra's clusters fill the holes first:
+    } },                                                        //   a file in four pieces, one in an extent block
+    { dev: 1 },                                                 // Blank: the Hydra formats it
+    { dev: 2, label: 'TINY', blocks: 34, hfs: () => {} }],      // 4 clusters: it fills up
+    args: ['--cycles', '220000000', '--input', BOOT + 'ftrain autoload\\r' + [
+      ': wr lit [ 80 , ] 0 do 3 here @ lit [ 256 , ] write drop loop ;\\r' +
+      ': fl lit [ 60 , ] 0 do 3 here @ lit [ 256 , ] write drop loop ;\\r' + W(1),
+      'q^/sd/0/big^ 0 create .\\rwr 3 close\\r' + W(18) + 'q^/sd/0^ ls\\r',        // (20 KB: type-ahead would overflow)
+      'q^/sd/0/t^ 0 create .\\r3 here @ 200 write . 3 close\\rq^/sd/0/t^ 10 open . 3 close\\r',
+      'q^/sd/0/log^ 64 create .\\r3 here @ 4 write . 3 0 0 seek 3 here @ 4 write . 3 close\\r',
+      'q^/sd/0/t^ 2 open .\\r3 100 0 seek 3 here @ 4 write\\rioerr .\\r3 close\\r',
+      'q^/sd/0/ro^ 1 create . 3 here @ 4 write . 3 close\\rq^/sd/0/ro^ 2 open\\rioerr .\\r',
+      'q^/sd/0/log^ mkdir\\rioerr .\\rq^/sd/0/sub^ mkdir\\rq^/sd/0/sub^ 0 create\\rioerr .\\r',
+      'q^/sd/0/log^ 1 open .\\rq^/sd/0/log^ remove\\rioerr .\\r3 close\\r',
+      'q^/sd/0/ro^ q^log^ rename\\rioerr .\\rq^/sd/0/log^ q^log2^ rename\\r',
+      'q^/sd/0/sub/x^ 0 create . 3 close\\rq^/sd/0/sub^ remove\\rioerr .\\rq^/sd/0/c^ remove\\rq^/sd/0^ ls\\r',
+      'q^/dev/sd/1/ctl^ 2 open .\\r3 q^format TEST^ @ 3 + 11 write . 3 close\\r' + W(1),
+      'q^/sd/1/hi^ 0 create .\\r3 here @ 5 write . 3 close\\rq^/sd/1^ ls\\r',
+      'q^/sd/2/fill^ 0 create .\\rfl\\r' + W(14) + 'ioerr .\\r3 close\\rq^/sd/2^ ls\\r'].join(W(2))],
+    expect: [
+      'ls\na 4096\nbig 20480\nc 4096\ne 4096\ng 4096\n',     // 20 KB, in the holes and after
+      '200 write . 3 close\n' + num(200) + '\n',
+      '4 write . 3 close\n' + num(4) + num(4) + '\n',          // Append-only: the second write after the first
+      'HF>ioerr .\n' + num(0x78) + '\n',                        // A write past the end (no holes)
+      'HF>ioerr .\n' + num(0x72) + '\n',                        // A read-only file (written as it was made)
+      'HF>ioerr .\n' + num(0x82) + '\n',                        // mkdir where there's a file
+      'HF>ioerr .\n' + num(0x82) + '\n',                        // A file where there's a directory
+      'HF>ioerr .\n' + num(0x84) + '\n',                        // Removing an open file
+      'HF>ioerr .\n' + num(0x82) + '\n',                        // Renaming to a name that's taken
+      'HF>ioerr .\n' + num(0x83) + '\n',                        // Removing a directory with a file in it
+      'ls\na 4096\nbig 20480\nt 0\ne 4096\nlog2 8\ng 4096\nro 4\nsub/\n',   // (Free entries used first)
+      '11 write . 3 close\n' + num(11) + '\n',                  // format TEST
+      'ls\nhi 5\n',
+      'HF>ioerr .\n' + num(0x81) + '\n',                        // The card is full
+      'ls\nfill 12288\n'],
+    forbid: ['!DS PTR ERROR!', '!UNK WORD!'],
+    check: (out, report, files) => {                            // What the host tool finds on the cards
+      const open = (dev, f) => { const v = new hydrafs.Volume(files.sds[dev]); try { return f(v); } finally { v.close(); } };
+      for (const dev of [0, 1, 2]) {
+        const p = open(dev, v => v.check());
+        if (p.length) return 'card ' + dev + ': ' + p[0];
+      }
+      const e = open(0, v => {
+        const big = v.walk('big'), d = v.read(big), ext = v.extents(big);
+        if (ext.length < 3 || !big.extBlock) return 'big is in ' + ext.length + ' extents, with no extent block';
+        for (let i = 256; i < d.length; i += 256) if (!d.subarray(i, i + 256).equals(d.subarray(0, 256))) return 'big\'s data is wrong at ' + i;
+        if (v.walk('log2').size !== 8 || v.walk('t').size !== 0 || v.walk('ro').mode !== hydrafs.MODE_RO) return 'log2, t or ro is wrong';
+      });
+      if (e) return e;
+      if (open(1, v => v.label) !== 'TEST') return 'card 1\'s label isn\'t TEST';
+      if (open(2, v => v.freeCount) !== 0) return 'card 2 isn\'t full';
+    },
+  },
+  {
+    name: 'hydrafs-check', about: 'HydraFS check on /dev/sd/0/ctl: lost, unmarked and doubly used clusters over two passes, check fix, the ctl file\'s lines',
+    sd: [{ dev: 0, label: 'CHECK', blocks: 600000, hfs: v => {    // 74997 clusters (two passes): a 1 MB image
+      v.put('a', Buffer.alloc(100, 1)); v.put('b', Buffer.alloc(100, 2)); v.put('c', Buffer.alloc(5000, 3));
+      v.mkdir('d'); v.put('d/e', Buffer.alloc(10, 4));
+      v.setUsed(v.extents(v.walk('c'))[0].start + 1, false);  // Unmarked: c's second cluster
+      const a = v.walk('a'), b = v.walk('b');
+      b.setExt(0, a.ext(0)); v.writeEntry(b);                 // Twice: b uses a's cluster (b's own is lost)
+      v.setUsed(70000, true);                                 // Lost, in the second pass
+      const e = v.walk('d/e');
+      e.setExt(0, { start: 70001, len: 1 }); v.writeEntry(e); // Unmarked in the second pass (e's own is lost)
+      v.freeCount = 7;                                        // And the free count is wrong
+    } }],
+    args: ['--cycles', '120000000', '--input', BOOT + ['ls\\r', 'q^check^ ctl\\r' + W(3), 'ls\\r',
+      'q^check fix^ ctl\\r' + W(3), 'ls\\r', 'q^check^ ctl\\r' + W(3), 'ls\\r'].map(s => 'q^/dev/sd/0/ctl^ ' + s).join('')],
+    expect: ['ls\nsdhc 1 MB 2048 blocks\nhydrafs label=CHECK\nfree 28 KB of 299988 KB\n',
+      'ls\nsdhc 1 MB 2048 blocks\nhydrafs label=CHECK\nfree 299960 KB of 299988 KB\ncheck: lost 3, unmarked 2, twice 1\n',
+      'ls\nsdhc 1 MB 2048 blocks\nhydrafs label=CHECK\nfree 299964 KB of 299988 KB\ncheck: lost 3, unmarked 2, twice 1, fixed\n',
+      'ls\nsdhc 1 MB 2048 blocks\nhydrafs label=CHECK\nfree 299964 KB of 299988 KB\ncheck: lost 0, unmarked 0, twice 1\n'],
+    forbid: ['!IO ERR!', '!DS PTR ERROR!', '!UNK WORD!'],
+    check: (out, report, files) => {                            // The host tool agrees: only the shared cluster
+      const v = new hydrafs.Volume(files.sds[0]);               //   is wrong (it needs a person), and the free
+      try {                                                     //   count is right
+        const p = v.check();
+        if (p.length !== 1 || !/ too$/.test(p[0])) return 'the card: ' + JSON.stringify(p);
+      } finally { v.close(); }
     },
   },
   {
@@ -327,6 +481,12 @@ function runTest(t) {
     const f = path.join(tmpDir, t.name + '-' + c.dev + '.img'), img = Buffer.alloc((c.mb || 1) << 20);
     if (c.fill) c.fill(img);
     fs.writeFileSync(f, img);
+    if (c.hfs) {                                                // A HydraFS on it, made with the host tool
+      hydrafs.mkfs(f, c.mb || 1, c.label || '', c.blocks);    // (blocks: a smaller filesystem)
+      const v = new hydrafs.Volume(f);
+      try { c.hfs(v, hydrafs); } finally { v.close(); }
+      if (fs.statSync(f).size > (c.mb || 1) << 20) fs.truncateSync(f, (c.mb || 1) << 20);   // (A HydraFS bigger than
+    }                                                           //   the card: only its first blocks are used)
     files.sds[c.dev] = f;
     if (!files.sd) files.sd = f;
     args.push('--sd', c.dev + ':' + f);

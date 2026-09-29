@@ -318,7 +318,27 @@ TASK_ZP     SD_DONE, 1              ;   bytes done (0-255; 256 when finished: th
 TASK_ZP     SD_N, 2                 ;   bytes in this block
 TASK_ZP     SD_SRC, 2               ;   the cache, and ...
 TASK_ZP     SD_DST, 2               ;   the data area, where this block's bytes go
+; The HydraFS server's (hfs_srv.s), in the same task: it runs between the SD server's requests (one call
+; at a time), so it borrows SD_POS, SD_LEFT, SD_DONE, SD_N, SD_SRC, SD_DST, SD_OP, SD_TMP, SD_CLIENT and
+; SD_FID, and uses SD_LBA as its own block number (SD_CACHE_LOAD leaves it alone).
+TASK_ZP     HFS_CARD, 1             ; The card (0-7) the request is about
+TASK_ZP     HFS_FID, 1              ; The open file (0-7)
+TASK_ZP     HFS_FP, 2               ; The directory entry in play: HFS_ENT, or the open file's copy
+TASK_ZP     HFS_XP, 2               ; The extent being looked at (in the entry, or in an extent block)
+TASK_ZP     HFS_LOC, 5              ; Where an entry is: its block (4), then its index in the block (0-7)
+TASK_ZP     HFS_CL, 4               ; A cluster in the file, counted down through the extents
+TASK_ZP     HFS_XBLK, 4             ; The extent block being read
+TASK_ZP     HFS_XLEN, 2             ; An extent: its clusters, and (below it) its first cluster, so that
+TASK_ZP     HFS_XCL, 4              ;   the 6 bytes read from the entry land in one loop
+TASK_ZP     HFS_SUB, 1              ; The block wanted, inside its cluster (0-7)
+TASK_ZP     HFS_OFS, 2              ; An offset inside a block (0-511)
+TASK_ZP     HFS_SKIP, 2             ; A directory listing: the bytes still to throw away (the fd's offset)
+TASK_ZP     HFS_LEN, 1              ;   and the length of the line or record being made
+TASK_ZP     HFS_DEPTH, 1            ; A walk: how deep it is (HFS_STK) ...
+TASK_ZP     HFS_ELEM, 1             ;   and where the path element it's on starts
+TASK_ZP     HFS_PTR, 2              ; A pointer into the block cache
 TASK_ZP_END
+.assert     HFS_XLEN = HFS_XCL + 4, error, "HFS_XCL and HFS_XLEN must be the extent's 6 bytes in order"
 
 ; Sound driver task ZP: the sound task's (SND_PLAYER), and the test tune's (in its player task; snd_test.s)
 TASK_ZP_BEGIN

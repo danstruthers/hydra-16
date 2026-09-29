@@ -1557,6 +1557,103 @@ def_word "pipe", "pipe", 0
     lda TEMP2
     jmp IOPUSHA
 ;
+;-------- Files on the SD cards (HydraFS, at /sd/N: e.g. q^/sd/0/games^ ls)
+;
+; ( sz mode -- fd )  create a file (mode 0; $40 append-only, $01 read-only) or a directory ($80), and open
+;                   it: a file for reading and writing, a directory for reading.  A file that's there already
+;                   is emptied (e.g. q^/sd/0/notes^ 0 create)
+def_word "create", "create", 0
+    jsr spull_1       ; the mode
+    jsr spull_0       ; the name
+    ldx #TEMP1
+    jsr SZTEXT        ; .A.Y = its text
+    bcs FSFAIL
+    ldx TEMP2
+    stx ZP_IO_BUF     ; (IO_CREATE: the new file's mode)
+    ldx #IO_MODE_RDWR
+    jsr IO_CREATE
+    bcs FSFAIL
+    jmp IOPUSHA
+FSFAIL:
+    jmp IOFAIL
+;
+; ( sz -- )  make a directory (e.g. q^/sd/0/games^ mkdir)
+def_word "mkdir", "mkdir", 0
+    jsr spull_0
+    ldx #TEMP1
+    jsr SZTEXT
+    bcs FSFAIL
+    ldx #HFS_M_DIR
+    stx ZP_IO_BUF
+    ldx #IO_MODE_READ
+    jsr IO_CREATE
+    bcs FSFAIL
+    jsr IO_CLOSE
+    jmp next
+;
+; ( sz -- )  remove a file, or an empty directory
+def_word "remove", "remove", 0
+    jsr spull_0
+    ldx #TEMP1
+    jsr SZTEXT
+    bcs FSFAIL
+    jsr IO_REMOVE
+    bcs FSFAIL
+    jmp next
+;
+; ( sz-old sz-new -- )  rename a file or directory, in its directory: the new name is a name, not a path
+;                      (e.g. q^/sd/0/notes^ q^old-notes^ rename)
+def_word "rename", "rename", 0
+    jsr NSARGS        ; .A.Y = the old name, ZP_IO_BUF = the new one
+    bcs FSFAIL
+    sta TEMP3
+    sty TEMP3+1
+    ldy #0            ; the new name -> the stat record (the server checks it: 31 characters at most)
+RNCOPY:
+    lda (ZP_IO_BUF),y
+    sta RNBUF,y
+    iny
+    cpy #IO_ST_MODE
+    bne RNCOPY
+    lda #$FF          ; the mode: as it is
+    sta RNBUF+IO_ST_MODE
+    lda TEMP3
+    ldy TEMP3+1
+    ldx #IO_MODE_READ
+    jsr IO_OPEN
+    bcs FSFAIL
+    sta TEMP3         ; the fd
+    lda #<RNBUF
+    sta ZP_IO_BUF
+    lda #>RNBUF
+    sta ZP_IO_BUF+1
+    lda TEMP3
+    jsr IO_WSTAT
+    php
+    pha
+    lda TEMP3
+    jsr IO_CLOSE
+    pla
+    plp
+    bcs FSFAIL2
+    jmp next
+FSFAIL2:
+    jmp IOFAIL
+RNBUF:
+    .res ::IO_STAT_SIZE
+;
+; ( sz -- )  list a directory: a line per entry, "name size" or "name/" (e.g. q^/sd/0^ ls)
+def_word "ls", "ls", 0
+    jsr spull_0
+    ldx #TEMP1
+    jsr SZTEXT
+    bcs FSFAIL2
+    ldx #IO_MODE_READ
+    jsr IO_OPEN
+    bcs FSFAIL2
+    sta TEMP3
+    jmp STTYSHOW      ; (it prints the fd to its end, and closes it)
+;
 ; ( sz-path sz-dev -- )  mount a device at a path in this task's namespace: names under the path go to
 ;                       the device (e.g. q^/z^ q^zero^ mount  then  q^/z^ 1 open)
 def_word "mount", "mount", 0
@@ -1605,6 +1702,7 @@ def_word "stty", "stty", 0
     ldy #>STTY_CTL
     ldx #IO_MODE_WRITE
     jsr IO_OPEN
+STTYOPEN:               ; (ctl: .A = the fd or the error, TEMP2 = the text)
     bcs STTYFAIL
     sta TEMP3           ; the fd
     lda TEMP2
@@ -1653,6 +1751,21 @@ STTYSHOWN:
     jmp next
 STTY_CTL:
     .byte "/dev/ser/ctl", 0
+;
+; ( sz-file sz-text -- )  write a line of text to a file: a command to a ctl file, e.g.
+;                        q^/dev/sd/0/ctl^ q^check^ ctl  (then q^/dev/sd/0/ctl^ ls shows what it found)
+def_word "ctl", "ctl", 0
+    jsr NSARGS          ; .A.Y = the file's name, ZP_IO_BUF = the text
+    bcs CTLFAIL
+    ldx ZP_IO_BUF
+    stx TEMP2
+    ldx ZP_IO_BUF+1
+    stx TEMP2+1
+    ldx #IO_MODE_WRITE
+    jsr IO_OPEN
+    jmp STTYOPEN        ; (stty's: it writes TEMP2's text, and closes the file)
+CTLFAIL:
+    jmp IOFAIL
 ;
 ; ( sz-path sz-2 -- ) -> .A.Y = the path's text, ZP_IO_BUF = the second's (C = 1: not strings)
 NSARGS:
