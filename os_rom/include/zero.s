@@ -13,6 +13,16 @@ TASK_PARENT:
     .res  1
 TASK_SAVE_REG:
     .res  1
+
+; The calls' parameters in the zero page (IO_READ, IO_WRITE, IO_SEEK, IO_STAT ...: io.s): at fixed addresses,
+; as programs are built against them (the C library, programs/c; programs.md).  Don't move them.
+ZP_IO_BUF:              ; caller's buffer / name (IO_OPEN, IO_READ, IO_WRITE, IO_STAT)
+    .res  2
+ZP_IO_CNT:              ; byte count: requested (in), done (out)
+    .res  2
+ZP_IO_OFS:              ; offset (IO_SEEK)
+    .res  4
+.assert     ZP_IO_BUF = $06 .and ZP_IO_CNT = $08 .and ZP_IO_OFS = $0A, error, "ZP_IO_BUF, ZP_IO_CNT, ZP_IO_OFS: programs use these addresses"
 ZP_SER_SEND_STATUS:     ; serial driver: TX ready (valid in the serial task's ZP)
     .res  1
 ZP_SER_CAPTURE:         ; serial driver: task that receives serial input (valid in the serial task's ZP)
@@ -171,12 +181,6 @@ ZP_TIME_D:              ;   and a byte
     .res  1
 
 ; IO (see io.s)
-ZP_IO_BUF:              ; caller's buffer / name (IO_OPEN, IO_READ, IO_WRITE, IO_STAT)
-    .res  2
-ZP_IO_CNT:              ; byte count: requested (in), done (out)
-    .res  2
-ZP_IO_OFS:              ; offset (IO_SEEK)
-    .res  4
 ZP_IO_FD:               ; fd being worked on
     .res  1
 ZP_IO_MODE:             ; open mode
@@ -296,6 +300,9 @@ TASK_ZP     SER_TX_TAIL, 1          ;   next byte out (the IRQ handler)
 TASK_ZP     SER_RD_WAIT, 2          ; Tasks waiting to read (bit = task), woken when a byte arrives
 TASK_ZP     SER_WR_WAIT, 2          ; Tasks waiting to write, woken when the TX ring has room (or the
                                     ;   foreground changes: background tasks wait to write to /dev/cons)
+TASK_ZP     SER_RAW, 1              ; <> 0: /dev/cons is raw (/dev/cons/ctl's rawon: ser_srv.s) ...
+TASK_ZP     SER_RAW_REFS, 1         ;   and the fds open on /dev/cons/ctl (raw ends with the last: rawoff)
+                                    ;   (These, from SER_PREFIX up, are 0 at the driver's start)
 TASK_ZP     SER_PREFIX, 1           ; Non-zero: the console prefix key came, the next key is a command
 TASK_ZP     SER_RATE, 1             ; The port's settings (SER_CONFIG): the baud rate (SER_RATE_*)
 TASK_ZP     SER_FORMAT, 1           ;   the character format (SER_FMT_*)

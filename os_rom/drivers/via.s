@@ -3,7 +3,7 @@
 ; ****************************************************************************
 ; VIA (the scheduler's tick is its timer 1; see SCHED_START; SPI uses port B, spi.s)
 
-.segment "BIOS"
+.segment "IRQ"
 
 ; Must be called from the system task (the VIA handler runs there)
 VIA_INIT:

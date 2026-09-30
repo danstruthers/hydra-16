@@ -10,7 +10,7 @@ For programmers writing code for the Hydra-16: ROM code (the OS, drivers, server
 | [Memory](memory.md) | The MMU (handles, allocation), shared memory, far pointers and references |
 | [Input and output](io.md) | fds and the IO calls, stdio, the devices, the console, pipes, namespaces |
 | [Drivers and file servers](servers.md) | Writing a device: registration, the serve routine, the request block, waiting, the storage layer |
-| [Programs](programs.md) | Hydra executables (`.hyx`): the header, what a program gets, building one, putting it on a card, how `run` loads it |
+| [Programs](programs.md) | Hydra executables (`.hyx`): the header, what a program gets, building one (in assembly, or in C with cc65), putting it on a card, how `run` loads it |
 
 ### **The system in one page**
 
@@ -57,6 +57,6 @@ For programmers writing code for the Hydra-16: ROM code (the OS, drivers, server
 | `os_rom/tests/` | POST and the self tests |
 | `os_rom/tools/check_pages.js` | The cross-page call checker the build runs |
 | `sim/` | The emulator, the regression tests, `tools/hydrafs.js` and `tools/mkhyx.js` ([tools](../tools/emulator.md)) |
-| `programs/` | A sample program (`.hyx`), and the header and link config for building others ([programs.md](programs.md)) |
+| `programs/` | A sample program (`.hyx`), and the header and link config for building others; `programs/c/`: the C library for cc65, and samples ([programs.md](programs.md)) |
 
 The **plans** in [../plans](../plans/) record the design reasoning, and what's still to come.

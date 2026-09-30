@@ -14,8 +14,9 @@ HyForth is the Hydra-16's shell and programming language: a small Forth that sta
 9. [Files and devices](#files-and-devices)
 10. [Pipelines](#pipelines)
 11. [Tasks and the console](#tasks-and-the-console)
-12. [Errors and keys](#errors-and-keys)
-13. [How HyForth uses memory](#how-hyforth-uses-memory)
+12. [Background tasks and exit statuses](#background-tasks-and-exit-statuses)
+13. [Errors and keys](#errors-and-keys)
+14. [How HyForth uses memory](#how-hyforth-uses-memory)
 
 ### **The basics**
 
@@ -192,7 +193,7 @@ HyForth is a base language, plus libraries of words for the rest of the system. 
 | `io` | `open`, `close`, `read`, `write`, `seek`, `ioctl`, `fdup2`, `pipe`, `create`, `mount`, `bind`, `unmount`, `ns`, `stty`, `stty?`, `ctl`, `ioerr` | |
 | `files` | `cd`, `pwd`, `ls`, `rm`, `rmdir`, `mkdir`, `cp`, `mv` (and their stack forms, `(cd)` ...), `cat`, `wc`, `vols`, `mkfs`, `mkfs-full`, `mkfs-size`, `mkfs-part`, `relabel`, `fsck`, `fsfix` | `io` |
 | `shell` | `prompt`, `include`, `run` (and `(include)`, `(run)`), `args`, `edit`, `echo`.  Also the shell's part of reading a line: the prompt's format, pipelines (`\|`), redirection (`>`, `>>`, `<`), and running a program for a word HyForth doesn't know | `io`, `files` |
-| `tasks` | `shell`, `forth`, `fg`, `kill`, `sleep`, `ps` | `io` |
+| `tasks` | `shell`, `forth`, `fg`, `kill`, `sleep`, `ps`, `wait`, `sem`, `mutex`, `acquire`, `acquire?`, `release`, `-sem` | `io` |
 | `sound` | `sndinit`, `sndtest`, `sndstop`, `ywrite` | `io` |
 | `mem` | `halloc`, `hfree`, `hlock`, `hunlock` (MMU memory) | |
 | `tools` | `dump`, `disasm`, `syscall`, `mmtest`, `hwtest` | |
@@ -290,20 +291,22 @@ games/
 
 **Scripts** (`.hys` files) are lines of HyForth, as you'd type them.  `include file` reads one into this shell, as if it were typed (no prompts, no echo), so its definitions stay.  An error, or Ctrl-C, stops it and the scripts that include it, and says which line (`line 0002`, in hex).  Scripts nest up to 4 deep; a script's lines may end with CR LF, CR or LF.
 
-**Programs** run in a task of their own, and the shell waits for them: `run file`.
+**Programs** run in a task of their own, and the shell waits for them: `run file` (or, with `&` at the line's end, doesn't: [below](#background-tasks-and-exit-statuses)).
 * A **Hydra executable** (`.hyx`: a file that starts with an `HYX1` header; [writing one](../programming/programs.md)) is loaded into its new task's RAM and run until it returns.
 * **Anything else is a HyForth script**, read by a copy of the shell, as a pipeline's stage is: it starts with this shell's dictionary and stack, and what it defines or leaves on the stack goes away with it.  `bye` in it ends it.
 * A program has the console while it runs (if the shell has it), so **Ctrl-C stops it**, and gets copies of the shell's fds, namespace and current directory: it can be a pipeline's stage (`run hello.hyx | wc`).
 
 **A program by its name:** a word HyForth doesn't know is looked for as a program, `name.hyx` then `name.hys`: in the current directory, then (for a name with no `/`) in the directories of `$PATH` (below), or, with no `PATH`, in `/bin` on the current directory's card.  So `hello` runs `hello.hyx`.
 
-**The environment:** variables, `NAME=value`, as files under `/env`; each task has its own, and the tasks it starts (programs, scripts, shells) get a copy.  The shell uses three:
+**The environment:** variables, `NAME=value`, as files under `/env`; each task has its own, and the tasks it starts (programs, scripts, shells) get a copy.  The shell uses three, and sets two:
 
 | Variable | Does |
 | :------- | :--- |
 | `PATH` | Where programs are found by name: directories, `:` between them (`/sd/0/bin:/sd/1/tools`) |
 | `LIBPATH` | Where `lib` finds library files (`name.hyl`), the same way (without it: `/lib` on the current card) |
 | `HOME` | Where `cd` alone goes (without it: the current card's root) |
+| `status` | Set by the shell: the last program's exit status, as Plan 9's `$status` (the message, or the code if there's none, or empty for success; [below](#background-tasks-and-exit-statuses)) |
+| `apid` | Set by the shell: the task of the last program started with `&` (Plan 9's `$apid`) |
 
 ```
 0:/> echo /sd/0/bin:/sd/0/tools > /env/PATH
@@ -543,6 +546,41 @@ A failed call gives `!IO ERR!`, with the reason in `ioerr` (`60` not a semaphore
 | `sndtest` | | Play the test tune in the background |
 | `sndstop` | | Stop it |
 | `ywrite` | `( xxaa -- f )` | Write value `aa` to YM2151 register `xx`; true if it went |
+
+### **Background tasks and exit statuses**
+
+**`&`** at the end of a line runs its program (or script, or pipeline) without waiting for it, as in Plan 9's `rc` or a Unix shell: the shell prints the task's number, puts it in `/env/apid`, and gives the prompt back.  The program runs alongside the shell; it doesn't have the console, so it waits if it reads or writes it, until it's brought to the front (`fg`, Ctrl-] and its number) or waited for.
+
+**Exit statuses**, as Plan 9's: a program ends with a code (0-255, 0 for success) and a message (up to 30 characters, or none).  A program that returns has 0; Ctrl-C gives 130, `interrupt`, and a kill 137, `killed`; a C program has `main`'s value or `exit`'s, or `hy_exits`'s message.  A script ends with its last program's status, or its error's (`!UNK WORD!` is 5, the message `UNK WORD`), or what `exits` gives it.  The shell keeps the status of each program it waits for, and of each error at its prompt.
+
+| Word | Stack | Does |
+| :--- | :---- | :--- |
+| `status` | `( -- n )` | The last exit status's code (the base) |
+| `exits` | `( n -- )` | End this script, pipeline stage or command shell with exit status n (the base).  At the boot shell, it only sets the status |
+| `wait` | `( n -- )` | Wait for task n (one started with `&`), giving it the console meanwhile; its exit status is the status then (`tasks`) |
+
+`/env/status` has the status as text (Plan 9's `$status`): the message, or the code if there's no message, or empty for success.
+
+```
+0:/> upper &
+[B]                       \ task B: the number is in /env/apid too
+0:/> ps
+0 R -
+1 R 0 *
+B W 1                     \ waiting for the console
+...
+0:/> $B wait              \ (task numbers are hex: $B)
+hiHI                      \ it has the console: type, then Ctrl-D ends it
+0:/> status .
+ 0000
+0:/> nosuch
+
+ !UNK WORD!
+0:/> cat /env/status
+UNK WORD
+```
+
+A **command shell** (`SHELL_CMD`, as Plan 9's `rc -c`) is HyForth running the lines on its stdin, with no banner or prompt, ending at its input's end with the last status: C's `system` runs one ([programs.md](../programming/programs.md#c-programs)).
 
 ### **Errors and keys**
 

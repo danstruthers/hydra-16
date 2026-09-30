@@ -26,8 +26,8 @@ SEM_Z           = ZP_SLEEP_SCAN                             ; (2) Scratch: a wai
 .assert     SEM_TABLE >= ENV_VALBUF + 256 .and SEM_TABLE + SEM_MAX * .sizeof(Sem) <= $8400, error, "SEM_TABLE: after ENV_VALBUF, below SH_HANDLES"
 
 ; ****************************************************************************
-; At boot (os_main, after MMU_INIT: the system's shared bank is there): every semaphore free.
-; Modifies: .A, .X, .Y
+; At boot (os_main, after MMU_INIT: the system's shared bank is there): every semaphore free, and every exit
+; record empty (exits.s).  Modifies: .A, .X, .Y
 SEM_INIT:
             php
             sei
@@ -38,6 +38,7 @@ SEM_INIT:
             sta         SEM_TABLE,X
             dex
             bpl         :-
+            jsr         EXIT_INIT
             _M_SYS_LEAVE
             plp
             rts

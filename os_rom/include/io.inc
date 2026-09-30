@@ -110,6 +110,14 @@ ENV_FID_VAR         = $80
 
 ; The clock chip (a DS1747: rtc.s, page 9): whether there's one (RTC_ST_*), in the system's shared bank too
 RTC_STATE           = $9D00
+
+; Exit statuses (kernel/exits.s, page 5): each task's code and message as it ended, in the system's shared bank
+EXIT_TABLE          = $9D20     ; A record a task (16): the code, then the message (zero-terminated)
+EXIT_SIZE           = 32
+EXIT_MSG_MAX        = 30        ; A message's characters, at most
+EXIT_BREAK          = 130       ; A break with no handler ended it: "interrupt"
+EXIT_KILLED         = 137       ; A kill: "killed"
+.assert     EXIT_TABLE > RTC_STATE .and EXIT_TABLE + 16 * EXIT_SIZE < $9FFF, error, "EXIT_TABLE: after RTC_STATE, below the probe byte"
 .assert     RTC_STATE >= ENV_BLOCKS + 16 * $100 && RTC_STATE < $9FFF, error, "RTC_STATE: after the environments, below the probe byte"
 
 ; Device table: in shared bank ID $00 (see shared.s)
@@ -416,6 +424,7 @@ PIPE_BUF_PAGE       = PIPE_TABLE + PIPE_MAX * PIPE_ENTRY_SIZE   ; The rings' fir
 SER_RX_BUF          = $0200     ; 256-byte RX ring, in the serial task's RAM
 SER_TX_BUF          = $0300     ; 256-byte TX ring, in the serial task's RAM
 SER_FID_CONS        = 0         ; /dev/cons: reads only for the foreground task
+SER_FID_CONSCTL     = 3         ; /dev/cons/ctl: rawon, rawoff (Plan 9's consctl)
 SER_FID_SER         = 1         ; /dev/ser: the raw port, for any task
 SER_PEND_WAKE_RD    = $01      ; SER_PEND (bit 0): wake the tasks waiting to read
 SER_PEND_WAKE_WR    = $02      ;   (bit 1) wake the tasks waiting to write

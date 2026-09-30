@@ -155,4 +155,24 @@ TH_SEM_RELEASE:
                 jmp             SEM_RELEASE         ; $F8E1
 TH_SEM_FREE:
                 jmp             SEM_FREE            ; $F8E4
+TH_TASK_SLEEP:
+                jmp             TASK_SLEEP          ; $F8E7
+TH_TICKS_GET:
+                jmp             TICKS_GET           ; $F8EA
+TH_CLOCK_GET:
+                jmp             CLOCK_GET           ; $F8ED
+TH_TASK_EXITS:
+                jmp             TASK_EXITS          ; $F8F0
+TH_TASK_JOIN:
+                jmp             TASK_JOIN           ; $F8F3
+TH_SHELL_CMD:
+                jmp             SHELL_CMD           ; $F8F6: a task's entry point (TASK_RUN, page 0): the command
+                                                    ;   shell (HyForth running its stdin: Plan 9's rc -c; system())
+
+; Gates for the calls above on other pages, and the kernel's to them (GATES_P0, before the thunks, is full)
+FAR_GATE_INLINE TASK_EXITS,     PAGE5::TASK_EXITS,      5
+FAR_GATE_INLINE TASK_JOIN,      PAGE5::TASK_JOIN,       5
+FAR_GATE_INLINE EXIT_NOTE,      PAGE5::EXIT_NOTE,       5   ; (TASK_EXIT: 0)
+FAR_GATE_INLINE EXIT_SIGNALLED, PAGE5::EXIT_SIGNALLED,  5   ; (BREAK_ENTRY: interrupt, killed)
+FAR_GATE_INLINE SHELL_CMD,      ::SH_CMDSHELL_P7,       7
 

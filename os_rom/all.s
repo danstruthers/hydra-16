@@ -20,6 +20,7 @@
 .include "kernel/page5.s"       ; must be first in the scope
 .include "kernel/fp.s"          ; Far pointers and references
 .include "kernel/sem.s"         ; Semaphores
+.include "kernel/exits.s"       ; Exit statuses (TASK_EXITS, TASK_JOIN)
 .endscope
 
 ; BIOS ROM page 2 (W = 2): the IO layer.  Its own scope, so page 2 code binds to the page 2 gates in
@@ -34,6 +35,7 @@
 .include "io/snd_srv.s"         ; The sound driver's file server (/dev/snd)
 .include "drivers/snd_test.s"   ; The sound driver's test tune
 .include "drivers/beep.s"       ; The console bell
+.include "drivers/ym.s"         ; The YM2151's set-up and register writes
 .include "io/pipe_srv.s"        ; The pipe server (/dev/pipe)
 .endscope
 IRQ_FAST_P2     = PAGE2::IRQ_FAST_P2    ; (For the COMMON block's fast IRQ stubs, assembled before page 2)
@@ -99,6 +101,8 @@ FW_ENTRY_PA     = PAGE1::FAR::FW_ENTRY  ; (For page 1's gates: page1.s)
 LINE_START_PA   = PAGE1::FAR::LINE_START
 LINE_PROMPT_PA  = PAGE1::FAR::LINE_PROMPT
 LINE_READ_PA    = PAGE1::FAR::LINE_READ
+LINE_EOF_PA     = PAGE1::FAR::LINE_EOF
+LINE_EXITS_PA   = PAGE1::FAR::LINE_EXITS
 INCOPEN_PA      = PAGE1::FAR::INCOPEN
 INCOPENFD_PA    = PAGE1::FAR::INCOPENFD
 INCEND_PA       = PAGE1::FAR::INCEND
@@ -120,6 +124,7 @@ DISASM_AY_PA    = PAGE1::FAR::DISASM_AY
 .include "shell/redir.s"        ; Redirection: >, >> and <
 .endscope
 SH_BOOT_P7      = PAGE7::SH_BOOT        ; (For page 0 and page 1's gates: PAGE1 is assembled before PAGE7)
+SH_CMDSHELL_P7  = PAGE7::SH_CMDSHELL    ; (The SHELL_CMD thunk's gate)
 SH_PROMPT_P7    = PAGE7::SH_PROMPT
 SH_CD_P7        = PAGE7::SH_CD
 SH_PWD_P7       = PAGE7::SH_PWD

@@ -86,7 +86,7 @@ SERIAL_INIT:
 @done:
                 jmp             MM_RETURN               ; Restore caller's I flag, keep C
 
-.assert         SER_RX_HEAD - SER_PREFIX = 8, error, "SERIAL_INIT clears the serial task ZP as one block"
+.assert         SER_RX_HEAD - SER_PREFIX = 10, error, "SERIAL_INIT clears the serial task ZP as one block"
 
 SERIAL_STOP:
                 clc

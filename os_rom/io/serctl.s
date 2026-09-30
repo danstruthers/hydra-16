@@ -327,6 +327,9 @@ SER_CTL_READ:
             jsr         SER_PUT
             lda         #ASCII_LF
             jsr         SER_PUT
+
+; ... a ctl file's text (made in the data area, ZP_IO_TMP long) out: what's after the request's offset
+SER_TEXT_OUT:
             dec         ZP_IO_REQ + 1
             ldy         #IO_BLK_OFS + 3                     ; Past the end: nothing more (end of file)
             lda         (ZP_IO_REQ),Y
@@ -371,6 +374,129 @@ SER_CTL_READ:
 @count:
             jsr         IO_SRV_COUNT
             jmp         SER_OK
+
+; /dev/cons/ctl's requests (ser_srv.s: the file).  IN: .A = request
+CONSCTL_REQUEST:
+            cmp         #H9_READ
+            beq         CONSCTL_READ
+            cmp         #H9_WRITE
+            beq         CONSCTL_WRITE
+            cmp         #H9_DUP
+            beq         @ref
+            cmp         #H9_CLUNK
+            beq         @unref
+            cmp         #H9_STAT
+            bne         @bad
+            jsr         STAT_ZERO
+            jmp         SER_OK
+
+@ref:
+            inc         SER_RAW_REFS                        ; (Another fd on it: IO_DUP, a new task's copy)
+            jmp         SER_OK
+
+@unref:
+            dec         SER_RAW_REFS                        ; (The last one closed: raw ends)
+            bne         :+
+            stz         SER_RAW
+:
+            jmp         SER_OK
+
+@bad:
+            jmp         SER_REFUSE
+
+; Read /dev/cons/ctl: "rawon" or "rawoff", and CR LF
+CONSCTL_READ:
+            ldx         ZP_IO_CHUNK
+            jsr         IO_SRV_MAP
+            inc         ZP_IO_REQ + 1                       ; The data area
+            stz         ZP_IO_TMP                           ; The text's length
+            ldx         #CONS_S_RAWON - CONS_S
+            lda         SER_RAW
+            bne         @put
+            ldx         #CONS_S_RAWOFF - CONS_S
+
+@put:
+            lda         CONS_S,X
+            beq         @end
+            jsr         SER_PUT
+            inx
+            bra         @put
+
+@end:
+            lda         #ASCII_CR
+            jsr         SER_PUT
+            lda         #ASCII_LF
+            jsr         SER_PUT
+            jmp         SER_TEXT_OUT
+
+; Write /dev/cons/ctl: "rawon" or "rawoff" (then a space, CR, LF or 0, or the write's end).  The whole write is
+; taken; anything else is refused
+CONSCTL_WRITE:
+            ldx         ZP_IO_CHUNK
+            jsr         IO_SRV_MAP
+            ldy         #IO_BLK_COUNT
+            lda         (ZP_IO_REQ),Y
+            bne         :+
+            dec                                             ; (256 bytes: look at 255)
+:
+            sta         ZP_IO_TMP                           ; The write's length
+            inc         ZP_IO_REQ + 1                       ; The data area
+            ldx         #CONS_S_RAWOFF - CONS_S
+            jsr         CONS_WORD
+            lda         #0
+            bcc         @set
+            ldx         #CONS_S_RAWON - CONS_S
+            jsr         CONS_WORD
+            lda         #1
+            bcc         @set
+            dec         ZP_IO_REQ + 1
+            jsr         IO_SRV_UNMAP
+            jmp         SER_REFUSE
+
+@set:
+            sta         SER_RAW
+            dec         ZP_IO_REQ + 1
+            jsr         IO_SRV_UNMAP                        ; (The count stays: all of it taken)
+            jmp         SER_OK
+
+; Is the write's text the word at CONS_S + .X?  OUT: C = 0: it is.  Modifies: .A, .X, .Y
+CONS_WORD:
+            ldy         #0
+
+@char:
+            lda         CONS_S,X
+            beq         @end
+            cpy         ZP_IO_TMP
+            beq         @no
+            cmp         (ZP_IO_REQ),Y
+            bne         @no
+            inx
+            iny
+            bra         @char
+
+@end:
+            cpy         ZP_IO_TMP                           ; Then the write's end ...
+            beq         @yes
+            lda         (ZP_IO_REQ),Y                       ; ... or a separator
+            beq         @yes
+            cmp         #ASCII_SPACE
+            beq         @yes
+            cmp         #ASCII_CR
+            beq         @yes
+            cmp         #ASCII_LF
+            bne         @no
+
+@yes:
+            clc
+            rts
+
+@no:
+            sec
+            rts
+
+CONS_S:
+CONS_S_RAWON:   .byte   "rawon", 0
+CONS_S_RAWOFF:  .byte   "rawoff", 0
 
 ; Add .A to the ctl file's text (in the data area: ZP_IO_REQ, moved up to it).  Preserves .X, .Y
 SER_PUT:

@@ -102,6 +102,7 @@ A program that prints a partial line and then computes for a long time without a
 | Name | Server (task) | What |
 | :--- | :------------ | :--- |
 | `/dev/cons` | Serial driver (`$F`) | The console (below) |
+| `/dev/cons/ctl` | Serial driver | The console's mode, as Plan 9's `consctl`: read `rawon` or `rawoff`; write `rawon` or `rawoff` (below) |
 | `/dev/ser` | Serial driver | The serial port as it is, for any task: no foreground rules, no echo |
 | `/dev/ser/ctl` | Serial driver | The port's settings: read `b9600 l8 pn s1`; write commands to change them ([below](#the-serial-port-settings)) |
 | `/dev/snd` | Sound driver (`$E`) | The YM2151 (below) |
@@ -125,6 +126,7 @@ A program that prints a partial line and then computes for a long time without a
 * **Buffering:** the serial driver buffers both ways (256-byte rings) and sends from its transmit interrupt.
 * **Switching the foreground:** `IO_CTL` code `SER_CTL_FOREGROUND` (1), `.Y` = task, or `CONS_SET_FG` ([tasks.md](tasks.md#the-consoles-foreground-task)).
 * **Settings:** the port starts at 9600 baud, 8 data bits, no parity, 1 stop bit (below).
+* **Raw mode** (`/dev/cons/ctl`, as Plan 9's `consctl`): write `rawon` to it, and the console's reads get each key as it's typed, with no echo, DEL kept as it is, and Ctrl-D and Ctrl-Z as characters, not the end of input.  It stays raw while the ctl file is open (any fd of it, in any task: its copies count), and goes back to cooked when the last one is closed, or on `rawoff`.  So a program that ends, or is killed, can't leave the console raw.  Ctrl-C, Ctrl-\\ and Ctrl-] still work.  C's `conio` uses it ([programs.md](programs.md#c-programs)).
 
 **Console keys** (acted on by the serial driver as they arrive, so they work on a task stuck in a loop):
 
@@ -214,7 +216,7 @@ Each task has an environment: variables, `NAME=value`, which the tasks it starts
 | `/env` | The variables, a line each: `NAME=value` | | |
 | `/env/NAME` | Its value (not found: `ERR_IO_NOT_FOUND`) | Its value: a write at the file's start replaces it, one after that adds to it; CRs and LFs are left out | `IO_CREATE` makes it (or empties it); `IO_REMOVE` removes it |
 
-So `echo /sd/0/bin > /env/PATH` sets one, `cat /env/PATH` shows it, `rm /env/PATH` removes it, and `ls /env` lists them.  A name is 1-30 characters, not `/` or `=`; a task's variables share 256 bytes (`ERR_IO_FULL` beyond).  The shell uses `PATH` (directories, `:` between them, to find programs by name) and `HOME` (`cd` alone).
+So `echo /sd/0/bin > /env/PATH` sets one, `cat /env/PATH` shows it, `rm /env/PATH` removes it, and `ls /env` lists them.  A name is 1-30 characters, not `/` or `=`; a task's variables share 256 bytes (`ERR_IO_FULL` beyond).  The shell uses `PATH` (directories, `:` between them, to find programs by name) and `HOME` (`cd` alone), and sets `status` (the last program's exit status: its message, or its code, or empty for success) and `apid` (the task of the last program started with `&`), as Plan 9's `rc` does.  C's `getenv` and `setenv` read and write these files; conio reads `COLUMNS` and `LINES`.
 
 How: each task's environment is a 256-byte block in the system's shared bank (`ENV_BLOCKS`, `$8D00`), entries one after another; `IO_INHERIT` copies the parent's block for a new task (`ENV_COPY`).  An open variable is one of 16 slots (its task and name), so 16 can be open at once.
 

@@ -19,6 +19,8 @@ SH_HDR          = $0100                                     ; The loader's copy 
 ; run: the program at .A.Y.  An executable is run, and waited for: .A = 0.  A script is left open on
 ; SH_RUN_FD, at its start, for the caller to run (HyForth's run): .A = SH_RUN_FD
 SH_RUN:
+            sta         PAGE1::SHNAMEP                      ; (Its name, as run: HYX_NAME)
+            sty         PAGE1::SHNAMEP + 1
             ldx         #IO_MODE_READ
             jsr         IO_OPEN
             bcc         SH_RUN_OPEN
@@ -69,15 +71,9 @@ SH_RUN_OPEN:
             lda         PAGE1::SHOWBUF + HYX_LOAD + 1       ; It fits in task RAM?  From HYX_RAM_LOW ...
             cmp         #>HYX_RAM_LOW
             bcc         @bad
-            lda         PAGE1::SHOWBUF + HYX_LOAD           ; ... to HYX_RAM_END
-            clc
-            adc         PAGE1::SHOWBUF + HYX_LENGTH
-            tax
-            lda         PAGE1::SHOWBUF + HYX_LOAD + 1
-            adc         PAGE1::SHOWBUF + HYX_LENGTH + 1
+            LOAD_ADDR   PAGE1::SHOWBUF, ZP_TEMP_VEC3        ; ... to HYX_RAM_END (its code, BSS and HYX_TOP)
+            jsr         SH_HYX_TOP
             bcs         @bad
-            cpx         #1                                  ; (C = 1: part of a page more)
-            adc         #0
             cmp         #(>HYX_RAM_END) + 1
             bcs         @bad
             jsr         SH_ARGS_OUT                         ; Its arguments, on SH_ARGS_FD
@@ -118,6 +114,7 @@ SH_RUN_OPEN:
             rts
 
 SH_S_HYX:   .byte   "HYX1"
+SH_S_EDIT:  .byte   "edit", 0
 
 ; edit: the editor (page 8: edit.s) on the file .A.Y (.Y = 0: none yet), in a task of its own, with the name
 ; as its argument; the shell waits for it
@@ -140,6 +137,10 @@ SH_EDIT:
 
 @named:
             stz         PAGE1::ARGLINE,X
+            lda         #<SH_S_EDIT                         ; (Its name)
+            sta         PAGE1::SHNAMEP
+            lda         #>SH_S_EDIT
+            sta         PAGE1::SHNAMEP + 1
             jsr         SH_ARGS_OUT
             lda         #<::ED_MAIN_P8
             ldy         #>::ED_MAIN_P8
@@ -157,8 +158,10 @@ SH_EDIT:
 @done:
             rts
 
-; SH_ARGS_FD = a pipe with a program's arguments in it (PAGE1::ARGLINE; its writing end closed, so the reader
-; gets them, then the end of the file).  No pipe free: it isn't open, and the program gets none.
+; SH_ARGS_FD = a pipe with a program's arguments in it (its writing end closed, so the reader gets them, then the
+; end of the file): PAGE1::ARGLINE, as a block of HYX_ARGS_SIZE bytes, then its name (PAGE1::SHNAMEP: as it was
+; run) as a block of HYX_NAME_SIZE (in PAGE1::SHBUF: the path's done with).  The loader reads them to HYX_ARGS
+; and HYX_NAME; the editor reads the first.  No pipe free: it isn't open, and the program gets none.
 ; Modifies: .A, .X, .Y
 SH_ARGS_OUT:
             jsr         IO_PIPE                             ; .A = the reading end, .X = the writing end
@@ -166,17 +169,43 @@ SH_ARGS_OUT:
             pha
             phx
             LOAD_ADDR   PAGE1::ARGLINE, ZP_IO_BUF
-            ldy         #$FF                                ; (Their length)
-:
-            iny
-            lda         PAGE1::ARGLINE,Y
-            bne         :-
-            sty         ZP_IO_CNT
+            lda         #HYX_ARGS_SIZE
+            sta         ZP_IO_CNT
             stz         ZP_IO_CNT + 1
-            pla                                             ; The writing end: them, then closed
+            pla                                             ; The writing end: them ...
             pha
             jsr         IO_WRITE
+            lda         ZP_TEMP_VEC3                        ; ... its name ...
+            pha
+            lda         ZP_TEMP_VEC3 + 1
+            pha
+            lda         PAGE1::SHNAMEP
+            sta         ZP_TEMP_VEC3
+            lda         PAGE1::SHNAMEP + 1
+            sta         ZP_TEMP_VEC3 + 1
+            ldy         #0
+:
+            lda         (ZP_TEMP_VEC3),Y
+            sta         PAGE1::SHBUF,Y
+            beq         :+
+            iny
+            cpy         #HYX_NAME_SIZE - 1
+            bne         :-
+            lda         #0
+            sta         PAGE1::SHBUF,Y
+:
             pla
+            sta         ZP_TEMP_VEC3 + 1
+            pla
+            sta         ZP_TEMP_VEC3
+            LOAD_ADDR   PAGE1::SHBUF, ZP_IO_BUF
+            lda         #HYX_NAME_SIZE
+            sta         ZP_IO_CNT
+            stz         ZP_IO_CNT + 1
+            pla
+            pha
+            jsr         IO_WRITE
+            pla                                             ; ... then closed
             jsr         IO_CLOSE
             pla                                             ; The reading end: SH_ARGS_FD
             pha
@@ -204,6 +233,8 @@ SH_LIBOPEN:
 ; ... either (.X = SH_FIND_PROG, SH_FIND_LIB: what to look for, in the tables below)
 SH_FIND:
             stx         PAGE1::SHFIND
+            sta         PAGE1::SHNAMEP                      ; (Its name, as run: HYX_NAME)
+            sty         PAGE1::SHNAMEP + 1
             jsr         SH_KEEP                             ; SH_PTR = the name
             ldx         #0
             jsr         SH_EXEC_TRY
@@ -380,61 +411,188 @@ SH_EXEC_TRY:
             rts
 .assert     SH_FIND_PROG = 0, error, "SH_EXEC_TRY: SH_FIND_PROG must be 0"
 
-; Wait for task .A (one the shell started) to end.  While it runs, it has the console, if we have it: Ctrl-C
-; goes to it, and the console comes back to us when it ends (CONS_RELEASE).  OUT: C = 0
+; Wait for task .A (one the shell started) to end (TASK_JOIN: while it runs, it has the console, if we have it,
+; so Ctrl-C goes to it), and keep its exit status: HyForth's (PAGE1::HYSTAT, HYSTATMSG) and $status
+; (SH_STATUS_OUT).  A program started with & (PAGE1::SHBG) isn't waited for: its task is shown ("[B]") and kept in
+; $apid, and it runs alongside the shell (fg brings it to the front; HyForth's wait waits for it).
+; OUT: C = 0, .A = its code (0: success)
 SH_WAIT:
-            pha                                             ; (The task)
-            jsr         SH_FG
-            php                                             ; (Z = 1: we had the console: it's ours again after)
-            bne         :+
-            tsx
-            lda         $0102,X                             ; (The task, under the php)
-            jsr         CONS_SET_FG
-:
-            tsx
-            lda         $0102,X
-            php
-            sei
-            ldy         T_REGISTER
-            sta         T_REGISTER                          ; Quick look at the task (no stack use!)
-            bbr0        TASK_STATUS_REG, @ended             ; (Ended already: free, ...
-            cpy         ZP_TASK_OWNER
-            bne         @ended                              ;   or someone else's now)
-            sty         TASK_PARENT                         ; It wakes us when it ends (TASK_EXIT) ...
-            sty         T_REGISTER
-            smb1        TASK_STATUS_REG                     ;   and till then we're paused (TASK_PAUSED_FLAG)
-            jsr         YIELD
-            bra         @done
+            ldx         PAGE1::SHBG
+            beq         @wait
+            stz         PAGE1::SHBG
+            jmp         SH_BACKGROUND
 
-@ended:
-            sty         T_REGISTER
+@wait:
+            pha                                             ; (The task: LOAD_ADDR uses .A)
+            LOAD_ADDR   PAGE1::HYSTATMSG, ZP_IO_BUF
+            pla
+            jsr         TASK_JOIN
+            bcs         @done
+            sta         PAGE1::HYSTAT
+            jsr         SH_STATUS_OUT
+            lda         PAGE1::HYSTAT
+            clc
 
 @done:
-            plp
-            plp                                             ; The console ours again, if we had it: the task
-            bne         :+                                  ;   gives it back as it ends (CONS_RELEASE), but
-            lda         T_REGISTER                          ;   not if it ended before it got it
-            and         #$0F
-            jsr         CONS_SET_FG
+            rts
+
+; $status (/env/status, as Plan 9's rc has it): HyForth's status as text: its message (PAGE1::HYSTATMSG), or, with
+; none, its code (PAGE1::HYSTAT) in decimal, or "" for success (0).  (No /env: nothing.)  OUT: C = 0
+; Modifies: .A, .X, .Y
+SH_STATUS_OUT:
+            lda         PAGE1::HYSTATMSG
+            bne         @text
+            lda         PAGE1::HYSTAT
+            beq         @text
+            ldx         #0                                  ; The code in decimal, in HYSTATMSG
+            ldy         #100
+            jsr         SH_DIGIT
+            ldy         #10
+            jsr         SH_DIGIT
+            ora         #'0'
+            sta         PAGE1::HYSTATMSG,X
+            stz         PAGE1::HYSTATMSG + 1,X
+
+@text:
+            LOAD_ADDR   PAGE1::HYSTATMSG, ZP_TEMP_VEC3
+            lda         #<SH_S_STATUS
+            ldy         #>SH_S_STATUS
+
+; ... the text at ZP_TEMP_VEC3 (in RAM) to the environment's variable .A.Y (a name on this page)
+SH_ENV_OUT:
+            stz         ZP_IO_BUF                           ; (IO_CREATE: its mode bits)
+            ldx         #IO_MODE_WRITE
+            jsr         IO_CREATE                           ; (Made, or emptied)
+            bcs         @done
+            pha
+            lda         ZP_TEMP_VEC3
+            sta         ZP_IO_BUF
+            lda         ZP_TEMP_VEC3 + 1
+            sta         ZP_IO_BUF + 1
+            ldy         #$FF
 :
+            iny
+            lda         (ZP_TEMP_VEC3),Y
+            bne         :-
+            sty         ZP_IO_CNT
+            stz         ZP_IO_CNT + 1
             pla
+            pha
+            jsr         IO_WRITE
+            pla
+            jsr         IO_CLOSE
+
+@done:
             clc
             rts
 
-.assert     TASK_BUSY_FLAG = 1 .and TASK_PAUSED_FLAG = 2, error, "SH_WAIT tests bit 0 and sets bit 1"
+; .A's digit for .Y (100, 10) into HYSTATMSG at .X, if it's not a leading 0 (.X = 0 still).
+; OUT: .A = what's left.  Modifies: .X, .Y, ZP_TEMP
+SH_DIGIT:
+            sty         ZP_TEMP
+            ldy         #'0' - 1
+:
+            iny
+            sec
+            sbc         ZP_TEMP
+            bcs         :-
+            adc         ZP_TEMP                             ; (C = 0)
+            cpy         #'0'
+            bne         :+
+            cpx         #0
+            beq         @done                               ; (A leading 0)
+:
+            pha
+            tya
+            sta         PAGE1::HYSTATMSG,X
+            inx
+            pla
 
-; Do we have the console (the serial driver's foreground task)?  OUT: Z = 1 yes.  Modifies: .A, .X
-SH_FG:
-            php
-            sei
-            ldx         T_REGISTER
-            lda         #SERIAL_TASK_NUM
-            sta         T_REGISTER                          ; Quick look (no stack use!)
-            lda         ZP_SER_CAPTURE
-            stx         T_REGISTER
-            plp
-            eor         T_REGISTER
+@done:
+            rts
+
+; A program started with & (task .A): "[B]" (its task) on the screen, and $apid.  OUT: C = 0
+SH_BACKGROUND:
             and         #$0F
+            ora         #'0'
+            cmp         #'9' + 1
+            bcc         :+
+            adc         #'A' - '9' - 2                      ; (C = 1: A-F)
+:
+            sta         PAGE1::SHBUF2                       ; (Its digit: $apid's text)
+            stz         PAGE1::SHBUF2 + 1
+            lda         #'['
+            jsr         WRITE_CHAR
+            lda         PAGE1::SHBUF2
+            jsr         WRITE_CHAR
+            lda         #']'
+            jsr         WRITE_CHAR
+            LOAD_ADDR   PAGE1::SHBUF2, ZP_TEMP_VEC3
+            lda         #<SH_S_APID
+            ldy         #>SH_S_APID
+            jmp         SH_ENV_OUT
+
+SH_S_STATUS:    .byte   "/env/status", 0
+SH_S_APID:      .byte   "/env/apid", 0
+
+; ****************************************************************************
+; The command shell (SHELL_CMD, $F8F6: a task's entry point, for TASK_RUN; C's system(): Plan 9's rc -c): HyForth,
+; reading its stdin (its starter's: a pipe with a command line, say) with no banner and no prompt (CMDFLAG), and
+; ending at its end with the last command's status (HyForth's LINE_EOF: TASK_EXITS).  Its fds, namespace, current
+; directory and environment are its starter's.
+SH_CMDSHELL:
+            jsr         COPYTORAM
+            lda         #1
+            sta         PAGE1::CMDFLAG
+            jsr         forth_main                          ; (It ends at its input's end; or, bye: here)
+            LOAD_ADDR   PAGE1::HYSTATMSG, ZP_IO_BUF
+            lda         PAGE1::HYSTAT
+            jmp         TASK_EXITS
+
+; The page after a program's RAM (its code, its BSS: HYX_BSS, and HYX_TOP, whichever's higher), from its header
+; at ZP_TEMP_VEC3.  OUT: C = 0, .A = the page; or C = 1: past $FFFF.  Modifies: .X, .Y
+SH_HYX_TOP:
+            ldy         #HYX_LOAD                           ; Its code's end ...
+            lda         (ZP_TEMP_VEC3),Y
+            ldy         #HYX_LENGTH
+            clc
+            adc         (ZP_TEMP_VEC3),Y
+            tax
+            ldy         #HYX_LOAD + 1
+            lda         (ZP_TEMP_VEC3),Y
+            ldy         #HYX_LENGTH + 1
+            adc         (ZP_TEMP_VEC3),Y
+            bcs         @done
+            pha                                             ; ... and its BSS's
+            txa
+            ldy         #HYX_BSS
+            clc
+            adc         (ZP_TEMP_VEC3),Y
+            tax
+            pla
+            ldy         #HYX_BSS + 1
+            adc         (ZP_TEMP_VEC3),Y
+            bcs         @done
+            pha                                             ; (.A.X, on the stack: the end)
+            txa
+            ldy         #HYX_TOP                            ; HYX_TOP higher?
+            cmp         (ZP_TEMP_VEC3),Y
+            pla
+            pha
+            ldy         #HYX_TOP + 1
+            sbc         (ZP_TEMP_VEC3),Y
+            pla
+            bcs         :+
+            ldy         #HYX_TOP                            ; (Yes)
+            lda         (ZP_TEMP_VEC3),Y
+            tax
+            iny
+            lda         (ZP_TEMP_VEC3),Y
+:
+            cpx         #1                                  ; (C = 1: part of a page more)
+            adc         #0                                  ; (C = 1: past $FF)
+
+@done:
             rts
 
 ; ****************************************************************************
@@ -451,16 +609,12 @@ SH_LOAD:
             bcc         @far1
             jmp         @done
 @far1:
-            lda         SH_HDR + HYX_LOAD                   ; The page floor: the page after the code's end
-            clc
-            adc         SH_HDR + HYX_LENGTH
-            tax
-            lda         SH_HDR + HYX_LOAD + 1
-            adc         SH_HDR + HYX_LENGTH + 1
-            cpx         #1                                  ; (C = 1: part of a page more)
-            adc         #0
+            LOAD_ADDR   SH_HDR, ZP_TEMP_VEC3                ; The page floor: after its RAM (its code, its BSS,
+            jsr         SH_HYX_TOP                          ;   its HYX_TOP; SH_RUN checked it fits)
             jsr         MM_SET_FLOOR
-            bcs         @done
+            bcc         :+
+            rts                                             ; (The loading fails: the task ends)
+:
             lda         SH_HDR + HYX_LOAD
             sta         ZP_IO_BUF
             lda         SH_HDR + HYX_LOAD + 1
@@ -475,7 +629,9 @@ SH_LOAD:
             beq         @loaded
             lda         #SH_RUN_FD
             jsr         IO_READ
-            bcs         @done
+            bcc         :+
+            rts
+:
             lda         ZP_IO_CNT
             ora         ZP_IO_CNT + 1
             beq         @done                               ; (The file's end, too soon)
@@ -489,11 +645,35 @@ SH_LOAD:
             bra         @read
 
 @loaded:
+            lda         SH_HDR + HYX_BSS                    ; Its BSS: after its code (IO_READ left ZP_IO_BUF
+            ldx         SH_HDR + HYX_BSS + 1                ;   there), cleared
+            ldy         #0
+@clear:
+            cmp         #0
+            bne         :+
+            cpx         #0
+            beq         @cleared
+:
+            pha
+            lda         #0
+            sta         (ZP_IO_BUF),Y
+            inc         ZP_IO_BUF
+            bne         :+
+            inc         ZP_IO_BUF + 1
+:
+            pla
+            sec
+            sbc         #1
+            bcs         @clear
+            dex
+            bra         @clear
+
+@cleared:
             lda         #SH_RUN_FD
             jsr         IO_CLOSE
-            LOAD_ADDR   HYX_ARGS, ZP_IO_BUF                 ; Its arguments, from SH_ARGS_FD (none, if it
-            lda         #HYX_ARGS_SIZE - 1                  ;   isn't open)
-            sta         ZP_IO_CNT
+            LOAD_ADDR   HYX_ARGS, ZP_IO_BUF                 ; Its arguments and its name, from SH_ARGS_FD (none,
+            lda         #HYX_ARGS_SIZE + HYX_NAME_SIZE      ;   if it isn't open): their blocks, at HYX_ARGS
+            sta         ZP_IO_CNT                           ;   and HYX_NAME
             stz         ZP_IO_CNT + 1
             lda         #SH_ARGS_FD
             jsr         IO_READ
@@ -501,7 +681,13 @@ SH_LOAD:
             bcs         :+
             ldx         ZP_IO_CNT
 :
+            cpx         #HYX_ARGS_SIZE + 1
+            bcs         :+
+            stz         HYX_NAME                            ; (No name came)
+:
             stz         HYX_ARGS,X
+            stz         HYX_ARGS + HYX_ARGS_SIZE - 1        ; (Both ended)
+            stz         HYX_NAME + HYX_NAME_SIZE - 1
             lda         #SH_ARGS_FD
             jsr         IO_CLOSE
             lda         SH_HDR + HYX_ENTRY

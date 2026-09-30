@@ -320,6 +320,8 @@ SER_CONS_GETC:
             sty         T_REGISTER                          ; Quick switch to the serial task (no stack use!)
             cpx         ZP_SER_CAPTURE
             bne         @no                                 ; Not the foreground task
+            lda         SER_RAW
+            bne         @no                                 ; Raw: /dev/cons's own read
             ldy         SER_RX_TAIL
             cpy         SER_RX_HEAD
             beq         @no                                 ; Nothing typed yet

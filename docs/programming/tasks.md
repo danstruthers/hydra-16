@@ -94,6 +94,7 @@ So interrupts, above all the serial port's, are rarely held off for long ([inter
 | `TASK_RUN` (`$F863`) | `.A.Y` = entry point, `.X` = its ROM page (0 for RAM or page 0 code) → `.A` = the new task.  It runs **alongside** the caller; it ends when its entry point returns |
 | `TASK_START` | `ZP_TEMP_VEC` = entry point (RAM or page 0) → runs it in a new task and **waits** for it to finish (the caller is paused) |
 | `TASK_CLONE` (`$F899`) | Like `fork`: a new task with a **copy** of the current one (below), starting at `.A.Y` on page `.X` |
+| `SHELL_CMD` (`$F8F6`) | Not a call but an entry point for `TASK_RUN` (page 0): a **command shell**, HyForth running the command lines on its stdin with no banner or prompt, as Plan 9's `rc -c`.  It ends at its input's end, with the last command's exit status.  C's `system` gives it a pipe with the line in it |
 | `DRV_START` | Start a driver in a given task (below) |
 
 Every new task gets a copy of its parent's **open fds**, **namespace**, **current directory** and **environment** (each server is told: `H9_DUP`), and records its parent (`ZP_TASK_OWNER`).  So `TASK_RUN` from the shell gives a task that prints on the console and reads the keyboard when it's in front.  Output buffered by the parent is written out first (`IO_FLUSH`), so it comes out in order.
@@ -105,19 +106,37 @@ Every new task gets a copy of its parent's **open fds**, **namespace**, **curren
 
 The copy goes a page at a time through the IO transfer area, about 1/400 s per page at 3.58 MHz, before the new task runs.  HyForth uses it for pipelines (each stage but the last runs in a copy of the shell) and for `run`ning a script.
 
-**Waiting for a task started alongside:** the shell's `run` starts a program with `TASK_RUN` (or `TASK_CLONE`), gives it the console, then makes itself the task's parent (`TASK_PARENT`, in the task's zero page) and pauses, as `TASK_START` does, so the task's end wakes it (`SH_WAIT` in `os_rom/shell/run.s`; [programs.md](programs.md)).
+**Waiting for a task started alongside:** `TASK_JOIN` (`$F8F3`, below) gives the task the console if the caller has it, makes the caller the task's parent (`TASK_PARENT`, in the task's zero page) and pauses, as `TASK_START` does, so the task's end wakes it; then it takes the console back and returns the task's exit status.  The shell's `run` starts a program with `TASK_RUN` (or `TASK_CLONE`) and waits for it this way (`SH_WAIT` in `os_rom/shell/run.s`; [programs.md](programs.md)).
 
 **From WOZMON**, `addrS` starts a task at `addr` and waits for it (`TASK_START`).
 
 ### **Ending tasks**
 
-A task ends when its entry point returns (`TASK_EXIT`).  Everything it had is freed at once:
+A task ends when its entry point returns (`TASK_EXIT`), or when it calls `TASK_EXITS` with an exit status (below).  Everything it had is freed at once:
 * its fds are closed (each server gets `H9_CLUNK`);
 * its MMU area is reset (all its pages, chunks and banks);
 * its shared memory references are dropped;
 * its IRQ and software interrupt handlers are removed.
 
-If it was the foreground task, the task that started it gets the console back (`CONS_RELEASE`).  A parent waiting in `TASK_START` continues.
+If it was the foreground task, the task that started it gets the console back (`CONS_RELEASE`).  A parent waiting in `TASK_START` or `TASK_JOIN` continues.
+
+### **Exit statuses**
+
+As Plan 9's `exits` and `wait`: a task ends with a **code** (0-255, 0 for success) and a **message** (up to 30 characters, `EXIT_MSG_MAX`; none for most), and the task that started it gets them when it waits for it.
+
+| Call | Does |
+| :--- | :--- |
+| `TASK_EXITS` (`$F8F0`) | End this task: `.A` = the code, `ZP_IO_BUF` = the message (zero-terminated; a high byte of 0: none).  Doesn't return |
+| `TASK_JOIN` (`$F8F3`) | `.A` = a task this one started: wait for it to end (it has the console meanwhile, if this task has it) → `C` = 0, `.A` = its code, and its message at `ZP_IO_BUF` (a buffer of 31 bytes; a high byte of 0: not wanted).  A task that's ended already isn't waited for.  `C` = 1, `ERR_BAD_TASK`: not a task |
+
+| How a task ends | Code | Message |
+| :--------------- | :--- | :------ |
+| Its entry point returns | 0 | none |
+| `TASK_EXITS` | `.A` | `ZP_IO_BUF`'s |
+| A break (Ctrl-C) with no break handler | 130 (`EXIT_BREAK`) | `interrupt` |
+| A kill (Ctrl-\\, `kill`, its starter's break) | 137 (`EXIT_KILLED`) | `killed` |
+
+The status is written as the task ends, before its parent is woken, to a record for each task in the system's shared bank (`EXIT_TABLE`, `$9D20`: 16 × 32 bytes, the code and the message; `os_rom/kernel/exits.s`, page 5).  It stays there until the task's number is used again.  The shell keeps the status of each program it waits for: HyForth's `status`, and `/env/status` (Plan 9's `$status`: the message, or the code if there's none, or empty for success).  A script's is that of its last command, or its error's number, or what `exits` gives ([HyForth](../using/hyforth.md#background-tasks-and-exit-statuses)).
 
 ### **Waiting and sleeping**
 

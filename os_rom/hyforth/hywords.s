@@ -1205,6 +1205,17 @@ lib_end
 ;-------- Libraries: the word sets beyond this base (LIBN_IO ...; hyforth.s), each a chain of headers of its
 ;         own, searched when it's loaded (LIBSET).  'cold' loads them all (LIB_BOOT); the code is on page A
 ;
+.pushseg
+.segment "FORTH_HIGH"   ; (Page 1's room: after its gates)
+; ( -- n )  the exit status: the last program's (or script's, or error's) code, 0 for success.  $status
+;           (/env/status) has it as text: the program's message, or the code, or "" for 0
+def_far "status", "status"
+;
+; ( n -- )  end this task (a script run by run, a pipeline's stage, a command shell) with exit status n.  The
+;           boot shell can't end: there it only sets the status
+def_far "exits", "exits"
+.popseg
+;
 ; libs  list the libraries: forth (the base, always there), then each one, in parentheses if it isn't loaded
 def_far "libs", "libs"
 ;
@@ -1416,6 +1427,16 @@ BOOTFLAG:               ; <> 0: run boot.hys before the first prompt (the boot s
     .byte 0
 BAREFLAG:               ; <> 0: a bare Forth ('forth': forth_bare_main): 'cold' loads no libraries
     .byte 0
+CMDFLAG:                ; <> 0: a command shell (SHELL_CMD: page 7's SH_CMDSHELL): no banner, and the end of
+    .byte 0             ;   its input ends it (LINE_EOF)
+HYSTAT:                 ; The exit status (status, $status): the last program's, script's or error's code ...
+    .byte 0
+HYSTATMSG:              ;   and its message ("": none; page 7's SH_WAIT, SH_STATUS_OUT)
+    .res ::EXIT_MSG_MAX + 2
+SHNAMEP:                ; The program being run: its name as run, for its argv[0] (page 7: SH_ARGS_OUT)
+    .word 0
+SHBG:                   ; <> 0: it was started with & (ARGREST): not waited for (page 7: SH_WAIT)
+    .byte 0
 LIB_HEADS2:             ; The chains LIBSET2 selects (LIB_NEXT): the RAM libraries' (by slot, 0 till
     .word 0, 0, 0, 0    ;   loaded), and the base's (entry 7: its last header, 'exit')
     .word 0, 0, 0, h_exit
@@ -1525,6 +1546,13 @@ def_far "sleep", "sleep"
 ; ( -- )  list the tasks (/dev/proc): the task, its state (R runnable, W waiting (IO or sleep), P paused, D a
 ;         driver) and the task that started it; * = the foreground task
 def_far "ps", "ps"
+;
+.pushseg
+.segment "FORTH_HIGH"
+; ( n -- )  wait for task n (one this shell started with &) to end, with the console meanwhile: its exit
+;           status is the status then
+def_far "wait", "wait"
+.popseg
 ;
 ; ( n -- s )  a semaphore of n: n takes (acquire) before a task has to wait; s = its number (1-16)
 def_far "sem", "sem"

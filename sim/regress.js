@@ -48,7 +48,8 @@ const { hyx } = require('./tools/mkhyx.js');              // ... and Hydra execu
 const SIM = path.join(__dirname, 'hydrasim.js');
 const CARDS = path.join(__dirname, 'cards');                    // Fixture card images (cards/README.md)
 const STACK_MARGIN = 32;                                        // Free stack bytes a task must keep
-const W = n => '\\w'.repeat(n);                                 // Wait n * ~2M cycles before the next key
+const W = n => '\\w'.repeat(n);
+const C_SAMPLES = ['hello', 'ctest', 'upper', 'code', 'keys'];         // programs/c/bin's (make.bat builds them)                                 // Wait n * ~2M cycles before the next key
 const BOOT = W(1);                                              // Before the first key: to the HyForth prompt
 const TO_MON = BOOT + 'bye\\r' + W(1);                          // To WOZMON
 
@@ -779,6 +780,63 @@ const TESTS = [
     forbid: ['!DS PTR ERROR!', /\n 0002\n/],
   },
   {
+    name: 'exit-status', about: 'exit statuses (Plan 9\'s exits): a script\'s exits, errors\', a C program\'s code and message; status, $status; exits at the boot shell; a program started with & ([B], $apid), wait for it',
+    sd: [{ dev: 0, label: 'STATUS', hfs: v => {
+      v.mkdir('bin');
+      for (const p of ['code', 'upper']) v.put('bin/' + p + '.hyx', fs.readFileSync(path.join(__dirname, '../programs/c/bin/' + p + '.hyx')));
+      v.put('ex.hys', Buffer.from('1 .\r\n7 exits\r\n2 .\r\n'));
+      v.put('err.hys', Buffer.from('nope\r\n3 .\r\n'));
+    } }],
+    args: ['--cycles', '150000000', '--input', BOOT + ['run ex.hys\\r', 'status .\\rcat /env/status\\r', 'nosuch\\rstatus .\\rcat /env/status\\r',
+      'code 3\\rstatus .\\r', 'code oops\\rstatus .\\rcat /env/status\\r', 'code\\rstatus .\\r', 'run err.hys\\rstatus .\\r',
+      '9 exits status .\\r', 'upper &\\r' + W(1) + 'ps\\r', '$B wait\\r' + W(1) + 'hi\\r' + W(1) + '\\x04' + W(1) + 'status .\\rcat /env/apid\\r'].join(W(1))],
+    expect: ['0:/> run ex.hys\n' + num(1) + '\n', '0:/> status .\n' + num(7) + '\n', '0:/> cat /env/status\n7\n',
+      '0:/> nosuch\n\n !UNK WORD!\n', '0:/> status .\n' + num(5) + '\n', '0:/> cat /env/status\nUNK WORD\n',
+      '0:/> code 3\n\n0:/> status .\n' + num(3) + '\n', '0:/> status .\n' + num(1) + '\n', '0:/> cat /env/status\noops\n',
+      '0:/> code\n\n0:/> status .\n' + num(0) + '\n',
+      '0:/> run err.hys\n\n !UNK WORD!\nline 0001\n0:/> status .\n' + num(5) + '\n',       // (The script's error: its status)
+      '0:/> 9 exits status .\n' + num(9) + '\n',                                          // (The boot shell stays)
+      '0:/> upper &\n[B]\n', /0:\/> ps\n0 R -\n1 R 0 \*\nB W 1\n/,                          // (Waiting for the console)
+      '0:/> $B wait\nhiHI\n', '0:/> status .\n' + num(0) + '\n', '0:/> cat /env/apid\nB\n'],
+    forbid: [/\n 0002\n/],
+  },
+  {
+    name: 'c-programs', about: 'C programs (cc65 and programs/c\'s library): hello (arguments, long arithmetic, the heap, the clock), ctest (argv[0], stdio and the file calls, directories, errno, the heap, time, semaphores, the environment, stat, dirent, system and exit statuses, clock, isatty), one into a pipe, upper (stdin: a pipe from another, a file with <), keys (conio: the screen, raw keys, the terminal\'s key sequences); hydra.inc agrees with the ROM',
+    sd: [{ dev: 0, label: 'CPROGS', hfs: v => {
+      v.mkdir('bin');
+      for (const p of C_SAMPLES) v.put('bin/' + p + '.hyx', fs.readFileSync(path.join(__dirname, '../programs/c/bin/' + p + '.hyx')));
+    } }],
+    args: ['--cycles', '300000000', '--rtc', '2026-09-30T14:05:00', '--input', W(3) + ['hello one "two three"\\r', 'ctest a "b c"\\r' + W(12),
+      'hello | wc . . .\\r', 'ls\\r', 'hello x | upper\\r' + W(1), 'echo abc def > t.txt\\rupper < t.txt\\r',
+      'keys\\r' + W(1) + 'a' + W(1) + '\\x1b[A' + W(1) + '\\x1b[3~' + W(1) + '\\x1bOP' + W(1) + 'q'].join(W(1))],
+    expect: ['0:/> hello one "two three"\nHello from C on the Hydra-16!\n2 arguments: [one] [two three]\n1^2 + ... + 1000^2 = 333833500\n',
+      /\nThe clock says 2026-09-30 14:05:\d\d\n/, '0:/> ctest a "b c"\nok arguments\n', '\nctest: 0 failed\n',
+      /\/> hello \| wc \. \. \.\n( [0-9A-F]{4}){3}\n/,
+      '0:/> ls\nbin/\n',                                                   // (ctest's files and directory: gone)
+      '0:/> hello x | upper\nHELLO FROM C ON THE HYDRA-16!\n1 ARGUMENTS: [X]\n', '0:/> upper < t.txt\nABC DEF\n',
+      '0:/> keys\n<ESC>[2J<ESC>[1;1H<ESC>[33mkeys: a 80x24 screen; type keys, q to end\n',     // (No echo: raw)
+      '<ESC>[37m<ESC>[7m<ESC>[3;1Hcodes:<ESC>[27m 61 80 89 8A\nended at 18,2\n'],
+    forbid: ['FAIL', '!IO ERR!'],
+    check: () => {                        // programs/c/lib/hydra.inc: the thunks, ZP parameters and constants as the ROM has them
+      const lbl = fs.readFileSync(path.join(__dirname, '../os_rom/obj/os_rom_C02.lbl'), 'latin1');
+      const addr = n => { const m = new RegExp('^al ([0-9A-F]{6}) \\.' + n + '$', 'm').exec(lbl); return m ? parseInt(m[1], 16) : undefined; };
+      const incs = ['include/kernel.inc', 'include/io.inc', 'include/shell.inc', 'include/hw.inc']
+        .map(n => fs.readFileSync(path.join(__dirname, '../os_rom', n), 'latin1')).join('\n');
+      const rom = n => { const m = new RegExp('^' + n + '\\s*=\\s*(\\$[0-9A-Fa-f]+|\\d+)\\s*(;|$)', 'm').exec(incs);
+        return m ? (m[1][0] === '$' ? parseInt(m[1].slice(1), 16) : +m[1]) : undefined; };
+      const inc = fs.readFileSync(path.join(__dirname, '../programs/c/lib/hydra.inc'), 'latin1');
+      let n = 0;
+      for (const m of inc.matchAll(/^([A-Z_0-9]+)\s*=\s*(\$[0-9A-Fa-f]+|\d+)/gm)) {
+        const v = m[2][0] === '$' ? parseInt(m[2].slice(1), 16) : +m[2];
+        const want = v >= 0xF800 ? addr('TH_' + m[1]) : m[1].startsWith('ZP_') ? addr(m[1]) : rom(m[1]);
+        if (want === undefined) continue;                              // (Not the ROM's: TICKS_PER_SEC, UNIX_2000 ...)
+        if (want !== v) return 'hydra.inc: ' + m[1] + ' is $' + v.toString(16) + ', the ROM has $' + want.toString(16);
+        n++;
+      }
+      if (n < 60) return 'hydra.inc: only ' + n + ' of its names found in the ROM';
+    },
+  },
+  {
     name: 'redirect', about: 'redirection (>, >>, <, a quoted name, in a script, a bad name), a program\'s arguments (.hyx, by name, a script\'s args), echo',
     sd: [{ dev: 0, label: 'REDIR', hfs: v => {
       v.put('s.hys', Buffer.from('"in script" .sz > s.txt\r\n2 .\r\nwc < s.txt . . .\r\n3 .\r\n'));
@@ -842,13 +900,13 @@ const TESTS = [
       'seven\\r', 'echo /sd/0/tools > /env/PATH\\rseven\\r', 'eight\\r', 'echo /sd/0/bin:/sd/0/tools > /env/PATH\\reight\\rseven\\r',
       'echo /sd/0/tools > /env/HOME\\rcd /\\rcd\\rpwd\\r', 'cat /dev/proc/1/cwd\\rcat /dev/proc/1/env\\rcat /dev/proc/1/mem\\rcat /dev/proc/F/mem\\rcat /dev/proc/9/mem\\r'].join(W(1))],
     expect: ['0:/> ls /env\n\n0:/> echo one > /env/A\n', 'cat /env/A\none\n', 'cat /env/A\nx\n',   // (>> at the start: replaced)
-      'run e.hys\nxA=x\nB=two\n', '0:/> ls /env\nA=x\n\n',                // The script's B: its own copy's
+      'run e.hys\nxA=x\nB=two\n', '0:/> ls /env\nA=x\nstatus=\n\n',     // The script's B: its own copy's; $status ""
       'cat /env/NOPE\n\n !IO ERR!\n', 'ioerr .\n' + num(0x70) + '\n', 'ioerr .\n' + num(0x77) + '\n',   // (= in a name)
-      'rm /env/A\n', '0:/> ls /env\n\n', '0:/> seven\n\n !UNK WORD!\n',
+      'rm /env/A\n', '0:/> ls /env\nstatus=IO ERR\n\n',             // ($status: the last error's) '0:/> seven\n\n !UNK WORD!\n',
       'PATH\n\n0:/> seven\n' + num(7) + '\n', '0:/> eight\n\n !UNK WORD!\n',   // (PATH, not the card's /bin)
       'eight\n' + num(8) + '\n0:/> seven\n' + num(7) + '\n',
       '0:/tools> pwd\n/sd/0/tools\n',                                   // cd alone: HOME
-      'cat /dev/proc/1/cwd\n/sd/0/tools\n', 'cat /dev/proc/1/env\nPATH=/sd/0/bin:/sd/0/tools\nHOME=/sd/0/tools\n',
+      'cat /dev/proc/1/cwd\n/sd/0/tools\n', 'cat /dev/proc/1/env\nPATH=/sd/0/bin:/sd/0/tools\nstatus=UNK WORD\nHOME=/sd/0/tools\n',
       /cat \/dev\/proc\/1\/mem\npages 08 floor [0-9A-F]{2}\n/, 'cat /dev/proc/F/mem\npages 00 floor 08\n', 'cat /dev/proc/9/mem\n-\n'],
     forbid: ['!DS PTR ERROR!'],
   },

@@ -721,11 +721,9 @@ getline:   ; drop rts of try, fall through to 'token'
     jsr LINE_START       ; the shell library's: the last line's > < and pipe undone; boot.hys (farwords.s)
     lda BATCH            ; a copy of the shell (a pipeline's left side, or run's for a script): all done,
     beq GLAUTO
-    lda INCDEPTH         ;   once the scripts it reads are: end the task
+    lda INCDEPTH         ;   once the scripts it reads are: end the task, with the status (farwords.s)
     bne GLAUTO
-    ldx CHILDSP
-    txs
-    rts
+    jmp LINE_EXITS
 GLAUTO:
 ;
 ;   DO AUTOLOAD HERE
@@ -768,9 +766,12 @@ GETREADLOOP:
     jsr GET_CHAR      ; (sleeps until a key comes in)
     bcs GETGOT
     lda INCDEPTH      ; nothing: the end of a script being read (the console: wait on)
-    beq GETREADLOOP
+    beq GLEOF
     jsr INCEND        ; stdin back to what it was, and what was read of the last line is the line
     bra GETLNEND
+GLEOF:
+    jsr LINE_EOF      ; the end of stdin: a file or a pipe ends the task (the console: nothing)
+    bra GETREADLOOP
 GETGOT:
     cmp #ASCII_TAB    ; (a script's tabs are spaces, and its lines may end with LF)
     bne GETNOTAB

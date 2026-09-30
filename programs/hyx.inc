@@ -11,6 +11,7 @@
             .word       __PROG_LAST__ - __PROG_START__  ; Length of the code
             .word       entry                           ; Entry point
             .word       0                               ; Flags
-            .dword      0                               ; Reserved
+            .word       0                               ; BSS: none (hyx.cfg has none: variables go in DATA)
+            .word       0                               ; Top: the code's end
             .popseg
 .endmacro

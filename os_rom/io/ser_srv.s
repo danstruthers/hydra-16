@@ -17,18 +17,51 @@
 ;         in front (like Unix job control).
 ;   Ctl: SER_CTL_FOREGROUND (.Y = task), SER_CTL_RATE (.Y = SER_RATE_*), SER_CTL_FORMAT (.Y = SER_FMT_*); on
 ;         any of the three files.  Stat: all zero.
+;   /dev/cons/ctl (as Plan 9's consctl): write "rawon" and /dev/cons is raw: its reads don't echo, keep DEL, and
+;         give the end-of-input keys as keys (for a program that reads keys itself: C's conio); "rawoff", or
+;         closing the last fd open on it, ends that.  (Ctrl-C, Ctrl-\ and Ctrl-] still act.)  Read: "rawon" or
+;         "rawoff", and CR LF.
 ; Server ZP (in the serial task): ZP_IO_TMP = count, ZP_IO_CHUNK = client.
 
 .segment "IO_P2"
 
 P2_BIT_MASKS:   .byte   $01, $02, $04, $08, $10, $20, $40, $80
 
-; /dev/cons
+; /dev/cons, and /dev/cons/ctl: the rest of the name is "" or "/ctl"
 CONS_SERVE:
             cmp         #H9_OPEN
             bne         SER_REQUEST
+            jsr         IO_SRV_MAP                          ; (.X = the client)
+            inc         ZP_IO_REQ + 1                       ; The data area: the name
+            ldy         #0
+            lda         (ZP_IO_REQ),Y
+            beq         @cons
+
+@ctl:
+            lda         SER_S_CTL,Y
+            cmp         (ZP_IO_REQ),Y
+            bne         @not_found
+            iny
+            ora         #0
+            bne         @ctl                                ; (Both ended: a match)
+            inc         SER_RAW_REFS
+            lda         #SER_FID_CONSCTL
+            bra         @open
+
+@cons:
             lda         #SER_FID_CONS
+
+@open:
+            dec         ZP_IO_REQ + 1
+            jsr         IO_SRV_UNMAP                        ; (Keeps .A)
             clc
+            rts
+
+@not_found:
+            dec         ZP_IO_REQ + 1
+            jsr         IO_SRV_UNMAP
+            lda         #ERR_IO_NOT_FOUND
+            sec
             rts
 
 ; /dev/ser, and /dev/ser/ctl: the rest of the name is "" or "/ctl"
@@ -72,6 +105,10 @@ SER_S_CTL:  .byte   "/ctl", 0
 ; A request on an open fid.  IN: .A = request, .X = client, .Y = fid
 SER_REQUEST:
             stx         ZP_IO_CHUNK
+            cpy         #SER_FID_CONSCTL
+            bne         :+
+            jmp         CONSCTL_REQUEST
+:
             cpy         #SER_FID_CTL
             bne         @data
             cmp         #H9_READ                            ; /dev/ser/ctl: its text
@@ -152,6 +189,9 @@ SER_READ:
             bne         :+                                  ; /dev/ser: any task
             cpx         ZP_SER_CAPTURE
             bne         @wait                               ; /dev/cons: only the foreground task
+            lda         SER_RAW                             ; (Raw: as /dev/ser from here on: no echo, DEL kept,
+            beq         :+                                  ;   no end-of-input keys)
+            inc         ZP_IO_BYTE
 :
             jsr         IO_SRV_MAP
             ldy         #IO_BLK_COUNT

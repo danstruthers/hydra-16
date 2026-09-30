@@ -508,7 +508,9 @@ stackslp:                           ; and then clear out DS / RT
     sta  DS,x
     inx
     bne  stackslp
-        ;  meet and greet
+        ;  meet and greet (not a command shell's: CMDFLAG)
+    lda  CMDFLAG
+    bne  CLREXIT
     ldy  #0
 hywelclp:
     lda  HYWELCOME,y

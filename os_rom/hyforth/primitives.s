@@ -5,11 +5,10 @@
 ;----------------------------------------------------------------------
 ; ( -- ) ae exit forth
 def_word "bye", "bye", 0
-    lda BATCH                   ; a copy of the shell (run's, a pipeline's): end its task
+    lda BATCH                   ; a copy of the shell (run's, a pipeline's), or a command shell: end its
+    ora CMDFLAG                 ;   task, with the status (LINE_EXITS)
     beq BYEMON
-    ldx CHILDSP
-    txs
-    rts
+    jmp LINE_EXITS
 BYEMON:
     jmp MON_START               ; jump to WOZMON
 

@@ -1234,6 +1234,7 @@ prun:                       ; (run)
     jsr SHARG1
     bcs RUNFAIL
     stz ARGLINE         ; (no arguments)
+    stz SHBG
 RUNGO:
     ldx #SHC_RUN
     jsr RUNCMD
@@ -1266,6 +1267,47 @@ RUNCMD:
 RCDONE:
     rts
 ;
+; ( -- n )  the exit status
+status:                     ; status
+    lda HYSTAT
+    jmp IOPUSHA
+;
+; ( n -- )  end this task with exit status n: the boot shell can't end (its status only)
+exits:                      ; exits
+    jsr spull_0
+    lda TEMP1
+    sta HYSTAT
+    stz HYSTATMSG
+    lda T_REGISTER
+    and #$0F
+    cmp #SHELL_TASK_NUM
+    bne LINE_EXITS
+    ldx #SHC_STATUS
+    jsr SH_CMD
+    jmp next
+;
+; getline: the end of stdin, with no script being read.  A file or a pipe (a command shell's command line, say)
+; ends the task, with its status (LINE_EXITS); the console (an end-of-input key) doesn't.  As getline's prompt
+; decides: no fd 0 (the console, read directly), or fd 0 on /dev/cons (IO_FDF_CONS)
+LINE_EOF:
+    lda IO_FD_SERVER
+    cmp #IO_FD_CLOSED
+    beq LEDONE
+    lda IO_FD_FLAGS
+    and #IO_FDF_CONS
+    bne LEDONE
+; ... and a copy's end (a script run by run, a pipeline's stage: getline), bye's (a copy, a command shell), exits':
+; the task ends with the status (TASK_EXITS: HYSTAT, HYSTATMSG)
+LINE_EXITS:
+    lda #<HYSTATMSG
+    sta ZP_IO_BUF
+    lda #>HYSTATMSG
+    sta ZP_IO_BUF+1
+    lda HYSTAT
+    jmp TASK_EXITS
+LEDONE:
+    rts
+;
 ; A word HyForth doesn't know (the token at NXTTOK), when interpreting: the program of that name (SH_EXEC:
 ; name.hyx or name.hys, here or in the card's /bin), run as run does.
 ; OUT: C = 0: it ran; or C = 1, .A = error (ERR_IO_NOT_FOUND: no such program)
@@ -1294,7 +1336,7 @@ RNCOPY:
     lda #<ARGBUF
     ldy #>ARGBUF
     ldx #SHC_EXEC
-    bra RUNCMD
+    jmp RUNCMD
 RNNONE:
     lda #ERR_IO_NOT_FOUND
     sec
@@ -1303,6 +1345,7 @@ RNNONE:
 ; A program's arguments: the rest of the line (from CURBUF, without the spaces around it; 63 characters at
 ; most) into ARGLINE, and the line ends there (the program has them, not the shell).  Modifies: .A, .X, .Y
 ARGREST:
+    stz SHBG
     ldy CURBUF
 ARSKIP:
     lda (TIB),y         ; (spaces before them)
@@ -1325,8 +1368,20 @@ ARTRIM:                 ; (.X = how many: spaces after them go, the line's own a
     beq AREND
     lda ARGLINE-1,x
     cmp #ASCII_SPACE
-    bne AREND
+    bne ARAMP
     dex
+    bra ARTRIM
+ARAMP:                  ; an & at the end (alone, or after a space): the program runs in the background (SHBG)
+    cmp #'&'
+    bne AREND
+    cpx #1
+    beq ARBG
+    lda ARGLINE-2,x
+    cmp #ASCII_SPACE
+    bne AREND
+ARBG:
+    dex                 ; (the & goes, and the spaces before it)
+    inc SHBG
     bra ARTRIM
 AREND:
     stz ARGLINE,x
@@ -1826,6 +1881,16 @@ sleep:                      ; sleep
     ldy TEMP1 + 1
     jsr TASK_SLEEP
     jmp next
+wait:                       ; wait
+    jsr spull_0
+    stz SHBG
+    lda TEMP1
+    ldx #SHC_WAIT
+    jsr SH_CMD          ; (the status: the task's)
+    bcc WTOK
+    jmp IOFAIL
+WTOK:
+    jmp next
 sem:                        ; sem
     jsr spull_0
     lda TEMP1
@@ -2014,6 +2079,7 @@ PEDONE:
 ; library is loaded now: it was when that line began, if they're set up), and before the boot shell's first
 ; line, boot.hys from the selected volume's root (the current directory), if it's there
 LINE_START:
+    stz SHBG            ; (A new line: nothing started with & yet)
     jsr SH_UNREDIR
     jsr PIPEEND
     lda LIBSET
@@ -2465,6 +2531,7 @@ wrterror:
     inc ERRPTR+1
 ERRSKIP:
     WERR ERRPTR
+    jsr ERRSTAT         ; the exit status: this error's
 ERREND:
     lda #0
     sta ERRFLAG
@@ -2472,6 +2539,38 @@ ERREND:
     sta ERRPTR+1
     rts
 ;
+;
+; An error's exit status: its number (ERRFLAG), and its text (TEMP0: WERR's) without the " !" and "!" around it
+; (" !UNK WORD!": "UNK WORD"), in HYSTAT and HYSTATMSG, and $status (SH_CMD: SHC_STATUS)
+ERRSTAT:
+    lda ERRFLAG
+    sta HYSTAT
+    ldy #0
+    ldx #0
+ESSKIP:
+    lda (TEMP0),y
+    beq ESEND
+    cmp #ASCII_SPACE
+    beq ESNEXT
+    cmp #'!'
+    bne ESCOPY
+ESNEXT:
+    iny
+    bra ESSKIP
+ESCOPY:
+    lda (TEMP0),y
+    beq ESEND
+    cmp #'!'
+    beq ESEND
+    sta HYSTATMSG,x
+    inx
+    iny
+    cpx #EXIT_MSG_MAX
+    bcc ESCOPY
+ESEND:
+    stz HYSTATMSG,x
+    ldx #SHC_STATUS
+    jmp SH_CMD
 ;
 emcount .set 0                      ; (ERR_entry counts the messages, in this scope)
 err_jumptable:

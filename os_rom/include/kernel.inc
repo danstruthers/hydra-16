@@ -188,6 +188,10 @@ name = task_zp_top
 .assert     task_zp_top >= __ZEROPAGE_RUN__ + __ZEROPAGE_SIZE__, lderror, "Task ZP overlaps OS ZP"
 .endmacro
 
+; A program's own zero page (a .hyx: the C library's, programs/c/hydra.cfg): the OS's must stay below it
+PROGRAM_ZP          = $E0
+.assert     __ZEROPAGE_RUN__ + __ZEROPAGE_SIZE__ <= PROGRAM_ZP, lderror, "The OS zero page runs into the programs' ($E0-$FF)"
+
 ; Task switcher interrupt timer (one interrupt per 5ms or so, with 64 cycles for INT Handler overhead)
 SCHED_TICK_HZ   = 200
 TIMER_TASK_INT  = (CLK_CPS / SCHED_TICK_HZ) - 64           ; 17833 at 3.58 MHz

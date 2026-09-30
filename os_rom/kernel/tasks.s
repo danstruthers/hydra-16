@@ -534,8 +534,13 @@ TASK_TRAMPOLINE:
             sta     ZP_FAR_PAGE
             jsr     FAR_CALL_A                      ; Run the task
 
-; The task's entry point returned: free everything it had, wake its parent, and never run again
+; The task's entry point returned: its exit status (0: EXIT_NOTE; TASK_EXITS and EXIT_SIGNALLED note their own,
+; then come in at TASK_EXIT_NOTED), then free everything it had, wake its parent, and never run again
 TASK_EXIT:
+            lda     #0
+            tax                                     ; (No message)
+            jsr     EXIT_NOTE
+TASK_EXIT_NOTED:
             jsr     CONS_RELEASE                    ; (In the foreground: the console goes back)
             lda     T_REGISTER
             jsr     MM_TASK_RESET                   ; (IRQs on: it holds NO_PREEMPT)
@@ -589,7 +594,7 @@ BREAK_ENTRY:
             and     #$0F
             cmp     #SHELL_TASK_NUM
             beq     @shell
-            jmp     TASK_EXIT
+            jmp     EXIT_SIGNALLED                  ; (.X = its status: which signal; then TASK_EXIT)
 
 @shell:                                     ; The shell: free everything, and start it again
             ldx     #$FF

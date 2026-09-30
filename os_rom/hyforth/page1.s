@@ -98,6 +98,8 @@ FAR_GATE_INLINE FW_CALL,        ::FW_ENTRY_PA,          $A  ; A far word (FARWOR
 FAR_GATE_INLINE LINE_START,     ::LINE_START_PA,        $A  ; (The shell library's part of reading a
 FAR_GATE_INLINE LINE_PROMPT,    ::LINE_PROMPT_PA,       $A  ;   line: getline)
 FAR_GATE_INLINE LINE_READ,      ::LINE_READ_PA,         $A
+FAR_GATE_INLINE LINE_EOF,       ::LINE_EOF_PA,          $A  ; (Stdin's end; a task's end, with its status)
+FAR_GATE_INLINE LINE_EXITS,     ::LINE_EXITS_PA,        $A
 FAR_GATE_INLINE INCOPEN,        ::INCOPEN_PA,           $A
 FAR_GATE_INLINE INCOPENFD,      ::INCOPENFD_PA,         $A
 FAR_GATE_INLINE INCEND,         ::INCEND_PA,            $A

@@ -102,7 +102,7 @@ TASK_ZP_END                    ; link error if it runs into the OS zero page
 
 Each task's code (the shell, each driver) has its own block; blocks for different tasks may overlap.  For example, HyForth uses `$C8-$FF` in the shell task, and the serial driver its own bytes in the serial task.
 
-OS zero-page variables that calls take parameters in (from the current build's `os_rom/obj/os_rom_C02.lbl`; they can move between builds):
+OS zero-page variables that calls take parameters in.  `ZP_IO_BUF`, `ZP_IO_CNT` and `ZP_IO_OFS` are at fixed addresses (programs are built against them: `zero.s` asserts them); the others are from the current build's `os_rom/obj/os_rom_C02.lbl`, and can move between builds.  A program's own zero page is `$E0-$FF` (`PROGRAM_ZP`: the OS's stays below it).
 
 | Variable | Address | Used by |
 | :------- | :------ | :------ |
@@ -111,7 +111,7 @@ OS zero-page variables that calls take parameters in (from the current build's `
 | `ZP_TEMP_VEC`, `ZP_TEMP_VEC2` | `$0A`, `$0C` | `MEM_COPY`, `TASK_START` |
 | `ZP_TC_VEC`, `ZP_TC_TASK` | `$1F`, `$21` | `TASK_CALL`, `DEV_REGISTER` (serve routine) |
 | `ZP_FP` (4 bytes) | `$42` | Far pointer calls |
-| `ZP_IO_BUF`, `ZP_IO_CNT`, `ZP_IO_OFS` | `$58`, `$5A`, `$5C` | `IO_READ`, `IO_WRITE`, `IO_SEEK`, `IO_STAT`, `IO_MOUNT`, `IO_BIND` |
+| `ZP_IO_BUF`, `ZP_IO_CNT`, `ZP_IO_OFS` | `$06`, `$08`, `$0A` (fixed) | `IO_READ`, `IO_WRITE`, `IO_SEEK`, `IO_STAT`, `IO_MOUNT`, `IO_BIND` |
 
 ### **Error codes**
 (`os_rom/include/kernel.inc`)
@@ -238,10 +238,16 @@ The thunk table at `$F800` (on BIOS pages 0 and 1) gives every public call a fix
 | `$F8DE` | `SEM_TRY` | `.A` = semaphore: take one, or `ERR_SEM_BUSY` | [tasks](tasks.md#semaphores) |
 | `$F8E1` | `SEM_RELEASE` | `.A` = semaphore: give one back | [tasks](tasks.md#semaphores) |
 | `$F8E4` | `SEM_FREE` | `.A` = semaphore: free it | [tasks](tasks.md#semaphores) |
+| `$F8E7` | `TASK_SLEEP` | `.A.Y` = ticks (200 a second, up to 32767) | [tasks](tasks.md#waiting-and-sleeping) |
+| `$F8EA` | `TICKS_GET` | → `.A.Y` = the tick count | [tasks](tasks.md#waiting-and-sleeping) |
+| `$F8ED` | `CLOCK_GET` | `.X` = a zero page address ← 4 bytes: seconds since 2000-01-01 | [io](io.md#the-clock-devtime) |
+| `$F8F0` | `TASK_EXITS` | `.A` = exit code, `ZP_IO_BUF` = message (high byte 0: none): end this task | [tasks](tasks.md#exit-statuses) |
+| `$F8F3` | `TASK_JOIN` | `.A` = task: wait for it to end → `.A` = its code, its message at `ZP_IO_BUF` (high byte 0: not wanted) | [tasks](tasks.md#exit-statuses) |
+| `$F8F6` | `SHELL_CMD` | An entry point for `TASK_RUN` (`.X` = 0): a command shell running the lines on its stdin (`rc -c`) | [tasks](tasks.md#starting-tasks) |
 
-Calls without a thunk (for ROM code; reached with a gate from other pages): `TASK_SLEEP`, `TASK_SLEEP_UNTIL`, `TICKS_GET`, `TASK_START`, `TASK_CALL`, `IRQ_REGISTER`, `IRQ_UNREGISTER`, `SWI_REGISTER`, `SWI_UNREGISTER`, `SW_INT`, `DRV_START`, `IO_FLUSH`, `YM_BEEP`, and the server helpers `IO_SRV_MAP`, `IO_SRV_UNMAP`, `IO_SRV_COUNT`.
+Calls without a thunk (for ROM code; reached with a gate from other pages): `TASK_SLEEP_UNTIL`, `TASK_START`, `TASK_CALL`, `IRQ_REGISTER`, `IRQ_UNREGISTER`, `SWI_REGISTER`, `SWI_UNREGISTER`, `SW_INT`, `DRV_START`, `IO_FLUSH`, `YM_BEEP`, and the server helpers `IO_SRV_MAP`, `IO_SRV_UNMAP`, `IO_SRV_COUNT`.
 
-**Adding a thunk:** add the `jmp` at the end of `kernel/thunks.s` (page 0), and, if page 1's code calls it, the same entry to page 1's copy in `hyforth/page1.s` (page 1's copy jumps to its gates; the semaphores' aren't there, as HyForth reaches them from page A).  A call on another page gets its gate in `GATES_P0` (`kernel/page0_gates.s`): the thunks are at a fixed `$F800`, and room below them doesn't help what's after them.  Never move existing entries: programs rely on the addresses.
+**Adding a thunk:** add the `jmp` at the end of `kernel/thunks.s` (page 0), and, if page 1's code calls it, the same entry to page 1's copy in `hyforth/page1.s` (page 1's copy jumps to its gates; the semaphores' aren't there, as HyForth reaches them from page A).  A call on another page gets its gate in `GATES_P0` (`kernel/page0_gates.s`), or, as `GATES_P0` is full, in `BIOS_THUNKS` after the thunks' `jmp`s (`FAR_GATE_INLINE`, at the end of `kernel/thunks.s`): the thunks are at a fixed `$F800`, and room below them doesn't help what's after them.  Never move existing entries: programs rely on the addresses.
 
 ### **Adding code**
 

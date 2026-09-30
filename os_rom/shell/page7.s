@@ -41,6 +41,8 @@ FAR_GATE_INLINE     DEV_REGISTER,   ::DEV_REGISTER_FAR,     0   ; (It reads the 
 FAR_GATE_INLINE     ENV_INIT,       ::ENV_INIT_P9,          9
 FAR_GATE_INLINE     CLOCK_TEXT,     ::CLOCK_TEXT_P9,        9   ; (ls -l: a stamp as a date and time)
 FAR_GATE_INLINE     RTC_BOOT,       ::RTC_BOOT_P9,          9   ; (SH_BOOT: the clock chip)
+FAR_GATE_INLINE     TASK_JOIN,      PAGE5::TASK_JOIN,       5   ; (SH_WAIT: a program's end, its status)
+FAR_GATE_INLINE     TASK_EXITS,     PAGE5::TASK_EXITS,      5   ; (SH_CMDSHELL: the command shell's end)
 FAR_GATE_INLINE     TIME_DIV8,      ::TIME_DIV8_P9,         9
 FAR_JMP_GATE        MON_START,      ::MON_START,            0
 
