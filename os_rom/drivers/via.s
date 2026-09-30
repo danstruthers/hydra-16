@@ -10,6 +10,10 @@ VIA_INIT:
             PUSH_AXY
             stz     ZP_TICKS                ; (The system task's: the tick count)
             stz     ZP_TICKS + 1
+            stz     ZP_CLOCK                ;   and the clock (VIA_IRQ_FAST counts it; this handler's
+            stz     ZP_CLOCK + 1            ;   tick is only a fallback, and doesn't)
+            stz     ZP_CLOCK + 2
+            stz     ZP_CLOCK + 3
             ldx     #IRQ_NUMBER_ONBOARD_VIA
             lda     #<VIA_IRQ_HANDLER
             ldy     #>VIA_IRQ_HANDLER

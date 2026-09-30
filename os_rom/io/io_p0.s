@@ -40,6 +40,7 @@ FAR_GATE_INLINE     NULL_SERVE,     PAGE2::NULL_SERVE,      2
 FAR_GATE_INLINE     ZERO_SERVE,     PAGE2::ZERO_SERVE,      2
 FAR_GATE_INLINE     PROC_SERVE,     ::PROC_SERVE_P9,        9   ; /dev/proc (proc_srv.s)
 FAR_GATE_INLINE     ENV_SERVE,      ::ENV_SERVE_P9,         9   ; env (env_srv.s: the shell registers it)
+FAR_GATE_INLINE     TIME_SERVE,     ::TIME_SERVE_P9,        9   ; time (time_srv.s: the shell registers it)
 FAR_GATE_INLINE     PROC_MEM_COUNT, ::PROC_MEM_COUNT_P9,    9   ; (/dev/proc/N/mem: TASK_CALL, in task N)
 
 NULL_NAME:  .byte   "null", 0

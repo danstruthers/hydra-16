@@ -141,6 +141,10 @@ ZP_SCHED_CNT:           ; SCHED_PICK loop count
     .res  1
 ZP_TICKS:               ; the tick count (valid in the system task: VIA_IRQ_HANDLER; TICKS_GET)
     .res  2
+ZP_CLOCK:               ; the clock: seconds since 2000-01-01 00:00:00 (valid in the system task: VIA_IRQ_FAST
+    .res  4             ;   counts it; 0 at power-up, until it's set: CLOCK_GET, CLOCK_SET)
+ZP_CLOCK_SUB:           ;   and the ticks left of this second
+    .res  1
 ZP_SIG_TARGET:          ; TASK_SIGNAL (IRQs off): the task signalled, the task being checked, and the
     .res  1             ;   owner links still to follow
 ZP_SIG_TASK:
@@ -159,6 +163,12 @@ ZP_ENV_P:               ; The env server (in the client's task; its scratch is Z
     .res  2             ;   block ...
 ZP_ENV_Q:               ;   and a slot, or another block
     .res  2
+ZP_TIME = ZP_ENV_P      ; The clock's date and time (time_srv.s, in the client's task; its scratch is
+                        ;   ZP_PROC_*, and it uses ZP_ENV_P and ZP_ENV_Q as one 4-byte number) ...
+ZP_TIME_M:              ;   another 4-byte number
+    .res  4
+ZP_TIME_D:              ;   and a byte
+    .res  1
 
 ; IO (see io.s)
 ZP_IO_BUF:              ; caller's buffer / name (IO_OPEN, IO_READ, IO_WRITE, IO_STAT)
@@ -329,7 +339,6 @@ TASK_ZP     HFS_CARD, 1             ; The card (0-7) the request is about
 TASK_ZP     HFS_FID, 1              ; The open file (0-7)
 TASK_ZP     HFS_FP, 2               ; The directory entry in play: HFS_ENT, or the open file's copy
 TASK_ZP     HFS_XP, 2               ; The extent being looked at (in the entry, or in an extent block)
-TASK_ZP     HFS_LOC, 5              ; Where an entry is: its block (4), then its index in the block (0-7)
 TASK_ZP     HFS_CL, 4               ; A cluster in the file, counted down through the extents
 TASK_ZP     HFS_XBLK, 4             ; The extent block being read
 TASK_ZP     HFS_XLEN, 2             ; An extent: its clusters, and (below it) its first cluster, so that

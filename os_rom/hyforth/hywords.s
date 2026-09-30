@@ -1300,8 +1300,8 @@ RSFAIL:
 ;   Each has a parsing form, which takes its arguments from the words after it on the line (ls games),
 ;   and a stack form in parentheses for definitions, which takes q^...^ strings ((ls))
 ;
-; ls [dir]  list a directory: a line per entry, "name size" or "name/" (ls alone: the current one); or
-;           show any file's text (ls /dev/sd/0/ctl)
+; ls [-l] [dir]  list a directory: a line per entry, "name size" or "name/" (ls alone: the current one); or
+;                show any file's text (ls /dev/sd/0/ctl).  -l: with each one's date and time (its last change)
 def_far "ls", "ls"
 def_far "(ls)", "pls"
 ;
@@ -1331,7 +1331,8 @@ def_far "vols", "vols"
 ;
 ; ( n sz-label -- )  make an empty HydraFS on card n (0-7), with that label, and show the card: everything
 ;                   that was on it is lost (e.g. 0 "GAMES" mkfs).  A quick format: the free map is written
-;                   as the card fills, so it takes a moment whatever the card's size
+;                   as the card fills, so it takes a moment whatever the card's size.  A card with a HydraFS
+;                   partition has it made in the partition (the others are kept)
 def_far "mkfs", "mkfs"
 ;
 ; ( n sz-label -- )  mkfs, with the whole free map written now (a version 1 HydraFS, as older ROMs read);
@@ -1341,6 +1342,10 @@ def_far "mkfs-full", "mkfsfull"
 ; ( n sz-label mb -- )  mkfs, making the HydraFS mb megabytes (up to 65535: $FFFF), if the card is bigger:
 ;                      the rest of the card isn't used (e.g. 0 "SMALL" 4096 mkfs-size)
 def_far "mkfs-size", "mkfssize"
+;
+; ( n sz-label -- )  mkfs, in a HydraFS partition: one is made after the card's other partitions (e.g. a FAT
+;                   one, for a PC), or with a new partition table, if it hasn't one (e.g. 0 "GAMES" mkfs-part)
+def_far "mkfs-part", "mkfspart"
 ;
 ; ( n sz-label -- )  give card n's HydraFS a new label (e.g. 0 q^TOYS^ relabel)
 def_far "relabel", "relabel"

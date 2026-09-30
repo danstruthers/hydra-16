@@ -247,23 +247,28 @@ HFS_CARD_X:
 ; ****************************************************************************
 ; The card's counters, and entries
 
-; Take the card's next qid id (HFS_TAKE_QID) or modification stamp (HFS_TAKE_STAMP) into HFS_T4, and count
-; it on (the superblock gets it at the end of the request).  Modifies: .A, .X, .Y
+; A modification stamp into HFS_T4: the clock's time (seconds since 2000-01-01: CLOCK_GET, page 9, into
+; this task's ZP_TIME, the time server's, which the storage task never is).  The card's superblock keeps the
+; latest (HFS_V_STAMP: it gets it at the end of the request).  Modifies: .A, .X, .Y
 HFS_TAKE_STAMP:
-            lda         #HFS_V_STAMP - HFS_V_QID
-            bra         HFS_TAKE
+            ldx         #ZP_TIME
+            jsr         CLOCK_GET
+            jsr         HFS_CARD_X
+            ldy         #0
+:
+            lda         ZP_TIME,Y
+            sta         HFS_T4,Y
+            sta         HFS_V_STAMP,X
+            inx
+            iny
+            cpy         #4
+            bne         :-
+            bra         HFS_TAKEN
 
+; Take the card's next qid id into HFS_T4, and count it on (the superblock gets it at the end of the
+; request).  Modifies: .A, .X, .Y
 HFS_TAKE_QID:
-            lda         #0
-
-HFS_TAKE:
-            sta         HFS_T4                              ; (.X = the counter: at HFS_V_QID,X)
-            lda         HFS_CARD
-            asl
-            asl
-            clc
-            adc         HFS_T4
-            tax
+            jsr         HFS_CARD_X                          ; (.X = the counter: at HFS_V_QID,X)
             ldy         #0
 :
             lda         HFS_V_QID,X
@@ -284,6 +289,8 @@ HFS_TAKE:
             bne         :+
             inc         HFS_V_QID + 3,X
 :
+
+HFS_TAKEN:
             lda         #1
             sta         HFS_SBDIRTY
             rts
@@ -818,12 +825,14 @@ HFS_C_LBA:
 ; Growing a file
 
 ; Give the file whose entry is at HFS_FP (at HFS_LOC) a cluster more at its end.  Its last extent grows if
-; the cluster after it is free; or else the cluster starts a new extent (HFS_NEW_EXT).  Then the entry is
+; the cluster after it is free; or else the cluster starts a new extent (HFS_APPEND_EXT).  Then the entry is
 ; written (with the file's size as it is now).
 ; OUT: C = 0; or C = 1, .A = ERR_IO_FULL or a card error.  Modifies: .A, .X, .Y
 HFS_GROW:
             jsr         HFS_LAST_EXT
-            bcs         @done
+            bcc         @far4
+            jmp         @done
+@far4:
             lda         #$FF                                ; HFS_D = the cluster after the last extent
             sta         HFS_D                               ;   (none, or it can't grow: $FFFFFFFF, which
             sta         HFS_D + 1                           ;   is never free)
@@ -836,6 +845,12 @@ HFS_GROW:
             and         HFS_XLEN + 1
             cmp         #$FF
             beq         @want                               ; (As long as an extent can be)
+            lda         HFS_XCL
+            and         HFS_XCL + 1
+            and         HFS_XCL + 2
+            and         HFS_XCL + 3
+            cmp         #HFS_HOLE
+            beq         @want                               ; (A hole: its clusters aren't the card's)
             clc
             lda         HFS_XCL
             adc         HFS_XLEN
@@ -881,15 +896,16 @@ HFS_GROW:
             jmp         HFS_ENT_PUT
 
 @new:
-            jmp         HFS_NEW_EXT
+            jsr         HFS_XNEW_C
+            jmp         HFS_APPEND_EXT
 
 @done:
             rts
 
-; A new extent, {HFS_C, 1 cluster}, after the file's last one (HFS_LAST_EXT): the entry's first or second,
+; A new extent, HFS_XNEW, after the file's last one (HFS_LAST_EXT found it): the entry's first or second,
 ; or in its last extent block, or in a new extent block (in a cluster of its own) when that's full or it
 ; has none.  OUT: C = 0; or C = 1, .A = error.  Modifies: .A, .X, .Y
-HFS_NEW_EXT:
+HFS_APPEND_EXT:
             lda         HFS_LASTB
             ora         HFS_LASTB + 1
             ora         HFS_LASTB + 2
@@ -983,23 +999,31 @@ HFS_NEW_EXT:
 @done:
             rts
 
-; The extent {HFS_C, 1 cluster} at HFS_PTR.  Modifies: .A, .Y
+; The extent HFS_XNEW at HFS_PTR.  Modifies: .A, .Y
 HFS_EXT_PUT:
             ldy         #0
 :
-            lda         HFS_C,Y
+            lda         HFS_XNEW,Y
             sta         (HFS_PTR),Y
             iny
-            cpy         #4
+            cpy         #HFS_EXT_SIZE
             bne         :-
-            lda         #1
-            sta         (HFS_PTR),Y
-            iny
-            lda         #0
-            sta         (HFS_PTR),Y
             rts
 
-; A new extent block, holding one extent {HFS_C, 1 cluster}, in a cluster of its own (its first block).
+; HFS_XNEW = {HFS_C, 1 cluster}.  Modifies: .A, .X
+HFS_XNEW_C:
+            ldx         #3
+:
+            lda         HFS_C,X
+            sta         HFS_XNEW,X
+            dex
+            bpl         :-
+            lda         #1
+            sta         HFS_XNEW + 4
+            stz         HFS_XNEW + 5
+            rts
+
+; A new extent block, holding one extent, HFS_XNEW, in a cluster of its own (its first block).
 ; OUT: C = 0: SD_LBA = the block (in the metadata buffer, to be written); or C = 1, .A = error.
 ; Modifies: .A, .X, .Y
 HFS_EXT_BLOCK_NEW:
@@ -1384,7 +1408,8 @@ HFS_EACH_RUN:
 @done:
             rts
 
-; The extent at (HFS_XP),Y, to the routine (an unused one, with no clusters, isn't).  OUT: as the routine's
+; The extent at (HFS_XP),Y, to the routine (an unused one, with no clusters, isn't; nor is a hole, whose
+; clusters aren't the card's).  OUT: as the routine's
 HFS_EXT_RUN:
             ldx         #0
 :
@@ -1396,7 +1421,15 @@ HFS_EXT_RUN:
             bne         :-
             lda         HFS_XLEN
             ora         HFS_XLEN + 1
+            beq         @none
+            lda         HFS_XCL
+            and         HFS_XCL + 1
+            and         HFS_XCL + 2
+            and         HFS_XCL + 3
+            cmp         #HFS_HOLE
             bne         HFS_RUN
+
+@none:
             clc
             rts
 
@@ -1454,7 +1487,8 @@ HFS_SHR:
 ; The requests that change a card
 
 ; H9_WRITE: at the fd's offset (at the end of the file if it's append-only), the part of a block at a time;
-; the file gets a cluster more when it needs one (HFS_GROW).  A write can't start past the end of the file.
+; the file gets a cluster more when it needs one (HFS_GROW).  A write past the end of the file makes it that
+; long first, with zeros (and a hole: HFS_EXTEND); a write into a hole fills its cluster in (HFS_FILL).
 HFS_WRITE_REQ:
             jsr         HFS_FID_CHECK
             bcc         :+
@@ -1490,34 +1524,58 @@ HFS_WRITE_REQ:
             bne         :-
 
 @where:
-            jsr         HFS_TAIL                            ; (C = 0: SD_POS is past the end: a hole)
-            bcs         HFS_W_PIECE
+            lda         SD_LEFT                             ; (Nothing to write: nothing changes)
+            ora         SD_LEFT + 1
+            beq         @written
+            jsr         HFS_TAIL                            ; (C = 0: SD_POS is past the end: a gap)
+            bcs         :+
+            jsr         HFS_EXTEND                          ; The file that long first, with zeros
+            bcs         HFS_W_ERROR
+:
+            jsr         HFS_W_RANGE
+            bcs         HFS_W_ERROR
+
+@written:
+            jsr         HFS_SYNC                            ; All written: the other copies of the entry get
+            jmp         HFS_READ_DONE                       ;   its size too; the count done goes back
+
+HFS_W_ERROR:
             jsr         IO_SRV_UNMAP
-            lda         #ERR_IO_BAD_REQ
             sec
             rts
 
-HFS_W_PIECE:
+; Write SD_LEFT bytes from the data area (SD_DONE on; or zeros, if HFS_WZERO says so: HFS_EXTEND) to the
+; file whose entry is at HFS_FP, at SD_POS, the part of a block at a time; SD_POS, SD_DONE and SD_LEFT go on.
+; OUT: C = 0; or C = 1, .A = error.  Modifies: .A, .X, .Y
+HFS_W_RANGE:
             lda         SD_LEFT
             ora         SD_LEFT + 1
             bne         :+
-            jsr         HFS_SYNC                            ; All written: the other copies of the entry get
-            jmp         HFS_READ_DONE                       ;   its size too; the count done goes back
+            clc
+            rts
 :
             jsr         HFS_FILE_BLOCK                      ; The block byte SD_POS goes in: a cluster more
-            bcc         @have                               ;   first, if the file has none there yet
-            cmp         #ERR_IO_EOF
-            beq         @far10
-            jmp         HFS_W_ERROR
-@far10:
+            bcc         @have                               ;   first, if the file has none there yet, or
+            cmp         #ERR_IO_EOF                         ;   the hole's cluster filled in
+            beq         @grow
+            cmp         #HFS_IN_HOLE
+            beq         @far3
+            jmp         @error
+@far3:
+            jsr         HFS_FILL
+            bra         @again
+
+@grow:
             jsr         HFS_GROW
-            bcc         @far9
-            jmp         HFS_W_ERROR
-@far9:
+
+@again:
+            bcc         @far2
+            jmp         @error
+@far2:
             jsr         HFS_FILE_BLOCK
-            bcc         @far8
-            jmp         HFS_W_ERROR
-@far8:
+            bcc         @far1
+            jmp         @error
+@far1:
 
 @have:
             lda         SD_POS + 1                          ; SD_N = the bytes to this block's end ...
@@ -1552,7 +1610,9 @@ HFS_W_PIECE:
 
 @load:
             jsr         HFS_LOAD
-            bcs         HFS_W_ERROR
+            bcc         @far8
+            jmp         @error
+@far8:
 
 @copy:
             lda         SD_POS                              ; SD_SRC = the cache + (SD_POS & 511)
@@ -1569,12 +1629,38 @@ HFS_W_PIECE:
             inc
             sta         SD_DST + 1
             ldy         #0
+            bit         HFS_WZERO
+            bmi         @zeros
 :
             lda         (SD_DST),Y                          ; SD_N bytes (1-256): the data area -> the cache
             sta         (SD_SRC),Y
             iny
             cpy         SD_N                                ; (SD_N = 256: 0, so .Y wraps round to it)
             bne         :-
+            bra         @copied
+
+@zeros:                                                     ; (Or zeros: SD_N can be a whole block here, as
+            lda         #0                                  ;   HFS_EXTEND's count isn't the request's)
+            ldx         SD_N + 1                            ; Whole pages ...
+            beq         @part
+:
+            sta         (SD_SRC),Y
+            iny
+            bne         :-
+            inc         SD_SRC + 1
+            dex
+            bne         :-
+
+@part:
+            ldy         SD_N                                ; ... and the rest (0-255)
+            beq         @copied
+:
+            dey
+            sta         (SD_SRC),Y
+            cpy         #0
+            bne         :-
+
+@copied:
             lda         SD_CACHE                            ; ... -> the card
             sta         SD_BUF
             lda         SD_CACHE + 1
@@ -1607,13 +1693,12 @@ HFS_W_PIECE:
             bne         :-
 
 @next:
-            jmp         HFS_W_PIECE
+            jmp         HFS_W_RANGE
 
 @write_error:
             stz         SD_CVALID                           ; (The cache and the card may differ)
 
-HFS_W_ERROR:
-            jsr         IO_SRV_UNMAP
+@error:
             sec
             rts
 

@@ -214,6 +214,21 @@ HFS_VERSION         = 2         ; The newest format this reads (and writes, with
 HFS_VERSION_FULL    = 1         ;   free map that's written as it's used (HFS_SB_MAPINIT); 1's is all written
 HFS_CSHIFT          = 3         ;   and its cluster size, as a shift (HFS_CLUSTER_BLOCKS)
 
+; Partitions: a card with a partition table (an MBR, in block 0) has its HydraFS in its partition of type
+; HFS_PART_TYPE, and HydraFS counts its blocks from the partition's first (HFS_V_BASE), so another partition
+; (a FAT one, for a PC) can be next to it.  A card without one is all HydraFS, from block 0
+HFS_PART_TYPE       = $7F       ; The partition type (for an OS in development, by convention)
+HFS_PART_ALIGN      = 2048      ; A new partition starts on a 1 MB boundary (block 2048 on an empty card)
+MBR_TABLE           = $1BE      ; Block 0: the table, 4 entries of MBR_ENTRY_SIZE bytes ...
+MBR_ENTRY_SIZE      = 16
+MBR_P_STATUS        = 0         ;   an entry: $00, or $80 (active)
+MBR_P_CHS1          = 1         ;   its first block as cylinder, head, sector (3: $FE $FF $FF, LBA only)
+MBR_P_TYPE          = 4         ;   its type (0: an unused entry)
+MBR_P_CHS2          = 5         ;   its last block as cylinder, head, sector (3)
+MBR_P_START         = 8         ;   its first block (4)
+MBR_P_BLOCKS        = 12        ;   its size in blocks (4)
+MBR_SIG             = $1FE      ;   and $55 $AA after the table
+
 ; The superblock (block 0)
 HFS_SB_MAGIC        = 0         ; "HYDRAFS1"
 HFS_SB_VERSION      = 8
@@ -225,7 +240,8 @@ HFS_SB_DATA         = 24        ; The data area's first block
 HFS_SB_FREE         = 28        ; Free clusters (a hint: "check" recounts it)
 HFS_SB_HINT         = 32        ; Where to look for free clusters next (a hint)
 HFS_SB_NEXT_QID     = 36        ; The next qid id to give out
-HFS_SB_STAMP        = 40        ; The next modification stamp (a counter, until the Hydra has a clock)
+HFS_SB_STAMP        = 40        ; The latest modification stamp given (a stamp is the clock's time: seconds
+                                ;   since 2000-01-01; before the clock, a counter's next)
 HFS_SB_MAPINIT      = 44        ; Version 2: the free map's blocks written so far (from its first); the rest
                                 ;   haven't been, and read as all free (version 1: ignored, all written)
 HFS_SB_ROOT         = 64        ; The root directory's entry
@@ -238,7 +254,7 @@ HFS_E_MODE          = 32        ; HFS_M_*
 HFS_E_QVER          = 34        ; The qid's version, then its id
 HFS_E_QID           = 36
 HFS_E_SIZE          = 40        ; The size in bytes (up to 4 GB)
-HFS_E_STAMP         = 44
+HFS_E_STAMP         = 44        ; The last change: the clock's time (seconds since 2000-01-01)
 HFS_E_EXT1          = 48        ; Extent 1: its first cluster (4), its clusters (2)
 HFS_E_EXT2          = 54        ; Extent 2 (0 clusters: unused)
 HFS_E_EXTBLK        = 60        ; The first extent block, for the rest (0 = none)
@@ -267,7 +283,7 @@ HFS_V_DATA          = $02A8     ; The data area's first block
 HFS_V_FREE          = $02C8     ; Free clusters
 HFS_V_HINT          = $02E8     ; Where to look for a free cluster next
 HFS_V_QID           = $0308     ; The next qid id
-HFS_V_STAMP         = $0328     ; The next modification stamp
+HFS_V_STAMP         = $0328     ; The latest modification stamp
 HFS_V_MINIT         = $0348     ; The free map's blocks written (HFS_SB_MAPINIT; version 1: HFS_V_MAPSZ)
 .assert     HFS_V_MINIT - HFS_V_CLUSTERS = (HFS_SB_MAPINIT - HFS_SB_CLUSTERS) * 8, error, "HFS_V_*: 32 apart, in the superblock's order"
 .assert     HFS_V_MINIT - HFS_V_FREE < 256, error, "HFS_SB_SAVE reaches HFS_V_FREE ... HFS_V_MINIT with .X (HFS_VOLUME: not HFS_V_MINIT)"
@@ -308,10 +324,35 @@ HFS_PG_LEFT         = $0842     ;   steps left to the next tenth (4) ...
 HFS_PG_TENS         = $0846     ;   tenths done ($FF: not shown)
 HFS_FMT_OPT         = $0847     ; Format: HFS_FMT_FULL, or 0 (a quick format) ...
 HFS_FMT_FULL        = $01       ;   the whole free map written
+HFS_FMT_PART        = $02       ;   a partition made for it, if the card hasn't one (-p)
 HFS_FMT_BLKS        = $0848     ;   the size asked for, in blocks (0: the whole card) (4)
 HFS_CK_MARKS        = $084C     ; Check: <> 0: the pass's bitmap has marks in it (0: it's all clear)
+HFS_V_BASE          = $0850     ; Per card, at the card * 4: its HydraFS's first block on the card (4: its
+                                ;   partition's first, or 0), set by HFS_VOLUME or a format
+HFS_LOC             = $0870     ; Where an entry is: its block (4), then its index in the block (0-7)
+; Sparse files (hfs_sparse.s): holes, and writes past a file's end
+HFS_XBC             = $0875     ; HFS_FILE_BLOCK: the extent block it's in (0: the entry's extents) (4) ...
+HFS_HOLEP           = $0879     ;   and a hole's extent it found (HFS_IN_HOLE) (2)
+HFS_POSB            = $087B     ; A place in a file's extent list: the extent block (0: the entry) (4) ...
+HFS_POSO            = $087F     ;   and the extent's offset there (2)
+HFS_POS_SIZE        = 6
+HFS_POSK            = $0881     ; A place, kept (HFS_POS_SIZE)
+HFS_XNEW            = $0887     ; An extent being put in a file's list (HFS_EXT_SIZE)
+HFS_XREP            = $088D     ; Another, kept for later (HFS_EXT_SIZE)
+HFS_HK              = $0893     ; A hole being filled: the cluster's place in it (2) ...
+HFS_HN              = $0895     ;   and its clusters (2)
+HFS_ENTCHG          = $0897     ; <> 0: the entry's extents changed (HFS_FILL writes it)
+HFS_WZERO           = $0898     ; $80: HFS_W_RANGE writes zeros, not the request's bytes
+HFS_WPOS            = $0899     ; A write past the end (HFS_EXTEND): its SD_POS (4), SD_LEFT (2), SD_DONE,
+HFS_WLEFT           = $089D     ;   kept while the gap is filled
+HFS_WDONE           = $089F
+HFS_WK              = $08A0     ;   and the gap's whole clusters (a hole) (4)
+HFS_HOLEF           = $08A4     ; A read: <> 0: the block is in a hole (zeros)
+HFS_HOLE            = $FF       ; A hole's extent: its first cluster is $FFFFFFFF
+HFS_IN_HOLE         = $01       ; HFS_FILE_BLOCK's C = 1 .A for a block in a hole (not an error)
 HFS_SCRATCH_FLOOR   = $09       ; The storage task's MMU page floor: the page above the scratch
-.assert     HFS_CK_MARKS + 1 <= HFS_SCRATCH_FLOOR * 256, error, "The HydraFS scratch must end below HFS_SCRATCH_FLOOR"
+.assert     HFS_HOLEF + 1 <= HFS_SCRATCH_FLOOR * 256, error, "The HydraFS scratch must end below HFS_SCRATCH_FLOOR"
+.assert     HFS_POSO = HFS_POSB + 4, error, "A place is HFS_POSB then HFS_POSO (HFS_POS_SIZE bytes)"
 HFS_FHDR            = $0380     ; An open file: HFS_MAX_OPEN headers of HFS_FHDR_SIZE bytes (at the fid * 16)
 HFS_FHDR_SIZE       = 16
 HFS_H_CARD          = 0         ;   its card, or $FF: a free slot

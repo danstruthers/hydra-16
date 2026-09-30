@@ -12,16 +12,21 @@
 
 .segment "GATES_P6"
 
-; Gates from page 6 to the block layer (page 3)
-FAR_GATE_INLINE     SD_CACHE_LOAD,  PAGE3::SD_CACHE_LOAD,   3
-FAR_GATE_INLINE     SD_READ_BLOCK,  PAGE3::SD_READ_BLOCK,   3
-FAR_GATE_INLINE     SD_WRITE_BLOCK, PAGE3::SD_WRITE_BLOCK,  3
+; Gates from page 6 to the block layer (page 3).  HydraFS calls the first three through SD_CACHE_LOAD,
+; SD_READ_BLOCK and SD_WRITE_BLOCK (hfs_srv.s), which count its blocks from its partition's first
+FAR_GATE_INLINE     SD_CACHE_LOAD_P3, PAGE3::SD_CACHE_LOAD, 3
+FAR_GATE_INLINE     SD_READ_BLOCK_P3, PAGE3::SD_READ_BLOCK, 3
+FAR_GATE_INLINE     SD_WRITE_BLOCK_P3, PAGE3::SD_WRITE_BLOCK, 3
 FAR_GATE_INLINE     SD_START,       PAGE3::SD_START,        3
 FAR_GATE_INLINE     SD_CARD_SIZE,   PAGE3::SD_CARD_SIZE,    3
+FAR_GATE_INLINE     HFS_PART_FIND,  PAGE3::HFS_PART_FIND,   3   ; (The card's HydraFS partition: hfs_format.s)
 
 ; ... and to page 0 (they run in the current task: the storage task)
 FAR_GATE_INLINE     IO_SRV_MAP,     ::IO_SRV_MAP,           0
 FAR_GATE_INLINE     IO_SRV_UNMAP,   ::IO_SRV_UNMAP,         0
-FAR_GATE_INLINE     MM_ALLOC,       ::MM_ALLOC,             0   ; (The check's buffer)
-FAR_GATE_INLINE     MM_LOCK,        ::MM_LOCK,              0
-FAR_GATE_INLINE     WRITE_CHAR,     ::WRITE_CHAR,           0   ; (Progress: straight to the console)
+
+; ... to page 9: the clock (HydraFS's stamps)
+FAR_GATE_INLINE     CLOCK_GET,      ::CLOCK_GET_P9,         9
+
+; ... and back to page 3: the check's routine for each run of a file's clusters (HFS_EACH_RUN calls it)
+FAR_GATE_INLINE     HFS_CK_RUN,     PAGE3::HFS_CK_RUN,      3

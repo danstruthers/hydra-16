@@ -41,7 +41,8 @@ IRQ_FAST_P2     = PAGE2::IRQ_FAST_P2    ; (For the COMMON block's fast IRQ stubs
 .include "drivers/spi.s"        ; SPI (bit-banged on the VIA's port B)
 .include "drivers/sd.s"         ; The SD card (blocks)
 .include "io/sd_srv.s"          ; /dev/sd, and the storage task's init
-.include "io/hfs_format.s"      ; HydraFS: format and label (the rest of it is on page 6)
+.include "io/hfs_format.s"      ; HydraFS: format and label (the rest of it is on page 6) ...
+.include "io/hfs_check.s"       ;   its check, and a card's details for its ctl file
 .endscope
 
 ; BIOS ROM page 6 (W = 6): the HydraFS server, in the storage task, on page 3's block layer.  After PAGE3,
@@ -50,7 +51,7 @@ IRQ_FAST_P2     = PAGE2::IRQ_FAST_P2    ; (For the COMMON block's fast IRQ stubs
 .include "io/page6.s"           ; must be first in the scope
 .include "io/hfs_srv.s"         ; The HydraFS server (/sd/N/..., the files on the cards): requests, reading
 .include "io/hfs_write.s"       ;   and writing: allocating, create, remove, wstat
-.include "io/hfs_check.s"       ;   its check, and a card's details for its ctl file
+.include "io/hfs_sparse.s"      ;   and sparse files: holes, and writes past a file's end
 .endscope
 HFS_FORGET_P6   = PAGE6::HFS_FORGET     ; (For page 3's gates: PAGE3 is assembled before PAGE6)
 HFS_META_NEW_P6 = PAGE6::HFS_META_NEW    ; (Format and label: io/hfs_format.s)
@@ -60,11 +61,18 @@ HFS_FINISH_P6   = PAGE6::HFS_FINISH
 HFS_SHR_P6      = PAGE6::HFS_SHR
 HFS_VOLUME_P6   = PAGE6::HFS_VOLUME
 HFS_SB_GET_P6   = PAGE6::HFS_SB_GET
-HFS_PG_START_P6 = PAGE6::HFS_PG_START
-HFS_PG_TICK_P6  = PAGE6::HFS_PG_TICK
-HFS_PG_END_P6   = PAGE6::HFS_PG_END
-HFS_CHECK_P6    = PAGE6::HFS_CHECK
-HFS_CTL_LINES_P6 = PAGE6::HFS_CTL_LINES
+HFS_AT_P6       = PAGE6::HFS_AT          ; (The check: io/hfs_check.s)
+HFS_AT_END_P6   = PAGE6::HFS_AT_END
+HFS_CARD_X_P6   = PAGE6::HFS_CARD_X
+HFS_EACH_RUN_P6 = PAGE6::HFS_EACH_RUN
+HFS_ENT_READ_P6 = PAGE6::HFS_ENT_READ
+HFS_FILE_BLOCK_P6 = PAGE6::HFS_FILE_BLOCK
+HFS_LOAD_P6     = PAGE6::HFS_LOAD
+HFS_MAP_BIT_P6  = PAGE6::HFS_MAP_BIT
+HFS_MAP_CHANGED_P6 = PAGE6::HFS_MAP_CHANGED
+HFS_PUT_P6      = PAGE6::HFS_PUT
+HFS_PUT_DEC_P6  = PAGE6::HFS_PUT_DEC
+HFS_CK_RUN_P6   = PAGE6::HFS_CK_RUN      ; (Page 6's gate to the check's HFS_CK_RUN)
 
 ; BIOS ROM page 4 (W = 4): the self tests.  Its own scope, so page 4 code binds to the page 4 gates in
 ; page4.s
@@ -128,12 +136,17 @@ ED_MAIN_P8      = PAGE8::ED_MAIN        ; (For page 7: SH_EDIT)
 .include "io/page9.s"           ; must be first in the scope
 .include "io/proc_srv.s"        ; The tasks (/dev/proc)
 .include "io/env_srv.s"         ; Each task's environment (/env)
+.include "io/time_srv.s"        ; The clock (/dev/time)
 .endscope
 PROC_SERVE_P9   = PAGE9::PROC_SERVE     ; (For page 0's gates: io_p0.s)
 ENV_SERVE_P9    = PAGE9::ENV_SERVE
 PROC_MEM_COUNT_P9 = PAGE9::PROC_MEM_COUNT
 ENV_COPY_P9     = PAGE9::ENV_COPY       ; (For page 2: IO_INHERIT)
 ENV_INIT_P9     = PAGE9::ENV_INIT       ; (For page 7: SH_BOOT)
+TIME_SERVE_P9   = PAGE9::TIME_SERVE     ; (For page 0's gates: io_p0.s)
+CLOCK_GET_P9    = PAGE9::CLOCK_GET      ; (For page 6: HydraFS's stamps)
+CLOCK_TEXT_P9   = PAGE9::TIME_TEXT      ; (For page 7: ls -l)
+TIME_DIV8_P9    = PAGE9::TIME_DIV8
 
 ; BIOS ROM page 0 (W = 0)
 .include "kernel/print.s"

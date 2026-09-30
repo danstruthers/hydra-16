@@ -55,7 +55,7 @@ Each command has a **parsing form** for typing, which takes its arguments from t
 | `cd dir`, `cd ..`, `cd` | Change directory (`cd` alone: the card's root) |
 | `pwd` | Show the current directory |
 | `vol n` | Go to card n's root |
-| `ls`, `ls dir` | List a directory (`-l`: with qid versions and modes, from stat records) |
+| `ls`, `ls dir` | List a directory (`-l`: with qid versions and modes, from stat records.  As built: `-l` gives each entry's date and time, from its stamp) |
 | `cat file` | Show a file |
 | `cp from to`, `mv from to` | Copy, move (a move within a card is a rename; across cards, a copy and remove) |
 | `rm file`, `mkdir dir`, `rmdir dir` | Remove, make |

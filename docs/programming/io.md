@@ -110,6 +110,7 @@ A program that prints a partial line and then computes for a long time without a
 | `/sd/N/...` | Storage | The **files** on card N: the HydraFS server (the device `hfs`, mounted at `/sd`; [below](#the-files-on-a-card)) |
 | `/dev/pipe` | Pipe server (`$D`) | Made by `IO_PIPE`, not opened by name |
 | `/dev/proc` | IO layer (in the reading task) | The tasks (below) |
+| `/dev/time` | The shell registers it (in the reading task) | The clock: read `2026-09-29 18:05:00`; write a date and time to set it (below) |
 | `/dev/null` | IO layer | Reads give end of file; writes are taken and dropped |
 | `/dev/zero` | IO layer | Reads give zeros |
 
@@ -195,6 +196,13 @@ In HyForth: `"b19200" stty`, and `stty?` to show the settings.
 
 A line is `N S O`: the task, its state (`R` running or runnable, `W` waiting, `P` paused, `D` a driver) and the task that started it (`-` none), then ` *` for the foreground task.  `/dev/proc` and `/env` are served in their client's task, from ROM page 9 (`io/proc_srv.s`, `io/env_srv.s`); `mem` is counted in task N itself (`TASK_CALL`).
 
+#### **The clock: `/dev/time`**
+
+The Hydra keeps the date and time as seconds since 2000-01-01 00:00:00, counted by the scheduler's tick.  It has no clock that runs while it's off, so the time starts at 2000-01-01 00:00:00 at power-up, until it's set:
+* **Reading** `/dev/time` gives the date and time and CR LF: `cat /dev/time` shows `2026-09-29 18:05:00`.
+* **Writing** `YYYY-MM-DD hh:mm:ss` sets it; the seconds can be left out, or the whole time (midnight): `echo 2026-09-29 18:05 > /dev/time`.  2000-01-01 to 2135-12-31; a date that isn't one (`2023-02-29`) is `ERR_IO_BAD_REQ`.
+* **From code:** `CLOCK_GET` and `CLOCK_SET` (page 9, `io/time_srv.s`: `.X` = a zero page address, the 4 bytes of seconds there).  HydraFS stamps files with it ([plans/HYDRAFS.md](../plans/HYDRAFS.md#time-stamps)).
+
 #### **The environment: `/env`**
 
 Each task has an environment: variables, `NAME=value`, which the tasks it starts get a copy of (so a change in a task stays in it and the tasks it starts later).  They're files, as in Plan 9, under `/env`, which every task has with no mount (the IO layer sends names under it to the `env` device, as it does `/dev`):
@@ -248,7 +256,7 @@ The **HydraFS** server (the device `hfs`) serves the files on the SD cards.  The
 
 * **Names** are case-sensitive, 1-31 characters, any byte but `/` and 0.  `.` and `..` are understood while walking (a path may be up to 8 elements deep); `..` at a card's root stays there.
 * **Reading a file** works as it does on `/dev/sd/N/data`, except that a read stops at the end of the file.
-* **Writing a file** at the fd's offset grows it past its end.  A write can't *start* past the end (`ERR_IO_BAD_REQ`: no holes), and an append-only file is always written at its end.  Writing runs at about 3.5 KB/s.
+* **Writing a file** at the fd's offset grows it past its end, and an append-only file is always written at its end.  A write that *starts* past the end (after a seek) makes the file that long first, with zeros: whole 4 KB clusters of them are a **hole**, which takes no space on the card, and reads as zeros ([sparse files](../plans/HYDRAFS.md#sparse-files)); a write into a hole takes a cluster for it.  Writing runs at about 3.5 KB/s.
 * **Reading a directory** gives a line per entry, `name size` (or `name/` for a directory), then CR LF, so `"/sd/0" 1 open 0 fdup2 cat | cat` lists it (as the shell's `ls` does).  Opened with `IO_MODE_STAT` it gives stat records instead; read a multiple of 48 bytes to get whole ones.  Either way the listing is made again from the card at every read, so the server keeps no state for it, and a directory that changes between two reads of one listing can give a torn one.
 * **Making and removing files:**
   * `IO_CREATE` makes a file (mode bits 0; `HFS_M_APPEND` `$40` append-only, `HFS_M_RO` `$01` read-only) or a directory (`HFS_M_DIR` `$80`) in a directory that's there, and opens it; a directory is opened for reading whatever the mode says.  A *file* that's there already is emptied and opened instead, as in Plan 9.
@@ -256,7 +264,8 @@ The **HydraFS** server (the device `hfs`) serves the files on the SD cards.  The
   * `IO_WSTAT` renames a file in its directory (the record's name: a name, not a path; a 0 first byte keeps it) and sets its mode bits (`HFS_M_APPEND`, `HFS_M_RO`; `$FF` keeps them).  The record's other fields are left alone.  HyForth's `mv` fills in the record for you.
   * The mode bits are checked when a file is opened: a read-only file can't be opened for writing, but the fd that made it can write it.
 * **What reaches the card when:** the data at once; the file's size when the last fd on it is closed, and whenever it gets a new 4 KB cluster.  So close a file you've written before taking the card out.  A crash can leave a file shorter than was written, never a damaged card.
-* **Formatting:** write `format [-f] [-s size] [LABEL]` to `/dev/sd/N/ctl` to make an empty HydraFS on the card (everything on it is lost), and `label NAME` to change the label.  Plain `format` is quick (a version 2 HydraFS, whose free map is written as it's used); `-f` writes the whole map now, printing its progress on the console; `-s` limits the size (megabytes, or `4G`) ([plans/HYDRAFS.md](../plans/HYDRAFS.md#formatting-and-tools)).
+* **Formatting:** write `format [-f] [-p] [-s size] [LABEL]` to `/dev/sd/N/ctl` to make an empty HydraFS on the card (everything on it is lost), and `label NAME` to change the label.  Plain `format` is quick (a version 2 HydraFS, whose free map is written as it's used); `-f` writes the whole map now, printing its progress on the console; `-s` limits the size (megabytes, or `4G`) ([plans/HYDRAFS.md](../plans/HYDRAFS.md#formatting-and-tools)).
+* **Partitions:** a card with a partition table has its HydraFS in its partition of type `$7F`, and the other partitions (a FAT one for a PC, say) are left alone.  `format` on such a card formats that partition; `format -p` makes one on a card without one, after its other partitions (or with a new table, from block 2048).  The ctl file then shows `partition at block N` ([plans/HYDRAFS.md](../plans/HYDRAFS.md#partitions)).
 * **Checking:** write `check` to `/dev/sd/N/ctl`, then read the file: it counts the clusters marked in use that nothing uses (lost), in use but marked free (unmarked), and used twice, and recounts the free space.  `check fix` also repairs the free map (not a cluster used twice: that's reported for a person to sort out).  In HyForth: `"/dev/sd/0/ctl" "check" ctl`, then `ls /dev/sd/0/ctl` (or `0 fsck`, which does both).  It takes a pass per 256 MB of card, and with 16 passes or more prints its progress on the console as it goes ([plans/HYDRAFS.md](../plans/HYDRAFS.md#the-check)).
 * **Errors:** `ERR_IO_NOT_FS` (`$80`) if the card holds no HydraFS, `ERR_IO_DEVICE` (`$79`) if there's no card, `ERR_IO_NOT_FOUND` (`$70`) for a name that isn't there (or a path through a file), `ERR_IO_NO_FDS` (`$75`) when all 8 HydraFS files are open (they're shared by every task), `ERR_IO_MODE` (`$72`) for writing a directory or a read-only file, `ERR_IO_FULL` (`$81`), `ERR_IO_EXISTS` (`$82`: creating a directory where there's a name already, a file where there's a directory, or renaming to a name that's taken), `ERR_IO_NOT_EMPTY` (`$83`) and `ERR_IO_BUSY` (`$84`: removing an open file).  The shell's commands add `ERR_IO_NOT_DIR` (`$85`: `cd` or `rmdir` on a file) and `ERR_IO_IS_DIR` (`$86`: `rm` or `cp` on a directory).  Any other device refuses these calls with `ERR_IO_BAD_REQ`.
 
@@ -272,6 +281,6 @@ The **HydraFS** server (the device `hfs`) serves the files on the SD cards.  The
 | 34 | 2 | The qid's version: up by 1 at every change |
 | 36 | 4 | The qid's id: unique on the card, never reused, and the same across renames |
 | 40 | 4 | The size in bytes |
-| 44 | 4 | The modification stamp (a counter, until the Hydra has a clock) |
+| 44 | 4 | The modification stamp: the clock's time at the last change (seconds since 2000-01-01; [/dev/time](#the-clock-devtime)) |
 
 A directory read with `IO_MODE_STAT` returns these same records, one per entry.

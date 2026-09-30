@@ -82,7 +82,7 @@ that got it there), and the final pseudo-register and vector RAM state.
 output for what it expects: POST, the self tests (MMU, scheduler, IO; also with 1 RAM module and 1 shared
 macro-page), POST with hardware faults, HyForth, pipelines, files and namespaces, tasks and console
 switching, Ctrl-C, background sound and the bell, `sleep`, the serial settings, `/dev/sd` (on a blank card
-image; also two shells reading it at once), HydraFS reading, writing, checking and quick formatting (on fixture card images kept in `sim/cards`, and on cards made by `tools/hydrafs.js`, and checked with it afterwards), and the shell: the volume chosen at boot, `boot.hys`, `cd`, the prompt, the file commands, `include`, running programs (`.hyx` executables and `.hys` scripts, by name and from `/bin`, their arguments, Ctrl-C), redirection, `echo`, the editor, and each task's environment (`/env`, `PATH`, `HOME`, `/dev/proc`).  One test runs a small program of its own instead of the ROM, and
+image; also two shells reading it at once), HydraFS reading, writing, checking and quick formatting (on fixture card images kept in `sim/cards`, and on cards made by `tools/hydrafs.js`, and checked with it afterwards), partitions, the clock (`/dev/time`) and files' stamps, sparse files, and the shell: the volume chosen at boot, `boot.hys`, `cd`, the prompt, the file commands, `include`, running programs (`.hyx` executables and `.hys` scripts, by name and from `/bin`, their arguments, Ctrl-C), redirection, `echo`, the editor, and each task's environment (`/env`, `PATH`, `HOME`, `/dev/proc`).  One test runs a small program of its own instead of the ROM, and
 checks the CPU's cycle counts against WDC's table.  Four watch timing: a 1000-character paste at 57600 with
 nothing lost, console output at 115200 inside a cycle budget, SD read throughput inside a cycles-a-byte
 budget, and a limit on how long the ROM ever holds interrupts off.  The emulators run in parallel; the whole
@@ -114,9 +114,10 @@ the PC, for the emulator's `--sd` or for writing to a real card with a disk imag
 
 ```
 node tools/hydrafs.js mkfs card.img 64 GAMES      a new, empty 64 MB image (-q: as the Hydra's quick format)
+node tools/hydrafs.js mkfs card.img 64 GAMES -p 32   ... in a partition, after a 32 MB FAT one (unformatted)
 node tools/hydrafs.js import card.img myfiles     copy a folder tree in
 node tools/hydrafs.js put card.img star.frt games copy a file into /games
-node tools/hydrafs.js ls card.img games           list a directory
+node tools/hydrafs.js ls card.img games           list a directory (ls card.img -l games: with dates)
 node tools/hydrafs.js get card.img games/star.frt star.frt
 node tools/hydrafs.js check card.img              check the free map against the files
 ```

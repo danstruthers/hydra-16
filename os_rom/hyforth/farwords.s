@@ -1079,9 +1079,31 @@ ECHODONE:
 ;---------------------------------------------------------------------
 ;  Shell commands: files and the cards
 ls:                         ; ls
+    stz SHOPT           ; (ls -l: SHOPT <> 0, a long listing: SH_LS)
+    jsr ARGGET
+    bcs LSNONE
+    lda ARGBUF          ; -l?
+    cmp #'-'
+    bne LSPATH
+    lda ARGBUF+1
+    cmp #'l'
+    bne LSPATH
+    lda ARGBUF+2
+    bne LSPATH
+    inc SHOPT
+    jsr ARGGET          ; (the path after it)
+    bcc LSPATH
+LSNONE:
+    ldy #0
+    bra LSGO
+LSPATH:
+    lda #<ARGBUF
+    ldy #>ARGBUF
+LSGO:
     ldx #SHC_LS
-    jmp SHPARSE
+    jmp SHDO
 pls:                        ; (ls)
+    stz SHOPT
     ldx #SHC_LS
     jmp SHSTACK
 rm:                         ; rm
@@ -1126,7 +1148,11 @@ MKFSGO:
     ldx #SHC_MKFS
     bra SHCARDSZ
 mkfsfull:                   ; mkfs-full
-    lda #1
+    lda #HFS_FMT_FULL
+    sta SHOPT
+    bra MKFSWHOLE
+mkfspart:                   ; mkfs-part
+    lda #HFS_FMT_PART
     sta SHOPT
     bra MKFSWHOLE
 mkfssize:                   ; mkfs-size

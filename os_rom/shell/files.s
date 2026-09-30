@@ -46,9 +46,13 @@ SH_S_DOT:   .byte   ".", 0
 ; ls: a directory's listing (or a file's text); none: the current directory's
 SH_LS:
             cpy         #0
-            bne         SH_SHOW
+            bne         :+
             lda         #<SH_S_DOT
             ldy         #>SH_S_DOT
+:
+            ldx         PAGE1::SHOPT                        ; (ls -l)
+            beq         SH_SHOW
+            jmp         SH_LS_LONG
 
 ; Show the file (or directory) at .A.Y: its text, to its end, a block at a time
 SH_SHOW:
@@ -83,6 +87,133 @@ SH_SHOW:
             plp
 
 @done:
+            rts
+
+; ls -l: a line for each entry of the directory at .A.Y, "name size date time" ("name/ date time" for a
+; directory), from its stat records; or the one line of a file.  (The date and time: the entry's stamp, as
+; /dev/time shows the clock.)  OUT: C = 0; or C = 1, .A = error
+SH_LS_LONG:
+            ldx         #IO_MODE_READ | IO_MODE_STAT
+            jsr         IO_OPEN
+            bcs         @done
+            sta         PAGE1::SHFD
+            LOAD_ADDR   PAGE1::SHOWBUF, ZP_IO_BUF           ; A directory?  (Its own stat record)
+            lda         PAGE1::SHFD
+            jsr         IO_STAT
+            bcs         @close
+            stz         PAGE1::SHSEL
+            lda         PAGE1::SHOWBUF + IO_ST_MODE
+            bmi         @read
+            jsr         SH_LS_LINE                          ; (A file: its line)
+            clc
+            bra         @close
+
+@read:                                                      ; A directory: its entries' records, 5 at a time
+            LOAD_ADDR   PAGE1::SHOWBUF, ZP_IO_BUF
+            lda         #5 * IO_STAT_SIZE
+            sta         ZP_IO_CNT
+            stz         ZP_IO_CNT + 1
+            lda         PAGE1::SHFD
+            jsr         IO_READ
+            bcs         @close
+            lda         ZP_IO_CNT
+            beq         @close                              ; (The end: C = 0)
+            sta         PAGE1::SHN
+            stz         PAGE1::SHSEL
+
+@entry:
+            jsr         SH_LS_LINE
+            lda         PAGE1::SHSEL
+            clc
+            adc         #IO_STAT_SIZE
+            sta         PAGE1::SHSEL
+            cmp         PAGE1::SHN
+            bcc         @entry
+            bra         @read
+
+@close:
+            php
+            pha
+            lda         PAGE1::SHFD
+            jsr         IO_CLOSE
+            pla
+            plp
+
+@done:
+            rts
+
+; The line for the stat record at SHOWBUF + SHSEL: the name ("/" after a directory's), the size (a file's),
+; the date and time (CLOCK_TEXT, page 9, into SHBUF2).  Modifies: .A, .X, .Y, ZP_TIME ...
+SH_LS_LINE:
+            ldx         PAGE1::SHSEL
+:
+            lda         PAGE1::SHOWBUF + IO_ST_NAME,X
+            beq         :+
+            jsr         WRITE_CHAR
+            inx
+            bra         :-
+:
+            ldx         PAGE1::SHSEL
+            lda         PAGE1::SHOWBUF + IO_ST_MODE,X
+            bpl         @file
+            lda         #'/'
+            jsr         WRITE_CHAR
+            bra         @stamp
+
+@file:
+            lda         #' '
+            jsr         WRITE_CHAR
+            ldy         #IO_ST_SIZE
+            jsr         SH_LS_FIELD
+            lda         #$FF                                ; The size in decimal: its digits, from the
+            pha                                             ;   last, on the stack ($FF: the end)
+:
+            lda         #10
+            jsr         TIME_DIV8                           ; (ZP_TIME / 10: .A = the digit)
+            pha
+            lda         ZP_TIME
+            ora         ZP_TIME + 1
+            ora         ZP_TIME + 2
+            ora         ZP_TIME + 3
+            bne         :-
+:
+            pla
+            bmi         @stamp
+            ora         #'0'
+            jsr         WRITE_CHAR
+            bra         :-
+
+@stamp:
+            lda         #' '
+            jsr         WRITE_CHAR
+            ldy         #IO_ST_STAMP
+            jsr         SH_LS_FIELD
+            LOAD_ADDR   PAGE1::SHBUF2, ZP_IO_REQ            ; (CLOCK_TEXT's text: at (ZP_IO_REQ) + ZP_PROC_IDX)
+            stz         ZP_PROC_IDX
+            jsr         CLOCK_TEXT
+            ldx         #0
+:
+            lda         PAGE1::SHBUF2,X                     ; (It ends with CR LF)
+            jsr         WRITE_CHAR
+            inx
+            cpx         ZP_PROC_IDX
+            bne         :-
+            rts
+
+; ZP_TIME = the 4 bytes at offset .Y in the stat record at SHOWBUF + SHSEL.  Modifies: .A, .X, .Y
+SH_LS_FIELD:
+            tya
+            clc
+            adc         PAGE1::SHSEL
+            tax
+            ldy         #0
+:
+            lda         PAGE1::SHOWBUF,X
+            sta         ZP_TIME,Y
+            inx
+            iny
+            cpy         #4
+            bne         :-
             rts
 
 ; Read up to SHOWBUF_SIZE bytes from fd SHFD into SHOWBUF: ZP_IO_CNT = how many (0: the end).
@@ -384,8 +515,8 @@ SH_VOLS:
             rts
 
 ; mkfs: "format", its options, and the label (SHBUF2), to card .A's ctl file; then it's shown.  The options:
-; PAGE1::SHOPT <> 0: " -f" (a full format: the whole free map written); PAGE1::SHSIZE (megabytes; 0: the whole
-; card): " -s N"
+; PAGE1::SHOPT: HFS_FMT_FULL " -f" (a full format: the whole free map written), HFS_FMT_PART " -p" (in a
+; partition); PAGE1::SHSIZE (megabytes; 0: the whole card): " -s N"
 SH_MKFS:
             ldy         #$FF                                ; (The prompt's %l: read the label again)
             sty         PAGE1::LBLCARD
@@ -394,9 +525,16 @@ SH_MKFS:
             bcc         @far1
             jmp         SH_CTL_DONE
 @far1:
-            lda         PAGE1::SHOPT
+            lda         PAGE1::SHOPT                        ; (HFS_FMT_* bits)
+            and         #HFS_FMT_FULL
             beq         :+
             ldx         #SH_S_OPT_F - SH_S_CTL
+            jsr         SH_CTL_ADD
+:
+            lda         PAGE1::SHOPT
+            and         #HFS_FMT_PART
+            beq         :+
+            ldx         #SH_S_OPT_P - SH_S_CTL
             jsr         SH_CTL_ADD
 :
             lda         PAGE1::SHSIZE
@@ -589,4 +727,5 @@ SH_S_LABEL:     .byte   "label", 0
 SH_S_CHECK:     .byte   "check", 0
 SH_S_FIX:       .byte   "check fix", 0
 SH_S_OPT_F:     .byte   " -f", 0
+SH_S_OPT_P:     .byte   " -p", 0
 SH_S_OPT_S:     .byte   " -s ", 0

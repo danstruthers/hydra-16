@@ -39,6 +39,8 @@ FAR_GATE_INLINE     DEV_REGISTER,   ::DEV_REGISTER_FAR,     0   ; (It reads the 
 
 ; ... and to page 9 (the system's servers)
 FAR_GATE_INLINE     ENV_INIT,       ::ENV_INIT_P9,          9
+FAR_GATE_INLINE     CLOCK_TEXT,     ::CLOCK_TEXT_P9,        9   ; (ls -l: a stamp as a date and time)
+FAR_GATE_INLINE     TIME_DIV8,      ::TIME_DIV8_P9,         9
 FAR_JMP_GATE        MON_START,      ::MON_START,            0
 
 ; ... and to HyForth (page 1)

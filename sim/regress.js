@@ -30,7 +30,8 @@
 //           HydraFS volume made on the card, and the hydrafs module, to put files in it), quick (that HydraFS
 //           as the Hydra's quick format makes one: version 2, no free map written), claim (the card says it
 //           has that many blocks, more than its image: they read as zeros), image (a card image from
-//           sim/cards to start from, instead of a blank one: a copy, so the fixture never changes) }
+//           sim/cards to start from, instead of a blank one: a copy, so the fixture never changes), part
+//           (the HydraFS in a partition, after a FAT one of that many MB: 0 for none) }
 //           (files.sds[dev] = each one's path)
 //
 // Every test also fails if a task's stack came within STACK_MARGIN bytes of its bottom (the emulator reports
@@ -53,7 +54,16 @@ const TO_MON = BOOT + 'bye\\r' + W(1);                          // To WOZMON
 
 // A Forth number as "." prints it: " 0003"
 const num = n => ' ' + n.toString(16).toUpperCase().padStart(4, '0');
-
+// The sparse test's writes: 4 bytes ("WXYZ") at each offset, from a script on the card.  Some at the edges
+// (a block's end, a cluster's end, past the end, a hole's first and last clusters), then pseudo-random ones
+// (always the same) up to 200000: each makes a hole, or fills one in
+const SPARSE_WRITES = (() => {
+  const list = [0, 511, 4094, 200000, 12288, 8190, 196606, 102400, 106494, 61441];
+  for (let s = 12345, i = 0; i < 30; i++) { s = (s * 1103515245 + 12345) % 2147483648; list.push(Math.floor(s / 32768) % 200000); }
+  return list;
+})();
+const SPARSE_SCRIPT = '"s" 0 create .\r\n"WXYZ" @ 3 + cons wxyz drop\r\n: w seek 3 wxyz 4 write drop ;\r\n' +
+  SPARSE_WRITES.map(o => '3 $' + (o & 0xFFFF).toString(16).toUpperCase() + ' $' + (o >>> 16).toString(16).toUpperCase() + ' w\r\n').join('') + '3 close\r\n';
 // The CPU cycle test's program: at $E000 on every BIOS page (W powers up random), then STP.  Each
 // instruction with its W65C02S cycles (WDC's table and extras); the test checks the total.
 function cycleTestRom() {
@@ -360,14 +370,14 @@ const TESTS = [
       'ls /sd/0\na 4096\nbig 20480\nc 4096\ne 4096\ng 4096\n',   // 20 KB, in the holes and after
       '200 write . 3 close\n' + num(200) + '\n',
       '4 write . 3 close\n' + num(4) + num(4) + '\n',          // Append-only: the second write after the first
-      '0:/> ioerr .\n' + num(0x78) + '\n',                        // A write past the end (no holes)
+      '0:/> ioerr .\n' + num(0) + '\n',                           // A write past the end: zeros before it
       '0:/> ioerr .\n' + num(0x72) + '\n',                        // A read-only file (written as it was made)
       '0:/> ioerr .\n' + num(0x82) + '\n',                        // mkdir where there's a file
       '0:/> ioerr .\n' + num(0x82) + '\n',                        // A file where there's a directory
       '0:/> ioerr .\n' + num(0x84) + '\n',                        // Removing an open file
       '0:/> ioerr .\n' + num(0x82) + '\n',                        // Renaming to a name that's taken
       '0:/> ioerr .\n' + num(0x83) + '\n',                        // Removing a directory with a file in it
-      '0:/> ls\na 4096\nbig 20480\nt 0\ne 4096\nlog2 8\ng 4096\nro 4\nsub/\n',   // (Free entries used first)
+      '0:/> ls\na 4096\nbig 20480\nt 104\ne 4096\nlog2 8\ng 4096\nro 4\nsub/\n',   // (Free entries used first)
       '11 write . 3 close\n' + num(11) + '\n',                  // format TEST
       'ls /sd/1\nhi 5\n',
       '0:/> ioerr .\n' + num(0x81) + '\n',                        // The card is full
@@ -383,7 +393,8 @@ const TESTS = [
         const big = v.walk('big'), d = v.read(big), ext = v.extents(big);
         if (ext.length < 3 || !big.extBlock) return 'big is in ' + ext.length + ' extents, with no extent block';
         for (let i = 256; i < d.length; i += 256) if (!d.subarray(i, i + 256).equals(d.subarray(0, 256))) return 'big\'s data is wrong at ' + i;
-        if (v.walk('log2').size !== 8 || v.walk('t').size !== 0 || v.walk('ro').mode !== hydrafs.MODE_RO) return 'log2, t or ro is wrong';
+        const t = v.read(v.walk('t'));
+        if (v.walk('log2').size !== 8 || t.length !== 104 || t.subarray(0, 100).some(b => b) || v.walk('ro').mode !== hydrafs.MODE_RO) return 'log2, t or ro is wrong';
       });
       if (e) return e;
       if (open(1, v => v.label) !== 'TEST') return 'card 1\'s label isn\'t TEST';
@@ -436,6 +447,83 @@ const TESTS = [
         const p = v.check();
         if (p.length) return 'the card: ' + p[0];
         if (v.label !== 'TOYS' || !v.tryWalk('x')) return 'the card has label "' + v.label + '", and x ' + (v.tryWalk('x') ? '' : 'isn\'t ') + 'on it';
+      } finally { v.close(); }
+    },
+  },
+  {
+    name: 'partitions', about: 'HydraFS in a partition: one the PC tool made (read, written, checked), mkfs-part next to a FAT partition, format -p on a blank card, mkfs again in a partition',
+    sd: [{ dev: 0, mb: 4, blocks: 2048, part: 1, label: 'PARTED', hfs: v => v.put('hello.txt', Buffer.from('in a partition\r\n')) },
+      { dev: 1, mb: 4, fill: img => {                             // A card a PC partitioned: a FAT partition
+        img.set([0xFE, 0xFF, 0xFF, 0x0C, 0xFE, 0xFF, 0xFF], 447);   //   (blocks 2048-5047), and its data
+        img.writeUInt32LE(2048, 454); img.writeUInt32LE(3000, 458); img[510] = 0x55; img[511] = 0xAA;
+        img.write('FAT DATA', 2048 * 512);
+      } }, { dev: 2, mb: 4 }],
+    args: ['--cycles', '150000000', '--input', BOOT + ['ls /dev/sd/0/ctl\\r', 'cat hello.txt\\recho more > new.txt\\rls\\r', '0 fsck\\r',
+      '1 "NEWP" mkfs-part\\r', 'echo hi > /sd/1/a.txt\\rls /sd/1\\r', '1 "AGAIN" mkfs\\r',
+      'echo format -p BLANKP > /dev/sd/2/ctl\\r', 'ls /dev/sd/2/ctl\\r'].join(W(1))],
+    expect: ['hydrafs 0\n', '0:/> ls /dev/sd/0/ctl\nsdhc 3 MB 6144 blocks\nhydrafs label=PARTED\npartition at block 4096\nfree 1012 KB of 1020 KB\n',
+      'cat hello.txt\nin a partition\n', '0:/> ls\nhello.txt 16\nnew.txt 6\n', 'check: lost 0, unmarked 0, twice 0\n',
+      'mkfs-part\nsdhc 4 MB 8192 blocks\nhydrafs label=NEWP\npartition at block 6144\nfree 1020 KB of 1020 KB\n',
+      'ls /sd/1\na.txt 4\n', 'mkfs\nsdhc 4 MB 8192 blocks\nhydrafs label=AGAIN\npartition at block 6144\nfree 1020 KB of 1020 KB\n',
+      'ls /dev/sd/2/ctl\nsdhc 4 MB 8192 blocks\nhydrafs label=BLANKP\npartition at block 2048\nfree 3068 KB of 3068 KB\n'],
+    forbid: ['!DS PTR ERROR!', '!UNK WORD!', '!IO ERR!'],
+    check: (out, report, files) => {
+      const open = (dev, f) => { const v = new hydrafs.Volume(files.sds[dev]); try { return f(v); } finally { v.close(); } };
+      const e = open(0, v => v.check()[0] || (v.base !== 4096 ? 'at ' + v.base : '') || (v.tryWalk('new.txt') ? '' : 'no new.txt'));
+      if (e) return 'card 0: ' + e;
+      const img = fs.readFileSync(files.sds[1]), parts = hydrafs.mbrParts(img.subarray(0, 512));
+      if (!parts || parts[0].type !== 0x0C || parts[0].start !== 2048 || parts[0].blocks !== 3000 ||
+          img.toString('latin1', 2048 * 512, 2048 * 512 + 8) !== 'FAT DATA') return 'card 1\'s FAT partition changed';
+      if (parts[1].type !== hydrafs.PART_TYPE || parts[1].start !== 6144 || parts[1].blocks !== 2048) return 'card 1\'s HydraFS partition: ' + JSON.stringify(parts[1]);
+      const e1 = open(1, v => v.check()[0] || (v.label !== 'AGAIN' ? 'label ' + v.label : ''));
+      if (e1) return 'card 1: ' + e1;
+      const p2 = hydrafs.mbrParts(fs.readFileSync(files.sds[2]).subarray(0, 512));
+      if (!p2 || p2[0].type !== hydrafs.PART_TYPE || p2[0].start !== 2048 || p2[0].blocks !== 6144 || p2[1].type) return 'card 2\'s table: ' + JSON.stringify(p2);
+      return open(2, v => v.check()[0]);
+    },
+  },
+  {
+    name: 'clock', about: 'the clock: /dev/time from power-up, set and read; into a leap day and past one 2100 hasn\'t; bad dates; files\' stamps (ls -l, and the PC tool\'s dates)',
+    sd: [{ dev: 0, label: 'CLOCK', hfs: () => {} }],
+    args: ['--cycles', '120000000', '--input', BOOT + ['cat /dev/time\\r', 'echo 2026-09-29 18:05:30 > /dev/time\\recho a > a.txt\\rls -l a.txt\\r',
+      'echo 2024-02-28 23:59:59 > /dev/time\\r' + W(2) + 'echo b > b.txt\\rcat /dev/time\\r',
+      'echo 2100-02-28 23:59:59 > /dev/time\\r' + W(2) + 'cat /dev/time\\r',
+      '"/dev/time" "2023-02-29" ctl\\rioerr .\\r"/dev/time" "2026-13-01" ctl\\r"/dev/time" "2026-01-01 24:00" ctl\\r"/dev/time" "1999-12-31" ctl\\r',
+      '"/dev/time" "2135-12-31 23:59:59" ctl\\rcat /dev/time\\r'].join(W(1))],
+    expect: ['0:/> cat /dev/time\n2000-01-01 00:00:0', 'ls -l a.txt\na.txt 3 2026-09-29 18:05:3', 'cat /dev/time\n2024-02-29 00:00:0',
+      'cat /dev/time\n2100-03-01 00:00:0', 'ioerr .\n' + num(0x78) + '\n', '!IO ERR!', '!IO ERR!', '!IO ERR!', 'cat /dev/time\n2135-12-31 23:59:59\n'],
+    forbid: ['!DS PTR ERROR!', '!UNK WORD!'],
+    check: (out, report, files) => {                            // The stamps, as the PC tool reads them
+      const v = new hydrafs.Volume(files.sds[0]);
+      try {
+        const a = hydrafs.stampText(v.walk('a.txt').stamp), b = hydrafs.stampText(v.walk('b.txt').stamp);
+        if (!a.startsWith('2026-09-29 18:05:3')) return 'a.txt\'s stamp: ' + a;
+        if (!b.startsWith('2024-02-29 00:00:0')) return 'b.txt\'s stamp: ' + b;
+      } finally { v.close(); }
+    },
+  },
+  {
+    name: 'sparse', about: 'sparse files: writes past the end (a hole), into holes (split, the extents after moving along, into an extent block), across blocks and clusters; a 64 MB file on a 2 MB card; emptied',
+    sd: [{ dev: 0, mb: 2, label: 'SPARSE', hfs: v => v.put('fill.hys', Buffer.from(SPARSE_SCRIPT)) }],
+    args: ['--cycles', '400000000', '--input', BOOT + ['include fill.hys\\r' + W(60) + 'ls\\r', '0 fsck\\r',
+      '"big" 0 create .\\r3 0 $400 seek 3 here @ 4 write .\\r3 close\\rls\\r0 fsck\\r',
+      '"big" 0 create .\\r3 close\\r0 fsck\\r'].join(W(2))],
+    expect: ['0:/> ls\nfill.hys ', 's ' + SPARSE_WRITES.reduce((m, o) => Math.max(m, o + 4), 0) + '\n',
+      'check: lost 0, unmarked 0, twice 0\n', 'big 67108868\n', 'check: lost 0, unmarked 0, twice 0\n',
+      'check: lost 0, unmarked 0, twice 0\n'],                  // (Emptied: big's cluster back, the PC tool checks)
+    forbid: ['!DS PTR ERROR!', '!UNK WORD!', '!IO ERR!', '!LOW MEM!'],
+    check: (out, report, files) => {                            // The file, as the PC tool reads it
+      const v = new hydrafs.Volume(files.sds[0]);
+      try {
+        const p = v.check();
+        if (p.length) return 'the card: ' + p[0];
+        const big = v.walk('big');
+        if (big.size || v.extents(big).length) return 'big wasn\'t emptied';
+        const e = v.walk('s'), d = v.read(e), want = Buffer.alloc(d.length);
+        for (const o of SPARSE_WRITES) want.write('WXYZ', o, 'latin1');
+        if (!d.equals(want)) { let i = 0; while (d[i] === want[i]) i++; return 's differs at ' + i; }
+        const x = v.extents(e);
+        if (!x.some(y => y.start === hydrafs.HOLE) || !e.extBlock) return 's has no hole, or no extent block: ' + JSON.stringify(x);
       } finally { v.close(); }
     },
   },
@@ -712,7 +800,7 @@ function runTest(t) {
       fs.writeFileSync(f, img);
     }
     if (c.hfs) {                                                // A HydraFS on it, made with the host tool
-      hydrafs.mkfs(f, c.mb || 1, c.label || '', c.blocks, c.quick);   // (blocks: a smaller filesystem)
+      hydrafs.mkfs(f, c.mb || 1, c.label || '', c.blocks, c.quick, c.part === undefined ? -1 : c.part);   // (blocks: a smaller filesystem)
       const v = new hydrafs.Volume(f);
       try { c.hfs(v, hydrafs); } finally { v.close(); }
       if (fs.statSync(f).size > (c.mb || 1) << 20) fs.truncateSync(f, (c.mb || 1) << 20);   // (A HydraFS bigger than

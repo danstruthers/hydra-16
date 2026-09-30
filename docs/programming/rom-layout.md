@@ -18,13 +18,13 @@ Both come from one build (`os_rom/all.s`, linked by `os_rom/os_rom_C02.cfg`).  H
 | 0 | (global) | Reset, POST gate, the kernel (tasks, scheduler, IRQ dispatch, MMU, shared memory), serial and sound drivers, the IO layer's page 0 part, printing, WOZMON, thunks | `kernel/`, `drivers/serial.s`, `drivers/sound.s`, `io/io_p0.s`, `monitor/wozmon.s` |
 | 1 | `PAGE1` | HyForth: its interpreter, and its built-in words' headers and code, all run from ROM; a copy of the thunks | `hyforth/` |
 | 2 | `PAGE2` | The IO layer: fds, namespaces, pipes, `/dev/cons` and `/dev/ser` (its settings, and the fast serial and tick interrupt handlers: `serfast.s`), `/dev/snd`, the sound test tune | `io/`, `drivers/snd_test.s` |
-| 3 | `PAGE3` | Storage: SPI, the SD card's block layer, `/dev/sd`, and HydraFS's format and label | `drivers/spi.s`, `drivers/sd.s`, `io/sd_srv.s`, `io/hfs_format.s` |
+| 3 | `PAGE3` | Storage: SPI, the SD card's block layer, `/dev/sd`, and HydraFS's format, label, partitions and check | `drivers/spi.s`, `drivers/sd.s`, `io/sd_srv.s`, `io/hfs_format.s`, `io/hfs_check.s` |
 | 4 | `PAGE4` | POST and the self tests (MMU, scheduler, IO) | `tests/` |
 | 5 | `PAGE5` | Far pointers and references | `kernel/fp.s` |
-| 6 | `PAGE6` | The HydraFS server (`/sd/N/...`), in the storage task, on page 3's block layer | `io/page6.s`, `io/hfs_srv.s`, `io/hfs_write.s`, `io/hfs_check.s` |
+| 6 | `PAGE6` | The HydraFS server (`/sd/N/...`), in the storage task, on page 3's block layer: reading, writing, sparse files | `io/page6.s`, `io/hfs_srv.s`, `io/hfs_write.s`, `io/hfs_sparse.s` |
 | 7 | `PAGE7` | The shell: the boot shell's start (the volumes found, one selected), the prompt, the file and card commands HyForth's shell words call (`SH_CMD`), running programs (`run`, the `.hyx` loader, arguments), redirection | `shell/page7.s`, `shell.s`, `files.s`, `run.s`, `redir.s` |
 | 8 | `PAGE8` | The text editor (`edit`): a ROM program, run in a task of its own | `shell/page8.s`, `shell/edit.s` |
-| 9 | `PAGE9` | The system's servers that run in their client's task: `/dev/proc` and `/env` (each task's environment) | `io/page9.s`, `io/proc_srv.s`, `io/env_srv.s` |
+| 9 | `PAGE9` | The system's servers that run in their client's task: `/dev/proc`, `/env` (each task's environment) and `/dev/time` (the clock: `CLOCK_GET`, `CLOCK_SET`) | `io/page9.s`, `io/proc_srv.s`, `io/env_srv.s`, `io/time_srv.s` |
 | A | `PAGE1::FAR` | HyForth's far words (their code: the shell's and IO words, tasks, sound, memory records, multiply and divide ...; their headers are on page 1), its error messages and `MALLOC`, and the disassembler | `hyforth/pagea.s`, `hyforth/farwords.s`, `monitor/disasm.s` |
 | B-F | | Empty | |
 

@@ -189,12 +189,16 @@ SH_R_DO:
             ldy         #>PAGE1::SHBUF2
             ldx         #IO_MODE_READ
             jsr         IO_OPEN
-            bcs         @done
+            bcc         @far2
+            jmp         @done
+@far2:
             sta         SH_R_FD
             lda         PAGE1::REDIN                        ; stdin kept (the first time): with its read-ahead
             bpl         :+                                  ;   given back (SH_INSAVE)
             jsr         SH_INSAVE
-            bcs         @close_fail
+            bcc         @far1
+            jmp         @close_fail
+@far1:
             sta         PAGE1::REDIN
 :
             ldx         #0
@@ -233,7 +237,19 @@ SH_R_DO:
             ldy         #>PAGE1::SHBUF2
             ldx         #IO_MODE_WRITE
             jsr         IO_CREATE
+            bcc         @made
+            cmp         #ERR_IO_BAD_REQ                     ; A device (its server makes no files): opened
+            beq         :+                                  ;   for writing (echo check > /dev/sd/0/ctl)
+            sec
+            rts
+:
+            lda         #<PAGE1::SHBUF2
+            ldy         #>PAGE1::SHBUF2
+            ldx         #IO_MODE_WRITE
+            jsr         IO_OPEN
             bcs         @done
+
+@made:
             sta         SH_R_FD
 
 @out:

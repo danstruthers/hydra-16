@@ -1,8 +1,8 @@
 .debuginfo
 
 ; ****************************************************************************
-; BIOS ROM page 3 (W = 3): storage (SPI, the SD card, /dev/sd).  The HydraFS server, in the same task, is on
-; page 6 (io/page6.s).
+; BIOS ROM page 3 (W = 3): storage (SPI, the SD card, /dev/sd), and HydraFS's format, label and check (the
+; card commands on /dev/sd/N/ctl).  The HydraFS server, in the same task, is on page 6 (io/page6.s).
 ;
 ;   This file is included inside `.scope PAGE3` (see all.s), before the rest of page 3, so the gate labels
 ;   below take precedence over the page 0 routines of the same name for all page 3 code.  Page 3 code
@@ -16,6 +16,7 @@ FAR_GATE_INLINE     IO_SRV_UNMAP,   ::IO_SRV_UNMAP,         0
 FAR_GATE_INLINE     MM_ALLOC,       ::MM_ALLOC,             0
 FAR_GATE_INLINE     MM_LOCK,        ::MM_LOCK,              0
 FAR_GATE_INLINE     MM_SET_FLOOR,   ::MM_SET_FLOOR,         0   ; (HydraFS's scratch page)
+FAR_GATE_INLINE     WRITE_CHAR,     ::WRITE_CHAR,           0   ; (Progress: straight to the console)
 
 ; Gates to the HydraFS server's routines /dev/sd uses (page 6; the aliases are in all.s)
 FAR_GATE_INLINE     HFS_FORGET,     ::HFS_FORGET_P6,        6   ; (A card started again)
@@ -26,8 +27,14 @@ FAR_GATE_INLINE     HFS_FINISH,     ::HFS_FINISH_P6,        6
 FAR_GATE_INLINE     HFS_SHR,        ::HFS_SHR_P6,           6
 FAR_GATE_INLINE     HFS_VOLUME,     ::HFS_VOLUME_P6,        6
 FAR_GATE_INLINE     HFS_SB_GET,     ::HFS_SB_GET_P6,        6
-FAR_GATE_INLINE     HFS_PG_START,   ::HFS_PG_START_P6,      6   ; (A full format's progress)
-FAR_GATE_INLINE     HFS_PG_TICK,    ::HFS_PG_TICK_P6,       6
-FAR_GATE_INLINE     HFS_PG_END,     ::HFS_PG_END_P6,        6
-FAR_GATE_INLINE     HFS_CHECK,      ::HFS_CHECK_P6,         6   ; ("check")
-FAR_GATE_INLINE     HFS_CTL_LINES,  ::HFS_CTL_LINES_P6,     6   ; (The ctl file's text: HydraFS's lines)
+FAR_GATE_INLINE     HFS_AT,         ::HFS_AT_P6,            6   ; (The check: io/hfs_check.s)
+FAR_GATE_INLINE     HFS_AT_END,     ::HFS_AT_END_P6,        6
+FAR_GATE_INLINE     HFS_CARD_X,     ::HFS_CARD_X_P6,        6
+FAR_GATE_INLINE     HFS_EACH_RUN,   ::HFS_EACH_RUN_P6,      6
+FAR_GATE_INLINE     HFS_ENT_READ,   ::HFS_ENT_READ_P6,      6
+FAR_GATE_INLINE     HFS_FILE_BLOCK, ::HFS_FILE_BLOCK_P6,    6
+FAR_GATE_INLINE     HFS_LOAD,       ::HFS_LOAD_P6,          6
+FAR_GATE_INLINE     HFS_MAP_BIT,    ::HFS_MAP_BIT_P6,       6
+FAR_GATE_INLINE     HFS_MAP_CHANGED, ::HFS_MAP_CHANGED_P6,  6
+FAR_GATE_INLINE     HFS_PUT,        ::HFS_PUT_P6,           6
+FAR_GATE_INLINE     HFS_PUT_DEC,    ::HFS_PUT_DEC_P6,       6

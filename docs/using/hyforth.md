@@ -190,6 +190,7 @@ The control words aren't built in: they're defined in HyForth itself, by the **t
 | `cd [dir]` | `(cd) ( sz -- )` | Change directory.  `cd` alone: `$HOME`, or the current card's root |
 | `pwd` | | Show the current directory, as a whole path: `/sd/0/games` |
 | `ls [dir]` | `(ls) ( sz -- )` | List a directory, a line per entry: `name size`, or `name/` for a directory (`ls` alone: the current one).  A file: its text (`ls /dev/sd/0/ctl`) |
+| `ls -l [dir]` | | The same, with each entry's date and time (its last change, by the Hydra's clock: `name size 2026-09-29 18:05:30`); `ls -l file` shows one file's line |
 | `cat [file]` | | Show a file; with no name, copy stdin to stdout until end of file |
 | `cp from to` | `(cp) ( sz-from sz-to -- )` | Copy a file: to a new name (a file that's there is replaced), or into a directory, with the same name |
 | `mv from to` | `(mv) ( sz-from sz-to -- )` | Rename a file or directory (`to` a plain name: in the same directory); or move a file (`to` a path, or a directory to move it into: a copy, then the original removed) |
@@ -331,6 +332,7 @@ Hello, world
 | `vols` | | The cards: for each of 0-7, what it is (or `none`), and its HydraFS label, free space and last check |
 | `mkfs` | `( n sz-label -- )` | Make an empty HydraFS on card n (everything on it is lost): `0 "GAMES" mkfs`.  A quick format: a moment, whatever the card's size |
 | `mkfs-size` | `( n sz-label mb -- )` | The same, `mb` megabytes big (up to 65535, `$FFFF`), if the card is bigger: `0 "SMALL" 4096 mkfs-size` |
+| `mkfs-part` | `( n sz-label -- )` | The same, in a HydraFS partition: one is made after the card's other partitions (a FAT one a PC made, say), or with a new partition table: `0 "GAMES" mkfs-part`.  (`mkfs` on a card that has one formats the partition) |
 | `mkfs-full` | `( n sz-label -- )` | A full format: the whole free map written now (a version 1 HydraFS), with its progress shown: minutes on a big card |
 | `relabel` | `( n sz-label -- )` | Give card n's HydraFS a new label: `0 "TOYS" relabel` |
 | `fsck` | `( n -- )` | Check card n's HydraFS, and show what it found |
@@ -402,7 +404,11 @@ check: lost 0, unmarked 0, twice 0
 
 `fsck` counts clusters lost (marked in use, but nothing uses them: wasted space), unmarked (in use, but marked free: a new file could be given them) and used twice (two files share them: one is damaged).  `fsfix` frees the lost ones and marks the unmarked ones; a cluster used twice is only shown, as a person has to decide which file keeps it.  A card takes a pass for each 256 MB, so checking a big one takes a while; from 4 GB up, `10% 20% ... 100%` shows how far it's got.  Empty space checks quickly: an empty 244 GB card takes about a minute and a half (quick-formatted), or 7 minutes (full-formatted: its whole free map is read).
 
-`mkfs` is a **quick format**: it writes just the superblock, and the free map is written as the card fills, so a 244 GB card is ready in a moment.  `mkfs-full` writes the whole map first (about 13 minutes for 244 GB, with its progress shown), for a card an older ROM will read.  `mkfs-size` makes a HydraFS smaller than the card.  By hand, the ctl command is `format [-f] [-s size] [label]` (size in megabytes, or gigabytes with a G: `"/dev/sd/0/ctl" "format -s 8G WORK" ctl`).
+`mkfs` is a **quick format**: it writes just the superblock, and the free map is written as the card fills, so a 244 GB card is ready in a moment.  `mkfs-full` writes the whole map first (about 13 minutes for 244 GB, with its progress shown), for a card an older ROM will read.  `mkfs-size` makes a HydraFS smaller than the card.  `mkfs-part` puts it in a partition, so the card can also hold a FAT partition for a PC: partition the card on the PC first, leaving room after the FAT partition, then `mkfs-part` on the Hydra.  By hand, the ctl command is `format [-f] [-p] [-s size] [label]` (size in megabytes, or gigabytes with a G: `"/dev/sd/0/ctl" "format -s 8G WORK" ctl`, or `echo format -p WORK > /dev/sd/0/ctl`).
+
+**The date and time:** `cat /dev/time` shows the Hydra's clock, and `echo 2026-09-29 18:05 > /dev/time` sets it.  It starts at 2000-01-01 at power-up (the Hydra has no clock that runs while it's off), so set it after a boot for the files you write to have the right dates (`ls -l` shows them); `boot.hys` can't know the time, but a line you type can.
+
+**Sparse files:** a write that starts past a file's end (after `seek`) fills the gap with zeros, and whole 4 KB clusters of the gap take no space on the card: a file can have holes.  `"f" 0 create .` then `3 0 $400 seek 3 here @ 4 write .` makes a 64 MB file that takes 4 KB.
 
 ### **Pipelines**
 

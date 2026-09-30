@@ -10,11 +10,13 @@
 HFS_S_MAGIC:    .byte   "HYDRAFS1"
 
 ; ****************************************************************************
-; "format [-f] [-s size] [label]" and "label <text>" on /dev/sd/N/ctl (from SD_CTL_FS in the SD server: the
+; "format [-f] [-p] [-s size] [label]" and "label <text>" on /dev/sd/N/ctl (from SD_CTL_FS in the SD server: the
 ; card is SD_DEV, and the text after the word is in HFS_STAT, zero-padded).  OUT: C = 0; or C = 1, .A = error
 
 ; Make an empty HydraFS on the card: block 0 cleared, then the superblock, with an empty root directory.
-; Any HydraFS file open on the card is let go of.
+; Any HydraFS file open on the card is let go of.  On a card with a HydraFS partition, it goes in the
+; partition (the others, and the partition table, are left alone); "-p" makes one on a card without one,
+; after its other partitions (HFS_PART_SETUP); otherwise it's the whole card.
 ;   A quick format (the default) writes no free map: the volume is version 2, and its map's blocks are
 ; written as the space is first used (HFS_MAP_WRITTEN, page 6).  "-f" (a full format) writes the whole map
 ; now (all free), for a version 1 volume, showing its progress: a 32 GB card takes 2050 block writes, about
@@ -36,7 +38,10 @@ HFS_FORMAT:
 @far1:
 :
             jsr         HFS_FORGET
-            jsr         SD_CARD_SIZE                        ; SD_LBA = its blocks
+            jsr         HFS_PART_SETUP                      ; Where it goes (HFS_V_BASE), SD_LBA = its blocks
+            bcc         :+
+            jmp         @done
+:
             lda         HFS_FMT_BLKS                        ; A size asked for, smaller than the card: that
             ora         HFS_FMT_BLKS + 1
             ora         HFS_FMT_BLKS + 2
@@ -228,8 +233,8 @@ HFS_FORMAT_SB:
             dey
             bpl         :-
             ldy         #HFS_SB_VERSION                     ; Version 1: the whole map written (-f); 2: none
-            lda         #HFS_VERSION_FULL                   ;   of it yet (HFS_SB_MAPINIT = 0)
-            ldx         HFS_FMT_OPT
+            lda         #HFS_FMT_FULL                       ;   of it yet (HFS_SB_MAPINIT = 0)
+            and         HFS_FMT_OPT
             bne         :+
             lda         #HFS_VERSION
 :
@@ -272,10 +277,10 @@ HFS_FORMAT_SB:
             rts
 
 .assert     HFS_SB_MAPSZ + 4 = HFS_SB_DATA && HFS_SB_DATA + 4 = HFS_SB_FREE, error, "HFS_FORMAT_SB puts them one after another"
-.assert     HFS_FMT_FULL = 1, error, "HFS_FORMAT_SB: HFS_FMT_OPT is 0 or HFS_FMT_FULL"
+.assert     HFS_FMT_FULL = HFS_VERSION_FULL, error, "HFS_FORMAT_SB: HFS_FMT_FULL is a full format's version"
 .assert     HFS_VERSION_FULL = 1 .and HFS_VERSION = 2, error, "HFS_FORMAT_SB: a quick format is version 2"
 
-; The options before the label in HFS_STAT: "-f" (HFS_FMT_OPT = HFS_FMT_FULL) and "-s size" (HFS_FMT_BLKS:
+; The options before the label in HFS_STAT: "-f" and "-p" (HFS_FMT_OPT: HFS_FMT_FULL, HFS_FMT_PART), and "-s size" (HFS_FMT_BLKS:
 ; megabytes, or gigabytes with a G after it; nothing, or 0: the whole card).  The label that follows is
 ; moved to HFS_STAT's start, and cut to 31 characters.  OUT: C = 0; or C = 1, .A = ERR_IO_BAD_REQ (an option
 ; this doesn't know).  Modifies: .A, .X, .Y
@@ -305,7 +310,14 @@ HFS_FMT_OPTIONS:
             cmp         #'f'
             bne         :+
             lda         #HFS_FMT_FULL
-            sta         HFS_FMT_OPT
+            bra         @option
+:
+            cmp         #'p'
+            bne         :+
+            lda         #HFS_FMT_PART
+
+@option:
+            tsb         HFS_FMT_OPT
             bra         @next
 :
             cmp         #'s'
@@ -463,3 +475,392 @@ HFS_LABEL:
 
 @done:
             jmp         HFS_FINISH
+
+; ****************************************************************************
+; Partitions (docs/plans/HYDRAFS.md): a card's HydraFS partition, found in its partition table (block 0),
+; and made for it by "format -p"
+
+; Is block 0 of card SD_DEV, in the cache (read from the card itself, not a partition), a partition table
+; with a HydraFS partition (HFS_PART_TYPE) in it?  Called by HFS_VOLUME (page 6) too.
+; OUT: C = 0: HFS_PTR -> its entry; or C = 1.  Modifies: .A, .X, .Y
+HFS_PART_FIND:
+            jsr         HFS_MBR_OK
+            bcs         @done
+            ldx         #4                                  ; (Its 4 entries)
+
+@entry:
+            ldy         #MBR_P_TYPE
+            lda         (HFS_PTR),Y
+            cmp         #HFS_PART_TYPE
+            beq         @found
+            jsr         HFS_MBR_NEXT
+            dex
+            bne         @entry
+            sec
+
+@done:
+            rts
+
+@found:
+            clc
+            rts
+
+; Is the block in the cache a partition table: $55 $AA at its end, and each entry's status $00 or $80?
+; (A FAT volume that isn't partitioned has code where the table would be.)
+; OUT: C = 0: HFS_PTR -> its first entry; or C = 1.  Modifies: .A, .Y
+HFS_MBR_OK:
+            lda         SD_CACHE
+            clc
+            adc         #<MBR_TABLE
+            sta         HFS_PTR
+            lda         SD_CACHE + 1
+            adc         #>MBR_TABLE
+            sta         HFS_PTR + 1
+            ldy         #MBR_SIG - MBR_TABLE
+            lda         (HFS_PTR),Y
+            cmp         #$55
+            bne         @no
+            iny
+            lda         (HFS_PTR),Y
+            cmp         #$AA
+            bne         @no
+            ldy         #3 * MBR_ENTRY_SIZE + MBR_P_STATUS
+
+@status:
+            lda         (HFS_PTR),Y
+            beq         :+
+            cmp         #$80
+            bne         @no
+:
+            tya
+            sec
+            sbc         #MBR_ENTRY_SIZE
+            tay
+            bcs         @status
+            clc
+            rts
+
+@no:
+            sec
+            rts
+
+; HFS_PTR on to the next entry.  Modifies: .A
+HFS_MBR_NEXT:
+            lda         HFS_PTR
+            clc
+            adc         #MBR_ENTRY_SIZE
+            sta         HFS_PTR
+            bcc         :+
+            inc         HFS_PTR + 1
+:
+            rts
+
+; Where a format's HydraFS goes (card SD_DEV = HFS_CARD, started): its HFS_V_BASE, and SD_LBA = its blocks.
+; On a card with a HydraFS partition, in it (up to the card's end); with HFS_FMT_PART (-p), a card without
+; one gets one (HFS_PART_MAKE); otherwise, the whole card.
+; OUT: C = 0; or C = 1, .A = error.  Modifies: .A, .X, .Y, HFS_T4, HFS_N4, HFS_D, HFS_C
+HFS_PART_SETUP:
+            jsr         HFS_BASE_ZERO
+            stz         SD_LBA                              ; Block 0 of the card
+            stz         SD_LBA + 1
+            stz         SD_LBA + 2
+            stz         SD_LBA + 3
+            jsr         SD_CACHE_LOAD
+            bcs         @done
+            jsr         HFS_PART_FIND
+            bcc         @part
+            lda         HFS_FMT_OPT
+            and         #HFS_FMT_PART
+            beq         @whole
+            jsr         HFS_PART_MAKE
+            bcs         @done
+
+@part:
+            jsr         HFS_BASE_X                          ; The base: the partition's first block ...
+            ldy         #MBR_P_START
+:
+            lda         (HFS_PTR),Y
+            sta         HFS_V_BASE,X
+            inx
+            iny
+            cpy         #MBR_P_START + 4
+            bne         :-
+            ldx         #0                                  ;   and HFS_T4 = its size
+:
+            lda         (HFS_PTR),Y
+            sta         HFS_T4,X
+            inx
+            iny
+            cpy         #MBR_P_BLOCKS + 4
+            bne         :-
+            jsr         SD_CARD_SIZE                        ; SD_LBA = the card's blocks after the base
+            jsr         HFS_BASE_X
+            sec
+            lda         SD_LBA
+            sbc         HFS_V_BASE,X
+            sta         SD_LBA
+            lda         SD_LBA + 1
+            sbc         HFS_V_BASE + 1,X
+            sta         SD_LBA + 1
+            lda         SD_LBA + 2
+            sbc         HFS_V_BASE + 2,X
+            sta         SD_LBA + 2
+            lda         SD_LBA + 3
+            sbc         HFS_V_BASE + 3,X
+            sta         SD_LBA + 3
+            bcc         @bad                                ; (It starts past the card's end)
+            lda         HFS_T4                              ; The partition's size, if that's less
+            cmp         SD_LBA
+            lda         HFS_T4 + 1
+            sbc         SD_LBA + 1
+            lda         HFS_T4 + 2
+            sbc         SD_LBA + 2
+            lda         HFS_T4 + 3
+            sbc         SD_LBA + 3
+            bcs         @ok
+            ldx         #3
+:
+            lda         HFS_T4,X
+            sta         SD_LBA,X
+            dex
+            bpl         :-
+
+@ok:
+            clc
+            rts
+
+@whole:
+            jsr         SD_CARD_SIZE
+            clc
+
+@done:
+            rts
+
+@bad:
+            lda         #ERR_IO_MEDIA
+            sec
+            rts
+
+; A HydraFS partition for card SD_DEV, after its other partitions, to the card's end, in the partition
+; table in block 0 (in the cache; a card with no table gets one, with the partition from block
+; HFS_PART_ALIGN).  It starts on a 1 MB boundary (HFS_PART_ALIGN).  The new table goes to the card.
+; OUT: C = 0: HFS_PTR -> its entry; or C = 1, .A = ERR_IO_FULL (no room, or no free entry) or a card error.
+; Modifies: .A, .X, .Y, HFS_T4, HFS_N4, HFS_D, HFS_C
+HFS_PART_MAKE:
+            jsr         HFS_MBR_OK
+            bcc         @table
+            lda         SD_CACHE                            ; No table: a new one (the block all zeros, then
+            sta         HFS_PTR                             ;   the table's signature)
+            lda         SD_CACHE + 1
+            sta         HFS_PTR + 1
+            lda         #0
+            tay
+:
+            sta         (HFS_PTR),Y
+            iny
+            bne         :-
+            inc         HFS_PTR + 1
+:
+            sta         (HFS_PTR),Y
+            iny
+            bne         :-
+            ldy         #<MBR_SIG
+            lda         #$55
+            sta         (HFS_PTR),Y
+            iny
+            lda         #$AA
+            sta         (HFS_PTR),Y
+            jsr         HFS_MBR_OK                          ; (HFS_PTR -> the table)
+
+@table:
+            ldx         #3                                  ; HFS_T4 = where the last partition ends
+:
+            stz         HFS_T4,X
+            dex
+            bpl         :-
+            lda         #$FF                                ; HFS_C = a free entry's offset ($FF: none)
+            sta         HFS_C
+            ldx         #0                                  ; (.X = the entry's offset)
+
+@entry:
+            txa
+            ora         #MBR_P_TYPE
+            tay
+            lda         (HFS_PTR),Y
+            bne         @used
+            lda         HFS_C                               ; (The first free one)
+            bpl         @next
+            stx         HFS_C
+            bra         @next
+
+@used:
+            txa                                             ; HFS_N4 = its first block, HFS_D its size
+            ora         #MBR_P_START
+            tay
+            phx
+            ldx         #0
+:
+            lda         (HFS_PTR),Y
+            sta         HFS_N4,X
+            iny
+            inx
+            cpx         #8
+            bne         :-
+            plx
+            clc                                             ; HFS_N4 = where it ends
+            lda         HFS_N4
+            adc         HFS_D
+            sta         HFS_N4
+            lda         HFS_N4 + 1
+            adc         HFS_D + 1
+            sta         HFS_N4 + 1
+            lda         HFS_N4 + 2
+            adc         HFS_D + 2
+            sta         HFS_N4 + 2
+            lda         HFS_N4 + 3
+            adc         HFS_D + 3
+            sta         HFS_N4 + 3
+            lda         HFS_T4                              ; Past the last one so far?
+            cmp         HFS_N4
+            lda         HFS_T4 + 1
+            sbc         HFS_N4 + 1
+            lda         HFS_T4 + 2
+            sbc         HFS_N4 + 2
+            lda         HFS_T4 + 3
+            sbc         HFS_N4 + 3
+            bcs         @next
+            phx
+            ldx         #3
+:
+            lda         HFS_N4,X
+            sta         HFS_T4,X
+            dex
+            bpl         :-
+            plx
+
+@next:
+            txa
+            clc
+            adc         #MBR_ENTRY_SIZE
+            tax
+            cpx         #4 * MBR_ENTRY_SIZE
+            bne         @entry
+            lda         HFS_C
+            bpl         @far6
+            jmp         @full
+@far6:
+            clc                                             ; The new one's first block: the end rounded up
+            lda         HFS_T4                              ;   to HFS_PART_ALIGN (and not block 0)
+            adc         #<(HFS_PART_ALIGN - 1)
+            lda         HFS_T4 + 1
+            adc         #>(HFS_PART_ALIGN - 1)
+            and         #<~(>(HFS_PART_ALIGN - 1))
+            sta         HFS_T4 + 1
+            lda         HFS_T4 + 2
+            adc         #0
+            sta         HFS_T4 + 2
+            lda         HFS_T4 + 3
+            adc         #0
+            sta         HFS_T4 + 3
+            bcc         @far5
+            jmp         @full
+@far5:
+            stz         HFS_T4
+            lda         HFS_T4 + 1
+            ora         HFS_T4 + 2
+            ora         HFS_T4 + 3
+            bne         :+
+            lda         #>HFS_PART_ALIGN
+            sta         HFS_T4 + 1
+:
+            jsr         SD_CARD_SIZE                        ; HFS_N4 = its size: the rest of the card
+            sec
+            lda         SD_LBA
+            sbc         HFS_T4
+            sta         HFS_N4
+            lda         SD_LBA + 1
+            sbc         HFS_T4 + 1
+            sta         HFS_N4 + 1
+            lda         SD_LBA + 2
+            sbc         HFS_T4 + 2
+            sta         HFS_N4 + 2
+            lda         SD_LBA + 3
+            sbc         HFS_T4 + 3
+            sta         HFS_N4 + 3
+            bcc         @full
+            lda         HFS_N4 + 3                          ; (Room for a HydraFS: HFS_FORMAT checks it)
+            ora         HFS_N4 + 2
+            ora         HFS_N4 + 1
+            beq         @full
+            ldy         HFS_C                               ; The entry
+            lda         #0
+            sta         (HFS_PTR),Y
+            iny
+            ldx         #0
+:
+            lda         HFS_PART_CHS,X                      ; (Its blocks as cylinder, head, sector: none)
+            sta         (HFS_PTR),Y
+            iny
+            inx
+            cpx         #7
+            bne         :-
+            ldx         #0
+:
+            lda         HFS_T4,X                            ; Its first block and size (HFS_N4 then)
+            sta         (HFS_PTR),Y
+            iny
+            inx
+            cpx         #4
+            bne         :-
+            ldx         #0
+:
+            lda         HFS_N4,X
+            sta         (HFS_PTR),Y
+            iny
+            inx
+            cpx         #4
+            bne         :-
+            stz         SD_LBA                              ; The table to the card (the cache has it)
+            stz         SD_LBA + 1
+            stz         SD_LBA + 2
+            stz         SD_LBA + 3
+            lda         SD_CACHE
+            sta         SD_BUF
+            lda         SD_CACHE + 1
+            sta         SD_BUF + 1
+            jsr         SD_WRITE_BLOCK
+            bcs         @done
+            jmp         HFS_PART_FIND
+
+@full:
+            lda         #ERR_IO_FULL
+            sec
+
+@done:
+            stz         SD_CVALID                           ; (The cache's block 0 may differ from the card's)
+            rts
+
+HFS_PART_CHS:   .byte   $FE, $FF, $FF, HFS_PART_TYPE, $FE, $FF, $FF
+
+.assert     HFS_D = HFS_N4 + 4, error, "HFS_PART_MAKE: an entry's first block and size go in HFS_N4, HFS_D"
+.assert     MBR_P_CHS1 = 1 && MBR_P_TYPE = 4 && MBR_P_CHS2 = 5 && MBR_P_START = 8 && MBR_P_BLOCKS = 12, error, "HFS_PART_MAKE: the entry's fields"
+.assert     (HFS_PART_ALIGN & $FF) = 0, error, "HFS_PART_MAKE: HFS_PART_ALIGN is whole pages of blocks"
+
+; Card HFS_CARD's HydraFS starts at block 0 (until HFS_PART_SETUP finds otherwise).  Modifies: .A, .X, .Y
+HFS_BASE_ZERO:
+            jsr         HFS_BASE_X
+            ldy         #4
+:
+            stz         HFS_V_BASE,X
+            inx
+            dey
+            bne         :-
+            rts
+
+; .X = card HFS_CARD * 4 (its HFS_V_BASE).  Modifies: .A
+HFS_BASE_X:
+            lda         HFS_CARD
+            asl
+            asl
+            tax
+            rts

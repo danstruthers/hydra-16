@@ -4,11 +4,14 @@
 // emulator (--sd), and moves files to and from a real card's image (written or read with a disk imager).
 //
 // Usage: node hydrafs.js COMMAND IMAGE [ARGS]
-//   mkfs IMAGE MB [LABEL] [-q]  a new, empty HydraFS image of MB megabytes (an existing file is replaced);
-//                               -q: as the Hydra's quick format makes one (version 2: no free map written)
+//   mkfs IMAGE MB [LABEL] [-q] [-p FATMB]  a new, empty HydraFS image of MB megabytes (an existing file is
+//                               replaced); -q: as the Hydra's quick format makes one (version 2: no free map
+//                               written); -p: in a partition (a partition table in block 0), after a FAT
+//                               one of FATMB megabytes from block 2048, left unformatted (0: none)
 //   info IMAGE                  the label, size, and free space
-//   ls IMAGE [PATH]             a directory's entries ("name size", "name/" for a directory), as the
-//                               Hydra's text directory read gives them; or one file's
+//   ls IMAGE [-l] [PATH]        a directory's entries ("name size", "name/" for a directory), as the
+//                               Hydra's text directory read gives them; or one file's.  -l: with each
+//                               one's stamp as a date and time, as the Hydra's ls -l shows it
 //   put IMAGE FILE PATH         copy a PC file in (PATH: the new name, or a directory to put it in)
 //   get IMAGE PATH FILE         copy a file out to the PC
 //   mkdir IMAGE PATH            make a directory (and any missing ones above it)
@@ -17,6 +20,9 @@
 //   check IMAGE                 check the free map against the files (lost or doubly used clusters)
 // Paths on the card start at its root: /games/star.frt (the Hydra sees it as /sd/N/games/star.frt); the
 // first / can be left out (in Git Bash, leave it out: it turns /games into a Windows path).
+//
+// A card with a partition table has its HydraFS in its partition of type PART_TYPE ($7F), which the other
+// commands find, as the Hydra does.
 //
 // As a module: require('./hydrafs.js') gives { mkfs, Volume }, e.g. for regress.js's test cards.
 // ****************************************************************************
@@ -28,6 +34,40 @@ const BLOCK = 512, CLUSTER_SHIFT = 3, CLUSTER_BLOCKS = 1 << CLUSTER_SHIFT, CLUST
 const ENTRY = 64, NAME_MAX = 31, MAP_BITS = BLOCK * 8, EXT_PER_BLOCK = 84, EXT_MAX = 0xFFFF;
 const MAGIC = 'HYDRAFS1', VERSION_FULL = 1, VERSION = 2, ROOT_LOC = { block: 0, off: 64 };
 const MODE_DIR = 0x80, MODE_APPEND = 0x40, MODE_RO = 0x01;
+const PART_TYPE = 0x7F, PART_FAT32 = 0x0C, PART_ALIGN = 2048;
+// A hole: an extent whose first cluster is HOLE: its clusters read as zeros, and aren't the card's
+const HOLE = 0xFFFFFFFF, isHole = x => x.start === HOLE;
+
+// A stamp is the Hydra clock's time: seconds since 2000-01-01 00:00:00, local time (as the Hydra's clock is
+// set).  Now, on the PC; and a stamp as the Hydra shows it (/dev/time, ls -l)
+const EPOCH = Date.UTC(2000, 0, 1) / 1000;
+const hydraNow = () => Math.max(0, Math.floor(Date.now() / 1000 - new Date().getTimezoneOffset() * 60 - EPOCH));
+const stampText = s => new Date((s + EPOCH) * 1000).toISOString().slice(0, 19).replace('T', ' ');
+
+// A partition table in block 0 (a Buffer), as the Hydra reads one: $55 $AA, and each entry's status $00 or
+// $80.  Its entries ({ type, start, blocks }), or null
+function mbrParts(b0) {
+  if (b0[510] !== 0x55 || b0[511] !== 0xAA) return null;
+  const parts = [];
+  for (let i = 0; i < 4; i++) {
+    const o = 446 + i * 16;
+    if (b0[o] !== 0 && b0[o] !== 0x80) return null;
+    parts.push({ type: b0[o + 4], start: b0.readUInt32LE(o + 8), blocks: b0.readUInt32LE(o + 12) });
+  }
+  return parts;
+}
+
+// A partition table: the entries ({ type, start, blocks }) in a block 0
+function mbrMake(parts) {
+  const b0 = Buffer.alloc(BLOCK);
+  parts.forEach((p, i) => {
+    const o = 446 + i * 16;
+    b0.set([0xFE, 0xFF, 0xFF, p.type, 0xFE, 0xFF, 0xFF], o + 1);
+    b0.writeUInt32LE(p.start, o + 8); b0.writeUInt32LE(p.blocks, o + 12);
+  });
+  b0[510] = 0x55; b0[511] = 0xAA;
+  return b0;
+}
 
 // A directory entry (64 bytes, at loc: its block and offset)
 class Entry {
@@ -47,41 +87,53 @@ class Entry {
 }
 
 // Make an empty HydraFS image: MB megabytes (or blocks, if given), with a label.  quick: as the Hydra's quick
-// format: version 2, with none of the free map written (it reads as all free until it's used)
-function mkfs(file, mb, label = '', blocks = Math.floor(mb * 1024 * 1024 / BLOCK), quick = false) {
+// format: version 2, with none of the free map written (it reads as all free until it's used).  fatMb >= 0:
+// in a partition, after a FAT one of fatMb megabytes (0: none) from block PART_ALIGN (unformatted)
+function mkfs(file, mb, label = '', blocks = Math.floor(mb * 1024 * 1024 / BLOCK), quick = false, fatMb = -1) {
   if (label.length > NAME_MAX) throw new Error('the label is longer than ' + NAME_MAX + ' characters');
   const mapBlocks = Math.ceil(Math.floor((blocks - 1) / CLUSTER_BLOCKS) / MAP_BITS);
   const dataStart = 1 + mapBlocks, clusters = Math.floor((blocks - dataStart) / CLUSTER_BLOCKS);
   if (clusters < 2) throw new Error('too small for HydraFS');
   const fd = fs.openSync(file, 'w+');
-  fs.ftruncateSync(fd, blocks * BLOCK);
+  let base = 0;
+  if (fatMb >= 0) {                                                  // The partition table
+    const fatBlocks = fatMb * 2048, parts = [];
+    if (fatBlocks) parts.push({ type: PART_FAT32, start: PART_ALIGN, blocks: fatBlocks });
+    base = Math.ceil((PART_ALIGN + fatBlocks) / PART_ALIGN) * PART_ALIGN;
+    parts.push({ type: PART_TYPE, start: base, blocks });
+    fs.writeSync(fd, mbrMake(parts), 0, BLOCK, 0);
+  }
+  fs.ftruncateSync(fd, (base + blocks) * BLOCK);
   const sb = Buffer.alloc(BLOCK);
   sb.write(MAGIC, 0, 'latin1');
   sb[8] = quick ? VERSION : VERSION_FULL; sb[9] = CLUSTER_SHIFT;
   sb.writeUInt32LE(clusters, 12); sb.writeUInt32LE(1, 16); sb.writeUInt32LE(mapBlocks, 20);
   sb.writeUInt32LE(dataStart, 24); sb.writeUInt32LE(clusters, 28); sb.writeUInt32LE(0, 32);
-  sb.writeUInt32LE(2, 36); sb.writeUInt32LE(1, 40);                 // Next qid (the root has 1), next stamp
+  sb.writeUInt32LE(2, 36); sb.writeUInt32LE(hydraNow(), 40);        // Next qid (the root has 1), the latest stamp
   const root = new Entry(sb.subarray(64, 128), ROOT_LOC);
   root.name = '/'; root.mode = MODE_DIR; root.qid = 1;
   sb.write(label, 128, 'latin1');
-  fs.writeSync(fd, sb, 0, BLOCK, 0);
+  fs.writeSync(fd, sb, 0, BLOCK, base * BLOCK);
   const zero = Buffer.alloc(BLOCK);                                  // The free map: all free
-  if (!quick) for (let b = 0; b < mapBlocks; b++) fs.writeSync(fd, zero, 0, BLOCK, (1 + b) * BLOCK);
+  if (!quick) for (let b = 0; b < mapBlocks; b++) fs.writeSync(fd, zero, 0, BLOCK, (base + 1 + b) * BLOCK);
   fs.closeSync(fd);
 }
 
 class Volume {
   constructor(file) {
     this.fd = fs.openSync(file, 'r+');
+    this.base = 0;                                                   // (Its first block: its partition's)
     this.sb = this.readBlock(0);
+    const part = this.sb.toString('latin1', 0, 8) !== MAGIC && (mbrParts(this.sb) || []).find(p => p.type === PART_TYPE);
+    if (part) { this.base = part.start; this.sb = this.readBlock(0); }
     if (this.sb.toString('latin1', 0, 8) !== MAGIC) throw new Error(file + ' isn\'t a HydraFS image');
     if (this.sb[8] < VERSION_FULL || this.sb[8] > VERSION || this.sb[9] !== CLUSTER_SHIFT) throw new Error('HydraFS version ' + this.sb[8] + ' isn\'t supported');
     this.map = new Map();                                            // Free map blocks read so far
   }
   close() { this.flush(); fs.closeSync(this.fd); }
 
-  readBlock(b) { const buf = Buffer.alloc(BLOCK); fs.readSync(this.fd, buf, 0, BLOCK, b * BLOCK); return buf; }
-  writeBlock(b, buf) { fs.writeSync(this.fd, buf, 0, BLOCK, b * BLOCK); }
+  readBlock(b) { const buf = Buffer.alloc(BLOCK); fs.readSync(this.fd, buf, 0, BLOCK, (this.base + b) * BLOCK); return buf; }
+  writeBlock(b, buf) { fs.writeSync(this.fd, buf, 0, BLOCK, (this.base + b) * BLOCK); }
 
   // The superblock's numbers
   get clusters() { return this.sb.readUInt32LE(12); }
@@ -96,7 +148,7 @@ class Volume {
   get hint() { return this.sb.readUInt32LE(32); } set hint(v) { this.sb.writeUInt32LE(v >>> 0, 32); }
   get label() { const n = this.sb.indexOf(0, 128); return this.sb.toString('latin1', 128, Math.min(n, 160)); }
   nextQid() { const q = this.sb.readUInt32LE(36); this.sb.writeUInt32LE(q + 1, 36); return q; }
-  nextStamp() { const s = this.sb.readUInt32LE(40); this.sb.writeUInt32LE(s + 1, 40); return s; }
+  nextStamp() { const s = hydraNow(); this.sb.writeUInt32LE(s, 40); return s; }   // (The superblock keeps the latest)
   flush() {
     for (const [b, buf] of this.map) if (buf.dirty) { this.writeBlock(b, buf); buf.dirty = false; }
     this.sb.set(this.root.buf, 64);
@@ -193,11 +245,11 @@ class Volume {
     });
     if (blocks.length) e.extBlock = blocks[0];
   }
-  // The block holding byte `pos` of a file
+  // The block holding byte `pos` of a file (-1: it's in a hole)
   fileBlock(e, pos, list = this.extents(e)) {
     let c = Math.floor(pos / CLUSTER);
     for (const x of list) {
-      if (c < x.len) return this.clusterBlock(x.start + c) + Math.floor((pos % CLUSTER) / BLOCK);
+      if (c < x.len) return isHole(x) ? -1 : this.clusterBlock(x.start + c) + Math.floor((pos % CLUSTER) / BLOCK);
       c -= x.len;
     }
     throw new Error('offset ' + pos + ' is past the file\'s clusters');
@@ -207,26 +259,31 @@ class Volume {
     const out = Buffer.alloc(Math.max(0, Math.min(len, e.size - pos))), list = this.extents(e);
     for (let done = 0; done < out.length; ) {
       const p = pos + done, off = p % BLOCK, n = Math.min(BLOCK - off, out.length - done);
-      this.readBlock(this.fileBlock(e, p, list)).copy(out, done, off, off + n);
+      const b = this.fileBlock(e, p, list);
+      if (b >= 0) this.readBlock(b).copy(out, done, off, off + n);    // (A hole's: zeros)
       done += n;
     }
     return out;
   }
-  // Write data at pos (growing the file: its last extent if the next cluster is free, else new extents)
+  // Write data at pos (growing the file: its last extent if the next cluster is free, else new extents; past
+  // the end, zeros before it, written: this tool makes no holes, nor writes into them)
   write(e, pos, data) {
+    if (pos > e.size) { data = Buffer.concat([Buffer.alloc(pos - e.size), data]); pos = e.size; }
     const end = pos + data.length, list = this.extents(e);
     let have = list.reduce((s, x) => s + x.len, 0), need = Math.ceil(end / CLUSTER);
     while (have < need) {
       const last = list[list.length - 1];
-      const got = this.alloc(need - have, last ? last.start + last.len : -1);
-      if (last && got.start === last.start + last.len && last.len + got.len <= EXT_MAX) last.len += got.len;
+      const got = this.alloc(need - have, last && !isHole(last) ? last.start + last.len : -1);
+      if (last && !isHole(last) && got.start === last.start + last.len && last.len + got.len <= EXT_MAX) last.len += got.len;
       else list.push(got);
       have += got.len;
     }
     this.setExtents(e, list);
     for (let done = 0; done < data.length; ) {
       const p = pos + done, off = p % BLOCK, n = Math.min(BLOCK - off, data.length - done);
-      const b = this.fileBlock(e, p, list), buf = n === BLOCK ? Buffer.alloc(BLOCK) : this.readBlock(b);
+      const b = this.fileBlock(e, p, list);
+      if (b < 0) throw new Error('this tool can\'t write into a hole');
+      const buf = n === BLOCK ? Buffer.alloc(BLOCK) : this.readBlock(b);
       data.copy(buf, off, done, done + n);
       this.writeBlock(b, buf);
       done += n;
@@ -236,7 +293,7 @@ class Volume {
     this.writeEntry(e);
   }
   truncate(e) {
-    for (const x of this.extents(e)) this.release(x.start, x.len);
+    for (const x of this.extents(e)) if (!isHole(x)) this.release(x.start, x.len);
     this.setExtents(e, []);
     e.size = 0;
     this.touch(e);
@@ -312,8 +369,8 @@ class Volume {
   }
   tryWalk(p) { try { return this.walk(p); } catch { return null; } }
   // A directory's text listing, as the Hydra's text directory read gives it
-  list(e) {
-    const line = x => x.isDir ? x.name + '/' : x.name + ' ' + x.size;
+  list(e, long = false) {
+    const line = x => (x.isDir ? x.name + '/' : x.name + ' ' + x.size) + (long ? ' ' + stampText(x.stamp) : '');
     return (e.isDir ? this.entries(e).filter(x => !x.free).map(line) : [line(e)]).join('\r\n') + '\r\n';
   }
   // Check the free map against the files: every cluster in use is in the map once, and nothing else is
@@ -325,7 +382,7 @@ class Volume {
       else owner.set(c, who);
     };
     const visit = (e, p) => {
-      for (const x of this.extents(e)) for (let c = x.start; c < x.start + x.len; c++) claim(c, p);
+      for (const x of this.extents(e)) if (!isHole(x)) for (let c = x.start; c < x.start + x.len; c++) claim(c, p);
       for (const b of this.extentBlocks(e)) claim((b - this.dataStart) / CLUSTER_BLOCKS, p + ' (extents)');
       const clusters = this.extents(e).reduce((s, x) => s + x.len, 0);
       if (clusters * CLUSTER < e.size) problems.push(p + ': ' + e.size + ' bytes in ' + clusters + ' clusters');
@@ -357,19 +414,20 @@ function main(argv) {
   const usage = () => { console.error(fs.readFileSync(__filename, 'utf8').split('\n').slice(4, 19).map(l => l.slice(3)).join('\n')); process.exit(1); };
   if (!cmd || !image) usage();
   if (cmd === 'mkfs') {
-    const q = args.includes('-q'), a = args.filter(x => x !== '-q');
-    if (!(+a[0] > 0)) usage();
-    mkfs(image, +a[0], a[1] || '', undefined, q); return;
+    const q = args.includes('-q'), pi = args.indexOf('-p'), fat = pi < 0 ? -1 : +args[pi + 1];
+    const a = args.filter((x, i) => x !== '-q' && (pi < 0 || (i !== pi && i !== pi + 1)));
+    if (!(+a[0] > 0) || !(fat >= -1)) usage();
+    mkfs(image, +a[0], a[1] || '', undefined, q, fat); return;
   }
   const v = new Volume(image);
   try {
     switch (cmd) {
       case 'info':
-        console.log('label "' + v.label + '", ' + v.clusters + ' clusters of ' + CLUSTER + ' bytes (' +
+        console.log((v.base ? 'partition at block ' + v.base + ', ' : '') + 'label "' + v.label + '", ' + v.clusters + ' clusters of ' + CLUSTER + ' bytes (' +
           (v.clusters * CLUSTER / 1048576).toFixed(1) + ' MB), ' + v.freeCount + ' free (' + (v.freeCount * CLUSTER / 1048576).toFixed(1) + ' MB); version ' + v.version + ', free map ' +
           v.mapInit + ' of ' + v.mapBlocks + ' blocks written');
         break;
-      case 'ls': process.stdout.write(v.list(v.walk(args[0] || '/'))); break;
+      case 'ls': { const l = args[0] === '-l', p = args[l ? 1 : 0]; process.stdout.write(v.list(v.walk(p || '/'), l)); break; }
       case 'put': if (args.length < 2) usage(); v.put(args[1], fs.readFileSync(args[0]), path.basename(args[0])); break;
       case 'get': { if (args.length < 2) usage(); const e = v.walk(args[0]); if (e.isDir) throw new Error(args[0] + ' is a directory');
         fs.writeFileSync(args[1], v.read(e)); break; }
@@ -396,4 +454,4 @@ function main(argv) {
 if (require.main === module) {
   try { main(process.argv.slice(2)); } catch (e) { console.error('hydrafs: ' + e.message); process.exit(1); }
 }
-module.exports = { mkfs, Volume, MODE_DIR, MODE_APPEND, MODE_RO };
+module.exports = { mkfs, Volume, MODE_DIR, MODE_APPEND, MODE_RO, PART_TYPE, mbrParts, stampText, HOLE };

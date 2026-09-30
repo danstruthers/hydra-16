@@ -286,13 +286,24 @@ HFS_REQ_ARGS:
 HFS_FILE_READ:
             lda         SD_LEFT
             ora         SD_LEFT + 1
-            beq         HFS_READ_DONE
+            bne         @far2
+            jmp         HFS_READ_DONE
+@far2:
             jsr         HFS_AT_END                          ; End of file: that's all there is
             bcs         HFS_READ_DONE
+            stz         HFS_HOLEF
             jsr         HFS_FILE_BLOCK                      ; The card block byte SD_POS is in
-            bcs         HFS_READ_ERR
+            bcc         @load
+            cmp         #HFS_IN_HOLE                        ; (In a hole: zeros)
+            bne         HFS_READ_ERR
+            dec         HFS_HOLEF
+            bra         @loaded
+
+@load:
             jsr         HFS_LOAD
             bcs         HFS_READ_ERR
+
+@loaded:
             lda         SD_POS + 1                          ; SD_N = the bytes to this block's end
             and         #1
             eor         #1                                  ; (Its high byte)
@@ -329,12 +340,25 @@ HFS_FILE_READ:
             inc
             sta         SD_DST + 1
             ldy         #0
+            bit         HFS_HOLEF
+            bmi         @zeros
 :
             lda         (SD_SRC),Y                          ; SD_N bytes (1-256): the cache -> the data area
             sta         (SD_DST),Y
             iny
             cpy         SD_N                                ; (SD_N = 256: 0, so .Y wraps round to it)
             bne         :-
+            bra         @next
+
+@zeros:                                                     ; (A hole's: zeros)
+            lda         #0
+:
+            sta         (SD_DST),Y
+            iny
+            cpy         SD_N
+            bne         :-
+
+@next:
             jsr         HFS_ADVANCE
             jmp         HFS_FILE_READ
 
@@ -932,30 +956,38 @@ HFS_VOLUME:
             lda         HFS_CARD                            ; Not started yet: start it (it may not be there)
             sta         SD_DEV
             jsr         SD_START
-            bcs         @fail
+            bcc         @far1
+            jmp         @fail
+@far1:
 :
-            stz         SD_LBA                              ; Block 0: the superblock
-            stz         SD_LBA + 1
-            stz         SD_LBA + 2
-            stz         SD_LBA + 3
-            jsr         HFS_LOAD
-            bcs         @fail
-            ldy         #7                                  ; "HYDRAFS1", the version, the cluster size
+            jsr         HFS_CARD_X                          ; Block 0 of the card: a superblock (the card is
+            ldy         #4                                  ;   all HydraFS), or a partition table
 :
-            lda         (SD_CACHE),Y
-            cmp         HFS_MAGIC,Y
-            bne         @no
+            stz         HFS_V_BASE,X
+            inx
             dey
-            bpl         :-
-            ldy         #HFS_SB_VERSION                     ; (Versions 1 and 2)
-            lda         (SD_CACHE),Y
-            beq         @no
-            cmp         #HFS_VERSION + 1
+            bne         :-
+            jsr         HFS_SB_LOAD
+            bcs         @fail
+            jsr         HFS_SB_OK
+            bcc         @superblock
+            jsr         HFS_PART_FIND                       ; HFS_PTR -> its HydraFS partition's entry
             bcs         @no
+            jsr         HFS_CARD_X                          ; Its blocks count from the partition's first
+            ldy         #MBR_P_START
+:
+            lda         (HFS_PTR),Y
+            sta         HFS_V_BASE,X
+            inx
             iny
-            lda         (SD_CACHE),Y
-            cmp         #HFS_CSHIFT
-            bne         @no
+            cpy         #MBR_P_START + 4
+            bne         :-
+            jsr         HFS_SB_LOAD                         ; Its block 0: the superblock
+            bcs         @fail
+            jsr         HFS_SB_OK
+            bcs         @no
+
+@superblock:
             lda         HFS_CARD                            ; The numbers the server works from: 4 of 4
             asl                                             ;   bytes, 4 apart in the block and 32 apart
             asl                                             ;   in RAM (at the card * 4)
@@ -1013,6 +1045,108 @@ HFS_VOLUME:
 
 @fail:
             sec
+            rts
+
+; Read block 0 of card HFS_CARD's HydraFS (from HFS_V_BASE) into the cache.
+; OUT: C = 0; or C = 1, .A = a card error.  Modifies: .A, .X, .Y
+HFS_SB_LOAD:
+            stz         SD_LBA
+            stz         SD_LBA + 1
+            stz         SD_LBA + 2
+            stz         SD_LBA + 3
+            jmp         HFS_LOAD
+
+; Is the block in the cache a HydraFS superblock this can read: "HYDRAFS1", version 1 or 2, the cluster
+; size?  OUT: C = 0: it is.  Modifies: .A, .Y
+HFS_SB_OK:
+            ldy         #7
+:
+            lda         (SD_CACHE),Y
+            cmp         HFS_MAGIC,Y
+            bne         @no
+            dey
+            bpl         :-
+            ldy         #HFS_SB_VERSION                     ; (Versions 1 and 2)
+            lda         (SD_CACHE),Y
+            beq         @no
+            cmp         #HFS_VERSION + 1
+            bcs         @no
+            iny
+            lda         (SD_CACHE),Y
+            cmp         #HFS_CSHIFT
+            bne         @no
+            clc
+            rts
+
+@no:
+            sec
+            rts
+
+; ****************************************************************************
+; Page 3's block calls, for a card's HydraFS: its block numbers count from its partition's first block
+; (HFS_V_BASE: 0 on a card that's all HydraFS), so SD_LBA is moved there for the call, and back after it.
+; IN and OUT as the calls they stand for (SD_DEV = the card, SD_LBA = the block; C = 1, .A = a card error).
+; Modifies: .A, .X, .Y
+SD_CACHE_LOAD:
+            jsr         HFS_BASE_ADD
+            jsr         SD_CACHE_LOAD_P3
+            bra         HFS_BASE_SUB
+
+SD_READ_BLOCK:
+            jsr         HFS_BASE_ADD
+            jsr         SD_READ_BLOCK_P3
+            bra         HFS_BASE_SUB
+
+SD_WRITE_BLOCK:
+            jsr         HFS_BASE_ADD
+            jsr         SD_WRITE_BLOCK_P3
+
+; SD_LBA back to a block of the HydraFS.  Keeps .A and C
+HFS_BASE_SUB:
+            php
+            pha
+            jsr         HFS_BASE_X
+            sec
+            lda         SD_LBA
+            sbc         HFS_V_BASE,X
+            sta         SD_LBA
+            lda         SD_LBA + 1
+            sbc         HFS_V_BASE + 1,X
+            sta         SD_LBA + 1
+            lda         SD_LBA + 2
+            sbc         HFS_V_BASE + 2,X
+            sta         SD_LBA + 2
+            lda         SD_LBA + 3
+            sbc         HFS_V_BASE + 3,X
+            sta         SD_LBA + 3
+            pla
+            plp
+            rts
+
+; SD_LBA = block SD_LBA of card SD_DEV's HydraFS, on the card.  Modifies: .A, .X
+HFS_BASE_ADD:
+            jsr         HFS_BASE_X
+            clc
+            lda         SD_LBA
+            adc         HFS_V_BASE,X
+            sta         SD_LBA
+            lda         SD_LBA + 1
+            adc         HFS_V_BASE + 1,X
+            sta         SD_LBA + 1
+            lda         SD_LBA + 2
+            adc         HFS_V_BASE + 2,X
+            sta         SD_LBA + 2
+            lda         SD_LBA + 3
+            adc         HFS_V_BASE + 3,X
+            sta         SD_LBA + 3
+            rts
+
+; .X = card SD_DEV * 4 (its HFS_V_BASE).  Modifies: .A
+HFS_BASE_X:
+            lda         SD_DEV
+            asl
+            asl
+            tax
             rts
 
 ; Card SD_DEV is being started (again): its superblock must be read afresh, since a different card may be
@@ -1160,8 +1294,16 @@ HFS_SLOT_FIND:
 
 ; SD_LBA = the card block holding byte SD_POS of the file whose entry is at HFS_FP: the file's cluster,
 ; then the extent it's in (the entry's two, then its extent blocks').
-; OUT: C = 0; or C = 1, .A = ERR_IO_EOF (past the file's clusters) or a card error
+; OUT: C = 0; or C = 1, .A = ERR_IO_EOF (past the file's clusters) or a card error; or C = 1, .A =
+;      HFS_IN_HOLE: it's in a hole (zeros, on no block: HFS_HOLEP -> the hole's extent, in the extent
+;      block HFS_XBC is (the cache holds it), or in the entry if that's 0; HFS_CL = the cluster's place in
+;      the hole, HFS_XLEN = the hole's clusters: hfs_sparse.s)
 HFS_FILE_BLOCK:
+            ldx         #3                                  ; (The entry's extents first)
+:
+            stz         HFS_XBC,X
+            dex
+            bpl         :-
             lda         SD_POS + 3                          ; HFS_CL = SD_POS >> 9: the block in the file
             lsr
             sta         HFS_CL + 2
@@ -1217,6 +1359,12 @@ HFS_FB_CHAIN:
             bpl         :-
             jsr         HFS_LOAD
             bcs         HFS_FB_DONE
+            ldx         #3                                  ; (The block its extents are in, for a hole's)
+:
+            lda         SD_LBA,X
+            sta         HFS_XBC,X
+            dex
+            bpl         :-
             ldy         #HFS_X_NEXT                         ; The one after this, and the extents in it
             ldx         #0
 :
@@ -1260,7 +1408,8 @@ HFS_FB_DONE:
 
 ; Is the file cluster HFS_CL (what's left of it) inside the extent at (HFS_XP),Y?
 ; OUT: C = 0: SD_LBA = the card block it wants (with HFS_SUB, the block inside the cluster);
-;      C = 1: HFS_CL less this extent's clusters, for the next extent (an unused one has none)
+;      C = 1: HFS_CL less this extent's clusters, for the next extent (an unused one has none).  In a
+;      hole, it returns from HFS_FILE_BLOCK (its only caller) instead: C = 1, .A = HFS_IN_HOLE
 ; Modifies: .A, .X, .Y, HFS_XCL, HFS_XLEN
 HFS_EXT_TRY:
             ldx         #0
@@ -1299,7 +1448,29 @@ HFS_EXT_TRY:
             sec
             rts
 
-@in:                                                        ; SD_LBA = the data area's first block +
+@in:
+            lda         HFS_XCL                             ; A hole (its first cluster HFS_HOLE)?
+            and         HFS_XCL + 1
+            and         HFS_XCL + 2
+            and         HFS_XCL + 3
+            cmp         #HFS_HOLE
+            bne         @data
+            tya                                             ; HFS_HOLEP -> its extent: (HFS_XP),Y, less the
+            sec                                             ;   extent's size (read past it)
+            sbc         #HFS_EXT_SIZE
+            clc
+            adc         HFS_XP
+            sta         HFS_HOLEP
+            lda         HFS_XP + 1
+            adc         #0
+            sta         HFS_HOLEP + 1
+            pla                                             ; (Not back to HFS_FILE_BLOCK: to its caller)
+            pla
+            lda         #HFS_IN_HOLE
+            sec
+            rts
+
+@data:                                                      ; SD_LBA = the data area's first block +
             lda         HFS_XCL                             ;   (its first cluster + HFS_CL) * 8 + HFS_SUB
             clc
             adc         HFS_CL

@@ -166,6 +166,18 @@ VIA_IRQ_FAST:
             bne         :+
             inc         ZP_TICKS + 1
 :
+            dec         ZP_CLOCK_SUB                        ; The clock (CLOCK_GET): a second every
+            bne         :+                                  ;   SCHED_TICK_HZ ticks
+            lda         #SCHED_TICK_HZ
+            sta         ZP_CLOCK_SUB
+            inc         ZP_CLOCK
+            bne         :+
+            inc         ZP_CLOCK + 1
+            bne         :+
+            inc         ZP_CLOCK + 2
+            bne         :+
+            inc         ZP_CLOCK + 3
+:
             lda         ZP_SLEEPERS                         ; The sleepers (usually none)
             sta         ZP_SLEEP_SCAN
             lda         ZP_SLEEPERS + 1

@@ -1,8 +1,9 @@
 .debuginfo
 
 ; ****************************************************************************
-; HydraFS's check, and a card's details in its ctl file's text (BIOS ROM page 6, with hfs_srv.s and
-; hfs_write.s, inside `.scope PAGE6`).  Both are reached from /dev/sd/N/ctl, in the SD server (page 3):
+; HydraFS's check, and a card's details in its ctl file's text (BIOS ROM page 3, with hfs_format.s and the
+; SD server, inside `.scope PAGE3`).  Both are reached from /dev/sd/N/ctl, in the SD server; the HydraFS
+; routines they use are on page 6, reached through page 3's gates (drivers/page3.s):
 ;
 ;   "check"      walks every directory from the root, marks in a bitmap every cluster a file, a directory or
 ;                an extent block uses, and compares that with the free map: clusters marked in use that
@@ -17,7 +18,7 @@
 ; The bitmap covers HFS_CK_WINDOW clusters (256 MB of card), so a bigger card takes a pass for each 256 MB,
 ; and each walks the directories again.  The walk follows directories HFS_CK_DEPTH_MAX deep.
 
-.segment "HFS_P6"
+.segment "STORAGE_P3"
 
 HFS_CK_S            = HFS_PLOC                              ; Comparing a map byte: the bitmap's byte ...
 HFS_CK_M            = HFS_PLOC + 1                          ;   the map's (the bits that are clusters)
@@ -28,6 +29,7 @@ HFS_CK_BLKS         = HFS_NLOC + 2                          ;   and the window's
 ; (HFS_D = the pass's first cluster, HFS_N4 = the cluster after its last; HFS_LASTB = a run's end)
 
 HFS_LOW_BITS:   .byte   $00, $01, $03, $07, $0F, $1F, $3F, $7F
+HFS_BITS:       .byte   $01, $02, $04, $08, $10, $20, $40, $80    ; (Page 6 has its own: hfs_write.s)
 HFS_S_FIX:      .byte   "fix"
 
 ; "check" or "check fix" (the card is SD_DEV; the text after the word is in HFS_STAT).
@@ -176,7 +178,8 @@ HFS_CK_CLEAR:
 ; where it is in it, in the buffer after the bitmap (HFS_CK_SP: the deepest).
 ; OUT: C = 0; or C = 1, .A = error (ERR_IO_NAME: too deep)
 HFS_CK_WALK:
-            LOAD_ADDR   HFS_CK_RUN, HFS_RUN_VEC
+            LOAD_ADDR   ::HFS_CK_RUN_P6, HFS_RUN_VEC        ; (HFS_EACH_RUN, on page 6, calls HFS_CK_RUN through
+                                                            ;   page 6's gate)
             lda         HFS_CK_BUF                          ; The walk's first directory goes after the bitmap:
             clc                                             ;   HFS_CK_SP starts a level before it
             adc         #<(HFS_CK_WINDOW / 8 - HFS_CK_LEVEL)
@@ -768,19 +771,24 @@ HFS_CK_ADD:
 ; being made in the data area (mapped, ZP_IO_REQ at it; SD_N = its length so far, SD_DEV = the card).
 ; Nothing for a card with no HydraFS on it.
 ;   hydrafs label=GAMES
+;   partition at block 2048                     (in a partition: HFS_V_BASE)
 ;   free 1012 KB of 2044 KB
 ;   check: lost 0, unmarked 0, twice 0          (after a check of this card; ", fixed" after "check fix")
 HFS_CTL_LINES:
             lda         SD_DEV
             sta         HFS_CARD
             jsr         HFS_VOLUME
-            bcs         @done                               ; (No HydraFS: nothing to add)
+            bcc         @far11                              ; (No HydraFS: nothing to add)
+            jmp         @done
+@far11:
             stz         SD_LBA                              ; The label, from the superblock
             stz         SD_LBA + 1
             stz         SD_LBA + 2
             stz         SD_LBA + 3
             jsr         HFS_LOAD
-            bcs         @done
+            bcc         @far10
+            jmp         @done
+@far10:
             stz         HFS_LEN
             ldx         #HFS_S_LABEL - HFS_TEXTS
             jsr         HFS_PUT_TEXT
@@ -796,6 +804,27 @@ HFS_CTL_LINES:
 
 @labelled:
             jsr         HFS_LINE_END
+            jsr         HFS_CARD_X                          ; Its partition, if it's in one
+            lda         HFS_V_BASE,X
+            ora         HFS_V_BASE + 1,X
+            ora         HFS_V_BASE + 2,X
+            ora         HFS_V_BASE + 3,X
+            beq         @whole
+            ldx         #HFS_S_PART - HFS_TEXTS
+            jsr         HFS_PUT_TEXT
+            jsr         HFS_CARD_X
+            ldy         #0
+:
+            lda         HFS_V_BASE,X
+            sta         HFS_CL,Y
+            inx
+            iny
+            cpy         #4
+            bne         :-
+            jsr         HFS_PUT_DEC
+            jsr         HFS_LINE_END
+
+@whole:
             ldx         #HFS_S_FREE - HFS_TEXTS             ; The free clusters and all of them, in KB
             jsr         HFS_PUT_TEXT
             jsr         HFS_CARD_X
@@ -921,6 +950,7 @@ HFS_LINE_OUT:
 
 HFS_TEXTS:
 HFS_S_LABEL:    .byte   "hydrafs label=", 0
+HFS_S_PART:     .byte   "partition at block ", 0
 HFS_S_FREE:     .byte   "free ", 0
 HFS_S_KB_OF:    .byte   " KB of ", 0
 HFS_S_KB:       .byte   " KB", 0

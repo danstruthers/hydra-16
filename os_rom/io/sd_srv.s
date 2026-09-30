@@ -30,6 +30,7 @@ STORAGE_INIT3:
             bcs         @done
             lda         #$FF                                ; (No progress being shown)
             sta         HFS_PG_TENS
+            stz         HFS_WZERO                           ; (Writes write the request's bytes)
             ldx         #SD_MAX_CARDS - 1                   ; (The cards start at their first open)
 :
             stz         SD_CARD_STATE,X

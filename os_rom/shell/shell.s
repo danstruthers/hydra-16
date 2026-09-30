@@ -26,6 +26,11 @@ SH_BOOT:
             ldy         #>SH_S_ENV
             ldx         #IO_DEV_CALLER_TASK
             jsr         DEV_REGISTER                        ;   needs no mount: io.s)
+            LOAD_ADDR   ::TIME_SERVE, ZP_TC_VEC             ; The clock: /dev/time (in each client's task too)
+            lda         #<SH_S_TIME
+            ldy         #>SH_S_TIME
+            ldx         #IO_DEV_CALLER_TASK
+            jsr         DEV_REGISTER
             LOAD_ADDR   SH_S_HFS, ZP_IO_BUF                 ; The cards' files at /sd (inherited too)
             lda         #<SH_S_SD
             ldy         #>SH_S_SD
@@ -39,6 +44,7 @@ SH_BOOT:
 
 SH_S_SD:    .byte   "/sd", 0
 SH_S_ENV:   .byte   "env", 0
+SH_S_TIME:  .byte   "time", 0
 SH_S_HFS:   .byte   "hfs", 0
 SH_S_VOLS:  .byte   "hydrafs", 0
 
