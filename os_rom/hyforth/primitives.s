@@ -90,8 +90,10 @@ def_word "words", "words", 0
     sta TEMP2 + 1
     lda LASTHEAP
     sta TEMP2
-    lda LIBSET          ; (then the libraries loaded: LIB_NEXT)
+    lda LIBSET          ; (then the RAM libraries, the base, and the libraries: LIB_NEXT)
     sta LIBLEFT
+    lda LIBSET2
+    sta LIBLEFT2
 
 ; load NEXTHEAP
     lda NEXTHEAP + 1

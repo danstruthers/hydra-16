@@ -16,8 +16,11 @@
 ; ****************************************************************************
 ; Pages .A to .X - 1 of the current task's RAM (or of the bank at $8000), with the pattern (offset ^ page ^
 ; .Y), then its complement.  It may run in any task: its zero page is HWT_S* ($F0-$FF), which it doesn't test.
+; HWT_PAGES_TO: the last page only up to offset HWT_SL (0: all of it).
 ; OUT: C = 0; or C = 1: .A = the page, .X = the offset, .Y = the bad bits.  Modifies: .A, .X, .Y
 HWT_PAGES:
+            stz         HWT_SL
+HWT_PAGES_TO:
             sta         HWT_SN                              ; (The first page)
             stx         HWT_SN + 1                          ;   and the one after the last
             sty         HWT_SW                              ; (The pattern's seed)
@@ -29,6 +32,7 @@ HWT_PAGES:
             stz         HWT_SP
 
 @wpage:
+            jsr         @end
             lda         HWT_SP + 1
             eor         HWT_SW
             eor         HWT_SE
@@ -39,6 +43,7 @@ HWT_PAGES:
             eor         HWT_SV
             sta         (HWT_SP),Y
             iny
+            cpy         HWT_SX
             bne         :-
             inc         HWT_SP + 1
             lda         HWT_SP + 1
@@ -48,6 +53,7 @@ HWT_PAGES:
             sta         HWT_SP + 1
 
 @rpage:
+            jsr         @end
             lda         HWT_SP + 1
             eor         HWT_SW
             eor         HWT_SE
@@ -59,6 +65,7 @@ HWT_PAGES:
             eor         (HWT_SP),Y
             bne         @bad
             iny
+            cpy         HWT_SX
             bne         :-
             inc         HWT_SP + 1
             lda         HWT_SP + 1
@@ -79,6 +86,17 @@ HWT_PAGES:
             ply
             lda         HWT_SP + 1
             sec
+            rts
+
+@end:                                                       ; HWT_SX = this page's end: 0 (all of it), or
+            stz         HWT_SX                              ;   HWT_SL on the last page
+            lda         HWT_SP + 1
+            inc
+            cmp         HWT_SN + 1
+            bne         :+
+            lda         HWT_SL
+            sta         HWT_SX
+:
             rts
 
 ; A memory fault (.A = the page, .X = the offset, .Y = the bad bits), after what the test printed:
@@ -129,11 +147,15 @@ HWT_PAGE_FAULT:
 .endmacro
 
 ; ****************************************************************************
-; Task RAM: each task's zero page (not $00-$01: the bank registers), its stack page, and $0200-$7FFF.  A
-; task's zero page and stack page are tested with no stack and no zero page (HWT_REG_PAGE), then the rest
-; with HWT_PAGES, run in the task (its stack and zero page just tested).  A fault: FAIL, the task, where
-; and the bad bits.
+; Task RAM: first, each task's RAM is its own (HWT_TASK_MARKS: a T line to U7 at fault makes two tasks one,
+; which the patterns, the same in every task, don't show).  Then each task's zero page (not $00-$01: the
+; bank registers), its stack page, and $0200-$7FFF (task RTC_TASK's to RTC_REGS: a DS1747's clock registers
+; may be there).  A task's zero page and stack page are tested with no stack and no zero page
+; (HWT_REG_PAGE), then the rest with HWT_PAGES, run in the task (its stack and zero page just tested).  A
+; fault: FAIL, the task, where and the bad bits; or the task, whose mark it has, and U7's lines that differ.
 HWT_T_TASKRAM:
+            jsr         HWT_TASK_MARKS
+            bcs         @marks_bad
             ldx         #15
 
 @task:
@@ -156,6 +178,92 @@ HWT_T_TASKRAM:
             pla
             jmp         HWT_PAGE_FAULT
 
+@marks_bad:                                                 ; (.X = the task, .Y = whose mark it has: $FF none)
+            phy
+            phx
+            jsr         HWT_FAIL
+            .byte       "task ", 0
+            pla
+            sta         HWT_T2
+            jsr         HWT_HEX1
+            pla
+            bmi         @no_mark
+            sta         HWT_T3
+            jsr         HWT_PRINT
+            .byte       " has task ", 0
+            lda         HWT_T3
+            jsr         HWT_HEX1
+            jsr         HWT_PRINT
+            .byte       "'s mark: U7", 0
+            lda         HWT_T2                              ; The T lines they differ by
+            eor         HWT_T3
+            sta         HWT_T2
+            ldx         #0                                  ; .X = the T line
+
+@line:
+            lsr         HWT_T2
+            bcc         @no_line
+            phx
+            lda         #' '
+            jsr         HWT_PUTC
+            txa
+            asl
+            tax
+            lda         HWT_TL_NAMES,X
+            ldy         HWT_TL_NAMES + 1,X
+            jsr         HWT_PUTS_AY
+            plx
+@no_line:
+            inx
+            cpx         #4
+            bne         @line
+            rts
+
+@no_mark:
+            jsr         HWT_PRINT
+            .byte       " no mark (U7's data lines, or U7)", 0
+            rts
+
+; The tasks' marks: each task's RAM gets a mark of its own at HWT_TMARK_AT, all of them written before any
+; is read back, so two tasks that are one show.  Leaves T at 0.
+; OUT: C = 0; or C = 1: .X = the task, .Y = the task whose mark it has ($FF: none of them).
+; Modifies: .A, .X, .Y
+HWT_TASK_MARKS:
+            ldx         #15
+:
+            lda         HWT_TMARKS,X
+            stx         T_REGISTER
+            sta         HWT_TMARK_AT
+            dex
+            bpl         :-                                  ; (Ends in task 0)
+            ldx         #15
+
+@check:
+            stx         T_REGISTER
+            lda         HWT_TMARK_AT
+            stz         T_REGISTER
+            cmp         HWT_TMARKS,X
+            bne         @bad
+            dex
+            bpl         @check
+            clc
+            rts
+
+@bad:
+            ldy         #15                                 ; Whose mark?
+:
+            cmp         HWT_TMARKS,Y
+            beq         :+
+            dey
+            bpl         :-
+:
+            sec
+            rts
+
+HWT_TMARK_AT    = $4000
+HWT_TMARKS:     .byte   $0F, $1E, $2D, $3C, $4B, $5A, $69, $78, $87, $96, $A5, $B4, $C3, $D2, $E1, $F0
+HWT_TL_NAMES:   .word   HWT_SH_N6, HWT_SH_N7, HWT_SH_N0, HWT_SH_N1  ; T0-T3: U7's A15-A18
+
 ; Task .X's RAM.  OUT: C = 0; or C = 1: .A = the page, .X = the offset, .Y = the bad bits.
 ; Modifies: .A, .X, .Y
 HWT_TASK_ONE:
@@ -168,17 +276,24 @@ HWT_TASK_ONE:
             HWT_REG_PAGE $00, 2, @zp_bad
             HWT_REG_PAGE $0100, 0, @st_bad
             sty         HWT_SA                              ; (The mode, in its zero page now)
+            stz         HWT_SL                              ; (All of it; task RTC_TASK: up to RTC_REGS)
+            lda         T_REGISTER
+            cmp         #RTC_TASK
+            bne         :+
+            lda         #<RTC_REGS
+            sta         HWT_SL
+:
             lda         #$02                                ; Now they're good: the rest (the return address
             ldx         #$80                                ;   goes on its stack, the pointers in its zero
             ldy         #$A5                                ;   page)
-            jsr         HWT_PAGES
+            jsr         HWT_PAGES_TO
             bcs         @out
             bit         HWT_SA
             bpl         @out
             lda         #$02                                ; Full: a second pattern
             ldx         #$80
             ldy         #$3C
-            jsr         HWT_PAGES
+            jsr         HWT_PAGES_TO
 
 @out:
             stz         T_REGISTER                          ; (Keeps .A, .X, .Y and C)

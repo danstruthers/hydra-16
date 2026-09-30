@@ -257,6 +257,8 @@ HWT_PATTERNS_N = * - HWT_PATTERNS
 ; own bank: task t selects shared bank $F0 + t (U = 0), which has t's mark.  Then its lines 4-7: $F0 with
 ; one of them cleared (a RAM module's bank, or nothing) mustn't be $F0.  A fault: FAIL, the task and what
 ; it read.  (Shared RAM must work for this: its own test says so if it doesn't.)
+HWT_BAD             = HWT_KEEP  ; (2) The shared banks this test skips: bit v, bank $F0 + v
+
 HWT_T_BANKREG:
             stz         U_REGISTER
             stz         T_REGISTER
@@ -521,8 +523,6 @@ HWT_T_BANKREG:
             jmp         HWT_HEX1
 
 HWT_HIGH_BITS:  .byte   $E0, $D0, $B0, $70
-
-HWT_BAD             = HWT_KEEP  ; (2) The shared banks the bank register test skips: bit v, bank $F0 + v
 
 ; Shared bank $F0 + .Y (0-F): skipped by the bank register test (task 0 reads it wrong).  In task 0.
 ; Preserves .X, .Y.  Modifies: .A

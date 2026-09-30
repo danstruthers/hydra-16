@@ -62,6 +62,9 @@ node hydrasim.js [options]
 | `--mark TEXT` | Report the cycle each time the serial output ends with `TEXT` (`\r` = CR), e.g. `--mark "/> "` to time a command from prompt to prompt |
 | `--profile N` | From cycle `N` on, count the instructions each task runs in each routine (named from the build's debug info, `os_rom/obj/os_rom_C02.dbg`), and report the top 30, e.g. `--profile 2800000 --input '\wwords \| wc . . .\r'` |
 | `--ym-log` | List every YM2151 key-on (channel and cycle) in the report, not just the first 8.  The report also gives the longest gap between key-ons and the time from the first to the last (a late note shows as a long gap) |
+| `--u7-fault An:high\|low` | Task RAM line `An` (A15-A18: `T0-T3`) stuck high or low at U7, e.g. `A17:low`: tasks that differ in that bit share their RAM (in the emulator, their bank registers too, which the board keeps apart) |
+| `--rtc TIME` | A DS1747 in U7 (a task RAM with a clock): its clock registers are task F's `$7FF8-$7FFF`.  `TIME`: `YYYY-MM-DDThh:mm[:ss]` or `now` (the PC's time), the time it has at power-up, running; `stopped`: its oscillator off (at 2000-01-01); `unset`: junk in its registers, as a part never set may have.  Modelled from the datasheet: R and W halt its updates, clearing W sets it from its registers (and the century), BF can't be written.  The report ends with its time.  Without it, U7 is a plain HM628512 |
+| `--rtc-battery-low` | The DS1747's battery flag reads 0 (a flat battery) |
 | `--seed N` | Power up RAM and the pseudo-registers from random number seed `N`, so a run repeats exactly (by default each run powers up differently) |
 | `--pc [PAGE:]ADDR` | Report the registers each time the PC reaches `ADDR` (on BIOS ROM page `PAGE`, if given); addresses are in `os_rom/obj/os_rom_C02.lbl` |
 

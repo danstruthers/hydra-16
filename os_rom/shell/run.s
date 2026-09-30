@@ -189,9 +189,21 @@ SH_ARGS_OUT:
             rts
 
 ; A program by its name (.A.Y, with no .hyx or .hys; a word HyForth doesn't know): name.hyx or name.hys,
-; in the current directory; then, for a name with no '/', in /bin on the current directory's card.  The
-; first one there is run as SH_RUN does.  None: .A = ERR_IO_NOT_FOUND
+; in the current directory; then, for a name with no '/', in $PATH's directories, or /bin on the current
+; directory's card.  The first one there is run as SH_RUN does.  None: .A = ERR_IO_NOT_FOUND
 SH_EXEC:
+            ldx         #SH_FIND_PROG
+            bra         SH_FIND
+
+; A HyForth library by its name (.A.Y, with no .hyl; lib): name.hyl, looked for as SH_EXEC looks for a
+; program, but in $LIBPATH's directories, or /lib on the current directory's card.  The first one there is
+; opened.  OUT: C = 0, .A = its fd (read); or C = 1, .A = ERR_IO_NOT_FOUND
+SH_LIBOPEN:
+            ldx         #SH_FIND_LIB
+
+; ... either (.X = SH_FIND_PROG, SH_FIND_LIB: what to look for, in the tables below)
+SH_FIND:
+            stx         PAGE1::SHFIND
             jsr         SH_KEEP                             ; SH_PTR = the name
             ldx         #0
             jsr         SH_EXEC_TRY
@@ -206,8 +218,9 @@ SH_EXEC:
             bne         @slash
 
 @bin:
-            lda         #<SH_S_PATH                         ; $PATH: the directories to look in, with :s
-            ldy         #>SH_S_PATH                         ;   between them (SHOWBUF)
+            ldx         PAGE1::SHFIND                       ; $PATH ($LIBPATH): the directories to look in,
+            lda         SH_FIND_ENV,X                       ;   with :s between them (SHOWBUF)
+            ldy         SH_FIND_ENV + 1,X
             jsr         SH_ENV_READ
             bcs         @card                               ; (None: the card's /bin)
             stz         PAGE1::SHSEL                        ; (Where the next one starts)
@@ -243,18 +256,23 @@ SH_EXEC:
             bra         @none
 
 @card:
-            LOAD_ADDR   PAGE1::SHBUF, ZP_IO_BUF             ; /sd/N/bin/name: after the card's root
+            LOAD_ADDR   PAGE1::SHBUF, ZP_IO_BUF             ; /sd/N/bin/name (/lib/): after the card's root
             jsr         IO_GETCWD
             jsr         SH_ON_CARD                          ; (.X = where its path starts; 0: not a card)
             txa
             beq         @none
-            ldy         #0
+            phx
+            ldx         PAGE1::SHFIND
+            ldy         SH_FIND_DIR,X
+            plx
+            lda         #SH_S_DIRS_LEN
+            sta         PAGE1::SHN
 :
-            lda         SH_S_BIN,Y
+            lda         SH_S_DIRS,Y
             sta         PAGE1::SHBUF,X
             inx
             iny
-            cpy         #SH_S_BIN_END - SH_S_BIN
+            dec         PAGE1::SHN
             bne         :-
             jsr         SH_EXEC_TRY
 
@@ -263,9 +281,18 @@ SH_EXEC:
             sec
             rts
 
-SH_S_BIN:   .byte   "/bin/"
-SH_S_BIN_END:
-SH_S_PATH:  .byte   "/env/PATH", 0
+; What SH_FIND looks for (by SH_FIND_*, word tables): the environment variable with its directories, the
+; card's directory (in SH_S_DIRS), and the extensions to try (in SH_S_EXTS: from, to)
+SH_FIND_PROG    = 0
+SH_FIND_LIB     = 2
+SH_FIND_ENV:    .word   SH_S_PATH, SH_S_LIBPATH
+SH_FIND_DIR:    .byte   0, 0, SH_S_DIRS_LEN, 0
+SH_FIND_EXT:    .byte   0, 0, SH_S_EXT_LIB - SH_S_EXTS, 0
+SH_FIND_EXTEND: .byte   SH_S_EXT_LIB - SH_S_EXTS, 0, SH_S_EXTS_END - SH_S_EXTS, 0
+SH_S_DIRS:      .byte   "/bin/", "/lib/"
+SH_S_DIRS_LEN   = 5
+SH_S_PATH:      .byte   "/env/PATH", 0
+SH_S_LIBPATH:   .byte   "/env/LIBPATH", 0
 
 ; An environment variable's value (its file: .A.Y, "/env/NAME") into SHOWBUF, zero-terminated (255 at most).
 ; OUT: C = 0: .X = its length (not 0); or C = 1: there's none (or it's empty).  Modifies: .A, .Y
@@ -297,10 +324,13 @@ SH_ENV_READ:
 @done:
             rts
 SH_S_EXTS:  .byte   ".hyx", 0, ".hys", 0
+SH_S_EXT_LIB:
+            .byte   ".hyl", 0
 SH_S_EXTS_END:
 
-; SHBUF from .X on = the name (SH_PTR), then .hyx or .hys: the first that opens is run (SH_RUN_OPEN), and
-; its result is SH_EXEC's (it doesn't come back here).  Neither: it returns
+; SHBUF from .X on = the name (SH_PTR), then .hyx or .hys (SH_FIND_LIB: .hyl): the first that opens is run
+; (SH_RUN_OPEN), and its result is SH_EXEC's (it doesn't come back here); SH_FIND_LIB: its fd is SH_FIND's
+; result.  None: it returns
 SH_EXEC_TRY:
             ldy         #0
 :
@@ -314,7 +344,8 @@ SH_EXEC_TRY:
             rts
 :
             stx         PAGE1::SHN                          ; (Where the extension goes)
-            ldy         #0
+            ldx         PAGE1::SHFIND                       ; (The first to try)
+            ldy         SH_FIND_EXT,X
 
 @ext:
             ldx         PAGE1::SHN
@@ -332,14 +363,22 @@ SH_EXEC_TRY:
             jsr         IO_OPEN
             ply
             bcc         @found
-            cpy         #SH_S_EXTS_END - SH_S_EXTS
+            tya                                             ; (The last to try: SH_FIND_EXTEND)
+            ldx         PAGE1::SHFIND
+            cmp         SH_FIND_EXTEND,X
             bcc         @ext
             rts
 
 @found:
-            ply                                             ; (Not back to SH_EXEC: to its caller)
+            ply                                             ; (Not back to SH_FIND: to its caller)
             ply
+            ldx         PAGE1::SHFIND                       ; A program: run it.  A library: its fd
+            bne         :+
             jmp         SH_RUN_OPEN
+:
+            clc
+            rts
+.assert     SH_FIND_PROG = 0, error, "SH_EXEC_TRY: SH_FIND_PROG must be 0"
 
 ; Wait for task .A (one the shell started) to end.  While it runs, it has the console, if we have it: Ctrl-C
 ; goes to it, and the console comes back to us when it ends (CONS_RELEASE).  OUT: C = 0

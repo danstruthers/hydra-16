@@ -94,8 +94,9 @@ HFS_CK_RUN_P6   = PAGE6::HFS_CK_RUN      ; (Page 6's gate to the check's HFS_CK_
 .include "hyforth/hyforth.s"
 .endscope
 FW_ENTRY_PA     = PAGE1::FAR::FW_ENTRY  ; (For page 1's gates: page1.s)
-PIPECHK_PA      = PAGE1::FAR::PIPECHK
-PIPEEND_PA      = PAGE1::FAR::PIPEEND
+LINE_START_PA   = PAGE1::FAR::LINE_START
+LINE_PROMPT_PA  = PAGE1::FAR::LINE_PROMPT
+LINE_READ_PA    = PAGE1::FAR::LINE_READ
 INCOPEN_PA      = PAGE1::FAR::INCOPEN
 INCOPENFD_PA    = PAGE1::FAR::INCOPENFD
 INCEND_PA       = PAGE1::FAR::INCEND
@@ -138,6 +139,7 @@ ED_MAIN_P8      = PAGE8::ED_MAIN        ; (For page 7: SH_EDIT)
 .include "io/proc_srv.s"        ; The tasks (/dev/proc)
 .include "io/env_srv.s"         ; Each task's environment (/env)
 .include "io/time_srv.s"        ; The clock (/dev/time)
+.include "io/rtc.s"             ; The clock chip (a DS1747 in U7)
 .endscope
 PROC_SERVE_P9   = PAGE9::PROC_SERVE     ; (For page 0's gates: io_p0.s)
 ENV_SERVE_P9    = PAGE9::ENV_SERVE
@@ -147,6 +149,7 @@ ENV_INIT_P9     = PAGE9::ENV_INIT       ; (For page 7: SH_BOOT)
 TIME_SERVE_P9   = PAGE9::TIME_SERVE     ; (For page 0's gates: io_p0.s)
 CLOCK_GET_P9    = PAGE9::CLOCK_GET      ; (For page 6: HydraFS's stamps)
 CLOCK_TEXT_P9   = PAGE9::TIME_TEXT      ; (For page 7: ls -l)
+RTC_BOOT_P9     = PAGE9::RTC_BOOT       ; (For page 7: SH_BOOT)
 TIME_DIV8_P9    = PAGE9::TIME_DIV8
 
 ; BIOS ROM page 0 (W = 0)

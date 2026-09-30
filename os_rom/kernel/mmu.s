@@ -67,7 +67,7 @@ MMU_BANK_ENDS    = MMU_HDR + MmuHeader::bank_ends
 MMU_LOW_WATER    = MMU_HDR + MmuHeader::low_water
 MMU_PAGE_FLOOR   = MMU_HDR + MmuHeader::page_floor
 MMU_HANDLE_TBL   = MMU_HDR + MmuHeader::handles             ; Entry for handle h: MMU_HANDLE_TBL + (h - 1) * 4
-MMU_MAX_HANDLES  = ($8000 - MMU_HANDLE_TBL) / .sizeof(Handle)   ; 103 for 2 pages
+MMU_MAX_HANDLES  = (RTC_REGS - MMU_HANDLE_TBL) / .sizeof(Handle) ; 101 for 2 pages (not the clock's bytes)
 MMU_CHUNK_HEADS  = MMU_HDR + MmuHeader::chunk_heads         ; First chunk page of each size class (0 = none)
 
 ; Chunk pages: a 256-byte task RAM page split into chunks of one size (4, 8, 16, 32 or 64 bytes).  The
@@ -196,11 +196,13 @@ MM_TASK_INIT:
             tay
 
 @clear:
-.repeat     MMU_TASK_PAGES, I
+.repeat     MMU_TASK_PAGES - 1, I
             sta         MMU_AREA + (I * $100),Y
 .endrepeat
-            iny
+            sta         RTC_REGS - $100,Y                   ; The last page's, up to the clock's bytes (task
+            iny                                             ;   F's RTC_REGS are a DS1747's clock)
             bne         @clear
+.assert     RTC_REGS - $100 >= MMU_AREA && RTC_REGS - $100 <= MMU_AREA + ((MMU_TASK_PAGES - 1) * $100), error, "MM_TASK_INIT: its clear leaves a gap"
             lda         #$FF                                ; Pages $00-$07: ZP, stack and BUFFERS
             sta         MMU_HDR + MmuHeader::page_map
             lda         #($FF << (MMU_SYS_PAGE & 7)) & $FF  ; System page and MMU area pages

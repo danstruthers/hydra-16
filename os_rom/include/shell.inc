@@ -19,7 +19,8 @@ SHC_RELABEL     = 24            ; .A = a card, SHBUF2 = a label: the new label
 SHC_FSCK        = 26            ; .A = a card: its HydraFS checked
 SHC_FSFIX       = 28            ;   and its free map repaired
 SHC_WAIT        = 30            ; .A = a task the shell started: it has the console (if the shell has), till it ends
-SHC_COUNT       = 32
+SHC_LIBOPEN     = 32            ; .A.Y = a HyForth library's name (no .hyl): found (run.s) and opened.  OUT: .A = its fd
+SHC_COUNT       = 34
 
 SH_RUN_FD       = IO_MAX_FDS - 1    ; A program's file, for the task that runs it (SHC_RUN)
 SH_ARGS_FD      = IO_MAX_FDS - 2    ;   and its arguments (a pipe: the loader reads them to HYX_ARGS)

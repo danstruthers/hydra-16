@@ -18,6 +18,7 @@ FAR_GATE_INLINE     TASK_SIGNAL,    ::TASK_SIGNAL,          0
 FAR_GATE_INLINE     TASK_CALL,      ::TASK_CALL,            0
 FAR_GATE_INLINE     NO_PREEMPT,     ::NO_PREEMPT,           0
 FAR_GATE_INLINE     PREEMPT,        ::PREEMPT,              0
+FAR_GATE_INLINE     TASK_SLEEP,     ::TASK_SLEEP,           0   ; (The clock chip's probe: rtc.s)
 
 ; ... and to the IO layer (page 2)
 FAR_GATE_INLINE     IO_SRV_COUNT,   PAGE2::IO_SRV_COUNT,    2

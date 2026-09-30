@@ -203,6 +203,14 @@ LIB_TOOLS   = 1 << LIBN_TOOLS
 LIB_TERM    = 1 << LIBN_TERM
 LIB_BOOT    = LIB_IO | LIB_FILES | LIB_SHELL | LIB_TASKS | LIB_SOUND | LIB_MEM | LIB_TOOLS | LIB_TERM
                            ; (loaded at 'cold': all of them, as the shell has always had)
+;
+; Libraries from files (lib: name.hyl, HyForth source, compiled into RAM on a chain of its own): up to
+; RLIB_MAX, by slot.  LIBSET2's bits: the slots searched, and the base (LIB2_BASE, always), in that order,
+; after the words defined in RAM and before the ROM libraries.  Their names and chains: hywords.s (RLIBNAME,
+; LIB_HEADS2: the base's chain is its entry 7); their loading: farwords.s (lib)
+RLIB_MAX    = 4
+RLIB_NAMELEN = 12          ; (A name: 11 characters and a 0)
+LIB2_BASE   = $80
 .repeat LIB_COUNT, n       ; (Each library's chain so far: the number of its last header)
 .ident(.sprintf("HL%d", n)) .set 0
 .endrepeat
@@ -378,6 +386,8 @@ TASK_ZP PIPEW, 1       ;   and write fd                        $BB
 ;
 TASK_ZP LIBSET, 1      ; the libraries loaded (LIB_IO ...)     $BA
 TASK_ZP LIBLEFT, 1     ;   those a search hasn't been through  $B9
+TASK_ZP LIBSET2, 1     ; the RAM libraries searched (bit s: slot s), and the base (bit 7)  $B8
+TASK_ZP LIBLEFT2, 1    ;   those a search hasn't been through  $B7
 TASK_ZP_END
 ;
 ; *** $DO-$FF total usage in ZP, including TEMP vars ***
@@ -411,6 +421,14 @@ forth_main:
     jmp cold
     jmp COPYTORAM
 
+; A bare Forth's task starts here ('forth', in the tasks library: TASK_RUN, ROM page 1): as a shell's
+; (SHELL_MAIN: fds 0-2 on the console, HyForth's RAM), but 'cold' loads no libraries (BAREFLAG)
+forth_bare_main:
+    jsr IO_STD_OPEN
+    jsr COPYTORAM
+    inc BAREFLAG
+    jmp cold
+
 HYPROMPT:
     .byte $0D, $0A
     .byte "HF>"
@@ -433,8 +451,14 @@ cold:
     jsr CLEAR          ; zero out zero page, INBUF, DS, and RT
     stz BATCH          ; not a pipeline's copy
     stz IOERR          ; no IO error yet
-    lda #LIB_BOOT      ; the base, and the libraries the shell needs
+    lda #LIB_BOOT      ; the base, and the libraries the shell needs; a bare Forth ('forth'): the base alone
+    ldx BAREFLAG
+    beq :+
+    lda #0
+:
     sta LIBSET
+    lda #LIB2_BASE     ; (No RAM libraries: the base)
+    sta LIBSET2
     lda #$FF
     sta PIPEIN         ; stdin not redirected
     lda #<fbreak       ; Ctrl-C: back to the prompt
@@ -471,11 +495,9 @@ cold:
 NOARENA:
 
 warm:
-; link list of headers
-    lda #>h_exit               ; initialize HEAP pointers
-    sta LASTHEAP + 1
-    lda #<h_exit
-    sta LASTHEAP
+; link list of headers: none in RAM yet (the base's, and the libraries': LIB_NEXT)
+    stz LASTHEAP + 1
+    stz LASTHEAP
 
 ; next heap free cell
     lda #>FORTH_BSS_END + 1    ; (after the buffers that follow the RAM image)
@@ -572,8 +594,10 @@ RESFIND:                ; load last or 'latest' word on heap
     sta TEMP2 + 1
     lda LASTHEAP
     sta TEMP2
-    lda LIBSET              ; (then the libraries loaded: LIB_NEXT)
+    lda LIBSET              ; (then the RAM libraries, the base, and the libraries: LIB_NEXT)
     sta LIBLEFT
+    lda LIBSET2
+    sta LIBLEFT2
 
 RESLOOP:              ; lsb linked list
     lda TEMP2
@@ -586,11 +610,8 @@ RESLOOP:              ; lsb linked list
 WORDNOTFOUND:
     lda ERRFLAG            ; keep an error already raised (e.g. out of memory for a q^...^ string)
     bne WNFERR
-    lda STATUS             ; interpreting: the program of that name?  (name.hyx or name.hys: RUNNAME)
-    bne WNFUKW
-    lda LIBSET             ;   (with the shell's library)
-    and #LIB_SHELL
-    beq WNFUKW
+    lda STATUS             ; interpreting: the program of that name?  (name.hyx or name.hys: RUNNAME,
+    bne WNFUKW             ;   with the shell's library)
     jsr RUNNAME
     bcc WNFRAN
     cmp #ERR_IO_NOT_FOUND
@@ -697,8 +718,7 @@ try:
 getline:   ; drop rts of try, fall through to 'token'
     pla
     pla
-    jsr SH_UNREDIR       ; the last line is done: stdout and stdin back from its > and < (shell/redir.s) ...
-    jsr PIPEEND          ;   and stdin back from the pipe
+    jsr LINE_START       ; the shell library's: the last line's > < and pipe undone; boot.hys (farwords.s)
     lda BATCH            ; a copy of the shell (a pipeline's left side, or run's for a script): all done,
     beq GLAUTO
     lda INCDEPTH         ;   once the scripts it reads are: end the task
@@ -718,13 +738,6 @@ GLAUTO:
     jmp GETLNSKIPCRLF
 
 GLNORMAL:
-    lda BOOTFLAG         ; the boot shell's first line: boot.hys first, from the selected volume's root
-    beq GLNOBOOT         ;   (the current directory), if it's there
-    stz BOOTFLAG
-    lda #<S_BOOTHYS
-    ldy #>S_BOOTHYS
-    jsr INCOPEN
-GLNOBOOT:
     stz ECHOCR           ; (A line read from a script: no prompt, and no CR LF after it)
     lda INCDEPTH
     beq GLCONS
@@ -739,16 +752,7 @@ GLCONS:
     beq GLNOPROMPT
 GLPROMPT:
     inc ECHOCR
-    lda LIBSET           ; (without the shell's library: a plain one)
-    and #LIB_SHELL
-    beq GLBARE
-    lda #<PROMPTFMT
-    ldy #>PROMPTFMT
-    jsr SH_PROMPT
-    bra GLNOPROMPT
-GLBARE:
-    jsr WRITE_CRLF
-    PRINT_CHAR #'>', #ASCII_SPACE
+    jsr LINE_PROMPT      ; (the shell's, or a plain one: farwords.s)
 GLNOPROMPT:
 ;
     ldy #0   ; leave the first
@@ -818,12 +822,7 @@ GETLNSKIPCRLF:          ; SKIP to here if don't want CRLF
     dey
 ; start it
     sta CURBUF
-    lda LIBSET           ; (the shell's library: pipelines and redirection)
-    and #LIB_SHELL
-    beq token
-    jsr PIPECHK          ; a pipeline ( ... | ... )?  start its left side (farwords.s)
-    bcs GETLNFAIL
-    jsr SH_REDIR         ; >, >> and < (shell/redir.s): stdout and stdin to and from files
+    jsr LINE_READ        ; the shell library's: a pipeline started, > >> < set up (farwords.s)
     bcc token
 GETLNFAIL:
     ply                  ; (they can't be: drop the return to 'resolve', and the error)
@@ -1230,6 +1229,7 @@ def_word "I", "Imm", 0
 wimm:                        ; jmp here if proccessing a compiled
     lda LASTHEAP+1           ;   word that needs to run 'immediate'.
     sta TEMP9+1
+    beq IMMNONE              ; (no word defined yet: nothing to do)
     lda LASTHEAP             ; get addr of 'last' compiled word, copy to TEMP4, add 2
     clc
     adc #2                   ; ..to find where length byte is...
@@ -1241,6 +1241,7 @@ IMMSKIP:
     lda (TEMP9),y
     ora #$80                 ; ...set bit 7 and store
     sta (TEMP9),y
+IMMNONE:
     jmp next
 ;
 def_word "[", "leftbrack", FLAG_IMM       ; switch to 'interpret'
@@ -1353,17 +1354,24 @@ def_word "exit", "exit", 0
 ; the lowest in LIBLEFT, which is taken out of it.  OUT: C = 0: TEMP2 = its head; C = 1: none left.
 ; Modifies: .A, .X
 LIB_NEXT:
-    lda LIBLEFT
+    lda LIBLEFT2         ; First the RAM libraries (by slot) and the base (LIBSET2, LIB_HEADS2 in RAM) ...
+    beq LNROM
+    jsr LNBITX
+    lda LIB_HEADS2,x
+    sta TEMP2
+    lda LIB_HEADS2+1,x
+    sta TEMP2+1
+    lda LIBLEFT2         ; (its bit, the lowest, cleared)
+    dec a
+    and LIBLEFT2
+    sta LIBLEFT2
+    clc
+    rts
+LNROM:
+    lda LIBLEFT          ;   then the ROM libraries (LIBSET, LIB_HEADS)
     sec
     beq LNNONE
-    ldx #0
-LNBIT:
-    lsr
-    bcs LNFOUND
-    inx
-    inx
-    bra LNBIT
-LNFOUND:
+    jsr LNBITX
     lda LIB_HEADS,x
     sta TEMP2
     lda LIB_HEADS+1,x
@@ -1374,6 +1382,16 @@ LNFOUND:
     sta LIBLEFT
     clc
 LNNONE:
+    rts
+LNBITX:                  ; (.X = the number of .A's lowest bit (not 0) x 2)
+    ldx #0
+LNBIT:
+    lsr
+    bcs LNFOUND
+    inx
+    inx
+    bra LNBIT
+LNFOUND:
     rts
 ;
 ; Each library's chain: its last header (0: none), by LIBN_

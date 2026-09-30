@@ -181,16 +181,18 @@ The control words aren't built in: they're defined in HyForth itself, by the **t
 
 ### **The base and its libraries**
 
-HyForth is a base language, plus libraries of words for the rest of the system.  The base is the Forth itself: the interpreter and compiler, the stacks, arithmetic and logic, memory and memory records, numbers and strings, `key` and `emit`, and loading scripts from memory.  Each library is a set of words in ROM with a dictionary chain of its own.  To find a word, the interpreter searches the words you've defined, then the base, then each library that's loaded.
+HyForth is a base language, plus libraries of words for the rest of the system.  The base is the Forth itself: the interpreter and compiler, the stacks, arithmetic and logic, memory and memory records, numbers and strings, `key` and `emit`, and loading scripts from memory.  Each library is a set of words with a dictionary chain of its own: in ROM, or read from a file on a card (below).  To find a word, the interpreter searches the words you've defined, then the libraries loaded from files, then the base, then each ROM library that's loaded.
 
-**At startup** HyForth loads the base and every library, which is everything the shell uses, and then runs the shell.  So the prompt works as it always has.  A new shell (`shell`) starts the same way.  The copy of the shell that runs a pipeline's left side, or a script (`run`), has the libraries of the shell that started it.
+**At startup** HyForth loads the base and every ROM library, which is everything the shell uses, and then runs the shell.  So the prompt works as it always has.  A new shell (`shell`) starts the same way.  The copy of the shell that runs a pipeline's left side, or a script (`run`), has the libraries of the shell that started it.
+
+**A bare Forth** (`forth`) is a new HyForth task with only the base loaded: a plain `> ` prompt, no shell and no `boot.hys`.  It's there for Forth on its own; `lib` loads what it needs, and `lib all` makes it a full shell.
 
 | Library | Words | Loads too |
 | :------ | :---- | :-------- |
 | `io` | `open`, `close`, `read`, `write`, `seek`, `ioctl`, `fdup2`, `pipe`, `create`, `mount`, `bind`, `unmount`, `ns`, `stty`, `stty?`, `ctl`, `ioerr` | |
 | `files` | `cd`, `pwd`, `ls`, `rm`, `rmdir`, `mkdir`, `cp`, `mv` (and their stack forms, `(cd)` ...), `cat`, `wc`, `vols`, `mkfs`, `mkfs-full`, `mkfs-size`, `mkfs-part`, `relabel`, `fsck`, `fsfix` | `io` |
 | `shell` | `prompt`, `include`, `run` (and `(include)`, `(run)`), `args`, `edit`, `echo`.  Also the shell's part of reading a line: the prompt's format, pipelines (`\|`), redirection (`>`, `>>`, `<`), and running a program for a word HyForth doesn't know | `io`, `files` |
-| `tasks` | `shell`, `fg`, `kill`, `sleep`, `ps` | `io` |
+| `tasks` | `shell`, `forth`, `fg`, `kill`, `sleep`, `ps` | `io` |
 | `sound` | `sndinit`, `sndtest`, `sndstop`, `ywrite` | `io` |
 | `mem` | `halloc`, `hfree`, `hlock`, `hunlock` (MMU memory) | |
 | `tools` | `dump`, `disasm`, `syscall`, `mmtest`, `hwtest` | |
@@ -198,9 +200,10 @@ HyForth is a base language, plus libraries of words for the rest of the system. 
 
 | Word | Does |
 | :--- | :--- |
-| `libs` | List the libraries: `forth` (the base), then each library.  A library in parentheses isn't loaded |
-| `lib name` | Load a library, and the ones it needs |
+| `libs` | List the libraries: `forth` (the base), each ROM library, then the ones loaded from files.  A library in parentheses isn't searched |
+| `lib name` | Load a library, and the ones it needs.  A name no ROM library has is a library file's (below) |
 | `-lib name` | Unload a library: its words aren't found any more.  Words already compiled into definitions still run |
+| `lib all`, `-lib all` | Every library: the ROM libraries, and the ones loaded from files |
 
 ```
 0:/> -lib sound
@@ -221,6 +224,29 @@ forth io files shell tasks (sound) mem tools term
 ```
 
 Without the `shell` library, the prompt is a plain `> `, a line's `|`, `>` and `<` are words like any other (unknown ones), and a word HyForth doesn't know is an error, not a program to run.
+
+**Libraries from files.** `lib name`, for a name that isn't a ROM library's, reads `name.hyl`: HyForth source, like a script.  It's looked for the way a program is: in the current directory, then (for a name with no `/`) in the directories of `$LIBPATH`, or, with no `LIBPATH`, in `/lib` on the current directory's card.  The words the file defines become the library's, and it's searched from then on.
+
+* **While it loads,** the words you've defined yourself aren't searched: a library uses the base, the ROM libraries and other libraries.  A library file can load the libraries it needs with `lib` lines of its own.
+* **An error** while it loads (an unknown word, say) stops it, and the library is dropped.  A file that isn't there is `!IO ERR!`.
+* **`-lib name`** stops searching it, but leaves it in memory: `lib name` then searches it again, without reading the file again.  To read a changed file, start a new HyForth (`shell`, or `forth`).
+* **Up to 4** can be loaded in a task, with names up to 11 characters; a fifth is `!LOW MEM!`.  A new HyForth starts with none.
+
+```
+0:/> cat /lib/greet.hyl
+: greet 7 . ;
+: twice dup + ;
+0:/> lib greet
+
+0:/> 3 twice .
+ 0006
+0:/> libs
+forth io files shell tasks sound mem tools term greet
+0:/> -lib greet
+
+0:/> libs
+forth io files shell tasks sound mem tools term (greet)
+```
 
 ### **The shell: directories, files and programs**
 
@@ -271,11 +297,12 @@ games/
 
 **A program by its name:** a word HyForth doesn't know is looked for as a program, `name.hyx` then `name.hys`: in the current directory, then (for a name with no `/`) in the directories of `$PATH` (below), or, with no `PATH`, in `/bin` on the current directory's card.  So `hello` runs `hello.hyx`.
 
-**The environment:** variables, `NAME=value`, as files under `/env`; each task has its own, and the tasks it starts (programs, scripts, shells) get a copy.  The shell uses two:
+**The environment:** variables, `NAME=value`, as files under `/env`; each task has its own, and the tasks it starts (programs, scripts, shells) get a copy.  The shell uses three:
 
 | Variable | Does |
 | :------- | :--- |
 | `PATH` | Where programs are found by name: directories, `:` between them (`/sd/0/bin:/sd/1/tools`) |
+| `LIBPATH` | Where `lib` finds library files (`name.hyl`), the same way (without it: `/lib` on the current card) |
 | `HOME` | Where `cd` alone goes (without it: the current card's root) |
 
 ```
@@ -451,7 +478,7 @@ check: lost 0, unmarked 0, twice 0
 
 `mkfs` is a **quick format**: it writes just the superblock, and the free map is written as the card fills, so a 244 GB card is ready in a moment.  `mkfs-full` writes the whole map first (about 13 minutes for 244 GB, with its progress shown), for a card an older ROM will read.  `mkfs-size` makes a HydraFS smaller than the card.  `mkfs-part` puts it in a partition, so the card can also hold a FAT partition for a PC: partition the card on the PC first, leaving room after the FAT partition, then `mkfs-part` on the Hydra.  By hand, the ctl command is `format [-f] [-p] [-s size] [label]` (size in megabytes, or gigabytes with a G: `"/dev/sd/0/ctl" "format -s 8G WORK" ctl`, or `echo format -p WORK > /dev/sd/0/ctl`).
 
-**The date and time:** `cat /dev/time` shows the Hydra's clock, and `echo 2026-09-29 18:05 > /dev/time` sets it.  It starts at 2000-01-01 at power-up (the Hydra has no clock that runs while it's off), so set it after a boot for the files you write to have the right dates (`ls -l` shows them); `boot.hys` can't know the time, but a line you type can.
+**The date and time:** `cat /dev/time` shows the Hydra's clock, and `echo 2026-09-29 18:05 > /dev/time` sets it.  With a **DS1747** in U7 (a task RAM with a clock that runs while the Hydra's off: [hardware](../hardware.md#task-ram-and-the-bank-registers)), the boot finds it and sets the clock from it, and says so after the volumes: `clock 2026-09-30 14:05:00` (with `battery low` when its battery is flat), or `clock stopped: set the time`.  Setting the time sets the DS1747 too, and a DS1747 that wasn't set (the boot said `no clock`) is found then.  Without one (`no clock`), the clock starts at 2000-01-01 at power-up, so set it after a boot for the files you write to have the right dates (`ls -l` shows them); `boot.hys` can't know the time, but a line you type can.
 
 **Sparse files:** a write that starts past a file's end (after `seek`) fills the gap with zeros, and whole 4 KB clusters of the gap take no space on the card: a file can have holes.  `"f" 0 create .` then `3 0 $400 seek 3 here @ 4 write .` makes a 64 MB file that takes 4 KB.
 
@@ -474,6 +501,7 @@ A line with `|` (with spaces around it, outside `"..."` and `q^...^` strings) is
 | Word | Stack | Does |
 | :--- | :---- | :--- |
 | `shell` | `( -- n )` | Start another HyForth in task n; it waits until brought to the front |
+| `forth` | `( -- n )` | The same, but a bare Forth: only the base loaded (see [the base and its libraries](#the-base-and-its-libraries)) |
 | `fg` | `( n -- )` | Bring task n to the front: it gets the keyboard, and the others wait to print |
 | `kill` | `( n -- )` | Kill task n and the tasks it started |
 | `ps` | | List the tasks (from `/dev/proc`: its files also give each task's directory, environment and memory: `cat /dev/proc/1/mem`) |

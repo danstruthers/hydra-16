@@ -2,6 +2,21 @@
 
 Ideas worth coming back to, with the reasoning so far.  Plans that are being built live in `MMU_PLAN.md` and `IO_PLAN.md`.
 
+### **Next features, in order**
+1. **A battery-backed clock: a DS1747 in U7.**  *(Done: the reserved bytes, the boot's probe and report, `/dev/time` with it, the emulator's `--rtc`, and tests.  Still to do: a hardware test of the chip, and a regular reload while the system runs, not only on a `/dev/time` read.)*  The DS1747 (the 5 V part; the DS1747W is 3.3 V) is a 512K RAM with a clock in its top 8 bytes, pin compatible with the HM628512 task RAM.  In U7 its registers (`$7FFF8-$7FFFF`) are **task F's `$7FF8-$7FFF`**: `T0-T3` come from U48 (74F573) through U21 (74F541, `T_M0-T_M3`) to U7's A15-A18 in order, with nothing inverted or swapped.  What it needs:
+   * Keep the ROM off those 8 bytes, in every task: the MMU area's clear (`MM_TASK_INIT`) and its handle table (103 handles become 101), and the hardware test's task RAM test.  Any stray write there could stop the oscillator or change the time.
+   * At boot: if its seconds count along with the tick (a plain HM628512 there doesn't), load `ZP_CLOCK` from it.  Setting the time (`/dev/time`) writes it too (the century, the day of the week, and OSC cleared: parts often come with the oscillator stopped).  Load it again now and then, so the tick clock doesn't drift.  Warn at boot when its battery flag says the battery is low.
+   * Each access with interrupts off, like `CLOCK_GET` (`T` = F, the R or W bit, the registers, `T` back), so it needs no lock.
+   * The emulator: a DS1747 in task F's RAM (`--rtc`), and regression tests.  The hardware test: is it counting, and is its battery good.
+2. **Semaphores.**  Nothing lets programs share memory safely today (`NO_PREEMPT` stops every task).  Kernel calls on a small table (16): `SEM_NEW` (a count; 1 = a mutex), `SEM_ACQUIRE` (waits, using no CPU), `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`.  Each has a count, a mask of the tasks waiting (woken with `TASK_WAKE_MASK`) and its holder.  The check and the wait happen with interrupts off, so no wakeup is lost.  A break or kill ends a wait with an error, and a task's end releases what it holds and frees what it made.  HyForth words for them.  Later, maybe named ones as files (`/dev/sem/NAME`).
+3. **C programs:** a cc65 target (start-up code, and a library over the `$F8xx` calls and `MM_ALLOC`).
+4. **`/rom`: programs and libraries in the paged ROM.**  A read-only file server over the paged ROM banks (4 MB, mostly free), made from a directory by a PC tool; `PATH` and `LIBPATH` fall back to `/rom/bin` and `/rom/lib`.  So programs, scripts and libraries run without a card.
+5. **XMODEM** send and receive, to move files over the serial port without taking the card out.  Its checksums and retries also get past the bad characters at 115200.
+6. **Exit status** for programs and scripts (through `TASK_EXIT`), and a word to read it, so a script can check a step.
+7. **Running a program in the background** (`&`).
+8. **Notes with handlers** (Plan 9's `notify`), as `IO_PLAN.md` step 10 has it.
+9. **Tools as programs:** paging output, `head`, `grep`, a hex dump of a file, copying a directory.
+
 ### **Slow devices on a faster CPU clock (board V2)**
 The CPU runs at 3.58 MHz; the board can also run it at 7.16 MHz, and the W65C02S goes to 14 MHz.  Some devices can't keep up with a faster bus: the YM2151 runs on its own 3.58 MHz clock, and slower 65C51/65C22 grades and ROMs have similar limits.  Until there's hardware for this, the CPU clock is a build-time setting (`CPU_CLOCK_MULT` in `os_rom/include/hw.inc`), and above 3.58 MHz the sound chip mustn't be used.
 

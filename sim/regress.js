@@ -167,6 +167,11 @@ const TESTS = [
       /serial port \(ACIA\) \. +FAIL a character took 76\d\d cycles\n/],
   },
   {
+    name: 'hwtest-u7', about: 'the hardware test from POST with task RAM line A17 stuck low at U7 (tasks F and B one): test 5 says which, and the pin',
+    args: ['--cycles', '20000000', '--input', 'T' + W(1) + '5', '--u7-fault', 'A17:low'],
+    expect: ['task RAM ........... FAIL task F has task B\'s mark: U7 A17 (pin 30)\n'],
+  },
+  {
     name: 'hwtest-irq', about: 'the hardware test from POST with IRQ line 9 held active (the OS can\'t run): the interrupts test says so',
     args: ['--cycles', '20000000', '--input', 'T' + W(1) + 'I', '--stuck-irq', '9'],
     expect: ['interrupts ......... FAIL an IRQ line is held active\n', 'hwtest: failed: 1\n'],
@@ -189,6 +194,43 @@ const TESTS = [
       '/> libs\nforth io files shell tasks sound mem tools term\n',            // (lib shell: io and files too)
       '\n> 1 2 + .\n' + num(3) + '\n', '> words | wc\n', '\n> foo\n\n !UNK WORD!\n', '> lib shell\n\n/> -lib bogus\n\n !UNK WORD!\n',
       '/> lib\n\n !UNK WORD!\n'],
+  },
+  {
+    name: 'libfiles', about: 'libraries from files (lib name: name.hyl in /lib): one loading another, an error dropping one, a missing one, -lib and lib again, lib all, words, out of slots',
+    sd: [{ dev: 0, label: 'LIBS', hfs: v => {
+      v.mkdir('lib');
+      v.put('lib/greet.hyl', Buffer.from('9 .\r\n: greet 7 . ;\r\n: twice dup + ;\r\n'));
+      v.put('lib/m2.hyl', Buffer.from('1 .\r\nlib greet\r\n: m2w greet greet ;\r\n2 .\r\n'));
+      v.put('lib/bad.hyl', Buffer.from(': oops nosuchword ;\r\n'));
+      v.put('lib/c.hyl', Buffer.from(': cw 3 . ;\r\n'));
+      v.put('lib/d.hyl', Buffer.from(': dw 4 . ;\r\n'));
+      v.put('lib/e.hyl', Buffer.from(': ew 5 . ;\r\n'));
+    } }],
+    args: ['--cycles', '150000000', '--input', BOOT + [': mine 6 . ;\\rlib m2\\r', 'm2w\\r3 twice .\\rmine\\rlibs\\r', 'lib bad\\rlibs\\roops\\r',
+      'lib nope\\r', '-lib greet\\rlibs\\rgreet\\rlib greet\\rgreet\\r', '-lib all\\rlibs\\rlib all\\rlibs\\r', 'words\\r',
+      'lib c\\rlib d\\rlib e\\rcw dw\\rlibs\\r'].join(W(1))],
+    expect: ['/> lib m2\n' + num(1) + num(9) + num(2) + '\n',             // (greet, loaded by m2: once)
+      '/> m2w\n' + num(7) + num(7) + '\n', '/> 3 twice .\n' + num(6) + '\n', '/> mine\n' + num(6) + '\n',
+      '/> libs\nforth io files shell tasks sound mem tools term m2 greet\n',
+      '/> lib bad\n\n !UNK WORD!\nline 0001\n', '/> libs\nforth io files shell tasks sound mem tools term m2 greet\n',
+      '/> oops\n\n !UNK WORD!\n', '/> lib nope\n\n !IO ERR!\n',
+      '/> libs\nforth io files shell tasks sound mem tools term m2 (greet)\n', '/> greet\n\n !UNK WORD!\n',
+      '/> lib greet\n\n0:/> greet\n' + num(7) + '\n',                // (searched again: not read again)
+      '> libs\nforth (io) (files) (shell) (tasks) (sound) (mem) (tools) (term) (m2) (greet)\n',
+      '/> libs\nforth io files shell tasks sound mem tools term m2 greet\n',
+      /: mine +\| [0-9A-F]{4}: m2w +\| [0-9A-F]{4}: twice +\| [0-9A-F]{4}: greet +\|/,
+      '/> lib e\n\n !LOW MEM!\n', '/> cw dw\n' + num(3) + num(4) + '\n',
+      '/> libs\nforth io files shell tasks sound mem tools term m2 greet c d\n'],
+    forbid: ['!DS PTR ERROR!', num(5)],
+  },
+  {
+    name: 'forth-bare', about: 'a bare Forth (forth): its own task, only the base loaded, lib loads what it needs; -lib all and lib all',
+    args: ['--cycles', '60000000', '--input', BOOT + 'forth .\\r' + W(1) + '\\x1dB' + W(1) + '\\rlibs\\r1 2 + .\\rls\\rlib files\\rlibs\\r' +
+      'lib all\\rlibs\\r-lib all\\rlibs\\r'],
+    expect: ['/> forth .\n' + num(0xB) + '\n', '[B]', '> libs\nforth (io) (files) (shell) (tasks) (sound) (mem) (tools) (term)\n',
+      '> 1 2 + .\n' + num(3) + '\n', '> ls\n\n !UNK WORD!\n', '> libs\nforth io files (shell) (tasks) (sound) (mem) (tools) (term)\n',
+      '/> libs\nforth io files shell tasks sound mem tools term\n',             // (lib all: the shell's prompt again)
+      '> libs\nforth (io) (files) (shell) (tasks) (sound) (mem) (tools) (term)\n'],
   },
   {
     name: 'pipes', about: 'pipelines: words | wc, and through cat (a copy of the shell in the middle) gives the same',
@@ -234,6 +276,29 @@ const TESTS = [
       if (!m || +m[1] < 5) return 'the tune played ' + (m ? m[1] : 'no') + ' notes';
       if (!/^ch 7 at/.test(m[2])) return 'no bell (the first key-on, on channel 7)';
     },
+  },
+  {
+    name: 'rtc', about: 'a DS1747 in U7 (its battery flat): found at boot, the clock set from it; /dev/time reads it; setting the time sets it too (the day of the week)',
+    args: ['--cycles', '60000000', '--rtc', '2026-09-30T14:05:00', '--rtc-battery-low', '--input', W(3) + 'cat /dev/time\\r' + W(1) +
+      'echo 2027-01-02 03:04:05 > /dev/time\\r' + W(1) + 'cat /dev/time\\r'],
+    expect: [/\nclock 2026-09-30 14:05:0[0-2] battery low\n/, /\/> cat \/dev\/time\n2026-09-30 14:05:0[1-3]\n/,
+      /\/> cat \/dev\/time\n2027-01-02 03:04:0[5-7]\n/],
+    check: (out, report) => {
+      if (!/--- DS1747: 2027-01-02 03:04:\d\d day 7\n/.test(report)) return 'the DS1747 wasn\'t set (Saturday: day 7): ' + (/--- DS1747.*/.exec(report) || ['none'])[0];
+    },
+  },
+  {
+    name: 'rtc-unset', about: 'a DS1747 never set (junk in its registers): "no clock" at boot; setting the time sets it, and it\'s found then',
+    args: ['--cycles', '60000000', '--rtc', 'unset', '--input', W(3) + 'echo 2027-01-02 03:04:05 > /dev/time\\r' + W(2) + 'cat /dev/time\\r'],
+    expect: ['\nno clock\n', /\/> cat \/dev\/time\n2027-01-02 03:04:0[6-9]\n/],
+    check: (out, report) => {
+      if (!/--- DS1747: 2027-01-02 03:04:\d\d day 7\n/.test(report)) return 'the DS1747 isn\'t running from the time set: ' + (/--- DS1747.*/.exec(report) || ['none'])[0];
+    },
+  },
+  {
+    name: 'rtc-none', about: 'no DS1747 (a plain HM628512 in U7): "no clock" at boot, and the clock is set and read as before',
+    args: ['--cycles', '40000000', '--input', BOOT + 'echo 2027-01-02 03:04:05 > /dev/time\\r' + W(1) + 'cat /dev/time\\r'],
+    expect: ['\nno clock\n\nHyForth', /\/> cat \/dev\/time\n2027-01-02 03:04:0[5-9]\n/],
   },
   {
     name: 'serial', about: 'serial settings: 9600 8N1 at boot; stty (/dev/ser/ctl), a refused format, IO_CTL rate and format; the ACIA\'s registers',

@@ -59,6 +59,8 @@ HWT_SN              = $F4       ; A count (2)
 HWT_SE              = $F6       ; A fault found: wrote, read, where (2)
 HWT_SR              = $F7
 HWT_SA              = $F8
+HWT_SL              = $F9       ; HWT_PAGES_TO: the last page's end (0: all of it)
+HWT_SX              = $FA       ;   and this page's
 
 HWT_RAM             = $0400     ; Routines that switch the paged ROM bank run in task 0's RAM here
 

@@ -49,6 +49,8 @@
 //   --stuck-irq N       Hold IRQ line N active all the time
 //   --ram-fault BANK:An:high|low   Address line An (0-12) stuck high/low on the RAM chip holding BANK (a
 //                       shared chip holds 4 bank IDs, e.g. F0-F3; a task RAM module 16 banks), e.g. F0:A0:high
+//   --u7-fault An:high|low   Task RAM line An (15-18: T0-T3, which task's 32K) stuck high/low at U7, e.g. A17:low
+//                       (tasks that differ in that bit share their RAM; here their bank registers too, which the board keeps apart)
 //   --model M           Hardware what-ifs: sharedlow (T doesn't switch $0000-$7FFF), nostack (stack page
 //                       not per task), zponly (only ZP per task), noshared (no shared RAM)
 //   --sd [N:]FILE[@B]   An SD card (SDHC) on SPI device N (0-7; default 0), backed by the image FILE
@@ -56,6 +58,11 @@
 //                       (e.g. --sd card0.img --sd 3:C:/images/card3.img).  @B: the card says it has B
 //                       blocks, more than the file (a big card from a small file: blocks past the file's end
 //                       read as zeros, and a write there makes the file longer)
+//   --rtc TIME|now|stopped|unset   A DS1747 in U7 (a 512K task RAM with a clock): its clock registers are
+//                       task F's $7FF8-$7FFF.  TIME (YYYY-MM-DDThh:mm[:ss]) or now (this PC's time): the time it has
+//                       at power-up, running; stopped: its oscillator off (OSC set), at 2000-01-01; unset: its
+//                       registers hold junk, as a part never set may.  Without it, U7 is a plain HM628512
+//   --rtc-battery-low   The DS1747's battery flag (BF) reads 0: its battery is flat
 //   --paste             Type the --input (and interactive input) at the ACIA's full line rate, back to back like a
 //                       paste, whether the ROM keeps up or not: bytes arriving while the last is still unread are
 //                       lost, as on the chip, and counted in the report (default: the next key waits for it)
@@ -95,6 +102,9 @@ for (let i = 0; i < argv.length; i++) {
     case '--acia-line': opt.aciaLine = +next(); break;
     case '--acia': opt.acia = next().toLowerCase(); if (!/^(rockwell|wdc)$/.test(opt.acia)) { console.error('--acia rockwell|wdc'); process.exit(1); } break;
     case '--stuck-irq': opt.stuckIrq = +next(); break;
+    case '--u7-fault': { const m = /^A(1[5-8]):(high|low)$/i.exec(next());
+      if (!m) { console.error('--u7-fault A15|A16|A17|A18:high|low'); process.exit(1); }
+      opt.u7Fault = { mask: 1 << (+m[1] - 15), high: m[2].toLowerCase() === 'high' }; break; }
     case '--model': opt.model = next(); break;
     case '--ram-fault': { const m = /^([0-9A-Fa-f]{1,2}):A(\d+):(high|low)$/i.exec(next()); opt.ramFault = { bank: parseInt(m[1], 16), mask: 1 << +m[2], high: m[3].toLowerCase() === 'high' }; break; }
     case '--sd': { let f = next(); const b = /^(.+)@(\d+)$/.exec(f); if (b) f = b[1];
@@ -103,6 +113,10 @@ for (let i = 0; i < argv.length; i++) {
       opt.sds.push({ dev, file: m ? m[2] : f, blocks: b ? +b[2] : 0 }); break; }
     case '--sdsc': opt.sdsc.push(+next()); break;
     case '--raw': opt.raw = true; break;
+    case '--rtc': { const s = next(), m = /^(\d{4})-(\d\d)-(\d\d)[T ](\d\d):(\d\d)(?::(\d\d))?$/.exec(s);
+      if (!m && !/^(now|stopped|unset)$/.test(s)) { console.error('--rtc YYYY-MM-DDThh:mm[:ss] | now | stopped | unset'); process.exit(1); }
+      opt.rtc = m ? Date.UTC(+m[1], m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0)) / 1000 : s; break; }
+    case '--rtc-battery-low': opt.rtcBatteryLow = true; break;
     case '--paste': opt.paste = true; break;
     case '--trace': opt.trace = +next(); break;
     case '--dump': opt.dumps.push(next()); break;
@@ -126,6 +140,45 @@ const hx = (v, n = 2) => v.toString(16).toUpperCase().padStart(n, '0');
 
 // ---- memory and devices
 const taskRam = []; for (let i = 0; i < 16; i++) taskRam.push(new Uint8Array(0x8000).map(() => rnd(256)));
+
+// --rtc: a DS1747 in U7.  Its clock counts seconds (base, at cycle 'at'; as UTC, for the fields) while its oscillator
+// runs.  Its registers show the time as it is, or as it was when R or W was set (a snapshot: 'held'); while W is set,
+// writes go to the snapshot, and clearing W starts the clock from it, with the century that write gives.  Writes with
+// W clear go nowhere (the datasheet doesn't say what they do).  BF (the day's bit 7) can't be written.
+const RTC_REGS = 0x7FF8, RTC_TASK = 15;
+let rtc = null;
+if (opt.rtc !== undefined) {
+  const n = new Date();                                         // (now: this PC's local time, as the clock's fields)
+  rtc = { base: typeof opt.rtc === 'number' ? opt.rtc : opt.rtc === 'now' ? Date.UTC(n.getFullYear(), n.getMonth(), n.getDate(),
+    n.getHours(), n.getMinutes(), n.getSeconds()) / 1000 : Date.UTC(2000, 0, 1) / 1000, at: 0, osc: opt.rtc !== 'stopped',
+    ctl: 0, held: null, dow: 0, junk: opt.rtc === 'unset' ? Array.from({ length: 8 }, () => rnd(256)) : null };
+  rtc.dow = 4;                                                  // (Day 1 = Sunday: 1970-01-01 was a Thursday, day 5)
+}
+const bcd = n => ((n / 10) | 0) << 4 | n % 10, unbcd = b => (b >> 4) * 10 + (b & 15);
+const rtcNow = () => rtc.osc ? rtc.base + Math.floor((cyc - rtc.at) / (opt.clock * 1e6)) : rtc.base;
+function rtcRegs() {                                            // The registers, from the clock as it is now
+  if (rtc.junk) return rtc.junk.slice();
+  const s = rtcNow(), d = new Date(s * 1000), y = d.getUTCFullYear(), days = Math.floor(s / 86400);
+  return [bcd(Math.floor(y / 100)), (rtc.osc ? 0 : 0x80) | bcd(d.getUTCSeconds()), bcd(d.getUTCMinutes()), bcd(d.getUTCHours()),
+    ((days + rtc.dow) % 7 + 7) % 7 + 1, bcd(d.getUTCDate()), bcd(d.getUTCMonth() + 1), bcd(y % 100)];
+}
+function rtcRead(r) {
+  const v = (rtc.held || rtcRegs())[r];
+  if (r === 0) return rtc.ctl | (v & 0x3F);
+  return r === 4 ? (opt.rtcBatteryLow ? 0 : 0x80) | (v & 0x7F) : v;
+}
+function rtcWrite(r, v) {
+  if (r > 0) { if (rtc.ctl & 0x80) rtc.held[r] = v; return; }
+  if ((v & 0xC0) && !(rtc.ctl & 0xC0)) rtc.held = rtcRegs();   // R or W set: updates halt
+  if (!(v & 0x80) && (rtc.ctl & 0x80)) {                        // W cleared: the clock from the registers
+    const h = rtc.held, y = unbcd(v & 0x3F) * 100 + unbcd(h[7]);
+    rtc.base = Date.UTC(y, unbcd(h[6] & 0x1F) - 1, unbcd(h[5] & 0x3F), unbcd(h[3] & 0x3F), unbcd(h[2] & 0x7F), unbcd(h[1] & 0x7F)) / 1000;
+    rtc.at = cyc; rtc.osc = !(h[1] & 0x80); rtc.junk = null;
+    rtc.dow = (((h[4] & 7) - 1 - Math.floor(rtc.base / 86400)) % 7 + 7) % 7;
+  }
+  rtc.ctl = v & 0xC0;
+  if (!rtc.ctl) rtc.held = null;
+}
 const taskBank = {}, sharedBank = {};
 const vecRam = new Uint16Array(16).map(() => rnd(65536));
 // T/U/V/W are 8-bit latches (74F573) read back through a 74F541: a read gives the whole byte written.  Only
@@ -311,7 +364,8 @@ function ymTimers(v) {                                         // Register $14 w
 
 // Which task's copy of $0000-$7FFF an access uses (the --model what-ifs change this)
 const tsel = a => opt.model === 'sharedlow' ? 0 : (opt.model === 'zponly' && a >= 0x200) ? 0
-  : (opt.model === 'nostack' && a >= 0x100 && a < 0x200) ? 0 : T;
+  : (opt.model === 'nostack' && a >= 0x100 && a < 0x200) ? 0
+  : opt.u7Fault ? (opt.u7Fault.high ? T | opt.u7Fault.mask : T & ~opt.u7Fault.mask) : T;
 const bankInstalled = b => b >= 0xF0 ? (opt.model !== 'noshared' && U < opt.sharedU) : b < opt.modules * 16;
 function bankMem(b) {
   if (b >= 0xF0) { const k = U * 16 + (b & 15); return sharedBank[k] || (sharedBank[k] = new Uint8Array(0x2000)); }
@@ -325,7 +379,7 @@ function ramOfs(b, a) {
   return f.high ? o | f.mask : o & ~f.mask;
 }
 function rd(a) {
-  if (a < 0x8000) return taskRam[tsel(a)][a];
+  if (a < 0x8000) return rtc && a >= RTC_REGS && tsel(a) === RTC_TASK ? rtcRead(a - RTC_REGS) : taskRam[tsel(a)][a];
   if (a < 0xA000) { const b = taskRam[tsel(0)][0]; return bankInstalled(b) ? bankMem(b)[ramOfs(b, a)] : (a >> 8); }  // floating bus
   if (a < 0xE000) { const off = taskRam[tsel(1)][1] * 0x4000 + ((a - 0xA000) ^ 0x2000); return off < pagedrom.length ? pagedrom[off] : 0xFF; }
   if (a >= 0xFF00 && a < 0xFFF0) {
@@ -349,6 +403,7 @@ function wr(a, v) {
   if (a < 0x8000) {
     for (const w of opt.watches) if (w.addr === a && (w.task < 0 || w.task === tsel(a)))
       console.log('watch: $' + hx(a, 4) + ' (task ' + hx(tsel(a), 1) + ') ' + hx(taskRam[tsel(a)][a]) + ' -> ' + hx(v) + ' by ' + hx(W, 1) + ':' + hx(lastPC, 4) + ' at cycle ' + cyc);
+    if (rtc && a >= RTC_REGS && tsel(a) === RTC_TASK) return rtcWrite(a - RTC_REGS, v);
     taskRam[tsel(a)][a] = v; return;
   }
   if (a < 0xA000) { const b = taskRam[tsel(0)][0]; if (bankInstalled(b)) bankMem(b)[ramOfs(b, a)] = v; return; }
@@ -601,6 +656,11 @@ if (ymKeyOns.length > 1) { const t = ymKeyOns.map(k => +k.split(' ').pop()); let
 if (opt.profile >= 0) profileReport();
 console.log('--- lowest stack pointer by task (free bytes; W:PC at the time): ' + stackLow.map((v, t) => v > 0xFF ? null : hx(t, 1) + ':' + hx(v) + ' (' + (v + 1) + '; ' + hx(stackLowAt[t][0], 1) + ':' + hx(stackLowAt[t][1], 4) + ')').filter(x => x).join(', '));
 if (ymLost) console.log('--- YM2151: ' + ymLost + ' data write(s) while it was busy (lost on the chip)');
+if (rtc) {                                                      // --rtc: the DS1747's registers as they are
+  const r = rtcRegs(), h = n => hx(r[n]);
+  console.log('--- DS1747: ' + (rtc.junk ? 'junk ' + r.map(v => hx(v)).join(' ') : hx(r[0] & 0x3F) + h(7) + '-' + h(6) + '-' + h(5) + ' ' + h(3) + ':'
+    + h(2) + ':' + hx(r[1] & 0x7F) + ' day ' + r[4]) + (rtc.osc ? '' : ', stopped (OSC)') + (rtc.ctl ? ', control bits ' + hx(rtc.ctl) + ' left set' : ''));
+}
 console.log('--- cycles ' + cyc + ' (' + (cyc / (opt.clock * 1e6)).toFixed(3) + ' s at ' + opt.clock.toFixed(2) + ' MHz), T=' + hx(T, 1) + ' U=' + hx(U, 1) + ' V=' + hx(V) + ' W=' + hx(W, 1) + ', ACIA control ' + hx(aciaCtrl) + ' command ' + hx(aciaCmd) + ', vector RAM: ' + [...vecRam].map(v => hx(v, 4)).join(' '));
 for (const d of opt.dumps) {
   const m = /^([0-9A-Fa-f]+)(?::(\d+))?(?:@([0-9A-Fa-f]))?$/.exec(d);

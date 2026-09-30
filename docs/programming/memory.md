@@ -4,7 +4,7 @@ How a task allocates memory, shares it with other tasks, and refers to memory an
 
 ### **The MMU: a task's own memory**
 
-Each task has its own memory manager state, the **MMU area** at `$7E00-$7FFF` of its RAM.  So a task switch swaps it in with the rest of the task's RAM.  All memory is reached through **handles**: 1-byte numbers (1-103) that stay valid until freed.
+Each task has its own memory manager state, the **MMU area** at `$7E00-$7FFF` of its RAM.  So a task switch swaps it in with the rest of the task's RAM.  All memory is reached through **handles**: 1-byte numbers (1-101) that stay valid until freed.  (The MMU area stops at `$7FF7`: the last 8 bytes of task RAM are left alone in every task, as task F's are a DS1747's clock registers when one is in U7.)
 
 **What an allocation gets**, by size (`MM_ALLOC`):
 

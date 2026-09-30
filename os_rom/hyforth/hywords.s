@@ -1414,6 +1414,23 @@ REDIN:                  ;   and its <: stdin
     .byte $FF
 BOOTFLAG:               ; <> 0: run boot.hys before the first prompt (the boot shell: page 7's SH_BOOT)
     .byte 0
+BAREFLAG:               ; <> 0: a bare Forth ('forth': forth_bare_main): 'cold' loads no libraries
+    .byte 0
+LIB_HEADS2:             ; The chains LIBSET2 selects (LIB_NEXT): the RAM libraries' (by slot, 0 till
+    .word 0, 0, 0, 0    ;   loaded), and the base's (entry 7: its last header, 'exit')
+    .word 0, 0, 0, h_exit
+RLIBNAME:               ; Each RAM library slot: its name (0: a free slot; lib, -lib, libs) ...
+    .res RLIB_MAX * RLIB_NAMELEN
+RLIBSAVE:               ;   while it's loading: the words in RAM's chain (LASTHEAP), put back at its end
+    .res RLIB_MAX * 2
+RLIBDEPTH:              ;   and the depth of its file (INCDEPTH, with it open), $FF: not loading
+    .byte $FF, $FF, $FF, $FF
+RLIBFAIL:               ; <> 0: the scripts being read are being stopped (an error): a library being
+    .byte 0             ;   loaded is dropped (INCABORT, INCEND)
+RLIBHAVE:               ; The slots loaded (bit s: slot s; lib all searches them all again)
+    .byte 0
+RLIBSLOT:               ; (lib's: the slot it's on)
+    .byte 0
 LBLCARD:                ; the card whose label SHLABEL holds ($FF: none yet, or it may have changed)
     .byte $FF
 SHN:                    ; the shell routines' scratch
@@ -1425,6 +1442,8 @@ SHFD:
 SHFD2:
     .byte 0
 SHTASK:
+    .byte 0
+SHFIND:                 ; What SH_EXEC's search looks for: SH_FIND_PROG (a program) or SH_FIND_LIB (lib's)
     .byte 0
 INCDEPTH:               ; include: how many scripts deep it is (their fds and lines: INCFD, INCLINE)
     .byte 0
@@ -1486,6 +1505,10 @@ lib_begin LIBN_TASKS
 ; ( -- n )  start another shell (HyForth, in a task of its own); n = its task.  It prints its banner and
 ;           waits for input until it's brought to the front (fg, or Ctrl-] then n)
 def_far "shell", "shell"
+;
+; ( -- n )  start a bare Forth: HyForth with only its base loaded (no libraries: lib loads them), in a task
+;           of its own; n = its task.  As shell's, it waits for input until it's brought to the front
+def_far "forth", "forth"
 ;
 ; ( n -- )  bring task n to the front: the console reads for it, and only it (and the tasks it started)
 ;           write to it; the others wait.  Ctrl-] then n does the same

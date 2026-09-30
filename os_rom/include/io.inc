@@ -108,6 +108,10 @@ ENV_FID_VAR         = $80
 .assert     ENV_VALBUF + 256 <= $8400, error, "ENV_VALBUF must end below SH_HANDLES"
 .assert     ENV_BLOCKS + 16 * $100 <= $9FFF, error, "ENV_BLOCKS must end below the shared bank's probe byte"
 
+; The clock chip (a DS1747: rtc.s, page 9): whether there's one (RTC_ST_*), in the system's shared bank too
+RTC_STATE           = $9D00
+.assert     RTC_STATE >= ENV_BLOCKS + 16 * $100 && RTC_STATE < $9FFF, error, "RTC_STATE: after the environments, below the probe byte"
+
 ; Device table: in shared bank ID $00 (see shared.s)
 IO_MAX_DEVS         = 16
 IO_DEV_SIZE         = 16

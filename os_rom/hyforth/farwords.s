@@ -780,6 +780,7 @@ SHARG1:
 ;         and what loading each loads (its bit, and the ones it needs)
 LIBNAMES:
     .byte "io", 0, "files", 0, "shell", 0, "tasks", 0, "sound", 0, "mem", 0, "tools", 0, "term", 0
+    .byte "all", 0    ; (After them: every one)
 LIBNEEDS:
     .byte LIB_IO
     .byte LIB_FILES | LIB_IO
@@ -816,19 +817,215 @@ LSEND:
 LSNEXT:
     asl TEMP1
     bne LSEACH
+    ldx #0            ; Then the RAM libraries: each slot with a name (in parentheses: not searched)
+LSRAM:
+    ldy RLIBOFS,x
+    lda RLIBNAME,y
+    beq LSRNEXT
+    PRINT_SPACE
+    lda RLIBBIT,x
+    and LIBSET2
+    sta TEMP1
+    bne LSRNAME
+    PRINT_CHAR #'('
+LSRNAME:
+    lda RLIBNAME,y
+    beq LSREND
+    PRINT_CHAR
+    iny
+    bra LSRNAME
+LSREND:
+    lda TEMP1
+    bne LSRNEXT
+    PRINT_CHAR #')'
+LSRNEXT:
+    inx
+    cpx #RLIB_MAX
+    bne LSRAM
     jmp next
 lib:                        ; lib
     jsr LIBARG
+    bcc LBROM
+    jmp RLIBLOAD      ; (Not a ROM library's: a file's)
+LBROM:
+    cpx #LIB_COUNT
+    bcc LBONE
+    lda RLIBHAVE      ; (all: the RAM libraries loaded too, and every ROM library)
+    tsb LIBSET2
+    lda #$FF
+    bra LBSET
+LBONE:
     lda LIBNEEDS,x    ; (it, and the ones it needs)
+LBSET:
     tsb LIBSET
     jmp next
 unlib:                      ; -lib
     jsr LIBARG
-    trb LIBSET        ; (.A: its bit)
+    bcs UNRAM
+    cpx #LIB_COUNT
+    bcc UNROM
+    pha               ; (all: the RAM libraries too)
+    lda #$FF ^ LIB2_BASE
+    trb LIBSET2
+    pla
+UNROM:
+    trb LIBSET        ; (.A: its bit; all: $FF)
+    jmp next
+UNRAM:
+    jsr RLIBFIND      ; A RAM library: not searched (it stays in RAM: lib searches it again)
+    bcc UNFOUND
+    jmp LAUNKNOWN
+UNFOUND:
+    lda RLIBBIT,x
+    trb LIBSET2
     jmp next
 ;
-; A library's name: the next word on the line (ARGGET).  OUT: .X = the library (LIBN_), .A = its bit.  No
-; name, or one that isn't a library's: the word ends with !UNK WORD!.  Uses TEMP1, TEMP2
+;-------- Libraries from files (RAM libraries: hyforth.s, RLIB_MAX).  lib name, when no ROM library has
+;         that name: loaded already, it's searched again; else name.hyl (HyForth source: SH_CMD SHC_LIBOPEN
+;         finds it, as a program is found, in $LIBPATH or /lib) is read as include reads a script, from the
+;         next line on, into a slot of its own.  While it's read, the words it defines go on a chain of
+;         their own (LASTHEAP from 0; the words defined in RAM aren't searched meanwhile); at its end
+;         (INCEND: RLIBEND) that chain is the library's, and the words in RAM's chain are back.  An error
+;         while it's read drops it (INCABORT).
+RLIBLOAD:
+    jsr RLIBFIND
+    bcs RLNEW
+    lda RLIBBIT,x     ; (Loaded: searched again; still loading: nothing)
+    and RLIBHAVE
+    tsb LIBSET2
+    jmp next
+RLNEW:
+    ldx #0            ; A free slot
+RLFREE:
+    ldy RLIBOFS,x
+    lda RLIBNAME,y
+    beq RLSLOT
+    inx
+    cpx #RLIB_MAX
+    bne RLFREE
+    lda #ERR_MEM      ; (None: out of memory)
+    sta ERRFLAG
+    jmp errrtn
+RLSLOT:
+    stx RLIBSLOT
+    ldx #0            ; The name must fit
+RLLEN:
+    lda ARGBUF,x
+    beq RLOPEN
+    inx
+    cpx #RLIB_NAMELEN
+    bcc RLLEN
+    lda #ERR_IO_NAME
+    bra RLFAIL
+RLOPEN:
+    lda #<ARGBUF
+    ldy #>ARGBUF
+    ldx #SHC_LIBOPEN
+    jsr SH_CMD        ; .A = its fd
+    bcs RLFAIL
+    jsr INCOPENFD     ; Read as a script, from the next line on
+    bcs RLFAIL
+    ldx RLIBSLOT      ; Its slot: its name ...
+    ldy RLIBOFS,x
+    ldx #0
+RLNAME:
+    lda ARGBUF,x
+    sta RLIBNAME,y
+    beq RLNAMED
+    iny
+    inx
+    bra RLNAME
+RLNAMED:
+    lda RLIBSLOT      ;   the words in RAM's chain, kept till its end ...
+    asl
+    tax
+    lda LASTHEAP
+    sta RLIBSAVE,x
+    lda LASTHEAP+1
+    sta RLIBSAVE+1,x
+    stz LASTHEAP      ;   its own chain, from none ...
+    stz LASTHEAP+1
+    ldx RLIBSLOT
+    lda INCDEPTH      ;   and its file's depth
+    sta RLIBDEPTH,x
+    jmp next
+RLFAIL:
+    jmp IOFAIL
+;
+; The RAM library slot named ARGBUF.  OUT: C = 0, .X = it; C = 1: none.  Modifies: .A, .Y
+RLIBFIND:
+    ldx #0
+RFSLOT:
+    ldy RLIBOFS,x
+    stx RLIBSLOT
+    ldx #0
+RFCHAR:
+    lda RLIBNAME,y
+    cmp ARGBUF,x
+    bne RFNEXT
+    iny
+    inx
+    cmp #0
+    bne RFCHAR
+    ldx RLIBSLOT      ; (The same, to their 0s: a free slot's "" isn't a name)
+    clc
+    rts
+RFNEXT:
+    ldx RLIBSLOT
+    inx
+    cpx #RLIB_MAX
+    bne RFSLOT
+    sec
+    rts
+;
+; The script at INCDEPTH ends: a RAM library it was loading is done: its chain is its own (LIB_HEADS2) and
+; searched, and the words in RAM's chain are back; or, the scripts being stopped (RLIBFAIL), it's dropped
+; (its slot free again).  Modifies: .A, .X, .Y
+RLIBEND:
+    ldx #RLIB_MAX-1
+REFIND:
+    lda RLIBDEPTH,x
+    cmp INCDEPTH
+    beq REFOUND
+    dex
+    bpl REFIND
+    rts
+REFOUND:
+    lda #$FF
+    sta RLIBDEPTH,x
+    txa
+    asl
+    tay
+    lda RLIBFAIL
+    bne REDROP
+    lda LASTHEAP
+    sta LIB_HEADS2,y
+    lda LASTHEAP+1
+    sta LIB_HEADS2+1,y
+    lda RLIBBIT,x
+    tsb RLIBHAVE
+    tsb LIBSET2
+    bra REBACK
+REDROP:
+    phy
+    ldy RLIBOFS,x
+    lda #0
+    sta RLIBNAME,y
+    ply
+REBACK:
+    lda RLIBSAVE,y
+    sta LASTHEAP
+    lda RLIBSAVE+1,y
+    sta LASTHEAP+1
+    rts
+;
+RLIBOFS:    .byte 0 * RLIB_NAMELEN, 1 * RLIB_NAMELEN, 2 * RLIB_NAMELEN, 3 * RLIB_NAMELEN
+RLIBBIT:    .byte $01, $02, $04, $08
+.assert     RLIB_MAX = 4, error, "RLIBOFS, RLIBBIT: one for each RAM library slot"
+;
+; A library's name: the next word on the line (ARGGET), into ARGBUF.  OUT: C = 0, a ROM library's: .X = the
+; library (LIBN_), .A = its bit; or all: .X = $FF, .A = $FF.  C = 1: not a ROM library's name (ARGBUF has
+; it).  No name: the word ends with !UNK WORD!.  Uses TEMP1, TEMP2
 LIBARG:
     jsr ARGGET        ; (into ARGBUF)
     bcs LAUNKNOWN
@@ -848,6 +1045,12 @@ LACHAR:
     bne LACHAR
     ldx TEMP2         ; (the same, to their 0s)
     lda TEMP1
+    cpx #LIB_COUNT    ; (all)
+    bcc LAFOUND
+    ldx #$FF
+    lda #$FF
+LAFOUND:
+    clc
     rts
 LANEXT:
     lda LIBNAMES,y    ; (past the rest of this name, and its 0)
@@ -858,7 +1061,11 @@ LASKIP:
     iny
     inc TEMP2
     asl TEMP1
+    lda TEMP2
+    cmp #LIB_COUNT + 1
     bne LANAME
+    sec               ; (Not a ROM library's name)
+    rts
 LAUNKNOWN:
     lda #ERR_UKW
     sta ERRFLAG
@@ -965,8 +1172,11 @@ INCDEEP:
     sec
     rts
 ;
-; A script's end: stdin back to what it was
+; A script's end: stdin back to what it was (and a RAM library it was loading, done: RLIBEND)
 INCEND:
+    phy               ; (.Y kept: the line reader's place in its line)
+    jsr RLIBEND
+    ply
     dec INCDEPTH
     ldx INCDEPTH
     lda INCFD,x
@@ -1002,10 +1212,13 @@ INCABORT:
     tax
     lda INCLINE-2,x
     PRINT_BYTE
+    lda #1            ; (The RAM libraries they were loading: dropped)
+    sta RLIBFAIL
 INCALOOP:
     jsr INCEND
     lda INCDEPTH
     bne INCALOOP
+    stz RLIBFAIL
     rts
 run:                        ; run
     jsr ARGGET
@@ -1057,6 +1270,13 @@ RCDONE:
 ; name.hyx or name.hys, here or in the card's /bin), run as run does.
 ; OUT: C = 0: it ran; or C = 1, .A = error (ERR_IO_NOT_FOUND: no such program)
 RUNNAME:
+    lda LIBSET          ; (Only with the shell's library: else not found)
+    and #LIB_SHELL
+    bne RNSHELL
+    lda #ERR_IO_NOT_FOUND
+    sec
+    rts
+RNSHELL:
     ldy #0
     lda (NXTTOK),y      ; (its length, then its characters)
     cmp #ARGBUF_SIZE
@@ -1570,10 +1790,16 @@ WCEND:
     pla
     sta TEMP1
     jmp this          ; characters
+forth:                      ; forth
+    lda #<PAGE1::forth_bare_main
+    ldy #>PAGE1::forth_bare_main
+    ldx #1            ; (ROM page 1)
+    bra TKRUN
 shell:                      ; shell
     lda #<::SHELL_MAIN
     ldy #>::SHELL_MAIN
     ldx #0            ; (ROM page 0)
+TKRUN:
     jsr TASK_RUN
     bcc TKPUSH
     jmp IOFAIL
@@ -1737,6 +1963,56 @@ PIPEEND:
     lda #$FF
     sta PIPEIN
 PEDONE:
+    rts
+;
+;-------- The shell library's part of reading a line (hyforth.s: getline, through the gates LINE_START,
+;         LINE_PROMPT and LINE_READ).  Without it loaded (LIB_SHELL in LIBSET), HyForth reads lines as a
+;         plain Forth: a plain prompt, and no pipelines, redirection or boot.hys.
+;
+; A line is about to be read: the last line's redirection and pipe undone (whether or not the shell's
+; library is loaded now: it was when that line began, if they're set up), and before the boot shell's first
+; line, boot.hys from the selected volume's root (the current directory), if it's there
+LINE_START:
+    jsr SH_UNREDIR
+    jsr PIPEEND
+    lda LIBSET
+    and #LIB_SHELL
+    beq LSDONE
+    lda BOOTFLAG
+    beq LSDONE
+    stz BOOTFLAG
+    lda #<S_BOOTHYS
+    ldy #>S_BOOTHYS
+    jmp INCOPEN
+LSDONE:
+    rts
+;
+; The console's line is about to be read: the prompt.  The shell's, in its format (prompt: PROMPTFMT);
+; without its library, a plain one
+LINE_PROMPT:
+    lda LIBSET
+    and #LIB_SHELL
+    beq LPBARE
+    lda #<PROMPTFMT
+    ldy #>PROMPTFMT
+    jmp SH_PROMPT
+LPBARE:
+    jsr WRITE_CRLF
+    PRINT_CHAR #'>', #ASCII_SPACE
+    rts
+;
+; A line has been read (into TIB): with the shell's library, its pipeline's left side started (PIPECHK) and
+; its redirection set up (SH_REDIR).  OUT: C = 0; or C = 1, .A = the IO error
+LINE_READ:
+    lda LIBSET
+    and #LIB_SHELL
+    beq LRNONE
+    jsr PIPECHK
+    bcs LRDONE
+    jmp SH_REDIR
+LRNONE:
+    clc
+LRDONE:
     rts
 ;
 ; ( fd addr n -- ) -> ZP_IO_BUF = addr, ZP_IO_CNT = n, .A = fd

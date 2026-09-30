@@ -86,6 +86,8 @@ The latches have no reset, so they power up random; the reset code sets them.  N
 
 **Task RAM** is one HM628512 (U7, 512K) on the main board.  CPU A0-A14 go straight to it, CPU A15 is its chip enable (low for `$0000-$7FFF`), and `T0-T3` drive its A15-A18.  So each value of `T` selects a different 32K, and a task switch is a single write to `$FFF0`.  Zero page and the stack page are part of it, so every task has its own zero page and stack.
 
+**A DS1747 in U7** gives the Hydra a clock that keeps the time while it's off.  The DS1747 (the 5 V part; the DS1747W is 3.3 V) is a 512K battery-backed RAM with a clock, pin compatible with the HM628512, in a 600-mil module.  Its clock registers are the chip's top 8 bytes, `$7FFF8-$7FFFF`, so they're **task F's `$7FF8-$7FFF`** (`T0-T3` reach U7's A15-A18 through U48 and U21 in order).  The ROM keeps off those bytes in every task, finds the chip at boot, and sets its clock from it ([HyForth](using/hyforth.md#files-and-devices)).  The rest of the chip is task RAM as before, kept while the power's off.  A new DS1747 comes with its battery disconnected until it first gets power, and its oscillator may be stopped: setting the time starts it.
+
 **The bank registers `$00` and `$01`** *(sheet `ZPMirrorRAM`)* are four 74LS219 (16 x 4-bit RAM) chips, addressed by `T0-T3`:
 
 | Register | Chips | Drives |

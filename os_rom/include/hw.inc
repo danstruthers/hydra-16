@@ -237,3 +237,23 @@ T_REGISTER = $FFF0 ; IO_PORT_BYTE IO_PORT_F, 0
 U_REGISTER = $FFF1 ; IO_PORT_BYTE IO_PORT_F, 1
 V_REGISTER = $FFF2 ; IO_PORT_BYTE IO_PORT_F, 2
 W_REGISTER = $FFF3 ; IO_PORT_BYTE IO_PORT_F, 3
+
+; A DS1747 in U7 (a 512K RAM with a clock, pin compatible with the HM628512 task RAM): its clock registers
+; are the chip's top 8 bytes, $7FFF8-$7FFFF.  T0-T3 are U7's A15-A18, so they're task RTC_TASK's RTC_REGS -
+; $7FFF.  Only the clock's own code may write there: in every task, the ROM keeps below RTC_REGS (the MMU
+; area's clear and its handle table, the hardware test's task RAM test).  With an HM628512 in U7 they're
+; plain RAM that nothing uses.
+RTC_TASK = $0F
+RTC_REGS = $7FF8
+RTC_CTL  = RTC_REGS + 0     ; W (bit 7: updates halted, and set from the registers when it's cleared), R
+                            ;   (bit 6: updates halted, to read), the century (BCD, 00-39)
+RTC_SEC  = RTC_REGS + 1     ; OSC (bit 7: the oscillator stopped), the seconds (BCD, as are the rest)
+RTC_MIN  = RTC_REGS + 2
+RTC_HOUR = RTC_REGS + 3     ; (00-23)
+RTC_DAY  = RTC_REGS + 4     ; BF (bit 7, read only: 1 while the battery is good), FT (bit 6: a 512 Hz
+                            ;   test), the day of the week (1-7)
+RTC_DATE = RTC_REGS + 5
+RTC_MON  = RTC_REGS + 6
+RTC_YEAR = RTC_REGS + 7     ; (00-99)
+RTC_W    = $80
+RTC_R    = $40

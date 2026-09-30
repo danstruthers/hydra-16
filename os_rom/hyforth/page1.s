@@ -81,14 +81,12 @@ FAR_GATE_INLINE IO_REMOVE,      PAGE2::IO_REMOVE,       2
 FAR_GATE_INLINE IO_WSTAT,       PAGE2::IO_WSTAT,        2
 FAR_GATE_INLINE IO_CHDIR,       PAGE2::IO_CHDIR,        2
 FAR_GATE_INLINE IO_GETCWD,      PAGE2::IO_GETCWD,       2
+FAR_GATE_INLINE IO_STD_OPEN,    PAGE2::IO_STD_OPEN,     2   ; (A bare Forth's start: forth_bare_main)
 
 ; Gates to the shell's routines (page 7; the aliases are in all.s)
-FAR_GATE_INLINE SH_PROMPT,      ::SH_PROMPT_P7,         7
 FAR_GATE_INLINE SH_CD,          ::SH_CD_P7,             7
 FAR_GATE_INLINE SH_PWD,         ::SH_PWD_P7,            7
 FAR_GATE_INLINE SH_CMD,         ::SH_CMD_P7,            7
-FAR_GATE_INLINE SH_REDIR,       ::SH_REDIR_P7,          7
-FAR_GATE_INLINE SH_UNREDIR,     ::SH_UNREDIR_P7,        7
 FAR_GATE_INLINE INSAVE,         ::SH_INSAVE_P7,         7
 FAR_GATE_INLINE TASK_SET_BREAK, ::TASK_SET_BREAK,       0
 FAR_GATE_INLINE TASK_SIGNAL,    ::TASK_SIGNAL,          0
@@ -97,8 +95,9 @@ FAR_GATE_INLINE CONS_SET_FG,    ::CONS_SET_FG,          0
 ; HyForth's far words, and the routines with them, and the disassembler (page A, hyforth/farwords.s; the
 ; aliases are in all.s)
 FAR_GATE_INLINE FW_CALL,        ::FW_ENTRY_PA,          $A  ; A far word (FARWORD)
-FAR_GATE_INLINE PIPECHK,        ::PIPECHK_PA,           $A
-FAR_GATE_INLINE PIPEEND,        ::PIPEEND_PA,           $A
+FAR_GATE_INLINE LINE_START,     ::LINE_START_PA,        $A  ; (The shell library's part of reading a
+FAR_GATE_INLINE LINE_PROMPT,    ::LINE_PROMPT_PA,       $A  ;   line: getline)
+FAR_GATE_INLINE LINE_READ,      ::LINE_READ_PA,         $A
 FAR_GATE_INLINE INCOPEN,        ::INCOPEN_PA,           $A
 FAR_GATE_INLINE INCOPENFD,      ::INCOPENFD_PA,         $A
 FAR_GATE_INLINE INCEND,         ::INCEND_PA,            $A

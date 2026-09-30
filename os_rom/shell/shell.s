@@ -15,7 +15,8 @@ SH_PTR2         = ZP_TEMP_VEC2                              ;   and another
 ; Boot
 
 ; The boot shell (task 1, from BOOT_SHELL on page 0): stdio on the console, the cards' files at /sd, the
-; volumes found and the lowest selected (SH_VOLUMES), then HyForth, which runs boot.hys from there
+; volumes found and the lowest selected (SH_VOLUMES), the clock chip (SH_CLOCK), then HyForth, which runs
+; boot.hys from there
 ; (BOOTFLAG), and WOZMON after bye.  (A shell started later starts at SHELL_MAIN, on page 0, and inherits
 ; its parent's namespace and current directory.)
 SH_BOOT:
@@ -36,6 +37,7 @@ SH_BOOT:
             ldy         #>SH_S_SD
             jsr         IO_MOUNT
             jsr         SH_VOLUMES
+            jsr         SH_CLOCK
             jsr         COPYTORAM
             lda         #1                                  ; (HyForth: run boot.hys before the first prompt)
             sta         PAGE1::BOOTFLAG
@@ -95,6 +97,20 @@ SH_VOLUMES:
 
 @done:
             clc
+            rts
+
+; The clock chip: looked for (RTC_BOOT, page 9: the clock set from it, if there's one), and its line printed:
+; "clock 2026-09-30 14:05:00", "clock stopped: set the time" or "no clock"
+SH_CLOCK:
+            LOAD_ADDR   PAGE1::SHBUF2, ZP_IO_REQ            ; (RTC_BOOT's text: at (ZP_IO_REQ), ZP_PROC_IDX long)
+            jsr         RTC_BOOT
+            ldx         #0
+:
+            lda         PAGE1::SHBUF2,X
+            jsr         WRITE_CHAR
+            inx
+            cpx         ZP_PROC_IDX
+            bne         :-
             rts
 
 ; SHBUF = card .A's root, "/sd/N".  Modifies: .A

@@ -53,6 +53,9 @@ FAR_GATE_INLINE     SH_CMD,         ::SH_CMD_P7,            7
 FAR_GATE_INLINE     SH_CD,          ::SH_CD_P7,             7
 FAR_GATE_INLINE     SH_PWD,         ::SH_PWD_P7,            7
 FAR_GATE_INLINE     INSAVE,         ::SH_INSAVE_P7,         7
+FAR_GATE_INLINE     SH_PROMPT,      ::SH_PROMPT_P7,         7   ; (The shell library's line hooks:
+FAR_GATE_INLINE     SH_REDIR,       ::SH_REDIR_P7,          7   ;   LINE_START ... in farwords.s)
+FAR_GATE_INLINE     SH_UNREDIR,     ::SH_UNREDIR_P7,        7
 
 ; Page A copy of WRITE_HSTRING: the HString has to be read from page A, where the caller's strings are
 ; (the disassembler's).  .A, .Y hold the addr of HString to write

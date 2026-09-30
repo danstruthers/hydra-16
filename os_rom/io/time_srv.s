@@ -3,12 +3,13 @@
 ; ****************************************************************************
 ; The clock (BIOS ROM page 9, included inside `.scope PAGE9`, see all.s): CLOCK_GET and CLOCK_SET, and
 ; /dev/time.  The clock is the seconds since 2000-01-01 00:00:00 (ZP_CLOCK, in the system task's ZP),
-; counted by the scheduler's tick (VIA_IRQ_FAST, page 2).  The Hydra has no clock that keeps the time while
-; it's off, so it starts at 0 at power-up: until it's set, it's early on 2000-01-01, and so are the stamps
-; HydraFS gives files.  It counts to 2135.
-;   /dev/time   read: the date and time, as text: "2026-09-29 18:05:00" and CR LF
+; counted by the scheduler's tick (VIA_IRQ_FAST, page 2).  It starts at 0 at power-up: until it's set, it's
+; early on 2000-01-01, and so are the stamps HydraFS gives files; but with a DS1747 in U7, a clock that
+; keeps the time while the Hydra's off (rtc.s), the boot sets it from that.  It counts to 2135.
+;   /dev/time   read: the date and time, as text: "2026-09-29 18:05:00" and CR LF (the DS1747's seconds
+;               first, if there's one: RTC_LOAD)
 ;               write: set them: "YYYY-MM-DD hh:mm:ss" (the seconds can be left out, or the whole time:
-;               0); e.g. echo 2026-09-29 18:05 > /dev/time
+;               0); e.g. echo 2026-09-29 18:05 > /dev/time.  The DS1747 too (RTC_SAVE)
 ; The server runs in the client's task (IO_DEV_CALLER_TASK; the shell registers it, as it does env:
 ; SH_BOOT).  Its scratch is ZP_PROC_* (the text: PROC_PUT, PROC_TEXT_OUT), ZP_TIME, ZP_TIME_M, ZP_TIME_D.
 
@@ -43,9 +44,17 @@ CLOCK_GET:
             plp
             rts
 
-; Set the clock to the 4 bytes at the zero page address .X (in this task), from the start of a second.
-; From any task.  Preserves .A, .X, .Y (and the caller's I flag)
+; Set the clock to the 4 bytes at the zero page address .X (in this task): from the start of a second
+; (CLOCK_SET); or its seconds only, where it is in this second staying (CLOCK_ADJUST: from the DS1747, which
+; the boot lined it up with).  From any task.  Preserves .A, .X, .Y (and the caller's I flag)
+CLOCK_ADJUST:
+            clc
+            bra         CLOCK_PUT
+
 CLOCK_SET:
+            sec
+
+CLOCK_PUT:
             php
             sei
             pha
@@ -66,8 +75,10 @@ CLOCK_SET:
             lda         3,X
             stz         T_REGISTER
             sta         ZP_CLOCK + 3
+            bcc         :+                                  ; (CLOCK_ADJUST: the second goes on)
             lda         #SCHED_TICK_HZ
             sta         ZP_CLOCK_SUB
+:
             sty         T_REGISTER
             ply
             pla
@@ -122,6 +133,13 @@ TIME_OPEN:
 TIME_READ:
             jsr         IO_SRV_MAP
             inc         ZP_IO_REQ + 1                       ; (The data area: PROC_PUT)
+            jsr         RTC_STATE_GET                       ; A DS1747: its seconds first (its text made in
+            bpl         :+                                  ;   the data area, then this over it)
+            jsr         RTC_LOAD
+            bcs         :+
+            ldx         #ZP_TIME
+            jsr         CLOCK_ADJUST
+:
             stz         ZP_PROC_IDX
             ldx         #ZP_TIME
             jsr         CLOCK_GET
@@ -240,7 +258,10 @@ TIME_PUT2:
             pla
             jmp         PROC_PUT
 
-; Write: set the clock from "YYYY-MM-DD[ hh:mm[:ss]]" (the whole write is taken).
+; Write: set the clock from "YYYY-MM-DD[ hh:mm[:ss]]" (the whole write is taken), and the DS1747: if the
+; boot didn't find one (it wasn't set, or was stopped), it's looked for again, now it's been set (up to
+; 1.1 s: RTC_PROBE), and the clock lined up with it.  (With no DS1747, its bytes in task RTC_TASK are
+; written: nothing else uses them.)
 ; OUT: C = 0; or C = 1, .A = ERR_IO_BAD_REQ (not a date and time the clock can hold)
 TIME_WRITE:
             jsr         IO_SRV_MAP
@@ -251,6 +272,34 @@ TIME_WRITE:
 :
             sta         ZP_PROC_LEN
             inc         ZP_IO_REQ + 1                       ; The data area
+            jsr         TIME_PARSE
+            bcs         @bad
+            ldx         #ZP_TIME
+            jsr         CLOCK_SET
+            jsr         RTC_SAVE                            ; (Its text in the data area)
+            jsr         RTC_STATE_GET
+            bmi         @done
+            jsr         RTC_PROBE
+            bpl         @done
+            jsr         RTC_LOAD
+            bcs         @done
+            ldx         #ZP_TIME
+            jsr         CLOCK_SET
+
+@done:
+            dec         ZP_IO_REQ + 1
+            jsr         IO_SRV_UNMAP                        ; (The count stays: all of it taken)
+            jmp         TIME_OK
+
+@bad:
+            dec         ZP_IO_REQ + 1
+            jsr         IO_SRV_UNMAP
+            jmp         TIME_BAD
+
+; ZP_TIME = the time in the text at (ZP_IO_REQ), ZP_PROC_LEN long: "YYYY-MM-DD[ hh:mm[:ss]]", then its end,
+; or a CR, LF or 0.  OUT: C = 0; or C = 1 (not a date and time the clock can hold).
+; Modifies: .A, .X, .Y, ZP_TIME ..., ZP_PROC_OWN, ZP_PROC_FG
+TIME_PARSE:
             ldy         #0
             jsr         TIME_NUM                            ; The year: 2000-2135
             bcs         @bad
@@ -288,9 +337,8 @@ TIME_WRITE:
             bra         @years
 
 @bad:
-            dec         ZP_IO_REQ + 1
-            jsr         IO_SRV_UNMAP
-            jmp         TIME_BAD
+            sec
+            rts
 
 @month:
             lda         #'-'                                ; The month: 1-12 (and its days before it)
@@ -380,11 +428,8 @@ TIME_WRITE:
             jmp         @bad
 @far1:
 :
-            ldx         #ZP_TIME
-            jsr         CLOCK_SET
-            dec         ZP_IO_REQ + 1
-            jsr         IO_SRV_UNMAP                        ; (The count stays: all of it taken)
-            jmp         TIME_OK
+            clc
+            rts
 
 ; A number below .A (a field of the time) at (ZP_IO_REQ),Y, added to ZP_TIME.
 ; OUT: C = 0 (.Y past it); or C = 1.  Modifies: .A, .X, ZP_TIME_M
