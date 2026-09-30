@@ -280,7 +280,7 @@ SER_TX_TRY:
                 sty             T_REGISTER                  ; Quick switch to the serial task (no stack use!)
                 ldy             ZP_SER_SEND_STATUS
                 bne             @queue                      ; Busy: the TX IRQ sends it
-                _M_SER_TX_BYTE
+                jsr             SER_TX_BYTE
                 inc             ZP_SER_SEND_STATUS          ; SER_SEND_STATUS_BUSY
                 bra             @ok
 
@@ -306,6 +306,11 @@ SER_TX_TRY:
                 sec
                 rts
 
+; Send .A to the ACIA: _M_SER_TX_BYTE, as a subroutine (page 0 has room for one copy).  Uses .Y
+SER_TX_BYTE:
+                _M_SER_TX_BYTE
+                rts
+
 ; The transmitter is free (the Rockwell 65C51's TDRE interrupt, or the WDC 65C51's timer 2 ran out): send
 ; the next byte from the TX ring, or go idle.  Runs in the serial task, in an IRQ handler.
 ; Modifies: .A, .X, .Y
@@ -322,7 +327,7 @@ SER_TX_NEXT:
                 lda             SER_TX_BUF,Y
                 iny
                 sty             SER_TX_TAIL
-                _M_SER_TX_BYTE
+                jsr             SER_TX_BYTE
                 ldx             #SER_WR_WAIT            ; There's room: wake the waiting writers
                 jmp             SER_WAKE
 

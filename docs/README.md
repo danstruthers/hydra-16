@@ -7,7 +7,7 @@ The Hydra-16 is a multitasking 65C02 computer: a W65C02S whose address decoding 
 
 ### **Using the system**
 * **[HyForth](using/hyforth.md)**: the shell and language: words, directories and files, scripts and programs, pipelines, tasks.
-* **[WOZMON, POST and the self tests](using/wozmon.md)**: the monitor and disassembler, reading the power-on self test.
+* **[WOZMON, POST and the self tests](using/wozmon.md)**: the monitor and disassembler, reading the power-on self test, the hardware test.
 
 ### **Programming it**
 The **[Programmer's Guide](programming/README.md)**, by area:

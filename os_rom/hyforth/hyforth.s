@@ -39,8 +39,9 @@
 .macro def_word name, label, flag
 makelabel "h_", label
 .ident(.sprintf("H%04X", hcount + 1)):
-  .word .ident (.sprintf ("H%04X", hcount))
+  .word .ident (.sprintf ("H%04X", hlink))
 hcount .set hcount + 1
+hlink .set hcount
   .byte .strlen(name) + flag + 0 ; nice trick !
   .byte name
 makelabel "", label
@@ -52,13 +53,30 @@ makelabel "", label
 .macro def_far name, label
 makelabel "h_", label
 .ident(.sprintf("H%04X", hcount + 1)):
-  .word .ident (.sprintf ("H%04X", hcount))
+  .word .ident (.sprintf ("H%04X", hlink))
 hcount .set hcount + 1
+hlink .set hcount
   .byte .strlen(name)
   .byte name
 makelabel "", label
     jsr FARWORD
     .word FAR::.ident(label)
+.endmacro
+;
+; A library's words (a word set beyond the base language, e.g. LIBN_IO): the headers between lib_begin and
+; lib_end go on that library's chain, not the base's.  A library's words can be in several places (each
+; lib_begin goes on with its chain); the interpreter searches the chains of the libraries loaded (LIBSET),
+; after the words defined in RAM and the base (LIB_NEXT).  LIB_HEADS, at the end, is each chain's head.
+;
+.macro lib_begin num
+hsave .set hlink
+hlink .set .ident(.sprintf("HL%d", num))
+hlibnum .set num
+.endmacro
+;
+.macro lib_end
+.ident(.sprintf("HL%d", hlibnum)) .set hlink
+hlink .set hsave
 .endmacro
 ;---------------------------------------------------------------------
 ;  macros for PGS stuff
@@ -155,9 +173,39 @@ werrend:
 ; variables for macros
 
 hcount .set 0
+hlink .set 0               ; the header the next one links to (its number: H0000 = none)
 emcount .set 0             ; # of error messages set up
 
 H0000 = 0
+
+;---------------------------------------------------------------------
+; The libraries: the word sets beyond the base language, each a chain of headers of its own (lib_begin),
+; searched when its bit is in LIBSET.  Their names and what each needs are on page A (farwords.s: lib).
+; LIB_BOOT is what HyForth loads at 'cold': everything the shell uses.
+;
+LIBN_IO     = 0            ; files and devices: open, read, mount, stty, ...
+LIBN_FILES  = 1            ; the file and card commands: cd, ls, cp, cat, mkfs, fsck, ...
+LIBN_SHELL  = 2            ; the shell: prompt, include, run, args, edit, echo; and a line's |, > and <,
+                           ;   the prompt's format, and a word it doesn't know run as a program
+LIBN_TASKS  = 3            ; tasks: shell, fg, kill, sleep, ps
+LIBN_SOUND  = 4            ; the YM2151: sndinit, sndtest, sndstop, ywrite
+LIBN_MEM    = 5            ; MMU memory: halloc, hfree, hlock, hunlock
+LIBN_TOOLS  = 6            ; debugging and tests: dump, disasm, syscall, mmtest, hwtest
+LIBN_TERM   = 7            ; the ANSI terminal: Acls, Ascr, Acol
+LIB_COUNT   = 8
+LIB_IO      = 1 << LIBN_IO ; (Their bits in LIBSET)
+LIB_FILES   = 1 << LIBN_FILES
+LIB_SHELL   = 1 << LIBN_SHELL
+LIB_TASKS   = 1 << LIBN_TASKS
+LIB_SOUND   = 1 << LIBN_SOUND
+LIB_MEM     = 1 << LIBN_MEM
+LIB_TOOLS   = 1 << LIBN_TOOLS
+LIB_TERM    = 1 << LIBN_TERM
+LIB_BOOT    = LIB_IO | LIB_FILES | LIB_SHELL | LIB_TASKS | LIB_SOUND | LIB_MEM | LIB_TOOLS | LIB_TERM
+                           ; (loaded at 'cold': all of them, as the shell has always had)
+.repeat LIB_COUNT, n       ; (Each library's chain so far: the number of its last header)
+.ident(.sprintf("HL%d", n)) .set 0
+.endrepeat
 
 ;---------------------------------------------------------------------
 ;               CONFIGURATION OPTIONS
@@ -325,6 +373,11 @@ TASK_ZP BATCH, 1       ; <> 0: a pipeline's left side (a copy)  $BE
 TASK_ZP CHILDSP, 1     ;   its stack pointer, to end the task  $BD
 TASK_ZP PIPER, 1       ; the pipe being set up: read fd        $BC
 TASK_ZP PIPEW, 1       ;   and write fd                        $BB
+;
+;                   Libraries (set up by 'cold', not cleared by CLEAR)
+;
+TASK_ZP LIBSET, 1      ; the libraries loaded (LIB_IO ...)     $BA
+TASK_ZP LIBLEFT, 1     ;   those a search hasn't been through  $B9
 TASK_ZP_END
 ;
 ; *** $DO-$FF total usage in ZP, including TEMP vars ***
@@ -380,6 +433,8 @@ cold:
     jsr CLEAR          ; zero out zero page, INBUF, DS, and RT
     stz BATCH          ; not a pipeline's copy
     stz IOERR          ; no IO error yet
+    lda #LIB_BOOT      ; the base, and the libraries the shell needs
+    sta LIBSET
     lda #$FF
     sta PIPEIN         ; stdin not redirected
     lda #<fbreak       ; Ctrl-C: back to the prompt
@@ -517,18 +572,25 @@ RESFIND:                ; load last or 'latest' word on heap
     sta TEMP2 + 1
     lda LASTHEAP
     sta TEMP2
+    lda LIBSET              ; (then the libraries loaded: LIB_NEXT)
+    sta LIBLEFT
 
 RESLOOP:              ; lsb linked list
     lda TEMP2
     sta WORKREG             ; so 'last' -> W
     ora TEMP2+1             ; only zero if both are zero
     bne RESEACH              ; PGS - did he forget this?
+    jsr LIB_NEXT            ; the end of a chain: the next library's
+    bcc RESLOOP
 
 WORDNOTFOUND:
     lda ERRFLAG            ; keep an error already raised (e.g. out of memory for a q^...^ string)
     bne WNFERR
     lda STATUS             ; interpreting: the program of that name?  (name.hyx or name.hys: RUNNAME)
     bne WNFUKW
+    lda LIBSET             ;   (with the shell's library)
+    and #LIB_SHELL
+    beq WNFUKW
     jsr RUNNAME
     bcc WNFRAN
     cmp #ERR_IO_NOT_FOUND
@@ -677,9 +739,16 @@ GLCONS:
     beq GLNOPROMPT
 GLPROMPT:
     inc ECHOCR
+    lda LIBSET           ; (without the shell's library: a plain one)
+    and #LIB_SHELL
+    beq GLBARE
     lda #<PROMPTFMT
     ldy #>PROMPTFMT
     jsr SH_PROMPT
+    bra GLNOPROMPT
+GLBARE:
+    jsr WRITE_CRLF
+    PRINT_CHAR #'>', #ASCII_SPACE
 GLNOPROMPT:
 ;
     ldy #0   ; leave the first
@@ -749,6 +818,9 @@ GETLNSKIPCRLF:          ; SKIP to here if don't want CRLF
     dey
 ; start it
     sta CURBUF
+    lda LIBSET           ; (the shell's library: pipelines and redirection)
+    and #LIB_SHELL
+    beq token
     jsr PIPECHK          ; a pipeline ( ... | ... )?  start its left side (farwords.s)
     bcs GETLNFAIL
     jsr SH_REDIR         ; >, >> and < (shell/redir.s): stdout and stdin to and from files
@@ -1275,6 +1347,40 @@ COMPEND:
 ; ( -- )
 def_word "exit", "exit", 0
     jmp EXIT
+;
+;---------------------------------------------------------------------
+; The libraries' chains (after the words in RAM and the base's: RESFIND, 'words').  The next one to search:
+; the lowest in LIBLEFT, which is taken out of it.  OUT: C = 0: TEMP2 = its head; C = 1: none left.
+; Modifies: .A, .X
+LIB_NEXT:
+    lda LIBLEFT
+    sec
+    beq LNNONE
+    ldx #0
+LNBIT:
+    lsr
+    bcs LNFOUND
+    inx
+    inx
+    bra LNBIT
+LNFOUND:
+    lda LIB_HEADS,x
+    sta TEMP2
+    lda LIB_HEADS+1,x
+    sta TEMP2+1
+    lda LIBLEFT          ; (its bit, the lowest, cleared)
+    dec a
+    and LIBLEFT
+    sta LIBLEFT
+    clc
+LNNONE:
+    rts
+;
+; Each library's chain: its last header (0: none), by LIBN_
+LIB_HEADS:
+.repeat LIB_COUNT, n
+    .word .ident(.sprintf("H%04X", .ident(.sprintf("HL%d", n))))
+.endrepeat
 
 ; mark end of ROM IMAGE
 ;

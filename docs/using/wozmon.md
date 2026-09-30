@@ -1,6 +1,6 @@
 ## **WOZMON, the disassembler, POST and the self tests**
 
-The machine-level tools: WOZMON (a monitor, after Steve Wozniak's Apple 1 monitor) with a built-in disassembler, the power-on self test, and the ROM self tests.  Sources: `os_rom/monitor/`, `os_rom/tests/`.
+The machine-level tools: WOZMON (a monitor, after Steve Wozniak's Apple 1 monitor) with a built-in disassembler, the power-on self test, the ROM self tests, and the hardware test.  Sources: `os_rom/monitor/`, `os_rom/tests/`, `os_rom/hwtest/`.
 
 ### **Getting to WOZMON**
 
@@ -103,4 +103,56 @@ To find the chip and pin behind a report, see the [Hardware Reference](../hardwa
 * `F0:0/00/0001` is A0 (pin 12) on U25;
 * `F8:2/00/0000` is bank line 1 (A18, pin 1) on U27.
 
-The emulator can inject a stuck address line to see the report (`--ram-fault`, [emulator](../tools/emulator.md)).
+The emulator can inject a stuck address line to see the report (`--ram-fault`, [emulator](../tools/emulator.md)).  For a closer look at a fault, run the [hardware test](#the-hardware-test).
+
+### **The hardware test**
+
+A test of as much of the board as software can reach, for bringing up a board or chasing a fault.  It's a program of its own in paged ROM bank 1 (`os_rom/hwtest/`).  It takes the machine over: interrupts off, its own polled serial I/O at 9600 8N1, and no calls into the OS.  Its memory tests overwrite everything, so it ends with a reset.
+
+**Starting it:**
+* From HyForth: `hwtest`.
+* From POST: type `T` just after a reset, before POST's second line appears.  This works when the OS can't start, for example with a bad shared RAM chip or an IRQ line held active.
+
+**The menu.**  Type a test's key to run it, or:
+
+| Key | Does |
+| :-- | :--- |
+| `A` | All the tests, quick: every bank's marks, and every byte of a sample of the memory (about 15 seconds) |
+| `F` | All the tests, full: every byte of every bank, in every task (about 3 minutes at 3.58 MHz with three RAM modules) |
+| `L` | All the tests, quick, again and again until a key: a count of the passes and failures after each (for an intermittent fault) |
+| `R` | Reset: the machine starts again, through POST |
+
+Each test prints its name, what it found, then `ok` or `FAIL` and the fault.  A run ends with `hwtest: all passed` or `hwtest: failed: N`:
+
+```
+CPU ................ ok
+RAM modules ........ 0 1 2 ok
+shared RAM ......... FAIL bank 04 8000 bits 08
+CPU clock .......... 3.58 MHz ok
+SPI devices ........ SD cards 0 ok
+hwtest: failed: 1
+```
+
+**The tests,** in the order `A` runs them.  The memory tests write a pattern that depends on the address, so a stuck or crossed address line shows up as well as a bad data line.  Bits are hex masks of the bad bits.
+
+| Key | Test | Checks | A fault shows |
+| :-- | :--- | :----- | :------------ |
+| `1` | CPU | A sample of the W65C02S's instructions and flags: binary and decimal arithmetic, and the 65C02's own (`STZ`, `TSB`/`TRB`, `BRA`, `PHX`, `RMB`/`SMB`, `BBR`/`BBS`, `(zp)`) | `check N` |
+| `2` | T U V W registers | Each stores and reads back all 8 bits | the register and its bad bits |
+| `3` | shared RAM | Every one of the 256 banks (`U` 0-F, IDs `$F0-$FF`) has its own mark; every byte of the first bank of each chip (full: of every bank) | Address faults: each chip and the lines it doesn't see, with pins, e.g. `U29: A18 (pin 1)` (from the marks of all 256 banks: the bits a bank's ID and the mark it holds differ by).  The same A13-A16 line on all four chips is the `U` register's line itself (test 2).  `no mark`: a data fault or no chip.  Otherwise a byte fault: `bank UB` (U, then the bank), where, the bad bits |
+| `4` | RAM bank registers | Each task's `$00` (74LS219s IC1 and IC2): task 0 marks the 16 shared banks; then each task set to each bank and read at once; then all 16 tasks set to their own banks first and read afterwards; then lines 4-7 | `at once: task F: D>F` (set to $FD, it read bank $FF's mark: a cell that doesn't hold its value); `all set, then read: task F bank FF read A8 (bank FD's mark, bits 02)` (right at once but wrong later: writing one register disturbs another).  `skipping banks FE FF (...)` (information, not a failure): task 0 alone reads those banks wrong, so the shared RAM is at fault (test 3, e.g. a bad solder joint on U29, which holds banks `$FC-$FF`); the registers are tested with the other banks.  `(task 0 too)` after a failure: task 0 read that bank wrong as well, so it's the RAM again (an intermittent fault) |
+| `5` | task RAM | Every task's zero page (from `$02`), stack page and `$0200-$7FFF` | the task, where, the bad bits |
+| `6` | RAM modules | Which modules there are (shown); each bank of each has its mark in each task; every byte of each module's first bank (full: of every bank, in every task) | the bank, the task, where, the bad bits |
+| `7` | BIOS ROM | A CRC of each 8K page against the checksums the build stores | `page N`, and `(W line n)` if it reads as another page |
+| `8` | paged ROM | A CRC of each 16K bank, and the bank lines | `bank NN`, or `bank line n` |
+| `I` | interrupts | No IRQ line active with the devices quiet; the vector RAM (all 16 entries, two patterns); `BRK` through entry `V`; the VIA's, the ACIA's and the YM2151's interrupts on their lines, one at a time, then all at once in priority order | `an IRQ line is held active`; `vector entry N wrote .. read ..`; the device, and `no IRQ` or the line it came on; `unasked: IRQ on line N` (one came before a device was asked).  With line 4, the YM2151's status too (bit 0: timer A's flag, 1: timer B's) |
+| `V` | VIA | Timer 1's latches, the shift register and IER read back; timer 1 counting, its flag (one-shot and free-running); timer 2's; the shift register's | the part |
+| `Y` | sound chip (YM2151) | Its busy flag (set by a write, then clear), and its timers' flags | `always busy (no chip?)`, `never busy`, `timer A`, ... |
+| `K` | CPU clock | The CPU's clock against the YM2151's (`SND_CLK`, 3.58 MHz): shows 0.89, 1.79, 3.58 or 7.16 MHz (jumpers J6-J7), which must be what the ROM is built for (`CPU_CLOCK_MULT`).  It shows its counts: `first`, from starting YM2151 timer A to its first overflow (judged: 16,384 at 3.58 MHz), and `next`, to the one after with the timer's flag reset by writing `$14` again (shown only: larger by the write's time if that restarts the timer) | the clock and what the ROM expects, or `not a clock the board has` and the counts |
+| `S` | serial port (ACIA) | DCD and DSR active; the control and command registers; a programmed reset; a character's time at 9600 baud (Rockwell only) | the register, or the character's time in cycles |
+| `P` | SPI devices | Information: each of devices 0-7 is sent an SD card's reset (CMD0); the SD cards that answer are shown | (another answer is shown as `(device: answer)`) |
+| `C` | I2C bus | SCL and SDA high when released and each low alone when pulled low (a line shorted, held low or stuck high); then information: the devices that answer, at `$08-$77` | the lines' levels |
+| `X` | slot cards | Information: the slot ports (`1A` = slot 1, select A) that don't read as empty | |
+| `H` | hold a task (probe) | Not a test, and not in `A`, `F` or `L`: every task's RAM bank register set to `$F0` + the task, then the task typed (0-F) held in `T`, its bank at `$8000` read over and over, until a key.  Meanwhile, measure T0-T3 (IC1-IC4 pins 1, 15, 14, 13) and the bank register's outputs, `RAMB0-7` (IC1 and IC2 pins 5, 7, 9, 11) | `not a task` |
+
+The ROM tests' checksums are made by the build (`os_rom/tools/romsum.js`, run by `makeC02`) and kept at the end of paged ROM bank 1, so burn both images from the same build.  The CPU clock and serial tests time things with VIA timer 1, so a bad VIA shows up there too; run the tests in order when chasing a fault.  The emulator can inject faults to see the reports: `--ram-fault`, `--stuck-irq`, `--acia-line`, `--clock` ([emulator](../tools/emulator.md)).

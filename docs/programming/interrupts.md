@@ -6,7 +6,7 @@ How the OS dispatches interrupts, and how a driver handles one.  Sources: `os_ro
 
 | IRQ | Source | Registered by |
 | ---: | :----- | :------------ |
-| 0 | VIA: timer 1 (the scheduler's tick), timer 2 | The system task (tick); the serial driver (timer 2, WDC ACIA builds) |
+| 0 | VIA: timer 1 (the scheduler's tick), timer 2 | The system task (tick); the serial driver (timer 2: sending, in WDC ACIA builds, and at 115200) |
 | 1 | ACIA (serial) | The serial driver (which also registers a VIA handler for timer 2, used in WDC ACIA builds) |
 | 2, 3 | Slot 0, A and B | |
 | 4 | YM2151 | The sound driver (a placeholder: it doesn't use the chip's timers yet, so it claims nothing) |
@@ -35,6 +35,7 @@ The dispatcher and its `TASK_CALL` cost about 650 cycles per interrupt, far too 
   * **The rest goes through the dispatcher:** the break and kill keys, console commands and the bell are recorded in `SER_PEND` for the serial driver's own handler (`SER_DO_PENDING`).
 * **`VIA_IRQ_FAST`** counts the tick and wakes the sleepers due, in the system task's zero page.
   * **Then** it asks the dispatcher for a task switch (`IRQ_TICK`).
+  * **Timer 2,** in Rockwell ACIA builds, paces sending at 115200: `SER_T2_FAST` sends the next byte from the transmit ring as `SER_IRQ_FAST` would (`SER_TX_STEP`).
   * **Other VIA sources** (timer 2, in WDC ACIA builds) go to the registered handlers as before.
 * **The registered handlers** for lines 0 and 1 (`VIA_IRQ_HANDLER`, `SERIAL_IRQ_HANDLER`) are still there, and are what the dispatcher calls for that rare work.
 

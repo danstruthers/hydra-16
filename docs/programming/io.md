@@ -167,6 +167,7 @@ The serial port starts at 9600 baud, 8 data bits, no parity, 1 stop bit.  Its se
 * **Not possible:**
   * 2 stop bits with 8 data bits and parity: the 65C51 sends 1.
   * With a WDC ACIA build, rates below about 1200: a character's time must fit VIA timer 2.
+* At 115200 (Rockwell ACIA builds), sending is paced by VIA timer 2, with idle bits between characters (`SER_PACE_GAP` in `hw.inc`; [hardware](../hardware.md#acia-65c51-u3-port-1-irq-line-1)).  At the other rates the ACIA's TDRE interrupt sends each byte as soon as it can.
 * **After a reset**, the port is back at 9600 8N1.
 
 In HyForth: `"b19200" stty`, and `stty?` to show the settings.

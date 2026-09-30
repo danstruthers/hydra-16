@@ -300,7 +300,8 @@ TASK_ZP     SER_PREFIX, 1           ; Non-zero: the console prefix key came, the
 TASK_ZP     SER_RATE, 1             ; The port's settings (SER_CONFIG): the baud rate (SER_RATE_*)
 TASK_ZP     SER_FORMAT, 1           ;   the character format (SER_FMT_*)
 TASK_ZP     SER_BIT_CYC, 2          ;   a bit's time in CPU cycles
-TASK_ZP     SER_T2_CHAR, 2          ;   a character's time (and a bit's margin): WDC ACIA pacing (VIA timer 2)
+TASK_ZP     SER_T2_CHAR, 2          ;   a character's time and the gap after it: pacing (VIA timer 2)
+TASK_ZP     SER_PACED, 1            ;   <> 0: sending is paced by VIA timer 2 (the Rockwell ACIA at 115200)
 TASK_ZP     SER_IRQ_W, 1            ; The fast ACIA handler (SER_IRQ_FAST): the interrupted ROM page
 TASK_ZP     SER_IRQ_T, 1            ;   and task
 TASK_ZP     SER_PEND, 1             ;   what it left for the driver's handler (SER_PEND_*: SER_DO_PENDING)

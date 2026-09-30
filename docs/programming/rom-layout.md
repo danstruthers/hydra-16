@@ -7,9 +7,9 @@ How the OS ROM is organised, how code calls between ROM pages, and the fixed ent
 | Image | Chip | Contents |
 | :---- | :--- | :------- |
 | `os_rom/bin/os_rom_C02.bin` (128K) | BIOS ROM, 16 pages of 8K at `$E000-$FFFF`, selected by `W` | The BIOS, kernel, drivers, IO layer, HyForth, WOZMON, self tests |
-| `os_rom/bin/paged_rom_C02.bin` (16K) | Paged ROM bank 0, at `$A000-$DFFF` | `COPYTORAM` and HyForth's variables (copied to `$0800` when the shell starts), HyForth's training scripts and sample binary words |
+| `os_rom/bin/paged_rom_C02.bin` (32K) | Paged ROM banks 0 and 1, at `$A000-$DFFF` | Bank 0: `COPYTORAM` and HyForth's variables (copied to `$0800` when the shell starts), HyForth's training scripts and sample binary words.  Bank 1: the [hardware test](../using/wozmon.md#the-hardware-test) (`hwtest/`, scope `HWTEST`), and the ROMs' checksums at its end (`$DFC0`) |
 
-Both come from one build (`os_rom/all.s`, linked by `os_rom/os_rom_C02.cfg`).  HyForth's code in the BIOS ROM uses its variables where the paged ROM's copy puts them, and the sample binary words call BIOS ROM addresses, so most changes affect both images: burn both.
+Both come from one build (`os_rom/all.s`, linked by `os_rom/os_rom_C02.cfg`); after the link, `tools/romsum.js` writes a CRC of each BIOS ROM page and paged ROM bank into bank 1, for the hardware test.  The hardware test runs on its own: BIOS ROM code starts it with `_M_HWT_ENTER` (`include/hwtest.inc`), which gives every task paged ROM bank 1 and jumps to it, and it never calls back.  HyForth's code in the BIOS ROM uses its variables where the paged ROM's copy puts them, and the sample binary words call BIOS ROM addresses, so most changes affect both images: burn both.
 
 ### **BIOS ROM pages**
 
@@ -71,6 +71,8 @@ FAR_GATE_INLINE  IO_OPEN,  PAGE2::IO_OPEN,  2      ; a label IO_OPEN on this pag
 **Gates into a task.**  `TASK_GATE name, target, task` makes a gate that runs `target` in another task (with `TASK_CALL`); e.g. HyForth's sound words run the sound code in the sound task.
 
 **HyForth's far words.**  HyForth's inner interpreter jumps straight to a word's code, so a built-in word's code has to be on page 1.  A word whose code is on page A has a header made by `def_far` instead of `def_word`: its code on page 1 is `jsr FARWORD` and the address of its code on page A.  `FARWORD` calls it through the gate `FW_CALL`, and it runs as it would on page 1: page A has its own `next`, `this`, `keeps`, `errrtn` and stack routines (`spush_0`, `spull_1` ...) that end the word, back on page 1 (`next`, or `errrtn` with the error in `ERRFLAG`).  They put the stack back as it was when the word started, so a subroutine can use them too.
+
+**HyForth's libraries.**  A built-in word is in the base language or in a library ([HyForth](../using/hyforth.md#the-base-and-its-libraries)).  Each library's headers are a chain of their own: the headers between `lib_begin LIBN_x` and `lib_end` (in `hywords.s` and `primitives.s`) go on library x's chain, and a library can have several such sections.  `LIB_HEADS` holds each chain's head.  The loaded libraries are the bits of `LIBSET`, in HyForth's zero page: `RESFIND` and `words` search the words in RAM, then the base, then each loaded library's chain (`LIB_NEXT`), and the shell's hooks in the interpreter (the prompt's format, `PIPECHK`, `SH_REDIR`, `RUNNAME`) check `LIB_SHELL`.  `cold` loads `LIB_BOOT`.  A new library needs a `LIBN_` number and bit (`hyforth.s`; up to 8) and its name and needs on page A (`LIBNAMES`, `LIBNEEDS` in `farwords.s`).
 
 ### **Calling conventions**
 

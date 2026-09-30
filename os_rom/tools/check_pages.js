@@ -42,6 +42,7 @@ for (const text of fs.readFileSync(dbgName, "utf8").split(/\r?\n/)) {
 function segPage(seg) {
     if (!seg || !seg.oname) return null;
     if (/^FORTH_(DATA|PAGED_ROM)$/.test(seg.name)) return 1;
+    if (/^HWT_/.test(seg.name)) return 'hwtest';                 // (The hardware test: calls no BIOS code)
     if (!/os_rom_C02\.bin$/.test(seg.oname)) return null;
     if (/^(COMMON|RESETVEC|IO_PORTS)/.test(seg.name)) return null;
     return Math.floor(+seg.ooffs / 0x2000);

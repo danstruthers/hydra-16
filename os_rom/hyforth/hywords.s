@@ -1019,8 +1019,9 @@ BLTEND:
 ;
 ;
 ;
-; ( -- )   ANSI clear screen
+; ( -- )   ANSI clear screen (the term library)
 .ifdef ANSIOK
+lib_begin LIBN_TERM
 def_far "Acls", "Acls"
 ;
 ; (c r -- )      ANSI screen position ESC[<r>;<c>f
@@ -1028,6 +1029,7 @@ def_far "Ascr", "Ascr"
 ;
 ; (c -- )      ANSI attributes ESC[<c>m
 def_far "Acol", "Acol"
+lib_end
 .endif   ; ANSIOK
 
 ;
@@ -1122,6 +1124,9 @@ def_word "free", "free", 0
     jsr spush_0
     jmp next
 ;
+;-------- The tools library: disasm and syscall here; dump (primitives.s), hwtest and mmtest below
+lib_begin LIBN_TOOLS
+;
 ; (daddr n -- ) start disassembly from daddr, do it
 ; $F600 is entry point --A+Y for starting address, C=1 for multiple opcodes, X for # of codes
 def_far "disasm", "disasm"
@@ -1150,6 +1155,7 @@ SCSKIP:
     jmp errrtn
 SCJUMP:
     jmp (TEMP1)
+lib_end
 ;
 ;
 ; ( paddr -- )
@@ -1167,7 +1173,8 @@ def_far "malloc", "malloc"
 ; ( maddr -- len )
 def_far "mlen", "mlen"
 ;
-;-------- MMU handles (see docs/plans/MMU_PLAN.md)
+;-------- MMU handles (see docs/plans/MMU_PLAN.md): the mem library
+lib_begin LIBN_MEM
 ;
 ; ( bytes flags -- h )  allocate MMU memory; flags 0 = task RAM, 1 = 8K RAM banks (AI_PAGED)
 def_far "halloc", "halloc"
@@ -1181,18 +1188,40 @@ def_far "hlock", "hlock"
 ;
 ; ( h -- )  undo hlock (restores the RAM bank)
 def_far "hunlock", "hunlock"
+lib_end
+lib_begin LIBN_TOOLS
+;
+; ( -- )  the hardware test: a program in the paged ROM that takes the machine over and tests what it can
+;          (RAM, ROMs, registers, IRQs, the VIA, ACIA, YM2151, SPI, I2C ...) from a menu.  It overwrites
+;          memory, and ends with a reset
+def_far "hwtest", "hwtest"
 ;
 ; ( -- )  run the MMU self test
 def_word "mmtest", "mmtest", 0
     jsr MMU_TEST
     jmp next
+lib_end
 ;
-;-------- IO: files (see docs/plans/IO_PLAN.md).  A failed call gives !IO ERR!, and 'ioerr' the IO layer's
+;-------- Libraries: the word sets beyond this base (LIBN_IO ...; hyforth.s), each a chain of headers of its
+;         own, searched when it's loaded (LIBSET).  'cold' loads them all (LIB_BOOT); the code is on page A
+;
+; libs  list the libraries: forth (the base, always there), then each one, in parentheses if it isn't loaded
+def_far "libs", "libs"
+;
+; lib name  load a library (and the ones it needs), e.g. lib sound: its words are found again
+def_far "lib", "lib"
+;
+; -lib name  unload a library: its words aren't found (the ones compiled into definitions still run).
+;            -lib shell: a plain prompt, and no pipelines, redirection, or programs run by name
+def_far "-lib", "unlib"
+;
+;-------- IO: files (see docs/plans/IO_PLAN.md): the io library (with mount ... ioerr below).  A failed call gives !IO ERR!, and 'ioerr' the IO layer's
 ;         error code ($70 not found, $71 bad fd, $72 wrong mode, $73 would block, $75 no fds, ...).
 ;         fds 0, 1, 2 are the console (key, emit); buffers must be in task RAM ($0000-$7FFF).
 ;
 ; ( sz mode -- fd )  open a file: sz = a q^...^ string, e.g. q^/dev/cons^; mode 1 = read, 2 = write,
 ;                   3 = both, + $80 = don't wait (reads and writes give ioerr $73 instead)
+lib_begin LIBN_IO
 def_far "open", "open"
 ;
 ; ( fd -- )  close a file
@@ -1225,12 +1254,14 @@ def_far "pipe", "pipe"
 ;                   it: a file for reading and writing, a directory for reading.  A file that's there already
 ;                   is emptied (e.g. q^/sd/0/notes^ 0 create)
 def_far "create", "create"
+lib_end
 ;
 ;-------- The shell: the current directory, and commands that take their arguments from the line
 ;   A parsing word (cd games) takes the words after it on the line (ARGGET); its stack form, for
 ;   definitions, takes q^...^ strings: (cd).  The work is done on BIOS page 7 (shell/shell.s).
 ;
 ; cd [dir]  change directory (relative, or not; ".." understood); cd alone: the current card's root
+lib_begin LIBN_FILES
 def_far "cd", "cd"
 ;
 ; ( sz -- )  change directory
@@ -1238,6 +1269,8 @@ def_far "(cd)", "pcd"
 ;
 ; pwd  show the current directory
 def_far "pwd", "pwd"
+lib_end
+lib_begin LIBN_SHELL
 ;
 ; ( sz -- )  set the prompt's format: %v the volume ("0:"), %d the directory on the card (or the whole
 ;           path off the cards), %p the whole path, %l the card's label, %t the task, %% a %
@@ -1270,6 +1303,7 @@ def_far "edit", "edit"
 ;
 ; echo text  print the rest of the line, and a new line (without its "s): echo hello > greeting.txt
 def_far "echo", "echo"
+lib_end
 ;
 ; A script's copy of the shell starts here (TASK_CLONE, ROM page 1; see RUNCMD): the scripts this shell
 ; was reading aren't the copy's (stdin goes back), the script is its stdin (SH_RUN_FD), and the rest of
@@ -1296,12 +1330,14 @@ RSOPEN:
 RSFAIL:
     rts
 ;
-;-------- Shell commands: files and the cards.  The work is done on BIOS page 7 (shell/files.s: SH_CMD).
+;-------- Shell commands: files and the cards (the files library).  The work is done on BIOS page 7
+;         (shell/files.s: SH_CMD).
 ;   Each has a parsing form, which takes its arguments from the words after it on the line (ls games),
 ;   and a stack form in parentheses for definitions, which takes q^...^ strings ((ls))
 ;
 ; ls [-l] [dir]  list a directory: a line per entry, "name size" or "name/" (ls alone: the current one); or
 ;                show any file's text (ls /dev/sd/0/ctl).  -l: with each one's date and time (its last change)
+lib_begin LIBN_FILES
 def_far "ls", "ls"
 def_far "(ls)", "pls"
 ;
@@ -1357,6 +1393,7 @@ def_far "fsck", "fsck"
 ; ( n -- )  check it as fsck does, and repair its free map (lost clusters freed, unmarked ones marked; a
 ;          cluster used twice needs a person, so it's only shown)
 def_far "fsfix", "fsfix"
+lib_end
 ;
 SDCMD_SIZE = 64
 SHOWBUF_SIZE = 256
@@ -1400,6 +1437,7 @@ FWSP:                   ; a far word's stack pointer, on page A (farwords.s: FW_
 S_BOOTHYS:              ; (getline's, for INCOPEN on page A: so it's in RAM, not on page 1)
     .byte "boot.hys", 0
 .segment "FORTH_CORE"
+lib_begin LIBN_IO
 ;
 ; ( sz-path sz-dev -- )  mount a device at a path in this task's namespace: names under the path go to
 ;                       the device (e.g. q^/z^ q^zero^ mount  then  q^/z^ 1 open)
@@ -1429,6 +1467,8 @@ def_far "ctl", "ctl"
 ;
 ; ( -- n )  the last IO error code
 def_far "ioerr", "ioerr"
+lib_end
+lib_begin LIBN_FILES
 ;
 ; cat [file]  show a file; or with none, copy stdin to stdout, to the end of the file (e.g. the right side
 ;             of a pipeline:  words | cat)
@@ -1438,8 +1478,10 @@ def_far "cat", "cat"
 ;                           other than space, tab, CR and LF) and characters, to the end of the file
 ;                           (e.g.  words | wc .S; or typed, ended with Ctrl-D)
 def_far "wc", "wc"
+lib_end
 ;
-;-------- Tasks: another shell, the foreground, kill, and the task list (/dev/proc)
+;-------- Tasks: another shell, the foreground, kill, and the task list (/dev/proc): the tasks library
+lib_begin LIBN_TASKS
 ;
 ; ( -- n )  start another shell (HyForth, in a task of its own); n = its task.  It prints its banner and
 ;           waits for input until it's brought to the front (fg, or Ctrl-] then n)
@@ -1459,6 +1501,7 @@ def_far "sleep", "sleep"
 ; ( -- )  list the tasks (/dev/proc): the task, its state (R runnable, W waiting (IO or sleep), P paused, D a
 ;         driver) and the task that started it; * = the foreground task
 def_far "ps", "ps"
+lib_end
 ;
 ; A pipeline's left side starts here, in a copy of the shell's task (TASK_CLONE, ROM page 1): stdout into
 ; the pipe, then run the line, which ends at the '|'.  At its end, getline ends the task (BATCH).
@@ -1482,7 +1525,9 @@ child_start:
 ;
 ;                        word definitions for Yamaha 2151 sound chip
 ;
-; They go through the sound driver's file, /dev/snd: IO_CTL codes, and register/value pairs to write
+; They go through the sound driver's file, /dev/snd: IO_CTL codes, and register/value pairs to write (the
+; sound library)
+lib_begin LIBN_SOUND
 ;
 ; ( -- )  clear the YM2151 (and stop the test tune)
 def_far "sndinit", "sndinit"
@@ -1495,6 +1540,7 @@ def_far "sndstop", "sndstop"
 ;
 ; ( xxaa -- f )    send byte(a) to register(x) on yamaha 2151: f = true if it went
 def_far "ywrite", "ywrite"
+lib_end
 .endif
 ;
 ;

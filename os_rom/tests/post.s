@@ -20,6 +20,8 @@
 ;            address lines A0-A12.  Tested: the first bank of each shared RAM chip ($F0, $F4, $F8, $FC, with
 ;            U = 0; a missing chip shows as bad lines) and of each installed task RAM module.
 ;   Destructive: run before anything is kept in paged RAM.
+; A T typed while it runs (held down through the reset) starts the hardware test instead of the OS
+; (hwtest/, in the paged ROM).
 POST_ACIA_CMD   = ACIA_CMD_BIT_DTRL | ACIA_CMD_BIT_TLID | ACIA_CMD_BIT_RID    ; No IRQs
 
 .macro _M_POST_TASK_TEST    addr, label
@@ -90,6 +92,16 @@ POST:
             jsr                 POST_RAM_TEST                       ; Paged RAM lines (page 4, post_ram.s)
             ldx                 #POST_S_CRLF - POST_STRINGS
             jsr                 POST_PUTS
+            lda                 ACIA_R_STATUS                       ; A T typed during it: the hardware test
+            and                 #ACIA_STATUS_BIT_RDRF               ;   (hold T down while pressing reset)
+            beq                 POST_NO_HWT
+            lda                 ACIA_R_DATA
+            and                 #$DF
+            cmp                 #'T'
+            bne                 POST_NO_HWT
+            _M_HWT_ENTER
+
+POST_NO_HWT:
             plp
             rts
 

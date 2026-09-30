@@ -52,6 +52,14 @@ SER_ACIA_ROCKWELL = 0
 SER_ACIA_WDC    = 1
 SER_ACIA        = SER_ACIA_ROCKWELL
 
+; At 115200 the Rockwell ACIA's sending is paced by timer 2 as well (SER_PACED), with at least SER_PACE_GAP
+; bits of idle line after each character, and about 2 more for the interrupt that sends the next: back to
+; back from its TDRE interrupt, long output there drops and garbles characters on the board (the ACIA's
+; rates are 2.9% slow, and the MAX232 is near its limit), and 1 idle bit (2 stop bits) isn't always enough.
+; With 2, about 7,000 characters a second (1 left a few characters in 260,000 blank on the board: each bit
+; costs about 7%)
+SER_PACE_GAP    = 2
+
 ; The ACIA's command register, as the serial driver sets it (parity bits 5-7 added): DTR on, receive
 ; interrupts on, no echo; Rockwell: transmit interrupts on (TDRE); WDC: off (timer 2 paces sending instead)
 .if SER_ACIA = SER_ACIA_WDC
@@ -104,13 +112,14 @@ ACIA_R_CMD          = IO_PORT_BYTE ACIA, 2
 ACIA_R_CTRL         = IO_PORT_BYTE ACIA, 3
 
 VIA_T1_INT_BIT      = $40       ; VIA_R_INT_FLAGS / VIA_R_INT_ENABLE: timer 1 (the scheduler's tick)
-VIA_T2_INT_BIT      = $20       ;   timer 2 (the WDC ACIA's TX pacing)
+VIA_T2_INT_BIT      = $20       ;   timer 2 (TX pacing: the WDC ACIA's, and the Rockwell's at 115200)
 VIA_INT_ENABLE      = $80       ; VIA_R_INT_ENABLE: set (1) or clear (0) the bits given
 
 ; Send .A to the ACIA (in the serial task's ZP, IRQs off, the transmitter idle or its last byte just sent),
-; and for the WDC 65C51 start timer 2, which stands in for its missing TDRE interrupt (SER_ACIA).  A BEL
-; beeps on the YM2151 too: it sets SER_PEND_BEEP, and the driver's handler beeps (SER_DO_PENDING), since
-; this can run with T switched to the serial task and no stack of its own (a quick look).  Uses .Y
+; and for the WDC 65C51 start timer 2, which stands in for its missing TDRE interrupt (SER_ACIA), or for
+; the Rockwell's when sending is paced (SER_PACED).  A BEL beeps on the YM2151 too: it sets SER_PEND_BEEP,
+; and the driver's handler beeps (SER_DO_PENDING), since this can run with T switched to the serial task
+; and no stack of its own (a quick look).  Uses .Y
 .macro _M_SER_TX_BYTE
             sta         ACIA_R_DATA
 .if ::SER_ACIA = ::SER_ACIA_WDC                             ; (:: so it's constant in the page scopes too)
@@ -118,6 +127,13 @@ VIA_INT_ENABLE      = $80       ; VIA_R_INT_ENABLE: set (1) or clear (0) the bit
             sty         VIA_R_T2C_L
             ldy         SER_T2_CHAR + 1
             sty         VIA_R_T2C_H                 ; (Starts the one-shot, and clears its IRQ)
+.else
+            ldy         z:SER_PACED                 ; Paced: the next byte when timer 2 runs out (the
+            beq         * + 12                      ;   same, past the 10 bytes below: no label here;
+            ldy         z:SER_T2_CHAR               ;   z: so they're 2-byte loads wherever it's used)
+            sty         a:VIA_R_T2C_L
+            ldy         z:SER_T2_CHAR + 1
+            sty         a:VIA_R_T2C_H
 .endif
             cmp         #ASCII_BELL                 ; The bell: the YM2151 beeps too, as the terminal's
             bne         * + 4                       ;   does (no label here: it would end the caller's

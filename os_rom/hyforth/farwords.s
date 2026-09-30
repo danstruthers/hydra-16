@@ -646,6 +646,8 @@ IOPUSHA:
     sta TEMP1
     stz TEMP1+1
     jmp this
+hwtest:                     ; hwtest
+    _M_HWT_ENTER
 IOFAIL:                     ; (an IO error, .A: 'ioerr' has it, and the word ends with !IO ERR!)
     sta IOERR
     lda #ERR_IO
@@ -773,6 +775,94 @@ SHARG1:
     jsr spull_0
     ldx #TEMP1
     jmp SZTEXT
+;
+;-------- Libraries (hyforth.s: LIBN_IO ...; their headers' chains: lib_begin): their names, in LIBN_ order,
+;         and what loading each loads (its bit, and the ones it needs)
+LIBNAMES:
+    .byte "io", 0, "files", 0, "shell", 0, "tasks", 0, "sound", 0, "mem", 0, "tools", 0, "term", 0
+LIBNEEDS:
+    .byte LIB_IO
+    .byte LIB_FILES | LIB_IO
+    .byte LIB_SHELL | LIB_FILES | LIB_IO
+    .byte LIB_TASKS | LIB_IO
+    .byte LIB_SOUND | LIB_IO
+    .byte LIB_MEM
+    .byte LIB_TOOLS
+    .byte LIB_TERM
+.assert * - LIBNEEDS = LIB_COUNT, error, "LIBNEEDS: one for each library"
+libs:                       ; libs
+    PRINT_CHAR #'f', #'o', #'r', #'t', #'h'
+    ldx #0            ; .X: the name's place in LIBNAMES
+    lda #1
+    sta TEMP1         ; the library's bit
+LSEACH:
+    PRINT_SPACE
+    lda LIBSET        ; (one that isn't loaded: in parentheses)
+    and TEMP1
+    bne LSNAME
+    PRINT_CHAR #'('
+LSNAME:
+    lda LIBNAMES,x
+    beq LSEND
+    PRINT_CHAR
+    inx
+    bra LSNAME
+LSEND:
+    inx               ; (past its 0)
+    lda LIBSET
+    and TEMP1
+    bne LSNEXT
+    PRINT_CHAR #')'
+LSNEXT:
+    asl TEMP1
+    bne LSEACH
+    jmp next
+lib:                        ; lib
+    jsr LIBARG
+    lda LIBNEEDS,x    ; (it, and the ones it needs)
+    tsb LIBSET
+    jmp next
+unlib:                      ; -lib
+    jsr LIBARG
+    trb LIBSET        ; (.A: its bit)
+    jmp next
+;
+; A library's name: the next word on the line (ARGGET).  OUT: .X = the library (LIBN_), .A = its bit.  No
+; name, or one that isn't a library's: the word ends with !UNK WORD!.  Uses TEMP1, TEMP2
+LIBARG:
+    jsr ARGGET        ; (into ARGBUF)
+    bcs LAUNKNOWN
+    ldy #0            ; .Y: LIBNAMES
+    stz TEMP2         ; the library
+    lda #1
+    sta TEMP1         ;   and its bit
+LANAME:
+    ldx #0            ; .X: ARGBUF
+LACHAR:
+    lda LIBNAMES,y
+    cmp ARGBUF,x
+    bne LANEXT
+    iny
+    inx
+    cmp #0
+    bne LACHAR
+    ldx TEMP2         ; (the same, to their 0s)
+    lda TEMP1
+    rts
+LANEXT:
+    lda LIBNAMES,y    ; (past the rest of this name, and its 0)
+    beq LASKIP
+    iny
+    bra LANEXT
+LASKIP:
+    iny
+    inc TEMP2
+    asl TEMP1
+    bne LANAME
+LAUNKNOWN:
+    lda #ERR_UKW
+    sta ERRFLAG
+    jmp errrtn
 ;
 ; A parsing word's argument: the next word on the line (up to a space, or the line's end), or "a name in
 ; quotes" (spaces and all), into ARGBUF, zero-terminated; the interpreter goes on after it.

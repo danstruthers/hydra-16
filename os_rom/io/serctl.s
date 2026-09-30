@@ -91,6 +91,18 @@ SER_CONFIG:
             sta         SER_T2_CHAR
             lda         ZP_IO_OFS + 1
             sta         SER_T2_CHAR + 1
+.if ::SER_ACIA = ::SER_ACIA_ROCKWELL
+            stz         SER_PACED                           ; At 115200, sending paced by timer 2 (one-shot,
+            lda         #VIA_T2_INT_BIT                     ;   its interrupt on; SER_IRQ_FAST: SER_T2_FAST);
+            ldx         ZP_IO_LEFT                          ;   otherwise by TDRE, and timer 2's interrupt off
+            cpx         #SER_RATE_115200
+            bne         :+
+            inc         SER_PACED
+            trb         VIA_R_AUX_CTRL                      ; (ACR bit 5, as VIA_T2_INT_BIT: one-shot)
+            ora         #VIA_INT_ENABLE
+:
+            sta         VIA_R_INT_ENABLE
+.endif
             plp
             clc
 
@@ -154,6 +166,13 @@ SER_FRAME:
             plx
             ora         #SER_CMD_BASE
             sta         ZP_IO_BUF + 1
+.if ::SER_ACIA = ::SER_ACIA_ROCKWELL
+            cpx         #SER_RATE_115200                    ; (Paced at 115200: no TDRE interrupt)
+            bne         :+
+            eor         #ACIA_CMD_BIT_TLIE | ACIA_CMD_BIT_TLID
+            sta         ZP_IO_BUF + 1
+:
+.endif
             lda         SER_RATE_CYC_L,X                    ; A bit's time
             sta         ZP_IO_CNT
             lda         SER_RATE_CYC_H,X
@@ -163,6 +182,14 @@ SER_FRAME:
             clc
             adc         #1 + 5 + 1 + 1
             sta         ZP_IO_OFS + 2
+.if ::SER_ACIA = ::SER_ACIA_ROCKWELL
+            cpx         #SER_RATE_115200                    ; (Paced at 115200: SER_PACE_GAP bits of idle
+            bne         :+                                  ;   line, not a bit's margin)
+            clc
+            adc         #SER_PACE_GAP - 1
+            sta         ZP_IO_OFS + 2
+:
+.endif
             tya
             and         #SER_FMT_PARITY
             beq         :+

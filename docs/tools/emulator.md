@@ -49,7 +49,7 @@ node hydrasim.js [options]
 | `--modules N` | RAM modules installed: banks `$00` to `N*16-1` (default 3) |
 | `--shared-u N` | Shared RAM installed for `U` macro-pages 0 to N-1 (default 16; each 512K chip is 4 macro-pages) |
 | `--acia-line N` | IRQ line the ACIA interrupts on (default 1) |
-| `--acia rockwell\|wdc` | The ACIA chip: the Rockwell R65C51 (default), or the WDC W65C51N with its transmitter bug (TDRE always reads 1, no TX interrupt; for a ROM built with `SER_ACIA = SER_ACIA_WDC`, which paces sending with VIA timer 2).  In WDC mode the emulator counts bytes written while one is still being sent (they'd be garbled on the chip) and reports them at the end.  (VIA timer 2 is modelled too: one-shot) |
+| `--acia rockwell\|wdc` | The ACIA chip: the Rockwell R65C51 (default), or the WDC W65C51N with its transmitter bug (TDRE always reads 1, no TX interrupt; for a ROM built with `SER_ACIA = SER_ACIA_WDC`, which paces sending with VIA timer 2).  In WDC mode the emulator counts bytes written while one is still being sent (they'd be garbled on the chip) and reports them at the end.  The report also gives the shortest idle time on the line between characters sent, in bits, since the rate was last set (0: back to back)  (VIA timer 2 is modelled too: one-shot) |
 | `--stuck-irq N` | Hold IRQ line N active the whole time |
 | `--sd [N:]FILE[@B]` | An SD card (SDHC) on SPI device N (0-7, the board's SPI headers J18-J25; default 0), backed by the image FILE (512-byte blocks; writes go to the file).  Up to 8 cards, one per device, e.g. `--sd card0.img --sd 3:C:/images/card3.img`.  `@B`: the card says it has B blocks, more than the file (a big card from a small file: blocks past the file's end read as zeros, and writing one makes the file longer), e.g. `--sd card.img@500170752` for a 244 GB card.  Models the VIA's port B SPI bit by bit (device select as the board's 74HC138 does it), and the SD commands the ROM uses (CMD0, 8, 9, 16, 17, 24, 55, 58, ACMD41; CMD9's CSD gives the image's size) |
 | `--sdsc N` | Make the card on device N a standard capacity one (SDSC): byte addresses, and a v1 CSD register |
@@ -80,7 +80,7 @@ that got it there), and the final pseudo-register and vector RAM state.
 
 `regress.js` boots the ROM in the emulator once per test, types each test's input, and checks the serial
 output for what it expects: POST, the self tests (MMU, scheduler, IO; also with 1 RAM module and 1 shared
-macro-page), POST with hardware faults, HyForth, pipelines, files and namespaces, tasks and console
+macro-page), POST with hardware faults, the hardware test (all of it; and from POST, with faults injected), HyForth and its libraries, pipelines, files and namespaces, tasks and console
 switching, Ctrl-C, background sound and the bell, `sleep`, the serial settings, `/dev/sd` (on a blank card
 image; also two shells reading it at once), HydraFS reading, writing, checking and quick formatting (on fixture card images kept in `sim/cards`, and on cards made by `tools/hydrafs.js`, and checked with it afterwards), partitions, the clock (`/dev/time`) and files' stamps, sparse files, and the shell: the volume chosen at boot, `boot.hys`, `cd`, the prompt, the file commands, `include`, running programs (`.hyx` executables and `.hys` scripts, by name and from `/bin`, their arguments, Ctrl-C), redirection, `echo`, the editor, and each task's environment (`/env`, `PATH`, `HOME`, `/dev/proc`).  One test runs a small program of its own instead of the ROM, and
 checks the CPU's cycle counts against WDC's table.  Four watch timing: a 1000-character paste at 57600 with
@@ -164,14 +164,20 @@ programs.
   of the lowest active IRQ line, or `V[0..3]` when no line is active (and for `BRK`).
 * Rockwell 65C51 ACIA at `$FF10` on IRQ line 1: transmit and receive with interrupts, output captured,
   input from `--input`.  A character takes the time set by the registers the ROM programs: the baud rate
-  (from its 1.8432 MHz crystal, or that clock / 16 for 115200), the word length, parity and stop bits.
+  (from its clock, the board's `SER_CLK`, 1.790 MHz, so every rate is 2.9% slow as on the board; or that
+  clock / 16 for 115200), the word length, parity and stop bits.  A programmed reset (a status write)
+  clears the command register's bits 0-4.  The transmit interrupt comes as TDRE goes on (when a byte
+  has gone), as on the board: turning it on while TDRE is already on doesn't interrupt.
 * VIA timer 1 (one-shot and free-running, latches, interrupt flag and enable registers) on IRQ line 0: the
-  scheduler's tick; timer 2 (one-shot); port B as the SPI bus (see `--sd`).  The other VIA registers are
-  plain storage (no shift register or handshake lines).
+  scheduler's tick; timer 2 (one-shot); the shift register's timing and flag (its CB1/CB2 lines aren't
+  brought out: shifting in reads 1s); port B as the SPI bus (see `--sd`); port A's inputs read high (the
+  I2C bus's pull-ups; no I2C devices).  The handshake lines aren't modelled.
 * YM2151: busy (status bit 7) for 64 of its clocks (3.58 MHz) after each data write.  A write while it's busy
-  would be lost on the chip: the report counts them.  Key-ons are reported (`--ym-log`).
+  would be lost on the chip: the report counts them.  Key-ons are reported (`--ym-log`).  Its timers A and B
+  (registers `$10-$14`): an enabled timer's overflow sets its status flag (bits 0, 1), which holds IRQ
+  line 4 until it's reset.
 * RAM and the pseudo-registers power up with random values, like the hardware.
 
-It is a model, not the hardware: anything it doesn't simulate (the YM2151's timers and sound, the SD card's
+It is a model, not the hardware: anything it doesn't simulate (the YM2151's sound, the SD card's
 own delays, card slots, the timing of each bus cycle inside an instruction) can still behave differently on
 the board.

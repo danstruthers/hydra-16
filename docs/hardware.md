@@ -2,6 +2,8 @@
 
 This is the Hydra-16 main board (V1) as its schematic describes it (`board/hydra-16.kicad_sch` and its sheets), with the two companion cards in `board/`.  Reference designators (U25, J18, ...) are the schematic's.  For how the software uses the hardware, see the [Programmer's Guide](programming/README.md).
 
+To test a board, run the [hardware test](using/wozmon.md#the-hardware-test) (HyForth's `hwtest`, or `T` typed during POST).
+
 ### **Contents**
 1. [Overview](#overview)
 2. [The CPU view: memory map](#the-cpu-view-memory-map)
@@ -326,6 +328,8 @@ The ROM's timing (the scheduler's tick, sound note lengths, serial timeouts) is 
 * DCD and DSR are tied active.
 
 **Serial settings:** 9600 baud, 8 data bits, no parity, 1 stop bit at boot, with RTS/CTS.  The ROM can change the rate (300 to 19200, and 115200: the ACIA clock / 16), the data bits (5-8), the parity and the stop bits afterwards (`/dev/ser/ctl`, [io.md](programming/io.md#the-serial-port-settings)).
+
+**115200 is paced.**  Sent back to back at 115200, long output (a WOZMON dump) loses and garbles characters on the board: the rate is 2.9% slow and the MAX232 is near its limit, so the receiver has little margin.  A second stop bit helps but isn't enough.  So at 115200 the ROM sends each byte from VIA timer 2 rather than the Rockwell ACIA's TDRE interrupt, with at least `SER_PACE_GAP` (2) idle bits after each character, about 4.5 with the interrupt's own time (with 1, a few characters in a whole-memory WOZMON dump were lost).  That's about 7,000 characters a second.  If long output still loses characters, raise `SER_PACE_GAP` in `os_rom/include/hw.inc` (each bit costs about 7%).  The other rates are sent back to back, as before.
 
 **The DE-9 connector** (J3, male) is driven by a MAX232 (U5), and wired like a modem (DCE):
 

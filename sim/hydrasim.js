@@ -18,9 +18,11 @@
 //   * Rockwell 65C51 ACIA at $FF10 (IRQ line 1): TX/RX with IRQs, output captured, input from --input; a
 //     character takes the time its baud rate, word length, parity and stop bits give (its 1.790 MHz clock)
 //   * VIA timer 1 (one-shot / free-running, IFR/IER) on IRQ line 0: the scheduler's tick; timer 2
-//     (one-shot); port B's SPI; other VIA registers are plain storage
+//     (one-shot); the shift register's timing and flag; port B's SPI; port A's inputs read high (the I2C
+//     pull-ups); other VIA registers are plain storage
 //   * YM2151: busy for 64 of its clocks (3.58 MHz) after each data write (writes while it's busy are
-//     counted: lost on the chip); key-ons (register $08) are counted and reported
+//     counted: lost on the chip); key-ons (register $08) are counted and reported; timers A and B, their
+//     status flags and IRQ line 4
 //   RAM and the pseudo-registers power up random, like the hardware.
 //
 // Usage: node hydrasim.js [options]
@@ -134,12 +136,18 @@ let T = regT & 15, U = regU & 15, W = regW & 15;
 let out = '';
 let ymReg = 0; const ymKeyOns = [];                          // YM2151: the register selected, and the key-ons written
 let aciaCmd = 0, aciaCtrl = 0, aciaTdre = 1, aciaTxTimer = 0, aciaIrq = 0, aciaRdrf = 0, aciaRx = 0, aciaOverruns = 0;
+// The line's idle time between characters sent: when the last one ended, and the shortest gap (in bits,
+// at the rate of the character after it; 0 = back to back or overlapping), counted once 8 have gone at the rate last set
+let aciaTxEnd = -Infinity, aciaTxSent = 0, aciaGapMin = Infinity;
 const aciaWdc = opt.acia === 'wdc';
 const rxQueue = [...opt.input]; let rxDelay = 200000, rxLost = 0;   // (--paste: bytes lost to overruns)
 const via = new Uint8Array(16);
 // VIA timer 1 (the scheduler's tick): counter, latch, IFR/IER; one-shot or free-running (ACR bit 6)
 let viaT1 = 0xFFFF, viaT1Latch = 0xFFFF, viaT1On = false, viaIFR = 0, viaIER = 0;
 let viaT2 = 0xFFFF, viaT2LatchL = 0xFF, viaT2On = false;         // Timer 2: one-shot
+// The shift register: shifting (cycles until its 8 bits are done: its IFR flag), or -1.  CB1/CB2 aren't
+// brought out: modes 3 and 7 (CB1's clock) never finish, and shifting in reads 1s
+let viaSrLeft = -1;
 // SPI on VIA port B (PB0 SCLK, PB1 /CS enable, PB2 MOSI, PB3-PB5 device 0-7, PB6 = 0 for the board's
 // devices, PB7 MISO; mode 0), with up to 8 SD cards (SPI mode, SDHC: block addresses) on devices 0-7,
 // each backed by an image file (--sd [N:]FILE); --sdsc N makes device N's a standard capacity card (byte
@@ -227,6 +235,8 @@ function spiPortB(v) {                                          // Port B's outp
 }
 function viaRead(r) {
   if (r === 0) { const ddr = via[2], pins = 0x7F | ((spiSel ? spiSel.miso : 1) << 7); return (via[0] & ddr) | (pins & ~ddr); }
+  if (r === 1 || r === 0x0F) return (via[1] & via[3]) | (~via[3] & 0xFF);   // Port A: its inputs read high (pull-ups)
+  if (r === 0x0A) { viaSrStart(); return via[0x0A]; }
   if (r === 4) { viaIFR &= ~0x40; return viaT1 & 0xFF; }       // T1C-L: clears the T1 flag
   if (r === 5) return viaT1 >> 8;
   if (r === 8) { viaIFR &= ~0x20; return viaT2 & 0xFF; }       // T2C-L: clears the T2 flag
@@ -245,9 +255,20 @@ function viaWrite(r, v) {
   else if (r === 9) { viaT2 = (v << 8) | viaT2LatchL; viaT2On = true; viaIFR &= ~0x20; }   // Load and start
   else if (r === 0x0D) viaIFR &= ~(v & 0x7F);
   else if (r === 0x0E) { if (v & 0x80) viaIER |= v & 0x7F; else viaIER &= ~(v & 0x7F); }
+  else if (r === 0x0A) { via[0x0A] = v; viaSrStart(); }
+  else if (r === 0x0F) via[1] = v;
+  else if (r === 0x0B) { via[0x0B] = v; if (!(v & 0x1C)) viaSrLeft = -1; }
   else { via[r] = v; if (r === 0 || r === 2) spiPortB((via[0] & via[2]) | (~via[2] & 0x7F)); }
 }
+// A shift register access: it clears the flag, and starts 8 shifts (mode 4, free-running, never sets it)
+function viaSrStart() {
+  const m = (via[0x0B] >> 2) & 7;
+  viaIFR &= ~0x04;
+  viaSrLeft = m === 2 || m === 6 ? 16 : m === 1 || m === 5 ? 16 * (viaT2LatchL + 2) : -1;
+  if (m === 1 || m === 2) via[0x0A] = 0xFF;                   // (Shifted in: CB2 floats high)
+}
 function viaTick(n) {                                          // (n can span several T1 periods: a WAI skipped ahead)
+  if (viaSrLeft >= 0 && (viaSrLeft -= n) < 0) viaIFR |= 0x04;
   if (viaT2On) { viaT2 -= n; if (viaT2 < 0) { viaIFR |= 0x20; viaT2On = false; viaT2 &= 0xFFFF; } }
   if (!viaT1On) return;
   viaT1 -= n;
@@ -270,6 +291,23 @@ function aciaCharCycles() {
 // lost on the chip (counted)
 const YM_BUSY_CYCLES = Math.round(64 * opt.clock / 3.579545);
 let ymBusyUntil = 0, ymLost = 0;
+// Its timers: A (10 bits, registers $10/$11: 64 x (1024 - NA) of its clocks) and B ($12: 1024 x (256 - NB));
+// register $14 loads (starts) them, enables their flags, resets the flags.  An enabled timer's overflow sets
+// its status flag (bit 0 or 1), and a flag holds IRQ line 4 until it's reset
+const ymRegs = new Uint8Array(256);
+let ymStatus = 0, ymANext = -1, ymBNext = -1;
+const ymAPeriod = () => Math.round(64 * (1024 - ((ymRegs[0x10] << 2) | (ymRegs[0x11] & 3))) * opt.clock / 3.579545);
+const ymBPeriod = () => Math.round(1024 * (256 - ymRegs[0x12]) * opt.clock / 3.579545);
+function ymTick(t) {
+  if (ymANext >= 0) while (t >= ymANext) { if (ymRegs[0x14] & 4) ymStatus |= 1; ymANext += ymAPeriod(); }
+  if (ymBNext >= 0) while (t >= ymBNext) { if (ymRegs[0x14] & 8) ymStatus |= 2; ymBNext += ymBPeriod(); }
+}
+function ymTimers(v) {                                         // Register $14 written
+  if (v & 1) { if (ymANext < 0) ymANext = ioAt + ymAPeriod(); } else ymANext = -1;
+  if (v & 2) { if (ymBNext < 0) ymBNext = ioAt + ymBPeriod(); } else ymBNext = -1;
+  if (v & 0x10) ymStatus &= ~1;
+  if (v & 0x20) ymStatus &= ~2;
+}
 
 // Which task's copy of $0000-$7FFF an access uses (the --model what-ifs change this)
 const tsel = a => opt.model === 'sharedlow' ? 0 : (opt.model === 'zponly' && a >= 0x200) ? 0
@@ -299,7 +337,7 @@ function rd(a) {
       return r === 2 ? aciaCmd : aciaCtrl;
     }
     if (a < 0xFF10) return viaRead(a - 0xFF00);
-    if (a === 0xFF41) return ioAt < ymBusyUntil ? 0x80 : 0x00; // YM2151 status: busy after a data write
+    if (a === 0xFF41) return (ioAt < ymBusyUntil ? 0x80 : 0x00) | ymStatus;   // YM2151 status: busy after a data write, the timer flags
     return 0xFF;
   }
   if (a === 0xFFF0) return regT; if (a === 0xFFF1) return regU; if (a === 0xFFF2) return V; if (a === 0xFFF3) return regW;
@@ -318,10 +356,14 @@ function wr(a, v) {
   if (a < 0xFFF0) sync(ioAt);                                   // (The devices, as of this access's cycle)
   if (a >= 0xFF10 && a < 0xFF14) {
     const r = a - 0xFF10;
-    if (r === 0) { if (aciaTxTimer > 0) aciaOverruns++; out += String.fromCharCode(v); for (const m of opt.marks) if (out.endsWith(m)) console.log('mark: ' + JSON.stringify(m) + ' at cycle ' + ioAt); aciaTdre = 0; aciaTxTimer = aciaCharCycles(); }
+    if (r === 0) {
+      if (aciaTxTimer > 0) aciaOverruns++;
+      if (++aciaTxSent > 8) aciaGapMin = Math.min(aciaGapMin, aciaTxTimer > 0 ? 0 : (ioAt - aciaTxEnd) * ACIA_BAUD[aciaCtrl & 15] / (opt.clock * 1e6));
+      out += String.fromCharCode(v); for (const m of opt.marks) if (out.endsWith(m)) console.log('mark: ' + JSON.stringify(m) + ' at cycle ' + ioAt); aciaTdre = 0; aciaTxTimer = aciaCharCycles(); }
     else if (r === 1) { aciaCmd &= 0xE0; aciaIrq = 0; }                         // programmed reset
-    else if (r === 2) { aciaCmd = v; if (!aciaWdc && (v & 0x0C) === 0x04 && aciaTdre) aciaIrq = 1; }
-    else aciaCtrl = v;
+    else if (r === 2) aciaCmd = v;                                  // (The TX interrupt comes as TDRE goes on, as on
+                                                                    //   the board: turning it on with TDRE on is nothing)
+    else { aciaCtrl = v; aciaTxSent = 0; aciaGapMin = Infinity; }            // (A new rate: the gaps from here)
     return;
   }
   if (a < 0xFF10) { viaWrite(a - 0xFF00, v); return; }
@@ -329,6 +371,8 @@ function wr(a, v) {
   if (a === 0xFF41) {
     if (ioAt < ymBusyUntil) { ymLost++; return; }
     ymBusyUntil = ioAt + YM_BUSY_CYCLES;
+    ymRegs[ymReg] = v;
+    if (ymReg === 0x14) ymTimers(v);
     if (ymReg === 0x08 && (v & 0x78)) ymKeyOns.push('ch ' + (v & 7) + ' at cycle ' + ioAt);
     return;
   }
@@ -343,6 +387,7 @@ function irqLine() {
   const lines = [];
   if (acia) lines.push(opt.aciaLine);
   if (viaIFR & viaIER & 0x7F) lines.push(0);                      // VIA: IRQ line 0
+  if (ymStatus & 3) lines.push(4);                                // YM2151: line 4
   if (opt.stuckIrq >= 0) lines.push(opt.stuckIrq);
   return lines.length ? Math.min(...lines) : -1;
 }
@@ -396,8 +441,9 @@ let devCyc = 0, ioAt = 0;
 function sync(t) {
   const d = t - devCyc; if (d <= 0) return; devCyc = t;
   viaTick(d);
+  ymTick(t);
   if (aciaTxTimer > 0 && (aciaTxTimer -= d) <= 0) {                // (A character's time)
-    aciaTxTimer = 0; aciaTdre = 1; if (!aciaWdc && (aciaCmd & 0x0C) === 0x04) aciaIrq = 1;
+    aciaTxEnd = t + aciaTxTimer; aciaTxTimer = 0; aciaTdre = 1; if (!aciaWdc && (aciaCmd & 0x0C) === 0x04) aciaIrq = 1;
   }
   if (rxQueue.length && (rxDelay -= d) <= 0 && (!aciaRdrf || opt.paste)) {
     const c = rxQueue.shift();
@@ -411,6 +457,9 @@ function nextEvent() {
   let n = Infinity;
   if (viaT1On) n = Math.min(n, viaT1 + 1);
   if (viaT2On) n = Math.min(n, viaT2 + 1);
+  if (viaSrLeft >= 0) n = Math.min(n, viaSrLeft + 1);
+  if (ymANext >= 0 && (ymRegs[0x14] & 4)) n = Math.min(n, Math.max(1, ymANext - devCyc));
+  if (ymBNext >= 0 && (ymRegs[0x14] & 8)) n = Math.min(n, Math.max(1, ymBNext - devCyc));
   if (aciaTxTimer > 0) n = Math.min(n, aciaTxTimer);
   if (rxQueue.length) n = Math.min(n, Math.max(1, rxDelay));
   return n;
@@ -541,6 +590,7 @@ for (const [w, t, pc, a, x, y, s, p] of trace) console.log(hx(w, 1), hx(t, 1), h
 if (iOffTop.length) console.log('--- longest with IRQs off, from the first key typed (cycles: from -> to, at cycle): ' +
   iOffTop.map(([n, a, b, at]) => n + ': ' + a + ' -> ' + b + ' at ' + at).join(', '));
 if (opt.paste) console.log('--- ACIA: ' + rxLost + ' received byte(s) lost (they arrived while the last one was still unread)');
+if (aciaGapMin < Infinity) console.log('--- ACIA: shortest idle between characters sent: ' + aciaGapMin.toFixed(2) + ' bits');
 if (aciaWdc) console.log('--- WDC ACIA: ' + aciaOverruns + ' byte(s) written while one was still being sent (garbled on the chip)');
 console.log('--- hottest PCs (W:PC count) ---');
 for (const [k, c] of [...pcHist.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10)) console.log(hx(k >> 16, 1) + ':' + hx(k & 0xFFFF, 4), c);
@@ -673,9 +723,9 @@ function interactive() {
 // The reset button (RESB): the CPU, the VIA, the ACIA and the YM2151 reset; RAM, the pseudo-registers
 // (plain latches) and the SD cards keep their state, as on the board
 function hwReset() {
-  via.fill(0); viaIFR = 0; viaIER = 0; viaT1On = false; viaT2On = false;
+  via.fill(0); viaIFR = 0; viaIER = 0; viaT1On = false; viaT2On = false; viaSrLeft = -1;
   spiPortB((via[0] & via[2]) | (~via[2] & 0x7F));              // (Port B: all inputs, so nothing is selected)
   aciaCmd = 0; aciaCtrl = 0; aciaTdre = 1; aciaTxTimer = 0; aciaIrq = 0; aciaRdrf = 0;
-  ymBusyUntil = 0; waiting = false;
+  ymBusyUntil = 0; ymRegs.fill(0); ymStatus = 0; ymANext = -1; ymBNext = -1; waiting = false;
   P = (P | I) & ~D; PC = rd16(0xFFFC);
 }

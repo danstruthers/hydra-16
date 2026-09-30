@@ -11,6 +11,7 @@
 .include "include/ascii.inc"
 .include "include/macros.inc"
 .include "include/shell.inc"    ; The shell's commands (page 7)
+.include "include/hwtest.inc"   ; The hardware test (paged ROM bank 1)
 .include "include/zero.s"       ; The OS ZP (after the constants)
 .include "kernel/common.s"      ; COMMON block (every ROM page) and gate macros
 
@@ -164,3 +165,10 @@ TIME_DIV8_P9    = PAGE9::TIME_DIV8
 .include "drivers/sound.s"
 .include "kernel/os_main.s"
 .include "kernel/page0_gates.s"
+
+; Paged ROM bank 1: the hardware test, a program of its own (it takes the machine over).  Its own scope: it
+; calls nothing in the BIOS ROM.
+.scope HWTEST
+.include "hwtest/hwtest.s"
+.endscope
+HWT_ENTRY       = HWTEST::HWT_ENTRY     ; (_M_HWT_ENTER's jump: include/hwtest.inc)

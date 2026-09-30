@@ -29,14 +29,17 @@ SOUND_DRV_INIT:
                 ldx         #SOUND_TASK_NUM
                 jmp         DEV_REGISTER
 
-; zero out all YM-2151 registers $28-$FF
+; Set up the YM-2151, whatever it powered up with (its reset, /IC, may not clear everything): the timers
+; stopped, their IRQs off and their flags reset, then every register $01-$FF zeroed (the test/LFO register
+; $01, noise, the timers' periods, and the voices)
 SOUND_INIT:
                 pha
                 phx
-                lda         #0
-                ldx         #$14        ; turn off the clocks
+                lda         #$30        ; timers stopped, their IRQs off, both flags reset
+                ldx         #$14
                 jsr         YM_WRITE
-                ldx         #$28
+                lda         #0
+                ldx         #$01
 
 @write_z:
                 jsr         YM_WRITE

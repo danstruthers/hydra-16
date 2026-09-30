@@ -9,12 +9,13 @@ HyForth is the Hydra-16's shell and programming language: a small Forth that sta
 4. [Defining words](#defining-words)
 5. [Control flow: the training scripts](#control-flow-the-training-scripts)
 6. [Word reference](#word-reference)
-7. [The shell: directories, files and programs](#the-shell-directories-files-and-programs)
-8. [Files and devices](#files-and-devices)
-9. [Pipelines](#pipelines)
-10. [Tasks and the console](#tasks-and-the-console)
-11. [Errors and keys](#errors-and-keys)
-12. [How HyForth uses memory](#how-hyforth-uses-memory)
+7. [The base and its libraries](#the-base-and-its-libraries)
+8. [The shell: directories, files and programs](#the-shell-directories-files-and-programs)
+9. [Files and devices](#files-and-devices)
+10. [Pipelines](#pipelines)
+11. [Tasks and the console](#tasks-and-the-console)
+12. [Errors and keys](#errors-and-keys)
+13. [How HyForth uses memory](#how-hyforth-uses-memory)
 
 ### **The basics**
 
@@ -29,7 +30,7 @@ HyForth reads a line, then runs each word in it, left to right.  Numbers go on t
 * **Words are separated by spaces.**  Names are case-sensitive.
 * **Lines** can be up to 255 characters.
 * **`.`** prints and drops the top of the stack, and **`.S`** shows the whole stack.  The format is `S<address> <depth> <items, top first>`, and `xS` clears it.
-* **`words`** lists every word.
+* **`words`** lists every word: the ones you've defined, then the base's, then each loaded [library's](#the-base-and-its-libraries).
 * **`bye`** leaves HyForth for [WOZMON](wozmon.md) (in a script that `run` started, it ends the script).  Ctrl-\\ starts a fresh HyForth.
 * **The prompt** shows the current card and directory: `0:/games> ` is `/games` on card 0 ([the shell](#the-shell-directories-files-and-programs)).
 
@@ -173,9 +174,53 @@ The control words aren't built in: they're defined in HyForth itself, by the **t
 | `syscall` | `( addr a y -- x )` | Call machine code at `addr` with `.A` and `.Y` set; pushes `.X`.  E.g. a thunk ([API index](../programming/rom-layout.md#api-index-the-thunks)) |
 | `disasm` | `( addr n -- )` | Disassemble n instructions |
 | `mmtest` | | Run the MMU self test |
+| `hwtest` | | Run the [hardware test](wozmon.md#the-hardware-test): it takes the machine over, and ends with a reset |
 | `debug`, `s@` | | Toggle debug; the status word's address |
 | `bye` | | Leave for WOZMON |
 | `abort` | | Abort to the prompt |
+
+### **The base and its libraries**
+
+HyForth is a base language, plus libraries of words for the rest of the system.  The base is the Forth itself: the interpreter and compiler, the stacks, arithmetic and logic, memory and memory records, numbers and strings, `key` and `emit`, and loading scripts from memory.  Each library is a set of words in ROM with a dictionary chain of its own.  To find a word, the interpreter searches the words you've defined, then the base, then each library that's loaded.
+
+**At startup** HyForth loads the base and every library, which is everything the shell uses, and then runs the shell.  So the prompt works as it always has.  A new shell (`shell`) starts the same way.  The copy of the shell that runs a pipeline's left side, or a script (`run`), has the libraries of the shell that started it.
+
+| Library | Words | Loads too |
+| :------ | :---- | :-------- |
+| `io` | `open`, `close`, `read`, `write`, `seek`, `ioctl`, `fdup2`, `pipe`, `create`, `mount`, `bind`, `unmount`, `ns`, `stty`, `stty?`, `ctl`, `ioerr` | |
+| `files` | `cd`, `pwd`, `ls`, `rm`, `rmdir`, `mkdir`, `cp`, `mv` (and their stack forms, `(cd)` ...), `cat`, `wc`, `vols`, `mkfs`, `mkfs-full`, `mkfs-size`, `mkfs-part`, `relabel`, `fsck`, `fsfix` | `io` |
+| `shell` | `prompt`, `include`, `run` (and `(include)`, `(run)`), `args`, `edit`, `echo`.  Also the shell's part of reading a line: the prompt's format, pipelines (`\|`), redirection (`>`, `>>`, `<`), and running a program for a word HyForth doesn't know | `io`, `files` |
+| `tasks` | `shell`, `fg`, `kill`, `sleep`, `ps` | `io` |
+| `sound` | `sndinit`, `sndtest`, `sndstop`, `ywrite` | `io` |
+| `mem` | `halloc`, `hfree`, `hlock`, `hunlock` (MMU memory) | |
+| `tools` | `dump`, `disasm`, `syscall`, `mmtest`, `hwtest` | |
+| `term` | `Acls`, `Ascr`, `Acol` (the ANSI terminal) | |
+
+| Word | Does |
+| :--- | :--- |
+| `libs` | List the libraries: `forth` (the base), then each library.  A library in parentheses isn't loaded |
+| `lib name` | Load a library, and the ones it needs |
+| `-lib name` | Unload a library: its words aren't found any more.  Words already compiled into definitions still run |
+
+```
+0:/> -lib sound
+
+0:/> libs
+forth io files shell tasks (sound) mem tools term
+0:/> sndtest
+
+ !UNK WORD!
+
+0:/> -lib shell
+
+> 1 2 + .
+ 0003
+> lib shell
+
+0:/>
+```
+
+Without the `shell` library, the prompt is a plain `> `, a line's `|`, `>` and `<` are words like any other (unknown ones), and a word HyForth doesn't know is an error, not a program to run.
 
 ### **The shell: directories, files and programs**
 

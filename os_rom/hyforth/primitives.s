@@ -58,7 +58,8 @@ def_far ".R", "rplist"           ; changed from %R
 ; ( -- ) dumps the user dictionary
 ;    ( REMOVED as of 4/19/26 )
 
-; ( -- ) dump memory
+; ( addr pages -- ) dump memory (the tools library)
+lib_begin LIBN_TOOLS
 def_word "dump", "dump", 0
     jsr spull_1             ; TEMP2 LSB is # of pages
     jsr spull_0             ; TEMP1 has starting addr
@@ -77,6 +78,7 @@ FDUMPGET:
     bne FDUMPLOOP
     clc
     jmp next
+lib_end
 
 ;------------------------------ WLIST -----------------------------------
 ;
@@ -88,6 +90,8 @@ def_word "words", "words", 0
     sta TEMP2 + 1
     lda LASTHEAP
     sta TEMP2
+    lda LIBSET          ; (then the libraries loaded: LIB_NEXT)
+    sta LIBLEFT
 
 ; load NEXTHEAP
     lda NEXTHEAP + 1
@@ -160,6 +164,11 @@ WORD_CONT:
     jsr addwx
     jmp WORD_LOOP
 WORD_END:
+    jsr LIB_NEXT     ; the end of a chain: the next library's
+    bcs WORD_DONE
+    dec TEMP5        ; (the count per line goes on)
+    jmp WORD_LOOP
+WORD_DONE:
     clc              ; clean return
     jmp next
 ;

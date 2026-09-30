@@ -147,12 +147,48 @@ const TESTS = [
     bootFailOk: true,
   },
   {
+    name: 'hwtest', about: 'the hardware test (paged ROM bank 1) from HyForth\'s hwtest: all its tests pass (an SD card on device 0), then R resets into POST and the OS',
+    sd: true,
+    args: ['--cycles', '90000000', '--input', BOOT + 'hwtest\\r' + W(1) + 'AR'],
+    expect: ['Hydra-16 hardware test', 'CPU ................ ok', 'T U V W registers .. ok', 'shared RAM ......... ok',
+      'RAM bank registers . ok', 'task RAM ........... ok', 'RAM modules ........ 0 1 2 ok', 'BIOS ROM ........... ok',
+      'paged ROM .......... ok', /interrupts \.+ +ok/,'VIA ................ ok', 'sound chip (YM2151) . ok',
+      /CPU clock \.+ 3\.58 MHz \(first \d+, next \d+\) ok/,'serial port (ACIA) .    9600 baud ok', 'SPI devices ........ SD cards 0 ok',
+      'I2C bus ............ no devices ok', 'slot cards ......... all empty ok', 'hwtest: all passed\n',
+      '> R\n', 'POST ZP:T', 'Welcome to the HYDRA-16!', '/> '],
+    forbid: ['FAIL'],
+  },
+  {
+    name: 'hwtest-faults', about: 'the hardware test from POST (a T typed) finds faults: a shared RAM address line, the ACIA on the wrong IRQ line, the CPU clock (and so the serial timing)',
+    args: ['--cycles', '40000000', '--input', 'T' + W(1) + '3IKS', '--acia-line', '3', '--clock', '7.16', '--ram-fault', 'F4:A3:high'],
+    expect: ['Hydra-16 hardware test', 'shared RAM ......... FAIL bank 04 8000 bits 08\n',
+      /interrupts \.+ +FAIL ACIA IRQ on line 3 +all at once: ACIA IRQ on line 3\n/,          // (Its spaces: the ACIA's test)
+      /CPU clock \.+ 7\.16 MHz \(first \d+, next \d+\) FAIL \(the ROM's built for 3\.58 MHz\)\n/,
+      /serial port \(ACIA\) \. +FAIL a character took 76\d\d cycles\n/],
+  },
+  {
+    name: 'hwtest-irq', about: 'the hardware test from POST with IRQ line 9 held active (the OS can\'t run): the interrupts test says so',
+    args: ['--cycles', '20000000', '--input', 'T' + W(1) + 'I', '--stuck-irq', '9'],
+    expect: ['interrupts ......... FAIL an IRQ line is held active\n', 'hwtest: failed: 1\n'],
+  },
+  {
     name: 'forth', about: 'HyForth: arithmetic (decimal in, hex out), negatives, $ and % prefixes, typed wc (Ctrl-D ends it)',
     args: ['--cycles', '60000000', '--input', BOOT + '1 2 + .\\r1000 24 - .\\r-1 . -2 . -9 . -10 . $B . $1F . %101 .\\rwc\\rab c\\r\\x04. . .\\r'],
     expect: ['/> 1 2 + .\n' + num(3) + '\n', num(1000 - 24),
       ' FFFF FFFE FFF7 FFF6' + num(0xB) + num(0x1F) + num(5) + '\n',
       '/> . . .\n' + num(5) + num(2) + num(1) + '\n'],
     forbid: ['!DS PTR ERROR!', '!UNK WORD!'],
+  },
+  {
+    name: 'libs', about: 'HyForth\'s libraries: all loaded at boot (libs); -lib and lib (and what one needs); without the shell\'s, a plain prompt, and no pipelines or programs by name; unknown names',
+    args: ['--cycles', '60000000', '--input', BOOT + 'libs\\r-lib sound\\rlibs\\rsndinit\\rlib sound\\rsndinit\\r' +
+      '-lib io\\r-lib files\\rlibs\\rlib shell\\rlibs\\r-lib shell\\r1 2 + .\\rwords | wc\\rfoo\\rlib shell\\r-lib bogus\\rlib\\r'],
+    expect: ['/> libs\nforth io files shell tasks sound mem tools term\n',
+      '/> libs\nforth io files shell tasks (sound) mem tools term\n', '/> sndinit\n\n !UNK WORD!\n', '/> sndinit\n\n/> ',
+      '/> libs\nforth (io) (files) shell tasks sound mem tools term\n',
+      '/> libs\nforth io files shell tasks sound mem tools term\n',            // (lib shell: io and files too)
+      '\n> 1 2 + .\n' + num(3) + '\n', '> words | wc\n', '\n> foo\n\n !UNK WORD!\n', '> lib shell\n\n/> -lib bogus\n\n !UNK WORD!\n',
+      '/> lib\n\n !UNK WORD!\n'],
   },
   {
     name: 'pipes', about: 'pipelines: words | wc, and through cat (a copy of the shell in the middle) gives the same',
@@ -222,14 +258,21 @@ const TESTS = [
     },
   },
   {
-    name: 'fast-output', about: 'console output at 115200: words (3.5K characters) in well under a second (the fast paths)',
+    name: 'fast-output', about: 'console output at 115200: words (3.5K characters) in under a second (the fast paths), paced by timer 2 with at least 2 idle bits between characters (SER_PACE_GAP, and the interrupt\'s time)',
     args: ['--cycles', '40000000', '--mark', '/> words', '--mark', '/> ', '--input', BOOT + 'q^b115200^ stty\\r' + W(1) + 'words\\r'],
-    expect: ['/> words\n'],
-    check: (out, report) => {                                   // (The wire alone: about 1.1M cycles; the old IO path: 3.6M)
+    expect: ['/> words\n', ': Acls '],
+    check: (out, report) => {                                   // (The wire alone, paced: about 1.6M cycles; the old IO path: 3.6M more)
       const at = +/mark: "\/> words" at cycle (\d+)/.exec(report)[1];
       const took = [...report.matchAll(/mark: "\/> " at cycle (\d+)/g)].map(m => +m[1]).find(c => c > at) - at;
-      if (!(took < 2500000)) return 'words took ' + took + ' cycles at 115200, not under 2.5M';
+      if (!(took < 3000000)) return 'words took ' + took + ' cycles at 115200, not under 3M';
+      const gap = +(/shortest idle between characters sent: ([\d.]+) bits/.exec(report) || [])[1];
+      if (!(gap >= 2)) return 'the line idled only ' + gap + ' bits between characters at 115200, not 2 or more';
     },
+  },
+  {
+    name: 'serial-unpaced', about: 'from 115200 (paced by timer 2) back to 9600: sending by the TDRE interrupt again, and the console works',
+    args: ['--cycles', '40000000', '--input', BOOT + 'q^b115200^ stty\\r' + W(1) + 'words\\r' + W(2) + 'q^b9600^ stty\\r' + W(1) + '1 2 + .\\r' + W(1) + 'words\\r'],
+    expect: ['/> q^b9600^ stty\n', '/> 1 2 + .\n' + num(3) + '\n', '/> words\n', ': Acls '],
   },
   {
     name: 'irqs-off', about: 'no long stretch with IRQs off after boot (tasks starting and ending, a pipeline, sound, files): a serial byte can\'t wait long',
