@@ -1,6 +1,6 @@
 ## **OS ROM reorganisation plan**
 
-A plan for tidying the OS ROM: less dead code, clearer ROM page roles, a cleaner source tree and build output.  Steps 1-6 are done; step 7 is a project of its own.  (Sizes as of the storage work: page 0 has about 320 bytes free before the thunks, page 1 about 2.3K in gaps and at the end, page 2 about 1.2K, page 3 about 6.9K, pages 4-F nothing used.)
+A plan for tidying the OS ROM: less dead code, clearer ROM page roles, a cleaner source tree and build output.  Steps 1-7 are done.  (Sizes as of the storage work: page 0 has about 320 bytes free before the thunks, page 1 about 2.3K in gaps and at the end, page 2 about 1.2K, page 3 about 6.9K, pages 4-F nothing used.)
 
 ### **1. Remove dead code** (done)
 *Done: the message rings (`msg.s`; the system-bank macros are `_M_SYS_ENTER` / `_M_SYS_LEAVE` and `SYS_BANK` in `defines.s` now, and shared bank IDs `$01-$08` are free for `SH_ALLOC`), `math.s` and `WRITE_DEC` / `WRITE_BYTE_MIN`, the unused VIA helpers, `COPYTORAM`'s dots and address printing, `DO_WELCOME`'s vector dump (and the shell's second clear screen, so boot messages stay), the I2C block, the old WDC ACIA alternatives (the WDC 65C51 is back as a build option for the new serial driver: `SER_ACIA`, TX paced by VIA timer 2), `ALTBUF` and HyForth's stale address comments.  Page 0: about 560 bytes back before the thunks and 260 in `BIOS`; the OS ZP is 10 bytes smaller.*
@@ -57,5 +57,7 @@ A plan for tidying the OS ROM: less dead code, clearer ROM page roles, a cleaner
 * The resident tasks' fixed buffers (serial rings `$0200-$03FF`, the pipe table and rings `$0200-$0AFF`) come from the MMU instead (the pipe task's reach above the MMU's bottom page).  `MMU_PAGE_BOTTOM` (`$08`: HyForth's buffers) could be per task.
 * Move single-purpose OS ZP (the disassembler's `ZP_D_*`) to task ZP.
 
-### **7. Later: HyForth's core from ROM**
+### **7. HyForth's core from ROM** (done)
+*Done: HyForth's interpreter and built-in words (headers and code) run from ROM page 1; only its variables (segment `FORTH_DATA`, about 90 bytes) are copied to RAM at `$0800`, and the dictionary starts at `$0B00`.  To make room, the code of the bulkier words (the shell's and IO words, tasks, sound, memory records, the stack printers, multiply and divide ...), the error messages, `MALLOC` and the disassembler moved to page A: those words are far words (`def_far`: `FARWORD` runs their code there; see [rom-layout.md](../programming/rom-layout.md#calling-across-rom-pages)).  The debug dump code sits after page 1's thunks.  `SYSCALL` jumps through `TEMP1` instead of modifying itself.  A pipeline's line takes about 37% fewer cycles (`TASK_CLONE` copies about 7K less), and the shell starts sooner.*
+
 * Running HyForth's core from ROM page 1 instead of a 6K RAM copy frees shell RAM and roughly halves `TASK_CLONE`'s time.  Needs a RAM trampoline for `SYSCALL` (self-modifying) and changes to the dictionary layout: a project of its own.

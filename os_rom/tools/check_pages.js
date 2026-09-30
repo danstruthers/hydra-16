@@ -11,10 +11,11 @@
 //   ld65 -C os_rom_C02.cfg obj.o --dbgfile all.dbg
 //   node check_pages.js all.dbg
 //
-// Not listed: references from the gate segments (GATES_Pn, the thunks), and references written with an
-// explicit scope in the source (`::NAME`, `PAGE2::NAME`: a gate's target, or an address handed to
-// TASK_CALL or TASK_RUN along with its page).  A reference made by a macro (e.g. PRINT_CHAR's call to
-// WRITE_CHAR) is listed, since it's never explicit.
+// Not listed: references written with an explicit scope in the source (`::NAME`, `PAGE2::NAME`: a gate's
+// target, or an address handed to TASK_CALL or TASK_RUN along with its page), and HyForth's far words'
+// headers (def_far).  A reference made by a macro (e.g. PRINT_CHAR's call to WRITE_CHAR) is listed, since
+// it's never explicit; so is one from a gate segment (a fast path in a gate, such as WRITE_CHAR's call to
+// IO_FLUSH, must call its own page's gate).
 //
 // Not caught: a pointer to ROM data handed to a routine on another page (e.g. a name string on page 4
 // passed to IO_OPEN, which reads it on page 2).  Such data has to be copied to RAM first.
@@ -36,11 +37,11 @@ for (const text of fs.readFileSync(dbgName, "utf8").split(/\r?\n/)) {
     rec[kind][+o.id] = o;
 }
 
-// ROM page of a segment: BIOS image segments by their offset in the image; HyForth's RAM code and paged
-// ROM run with W = 1.  null = not BIOS ROM code (RAM, zero page), or shared by every page.
+// ROM page of a segment: BIOS image segments by their offset in the image; HyForth's RAM variables and
+// paged ROM are used with W = 1.  null = not BIOS ROM code (RAM, zero page), or shared by every page.
 function segPage(seg) {
     if (!seg || !seg.oname) return null;
-    if (/^FORTH_(CODE|PAGED_ROM)$/.test(seg.name)) return 1;
+    if (/^FORTH_(DATA|PAGED_ROM)$/.test(seg.name)) return 1;
     if (!/os_rom_C02\.bin$/.test(seg.oname)) return null;
     if (/^(COMMON|RESETVEC|IO_PORTS)/.test(seg.name)) return null;
     return Math.floor(+seg.ooffs / 0x2000);
@@ -55,8 +56,8 @@ function srcLine(fileName, n) {
     return srcCache[fileName][n - 1] || "";
 }
 const isExplicit = (text, name) => new RegExp("::" + name + "\\b").test(text.replace(/;.*/, ""));
-
-const isGateSeg = (seg) => /^GATES_P/.test(seg.name) || /^BIOS_THUNKS/.test(seg.name);
+// A far word's header (def_far, hyforth.s): the address of its code on page A, which FARWORD calls there
+const isFarWord = (text) => /^\s*def_far\b/.test(text);
 
 let problems = 0;
 for (const sym of rec.sym) {
@@ -71,9 +72,10 @@ for (const sym of rec.sym) {
         for (const spanId of line.span.split("+")) {
             const seg = rec.seg[+rec.span[+spanId].seg];
             const refPage = segPage(seg);
-            if (refPage === null || refPage === defPage || isGateSeg(seg)) continue;
+            if (refPage === null || refPage === defPage) continue;
             const fileName = rec.file[+line.file].name;
-            if (isExplicit(srcLine(fileName, +line.line), sym.name)) continue;
+            const text = srcLine(fileName, +line.line);
+            if (isExplicit(text, sym.name) || isFarWord(text)) continue;
             problems++;
             console.log(`${fileName}:${line.line}: page ${refPage} (${seg.name}) uses ` +
                         `${sym.name} = $${val.toString(16).toUpperCase()} on page ${defPage}`);

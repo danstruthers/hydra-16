@@ -26,7 +26,7 @@ The software gives each task:
 | `$0100-$01FF` | The stack |
 | `$0200-$06FF` | Buffers (in the shell: HyForth's input buffer and stacks, WOZMON's input buffer) |
 | `$0700-$07FF` | stdio buffers: stdout (`$0700`) and the stdin read-ahead (`$0780`) |
-| `$0800-$7CFF` | Program RAM.  The MMU hands out pages from the top down; below its *page floor* a program can use RAM directly (HyForth's dictionary grows up from `$0800`) |
+| `$0800-$7CFF` | Program RAM.  The MMU hands out pages from the top down; below its *page floor* a program can use RAM directly (HyForth's variables are at `$0800`, and its dictionary grows up after them) |
 | `$7D00-$7DFF` | Task system page: IRQ tables (`$7D00-$7D8F`), unclaimed-IRQ counters (`$7D90-$7D9F`), fd table (`$7DA0-$7DFF`) |
 | `$7E00-$7FFF` | MMU area: allocation maps and the handle table |
 

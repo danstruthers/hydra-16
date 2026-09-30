@@ -45,6 +45,21 @@ hcount .set hcount + 1
   .byte name
 makelabel "", label
 .endmacro
+;
+; header for a far word: its code is on BIOS ROM page A (farwords.s, the label ~name~ in scope FAR), and
+; here it's a call to FARWORD, which runs it there
+;
+.macro def_far name, label
+makelabel "h_", label
+.ident(.sprintf("H%04X", hcount + 1)):
+  .word .ident (.sprintf ("H%04X", hcount))
+hcount .set hcount + 1
+  .byte .strlen(name)
+  .byte name
+makelabel "", label
+    jsr FARWORD
+    .word FAR::.ident(label)
+.endmacro
 ;---------------------------------------------------------------------
 ;  macros for PGS stuff
 ;
@@ -734,9 +749,11 @@ GETLNSKIPCRLF:          ; SKIP to here if don't want CRLF
     dey
 ; start it
     sta CURBUF
-    jsr PIPECHK          ; a pipeline ( ... | ... )?  start its left side
+    jsr PIPECHK          ; a pipeline ( ... | ... )?  start its left side (farwords.s)
+    bcs GETLNFAIL
     jsr SH_REDIR         ; >, >> and < (shell/redir.s): stdout and stdin to and from files
     bcc token
+GETLNFAIL:
     ply                  ; (they can't be: drop the return to 'resolve', and the error)
     ply
     jmp IOFAIL
@@ -987,6 +1004,36 @@ decwx_end:
     dec 0, x
     rts
 ;
+;---------------------------------------------------------------------
+; A far word (def_far): its code is `jsr FARWORD`, then the address of its code on BIOS ROM page A
+; (farwords.s), which runs there (through the gate FW_CALL) and comes back here: on to 'next', or with C = 1
+; to 'errrtn' (ERRFLAG says what the error is)
+;
+FARWORD:
+    pla                           ; (the address of the address, - 1)
+    sta ZP_FAR_VEC
+    pla
+    sta ZP_FAR_VEC + 1
+    ldy #1
+    lda (ZP_FAR_VEC), y
+    pha
+    iny
+    lda (ZP_FAR_VEC), y
+    tay
+    pla                           ; .A.Y = the code
+    jsr FW_CALL
+    bcs FARWORD_ERR
+    jmp next
+FARWORD_ERR:
+    jmp errrtn
+;
+; An IO error, .A: 'ioerr' has it, and !IO ERR!
+IOFAIL:
+    sta IOERR
+    lda #ERR_IO
+    sta ERRFLAG
+    jmp errrtn
+;
 ;
 ;
 ENGINEEND:
@@ -1019,7 +1066,7 @@ ROMCODEEND:                         ; end of all code
                                ; to make easier to identify different
                                ; code segments.
 ;-----------------------------------------------------------------------
-;                            BELOW ENDS UP IN RAM
+;                  BELOW, ONLY HYFORTH'S VARIABLES END UP IN RAM
 ;-----------------------------------------------------------------------
 .segment "FORTH_PAGED_ROM"
 ;------------------------------------------------------------------------
@@ -1030,10 +1077,21 @@ ROMCODEEND:                         ; end of all code
 ;
 ;
 COPYSTART := $A100              ; marks beginning of copy in ROM space
-.segment "FORTH_CODE"
+;
+;   The variables (segment FORTH_DATA: the words' data that changes, and what other ROM pages read, as
+;   the shell's page 7 does) are copied to RAM at RAMSTART ($0800), up to 'ends', by COPYTORAM.  The code and
+;   the built-in words' headers (segment FORTH_CORE) run from ROM, on page 1, as the engine above does; the
+;   dictionary (user words) grows in RAM, after the variables and the buffers that follow them.
+;
+.segment "FORTH_DATA"
 RAMSTART:
-    jmp forth_main             ; MAIN program start
-    jmp COPYTORAM
+;
+;---------------------------------------------------------------------
+;        farwords.s -- the words whose code is on BIOS ROM page A (scope FAR), and the disassembler
+;
+.include "farwords.s"
+;
+.segment "FORTH_CORE"
 ;---------------------------------------------------------------------
 ;        primitives.s -- original AGSB hardcoded dictionary
 ;
@@ -1225,10 +1283,11 @@ def_word "exit", "exit", 0
 ;-----------------------------------------------------------------------
 ; BEWARE, MUST BE AT END! MINIMAL THREAD CODE DEPENDS ON IT!
 ;
-ends:                            ; end marker of hardcoded primitives
+.segment "FORTH_DATA"
+ends:                            ; end marker of the variables (COPYTORAM)
 ;
-; Buffers in the RAM after the image (COPYTORAM copies it up to 'ends'), before the dictionary: nothing
-; in the paged ROM for them.  (Their contents are whatever was there.)
+; Buffers in the RAM after the variables (COPYTORAM copies them up to 'ends'), before the dictionary:
+; nothing in the paged ROM for them.  (Their contents are whatever was there.)
 ARGBUF      = ends                  ; a parsing word's argument (ARGGET)
 SHBUF       = ARGBUF + ARGBUF_SIZE  ; a path: the current directory, a name being made (shell/shell.s)
 SHBUF2      = SHBUF + 64            ; another

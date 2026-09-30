@@ -55,7 +55,7 @@ On Linux or macOS, run the same three commands by hand (with `/` in the paths).
 
 ### **Programming the chips**
 
-* **Burn both images** after most changes: HyForth's RAM image (in the paged ROM) calls BIOS ROM addresses directly.
+* **Burn both images** after most changes: HyForth's variables (in the paged ROM) are where its code in the BIOS ROM expects them, and its sample binary words call BIOS ROM addresses.
 * The BIOS ROM image goes into **U6** (SST39SF010, or a larger '020/'040).
 * The paged ROM image goes at offset 0 of **U31**, the chip holding paged ROM banks `$00-$1F`.  The image is already in chip order: the board swaps the 8K halves of each 16K bank.
 

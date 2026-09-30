@@ -1,71 +1,6 @@
 ;
 ;   upper.s  - utility functions for HyForth - eventually ROM resident
 ;
-;---------------------------------------------------------------------
-;  error messaging
-;
-wrterror:
-    lda #>err_jumptable
-    sta ERRPTR+1
-    lda ERRFLAG
-    beq ERREND
-    asl a
-    clc
-    adc #<err_jumptable
-    sta ERRPTR
-    bcc ERRSKIP
-    inc ERRPTR+1
-ERRSKIP:
-    WERR ERRPTR
-ERREND:
-    lda #0
-    sta ERRFLAG
-    sta ERRPTR
-    sta ERRPTR+1
-    rts
-;
-;
-err_jumptable:
-    .res 2
-    ERR_entry RPTR_ERR              ; RT stack full/empty  - error $01
-    ERR_entry SPTR_ERR              ; DS stack full/empty  - error $02
-    ERR_entry DIV_ERR               ; divide by zero - error $03
-    ERR_entry OOM_ERR               ; out of memory  - error $04
-    ERR_entry UKW_ERR               ; no existing word - error $05
-    ERR_entry SEC_ERR               ; writing to dangerous RAM areas - error $06
-    ERR_entry SYS_ERR               ; error on return from SYSCALL - error $07
-    ERR_entry IO_ERR                ; IO error (see ioerr) - error $08
-    ERR_entry BRK_ERR               ; break from the console - error $09
-LASTERR = 9
-;
-;  error messages
-RPTR_ERR:
-    .byte " !RT PTR ERROR!"
-    .byte 0
-SPTR_ERR:
-    .byte " !DS PTR ERROR!"
-    .byte 0
-DIV_ERR:
-    .byte " !DIV ZERO!"
-    .byte 0
-OOM_ERR:
-    .byte " !LOW MEM!"
-    .byte 0
-UKW_ERR:
-    .byte " !UNK WORD!"
-    .byte 0
-SEC_ERR:
-    .byte " !SECURITY!"
-    .byte 0
-SYS_ERR:
-    .byte " !SYS ERR!"
-    .byte 0
-IO_ERR:
-    .byte " !IO ERR!"
-    .byte 0
-BRK_ERR:
-    .byte " !BREAK!"
-    .byte 0
 
 ;-------------------------------------------------------------
 ;
@@ -158,124 +93,6 @@ ALNOTDONE:
     dey
     rts
 ;
-;-------- malloc and mlen
-
-MALFAIL:
-    clc                   ; out of memory
-    rts
-MALLOC:
-    ;  TEMP1 and TEMP2 should have bytes / record type if 'jsr MALLOC'
-    ;  OUT: C = 1 and TEMP1 = memory stack slot (holds the record address); C = 0 if out of memory
-    ;  Records smaller than FORTH_LARGE_MIN go in the arena (MEMLAST grows down, not below MEMBOT);
-    ;  bigger ones get their own MMU block, marked with MEM_MMU in the type byte.
-    ;  uses TEMP3, TEMP4, y, x, a
-    lda MEMPTR           ; memory stack full?
-    cmp #<MEMSTK
-    lda MEMPTR+1
-    sbc #>MEMSTK
-    bcc MALFAIL
-    lda TEMP1+1
-    bne MALLARGE
-                        ; arena: new record at MEMLAST - 3 - bytes, into TEMP4
-    lda MEMLAST
-    sec
-    sbc #3
-    sta TEMP4
-    lda MEMLAST+1
-    sbc #0
-    sta TEMP4+1
-    lda TEMP4
-    sec
-    sbc TEMP1
-    sta TEMP4
-    lda TEMP4+1
-    sbc TEMP1+1
-    sta TEMP4+1
-    bcc MALFAIL         ; wrapped
-    lda TEMP4
-    cmp MEMBOT
-    lda TEMP4+1
-    sbc MEMBOT+1
-    bcc MALFAIL         ; below the arena
-    lda TEMP4
-    sta MEMLAST
-    lda TEMP4+1
-    sta MEMLAST+1        ;MEMLAST updated to start of new record
-    bra MALHDR
-MALLARGE:               ; its own MMU block: bytes + 3 for the header
-    lda TEMP1
-    clc
-    adc #3
-    pha
-    lda TEMP1+1
-    adc #0
-    tay
-    pla
-    bcs MALFAIL          ; more than $FFFF
-    ldx #0
-    jsr MM_ALLOC         ; .A = handle
-    bcs MALFAIL
-    pha
-    jsr MM_LOCK          ; .A.Y = address (page blocks don't move), .X = RAM bank
-    sta TEMP4
-    sty TEMP4+1
-    pla
-    jsr MM_UNLOCK
-    lda TEMP2
-    ora #MEM_MMU
-    sta TEMP2
-MALHDR:
-    lda TEMP4
-    sta TEMP3
-    lda TEMP4+1
-    sta TEMP3+1         ; use TEMP3 to walk through clearing of memory
-    ldy #0
-    lda TEMP2            ; write type first
-    sta (TEMP3),y
-    iny
-    lda TEMP1            ; LSB length
-    sta (TEMP3),y
-    iny
-    lda TEMP1+1          ; MSB length
-    sta (TEMP3),y
-    ldx #TEMP3
-    lda #3
-    jsr addwx            ; increment TEMP3 by 3
-MALLOOP:                 ; clear TEMP1 bytes at TEMP3
-    lda TEMP1
-    ora TEMP1+1
-    beq MALCONT
-    lda #0
-    sta (TEMP3)
-    inc TEMP3
-    bne MALSK01
-    inc TEMP3+1
-MALSK01:
-    lda TEMP1
-    bne MALSK02
-    dec TEMP1+1
-MALSK02:
-    dec TEMP1
-    bra MALLOOP
-MALCONT:                   ; now store the record address at MEMPTR
-    ldy #0
-    lda TEMP4
-    sta (MEMPTR),y
-    iny
-    lda TEMP4+1
-    sta (MEMPTR),y
-    lda MEMPTR+1
-    sta TEMP1+1
-    lda MEMPTR
-    sta TEMP1             ; copy to TEMP1 before incrementing
-    sec                   ; MEMPTR + 2
-    sbc #2
-    sta MEMPTR
-    bcs MALLOCEND
-    dec MEMPTR+1
-MALLOCEND:
-    sec                   ; OK
-    rts
 ;
 ;  Keep the MMU from handing out the pages the dictionary grows into: raise the MMU page floor
 ;  (DICTLIM) to FORTH_DICT_MARGIN pages above 'here' when needed.
@@ -300,131 +117,6 @@ DICTNO:
     clc
     rts
 ;
-;  Free a large (MEM_MMU) record's MMU block.  IN: TEMP3 = record address.  uses a, x, y
-MMUFREE:
-    lda TEMP3
-    ldy TEMP3+1
-    jsr MM_FIND                  ; .A = handle
-    bcs MMUFREEND
-    jsr MM_FREE
-MMUFREEND:
-    rts
-; 
-MEMLEN:              ; address in TEMP2
-     ldy #0
-     lda (TEMP2),y
-     sta TEMP3
-     iny
-     lda (TEMP2),y   ; and deref once
-     sta TEMP3+1
-     ldy #1
-     lda (TEMP3),y   ; skip over type, get length
-     sta TEMP1
-     iny
-     lda (TEMP3),y
-     sta TEMP1+1
-     rts
-;
-;-------------------------------------------------------------
-;                MATH routines
-;         with MULT16 / DIV16, signs handled by calling word.
-;         we just do the math here.
-;
-;
-MULT16:                             ; 16 x 16 multiply; TEMP1 and TEMP2 are #'s, TEMP1 will be result
-    stz TEMP3                       ; with TEMP3 as high bytes
-    stz TEMP3+1
-    ldx #17
-    clc
-MULTLOOP:
-    ror TEMP3+1                     ; RIGHT.  if you need to go backwards, go backwards stupid fuck.
-    ror TEMP3
-    ror TEMP1+1
-    ror TEMP1
-    bcc MULTDECCNT
-    clc
-    lda TEMP2
-    adc TEMP3
-    sta TEMP3
-    lda TEMP2+1
-    adc TEMP3+1
-    sta TEMP3+1
-MULTDECCNT:
-    dex
-    bne MULTLOOP
-    rts
-
-;
-;
-       ; 16 x 16 divide; TEMP1 and TEMP2 #'s - TEMP3 is 'overflow'
-       ;  TEMP2 divisor, TEMP1 dividend, TEMP1 + 3 = result + remainder
-DIV16:
-    stz TEMP3
-    stz TEMP3+1
-    ldx #16
-UDIVLP:
-    rol TEMP1
-    rol TEMP1+1
-    rol TEMP3
-    rol TEMP3+1
-UDIVCHK:
-    sec
-    lda TEMP3
-    sbc TEMP2
-    tay
-    lda TEMP3+1
-    sbc TEMP2+1
-    bcc UDIVCNT
-    sty TEMP3
-    sta TEMP3+1
-UDIVCNT:
-    dex
-    bne UDIVLP
-    rol TEMP1
-    rol TEMP1+1
-    rts
-;
-;     galois32o - LSFR psuedo-random # generator
-;
-;  -- boilerplate --
-; 6502 LFSR PRNG - 32-bit
-; Brad Smith, 2019
-; http://rainwarrior.ca
-;
-;
-galois32o:
-    ; rotate the middle bytes left
-    ldy RSEED+2                     ; will move to RSEED+3 at the end
-    lda RSEED+1
-    sta RSEED+2
-    ; compute RSEED+1 ($C5>>1 = %1100010)
-    lda RSEED+3                     ; original high byte
-    lsr
-    sta RSEED+1                     ; reverse: 100011
-    lsr
-    lsr
-    lsr
-    lsr
-    eor RSEED+1
-    lsr
-    eor RSEED+1
-    eor RSEED+0                     ; combine with original low byte
-    sta RSEED+1
-    ; compute RSEED+0 ($C5 = %11000101)
-    lda RSEED+3                     ; original high byte
-    asl
-    eor RSEED+3
-    asl
-    asl
-    asl
-    asl
-    eor RSEED+3
-    asl
-    asl
-    eor RSEED+3
-    sty RSEED+3                     ; finish rotating byte 2 into 3
-    sta RSEED+0
-    rts
 ;-------------------------------------------------------------------
 ;              get delimited text from INBUF, store in string
 ;
@@ -636,25 +328,6 @@ TEXTGEND:
 
 .endif  ; ---TXT2STACK
 
-;-----------------------   NUMBER CONVERSIONS
-;
-DEC2ASCII:       ;  X is # - return as two digits in TEMP3, TEMP3+1
-    lda #ASCII_0
-    sta TEMP3+1
-    txa
-    sta TEMP3
-D2ASCLOOP:
-    sec
-    sbc #ASCII_LF
-    bcc D2ASCNEXT
-    inc TEMP3+1
-    bra D2ASCLOOP
-D2ASCNEXT:
-    clc
-    adc #$3A
-    sta TEMP3
-    rts
-
 .ifdef numbers
 ;------------------------
 ;      CONVERT DIGITS, PUSH on DS
@@ -802,60 +475,6 @@ GETDIG_ERR:                         ; pass carry set for no digit
     rts
 ;  end of new number conv
 ;
-H2NUM: .byte $27,$10
- .byte $03,$E8
- .byte $00,$64
- .byte $00,$0A
-HEX2DEC:                            ; low/high in A,Y - use X, TEMP1, TEMP3, TEMP4, TEMP6
-    sty TEMP3+1
-    sta TEMP3
-    ldx #0
-H2DDIV10:
-    lda H2NUM,x
-    sta TEMP4+1
-    inx
-    lda H2NUM,x
-    sta TEMP4
-    inx
-    stz TEMP6
-H2DLOOP:
-    lda TEMP3+1
-    cmp TEMP4+1
-    bcc  H2DSK1
-    bne  H2DSK0
-    lda TEMP3
-    cmp TEMP4
-    bcc  H2DSK1
-H2DSK0:
-    lda TEMP3
-    sec
-    sbc TEMP4
-    sta TEMP3
-    lda TEMP3+1
-    sbc TEMP4+1
-    sta TEMP3+1
-    inc TEMP6
-    bra H2DLOOP
-H2DSK1:
-    lda TEMP6
-    clc
-    adc #ASCII_0
-    sta TEMP1
-    stz TEMP1+1
-    phx
-    jsr spush_0                      ; remember!  A/X both destroyed with push and pull!
-    plx
-    cpx #8
-    beq H2DFIN
-    jmp H2DDIV10
-H2DFIN:
-    lda TEMP3
-    clc
-    adc #ASCII_0
-    sta TEMP1
-    stz TEMP1+1
-    jsr spush_0
-    rts
 
 ;
 ;
@@ -903,8 +522,9 @@ CLREXIT:
 ;
 .ifdef DEBUG
 ;      argh.
-;   Include DEBUG code here
+;   Include DEBUG code here (page 1's room after the BIOS thunks, $F800: segment FORTH_HIGH)
 ;
+.segment "FORTH_HIGH"
 ;
 ;  debug stuff   ------------------------------ DUMPREG ---------------------
 ;
@@ -1036,6 +656,7 @@ DUMPZP:                             ; dump ZP
     pha
     stz TEMP0+1
     jmp DUMPPDBG
+.segment "FORTH_ROM"
 .endif
 
 DUMPPAGE:                           ; general purpose page dumper

@@ -1,12 +1,13 @@
 .debuginfo
 
 ; ****************************************************************************
-; BIOS ROM page 1 (W = 1): HyForth and the disassembler.  (The self tests are on page 4, page4.s.)
+; BIOS ROM page 1 (W = 1): HyForth.  (Its far words and the disassembler are on page A, farwords.s; the
+; self tests are on page 4, page4.s.)
 ;
-;   This file is included inside `.scope PAGE1` (see all.s), BEFORE disasm.s and hyforth, so the gate
-;   labels below take precedence over the page 0 routines of the same name for all page 1 code.
-;   Page 1 code (including HyForth's RAM code) must run with W = 1; it's entered through the page 0
-;   gates in page0_gates.s.
+;   This file is included inside `.scope PAGE1` (see all.s), BEFORE hyforth, so the gate labels below take
+;   precedence over the page 0 routines of the same name for all page 1 code.  Page 1 code (HyForth's,
+;   and the code user words compile to in RAM) must run with W = 1; it's entered through the page 0 gates
+;   in page0_gates.s.
 
 .segment "GATES_P1"
 
@@ -92,6 +93,22 @@ FAR_GATE_INLINE INSAVE,         ::SH_INSAVE_P7,         7
 FAR_GATE_INLINE TASK_SET_BREAK, ::TASK_SET_BREAK,       0
 FAR_GATE_INLINE TASK_SIGNAL,    ::TASK_SIGNAL,          0
 FAR_GATE_INLINE CONS_SET_FG,    ::CONS_SET_FG,          0
+
+; HyForth's far words, and the routines with them, and the disassembler (page A, hyforth/farwords.s; the
+; aliases are in all.s)
+FAR_GATE_INLINE FW_CALL,        ::FW_ENTRY_PA,          $A  ; A far word (FARWORD)
+FAR_GATE_INLINE PIPECHK,        ::PIPECHK_PA,           $A
+FAR_GATE_INLINE PIPEEND,        ::PIPEEND_PA,           $A
+FAR_GATE_INLINE INCOPEN,        ::INCOPEN_PA,           $A
+FAR_GATE_INLINE INCOPENFD,      ::INCOPENFD_PA,         $A
+FAR_GATE_INLINE INCEND,         ::INCEND_PA,            $A
+FAR_GATE_INLINE INCCOUNT,       ::INCCOUNT_PA,          $A
+FAR_GATE_INLINE INCABORT,       ::INCABORT_PA,          $A
+FAR_GATE_INLINE RUNNAME,        ::RUNNAME_PA,           $A
+FAR_GATE_INLINE wrterror,       ::wrterror_PA,          $A
+FAR_GATE_INLINE MALLOC,         ::MALLOC_PA,            $A
+FAR_GATE_INLINE DISASM,         ::DISASM_PA,            $A
+FAR_GATE_INLINE DISASM_AY,      ::DISASM_AY_PA,         $A
 
 ; Far pointers and references (page 5)
 FAR_GATE_INLINE FP_MAKE,        PAGE5::FP_MAKE,         5

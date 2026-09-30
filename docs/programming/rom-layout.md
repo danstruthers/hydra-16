@@ -6,17 +6,17 @@ How the OS ROM is organised, how code calls between ROM pages, and the fixed ent
 
 | Image | Chip | Contents |
 | :---- | :--- | :------- |
-| `os_rom/bin/os_rom_C02.bin` (128K) | BIOS ROM, 16 pages of 8K at `$E000-$FFFF`, selected by `W` | The BIOS, kernel, drivers, IO layer, HyForth's ROM part, WOZMON, self tests |
-| `os_rom/bin/paged_rom_C02.bin` (16K) | Paged ROM bank 0, at `$A000-$DFFF` | `COPYTORAM` and HyForth's RAM image (copied to `$0800` when the shell starts), HyForth's training scripts and sample binary words |
+| `os_rom/bin/os_rom_C02.bin` (128K) | BIOS ROM, 16 pages of 8K at `$E000-$FFFF`, selected by `W` | The BIOS, kernel, drivers, IO layer, HyForth, WOZMON, self tests |
+| `os_rom/bin/paged_rom_C02.bin` (16K) | Paged ROM bank 0, at `$A000-$DFFF` | `COPYTORAM` and HyForth's variables (copied to `$0800` when the shell starts), HyForth's training scripts and sample binary words |
 
-Both come from one build (`os_rom/all.s`, linked by `os_rom/os_rom_C02.cfg`).  HyForth's RAM image calls ROM addresses directly, so most changes affect both images: burn both.
+Both come from one build (`os_rom/all.s`, linked by `os_rom/os_rom_C02.cfg`).  HyForth's code in the BIOS ROM uses its variables where the paged ROM's copy puts them, and the sample binary words call BIOS ROM addresses, so most changes affect both images: burn both.
 
 ### **BIOS ROM pages**
 
 | Page (`W`) | Scope | Contents | Sources |
 | :--------- | :---- | :------- | :------ |
 | 0 | (global) | Reset, POST gate, the kernel (tasks, scheduler, IRQ dispatch, MMU, shared memory), serial and sound drivers, the IO layer's page 0 part, printing, WOZMON, thunks | `kernel/`, `drivers/serial.s`, `drivers/sound.s`, `io/io_p0.s`, `monitor/wozmon.s` |
-| 1 | `PAGE1` | HyForth's ROM part, the disassembler, a copy of the thunks | `hyforth/`, `monitor/disasm.s` |
+| 1 | `PAGE1` | HyForth: its interpreter, and its built-in words' headers and code, all run from ROM; a copy of the thunks | `hyforth/` |
 | 2 | `PAGE2` | The IO layer: fds, namespaces, pipes, `/dev/cons` and `/dev/ser` (its settings, and the fast serial and tick interrupt handlers: `serfast.s`), `/dev/snd`, the sound test tune | `io/`, `drivers/snd_test.s` |
 | 3 | `PAGE3` | Storage: SPI, the SD card's block layer, `/dev/sd`, and HydraFS's format and label | `drivers/spi.s`, `drivers/sd.s`, `io/sd_srv.s`, `io/hfs_format.s` |
 | 4 | `PAGE4` | POST and the self tests (MMU, scheduler, IO) | `tests/` |
@@ -25,9 +25,10 @@ Both come from one build (`os_rom/all.s`, linked by `os_rom/os_rom_C02.cfg`).  H
 | 7 | `PAGE7` | The shell: the boot shell's start (the volumes found, one selected), the prompt, the file and card commands HyForth's shell words call (`SH_CMD`), running programs (`run`, the `.hyx` loader, arguments), redirection | `shell/page7.s`, `shell.s`, `files.s`, `run.s`, `redir.s` |
 | 8 | `PAGE8` | The text editor (`edit`): a ROM program, run in a task of its own | `shell/page8.s`, `shell/edit.s` |
 | 9 | `PAGE9` | The system's servers that run in their client's task: `/dev/proc` and `/env` (each task's environment) | `io/page9.s`, `io/proc_srv.s`, `io/env_srv.s` |
-| A-F | | Empty | |
+| A | `PAGE1::FAR` | HyForth's far words (their code: the shell's and IO words, tasks, sound, memory records, multiply and divide ...; their headers are on page 1), its error messages and `MALLOC`, and the disassembler | `hyforth/pagea.s`, `hyforth/farwords.s`, `monitor/disasm.s` |
+| B-F | | Empty | |
 
-Page 0 is nearly full (about 40 bytes are left), so new code goes on another page behind gates.  The link map (`os_rom/obj/os_rom_C02.map`) shows each page's segments and free space.
+Page 0 is nearly full (about 40 bytes are left), so new code goes on another page behind gates.  Page 1 has about 400 bytes left (in two pieces, below and above the thunks), so a new HyForth word's code goes on page A (a far word: see below).  The link map (`os_rom/obj/os_rom_C02.map`) shows each page's segments and free space.
 
 **Fixed addresses on every page:**
 
@@ -59,7 +60,8 @@ FAR_GATE_INLINE  IO_OPEN,  PAGE2::IO_OPEN,  2      ; a label IO_OPEN on this pag
 
 **Scopes.**  Each page's sources are included inside `.scope PAGEn` (see `all.s`), with the page's gate file first.  A page's gate labels therefore shadow the page 0 routines of the same name for that page's code: `jsr WRITE_CHAR` on page 2 goes through page 2's gate.
 * Refer to page 0's own label with `::NAME`, and to another page's with `PAGEn::NAME`.
-* The gate files are `hyforth/page1.s`, `io/page2.s`, `drivers/page3.s`, `tests/page4.s` and `kernel/page5.s`.
+* The gate files are `hyforth/page1.s`, `io/page2.s`, `drivers/page3.s`, `tests/page4.s`, `kernel/page5.s`, `io/page6.s`, `shell/page7.s`, `shell/page8.s`, `io/page9.s` and `hyforth/pagea.s`.
+* Page A's code is the scope `FAR` inside `PAGE1` (included from `hyforth/hyforth.s`), so it sees HyForth's names (its zero page, variables and constants), with its own gates first.  Page 1 reaches it through the global aliases after `PAGE1` in `all.s` (`FW_ENTRY_PA` ...).
 * The gates from page 0 outward are in `kernel/page0_gates.s`, `io/io_p0.s` and `drivers/storage.s`.
 
 **The page checker.**  The build ends by running `os_rom/tools/check_pages.js` on the debug info.  It lists any `jsr`/`jmp` from one page to a routine on another that doesn't go through a gate ("No cross-page references" when there's none).  It can't see pointers (a routine's address passed in registers), so:
@@ -67,6 +69,8 @@ FAR_GATE_INLINE  IO_OPEN,  PAGE2::IO_OPEN,  2      ; a label IO_OPEN on this pag
 * **Data pointers** (strings, buffers) are read as the reader sees them.  The IO layer reads names through far pointers ([memory.md](memory.md#far-pointers)), so they can be on the caller's page.  Other buffers must be in RAM.
 
 **Gates into a task.**  `TASK_GATE name, target, task` makes a gate that runs `target` in another task (with `TASK_CALL`); e.g. HyForth's sound words run the sound code in the sound task.
+
+**HyForth's far words.**  HyForth's inner interpreter jumps straight to a word's code, so a built-in word's code has to be on page 1.  A word whose code is on page A has a header made by `def_far` instead of `def_word`: its code on page 1 is `jsr FARWORD` and the address of its code on page A.  `FARWORD` calls it through the gate `FW_CALL`, and it runs as it would on page 1: page A has its own `next`, `this`, `keeps`, `errrtn` and stack routines (`spush_0`, `spull_1` ...) that end the word, back on page 1 (`next`, or `errrtn` with the error in `ERRFLAG`).  They put the stack back as it was when the word started, so a subroutine can use them too.
 
 ### **Calling conventions**
 

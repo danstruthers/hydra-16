@@ -77,12 +77,26 @@ HFS_CTL_LINES_P6 = PAGE6::HFS_CTL_LINES
 .include "tests/post_ram.s"     ; POST paged RAM line tests
 .endscope
 
-; BIOS ROM page 1 (W = 1).  Its own scope, so page 1 code binds to the page 1 gates in page1.s
+; BIOS ROM page 1 (W = 1): HyForth.  Its own scope, so page 1 code binds to the page 1 gates in page1.s.
+; Inside it, scope FAR is BIOS ROM page A (W = $A): HyForth's far words and the disassembler
+; (hyforth/farwords.s); page 0 and page 1 reach it through the aliases after the scope.
 .scope PAGE1
 .include "hyforth/page1.s"      ; must be first in the scope
-.include "monitor/disasm.s"
 .include "hyforth/hyforth.s"
 .endscope
+FW_ENTRY_PA     = PAGE1::FAR::FW_ENTRY  ; (For page 1's gates: page1.s)
+PIPECHK_PA      = PAGE1::FAR::PIPECHK
+PIPEEND_PA      = PAGE1::FAR::PIPEEND
+INCOPEN_PA      = PAGE1::FAR::INCOPEN
+INCOPENFD_PA    = PAGE1::FAR::INCOPENFD
+INCEND_PA       = PAGE1::FAR::INCEND
+INCCOUNT_PA     = PAGE1::FAR::INCCOUNT
+INCABORT_PA     = PAGE1::FAR::INCABORT
+RUNNAME_PA      = PAGE1::FAR::RUNNAME
+wrterror_PA     = PAGE1::FAR::wrterror
+MALLOC_PA       = PAGE1::FAR::MALLOC
+DISASM_PA       = PAGE1::FAR::DISASM
+DISASM_AY_PA    = PAGE1::FAR::DISASM_AY
 
 ; BIOS ROM page 7 (W = 7): the shell: its boot, the prompt, file commands, running programs.  After PAGE1,
 ; whose RAM (HyForth's) it uses; page 1 reaches it through the aliases after the scope.

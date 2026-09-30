@@ -24,17 +24,7 @@ def_word "reset", "reset_", 0
 
 ;----------------------------------------------------------------------
 ; ( -- ) ae list of data stack
-def_word ".S", "splist", 0      ; changed from %S
-    lda DSPTR
-    sta TEMP1
-    lda DSPTR + 1
-    sta TEMP1 + 1
-    WCRLF_np
-    PRINT_CHAR #ASCII_S
-    lda #DSEND
-    jsr STKLIST
-    WCRLF_np
-    jmp next
+def_far ".S", "splist"          ; changed from %S
 
 ; ( -- ) data stack empty?
 def_word "?S", "spp", 0
@@ -62,45 +52,7 @@ def_word "?R", "rtp", 0
 
 ;----------------------------------------------------------------------
 ; ( -- ) list of return stack
-def_word ".R", "rplist", 0       ; changed from %R
-    lda RTPTR
-    sta TEMP1
-    lda RTPTR + 1
-    sta TEMP1 + 1
-    WCRLF_np
-    PRINT_CHAR #ASCII_R
-    lda #RTEND
-    jsr STKLIST
-    WCRLF_np
-    jmp next
-
-;----------------------------------------------------------------------
-;  list a sequence of references ( for .S and .R )
-STKLIST:
-    sec                 ; calc diff and length of list
-    sbc TEMP1
-    lsr
-    tax                 ; hide in X
-    PRINT_BYTE TEMP1 + 1,TEMP1        ; print addr of pointer
-    PRINT_SPACE
-    txa
-    PRINT_BYTE         ; print # of entries
-    PRINT_SPACE
-    txa
-    beq @ends
-    ldy #0
-@loop:
-    PRINT_SPACE
-    iny
-    PRINT_BYTE {(TEMP1),y}
-    dey
-    PRINT_BYTE {(TEMP1),y}
-    iny
-    iny
-    dex
-    bne @loop
-@ends:
-    rts
+def_far ".R", "rplist"           ; changed from %R
 
 ;------------------------------- ODUMP AND DUMP ---------------------------------------
 ; ( -- ) dumps the user dictionary
@@ -272,17 +224,10 @@ show_refer:
 
 ;----------------------------------------------------------------------
 ; ( u -- ) print top of DS in hexadecimal in MSB:LSB form, and drop it
-def_word ".", "dot", 0
-    PRINT_SPACE
-    jsr spull_0
-    PRINT_BYTE TEMP1 + 1, TEMP1
-    jmp next
+def_far ".", "dot"
 
 ; ( u -- ) print top of DS in ascii, two bytes, msb first, and drop it
-def_word ".C", "cdot", 0
-    jsr spull_0
-    PRINT_CHAR TEMP1 + 1, TEMP1
-    jmp next
+def_far ".C", "cdot"
 ;
 ;
 def_word "ord", "ord", 0
@@ -311,212 +256,32 @@ ORDNONE:
 ;
 ; (addr -- )  -------  print sz string using new allocated RAM space
 ;
-def_word ".sz", "szdot", 0
-    jsr spull_0    ; will have MEMPTR addr
-    ldy #0
-    lda (TEMP1),y
-    sta TEMP2      ; will have RAM stack address
-    iny
-    lda (TEMP1),y
-    sta TEMP2+1    ; TEMP2 now points at type byte of string?
-    ldy #0
-    lda (TEMP2),y
-    and #$7F       ; mask off temp flag
-    cmp #MEM_SZ
-    bne SZEND
-    ldy #3
-SZLOOP:
-    lda (TEMP2),y
-    beq SZEND
-    PRINT_CHAR
-    iny
-    bra SZLOOP
-SZEND:
-    jmp next
+def_far ".sz", "szdot"
 ;
 ; ( addr n -- w0 w1 ... w(n-1) )  push n words from memory to stack
 ;
-def_word "dsgetn@", "dsgetn", 0
-    ldy #TEMP4
-    jsr spull    ; get # WORDS
-    jsr spull_1  ; get ptr addr
-    jsr MEMLEN   ; returns TEMP3 w/maddr, length in TEMP1
-    lda TEMP4
-    asl a
-    sta TEMP4
-    cmp TEMP1
-    bcs DSGETNSK
-    sta TEMP1
-DSGETNSK:
-    lda TEMP1
-    cmp #$78
-    bcc DSGETNSK2
-    jmp DSGETERR
-DSGETNSK2:
-    clc
-    adc #3
-    sta TEMP1
-    ldy #3
-    jmp DSGLOOP
+def_far "dsgetn@", "dsgetn"
 ;
 ; ( addr -- w w ... w )  push words from memory to stack
 ;
-def_word "dsget@", "dsget", 0
-    jsr spull_1    ; get addr on memstack
-    jsr MEMLEN     ; maddr in TEMP3, length in TEMP1
-    lda TEMP1
-    cmp #$78
-    bcs DSGETERR
-    lda TEMP1+1
-    bne DSGETERR    ; too much data, can't push this on
-    lda TEMP1
-    clc
-    adc #3
-    sta TEMP1
-    ldy #3
-DSGLOOP:
-    lda (TEMP3),y
-    sta TEMP2
-    iny
-    lda (TEMP3),y
-    sta TEMP2+1
-    iny
-    phy
-    jsr spush_1
-    ply
-    cpy TEMP1
-    bne DSGLOOP
-DSGEND:
-    jmp next
-DSGETERR:
-    lda #ERR_SPTR   ; throw pointer error
-    sta ERRFLAG
-    jmp errrtn
+def_far "dsget@", "dsget"
 ;
 ; ( w w w..len addr -- addr)    stores len BYTES (words * 2) from stack
 ;
-def_word "dwstk!", "dwstkstore", 0
-    jsr HSSETUP
-    jsr DW_STFWD
-    jsr spush_1      ; and push ptr addr back on stack
-    jmp next
-
-DW_STFWD:
-    ldy #0            ; count up
-DWFLOOP:
-    lda DSPTR
-    sec
-    sbc #DSEND
-    bcs DW_FWDEND
-    phy
-    jsr spull_0
-    ply
-    lda TEMP1
-    sta (TEMP3),y
-    iny
-    lda TEMP1+1
-    sta (TEMP3),y
-    iny
-    cpy TEMP5
-    bne DWFLOOP
-DW_FWDEND:
-    rts
+def_far "dwstk!", "dwstkstore"
 ;
 ;
 ; ( 0c 0c 0c...len addr -- addr)    stores len chars from stack
 ;
-def_word "dcstk!", "dcstkstore", 0
-    jsr HSSETUP
-    jsr HS_STFWD
-    jsr spush_1      ; and push ptr addr back on stack
-    jmp next
-
-HS_STFWD:
-    ldy #0            ; count up
-HSRLOOP:
-    lda DSPTR
-    sec
-    sbc #DSEND
-    bcs HS_FWDEND
-    phy
-    jsr spull_0
-    ply
-    lda TEMP1
-    sta (TEMP3),y
-    iny
-    cpy TEMP5
-    bne HSRLOOP
-HS_FWDEND:
-    rts
+def_far "dcstk!", "dcstkstore"
 ;
 ; ( 0c 0c 0c...len addr -- addr)  stores len chars from stack, reverse order
 ;
-def_word "rdcstk!", "rdstkstore", 0
-    jsr HSSETUP
-    jsr HS_STREV
-    jsr spush_1      ; and push ptr addr back on stack
-    jmp next
-
-HSSETUP:
-    jsr spull_1     ; get addr from malloc run -> TEMP2
-    jsr MEMLEN      ; length in TEMP1, maddr TEMP3
-    lda TEMP1
-    sta TEMP5
-    lda TEMP3
-    clc
-    adc #3          ; calc offset to storage
-    sta TEMP3
-    bcc HSSETUPEND
-    inc TEMP3+1
-HSSETUPEND:
-    rts
-
-HS_STREV:
-    ldy TEMP5            ; count down from length
-    lda #0
-    dey
-    sta (TEMP3),y
-HSFLOOP:
-    lda DSPTR
-    sec
-    sbc #DSEND
-    bcs HS_REVEND
-    phy
-    jsr spull_0
-    ply
-    lda TEMP1
-    dey
-    sta (TEMP3),y
-    bne HSFLOOP
-HS_REVEND:
-    rts
-;
-;   replace leading zeros with spcs when creating decimal ascii string
-;
-DECSFINISH:
-    ldy #0
-DECSCLRLOOP:             ; replace $00 or leading $30 with spaces
-    lda (TEMP3),y
-    beq  DECSTSK02
-    cmp #ASCII_0
-    beq  DECSTSK02
-    bra  DECSTDONE
-DECSTSK02:
-    lda #ASCII_SPACE
-    sta (TEMP3),y
-    iny
-    bra DECSCLRLOOP
-DECSTDONE:
-    rts
+def_far "rdcstk!", "rdstkstore"
 ;
 ;
 ;
-def_word "decs!", "decstore", 0
-    jsr HSSETUP
-    jsr HS_STREV
-    jsr DECSFINISH
-    jsr spush_1      ; and push ptr addr back on stack
-    jmp next
+def_far "decs!", "decstore"
 ;
 ;
 extensions:
@@ -553,82 +318,13 @@ SLZERO:
 
 ;--------------- bit test/set/clear ----------------------------------
 ; ( n b -- t? )
-def_word "tbit", "tbit", 0            ; nondestructive test bit
-    jsr spull_1     ; which bit
-    lda TEMP2
-    and #$0F        ; only want 0-16
-    sta TEMP2
-    jsr spull_0
-    jsr spush_0     ; backup!
-    jsr BITWIND
-    lda TEMP1
-    and #$01
-    beq TBCLR      ; test bit 0
-    lda #$FF
-    sta TEMP1
-    sta TEMP1+1
-    bra TBITEND
-TBCLR:
-    stz TEMP1
-    stz TEMP1+1
-TBITEND:
-    jmp this
+def_far "tbit", "tbit"                ; nondestructive test bit
 
 ; ( n b -- ns )
-def_word "sbit", "sbit", 0             ; set bit
-    jsr spull_1     ; which bit
-    lda TEMP2
-    and #$0F        ; only want 0-16
-    sta TEMP2
-    jsr spull_0
-    jsr BITWIND
-    lda TEMP1
-    ora #$01        ; set bit 0
-    sta TEMP1
-    jsr BITUNWIND
-    jmp this
+def_far "sbit", "sbit"                 ; set bit
 
 ; ( n b -- nc )
-def_word "cbit", "cbit", 0
-    jsr spull_1     ; which bit
-    lda TEMP2
-    and #$0F        ; only want 0-16
-    sta TEMP2
-    jsr spull_0
-    jsr BITWIND
-    lda TEMP1
-    and #$FE       ; clear bit 0
-    sta TEMP1
-    jsr BITUNWIND
-    jmp this
-
-BITWIND:
-    stz TEMP3
-    stz TEMP3+1
-    ldx TEMP2
-    beq BITWSKIP
-BITWLOOP:
-    lsr TEMP1+1
-    ror TEMP1
-    ror TEMP3+1
-    ror TEMP3
-    dex
-    bne BITWLOOP
-BITWSKIP:
-    rts
-
-BITUNWIND:
-    ldx TEMP2
-    beq BITUWSKIP
-BITUNWLOOP:
-    asl TEMP3
-    rol TEMP3+1
-    rol TEMP1
-    rol TEMP1+1
-    dex
-    bne BITUNWLOOP
-BITUWSKIP:
-    rts
+def_far "cbit", "cbit"
 ;---------------------------------------------------------------------
 ; start of dictionary
 ;---------------------------------------------------------------------

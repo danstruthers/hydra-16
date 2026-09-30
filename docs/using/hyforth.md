@@ -471,15 +471,16 @@ C D -
 
 ### **How HyForth uses memory**
 
-HyForth runs in task 1, and its RAM image is copied from the paged ROM to `$0800` at startup.
+HyForth runs in task 1.  Its code and the built-in words run from the BIOS ROM (page 1, with some words' code on page A), so only its variables are in RAM: they're copied from the paged ROM to `$0800` at startup (about 90 bytes).
 
 | What | Where |
 | :--- | :---- |
 | Input buffer | `$0200` |
 | Data and return stacks | `$0300-$03FF` |
 | Record stack | `$0400-$05FF` |
-| The shell's buffers (names, a block of a file being shown, include's saved fds) | Just after the image: not in the paged ROM |
-| Dictionary | Grows up from the page after them, `here @` |
+| Variables (the prompt's format, the shell's settings) | `$0800` |
+| The shell's buffers (names, a block of a file being shown, include's saved fds) | Just after the variables: not in the paged ROM |
+| Dictionary (your words) | Grows up from the page after them (`$0B00`), `here @` |
 | Small records (strings, `malloc`) | A 2K arena from the MMU |
 | Records of 256 bytes or more | Their own MMU blocks |
 
