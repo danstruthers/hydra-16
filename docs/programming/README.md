@@ -11,6 +11,7 @@ For programmers writing code for the Hydra-16: ROM code (the OS, drivers, server
 | [Input and output](io.md) | fds and the IO calls, stdio, the devices, the console, pipes, namespaces |
 | [Drivers and file servers](servers.md) | Writing a device: registration, the serve routine, the request block, waiting, the storage layer |
 | [Programs](programs.md) | Hydra executables (`.hyx`): the header, what a program gets, building one (in assembly, or in C with cc65), putting it on a card, how `run` loads it |
+| [The C Programmer's Guide](c.md) | Programs in C (cc65): setting up, building, running, arguments and exit statuses, files, the console (stdio and conio), running other programs, time, semaphores, errors, memory, assembly, performance, debugging, limits |
 
 ### **The system in one page**
 

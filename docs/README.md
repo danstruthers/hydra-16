@@ -18,6 +18,7 @@ The **[Programmer's Guide](programming/README.md)**, by area:
 * [Input and output](programming/io.md): fds, devices, the console, pipes, namespaces.
 * [Drivers and file servers](programming/servers.md)
 * [Programs](programming/programs.md): Hydra executables (`.hyx`), and building one.
+* [The C Programmer's Guide](programming/c.md): writing programs in C with cc65, from the first build to the library, the console, files, processes, assembly, performance and debugging.
 
 ### **The hardware**
 * **[Hardware Reference](hardware.md)**: the main board in detail (memory system, address decoding, pseudo-registers, interrupts, clocks, devices, slots, connectors, errata) and the companion cards.

@@ -20,6 +20,7 @@ void __fastcall__ _hy_putc (char c);                    /* conglue.s: WRITE_CHAR
 void __fastcall__ _hy_cputc (char c);                   /* (conglue.s's cputc and cgetc: these, the zero page */
 char _hy_cgetc (void);                                  /*   kept around them) */
 int __fastcall__ _hy_open (const char* name, unsigned char mode);
+extern unsigned char _hy_rawcons;                       /* read.c: no LF echoed after a CR on stdin */
 
 static unsigned char x, y, width, height, sized;
 static unsigned char fg = COLOR_WHITE, bg = COLOR_BLACK, border, rev;
@@ -242,6 +243,7 @@ static void raw (void)
     ctlfd = _hy_open ("/dev/cons/ctl", IO_MODE_WRITE);  /* (Kept open: raw till the program ends) */
     if (ctlfd >= 0) {
         write (ctlfd, "rawon", 5);
+        _hy_rawcons = 1;
     }
     kfd = _hy_open ("/dev/cons", IO_MODE_READ);
     nbfd = _hy_open ("/dev/cons", IO_MODE_READ | IO_MODE_NONBLOCK);

@@ -797,7 +797,7 @@ const TESTS = [
       '0:/> run err.hys\n\n !UNK WORD!\nline 0001\n0:/> status .\n' + num(5) + '\n',       // (The script's error: its status)
       '0:/> 9 exits status .\n' + num(9) + '\n',                                          // (The boot shell stays)
       '0:/> upper &\n[B]\n', /0:\/> ps\n0 R -\n1 R 0 \*\nB W 1\n/,                          // (Waiting for the console)
-      '0:/> $B wait\nhiHI\n', '0:/> status .\n' + num(0) + '\n', '0:/> cat /env/apid\nB\n'],
+      '0:/> $B wait\nhi\nHI\n', '0:/> status .\n' + num(0) + '\n', '0:/> cat /env/apid\nB\n'],  // (Enter: a new line, read.c)
     forbid: [/\n 0002\n/],
   },
   {

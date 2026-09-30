@@ -1,9 +1,10 @@
 ; ****************************************************************************
 ; fileio.s - the C library's file calls on the Hydra's IO layer (fds 0-2: stdin, stdout, stderr, as the
-; shell gives them): read, write, close, and the helpers open.c and lseek.c use.  A failed call sets
-; _oserror (the OS's error) and errno (___mappederrno), and returns -1.
+; shell gives them): the raw reads and writes (read.c and write.c add a terminal's line ends for the console),
+; close, and the helpers open.c and lseek.c use.  A failed call sets _oserror (the OS's error) and errno
+; (___mappederrno), and returns -1.
 
-        .export     _read, _write, _close
+        .export     __hy_read, __hy_write, _close
         .export     __hy_open, __hy_create, __hy_seek, __hy_size, __hy_statrec
         .import     popax, ___mappederrno
 
@@ -12,14 +13,14 @@
 
         .code
 
-; int __fastcall__ read (int fd, void* buf, unsigned count)
-_read:
+; int __fastcall__ _hy_read (int fd, void* buf, unsigned count): the bytes as they come
+__hy_read:
         jsr         setbuf
         jsr         IO_READ
         bra         done
 
-; int __fastcall__ write (int fd, const void* buf, unsigned count)
-_write:
+; int __fastcall__ _hy_write (int fd, const void* buf, unsigned count): the bytes as they are
+__hy_write:
         jsr         setbuf
         jsr         IO_WRITE
 

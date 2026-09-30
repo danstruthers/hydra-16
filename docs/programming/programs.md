@@ -61,11 +61,11 @@ node sim/tools/mkhyx.js --info prog.hyx                      show a .hyx file's 
 
 ### **C programs**
 
-`programs/c/` has a C library for [cc65](https://cc65.github.io/): cc65's own C library (stdio, strings, malloc, time ...) on the Hydra's calls, and the Hydra's own (`hydra.h`).  A C program is a `.hyx` like any other.
+`programs/c/` has a C library for [cc65](https://cc65.github.io/): cc65's own C library (stdio, strings, malloc, time ...) on the Hydra's calls, and the Hydra's own (`hydra.h`).  A C program is a `.hyx` like any other.  **[The C Programmer's Guide](c.md)** covers writing one in depth; this section is the summary.
 
 ```
-programs\c\make.bat                  build the library (lib\hydra.lib) and the samples (bin\*.hyx)
-programs\c\hyc.bat prog.c [more.c]   build a program of your own: bin\prog.hyx
+programs\c\make.bat                            build the library (lib\hydra.lib) and the samples (bin\*.hyx)
+programs\c\hyc.bat prog.c [more.c] [more.s]    build a program of your own: bin\prog.hyx
 ```
 
 They find cc65 in `CC65_HOME` (default `C:\source\cc65\win64_snapshot`).  `hyc.bat` compiles with `cc65 -t none --cpu 65C02 -O` and links with `hydra.cfg` and `lib\hydra.lib`.
@@ -90,7 +90,7 @@ A module in `lib/` replaces cc65's module of the same name (`make.bat` adds them
 * **`argc` and `argv`:** `argv[0]` is the program's name as it was run; the arguments are split at spaces, `"a b"` as one (15 at most).
 * **The environment** (Plan 9's: each variable is a file, `/env/NAME`, in a copy of the shell's environment): `getenv` reads one (into a static buffer, up to `HY_ENV_MAX` characters), and `setenv`, `putenv` (`"NAME=value"`; `"NAME"` alone removes it) and `unsetenv` change it.  The changes are the program's own, and the commands it runs get them.
 * **Files and directories:** `stat` and `fstat` (`st_size`, `st_mode`: `S_ISDIR`, `S_IREAD`, `S_IWRITE`; `st_mtime` from HydraFS's stamps), `opendir`/`readdir`/`closedir` (`d_name`; `hy_dirstat` gives the entry's stat without opening it), `isatty`.
-* **The console** through `conio.h` (below), or stdio.
+* **The console** through `conio.h` (below), or stdio.  stdio on the console acts as a Unix terminal: an LF written goes out as CR LF, and Enter (CR) reads as `\n` (`read.c`, `write.c`).
 * **Commands:** `system ("ls /bin | wc")` runs a command line as the prompt would (in a command shell, `SHELL_CMD`: Plan 9's `rc -c`), waits, and returns its exit code; `hy_spawn` starts one without waiting, and `hy_wait` waits for it and gets its code and message.
 * **Time:** `time` and `localtime` (the Hydra's clock, to the second, as local time); `clock` (ticks since the program started: `CLOCKS_PER_SEC` is 200); `sleep`.
 * **Errors:** a failed call returns -1 and sets `errno`; `_oserror` has the Hydra's own error ([error codes](rom-layout.md#error-codes)).
