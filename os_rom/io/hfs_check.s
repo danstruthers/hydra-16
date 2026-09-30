@@ -516,10 +516,25 @@ HFS_CK_COMPARE:
             bcc         @far2
             jmp         @done
 @far2:
-            bit         HFS_MSTATE                          ; A map block a quick format hasn't written yet
-            bvc         @bytes                              ;   (HFS_MS_FRESH: all free), a whole one, with
-            lda         HFS_CK_REM + 3                      ;   none of its clusters used: 4096 free ones, at
-            ora         HFS_CK_REM + 2                      ;   once
+            bit         HFS_MSTATE                          ; A map block all free (a quick format hasn't
+            bvs         @free                               ;   written it yet: HFS_MS_FRESH; or all zeros),
+            ldy         #0                                  ;   a whole one, with none of its clusters used:
+:                                                           ;   4096 free ones, at once
+            lda         (HFS_PTR),Y
+            bne         @bytes
+            iny
+            bne         :-
+            inc         HFS_PTR + 1
+:
+            lda         (HFS_PTR),Y
+            bne         @map_back
+            iny
+            bne         :-
+            dec         HFS_PTR + 1
+
+@free:
+            lda         HFS_CK_REM + 3
+            ora         HFS_CK_REM + 2
             bne         :+
             lda         HFS_CK_REM + 1
             cmp         #>(HFS_BLOCK * 8)
@@ -571,6 +586,10 @@ HFS_CK_COMPARE:
 
 @undo:
             dec         HFS_XP + 1
+            bra         @bytes
+
+@map_back:
+            dec         HFS_PTR + 1
 
 @bytes:
             stz         HFS_CK_CNT

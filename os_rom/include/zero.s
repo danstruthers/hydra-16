@@ -155,6 +155,10 @@ ZP_PROC_FG:
     .res  1
 ZP_PROC_LEN:
     .res  1
+ZP_ENV_P:               ; The env server (in the client's task; its scratch is ZP_PROC_*): an environment
+    .res  2             ;   block ...
+ZP_ENV_Q:               ;   and a slot, or another block
+    .res  2
 
 ; IO (see io.s)
 ZP_IO_BUF:              ; caller's buffer / name (IO_OPEN, IO_READ, IO_WRITE, IO_STAT)

@@ -189,8 +189,24 @@ In HyForth: `"b19200" stty`, and `stty?` to show the settings.
 | `/dev/proc` | A line per busy task | |
 | `/dev/proc/N`, `/dev/proc/N/status` | Task N's line | |
 | `/dev/proc/N/ctl` | | `kill`, `break` or `fg` |
+| `/dev/proc/N/cwd` | Its current directory | |
+| `/dev/proc/N/env` | Its environment, as `/env`'s list | |
+| `/dev/proc/N/mem` | `pages PP floor FF` (hex): the MMU pages it has (not counting the ones every task has marked: `$00-$07`, `$7D-$7F`), and its page floor; `-` for a free task | |
 
-A line is `N S O`: the task, its state (`R` running or runnable, `W` waiting, `P` paused, `D` a driver) and the task that started it (`-` none), then ` *` for the foreground task.
+A line is `N S O`: the task, its state (`R` running or runnable, `W` waiting, `P` paused, `D` a driver) and the task that started it (`-` none), then ` *` for the foreground task.  `/dev/proc` and `/env` are served in their client's task, from ROM page 9 (`io/proc_srv.s`, `io/env_srv.s`); `mem` is counted in task N itself (`TASK_CALL`).
+
+#### **The environment: `/env`**
+
+Each task has an environment: variables, `NAME=value`, which the tasks it starts get a copy of (so a change in a task stays in it and the tasks it starts later).  They're files, as in Plan 9, under `/env`, which every task has with no mount (the IO layer sends names under it to the `env` device, as it does `/dev`):
+
+| Name | Read | Write | Create, remove |
+| :--- | :--- | :---- | :------------- |
+| `/env` | The variables, a line each: `NAME=value` | | |
+| `/env/NAME` | Its value (not found: `ERR_IO_NOT_FOUND`) | Its value: a write at the file's start replaces it, one after that adds to it; CRs and LFs are left out | `IO_CREATE` makes it (or empties it); `IO_REMOVE` removes it |
+
+So `echo /sd/0/bin > /env/PATH` sets one, `cat /env/PATH` shows it, `rm /env/PATH` removes it, and `ls /env` lists them.  A name is 1-30 characters, not `/` or `=`; a task's variables share 256 bytes (`ERR_IO_FULL` beyond).  The shell uses `PATH` (directories, `:` between them, to find programs by name) and `HOME` (`cd` alone).
+
+How: each task's environment is a 256-byte block in the system's shared bank (`ENV_BLOCKS`, `$8D00`), entries one after another; `IO_INHERIT` copies the parent's block for a new task (`ENV_COPY`).  An open variable is one of 16 slots (its task and name), so 16 can be open at once.
 
 ### **Pipes**
 

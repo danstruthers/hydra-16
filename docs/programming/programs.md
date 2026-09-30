@@ -21,7 +21,9 @@ Then the code, which is loaded at the load address as it is: a program isn't rel
 
 * **A task of its own**, started with copies of the shell's fds (stdin, stdout and stderr: fds 0-2), namespace and current directory.  So a program can read and write files by relative names, and be a stage of a pipeline (`run hello.hyx | wc`).
 * **Its RAM:** task RAM `$0800-$7BFF`.  Its code is loaded at its load address, and the MMU's page floor is set just above it, so the MMU's allocations come from the pages above its end.  For RAM beyond its end, a program allocates it (`MM_ALLOC`), or raises the floor (`MM_SET_FLOOR`) to use it directly ([memory.md](memory.md#the-mmu-a-tasks-own-memory)).
-* **Zero page** `$A9-$FF` (the OS's is `$00-$A8` in this build: the `ZEROPAGE` segment in the link map), and the stack page: the loader has used a few bytes of the stack, and `$0100-$010F` held the header.
+* **Its arguments:** at the entry point, `.A.Y` points to them: the rest of the line after its name (`prog a b` gives `a b`), zero-terminated, at `HYX_ARGS` (`$0110`, 63 characters at most; empty if there are none).  They travel from the shell through a pipe on fd 10 (`SH_ARGS_FD`), which the loader reads and closes.
+* **Its environment:** a copy of the shell's: `/env/NAME` files it can read (and change, for itself and the tasks it starts).
+* **Zero page** `$A9-$FF` (the OS's is `$00-$A8` in this build: the `ZEROPAGE` segment in the link map), and the stack page: the loader has used a few bytes of the stack, `$0100-$010F` held the header, and the arguments are at `$0110-$014F`.
 * **The OS calls** through the `$F8xx` thunks ([the API index](rom-layout.md#api-index-the-thunks)): the entry point is called on ROM page 0, where they are.
 * **The console** while it runs, if the shell had it: its keys come to the program, and **Ctrl-C ends it** (a task without a break handler ends on a break; `TASK_SET_BREAK` sets one: [tasks.md](tasks.md#signals-break-and-kill)).  The shell's prompt comes back when it ends.
 
@@ -63,8 +65,8 @@ A program in the current directory, or in `/bin` on the current directory's card
 ### **How `run` does it** (`os_rom/shell/run.s`, BIOS ROM page 7)
 
 1. The shell opens the file, and reads its start: an `HYX1` header is checked (it has to fit in task RAM); anything else is a script.
-2. The file goes on fd 11 (`SH_RUN_FD`), back at its start, and the shell starts a task (`TASK_RUN`) at the loader, `SH_LOAD`, which inherits it.
-3. The shell waits: it hands the console to the new task if it has it (`CONS_SET_FG`), makes itself the task's parent, and pauses, as `TASK_START` does.  `TASK_EXIT` wakes it, and `CONS_RELEASE` gives the console back.
-4. The loader, in the new task, reads the header and the code into place, sets the MMU's page floor above it, closes fd 11, and calls the entry point on ROM page 0.  When that returns, the loader returns, and the task ends.
+2. The file goes on fd 11 (`SH_RUN_FD`), back at its start, and the arguments into a pipe on fd 10 (`SH_ARGS_FD`); the shell starts a task (`TASK_RUN`) at the loader, `SH_LOAD`, which inherits both.
+3. The shell waits: it hands the console to the new task if it has it (`CONS_SET_FG`), makes itself the task's parent, and pauses, as `TASK_START` does.  `TASK_EXIT` wakes it, and `CONS_RELEASE` gives the console back (and the shell takes it back itself too, for a task that ended before it had it).
+4. The loader, in the new task, reads the header and the code into place, sets the MMU's page floor above it, closes fd 11, reads the arguments from fd 10 into `HYX_ARGS` and closes it, and calls the entry point on ROM page 0 with `.A.Y` pointing to them.  When that returns, the loader returns, and the task ends.
 
 A script (`.hys`) is run by HyForth itself: a copy of the shell's task (`TASK_CLONE`) reads it from fd 11 as `include` would, and ends at its end; the shell waits for it the same way.

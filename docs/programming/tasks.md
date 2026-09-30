@@ -96,7 +96,7 @@ So interrupts, above all the serial port's, are rarely held off for long ([inter
 | `TASK_CLONE` (`$F899`) | Like `fork`: a new task with a **copy** of the current one (below), starting at `.A.Y` on page `.X` |
 | `DRV_START` | Start a driver in a given task (below) |
 
-Every new task gets a copy of its parent's **open fds**, **namespace** and **current directory** (each server is told: `H9_DUP`), and records its parent (`ZP_TASK_OWNER`).  So `TASK_RUN` from the shell gives a task that prints on the console and reads the keyboard when it's in front.  Output buffered by the parent is written out first (`IO_FLUSH`), so it comes out in order.
+Every new task gets a copy of its parent's **open fds**, **namespace**, **current directory** and **environment** (each server is told: `H9_DUP`), and records its parent (`ZP_TASK_OWNER`).  So `TASK_RUN` from the shell gives a task that prints on the console and reads the keyboard when it's in front.  Output buffered by the parent is written out first (`IO_FLUSH`), so it comes out in order.
 
 **`TASK_CLONE`** copies:
 * the task's RAM, `$0200-$7CFF` and the MMU area `$7E00-$7FFF`.  Not copied: the stack page, the task system page, and the free pages between the MMU's page floor and its lowest allocated page;
@@ -157,7 +157,7 @@ IO waits happen by themselves: a read with no data makes the task wait until the
 | Break | The task continues at its **break handler** (`TASK_SET_BREAK`), with the stack pointer it had when the handler was set.  With no handler, the task ends |
 | Kill | The task ends.  The shell (task 1) instead starts again from scratch (a fresh HyForth) |
 
-`TASK_SET_BREAK` (`$F8A8`): `.A.Y` = handler, `.X` = its ROM page (`.A.Y` = 0: no handler).  The handler never returns: it's where the task goes on after a break.  HyForth's handler goes back to its prompt with `!BREAK!`, keeping the dictionary.
+`TASK_SET_BREAK` (`$F8A8`): `.A.Y` = handler, `.X` = its ROM page (`.A.Y` = 0: no handler).  Called through a far-call gate (from another ROM page), the stack pointer it keeps is inside the gate, 3 bytes deeper than the caller's: a handler that goes on as its caller would (rather than starting afresh) sets the stack pointer it wants itself, as the editor does (`shell/edit.s`: `ED_SP`).  The handler never returns: it's where the task goes on after a break.  HyForth's handler goes back to its prompt with `!BREAK!`, keeping the dictionary.
 
 The console keys send them: **Ctrl-C** a break, **Ctrl-\\** a kill to the foreground task ([io.md](io.md#the-console)).  So do `/dev/proc/N/ctl` (`break`, `kill`) and HyForth's `kill`.
 

@@ -89,6 +89,25 @@ STDIN_BUF_SIZE      = 128
             plx
 .endmacro
 
+; Environments (the env server: env_srv.s, page 9), in the system's shared bank (SYS_BANK): each task's is
+; a block of entries "NAME=value", each zero-terminated, then a 0 (an empty one).  A new task gets a copy of
+; its parent's (ENV_COPY, from IO_INHERIT).  An open variable is a slot: the task whose environment it's
+; in, the fds using it, and its name (its fid: ENV_FID_VAR + the slot; the list's: 0).
+ENV_BLOCKS          = $8D00     ; Task N's: ENV_BLOCKS + N * $100 (to $9CFF)
+ENV_NAME_MAX        = 30        ; A name's characters (not '/', '=' or 0)
+ENV_SLOTS           = $8000     ; ENV_SLOT_COUNT open variables, ENV_SLOT_SIZE bytes each
+ENV_SLOT_SIZE       = 32
+ENV_SLOT_COUNT      = 16
+ENV_S_TASK          = 0         ;   the task whose environment it's in ($FF: a free slot)
+ENV_S_REFS          = 1         ;   the fds using it
+ENV_S_NAME          = 2         ;   its name, zero-terminated
+ENV_NAMEBUF         = $8240     ; A request's name (ENV_NAME_MAX + 1)
+ENV_VALBUF          = $8260     ; A value being made (256 bytes)
+ENV_FID_VAR         = $80
+.assert     ENV_SLOTS + ENV_SLOT_COUNT * ENV_SLOT_SIZE <= $8200, error, "ENV_SLOTS must end below SH_MAP"
+.assert     ENV_VALBUF + 256 <= $8400, error, "ENV_VALBUF must end below SH_HANDLES"
+.assert     ENV_BLOCKS + 16 * $100 <= $9FFF, error, "ENV_BLOCKS must end below the shared bank's probe byte"
+
 ; Device table: in shared bank ID $00 (see shared.s)
 IO_MAX_DEVS         = 16
 IO_DEV_SIZE         = 16
@@ -399,3 +418,6 @@ SER_KEY_PREFIX      = $1D       ; Ctrl-]: the next key is a console command: a t
 PROC_FID_LIST       = $00       ; /dev/proc: a line per task (read)
 PROC_FID_STATUS     = $10       ; /dev/proc/N, /dev/proc/N/status: task N's line (read)
 PROC_FID_CTL        = $20       ; /dev/proc/N/ctl: kill, break or fg (write)
+PROC_FID_CWD        = $30       ; /dev/proc/N/cwd: task N's current directory (read)
+PROC_FID_ENV        = $40       ; /dev/proc/N/env: its environment, as /env's list (read)
+PROC_FID_MEM        = $50       ; /dev/proc/N/mem: its memory: the MMU pages it has, its page floor (read)

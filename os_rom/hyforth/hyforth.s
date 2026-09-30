@@ -620,7 +620,8 @@ try:
 getline:   ; drop rts of try, fall through to 'token'
     pla
     pla
-    jsr PIPEEND          ; a pipeline's line is done: stdin back from the pipe
+    jsr SH_UNREDIR       ; the last line is done: stdout and stdin back from its > and < (shell/redir.s) ...
+    jsr PIPEEND          ;   and stdin back from the pipe
     lda BATCH            ; a copy of the shell (a pipeline's left side, or run's for a script): all done,
     beq GLAUTO
     lda INCDEPTH         ;   once the scripts it reads are: end the task
@@ -734,6 +735,11 @@ GETLNSKIPCRLF:          ; SKIP to here if don't want CRLF
 ; start it
     sta CURBUF
     jsr PIPECHK          ; a pipeline ( ... | ... )?  start its left side
+    jsr SH_REDIR         ; >, >> and < (shell/redir.s): stdout and stdin to and from files
+    bcc token
+    ply                  ; (they can't be: drop the return to 'resolve', and the error)
+    ply
+    jmp IOFAIL
 
 ;---------------------------------------------------------------------
 ; in place every token,
@@ -1233,7 +1239,9 @@ INCLINE     = INCFD + INC_MAX           ;   and the line it's on (INC_MAX x 2)
 SHLABEL     = INCLINE + INC_MAX * 2     ; the prompt's %l: card LBLCARD's HydraFS label (32 bytes)
 SHOPT       = SHLABEL + 32              ; mkfs: <> 0: a full format (mkfs-full) ...
 SHSIZE      = SHOPT + 1                 ;   and the volume's size in megabytes (0: the whole card) (2)
-FORTH_BSS_END = SHSIZE + 2
+ARGREC      = SHSIZE + 2                ; A program's arguments (ARGREST), as a string record for args: its
+ARGLINE     = ARGREC + 3                ;   3-byte header, then the text (ARGLINE_SIZE bytes)
+FORTH_BSS_END = ARGLINE + ARGLINE_SIZE
 INC_MAX     = 4                     ; Scripts include can nest
 ;
 ;-----------------------------------------------------------------------

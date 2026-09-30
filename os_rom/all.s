@@ -32,7 +32,6 @@
 .include "io/snd_srv.s"         ; The sound driver's file server (/dev/snd)
 .include "drivers/snd_test.s"   ; The sound driver's test tune
 .include "io/pipe_srv.s"        ; The pipe server (/dev/pipe)
-.include "io/proc_srv.s"        ; The tasks (/dev/proc)
 .endscope
 IRQ_FAST_P2     = PAGE2::IRQ_FAST_P2    ; (For the COMMON block's fast IRQ stubs, assembled before page 2)
 
@@ -92,12 +91,35 @@ HFS_CTL_LINES_P6 = PAGE6::HFS_CTL_LINES
 .include "shell/shell.s"
 .include "shell/files.s"        ; Its file and card commands (SH_CMD)
 .include "shell/run.s"          ; Running programs: run, a program's name, the loader
+.include "shell/redir.s"        ; Redirection: >, >> and <
 .endscope
 SH_BOOT_P7      = PAGE7::SH_BOOT        ; (For page 0 and page 1's gates: PAGE1 is assembled before PAGE7)
 SH_PROMPT_P7    = PAGE7::SH_PROMPT
 SH_CD_P7        = PAGE7::SH_CD
 SH_PWD_P7       = PAGE7::SH_PWD
 SH_CMD_P7       = PAGE7::SH_CMD
+SH_REDIR_P7     = PAGE7::SH_REDIR
+SH_UNREDIR_P7   = PAGE7::SH_UNREDIR
+SH_INSAVE_P7    = PAGE7::SH_INSAVE
+
+; BIOS ROM page 8 (W = 8): the text editor, a ROM program the shell starts in a task of its own (edit)
+.scope PAGE8
+.include "shell/page8.s"        ; must be first in the scope
+.include "shell/edit.s"
+.endscope
+ED_MAIN_P8      = PAGE8::ED_MAIN        ; (For page 7: SH_EDIT)
+
+; BIOS ROM page 9 (W = 9): the system's servers that run in their client's task (/dev/proc, /env)
+.scope PAGE9
+.include "io/page9.s"           ; must be first in the scope
+.include "io/proc_srv.s"        ; The tasks (/dev/proc)
+.include "io/env_srv.s"         ; Each task's environment (/env)
+.endscope
+PROC_SERVE_P9   = PAGE9::PROC_SERVE     ; (For page 0's gates: io_p0.s)
+ENV_SERVE_P9    = PAGE9::ENV_SERVE
+PROC_MEM_COUNT_P9 = PAGE9::PROC_MEM_COUNT
+ENV_COPY_P9     = PAGE9::ENV_COPY       ; (For page 2: IO_INHERIT)
+ENV_INIT_P9     = PAGE9::ENV_INIT       ; (For page 7: SH_BOOT)
 
 ; BIOS ROM page 0 (W = 0)
 .include "kernel/print.s"

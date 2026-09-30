@@ -38,7 +38,9 @@ FAR_GATE_INLINE     STDIN_GET,      PAGE2::STDIN_GET,       2
 ; Serve routines must be page 0 addresses (TASK_CALL runs them on page 0): gates to the page 2 servers
 FAR_GATE_INLINE     NULL_SERVE,     PAGE2::NULL_SERVE,      2
 FAR_GATE_INLINE     ZERO_SERVE,     PAGE2::ZERO_SERVE,      2
-FAR_GATE_INLINE     PROC_SERVE,     PAGE2::PROC_SERVE,      2   ; /dev/proc (proc_srv.s)
+FAR_GATE_INLINE     PROC_SERVE,     ::PROC_SERVE_P9,        9   ; /dev/proc (proc_srv.s)
+FAR_GATE_INLINE     ENV_SERVE,      ::ENV_SERVE_P9,         9   ; env (env_srv.s: the shell registers it)
+FAR_GATE_INLINE     PROC_MEM_COUNT, ::PROC_MEM_COUNT_P9,    9   ; (/dev/proc/N/mem: TASK_CALL, in task N)
 
 NULL_NAME:  .byte   "null", 0
 ZERO_NAME:  .byte   "zero", 0

@@ -17,6 +17,8 @@ SH_CMD:
             bcs         @go
             cpx         #SHC_LS                             ; (ls alone: the current directory)
             beq         @go
+            cpx         #SHC_EDIT                           ; (edit alone: a new file, named when written)
+            beq         @go
             cpy         #0
             bne         @go
             lda         #ERR_IO_NAME                        ; (A file command with no name)
@@ -32,7 +34,7 @@ SH_CMD:
             rts
 
 SH_CMDS:
-            .word       SH_LS, SH_SHOW, SH_RM, SH_RMDIR, SH_MKDIR, SH_CP, SH_MV, SH_RUN, SH_EXEC
+            .word       SH_LS, SH_SHOW, SH_RM, SH_RMDIR, SH_MKDIR, SH_CP, SH_MV, SH_RUN, SH_EXEC, SH_EDIT
             .word       SH_VOLS, SH_MKFS, SH_RELABEL, SH_FSCK, SH_FSFIX, SH_WAIT
 .assert     * - SH_CMDS = SHC_COUNT, error, "SH_CMDS: an entry for each SHC_*"
 

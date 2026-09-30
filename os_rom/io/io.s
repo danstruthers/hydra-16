@@ -30,6 +30,8 @@
 .endmacro
 
 S_DEV_PREFIX:   .byte "/dev/"
+S_ENV_PREFIX:   .byte "/env"                ; (Names under it: the env device's, as if mounted)
+S_ENV_PREFIX_END:
 DEV_PREFIX_LEN  = 5
 
 ; ---- helpers
@@ -288,7 +290,8 @@ IO_COPY_IN:
 ; The calls
 
 ; Open a file.  The name goes through the task's namespace first (IO_MOUNT, IO_BIND); a name it doesn't
-; match must be "/dev/<device>" or "/dev/<device>/<rest>".  The server opens the rest of the name.
+; match must be "/dev/<device>" or "/dev/<device>/<rest>" (or "/env[/<rest>]": the env device, with no
+; mount, in every task).  The server opens the rest of the name.
 ; IN: .A.Y = name (zero-terminated, 255 characters at most), .X = IO_MODE_* bits
 ; OUT (success): .A = fd, C = 0
 ; OUT (failure): .A = ERR_IO_NOT_FOUND, ERR_IO_NO_FDS, ERR_IO_NS_LOOP, ERR_IO_NAME or the server's
@@ -403,21 +406,44 @@ IO_OPEN_NAME:
 @prefix:
             lda         (ZP_IO_DATA),Y
             cmp         S_DEV_PREFIX,Y
-            bne         @not_found
+            bne         @env
             dey
             bpl         @prefix
             lda         #DEV_PREFIX_LEN             ; ZP_IO_LEFT = the device name
+
+@device:
             sta         ZP_IO_LEFT
+            pha
             lda         ZP_IO_DATA + 1
             sta         ZP_IO_LEFT + 1
             jsr         IO_DEV_FIND                 ; .A = the device, .Y = its name's length
+            plx
             bcs         @not_found
             pha
+            stx         ZP_IO_TMP
             tya
             clc
-            adc         #DEV_PREFIX_LEN
+            adc         ZP_IO_TMP
             jsr         NS_CUT                      ; The rest of the name, for the server
             pla
+            bra         @found
+
+@env:                                               ; "/env", or "/env/...": the env device's (every
+            ldy         #S_ENV_PREFIX_END - S_ENV_PREFIX - 1 ;   task's environment, with no mount)
+:
+            lda         (ZP_IO_DATA),Y
+            cmp         S_ENV_PREFIX,Y
+            bne         @not_found
+            dey
+            bpl         :-
+            ldy         #S_ENV_PREFIX_END - S_ENV_PREFIX
+            lda         (ZP_IO_DATA),Y
+            beq         :+
+            cmp         #'/'
+            bne         @not_found
+:
+            lda         #1                          ; (The device's name: "env", after the '/')
+            bra         @device
 
 @found:
             sta         ZP_IO_CNT                   ; ZP_IO_CNT = device index
@@ -1206,7 +1232,8 @@ IO_FD_COPY:
 ; Make fd .X refer to the same file as fd .A (closing .X first if it's open): e.g. .X = 1 redirects
 ; stdout.  IN: .A = fd, .X = new fd.  OUT: C = 0; or .A = error, C = 1
 IO_DUP2:
-            PUSH_XY
+            jsr         IO_FLUSH                    ; (Our output first: closing fd 1 would write it, and
+            PUSH_XY                                 ;   that uses ZP_IO_TMP, the fd, below)
             cpx         #IO_MAX_FDS
             bcs         @bad
             stx         ZP_IO_TMP
@@ -1407,6 +1434,7 @@ IO_INHERIT:
             jsr         NS_COPY_TO                  ; The namespace
             pla
             pha
+            jsr         ENV_COPY                    ; The environment (env_srv.s: keeps .A)
             ldy         #IO_MAX_FDS - 1             ; Any open?  (If not, the new task's are all closed
             lda         #IO_FD_CLOSED               ;   already: it's a free task)
             sta         ZP_IO_TMP                   ; ZP_IO_TMP = $FF: none open yet

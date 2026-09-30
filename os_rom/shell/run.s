@@ -37,7 +37,9 @@ SH_RUN_OPEN:
             jsr         IO_CLOSE
             pla
             plp
-            bcs         @done
+            bcc         @far2
+            jmp         @done
+@far2:
 
 @on_fd:
             lda         #SH_RUN_FD
@@ -78,10 +80,17 @@ SH_RUN_OPEN:
             adc         #0
             cmp         #(>HYX_RAM_END) + 1
             bcs         @bad
+            jsr         SH_ARGS_OUT                         ; Its arguments, on SH_ARGS_FD
             lda         #<SH_LOAD                           ; Its task: the loader, which has SH_RUN_FD
-            ldy         #>SH_LOAD
+            ldy         #>SH_LOAD                           ;   and SH_ARGS_FD
             ldx         #7
             jsr         TASK_RUN
+            php
+            pha
+            lda         #SH_ARGS_FD                         ; (Ours goes)
+            jsr         IO_CLOSE
+            pla
+            plp
             bcs         @close
             jsr         SH_WAIT
             lda         #SH_RUN_FD                          ; (Ours goes)
@@ -110,6 +119,75 @@ SH_RUN_OPEN:
 
 SH_S_HYX:   .byte   "HYX1"
 
+; edit: the editor (page 8: edit.s) on the file .A.Y (.Y = 0: none yet), in a task of its own, with the name
+; as its argument; the shell waits for it
+SH_EDIT:
+            jsr         SH_KEEP
+            ldx         #0                                  ; PAGE1::ARGLINE = the name
+            cpy         #0
+            beq         @named
+            ldy         #0
+:
+            lda         (SH_PTR),Y
+            beq         :+
+            sta         PAGE1::ARGLINE,Y
+            iny
+            cpy         #HYX_ARGS_SIZE - 1
+            bne         :-
+:
+            tya
+            tax
+
+@named:
+            stz         PAGE1::ARGLINE,X
+            jsr         SH_ARGS_OUT
+            lda         #<::ED_MAIN_P8
+            ldy         #>::ED_MAIN_P8
+            ldx         #8
+            jsr         TASK_RUN
+            php
+            pha
+            lda         #SH_ARGS_FD                         ; (Ours goes: the editor has it)
+            jsr         IO_CLOSE
+            pla
+            plp
+            bcs         @done
+            jmp         SH_WAIT
+
+@done:
+            rts
+
+; SH_ARGS_FD = a pipe with a program's arguments in it (PAGE1::ARGLINE; its writing end closed, so the reader
+; gets them, then the end of the file).  No pipe free: it isn't open, and the program gets none.
+; Modifies: .A, .X, .Y
+SH_ARGS_OUT:
+            jsr         IO_PIPE                             ; .A = the reading end, .X = the writing end
+            bcs         @done
+            pha
+            phx
+            LOAD_ADDR   PAGE1::ARGLINE, ZP_IO_BUF
+            ldy         #$FF                                ; (Their length)
+:
+            iny
+            lda         PAGE1::ARGLINE,Y
+            bne         :-
+            sty         ZP_IO_CNT
+            stz         ZP_IO_CNT + 1
+            pla                                             ; The writing end: them, then closed
+            pha
+            jsr         IO_WRITE
+            pla
+            jsr         IO_CLOSE
+            pla                                             ; The reading end: SH_ARGS_FD
+            pha
+            ldx         #SH_ARGS_FD
+            jsr         IO_DUP2
+            pla
+            jmp         IO_CLOSE
+
+@done:
+            rts
+
 ; A program by its name (.A.Y, with no .hyx or .hys; a word HyForth doesn't know): name.hyx or name.hys,
 ; in the current directory; then, for a name with no '/', in /bin on the current directory's card.  The
 ; first one there is run as SH_RUN does.  None: .A = ERR_IO_NOT_FOUND
@@ -128,6 +206,43 @@ SH_EXEC:
             bne         @slash
 
 @bin:
+            lda         #<SH_S_PATH                         ; $PATH: the directories to look in, with :s
+            ldy         #>SH_S_PATH                         ;   between them (SHOWBUF)
+            jsr         SH_ENV_READ
+            bcs         @card                               ; (None: the card's /bin)
+            stz         PAGE1::SHSEL                        ; (Where the next one starts)
+
+@dir:
+            ldy         PAGE1::SHSEL                        ; SHBUF = the next, and a '/'
+            ldx         #0
+:
+            lda         PAGE1::SHOWBUF,Y
+            beq         :+
+            iny
+            cmp         #':'
+            beq         :++
+            sta         PAGE1::SHBUF,X
+            inx
+            cpx         #64 - 6
+            bcc         :-
+            bra         @none                               ; (Too long)
+:                                                           ; (The end: .Y stays at the 0)
+:
+            sty         PAGE1::SHSEL
+            txa
+            beq         @next                               ; (An empty one: none)
+            lda         #'/'
+            sta         PAGE1::SHBUF,X
+            inx
+            jsr         SH_EXEC_TRY                         ; (Found: it doesn't come back)
+
+@next:
+            ldy         PAGE1::SHSEL
+            lda         PAGE1::SHOWBUF,Y
+            bne         @dir
+            bra         @none
+
+@card:
             LOAD_ADDR   PAGE1::SHBUF, ZP_IO_BUF             ; /sd/N/bin/name: after the card's root
             jsr         IO_GETCWD
             jsr         SH_ON_CARD                          ; (.X = where its path starts; 0: not a card)
@@ -150,6 +265,37 @@ SH_EXEC:
 
 SH_S_BIN:   .byte   "/bin/"
 SH_S_BIN_END:
+SH_S_PATH:  .byte   "/env/PATH", 0
+
+; An environment variable's value (its file: .A.Y, "/env/NAME") into SHOWBUF, zero-terminated (255 at most).
+; OUT: C = 0: .X = its length (not 0); or C = 1: there's none (or it's empty).  Modifies: .A, .Y
+SH_ENV_READ:
+            ldx         #IO_MODE_READ
+            jsr         IO_OPEN
+            bcs         @done
+            sta         PAGE1::SHFD
+            jsr         SH_READ
+            php
+            lda         PAGE1::SHFD
+            jsr         IO_CLOSE
+            plp
+            bcs         @done
+            ldx         ZP_IO_CNT                           ; (256: 255)
+            lda         ZP_IO_CNT + 1
+            beq         :+
+            ldx         #$FF
+:
+            stz         PAGE1::SHOWBUF,X
+            txa
+            beq         @none
+            clc
+            rts
+
+@none:
+            sec
+
+@done:
+            rts
 SH_S_EXTS:  .byte   ".hyx", 0, ".hys", 0
 SH_S_EXTS_END:
 
@@ -198,14 +344,16 @@ SH_EXEC_TRY:
 ; Wait for task .A (one the shell started) to end.  While it runs, it has the console, if we have it: Ctrl-C
 ; goes to it, and the console comes back to us when it ends (CONS_RELEASE).  OUT: C = 0
 SH_WAIT:
-            pha
+            pha                                             ; (The task)
             jsr         SH_FG
+            php                                             ; (Z = 1: we had the console: it's ours again after)
             bne         :+
-            pla
-            pha
+            tsx
+            lda         $0102,X                             ; (The task, under the php)
             jsr         CONS_SET_FG
 :
-            pla
+            tsx
+            lda         $0102,X
             php
             sei
             ldy         T_REGISTER
@@ -224,6 +372,13 @@ SH_WAIT:
 
 @done:
             plp
+            plp                                             ; The console ours again, if we had it: the task
+            bne         :+                                  ;   gives it back as it ends (CONS_RELEASE), but
+            lda         T_REGISTER                          ;   not if it ended before it got it
+            and         #$0F
+            jsr         CONS_SET_FG
+:
+            pla
             clc
             rts
 
@@ -254,7 +409,9 @@ SH_LOAD:
             stz         ZP_IO_CNT + 1
             lda         #SH_RUN_FD
             jsr         IO_READ
-            bcs         @done
+            bcc         @far1
+            jmp         @done
+@far1:
             lda         SH_HDR + HYX_LOAD                   ; The page floor: the page after the code's end
             clc
             adc         SH_HDR + HYX_LENGTH
@@ -295,11 +452,27 @@ SH_LOAD:
 @loaded:
             lda         #SH_RUN_FD
             jsr         IO_CLOSE
+            LOAD_ADDR   HYX_ARGS, ZP_IO_BUF                 ; Its arguments, from SH_ARGS_FD (none, if it
+            lda         #HYX_ARGS_SIZE - 1                  ;   isn't open)
+            sta         ZP_IO_CNT
+            stz         ZP_IO_CNT + 1
+            lda         #SH_ARGS_FD
+            jsr         IO_READ
+            ldx         #0
+            bcs         :+
+            ldx         ZP_IO_CNT
+:
+            stz         HYX_ARGS,X
+            lda         #SH_ARGS_FD
+            jsr         IO_CLOSE
             lda         SH_HDR + HYX_ENTRY
             sta         ZP_FAR_VEC
             lda         SH_HDR + HYX_ENTRY + 1
             sta         ZP_FAR_VEC + 1
             stz         ZP_FAR_PAGE
+            lda         #<HYX_ARGS                          ; (.A.Y = the arguments)
+            sta         ZP_FAR_A
+            ldy         #>HYX_ARGS
             jsr         FAR_CALL_A                          ; The program (ROM page 0: the $F8xx calls)
 
 @done:

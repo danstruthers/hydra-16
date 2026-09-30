@@ -1,7 +1,7 @@
 .debuginfo
 
 ; ****************************************************************************
-; /dev/proc: the tasks, as files (like Plan 9's /proc).  BIOS ROM page 2, included inside `.scope PAGE2`
+; /dev/proc: the tasks, as files (like Plan 9's /proc).  BIOS ROM page 9, included inside `.scope PAGE9`
 ; (see all.s).  It runs in the client's task (IO_DEV_CALLER_TASK; registered by IO_INIT, io_p0.s).
 ;   /dev/proc               read: a line for each busy task
 ;   /dev/proc/N             read: task N's line (N = 0-F; also /dev/proc/N/status)
@@ -12,7 +12,7 @@
 ; foreground task.  The text is made again for each read, from the fd's offset.
 ; Server ZP: ZP_PROC_* (in the client's task: the IO layer's ZP_IO_* are in use around the request).
 
-.segment "IO_P2"
+.segment "SYS_P9"
 
 ; A request.  IN: .A = request, .X = client, .Y = fid
 PROC_SERVE:
@@ -74,14 +74,26 @@ PROC_OPEN:
             bne         @not_found
             iny
             sty         ZP_PROC_IDX                         ; (Where the file's name starts)
-            ldx         #PROC_S_STATUS - PROC_NAMES
-            jsr         PROC_MATCH
-            bcc         @status
+            stz         ZP_PROC_LEN                         ; Which of PROC_NAMES (its fid: PROC_FIDS)
+            ldx         #0
+
+@name:
             ldy         ZP_PROC_IDX
-            ldx         #PROC_S_CTL - PROC_NAMES
             jsr         PROC_MATCH
-            bcs         @not_found
-            lda         #PROC_FID_CTL
+            bcc         @named
+:
+            lda         PROC_NAMES,X                        ; (Not it: the next name)
+            inx
+            cmp         #0
+            bne         :-
+            inc         ZP_PROC_LEN
+            lda         PROC_NAMES,X
+            bne         @name
+            bra         @not_found
+
+@named:
+            ldx         ZP_PROC_LEN
+            lda         PROC_FIDS,X
             bra         @fid
 
 @status:
@@ -120,9 +132,10 @@ PROC_MATCH:
             sec
             rts
 
-PROC_NAMES:
-PROC_S_STATUS:  .byte   "status", 0
-PROC_S_CTL:     .byte   "ctl", 0
+PROC_S_MEM:     .byte   "pages floor "
+PROC_S_MEM_END:
+PROC_NAMES:     .byte   "status", 0, "ctl", 0, "cwd", 0, "env", 0, "mem", 0, 0
+PROC_FIDS:      .byte   PROC_FID_STATUS, PROC_FID_CTL, PROC_FID_CWD, PROC_FID_ENV, PROC_FID_MEM
 
 ; .A = a hex digit's value (0-F; upper or lower case).  OUT: C = 0; or C = 1 (not a hex digit)
 PROC_HEX_DIGIT:
@@ -156,6 +169,96 @@ PROC_READ:
             jsr         IO_SRV_COUNT
             jmp         PROC_OK
 :
+            cmp         #PROC_FID_CWD
+            bcs         @far1
+            jmp         @list_status
+@far1:
+            pha                                             ; cwd, env, mem: task N's
+            tya
+            and         #$0F
+            sta         ZP_PROC_OWN
+            jsr         IO_SRV_MAP
+            stz         ZP_PROC_IDX                         ; (The text: none yet)
+            pla
+            cmp         #PROC_FID_ENV
+            bne         :+
+            lda         ZP_PROC_OWN                         ; env: as /env's list
+            jsr         ENV_LIST
+            stx         ZP_PROC_IDX
+            jmp         PROC_TEXT_OUT
+:
+            inc         ZP_IO_REQ + 1                       ; (The data area: PROC_PUT)
+            cmp         #PROC_FID_MEM
+            beq         @mem
+            lda         ZP_PROC_OWN                         ; cwd: in its IO transfer area (the same bank),
+            asl                                             ;   "/" for none
+            ora         #>PAGED_RAM_BASE
+            sta         ZP_ENV_Q + 1
+            lda         #IO_BLK_CWD
+            sta         ZP_ENV_Q
+            lda         (ZP_ENV_Q)
+            bne         :+
+            lda         #'/'
+            jsr         PROC_PUT
+:
+            ldx         #0
+:
+            txa
+            tay
+            lda         (ZP_ENV_Q),Y
+            beq         @line
+            jsr         PROC_PUT
+            inx
+            cpx         #IO_CWD_MAX - 1
+            bne         :-
+
+@line:
+            lda         #ASCII_CR
+            jsr         PROC_PUT
+            lda         #ASCII_LF
+            jsr         PROC_PUT
+            dec         ZP_IO_REQ + 1
+            jmp         PROC_TEXT_OUT
+
+@mem:                                                       ; mem: "pages PP floor FF" (hex), counted
+            ldx         ZP_PROC_OWN                         ;   in the task (PROC_MEM_COUNT); a free one: "-"
+            jsr         PROC_PEEK
+            and         #TASK_BUSY_FLAG
+            bne         :+
+            lda         #'-'
+            jsr         PROC_PUT
+            bra         @line
+:
+            stx         ZP_TC_TASK                          ; (The task: PROC_PEEK keeps .X)
+            LOAD_ADDR   ::PROC_MEM_COUNT, ZP_TC_VEC         ; (Its page 0 gate)
+            jsr         TASK_CALL                           ; .A = pages, .Y = its page floor
+            phy
+            pha
+            ldx         #0
+
+@field:
+            lda         PROC_S_MEM,X                        ; "pages ", "floor "
+            jsr         PROC_PUT
+            inx
+            cmp         #' '
+            bne         @field
+            pla
+            pha
+            lsr
+            lsr
+            lsr
+            lsr
+            jsr         PROC_PUT_HEX
+            pla
+            and         #$0F
+            jsr         PROC_PUT_HEX
+            cpx         #PROC_S_MEM_END - PROC_S_MEM
+            beq         @line
+            lda         #' '
+            jsr         PROC_PUT
+            bra         @field
+
+@list_status:
             phy
             jsr         IO_SRV_MAP
             php
@@ -195,6 +298,11 @@ PROC_READ:
 
 @made:                                                      ; The text is ZP_PROC_IDX bytes (144 at most)
             dec         ZP_IO_REQ + 1
+
+; The text made in the data area (ZP_PROC_IDX bytes; the client's transfer area mapped, ZP_IO_REQ at the
+; request): what's after the fd's offset, up to the count, handed over (IO_SRV_COUNT: and unmapped).  For
+; /env too (env_srv.s).  OUT: C = 0, .A = 0
+PROC_TEXT_OUT:
             ldy         #IO_BLK_OFS + 3                     ; Past the end: nothing more (end of file)
             lda         (ZP_IO_REQ),Y
             dey

@@ -566,6 +566,80 @@ const TESTS = [
     forbid: ['!DS PTR ERROR!', /\n 0002\n/],
   },
   {
+    name: 'redirect', about: 'redirection (>, >>, <, a quoted name, in a script, a bad name), a program\'s arguments (.hyx, by name, a script\'s args), echo',
+    sd: [{ dev: 0, label: 'REDIR', hfs: v => {
+      v.put('s.hys', Buffer.from('"in script" .sz > s.txt\r\n2 .\r\nwc < s.txt . . .\r\n3 .\r\n'));
+      v.put('args.hys', Buffer.from('args .sz\r\n'));
+      // sta $F0 / sty $F1 / ldy #0 / lda ($F0),Y / beq +6 / jsr WRITE_CHAR / iny / bne -10 / CR LF: its arguments
+      v.put('pargs.hyx', hyx(0x0800, [0x85, 0xF0, 0x84, 0xF1, 0xA0, 0x00, 0xB1, 0xF0, 0xF0, 0x06, 0x20, 0x03, 0xF8, 0xC8,
+        0xD0, 0xF6, 0xA9, 0x0D, 0x20, 0x03, 0xF8, 0xA9, 0x0A, 0x4C, 0x03, 0xF8]));
+    } }],
+    args: ['--cycles', '120000000', '--input', BOOT + ['"hello" .sz > h.txt\\rcat h.txt\\r', '"more" .sz >> h.txt\\rcat h.txt\\r',
+      'wc < h.txt . . .\\r', 'words | wc . . . > c.txt\\rcat c.txt\\r', 'cat < nofile\\r1 .\\r', '"x" .sz > "a b.txt"\\rls\\r',
+      'include s.hys\\rcat s.txt\\r', '"b" .sz >> new.txt\\rcat new.txt\\r', 'run pargs.hyx one two\\r', 'pargs three "four five"\\r',
+      'run args.hys x y z\\r', 'echo hello there > e.txt\\rcat e.txt\\recho "quoted  text"\\r'].join(W(1))],
+    expect: ['cat h.txt\nhello\n', 'cat h.txt\nhellomore\n', 'wc < h.txt . . .\n' + num(9) + num(1) + num(0) + '\n',
+      /cat c\.txt\n( [0-9A-F]{4}){3}\n/,                          // (A pipeline's last command, into a file)
+      'cat < nofile\n\n !IO ERR!\n', '1 .\n' + num(1) + '\n', 'a b.txt 1\n',
+      'include s.hys\n' + num(2) + num(9) + num(2) + num(0) + num(3) + '\n',   // (The script reads on after its <)
+      'cat s.txt\nin script\n', 'cat new.txt\nb\n',
+      'run pargs.hyx one two\none two\n', 'pargs three "four five"\nthree "four five"\n', 'run args.hys x y z\nx y z\n',
+      'cat e.txt\nhello there\n', 'echo "quoted  text"\nquoted  text\n'],
+    forbid: ['!DS PTR ERROR!', '!UNK WORD!'],
+    check: (out, report, files) => {
+      const v = new hydrafs.Volume(files.sds[0]);
+      try {
+        const text = n => v.read(v.walk(n)).toString('latin1');
+        if (text('h.txt') !== 'hellomore' || text('e.txt') !== 'hello there\r\n') return 'h.txt or e.txt is wrong';
+        const p = v.check(); if (p.length) return p[0];
+      } finally { v.close(); }
+    },
+  },
+  {
+    name: 'editor', about: 'edit: add, insert, change, delete, print, write, q (twice with changes), a new unnamed file, errors, help, Ctrl-C, commands from a file',
+    sd: [{ dev: 0, label: 'EDIT', hfs: v => v.put('cmds.txt', Buffer.from('a\r\none\r\ntwo\r\n.\r\n1d\r\nw\r\nq\r\n')) }],
+    args: ['--cycles', '200000000', '--input', BOOT + ['edit notes.txt\\r', 'a\\rfirst line\\rsecond line\\r.\\rp\\r', 'i 1\\rzero\\r.\\r2p\\r',
+      'c 2\\rFIRST\\r.\\rd 3\\rp\\rw\\rq\\r', 'cat notes.txt\\r', 'edit notes.txt\\r', 'a\\rmore\\r.\\rq\\rq\\r', 'edit\\ra\\rx\\r.\\rw\\rw other.txt\\rQ\\r',
+      'edit notes.txt\\rp 9\\rd\\rz\\r$p\\r1,$p\\ra\\rthree\\r' + W(1) + '\\x03', 'p\\rQ\\r', 'edit s.txt < cmds.txt\\r' + W(2) + 'cat s.txt\\r'].join(W(1))],
+    expect: ['edit notes.txt\nnotes.txt: new file\n', '*p\n   1 first line\n   2 second line\n', '*2p\n   2 first line\n',
+      '*p\n   1 zero\n   2 FIRST\n*w\n 13 bytes\n*q\n', 'cat notes.txt\nzero\nFIRST\n',
+      'notes.txt: 2 lines\n', '*q\n? not written: q again to quit anyway\n*q\n',
+      '*w\n? no file name (w name)\n*w other.txt\n 3 bytes\n',
+      '*p 9\n? no such line\n*d\n? which lines\n*z\n? h: help\n*$p\n   2 FIRST\n*1,$p\n   1 zero\n   2 FIRST\n',
+      '?\n*p\n   1 zero\n   2 FIRST\n   3 three\n*Q\n',                // Ctrl-C: back to the prompt, the line kept
+      'cat s.txt\ntwo\n'],
+    forbid: ['!DS PTR ERROR!', '!UNK WORD!', /POST[\s\S]*POST/],  // (POST again: a crash, and the machine starting again)
+    check: (out, report, files) => {
+      const v = new hydrafs.Volume(files.sds[0]);
+      try {
+        const text = n => v.read(v.walk(n)).toString('latin1');
+        if (text('notes.txt') !== 'zero\r\nFIRST\r\n' || text('other.txt') !== 'x\r\n' || text('s.txt') !== 'two\r\n') return 'a file the editor wrote is wrong';
+      } finally { v.close(); }
+    },
+  },
+  {
+    name: 'env', about: '/env (make, read, add to, list, remove, errors), a copy for each task (a script\'s changes stay its own), PATH, HOME, /dev/proc/N/cwd, env and mem',
+    sd: [{ dev: 0, label: 'ENV', hfs: v => {
+      v.mkdir('tools'); v.put('tools/seven.hys', Buffer.from('7 .\r\n'));
+      v.mkdir('bin'); v.put('bin/eight.hys', Buffer.from('8 .\r\n'));
+      v.put('e.hys', Buffer.from('cat /env/A\r\necho two > /env/B\r\nls /env\r\n'));
+    } }],
+    args: ['--cycles', '120000000', '--input', BOOT + ['ls /env\\recho one > /env/A\\rcat /env/A\\r', 'echo x >> /env/A\\rcat /env/A\\r',
+      'run e.hys\\r', 'ls /env\\r', 'cat /env/NOPE\\rioerr .\\recho y > /env/a=b\\rioerr .\\r', 'rm /env/A\\rls /env\\r',
+      'seven\\r', 'echo /sd/0/tools > /env/PATH\\rseven\\r', 'eight\\r', 'echo /sd/0/bin:/sd/0/tools > /env/PATH\\reight\\rseven\\r',
+      'echo /sd/0/tools > /env/HOME\\rcd /\\rcd\\rpwd\\r', 'cat /dev/proc/1/cwd\\rcat /dev/proc/1/env\\rcat /dev/proc/1/mem\\rcat /dev/proc/F/mem\\rcat /dev/proc/9/mem\\r'].join(W(1))],
+    expect: ['0:/> ls /env\n\n0:/> echo one > /env/A\n', 'cat /env/A\none\n', 'cat /env/A\nx\n',   // (>> at the start: replaced)
+      'run e.hys\nxA=x\nB=two\n', '0:/> ls /env\nA=x\n\n',                // The script's B: its own copy's
+      'cat /env/NOPE\n\n !IO ERR!\n', 'ioerr .\n' + num(0x70) + '\n', 'ioerr .\n' + num(0x77) + '\n',   // (= in a name)
+      'rm /env/A\n', '0:/> ls /env\n\n', '0:/> seven\n\n !UNK WORD!\n',
+      'PATH\n\n0:/> seven\n' + num(7) + '\n', '0:/> eight\n\n !UNK WORD!\n',   // (PATH, not the card's /bin)
+      'eight\n' + num(8) + '\n0:/> seven\n' + num(7) + '\n',
+      '0:/tools> pwd\n/sd/0/tools\n',                                   // cd alone: HOME
+      'cat /dev/proc/1/cwd\n/sd/0/tools\n', 'cat /dev/proc/1/env\nPATH=/sd/0/bin:/sd/0/tools\nHOME=/sd/0/tools\n',
+      /cat \/dev\/proc\/1\/mem\npages 08 floor [0-9A-F]{2}\n/, 'cat /dev/proc/F/mem\npages 00 floor 08\n', 'cat /dev/proc/9/mem\n-\n'],
+    forbid: ['!DS PTR ERROR!'],
+  },
+  {
     name: 'sleep', about: 'TASK_SLEEP (HyForth sleep): 400 ticks take 2 s, and Ctrl-C ends a long one',
     args: ['--cycles', '40000000', '--mark', '400 sleep', '--mark', '/> ', '--input', BOOT + '400 sleep\\r' + W(5) + '30000 sleep\\r' + W(1) + '\\x03' + W(1) + '1 2 + .\\r'],
     expect: ['/> 400 sleep\n', '/> 30000 sleep\n', '!BREAK!', '/> 1 2 + .\n' + num(3)],

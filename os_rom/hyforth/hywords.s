@@ -1709,33 +1709,10 @@ INCOPEN:
     bcs INCODONE
 INCOPENFD:              ; (.A = the script's fd, closed here: stdin has it)
     sta TEMP5           ; the script's fd
-    lda #0
-    jsr IO_DUP          ; stdin, kept
+    jsr INSAVE          ; stdin, kept
     bcs INCOCLOSE
     ldx INCDEPTH
     sta INCFD,x
-    asl                 ; (What stdin has read ahead but not used yet goes back: its offset moves back
-    asl                 ;   by that much, as the read-ahead is dropped when stdin changes.  E.g. the
-    asl                 ;   rest of a script that includes this one)
-    tax
-    lda ZP_IN_CNT
-    sec
-    sbc ZP_IN_POS
-    sta TEMP4
-    lda IO_FD_OFS,x
-    sec
-    sbc TEMP4
-    sta IO_FD_OFS,x
-    lda IO_FD_OFS+1,x
-    sbc #0
-    sta IO_FD_OFS+1,x
-    lda IO_FD_OFS+2,x
-    sbc #0
-    sta IO_FD_OFS+2,x
-    lda IO_FD_OFS+3,x
-    sbc #0
-    sta IO_FD_OFS+3,x
-    ldx INCDEPTH
     txa
     asl
     tax
@@ -1811,14 +1788,20 @@ S_BOOTHYS:
 ;           runs: Ctrl-C stops it.  A word HyForth doesn't know runs the program of that name (RUNNAME)
 def_word "run", "run", 0
     jsr ARGGET
-    bcc RUNGO
+    bcc RUNARGS
     lda #ERR_IO_NAME
     bra RUNFAIL
+RUNARGS:                ; the rest of the line: the program's arguments
+    jsr ARGREST
+    lda #<ARGBUF        ; (the name: ARGGET's)
+    ldy #>ARGBUF
+    bra RUNGO
 ;
-; ( sz -- )  run a program, as run does
+; ( sz -- )  run a program, as run does (with no arguments)
 def_word "(run)", "prun", 0
     jsr SHARG1
     bcs RUNFAIL
+    stz ARGLINE         ; (no arguments)
 RUNGO:
     ldx #SHC_RUN
     jsr RUNCMD
@@ -1868,6 +1851,7 @@ RNCOPY:
     bne RNCOPY
     lda #0
     sta ARGBUF,y
+    jsr ARGREST         ; (the rest of the line: its arguments)
     lda #<ARGBUF
     ldy #>ARGBUF
     ldx #SHC_EXEC
@@ -1876,6 +1860,98 @@ RNNONE:
     lda #ERR_IO_NOT_FOUND
     sec
     rts
+;
+; A program's arguments: the rest of the line (from CURBUF, without the spaces around it; 63 characters at
+; most) into ARGLINE, and the line ends there (the program has them, not the shell).  Modifies: .A, .X, .Y
+ARGREST:
+    ldy CURBUF
+ARSKIP:
+    lda (TIB),y         ; (spaces before them)
+    cmp #ASCII_SPACE
+    bne ARCOPY0
+    iny
+    bra ARSKIP
+ARCOPY0:
+    ldx #0
+ARCOPY:
+    lda (TIB),y
+    sta ARGLINE,x
+    beq ARTRIM
+    iny
+    inx
+    cpx #ARGLINE_SIZE - 1
+    bcc ARCOPY
+ARTRIM:                 ; (.X = how many: spaces after them go, the line's own and blanked-out redirections)
+    cpx #0
+    beq AREND
+    lda ARGLINE-1,x
+    cmp #ASCII_SPACE
+    bne AREND
+    dex
+    bra ARTRIM
+AREND:
+    stz ARGLINE,x
+    ldy CURBUF          ; the line ends here
+    lda #0
+    sta (TIB),y
+    rts
+;
+; ( -- sz )  a program's arguments: the rest of the line after a program's name (run go.hys a b, or go a b),
+;           as a string (e.g. args .sz; args (cat)).  In a script run with them: its own
+def_word "args", "args", 0
+    lda #MEM_SZ         ; (ARGLINE, as a string record)
+    sta ARGREC
+    lda #ARGLINE_SIZE
+    sta ARGREC+1
+    stz ARGREC+2
+    lda #<ARGREF
+    sta TEMP1
+    lda #>ARGREF
+    sta TEMP1+1
+    jmp this
+ARGREF:
+    .word ARGREC
+;
+; edit [file]  edit a text file (a new one, if it isn't there): a line editor, in a task of its own (its h:
+;              its commands)
+def_word "edit", "edit", 0
+    ldx #SHC_EDIT
+    jmp SHPARSE
+;
+; echo text  print the rest of the line, and a new line (without its "s): echo hello > greeting.txt
+def_word "echo", "echo", 0
+    ldy CURBUF          ; .X = where the text ends (after its last character that isn't a space)
+    ldx CURBUF
+ECHOEND:
+    iny
+    lda (TIB),y
+    beq ECHOSTART
+    cmp #ASCII_SPACE
+    beq ECHOEND
+    tya
+    tax
+    inx
+    bra ECHOEND
+ECHOSTART:
+    stx TEMP1
+    ldy CURBUF
+    iny                 ; (the space after echo)
+ECHOCHAR:
+    cpy TEMP1
+    bcs ECHODONE
+    lda (TIB),y
+    cmp #ASCII_DQUOTE
+    beq ECHONEXT
+    PRINT_CHAR
+ECHONEXT:
+    iny
+    bra ECHOCHAR
+ECHODONE:
+    PRINT_CHAR #ASCII_CR, #ASCII_LF
+    lda #0              ; the line ends here: it was echo's
+    ldy CURBUF
+    sta (TIB),y
+    jmp next
 ;
 ; A script's copy of the shell starts here (TASK_CLONE, ROM page 1; see RUNCMD): the scripts this shell
 ; was reading aren't the copy's (stdin goes back), the script is its stdin (SH_RUN_FD), and the rest of
@@ -2086,6 +2162,7 @@ SHC2DONE:
 SDCMD_SIZE = 64
 SHOWBUF_SIZE = 256
 ARGBUF_SIZE = 64
+ARGLINE_SIZE = 64
 PROMPTFMT_SIZE = 32
 ; The shell's RAM that starts with a value (its buffers are after 'ends': hyforth.s).  The shell's routines,
 ; on BIOS page 7, use it too (shell/shell.s)
@@ -2094,6 +2171,10 @@ PROMPTFMT:              ; the prompt's format (prompt)
     .res PROMPTFMT_SIZE - 7
 PROMPTLAST:             ; the prompt's last character (put back when the console's echo erases it)
     .byte '>'
+REDOUT:                 ; the line's > or >> redirection: stdout, kept ($FF: none; shell/redir.s)
+    .byte $FF
+REDIN:                  ;   and its <: stdin
+    .byte $FF
 BOOTFLAG:               ; <> 0: run boot.hys before the first prompt (the boot shell: page 7's SH_BOOT)
     .byte 0
 LBLCARD:                ; the card whose label SHLABEL holds ($FF: none yet, or it may have changed)
@@ -2517,8 +2598,7 @@ PCFOUND:                   ; .Y = the '|'
     jsr IO_CLOSE
     lda PIPEIN
     bpl PCSAVED            ; (a later '|': stdin is the previous pipe; the new one replaces it)
-    lda #0
-    jsr IO_DUP             ; save stdin
+    jsr INSAVE             ; save stdin (with its read-ahead given back: a pipeline in a script)
     bcs PCFAIL2
     sta PIPEIN
 PCSAVED:

@@ -809,7 +809,8 @@ IO_NS_LIST:
             clc
             adc         #NS_ENTRY_SIZE
             tax
-            bne         @entry                      ; (The last entry ends at $FF)
+            cpx         #IO_BLK_NS + NS_ENTRIES * NS_ENTRY_SIZE
+            bne         @entry                      ; (After the last: the current directory, IO_BLK_CWD)
             PULL_YXA
             clc
             rts

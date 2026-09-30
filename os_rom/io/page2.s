@@ -32,6 +32,7 @@ FAR_GATE_INLINE     SERIAL_SET_CAPTURE, ::SERIAL_SET_CAPTURE, 0
 FAR_GATE_INLINE     CONS_FG_CHECK,  ::CONS_FG_CHECK,        0
 FAR_GATE_INLINE     CONS_SET_FG,    ::CONS_SET_FG,          0
 FAR_GATE_INLINE     TASK_SIGNAL,    ::TASK_SIGNAL,          0
+FAR_GATE_INLINE     ENV_COPY,       ::ENV_COPY_P9,          9   ; (A new task's environment: IO_INHERIT)
 FAR_GATE_INLINE     YM_BEEP,        ::YM_BEEP,              0   ; (The bell: _M_SER_TX_BYTE)
 FAR_GATE_INLINE     YM_WRITE,       ::YM_WRITE,             0   ; (These run in the current task: the
 FAR_GATE_INLINE     SOUND_INIT,     ::SOUND_INIT,           0   ;   sound task, from its server)

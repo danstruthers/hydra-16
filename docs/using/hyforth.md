@@ -187,7 +187,7 @@ The control words aren't built in: they're defined in HyForth itself, by the **t
 
 | Command | Stack form | Does |
 | :------ | :--------- | :--- |
-| `cd [dir]` | `(cd) ( sz -- )` | Change directory.  `cd` alone: the current card's root |
+| `cd [dir]` | `(cd) ( sz -- )` | Change directory.  `cd` alone: `$HOME`, or the current card's root |
 | `pwd` | | Show the current directory, as a whole path: `/sd/0/games` |
 | `ls [dir]` | `(ls) ( sz -- )` | List a directory, a line per entry: `name size`, or `name/` for a directory (`ls` alone: the current one).  A file: its text (`ls /dev/sd/0/ctl`) |
 | `cat [file]` | | Show a file; with no name, copy stdin to stdout until end of file |
@@ -197,7 +197,9 @@ The control words aren't built in: they're defined in HyForth itself, by the **t
 | `mkdir dir` | `(mkdir) ( sz -- )` | Make a directory |
 | `rmdir dir` | `(rmdir) ( sz -- )` | Remove an empty directory |
 | `include file` | `(include) ( sz -- )` | Read a HyForth script into this shell (below) |
-| `run file` | `(run) ( sz -- )` | Run a program in a task of its own, and wait for it (below) |
+| `run file [args]` | `(run) ( sz -- )` | Run a program in a task of its own, and wait for it (below) |
+| `edit [file]` | | Edit a text file (below) |
+| `echo text` | | Print the text, and a new line |
 | `prompt` | `( sz -- )` | Set the prompt's format (below) |
 
 ```
@@ -221,15 +223,86 @@ games/
 * **Anything else is a HyForth script**, read by a copy of the shell, as a pipeline's stage is: it starts with this shell's dictionary and stack, and what it defines or leaves on the stack goes away with it.  `bye` in it ends it.
 * A program has the console while it runs (if the shell has it), so **Ctrl-C stops it**, and gets copies of the shell's fds, namespace and current directory: it can be a pipeline's stage (`run hello.hyx | wc`).
 
-**A program by its name:** a word HyForth doesn't know is looked for as a program, `name.hyx` then `name.hys`: in the current directory, then (for a name with no `/`) in `/bin` on the current directory's card.  So `hello` runs `hello.hyx`, and a card's `/bin` works like a path.  Programs don't get the rest of the line as arguments, but a script gets the stack:
+**A program by its name:** a word HyForth doesn't know is looked for as a program, `name.hyx` then `name.hys`: in the current directory, then (for a name with no `/`) in the directories of `$PATH` (below), or, with no `PATH`, in `/bin` on the current directory's card.  So `hello` runs `hello.hyx`.
+
+**The environment:** variables, `NAME=value`, as files under `/env`; each task has its own, and the tasks it starts (programs, scripts, shells) get a copy.  The shell uses two:
+
+| Variable | Does |
+| :------- | :--- |
+| `PATH` | Where programs are found by name: directories, `:` between them (`/sd/0/bin:/sd/1/tools`) |
+| `HOME` | Where `cd` alone goes (without it: the current card's root) |
+
+```
+0:/> echo /sd/0/bin:/sd/0/tools > /env/PATH
+0:/> echo /sd/0/work > /env/HOME
+0:/> ls /env
+PATH=/sd/0/bin:/sd/0/tools
+HOME=/sd/0/work
+0:/> cat /env/HOME
+/sd/0/work
+0:/> rm /env/HOME
+```
+
+Put them in `boot.hys` to have them at every boot.  A program reads one as a file (`/env/NAME`); `/dev/proc/N/env` shows task N's.
+
+**Arguments:** the rest of the line after a program's name (`run prog a b`, or `prog a b`) is the program's, as it was typed (63 characters at most): an executable gets it in `.A.Y` ([programs.md](../programming/programs.md)), and a script with `args ( -- sz )`, a string.  A script also starts with a copy of the shell's stack.  (`(run)` gives no arguments.)
 
 ```
 0:/> hello
 Hello from task B
 0:/> 3 4 add                    \ add.hys:  + .
  0007
+0:/> greet Ann                  \ greet.hys:  "Hello, " .sz args .sz cr
+Hello, Ann
 0:/> nosuch
  !UNK WORD!
+```
+
+**Redirection:** a command's output can go to a file, and its input come from one:
+
+| | Does |
+| :- | :--- |
+| `command > file` | stdout to the file: made, or emptied first |
+| `command >> file` | stdout added to the file's end (made, if it isn't there) |
+| `command < file` | stdin from the file |
+
+`>`, `>>` and `<` are words of their own (spaces around them), outside strings; the name can be `"in quotes"`.  They apply to the whole line, or to a pipeline's last command, and stdin and stdout go back when the line's done.  In a script, a line's `<` doesn't lose the script's place.
+
+```
+0:/> words > words.txt
+0:/> words | wc . . . >> counts.txt
+0:/> wc < notes.txt . . .
+0:/> echo run hello > /sd/0/boot.hys
+```
+
+**`echo text`** prints the rest of the line, and a new line (without its `"`s): with `>`, a quick way to make a small file.
+
+**`edit [file]`** edits a text file: a line editor in the manner of Unix's `ed`, run in a task of its own.  It reads the file (or starts a new one), then takes commands at its `*` prompt, with line numbers before or after them (`n`, `$` for the last, `a,b` for a range):
+
+| Command | Does |
+| :------ | :--- |
+| `p [a[,b]]` | Print lines, numbered (`p` alone: all of them) |
+| `a [n]` | Add lines after line n (the last, if none), typed until a line of just `.` |
+| `i [n]` | Insert lines before line n (the first, if none), until `.` |
+| `c a[,b]` | Change lines: they go, and the lines typed until `.` take their place |
+| `d a[,b]` | Delete lines |
+| `w [file]` | Write the file (or another: then that's the file) |
+| `q`, `Q` | Quit (with changes not written, `q` asks for a second `q`); quit at once |
+| `h` | Help |
+
+Ctrl-C comes back to its prompt, keeping the text.  Lines end with CR LF in the file; the text can be up to 29 KB.  Its commands can come from a file too: `edit notes.txt < changes.txt`.
+
+```
+0:/> edit hello.hys
+hello.hys: new file
+*a
+"Hello, world" .sz cr
+.
+*w
+ 23 bytes
+*q
+0:/> hello
+Hello, world
 ```
 
 ### **Files and devices**
@@ -327,13 +400,13 @@ check: lost 0, unmarked 0, twice 0
 0:/> 0 "TOYS" relabel                       \ a new label
 ```
 
-`fsck` counts clusters lost (marked in use, but nothing uses them: wasted space), unmarked (in use, but marked free: a new file could be given them) and used twice (two files share them: one is damaged).  `fsfix` frees the lost ones and marks the unmarked ones; a cluster used twice is only shown, as a person has to decide which file keeps it.  A card takes a pass for each 256 MB, so checking a big one takes a while; from 4 GB up, `10% 20% ... 100%` shows how far it's got.  Empty space checks quickly: an empty 244 GB card takes about a minute and a half.
+`fsck` counts clusters lost (marked in use, but nothing uses them: wasted space), unmarked (in use, but marked free: a new file could be given them) and used twice (two files share them: one is damaged).  `fsfix` frees the lost ones and marks the unmarked ones; a cluster used twice is only shown, as a person has to decide which file keeps it.  A card takes a pass for each 256 MB, so checking a big one takes a while; from 4 GB up, `10% 20% ... 100%` shows how far it's got.  Empty space checks quickly: an empty 244 GB card takes about a minute and a half (quick-formatted), or 7 minutes (full-formatted: its whole free map is read).
 
 `mkfs` is a **quick format**: it writes just the superblock, and the free map is written as the card fills, so a 244 GB card is ready in a moment.  `mkfs-full` writes the whole map first (about 13 minutes for 244 GB, with its progress shown), for a card an older ROM will read.  `mkfs-size` makes a HydraFS smaller than the card.  By hand, the ctl command is `format [-f] [-s size] [label]` (size in megabytes, or gigabytes with a G: `"/dev/sd/0/ctl" "format -s 8G WORK" ctl`).
 
 ### **Pipelines**
 
-A line with `|` (with spaces around it, outside `"..."` and `q^...^` strings) is a **pipeline**:
+A line with `|` (with spaces around it, outside `"..."` and `q^...^` strings) is a **pipeline** (and its last command's output can go to a file: [redirection](#the-shell-directories-files-and-programs)):
 
 ```
 0:/> words | wc . . .
@@ -352,7 +425,7 @@ A line with `|` (with spaces around it, outside `"..."` and `q^...^` strings) is
 | `shell` | `( -- n )` | Start another HyForth in task n; it waits until brought to the front |
 | `fg` | `( n -- )` | Bring task n to the front: it gets the keyboard, and the others wait to print |
 | `kill` | `( n -- )` | Kill task n and the tasks it started |
-| `ps` | | List the tasks (from `/dev/proc`) |
+| `ps` | | List the tasks (from `/dev/proc`: its files also give each task's directory, environment and memory: `cat /dev/proc/1/mem`) |
 | `sleep` | `( n -- )` | Sleep n ticks (200 a second; `200 sleep` is 1 s); Ctrl-C ends it |
 
 ```

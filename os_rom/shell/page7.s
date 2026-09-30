@@ -23,7 +23,9 @@ FAR_GATE_INLINE     IO_WSTAT,       PAGE2::IO_WSTAT,        2
 FAR_GATE_INLINE     IO_CHDIR,       PAGE2::IO_CHDIR,        2
 FAR_GATE_INLINE     IO_GETCWD,      PAGE2::IO_GETCWD,       2
 FAR_GATE_INLINE     IO_SEEK,        PAGE2::IO_SEEK,         2
+FAR_GATE_INLINE     IO_DUP,         PAGE2::IO_DUP,          2
 FAR_GATE_INLINE     IO_DUP2,        PAGE2::IO_DUP2,         2
+FAR_GATE_INLINE     IO_PIPE,        PAGE2::IO_PIPE,         2
 FAR_GATE_INLINE     IO_STD_OPEN,    PAGE2::IO_STD_OPEN,     2
 FAR_GATE_INLINE     IO_MOUNT,       PAGE2::IO_MOUNT,        2
 
@@ -33,6 +35,10 @@ FAR_GATE_INLINE     TASK_RUN,       ::TASK_RUN,             0
 FAR_GATE_INLINE     YIELD,          ::YIELD,                0
 FAR_GATE_INLINE     CONS_SET_FG,    ::CONS_SET_FG,          0
 FAR_GATE_INLINE     MM_SET_FLOOR,   ::MM_SET_FLOOR,         0
+FAR_GATE_INLINE     DEV_REGISTER,   ::DEV_REGISTER_FAR,     0   ; (It reads the name on the caller's page)
+
+; ... and to page 9 (the system's servers)
+FAR_GATE_INLINE     ENV_INIT,       ::ENV_INIT_P9,          9
 FAR_JMP_GATE        MON_START,      ::MON_START,            0
 
 ; ... and to HyForth (page 1)

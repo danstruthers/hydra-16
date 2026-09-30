@@ -20,6 +20,12 @@ SH_PTR2         = ZP_TEMP_VEC2                              ;   and another
 ; its parent's namespace and current directory.)
 SH_BOOT:
             jsr         IO_STD_OPEN                         ; fds 0-2 on /dev/cons (inherited by what it starts)
+            jsr         ENV_INIT                            ; An empty environment (inherited too), and its
+            LOAD_ADDR   ::ENV_SERVE, ZP_TC_VEC              ;   server (env: in each client's task; /env
+            lda         #<SH_S_ENV
+            ldy         #>SH_S_ENV
+            ldx         #IO_DEV_CALLER_TASK
+            jsr         DEV_REGISTER                        ;   needs no mount: io.s)
             LOAD_ADDR   SH_S_HFS, ZP_IO_BUF                 ; The cards' files at /sd (inherited too)
             lda         #<SH_S_SD
             ldy         #>SH_S_SD
@@ -32,6 +38,7 @@ SH_BOOT:
             jmp         MON_START
 
 SH_S_SD:    .byte   "/sd", 0
+SH_S_ENV:   .byte   "env", 0
 SH_S_HFS:   .byte   "hfs", 0
 SH_S_VOLS:  .byte   "hydrafs", 0
 
@@ -302,16 +309,25 @@ SH_ON_CARD:
             rts
 
 SH_S_SDPRE: .byte   "/sd/"
+SH_S_HOME:  .byte   "/env/HOME", 0
 
 ; ****************************************************************************
 ; Directories
 
-; Change directory: to the path at .A.Y (relative, or not); or, with .Y = 0 (no path), to the current card's
-; root (or "/" off the cards).
+; Change directory: to the path at .A.Y (relative, or not); or, with .Y = 0 (no path), to $HOME if it's set,
+; or else to the current card's root (or "/" off the cards).
 SH_CD:
             cpy         #0
             bne         @path
-            LOAD_ADDR   PAGE1::SHBUF, ZP_IO_BUF             ; The card's root: the current directory,
+            lda         #<SH_S_HOME                         ; $HOME, if it's set
+            ldy         #>SH_S_HOME
+            jsr         SH_ENV_READ
+            bcs         :+
+            lda         #<PAGE1::SHOWBUF
+            ldy         #>PAGE1::SHOWBUF
+            bra         @path
+:
+            LOAD_ADDR   PAGE1::SHBUF, ZP_IO_BUF             ; Or the card's root: the current directory,
             jsr         IO_GETCWD                           ;   cut after "/sd/N"
             jsr         SH_ON_CARD
             stz         PAGE1::SHBUF,X                      ; (Off the cards: "", which IO_CHDIR takes as
