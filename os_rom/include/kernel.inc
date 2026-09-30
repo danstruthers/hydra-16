@@ -31,6 +31,12 @@ ERR_MEM_LOCKED      = $45
 ERR_IRQ_CHAIN_FULL  = $50
 ERR_IRQ_NOT_FOUND   = $51
 
+ERR_SEM_BAD         = $60       ; not a semaphore (or it was freed)
+ERR_SEM_NONE        = $61       ; all SEM_MAX semaphores are in use
+ERR_SEM_BUSY        = $62       ; SEM_TRY: none to take
+ERR_SEM_NOT_HELD    = $63       ; SEM_RELEASE of a mutex this task doesn't hold
+ERR_SEM_FULL        = $64       ; SEM_RELEASE: its count is 255 already
+
 ERR_IO_NOT_FOUND    = $70       ; no such file / device
 ERR_IO_BAD_FD       = $71       ; fd not open (or out of range)
 ERR_IO_MODE         = $72       ; not opened for that (e.g. write on a read-only fd)
@@ -71,6 +77,20 @@ NUM_RAM_BANKS   = NUM_RAM_MODULES * NUM_BANKS_PER_MODULE
 ; (shared.s) and the device table (below)
 SYS_SHARED_U        = 0
 SYS_BANK            = $F0
+
+; Semaphores (kernel/sem.s, page 5): SEM_MAX of them, in the system's shared bank too (after the
+; environments' buffers: io.inc)
+SEM_MAX             = 16
+SEM_TABLE           = $8360     ; SEM_MAX x Sem
+SEM_MUTEX           = $80       ; SEM_NEW's .Y: a mutex (count 1, and a holder)
+SEM_NONE            = $FF       ; Sem::maker: a free one; Sem::holder: nobody
+.struct     Sem
+            count       .byte                               ; How many can still take it
+            waiters     .word                               ; The tasks waiting for it (bit = task)
+            maker       .byte                               ; The task that made it (SEM_NONE: free)
+            holder      .byte                               ; A mutex: the task that has it (SEM_NONE)
+            flags       .byte                               ; SEM_MUTEX
+.endstruct
 
 ; MMU handle table entry (kernel/mmu.s), and shared handle table entry (kernel/shared.s).  (Here, so
 ; page 5 can use them: fp.s comes before mmu.s and shared.s.)

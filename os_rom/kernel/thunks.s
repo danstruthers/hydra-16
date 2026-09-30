@@ -145,10 +145,14 @@ TH_IO_CHDIR:
                 jmp             IO_CHDIR            ; $F8D2
 TH_IO_GETCWD:
                 jmp             IO_GETCWD           ; $F8D5
+TH_SEM_NEW:
+                jmp             SEM_NEW             ; $F8D8
+TH_SEM_ACQUIRE:
+                jmp             SEM_ACQUIRE         ; $F8DB
+TH_SEM_TRY:
+                jmp             SEM_TRY             ; $F8DE
+TH_SEM_RELEASE:
+                jmp             SEM_RELEASE         ; $F8E1
+TH_SEM_FREE:
+                jmp             SEM_FREE            ; $F8E4
 
-; Gates for the calls above that aren't used on page 0 (here: GATES_P0, before the thunks, is full)
-FAR_GATE_INLINE IO_CREATE,      PAGE2::IO_CREATE,       2
-FAR_GATE_INLINE IO_REMOVE,      PAGE2::IO_REMOVE,       2
-FAR_GATE_INLINE IO_WSTAT,       PAGE2::IO_WSTAT,        2
-FAR_GATE_INLINE IO_CHDIR,       PAGE2::IO_CHDIR,        2
-FAR_GATE_INLINE IO_GETCWD,      PAGE2::IO_GETCWD,       2

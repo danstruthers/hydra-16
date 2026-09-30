@@ -17,10 +17,10 @@ Both come from one build (`os_rom/all.s`, linked by `os_rom/os_rom_C02.cfg`); af
 | :--------- | :---- | :------- | :------ |
 | 0 | (global) | Reset, POST gate, the kernel (tasks, scheduler, IRQ dispatch, MMU, shared memory), serial and sound drivers, the IO layer's page 0 part, printing, WOZMON, thunks | `kernel/`, `drivers/serial.s`, `drivers/sound.s`, `io/io_p0.s`, `monitor/wozmon.s` |
 | 1 | `PAGE1` | HyForth: its interpreter, and its built-in words' headers and code, all run from ROM; a copy of the thunks | `hyforth/` |
-| 2 | `PAGE2` | The IO layer: fds, namespaces, pipes, `/dev/cons` and `/dev/ser` (its settings, and the fast serial and tick interrupt handlers: `serfast.s`), `/dev/snd`, the sound test tune | `io/`, `drivers/snd_test.s` |
+| 2 | `PAGE2` | The IO layer: fds, namespaces, pipes, `/dev/cons` and `/dev/ser` (its settings, and the fast serial and tick interrupt handlers: `serfast.s`), `/dev/snd`, the sound test tune, the console bell (`YM_BEEP`) | `io/`, `drivers/snd_test.s`, `drivers/beep.s` |
 | 3 | `PAGE3` | Storage: SPI, the SD card's block layer, `/dev/sd`, and HydraFS's format, label, partitions and check | `drivers/spi.s`, `drivers/sd.s`, `io/sd_srv.s`, `io/hfs_format.s`, `io/hfs_check.s` |
 | 4 | `PAGE4` | POST and the self tests (MMU, scheduler, IO) | `tests/` |
-| 5 | `PAGE5` | Far pointers and references | `kernel/fp.s` |
+| 5 | `PAGE5` | Far pointers and references; semaphores | `kernel/fp.s`, `kernel/sem.s` |
 | 6 | `PAGE6` | The HydraFS server (`/sd/N/...`), in the storage task, on page 3's block layer: reading, writing, sparse files | `io/page6.s`, `io/hfs_srv.s`, `io/hfs_write.s`, `io/hfs_sparse.s` |
 | 7 | `PAGE7` | The shell: the boot shell's start (the volumes found, one selected), the prompt, the file and card commands HyForth's shell words call (`SH_CMD`), running programs (`run`, the `.hyx` loader, arguments), redirection | `shell/page7.s`, `shell.s`, `files.s`, `run.s`, `redir.s` |
 | 8 | `PAGE8` | The text editor (`edit`): a ROM program, run in a task of its own | `shell/page8.s`, `shell/edit.s` |
@@ -233,10 +233,15 @@ The thunk table at `$F800` (on BIOS pages 0 and 1) gives every public call a fix
 | `$F8CF` | `IO_WSTAT` | `.A` = fd, `ZP_IO_BUF` = stat record | [io](io.md#the-files-on-a-card) |
 | `$F8D2` | `IO_CHDIR` | `.A.Y` = a directory's path: the current directory | [io](io.md#the-current-directory) |
 | `$F8D5` | `IO_GETCWD` | `ZP_IO_BUF` = 64-byte buffer ← the current directory | [io](io.md#the-current-directory) |
+| `$F8D8` | `SEM_NEW` | `.A` = count, `.Y` = 0 or `SEM_MUTEX` → `.A` = semaphore | [tasks](tasks.md#semaphores) |
+| `$F8DB` | `SEM_ACQUIRE` | `.A` = semaphore: take one (waits) | [tasks](tasks.md#semaphores) |
+| `$F8DE` | `SEM_TRY` | `.A` = semaphore: take one, or `ERR_SEM_BUSY` | [tasks](tasks.md#semaphores) |
+| `$F8E1` | `SEM_RELEASE` | `.A` = semaphore: give one back | [tasks](tasks.md#semaphores) |
+| `$F8E4` | `SEM_FREE` | `.A` = semaphore: free it | [tasks](tasks.md#semaphores) |
 
 Calls without a thunk (for ROM code; reached with a gate from other pages): `TASK_SLEEP`, `TASK_SLEEP_UNTIL`, `TICKS_GET`, `TASK_START`, `TASK_CALL`, `IRQ_REGISTER`, `IRQ_UNREGISTER`, `SWI_REGISTER`, `SWI_UNREGISTER`, `SW_INT`, `DRV_START`, `IO_FLUSH`, `YM_BEEP`, and the server helpers `IO_SRV_MAP`, `IO_SRV_UNMAP`, `IO_SRV_COUNT`.
 
-**Adding a thunk:** add the `jmp` at the end of `kernel/thunks.s` (page 0), and the same entry to page 1's copy in `hyforth/page1.s` (page 1's copy jumps to its gates).  A call that page 0 doesn't use itself can have its gate right after the thunks (as `IO_CREATE` does), since `GATES_P0` is full.  The assertion there checks that both tables end at the same address.  Never move existing entries: programs rely on the addresses.
+**Adding a thunk:** add the `jmp` at the end of `kernel/thunks.s` (page 0), and, if page 1's code calls it, the same entry to page 1's copy in `hyforth/page1.s` (page 1's copy jumps to its gates; the semaphores' aren't there, as HyForth reaches them from page A).  A call on another page gets its gate in `GATES_P0` (`kernel/page0_gates.s`): the thunks are at a fixed `$F800`, and room below them doesn't help what's after them.  Never move existing entries: programs rely on the addresses.
 
 ### **Adding code**
 

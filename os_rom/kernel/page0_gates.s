@@ -29,3 +29,22 @@ FAR_GATE_INLINE SH_FP,          PAGE5::SH_FP,           5
 FAR_GATE_INLINE MM_ENTRY_FP,    PAGE5::MM_ENTRY_FP,     5
 FAR_GATE_INLINE MM_REF_LOCK,    PAGE5::MM_REF_LOCK,     5
 FAR_GATE_INLINE SH_REF_LOAD,    PAGE5::SH_REF_LOAD,     5
+
+; Semaphores (page 5): the boot's and a task's end's
+FAR_GATE_INLINE SEM_INIT,       PAGE5::SEM_INIT,        5
+FAR_GATE_INLINE SEM_RESET_TASK, PAGE5::SEM_RESET_TASK,  5
+
+; The thunks' calls that aren't on page 0 (thunks.s): the IO layer's (page 2) and the semaphores
+FAR_GATE_INLINE IO_CREATE,      PAGE2::IO_CREATE,       2
+FAR_GATE_INLINE IO_REMOVE,      PAGE2::IO_REMOVE,       2
+FAR_GATE_INLINE IO_WSTAT,       PAGE2::IO_WSTAT,        2
+FAR_GATE_INLINE IO_CHDIR,       PAGE2::IO_CHDIR,        2
+FAR_GATE_INLINE IO_GETCWD,      PAGE2::IO_GETCWD,       2
+FAR_GATE_INLINE SEM_NEW,        PAGE5::SEM_NEW,         5
+FAR_GATE_INLINE SEM_ACQUIRE,    PAGE5::SEM_ACQUIRE,     5
+FAR_GATE_INLINE SEM_TRY,        PAGE5::SEM_TRY,         5
+FAR_GATE_INLINE SEM_RELEASE,    PAGE5::SEM_RELEASE,     5
+FAR_GATE_INLINE SEM_FREE,       PAGE5::SEM_FREE,        5
+
+; The console bell (page 2: beep.s), for the serial driver
+FAR_GATE_INLINE YM_BEEP,        PAGE2::YM_BEEP,         2

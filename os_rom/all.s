@@ -19,6 +19,7 @@
 .scope PAGE5
 .include "kernel/page5.s"       ; must be first in the scope
 .include "kernel/fp.s"          ; Far pointers and references
+.include "kernel/sem.s"         ; Semaphores
 .endscope
 
 ; BIOS ROM page 2 (W = 2): the IO layer.  Its own scope, so page 2 code binds to the page 2 gates in
@@ -32,6 +33,7 @@
 .include "io/serfast.s"         ; Its fast paths: the ACIA's interrupt, console output and input
 .include "io/snd_srv.s"         ; The sound driver's file server (/dev/snd)
 .include "drivers/snd_test.s"   ; The sound driver's test tune
+.include "drivers/beep.s"       ; The console bell
 .include "io/pipe_srv.s"        ; The pipe server (/dev/pipe)
 .endscope
 IRQ_FAST_P2     = PAGE2::IRQ_FAST_P2    ; (For the COMMON block's fast IRQ stubs, assembled before page 2)

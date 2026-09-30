@@ -25,6 +25,11 @@ FAR_GATE_INLINE     TASK_RUN,       ::TASK_RUN,             0
 FAR_GATE_INLINE     TASK_SLEEP,     ::TASK_SLEEP,           0
 FAR_GATE_INLINE     TASK_SIGNAL,    ::TASK_SIGNAL,          0
 FAR_GATE_INLINE     CONS_SET_FG,    ::CONS_SET_FG,          0
+FAR_GATE_INLINE     SEM_NEW,        PAGE5::SEM_NEW,         5   ; (The semaphore words)
+FAR_GATE_INLINE     SEM_ACQUIRE,    PAGE5::SEM_ACQUIRE,     5
+FAR_GATE_INLINE     SEM_TRY,        PAGE5::SEM_TRY,         5
+FAR_GATE_INLINE     SEM_RELEASE,    PAGE5::SEM_RELEASE,     5
+FAR_GATE_INLINE     SEM_FREE,       PAGE5::SEM_FREE,        5
 FAR_GATE_INLINE     MM_ALLOC,       ::MM_ALLOC,             0
 FAR_GATE_INLINE     MM_FREE,        ::MM_FREE,              0
 FAR_GATE_INLINE     MM_LOCK,        ::MM_LOCK,              0

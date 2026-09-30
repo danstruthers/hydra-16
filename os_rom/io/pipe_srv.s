@@ -245,8 +245,8 @@ PIPE_WAIT:
             sec
             rts
 
-; Wake the tasks in a wait mask of the pipe, and clear it.  IN: .Y = PIPE_RD_WAIT or PIPE_WR_WAIT
-; OUT: .X = the pipe's table offset.  Modifies: .A, .Y
+; Wake the tasks in a wait mask of the pipe, and clear it (TASK_WAKE_MASK, on a copy in the zero page).
+; IN: .Y = PIPE_RD_WAIT or PIPE_WR_WAIT.  OUT: .X = the pipe's table offset.  Modifies: .A, .Y
 PIPE_WAKE:
             tya
             clc
@@ -258,22 +258,8 @@ PIPE_WAKE:
             sta         ZP_IO_LEFT + 1
             stz         PIPE_TABLE,X
             stz         PIPE_TABLE + 1,X
-            ldy         #0
-
-@loop:
-            lda         ZP_IO_LEFT                          ; Nobody (else) waiting: done (usually at once)
-            ora         ZP_IO_LEFT + 1
-            beq         @done
-            lsr         ZP_IO_LEFT + 1
-            ror         ZP_IO_LEFT
-            bcc         :+
-            tya
-            jsr         IO_WAKE
-:
-            iny
-            bra         @loop
-
-@done:
+            ldx         #ZP_IO_LEFT
+            jsr         TASK_WAKE_MASK
             ldx         ZP_IO_CHUNK + 1
             rts
 

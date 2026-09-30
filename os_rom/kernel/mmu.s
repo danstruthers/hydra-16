@@ -1264,6 +1264,8 @@ MM_TASK_RESET:
             jsr         TASK_CALL                           ; Re-initialize its MMU area, in the task
             lda         ZP_TC_TASK
             jsr         SH_RESET_TASK
+            lda         ZP_TC_TASK
+            jsr         SEM_RESET_TASK                      ; (Its semaphores freed, its mutexes released)
             jsr         IRQ_UNREGISTER_TASK
             PULL_YXA
             plp

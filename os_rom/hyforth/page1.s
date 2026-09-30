@@ -223,3 +223,5 @@ WRITE_HSTRING:
                 jmp             IO_CHDIR            ; $F8D2
                 jmp             IO_GETCWD           ; $F8D5
 .assert     * = ::TH_IO_GETCWD + 3, lderror, "BIOS_THUNKS_P1 must match BIOS_THUNKS"
+; (Page 0's later thunks, the semaphores' ($F8D8-$F8E4), aren't here: page 1's code doesn't call them, and
+; HyForth's semaphore words reach page 5 from page A.  Its gates start here instead.)

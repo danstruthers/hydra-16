@@ -1499,7 +1499,8 @@ def_far "cat", "cat"
 def_far "wc", "wc"
 lib_end
 ;
-;-------- Tasks: another shell, the foreground, kill, and the task list (/dev/proc): the tasks library
+;-------- Tasks: another shell, the foreground, kill, the task list (/dev/proc), and semaphores: the tasks
+;         library
 lib_begin LIBN_TASKS
 ;
 ; ( -- n )  start another shell (HyForth, in a task of its own); n = its task.  It prints its banner and
@@ -1524,6 +1525,24 @@ def_far "sleep", "sleep"
 ; ( -- )  list the tasks (/dev/proc): the task, its state (R runnable, W waiting (IO or sleep), P paused, D a
 ;         driver) and the task that started it; * = the foreground task
 def_far "ps", "ps"
+;
+; ( n -- s )  a semaphore of n: n takes (acquire) before a task has to wait; s = its number (1-16)
+def_far "sem", "sem"
+;
+; ( -- s )  a mutex: a semaphore of 1 that only the task that took it can release (released if it ends)
+def_far "mutex", "mutex"
+;
+; ( s -- )  take one of semaphore s: if there's none, wait (using no CPU) until there is.  Ctrl-C ends it
+def_far "acquire", "acquire"
+;
+; ( s -- f )  take one if there is one (true); else false, at once
+def_far "acquire?", "acquireq"
+;
+; ( s -- )  give one back to semaphore s (a mutex: only its holder can): a task waiting for it goes on
+def_far "release", "release"
+;
+; ( s -- )  free semaphore s: its number can be made again, and the tasks waiting for it get an error
+def_far "-sem", "unsem"
 lib_end
 ;
 ; A pipeline's left side starts here, in a copy of the shell's task (TASK_CLONE, ROM page 1): stdout into

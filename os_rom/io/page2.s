@@ -15,6 +15,7 @@ FAR_GATE_INLINE     YIELD,          ::YIELD,                0
 FAR_GATE_INLINE     TASK_SLEEP,     ::TASK_SLEEP,           0   ; (The test tune's timing)
 FAR_GATE_INLINE     PREEMPT,        ::PREEMPT,              0
 FAR_GATE_INLINE     IO_WAKE,        ::IO_WAKE,              0
+FAR_GATE_INLINE     TASK_WAKE_MASK, ::TASK_WAKE_MASK,       0   ; (The pipes' waiters)
 FAR_GATE_INLINE     TASK_RUN,       ::TASK_RUN,             0
 FAR_GATE_INLINE     RESERVE_TASK,   ::RESERVE_TASK,         0
 FAR_GATE_INLINE     TASK_BUILD_FRAME, ::TASK_BUILD_FRAME,   0
@@ -33,7 +34,6 @@ FAR_GATE_INLINE     CONS_FG_CHECK,  ::CONS_FG_CHECK,        0
 FAR_GATE_INLINE     CONS_SET_FG,    ::CONS_SET_FG,          0
 FAR_GATE_INLINE     TASK_SIGNAL,    ::TASK_SIGNAL,          0
 FAR_GATE_INLINE     ENV_COPY,       ::ENV_COPY_P9,          9   ; (A new task's environment: IO_INHERIT)
-FAR_GATE_INLINE     YM_BEEP,        ::YM_BEEP,              0   ; (The bell: _M_SER_TX_BYTE)
 FAR_GATE_INLINE     YM_WRITE,       ::YM_WRITE,             0   ; (These run in the current task: the
 FAR_GATE_INLINE     SOUND_INIT,     ::SOUND_INIT,           0   ;   sound task, from its server)
 FAR_GATE_INLINE     FP_MAKE,        PAGE5::FP_MAKE,         5   ; Far pointers (page 5): callers' names

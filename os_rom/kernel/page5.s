@@ -1,7 +1,7 @@
 .debuginfo
 
 ; ****************************************************************************
-; BIOS ROM page 5 (W = 5): far pointers and references (fp.s).
+; BIOS ROM page 5 (W = 5): far pointers and references (fp.s), and semaphores (sem.s).
 ;
 ;   This file is included inside `.scope PAGE5` (see all.s), before fp.s, so the gate labels below take
 ;   precedence over the page 0 routines of the same name for all page 5 code.  Page 5 code runs with
@@ -16,3 +16,7 @@ FAR_GATE_INLINE     SH_NEW_HANDLE,  ::SH_NEW_HANDLE,        0
 FAR_GATE_INLINE     SH_HANDLE_PTR,  ::SH_HANDLE_PTR,        0
 FAR_GATE_INLINE     SH_CHECK_REF,   ::SH_CHECK_REF,         0
 FAR_GATE_INLINE     SH_SET_TASK_BIT, ::SH_SET_TASK_BIT,     0
+
+; ... and for the semaphores (sem.s)
+FAR_GATE_INLINE     YIELD,          ::YIELD,                0
+FAR_GATE_INLINE     TASK_WAKE_MASK, ::TASK_WAKE_MASK,       0

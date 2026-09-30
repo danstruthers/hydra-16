@@ -506,6 +506,12 @@ A line with `|` (with spaces around it, outside `"..."` and `q^...^` strings) is
 | `kill` | `( n -- )` | Kill task n and the tasks it started |
 | `ps` | | List the tasks (from `/dev/proc`: its files also give each task's directory, environment and memory: `cat /dev/proc/1/mem`) |
 | `sleep` | `( n -- )` | Sleep n ticks (200 a second; `200 sleep` is 1 s); Ctrl-C ends it |
+| `sem` | `( n -- s )` | A semaphore of n: n takes before a task has to wait; s = its number (1-16), which every task can use |
+| `mutex` | `( -- s )` | A mutex: a semaphore of 1 that only the task that took it can release (released if that task ends) |
+| `acquire` | `( s -- )` | Take one of semaphore s, waiting (using no CPU) until there is one; Ctrl-C ends the wait |
+| `acquire?` | `( s -- f )` | Take one if there is one (true), or false at once |
+| `release` | `( s -- )` | Give one back (a mutex: only its holder can): a task waiting for it goes on |
+| `-sem` | `( s -- )` | Free semaphore s: the tasks waiting for it get `!IO ERR!` (`ioerr` `60`) |
 
 ```
 0:/> shell .
@@ -517,6 +523,17 @@ B W 1
 C D -
 ...
 ```
+
+A semaphore made in the shell can be used by the tasks it starts, and by a pipeline's stages.  Here the shell waits for the pipeline's first stage, which runs alongside it:
+
+```
+0:/> 0 sem .
+ 0001
+0:/> 200 sleep 1 release | 1 acquire 7 .
+ 0007                     \ a second later: when the first stage released it
+```
+
+A failed call gives `!IO ERR!`, with the reason in `ioerr` (`60` not a semaphore, `61` all 16 in use, `63` a mutex this task doesn't hold).  When a task ends, the semaphores it made are freed and the mutexes it holds released.
 
 **Sound:**
 

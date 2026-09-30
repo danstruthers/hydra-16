@@ -133,6 +133,27 @@ A sleeping task uses no CPU; the system task's tick handler wakes it (`SLEEP_CHE
 
 IO waits happen by themselves: a read with no data makes the task wait until the server wakes it ([io.md](io.md)).
 
+**How the kernel waits.**  Every wait is the same: the task's bit goes in a 16-bit **wait mask** (bit = task), it sets `TASK_WAITING_FLAG` and `YIELD`s, and when it's woken it looks again, waiting again if it has to.  Waking a mask (`TASK_WAKE_MASK`) wakes every task in it and clears it; each looks again, so a wake that turns out to be for nothing costs a look and nothing more.  Everything that waits is built this way: a busy server's callers (`ZP_TC_WAITERS`, `TC_WAIT_FREE`), sleepers (`ZP_SLEEPERS`, woken by the tick when their time comes), a pipe's readers and writers, the console's, and semaphores.  (The serial port's interrupt wakes its masks with a copy of `TASK_WAKE_MASK` that uses no stack.)
+
+### **Semaphores**
+
+For tasks that share something, or wait for each other: a semaphore is a count and the tasks waiting for it.  `SEM_ACQUIRE` takes one, or waits (using no CPU) until `SEM_RELEASE` gives one back.  A **mutex** is a semaphore of 1 with a holder: only the task that took it can release it.
+
+| Call | Does |
+| :--- | :--- |
+| `SEM_NEW` (`$F8D8`) | `.A` = its count (how many can take it before a task has to wait: 0-255), `.Y` = 0, or `SEM_MUTEX` (`$80`: a mutex, count 1) → `.A` = the semaphore (1-16) |
+| `SEM_ACQUIRE` (`$F8DB`) | `.A` = semaphore: take one, waiting until there is one.  A break or kill ends the wait |
+| `SEM_TRY` (`$F8DE`) | The same, but `ERR_SEM_BUSY` at once instead of waiting |
+| `SEM_RELEASE` (`$F8E1`) | `.A` = semaphore: give one back, and wake the tasks waiting for it |
+| `SEM_FREE` (`$F8E4`) | `.A` = semaphore: free it (any task can); the tasks waiting for it get `ERR_SEM_BAD` |
+
+* **All tasks see the same ones**, by number: they're in the system's shared bank (`SEM_TABLE`, `$8360`), 16 of them.  So a task can make one and hand its number to the tasks it starts, or to a pipeline's stages.
+* **Errors:** `ERR_SEM_BAD` (`$60`: not a semaphore, or freed while waited for), `ERR_SEM_NONE` (`$61`: all 16 in use), `ERR_SEM_BUSY` (`$62`), `ERR_SEM_NOT_HELD` (`$63`: a mutex this task doesn't hold), `ERR_SEM_FULL` (`$64`: its count is 255).
+* **When a task ends,** the semaphores it made are freed, and the mutexes it holds are released (`SEM_RESET_TASK`, from `MM_TASK_RESET`).  A counting semaphore it took one of stays one down: nothing records who took what.
+* **Inside:** `kernel/sem.s` (page 5).  Each call works on the table with IRQs off, for a few hundred cycles at most; a wait is the kernel's usual one (above): a release wakes every waiter, the first to run takes it, and the others wait again.
+
+**What semaphores don't replace.**  The kernel's short updates of shared tables (the MMU's, shared memory's, the environments') hold `NO_PREEMPT` or keep IRQs off instead.  That keeps a Ctrl-C from stopping a task halfway through an update, which a lock can't do: a break ends a task's work where it is, and a table half changed would stay that way.  Semaphores are for waits that can take a while, where a break is fine: a task waiting for another, or for its turn at something they share.
+
 ### **Running code in another task: `TASK_CALL`**
 
 `TASK_CALL` runs a routine in another task's context: its zero page, its stack (below its saved frame), its RAM bank and its MMU area.  The IO layer uses it to run servers, the IRQ dispatcher to run handlers, and `DRV_START` to run a driver's init.

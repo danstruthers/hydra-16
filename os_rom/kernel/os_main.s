@@ -19,6 +19,7 @@ RESET_VECTOR_START:
             jsr                 TASKS_INIT                          ; Must be called before the drivers and MMU_INIT
             cli                                                     ; IRQs on: the dispatcher and tasks are ready
             jsr                 MMU_INIT
+            jsr                 SEM_INIT                            ; (The system's shared bank is there now)
             jsr                 IO_INIT                             ; The IO layer's devices (/dev/null, /dev/zero)
             jsr                 VIA_INIT
             lda                 #<SERIAL_DRIVER                     ; Serial driver in its own (Resident) task;

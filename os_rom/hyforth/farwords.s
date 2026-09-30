@@ -1826,6 +1826,47 @@ sleep:                      ; sleep
     ldy TEMP1 + 1
     jsr TASK_SLEEP
     jmp next
+sem:                        ; sem
+    jsr spull_0
+    lda TEMP1
+    ldy #0
+SMNEW:
+    jsr SEM_NEW
+    bcc TKPUSH
+    jmp IOFAIL
+mutex:                      ; mutex
+    lda #1
+    ldy #SEM_MUTEX
+    bra SMNEW
+acquire:                    ; acquire
+    jsr spull_0
+    lda TEMP1
+    jsr SEM_ACQUIRE
+SMDONE:
+    bcc TKOK
+    jmp IOFAIL
+acquireq:                   ; acquire?
+    jsr spull_0
+    lda TEMP1
+    jsr SEM_TRY
+    bcs :+
+    jmp PUSHTRUE
+:
+    cmp #ERR_SEM_BUSY
+    beq :+
+    jmp IOFAIL
+:
+    jmp PUSHFALSE
+release:                    ; release
+    jsr spull_0
+    lda TEMP1
+    jsr SEM_RELEASE
+    bra SMDONE
+unsem:                      ; -sem
+    jsr spull_0
+    lda TEMP1
+    jsr SEM_FREE
+    bra SMDONE
 ps:                         ; ps
     lda #<PSNAME
     ldy #>PSNAME

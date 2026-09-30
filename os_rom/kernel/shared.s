@@ -9,6 +9,8 @@
 ;   $F0-$FF.  The system data lives in shared bank ID $00 (U = 0, bank $F0: SYS_BANK, _M_SYS_ENTER):
 ;       $8200-$821F  SH_MAP     shared bank bitmap (1 = in use)
 ;       $8220-$823F  SH_ENDS    run-end bitmap (last bank of each allocation)
+;       $8240-$835F  (the environments' buffers: io.inc)
+;       $8360-$83BF  SEM_TABLE  the semaphores (sem.s, page 5)
 ;       $8400-$87FF  SH_HANDLES shared handle table: 255 entries of ShHandle
 ;       $8800-$88FF  IO_DEV_TABLE the IO device table (io.s)
 ;       $8900-$8CFB  SH_REF_TBL references' far pointers (SH_REF, fp.s), by shared handle

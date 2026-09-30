@@ -227,7 +227,7 @@ const TESTS = [
     name: 'forth-bare', about: 'a bare Forth (forth): its own task, only the base loaded, lib loads what it needs; -lib all and lib all',
     args: ['--cycles', '60000000', '--input', BOOT + 'forth .\\r' + W(1) + '\\x1dB' + W(1) + '\\rlibs\\r1 2 + .\\rls\\rlib files\\rlibs\\r' +
       'lib all\\rlibs\\r-lib all\\rlibs\\r'],
-    expect: ['/> forth .\n' + num(0xB) + '\n', '[B]', '> libs\nforth (io) (files) (shell) (tasks) (sound) (mem) (tools) (term)\n',
+    expect: [/\/> forth \.\n\n? 000B\n/, '[B]',                   // (The new task's first CR LF may come first: both write) '> libs\nforth (io) (files) (shell) (tasks) (sound) (mem) (tools) (term)\n',
       '> 1 2 + .\n' + num(3) + '\n', '> ls\n\n !UNK WORD!\n', '> libs\nforth io files (shell) (tasks) (sound) (mem) (tools) (term)\n',
       '/> libs\nforth io files shell tasks sound mem tools term\n',             // (lib all: the shell's prompt again)
       '> libs\nforth (io) (files) (shell) (tasks) (sound) (mem) (tools) (term)\n'],
@@ -299,6 +299,23 @@ const TESTS = [
     name: 'rtc-none', about: 'no DS1747 (a plain HM628512 in U7): "no clock" at boot, and the clock is set and read as before',
     args: ['--cycles', '40000000', '--input', BOOT + 'echo 2027-01-02 03:04:05 > /dev/time\\r' + W(1) + 'cat /dev/time\\r'],
     expect: ['\nno clock\n\nHyForth', /\/> cat \/dev\/time\n2027-01-02 03:04:0[5-9]\n/],
+  },
+  {
+    name: 'semaphores', about: 'semaphores: counts (acquire?, release), a mutex (only its holder releases it), bad ones, a wait another task ends (a pipeline stage), freed and released when a task ends, freed while waited for, Ctrl-C in a wait',
+    args: ['--cycles', '120000000', '--input', BOOT + ['2 sem .\\r', '1 acquire? . 1 acquire? . 1 acquire? .\\r', '1 release 1 acquire? .\\r',
+      'mutex .\\r', '2 acquire 2 release 2 release\\rioerr .\\r', '9 acquire\\rioerr .\\r', '0 sem .\\r',
+      '200 sleep 3 release | 3 acquire 7 .\\r' + W(1), '4 sem . | cat\\r', '4 sem .\\r', '2 acquire 100 sleep | 2 acquire 8 .\\r' + W(1),
+      '2 acquire? .\\r', '100 sleep 3 -sem | 3 acquire\\rioerr .\\r', '0 sem .\\r', '3 acquire\\r' + W(1) + '\\x03' + W(1) + '1 2 + .\\r'].join(W(1))],
+    expect: ['/> 2 sem .\n' + num(1) + '\n', '/> 1 acquire? . 1 acquire? . 1 acquire? .\n' + num(0xFFFF) + num(0xFFFF) + num(0) + '\n',
+      '/> 1 release 1 acquire? .\n' + num(0xFFFF) + '\n', '/> mutex .\n' + num(2) + '\n',
+      '/> 2 acquire 2 release 2 release\n\n !IO ERR!\n', '/> ioerr .\n' + num(0x63) + '\n',       // (Released already: not held)
+      '/> 9 acquire\n\n !IO ERR!\n', '/> ioerr .\n' + num(0x60) + '\n', '/> 0 sem .\n' + num(3) + '\n',
+      '/> 200 sleep 3 release | 3 acquire 7 .\n' + num(7) + '\n',                              // (The shell waits for the stage)
+      '/> 4 sem . | cat\n' + num(4) + '\n', '/> 4 sem .\n' + num(4) + '\n',                     // (The stage's: freed as it ended)
+      '/> 2 acquire 100 sleep | 2 acquire 8 .\n' + num(8) + '\n',                             // (Released as its holder ended)
+      '/> 2 acquire? .\n' + num(0) + '\n',                                                    // (The shell holds it now)
+      '/> 100 sleep 3 -sem | 3 acquire\n\n !IO ERR!\n', '/> ioerr .\n' + num(0x60) + '\n',       // (Freed while waited for)
+      '/> 0 sem .\n' + num(3) + '\n', '/> 3 acquire\n\n !BREAK!\n', '/> 1 2 + .\n' + num(3) + '\n'],
   },
   {
     name: 'serial', about: 'serial settings: 9600 8N1 at boot; stty (/dev/ser/ctl), a refused format, IO_CTL rate and format; the ACIA\'s registers',
