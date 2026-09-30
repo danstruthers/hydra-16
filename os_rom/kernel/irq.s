@@ -95,6 +95,10 @@ IRQ_INIT:
             lda         #<VIA_IRQ_STUB
             ldy         #>VIA_IRQ_STUB
             jsr         IRQ_SET_VECTOR
+            ldx         #IRQ_NUMBER_ONBOARD_SOUND           ; The YM2151 too (its timer B: the sound clock)
+            lda         #<YM_IRQ_STUB
+            ldy         #>YM_IRQ_STUB
+            jsr         IRQ_SET_VECTOR
             PULL_YXA
             plp                                             ; Restore caller's I flag
             clc

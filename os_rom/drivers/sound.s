@@ -4,10 +4,10 @@
 
 ; ****************************************************************************
 ; Sound driver.  Runs in its own Resident task (SOUND_TASK_NUM, started by DRV_START at boot), so its
-; ZP is task ZP.  Other tasks use it through its file, /dev/snd (snd_srv.s, on ROM page 2): writes are
+; ZP is task ZP.  Other tasks use it through its file, /dev/snd (sound/snd_srv.s, on ROM page B): writes are
 ; register/value pairs, and IO_CTL clears the chip, and starts and stops the test tune, which plays in
 ; a player task in the background (snd_test.s).  (The console bell, YM_BEEP, writes the chip directly: page
-; 2, beep.s.)
+; B, beep.s.)
 
 SOUND_DRIVER:
                 .word       SOUND_DRV_INIT              ; DriverInfo::init
@@ -16,15 +16,15 @@ SOUND_DRIVER:
 NamedHString SOUND_NAME, "SOUND"
 SND_NAME:       .byte       "snd", 0
 
-; The serve routine (page 2, snd_srv.s), and the chip's set-up (page 2, ym.s)
-FAR_GATE_INLINE     SND_SERVE,      PAGE2::SND_SERVE,       2
-FAR_GATE_INLINE     SOUND_INIT,     PAGE2::SOUND_INIT,      2
+; The serve routine (page B, snd_srv.s), and the chip's set-up (page B, ym.s)
+FAR_GATE_INLINE     SND_SERVE,      PAGEB::SND_SERVE,       $B
+FAR_GATE_INLINE     SND_SETUP,      PAGEB::SND_SETUP,       $B
 
 ; Driver init (runs in the sound task): the chip, then the file.  OUT: C = 0, or C = 1 and .A = error
 SOUND_DRV_INIT:
                 lda         #$FF
                 sta         SND_PLAYER                  ; No player (snd_srv.s)
-                jsr         SOUND_INIT
+                jsr         SND_SETUP                   ; (A chip that doesn't answer: its writes fail)
                 LOAD_ADDR   SND_SERVE, ZP_TC_VEC
                 lda         #<SND_NAME
                 ldy         #>SND_NAME

@@ -32,11 +32,8 @@
 .include "io/ser_srv.s"         ; The serial driver's file server (/dev/cons, /dev/ser)
 .include "io/serctl.s"          ; Its settings: /dev/ser/ctl, the rate and format IO_CTLs
 .include "io/serfast.s"         ; Its fast paths: the ACIA's interrupt, console output and input
-.include "io/snd_srv.s"         ; The sound driver's file server (/dev/snd)
-.include "drivers/snd_test.s"   ; The sound driver's test tune
-.include "drivers/beep.s"       ; The console bell
-.include "drivers/ym.s"         ; The YM2151's set-up and register writes
 .include "io/pipe_srv.s"        ; The pipe server (/dev/pipe)
+.include "sound/ymfast.s"       ; The YM2151's interrupt: the sound clock (a fast handler, as serfast.s's)
 .endscope
 IRQ_FAST_P2     = PAGE2::IRQ_FAST_P2    ; (For the COMMON block's fast IRQ stubs, assembled before page 2)
 
@@ -159,6 +156,24 @@ CLOCK_TEXT_P9   = PAGE9::TIME_TEXT      ; (For page 7: ls -l)
 RTC_BOOT_P9     = PAGE9::RTC_BOOT       ; (For page 7: SH_BOOT)
 TIME_DIV8_P9    = PAGE9::TIME_DIV8
 
+; BIOS ROM page B (W = $B): sound (the YM2151: its library, /dev/snd, the test tune, the bell)
+.scope PAGEB
+.include "sound/pageb.s"         ; must be first in the scope
+.include "sound/ym.s"           ; The YM2151's set-up and register writes
+.include "sound/snd_lib.s"      ; Its library: the registers' shadow, volumes, notes, patches, commands
+.include "sound/patches.s"      ;   and its data: the patches, the drum map, the volume curve
+.include "sound/snd_srv.s"      ; The sound driver's file server (/dev/snd)
+.include "sound/beep.s"         ; The console bell
+.endscope
+
+; BIOS ROM page C (W = $C): the song player (ZSM), a ROM program the shell starts in a task of its own (play)
+.scope PAGEC
+.include "sound/pagec.s"         ; must be first in the scope
+.include "sound/player.s"       ; The song player
+.endscope
+ZSM_PLAY_PC     = PAGEC::ZSM_PLAY       ; (For page 7: SH_SONG)
+ZSM_PLAY_ROM_PC = PAGEC::ZSM_PLAY_ROM   ; (For page B: SND_CTL_TEST)
+
 ; BIOS ROM page 0 (W = 0)
 .include "kernel/print.s"
 .include "drivers/serial.s"
@@ -182,3 +197,6 @@ TIME_DIV8_P9    = PAGE9::TIME_DIV8
 .include "hwtest/hwtest.s"
 .endscope
 HWT_ENTRY       = HWTEST::HWT_ENTRY     ; (_M_HWT_ENTER's jump: include/hwtest.inc)
+
+; Paged ROM bank 2: the test song (sndtest's), made from songs/test.mml by makeC02.bat (sim/tools/hysong.js)
+.include "songs/test_rom.s"

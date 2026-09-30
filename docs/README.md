@@ -33,4 +33,5 @@ The reasoning behind the design, and what's planned.  Parts of them are history 
 * [HYDRAFS.md](plans/HYDRAFS.md): the SD card filesystem (spec).
 * [SHELL.md](plans/SHELL.md): HyForth as a shell: a current directory, commands, running programs (done).
 * [REORG_PLAN.md](plans/REORG_PLAN.md): the ROM reorganisation.
+* [SOUND.md](plans/SOUND.md): the YM2151: its library (done), a song player, a test song that uses the whole chip, and importing music from other machines.
 * [IDEAS.md](plans/IDEAS.md): ideas for later (wait states for board V2, ...).

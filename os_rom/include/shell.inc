@@ -21,7 +21,8 @@ SHC_FSFIX       = 28            ;   and its free map repaired
 SHC_WAIT        = 30            ; .A = a task the shell started: it has the console (if the shell has), till it ends
 SHC_LIBOPEN     = 32            ; .A.Y = a HyForth library's name (no .hyl): found (run.s) and opened.  OUT: .A = its fd
 SHC_STATUS      = 34            ; HyForth's status (PAGE1::HYSTAT, HYSTATMSG) to $status (/env/status)
-SHC_COUNT       = 36
+SHC_PLAY        = 36            ; .A.Y = a song (ZSM): the song player on it (page C), waited for (or not: &)
+SHC_COUNT       = 38
 
 SH_RUN_FD       = IO_MAX_FDS - 1    ; A program's file, for the task that runs it (SHC_RUN)
 SH_ARGS_FD      = IO_MAX_FDS - 2    ;   and its arguments (a pipe: the loader reads them to HYX_ARGS)

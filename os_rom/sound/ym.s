@@ -1,21 +1,50 @@
 .debuginfo
 
 ; ****************************************************************************
-; The YM2151's set-up and register writes (BIOS ROM page 2, included inside `.scope PAGE2`, see all.s): the
-; sound driver's (sound.s, on page 0, reaches SOUND_INIT through a gate), its server's and test tune's, and
-; the bell's (beep.s).
+; The YM2151's set-up and register writes (BIOS ROM page B, included inside `.scope PAGEB`, see all.s): the
+; sound driver's (sound.s, on page 0, reaches SND_SETUP through a gate), the library's (snd_lib.s), the test
+; tune's, and the bell's (beep.s).
 
-.segment "IO_P2"
+.segment "SOUND_PB"
+
+; The sound driver's set-up, in the sound task (its init, sound.s): no claims, no fids open, the master volume
+; full, the chip and the library reset (SND_RESET: a chip that doesn't answer is left to fail its writes), and
+; the chip's IRQ handler
+SND_SETUP:
+                ldx         #SND_FIDS - 1
+@clear:
+                stz         SND_REFS,X
+                dex
+                bpl         @clear
+                ldx         #7
+@free:
+                stz         SND_OWNER,X
+                dex
+                bpl         @free
+                stz         SND_CLAIMED
+                stz         SND_CLK_OWNER               ; (No sound clock)
+                stz         SND_R14
+                lda         #$FF
+                sta         SND_CLK_WAIT
+                lda         #$7F
+                sta         SND_MASTER
+                jsr         SND_RESET
+                ldx         #IRQ_NUMBER_ONBOARD_SOUND
+                lda         #<::SOUND_IRQ_HANDLER
+                ldy         #>::SOUND_IRQ_HANDLER
+                jmp         IRQ_REGISTER            ; Handler runs in this (the sound) task, on page 0
 
 ; Set up the YM-2151, whatever it powered up with (its reset, /IC, may not clear everything): the timers
 ; stopped, their IRQs off and their flags reset, then every register $01-$FF zeroed (the test/LFO register
-; $01, noise, the timers' periods, and the voices)
+; $01, noise, the timers' periods, and the voices).  OUT: C = 0; or C = 1: the chip didn't answer.
+; Preserves .A, .X
 SOUND_INIT:
                 pha
                 phx
                 lda         #$30        ; timers stopped, their IRQs off, both flags reset
                 ldx         #$14
                 jsr         YM_WRITE
+                bcs         @error
                 lda         #0
                 ldx         #$01
 
@@ -24,10 +53,6 @@ SOUND_INIT:
                 bcs         @error
                 inx
                 bne         @write_z
-                ldx         #IRQ_NUMBER_ONBOARD_SOUND
-                lda         #<::SOUND_IRQ_HANDLER
-                ldy         #>::SOUND_IRQ_HANDLER
-                jsr         IRQ_REGISTER            ; Handler runs in this (the sound) task, on page 0
 
 @error:
                 plx

@@ -49,8 +49,11 @@ SER_IRQ_LOGICAL = 1                                         ; The ACIA's logical
 ; stack.  Each returns through IRQ_EXIT (.A = the page), or goes on to the dispatcher (IRQ_FAST_SLOW, with
 ; the stack and registers an IRQ stub leaves), after pulling .Y.
 IRQ_FAST_P2:
-            cpy         #0
-            bne         SER_IRQ_FAST
+            cpy         #1
+            beq         SER_IRQ_FAST
+            bcc         :+
+            jmp         YM_IRQ_FAST                         ; (2: the YM2151, ymfast.s)
+:
             jmp         VIA_IRQ_FAST
 
 ; The ACIA's interrupt

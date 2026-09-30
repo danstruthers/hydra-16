@@ -175,4 +175,5 @@ FAR_GATE_INLINE TASK_JOIN,      PAGE5::TASK_JOIN,       5
 FAR_GATE_INLINE EXIT_NOTE,      PAGE5::EXIT_NOTE,       5   ; (TASK_EXIT: 0)
 FAR_GATE_INLINE EXIT_SIGNALLED, PAGE5::EXIT_SIGNALLED,  5   ; (BREAK_ENTRY: interrupt, killed)
 FAR_GATE_INLINE SHELL_CMD,      ::SH_CMDSHELL_P7,       7
+FAR_GATE_INLINE YM_BEEP,        PAGEB::YM_BEEP,         $B  ; (The console bell, page B: beep.s, for the serial driver)
 

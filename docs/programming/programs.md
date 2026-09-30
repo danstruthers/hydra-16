@@ -16,7 +16,7 @@ A Hydra executable is a program on a card that the shell loads and runs in a tas
 
 Then the code, which is loaded at the load address as it is: a program isn't relocatable.  The code, its BSS and its top must fit in `$0800-$7BFF` (`ERR_IO_NOT_EXEC`, `$87`, otherwise).  As in Plan 9's `a.out` header, the BSS isn't in the file: the loader clears it.  An older header, with 4 zero bytes at offset 12, still loads.  The constants are in `os_rom/include/shell.inc` (`HYX_*`).
 
-`run` tells a program from a script by the header, not by the name: a file without `HYX1` at its start is run as a HyForth script.  Name them `.hyx` anyway, so the shell finds them by name.
+`run` tells a program from a script by the header, not by the name: a file without `HYX1` at its start is run as a HyForth script, except a **song** (a ZSM file, which starts with `zm`), which the ROM's song player plays in a task of its own ([HyForth's play](../using/hyforth.md#tasks-and-the-console)).  Name them `.hyx` (`.zsm`) anyway, so the shell finds them by name.
 
 ### **What a program gets**
 
@@ -79,8 +79,9 @@ They find cc65 in `CC65_HOME` (default `C:\source\cc65\win64_snapshot`).  `hyc.b
 | `lib/io/` | Files: `read`, `write`, `open`, `close`, `lseek`, `remove`, `rename`, `mkdir`, `rmdir`, `chdir`, `getcwd`, `stat`, `fstat`, `isatty`, `opendir` and the rest of `dirent.h`, errno and `_oserror` |
 | `lib/env/` | The environment: `getenv`, `putenv`, `setenv`, `unsetenv` |
 | `lib/conio/` | `conio.h` on the console (an ANSI terminal) |
+| `lib/snd/` | `snd.h`: the YM2151, through `/dev/snd` and the ROM's sound library; songs (`snd_play`) |
 | `lib/sys/` | `system`, `clock`, `clock_gettime` (so `time`), `sleep`; `hydra.h`'s calls (tasks, exit statuses, semaphores, ticks) |
-| `samples/` | `hello.c` (arguments, arithmetic, the heap, the clock), `upper.c` (a filter: stdin to stdout in capitals), `code.c` (an exit status from its argument), `keys.c` (conio: the screen and raw keys), `ctest.c` (the library's test) |
+| `samples/` | `hello.c` (arguments, arithmetic, the heap, the clock), `upper.c` (a filter: stdin to stdout in capitals), `code.c` (an exit status from its argument), `keys.c` (conio: the screen and raw keys), `tones.c` (`snd.h`: patches, notes, volume, a bend, drums), `jukebox.c` (a song in the background, stopped), `ctest.c` (the library's test) |
 
 A module in `lib/` replaces cc65's module of the same name (`make.bat` adds them to a copy of cc65's `none.lib`), so name a new one after the cc65 module it replaces, or something cc65 doesn't have.
 
@@ -112,6 +113,7 @@ A module in `lib/` replaces cc65's module of the same name (`make.bat` adds them
 | `hy_spawn (cmd)` | A command line in a task of its own, not waited for: its task, or -1 |
 | `hy_wait (task, msg)` | Wait for a task this one started to end: its exit code (0-255), and its message into `msg` (`HY_STATUS_MAX` bytes; `NULL`: not wanted) |
 | `hy_exits (msg)` | End the program with a message (Plan 9's `exits`) |
+| `hy_kill (task)` | End a task and the tasks it started (its status: 137, `killed`) |
 | `fstat (fd, st)`, `hy_dirstat (dir, st)`, `isatty (fd)` | What POSIX has and cc65's headers don't for this target |
 | `setenv`, `unsetenv` | (Also POSIX's) |
 | `COLOR_*`, `CH_*` | conio's colours (ANSI's 16) and keys |

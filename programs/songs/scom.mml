@@ -1,0 +1,17 @@
+; ****************************************************************************
+; The first sndtest tune (the ROM's until the test song, os_rom/songs/test.mml, took its place): "Sweet Child o'
+; Mine"'s opening riff on two overdriven guitars (the ROM's patch 29), tuned down a half step as Slash plays it.
+; Channel A holds each bar's root; B plays the riff over it.  A demo of the score language (sim/tools/hysong.js):
+;     node sim/tools/hysong.js programs/songs/scom.mml programs/songs/scom.zsm
+; then put scom.zsm on a card (in /bin, or the current directory) and run it by its name: scom.
+
+#title  The riff
+#tempo  120
+
+@guitar { gm 29 }
+
+A @guitar p c v110 k-1 o4 l1 q8
+A d d e e g g d d
+
+B @guitar p c v100 k-1 o4 l8 q8
+B [d >d< a g >g< a >f+< a]8

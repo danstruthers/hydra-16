@@ -75,6 +75,9 @@
 //   --seed N            Power up RAM and the pseudo-registers from random number seed N (default: a new
 //                       random power-up each run), so a run can be repeated exactly
 //   --ym-log            List every YM2151 key-on (channel and cycle), not just the first 8
+//   --ym-dump           Show the YM2151's registers at the end (as the chip has them: its levels with the volumes)
+//   --ym-vgm FILE       Write what the ROM wrote to the YM2151 as a VGM file (with the time between writes), to
+//                       hear it in any VGM player (VGMPlay, foobar2000 with its VGM plugin ...)
 //   --profile N         From cycle N on, count the instructions run in each routine (named from the
 //                       build's debug info, ../os_rom/obj/os_rom_C02.dbg) and in each task, and report them
 //
@@ -125,6 +128,8 @@ for (let i = 0; i < argv.length; i++) {
     case '--profile': opt.profile = +next(); break;
     case '--seed': opt.seed = +next() >>> 0; break;
     case '--ym-log': opt.ymLog = true; break;
+    case '--ym-dump': opt.ymDump = true; break;
+    case '--ym-vgm': opt.ymVgm = next(); break;
     case '--clock': { const c = next(); opt.clock = /^7/.test(c) ? 7.15909 : 3.579545; if (!/^(3\.58|7\.16)$/.test(c)) { console.error('--clock 3.58|7.16'); process.exit(1); } break; }
     case '--watch': { const m = /^([0-9A-Fa-f]+)(?:@([0-9A-Fa-f]))?$/.exec(next()); opt.watches.push({ addr: parseInt(m[1], 16), task: m[2] === undefined ? -1 : parseInt(m[2], 16) }); break; }
     default: console.error('Unknown option: ' + a + ' (see the header of hydrasim.js)'); process.exit(1);
@@ -187,7 +192,7 @@ const vecRam = new Uint16Array(16).map(() => rnd(65536));
 let regT = rnd(256), regU = rnd(256), V = rnd(256), regW = rnd(256);
 let T = regT & 15, U = regU & 15, W = regW & 15;
 let out = '';
-let ymReg = 0; const ymKeyOns = [];                          // YM2151: the register selected, and the key-ons written
+let ymReg = 0; const ymKeyOns = [], ymWrites = [];                          // YM2151: the register selected, and the key-ons written
 let aciaCmd = 0, aciaCtrl = 0, aciaTdre = 1, aciaTxTimer = 0, aciaIrq = 0, aciaRdrf = 0, aciaRx = 0, aciaOverruns = 0;
 // The line's idle time between characters sent: when the last one ended, and the shortest gap (in bits,
 // at the rate of the character after it; 0 = back to back or overlapping), counted once 8 have gone at the rate last set
@@ -427,6 +432,7 @@ function wr(a, v) {
     if (ioAt < ymBusyUntil) { ymLost++; return; }
     ymBusyUntil = ioAt + YM_BUSY_CYCLES;
     ymRegs[ymReg] = v;
+    if (opt.ymVgm) ymWrites.push([ioAt, ymReg, v]);
     if (ymReg === 0x14) ymTimers(v);
     if (ymReg === 0x08 && (v & 0x78)) ymKeyOns.push('ch ' + (v & 7) + ' at cycle ' + ioAt);
     return;
@@ -656,6 +662,11 @@ if (ymKeyOns.length > 1) { const t = ymKeyOns.map(k => +k.split(' ').pop()); let
 if (opt.profile >= 0) profileReport();
 console.log('--- lowest stack pointer by task (free bytes; W:PC at the time): ' + stackLow.map((v, t) => v > 0xFF ? null : hx(t, 1) + ':' + hx(v) + ' (' + (v + 1) + '; ' + hx(stackLowAt[t][0], 1) + ':' + hx(stackLowAt[t][1], 4) + ')').filter(x => x).join(', '));
 if (ymLost) console.log('--- YM2151: ' + ymLost + ' data write(s) while it was busy (lost on the chip)');
+if (opt.ymDump) {                                               // --ym-dump: the chip's registers, 16 a line
+  console.log('--- YM2151 registers ---');
+  for (let r = 0; r < 256; r += 16) console.log(hx(r) + ': ' + [...ymRegs.slice(r, r + 16)].map(v => hx(v)).join(' '));
+}
+if (opt.ymVgm) ymVgm(opt.ymVgm);
 if (rtc) {                                                      // --rtc: the DS1747's registers as they are
   const r = rtcRegs(), h = n => hx(r[n]);
   console.log('--- DS1747: ' + (rtc.junk ? 'junk ' + r.map(v => hx(v)).join(' ') : hx(r[0] & 0x3F) + h(7) + '-' + h(6) + '-' + h(5) + ' ' + h(3) + ':'
@@ -673,6 +684,30 @@ for (const d of opt.dumps) {
 }
 
 // ---- profile report: instructions per routine (the nearest label at or below the PC, on its ROM page)
+// --ym-vgm: the YM2151's writes as a VGM 1.51 file (YM2151 at 3,579,545 Hz; waits in 44,100ths of a second)
+function ymVgm(file) {
+  const data = [];
+  let at = ymWrites.length ? ymWrites[0][0] : 0, samples = 0, owed = 0;
+  const hz = opt.clock * 1e6;
+  for (const [cyc, reg, val] of ymWrites) {
+    owed += (cyc - at) * 44100 / hz; at = cyc;
+    let n = Math.floor(owed); owed -= n; samples += n;
+    while (n > 0) { const w = Math.min(n, 65535); data.push(0x61, w & 255, w >> 8); n -= w; }
+    data.push(0x54, reg, val);
+  }
+  data.push(0x66);
+  const b = Buffer.alloc(0x100 + data.length);
+  b.write('Vgm ', 0, 'latin1');
+  b.writeUInt32LE(b.length - 4, 0x04);
+  b.writeUInt32LE(0x151, 0x08);
+  b.writeUInt32LE(samples, 0x18);
+  b.writeUInt32LE(3579545, 0x30);
+  b.writeUInt32LE(0x100 - 0x34, 0x34);
+  Buffer.from(data).copy(b, 0x100);
+  fs.writeFileSync(file, b);
+  console.log('--- YM2151: ' + ymWrites.length + ' writes, ' + (samples / 44100).toFixed(2) + ' s, to ' + file);
+}
+
 function profileReport() {
   const dbgFile = path.join(opt.rom, '..', 'obj', 'os_rom_C02.dbg');
   const lists = {};                                             // 'P0'-'PF' (BIOS ROM pages), 'A' (paged ROM), 'R' (RAM)

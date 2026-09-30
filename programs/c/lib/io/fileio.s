@@ -5,8 +5,8 @@
 ; (___mappederrno), and returns -1.
 
         .export     __hy_read, __hy_write, _close
-        .export     __hy_open, __hy_create, __hy_seek, __hy_size, __hy_statrec
-        .import     popax, ___mappederrno
+        .export     __hy_open, __hy_create, __hy_seek, __hy_size, __hy_statrec, __hy_ctl
+        .import     popa, popax, ___mappederrno
 
         .include    "zeropage.inc"
         .include    "hydra.inc"
@@ -106,6 +106,20 @@ __hy_statrec:
         bcs         error
         lda         #0
         tax
+        rts
+
+; int __fastcall__ _hy_ctl (int fd, unsigned char code, unsigned char arg): a device's control (IO_CTL): the server's
+; answer (0-255), or -1
+__hy_ctl:
+        sta         tmp2                                ; The argument
+        jsr         popa
+        sta         tmp1                                ; The code
+        jsr         popax                               ; The fd
+        ldx         tmp1
+        ldy         tmp2
+        jsr         IO_CTL
+        bcs         error
+        ldx         #0
         rts
 
 ; long __fastcall__ _hy_size (int fd): its size (IO_STAT), or -1

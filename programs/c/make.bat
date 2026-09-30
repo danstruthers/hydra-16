@@ -1,5 +1,5 @@
 @REM Build the C library, lib\hydra.lib (cc65's none.lib, with the Hydra's start-up, calls, files, environment,
-@REM conio and the rest added or put in place of cc65's: lib\crt, io, env, conio, sys), and the samples
+@REM conio, sound and the rest added or put in place of cc65's: lib\crt, io, env, conio, snd, sys), and the samples
 @REM (samples\*.c -> bin\NAME.hyx).  cc65's snapshot is in CC65_HOME (default C:\source\cc65\win64_snapshot).
 @REM Then hyc.bat builds a program of your own.
 @SETLOCAL
@@ -9,8 +9,8 @@
 @IF NOT EXIST obj MKDIR obj
 @IF NOT EXIST bin MKDIR bin
 @SET OBJS=
-@FOR %%D IN (crt io env conio sys) DO @FOR %%F IN (lib\%%D\*.s) DO @CALL :asm %%F || EXIT /B 1
-@FOR %%D IN (crt io env conio sys) DO @FOR %%F IN (lib\%%D\*.c) DO @CALL :cc %%F || EXIT /B 1
+@FOR %%D IN (crt io env conio snd sys) DO @FOR %%F IN (lib\%%D\*.s) DO @CALL :asm %%F || EXIT /B 1
+@FOR %%D IN (crt io env conio snd sys) DO @FOR %%F IN (lib\%%D\*.c) DO @CALL :cc %%F || EXIT /B 1
 COPY /Y /B %CC65_HOME%\lib\none.lib lib\hydra.lib >NUL
 ar65 a lib\hydra.lib %OBJS%
 @IF ERRORLEVEL 1 EXIT /B 1

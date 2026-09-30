@@ -7,7 +7,7 @@ How the OS ROM is organised, how code calls between ROM pages, and the fixed ent
 | Image | Chip | Contents |
 | :---- | :--- | :------- |
 | `os_rom/bin/os_rom_C02.bin` (128K) | BIOS ROM, 16 pages of 8K at `$E000-$FFFF`, selected by `W` | The BIOS, kernel, drivers, IO layer, HyForth, WOZMON, self tests |
-| `os_rom/bin/paged_rom_C02.bin` (32K) | Paged ROM banks 0 and 1, at `$A000-$DFFF` | Bank 0: `COPYTORAM` and HyForth's variables (copied to `$0800` when the shell starts), HyForth's training scripts and sample binary words.  Bank 1: the [hardware test](../using/wozmon.md#the-hardware-test) (`hwtest/`, scope `HWTEST`), and the ROMs' checksums at its end (`$DFC0`) |
+| `os_rom/bin/paged_rom_C02.bin` (48K) | Paged ROM banks 0-2, at `$A000-$DFFF` | Bank 0: `COPYTORAM` and HyForth's variables (copied to `$0800` when the shell starts), HyForth's training scripts and sample binary words.  Bank 1: the [hardware test](../using/wozmon.md#the-hardware-test) (`hwtest/`, scope `HWTEST`), and the ROMs' checksums at its end (`$DFC0`).  Bank 2: the test song (`sndtest`'s: a ZSM, `songs/test_rom.s`, which the build makes from `songs/test.mml` with `sim/tools/hysong.js`) |
 
 Both come from one build (`os_rom/all.s`, linked by `os_rom/os_rom_C02.cfg`); after the link, `tools/romsum.js` writes a CRC of each BIOS ROM page and paged ROM bank into bank 1, for the hardware test.  The hardware test runs on its own: BIOS ROM code starts it with `_M_HWT_ENTER` (`include/hwtest.inc`), which gives every task paged ROM bank 1 and jumps to it, and it never calls back.  HyForth's code in the BIOS ROM uses its variables where the paged ROM's copy puts them, and the sample binary words call BIOS ROM addresses, so most changes affect both images: burn both.
 
@@ -17,18 +17,20 @@ Both come from one build (`os_rom/all.s`, linked by `os_rom/os_rom_C02.cfg`); af
 | :--------- | :---- | :------- | :------ |
 | 0 | (global) | Reset, POST gate, the kernel (tasks, scheduler, IRQ dispatch, MMU, shared memory), serial and sound drivers, the IO layer's page 0 part, printing, WOZMON, thunks | `kernel/`, `drivers/serial.s`, `drivers/sound.s`, `io/io_p0.s`, `monitor/wozmon.s` |
 | 1 | `PAGE1` | HyForth: its interpreter, and its built-in words' headers and code, all run from ROM; a copy of the thunks | `hyforth/` |
-| 2 | `PAGE2` | The IO layer: fds, namespaces, pipes, `/dev/cons` and `/dev/ser` (its settings, and the fast serial and tick interrupt handlers: `serfast.s`), `/dev/snd`, the sound test tune, the console bell (`YM_BEEP`) | `io/`, `drivers/snd_test.s`, `drivers/beep.s` |
+| 2 | `PAGE2` | The IO layer: fds, namespaces, pipes, `/dev/cons` and `/dev/ser` (its settings, and the fast serial and tick interrupt handlers: `serfast.s`) | `io/` |
 | 3 | `PAGE3` | Storage: SPI, the SD card's block layer, `/dev/sd`, and HydraFS's format, label, partitions and check | `drivers/spi.s`, `drivers/sd.s`, `io/sd_srv.s`, `io/hfs_format.s`, `io/hfs_check.s` |
 | 4 | `PAGE4` | POST and the self tests (MMU, scheduler, IO) | `tests/` |
-| 5 | `PAGE5` | Far pointers and references; semaphores | `kernel/fp.s`, `kernel/sem.s` |
+| 5 | `PAGE5` | Far pointers and references; semaphores; exit statuses | `kernel/fp.s`, `kernel/sem.s`, `kernel/exits.s` |
 | 6 | `PAGE6` | The HydraFS server (`/sd/N/...`), in the storage task, on page 3's block layer: reading, writing, sparse files | `io/page6.s`, `io/hfs_srv.s`, `io/hfs_write.s`, `io/hfs_sparse.s` |
 | 7 | `PAGE7` | The shell: the boot shell's start (the volumes found, one selected), the prompt, the file and card commands HyForth's shell words call (`SH_CMD`), running programs (`run`, the `.hyx` loader, arguments), redirection | `shell/page7.s`, `shell.s`, `files.s`, `run.s`, `redir.s` |
 | 8 | `PAGE8` | The text editor (`edit`): a ROM program, run in a task of its own | `shell/page8.s`, `shell/edit.s` |
 | 9 | `PAGE9` | The system's servers that run in their client's task: `/dev/proc`, `/env` (each task's environment) and `/dev/time` (the clock: `CLOCK_GET`, `CLOCK_SET`; a DS1747 clock chip, `RTC_BOOT`) | `io/page9.s`, `io/proc_srv.s`, `io/env_srv.s`, `io/time_srv.s`, `io/rtc.s` |
 | A | `PAGE1::FAR` | HyForth's far words (their code: the shell's and IO words, tasks, sound, memory records, multiply and divide ...; their headers are on page 1), its error messages and `MALLOC`, and the disassembler | `hyforth/pagea.s`, `hyforth/farwords.s`, `monitor/disasm.s` |
-| B-F | | Empty | |
+| B | `PAGEB` | Sound: the YM2151's library (the registers' shadow, volumes, notes, patches, claims), `/dev/snd`, the patches (the X16's General MIDI set), the console bell (`YM_BEEP`) | `sound/` |
+| C | `PAGEC` | The song player (ZSM): a ROM program the shell starts in a task of its own (`play`), a client of `/dev/snd` | `sound/pagec.s`, `sound/player.s` |
+| D-F | | Empty | |
 
-Page 0 is nearly full (about 40 bytes are left), so new code goes on another page behind gates.  Page 1 has about 400 bytes left (in two pieces, below and above the thunks), so a new HyForth word's code goes on page A (a far word: see below).  The link map (`os_rom/obj/os_rom_C02.map`) shows each page's segments and free space.
+Page 0 is nearly full (about 40 bytes are left), so new code goes on another page behind gates.  Page 1 has about 40 bytes left (in two pieces, below and above the thunks), so a new HyForth word's code goes on page A (a far word: see below), and only its header on page 1.  The link map (`os_rom/obj/os_rom_C02.map`) shows each page's segments and free space.
 
 **Fixed addresses on every page:**
 
@@ -36,7 +38,7 @@ Page 0 is nearly full (about 40 bytes are left), so new code goes on another pag
 | :------ | :--- |
 | `$E000` | Reset entry: sets `W` = 0 and continues on page 0.  Every page starts with it, because `W` isn't reset by hardware |
 | `$F800-$F8D7` | The thunk table (pages 0 and 1): `jmp`s to the public calls, below |
-| `$FD00-$FDFF` | The COMMON block: IRQ entry stubs and exit, the fast handlers' stubs (VIA, ACIA), NMI entry, far-call trampolines, cross-page peeks.  Identical on every page (the link checks it) |
+| `$FD00-$FDFF` | The COMMON block: IRQ entry stubs and exit, the fast handlers' stubs (VIA, ACIA, YM2151), NMI entry, far-call trampolines, cross-page peeks.  Identical on every page (the link checks it) |
 | `$FE00` | WOZMON (page 0) |
 | `$FFFA-$FFFD` | NMI vector (the COMMON block's `NMI_ENTRY`) and RESET vector (`$E000`) |
 

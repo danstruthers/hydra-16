@@ -2205,6 +2205,54 @@ ywrite:                     ; ywrite
     jmp PUSHTRUE
 YMBAD:
     jmp PUSHFALSE
+patch:                      ; patch
+    lda #SND_R_PATCH
+    bra SNDCMD2
+note:                       ; note
+    lda #SND_R_NOTE
+SNDCMD2:              ; ( v ch -- ): the library's command .A for channel ch, value v
+    sta TEMP4         ; (the pairs, in TEMP3-TEMP4: SND_R_CH ch, then the command v)
+    jsr spull_0       ; TEMP1 = ch
+    jsr spull_1       ; TEMP2 = v
+    lda TEMP2
+SNDCMD:               ; the command in TEMP4, its value .A, the channel TEMP1: one write to /dev/snd
+    sta TEMP4+1
+    lda #SND_R_CH
+    sta TEMP3
+    lda TEMP1
+    sta TEMP3+1
+    jsr SNDOPEN
+    sta TEMP1         ; the fd
+    lda #<TEMP3
+    sta ZP_IO_BUF
+    stz ZP_IO_BUF+1
+    lda #4
+    sta ZP_IO_CNT
+    stz ZP_IO_CNT+1
+    lda TEMP1
+    jsr IO_WRITE
+    jmp SNDCLOSE
+noteoff:                    ; noteoff
+    lda #SND_R_OFF
+    sta TEMP4
+    jsr spull_0       ; TEMP1 = ch
+    lda #0
+    bra SNDCMD
+play:                       ; play
+    jsr ARGGET
+    bcc PLAYARGS
+    lda #ERR_IO_NAME
+    jmp IOFAIL
+PLAYARGS:             ; the rest of the line: how many times to play its loop (and &)
+    jsr ARGREST
+    lda #<ARGBUF      ; (the song: ARGGET's)
+    ldy #>ARGBUF
+    ldx #SHC_PLAY
+    jsr SH_CMD
+    bcc :+
+    jmp IOFAIL
+:
+    jmp next
 .endif
 ;
 ;---------------------------------------------------------------------

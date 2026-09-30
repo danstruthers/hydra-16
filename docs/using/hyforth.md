@@ -194,7 +194,7 @@ HyForth is a base language, plus libraries of words for the rest of the system. 
 | `files` | `cd`, `pwd`, `ls`, `rm`, `rmdir`, `mkdir`, `cp`, `mv` (and their stack forms, `(cd)` ...), `cat`, `wc`, `vols`, `mkfs`, `mkfs-full`, `mkfs-size`, `mkfs-part`, `relabel`, `fsck`, `fsfix` | `io` |
 | `shell` | `prompt`, `include`, `run` (and `(include)`, `(run)`), `args`, `edit`, `echo`.  Also the shell's part of reading a line: the prompt's format, pipelines (`\|`), redirection (`>`, `>>`, `<`), and running a program for a word HyForth doesn't know | `io`, `files` |
 | `tasks` | `shell`, `forth`, `fg`, `kill`, `sleep`, `ps`, `wait`, `sem`, `mutex`, `acquire`, `acquire?`, `release`, `-sem` | `io` |
-| `sound` | `sndinit`, `sndtest`, `sndstop`, `ywrite` | `io` |
+| `sound` | `sndinit`, `sndtest`, `sndstop`, `ywrite`, `patch`, `note`, `noteoff`, `play` | `io` |
 | `mem` | `halloc`, `hfree`, `hlock`, `hunlock` (MMU memory) | |
 | `tools` | `dump`, `disasm`, `syscall`, `mmtest`, `hwtest` | |
 | `term` | `Acls`, `Ascr`, `Acol` (the ANSI terminal) | |
@@ -293,10 +293,11 @@ games/
 
 **Programs** run in a task of their own, and the shell waits for them: `run file` (or, with `&` at the line's end, doesn't: [below](#background-tasks-and-exit-statuses)).
 * A **Hydra executable** (`.hyx`: a file that starts with an `HYX1` header; [writing one](../programming/programs.md)) is loaded into its new task's RAM and run until it returns.
+* A **song** (`.zsm`: a file that starts with `zm`) is played by the ROM's song player, in a task of its own (see `play`, [below](#tasks-and-the-console)).
 * **Anything else is a HyForth script**, read by a copy of the shell, as a pipeline's stage is: it starts with this shell's dictionary and stack, and what it defines or leaves on the stack goes away with it.  `bye` in it ends it.
 * A program has the console while it runs (if the shell has it), so **Ctrl-C stops it**, and gets copies of the shell's fds, namespace and current directory: it can be a pipeline's stage (`run hello.hyx | wc`).
 
-**A program by its name:** a word HyForth doesn't know is looked for as a program, `name.hyx` then `name.hys`: in the current directory, then (for a name with no `/`) in the directories of `$PATH` (below), or, with no `PATH`, in `/bin` on the current directory's card.  So `hello` runs `hello.hyx`.
+**A program by its name:** a word HyForth doesn't know is looked for as a program, `name.hyx`, then `name.hys`, then `name.zsm` (a song, played: [below](#tasks-and-the-console)): in the current directory, then (for a name with no `/`) in the directories of `$PATH` (below), or, with no `PATH`, in `/bin` on the current directory's card.  So `hello` runs `hello.hyx`, and `theme` plays `theme.zsm`.
 
 **The environment:** variables, `NAME=value`, as files under `/env`; each task has its own, and the tasks it starts (programs, scripts, shells) get a copy.  The shell uses three, and sets two:
 
@@ -543,9 +544,27 @@ A failed call gives `!IO ERR!`, with the reason in `ioerr` (`60` not a semaphore
 | Word | Stack | Does |
 | :--- | :---- | :--- |
 | `sndinit` | | Clear the YM2151 |
-| `sndtest` | | Play the test tune in the background |
+| `sndtest` | | Play the test song in the background: a minute of music in the ROM that uses the whole YM2151 (`sndstop` ends it) |
 | `sndstop` | | Stop it |
 | `ywrite` | `( xxaa -- f )` | Write value `aa` to YM2151 register `xx`; true if it went |
+| `patch` | `( p ch -- )` | Load patch p into channel ch (0-7): 0-127 are General MIDI's instruments (0 piano, 24 guitar, 40 violin, 56 trumpet, 73 flute ...), 128-162 drum sounds |
+| `note` | `( n ch -- )` | Play MIDI note n on channel ch (60: middle C; 69: A, 440 Hz) |
+| `noteoff` | `( ch -- )` | Key channel ch off |
+| `play` | `play song [n] [&]` | Play a song (a ZSM file), in a task of its own, and wait for it (`&`: don't).  Its loop is played n more times (none: the song once, to its end; 0: forever, until Ctrl-C or `kill`) |
+
+```
+0:/> 0 0 patch 60 0 note 100 sleep 64 0 note 100 sleep 0 noteoff
+```
+
+**Songs** are ZSM files, the Commander X16's format: the YM2151's register writes and their timing, which the Furnace tracker exports, and X16 music comes in.  `play` plays one in the ROM's player, and so does a song's name, as a program's does (`theme` for `theme.zsm`), or `run theme.zsm`.  The player claims the channels the song uses, so another program can't play over them; Ctrl-C (or `kill`, for one in the background) stops it, and its channels go quiet.  The exit status is 0 when it plays to its end, 130 on Ctrl-C.
+
+```
+0:/> play theme.zsm 0 &           \ the music, forever, in the background
+[B]
+0:/> $B kill                      \ and stopped
+```
+
+The library's other commands (a channel's volume, speakers, bend, a drum) are register numbers the chip doesn't have, sent with `ywrite` after the channel (`$02`): `$0203 ywrite drop $0640 ywrite drop` sets channel 3's volume to 64 (`$06`); `$07` is the speakers (1 left, 2 right, 3 both), `$09` the bend (64ths of a semitone), `$0A` a General MIDI drum (`$0A24`: a kick).  See [`/dev/snd`](../programming/io.md#sound-devsnd).
 
 ### **Background tasks and exit statuses**
 

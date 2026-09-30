@@ -36,6 +36,7 @@ SH_CMD:
 SH_CMDS:
             .word       SH_LS, SH_SHOW, SH_RM, SH_RMDIR, SH_MKDIR, SH_CP, SH_MV, SH_RUN, SH_EXEC, SH_EDIT
             .word       SH_VOLS, SH_MKFS, SH_RELABEL, SH_FSCK, SH_FSFIX, SH_WAIT, SH_LIBOPEN, SH_STATUS_OUT
+            .word       SH_PLAY
 .assert     * - SH_CMDS = SHC_COUNT, error, "SH_CMDS: an entry for each SHC_*"
 
 SH_S_DOT:   .byte   ".", 0

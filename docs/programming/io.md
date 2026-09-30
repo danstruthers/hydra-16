@@ -176,15 +176,40 @@ In HyForth: `"b19200" stty`, and `stty?` to show the settings.
 
 #### **Sound: `/dev/snd`**
 
-**Writes** are YM2151 register/value byte pairs.  The driver waits for the chip between writes.
+The YM2151 (8 FM channels of 4 operators, at 3.58 MHz), through the sound library in the sound task (`os_rom/sound/`, BIOS ROM page B).
+
+**Writes** are register/value byte pairs.  The driver waits for the chip between writes, and keeps each register as written (the chip's can't be read back).  The register numbers the chip doesn't have are the **library's commands**, each for the channel `SND_R_CH` last chose (one choice for every fd: send it in the same write as the command):
+
+| Register | Name | Value |
+| :------- | :--- | :---- |
+| `$02` | `SND_R_CH` | The channel (0-7) for the commands after it |
+| `$03` | `SND_R_PATCH` | Load patch n into the channel: 0-127 are General MIDI's instruments, 128-162 drum and percussion sounds (the Commander X16's set).  The channel keeps its speakers |
+| `$04` | `SND_R_NOTE` | Key on MIDI note n (60: middle C; 69: A, 440 Hz), with the channel's bend |
+| `$05` | `SND_R_OFF` | Key off (the note's release) |
+| `$06` | `SND_R_VOL` | The channel's volume, 0-127 (General MIDI's curve) |
+| `$07` | `SND_R_PAN` | Its speakers: 1 left, 2 right, 3 both (`SND_PAN_*`) |
+| `$09` | `SND_R_BEND` | Its pitch bend: signed, in 64ths of a semitone (-2 to +2 semitones); the note playing moves too |
+| `$0A` | `SND_R_DRUM` | A General MIDI drum (MIDI channel 10's note numbers: 36 kick, 38 snare, 42 closed hi-hat ...): its patch and pitch, keyed on |
+
+Everything else goes to the chip as written (except the timers' interrupt enables, `$14`'s bits 2 and 3, which stay off: a register dump from another machine may have them on, and nothing here would clear the interrupt; and timer B, `$12` and its bits of `$14`, while the sound clock has it), with one exception: a **carrier's level** (TL, `$60-$7F`, for the operators the channel's algorithm sounds) gets the channel's and the master volume's attenuation added.  So the volumes work on raw register writes too (a song's), and a new algorithm (`$20-$27`) writes the levels again.
+
+**Reads** give the registers as written (the levels before the volumes): a 256-byte file, a byte a register.
+
+**Claims:** a fd can claim channels (`SND_CTL_CLAIM`): the other fds' writes and commands for them are dropped, and the console's bell leaves channel 7 alone while it's claimed.  The claim lasts until `SND_CTL_RELEASE` or the fd's last close (a task's end closes its fds), which keys the channels off.  So a game can have its music on some channels and its sound effects on others, each program's safe from the rest.
 
 **`IO_CTL` codes:**
 
 | Code | Name | Does |
 | :--- | :--- | :--- |
-| 1 | `SND_CTL_INIT` | Stop the tune and clear the chip |
-| 2 | `SND_CTL_TEST` | Play the test tune in the background, in a player task: the caller goes on at once.  `ERR_TASK_BUSY` if it's playing already.  The tune keeps time by the system tick and sleeps between notes |
+| 1 | `SND_CTL_INIT` | Stop the tune and clear the chip and the library's settings (the claims stay) |
+| 2 | `SND_CTL_TEST` | Play the test song (the ROM's: paged ROM bank 2, `SND_SONG_BANK`) in the background, in the song player (a task of its own, which claims the channels): the caller goes on at once.  `ERR_TASK_BUSY` if it's playing already |
 | 3 | `SND_CTL_STOP` | Stop the tune |
+| 4 | `SND_CTL_CLAIM` | `.Y` = a mask of channels (bit n: channel n), this fd's alone; `ERR_IO_BUSY` if another fd has one of them (none taken) |
+| 5 | `SND_CTL_RELEASE` | `.Y` = a mask of channels to give back |
+| 6 | `SND_CTL_VOLUME` | `.Y` = the master volume (0-127) |
+| 7 | `SND_CTL_CLOCK` | The sound clock, a song player's tick: the YM2151's timer B, its interrupt counting ticks (`SND_CLK`, from 0) and waking the waiting player at its time (`sound/ymfast.s`).  `.Y` = K: a period of K units of 1,024 of the chip's clocks (286 us) or K + 1, as often as the fraction written to `SND_R_CLOCK_F` (`$0C`, and `$0D`, the high byte: 65536ths) says, so the rate is exact on average; 0 stops it.  This fd's while it runs (`ERR_IO_BUSY`: another's); its last close stops it.  Timer A stays the clients' (CSM) |
+
+HyForth's `patch`, `note`, `noteoff` and `ywrite` ([HyForth](../using/hyforth.md#tasks-and-the-console)) and C's `snd.h` ([the C guide](c.md#sound-sndh)) use it.
 
 #### **`/dev/proc`**
 

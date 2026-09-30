@@ -4,10 +4,11 @@
 ; Running programs (BIOS ROM page 7): what run and a program's name do (SH_CMD's SHC_RUN, SHC_EXEC), the
 ; executable loader (SH_LOAD, in the program's own task), and the wait for a program to end (SHC_WAIT).
 ;
-;   A program is a file: a Hydra executable (.hyx), which starts with a header (include/shell.inc), or
-; else a HyForth script (.hys).  run tells them apart by the header, not the name.  An executable gets a
-; new task: the loader reads it into the task's RAM and calls it.  A script is read by a copy of the shell
-; (HyForth's run: TASK_CLONE).  Either way the program's file is on fd SH_RUN_FD for its task, which has
+;   A program is a file: a Hydra executable (.hyx), which starts with a header (include/shell.inc), a song
+; (.zsm: "zm"), or else a HyForth script (.hys).  run tells them apart by the header, not the name.  An
+; executable gets a new task: the loader reads it into the task's RAM and calls it.  A song gets one too, for
+; the song player (page C: sound/player.s).  A script is read by a copy of the shell (HyForth's run:
+; TASK_CLONE).  Either way the program's file is on fd SH_RUN_FD for its task, which has
 ; copies of the shell's fds, namespace and current directory, and the console while it runs, if the shell
 ; has it (SH_WAIT).
 
@@ -47,7 +48,9 @@ SH_RUN_OPEN:
             lda         #SH_RUN_FD
             sta         PAGE1::SHFD
             jsr         SH_READ                             ; SHOWBUF = its start (a header?)
-            bcs         @close
+            bcc         :+
+            jmp         @close
+:
             stz         ZP_IO_OFS                           ; (Then back to its start)
             stz         ZP_IO_OFS + 1
             stz         ZP_IO_OFS + 2
@@ -96,6 +99,21 @@ SH_RUN_OPEN:
             rts
 
 @script:
+            lda         ZP_IO_CNT + 1                       ; A song: a whole ZSM header, and "zm"?
+            bne         :+
+            lda         ZP_IO_CNT
+            cmp         #SH_ZSM_HDR_SIZE
+            bcc         @not_song
+:
+            lda         PAGE1::SHOWBUF
+            cmp         #'z'
+            bne         @not_song
+            lda         PAGE1::SHOWBUF + 1
+            cmp         #'m'
+            bne         @not_song
+            jmp         SH_SONG
+
+@not_song:
             lda         #SH_RUN_FD
             clc
             rts
@@ -115,6 +133,52 @@ SH_RUN_OPEN:
 
 SH_S_HYX:   .byte   "HYX1"
 SH_S_EDIT:  .byte   "edit", 0
+SH_ZSM_HDR_SIZE = 16
+
+; A song, on SH_RUN_FD at its start: the song player (page C) in a task of its own, which has it, and the
+; arguments (PAGE1::ARGLINE: how many times to play its loop), on SH_ARGS_FD; the shell waits for it, as for a
+; program (or not: &).  OUT: C = 0, .A = 0; or C = 1, .A = an error
+SH_SONG:
+            jsr         SH_ARGS_OUT
+            lda         #<::ZSM_PLAY_PC
+            ldy         #>::ZSM_PLAY_PC
+            ldx         #$C
+            jsr         TASK_RUN
+            php
+            pha
+            lda         #SH_ARGS_FD                         ; (Ours go: the player has them)
+            jsr         IO_CLOSE
+            pla
+            plp
+            bcs         @failed
+            jsr         SH_WAIT
+            lda         #SH_RUN_FD
+            jsr         IO_CLOSE
+            lda         #0
+            clc
+            rts
+
+@failed:
+            pha
+            lda         #SH_RUN_FD
+            jsr         IO_CLOSE
+            pla
+            sec
+            rts
+
+; play: the song at .A.Y (a ZSM file), as run would play it; anything else is ERR_IO_NOT_EXEC (an executable
+; runs, as run would: play is for songs, but it's harmless).  OUT: C = 0; or C = 1, .A = an error
+SH_PLAY:
+            jsr         SH_RUN
+            bcs         @done
+            cmp         #SH_RUN_FD
+            bne         @done                               ; (It ran: C = 0)
+            jsr         IO_CLOSE                            ; A script: not for play
+            lda         #ERR_IO_NOT_EXEC
+            sec
+
+@done:
+            rts
 
 ; edit: the editor (page 8: edit.s) on the file .A.Y (.Y = 0: none yet), in a task of its own, with the name
 ; as its argument; the shell waits for it
@@ -217,7 +281,8 @@ SH_ARGS_OUT:
 @done:
             rts
 
-; A program by its name (.A.Y, with no .hyx or .hys; a word HyForth doesn't know): name.hyx or name.hys,
+; A program by its name (.A.Y, with no .hyx, .hys or .zsm; a word HyForth doesn't know): name.hyx, name.hys or
+; name.zsm (a song),
 ; in the current directory; then, for a name with no '/', in $PATH's directories, or /bin on the current
 ; directory's card.  The first one there is run as SH_RUN does.  None: .A = ERR_IO_NOT_FOUND
 SH_EXEC:
@@ -354,12 +419,12 @@ SH_ENV_READ:
 
 @done:
             rts
-SH_S_EXTS:  .byte   ".hyx", 0, ".hys", 0
+SH_S_EXTS:  .byte   ".hyx", 0, ".hys", 0, ".zsm", 0
 SH_S_EXT_LIB:
             .byte   ".hyl", 0
 SH_S_EXTS_END:
 
-; SHBUF from .X on = the name (SH_PTR), then .hyx or .hys (SH_FIND_LIB: .hyl): the first that opens is run
+; SHBUF from .X on = the name (SH_PTR), then .hyx, .hys or .zsm (SH_FIND_LIB: .hyl): the first that opens is run
 ; (SH_RUN_OPEN), and its result is SH_EXEC's (it doesn't come back here); SH_FIND_LIB: its fd is SH_FIND's
 ; result.  None: it returns
 SH_EXEC_TRY:

@@ -361,18 +361,41 @@ TASK_ZP     HFS_PTR, 2              ; A pointer into the block cache
 TASK_ZP_END
 .assert     HFS_XLEN = HFS_XCL + 4, error, "HFS_XCL and HFS_XLEN must be the extent's 6 bytes in order"
 
-; Sound driver task ZP: the sound task's (SND_PLAYER), and the test tune's (in its player task; snd_test.s)
+; Sound driver task ZP: the sound task's (SND_PLAYER ...)
 TASK_ZP_BEGIN
 TASK_ZP     SND_PLAYER, 1           ; The player task (the test tune, in the background; $FF: none)
-TASK_ZP     YMN0L, 4
-YMN0H = YMN0L + 1
-YMN1L = YMN0L + 2
-YMN1H = YMN0L + 3
+TASK_ZP     SND_CLAIMED, 1          ; The channels claimed (bit = channel: the bell looks at bit 7)
+TASK_ZP     SND_FID, 1              ; The fid of the request being served
+TASK_ZP     SND_CH, 1               ; The channel a command is for
+TASK_ZP     SND_P, 2                ; A pointer (a patch)
+TASK_ZP     SND_T, 2                ; Temporaries
+TASK_ZP     SND_R14, 1              ; What the clients keep on in $14 (the timers' control): CSM, timer A's load
+TASK_ZP     SND_CLK, 2              ; The sound clock (timer B): its ticks since it started ...
+TASK_ZP     SND_CLK_OWNER, 1        ;   the fid that started it (0: stopped)
+TASK_ZP     SND_CLK_NB1, 1          ;   timer B's value ($12) for a long period (K + 1); a short one is 1 more
+TASK_ZP     SND_CLK_F, 2            ;   the period's fraction (65536ths: how often it's long) ...
+TASK_ZP     SND_CLK_ACC, 2          ;   and its sum so far
+TASK_ZP     SND_CLK_LAST, 1         ;   the value in $12 now
+TASK_ZP     SND_CLK_WAIT, 1         ;   the task waiting for it ($FF: none): its ZSM_AT is the time it wants
+TASK_ZP     SND_IRQ_T, 1            ; The fast handler (ymfast.s): the interrupted task ...
+TASK_ZP     SND_IRQ_W, 1            ;   and ROM page
+TASK_ZP_END
 
-TASK_ZP     AZP0L, 4
-AZP0H = AZP0L + 1
-YMTMP1 = AZP0L + 2
-YMTMP2 = AZP0L + 3
+; The song player's task ZP (sound/player.s: play, a ZSM song, in a task of its own)
+TASK_ZP_BEGIN
+TASK_ZP     ZSM_SND, 1              ; /dev/snd's fd
+TASK_ZP     ZSM_IN_POS, 1           ; The read buffer (ZSM_INBUF): where the next byte is ...
+TASK_ZP     ZSM_IN_LEFT, 2          ;   and how many are left (0-256)
+TASK_ZP     ZSM_OUT, 1              ; The register pairs gathered for this tick (ZSM_FRAME): their bytes
+TASK_ZP     ZSM_NEXT, 4             ; The next tick's time: a fraction (16 bits), then the system's tick count
+TASK_ZP     ZSM_PERIOD, 3           ; A song tick in system ticks (8.16 fixed point)
+TASK_ZP     ZSM_LOOP, 3             ; The loop point (an offset in the file; 0: none)
+TASK_ZP     ZSM_LOOPS, 1            ; Times more to play the loop (ZSM_FOREVER: forever)
+TASK_ZP     ZSM_T, 2                ; Temporaries
+TASK_ZP     ZSM_ROM, 1              ; 0: the song's in a file; else in the paged ROM, from this bank ...
+TASK_ZP     ZSM_RP, 2               ;   at this address ($A000-$DFFF)
+TASK_ZP     ZSM_CLOCK, 1            ; Timed by the sound clock (not 0), or by the system's tick (0)
+TASK_ZP     ZSM_AT, 2               ; The sound clock's time the next tick is at (its interrupt looks: ymfast.s)
 TASK_ZP_END
 
 .feature org_per_seg

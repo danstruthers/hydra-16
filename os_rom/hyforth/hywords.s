@@ -1610,6 +1610,20 @@ def_far "sndstop", "sndstop"
 ;
 ; ( xxaa -- f )    send byte(a) to register(x) on yamaha 2151: f = true if it went
 def_far "ywrite", "ywrite"
+.pushseg
+.segment "FORTH_HIGH"   ; (Page 1's room: after its gates)
+; ( p ch -- )  load patch p (0-127: General MIDI's instruments; 128-162: drum sounds) into channel ch (0-7)
+def_far "patch", "patch"
+;
+; ( n ch -- )  play MIDI note n (60: middle C) on channel ch
+def_far "note", "note"
+;
+; ( ch -- )  key channel ch off
+def_far "noteoff", "noteoff"
+;
+; play song [n] [&]  play a ZSM song (and its loop n more times; 0: forever), in a task of its own
+def_far "play", "play"
+.popseg
 lib_end
 .endif
 ;

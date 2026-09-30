@@ -192,9 +192,11 @@ name = task_zp_top
 PROGRAM_ZP          = $E0
 .assert     __ZEROPAGE_RUN__ + __ZEROPAGE_SIZE__ <= PROGRAM_ZP, lderror, "The OS zero page runs into the programs' ($E0-$FF)"
 
-; Task switcher interrupt timer (one interrupt per 5ms or so, with 64 cycles for INT Handler overhead)
+; The scheduler's tick: VIA timer 1, one interrupt every 5 ms (it also counts the clock's seconds: via.s)
 SCHED_TICK_HZ   = 200
-TIMER_TASK_INT  = (CLK_CPS / SCHED_TICK_HZ) - 64           ; 17833 at 3.58 MHz
+TIMER_TASK_INT  = (CLK_CPS + SCHED_TICK_HZ / 2) / SCHED_TICK_HZ - 2   ; 17896 at 3.58 MHz: T1 free-running counts
+                                                            ;   the latch + 2 cycles a period (the handler's
+                                                            ;   time doesn't come into it): 199.997 Hz
 .assert     TIMER_TASK_INT < $10000, error, "Scheduler tick doesn't fit VIA T1: raise SCHED_TICK_HZ"
 TIMER_TASK_INT_H = >TIMER_TASK_INT
 TIMER_TASK_INT_L = <TIMER_TASK_INT

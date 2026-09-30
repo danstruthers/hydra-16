@@ -4,7 +4,7 @@
 ; uses (a pipe, fds, the command shell).  A failed call sets _oserror and errno, and returns -1.
 
         .export     _hy_sem_new, _hy_mutex_new, _hy_sem_acquire, _hy_sem_try, _hy_sem_release, _hy_sem_free
-        .export     _hy_ticks, _hy_sleep_ticks, _hy_yield, _hy_clock, _hy_task, _hy_wait, _sleep
+        .export     _hy_ticks, _hy_sleep_ticks, _hy_yield, _hy_clock, _hy_task, _hy_wait, _hy_kill, _sleep
         .export     __hy_pipe, __hy_dup, __hy_dup2, __hy_shell
         .import     ___mappederrno, popax
 
@@ -105,6 +105,14 @@ _hy_task:
         and         #$0F
         ldx         #0
         rts
+
+; int __fastcall__ hy_kill (int task): end task and the tasks it started, as the kill word and Ctrl-\ do (its
+; exit status: 137, "killed")
+_hy_kill:
+        tax
+        lda         #TASK_KILL_FLAG
+        jsr         TASK_SIGNAL
+        bra         zero
 
 ; int __fastcall__ hy_wait (int task, char* msg): wait for task (one this one started) to end: its exit status's
 ; code (0-255), and its message (up to HY_STATUS_MAX - 1 characters) into msg, if it's not NULL

@@ -49,7 +49,21 @@ const SIM = path.join(__dirname, 'hydrasim.js');
 const CARDS = path.join(__dirname, 'cards');                    // Fixture card images (cards/README.md)
 const STACK_MARGIN = 32;                                        // Free stack bytes a task must keep
 const W = n => '\\w'.repeat(n);
-const C_SAMPLES = ['hello', 'ctest', 'upper', 'code', 'keys'];         // programs/c/bin's (make.bat builds them)                                 // Wait n * ~2M cycles before the next key
+const C_SAMPLES = ['hello', 'ctest', 'upper', 'code', 'keys', 'tones', 'jukebox'];
+
+// A ZSM song (the player's format: sound/player.s) for the tests: channel 0, a sine (algorithm 7), an intro note
+// (C4) and a loop of one note (E4), each 30 ticks on and 6 off at 60 Hz; a PSG write and an extension to skip
+function zsmSong() {
+  const fm = pairs => [0x40 | pairs.length / 2, ...pairs];
+  const voice = [0x20, 0xC7, 0x38, 0x00];
+  for (const op of [0x00, 0x08, 0x10, 0x18]) voice.push(0x40 + op, 0x01, 0x60 + op, 0x10, 0x80 + op, 0x1F, 0xA0 + op, 0x00, 0xC0 + op, 0x00, 0xE0 + op, 0x0F);
+  const note = kc => [...fm([0x28, kc, 0x30, 0x00, 0x08, 0x78]), 0x80 + 30, ...fm([0x08, 0x00]), 0x80 + 6];
+  const intro = [...fm(voice), 0x05, 0x3F, 0x40, 0x82, 0x12, 0x34, ...note(0x3E)];    // (A PSG write; an extension)
+  const loop = [...note(0x44)];
+  const loopAt = 16 + intro.length;
+  const hdr = [0x7A, 0x6D, 1, loopAt & 255, loopAt >> 8 & 255, loopAt >> 16, 0, 0, 0, 0x01, 0, 0, 60, 0, 0, 0];
+  return Buffer.from([...hdr, ...intro, ...loop, 0x80]);
+}         // programs/c/bin's (make.bat builds them)                                 // Wait n * ~2M cycles before the next key
 const BOOT = W(1);                                              // Before the first key: to the HyForth prompt
 const TO_MON = BOOT + 'bye\\r' + W(1);                          // To WOZMON
 
@@ -276,6 +290,53 @@ const TESTS = [
       const m = /--- YM2151 key-ons: (\d+) \((.*)\)/.exec(report);
       if (!m || +m[1] < 5) return 'the tune played ' + (m ? m[1] : 'no') + ' notes';
       if (!/^ch 7 at/.test(m[2])) return 'no bell (the first key-on, on channel 7)';
+    },
+  },
+  {
+    name: 'sound-lib', about: 'the YM2151 library (/dev/snd): a C program (snd.h) claims channels 0-3 in the background (patches, notes, volumes, a bend, drums; the registers read back), a second one finds them busy; HyForth\'s patch and note, commands through ywrite (a channel, its volume and speakers); the chip\'s registers: key codes, a carrier\'s level with the volume, the rest as written',
+    sd: [{ dev: 0, label: 'SOUND', hfs: v => {
+      v.mkdir('bin');
+      v.put('bin/tones.hyx', fs.readFileSync(path.join(__dirname, '../programs/c/bin/tones.hyx')));
+    } }],
+    args: ['--cycles', '110000000', '--ym-dump', '--input', W(3) + ['tones 29 &\r', 'tones\rstatus .\rcat /env/status\r', '$B wait\r' + W(8),
+      '0 5 patch 72 5 note\r', '$0205 ywrite drop $0640 ywrite drop $0702 ywrite drop\r'].join(W(1))],
+    expect: ['0:/> tones 29 &\n[B]\n', '0:/> tones\ntones: channels 0-3: Device or resource busy\n', '0:/> status .\n' + num(1) + '\n0:/> cat /env/status\nbusy\n',
+      '0:/> $B wait\ntones: patch 29, $20 FA, $28 4C\n'],
+    forbid: ['!IO ERR!'],
+    check: (out, report) => {
+      const m = /--- YM2151 key-ons: (\d+)/.exec(report);
+      if (!m || +m[1] < 20) return 'only ' + (m ? m[1] : 'no') + ' key-ons';
+      if (/lost on the chip/.test(report)) return 'writes lost on the chip';
+      for (const [re, what] of [
+        [/^20: FA FA FA FC C0 84 C0 C0 4C 44 48 41 00 4E 00 00$/m, 'patch 29 on 0-2, a drum on 3; 5: patch 0 on the right, C5'],
+        [/^60: 10 10 10 \w\w \w\w 35 \w\w \w\w 16 16 16 \w\w \w\w 18 /m, 'patch 0\'s M1 and M2 (not carriers) as written'],
+        [/^70: 21 21 21 \w\w \w\w 27 \w\w \w\w 00 00 00 \w\w \w\w 10 /m, 'its C1 and C2 (carriers) 16 steps down at volume 64']])
+        if (!re.test(report)) return 'YM2151 registers: not ' + what;
+    },
+  },
+  {
+    name: 'songs', about: 'the song player (ZSM): play with a loop count, a song run by its name, played in time (the key-ons 36 ticks of 60 Hz apart); play ... 0 & (forever) in the background, its channel claimed (tones finds it busy), Ctrl-C at wait ends it (status 130, its channel keyed off); a script is no song; C\'s snd_play, stopped with hy_kill',
+    sd: [{ dev: 0, label: 'SONGS', hfs: v => {
+      v.mkdir('bin');
+      for (const p of ['tones', 'jukebox']) v.put('bin/' + p + '.hyx', fs.readFileSync(path.join(__dirname, '../programs/c/bin/' + p + '.hyx')));
+      v.put('t.zsm', zsmSong());
+      v.put('x.hys', Buffer.from('1 .\r\n'));
+    } }],
+    args: ['--cycles', '110000000', '--ym-log', '--ym-dump', '--input', W(3) + ['play t.zsm 2\\r' + W(6), 'status .\\r', 't\\r' + W(3),
+      'play t.zsm 0 &\\r', 'tones\\r' + W(1), '$B wait\\r' + W(3) + '\\x03' + W(1), 'status .\\rcat /env/status\\r', 'play x.hys\\r', 'jukebox t.zsm 1\\r' + W(4)].join(W(1))],
+    expect: ['0:/> play t.zsm 2\n\n0:/> status .\n' + num(0) + '\n', '0:/> t\n\n0:/> play t.zsm 0 &\n[B]\n',     // (t: t.zsm, by its name)
+      '0:/> tones\ntones: channels 0-3: Device or resource busy\n', '0:/> status .\n' + num(130) + '\n0:/> cat /env/status\ninterrupt\n',
+      '0:/> play x.hys\n\n !IO ERR!\n', '0:/> jukebox t.zsm 1\n1\nstopped: 137\n'],     // (C: snd_play, hy_kill)
+    check: (out, report) => {
+      const on =[...report.matchAll(/ch (\d) at cycle (\d+)/g)].map(m => [+m[1], +m[2]]);
+      if (on.length < 8 || on.some(k => k[0] !== 0)) return 'key-ons: ' + on.length + ', on channel 0 only?';
+      for (let k = 1; k < 4; k++) {                                // The first play: 4 notes, 0.6 s (2,147,727 cycles) apart
+        const gap = on[k][1] - on[k - 1][1];
+        if (Math.abs(gap - 2147727) > 25000) return 'key-on ' + k + ' came ' + gap + ' cycles after the last, not 0.6 s';
+      }
+      if (on[4][1] - on[3][1] < 2147727) return 'the second play began before the first ended';
+      if (!/^00: 00 00 00 00 00 00 00 00 00 /m.test(report)) return 'channel 0 not keyed off at the end ($08)';
+      if (!/^10: \w\w \w\w C[67] /m.test(report)) return 'no sound clock: timer B ($12) not at 58 or 59 units (60 Hz)';
     },
   },
   {
@@ -918,7 +979,7 @@ const TESTS = [
     check: (out, report) => {                                   // The line typed to the prompt: 2 s is 7.16M cycles at 3.58 MHz
       const typed = +/mark: "400 sleep" at cycle (\d+)/.exec(report)[1];
       const took = [...report.matchAll(/mark: "\/> " at cycle (\d+)/g)].map(m => +m[1]).find(c => c > typed) - typed;
-      if (!(took > 7100000 && took < 7400000)) return '400 sleep took ' + took + ' cycles, not about 7.16M';
+      if (!(took > 7150000 && took < 7400000)) return '400 sleep took ' + took + ' cycles, not about 7.16M';
     },
   },
   {

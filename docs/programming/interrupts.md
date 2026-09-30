@@ -9,7 +9,7 @@ How the OS dispatches interrupts, and how a driver handles one.  Sources: `os_ro
 | 0 | VIA: timer 1 (the scheduler's tick), timer 2 | The system task (tick); the serial driver (timer 2: sending, in WDC ACIA builds, and at 115200) |
 | 1 | ACIA (serial) | The serial driver (which also registers a VIA handler for timer 2, used in WDC ACIA builds) |
 | 2, 3 | Slot 0, A and B | |
-| 4 | YM2151 | The sound driver (a placeholder: it doesn't use the chip's timers yet, so it claims nothing) |
+| 4 | YM2151 | Timer B: the sound clock, a song player's tick (a fast handler, `YM_IRQ_FAST`: below).  The sound driver's registered handler is a placeholder |
 | 5-9 | Slots 1-5, A | |
 | 10-14 | Slots 1-5, B | |
 | 15 | Software interrupts | `SWI_REGISTER` |
@@ -25,10 +25,10 @@ Line 0 has the highest priority.  In code, name a line with `IRQ_NUMBER(n)`, or 
 
 The registration tables live in the task system page (`$7D00`) and are copied into all 16 tasks.  So the dispatcher reads them from whichever task was interrupted, without switching.  Registering updates all 16 copies.
 
-### **The fast handlers: the tick and the serial port**
+### **The fast handlers: the tick, the serial port and the sound clock**
 
-The dispatcher and its `TASK_CALL` cost about 650 cycles per interrupt, far too much for the serial port at high rates (at 115200 baud a byte arrives every 320 cycles, and the 65C51 holds only one).  So the two busiest interrupts bypass it (`io/serfast.s`, BIOS page 2):
-* **Their vectors:** `IRQ_INIT` points the VIA's (line 0) and the ACIA's (line 1) vectors at `VIA_IRQ_STUB` and `SER_IRQ_STUB` in the COMMON block, which switch to page 2.
+The dispatcher and its `TASK_CALL` cost about 650 cycles per interrupt, far too much for the serial port at high rates (at 115200 baud a byte arrives every 320 cycles, and the 65C51 holds only one).  So the busiest interrupts bypass it (`io/serfast.s`, `sound/ymfast.s`, BIOS page 2):
+* **Their vectors:** `IRQ_INIT` points the VIA's (line 0), the ACIA's (line 1) and the YM2151's (line 4) vectors at `VIA_IRQ_STUB`, `SER_IRQ_STUB` and `YM_IRQ_STUB` in the COMMON block, which switch to page 2 (`IRQ_FAST_P2`).
 * **No stack switch:** instead of running in the driver's task, a fast handler briefly switches `T` to it, a "quick look": its zero page and RAM, with no stack use until `T` is back.
 * **`SER_IRQ_FAST`** moves the received byte into the receive ring and the next byte from the transmit ring to the ACIA, and wakes the tasks waiting to read or write.
   * **Cost:** about 60–90 cycles per byte.
@@ -37,6 +37,8 @@ The dispatcher and its `TASK_CALL` cost about 650 cycles per interrupt, far too 
   * **Then** it asks the dispatcher for a task switch (`IRQ_TICK`).
   * **Timer 2,** in Rockwell ACIA builds, paces sending at 115200: `SER_T2_FAST` sends the next byte from the transmit ring as `SER_IRQ_FAST` would (`SER_TX_STEP`).
   * **Other VIA sources** (timer 2, in WDC ACIA builds) go to the registered handlers as before.
+* **`YM_IRQ_FAST`** is the sound clock: timer B, run by the sound driver for a song player at the song's rate (`SND_CTL_CLOCK`, [io.md](io.md#sound-devsnd)).  In the sound task's zero page, it resets timer B's flag, sets the period after the next (K or K + 1 units, as a 16-bit fraction carries, so the rate is exact on average), counts the tick (`SND_CLK`), and, when the waiting player's time has come (its `ZSM_AT`, a quick look into its zero page), wakes it and asks for a task switch (`IRQ_TICK`).
+  * **Cost:** about 150-300 cycles: up to two register writes to the chip, each of which may wait up to 64 cycles for it (busy after the sound driver's last write).
 * **The registered handlers** for lines 0 and 1 (`VIA_IRQ_HANDLER`, `SERIAL_IRQ_HANDLER`) are still there, and are what the dispatcher calls for that rare work.
 
 ### **Registering a handler**

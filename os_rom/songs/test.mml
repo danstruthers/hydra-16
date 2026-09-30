@@ -1,0 +1,163 @@
+; ****************************************************************************
+; The Hydra-16's test song (sndtest): a short piece in A minor that uses the whole YM2151.  Compiled by
+; sim/tools/hysong.js (makeC02.bat) into test.zsm and test_rom.s (paged ROM bank 2).
+;
+;   All 8 channels, and all 8 algorithms: lead 4, bells 5, pads 6, organ 7, bass 0, synth bass 1, brass 2,
+;   pluck 3.  Feedback (bass 6-7, lead 5), detune (DT1 across the pads for a chorus, DT2's inharmonic ratios in
+;   the bells), key scaling (the pluck), envelopes from a pluck to a slow pad.  The LFO in all four waveforms:
+;   triangle tremolo (the intro's pads), vibrato (the lead), square (a trill and a chopped organ in the bridge),
+;   noise (a wobble in the break), saw (the last verse).  Noise on channel 7 (hi-hats, and sweeps of its
+;   frequency).  Stereo (the pads apart, the pluck from side to side), slides, legato, the General MIDI drums.
+;   And the timers: the end is CSM, timer A keying every operator on 110 times a second (the chip's speech
+;   trick), under an A major chord.
+;
+;   Intro (4 bars) - verse (8) - bridge (4) - break (4) - verse (8) - outro (2) - CSM coda (1).  Chords: Am F C G;
+;   the bridge F G Em Am; the break Am Am F G.
+
+#title  Hydra-16 YM2151 test song
+#tempo  112
+#rate   200
+
+; ---- The instruments (operators: m1 m2 c1 c2; which ones sound depends on alg)
+
+@lead { alg 4 fb 5                                  ; M1 > C1, M2 > C2
+  m1 mul 1 dt1 3 tl 34 ks 1 ar 31 d1r 7 d2r 2 d1l 2 rr 6
+  c1 mul 1 dt1 3 tl 6 ks 1 ar 31 d1r 3 d2r 1 d1l 1 rr 7
+  m2 mul 3 dt1 7 tl 42 ks 1 ar 31 d1r 8 d2r 2 d1l 3 rr 6
+  c2 mul 1 dt1 7 tl 8 ks 1 ar 31 d1r 3 d2r 1 d1l 1 rr 7 }
+
+@bell { alg 5 fb 3                                  ; M1 > M2, C1, C2: DT2 for inharmonic partials
+  m1 mul 3 dt2 1 tl 30 ar 31 d1r 9 d2r 5 d1l 5 rr 5
+  m2 mul 1 tl 14 ar 31 d1r 6 d2r 3 d1l 4 rr 4
+  c1 mul 2 dt2 2 tl 24 ar 31 d1r 8 d2r 4 d1l 5 rr 4
+  c2 mul 4 dt1 2 tl 30 ar 31 d1r 11 d2r 5 d1l 7 rr 4 }
+
+@pad { alg 6 fb 1                                   ; M1 > C1; M2, C1, C2 sound: detuned, slow, tremolo on
+  m1 mul 1 tl 44 ar 10 d1r 2 d1l 2 rr 4 am 1
+  m2 mul 1 dt1 2 tl 18 ar 9 d1r 1 d1l 1 rr 4 am 1
+  c1 mul 1 dt1 6 tl 18 ar 9 d1r 1 d1l 1 rr 4 am 1
+  c2 mul 2 tl 26 ar 9 d1r 1 d1l 1 rr 4 am 1 }
+
+@organ { alg 7                                      ; four sines, as drawbars: 1, 2, 3, 4 times
+  m1 mul 1 tl 22 ar 31 rr 7 am 1
+  m2 mul 2 tl 26 ar 31 rr 7 am 1
+  c1 mul 3 tl 32 ar 31 rr 7 am 1
+  c2 mul 4 tl 36 ar 31 rr 7 am 1 }
+
+@bass { alg 0 fb 6                                  ; M1 > C1 > M2 > C2
+  m1 mul 1 tl 38 ks 1 ar 31 d1r 12 d2r 6 d1l 6 rr 7
+  c1 mul 1 tl 34 ks 1 ar 31 d1r 10 d2r 5 d1l 5 rr 7
+  m2 mul 1 tl 28 ks 1 ar 31 d1r 8 d2r 4 d1l 4 rr 7
+  c2 mul 1 tl 2 ks 1 ar 31 d1r 4 d2r 2 d1l 2 rr 8 }
+
+@synbass { alg 1 fb 7                               ; (M1 + C1) > M2 > C2
+  m1 mul 1 tl 30 ar 31 d1r 10 d2r 4 d1l 4 rr 7
+  c1 mul 2 tl 34 ar 31 d1r 12 d2r 5 d1l 5 rr 7
+  m2 mul 1 tl 26 ar 31 d1r 8 d2r 3 d1l 3 rr 7
+  c2 mul 1 tl 2 ar 31 d1r 3 d2r 1 d1l 2 rr 8 }
+
+@pluck { alg 3 fb 4                                 ; (M1 > C1) + M2 > C2; key scaling: brighter, shorter higher up
+  m1 mul 3 tl 30 ks 2 ar 31 d1r 14 d2r 8 d1l 8 rr 6
+  c1 mul 1 tl 36 ks 2 ar 31 d1r 12 d2r 6 d1l 7 rr 6
+  m2 mul 5 dt1 3 tl 44 ks 2 ar 31 d1r 16 d2r 8 d1l 9 rr 6
+  c2 mul 1 tl 8 ks 2 ar 31 d1r 7 d2r 4 d1l 5 rr 6 }
+
+@brass { alg 2 fb 5                                 ; M1 + (C1 > M2) > C2: the modulators come in slower
+  m1 mul 1 tl 30 ar 18 d1r 4 d2r 1 d1l 2 rr 6
+  c1 mul 1 tl 34 ar 20 d1r 5 d2r 1 d1l 3 rr 6
+  m2 mul 1 dt1 3 tl 24 ar 16 d1r 4 d2r 1 d1l 2 rr 6
+  c2 mul 1 tl 6 ar 22 d1r 2 d2r 1 d1l 1 rr 7 }
+
+@hat { alg 7                                        ; channel 7's C2 as noise (N): a short burst
+  c2 mul 1 tl 12 ar 31 d1r 22 d2r 20 d1l 15 rr 13 }
+
+@ohat { alg 7
+  c2 mul 1 tl 14 ar 31 d1r 12 d2r 10 d1l 12 rr 9 }
+
+@sweep { alg 7                                      ; a noise swell
+  c2 mul 1 tl 16 ar 12 d1r 0 d2r 0 d1l 0 rr 6 }
+
+@voice { alg 7                                      ; the coda: one sine, a pulse each time CSM keys it
+  c2 mul 1 tl 24 ar 31 d1r 16 d1l 15 rr 15 }
+
+; ---- A: the lead (vibrato from the LFO)
+A @lead p c v108 o5 l4 M2,0 q7
+A r1 r1 r1 r1                                                                   ; intro
+A e4. d8 c4 <a4> | c4 d8 e8 f4 e8 d8 | e2 g4 e4 | d2. r4                         ; verse
+A a4 g8 e8 a4 b8 >c8< | a2 g4 f4 | e4 g4 >c4< b8 a8 | b2 >d4< b4
+A M4,0 >c2 _<a2 | b4 >d4< b4 g4 | e2 _g4 b4 | a1                                ; bridge: slides, a square-wave trill
+A M2,0 r1 r1 r1 r1                                                              ; break
+A e4. d8 c4 <a4> | c4 d8 e8 f4 e8 d8 | e2 g4 e4 | d2. r4                         ; verse
+A a4 g8 e8 a4 b8 >c8< | a2 g4 f4 | e4 g4 >c4< b8 a8 | b2 >d4< b4
+A q8 a1 & a2 & v90 a4 & v70 a4                                                  ; outro: a fade
+A @voice p c v100 o4 a1                                                         ; coda
+
+; ---- B: bells, then brass
+B @bell p r v84 o5 l4 q8
+B a >c e c< | a >c f c< | g >c e c< | g b >d< b                                 ; intro
+B [e2 a2 | f2 a2 | e2 g2 | d2 g2]2                                              ; verse
+B @brass p c v96 o4 l8 [r a r4]2 | [r b r4]2 | [r g r4]2 | [r a r4]2            ; bridge
+B r1 r1 r1 r1                                                                   ; break
+B l1 q8 v88 e f g g a a g b                                                     ; verse: brass lines
+B @bell p r v84 a1 r1                                                           ; outro
+B @voice p c v100 o5 c+1                                                        ; coda
+
+; ---- C and D: the pads (C left, D right and a little sharp: a chorus), an organ in the bridge
+C @pad p l v74 o4 l1 q8 M0,2
+C e f e d                                                                       ; intro
+C [e f e d]2                                                                    ; verse
+C @organ M0,3 f d e e                                                           ; bridge
+C @pad M1,2 e e f d                                                             ; break
+C M0,2 [e f e d]2                                                               ; verse
+C e e                                                                           ; outro
+C @voice p c v100 o5 e1                                                         ; coda
+
+D @pad p r v74 o4 l1 q8 M0,2 D3
+D a a g g                                                                       ; intro
+D [a a g g]2                                                                    ; verse
+D @organ M0,3 a b b a                                                           ; bridge
+D @pad M1,2 a a a b                                                             ; break
+D M0,2 [a a g g]2                                                               ; verse
+D a a                                                                           ; outro
+D @voice p c v100 D0 o5 a1                                                      ; coda
+
+; ---- E: the bass (a 4-operator chain), a synth bass in the bridge
+E @bass p c v112 o2 l8 q6
+E r1 r1 r1 r1                                                                   ; intro
+E [a a >a< a a a >a< a | f f >f< f f f >f< f | >c c >c< c c c >c< c< | g g >g< g g g >g< g]2   ; verse
+E @synbass q5 [f16 f16 >f8< f8 f8]2 | [g16 g16 >g8< g8 g8]2 | [e16 e16 >e8< e8 e8]2 | [a16 a16 >a8< a8 a8]2   ; bridge
+E @bass q7 a2 _>a2< | a4 r4 a4 r4 | f2 f2 | g2 _>g2<                            ; break: slides
+E q6 [a a >a< a a a >a< a | f f >f< f f f >f< f | >c c >c< c c c >c< c< | g g >g< g g g >g< g]2   ; verse
+E q8 a1 a1                                                                      ; outro
+E @voice p c v100 o3 a1                                                         ; coda
+
+; ---- F: the pluck: arpeggios, from side to side
+F @pluck v78 o4 l8 q5
+F r1 r1 r1 r1                                                                   ; intro
+F [p l o4 a >c e a e c <a >c | p r o4 f a >c f c <a f a | p l o4 g >c e g e c <g >c | p r o4 g b >d g d <b g b]2   ; verse
+F p l o4 f a >c f c <a f a | p r o4 g b >d g d <b g b | p l o4 e g b >e< b g e g | p r o4 a >c e a e c <a >c   ; bridge
+F r1 r1 r1 r1                                                                   ; break
+F [p l o4 a >c e a e c <a >c | p r o4 f a >c f c <a f a | p l o4 g >c e g e c <g >c | p r o4 g b >d g d <b g b]2   ; verse
+F r1 r1                                                                         ; outro
+F @voice p c v100 o6 c+1                                                        ; coda
+
+; ---- G: the drums (General MIDI's: 36 kick, 38 snare, 41-50 toms, 49 crash)
+G p c v112 l8
+G r1 r1 r1 | x45 x45 x47 x47 x48 x48 x50 x50                                    ; intro: a tom fill
+G [x36 4 x38 4 x36 x36 x38 4]7 | x36 4 x38 x38 x45 x47 x48 x50                  ; verse
+G [x36 2 x38 2]4                                                                ; bridge: half time
+G [x41 x43 x45 x47 x36 4 x38 4]3 | [x38 16]16                                   ; break: toms, a snare roll
+G x49 4 x38 4 x36 x36 x38 4 | [x36 4 x38 4 x36 x36 x38 4]6 | x36 4 x38 x38 x45 x47 x48 x50   ; verse
+G x49 1 r1                                                                      ; outro
+G @voice p c v100 o6 e1                                                         ; coda
+
+; ---- H: noise (hi-hats, sweeps), the LFO for the whole chip, and the coda's timer (CSM)
+H p c v84 l8
+H L100,0,40,2 @sweep N2 c4& N6 c4& N10 c4& N14 c4& | N18 c4& N22 c4& N26 c4& N30 c4& | N28 c4& N24 c4& N20 c4& N16 c4& | N12 c4& N8 c4& N4 c4& N2 c4   ; intro: triangle tremolo
+H L180,12,20,2 N28 @hat [v96 c v68 c]12 @ohat v84 c4 @hat [v96 c v68 c]3 | [v96 c v68 c]16   ; verse: vibrato and tremolo
+H L220,40,60,1 [v92 c16 v64 c16]32                                              ; bridge: a square LFO
+H L120,60,0,3 @sweep N31 c4& N27 c4& N23 c4& N19 c4& | N15 c1& | N30 c4& N25 c4& N20 c4& N15 c4 | @ohat N20 c4 r4 c4 r4   ; break: the noise LFO
+H L180,12,20,0 @hat N28 [v96 c v68 c]28 @ohat v84 c4 r4 @hat [v96 c v68 c]2        ; verse: a saw LFO
+H L60,20,0,2 @ohat N18 c2 r2 | r1                                               ; outro
+H L0,0,0,0 N- @voice p c v100 o4 y$10,129 y$11,0 y$14,$91 e2& y$10,86 y$11,1 e2 y$14,$30   ; coda: CSM
+                                                                                ; (timer A: 110 Hz, A; then 82, E)

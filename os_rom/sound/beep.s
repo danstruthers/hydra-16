@@ -1,16 +1,17 @@
 .debuginfo
 
 ; ****************************************************************************
-; The console bell (BIOS ROM page 2, included inside `.scope PAGE2`, see all.s; page 0's serial driver
+; The console bell (BIOS ROM page B, included inside `.scope PAGEB`, see all.s; page 0's serial driver
 ; reaches it through a gate).  YM_WRITE is page 0's (the sound driver's: sound.s).
 
-.segment "IO_P2"
+.segment "SOUND_PB"
 
 ; The console bell on the YM2151: a short beep on channel 7, a sine (four operators in step) that fades by
 ; itself, so nothing has to turn it off.  The serial driver calls it as it sends a BEL (Ctrl-G) to the
 ; terminal (_M_SER_TX_BYTE): the terminal's bell, echoed Ctrl-G, a console command that failed.  From any
 ; task, and in IRQ handlers: IRQs are off while it writes.  Skipped while the sound driver is busy (a
-; guest in the sound task: a tune, /dev/snd, ywrite), so it never cuts into the driver's writes.
+; guest in the sound task: a tune, /dev/snd, ywrite), so it never cuts into the driver's writes, and while channel
+; 7 is claimed (SND_CLAIMED: /dev/snd's SND_CTL_CLAIM).
 ; Preserves .A, .X, .Y and C
 YM_BEEP:
                 php
@@ -19,10 +20,12 @@ YM_BEEP:
                 ldy         T_REGISTER
                 ldx         #SOUND_TASK_NUM
                 stx         T_REGISTER                  ; Quick look (no stack use!)
-                lda         ZP_TC_GUEST
+                lda         SND_CLAIMED
+                and         #1 << YM_BEEP_CH            ; (Its channel claimed)
+                ora         ZP_TC_GUEST
                 sty         T_REGISTER
                 cmp         #0
-                bne         @done                       ; The sound driver is busy
+                bne         @done                       ; The sound driver is busy, or channel 7 isn't free
                 ldx         #0
 
 @reg:

@@ -141,7 +141,7 @@ programs\c\hyc.bat game.c map.c sound.s
 
 ### **4. A program's life: arguments, environment, exit status**
 
-**Running it.**  HyForth runs a program by name: a word it doesn't know is looked for as `name.hyx` (then `name.hys`, a script) in the current directory, then in the directories of `$PATH`, or in `/bin` on the current card.  `run file.hyx args` runs one by its file name.  **HyForth's own words come first**: a program called `fg`, `ls` or `wait` never runs by name (use `run`, or another name; `words` lists them).
+**Running it.**  HyForth runs a program by name: a word it doesn't know is looked for as `name.hyx` (then `name.hys`, a script, and `name.zsm`, a song) in the current directory, then in the directories of `$PATH`, or in `/bin` on the current card.  `run file.hyx args` runs one by its file name.  **HyForth's own words come first**: a program called `fg`, `ls` or `wait` never runs by name (use `run`, or another name; `words` lists them).
 
 **What it starts with:**
 * **`argc` and `argv`.**  `argv[0]` is the name as it was typed (`hello`, `bin/hello.hyx`).  The rest of the line is split at spaces; `"two words"` is one argument (without the quotes).  At most 15 arguments, and 63 characters of line.
@@ -187,7 +187,7 @@ Use 0 for success, 1 with a message for a failure, and 2 for a usage error, as U
 | `/dev/null`, `/dev/zero` | As on Unix |
 | `/dev/time` | The clock, as text: `2026-09-30 14:05:00`; write one to set it |
 | `/dev/proc/N/...` | Task N: its `cwd`, `env`, `mem` |
-| `/dev/snd` | The YM2151 sound chip: write register/value byte pairs |
+| `/dev/snd` | The YM2151 sound chip ([below](#sound-sndh)) |
 | `/env/NAME` | An environment variable (below) |
 
 A file's name is up to 31 characters (`HY_NAME_MAX`, 32 with its 0), and a path up to 64 (`HY_PATH_MAX`, 65): size buffers with these, not `FILENAME_MAX`, which is cc65's 17 for this target.  `/` and `/dev` aren't directories you can list; a card's directories are.  See [io.md](io.md) for the devices in full.
@@ -242,6 +242,48 @@ setenv ("MODE", "fast", 1);             /* This program's, and the programs it s
 ```
 
 The shell uses `PATH`, `LIBPATH` and `HOME`, and sets `status` and `apid`.  conio uses `COLUMNS` and `LINES`.  Reading `/env/NAME` with `fopen` works as well.
+
+#### **Sound: `snd.h`**
+
+The YM2151 has 8 channels (0-7), each a voice of 4 FM operators.  `snd.h` plays them through `/dev/snd` and the ROM's sound library ([io.md](io.md#sound-devsnd)): a channel plays a **patch** (0-127 are General MIDI's instruments, 128-162 drum and percussion sounds) at a **MIDI note** (60 is middle C), with its own volume, speakers and bend.
+
+| Call | Does |
+| :--- | :--- |
+| `snd_claim (mask)`, `snd_release (mask)` | The channels (bit n: channel n) this program's alone: other programs' writes to them are dropped.  `EBUSY` if another has one.  Given back when the program ends |
+| `snd_patch (ch, p)` | Load patch p |
+| `snd_note (ch, n)`, `snd_off (ch)` | Key a MIDI note on; key off (the note's release) |
+| `snd_vol (ch, v)`, `snd_volume (v)` | A channel's volume, the master volume (0-127) |
+| `snd_pan (ch, SND_PAN_LEFT \| _RIGHT \| _BOTH)` | Its speakers |
+| `snd_bend (ch, b)` | Its bend, in 64ths of a semitone (-128 to 127) |
+| `snd_drum (ch, n)` | A General MIDI drum (35-36 kick, 38 snare, 42 closed hi-hat, 46 open hi-hat, 49 crash ...) |
+| `snd_write (reg, val)`, `snd_writes (pairs, n)` | The chip's own registers (the YM2151's datasheet), one or n at a time |
+| `snd_regs (buf)` | All 256 registers, as written |
+| `snd_reset ()` | Clear the chip and the settings |
+| `snd_play (song, loops)` | Play a song (a ZSM file: the Commander X16's format, which the Furnace tracker exports) in the ROM's player, a task of its own: its task, at once.  `loops`: its loop that many more times (0: the song once; `SND_FOREVER`).  `hy_wait` waits for it, `hy_kill` stops it |
+
+```c
+#include <hydra.h>
+#include <snd.h>
+
+int main (void)
+{
+    static const unsigned char tune[] = { 60, 64, 67, 72 };
+    unsigned char i;
+
+    if (snd_claim (1) < 0) {                /* Channel 0 */
+        hy_exits ("sound busy");
+    }
+    snd_patch (0, 73);                      /* A flute */
+    for (i = 0; i < sizeof tune; ++i) {
+        snd_note (0, tune[i]);
+        hy_sleep_ticks (40);                /* 0.2 s */
+        snd_off (0);
+    }
+    return 0;
+}
+```
+
+Each call is one request to the sound driver (a couple of thousand cycles), fine for music at human speeds.  For music, a song is easier: `snd_play` ("background.zsm", SND_FOREVER) plays it while the program goes on (a game's sound effects can use the channels the song doesn't), and `hy_kill` on its task stops it; `samples/jukebox.c` shows how.  Songs come from the Furnace tracker (it exports ZSM) or from a score compiled on the PC (`sim/tools/hysong.js`: [the emulator's tools](../tools/emulator.md#songs-the-score-compiler)).  For timing, sleep between events (`hy_sleep_ticks`: 5 ms steps), and measure with `hy_ticks` so delays don't add up.  `samples/tones.c` shows the rest.
 
 ### **6. The console: stdio and conio**
 
@@ -539,6 +581,7 @@ The CPU does about 3.6 million simple operations a second, and cc65's code isn't
 | `getenv`'s buffer is shared | Copy the value before the next `getenv` |
 | `atexit` functions don't run on Ctrl-C or a kill | Don't save state in them |
 | HyForth's words shadow program names | `run prog.hyx`, or another name |
+| A function's locals: 256 bytes at most ("Too many local variables") | Make big arrays `static`, or `malloc` them |
 | Backspace reaches `fgets` | A `readline` of your own ([above](#6-the-console-stdio-and-conio)) |
 | `/` and `/dev` can't be listed | List a card: `/sd/0`, `.` |
 | No signals, no `fork` | `hy_spawn`, `system`; Ctrl-C ends the program |
@@ -559,6 +602,7 @@ The CPU does about 3.6 million simple operations a second, and cc65's code isn't
 | `unsigned char hy_task (void)` | This program's task (1-15) |
 | `int hy_spawn (const char* cmd)` | Start a command line: its task, or -1 |
 | `int hy_wait (int task, char* msg)` | Wait for a task: its code, and its message |
+| `int hy_kill (int task)` | End a task and the tasks it started (its status: 137) |
 | `void hy_exits (const char* msg)` | End with a message (code 1), or success (`NULL`, `""`) |
 | `int hy_sem_new (unsigned char count)`, `int hy_mutex_new (void)` | A semaphore (1-16), or -1 |
 | `int hy_sem_acquire (s)`, `hy_sem_try (s)`, `hy_sem_release (s)`, `hy_sem_free (s)` | [Semaphores](#9-tasks-working-together-semaphores) |
@@ -578,14 +622,15 @@ The CPU does about 3.6 million simple operations a second, and cc65's code isn't
 | Path | What |
 | :--- | :--- |
 | `hydra.cfg` | The linker config: the header, the memory, `__STACKSIZE__`, `__RAMTOP__`, the zero page |
-| `include/hydra.h` | The Hydra's own calls and constants |
+| `include/hydra.h`, `include/snd.h` | The Hydra's own calls and constants; the sound chip's |
 | `lib/hydra.inc` | The OS's calls, zero page and constants for the library's assembly.  The `c-programs` test checks each name against the ROM's build, so keep it in step with `os_rom/include` |
 | `lib/crt/` | `crt0.s` (the header, start-up and `exit`), `mainargs.s` (`argc`, `argv`) |
 | `lib/io/` | Files: `fileio.s` (the raw IO calls), `read.c` and `write.c` (the console's line ends), `open.c`, `lseek.c`, `stat.c`, `dirent.c`, `isatty.c`, `sysfile.s` (remove, rename, mkdir, rmdir), `_cwd.s`, `oserror.s` (errors to `errno`) |
 | `lib/env/` | `getenv.c`, `putenv.c` |
 | `lib/conio/` | `conio.c` (ANSI output, keys), `conglue.s` (the entry points cc65's own conio code calls), `cursor.c` |
+| `lib/snd/` | `snd.c`: `snd.h` over `/dev/snd`; `sndplay.c`: `snd_play` |
 | `lib/sys/` | `hydra.s` (tasks, semaphores, ticks, sleep), `system.c`, `gettime.c`, `clock.s` |
-| `samples/` | `hello.c`, `upper.c`, `code.c`, `keys.c`, `ctest.c` (the library's own test) |
+| `samples/` | `hello.c`, `upper.c`, `code.c`, `keys.c`, `tones.c`, `jukebox.c`, `ctest.c` (the library's own test) |
 
 * **A module replaces cc65's module of the same file name** (`make.bat` adds the objects to a copy of `none.lib`): `getenv.c` makes `getenv.o`, which takes the place of cc65's.  Name a new module after the cc65 module it replaces, or something cc65 doesn't have (`ar65 t lib\hydra.lib` lists them).  Two files with the same base name (`conio.c` and `conio.s`) would make the same object.
 * **cc65's common code calls some routines expecting `ptr1`-`ptr3` and `tmp1` to survive** (conio's `cputs` and `cprintf` call `cputc` and `gotoxy`): a C version of one of those needs an assembly wrapper that keeps them, as `conglue.s` does.

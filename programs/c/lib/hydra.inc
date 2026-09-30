@@ -12,12 +12,14 @@ MM_FREE         = $F824
 MM_SET_FLOOR    = $F851     ; .A = a page: the MMU hands out none below it
 YIELD           = $F854
 TASK_RUN        = $F863     ; .A.Y = an entry point, .X = its ROM page -> .A = the new task (it runs alongside)
+TASK_SIGNAL     = $F8AB     ; .A = TASK_BREAK_FLAG or TASK_KILL_FLAG, .X = a task (and the tasks it started)
 IO_OPEN         = $F86C     ; .A.Y = name, .X = mode -> .A = fd
 IO_CLOSE        = $F86F     ; .A = fd
 IO_READ         = $F872     ; .A = fd, ZP_IO_BUF, ZP_IO_CNT -> ZP_IO_CNT = bytes read (0: the end)
 IO_WRITE        = $F875     ; .A = fd, ZP_IO_BUF, ZP_IO_CNT -> ZP_IO_CNT = bytes written
 IO_SEEK         = $F87E     ; .A = fd, ZP_IO_OFS = 32-bit offset
 IO_STAT         = $F881     ; .A = fd, ZP_IO_BUF = a 48-byte buffer (IO_STAT_SIZE)
+IO_CTL          = $F884     ; .A = fd, .X = code, .Y = argument -> .A = the server's answer
 GET_CHAR        = $F88D     ; -> .A = a key (waits; echoed)
 IO_DUP2         = $F890     ; .A = fd, .X = another: .X is .A's file too (closed first, if it was open)
 IO_PIPE         = $F893     ; -> .A = its reading end's fd, .X = its writing end's
@@ -72,7 +74,21 @@ HYX_ARGS_SIZE   = 64        ; A program's arguments, at most (with the 0)
 HYX_NAME        = $0150     ; Its name, as it was run (argv[0]), zero-terminated ...
 HYX_NAME_SIZE   = 32        ;   at most (with the 0)
 EXIT_MSG_MAX    = 30        ; An exit status's message: its characters, at most
+TASK_BREAK_FLAG = $10       ; TASK_SIGNAL: a break (Ctrl-C) ...
+TASK_KILL_FLAG  = $20       ;   or a kill (Ctrl-\, kill)
 UNIX_2000       = 946684800 ; 2000-01-01 00:00:00 in seconds since 1970 (the clock counts from 2000)
+SND_CTL_INIT    = 1         ; /dev/snd's IO_CTL codes: clear the chip and the library's settings
+SND_CTL_CLAIM   = 4         ;   channels (a mask) this fd's alone
+SND_CTL_RELEASE = 5         ;   give them back
+SND_CTL_VOLUME  = 6         ;   the master volume (0-127)
+SND_R_CH        = $02       ; /dev/snd's commands (a register/value pair each): the channel ...
+SND_R_PATCH     = $03       ;   a patch into it
+SND_R_NOTE      = $04       ;   key on a MIDI note
+SND_R_OFF       = $05       ;   key off
+SND_R_VOL       = $06       ;   its volume
+SND_R_PAN       = $07       ;   its speakers
+SND_R_BEND      = $09       ;   its bend (1/64 semitone)
+SND_R_DRUM      = $0A       ;   a General MIDI drum
 
 ; OS errors (kernel.inc)
 ERR_OUT_OF_MEMORY   = $02

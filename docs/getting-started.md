@@ -126,7 +126,7 @@ cd os_rom
 makeC02 test
 ```
 
-This builds, then boots the new images in the emulator about 40 times: POST, the self tests, HyForth and its libraries, pipes, tasks, sound, SD cards and their files, the shell and running programs, sleeping, C programs, exit statuses, fault injection.  It prints `48 of 48 tests passed`, or the failing test's output and the command that reproduces it.  Then try it on the board.
+This builds, then boots the new images in the emulator about 40 times: POST, the self tests, HyForth and its libraries, pipes, tasks, sound, SD cards and their files, the shell and running programs, sleeping, C programs, exit statuses, the sound library and songs, fault injection.  It prints `50 of 50 tests passed`, or the failing test's output and the command that reproduces it.  Then try it on the board.
 
 ### **Where to go next**
 

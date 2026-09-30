@@ -194,11 +194,47 @@ H9_WSTAT            = 10        ; a stat record in the data area: a new name (no
                                 ;   bits ($FF: as they are)
 ; Every request also carries the fd's mode (IO_BLK_MODE), so a server can tell the ends of a pipe apart.
 
-; Sound driver: /dev/snd (sound.s, snd_srv.s).  Writes are YM2151 register/value byte pairs.
-SND_CTL_INIT        = 1         ; IO_CTL code: clear the YM2151
-SND_CTL_TEST        = 2         ; IO_CTL code: play the test tune, in the background (a player task);
-                                ;   ERR_TASK_BUSY if it's playing already
+; Sound driver: /dev/snd (drivers/sound.s; sound/: BIOS ROM page B).  Writes are YM2151 register/value byte pairs;
+; the register numbers the chip doesn't have are the library's commands (SND_R_*).  Reads: the registers as
+; they were written (the carriers' TL before the volume), a 256-byte file.
+SND_CTL_INIT        = 1         ; IO_CTL code: clear the YM2151 (and the library's settings)
+SND_CTL_TEST        = 2         ; IO_CTL code: play the test song (the ROM's), in the background (the song
+                                ;   player in a task of its own, SND_PLAYER); ERR_TASK_BUSY if it's playing
 SND_CTL_STOP        = 3         ; IO_CTL code: stop the player (and key off all channels)
+SND_CTL_CLAIM       = 4         ; IO_CTL code: .Y = a mask of channels, this fd's alone while it's open (other
+                                ;   fds' writes to them are dropped); ERR_IO_BUSY if another fd has one
+SND_CTL_RELEASE     = 5         ; IO_CTL code: .Y = a mask of channels this fd gives back
+SND_CTL_VOLUME      = 6         ; IO_CTL code: .Y = the master volume (0-127)
+SND_CTL_CLOCK       = 7         ; IO_CTL code: the sound clock (the YM2151's timer B, its interrupt counting its
+                                ;   ticks: SND_CLK): .Y = K, a period of K timer B units (1024 of the chip's clocks,
+                                ;   286 us) or K + 1, as often as SND_R_CLOCK_F's fraction says; 0: stop it.  This
+                                ;   fd's while it runs (ERR_IO_BUSY: another's); its last close stops it
+SND_R_CH            = $02       ; Command: the channel the next commands are for (0-7; one for all fds)
+SND_R_PATCH         = $03       ;   load patch n (0-162: SND_PATCHES) into it (its speakers stay)
+SND_R_NOTE          = $04       ;   key on MIDI note n (60: middle C; 69: A, 440 Hz), with its bend
+SND_R_OFF           = $05       ;   key off (the release)
+SND_R_VOL           = $06       ;   its volume (0-127: the carriers' levels, as General MIDI's volume)
+SND_R_PAN           = $07       ;   its speakers: SND_PAN_* bits
+SND_R_BEND          = $09       ;   its pitch bend (signed: 1/64 of a semitone; the note playing too)
+SND_R_DRUM          = $0A       ;   a General MIDI drum (a note of MIDI channel 10): its patch and pitch, keyed on
+SND_R_CLOCK_F       = $0C       ; The sound clock's fraction (65536ths of a unit, the low byte, then $0D the high),
+                                ;   for SND_CTL_CLOCK
+SND_PAN_LEFT        = 1
+SND_PAN_RIGHT       = 2
+SND_PAN_BOTH        = 3
+SND_FIDS            = 8         ; /dev/snd open at once (fids 1-8)
+SND_SONG_BANK       = 2         ; The test song (a ZSM: songs/test.mml): in this paged ROM bank ...
+SND_SONG            = $A000     ;   at this address (and on into the next bank, past $DFFF)
+; In the sound task's RAM
+SND_SHADOW          = $0200     ; Every register as last written (256 bytes; the carriers' TL before the volume)
+SND_VOL             = $0300     ; Each channel's volume (8)
+SND_ATTEN           = $0308     ;   and its carriers' attenuation (TL steps: the volume's and the master's)
+SND_BEND            = $0310     ; Each channel's bend (8)
+SND_NOTE            = $0318     ; Each channel's note ($FF: none)
+SND_OWNER           = $0320     ; The fid each channel is claimed by (0: none)
+SND_REFS            = $0328     ; Each fid's fds (SND_FIDS: fid N at SND_REFS + N - 1; 0: free)
+SND_MASTER          = $0330     ; The master volume (0-127)
+SND_RAM_END         = $0331
 
 ; Storage: /dev/sd/N/data and /dev/sd/N/ctl (storage.s, spi.s, sd.s, sd_srv.s; ROM page 3), a card on each
 ; SPI device N (0-7; the board's SD socket, header J18, is device 0).  A fid is SD_FID_* | the card.

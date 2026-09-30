@@ -2,6 +2,9 @@
 @IF NOT EXIST bin MKDIR bin
 @IF NOT EXIST obj MKDIR obj
 @REM (A failed step stops the build: otherwise the link would use the last good object file)
+@REM The test song (sndtest's, paged ROM bank 2), from its score (needs Node.js: sim/tools/hysong.js)
+node ..\sim\tools\hysong.js songs\test.mml songs\test.zsm --rom songs\test_rom.s --quiet
+@IF ERRORLEVEL 1 EXIT /B 1
 ca65 -g -o obj\all_C02.o -l obj\all_C02.txt --cpu 65C02 all.s
 @IF ERRORLEVEL 1 EXIT /B 1
 ld65 -C os_rom_C02.cfg obj\all_C02.o -Ln obj\os_rom_C02.lbl -m obj\os_rom_C02.map --dbgfile obj\os_rom_C02.dbg

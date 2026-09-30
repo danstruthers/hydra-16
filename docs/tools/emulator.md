@@ -26,7 +26,7 @@ node hydrasim.js -i --sd card.img        with an SD card (a file: see tools/hydr
 | Ctrl-A Ctrl-A | Type a Ctrl-A |
 
 - **Serial speed:** output arrives at the Hydra's serial rate, as on the board: 9600 baud at boot, about 930 characters a second.  `q^b115200^ stty` speeds it up; the emulated terminal follows any rate and format, so nothing needs switching.
-- **Speed:** `--speed N` runs N times real time (`--speed 0`: as fast as the PC can go, about 20 times). Timings the Hydra shows (`sleep`, the test tune's tempo) keep the Hydra's time either way.
+- **Speed:** `--speed N` runs N times real time (`--speed 0`: as fast as the PC can go, about 20 times). Timings the Hydra shows (`sleep`, a song's tempo) keep the Hydra's time either way.
 - **Other options:** most options below work too, e.g. `--modules`, `--acia wdc`, `--seed`. `--cycles` stops it after that many cycles.
 - **Piped input:** input can be piped in, e.g. `printf '1 2 + .\n' | node hydrasim.js -i`. Line ends become Enter, and it stops 3 seconds after the input runs out.
 - **Not modelled:** there's no sound; the YM2151 is timed but silent, so the bell only reaches you through the terminal's own BEL.
@@ -63,6 +63,8 @@ node hydrasim.js [options]
 | `--profile N` | From cycle `N` on, count the instructions each task runs in each routine (named from the build's debug info, `os_rom/obj/os_rom_C02.dbg`), and report the top 30, e.g. `--profile 2800000 --input '\wwords \| wc . . .\r'` |
 | `--ym-log` | List every YM2151 key-on (channel and cycle) in the report, not just the first 8.  The report also gives the longest gap between key-ons and the time from the first to the last (a late note shows as a long gap) |
 | `--u7-fault An:high\|low` | Task RAM line `An` (A15-A18: `T0-T3`) stuck high or low at U7, e.g. `A17:low`: tasks that differ in that bit share their RAM (in the emulator, their bank registers too, which the board keeps apart) |
+| `--ym-dump` | Show the YM2151's registers at the end, 16 a line (as the chip has them: the carriers' levels with the volumes) |
+| `--ym-vgm FILE` | Write what the ROM wrote to the YM2151 as a VGM file (with the time between writes), to hear it in any VGM player (VGMPlay, foobar2000 with its VGM plugin, ...) |
 | `--rtc TIME` | A DS1747 in U7 (a task RAM with a clock): its clock registers are task F's `$7FF8-$7FFF`.  `TIME`: `YYYY-MM-DDThh:mm[:ss]` or `now` (the PC's time), the time it has at power-up, running; `stopped`: its oscillator off (at 2000-01-01); `unset`: junk in its registers, as a part never set may have.  Modelled from the datasheet: R and W halt its updates, clearing W sets it from its registers (and the century), BF can't be written.  The report ends with its time.  Without it, U7 is a plain HM628512 |
 | `--rtc-battery-low` | The DS1747's battery flag reads 0 (a flat battery) |
 | `--seed N` | Power up RAM and the pseudo-registers from random number seed `N`, so a run repeats exactly (by default each run powers up differently) |
@@ -147,6 +149,23 @@ node tools/mkhyx.js --info prog.hyx                show a .hyx file's header
 
 From Node, `require('./tools/mkhyx.js')` gives `hyx(load, code, entry)`, which `regress.js` uses for its test
 programs.
+
+### **Songs: the score compiler**
+
+`tools/hysong.js` compiles a score (a text file: instruments, and a line of MML for each of the YM2151's eight
+channels) into a ZSM song, which the Hydra's player plays (`play`, [HyForth](../using/hyforth.md#tasks-and-the-console)).
+The patches and volumes are worked out on the PC, so the song is plain register writes: it plays on a Commander X16 or
+in any ZSM player too.  The score language is described at the top of `hysong.js`; `os_rom/songs/test.mml` (the
+ROM's test song) and `programs/songs/scom.mml` are examples.
+
+```
+node tools/hysong.js song.mml song.zsm                    compile; report its size, length and notes by channel
+node tools/hysong.js song.mml song.zsm --vgm song.vgm     ... and a VGM, to hear it on the PC (VGMPlay, foobar2000)
+node tools/hysong.js song.mml song.zsm --rom song.s       ... and a ca65 source for paged ROM bank 2 (the build's)
+```
+
+`makeC02.bat` compiles `os_rom/songs/test.mml` this way before it assembles the ROM.  To hear what the Hydra itself
+plays, run the emulator with `--ym-vgm`.
 
 ### **What it models**
 

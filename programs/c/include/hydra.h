@@ -44,6 +44,8 @@ int __fastcall__ hy_wait (int task, char* msg);         /* Wait for a task this 
                                                         **   NULL: not wanted) */
 void __fastcall__ hy_exits (const char* msg);           /* End with a message (Plan 9's exits): NULL or "" is
                                                         **   success (0), anything else 1 and the message */
+int __fastcall__ hy_kill (int task);                    /* End a task and the tasks it started (its status:
+                                                        **   137, "killed") */
 
 /* ---- Semaphores: 16 for the whole system, by number (1-16), so a task can hand one to the tasks it starts.
 ** A counting semaphore: acquire takes one, waiting (using no CPU) until there's one; release gives one back.  A

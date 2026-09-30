@@ -29,7 +29,9 @@ name:
             CLABEL      .ident(.sprintf("IRQ_STUB_%X", I))
             pha
             lda         #I
+.if I < 15
             jmp         IRQ_ENTRY
+.endif                                                      ; (The last one runs on into it)
 .endrepeat
 
 ; .A = logical IRQ#.  Save the caller's ROM page and switch to page 0 for the dispatcher.
@@ -46,12 +48,16 @@ name:
             pla
             rti
 
-; The fast interrupt handlers (IRQ_INIT points the VIA's and the ACIA's vectors here, not at their IRQ
-; stubs): on to page 2, IRQ_FAST_P2 (serfast.s), with no dispatcher.  .Y = which (0 VIA, 1 ACIA), .X = the
-; interrupted page; the interrupted .A, .X and .Y are on the stack.
+; The fast interrupt handlers (IRQ_INIT points the VIA's, the ACIA's and the YM2151's vectors here, not at
+; their IRQ stubs): on to page 2, IRQ_FAST_P2 (serfast.s), with no dispatcher.  .Y = which (0 VIA, 1 ACIA,
+; 2 YM2151), .X = the interrupted page; the interrupted .A, .X and .Y are on the stack.
             CLABEL      VIA_IRQ_STUB
             pha
             lda         #0
+            bra         :+
+            CLABEL      YM_IRQ_STUB
+            pha
+            lda         #2
             bra         :+
             CLABEL      SER_IRQ_STUB
             pha
@@ -83,27 +89,8 @@ name:
             pla
             rti
 
-; Far call: ZP_FAR_A = .A, ZP_FAR_VEC = routine, ZP_FAR_PAGE = its ROM page.  Use FAR_GATE_INLINE.
-; .A, .X, .Y, C and V pass through in both directions; N/Z on return reflect .A.
-; Not for use from IRQ handlers.
-            CLABEL      FAR_CALL_A
-            lda         W_REGISTER
-            pha                                             ; Caller's page
-            lda         ZP_FAR_PAGE
-            sta         W_REGISTER                          ; Now on the far page (this same code)
-            lda         ZP_FAR_A
-            jsr         FAR_JMP_VEC
-            sta         ZP_FAR_A
-            pla
-            sta         W_REGISTER                          ; Back on the caller's page (this same code)
-            lda         ZP_FAR_A
-            rts
-
-            CLABEL      FAR_JMP_VEC
-            jmp         (ZP_FAR_VEC)
-
 ; Compact far call: `jsr FAR_INLINE` followed by `.word routine` and `.byte page` (FAR_GATE_INLINE).
-; Reads the inline data (on the caller's page), then continues as FAR_CALL_A.
+; Reads the inline data (on the caller's page), then continues as FAR_CALL_A (it runs on into it).
             CLABEL      FAR_INLINE
             sta         ZP_FAR_A
             pla                                             ; Address of the inline data - 1
@@ -122,8 +109,26 @@ name:
             sta         ZP_FAR_VEC
             pla
             sta         ZP_FAR_VEC + 1
-            ply
-            jmp         FAR_CALL_A                          ; Returns to the gate's caller
+            ply                                             ; (Returns to the gate's caller)
+
+; Far call: ZP_FAR_A = .A, ZP_FAR_VEC = routine, ZP_FAR_PAGE = its ROM page.  Use FAR_GATE_INLINE.
+; .A, .X, .Y, C and V pass through in both directions; N/Z on return reflect .A.
+; Not for use from IRQ handlers.
+            CLABEL      FAR_CALL_A
+            lda         W_REGISTER
+            pha                                             ; Caller's page
+            lda         ZP_FAR_PAGE
+            sta         W_REGISTER                          ; Now on the far page (this same code)
+            lda         ZP_FAR_A
+            jsr         FAR_JMP_VEC
+            sta         ZP_FAR_A
+            pla
+            sta         W_REGISTER                          ; Back on the caller's page (this same code)
+            lda         ZP_FAR_A
+            rts
+
+            CLABEL      FAR_JMP_VEC
+            jmp         (ZP_FAR_VEC)
 
 ; .A = byte at (ZP_D_XAM), with ROM page ZP_D_PAGE selected (only $E000-$FDFF is paged).
 ; For the disassembler, which runs on page 1 but usually examines the BIOS (page 0).

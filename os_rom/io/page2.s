@@ -12,7 +12,6 @@
 ; Gates from page 2 to page 0 routines
 FAR_GATE_INLINE     TASK_CALL,      ::TASK_CALL,            0
 FAR_GATE_INLINE     YIELD,          ::YIELD,                0
-FAR_GATE_INLINE     TASK_SLEEP,     ::TASK_SLEEP,           0   ; (The test tune's timing)
 FAR_GATE_INLINE     PREEMPT,        ::PREEMPT,              0
 FAR_GATE_INLINE     IO_WAKE,        ::IO_WAKE,              0
 FAR_GATE_INLINE     TASK_WAKE_MASK, ::TASK_WAKE_MASK,       0   ; (The pipes' waiters)
@@ -34,7 +33,6 @@ FAR_GATE_INLINE     CONS_FG_CHECK,  ::CONS_FG_CHECK,        0
 FAR_GATE_INLINE     CONS_SET_FG,    ::CONS_SET_FG,          0
 FAR_GATE_INLINE     TASK_SIGNAL,    ::TASK_SIGNAL,          0
 FAR_GATE_INLINE     ENV_COPY,       ::ENV_COPY_P9,          9   ; (A new task's environment: IO_INHERIT)
-FAR_GATE_INLINE     IRQ_REGISTER,   ::IRQ_REGISTER,         0   ; (SOUND_INIT: the sound chip's handler)
 FAR_GATE_INLINE     FP_MAKE,        PAGE5::FP_MAKE,         5   ; Far pointers (page 5): callers' names
 FAR_GATE_INLINE     FP_COPY,        PAGE5::FP_COPY,         5
 

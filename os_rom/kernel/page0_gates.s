@@ -46,6 +46,3 @@ FAR_GATE_INLINE SEM_TRY,        PAGE5::SEM_TRY,         5
 FAR_GATE_INLINE SEM_RELEASE,    PAGE5::SEM_RELEASE,     5
 FAR_GATE_INLINE SEM_FREE,       PAGE5::SEM_FREE,        5
 FAR_GATE_INLINE CLOCK_GET,      ::CLOCK_GET_P9,         9
-
-; The console bell (page 2: beep.s), for the serial driver
-FAR_GATE_INLINE YM_BEEP,        PAGE2::YM_BEEP,         2
