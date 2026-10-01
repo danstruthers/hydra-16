@@ -26,6 +26,7 @@ S_NS_Z_SUB:     .byte "/z/sub", 0
 S_NS_X:         .byte "/x", 0
 S_NS_Y:         .byte "/y", 0
 S_ZERO:         .byte "zero", 0
+S_DEV_RAM:      .byte "/dev/ram", 0
 
 ; The IO layer runs on page 2 and reads names through their pointers, so a name has to be in RAM: copy
 ; it to path slot `slot` (0 or 1) after the buffer.  OUT: .A.Y = the copy.  Uses ZP_HS_TEMP
@@ -398,6 +399,67 @@ IO_TEST:
             cpx         #IO_MAX_FDS
             bne         @close_all
 
+; /dev/ram: not for this task (only task 0's) ...
+            _M_IT_OPEN  S_DEV_RAM, IO_MODE_READ
+            _M_IT_FAIL_IF_NC    'r', ERR_IO_PERM
+; ... but task 0 reads this task's RAM through it (IT_RAW: the buffer's first bytes, IT_RAW_BYTES) ...
+            ldy         #2
+:
+            lda         IT_RAW_BYTES,Y
+            sta         (ZP_TEMP_VEC3),Y
+            dey
+            bpl         :-
+            lda         T_REGISTER
+            ldx         ZP_TEMP_VEC3
+            ldy         ZP_TEMP_VEC3 + 1
+            jsr         IT_RAW
+            _M_IT_FAIL_IF_C     's'
+; ... a bank of this task's on a RAM module ...
+            lda         #<8192
+            ldy         #>8192
+            ldx         #AI_PAGED
+            jsr         MM_ALLOC
+            _M_IT_FAIL_IF_C     't'
+            sta         ZP_TEMP_VEC2                        ; (Its handle)
+            jsr         MM_LOCK                             ; (Its bank at $8000: .X = what to put back)
+            jsr         IT_RAW_FILL                         ; .A = the bank
+            sta         ZP_TEMP_VEC2 + 1
+            lda         ZP_TEMP_VEC2
+            jsr         MM_UNLOCK
+            ldx         ZP_TEMP_VEC2 + 1
+            lda         T_REGISTER
+            ora         #IT_RAW_MODULE
+            jsr         IT_RAW
+            _M_IT_FAIL_IF_C     'u'
+            lda         ZP_TEMP_VEC2
+            jsr         MM_FREE
+            _M_IT_FAIL_IF_C     'u'
+; ... and a shared bank
+            lda         #<8192
+            ldy         #>8192
+            jsr         SH_ALLOC
+            _M_IT_FAIL_IF_C     'v'
+            sta         ZP_TEMP_VEC2
+            jsr         SH_FP                               ; Its shared bank ID (its far pointer's sel)
+            _M_IT_FAIL_IF_C     'v'
+            lda         ZP_FP + FarPtr::sel
+            sta         ZP_TEMP_VEC2 + 1
+            lda         ZP_TEMP_VEC2
+            jsr         SH_LOCK                             ; (Mapped: .X, .Y = what to put back)
+            _M_IT_FAIL_IF_C     'v'
+            phx
+            phy
+            jsr         IT_RAW_FILL
+            ply
+            plx
+            jsr         SH_UNLOCK
+            ldx         ZP_TEMP_VEC2 + 1
+            lda         #IT_RAW_SHARED
+            jsr         IT_RAW
+            _M_IT_FAIL_IF_C     'w'
+            lda         ZP_TEMP_VEC2
+            jsr         SH_DETACH
+            _M_IT_FAIL_IF_C     'w'
             lda         ZP_TEMP_VEC4
             jsr         MM_FREE
             _M_IT_FAIL_IF_C     'p'
@@ -417,6 +479,179 @@ IO_TEST:
 @end:
             PRINT_CRLF
             PULL_YXA
+            rts
+
+; The /dev/ram step's bytes, and what IT_RAW reads (IT_RAW_T0's .A: the kind | the task)
+IT_RAW_BYTES:   .byte   $5A, $A5, $3C
+IT_RAW_TASK     = $00                                   ; Task RAM: .Y.X = the address
+IT_RAW_MODULE   = $10                                   ; A bank on a RAM module: .X = its bank ID
+IT_RAW_SHARED   = $20                                   ; A shared bank: .X = its shared bank ID
+
+; IT_RAW_BYTES at $8000 (the bank mapped there).  OUT: .A = the bank ($00).  Preserves .X
+IT_RAW_FILL:
+            ldy         #2
+:
+            lda         IT_RAW_BYTES,Y
+            sta         PAGED_RAM_BASE,Y
+            dey
+            bpl         :-
+            lda         RAM_BANK_REG
+            rts
+
+; Have task 0 read 3 bytes through /dev/ram (IT_RAW_T0, by TASK_CALL), and check they're IT_RAW_BYTES.
+; IN: as IT_RAW_T0.  OUT: C = 0; or C = 1, .A = the error, or the first byte read
+IT_RAW:
+            pha
+            LOAD_ADDR   ::IT_RAW_T0, ZP_TC_VEC              ; (Its page 0 gate: thunks.s)
+            stz         ZP_TC_TASK
+            pla
+            jsr         TASK_CALL
+            bcs         @done
+            cmp         IT_RAW_BYTES
+            bne         @wrong
+            cpx         IT_RAW_BYTES + 1
+            bne         @wrong
+            cpy         IT_RAW_BYTES + 2
+            bne         @wrong
+            clc
+            rts
+
+@wrong:
+            sec
+
+@done:
+            rts
+
+; The /dev/ram step's part in task 0 (TASK_CALL): 3 bytes, read through /dev/ram as only task 0 can.  WOZMON's line
+; buffer (IN) is task 0's scratch: it never runs WOZMON.
+; IN: .A = IT_RAW_TASK | the task, .Y.X = an address in its RAM; IT_RAW_MODULE | the task, .X = a bank ID of its;
+;     or IT_RAW_SHARED, .X = a shared bank ID (the bank's first bytes).  OUT: C = 0, .A .X .Y = the bytes; or C = 1,
+;     .A = the error
+IT_RAW_T0:
+            sta         IN + 16                             ; (What)
+            stx         IN + 17
+            sty         IN + 18
+            ldx         #0
+:
+            lda         S_DEV_RAM,X
+            sta         IN,X
+            beq         :+
+            inx
+            bra         :-
+:
+            lda         #<IN
+            ldy         #>IN
+            ldx         #IO_MODE_READ
+            jsr         IO_OPEN
+            bcc         :+
+            rts
+:
+            sta         IN + 19                             ; (The fd)
+            stz         ZP_IO_OFS
+            stz         ZP_IO_OFS + 3
+            lda         IN + 16
+            and         #$F0
+            beq         @task_ram
+            cmp         #IT_RAW_MODULE
+            beq         @module
+            lda         IN + 17                             ; A shared bank: $80000 + the ID * $2000
+            asl
+            asl
+            asl
+            asl
+            asl
+            sta         ZP_IO_OFS + 1
+            lda         IN + 17
+            lsr
+            lsr
+            lsr
+            clc
+            adc         #8
+            sta         ZP_IO_OFS + 2
+            bra         @seek
+
+@task_ram:                                                  ; Task RAM: the task * $8000 + the address
+            lda         IN + 17
+            sta         ZP_IO_OFS
+            lda         IN + 16
+            lsr
+            sta         ZP_IO_OFS + 2
+            lda         IN + 18
+            and         #$7F
+            bcc         :+
+            ora         #$80
+:
+            sta         ZP_IO_OFS + 1
+            bra         @seek
+
+@module:                                                    ; Module m's bank b, the task's: $280000 +
+            lda         IN + 17                             ;   m * $200000 + the task * $20000 + b * $2000
+            asl
+            asl
+            asl
+            asl
+            asl
+            sta         ZP_IO_OFS + 1                       ; (b's low 3 bits)
+            lda         IN + 17
+            and         #$08
+            lsr
+            lsr
+            lsr
+            sta         IN + 23                             ; (b's top bit)
+            lda         IN + 16
+            and         #$0F
+            asl
+            ora         IN + 23
+            sta         IN + 23
+            lda         IN + 17                             ; m: m * 32 (in 64K units)
+            lsr
+            lsr
+            lsr
+            lsr
+            pha
+            asl
+            asl
+            asl
+            asl
+            asl
+            ora         IN + 23
+            clc
+            adc         #$28
+            sta         ZP_IO_OFS + 2
+            pla
+            lsr
+            lsr
+            lsr
+            adc         #0
+            sta         ZP_IO_OFS + 3
+
+@seek:
+            lda         IN + 19
+            jsr         IO_SEEK
+            bcs         @close
+            LOAD_ADDR   (IN + 20), ZP_IO_BUF
+            lda         #3
+            sta         ZP_IO_CNT
+            stz         ZP_IO_CNT + 1
+            lda         IN + 19
+            jsr         IO_READ
+            bcs         @close
+            lda         IN + 19
+            jsr         IO_CLOSE
+            lda         IN + 20
+            ldx         IN + 21
+            ldy         IN + 22
+            clc
+
+@done:
+            rts
+
+@close:
+            pha
+            lda         IN + 19
+            jsr         IO_CLOSE
+            pla
+            sec
             rts
 
 ; ZP_HS_TEMP = path slot .X / IT_PATH_SIZE: ZP_TEMP_VEC3 (the buffer) + IT_BUF_SIZE + .X

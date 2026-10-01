@@ -21,7 +21,7 @@ module.exports = [
     args: ['--cycles', '30000000'],
     expect: ['POST ZP:T ST:T LO:T 7D:T SH:S P1:4C\n',
       /RAM U:0( [0-9A-F]{2}:0\/00\/0000)+\n/,
-      'Welcome to the HYDRA-16!', /HyForth \d/, '/> '],
+      'Welcome to the HYDRA-16!', /HyForth \d/, '/ram/1> '],
   },
   {
     name: 'selftest', about: 'the ROM self tests from WOZMON: MMU (F833), scheduler (F869), IO (F88A)',
@@ -61,7 +61,7 @@ module.exports = [
       'paged ROM .......... ok', /interrupts \.+ +ok/,'VIA ................ ok', 'sound chip (YM2151) . ok',
       /CPU clock \.+ 3\.58 MHz \(first \d+, next \d+\) ok/,'serial port (ACIA) .    9600 baud ok', 'SPI devices ........ SD cards 0 ok',
       'I2C bus ............ no devices ok', 'slot cards ......... all empty ok', 'hwtest: all passed\n',
-      '> R\n', 'POST ZP:T', 'Welcome to the HYDRA-16!', '/> '],
+      '> R\n', 'POST ZP:T', 'Welcome to the HYDRA-16!', '/ram/1> '],
     forbid: ['FAIL'],
   },
   {

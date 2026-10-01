@@ -390,8 +390,6 @@ TASK_ZP     ZSM_PERIOD, 3           ; A song tick in system ticks (8.16 fixed po
 TASK_ZP     ZSM_LOOP, 3             ; The loop point (an offset in the file; 0: none)
 TASK_ZP     ZSM_LOOPS, 1            ; Times more to play the loop (ZSM_FOREVER: forever)
 TASK_ZP     ZSM_T, 2                ; Temporaries
-TASK_ZP     ZSM_ROM, 1              ; 0: the song's in a file; else in the paged ROM, from this bank ...
-TASK_ZP     ZSM_RP, 2               ;   at this address ($A000-$DFFF)
 TASK_ZP     ZSM_CLOCK, 1            ; Timed by the sound clock (not 0), or by the system's tick (0)
 TASK_ZP     ZSM_AT, 2               ; The sound clock's time the next tick is at (its interrupt looks: ymfast.s)
 TASK_ZP_END

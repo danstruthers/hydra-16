@@ -93,8 +93,8 @@ at `$A000 + (n % 32) * 512`, as the CPU sees it (8,192 blocks).  It starts with 
 | Blocks | Banks | What |
 | :----- | :---- | :--- |
 | 0 | 0, `$A000-$A1FF` | The partition table (an MBR), and a line saying what the disk is |
-| 1-95 | 0-2 | Partition 1, type `$DA` (not a file system): the system's banks: HyForth's variables and `COPYTORAM` (bank 0, from `$A200`), the hardware test (bank 1), the test song (bank 2) |
-| 96-8191 | 3-255 | Partition 2, type `$7F`: the HydraFS volume, label `ROM`, read-only |
+| 1-63 | 0-1 | Partition 1, type `$DA` (not a file system): the system's banks: HyForth's variables and `COPYTORAM` (bank 0, from `$A200`), the hardware test (bank 1) |
+| 64-8191 | 2-255 | Partition 2, type `$7F`: the HydraFS volume, label `ROM`, read-only |
 
 * **The storage driver** (`drivers/sd.s`, page 3) reads a block by selecting its bank in the storage task's own
   ROM bank register, copying 512 bytes into the block cache, and putting the register back (`SD_ROM_READ`).
@@ -133,9 +133,9 @@ A file on the ROM disk can lie across banks (`jukebox.hyx` is in banks 4 and 5 n
 5. **The machine checks it.**  The `rom-copy` test copies every file in `/rom` to a card on the emulated machine
    (through `SD_ROM_READ`) and compares the card's copies with the sources.
 6. **Code and data used by address stay in the system banks,** linked by ld65 into a memory area per bank half,
-   so a segment can't spill into the next bank (the link fails).  The one place that walks a pointer from bank
-   to bank is the song player reading the ROM's test song (`ZSM_BYTE` increments the ROM bank past `$DFFF`); it
-   goes when `sndtest` plays `/rom/songs/test.zsm` as a file ([below](#what-the-disks-simplify)).
+   so a segment can't spill into the next bank (the link fails).  The one place that walked a pointer from bank
+   to bank was the song player reading the ROM's test song (`ZSM_BYTE` incremented the ROM bank past `$DFFF`);
+   it's gone: `sndtest` plays `/rom/songs/test.zsm` as a file ([below](#what-the-disks-simplify)).
 7. **A task's banks are its own.**  The bank registers are in each task's zero page; the storage task saves and
    restores its own around a read.  A new task now starts with banks 0 (`RESERVE_TASK`): before, it kept its
    slot's last banks, and a shell started where the song player had been ran bank 2's song data as HyForth's
@@ -256,14 +256,16 @@ blocks straight into the client's transfer area, past the cache, which takes out
    open, as now.
 2. **The boot shell finds the volumes:** `/sd` mounted, then each disk's partition table read (HydraFS finds its
    partition, as on a card).  `/rom` is bound if the ROM disk has a volume (an image without one, or a blank
-   paged ROM, has no table: no `/rom`, and everything else works).  Now the bind is made without looking.
+   paged ROM, has no table: no `/rom`, and everything else works).  *Done:* the boot shell binds a name only if
+   what it stands for opens (`SH_BINDS`; the `rom-none` test).
 3. **The namespace from a file:** the boot shell reads `/rom/lib/namespace`, the default list of binds and mounts
    (`/ram`, `/bin` and `/lib` unions), then a card's `/lib/namespace` ([NAMESPACES.md](NAMESPACES.md)).  The list
    is a file in ROM, not code: changing it is a rebuild of the ROM disk, not of a BIOS page.
 4. **The current directory:** the first card with a HydraFS, as now; with no card, the shell's own area,
-   `/ram/1`, so files can be saved (until reset) on a machine with no card at all.
-5. **The boot script:** a card's `boot.hys`, or else `/rom/boot.hys` (which can copy the ROM's programs into
-   `/ram/s/bin`, set `PATH`, print help).  (Planned.)
+   `/ram/1`, so files can be saved (until reset) on a machine with no card at all.  *Done* (`SH_VOLUMES`).
+5. **The boot script:** a card's `boot.hys`; with no card, `/rom/boot.hys` (now a line saying so; later it can
+   copy the ROM's programs into `/ram/s/bin`, set `PATH`, print help).  *Done:* `SH_VOLUMES` says which
+   (`BOOTFLAG` 1 or 2).
 
 ---
 
@@ -274,12 +276,12 @@ Every piece of the ROM that isn't code can be a file, and every place that searc
 | Now (or before) | With the disks | Status |
 | :-------------- | :------------- | :----- |
 | `/rom`: its own server (page D), image format and PC tool, an IO-layer prefix, a gate | A HydraFS volume read by the storage driver; a bind | **Done.**  Page D is free (7.5K) |
-| The test song in bank 2, and the player's ROM mode (`ZSM_PLAY_ROM`, `SND_SONG_BANK`, the bank walk in `ZSM_BYTE`, `songs/test_rom.s`) | `sndtest` plays `/rom/songs/test.zsm` (already on the disk) as `play` does any file | Next: frees bank 2 for the volume, and removes the only cross-bank pointer |
+| The test song in bank 2, and the player's ROM mode (`ZSM_PLAY_ROM`, `SND_SONG_BANK`, the bank walk in `ZSM_BYTE`, `songs/test_rom.s`) | `sndtest` plays `/rom/songs/test.zsm` (already on the disk) as `play` does any file | **Done:** bank 2 is the volume's, and the only cross-bank pointer is gone |
 | HyForth's training scripts and sample binary words in bank 0 (`ftrain`, words compiled at `COPYSTART` offsets) | Files in `/rom/forth`, read with `include` | Planned: bank 0 keeps only `COPYTORAM` and the variables |
 | New HyForth words: assembly on page 1 (196 bytes free) or page A (530) | Forth source libraries in `/rom/lib` (`lib name`, which reads files already) | From now on, where speed allows |
 | The shell's search: the current directory, `$PATH`, the card's `/bin`, then `/rom/bin` (and `$LIBPATH`, `/lib`, `/rom/lib`) | `.` then `/bin`, a union of the caches, the card and the ROM ([NAMESPACES.md](NAMESPACES.md)) | With the namespace plan |
 | A built-in default namespace (code in the boot shell) | `/rom/lib/namespace`, a file | With the namespace plan |
-| No card: nowhere to save | `/ram/1` (the shell's area) as the current directory | The area's there; the boot's choice of it is planned |
+| No card: nowhere to save | `/ram/1` (the shell's area) as the current directory | **Done** |
 | Slow program loads from a card, and no resident programs | The caches: a program copied to RAM once | **Done** |
 | A task's memory: summaries in `/dev/proc/N/mem`; far pointers refuse other tasks' RAM | `/proc/N/mem`, the bytes, for the family and task 0 ([PROC.md](PROC.md)) | Planned |
 | ROM programs on BIOS pages (the editor, page 8; the song player, page C) | Could be `.hyx` files in `/rom/bin`, loaded into task RAM | An option: BIOS pages aren't short, but files can change without a BIOS rebuild |
@@ -336,7 +338,10 @@ In the emulator:
   task in that slot (`ram-area-busy`).
 * **The speed (done):** a 16K program by its full path from the card, then from `/ram/s/bin`: at least 2.5 times
   as fast (`ram-speed`).
-* the boot: no `/rom` bind with a paged ROM image that has no volume; `/rom/boot.hys` with no card.
+* **The boot (done):** no `/rom` bind, and no `/rom/boot.hys`, with a paged ROM image that has no volume
+  (`rom-none`); `/rom/boot.hys` run with no card (`rom`), not with one (`ram-disks`); `/ram/1` as the current
+  directory with no card (every test without a card: the prompt `/ram/1> `).
+* **The test song as a file (done):** `sndtest` plays it from the ROM disk (`sound`).
 
 ---
 
@@ -350,9 +355,9 @@ In the emulator:
    through HydraFS); the areas' check and `ERR_IO_PERM`; `TASK_ORPHANS`; the caches in the shell's search and their
    directories; the tests; the docs.
 3. **An area removed when its task ends.**  *Done:* `TASK_AREA_END`, `HFS_AREA_END`, `RAMD_AREAS`.
-4. The test song as a file: `sndtest` plays `/rom/songs/test.zsm`; the player's ROM mode and bank 2 go, and the
-   volume starts at bank 2.
-5. The boot: bind `/rom` only when the ROM disk has a volume; `/rom/boot.hys`; with no card, `/ram/1` as the
+4. **The test song as a file.**  *Done:* `sndtest` plays `/rom/songs/test.zsm` (`ZSM_PLAY_TEST`); the player's ROM
+   mode and bank 2 are gone, and the volume starts at bank 2.
+5. **The boot.**  *Done:* `/rom` (and `/ram`) bound only when there; `/rom/boot.hys`; with no card, `/ram/1` as the
    current directory.
 6. **`TASK_MAY` as a kernel routine.**  *Done* (page 5), with the way `/proc` will need.
 7. Cards on SPI devices `$8`-`$F`, with the slot map, whenever a slot card has one.

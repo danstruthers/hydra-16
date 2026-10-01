@@ -138,8 +138,8 @@ SND_SERVE:
             bne         @bad
             jsr         SND_PLAYING
             bcs         @busy
-            lda         #<::ZSM_PLAY_ROM_PC                 ; The song player on the ROM's song, in a task of
-            ldy         #>::ZSM_PLAY_ROM_PC                 ;   its own (the sound task's: it isn't the caller's,
+            lda         #<::ZSM_PLAY_TEST_PC                ; The song player on the test song, in a task of
+            ldy         #>::ZSM_PLAY_TEST_PC                ;   its own (the sound task's: it isn't the caller's,
             ldx         #$C                                 ;   so the console keys leave it alone).  It claims
             jsr         TASK_RUN                            ;   its channels itself
             bcs         @error

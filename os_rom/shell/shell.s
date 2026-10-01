@@ -27,6 +27,11 @@ SH_BOOT:
             ldy         #>SH_S_ENV
             ldx         #IO_DEV_CALLER_TASK
             jsr         DEV_REGISTER                        ;   needs no mount: io.s)
+            LOAD_ADDR   ::RAM_SERVE, ZP_TC_VEC              ; The RAM itself, for task 0: /dev/ram (in its
+            lda         #<SH_S_RAMDEV                       ;   client's task: task 0's)
+            ldy         #>SH_S_RAMDEV
+            ldx         #IO_DEV_CALLER_TASK
+            jsr         DEV_REGISTER
             LOAD_ADDR   ::TIME_SERVE, ZP_TC_VEC             ; The clock: /dev/time (in each client's task too)
             lda         #<SH_S_TIME
             ldy         #>SH_S_TIME
@@ -37,8 +42,16 @@ SH_BOOT:
             ldy         #>SH_S_SD
             jsr         IO_MOUNT
             ldx         #0                                  ; The disks in memory by their names: /rom, /ram
-                                                            ;   (the shared RAM disk too, as /ram/s: HydraFS's)
-@bind:                                                      ;   (bound: inherited too; docs/plans/DISKS.md)
+                                                            ;   (the shared RAM disk too, as /ram/s: HydraFS's),
+@bind:                                                      ;   each if it's there (a paged ROM with no ROM disk:
+            phx                                             ;   no /rom).  Bound: inherited too (DISKS.md)
+            lda         SH_BINDS + 2,X
+            ldy         SH_BINDS + 3,X
+            ldx         #IO_MODE_READ
+            jsr         IO_OPEN
+            bcs         @next
+            jsr         IO_CLOSE
+            plx
             phx
             lda         SH_BINDS + 2,X
             sta         ZP_IO_BUF
@@ -47,6 +60,8 @@ SH_BOOT:
             lda         SH_BINDS,X
             ldy         SH_BINDS + 1,X
             jsr         IO_BIND
+
+@next:
             pla
             clc
             adc         #4
@@ -54,17 +69,19 @@ SH_BOOT:
             cpx         #SH_BINDS_END - SH_BINDS
             bne         @bind
             jsr         SH_RAM_DIRS                         ; The program caches' directories
-            jsr         SH_VOLUMES
+            jsr         SH_VOLUMES                          ; (.A = the boot script: BOOTFLAG's, after
+            pha                                             ;   COPYTORAM sets HyForth's variables)
             jsr         SH_CLOCK
             jsr         COPYTORAM
-            lda         #1                                  ; (HyForth: run boot.hys before the first prompt)
-            sta         PAGE1::BOOTFLAG
+            pla                                             ; (HyForth: run boot.hys before the first prompt:
+            sta         PAGE1::BOOTFLAG                     ;   a card's, or with none the ROM's)
             jsr         forth_main
             jmp         MON_START
 
 SH_S_SD:    .byte   "/sd", 0
 SH_S_ENV:   .byte   "env", 0
 SH_S_TIME:  .byte   "time", 0
+SH_S_RAMDEV: .byte  "ram", 0
 SH_S_HFS:   .byte   "hfs", 0
 SH_BINDS:   .word   SH_S_ROM, SH_S_ROMDISK              ; The boot shell's binds: a name, what it stands for
             .word   SH_S_RAM, SH_S_RAMDISK              ;   (the ROM disk; the RAM disk: the tasks' areas,
@@ -114,7 +131,9 @@ SH_MKDIR_BUF:
             jmp         SH_MKDIR
 
 ; Find the HydraFS volumes: /sd/0 ... /sd/7 opened (so each card is started, and its superblock read),
-; the ones that have one listed ("hydrafs 0 2"), and the lowest made the current directory.
+; the ones that have one listed ("hydrafs 0 2"), and the lowest made the current directory (none: this
+; task's own area on the RAM disk, /ram/N).  OUT: .A = the boot script (BOOTFLAG): 1, boot.hys there (a card's);
+; 2, with no card, /rom/boot.hys
 SH_VOLUMES:
             stz         PAGE1::SHN
             lda         #$FF
@@ -150,17 +169,28 @@ SH_VOLUMES:
             cmp         #SD_MAX_CARDS
             bne         @card
             lda         PAGE1::SHSEL
-            bmi         @done                               ; (None)
+            bmi         @no_card                            ; (None)
             jsr         SH_CRLF
             lda         PAGE1::SHSEL
             jsr         SH_CARD_PATH
+
+@chdir:
             lda         #<PAGE1::SHBUF
             ldy         #>PAGE1::SHBUF
             jsr         IO_CHDIR
-
-@done:
+            lda         #1                                  ; (Its boot script: a card's, or the ROM's)
+            ldx         PAGE1::SHSEL
+            bpl         :+
+            inc
+:
             clc
             rts
+
+@no_card:                                                   ; No card: this task's own area on the RAM disk,
+            lda         T_REGISTER                          ;   /ram/N, so files can be saved (until a reset).
+            jsr         SH_AREA_NAME                        ;   (No RAM disk: "/", as it was)
+            stz         PAGE1::SHBUF,X
+            bra         @chdir
 
 ; The clock chip: looked for (RTC_BOOT, page 9: the clock set from it, if there's one), and its line printed:
 ; "clock 2026-09-30 14:05:00", "clock stopped: set the time" or "no clock"

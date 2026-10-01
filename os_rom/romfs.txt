@@ -1,11 +1,12 @@
 ; ****************************************************************************
-; The /rom file system: the files on the ROM disk, a HydraFS volume in the paged ROM from bank 3 (/sd/x,
+; The /rom file system: the files on the ROM disk, a HydraFS volume in the paged ROM from bank 2 (/sd/x,
 ; which the boot shell binds at /rom).  sim/tools/mkromdisk.js makes it, after the link (build.js), and checks each
 ; file read back from the image.  A line per file: its path in /rom, then its source (relative to this folder).  /rom/bin is where the
 ; shell looks for a program by its name when $PATH (or the card's /bin) hasn't got it, and /rom/lib for a HyForth
 ; library ($LIBPATH, the card's /lib), so these run with no card at all.
 
 README              romfs/README
+boot.hys            romfs/boot.hys      ; The boot script when the current directory has none (no card)
 
 ; Programs (C: programs/c/samples), and a song that runs by its name (scom)
 bin/hello.hyx       ../programs/c/bin/hello.hyx

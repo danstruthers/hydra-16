@@ -22,6 +22,8 @@ FAR_GATE_INLINE     IO_READ,        PAGE2::IO_READ,         2
 FAR_GATE_INLINE     IO_WRITE,       PAGE2::IO_WRITE,        2
 FAR_GATE_INLINE     IO_SEEK,        PAGE2::IO_SEEK,         2
 FAR_GATE_INLINE     IO_CTL,         PAGE2::IO_CTL,          2
+FAR_GATE_INLINE     IO_MOUNT,       PAGE2::IO_MOUNT,        2   ; (The test song: ZSM_PLAY_TEST)
+FAR_GATE_INLINE     IO_DUP2,        PAGE2::IO_DUP2,         2
 
 ; ... and to the exit statuses (page 5)
 FAR_GATE_INLINE     TASK_EXITS,     PAGE5::TASK_EXITS,      5

@@ -254,7 +254,7 @@ forth io files shell tasks sound mem tools term (greet)
 
 ### **The shell: directories, files and programs**
 
-**At boot** the shell looks for HydraFS volumes on the SD cards (`/sd/0` to `/sd/7`), lists the ones it finds (`hydrafs 0 2`), and makes the lowest one's root the **current directory**.  Then it runs **`boot.hys`** from there, if there is one, before the first prompt: a script for your own words and settings.
+**At boot** the shell looks for HydraFS volumes on the SD cards (`/sd/0` to `/sd/7`), lists the ones it finds (`hydrafs 0 2`), and makes the lowest one's root the **current directory**.  Then it runs **`boot.hys`** from there, if there is one, before the first prompt: a script for your own words and settings.  **With no card**, the current directory is the shell's own area on the RAM disk, `/ram/1` (the prompt `/ram/1> `), where files can be saved until a reset, and the ROM's `/rom/boot.hys` runs instead.
 
 **Names** are relative to the current directory unless they start with `/`, and `.` and `..` work anywhere in them: `games/star.frt`, `../notes`, `/sd/1/log`.  The current directory is a directory on a card, or `/` (`cd /`); each task has one of its own, and the tasks it starts get a copy.
 
@@ -547,7 +547,7 @@ A failed call gives `!IO ERR!`, with the reason in `ioerr` (`60` not a semaphore
 | Word | Stack | Does |
 | :--- | :---- | :--- |
 | `sndinit` | | Clear the YM2151 |
-| `sndtest` | | Play the test song in the background: a minute of music in the ROM that uses the whole YM2151 (`sndstop` ends it) |
+| `sndtest` | | Play the test song in the background: a minute of music that uses the whole YM2151 (`/rom/songs/test.zsm`: `play` plays it too; `sndstop` ends it) |
 | `sndstop` | | Stop it |
 | `ywrite` | `( xxaa -- f )` | Write value `aa` to YM2151 register `xx`; true if it went |
 | `patch` | `( p ch -- )` | Load patch p into channel ch (0-7): 0-127 are General MIDI's instruments (0 piano, 24 guitar, 40 violin, 56 trumpet, 73 flute ...), 128-162 drum sounds |

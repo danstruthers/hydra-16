@@ -51,6 +51,7 @@ FAR_GATE_INLINE     DISASM_WM,      ::DISASM_WM_PA,         $A
 FAR_GATE_INLINE     FP_MAKE,        PAGE5::FP_MAKE,         5
 FAR_GATE_INLINE     FP_READ,        PAGE5::FP_READ,         5
 FAR_GATE_INLINE     FP_COPY,        PAGE5::FP_COPY,         5
+FAR_GATE_INLINE     SH_FP,          PAGE5::SH_FP,           5   ; (The IO test's /dev/ram step)
 FAR_GATE_INLINE     MM_REF,         PAGE5::MM_REF,          5
 FAR_GATE_INLINE     MM_FP,          PAGE5::MM_FP,           5
 FAR_GATE_INLINE     SH_REF,         PAGE5::SH_REF,          5
@@ -59,6 +60,7 @@ FAR_GATE_INLINE     SH_REF,         PAGE5::SH_REF,          5
 FAR_GATE_INLINE     IO_OPEN,        PAGE2::IO_OPEN,         2
 FAR_GATE_INLINE     IO_CLOSE,       PAGE2::IO_CLOSE,        2
 FAR_GATE_INLINE     IO_READ,        PAGE2::IO_READ,         2
+FAR_GATE_INLINE     IO_SEEK,        PAGE2::IO_SEEK,         2
 FAR_GATE_INLINE     IO_WRITE,       PAGE2::IO_WRITE,        2
 FAR_GATE_INLINE     IO_GETC,        PAGE2::IO_GETC,         2
 FAR_GATE_INLINE     IO_PUTC,        PAGE2::IO_PUTC,         2

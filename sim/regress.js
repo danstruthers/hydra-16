@@ -27,6 +27,7 @@
 //           message, or nothing when it's good
 //   fullRun true: run to --cycles (otherwise the run ends STOP_AFTER_INPUT cycles after the prompt that follows the
 //           input's last key: a \p is added to the input, and --stop-after-input)
+//   pagedRom  function (the paged ROM image in use) returning another, to run with (and the BIOS ROM in use)
 // The input's waits (tests/common.js): P for the prompt (the last command done), W(n) for n * 2M cycles (where time
 // has to pass).  The tests are in tests/*.js, by area.
 //   sd      true: a blank 1 MB SD card image on device 0 (files.sd = its path); or a list of cards: { dev (0-7),
@@ -105,6 +106,12 @@ function runTest(t) {
     fs.writeFileSync(path.join(dir, 'os_rom_C02.bin'), bios);
     fs.writeFileSync(path.join(dir, 'paged_rom_C02.bin'), Buffer.alloc(0x10000, 0xFF));
     files.expectCycles = cycles;
+    args.push('--rom', dir);
+  } else if (t.pagedRom) {                                      // The ROMs in use, with a paged ROM image of its own
+    const rom = opt.rom || path.join(__dirname, '..', 'os_rom', 'bin'), dir = path.join(tmpDir, t.name);
+    fs.mkdirSync(dir);
+    fs.copyFileSync(path.join(rom, 'os_rom_C02.bin'), path.join(dir, 'os_rom_C02.bin'));
+    fs.writeFileSync(path.join(dir, 'paged_rom_C02.bin'), t.pagedRom(fs.readFileSync(path.join(rom, 'paged_rom_C02.bin'))));
     args.push('--rom', dir);
   } else if (opt.rom) args.push('--rom', opt.rom);
   if (opt.seed >= 0) args.push('--seed', String(opt.seed));

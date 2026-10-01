@@ -197,12 +197,12 @@ module.exports = [
   },
   {
     name: 'sleep', about: 'TASK_SLEEP (HyForth sleep): 400 ticks take 2 s, and Ctrl-C ends a long one',
-    args: ['--cycles', '40000000', '--mark', '400 sleep', '--mark', '/> ', '--input', BOOT + '400 sleep\\r' + W(5) + '30000 sleep\\r' + W(1) + '\\x03' + W(1) + '1 2 + .\\r'],
-    expect: ['/> 400 sleep\n', '/> 30000 sleep\n', '!BREAK!', '/> 1 2 + .\n' + num(3)],
+    args: ['--cycles', '40000000', '--mark', '400 sleep', '--mark', '> ', '--input', BOOT + '400 sleep\\r' + W(5) + '30000 sleep\\r' + W(1) + '\\x03' + W(1) + '1 2 + .\\r'],
+    expect: ['/ram/1> 400 sleep\n', '/ram/1> 30000 sleep\n', '!BREAK!', '/ram/1> 1 2 + .\n' + num(3)],
     forbid: ['!DS PTR ERROR!', '!UNK WORD!'],
     check: (out, report) => {                                   // The line typed to the prompt: 2 s is 7.16M cycles at 3.58 MHz
       const typed = +/mark: "400 sleep" at cycle (\d+)/.exec(report)[1];
-      const took = [...report.matchAll(/mark: "\/> " at cycle (\d+)/g)].map(m => +m[1]).find(c => c > typed) - typed;
+      const took = [...report.matchAll(/mark: "> " at cycle (\d+)/g)].map(m => +m[1]).find(c => c > typed) - typed;
       if (!(took > 7150000 && took < 7400000)) return '400 sleep took ' + took + ' cycles, not about 7.16M';
     },
   },
@@ -212,7 +212,7 @@ module.exports = [
     args: ['--cycles', '90000000', '--input', BOOT + 'shell\\r' + W(1) + '\\x1dB' + W(1) + '\\rq^/dev/sd/0/data^ 1 open .\\r' + W(1) +
       '6 here @ 600 read '.repeat(12) + '\\r\\x1d1q^/dev/sd/0/data^ 1 open .\\r' + '3 here @ 600 read . '.repeat(6) + '\\r' + W(12) +
       '\\x1dB' + W(1) + '\\r' + '+ '.repeat(11) + '.\\r'],             // (B's 12 counts, added up: 7200 = $1C20)
-    expect: ['/> q^/dev/sd/0/data^ 1 open .\n' + num(6), '[1]q^/dev/sd/0/data^ 1 open .\n' + num(3), '[B]', '+ .\n' + num(7200) + '\n'],
+    expect: ['/ram/1> q^/dev/sd/0/data^ 1 open .\n' + num(6), '[1]q^/dev/sd/0/data^ 1 open .\n' + num(3), '[B]', '+ .\n' + num(7200) + '\n'],
     forbid: ['!IO ERR!', '!DS PTR ERROR!', '!UNK WORD!'],
     check: out => {                                             // Shell 1's 6 reads (B's prompt can come out among them)
       const n = (out.slice(out.indexOf('[1]'), out.lastIndexOf('[B]')).match(/0258/g) || []).length;

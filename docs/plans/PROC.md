@@ -89,11 +89,10 @@ sees them at `$8000` through its `$00`): offset `b * $2000 + o` is byte `o` of i
   bank it hasn't got gives `ERR_IO_NOT_FOUND`; a listing (`IO_STAT`) gives the size up to its last bank.
 * So a task's whole state is `/proc/N/mem` and `/proc/N/ram`; shared RAM is reached by its handles, as now.
 
-**Raw memory (an option): `/dev/mem`.**  Neither file above reads memory as the hardware has it: every RAM module's
-banks (whichever task's they are), the shared RAM by bank ID, the paged ROM by chip, the BIOS ROM by page.  A
-`/dev/mem` could, at offsets laid out as `docs/hardware.md`'s memory map, for a memory tester or a whole-machine
-dump.  Who may use it is a choice still to make: task 0 only (the system's own), or any task, as WOZMON already
-reads any address it's given.  Its writes (RAM only) would be task 0's, either way.
+**Raw RAM: `/dev/ram` (built).**  Neither file above reads memory as the hardware has it; `/dev/ram` does: every
+task's 32K, the shared RAM by bank ID, every RAM module's banks for every task, read-only, and **for task 0
+only**, the system's task (any other task's open is `ERR_IO_PERM`).  Its offsets and how it reads are in
+[io.md](../programming/io.md#the-ram-itself-devram).
 
 ---
 

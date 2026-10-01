@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // mkromdisk.js: the paged ROM as one disk, the ROM disk: a partition table in its block 0, the system's banks
-// (HyForth's variables, the hardware test, the test song) in a partition of their own, and a read-only HydraFS
+// (HyForth's variables, the hardware test) in a partition of their own, and a read-only HydraFS
 // volume in the rest, which the Hydra sees as /sd/x and binds at /rom (docs/plans/DISKS.md).  The files come from
 // a manifest; the HydraFS is made with hydrafs.js (as a card's), stamped 2000-01-01 so the image is the same each
 // build, and written into the paged ROM image after ld65 has written the system's banks (build.js).
@@ -11,8 +11,8 @@
 //
 // The disk is the paged ROM as the CPU sees it, bank after bank: block n is bank n / 32, at $A000 + (n % 32) * 512.
 //   block 0               the partition table (an MBR, as a card's)
-//   blocks 1-95           partition 1, type $DA (not a filesystem): the system's banks 0-2 (but bank 0's block 0)
-//   blocks 96-8191        partition 2, type $7F: the HydraFS volume, to the end of the 4 MB paged ROM
+//   blocks 1-63           partition 1, type $DA (not a filesystem): the system's banks 0-1 (but bank 0's block 0)
+//   blocks 64-8191        partition 2, type $7F: the HydraFS volume, to the end of the 4 MB paged ROM
 // The image holds each bank's $C000 half first (the board swaps A13), and on the V1 board a bank number's bits 2
 // and 3 (and 6 and 7) trade places before they reach the chips, so bank b sits at bank swap(b)'s place in the image.
 // Only the blocks the volume uses are written: the rest of the ROM reads as erased ($FF), and nothing reads it.
@@ -23,12 +23,12 @@ const path = require('path');
 const hydrafs = require('./hydrafs.js');
 
 const BLOCK = 512, BANK = 0x4000, BLOCKS_PER_BANK = BANK / BLOCK;
-const SYSTEM_BANKS = 3, DISK_BANKS = 256;                         // Banks 0-2 the system's; 4 MB in all
+const SYSTEM_BANKS = 2, DISK_BANKS = 256;                         // Banks 0-1 the system's; 4 MB in all
 const PART_START = SYSTEM_BANKS * BLOCKS_PER_BANK, PART_BLOCKS = DISK_BANKS * BLOCKS_PER_BANK - PART_START;
 const PART_SYSTEM = 0xDA, LABEL = 'ROM';
 // Block 0's first bytes: what the disk is.  Bank 0's first page must read as no other bank's (the hardware test's
 // bank lines: hwtest/hwt_rom.s), and the table alone leaves it all zeros, as an empty block in a later bank can be
-const SIGNATURE = 'Hydra-16 ROM disk: the paged ROM as one disk (block 0: this table; 1-95: the system; 96 on: /rom)\r\n';
+const SIGNATURE = 'Hydra-16 ROM disk: the paged ROM as one disk (block 0: this table; 1-63: the system; 64 on: /rom)\r\n';
 const MAX_IMAGE_BANKS = 15;                                       // (romsum.js's table in bank 1: 15 paged ROM banks)
 const swap = b => (b & 0x33) | ((b & 0x04) << 1) | ((b & 0x08) >> 1) | ((b & 0x40) << 1) | ((b & 0x80) >> 1);
 

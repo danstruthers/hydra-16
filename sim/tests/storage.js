@@ -23,14 +23,14 @@ module.exports = [
   {
     name: 'sd-speed', about: 'SD read throughput: 4K in 256-byte reads, inside a cycle budget (the bit-banged SPI is most of it)',
     sd: true,
-    args: ['--cycles', '200000000', '--mark', '/> go', '--mark', '/> ', '--input', BOOT +
+    args: ['--cycles', '200000000', '--mark', '> go', '--mark', '> ', '--input', BOOT +
       'ftrain autoload\\rq^/dev/sd/0/data^ 1 open .\\r' +
       ': go lit [ 16 , ] 0 do 3 here @ lit [ 256 , ] read drop loop ;\\r' + P + 'go\\r' + W(2)],
     expect: ['open .\n' + num(3) + '\n'],
     forbid: ['!IO ERR!', '!DS PTR ERROR!', '!UNK WORD!'],
     check: (out, report) => {                                   // 298 cycles/byte now; SPI_RECV is about 60% of it
-      const at = +/mark: "\/> go" at cycle (\d+)/.exec(report)[1];
-      const took = [...report.matchAll(/mark: "\/> " at cycle (\d+)/g)].map(m => +m[1]).find(c => c > at) - at;
+      const at = +/mark: "> go" at cycle (\d+)/.exec(report)[1];
+      const took = [...report.matchAll(/mark: "> " at cycle (\d+)/g)].map(m => +m[1]).find(c => c > at) - at;
       const per = Math.round(took / 4096);
       if (per > 330) return 'an SD read took ' + per + ' cycles a byte, over the 330 budget';
     },
@@ -48,9 +48,9 @@ module.exports = [
       '3 here @ 4 write .\\r3 here @ 2 write\\rioerr .\\r3 close\\r'],
     expect: ['| cat\nsdhc 1 MB 2048 blocks\n', '| cat\nsdsc 3 MB 6144 blocks\n', '| cat\nnone\n',
       'open .\n' + num(3) + '\n', 'c@ .\n' + num(9) + num(0x42) + '\n', 'write .\n' + num(1) + '\n',
-      '!IO ERR!', '/> ioerr .\n' + num(0x70) + '\n', '!IO ERR!', '/> ioerr .\n' + num(0x70) + '\n',
-      '!IO ERR!', '/> ioerr .\n' + num(0x79) + '\n',
-      'open .\n' + num(3) + '\n', '4 write .\n' + num(4) + '\n', '!IO ERR!', '/> ioerr .\n' + num(0x78) + '\n'],
+      '!IO ERR!', '/ram/1> ioerr .\n' + num(0x70) + '\n', '!IO ERR!', '/ram/1> ioerr .\n' + num(0x70) + '\n',
+      '!IO ERR!', '/ram/1> ioerr .\n' + num(0x79) + '\n',
+      'open .\n' + num(3) + '\n', '4 write .\n' + num(4) + '\n', '!IO ERR!', '/ram/1> ioerr .\n' + num(0x78) + '\n'],
     forbid: ['!DS PTR ERROR!', '!UNK WORD!'],
     check: (out, report, files) => {
       const img = fs.readFileSync(files.sds[1]);
@@ -198,12 +198,12 @@ module.exports = [
     sd: [{ dev: 0 }],
     args: ['--cycles', '100000000', '--input', BOOT + 'vols\\r' + P + '0 q^GAMES^ mkfs\\r' + P +
       'q^/sd/0/x^ 0 create . 3 close\\r0 q^TOYS^ relabel\\r0 fsck\\r0 fsfix\\r9 fsck\\rioerr .\\rvols\\r'],
-    expect: ['/> vols\n0: sdhc 1 MB 2048 blocks\n1: none\n', '7: none\n',
+    expect: ['/ram/1> vols\n0: sdhc 1 MB 2048 blocks\n1: none\n', '7: none\n',
       'mkfs\nsdhc 1 MB 2048 blocks\nhydrafs label=GAMES\nfree 1020 KB of 1020 KB\n',
       'relabel\nsdhc 1 MB 2048 blocks\nhydrafs label=TOYS\nfree 1016 KB of 1020 KB\n',
       'fsck\nsdhc 1 MB 2048 blocks\nhydrafs label=TOYS\nfree 1016 KB of 1020 KB\ncheck: lost 0, unmarked 0, twice 0\n',
-      'check: lost 0, unmarked 0, twice 0, fixed\n', '/> ioerr .\n' + num(0x70) + '\n',
-      '/> vols\n0: sdhc 1 MB 2048 blocks\nhydrafs label=TOYS\n'],
+      'check: lost 0, unmarked 0, twice 0, fixed\n', '/ram/1> ioerr .\n' + num(0x70) + '\n',
+      '/ram/1> vols\n0: sdhc 1 MB 2048 blocks\nhydrafs label=TOYS\n'],
     forbid: ['!DS PTR ERROR!', '!UNK WORD!'],
     check: (out, report, files) => {                            // The card the Hydra made: as the PC tool makes them
       const v = new hydrafs.Volume(files.sds[0]);
@@ -368,7 +368,7 @@ module.exports = [
       'cat /dev/sd/s/ctl\nsram 512 KB 1024 blocks\nbanks $40-$7F\nhydrafs label=SRAM\nfree 504 KB of 508 KB\n',
       '> ns\n/sd -> hfs\n/rom = /sd/x\n/ram = /sd/r\n', '> ls /ram\n1/\n', '> ls /ram/1\nbin/\nlib/\n', '> ls /ram/s\nbin/\nlib/\n',
       '> ls /sd/s\nbin/\nlib/\nt.zsm 14075\n'],
-    forbid: ['!IO ERR!', '!UNK WORD!'],
+    forbid: ['!IO ERR!', '!UNK WORD!', 'No card:'],
     check: (out, report, files) => {
       const song = fs.readFileSync(path.join(__dirname, '../../os_rom/songs/test.zsm'));
       const v = new hydrafs.Volume(files.sd);
@@ -388,10 +388,10 @@ module.exports = [
       'q^/dev/sd/r/ctl^ q^start 2^ ctl\\r', 'q^/dev/sd/r/ctl^ q^stop^ ctl\\r', 'q^/dev/sd/r/ctl^ q^start 255^ ctl\\r', 'q^/dev/sd/r/ctl^ q^start 3Q^ ctl\\r',
       'q^/dev/sd/r/ctl^ q^start 2 1-2 x^ ctl\\r', 'q^/dev/sd/r/ctl^ q^start 1 15-15^ ctl\\r', 'q^/dev/sd/x/ctl^ q^start 1^ ctl\\r',
       'q^/dev/sd/r/ctl^ q^start 16k 1-1^ ctl\\r', 'cat /dev/sd/r/ctl\\r', 'echo y > /ram/1/g\\r', 'cat /ram/1/g\\r'].join(P) + P],
-    expect: ['open .\n' + num(3) + '\n', 'q^stop^ ctl\n\n !IO ERR! busy\n', '3 close\n', 'q^stop^ ctl\n\n/> cat /dev/sd/s/ctl\nnone\n',
+    expect: ['open .\n' + num(3) + '\n', 'q^stop^ ctl\n\n !IO ERR! busy\n', '3 close\n', 'q^stop^ ctl\n\n/ram/1> cat /dev/sd/s/ctl\nnone\n',
       'cat /dev/sd/s/ctl\nsram 1024 KB 2048 blocks\nbanks $20-$9F\nhydrafs label=SRAM\n', 'q^start 2^ ctl\n\n !IO ERR! busy\n',
       'q^start 255^ ctl\n\n !IO ERR! disk full\n', 'q^start 3Q^ ctl\n\n !IO ERR! not supported\n', 'q^start 2 1-2 x^ ctl\n\n !IO ERR! not supported\n',
-      'q^start 1 15-15^ ctl\n\n !IO ERR! not supported\n', 'q^start 1^ ctl\n\n !IO ERR! not supported\n', 'q^start 16k 1-1^ ctl\n\n/> cat /dev/sd/r/ctl\nram 16 KB 32 blocks\nbanks $1E-$1F\n',
+      'q^start 1 15-15^ ctl\n\n !IO ERR! not supported\n', 'q^start 1^ ctl\n\n !IO ERR! not supported\n', 'q^start 16k 1-1^ ctl\n\n/ram/1> cat /dev/sd/r/ctl\nram 16 KB 32 blocks\nbanks $1E-$1F\n',
       '> cat /ram/1/g\n\n !IO ERR! not found\n'],
     forbid: ['!UNK WORD!'],
   },

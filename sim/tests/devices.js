@@ -22,24 +22,24 @@ module.exports = [
       'q^/dev/proc^ 1 open here @ 100 read .\\r' +
       'q^/dev/proc/z^ 1 open\\rioerr .\\r'],
     expect: ['read . ioerr .\n' + num(5) + num(0) + '\n',
-      '!IO ERR!', '/> ioerr .\n' + num(0x70) + '\n',
+      '!IO ERR!', '/ram/1> ioerr .\n' + num(0x70) + '\n',
       '/z -> zero\n', 'read .\n' + num(3) + '\n',
       /\/dev\/proc\^ 1 open here @ 100 read \.\n 00[1-9A-F][0-9A-F]\n/,
-      '!IO ERR!', '/> ioerr .\n' + num(0x70) + '\n'],
+      '!IO ERR!', '/ram/1> ioerr .\n' + num(0x70) + '\n'],
     forbid: ['!DS PTR ERROR!', '!UNK WORD!'],
   },
   {
     name: 'tasks', about: 'another shell: ps, Ctrl-] to switch the console, kill; Ctrl-C breaks a read',
     args: ['--cycles', '150000000', '--input', BOOT + 'shell\\r' + W(1) + 'ps\\r' + W(1) + '\\x1dB' + W(1) + '\\r1 2 + .\\r' + W(1) + '\\x1d1' + W(1) +
       '\\r11 kill\\r' + W(1) + 'ps\\rcat\\r' + W(1) + '\\x03' + W(1) + '3 4 + .\\r'],   // (kill flags B: it ends when it next runs)
-    expect: ['/> ps\n0 R -\n1 R 0 *\nB W 1\n', '[B]', '/> 1 2 + .\n' + num(3), '[1]',
-      '/> ps\n0 R -\n1 R 0 *\nC D -\n', '/> cat\n', '!BREAK!', '/> 3 4 + .\n' + num(7)],
+    expect: ['/ram/1> ps\n0 R -\n1 R 0 *\nB W 1\n', '[B]', '/ram/1> 1 2 + .\n' + num(3), '[1]',
+      '/ram/1> ps\n0 R -\n1 R 0 *\nC D -\n', '/ram/1> cat\n', '!BREAK!', '/ram/1> 3 4 + .\n' + num(7)],
     forbid: ['!DS PTR ERROR!', '!UNK WORD!'],
   },
   {
     name: 'sound', about: 'sndtest plays in a task of its own while the shell runs; sndstop ends it; the bell (Ctrl-G) first',
     args: ['--cycles', '90000000', '--input', BOOT + '\\x07\\r' + P + 'sndtest\\r' + P + 'ps\\r' + W(2) + 'sndstop\\rps\\r'],
-    expect: ['/> ps\n0 R -\n1 R 0 *\nB W E\n', '/> sndstop\n', '/> ps\n0 R -\n1 R 0 *\nC D -\n'],  // (B W: it sleeps between notes)
+    expect: ['/ram/1> ps\n0 R -\n1 R 0 *\nB W E\n', '/ram/1> sndstop\n', '/ram/1> ps\n0 R -\n1 R 0 *\nC D -\n'],  // (B W: it sleeps between notes)
     check: (out, report) => {
       const m = /--- YM2151 key-ons: (\d+) \((.*)\)/.exec(report);
       if (!m || +m[1] < 5) return 'the tune played ' + (m ? m[1] : 'no') + ' notes';
@@ -94,24 +94,24 @@ module.exports = [
     },
   },
   {
-    name: 'rom', about: '/rom, the files in the paged ROM, with no card: its listing (text and stat records: ls -l), a file read, a program run by its name from /rom/bin (the PATH fallback), cd into it, an exit status; read-only (write, remove, create refused), a missing name, a file for cd; the ROM disk by its name, /sd/x and /dev/sd/x (x: not a digit, so SPI devices 8-f keep theirs), the bind in ns, /sd/8 no disk',
+    name: 'rom', about: '/rom, the files in the paged ROM, with no card: its listing (text and stat records: ls -l), a file read, a program run by its name from /rom/bin (the PATH fallback), cd into it, an exit status; read-only (write, remove, create refused), a missing name, a file for cd; the ROM disk by its name, /sd/x and /dev/sd/x (x: not a digit, so SPI devices 8-f keep theirs), the bind in ns, /sd/8 no disk; /rom/boot.hys run at boot with no card',
     args: ['--cycles', '90000000', '--input', BOOT + ['ls /rom\\r', 'hello a b\\r' + W(2), 'cd /rom/bin\\rpwd\\rls -l\\r', 'code 3\\r' + P + 'status .\\r',
       'cat /rom/nope\\r', 'rm /rom/README\\r', 'echo x > /rom/x\\r', 'cd /\\rcd /rom/README\\r', 'ns\\r', 'ls /sd/x\\r', 'cat /dev/sd/x/ctl\\r', 'ls /sd/8\\r'].join(P)],
-    expect: ['/> ls /rom\nREADME 984\nbin/\nsongs/\n', '/> hello a b\nHello from C on the Hydra-16!\n2 arguments: [a] [b]\n',
-      '/> cd /rom/bin\n\n/rom/bin> pwd\n/rom/bin\n/rom/bin> ls -l\ncode.hyx 2158 2000-01-01 00:00:00\n', 'scom.zsm 838 2000-01-01 00:00:00\n',
+    expect: ['No card: /ram/1 keeps your files until a reset.', '/ram/1> ls /rom\nREADME 984\nbin/\nboot.hys 85\nsongs/\n', '/ram/1> hello a b\nHello from C on the Hydra-16!\n2 arguments: [a] [b]\n',
+      '/ram/1> cd /rom/bin\n\n/rom/bin> pwd\n/rom/bin\n/rom/bin> ls -l\ncode.hyx 2158 2000-01-01 00:00:00\n', 'scom.zsm 838 2000-01-01 00:00:00\n',
       '/rom/bin> code 3\n\n/rom/bin> status .\n' + num(3) + '\n', '/rom/bin> cat /rom/nope\n\n !IO ERR! not found\n', '/rom/bin> rm /rom/README\n\n !IO ERR! not opened for that\n',
-      '/rom/bin> echo x > /rom/x\n\n !IO ERR! not opened for that\n', '/> cd /rom/README\n\n !IO ERR! ', '/> ns\n/sd -> hfs\n/rom = /sd/x\n', '/> ls /sd/x\nREADME 984\nbin/\nsongs/\n',
+      '/rom/bin> echo x > /rom/x\n\n !IO ERR! not opened for that\n', '/> cd /rom/README\n\n !IO ERR! ', '/> ns\n/sd -> hfs\n/rom = /sd/x\n/ram = /sd/r\n', '/> ls /sd/x\nREADME 984\nbin/\nboot.hys 85\nsongs/\n',
       '/> cat /dev/sd/x/ctl\nrom 4 MB 8192 blocks\nhydrafs label=ROM\n', '/> ls /sd/8\n\n !IO ERR! not found\n'],
   },
   {
-    name: 'ram-areas', about: 'the RAM disk\'s areas and the program caches: the shell\'s area (/ram/1) its own, a pipeline stage (a task it started) using it, another task\'s area and a name that isn\'t one refused (not allowed); programs by name from the shell\'s cache (/ram/1/bin) and the shared one (/ram/s/bin), a pipeline stage finding the shell\'s cache, the current directory first',
+    name: 'ram-areas', about: 'the RAM disk\'s areas and the program caches: the shell\'s area (/ram/1) its own, a pipeline stage (a task it started) using it, another task\'s area and a name that isn\'t one refused (not allowed); programs by name from the shell\'s cache (/ram/1/bin) and the shared one (/ram/s/bin), a pipeline stage finding the shell\'s cache, the current directory first; /dev/ram (raw RAM) refused: it\'s task 0\'s',
     sd: [{ dev: 0, label: 'AREAS', hfs: v => { v.put('c8.hys', Buffer.from('7 .\r\n')); } }],
     args: ['--cycles', '200000000', '--input', BOOT + ['echo hi > /ram/1/x\\r', 'cat /ram/1/x | cat\\r', 'mkdir /ram/2\\r', 'ls /ram/2\\r', 'mkdir /ram/zz\\r',
       'echo no > /ram/3\\r', 'cp /rom/bin/code.hyx /ram/1/bin/c9.hyx\\r', 'c9 4\\r' + P + 'status .\\r', 'cp /rom/bin/hello.hyx /ram/1/bin/hh.hyx\\r',
-      'hh a | cat\\r' + W(2), 'cp /rom/bin/code.hyx /ram/s/bin/c7.hyx\\r', 'c7 5\\r' + P + 'status .\\r', 'cp /rom/bin/code.hyx /ram/s/bin/c8.hyx\\r', 'c8\\r'].join(P) + P],
+      'hh a | cat\\r' + W(2), 'cp /rom/bin/code.hyx /ram/s/bin/c7.hyx\\r', 'c7 5\\r' + P + 'status .\\r', 'cp /rom/bin/code.hyx /ram/s/bin/c8.hyx\\r', 'c8\\r', 'cat /dev/ram\\r'].join(P) + P],
     expect: ['cat /ram/1/x | cat\nhi\n', 'mkdir /ram/2\n\n !IO ERR! not allowed\n', 'ls /ram/2\n\n !IO ERR! not allowed\n', 'mkdir /ram/zz\n\n !IO ERR! not allowed\n',
       'echo no > /ram/3\n\n !IO ERR! not allowed\n', '> status .\n' + num(4) + '\n', 'hh a | cat\nHello from C on the Hydra-16!\n1 arguments: [a]\n',
-      '> status .\n' + num(5) + '\n', '> c8\n' + num(7) + '\n'],
+      '> status .\n' + num(5) + '\n', '> c8\n' + num(7) + '\n', '> cat /dev/ram\n\n !IO ERR! not allowed\n'],
     forbid: ['!UNK WORD!'],
   },
   {
@@ -125,14 +125,25 @@ module.exports = [
     forbid: ['!IO ERR!', '!UNK WORD!'],
   },
   {
-    name: 'ram-area-busy', about: 'an area kept while a task its task started has a file in it open: a script (task B) makes /ram/b and starts upper in the background, writing to /ram/b/out; when the script ends, its area stays; once upper has ended, the next task B\'s end removes it',
+    name: 'ram-area-busy', about: 'an area kept while a task its task started has a file in it open: a script (task B) makes /ram/b and starts upper in the background, reading the console (so it waits) and writing to /ram/b/out; when the script ends, its area stays, and upper\'s owner is the shell; once upper is killed, the next task B\'s end removes it',
     sd: [{ dev: 0, label: 'AREABUSY', hfs: v => {
-      v.put('mk.hys', Buffer.from('mkdir /ram/b\r\nupper > /ram/b/out &\r\n'));
+      v.put('mk.hys', Buffer.from('mkdir /ram/b\r\nupper < /dev/cons > /ram/b/out &\r\n'));
       v.put('mk2.hys', Buffer.from('$FFF0 c@ .\r\necho z > /ram/b/z\r\n'));
     } }],
-    args: ['--cycles', '200000000', '--input', BOOT + ['mk\\r', 'ls /ram\\r', 'mk2\\r', 'ls /ram\\r'].join(P) + P],
-    expect: ['> ls /ram\n1/\nb/\n', '> mk2\n' + num(11), '> ls /ram\n1/\n'],
+    args: ['--cycles', '200000000', '--input', BOOT + ['mk\\r', 'ls /ram\\r', 'cat /dev/proc\\r', 'q^/dev/proc/a/ctl^ q^kill^ ctl\\r', 'mk2\\r', 'ls /ram\\r'].join(P) + P],
+    expect: ['> ls /ram\n1/\nb/\n', '\nA W 1\n', '> mk2\n' + num(11), '> ls /ram\n1/\n'],
     forbid: ['!IO ERR!', '!UNK WORD!'],
+  },
+  {
+    name: 'rom-none', about: 'a paged ROM image with no ROM disk (banks 0 and 1 only, no partition table): no /rom bound, so no /rom/boot.hys; the rest as usual',
+    pagedRom: image => {
+      const paged = Buffer.from(image.subarray(0, 2 * 0x4000));
+      paged.fill(0, 0x2000, 0x2200);                            // (Bank 0's $A000 half is at $2000: block 0, the table)
+      return paged;
+    },
+    args: ['--cycles', '60000000', '--input', BOOT + ['ns\\r', 'ls /rom\\r', '1 2 + .\\r'].join(P)],
+    expect: ['/ram/1> ns\n/sd -> hfs\n/ram = /sd/r\n', '/ram/1> ls /rom\n\n !IO ERR! not found\n', '/ram/1> 1 2 + .\n' + num(3)],
+    forbid: ['No card:'],
   },
   {
     name: 'rom-copy', about: 'the ROM disk read back on the machine: every file in /rom (romfs.txt) copied to a card is its source, byte for byte, the ones across a bank boundary too (sd.s: SD_ROM_READ)',
@@ -155,8 +166,8 @@ module.exports = [
     name: 'rtc', about: 'a DS1747 in U7 (its battery flat): found at boot, the clock set from it; /dev/time reads it; setting the time sets it too (the day of the week)',
     args: ['--cycles', '60000000', '--rtc', '2026-09-30T14:05:00', '--rtc-battery-low', '--input', W(3) + 'cat /dev/time\\r' + P +
       'echo 2027-01-02 03:04:05 > /dev/time\\r' + P + 'cat /dev/time\\r'],
-    expect: [/\nclock 2026-09-30 14:05:0[0-2] battery low\n/, /\/> cat \/dev\/time\n2026-09-30 14:05:0[1-3]\n/,
-      /\/> cat \/dev\/time\n2027-01-02 03:04:0[5-7]\n/],
+    expect: [/\nclock 2026-09-30 14:05:0[0-2] battery low\n/, /\/ram\/1> cat \/dev\/time\n2026-09-30 14:05:0[1-3]\n/,
+      /\/ram\/1> cat \/dev\/time\n2027-01-02 03:04:0[5-7]\n/],
     check: (out, report) => {
       if (!/--- DS1747: 2027-01-02 03:04:\d\d day 7\n/.test(report)) return 'the DS1747 wasn\'t set (Saturday: day 7): ' + (/--- DS1747.*/.exec(report) || ['none'])[0];
     },
@@ -164,7 +175,7 @@ module.exports = [
   {
     name: 'rtc-unset', about: 'a DS1747 never set (junk in its registers): "no clock" at boot; setting the time sets it, and it\'s found then',
     args: ['--cycles', '60000000', '--rtc', 'unset', '--input', W(3) + 'echo 2027-01-02 03:04:05 > /dev/time\\r' + W(2) + 'cat /dev/time\\r'],
-    expect: ['\nno clock\n', /\/> cat \/dev\/time\n2027-01-02 03:04:0[6-9]\n/],
+    expect: ['\nno clock\n', /\/ram\/1> cat \/dev\/time\n2027-01-02 03:04:0[6-9]\n/],
     check: (out, report) => {
       if (!/--- DS1747: 2027-01-02 03:04:\d\d day 7\n/.test(report)) return 'the DS1747 isn\'t running from the time set: ' + (/--- DS1747.*/.exec(report) || ['none'])[0];
     },
@@ -172,7 +183,7 @@ module.exports = [
   {
     name: 'rtc-none', about: 'no DS1747 (a plain HM628512 in U7): "no clock" at boot, and the clock is set and read as before',
     args: ['--cycles', '40000000', '--input', BOOT + 'echo 2027-01-02 03:04:05 > /dev/time\\r' + P + 'cat /dev/time\\r'],
-    expect: ['\nno clock\n\nHyForth', /\/> cat \/dev\/time\n2027-01-02 03:04:0[5-9]\n/],
+    expect: ['\nno clock\n\nHyForth', /\/ram\/1> cat \/dev\/time\n2027-01-02 03:04:0[5-9]\n/],
   },
   {
     name: 'semaphores', about: 'semaphores: counts (acquire?, release), a mutex (only its holder releases it), bad ones, a wait another task ends (a pipeline stage), freed and released when a task ends, freed while waited for, Ctrl-C in a wait',
@@ -180,22 +191,22 @@ module.exports = [
       'mutex .\\r', '2 acquire 2 release 2 release\\rioerr .\\r', '9 acquire\\rioerr .\\r', '0 sem .\\r',
       '200 sleep 3 release | 3 acquire 7 .\\r' + W(1), '4 sem . | cat\\r', '4 sem .\\r', '2 acquire 100 sleep | 2 acquire 8 .\\r' + W(1),
       '2 acquire? .\\r', '100 sleep 3 -sem | 3 acquire\\rioerr .\\r', '0 sem .\\r', '3 acquire\\r' + W(1) + '\\x03' + W(1) + '1 2 + .\\r'].join(W(1))],
-    expect: ['/> 2 sem .\n' + num(1) + '\n', '/> 1 acquire? . 1 acquire? . 1 acquire? .\n' + num(0xFFFF) + num(0xFFFF) + num(0) + '\n',
-      '/> 1 release 1 acquire? .\n' + num(0xFFFF) + '\n', '/> mutex .\n' + num(2) + '\n',
-      '/> 2 acquire 2 release 2 release\n\n !IO ERR! ', '/> ioerr .\n' + num(0x63) + '\n',       // (Released already: not held)
-      '/> 9 acquire\n\n !IO ERR! ', '/> ioerr .\n' + num(0x60) + '\n', '/> 0 sem .\n' + num(3) + '\n',
-      '/> 200 sleep 3 release | 3 acquire 7 .\n' + num(7) + '\n',                              // (The shell waits for the stage)
-      '/> 4 sem . | cat\n' + num(4) + '\n', '/> 4 sem .\n' + num(4) + '\n',                     // (The stage's: freed as it ended)
-      '/> 2 acquire 100 sleep | 2 acquire 8 .\n' + num(8) + '\n',                             // (Released as its holder ended)
-      '/> 2 acquire? .\n' + num(0) + '\n',                                                    // (The shell holds it now)
-      '/> 100 sleep 3 -sem | 3 acquire\n\n !IO ERR! ', '/> ioerr .\n' + num(0x60) + '\n',       // (Freed while waited for)
-      '/> 0 sem .\n' + num(3) + '\n', '/> 3 acquire\n\n !BREAK!\n', '/> 1 2 + .\n' + num(3) + '\n'],
+    expect: ['/ram/1> 2 sem .\n' + num(1) + '\n', '/ram/1> 1 acquire? . 1 acquire? . 1 acquire? .\n' + num(0xFFFF) + num(0xFFFF) + num(0) + '\n',
+      '/ram/1> 1 release 1 acquire? .\n' + num(0xFFFF) + '\n', '/ram/1> mutex .\n' + num(2) + '\n',
+      '/ram/1> 2 acquire 2 release 2 release\n\n !IO ERR! ', '/ram/1> ioerr .\n' + num(0x63) + '\n',       // (Released already: not held)
+      '/ram/1> 9 acquire\n\n !IO ERR! ', '/ram/1> ioerr .\n' + num(0x60) + '\n', '/ram/1> 0 sem .\n' + num(3) + '\n',
+      '/ram/1> 200 sleep 3 release | 3 acquire 7 .\n' + num(7) + '\n',                              // (The shell waits for the stage)
+      '/ram/1> 4 sem . | cat\n' + num(4) + '\n', '/ram/1> 4 sem .\n' + num(4) + '\n',                     // (The stage's: freed as it ended)
+      '/ram/1> 2 acquire 100 sleep | 2 acquire 8 .\n' + num(8) + '\n',                             // (Released as its holder ended)
+      '/ram/1> 2 acquire? .\n' + num(0) + '\n',                                                    // (The shell holds it now)
+      '/ram/1> 100 sleep 3 -sem | 3 acquire\n\n !IO ERR! ', '/ram/1> ioerr .\n' + num(0x60) + '\n',       // (Freed while waited for)
+      '/ram/1> 0 sem .\n' + num(3) + '\n', '/ram/1> 3 acquire\n\n !BREAK!\n', '/ram/1> 1 2 + .\n' + num(3) + '\n'],
   },
   {
     name: 'serial', about: 'serial settings: 9600 8N1 at boot; stty (/dev/ser/ctl), a refused format, IO_CTL rate and format; the ACIA\'s registers',
     args: ['--cycles', '60000000', '--input', BOOT + 'stty?\\rq^b19200 l7 pe s2^ stty stty?\\rq^l8 pe s2^ stty\\rioerr .\\r' +
       '1 2 6 ioctl stty?\\r1 3 11 ioctl stty?\\r'],
-    expect: ['/> stty?\nb9600 l8 pn s1\n', 'stty stty?\nb19200 l7 pe s2\n', '!IO ERR!', '/> ioerr .\n' + num(0x78) + '\n',
+    expect: ['/ram/1> stty?\nb9600 l8 pn s1\n', 'stty stty?\nb19200 l7 pe s2\n', '!IO ERR!', '/ram/1> ioerr .\n' + num(0x78) + '\n',
       '6 ioctl stty?\nb4800 l7 pe s2\n', '11 ioctl stty?\nb4800 l8 pe s1\n'],
     forbid: ['!DS PTR ERROR!', '!UNK WORD!'],
     check: (out, report) => {                                   // 4800 ($0C), 8 bits, 1 stop; even parity ($60) on DTR + IRQs ($05)
@@ -215,11 +226,11 @@ module.exports = [
   },
   {
     name: 'fast-output', about: 'console output at 115200: words (3.5K characters) in under a second (the fast paths), paced by timer 2 with at least 2 idle bits between characters (SER_PACE_GAP, and the interrupt\'s time)',
-    args: ['--cycles', '40000000', '--mark', '/> words', '--mark', '/> ', '--input', BOOT + 'q^b115200^ stty\\r' + P + 'words\\r'],
-    expect: ['/> words\n', ': Acls '],
+    args: ['--cycles', '40000000', '--mark', '/ram/1> words', '--mark', '/ram/1> ', '--input', BOOT + 'q^b115200^ stty\\r' + P + 'words\\r'],
+    expect: ['/ram/1> words\n', ': Acls '],
     check: (out, report) => {                                   // (The wire alone, paced: about 1.6M cycles; the old IO path: 3.6M more)
-      const at = +/mark: "\/> words" at cycle (\d+)/.exec(report)[1];
-      const took = [...report.matchAll(/mark: "\/> " at cycle (\d+)/g)].map(m => +m[1]).find(c => c > at) - at;
+      const at = +/mark: "\/ram\/1> words" at cycle (\d+)/.exec(report)[1];
+      const took = [...report.matchAll(/mark: "\/ram\/1> " at cycle (\d+)/g)].map(m => +m[1]).find(c => c > at) - at;
       if (!(took < 3000000)) return 'words took ' + took + ' cycles at 115200, not under 3M';
       const gap = +(/shortest idle between characters sent: ([\d.]+) bits/.exec(report) || [])[1];
       if (!(gap >= 2)) return 'the line idled only ' + gap + ' bits between characters at 115200, not 2 or more';
@@ -228,7 +239,7 @@ module.exports = [
   {
     name: 'serial-unpaced', about: 'from 115200 (paced by timer 2) back to 9600: sending by the TDRE interrupt again, and the console works',
     args: ['--cycles', '40000000', '--input', BOOT + 'q^b115200^ stty\\r' + P + 'words\\r' + W(2) + 'q^b9600^ stty\\r' + P + '1 2 + .\\r' + P + 'words\\r'],
-    expect: ['/> q^b9600^ stty\n', '/> 1 2 + .\n' + num(3) + '\n', '/> words\n', ': Acls '],
+    expect: ['/ram/1> q^b9600^ stty\n', '/ram/1> 1 2 + .\n' + num(3) + '\n', '/ram/1> words\n', ': Acls '],
   },
   {
     name: 'irqs-off', about: 'no long stretch with IRQs off after boot (tasks starting and ending, a pipeline, sound, files): a serial byte can\'t wait long',

@@ -111,6 +111,7 @@ A program that prints a partial line and then computes for a long time without a
 | `/sd/N/...` | Storage | The **files** on disk N: the HydraFS server (the device `hfs`, mounted at `/sd`; [below](#the-files-on-a-card)) |
 | `/dev/pipe` | Pipe server (`$D`) | Made by `IO_PIPE`, not opened by name |
 | `/dev/proc` | IO layer (in the reading task) | The tasks (below) |
+| `/dev/ram` | The shell registers it (in the reading task) | The RAM itself, as the CPU selects it: task 0's only (any other task's open: `ERR_IO_PERM`); read-only ([below](#the-ram-itself-devram)) |
 | `/dev/time` | The shell registers it (in the reading task) | The clock: read `2026-09-29 18:05:00`; write a date and time to set it (below) |
 | `/dev/null` | IO layer | Reads give end of file; writes are taken and dropped |
 | `/dev/zero` | IO layer | Reads give zeros |
@@ -202,7 +203,7 @@ Everything else goes to the chip as written (except the timers' interrupt enable
 | Code | Name | Does |
 | :--- | :--- | :--- |
 | 1 | `SND_CTL_INIT` | Stop the tune and clear the chip and the library's settings (the claims stay) |
-| 2 | `SND_CTL_TEST` | Play the test song (the ROM's: paged ROM bank 2, `SND_SONG_BANK`) in the background, in the song player (a task of its own, which claims the channels): the caller goes on at once.  `ERR_TASK_BUSY` if it's playing already |
+| 2 | `SND_CTL_TEST` | Play the test song (`/rom/songs/test.zsm`: the player mounts `/sd` for itself and opens it as `/sd/x/songs/test.zsm`, since the sound task's namespace has no names) in the background, in the song player (a task of its own, which claims the channels): the caller goes on at once.  `ERR_TASK_BUSY` if it's playing already |
 | 3 | `SND_CTL_STOP` | Stop the tune |
 | 4 | `SND_CTL_CLAIM` | `.Y` = a mask of channels (bit n: channel n), this fd's alone; `ERR_IO_BUSY` if another fd has one of them (none taken) |
 | 5 | `SND_CTL_RELEASE` | `.Y` = a mask of channels to give back |
@@ -245,9 +246,21 @@ So `echo /sd/0/bin > /env/PATH` sets one, `cat /env/PATH` shows it, `rm /env/PAT
 
 How: each task's environment is a 256-byte block in the system's shared bank (`ENV_BLOCKS`, `$8D00`), entries one after another; `IO_INHERIT` copies the parent's block for a new task (`ENV_COPY`).  An open variable is one of 16 slots (its task and name), so 16 can be open at once.
 
+#### **The RAM itself: `/dev/ram`**
+
+Every byte of RAM, as the CPU selects it, for task 0 (the system's task) and no other: a program can't read another's memory through it (a task's own family will have `/proc/N/mem`: [plans/PROC.md](../plans/PROC.md)).  Read-only; `servers/ram_srv.s`, page 9.
+
+| Offsets | What |
+| :------ | :--- |
+| `$0000000-$007FFFF` | Task RAM: task t's `$0000-$7FFF` at `t * $8000` |
+| `$0080000-$027FFFF` | Shared RAM: shared bank ID s at `$80000 + s * $2000` |
+| `$0280000-$207FFFF` | The RAM modules: module m's bank b for task t (its bank ID `m << 4 \| b`) at `$280000 + m * $200000 + t * $20000 + b * $2000` |
+
+A read gives up to 64 bytes, and stops at a 256-byte page's end (a short read: read again); past the last module, nothing (end of file).  How: it switches `T`, and the bank (and `U`) the bytes are in, with IRQs off, and copies them straight into task 0's transfer area, which also holds the copy's numbers (the request block's spare bytes: the one RAM every task sees with `$00` at the IO transfer bank).  The task's `$00` and the zero page bytes the copy uses are put back, and a copy of them reads as they were.  The IO self test (WOZMON `F88AR`) has task 0 read a task's RAM, a module bank and a shared bank through it (`TASK_CALL`), and checks that the task itself is refused.
+
 #### **The ROM's files: `/rom`**
 
-Files kept in the paged ROM, read-only, there with no card: programs, songs and (later) libraries.  The paged ROM is a disk, the **ROM disk** (`/dev/sd/x`), with a HydraFS volume on it, so its files are `/sd/x/...` like a card's; the boot shell binds `/rom` to `/sd/x` (`ns` shows `/rom = /sd/x`), and every task it starts inherits the bind.
+Files kept in the paged ROM, read-only, there with no card: programs, songs and (later) libraries.  The paged ROM is a disk, the **ROM disk** (`/dev/sd/x`), with a HydraFS volume on it, so its files are `/sd/x/...` like a card's; the boot shell binds `/rom` to `/sd/x` (`ns` shows `/rom = /sd/x`) if the ROM disk has a volume (a paged ROM image without one has no table: no `/rom`, and everything else works), and every task it starts inherits the bind.
 
 | Name | Read |
 | :--- | :--- |
@@ -261,8 +274,8 @@ Writing, creating and removing give `ERR_IO_MODE` (the shell's `!IO ERR!`), as d
 | Blocks | Banks | What |
 | :----- | :---- | :--- |
 | 0 | 0 (`$A000-$A1FF`) | The partition table (an MBR, as a card's), and a line saying what the disk is |
-| 1-95 | 0-2 | Partition 1, type `$DA` (not a file system): the system's banks: HyForth's variables, the hardware test, the test song |
-| 96-8191 | 3-255 | Partition 2, type `$7F`: the HydraFS volume, label `ROM`, read-only |
+| 1-63 | 0-1 | Partition 1, type `$DA` (not a file system): the system's banks: HyForth's variables, the hardware test |
+| 64-8191 | 2-255 | Partition 2, type `$7F`: the HydraFS volume, label `ROM`, read-only |
 
 What's in it comes from `os_rom/romfs.txt`, a list of files (their names in `/rom`, and where the build finds them).  After the link, the build's `sim/tools/mkromdisk.js` makes the volume with the HydraFS PC tool (`hydrafs.js`, stamped 2000-01-01 so each build is the same), writes the table and the volume's blocks into the paged ROM image, then reads the image back the way the CPU would (through the emulator's bank mapping) and checks every file against its source: a mismatch fails the build.  `node sim/tools/mkromdisk.js os_rom/romfs.txt os_rom/bin/paged_rom_C02.bin --list` (from `os_rom`, after a build) also shows which banks each file is in.  The `rom-copy` test copies every file from `/rom` to a card on the emulated machine and compares them with their sources.
 
@@ -282,6 +295,8 @@ The boot shell binds `/ram` to `/sd/r`, and HydraFS serves the shared disk insid
 * **Other names** in the root (`/ram/zz`) aren't areas: refused.  `/ram/s` and the root's listing are everyone's.  Renaming an area, or changing its mode, is refused too (but for task 0).
 * **Owners:** when a task ends, the tasks it started get its owner instead (`TASK_ORPHANS`, as Unix gives orphans to `init`), so a new task in its slot isn't taken for their parent.
 * **An area goes when its task ends,** with everything in it: after the task's fds are closed, and before its parent (a shell waiting for it) goes on (`TASK_AREA_END`, then `HFS_AREA_END` in the storage task).  If a task it started still has a file in it open, it stays, and goes when task N ends next.  (The storage task keeps a bit for each area that may be there, `RAMD_AREAS`, so a task without one ends as fast as before.)
+
+**With no card,** the boot shell's current directory is its own area, `/ram/1` (the prompt `/ram/1> `), so files can be saved there (until a reset), and it runs `/rom/boot.hys` (a line about it) in place of a card's `boot.hys`.
 
 **Program caches.**  The boot shell makes `/ram/s/bin` and `/ram/s/lib` (the shared caches) and its own area, `/ram/1`, with `bin` and `lib`.  A program typed by its name is looked for in:
 1. the current directory (Plan 9's `.` first);

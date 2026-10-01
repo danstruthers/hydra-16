@@ -167,7 +167,7 @@ node ../sim/tools/mkromdisk.js romfs.txt bin/paged_rom_C02.bin --list   ... and 
 ```
 
 It makes a HydraFS volume of the files with `hydrafs.js` (stamped 2000-01-01, so each build is the same), puts
-a partition table in bank 0's first block and the volume from bank 3, in the chips' order (the halves and the V1
+a partition table in bank 0's first block and the volume from bank 2, in the chips' order (the halves and the V1
 board's bank bits swapped), then reads the image back as the CPU would, through the emulator's own bank mapping
 (`lib/machine.js`), and fails if any file isn't its source byte for byte.  Running it again on an image it has
 already written is harmless: the blocks are written over.
@@ -183,10 +183,10 @@ ROM's test song) and `programs/songs/scom.mml` are examples.
 ```
 node tools/hysong.js song.mml song.zsm                    compile; report its size, length and notes by channel
 node tools/hysong.js song.mml song.zsm --vgm song.vgm     ... and a VGM, to hear it on the PC (VGMPlay, foobar2000)
-node tools/hysong.js song.mml song.zsm --rom song.s       ... and a ca65 source for paged ROM bank 2 (the build's)
+node tools/hysong.js song.mml song.zsm --rom song.s       ... and a ca65 source of its bytes (for a ROM of your own)
 ```
 
-The build compiles `os_rom/songs/test.mml` this way before it assembles the ROM (into `os_rom/obj/test_rom.s`).  To hear what the Hydra itself
+The build compiles `os_rom/songs/test.mml` this way before it assembles the ROM (into `os_rom/songs/test.zsm`, a file on the ROM disk).  To hear what the Hydra itself
 plays, run the emulator with `--ym-vgm`.
 
 ### **What it models**

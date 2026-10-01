@@ -2208,7 +2208,8 @@ PEDONE:
 ;
 ; A line is about to be read: the last line's redirection and pipe undone (whether or not the shell's
 ; library is loaded now: it was when that line began, if they're set up), and before the boot shell's first
-; line, boot.hys from the selected volume's root (the current directory), if it's there
+; line, boot.hys from the selected volume's root (the current directory), if it's there; with no card, the
+; ROM's, /rom/boot.hys (BOOTFLAG 2)
 LINE_START:
     stz SHBG            ; (A new line: nothing started with & yet)
     jsr SH_UNREDIR
@@ -2219,8 +2220,13 @@ LINE_START:
     lda BOOTFLAG
     beq LSDONE
     stz BOOTFLAG
+    cmp #2
     lda #<S_BOOTHYS
     ldy #>S_BOOTHYS
+    bcc LSBOOT
+    lda #<S_ROMBOOT
+    ldy #>S_ROMBOOT
+LSBOOT:
     jmp INCOPEN
 LSDONE:
     rts

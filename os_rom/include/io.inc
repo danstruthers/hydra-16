@@ -198,7 +198,7 @@ H9_WSTAT            = 10        ; a stat record in the data area: a new name (no
 ; the register numbers the chip doesn't have are the library's commands (SND_R_*).  Reads: the registers as
 ; they were written (the carriers' TL before the volume), a 256-byte file.
 SND_CTL_INIT        = 1         ; IO_CTL code: clear the YM2151 (and the library's settings)
-SND_CTL_TEST        = 2         ; IO_CTL code: play the test song (the ROM's), in the background (the song
+SND_CTL_TEST        = 2         ; IO_CTL code: play the test song (/rom/songs/test.zsm), in the background (the song
                                 ;   player in a task of its own, SND_PLAYER); ERR_TASK_BUSY if it's playing
 SND_CTL_STOP        = 3         ; IO_CTL code: stop the player (and key off all channels)
 SND_CTL_CLAIM       = 4         ; IO_CTL code: .Y = a mask of channels, this fd's alone while it's open (other
@@ -223,8 +223,6 @@ SND_PAN_LEFT        = 1
 SND_PAN_RIGHT       = 2
 SND_PAN_BOTH        = 3
 SND_FIDS            = 8         ; /dev/snd open at once (fids 1-8)
-SND_SONG_BANK       = 2         ; The test song (a ZSM: songs/test.mml): in this paged ROM bank ...
-SND_SONG            = $A000     ;   at this address (and on into the next bank, past $DFFF)
 ; In the sound task's RAM
 SND_SHADOW          = $0200     ; Every register as last written (256 bytes; the carriers' TL before the volume)
 SND_VOL             = $0300     ; Each channel's volume (8)

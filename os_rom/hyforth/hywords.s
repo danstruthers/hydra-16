@@ -1425,7 +1425,8 @@ HISTLEN:                ; The lines typed (LINE_EDIT's history): HISTLEN bytes i
     .byte 0             ;   first
 HIST:
     .res HIST_SIZE
-BOOTFLAG:               ; <> 0: run boot.hys before the first prompt (the boot shell: page 7's SH_BOOT)
+BOOTFLAG:               ; Before the first prompt (the boot shell: page 7's SH_BOOT): 1, run boot.hys (a card's);
+                        ;   2, /rom/boot.hys (no card); 0, neither
     .byte 0
 BAREFLAG:               ; <> 0: a bare Forth ('forth': forth_bare_main): 'cold' loads no libraries
     .byte 0
@@ -1478,6 +1479,8 @@ FWSP:                   ; a far word's stack pointer, on page A (farwords.s: FW_
     .byte 0
 S_BOOTHYS:              ; (getline's, for INCOPEN on page A: so it's in RAM, not on page 1)
     .byte "boot.hys", 0
+S_ROMBOOT:              ; (... and the ROM's, when the current directory has none)
+    .byte "/rom/boot.hys", 0
 .segment "FORTH_CORE"
 lib_begin LIBN_IO
 ;

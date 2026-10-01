@@ -5,7 +5,7 @@
 ; format: YM2151 register writes and delays) played through /dev/snd, in a task of its own.  The shell starts it
 ; (run.s: SH_SONG, for play and for a song run by its name) with the song on SH_RUN_FD, at its start, and its
 ; arguments on SH_ARGS_FD: how many more times to play the song's loop (none: to its end once; 0: forever).  Or
-; the sound driver starts it on the ROM's song (ZSM_PLAY_ROM: sndtest's, in paged ROM bank SND_SONG_BANK).
+; the sound driver starts it on the test song (ZSM_PLAY_TEST: sndtest's, /rom/songs/test.zsm on the ROM disk).
 ;   The header (16 bytes): "zm", a version, the loop point (3 bytes: an offset in the file; 0: none), the PCM
 ; table's (ignored), the FM channels it uses (claimed: SND_CTL_CLAIM), the PSG's (ignored), the tick rate (Hz;
 ; 0: 60), 2 reserved.  Then the stream: $00-$3F a PSG write (skipped: the Hydra has no PSG), $40 an extension
@@ -39,8 +39,9 @@ ZSM_FOREVER     = $FF                                       ; ZSM_LOOPS: the loo
 ZSM_PLAY:
             lda         #>ZSM_RAM_END                       ; (Its RAM: not the MMU's)
             jsr         MM_SET_FLOOR
-            stz         ZSM_ROM
             jsr         ZSM_ARGS                            ; ZSM_LOOPS
+
+ZSM_PLAY_FILE:
             LOAD_ADDR   ZSM_HDR, ZP_IO_BUF                  ; The header
             lda         #ZSM_HDR_SIZE
             sta         ZP_IO_CNT
@@ -55,24 +56,47 @@ ZSM_PLAY:
 @short:
             jmp         ZSM_BEGIN_NOT
 
-; The player's task for the ROM's song (the sound driver's SND_CTL_TEST: sndtest): SND_SONG in paged ROM bank
-; SND_SONG_BANK, to its end once.  Its entry point (TASK_RUN, page C)
-ZSM_PLAY_ROM:
+; The player's task for the test song (the sound driver's SND_CTL_TEST: sndtest): songs/test.zsm on the ROM disk,
+; to its end once, played as any song file is.  This task's namespace is the sound task's, which has no names, so
+; it mounts /sd (HydraFS) itself and opens /sd/x/songs/test.zsm (/rom/songs/test.zsm) on SH_RUN_FD.  Its entry
+; point (TASK_RUN, page C)
+ZSM_PLAY_TEST:
             lda         #>ZSM_RAM_END
             jsr         MM_SET_FLOOR
             stz         ZSM_LOOPS
-            lda         #SND_SONG_BANK                      ; (The task's own bank at $A000-$DFFF)
-            sta         ZSM_ROM
-            sta         ROM_BANK_REG
-            LOAD_ADDR   SND_SONG, ZSM_RP
-            ldx         #0
+            ldx         #ZSM_TEST_END - ZSM_TEST_NAMES - 1  ; The names: in RAM (the IO layer reads them there)
+:
+            lda         ZSM_TEST_NAMES,X
+            sta         ZSM_TEXT,X
+            dex
+            bpl         :-
+            LOAD_ADDR   (ZSM_TEXT + ZSM_TEST_HFS - ZSM_TEST_NAMES), ZP_IO_BUF
+            lda         #<ZSM_TEXT
+            ldy         #>ZSM_TEXT
+            jsr         IO_MOUNT                            ; (/sd -> hfs)
+            lda         #<(ZSM_TEXT + ZSM_TEST_SONG - ZSM_TEST_NAMES)
+            ldy         #>(ZSM_TEXT + ZSM_TEST_SONG - ZSM_TEST_NAMES)
+            ldx         #IO_MODE_READ
+            jsr         IO_OPEN
+            bcs         @none
+            cmp         #SH_RUN_FD
+            beq         :+
+            pha
+            ldx         #SH_RUN_FD
+            jsr         IO_DUP2
+            pla
+            jsr         IO_CLOSE
+:
+            jmp         ZSM_PLAY_FILE
 
-@header:
-            jsr         ZSM_BYTE
-            sta         ZSM_HDR,X
-            inx
-            cpx         #ZSM_HDR_SIZE
-            bne         @header
+@none:
+            jmp         ZSM_BEGIN_NOT
+
+ZSM_TEST_NAMES: .byte   "/sd", 0
+ZSM_TEST_HFS:   .byte   "hfs", 0
+ZSM_TEST_SONG:  .byte   "/sd/", DISK_NAME_ROM, "/songs/test.zsm", 0
+ZSM_TEST_END:
+.assert     ZSM_TEXT + ZSM_TEST_END - ZSM_TEST_NAMES <= ZSM_RAM_END, error, "ZSM_TEST_NAMES: in ZSM_TEXT"
 
 ; The header read (ZSM_HDR): play the song
 ZSM_BEGIN:
@@ -244,30 +268,6 @@ ZSM_STREAM:
             dec         ZSM_LOOPS
 
 @again:
-            lda         ZSM_ROM
-            beq         @again_file
-            lda         ZSM_LOOP                            ; The ROM's song: the loop point's bank and address
-            sta         ZSM_RP
-            lda         ZSM_LOOP + 1
-            and         #$3F
-            ora         #>SND_SONG
-            sta         ZSM_RP + 1
-            lda         ZSM_LOOP + 2                        ; (Its bank: the offset / $4000)
-            asl
-            asl
-            sta         ZSM_T
-            lda         ZSM_LOOP + 1
-            rol
-            rol
-            rol
-            and         #$03
-            ora         ZSM_T
-            clc
-            adc         ZSM_ROM
-            sta         ROM_BANK_REG
-            jmp         ZSM_STREAM
-
-@again_file:
             lda         ZSM_LOOP
             sta         ZP_IO_OFS
             lda         ZSM_LOOP + 1
@@ -289,27 +289,6 @@ ZSM_STREAM:
 ; The song's next byte (the buffer refilled from the file as it runs out).  OUT: C = 0, .A = the byte; or C =
 ; 1: the file's end (or an error).  Preserves .X, .Y
 ZSM_BYTE:
-            lda         ZSM_ROM
-            beq         @file
-            lda         (ZSM_RP)                            ; The ROM's song: the next byte, and past $DFFF, the
-            inc         ZSM_RP                              ;   next bank from $A000
-            bne         @rom_byte
-            inc         ZSM_RP + 1
-            pha
-            lda         ZSM_RP + 1
-            cmp         #$E0
-            bne         :+
-            lda         #>SND_SONG
-            sta         ZSM_RP + 1
-            inc         ROM_BANK_REG
-:
-            pla
-
-@rom_byte:
-            clc
-            rts
-
-@file:
             lda         ZSM_IN_LEFT
             ora         ZSM_IN_LEFT + 1
             bne         @have
@@ -353,8 +332,6 @@ ZSM_BYTE:
 ; Read ahead: when fewer than 128 of the song's bytes are left in the buffer, they go to its start and the file
 ; fills the rest (the end of the file: what there is)
 ZSM_TOPUP:
-            lda         ZSM_ROM
-            bne         @done                               ; (The ROM's song: nothing to read)
             lda         ZSM_IN_LEFT + 1
             bne         @done                               ; (256: full)
             lda         ZSM_IN_LEFT

@@ -38,7 +38,9 @@ table[0] = pages;
 table[1] = banks;
 let at = 2;
 for (let p = 0; p < pages; p++, at += 2) table.writeUInt16LE(crc16(i => bios[p * PAGE + i], 0x1F00), at);
-for (let b = 0; b < banks; b++, at += 2) table.writeUInt16LE(crc16(i => paged[pagedOfs(b, 0xA000 + i)], SUMS - 0xA000), at);
+// (A bank the CPU selects can be past the image's end in the chips' order, where the chips are erased: $FF)
+const pagedByte = o => o < paged.length ? paged[o] : 0xFF;
+for (let b = 0; b < banks; b++, at += 2) table.writeUInt16LE(crc16(i => pagedByte(pagedOfs(b, 0xA000 + i)), SUMS - 0xA000), at);
 for (let i = 0; i < SUMS_SIZE; i++) paged[pagedOfs(HWT_BANK, SUMS + i)] = table[i];
 fs.writeFileSync(pagedName, paged);
 console.log("ROM checksums: " + pages + " BIOS pages, " + banks + " paged ROM banks");

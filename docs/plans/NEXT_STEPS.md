@@ -178,9 +178,9 @@ Each milestone leaves the project in a state worth showing.
 4. `CONTRIBUTING.md`.
 
 **2. Storage and names, then programming and making things** (the order set for it):
-1. RAM and ROM disks ([DISKS.md](DISKS.md)).  *Done:* the paged ROM is the disk `/sd/x`, a HydraFS volume bound at `/rom`; the RAM disks `/sd/r` and `/sd/s` (`/ram`, `/ram/s`), the tasks' areas, the program caches.  Next: the test song as a file, `/rom` bound only when found.
-2. `/proc` ([PROC.md](PROC.md)): `/proc/N/mem` and `/proc/N/ram`, a task's memory as files, for its family and task 0.
-3. Namespaces the Plan 9 way ([NAMESPACES.md](NAMESPACES.md)): union directories, a default namespace from `/rom/lib/namespace`, `.` then `/bin` in place of search paths.
+1. RAM and ROM disks ([DISKS.md](DISKS.md)).  *Done:* the paged ROM is the disk `/sd/x`, a HydraFS volume bound at `/rom`; the RAM disks `/sd/r` and `/sd/s` (`/ram`, `/ram/s`), the tasks' areas, the program caches; the test song a file; with no card, `/ram/1` and `/rom/boot.hys`; `/dev/ram` for task 0.
+2. **Next:** namespaces the Plan 9 way ([NAMESPACES.md](NAMESPACES.md)): a bigger namespace, union directories, a default namespace from `/rom/lib/namespace`, `.` then `/bin` in place of search paths.
+3. `/proc` ([PROC.md](PROC.md)): `/proc/N/mem` and `/proc/N/ram`, a task's memory as files, for its family and task 0; and a command for another running shell (`/proc/N/cmd`: a line written there is run by shell N as if typed, before its next line from the console).
 4. EhyBASIC, adapted to the system (a `.hyx`, and `/rom/bin/basic`).
 5. `/pc`: a PC folder over the serial port (then XMODEM).
 6. `/dev/i2c`.

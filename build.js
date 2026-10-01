@@ -67,12 +67,12 @@ function rom() {
   if (!/^[\x20-\x7E]{1,16}$/.test(version)) fail('os_rom/VERSION: 1-16 printable characters, please');
   writeIfChanged(path.join(OS_ROM, 'obj', 'version.inc'),
     '; Made by build.js from os_rom/VERSION: don\'t edit\r\n.define HY_VERSION "' + version + '"\r\n');
-  // The test song (sndtest's, paged ROM bank 2), from its score
-  node(path.join(ROOT, 'sim', 'tools', 'hysong.js'), ['songs/test.mml', 'songs/test.zsm', '--rom', 'obj/test_rom.s', '--quiet'], OS_ROM);
+  // The test song (sndtest's: /rom/songs/test.zsm, on the ROM disk), from its score
+  node(path.join(ROOT, 'sim', 'tools', 'hysong.js'), ['songs/test.mml', 'songs/test.zsm', '--quiet'], OS_ROM);
   run(tool('ca65'), ['-g', '-o', 'obj/all_C02.o', '-l', 'obj/all_C02.txt', '--cpu', '65C02', 'all.s'], OS_ROM);
   run(tool('ld65'), ['-C', 'os_rom_C02.cfg', 'obj/all_C02.o', '-Ln', 'obj/os_rom_C02.lbl', '-m', 'obj/os_rom_C02.map',
     '--dbgfile', 'obj/os_rom_C02.dbg'], OS_ROM);
-  // The ROM disk (/rom: a HydraFS volume, from romfs.txt) into the paged ROM image from bank 3; then the checksums for the
+  // The ROM disk (/rom: a HydraFS volume, from romfs.txt) into the paged ROM image from bank 2; then the checksums for the
   // hardware test; then calls to another ROM page that don't go through a gate (a crash on the board)
   node(path.join(ROOT, 'sim', 'tools', 'mkromdisk.js'), ['romfs.txt', 'bin/paged_rom_C02.bin'], OS_ROM);
   node(path.join(OS_ROM, 'tools', 'romsum.js'), ['bin/os_rom_C02.bin', 'bin/paged_rom_C02.bin'], OS_ROM);

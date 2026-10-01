@@ -151,6 +151,7 @@ ED_MAIN_P8      = PAGE8::ED_MAIN        ; (For page 7: SH_EDIT)
 .include "servers/proc_srv.s"        ; The tasks (/dev/proc)
 .include "servers/env_srv.s"         ; Each task's environment (/env)
 .include "servers/time_srv.s"        ; The clock (/dev/time)
+.include "servers/ram_srv.s"         ; The RAM itself, for task 0 (/dev/ram)
 .include "drivers/rtc.s"             ; The clock chip (a DS1747 in U7)
 .endscope
 PROC_SERVE_P9   = PAGE9::PROC_SERVE     ; (For page 0's gates: io_p0.s)
@@ -159,6 +160,7 @@ PROC_MEM_COUNT_P9 = PAGE9::PROC_MEM_COUNT
 ENV_COPY_P9     = PAGE9::ENV_COPY       ; (For page 2: IO_INHERIT)
 ENV_INIT_P9     = PAGE9::ENV_INIT       ; (For page 7: SH_BOOT)
 TIME_SERVE_P9   = PAGE9::TIME_SERVE     ; (For page 0's gates: io_p0.s)
+RAM_SERVE_P9    = PAGE9::RAM_SERVE      ; (... and thunks.s)
 CLOCK_GET_P9    = PAGE9::CLOCK_GET      ; (For page 6: HydraFS's stamps)
 CLOCK_TEXT_P9   = PAGE9::TIME_TEXT      ; (For page 7: ls -l)
 RTC_BOOT_P9     = PAGE9::RTC_BOOT       ; (For page 7: SH_BOOT)
@@ -180,7 +182,7 @@ TIME_DIV8_P9    = PAGE9::TIME_DIV8
 .include "sound/player.s"       ; The song player
 .endscope
 ZSM_PLAY_PC     = PAGEC::ZSM_PLAY       ; (For page 7: SH_SONG)
-ZSM_PLAY_ROM_PC = PAGEC::ZSM_PLAY_ROM   ; (For page B: SND_CTL_TEST)
+ZSM_PLAY_TEST_PC = PAGEC::ZSM_PLAY_TEST ; (For page B: SND_CTL_TEST)
 
 ; BIOS ROM page 0 (W = 0)
 .include "kernel/print.s"
@@ -205,5 +207,3 @@ ZSM_PLAY_ROM_PC = PAGEC::ZSM_PLAY_ROM   ; (For page B: SND_CTL_TEST)
 .endscope
 HWT_ENTRY       = HWTEST::HWT_ENTRY     ; (_M_HWT_ENTER's jump: include/hwtest.inc)
 
-; Paged ROM bank 2: the test song (sndtest's), made from songs/test.mml by makeC02.bat (sim/tools/hysong.js)
-.include "obj/test_rom.s"       ; (build.js makes it from songs/test.mml)
