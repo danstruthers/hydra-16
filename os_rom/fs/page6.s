@@ -23,6 +23,7 @@ FAR_GATE_INLINE     HFS_PART_FIND,  PAGE3::HFS_PART_FIND,   3   ; (The card's Hy
 
 ; ... and to page 0 (they run in the current task: the storage task)
 FAR_GATE_INLINE     IO_SRV_MAP,     ::IO_SRV_MAP,           0
+FAR_GATE_INLINE     TASK_MAY,       PAGE5::TASK_MAY,        5   ; (The RAM disk's areas: HFS_AREA_CHECK)
 FAR_GATE_INLINE     IO_SRV_UNMAP,   ::IO_SRV_UNMAP,         0
 
 ; ... to page 9: the clock (HydraFS's stamps)

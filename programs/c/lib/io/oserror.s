@@ -57,5 +57,6 @@ errtab:
         .byte       ERR_IO_NOT_DIR,     EINVAL
         .byte       ERR_IO_IS_DIR,      EACCES
         .byte       ERR_IO_NOT_EXEC,    ENOEXEC
+        .byte       ERR_IO_PERM,        EACCES
 ERRTAB_SIZE = * - errtab
 .assert     ERRTAB_SIZE < 128, error, "errtab: .X counts down with bpl"

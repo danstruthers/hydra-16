@@ -7,39 +7,39 @@ How the OS ROM is organised, how code calls between ROM pages, and the fixed ent
 | Image | Chip | Contents |
 | :---- | :--- | :------- |
 | `os_rom/bin/os_rom_C02.bin` (128K) | BIOS ROM, 16 pages of 8K at `$E000-$FFFF`, selected by `W` | The BIOS, kernel, drivers, IO layer, HyForth, WOZMON, self tests |
-| `os_rom/bin/paged_rom_C02.bin` (48K) | Paged ROM banks 0-2, at `$A000-$DFFF` | Bank 0: `COPYTORAM` and HyForth's variables (copied to `$0800` when the shell starts), HyForth's training scripts and sample binary words.  Bank 1: the [hardware test](../using/wozmon.md#the-hardware-test) (`hwtest/`, scope `HWTEST`), and the ROMs' checksums at its end (`$DFC0`).  Bank 2: the test song (`sndtest`'s: a ZSM, `songs/test_rom.s`, which the build makes from `songs/test.mml` with `sim/tools/hysong.js`) |
+| `os_rom/bin/paged_rom_C02.bin` (192K) | Paged ROM banks 0-11, at `$A000-$DFFF` | The whole paged ROM is one disk, the ROM disk (`/sd/x`, bound at `/rom`: [io.md](io.md#the-roms-files-rom)), with a partition table in its first 512 bytes (bank 0, `$A000-$A1FF`).  Bank 0, after the table: `COPYTORAM` (`$A200`) and HyForth's variables (`$A300`, copied to `$0800` when the shell starts), HyForth's training scripts and sample binary words.  Bank 1: the [hardware test](../using/wozmon.md#the-hardware-test) (`hwtest/`, scope `HWTEST`), and the ROMs' checksums at its end (`$DFC0`).  Bank 2: the test song (`sndtest`'s: a ZSM, `songs/test_rom.s`, which the build makes from `songs/test.mml` with `sim/tools/hysong.js`).  Banks 0-2 are the disk's partition 1, so the volume leaves them alone.  Banks 3 on: the ROM disk's HydraFS volume, `/rom`'s files, which `sim/tools/mkromdisk.js` adds to the image after the link, from `romfs.txt` |
 
-Both come from one build (`os_rom/all.s`, linked by `os_rom/os_rom_C02.cfg`); after the link, `tools/romsum.js` writes a CRC of each BIOS ROM page and paged ROM bank into bank 1, for the hardware test.  The hardware test runs on its own: BIOS ROM code starts it with `_M_HWT_ENTER` (`include/hwtest.inc`), which gives every task paged ROM bank 1 and jumps to it, and it never calls back.  HyForth's code in the BIOS ROM uses its variables where the paged ROM's copy puts them, and the sample binary words call BIOS ROM addresses, so most changes affect both images: burn both.
+Both come from one build (`os_rom/all.s`, linked by `os_rom/os_rom_C02.cfg`); after the link, `sim/tools/mkromdisk.js` writes the ROM disk's table and volume (and reads them back to check every file), and `tools/romsum.js` writes a CRC of each BIOS ROM page and paged ROM bank into bank 1, for the hardware test.  On the V1 board a bank number's bits 2 and 3, and 6 and 7, trade places on their way to the chips ([hardware.md](../hardware.md#the-paged-rom)), so the image holds the bank the CPU selects as `b` at bank `swap(b)`'s place (`mkromdisk.js` and `romsum.js` do this; banks 0-3 are where they seem).  The hardware test runs on its own: BIOS ROM code starts it with `_M_HWT_ENTER` (`include/hwtest.inc`), which gives every task paged ROM bank 1 and jumps to it, and it never calls back.  HyForth's code in the BIOS ROM uses its variables where the paged ROM's copy puts them, and the sample binary words call BIOS ROM addresses, so most changes affect both images: burn both.
 
 ### **BIOS ROM pages**
 
 | Page (`W`) | Scope | Contents | Sources |
 | :--------- | :---- | :------- | :------ |
-| 0 | (global) | Reset, POST gate, the kernel (tasks, scheduler, IRQ dispatch, MMU, shared memory), serial and sound drivers, the IO layer's page 0 part, printing, WOZMON, thunks | `kernel/`, `drivers/serial.s`, `drivers/sound.s`, `io/io_p0.s`, `monitor/wozmon.s` |
+| 0 | (global) | Reset, POST gate, the kernel (tasks, scheduler, IRQ dispatch, MMU, shared memory), serial and sound drivers, the IO layer's page 0 part, printing, thunks | `kernel/`, `drivers/serial.s`, `drivers/sound.s`, `io/io_p0.s` |
 | 1 | `PAGE1` | HyForth: its interpreter, and its built-in words' headers and code, all run from ROM; a copy of the thunks | `hyforth/` |
-| 2 | `PAGE2` | The IO layer: fds, namespaces, pipes, `/dev/cons` and `/dev/ser` (its settings, and the fast serial and tick interrupt handlers: `serfast.s`) | `io/` |
-| 3 | `PAGE3` | Storage: SPI, the SD card's block layer, `/dev/sd`, and HydraFS's format, label, partitions and check | `drivers/spi.s`, `drivers/sd.s`, `io/sd_srv.s`, `io/hfs_format.s`, `io/hfs_check.s` |
-| 4 | `PAGE4` | POST and the self tests (MMU, scheduler, IO) | `tests/` |
-| 5 | `PAGE5` | Far pointers and references; semaphores; exit statuses | `kernel/fp.s`, `kernel/sem.s`, `kernel/exits.s` |
-| 6 | `PAGE6` | The HydraFS server (`/sd/N/...`), in the storage task, on page 3's block layer: reading, writing, sparse files | `io/page6.s`, `io/hfs_srv.s`, `io/hfs_write.s`, `io/hfs_sparse.s` |
+| 2 | `PAGE2` | The IO layer: fds, namespaces, pipes, `/dev/cons` and `/dev/ser` (its settings, and the fast serial and tick interrupt handlers: `serfast.s`) | `io/`, `servers/ser_srv.s`, `servers/serctl.s`, `servers/serfast.s` |
+| 3 | `PAGE3` | Storage: SPI, the disks' block layer (SD cards; the ROM disk: the paged ROM, read-only; the RAM disks, and starting and stopping them), `/dev/sd`, and HydraFS's format, label, partitions and check | `drivers/spi.s`, `drivers/sd.s`, `servers/sd_srv.s`, `servers/ramdisk.s`, `fs/hfs_format.s`, `fs/hfs_check.s` |
+| 4 | `PAGE4` | POST and the self tests (MMU, scheduler, IO); WOZMON (`MON_START`, through gates: it reads `$E000-$FDFF` from BIOS ROM page `ZP_D_PAGE`, 0 unless the disassembler was set otherwise, and `R` runs code on page 0) | `tests/`, `monitor/wozmon.s` |
+| 5 | `PAGE5` | Far pointers and references; semaphores; exit statuses; the owner chain at a task's end (`TASK_ORPHANS`: its children, its RAM disk area) and `TASK_MAY` | `kernel/fp.s`, `kernel/sem.s`, `kernel/exits.s` |
+| 6 | `PAGE6` | The HydraFS server (`/sd/N/...`), in the storage task, on page 3's block layer: reading, writing, sparse files | `fs/page6.s`, `fs/hfs_srv.s`, `fs/hfs_write.s`, `fs/hfs_sparse.s` |
 | 7 | `PAGE7` | The shell: the boot shell's start (the volumes found, one selected), the prompt, the file and card commands HyForth's shell words call (`SH_CMD`), running programs (`run`, the `.hyx` loader, arguments), redirection | `shell/page7.s`, `shell.s`, `files.s`, `run.s`, `redir.s` |
 | 8 | `PAGE8` | The text editor (`edit`): a ROM program, run in a task of its own | `shell/page8.s`, `shell/edit.s` |
-| 9 | `PAGE9` | The system's servers that run in their client's task: `/dev/proc`, `/env` (each task's environment) and `/dev/time` (the clock: `CLOCK_GET`, `CLOCK_SET`; a DS1747 clock chip, `RTC_BOOT`) | `io/page9.s`, `io/proc_srv.s`, `io/env_srv.s`, `io/time_srv.s`, `io/rtc.s` |
+| 9 | `PAGE9` | The system's servers that run in their client's task: `/dev/proc`, `/env` (each task's environment) and `/dev/time` (the clock: `CLOCK_GET`, `CLOCK_SET`; a DS1747 clock chip, `RTC_BOOT`) | `servers/page9.s`, `servers/proc_srv.s`, `servers/env_srv.s`, `servers/time_srv.s`, `drivers/rtc.s` |
 | A | `PAGE1::FAR` | HyForth's far words (their code: the shell's and IO words, tasks, sound, memory records, multiply and divide ...; their headers are on page 1), its error messages and `MALLOC`, and the disassembler | `hyforth/pagea.s`, `hyforth/farwords.s`, `monitor/disasm.s` |
 | B | `PAGEB` | Sound: the YM2151's library (the registers' shadow, volumes, notes, patches, claims), `/dev/snd`, the patches (the X16's General MIDI set), the console bell (`YM_BEEP`) | `sound/` |
 | C | `PAGEC` | The song player (ZSM): a ROM program the shell starts in a task of its own (`play`), a client of `/dev/snd` | `sound/pagec.s`, `sound/player.s` |
-| D-F | | Empty | |
+| D-F | | Empty (`/rom` was page D's server; it's now the ROM disk, which page 3's storage driver reads: `SD_ROM_READ`) | |
 
-Page 0 is nearly full (about 40 bytes are left), so new code goes on another page behind gates.  Page 1 has about 40 bytes left (in two pieces, below and above the thunks), so a new HyForth word's code goes on page A (a far word: see below), and only its header on page 1.  The link map (`os_rom/obj/os_rom_C02.map`) shows each page's segments and free space.
+Every build prints the space left on each page (`tools/rom_space.js`; `node tools/rom_space.js --table` in `os_rom` shows where), and warns when page 0 or COMMON is nearly full.  Page 0 (the kernel) and page 1 (HyForth) have a few hundred bytes each, so new code goes on another page behind gates, and a new HyForth word's code on page A (a far word: see below), with only its header on page 1.  Each page's room above COMMON, `$FE00-$FEFF`, has a segment of its own (`HIGH_Pn`, declared in `kernel/high.s`; page 1's is `FORTH_TOP`) for code that fits nowhere else.  The link map (`os_rom/obj/os_rom_C02.map`) shows each page's segments.
 
 **Fixed addresses on every page:**
 
 | Address | What |
 | :------ | :--- |
 | `$E000` | Reset entry: sets `W` = 0 and continues on page 0.  Every page starts with it, because `W` isn't reset by hardware |
-| `$F800-$F8D7` | The thunk table (pages 0 and 1): `jmp`s to the public calls, below |
-| `$FD00-$FDFF` | The COMMON block: IRQ entry stubs and exit, the fast handlers' stubs (VIA, ACIA, YM2151), NMI entry, far-call trampolines, cross-page peeks.  Identical on every page (the link checks it) |
-| `$FE00` | WOZMON (page 0) |
+| `$F800-$F8F8` | The thunk table (pages 0 and 1): `jmp`s to the public calls, below |
+| `$FD00-$FDFF` | The COMMON block: IRQ entry stubs and exit, the fast handlers' stubs (VIA, ACIA, YM2151), NMI entry, far-call trampolines, `PEEK_PAGE` (a byte from another page).  Identical on every page (the link checks it) |
+| `$FE00-$FEFF` | Each page's room above COMMON (`HIGH_Pn`): page 0's boot welcome, page 1's HyForth words |
 | `$FFFA-$FFFD` | NMI vector (the COMMON block's `NMI_ENTRY`) and RESET vector (`$E000`) |
 
 ### **Calling across ROM pages**
@@ -62,7 +62,7 @@ FAR_GATE_INLINE  IO_OPEN,  PAGE2::IO_OPEN,  2      ; a label IO_OPEN on this pag
 
 **Scopes.**  Each page's sources are included inside `.scope PAGEn` (see `all.s`), with the page's gate file first.  A page's gate labels therefore shadow the page 0 routines of the same name for that page's code: `jsr WRITE_CHAR` on page 2 goes through page 2's gate.
 * Refer to page 0's own label with `::NAME`, and to another page's with `PAGEn::NAME`.
-* The gate files are `hyforth/page1.s`, `io/page2.s`, `drivers/page3.s`, `tests/page4.s`, `kernel/page5.s`, `io/page6.s`, `shell/page7.s`, `shell/page8.s`, `io/page9.s` and `hyforth/pagea.s`.
+* The gate files are `hyforth/page1.s`, `io/page2.s`, `drivers/page3.s`, `tests/page4.s`, `kernel/page5.s`, `fs/page6.s`, `shell/page7.s`, `shell/page8.s`, `servers/page9.s` and `hyforth/pagea.s`.
 * Page A's code is the scope `FAR` inside `PAGE1` (included from `hyforth/hyforth.s`), so it sees HyForth's names (its zero page, variables and constants), with its own gates first.  Page 1 reaches it through the global aliases after `PAGE1` in `all.s` (`FW_ENTRY_PA` ...).
 * The gates from page 0 outward are in `kernel/page0_gates.s`, `io/io_p0.s` and `drivers/storage.s`.
 
@@ -153,6 +153,7 @@ OS zero-page variables that calls take parameters in.  `ZP_IO_BUF`, `ZP_IO_CNT` 
 | `$85` | `ERR_IO_NOT_DIR` | Not a directory (`IO_CHDIR`, `rmdir`) |
 | `$86` | `ERR_IO_IS_DIR` | A directory, where a file was wanted (`rm`, `cp`) |
 | `$87` | `ERR_IO_NOT_EXEC` | A Hydra executable whose header doesn't fit task RAM (`run`) |
+| `$88` | `ERR_IO_PERM` | Not allowed: another task's area on the RAM disk (`/ram/N`) |
 | `$F1` | `ERR_NO_TASKS_AVAILABLE` | All 16 tasks are busy |
 | `$F2` | `ERR_TASK_BUSY` | The task (or player) is busy |
 | `$F3` | `ERR_BAD_TASK` | Not a task that can be used that way |
@@ -249,11 +250,11 @@ The thunk table at `$F800` (on BIOS pages 0 and 1) gives every public call a fix
 
 Calls without a thunk (for ROM code; reached with a gate from other pages): `TASK_SLEEP_UNTIL`, `TASK_START`, `TASK_CALL`, `IRQ_REGISTER`, `IRQ_UNREGISTER`, `SWI_REGISTER`, `SWI_UNREGISTER`, `SW_INT`, `DRV_START`, `IO_FLUSH`, `YM_BEEP`, and the server helpers `IO_SRV_MAP`, `IO_SRV_UNMAP`, `IO_SRV_COUNT`.
 
-**Adding a thunk:** add the `jmp` at the end of `kernel/thunks.s` (page 0), and, if page 1's code calls it, the same entry to page 1's copy in `hyforth/page1.s` (page 1's copy jumps to its gates; the semaphores' aren't there, as HyForth reaches them from page A).  A call on another page gets its gate in `GATES_P0` (`kernel/page0_gates.s`), or, as `GATES_P0` is full, in `BIOS_THUNKS` after the thunks' `jmp`s (`FAR_GATE_INLINE`, at the end of `kernel/thunks.s`): the thunks are at a fixed `$F800`, and room below them doesn't help what's after them.  Never move existing entries: programs rely on the addresses.
+**Adding a thunk:** add it at the end of the list in `include/thunks.inc`, with its address: both copies of the table are made from it, page 0's (`kernel/thunks.s`) and page 1's (`hyforth/page1.s`), and the build checks every address.  Give it as `THUNK_P0`: page 1's entry then goes on to page 0's (`THUNK_TO_P0`), so code running on page 1 (HyForth's binary words) can call it too; `THUNK` is for a call page 1 has a gate of its own for, which its entry jumps to.  A call on another page gets its gate in `GATES_P0` (`kernel/page0_gates.s`), or, as `GATES_P0` is full, in `BIOS_THUNKS` after the thunks' `jmp`s (`FAR_GATE_INLINE`, at the end of `kernel/thunks.s`): the thunks are at a fixed `$F800`, and room below them doesn't help what's after them.  Never move existing entries: programs rely on the addresses.
 
 ### **Adding code**
 
 * **Where:** pick the page by role (table above).  If page 0 code needs it, add a gate on page 0 (`page0_gates.s`).  If code on another page calls into it, add a gate in that page's gate file.
 * **Build:** see [Getting started](../getting-started.md#building).  The build stops at the first error, then checks for cross-page calls.
-* **Test:** run `makeC02 test` (build, then the regression tests).  For a new feature, add a test to `sim/regress.js` ([emulator](../tools/emulator.md#regression-tests)).
+* **Test:** run `node build.js rom test` (or `makeC02 test`: build, then the regression tests).  For a new feature, add a test to `sim/regress.js` ([emulator](../tools/emulator.md#regression-tests)).
 * **Style:** match the file's formatting: mnemonics and operands in fixed columns, `;` comments aligned, CRLF line endings, a header comment on each routine (what it does, IN, OUT, what it preserves).

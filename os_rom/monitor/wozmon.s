@@ -1,12 +1,17 @@
 ;
 ;   Taken mostly from Steve Wozniak's Apple 1 Monitor for the 6502, or WOZMON
 ;
+;   BIOS ROM page 4 (included inside .scope PAGE4: page 0 has no room), entered at MON_START through gates.
+;   It reads memory as the disassembler does (PEEK_D_XAM): $E000-$FDFF from BIOS ROM page ZP_D_PAGE (0, the
+;   kernel's, unless the disassembler was set to another), and R runs the code with page 0 selected, as a
+;   program runs, so the thunks ($F800 ...) work.
+;
 .debuginfo
 .segment "BUFFERS"
 IN:
                 .res            $100
 
-.segment "WOZMON"
+.segment "TESTS_P4"
 ; WOZMON Entrypoint
 MON_START:
                 cld                             ; Clear decimal arithmetic mode.
@@ -143,8 +148,14 @@ MON_START:
 @to_next_item:
                 bra             @next_item      ; Get next command item.
 
-@run_prog:
-                _M_JSRR         ZP_WM_XAM, MON_START
+@run_prog:                                      ; (On page 0, as a program runs: the thunks are there)
+                lda             ZP_WM_XAM
+                sta             ZP_FAR_VEC
+                lda             ZP_WM_XAM + 1
+                sta             ZP_FAR_VEC + 1
+                stz             ZP_FAR_PAGE
+                jsr             FAR_CALL_A
+                jmp             MON_START
 
 @not_store:
                 bmi             @examine_next   ; B7 = 0 for XAM, 1 for BLOCK XAM.
@@ -163,7 +174,12 @@ MON_START:
 
 @print_data:
                 PRINT_SPACE
-                PRINT_BYTE      {(ZP_WM_XAM)}
+                lda             ZP_WM_XAM       ; (Read as the disassembler reads: ROM page ZP_D_PAGE)
+                sta             ZP_D_XAM
+                lda             ZP_WM_XAM + 1
+                sta             ZP_D_XAM + 1
+                jsr             PEEK_D_XAM
+                jsr             WRITE_BYTE
 
 @examine_next:
                 stz             ZP_WM_MODE      ; 0 -> ZP_WM_MODE (XAM mode).

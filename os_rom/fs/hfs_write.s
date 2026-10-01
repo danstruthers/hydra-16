@@ -199,8 +199,8 @@ HFS_SB_SAVE:
             jsr         HFS_CARD_X
             ldy         #HFS_SB_FREE
 
-@number:                                                    ; (4 of 4 bytes: 4 apart in the block, 32 in RAM)
-            lda         HFS_V_FREE,X
+@number:                                                    ; (4 of 4 bytes: 4 apart in the block, HFS_V_STRIDE
+            lda         HFS_V_FREE,X                        ;   in RAM, the four counters a page)
             sta         (HFS_PTR),Y
             iny
             inx
@@ -209,10 +209,16 @@ HFS_SB_SAVE:
             bne         @number
             txa
             clc
-            adc         #32 - 4
+            adc         #HFS_V_STRIDE - 4
             tax
+            bcc         @number                             ; (Past the page's fourth, .X wraps: the disk * 4)
+:
+            lda         HFS_V_MINIT,X                       ; Then HFS_V_MINIT (.Y = HFS_SB_MAPINIT)
+            sta         (HFS_PTR),Y
+            iny
+            inx
             cpy         #HFS_SB_MAPINIT + 4
-            bne         @number
+            bne         :-
             jsr         HFS_META_CHANGED
             clc
 
@@ -236,7 +242,7 @@ HFS_SB_GET:
 @done:
             rts
 
-; .X = the card * 4: where its numbers are in the HFS_V_* arrays.  Modifies: .A
+; .X = the disk * 4: where its numbers are in the HFS_V_* arrays.  Modifies: .A
 HFS_CARD_X:
             lda         HFS_CARD
             asl
@@ -1720,6 +1726,10 @@ HFS_CREATE_REQ:
             jmp         IO_SRV_UNMAP                        ; (It keeps .A and C)
 
 HFS_CREATE:
+            jsr         HFS_AREA_CHECK                      ; (The whole name: on the RAM disk, an area the
+            bcc         :+                                  ;   client may use?)
+            rts
+:
             ldy         #0                                  ; The last '/': the new name comes after it
             ldx         #0
 
@@ -1760,6 +1770,8 @@ HFS_CREATE:
             lda         #0
             sta         (ZP_IO_REQ),Y
             jsr         HFS_WALK
+            bcs         @done
+            jsr         HFS_RO_DISK                         ; (Not on the ROM disk)
             bcs         @done
             lda         HFS_ENT + HFS_E_MODE
             bpl         @not_found                          ; (Not a directory)
@@ -1992,6 +2004,12 @@ HFS_REMOVE_REQ:
             jsr         HFS_WALK
             dec         ZP_IO_REQ + 1
             jsr         IO_SRV_UNMAP
+            bcc         HFS_REMOVE_AT
+            rts
+
+; Remove what HFS_WALK found (the request's, or HFS_AREA_END's).  OUT: C = 0; or C = 1, .A = error
+HFS_REMOVE_AT:
+            jsr         HFS_RO_DISK                         ; (Not on the ROM disk)
             bcs         @done
             lda         HFS_DEPTH
             beq         @bad_req                            ; (A card's root)
@@ -2049,7 +2067,12 @@ HFS_REMOVE_REQ:
 ; mode; the record's other fields are left alone.
 HFS_WSTAT_REQ:
             jsr         HFS_FID_CHECK
-            bcc         :+
+            bcs         :+
+            jsr         HFS_RO_DISK                         ; (Not on the ROM disk, nor an area itself on the
+            bcs         :+                                  ;   RAM disk)
+            jsr         HFS_AREA_WSTAT
+            bcc         :++
+:
             rts
 :
             ldx         SD_CLIENT

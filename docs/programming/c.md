@@ -27,7 +27,7 @@ How to write programs for the Hydra-16 in C: setting up cc65, building and runni
 
 | Tool | For | Where |
 | :--- | :-- | :---- |
-| cc65 (V2.19 or later) | The C compiler, assembler and linker | [cc65.github.io](https://cc65.github.io/): the Windows snapshot zip, or build it from source.  The scripts look in `CC65_HOME` (default `C:\source\cc65\win64_snapshot`) |
+| cc65 (V2.19 or later) | The C compiler, assembler and linker | [cc65.github.io](https://cc65.github.io/): the Windows snapshot zip, or build it from source.  The build looks in `CC65_HOME`, then on the `PATH`, then in `C:\source\cc65\win64_snapshot` |
 | Node.js | The emulator and the card image tool | [nodejs.org](https://nodejs.org) (no packages needed) |
 | The ROM images | The emulator runs them | Built already in `os_rom/bin`, or build them ([getting started](../getting-started.md)) |
 
@@ -78,7 +78,7 @@ Ctrl-A x quits the emulator ([its keys](../tools/emulator.md#using-the-hydra-fro
 
 **On the real Hydra**, the card is the same format: read the card into an image with a disk imager (Win32 Disk Imager, `dd`), `put` the program into the image, and write it back.  Or put it on one card and `cp` it to another on the Hydra.  The emulator is the quickest loop, and what the Hydra does with a program there it does on the board.
 
-**Not on Windows?**  The two `.bat` files are short: `make.bat` assembles or compiles each file in `lib/crt`, `lib/io`, `lib/env`, `lib/conio` and `lib/sys`, copies cc65's `none.lib` to `lib/hydra.lib` and adds the objects to it (`ar65 a`).  A program is then:
+**Not on Windows?**  The two `.bat` files run `build.js` (at the top of the repository), which works on any OS: `node build.js c` builds the library and the samples, and `node build.js prog hello.c` a program of your own (`programs/c/bin/hello.hyx`).  By hand, the library is each file in `lib/crt`, `lib/io`, `lib/env`, `lib/conio`, `lib/snd` and `lib/sys`, assembled or compiled, and added (`ar65 a`) to a copy of cc65's `none.lib` as `lib/hydra.lib`; a program is then:
 
 ```
 cc65 -t none --cpu 65C02 -O -I programs/c/include -o obj/hello.s hello.c
@@ -190,7 +190,7 @@ Use 0 for success, 1 with a message for a failure, and 2 for a usage error, as U
 | `/dev/snd` | The YM2151 sound chip ([below](#sound-sndh)) |
 | `/env/NAME` | An environment variable (below) |
 
-A file's name is up to 31 characters (`HY_NAME_MAX`, 32 with its 0), and a path up to 64 (`HY_PATH_MAX`, 65): size buffers with these, not `FILENAME_MAX`, which is cc65's 17 for this target.  `/` and `/dev` aren't directories you can list; a card's directories are.  See [io.md](io.md) for the devices in full.
+**Size buffers for names with `HY_NAME_MAX` and `HY_PATH_MAX`, not `FILENAME_MAX`.**  A file's name is up to 31 characters (`HY_NAME_MAX`, 32 with its 0), and a path up to 64 (`HY_PATH_MAX`, 65); cc65's `FILENAME_MAX` is 17 for this target, so a buffer sized with it cuts names short.  `/` and `/dev` aren't directories you can list; a card's directories are.  See [io.md](io.md) for the devices in full.
 
 **What works:**
 
@@ -462,7 +462,7 @@ hy_sem_acquire (s);                         /* Wait for it */
 
 ### **10. Errors**
 
-A failed library call returns -1 (or `NULL`) and sets `errno`, as usual; `perror` and `strerror` describe it.  `_oserror` (in `errno.h`) keeps the Hydra's own error code ([the list](rom-layout.md#error-codes)), which says more:
+A failed library call returns -1 (or `NULL`) and sets `errno`, as usual; `perror` and `strerror` describe it.  `_oserror` (in `errno.h`) keeps the Hydra's own error code ([the list](rom-layout.md#error-codes)), which says more, and `_stroserror (_oserror)` (`string.h`) gives it as text, as HyForth's `!IO ERR!` does (`"not found"`, `"disk full"` ...; `_poserror ("prog")` prints it after `prog: `):
 
 | The Hydra's error | `errno` |
 | :---------------- | :------ |
@@ -625,7 +625,7 @@ The CPU does about 3.6 million simple operations a second, and cc65's code isn't
 | `include/hydra.h`, `include/snd.h` | The Hydra's own calls and constants; the sound chip's |
 | `lib/hydra.inc` | The OS's calls, zero page and constants for the library's assembly.  The `c-programs` test checks each name against the ROM's build, so keep it in step with `os_rom/include` |
 | `lib/crt/` | `crt0.s` (the header, start-up and `exit`), `mainargs.s` (`argc`, `argv`) |
-| `lib/io/` | Files: `fileio.s` (the raw IO calls), `read.c` and `write.c` (the console's line ends), `open.c`, `lseek.c`, `stat.c`, `dirent.c`, `isatty.c`, `sysfile.s` (remove, rename, mkdir, rmdir), `_cwd.s`, `oserror.s` (errors to `errno`) |
+| `lib/io/` | Files: `fileio.s` (the raw IO calls), `read.c` and `write.c` (the console's line ends), `open.c`, `lseek.c`, `stat.c`, `dirent.c`, `isatty.c`, `sysfile.s` (remove, rename, mkdir, rmdir), `_cwd.s`, `oserror.s` (errors to `errno`), `oserrlist.s` (the errors as text: `_stroserror`) |
 | `lib/env/` | `getenv.c`, `putenv.c` |
 | `lib/conio/` | `conio.c` (ANSI output, keys), `conglue.s` (the entry points cc65's own conio code calls), `cursor.c` |
 | `lib/snd/` | `snd.c`: `snd.h` over `/dev/snd`; `sndplay.c`: `snd_play` |

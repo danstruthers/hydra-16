@@ -5,9 +5,9 @@ How to add a device: a file server that tasks open by name, and optionally a dri
 | Source | What it shows |
 | :----- | :------------ |
 | `os_rom/io/io.s` | `NULL_SERVE`: the smallest server |
-| `os_rom/io/proc_srv.s` | Names, text files and a `ctl` file |
+| `os_rom/servers/proc_srv.s` | Names, text files and a `ctl` file |
 | `os_rom/io/pipe_srv.s` | Waiting and waking |
-| `os_rom/io/sd_srv.s` | A server on its own ROM page, with a cache |
+| `os_rom/servers/sd_srv.s` | A server on its own ROM page, with a cache |
 | `os_rom/drivers/serial.s` | A driver with IRQ handlers |
 
 Part of the [Programmer's Guide](README.md).
@@ -162,7 +162,7 @@ Waking a task that has already been woken, or isn't waiting any more, is harmles
 **ctl files.**  A text control file is friendlier than `IO_CTL` codes, because anything that can write text can use it (HyForth, a script).  Examples:
 * `/dev/proc/N/ctl` takes `kill`, `break`, `fg`;
 * `/dev/sd/N/ctl` takes `init`, and reads back the card's details;
-* `/dev/ser/ctl` takes `b9600 l8 pn s1`-style settings, and reads back the current ones (`io/serctl.s`).
+* `/dev/ser/ctl` takes `b9600 l8 pn s1`-style settings, and reads back the current ones (`servers/serctl.s`).
 
 The parsing in `PROC_WRITE` / `SD_CTL_WRITE` takes a command word followed by the end of the write, a space, CR, LF or 0.
 
@@ -200,7 +200,7 @@ The storage task (`$C`) owns the SPI bus.  Its block layer (`drivers/sd.s`, page
 
 ### **The HydraFS server**
 
-`io/hfs_srv.s` and `io/hfs_write.s` (ROM page 6: page 3 was full) are a second device, `hfs`, in the same storage task, on the same block layer and cache (through gates to page 3, one far call a block): it serves the **files** on the cards (`/sd/N/...`, the format in [plans/HYDRAFS.md](../plans/HYDRAFS.md); using it is in [io.md](io.md#the-files-on-a-card)).  Worth knowing if you write a server of your own:
+`fs/hfs_srv.s` and `fs/hfs_write.s` (ROM page 6: page 3 was full) are a second device, `hfs`, in the same storage task, on the same block layer and cache (through gates to page 3, one far call a block): it serves the **files** on the cards (`/sd/N/...`, the format in [plans/HYDRAFS.md](../plans/HYDRAFS.md); using it is in [io.md](io.md#the-files-on-a-card)).  Worth knowing if you write a server of your own:
 
 * **Two devices, one task.** A server task serves one call at a time, so `hfs_srv.s` borrows the SD server's zero page (`SD_POS`, `SD_LEFT`, `SD_N`, ...) rather than having its own, and uses `SD_LBA` as its block number (`SD_CACHE_LOAD` leaves it alone).  Its own state goes in the storage task's RAM, next to the SD driver's.
 * **Its own fids.** A HydraFS fid is an open-file slot (0-7), shared by every task; `H9_DUP` counts up the fds that share one and `H9_CLUNK` counts down, so an inherited or `IO_DUP2`'d fd doesn't free it early.

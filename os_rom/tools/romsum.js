@@ -26,7 +26,10 @@ function crc16(get, n) {
     }
     return c;
 }
-const pagedOfs = (bank, a) => bank * BANK + ((a - 0xA000) ^ 0x2000);   // (The halves swapped)
+// (The halves swapped; and on the V1 board a bank number's bits 2 and 3, and 6 and 7, trade places before they reach
+// the chips: bank b, as the CPU selects it, is in the image at bank swap(b)'s place: sim/tools/mkromdisk.js)
+const swap = b => (b & 0x33) | ((b & 0x04) << 1) | ((b & 0x08) >> 1) | ((b & 0x40) << 1) | ((b & 0x80) >> 1);
+const pagedOfs = (bank, a) => swap(bank) * BANK + ((a - 0xA000) ^ 0x2000);
 
 const pages = bios.length / PAGE, banks = paged.length / BANK;
 if (2 + 2 * (pages + banks) > SUMS_SIZE) throw new Error("too many pages and banks for the table");

@@ -88,7 +88,7 @@ IRQ_INIT:
             cpx         #16
             bne         @vector_loop
             ldx         #IRQ_NUMBER_ONBOARD_SERIAL          ; The ACIA and the VIA: their fast handlers instead
-            lda         #<SER_IRQ_STUB                      ;   (io/serfast.s), which only go through the
+            lda         #<SER_IRQ_STUB                      ;   (servers/serfast.s), which only go through the
             ldy         #>SER_IRQ_STUB                      ;   dispatcher for the rare work and task switches
             jsr         IRQ_SET_VECTOR
             ldx         #IRQ_NUMBER_ONBOARD_VIA

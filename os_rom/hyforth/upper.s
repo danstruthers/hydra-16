@@ -385,6 +385,7 @@ DIGCONT0:
 DIGDEC:
     asl TEMP1                       ; 2nd shift; upper nybble doesn't end up right
     rol TEMP1+1
+    bcs DIGOVER                     ; (Past 16 bits: too big)
     lda TEMP1                       ; load results of two shifts
     clc
     adc TEMP2                       ; add in previous total from last loop
@@ -392,9 +393,11 @@ DIGDEC:
     lda TEMP1+1                     ; and same with second digit, and the carry
     adc TEMP2+1
     sta TEMP1+1
+    bcs DIGOVER
 DIGDEC2:
     asl TEMP1                       ; final shift
     rol TEMP1+1
+    bcs DIGOVER
     pla                             ; bring back read digit
     cmp #10                         ; make sure it's not hex, mostly
     bcc DIGCONT                     ; jump to continue
@@ -419,14 +422,20 @@ DIGCONT:
     sta TEMP2                       ; copy to intermediate result in case another dec digit
     bcc DIGCONT2
     inc TEMP1+1                     ; and inc 2nd byte if necc.
+    beq DIGCONV_ERR                 ; (Past 16 bits)
 DIGCONT2:
     lda DIGBASE
     cmp #10
     bne DIGCONT3
     lda TEMP1+1
     sta TEMP2+1                     ; save it for next round, regardless
-    cmp #$80                        ; check to see if > $8000
-    bcs DIGCONV_ERR
+    cmp #$80                        ; decimal: up to 32767, or 32768 with a minus
+    bcc DIGCONT3
+    bne DIGCONV_ERR
+    lda TEMP1
+    bne DIGCONV_ERR
+    lda TEMP6
+    beq DIGCONV_ERR
 DIGCONT3:
     iny
     dex
@@ -450,6 +459,8 @@ DIGCONT4:
     jsr spush_0                     ; push TEMP1 on to stack
     clc
     rts
+DIGOVER:
+    pla                             ; (The digit)
 DIGCONV_ERR:
     sec
     rts
@@ -486,7 +497,7 @@ GETDIG_ERR:                         ; pass carry set for no digit
 ;
 HYWELCOME:
     .byte ASCII_CR, ASCII_LF
-    .byte "HyForth 0.91 05-07-2026"
+    .byte "HyForth 0.91"
     .byte ASCII_CR, ASCII_LF, 0
 CLEAR:
     lda #1

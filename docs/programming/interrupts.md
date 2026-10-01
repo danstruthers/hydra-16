@@ -7,7 +7,7 @@ How the OS dispatches interrupts, and how a driver handles one.  Sources: `os_ro
 | IRQ | Source | Registered by |
 | ---: | :----- | :------------ |
 | 0 | VIA: timer 1 (the scheduler's tick), timer 2 | The system task (tick); the serial driver (timer 2: sending, in WDC ACIA builds, and at 115200) |
-| 1 | ACIA (serial) | The serial driver (which also registers a VIA handler for timer 2, used in WDC ACIA builds) |
+| 1 | ACIA (serial) | The serial driver |
 | 2, 3 | Slot 0, A and B | |
 | 4 | YM2151 | Timer B: the sound clock, a song player's tick (a fast handler, `YM_IRQ_FAST`: below).  The sound driver's registered handler is a placeholder |
 | 5-9 | Slots 1-5, A | |
@@ -18,7 +18,7 @@ Line 0 has the highest priority.  In code, name a line with `IRQ_NUMBER(n)`, or 
 
 ### **How an interrupt is handled**
 
-1. **The stub.**  At boot, `IRQ_INIT` points the vectors at the IRQ stubs in the COMMON block (all but the VIA's and the ACIA's: [below](#the-fast-handlers-the-tick-and-the-serial-port)) (`$FD00`, the same on every page).  Each stub loads its line's number, saves `W` and switches to ROM page 0, wherever the CPU was.
+1. **The stub.**  At boot, `IRQ_INIT` points the vectors at the IRQ stubs in the COMMON block (all but the VIA's and the ACIA's: [below](#the-fast-handlers-the-tick-the-serial-port-and-the-sound-clock)) (`$FD00`, the same on every page).  Each stub loads its line's number, saves `W` and switches to ROM page 0, wherever the CPU was.
 2. **The dispatcher** (`IRQ_DISPATCH`, page 0) looks the line up in the registration table.  It runs each registered handler **in the task that registered it** (`TASK_CALL`): on that task's stack, with its zero page, RAM bank and MMU area.  So a driver's handler sees the driver's own state, whichever task was interrupted.
 3. **Claiming.**  A handler returns C = 1 if it claimed the interrupt, which stops the chain.  An IRQ that none of its handlers claims is counted in the interrupted task's unclaimed-IRQ counters (`$7D90-$7D9F`, by line).  It's then offered to every registered handler, so a misrouted interrupt still gets cleared.
 4. **Returning.**  The dispatcher switches back to the interrupted task, or switches task if the tick asked for one.  It restores `W` and returns with `rti` from the COMMON block.
@@ -27,7 +27,7 @@ The registration tables live in the task system page (`$7D00`) and are copied in
 
 ### **The fast handlers: the tick, the serial port and the sound clock**
 
-The dispatcher and its `TASK_CALL` cost about 650 cycles per interrupt, far too much for the serial port at high rates (at 115200 baud a byte arrives every 320 cycles, and the 65C51 holds only one).  So the busiest interrupts bypass it (`io/serfast.s`, `sound/ymfast.s`, BIOS page 2):
+The dispatcher and its `TASK_CALL` cost about 650 cycles per interrupt, far too much for the serial port at high rates (at 115200 baud a byte arrives every 320 cycles, and the 65C51 holds only one).  So the busiest interrupts bypass it (`servers/serfast.s`, `sound/ymfast.s`, BIOS page 2):
 * **Their vectors:** `IRQ_INIT` points the VIA's (line 0), the ACIA's (line 1) and the YM2151's (line 4) vectors at `VIA_IRQ_STUB`, `SER_IRQ_STUB` and `YM_IRQ_STUB` in the COMMON block, which switch to page 2 (`IRQ_FAST_P2`).
 * **No stack switch:** instead of running in the driver's task, a fast handler briefly switches `T` to it, a "quick look": its zero page and RAM, with no stack use until `T` is back.
 * **`SER_IRQ_FAST`** moves the received byte into the receive ring and the next byte from the transmit ring to the ACIA, and wakes the tasks waiting to read or write.
@@ -35,8 +35,8 @@ The dispatcher and its `TASK_CALL` cost about 650 cycles per interrupt, far too 
   * **The rest goes through the dispatcher:** the break and kill keys, console commands and the bell are recorded in `SER_PEND` for the serial driver's own handler (`SER_DO_PENDING`).
 * **`VIA_IRQ_FAST`** counts the tick and wakes the sleepers due, in the system task's zero page.
   * **Then** it asks the dispatcher for a task switch (`IRQ_TICK`).
-  * **Timer 2,** in Rockwell ACIA builds, paces sending at 115200: `SER_T2_FAST` sends the next byte from the transmit ring as `SER_IRQ_FAST` would (`SER_TX_STEP`).
-  * **Other VIA sources** (timer 2, in WDC ACIA builds) go to the registered handlers as before.
+  * **Timer 2** paces sending: always with a WDC ACIA (its transmitter status doesn't work), and at 115200 with the Rockwell.  `SER_T2_FAST` sends the next byte from the transmit ring as `SER_IRQ_FAST` would (`SER_TX_STEP`), so either chip sends at the wire's rate.
+  * **Other VIA sources** go to the registered handlers as before.
 * **`YM_IRQ_FAST`** is the sound clock: timer B, run by the sound driver for a song player at the song's rate (`SND_CTL_CLOCK`, [io.md](io.md#sound-devsnd)).  In the sound task's zero page, it resets timer B's flag, sets the period after the next (K or K + 1 units, as a 16-bit fraction carries, so the rate is exact on average), counts the tick (`SND_CLK`), and, when the waiting player's time has come (its `ZSM_AT`, a quick look into its zero page), wakes it and asks for a task switch (`IRQ_TICK`).
   * **Cost:** about 150-300 cycles: up to two register writes to the chip, each of which may wait up to 64 cycles for it (busy after the sound driver's last write).
 * **The registered handlers** for lines 0 and 1 (`VIA_IRQ_HANDLER`, `SERIAL_IRQ_HANDLER`) are still there, and are what the dispatcher calls for that rare work.
@@ -95,6 +95,7 @@ The NMI vector points at the COMMON block's `NMI_ENTRY`: it switches to page 0 a
 ### **Timing notes**
 
 * The dispatcher and the `TASK_CALL` into the handler's task cost about 650 cycles per interrupt; the fast handlers about 60–90.
+* **How often a driver's interrupt can come:** through the dispatcher, up to a few hundred a second (650 cycles each: 60 a second, a VERA's frames, is about 1% of the CPU; 1,000 a second would be a fifth of it).  Faster than that (a raster line, a byte at a time from a fast port) needs a fast handler: a stub in COMMON, as the VIA's, the ACIA's and the YM2151's have, and its code on its page, with no dispatcher.  COMMON has little room (the build's `rom_space.js` report shows how much), so plan for it.
 * **Keep sections with interrupts off short.**  Anything longer than a character's time holds off the serial port and loses input: about 320 cycles at 115200 baud, 620 at 57600, 3,700 at 9600.
   * **Instead:** use `NO_PREEMPT` when only a task switch must be prevented, as the MMU calls do.
   * **For long loops that need interrupts off:** open a moment for them between iterations (`cli`, `nop`, `sei`), as `FP_COPY`, `SH_RESET_TASK` and `SCHED_PICK` do.

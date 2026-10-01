@@ -544,6 +544,8 @@ TASK_EXIT_NOTED:
             jsr     CONS_RELEASE                    ; (In the foreground: the console goes back)
             lda     T_REGISTER
             jsr     MM_TASK_RESET                   ; (IRQs on: it holds NO_PREEMPT)
+            jsr     TASK_ORPHANS                    ; (The tasks it started: its owner's now; its area,
+                                                    ;   its fds closed: before its parent wakes)
             sei
             lda     TASK_PARENT
             cmp     #MAX_TASK_NUMBER + 1
@@ -804,6 +806,8 @@ RESERVE_TASK:
 @task_found:
             smb0    TASK_STATUS_REG
             smb1    TASK_STATUS_REG
+            stz     RAM_BANK_REG                    ; Its banks: 0, not what its last task left (a song
+            stz     ROM_BANK_REG                    ;   player's paged ROM bank, under HyForth's $A200)
             clc                                     ; Found
 
 @cleanup:

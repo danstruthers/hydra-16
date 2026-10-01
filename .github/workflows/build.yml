@@ -1,0 +1,21 @@
+# Build everything and run the regression tests in the emulator, on every push and pull request.
+# cc65 is built from its source (the project uses a recent snapshot); build.js finds it through CC65_HOME.
+name: build
+on: [push, pull_request]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: cc65
+        run: |
+          git clone --depth 1 https://github.com/cc65/cc65.git "$RUNNER_TEMP/cc65"
+          make -C "$RUNNER_TEMP/cc65" -j4
+          echo "CC65_HOME=$RUNNER_TEMP/cc65" >> "$GITHUB_ENV"
+      - name: Build and test
+        run: node build.js test
+      - name: The images, if they changed (the ones in Git should be the build's)
+        run: git status --short -- os_rom/bin programs

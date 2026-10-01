@@ -79,6 +79,7 @@ int main (int argc, char* argv[])
     check (rename ("ct.txt", "ct2.txt") == 0 && fopen ("ct.txt", "r") == 0 && errno == ENOENT, "rename");
     check (remove ("ct2.txt") == 0 && remove ("ct2.txt") != 0 && errno == ENOENT, "remove");
     check (fopen ("nosuch/x", "r") == 0 && errno == ENOENT && _oserror == 0x70, "errno, _oserror");
+    check (strcmp (_stroserror (_oserror), "not found") == 0 && strcmp (_stroserror (0x55), "unknown error") == 0, "_stroserror");
 
     /* directories */
     check (getcwd (cwd, sizeof cwd) != 0, "getcwd");

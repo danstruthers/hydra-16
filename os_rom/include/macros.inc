@@ -7,6 +7,11 @@
     .byte       .strlen(Str), Str
 .endmacro
 
+; A client-task server's name for size bytes of the scratch they share (ZP_CS, zero.s): checked to be in it
+.macro CS_FITS      name, size
+.assert     name >= ZP_CS && name + size <= ZP_CS_END, error, .sprintf("%s isn't in ZP_CS (the client-task servers' scratch)", .string(name))
+.endmacro
+
 .macro NamedHString Name, Str
 Name:
     HString Str

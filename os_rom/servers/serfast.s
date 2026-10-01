@@ -110,12 +110,15 @@ SER_IRQ_FAST:
             _M_SER_WAKE_QUICK SER_RD_WAIT                   ; Wake the tasks waiting to read
 
 @tx:
-.if ::SER_ACIA = ::SER_ACIA_ROCKWELL                        ; (The WDC 65C51's TDRE doesn't work: timer 2
-            lda         SER_PACED                           ;   and SERIAL_T2_HANDLER instead.  Paced, at
-            bne         SER_FAST_EXIT                       ;   115200: timer 2 and SER_T2_FAST)
+.if ::SER_ACIA = ::SER_ACIA_ROCKWELL
+            lda         SER_PACED                           ; (Paced, at 115200: timer 2 and SER_T2_FAST)
+            bne         SER_FAST_EXIT
             txa
             and         #ACIA_STATUS_BIT_TDRE
             beq         SER_FAST_EXIT                       ; Still sending
+.else
+            bra         SER_FAST_EXIT                       ; (The WDC 65C51's TDRE doesn't work: timer 2
+.endif                                                      ;   sends, SER_T2_FAST)
 
 ; The transmitter is free (TDRE; or paced, timer 2 ran out: SER_T2_FAST): the next byte from the TX ring,
 ; or idle, and the writers woken.  In the serial task (a quick look), IRQs off; on to SER_FAST_EXIT
@@ -136,7 +139,6 @@ SER_TX_STEP:
 
 @room:
             _M_SER_WAKE_QUICK SER_WR_WAIT                   ; Wake the tasks waiting to write
-.endif
 
 SER_FAST_EXIT:
             ldx         SER_IRQ_W
@@ -153,10 +155,10 @@ SER_FAST_EXIT:
             lda         #SER_IRQ_LOGICAL
             jmp         IRQ_FAST_SLOW
 
-.if ::SER_ACIA = ::SER_ACIA_ROCKWELL
-; VIA timer 2 ran out: paced sending (SER_PACED, the Rockwell ACIA at 115200: a character's time and
-; SER_PACE_GAP idle bits since the last byte went) can send the next.  From VIA_IRQ_FAST, entered as
-; SER_IRQ_FAST is, and it leaves the same way (the tick, if it's due too, is the next interrupt)
+; VIA timer 2 ran out: paced sending can send the next byte (a character's time since the last one went: the
+; WDC ACIA's always, as its TDRE doesn't work; the Rockwell's at 115200, SER_PACED, with SER_PACE_GAP idle bits
+; too).  From VIA_IRQ_FAST, entered as SER_IRQ_FAST is, and it leaves the same way (the tick, if it's due too,
+; is the next interrupt)
 SER_T2_FAST:
             lda         VIA_R_T2C_L                         ; Clears its flag
             ldy         T_REGISTER                          ; The interrupted task
@@ -164,25 +166,23 @@ SER_T2_FAST:
             sta         T_REGISTER                          ; Quick switch to the serial task (no stack use!)
             sty         SER_IRQ_T
             stx         SER_IRQ_W
+.if ::SER_ACIA = ::SER_ACIA_ROCKWELL
             lda         SER_PACED
             bne         SER_TX_STEP
             jmp         SER_FAST_EXIT                       ; (Not paced any more: nothing to do)
+.else
+            jmp         SER_TX_STEP
 .endif
 
 ; The VIA's interrupt: the scheduler's tick (timer 1), in about 60 cycles plus the sleepers due: counts it
 ; and wakes the sleepers whose time has come (in the system task, by a quick look: VIA_IRQ_HANDLER and
 ; SLEEP_CHECK, without the dispatcher), then asks the dispatcher for a task switch (IRQ_TICK), which lets
-; IRQs in while it picks the task (SCHED_PICK).  Anything else the VIA raises (timer 2, for the WDC ACIA)
-; goes to its registered handlers, the usual way.
+; IRQs in while it picks the task (SCHED_PICK).  Timer 2 is the serial port's paced sending (SER_T2_FAST).
+; Anything else the VIA raises goes to its registered handlers, the usual way.
 VIA_IRQ_FAST:
             lda         VIA_R_INT_FLAGS
-.if ::SER_ACIA = ::SER_ACIA_WDC
-            bit         #VIA_T2_INT_BIT                     ; (Timer 2 as well: all to the handlers)
-            bne         @others
-.else
             bit         #VIA_T2_INT_BIT                     ; Timer 2: paced sending (SER_T2_FAST)
             bne         SER_T2_FAST
-.endif
             and         #VIA_T1_INT_BIT
             beq         @others
             lda         VIA_R_T1C_L                         ; Clears it

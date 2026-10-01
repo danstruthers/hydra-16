@@ -165,6 +165,7 @@ Eight SST39SF040 (512K each, U30-U37) give 4 MB, seen as 256 banks of 16K.  The 
 | 7 | U37 | `$E0-$FF` |
 
 * **The halves are swapped.** CPU A13 goes to the chips' A13 unchanged, but in the window `$A000-$BFFF` has A13 = 1 and `$C000-$DFFF` has A13 = 0.  So CPU `$A000` reads chip offset `$2000` of the bank, and `$C000` reads offset `$0000`.  The build writes `paged_rom_C02.bin` in chip order for this, so burn it at offset 0 of U31.
+* **V1: bits 2 and 3, and 6 and 7, trade places.**  On the V1 board `ROMB2`/`ROMB3` and `ROMB6`/`ROMB7` are swapped on their way to the chips (as are the RAM bank bits; the schematic shows the board as built), so the bank the CPU selects as `b` is the chips' bank `swap(b)`.  Banks whose two bits match (`$00-$03`, `$0C-$0F`, ...) aren't affected.  The build writes the image in the chips' order (`sim/tools/mkromdisk.js`), and the emulator reads it that way.
 * **`nBROMD`** (a slot pin, pulled up) disables the whole paged ROM when a card pulls it low, so the card can answer `$A000-$DFFF` itself.
 * The chips' ~OE is the inverted R/W; there's no write path in circuit (program the chips in a programmer).
 
@@ -518,7 +519,7 @@ The ROM finds the installed modules at boot (`MMU_PROBE_MODULES`), tests each on
   * In the bank registers (sheet `ZPMirrorRAM`), data bit 2 drives `RAMB3`, and bit 3 drives `RAMB2`: IC1 for the RAM bank, IC3 for the ROM bank.
   * So a bank ID's bits 2 and 3 trade places before they reach the hardware.  For example, shared bank IDs `$F4-$F7` are on U28 and `$F8-$FB` on U27, module 4 and module 8 trade places, and so do paged ROM banks `$04-$07` and `$08-$0B`.
   * IDs whose bits 2 and 3 are equal aren't affected, and the software never needs to care: an ID always reaches the same memory.  It matters when you map a bank ID to a chip, for example to act on a POST report.
-  * **Bits 6 and 7** have also been reported crossed on the V1 board.  The schematic's IC2 and IC4 show them straight through, so confirm on the board before relying on either.
+  * **Bits 6 and 7** are crossed too, on the V1 board as built (`RAMB6`/`RAMB7`, `ROMB6`/`ROMB7`).  The ROM's tools and the emulator assume both swaps for the paged ROM (`sim/tools/mkromdisk.js`, `os_rom/tools/romsum.js`).
 * **No wait states.**  RDY only has a pull-up, so slow devices can't stretch a bus cycle.  This is why the YM2151 can't be used above 3.58 MHz.  Board V2 is planned to have programmable RDY wait states (see [plans/IDEAS.md](plans/IDEAS.md)).
 * **Audio jack channels.**  J26 has the right channel on the tip and the left on the ring, per the schematic; the usual convention is the reverse, so left and right may come out swapped.
 * **ACIA clock.**  The ACIA runs from 1.790 MHz instead of 1.8432 MHz, so its baud rates are 2.9% slow (see [ACIA](#acia-65c51-u3-port-1-irq-line-1)).

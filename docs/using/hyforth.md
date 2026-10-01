@@ -40,9 +40,9 @@ Stack effects are written `( before -- after )`, with the top of the stack on th
 ### **Numbers**
 
 * **Input** is decimal: `11`, `-2`.  A `$` prefix gives hex (`$B`, `$FFFF`), and `%` binary (`%101`).
-* **Output** is always 4 hex digits: `11 .` prints `000B`.
-* **Size:** numbers are 16 bits.  Decimal input is signed, `-32768` to `32767`; hex input covers `$0000-$FFFF`.
-* **Inside a definition**, a number other than a single digit is written `lit [ 65 , ]`, because numbers are converted as they're read, even while compiling.  Single digits (`0`-`9`, `-1`-`-9`, `$0`-`$F`) are words, so they compile as they are.
+* **Output** is 4 hex digits at first: `11 .` prints `000B`.  After `decimal`, `.` prints in decimal, signed (`-264 .` prints `-264`), and `u.` unsigned (`$FFFF u.` prints `65535`); `hex` goes back.  Input isn't affected: it's decimal, with `$` for hex, either way.
+* **Size:** numbers are 16 bits.  Decimal input is signed, `-32768` to `32767` (a bigger one isn't a number: `!UNK WORD!`); hex input covers `$0000-$FFFF`.
+* **Inside a definition**, a number is compiled into the word, as in any Forth: `: x 65 . ;` prints `0041` each time `x` runs.  (`lit [ 65 , ]` does the same by hand.)
 
 ### **Strings**
 
@@ -163,7 +163,9 @@ The control words aren't built in: they're defined in HyForth itself, by the **t
 | `key` | `( -- c )` | Wait for a key (stdin); -1 at end of file |
 | `emit` | `( c -- )` | Write a character (stdout) |
 | `cr`, `spc` | | Newline; `spc` pushes 32 |
-| `.`, `.C` | `( u -- )` | Print as hex / as two characters |
+| `.`, `.C` | `( n -- )` | Print as a number (hex, or decimal after `decimal`: [numbers](#numbers)) / as two characters |
+| `u.` | `( u -- )` | Print unsigned (hex, or decimal after `decimal`) |
+| `decimal`, `hex` | `( -- )` | The base `.` and `u.` print in (hex at first) |
 | `.sz` | `( sz -- )` | Print a string (`"..."` or `q^...^`) |
 | `Acls`, `Ascr ( c r -- )`, `Acol ( c -- )` | | ANSI: clear the screen, move the cursor, set attributes |
 | `in>`, `reset` | | Read the input buffer; reset it |
@@ -172,7 +174,8 @@ The control words aren't built in: they're defined in HyForth itself, by the **t
 
 | Word | Stack | Does |
 | :--- | :---- | :--- |
-| `syscall` | `( addr a y -- x )` | Call machine code at `addr` with `.A` and `.Y` set; pushes `.X`.  E.g. a thunk ([API index](../programming/rom-layout.md#api-index-the-thunks)) |
+| `syscall` | `( addr a y -- x )` | Call machine code at `addr` with `.A` and `.Y` set, and BIOS ROM page 0 selected (as a program runs), so any thunk works ([API index](../programming/rom-layout.md#api-index-the-thunks)); pushes `.X` |
+| `sys` | `( addr a x y -- a x y p )` | The same with every register, in and out, and the flags after it (`p`: C is bit 0, which the OS's calls set when they fail, with the error in `.A`).  E.g. `$F8EA 0 0 0 sys` gives the tick count in `a` and `y` |
 | `disasm` | `( addr n -- )` | Disassemble n instructions |
 | `mmtest` | | Run the MMU self test |
 | `hwtest` | | Run the [hardware test](wozmon.md#the-hardware-test): it takes the machine over, and ends with a reset |
@@ -196,7 +199,7 @@ HyForth is a base language, plus libraries of words for the rest of the system. 
 | `tasks` | `shell`, `forth`, `fg`, `kill`, `sleep`, `ps`, `wait`, `sem`, `mutex`, `acquire`, `acquire?`, `release`, `-sem` | `io` |
 | `sound` | `sndinit`, `sndtest`, `sndstop`, `ywrite`, `patch`, `note`, `noteoff`, `play` | `io` |
 | `mem` | `halloc`, `hfree`, `hlock`, `hunlock` (MMU memory) | |
-| `tools` | `dump`, `disasm`, `syscall`, `mmtest`, `hwtest` | |
+| `tools` | `dump`, `disasm`, `syscall`, `sys`, `mmtest`, `hwtest` | |
 | `term` | `Acls`, `Ascr`, `Acol` (the ANSI terminal) | |
 
 | Word | Does |
@@ -226,7 +229,7 @@ forth io files shell tasks (sound) mem tools term
 
 Without the `shell` library, the prompt is a plain `> `, a line's `|`, `>` and `<` are words like any other (unknown ones), and a word HyForth doesn't know is an error, not a program to run.
 
-**Libraries from files.** `lib name`, for a name that isn't a ROM library's, reads `name.hyl`: HyForth source, like a script.  It's looked for the way a program is: in the current directory, then (for a name with no `/`) in the directories of `$LIBPATH`, or, with no `LIBPATH`, in `/lib` on the current directory's card.  The words the file defines become the library's, and it's searched from then on.
+**Libraries from files.** `lib name`, for a name that isn't a ROM library's, reads `name.hyl`: HyForth source, like a script.  It's looked for the way a program is: in the current directory, then (for a name with no `/`) in the caches' `lib` directories on the RAM disks, in the directories of `$LIBPATH`, or, with no `LIBPATH`, in `/lib` on the current directory's card, and last in `/rom/lib`.  The words the file defines become the library's, and it's searched from then on.
 
 * **While it loads,** the words you've defined yourself aren't searched: a library uses the base, the ROM libraries and other libraries.  A library file can load the libraries it needs with `lib` lines of its own.
 * **An error** while it loads (an unknown word, say) stops it, and the library is dropped.  A file that isn't there is `!IO ERR!`.
@@ -297,7 +300,7 @@ games/
 * **Anything else is a HyForth script**, read by a copy of the shell, as a pipeline's stage is: it starts with this shell's dictionary and stack, and what it defines or leaves on the stack goes away with it.  `bye` in it ends it.
 * A program has the console while it runs (if the shell has it), so **Ctrl-C stops it**, and gets copies of the shell's fds, namespace and current directory: it can be a pipeline's stage (`run hello.hyx | wc`).
 
-**A program by its name:** a word HyForth doesn't know is looked for as a program, `name.hyx`, then `name.hys`, then `name.zsm` (a song, played: [below](#tasks-and-the-console)): in the current directory, then (for a name with no `/`) in the directories of `$PATH` (below), or, with no `PATH`, in `/bin` on the current directory's card.  So `hello` runs `hello.hyx`, and `theme` plays `theme.zsm`.
+**A program by its name:** a word HyForth doesn't know is looked for as a program, `name.hyx`, then `name.hys`, then `name.zsm` (a song, played: [below](#tasks-and-the-console)): in the current directory, then (for a name with no `/`) in the program caches on the RAM disks (the shell's own, `/ram/1/bin`, then the shared `/ram/s/bin`: [`/ram`](../programming/io.md#the-ram-disks-ram)), in the directories of `$PATH` (below), or, with no `PATH`, in `/bin` on the current directory's card, and last in `/rom/bin`, the ROM's own ([`/rom`](../programming/io.md#the-roms-files-rom)).  So `cp game.hyx /ram/s/bin/game.hyx` makes `game` load from RAM.  So `hello` runs `hello.hyx`, and `theme` plays `theme.zsm`; with no card, `ls /rom/bin` shows what runs.
 
 **The environment:** variables, `NAME=value`, as files under `/env`; each task has its own, and the tasks it starts (programs, scripts, shells) get a copy.  The shell uses three, and sets two:
 
@@ -610,8 +613,7 @@ A **command shell** (`SHELL_CMD`, as Plan 9's `rc -c`) is HyForth running the li
 | `!DIV ZERO!` | Division by zero |
 | `!LOW MEM!` | Out of memory (dictionary or records) |
 | `!SECURITY!` | A write to a protected area |
-| `!SYS ERR!` | `syscall` returned an error |
-| `!IO ERR!` | An IO word failed: see `ioerr` |
+| `!IO ERR!` | An IO word failed, and why (`!IO ERR! not found`); `ioerr` gives the code |
 | `!BREAK!` | Ctrl-C |
 
 | Key | Does |
@@ -620,11 +622,17 @@ A **command shell** (`SHELL_CMD`, as Plan 9's `rc -c`) is HyForth running the li
 | Ctrl-\\ | Kill: a fresh HyForth (the dictionary is lost) |
 | Ctrl-D / Ctrl-Z | End of input (`cat`, `wc`, `key`) |
 | Ctrl-] then `0-F` | Switch to that task; `l` lists them |
-| Backspace | Erase a character |
+| Backspace, Delete (Ctrl-D) | Erase the character before the cursor / at it |
+| Left, Right (Ctrl-B, Ctrl-F) | Move along the line |
+| Home, End (Ctrl-A, Ctrl-E) | To the line's start / end |
+| Up, Down (Ctrl-P, Ctrl-N) | The lines typed before (about the last 255 characters' worth) |
+| Ctrl-U | Erase the line |
+
+The line editing is HyForth's, at the prompt when its input is the console: it turns the console raw while a line is typed (`/dev/cons/ctl`), and echoes the line itself.  Programs reading the console (`cat`, `wc`, C's `fgets`) get it as before: echoed, with Backspace.
 
 ### **How HyForth uses memory**
 
-HyForth runs in task 1.  Its code and the built-in words run from the BIOS ROM (page 1, with some words' code on page A), so only its variables are in RAM: they're copied from the paged ROM to `$0800` at startup (about 90 bytes).
+HyForth runs in task 1.  Its code and the built-in words run from the BIOS ROM (page 1, with some words' code on page A), so only its variables are in RAM: they're copied from the paged ROM to `$0800` at startup (about 1.3K: the shell's settings, the line editor's history, the sample scripts).  The build's link map (`os_rom/obj/os_rom_C02.map`, segment `FORTH_DATA`) has the size.
 
 | What | Where |
 | :--- | :---- |

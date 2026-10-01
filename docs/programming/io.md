@@ -106,9 +106,9 @@ A program that prints a partial line and then computes for a long time without a
 | `/dev/ser` | Serial driver | The serial port as it is, for any task: no foreground rules, no echo |
 | `/dev/ser/ctl` | Serial driver | The port's settings: read `b9600 l8 pn s1`; write commands to change them ([below](#the-serial-port-settings)) |
 | `/dev/snd` | Sound driver (`$E`) | The YM2151 (below) |
-| `/dev/sd/N/data` | Storage (`$C`) | SD card on SPI device N (0-7), as bytes at the fd's offset (`IO_SEEK`); the first 4 GB.  The card is started at the first open (`ERR_IO_DEVICE` if there's none) |
-| `/dev/sd/N/ctl` | Storage | Read: the card as a line, e.g. `sdhc 7580 MB 15523840 blocks` (or `sdsc`, or `none`), and for a HydraFS card its label, free space and last check.  Write: `init` starts the card again (e.g. after changing it); `format`, `label`, `check` ([below](#the-files-on-a-card)) |
-| `/sd/N/...` | Storage | The **files** on card N: the HydraFS server (the device `hfs`, mounted at `/sd`; [below](#the-files-on-a-card)) |
+| `/dev/sd/N/data` | Storage (`$C`) | Disk N as bytes at the fd's offset (`IO_SEEK`); the first 4 GB.  N is one character: for an SD card, its SPI device's number as a hex digit, `0`-`7` (`8`-`f`, slot cards' SPI devices, are planned), started at the first open (`ERR_IO_DEVICE` if there's none); other disks are letters that aren't hex digits: `x`, the ROM disk, the paged ROM ([read-only](#the-roms-files-rom)); `r` and `s`, the [RAM disks](#the-ram-disks-ram) |
+| `/dev/sd/N/ctl` | Storage | Read: the disk as a line, e.g. `sdhc 7580 MB 15523840 blocks` (or `sdsc`, `rom`, or `none`), and for a HydraFS its label, free space and last check.  Write: `init` starts the card again (e.g. after changing it); `format`, `label`, `check` ([below](#the-files-on-a-card)) |
+| `/sd/N/...` | Storage | The **files** on disk N: the HydraFS server (the device `hfs`, mounted at `/sd`; [below](#the-files-on-a-card)) |
 | `/dev/pipe` | Pipe server (`$D`) | Made by `IO_PIPE`, not opened by name |
 | `/dev/proc` | IO layer (in the reading task) | The tasks (below) |
 | `/dev/time` | The shell registers it (in the reading task) | The clock: read `2026-09-29 18:05:00`; write a date and time to set it (below) |
@@ -222,15 +222,15 @@ HyForth's `patch`, `note`, `noteoff` and `ywrite` ([HyForth](../using/hyforth.md
 | `/dev/proc/N/env` | Its environment, as `/env`'s list | |
 | `/dev/proc/N/mem` | `pages PP floor FF` (hex): the MMU pages it has (not counting the ones every task has marked: `$00-$07`, `$7D-$7F`), and its page floor; `-` for a free task | |
 
-A line is `N S O`: the task, its state (`R` running or runnable, `W` waiting, `P` paused, `D` a driver) and the task that started it (`-` none), then ` *` for the foreground task.  `/dev/proc` and `/env` are served in their client's task, from ROM page 9 (`io/proc_srv.s`, `io/env_srv.s`); `mem` is counted in task N itself (`TASK_CALL`).
+A line is `N S O`: the task, its state (`R` running or runnable, `W` waiting, `P` paused, `D` a driver) and the task that started it (`-` none), then ` *` for the foreground task.  `/dev/proc` and `/env` are served in their client's task, from ROM page 9 (`servers/proc_srv.s`, `servers/env_srv.s`); `mem` is counted in task N itself (`TASK_CALL`).
 
 #### **The clock: `/dev/time`**
 
 The Hydra keeps the date and time as seconds since 2000-01-01 00:00:00, counted by the scheduler's tick.  It has no clock that runs while it's off, so the time starts at 2000-01-01 00:00:00 at power-up, until it's set:
 * **Reading** `/dev/time` gives the date and time and CR LF: `cat /dev/time` shows `2026-09-29 18:05:00`.
 * **Writing** `YYYY-MM-DD hh:mm:ss` sets it; the seconds can be left out, or the whole time (midnight): `echo 2026-09-29 18:05 > /dev/time`.  2000-01-01 to 2135-12-31; a date that isn't one (`2023-02-29`) is `ERR_IO_BAD_REQ`.
-* **From code:** `CLOCK_GET` and `CLOCK_SET` (page 9, `io/time_srv.s`: `.X` = a zero page address, the 4 bytes of seconds there).  HydraFS stamps files with it ([plans/HYDRAFS.md](../plans/HYDRAFS.md#time-stamps)).
-* **The clock chip:** a DS1747 in U7 keeps the time while the Hydra's off (`io/rtc.s`, page 9).  Its clock registers are task F's `$7FF8-$7FFF` (`RTC_REGS`, `hw.inc`), which nothing else in the ROM writes, in any task.  At boot the shell looks for it (`RTC_BOOT`): its registers must hold a date and time, and its seconds must change within 1.1 s; then `ZP_CLOCK` is set from it at the start of one of its seconds, and `RTC_STATE` (in the system's shared bank) says it's there.  Writing `/dev/time` sets it too (`RTC_SAVE`: the W bit), and looks for it again if it wasn't found; reading `/dev/time` takes its seconds first (`RTC_LOAD`, the R bit, then `CLOCK_ADJUST`, which keeps the tick clock's place in the second).  Each access is a few bytes with IRQs off and `T` switched to F and back for each.
+* **From code:** `CLOCK_GET` and `CLOCK_SET` (page 9, `servers/time_srv.s`: `.X` = a zero page address, the 4 bytes of seconds there).  HydraFS stamps files with it ([plans/HYDRAFS.md](../plans/HYDRAFS.md#time-stamps)).
+* **The clock chip:** a DS1747 in U7 keeps the time while the Hydra's off (`drivers/rtc.s`, page 9).  Its clock registers are task F's `$7FF8-$7FFF` (`RTC_REGS`, `hw.inc`), which nothing else in the ROM writes, in any task.  At boot the shell looks for it (`RTC_BOOT`): its registers must hold a date and time, and its seconds must change within 1.1 s; then `ZP_CLOCK` is set from it at the start of one of its seconds, and `RTC_STATE` (in the system's shared bank) says it's there.  Writing `/dev/time` sets it too (`RTC_SAVE`: the W bit), and looks for it again if it wasn't found; reading `/dev/time` takes its seconds first (`RTC_LOAD`, the R bit, then `CLOCK_ADJUST`, which keeps the tick clock's place in the second).  Each access is a few bytes with IRQs off and `T` switched to F and back for each.
 
 #### **The environment: `/env`**
 
@@ -244,6 +244,62 @@ Each task has an environment: variables, `NAME=value`, which the tasks it starts
 So `echo /sd/0/bin > /env/PATH` sets one, `cat /env/PATH` shows it, `rm /env/PATH` removes it, and `ls /env` lists them.  A name is 1-30 characters, not `/` or `=`; a task's variables share 256 bytes (`ERR_IO_FULL` beyond).  The shell uses `PATH` (directories, `:` between them, to find programs by name) and `HOME` (`cd` alone), and sets `status` (the last program's exit status: its message, or its code, or empty for success) and `apid` (the task of the last program started with `&`), as Plan 9's `rc` does.  C's `getenv` and `setenv` read and write these files; conio reads `COLUMNS` and `LINES`.
 
 How: each task's environment is a 256-byte block in the system's shared bank (`ENV_BLOCKS`, `$8D00`), entries one after another; `IO_INHERIT` copies the parent's block for a new task (`ENV_COPY`).  An open variable is one of 16 slots (its task and name), so 16 can be open at once.
+
+#### **The ROM's files: `/rom`**
+
+Files kept in the paged ROM, read-only, there with no card: programs, songs and (later) libraries.  The paged ROM is a disk, the **ROM disk** (`/dev/sd/x`), with a HydraFS volume on it, so its files are `/sd/x/...` like a card's; the boot shell binds `/rom` to `/sd/x` (`ns` shows `/rom = /sd/x`), and every task it starts inherits the bind.
+
+| Name | Read |
+| :--- | :--- |
+| `/rom`, `/rom/bin`, ... | A directory: a line per entry, `name size` (a directory: `name/`), or stat records (`IO_CTL_READ_STATS`: `ls -l`, C's `readdir`) |
+| `/rom/README`, `/rom/bin/hello.hyx`, ... | The file's bytes; `IO_SEEK` and `IO_STAT` work as on a card (the stamps are 2000-01-01) |
+
+Writing, creating and removing give `ERR_IO_MODE` (the shell's `!IO ERR!`), as do `format` and `label` on `/dev/sd/x/ctl` and writes to `/dev/sd/x/data`: they're refused before anything is changed, even in the block cache.  `cd /rom/bin` works, and the shell looks in `/rom/bin` last for a program by its name (and in `/rom/lib` for a library: [HyForth](../using/hyforth.md#the-shell-directories-files-and-programs)).  So `hello`, `jukebox` or `scom` run on a machine with no card.
+
+**The ROM disk.**  Block n of the ROM disk is paged ROM bank n / 32, at `$A000 + (n % 32) * 512`, as the CPU sees it: 8192 blocks, the whole 4 MB.  A block never crosses a bank, or the 8K halves the board swaps, so the storage driver (`SD_ROM_READ` in `drivers/sd.s`) selects one bank, copies 512 bytes from one place, and puts the storage task's bank back.  A file whose blocks are in several banks is no different from one on a card: HydraFS asks for it a block at a time, so no pointer ever runs from one bank into the next.
+
+| Blocks | Banks | What |
+| :----- | :---- | :--- |
+| 0 | 0 (`$A000-$A1FF`) | The partition table (an MBR, as a card's), and a line saying what the disk is |
+| 1-95 | 0-2 | Partition 1, type `$DA` (not a file system): the system's banks: HyForth's variables, the hardware test, the test song |
+| 96-8191 | 3-255 | Partition 2, type `$7F`: the HydraFS volume, label `ROM`, read-only |
+
+What's in it comes from `os_rom/romfs.txt`, a list of files (their names in `/rom`, and where the build finds them).  After the link, the build's `sim/tools/mkromdisk.js` makes the volume with the HydraFS PC tool (`hydrafs.js`, stamped 2000-01-01 so each build is the same), writes the table and the volume's blocks into the paged ROM image, then reads the image back the way the CPU would (through the emulator's bank mapping) and checks every file against its source: a mismatch fails the build.  `node sim/tools/mkromdisk.js os_rom/romfs.txt os_rom/bin/paged_rom_C02.bin --list` (from `os_rom`, after a build) also shows which banks each file is in.  The `rom-copy` test copies every file from `/rom` to a card on the emulated machine and compares them with their sources.
+
+#### **The RAM disks: `/ram`**
+
+Two disks in RAM, each with a HydraFS on it: fast, there with no card, and **empty after a reset** (each is quick-formatted when it starts).  The plan they come from is [plans/DISKS.md](../plans/DISKS.md).
+
+| Disk | Names | Memory | At boot |
+| :--- | :---- | :----- | :------ |
+| `r`, the RAM disk | `/dev/sd/r`, `/sd/r`, `/ram` | The storage task's own 8K banks on the RAM modules | 256K (on a machine with less: half that, and so on) |
+| `s`, the shared RAM disk | `/dev/sd/s`, `/sd/s`, `/ram/s` | Shared RAM banks, from the lower half (IDs `$01-$7F`: `SH_ALLOC` takes from the top) | 512K (the same) |
+
+The boot shell binds `/ram` to `/sd/r`, and HydraFS serves the shared disk inside the RAM disk as `s` (`/sd/r/s/...` is `/sd/s/...`), so that one bind gives both and `ns` shows `/ram = /sd/r`.
+
+**Areas.**  The RAM disk's top directories are the tasks' areas: `/ram/N`, N a hex digit (`0`-`9`, `a`-`f`), is task N's.
+* **Who:** anything under `/ram/N` (opening, creating, removing, `ls`) is for task N, the tasks it started (and theirs, up the owner chain: `ZP_TASK_OWNER`), and task 0, the system's (the kernel's `TASK_MAY`).  Any other task gets `ERR_IO_PERM` (`$88`, the shell's `!IO ERR! not allowed`).  So a program the shell runs, or a stage of a pipeline, uses the shell's area, and two shells' families can't see into each other's.
+* **Other names** in the root (`/ram/zz`) aren't areas: refused.  `/ram/s` and the root's listing are everyone's.  Renaming an area, or changing its mode, is refused too (but for task 0).
+* **Owners:** when a task ends, the tasks it started get its owner instead (`TASK_ORPHANS`, as Unix gives orphans to `init`), so a new task in its slot isn't taken for their parent.
+* **An area goes when its task ends,** with everything in it: after the task's fds are closed, and before its parent (a shell waiting for it) goes on (`TASK_AREA_END`, then `HFS_AREA_END` in the storage task).  If a task it started still has a file in it open, it stays, and goes when task N ends next.  (The storage task keeps a bit for each area that may be there, `RAMD_AREAS`, so a task without one ends as fast as before.)
+
+**Program caches.**  The boot shell makes `/ram/s/bin` and `/ram/s/lib` (the shared caches) and its own area, `/ram/1`, with `bin` and `lib`.  A program typed by its name is looked for in:
+1. the current directory (Plan 9's `.` first);
+2. this task's area's `bin` (`/ram/N/bin`), then its owner's, up to three owners up (so a pipeline's stage finds the shell's cache);
+3. the shared cache, `/ram/s/bin`;
+4. `$PATH`'s directories, or `/bin` on the current directory's card;
+5. `/rom/bin`.
+
+Caching a program is copying it there: `cp /sd/0/bin/game.hyx /ram/s/bin/game.hyx`, and then `game` loads from RAM, about three times as fast as from a card (a 16K program: 1.5 million cycles, against 4.8 million).  Libraries are found the same way, in the `lib` directories (`lib name`).  A copy isn't checked against the card's: after rebuilding a program, copy it again (or remove the cached one).
+
+**Starting and stopping** them is a write to the ctl file (`echo stop > /dev/sd/s/ctl`, or HyForth's `ctl`, which reports errors: `q^/dev/sd/s/ctl^ q^stop^ ctl`):
+
+| Write | Does |
+| :---- | :--- |
+| `start SIZE [FROM-TO]` | Take SIZE (8K banks; or `K` or `M` after it: `256K`, `1M`), from the RAM modules FROM-TO (`r`: `start 256K 1-2`, the storage task's banks on modules 1 and 2) or the shared bank IDs FROM-TO (`s`: `start 1M $20-$9F`), or from anywhere; then make an empty HydraFS on it.  Numbers are decimal, or hex after a `$`.  `ERR_IO_BUSY`: it's started (stop it first); `ERR_IO_FULL`: no run of free banks that long there; `ERR_IO_BAD_REQ`: not a size or a range |
+| `stop` | Give its banks back; its files are lost.  `ERR_IO_BUSY` while a file on it is open |
+
+Reading the ctl file gives `ram 256 KB 512 blocks` (`sram` for the shared one), `banks $10-$2F` (its banks, or its shared bank IDs), then its HydraFS's lines; `none` when it's stopped.  `format` and `check` work as on a card, and `/dev/sd/r/data` is the disk's bytes.  How: the storage driver reads or writes a block by mapping its bank at `$8000` in the storage task (the RAM disk's bank in its own `$00`; the shared one's with `U`), copying 512 bytes and putting them back (`SD_RAM_READ`, `SD_RAM_WRITE` in `drivers/sd.s`); the starting and stopping are in `servers/ramdisk.s`, with the memory manager's `MM_BANK_ALLOC_IN` (task banks from a range) and `SH_BANK_ALLOC` (shared banks by number, with no handle).
 
 ### **Pipes**
 
@@ -268,7 +324,7 @@ Each task has its own namespace of up to 5 entries, which the tasks it starts in
 **How `IO_OPEN` resolves a name:**
 * It applies the entry with the **longest matching prefix**, matching whole path elements (`/z` matches `/z/sub`, not `/zz`).
 * After a bind it looks again, up to 4 times (`ERR_IO_NS_LOOP` beyond).
-* A name no entry matches must be under `/dev`.
+* A name no entry matches must be under `/dev` or `/env`: the IO layer sends those to their devices in every task, with no mount (`S_OWN_PREFIXES` in `io/io.s` for `/env`), so they take none of a task's 5 entries.  A device that every task should have (`/dev/vid`, say) belongs under `/dev`; one that wants a short name of its own goes in that table.  (`/rom` and `/ram` are ordinary binds, to the ROM disk's `/sd/x` and the RAM disk's `/sd/r`, which the boot shell makes: its tasks inherit them.)
 
 ### **The current directory**
 
@@ -306,7 +362,7 @@ The **HydraFS** server (the device `hfs`) serves the files on the SD cards.  The
 | :----- | :--- | :---- |
 | 0 | 32 | The name, zero-terminated |
 | 32 | 1 | Mode: bit 7 = a directory, bit 6 = append-only, bit 0 = read-only |
-| 33 | 1 | The card (0-7) |
+| 33 | 1 | The disk's number (0-7: the card `0`-`7`; 8: the ROM disk, `x`; 9 and 10: the RAM disks, `r` and `s`) |
 | 34 | 2 | The qid's version: up by 1 at every change |
 | 36 | 4 | The qid's id: unique on the card, never reused, and the same across renames |
 | 40 | 4 | The size in bytes |

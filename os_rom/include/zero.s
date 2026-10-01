@@ -161,24 +161,22 @@ ZP_SIG_TASK:
     .res  1
 ZP_SIG_CNT:
     .res  1
-ZP_PROC_IDX:            ; /dev/proc's server (in the client's task): the text's length, a task's owner,
-    .res  1             ;   the foreground task, and the request's count
-ZP_PROC_OWN:
-    .res  1
-ZP_PROC_FG:
-    .res  1
-ZP_PROC_LEN:
-    .res  1
-ZP_ENV_P:               ; The env server (in the client's task; its scratch is ZP_PROC_*): an environment
-    .res  2             ;   block ...
-ZP_ENV_Q:               ;   and a slot, or another block
-    .res  2
-ZP_TIME = ZP_ENV_P      ; The clock's date and time (time_srv.s, in the client's task; its scratch is
-                        ;   ZP_PROC_*, and it uses ZP_ENV_P and ZP_ENV_Q as one 4-byte number) ...
-ZP_TIME_M:              ;   another 4-byte number
-    .res  4
-ZP_TIME_D:              ;   and a byte
-    .res  1
+; The client-task servers' scratch: /dev/proc, /env, /dev/time and /rom run in their client's task, one request
+; at a time, and keep nothing here between requests, so they share these bytes.  The names below are its usual
+; views; a server that names bytes of its own in it checks them with CS_FITS (macros.inc), so none reaches
+; past it (or into the bytes around it, which other code holds across a call)
+ZP_CS:
+    .res  13
+ZP_CS_END:
+ZP_PROC_IDX = ZP_CS + 0 ; /dev/proc's server: the text's length, a task's owner, the foreground task, and the
+ZP_PROC_OWN = ZP_CS + 1 ;   request's count
+ZP_PROC_FG  = ZP_CS + 2
+ZP_PROC_LEN = ZP_CS + 3
+ZP_ENV_P    = ZP_CS + 4 ; The env server (its scratch is ZP_PROC_* too): an environment block ...
+ZP_ENV_Q    = ZP_CS + 6 ;   and a slot, or another block
+ZP_TIME     = ZP_CS + 4 ; The clock's date and time (time_srv.s; its scratch is ZP_PROC_* too): a 4-byte number
+ZP_TIME_M   = ZP_CS + 8 ;   another 4-byte number
+ZP_TIME_D   = ZP_CS + 12;   and a byte
 
 ; IO (see io.s)
 ZP_IO_FD:               ; fd being worked on

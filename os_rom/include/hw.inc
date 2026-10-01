@@ -13,7 +13,9 @@ IO_PORT_BASE    = $FF00
 ; CPU clock: a build-time setting for now (board V2 will have a clock jumper register to read).  Timing
 ; constants are derived from it.  Above 3.58 MHz the YM2151 (on its own 3.58 MHz clock) needs bus wait
 ; states, which need the V2 RDY hold hardware (see docs/plans/IO_PLAN.md), so don't use the sound chip until then.
+.ifndef CPU_CLOCK_MULT      ; (A build can give it: ca65 -D CPU_CLOCK_MULT=2; build.js variants)
 CPU_CLOCK_MULT  = 1         ; 1 = 3.58 MHz, 2 = 7.16 MHz
+.endif
 .assert     CPU_CLOCK_MULT = 1 .or CPU_CLOCK_MULT = 2, error, "CPU_CLOCK_MULT must be 1 (3.58 MHz) or 2 (7.16 MHz)"
 CLK_BASE_CPS    = 3579545   ; ~3.58 MHz (the 14.318 MHz crystal / 4)
 CLK_CPS         = CLK_BASE_CPS * CPU_CLOCK_MULT
@@ -50,7 +52,9 @@ SER_RATE_BOOT   = 8                                         ; (SER_RATE_9600)
 ; interrupt sends the next.  Receiving is the same on both.  (VIA T2 is the serial driver's then.)
 SER_ACIA_ROCKWELL = 0
 SER_ACIA_WDC    = 1
+.ifndef SER_ACIA            ; (A build can give it: ca65 -D SER_ACIA=1; build.js variants)
 SER_ACIA        = SER_ACIA_ROCKWELL
+.endif
 
 ; At 115200 the Rockwell ACIA's sending is paced by timer 2 as well (SER_PACED), with at least SER_PACE_GAP
 ; bits of idle line after each character, and about 2 more for the interrupt that sends the next: back to

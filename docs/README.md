@@ -3,6 +3,7 @@
 The Hydra-16 is a multitasking 65C02 computer: a W65C02S whose address decoding gives each of 16 tasks its own RAM, zero page, stack and bank selections, running a small preemptive OS with Plan 9-style IO, and HyForth as its shell.
 
 ### **Start here**
+* **[First steps](tutorial.md)**: a tutorial for the first hour, in the emulator: HyForth, files and a card, a program in C and one in assembly.
 * **[Getting started](getting-started.md)**: build the ROMs, program the chips, connect a terminal, boot, or run it in the emulator.
 
 ### **Using the system**
@@ -34,4 +35,10 @@ The reasoning behind the design, and what's planned.  Parts of them are history 
 * [SHELL.md](plans/SHELL.md): HyForth as a shell: a current directory, commands, running programs (done).
 * [REORG_PLAN.md](plans/REORG_PLAN.md): the ROM reorganisation.
 * [SOUND.md](plans/SOUND.md): the YM2151: its library (done), a song player, a test song that uses the whole chip, and importing music from other machines.
+* [NEXT_STEPS.md](plans/NEXT_STEPS.md): what's missing to make the Hydra fun and useful for hobbyists and programmers, and the milestones to get there.
+* [DISKS.md](plans/DISKS.md): RAM and ROM disks as HydraFS volumes: `/ram` (an area for each task, `/ram/0-F`, and a shared one, `/ram/s`, with program caches) and `/rom` (the paged ROM as one disk, `/sd/x`: built).
+* [NAMESPACES.md](plans/NAMESPACES.md): the Plan 9 way: union directories put together with binds and mounts, a default namespace, and `/bin` and `/lib` in place of search paths.
+* [PROC.md](plans/PROC.md): `/proc`, the tasks as files, with a task's memory (`/proc/N/mem`, `/proc/N/ram`) for its family and task 0, the system task.
+* [VIDEO.md](plans/VIDEO.md): the Vera X video card in slot 0 (the VERA: VGA, sprites, PSG and PCM), its keyboard controller, and the software for them.
+* [CODE_REVIEW.md](plans/CODE_REVIEW.md): a review of the whole software tree, with bugs, ROM and zero page budgets, and recommendations.
 * [IDEAS.md](plans/IDEAS.md): ideas for later (wait states for board V2, ...).

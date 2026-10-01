@@ -1131,30 +1131,10 @@ lib_begin LIBN_TOOLS
 ; $F600 is entry point --A+Y for starting address, C=1 for multiple opcodes, X for # of codes
 def_far "disasm", "disasm"
 
-; (jsaddr 0a 0y-- 0x) jump to external code with parms passed via A,Y, result in X
-def_word "syscall", "syscall", 0
-    jsr spull_2    ; parm to pass to y
-    jsr spull_1    ; parm to pass to a
-    jsr spull_0    ; addr
-    ldy TEMP3
-    lda TEMP2
-    jsr SYSCALL
-    jmp next
-;
-SYSCALL:
-    jsr SCJUMP         ; the routine at TEMP1
-    txa                ; returned stuff in X
-    beq SCSKIP         ; if returns zero, don't do anything else
-    sta TEMP1          ; otherwise...
-    stz TEMP1+1
-    jsr spush_0        ; push result onto stack
-    rts
-SCSKIP:
-    pla
-    pla
-    jmp errrtn
-SCJUMP:
-    jmp (TEMP1)
+; (jsaddr a y -- x) call machine code (a thunk, or code in RAM), on BIOS ROM page 0, with .A and .Y set
+def_far "syscall", "syscall"
+; (jsaddr a x y -- a x y p) the same, with every register, in and out, and the flags (p: C is bit 0)
+def_far "sys", "sys"
 lib_end
 ;
 ;
@@ -1423,6 +1403,28 @@ REDOUT:                 ; the line's > or >> redirection: stdout, kept ($FF: non
     .byte $FF
 REDIN:                  ;   and its <: stdin
     .byte $FF
+OUTBASE:                ; The base '.' and 'u.' print in: 16 (hex, 4 digits) or 10 (decimal, signed for '.')
+    .byte 16
+LECTL:                  ; The console's line editor (LINE_EDIT, farwords.s): its fd on /dev/cons/ctl ($FF: none)
+    .byte $FF
+LELEN:                  ;   the line's length (in TIB from 1), the cursor (before character LEPOS + 1) ...
+    .byte 0
+LEPOS:
+    .byte 0
+LEHPOS:                 ;   the line from HIST being shown (HISTLEN: the new one)
+    .byte 0
+LEOLD:                  ;   scratch: an old length, spaces to write, a count
+    .byte 0
+LEPAD:
+    .byte 0
+LECNT:
+    .byte 0
+LE_RAWON:               ;   what it writes to /dev/cons/ctl
+    .byte "rawon"
+HISTLEN:                ; The lines typed (LINE_EDIT's history): HISTLEN bytes in HIST, each line and a 0, the oldest
+    .byte 0             ;   first
+HIST:
+    .res HIST_SIZE
 BOOTFLAG:               ; <> 0: run boot.hys before the first prompt (the boot shell: page 7's SH_BOOT)
     .byte 0
 BAREFLAG:               ; <> 0: a bare Forth ('forth': forth_bare_main): 'cold' loads no libraries
@@ -1611,7 +1613,7 @@ def_far "sndstop", "sndstop"
 ; ( xxaa -- f )    send byte(a) to register(x) on yamaha 2151: f = true if it went
 def_far "ywrite", "ywrite"
 .pushseg
-.segment "FORTH_HIGH"   ; (Page 1's room: after its gates)
+.segment "FORTH_TOP"    ; (Page 1's room above COMMON, $FE00)
 ; ( p ch -- )  load patch p (0-127: General MIDI's instruments; 128-162: drum sounds) into channel ch (0-7)
 def_far "patch", "patch"
 ;

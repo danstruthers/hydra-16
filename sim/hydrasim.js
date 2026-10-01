@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 // ****************************************************************************
-// hydrasim.js - a minimal Hydra-16 emulator, for debugging the OS ROM without the hardware.
+// hydrasim.js - a Hydra-16 emulator, for debugging the OS ROM without the hardware: the command line (its options,
+// the image files, the report, the interactive terminal).  The machine is in lib/ (machine.js and its devices,
+// with no Node.js in them: docs/tools/emulator.md, "Inside the emulator").
 //
 // Models:
 //   * W65C02S CPU (STZ, BRA, PHX/PLY, TSB/TRB, BBR/BBS, RMB/SMB, WAI, STP, (zp) mode, the 1-byte NOPs, ...),
@@ -38,8 +40,11 @@
 //   --clock 3.58|7.16   The CPU clock in MHz, as the ROM was built for (CPU_CLOCK_MULT; default 3.58): it
 //                       sets the ACIA's and the YM2151's timing in CPU cycles, and the report's seconds
 //   --input TEXT        Serial input to type, from cycle 200000, a key every 20000 cycles; "\r" = CR,
-//                       "\xNN" = byte NN, e.g. a control key; "\w" = wait 2M cycles before the next key (e.g. --input
-//                       "1 2 + .\r", "cat\rhi\x04", "inf\r\w\x03")
+//                       "\xNN" = byte NN, e.g. a control key; "\w" = wait 2M cycles before the next key; "\p" = wait
+//                       for a prompt: until the output (grown since) ends with "> ", or WOZMON's ">" (e.g. --input
+//                       "1 2 + .\r", "cat\rhi\x04", "inf\r\w\x03", "\pls\r\pcd /rom\r\p")
+//   --stop-after-input N   Stop N cycles after the last key of --input is typed (and its waits are done), or at
+//                       --cycles, whichever comes first
 //   --modules N         RAM modules installed: banks $00 - N*16-1 (default 3)
 //   --shared-u N        Shared RAM installed for U macro-pages 0 - N-1 (default 16; 4 per 512K chip)
 //   --acia-line N       IRQ line the ACIA interrupts on (default 1)
@@ -87,6 +92,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
+const { createMachine } = require('./lib/machine.js');
 
 // ---- options
 const opt = { rom: path.join(__dirname, '..', 'os_rom', 'bin'), cycles: 20000000, input: '', modules: 3,
@@ -99,7 +105,8 @@ for (let i = 0; i < argv.length; i++) {
     case '--cycles': opt.cycles = +next(); opt.cyclesSet = true; break;
     case '-i': case '--interactive': opt.interactive = true; break;
     case '--speed': opt.speed = +next(); if (!(opt.speed >= 0)) { console.error('--speed N (0 = as fast as it goes)'); process.exit(1); } break;
-    case '--input': opt.input = next().replace(/\\r/g, '\r').replace(/\\n/g, '\n').replace(/\\x([0-9A-Fa-f]{2})/g, (m, h) => String.fromCharCode(parseInt(h, 16))).replace(/\\w/g, '\u0100'); break;
+    case '--input': opt.input = next().replace(/\\r/g, '\r').replace(/\\n/g, '\n').replace(/\\x([0-9A-Fa-f]{2})/g, (m, h) => String.fromCharCode(parseInt(h, 16))).replace(/\\w/g, '\u0100').replace(/\\p/g, '\u0101'); break;
+    case '--stop-after-input': opt.stopAfterInput = +next(); break;
     case '--modules': opt.modules = +next(); break;
     case '--shared-u': opt.sharedU = +next(); break;
     case '--acia-line': opt.aciaLine = +next(); break;
@@ -135,562 +142,71 @@ for (let i = 0; i < argv.length; i++) {
     default: console.error('Unknown option: ' + a + ' (see the header of hydrasim.js)'); process.exit(1);
   }
 }
-const osrom = fs.readFileSync(path.join(opt.rom, 'os_rom_C02.bin'));
-const pagedrom = fs.readFileSync(path.join(opt.rom, 'paged_rom_C02.bin'));
-let seed = opt.seed;                                            // --seed: a repeatable power-up (mulberry32)
-const random = seed < 0 ? Math.random : () => { seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
-const rnd = n => (random() * n) | 0;
 const hx = (v, n = 2) => v.toString(16).toUpperCase().padStart(n, '0');
 
-// ---- memory and devices
-const taskRam = []; for (let i = 0; i < 16; i++) taskRam.push(new Uint8Array(0x8000).map(() => rnd(256)));
-
-// --rtc: a DS1747 in U7.  Its clock counts seconds (base, at cycle 'at'; as UTC, for the fields) while its oscillator
-// runs.  Its registers show the time as it is, or as it was when R or W was set (a snapshot: 'held'); while W is set,
-// writes go to the snapshot, and clearing W starts the clock from it, with the century that write gives.  Writes with
-// W clear go nowhere (the datasheet doesn't say what they do).  BF (the day's bit 7) can't be written.
-const RTC_REGS = 0x7FF8, RTC_TASK = 15;
-let rtc = null;
-if (opt.rtc !== undefined) {
-  const n = new Date();                                         // (now: this PC's local time, as the clock's fields)
-  rtc = { base: typeof opt.rtc === 'number' ? opt.rtc : opt.rtc === 'now' ? Date.UTC(n.getFullYear(), n.getMonth(), n.getDate(),
-    n.getHours(), n.getMinutes(), n.getSeconds()) / 1000 : Date.UTC(2000, 0, 1) / 1000, at: 0, osc: opt.rtc !== 'stopped',
-    ctl: 0, held: null, dow: 0, junk: opt.rtc === 'unset' ? Array.from({ length: 8 }, () => rnd(256)) : null };
-  rtc.dow = 4;                                                  // (Day 1 = Sunday: 1970-01-01 was a Thursday, day 5)
-}
-const bcd = n => ((n / 10) | 0) << 4 | n % 10, unbcd = b => (b >> 4) * 10 + (b & 15);
-const rtcNow = () => rtc.osc ? rtc.base + Math.floor((cyc - rtc.at) / (opt.clock * 1e6)) : rtc.base;
-function rtcRegs() {                                            // The registers, from the clock as it is now
-  if (rtc.junk) return rtc.junk.slice();
-  const s = rtcNow(), d = new Date(s * 1000), y = d.getUTCFullYear(), days = Math.floor(s / 86400);
-  return [bcd(Math.floor(y / 100)), (rtc.osc ? 0 : 0x80) | bcd(d.getUTCSeconds()), bcd(d.getUTCMinutes()), bcd(d.getUTCHours()),
-    ((days + rtc.dow) % 7 + 7) % 7 + 1, bcd(d.getUTCDate()), bcd(d.getUTCMonth() + 1), bcd(y % 100)];
-}
-function rtcRead(r) {
-  const v = (rtc.held || rtcRegs())[r];
-  if (r === 0) return rtc.ctl | (v & 0x3F);
-  return r === 4 ? (opt.rtcBatteryLow ? 0 : 0x80) | (v & 0x7F) : v;
-}
-function rtcWrite(r, v) {
-  if (r > 0) { if (rtc.ctl & 0x80) rtc.held[r] = v; return; }
-  if ((v & 0xC0) && !(rtc.ctl & 0xC0)) rtc.held = rtcRegs();   // R or W set: updates halt
-  if (!(v & 0x80) && (rtc.ctl & 0x80)) {                        // W cleared: the clock from the registers
-    const h = rtc.held, y = unbcd(v & 0x3F) * 100 + unbcd(h[7]);
-    rtc.base = Date.UTC(y, unbcd(h[6] & 0x1F) - 1, unbcd(h[5] & 0x3F), unbcd(h[3] & 0x3F), unbcd(h[2] & 0x7F), unbcd(h[1] & 0x7F)) / 1000;
-    rtc.at = cyc; rtc.osc = !(h[1] & 0x80); rtc.junk = null;
-    rtc.dow = (((h[4] & 7) - 1 - Math.floor(rtc.base / 86400)) % 7 + 7) % 7;
-  }
-  rtc.ctl = v & 0xC0;
-  if (!rtc.ctl) rtc.held = null;
-}
-const taskBank = {}, sharedBank = {};
-const vecRam = new Uint16Array(16).map(() => rnd(65536));
-// T/U/V/W are 8-bit latches (74F573) read back through a 74F541: a read gives the whole byte written.  Only
-// T0-T3 select the task, U0-U3 the shared macro-page and W0-W3 the BIOS ROM page (the socket wires W0-W5
-// for up to a 512K chip; with a 128K image, W4-W5 fold back, as on a 39SF010)
-let regT = rnd(256), regU = rnd(256), V = rnd(256), regW = rnd(256);
-let T = regT & 15, U = regU & 15, W = regW & 15;
-let out = '';
-let ymReg = 0; const ymKeyOns = [], ymWrites = [];                          // YM2151: the register selected, and the key-ons written
-let aciaCmd = 0, aciaCtrl = 0, aciaTdre = 1, aciaTxTimer = 0, aciaIrq = 0, aciaRdrf = 0, aciaRx = 0, aciaOverruns = 0;
-// The line's idle time between characters sent: when the last one ended, and the shortest gap (in bits,
-// at the rate of the character after it; 0 = back to back or overlapping), counted once 8 have gone at the rate last set
-let aciaTxEnd = -Infinity, aciaTxSent = 0, aciaGapMin = Infinity;
-const aciaWdc = opt.acia === 'wdc';
-const rxQueue = [...opt.input]; let rxDelay = 200000, rxLost = 0;   // (--paste: bytes lost to overruns)
-const via = new Uint8Array(16);
-// VIA timer 1 (the scheduler's tick): counter, latch, IFR/IER; one-shot or free-running (ACR bit 6)
-let viaT1 = 0xFFFF, viaT1Latch = 0xFFFF, viaT1On = false, viaIFR = 0, viaIER = 0;
-let viaT2 = 0xFFFF, viaT2LatchL = 0xFF, viaT2On = false;         // Timer 2: one-shot
-// The shift register: shifting (cycles until its 8 bits are done: its IFR flag), or -1.  CB1/CB2 aren't
-// brought out: modes 3 and 7 (CB1's clock) never finish, and shifting in reads 1s
-let viaSrLeft = -1;
-// SPI on VIA port B (PB0 SCLK, PB1 /CS enable, PB2 MOSI, PB3-PB5 device 0-7, PB6 = 0 for the board's
-// devices, PB7 MISO; mode 0), with up to 8 SD cards (SPI mode, SDHC: block addresses) on devices 0-7,
-// each backed by an image file (--sd [N:]FILE); --sdsc N makes device N's a standard capacity card (byte
-// addresses, CSD v1)
-const sdCards = [];                                             // By device: a card, or undefined
-for (const { dev, file, blocks } of opt.sds) {
+// ---- the machine (lib/machine.js), with the ROM images and SD card images from files
+const sd = opt.sds.map(({ dev, file, blocks }) => {             // A card's blocks: its image file (512 bytes a block)
   const fd = fs.openSync(file, 'r+');
-  sdCards[dev] = { dev, fd, blocks: blocks || Math.floor(fs.fstatSync(fd).size / 512), sdsc: opt.sdsc.includes(dev), bit: 0, inB: 0, cur: 0xFF, miso: 1,
-    q: [], cmd: [], idle: true, app: false, acmd41: 0, writeAt: -1, wr: null };
-}
-let spiSel = null, spiClk = 0;                                  // The selected card (null: none), SCLK
-function sdReset(sd) {                                          // Deselected: it forgets the transfer
-  sd.bit = 0; sd.cmd = []; sd.q = []; sd.wr = null; sd.writeAt = -1; sd.cur = 0xFF;
-}
-function sdCommand(sd, c) {                                     // One 6-byte command: its answer bytes
-  const idx = c[0] & 0x3F, idle = sd.idle ? 1 : 0;
-  let arg = ((c[1] << 24) | (c[2] << 16) | (c[3] << 8) | c[4]) >>> 0;
-  if (sd.sdsc && (idx === 17 || idx === 24)) { if (arg % 512) return [0x20 | idle]; arg /= 512; }   // SDSC: byte addresses (address error)
-  if (sd.app) {
-    sd.app = false;
-    if (idx === 41) { if (++sd.acmd41 >= 3) sd.idle = false; return [sd.idle ? 1 : 0]; }
-    return [0x04 | idle];
-  }
-  switch (idx) {
-    case 0: sd.idle = true; sd.acmd41 = 0; return [0x01];
-    case 8: return [idle, 0x00, 0x00, c[3] & 0x0F, c[4]];        // R7: voltage accepted, the pattern back
-    case 55: sd.app = true; return [idle];
-    case 58: return [idle, sd.sdsc ? 0x80 : 0xC0, 0xFF, 0x80, 0x00];   // OCR: powered up, CCS (SDHC)
-    case 9: return [idle, 0xFF, 0xFE, ...sdCsd(sd), 0x12, 0x34];  // CSD: R1, a wait, the token, 16 bytes, CRC
-    case 16: return [idle];
-    case 17: {
-      if (sd.idle || arg >= sd.blocks) return [0x40 | idle];     // (Parameter error)
-      const b = Buffer.alloc(512); fs.readSync(sd.fd, b, 0, 512, arg * 512);
-      return [0x00, 0xFF, 0xFF, 0xFE, ...b, 0x12, 0x34];         // R1, a wait, the token, data, CRC
-    }
-    case 24:
-      if (sd.idle || arg >= sd.blocks) return [0x40 | idle];
-      sd.writeAt = arg; return [0x00];                           // Then: the data block
-    default: return [0x04 | idle];                               // Illegal command
-  }
-}
-function sdCsd(sd) {                                            // The CSD register: the card's size
-  const b = [0x40, 0x0E, 0x00, 0x32, 0x5B, 0x59, 0x00, 0, 0, 0, 0x7F, 0x80, 0x0A, 0x40, 0x00, 0x01];
-  if (!sd.sdsc) {                                               // v2: (C_SIZE + 1) * 1024 blocks
-    const c = Math.max(1, Math.floor(sd.blocks / 1024)) - 1;
-    b[7] = (c >> 16) & 0x3F; b[8] = (c >> 8) & 0xFF; b[9] = c & 0xFF;
-  } else {                                                      // v1: (C_SIZE + 1) << (C_SIZE_MULT + 2) blocks of 2^READ_BL_LEN
-    const len = sd.blocks <= 4096 * 512 ? 9 : sd.blocks <= 4096 * 1024 ? 10 : 11;
-    const c = Math.max(1, Math.floor(sd.blocks / (512 << (len - 9)))) - 1;   // (C_SIZE_MULT 7: * 512)
-    b[0] = 0x00; b[5] = 0x50 | len; b[6] = (c >> 10) & 3; b[7] = (c >> 2) & 0xFF; b[8] = ((c & 3) << 6) | 0x3F;
-    b[9] = 0xE0 | 3; b[10] = 0x80 | 0x7F;
-  }
-  return b;
-}
-function sdByte(sd, b) {                                        // Byte b came in: the next byte out
-  if (sd.wr) {                                                  // A block for CMD24: token, 512 bytes, CRC
-    if (sd.wr.data.length === 0 && b !== 0xFE) return 0xFF;
-    sd.wr.data.push(b);
-    if (sd.wr.data.length === 515) {
-      fs.writeSync(sd.fd, Buffer.from(sd.wr.data.slice(1, 513)), 0, 512, sd.wr.at * 512);
-      sd.wr = null; sd.q = [0x00, 0x00, 0x00, 0xFF];             // (Busy a while, then ready)
-      return 0x05;                                               // Data accepted
-    }
-    return 0xFF;
-  }
-  if (sd.cmd.length || (b & 0xC0) === 0x40) {
-    sd.cmd.push(b);
-    if (sd.cmd.length === 6) { sd.q = [0xFF, ...sdCommand(sd, sd.cmd)]; sd.cmd = []; return sd.q.shift(); }
-    return 0xFF;
-  }
-  if (sd.q.length) return sd.q.shift();
-  if (sd.writeAt >= 0) { sd.wr = { at: sd.writeAt, data: [] }; sd.writeAt = -1; }   // (R1 out: data next)
-  return 0xFF;
-}
-function spiPortB(v) {                                          // Port B's output bits changed
-  const card = !(v & 0x02) && !(v & 0x40) ? sdCards[(v >> 3) & 7] || null : null;
-  if (card !== spiSel) { if (spiSel) sdReset(spiSel); spiSel = card; }
-  const clk = v & 1;
-  if (clk && !spiClk && card) {                                 // Rising edge: both sides sample
-    card.miso = (card.cur >> (7 - card.bit)) & 1;
-    card.inB = ((card.inB << 1) | ((v >> 2) & 1)) & 0xFF;
-    if (++card.bit === 8) { card.bit = 0; card.cur = sdByte(card, card.inB); }
-  }
-  spiClk = clk;
-}
-function viaRead(r) {
-  if (r === 0) { const ddr = via[2], pins = 0x7F | ((spiSel ? spiSel.miso : 1) << 7); return (via[0] & ddr) | (pins & ~ddr); }
-  if (r === 1 || r === 0x0F) return (via[1] & via[3]) | (~via[3] & 0xFF);   // Port A: its inputs read high (pull-ups)
-  if (r === 0x0A) { viaSrStart(); return via[0x0A]; }
-  if (r === 4) { viaIFR &= ~0x40; return viaT1 & 0xFF; }       // T1C-L: clears the T1 flag
-  if (r === 5) return viaT1 >> 8;
-  if (r === 8) { viaIFR &= ~0x20; return viaT2 & 0xFF; }       // T2C-L: clears the T2 flag
-  if (r === 9) return (viaT2 >> 8) & 0xFF;
-  if (r === 6) return viaT1Latch & 0xFF;
-  if (r === 7) return viaT1Latch >> 8;
-  if (r === 0x0D) return viaIFR | ((viaIFR & viaIER & 0x7F) ? 0x80 : 0);
-  if (r === 0x0E) return viaIER | 0x80;
-  return via[r];
-}
-function viaWrite(r, v) {
-  if (r === 4 || r === 6) viaT1Latch = (viaT1Latch & 0xFF00) | v;
-  else if (r === 5) { viaT1Latch = (viaT1Latch & 0xFF) | (v << 8); viaT1 = viaT1Latch; viaT1On = true; viaIFR &= ~0x40; }
-  else if (r === 7) { viaT1Latch = (viaT1Latch & 0xFF) | (v << 8); viaIFR &= ~0x40; }
-  else if (r === 8) viaT2LatchL = v;
-  else if (r === 9) { viaT2 = (v << 8) | viaT2LatchL; viaT2On = true; viaIFR &= ~0x20; }   // Load and start
-  else if (r === 0x0D) viaIFR &= ~(v & 0x7F);
-  else if (r === 0x0E) { if (v & 0x80) viaIER |= v & 0x7F; else viaIER &= ~(v & 0x7F); }
-  else if (r === 0x0A) { via[0x0A] = v; viaSrStart(); }
-  else if (r === 0x0F) via[1] = v;
-  else if (r === 0x0B) { via[0x0B] = v; if (!(v & 0x1C)) viaSrLeft = -1; }
-  else { via[r] = v; if (r === 0 || r === 2) spiPortB((via[0] & via[2]) | (~via[2] & 0x7F)); }
-}
-// A shift register access: it clears the flag, and starts 8 shifts (mode 4, free-running, never sets it)
-function viaSrStart() {
-  const m = (via[0x0B] >> 2) & 7;
-  viaIFR &= ~0x04;
-  viaSrLeft = m === 2 || m === 6 ? 16 : m === 1 || m === 5 ? 16 * (viaT2LatchL + 2) : -1;
-  if (m === 1 || m === 2) via[0x0A] = 0xFF;                   // (Shifted in: CB2 floats high)
-}
-function viaTick(n) {                                          // (n can span several T1 periods: a WAI skipped ahead)
-  if (viaSrLeft >= 0 && (viaSrLeft -= n) < 0) viaIFR |= 0x04;
-  if (viaT2On) { viaT2 -= n; if (viaT2 < 0) { viaIFR |= 0x20; viaT2On = false; viaT2 &= 0xFFFF; } }
-  if (!viaT1On) return;
-  viaT1 -= n;
-  while (viaT1 < 0) {
-    viaIFR |= 0x40;
-    if (via[0x0B] & 0x40) viaT1 += viaT1Latch + 2; else { viaT1 = 0xFFFF; viaT1On = false; }
-  }
-}
-// The ACIA's character time in CPU cycles: its baud rate (control register: the internal generator, or 0 =
-// the external clock / 16), the word length and stop bits, and parity (command register).  Its clock
-// (SER_CLK) is the board's 14.318 MHz crystal / 8, 1.790 MHz, not the 1.8432 MHz the rates are named for:
-// every rate is 2.9% slow, as on the board.
-const ACIA_BAUD = [1843200 / 16, 50, 75, 109.92, 134.58, 150, 300, 600, 1200, 1800, 2400, 3600, 4800, 7200, 9600, 19200]
-  .map(r => r * (14318180 / 8) / 1843200);
-function aciaCharCycles() {
-  const bits = 1 + (8 - ((aciaCtrl >> 5) & 3)) + ((aciaCmd & 0x20) ? 1 : 0) + ((aciaCtrl & 0x80) ? 2 : 1);
-  return Math.round(bits * opt.clock * 1e6 / ACIA_BAUD[aciaCtrl & 15]);
-}
-// YM2151: busy for 64 of its clocks (SND_CLK, 3.58 MHz) after each data write; a write while it's busy is
-// lost on the chip (counted)
-const YM_BUSY_CYCLES = Math.round(64 * opt.clock / 3.579545);
-let ymBusyUntil = 0, ymLost = 0;
-// Its timers: A (10 bits, registers $10/$11: 64 x (1024 - NA) of its clocks) and B ($12: 1024 x (256 - NB));
-// register $14 loads (starts) them, enables their flags, resets the flags.  An enabled timer's overflow sets
-// its status flag (bit 0 or 1), and a flag holds IRQ line 4 until it's reset
-const ymRegs = new Uint8Array(256);
-let ymStatus = 0, ymANext = -1, ymBNext = -1;
-const ymAPeriod = () => Math.round(64 * (1024 - ((ymRegs[0x10] << 2) | (ymRegs[0x11] & 3))) * opt.clock / 3.579545);
-const ymBPeriod = () => Math.round(1024 * (256 - ymRegs[0x12]) * opt.clock / 3.579545);
-function ymTick(t) {
-  if (ymANext >= 0) while (t >= ymANext) { if (ymRegs[0x14] & 4) ymStatus |= 1; ymANext += ymAPeriod(); }
-  if (ymBNext >= 0) while (t >= ymBNext) { if (ymRegs[0x14] & 8) ymStatus |= 2; ymBNext += ymBPeriod(); }
-}
-function ymTimers(v) {                                         // Register $14 written
-  if (v & 1) { if (ymANext < 0) ymANext = ioAt + ymAPeriod(); } else ymANext = -1;
-  if (v & 2) { if (ymBNext < 0) ymBNext = ioAt + ymBPeriod(); } else ymBNext = -1;
-  if (v & 0x10) ymStatus &= ~1;
-  if (v & 0x20) ymStatus &= ~2;
-}
-
-// Which task's copy of $0000-$7FFF an access uses (the --model what-ifs change this)
-const tsel = a => opt.model === 'sharedlow' ? 0 : (opt.model === 'zponly' && a >= 0x200) ? 0
-  : (opt.model === 'nostack' && a >= 0x100 && a < 0x200) ? 0
-  : opt.u7Fault ? (opt.u7Fault.high ? T | opt.u7Fault.mask : T & ~opt.u7Fault.mask) : T;
-const bankInstalled = b => b >= 0xF0 ? (opt.model !== 'noshared' && U < opt.sharedU) : b < opt.modules * 16;
-function bankMem(b) {
-  if (b >= 0xF0) { const k = U * 16 + (b & 15); return sharedBank[k] || (sharedBank[k] = new Uint8Array(0x2000)); }
-  const k = T * 256 + b; return taskBank[k] || (taskBank[k] = new Uint8Array(0x2000));
-}
-// --ram-fault: the offset in the window that the chip holding bank b actually sees
-const sameChip = (b, f) => b >= 0xF0 ? f >= 0xF0 && ((b ^ f) & 0x0C) === 0 : f < 0xF0 && (b >> 4) === (f >> 4);
-function ramOfs(b, a) {
-  const o = a - 0x8000, f = opt.ramFault;
-  if (!f || !sameChip(b, f.bank)) return o;
-  return f.high ? o | f.mask : o & ~f.mask;
-}
-function rd(a) {
-  if (a < 0x8000) return rtc && a >= RTC_REGS && tsel(a) === RTC_TASK ? rtcRead(a - RTC_REGS) : taskRam[tsel(a)][a];
-  if (a < 0xA000) { const b = taskRam[tsel(0)][0]; return bankInstalled(b) ? bankMem(b)[ramOfs(b, a)] : (a >> 8); }  // floating bus
-  if (a < 0xE000) { const off = taskRam[tsel(1)][1] * 0x4000 + ((a - 0xA000) ^ 0x2000); return off < pagedrom.length ? pagedrom[off] : 0xFF; }
-  if (a >= 0xFF00 && a < 0xFFF0) {
-    sync(ioAt);                                                 // (The devices, as of this access's cycle)
-    if (a >= 0xFF10 && a < 0xFF14) {
-      const r = a - 0xFF10;
-      if (r === 0) { aciaRdrf = 0; return aciaRx; }
-      if (r === 1) { const s = (aciaIrq ? 0x80 : 0) | (aciaTdre || aciaWdc ? 0x10 : 0) | (aciaRdrf ? 0x08 : 0); aciaIrq = 0; return s; }
-      return r === 2 ? aciaCmd : aciaCtrl;
-    }
-    if (a < 0xFF10) return viaRead(a - 0xFF00);
-    if (a === 0xFF41) return (ioAt < ymBusyUntil ? 0x80 : 0x00) | ymStatus;   // YM2151 status: busy after a data write, the timer flags
-    return 0xFF;
-  }
-  if (a === 0xFFF0) return regT; if (a === 0xFFF1) return regU; if (a === 0xFFF2) return V; if (a === 0xFFF3) return regW;
-  if (a === 0xFFFE || a === 0xFFFF) { const v = vecRam[V & 15]; return a === 0xFFFE ? v & 0xFF : v >> 8; }
-  return osrom[W * 0x2000 + (a - 0xE000)];
-}
-function wr(a, v) {
-  v &= 0xFF;
-  if (a < 0x8000) {
-    for (const w of opt.watches) if (w.addr === a && (w.task < 0 || w.task === tsel(a)))
-      console.log('watch: $' + hx(a, 4) + ' (task ' + hx(tsel(a), 1) + ') ' + hx(taskRam[tsel(a)][a]) + ' -> ' + hx(v) + ' by ' + hx(W, 1) + ':' + hx(lastPC, 4) + ' at cycle ' + cyc);
-    if (rtc && a >= RTC_REGS && tsel(a) === RTC_TASK) return rtcWrite(a - RTC_REGS, v);
-    taskRam[tsel(a)][a] = v; return;
-  }
-  if (a < 0xA000) { const b = taskRam[tsel(0)][0]; if (bankInstalled(b)) bankMem(b)[ramOfs(b, a)] = v; return; }
-  if (a < 0xFF00) return;
-  if (a < 0xFFF0) sync(ioAt);                                   // (The devices, as of this access's cycle)
-  if (a >= 0xFF10 && a < 0xFF14) {
-    const r = a - 0xFF10;
-    if (r === 0) {
-      if (aciaTxTimer > 0) aciaOverruns++;
-      if (++aciaTxSent > 8) aciaGapMin = Math.min(aciaGapMin, aciaTxTimer > 0 ? 0 : (ioAt - aciaTxEnd) * ACIA_BAUD[aciaCtrl & 15] / (opt.clock * 1e6));
-      out += String.fromCharCode(v); for (const m of opt.marks) if (out.endsWith(m)) console.log('mark: ' + JSON.stringify(m) + ' at cycle ' + ioAt); aciaTdre = 0; aciaTxTimer = aciaCharCycles(); }
-    else if (r === 1) { aciaCmd &= 0xE0; aciaIrq = 0; }                         // programmed reset
-    else if (r === 2) aciaCmd = v;                                  // (The TX interrupt comes as TDRE goes on, as on
-                                                                    //   the board: turning it on with TDRE on is nothing)
-    else { aciaCtrl = v; aciaTxSent = 0; aciaGapMin = Infinity; }            // (A new rate: the gaps from here)
-    return;
-  }
-  if (a < 0xFF10) { viaWrite(a - 0xFF00, v); return; }
-  if (a === 0xFF40) { ymReg = v; return; }                          // YM2151: register, then data
-  if (a === 0xFF41) {
-    if (ioAt < ymBusyUntil) { ymLost++; return; }
-    ymBusyUntil = ioAt + YM_BUSY_CYCLES;
-    ymRegs[ymReg] = v;
-    if (opt.ymVgm) ymWrites.push([ioAt, ymReg, v]);
-    if (ymReg === 0x14) ymTimers(v);
-    if (ymReg === 0x08 && (v & 0x78)) ymKeyOns.push('ch ' + (v & 7) + ' at cycle ' + ioAt);
-    return;
-  }
-  if (a === 0xFFF0) { regT = v; T = v & 15; return; } if (a === 0xFFF1) { regU = v; U = v & 15; return; }
-  if (a === 0xFFF2) { V = v; return; } if (a === 0xFFF3) { regW = v; W = v & 15; return; }
-  if (a === 0xFFFE) { vecRam[V & 15] = (vecRam[V & 15] & 0xFF00) | v; return; }
-  if (a === 0xFFFF) { vecRam[V & 15] = (vecRam[V & 15] & 0xFF) | (v << 8); return; }
-}
-// Lowest numbered active IRQ line, or -1
-function irqLine() {
-  const acia = aciaIrq && ((!aciaWdc && (aciaCmd & 0x0C) === 0x04 && aciaTdre) || (!(aciaCmd & 2) && aciaRdrf));
-  const lines = [];
-  if (acia) lines.push(opt.aciaLine);
-  if (viaIFR & viaIER & 0x7F) lines.push(0);                      // VIA: IRQ line 0
-  if (ymStatus & 3) lines.push(4);                                // YM2151: line 4
-  if (opt.stuckIrq >= 0) lines.push(opt.stuckIrq);
-  return lines.length ? Math.min(...lines) : -1;
-}
-const irqVector = () => { const n = irqLine(); return vecRam[n >= 0 ? (n ^ 7) : (V & 15)]; };
-
-// ---- CPU
-let A = 0, X = 0, Y = 0, S = 0xFD, P = 0x34, PC = 0, lastPC = 0, cyc = 0, waiting = false, halted = '';
-const C = 1, Z = 2, I = 4, D = 8, B = 0x10, Vf = 0x40, N = 0x80;
-const setNZ = v => { P = (P & ~(N | Z)) | (v & 0x80) | (v ? 0 : Z); return v; };
-const stackLow = new Array(16).fill(0x100), stackLowAt = new Array(16).fill(null);    // Per task: lowest S, and where (W:PC, cycle)
-const push = v => { wr(0x100 + S, v); S = (S - 1) & 0xFF; if (S < stackLow[T & 15]) { stackLow[T & 15] = S; stackLowAt[T & 15] = [W, lastPC, cyc]; } };
-const pull = () => { S = (S + 1) & 0xFF; return rd(0x100 + S); };
-const rd16 = a => rd(a) | (rd((a + 1) & 0xFFFF) << 8);
-const zp16 = a => rd(a & 0xFF) | (rd((a + 1) & 0xFF) << 8);
-const fetch = () => { const v = rd(PC); PC = (PC + 1) & 0xFFFF; return v; };
-const fetch16 = () => { const v = rd16(PC); PC = (PC + 2) & 0xFFFF; return v; };
-function adc(v) {
-  const c = P & C; let r = A + v + c;
-  P = (P & ~(C | Vf)) | (r > 0xFF ? C : 0) | ((~(A ^ v) & (A ^ r) & 0x80) ? Vf : 0);
-  if (P & D) {
-    let lo = (A & 15) + (v & 15) + c, hi = (A >> 4) + (v >> 4);
-    if (lo > 9) { lo += 6; hi++; } if (hi > 9) hi += 6;
-    r = (hi << 4) | (lo & 15); P = (P & ~C) | (hi > 15 ? C : 0);
-  }
-  A = setNZ(r & 0xFF);
-}
-function sbc(v) {
-  if (!(P & D)) { adc(v ^ 0xFF); return; }
-  const b = 1 - (P & C), r = A - v - b; let lo = (A & 15) - (v & 15) - b, hi = (A >> 4) - (v >> 4);
-  if (lo < 0) { lo -= 6; hi--; } if (hi < 0) hi -= 6;
-  P = (P & ~C) | (r >= 0 ? C : 0); A = setNZ(((hi << 4) | (lo & 15)) & 0xFF);
-}
-const cmp = (r, v) => { const t = r - v; P = (P & ~C) | (t >= 0 ? C : 0); setNZ(t & 0xFF); };
-function interrupt(vec, brk) { push(PC >> 8); push(PC & 0xFF); push((P | 0x20) & (brk ? 0xFF : ~B)); P = (P | I) & ~D; PC = vec; }
-
-// The longest stretches with IRQs off (the I flag set), from the first key typed: [cycles, from, to, at]
-let typedAt = -1, iOffAt = -1, iOffFrom = '';
-const iOffTop = [];
-function iOffNote(n, from, to, at) {
-  const k = iOffTop.findIndex(e => e[1] === from);             // (One entry per starting place)
-  if (k >= 0) { if (iOffTop[k][0] < n) iOffTop[k] = [n, from, to, at]; }
-  else iOffTop.push([n, from, to, at]);
-  iOffTop.sort((a, b) => b[0] - a[0]); if (iOffTop.length > 8) iOffTop.pop();
-}
-const trace = [], pcHist = new Map(), profHist = new Map(), profTask = new Array(16).fill(0);
-let profCount = 0;
-PC = rd16(0xFFFC); P |= I;                                  // RESET
-// The devices, brought up to cycle t (at the start of each instruction, and at each I/O access: the
-// access's cycle, ioAt)
-let devCyc = 0, ioAt = 0;
-function sync(t) {
-  const d = t - devCyc; if (d <= 0) return; devCyc = t;
-  viaTick(d);
-  ymTick(t);
-  if (aciaTxTimer > 0 && (aciaTxTimer -= d) <= 0) {                // (A character's time)
-    aciaTxEnd = t + aciaTxTimer; aciaTxTimer = 0; aciaTdre = 1; if (!aciaWdc && (aciaCmd & 0x0C) === 0x04) aciaIrq = 1;
-  }
-  if (rxQueue.length && (rxDelay -= d) <= 0 && (!aciaRdrf || opt.paste)) {
-    const c = rxQueue.shift();
-    if (c === '\u0100') rxDelay = 2000000;                  // \w: wait before the next key
-    else if (aciaRdrf) { rxLost++; rxDelay = aciaCharCycles(); }   // (--paste: an overrun: the ACIA keeps the old byte)
-    else { if (typedAt < 0) typedAt = t; aciaRx = c.charCodeAt(0); aciaRdrf = 1; if (!(aciaCmd & 2)) aciaIrq = 1; rxDelay = opt.paste ? aciaCharCycles() : 20000; }
-  }
-}
-// Cycles to the next device event (for a WAI: the CPU sleeps until then)
-function nextEvent() {
-  let n = Infinity;
-  if (viaT1On) n = Math.min(n, viaT1 + 1);
-  if (viaT2On) n = Math.min(n, viaT2 + 1);
-  if (viaSrLeft >= 0) n = Math.min(n, viaSrLeft + 1);
-  if (ymANext >= 0 && (ymRegs[0x14] & 4)) n = Math.min(n, Math.max(1, ymANext - devCyc));
-  if (ymBNext >= 0 && (ymRegs[0x14] & 8)) n = Math.min(n, Math.max(1, ymBNext - devCyc));
-  if (aciaTxTimer > 0) n = Math.min(n, aciaTxTimer);
-  if (rxQueue.length) n = Math.min(n, Math.max(1, rxDelay));
-  return n;
-}
-
-// W65C02S cycles per opcode (WDC data sheet), before the extras: +1 for a page crossed by an indexed read
-// (PAGE_X), +1 for a branch taken and +1 more if it lands on another page, +1 for ADC/SBC in decimal mode.
-// (BRA is 2 + 1 taken.)  The 1-byte NOPs (xxx3, xxxB) take 1 cycle.
-const CYC = ('7621535532216465' + '2551546524216465' + '6621335542214465' + '2551446524214465' +
-             '6621335532213465' + '2551446524318465' + '6621335542216465' + '2551446524416465' +
-             '2621333522214445' + '2651444525214555' + '2621333522214445' + '2551444524214445' +
-             '2621335522234465' + '2551446524334475' + '2621335522214465' + '2551446524414475').split('').map(Number);
-const PAGE_X = new Uint8Array(256);
-for (const o of [0x11, 0x19, 0x1D, 0x31, 0x39, 0x3D, 0x51, 0x59, 0x5D, 0x71, 0x79, 0x7D, 0xB1, 0xB9, 0xBD, 0xD1, 0xD9, 0xDD,
-  0xF1, 0xF9, 0xFD, 0xBC, 0xBE, 0x3C, 0x1E, 0x3E, 0x5E, 0x7E]) PAGE_X[o] = 1;   // (Shifts abs,X too, on the 65C02)
-const DECIMAL_X = new Uint8Array(256);
-for (const o of [0x61, 0x65, 0x69, 0x6D, 0x71, 0x72, 0x75, 0x79, 0x7D, 0xE1, 0xE5, 0xE9, 0xED, 0xF1, 0xF2, 0xF5, 0xF9, 0xFD]) DECIMAL_X[o] = 1;
-let crossed = 0, extra = 0;                                     // This instruction's page crossing and extra cycles
-
-// Run until cycle limit (or a halt)
-function run(limit) {
-while (cyc < limit && !halted) {
-  sync(cyc);
-  if (irqLine() >= 0) { waiting = false; if (!(P & I)) { interrupt(irqVector(), false); cyc += 7; continue; } }
-  if (waiting) { cyc += Math.max(1, Math.min(nextEvent(), limit - cyc)); continue; }
-  if (typedAt >= 0) {                                          // IRQs-off stretches, from the first key typed
-    if (P & I) { if (iOffAt < 0) { iOffAt = cyc; iOffFrom = hx(W, 1) + ':' + hx(PC, 4); } }
-    else if (iOffAt >= 0) { iOffNote(cyc - iOffAt, iOffFrom, hx(W, 1) + ':' + hx(lastPC, 4), iOffAt); iOffAt = -1; }
-  }
-  trace.push([W, T, PC, A, X, Y, S, P]); if (trace.length > opt.trace) trace.shift();
-  lastPC = PC;
-  for (const w of opt.pcWatches) if (w.pc === PC && (w.page < 0 || w.page === W))
-    console.log('pc: ' + hx(W, 1) + ':' + hx(PC, 4) + ' T=' + hx(T, 1) + ' A=' + hx(A) + ' X=' + hx(X) + ' Y=' + hx(Y) + ' S=' + hx(S) + ' P=' + hx(P) + ' at cycle ' + cyc);
-  const op = fetch();
-  crossed = 0; extra = DECIMAL_X[op] && (P & D) ? 1 : 0;
-  ioAt = cyc + CYC[op] - 1;                                     // (Its data access: the last cycle, near enough)
-  let a, v, t;
-  const idx = (b, i) => { const r = (b + i) & 0xFFFF; crossed = (b ^ r) >> 8; return r; };
-  const zp = () => fetch(), zpx = () => (fetch() + X) & 0xFF, zpy = () => (fetch() + Y) & 0xFF;
-  const abs = () => fetch16(), absx = () => idx(fetch16(), X), absy = () => idx(fetch16(), Y);
-  const indx = () => zp16(fetch() + X), indy = () => idx(zp16(fetch()), Y), indz = () => zp16(fetch());
-  const br = c => { const o = fetch(); if (c) { const t = (PC + ((o ^ 0x80) - 0x80)) & 0xFFFF; extra += (t ^ PC) >> 8 ? 2 : 1; PC = t; } };
-  const rmw = (addr, f) => wr(addr, f(rd(addr)) & 0xFF);
-  const asl = v => { P = (P & ~C) | (v >> 7); return setNZ((v << 1) & 0xFF); };
-  const lsr = v => { P = (P & ~C) | (v & 1); return setNZ(v >> 1); };
-  const rol = v => { const c = P & C; P = (P & ~C) | (v >> 7); return setNZ(((v << 1) | c) & 0xFF); };
-  const ror = v => { const c = P & C; P = (P & ~C) | (v & 1); return setNZ((v >> 1) | (c << 7)); };
-  const bit = v => { P = (P & ~(N | Vf | Z)) | (v & 0xC0) | ((A & v) ? 0 : Z); };
-  const ALU = [v => A = setNZ(A | v), v => A = setNZ(A & v), v => A = setNZ(A ^ v), adc, null, null, v => cmp(A, v), sbc];
-  const aaa = op >> 5, bbb = (op >> 2) & 7, cc = op & 3;
-  const bad = () => { halted = 'unimplemented opcode $' + hx(op) + ' at ' + hx(W, 1) + ':' + hx((PC - 1) & 0xFFFF, 4) + ' (task ' + T + ')'; };
-  switch (op) {
-    case 0x00: PC = (PC + 1) & 0xFFFF; interrupt(irqVector(), true); break;           // BRK
-    case 0x40: P = pull() | 0x30; PC = pull(); PC |= pull() << 8; break;              // RTI
-    case 0x60: PC = pull(); PC |= pull() << 8; PC = (PC + 1) & 0xFFFF; break;         // RTS
-    case 0x20: a = fetch16(); t = (PC - 1) & 0xFFFF; push(t >> 8); push(t & 0xFF); PC = a; break;
-    case 0x4C: PC = fetch16(); break;
-    case 0x6C: PC = rd16(fetch16()); break;
-    case 0x7C: PC = rd16(absx()); break;
-    case 0x08: push(P | 0x30); break; case 0x28: P = pull() | 0x30; break;
-    case 0x48: push(A); break; case 0x68: A = setNZ(pull()); break;
-    case 0xDA: push(X); break; case 0xFA: X = setNZ(pull()); break;
-    case 0x5A: push(Y); break; case 0x7A: Y = setNZ(pull()); break;
-    case 0x18: P &= ~C; break; case 0x38: P |= C; break; case 0x58: P &= ~I; break; case 0x78: P |= I; break;
-    case 0xB8: P &= ~Vf; break; case 0xD8: P &= ~D; break; case 0xF8: P |= D; break;
-    case 0xAA: X = setNZ(A); break; case 0xA8: Y = setNZ(A); break; case 0x8A: A = setNZ(X); break; case 0x98: A = setNZ(Y); break;
-    case 0xBA: X = setNZ(S); break; case 0x9A: S = X; break;
-    case 0xE8: X = setNZ((X + 1) & 0xFF); break; case 0xCA: X = setNZ((X - 1) & 0xFF); break;
-    case 0xC8: Y = setNZ((Y + 1) & 0xFF); break; case 0x88: Y = setNZ((Y - 1) & 0xFF); break;
-    case 0x1A: A = setNZ((A + 1) & 0xFF); break; case 0x3A: A = setNZ((A - 1) & 0xFF); break;
-    case 0xEA: break;
-    case 0xCB: waiting = true; break;                                                 // WAI
-    case 0xDB: halted = 'STP at ' + hx(W, 1) + ':' + hx((PC - 1) & 0xFFFF, 4); break;   // STP
-    case 0x0A: A = asl(A); break; case 0x4A: A = lsr(A); break; case 0x2A: A = rol(A); break; case 0x6A: A = ror(A); break;
-    case 0x10: br(!(P & N)); break; case 0x30: br(P & N); break; case 0x50: br(!(P & Vf)); break; case 0x70: br(P & Vf); break;
-    case 0x90: br(!(P & C)); break; case 0xB0: br(P & C); break; case 0xD0: br(!(P & Z)); break; case 0xF0: br(P & Z); break;
-    case 0x80: br(true); break;
-    case 0x64: wr(zp(), 0); break; case 0x74: wr(zpx(), 0); break; case 0x9C: wr(abs(), 0); break; case 0x9E: wr(absx(), 0); break;
-    case 0x89: v = fetch(); P = (P & ~Z) | ((A & v) ? 0 : Z); break;
-    case 0x24: bit(rd(zp())); break; case 0x34: bit(rd(zpx())); break; case 0x2C: bit(rd(abs())); break; case 0x3C: bit(rd(absx())); break;
-    case 0x04: case 0x0C: a = op === 0x04 ? zp() : abs(); v = rd(a); P = (P & ~Z) | ((A & v) ? 0 : Z); wr(a, v | A); break;   // TSB
-    case 0x14: case 0x1C: a = op === 0x14 ? zp() : abs(); v = rd(a); P = (P & ~Z) | ((A & v) ? 0 : Z); wr(a, v & ~A); break;  // TRB
-    case 0x92: wr(indz(), A); break; case 0xB2: A = setNZ(rd(indz())); break;
-    case 0x12: ALU[0](rd(indz())); break; case 0x32: ALU[1](rd(indz())); break; case 0x52: ALU[2](rd(indz())); break;
-    case 0x72: adc(rd(indz())); break; case 0xD2: cmp(A, rd(indz())); break; case 0xF2: sbc(rd(indz())); break;
-    case 0xA2: X = setNZ(fetch()); break; case 0xA0: Y = setNZ(fetch()); break;
-    case 0xA6: X = setNZ(rd(zp())); break; case 0xB6: X = setNZ(rd(zpy())); break; case 0xAE: X = setNZ(rd(abs())); break; case 0xBE: X = setNZ(rd(absy())); break;
-    case 0xA4: Y = setNZ(rd(zp())); break; case 0xB4: Y = setNZ(rd(zpx())); break; case 0xAC: Y = setNZ(rd(abs())); break; case 0xBC: Y = setNZ(rd(absx())); break;
-    case 0x86: wr(zp(), X); break; case 0x96: wr(zpy(), X); break; case 0x8E: wr(abs(), X); break;
-    case 0x84: wr(zp(), Y); break; case 0x94: wr(zpx(), Y); break; case 0x8C: wr(abs(), Y); break;
-    case 0xE0: cmp(X, fetch()); break; case 0xE4: cmp(X, rd(zp())); break; case 0xEC: cmp(X, rd(abs())); break;
-    case 0xC0: cmp(Y, fetch()); break; case 0xC4: cmp(Y, rd(zp())); break; case 0xCC: cmp(Y, rd(abs())); break;
-    case 0x02: case 0x22: case 0x42: case 0x62: case 0x82: case 0xC2: case 0xE2: case 0x44: case 0x54: case 0xD4: case 0xF4: fetch(); break;   // NOPs
-    case 0x5C: case 0xDC: case 0xFC: fetch16(); break;
-    case 0x03: case 0x13: case 0x23: case 0x33: case 0x43: case 0x53: case 0x63: case 0x73: case 0x83: case 0x93: case 0xA3: case 0xB3:
-    case 0xC3: case 0xD3: case 0xE3: case 0xF3: case 0x0B: case 0x1B: case 0x2B: case 0x3B: case 0x4B: case 0x5B: case 0x6B: case 0x7B:
-    case 0x8B: case 0x9B: case 0xAB: case 0xBB: case 0xEB: case 0xFB: break;                                   // 1-byte NOPs
-    default:
-      if ((op & 0x0F) === 0x0F) { const n = (op >> 4) & 7, z = fetch(); const set = (rd(z) >> n) & 1; br((op & 0x80) ? set : !set); break; }   // BBR/BBS
-      if ((op & 0x0F) === 0x07) { const n = (op >> 4) & 7, z = fetch(); v = rd(z); wr(z, (op & 0x80) ? v | (1 << n) : v & ~(1 << n)); break; } // RMB/SMB
-      if (cc === 1) {
-        a = [indx, zp, () => -1, abs, indy, zpx, absy, absx][bbb]();
-        if (aaa === 4) { if (a >= 0) wr(a, A); else fetch(); break; }                // STA (no immediate)
-        v = a < 0 ? fetch() : rd(a);
-        if (aaa === 5) A = setNZ(v); else ALU[aaa](v);
-        break;
-      }
-      if (cc === 2) {
-        const mode = { 1: zp, 3: abs, 5: zpx, 7: absx }[bbb];
-        const f = [asl, rol, lsr, ror, null, null, v => setNZ((v - 1) & 0xFF), v => setNZ((v + 1) & 0xFF)][aaa];
-        if (!mode || !f) { bad(); break; }
-        rmw(mode(), f); break;
-      }
-      bad();
-  }
-  cyc += CYC[op] + extra + (crossed && PAGE_X[op] ? 1 : 0);
-  const k = W * 65536 + PC; pcHist.set(k, (pcHist.get(k) || 0) + 1);
-  if (opt.profile >= 0 && cyc >= opt.profile) { const pk = T * 1048576 + W * 65536 + lastPC; profHist.set(pk, (profHist.get(pk) || 0) + 1); profTask[T]++; profCount++; }
-}
-}
+  return { dev, sdsc: opt.sdsc.includes(dev), blocks: blocks || Math.floor(fs.fstatSync(fd).size / 512),
+    read: n => { const b = Buffer.alloc(512); fs.readSync(fd, b, 0, 512, n * 512); return b; },
+    write: (n, data) => { fs.writeSync(fd, data, 0, 512, n * 512); } };
+});
+const m = createMachine(Object.assign({}, opt, {
+  osrom: fs.readFileSync(path.join(opt.rom, 'os_rom_C02.bin')),
+  pagedrom: fs.readFileSync(path.join(opt.rom, 'paged_rom_C02.bin')),
+  sd, ymLog: !!opt.ymVgm, log: t => console.log(t),
+}));
+const { cpu, acia, ym, rtc } = m;
 
 // ---- report
 function report() {
-console.log('--- serial output ---\n' + (opt.raw ? out : out.replace(/\x1b/g, '<ESC>')));
-if (halted) console.log('--- halted: ' + halted);
+console.log('--- serial output ---\n' + (opt.raw ? m.out : m.out.replace(/\x1b/g, '<ESC>')));
+if (cpu.halted) console.log('--- halted: ' + cpu.halted);
 console.log('--- last instructions (W T PC   A  X  Y  S  P) ---');
-for (const [w, t, pc, a, x, y, s, p] of trace) console.log(hx(w, 1), hx(t, 1), hx(pc, 4), hx(a), hx(x), hx(y), hx(s), hx(p));
-if (iOffTop.length) console.log('--- longest with IRQs off, from the first key typed (cycles: from -> to, at cycle): ' +
-  iOffTop.map(([n, a, b, at]) => n + ': ' + a + ' -> ' + b + ' at ' + at).join(', '));
-if (opt.paste) console.log('--- ACIA: ' + rxLost + ' received byte(s) lost (they arrived while the last one was still unread)');
-if (aciaGapMin < Infinity) console.log('--- ACIA: shortest idle between characters sent: ' + aciaGapMin.toFixed(2) + ' bits');
-if (aciaWdc) console.log('--- WDC ACIA: ' + aciaOverruns + ' byte(s) written while one was still being sent (garbled on the chip)');
+for (const [w, t, pc, a, x, y, s, p] of m.trace) console.log(hx(w, 1), hx(t, 1), hx(pc, 4), hx(a), hx(x), hx(y), hx(s), hx(p));
+if (m.iOffTop.length) console.log('--- longest with IRQs off, from the first key typed (cycles: from -> to, at cycle): ' +
+  m.iOffTop.map(([n, a, b, at]) => n + ': ' + a + ' -> ' + b + ' at ' + at).join(', '));
+if (opt.paste) console.log('--- ACIA: ' + acia.rxLost + ' received byte(s) lost (they arrived while the last one was still unread)');
+if (acia.gapMin < Infinity) console.log('--- ACIA: shortest idle between characters sent: ' + acia.gapMin.toFixed(2) + ' bits');
+if (acia.wdc) console.log('--- WDC ACIA: ' + acia.overruns + ' byte(s) written while one was still being sent (garbled on the chip)');
 console.log('--- hottest PCs (W:PC count) ---');
-for (const [k, c] of [...pcHist.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10)) console.log(hx(k >> 16, 1) + ':' + hx(k & 0xFFFF, 4), c);
-if (ymKeyOns.length) console.log('--- YM2151 key-ons: ' + ymKeyOns.length + ' (' + (opt.ymLog ? ymKeyOns : ymKeyOns.slice(0, 8)).join(', ') + (ymKeyOns.length > 8 && !opt.ymLog ? ', ...' : '') + ')');
-if (ymKeyOns.length > 1) { const t = ymKeyOns.map(k => +k.split(' ').pop()); let g = 0, at = 0;   // (Timing: a late note shows as a long gap)
+for (const [k, c] of [...m.pcHist.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10)) console.log(hx(k >> 16, 1) + ':' + hx(k & 0xFFFF, 4), c);
+const keyOns = ym.keyOns;
+if (keyOns.length) console.log('--- YM2151 key-ons: ' + keyOns.length + ' (' + (opt.ymLog ? keyOns : keyOns.slice(0, 8)).join(', ') + (keyOns.length > 8 && !opt.ymLog ? ', ...' : '') + ')');
+if (keyOns.length > 1) { const t = keyOns.map(k => +k.split(' ').pop()); let g = 0, at = 0;   // (Timing: a late note shows as a long gap)
   for (let i = 1; i < t.length; i++) if (t[i] - t[i - 1] > g) { g = t[i] - t[i - 1]; at = t[i - 1]; }
   console.log('--- YM2151 longest gap between key-ons: ' + g + ' cycles, after cycle ' + at + '; first to last: ' + (t[t.length - 1] - t[0]) + ' cycles'); }
 if (opt.profile >= 0) profileReport();
-console.log('--- lowest stack pointer by task (free bytes; W:PC at the time): ' + stackLow.map((v, t) => v > 0xFF ? null : hx(t, 1) + ':' + hx(v) + ' (' + (v + 1) + '; ' + hx(stackLowAt[t][0], 1) + ':' + hx(stackLowAt[t][1], 4) + ')').filter(x => x).join(', '));
-if (ymLost) console.log('--- YM2151: ' + ymLost + ' data write(s) while it was busy (lost on the chip)');
+console.log('--- lowest stack pointer by task (free bytes; W:PC at the time): ' + m.stackLow.map((v, t) => v > 0xFF ? null : hx(t, 1) + ':' + hx(v) + ' (' + (v + 1) + '; ' + hx(m.stackLowAt[t][0], 1) + ':' + hx(m.stackLowAt[t][1], 4) + ')').filter(x => x).join(', '));
+if (ym.lost) console.log('--- YM2151: ' + ym.lost + ' data write(s) while it was busy (lost on the chip)');
 if (opt.ymDump) {                                               // --ym-dump: the chip's registers, 16 a line
   console.log('--- YM2151 registers ---');
-  for (let r = 0; r < 256; r += 16) console.log(hx(r) + ': ' + [...ymRegs.slice(r, r + 16)].map(v => hx(v)).join(' '));
+  for (let r = 0; r < 256; r += 16) console.log(hx(r) + ': ' + [...ym.regs.slice(r, r + 16)].map(v => hx(v)).join(' '));
 }
 if (opt.ymVgm) ymVgm(opt.ymVgm);
 if (rtc) {                                                      // --rtc: the DS1747's registers as they are
-  const r = rtcRegs(), h = n => hx(r[n]);
+  const r = rtc.regs(), h = n => hx(r[n]);
   console.log('--- DS1747: ' + (rtc.junk ? 'junk ' + r.map(v => hx(v)).join(' ') : hx(r[0] & 0x3F) + h(7) + '-' + h(6) + '-' + h(5) + ' ' + h(3) + ':'
     + h(2) + ':' + hx(r[1] & 0x7F) + ' day ' + r[4]) + (rtc.osc ? '' : ', stopped (OSC)') + (rtc.ctl ? ', control bits ' + hx(rtc.ctl) + ' left set' : ''));
 }
-console.log('--- cycles ' + cyc + ' (' + (cyc / (opt.clock * 1e6)).toFixed(3) + ' s at ' + opt.clock.toFixed(2) + ' MHz), T=' + hx(T, 1) + ' U=' + hx(U, 1) + ' V=' + hx(V) + ' W=' + hx(W, 1) + ', ACIA control ' + hx(aciaCtrl) + ' command ' + hx(aciaCmd) + ', vector RAM: ' + [...vecRam].map(v => hx(v, 4)).join(' '));
+console.log('--- cycles ' + cpu.cyc + ' (' + (cpu.cyc / (opt.clock * 1e6)).toFixed(3) + ' s at ' + opt.clock.toFixed(2) + ' MHz), T=' + hx(m.T, 1) + ' U=' + hx(m.U, 1) + ' V=' + hx(m.V) + ' W=' + hx(m.W, 1) + ', ACIA control ' + hx(acia.ctrl) + ' command ' + hx(acia.cmd) + ', vector RAM: ' + [...m.vecRam].map(v => hx(v, 4)).join(' '));
 for (const d of opt.dumps) {
-  const m = /^([0-9A-Fa-f]+)(?::(\d+))?(?:@([0-9A-Fa-f]))?$/.exec(d);
-  if (!m) { console.log('bad --dump ' + d); continue; }
-  const start = parseInt(m[1], 16), len = +(m[2] || 16), task = parseInt(m[3] || '0', 16);
+  const r = /^([0-9A-Fa-f]+)(?::(\d+))?(?:@([0-9A-Fa-f]))?$/.exec(d);
+  if (!r) { console.log('bad --dump ' + d); continue; }
+  const start = parseInt(r[1], 16), len = +(r[2] || 16), task = parseInt(r[3] || '0', 16);
   console.log('--- task ' + hx(task, 1) + ' $' + hx(start, 4) + ':');
   for (let a = start; a < start + len; a += 16)
-    console.log(hx(a, 4) + ': ' + [...taskRam[task].slice(a, Math.min(a + 16, start + len, 0x8000))].map(v => hx(v)).join(' '));
+    console.log(hx(a, 4) + ': ' + [...m.taskRam[task].slice(a, Math.min(a + 16, start + len, 0x8000))].map(v => hx(v)).join(' '));
 }
 }
 
-// ---- profile report: instructions per routine (the nearest label at or below the PC, on its ROM page)
 // --ym-vgm: the YM2151's writes as a VGM 1.51 file (YM2151 at 3,579,545 Hz; waits in 44,100ths of a second)
 function ymVgm(file) {
-  const data = [];
-  let at = ymWrites.length ? ymWrites[0][0] : 0, samples = 0, owed = 0;
+  const data = [], writes = ym.writes;
+  let at = writes.length ? writes[0][0] : 0, samples = 0, owed = 0;
   const hz = opt.clock * 1e6;
-  for (const [cyc, reg, val] of ymWrites) {
-    owed += (cyc - at) * 44100 / hz; at = cyc;
+  for (const [c, reg, val] of writes) {
+    owed += (c - at) * 44100 / hz; at = c;
     let n = Math.floor(owed); owed -= n; samples += n;
     while (n > 0) { const w = Math.min(n, 65535); data.push(0x61, w & 255, w >> 8); n -= w; }
     data.push(0x54, reg, val);
@@ -705,16 +221,17 @@ function ymVgm(file) {
   b.writeUInt32LE(0x100 - 0x34, 0x34);
   Buffer.from(data).copy(b, 0x100);
   fs.writeFileSync(file, b);
-  console.log('--- YM2151: ' + ymWrites.length + ' writes, ' + (samples / 44100).toFixed(2) + ' s, to ' + file);
+  console.log('--- YM2151: ' + writes.length + ' writes, ' + (samples / 44100).toFixed(2) + ' s, to ' + file);
 }
 
+// ---- profile report: instructions per routine (the nearest label at or below the PC, on its ROM page)
 function profileReport() {
   const dbgFile = path.join(opt.rom, '..', 'obj', 'os_rom_C02.dbg');
   const lists = {};                                             // 'P0'-'PF' (BIOS ROM pages), 'A' (paged ROM), 'R' (RAM)
   if (fs.existsSync(dbgFile)) {
     const segs = {};
     for (const line of fs.readFileSync(dbgFile, 'utf8').split(/\r?\n/)) {
-      const f = {}; for (const m of line.matchAll(/(\w+)=("[^"]*"|[^,\t]*)/g)) f[m[1]] = m[2].replace(/"/g, '');
+      const f = {}; for (const r of line.matchAll(/(\w+)=("[^"]*"|[^,\t]*)/g)) f[r[1]] = r[2].replace(/"/g, '');
       if (line.startsWith('seg\t')) {
         let key = null;
         if (/os_rom_C02\.bin$/.test(f.oname || '')) key = 'P' + hx(Math.floor(+f.ooffs / 0x2000), 1);
@@ -737,15 +254,21 @@ function profileReport() {
     return (key === 'R' ? 'RAM:' : key === 'A' ? 'PROM:' : hx(w, 1) + ':') + (best || hx(pc, 4));
   };
   const byName = new Map();
-  for (const [k, c] of profHist) { const n = "T" + hx(Math.floor(k / 1048576), 1) + " " + nameOf((k >> 16) & 15, k & 0xFFFF); byName.set(n, (byName.get(n) || 0) + c); }
-  console.log('--- profile: ' + profCount + ' instructions from cycle ' + opt.profile + ' (by task: ' +
-    profTask.map((c, t) => c ? hx(t, 1) + ' ' + (100 * c / profCount).toFixed(1) + '%' : '').filter(x => x).join(', ') + ') ---');
+  for (const [k, c] of m.profHist) { const n = "T" + hx(Math.floor(k / 1048576), 1) + " " + nameOf((k >> 16) & 15, k & 0xFFFF); byName.set(n, (byName.get(n) || 0) + c); }
+  console.log('--- profile: ' + m.profCount + ' instructions from cycle ' + opt.profile + ' (by task: ' +
+    m.profTask.map((c, t) => c ? hx(t, 1) + ' ' + (100 * c / m.profCount).toFixed(1) + '%' : '').filter(x => x).join(', ') + ') ---');
   for (const [n, c] of [...byName.entries()].sort((a, b) => b[1] - a[1]).slice(0, 30))
-    console.log((100 * c / profCount).toFixed(1).padStart(5) + '%  ' + String(c).padStart(9) + '  ' + n);
+    console.log((100 * c / m.profCount).toFixed(1).padStart(5) + '%  ' + String(c).padStart(9) + '  ' + n);
 }
 
 // ---- run: in one go with a report (batch), or live on the terminal (--interactive)
-if (!opt.interactive) { run(opt.cycles); report(); }
+if (!opt.interactive) {
+  if (opt.stopAfterInput >= 0) {                                // (In steps: stop once the input's done, and that long after)
+    while (cpu.cyc < opt.cycles && !cpu.halted && (acia.rxQueue.length || acia.typedLast < 0)) m.run(Math.min(opt.cycles, cpu.cyc + 100000));
+    m.run(Math.min(opt.cycles, Math.max(cpu.cyc, acia.typedLast + opt.stopAfterInput)));
+  } else m.run(opt.cycles);
+  report();
+}
 else interactive();
 
 // Interactive: the terminal is the Hydra's serial terminal.  The machine runs in real time (--speed), keys
@@ -757,11 +280,11 @@ function interactive() {
   const now = () => Number(process.hrtime.bigint()) / 1e9;
   if (!opt.cyclesSet) opt.cycles = Infinity;
   let sent = 0, prefix = false, quit = '', eof = false, stopAt = Infinity;
-  let baseT = now(), baseC = cyc;
+  let baseT = now(), baseC = cpu.cyc;
   const say = t => stdout.write('\r\n[hydrasim] ' + t + '\r\n');
-  const status = () => 'cycle ' + cyc + ' (' + (cyc / cps).toFixed(1) + ' s at ' + opt.clock.toFixed(2) + ' MHz' +
-    (opt.speed ? (opt.speed !== 1 ? ', ' + opt.speed + 'x real time' : '') : ', as fast as it goes') + '), task ' + hx(T, 1) +
-    ', ROM page ' + hx(W, 1) + ', PC ' + hx(PC, 4) + (waiting ? ' (WAI: idle)' : '') +
+  const status = () => 'cycle ' + cpu.cyc + ' (' + (cpu.cyc / cps).toFixed(1) + ' s at ' + opt.clock.toFixed(2) + ' MHz' +
+    (opt.speed ? (opt.speed !== 1 ? ', ' + opt.speed + 'x real time' : '') : ', as fast as it goes') + '), task ' + hx(m.T, 1) +
+    ', ROM page ' + hx(m.W, 1) + ', PC ' + hx(cpu.PC, 4) + (cpu.waiting ? ' (WAI: idle)' : '') +
     (opt.sds.length ? ', SD: ' + opt.sds.map(c => c.dev + ':' + path.basename(c.file)).join(' ') : '');
   const help = () => say('Ctrl-A then: x quit, r reset (the reset button), s status, h this help, Ctrl-A a Ctrl-A.  ' +
     'Everything else goes to the Hydra (Ctrl-C breaks, Ctrl-] switches tasks, Ctrl-D ends input).');
@@ -770,16 +293,16 @@ function interactive() {
     if (prefix) {
       prefix = false;
       const k = String.fromCharCode(b).toLowerCase();
-      if (b === 1) rxQueue.push('\x01');
+      if (b === 1) acia.type('\x01');
       else if (k === 'x' || k === 'q') quit = 'quit (Ctrl-A x)';
-      else if (k === 'r') { hwReset(); say('reset'); }
+      else if (k === 'r') { m.hwReset(); say('reset'); }
       else if (k === 's') say(status());
       else help();
       return;
     }
     if (b === 1) { prefix = true; return; }
     if (!tty && b === 0x0A) b = 0x0D;                           // (Piped text: a line ends in CR, as Enter sends)
-    rxQueue.push(String.fromCharCode(b));
+    acia.type(String.fromCharCode(b));
   }
   if (tty) stdin.setRawMode(true);
   stdin.on('data', buf => { for (const b of buf) if (!(!tty && b === 0x0D)) onKey(b); });
@@ -787,40 +310,30 @@ function interactive() {
   stdin.resume();
 
   function flush() {
-    if (sent < out.length) { stdout.write(out.slice(sent)); sent = out.length; }
-    if (out.length > 1 << 16) { out = out.slice(-1024); sent = out.length; }   // (Keep only a tail for --mark)
+    if (sent < m.out.length) { stdout.write(m.out.slice(sent)); sent = m.out.length; }
+    if (m.out.length > 1 << 16) { m.out = m.out.slice(-1024); sent = m.out.length; }   // (Keep only a tail for --mark)
   }
   function finish(why) {
     flush();
     say('stopped: ' + why + '; ' + status());
     if (tty) stdin.setRawMode(false);
-    process.exit(halted ? 1 : 0);
+    process.exit(cpu.halted ? 1 : 0);
   }
   function tick() {
     const t = now();
     if (opt.speed > 0) {
       let target = baseC + (t - baseT) * cps * opt.speed;
-      if (target - cyc > cps * opt.speed * 0.25) { baseT = t; baseC = cyc; target = cyc + cps * opt.speed * 0.01; }   // (A slow host: don't race to catch up)
-      run(Math.min(target, opt.cycles, stopAt));
-    } else while (now() - t < 0.02 && !halted && cyc < Math.min(opt.cycles, stopAt)) run(Math.min(cyc + 200000, opt.cycles, stopAt));
+      if (target - cpu.cyc > cps * opt.speed * 0.25) { baseT = t; baseC = cpu.cyc; target = cpu.cyc + cps * opt.speed * 0.01; }   // (A slow host: don't race to catch up)
+      m.run(Math.min(target, opt.cycles, stopAt));
+    } else while (now() - t < 0.02 && !cpu.halted && cpu.cyc < Math.min(opt.cycles, stopAt)) m.run(Math.min(cpu.cyc + 200000, opt.cycles, stopAt));
     flush();
-    if (eof && !rxQueue.length && stopAt === Infinity) stopAt = cyc + cps * 3;   // Piped input used up: 3 s more, then stop
-    if (halted) return finish('halted: ' + halted);
+    if (eof && !acia.rxQueue.length && stopAt === Infinity) stopAt = cpu.cyc + cps * 3;   // Piped input used up: 3 s more, then stop
+    if (cpu.halted) return finish('halted: ' + cpu.halted);
     if (quit) return finish(quit);
-    if (cyc >= opt.cycles) return finish('--cycles reached');
-    if (cyc >= stopAt) return finish('end of input');
+    if (cpu.cyc >= opt.cycles) return finish('--cycles reached');
+    if (cpu.cyc >= stopAt) return finish('end of input');
     setTimeout(tick, opt.speed > 0 ? 4 : 0);
   }
   say('interactive: the Hydra\'s serial console.  Ctrl-A x quits, Ctrl-A h for help.');
   tick();
-}
-
-// The reset button (RESB): the CPU, the VIA, the ACIA and the YM2151 reset; RAM, the pseudo-registers
-// (plain latches) and the SD cards keep their state, as on the board
-function hwReset() {
-  via.fill(0); viaIFR = 0; viaIER = 0; viaT1On = false; viaT2On = false; viaSrLeft = -1;
-  spiPortB((via[0] & via[2]) | (~via[2] & 0x7F));              // (Port B: all inputs, so nothing is selected)
-  aciaCmd = 0; aciaCtrl = 0; aciaTdre = 1; aciaTxTimer = 0; aciaIrq = 0; aciaRdrf = 0;
-  ymBusyUntil = 0; ymRegs.fill(0); ymStatus = 0; ymANext = -1; ymBNext = -1; waiting = false;
-  P = (P | I) & ~D; PC = rd16(0xFFFC);
 }

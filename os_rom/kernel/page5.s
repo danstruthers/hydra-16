@@ -19,6 +19,7 @@ FAR_GATE_INLINE     SH_SET_TASK_BIT, ::SH_SET_TASK_BIT,     0
 
 ; ... and for the semaphores (sem.s)
 FAR_GATE_INLINE     YIELD,          ::YIELD,                0
+FAR_GATE_INLINE     TASK_CALL,      ::TASK_CALL,            0   ; (TASK_AREA_END: into the storage task)
 FAR_GATE_INLINE     TASK_WAKE_MASK, ::TASK_WAKE_MASK,       0
 
 ; ... and for the exit statuses (exits.s)

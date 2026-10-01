@@ -54,6 +54,8 @@ Allocations don't move: a pointer from `MM_LOCK` stays valid until `MM_UNLOCK`. 
             jsr     MM_FREE
 ```
 
+**The RAM disk** (`/ram`) is in the storage task's own banks (256K of them at boot), so it takes none from any other task: each task has banks of its own.
+
 **Bank memory** (`AI_PAGED`) is only visible while locked: `MM_LOCK` selects the bank at `$8000-$9FFF`.  A task has 16 banks per installed RAM module (bank IDs `$00-$EF`, as far as modules are fitted).  An allocation of several banks gets consecutive IDs; select the next ones by writing `$00` yourself.
 
 **The page floor.**  The MMU allocates task RAM pages from `$7C00` down.  A program that uses RAM from `$0800` up directly sets the floor above its data (`MM_SET_FLOOR`), so the MMU never hands those pages out.  HyForth keeps its floor 2 pages above its dictionary.  `TASK_CLONE` skips the free pages between the floor and the lowest allocation.
@@ -88,6 +90,7 @@ The calling task must hold a reference for all but `SH_ALLOC` and `SH_ATTACH`.
 | `$00` | System tables: the shared bank map (`$8200`), the shared handle table (`$8400`), the device table (`$8800`), the shared reference table (`$8900`) |
 | `$09` | The IO transfer areas: 512 bytes per task ([servers.md](servers.md#the-request-block-and-the-transfer-area)) |
 | any on a bad chip | Reserved at boot if POST found the chip bad; missing `U` macro-pages too |
+| a run in `$01-$7F` | The shared RAM disk's (`/ram/s`: 512K at boot, from the lower half, so `SH_ALLOC`, which takes from the top down, doesn't look past them; [io.md](io.md#the-ram-disks-ram)) |
 
 ### **Far pointers**
 

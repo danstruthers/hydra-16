@@ -40,7 +40,7 @@ E002: 8D F3 FF STA  $FFF3
 E005: D8       CLD
 ```
 
-What WOZMON shows is the task's own view: `0000-7FFF` is task 1's RAM, `8000-9FFF` the bank in the prompt, `A000-DFFF` the paged ROM bank, and `E000-FFFF` BIOS ROM page 0.  To look at another bank, store it in `0000` (RAM bank) or `0001` (ROM bank).
+What WOZMON shows is the task's own view: `0000-7FFF` is task 1's RAM, `8000-9FFF` the bank in the prompt, `A000-DFFF` the paged ROM bank, and `E000-FFFF` BIOS ROM page 0 (the kernel's: WOZMON itself runs on page 4, and reads ROM as the disassembler does, from page 0 unless that was set to another).  To look at another bank, store it in `0000` (RAM bank) or `0001` (ROM bank).
 
 The disassembler is also a call: `DISASM_AY` (`$F81B`) disassembles at `.A.Y` (C = 0: one instruction; C = 1: `.X` of them).  HyForth has it as `disasm ( addr n -- )`.
 
@@ -155,4 +155,4 @@ hwtest: failed: 1
 | `X` | slot cards | Information: the slot ports (`1A` = slot 1, select A) that don't read as empty | |
 | `H` | hold a task (probe) | Not a test, and not in `A`, `F` or `L`: every task's RAM bank register set to `$F0` + the task, then the task typed (0-F) held in `T`, its bank at `$8000` read over and over, until a key.  Meanwhile, measure T0-T3 (IC1-IC4 pins 1, 15, 14, 13) and the bank register's outputs, `RAMB0-7` (IC1 and IC2 pins 5, 7, 9, 11) | `not a task` |
 
-The ROM tests' checksums are made by the build (`os_rom/tools/romsum.js`, run by `makeC02`) and kept at the end of paged ROM bank 1, so burn both images from the same build.  The CPU clock and serial tests time things with VIA timer 1, so a bad VIA shows up there too; run the tests in order when chasing a fault.  The emulator can inject faults to see the reports: `--ram-fault`, `--stuck-irq`, `--acia-line`, `--clock` ([emulator](../tools/emulator.md)).
+The ROM tests' checksums are made by the build (`os_rom/tools/romsum.js`, run by `build.js`) and kept at the end of paged ROM bank 1, so burn both images from the same build.  The CPU clock and serial tests time things with VIA timer 1, so a bad VIA shows up there too; run the tests in order when chasing a fault.  The emulator can inject faults to see the reports: `--ram-fault`, `--stuck-irq`, `--acia-line`, `--clock` ([emulator](../tools/emulator.md)).

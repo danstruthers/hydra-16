@@ -131,6 +131,223 @@ HFS_OPEN_REQ:
 HFS_OPEN_RET:
             rts
 
+; Is disk HFS_CARD read only (the ROM disk)?  OUT: C = 1 and .A = ERR_IO_MODE if it is; C = 0 if not.
+; Modifies: .A
+HFS_RO_DISK:
+            lda         HFS_CARD
+            cmp         #DISK_ROM
+            bne         :+
+            lda         #ERR_IO_MODE
+            sec
+            rts
+:
+            clc
+            rts
+
+; May the client (SD_CLIENT) use the name at (ZP_IO_REQ)?  On the RAM disk ("/r/..."), the root's entries are the
+; tasks' areas (docs/plans/DISKS.md): "/r/N" (N a hex digit, 0-9 a-f) is task N's, for task N and the tasks it
+; started (and theirs, up its owner chain: TASK_MAY); "/r/s" is the shared RAM disk (HFS_WALK), everyone's; any
+; other name there isn't one.  Task 0, the system's, may use them all, and the root itself is everyone's.  Other
+; disks: no check.  (Before a walk, and before a create cuts the name at its last '/'.)  An area a task may use is
+; marked in RAMD_AREAS, so its task's end removes it (HFS_AREA_END).
+; OUT: C = 0; or C = 1, .A = ERR_IO_PERM.  Modifies: .A, .X, .Y, HFS_ELEM, ZP_TEMP, ZP_TEMP_2
+HFS_AREA_CHECK:
+            ldy         #1
+            lda         (ZP_IO_REQ),Y
+            cmp         #DISK_NAME_RAM
+            bne         @ok
+            iny
+            lda         (ZP_IO_REQ),Y                       ; "/r", the root
+            beq         @ok
+            cmp         #'/'
+            bne         @ok                                 ; (Not the RAM disk: the walk finds no such disk)
+            lda         SD_CLIENT
+            beq         @ok                                 ; (Task 0: anything)
+            iny
+            lda         (ZP_IO_REQ),Y                       ; The area: one hex digit ...
+            cmp         #DISK_NAME_SRAM
+            beq         @shared
+            sec
+            sbc         #'0'
+            cmp         #10
+            bcc         :+
+            sbc         #'a' - '0' - 10                     ; (C = 1)
+            cmp         #10
+            bcc         @no
+            cmp         #16
+            bcs         @no
+:
+            sta         HFS_ELEM                            ; (The area's task)
+            iny
+            lda         (ZP_IO_REQ),Y                       ; ... then the end, or a '/'
+            beq         :+
+            cmp         #'/'
+            bne         @no
+:
+            lda         SD_CLIENT                           ; The client: the area's task's family?
+            ldx         HFS_ELEM
+            ldy         #0
+            jsr         TASK_MAY
+            bcs         @no
+            lda         HFS_ELEM                            ; It may: the area may be there now
+            jsr         HFS_AREA_BIT
+            ora         RAMD_AREAS,X
+            sta         RAMD_AREAS,X
+            clc
+            rts
+
+@no:
+            lda         #ERR_IO_PERM
+            sec
+            rts
+
+@shared:                                                    ; ("/r/s": the shared RAM disk, then the end or
+            iny                                             ;   a '/')
+            lda         (ZP_IO_REQ),Y
+            beq         @ok
+            cmp         #'/'
+            bne         @no
+
+@ok:
+            clc
+            rts
+
+; Area .A's bit in RAMD_AREAS: .X = which byte, .A = the mask.  Modifies: .Y
+HFS_AREA_BIT:
+            ldx         #0
+            cmp         #8
+            bcc         :+
+            inx
+            and         #7
+:
+            tay
+            lda         #1
+:
+            dey
+            bmi         :+
+            asl
+            bra         :-
+:
+            rts
+
+; As task .A ends (TASK_AREA_END, page 5, through TASK_CALL: in the storage task, between requests): its area on
+; the RAM disk, /r/N, removed with everything in it.  Over and over: from the area down, the first entry of each
+; directory, to a file or an empty directory, which is removed; the area's own last.  An open file in it (a task
+; it started may still have one), or a path too long or too deep, stops it, and the area's bit stays, for the next
+; time task N ends; gone, the bit goes.  Requests from here are task 0's (SD_CLIENT): any area.
+HFS_AREA_END:
+            sta         RAMD_AREA_TASK
+            lda         RAMD_AREA_PATH                      ; The name to walk: "/r/N" (N as a hex digit)
+            sta         ZP_IO_REQ
+            lda         RAMD_AREA_PATH + 1
+            sta         ZP_IO_REQ + 1
+            stz         SD_CLIENT
+            ldy         #3
+:
+            lda         HFS_AREA_ROOT,Y
+            sta         (ZP_IO_REQ),Y
+            dey
+            bpl         :-
+            lda         RAMD_AREA_TASK
+            cmp         #10
+            bcc         :+
+            adc         #'a' - '0' - 10 - 1                 ; (C = 1)
+:
+            adc         #'0'
+            ldy         #3
+            sta         (ZP_IO_REQ),Y
+
+@again:                                                     ; From the area down ...
+            lda         #4
+            sta         RAMD_AREA_LEN
+
+@down:
+            ldy         RAMD_AREA_LEN
+            lda         #0
+            sta         (ZP_IO_REQ),Y
+            jsr         HFS_WALK
+            bcs         @not_there
+            lda         HFS_ENT + HFS_E_MODE
+            bpl         @remove                             ; (A file)
+            lda         #HFS_SCAN_USED                      ; A directory: its first entry?
+            sta         HFS_SCAN
+            jsr         HFS_DIR_SCAN
+            bcc         @entry
+            cmp         #ERR_IO_NOT_FOUND
+            beq         @remove                             ; (Empty)
+            bra         @stop
+
+@entry:
+            ldy         RAMD_AREA_LEN                       ; The path: then '/' and its name
+            lda         #'/'
+            sta         (ZP_IO_REQ),Y
+            iny
+            sty         RAMD_AREA_LEN
+            ldy         #HFS_E_NAME
+
+@name:
+            lda         (HFS_PTR),Y
+            beq         @down
+            phy
+            ldy         RAMD_AREA_LEN
+            sta         (ZP_IO_REQ),Y
+            ply
+            inc         RAMD_AREA_LEN
+            beq         @stop                               ; (Too long a path)
+            iny
+            cpy         #HFS_NAME_MAX + HFS_E_NAME
+            bne         @name
+            bra         @down
+
+@remove:
+            jsr         HFS_REMOVE_AT
+            bcs         @stop                               ; (Open, or an error)
+            lda         RAMD_AREA_LEN
+            cmp         #4
+            bne         @again                              ; (Something in it: again, from the area)
+            bra         @gone
+
+@not_there:
+            lda         RAMD_AREA_LEN                       ; The area itself not there: none to remove
+            cmp         #4
+            bne         @stop                               ; (Deeper: too deep a walk, or an error)
+
+@gone:
+            lda         RAMD_AREA_TASK                      ; No area now: its bit goes
+            jsr         HFS_AREA_BIT
+            eor         #$FF
+            and         RAMD_AREAS,X
+            sta         RAMD_AREAS,X
+
+@stop:
+            jmp         HFS_FINISH                          ; (What it changed goes to the disk now)
+
+HFS_AREA_ROOT:  .byte   "/", DISK_NAME_RAM, "/", 0
+
+; A wstat (rename, mode) of the open file at header .X: on the RAM disk, not an area itself (an entry in its root),
+; but for task 0.  OUT: C = 0; or C = 1, .A = ERR_IO_PERM.  Preserves .X
+HFS_AREA_WSTAT:
+            lda         HFS_CARD
+            cmp         #DISK_RAM
+            bne         @ok
+            lda         SD_CLIENT
+            beq         @ok
+            lda         HFS_FHDR + HFS_H_PBLK,X             ; Its directory: the root (its entry is in block
+            ora         HFS_FHDR + HFS_H_PBLK + 1,X         ;   0, the superblock)?
+            ora         HFS_FHDR + HFS_H_PBLK + 2,X
+            ora         HFS_FHDR + HFS_H_PBLK + 3,X
+            bne         @ok
+            lda         HFS_FHDR + HFS_H_PIDX,X
+            cmp         #HFS_SB_ROOT / HFS_ENTRY_SIZE
+            bne         @ok
+            lda         #ERR_IO_PERM
+            sec
+            rts
+
+@ok:
+            clc
+            rts
+
 ; HFS_PLOC = where the entry a walk ended at is listed: in the walk's last directory (HFS_STK); for a
 ; card's root, which isn't in one, its own place.  Modifies: .A, .X, .Y
 HFS_PARENT_LOC:
@@ -165,7 +382,9 @@ HFS_TAKE_SLOT:
             lda         SD_OP
             and         #IO_MODE_WRITE | IO_MODE_TRUNC
             beq         HFS_TAKE_NEW
-            lda         HFS_ENT + HFS_E_MODE                ; Writing: not a directory, nor a read-only file
+            jsr         HFS_RO_DISK                         ; Writing: not on the ROM disk ...
+            bcs         @bad_mode
+            lda         HFS_ENT + HFS_E_MODE                ;   not a directory, nor a read-only file
             and         #HFS_M_DIR | HFS_M_RO
             bne         @bad_mode
             lda         SD_OP
@@ -631,22 +850,54 @@ HFS_REC:
 ; OUT: C = 0: HFS_CARD = the card, HFS_LOC = where the entry is, HFS_ENT = the entry (and HFS_FP -> it);
 ;      C = 1, .A = ERR_IO_NOT_FOUND, ERR_IO_NAME, ERR_IO_NOT_FS or a card error
 HFS_WALK:
+            jsr         HFS_AREA_CHECK                      ; (On the RAM disk: an area the client may use?)
+            bcc         :+
+            rts
+:
             ldy         #0
             lda         (ZP_IO_REQ),Y                       ; "/N": the card
             cmp         #'/'
-            bne         HFS_W_NOT_FOUND
+            bne         @no_disk
             iny
             lda         (ZP_IO_REQ),Y
-            sec
-            sbc         #'0'
-            cmp         #SD_MAX_CARDS
-            bcs         HFS_W_NOT_FOUND
+            DISK_FROM_NAME                                  ; (0-7, x)
+            bcc         @disk
+
+@no_disk:
+            jmp         HFS_W_NOT_FOUND
+
+@disk:
             sta         HFS_CARD
+            cmp         #DISK_RAM                           ; "/r/s": the shared RAM disk, as if it were "/s"
+            bne         @path                               ;   (so /ram, one bind, is the tasks' areas and
+            ldy         #2                                  ;   the shared one: /ram/s)
+            lda         (ZP_IO_REQ),Y
+            cmp         #'/'
+            bne         @ram
+            iny
+            lda         (ZP_IO_REQ),Y
+            cmp         #DISK_NAME_SRAM
+            bne         @ram
+            iny
+            lda         (ZP_IO_REQ),Y
+            beq         :+
+            cmp         #'/'
+            bne         @ram
+:
+            lda         #DISK_SRAM
+            sta         HFS_CARD
+            ldy         #3                                  ; (Its path starts after the s)
+            bra         @path
+
+@ram:
+            ldy         #1
+
+@path:
             iny
             lda         (ZP_IO_REQ),Y                       ; Then the path in it, or nothing: its root
             beq         :+
             cmp         #'/'
-            bne         HFS_W_NOT_FOUND
+            bne         @no_disk
 :
             sty         HFS_ELEM
             jsr         HFS_VOLUME                          ; The card's superblock
@@ -968,7 +1219,9 @@ HFS_VOLUME:
             dey
             bne         :-
             jsr         HFS_SB_LOAD
-            bcs         @fail
+            bcc         :+
+            jmp         @fail
+:
             jsr         HFS_SB_OK
             bcc         @superblock
             jsr         HFS_PART_FIND                       ; HFS_PTR -> its HydraFS partition's entry
@@ -988,12 +1241,9 @@ HFS_VOLUME:
             bcs         @no
 
 @superblock:
-            lda         HFS_CARD                            ; The numbers the server works from: 4 of 4
-            asl                                             ;   bytes, 4 apart in the block and 32 apart
-            asl                                             ;   in RAM (at the card * 4)
-            tax
-            ldy         #HFS_SB_CLUSTERS
-
+            jsr         HFS_CARD_X                          ; The numbers the server works from: 4 of 4 bytes,
+            ldy         #HFS_SB_CLUSTERS                    ;   4 apart in the block and HFS_V_STRIDE apart in
+                                                            ;   RAM (at the disk * 4), four arrays to a page
 @number:
             lda         (SD_CACHE),Y
             sta         HFS_V_CLUSTERS,X
@@ -1004,10 +1254,23 @@ HFS_VOLUME:
             bne         @number
             txa
             clc
-            adc         #32 - 4                             ; The next one, in RAM
+            adc         #HFS_V_STRIDE - 4                   ; The next one, in RAM
             tax
-            cpy         #HFS_SB_STAMP + 4                   ; (The counters too: HFS_V_FREE ... HFS_V_STAMP)
-            bne         @number
+            bcc         @number                             ; (Past the page's fourth, .X wraps: the disk * 4)
+
+@counter:                                                   ; The counters: the next page (HFS_V_FREE ...)
+            lda         (SD_CACHE),Y
+            sta         HFS_V_FREE,X
+            iny
+            inx
+            txa
+            and         #3
+            bne         @counter
+            txa
+            clc
+            adc         #HFS_V_STRIDE - 4
+            tax
+            bcc         @counter
             jsr         HFS_CARD_X                          ; HFS_V_MINIT (256 on from HFS_V_CLUSTERS: out
             ldy         #HFS_SB_MAPINIT                     ;   of the loop's reach): the superblock's; for
 :                                                           ;   version 1, the map's size (all written)

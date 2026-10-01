@@ -333,20 +333,21 @@ MM_PAGE_FREE:
             sec
             bra         @done
 
-; Allocate a run of contiguous 8K task RAM banks, top-down.
-; IN: .A = number of banks (1+)
+; Allocate a run of contiguous 8K task RAM banks, top-down: from any of them (MM_BANK_ALLOC), or only from
+; banks .Y-.X (MM_BANK_ALLOC_IN: the RAM disk's, from the modules it's given; no handle, docs/plans/DISKS.md).
+; IN: .A = number of banks (1+); MM_BANK_ALLOC_IN: .Y = the lowest bank, .X = the highest (MMU_BANK_TOP at most)
 ; OUT (success): .A = first (lowest) bank of the run, C = 0
 ; OUT (failure): .A = ERROR, C = 1
-; Modifies: .A
+; Modifies: .A, .X, .Y
 MM_BANK_ALLOC:
-            jsr         NO_PREEMPT                          ; Not switched out meanwhile (IRQs stay on:
-            php                                             ;   only this task's own MMU area is touched)
-            PUSH_XY
-            jsr         MM_BANK_MAPS_SETUP
             ldx         #MMU_BANK_TOP
             ldy         #0
+
+MM_BANK_ALLOC_IN:
+            jsr         NO_PREEMPT                          ; Not switched out meanwhile (IRQs stay on:
+            php                                             ;   only this task's own MMU area is touched)
+            jsr         MM_BANK_MAPS_SETUP
             jsr         BM_ALLOC_RUN
-            PULL_YX
             jmp         MM_RETURN_NP
 
 ; Free a run of task RAM banks allocated with MM_BANK_ALLOC.

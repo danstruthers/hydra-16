@@ -17,33 +17,35 @@ How to build the ROMs, program the chips, connect a terminal and boot the Hydra-
 | :----- | :--- |
 | `os_rom/` | The OS ROM: sources, build script, linker config, and the built images in `os_rom/bin/` |
 | `sim/` | The emulator (`hydrasim.js`), the regression tests (`regress.js`), tools (`tools/hydrafs.js`, `tools/mkhyx.js`) |
-| `programs/` | A sample program for the Hydra (`.hyx`), and what to build others with |
+| `programs/` | Programs for the Hydra (`.hyx`): C (`programs/c/`: the library and samples) and assembly (`programs/asm/`), and what to build others with |
 | `board/` | KiCad schematics and PCBs: the main board, the memory daughter card, the bus breakout card |
 | `docs/` | This documentation |
 
 ### **Building**
 
-The build is `os_rom/makeC02.bat`.  Run it **from the `os_rom` folder**, with the cc65 `bin` folder on the `PATH`:
+The build is `build.js`, at the top of the repository, on Windows, Linux or macOS.  It needs Node.js and cc65, which it finds in `CC65_HOME` (cc65's folder), or on the `PATH`, or in `C:\source\cc65\win64_snapshot`:
 
 ```
-cd os_rom
-set PATH=C:\path\to\cc65\bin;%PATH%
-makeC02                  build the ROM images
-makeC02 test             build, then run the regression tests
+node build.js            everything: the C library and samples, the assembly sample, the ROM images
+node build.js rom        just the ROM images
+node build.js test       everything, then the regression tests
+node build.js rom test   the ROM images, then the tests
 ```
 
-It runs three steps, and stops at the first that fails:
-1. `ca65` assembles `all.s` (which includes every source file) for the 65C02.
-2. `ld65` links with `os_rom_C02.cfg`.
-3. `tools/check_pages.js` checks for calls between BIOS ROM pages that bypass a gate.  It prints `No cross-page references` when all is well.
+`os_rom/makeC02.bat` (`makeC02`, `makeC02 test`) runs `build.js rom` too.  The ROM's steps, stopping at the first that fails:
+1. `sim/tools/hysong.js` compiles the test song (`songs/test.mml`), and the version (`os_rom/VERSION`, shown at boot) goes into an include file, both in `obj/`.
+2. `ca65` assembles `all.s` (which includes every source file) for the 65C02, and `ld65` links with `os_rom_C02.cfg`.
+3. `sim/tools/mkromdisk.js` writes the ROM disk (`/rom`'s files, as a HydraFS volume) into the paged ROM image and reads every file back to check it, and `tools/romsum.js` adds the checksums the hardware test checks.
+4. `tools/check_pages.js` checks for calls between BIOS ROM pages that bypass a gate (`No cross-page references`); one is an error.
+5. `tools/rom_space.js` prints the space left on each BIOS ROM page, and warns when page 0 or COMMON is nearly full (`node tools/rom_space.js --table` in `os_rom` shows where).
+
+GitHub runs `node build.js test` on every push (`.github/workflows/build.yml`).
 
 | Output | What |
 | :----- | :--- |
 | `os_rom/bin/os_rom_C02.bin` | The BIOS ROM image (128K): burn it into U6 |
-| `os_rom/bin/paged_rom_C02.bin` | The paged ROM image (16K): burn it at offset 0 of U31 (paged ROM bank 0) |
-| `os_rom/obj/` | The object file, listing (`all_C02.txt`), labels (`os_rom_C02.lbl`), map (`os_rom_C02.map`) and debug info (`os_rom_C02.dbg`); not in source control |
-
-On Linux or macOS, run the same three commands by hand (with `/` in the paths).
+| `os_rom/bin/paged_rom_C02.bin` | The paged ROM image (192K: banks 0-11, with `/rom`): burn it at offset 0 of U31 (paged ROM bank 0) |
+| `os_rom/obj/` | The object file, listing (`all_C02.txt`), labels (`os_rom_C02.lbl`), map (`os_rom_C02.map`), debug info (`os_rom_C02.dbg`), and the generated includes (`version.inc`, `test_rom.s`); not in source control |
 
 **Build options** (`os_rom/include/hw.inc`):
 
@@ -78,9 +80,9 @@ Fit the CPU clock jumper J7 (3.58 MHz) and the RDY jumper J4, then power up.  Yo
 POST ZP:T ST:T LO:T 7D:T SH:S P1:4C
 RAM U:0 F0:0/00/0000 F4:0/00/0000 F8:0/00/0000 FC:0/00/0000 00:0/00/0000 10:0/00/0000 20:0/00/0000
 
-Welcome to the HYDRA-16!
+Welcome to the HYDRA-16!  OS 1.8C_0.5
 
-HyForth 0.91 05-07-2026
+HyForth 0.91
 
 /> 
 ```
@@ -123,10 +125,10 @@ Without `-i`, the emulator runs a fixed number of cycles with scripted input, th
 
 ```
 cd os_rom
-makeC02 test
+node build.js rom test
 ```
 
-This builds, then boots the new images in the emulator about 40 times: POST, the self tests, HyForth and its libraries, pipes, tasks, sound, SD cards and their files, the shell and running programs, sleeping, C programs, exit statuses, the sound library and songs, fault injection.  It prints `50 of 50 tests passed`, or the failing test's output and the command that reproduces it.  Then try it on the board.
+This builds, then boots the new images in the emulator for each regression test (`node sim/regress.js --list` lists them): POST, the self tests, HyForth and its libraries, line editing, pipes, tasks, sound, SD cards and their files, the shell and running programs, sleeping, C programs, exit statuses, the sound library and songs, `/rom`, fault injection.  It prints `N of N tests passed`, or the failing test's output and the command that reproduces it.  Then try it on the board.
 
 ### **Where to go next**
 

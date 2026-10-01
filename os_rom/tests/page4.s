@@ -41,6 +41,12 @@ FAR_GATE_INLINE     NO_PREEMPT,     ::NO_PREEMPT,           0
 FAR_GATE_INLINE     PREEMPT,        ::PREEMPT,              0
 FAR_GATE_INLINE     MMU_PROBE_MODULES, ::MMU_PROBE_MODULES, 0
 
+; WOZMON's (monitor/wozmon.s)
+FAR_GATE_INLINE     GET_CHAR,       ::GET_CHAR,             0
+FAR_GATE_INLINE     WRITE_PROMPT,   ::WRITE_PROMPT,         0
+FAR_GATE_INLINE     SPAWN_TASK,     ::SPAWN_TASK,           0
+FAR_GATE_INLINE     DISASM_WM,      ::DISASM_WM_PA,         $A
+
 ; Gates from page 4 to far pointers and references (page 5)
 FAR_GATE_INLINE     FP_MAKE,        PAGE5::FP_MAKE,         5
 FAR_GATE_INLINE     FP_READ,        PAGE5::FP_READ,         5
@@ -68,6 +74,21 @@ FAR_GATE_INLINE     IO_UNMOUNT,     PAGE2::IO_UNMOUNT,      2
 WRITE_CHAR:
                 jsr             WRITE_CHAR_BUF
                 jmp             IO_FLUSH
+
+; .A = the byte at (ZP_D_XAM) on BIOS ROM page ZP_D_PAGE (only $E000-$FDFF is paged; 0: the kernel's), through
+; PEEK_PAGE (COMMON), with ZP_FP borrowed.  Preserves .X, .Y, C; N/Z reflect .A
+PEEK_D_XAM:
+                lda             ZP_D_XAM
+                sta             ZP_FP
+                lda             ZP_D_XAM + 1
+                sta             ZP_FP + 1
+                phy
+                ldy             #0
+                lda             ZP_D_PAGE
+                jsr             PEEK_PAGE
+                ply
+                ora             #0
+                rts
 
 ; Page 4 copy of WRITE_HSTRING: the HString has to be read from page 4, where the caller's strings are.
 ; .A, .Y hold the addr of HString to write

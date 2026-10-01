@@ -24,7 +24,8 @@
 // A card with a partition table has its HydraFS in its partition of type PART_TYPE ($7F), which the other
 // commands find, as the Hydra does.
 //
-// As a module: require('./hydrafs.js') gives { mkfs, Volume }, e.g. for regress.js's test cards.
+// As a module: require('./hydrafs.js') gives { mkfs, Volume }, e.g. for regress.js's test cards; setNow(s) stamps
+// everything with s (seconds since 2000) instead of the PC's time, for an image that builds the same each time.
 // ****************************************************************************
 'use strict';
 const fs = require('fs');
@@ -41,7 +42,9 @@ const HOLE = 0xFFFFFFFF, isHole = x => x.start === HOLE;
 // A stamp is the Hydra clock's time: seconds since 2000-01-01 00:00:00, local time (as the Hydra's clock is
 // set).  Now, on the PC; and a stamp as the Hydra shows it (/dev/time, ls -l)
 const EPOCH = Date.UTC(2000, 0, 1) / 1000;
-const hydraNow = () => Math.max(0, Math.floor(Date.now() / 1000 - new Date().getTimezoneOffset() * 60 - EPOCH));
+let fixedNow = null;                                           // (setNow: a fixed time, for images that must build the same)
+const hydraNow = () => fixedNow !== null ? fixedNow : Math.max(0, Math.floor(Date.now() / 1000 - new Date().getTimezoneOffset() * 60 - EPOCH));
+const setNow = s => { fixedNow = s; };
 const stampText = s => new Date((s + EPOCH) * 1000).toISOString().slice(0, 19).replace('T', ' ');
 
 // A partition table in block 0 (a Buffer), as the Hydra reads one: $55 $AA, and each entry's status $00 or
@@ -454,4 +457,4 @@ function main(argv) {
 if (require.main === module) {
   try { main(process.argv.slice(2)); } catch (e) { console.error('hydrafs: ' + e.message); process.exit(1); }
 }
-module.exports = { mkfs, Volume, MODE_DIR, MODE_APPEND, MODE_RO, PART_TYPE, mbrParts, stampText, HOLE };
+module.exports = { mkfs, Volume, MODE_DIR, MODE_APPEND, MODE_RO, PART_TYPE, mbrParts, mbrMake, stampText, HOLE, setNow };

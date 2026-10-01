@@ -30,8 +30,9 @@
 .endmacro
 
 S_DEV_PREFIX:   .byte "/dev/"
-S_ENV_PREFIX:   .byte "/env"                ; (Names under it: the env device's, as if mounted)
-S_ENV_PREFIX_END:
+S_OWN_PREFIXES: .byte "/env"               ; (Names under them: those devices', as if mounted, in every task)
+S_OWN_PREFIXES_END:
+OWN_PREFIX_LEN  = 4
 DEV_PREFIX_LEN  = 5
 
 ; ---- helpers
@@ -290,8 +291,8 @@ IO_COPY_IN:
 ; The calls
 
 ; Open a file.  The name goes through the task's namespace first (IO_MOUNT, IO_BIND); a name it doesn't
-; match must be "/dev/<device>" or "/dev/<device>/<rest>" (or "/env[/<rest>]": the env device, with no
-; mount, in every task).  The server opens the rest of the name.
+; match must be "/dev/<device>" or "/dev/<device>/<rest>" (or "/env[/<rest>]" or "/rom[/<rest>]": the env
+; or rom device, with no mount, in every task).  The server opens the rest of the name.
 ; IN: .A.Y = name (zero-terminated, 255 characters at most), .X = IO_MODE_* bits
 ; OUT (success): .A = fd, C = 0
 ; OUT (failure): .A = ERR_IO_NOT_FOUND, ERR_IO_NO_FDS, ERR_IO_NS_LOOP, ERR_IO_NAME or the server's
@@ -428,22 +429,36 @@ IO_OPEN_NAME:
             pla
             bra         @found
 
-@env:                                               ; "/env", or "/env/...": the env device's (every
-            ldy         #S_ENV_PREFIX_END - S_ENV_PREFIX - 1 ;   task's environment, with no mount)
+@env:                                               ; "/env" or "/rom", or a name under them: the env or
+            ldx         #0                          ;   rom device's (with no mount, in every task)
+
+@own:
+            stx         ZP_IO_TMP                   ; (Where this prefix starts)
+            ldy         #0
 :
             lda         (ZP_IO_DATA),Y
-            cmp         S_ENV_PREFIX,Y
-            bne         @not_found
-            dey
-            bpl         :-
-            ldy         #S_ENV_PREFIX_END - S_ENV_PREFIX
+            cmp         S_OWN_PREFIXES,X
+            bne         @own_next
+            inx
+            iny
+            cpy         #OWN_PREFIX_LEN
+            bne         :-
             lda         (ZP_IO_DATA),Y
             beq         :+
             cmp         #'/'
             bne         @not_found
 :
-            lda         #1                          ; (The device's name: "env", after the '/')
+            lda         #1                          ; (The device's name: "env" or "rom", after the '/')
             bra         @device
+
+@own_next:
+            lda         ZP_IO_TMP
+            clc
+            adc         #OWN_PREFIX_LEN
+            tax
+            cpx         #S_OWN_PREFIXES_END - S_OWN_PREFIXES
+            bne         @own
+            bra         @not_found
 
 @found:
             sta         ZP_IO_CNT                   ; ZP_IO_CNT = device index

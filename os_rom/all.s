@@ -2,17 +2,21 @@
 .macpack        cpu
 .pc02
 
-; The OS ROM, as one assembly.  Folders: include/ (constants and macros), kernel/, io/ (the IO layer and
-; the file servers), drivers/, tests/, monitor/ (WOZMON, the disassembler), hyforth/.  Build: makeC02.bat.
+; The OS ROM, as one assembly.  Folders: include/ (constants and macros), kernel/, io/ (the IO layer:
+; fds, namespaces, pipes), servers/ (the devices' file servers), fs/ (HydraFS), drivers/, sound/, shell/,
+; tests/, monitor/ (WOZMON, the disassembler), hyforth/.  Build: build.js (makeC02.bat runs it).
 
 .include "include/hw.inc"       ; The hardware: ports, chip registers, IRQ numbers
 .include "include/kernel.inc"   ; Task numbers, error codes, task ZP
 .include "include/io.inc"       ; IO, namespaces, the drivers' and servers' constants
 .include "include/ascii.inc"
 .include "include/macros.inc"
+.include "obj/version.inc"      ; HY_VERSION (build.js makes it from VERSION)
+.include "include/thunks.inc"     ; The thunk table's list (kernel/thunks.s, hyforth/page1.s)
 .include "include/shell.inc"    ; The shell's commands (page 7)
 .include "include/hwtest.inc"   ; The hardware test (paged ROM bank 1)
 .include "include/zero.s"       ; The OS ZP (after the constants)
+.include "kernel/high.s"        ; Each page's room at $FE00 (its segment)
 .include "kernel/common.s"      ; COMMON block (every ROM page) and gate macros
 
 ; BIOS ROM page 5 (W = 5): far pointers and references.  First: the other pages' gates refer to PAGE5::
@@ -29,9 +33,9 @@
 .include "io/page2.s"           ; must be first in the scope
 .include "io/io.s"
 .include "io/ns.s"              ; Per-task namespaces (IO_MOUNT, IO_BIND)
-.include "io/ser_srv.s"         ; The serial driver's file server (/dev/cons, /dev/ser)
-.include "io/serctl.s"          ; Its settings: /dev/ser/ctl, the rate and format IO_CTLs
-.include "io/serfast.s"         ; Its fast paths: the ACIA's interrupt, console output and input
+.include "servers/ser_srv.s"         ; The serial driver's file server (/dev/cons, /dev/ser)
+.include "servers/serctl.s"          ; Its settings: /dev/ser/ctl, the rate and format IO_CTLs
+.include "servers/serfast.s"         ; Its fast paths: the ACIA's interrupt, console output and input
 .include "io/pipe_srv.s"        ; The pipe server (/dev/pipe)
 .include "sound/ymfast.s"       ; The YM2151's interrupt: the sound clock (a fast handler, as serfast.s's)
 .endscope
@@ -42,28 +46,29 @@ IRQ_FAST_P2     = PAGE2::IRQ_FAST_P2    ; (For the COMMON block's fast IRQ stubs
 .include "drivers/page3.s"      ; must be first in the scope
 .include "drivers/spi.s"        ; SPI (bit-banged on the VIA's port B)
 .include "drivers/sd.s"         ; The SD card (blocks)
-.include "io/sd_srv.s"          ; /dev/sd, and the storage task's init
-.include "io/hfs_format.s"      ; HydraFS: format and label (the rest of it is on page 6) ...
-.include "io/hfs_check.s"       ;   its check, and a card's details for its ctl file
+.include "servers/sd_srv.s"          ; /dev/sd, and the storage task's init
+.include "servers/ramdisk.s"         ; The RAM disks: started, stopped, their ctl lines
+.include "fs/hfs_format.s"      ; HydraFS: format and label (the rest of it is on page 6) ...
+.include "fs/hfs_check.s"       ;   its check, and a card's details for its ctl file
 .endscope
 
 ; BIOS ROM page 6 (W = 6): the HydraFS server, in the storage task, on page 3's block layer.  After PAGE3,
 ; whose names its gates use; page 3 reaches it through the aliases after the scope.
 .scope PAGE6
-.include "io/page6.s"           ; must be first in the scope
-.include "io/hfs_srv.s"         ; The HydraFS server (/sd/N/..., the files on the cards): requests, reading
-.include "io/hfs_write.s"       ;   and writing: allocating, create, remove, wstat
-.include "io/hfs_sparse.s"      ;   and sparse files: holes, and writes past a file's end
+.include "fs/page6.s"           ; must be first in the scope
+.include "fs/hfs_srv.s"         ; The HydraFS server (/sd/N/..., the files on the cards): requests, reading
+.include "fs/hfs_write.s"       ;   and writing: allocating, create, remove, wstat
+.include "fs/hfs_sparse.s"      ;   and sparse files: holes, and writes past a file's end
 .endscope
 HFS_FORGET_P6   = PAGE6::HFS_FORGET     ; (For page 3's gates: PAGE3 is assembled before PAGE6)
-HFS_META_NEW_P6 = PAGE6::HFS_META_NEW    ; (Format and label: io/hfs_format.s)
+HFS_META_NEW_P6 = PAGE6::HFS_META_NEW    ; (Format and label: fs/hfs_format.s)
 HFS_META_AT_P6  = PAGE6::HFS_META_AT
 HFS_META_CHANGED_P6 = PAGE6::HFS_META_CHANGED
 HFS_FINISH_P6   = PAGE6::HFS_FINISH
 HFS_SHR_P6      = PAGE6::HFS_SHR
 HFS_VOLUME_P6   = PAGE6::HFS_VOLUME
 HFS_SB_GET_P6   = PAGE6::HFS_SB_GET
-HFS_AT_P6       = PAGE6::HFS_AT          ; (The check: io/hfs_check.s)
+HFS_AT_P6       = PAGE6::HFS_AT          ; (The check: fs/hfs_check.s)
 HFS_AT_END_P6   = PAGE6::HFS_AT_END
 HFS_CARD_X_P6   = PAGE6::HFS_CARD_X
 HFS_EACH_RUN_P6 = PAGE6::HFS_EACH_RUN
@@ -80,12 +85,14 @@ HFS_CK_RUN_P6   = PAGE6::HFS_CK_RUN      ; (Page 6's gate to the check's HFS_CK_
 ; page4.s
 .scope PAGE4
 .include "tests/page4.s"        ; must be first in the scope
+.include "monitor/wozmon.s"     ; WOZMON (MON_START: page 0 and the others reach it through gates)
 .include "tests/mmu_test.s"
 .include "tests/sched_test.s"
 .include "tests/io_test.s"
 .include "tests/post.s"         ; POST (the power-on self test)
 .include "tests/post_ram.s"     ; POST paged RAM line tests
 .endscope
+MON_START_P4    = PAGE4::MON_START      ; (WOZMON: page 0's, 1's and 7's gates)
 
 ; BIOS ROM page 1 (W = 1): HyForth.  Its own scope, so page 1 code binds to the page 1 gates in page1.s.
 ; Inside it, scope FAR is BIOS ROM page A (W = $A): HyForth's far words and the disassembler
@@ -97,6 +104,7 @@ HFS_CK_RUN_P6   = PAGE6::HFS_CK_RUN      ; (Page 6's gate to the check's HFS_CK_
 FW_ENTRY_PA     = PAGE1::FAR::FW_ENTRY  ; (For page 1's gates: page1.s)
 LINE_START_PA   = PAGE1::FAR::LINE_START
 LINE_PROMPT_PA  = PAGE1::FAR::LINE_PROMPT
+DISASM_WM_PA    = PAGE1::FAR::DISASM_WM   ; (WOZMON's, page 4)
 LINE_READ_PA    = PAGE1::FAR::LINE_READ
 LINE_EOF_PA     = PAGE1::FAR::LINE_EOF
 LINE_EXITS_PA   = PAGE1::FAR::LINE_EXITS
@@ -139,11 +147,11 @@ ED_MAIN_P8      = PAGE8::ED_MAIN        ; (For page 7: SH_EDIT)
 
 ; BIOS ROM page 9 (W = 9): the system's servers that run in their client's task (/dev/proc, /env)
 .scope PAGE9
-.include "io/page9.s"           ; must be first in the scope
-.include "io/proc_srv.s"        ; The tasks (/dev/proc)
-.include "io/env_srv.s"         ; Each task's environment (/env)
-.include "io/time_srv.s"        ; The clock (/dev/time)
-.include "io/rtc.s"             ; The clock chip (a DS1747 in U7)
+.include "servers/page9.s"           ; must be first in the scope
+.include "servers/proc_srv.s"        ; The tasks (/dev/proc)
+.include "servers/env_srv.s"         ; Each task's environment (/env)
+.include "servers/time_srv.s"        ; The clock (/dev/time)
+.include "drivers/rtc.s"             ; The clock chip (a DS1747 in U7)
 .endscope
 PROC_SERVE_P9   = PAGE9::PROC_SERVE     ; (For page 0's gates: io_p0.s)
 ENV_SERVE_P9    = PAGE9::ENV_SERVE
@@ -181,7 +189,6 @@ ZSM_PLAY_ROM_PC = PAGEC::ZSM_PLAY_ROM   ; (For page B: SND_CTL_TEST)
 .include "kernel/vectors.s"
 .include "kernel/thunks.s"
 .include "kernel/tasks.s"
-.include "monitor/wozmon.s"
 .include "kernel/mmu.s"
 .include "kernel/irq.s"
 .include "kernel/shared.s"
@@ -199,4 +206,4 @@ ZSM_PLAY_ROM_PC = PAGEC::ZSM_PLAY_ROM   ; (For page B: SND_CTL_TEST)
 HWT_ENTRY       = HWTEST::HWT_ENTRY     ; (_M_HWT_ENTER's jump: include/hwtest.inc)
 
 ; Paged ROM bank 2: the test song (sndtest's), made from songs/test.mml by makeC02.bat (sim/tools/hysong.js)
-.include "songs/test_rom.s"
+.include "obj/test_rom.s"       ; (build.js makes it from songs/test.mml)

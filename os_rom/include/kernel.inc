@@ -61,6 +61,7 @@ ERR_IO_BUSY         = $84       ; the file is open (remove)
 ERR_IO_NOT_DIR      = $85       ; not a directory (IO_CHDIR, rmdir)
 ERR_IO_IS_DIR       = $86       ; a directory, where a file was wanted (rm, cp)
 ERR_IO_NOT_EXEC     = $87       ; a Hydra executable whose header doesn't fit task RAM (run)
+ERR_IO_PERM         = $88       ; not allowed: another task's area (/ram/N: docs/plans/DISKS.md)
 
 ; ERROR CODES
 ERR_NO_TASKS_AVAILABLE = $F1

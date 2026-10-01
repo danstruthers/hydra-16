@@ -195,8 +195,82 @@ STKLIST:
 dot:                        ; .
     PRINT_SPACE
     jsr spull_0
+    lda OUTBASE
+    cmp #10
+    bne DOTHEX
+    bit TEMP1 + 1
+    bpl DOTDEC
+    PRINT_CHAR #ASCII_MINUS
+    sec                     ; (- n)
+    lda #0
+    sbc TEMP1
+    sta TEMP1
+    lda #0
+    sbc TEMP1 + 1
+    sta TEMP1 + 1
+DOTDEC:
+    jsr PRINT_UDEC
+    jmp next
+DOTHEX:
     PRINT_BYTE TEMP1 + 1, TEMP1
     jmp next
+udot:                       ; u.
+    PRINT_SPACE
+    jsr spull_0
+    lda OUTBASE
+    cmp #10
+    beq DOTDEC
+    bra DOTHEX
+decimal:                    ; decimal
+    lda #10
+    bra SETBASE
+hexbase:                    ; hex
+    lda #16
+SETBASE:
+    sta OUTBASE
+    jmp next
+;
+; TEMP1 in decimal, unsigned, with no leading zeros.  Modifies .A, .X, .Y, TEMP1, TEMP2
+PRINT_UDEC:
+    stz TEMP2               ; (A digit printed: the zeros after it count)
+    ldx #3
+UDECPOW:                    ; The digit for 10^(.X + 1): how many times it goes
+    ldy #'0'
+UDECSUB:
+    lda TEMP1
+    sec
+    sbc UDECLO, x
+    pha
+    lda TEMP1 + 1
+    sbc UDECHI, x
+    bcc UDECLESS
+    sta TEMP1 + 1
+    pla
+    sta TEMP1
+    iny
+    bra UDECSUB
+UDECLESS:
+    pla
+    tya
+    cmp #'0'
+    bne UDECOUT
+    ldy TEMP2
+    beq UDECNEXT            ; (A leading zero)
+UDECOUT:
+    sta TEMP2
+    phx
+    PRINT_CHAR
+    plx
+UDECNEXT:
+    dex
+    bpl UDECPOW
+    lda TEMP1               ; The units
+    ora #'0'
+    PRINT_CHAR_JMP
+UDECLO:
+    .byte <10, <100, <1000, <10000
+UDECHI:
+    .byte >10, >100, >1000, >10000
 cdot:                       ; .C
     jsr spull_0
     PRINT_CHAR TEMP1 + 1, TEMP1
@@ -612,6 +686,63 @@ disasm:                     ; disasm
     jsr spush_0     ; push last address on stack?
 DISEND:
     jmp next
+;
+;---------------------------------------------------------------------
+;  syscall ( jsaddr a y -- x ): call the machine code at jsaddr with .A and .Y set, and BIOS ROM page 0
+;  selected, as a program's code runs: so every thunk ($F800 ...) works, and code in RAM that calls them.
+;  It pushes what the code leaves in .X
+syscall:
+    jsr spull_2                 ; .Y
+    jsr spull_1                 ; .A
+    jsr spull_0                 ; The address
+    lda TEMP2
+    ldy TEMP3
+    jsr SYS_CALL
+    stx TEMP1
+    stz TEMP1+1
+    jsr spush_0
+    jmp next
+;
+;  sys ( jsaddr a x y -- a x y p ): syscall with every register, in and out, and the flags after it (p; C is
+;  bit 0: the OS's calls set it when they fail, with the error in .A)
+sys:
+    jsr spull_2                 ; .Y
+    ldy #TEMP4
+    jsr spull                   ; .X
+    jsr spull_1                 ; .A
+    jsr spull_0                 ; The address
+    lda TEMP2
+    ldx TEMP4
+    ldy TEMP3
+    jsr SYS_CALL
+    php
+    sta TEMP1
+    stx TEMP2
+    sty TEMP3
+    pla
+    sta TEMP4
+    stz TEMP1+1
+    stz TEMP2+1
+    stz TEMP3+1
+    stz TEMP4+1
+    jsr spush_0                 ; a
+    jsr spush_1                 ; x
+    jsr spush_2                 ; y
+    ldy #TEMP4
+    jsr spush                   ; p
+    jmp next
+;
+; Call the code at TEMP1 on BIOS ROM page 0, with .A, .X, .Y (and C) as they are; back with them as it left them
+SYS_CALL:
+    pha
+    lda TEMP1
+    sta ZP_FAR_VEC
+    lda TEMP1+1
+    sta ZP_FAR_VEC+1
+    stz ZP_FAR_PAGE
+    pla
+    sta ZP_FAR_A
+    jmp FAR_CALL_A
 ;
 ;---------------------------------------------------------------------
 ;  IO: files
@@ -2102,10 +2233,435 @@ LINE_PROMPT:
     beq LPBARE
     lda #<PROMPTFMT
     ldy #>PROMPTFMT
-    jmp SH_PROMPT
+    jsr SH_PROMPT
+    jmp LINE_EDIT
 LPBARE:
     jsr WRITE_CRLF
     PRINT_CHAR #'>', #ASCII_SPACE
+    ; (On into LINE_EDIT)
+;
+;---------------------------------------------------------------------
+; The console's line editor: with fd 0 on the console, the line is typed with editing and history, and the
+; console raw meanwhile (/dev/cons/ctl's rawon: this echoes).  Keys: Left and Right (Ctrl-B, Ctrl-F), Home
+; and End (Ctrl-A, Ctrl-E), Backspace, Delete (Ctrl-D), Up and Down (Ctrl-P, Ctrl-N) for the lines typed
+; before (HIST), Ctrl-U to erase the line, Enter.  (Ctrl-C and the console's other keys act as ever.)
+; OUT: C = 0: the line is in TIB, from 1, and .Y = its length + 1 (as getline has it); C = 1: fd 0 isn't
+; the console: getline reads the line itself
+LINE_EDIT:
+    lda IO_FD_SERVER        ; fd 0, open on the console?
+    cmp #IO_FD_CLOSED
+    beq LENOT
+    lda IO_FD_FLAGS
+    and #IO_FDF_CONS
+    bne LEGO
+LENOT:
+    sec
+    rts
+LEGO:
+    lda LECTL               ; Raw (still, after a break in the last line: its fd's still open)
+    bpl LERAWON
+    lda #<LE_CTL
+    ldy #>LE_CTL
+    ldx #IO_MODE_WRITE
+    jsr IO_OPEN
+    bcs LENOT               ; (No /dev/cons/ctl: as it was)
+    sta LECTL
+    lda #<LE_RAWON
+    sta ZP_IO_BUF
+    lda #>LE_RAWON
+    sta ZP_IO_BUF + 1
+    lda #5
+    sta ZP_IO_CNT
+    stz ZP_IO_CNT + 1
+    lda LECTL
+    jsr IO_WRITE
+LERAWON:
+    stz LELEN
+    stz LEPOS
+    lda HISTLEN
+    sta LEHPOS
+LEKEYS:
+    jsr GET_CHAR
+    bcc LEKEYS              ; (Nothing: the console waits on)
+    cmp #ASCII_LF
+    bne LENOTLF
+    ldx LELEN               ; An LF: the line's end, but not the LF of a CR LF
+    bne LELFEND
+    ldx LASTCR
+    beq LELFEND
+    stz LASTCR
+    bra LEKEYS
+LELFEND:
+    stz LASTCR
+    jmp LEENTER
+LENOTLF:
+    cmp #ASCII_CR
+    bne LENOTCR
+    sta LASTCR
+    jmp LEENTER
+LENOTCR:
+    cmp #ASCII_TAB          ; (A tab is a space)
+    bne LENOTTAB
+    lda #ASCII_SPACE
+LENOTTAB:
+    cmp #ASCII_SPACE
+    bcc LECTRLKEY
+    cmp #ASCII_DEL
+    beq LEBSKEY
+    bcs LEKEYS              ; (Not ASCII: nothing)
+    jsr LEINSERT
+    bra LEKEYS
+LEBSKEY:
+    lda #ASCII_BACKSPACE
+LECTRLKEY:
+    ldx #LE_KEYS_END - LE_KEYS - 1
+LEFIND:
+    cmp LE_KEYS, x
+    beq LEACT
+    dex
+    bpl LEFIND
+    cmp #ASCII_ESC
+    beq LEESC
+    cmp #ASCII_BELL         ; (Ctrl-G rings, as the console's echo had it; other control keys: nothing)
+    bne LEKEYS
+    jsr WRITE_CHAR
+    jmp LEKEYS
+LEESC:
+    jsr GET_CHAR            ; ESC [ (or O) and a letter, or digits and ~
+    cmp #'['
+    beq LECSI
+    cmp #'O'
+    bne LEKEYS
+LECSI:
+    jsr GET_CHAR
+    cmp #'A'
+    bcc LEDIGITS
+    ldx #LE_CSI_END - LE_CSI - 1
+LEFINDCSI:
+    cmp LE_CSI, x
+    beq LEACTCSI
+    dex
+    bpl LEFINDCSI
+    bra LEKEYS
+LEDIGITS:
+    sta LEOLD               ; (The first digit: 1 or 7 Home, 4 or 8 End, 3 Delete)
+LETILDE:
+    jsr GET_CHAR
+    cmp #'~'
+    beq LETILDED
+    cmp #'0'
+    bcs LETILDE
+    jmp LEKEYS
+LETILDED:
+    lda LEOLD
+    ldx #LE_TILDE_END - LE_TILDE - 1
+LEFINDT:
+    cmp LE_TILDE, x
+    beq LEACTT
+    dex
+    bpl LEFINDT
+    jmp LEKEYS
+LEACTCSI:
+    lda LE_CSI_ACT, x
+    bra LEDO
+LEACTT:
+    lda LE_TILDE_ACT, x
+    bra LEDO
+LEACT:
+    lda LE_KEYS_ACT, x
+LEDO:                       ; .A = the action (LEA_*)
+    asl
+    tax
+    jsr LEDISPATCH
+    jmp LEKEYS
+LEDISPATCH:
+    jmp (LE_ACTIONS, x)
+;
+LEENTER:                    ; The line's done: it goes in the history
+    jsr HIST_ADD
+    lda LECTL               ; The console isn't raw any more (the fd's last close)
+    jsr IO_CLOSE
+    lda #$FF
+    sta LECTL
+    ldy LELEN
+    iny
+    clc
+    rts
+;
+LE_CTL:
+    .byte "/dev/cons/ctl", 0
+; The keys: Ctrl-A .. and BS; ESC [ (or O) and a letter; ESC [ n ~
+LEA_HOME = 0
+LEA_LEFT = 1
+LEA_RIGHT = 2
+LEA_END = 3
+LEA_BS = 4
+LEA_DEL = 5
+LEA_UP = 6
+LEA_DOWN = 7
+LEA_KILL = 8
+LE_KEYS:
+    .byte 1, 2, 6, 5, ASCII_BACKSPACE, 4, $10, $0E, $15
+LE_KEYS_END:
+LE_KEYS_ACT:
+    .byte LEA_HOME, LEA_LEFT, LEA_RIGHT, LEA_END, LEA_BS, LEA_DEL, LEA_UP, LEA_DOWN, LEA_KILL
+LE_CSI:
+    .byte 'A', 'B', 'C', 'D', 'H', 'F'
+LE_CSI_END:
+LE_CSI_ACT:
+    .byte LEA_UP, LEA_DOWN, LEA_RIGHT, LEA_LEFT, LEA_HOME, LEA_END
+LE_TILDE:
+    .byte '1', '7', '4', '8', '3'
+LE_TILDE_END:
+LE_TILDE_ACT:
+    .byte LEA_HOME, LEA_HOME, LEA_END, LEA_END, LEA_DEL
+LE_ACTIONS:
+    .word LEHOME, LELEFT, LERIGHT, LEEND, LEBS, LEDELETE, LEUP, LEDOWN, LEKILL
+;
+; The cursor to the line's start, or end; one left, or right
+LEHOME:
+    lda LEPOS
+    beq LERET
+    jsr LELEFT
+    bra LEHOME
+LEEND:
+    lda LEPOS
+    cmp LELEN
+    beq LERET
+    jsr LERIGHT
+    bra LEEND
+LELEFT:
+    lda LEPOS
+    beq LERET
+    dec LEPOS
+    lda #ASCII_BACKSPACE
+    jmp WRITE_CHAR
+LERIGHT:
+    ldy LEPOS
+    cpy LELEN
+    beq LERET
+    iny
+    sty LEPOS
+    lda (TIB), y
+    jmp WRITE_CHAR
+LERET:
+    rts
+;
+; Backspace: the character before the cursor goes; Delete: the one at it
+LEBS:
+    lda LEPOS
+    beq LERET
+    jsr LELEFT
+LEDELETE:
+    ldy LEPOS
+    cpy LELEN
+    beq LERET
+LEDELMOVE:                  ; TIB[pos + 1 ..] = TIB[pos + 2 ..]
+    iny
+    cpy LELEN
+    beq LEDELMOVED
+    iny
+    lda (TIB), y
+    dey
+    sta (TIB), y
+    bra LEDELMOVE
+LEDELMOVED:
+    dec LELEN
+    lda #1
+    bra LESHOW
+;
+; Ctrl-U: the line goes
+LEKILL:
+    jsr LEHOME
+    lda LELEN
+    stz LELEN
+    bra LESHOW
+;
+; .A typed: in at the cursor (if there's room: TIB's end less the one getline puts after the line)
+LEINSERT:
+    ldy LELEN
+    iny
+    iny
+    cpy TIBEND
+    bcs LERET
+    pha
+    ldy LELEN               ; TIB[pos + 2 ..] = TIB[pos + 1 ..], from the end
+LEINSMOVE:
+    cpy LEPOS
+    beq LEINSMOVED
+    lda (TIB), y
+    iny
+    sta (TIB), y
+    dey
+    dey
+    bra LEINSMOVE
+LEINSMOVED:
+    iny
+    pla
+    sta (TIB), y
+    inc LELEN
+    jsr LERIGHT
+    lda #0
+;
+; Write the line from the cursor on, then .A spaces (over what was there), and back to the cursor
+LESHOW:
+    sta LEPAD
+    ldy LEPOS
+LESHOWCH:
+    cpy LELEN
+    beq LESHOWPAD
+    iny
+    lda (TIB), y
+    phy
+    jsr WRITE_CHAR
+    ply
+    bra LESHOWCH
+LESHOWPAD:
+    lda LELEN               ; (The way back: what was written, and the spaces)
+    sec
+    sbc LEPOS
+    clc
+    adc LEPAD
+    sta LECNT
+    ldx LEPAD
+    beq LESHOWBACK
+LESHOWSP:
+    lda #ASCII_SPACE
+    jsr WRITE_CHAR
+    dex
+    bne LESHOWSP
+LESHOWBACK:
+    ldx LECNT
+    beq LEDONE2
+LESHOWBS:
+    lda #ASCII_BACKSPACE
+    jsr WRITE_CHAR
+    dex
+    bne LESHOWBS
+LEDONE2:
+    rts
+;
+; Up and Down: the line before (or after) the one shown, from the history; after the newest, an empty one
+LEUP:
+    ldx LEHPOS
+    jsr HIST_PREV
+    bcs LEDONE2
+    bra LELOAD
+LEDOWN:
+    ldx LEHPOS
+    cpx HISTLEN
+    beq LEDONE2
+    jsr HIST_NEXT
+LELOAD:                     ; The line at HIST + .X (HISTLEN: an empty one) in place of the one typed
+    stx LEHPOS
+    phx
+    jsr LEHOME
+    plx
+    lda LELEN
+    sta LEOLD
+    ldy #0
+LELOADCH:
+    cpx HISTLEN
+    beq LELOADED
+    lda HIST, x
+    beq LELOADED
+    iny
+    sta (TIB), y
+    inx
+    bra LELOADCH
+LELOADED:
+    sty LELEN
+    lda LEOLD               ; (Spaces over what's left of the old line)
+    sec
+    sbc LELEN
+    bcs LELOADPAD
+    lda #0
+LELOADPAD:
+    jsr LESHOW
+    jmp LEEND
+;
+; The line typed (TIB, LELEN) into the history, unless it's empty or the newest line again; the oldest lines
+; go to make room
+HIST_ADD:
+    lda LELEN
+    beq LEDONE2
+    ldx HISTLEN             ; The newest: the same?
+    jsr HIST_PREV
+    bcs HISTROOM
+    ldy #0
+HISTCMP:
+    lda HIST, x
+    beq HISTCMPEND
+    iny
+    cmp (TIB), y
+    bne HISTROOM
+    inx
+    bra HISTCMP
+HISTCMPEND:
+    cpy LELEN
+    beq LEDONE2             ; (The same)
+HISTROOM:
+    lda HISTLEN             ; Room for it and its 0?  (Up to 255 bytes: no carry)
+    sec
+    adc LELEN
+    bcc HISTPUT
+.assert HIST_SIZE = 255, error, "HIST_ADD's room check is the carry: HIST_SIZE must be 255"
+HISTDROP:                   ; No: the oldest line goes
+    ldx #0
+    jsr HIST_NEXT           ; (.X = its length + 1)
+    stx LECNT
+    ldy #0
+HISTSHIFT:
+    cpx HISTLEN
+    beq HISTSHIFTED
+    lda HIST, x
+    sta HIST, y
+    inx
+    iny
+    bra HISTSHIFT
+HISTSHIFTED:
+    sty HISTLEN
+    bra HISTROOM
+HISTPUT:
+    ldx HISTLEN
+    ldy #0
+HISTPUTCH:
+    iny
+    lda (TIB), y
+    sta HIST, x
+    inx
+    cpy LELEN
+    bne HISTPUTCH
+    stz HIST, x
+    inx
+    stx HISTLEN
+    rts
+;
+; HIST + .X is a line's start (or HISTLEN): .X = the line before's, C = 0; or C = 1, none
+HIST_PREV:
+    txa
+    beq HISTNONE
+    dex                     ; (The line before's 0)
+HISTBACK:
+    txa
+    beq HISTFOUND
+    lda HIST - 1, x
+    beq HISTFOUND
+    dex
+    bra HISTBACK
+HISTFOUND:
+    clc
+    rts
+HISTNONE:
+    sec
+    rts
+;
+; HIST + .X is a line's start: .X = the next one's (after its 0)
+HIST_NEXT:
+    lda HIST, x
+    inx
+    cmp #0
+    bne HIST_NEXT
     rts
 ;
 ; A line has been read (into TIB): with the shell's library, its pipeline's left side started (PIPECHK) and
@@ -2580,6 +3136,13 @@ wrterror:
 ERRSKIP:
     WERR ERRPTR
     jsr ERRSTAT         ; the exit status: this error's
+    lda ERRFLAG         ; An IO error: what it was (" !IO ERR! not found")
+    cmp #ERR_IO
+    bne ERRLINE
+    lda IOERR
+    jsr ERRWHY
+ERRLINE:
+    WCRLF_np
 ERREND:
     lda #0
     sta ERRFLAG
@@ -2619,6 +3182,81 @@ ESEND:
     stz HYSTATMSG,x
     ldx #SHC_STATUS
     jmp SH_CMD
+;
+; The OS's error .A, briefly, after a space (ERR_WHY: an error code, then its text; unknown: $ and the code)
+ERRWHY:
+    sta TEMP1
+    PRINT_SPACE
+    lda #<ERR_WHY
+    sta TEMP2
+    lda #>ERR_WHY
+    sta TEMP2 + 1
+EWFIND:
+    lda (TEMP2)
+    beq EWHEX                       ; (The table's end)
+    cmp TEMP1
+    beq EWFOUND
+EWSKIP:                             ; (Past this one's text)
+    jsr EWNEXT
+    lda (TEMP2)
+    bne EWSKIP
+    jsr EWNEXT
+    bra EWFIND
+EWFOUND:
+    jsr EWNEXT
+    lda (TEMP2)
+    beq EWDONE
+    jsr WRITE_CHAR
+    bra EWFOUND
+EWNEXT:
+    inc TEMP2
+    bne EWDONE
+    inc TEMP2 + 1
+    rts
+EWHEX:
+    PRINT_CHAR #'$'
+    lda TEMP1
+    jmp WRITE_BYTE
+EWDONE:
+    rts
+.pushseg
+.segment "FORTH_ROM_DATA"           ; (Paged ROM bank 0, which HyForth's task has: there's no room on page A)
+ERR_WHY:
+    .byte ERR_IO_NOT_FOUND, "not found", 0
+    .byte ERR_IO_BAD_FD, "bad fd", 0
+    .byte ERR_IO_MODE, "not opened for that", 0
+    .byte ERR_IO_WOULD_BLOCK, "would wait", 0
+    .byte ERR_IO_EOF, "end of file", 0
+    .byte ERR_IO_NO_FDS, "no fds left", 0
+    .byte ERR_IO_NO_DEVS, "device table full", 0
+    .byte ERR_IO_NAME, "bad name", 0
+    .byte ERR_IO_BAD_REQ, "not supported", 0
+    .byte ERR_IO_DEVICE, "no answer", 0
+    .byte ERR_IO_BROKEN, "broken pipe", 0
+    .byte ERR_IO_NO_PIPES, "no pipes left", 0
+    .byte ERR_IO_NS_FULL, "namespace full", 0
+    .byte ERR_IO_NS_LOOP, "bind loop", 0
+    .byte ERR_IO_NOT_READY, "not ready", 0
+    .byte ERR_IO_MEDIA, "media error", 0
+    .byte ERR_IO_NOT_FS, "no HydraFS", 0
+    .byte ERR_IO_FULL, "disk full", 0
+    .byte ERR_IO_EXISTS, "exists", 0
+    .byte ERR_IO_NOT_EMPTY, "not empty", 0
+    .byte ERR_IO_BUSY, "busy", 0
+    .byte ERR_IO_NOT_DIR, "not a directory", 0
+    .byte ERR_IO_IS_DIR, "a directory", 0
+    .byte ERR_IO_NOT_EXEC, "not executable", 0
+    .byte ERR_IO_PERM, "not allowed", 0
+    .byte ERR_SEM_BAD, "no such semaphore", 0
+    .byte ERR_SEM_NONE, "no semaphores left", 0
+    .byte ERR_SEM_BUSY, "none to take", 0
+    .byte ERR_SEM_NOT_HELD, "not held", 0
+    .byte ERR_SEM_FULL, "count full", 0
+    .byte ERR_NO_TASKS_AVAILABLE, "no tasks left", 0
+    .byte ERR_TASK_BUSY, "task busy", 0
+    .byte ERR_BAD_TASK, "bad task", 0
+    .byte 0
+.popseg
 ;
 emcount .set 0                      ; (ERR_entry counts the messages, in this scope)
 err_jumptable:

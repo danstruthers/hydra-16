@@ -1,7 +1,7 @@
 ## **The emulator and tools**
 
 A minimal Hydra-16 emulator for debugging the OS ROM without the hardware. It boots the real ROM images
-built by `os_rom/makeC02.bat` (`os_rom/bin/os_rom_C02.bin` and `os_rom/bin/paged_rom_C02.bin`).
+built by `build.js` (`os_rom/bin/os_rom_C02.bin` and `os_rom/bin/paged_rom_C02.bin`).
 
 Requires [Node.js](https://nodejs.org). No other dependencies.  The emulator, the regression tests and the card tool are in `sim/`; the commands below are run from there.
 
@@ -44,7 +44,8 @@ node hydrasim.js [options]
 | `--paste` | Type the input at the ACIA's full line rate, back to back like a paste, whether the ROM keeps up or not: bytes that arrive while the last one is still unread are lost, as on the chip, and counted in the report (default: each key waits until the ROM has read the last) |
 | `--rom DIR` | ROM images directory (default: `../os_rom/bin`) |
 | `--cycles N` | CPU cycles to run (default 20,000,000; about 5.6 seconds at 3.58 MHz) |
-| `--input TEXT` | Serial input to type, from cycle 200,000 on, a key every 20,000 cycles; `\r` = CR, `\xNN` = the byte NN (e.g. `\x03` = Ctrl-C), `\w` = wait 2M cycles before the next key (booting to the HyForth prompt takes about 0.9M cycles, so start with one) |
+| `--input TEXT` | Serial input to type, from cycle 200,000 on, a key every 20,000 cycles; `\r` = CR, `\xNN` = the byte NN (e.g. `\x03` = Ctrl-C), `\w` = wait 2M cycles before the next key (booting to the HyForth prompt takes about 0.9M cycles, so start with one), `\p` = wait for a prompt: a new one (`> `, or WOZMON's `>`), with the output quiet for 300,000 cycles after it |
+| `--stop-after-input N` | Stop `N` cycles after the last key of `--input` is typed (after its waits), or at `--cycles`: with a final `\p`, a run ends soon after its last command is done |
 | `--clock 3.58\|7.16` | The CPU clock in MHz, as the ROM was built for (`CPU_CLOCK_MULT` in `os_rom/include/hw.inc`; default 3.58).  It sets the ACIA's and the YM2151's timing in CPU cycles, and the seconds in the report |
 | `--modules N` | RAM modules installed: banks `$00` to `N*16-1` (default 3) |
 | `--shared-u N` | Shared RAM installed for `U` macro-pages 0 to N-1 (default 16; each 512K chip is 4 macro-pages) |
@@ -87,11 +88,11 @@ that got it there), and the final pseudo-register and vector RAM state.
 output for what it expects: POST, the self tests (MMU, scheduler, IO; also with 1 RAM module and 1 shared
 macro-page), POST with hardware faults, the hardware test (all of it; and from POST, with faults injected), HyForth and its libraries, pipelines, files and namespaces, tasks and console
 switching, Ctrl-C, background sound and the bell, `sleep`, the serial settings, `/dev/sd` (on a blank card
-image; also two shells reading it at once), HydraFS reading, writing, checking and quick formatting (on fixture card images kept in `sim/cards`, and on cards made by `tools/hydrafs.js`, and checked with it afterwards), partitions, the clock (`/dev/time`) and files' stamps, sparse files, and the shell: the volume chosen at boot, `boot.hys`, `cd`, the prompt, the file commands, `include`, running programs (`.hyx` executables and `.hys` scripts, by name and from `/bin`, their arguments, Ctrl-C), redirection, `echo`, the editor, and each task's environment (`/env`, `PATH`, `HOME`, `/dev/proc`).  One test runs a small program of its own instead of the ROM, and
+image; also two shells reading it at once), HydraFS reading, writing, checking and quick formatting (on fixture card images kept in `sim/cards`, and on cards made by `tools/hydrafs.js`, and checked with it afterwards), partitions, the clock (`/dev/time`) and files' stamps, sparse files, and the shell: the volume chosen at boot, `boot.hys`, `cd`, the prompt, the file commands, `include`, running programs (`.hyx` executables and `.hys` scripts, by name and from `/bin`, their arguments, Ctrl-C), redirection, `echo`, the editor, and each task's environment (`/env`, `PATH`, `HOME`, `/dev/proc`), and `/rom`.  One test runs a small program of its own instead of the ROM, and
 checks the CPU's cycle counts against WDC's table.  Four watch timing: a 1000-character paste at 57600 with
 nothing lost, console output at 115200 inside a cycle budget, SD read throughput inside a cycles-a-byte
 budget, and a limit on how long the ROM ever holds interrupts off.  The emulators run in parallel; the whole
-set takes about 10 seconds.
+set takes under a minute.
 
 ```
 node regress.js              all the tests (exit code 1 if any fails)
@@ -101,11 +102,16 @@ node regress.js --random     a new random power-up each run (default: --seed 1, 
 node regress.js --verbose    show every test's serial output, not just the failures'
 ```
 
-Or from `os_rom`: `makeC02 test` builds the ROM and then runs them.  A failure shows what was missing (or
+Or `node build.js rom test` builds the ROM and then runs them.  A failure shows what was missing (or
 found when it shouldn't be), the `hydrasim.js` command that reproduces it, and the serial output.  Every
 test also fails if a task's stack got within 32 bytes of its bottom, and the summary shows the deepest stack
 of the run (about 70 of the 256 bytes so far, with IRQ frames on top of far calls).  To add a
-test, add an entry to the `TESTS` list at the top of `regress.js` (its header describes the fields).  A test
+test, add an entry to one of the files in `sim/tests/` (by area: `system`, `forth`, `devices`, `storage`, `shell`;
+their helpers are in `tests/common.js`, and the fields are described at the top of `regress.js`).  In a test's
+input, `P` waits for the prompt (the last command done) and `W(n)` for a fixed time: use `P` between commands,
+and `W` only where time has to pass (a song playing, a background task working, a key typed into a program).
+A test's run ends 3M cycles after the prompt that follows its last key (`--stop-after-input`), or at its
+`--cycles` if that never comes; `fullRun: true` makes it run to `--cycles` (for a check of what happens later).  A test
 that wants SD cards lists them under `sd`; a card with `hfs` gets a HydraFS made on it (`quick`: as the
 Hydra's quick format makes one), and the function is handed the volume (the `Volume` class below) to put
 files in; `claim` makes a card say it's bigger than its image (`--sd FILE@B`); `image` starts a card from one
@@ -138,7 +144,7 @@ gives `mkfs` and `Volume`.
 ### **Hydra executables**
 
 `tools/mkhyx.js` puts the 16-byte `.hyx` header on a raw binary linked for a fixed address, so the shell can
-run it ([programs.md](../programming/programs.md)).  (Programs built with ca65 and `programs/hyx.cfg` have
+run it ([programs.md](../programming/programs.md)).  (Programs built with ca65 and `programs/asm/hyx.cfg` have
 the header already.)
 
 ```
@@ -149,6 +155,22 @@ node tools/mkhyx.js --info prog.hyx                show a .hyx file's header
 
 From Node, `require('./tools/mkhyx.js')` gives `hyx(load, code, entry)`, which `regress.js` uses for its test
 programs.
+
+### **The ROM disk**
+
+`tools/mkromdisk.js` makes the ROM disk, the paged ROM as one disk with `/rom`'s files on it
+([io.md](../programming/io.md#the-roms-files-rom)).  The build runs it after the link; run from `os_rom`, it
+takes the list of files and the paged ROM image:
+
+```
+node ../sim/tools/mkromdisk.js romfs.txt bin/paged_rom_C02.bin --list   ... and show each file's size and banks
+```
+
+It makes a HydraFS volume of the files with `hydrafs.js` (stamped 2000-01-01, so each build is the same), puts
+a partition table in bank 0's first block and the volume from bank 3, in the chips' order (the halves and the V1
+board's bank bits swapped), then reads the image back as the CPU would, through the emulator's own bank mapping
+(`lib/machine.js`), and fails if any file isn't its source byte for byte.  Running it again on an image it has
+already written is harmless: the blocks are written over.
 
 ### **Songs: the score compiler**
 
@@ -164,7 +186,7 @@ node tools/hysong.js song.mml song.zsm --vgm song.vgm     ... and a VGM, to hear
 node tools/hysong.js song.mml song.zsm --rom song.s       ... and a ca65 source for paged ROM bank 2 (the build's)
 ```
 
-`makeC02.bat` compiles `os_rom/songs/test.mml` this way before it assembles the ROM.  To hear what the Hydra itself
+The build compiles `os_rom/songs/test.mml` this way before it assembles the ROM (into `os_rom/obj/test_rom.s`).  To hear what the Hydra itself
 plays, run the emulator with `--ym-vgm`.
 
 ### **What it models**
@@ -179,8 +201,9 @@ plays, run the emulator with `--ym-vgm`.
 * `T`: each task has its own `$0000-$7FFF` (zero page, stack, task RAM) and `$00`/`$01` bank registers.
 * RAM bank window `$8000-$9FFF`: banks `$00-$EF` per task (only the installed modules; others read back
   floating-bus values), banks `$F0-$FF` shared, 16 macro-pages selected by `U`.
-* Paged ROM `$A000-$DFFF` (16K banks selected by `$01`), including the board's A13 half-swap: `$A000` reads
-  ROM offset `$2000`, `$C000` reads ROM offset `$0000`.
+* Paged ROM `$A000-$DFFF` (16K banks selected by `$01`), including the board's A13 half-swap (`$A000` reads
+  ROM offset `$2000`, `$C000` reads ROM offset `$0000`) and the V1 board's swap of the bank number's bits 2
+  and 3, and 6 and 7 (the image holds bank `b` at bank `swap(b)`'s place).
 * BIOS ROM `$E000-$FFFF` in 8K pages selected by `W`; I/O at `$FF00-$FFEF`; `T`/`U`/`V`/`W` at `$FFF0-$FFF3`.
 * IRQ vector RAM at `$FFFE`/`$FFFF`: written at index `V[0..3]`, read at index `IRQ_NUMBER(n)` (`n ^ 7`)
   of the lowest active IRQ line, or `V[0..3]` when no line is active (and for `BRK`).
@@ -203,3 +226,19 @@ plays, run the emulator with `--ym-vgm`.
 It is a model, not the hardware: anything it doesn't simulate (the YM2151's sound, the SD card's
 own delays, card slots, the timing of each bus cycle inside an instruction) can still behave differently on
 the board.
+
+### **Inside the emulator**
+
+`hydrasim.js` is the command line: its options, the ROM and card image files, the report, the interactive
+terminal.  The machine itself is in `sim/lib/`, with no Node.js in it (no files, no console), so it can run
+in a web page too:
+
+| File | What |
+| :--- | :--- |
+| `machine.js` | `createMachine(opt)`: memory (tasks, banks, the paged ROM and its bit swaps), `T`/`U`/`V`/`W`, the vector RAM, I/O, IRQ lines, the run loop (`run(cycle)`), the reset button, and what's watched as it runs (the trace, hot PCs, IRQs-off stretches, stack depth, the profile) |
+| `cpu65c02.js` | The W65C02S: `step()`, `interrupt()`, `reset()`, the cycle count |
+| `acia.js`, `via.js`, `ym2151.js`, `ds1747.js` | The devices: each has `read`/`write`, `tick` (cycles gone), `irqActive`, `nextEvent` (for `WAI`) and `reset` |
+| `sd.js` | The SPI bus on the VIA's port B, and SD cards on it: each card's blocks come from a block device (`{ blocks, read(n), write(n, data) }`): a file in `hydrasim.js` |
+
+A new device (a card in a slot: the VERA, [plans/VIDEO.md](../plans/VIDEO.md)) is a module like these, which
+`machine.js` connects to its I/O ports and IRQ line.

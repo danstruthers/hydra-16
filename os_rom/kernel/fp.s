@@ -218,7 +218,8 @@ FP_GET:
             bra         FP_UNMAP
 
 @bios:
-            jsr         FP_PEEK_PAGE                        ; (COMMON: switches W for the read)
+            lda         ZP_FP + FarPtr::sel
+            jsr         PEEK_PAGE                           ; (COMMON: switches W for the read)
             bra         FP_UNMAP
 
 ; Map what ZP_FP points into: its RAM bank (FP_TASK), shared bank (FP_SHARED: RAM bank and U) or paged

@@ -3,7 +3,7 @@
 ; ****************************************************************************
 ; Printing: hex, CR/LF, the monitor prompt, HStrings, clear screen (WRITE_CHAR is the serial driver's)
 
-.segment "BIOS"
+.segment "HIGH_P0"                  ; (Page 0's room above COMMON: kernel/high.s)
 
 HEX_MAP: .byte "0123456789ABCDEF"
 

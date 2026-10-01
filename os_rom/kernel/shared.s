@@ -396,6 +396,46 @@ SH_RESET_TASK:
             plp                                             ; Restore caller's I flag
             rts
 
+.pushseg
+.segment "BIOS"                                             ; (Page 0's room is after the thunks)
+
+; Take a run of shared banks by number, with no handle (the shared RAM disk's, kept until it's stopped:
+; docs/plans/DISKS.md), from IDs .Y-.X (never below SH_FIRST_FREE_ID), top-down.
+; IN: .A = banks (1+), .Y = the lowest ID, .X = the highest
+; OUT (success): .A = the first (lowest) ID, C = 0
+; OUT (failure): .A = ERR_OUT_OF_MEMORY or ERR_MEM_BAD_ARG, C = 1
+; Modifies: .X, .Y
+SH_BANK_ALLOC:
+            php                                             ; Save caller's I flag
+            sei
+            stx         ZP_M_TEMP2                          ; (The range, past _M_SYS_ENTER)
+            cpy         #SH_FIRST_FREE_ID
+            bcs         :+
+            ldy         #SH_FIRST_FREE_ID
+:
+            sty         ZP_M_TEMP
+            _M_SYS_ENTER                                    ; Select shared bank ID $00 (keeps .A)
+            jsr         SH_MAPS_SETUP
+            ldx         ZP_M_TEMP2
+            ldy         ZP_M_TEMP
+            jsr         BM_ALLOC_RUN
+            _M_SYS_LEAVE
+            jmp         MM_RETURN
+
+; Give back a run of shared banks SH_BANK_ALLOC took.  IN: .A = its first ID
+; OUT: C = 0; or .A = ERR_MEM_NOT_ALLOC, C = 1.  Modifies: .X, .Y
+SH_BANK_FREE:
+            php                                             ; Save caller's I flag
+            sei
+            _M_SYS_ENTER                                    ; Select shared bank ID $00 (keeps .A)
+            jsr         SH_MAPS_SETUP
+            ldx         #$FF
+            jsr         BM_FREE_RUN
+            _M_SYS_LEAVE
+            jmp         MM_RETURN
+
+.popseg
+
 ; ---- helpers (shared bank ID $00 selected, IRQs off)
 
 ; Point ZP_M_BM / ZP_M_BE at the shared bank maps.  Preserves .A

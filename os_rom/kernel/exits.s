@@ -51,6 +51,120 @@ EXIT_SIGNALLED:
 EXIT_S_BREAK:   .byte   "interrupt", 0
 EXIT_S_KILLED:  .byte   "killed", 0
 
+; As this task ends: the tasks it started (their ZP_TASK_OWNER: it) get its owner instead, as Unix gives its
+; orphans to init, so a new task in its slot isn't taken for their parent: the RAM disk's areas (/ram/N, for N's
+; family) and kills follow the owner chain (docs/plans/DISKS.md).  Then its own area goes (TASK_AREA_END).
+; (From TASK_EXIT_NOTED, after MM_TASK_RESET has closed its fds; IRQs on.)  Modifies: .A, .X, .Y, ZP_TEMP, ZP_TEMP_2
+TASK_ORPHANS:
+            php
+            sei
+            ldy         T_REGISTER                          ; .Y = this task, all the way through
+            lda         ZP_TASK_OWNER                       ; .A = its owner, theirs now
+            ldx         #MAX_TASK_NUMBER
+
+@task:
+            stx         T_REGISTER                          ; Quick look (no stack use!)
+            cpy         ZP_TASK_OWNER
+            bne         :+
+            sta         ZP_TASK_OWNER
+:
+            dex
+            bne         @task                               ; (Tasks 15-1: task 0, the system's, has none)
+            sty         T_REGISTER
+            plp
+
+; As this task ends: its area on the RAM disk (/ram/N), if it may have one, removed with all that's in it
+; (HFS_AREA_END, run in the storage task: TASK_CALL).  Which areas there may be is the storage task's RAMD_AREAS:
+; a quick look.  Modifies: .A, .X, .Y, ZP_TEMP, ZP_TEMP_2
+TASK_AREA_END:
+            php
+            sei
+            ldy         T_REGISTER                          ; .Y = this task
+            lda         #STORAGE_TASK_NUM
+            sta         T_REGISTER                          ; Quick look (no stack use!)
+            lda         #0
+            tax
+            bbr3        TASK_STATUS_REG, :+                 ; (TASK_RESIDENT_FLAG: not started yet, no areas)
+            lda         RAMD_AREAS
+            ldx         RAMD_AREAS + 1
+:
+            sty         T_REGISTER
+            plp
+            sta         ZP_TEMP                             ; Its bit: bit .Y of .X.A
+            stx         ZP_TEMP_2
+            tya
+            tax
+:
+            lsr         ZP_TEMP_2
+            ror         ZP_TEMP
+            dex
+            bpl         :-
+            bcc         @done                               ; (No area)
+            LOAD_ADDR   ::HFS_AREA_END_G, ZP_TC_VEC
+            lda         #STORAGE_TASK_NUM
+            sta         ZP_TC_TASK
+            tya
+            jmp         TASK_CALL                           ; (.A = this task)
+
+@done:
+            rts
+
+; May task .A (the one asking) use task .X's things?  .Y = 0: the way the RAM disk's areas go (/ram/X is X's
+; family's): .A is .X, or a task .X started (directly or not).  .Y = 1: the other way (/proc, planned: a task, or
+; a debugger, may reach the tasks it started): .X is .A, or a task .A started.  Task 0, the system's, may use
+; anything.  OUT: C = 0: yes; C = 1: no.  Preserves .X, .Y.  Modifies: .A, ZP_TEMP, ZP_TEMP_2
+TASK_MAY:
+            cmp         #SYSTEM_TASK_NUM
+            beq         @yes
+            phx
+            phy
+            cpy         #0
+            beq         :+
+            pha                                             ; (The other way: .A and .X swapped)
+            txa
+            plx
+:
+            jsr         TASK_DESCENDS
+            ply
+            plx
+            rts
+
+@yes:
+            clc
+            rts
+
+; Is task .A task .X, or one .X started (directly or not: up .A's owner chain, 16 steps at most)?
+; OUT: C = 0: yes; C = 1: no.  Modifies: .A, .X, .Y, ZP_TEMP, ZP_TEMP_2
+TASK_DESCENDS:
+            stx         ZP_TEMP                             ; (The one to find)
+            ldy         #MAX_TASK_NUMBER + 1
+            sty         ZP_TEMP_2
+
+@up:
+            cmp         ZP_TEMP
+            beq         @yes
+            cmp         #MAX_TASK_NUMBER + 1
+            bcs         @no                                 ; ($FF: nobody started it)
+            tax
+            php
+            sei
+            ldy         T_REGISTER                          ; Its owner: a quick look in its zero page (no
+            stx         T_REGISTER                          ;   RAM but the registers while T is that task)
+            ldx         ZP_TASK_OWNER
+            sty         T_REGISTER
+            plp
+            txa
+            dec         ZP_TEMP_2
+            bne         @up
+
+@no:
+            sec
+            rts
+
+@yes:
+            clc
+            rts
+
 ; This task's exit record: .A = the code; .X = 0: no message, or its message is at ZP_IO_BUF (in task RAM, or on
 ; this page).  Preserves .X, .Y (and the caller's I flag).  Modifies: .A, ZP_TEMP, ZP_TEMP_2
 EXIT_NOTE:

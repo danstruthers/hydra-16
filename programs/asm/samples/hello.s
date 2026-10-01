@@ -4,7 +4,7 @@
 ; hello.s - a sample Hydra executable (.hyx): it says hello, with its task number and its arguments (hello a b:
 ; "Hello from task B: a b"), and returns, which ends its task (and the shell's prompt comes back).
 ;
-;   Build it with make.bat (ca65, then ld65 with hyx.cfg, which puts the header on it: bin\hello.hyx).
+;   Build it with make.bat, or build.js asm (ca65, then ld65 with hyx.cfg, which puts the header on it: bin\hello.hyx).
 ; Put it on a card (sim/tools/hydrafs.js put, or cp on the Hydra), in the current directory or the card's
 ; /bin, and type hello (or run hello.hyx).
 

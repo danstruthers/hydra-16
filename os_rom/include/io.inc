@@ -236,19 +236,73 @@ SND_REFS            = $0328     ; Each fid's fds (SND_FIDS: fid N at SND_REFS + 
 SND_MASTER          = $0330     ; The master volume (0-127)
 SND_RAM_END         = $0331
 
-; Storage: /dev/sd/N/data and /dev/sd/N/ctl (storage.s, spi.s, sd.s, sd_srv.s; ROM page 3), a card on each
-; SPI device N (0-7; the board's SD socket, header J18, is device 0).  A fid is SD_FID_* | the card.
-SD_MAX_CARDS        = 8
+; Storage: /dev/sd/N/data and /dev/sd/N/ctl (storage.s, spi.s, sd.s, sd_srv.s; ROM page 3), a disk N (docs/plans/
+; DISKS.md), one character: an SD card by its SPI device's number as a hex digit (0-7 now; the board's SD socket,
+; header J18, is device 0; 8-f are slot cards'), any other disk by a letter that isn't one: x the ROM disk, r the
+; RAM disk, s the shared RAM disk.  A disk's number, the tables' index, isn't its name: cards 0-7 are disks 0-7,
+; then x, r and s are 8, 9 and 10.  A fid is SD_FID_* | the disk.
+SD_MAX_CARDS        = 8         ; SD cards: disks 0-7
+DISK_ROM            = 8         ; The ROM disk: the paged ROM (sd.s: SD_ROM_READ; sim/tools/mkromdisk.js), bound at /rom
+DISK_NAME_ROM       = 'x'       ;   its name: /dev/sd/x, /sd/x
+DISK_RAM            = 9         ; The RAM disk: the storage task's banks on the RAM modules, bound at /ram (the
+DISK_NAME_RAM       = 'r'       ;   tasks' areas, /ram/0-f)
+DISK_SRAM           = 10        ; The shared RAM disk: shared RAM banks, bound at /ram/s
+DISK_NAME_SRAM      = 's'
+DISK_MAX            = 16        ; Disks the tables are for (a fid's low 4 bits)
+.assert     DISK_SRAM = DISK_RAM + 1 .and DISK_NAME_SRAM = DISK_NAME_RAM + 1 .and DISK_NAME_RAM > DISK_NAME_ROM - 8, error, "DISK_FROM_NAME: r and s, 9 and 10"
+
+; A disk's name (/dev/sd/N, /sd/N) to its number.  IN: .A = the name's character.  OUT: C = 0, .A = the disk; or
+; C = 1: no such disk.  (Anonymous labels: the caller's cheap local labels go on past it)
+.macro DISK_FROM_NAME
+            cmp         #DISK_NAME_ROM
+            bne         :+
+            lda         #DISK_ROM                           ; x: the ROM disk
+            clc
+            bra         :+++
+:
+            cmp         #DISK_NAME_RAM
+            bcc         :+                                  ; (Below r: a card's digit?)
+            sbc         #DISK_NAME_RAM - DISK_RAM           ; r, s: the RAM disks (C = 1 from the cmp; past s,
+            cmp         #DISK_SRAM + 1                      ;   C = 1: no disk)
+            bra         :++
+:
+            sec
+            sbc         #'0'
+            cmp         #SD_MAX_CARDS                       ; A card (characters below '0' wrap: not one)
+:
+.endmacro
+
+; The RAM disks (docs/plans/DISKS.md): 8K banks, block n in bank n / 16 of the disk's run (from its first, in
+; RAMD_FIRST), at $8000 + (n % 16) * 512.  The RAM disk's banks are the storage task's own (MM_BANK_ALLOC_IN), the
+; shared one's shared banks (SH_BANK_ALLOC).  Started at boot with these sizes, and quick-formatted (they lose
+; their files at a reset); "start SIZE [FROM-TO]" and "stop" on /dev/sd/r/ctl and /dev/sd/s/ctl change them
+RAMD_BANKS          = 32        ; The RAM disk at boot: 256K, from any module
+SRAMD_BANKS         = 64        ; The shared RAM disk at boot: 512K, from free shared banks ...
+RAMD_SHARED_TOP     = $7F       ;   in the lower half (shared bank IDs $01-$7F)
+RAMD_FIRST          = $09E0     ; Each disk's first bank (or first shared bank ID): DISK_MAX bytes
+RAMD_AREAS          = $09F0     ; The areas there may be on the RAM disk: bit N (of 16) for /r/N, set as one's
+                                ;   used, cleared when it's removed (TASK_AREA_END, page 5, looks as a task ends)
+RAMD_AREA_TASK      = $09F2     ; HFS_AREA_END: the area's task ...
+RAMD_AREA_LEN       = $09F3     ;   the path's length so far ...
+RAMD_AREA_PATH      = $09F4     ;   and where it is (256 bytes from the MMU: STORAGE_INIT3)
+PAGED_ROM_BASE      = $A000     ; (Where the CPU sees a paged ROM bank: $A000-$DFFF)
+DISK_ROM_BLOCKS     = 256 * 32  ;   the ROM disk's blocks: the whole paged ROM (block n: bank n / 32, $A000 + n % 32 * 512)
 SD_FID_DATA         = $00       ; /dev/sd/N/data: the card as bytes
 SD_FID_CTL          = $10       ; /dev/sd/N/ctl: its details (read) and commands (write)
 SD_STATE_SDSC       = 1         ; A card's state: 0 = not started; byte addresses
 SD_STATE_SDHC       = 2         ;   block addresses (SDHC, SDXC)
 SD_CTL_INIT         = 1         ; IO_CTL code: start the card again (e.g. after changing it)
-SD_CARD_STATE       = $0200     ; In the storage task's RAM: each card's state (SD_MAX_CARDS bytes)
-SD_CARD_BLOCKS      = $0208     ;   and size in blocks (4 bytes each, from its CSD register)
+SD_STATE_ROM        = 3         ;   the ROM disk (block addresses; read only)
+SD_STATE_RAM        = 4         ;   the RAM disk (the storage task's banks)
+SD_STATE_SRAM       = 5         ;   the shared RAM disk (shared banks)
 SD_CSD              = $0228     ; The last CSD register read (16 bytes)
+; Each disk's state and size, and HydraFS's numbers for it (below), in the storage task's RAM above its scratch
+; ($0800-$08FF): DISK_MAX bytes, or 4 bytes at the disk * 4 (arrays 64 bytes apart), the storage task's MMU floor
+; above them (HFS_SCRATCH_FLOOR)
+SD_CARD_STATE       = $0900     ; Each disk's state: 0 = not started, SD_STATE_*
+SD_CARD_BLOCKS      = $0920     ;   and size in blocks (4 bytes each: a card's from its CSD register)
 
-; HydraFS: the files on the cards, /sd/N/... (io/hfs_srv.s, ROM page 3, in the storage task, on the SD
+; HydraFS: the files on the cards, /sd/N/... (fs/hfs_srv.s, ROM page 3, in the storage task, on the SD
 ; driver's block cache).  The device is "hfs"; the shell mounts it at /sd, so /sd/0 is card 0's root
 ; directory, and the tasks it starts inherit the mount.  The format is in docs/plans/HYDRAFS.md, and
 ; sim/tools/hydrafs.js makes and reads card images on the PC.
@@ -319,23 +373,26 @@ HFS_X_FIRST         = 8         ; 84 extents, HFS_EXT_SIZE bytes each
 HFS_X_MAX           = 84
 .assert     HFS_X_FIRST + HFS_X_MAX * HFS_EXT_SIZE = HFS_BLOCK, error, "An extent block's extents fill it"
 
-; In the storage task's RAM, next to the SD driver's.  Per card: whether it holds a HydraFS, and the
-; superblock's numbers the server works from (4 bytes each, at the card * 4, in arrays 32 bytes apart in
-; the superblock's order, so that one loop copies them: HFS_VOLUME, HFS_SB_SAVE).  The counters (free,
-; hint, qid, stamp) change in RAM and go back to the superblock at the end of the request (HFS_FINISH)
-HFS_V_STATE         = $0240     ; 0 = not looked at yet, 1 = HydraFS, $FF = not one (SD_MAX_CARDS bytes)
-HFS_V_CLUSTERS      = $0248     ; Clusters in the data area
-HFS_V_MAP           = $0268     ; The free map's first block
-HFS_V_MAPSZ         = $0288     ;   its size in blocks
-HFS_V_DATA          = $02A8     ; The data area's first block
-HFS_V_FREE          = $02C8     ; Free clusters
-HFS_V_HINT          = $02E8     ; Where to look for a free cluster next
-HFS_V_QID           = $0308     ; The next qid id
-HFS_V_STAMP         = $0328     ; The latest modification stamp
-HFS_V_MINIT         = $0348     ; The free map's blocks written (HFS_SB_MAPINIT; version 1: HFS_V_MAPSZ)
-.assert     HFS_V_MINIT - HFS_V_CLUSTERS = (HFS_SB_MAPINIT - HFS_SB_CLUSTERS) * 8, error, "HFS_V_*: 32 apart, in the superblock's order"
-.assert     HFS_V_MINIT - HFS_V_FREE < 256, error, "HFS_SB_SAVE reaches HFS_V_FREE ... HFS_V_MINIT with .X (HFS_VOLUME: not HFS_V_MINIT)"
-.assert     HFS_V_MINIT + 32 <= HFS_FHDR, error, "The HFS_V_* arrays must end below HFS_FHDR"
+; In the storage task's RAM, beside the SD driver's (SD_CARD_STATE ...).  Per disk: whether it holds a HydraFS,
+; and the superblock's numbers the server works from (4 bytes each, at the disk * 4, in arrays 64 bytes apart in
+; the superblock's order: four to a page, so a loop with .X copies a page's four: HFS_VOLUME, HFS_SB_SAVE).  The
+; counters (free, hint, qid, stamp) change in RAM and go back to the superblock at the end of the request
+; (HFS_FINISH)
+HFS_V_STATE         = $0910     ; 0 = not looked at yet, 1 = HydraFS, $FF = not one (DISK_MAX bytes)
+HFS_V_MINIT         = $09A0     ; The free map's blocks written (HFS_SB_MAPINIT; version 1: HFS_V_MAPSZ)
+HFS_V_CLUSTERS      = $0A00     ; Clusters in the data area             (the superblock's numbers: a page ...)
+HFS_V_MAP           = $0A40     ; The free map's first block
+HFS_V_MAPSZ         = $0A80     ;   its size in blocks
+HFS_V_DATA          = $0AC0     ; The data area's first block
+HFS_V_FREE          = $0B00     ; Free clusters                         (... and the counters: the next page)
+HFS_V_HINT          = $0B40     ; Where to look for a free cluster next
+HFS_V_QID           = $0B80     ; The next qid id
+HFS_V_STAMP         = $0BC0     ; The latest modification stamp
+HFS_V_STRIDE        = HFS_V_MAP - HFS_V_CLUSTERS
+.assert     HFS_V_STRIDE = DISK_MAX * 4, error, "HFS_V_*: an array is 4 bytes a disk"
+.assert     HFS_V_DATA - HFS_V_CLUSTERS = (HFS_SB_DATA - HFS_SB_CLUSTERS) * HFS_V_STRIDE / 4 .and HFS_V_STAMP - HFS_V_FREE = (HFS_SB_STAMP - HFS_SB_FREE) * HFS_V_STRIDE / 4, error, "HFS_V_*: in the superblock's order"
+.assert     HFS_V_FREE - HFS_V_CLUSTERS = $100 .and <HFS_V_CLUSTERS = 0, error, "HFS_V_*: the numbers a page, the counters the next"
+.assert     HFS_SB_FREE = HFS_SB_DATA + 4 .and HFS_SB_MAPINIT = HFS_SB_STAMP + 4, error, "The superblock's numbers, counters and HFS_SB_MAPINIT in a row"
 ; The server's scratch (RAM: only pointers need to be in its ZP), in the page the storage task keeps from its
 ; MMU (SD_INIT raises its page floor above it: HFS_SCRATCH_FLOOR)
 HFS_META            = $0800     ; The metadata buffer (512 bytes from the MMU): the free map, extent blocks,
@@ -375,7 +432,7 @@ HFS_FMT_FULL        = $01       ;   the whole free map written
 HFS_FMT_PART        = $02       ;   a partition made for it, if the card hasn't one (-p)
 HFS_FMT_BLKS        = $0848     ;   the size asked for, in blocks (0: the whole card) (4)
 HFS_CK_MARKS        = $084C     ; Check: <> 0: the pass's bitmap has marks in it (0: it's all clear)
-HFS_V_BASE          = $0850     ; Per card, at the card * 4: its HydraFS's first block on the card (4: its
+HFS_V_BASE          = $0960     ; Per disk, at the disk * 4: its HydraFS's first block on the disk (4: its
                                 ;   partition's first, or 0), set by HFS_VOLUME or a format
 HFS_LOC             = $0870     ; Where an entry is: its block (4), then its index in the block (0-7)
 ; Sparse files (hfs_sparse.s): holes, and writes past a file's end
@@ -398,7 +455,10 @@ HFS_WK              = $08A0     ;   and the gap's whole clusters (a hole) (4)
 HFS_HOLEF           = $08A4     ; A read: <> 0: the block is in a hole (zeros)
 HFS_HOLE            = $FF       ; A hole's extent: its first cluster is $FFFFFFFF
 HFS_IN_HOLE         = $01       ; HFS_FILE_BLOCK's C = 1 .A for a block in a hole (not an error)
-HFS_SCRATCH_FLOOR   = $09       ; The storage task's MMU page floor: the page above the scratch
+HFS_SCRATCH_FLOOR   = $0C       ; The storage task's MMU page floor: the page above the scratch and the disks' tables
+.assert     HFS_V_STAMP + HFS_V_STRIDE <= HFS_SCRATCH_FLOOR * 256 .and HFS_V_MINIT + HFS_V_STRIDE <= HFS_V_CLUSTERS, error, "The disks' tables must end below HFS_SCRATCH_FLOOR"
+.assert     SD_CARD_BLOCKS + DISK_MAX * 4 <= HFS_V_BASE .and HFS_V_BASE + DISK_MAX * 4 <= HFS_V_MINIT .and HFS_V_STATE + DISK_MAX <= SD_CARD_BLOCKS, error, "The disks' tables overlap"
+.assert     HFS_V_MINIT + DISK_MAX * 4 <= RAMD_FIRST .and RAMD_FIRST + DISK_MAX <= RAMD_AREAS .and RAMD_AREA_PATH + 2 <= HFS_V_CLUSTERS, error, "RAMD_FIRST ... overlap the disks' tables"
 .assert     HFS_HOLEF + 1 <= HFS_SCRATCH_FLOOR * 256, error, "The HydraFS scratch must end below HFS_SCRATCH_FLOOR"
 .assert     HFS_POSO = HFS_POSB + 4, error, "A place is HFS_POSB then HFS_POSO (HFS_POS_SIZE bytes)"
 HFS_FHDR            = $0380     ; An open file: HFS_MAX_OPEN headers of HFS_FHDR_SIZE bytes (at the fid * 16)
@@ -456,7 +516,7 @@ PIPE_WR_WAIT        = 6         ;   and to write
 PIPE_BUF_PAGE       = PIPE_TABLE + PIPE_MAX * PIPE_ENTRY_SIZE   ; The rings' first page: PIPE_MAX pages
                                 ;   from the pipe task's MMU (PIPE_INIT), one per pipe
 
-; Serial driver: the /dev/cons and /dev/ser server (drivers/serial.s, io/ser_srv.s)
+; Serial driver: the /dev/cons and /dev/ser server (drivers/serial.s, servers/ser_srv.s)
 SER_RX_BUF          = $0200     ; 256-byte RX ring, in the serial task's RAM
 SER_TX_BUF          = $0300     ; 256-byte TX ring, in the serial task's RAM
 SER_FID_CONS        = 0         ; /dev/cons: reads only for the foreground task
@@ -504,7 +564,7 @@ SER_KEY_EOF2        = $1A       ; Ctrl-Z: the same
 SER_KEY_PREFIX      = $1D       ; Ctrl-]: the next key is a console command: a task (0-F) to bring to the
                                 ;   front, l to list them; Ctrl-] again for the key itself (SER_COMMAND)
 
-; /dev/proc (io/proc_srv.s): the tasks.  A fid is PROC_FID_* | task
+; /dev/proc (servers/proc_srv.s): the tasks.  A fid is PROC_FID_* | task
 PROC_FID_LIST       = $00       ; /dev/proc: a line per task (read)
 PROC_FID_STATUS     = $10       ; /dev/proc/N, /dev/proc/N/status: task N's line (read)
 PROC_FID_CTL        = $20       ; /dev/proc/N/ctl: kill, break or fg (write)

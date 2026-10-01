@@ -31,6 +31,10 @@ SD_TOKEN_TRIES      = 4000      ; Bytes to wait for a data token or the end of b
 ; or SD_STATE_SDSC, and SD_CARD_BLOCKS its size); or C = 1, .A = error.  Modifies: .A, .X, .Y
 SD_INIT:
             ldx         SD_DEV
+            cpx         #SD_MAX_CARDS                       ; Not a card: the ROM disk, a RAM disk
+            bcc         :+
+            jmp         SD_DISK_INIT
+:
             stz         SD_CARD_STATE,X
             jsr         SPI_INIT
             lda         #10                                 ; 80 clocks, nothing selected
@@ -145,13 +149,19 @@ SD_NOT_READY:
             lda         #ERR_IO_NOT_READY
             sec
             rts
-
 ; Read block SD_LBA (32 bits) into the 512 bytes at SD_BUF.  OUT: C = 0; or C = 1, .A = error
 ; Modifies: .A, .X, .Y
 SD_READ_BLOCK:
             ldx         SD_DEV
             lda         SD_CARD_STATE,X
             beq         SD_NOT_READY
+            cmp         #SD_STATE_ROM
+            bne         :+
+            jmp         SD_ROM_READ
+:
+            bcc         :+                                  ; (Past the ROM's: a RAM disk)
+            jmp         SD_RAM_READ
+:
             jsr         SD_BLOCK_ARG
             lda         SD_DEV
             jsr         SPI_SELECT
@@ -188,6 +198,13 @@ SD_WRITE_BLOCK:
             ldx         SD_DEV
             lda         SD_CARD_STATE,X
             beq         SD_NOT_READY
+            cmp         #SD_STATE_ROM
+            bne         :+
+            jmp         SD_ROM_WRITE
+:
+            bcc         :+                                  ; (Past the ROM's: a RAM disk)
+            jmp         SD_RAM_WRITE
+:
             jsr         SD_BLOCK_ARG
             lda         SD_DEV
             jsr         SPI_SELECT
@@ -472,4 +489,242 @@ SD_END:
             jsr         SPI_DESELECT
             jsr         SPI_RECV
             pla
+            rts
+
+; ****************************************************************************
+; The ROM disk (disk DISK_ROM): the paged ROM as a block device, read only (docs/plans/DISKS.md;
+; sim/tools/mkromdisk.js makes it).  Block n is bank n / 32, at $A000 + (n % 32) * 512, as the CPU sees it: a
+; block is always inside one bank (and one of its 8K halves, which the board swaps), so a read selects its bank
+; and copies 512 bytes from one place, and nothing assumes the next bank follows.
+.assert     $4000 .mod HFS_BLOCK = 0 .and $2000 .mod HFS_BLOCK = 0, error, "A ROM disk block must be inside one bank, and one half of it"
+.assert     DISK_ROM_BLOCKS = 256 * ($4000 / HFS_BLOCK), error, "The ROM disk: the whole paged ROM, 256 banks"
+
+; Start it: nothing to start; its state and size.  OUT: C = 0.  Modifies: .A, .X
+SD_ROM_INIT:
+            lda         #SD_STATE_ROM
+            sta         SD_CARD_STATE,X
+            txa
+            asl
+            asl
+            tax
+            lda         #<DISK_ROM_BLOCKS
+            sta         SD_CARD_BLOCKS,X
+            lda         #>DISK_ROM_BLOCKS
+            sta         SD_CARD_BLOCKS + 1,X
+            stz         SD_CARD_BLOCKS + 2,X
+            stz         SD_CARD_BLOCKS + 3,X
+            clc
+            rts
+
+; Read block SD_LBA of the ROM disk into the 512 bytes at SD_BUF: the storage task's own paged ROM bank ($01)
+; set to the block's for the copy, and put back.  Past the paged ROM: ERR_IO_MEDIA.  SD_ARG is the pointer (an SD
+; card's command argument, not in use here).  OUT: C = 0; or C = 1, .A = error.  Modifies: .A, .X, .Y
+SD_ROM_READ:
+            lda         SD_LBA + 3
+            ora         SD_LBA + 2
+            bne         @past
+            lda         SD_LBA + 1
+            cmp         #>DISK_ROM_BLOCKS
+            bcs         @past
+            asl                                             ; The bank: SD_LBA / 32 (13 bits: 8 of them)
+            asl
+            asl
+            sta         SD_ARG + 2
+            lda         SD_LBA
+            lsr
+            lsr
+            lsr
+            lsr
+            lsr
+            ora         SD_ARG + 2
+            tax
+            lda         SD_LBA                              ; Where in it: $A000 + (SD_LBA % 32) * 512
+            and         #$1F
+            asl
+            adc         #>PAGED_ROM_BASE                    ; (C = 0: the asl's bit 7 was 0)
+            sta         SD_ARG + 1
+            stz         SD_ARG
+            lda         ROM_BANK_REG                        ; (Reads give this task's last write)
+            pha
+            stx         ROM_BANK_REG
+            ldy         #0
+
+@first:
+            lda         (SD_ARG),Y
+            sta         (SD_BUF),Y
+            iny
+            bne         @first
+            inc         SD_ARG + 1
+            inc         SD_BUF + 1
+
+@second:
+            lda         (SD_ARG),Y
+            sta         (SD_BUF),Y
+            iny
+            bne         @second
+            dec         SD_BUF + 1
+            pla
+            sta         ROM_BANK_REG
+            clc
+            rts
+
+@past:
+            lda         #ERR_IO_MEDIA
+            sec
+            rts
+
+; A write to the ROM disk: refused
+SD_ROM_WRITE:
+            lda         #ERR_IO_MODE
+            sec
+            rts
+
+; A disk that isn't a card, at SD_INIT (.X = SD_DEV): the ROM disk starts; a RAM disk is started by "start" on
+; its ctl file (SD_RAM_START), so here it's ready or it isn't.  OUT: C = 0; or C = 1, .A = ERR_IO_DEVICE
+SD_DISK_INIT:
+            cpx         #DISK_ROM
+            beq         SD_ROM_INIT
+            lda         SD_CARD_STATE,X
+            beq         :+
+            clc
+            rts
+:
+            lda         #ERR_IO_DEVICE
+            sec
+            rts
+
+; ****************************************************************************
+; The RAM disks (DISK_RAM, DISK_SRAM): 8K banks as a block device (docs/plans/DISKS.md; started and stopped in
+; sd_srv.s).  Block n is bank n / 16 of the disk's run, from RAMD_FIRST, at $8000 + (n % 16) * 512: the RAM
+; disk's banks are the storage task's own (its $00), the shared one's shared bank IDs (U and $00).  A block is
+; inside one bank, so a read or write maps one bank, copies 512 bytes, and puts the bank (and U) back.
+.assert     $2000 .mod HFS_BLOCK = 0, error, "A RAM disk block must be inside one bank"
+
+; Read block SD_LBA of RAM disk SD_DEV into the 512 bytes at SD_BUF.  OUT: C = 0; or C = 1, .A = ERR_IO_MEDIA
+; (past its end).  Modifies: .A, .X, .Y
+SD_RAM_READ:
+            jsr         SD_RAM_MAP
+            bcs         @done
+            ldy         #0
+
+@first:
+            lda         (SD_ARG),Y
+            sta         (SD_BUF),Y
+            iny
+            bne         @first
+            inc         SD_ARG + 1
+            inc         SD_BUF + 1
+
+@second:
+            lda         (SD_ARG),Y
+            sta         (SD_BUF),Y
+            iny
+            bne         @second
+            dec         SD_BUF + 1
+            jmp         SD_RAM_UNMAP
+
+@done:
+            rts
+
+; Write the 512 bytes at SD_BUF to block SD_LBA of RAM disk SD_DEV.  OUT: C = 0; or C = 1, .A = ERR_IO_MEDIA.
+; Modifies: .A, .X, .Y
+SD_RAM_WRITE:
+            jsr         SD_RAM_MAP
+            bcs         @done
+            ldy         #0
+
+@first:
+            lda         (SD_BUF),Y
+            sta         (SD_ARG),Y
+            iny
+            bne         @first
+            inc         SD_ARG + 1
+            inc         SD_BUF + 1
+
+@second:
+            lda         (SD_BUF),Y
+            sta         (SD_ARG),Y
+            iny
+            bne         @second
+            dec         SD_BUF + 1
+            jmp         SD_RAM_UNMAP
+
+@done:
+            rts
+
+; Map block SD_LBA of RAM disk SD_DEV at $8000-$9FFF: SD_ARG -> it, and the storage task's RAM bank and U as they
+; were in SD_ARG + 2 and SD_ARG + 3, for SD_RAM_UNMAP.  (The block cache, SD_BUF, is in task RAM, below $8000.)
+; OUT: C = 0; or C = 1, .A = ERR_IO_MEDIA (past the disk's end: nothing mapped).  Modifies: .A, .X
+SD_RAM_MAP:
+            lda         SD_LBA + 3
+            ora         SD_LBA + 2
+            bne         @past
+            lda         SD_DEV                              ; Inside the disk?
+            asl
+            asl
+            tax
+            lda         SD_LBA
+            cmp         SD_CARD_BLOCKS,X
+            lda         SD_LBA + 1
+            sbc         SD_CARD_BLOCKS + 1,X
+            bcs         @past
+            lda         SD_LBA                              ; Where in its bank: $8000 + (SD_LBA % 16) * 512
+            and         #$0F
+            asl
+            ora         #>::PAGED_RAM_BASE
+            sta         SD_ARG + 1
+            stz         SD_ARG
+            lda         SD_LBA + 1                          ; The bank: the first + SD_LBA / 16 (the disk is
+            asl                                             ;   256 banks at most: 8 bits)
+            asl
+            asl
+            asl
+            sta         SD_ARG + 2
+            lda         SD_LBA
+            lsr
+            lsr
+            lsr
+            lsr
+            ora         SD_ARG + 2
+            ldx         SD_DEV
+            clc
+            adc         RAMD_FIRST,X
+            tax
+            lda         RAM_BANK_REG                        ; (Put back by SD_RAM_UNMAP)
+            sta         SD_ARG + 2
+            lda         U_REGISTER
+            sta         SD_ARG + 3
+            lda         SD_DEV
+            cmp         #DISK_SRAM
+            beq         @shared
+            stx         RAM_BANK_REG                        ; The RAM disk: the storage task's own bank
+            clc
+            rts
+
+@shared:                                                    ; The shared one: bank ID .X, U = ID >> 4 and the
+            txa                                             ;   bank $F0 | (ID & $0F), as SH_SELECT_BANK maps it
+            and         #$0F
+            ora         #$F0
+            sta         RAM_BANK_REG
+            txa
+            lsr
+            lsr
+            lsr
+            lsr
+            sta         U_REGISTER
+            clc
+            rts
+
+@past:
+            lda         #ERR_IO_MEDIA
+            sec
+            rts
+
+; Put back what SD_RAM_MAP mapped.  OUT: C = 0
+SD_RAM_UNMAP:
+            lda         SD_ARG + 2
+            sta         RAM_BANK_REG
+            lda         SD_ARG + 3
+            sta         U_REGISTER
+            clc
             rts

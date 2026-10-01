@@ -329,27 +329,29 @@ IO_TEST:
             jsr         IO_CLOSE
             _M_IT_FAIL_IF_C     'w'
 
-; The namespace: a bind, a mount (the server gets the rest of the name), a loop of binds, and unmounting
+; The namespace: a bind, a mount (the server gets the rest of the name), a loop of binds, and unmounting.
+; Each step's entries go before the next, so it needs only 2 of the task's free entries (NS_ENTRIES: the
+; shell's, /sd, has one already)
             _M_IT_NS    IO_BIND, S_NS_N, S_DEV_NULL
             _M_IT_FAIL_IF_C     'x'
             _M_IT_OPEN  S_NS_N, IO_MODE_RDWR
             _M_IT_FAIL_IF_C     'x'
             jsr         IO_CLOSE
+            _M_IT_UNMOUNT       S_NS_N
+            _M_IT_FAIL_IF_C     '1'
             _M_IT_NS    IO_MOUNT, S_NS_Z, S_ZERO
             _M_IT_FAIL_IF_C     'y'
             _M_IT_OPEN  S_NS_Z_SUB, IO_MODE_READ
             _M_IT_FAIL_IF_C     'y'
             jsr         IO_CLOSE
+            _M_IT_UNMOUNT       S_NS_Z
+            _M_IT_FAIL_IF_C     '1'
             _M_IT_NS    IO_BIND, S_NS_X, S_NS_Y
             _M_IT_FAIL_IF_C     'z'
             _M_IT_NS    IO_BIND, S_NS_Y, S_NS_X
             _M_IT_FAIL_IF_C     'z'
             _M_IT_OPEN  S_NS_X, IO_MODE_READ
             _M_IT_FAIL_IF_NC    'z', ERR_IO_NS_LOOP
-            _M_IT_UNMOUNT       S_NS_N
-            _M_IT_FAIL_IF_C     '1'
-            _M_IT_UNMOUNT       S_NS_Z
-            _M_IT_FAIL_IF_C     '1'
             _M_IT_UNMOUNT       S_NS_X
             _M_IT_FAIL_IF_C     '1'
             _M_IT_UNMOUNT       S_NS_Y

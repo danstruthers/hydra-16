@@ -2,7 +2,7 @@
 // ****************************************************************************
 // mkhyx.js - Hydra executables (.hyx) on the PC: puts the 16-byte header on a raw binary (the layout:
 // os_rom/include/shell.inc), or shows a .hyx file's header.  (A program built with ca65 and
-// programs/hyx.cfg has its header already.)
+// programs/asm/hyx.cfg has its header already.)
 //
 // Usage: node mkhyx.js BINARY OUT.hyx LOAD [ENTRY]
 //          LOAD, ENTRY: addresses ($0800, 0x0800 or 2048); ENTRY defaults to LOAD.  The program must fit in

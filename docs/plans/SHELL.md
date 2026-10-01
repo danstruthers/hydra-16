@@ -8,7 +8,7 @@ A plan for making HyForth a usable shell on HydraFS cards: the cards found and a
 * The shell waits for a program by making itself the program's parent and pausing (as `TASK_START` does), rather than polling.  The program gets the console only if the shell has it.
 * A script run by `run` starts with a copy of the shell's stack (it's a `TASK_CLONE`, like a pipeline's stage), so `3 4 add` passes it arguments; executables get none.
 * HyForth got `"..."` strings, valid wherever a `q^...^` string is (stack forms, `prompt`, `ctl`, `open` ...), and the parsing forms take a `"quoted name"` with spaces in it.
-* The executable loader is on page 7 with the rest of the shell; the build tools are `programs/hyx.cfg` and `hyx.inc` (the header made by ld65) and `sim/tools/mkhyx.js` (for raw binaries).
+* The executable loader is on page 7 with the rest of the shell; the build tools are `programs/asm/hyx.cfg` and `hyx.inc` (the header made by ld65) and `sim/tools/mkhyx.js` (for raw binaries).
 
 When it was planned: HydraFS was complete (reading, writing, `check`), with HyForth words for files (`ls`, `create`, `mkdir`, `remove`, `rename`) and for the cards themselves (`vols`, `mkfs`, `relabel`, `fsck`, `fsfix`).  Every file word took a full path as a `q^...^` string.
 

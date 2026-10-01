@@ -126,7 +126,7 @@ FAR_GATE_INLINE MMU_TEST,       PAGE4::MMU_TEST,        4
 FAR_GATE_INLINE SCHED_TEST,     PAGE4::SCHED_TEST,      4
 FAR_GATE_INLINE IO_TEST,        PAGE4::IO_TEST,         4
 
-FAR_JMP_GATE    MON_START,      ::MON_START,            0
+FAR_JMP_GATE    MON_START,      ::MON_START_P4,         4
 
 ; Page 1 copy of WRITE_HSTRING: the HString has to be read from page 1, where the caller's strings are.
 ; .A, .Y hold the addr of HString to write
@@ -148,82 +148,36 @@ WRITE_HSTRING:
                 plx
                 rts
 
-; Page 1 copy of the BIOS thunk table, at the same address as the page 0 one ($F800), so code running
-; on page 1 (e.g. Forth's syscall) can use the documented thunk addresses.
+; Page 1's copy of the thunk table (include/thunks.inc), at the same address as page 0's ($F800), so code
+; running on page 1 (HyForth's binary words) can use the documented thunk addresses.  An entry jumps to page
+; 1's gate for the call; or, for the calls page 1 has no gate for (THUNK_P0), goes on to page 0's entry at
+; the same address (THUNK_TO_P0).
 .segment "BIOS_THUNKS_P1"
-.assert     * = ::TH_READ_CHAR, lderror, "BIOS_THUNKS_P1 must line up with BIOS_THUNKS"
-                jmp             READ_CHAR           ; $F800
-                jmp             WRITE_CHAR          ; $F803
-                jmp             WRITE_BYTE          ; $F806
-                jmp             WRITE_HEX           ; $F809
-                jmp             WRITE_HEX_MASK      ; $F80C
-                jmp             WRITE_HSTRING       ; $F80F
-                jmp             WRITE_CRLF          ; $F812
-                jmp             CLEAR_SCR           ; $F815
-                jmp             DISASM              ; $F818
-                jmp             DISASM_AY           ; $F81B
-                jmp             MEM_COPY            ; $F81E
-                jmp             MM_ALLOC            ; $F821
-                jmp             MM_FREE             ; $F824
-                jmp             MM_READ             ; $F827
-                jmp             MM_WRITE            ; $F82A
-                jmp             MM_LOCK             ; $F82D
-                jmp             MM_UNLOCK           ; $F830
-                jmp             MMU_TEST            ; $F833
-                jmp             SH_ALLOC            ; $F836
-                jmp             SH_ATTACH           ; $F839
-                jmp             SH_DETACH           ; $F83C
-                jmp             SH_READ             ; $F83F
-                jmp             SH_WRITE            ; $F842
-                jmp             SH_LOCK             ; $F845
-                jmp             SH_UNLOCK           ; $F848
-                jmp             MM_TASK_RESET       ; $F84B
-                jmp             MM_FIND             ; $F84E
-                jmp             MM_SET_FLOOR        ; $F851
-                jmp             YIELD               ; $F854
-                jmp             NO_PREEMPT          ; $F857
-                jmp             PREEMPT             ; $F85A
-                jmp             TASK_WAIT           ; $F85D
-                jmp             IO_WAKE             ; $F860
-                jmp             TASK_RUN            ; $F863
-                jmp             TASK_STATUS         ; $F866
-                jmp             SCHED_TEST          ; $F869
-                jmp             IO_OPEN             ; $F86C
-                jmp             IO_CLOSE            ; $F86F
-                jmp             IO_READ             ; $F872
-                jmp             IO_WRITE            ; $F875
-                jmp             IO_GETC             ; $F878
-                jmp             IO_PUTC             ; $F87B
-                jmp             IO_SEEK             ; $F87E
-                jmp             IO_STAT             ; $F881
-                jmp             IO_CTL              ; $F884
-                jmp             DEV_REGISTER        ; $F887
-                jmp             IO_TEST             ; $F88A
-                jmp             GET_CHAR            ; $F88D
-                jmp             IO_DUP2             ; $F890
-                jmp             IO_PIPE             ; $F893
-                jmp             IO_DUP              ; $F896
-                jmp             TASK_CLONE          ; $F899
-                jmp             IO_MOUNT            ; $F89C
-                jmp             IO_BIND             ; $F89F
-                jmp             IO_UNMOUNT          ; $F8A2
-                jmp             IO_NS_LIST          ; $F8A5
-                jmp             TASK_SET_BREAK      ; $F8A8
-                jmp             TASK_SIGNAL         ; $F8AB
-                jmp             CONS_SET_FG         ; $F8AE
-                jmp             FP_MAKE             ; $F8B1
-                jmp             FP_READ             ; $F8B4
-                jmp             FP_WRITE            ; $F8B7
-                jmp             FP_COPY             ; $F8BA
-                jmp             MM_REF              ; $F8BD
-                jmp             MM_FP               ; $F8C0
-                jmp             SH_REF              ; $F8C3
-                jmp             SH_FP               ; $F8C6
-                jmp             IO_CREATE           ; $F8C9
-                jmp             IO_REMOVE           ; $F8CC
-                jmp             IO_WSTAT            ; $F8CF
-                jmp             IO_CHDIR            ; $F8D2
-                jmp             IO_GETCWD           ; $F8D5
-.assert     * = ::TH_IO_GETCWD + 3, lderror, "BIOS_THUNKS_P1 must match BIOS_THUNKS"
-; (Page 0's later thunks, the semaphores' ($F8D8-$F8E4), aren't here: page 1's code doesn't call them, and
-; HyForth's semaphore words reach page 5 from page A.  Its gates start here instead.)
+.macro THUNK name, addr
+.assert     * = addr, lderror, .sprintf("Page 1's thunk %s isn't page 0's", .string(name))
+                jmp             name
+.endmacro
+.macro THUNK_P0 name, addr
+.assert     * = addr, lderror, .sprintf("Page 1's thunk %s isn't page 0's", .string(name))
+.assert     <(* + 2) >= 2, error, "THUNK_TO_P0 takes 2 from the return address's low byte only"
+                jsr             THUNK_TO_P0
+.endmacro
+
+                THUNK_TABLE
+.delmacro       THUNK
+.delmacro       THUNK_P0
+
+; Page 1's thunk entries for the calls it has no gate for: on to page 0's entry at the same address (the
+; entry's return address - 2), as a far call.  .A, .X, .Y, C and V pass through both ways (FAR_CALL_A); a
+; name the call reads has to be in RAM or the paged ROM, not on page 1.
+.segment "FORTH_TOP"
+THUNK_TO_P0:
+                sta             ZP_FAR_A
+                pla                                 ; The entry's address + 2 (no carry: C and V go through)
+                sta             ZP_FAR_VEC
+                pla
+                sta             ZP_FAR_VEC + 1
+                dec             ZP_FAR_VEC
+                dec             ZP_FAR_VEC
+                stz             ZP_FAR_PAGE
+                jmp             FAR_CALL_A

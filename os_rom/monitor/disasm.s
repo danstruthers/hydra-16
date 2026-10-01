@@ -430,3 +430,18 @@ _disasm_zeropage:
 
 _disasm_zp_byte:
     PRINT_BYTE_JMP  {ZP_D_INST, y}
+
+; .A = the byte at (ZP_D_XAM) on BIOS ROM page ZP_D_PAGE (only $E000-$FDFF is paged; 0: the kernel's), through
+; PEEK_PAGE (COMMON), with ZP_FP borrowed.  Preserves .X, .Y, C; N/Z reflect .A
+PEEK_D_XAM:
+    lda         ZP_D_XAM
+    sta         ZP_FP
+    lda         ZP_D_XAM + 1
+    sta         ZP_FP + 1
+    phy
+    ldy         #0
+    lda         ZP_D_PAGE
+    jsr         PEEK_PAGE
+    ply
+    ora         #0
+    rts

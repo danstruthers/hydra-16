@@ -21,6 +21,10 @@ ENV_OWN         = ZP_PROC_OWN                               ; An entry's start i
 ENV_VAL         = ZP_PROC_IDX                               ; Its value's start
 ENV_END         = ZP_PROC_FG                                ; A block's end (its final 0)
 ENV_N           = ZP_PROC_LEN                               ; The request; a length
+            CS_FITS     ENV_OWN, 1
+            CS_FITS     ENV_VAL, 1
+            CS_FITS     ENV_END, 1
+            CS_FITS     ENV_N, 1
 
 ; A request.  IN: .A = request, .X = client, .Y = fid
 ENV_SERVE:

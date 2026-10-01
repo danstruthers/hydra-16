@@ -165,8 +165,7 @@ werrloop:
     iny
     PRINT_CHAR
     bra werrloop
-werrend:
-    WCRLF_np                ; (no rts: wrterror goes on to clear the error)
+werrend:                    ; (no CR LF: wrterror may add the reason first, then ends the line)
 .endmacro
 
 ;---------------------------------------------------------------------
@@ -265,6 +264,7 @@ MAXSTR = 100
 ; INBUF = $0400  (see segment STACKS below)
 ; moves forwards
 INBUF_end = $FD
+HIST_SIZE = 255          ; the line editor's history (HIST: farwords.s, LINE_EDIT)
 
 ; data stacks
 ; moves backwards, push decreases before copy
@@ -750,7 +750,8 @@ GLCONS:
     beq GLNOPROMPT
 GLPROMPT:
     inc ECHOCR
-    jsr LINE_PROMPT      ; (the shell's, or a plain one: farwords.s)
+    jsr LINE_PROMPT      ; (the shell's, or a plain one; then the line, edited, if fd 0 is the console: farwords.s)
+    bcc GETLNEND         ; (.Y = its length + 1)
 GLNOPROMPT:
 ;
     ldy #0   ; leave the first
@@ -871,7 +872,25 @@ TOKENDONE:  ; find size and store it;
     tax                ; store size in X, pass to conversion
     jsr DIGCONVT
     bcs CHKFERTXT       ; if some error in conversion, skip and continue processing
+    lda STATUS          ; compiling: the number goes into the definition (LITCOMPILE)
+    beq TOKCLR0
+    jsr LITCOMPILE
     bra TOKCLR0
+;
+; A number in a definition (DIGCONVT pushed it): compiled as 'lit' and the number, so it's pushed when the
+; word runs, as 'lit [ n , ]' writes it by hand.  (DICTCHK's margin has room: the next word compiled checks it)
+.pushseg
+.segment "FORTH_TOP"
+LITCOMPILE:
+    jsr spull_0
+    lda #<literal
+    sta WORKREG
+    lda #>literal
+    sta WORKREG + 1
+    jsr wcomma
+    ldy #TEMP1
+    jmp comma
+.popseg
 .endif  ; 'numbers'
 CHKFERTXT:
     jsr TEXTGET         ; returns length +4 in X
@@ -1148,7 +1167,7 @@ ROMCODEEND:                         ; end of all code
 .include "hyf_rom.s"
 ;
 ;
-COPYSTART := $A100              ; marks beginning of copy in ROM space
+COPYSTART := $A300              ; marks beginning of copy in ROM space (bank 0; $A000-$A1FF: the ROM disk's table)
 ;
 ;   The variables (segment FORTH_DATA: the words' data that changes, and what other ROM pages read, as
 ;   the shell's page 7 does) are copied to RAM at RAMSTART ($0800), up to 'ends', by COPYTORAM.  The code and

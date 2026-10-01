@@ -35,13 +35,13 @@ Then the code, which is loaded at the load address as it is: a program isn't rel
 
 ### **Building one**
 
-`programs/` has a sample, `hello.s`, and what it's built with:
+`programs/asm/` has a sample, `samples/hello.s`, and what it's built with (C programs are in `programs/c/`: below):
 
 | File | What |
 | :--- | :--- |
 | `hyx.inc` | `HYX_HEADER entry`: the header, in its own segment, with the load address and length filled in by the linker |
 | `hyx.cfg` | The ld65 config: the header, then `CODE`, `RODATA` and `DATA` at `$0800`.  There's no BSS segment: everything is in the file (variables go in `DATA`) |
-| `make.bat` | ca65, then ld65 with `hyx.cfg`: `bin\hello.hyx` |
+| `make.bat` | Runs `build.js asm`: ca65, then ld65 with `hyx.cfg`, for each `samples\*.s`: `bin\hello.hyx` |
 
 ```
 .include "hyx.inc"
@@ -68,7 +68,7 @@ programs\c\make.bat                            build the library (lib\hydra.lib)
 programs\c\hyc.bat prog.c [more.c] [more.s]    build a program of your own: bin\prog.hyx
 ```
 
-They find cc65 in `CC65_HOME` (default `C:\source\cc65\win64_snapshot`).  `hyc.bat` compiles with `cc65 -t none --cpu 65C02 -O` and links with `hydra.cfg` and `lib\hydra.lib`.
+They run `build.js` (`node build.js c`, `node build.js prog prog.c ...` on any OS), which finds cc65 in `CC65_HOME`, on the `PATH`, or in `C:\source\cc65\win64_snapshot`.  `hyc.bat` compiles with `cc65 -t none --cpu 65C02 -O` and links with `hydra.cfg` and `lib\hydra.lib`.
 
 | File | What |
 | :--- | :--- |
@@ -132,7 +132,7 @@ int main (int argc, char* argv[])
 
 ### **Putting it on a card**
 
-* **In the emulator, or on a real card's image:** `node sim/tools/hydrafs.js mkdir card.img bin`, then `node sim/tools/hydrafs.js put card.img programs/bin/hello.hyx bin` ([the card tool](../tools/emulator.md#hydrafs-card-images)).
+* **In the emulator, or on a real card's image:** `node sim/tools/hydrafs.js mkdir card.img bin`, then `node sim/tools/hydrafs.js put card.img programs/asm/bin/hello.hyx bin` ([the card tool](../tools/emulator.md#hydrafs-card-images)).
 * **On the Hydra:** copy it from one card to another with `cp`.
 
 A program in the current directory, or in `/bin` on the current directory's card, runs by its name: `hello`.

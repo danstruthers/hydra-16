@@ -1,0 +1,7 @@
+# KiCad's own files next to a project (board/ is edited in KiCad: these are its backups, locks and caches)
+*-backups/
+~*.lck
+fp-info-cache
+
+# The build's work files (os_rom/.gitignore, programs/.gitignore have the rest)
+node_modules/

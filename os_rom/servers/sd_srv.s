@@ -27,11 +27,13 @@
 STORAGE_INIT3:
             lda         #HFS_SCRATCH_FLOOR                  ; HydraFS's scratch page ($0800): not the MMU's
             jsr         MM_SET_FLOOR
-            bcs         @done
+            bcc         :+
+            rts
+:
             lda         #$FF                                ; (No progress being shown)
             sta         HFS_PG_TENS
             stz         HFS_WZERO                           ; (Writes write the request's bytes)
-            ldx         #SD_MAX_CARDS - 1                   ; (The cards start at their first open)
+            ldx         #DISK_MAX - 1                       ; (The disks start at their first open)
 :
             stz         SD_CARD_STATE,X
             stz         HFS_V_STATE,X                       ; (Nor is a card's superblock read before then)
@@ -77,6 +79,17 @@ STORAGE_INIT3:
             sty         HFS_ZBUF + 1
             stz         HFS_MSTATE
             stz         HFS_SBDIRTY
+            stz         RAMD_AREAS                          ; (No areas on the RAM disk yet)
+            stz         RAMD_AREAS + 1
+            lda         #<256                               ; And the path HFS_AREA_END walks
+            ldy         #>256
+            ldx         #0
+            jsr         MM_ALLOC
+            bcs         @done
+            jsr         MM_LOCK
+            sta         RAMD_AREA_PATH
+            sty         RAMD_AREA_PATH + 1
+            jsr         RAMD_BOOT                           ; The RAM disks, as io.inc has them
             clc
 
 @done:
@@ -88,8 +101,8 @@ SD_SERVE:
             sty         SD_FID
             pha
             tya
-            and         #SD_MAX_CARDS - 1
-            sta         SD_DEV                              ; The card (not for H9_OPEN: it has no fid)
+            and         #DISK_MAX - 1
+            sta         SD_DEV                              ; The disk (not for H9_OPEN: it has no fid)
             pla
             cmp         #H9_CREATE
             bcs         SD_BAD                              ; (The filesystem's requests: that's hfs)
@@ -157,9 +170,7 @@ SD_OPEN:
             bne         @not_found
             iny
             lda         (ZP_IO_REQ),Y
-            sec
-            sbc         #'0'
-            cmp         #SD_MAX_CARDS
+            DISK_FROM_NAME                                  ; (0-7, x)
             bcs         @not_found
             sta         SD_DEV
             iny
@@ -247,11 +258,29 @@ SD_CTL_READ:
             ldx         #SD_S_SDHC - SD_TEXTS
             cmp         #SD_STATE_SDHC
             beq         :+
+            ldx         #SD_S_ROM - SD_TEXTS
+            cmp         #SD_STATE_ROM
+            beq         :+
+            ldx         #SD_S_RAM - SD_TEXTS
+            cmp         #SD_STATE_RAM
+            beq         :+
+            ldx         #SD_S_SRAM - SD_TEXTS
+            cmp         #SD_STATE_SRAM
+            beq         :+
             ldx         #SD_S_SDSC - SD_TEXTS
 :
             jsr         SD_PUT_TEXT
-            jsr         SD_CARD_SIZE                        ; The size in MB: blocks >> 11
+            jsr         SD_CARD_SIZE                        ; The size in MB: blocks >> 11 (a RAM disk's in
+            ldx         SD_DEV                              ;   KB: blocks >> 1)
+            lda         SD_CARD_STATE,X
+            cmp         #SD_STATE_RAM
             ldx         #11
+            ldy         #SD_S_MB - SD_TEXTS
+            bcc         :+
+            ldx         #1
+            ldy         #SD_S_KB - SD_TEXTS
+:
+            phy
 :
             lsr         SD_LBA + 3
             ror         SD_LBA + 2
@@ -260,12 +289,13 @@ SD_CTL_READ:
             dex
             bne         :-
             jsr         SD_PUT_DEC
-            ldx         #SD_S_MB - SD_TEXTS
+            plx
             jsr         SD_PUT_TEXT
             jsr         SD_CARD_SIZE                        ; And in blocks
             jsr         SD_PUT_DEC
             ldx         #SD_S_BLOCKS - SD_TEXTS
             jsr         SD_PUT_TEXT
+            jsr         RAMD_CTL_LINE                       ; (A RAM disk's banks)
             jsr         HFS_CTL_LINES                       ; (HydraFS's, if there's one on it)
 
 @made:                                                      ; The text is SD_N bytes
@@ -323,7 +353,11 @@ SD_TEXTS:
 SD_S_NONE:  .byte   "none", ASCII_CR, ASCII_LF, 0
 SD_S_SDHC:  .byte   "sdhc ", 0
 SD_S_SDSC:  .byte   "sdsc ", 0
+SD_S_ROM:   .byte   "rom ", 0
+SD_S_RAM:   .byte   "ram ", 0
+SD_S_SRAM:  .byte   "sram ", 0
 SD_S_MB:    .byte   " MB ", 0
+SD_S_KB:    .byte   " KB ", 0
 SD_S_BLOCKS: .byte  " blocks", ASCII_CR, ASCII_LF, 0
 
 ; SD_LBA = card SD_DEV's size in blocks.  Modifies: .A, .X
@@ -458,9 +492,10 @@ SD_CTL_WRITE:
             jsr         IO_SRV_UNMAP                        ; (The count stays: all of it taken)
             jmp         SD_RESTART
 
-SD_CMDS:    .byte   "init", 0, "format", 0, "label", 0, "check", 0, 0
+SD_CMDS:    .byte   "init", 0, "format", 0, "label", 0, "check", 0, "start", 0, "stop", 0, 0
 
-; "format [options] [label]" (SD_TMP = 1), "label <text>" (2) and "check [fix]" (3), for HydraFS: the text
+; "format [options] [label]" (SD_TMP = 1), "label <text>" (2) and "check [fix]" (3), for HydraFS, and "start ..."
+; (4) and "stop" (5) for a RAM disk (ramdisk.s): the text
 ; after the word (spaces before it skipped, up to 47 characters, to the end of the line) -> HFS_STAT,
 ; zero-padded to 48.  (A label is cut to 31 characters where it's used: HFS_LABEL_CUT.)
 ; IN: .Y = where the word ended, in the data area (mapped); SD_N = the write's length
@@ -500,14 +535,31 @@ SD_CTL_FS:
             dec         ZP_IO_REQ + 1
             jsr         IO_SRV_UNMAP                        ; (The count stays: all of it taken)
             lda         SD_TMP
+            cmp         #4
+            bcc         :+
+            jmp         RAMD_CTL                            ; (start, stop)
+:
+            cmp         #1
+            beq         @writes
+            cmp         #2
+            bne         @check
+@writes:                                                    ; Format, label: not the ROM disk
+            ldx         SD_DEV
+            lda         SD_CARD_STATE,X
+            cmp         #SD_STATE_ROM
+            bne         :+
+            lda         #ERR_IO_MODE
+            sec
+            rts
+:
+            lda         SD_TMP
             cmp         #1
             bne         :+
             jmp         HFS_FORMAT
 :
-            cmp         #2
-            bne         :+
             jmp         HFS_LABEL
-:
+
+@check:
             jmp         HFS_CHECK
 
 ; A read or write of a data file: .A = H9_READ / H9_WRITE.  Up to 256 bytes at the offset, a block (or two)
@@ -518,6 +570,15 @@ SD_RW:
             lda         SD_CARD_STATE,X
             bne         :+
             lda         #ERR_IO_NOT_READY
+            sec
+            rts
+:
+            cmp         #SD_STATE_ROM                       ; The ROM disk: no writes (refused here, before the
+            bne         :+                                  ;   block cache has the block changed in it)
+            lda         SD_OP
+            cmp         #H9_WRITE
+            bne         :+
+            lda         #ERR_IO_MODE
             sec
             rts
 :

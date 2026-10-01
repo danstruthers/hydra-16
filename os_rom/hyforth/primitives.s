@@ -233,8 +233,17 @@ show_refer:
 ;  removed 'seek', was not used in original code
 
 ;----------------------------------------------------------------------
-; ( u -- ) print top of DS in hexadecimal in MSB:LSB form, and drop it
+; ( n -- ) print top of DS, and drop it: in hex, 4 digits (hex: the default), or in decimal, signed (decimal)
 def_far ".", "dot"
+.pushseg
+.segment "FORTH_TOP"
+; ( u -- ) the same, unsigned
+def_far "u.", "udot"
+; ( -- ) '.' and 'u.' print in decimal
+def_far "decimal", "decimal"
+; ( -- ) '.' and 'u.' print in hex (4 digits): the default.  (Numbers typed are decimal either way: $ for hex)
+def_far "hex", "hexbase"
+.popseg
 
 ; ( u -- ) print top of DS in ascii, two bytes, msb first, and drop it
 def_far ".C", "cdot"

@@ -130,33 +130,18 @@ name:
             CLABEL      FAR_JMP_VEC
             jmp         (ZP_FAR_VEC)
 
-; .A = byte at (ZP_D_XAM), with ROM page ZP_D_PAGE selected (only $E000-$FDFF is paged).
-; For the disassembler, which runs on page 1 but usually examines the BIOS (page 0).
-; Preserves .X, .Y, C; N/Z reflect .A
-            CLABEL      PEEK_D_XAM
+; .A = the byte at (ZP_FP),Y on BIOS ROM page .A (only $E000-$FDFF is paged): for FP_BIOS far pointers (fp.s),
+; and the disassembler's and WOZMON's reads (PEEK_D_XAM, on their pages).  Preserves .X, .Y, C
+            CLABEL      PEEK_PAGE
             phx
             ldx         W_REGISTER
-            lda         ZP_D_PAGE
-            sta         W_REGISTER                          ; Now on page ZP_D_PAGE (this same code)
-            lda         (ZP_D_XAM)
-            stx         W_REGISTER                          ; Back on the caller's page (this same code)
-            plx
-            ora         #0
-            rts
-
-; .A = the byte at (ZP_FP),Y on BIOS ROM page ZP_FP + FarPtr::sel (for FP_BIOS far pointers: fp.s).
-; IRQs off.  Preserves .X, .Y, C
-            CLABEL      FP_PEEK_PAGE
-            phx
-            ldx         W_REGISTER
-            lda         ZP_FP + FarPtr::sel
             sta         W_REGISTER                          ; Now on that page (this same code)
             lda         (ZP_FP),Y
             stx         W_REGISTER                          ; Back on the caller's page (this same code)
             plx
             rts
 
-; Far jump (no return): ZP_FAR_VEC = destination, ZP_FAR_PAGE = its ROM page.  Use FAR_JMP_GATE.
+; Far jump (no return): ZP_FAR_VEC = destination, ZP_FAR_PAGE = its ROM page (a task's start: tasks.s)
             CLABEL      FAR_JUMP
             lda         ZP_FAR_PAGE
             sta         W_REGISTER                          ; Now on the far page (this same code)
@@ -223,13 +208,8 @@ name:
             jmp         TASK_CALL
 .endmacro
 
+; A gate to code on another page that never comes back (WOZMON, a task's end): 6 bytes, a far call whose return
+; is never used (it leaves 3 bytes on the stack: the caller's page and FAR_CALL_A's return)
 .macro FAR_JMP_GATE name, target, page
-name:
-            lda         #<(target)
-            sta         ZP_FAR_VEC
-            lda         #>(target)
-            sta         ZP_FAR_VEC + 1
-            lda         #page
-            sta         ZP_FAR_PAGE
-            jmp         FAR_JUMP
+            FAR_GATE_INLINE name, target, page
 .endmacro

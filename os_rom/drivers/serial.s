@@ -65,12 +65,7 @@ SERIAL_INIT:
                 and             #<~VIA_T2_INT_BIT
                 sta             VIA_R_AUX_CTRL
                 lda             #VIA_INT_ENABLE | VIA_T2_INT_BIT
-                sta             VIA_R_INT_ENABLE        ; Its IRQ on
-                ldx             #IRQ_NUMBER_ONBOARD_VIA
-                lda             #<SERIAL_T2_HANDLER
-                ldy             #>SERIAL_T2_HANDLER
-                jsr             IRQ_REGISTER            ; (After the scheduler's VIA handler: T1)
-                bcs             @done
+                sta             VIA_R_INT_ENABLE        ; Its IRQ on (the fast handler sends: SER_T2_FAST)
 .endif
                 LOAD_ADDR       CONS_SERVE, ZP_TC_VEC   ; The files.  (If they can't be registered, e.g.
                 lda             #<CONS_NAME             ;   no shared RAM for the device table, the console
@@ -334,28 +329,6 @@ SER_TX_NEXT:
 @done:
                 rts
 
-.if SER_ACIA = SER_ACIA_WDC
-; The WDC 65C51's TX pacing: VIA timer 2 ran out (a character's time since the last byte went).  Registered
-; by SERIAL_INIT on the VIA's IRQ (after the scheduler's handler); runs in the serial task.
-; OUT: C = 1 if T2 was interrupting
-SERIAL_T2_HANDLER:
-                lda             #VIA_T2_INT_BIT
-                and             VIA_R_INT_FLAGS
-                beq             @not_mine
-                lda             VIA_R_T2C_L             ; Clears its IRQ
-                jsr             SER_TX_NEXT             ; (Starts it again for the next byte)
-                lda             SER_PEND                ; (The bell; and what the fast handler left)
-                beq             :+
-                jsr             SER_DO_PENDING
-:
-                sec
-                rts
-
-@not_mine:
-                clc
-                rts
-.endif
-
 ; A break or kill key (the IRQ handler, in the serial task, IRQs off): the foreground task gets .A
 ; (TASK_BREAK_FLAG or TASK_KILL_FLAG), and the tasks it started are killed (TASK_SIGNAL).  The keys
 ; typed before it are dropped.  (A killed foreground task hands the console back as it ends: CONS_RELEASE.)
@@ -446,7 +419,7 @@ SERIAL_IRQ_HANDLER:
                 clc
                 rts
 
-; Do what the fast ACIA handler left (SER_PEND, see io/serfast.s), in the serial task, in an IRQ handler:
+; Do what the fast ACIA handler left (SER_PEND, see servers/serfast.s), in the serial task, in an IRQ handler:
 ; wake the tasks waiting to read or write, a break or kill key, a console command, the bell.
 ; OUT: .A.Y = SCHED_RESCHED_A/Y after a break or kill (switch tasks now, so it happens), else .A = 0
 ; Modifies: .A, .X, .Y

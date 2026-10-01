@@ -36,6 +36,24 @@ SH_BOOT:
             lda         #<SH_S_SD
             ldy         #>SH_S_SD
             jsr         IO_MOUNT
+            ldx         #0                                  ; The disks in memory by their names: /rom, /ram
+                                                            ;   (the shared RAM disk too, as /ram/s: HydraFS's)
+@bind:                                                      ;   (bound: inherited too; docs/plans/DISKS.md)
+            phx
+            lda         SH_BINDS + 2,X
+            sta         ZP_IO_BUF
+            lda         SH_BINDS + 3,X
+            sta         ZP_IO_BUF + 1
+            lda         SH_BINDS,X
+            ldy         SH_BINDS + 1,X
+            jsr         IO_BIND
+            pla
+            clc
+            adc         #4
+            tax
+            cpx         #SH_BINDS_END - SH_BINDS
+            bne         @bind
+            jsr         SH_RAM_DIRS                         ; The program caches' directories
             jsr         SH_VOLUMES
             jsr         SH_CLOCK
             jsr         COPYTORAM
@@ -48,7 +66,52 @@ SH_S_SD:    .byte   "/sd", 0
 SH_S_ENV:   .byte   "env", 0
 SH_S_TIME:  .byte   "time", 0
 SH_S_HFS:   .byte   "hfs", 0
+SH_BINDS:   .word   SH_S_ROM, SH_S_ROMDISK              ; The boot shell's binds: a name, what it stands for
+            .word   SH_S_RAM, SH_S_RAMDISK              ;   (the ROM disk; the RAM disk: the tasks' areas,
+SH_BINDS_END:                                           ;   and the shared RAM disk in it as /ram/s)
+SH_S_ROM:   .byte   "/rom", 0
+SH_S_ROMDISK: .byte "/sd/", DISK_NAME_ROM, 0
+SH_S_RAM:   .byte   "/ram", 0
+SH_S_RAMDISK: .byte "/sd/", DISK_NAME_RAM, 0
 SH_S_VOLS:  .byte   "hydrafs", 0
+
+; The program caches' directories on the RAM disks (docs/plans/DISKS.md): the shared /ram/s/bin and /ram/s/lib,
+; and this task's area, /ram/N, with its own bin and lib.  (Errors, or no RAM disk: left as they are.)
+SH_RAM_DIRS:
+            lda         #SH_SHARED_AREA
+            jsr         SH_RAM_NAME                         ; SHBUF = /ram/s (.X = its length): its bin, lib
+            jsr         SH_RAM_SUBDIRS
+            lda         T_REGISTER
+            jsr         SH_AREA_NAME                        ; /ram/N: this task's area ...
+            stx         PAGE1::SHN
+            stz         PAGE1::SHBUF,X
+            jsr         SH_MKDIR_BUF
+            ldx         PAGE1::SHN                          ; ... and its bin and lib
+
+; SHBUF up to .X: a directory to make /bin and /lib in (SH_S_DIRS' names)
+SH_RAM_SUBDIRS:
+            stx         PAGE1::SHN
+            ldy         #0
+            jsr         @one
+            ldy         #SH_S_DIRS_LEN
+
+@one:
+            ldx         PAGE1::SHN
+            lda         #SH_S_DIRS_LEN - 1                  ; ("/bin": not its last '/')
+            sta         PAGE1::SHSEL
+:
+            lda         SH_S_DIRS,Y
+            sta         PAGE1::SHBUF,X
+            inx
+            iny
+            dec         PAGE1::SHSEL
+            bne         :-
+            stz         PAGE1::SHBUF,X
+
+SH_MKDIR_BUF:
+            lda         #<PAGE1::SHBUF
+            ldy         #>PAGE1::SHBUF
+            jmp         SH_MKDIR
 
 ; Find the HydraFS volumes: /sd/0 ... /sd/7 opened (so each card is started, and its superblock read),
 ; the ones that have one listed ("hydrafs 0 2"), and the lowest made the current directory.

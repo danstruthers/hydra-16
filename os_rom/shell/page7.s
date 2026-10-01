@@ -28,6 +28,7 @@ FAR_GATE_INLINE     IO_DUP2,        PAGE2::IO_DUP2,         2
 FAR_GATE_INLINE     IO_PIPE,        PAGE2::IO_PIPE,         2
 FAR_GATE_INLINE     IO_STD_OPEN,    PAGE2::IO_STD_OPEN,     2
 FAR_GATE_INLINE     IO_MOUNT,       PAGE2::IO_MOUNT,        2
+FAR_GATE_INLINE     IO_BIND,        PAGE2::IO_BIND,         2
 
 ; ... to page 0
 FAR_GATE_INLINE     WRITE_CHAR,     ::WRITE_CHAR,           0
@@ -44,7 +45,7 @@ FAR_GATE_INLINE     RTC_BOOT,       ::RTC_BOOT_P9,          9   ; (SH_BOOT: the 
 FAR_GATE_INLINE     TASK_JOIN,      PAGE5::TASK_JOIN,       5   ; (SH_WAIT: a program's end, its status)
 FAR_GATE_INLINE     TASK_EXITS,     PAGE5::TASK_EXITS,      5   ; (SH_CMDSHELL: the command shell's end)
 FAR_GATE_INLINE     TIME_DIV8,      ::TIME_DIV8_P9,         9
-FAR_JMP_GATE        MON_START,      ::MON_START,            0
+FAR_JMP_GATE        MON_START,      ::MON_START_P4,         4
 
 ; ... and to HyForth (page 1)
 FAR_GATE_INLINE     COPYTORAM,      PAGE1::COPYTORAM,       1
