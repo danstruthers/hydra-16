@@ -317,6 +317,7 @@ The ROM's timing (the scheduler's tick, sound note lengths, serial timeouts) is 
 | 11 | CA1 | 12 | CA2 |
 
 * PA0/PA1 are the I2C bus (bit-banged; the SDA and SCL pull-ups are in RN1), which also goes to every slot.  No I2C driver exists yet.
+* **The pins, CA1 and CA2 are files:** `/dev/gpio` ([io.md](programming/io.md#gpio-devgpio)); CA1 can interrupt (IRQ line 0, `/dev/gpio/ca1`).
 * **Port B is the SPI bus** (below).
 * **Timer 1** is the scheduler's tick: free-running, 200 interrupts a second.
 * **Timer 2** paces serial output when the ROM is built for a WDC ACIA.
@@ -354,6 +355,7 @@ The ROM's timing (the scheduler's tick, sound note lengths, serial timeouts) is 
 * `$FF40` selects a register (and reads the status: bit 7 = busy), and `$FF41` writes it.
 * After a data write the chip is busy for 64 of its clocks (about 18 µs); writes while it's busy are lost.
 * **CT1/CT2**, its two general-purpose outputs, are on header J9.
+* **Timer B on the board:** re-armed every song tick (its flag reset through `$14`, which on the board seems to restart it), it didn't keep its period: songs timed by it ran up to twice as fast, by a different amount each run.  So the song player times songs by the system's tick (the VIA's timer 1) instead; the hardware test's timer checks (one period from a clean start) pass.
 
 **The audio path:**
 * A YM3012 DAC (U41) converts its serial output, buffered and filtered by a TL074 (U42).

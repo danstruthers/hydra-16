@@ -55,6 +55,9 @@ node hydrasim.js [options]
 | `--sd [N:]FILE[@B]` | An SD card (SDHC) on SPI device N (0-7, the board's SPI headers J18-J25; default 0), backed by the image FILE (512-byte blocks; writes go to the file).  Up to 8 cards, one per device, e.g. `--sd card0.img --sd 3:C:/images/card3.img`.  `@B`: the card says it has B blocks, more than the file (a big card from a small file: blocks past the file's end read as zeros, and writing one makes the file longer), e.g. `--sd card.img@500170752` for a 244 GB card.  Models the VIA's port B SPI bit by bit (device select as the board's 74HC138 does it), and the SD commands the ROM uses (CMD0, 8, 9, 16, 17, 24, 55, 58, ACMD41; CMD9's CSD gives the image's size) |
 | `--sdsc N` | Make the card on device N a standard capacity one (SDSC): byte addresses, and a v1 CSD register |
 | `--spi-echo N` | A test device on SPI device N (0-f, hex; 8-f are the slots'), for `/dev/spi`: it answers each byte with the one it got before; its first after a select is `$A0`, or `$A3` if SCLK was high then (mode 3) |
+| `--ym-reset-delay N` | The YM2151 takes N cycles more to reset a timer flag (and let its IRQ line go) after the write's busy time: a slower chip, as some boards' seem to be (the `songs` test runs with 150) |
+| `--gpio-in HH` | The VIA's port A inputs (J27: `/dev/gpio`), as levels, hex (default `FF`: the pull-ups); the report gives its directions, outputs and PCR at the end (`--- VIA port A`) |
+| `--ca1 C[,C...]` | Pulse CA1 (J27 pin 11) low at each cycle C, high again 500 cycles on (`/dev/gpio/ca1`) |
 | `--ram-fault BANK:An:high\|low` | Address line An (0-12) stuck high or low on the RAM chip holding BANK (a shared chip holds 4 bank IDs, e.g. `F0-F3`; a task RAM module 16 banks), e.g. `F0:A0:high`.  The POST `RAM` line should report it |
 | `--model M` | Hardware what-ifs: `sharedlow`, `nostack`, `zponly`, `noshared` |
 | `--raw` | Print serial output as-is (by default ESC shows as `<ESC>`) |
@@ -217,8 +220,9 @@ plays, run the emulator with `--ym-vgm`.
   has gone), as on the board: turning it on while TDRE is already on doesn't interrupt.
 * VIA timer 1 (one-shot and free-running, latches, interrupt flag and enable registers) on IRQ line 0: the
   scheduler's tick; timer 2 (one-shot); the shift register's timing and flag (its CB1/CB2 lines aren't
-  brought out: shifting in reads 1s); port B as the SPI bus, its 16 devices (see `--sd`, `--spi-echo`); port A's inputs read high (the
-  I2C bus's pull-ups; no I2C devices).  The handshake lines aren't modelled.
+  brought out: shifting in reads 1s); port B as the SPI bus, its 16 devices (see `--sd`, `--spi-echo`); port A's inputs read as `--gpio-in`
+  gives them (high: the I2C bus's pull-ups; no I2C devices), and CA1 as `--ca1` pulses it (its edge sets its flag; `ORA` with
+  the handshake clears it).  CA2 and the CB lines aren't modelled.
 * YM2151: busy (status bit 7) for 64 of its clocks (3.58 MHz) after each data write.  A write while it's busy
   would be lost on the chip: the report counts them.  Key-ons are reported (`--ym-log`).  Its timers A and B
   (registers `$10-$14`): an enabled timer's overflow sets its status flag (bits 0, 1), which holds IRQ

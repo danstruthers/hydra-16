@@ -288,6 +288,17 @@ ZP_D_ICOUNT:
 ZP_D_PAGE:              ; ROM page (W) the disassembler reads $E000-$FDFF from (0 = BIOS, set by TASKS_INIT)
     .res    1
 
+; The system task's (task 0's) ZP: the task to pick first (SCHED_PICK: a quick look), and CA1's edges, for
+; /dev/gpio/ca1 (VIA_IRQ_HANDLER counts them; gpio_srv.s, in its clients' tasks, takes a quick look)
+TASK_ZP_BEGIN
+TASK_ZP     SCHED_URGENT_T, 1       ; A task just woken that should run next ($FF: none): a sleeper the tick wakes
+                                    ;   (VIA_IRQ_FAST: a song player), or the player the sound clock wakes (ymfast.s),
+                                    ;   so a busy task doesn't make its tick late
+TASK_ZP     GPIO_CA1N, 2            ; CA1's active edges, counted while /dev/gpio/ca1 is open (it wraps)
+TASK_ZP     GPIO_CA1W, 2            ; The tasks waiting for the next (bit = task: IO_WAKE)
+TASK_ZP     GPIO_CA1REFS, 1         ; The fds open on /dev/gpio/ca1 (CA1's interrupt is on while there are some)
+TASK_ZP_END
+
 ; Serial driver task ZP (valid in the serial task; see drivers/serial.s).  Here, so page 2 (ser_srv.s) sees them
 ; as zero page addresses.  The rings (SER_RX_BUF, SER_TX_BUF) are empty when head = tail.
 TASK_ZP_BEGIN
@@ -377,6 +388,11 @@ TASK_ZP     SND_CLK_LAST, 1         ;   the value in $12 now
 TASK_ZP     SND_CLK_WAIT, 1         ;   the task waiting for it ($FF: none): its ZSM_AT is the time it wants
 TASK_ZP     SND_IRQ_T, 1            ; The fast handler (ymfast.s): the interrupted task ...
 TASK_ZP     SND_IRQ_W, 1            ;   and ROM page
+TASK_ZP     SND_IRQS, 2             ; The sound clock's interrupts since it started (taken: counted or not) ...
+TASK_ZP     SND_CLK_T0, 2           ;   and the system's tick count then (a read of /dev/snd shows them),
+TASK_ZP     SND_WAKES, 1            ;   the player's wake-ups (low byte),
+TASK_ZP     SND_LAST_AT, 2          ;   the time it waited for, as last seen (its ZSM_AT),
+TASK_ZP     SND_CLK_ERR, 1          ;   and SND_CLOCK_SET's last result (0: started; else the error)
 TASK_ZP_END
 
 ; The song player's task ZP (sound/player.s: play, a ZSM song, in a task of its own)

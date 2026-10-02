@@ -477,6 +477,20 @@ SND_CLOCK_SET:
 @ours:
             cmp         #0
             beq         SND_CLOCK_STOP
+            sta         SND_T                               ; K and its fraction (SND_P)
+            lda         SND_SHADOW + SND_R_CLOCK_F
+            sta         SND_P
+            lda         SND_SHADOW + SND_R_CLOCK_F + 1
+            sta         SND_P + 1
+            jsr         TICKS_GET                           ; (The system's tick now: for /dev/snd's numbers)
+            sta         SND_CLK_T0
+            sty         SND_CLK_T0 + 1
+            stz         SND_IRQS
+            stz         SND_IRQS + 1
+            stz         SND_WAKES
+            stz         SND_LAST_AT
+            stz         SND_LAST_AT + 1
+            lda         SND_T
             eor         #$FF                                ; A long period: K + 1 units ($12 = 256 - K - 1)
             sta         SND_CLK_NB1
             inc
@@ -490,9 +504,9 @@ SND_CLOCK_SET:
             sei                                             ; (Its interrupt can't come in halfway)
             lda         SND_FID
             sta         SND_CLK_OWNER
-            lda         SND_SHADOW + SND_R_CLOCK_F
+            lda         SND_P                               ; (Its fraction)
             sta         SND_CLK_F
-            lda         SND_SHADOW + SND_R_CLOCK_F + 1
+            lda         SND_P + 1
             sta         SND_CLK_F + 1
             stz         SND_CLK_ACC
             stz         SND_CLK_ACC + 1

@@ -150,6 +150,7 @@ SCHED_PICK:
             and     #$0F
             tay                                     ; .Y = current task
             tax                                     ; .X = candidate
+            jsr     SCHED_URGENT                    ; (Or one before the task to run next)
             lda     #MAX_TASK_NUMBER
             sta     ZP_SCHED_CNT
 
@@ -193,6 +194,26 @@ SCHED_PICK:
             txa
             rts
 
+; A task to run next (SCHED_URGENT_T, in the system task: a quick look)?  Then the pick starts at it: OUT: .X =
+; the task before it, and none is next any more.  Else .X stays.  IN: .Y = this task.  Modifies: .A.  (After the
+; thunks, where page 0 has room)
+.pushseg
+.segment "BIOS"
+SCHED_URGENT:
+            sei
+            stz     T_REGISTER                      ; Quick look at the system task (no stack use!)
+            lda     SCHED_URGENT_T
+            bmi     @none
+            tax
+            dex
+            lda     #$FF
+            sta     SCHED_URGENT_T
+
+@none:
+            sty     T_REGISTER
+            rts
+.popseg
+
 ; Can a task with status .A run?  OUT: Z = 1 yes.  Modifies: .A
 SCHED_RUNNABLE:
             bmi     @guest                          ; (TASK_GUEST_OUT_FLAG)
@@ -206,32 +227,33 @@ SCHED_RUNNABLE:
 
 .assert     TASK_GUEST_OUT_FLAG = $80, error, "SCHED_RUNNABLE tests TASK_GUEST_OUT_FLAG with bmi"
 
-; Can the interrupted (current) task be preempted?  Not if it isn't runnable (e.g. a resident driver
-; task), unless it's running a TASK_CALL routine for another task (a server serving a request: that can
-; be switched out too), or if it holds NO_PREEMPT (then the switch is noted, for PREEMPT).
+; Can the interrupted (current) task be preempted?  Not if it holds NO_PREEMPT: then the switch is noted, for
+; its PREEMPT, even if it isn't runnable just now (IO_SERVE marks it waiting before its call; a switch asked
+; for then was lost till the next tick).  Nor if it isn't runnable (e.g. a resident driver task), unless
+; it's running a TASK_CALL routine for another task (a server serving a request: that can be switched out too).
 ; OUT: C = 1 switch, C = 0 don't
 SCHED_CAN_PREEMPT:
-            lda     ZP_IN_SCHED                     ; An IRQ during SCHED_PICK: already switching
-            bne     @no
+            lda     ZP_IN_SCHED                     ; An IRQ during SCHED_PICK: already switching, but its
+            bne     @due                            ;   scan may have passed a task this IRQ woke: noted
+            lda     ZP_NO_PREEMPT
+            bne     @due
             lda     ZP_TC_GUEST
-            bne     @guest
+            bne     @yes
             lda     TASK_STATUS_REG
             and     #TASK_RUN_MASK
             cmp     #TASK_BUSY_FLAG
             bne     @no
 
-@guest:
-            lda     ZP_NO_PREEMPT
-            beq     @yes
+@yes:
+            sec
+            rts
+
+@due:
             lda     #1
             sta     ZP_PREEMPT_DUE                  ; Switch at PREEMPT
 
 @no:
             clc
-            rts
-
-@yes:
-            sec
             rts
 
 ; Give up the CPU: switch to the next runnable task.  Returns when this task is picked again (at once
@@ -301,7 +323,9 @@ TASK_WAIT:
 
 ; Let a task waiting for IO (TASK_WAIT) run again.  Can be called from IRQ handlers.
 ; IN: .A = task
-; Preserves .A, .X, .Y
+; Preserves .A, .X, .Y.  (Above COMMON, where page 0 has room)
+.pushseg
+.segment "HIGH_P0"
 IO_WAKE:
             php
             sei
@@ -316,6 +340,7 @@ IO_WAKE:
             ply
             plp
             rts
+.popseg
 
 ; A task's status (TASK_STATUS_REG).
 ; IN: .A = task.  OUT: .A = status
@@ -937,9 +962,13 @@ TC_GO:
             _M_TC_COPY_BACK ZP_TC_X
             _M_TC_COPY_BACK ZP_TC_Y
             _M_TC_COPY_BACK ZP_TC_P
+            lda     ZP_PREEMPT_DUE                  ; A switch that came due while the call held the CPU
+            stz     ZP_PREEMPT_DUE                  ;   (NO_PREEMPT): the caller's now, for its PREEMPT
 
 ; !! NO STACK MANIPULATIONS UNTIL THE CALLING TASK'S STACK IS SELECTED !!
             stx     T_REGISTER                      ; Back to the calling task
+            ora     ZP_PREEMPT_DUE
+            sta     ZP_PREEMPT_DUE
             rmb6    TASK_STATUS_REG                 ; (TASK_CALLING_FLAG)
             ldx     STACK_SAVE_REG                  ; ...and its stack
             txs

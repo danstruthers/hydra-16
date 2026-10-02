@@ -1,20 +1,21 @@
 // The ROMs' checksums, for the hardware test (hwtest/hwt_rom.s): a CRC-16 of each BIOS ROM page and of each
 // paged ROM bank the image uses, written into the table at the end of the hardware test's paged ROM bank
-// (HWT_SUMS, $DFC0 in bank 1).  Run by makeC02.bat after the link.
+// (HWT_SUMS, $DF00 in bank 1).  Run by makeC02.bat after the link.
 //
 // Usage (from os_rom): node tools/romsum.js bin/os_rom_C02.bin bin/paged_rom_C02.bin
 //
 // The CRC is CRC-16/CCITT-FALSE (polynomial $1021, from $FFFF, no reflection), over:
 //   a BIOS ROM page: $E000-$FEFF as the CPU sees it (the page's first $1F00 bytes)
-//   a paged ROM bank: $A000-$DFBF as the CPU sees it (its halves are swapped in the file: $A000 is at
-//                     offset $2000 of the bank), so not the table's 64 bytes at $DFC0-$DFFF
+//   a paged ROM bank: $A000-$DEFF as the CPU sees it (its halves are swapped in the file: $A000 is at
+//                     offset $2000 of the bank), so not the table's 256 bytes at $DF00-$DFFF
 // The table: the BIOS pages (1 byte), the paged banks (1), then a CRC for each page, then for each bank
-// (2 bytes each, low byte first).
+// (2 bytes each, low byte first): 127 CRCs at most (the hardware test indexes them by 2 * the entry, in a byte),
+// so 16 pages and 111 banks.
 
 "use strict";
 const fs = require("fs");
 
-const BANK = 0x4000, PAGE = 0x2000, HWT_BANK = 1, SUMS = 0xDFC0, SUMS_SIZE = 64;
+const BANK = 0x4000, PAGE = 0x2000, HWT_BANK = 1, SUMS = 0xDF00, SUMS_SIZE = 256;
 const [biosName, pagedName] = process.argv.slice(2);
 const bios = fs.readFileSync(biosName), paged = fs.readFileSync(pagedName);
 

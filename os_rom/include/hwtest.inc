@@ -5,7 +5,7 @@
 ; _M_HWT_ENTER: HyForth's hwtest (farwords.s), and POST when a T is typed during it (post.s).
 
 HWT_BANK            = $01       ; Its paged ROM bank ($A000-$DFFF)
-HWT_SUMS            = $DFC0     ; The ROMs' checksums, at the end of its bank (tools/romsum.js fills them in)
+HWT_SUMS            = $DF00     ; The ROMs' checksums, at the end of its bank (tools/romsum.js fills them in: 256 bytes)
 
 ; Go to the hardware test, from BIOS ROM code (which T doesn't change): every task gets the test's paged
 ; ROM bank, so the test can switch T while it runs from it, and shared bank $F0 at $8000.  It never returns.

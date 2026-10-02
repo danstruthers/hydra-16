@@ -65,6 +65,11 @@
 //                       read as zeros, and a write there makes the file longer)
 //   --spi-echo N        A test device on SPI device N (0-f, hex): it answers each byte with the one before;
 //                       its first after a select is $A0 (SCLK low then: mode 0) or $A3 (high: mode 3)
+//   --gpio-in HH        The VIA's port A inputs (J27: /dev/gpio), as levels, hex (default FF: the pull-ups); the
+//                       report shows its directions and outputs at the end
+//   --ca1 C[,C...]      Pulse CA1 (J27 pin 11) low at each cycle C, high again 500 cycles on (/dev/gpio/ca1)
+//   --ym-reset-delay N  The YM2151 takes N cycles more to reset a timer flag (to its IRQ line going) after the
+//                       write's busy time: a slower chip, as some boards' seem to be (default 0)
 //   --rtc TIME|now|stopped|unset   A DS1747 in U7 (a 512K task RAM with a clock): its clock registers are
 //                       task F's $7FF8-$7FFF.  TIME (YYYY-MM-DDThh:mm[:ss]) or now (this PC's time): the time it has
 //                       at power-up, running; stopped: its oscillator off (OSC set), at 2000-01-01; unset: its
@@ -127,6 +132,9 @@ for (let i = 0; i < argv.length; i++) {
       opt.sds.push({ dev, file: m ? m[2] : f, blocks: b ? +b[2] : 0 }); break; }
     case '--sdsc': opt.sdsc.push(+next()); break;
     case '--spi-echo': opt.spiEcho.push(parseInt(next(), 16)); break;
+    case '--ym-reset-delay': opt.ymResetDelay = +next(); break;
+    case '--gpio-in': opt.gpioIn = parseInt(next(), 16) & 0xFF; break;
+    case '--ca1': opt.ca1 = next().split(',').map(Number); break;
     case '--raw': opt.raw = true; break;
     case '--rtc': { const s = next(), m = /^(\d{4})-(\d\d)-(\d\d)[T ](\d\d):(\d\d)(?::(\d\d))?$/.exec(s);
       if (!m && !/^(now|stopped|unset)$/.test(s)) { console.error('--rtc YYYY-MM-DDThh:mm[:ss] | now | stopped | unset'); process.exit(1); }
@@ -196,6 +204,7 @@ if (rtc) {                                                      // --rtc: the DS
     + h(2) + ':' + hx(r[1] & 0x7F) + ' day ' + r[4]) + (rtc.osc ? '' : ', stopped (OSC)') + (rtc.ctl ? ', control bits ' + hx(rtc.ctl) + ' left set' : ''));
 }
 console.log('--- cycles ' + cpu.cyc + ' (' + (cpu.cyc / (opt.clock * 1e6)).toFixed(3) + ' s at ' + opt.clock.toFixed(2) + ' MHz), T=' + hx(m.T, 1) + ' U=' + hx(m.U, 1) + ' V=' + hx(m.V) + ' W=' + hx(m.W, 1) + ', ACIA control ' + hx(acia.ctrl) + ' command ' + hx(acia.cmd) + ', vector RAM: ' + [...m.vecRam].map(v => hx(v, 4)).join(' '));
+if (m.via.r[3]) console.log('--- VIA port A: directions ' + hx(m.via.r[3]) + ', outputs ' + hx(m.via.r[1] & m.via.r[3]) + ', PCR ' + hx(m.via.r[0x0C]));
 for (const d of opt.dumps) {
   const r = /^([0-9A-Fa-f]+)(?::(\d+))?(?:@([0-9A-Fa-f]))?$/.exec(d);
   if (!r) { console.log('bad --dump ' + d); continue; }

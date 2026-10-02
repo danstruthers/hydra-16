@@ -29,7 +29,7 @@ const PART_SYSTEM = 0xDA, LABEL = 'ROM';
 // Block 0's first bytes: what the disk is.  Bank 0's first page must read as no other bank's (the hardware test's
 // bank lines: hwtest/hwt_rom.s), and the table alone leaves it all zeros, as an empty block in a later bank can be
 const SIGNATURE = 'Hydra-16 ROM disk: the paged ROM as one disk (block 0: this table; 1-63: the system; 64 on: /rom)\r\n';
-const MAX_IMAGE_BANKS = 15;                                       // (romsum.js's table in bank 1: 15 paged ROM banks)
+const MAX_IMAGE_BANKS = 111;                                      // (romsum.js's table in bank 1: 111 paged ROM banks)
 const swap = b => (b & 0x33) | ((b & 0x04) << 1) | ((b & 0x08) >> 1) | ((b & 0x40) << 1) | ((b & 0x80) >> 1);
 
 // The manifest: { name: { dir, kids } | { data } }, from "path source" lines

@@ -16,6 +16,7 @@ FAR_GATE_INLINE     IO_SRV_UNMAP,   ::IO_SRV_UNMAP,         0
 FAR_GATE_INLINE     TASK_RUN,       ::TASK_RUN,             0   ; (The test tune's player)
 FAR_GATE_INLINE     TASK_SIGNAL,    ::TASK_SIGNAL,          0
 FAR_GATE_INLINE     TASK_SLEEP,     ::TASK_SLEEP,           0   ; (The test tune's timing)
+FAR_GATE_INLINE     TICKS_GET,      ::TICKS_GET,            0   ; (The sound clock's numbers: SND_READ)
 FAR_GATE_INLINE     IRQ_REGISTER,   ::IRQ_REGISTER,         0   ; (SOUND_INIT: the sound chip's handler)
 
 ; ... and to the IO layer (page 2)

@@ -244,4 +244,4 @@ HWT_T_PAGED:
             rts
 
 .segment "HWT_SUMS"
-            .res        64                                  ; (tools/romsum.js fills them in)
+            .res        256                                 ; (tools/romsum.js fills them in)

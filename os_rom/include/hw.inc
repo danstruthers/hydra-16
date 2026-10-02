@@ -117,6 +117,11 @@ ACIA_R_CTRL         = IO_PORT_BYTE ACIA, 3
 
 VIA_T1_INT_BIT      = $40       ; VIA_R_INT_FLAGS / VIA_R_INT_ENABLE: timer 1 (the scheduler's tick)
 VIA_T2_INT_BIT      = $20       ;   timer 2 (TX pacing: the WDC ACIA's, and the Rockwell's at 115200)
+VIA_CA1_INT_BIT     = $02       ;   CA1's active edge (/dev/gpio/ca1)
+VIA_PCR_CA1_RISE    = $01       ; VIA_R_PER_CTRL: CA1's active edge rising (0: falling)
+VIA_PCR_CA2         = $0E       ;   CA2's control: VIA_PCR_CA2_LOW or _HIGH, an output
+VIA_PCR_CA2_LOW     = $0C
+VIA_PCR_CA2_HIGH    = $0E
 VIA_INT_ENABLE      = $80       ; VIA_R_INT_ENABLE: set (1) or clear (0) the bits given
 
 ; Send .A to the ACIA (in the serial task's ZP, IRQs off, the transmitter idle or its last byte just sent),

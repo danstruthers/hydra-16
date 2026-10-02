@@ -154,7 +154,22 @@ The calls a program can make are the thunks at `$F800` and up ([the API index](p
 the console, files, memory, tasks, the clock.  A program has its own task: 32K of RAM, its own zero page and
 stack, and its own fds, so a crash in it doesn't take the shell down (Ctrl-C ends it).
 
-### **7. Where next**
+### **7. An LED and a button**
+
+The VIA's port A comes out on header J27 ([hardware](hardware.md#via-65c22-u2-port-0-irq-line-0)): pins PA0-PA7 and
+CA1, with +5 V and ground.  `/dev/gpio` makes each pin a file ([io.md](programming/io.md#gpio-devgpio)).
+
+* **An LED:** an LED and a 330 Ω resistor in series, from PA2 (J27 pin 5) to ground (pin 1), the LED's short leg to
+  ground.  `echo 1 > /dev/gpio/2` lights it (the pin becomes an output, high), and `echo 0 > /dev/gpio/2` puts it out.
+* **A button:** a push button from PA3 (pin 6) to ground, and a 10 kΩ resistor from PA3 to +5 V (pin 2).
+  `cat /dev/gpio/3` says `1`, or `0` while it's pressed.  `cat /dev/gpio/ctl` shows every pin.
+* **Waiting for a press:** wire the button to CA1 (pin 11) instead.  `"/dev/gpio/ca1" 1 open .` gives an fd (say 3);
+  then `3 here @ 8 read .` waits for the next press.  (A button bounces, so one press can count as several edges:
+  `cat /dev/gpio/ctl`'s `ca1` line shows the count.)
+* **In the emulator:** `--gpio-in F7` makes PA3 read 0 (pressed), `--ca1 20000000` presses CA1 at cycle 20
+  million, and the report's `--- VIA port A` line shows what the pins drive at the end.
+
+### **8. Where next**
 
 * **Try the rest of the system:** pipelines (`words | wc . . .`), background programs (`play /rom/bin/scom.zsm 0 &`),
   the environment (`echo /sd/0/bin > /env/PATH`), `/dev/proc` (`cat /dev/proc`): the [HyForth guide](using/hyforth.md).

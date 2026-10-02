@@ -109,6 +109,7 @@ A program that prints a partial line and then computes for a long time without a
 | `/dev/sd/N/data` | Storage (`$C`) | Disk N as bytes at the fd's offset (`IO_SEEK`); the first 4 GB.  N is one character: for an SD card, its SPI device's number as a hex digit, `0`-`7` (`8`-`f`, slot cards' SPI devices, are planned), started at the first open (`ERR_IO_DEVICE` if there's none); other disks are letters that aren't hex digits: `x`, the ROM disk, the paged ROM ([read-only](#the-roms-files-rom)); `r` and `s`, the [RAM disks](#the-ram-disks-ram) |
 | `/dev/sd/N/ctl` | Storage | Read: the disk as a line, e.g. `sdhc 7580 MB 15523840 blocks` (or `sdsc`, `rom`, or `none`), and for a HydraFS its label, free space and last check.  Write: `init` starts the card again (e.g. after changing it); `format`, `label`, `check` ([below](#the-files-on-a-card)) |
 | `/dev/spi/N`, `/dev/spi/N/ctl` | Storage (page D) | SPI device N (`0`-`f`) as a file: a transaction a write, the bytes it sends back read after ([below](#spi-devices-devspi)) |
+| `/dev/gpio/N`, `port`, `ctl`, `ca1` | IO layer (in the reading task: page D) | The VIA's port A on J27: its pins, CA1's edges, CA2 ([below](#gpio-devgpio)) |
 | `/sd/N/...` | Storage | The **files** on disk N: the HydraFS server (the device `hfs`, mounted at `/sd`; [below](#the-files-on-a-card)) |
 | `/dev/pipe` | Pipe server (`$D`) | Made by `IO_PIPE`, not opened by name |
 | `/dev/proc` | IO layer (in the reading task) | The tasks (below) |
@@ -209,7 +210,7 @@ Everything else goes to the chip as written (except the timers' interrupt enable
 | 4 | `SND_CTL_CLAIM` | `.Y` = a mask of channels (bit n: channel n), this fd's alone; `ERR_IO_BUSY` if another fd has one of them (none taken) |
 | 5 | `SND_CTL_RELEASE` | `.Y` = a mask of channels to give back |
 | 6 | `SND_CTL_VOLUME` | `.Y` = the master volume (0-127) |
-| 7 | `SND_CTL_CLOCK` | The sound clock, a song player's tick: the YM2151's timer B, its interrupt counting ticks (`SND_CLK`, from 0) and waking the waiting player at its time (`sound/ymfast.s`).  `.Y` = K: a period of K units of 1,024 of the chip's clocks (286 us) or K + 1, as often as the fraction written to `SND_R_CLOCK_F` (`$0C`, and `$0D`, the high byte: 65536ths) says, so the rate is exact on average; 0 stops it.  This fd's while it runs (`ERR_IO_BUSY`: another's); its last close stops it.  Timer A stays the clients' (CSM) |
+| 7 | `SND_CTL_CLOCK` | The sound clock, a song player's tick: the YM2151's timer B, its interrupt counting ticks (`SND_CLK`, from 0) and waking the waiting player at its time (`sound/ymfast.s`).  `.Y` = K: a period of K units of 1,024 of the chip's clocks (286 us) or K + 1, as often as the fraction written to `SND_R_CLOCK_F` (`$0C`, and `$0D`, the high byte: 65536ths) says, so the rate is exact on average; 0 stops it.  This fd's while it runs (`ERR_IO_BUSY`: another's); its last close stops it.  Timer A stays the clients' (CSM)  The song player doesn't use it (on the board, timer B didn't keep its period: [hardware](../hardware.md#ym2151-sound-u38-port-4-irq-line-4)); a read of `/dev/snd` shows its numbers in the shadow's spare bytes (`snd_srv.s`: `SND_NUMBERS`) |
 
 HyForth's `patch`, `note`, `noteoff` and `ywrite` ([HyForth](../using/hyforth.md#tasks-and-the-console)) and C's `snd.h` ([the C guide](c.md#sound-sndh)) use it.
 
@@ -226,6 +227,22 @@ The SPI bus's 16 devices (0-7 the board's headers J18-J25, 8-f the slots' cards:
 * **Bits:** MSB first, sent and sampled on SCLK's rising edge (modes 0 and 3), at about 100 kHz (bit-banged on the VIA's port B: `drivers/spi.s`).  The device is deselected after each request.
 * **One open at a time:** another open of the same device is `ERR_IO_BUSY` (the fd's dups share it).  So is a device with an SD card started on it (`/dev/sd/N`), and while `/dev/spi/N` is open, the SD driver doesn't start a card there (`ERR_IO_BUSY`, and its `ctl` reads `none`).
 * **From HyForth:** `"/dev/spi/1" 3 open`, then `write` and `read` on the fd ([files and devices](../using/hyforth.md#files-and-devices)); from C, `open`, `write`, `read`.
+
+#### **GPIO: `/dev/gpio`**
+
+The VIA's port A on header J27 ([hardware](../hardware.md#via-65c22-u2-port-0-irq-line-0)): 8 pins, PA0-PA7, and the handshake lines CA1 (an input, which can interrupt) and CA2.  Served in its client's task (`servers/gpio_srv.s`, BIOS ROM page D), with interrupts off around each change to the VIA's registers.
+
+| Name | Read | Write |
+| :--- | :--- | :---- |
+| `/dev/gpio/N` | Pin N (`0`-`7`): `0` or `1` and CR LF, from the offset (`cat` reads it once; a program polling it seeks back to 0) | `0` or `1`: the pin's level, and the pin an output |
+| `/dev/gpio/port` | All 8 pins, a byte (any offset) | A byte: the outputs' levels (the inputs keep theirs) |
+| `/dev/gpio/ctl` | A line a pin (`2 out 1`, `3 in 0`), then `ca1 fall 0003` (CA1's active edge, and the edges counted), then `ca2 in` (or `ca2 0`, `ca2 1`: an output) | A command: `in N`, `out N`, `ddr HH` (all 8 directions, hex: 1 = out), `ca1 rise`, `ca1 fall`, `ca2 0`, `ca2 1`; anything else is `ERR_IO_BAD_REQ` |
+| `/dev/gpio/ca1` | Waits for CA1's next active edge (one since this task last read it, or opened it), then gives the edges counted so far: `0003` and CR LF.  A non-blocking fd gets `ERR_IO_WOULD_BLOCK` instead of waiting | |
+
+* **The pins start as inputs** (the VIA's reset).  PA0 and PA1 are the I2C bus's SCL and SDA too, pulled up on the board; they're plain pins until an I2C driver uses them.
+* **CA1's interrupt** is on only while `/dev/gpio/ca1` is open, so a floating CA1 can't flood the system.  The VIA's handler (`VIA_IRQ_HANDLER`, in task 0) counts each edge and wakes the readers waiting.  A switch's bounce counts too: a button wants a capacitor, or a program that ignores edges close together.
+* **Port A is read and written without the handshake** (`ORA` at register `$F`), which leaves CA1's flag alone.
+* **From HyForth:** `echo 1 > /dev/gpio/2`, `cat /dev/gpio/3`, `echo out 4 > /dev/gpio/ctl`; a program opens the files and reads and writes them.  The [tutorial](../tutorial.md#7-an-led-and-a-button) wires an LED and a button.
 
 #### **The tasks: `/proc`**
 

@@ -61,6 +61,8 @@ The software gives each task:
 
 **The tick.**  VIA timer 1 interrupts 200 times a second (`SCHED_TICK_HZ`, every 5 ms: `SCHED_START`).  At each tick the IRQ dispatcher switches to the next runnable task, round robin over tasks 1-15.  Task 0 runs only when no other task can; it runs `wai`, so the CPU sleeps until the next interrupt.
 
+**A task to run next.**  An interrupt that wakes a task with a deadline can put it first: the tick does this for a sleeper whose time has come (`TASK_SLEEP`: the song player's ticks), and the sound clock for its waiting player (`SCHED_URGENT_T`, in the system task's zero page: `SCHED_PICK` starts its round there, once).  So a busy task's slice doesn't make a note late.
+
 **Runnable** means busy, and not paused, waiting, resident or in a call.  A resident task switched out in the middle of a call is runnable too, until it finishes that call.
 
 **The task frame.**  A task that isn't running keeps one frame on its own stack, whatever stopped it (the tick, `YIELD`, or waiting):
@@ -81,7 +83,8 @@ Its stack pointer is kept in its zero page.  A switch saves the SP, picks the ne
 
 **How `NO_PREEMPT` behaves:**
 * **Blocking:** a task that blocks (IO, `TASK_WAIT`, `YIELD`) while holding it still gives up the CPU: it can't make progress anyway.
-* **Calls into other tasks:** it holds across `TASK_CALL`s, such as the IO requests the task makes; the server running its request isn't switched out either.
+* **Calls into other tasks:** it holds across `TASK_CALL`s, such as the IO requests the task makes; the server running its request isn't switched out either.  A switch that comes due in the server is the caller's when the call returns, so the caller's `PREEMPT` makes it.
+* **Not runnable just now:** a switch asked for while a task holds it is noted even if the task is marked waiting (as `IO_SERVE` marks it before its call), not lost till the next tick.
 * **The kernel's own use:** the MMU calls and task reset hold `NO_PREEMPT` rather than turning interrupts off.
 * **The scheduler:** it scans for the next task with interrupts on between its looks at each task.
 

@@ -77,7 +77,23 @@ module.exports = [
     },
   },
   {
-    name: 'songs', about: 'the song player (ZSM): play with a loop count, a song run by its name, played in time (the key-ons 36 ticks of 60 Hz apart); play ... 0 & (forever) in the background, its channel claimed (tones finds it busy), Ctrl-C at wait ends it (status 130, its channel keyed off); a script is no song; C\'s snd_play, stopped with hy_kill',
+    name: 'song-load', about: 'a song in the background keeps its time while the shell is busy (words, again and again, to the serial port): the sound clock\'s wake-up makes the player the task to run next (SCHED_URGENT_T), so each note of the test song comes within 1.5 ms of when it does with the shell idle (a console write holds the CPU about 1 ms at most) (a second run, here), after its start (the player starting up as the shell is busy)',
+    args: ['--cycles', '50000000', '--ym-log', '--seed', '1', '--input', BOOT + 'play /rom/songs/test.zsm &\r' + P + ('words\r' + P).repeat(6)],
+    expect: ['> play /rom/songs/test.zsm &\n[B]\n', '> words\n'],
+    check: (out, report) => {
+      const keyOns = r => [...r.matchAll(/ch (\d) at cycle (\d+)/g)].map(m => +m[2]);
+      const idle = keyOns(require('child_process').execFileSync(process.execPath, [path.join(__dirname, '..', 'hydrasim.js'), '--cycles', '50000000', '--ym-log', '--seed', '1',
+        '--input', BOOT + 'play /rom/songs/test.zsm &\r' + P], { cwd: path.join(__dirname, '..'), maxBuffer: 64 << 20 }).toString());
+      const on = keyOns(report);
+      if (on.length < 40 || idle.length < on.length) return 'key-ons: ' + on.length + ' busy, ' + idle.length + ' idle';
+      for (let k = 6; k < on.length; k++) {
+        const late = (on[k] - on[5]) - (idle[k] - idle[5]);
+        if (Math.abs(late) > 5370) return 'key-on ' + k + ' came ' + late + ' cycles from its time with the shell idle';
+      }
+    },
+  },
+  {
+    name: 'songs', about: 'the song player (ZSM): play with a loop count, a song run by its name, played in time (the key-ons 36 ticks of 60 Hz apart), by the system\'s tick (the sound clock, the YM2151\'s timer B, isn\'t used: on a board it didn\'t keep its period); play ... 0 & (forever) in the background, its channel claimed (tones finds it busy), Ctrl-C at wait ends it (status 130, its channel keyed off); a script is no song; C\'s snd_play, stopped with hy_kill',
     sd: [{ dev: 0, label: 'SONGS', hfs: v => {
       v.mkdir('bin');
       for (const p of ['tones', 'jukebox']) v.put('bin/' + p + '.hyx', fs.readFileSync(path.join(__dirname, '../../programs/c/bin/' + p + '.hyx')));
@@ -98,7 +114,8 @@ module.exports = [
       }
       if (on[4][1] - on[3][1] < 2147727) return 'the second play began before the first ended';
       if (!/^00: 00 00 00 00 00 00 00 00 00 /m.test(report)) return 'channel 0 not keyed off at the end ($08)';
-      if (!/^10: \w\w \w\w C[5-7] /m.test(report)) return 'no sound clock: timer B ($12) not at 57-59 units (60 Hz: its short or long period)';
+      const r10 = /^10: (\w\w) (\w\w) (\w\w) (\w\w) (\w\w) /m.exec(report);
+      if (!r10 || (parseInt(r10[5], 16) & 2)) return 'timer B running ($14: ' + (r10 && r10[5]) + '): the sound clock is used';
     },
   },
   {
@@ -170,7 +187,7 @@ module.exports = [
       'unmount /u\\r', 'ns\\r'].join(P) + P],
     expect: ['/ram> ns\nmount -s hfs /sd\nmount -s env /env\nmount -s proc /proc\nmount -s hfs /rom x\nmount -s hfs /sram s\nbind -cs /ram/bin /bin\nbind -as /sram/bin /bin\nbind -as /rom/bin /bin\nbind -cs /ram/lib /lib\nbind -as /sram/lib /lib\nbind -as /rom/lib /lib\nmount hfs /ram r/1\nbind /ram/b /u\nbind -a /rom /u\n',
       '/ram> ls /u\nx 4\nREADME 984\nbin/\nboot.hys 83\nlib/\nsongs/\n\n', '/ram> ls -l /u\nx 4 2000-01-01 00:00:0', '\nREADME 984 2000-01-01 00:00:00\n',
-      '/ram> ls /u/songs\ntest.zsm 14075\n\n', '/ram> cat /u/x\nhi\n\n/ram> ls -l /u/boot.hys\nboot.hys 83 2000-01-01 00:00:00\n', '/ram> echo y > /u/new\n\n !IO ERR! not opened for that\n', '/ram> cat /ram/c/new\ny\n', '/ram> cat /u/new | cat\ny\n',
+      '/ram> ls /u/songs\n', 'test.zsm 14075\n\n', '/ram> cat /u/x\nhi\n\n/ram> ls -l /u/boot.hys\nboot.hys 83 2000-01-01 00:00:00\n', '/ram> echo y > /u/new\n\n !IO ERR! not opened for that\n', '/ram> cat /ram/c/new\ny\n', '/ram> cat /u/new | cat\ny\n',
       '/ram> ns\nmount -s hfs /sd\nmount -s env /env\nmount -s proc /proc\nmount -s hfs /rom x\nmount -s hfs /sram s\nbind -cs /ram/bin /bin\nbind -as /sram/bin /bin\nbind -as /rom/bin /bin\nbind -cs /ram/lib /lib\nbind -as /sram/lib /lib\nbind -as /rom/lib /lib\nmount hfs /ram r/1\nbind -c /ram/c /u\nbind -a /ram/b /u\nbind -a /rom /u\n',
       '/ram> ls -l /u/boot.hys\n\n !IO ERR! not found\n', '/ram> cat /u/x\n\n !IO ERR! not found\n', '/ram> cat /u/new\ny\n', '/ram> mount -z zero /z\n\n !IO ERR! bad name\n',
       '/ram> ns\nmount -s hfs /sd\nmount -s env /env\nmount -s proc /proc\nmount -s hfs /rom x\nmount -s hfs /sram s\nbind -cs /ram/bin /bin\nbind -as /sram/bin /bin\nbind -as /rom/bin /bin\nbind -cs /ram/lib /lib\nbind -as /sram/lib /lib\nbind -as /rom/lib /lib\nmount hfs /ram r/1\nhide /u/x\n'],
@@ -180,7 +197,7 @@ module.exports = [
     name: 'ns-system', about: 'the system namespace: a bind -s from the boot shell, seen by a shell started before it and by a driver (/proc/f/ns); -s from another shell refused (not allowed); a hide over a system entry is the shell\'s own (unmount /rom in shell B: the boot shell still has it)',
     args: ['--cycles', '150000000', '--input', BOOT + 'shell\\r' + W(2) + ['bind -s /rom/songs /x\\r', 'ls /x\\r', 'cat /proc/f/ns | wc . . .\\r'].join(P) + P + '\\x1dB' + W(1) +
       ['\\rls /x\\r', 'bind -s /rom /y\\r', 'unmount /rom\\r', 'ls /rom\\r'].join(W(1)) + W(1) + '\\x1d1' + W(1) + ['\\rls /rom\\r', 'ns\\r'].join(W(1)) + W(1)],
-    expect: ['/ram> ls /x\ntest.zsm 14075\n', '> cat /proc/f/ns | wc . . .\n', '> ls /x\ntest.zsm 14075\n', '> bind -s /rom /y\n\n !IO ERR! not allowed\n',
+    expect: ['/ram> ls /x\n', 'test.zsm 14075\n', '> cat /proc/f/ns | wc . . .\n', '> ls /x\n', 'test.zsm 14075\n', '> bind -s /rom /y\n\n !IO ERR! not allowed\n',
       '> ls /rom\n\n !IO ERR! not found\n', '[1]', '/ram> ls /rom\nREADME 984\n', 'bind -s /rom/songs /x\nmount hfs /ram r/1\n'],
     forbid: ['!UNK WORD!'],
   },
@@ -191,7 +208,7 @@ module.exports = [
     expect: (() => {
       const sys = 'mount -s hfs /sd\nmount -s env /env\nmount -s proc /proc\nmount -s hfs /rom x\nmount -s hfs /sram s\nbind -cs /ram/bin /bin\nbind -as /sram/bin /bin\nbind -as /rom/bin /bin\nbind -cs /ram/lib /lib\nbind -as /sram/lib /lib\nbind -as /rom/lib /lib\n';
       return ['/ram> ns\n' + sys + 'mount hfs /ram r/1\nbind /rom/songs /x\nhide /sram\n', 'bind -a /rom/songs /bin\n', '/ram> newns\n\n/ram> ns\n' + sys + 'mount hfs /ram r/1\n\n',
-        '> ls /sram\nbin/\nlib/\n', '> ls /x\n\n !IO ERR! not found\n', '/ram> ns\n' + sys + 'mount hfs /ram r/1\nbind /rom/songs /y\n\n', '> ls /y\ntest.zsm 14075\n'];
+        '> ls /sram\nbin/\nlib/\n', '> ls /x\n\n !IO ERR! not found\n', '/ram> ns\n' + sys + 'mount hfs /ram r/1\nbind /rom/songs /y\n\n', '> ls /y\n', 'test.zsm 14075\n'];
     })(),
     forbid: ['!UNK WORD!'],
   },
@@ -261,6 +278,21 @@ module.exports = [
       '3 here @ 2 read .\n' + num(0x100) + num(0x64) + num(0x9C) + num(2), '> q^/dev/spi/2^ 3 open .\n' + num(3), '> cat /dev/sd/2/ctl\nnone\n',
       '> q^/dev/sd/2/ctl^ 1 open .\n' + num(3)],
     forbid: ['!UNK WORD!'],
+  },
+  {
+    name: 'gpio', about: '/dev/gpio: port A\'s pins (--gpio-in A5: the inputs\' levels) read, one written (an output, high), ctl\'s lines; /dev/gpio/ca1\'s read waits for CA1\'s edge (a pulse at cycle 20M: --ca1) and gives the count; ddr, the port as a byte (outputs and inputs), CA2 an output, CA1\'s edge rising; a bad command not supported, pin 8 not found; the report has port A\'s directions and outputs',
+    args: ['--cycles', '60000000', '--gpio-in', 'A5', '--ca1', '20000000', '--input', BOOT + ['cat /dev/gpio/ctl', 'echo 1 > /dev/gpio/2', 'cat /dev/gpio/2', 'cat /dev/gpio/1',
+      'q^/dev/gpio/ca1^ 1 open .', '3 here @ 8 read .', 'q^/dev/gpio/ctl^ q^ddr F0^ ctl', 'q^/dev/gpio/port^ 3 open .', '$5A here @ c! 4 here @ 1 write . 4 here @ 1 read . here @ c@ .',
+      'echo ca2 1 > /dev/gpio/ctl', 'echo ca1 rise > /dev/gpio/ctl', 'cat /dev/gpio/ctl', 'q^/dev/gpio/ctl^ q^bogus^ ctl', 'q^/dev/gpio/8^ 1 open .'].join('\\r' + P) + '\\r' + P],
+    expect: ['> cat /dev/gpio/ctl\n0 in 1\n1 in 0\n2 in 1\n3 in 0\n4 in 0\n5 in 1\n6 in 0\n7 in 1\nca1 fall 0000\nca2 in\n', '> cat /dev/gpio/2\n1\n', '> cat /dev/gpio/1\n0\n',
+      '> q^/dev/gpio/ca1^ 1 open .\n' + num(3), '> 3 here @ 8 read .\n' + num(6), '> q^/dev/gpio/port^ 3 open .\n' + num(4),
+      '> $5A here @ c! 4 here @ 1 write . 4 here @ 1 read . here @ c@ .\n' + num(1) + num(1) + num(0x55),
+      '> cat /dev/gpio/ctl\n0 in 1\n1 in 0\n2 in 1\n3 in 0\n4 out 1\n5 out 0\n6 out 1\n7 out 0\nca1 rise 0001\nca2 1\n',
+      '> q^/dev/gpio/ctl^ q^bogus^ ctl\n\n !IO ERR! not supported\n', '> q^/dev/gpio/8^ 1 open .\n\n !IO ERR! not found\n'],
+    forbid: ['!UNK WORD!'],
+    check: (out, report) => {
+      if (!/--- VIA port A: directions F0, outputs 50, PCR 0F/.test(report)) return 'port A at the end: not directions F0, outputs 50, PCR 0F';
+    },
   },
   {
     name: 'rom-copy', about: 'the ROM disk read back on the machine: every file in /rom (romfs.txt) copied to a card is its source, byte for byte, the ones across a bank boundary too (sd.s: SD_ROM_READ)',

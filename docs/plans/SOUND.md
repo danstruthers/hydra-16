@@ -69,7 +69,9 @@ The design, as planned:
 
 The instruments were written for it (`@lead` algorithm 4, `@bell` 5, `@pad` 6, `@organ` 7, `@bass` 0, `@synbass` 1, `@brass` 2, `@pluck` 3, and noise ones for channel 7), and the drums are the ROM's General MIDI kit.  It hasn't been heard on the board yet: its voices are first drafts, to adjust by ear.
 
-### **Phase 4: the chip's own clock** *(done)*
+### **Phase 4: the chip's own clock** *(done, then set aside)*
+
+*On the board, the YM2151's timer B didn't keep its period while the driver re-armed it each tick (its flag reset through `$14`, which there seems to restart it): songs ran up to twice as fast, by a different amount each run.  So the player times songs by the system's tick again, as before this phase, with the scheduler's fixes (the woken player runs next, and holds the CPU through its tick's work); the sound clock stays in the driver (`SND_CTL_CLOCK`), unused.*
 
 **Built:** the **sound clock**: the YM2151's timer B, at the song's rate, drives the player (`SND_CTL_CLOCK`; `sound/ymfast.s`, the player's `ZSM_CLOCK_START` and `ZSM_CLOCK_WAIT`).
 * **Timer B, not A:** timer A's steps are finer (18 us), but songs use it for CSM (the test song's coda does), and a song from a VGM may program it; timer B's are 286 us, and the rate comes out exact anyway: each period is K or K + 1 units, as a 16-bit fraction carries (Bresenham's way), so the ticks are never more than one unit (0.3 ms) from where they belong and the average is exact.  Range: 14-3,495 Hz.

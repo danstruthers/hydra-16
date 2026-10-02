@@ -37,6 +37,11 @@ SH_BOOT:
             ldy         #>SH_S_TIME
             ldx         #IO_DEV_CALLER_TASK
             jsr         DEV_REGISTER
+            LOAD_ADDR   ::GPIO_SERVE, ZP_TC_VEC             ; Port A on J27: /dev/gpio (in each client's task)
+            lda         #<SH_S_GPIO
+            ldy         #>SH_S_GPIO
+            ldx         #IO_DEV_CALLER_TASK
+            jsr         DEV_REGISTER
             LOAD_ADDR   SH_S_HFS, ZP_IO_BUF                 ; The cards' files at /sd: in the system namespace,
             lda         #<SH_S_SD                           ;   which every task sees (NS_SYSTEM), as all of
             ldy         #>SH_S_SD                           ;   these but /ram (a shell's own)
@@ -88,6 +93,7 @@ SH_S_ENVP:  .byte   "/env", 0                           ; (... "env")
 SH_S_ENV    = SH_S_ENVP + 1
 SH_S_TIME:  .byte   "time", 0
 SH_S_RAMDEV: .byte  "ram", 0
+SH_S_GPIO:  .byte   "gpio", 0
 SH_S_HFS:   .byte   "hfs", 0
 SH_MOUNTS:  .word   SH_S_ROM, SH_S_SPEC_ROM             ; The boot shell's mounts of hfs: a name, its spec
             .word   SH_S_SRAM, SH_S_SPEC_SRAM           ;   (the ROM disk; the shared RAM disk)

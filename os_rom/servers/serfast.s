@@ -242,6 +242,7 @@ VIA_IRQ_FAST:
             stx         T_REGISTER                          ; Wake it (as IO_WAKE: no stack use)
             rmb2        TASK_STATUS_REG                     ; (TASK_WAITING_FLAG)
             stz         T_REGISTER
+            stx         SCHED_URGENT_T                      ; ... and it runs next (a song player's tick: SCHED_PICK)
 
 @next:
             inx

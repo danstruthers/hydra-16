@@ -197,8 +197,10 @@ ZSM_PLAY_TEST_PC = PAGEC::ZSM_PLAY_TEST ; (For page B: SND_CTL_TEST)
 .scope PAGED
 .include "servers/paged.s"        ; must be first in the scope
 .include "servers/spi_srv.s"      ; /dev/spi
+.include "servers/gpio_srv.s"     ; /dev/gpio
 .endscope
 SPI_SRV_INIT_PD = PAGED::SPI_SRV_INIT   ; (For page 3: STORAGE_INIT3)
+GPIO_SERVE_PD   = PAGED::GPIO_SERVE     ; (For page 0's gate: thunks.s)
 
 ; BIOS ROM page 0 (W = 0)
 .include "kernel/print.s"

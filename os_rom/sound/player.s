@@ -12,10 +12,15 @@
 ; (skipped), $41-$7F n register/value pairs, $80 the end (or the loop), $81-$FF a delay of n ticks.
 ;   Each tick's register pairs go to /dev/snd in one write (so another program's writes can't come between
 ; them); then the player sleeps to the next tick by the sound clock: the YM2151's timer B at the song's rate,
-; exact on average, whose interrupt wakes the player when its time comes (SND_CTL_CLOCK; ymfast.s).  If the clock
-; is another program's, it sleeps by the system's tick (200 a second) instead, keeping a fraction, so the tempo is
-; exact on average there too, if not each tick.  It reads the file ahead while it waits (ZSM_TOPUP: a card's block can take 10 ms),
-; so a tick's writes aren't held up by a read.  Its end, or Ctrl-C, closes /dev/snd, which keys its channels off.
+; exact on average, whose interrupt wakes the player when its time comes (SND_CTL_CLOCK; ymfast.s): not used now
+; (ZSM_BEGIN), as on a board the chip's timer B didn't keep its period.  It sleeps by the system's tick (200 a
+; second) instead, keeping a fraction, so the tempo is exact on average, if not each tick; the tick that wakes it
+; makes it the task to run next (SCHED_URGENT_T).  It reads the file ahead while it waits (ZSM_TOPUP: a card's block can take 10 ms),
+; so a tick's writes aren't held up by a read.  From its wake-up to its next wait it holds the CPU (ZP_NO_PREEMPT
+; 1): its writes, then its read ahead, so the system's tick doesn't switch it out halfway for a busy task's slice
+; and make a note late (by up to 5 ms).  It lets go (0) only as it sleeps, so a switch that came due meanwhile
+; (PREEMPT's) doesn't put it at the back of the queue before it's waiting.  Its end, or Ctrl-C, closes /dev/snd,
+; which keys its channels off.
 ;   Exit status: 0; or 1 and "not a song", "no sound", "channels busy".
 ; RAM: the player's task's, from $0800 (ZSM_*); ZP: its own (zero.s: ZSM_*).
 
@@ -129,12 +134,11 @@ ZSM_BEGIN:
             stz         ZSM_IN_LEFT + 1
             stz         ZSM_OUT
             jsr         ZSM_TOPUP                           ; (The start of the song read before its time starts)
-            jsr         ZSM_CLOCK_START                     ; The sound clock (0: the start)
-            lda         ZSM_CLOCK
-            beq         :+
-            jmp         ZSM_STREAM
-:
-            jsr         ZSM_RATE                            ; Or the system's tick: ZSM_PERIOD
+            stz         ZSM_CLOCK                           ; Timed by the system's tick, not the sound clock: on
+                                                            ;   a board, the YM2151's timer B, re-armed each tick,
+                                                            ;   didn't keep its period (songs ran up to twice as
+                                                            ;   fast).  ZSM_CLOCK_START stays, for a chip that does
+            jsr         ZSM_RATE                            ; The system's tick: ZSM_PERIOD
             jsr         TICKS_GET                           ; The first tick: the system's next but one, so
             clc                                             ;   every song tick is timed from the start of one,
             adc         #2                                  ;   and the shell that started us is waiting by then
@@ -144,6 +148,8 @@ ZSM_BEGIN:
             sta         ZSM_NEXT + 2
             sty         ZSM_NEXT + 3
             jsr         TASK_SLEEP_UNTIL
+            lda         #1                                  ; (The first tick's work: the CPU held)
+            sta         ZP_NO_PREEMPT
             stz         ZSM_NEXT                            ; (The fraction from a half: each time rounds to the
             lda         #$80                                ;   nearest system tick, not down, as a period a
             sta         ZSM_NEXT + 1                        ;   hair short would)
@@ -423,9 +429,13 @@ ZSM_DELAY:
             dex
             bne         @tick
             jsr         ZSM_TOPUP                           ; (Read ahead: this is the time for it)
+            stz         ZP_NO_PREEMPT                       ; (Asleep: the CPU let go)
             lda         ZSM_NEXT + 2
             ldy         ZSM_NEXT + 3
-            jmp         TASK_SLEEP_UNTIL                    ; (Already past it: it returns at once)
+            jsr         TASK_SLEEP_UNTIL                    ; (Already past it: it returns at once)
+            lda         #1                                  ; (The next tick's work: the CPU held)
+            sta         ZP_NO_PREEMPT
+            rts
 
 ; The sound clock, at the song's rate (SND_CTL_CLOCK): a period of 3,579,545 / 1024 / the rate timer B units,
 ; K and a fraction (65536ths), from 3,579,545 * 64 / the rate.  OUT: ZSM_CLOCK: not 0 if it runs for us (from 0:
@@ -533,11 +543,14 @@ ZSM_CLOCK_WAIT:
             sbc         ZSM_AT + 1
             bpl         @come
             smb2        TASK_STATUS_REG                     ; Wait (TASK_WAITING_FLAG), till the interrupt
-            jsr         YIELD                               ;   wakes us, or a break or kill does
+            stz         ZP_NO_PREEMPT                       ;   wakes us, or a break or kill does (asleep: the
+            jsr         YIELD                               ;   CPU let go)
             plp
             bra         ZSM_CLOCK_WAIT                      ; (Look again)
 
 @come:
+            lda         #1                                  ; (The tick's work: the CPU held)
+            sta         ZP_NO_PREEMPT
             plp
             rts
 

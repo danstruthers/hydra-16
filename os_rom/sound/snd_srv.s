@@ -131,6 +131,11 @@ SND_SERVE:
             bne         :+
             lda         SND_T + 1
             jsr         SND_CLOCK_SET
+            bcs         @clock_err
+            lda         #0
+
+@clock_err:
+            sta         SND_CLK_ERR                         ; (Its result, for /dev/snd's numbers)
             bcs         @error
             bra         @ctl_ok
 :
@@ -205,8 +210,40 @@ SND_SERVE:
             jsr         IO_SRV_COUNT
             jmp         @ok
 
+; The sound clock's numbers, in the shadow's spare bytes (no register of the chip's), for a read of /dev/snd:
+;   $15-$16 its ticks (SND_CLK), $1C-$1D its interrupts taken (SND_IRQS), $1E-$1F the system's ticks since it
+;   started (200 a second: as many as the clock's at a song's 200 Hz); $00 SND_CLOCK_SET's last result (0: started), $0B and $0E the
+;   time the player last waited for (its ZSM_AT: 0 if it never waited on the clock), $13 its wake-ups (low byte).
+;   Modifies .A, .X, .Y
+SND_NUMBERS:
+            lda         SND_CLK
+            sta         SND_SHADOW + $15
+            lda         SND_CLK + 1
+            sta         SND_SHADOW + $16
+            lda         SND_IRQS
+            sta         SND_SHADOW + $1C
+            lda         SND_IRQS + 1
+            sta         SND_SHADOW + $1D
+            lda         SND_CLK_ERR
+            sta         SND_SHADOW + $00
+            lda         SND_LAST_AT
+            sta         SND_SHADOW + $0B
+            lda         SND_LAST_AT + 1
+            sta         SND_SHADOW + $0E
+            lda         SND_WAKES
+            sta         SND_SHADOW + $13
+            jsr         TICKS_GET
+            sec
+            sbc         SND_CLK_T0
+            sta         SND_SHADOW + $1E
+            tya
+            sbc         SND_CLK_T0 + 1
+            sta         SND_SHADOW + $1F
+            rts
+
 ; A read: the shadow's bytes from the fd's offset (256 bytes in all; past them, the end).  IN: .X = the client
 SND_READ:
+            jsr         SND_NUMBERS
             jsr         IO_SRV_MAP
             ldy         #IO_BLK_OFS + 3                     ; An offset past 255: the end
             lda         (ZP_IO_REQ),Y

@@ -1,6 +1,8 @@
 // via.js - the 65C22 VIA (port 0, IRQ line 0): timer 1 (one-shot or free-running, IFR/IER: the scheduler's tick),
 // timer 2 (one-shot), the shift register's timing and flag, port B (the SPI bus: env.portB(v) is told its output
-// bits, env.miso() gives PB7), port A's inputs read high (the I2C pull-ups); the other registers are plain storage.
+// bits, env.miso() gives PB7), port A's inputs (env.portAIn: their levels, the I2C pull-ups' FF if none given),
+// CA1 (env's v.ca1(level): its active edge, PCR bit 0, sets IFR bit 1; reading or writing ORA with the handshake,
+// register 1, clears CA1's and CA2's flags, as the chip does); the other registers are plain storage.
 'use strict';
 
 function createVia(env) {
@@ -14,6 +16,13 @@ function createVia(env) {
   };
   const r = v.r;
   const portB = () => env.portB((r[0] & r[2]) | (~r[2] & 0x7F));
+  const pinsA = () => (env.portAIn === undefined ? 0xFF : env.portAIn);
+  let ca1Level = 1;
+  v.ca1 = level => {                                          // CA1's input changed: its active edge sets the flag
+    if (level === ca1Level) return;
+    ca1Level = level;
+    if (level === (r[0x0C] & 1)) v.ifr |= 0x02;
+  };
   // A shift register access: it clears the flag, and starts 8 shifts (mode 4, free-running, never sets it)
   function srStart() {
     const m = (r[0x0B] >> 2) & 7;
@@ -23,7 +32,10 @@ function createVia(env) {
   }
   v.read = n => {
     if (n === 0) { const ddr = r[2], pins = 0x7F | (env.miso() << 7); return (r[0] & ddr) | (pins & ~ddr); }
-    if (n === 1 || n === 0x0F) return (r[1] & r[3]) | (~r[3] & 0xFF);   // Port A: its inputs read high (pull-ups)
+    if (n === 1 || n === 0x0F) {                              // Port A: its outputs, and its inputs' levels
+      if (n === 1) v.ifr &= ~0x03;
+      return (r[1] & r[3]) | (pinsA() & ~r[3] & 0xFF);
+    }
     if (n === 0x0A) { srStart(); return r[0x0A]; }
     if (n === 4) { v.ifr &= ~0x40; return v.t1 & 0xFF; }     // T1C-L: clears the T1 flag
     if (n === 5) return v.t1 >> 8;
@@ -45,6 +57,7 @@ function createVia(env) {
     else if (n === 0x0E) { if (b & 0x80) v.ier |= b & 0x7F; else v.ier &= ~(b & 0x7F); }
     else if (n === 0x0A) { r[0x0A] = b; srStart(); }
     else if (n === 0x0F) r[1] = b;
+    else if (n === 1) { r[1] = b; v.ifr &= ~0x03; }
     else if (n === 0x0B) { r[0x0B] = b; if (!(b & 0x1C)) v.srLeft = -1; }
     else { r[n] = b; if (n === 0 || n === 2) portB(); }
   };

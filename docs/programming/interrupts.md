@@ -9,7 +9,7 @@ How the OS dispatches interrupts, and how a driver handles one.  Sources: `os_ro
 | 0 | VIA: timer 1 (the scheduler's tick), timer 2 | The system task (tick); the serial driver (timer 2: sending, in WDC ACIA builds, and at 115200) |
 | 1 | ACIA (serial) | The serial driver |
 | 2, 3 | Slot 0, A and B | |
-| 4 | YM2151 | Timer B: the sound clock, a song player's tick (a fast handler, `YM_IRQ_FAST`: below).  The sound driver's registered handler is a placeholder |
+| 4 | YM2151 | Timer B: the sound clock, a song player's tick if one asks for it (a fast handler, `YM_IRQ_FAST`: below; the song player doesn't now).  The sound driver's registered handler is a placeholder |
 | 5-9 | Slots 1-5, A | |
 | 10-14 | Slots 1-5, B | |
 | 15 | Software interrupts | `SWI_REGISTER` |
@@ -36,9 +36,11 @@ The dispatcher and its `TASK_CALL` cost about 650 cycles per interrupt, far too 
 * **`VIA_IRQ_FAST`** counts the tick and wakes the sleepers due, in the system task's zero page.
   * **Then** it asks the dispatcher for a task switch (`IRQ_TICK`).
   * **Timer 2** paces sending: always with a WDC ACIA (its transmitter status doesn't work), and at 115200 with the Rockwell.  `SER_T2_FAST` sends the next byte from the transmit ring as `SER_IRQ_FAST` would (`SER_TX_STEP`), so either chip sends at the wire's rate.
-  * **Other VIA sources** go to the registered handlers as before.
+  * **Other VIA sources** go to the registered handlers as before: CA1's edges (`/dev/gpio/ca1`) to `VIA_IRQ_HANDLER`, which counts them and wakes the tasks waiting.
 * **`YM_IRQ_FAST`** is the sound clock: timer B, run by the sound driver for a song player at the song's rate (`SND_CTL_CLOCK`, [io.md](io.md#sound-devsnd)).  In the sound task's zero page, it resets timer B's flag, sets the period after the next (K or K + 1 units, as a 16-bit fraction carries, so the rate is exact on average), counts the tick (`SND_CLK`), and, when the waiting player's time has come (its `ZSM_AT`, a quick look into its zero page), wakes it and asks for a task switch (`IRQ_TICK`).
   * **Cost:** about 150-300 cycles: up to two register writes to the chip, each of which may wait up to 64 cycles for it (busy after the sound driver's last write).
+  * **One tick an interrupt:** it counts a tick only when timer B's flag is set, and waits (256 looks at most) for the flag's reset to be done before it returns.  The chip holds its IRQ line until then, longer than its busy time on some boards; returning sooner, the interrupt came straight back and counted the same tick again, and songs played nearly twice as fast.
+  * **The player first:** waking the player, it makes it the task to run next ([tasks.md](tasks.md#scheduling)).  (The song player doesn't use the sound clock now: on the board, timer B didn't keep its period.  It sleeps by the system's tick, which makes it the task to run next the same way, and it holds the CPU (`NO_PREEMPT`) from its wake-up to its next sleep, so a busy task doesn't make a note late.)
 * **The registered handlers** for lines 0 and 1 (`VIA_IRQ_HANDLER`, `SERIAL_IRQ_HANDLER`) are still there, and are what the dispatcher calls for that rare work.
 
 ### **Registering a handler**

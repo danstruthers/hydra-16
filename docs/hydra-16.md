@@ -60,7 +60,7 @@ More: [the system in one page](programming/README.md#the-system-in-one-page) (th
 
 ### **2. Getting started**
 
-* **[First steps](tutorial.md)**: a tutorial for the first hour, in the emulator: [switching it on](tutorial.md#1-switch-it-on), [HyForth](tutorial.md#2-hyforth), [files](tutorial.md#3-files), [a card](tutorial.md#4-a-card), [a program in C](tutorial.md#5-a-program-in-c) and [one in assembly](tutorial.md#6-a-program-in-assembly).
+* **[First steps](tutorial.md)**: a tutorial for the first hour, in the emulator: [switching it on](tutorial.md#1-switch-it-on), [HyForth](tutorial.md#2-hyforth), [files](tutorial.md#3-files), [a card](tutorial.md#4-a-card), [a program in C](tutorial.md#5-a-program-in-c), [one in assembly](tutorial.md#6-a-program-in-assembly), and [an LED and a button](tutorial.md#7-an-led-and-a-button).
 * **[Getting started](getting-started.md)**: [what you need](getting-started.md#what-you-need), [building](getting-started.md#building) (`node build.js`, with cc65 and Node.js), [programming the chips](getting-started.md#programming-the-chips), [connecting a terminal](getting-started.md#connecting-a-terminal) (9600 8N1, a straight-through cable), [the first boot](getting-started.md#first-boot), [the emulator](getting-started.md#without-the-hardware-the-emulator), [testing a change](getting-started.md#testing-a-change).
 
 ```
@@ -105,7 +105,7 @@ The **[Hardware Reference](hardware.md)** describes the main board from its sche
 
 | Device | Port | IRQ line | Used for |
 | :----- | :--- | :------- | :------- |
-| [VIA, 65C22 (U2)](hardware.md#via-65c22-u2-port-0-irq-line-0) | 0, `$FF00` | 0 | Timer 1: the scheduler's tick; port A: GPIO and I2C (header J27); port B: [the SPI bus](hardware.md#spi-bus-via-port-b), with 8 device headers (J18-J25), each device a file: [`/dev/spi/N`](programming/io.md#spi-devices-devspi) |
+| [VIA, 65C22 (U2)](hardware.md#via-65c22-u2-port-0-irq-line-0) | 0, `$FF00` | 0 | Timer 1: the scheduler's tick; port A: GPIO and I2C (header J27: [`/dev/gpio`](programming/io.md#gpio-devgpio)); port B: [the SPI bus](hardware.md#spi-bus-via-port-b), with 8 device headers (J18-J25), each device a file: [`/dev/spi/N`](programming/io.md#spi-devices-devspi) |
 | [ACIA, 65C51 (U3)](hardware.md#acia-65c51-u3-port-1-irq-line-1) | 1, `$FF10` | 1 | The serial console, on a DE-9 (DCE wiring) |
 | [YM2151 (U38)](hardware.md#ym2151-sound-u38-port-4-irq-line-4) | 4, `$FF40` | 4 | 8-voice FM sound, through a YM3012 DAC and a mixer to a stereo jack |
 | [Expansion slots](hardware.md#expansion-slots) 0-5 | 2-3, 5-14 | 2-3, 5-14 | Cards on the 62-pin bus: video in slot 0 (planned), and anything else |
@@ -156,7 +156,7 @@ Everything the Hydra runs at boot is in two ROM images, from one build ([the two
 | A | HyForth's far words, its error messages, the disassembler |
 | B | Sound: the YM2151 library, `/dev/snd`, the patches |
 | C | The song player |
-| D | `/dev/spi`, the SPI devices as files |
+| D | `/dev/spi`, the SPI devices as files; `/dev/gpio`, port A's pins |
 | E-F | Free |
 
 * [BIOS ROM pages](programming/rom-layout.md#bios-rom-pages): the full table, with the sources, and the fixed addresses on every page (the reset entry at `$E000`, the thunks at `$F800`, the COMMON block at `$FD00`).
@@ -228,6 +228,7 @@ Everything is a file.  A task opens names and reads and writes fds; the IO layer
 | `/dev/snd` | [The YM2151](programming/io.md#sound-devsnd) |
 | `/dev/sd/N/data`, `/dev/sd/N/ctl` | A disk as bytes, and its control file |
 | `/dev/spi/N`, `/dev/spi/N/ctl` | [An SPI device](programming/io.md#spi-devices-devspi) (`0`-`f`): a transaction a write, its answer read after; its mode |
+| `/dev/gpio/N`, `port`, `ctl`, `ca1` | [Port A's pins](programming/io.md#gpio-devgpio) on J27, CA1's edges, CA2 |
 | `/sd/N/...` | [The files on a card](programming/io.md#the-files-on-a-card) (HydraFS) |
 | `/proc/N/...` | [The tasks](programming/io.md#the-tasks-proc): status, `ctl`, `ns`, `cmd` (`send`), and their memory as files, `mem` and `ram` |
 | `/env/NAME` | [The environment](programming/io.md#the-environment-env) |

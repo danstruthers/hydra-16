@@ -187,6 +187,7 @@ Use 0 for success, 1 with a message for a failure, and 2 for a usage error, as U
 | `/dev/null`, `/dev/zero` | As on Unix |
 | `/dev/time` | The clock, as text: `2026-09-30 14:05:00`; write one to set it |
 | `/dev/spi/N` | SPI device N (`0`-`f`): `write` a transaction, `read` what came back ([io.md](io.md#spi-devices-devspi)) |
+| `/dev/gpio/N`, `/dev/gpio/port` | Port A's pins: `"0"`/`"1"` each, or the 8 as a byte; `ctl` for directions, `ca1` to wait for an edge ([io.md](io.md#gpio-devgpio)) |
 | `/rom/...`, `/ram/...`, `/sram/...` | The ROM's files; the shell's own area of the RAM disk; the shared RAM disk |
 | `/bin`, `/lib` | The programs and libraries: unions of `/ram`'s, `/sram`'s, the card's and `/rom`'s |
 | `/proc/N/...` | Task N: its `status`, `cwd`, `env`, `pages`, `ns`; and for a task this program started (or itself), its memory: `mem` (its addresses) and `ram` (its banks) |

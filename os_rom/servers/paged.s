@@ -1,8 +1,9 @@
 .debuginfo
 
 ; ****************************************************************************
-; BIOS ROM page D (W = $D): /dev/spi, the SPI devices as files (spi_srv.s), served in the storage task.  Its
-; gates: the IO layer's server calls and the MMU (page 0), and the storage page's SPI loops (page 3: spi.s).
+; BIOS ROM page D (W = $D): /dev/spi, the SPI devices as files (spi_srv.s), served in the storage task; and
+; /dev/gpio, the VIA's port A (gpio_srv.s), served in its client's task.  Their gates: the IO layer's server
+; calls and the MMU (page 0), and the storage page's SPI loops (page 3: spi.s).
 ;
 ;   This file is included inside `.scope PAGED` (see all.s), before the rest of page D, so the gate labels
 ;   below take precedence over the routines of the same name on other pages.

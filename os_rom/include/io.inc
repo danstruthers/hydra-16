@@ -653,6 +653,15 @@ SER_KEY_EOF2        = $1A       ; Ctrl-Z: the same
 SER_KEY_PREFIX      = $1D       ; Ctrl-]: the next key is a console command: a task (0-F) to bring to the
                                 ;   front, l to list them; Ctrl-] again for the key itself (SER_COMMAND)
 
+; /dev/gpio (servers/gpio_srv.s, page D, in its client's task): the VIA's port A on J27, CA1 and CA2.  A fid is
+; GPIO_FID_* (| the pin)
+GPIO_FID_PIN        = $00       ; /dev/gpio/N: pin PA N (0-7)
+GPIO_FID_PORT       = $10       ; /dev/gpio/port: all 8, a byte
+GPIO_FID_CTL        = $20       ; /dev/gpio/ctl: the directions, CA1's edge, CA2
+GPIO_FID_CA1        = $30       ; /dev/gpio/ca1: CA1's edges, a read waiting for the next
+IO_BLK_CA1          = $10       ; A task's: GPIO_CA1N when it last read /dev/gpio/ca1 (or opened it) (2)
+.assert     IO_BLK_CA1 > IO_BLK_NSTAB .and IO_BLK_CA1 + 2 <= IO_BLK_ORIG, error, "IO_BLK_CA1: the request block's spare bytes"
+
 ; /dev/proc (servers/proc_srv.s): the tasks.  A fid is PROC_FID_* | task
 PROC_FID_LIST       = $00       ; /dev/proc: a line per task (read)
 PROC_FID_STATUS     = $10       ; /dev/proc/N, /dev/proc/N/status: task N's line (read)

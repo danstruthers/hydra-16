@@ -4,7 +4,7 @@ The Hydra-16 is a multitasking 65C02 computer: a W65C02S whose address decoding 
 
 ### **Start here**
 * **[The Hydra-16 in one place](hydra-16.md)**: the master document: every part of the machine and its software, the hardware included, in one page, with links into the documents below.  All of the documentation is also one PDF: **[hydra-16.pdf](hydra-16.pdf)** (`node sim/tools/mkpdf.js` remakes it, with Microsoft Edge or Chrome).
-* **[First steps](tutorial.md)**: a tutorial for the first hour, in the emulator: HyForth, files and a card, a program in C and one in assembly.
+* **[First steps](tutorial.md)**: a tutorial for the first hour, in the emulator: HyForth, files and a card, a program in C and one in assembly, an LED and a button.
 * **[Getting started](getting-started.md)**: build the ROMs, program the chips, connect a terminal, boot, or run it in the emulator.
 
 ### **Using the system**

@@ -592,12 +592,17 @@ HWT_T_YM:
             .byte       "timer A", 0
             bra         @timer_b
 :
-            lda         #$14                                ; (Its flag reset)
-            ldx         #$15
-            jsr         HWT_YM_SET
+            lda         #$14                                ; (Its flag reset: done once the chip isn't busy, or
+            ldx         #$15                                ;   a while after, on some boards: then its IRQ
+            jsr         HWT_YM_SET                          ;   line let go too)
+            jsr         HWT_YM_WAIT
+            ldy         #0
+:
             lda         YM_DATA
             and         #$01
             beq         @timer_b
+            dey
+            bne         :-
             jsr         HWT_FAIL
             .byte       "timer A flag stays set", 0
 

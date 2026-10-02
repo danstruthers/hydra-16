@@ -52,8 +52,12 @@ function createMachine(opt) {
   const acia = createAcia({ clock: opt.clock, wdc: opt.acia === 'wdc', paste: opt.paste, input: opt.input,
     onTx: (v, t) => { m.out += String.fromCharCode(v); for (const k of opt.marks || []) if (m.out.endsWith(k)) log('mark: ' + JSON.stringify(k) + ' at cycle ' + t); } });
   const spi = createSpi(opt.sd || [], opt.spiEcho || []);
-  const via = createVia({ portB: spi.portB, miso: spi.miso });
-  const ym = createYm({ clock: opt.clock, log: !!opt.ymLog });
+  const via = createVia({ portB: spi.portB, miso: spi.miso, portAIn: opt.gpioIn });
+  // CA1's pulses (opt.ca1: cycles): low at each, high again 500 cycles on (its edges, in order)
+  const ca1Edges = [];
+  for (const t of (opt.ca1 || []).slice().sort((a, b) => a - b)) ca1Edges.push([t, 0], [t + 500, 1]);
+  let ca1At = 0;
+  const ym = createYm({ clock: opt.clock, log: !!opt.ymLog, resetDelay: opt.ymResetDelay || 0 });
 
   // Which task's copy of $0000-$7FFF an access uses (the model what-ifs change this)
   const model = opt.model || '', u7 = opt.u7Fault, ramFault = opt.ramFault;
@@ -142,11 +146,13 @@ function createMachine(opt) {
   function sync(t) {
     const d = t - devCyc; if (d <= 0) return; devCyc = t;
     via.tick(d);
+    while (ca1At < ca1Edges.length && ca1Edges[ca1At][0] <= t) via.ca1(ca1Edges[ca1At++][1]);
     ym.tick(t);
     acia.tick(d, t);
   }
   // Cycles to the next device event (for a WAI: the CPU sleeps until then)
-  const nextEvent = () => Math.min(via.nextEvent(), ym.nextEvent(devCyc), acia.nextEvent());
+  const nextEvent = () => Math.min(via.nextEvent(), ym.nextEvent(devCyc), acia.nextEvent(),
+    ca1At < ca1Edges.length ? Math.max(1, ca1Edges[ca1At][0] - devCyc) : Infinity);
 
   // Run until cycle limit (or a halt)
   const traceLen = opt.trace === undefined ? 25 : opt.trace, pcWatches = opt.pcWatches || [], profileFrom = opt.profile === undefined ? -1 : opt.profile,
