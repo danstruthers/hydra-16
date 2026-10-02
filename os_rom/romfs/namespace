@@ -2,10 +2,12 @@
 # boot.hys.  The boot shell has mounted /sd, /env, /proc, /rom and /sram (the shared RAM disk) and bound the boot
 # card's bin and lib (if there's a card) at /bin and /lib, in the system namespace, which every task sees (-s);
 # these put the program caches before them, the shell's own first (a copy into /bin goes there: -c), and the
-# ROM's after.  (/ram is each shell's own, mounted in its own namespace, so /ram/bin is too.)
+# ROM's after.  (/ram is each shell's own, mounted in its own namespace, so /ram/bin is too.)  Then /pc, a folder
+# on the PC, served by the PC tool over the serial port (docs/plans/PC.md).
 bind -bs /sram/bin /bin
 bind -bcs /ram/bin /bin
 bind -as /rom/bin /bin
 bind -bs /sram/lib /lib
 bind -bcs /ram/lib /lib
 bind -as /rom/lib /lib
+mount -s pc /pc

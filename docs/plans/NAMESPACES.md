@@ -26,7 +26,9 @@ Each task has a namespace of up to 32 entries in the IO transfer areas' banks, c
 the **system namespace**, 32 entries every task sees ([io.md](../programming/io.md#namespaces)): a **mount** sends names under a path to a device's server, and a
 **bind** makes a path stand for another; the entries with the longest matching prefix apply, and several with the
 same path are a **union**, looked in in order (`bind -a`, `bind -b`, `-c` for creates; `unmount new old` takes one
-member out; `hide`); reading a union's directory reads each member's.  Names nothing matches must be under `/dev`.
+member out; `hide`); reading a union's directory reads each member's.  Names nothing matches must be under `/dev`;
+`/` and `/dev` themselves are the `root` device's directories, as Plan 9's `#/` is: `ls /` lists the namespace's
+first names (not one the task hides), `ls /dev` the devices.
 In the system namespace, the boot shell mounts `/sd`, `/env`, `/proc`, and `/rom` and `/sram` (the HydraFS server
 with a spec, as Plan 9's `mount` takes one: `mount -s hfs /rom x`), and binds the boot card's `bin` and `lib`; in
 its own, it mounts its area at `/ram` (each shell mounts its own: `mount hfs /ram r/N`).  Then it runs
@@ -183,7 +185,7 @@ anything, only take a name away.
 In the emulator (`sim/tests/devices.js`): unions (`-b`, `-a`, the order a name is found in, a listing of all the
 members, a create into the `-c` member, unmounting one member); the default namespace (`ns`), a new task's copy;
 programs found in `/bin` from a cache, a card and the ROM, in that order; `$PATH` still read; `hide`; 16 entries
-(and the 17th refused); the existing namespace tests unchanged.
+(and the 17th refused); the existing namespace tests unchanged; `/` and `/dev` listed (`ns-root`).
 
 ---
 

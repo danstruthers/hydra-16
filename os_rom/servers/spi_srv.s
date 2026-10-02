@@ -58,6 +58,10 @@ SPI_SERVE:
             cmp         #H9_CREATE
             bcs         SPI_BAD
             ldx         SD_FID
+            cpx         #SPI_FID_DIR                        ; /dev/spi itself?
+            bcc         :+
+            jmp         SPI_DIR
+:
             cpx         #SPI_FID_CTL
             bcs         @ctl
             ldx         SD_DEV
@@ -123,6 +127,22 @@ SPI_OPEN:
             inc         ZP_IO_REQ + 1                       ; The data area
             ldy         #0
             lda         (ZP_IO_REQ),Y
+            bne         :+
+            dec         ZP_IO_REQ + 1                       ; "": /dev/spi itself, a directory (read only)
+            ldy         #IO_BLK_MODE
+            lda         (ZP_IO_REQ),Y
+            jsr         IO_SRV_UNMAP
+            and         #IO_MODE_WRITE
+            bne         @mode
+            lda         #SPI_FID_DIR
+            clc
+            rts
+
+@mode:
+            lda         #ERR_IO_MODE
+            sec
+            rts
+:
             cmp         #'/'
             bne         @not_found
             iny
@@ -192,6 +212,42 @@ SPI_OPEN:
             rts
 
 SPI_CTL_NAME:   .byte   "/ctl", 0
+SPI_DIR_NAMES:  .byte   "0", 0, "1", 0, "2", 0, "3", 0, "4", 0, "5", 0, "6", 0, "7", 0  ; (/dev/spi's listing)
+                .byte   "8", 0, "9", 0, "a", 0, "b", 0, "c", 0, "d", 0, "e", 0, "f", 0, 0
+SPI_S_SPI:      .byte   "spi", 0
+
+; /dev/spi itself: its listing (DIR_LIST), its stat (DIR_STAT).  IN: .A = request
+SPI_DIR:
+            cmp         #H9_READ
+            beq         @read
+            cmp         #H9_STAT
+            beq         @stat
+            cmp         #H9_CLUNK
+            beq         @ok
+            cmp         #H9_DUP
+            beq         @ok
+            jmp         SPI_BAD
+
+@read:
+            ldx         SD_CLIENT
+            jsr         IO_SRV_MAP
+            lda         #<SPI_DIR_NAMES
+            ldy         #>SPI_DIR_NAMES
+            jsr         DIR_LIST
+            bra         @unmap
+
+@stat:
+            ldx         SD_CLIENT
+            jsr         IO_SRV_MAP
+            lda         #<SPI_S_SPI
+            ldy         #>SPI_S_SPI
+            jsr         DIR_STAT
+
+@unmap:
+            jsr         IO_SRV_UNMAP
+
+@ok:
+            jmp         SPI_OK
 
 ; Select device SD_DEV for a transaction, in its mode (mode 3: SCLK high before the select, so the first
 ; bit's store is a falling edge).  SPI_PORT keeps SCLK low, as SPI_XFER and SPI_RECV want.  Modifies: .A, .X

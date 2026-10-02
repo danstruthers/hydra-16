@@ -72,6 +72,8 @@ GitHub runs `node build.js test` on every push (`.github/workflows/build.yml`).
 
 See the [Hardware Reference](hardware.md#acia-65c51-u3-port-1-irq-line-1) for the pinout.
 
+**The PC tool** is a terminal that also serves a folder on the PC to the Hydra, at `/pc`: programs built on the PC run at once, with no card to carry across.  Once, in `sim/`: `npm install` (the `serialport` package); then `node sim/tools/hydrapc.js COM3 C:\hydra` (`--list` shows the ports; Ctrl-A x quits).  See [the PC tool](tools/emulator.md#the-pc-tool-pc) and [/pc](programming/io.md#a-folder-on-the-pc-pc).
+
 ### **First boot**
 
 Fit the CPU clock jumper J7 (3.58 MHz) and the RDY jumper J4, then power up.  You should see:

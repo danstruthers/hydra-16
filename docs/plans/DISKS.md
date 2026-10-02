@@ -244,6 +244,9 @@ server checks it on the RAM disk (`HFS_AREA_CHECK`), before a walk and before a 
 directories, `/sram/bin` and `/sram/lib` (`SH_RAM_DIRS`).  Each shell mounts its own area at `/ram` (`mount hfs
 /ram r/N`, in its own namespace) and makes it, with `bin` and `lib` (`SH_OWN_AREA`: the boot shell's from `SH_BOOT`,
 one started with `shell` from `SHELL_MAIN`); the programs, scripts and pipelines it runs inherit that.
+With no memory modules there's no RAM disk (its banks are the modules'), so each shell's area is on the shared
+one instead: `s/ram/N`, in `/sram/ram` (`mount hfs /ram s/ram/N`), the same at `/ram`, but kept when the shell
+ends, and open to every task, as `/sram` is.
 
 **Speed.**  A block from RAM or ROM is a 512-byte copy, about 7,000 cycles; from a card it's the bit-banged SPI,
 about 150,000 (the `sd-speed` test's budget).  The rest of a load is the same either way, and it's most of the

@@ -4,7 +4,8 @@
 ; The song player (BIOS ROM page C, included inside `.scope PAGEC`, see all.s): a ZSM song (the Commander X16's
 ; format: YM2151 register writes and delays) played through /dev/snd, in a task of its own.  The shell starts it
 ; (run.s: SH_SONG, for play and for a song run by its name) with the song on SH_RUN_FD, at its start, and its
-; arguments on SH_ARGS_FD: how many more times to play the song's loop (none: to its end once; 0: forever).  Or
+; arguments on SH_ARGS_FD: how many more times to play the song's loop (none: to its end once; 0, loop or -l:
+; forever; a song with no loop point loops from its start).  Or
 ; the sound driver starts it on the test song (ZSM_PLAY_TEST: sndtest's, /rom/songs/test.zsm on the ROM disk).
 ;   The header (16 bytes): "zm", a version, the loop point (3 bytes: an offset in the file; 0: none), the PCM
 ; table's (ignored), the FM channels it uses (claimed: SND_CTL_CLAIM), the PSG's (ignored), the tick rate (Hz;
@@ -16,7 +17,8 @@
 ; (ZSM_BEGIN), as on a board the chip's timer B didn't keep its period.  It sleeps by the system's tick (200 a
 ; second) instead, keeping a fraction, so the tempo is exact on average, if not each tick; the tick that wakes it
 ; makes it the task to run next (SCHED_URGENT_T).  It reads the file ahead while it waits (ZSM_TOPUP: a card's block can take 10 ms),
-; so a tick's writes aren't held up by a read.  From its wake-up to its next wait it holds the CPU (ZP_NO_PREEMPT
+; so a tick's writes aren't held up by a read; and it doesn't wait for a read ahead (IO_MODE_NONBLOCK: /pc's take
+; a third of a second on the line), but asks for it again each tick until it's come (ZSM_STAGE_READ).  From its wake-up to its next wait it holds the CPU (ZP_NO_PREEMPT
 ; 1): its writes, then its read ahead, so the system's tick doesn't switch it out halfway for a busy task's slice
 ; and make a note late (by up to 5 ms).  It lets go (0) only as it sleeps, so a switch that came due meanwhile
 ; (PREEMPT's) doesn't put it at the back of the queue before it's waiting.  Its end, or Ctrl-C, closes /dev/snd,
@@ -31,7 +33,9 @@ ZSM_FRAME       = $0900                                     ; A tick's register 
 ZSM_ARGBUF      = $0A00                                     ; The arguments (HYX_ARGS_SIZE), then the name
 ZSM_HDR         = $0A60                                     ; The header (ZSM_HDR_SIZE)
 ZSM_TEXT        = $0A70                                     ; "/dev/snd", or an exit message: in RAM (read
-ZSM_RAM_END     = $0B00                                     ;   on page 2, or page 5)
+ZSM_STAGE       = $0B00                                     ;   on page 2, or page 5).  The file read ahead
+ZSM_STAGE_SIZE  = 256                                       ;   (ZSM_STAGE_READ), for ZSM_INBUF when it's empty
+ZSM_RAM_END     = $0C00
 ZSM_FRAME_MAX   = 254                                       ; (127 pairs: a write each)
 ZSM_HDR_SIZE    = 16
 ZSM_H_LOOP      = 3                                         ; The header: the loop point ...
@@ -113,6 +117,14 @@ ZSM_BEGIN:
             sta         ZSM_LOOP,X
             dex
             bpl         @loop_point
+            lda         ZSM_LOOP                            ; None: a loop asked for is the whole song, from
+            ora         ZSM_LOOP + 1                        ;   the stream's start
+            ora         ZSM_LOOP + 2
+            bne         @looped
+            lda         #ZSM_HDR_SIZE
+            sta         ZSM_LOOP
+
+@looped:
             ldx         #ZSM_S_SND_LEN                      ; /dev/snd, in RAM
 
 @name:
@@ -130,10 +142,8 @@ ZSM_BEGIN:
             ldy         ZSM_HDR + ZSM_H_FM
             jsr         IO_CTL
             bcs         ZSM_BUSY
-            stz         ZSM_IN_LEFT
-            stz         ZSM_IN_LEFT + 1
             stz         ZSM_OUT
-            jsr         ZSM_TOPUP                           ; (The start of the song read before its time starts)
+            jsr         ZSM_START                           ; (The start of the song read before its time starts)
             stz         ZSM_CLOCK                           ; Timed by the system's tick, not the sound clock: on
                                                             ;   a board, the YM2151's timer B, re-armed each tick,
                                                             ;   didn't keep its period (songs ran up to twice as
@@ -258,10 +268,6 @@ ZSM_STREAM:
             bra         ZSM_STREAM
 
 @eof:                                                       ; The end: the loop again?
-            lda         ZSM_LOOP
-            ora         ZSM_LOOP + 1
-            ora         ZSM_LOOP + 2
-            beq         @end                                ; (None)
             lda         ZSM_LOOPS
             beq         @end
             cmp         #ZSM_FOREVER
@@ -269,48 +275,31 @@ ZSM_STREAM:
             dec         ZSM_LOOPS
 
 @again:
-            lda         ZSM_LOOP
-            sta         ZP_IO_OFS
-            lda         ZSM_LOOP + 1
-            sta         ZP_IO_OFS + 1
-            lda         ZSM_LOOP + 2
-            sta         ZP_IO_OFS + 2
-            stz         ZP_IO_OFS + 3
-            lda         #SH_RUN_FD
-            jsr         IO_SEEK
-            bcs         @end
-            stz         ZSM_IN_LEFT                         ; (What's read is spent)
-            stz         ZSM_IN_LEFT + 1
-            jsr         ZSM_TOPUP
-            jmp         ZSM_STREAM
+            jmp         ZSM_STREAM                          ; (The read ahead went on into the loop: what follows)
 
 @end:
             jmp         ZSM_FLUSH
 
-; The song's next byte (the buffer refilled from the file as it runs out).  OUT: C = 0, .A = the byte; or C =
-; 1: the file's end (or an error).  Preserves .X, .Y
+; The song's next byte (the buffer refilled from what was read ahead as it runs out, or from the file, waiting
+; for it, if nothing was).  OUT: C = 0, .A = the byte; or C = 1: the file's end (or an error).  Preserves .X, .Y
 ZSM_BYTE:
             lda         ZSM_IN_LEFT
             ora         ZSM_IN_LEFT + 1
             bne         @have
             phx
             phy
-            LOAD_ADDR   ZSM_INBUF, ZP_IO_BUF
-            stz         ZP_IO_CNT
-            lda         #>256
-            sta         ZP_IO_CNT + 1
-            lda         #SH_RUN_FD
-            jsr         IO_READ
+            lda         ZSM_STAGED
+            ora         ZSM_STAGED + 1
+            bne         :+
+            sec                                             ; Nothing read ahead: wait for it
+            jsr         ZSM_STAGE_READ
+            lda         ZSM_STAGED
+            ora         ZSM_STAGED + 1
+            beq         @none                               ; (The end)
+:
+            jsr         ZSM_UNSTAGE
             ply
             plx
-            bcs         @end
-            lda         ZP_IO_CNT
-            sta         ZSM_IN_LEFT
-            lda         ZP_IO_CNT + 1
-            sta         ZSM_IN_LEFT + 1
-            ora         ZSM_IN_LEFT
-            beq         @end                                ; (Nothing: the end)
-            stz         ZSM_IN_POS
 
 @have:
             lda         ZSM_IN_LEFT
@@ -326,58 +315,117 @@ ZSM_BYTE:
             clc
             rts
 
-@end:
+@none:
+            ply
+            plx
             sec
             rts
 
-; Read ahead: when fewer than 128 of the song's bytes are left in the buffer, they go to its start and the file
-; fills the rest (the end of the file: what there is)
-ZSM_TOPUP:
-            lda         ZSM_IN_LEFT + 1
-            bne         @done                               ; (256: full)
-            lda         ZSM_IN_LEFT
-            cmp         #128
-            bcs         @done
-            ldx         ZSM_IN_POS                          ; What's left, to the start
-            ldy         #0
-
-@move:
-            cpy         ZSM_IN_LEFT
-            beq         @moved
-            lda         ZSM_INBUF,X
-            sta         ZSM_INBUF,Y
-            inx
-            iny
-            bra         @move
-
-@moved:
-            stz         ZSM_IN_POS
-            clc                                             ; The rest: 256 - what's left, after it
-            lda         #<ZSM_INBUF
-            adc         ZSM_IN_LEFT
-            sta         ZP_IO_BUF
-            lda         #>ZSM_INBUF
-            adc         #0
-            sta         ZP_IO_BUF + 1
+; The song from the file's offset as it is (its start, or the loop's): nothing read yet; its first 512 bytes read,
+; waiting for them, before its time starts (a song's first tick sets its voices up: the test song's is 254 bytes).
+; Modifies: .A, .X, .Y
+ZSM_START:
+            stz         ZSM_IN_LEFT
+            stz         ZSM_IN_LEFT + 1
+            stz         ZSM_STAGED
+            stz         ZSM_STAGED + 1
+            stz         ZSM_EOF
+            lda         ZSM_LOOPS
+            sta         ZSM_RLOOPS
             sec
-            lda         #<256
-            sbc         ZSM_IN_LEFT
+            jsr         ZSM_STAGE_READ
+            jsr         ZSM_UNSTAGE                         ; (Nothing read: nothing there)
+            sec
+            jmp         ZSM_STAGE_READ
+
+; Read ahead, into ZSM_STAGE while ZSM_INBUF is played: not waiting (a read that's on its way is asked for again
+; next time).  Modifies: .A, .X, .Y
+ZSM_TOPUP:
+            clc
+            jmp         ZSM_STAGE_READ
+
+; What was read ahead (ZSM_STAGE) into the buffer, which is empty.  Modifies: .A, .X
+ZSM_UNSTAGE:
+            ldx         #0
+:
+            lda         ZSM_STAGE,X
+            sta         ZSM_INBUF,X
+            inx
+            bne         :-
+            lda         ZSM_STAGED
+            sta         ZSM_IN_LEFT
+            lda         ZSM_STAGED + 1
+            sta         ZSM_IN_LEFT + 1
+            stz         ZSM_IN_POS
+            stz         ZSM_STAGED
+            stz         ZSM_STAGED + 1
+            rts
+
+; Read ahead into ZSM_STAGE, ZSM_STAGE_SIZE bytes, if nothing's there yet; at the file's end, on from the loop point
+; if the loop is to be played again (ZSM_RLOOPS: so the stream finds it there after its $80, with no wait for a
+; seek and a read).  IN: C = 1: wait for them; C = 0:
+; don't (IO_MODE_NONBLOCK: a read that isn't done is asked for again next time, the same request, which a server
+; that's still on it, as /pc's, knows as the one it has out).  OUT: ZSM_STAGED (0: not yet); ZSM_EOF at the
+; file's end, or an error.  Modifies: .A, .X, .Y
+ZSM_STAGE_READ:
+            php                                             ; (C: wait or not)
+
+@again:
+            lda         ZSM_STAGED
+            ora         ZSM_STAGED + 1
+            ora         ZSM_EOF
+            bne         @done
+            pla                                             ; (C as given)
+            pha
+            lsr
+            lda         IO_FD_MODE + SH_RUN_FD * IO_FD_SIZE ; (lda, and, ora: C stays)
+            and         #<~IO_MODE_NONBLOCK
+            bcs         :+
+            ora         #IO_MODE_NONBLOCK
+:
+            sta         IO_FD_MODE + SH_RUN_FD * IO_FD_SIZE
+            LOAD_ADDR   ZSM_STAGE, ZP_IO_BUF
+            lda         #<ZSM_STAGE_SIZE
             sta         ZP_IO_CNT
-            lda         #>256
-            sbc         #0
+            lda         #>ZSM_STAGE_SIZE
             sta         ZP_IO_CNT + 1
             lda         #SH_RUN_FD
             jsr         IO_READ
-            bcs         @done
-            clc
-            lda         ZSM_IN_LEFT
-            adc         ZP_IO_CNT
-            sta         ZSM_IN_LEFT
-            lda         #0
-            adc         ZP_IO_CNT + 1
-            sta         ZSM_IN_LEFT + 1
+            bcc         @read
+            cmp         #ERR_IO_WOULD_BLOCK
+            beq         @done                               ; (On its way)
+            bra         @end
+
+@read:
+            lda         ZP_IO_CNT
+            sta         ZSM_STAGED
+            lda         ZP_IO_CNT + 1
+            sta         ZSM_STAGED + 1
+            ora         ZSM_STAGED
+            bne         @done
+            lda         ZSM_RLOOPS                          ; The file's end: on at the loop point, if it's
+            beq         @end                                ;   played again
+            cmp         #ZSM_FOREVER
+            beq         :+
+            dec         ZSM_RLOOPS
+:
+            lda         ZSM_LOOP
+            sta         ZP_IO_OFS
+            lda         ZSM_LOOP + 1
+            sta         ZP_IO_OFS + 1
+            lda         ZSM_LOOP + 2
+            sta         ZP_IO_OFS + 2
+            stz         ZP_IO_OFS + 3
+            lda         #SH_RUN_FD
+            jsr         IO_SEEK
+            bcc         @again
+
+@end:
+            lda         #1                                  ; The end
+            sta         ZSM_EOF
 
 @done:
+            plp
             rts
 
 ; The tick's register pairs to /dev/snd (one write), if there are any.  Preserves .X
@@ -606,7 +654,8 @@ ZSM_RATE:
             bne         @bit
             rts
 
-; The arguments (SH_ARGS_FD): how many more times to play the loop.  None: 0 (to the end once); 0: forever.
+; The arguments (SH_ARGS_FD): how many more times to play the loop.  None: 0 (to the end once); 0, loop or -l:
+; forever.
 ; OUT: ZSM_LOOPS
 ZSM_ARGS:
             stz         ZSM_ARGBUF
@@ -629,6 +678,13 @@ ZSM_ARGS:
             bra         @space
 
 @first:
+            cmp         #'-'                                ; -l, or loop: forever
+            bne         :+
+            inx
+            lda         ZSM_ARGBUF,X
+:
+            cmp         #'l'
+            beq         @forever
             sec
             sbc         #'0'
             cmp         #10
@@ -658,6 +714,8 @@ ZSM_ARGS:
 @number:
             lda         ZSM_T
             bne         :+
+
+@forever:
             lda         #ZSM_FOREVER                        ; 0: forever
 :
             sta         ZSM_LOOPS

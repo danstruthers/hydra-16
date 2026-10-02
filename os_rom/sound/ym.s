@@ -8,7 +8,7 @@
 .segment "SOUND_PB"
 
 ; The sound driver's set-up, in the sound task (its init, sound.s): no claims, no fids open, the master volume
-; full, the chip and the library reset (SND_RESET: a chip that doesn't answer is left to fail its writes), and
+; 100 (songs as written), the chip and the library reset (SND_RESET: a chip that doesn't answer is left to fail its writes), and
 ; the chip's IRQ handler
 SND_SETUP:
                 ldx         #SND_FIDS - 1
@@ -26,8 +26,9 @@ SND_SETUP:
                 stz         SND_R14
                 lda         #$FF
                 sta         SND_CLK_WAIT
-                lda         #$7F
+                lda         #100
                 sta         SND_MASTER
+                stz         SND_MASTER_TL
                 jsr         SND_RESET
                 ldx         #IRQ_NUMBER_ONBOARD_SOUND
                 lda         #<::SOUND_IRQ_HANDLER

@@ -256,14 +256,14 @@ The YM2151 has 8 channels (0-7), each a voice of 4 FM operators.  `snd.h` plays 
 | `snd_claim (mask)`, `snd_release (mask)` | The channels (bit n: channel n) this program's alone: other programs' writes to them are dropped.  `EBUSY` if another has one.  Given back when the program ends |
 | `snd_patch (ch, p)` | Load patch p |
 | `snd_note (ch, n)`, `snd_off (ch)` | Key a MIDI note on; key off (the note's release) |
-| `snd_vol (ch, v)`, `snd_volume (v)` | A channel's volume, the master volume (0-127) |
+| `snd_vol (ch, v)`, `snd_volume (v)` | A channel's volume (0-127), the master volume (a percentage, 0-200: 100 plays songs as written, more is louder) |
 | `snd_pan (ch, SND_PAN_LEFT \| _RIGHT \| _BOTH)` | Its speakers |
 | `snd_bend (ch, b)` | Its bend, in 64ths of a semitone (-128 to 127) |
 | `snd_drum (ch, n)` | A General MIDI drum (35-36 kick, 38 snare, 42 closed hi-hat, 46 open hi-hat, 49 crash ...) |
 | `snd_write (reg, val)`, `snd_writes (pairs, n)` | The chip's own registers (the YM2151's datasheet), one or n at a time |
 | `snd_regs (buf)` | All 256 registers, as written |
 | `snd_reset ()` | Clear the chip and the settings |
-| `snd_play (song, loops)` | Play a song (a ZSM file: the Commander X16's format, which the Furnace tracker exports) in the ROM's player, a task of its own: its task, at once.  `loops`: its loop that many more times (0: the song once; `SND_FOREVER`).  `hy_wait` waits for it, `hy_kill` stops it |
+| `snd_play (song, loops)` | Play a song (a ZSM file: the Commander X16's format, which the Furnace tracker exports) in the ROM's player, a task of its own: its task, at once.  `loops`: its loop that many more times (0: the song once; `SND_FOREVER`; a song with no loop point loops from its start).  `hy_wait` waits for it, `hy_kill` stops it |
 
 ```c
 #include <hydra.h>

@@ -40,6 +40,8 @@
 //           sim/cards to start from, instead of a blank one: a copy, so the fixture never changes), part
 //           (the HydraFS in a partition, after a FAT one of that many MB: 0 for none) }
 //           (files.sds[dev] = each one's path)
+//   pc      a folder on the PC for /pc (hydrasim.js --pc-dir): { files: { name: contents (a string or a Buffer; a
+//           name ending in / a folder) }, readOnly (--pc-read-only) } (files.pc = its path, to look at afterwards)
 //
 // Every test also fails if a task's stack came within STACK_MARGIN bytes of its bottom (the emulator reports
 // each task's lowest stack pointer); the summary shows the deepest stack of the whole run.
@@ -63,6 +65,7 @@ const TESTS = [
   ...require('./tests/devices.js'),
   ...require('./tests/storage.js'),
   ...require('./tests/shell.js'),
+  ...require('./tests/pc.js'),
 ];
 
 // ---- options
@@ -138,8 +141,21 @@ function runTest(t) {
     args.push('--sd', c.dev + ':' + f + (c.claim ? '@' + c.claim : ''));
     if (c.sdsc) args.push('--sdsc', String(c.dev));
   }
+  if (t.pc) {                                                    // A folder on the PC (/pc)
+    const d = path.join(tmpDir, t.name + '-pc');
+    fs.mkdirSync(d);
+    for (const [name, data] of Object.entries(t.pc.files || {})) {
+      const f = path.join(d, ...name.split('/'));
+      if (name.endsWith('/')) fs.mkdirSync(f, { recursive: true });
+      else { fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, data); }
+    }
+    files.pc = d;
+    args.push('--pc-dir', d);
+    if (t.pc.readOnly) args.push('--pc-read-only');
+  }
   let cmd = 'node hydrasim.js ' + args.slice(1).map(quote).join(' ');
   for (const f of files.sds) if (f) cmd = cmd.split(f).join(path.basename(f));
+  if (files.pc) cmd = cmd.split(files.pc).join(path.basename(files.pc));
   return new Promise(resolve => execFile(process.execPath, args, { maxBuffer: 64 << 20 }, (err, stdout, stderr) => {
     const report = stdout.replace(/\r/g, '');
     const m = /--- serial output ---\n([\s\S]*?)\n--- last instructions/.exec(report);

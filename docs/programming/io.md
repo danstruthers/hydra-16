@@ -111,10 +111,12 @@ A program that prints a partial line and then computes for a long time without a
 | `/dev/spi/N`, `/dev/spi/N/ctl` | Storage (page D) | SPI device N (`0`-`f`) as a file: a transaction a write, the bytes it sends back read after ([below](#spi-devices-devspi)) |
 | `/dev/gpio/N`, `port`, `ctl`, `ca1` | IO layer (in the reading task: page D) | The VIA's port A on J27: its pins, CA1's edges, CA2 ([below](#gpio-devgpio)) |
 | `/sd/N/...` | Storage | The **files** on disk N: the HydraFS server (the device `hfs`, mounted at `/sd`; [below](#the-files-on-a-card)) |
+| `/pc/...` | Serial driver (page D) | The **files** in a folder on the PC, through the serial port: the device `pc`, mounted at `/pc` ([below](#a-folder-on-the-pc-pc)) |
 | `/dev/pipe` | Pipe server (`$D`) | Made by `IO_PIPE`, not opened by name |
 | `/dev/proc` | IO layer (in the reading task) | The tasks (below) |
 | `/dev/ram` | The shell registers it (in the reading task) | The RAM itself, as the CPU selects it: task 0's only (any other task's open: `ERR_IO_PERM`); read-only ([below](#the-ram-itself-devram)) |
 | `/dev/time` | The shell registers it (in the reading task) | The clock: read `2026-09-29 18:05:00`; write a date and time to set it (below) |
+| `/`, `/dev` | The shell registers it (`root`, in the reading task) | The root and `/dev` as directories, as Plan 9's root device is: `/` lists `dev` and the first element of each namespace entry (the task's and the system's, each once; not one the task hides), `/dev` the device table; text lines, or stat records with `IO_MODE_STAT` (`ls -l`).  `IO_OPEN` sends `/` and `/dev` there when no namespace entry has them (as `/dev/root` and `/dev/root/dev`), so `cd /dev` works too.  The devices with files under them list them too, each its own server: `/dev/sd` (the disks started: `0/`, `x/`, `r/`, `s/`), `/dev/sd/N` (`data`, `ctl`), `/dev/gpio`, `/dev/spi`; and `/sd`, the cards started |
 | `/dev/null` | IO layer | Reads give end of file; writes are taken and dropped |
 | `/dev/zero` | IO layer | Reads give zeros |
 
@@ -181,6 +183,8 @@ In HyForth: `"b19200" stty`, and `stty?` to show the settings.
 
 The YM2151 (8 FM channels of 4 operators, at 3.58 MHz), through the sound library in the sound task (`os_rom/sound/`, BIOS ROM page B).
 
+**The volume:** `/dev/snd/volume` is the master volume as text, a percentage: `cat /dev/snd/volume` shows it (100 at boot: songs as written), and `echo 150 > /dev/snd/volume` sets it (0-200; words before the number are skipped).  Below 100 is quieter; above it louder, up to about 24 dB at 200, by lowering the carriers' levels (TL), as far as the chip's loudest: a song written quiet (background music often is) gets the most from it.  `SND_CTL_VOLUME` (below) and C's `snd_volume` set the same.
+
 **Writes** are register/value byte pairs.  The driver waits for the chip between writes, and keeps each register as written (the chip's can't be read back).  The register numbers the chip doesn't have are the **library's commands**, each for the channel `SND_R_CH` last chose (one choice for every fd: send it in the same write as the command):
 
 | Register | Name | Value |
@@ -209,7 +213,7 @@ Everything else goes to the chip as written (except the timers' interrupt enable
 | 3 | `SND_CTL_STOP` | Stop the tune |
 | 4 | `SND_CTL_CLAIM` | `.Y` = a mask of channels (bit n: channel n), this fd's alone; `ERR_IO_BUSY` if another fd has one of them (none taken) |
 | 5 | `SND_CTL_RELEASE` | `.Y` = a mask of channels to give back |
-| 6 | `SND_CTL_VOLUME` | `.Y` = the master volume (0-127) |
+| 6 | `SND_CTL_VOLUME` | `.Y` = the master volume, a percentage, 0-200: 100 (at boot) plays songs as written, less is quieter (the volume curve), more is louder, up to about 24 dB at 200 (the carriers' levels lowered, as far as the chip's loudest).  The file `/dev/snd/volume` is the same, as text |
 | 7 | `SND_CTL_CLOCK` | The sound clock, a song player's tick: the YM2151's timer B, its interrupt counting ticks (`SND_CLK`, from 0) and waking the waiting player at its time (`sound/ymfast.s`).  `.Y` = K: a period of K units of 1,024 of the chip's clocks (286 us) or K + 1, as often as the fraction written to `SND_R_CLOCK_F` (`$0C`, and `$0D`, the high byte: 65536ths) says, so the rate is exact on average; 0 stops it.  This fd's while it runs (`ERR_IO_BUSY`: another's); its last close stops it.  Timer A stays the clients' (CSM)  The song player doesn't use it (on the board, timer B didn't keep its period: [hardware](../hardware.md#ym2151-sound-u38-port-4-irq-line-4)); a read of `/dev/snd` shows its numbers in the shadow's spare bytes (`snd_srv.s`: `SND_NUMBERS`) |
 
 HyForth's `patch`, `note`, `noteoff` and `ywrite` ([HyForth](../using/hyforth.md#tasks-and-the-console)) and C's `snd.h` ([the C guide](c.md#sound-sndh)) use it.
@@ -338,7 +342,7 @@ Two disks in RAM, each with a HydraFS on it: fast, there with no card, and **emp
 
 Each shell mounts **its own area** of the RAM disk at `/ram` (below), and the boot shell mounts the shared disk at `/sram`, both with a spec: `ns` shows `mount hfs /ram r/1` (the shell's own namespace) and `mount -s hfs /sram s` (the system's).  So `/ram` means "my files in RAM" in every shell, as Plan 9 gives each process its own names, and the tasks a shell starts (programs, scripts, pipelines) inherit it.
 
-**Areas.**  The RAM disk's top directories are the tasks' areas: `N`, a hex digit (`0`-`9`, `a`-`f`), is task N's.  A shell mounts its own when it starts (`SH_OWN_AREA`: `mount hfs /ram r/N`, N its task: the boot shell's is `r/1`) and makes it, with `bin` and `lib` in it.  To see them all, mount the whole disk: `mount hfs /a r`, then `ls /a`.
+**Areas.**  The RAM disk's top directories are the tasks' areas: `N`, a hex digit (`0`-`9`, `a`-`f`), is task N's.  A shell mounts its own when it starts (`SH_OWN_AREA`: `mount hfs /ram r/N`, N its task: the boot shell's is `r/1`) and makes it, with `bin` and `lib` in it.  To see them all, mount the whole disk: `mount hfs /a r`, then `ls /a`.  **With no memory modules** there's no RAM disk (its banks are theirs), so a shell's area is on the shared RAM disk instead, `s/ram/N` in `/sram/ram` (`ns`: `mount hfs /ram s/ram/1`): `/ram` works the same, but the area is kept when the shell ends, and every task can use it, as `/sram`.
 * **Who:** anything in area N (opening, creating, removing, `ls`) is for task N, the tasks it started (and theirs, up the owner chain: `ZP_TASK_OWNER`), and task 0, the system's (the kernel's `TASK_MAY`).  Any other task gets `ERR_IO_PERM` (`$88`, the shell's `!IO ERR! not allowed`).  So a program the shell runs, or a stage of a pipeline, uses the shell's area, and two shells' families can't see into each other's.
 * **Other names** in the root (`zz`) aren't areas: refused.  The root's listing is everyone's.  Renaming an area, or changing its mode, is refused too (but for task 0).
 * **Owners:** when a task ends, the tasks it started get its owner instead (`TASK_ORPHANS`, as Unix gives orphans to `init`), so a new task in its slot isn't taken for their parent.
@@ -364,6 +368,21 @@ then in `$PATH`'s directories.  Caching a program is copying it there: `cp /sd/0
 | `stop` | Give its banks back; its files are lost.  `ERR_IO_BUSY` while a file on it is open |
 
 Reading the ctl file gives `ram 256 KB 512 blocks` (`sram` for the shared one), `banks $10-$2F` (its banks, or its shared bank IDs), then its HydraFS's lines; `none` when it's stopped.  `format` and `check` work as on a card, and `/dev/sd/r/data` is the disk's bytes.  How: the storage driver reads or writes a block by mapping its bank at `$8000` in the storage task (the RAM disk's bank in its own `$00`; the shared one's with `U`), copying 512 bytes and putting them back (`SD_RAM_READ`, `SD_RAM_WRITE` in `drivers/sd.s`); the starting and stopping are in `servers/ramdisk.s`, with the memory manager's `MM_BANK_ALLOC_IN` (task banks from a range) and `SH_BANK_ALLOC` (shared banks by number, with no handle).
+
+#### **A folder on the PC: `/pc`**
+
+`/pc` is a folder on the PC, served over the serial port by the PC tool, which is the terminal too ([plans/PC.md](../plans/PC.md)):
+
+```
+node sim/tools/hydrapc.js COM3 C:\hydra [--read-only]     (on the PC; once, in sim/: npm install)
+```
+
+Its files work as a card's do ([below](#the-files-on-a-card)): read, write, create (a directory too), remove, rename, `ls -l`'s sizes and times (the PC's), a program run from it (`/pc/game`, or by name after `bind -a /pc/bin /bin`).  The device `pc` runs in the serial task, and `/rom/lib/namespace` mounts it (`mount -s pc /pc`).  Its requests and replies are frames on the serial line, between the console's bytes: the PC tool doesn't show them, and the Hydra's serial handler takes the PC's before the console sees them.
+* **Speed:** the line's, about 900 bytes a second each way at 9600 baud: a 2K program in about 2.5 s.
+* **Songs** play from it in time (`play /pc/song.zsm`): the player reads ahead without waiting ([SOUND.md](../plans/SOUND.md)).  But a song that needs more than the line carries (a dense one: `allub.zsm` needs about 2 KB a second), or a tick with more than about 500 bytes of writes, waits for it: copy such a song to `/ram` or `/sram` first.
+* **Errors:** a damaged frame, or one lost, is sent again; with no PC tool on the line (or after 3 tries) a request fails with `ERR_IO_DEVICE` (`no answer`) after a second or two, and the attach frame's 7 bytes show on the terminal.  With the tool's `--read-only`, every change is `ERR_IO_PERM` (`not allowed`).  The other errors are HydraFS's (`ERR_IO_NOT_FOUND`, `ERR_IO_EXISTS`, `ERR_IO_NOT_EMPTY`, `ERR_IO_BUSY`: removing a file the Hydra has open).
+* **One request at a time:** tasks using `/pc` together take turns.
+* **The emulator** plays the PC tool's part: `--pc-dir FOLDER` ([emulator](../tools/emulator.md)).
 
 ### **Pipes**
 
@@ -394,10 +413,10 @@ Each task has its own namespace of up to 32 entries, which the tasks it starts i
 * After a bind it looks again, up to 4 times (`ERR_IO_NS_LOOP` beyond).
 * In a union, it opens the name in the first member; if that member hasn't got it (`ERR_IO_NOT_FOUND`), the next, and so on.  A create goes to the `-c` member.  A hide's path gives `ERR_IO_NOT_FOUND`.
 * **A union's directory** is read member by member, as in Plan 9: when an fd reading one reaches the end of a member's listing, the IO layer opens the same name in the next member that has it, on the same fd, and the read goes on (`IO_UNION_NEXT` in `io/io.s`).  A name in two members shows twice.  One such fd a task at a time (the last opened; the name up to 50 characters): another fd on a union's directory reads only its first member.
-* A name no entry matches must be under `/dev`: the IO layer sends `/dev/<device>/...` to the device in every task, with no mount.  Everything else is an entry's.
+* A name no entry matches must be under `/dev`: the IO layer sends `/dev/<device>/...` to the device in every task, with no mount.  Everything else is an entry's.  `/` and `/dev` themselves are the `root` device's directories ([above](#devices)): `ls /` lists the namespace's first names, `ls /dev` the devices.
 * Through a mount with a spec, the request says so (`IO_BLK_SPEC`): HydraFS serves its disks in memory (`x`, `r`, `s`) only then (or for task 0), so `/sd` has the cards alone.
 
-**The namespace at boot.**  In the system namespace, the boot shell mounts `/sd` (`hfs`), `/env` (`env`), `/proc` (`proc`), and `/rom` and `/sram` (`hfs`, with the specs `x` and `s`, if they're there), and binds the boot card's `bin` and `lib` at `/bin` and `/lib`; in its own, it mounts its area at `/ram`.  Then, before `boot.hys`, it runs `/rom/lib/namespace` (on the ROM disk: `os_rom/romfs/namespace`), whose `-s` lines put the program caches before the card's and the ROM's after, and then the card's own `lib/namespace` if it has one (lines of the shell's `bind` and `mount`, and `#` comments).  With a card, `ns` shows:
+**The namespace at boot.**  In the system namespace, the boot shell mounts `/sd` (`hfs`), `/env` (`env`), `/proc` (`proc`), and `/rom` and `/sram` (`hfs`, with the specs `x` and `s`, if they're there), and binds the boot card's `bin` and `lib` at `/bin` and `/lib`; in its own, it mounts its area at `/ram`.  Then, before `boot.hys`, it runs `/rom/lib/namespace` (on the ROM disk: `os_rom/romfs/namespace`), whose `-s` lines put the program caches before the card's and the ROM's after, and mount `/pc` ([above](#a-folder-on-the-pc-pc)), and then the card's own `lib/namespace` if it has one (lines of the shell's `bind` and `mount`, and `#` comments).  With a card, `ns` shows:
 
 ```
 mount -s hfs /sd
@@ -413,10 +432,11 @@ bind -cs /ram/lib /lib
 bind -as /sram/lib /lib
 bind -as /sd/0/lib /lib
 bind -as /rom/lib /lib
+mount -s pc /pc
 mount hfs /ram r/1
 ```
 
-That's 13 of the system's 32 entries and 1 of the shell's own 32.  `/bin`'s first member is `/ram/bin`, which each task resolves in its own namespace: each shell's cache.  A card's `lib/namespace` adds with `-s` for everyone (`bind -as /sd/0/tools /bin`), or without it for the boot shell and what it starts.  Every task sees the same, so a C program's `fopen ("/bin/x.hyx")` finds what the shell does.
+That's 14 of the system's 32 entries and 1 of the shell's own 32.  `/bin`'s first member is `/ram/bin`, which each task resolves in its own namespace: each shell's cache.  A card's `lib/namespace` adds with `-s` for everyone (`bind -as /sd/0/tools /bin`), or without it for the boot shell and what it starts.  Every task sees the same, so a C program's `fopen ("/bin/x.hyx")` finds what the shell does.
 
 ### **The current directory**
 

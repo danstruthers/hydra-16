@@ -4,7 +4,8 @@
 // its 1.790 MHz clock.  What it sends goes to env.onTx; what it receives comes from its input queue (keys, and
 // '\u0100': wait 2M cycles before the next one; '\u0101': wait for a prompt, the output (grown since) ending with
 // "> " or ">", and quiet for a while), a key every 20000 cycles from cycle 200000, or as fast as the line goes (env.paste: then a byte
-// arriving while the last is unread is lost, as on the chip).
+// arriving while the last is unread is lost, as on the chip).  send(bytes): what the PC sends on its own (a /pc reply: hydrasim.js
+// --pc-dir), back to back at the line's rate, ahead of the keys (a byte arriving while the last is unread is lost, and counted).
 'use strict';
 
 // The rates (the control register's low 4 bits: 0 = the external clock / 16), named for 1.8432 MHz; the ACIA's
@@ -21,6 +22,7 @@ function createAcia(env) {
     // last set
     txEnd: -Infinity, txSent: 0, gapMin: Infinity,
     rxQueue: [...(env.input || '')], rxDelay: 200000, rxLost: 0, typedAt: -1, typedLast: -1, wdc,
+    pcQueue: [], pcDelay: 0, pcLost: 0,                       // (What the PC sends on its own: send)
     sent: 0, tail: '', sentAt: 0, promptFrom: -1,             // (Bytes sent, the last two, when: for a wait for a prompt)
   };
   // A prompt: sent since the wait began, and nothing after it for PROMPT_QUIET cycles (lines typed ahead are still
@@ -41,7 +43,7 @@ function createAcia(env) {
     if (r === 0) {
       if (a.txTimer > 0) a.overruns++;
       if (++a.txSent > 8) a.gapMin = Math.min(a.gapMin, a.txTimer > 0 ? 0 : (t - a.txEnd) * ACIA_BAUD[a.ctrl & 15] / (clock * 1e6));
-      a.sent++; a.tail = (a.tail + String.fromCharCode(v)).slice(-2); a.sentAt = t;
+      if (!env.consoleOnly) a.shown(v, t);
       env.onTx(v, t); a.tdre = 0; a.txTimer = a.charCycles();
     } else if (r === 1) { a.cmd &= 0xE0; a.irq = 0; }       // Programmed reset
     else if (r === 2) a.cmd = v;                              // (The TX interrupt comes as TDRE goes on, as on the
@@ -52,6 +54,15 @@ function createAcia(env) {
   a.tick = (d, t) => {
     if (a.txTimer > 0 && (a.txTimer -= d) <= 0) {             // (A character's time)
       a.txEnd = t + a.txTimer; a.txTimer = 0; a.tdre = 1; if (!wdc && (a.cmd & 0x0C) === 0x04) a.irq = 1;
+    }
+    if (a.pcQueue.length) {                                   // The PC's own bytes: back to back, the keys wait
+      if ((a.pcDelay -= d) > 0) return;
+      const c = a.pcQueue.shift();
+      if (a.rdrf) a.pcLost++;
+      else { a.rx = c; a.rdrf = 1; if (!(a.cmd & 2)) a.irq = 1; }
+      a.pcDelay = a.charCycles();
+      if (!a.pcQueue.length && a.rxDelay < a.pcDelay) a.rxDelay = a.pcDelay;   // (A key after them: a character's time on)
+      return;
     }
     if (a.rxQueue[0] === '\u0101') {                           // \p: a prompt (one sent since the wait began), then on
       if (a.promptFrom < 0) a.promptFrom = a.sent;
@@ -70,10 +81,15 @@ function createAcia(env) {
   a.nextEvent = () => {
     let n = Infinity;
     if (a.txTimer > 0) n = Math.min(n, a.txTimer);
+    if (a.pcQueue.length) n = Math.min(n, Math.max(1, a.pcDelay));
     if (a.rxQueue.length && a.rxQueue[0] !== '\u0101') n = Math.min(n, Math.max(1, a.rxDelay));   // (A wait for a prompt: the output wakes it)
     return n;
   };
+  // A byte of the console's output (for a wait for a prompt): every byte sent, or with env.consoleOnly (a /pc host
+  // takes its frames out first: machine.js) only the ones its caller says are the console's
+  a.shown = (v, t) => { a.sent++; a.tail = (a.tail + String.fromCharCode(v)).slice(-2); a.sentAt = t; };
   a.type = key => a.rxQueue.push(key);                        // A key typed (interactive)
+  a.send = bytes => { if (!a.pcQueue.length) a.pcDelay = a.charCycles(); a.pcQueue.push(...bytes); };   // The PC's own bytes
   a.reset = () => { a.cmd = 0; a.ctrl = 0; a.tdre = 1; a.txTimer = 0; a.irq = 0; a.rdrf = 0; };
   return a;
 }

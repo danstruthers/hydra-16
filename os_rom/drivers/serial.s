@@ -55,6 +55,7 @@ SERIAL_INIT:
                 stz             SER_PREFIX,X            ; Empty rings, nobody waiting, no prefix key
                 dex
                 bpl             :-
+                jsr             PC_INIT                 ; /pc: no frames yet, not attached; its device
                 ldx             #IRQ_NUMBER_ONBOARD_SERIAL
                 lda             #<SERIAL_IRQ_HANDLER
                 ldy             #>SERIAL_IRQ_HANDLER

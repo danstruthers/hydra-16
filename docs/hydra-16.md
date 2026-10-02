@@ -66,6 +66,7 @@ More: [the system in one page](programming/README.md#the-system-in-one-page) (th
 ```
 node build.js test                 build everything and run the regression tests
 node sim/hydrasim.js -i            use the Hydra in your terminal, in the emulator (Ctrl-A x quits)
+node sim/tools/hydrapc.js COM3 DIR the board's terminal, with the folder DIR at /pc (npm install in sim/ first)
 ```
 
 ---
@@ -156,7 +157,7 @@ Everything the Hydra runs at boot is in two ROM images, from one build ([the two
 | A | HyForth's far words, its error messages, the disassembler |
 | B | Sound: the YM2151 library, `/dev/snd`, the patches |
 | C | The song player |
-| D | `/dev/spi`, the SPI devices as files; `/dev/gpio`, port A's pins |
+| D | `/dev/spi`, the SPI devices as files; `/dev/gpio`, port A's pins; `/pc`, a folder on the PC |
 | E-F | Free |
 
 * [BIOS ROM pages](programming/rom-layout.md#bios-rom-pages): the full table, with the sources, and the fixed addresses on every page (the reset entry at `$E000`, the thunks at `$F800`, the COMMON block at `$FD00`).
@@ -230,6 +231,7 @@ Everything is a file.  A task opens names and reads and writes fds; the IO layer
 | `/dev/spi/N`, `/dev/spi/N/ctl` | [An SPI device](programming/io.md#spi-devices-devspi) (`0`-`f`): a transaction a write, its answer read after; its mode |
 | `/dev/gpio/N`, `port`, `ctl`, `ca1` | [Port A's pins](programming/io.md#gpio-devgpio) on J27, CA1's edges, CA2 |
 | `/sd/N/...` | [The files on a card](programming/io.md#the-files-on-a-card) (HydraFS) |
+| `/pc/...` | [A folder on the PC](programming/io.md#a-folder-on-the-pc-pc), through the serial port (the PC tool, `sim/tools/hydrapc.js`) |
 | `/proc/N/...` | [The tasks](programming/io.md#the-tasks-proc): status, `ctl`, `ns`, `cmd` (`send`), and their memory as files, `mem` and `ram` |
 | `/env/NAME` | [The environment](programming/io.md#the-environment-env) |
 | `/dev/time` | [The clock](programming/io.md#the-clock-devtime) |
@@ -263,6 +265,7 @@ bind -as /sram/bin /bin
 bind -as /sd/0/bin /bin
 bind -as /rom/bin /bin
 ...
+mount -s pc /pc
 mount hfs /ram r/1
 ```
 
@@ -286,6 +289,7 @@ mount hfs /ram r/1
 * **The ROM disk**, `/rom`: [io.md](programming/io.md#the-roms-files-rom), [its design](plans/DISKS.md#the-rom-disk); built from `os_rom/romfs.txt` by `sim/tools/mkromdisk.js` ([the ROM disk tool](tools/emulator.md#the-rom-disk)).
 * **The RAM disks**, `/ram` and `/sram`: [io.md](programming/io.md#the-ram-disks-ram), [their design](plans/DISKS.md#ram-disks), [who can use which area](plans/DISKS.md#who-can-use-which-area), [the program caches](plans/DISKS.md#the-program-caches), [booting with or without a card](plans/DISKS.md#booting-finding-the-disks).
 * **Cards from a PC:** [HydraFS card images](tools/emulator.md#hydrafs-card-images) (`sim/tools/hydrafs.js`), [putting a program on a card](programming/programs.md#putting-it-on-a-card).
+* **A folder on the PC, with no card:** `/pc`, served over the serial port by the PC tool, which is the terminal too: [io.md](programming/io.md#a-folder-on-the-pc-pc), [the PC tool](tools/emulator.md#the-pc-tool-pc), [its design](plans/PC.md).
 
 ---
 
@@ -343,6 +347,7 @@ A YM2151 (8 FM voices of 4 operators each) on port 4, mixed with the slots' audi
   * [Using the Hydra from your terminal](tools/emulator.md#using-the-hydra-from-your-terminal), and [its options](tools/emulator.md#usage), the profiler (`--profile`) among them.
   * [Regression tests](tools/emulator.md#regression-tests) (`sim/regress.js`, `sim/tests/`), which boot the real ROMs.
   * [HydraFS card images](tools/emulator.md#hydrafs-card-images), [Hydra executables](tools/emulator.md#hydra-executables), [the ROM disk](tools/emulator.md#the-rom-disk), [songs](tools/emulator.md#songs-the-score-compiler).
+  * [The PC tool](tools/emulator.md#the-pc-tool-pc) (`sim/tools/hydrapc.js`): the board's terminal, serving a folder at `/pc`.
   * [What it models](tools/emulator.md#what-it-models), [inside the emulator](tools/emulator.md#inside-the-emulator).
 * **The documentation as one PDF** (`sim/tools/mkpdf.js`): every document in `docs/` and the top README, made into [hydra-16.pdf](hydra-16.pdf) by a headless Microsoft Edge or Chrome, with the links between them kept and bookmarks for each document and section.  `node sim/tools/mkpdf.js` remakes it after a change.
 
@@ -386,6 +391,7 @@ The plans record the design's reasoning and what's to come; parts of them are hi
 | [NAMESPACES.md](plans/NAMESPACES.md) | Unions, the default namespace, `/bin` and `/lib`, `newns` | Done |
 | [PROC.md](plans/PROC.md) | `/proc`, and a task's memory as files | Done but `regs`, `fd` and the debugger's commands |
 | [DISKS.md](plans/DISKS.md) | The ROM and RAM disks, the program caches | Done |
+| [PC.md](plans/PC.md) | `/pc`, a folder on the PC over the serial port, and the PC tool | Done |
 | [VIDEO.md](plans/VIDEO.md) | The Vera X card in slot 0 | Planned |
 | [SOUND.md](plans/SOUND.md) | The YM2151 library, the player, the test song | Done; importing music to do |
 | [HYDRAFS.md](plans/HYDRAFS.md) | The filesystem's spec | Done |

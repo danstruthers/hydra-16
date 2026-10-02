@@ -68,6 +68,14 @@
 //   --gpio-in HH        The VIA's port A inputs (J27: /dev/gpio), as levels, hex (default FF: the pull-ups); the
 //                       report shows its directions and outputs at the end
 //   --ca1 C[,C...]      Pulse CA1 (J27 pin 11) low at each cycle C, high again 500 cycles on (/dev/gpio/ca1)
+//   --pc-dir DIR        /pc: the PC tool's part (sim/tools/hydrapc.js) is played here, serving the folder DIR: the
+//                       frames the Hydra sends for /pc are answered (sim/tools/pcfs.js), at the line's rate, and
+//                       don't show in the output; the report counts them
+//   --pc-read-only      /pc can't be written: its writes, creates, removes and renames are refused
+//   --pc-log            List /pc's requests as they're served (opens, creates, removes, renames, errors)
+//   --pc-damage F[,F...] Damage /pc frames on the line, to try the Hydra's resends: qN the Nth frame the Hydra sends
+//                       (the PC asks for it again, or it's cut short and the Hydra's time runs out), rN the Nth reply
+//                       (the Hydra asks again); a byte in its body gets bit 6 flipped (e.g. --pc-damage q3,r5)
 //   --ym-reset-delay N  The YM2151 takes N cycles more to reset a timer flag (to its IRQ line going) after the
 //                       write's busy time: a slower chip, as some boards' seem to be (default 0)
 //   --rtc TIME|now|stopped|unset   A DS1747 in U7 (a 512K task RAM with a clock): its clock registers are
@@ -133,6 +141,10 @@ for (let i = 0; i < argv.length; i++) {
     case '--sdsc': opt.sdsc.push(+next()); break;
     case '--spi-echo': opt.spiEcho.push(parseInt(next(), 16)); break;
     case '--ym-reset-delay': opt.ymResetDelay = +next(); break;
+    case '--pc-dir': opt.pcDir = next(); break;
+    case '--pc-read-only': opt.pcReadOnly = true; break;
+    case '--pc-log': opt.pcLog = true; break;
+    case '--pc-damage': opt.pcDamage = next().split(',').map(s => s.trim().toLowerCase()); break;
     case '--gpio-in': opt.gpioIn = parseInt(next(), 16) & 0xFF; break;
     case '--ca1': opt.ca1 = next().split(',').map(Number); break;
     case '--raw': opt.raw = true; break;
@@ -165,21 +177,51 @@ const sd = opt.sds.map(({ dev, file, blocks }) => {             // A card's bloc
     read: n => { const b = Buffer.alloc(512); fs.readSync(fd, b, 0, 512, n * 512); return b; },
     write: (n, data) => { fs.writeSync(fd, data, 0, 512, n * 512); } };
 });
+// --pc-dir: the PC tool's part of /pc, the frames out of the serial output answered (sim/lib/pcproto.js, tools/pcfs.js)
+const pcLink = opt.pcDir ? pcHost() : null;
+function pcHost() {
+  const P = require('./lib/pcproto.js');
+  const { createPcFs } = require('./tools/pcfs.js');
+  const fsrv = createPcFs({ root: opt.pcDir, readOnly: !!opt.pcReadOnly, log: opt.pcLog ? t => console.log('[pc] ' + t) : undefined });
+  const h = { requests: 0, attaches: 0, naks: 0, send: null, fsrv };
+  const damage = new Set(opt.pcDamage || []);
+  let sent = 0, replies = 0, at = -1;                          // (Frames from the Hydra, replies; a frame's byte count)
+  const reply = bytes => {                                      // (--pc-damage rN: a byte of its body)
+    if (damage.has('r' + ++replies)) { bytes = Uint8Array.from(bytes); bytes[6] ^= 0x40; }
+    h.send(bytes);
+  };
+  const reader = P.createReader({ types: [P.T_ATTACH, P.T_REQ],
+    onFrame: f => {
+      if (f.type === P.T_ATTACH) h.attaches++; else h.requests++;
+      reply(P.encode(P.T_REPLY, f.tag, f.type === P.T_ATTACH ? fsrv.attach() : fsrv.request(f.tag, f.payload)));
+    },
+    onBad: f => { h.naks++; reply(P.encode(P.T_NAK, f.tag)); } });
+  h.push = b => {
+    if (b === P.MARK) at = damage.has('q' + ++sent) ? 0 : -1;  // (--pc-damage qN: its 6th byte on)
+    else if (at >= 0 && ++at === 6) { b ^= 0x40; at = -1; }
+    return reader.push(b);
+  };
+  h.flush = () => reader.flush();
+  return h;
+}
 const m = createMachine(Object.assign({}, opt, {
   osrom: fs.readFileSync(path.join(opt.rom, 'os_rom_C02.bin')),
   pagedrom: fs.readFileSync(path.join(opt.rom, 'paged_rom_C02.bin')),
-  sd, ymLog: !!opt.ymVgm, log: t => console.log(t),
+  sd, ymLog: !!opt.ymVgm, log: t => console.log(t), pcHost: pcLink,
 }));
 const { cpu, acia, ym, rtc } = m;
+if (pcLink) pcLink.send = bytes => acia.send(bytes);
 
 // ---- report
 function report() {
+if (pcLink) for (const b of pcLink.flush()) m.out += String.fromCharCode(b);   // (A frame cut short: the output's)
 console.log('--- serial output ---\n' + (opt.raw ? m.out : m.out.replace(/\x1b/g, '<ESC>')));
 if (cpu.halted) console.log('--- halted: ' + cpu.halted);
 console.log('--- last instructions (W T PC   A  X  Y  S  P) ---');
 for (const [w, t, pc, a, x, y, s, p] of m.trace) console.log(hx(w, 1), hx(t, 1), hx(pc, 4), hx(a), hx(x), hx(y), hx(s), hx(p));
 if (m.iOffTop.length) console.log('--- longest with IRQs off, from the first key typed (cycles: from -> to, at cycle): ' +
   m.iOffTop.map(([n, a, b, at]) => n + ': ' + a + ' -> ' + b + ' at ' + at).join(', '));
+if (pcLink) console.log('--- /pc: ' + pcLink.attaches + ' attach(es), ' + pcLink.requests + ' request(s), ' + pcLink.naks + ' damaged (asked again), ' + pcLink.fsrv.stats.repeats + ' repeated (a reply lost); ' + acia.pcLost + ' reply byte(s) lost (they arrived while the last one was still unread)');
 if (opt.paste) console.log('--- ACIA: ' + acia.rxLost + ' received byte(s) lost (they arrived while the last one was still unread)');
 if (acia.gapMin < Infinity) console.log('--- ACIA: shortest idle between characters sent: ' + acia.gapMin.toFixed(2) + ' bits');
 if (acia.wdc) console.log('--- WDC ACIA: ' + acia.overruns + ' byte(s) written while one was still being sent (garbled on the chip)');

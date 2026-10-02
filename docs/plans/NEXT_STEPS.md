@@ -23,7 +23,7 @@ The Hydra already does more than most homebrew 65C02 machines:
   * a line editor;
   * WOZMON with a disassembler.
 * **Sound:** the YM2151, with a library, `/dev/snd`, a ZSM song player and a score language.
-* **Tools:** an emulator that runs the real ROM, 74 regression tests, a hardware test, and documentation for every part.
+* **Tools:** an emulator that runs the real ROM, 80 regression tests, a hardware test, and documentation for every part.
 
 What's missing is mostly **on-ramps** (ways to start without the author's setup) and **things to make** (a screen, input, games, hardware projects, languages beginners know).
 
@@ -36,7 +36,7 @@ What's missing is mostly **on-ramps** (ways to start without the author's setup)
 | Try it without building a board | Install Node and cc65, clone, build, run the emulator in a terminal | **A web emulator**: a page that boots the ROM, with a sample card |
 | Build it on Linux or macOS | Windows `.bat` files only | **`build.js`** for any OS; CI; release images |
 | Plug in a monitor and keyboard | A serial terminal is the only console | **Vera X** video and a keyboard ([VIDEO.md](VIDEO.md)) |
-| Get programs onto it | Take the SD card out and copy with `hydrafs.js` | **A PC folder as a filesystem over serial** (`/pc`), then XMODEM |
+| Get programs onto it | Take the SD card out and copy with `hydrafs.js` | **A PC folder as a filesystem over serial** (`/pc`: built), then XMODEM |
 | Type a first Forth program | `: x 65 . ;` silently breaks, and `.` prints hex | **HyForth fixes**: literals compiled, decimal output, history ([review](CODE_REVIEW.md#hyforth)) |
 | Write BASIC | No BASIC | **hy-basic**, adapted to run as a program |
 | Blink an LED, read a sensor | The VIA's port A and I2C are on a header, but there's no driver | **`/dev/i2c`, `/dev/spi`, `/dev/gpio`** |
@@ -82,7 +82,7 @@ Sizes are rough: **S** a few days, **M** a few weeks, **L** longer.
 * **Keyboard, mouse and game pads (M).**  Vera X's input controller on IRQ line 3, over I2C ([VIDEO.md](VIDEO.md#the-card)).
 * **Files from the PC without the card (M).**  Two ways, both worth having:
   * **XMODEM** ([IDEAS.md](IDEAS.md) item 6): send and receive single files with any terminal program.
-  * **`/pc`**: a small Node program on the PC serves a folder over the serial port, and the Hydra mounts it as a file server (9P-style requests, which is what the IO layer speaks inside).  Then `cc65` output is runnable at once (`/pc/bin/game`), with no copying.  The emulator can serve a folder the same way.  For a programmer this is the biggest workflow win.
+  * **`/pc`**: *(Built: [PC.md](PC.md).)*  A small Node program on the PC serves a folder over the serial port, and the Hydra mounts it as a file server (9P-style requests, which is what the IO layer speaks inside).  Then `cc65` output is runnable at once (`/pc/bin/game`), with no copying.  The emulator can serve a folder the same way.  For a programmer this is the biggest workflow win.
 * **A full-screen editor (M).**  `edit` is a line editor.  A small screen editor (nano-like: arrows, insert, search, save) using conio works on a terminal today and on the Vera X screen later.
 
 #### **3. Languages and tools on the machine**
@@ -183,8 +183,9 @@ Each milestone leaves the project in a state worth showing.
 3. `/proc` ([PROC.md](PROC.md)).  *Done:* `/proc` mounted, `ns`, `pages`, `ctl` for the family only, and `/proc/N/cmd` (`send N line`: shell N runs it as if typed); `/proc/N/mem` and `/proc/N/ram`, a task's memory as files, for its family and task 0.  *To do:* `regs` and `fd`, then the debugger's `ctl` commands with the debugger.
 4. `/dev/spi`.  *Done:* `/dev/spi/N` and its `ctl` (modes 0 and 3), shared with the SD cards (a device with a card started is busy, and a card isn't started on an open one).
 5. `/dev/gpio`, with a hardware project tutorial.  *Done:* the pins (`/dev/gpio/N`, `port`), `ctl` (directions, CA1's edge, CA2), `/dev/gpio/ca1` (a read waits for CA1's edge: its interrupt), and the tutorial's LED and button.
-6. **Next:** `/pc`: a PC folder over the serial port, then XMODEM.
-7. Not yet placed in the order: EhyBASIC, adapted to the system (a `.hyx`, and `/rom/bin/basic`), and `/dev/i2c`.
+6. `/pc`, a PC folder over the serial port ([PC.md](PC.md)).  *Done:* the device `pc` (in the serial task, mounted at `/pc` by `/rom/lib/namespace`), its frames between the console's bytes (CRC-checked, sent again when damaged or lost), and the PC tool (`sim/tools/hydrapc.js`: the terminal too, `--read-only`); the emulator's `--pc-dir`.
+7. **Next:** XMODEM.
+8. Not yet placed in the order: EhyBASIC, adapted to the system (a `.hyx`, and `/rom/bin/basic`), and `/dev/i2c`.
 
 **3. A computer on its own:**
 1. The emulator's VERA, then the Vera X carrier card.

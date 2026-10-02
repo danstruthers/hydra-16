@@ -322,6 +322,31 @@ TASK_ZP     SER_IRQ_W, 1            ; The fast ACIA handler (SER_IRQ_FAST): the 
 TASK_ZP     SER_IRQ_T, 1            ;   and task
 TASK_ZP     SER_PEND, 1             ;   what it left for the driver's handler (SER_PEND_*: SER_DO_PENDING)
 TASK_ZP     SER_PEND_KEY, 1         ;   the console command key (SER_PEND_CMD)
+                                    ; /pc's frames (servers/pc_srv.s; serfast.s moves their bytes), 0 at the start
+                                    ;   from here to PC_ZP_LOW (PC_INIT):
+TASK_ZP     PC_RXS, 1               ; A frame coming in: 0 none (the bytes are the console's), 1 one is; $81 one is,
+                                    ;   skipped (PC_RXBUF has one still)
+TASK_ZP     PC_RXI, 1               ;   its header's bytes so far (4: in its body)
+TASK_ZP     PC_RXE, 1               ;   <> 0: the next byte is escaped (PC_ESC)
+TASK_ZP     PC_RXP, 2               ;   where its next byte goes (PC_RXBUF ...)
+TASK_ZP     PC_RXL, 2               ;   its body's bytes still to come (the payload and the CRC)
+TASK_ZP     PC_RXF, 1               ; <> 0: a frame is in PC_RXBUF, for the request that's out
+TASK_ZP     PC_OWNER, 1             ; The client whose request is out ($FF: none): a frame coming in wakes it
+TASK_ZP     PC_TXS, 1               ; <> 0: a frame is going out, from PC_TXP ...
+TASK_ZP     PC_TXE, 1               ;   <> 0: the byte to send next, as it is (PC_MARK, or an escaped byte's second)
+TASK_ZP     PC_TXP, 2               ;   its next byte
+TASK_ZP     PC_TXL, 2               ;   its bytes still to go
+TASK_ZP     PC_STEP, 1              ; The server: 0 no request out; PC_STEP_ATTACH; PC_STEP_REQ
+TASK_ZP     PC_TAG, 1               ;   the request's tag (its reply's must match)
+TASK_ZP     PC_TRIES, 1             ;   the tries left
+TASK_ZP     PC_UNTIL, 2             ;   the tick count its reply is due by
+TASK_ZP     PC_ONLINE, 1            ;   <> 0: attached (the PC answered)
+TASK_ZP     PC_CLIENT, 1            ;   the request's client
+TASK_ZP     PC_LEN, 2               ;   the frame going out: its body's length (with the CRC: a resend's)
+TASK_ZP     PC_N, 2                 ;   (A count)
+TASK_ZP     PC_PTR, 2               ;   (A pointer)
+TASK_ZP     PC_CRC, 2               ;   (A CRC)
+TASK_ZP     PC_ZP_LOW, 0
 TASK_ZP_END
 
 ; Storage task ZP (valid in the storage task: SPI, the SD card and its server; spi.s, sd.s, sd_srv.s)
@@ -400,6 +425,9 @@ TASK_ZP_BEGIN
 TASK_ZP     ZSM_SND, 1              ; /dev/snd's fd
 TASK_ZP     ZSM_IN_POS, 1           ; The read buffer (ZSM_INBUF): where the next byte is ...
 TASK_ZP     ZSM_IN_LEFT, 2          ;   and how many are left (0-256)
+TASK_ZP     ZSM_STAGED, 2           ; The bytes read ahead into ZSM_STAGE (0-256; 0: none yet, a read may be on its way)
+TASK_ZP     ZSM_EOF, 1              ; <> 0: the file's end was read (or an error)
+TASK_ZP     ZSM_RLOOPS, 1           ; The read ahead's ZSM_LOOPS: at the file's end it goes on at the loop point
 TASK_ZP     ZSM_OUT, 1              ; The register pairs gathered for this tick (ZSM_FRAME): their bytes
 TASK_ZP     ZSM_NEXT, 4             ; The next tick's time: a fraction (16 bits), then the system's tick count
 TASK_ZP     ZSM_PERIOD, 3           ; A song tick in system ticks (8.16 fixed point)

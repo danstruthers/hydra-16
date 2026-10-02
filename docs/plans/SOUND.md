@@ -25,13 +25,13 @@ The plan for the Hydra's sound: a library for the YM2151, a song player, a test 
 
 ### **Phase 2: the song player** *(done)*
 
-**Built:** `os_rom/sound/player.s` on BIOS ROM page C (627 bytes; it uses only gates, so it has a page of its own and page B keeps its room).  `play song [n] [&]`, a song by its name (`theme` finds `theme.zsm`, after `.hyx` and `.hys`), `run song.zsm` (the shell knows a song by its `zm`, as it knows an executable by `HYX1`), and C's `snd_play` (with `hy_kill` to stop one).  `n` plays the song's loop n more times; none: the song once, to its end; 0: forever.  Tests: `songs` (a song made in the test: its timing, loops, a claim, Ctrl-C, `jukebox`).
+**Built:** `os_rom/sound/player.s` on BIOS ROM page C (627 bytes; it uses only gates, so it has a page of its own and page B keeps its room).  `play song [n] [&]`, a song by its name (`theme` finds `theme.zsm`, after `.hyx` and `.hys`), `run song.zsm` (the shell knows a song by its `zm`, as it knows an executable by `HYX1`), and C's `snd_play` (with `hy_kill` to stop one).  `n` plays the song's loop n more times; none: the song once, to its end; 0 (or `loop`, `-l`): forever.  A song with no loop point loops from its start.  Tests: `songs` (a song made in the test: its timing, loops, a claim, Ctrl-C, `jukebox`).
 
 **Measured** in the emulator with songs from the X16's tools (zsound's `BGM.ZSM`, 564 notes at 60 Hz; zsmkit's `SONG1.ZSM`, 935 notes at 62 Hz, with PSG parts skipped): every note played, on average 1.5 ms from the song's time, with no drift over a minute (under 2 ms at the end).  A note is late when its tick carries a lot of register writes before its key-on (the song's first tick, setting up every channel, 40-50 ms; a big patch change, 15 ms): the chip takes the writes one at a time.  What made it that close:
 * the system tick was 0.35% fast (the timer's latch had 64 cycles taken off for "the handler's time", but a free-running VIA timer counts latch + 2 cycles whatever the handler does), which also made the clock gain 5 minutes a day; fixed (`TIMER_TASK_INT`, `kernel.inc`), and the `sleep` test's window narrowed so it can't come back;
 * the song's time in 8.16 fixed point (200 x 65536 / the rate), from a half, so each tick rounds to the nearest system tick;
 * the song's start on a tick boundary, two ticks after the player starts (the shell that started it is waiting by then);
-* the file read ahead while the player waits (a card's block can take 10 ms), not when a tick's writes run out.
+* the file read ahead while the player waits (a card's block can take 10 ms), not when a tick's writes run out; and not waited for (`IO_MODE_NONBLOCK`: asked for again each tick until it's come), 256 bytes at a time into a second buffer, so a song plays in time from `/pc`, where a read takes a third of a second on the line ([PC.md](PC.md)).  512 bytes are read before the song's time starts, and the read ahead goes on into the loop before the stream gets there.
 
 The design, as planned:
 
@@ -46,6 +46,7 @@ The design, as planned:
 * It reads the file in 256-byte blocks, collects each tick's register pairs, and sends them in one write (one request a tick), then sleeps to the next tick.
 * **Timing:** the system tick is 200 Hz (5 ms), so a 60 Hz song's ticks land 15 or 20 ms apart; with a running target (`TASK_SLEEP_UNTIL` and a fraction), the tempo is exact on average.  Phase 4 made each tick exact.
 * **Cost:** a request is about 2,000 cycles, and the server about 150 a pair: a 60 Hz song with 10 writes a tick is about 6% of the CPU.  Songs are streams: 0.5-2 KB a second, so a 3-minute song is 100-300 KB, read from the card as it plays (well within the SD card's rate).
+* **Volume:** `/dev/snd/volume` (a percentage: 100 as written, up to 200, about 24 dB louder, for songs written quiet), `SND_CTL_VOLUME`, C's `snd_volume`.
 * **Loops:** the header's loop point, a number of times (`play song.zsm 3`), or forever until stopped.
 * A text `/dev/snd/ctl` (`play`, `stop`, `volume 90`, a status line) may follow, as Plan 9's audio devices have one.
 * The driver keeps the timers' interrupt enables (`$14`) off whatever a song writes: a register dump from an arcade game has its driver's timers in it, and an interrupt nothing clears would stop the machine.

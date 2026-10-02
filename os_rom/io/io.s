@@ -34,6 +34,8 @@
 .endmacro
 
 S_DEV_PREFIX:   .byte "/dev/"
+S_ROOT:         .byte "/dev/root", 0            ; ("/": IO_OPEN)
+S_ROOT_DEV:     .byte "/dev/root/dev", 0        ; ("/dev")
 DEV_PREFIX_LEN  = 5
 
 ; ---- helpers
@@ -330,7 +332,8 @@ IO_COPY_IN:
 ; The calls
 
 ; Open a file.  The name goes through the task's namespace first (IO_MOUNT, IO_BIND); a name it doesn't
-; match must be "/dev/<device>" or "/dev/<device>/<rest>".  The server opens the rest of the name.
+; match must be "/dev/<device>" or "/dev/<device>/<rest>".  The server opens the rest of the name.  "/" and
+; "/dev" themselves are the root device's directories (root_srv.s): /dev/root and /dev/root/dev.
 ; IN: .A.Y = name (zero-terminated, 255 characters at most), .X = IO_MODE_* bits
 ; OUT (success): .A = fd, C = 0
 ; OUT (failure): .A = ERR_IO_NOT_FOUND, ERR_IO_NO_FDS, ERR_IO_NS_LOOP, ERR_IO_NAME or the server's
@@ -441,6 +444,8 @@ IO_OPEN_NAME:
             beq         :+
             jmp         @fail                       ; (An error)
 :
+
+@dev:
             ldy         #DEV_PREFIX_LEN - 1         ; "/dev/"?
 
 @prefix:
@@ -471,6 +476,37 @@ IO_OPEN_NAME:
             bra         @find_fd
 
 @not_found:
+            ldy         #1                          ; "/" or "/dev": the root device's directories
+            lda         (ZP_IO_DATA),Y
+            beq         @root
+            ldy         #DEV_PREFIX_LEN - 1         ; ("/dev", and its end)
+            lda         (ZP_IO_DATA),Y
+            bne         @no_such
+:
+            dey
+            lda         (ZP_IO_DATA),Y
+            cmp         S_DEV_PREFIX,Y
+            bne         @no_such
+            tya
+            bne         :-
+            ldx         #S_ROOT_DEV - S_ROOT
+            bra         @rename
+
+@root:
+            ldx         #0
+
+@rename:
+            ldy         #0                          ; The name: the root device's
+:
+            lda         S_ROOT,X
+            sta         (ZP_IO_DATA),Y
+            inx
+            iny
+            cmp         #0
+            bne         :-
+            bra         @dev                        ; (No root device: not found, as the name isn't "/")
+
+@no_such:
             lda         #ERR_IO_NOT_FOUND
             jmp         @fail
 
@@ -1204,7 +1240,8 @@ STDIN_GET:
 @done:
             rts
 
-; Is device .X served by the serial task (/dev/cons, /dev/ser)?  OUT: C = 1 yes.  Preserves .A, .Y
+; Is device .X the serial port's (/dev/cons, /dev/ser: served by the serial task; /pc is too, but it's files)?
+; OUT: C = 1 yes.  Preserves .A, .Y
 IO_DEV_IS_SERIAL:
             pha
             phy
@@ -1215,7 +1252,19 @@ IO_DEV_IS_SERIAL:
             asl
             tax
             _M_SYS_ENTER                            ; The device table
+            lda         IO_DEV_TABLE + IO_DEV_SERVE + 1,X
+            cmp         #>::PC_SERVE
+            bne         @task
+            lda         IO_DEV_TABLE + IO_DEV_SERVE,X
+            cmp         #<::PC_SERVE
+            bne         @task
+            lda         #0                          ; (/pc: not the port's)
+            bra         @leave
+
+@task:
             lda         IO_DEV_TABLE + IO_DEV_TASK,X
+
+@leave:
             _M_SYS_LEAVE
             cmp         #SERIAL_TASK_NUM
             clc

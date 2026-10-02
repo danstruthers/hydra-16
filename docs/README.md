@@ -37,6 +37,7 @@ The reasoning behind the design, and what's planned.  Parts of them are history 
 * [REORG_PLAN.md](plans/REORG_PLAN.md): the ROM reorganisation.
 * [SOUND.md](plans/SOUND.md): the YM2151: its library (done), a song player, a test song that uses the whole chip, and importing music from other machines.
 * [NEXT_STEPS.md](plans/NEXT_STEPS.md): what's missing to make the Hydra fun and useful for hobbyists and programmers, and the milestones to get there.
+* [PC.md](plans/PC.md): `/pc`, a folder on the PC served over the serial port by the PC tool, which is the terminal too (built).
 * [DISKS.md](plans/DISKS.md): RAM and ROM disks as HydraFS volumes: `/ram` (each shell's own area of the RAM disk) and `/sram` (the shared RAM disk), with program caches, and `/rom` (the paged ROM as one disk: built).
 * [NAMESPACES.md](plans/NAMESPACES.md): the Plan 9 way: union directories put together with binds and mounts, a default namespace, and `/bin` and `/lib` in place of search paths.
 * [PROC.md](plans/PROC.md): `/proc`, the tasks as files, with a task's memory (`/proc/N/mem`, `/proc/N/ram`) for its family and task 0, the system task.

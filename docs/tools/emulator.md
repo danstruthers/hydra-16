@@ -58,6 +58,10 @@ node hydrasim.js [options]
 | `--ym-reset-delay N` | The YM2151 takes N cycles more to reset a timer flag (and let its IRQ line go) after the write's busy time: a slower chip, as some boards' seem to be (the `songs` test runs with 150) |
 | `--gpio-in HH` | The VIA's port A inputs (J27: `/dev/gpio`), as levels, hex (default `FF`: the pull-ups); the report gives its directions, outputs and PCR at the end (`--- VIA port A`) |
 | `--ca1 C[,C...]` | Pulse CA1 (J27 pin 11) low at each cycle C, high again 500 cycles on (`/dev/gpio/ca1`) |
+| `--pc-dir DIR` | `/pc`: the emulator plays the PC tool's part (`tools/hydrapc.js`, [below](#the-pc-tool-pc)), serving the folder DIR: the frames the Hydra sends for `/pc` are answered at the line's rate, and don't show in the output; the report counts them (`--- /pc`) |
+| `--pc-read-only` | `/pc` can't be changed: writes, creates, removes and renames are refused (the PC tool's `--read-only`) |
+| `--pc-log` | List `/pc`'s requests as they're served (opens, creates, removes, renames, errors) |
+| `--pc-damage F[,F...]` | Damage `/pc`'s frames on the line, to try the resends: `qN` the Nth frame the Hydra sends, `rN` the Nth reply (a byte of its body gets bit 6 flipped), e.g. `q3,r5` |
 | `--ram-fault BANK:An:high\|low` | Address line An (0-12) stuck high or low on the RAM chip holding BANK (a shared chip holds 4 bank IDs, e.g. `F0-F3`; a task RAM module 16 banks), e.g. `F0:A0:high`.  The POST `RAM` line should report it |
 | `--model M` | Hardware what-ifs: `sharedlow`, `nostack`, `zponly`, `noshared` |
 | `--raw` | Print serial output as-is (by default ESC shows as `<ESC>`) |
@@ -93,7 +97,7 @@ that got it there), and the final pseudo-register and vector RAM state.
 output for what it expects: POST, the self tests (MMU, scheduler, IO; also with 1 RAM module and 1 shared
 macro-page), POST with hardware faults, the hardware test (all of it; and from POST, with faults injected), HyForth and its libraries, pipelines, files and namespaces, tasks and console
 switching, Ctrl-C, background sound and the bell, `sleep`, the serial settings, `/dev/sd` (on a blank card
-image; also two shells reading it at once), HydraFS reading, writing, checking and quick formatting (on fixture card images kept in `sim/cards`, and on cards made by `tools/hydrafs.js`, and checked with it afterwards), partitions, the clock (`/dev/time`) and files' stamps, sparse files, and the shell: the volume chosen at boot, `boot.hys`, `cd`, the prompt, the file commands, `include`, running programs (`.hyx` executables and `.hys` scripts, by name and from `/bin`, their arguments, Ctrl-C), redirection, `echo`, the editor, and each task's environment (`/env`, `PATH`, `HOME`, `/dev/proc`), and `/rom`.  One test runs a small program of its own instead of the ROM, and
+image; also two shells reading it at once), HydraFS reading, writing, checking and quick formatting (on fixture card images kept in `sim/cards`, and on cards made by `tools/hydrafs.js`, and checked with it afterwards), partitions, the clock (`/dev/time`) and files' stamps, sparse files, and the shell: the volume chosen at boot, `boot.hys`, `cd`, the prompt, the file commands, `include`, running programs (`.hyx` executables and `.hys` scripts, by name and from `/bin`, their arguments, Ctrl-C), redirection, `echo`, the editor, and each task's environment (`/env`, `PATH`, `HOME`, `/dev/proc`), `/rom`, and `/pc` (a folder on the PC, through the serial port; also with frames damaged on the line, and with no PC tool).  One test runs a small program of its own instead of the ROM, and
 checks the CPU's cycle counts against WDC's table.  Four watch timing: a 1000-character paste at 57600 with
 nothing lost, console output at 115200 inside a cycle budget, SD read throughput inside a cycles-a-byte
 budget, and a limit on how long the ROM ever holds interrupts off.  The emulators run in parallel; the whole
@@ -111,7 +115,7 @@ Or `node build.js rom test` builds the ROM and then runs them.  A failure shows 
 found when it shouldn't be), the `hydrasim.js` command that reproduces it, and the serial output.  Every
 test also fails if a task's stack got within 32 bytes of its bottom, and the summary shows the deepest stack
 of the run (about 70 of the 256 bytes so far, with IRQ frames on top of far calls).  To add a
-test, add an entry to one of the files in `sim/tests/` (by area: `system`, `forth`, `devices`, `storage`, `shell`;
+test, add an entry to one of the files in `sim/tests/` (by area: `system`, `forth`, `devices`, `storage`, `shell`, `pc`;
 their helpers are in `tests/common.js`, and the fields are described at the top of `regress.js`).  In a test's
 input, `P` waits for the prompt (the last command done) and `W(n)` for a fixed time: use `P` between commands,
 and `W` only where time has to pass (a song playing, a background task working, a key typed into a program).
@@ -121,7 +125,26 @@ that wants SD cards lists them under `sd`; a card with `hfs` gets a HydraFS made
 Hydra's quick format makes one), and the function is handed the volume (the `Volume` class below) to put
 files in; `claim` makes a card say it's bigger than its image (`--sd FILE@B`); `image` starts a card from one
 of the fixture images in `sim/cards` (a copy), cards made before that the ROM must go on reading ([their
-README](../../sim/cards/README.md)).
+README](../../sim/cards/README.md)).  A test that uses `/pc` gives the folder's files under `pc` (`readOnly` too), and
+its `check` can look at the folder afterwards (`files.pc`).
+
+### **The PC tool: /pc**
+
+`tools/hydrapc.js` is a terminal for the Hydra on a real serial port that also serves a folder on the PC to it, at
+`/pc` ([plans/PC.md](../plans/PC.md); on the Hydra: [io.md](../programming/io.md#a-folder-on-the-pc-pc)).  It needs the
+`serialport` package: `npm install`, once, in `sim/`.
+
+```
+node tools/hydrapc.js COM3 C:\hydra               the terminal, with C:\hydra served as /pc
+node tools/hydrapc.js COM3 C:\hydra --read-only   the Hydra can't change the folder
+node tools/hydrapc.js --list                      the serial ports
+```
+
+Ctrl-A is its prefix key, as the emulator's: Ctrl-A x quits, Ctrl-A l lists the requests as they're served (or
+`--log`), Ctrl-A Ctrl-A sends a Ctrl-A.  `--baud N` sets the line's rate (default 9600, the Hydra's at boot).
+It raises RTS and DTR as it opens the port: the Hydra's ACIA sends only while its ~CTS (the PC's RTS) is on.
+Its parts are shared with the emulator's `--pc-dir`: `lib/pcproto.js` (the frames, their CRC and the reader that
+picks them out of the console's bytes) and `tools/pcfs.js` (the file server, which answers as HydraFS does).
 
 ### **HydraFS card images**
 

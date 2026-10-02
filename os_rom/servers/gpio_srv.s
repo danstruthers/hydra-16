@@ -38,6 +38,10 @@ GPIO_SERVE:
             jsr         IO_SRV_MAP                          ; (.X: the client)
             pla
             ldx         GPIO_FID
+            cpx         #GPIO_FID_DIR
+            bcc         :+
+            jmp         GPIO_DIR
+:
             cpx         #GPIO_FID_CA1
             bcs         @ca1
             cmp         #H9_READ
@@ -68,6 +72,27 @@ GPIO_SERVE:
             bne         GPIO_BAD_UNMAP
             jsr         GPIO_CA1_UNREF
 
+; /dev/gpio itself (mapped): its listing (DIR_LIST), its stat (DIR_STAT).  IN: .A = request
+GPIO_DIR:
+            cmp         #H9_READ
+            bne         :+
+            lda         #<GPIO_DIR_NAMES
+            ldy         #>GPIO_DIR_NAMES
+            jsr         DIR_LIST
+            bra         GPIO_OK_UNMAP
+:
+            cmp         #H9_STAT
+            bne         :+
+            lda         #<GPIO_S_GPIO
+            ldy         #>GPIO_S_GPIO
+            jsr         DIR_STAT
+            bra         GPIO_OK_UNMAP
+:
+            cmp         #H9_CLUNK
+            beq         GPIO_OK_UNMAP
+            cmp         #H9_DUP
+            bne         GPIO_BAD_UNMAP
+
 GPIO_OK_UNMAP:
             jsr         IO_SRV_UNMAP
 
@@ -84,12 +109,29 @@ GPIO_BAD:
             sec
             rts
 
-; The rest of the name is in the data area: "/N" (0-7), "/port", "/ctl" or "/ca1".  OUT: .A = the fid
+; The rest of the name is in the data area: "/N" (0-7), "/port", "/ctl" or "/ca1"; or "", /dev/gpio itself (a
+; directory, read only).  OUT: .A = the fid
 GPIO_OPEN:
             jsr         IO_SRV_MAP
             inc         ZP_IO_REQ + 1                       ; The data area
             ldy         #0
             lda         (ZP_IO_REQ),Y
+            bne         :+
+            dec         ZP_IO_REQ + 1                       ; "": the directory
+            ldy         #IO_BLK_MODE
+            lda         (ZP_IO_REQ),Y
+            jsr         IO_SRV_UNMAP
+            and         #IO_MODE_WRITE
+            bne         @mode
+            lda         #GPIO_FID_DIR
+            clc
+            rts
+
+@mode:
+            lda         #ERR_IO_MODE
+            sec
+            rts
+:
             cmp         #'/'
             bne         @not_found
             iny
@@ -157,7 +199,9 @@ GPIO_OPEN:
             clc
             rts
 
-GPIO_NAMES:     .byte   "port", 0, "ctl", 0, "ca1", 0, 0
+GPIO_DIR_NAMES: .byte   "0", 0, "1", 0, "2", 0, "3", 0, "4", 0, "5", 0, "6", 0, "7", 0  ; (/dev/gpio's listing: the
+GPIO_NAMES:     .byte   "port", 0, "ctl", 0, "ca1", 0, 0                                ;   pins, then these)
+GPIO_S_GPIO:    .byte   "gpio", 0
 GPIO_NAME_FIDS: .byte   GPIO_FID_PORT, GPIO_FID_CTL, GPIO_FID_CA1
 GPIO_BITS:      .byte   $01, $02, $04, $08, $10, $20, $40, $80
 

@@ -42,6 +42,11 @@ SH_BOOT:
             ldy         #>SH_S_GPIO
             ldx         #IO_DEV_CALLER_TASK
             jsr         DEV_REGISTER
+            LOAD_ADDR   ::ROOT_SERVE, ZP_TC_VEC             ; / and /dev as directories (in each client's task:
+            lda         #<SH_S_ROOT                         ;   IO_OPEN sends them here as /dev/root)
+            ldy         #>SH_S_ROOT
+            ldx         #IO_DEV_CALLER_TASK
+            jsr         DEV_REGISTER
             LOAD_ADDR   SH_S_HFS, ZP_IO_BUF                 ; The cards' files at /sd: in the system namespace,
             lda         #<SH_S_SD                           ;   which every task sees (NS_SYSTEM), as all of
             ldy         #>SH_S_SD                           ;   these but /ram (a shell's own)
@@ -94,6 +99,7 @@ SH_S_ENV    = SH_S_ENVP + 1
 SH_S_TIME:  .byte   "time", 0
 SH_S_RAMDEV: .byte  "ram", 0
 SH_S_GPIO:  .byte   "gpio", 0
+SH_S_ROOT:  .byte   "root", 0
 SH_S_HFS:   .byte   "hfs", 0
 SH_MOUNTS:  .word   SH_S_ROM, SH_S_SPEC_ROM             ; The boot shell's mounts of hfs: a name, its spec
             .word   SH_S_SRAM, SH_S_SPEC_SRAM           ;   (the ROM disk; the shared RAM disk)
@@ -103,17 +109,47 @@ SH_S_SPEC_ROM: .byte DISK_NAME_ROM, 0
 SH_S_SRAM:  .byte   "/sram", 0
 SH_S_SPEC_SRAM: .byte DISK_NAME_SRAM, 0
 SH_S_RAM:   .byte   "/ram", 0
+SH_S_SRAM_RAM: .byte "/sram/ram", 0
 SH_S_VOLS:  .byte   "hydrafs", 0
 
 ; This shell's own area on the RAM disk, r/N (N: its task), mounted at /ram (mount hfs /ram r/N), and made, with
 ; its bin and lib (its caches: /ram/bin and /ram/lib, the first members of /bin and /lib): the boot shell's
 ; (SH_BOOT), and each shell's started later (SHELL_MAIN), so the programs, scripts and pipelines a shell runs use
-; its area, as they inherit its namespace (docs/plans/DISKS.md).  (No RAM disk: no /ram.)  Modifies: .A, .X, .Y
+; its area, as they inherit its namespace (docs/plans/DISKS.md).  No RAM disk (no memory modules: its banks are
+; theirs): an area on the shared RAM disk instead, s/ram/N, in /sram/ram (kept when the shell ends, unlike r's).
+; (Neither: no /ram.)  Modifies: .A, .X, .Y
 SH_OWN_AREA:
-            lda         #DISK_NAME_RAM                      ; PAGE1::SHBUF2 = the spec: r/N
-            sta         PAGE1::SHBUF2
+            lda         #DISK_NAME_RAM
+            jsr         SH_AREA_TRY
+            bcc         :+
+            lda         #<SH_S_SRAM_RAM                     ; (/sram/ram: the shells' areas there)
+            ldy         #>SH_S_SRAM_RAM
+            jsr         SH_MKDIR
+            lda         #DISK_NAME_SRAM
+            jmp         SH_AREA_TRY
+:
+            rts
+
+; This shell's area of RAM disk .A (DISK_NAME_RAM: r/N; DISK_NAME_SRAM: s/ram/N) mounted at /ram, and made, with
+; its bin and lib.  OUT: C = 0: there; C = 1: not (unmounted again).  Modifies: .A, .X, .Y
+SH_AREA_TRY:
+            sta         PAGE1::SHBUF2                       ; PAGE1::SHBUF2 = the spec: "r/N", or "s/ram/N"
+            ldx         #1
+            cmp         #DISK_NAME_SRAM
+            bne         @task
+            ldy         #0                                  ; ("/ram")
+:
+            lda         SH_S_RAM,Y
+            beq         @task
+            sta         PAGE1::SHBUF2,X
+            inx
+            iny
+            bra         :-
+
+@task:
             lda         #'/'
-            sta         PAGE1::SHBUF2 + 1
+            sta         PAGE1::SHBUF2,X
+            inx
             lda         T_REGISTER
             and         #$0F
             cmp         #10
@@ -121,8 +157,8 @@ SH_OWN_AREA:
             adc         #'a' - '0' - 10 - 1                 ; (C = 1)
 :
             adc         #'0'
-            sta         PAGE1::SHBUF2 + 2
-            stz         PAGE1::SHBUF2 + 3
+            sta         PAGE1::SHBUF2,X
+            stz         PAGE1::SHBUF2 + 1,X
             LOAD_ADDR   PAGE1::SHBUF2, ZP_IO_CNT
             lda         #<SH_S_RAM                          ; (In this shell's own namespace: .X = 0)
             ldy         #>SH_S_RAM
@@ -154,7 +190,7 @@ SH_MOUNT_SPEC:
             rts
 
 ; The mount at .A.Y kept if its disk is there (the path opens); else unmounted (from the namespace .X says, as
-; SH_MOUNT_SPEC's).  Modifies: .A, .X, .Y
+; SH_MOUNT_SPEC's).  OUT: C = 1: it wasn't there.  Modifies: .A, .X, .Y
 SH_IF_THERE:
             pha
             phy
@@ -166,13 +202,16 @@ SH_IF_THERE:
             plx
             ply
             pla
+            clc
             rts
 
 @gone:
             plx
             ply
             pla
-            jmp         IO_UNMOUNT
+            jsr         IO_UNMOUNT
+            sec
+            rts
 
 ; The shared program caches' directories, on the shared RAM disk: /sram/bin and /sram/lib.  (Errors, or no
 ; RAM disk: left as they are.)

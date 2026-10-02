@@ -8,7 +8,9 @@
 ; look": its ZP and RAM, where the rings are; no stack use until T is back) instead of running code in it:
 ;   SER_IRQ_FAST    the ACIA's interrupt (its vector points at SER_IRQ_STUB in the COMMON block): moves the
 ;                   received byte into the RX ring, and the next byte from the TX ring to the ACIA, and wakes
-;                   the tasks waiting to read or write.  The rest (the break and kill keys, console commands,
+;                   the tasks waiting to read or write.  /pc's frames (pc_srv.s) go by here too: one coming in
+;                   into PC_RXBUF, not the ring (and the client whose request is out woken when it's whole),
+;                   and one going out from PC_TXBUF, whole, ahead of the ring's bytes.  The rest (the break and kill keys, console commands,
 ;                   the bell) it leaves in SER_PEND for the driver's handler, reached through the dispatcher
 ;                   (IRQ_FAST_SLOW; SERIAL_IRQ_HANDLER: SER_DO_PENDING), which only happens for those.
 ;   SER_CONS_PUTS   IO_FLUSH, for /dev/cons from the foreground task: the stdout buffer into the TX ring.
@@ -69,8 +71,16 @@ SER_IRQ_FAST:
 :
             txa
             and         #ACIA_STATUS_BIT_RDRF
-            beq         @tx
+            beq         SER_RX_TX
             lda         ACIA_R_DATA                         ; A byte in
+            ldy         PC_RXS                              ; A /pc frame's (pc_srv.s)?
+            beq         :+
+            jmp         SER_PC_BYTE
+:
+            cmp         #PC_MARK
+            bne         :+
+            jmp         SER_PC_MARK
+:
             cmp         #SER_KEY_BREAK                      ; Break or kill: the driver acts on it now (the
             beq         @break                              ;   task may not be reading)
             cmp         #SER_KEY_KILL
@@ -78,38 +88,38 @@ SER_IRQ_FAST:
             ldy         SER_PREFIX
             bne         @command                            ; The key after the prefix key
             cmp         #SER_KEY_PREFIX
-            bne         @store
+            bne         SER_RX_STORE
             sta         SER_PREFIX                          ; The prefix key (non-zero)
-            jmp         @tx
+            jmp         SER_RX_TX
 
 @break:
             stz         SER_PREFIX
             smb2        SER_PEND                            ; (SER_PEND_BREAK)
-            jmp         @tx
+            jmp         SER_RX_TX
 
 @kill:
             stz         SER_PREFIX
             smb3        SER_PEND                            ; (SER_PEND_KILL)
-            jmp         @tx
+            jmp         SER_RX_TX
 
 @command:
             stz         SER_PREFIX
             cmp         #SER_KEY_PREFIX
-            beq         @store                              ; Twice: the key itself
+            beq         SER_RX_STORE                        ; Twice: the key itself
             sta         SER_PEND_KEY
             smb4        SER_PEND                            ; (SER_PEND_CMD)
-            jmp         @tx
+            jmp         SER_RX_TX
 
-@store:
+SER_RX_STORE:
             ldy         SER_RX_HEAD                         ; Into the RX ring
             sta         SER_RX_BUF,Y
             iny
             cpy         SER_RX_TAIL
-            beq         @tx                                 ; The ring is full: the byte is dropped
+            beq         SER_RX_TX                           ; The ring is full: the byte is dropped
             sty         SER_RX_HEAD
             _M_SER_WAKE_QUICK SER_RD_WAIT                   ; Wake the tasks waiting to read
 
-@tx:
+SER_RX_TX:
 .if ::SER_ACIA = ::SER_ACIA_ROCKWELL
             lda         SER_PACED                           ; (Paced, at 115200: timer 2 and SER_T2_FAST)
             bne         SER_FAST_EXIT
@@ -125,6 +135,11 @@ SER_IRQ_FAST:
 SER_TX_STEP:
             lda         ZP_SER_SEND_STATUS
             beq         SER_FAST_EXIT                       ; Idle: nothing to send
+            lda         PC_TXE                              ; A /pc frame first, the whole of it (pc_srv.s)
+            ora         PC_TXS
+            beq         :+
+            jmp         SER_TX_FRAME
+:
             ldy         SER_TX_TAIL                         ; The next byte from the TX ring
             cpy         SER_TX_HEAD
             bne         @send
@@ -366,3 +381,142 @@ SER_CONS_GETC:
             ply
             sec
             rts
+
+; /pc's frames: PC_MARK starts one (skipped, not stored, while PC_RXBUF has one still); its body goes into
+; PC_RXBUF unstuffed; when it's whole, the client whose request is out is woken (none: it's dropped).
+; In the serial task (a quick look: no stack use), from SER_IRQ_FAST: .A = the byte (.X is the ACIA's status all
+; through); back to it at SER_RX_TX, or SER_RX_STORE for a key.
+SER_PC_MARK:
+            ldy         #1
+            lda         PC_RXF
+            beq         :+
+            ldy         #$81                                ; (PC_RXBUF has one still: this one is skipped)
+:
+            sty         PC_RXS
+            stz         PC_RXI
+            stz         PC_RXE
+            lda         #<PC_RXBUF
+            sta         PC_RXP
+            lda         #>PC_RXBUF
+            sta         PC_RXP + 1
+            jmp         SER_RX_TX
+
+SER_PC_BYTE:
+            cmp         #PC_MARK
+            beq         SER_PC_MARK                         ; (Another frame: this one was cut short)
+            cmp         #PC_ESC
+            bne         @pc_plain
+            ldy         PC_RXI
+            bne         @pc_esc
+            stz         PC_RXS                              ; PC_MARK then PC_ESC: a typed $1E, a key
+            lda         #PC_MARK
+            jmp         SER_RX_STORE
+
+@pc_esc:
+            sta         PC_RXE                              ; (<> 0) The next byte is escaped
+            jmp         SER_RX_TX
+
+@pc_plain:
+            ldy         PC_RXE
+            beq         :+
+            stz         PC_RXE
+            eor         #$20
+:
+            ldy         PC_RXS
+            bmi         :+                                  ; (Skipped: not stored)
+            sta         (PC_RXP)
+            inc         PC_RXP
+            bne         :+
+            inc         PC_RXP + 1
+:
+            ldy         PC_RXI
+            cpy         #4
+            bcs         @pc_body
+            inc         PC_RXI                              ; The header: the type, the tag, the length
+            cpy         #2
+            bcc         @pc_next
+            bne         @pc_length
+            sta         PC_RXL
+            bra         @pc_next
+
+@pc_length:
+            cmp         #>PC_RX_MAX                         ; Longer than PC_RX_MAX: not a frame of ours
+            bcc         @pc_fits
+            bne         @pc_drop
+            ldy         PC_RXL
+            cpy         #<(PC_RX_MAX + 1)
+            bcs         @pc_drop
+
+@pc_fits:
+            sta         PC_RXL + 1
+            lda         PC_RXL                              ; Its body: the payload and the CRC
+            clc
+            adc         #2
+            sta         PC_RXL
+            bcc         @pc_next
+            inc         PC_RXL + 1
+            bra         @pc_next
+
+@pc_drop:
+            stz         PC_RXS
+            bra         @pc_next
+
+@pc_body:
+            lda         PC_RXL
+            bne         :+
+            dec         PC_RXL + 1
+:
+            dec         PC_RXL
+            lda         PC_RXL
+            ora         PC_RXL + 1
+            bne         @pc_next
+            ldy         PC_RXS                              ; It's whole
+            stz         PC_RXS
+            bmi         @pc_next                            ; (Skipped)
+            ldy         PC_OWNER
+            bmi         @pc_next                            ; (No request out: dropped)
+            lda         #1
+            sta         PC_RXF                              ; For the server ...
+            sty         T_REGISTER                          ; ... and its client woken (as IO_WAKE: a quick
+            rmb2        TASK_STATUS_REG                     ;   look, no stack use.  TASK_WAITING_FLAG)
+            lda         #SERIAL_TASK_NUM
+            sta         T_REGISTER
+
+@pc_next:
+            jmp         SER_RX_TX
+
+; A /pc frame's next byte, stuffed (pc_srv.s), from SER_TX_STEP (in the serial task: a quick look)
+SER_TX_FRAME:
+            lda         PC_TXE                              ; PC_MARK, or an escaped byte's second: as it is
+            beq         @byte
+            stz         PC_TXE
+            bra         @send
+
+@byte:
+            lda         (PC_TXP)                            ; Its next byte
+            inc         PC_TXP
+            bne         :+
+            inc         PC_TXP + 1
+:
+            ldy         PC_TXL
+            bne         :+
+            dec         PC_TXL + 1
+:
+            dec         PC_TXL
+            bne         :+
+            ldy         PC_TXL + 1
+            bne         :+
+            stz         PC_TXS                              ; (Its last)
+:
+            cmp         #PC_MARK
+            beq         :+
+            cmp         #PC_ESC
+            bne         @send
+:
+            eor         #$20                                ; PC_MARK or PC_ESC: PC_ESC, then the byte ^ $20
+            sta         PC_TXE
+            lda         #PC_ESC
+
+@send:
+            _M_SER_TX_BYTE nobell                           ; (A frame's $07 is no bell)
+            jmp         SER_FAST_EXIT

@@ -559,7 +559,7 @@ A failed call gives `!IO ERR!`, with the reason in `ioerr` (`60` not a semaphore
 | `patch` | `( p ch -- )` | Load patch p into channel ch (0-7): 0-127 are General MIDI's instruments (0 piano, 24 guitar, 40 violin, 56 trumpet, 73 flute ...), 128-162 drum sounds |
 | `note` | `( n ch -- )` | Play MIDI note n on channel ch (60: middle C; 69: A, 440 Hz) |
 | `noteoff` | `( ch -- )` | Key channel ch off |
-| `play` | `play song [n] [&]` | Play a song (a ZSM file), in a task of its own, and wait for it (`&`: don't).  Its loop is played n more times (none: the song once, to its end; 0: forever, until Ctrl-C or `kill`) |
+| `play` | `play song [n \| loop] [&]` | Play a song (a ZSM file), in a task of its own, and wait for it (`&`: don't).  Its loop is played n more times (none: the song once, to its end; 0, `loop` or `-l`: forever, until Ctrl-C or `kill`).  A song's loop is the part from its loop point (a ZSM file's header has one), or the whole song if it has none |
 
 ```
 0:/> 0 0 patch 60 0 note 100 sleep 64 0 note 100 sleep 0 noteoff

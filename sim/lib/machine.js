@@ -15,7 +15,9 @@
 // createMachine(opt): opt.osrom, opt.pagedrom (the images, Uint8Arrays) and the options hydrasim.js documents
 // (modules, sharedU, model, ramFault, u7Fault, aciaLine, stuckIrq, acia, paste, input, sd: block devices, rtc,
 // rtcBatteryLow, clock, trace, watches, pcWatches, marks, profile, ymLog), and opt.log(text) for the watches and
-// marks.  run(limit) runs to a cycle; the rest is its state, for a report.
+// marks.  opt.pcHost: what the serial port sends goes through its push(byte, cycle), which gives back the bytes that
+// are the console's (the rest are /pc's frames: hydrasim.js --pc-dir).  run(limit) runs to a cycle; the rest is its
+// state, for a report.
 'use strict';
 const { createCpu, FLAGS } = require('./cpu65c02.js');
 const { createAcia } = require('./acia.js');
@@ -49,8 +51,9 @@ function createMachine(opt) {
   let regT = rnd(256), regU = rnd(256), V = rnd(256), regW = rnd(256);
   let T = regT & 15, U = regU & 15, W = regW & 15;
   const m = { out: '' };                                      // The serial output (the ACIA's)
-  const acia = createAcia({ clock: opt.clock, wdc: opt.acia === 'wdc', paste: opt.paste, input: opt.input,
-    onTx: (v, t) => { m.out += String.fromCharCode(v); for (const k of opt.marks || []) if (m.out.endsWith(k)) log('mark: ' + JSON.stringify(k) + ' at cycle ' + t); } });
+  const acia = createAcia({ clock: opt.clock, wdc: opt.acia === 'wdc', paste: opt.paste, input: opt.input, consoleOnly: !!opt.pcHost,
+    onTx: (v, t) => { for (const b of opt.pcHost ? opt.pcHost.push(v, t) : [v]) out(b, t); } });
+  function out(v, t) { if (opt.pcHost) acia.shown(v, t); m.out += String.fromCharCode(v); for (const k of opt.marks || []) if (m.out.endsWith(k)) log('mark: ' + JSON.stringify(k) + ' at cycle ' + t); }
   const spi = createSpi(opt.sd || [], opt.spiEcho || []);
   const via = createVia({ portB: spi.portB, miso: spi.miso, portAIn: opt.gpioIn });
   // CA1's pulses (opt.ca1: cycles): low at each, high again 500 cycles on (its edges, in order)

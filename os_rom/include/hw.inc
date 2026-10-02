@@ -128,8 +128,8 @@ VIA_INT_ENABLE      = $80       ; VIA_R_INT_ENABLE: set (1) or clear (0) the bit
 ; and for the WDC 65C51 start timer 2, which stands in for its missing TDRE interrupt (SER_ACIA), or for
 ; the Rockwell's when sending is paced (SER_PACED).  A BEL beeps on the YM2151 too: it sets SER_PEND_BEEP,
 ; and the driver's handler beeps (SER_DO_PENDING), since this can run with T switched to the serial task
-; and no stack of its own (a quick look).  Uses .Y
-.macro _M_SER_TX_BYTE
+; and no stack of its own (a quick look); not with nobell given (a /pc frame's bytes: serfast.s).  Uses .Y
+.macro _M_SER_TX_BYTE   nobell
             sta         ACIA_R_DATA
 .if ::SER_ACIA = ::SER_ACIA_WDC                             ; (:: so it's constant in the page scopes too)
             ldy         SER_T2_CHAR                 ; (A character's time at the current settings)
@@ -144,9 +144,11 @@ VIA_INT_ENABLE      = $80       ; VIA_R_INT_ENABLE: set (1) or clear (0) the bit
             ldy         z:SER_T2_CHAR + 1
             sty         a:VIA_R_T2C_H
 .endif
+.ifblank nobell
             cmp         #ASCII_BELL                 ; The bell: the YM2151 beeps too, as the terminal's
             bne         * + 4                       ;   does (no label here: it would end the caller's
             smb7        SER_PEND                    ;   @ labels.  SER_PEND_BEEP)
+.endif
 .endmacro
 .assert     SER_PEND_BEEP = $80, error, "_M_SER_TX_BYTE sets SER_PEND_BEEP with smb7"
 

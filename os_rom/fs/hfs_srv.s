@@ -43,6 +43,9 @@ HFS_SERVE:
             jmp         HFS_FINISH                          ; (What it changed goes to the card now)
 
 HFS_REQUEST:
+            jmp         HFS_REQ_DISKS                       ; (/sd itself?  Above COMMON: back at HFS_REQUEST_ON)
+
+HFS_REQUEST_ON:
             cmp         #H9_READ
             beq         HFS_TO_READ
             cmp         #H9_WRITE
@@ -124,6 +127,10 @@ HFS_OPEN_REQ:
             lda         (ZP_IO_REQ),Y
             sta         SD_OP                               ; The open mode
             inc         ZP_IO_REQ + 1                       ; The data area: the name after the mount point
+            lda         (ZP_IO_REQ)
+            bne         :+
+            jmp         HFS_OPEN_DISKS                      ; ("": /sd itself)
+:
             jsr         HFS_WALK
             dec         ZP_IO_REQ + 1
             jsr         IO_SRV_UNMAP                        ; (It keeps .A and C)
@@ -133,6 +140,34 @@ HFS_OPEN_REQ:
 
 HFS_OPEN_RET:
             rts
+
+.pushseg
+.segment "HIGH_P6"                                          ; (Page 6's room above COMMON)
+FAR_GATE_INLINE     SD_DIR_REQ,     PAGE3::SD_DIR_REQ,      3   ; (/sd itself: the cards, sd_srv.s)
+
+; A request on /sd itself (HFS_FID_DISKS: the cards, a directory) goes to sd_srv.s; the rest on (HFS_REQUEST_ON)
+HFS_REQ_DISKS:
+            cpy         #HFS_FID_DISKS
+            beq         :+
+            jmp         HFS_REQUEST_ON
+:
+            ldx         #SD_MAX_CARDS
+            jmp         SD_DIR_REQ
+
+HFS_OPEN_DISKS:                                             ; /sd itself: the cards, read only (HFS_FID_DISKS)
+            dec         ZP_IO_REQ + 1
+            jsr         IO_SRV_UNMAP
+            lda         SD_OP
+            and         #IO_MODE_WRITE
+            bne         :+
+            lda         #HFS_FID_DISKS
+            clc
+            rts
+:
+            lda         #ERR_IO_MODE
+            sec
+            rts
+.popseg
 
 ; Is disk HFS_CARD read only (the ROM disk)?  OUT: C = 1 and .A = ERR_IO_MODE if it is; C = 0 if not.
 ; Modifies: .A

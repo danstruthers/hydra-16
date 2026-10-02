@@ -45,3 +45,7 @@ FAR_GATE_INLINE SEM_TRY,        PAGE5::SEM_TRY,         5
 FAR_GATE_INLINE SEM_RELEASE,    PAGE5::SEM_RELEASE,     5
 FAR_GATE_INLINE SEM_FREE,       PAGE5::SEM_FREE,        5
 FAR_GATE_INLINE CLOCK_GET,      ::CLOCK_GET_P9,         9
+
+; /pc (pc_srv.s): its serve routine, and its init (the serial driver's: serial.s)
+FAR_GATE_INLINE PC_SERVE,       ::PC_SERVE_PD,          $D  ; (/pc: pc_srv.s)
+FAR_GATE_INLINE PC_INIT,        ::PC_INIT_PD,           $D

@@ -31,7 +31,7 @@ const ORDER = [
   'docs/programming/interrupts.md', 'docs/programming/memory.md', 'docs/programming/io.md',
   'docs/programming/servers.md', 'docs/programming/programs.md', 'docs/programming/c.md',
   'docs/tools/emulator.md',
-  'docs/plans/NEXT_STEPS.md', 'docs/plans/IDEAS.md', 'docs/plans/NAMESPACES.md', 'docs/plans/PROC.md',
+  'docs/plans/NEXT_STEPS.md', 'docs/plans/IDEAS.md', 'docs/plans/NAMESPACES.md', 'docs/plans/PROC.md', 'docs/plans/PC.md',
   'docs/plans/DISKS.md', 'docs/plans/VIDEO.md', 'docs/plans/SOUND.md', 'docs/plans/HYDRAFS.md',
   'docs/plans/IO_PLAN.md', 'docs/plans/MMU_PLAN.md', 'docs/plans/SHELL.md', 'docs/plans/REORG_PLAN.md',
   'docs/plans/CODE_REVIEW.md',

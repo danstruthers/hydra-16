@@ -119,14 +119,45 @@ module.exports = [
     },
   },
   {
+    name: 'snd-volume', about: 'the master volume as a file, /dev/snd/volume, a percentage: 100 at boot (songs as written); written (a number, words before it skipped; over 200: 200), read back; a song at 200 is louder than written (its carriers\' TL $10 reaches the chip as $00), at 50 quieter ($21)',
+    sd: [{ dev: 0, label: 'VOL', hfs: v => v.put('t.zsm', zsmSong()) }],
+    args: ['--cycles', '90000000', '--ym-dump', '--input', W(3) + ['cat /dev/snd/volume', 'echo volume 50 > /dev/snd/volume', 'cat /dev/snd/volume', 'echo 999 > /dev/snd/volume', 'cat /dev/snd/volume', 'play t.zsm'].map(c => c + '\\r').join(P)],
+    expect: ['0:/> cat /dev/snd/volume\n100\n', '0:/> cat /dev/snd/volume\n50\n', '0:/> cat /dev/snd/volume\n200\n'],
+    check: (out, report) => {
+      if (!/^60: 00 00 00 00 00 00 00 00 00 /m.test(report) || !/^70: 00 00 00 00 00 00 00 00 00 /m.test(report)) return 'at 200, channel 0\'s carriers not at TL 0 (written as $10): ' + (/^60: .*/m.exec(report) || [''])[0];
+    },
+  },
+  {
+    name: 'song-loop', about: 'play\'s loop option: a song with no loop point loops from its start (play n.zsm 1: its 2 notes twice, in time), and play ... -l & loops it until stopped',
+    sd: [{ dev: 0, label: 'SONGS', hfs: v => { const z = zsmSong(); z[3] = z[4] = z[5] = 0; v.put('n.zsm', z); } }],
+    args: ['--cycles', '60000000', '--ym-log', '--input', W(3) + 'play n.zsm 1\\r' + W(4) + 'play n.zsm -l &\\r' + W(5)],
+    expect: ['0:/> play n.zsm 1\n\n0:/> play n.zsm -l &\n', /\[[0-9A-F]\]\n/],
+    fullRun: true,
+    check: (out, report) => {
+      const on = [...report.matchAll(/ch (\d) at cycle (\d+)/g)].map(m => +m[2]);
+      if (on.length < 8) return 'key-ons: ' + on.length + ', not the song twice and then again and again';
+      for (let k = 1; k < 4; k++) {                                // The first play: 4 notes, 0.6 s (2,147,727 cycles) apart
+        const gap = on[k] - on[k - 1];
+        if (Math.abs(gap - 2147727) > 25000) return 'key-on ' + k + ' came ' + gap + ' cycles after the last, not 0.6 s';
+      }
+    },
+  },
+  {
     name: 'rom', about: '/rom, the files in the paged ROM, with no card: its listing (text and stat records: ls -l), a file read, a program run by its name from /rom/bin (through /bin), cd into it, an exit status; read-only (write, remove, create refused), a missing name, a file for cd; the ROM disk as a block device, /dev/sd/x (x: not a digit, so SPI devices 8-f keep theirs), and not under /sd (only through a mount\'s spec: mount hfs /rom x, in ns), /sd/8 no disk; /rom/boot.hys run at boot with no card',
     args: ['--cycles', '90000000', '--input', BOOT + ['ls /rom\\r', 'hello a b\\r' + W(2), 'cd /rom/bin\\rpwd\\rls -l\\r', 'code 3\\r' + P + 'status .\\r',
       'cat /rom/nope\\r', 'rm /rom/README\\r', 'echo x > /rom/x\\r', 'cd /\\rcd /rom/README\\r', 'ns\\r', 'ls /sd/x\\r', 'cat /dev/sd/x/ctl\\r', 'ls /sd/8\\r'].join(P)],
     expect: ['No card: /ram keeps your files until a reset.', '/ram> ls /rom\nREADME 984\nbin/\nboot.hys 83\nlib/\nsongs/\n', '/ram> hello a b\nHello from C on the Hydra-16!\n2 arguments: [a] [b]\n',
       '/ram> cd /rom/bin\n\n/rom/bin> pwd\n/rom/bin\n/rom/bin> ls -l\ncode.hyx 2158 2000-01-01 00:00:00\n', 'scom.zsm 838 2000-01-01 00:00:00\n',
       '/rom/bin> code 3\n\n/rom/bin> status .\n' + num(3) + '\n', '/rom/bin> cat /rom/nope\n\n !IO ERR! not found\n', '/rom/bin> rm /rom/README\n\n !IO ERR! not opened for that\n',
-      '/rom/bin> echo x > /rom/x\n\n !IO ERR! not opened for that\n', '/> cd /rom/README\n\n !IO ERR! ', '/> ns\nmount -s hfs /sd\nmount -s env /env\nmount -s proc /proc\nmount -s hfs /rom x\nmount -s hfs /sram s\nbind -cs /ram/bin /bin\nbind -as /sram/bin /bin\nbind -as /rom/bin /bin\nbind -cs /ram/lib /lib\nbind -as /sram/lib /lib\nbind -as /rom/lib /lib\nmount hfs /ram r/1\n', '/> ls /sd/x\n\n !IO ERR! not found\n',
+      '/rom/bin> echo x > /rom/x\n\n !IO ERR! not opened for that\n', '/> cd /rom/README\n\n !IO ERR! ', '/> ns\nmount -s hfs /sd\nmount -s env /env\nmount -s proc /proc\nmount -s hfs /rom x\nmount -s hfs /sram s\nbind -cs /ram/bin /bin\nbind -as /sram/bin /bin\nbind -as /rom/bin /bin\nbind -cs /ram/lib /lib\nbind -as /sram/lib /lib\nbind -as /rom/lib /lib\nmount -s pc /pc\nmount hfs /ram r/1\n', '/> ls /sd/x\n\n !IO ERR! not found\n',
       '/> cat /dev/sd/x/ctl\nrom 4 MB 8192 blocks\nhydrafs label=ROM\n', '/> ls /sd/8\n\n !IO ERR! not found\n'],
+  },
+  {
+    name: 'ram-fallback', about: 'no memory modules (--modules 0): no RAM disk (r: its banks are the modules\'), so each shell\'s /ram is an area on the shared RAM disk instead, s/ram/N in /sram/ram (mount hfs /ram s/ram/1), with its bin and lib; a file kept there; a second shell gets its own (s/ram/b)',
+    args: ['--cycles', '120000000', '--modules', '0', '--input', BOOT + ['cat /dev/sd/r/ctl', 'ls /ram', 'echo hi > /ram/x', 'cat /ram/x', 'ls /sram/ram', 'shell'].map(c => c + '\\r').join(P) + W(2) + '\\x1dB' + W(1) + '\\rls /sram/ram\\r' + P + 'ns\\r'],
+    expect: ['No card: /ram keeps your files until a reset.', '/ram> cat /dev/sd/r/ctl\nnone\n', '/ram> ls /ram\nbin/\nlib/\n', '/ram> cat /ram/x\nhi\n',
+      '/ram> ls /sram/ram\n1/\n', '> ls /sram/ram\n1/\nb/\n', 'mount -s pc /pc\nmount hfs /ram s/ram/b\n'],
+    forbid: ['!IO ERR!'],
   },
   {
     name: 'ram-own', about: 'each shell\'s own area at /ram: the boot shell\'s is r/1 (mount hfs /ram r/1; the whole RAM disk at /a), the shared disk is /sram; a shell started with shell gets its own (/a/b, in its ns), so a copy into /bin goes to its own cache, and its files aren\'t the boot shell\'s; when it ends, its area goes',
@@ -180,17 +211,35 @@ module.exports = [
     forbid: ['No card:'],
   },
   {
+    name: 'ns-root', about: '/ and /dev as directories (the device root, as Plan 9\'s #/): / lists dev and the first element of every namespace entry, the task\'s and the system\'s, once each (ls, ls -l: directories); /dev lists the device table (but root); cd /dev and ls there; a name the task hides (hide /sram) isn\'t listed; a write to / refused, a name not in /dev not found',
+    args: ['--cycles', '90000000', '--input', BOOT + ['ls /', 'ls /dev', 'cd /dev', 'ls -l', 'cd /', 'hide /sram', 'ls /', 'echo x > /', 'ls /dev/nope'].map(c => c + '\\r').join(P)],
+    expect: ['/ram> ls /\ndev/\nram/\nsd/\nenv/\nproc/\nrom/\nsram/\nbin/\nlib/\npc/\n\n',
+      '/ram> ls /dev\nnull\nzero\nproc\npc\ncons\nser\nsnd\npipe\nspi\nsd\nhfs\nenv\nram\ntime\ngpio\n\n',
+      '/dev> ls -l\nnull 0 2000-01-01 00:00:00\nzero 0 2000-01-01 00:00:00\nproc 0 2000-01-01 00:00:00\npc 0 2000-01-01 00:00:00\ncons 0 2000-01-01 00:00:00\nser 0 2000-01-01 00:00:00\nsnd 0 2000-01-01 00:00:00\npipe 0 2000-01-01 00:00:00\nspi 0 2000-01-01 00:00:00\nsd 0 2000-01-01 00:00:00\nhfs 0 2000-01-01 00:00:00\nenv 0 2000-01-01 00:00:00\nram 0 2000-01-01 00:00:00\ntime 0 2000-01-01 00:00:00\ngpio 0 2000-01-01 00:00:00\n\n',
+      '/> ls /\ndev/\nram/\nsd/\nenv/\nproc/\nrom/\nbin/\nlib/\npc/\n\n',
+      '/> echo x > /\n\n !IO ERR! not opened for that\n', '/> ls /dev/nope\n\n !IO ERR! not found\n'],
+  },
+  {
+    name: 'dev-dirs', about: 'the devices\' directories, each its own server\'s: /sd (hfs: the cards started), /dev/sd (the disks started: a card, the ROM disk, the RAM disks), /dev/sd/N (data, ctl), /dev/gpio, /dev/spi; ls -l (stat records: directories), cd into them and a name relative to them; a write to one refused',
+    sd: [{ dev: 0, label: 'DIRS', hfs: v => v.put('a', Buffer.from('a')) }],
+    args: ['--cycles', '120000000', '--input', BOOT + ['ls /sd', 'ls -l /sd', 'ls /dev/sd', 'ls -l /dev/sd/x', 'ls /dev/gpio', 'ls /dev/spi', 'cd /dev/sd', 'cat x/ctl', 'cd /sd', 'ls', 'echo x > /dev/sd', 'cd /dev/gpio', 'pwd'].map(c => c + '\\r').join(P)],
+    expect: ['> ls /sd\n0/\n', '> ls -l /sd\n0/ 2000-01-01 00:00:00\n', '> ls /dev/sd\n0/\nx/\nr/\ns/\n',
+      '> ls -l /dev/sd/x\ndata 0 2000-01-01 00:00:00\nctl 0 2000-01-01 00:00:00\n', '> ls /dev/gpio\n0\n1\n2\n3\n4\n5\n6\n7\nport\nctl\nca1\n',
+      '> ls /dev/spi\n0\n1\n2\n3\n4\n5\n6\n7\n8\n9\na\nb\nc\nd\ne\nf\n', '/dev/sd> cat x/ctl\nrom ', '/sd> ls\n0/\n',
+      '> echo x > /dev/sd\n\n !IO ERR! not opened for that\n', '/dev/gpio> pwd\n/dev/gpio\n'],
+  },
+  {
     name: 'ns-unions', about: 'namespaces as Plan 9\'s: a union of two binds (bind, bind -a), a name in its first member and one only in its second, ns\'s lines; its listing (ls, ls -l: each member\'s in turn; a directory only the second has), a file read through it not run on into the next member; a create with no -c member refused, then one to the -bc member; a pipeline stage (a task the shell started) sees the union; a member unmounted (unmount new old), a hide, a bad flag, the whole union unmounted',
     args: ['--cycles', '150000000', '--input', BOOT + ['mkdir /ram/b\\r', 'echo hi > /ram/b/x\\r', 'bind /ram/b /u\\r', 'bind -a /rom /u\\r', 'ns\\r', 'ls /u\\r', 'ls -l /u\\r', 'ls /u/songs\\r',
       'cat /u/x\\r', 'ls -l /u/boot.hys\\r', 'echo y > /u/new\\r', 'mkdir /ram/c\\r', 'bind -bc /ram/c /u\\r', 'echo y > /u/new\\r', 'cat /ram/c/new\\r',
       'cat /u/new | cat\\r', 'ns\\r', 'unmount /rom /u\\r', 'ls -l /u/boot.hys\\r', 'hide /u/x\\r', 'cat /u/x\\r', 'cat /u/new\\r', 'mount -z zero /z\\r',
       'unmount /u\\r', 'ns\\r'].join(P) + P],
-    expect: ['/ram> ns\nmount -s hfs /sd\nmount -s env /env\nmount -s proc /proc\nmount -s hfs /rom x\nmount -s hfs /sram s\nbind -cs /ram/bin /bin\nbind -as /sram/bin /bin\nbind -as /rom/bin /bin\nbind -cs /ram/lib /lib\nbind -as /sram/lib /lib\nbind -as /rom/lib /lib\nmount hfs /ram r/1\nbind /ram/b /u\nbind -a /rom /u\n',
+    expect: ['/ram> ns\nmount -s hfs /sd\nmount -s env /env\nmount -s proc /proc\nmount -s hfs /rom x\nmount -s hfs /sram s\nbind -cs /ram/bin /bin\nbind -as /sram/bin /bin\nbind -as /rom/bin /bin\nbind -cs /ram/lib /lib\nbind -as /sram/lib /lib\nbind -as /rom/lib /lib\nmount -s pc /pc\nmount hfs /ram r/1\nbind /ram/b /u\nbind -a /rom /u\n',
       '/ram> ls /u\nx 4\nREADME 984\nbin/\nboot.hys 83\nlib/\nsongs/\n\n', '/ram> ls -l /u\nx 4 2000-01-01 00:00:0', '\nREADME 984 2000-01-01 00:00:00\n',
       '/ram> ls /u/songs\n', 'test.zsm 14075\n\n', '/ram> cat /u/x\nhi\n\n/ram> ls -l /u/boot.hys\nboot.hys 83 2000-01-01 00:00:00\n', '/ram> echo y > /u/new\n\n !IO ERR! not opened for that\n', '/ram> cat /ram/c/new\ny\n', '/ram> cat /u/new | cat\ny\n',
-      '/ram> ns\nmount -s hfs /sd\nmount -s env /env\nmount -s proc /proc\nmount -s hfs /rom x\nmount -s hfs /sram s\nbind -cs /ram/bin /bin\nbind -as /sram/bin /bin\nbind -as /rom/bin /bin\nbind -cs /ram/lib /lib\nbind -as /sram/lib /lib\nbind -as /rom/lib /lib\nmount hfs /ram r/1\nbind -c /ram/c /u\nbind -a /ram/b /u\nbind -a /rom /u\n',
+      '/ram> ns\nmount -s hfs /sd\nmount -s env /env\nmount -s proc /proc\nmount -s hfs /rom x\nmount -s hfs /sram s\nbind -cs /ram/bin /bin\nbind -as /sram/bin /bin\nbind -as /rom/bin /bin\nbind -cs /ram/lib /lib\nbind -as /sram/lib /lib\nbind -as /rom/lib /lib\nmount -s pc /pc\nmount hfs /ram r/1\nbind -c /ram/c /u\nbind -a /ram/b /u\nbind -a /rom /u\n',
       '/ram> ls -l /u/boot.hys\n\n !IO ERR! not found\n', '/ram> cat /u/x\n\n !IO ERR! not found\n', '/ram> cat /u/new\ny\n', '/ram> mount -z zero /z\n\n !IO ERR! bad name\n',
-      '/ram> ns\nmount -s hfs /sd\nmount -s env /env\nmount -s proc /proc\nmount -s hfs /rom x\nmount -s hfs /sram s\nbind -cs /ram/bin /bin\nbind -as /sram/bin /bin\nbind -as /rom/bin /bin\nbind -cs /ram/lib /lib\nbind -as /sram/lib /lib\nbind -as /rom/lib /lib\nmount hfs /ram r/1\nhide /u/x\n'],
+      '/ram> ns\nmount -s hfs /sd\nmount -s env /env\nmount -s proc /proc\nmount -s hfs /rom x\nmount -s hfs /sram s\nbind -cs /ram/bin /bin\nbind -as /sram/bin /bin\nbind -as /rom/bin /bin\nbind -cs /ram/lib /lib\nbind -as /sram/lib /lib\nbind -as /rom/lib /lib\nmount -s pc /pc\nmount hfs /ram r/1\nhide /u/x\n'],
     forbid: ['!UNK WORD!'],
   },
   {
@@ -206,7 +255,7 @@ module.exports = [
     args: ['--cycles', '150000000', '--input', BOOT + ['bind /rom/songs /x', 'hide /sram', 'bind -a /rom/songs /bin', 'ns', 'newns', 'ns', 'ls /sram', 'ls /x',
       'echo bind /rom/songs /y > myns', 'newns myns', 'ns', 'ls /y'].join('\\r' + P) + '\\r' + P],
     expect: (() => {
-      const sys = 'mount -s hfs /sd\nmount -s env /env\nmount -s proc /proc\nmount -s hfs /rom x\nmount -s hfs /sram s\nbind -cs /ram/bin /bin\nbind -as /sram/bin /bin\nbind -as /rom/bin /bin\nbind -cs /ram/lib /lib\nbind -as /sram/lib /lib\nbind -as /rom/lib /lib\n';
+      const sys = 'mount -s hfs /sd\nmount -s env /env\nmount -s proc /proc\nmount -s hfs /rom x\nmount -s hfs /sram s\nbind -cs /ram/bin /bin\nbind -as /sram/bin /bin\nbind -as /rom/bin /bin\nbind -cs /ram/lib /lib\nbind -as /sram/lib /lib\nbind -as /rom/lib /lib\nmount -s pc /pc\n';
       return ['/ram> ns\n' + sys + 'mount hfs /ram r/1\nbind /rom/songs /x\nhide /sram\n', 'bind -a /rom/songs /bin\n', '/ram> newns\n\n/ram> ns\n' + sys + 'mount hfs /ram r/1\n\n',
         '> ls /sram\nbin/\nlib/\n', '> ls /x\n\n !IO ERR! not found\n', '/ram> ns\n' + sys + 'mount hfs /ram r/1\nbind /rom/songs /y\n\n', '> ls /y\n', 'test.zsm 14075\n'];
     })(),
@@ -228,10 +277,10 @@ module.exports = [
     args: ['--cycles', '120000000', '--input', BOOT + [[1, 2, 3, 4].map(n => 'bind /rom/songs /aaaaaaaaaaa' + n + '\\r').join(''), 'ns\\r', 'cat /proc/1/ns\\r',
       'cat /proc/1/ns | cat\\r', 'cat /proc\\r', 'echo fg > /proc/1/ctl\\r', 'q^/proc/0/ctl^ q^kill^ ctl\\r', 'q^/proc/f/ctl^ q^kill^ ctl\\r', 'cat /proc/f/ns\\r'].join(P) + P],
     expect: (() => {
-      const ns = 'mount -s hfs /sd\nmount -s env /env\nmount -s proc /proc\nmount -s hfs /rom x\nmount -s hfs /sram s\nbind -cs /ram/bin /bin\nbind -as /sram/bin /bin\nbind -as /rom/bin /bin\nbind -cs /ram/lib /lib\nbind -as /sram/lib /lib\nbind -as /rom/lib /lib\nmount hfs /ram r/1\n' + [1, 2, 3, 4].map(n => 'bind /rom/songs /aaaaaaaaaaa' + n + '\n').join('');
+      const ns = 'mount -s hfs /sd\nmount -s env /env\nmount -s proc /proc\nmount -s hfs /rom x\nmount -s hfs /sram s\nbind -cs /ram/bin /bin\nbind -as /sram/bin /bin\nbind -as /rom/bin /bin\nbind -cs /ram/lib /lib\nbind -as /sram/lib /lib\nbind -as /rom/lib /lib\nmount -s pc /pc\nmount hfs /ram r/1\n' + [1, 2, 3, 4].map(n => 'bind /rom/songs /aaaaaaaaaaa' + n + '\n').join('');
       return ['/ram> ns\n' + ns + '\n', '/ram> cat /proc/1/ns\n' + ns + '\n', '/ram> cat /proc/1/ns | cat\n' + ns + '\n', '/ram> cat /proc\n0 ', '\n1 R 0 *\n',
         '/ram> echo fg > /proc/1/ctl\n\n/ram> q^/proc/0/ctl^ q^kill^ ctl\n\n !IO ERR! not allowed\n', '/ram> q^/proc/f/ctl^ q^kill^ ctl\n\n !IO ERR! not allowed\n',
-        '/ram> cat /proc/f/ns\nmount -s hfs /sd\nmount -s env /env\nmount -s proc /proc\nmount -s hfs /rom x\nmount -s hfs /sram s\nbind -cs /ram/bin /bin\nbind -as /sram/bin /bin\nbind -as /rom/bin /bin\nbind -cs /ram/lib /lib\nbind -as /sram/lib /lib\nbind -as /rom/lib /lib\n\n/ram> '];
+        '/ram> cat /proc/f/ns\nmount -s hfs /sd\nmount -s env /env\nmount -s proc /proc\nmount -s hfs /rom x\nmount -s hfs /sram s\nbind -cs /ram/bin /bin\nbind -as /sram/bin /bin\nbind -as /rom/bin /bin\nbind -cs /ram/lib /lib\nbind -as /sram/lib /lib\nbind -as /rom/lib /lib\nmount -s pc /pc\n\n/ram> '];
     })(),
     forbid: ['!UNK WORD!'],
   },

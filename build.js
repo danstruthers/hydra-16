@@ -85,9 +85,9 @@ function writeIfChanged(file, text) {
 
 // ---- the ROM's build options, each built on its own and tested with the emulator set to match
 const VARIANTS = [
-  { name: 'cpu7mhz', defines: ['CPU_CLOCK_MULT=2'], sim: ['--clock', '7.16'], scale: 2, tests: ['boot', 'selftest', 'forth', 'io', 'pipes', 'serial', 'hydrafs'] },
+  { name: 'cpu7mhz', defines: ['CPU_CLOCK_MULT=2'], sim: ['--clock', '7.16'], scale: 2, tests: ['boot', 'selftest', 'forth', 'io', 'pipes', 'serial', 'hydrafs', 'pc'] },
   // (Not serial: it checks the Rockwell ACIA's command register, which turns on the TX interrupt)
-  { name: 'wdc-acia', defines: ['SER_ACIA=1'], sim: ['--acia', 'wdc'], scale: 1, tests: ['boot', 'selftest', 'forth', 'io', 'pipes', 'serial-unpaced', 'paste', 'fast-output', 'sound'] },
+  { name: 'wdc-acia', defines: ['SER_ACIA=1'], sim: ['--acia', 'wdc'], scale: 1, tests: ['boot', 'selftest', 'forth', 'io', 'pipes', 'serial-unpaced', 'paste', 'fast-output', 'sound', 'pc'] },
 ];
 function variants(test) {
   for (const v of VARIANTS) {

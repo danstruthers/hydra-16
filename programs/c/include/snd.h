@@ -33,7 +33,7 @@ int __fastcall__ snd_claim (unsigned char mask);                        /* Bit n
                                                                         **   another program's */
 int __fastcall__ snd_release (unsigned char mask);
 int snd_reset (void);                                                   /* The chip and every setting cleared */
-int __fastcall__ snd_volume (unsigned char vol);                        /* The master volume, 0-127 */
+int __fastcall__ snd_volume (unsigned char vol);                        /* The master volume, 0-200 (100: as written) */
 
 int __fastcall__ snd_patch (unsigned char ch, unsigned char patch);
 int __fastcall__ snd_note (unsigned char ch, unsigned char note);       /* Key on */

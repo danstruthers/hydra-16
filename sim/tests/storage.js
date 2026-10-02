@@ -366,7 +366,7 @@ module.exports = [
       'cp /rom/songs/test.zsm /sram/t.zsm\\r', 'cp /sram/t.zsm s.zsm\\r', 'cp /rom/songs/test.zsm /ram/t.zsm\\r', 'cp /ram/t.zsm r.zsm\\r', 'ls /sram\\r'].join(P) + P],
     expect: ['cat /dev/sd/r/ctl\nram 256 KB 512 blocks\nbanks $10-$2F\nhydrafs label=RAM\nfree 244 KB of 252 KB\n',
       'cat /dev/sd/s/ctl\nsram 512 KB 1024 blocks\nbanks $40-$7F\nhydrafs label=SRAM\nfree 504 KB of 508 KB\n',
-      '> ns\nmount -s hfs /sd\nmount -s env /env\nmount -s proc /proc\nmount -s hfs /rom x\nmount -s hfs /sram s\nbind -cs /ram/bin /bin\nbind -as /sram/bin /bin\nbind -as /sd/0/bin /bin\nbind -as /rom/bin /bin\nbind -cs /ram/lib /lib\nbind -as /sram/lib /lib\nbind -as /sd/0/lib /lib\nbind -as /rom/lib /lib\nmount hfs /ram r/1\n', '> ls /a\n1/\n', '> ls /ram\nbin/\nlib/\n', '> ls /sram\nbin/\nlib/\n',
+      '> ns\nmount -s hfs /sd\nmount -s env /env\nmount -s proc /proc\nmount -s hfs /rom x\nmount -s hfs /sram s\nbind -cs /ram/bin /bin\nbind -as /sram/bin /bin\nbind -as /sd/0/bin /bin\nbind -as /rom/bin /bin\nbind -cs /ram/lib /lib\nbind -as /sram/lib /lib\nbind -as /sd/0/lib /lib\nbind -as /rom/lib /lib\nmount -s pc /pc\nmount hfs /ram r/1\n', '> ls /a\n1/\n', '> ls /ram\nbin/\nlib/\n', '> ls /sram\nbin/\nlib/\n',
       '> ls /sram\nbin/\nlib/\nt.zsm 14075\n'],
     forbid: ['!IO ERR!', '!UNK WORD!', 'No card:'],
     check: (out, report, files) => {

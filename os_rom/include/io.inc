@@ -279,7 +279,8 @@ SND_CTL_STOP        = 3         ; IO_CTL code: stop the player (and key off all 
 SND_CTL_CLAIM       = 4         ; IO_CTL code: .Y = a mask of channels, this fd's alone while it's open (other
                                 ;   fds' writes to them are dropped); ERR_IO_BUSY if another fd has one
 SND_CTL_RELEASE     = 5         ; IO_CTL code: .Y = a mask of channels this fd gives back
-SND_CTL_VOLUME      = 6         ; IO_CTL code: .Y = the master volume (0-127)
+SND_CTL_VOLUME      = 6         ; IO_CTL code: .Y = the master volume, a percentage (0-200: 100, songs as written;
+                                ;   more, louder: SND_MASTER_SET).  /dev/snd/volume too, as text
 SND_CTL_CLOCK       = 7         ; IO_CTL code: the sound clock (the YM2151's timer B, its interrupt counting its
                                 ;   ticks: SND_CLK): .Y = K, a period of K timer B units (1024 of the chip's clocks,
                                 ;   286 us) or K + 1, as often as SND_R_CLOCK_F's fraction says; 0: stop it.  This
@@ -301,13 +302,17 @@ SND_FIDS            = 8         ; /dev/snd open at once (fids 1-8)
 ; In the sound task's RAM
 SND_SHADOW          = $0200     ; Every register as last written (256 bytes; the carriers' TL before the volume)
 SND_VOL             = $0300     ; Each channel's volume (8)
-SND_ATTEN           = $0308     ;   and its carriers' attenuation (TL steps: the volume's and the master's)
+SND_ATTEN           = $0308     ;   and its carriers' attenuation (TL steps: the volume's and the master's;
+                                ;   negative, -32 at most: louder than written)
 SND_BEND            = $0310     ; Each channel's bend (8)
 SND_NOTE            = $0318     ; Each channel's note ($FF: none)
 SND_OWNER           = $0320     ; The fid each channel is claimed by (0: none)
 SND_REFS            = $0328     ; Each fid's fds (SND_FIDS: fid N at SND_REFS + N - 1; 0: free)
-SND_MASTER          = $0330     ; The master volume (0-127)
-SND_RAM_END         = $0331
+SND_MASTER          = $0330     ; The master volume, a percentage (0-200; 100: as written) ...
+SND_MASTER_TL       = $0331     ;   and its TL steps, signed (127: silent; 0: as written; -31: louder: SND_MASTER_SET)
+SND_TEXT            = $0332     ; /dev/snd/volume's text, as a read makes it ("150", CR LF: 5 bytes at most)
+SND_RAM_END         = $0337
+SND_FID_VOLUME      = $80       ; /dev/snd/volume's fid (the others are 1-SND_FIDS)
 
 ; Storage: /dev/sd/N/data and /dev/sd/N/ctl (storage.s, spi.s, sd.s, sd_srv.s; ROM page 3), a disk N (docs/plans/
 ; DISKS.md), one character: an SD card by its SPI device's number as a hex digit (0-7 now; the board's SD socket,
@@ -362,6 +367,8 @@ PAGED_ROM_BASE      = $A000     ; (Where the CPU sees a paged ROM bank: $A000-$D
 DISK_ROM_BLOCKS     = 256 * 32  ;   the ROM disk's blocks: the whole paged ROM (block n: bank n / 32, $A000 + n % 32 * 512)
 SD_FID_DATA         = $00       ; /dev/sd/N/data: the card as bytes
 SD_FID_CTL          = $10       ; /dev/sd/N/ctl: its details (read) and commands (write)
+SD_FID_DIR          = $20       ; /dev/sd/N: its files, a directory (data, ctl)
+SD_FID_DISKS        = $30       ; /dev/sd: the disks started, a directory (hfs's /sd too: the cards, HFS_FID_DISKS)
 SD_STATE_SDSC       = 1         ; A card's state: 0 = not started; byte addresses
 SD_STATE_SDHC       = 2         ;   block addresses (SDHC, SDXC)
 SD_CTL_INIT         = 1         ; IO_CTL code: start the card again (e.g. after changing it)
@@ -380,6 +387,7 @@ SD_CARD_BLOCKS      = $0920     ;   and size in blocks (4 bytes each: a card's f
 ; disks' tables), and the bytes kept from its last write (SPI_RX_PAGES: a page each, from the MMU)
 SPI_FID_DATA        = $00       ; /dev/spi/N: the device's transfers
 SPI_FID_CTL         = $10       ; /dev/spi/N/ctl: its mode
+SPI_FID_DIR         = $20       ; /dev/spi: the devices, a directory
 SPI_REFS            = $08B0     ; Each device's fds on its data file (0: not open; one open at a time, dups too)
 SPI_MODE            = $08C0     ;   its mode: SPI_M_IDLE (SCLK idles high: mode 3, else 0), SPI_M_FULL
 SPI_RXN             = $08D0     ;   the bytes kept from its last write, still to read (with SPI_M_FULL: 256)
@@ -398,6 +406,7 @@ HFS_CLUSTER_BLOCKS  = 8         ; A cluster (what space is allocated in): 8 bloc
 HFS_ENTRY_SIZE      = 64        ; A directory entry (a directory is a file of them)
 HFS_NAME_MAX        = 31        ; A name's characters (any byte but '/' and 0; case-sensitive)
 HFS_MAX_OPEN        = 8         ; Files open at once, all cards together (a fid is the slot: 0-7)
+HFS_FID_DISKS       = SD_FID_DISKS  ; /sd itself: the cards started, a directory (sd_srv.s: SD_DIR_REQ)
 HFS_DEPTH_MAX       = 8         ; Path elements in one walk ("..": back up through them)
 HFS_VERSION         = 2         ; The newest format this reads (and writes, with a quick format): 2 has a
 HFS_VERSION_FULL    = 1         ;   free map that's written as it's used (HFS_SB_MAPINIT); 1's is all written
@@ -653,12 +662,31 @@ SER_KEY_EOF2        = $1A       ; Ctrl-Z: the same
 SER_KEY_PREFIX      = $1D       ; Ctrl-]: the next key is a console command: a task (0-F) to bring to the
                                 ;   front, l to list them; Ctrl-] again for the key itself (SER_COMMAND)
 
+; /pc (servers/pc_srv.s, page D, in the serial task): a folder on the PC, its requests and replies as frames on the
+; serial port, between the console's bytes (docs/plans/PC.md; the PC's side: sim/lib/pcproto.js).  A frame: PC_MARK,
+; then its body with PC_MARK and PC_ESC stuffed (PC_ESC, the byte ^ $20): the type, the tag, the payload's length
+; (2), the payload, a CRC-16 (CCITT, from $FFFF; low byte first) of the type to the payload's end
+PC_MARK             = $1E       ; A frame starts (from the PC, PC_MARK then PC_ESC: a typed $1E, Ctrl-^)
+PC_ESC              = $1F       ; The next byte ^ $20 is the byte (PC_MARK or PC_ESC)
+PC_T_ATTACH         = 'A'       ; The Hydra's: a new session (the PC forgets its open files); payload: PC_VERSION
+PC_T_REQ            = 'Q'       ;   a request: the request block's first PC_REQ_HDR bytes, then its data
+PC_T_REPLY          = 'R'       ; The PC's: status (0, or an error), a value (an open's fid), the count (2), data
+PC_T_NAK            = 'N'       ;   the request came damaged: send it again
+PC_VERSION          = 1
+PC_REQ_HDR          = 16
+PC_REPLY_HDR        = 4
+PC_TXBUF            = $0400     ; The frame going out (its body: 4 + PC_REQ_HDR + 256 + 2 at most), in the serial
+PC_RXBUF            = $0580     ;   task's RAM; the frame come in (its body: 4 + PC_RX_MAX + 2 at most)
+PC_RX_MAX           = PC_REPLY_HDR + 256    ; (A longer frame is dropped)
+.assert     PC_TXBUF + 4 + PC_REQ_HDR + 256 + 2 <= PC_RXBUF .and PC_RXBUF + 4 + PC_RX_MAX + 2 <= STDOUT_BUF, error, "/pc's frame buffers"
+
 ; /dev/gpio (servers/gpio_srv.s, page D, in its client's task): the VIA's port A on J27, CA1 and CA2.  A fid is
 ; GPIO_FID_* (| the pin)
 GPIO_FID_PIN        = $00       ; /dev/gpio/N: pin PA N (0-7)
 GPIO_FID_PORT       = $10       ; /dev/gpio/port: all 8, a byte
 GPIO_FID_CTL        = $20       ; /dev/gpio/ctl: the directions, CA1's edge, CA2
 GPIO_FID_CA1        = $30       ; /dev/gpio/ca1: CA1's edges, a read waiting for the next
+GPIO_FID_DIR        = $40       ; /dev/gpio: the files, a directory
 IO_BLK_CA1          = $10       ; A task's: GPIO_CA1N when it last read /dev/gpio/ca1 (or opened it) (2)
 .assert     IO_BLK_CA1 > IO_BLK_NSTAB .and IO_BLK_CA1 + 2 <= IO_BLK_ORIG, error, "IO_BLK_CA1: the request block's spare bytes"
 

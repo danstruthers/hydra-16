@@ -6,7 +6,8 @@
 ; (SND_SHADOW: the chip's can't be read) and each channel's settings (io.inc).
 ;   Registers: SND_SET writes one, keeping it in the shadow.  A carrier's total level (TL, $60-$7F) goes to the
 ; chip with the channel's attenuation added (its volume's and the master volume's, SND_ATTEN), so a volume works
-; on anything written, a song's register stream too; the shadow keeps the level as written.  Which operators are
+; on anything written, a song's register stream too; the shadow keeps the level as written.  The master volume can
+; take some away too (SND_MASTER_TL negative: louder than written, as far as the chip's level goes: TL 0).  Which operators are
 ; carriers depends on the channel's algorithm ($20-$27: CON), so a new algorithm writes the levels again.
 ;   Commands (SND_PAIR): the register numbers the chip doesn't have (SND_R_*), each for the channel SND_R_CH
 ; chose: a patch, a note (MIDI numbers, with a bend), key off, volume, speakers, a drum.
@@ -58,18 +59,24 @@ SND_RESET:
 @done:
             rts
 
-; A channel's attenuation: its volume's and the master volume's (SND_VOLUME_ATTEN), 127 at most.  IN: .Y = the
-; channel.  Preserves .X, .Y
+; A channel's attenuation: its volume's (SND_VOLUME_ATTEN) and the master volume's (SND_MASTER_TL), 127 at most;
+; negative (-32 at most) when the master volume takes more away than the channel's adds.  IN: .Y = the channel.
+; Preserves .X, .Y
 SND_ATTEN_SET:
             phx
             ldx         SND_VOL,Y
-            lda         SND_VOLUME_ATTEN,X
-            ldx         SND_MASTER
+            lda         SND_VOLUME_ATTEN,X                  ; (0-127)
             clc
-            adc         SND_VOLUME_ATTEN,X
-            bpl         :+                                  ; (Each is 127 at most: the sum fits)
+            bit         SND_MASTER_TL
+            bmi         :+
+            adc         SND_MASTER_TL                       ; (0-127 more: the sum fits a byte)
+            bpl         @set
             lda         #$7F
+            bra         @set
 :
+            adc         SND_MASTER_TL                       ; (Louder: -32 to 127, as it comes out)
+
+@set:
             sta         SND_ATTEN,Y
             plx
             rts
@@ -133,11 +140,19 @@ SND_COOK:
             plx
             cmp         #0
             beq         @as_is
-            lda         SND_T
+            lda         SND_ATTEN,Y
+            bmi         @louder
             clc
-            adc         SND_ATTEN,Y
+            adc         SND_T
             bpl         @done                               ; (Each is 127 at most: the sum fits)
             lda         #$7F
+            bra         @done
+
+@louder:                                                    ; (Less than as written: down to 0, the loudest)
+            clc
+            adc         SND_T
+            bcs         @done
+            lda         #0
             bra         @done
 
 @as_is:

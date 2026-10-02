@@ -41,15 +41,15 @@ module.exports = [
     forbid: ['!DS PTR ERROR!'],
   },
   {
-    name: 'syscall', about: 'machine code from HyForth: syscall and sys call thunks on ROM page 0 (TICKS_GET, an IO_OPEN that fails); a bload word on page 1 calls a thunk page 1 has no gate for (TICKS_GET: page 1\'s table goes on to page 0\'s)',
+    name: 'syscall', about: 'machine code from HyForth: syscall and sys call thunks on ROM page 0 (TICKS_GET, an IO_OPEN that fails: / opened for writing); a bload word on page 1 calls a thunk page 1 has no gate for (TICKS_GET: page 1\'s table goes on to page 0\'s)',
     args: () => {                         // The bload word, TKX: jsr TICKS_GET, sta TEMP1, sty TEMP1 + 1, jsr spush_0, jmp next
       const t1 = romSym('TEMP1', 'PAGE1'), push = romSym('spush_0', 'PAGE1'), next = romSym('next', 'PAGE1');
       const code = [3, 84, 75, 88, 0x22, 0, 0x20, 0xEA, 0xF8, 0x85, t1, 0x84, t1 + 1, 0x20, push & 255, push >> 8, 0x4C, next & 255, next >> 8, 0, 0, 69, 78, 68];
-      return ['--cycles', '80000000', '--input', BOOT + ['$F806 $41 0 syscall drop\\r', '$F8EA 0 0 0 sys . . . .\\r', 'cd /\\r', '$F86C 0 0 0 sys . . . .\\r',
+      return ['--cycles', '80000000', '--input', BOOT + ['$F806 $41 0 syscall drop\\r', '$F8EA 0 0 0 sys . . . .\\r', 'cd /\\r', '$F86C 0 2 0 sys . . . .\\r',
         '$5000\\r' + code.map(b => 'dup ' + b + ' swap c! 1 +\\r').join('') + 'drop\\r', '$5000 bload\\r' + W(1), 'TKX .\\r', '1 2 + .\\r'].join(W(1))];
     },
     expect: ['/ram> $F806 $41 0 syscall drop\n41\n', /\/ram> \$F8EA 0 0 0 sys \. \. \. \.\n [0-9A-F]{4} 000[0-9A-F] [0-9A-F]{4} [0-9A-F]{4}\n/,
-      /\/> \$F86C 0 0 0 sys \. \. \. \.\n [0-9A-F]{3}[13579BDF] 0000 0000 0070\n/, /\/> TKX \.\n [0-9A-F]{4}\n/, '/> 1 2 + .\n' + num(3)],
+      /\/> \$F86C 0 2 0 sys \. \. \. \.\n [0-9A-F]{3}[13579BDF] 0000 0002 0072\n/, /\/> TKX \.\n [0-9A-F]{4}\n/, '/> 1 2 + .\n' + num(3)],
     forbid: ['!DS PTR ERROR!', '!UNK WORD!', '!SYS ERR!'],
   },
   {

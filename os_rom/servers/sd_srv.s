@@ -110,6 +110,11 @@ SD_SERVE:
             bcs         SD_BAD                              ; (The filesystem's requests: that's hfs)
             cmp         #H9_OPEN
             beq         SD_OPEN
+            cpy         #SD_FID_DIR                         ; A directory's (/dev/sd, /dev/sd/N)?
+            bcc         :+
+            ldx         #DISK_MAX
+            jmp         SD_DIR_REQ
+:
             cmp         #H9_READ
             beq         SD_REQ_RW
             cmp         #H9_WRITE
@@ -161,22 +166,32 @@ SD_START:
             jsr         HFS_FORGET                          ; (It may be a different card now)
             jmp         SD_INIT
 
-; The rest of the name is in the data area: "/N/data" or "/N/ctl" (N = 0-7)
+; The rest of the name is in the data area: "/N/data" or "/N/ctl" (N = 0-7, x, r, s); or the directories, "" (the
+; disks) and "/N" (its files)
 SD_OPEN:
             ldx         SD_CLIENT
             jsr         IO_SRV_MAP
             inc         ZP_IO_REQ + 1                       ; The data area
             ldy         #0
             lda         (ZP_IO_REQ),Y
+            bne         :+
+            lda         #SD_FID_DISKS                       ; "": the disks
+            bra         @dir
+:
             cmp         #'/'
             bne         @not_found
             iny
             lda         (ZP_IO_REQ),Y
-            DISK_FROM_NAME                                  ; (0-7, x)
+            DISK_FROM_NAME                                  ; (0-7, x, r, s)
             bcs         @not_found
             sta         SD_DEV
             iny
             lda         (ZP_IO_REQ),Y
+            bne         :+
+            lda         #SD_FID_DIR                         ; "/N": its files
+            ora         SD_DEV
+            bra         @dir
+:
             cmp         #'/'
             bne         @not_found
             iny
@@ -217,6 +232,135 @@ SD_OPEN:
             sec
             rts
 
+@dir:                                                       ; A directory, .A = its fid: read only
+            dec         ZP_IO_REQ + 1
+            tax
+            ldy         #IO_BLK_MODE
+            lda         (ZP_IO_REQ),Y
+            jsr         IO_SRV_UNMAP
+            and         #IO_MODE_WRITE
+            bne         :+
+            txa
+            clc
+            rts
+:
+            lda         #ERR_IO_MODE
+            sec
+            rts
+
+; A directory's request (SD_FID): /dev/sd, the disks started (SD_FID_DISKS: those below .X, DISK_MAX; hfs's /sd,
+; the cards: SD_MAX_CARDS), or /dev/sd/N, its files (SD_FID_DIR).  A listing (root_srv.s: DIR_LIST, the names made
+; in HFS_STAT), or its stat record.  IN: .A = request, .X = the disks' limit
+SD_DIR_REQ:
+            stx         SD_TMP
+            cmp         #H9_CLUNK
+            beq         @ok
+            cmp         #H9_DUP
+            beq         @ok
+            cmp         #H9_READ
+            beq         @read
+            cmp         #H9_STAT
+            beq         @stat
+            lda         #ERR_IO_BAD_REQ                     ; (Writes, ctl)
+            sec
+            rts
+
+@read:
+            jsr         SD_DIR_NAMES
+            ldx         SD_CLIENT
+            jsr         IO_SRV_MAP
+            lda         #<HFS_STAT
+            ldy         #>HFS_STAT
+            jsr         DIR_LIST
+            bra         @unmap
+
+@stat:
+            lda         SD_FID                              ; Its name: "sd", or the disk's
+            cmp         #SD_FID_DISKS
+            bcc         :+
+            lda         #'s'
+            sta         HFS_STAT
+            lda         #'d'
+            sta         HFS_STAT + 1
+            stz         HFS_STAT + 2
+            bra         :++
+:
+            lda         SD_DEV
+            jsr         SD_DISK_CHAR
+            sta         HFS_STAT
+            stz         HFS_STAT + 1
+:
+            ldx         SD_CLIENT
+            jsr         IO_SRV_MAP
+            lda         #<HFS_STAT
+            ldy         #>HFS_STAT
+            jsr         DIR_STAT
+
+@unmap:
+            jsr         IO_SRV_UNMAP
+
+@ok:
+            lda         #0
+            clc
+            rts
+
+; HFS_STAT = a directory's names (DIR_LIST's): SD_FID_DISKS, the disks started below SD_TMP ("N/" each); or
+; SD_FID_DIR, a disk's files.  Modifies: .A, .X, .Y
+SD_DIR_NAMES:
+            ldy         #0
+            lda         SD_FID
+            cmp         #SD_FID_DISKS
+            bcs         @disk
+            ldx         #0                                  ; A disk's files
+:
+            lda         SD_NAMES,X
+            sta         HFS_STAT,X
+            inx
+            cpx         #SD_NAMES_END - SD_NAMES
+            bne         :-
+            stz         HFS_STAT,X
+            rts
+
+@disk:
+            ldx         #0
+
+@next:
+            lda         SD_CARD_STATE,X
+            beq         :+                                  ; (Not started)
+            txa
+            jsr         SD_DISK_CHAR
+            sta         HFS_STAT,Y
+            iny
+            lda         #'/'
+            sta         HFS_STAT,Y
+            iny
+            lda         #0
+            sta         HFS_STAT,Y
+            iny
+:
+            inx
+            cpx         SD_TMP
+            bne         @next
+            lda         #0
+            sta         HFS_STAT,Y
+            rts
+.assert     (DISK_SRAM + 1) * 3 + 1 <= IO_STAT_SIZE, error, "SD_DIR_NAMES: the disks' names fit in HFS_STAT"
+
+; Disk .A's name: 0-7, x, r, s (DISK_FROM_NAME's other way).  OUT: .A
+SD_DISK_CHAR:
+            cmp         #SD_MAX_CARDS
+            bcs         :+
+            adc         #'0'                                ; (C = 0)
+            rts
+:
+            cmp         #DISK_ROM
+            bne         :+
+            lda         #DISK_NAME_ROM
+            rts
+:
+            adc         #DISK_NAME_RAM - DISK_RAM - 1       ; (C = 1: r, s)
+            rts
+
 ; Does the name at (ZP_IO_REQ),Y end with the name at SD_NAMES,X?  OUT: C = 0 yes.  Modifies: .A, .X, .Y
 SD_MATCH:
             lda         SD_NAMES,X
@@ -236,6 +380,7 @@ SD_MATCH:
 SD_NAMES:
 SD_S_DATA:  .byte   "data", 0
 SD_S_CTL:   .byte   "ctl", 0
+SD_NAMES_END:
 
 ; Read the ctl file: make its text in the data area, then hand over what's after the fd's offset (up to
 ; the count)

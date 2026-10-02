@@ -11,6 +11,8 @@
 ;          byte is left over; if the chip doesn't respond, the pairs written so far count, or ERR_IO_DEVICE
 ;          if none.
 ;   Read: the registers as they were written (SND_SHADOW), a 256-byte file.  Stat: its size, 256.
+;   /dev/snd/volume (SND_FID_VOLUME): the master volume as text, a percentage: read "100" (and CR LF); write a number,
+;         0-200 (100: songs as written; more: louder, up to about 24 dB; any words before it are skipped: "volume 150").
 ;   Ctl: SND_CTL_INIT (stop, and clear the chip and the library's settings), SND_CTL_TEST (play the test song in
 ;        the background: the song player, page C, in a task of its own, SND_PLAYER), SND_CTL_STOP (stop it),
 ;        SND_CTL_CLAIM and SND_CTL_RELEASE (.Y: a mask of channels), SND_CTL_VOLUME (the master volume),
@@ -21,6 +23,12 @@
 
 SND_SERVE:
             sty         SND_FID
+            cpy         #SND_FID_VOLUME                     ; /dev/snd/volume's (H9_OPEN: no fid yet)?
+            bne         :+
+            cmp         #H9_OPEN
+            beq         :+
+            jmp         SND_VOLUME_REQ
+:
             cmp         #H9_CREATE
             bcc         :+
             jmp         @bad                                ; (The filesystem's requests)
@@ -53,7 +61,35 @@ SND_SERVE:
             clc
             rts
 
-@open:                                                      ; A free fid
+@open:                                                      ; "/volume": /dev/snd/volume
+            jsr         IO_SRV_MAP
+            inc         ZP_IO_REQ + 1                       ; (The name, in the data area)
+            ldy         #0
+            lda         (ZP_IO_REQ),Y
+            beq         @slot                               ; "": /dev/snd
+:
+            lda         (ZP_IO_REQ),Y
+            cmp         SND_S_VOLUME,Y
+            bne         @no_name
+            iny
+            cmp         #0
+            bne         :-
+            dec         ZP_IO_REQ + 1
+            jsr         IO_SRV_UNMAP
+            lda         #SND_FID_VOLUME
+            clc
+            rts
+
+@no_name:
+            dec         ZP_IO_REQ + 1
+            jsr         IO_SRV_UNMAP
+            lda         #ERR_IO_NOT_FOUND
+            sec
+            rts
+
+@slot:                                                      ; A free fid
+            dec         ZP_IO_REQ + 1
+            jsr         IO_SRV_UNMAP
             ldx         #0
 :
             lda         SND_REFS,X
@@ -101,25 +137,25 @@ SND_SERVE:
             bne         :+
             jsr         SND_STOP                            ; (The player can't write over it)
             jsr         SND_RESET
-            bra         @ok
+            bra         @ctl_ok
 :
             cmp         #SND_CTL_STOP
             bne         :+
             jsr         SND_STOP
-            bra         @ok
+            bra         @ctl_ok
 :
             cmp         #SND_CTL_CLAIM
             bne         :+
             lda         SND_T + 1
             jsr         SND_CLAIM
             bcs         @error
-            bra         @ok
+            bra         @ctl_ok
 :
             cmp         #SND_CTL_RELEASE
             bne         :+
             lda         SND_T + 1
             jsr         SND_RELEASE
-            bra         @ok
+            bra         @ctl_ok
 :
             cmp         #SND_CTL_VOLUME
             bne         :+
@@ -389,10 +425,47 @@ SND_CLAIMED_SET:
             clc
             rts
 
-; The master volume: every channel's attenuation, and the levels written again.  IN: .A = the volume (0-127)
+; The master volume: its TL steps (SND_MASTER_TL), every channel's attenuation, and the levels written again.
+; IN: .A = the volume, a percentage: 0-99, quieter (the volume curve, SND_VOLUME_ATTEN, at about .A * 1.27); 100,
+; songs as written; 101-200, louder: 0.32 of a TL step (0.75 dB) a point, 31 steps (23 dB) at 200 (more: 200)
 SND_MASTER_SET:
-            and         #$7F
+            cmp         #201
+            bcc         :+
+            lda         #200
+:
             sta         SND_MASTER
+            sec
+            sbc         #100
+            bcc         @quieter
+            sta         SND_T                               ; Louder: -(n / 4 + n / 16), n = .A - 100
+            lsr
+            lsr
+            sta         SND_T + 1
+            lsr
+            lsr
+            clc
+            adc         SND_T + 1
+            eor         #$FF
+            inc                                             ; (Negative)
+            bra         @set
+
+@quieter:
+            lda         SND_MASTER                          ; The curve at .A + .A / 4 + .A / 64 (about * 1.27)
+            lsr
+            lsr
+            sta         SND_T + 1
+            lsr
+            lsr
+            lsr
+            lsr
+            clc
+            adc         SND_T + 1
+            adc         SND_MASTER
+            tax
+            lda         SND_VOLUME_ATTEN,X
+
+@set:
+            sta         SND_MASTER_TL
             ldy         #7
 
 @channel:
@@ -402,6 +475,181 @@ SND_MASTER_SET:
             dey
             bpl         @channel
             rts
+
+SND_S_VOLUME:   .byte   "/volume", 0
+
+; /dev/snd/volume's request.  IN: .A = request
+SND_VOLUME_REQ:
+            cmp         #H9_READ
+            beq         @read
+            cmp         #H9_WRITE
+            beq         @write
+            cmp         #H9_STAT
+            bne         :+
+            jsr         STAT_ZERO                           ; (It unmaps)
+            bra         @ok
+:
+            cmp         #H9_CLUNK
+            beq         @ok
+            cmp         #H9_DUP
+            beq         @ok
+            lda         #ERR_IO_BAD_REQ
+            sec
+            rts
+
+@ok:
+            lda         #0
+            clc
+            rts
+
+@write:                                                     ; A number: the first digits, up to 255 (more: 255)
+            jsr         IO_SRV_MAP
+            ldy         #IO_BLK_COUNT
+            lda         (ZP_IO_REQ),Y
+            sta         ZP_IO_TMP                           ; (The count: 1-256, 256 = 0)
+            inc         ZP_IO_REQ + 1
+            ldy         #0
+            stz         SND_T                               ; The number
+            stz         SND_T + 1                           ; (<> 0: a digit seen)
+
+@char:
+            lda         (ZP_IO_REQ),Y
+            sec
+            sbc         #'0'
+            cmp         #10
+            bcc         @digit
+            lda         SND_T + 1
+            bne         @number                             ; (After the digits: the end)
+            bra         @next
+
+@digit:
+            sta         ZP_IO_BYTE
+            sta         SND_T + 1                           ; (Seen: <> 0 below if it's 0, by the inc)
+            inc         SND_T + 1
+            lda         SND_T                               ; * 10 + the digit, 255 at most
+            cmp         #26
+            bcs         @big
+            asl
+            asl
+            adc         SND_T
+            asl
+            adc         ZP_IO_BYTE
+            bcc         :+
+
+@big:
+            lda         #255
+:
+            sta         SND_T
+
+@next:
+            iny
+            cpy         ZP_IO_TMP
+            bne         @char
+            lda         SND_T + 1
+            beq         @bad                                ; (No number)
+
+@number:
+            dec         ZP_IO_REQ + 1
+            jsr         IO_SRV_UNMAP
+            lda         SND_T
+            jsr         SND_MASTER_SET
+            bra         @ok
+
+@bad:
+            dec         ZP_IO_REQ + 1
+            jsr         IO_SRV_UNMAP
+            lda         #ERR_IO_BAD_REQ
+            sec
+            rts
+
+@read:                                                      ; "N", CR LF, from the offset
+            phx                                             ; (The client)
+            ldx         #0                                  ; SND_TEXT: the number, in decimal
+            lda         SND_MASTER
+            ldy         #0                                  ; (Hundreds)
+:
+            cmp         #100
+            bcc         :+
+            sbc         #100
+            iny
+            bra         :-
+:
+            pha
+            tya
+            beq         :+                                  ; (No leading 0)
+            ora         #'0'
+            sta         SND_TEXT,X
+            inx
+:
+            pla
+            ldy         #0                                  ; (Tens)
+:
+            cmp         #10
+            bcc         :+
+            sbc         #10
+            iny
+            bra         :-
+:
+            pha
+            tya
+            bne         :+
+            cpx         #0
+            beq         :++                                 ; (No leading 0)
+:
+            ora         #'0'
+            sta         SND_TEXT,X
+            inx
+:
+            pla
+            ora         #'0'
+            sta         SND_TEXT,X
+            lda         #ASCII_CR
+            sta         SND_TEXT + 1,X
+            lda         #ASCII_LF
+            sta         SND_TEXT + 2,X
+            inx
+            inx
+            inx
+            stx         SND_T + 1                           ; (Its length)
+            plx
+            jsr         IO_SRV_MAP
+            ldy         #IO_BLK_OFS + 3                     ; From the offset: past the text, nothing
+            lda         (ZP_IO_REQ),Y
+            dey
+            ora         (ZP_IO_REQ),Y
+            dey
+            ora         (ZP_IO_REQ),Y
+            bne         @none
+            dey
+            lda         (ZP_IO_REQ),Y
+            tax                                             ; .X = the offset
+            ldy         #0                                  ; .Y = bytes given
+            inc         ZP_IO_REQ + 1
+
+@give:
+            cpx         SND_T + 1
+            bcs         @given
+            lda         SND_TEXT,X
+            sta         (ZP_IO_REQ),Y
+            inx
+            iny
+            bra         @give                               ; (5 at most: a read's count is more)
+
+@given:
+            dec         ZP_IO_REQ + 1
+            tya
+            bra         :+
+
+@none:
+            lda         #0
+:
+            ldy         #IO_BLK_COUNT
+            sta         (ZP_IO_REQ),Y
+            iny
+            lda         #0
+            sta         (ZP_IO_REQ),Y
+            jsr         IO_SRV_UNMAP
+            jmp         @ok
 
 ; Is the player playing: SND_PLAYER busy, and still the sound task's (not a task that came after it)?
 ; OUT: C = 1 yes (.X = it).  Modifies: .A, .Y, ZP_IO_TMP
