@@ -1,16 +1,31 @@
 .debuginfo
 
 ; ****************************************************************************
-; /dev/proc: the tasks, as files (like Plan 9's /proc).  BIOS ROM page 9, included inside `.scope PAGE9`
-; (see all.s).  It runs in the client's task (IO_DEV_CALLER_TASK; registered by IO_INIT, io_p0.s).
-;   /dev/proc               read: a line for each busy task
-;   /dev/proc/N             read: task N's line (N = 0-F; also /dev/proc/N/status)
-;   /dev/proc/N/ctl         write: "kill" (TASK_SIGNAL), "break" (as Ctrl-C does) or "fg" (bring it to
-;                           the front: CONS_SET_FG)
+; /proc: the tasks, as files (like Plan 9's).  BIOS ROM page 9, included inside `.scope PAGE9` (see all.s).
+; It runs in the client's task (IO_DEV_CALLER_TASK; registered by IO_INIT, io_p0.s).  The device is proc:
+; /dev/proc, and /proc (the boot shell mounts it there).
+;   /proc                   read: a line for each busy task
+;   /proc/N                 read: task N's line (N = 0-F; also /proc/N/status)
+;   /proc/N/ctl             write: "kill" (TASK_SIGNAL), "break" (as Ctrl-C does) or "fg" (bring it to
+;                           the front: CONS_SET_FG); for task N's family and task 0 (TASK_MAY)
+;   /proc/N/cwd, env        read: its current directory, its environment
+;   /proc/N/pages           read: "pages PP floor FF", the MMU pages it has and its page floor
+;   /proc/N/ns              read: its namespace, as the lines that would make it (ns: PROC_NS_LIST)
+;   /proc/N/cmd             write: a line for task N's shell to run, as if typed (PROC_CMD); for its family
+;                           and task 0
 ; A line is "N S O" and CR LF: the task, its state (R runnable, W waiting for IO, P paused: waiting for a
 ; task it started, D a driver, - free) and the task that started it (- none), then " *" for the
 ; foreground task.  The text is made again for each read, from the fd's offset.
-; Server ZP: ZP_PROC_* (in the client's task: the IO layer's ZP_IO_* are in use around the request).
+; Server ZP: ZP_PROC_* (in the client's task: the IO layer's ZP_IO_* are in use around the request), and
+; these (ZP_CS; and for PROC_NS_LIST and PROC_CMD, in a task of its own: no request is under way then)
+ZP_PROC_NSE     = ZP_CS + 4         ; The entry
+ZP_PROC_TYPE    = ZP_CS + 5         ;   its NS_TYPE
+ZP_PROC_PTR     = ZP_CS + 6         ; A byte's address, in a bank (PROC_FAR_PEEK)
+ZP_PROC_SKIP    = ZP_CS + 8         ; A read's: the bytes before its offset, still to skip
+ZP_PROC_A       = ZP_CS + 10        ; -a: after a member with the same path
+ZP_PROC_T       = ZP_CS + 11        ; (PROC_FAR_PEEK's)
+ZP_PROC_C       = ZP_CS + 12        ; (A character, compared)
+            CS_FITS     ZP_PROC_NSE, 9
 
 .segment "SYS_P9"
 
@@ -134,8 +149,8 @@ PROC_MATCH:
 
 PROC_S_MEM:     .byte   "pages floor "
 PROC_S_MEM_END:
-PROC_NAMES:     .byte   "status", 0, "ctl", 0, "cwd", 0, "env", 0, "mem", 0, 0
-PROC_FIDS:      .byte   PROC_FID_STATUS, PROC_FID_CTL, PROC_FID_CWD, PROC_FID_ENV, PROC_FID_MEM
+PROC_NAMES:     .byte   "status", 0, "ctl", 0, "cwd", 0, "env", 0, "pages", 0, "ns", 0, "cmd", 0, 0
+PROC_FIDS:      .byte   PROC_FID_STATUS, PROC_FID_CTL, PROC_FID_CWD, PROC_FID_ENV, PROC_FID_PAGES, PROC_FID_NS, PROC_FID_CMD
 
 ; .A = a hex digit's value (0-F; upper or lower case).  OUT: C = 0; or C = 1 (not a hex digit)
 PROC_HEX_DIGIT:
@@ -163,17 +178,25 @@ PROC_READ:
             tya
             and         #$F0
             cmp         #PROC_FID_CTL
+            beq         @empty
+            cmp         #PROC_FID_CMD
             bne         :+
-            jsr         IO_SRV_MAP                          ; ctl: nothing to read (end of file)
+
+@empty:
+            jsr         IO_SRV_MAP                          ; ctl, cmd: nothing to read (end of file)
             lda         #0
             jsr         IO_SRV_COUNT
             jmp         PROC_OK
+:
+            cmp         #PROC_FID_NS
+            bne         :+
+            jmp         PROC_NS_READ
 :
             cmp         #PROC_FID_CWD
             bcs         @far1
             jmp         @list_status
 @far1:
-            pha                                             ; cwd, env, mem: task N's
+            pha                                             ; cwd, env, pages: task N's
             tya
             and         #$0F
             sta         ZP_PROC_OWN
@@ -188,29 +211,46 @@ PROC_READ:
             jmp         PROC_TEXT_OUT
 :
             inc         ZP_IO_REQ + 1                       ; (The data area: PROC_PUT)
-            cmp         #PROC_FID_MEM
+            cmp         #PROC_FID_PAGES
             beq         @mem
-            lda         ZP_PROC_OWN                         ; cwd: in its IO transfer area (the same bank),
-            asl                                             ;   "/" for none
-            ora         #>PAGED_RAM_BASE
+            lda         ZP_PROC_OWN                         ; cwd: in its IO transfer area ("/" for none),
+            and         #7                                  ;   at $8000 + (task & 7) * $400 in its bank, which
+            asl                                             ;   may not be the client's: read a byte at a time
+            asl                                             ;   with its mapped (ZP_PROC_LEN), and written with
+            ora         #>PAGED_RAM_BASE                    ;   the client's (ZP_ENV_P)
             sta         ZP_ENV_Q + 1
             lda         #IO_BLK_CWD
             sta         ZP_ENV_Q
-            lda         (ZP_ENV_Q)
-            bne         :+
-            lda         #'/'
-            jsr         PROC_PUT
-:
+            lda         ZP_PROC_OWN
+            and         #8
+            lsr
+            lsr
+            lsr                                             ; (C = 0)
+            adc         #IO_XFER_BANK
+            sta         ZP_PROC_LEN
+            lda         RAM_BANK_REG                        ; (The client's, mapped: ZP_ENV_P)
+            sta         ZP_ENV_P
             ldx         #0
 :
             txa
             tay
+            lda         ZP_PROC_LEN
+            sta         RAM_BANK_REG
             lda         (ZP_ENV_Q),Y
-            beq         @line
+            ldy         ZP_ENV_P
+            sty         RAM_BANK_REG
+            cmp         #0
+            bne         :+
+            txa                                             ; (Its end: "/" if it's empty)
+            bne         @line
+            lda         #'/'
+            jsr         PROC_PUT
+            bra         @line
+:
             jsr         PROC_PUT
             inx
             cpx         #IO_CWD_MAX - 1
-            bne         :-
+            bne         :--
 
 @line:
             lda         #ASCII_CR
@@ -220,7 +260,7 @@ PROC_READ:
             dec         ZP_IO_REQ + 1
             jmp         PROC_TEXT_OUT
 
-@mem:                                                       ; mem: "pages PP floor FF" (hex), counted
+@mem:                                                       ; pages: "pages PP floor FF" (hex), counted
             ldx         ZP_PROC_OWN                         ;   in the task (PROC_MEM_COUNT); a free one: "-"
             jsr         PROC_PEEK
             and         #TASK_BUSY_FLAG
@@ -434,6 +474,10 @@ PROC_PUT:
 PROC_WRITE:
             tya
             and         #$F0
+            cmp         #PROC_FID_CMD
+            bne         :+
+            jmp         PROC_CMD_WRITE
+:
             cmp         #PROC_FID_CTL
             beq         :+
             lda         #ERR_IO_MODE
@@ -497,6 +541,10 @@ PROC_WRITE:
 @match:
             dec         ZP_IO_REQ + 1
             jsr         IO_SRV_UNMAP                        ; (The count stays: all of it taken)
+            jsr         PROC_MAY
+            bcc         :+
+            rts                                             ; (ERR_IO_PERM)
+:
             ldx         ZP_PROC_OWN
             lda         ZP_PROC_IDX
             beq         @kill
@@ -522,3 +570,499 @@ PROC_WRITE:
             rts                                             ; (.A = the error)
 
 PROC_CMDS:  .byte   "kill", 0, "break", 0, "fg", 0, 0
+
+; May the asker (this task) use task ZP_PROC_OWN's ctl and cmd?  Its family (a task that started it, or itself)
+; and task 0 may (TASK_MAY).  OUT: C = 0 yes; or .A = ERR_IO_PERM, C = 1.  Modifies: .A, .X, .Y
+PROC_MAY:
+            lda         T_REGISTER
+            and         #$0F
+            ldx         ZP_PROC_OWN
+            ldy         #1
+            jsr         TASK_MAY
+            bcc         :+
+            lda         #ERR_IO_PERM
+:
+            rts
+
+; ****************************************************************************
+; /proc/N/cmd: a line for task N's shell to run, as if typed at its prompt.  It waits in task N's IO transfer area
+; (IO_BLK_CMD) till the shell is at its prompt (PROC_CMD); if it's there already, waiting for the console, a break
+; wakes it (a quiet one: IO_CMD_WOKEN), and it takes the line.  One line waits at a time (ERR_IO_BUSY); a write
+; ends at its CR, LF or 0, and up to IO_CMD_MAX - 1 characters are kept.  The whole write is taken.
+
+; Write to /proc/N/cmd (.Y = the fid)
+PROC_CMD_WRITE:
+            tya
+            and         #$0F
+            tax                                             ; A task?
+            jsr         PROC_PEEK
+            stx         ZP_PROC_OWN                         ; (PROC_PEEK's is its owner)
+            and         #TASK_BUSY_FLAG
+            bne         :+
+            lda         #ERR_IO_NOT_FOUND
+            sec
+            rts
+:
+            jsr         PROC_MAY
+            bcc         :+
+            rts                                             ; (ERR_IO_PERM)
+:
+            lda         T_REGISTER                          ; (The client: this task)
+            and         #$0F
+            tax
+            jsr         IO_SRV_MAP
+            ldy         #IO_BLK_COUNT + 1                   ; The characters to look at
+            lda         (ZP_IO_REQ),Y
+            bne         @most
+            dey
+            lda         (ZP_IO_REQ),Y
+            beq         @most                               ; (256)
+            cmp         #IO_CMD_MAX
+            bcc         :+
+
+@most:
+            lda         #IO_CMD_MAX - 1
+:
+            sta         ZP_PROC_LEN
+            jsr         PROC_CMD_PTR                        ; ZP_PROC_PTR, .X: task N's
+            jsr         NO_PREEMPT                          ; (Its shell takes it whole, or not at all)
+            ldy         #1
+            jsr         PROC_FAR_PEEK                       ; One waiting already?
+            beq         :+
+            jsr         PREEMPT
+            jsr         IO_SRV_UNMAP
+            lda         #ERR_IO_BUSY
+            sec
+            rts
+:
+            inc         ZP_IO_REQ + 1                       ; The data area
+            ldy         #0
+
+@copy:
+            cpy         ZP_PROC_LEN
+            beq         @end
+            lda         (ZP_IO_REQ),Y
+            beq         @end
+            cmp         #ASCII_CR
+            beq         @end
+            cmp         #ASCII_LF
+            beq         @end
+            iny
+            jsr         PROC_FAR_POKE                       ; (Its character .Y - 1: at IO_BLK_CMD + .Y - 1)
+            bra         @copy
+
+@end:
+            dec         ZP_IO_REQ + 1
+            sty         ZP_PROC_IDX                         ; (Its length)
+            iny
+            lda         #0
+            jsr         PROC_FAR_POKE
+            lda         ZP_PROC_IDX
+            beq         @done                               ; (An empty line: nothing)
+            ldy         #0
+            jsr         PROC_FAR_PEEK                       ; At its prompt?  Woken
+            bpl         @done                               ; (IO_CMD_PROMPT)
+            ora         #IO_CMD_WOKEN
+            jsr         PROC_FAR_POKE
+            ldx         ZP_PROC_OWN
+            jsr         PROC_BREAK
+
+@done:
+            jsr         PREEMPT
+            jsr         IO_SRV_UNMAP                        ; (The count stays: all of it taken)
+            jmp         PROC_OK
+
+; The shell's side of /proc/N/cmd, in its own task (HyForth: LINE_PROMPT, LINE_READ, fbreak).
+; IN: .X = 1: at its prompt, about to read a line from the console: a line waiting is taken, to (ZP_IO_BUF) + 1
+;             on, 0-terminated, as the line editor puts one in TIB; OUT: .A = its length.  None (.A = 0): it's
+;             marked at its prompt, so a line written now wakes it
+;     .X = 0: a line came: not at its prompt
+;     .X = 2: a break came: a line's wake-up?  OUT: C = 1 yes (the shell shows no message)
+; Modifies: .A, .X, .Y
+PROC_CMD:
+            lda         T_REGISTER
+            and         #$0F
+            sta         ZP_PROC_OWN
+            stz         ZP_PROC_IDX
+            phx
+            jsr         PROC_CMD_PTR                        ; .X = the bank
+            jsr         NO_PREEMPT
+            pla
+            beq         @mark                               ; (.A = 0: not at its prompt)
+            cmp         #1
+            beq         @prompt
+            ldy         #0                                  ; A wake-up?  Told once
+            jsr         PROC_FAR_PEEK
+            sta         ZP_PROC_C
+            and         #<~IO_CMD_WOKEN
+            jsr         PROC_FAR_POKE
+            jsr         PREEMPT
+            lda         ZP_PROC_C
+            asl                                             ; C = IO_CMD_WOKEN (bit 6)
+            asl
+            rts
+
+@prompt:
+            ldy         #1
+
+@copy:
+            jsr         PROC_FAR_PEEK
+            sta         (ZP_IO_BUF),Y
+            beq         @copied
+            iny
+            cpy         #IO_CMD_MAX
+            bne         @copy
+            lda         #0
+            sta         (ZP_IO_BUF),Y
+
+@copied:
+            dey
+            sty         ZP_PROC_IDX                         ; Its length
+            lda         #IO_CMD_PROMPT                      ; None: at its prompt
+            cpy         #0
+            beq         @mark
+            lda         #0                                  ; Taken: gone, and not at its prompt (it runs)
+            ldy         #1
+            jsr         PROC_FAR_POKE
+
+@mark:
+            ldy         #0
+            jsr         PROC_FAR_POKE
+            jsr         PREEMPT
+            lda         ZP_PROC_IDX
+            rts
+
+; ZP_PROC_PTR = task ZP_PROC_OWN's IO_BLK_CMDST, in its IO transfer area; .X = its bank.  Modifies: .A
+PROC_CMD_PTR:
+            lda         #IO_BLK_CMDST
+            sta         ZP_PROC_PTR
+
+; ZP_PROC_PTR + 1 = task ZP_PROC_OWN's IO transfer area's first page ($8000 + (task & 7) * $400), .X = its
+; bank (IO_XFER_OF's).  Modifies: .A
+PROC_AREA:
+            lda         ZP_PROC_OWN
+            and         #7
+            asl
+            asl
+            ora         #>PAGED_RAM_BASE
+            sta         ZP_PROC_PTR + 1
+            lda         ZP_PROC_OWN
+            and         #8
+            lsr
+            lsr
+            lsr                                             ; (C = 0)
+            adc         #IO_XFER_BANK
+            tax
+            rts
+
+; Break task .X alone (not the tasks it started, as TASK_SIGNAL does), if it's busy and not a driver: as
+; TASK_FLAG does (page 0), it stops waiting.  Modifies: .A, .Y
+PROC_BREAK:
+            php
+            sei
+            ldy         T_REGISTER
+            stx         T_REGISTER                          ; Quick switch (no stack use!)
+            bbr0        TASK_STATUS_REG, @done              ; Free (TASK_BUSY_FLAG)
+            bbs3        TASK_STATUS_REG, @done              ; A driver (TASK_RESIDENT_FLAG)
+            lda         #TASK_BREAK_FLAG
+            tsb         TASK_STATUS_REG
+            rmb2        TASK_STATUS_REG                     ; Not waiting (TASK_WAITING_FLAG)
+
+@done:
+            sty         T_REGISTER
+            plp
+            rts
+.assert     TASK_BUSY_FLAG = 1 .and TASK_RESIDENT_FLAG = 8 .and TASK_WAITING_FLAG = 4, error, "PROC_BREAK: bits 0, 3, 2"
+
+; ****************************************************************************
+; Namespaces as text: a task's entries (in its IO transfer area: ns.s) as the lines that would make them, as
+; Plan 9's ns prints them: "mount [-ac] device /path", "bind [-ac] /target /path", "hide /path"; a union's
+; members after its first get -a, and NS_C c.  Printed (IO_NS_LIST: PROC_NS_LIST), or a read's text
+; (/proc/N/ns: PROC_NS_READ).  The scratch: ZP_PROC_* (above)
+.assert     IO_BLK_NS = $200 .and NS_ENTRIES <= 16, error, "PROC_NS_GETC: the entries are $200-$3FF of the area"
+
+; Print this task's namespace (IO_NS_LIST, through page 0's gate).  OUT: C = 0.  Preserves .A, .X, .Y
+PROC_NS_LIST:
+            PUSH_AXY
+            lda         T_REGISTER
+            and         #$0F
+            sta         ZP_PROC_OWN
+            stz         ZP_PROC_FG                          ; (Printed)
+            jsr         PROC_NS_TEXT
+            PULL_YXA
+            clc
+            rts
+
+; Read /proc/N/ns (.Y = the fid): the text from the fd's offset, up to the count (255 at most), made
+; again for each read
+PROC_NS_READ:
+            tya
+            and         #$0F
+            sta         ZP_PROC_OWN
+            jsr         IO_SRV_MAP
+            ldy         #IO_BLK_OFS + 3                     ; Past 64K: the end
+            lda         (ZP_IO_REQ),Y
+            dey
+            ora         (ZP_IO_REQ),Y
+            bne         @count                              ; (.A <> 0, but nothing: .X)
+            dey
+            lda         (ZP_IO_REQ),Y
+            sta         ZP_PROC_SKIP + 1
+            dey
+            lda         (ZP_IO_REQ),Y
+            sta         ZP_PROC_SKIP
+            ldy         #IO_BLK_COUNT + 1
+            lda         (ZP_IO_REQ),Y
+            bne         @most
+            dey
+            lda         (ZP_IO_REQ),Y
+            bne         :+
+
+@most:
+            lda         #255
+:
+            sta         ZP_PROC_LEN
+            stz         ZP_PROC_IDX
+            sta         ZP_PROC_FG                          ; (A read's: not 0)
+            inc         ZP_IO_REQ + 1                       ; (The data area: PROC_NS_PUT)
+            jsr         PROC_NS_TEXT
+            dec         ZP_IO_REQ + 1
+
+@count:
+            lda         ZP_PROC_IDX
+            jsr         IO_SRV_COUNT
+            jmp         PROC_OK
+
+; Task ZP_PROC_OWN's namespace, as text (PROC_NS_PUT: ZP_PROC_FG).  Modifies: .A, .X, .Y
+PROC_NS_TEXT:
+            stz         ZP_PROC_NSE
+
+@entry:
+            ldy         #NS_TYPE
+            jsr         PROC_NS_GETC
+            bne         :+
+            rts                                             ; (The first free one: the end)
+:
+            sta         ZP_PROC_TYPE
+            and         #NS_KIND
+            tax
+            lda         PROC_NS_KINDS - 1,X
+            tax
+            jsr         PROC_NS_STR                         ; "mount", "bind", "hide"
+            stz         ZP_PROC_A
+            lda         ZP_PROC_NSE
+            beq         @flagged
+            ldy         #NS_PREFIX                          ; The one before's path the same?  -a
+
+@same:
+            dec         ZP_PROC_NSE
+            jsr         PROC_NS_GETC
+            inc         ZP_PROC_NSE
+            sta         ZP_PROC_C
+            jsr         PROC_NS_GETC
+            cmp         ZP_PROC_C
+            bne         @flagged
+            iny
+            cmp         #0
+            bne         @same
+            inc         ZP_PROC_A
+
+@flagged:
+            lda         ZP_PROC_TYPE
+            and         #NS_C
+            ora         ZP_PROC_A
+            beq         @names
+            ldx         #PROC_S_FLAG - PROC_NS_WORDS        ; " -"
+            jsr         PROC_NS_STR
+            lda         ZP_PROC_A
+            beq         :+
+            lda         #'a'
+            jsr         PROC_NS_PUT
+:
+            bit         ZP_PROC_TYPE                        ; (NS_C: bit 7)
+            bpl         @names
+            lda         #'c'
+            jsr         PROC_NS_PUT
+
+@names:
+            lda         #' '
+            jsr         PROC_NS_PUT
+            lda         ZP_PROC_TYPE
+            and         #NS_KIND
+            cmp         #NS_MOUNT
+            bne         :+
+            ldy         #NS_DEV
+            jsr         PROC_NS_GETC                        ; .A = the device
+            jsr         PROC_NS_DEV
+            bra         @path
+:
+            cmp         #NS_BIND
+            bne         @prefix
+            ldy         #NS_TARGET
+            jsr         PROC_NS_PUTS
+
+@path:
+            lda         #' '
+            jsr         PROC_NS_PUT
+
+@prefix:
+            ldy         #NS_PREFIX
+            jsr         PROC_NS_PUTS
+            lda         #ASCII_CR
+            jsr         PROC_NS_PUT
+            lda         #ASCII_LF
+            jsr         PROC_NS_PUT
+            inc         ZP_PROC_NSE
+            lda         ZP_PROC_NSE
+            cmp         #NS_ENTRIES
+            bcs         :+
+            jmp         @entry
+:
+            rts
+
+PROC_NS_WORDS:
+PROC_S_MOUNT:   .byte   "mount", 0
+PROC_S_BIND:    .byte   "bind", 0
+PROC_S_HIDE:    .byte   "hide", 0
+PROC_S_FLAG:    .byte   " -", 0
+PROC_NS_KINDS:  .byte   PROC_S_MOUNT - PROC_NS_WORDS, PROC_S_BIND - PROC_NS_WORDS, PROC_S_HIDE - PROC_NS_WORDS
+.assert     NS_MOUNT = 1 .and NS_BIND = 2 .and NS_HIDE = 3, error, "PROC_NS_KINDS: NS_MOUNT, NS_BIND, NS_HIDE"
+
+; Put the string at PROC_NS_WORDS + .X.  Modifies: .A, .X
+PROC_NS_STR:
+            lda         PROC_NS_WORDS,X
+            beq         @done
+            jsr         PROC_NS_PUT
+            inx
+            bra         PROC_NS_STR
+
+@done:
+            rts
+
+; Put the entry's string from its byte .Y.  Modifies: .A, .Y
+PROC_NS_PUTS:
+            jsr         PROC_NS_GETC
+            beq         @done
+            jsr         PROC_NS_PUT
+            iny
+            bra         PROC_NS_PUTS
+
+@done:
+            rts
+
+; Put device .A's name (the device table's, in the system's bank).  Modifies: .A, .X, .Y
+PROC_NS_DEV:
+            asl                                             ; Its entry: IO_DEV_TABLE + device * 16
+            asl
+            asl
+            asl
+            sta         ZP_PROC_PTR
+            lda         #>IO_DEV_TABLE
+            sta         ZP_PROC_PTR + 1
+            ldx         #SYS_BANK
+            ldy         #0
+
+@char:
+            jsr         PROC_FAR_PEEK
+            beq         @done
+            jsr         PROC_NS_PUT
+            iny
+            cpy         #IO_DEV_NAME_LEN
+            bne         @char
+
+@done:
+            rts
+.assert     <IO_DEV_TABLE = 0 .and IO_MAX_DEVS * IO_DEV_SIZE <= 256, error, "PROC_NS_DEV: the device table, a page"
+
+; Byte .Y of entry ZP_PROC_NSE of task ZP_PROC_OWN's namespace: at $8000 + (task & 7) * $400 + IO_BLK_NS +
+; entry * 32 in its transfer area's bank (IO_XFER_OF's).  OUT: .A (and Z).  Preserves .X, .Y
+PROC_NS_GETC:
+            phx
+            lda         ZP_PROC_NSE
+            asl
+            asl
+            asl
+            asl
+            asl
+            sta         ZP_PROC_PTR
+            jsr         PROC_AREA                           ; .X = its bank
+            lda         ZP_PROC_NSE                         ; (Entries 8-15: the next page)
+            lsr
+            lsr
+            lsr
+            ora         #>IO_BLK_NS
+            ora         ZP_PROC_PTR + 1
+            sta         ZP_PROC_PTR + 1
+            jsr         PROC_FAR_PEEK
+            plx
+            ora         #0
+            rts
+
+; Byte .Y at ZP_PROC_PTR in shared bank .X (mapped for the one byte: U = 0, then back as it was).
+; OUT: .A (and Z).  Preserves .X, .Y
+PROC_FAR_PEEK:
+            sty         ZP_PROC_T
+            ldy         RAM_BANK_REG
+            phy
+            ldy         U_REGISTER
+            phy
+            stz         U_REGISTER
+            stx         RAM_BANK_REG
+            ldy         ZP_PROC_T
+            lda         (ZP_PROC_PTR),Y
+            ply
+            sty         U_REGISTER
+            ply
+            sty         RAM_BANK_REG
+            ldy         ZP_PROC_T
+            ora         #0
+            rts
+
+; Byte .Y at ZP_PROC_PTR in shared bank .X = .A (mapped for the one byte, as PROC_FAR_PEEK).  Preserves .A, .X, .Y
+PROC_FAR_POKE:
+            sty         ZP_PROC_T
+            ldy         RAM_BANK_REG
+            phy
+            ldy         U_REGISTER
+            phy
+            stz         U_REGISTER
+            stx         RAM_BANK_REG
+            ldy         ZP_PROC_T
+            sta         (ZP_PROC_PTR),Y
+            ply
+            sty         U_REGISTER
+            ply
+            sty         RAM_BANK_REG
+            ldy         ZP_PROC_T
+            rts
+
+; Put .A: printed (ZP_PROC_FG = 0), or a read's text (in the data area: ZP_IO_REQ), once ZP_PROC_SKIP bytes
+; are skipped, and while it's under ZP_PROC_LEN bytes.  Preserves .X, .Y
+PROC_NS_PUT:
+            phy
+            ldy         ZP_PROC_FG
+            bne         @text
+            jsr         WRITE_CHAR
+            bra         @done
+
+@text:
+            ldy         ZP_PROC_SKIP
+            bne         @skip
+            ldy         ZP_PROC_SKIP + 1
+            beq         @put
+            dec         ZP_PROC_SKIP + 1
+
+@skip:
+            dec         ZP_PROC_SKIP
+            bra         @done
+
+@put:
+            ldy         ZP_PROC_IDX
+            cpy         ZP_PROC_LEN
+            beq         @done                               ; (Full)
+            sta         (ZP_IO_REQ),Y
+            inc         ZP_PROC_IDX
+
+@done:
+            ply
+            rts

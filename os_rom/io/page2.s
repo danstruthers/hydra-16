@@ -14,7 +14,6 @@ FAR_GATE_INLINE     TASK_CALL,      ::TASK_CALL,            0
 FAR_GATE_INLINE     YIELD,          ::YIELD,                0
 FAR_GATE_INLINE     PREEMPT,        ::PREEMPT,              0
 FAR_GATE_INLINE     IO_WAKE,        ::IO_WAKE,              0
-FAR_GATE_INLINE     TASK_WAKE_MASK, ::TASK_WAKE_MASK,       0   ; (The pipes' waiters)
 FAR_GATE_INLINE     TASK_RUN,       ::TASK_RUN,             0
 FAR_GATE_INLINE     RESERVE_TASK,   ::RESERVE_TASK,         0
 FAR_GATE_INLINE     TASK_BUILD_FRAME, ::TASK_BUILD_FRAME,   0

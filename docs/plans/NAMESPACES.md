@@ -2,8 +2,9 @@
 
 A plan to make the namespace the way names are found, as Plan 9 does, in place of search paths.  Directories are
 mapped onto other paths (bound, mounted) and stacked into **unions**, so `/bin` is one directory that holds the
-program caches, the cards' programs and the ROM's, and the shell just looks in `/bin`.  Nothing here is built
-yet; it goes with the [RAM and ROM disks](DISKS.md), which give it most of what it puts together.
+program caches, the cards' programs and the ROM's, and the shell just looks in `/bin`.  It goes with the
+[RAM and ROM disks](DISKS.md), which give it most of what it puts together.  Steps 1 and 2 are built (16 entries,
+unions, hides, `ns` printing `bind` lines); the default namespace and `/bin` are next.
 
 ### **Contents**
 1. [Where it stands](#where-it-stands)
@@ -22,10 +23,12 @@ yet; it goes with the [RAM and ROM disks](DISKS.md), which give it most of what 
 
 ### **Where it stands**
 
-Each task has a namespace of up to 5 entries, copied to the tasks it starts ([io.md](../programming/io.md#namespaces)):
-a **mount** sends names under a path to a device's server, and a **bind** makes a path stand for another; the
-entry with the longest matching prefix applies.  Names nothing matches must be under `/dev` or `/env`, which the
-IO layer knows itself; `/rom` and `/ram` are plain binds to the ROM and RAM disks (`/rom = /sd/x`, `/ram = /sd/r`,
+Each task has a namespace of up to 16 entries in the IO transfer areas' banks, copied to the tasks it starts
+([io.md](../programming/io.md#namespaces)): a **mount** sends names under a path to a device's server, and a
+**bind** makes a path stand for another; the entries with the longest matching prefix apply, and several with the
+same path are a **union**, looked in in order (`bind -a`, `bind -b`, `-c` for creates; `unmount new old` takes one
+member out; `hide`).  Names nothing matches must be under `/dev` or `/env`, which the
+IO layer knows itself; `/rom` and `/ram` are plain binds to the ROM and RAM disks (`bind /sd/x /rom`, `bind /sd/r /ram`,
 made by the boot shell: [DISKS.md](DISKS.md)).  Programs and libraries are found by **search paths**: the shell
 tries the current directory, then the RAM disks' caches (`/ram/N/bin` up the owner chain, `/ram/s/bin`), then
 `$PATH`'s directories (or the card's `/bin`), then `/rom/bin` (`$LIBPATH` and `/lib` the same).
@@ -141,11 +144,12 @@ anything, only take a name away.
 * **`IO_BIND`, `IO_MOUNT`** take the flags in `.X` (0: replace, as now, so programs keep working):
   `NS_BEFORE`, `NS_AFTER`, `NS_CREATE`.
 * **`IO_UNMOUNT`** takes the member too (`ZP_IO_BUF`: the target or device; 0: all of `old`).
-* **`IO_HIDE`:** a new call (`.A.Y` = the path).
+* **Hide:** `IO_BIND` with `.X` = `NS_HIDDEN` (`.A.Y` = the path, no target).
 * **`IO_NS_LIST`** prints the entries as the lines that would make them (`bind -a /ram/s/bin /bin`), as Plan 9's
   `ns` does, so a namespace can be saved and read back.
-* **HyForth:** `bind` and `mount` take the flags (`"-a" "/sd/0/tools" "/bin" bind`); `unmount`, `hide`, `ns`;
-  `newns` reads a file of `bind` and `mount` lines (the card's `/lib/namespace`).
+* **HyForth:** `bind [-abc] new old`, `mount [-abc] device old`, `unmount [new] old`, `hide path` take their
+  arguments from the line, as the shell's commands do (stack forms `(bind)`, `(mount)`, `(unmount)`, with no
+  flags); `ns`; `newns` (to come) reads a file of `bind` and `mount` lines (the card's `/lib/namespace`).
 * **C:** `hy_bind(new, old, flags)`, `hy_mount`, `hy_unmount`, `hy_hide`.
 
 ---
@@ -173,11 +177,13 @@ programs found in `/bin` from a cache, a card and the ROM, in that order; `$PATH
 
 ### **Steps**
 
-1. The namespace bank: 16 entries a task, `NS_RESOLVE` and `IO_INHERIT` on it, longer names; every test passing.
-2. Unions: the flags, lookups through the members, union directory reads, creates, `unmount` of one member.
+1. **(Done)** The namespace bank: 16 entries a task, `NS_RESOLVE` and `IO_INHERIT` on it, longer names; every test passing.
+2. **(Done, but directory reads)** Unions: the flags, lookups through the members, creates, `unmount` of one member;
+   `hide`, `ns` printing `bind` lines, the words (`ns-unions` in `sim/tests/devices.js`).  A union's directory
+   listing is still its first member's.
 3. The default namespace from `/rom/lib/namespace`: the built-in names as entries (`/env`, `/proc`, `/ram`), `/bin` and `/lib`
    unions, `newns` and the card's `/lib/namespace`; the IO layer's special prefixes go.
 4. The shell: programs in the current directory then `/bin`, libraries in `/lib`, `$PATH` and `$LIBPATH` after
    them; a copy into `/bin` goes to the `-c` member.
-5. `hide`; `ns` printing `bind` lines; C's calls.
+5. C's calls (`hide` and `ns`'s lines: done in step 2).
 6. Docs: `io.md` (namespaces), `hyforth.md` (the words, finding programs), `c.md`, the tutorial.

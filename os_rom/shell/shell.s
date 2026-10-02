@@ -40,6 +40,12 @@ SH_BOOT:
             LOAD_ADDR   SH_S_HFS, ZP_IO_BUF                 ; The cards' files at /sd (inherited too)
             lda         #<SH_S_SD
             ldy         #>SH_S_SD
+            ldx         #0                                  ; (No flags: IO_BIND's too)
+            jsr         IO_MOUNT
+            LOAD_ADDR   (SH_S_PROC + 1), ZP_IO_BUF          ; The tasks at /proc (the device proc: /dev/proc
+            lda         #<SH_S_PROC                         ;   too), as Plan 9 has them
+            ldy         #>SH_S_PROC
+            ldx         #0
             jsr         IO_MOUNT
             ldx         #0                                  ; The disks in memory by their names: /rom, /ram
                                                             ;   (the shared RAM disk too, as /ram/s: HydraFS's),
@@ -59,6 +65,7 @@ SH_BOOT:
             sta         ZP_IO_BUF + 1
             lda         SH_BINDS,X
             ldy         SH_BINDS + 1,X
+            ldx         #0
             jsr         IO_BIND
 
 @next:
@@ -79,6 +86,7 @@ SH_BOOT:
             jmp         MON_START
 
 SH_S_SD:    .byte   "/sd", 0
+SH_S_PROC:  .byte   "/proc", 0                          ; (And the device's name: "proc")
 SH_S_ENV:   .byte   "env", 0
 SH_S_TIME:  .byte   "time", 0
 SH_S_RAMDEV: .byte  "ram", 0

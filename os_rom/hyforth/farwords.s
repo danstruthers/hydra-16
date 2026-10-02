@@ -1538,6 +1538,93 @@ ARGREF:
 edit:                       ; edit
     ldx #SHC_EDIT
     jmp SHPARSE
+.pushseg
+.segment "HIGH_PA"      ; (Page A's room above COMMON, $FE00)
+send:                       ; send N line
+    jsr ARGGET          ; N: the task
+    bcs SENDNAME
+    ldx #0              ; SHBUF2 = /proc/N/cmd
+SENDPROC:
+    lda SEND_PROC,x
+    beq SENDTASK
+    sta SHBUF2,x
+    inx
+    bra SENDPROC
+SENDTASK:
+    ldy #0
+SENDTLP:
+    lda ARGBUF,y
+    beq SENDSUF
+    sta SHBUF2,x
+    inx
+    iny
+    cpy #8
+    bne SENDTLP
+SENDNAME:
+    lda #ERR_IO_NAME
+    bra SENDFAIL
+SENDSUF:
+    ldy #0
+SENDCMD:
+    lda SEND_CMD,y
+    sta SHBUF2,x
+    beq SENDOPEN
+    inx
+    iny
+    bra SENDCMD
+SENDOPEN:
+    lda #<SHBUF2
+    ldy #>SHBUF2
+    ldx #IO_MODE_WRITE
+    jsr IO_OPEN
+    bcs SENDFAIL
+    sta TEMP1           ; the fd
+    ldy CURBUF          ; the rest of the line, from its first character that isn't a space
+SENDSKIP:
+    lda (TIB),y
+    cmp #ASCII_SPACE
+    bne SENDSTART
+    iny
+    bra SENDSKIP
+SENDSTART:
+    tya
+    clc
+    adc TIB
+    sta ZP_IO_BUF
+    lda TIB+1
+    adc #0
+    sta ZP_IO_BUF+1
+    ldx #0
+    stz ZP_IO_CNT       ; (its length, to its last character that isn't a space)
+SENDLEN:
+    lda (TIB),y
+    beq SENDWRITE
+    inx
+    iny
+    cmp #ASCII_SPACE
+    beq SENDLEN
+    stx ZP_IO_CNT
+    bra SENDLEN
+SENDWRITE:
+    sty CURBUF          ; (the line ends here: it was send's)
+    stz ZP_IO_CNT+1
+    lda TEMP1
+    jsr IO_WRITE
+    php
+    pha
+    lda TEMP1
+    jsr IO_CLOSE
+    pla
+    plp
+    bcs SENDFAIL
+    jmp next
+SENDFAIL:
+    jmp IOFAIL
+SEND_PROC:
+    .byte "/proc/", 0
+SEND_CMD:
+    .byte "/cmd", 0
+.popseg
 echo:                       ; echo
     ldy CURBUF          ; .X = where the text ends (after its last character that isn't a space)
     ldx CURBUF
@@ -1746,13 +1833,13 @@ SHC2DONE:
 ;
 ;---------------------------------------------------------------------
 ;  Namespaces, the serial port, ctl, cat, wc; tasks; pipelines
-mount:                      ; mount
-    jsr NSARGS
+mount:                      ; mount [-abc] device path
+    jsr NS2WORDS
     bcs NSFAIL
     jsr IO_MOUNT
     bra NSDONE
-bind:                       ; bind
-    jsr NSARGS
+bind:                       ; bind [-abc] new old
+    jsr NS2WORDS
     bcs NSFAIL
     jsr IO_BIND
 NSDONE:
@@ -1760,11 +1847,49 @@ NSDONE:
     jmp next
 NSFAIL:
     jmp IOFAIL
-unmount:                    ; unmount
+unmount:                    ; unmount [new] old
+    jsr ARGGET
+    bcs NSNAME
+    jsr SHCOPY2         ; (the first in SHBUF2)
+    LOAD_ADDR SHBUF2, ZP_IO_BUF
+    ldx #1              ; two: one member, ZP_IO_BUF's
+    jsr ARGGET
+    bcc NSUNMOUNT
+    lda #<SHBUF2        ; one: all of the path's entries
+    ldy #>SHBUF2
+    ldx #0
+NSUNMOUNT:
+    jsr IO_UNMOUNT
+    bra NSDONE
+hide:                       ; hide path
+    jsr ARGGET
+    bcs NSNAME
+    ldx #NS_HIDDEN
+    jsr IO_BIND
+    bra NSDONE
+NSNAME:
+    lda #ERR_IO_NAME
+    bra NSFAIL
+pmount:                     ; (mount)
+    jsr NSARGS
+    bcs NSFAIL
+    jsr NSSWAP
+    ldx #0              ; (No flags: the path's entries replaced)
+    jsr IO_MOUNT
+    bra NSDONE
+pbind:                      ; (bind)
+    jsr NSARGS
+    bcs NSFAIL
+    jsr NSSWAP
+    ldx #0
+    jsr IO_BIND
+    bra NSDONE
+punmount:                   ; (unmount)
     jsr spull_0
     ldx #TEMP1
     jsr SZTEXT
     bcs NSFAIL
+    ldx #0              ; (All of the path's entries)
     jsr IO_UNMOUNT
     bra NSDONE
 ns:                         ; ns
@@ -1840,6 +1965,62 @@ ctl:                        ; ctl
     jmp STTYOPEN        ; (stty's: it writes TEMP2's text, and closes the file)
 CTLFAIL:
     jmp IOFAIL
+;
+; The line's [-abc] and two words after it: .X = the flags (a: NS_AFTER, b: NS_BEFORE, c: NS_CREATE),
+; ZP_IO_BUF = the first word (SHBUF2), .A.Y = the second (ARGBUF); or .A = ERR_IO_NAME, C = 1
+NS2WORDS:
+    stz SHOPT           ; (the flags so far)
+    jsr ARGGET
+    bcs NS2NAME
+    lda ARGBUF
+    cmp #'-'
+    bne NS2FIRST
+    ldy #0
+NS2FLAG:
+    iny
+    lda ARGBUF,y
+    beq NS2FLAGS
+    sec
+    sbc #'a'            ; a b c: bits 0 1 2
+    cmp #3
+    bcs NS2NAME
+    tax
+    lda #1
+NS2BIT:
+    dex
+    bmi NS2SET
+    asl
+    bra NS2BIT
+NS2SET:
+    tsb SHOPT
+    bra NS2FLAG
+NS2FLAGS:
+    jsr ARGGET          ; (the first name, after the flags)
+    bcs NS2NAME
+NS2FIRST:
+    lda #<ARGBUF
+    ldy #>ARGBUF
+    jsr SHCOPY2
+    LOAD_ADDR SHBUF2, ZP_IO_BUF
+    jsr ARGGET          ; .A.Y = the second
+    bcs NS2NAME
+    ldx SHOPT
+    rts
+NS2NAME:
+    lda #ERR_IO_NAME
+    sec
+    rts
+;
+; After NSARGS: .A.Y <-> ZP_IO_BUF (the stack forms name the path second, as the line does)
+NSSWAP:
+    ldx ZP_IO_BUF
+    sta ZP_IO_BUF
+    txa
+    ldx ZP_IO_BUF+1
+    sty ZP_IO_BUF+1
+    phx
+    ply
+    rts
 ;
 ; ( sz-path sz-2 -- ) -> .A.Y = the path's text, ZP_IO_BUF = the second's (C = 1: not strings)
 NSARGS:
@@ -2240,7 +2421,9 @@ LINE_PROMPT:
     lda #<PROMPTFMT
     ldy #>PROMPTFMT
     jsr SH_PROMPT
-    jmp LINE_EDIT
+    jsr LINE_CMD        ; a line another task sent (/proc/N/cmd)?  It's the line
+    bcs LINE_EDIT
+    rts
 LPBARE:
     jsr WRITE_CRLF
     PRINT_CHAR #'>', #ASCII_SPACE
@@ -2392,6 +2575,38 @@ LEENTER:                    ; The line's done: it goes in the history
     ldy LELEN
     iny
     clc
+    rts
+;
+; A line another task wrote to /proc/N/cmd (PROC_CMD, page 9) is the line: shown after the prompt, as if typed,
+; with the console not raw (a break in the line editor leaves its fd open).  With none, the shell is marked at
+; its prompt, so a line written now wakes it.  OUT: C = 0, .Y = its length + 1 (as LINE_EDIT's); or C = 1: none
+LINE_CMD:
+    lda TIB
+    sta ZP_IO_BUF
+    lda TIB+1
+    sta ZP_IO_BUF+1
+    ldx #1
+    jsr PROC_CMD        ; .A = its length
+    tax
+    beq LCNONE
+    lda LECTL
+    bmi LCSHOW
+    jsr IO_CLOSE
+    lda #$FF
+    sta LECTL
+LCSHOW:
+    ldy #0
+LCECHO:
+    iny
+    lda (TIB),y
+    jsr WRITE_CHAR
+    dex
+    bne LCECHO
+    iny
+    clc
+    rts
+LCNONE:
+    sec
     rts
 ;
 LE_CTL:
@@ -2673,6 +2888,8 @@ HIST_NEXT:
 ; A line has been read (into TIB): with the shell's library, its pipeline's left side started (PIPECHK) and
 ; its redirection set up (SH_REDIR).  OUT: C = 0; or C = 1, .A = the IO error
 LINE_READ:
+    ldx #0              ; (not at the prompt now: /proc/N/cmd's lines wait)
+    jsr PROC_CMD
     lda LIBSET
     and #LIB_SHELL
     beq LRNONE

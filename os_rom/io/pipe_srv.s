@@ -1,7 +1,7 @@
 .debuginfo
 
 ; ****************************************************************************
-; The pipe server: /dev/pipe.  BIOS ROM page 2, included inside `.scope PAGE2` (see all.s); it runs in
+; The pipe server: /dev/pipe.  BIOS ROM page 9, included inside `.scope PAGE9` (see all.s); it runs in
 ; its own Resident task (PIPE_TASK_NUM; PIPE_INIT and the gate are in io_p0.s), which holds the pipe
 ; table and the rings (PIPE_TABLE, PIPE_BUF_PAGE).  Requests run one at a time (TASK_CALL: no task switch
 ; while the server runs), and no IRQ handler touches the pipes, so no locking is needed.
@@ -15,7 +15,7 @@
 ; Server ZP (in the pipe task): ZP_IO_CHUNK = client, ZP_IO_CHUNK + 1 = the pipe's table offset,
 ; ZP_IO_OFS = its ring, ZP_IO_TMP = bytes asked for, ZP_IO_BYTE = bytes done, ZP_IO_LEFT = a wait mask.
 
-.segment "IO_P2"
+.segment "SYS_P9"
 
 ; IN: .A = request, .X = client, .Y = fid
 PIPE_SERVE:
@@ -233,7 +233,7 @@ PIPE_WAIT:
             lda         ZP_IO_CHUNK
             and         #7
             tay
-            lda         P2_BIT_MASKS,Y
+            lda         PIPE_BIT_MASKS,Y
             ldy         ZP_IO_CHUNK
             cpy         #8
             bcc         :+
@@ -289,3 +289,5 @@ PIPE_MODE:
 IO_SRV_MAP_C:
             ldx         ZP_IO_CHUNK
             jmp         IO_SRV_MAP
+
+PIPE_BIT_MASKS: .byte   $01, $02, $04, $08, $10, $20, $40, $80    ; (Page 2's are ser_srv.s's)

@@ -1294,6 +1294,13 @@ def_far "edit", "edit"
 ;
 ; echo text  print the rest of the line, and a new line (without its "s): echo hello > greeting.txt
 def_far "echo", "echo"
+.pushseg
+.segment "FORTH_TOP"    ; (Page 1's room above COMMON, $FE00)
+;
+; send N line  shell N (task N, one this shell started) runs the line, as if typed at its prompt: now, if it's
+;              waiting there, or when it's next there (/proc/N/cmd)
+def_far "send", "send"
+.popseg
 lib_end
 ;
 ; A script's copy of the shell starts here (TASK_CLONE, ROM page 1; see RUNCMD): the scripts this shell
@@ -1484,16 +1491,36 @@ S_ROMBOOT:              ; (... and the ROM's, when the current directory has non
 .segment "FORTH_CORE"
 lib_begin LIBN_IO
 ;
-; ( sz-path sz-dev -- )  mount a device at a path in this task's namespace: names under the path go to
-;                       the device (e.g. q^/z^ q^zero^ mount  then  q^/z^ 1 open)
+; Namespaces, as Plan 9's (docs/io.md).  Each has a parsing form, which takes its arguments from the words
+; after it on the line, and a stack form in parentheses, which takes q^...^ strings and no flags.
+; mount [-abc] device path  attach a device at a path in this task's namespace: names under the path go to
+;                           the device (e.g. mount zero /z  then  q^/z^ 1 open).  With none of -a -b,
+;                           it replaces the path's entries; -b puts it before them in the path's union,
+;                           -a after; -c: a file made in the union is made in it
 def_far "mount", "mount"
 ;
-; ( sz-path sz-target -- )  bind a path to another: names under the path stand for names under the
-;                          target (e.g. q^/tty^ q^/dev/cons^ bind)
+; bind [-abc] new old  names under old stand for names under new (e.g. bind /dev/cons /tty); -a -b -c: as
+;                      mount's
 def_far "bind", "bind"
 ;
-; ( sz-path -- )  remove a path's mount or bind
+; unmount [new] old  remove old's entries; or just one member of its union: the bind of new, or the mount
+;                    of the device new
 def_far "unmount", "unmount"
+.pushseg
+.segment "FORTH_TOP"    ; (Page 1's room above COMMON, $FE00)
+;
+; hide path  nothing under the path is found (in this task, and the tasks it starts)
+def_far "hide", "hide"
+;
+; ( sz-dev sz-path -- )  (mount)
+def_far "(mount)", "pmount"
+;
+; ( sz-new sz-old -- )  (bind)
+def_far "(bind)", "pbind"
+;
+; ( sz-old -- )  (unmount)
+def_far "(unmount)", "punmount"
+.popseg
 ;
 ; ( -- )  list this task's namespace
 def_far "ns", "ns"

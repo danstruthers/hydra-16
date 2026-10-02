@@ -283,7 +283,7 @@ Every piece of the ROM that isn't code can be a file, and every place that searc
 | A built-in default namespace (code in the boot shell) | `/rom/lib/namespace`, a file | With the namespace plan |
 | No card: nowhere to save | `/ram/1` (the shell's area) as the current directory | **Done** |
 | Slow program loads from a card, and no resident programs | The caches: a program copied to RAM once | **Done** |
-| A task's memory: summaries in `/dev/proc/N/mem`; far pointers refuse other tasks' RAM | `/proc/N/mem`, the bytes, for the family and task 0 ([PROC.md](PROC.md)) | Planned |
+| A task's memory: summaries in `/proc/N/pages`; far pointers refuse other tasks' RAM | `/proc/N/mem`, the bytes, for the family and task 0 ([PROC.md](PROC.md)) | Planned |
 | ROM programs on BIOS pages (the editor, page 8; the song player, page C) | Could be `.hyx` files in `/rom/bin`, loaded into task RAM | An option: BIOS pages aren't short, but files can change without a BIOS rebuild |
 | Two PC tools for images (`hydrafs.js`, `mkromfs.js`) | One, `hydrafs.js`, for cards and the ROM | **Done** |
 

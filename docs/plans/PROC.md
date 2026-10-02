@@ -4,7 +4,8 @@ A plan to move `/dev/proc` to `/proc`, as Plan 9 has it, and to add a task's **m
 `/proc/N/mem` (its address space as it sees it) and `/proc/N/ram` (its banks on the RAM modules).  Then a
 debugger, a memory dump or a core file is just a program reading files.  Who may read and write them is the same
 rule as the RAM disks' areas ([DISKS.md](DISKS.md#who-can-use-which-area)), and **task 0, the system task, may use
-everything**.  Nothing here is built yet.
+everything**.  Built so far: `/proc` mounted, `pages`, `ns`, `cmd` and `ctl` checked by `TASK_MAY` (step 2 below,
+and `ns` from step 4); the memory files are next.
 
 ### **Contents**
 1. [Where it stands](#where-it-stands)
@@ -22,10 +23,11 @@ everything**.  Nothing here is built yet.
 
 ### **Where it stands**
 
-`/dev/proc` ([io.md](../programming/io.md#devproc)) lists the busy tasks, and for each task N has `status`, `ctl`
-(`kill`, `break`, `fg`), `cwd`, `env`, and `mem`, which is a **summary** (`pages PP floor FF`), not the memory.
-It's served in its client's task, from BIOS ROM page 9 (`servers/proc_srv.s`).  Any task can read any of it, and
-any task can `kill` any other.  A task's RAM can't be reached from another task at all: far pointers refuse it
+`/proc` ([io.md](../programming/io.md#the-tasks-proc)), the device `proc` mounted by the boot shell (`/dev/proc` is
+the same files), lists the busy tasks, and for each task N has `status`, `ctl` (`kill`, `break`, `fg`), `cwd`, `env`,
+`pages` (a **summary**: `pages PP floor FF`; it was `mem`), `ns` (its namespace, as `ns` prints it) and `cmd` (a line
+for its shell to run: HyForth's `send`).  It's served in its client's task, from BIOS ROM page 9
+(`servers/proc_srv.s`).  Any task can read the status files; `ctl` and `cmd` are for the task's family and task 0.  A task's RAM can't be reached from another task at all: far pointers refuse it
 (`FP_READ` on another task's RAM: the MMU test's step 9).
 
 ---
@@ -160,8 +162,9 @@ chain after a task ends and its slot is reused; the `irqs-off` limit while copyi
 ### **Steps**
 
 1. *Done:* the owner chain kept right at task end; `TASK_MAY` (task 0 passes).
-2. `/proc` as a mount, `/dev/proc` a bind to it; `pages` for the old `mem`; `ctl` checked by `TASK_MAY`.
+2. **(Done)** `/proc` as a mount (`/dev/proc` stays: the same device); `pages` for the old `mem`; `ctl` checked by
+   `TASK_MAY`; and `cmd` (`send`), a line for another running shell (the `send` and `proc` tests).
 3. `/proc/N/mem` and `/proc/N/ram`: the copy routine through `TASK_CALL`, reads then writes.
-4. `regs`, `fd`, `ns`.
+4. `regs`, `fd` (`ns`: done in step 2).
 5. The debugger's `ctl` commands (`stop`, `start`, `step`, `break ADDR`) with the debugger itself.
 6. Docs: `io.md` (`/proc`), `tasks.md` (owners, task 0), `hyforth.md` (`ps`).

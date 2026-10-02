@@ -73,6 +73,7 @@ ZSM_PLAY_TEST:
             LOAD_ADDR   (ZSM_TEXT + ZSM_TEST_HFS - ZSM_TEST_NAMES), ZP_IO_BUF
             lda         #<ZSM_TEXT
             ldy         #>ZSM_TEXT
+            ldx         #0
             jsr         IO_MOUNT                            ; (/sd -> hfs)
             lda         #<(ZSM_TEXT + ZSM_TEST_SONG - ZSM_TEST_NAMES)
             ldy         #>(ZSM_TEXT + ZSM_TEST_SONG - ZSM_TEST_NAMES)

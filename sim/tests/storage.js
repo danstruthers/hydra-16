@@ -366,7 +366,7 @@ module.exports = [
       'cp /rom/songs/test.zsm /ram/s/t.zsm\\r', 'cp /ram/s/t.zsm s.zsm\\r', 'cp /rom/songs/test.zsm /ram/1/t.zsm\\r', 'cp /ram/1/t.zsm r.zsm\\r', 'ls /sd/s\\r'].join(P) + P],
     expect: ['cat /dev/sd/r/ctl\nram 256 KB 512 blocks\nbanks $10-$2F\nhydrafs label=RAM\nfree 244 KB of 252 KB\n',
       'cat /dev/sd/s/ctl\nsram 512 KB 1024 blocks\nbanks $40-$7F\nhydrafs label=SRAM\nfree 504 KB of 508 KB\n',
-      '> ns\n/sd -> hfs\n/rom = /sd/x\n/ram = /sd/r\n', '> ls /ram\n1/\n', '> ls /ram/1\nbin/\nlib/\n', '> ls /ram/s\nbin/\nlib/\n',
+      '> ns\nmount hfs /sd\nmount proc /proc\nbind /sd/x /rom\nbind /sd/r /ram\n', '> ls /ram\n1/\n', '> ls /ram/1\nbin/\nlib/\n', '> ls /ram/s\nbin/\nlib/\n',
       '> ls /sd/s\nbin/\nlib/\nt.zsm 14075\n'],
     forbid: ['!IO ERR!', '!UNK WORD!', 'No card:'],
     check: (out, report, files) => {

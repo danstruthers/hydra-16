@@ -130,10 +130,12 @@ IO_DEV_TASK         = 8         ; task the serve routine runs in ($FF = the call
 IO_DEV_SERVE        = 9         ; serve routine (ROM page 0 address)
 IO_DEV_CALLER_TASK  = $FF
 
-; IO transfer areas: shared bank ID $09 (U = 0, bank $F9), 512 bytes per task at $8000 + task * $200:
-; the request block, then (at + $100) up to IO_UNIT bytes of data
+; IO transfer areas: 1K per task, at $8000 + (task & 7) * $400 in shared bank ID $09 (tasks 0-7) or $0A (tasks
+; 8-15; U = 0, banks $F9, $FA; IO_XFER_OF): the request block, the current directory, then (at + $100) up to
+; IO_UNIT bytes of data, then the task's namespace
 IO_XFER_BANK_ID     = $09
-IO_XFER_BANK        = $F0 | IO_XFER_BANK_ID
+IO_XFER_BANK        = $F0 | IO_XFER_BANK_ID     ; (Tasks 0-7's; IO_XFER_BANK + 1 tasks 8-15's)
+IO_XFER_SIZE        = $400
 IO_UNIT             = 256
 IO_BLK_TYPE         = 0         ; H9_* request
 IO_BLK_FID          = 1
@@ -148,8 +150,8 @@ IO_BLK_CALL         = 13        ; IO_OPEN and the calls that share its code: whi
                                 ;   H9_REMOVE, IO_CALL_CHDIR ...)
 IO_CALL_CHDIR       = $80       ; IO_BLK_CALL: IO_CHDIR (it sends H9_OPEN, to check the directory) ...
 IO_CALL_CHDIR_SET   = $81       ;   the new directory has been set (the old one is at IO_BLK_DATA + $80)
-IO_BLK_NS           = $20       ; The task's namespace (below)
 IO_BLK_DATA         = $100
+IO_BLK_NS           = $200      ; The task's namespace (below): NS_ENTRIES * NS_ENTRY_SIZE, to the area's end
 
 ; Per-task current directory (IO_CHDIR, IO_GETCWD): in the task's IO transfer area, after the namespace, so
 ; new tasks get a copy of it with the namespace.  An absolute path with no '/' at its end (empty: "/"),
@@ -159,13 +161,13 @@ IO_BLK_CWD          = $C0
 IO_CWD_MAX          = 64        ; (63 characters, and its 0)
 .assert     IO_BLK_CWD + IO_CWD_MAX <= IO_BLK_DATA, error, "The current directory must fit below the data area"
 
-; Per-task namespace (IO_MOUNT, IO_BIND): in the task's IO transfer area, after the request block.
+; Per-task namespace (IO_MOUNT, IO_BIND): in the task's IO transfer area, after the data area.
 ; IO_OPEN applies the entry with the longest matching path prefix: a mount sends the rest of the name to
 ; a device's server, a bind rewrites the name (prefix -> target) and looks again.  No match: the global
 ; /dev.  New tasks get a copy of their parent's namespace.
-NS_ENTRIES          = 5         ; ($20-$BF of the area)
+NS_ENTRIES          = 16        ; ($200-$3FF of the area: two pages)
 NS_ENTRY_SIZE       = 32
-NS_TYPE             = 0         ; NS_FREE, NS_MOUNT or NS_BIND
+NS_TYPE             = 0         ; NS_FREE, NS_MOUNT, NS_BIND or NS_HIDE (NS_KIND), and NS_C: a create in its union goes to it
 NS_DEV              = 1         ; Mount: the device (device table index)
 NS_PREFIX           = 2         ; The path prefix, zero-terminated (13 characters at most)
 NS_PREFIX_MAX       = 13
@@ -174,8 +176,34 @@ NS_TARGET_MAX       = 15
 NS_FREE             = 0
 NS_MOUNT            = 1
 NS_BIND             = 2
+NS_HIDE             = 3         ; (Nothing under the path is found)
+NS_KIND             = $03
+NS_C                = $80
+; IO_MOUNT, IO_BIND: .X = flags (0: the path's entries are replaced).  The entries with the same path are a
+; union's members, looked in in order (docs/plans/NAMESPACES.md)
+NS_AFTER            = $01       ; -a: after the path's members
+NS_BEFORE           = $02       ; -b: before them
+NS_CREATE           = $04       ; -c: a create in the union goes to this one
+.assert     NS_AFTER = 1 .and NS_BEFORE = 2 .and NS_CREATE = 4, error, "NS_*: -a -b -c are bits 0-2 (HyForth's NSWORD)"
+NS_HIDDEN           = $08       ; IO_BIND: hide the path (no target)
+; IO_OPEN's own, in the transfer area's spare bytes (the request block page): the tidy name, for a union's next
+; member (NS_RETRY), how many of the first union's members it has skipped, and how many are left after the one used
+IO_BLK_ORIG         = $20
+IO_ORIG_MAX         = IO_CWD_MAX
+IO_BLK_SKIP         = $60
+IO_BLK_ULEFT        = $61       ; ($FF: no union met yet)
+.assert     IO_BLK_ORIG + IO_ORIG_MAX <= IO_BLK_SKIP .and IO_BLK_ULEFT < IO_BLK_CWD, error, "IO_BLK_ORIG ..."
+; /proc/N/cmd (proc_srv.s: PROC_CMD): a line for the task's shell to run, and whether it's at its prompt.  Cleared
+; when the task ends (NS_CLEAR_MAPPED)
+IO_BLK_CMDST        = $62       ; IO_CMD_PROMPT: its shell is at its prompt; IO_CMD_WOKEN: woken (a break) for a line
+IO_BLK_CMD          = $63       ; The line waiting, 0-terminated (none: 0)
+IO_CMD_MAX          = 64        ; (With its 0)
+IO_CMD_PROMPT       = $80
+IO_CMD_WOKEN        = $40
+.assert     IO_BLK_CMDST > IO_BLK_ULEFT .and IO_BLK_CMD = IO_BLK_CMDST + 1 .and IO_BLK_CMD + IO_CMD_MAX <= IO_BLK_CWD, error, "IO_BLK_CMD ..."
 NS_MAX_REWRITES     = 4         ; Binds applied to one name, at most
-.assert     IO_BLK_NS + NS_ENTRIES * NS_ENTRY_SIZE <= IO_BLK_CWD, error, "The namespace must fit below the current directory"
+.assert     IO_BLK_NS + NS_ENTRIES * NS_ENTRY_SIZE <= IO_XFER_SIZE .and IO_BLK_DATA + IO_UNIT <= IO_BLK_NS, error, "The namespace must fit after the data area"
+.assert     <IO_BLK_NS = 0 .and (NS_ENTRY_SIZE * 8) = 256, error, "NS_FIRST, NS_NEXT: the namespace starts a page, 8 entries a page"
 
 ; H9P requests (serve routine: .A = request, .X = client task, .Y = fid; the request block is in the
 ; client's transfer area, see IO_SRV_MAP.  OUT: C = 0 (.A = fid for H9_OPEN), or C = 1 and .A = error)
@@ -568,4 +596,6 @@ PROC_FID_STATUS     = $10       ; /dev/proc/N, /dev/proc/N/status: task N's line
 PROC_FID_CTL        = $20       ; /dev/proc/N/ctl: kill, break or fg (write)
 PROC_FID_CWD        = $30       ; /dev/proc/N/cwd: task N's current directory (read)
 PROC_FID_ENV        = $40       ; /dev/proc/N/env: its environment, as /env's list (read)
-PROC_FID_MEM        = $50       ; /dev/proc/N/mem: its memory: the MMU pages it has, its page floor (read)
+PROC_FID_PAGES      = $50       ; /dev/proc/N/pages: its memory: the MMU pages it has, its page floor (read)
+PROC_FID_NS         = $60       ; /dev/proc/N/ns: its namespace, as ns lists it (read)
+PROC_FID_CMD        = $70       ; /dev/proc/N/cmd: a line for its shell to run (write)

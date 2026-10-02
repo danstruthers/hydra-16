@@ -521,7 +521,12 @@ warm:
 ; A break from the console (Ctrl-C; see TASK_SET_BREAK in 'cold'): the task comes here, with the stack
 ; pointer it had at 'cold', wherever it was: back to the prompt, as for an error
 fbreak:
+    ldx #2              ; (a line for /proc/N/cmd woke it: no message)
+    jsr PROC_CMD
     lda #ERR_BRK
+    bcc FBMSG
+    lda #0
+FBMSG:
     sta ERRFLAG
     jmp abort
 ;---------------------------------------------------------------------

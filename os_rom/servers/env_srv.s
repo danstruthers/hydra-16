@@ -431,7 +431,11 @@ ENV_SYS:
 
 ENV_XFER:
             pha
+            lda         T_REGISTER                          ; (The client's: this task's.  Tasks 8-15: the next
+            cmp         #8                                  ;   bank, IO_XFER_OF)
             lda         #IO_XFER_BANK
+            bcc         :+
+            inc
 :
             sta         RAM_BANK_REG
             pla

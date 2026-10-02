@@ -26,7 +26,7 @@ FAR_GATE_INLINE     IO_MOUNT,       PAGE2::IO_MOUNT,        2
 FAR_GATE_INLINE     IO_BIND,        PAGE2::IO_BIND,         2
 FAR_GATE_INLINE     IO_UNMOUNT,     PAGE2::IO_UNMOUNT,      2
 FAR_GATE_INLINE     NS_CLEAR_ALL,   PAGE2::NS_CLEAR_ALL,    2
-FAR_GATE_INLINE     IO_NS_LIST,     PAGE2::IO_NS_LIST,      2
+FAR_GATE_INLINE     IO_NS_LIST,     ::PROC_NS_LIST_P9,      9
 FAR_GATE_INLINE     IO_STD_OPEN,    PAGE2::IO_STD_OPEN,     2
 FAR_GATE_INLINE     IO_CLOSE_ALL,   PAGE2::IO_CLOSE_ALL,    2
 FAR_GATE_INLINE     IO_INHERIT,     PAGE2::IO_INHERIT,      2
@@ -55,7 +55,7 @@ PIPE_DRIVER:
 NamedHString PIPE_DNAME, "PIPE"
 PIPE_NAME:  .byte   "pipe", 0
 
-FAR_GATE_INLINE     PIPE_SERVE,     PAGE2::PIPE_SERVE,      2
+FAR_GATE_INLINE     PIPE_SERVE,     ::PIPE_SERVE_P9,        9
 
 ; Runs in the pipe task: no pipes yet, the rings (task RAM pages from the MMU, kept for good: page
 ; blocks don't move), and register /dev/pipe.  OUT: C = 0, or C = 1 and .A = error
@@ -246,12 +246,18 @@ IO_SRV_MAP:
             lda         U_REGISTER
             sta         ZP_IO_SAVEU
             stz         U_REGISTER
-            lda         #IO_XFER_BANK
+            txa                                             ; Its bank: IO_XFER_BANK for tasks 0-7, + 1 for 8-15
+            and         #8
+            lsr
+            lsr
+            lsr                                             ; (C = 0)
+            adc         #IO_XFER_BANK
             sta         RAM_BANK_REG
             stz         ZP_IO_REQ
             txa
-            and         #$0F
-            asl                                             ; $8000 + task * $200
+            and         #7
+            asl                                             ; $8000 + (task & 7) * $400
+            asl
             ora         #>PAGED_RAM_BASE
             sta         ZP_IO_REQ + 1
             pla

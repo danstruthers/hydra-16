@@ -183,7 +183,7 @@ module.exports = [
     args: ['--cycles', '120000000', '--input', BOOT + ['ls /env\\recho one > /env/A\\rcat /env/A\\r', 'echo x >> /env/A\\rcat /env/A\\r',
       'run e.hys\\r', 'ls /env\\r', 'cat /env/NOPE\\rioerr .\\recho y > /env/a=b\\rioerr .\\r', 'rm /env/A\\rls /env\\r',
       'seven\\r', 'echo /sd/0/tools > /env/PATH\\rseven\\r', 'eight\\r', 'echo /sd/0/bin:/sd/0/tools > /env/PATH\\reight\\rseven\\r',
-      'echo /sd/0/tools > /env/HOME\\rcd /\\rcd\\rpwd\\r', 'cat /dev/proc/1/cwd\\rcat /dev/proc/1/env\\rcat /dev/proc/1/mem\\rcat /dev/proc/F/mem\\rcat /dev/proc/9/mem\\r'].join(P)],
+      'echo /sd/0/tools > /env/HOME\\rcd /\\rcd\\rpwd\\r', 'cat /dev/proc/1/cwd\\rcat /dev/proc/1/env\\rcat /proc/1/pages\\rcat /proc/F/pages\\rcat /proc/9/pages\\r'].join(P)],
     expect: ['0:/> ls /env\n\n0:/> echo one > /env/A\n', 'cat /env/A\none\n', 'cat /env/A\nx\n',   // (>> at the start: replaced)
       'run e.hys\nxA=x\nB=two\n', '0:/> ls /env\nA=x\nstatus=\n\n',     // The script's B: its own copy's; $status ""
       'cat /env/NOPE\n\n !IO ERR! ', 'ioerr .\n' + num(0x70) + '\n', 'ioerr .\n' + num(0x77) + '\n',   // (= in a name)
@@ -192,7 +192,7 @@ module.exports = [
       'eight\n' + num(8) + '\n0:/> seven\n' + num(7) + '\n',
       '0:/tools> pwd\n/sd/0/tools\n',                                   // cd alone: HOME
       'cat /dev/proc/1/cwd\n/sd/0/tools\n', 'cat /dev/proc/1/env\nPATH=/sd/0/bin:/sd/0/tools\nstatus=UNK WORD\nHOME=/sd/0/tools\n',
-      /cat \/dev\/proc\/1\/mem\npages 08 floor [0-9A-F]{2}\n/, 'cat /dev/proc/F/mem\npages 00 floor 08\n', 'cat /dev/proc/9/mem\n-\n'],
+      /cat \/proc\/1\/pages\npages 08 floor [0-9A-F]{2}\n/, 'cat /proc/F/pages\npages 00 floor 08\n', 'cat /proc/9/pages\n-\n'],
     forbid: ['!DS PTR ERROR!'],
   },
   {

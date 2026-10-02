@@ -193,7 +193,7 @@ HyForth is a base language, plus libraries of words for the rest of the system. 
 
 | Library | Words | Loads too |
 | :------ | :---- | :-------- |
-| `io` | `open`, `close`, `read`, `write`, `seek`, `ioctl`, `fdup2`, `pipe`, `create`, `mount`, `bind`, `unmount`, `ns`, `stty`, `stty?`, `ctl`, `ioerr` | |
+| `io` | `open`, `close`, `read`, `write`, `seek`, `ioctl`, `fdup2`, `pipe`, `create`, `mount`, `bind`, `unmount`, `hide` (and their stack forms, `(mount)` ...), `ns`, `stty`, `stty?`, `ctl`, `ioerr` | |
 | `files` | `cd`, `pwd`, `ls`, `rm`, `rmdir`, `mkdir`, `cp`, `mv` (and their stack forms, `(cd)` ...), `cat`, `wc`, `vols`, `mkfs`, `mkfs-full`, `mkfs-size`, `mkfs-part`, `relabel`, `fsck`, `fsfix` | `io` |
 | `shell` | `prompt`, `include`, `run` (and `(include)`, `(run)`), `args`, `edit`, `echo`.  Also the shell's part of reading a line: the prompt's format, pipelines (`\|`), redirection (`>`, `>>`, `<`), and running a program for a word HyForth doesn't know | `io`, `files` |
 | `tasks` | `shell`, `forth`, `fg`, `kill`, `sleep`, `ps`, `wait`, `sem`, `mutex`, `acquire`, `acquire?`, `release`, `-sem` | `io` |
@@ -276,6 +276,7 @@ forth io files shell tasks sound mem tools term (greet)
 | `run file [args]` | `(run) ( sz -- )` | Run a program in a task of its own, and wait for it (below) |
 | `edit [file]` | | Edit a text file (below) |
 | `echo text` | | Print the text, and a new line |
+| `send N line` | | Shell N (one this shell started, e.g. with `shell`) runs the line, as if typed at its prompt: now, if it's waiting there, or when it next is (`/proc/N/cmd`) |
 | `prompt` | `( sz -- )` | Set the prompt's format (below) |
 
 ```
@@ -400,13 +401,14 @@ Hello, world
 | `ioerr` | `( -- n )` | The last IO error code |
 | `cat` | | Copy stdin to stdout until end of file (`cat file` shows a file: [the shell](#the-shell-directories-files-and-programs)) |
 | `wc` | `( -- lines words chars )` | Count stdin until end of file |
-| `mount` | `( sz-path sz-dev -- )` | Mount a device at a path: `"/z" "zero" mount`, then `"/z" 1 open` |
-| `bind` | `( sz-path sz-target -- )` | Make a path stand for another: `"/tty" "/dev/cons" bind` |
-| `unmount` | `( sz-path -- )` | Remove a mount or bind |
-| `ns` | | List the namespace |
+| `mount [-abc] device path` | `(mount) ( sz-dev sz-path -- )` | Mount a device at a path: `mount zero /z`, then `"/z" 1 open`.  The flags as `bind`'s |
+| `bind [-abc] new old` | `(bind) ( sz-new sz-old -- )` | Make a path stand for another: `bind /dev/cons /tty`.  With no flags it replaces old's entries; `-b` and `-a` add it to old's **union**, before or after its members, which are looked in, in order, for a name (`bind -a /rom/bin /bin`); `-c`: a file made in the union is made in it |
+| `unmount [new] old` | `(unmount) ( sz-old -- )` | Remove old's mounts and binds; or just one member of its union: `unmount /rom/bin /bin` |
+| `hide path` | | Nothing under the path is found, in this task and the tasks it starts |
+| `ns` | | List the namespace, as the lines that would make it: `bind -a /rom /u` |
 | `stty` | `( sz -- )` | Change the serial port's settings: `"b19200" stty`, `"l7 pe s1" stty` (b = baud rate, l = data bits, p = parity n/o/e/m/s, s = stop bits).  Output so far goes out first; then switch the terminal |
 | `stty?` | | Show the serial port's settings, e.g. `b9600 l8 pn s1` |
-| `ctl` | `( sz-file sz-text -- )` | Write a command to a ctl file: `"/dev/sd/0/ctl" "check" ctl`, `"/dev/proc/3/ctl" "kill" ctl` |
+| `ctl` | `( sz-file sz-text -- )` | Write a command to a ctl file: `"/dev/sd/0/ctl" "check" ctl`, `"/proc/3/ctl" "kill" ctl` (a task this shell started) |
 | `create` | `( sz mode -- fd )` | Make a file (mode 0; 64 = append-only, 1 = read-only) and open it for reading and writing; a file that's there is emptied.  Mode 128 makes a directory |
 | `vols` | | The cards: for each of 0-7, what it is (or `none`), and its HydraFS label, free space and last check |
 | `mkfs` | `( n sz-label -- )` | Make an empty HydraFS on card n (everything on it is lost): `0 "GAMES" mkfs`.  A quick format: a moment, whatever the card's size |
@@ -511,7 +513,7 @@ A line with `|` (with spaces around it, outside `"..."` and `q^...^` strings) is
 | `forth` | `( -- n )` | The same, but a bare Forth: only the base loaded (see [the base and its libraries](#the-base-and-its-libraries)) |
 | `fg` | `( n -- )` | Bring task n to the front: it gets the keyboard, and the others wait to print |
 | `kill` | `( n -- )` | Kill task n and the tasks it started |
-| `ps` | | List the tasks (from `/dev/proc`: its files also give each task's directory, environment and memory: `cat /dev/proc/1/mem`) |
+| `ps` | | List the tasks (from `/proc`: its files also give each task's directory, environment, memory and namespace: `cat /proc/1/pages`, `cat /proc/1/ns`) |
 | `sleep` | `( n -- )` | Sleep n ticks (200 a second; `200 sleep` is 1 s); Ctrl-C ends it |
 | `sem` | `( n -- s )` | A semaphore of n: n takes before a task has to wait; s = its number (1-16), which every task can use |
 | `mutex` | `( -- s )` | A mutex: a semaphore of 1 that only the task that took it can release (released if that task ends) |

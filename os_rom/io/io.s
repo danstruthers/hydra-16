@@ -20,9 +20,13 @@
 
 .segment "IO_P2"
 
-; Save RAM_BANK_REG / U on the stack and map the IO transfer bank (uses .Y); _M_IO_UNMAP restores them
+; Save RAM_BANK_REG / U on the stack and map this task's IO transfer bank (uses .Y); _M_IO_UNMAP restores them
 .macro _M_IO_MAP_XFER
-            _M_BANK_ENTER   IO_XFER_BANK, 0
+            ldy         RAM_BANK_REG
+            phy
+            ldy         U_REGISTER
+            phy
+            jsr         IO_XFER_MAP
 .endmacro
 
 .macro _M_IO_UNMAP
@@ -59,17 +63,57 @@ IO_SRV_COUNT:
             sta         (ZP_IO_REQ),Y
             jmp         IO_SRV_UNMAP
 
-; ZP_IO_XFER / ZP_IO_DATA = the current task's transfer area: $8000 + task * $200.  Modifies: .A
+; ZP_IO_XFER / ZP_IO_DATA = the current task's transfer area.  Modifies: .A
 IO_XFER_SETUP:
+            phy
             lda         T_REGISTER
-            and         #$0F
-            asl
-            ora         #>PAGED_RAM_BASE
+            jsr         IO_XFER_OF
+            ply
             sta         ZP_IO_XFER + 1
             inc
             sta         ZP_IO_DATA + 1
             stz         ZP_IO_XFER
             stz         ZP_IO_DATA
+            rts
+
+; Task .A's IO transfer area: .A = its high byte, $80 + (task & 7) * 4, and .Y = its bank (IO_XFER_BANK for
+; tasks 0-7, + 1 for 8-15).  Preserves .X
+IO_XFER_OF:
+            ldy         #IO_XFER_BANK
+            cmp         #8
+            bcc         :+
+            iny
+:
+            and         #7
+            asl
+            asl
+            ora         #>PAGED_RAM_BASE
+            rts
+.assert     IO_XFER_SIZE = $400, error, "IO_XFER_OF: 1K areas, 8 to a bank"
+
+; Map this task's IO transfer bank at $8000 (U = 0; _M_IO_MAP_XFER's).  Preserves .A, .X.  Modifies: .Y
+IO_XFER_MAP:
+            stz         U_REGISTER
+            ldy         #IO_XFER_BANK
+            pha
+            lda         T_REGISTER                  ; (Tasks 8-15: the next bank)
+            cmp         #8
+            pla
+            bcc         :+
+            iny
+:
+            sty         RAM_BANK_REG
+            rts
+
+; ... with .X instead (U as it is).  Preserves .A, .Y.  Modifies: .X
+IO_XFER_REMAP:
+            ldx         T_REGISTER
+            cpx         #8
+            ldx         #IO_XFER_BANK
+            bcc         :+
+            inx
+:
+            stx         RAM_BANK_REG
             rts
 
 ; .X = .A = ZP_IO_FD * IO_FD_SIZE: the fd's entry in the fd table
@@ -138,8 +182,7 @@ IO_SERVE:
             sta         ZP_TC_VEC
             lda         IO_DEV_TABLE + IO_DEV_SERVE + 1,X
             sta         ZP_TC_VEC + 1
-            ldy         #IO_XFER_BANK
-            sty         RAM_BANK_REG
+            jsr         IO_XFER_MAP
 
 @request:
             inc         ZP_NO_PREEMPT               ; No task switch while we're marked waiting but not yet in
@@ -383,6 +426,7 @@ IO_OPEN_NAME:
             bcc         :+
             jmp         @fail
 :
+            jsr         NS_ORIG_SAVE                ; (Kept: a union's next member starts from it)
             ldy         #IO_BLK_CALL
             lda         (ZP_IO_XFER),Y
             cmp         #IO_CALL_CHDIR
@@ -482,7 +526,7 @@ IO_OPEN_NAME:
             cpx         #IO_MAX_FDS * IO_FD_SIZE
             bne         @fd
             lda         #ERR_IO_NO_FDS
-            bra         @fail
+            jmp         IO_OPEN_FAIL
 
 @got_fd:
             txa                                     ; fd = offset / 8
@@ -549,6 +593,14 @@ IO_OPEN_NAME:
             lda         #IO_FD_CLOSED
             sta         IO_FD_SERVER,X
             pla
+            cmp         #ERR_IO_NOT_FOUND           ; Not there: in the union's next member?
+            bne         @fail
+            jsr         NS_RETRY
+            bcs         @not_there
+            jmp         @resolve
+
+@not_there:
+            lda         #ERR_IO_NOT_FOUND
 
 @fail:
             jmp         IO_OPEN_FAIL
@@ -1413,13 +1465,17 @@ TASK_CLONE:
 
 ; Runs in the new task: copy page .X from the parent's (.A's) IO transfer area.  Preserves .X
 TASK_CLONE_PAGE:
-            asl                                     ; Its data area: $8000 + task * $200 + $100
-            ora         #>(PAGED_RAM_BASE + IO_BLK_DATA)
+            jsr         IO_XFER_OF                  ; Its data area (and its bank: .Y)
+            clc
+            adc         #>IO_BLK_DATA
             sta         ZP_IO_DATA + 1
             stz         ZP_IO_DATA
-            stz         ZP_IO_BUF
+            sty         ZP_IO_BUF                   ; (Kept here a moment)
             stx         ZP_IO_BUF + 1
             _M_IO_MAP_XFER
+            lda         ZP_IO_BUF                   ; Its bank, not this task's
+            sta         RAM_BANK_REG
+            stz         ZP_IO_BUF
             ldy         #0
             txa
             bne         @byte
@@ -1501,11 +1557,15 @@ IO_INHERIT:
 
 ; Runs in the new task: copy the fd table from the parent's IO transfer area.  IN: .A = the parent
 IO_ADOPT_FDS:
-            asl                                     ; Its data area: $8000 + task * $200 + $100
-            ora         #>(PAGED_RAM_BASE + IO_BLK_DATA)
+            jsr         IO_XFER_OF                  ; Its data area (and its bank: .Y)
+            clc
+            adc         #>IO_BLK_DATA
             sta         ZP_IO_DATA + 1
             stz         ZP_IO_DATA
+            sty         ZP_IO_BUF                   ; (Kept here a moment)
             _M_IO_MAP_XFER
+            lda         ZP_IO_BUF                   ; Its bank, not this task's
+            sta         RAM_BANK_REG
             ldy         #IO_MAX_FDS * IO_FD_SIZE - 1
 
 @byte:

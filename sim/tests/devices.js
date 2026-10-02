@@ -18,12 +18,12 @@ module.exports = [
     args: ['--cycles', '90000000', '--input', BOOT +
       'q^/dev/zero^ 1 open here @ 5 read . ioerr .\\r' +
       'q^/dev/nothere^ 1 open\\rioerr .\\r' +
-      'q^/z^ q^zero^ mount ns\\rq^/z^ 1 open here @ 3 read .\\r' +
+      'mount zero /z\\rns\\rq^/z^ 1 open here @ 3 read .\\r' +
       'q^/dev/proc^ 1 open here @ 100 read .\\r' +
       'q^/dev/proc/z^ 1 open\\rioerr .\\r'],
     expect: ['read . ioerr .\n' + num(5) + num(0) + '\n',
       '!IO ERR!', '/ram/1> ioerr .\n' + num(0x70) + '\n',
-      '/z -> zero\n', 'read .\n' + num(3) + '\n',
+      'mount zero /z\n', 'read .\n' + num(3) + '\n',
       /\/dev\/proc\^ 1 open here @ 100 read \.\n 00[1-9A-F][0-9A-F]\n/,
       '!IO ERR!', '/ram/1> ioerr .\n' + num(0x70) + '\n'],
     forbid: ['!DS PTR ERROR!', '!UNK WORD!'],
@@ -35,6 +35,14 @@ module.exports = [
     expect: ['/ram/1> ps\n0 R -\n1 R 0 *\nB W 1\n', '[B]', '/ram/1> 1 2 + .\n' + num(3), '[1]',
       '/ram/1> ps\n0 R -\n1 R 0 *\nC D -\n', '/ram/1> cat\n', '!BREAK!', '/ram/1> 3 4 + .\n' + num(7)],
     forbid: ['!DS PTR ERROR!', '!UNK WORD!'],
+  },
+  {
+    name: 'send', about: 'send (/proc/N/cmd): a line for another shell, one this shell started, waiting at its prompt in the background: woken (no break message), it runs the line; its cwd changed so; a line for this shell itself, run at its next prompt; no such task; the other way refused (not allowed)',
+    args: ['--cycles', '150000000', '--input', BOOT + 'shell\\r' + W(1) + 'send b 5 6 + .\\r' + W(2) + 'send b cd /rom\\r' + W(2) + 'cat /proc/b/cwd\\r' + W(1) +
+      'send 1 7 8 + .\\r' + W(2) + 'send 9 1\\r' + W(1) + '\\x1dB' + W(1) + '\\rsend 1 2 2 + .\\r' + W(1)],
+    expect: ['/ram/1> 5 6 + .\n', num(11), '/ram/1> cd /rom\n', 'cat /proc/b/cwd\n/rom\n', '/ram/1> 7 8 + .\n' + num(15), 'send 9 1\n\n !IO ERR! not found\n',
+      '[B]', 'send 1 2 2 + .\n\n !IO ERR! not allowed\n'],
+    forbid: ['!DS PTR ERROR!', '!UNK WORD!', '!BREAK!'],
   },
   {
     name: 'sound', about: 'sndtest plays in a task of its own while the shell runs; sndstop ends it; the bell (Ctrl-G) first',
@@ -100,7 +108,7 @@ module.exports = [
     expect: ['No card: /ram/1 keeps your files until a reset.', '/ram/1> ls /rom\nREADME 984\nbin/\nboot.hys 85\nsongs/\n', '/ram/1> hello a b\nHello from C on the Hydra-16!\n2 arguments: [a] [b]\n',
       '/ram/1> cd /rom/bin\n\n/rom/bin> pwd\n/rom/bin\n/rom/bin> ls -l\ncode.hyx 2158 2000-01-01 00:00:00\n', 'scom.zsm 838 2000-01-01 00:00:00\n',
       '/rom/bin> code 3\n\n/rom/bin> status .\n' + num(3) + '\n', '/rom/bin> cat /rom/nope\n\n !IO ERR! not found\n', '/rom/bin> rm /rom/README\n\n !IO ERR! not opened for that\n',
-      '/rom/bin> echo x > /rom/x\n\n !IO ERR! not opened for that\n', '/> cd /rom/README\n\n !IO ERR! ', '/> ns\n/sd -> hfs\n/rom = /sd/x\n/ram = /sd/r\n', '/> ls /sd/x\nREADME 984\nbin/\nboot.hys 85\nsongs/\n',
+      '/rom/bin> echo x > /rom/x\n\n !IO ERR! not opened for that\n', '/> cd /rom/README\n\n !IO ERR! ', '/> ns\nmount hfs /sd\nmount proc /proc\nbind /sd/x /rom\nbind /sd/r /ram\n', '/> ls /sd/x\nREADME 984\nbin/\nboot.hys 85\nsongs/\n',
       '/> cat /dev/sd/x/ctl\nrom 4 MB 8192 blocks\nhydrafs label=ROM\n', '/> ls /sd/8\n\n !IO ERR! not found\n'],
   },
   {
@@ -142,8 +150,33 @@ module.exports = [
       return paged;
     },
     args: ['--cycles', '60000000', '--input', BOOT + ['ns\\r', 'ls /rom\\r', '1 2 + .\\r'].join(P)],
-    expect: ['/ram/1> ns\n/sd -> hfs\n/ram = /sd/r\n', '/ram/1> ls /rom\n\n !IO ERR! not found\n', '/ram/1> 1 2 + .\n' + num(3)],
+    expect: ['/ram/1> ns\nmount hfs /sd\nmount proc /proc\nbind /sd/r /ram\n', '/ram/1> ls /rom\n\n !IO ERR! not found\n', '/ram/1> 1 2 + .\n' + num(3)],
     forbid: ['No card:'],
+  },
+  {
+    name: 'ns-unions', about: 'namespaces as Plan 9\'s: a union of two binds (bind, bind -a), a name in its first member and one only in its second, ns\'s lines; a create with no -c member refused, then one to the -bc member; a pipeline stage (a task the shell started) sees the union; a member unmounted (unmount new old), a hide, a bad flag, the whole union unmounted',
+    args: ['--cycles', '150000000', '--input', BOOT + ['mkdir /ram/1/b\\r', 'echo hi > /ram/1/b/x\\r', 'bind /ram/1/b /u\\r', 'bind -a /rom /u\\r', 'ns\\r',
+      'cat /u/x\\r', 'ls -l /u/boot.hys\\r', 'echo y > /u/new\\r', 'mkdir /ram/1/c\\r', 'bind -bc /ram/1/c /u\\r', 'echo y > /u/new\\r', 'cat /ram/1/c/new\\r',
+      'cat /u/new | cat\\r', 'ns\\r', 'unmount /rom /u\\r', 'ls -l /u/boot.hys\\r', 'hide /u/x\\r', 'cat /u/x\\r', 'cat /u/new\\r', 'mount -z zero /z\\r',
+      'unmount /u\\r', 'ns\\r'].join(P) + P],
+    expect: ['/ram/1> ns\nmount hfs /sd\nmount proc /proc\nbind /sd/x /rom\nbind /sd/r /ram\nbind /ram/1/b /u\nbind -a /rom /u\n', '/ram/1> cat /u/x\nhi\n',
+      '/ram/1> ls -l /u/boot.hys\nboot.hys 85 2000-01-01 00:00:00\n', '/ram/1> echo y > /u/new\n\n !IO ERR! not opened for that\n', '/ram/1> cat /ram/1/c/new\ny\n', '/ram/1> cat /u/new | cat\ny\n',
+      '/ram/1> ns\nmount hfs /sd\nmount proc /proc\nbind /sd/x /rom\nbind /sd/r /ram\nbind -c /ram/1/c /u\nbind -a /ram/1/b /u\nbind -a /rom /u\n',
+      '/ram/1> ls -l /u/boot.hys\n\n !IO ERR! not found\n', '/ram/1> cat /u/x\n\n !IO ERR! not found\n', '/ram/1> cat /u/new\ny\n', '/ram/1> mount -z zero /z\n\n !IO ERR! bad name\n',
+      '/ram/1> ns\nmount hfs /sd\nmount proc /proc\nbind /sd/x /rom\nbind /sd/r /ram\nhide /u/x\n'],
+    forbid: ['!UNK WORD!'],
+  },
+  {
+    name: 'proc', about: '/proc, mounted as Plan 9 has it: the task list, a task\'s ns file (as ns prints it, past 255 bytes: read in pieces from the offset), the other task\'s; ctl for the family only: the shell\'s own, task 0\'s and a driver\'s refused (not allowed)',
+    args: ['--cycles', '120000000', '--input', BOOT + [[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => 'bind /sd/x/songs /aaaaaaaaaaa' + n + '\\r').join(''), 'ns\\r', 'cat /proc/1/ns\\r',
+      'cat /proc/1/ns | cat\\r', 'cat /proc\\r', 'echo fg > /proc/1/ctl\\r', 'q^/proc/0/ctl^ q^kill^ ctl\\r', 'q^/proc/f/ctl^ q^kill^ ctl\\r', 'cat /proc/f/ns\\r'].join(P) + P],
+    expect: (() => {
+      const ns = 'mount hfs /sd\nmount proc /proc\nbind /sd/x /rom\nbind /sd/r /ram\n' + [1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => 'bind /sd/x/songs /aaaaaaaaaaa' + n + '\n').join('');
+      return ['/ram/1> ns\n' + ns + '\n', '/ram/1> cat /proc/1/ns\n' + ns + '\n', '/ram/1> cat /proc/1/ns | cat\n' + ns + '\n', '/ram/1> cat /proc\n0 ', '\n1 R 0 *\n',
+        '/ram/1> echo fg > /proc/1/ctl\n\n/ram/1> q^/proc/0/ctl^ q^kill^ ctl\n\n !IO ERR! not allowed\n', '/ram/1> q^/proc/f/ctl^ q^kill^ ctl\n\n !IO ERR! not allowed\n',
+        '/ram/1> cat /proc/f/ns\n\n/ram/1> '];
+    })(),
+    forbid: ['!UNK WORD!'],
   },
   {
     name: 'rom-copy', about: 'the ROM disk read back on the machine: every file in /rom (romfs.txt) copied to a card is its source, byte for byte, the ones across a bank boundary too (sd.s: SD_ROM_READ)',

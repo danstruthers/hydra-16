@@ -50,11 +50,13 @@ S_DEV_RAM:      .byte "/dev/ram", 0
             sta         ZP_IO_BUF
             sty         ZP_IO_BUF + 1
             _M_IT_PATH  path, 0
+            ldx         #0                                  ; (No flags)
             jsr         call
 .endmacro
 
 .macro _M_IT_UNMOUNT    path
             _M_IT_PATH  path, 0
+            ldx         #0                                  ; (All of its entries)
             jsr         IO_UNMOUNT
 .endmacro
 
@@ -240,10 +242,12 @@ IO_TEST:
             sta         ZP_IO_BUF + 1
             lda         #<S_ROM_PATH
             ldy         #>S_ROM_PATH
+            ldx         #0
             jsr         IO_MOUNT
             _M_IT_FAIL_IF_C     'k'
             lda         #<S_ROM_PATH
             ldy         #>S_ROM_PATH
+            ldx         #0
             jsr         IO_UNMOUNT
             _M_IT_FAIL_IF_C     'k'
             _M_IT_OPEN  S_DEV_ZERO_SUB, IO_MODE_READ            ; A path inside the device: the server's

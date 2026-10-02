@@ -19,6 +19,11 @@ FAR_GATE_INLINE     TASK_CALL,      ::TASK_CALL,            0
 FAR_GATE_INLINE     NO_PREEMPT,     ::NO_PREEMPT,           0
 FAR_GATE_INLINE     PREEMPT,        ::PREEMPT,              0
 FAR_GATE_INLINE     TASK_SLEEP,     ::TASK_SLEEP,           0   ; (The clock chip's probe: rtc.s)
+FAR_GATE_INLINE     TASK_WAKE_MASK, ::TASK_WAKE_MASK,       0   ; (The pipes' waiters: pipe_srv.s)
+FAR_GATE_INLINE     WRITE_CHAR,     ::WRITE_CHAR,           0   ; (ns: PROC_NS_LIST)
+
+; ... to the tasks' families (page 5)
+FAR_GATE_INLINE     TASK_MAY,       PAGE5::TASK_MAY,        5   ; (/proc/N/ctl, cmd)
 
 ; ... and to the IO layer (page 2)
 FAR_GATE_INLINE     IO_SRV_COUNT,   PAGE2::IO_SRV_COUNT,    2

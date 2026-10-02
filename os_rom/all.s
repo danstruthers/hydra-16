@@ -36,7 +36,6 @@
 .include "servers/ser_srv.s"         ; The serial driver's file server (/dev/cons, /dev/ser)
 .include "servers/serctl.s"          ; Its settings: /dev/ser/ctl, the rate and format IO_CTLs
 .include "servers/serfast.s"         ; Its fast paths: the ACIA's interrupt, console output and input
-.include "io/pipe_srv.s"        ; The pipe server (/dev/pipe)
 .include "sound/ymfast.s"       ; The YM2151's interrupt: the sound clock (a fast handler, as serfast.s's)
 .endscope
 IRQ_FAST_P2     = PAGE2::IRQ_FAST_P2    ; (For the COMMON block's fast IRQ stubs, assembled before page 2)
@@ -152,6 +151,7 @@ ED_MAIN_P8      = PAGE8::ED_MAIN        ; (For page 7: SH_EDIT)
 .include "servers/env_srv.s"         ; Each task's environment (/env)
 .include "servers/time_srv.s"        ; The clock (/dev/time)
 .include "servers/ram_srv.s"         ; The RAM itself, for task 0 (/dev/ram)
+.include "io/pipe_srv.s"             ; The pipes (/dev/pipe: it runs in the pipe task)
 .include "drivers/rtc.s"             ; The clock chip (a DS1747 in U7)
 .endscope
 PROC_SERVE_P9   = PAGE9::PROC_SERVE     ; (For page 0's gates: io_p0.s)
@@ -161,6 +161,9 @@ ENV_COPY_P9     = PAGE9::ENV_COPY       ; (For page 2: IO_INHERIT)
 ENV_INIT_P9     = PAGE9::ENV_INIT       ; (For page 7: SH_BOOT)
 TIME_SERVE_P9   = PAGE9::TIME_SERVE     ; (For page 0's gates: io_p0.s)
 RAM_SERVE_P9    = PAGE9::RAM_SERVE      ; (... and thunks.s)
+PIPE_SERVE_P9   = PAGE9::PIPE_SERVE
+PROC_NS_LIST_P9 = PAGE9::PROC_NS_LIST   ; (IO_NS_LIST's gates)
+PROC_CMD_P9     = PAGE9::PROC_CMD       ; (For HyForth: /proc/N/cmd's lines)
 CLOCK_GET_P9    = PAGE9::CLOCK_GET      ; (For page 6: HydraFS's stamps)
 CLOCK_TEXT_P9   = PAGE9::TIME_TEXT      ; (For page 7: ls -l)
 RTC_BOOT_P9     = PAGE9::RTC_BOOT       ; (For page 7: SH_BOOT)
