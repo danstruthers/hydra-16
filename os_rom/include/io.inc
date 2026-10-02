@@ -130,12 +130,17 @@ IO_DEV_TASK         = 8         ; task the serve routine runs in ($FF = the call
 IO_DEV_SERVE        = 9         ; serve routine (ROM page 0 address)
 IO_DEV_CALLER_TASK  = $FF
 
-; IO transfer areas: 1K per task, at $8000 + (task & 7) * $400 in shared bank ID $09 (tasks 0-7) or $0A (tasks
-; 8-15; U = 0, banks $F9, $FA; IO_XFER_OF): the request block, the current directory, then (at + $100) up to
-; IO_UNIT bytes of data, then the task's namespace
+; IO transfer areas: 1.5K per task, four to a bank: at $8000 + (task & 3) * $600 in shared bank ID $09 + task / 4
+; ($09-$0C; U = 0, banks $F9-$FC; IO_XFER_OF): the request block, the current directory, then (at + $100) up to
+; IO_UNIT bytes of data, then the task's namespace (four pages).  Each bank's $9800-$9BFF holds a copy of the
+; system namespace (NS_SYS)
 IO_XFER_BANK_ID     = $09
-IO_XFER_BANK        = $F0 | IO_XFER_BANK_ID     ; (Tasks 0-7's; IO_XFER_BANK + 1 tasks 8-15's)
-IO_XFER_SIZE        = $400
+IO_XFER_BANK        = $F0 | IO_XFER_BANK_ID     ; (Tasks 0-3's; IO_XFER_BANK + 1 tasks 4-7's, and so on)
+IO_XFER_BANKS       = 4
+IO_XFER_SIZE        = $600
+IO_XFER_PER_BANK    = 4
+.define     IO_XFER_PAGES   $80, $86, $8C, $92  ; (task & 3)'s area's first page: >PAGED_RAM_BASE + (task & 3) * 6
+.assert     IO_XFER_PER_BANK * IO_XFER_SIZE <= $1800, error, "IO transfer areas: four to a bank, below the system namespace"
 IO_UNIT             = 256
 IO_BLK_TYPE         = 0         ; H9_* request
 IO_BLK_FID          = 1
@@ -148,6 +153,8 @@ IO_BLK_CTL_ARG      = 12
 IO_BLK_PERM         = 12        ; H9_CREATE: the new file's mode (HFS_M_*)
 IO_BLK_CALL         = 13        ; IO_OPEN and the calls that share its code: which call (H9_OPEN, H9_CREATE,
                                 ;   H9_REMOVE, IO_CALL_CHDIR ...)
+IO_BLK_SPEC         = 14        ; IO_OPEN and the calls that share its code: <> 0, the name came through a mount
+                                ;   with a spec (mount hfs /rom x): the server may serve what only a spec names
 IO_CALL_CHDIR       = $80       ; IO_BLK_CALL: IO_CHDIR (it sends H9_OPEN, to check the directory) ...
 IO_CALL_CHDIR_SET   = $81       ;   the new directory has been set (the old one is at IO_BLK_DATA + $80)
 IO_BLK_DATA         = $100
@@ -165,13 +172,15 @@ IO_CWD_MAX          = 64        ; (63 characters, and its 0)
 ; IO_OPEN applies the entry with the longest matching path prefix: a mount sends the rest of the name to
 ; a device's server, a bind rewrites the name (prefix -> target) and looks again.  No match: the global
 ; /dev.  New tasks get a copy of their parent's namespace.
-NS_ENTRIES          = 16        ; ($200-$3FF of the area: two pages)
+NS_ENTRIES          = 32        ; ($200-$5FF of the area: four pages)
 NS_ENTRY_SIZE       = 32
+NS_PAGES            = NS_ENTRIES * NS_ENTRY_SIZE / 256
 NS_TYPE             = 0         ; NS_FREE, NS_MOUNT, NS_BIND or NS_HIDE (NS_KIND), and NS_C: a create in its union goes to it
 NS_DEV              = 1         ; Mount: the device (device table index)
 NS_PREFIX           = 2         ; The path prefix, zero-terminated (13 characters at most)
 NS_PREFIX_MAX       = 13
-NS_TARGET           = 16        ; Bind: what the prefix stands for, zero-terminated (15 at most)
+NS_TARGET           = 16        ; Bind: what the prefix stands for, zero-terminated (15 at most); mount: "/" and its
+                                ;   spec, or "" (none): the server is sent the spec's path, then the rest of the name
 NS_TARGET_MAX       = 15
 NS_FREE             = 0
 NS_MOUNT            = 1
@@ -186,6 +195,17 @@ NS_BEFORE           = $02       ; -b: before them
 NS_CREATE           = $04       ; -c: a create in the union goes to this one
 .assert     NS_AFTER = 1 .and NS_BEFORE = 2 .and NS_CREATE = 4, error, "NS_*: -a -b -c are bits 0-2 (HyForth's NSWORD)"
 NS_HIDDEN           = $08       ; IO_BIND: hide the path (no target)
+NS_SPEC             = $10       ; IO_MOUNT: ZP_IO_CNT = a spec (14 characters at most: hfs's disk and a path in it,
+                                ;   "x", "r/1"), as Plan 9's mount's
+NS_SYSTEM           = $20       ; IO_MOUNT, IO_BIND, IO_UNMOUNT: the system namespace's entry (for task 0 and the
+                                ;   boot shell: ERR_IO_PERM for others)
+IO_BLK_NSTAB        = 15        ; The namespace's routines: the table they use now, 0 the task's, 1 the system's
+.assert     IO_BLK_SPEC < $10 .and IO_BLK_SPEC > IO_BLK_CALL .and IO_BLK_NSTAB < $10 .and IO_BLK_NSTAB > IO_BLK_SPEC, error, "IO_BLK_SPEC, IO_BLK_NSTAB: the request block's spare bytes"
+; The system namespace: entries every task sees, under its own (a task's entry with the same path, or a longer
+; one, wins), written at boot (the boot shell's mounts, /rom/lib/namespace's lines with -s).  NS_ENTRIES entries
+; at NS_SYS in each IO transfer bank, the same in each (NS_SYS_SYNC), so a name resolves with no bank switch
+NS_SYS              = $9800
+.assert     NS_SYS >= PAGED_RAM_BASE + IO_XFER_PER_BANK * IO_XFER_SIZE .and NS_SYS + NS_ENTRIES * NS_ENTRY_SIZE <= $9FFF .and <NS_SYS = 0, error, "NS_SYS: after the areas, below $9FFF"
 ; IO_OPEN's own, in the transfer area's spare bytes (the request block page): the tidy name, for a union's next
 ; member (NS_RETRY), how many of the first union's members it has skipped, and how many are left after the one used
 IO_BLK_ORIG         = $20
@@ -197,10 +217,17 @@ IO_BLK_ULEFT        = $61       ; ($FF: no union met yet)
 ; when the task ends (NS_CLEAR_MAPPED)
 IO_BLK_CMDST        = $62       ; IO_CMD_PROMPT: its shell is at its prompt; IO_CMD_WOKEN: woken (a break) for a line
 IO_BLK_CMD          = $63       ; The line waiting, 0-terminated (none: 0)
-IO_CMD_MAX          = 64        ; (With its 0)
+IO_CMD_MAX          = 40        ; (With its 0)
 IO_CMD_PROMPT       = $80
 IO_CMD_WOKEN        = $40
-.assert     IO_BLK_CMDST > IO_BLK_ULEFT .and IO_BLK_CMD = IO_BLK_CMDST + 1 .and IO_BLK_CMD + IO_CMD_MAX <= IO_BLK_CWD, error, "IO_BLK_CMD ..."
+; A union's directory, read through: the fd reading it (+ 1; 0: none), the member it reads (IO_BLK_SKIP's), and
+; the tidy name, to open in the next member at the end of this one's (io.s: IO_UNION_KEEP, IO_UNION_NEXT).  One a
+; task; cleared when the task ends
+IO_BLK_UFD          = IO_BLK_CMD + IO_CMD_MAX
+IO_BLK_USKIP        = IO_BLK_UFD + 1
+IO_BLK_UNAME        = IO_BLK_USKIP + 1
+IO_UNAME_MAX        = IO_BLK_CWD - IO_BLK_UNAME     ; (With its 0: a longer name, its first member's listing only)
+.assert     IO_BLK_CMDST > IO_BLK_ULEFT .and IO_BLK_CMD = IO_BLK_CMDST + 1 .and IO_UNAME_MAX >= 40, error, "IO_BLK_CMD ..."
 NS_MAX_REWRITES     = 4         ; Binds applied to one name, at most
 .assert     IO_BLK_NS + NS_ENTRIES * NS_ENTRY_SIZE <= IO_XFER_SIZE .and IO_BLK_DATA + IO_UNIT <= IO_BLK_NS, error, "The namespace must fit after the data area"
 .assert     <IO_BLK_NS = 0 .and (NS_ENTRY_SIZE * 8) = 256, error, "NS_FIRST, NS_NEXT: the namespace starts a page, 8 entries a page"
@@ -268,11 +295,11 @@ SND_RAM_END         = $0331
 ; RAM disk, s the shared RAM disk.  A disk's number, the tables' index, isn't its name: cards 0-7 are disks 0-7,
 ; then x, r and s are 8, 9 and 10.  A fid is SD_FID_* | the disk.
 SD_MAX_CARDS        = 8         ; SD cards: disks 0-7
-DISK_ROM            = 8         ; The ROM disk: the paged ROM (sd.s: SD_ROM_READ; sim/tools/mkromdisk.js), bound at /rom
-DISK_NAME_ROM       = 'x'       ;   its name: /dev/sd/x, /sd/x
-DISK_RAM            = 9         ; The RAM disk: the storage task's banks on the RAM modules, bound at /ram (the
-DISK_NAME_RAM       = 'r'       ;   tasks' areas, /ram/0-f)
-DISK_SRAM           = 10        ; The shared RAM disk: shared RAM banks, bound at /ram/s
+DISK_ROM            = 8         ; The ROM disk: the paged ROM (sd.s: SD_ROM_READ; sim/tools/mkromdisk.js), at /rom
+DISK_NAME_ROM       = 'x'       ;   its name: /dev/sd/x; hfs's x (mount hfs /rom x)
+DISK_RAM            = 9         ; The RAM disk: the storage task's banks on the RAM modules (the tasks' areas, r/0
+DISK_NAME_RAM       = 'r'       ;   to r/f: a shell's at /ram, mount hfs /ram r/N)
+DISK_SRAM           = 10        ; The shared RAM disk: shared RAM banks, at /sram (mount hfs /sram s)
 DISK_NAME_SRAM      = 's'
 DISK_MAX            = 16        ; Disks the tables are for (a fid's low 4 bits)
 .assert     DISK_SRAM = DISK_RAM + 1 .and DISK_NAME_SRAM = DISK_NAME_RAM + 1 .and DISK_NAME_RAM > DISK_NAME_ROM - 8, error, "DISK_FROM_NAME: r and s, 9 and 10"
@@ -479,13 +506,15 @@ HFS_WLEFT           = $089D     ;   kept while the gap is filled
 HFS_WDONE           = $089F
 HFS_WK              = $08A0     ;   and the gap's whole clusters (a hole) (4)
 HFS_HOLEF           = $08A4     ; A read: <> 0: the block is in a hole (zeros)
+HFS_ROMB            = $08A5     ; A read: the paged ROM bank the block is seen in (the ROM disk's), or this task's
+HFS_BLK             = $08A6     ;   and where the block is: in the paged ROM, or the cache (2) (HFS_BLOCK_AT)
 HFS_HOLE            = $FF       ; A hole's extent: its first cluster is $FFFFFFFF
 HFS_IN_HOLE         = $01       ; HFS_FILE_BLOCK's C = 1 .A for a block in a hole (not an error)
 HFS_SCRATCH_FLOOR   = $0C       ; The storage task's MMU page floor: the page above the scratch and the disks' tables
 .assert     HFS_V_STAMP + HFS_V_STRIDE <= HFS_SCRATCH_FLOOR * 256 .and HFS_V_MINIT + HFS_V_STRIDE <= HFS_V_CLUSTERS, error, "The disks' tables must end below HFS_SCRATCH_FLOOR"
 .assert     SD_CARD_BLOCKS + DISK_MAX * 4 <= HFS_V_BASE .and HFS_V_BASE + DISK_MAX * 4 <= HFS_V_MINIT .and HFS_V_STATE + DISK_MAX <= SD_CARD_BLOCKS, error, "The disks' tables overlap"
 .assert     HFS_V_MINIT + DISK_MAX * 4 <= RAMD_FIRST .and RAMD_FIRST + DISK_MAX <= RAMD_AREAS .and RAMD_AREA_PATH + 2 <= HFS_V_CLUSTERS, error, "RAMD_FIRST ... overlap the disks' tables"
-.assert     HFS_HOLEF + 1 <= HFS_SCRATCH_FLOOR * 256, error, "The HydraFS scratch must end below HFS_SCRATCH_FLOOR"
+.assert     HFS_BLK + 2 <= SD_CARD_STATE .and SD_CARD_STATE < HFS_SCRATCH_FLOOR * 256, error, "The HydraFS scratch must end below the disks' tables"
 .assert     HFS_POSO = HFS_POSB + 4, error, "A place is HFS_POSB then HFS_POSO (HFS_POS_SIZE bytes)"
 HFS_FHDR            = $0380     ; An open file: HFS_MAX_OPEN headers of HFS_FHDR_SIZE bytes (at the fid * 16)
 HFS_FHDR_SIZE       = 16

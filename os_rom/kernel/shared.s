@@ -14,7 +14,7 @@
 ;       $8400-$87FF  SH_HANDLES shared handle table: 255 entries of ShHandle
 ;       $8800-$88FF  IO_DEV_TABLE the IO device table (io.s)
 ;       $8900-$8CFB  SH_REF_TBL references' far pointers (SH_REF, fp.s), by shared handle
-;   Bank IDs $00 (system), $09 and $0A (IO transfer areas) are reserved, as are the banks of any U macro-page
+;   Bank IDs $00 (system), $09-$0C (IO transfer areas) are reserved, as are the banks of any U macro-page
 ;   whose RAM isn't installed, and the banks of any RAM chip that failed the POST (ZP_M_BAD_SH: chip c
 ;   holds bank IDs 4c - 4c+3 of every U).
 ;
@@ -30,7 +30,7 @@ SH_MAX_HANDLES      = 255
 SH_REF_MARK         = $FF                                   ; ShHandle::count of a reference (SH_REF, fp.s): no
                                                             ;   banks (no allocation can have 255)
 SH_REF_TBL          = $8900                                 ; References' far pointers: 255 of FarPtr, by handle
-SH_FIRST_FREE_ID    = $01                                   ; (ID $00: system data; $09 and $0A, the IO
+SH_FIRST_FREE_ID    = $01                                   ; (ID $00: system data; $09-$0C, the IO
                                                             ;   transfer areas, are reserved in the map)
 SH_WINDOW           = PAGED_RAM_BASE                        ; Where SH_LOCK maps a shared allocation
 SH_PROBE_ADDR       = $9FFF                                 ; Probe byte (bank $F0 of each U)
@@ -129,9 +129,9 @@ SHARED_RAM_INIT:
             cpx         #32
             bne         @macro_pages
             lda         #$01                                ; Reserve bank IDs $00 (system data), and
-            ora         SH_MAP                              ;   $09 and $0A (IO transfer areas)
+            ora         SH_MAP                              ;   $09-$0C (IO transfer areas)
             sta         SH_MAP
-            lda         #$06
+            lda         #$1E
             ora         SH_MAP + 1
             sta         SH_MAP + 1
             _M_SYS_LEAVE

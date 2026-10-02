@@ -203,7 +203,7 @@ Everything else goes to the chip as written (except the timers' interrupt enable
 | Code | Name | Does |
 | :--- | :--- | :--- |
 | 1 | `SND_CTL_INIT` | Stop the tune and clear the chip and the library's settings (the claims stay) |
-| 2 | `SND_CTL_TEST` | Play the test song (`/rom/songs/test.zsm`: the player mounts `/sd` for itself and opens it as `/sd/x/songs/test.zsm`, since the sound task's namespace has no names) in the background, in the song player (a task of its own, which claims the channels): the caller goes on at once.  `ERR_TASK_BUSY` if it's playing already |
+| 2 | `SND_CTL_TEST` | Play the test song (`/rom/songs/test.zsm`: `/rom` is in the system namespace, which every task sees, the sound task's too) in the background, in the song player (a task of its own, which claims the channels): the caller goes on at once.  `ERR_TASK_BUSY` if it's playing already |
 | 3 | `SND_CTL_STOP` | Stop the tune |
 | 4 | `SND_CTL_CLAIM` | `.Y` = a mask of channels (bit n: channel n), this fd's alone; `ERR_IO_BUSY` if another fd has one of them (none taken) |
 | 5 | `SND_CTL_RELEASE` | `.Y` = a mask of channels to give back |
@@ -231,7 +231,7 @@ A line is `N S O`: the task, its state (`R` running or runnable, `W` waiting, `P
 
 **Who may write `ctl` and `cmd`:** task N itself, a task that started N (directly or not: a shell and what it runs), and task 0; any other task gets `ERR_IO_PERM` (`TASK_MAY`, page 5).  So a shell can't kill or drive another shell's programs.
 
-**`cmd`:** a write is one line (up to its CR, LF or 0; 63 characters at most).  It waits in task N's IO transfer area until N's shell is at its prompt; if it's there now, waiting for the console (in the background, say), a break wakes it, a quiet one with no `!BREAK!`, and it runs the line, shown after its prompt.  One line waits at a time (`ERR_IO_BUSY`).  HyForth's `send N line` writes it.  A task that isn't a HyForth shell never takes the line.
+**`cmd`:** a write is one line (up to its CR, LF or 0; 39 characters at most).  It waits in task N's IO transfer area until N's shell is at its prompt; if it's there now, waiting for the console (in the background, say), a break wakes it, a quiet one with no `!BREAK!`, and it runs the line, shown after its prompt.  One line waits at a time (`ERR_IO_BUSY`).  HyForth's `send N line` writes it.  A task that isn't a HyForth shell never takes the line.
 
 #### **The clock: `/dev/time`**
 
@@ -268,7 +268,7 @@ A read gives up to 64 bytes, and stops at a 256-byte page's end (a short read: r
 
 #### **The ROM's files: `/rom`**
 
-Files kept in the paged ROM, read-only, there with no card: programs, songs and (later) libraries.  The paged ROM is a disk, the **ROM disk** (`/dev/sd/x`), with a HydraFS volume on it, so its files are `/sd/x/...` like a card's; the boot shell binds `/rom` to `/sd/x` (`ns` shows `bind /sd/x /rom`) if the ROM disk has a volume (a paged ROM image without one has no table: no `/rom`, and everything else works), and every task it starts inherits the bind.
+Files kept in the paged ROM, read-only, there with no card: programs, songs and (later) libraries.  The paged ROM is a disk, the **ROM disk** (the block device `/dev/sd/x`), with a HydraFS volume on it, which the boot shell mounts at `/rom` with a spec, as Plan 9's `mount` takes one: `mount -s hfs /rom x` (the HydraFS server's disk `x`), in the system namespace, so every task sees it.  It's mounted if the ROM disk has a volume (a paged ROM image without one has no table: no `/rom`, and everything else works).  The disks in memory aren't under `/sd`, which has the cards alone: HydraFS serves them only through a mount with a spec (below).
 
 | Name | Read |
 | :--- | :--- |
@@ -293,27 +293,28 @@ Two disks in RAM, each with a HydraFS on it: fast, there with no card, and **emp
 
 | Disk | Names | Memory | At boot |
 | :--- | :---- | :----- | :------ |
-| `r`, the RAM disk | `/dev/sd/r`, `/sd/r`, `/ram` | The storage task's own 8K banks on the RAM modules | 256K (on a machine with less: half that, and so on) |
-| `s`, the shared RAM disk | `/dev/sd/s`, `/sd/s`, `/ram/s` | Shared RAM banks, from the lower half (IDs `$01-$7F`: `SH_ALLOC` takes from the top) | 512K (the same) |
+| `r`, the RAM disk | `/dev/sd/r`; a shell's own area at `/ram` | The storage task's own 8K banks on the RAM modules | 256K (on a machine with less: half that, and so on) |
+| `s`, the shared RAM disk | `/dev/sd/s`; `/sram` | Shared RAM banks, from the lower half (IDs `$01-$7F`: `SH_ALLOC` takes from the top) | 512K (the same) |
 
-The boot shell binds `/ram` to `/sd/r`, and HydraFS serves the shared disk inside the RAM disk as `s` (`/sd/r/s/...` is `/sd/s/...`), so that one bind gives both and `ns` shows `bind /sd/r /ram`.
+Each shell mounts **its own area** of the RAM disk at `/ram` (below), and the boot shell mounts the shared disk at `/sram`, both with a spec: `ns` shows `mount hfs /ram r/1` (the shell's own namespace) and `mount -s hfs /sram s` (the system's).  So `/ram` means "my files in RAM" in every shell, as Plan 9 gives each process its own names, and the tasks a shell starts (programs, scripts, pipelines) inherit it.
 
-**Areas.**  The RAM disk's top directories are the tasks' areas: `/ram/N`, N a hex digit (`0`-`9`, `a`-`f`), is task N's.
-* **Who:** anything under `/ram/N` (opening, creating, removing, `ls`) is for task N, the tasks it started (and theirs, up the owner chain: `ZP_TASK_OWNER`), and task 0, the system's (the kernel's `TASK_MAY`).  Any other task gets `ERR_IO_PERM` (`$88`, the shell's `!IO ERR! not allowed`).  So a program the shell runs, or a stage of a pipeline, uses the shell's area, and two shells' families can't see into each other's.
-* **Other names** in the root (`/ram/zz`) aren't areas: refused.  `/ram/s` and the root's listing are everyone's.  Renaming an area, or changing its mode, is refused too (but for task 0).
+**Areas.**  The RAM disk's top directories are the tasks' areas: `N`, a hex digit (`0`-`9`, `a`-`f`), is task N's.  A shell mounts its own when it starts (`SH_OWN_AREA`: `mount hfs /ram r/N`, N its task: the boot shell's is `r/1`) and makes it, with `bin` and `lib` in it.  To see them all, mount the whole disk: `mount hfs /a r`, then `ls /a`.
+* **Who:** anything in area N (opening, creating, removing, `ls`) is for task N, the tasks it started (and theirs, up the owner chain: `ZP_TASK_OWNER`), and task 0, the system's (the kernel's `TASK_MAY`).  Any other task gets `ERR_IO_PERM` (`$88`, the shell's `!IO ERR! not allowed`).  So a program the shell runs, or a stage of a pipeline, uses the shell's area, and two shells' families can't see into each other's.
+* **Other names** in the root (`zz`) aren't areas: refused.  The root's listing is everyone's.  Renaming an area, or changing its mode, is refused too (but for task 0).
 * **Owners:** when a task ends, the tasks it started get its owner instead (`TASK_ORPHANS`, as Unix gives orphans to `init`), so a new task in its slot isn't taken for their parent.
 * **An area goes when its task ends,** with everything in it: after the task's fds are closed, and before its parent (a shell waiting for it) goes on (`TASK_AREA_END`, then `HFS_AREA_END` in the storage task).  If a task it started still has a file in it open, it stays, and goes when task N ends next.  (The storage task keeps a bit for each area that may be there, `RAMD_AREAS`, so a task without one ends as fast as before.)
 
-**With no card,** the boot shell's current directory is its own area, `/ram/1` (the prompt `/ram/1> `), so files can be saved there (until a reset), and it runs `/rom/boot.hys` (a line about it) in place of a card's `boot.hys`.
+**With no card,** the boot shell's current directory is its own area, `/ram` (the prompt `/ram> `), so files can be saved there (until a reset), and it runs `/rom/boot.hys` (a line about it) in place of a card's `boot.hys`.
 
-**Program caches.**  The boot shell makes `/ram/s/bin` and `/ram/s/lib` (the shared caches) and its own area, `/ram/1`, with `bin` and `lib`.  A program typed by its name is looked for in:
-1. the current directory (Plan 9's `.` first);
-2. this task's area's `bin` (`/ram/N/bin`), then its owner's, up to three owners up (so a pipeline's stage finds the shell's cache);
-3. the shared cache, `/ram/s/bin`;
-4. `$PATH`'s directories, or `/bin` on the current directory's card;
-5. `/rom/bin`.
+**Before `boot.hys`,** the boot shell runs `/rom/lib/namespace`, the default namespace's `/bin` and `/lib` ([namespaces](../programming/io.md#namespaces)), then the card's `lib/namespace`, if it has one: lines of `bind` and `mount` for the card's own directories (`bind -a /sd/0/tools /bin`), and `#` comments.
 
-Caching a program is copying it there: `cp /sd/0/bin/game.hyx /ram/s/bin/game.hyx`, and then `game` loads from RAM, about three times as fast as from a card (a 16K program: 1.5 million cycles, against 4.8 million).  Libraries are found the same way, in the `lib` directories (`lib name`).  A copy isn't checked against the card's: after rebuilding a program, copy it again (or remove the cached one).
+**Program caches.**  The boot shell makes `/sram/bin` and `/sram/lib` (the shared caches), and each shell's area has its own `bin` and `lib`.  A program typed by its name is looked for in the current directory (Plan 9's `.` first), then in `/bin`, a union ([namespaces](#namespaces)) of:
+1. the shell's cache, `/ram/bin` (its `-c` member: a copy into `/bin` goes there; a bind to `/ram/bin`, so in each shell it's that shell's);
+2. the shared cache, `/sram/bin`;
+3. the boot card's `/bin`;
+4. `/rom/bin`;
+
+then in `$PATH`'s directories.  Caching a program is copying it there: `cp /sd/0/bin/game.hyx /bin/game.hyx` (or to `/sram/bin`, for every shell), and then `game` loads from RAM, about three and a half times as fast as from a card (a 16K program: 1.34 million cycles, against 4.69 million: [DISKS.md](../plans/DISKS.md) has where the time goes).  Libraries are found the same way, in the `lib` directories (`lib name`).  A copy isn't checked against the card's: after rebuilding a program, copy it again (or remove the cached one).
 
 **Starting and stopping** them is a write to the ctl file (`echo stop > /dev/sd/s/ctl`, or HyForth's `ctl`, which reports errors: `q^/dev/sd/s/ctl^ q^stop^ ctl`):
 
@@ -335,22 +336,47 @@ To connect two tasks, make the pipe, then point the child's stdin or stdout at o
 
 ### **Namespaces**
 
-Each task has its own namespace of up to 16 entries, which the tasks it starts inherit.  It works as Plan 9's does ([NAMESPACES.md](../plans/NAMESPACES.md)): entries with the same path are a **union**, whose members are looked in, in order, for a name.
+Each task has its own namespace of up to 32 entries, which the tasks it starts inherit, on top of the **system namespace**, 32 more that every task sees.  It works as Plan 9's does ([NAMESPACES.md](../plans/NAMESPACES.md)): entries with the same path are a **union**, whose members are looked in, in order, for a name.
 
 | Call | Does |
 | :--- | :--- |
-| `IO_MOUNT` (`$F89C`) | `.A.Y` = path (up to 13 characters), `ZP_IO_BUF` = a device's name, `.X` = flags: names under the path go to that device's server, with the rest of the name (`/z/sub` → device `zero`, name `/sub`) |
+| `IO_MOUNT` (`$F89C`) | `.A.Y` = path (up to 13 characters), `ZP_IO_BUF` = a device's name, `.X` = flags: names under the path go to that device's server, with the rest of the name (`/z/sub` → device `zero`, name `/sub`).  With `NS_SPEC`, `ZP_IO_CNT` = a spec, as Plan 9's `mount` takes one (up to 14 characters): the server gets the spec's path, then the rest (`mount hfs /rom x`: `/rom/bin` → `/x/bin`) |
 | `IO_BIND` (`$F89F`) | `.A.Y` = path, `ZP_IO_BUF` = target (up to 15), `.X` = flags: names under the path stand for the same names under the target (`/tty` → `/dev/cons`).  `.X` = `NS_HIDDEN`: a **hide**, no target: nothing under the path is found |
-| `IO_UNMOUNT` (`$F8A2`) | `.A.Y` = path, `.X` = 0: remove all its entries.  `.X` ≠ 0: just the member `ZP_IO_BUF` names (a bind's target, or a mount's device) |
-| `IO_NS_LIST` (`$F8A5`) | Print the entries as the lines that would make them, as Plan 9's `ns` does: `mount [-ac] device /path`, `bind [-ac] /target /path`, `hide /path` |
+| `IO_UNMOUNT` (`$F8A2`) | `.A.Y` = path, `.X` = 0 (or `NS_SYSTEM`): remove all its entries.  Other bits in `.X`: just the member `ZP_IO_BUF` names (a bind's target, or a mount's device) |
+| `IO_NS_LIST` (`$F8A5`) | Print the entries as the lines that would make them, as Plan 9's `ns` does: `mount [-acs] device /path [spec]`, `bind [-acs] /target /path`, `hide /path`; the system namespace's first (`-s`), then the task's own |
 
-**The flags** (`.X`, `include/io.inc`): none (0) replaces the path's entries with this one, as a plain bind or mount always did; `NS_BEFORE` (`-b`) puts it before the path's members, `NS_AFTER` (`-a`) after them; `NS_CREATE` (`-c`) makes it the member a new file in the union is made in.  A union with no `-c` member makes no files (`ERR_IO_MODE`).
+**The flags** (`.X`, `include/io.inc`): none (0) replaces the path's entries with this one, as a plain bind or mount always did; `NS_BEFORE` (`-b`) puts it before the path's members, `NS_AFTER` (`-a`) after them; `NS_CREATE` (`-c`) makes it the member a new file in the union is made in.  A union with no `-c` member makes no files (`ERR_IO_MODE`).  `NS_SYSTEM` (`-s`) makes the entry the system namespace's: for task 0 and the boot shell only (`ERR_IO_PERM` for others).
+
+**The system namespace** is a table of 32 entries every task sees, under its own: the boot shell writes it at boot (its mounts, `/rom/lib/namespace`'s lines), and a copy of it sits in each IO transfer bank (`NS_SYS`, `$9800`), so a name resolves without switching banks.  A task's own entry for a path wins over the system's, so a plain `bind` or `mount` at a system path replaces it for that task (and the tasks it starts).  Changing a system union in a task (`bind -a`, `-b`, or `unmount` of one member) first copies the union's members into the task's own table (copy on write); `unmount` of a system path leaves a hide in the task's.  So every task behaves as if it had a copy of the system's entries, and only what a task changes costs it entries of its own.
 
 **How `IO_OPEN` resolves a name:**
-* It applies the entry with the **longest matching prefix**, matching whole path elements (`/z` matches `/z/sub`, not `/zz`).
+* It applies the entry with the **longest matching prefix**, matching whole path elements (`/z` matches `/z/sub`, not `/zz`), in the task's table or the system's (a tie: the task's).
 * After a bind it looks again, up to 4 times (`ERR_IO_NS_LOOP` beyond).
-* In a union, it opens the name in the first member; if that member hasn't got it (`ERR_IO_NOT_FOUND`), the next, and so on.  A create goes to the `-c` member.  A hide's path gives `ERR_IO_NOT_FOUND`.  (A directory listing of a union is its first member's, for now.)
-* A name no entry matches must be under `/dev` or `/env`: the IO layer sends those to their devices in every task, with no mount (`S_OWN_PREFIXES` in `io/io.s` for `/env`), so they take none of a task's 5 entries.  A device that every task should have (`/dev/vid`, say) belongs under `/dev`; one that wants a short name of its own goes in that table.  (`/rom` and `/ram` are ordinary binds, to the ROM disk's `/sd/x` and the RAM disk's `/sd/r`, which the boot shell makes: its tasks inherit them.)
+* In a union, it opens the name in the first member; if that member hasn't got it (`ERR_IO_NOT_FOUND`), the next, and so on.  A create goes to the `-c` member.  A hide's path gives `ERR_IO_NOT_FOUND`.
+* **A union's directory** is read member by member, as in Plan 9: when an fd reading one reaches the end of a member's listing, the IO layer opens the same name in the next member that has it, on the same fd, and the read goes on (`IO_UNION_NEXT` in `io/io.s`).  A name in two members shows twice.  One such fd a task at a time (the last opened; the name up to 50 characters): another fd on a union's directory reads only its first member.
+* A name no entry matches must be under `/dev`: the IO layer sends `/dev/<device>/...` to the device in every task, with no mount.  Everything else is an entry's.
+* Through a mount with a spec, the request says so (`IO_BLK_SPEC`): HydraFS serves its disks in memory (`x`, `r`, `s`) only then (or for task 0), so `/sd` has the cards alone.
+
+**The namespace at boot.**  In the system namespace, the boot shell mounts `/sd` (`hfs`), `/env` (`env`), `/proc` (`proc`), and `/rom` and `/sram` (`hfs`, with the specs `x` and `s`, if they're there), and binds the boot card's `bin` and `lib` at `/bin` and `/lib`; in its own, it mounts its area at `/ram`.  Then, before `boot.hys`, it runs `/rom/lib/namespace` (on the ROM disk: `os_rom/romfs/namespace`), whose `-s` lines put the program caches before the card's and the ROM's after, and then the card's own `lib/namespace` if it has one (lines of the shell's `bind` and `mount`, and `#` comments).  With a card, `ns` shows:
+
+```
+mount -s hfs /sd
+mount -s env /env
+mount -s proc /proc
+mount -s hfs /rom x
+mount -s hfs /sram s
+bind -cs /ram/bin /bin
+bind -as /sram/bin /bin
+bind -as /sd/0/bin /bin
+bind -as /rom/bin /bin
+bind -cs /ram/lib /lib
+bind -as /sram/lib /lib
+bind -as /sd/0/lib /lib
+bind -as /rom/lib /lib
+mount hfs /ram r/1
+```
+
+That's 13 of the system's 32 entries and 1 of the shell's own 32.  `/bin`'s first member is `/ram/bin`, which each task resolves in its own namespace: each shell's cache.  A card's `lib/namespace` adds with `-s` for everyone (`bind -as /sd/0/tools /bin`), or without it for the boot shell and what it starts.  Every task sees the same, so a C program's `fopen ("/bin/x.hyx")` finds what the shell does.
 
 ### **The current directory**
 

@@ -83,13 +83,13 @@ RAM U:0 F0:0/00/0000 F4:0/00/0000 F8:0/00/0000 FC:0/00/0000 00:0/00/0000 10:0/00
 Welcome to the HYDRA-16!  OS 1.8C_0.5
 
 HyForth 0.91
-No card: /ram/1 keeps your files until a reset.  ls /rom/bin for the programs.
+No card: /ram keeps your files until a reset.  ls /rom/bin for the programs.
 
-/ram/1> 
+/ram> 
 ```
 
 * **The first two lines are POST**, the power-on self test ([what they mean](using/wozmon.md#post-the-power-on-self-test)).
-* **With no card**, the prompt is `/ram/1> `: the shell's own area on the RAM disk, where files last until a reset ([the RAM disks](programming/io.md#the-ram-disks-ram)).  **With a HydraFS card in**, `hydrafs 0` comes before HyForth's banner, and the prompt is `0:/> `: you're at card 0's root ([the shell](using/hyforth.md#the-shell-directories-files-and-programs)).
+* **With no card**, the prompt is `/ram> `: the shell's own area on the RAM disk, where files last until a reset ([the RAM disks](programming/io.md#the-ram-disks-ram)).  **With a HydraFS card in**, `hydrafs 0` comes before HyForth's banner, and the prompt is `0:/> `: you're at card 0's root ([the shell](using/hyforth.md#the-shell-directories-files-and-programs)).
 * **A driver that fails to start** prints `NAME FAIL ee` (ee = the [error code](programming/rom-layout.md#error-codes)).
 * **Try it:** `1 2 + .` prints ` 0003`.
 

@@ -97,7 +97,7 @@ The banks tested are the first bank of each shared RAM chip (`F0`, `F4`, `F8`, `
 **A chip that fails is left unused:**
 * A bad shared RAM chip has every bank ID on it reserved, in all 16 macro-pages.
 * A bad task RAM module is treated as not installed.
-* The system's shared banks (IDs `$00` and `$09`) can't move elsewhere, so a fault on the `F0` or `F8` chip still needs fixing.
+* The system's shared banks (IDs `$00` and `$09-$0C`) can't move elsewhere, so a fault on the `F0` or `F8` chip still needs fixing.
 
 To find the chip and pin behind a report, see the [Hardware Reference](../hardware.md#the-paged-ram-window): the shared bank IDs per chip (with V1's crossed bits 2/3: `F4` is U28, `F8` is U27), and the HM628512 pinout.  For example:
 * `F0:0/00/0001` is A0 (pin 12) on U25;

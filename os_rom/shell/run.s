@@ -282,18 +282,16 @@ SH_ARGS_OUT:
             rts
 
 ; A program by its name (.A.Y, with no .hyx, .hys or .zsm; a word HyForth doesn't know): name.hyx, name.hys or
-; name.zsm (a song),
-; in the current directory; then, for a name with no '/', in the program caches on the RAM disks (this task's
-; area's /ram/N/bin, its owner's, ..., then the shared /ram/s/bin: docs/plans/DISKS.md), in $PATH's
-; directories, or /bin on the current directory's card; then in /rom/bin (the ROM's own).  The first one there is
-; run as SH_RUN does.  None: .A = ERR_IO_NOT_FOUND
+; name.zsm (a song), in the current directory; then, for a name with no '/', in /bin, as Plan 9's path=(. /bin):
+; the namespace's union of the program caches, the boot card's /bin and the ROM's (docs/plans/NAMESPACES.md);
+; then in $PATH's directories.  The first one there is run as SH_RUN does.  None: .A = ERR_IO_NOT_FOUND
 SH_EXEC:
             ldx         #SH_FIND_PROG
             bra         SH_FIND
 
 ; A HyForth library by its name (.A.Y, with no .hyl; lib): name.hyl, looked for as SH_EXEC looks for a
-; program, but in the caches' /lib, $LIBPATH's directories, or /lib on the current directory's card, then /rom/lib.  The first one there is
-; opened.  OUT: C = 0, .A = its fd (read); or C = 1, .A = ERR_IO_NOT_FOUND
+; program, but in /lib (a union, as /bin) and $LIBPATH's directories.  The first one there is opened.
+; OUT: C = 0, .A = its fd (read); or C = 1, .A = ERR_IO_NOT_FOUND
 SH_LIBOPEN:
             ldx         #SH_FIND_LIB
 
@@ -318,51 +316,15 @@ SH_FIND:
             bne         @slash
 
 @bin:
-            lda         T_REGISTER                          ; The caches: this task's area's (/ram/N/bin, or
-            ora         #SH_CACHE_LEVELS << 4               ;   /lib), its owner's, ... (so a task the shell
-            sta         PAGE1::SHSEL                        ;   started sees the shell's), then the shared one.
-                                                            ;   SHSEL = the levels left << 4 | the task
-@cache:
-            lda         PAGE1::SHSEL
-            and         #$0F
-            jsr         SH_AREA_NAME                        ; SHBUF = /ram/N
+            ldx         #0                                  ; /bin/name (/lib/): the union
             jsr         SH_FIND_IN                          ; (Found: it doesn't come back)
-            lda         PAGE1::SHSEL                        ; Its owner: a quick look in its zero page (no
-            and         #$0F                                ;   RAM but the registers while T is that task)
-            tax
-            php
-            sei
-            ldy         T_REGISTER
-            stx         T_REGISTER
-            ldx         ZP_TASK_OWNER
-            sty         T_REGISTER
-            plp
-            txa
-            beq         @shared                             ; (Task 0, the system's, or nobody ($FF): the
-            cmp         #MAX_TASK_NUMBER + 1                ;   top of the family)
-            bcs         @shared
-            lda         PAGE1::SHSEL
-            sec
-            sbc         #$10
-            bcc         @shared                             ; (No levels left)
-            and         #$F0
-            sta         PAGE1::SHSEL
-            txa
-            ora         PAGE1::SHSEL
-            sta         PAGE1::SHSEL
-            bra         @cache
-
-@shared:
-            lda         #SH_SHARED_AREA                     ; The shared cache: /ram/s
-            jsr         SH_RAM_NAME
-            jsr         SH_FIND_IN
 
 @path:
             ldx         PAGE1::SHFIND                       ; $PATH ($LIBPATH): the directories to look in,
             lda         SH_FIND_ENV,X                       ;   with :s between them (SHOWBUF)
             ldy         SH_FIND_ENV + 1,X
             jsr         SH_ENV_READ
-            bcs         @card                               ; (None: the card's /bin)
+            bcs         @none                               ; (None)
             stz         PAGE1::SHSEL                        ; (Where the next one starts)
 
 @dir:
@@ -393,25 +355,6 @@ SH_FIND:
             ldy         PAGE1::SHSEL
             lda         PAGE1::SHOWBUF,Y
             bne         @dir
-            bra         @rom
-
-@card:
-            LOAD_ADDR   PAGE1::SHBUF, ZP_IO_BUF             ; /sd/N/bin/name (/lib/): after the card's root
-            jsr         IO_GETCWD
-            jsr         SH_ON_CARD                          ; (.X = where its path starts; 0: not a card)
-            txa
-            beq         @rom
-            jsr         SH_FIND_IN                          ; (Found: it doesn't come back)
-
-@rom:
-            ldx         #0                                  ; The ROM's: /rom/bin/name (/rom/lib/)
-:
-            lda         SH_S_ROMDIR,X
-            sta         PAGE1::SHBUF,X
-            inx
-            cpx         #SH_S_ROMDIR_LEN
-            bne         :-
-            jsr         SH_FIND_IN
 
 @none:
             lda         #ERR_IO_NOT_FOUND
@@ -434,37 +377,6 @@ SH_FIND_IN:
             dec         PAGE1::SHN
             bne         :-
             jmp         SH_EXEC_TRY
-
-SH_S_ROMDIR:    .byte   "/rom"
-SH_S_ROMDIR_LEN = * - SH_S_ROMDIR
-
-; SHBUF = /ram/N, task N's area on the RAM disk (N: 0-15, as a hex digit, 0-9 a-f); or (SH_RAM_NAME) /ram/C, C
-; a character (SH_SHARED_AREA: the shared RAM disk's, /ram/s).  OUT: .X = its length
-SH_AREA_NAME:
-            cmp         #10
-            bcc         :+
-            adc         #'a' - '0' - 10 - 1                 ; (C = 1)
-:
-            adc         #'0'
-
-SH_RAM_NAME:
-            pha
-            ldx         #0
-:
-            lda         SH_S_RAMDIR,X
-            sta         PAGE1::SHBUF,X
-            inx
-            cpx         #SH_S_RAMDIR_LEN
-            bne         :-
-            pla
-            sta         PAGE1::SHBUF,X
-            inx
-            rts
-
-SH_S_RAMDIR:    .byte   "/ram/"
-SH_S_RAMDIR_LEN = * - SH_S_RAMDIR
-SH_SHARED_AREA  = DISK_NAME_SRAM                        ; (/ram/s: the shared RAM disk, as HydraFS has it)
-SH_CACHE_LEVELS = 3                                     ; Owners up from the task whose caches are looked in
 
 ; What SH_FIND looks for (by SH_FIND_*, word tables): the environment variable with its directories, the
 ; card's directory (in SH_S_DIRS), and the extensions to try (in SH_S_EXTS: from, to)

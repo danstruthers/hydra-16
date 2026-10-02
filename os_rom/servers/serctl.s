@@ -1,8 +1,9 @@
 .debuginfo
 
 ; ****************************************************************************
-; The serial port's settings: baud rate, data bits, parity and stop bits (BIOS ROM page 2, included inside
-; `.scope PAGE2`, see all.s; part of the serial driver's server, ser_srv.s).  Runs in the serial task.
+; The serial port's settings: baud rate, data bits, parity and stop bits (BIOS ROM page 9, included inside
+; `.scope PAGE9`, see all.s; part of the serial driver's server, ser_srv.s on page 2, which reaches it through
+; gates, as it reaches ser_srv's: page9.s).  Runs in the serial task.
 ;   /dev/ser/ctl  read: the settings as text, "b9600 l8 pn s1" and CR LF.  write: commands, separated by
 ;                 spaces (or CR, LF): bN the baud rate (300, 600, 1200, 1800, 2400, 3600, 4800, 7200,
 ;                 9600, 19200, 115200), lN the data bits (5-8), pX the parity (n none, o odd, e even,
@@ -16,7 +17,7 @@
 ; Server ZP (the serial task's): ZP_IO_CHUNK = the client; ZP_IO_TMP, ZP_IO_BYTE, ZP_IO_LEFT, ZP_IO_BUF,
 ; ZP_IO_CNT, ZP_IO_OFS as scratch.
 
-.segment "IO_P2"
+.segment "SYS_P9"
 
 ; The rates (SER_RATE_*): the ACIA's code, a bit's time in CPU cycles (2 * 1843200 / rate, times the clock
 ; multiplier: the ACIA's clock is half the CPU's base clock), and the text

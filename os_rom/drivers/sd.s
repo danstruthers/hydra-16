@@ -550,18 +550,12 @@ SD_ROM_READ:
             ldy         #0
 
 @first:
-            lda         (SD_ARG),Y
-            sta         (SD_BUF),Y
-            iny
-            bne         @first
+            _M_COPY_PAGE SD_ARG, SD_BUF
             inc         SD_ARG + 1
             inc         SD_BUF + 1
 
 @second:
-            lda         (SD_ARG),Y
-            sta         (SD_BUF),Y
-            iny
-            bne         @second
+            _M_COPY_PAGE SD_ARG, SD_BUF
             dec         SD_BUF + 1
             pla
             sta         ROM_BANK_REG
@@ -583,7 +577,10 @@ SD_ROM_WRITE:
 ; its ctl file (SD_RAM_START), so here it's ready or it isn't.  OUT: C = 0; or C = 1, .A = ERR_IO_DEVICE
 SD_DISK_INIT:
             cpx         #DISK_ROM
-            beq         SD_ROM_INIT
+            bne         @ram
+            jmp         SD_ROM_INIT
+
+@ram:
             lda         SD_CARD_STATE,X
             beq         :+
             clc
@@ -608,18 +605,12 @@ SD_RAM_READ:
             ldy         #0
 
 @first:
-            lda         (SD_ARG),Y
-            sta         (SD_BUF),Y
-            iny
-            bne         @first
+            _M_COPY_PAGE SD_ARG, SD_BUF
             inc         SD_ARG + 1
             inc         SD_BUF + 1
 
 @second:
-            lda         (SD_ARG),Y
-            sta         (SD_BUF),Y
-            iny
-            bne         @second
+            _M_COPY_PAGE SD_ARG, SD_BUF
             dec         SD_BUF + 1
             jmp         SD_RAM_UNMAP
 
@@ -634,18 +625,12 @@ SD_RAM_WRITE:
             ldy         #0
 
 @first:
-            lda         (SD_BUF),Y
-            sta         (SD_ARG),Y
-            iny
-            bne         @first
+            _M_COPY_PAGE SD_BUF, SD_ARG
             inc         SD_ARG + 1
             inc         SD_BUF + 1
 
 @second:
-            lda         (SD_BUF),Y
-            sta         (SD_ARG),Y
-            iny
-            bne         @second
+            _M_COPY_PAGE SD_BUF, SD_ARG
             dec         SD_BUF + 1
             jmp         SD_RAM_UNMAP
 

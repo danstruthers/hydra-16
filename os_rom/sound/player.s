@@ -58,7 +58,7 @@ ZSM_PLAY_FILE:
 
 ; The player's task for the test song (the sound driver's SND_CTL_TEST: sndtest): songs/test.zsm on the ROM disk,
 ; to its end once, played as any song file is.  This task's namespace is the sound task's, which has no names, so
-; it mounts /sd (HydraFS) itself and opens /sd/x/songs/test.zsm (/rom/songs/test.zsm) on SH_RUN_FD.  Its entry
+; /rom is the system namespace's, every task's: it opens /rom/songs/test.zsm on SH_RUN_FD.  Its entry
 ; point (TASK_RUN, page C)
 ZSM_PLAY_TEST:
             lda         #>ZSM_RAM_END
@@ -70,11 +70,6 @@ ZSM_PLAY_TEST:
             sta         ZSM_TEXT,X
             dex
             bpl         :-
-            LOAD_ADDR   (ZSM_TEXT + ZSM_TEST_HFS - ZSM_TEST_NAMES), ZP_IO_BUF
-            lda         #<ZSM_TEXT
-            ldy         #>ZSM_TEXT
-            ldx         #0
-            jsr         IO_MOUNT                            ; (/sd -> hfs)
             lda         #<(ZSM_TEXT + ZSM_TEST_SONG - ZSM_TEST_NAMES)
             ldy         #>(ZSM_TEXT + ZSM_TEST_SONG - ZSM_TEST_NAMES)
             ldx         #IO_MODE_READ
@@ -93,9 +88,8 @@ ZSM_PLAY_TEST:
 @none:
             jmp         ZSM_BEGIN_NOT
 
-ZSM_TEST_NAMES: .byte   "/sd", 0
-ZSM_TEST_HFS:   .byte   "hfs", 0
-ZSM_TEST_SONG:  .byte   "/sd/", DISK_NAME_ROM, "/songs/test.zsm", 0
+ZSM_TEST_NAMES:
+ZSM_TEST_SONG:  .byte   "/rom/songs/test.zsm", 0
 ZSM_TEST_END:
 .assert     ZSM_TEXT + ZSM_TEST_END - ZSM_TEST_NAMES <= ZSM_RAM_END, error, "ZSM_TEST_NAMES: in ZSM_TEXT"
 

@@ -49,14 +49,18 @@ For programmers writing code for the Hydra-16: ROM code (the OS, drivers, server
 | `os_rom/all.s` | Includes everything, page by page (`.scope PAGEn`) |
 | `os_rom/os_rom_C02.cfg` | The linker config: memory areas per ROM page, segments |
 | `os_rom/include/` | Constants and macros: `hw.inc` (hardware), `kernel.inc` (tasks, errors, far pointers), `io.inc` (IO), `zero.s` (the OS zero page), `macros.inc`, `ascii.inc` |
-| `os_rom/kernel/` | Reset and boot (`os_main.s`), tasks and scheduler (`tasks.s`), IRQs (`irq.s`), MMU (`mmu.s`), shared memory (`shared.s`), far pointers (`fp.s`), the COMMON block (`common.s`), gates, thunks, printing |
-| `os_rom/io/` | The IO layer (`io.s`, `io_p0.s`), namespaces (`ns.s`) and the servers: console and serial (`ser_srv.s`), sound (`snd_srv.s`), pipes, `/dev/proc`, `/dev/sd`, HydraFS (`hfs_srv.s`, `hfs_write.s`, `hfs_check.s`, on ROM page 6; `hfs_format.s`, on page 3) |
-| `os_rom/drivers/` | Serial, sound, VIA, SPI, SD card, storage task |
+| `os_rom/kernel/` | Reset and boot (`os_main.s`), tasks and scheduler (`tasks.s`), IRQs (`irq.s`), MMU (`mmu.s`), shared memory (`shared.s`), far pointers (`fp.s`), semaphores (`sem.s`), exit statuses (`exits.s`), the COMMON block (`common.s`), gates, thunks, printing |
+| `os_rom/io/` | The IO layer (`io.s`, `io_p0.s`), namespaces (`ns.s`), the pipe server (`pipe_srv.s`) |
+| `os_rom/servers/` | The console and serial port (`ser_srv.s`, `serctl.s`, `serfast.s`), `/dev/sd` (`sd_srv.s`), the RAM disks (`ramdisk.s`), `/proc` (`proc_srv.s`), `/env` (`env_srv.s`), `/dev/time` (`time_srv.s`), `/dev/ram` (`ram_srv.s`) |
+| `os_rom/fs/` | HydraFS: the server (`hfs_srv.s`, `hfs_write.s`, `hfs_sparse.s`, on ROM page 6), format and check (`hfs_format.s`, `hfs_check.s`, on page 3) |
+| `os_rom/drivers/` | Serial, sound, VIA, SPI, SD cards and the disks' block layer, the clock chip (`rtc.s`), the storage task |
+| `os_rom/sound/` | The YM2151's library, `/dev/snd` (`snd_srv.s`), the patches, the song player |
 | `os_rom/monitor/` | WOZMON and the disassembler |
 | `os_rom/hyforth/` | HyForth |
 | `os_rom/shell/` | The shell's page 7 part: boot (the volumes, `boot.hys`), the prompt, the file and card commands, running programs |
-| `os_rom/tests/` | POST and the self tests |
-| `os_rom/tools/check_pages.js` | The cross-page call checker the build runs |
+| `os_rom/tests/`, `os_rom/hwtest/` | POST and the self tests; the hardware test |
+| `os_rom/romfs/`, `os_rom/romfs.txt` | The ROM disk's files (`/rom`) |
+| `os_rom/tools/` | The cross-page call checker the build runs (`check_pages.js`), the ROM space report, the ROMs' checksums |
 | `sim/` | The emulator, the regression tests, `tools/hydrafs.js` and `tools/mkhyx.js` ([tools](../tools/emulator.md)) |
 | `programs/` | A sample program (`.hyx`), and the header and link config for building others; `programs/c/`: the C library for cc65, and samples ([programs.md](programs.md)) |
 

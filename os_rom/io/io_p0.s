@@ -246,22 +246,24 @@ IO_SRV_MAP:
             lda         U_REGISTER
             sta         ZP_IO_SAVEU
             stz         U_REGISTER
-            txa                                             ; Its bank: IO_XFER_BANK for tasks 0-7, + 1 for 8-15
-            and         #8
+            txa                                             ; Its bank: IO_XFER_BANK + task / 4
             lsr
             lsr
-            lsr                                             ; (C = 0)
+            clc
             adc         #IO_XFER_BANK
             sta         RAM_BANK_REG
             stz         ZP_IO_REQ
-            txa
-            and         #7
-            asl                                             ; $8000 + (task & 7) * $400
-            asl
-            ora         #>PAGED_RAM_BASE
+            txa                                             ; $8000 + (task & 3) * IO_XFER_SIZE
+            and         #IO_XFER_PER_BANK - 1
+            phy
+            tay
+            lda         IO_SRV_PAGE,Y
+            ply
             sta         ZP_IO_REQ + 1
             pla
             rts
+
+IO_SRV_PAGE:    .byte   IO_XFER_PAGES
 
 ; Undo IO_SRV_MAP.  Preserves .A, .X, .Y and C
 IO_SRV_UNMAP:

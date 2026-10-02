@@ -34,7 +34,6 @@
 .include "io/io.s"
 .include "io/ns.s"              ; Per-task namespaces (IO_MOUNT, IO_BIND)
 .include "servers/ser_srv.s"         ; The serial driver's file server (/dev/cons, /dev/ser)
-.include "servers/serctl.s"          ; Its settings: /dev/ser/ctl, the rate and format IO_CTLs
 .include "servers/serfast.s"         ; Its fast paths: the ACIA's interrupt, console output and input
 .include "sound/ymfast.s"       ; The YM2151's interrupt: the sound clock (a fast handler, as serfast.s's)
 .endscope
@@ -133,6 +132,7 @@ SH_PROMPT_P7    = PAGE7::SH_PROMPT
 SH_CD_P7        = PAGE7::SH_CD
 SH_PWD_P7       = PAGE7::SH_PWD
 SH_CMD_P7       = PAGE7::SH_CMD
+SH_OWN_AREA_P7  = PAGE7::SH_OWN_AREA    ; (SHELL_MAIN: a shell's own area at /ram)
 SH_REDIR_P7     = PAGE7::SH_REDIR
 SH_UNREDIR_P7   = PAGE7::SH_UNREDIR
 SH_INSAVE_P7    = PAGE7::SH_INSAVE
@@ -152,6 +152,7 @@ ED_MAIN_P8      = PAGE8::ED_MAIN        ; (For page 7: SH_EDIT)
 .include "servers/time_srv.s"        ; The clock (/dev/time)
 .include "servers/ram_srv.s"         ; The RAM itself, for task 0 (/dev/ram)
 .include "io/pipe_srv.s"             ; The pipes (/dev/pipe: it runs in the pipe task)
+.include "servers/serctl.s"          ; The serial port's settings: /dev/ser/ctl, /dev/cons/ctl, the IO_CTLs (the serial task's)
 .include "drivers/rtc.s"             ; The clock chip (a DS1747 in U7)
 .endscope
 PROC_SERVE_P9   = PAGE9::PROC_SERVE     ; (For page 0's gates: io_p0.s)
@@ -162,6 +163,11 @@ ENV_INIT_P9     = PAGE9::ENV_INIT       ; (For page 7: SH_BOOT)
 TIME_SERVE_P9   = PAGE9::TIME_SERVE     ; (For page 0's gates: io_p0.s)
 RAM_SERVE_P9    = PAGE9::RAM_SERVE      ; (... and thunks.s)
 PIPE_SERVE_P9   = PAGE9::PIPE_SERVE
+SER_CONFIG_P9   = PAGE9::SER_CONFIG     ; (serctl.s: for page 0's and page 2's gates)
+SER_SET_P9      = PAGE9::SER_SET
+SER_CTL_READ_P9 = PAGE9::SER_CTL_READ
+SER_CTL_WRITE_P9 = PAGE9::SER_CTL_WRITE
+CONSCTL_REQUEST_P9 = PAGE9::CONSCTL_REQUEST
 PROC_NS_LIST_P9 = PAGE9::PROC_NS_LIST   ; (IO_NS_LIST's gates)
 PROC_CMD_P9     = PAGE9::PROC_CMD       ; (For HyForth: /proc/N/cmd's lines)
 CLOCK_GET_P9    = PAGE9::CLOCK_GET      ; (For page 6: HydraFS's stamps)

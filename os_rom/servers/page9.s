@@ -28,3 +28,7 @@ FAR_GATE_INLINE     TASK_MAY,       PAGE5::TASK_MAY,        5   ; (/proc/N/ctl, 
 ; ... and to the IO layer (page 2)
 FAR_GATE_INLINE     IO_SRV_COUNT,   PAGE2::IO_SRV_COUNT,    2
 FAR_GATE_INLINE     STAT_ZERO,      PAGE2::STAT_ZERO,       2
+FAR_GATE_INLINE     SER_ADD_WAIT,   PAGE2::SER_ADD_WAIT,    2   ; (The serial server's: serctl.s)
+FAR_GATE_INLINE     SER_OK,         PAGE2::SER_OK,          2
+FAR_GATE_INLINE     SER_REFUSE,     PAGE2::SER_REFUSE,      2
+FAR_GATE_INLINE     SER_WOULD_BLOCK, PAGE2::SER_WOULD_BLOCK, 2

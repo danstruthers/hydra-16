@@ -34,9 +34,6 @@
 .endmacro
 
 S_DEV_PREFIX:   .byte "/dev/"
-S_OWN_PREFIXES: .byte "/env"               ; (Names under them: those devices', as if mounted, in every task)
-S_OWN_PREFIXES_END:
-OWN_PREFIX_LEN  = 4
 DEV_PREFIX_LEN  = 5
 
 ; ---- helpers
@@ -76,44 +73,53 @@ IO_XFER_SETUP:
             stz         ZP_IO_DATA
             rts
 
-; Task .A's IO transfer area: .A = its high byte, $80 + (task & 7) * 4, and .Y = its bank (IO_XFER_BANK for
-; tasks 0-7, + 1 for 8-15).  Preserves .X
+; Task .A's IO transfer area: .A = its high byte, $80 + (task & 3) * 6, and .Y = its bank (IO_XFER_BANK +
+; task / 4).  Preserves .X
 IO_XFER_OF:
-            ldy         #IO_XFER_BANK
-            cmp         #8
-            bcc         :+
-            iny
-:
-            and         #7
-            asl
-            asl
-            ora         #>PAGED_RAM_BASE
+            and         #$0F
+            pha
+            lsr
+            lsr
+            clc
+            adc         #IO_XFER_BANK
+            tay
+            pla
+            and         #IO_XFER_PER_BANK - 1
+            phx
+            tax
+            lda         IO_XFER_PAGE,X
+            plx
             rts
-.assert     IO_XFER_SIZE = $400, error, "IO_XFER_OF: 1K areas, 8 to a bank"
+
+IO_XFER_PAGE:   .byte   IO_XFER_PAGES
 
 ; Map this task's IO transfer bank at $8000 (U = 0; _M_IO_MAP_XFER's).  Preserves .A, .X.  Modifies: .Y
 IO_XFER_MAP:
             stz         U_REGISTER
-            ldy         #IO_XFER_BANK
             pha
-            lda         T_REGISTER                  ; (Tasks 8-15: the next bank)
-            cmp         #8
+            jsr         IO_XFER_BANK_OF
+            tay
             pla
-            bcc         :+
-            iny
-:
             sty         RAM_BANK_REG
             rts
 
 ; ... with .X instead (U as it is).  Preserves .A, .Y.  Modifies: .X
 IO_XFER_REMAP:
-            ldx         T_REGISTER
-            cpx         #8
-            ldx         #IO_XFER_BANK
-            bcc         :+
-            inx
-:
+            pha
+            jsr         IO_XFER_BANK_OF
+            tax
+            pla
             stx         RAM_BANK_REG
+            rts
+
+; .A = this task's IO transfer bank (IO_XFER_BANK + task / 4)
+IO_XFER_BANK_OF:
+            lda         T_REGISTER
+            and         #$0F
+            lsr
+            lsr
+            clc
+            adc         #IO_XFER_BANK
             rts
 
 ; .X = .A = ZP_IO_FD * IO_FD_SIZE: the fd's entry in the fd table
@@ -308,34 +314,23 @@ IO_ADVANCE:
 @done:
             rts
 
-; Copy ZP_IO_CHUNK (1-256) bytes: transfer data -> caller's buffer (IO_COPY_OUT) or back (IO_COPY_IN).
-; Modifies: .A, .Y
+; Copy ZP_IO_CHUNK (1-256; 256: 0) bytes: transfer data -> caller's buffer (IO_COPY_OUT) or back (IO_COPY_IN).
+; (A whole page, the most of a big read or write, four bytes a turn: _M_COPY_N.)  Modifies: .A, .Y
 IO_COPY_OUT:
             ldy         #0
-:
-            lda         (ZP_IO_DATA),Y
-            sta         (ZP_IO_BUF),Y
-            iny
-            cpy         ZP_IO_CHUNK                 ; (256: ZP_IO_CHUNK = 0, so Y wraps round to it)
-            bne         :-
+            _M_COPY_N   ZP_IO_DATA, ZP_IO_BUF, ZP_IO_CHUNK
             rts
 
 IO_COPY_IN:
             ldy         #0
-:
-            lda         (ZP_IO_BUF),Y
-            sta         (ZP_IO_DATA),Y
-            iny
-            cpy         ZP_IO_CHUNK
-            bne         :-
+            _M_COPY_N   ZP_IO_BUF, ZP_IO_DATA, ZP_IO_CHUNK
             rts
 
 ; ****************************************************************************
 ; The calls
 
 ; Open a file.  The name goes through the task's namespace first (IO_MOUNT, IO_BIND); a name it doesn't
-; match must be "/dev/<device>" or "/dev/<device>/<rest>" (or "/env[/<rest>]" or "/rom[/<rest>]": the env
-; or rom device, with no mount, in every task).  The server opens the rest of the name.
+; match must be "/dev/<device>" or "/dev/<device>/<rest>".  The server opens the rest of the name.
 ; IN: .A.Y = name (zero-terminated, 255 characters at most), .X = IO_MODE_* bits
 ; OUT (success): .A = fd, C = 0
 ; OUT (failure): .A = ERR_IO_NOT_FOUND, ERR_IO_NO_FDS, ERR_IO_NS_LOOP, ERR_IO_NAME or the server's
@@ -451,12 +446,10 @@ IO_OPEN_NAME:
 @prefix:
             lda         (ZP_IO_DATA),Y
             cmp         S_DEV_PREFIX,Y
-            bne         @env
+            bne         @not_found
             dey
             bpl         @prefix
             lda         #DEV_PREFIX_LEN             ; ZP_IO_LEFT = the device name
-
-@device:
             sta         ZP_IO_LEFT
             pha
             lda         ZP_IO_DATA + 1
@@ -472,37 +465,6 @@ IO_OPEN_NAME:
             jsr         NS_CUT                      ; The rest of the name, for the server
             pla
             bra         @found
-
-@env:                                               ; "/env" or "/rom", or a name under them: the env or
-            ldx         #0                          ;   rom device's (with no mount, in every task)
-
-@own:
-            stx         ZP_IO_TMP                   ; (Where this prefix starts)
-            ldy         #0
-:
-            lda         (ZP_IO_DATA),Y
-            cmp         S_OWN_PREFIXES,X
-            bne         @own_next
-            inx
-            iny
-            cpy         #OWN_PREFIX_LEN
-            bne         :-
-            lda         (ZP_IO_DATA),Y
-            beq         :+
-            cmp         #'/'
-            bne         @not_found
-:
-            lda         #1                          ; (The device's name: "env" or "rom", after the '/')
-            bra         @device
-
-@own_next:
-            lda         ZP_IO_TMP
-            clc
-            adc         #OWN_PREFIX_LEN
-            tax
-            cpx         #S_OWN_PREFIXES_END - S_OWN_PREFIXES
-            bne         @own
-            bra         @not_found
 
 @found:
             sta         ZP_IO_CNT                   ; ZP_IO_CNT = device index
@@ -583,6 +545,7 @@ IO_OPEN_NAME:
             sta         IO_FD_FLAGS,X
 
 @opened:
+            jsr         IO_UNION_KEEP               ; (Through a union: its next members, at the end)
             lda         ZP_IO_FD
             clc
             bra         @done
@@ -705,6 +668,9 @@ IO_CLOSE:
             _M_IO_MAP_XFER
             lda         #H9_CLUNK
             jsr         IO_SERVE
+            php
+            jsr         IO_UNION_DROP
+            plp
             _M_IO_UNMAP
             pha
             php
@@ -775,6 +741,8 @@ IO_READ:
 @eof:
             pla
             pla
+            jsr         IO_UNION_NEXT               ; A union's directory: its next member?
+            bcc         @loop
 
 @ok:
             clc
@@ -790,6 +758,196 @@ IO_READ:
 
 @done:
             PULL_YX
+            rts
+
+; ****************************************************************************
+; A union's directory: an fd that reads it reads each member's listing in turn, as in Plan 9 (one fd a task:
+; IO_BLK_UFD; the name has to fit IO_UNAME_MAX).  (The IO transfer bank is mapped for these.)
+
+; IO_OPEN, an fd opened (ZP_IO_FD): through a union, for reading, with members after the one it opened?  Then
+; it's the task's union fd, with the member (IO_BLK_SKIP) and the name (IO_BLK_ORIG) kept.
+; Modifies: .A, .Y, ZP_IO_LEFT, ZP_IO_CHUNK
+IO_UNION_KEEP:
+            jsr         IO_UNION_DROP               ; (Not any more, if it was)
+            ldy         #IO_BLK_CALL
+            lda         (ZP_IO_XFER),Y
+            cmp         #H9_OPEN
+            bne         @no
+            lda         ZP_IO_MODE
+            and         #IO_MODE_READ
+            beq         @no
+            ldy         #IO_BLK_ULEFT
+            lda         (ZP_IO_XFER),Y
+            beq         @no                         ; (The union's last member)
+            bmi         @no                         ; (No union)
+            lda         #IO_BLK_ORIG                ; (ZP_IO_XFER: a page's start)
+            sta         ZP_IO_LEFT
+            lda         #IO_BLK_UNAME
+            sta         ZP_IO_CHUNK
+            lda         ZP_IO_XFER + 1
+            sta         ZP_IO_LEFT + 1
+            sta         ZP_IO_CHUNK + 1
+            ldy         #0
+
+@copy:
+            lda         (ZP_IO_LEFT),Y
+            sta         (ZP_IO_CHUNK),Y
+            beq         @kept
+            iny
+            cpy         #IO_UNAME_MAX
+            bne         @copy
+
+@no:
+            rts                                     ; (Too long: its first member's listing only)
+
+@kept:
+            ldy         #IO_BLK_SKIP
+            lda         (ZP_IO_XFER),Y
+            ldy         #IO_BLK_USKIP
+            sta         (ZP_IO_XFER),Y
+            lda         ZP_IO_FD
+            inc
+            ldy         #IO_BLK_UFD
+            sta         (ZP_IO_XFER),Y
+            rts
+
+; If fd ZP_IO_FD is the task's union fd, it isn't any more.  Modifies: .A, .Y
+IO_UNION_DROP:
+            ldy         #IO_BLK_UFD
+            lda         (ZP_IO_XFER),Y
+            dec
+            cmp         ZP_IO_FD
+            bne         :+
+            lda         #0
+            sta         (ZP_IO_XFER),Y
+:
+            rts
+
+; IO_READ, at the end of what fd ZP_IO_FD reads: if it's the task's union fd and a directory, the union's next
+; member that has the name is opened on it (then the one it read is closed), from its start; with none, the fd
+; stays as it was, at its end.  OUT: C = 0: read on; C = 1: the end.  Preserves ZP_IO_BUF, ZP_IO_CNT, ZP_IO_LEFT.
+; Modifies: .A, .X, .Y, the namespace's ZP (NS_RESOLVE's)
+IO_UNION_NEXT:
+            ldy         #IO_BLK_UFD
+            lda         (ZP_IO_XFER),Y
+            dec
+            cmp         ZP_IO_FD
+            beq         :+
+            sec
+            rts
+:
+            jsr         IO_UNION_DROP               ; (Kept again below, if there's another member)
+            lda         #H9_STAT                    ; A directory?
+            jsr         IO_SERVE
+            bcs         @end
+            ldy         #IO_ST_MODE
+            lda         (ZP_IO_DATA),Y
+            bmi         :+                          ; (HFS_M_DIR)
+
+@end:
+            sec
+            rts
+:
+            ldx         #3                          ; Kept: the read's (ZP_IO_BUF, ZP_IO_CNT, ZP_IO_LEFT)
+:
+            lda         ZP_IO_BUF,X
+            pha
+            dex
+            bpl         :-
+            lda         ZP_IO_LEFT
+            pha
+            lda         ZP_IO_LEFT + 1
+            pha
+            jsr         IO_FD_ENTRY                 ; And the member's: its device and fid
+            lda         IO_FD_SERVER,X
+            pha
+            lda         IO_FD_FID,X
+            pha
+            jsr         NS_ORIG_PTR                 ; The name, back as IO_OPEN kept it, and its member
+            ldy         #IO_BLK_USKIP
+            lda         (ZP_IO_XFER),Y
+            ldy         #IO_BLK_SKIP
+            sta         (ZP_IO_XFER),Y
+            lda         #IO_BLK_UNAME
+            sta         ZP_IO_CHUNK
+            lda         ZP_IO_XFER + 1
+            sta         ZP_IO_CHUNK + 1
+            ldy         #0
+:
+            lda         (ZP_IO_CHUNK),Y
+            sta         (ZP_IO_LEFT),Y
+            iny
+            cmp         #0
+            bne         :-
+            ldy         #IO_BLK_CALL                ; (An open: NS_RESOLVE)
+            lda         #H9_OPEN
+            sta         (ZP_IO_XFER),Y
+            ldy         #IO_BLK_ULEFT
+            lda         #1                          ; (Members after it: NS_RETRY looks)
+            sta         (ZP_IO_XFER),Y
+
+@member:
+            jsr         NS_RETRY                    ; The next member: the name in the data area
+            bcs         @none
+            jsr         NS_RESOLVE                  ; .A = the device, the rest of the name for it
+            bcs         @member                     ; (Not there, or not a mount: the next)
+            pha
+            jsr         IO_FD_ENTRY
+            pla
+            sta         IO_FD_SERVER,X
+            stz         IO_FD_FID,X
+            lda         IO_FD_MODE,X
+            sta         ZP_IO_MODE
+            ldy         #IO_BLK_MODE
+            sta         (ZP_IO_XFER),Y
+            lda         #H9_OPEN
+            jsr         IO_SERVE                    ; .A = the fid
+            bcs         @member
+            sta         ZP_IO_TMP                   ; (The fid)
+            jsr         IO_FD_ENTRY
+            lda         IO_FD_SERVER,X
+            sta         ZP_IO_OFS                   ; (The device)
+            pla                                     ; The member read: closed
+            sta         IO_FD_FID,X
+            pla
+            sta         IO_FD_SERVER,X
+            lda         #H9_CLUNK
+            jsr         IO_SERVE
+            jsr         IO_FD_ENTRY                 ; This one, from its start
+            lda         ZP_IO_OFS
+            sta         IO_FD_SERVER,X
+            lda         ZP_IO_TMP
+            sta         IO_FD_FID,X
+            stz         IO_FD_OFS,X
+            stz         IO_FD_OFS + 1,X
+            stz         IO_FD_OFS + 2,X
+            stz         IO_FD_OFS + 3,X
+            jsr         IO_UNION_KEEP               ; (Its next members, at its end)
+            clc
+            bra         @back
+
+@none:
+            jsr         IO_FD_ENTRY                 ; No more: as it was
+            pla
+            sta         IO_FD_FID,X
+            pla
+            sta         IO_FD_SERVER,X
+            sec
+
+@back:
+            ror         ZP_IO_TMP                   ; (C, kept in bit 7)
+            pla
+            sta         ZP_IO_LEFT + 1
+            pla
+            sta         ZP_IO_LEFT
+            ldx         #0
+:
+            pla
+            sta         ZP_IO_BUF,X
+            inx
+            cpx         #4
+            bne         :-
+            rol         ZP_IO_TMP
             rts
 
 ; Write to an fd.  Returns when the count is done, or when the server takes nothing (a server that takes

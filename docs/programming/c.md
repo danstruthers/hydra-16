@@ -141,7 +141,7 @@ programs\c\hyc.bat game.c map.c sound.s
 
 ### **4. A program's life: arguments, environment, exit status**
 
-**Running it.**  HyForth runs a program by name: a word it doesn't know is looked for as `name.hyx` (then `name.hys`, a script, and `name.zsm`, a song) in the current directory, then in the directories of `$PATH`, or in `/bin` on the current card.  `run file.hyx args` runs one by its file name.  **HyForth's own words come first**: a program called `fg`, `ls` or `wait` never runs by name (use `run`, or another name; `words` lists them).
+**Running it.**  HyForth runs a program by name: a word it doesn't know is looked for as `name.hyx` (then `name.hys`, a script, and `name.zsm`, a song) in the current directory, then in `/bin` (a union in the namespace of the program caches, the boot card's `/bin` and the ROM's: [io.md](io.md#namespaces)), then in the directories of `$PATH`.  `run file.hyx args` runs one by its file name.  **HyForth's own words come first**: a program called `fg`, `ls` or `wait` never runs by name (use `run`, or another name; `words` lists them).
 
 **What it starts with:**
 * **`argc` and `argv`.**  `argv[0]` is the name as it was typed (`hello`, `bin/hello.hyx`).  The rest of the line is split at spaces; `"two words"` is one argument (without the quotes).  At most 15 arguments, and 63 characters of line.
@@ -603,6 +603,8 @@ The CPU does about 3.6 million simple operations a second, and cc65's code isn't
 | `int hy_spawn (const char* cmd)` | Start a command line: its task, or -1 |
 | `int hy_wait (int task, char* msg)` | Wait for a task: its code, and its message |
 | `int hy_kill (int task)` | End a task and the tasks it started (its status: 137) |
+| `int hy_bind (new, old, flags)`, `int hy_mount (dev, old, flags, spec)` | The namespace, as Plan 9's `bind` and `mount`: names under `old` stand for names under `new` (or are device `dev`'s, such as `"zero"`; `spec`: `NULL`, or what the server serves there, as Plan 9's, `hy_mount ("hfs", "/a", HY_MREPL, "r")`).  `flags`: `HY_MREPL` (replace `old`'s entries), `HY_MBEFORE`, `HY_MAFTER` (a union's member, before or after the others), `HY_MCREATE` (files made in the union go to it).  0, or -1 |
+| `int hy_unmount (new, old)`, `int hy_hide (path)` | Take `old`'s member `new` out (`NULL`: all of `old`'s entries); make nothing under `path` found.  0, or -1 |
 | `void hy_exits (const char* msg)` | End with a message (code 1), or success (`NULL`, `""`) |
 | `int hy_sem_new (unsigned char count)`, `int hy_mutex_new (void)` | A semaphore (1-16), or -1 |
 | `int hy_sem_acquire (s)`, `hy_sem_try (s)`, `hy_sem_release (s)`, `hy_sem_free (s)` | [Semaphores](#9-tasks-working-together-semaphores) |

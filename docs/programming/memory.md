@@ -88,9 +88,9 @@ The calling task must hold a reference for all but `SH_ALLOC` and `SH_ATTACH`.
 | Shared bank ID | Use |
 | :------------- | :-- |
 | `$00` | System tables: the shared bank map (`$8200`), the shared handle table (`$8400`), the device table (`$8800`), the shared reference table (`$8900`) |
-| `$09` | The IO transfer areas: 512 bytes per task ([servers.md](servers.md#the-request-block-and-the-transfer-area)) |
+| `$09-$0C` | The IO transfer areas: 1.5K per task, four to a bank, and a copy of the system namespace in each ([servers.md](servers.md#the-request-block-and-the-transfer-area)) |
 | any on a bad chip | Reserved at boot if POST found the chip bad; missing `U` macro-pages too |
-| a run in `$01-$7F` | The shared RAM disk's (`/ram/s`: 512K at boot, from the lower half, so `SH_ALLOC`, which takes from the top down, doesn't look past them; [io.md](io.md#the-ram-disks-ram)) |
+| a run in `$01-$7F` | The shared RAM disk's (`/sram`: 512K at boot, from the lower half, so `SH_ALLOC`, which takes from the top down, doesn't look past them; [io.md](io.md#the-ram-disks-ram)) |
 
 ### **Far pointers**
 

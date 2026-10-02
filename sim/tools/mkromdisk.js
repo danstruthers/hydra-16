@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // mkromdisk.js: the paged ROM as one disk, the ROM disk: a partition table in its block 0, the system's banks
 // (HyForth's variables, the hardware test) in a partition of their own, and a read-only HydraFS
-// volume in the rest, which the Hydra sees as /sd/x and binds at /rom (docs/plans/DISKS.md).  The files come from
+// volume in the rest, which the Hydra mounts at /rom (mount hfs /rom x) (docs/plans/DISKS.md).  The files come from
 // a manifest; the HydraFS is made with hydrafs.js (as a card's), stamped 2000-01-01 so the image is the same each
 // build, and written into the paged ROM image after ld65 has written the system's banks (build.js).
 //

@@ -15,7 +15,7 @@ From the top of the repository:
 node sim/hydrasim.js -i
 ```
 
-The Hydra boots in your terminal: its power-on test, the welcome, and HyForth's prompt, `/ram/1>` (the current
+The Hydra boots in your terminal: its power-on test, the welcome, and HyForth's prompt, `/ram>` (the current
 directory: with no card, the shell's own area on the RAM disk, where files can be saved until a reset).  Your terminal is now the Hydra's serial console.  Ctrl-A then x quits the emulator, and Ctrl-A
 then h lists its other keys.
 
@@ -25,23 +25,23 @@ HyForth is the Hydra's shell and its language.  Type a line, press Enter, and it
 on a stack, and words take them from it:
 
 ```
-/ram/1> 1 2 + .
+/ram> 1 2 + .
  0003
 ```
 
 `.` prints the top number in hex, 4 digits.  For decimal, say so:
 
 ```
-/ram/1> decimal 12 12 * .
+/ram> decimal 12 12 * .
  144
-/ram/1> hex
+/ram> hex
 ```
 
 Make a word of your own with `:` and `;`.  It works like the built-in ones:
 
 ```
-/ram/1> : sq dup * ;
-/ram/1> 7 sq .
+/ram> : sq dup * ;
+/ram> 7 sq .
  0031
 ```
 
@@ -54,20 +54,22 @@ task's number switches the console to it, and `ps` lists the tasks.
 Even with no card, the Hydra has files: the ones built into its ROM, under `/rom`.
 
 ```
-/ram/1> ls /rom/bin
+/ram> ls /rom/bin
 code.hyx 2156
 hello.hyx 8616
 ...
 scom.zsm 838
-/ram/1> cat /rom/README
+/ram> cat /rom/README
 ```
 
 A program runs by its name: `hello` runs `/rom/bin/hello.hyx` (a C program), and `scom` plays the song
 `scom.zsm` on the YM2151 (the emulator times the music but makes no sound; `--ym-vgm FILE` saves it to listen to).
-Words that fail say why:
+The shell looks for it in the current directory, then in `/bin`, which isn't one directory but several put
+together, as in Plan 9: `ns` shows how (the caches on the RAM disk, a card's `/bin`, then `/rom/bin`), and `ls /bin`
+lists them all.  Words that fail say why:
 
 ```
-/ram/1> cat /rom/nope
+/ram> cat /rom/nope
 
  !IO ERR! not found
 ```

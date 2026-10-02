@@ -229,3 +229,38 @@ F_CELL          := 2
                 BYTECOPY    {#>addr}, {to + 1}
                 BYTECOPY    {#<addr}, {to}
 .endmacro
+
+; Copy a page, 256 bytes, from (src),Y to (dst),Y (zero-page pointers), four bytes a turn of the loop: 13.75 cycles
+; a byte, against 16 for one a turn.  IN: .Y = 0.  OUT: .Y = 0.  Modifies: .A.  (Anonymous labels, so the caller's
+; cheap local labels go on past it)
+.macro _M_COPY_PAGE src, dst
+:
+            .repeat 4
+            lda         (src),Y
+            sta         (dst),Y
+            iny
+            .endrepeat
+            bne         :-
+.endmacro
+
+; Copy n bytes (the zero-page byte n: 1-256, 0 for 256) from (src),Y to (dst),Y: a whole page four bytes a turn,
+; and fewer one a turn (19 cycles a byte).  IN: .Y = 0.  Modifies: .A, .Y.  (Anonymous labels, as _M_COPY_PAGE's)
+.macro _M_COPY_N src, dst, n
+            lda         n
+            bne         :++                         ; (Fewer)
+:
+            .repeat 4
+            lda         (src),Y
+            sta         (dst),Y
+            iny
+            .endrepeat
+            bne         :-
+            bra         :++
+:
+            lda         (src),Y
+            sta         (dst),Y
+            iny
+            cpy         n
+            bne         :-
+:
+.endmacro

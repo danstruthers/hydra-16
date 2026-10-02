@@ -1,0 +1,2 @@
+# The documentation PDF (sim/tools/mkpdf.js): never a text file, whatever core.autocrlf says
+*.pdf binary

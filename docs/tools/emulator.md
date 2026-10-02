@@ -61,7 +61,8 @@ node hydrasim.js [options]
 | `--dump ADDR[:LEN][@TASK]` | Hex dump task RAM after the run, e.g. `--dump 7D90:16@1` |
 | `--watch ADDR[@TASK]` | Report every write to a task RAM address: the old and new value, and the PC that wrote it |
 | `--mark TEXT` | Report the cycle each time the serial output ends with `TEXT` (`\r` = CR), e.g. `--mark "/> "` to time a command from prompt to prompt |
-| `--profile N` | From cycle `N` on, count the instructions each task runs in each routine (named from the build's debug info, `os_rom/obj/os_rom_C02.dbg`), and report the top 30, e.g. `--profile 2800000 --input '\wwords \| wc . . .\r'` |
+| `--profile-top N` | How many routines the profile lists (default 30) |
+| `--profile N[-M]` | From cycle `N` on (to `M`), count the cycles and instructions each task runs in each routine (named from the build's debug info, `os_rom/obj/os_rom_C02.dbg`), and report the busiest by cycles (with `--mark`, the window can be one command: its line's mark to the next prompt's), e.g. `--profile 2800000 --input '\wwords \| wc . . .\r'` |
 | `--ym-log` | List every YM2151 key-on (channel and cycle) in the report, not just the first 8.  The report also gives the longest gap between key-ons and the time from the first to the last (a late note shows as a long gap) |
 | `--u7-fault An:high\|low` | Task RAM line `An` (A15-A18: `T0-T3`) stuck high or low at U7, e.g. `A17:low`: tasks that differ in that bit share their RAM (in the emulator, their bank registers too, which the board keeps apart) |
 | `--ym-dump` | Show the YM2151's registers at the end, 16 a line (as the chip has them: the carriers' levels with the volumes) |

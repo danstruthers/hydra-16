@@ -91,7 +91,7 @@ A server that counts its users keeps counts per fid.  It gets an `H9_DUP` for ev
 
 ### **The request block and the transfer area**
 
-Each task has a 512-byte **IO transfer area** in shared bank ID `$09`, at `$8000 + task * $200` when mapped.  Its request block is at the start, and the data at `+$100`:
+Each task has a 1.5K **IO transfer area**, four to a shared bank: in bank ID `$09 + task / 4` (`$09-$0C`), at `$8000 + (task & 3) * $600` when mapped (`IO_XFER_OF`).  Its request block is at the start, the data at `+$100`, and the task's namespace after it; each bank's `$9800-$9BFF` holds a copy of the system namespace:
 
 | Offset | Field (`include/io.inc`) |
 | :----- | :----------------------- |

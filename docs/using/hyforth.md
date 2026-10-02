@@ -229,7 +229,7 @@ forth io files shell tasks (sound) mem tools term
 
 Without the `shell` library, the prompt is a plain `> `, a line's `|`, `>` and `<` are words like any other (unknown ones), and a word HyForth doesn't know is an error, not a program to run.
 
-**Libraries from files.** `lib name`, for a name that isn't a ROM library's, reads `name.hyl`: HyForth source, like a script.  It's looked for the way a program is: in the current directory, then (for a name with no `/`) in the caches' `lib` directories on the RAM disks, in the directories of `$LIBPATH`, or, with no `LIBPATH`, in `/lib` on the current directory's card, and last in `/rom/lib`.  The words the file defines become the library's, and it's searched from then on.
+**Libraries from files.** `lib name`, for a name that isn't a ROM library's, reads `name.hyl`: HyForth source, like a script.  It's looked for the way a program is: in the current directory, then (for a name with no `/`) in `/lib` (a union, as `/bin` is: the caches' `lib` directories, the boot card's `/lib`, then `/rom/lib`), then in the directories of `$LIBPATH`.  The words the file defines become the library's, and it's searched from then on.
 
 * **While it loads,** the words you've defined yourself aren't searched: a library uses the base, the ROM libraries and other libraries.  A library file can load the libraries it needs with `lib` lines of its own.
 * **An error** while it loads (an unknown word, say) stops it, and the library is dropped.  A file that isn't there is `!IO ERR!`.
@@ -254,7 +254,7 @@ forth io files shell tasks sound mem tools term (greet)
 
 ### **The shell: directories, files and programs**
 
-**At boot** the shell looks for HydraFS volumes on the SD cards (`/sd/0` to `/sd/7`), lists the ones it finds (`hydrafs 0 2`), and makes the lowest one's root the **current directory**.  Then it runs **`boot.hys`** from there, if there is one, before the first prompt: a script for your own words and settings.  **With no card**, the current directory is the shell's own area on the RAM disk, `/ram/1` (the prompt `/ram/1> `), where files can be saved until a reset, and the ROM's `/rom/boot.hys` runs instead.
+**At boot** the shell looks for HydraFS volumes on the SD cards (`/sd/0` to `/sd/7`), lists the ones it finds (`hydrafs 0 2`), and makes the lowest one's root the **current directory**.  Then it runs **`boot.hys`** from there, if there is one, before the first prompt: a script for your own words and settings.  **With no card**, the current directory is the shell's own area on the RAM disk, `/ram` (the prompt `/ram> `), where files can be saved until a reset, and the ROM's `/rom/boot.hys` runs instead.
 
 **Names** are relative to the current directory unless they start with `/`, and `.` and `..` work anywhere in them: `games/star.frt`, `../notes`, `/sd/1/log`.  The current directory is a directory on a card, or `/` (`cd /`); each task has one of its own, and the tasks it starts get a copy.
 
@@ -276,6 +276,7 @@ forth io files shell tasks sound mem tools term (greet)
 | `run file [args]` | `(run) ( sz -- )` | Run a program in a task of its own, and wait for it (below) |
 | `edit [file]` | | Edit a text file (below) |
 | `echo text` | | Print the text, and a new line |
+| `# text` | | A comment: the rest of the line is nothing (scripts; the namespace files) |
 | `send N line` | | Shell N (one this shell started, e.g. with `shell`) runs the line, as if typed at its prompt: now, if it's waiting there, or when it next is (`/proc/N/cmd`) |
 | `prompt` | `( sz -- )` | Set the prompt's format (below) |
 
@@ -301,14 +302,14 @@ games/
 * **Anything else is a HyForth script**, read by a copy of the shell, as a pipeline's stage is: it starts with this shell's dictionary and stack, and what it defines or leaves on the stack goes away with it.  `bye` in it ends it.
 * A program has the console while it runs (if the shell has it), so **Ctrl-C stops it**, and gets copies of the shell's fds, namespace and current directory: it can be a pipeline's stage (`run hello.hyx | wc`).
 
-**A program by its name:** a word HyForth doesn't know is looked for as a program, `name.hyx`, then `name.hys`, then `name.zsm` (a song, played: [below](#tasks-and-the-console)): in the current directory, then (for a name with no `/`) in the program caches on the RAM disks (the shell's own, `/ram/1/bin`, then the shared `/ram/s/bin`: [`/ram`](../programming/io.md#the-ram-disks-ram)), in the directories of `$PATH` (below), or, with no `PATH`, in `/bin` on the current directory's card, and last in `/rom/bin`, the ROM's own ([`/rom`](../programming/io.md#the-roms-files-rom)).  So `cp game.hyx /ram/s/bin/game.hyx` makes `game` load from RAM.  So `hello` runs `hello.hyx`, and `theme` plays `theme.zsm`; with no card, `ls /rom/bin` shows what runs.
+**A program by its name:** a word HyForth doesn't know is looked for as a program, `name.hyx`, then `name.hys`, then `name.zsm` (a song, played: [below](#tasks-and-the-console)): in the current directory, then (for a name with no `/`) in `/bin`, as Plan 9's shell looks (`path=(. /bin)`), then in the directories of `$PATH` (below).  `/bin` is a union in the namespace ([namespaces](../programming/io.md#namespaces)): the program caches on the RAM disks (the shell's own, `/ram/bin`, then the shared `/sram/bin`: [`/ram`](../programming/io.md#the-ram-disks-ram)), the boot card's `/bin`, and the ROM's own, `/rom/bin` ([`/rom`](../programming/io.md#the-roms-files-rom)); `ls /bin` lists them all.  So `cp game.hyx /bin/game.hyx` puts a copy in the shell's cache, and `game` loads from RAM; `bind -a /sd/0/tools /bin` adds a directory.  So `hello` runs `hello.hyx`, and `theme` plays `theme.zsm`; with no card, `ls /rom/bin` shows what runs.
 
 **The environment:** variables, `NAME=value`, as files under `/env`; each task has its own, and the tasks it starts (programs, scripts, shells) get a copy.  The shell uses three, and sets two:
 
 | Variable | Does |
 | :------- | :--- |
-| `PATH` | Where programs are found by name: directories, `:` between them (`/sd/0/bin:/sd/1/tools`) |
-| `LIBPATH` | Where `lib` finds library files (`name.hyl`), the same way (without it: `/lib` on the current card) |
+| `PATH` | Where programs are also found by name, after `/bin`: directories, `:` between them (`/sd/1/bin:/sd/1/tools`) |
+| `LIBPATH` | Where `lib` also finds library files (`name.hyl`), after `/lib`, the same way |
 | `HOME` | Where `cd` alone goes (without it: the current card's root) |
 | `status` | Set by the shell: the last program's exit status, as Plan 9's `$status` (the message, or the code if there's none, or empty for success; [below](#background-tasks-and-exit-statuses)) |
 | `apid` | Set by the shell: the task of the last program started with `&` (Plan 9's `$apid`) |
@@ -401,8 +402,8 @@ Hello, world
 | `ioerr` | `( -- n )` | The last IO error code |
 | `cat` | | Copy stdin to stdout until end of file (`cat file` shows a file: [the shell](#the-shell-directories-files-and-programs)) |
 | `wc` | `( -- lines words chars )` | Count stdin until end of file |
-| `mount [-abc] device path` | `(mount) ( sz-dev sz-path -- )` | Mount a device at a path: `mount zero /z`, then `"/z" 1 open`.  The flags as `bind`'s |
-| `bind [-abc] new old` | `(bind) ( sz-new sz-old -- )` | Make a path stand for another: `bind /dev/cons /tty`.  With no flags it replaces old's entries; `-b` and `-a` add it to old's **union**, before or after its members, which are looked in, in order, for a name (`bind -a /rom/bin /bin`); `-c`: a file made in the union is made in it |
+| `mount [-abcs] device path [spec]` | `(mount) ( sz-dev sz-path -- )` | Mount a device at a path: `mount zero /z`, then `"/z" 1 open`.  A spec, as Plan 9's, picks what the server serves there: `mount hfs /rom x` (the ROM disk), `mount hfs /a r` (the whole RAM disk, every task's area).  The flags as `bind`'s |
+| `bind [-abc] new old` | `(bind) ( sz-new sz-old -- )` | Make a path stand for another: `bind /dev/cons /tty`.  With no flags it replaces old's entries; `-b` and `-a` add it to old's **union**, before or after its members, which are looked in, in order, for a name (`bind -a /rom/bin /bin`); `-c`: a file made in the union is made in it; `-s`: in the **system namespace**, which every task sees (the boot shell's lines, and `/rom/lib/namespace`'s: the boot shell and task 0 only) |
 | `unmount [new] old` | `(unmount) ( sz-old -- )` | Remove old's mounts and binds; or just one member of its union: `unmount /rom/bin /bin` |
 | `hide path` | | Nothing under the path is found, in this task and the tasks it starts |
 | `ns` | | List the namespace, as the lines that would make it: `bind -a /rom /u` |

@@ -8,6 +8,9 @@
 ;
 ;   /sd/0 ... /sd/7      card 0-7's root directory (the shell mounts the device at /sd, and the tasks it
 ;                        starts inherit the mount; IO_MOUNT can put it anywhere)
+;   /x, /r, /s           the disks in memory: the ROM disk, the RAM disk (its areas, /r/N), the shared RAM
+;                        disk; only through a mount with a spec (mount hfs /rom x: IO_BLK_SPEC), or for task
+;                        0, so /sd has the cards alone (HFS_SPEC_CHECK)
 ;   /sd/N/a/b            the file or directory b in the directory a on card N.  "." and ".." are understood
 ;                        while walking (they aren't stored); names are case-sensitive, 1-31 characters
 ;   Reading a directory  gives a line per entry, "name size" ("name/" for a directory), then CR LF; or,
@@ -146,8 +149,7 @@ HFS_RO_DISK:
 
 ; May the client (SD_CLIENT) use the name at (ZP_IO_REQ)?  On the RAM disk ("/r/..."), the root's entries are the
 ; tasks' areas (docs/plans/DISKS.md): "/r/N" (N a hex digit, 0-9 a-f) is task N's, for task N and the tasks it
-; started (and theirs, up its owner chain: TASK_MAY); "/r/s" is the shared RAM disk (HFS_WALK), everyone's; any
-; other name there isn't one.  Task 0, the system's, may use them all, and the root itself is everyone's.  Other
+; started (and theirs, up its owner chain: TASK_MAY); any other name there isn't one.  Task 0, the system's, may use them all, and the root itself is everyone's.  Other
 ; disks: no check.  (Before a walk, and before a create cuts the name at its last '/'.)  An area a task may use is
 ; marked in RAMD_AREAS, so its task's end removes it (HFS_AREA_END).
 ; OUT: C = 0; or C = 1, .A = ERR_IO_PERM.  Modifies: .A, .X, .Y, HFS_ELEM, ZP_TEMP, ZP_TEMP_2
@@ -165,8 +167,6 @@ HFS_AREA_CHECK:
             beq         @ok                                 ; (Task 0: anything)
             iny
             lda         (ZP_IO_REQ),Y                       ; The area: one hex digit ...
-            cmp         #DISK_NAME_SRAM
-            beq         @shared
             sec
             sbc         #'0'
             cmp         #10
@@ -201,16 +201,34 @@ HFS_AREA_CHECK:
             sec
             rts
 
-@shared:                                                    ; ("/r/s": the shared RAM disk, then the end or
-            iny                                             ;   a '/')
-            lda         (ZP_IO_REQ),Y
+@ok:
+            clc
+            rts
+
+; The name at (ZP_IO_REQ) (the client's data area, its request block the page before): a disk in memory ("/x",
+; "/r", "/s": a letter past the cards' hex digits) only if a mount's spec named it (IO_BLK_SPEC), or for task 0
+; (SD_CLIENT: HFS_AREA_END's own walks too).  OUT: C = 0; or .A = ERR_IO_NOT_FOUND, C = 1.  Modifies: .A, .Y
+HFS_SPEC_CHECK:
+            lda         SD_CLIENT
             beq         @ok
-            cmp         #'/'
-            bne         @no
+            ldy         #1
+            lda         (ZP_IO_REQ),Y                       ; The disk's name
+            cmp         #'f' + 1
+            bcc         @ok                                 ; (A card's, or the root, or nothing)
+            dec         ZP_IO_REQ + 1
+            ldy         #IO_BLK_SPEC
+            lda         (ZP_IO_REQ),Y
+            inc         ZP_IO_REQ + 1
+            cmp         #0
+            bne         @ok
+            lda         #ERR_IO_NOT_FOUND
+            sec
+            rts
 
 @ok:
             clc
             rts
+.assert     DISK_NAME_ROM > 'f' .and DISK_NAME_RAM > 'f' .and DISK_NAME_SRAM > 'f', error, "HFS_SPEC_CHECK: the disks in memory have names past f"
 
 ; Area .A's bit in RAMD_AREAS: .X = which byte, .A = the mask.  Modifies: .Y
 HFS_AREA_BIT:
@@ -509,18 +527,25 @@ HFS_FILE_READ:
             jmp         HFS_READ_DONE
 @far2:
             jsr         HFS_AT_END                          ; End of file: that's all there is
-            bcs         HFS_READ_DONE
+            bcc         @more
+            jmp         HFS_READ_DONE
+
+@more:
             stz         HFS_HOLEF
             jsr         HFS_FILE_BLOCK                      ; The card block byte SD_POS is in
             bcc         @load
             cmp         #HFS_IN_HOLE                        ; (In a hole: zeros)
-            bne         HFS_READ_ERR
+            beq         @hole
+            jmp         HFS_READ_ERR
+
+@hole:
             dec         HFS_HOLEF
             bra         @loaded
 
 @load:
-            jsr         HFS_LOAD
-            bcs         HFS_READ_ERR
+            jsr         HFS_BLOCK_AT                        ; (The ROM disk's: in the paged ROM; else the cache)
+            bcc         @loaded
+            jmp         HFS_READ_ERR
 
 @loaded:
             lda         SD_POS + 1                          ; SD_N = the bytes to this block's end
@@ -545,13 +570,13 @@ HFS_FILE_READ:
             jsr         HFS_N_MIN
             jsr         HFS_TAIL                            ; ... or than there is before the end of file
             jsr         HFS_N_MIN
-            lda         SD_POS                              ; SD_SRC = the cache + (SD_POS & 511)
+            lda         SD_POS                              ; SD_SRC = the block + (SD_POS & 511)
             clc
-            adc         SD_CACHE
+            adc         HFS_BLK
             sta         SD_SRC
             lda         SD_POS + 1
             and         #1
-            adc         SD_CACHE + 1
+            adc         HFS_BLK + 1
             sta         SD_SRC + 1
             lda         SD_DONE                             ; SD_DST = the data area + SD_DONE
             sta         SD_DST
@@ -561,12 +586,13 @@ HFS_FILE_READ:
             ldy         #0
             bit         HFS_HOLEF
             bmi         @zeros
-:
-            lda         (SD_SRC),Y                          ; SD_N bytes (1-256): the cache -> the data area
-            sta         (SD_DST),Y
-            iny
-            cpy         SD_N                                ; (SD_N = 256: 0, so .Y wraps round to it)
-            bne         :-
+            ldx         ROM_BANK_REG                        ; (Reads give this task's last write)
+            phx
+            lda         HFS_ROMB                            ; (The block's paged ROM bank, or this one)
+            sta         ROM_BANK_REG
+            _M_COPY_N   SD_SRC, SD_DST, SD_N                ; SD_N bytes (1-256; 0: 256): the block -> the data area
+            pla
+            sta         ROM_BANK_REG
             bra         @next
 
 @zeros:                                                     ; (A hole's: zeros)
@@ -850,6 +876,10 @@ HFS_REC:
 ; OUT: C = 0: HFS_CARD = the card, HFS_LOC = where the entry is, HFS_ENT = the entry (and HFS_FP -> it);
 ;      C = 1, .A = ERR_IO_NOT_FOUND, ERR_IO_NAME, ERR_IO_NOT_FS or a card error
 HFS_WALK:
+            jsr         HFS_SPEC_CHECK                      ; (A disk in memory: through a spec?)
+            bcc         :+
+            rts
+:
             jsr         HFS_AREA_CHECK                      ; (On the RAM disk: an area the client may use?)
             bcc         :+
             rts
@@ -868,29 +898,6 @@ HFS_WALK:
 
 @disk:
             sta         HFS_CARD
-            cmp         #DISK_RAM                           ; "/r/s": the shared RAM disk, as if it were "/s"
-            bne         @path                               ;   (so /ram, one bind, is the tasks' areas and
-            ldy         #2                                  ;   the shared one: /ram/s)
-            lda         (ZP_IO_REQ),Y
-            cmp         #'/'
-            bne         @ram
-            iny
-            lda         (ZP_IO_REQ),Y
-            cmp         #DISK_NAME_SRAM
-            bne         @ram
-            iny
-            lda         (ZP_IO_REQ),Y
-            beq         :+
-            cmp         #'/'
-            bne         @ram
-:
-            lda         #DISK_SRAM
-            sta         HFS_CARD
-            ldy         #3                                  ; (Its path starts after the s)
-            bra         @path
-
-@ram:
-            ldy         #1
 
 @path:
             iny
@@ -1433,6 +1440,62 @@ HFS_FORGET:
             bpl         :--
             rts
 
+.pushseg
+.segment "HIGH_P6"      ; (Page 6's room above COMMON, $FE00)
+
+; Block SD_LBA of disk HFS_CARD, for a file's read (HFS_FILE_READ): HFS_BLK = where it is, seen with paged ROM bank
+; HFS_ROMB.  The ROM disk's is read where it is, in the paged ROM at $A000-$DFFF (as SD_ROM_READ finds it), with
+; no copy into the cache first (it never changes, so the cache can't have a newer one); any other disk's is read
+; into the cache (HFS_LOAD), and HFS_ROMB is the bank this task has.  OUT: C = 0; or C = 1, .A = an error.
+; Modifies: .A, .X, .Y
+HFS_BLOCK_AT:
+            lda         ROM_BANK_REG
+            sta         HFS_ROMB
+            lda         HFS_CARD
+            cmp         #DISK_ROM
+            beq         @rom
+            lda         SD_CACHE
+            sta         HFS_BLK
+            lda         SD_CACHE + 1
+            sta         HFS_BLK + 1
+            bra         HFS_LOAD
+
+@rom:
+            sta         SD_DEV
+            jsr         HFS_BASE_ADD                        ; SD_LBA: on the disk
+            lda         SD_LBA + 3
+            ora         SD_LBA + 2
+            bne         @past
+            lda         SD_LBA + 1
+            cmp         #>DISK_ROM_BLOCKS
+            bcs         @past
+            asl                                             ; The bank: SD_LBA / 32 (13 bits: 8 of them)
+            asl
+            asl
+            sta         HFS_ROMB
+            lda         SD_LBA
+            lsr
+            lsr
+            lsr
+            lsr
+            lsr
+            ora         HFS_ROMB
+            sta         HFS_ROMB
+            lda         SD_LBA                              ; Where in it: $A000 + (SD_LBA % 32) * 512
+            and         #$1F
+            asl
+            adc         #>PAGED_ROM_BASE                    ; (C = 0: the asl's bit 7 was 0)
+            sta         HFS_BLK + 1
+            stz         HFS_BLK
+            clc
+            jmp         HFS_BASE_SUB                        ; (SD_LBA back: keeps C)
+
+@past:
+            lda         #ERR_IO_MEDIA
+            sec
+            jmp         HFS_BASE_SUB
+.assert     DISK_ROM_BLOCKS / 32 <= 256, error, "HFS_BLOCK_AT: the ROM disk's banks, 8 bits"
+
 ; Read block SD_LBA of card HFS_CARD into the cache (SD_CACHE_LOAD, which shares it with /dev/sd).
 ; OUT: C = 0; or C = 1, .A = a card error.  Modifies: .A, .X, .Y
 HFS_LOAD:
@@ -1449,6 +1512,7 @@ HFS_LOAD:
 
 @done:
             rts
+.popseg
 
 ; HFS_PTR = the cache + HFS_OFS (an offset inside the block).  Modifies: .A
 HFS_AT:

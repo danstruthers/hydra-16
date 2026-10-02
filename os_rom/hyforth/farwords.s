@@ -1624,6 +1624,20 @@ SEND_PROC:
     .byte "/proc/", 0
 SEND_CMD:
     .byte "/cmd", 0
+S_ROMNS:                ; (LINE_START's: the default namespace, and the card's)
+    .byte "/rom/"
+S_CARDNS:
+    .byte "lib/namespace", 0
+comment:                    ; # text
+    ldy CURBUF          ; (the rest of the line: nothing)
+CMTEND:
+    lda (TIB),y
+    beq CMTDONE
+    iny
+    bne CMTEND
+CMTDONE:
+    sty CURBUF
+    jmp next
 .popseg
 echo:                       ; echo
     ldy CURBUF          ; .X = where the text ends (after its last character that isn't a space)
@@ -1833,11 +1847,35 @@ SHC2DONE:
 ;
 ;---------------------------------------------------------------------
 ;  Namespaces, the serial port, ctl, cat, wc; tasks; pipelines
-mount:                      ; mount [-abc] device path
+.pushseg
+.segment "HIGH_PA"      ; (Page A's room above COMMON, $FE00)
+mount:                      ; mount [-abc] device path [spec]
     jsr NS2WORDS
-    bcs NSFAIL
+    bcs MNTFAIL
+    stx SHOPT           ; (the flags)
+    ldy #0              ; the path to SHBUF: ARGBUF has the spec next
+MNTPATH:
+    lda ARGBUF,y
+    sta SHBUF,y
+    beq MNTSPEC
+    iny
+    bne MNTPATH
+MNTSPEC:
+    jsr ARGGET
+    bcs MNTGO
+    sta ZP_IO_CNT       ; (ARGBUF)
+    sty ZP_IO_CNT+1
+    lda #NS_SPEC
+    tsb SHOPT
+MNTGO:
+    ldx SHOPT
+    lda #<SHBUF
+    ldy #>SHBUF
     jsr IO_MOUNT
-    bra NSDONE
+    jmp NSDONE
+MNTFAIL:
+    jmp NSFAIL
+.popseg
 bind:                       ; bind [-abc] new old
     jsr NS2WORDS
     bcs NSFAIL
@@ -1980,6 +2018,11 @@ NS2FLAG:
     iny
     lda ARGBUF,y
     beq NS2FLAGS
+    cmp #'s'            ; s: the system namespace's
+    bne NS2ABC
+    lda #NS_SYSTEM
+    bra NS2SET
+NS2ABC:
     sec
     sbc #'a'            ; a b c: bits 0 1 2
     cmp #3
@@ -2389,8 +2432,9 @@ PEDONE:
 ;
 ; A line is about to be read: the last line's redirection and pipe undone (whether or not the shell's
 ; library is loaded now: it was when that line began, if they're set up), and before the boot shell's first
-; line, boot.hys from the selected volume's root (the current directory), if it's there; with no card, the
-; ROM's, /rom/boot.hys (BOOTFLAG 2)
+; line, its scripts (each if it's there; the last opened is read first): the ROM's /rom/lib/namespace (the
+; default namespace's binds: docs/plans/NAMESPACES.md), then the card's lib/namespace, then boot.hys, from the
+; selected volume's root (the current directory); with no card, the ROM's, /rom/boot.hys (BOOTFLAG 2)
 LINE_START:
     stz SHBG            ; (A new line: nothing started with & yet)
     jsr SH_UNREDIR
@@ -2402,12 +2446,22 @@ LINE_START:
     beq LSDONE
     stz BOOTFLAG
     cmp #2
+    php
     lda #<S_BOOTHYS
     ldy #>S_BOOTHYS
     bcc LSBOOT
     lda #<S_ROMBOOT
     ldy #>S_ROMBOOT
 LSBOOT:
+    jsr INCOPEN
+    plp
+    bcs LSROMNS         ; (no card: no card's namespace)
+    lda #<S_CARDNS
+    ldy #>S_CARDNS
+    jsr INCOPEN
+LSROMNS:
+    lda #<S_ROMNS
+    ldy #>S_ROMNS
     jmp INCOPEN
 LSDONE:
     rts

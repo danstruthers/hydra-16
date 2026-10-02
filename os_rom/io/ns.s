@@ -9,7 +9,7 @@
 ;   IO_MOUNT "/sd", "sd"          names under /sd go to the device sd (its server gets the rest: /x/y)
 ;   IO_BIND "/null", "/dev/null"  names under /null stand for names under /dev/null
 ;   IO_UNMOUNT "/sd"              removes the entry for that path (mount or bind)
-; A prefix matches a whole path element: /sd matches /sd and /sd/x, not /sdx.  The longest match wins.
+; A prefix matches a whole path element: /sd matches /sd and /sd/0, not /sdx.  The longest match wins.
 ; New tasks get a copy of their parent's namespace (IO_INHERIT); a task's is cleared when it ends.
 
 .segment "IO_P2"
@@ -105,6 +105,9 @@ NS_CUT:
 ;             no members left) or ERR_IO_MODE (a create in a union with no NS_C member)
 ; Modifies: .X, .Y, ZP_IO_BUF, ZP_IO_CHUNK, ZP_IO_CNT, ZP_IO_TMP, ZP_IO_BYTE, ZP_IO_LEFT, ZP_IO_OFS
 NS_RESOLVE:
+            lda         #0                          ; (No spec yet: IO_BLK_SPEC)
+            ldy         #IO_BLK_SPEC
+            sta         (ZP_IO_XFER),Y
             lda         #NS_MAX_REWRITES + 1
             sta         ZP_IO_BYTE
 
@@ -116,19 +119,21 @@ NS_RESOLVE:
             rts
 :
             jsr         NS_NAME_PTR
-            stz         ZP_IO_TMP                   ; The longest prefix that matches (0: none)
-            jsr         NS_FIRST
-
-@longest:
-            jsr         NS_MATCH
+            lda         #1                          ; The longest prefix that matches: the system's table's ...
+            jsr         NS_TABLE
+            jsr         NS_LONGEST
+            sta         ZP_IO_CNT
+            lda         #0                          ; ... and the task's: the longer (a tie: the task's), whose
+            jsr         NS_TABLE                    ;   table the rest uses
+            jsr         NS_LONGEST
+            cmp         ZP_IO_CNT
             bcs         :+
-            cmp         ZP_IO_TMP
-            bcc         :+
-            sta         ZP_IO_TMP
+            lda         #1
+            jsr         NS_TABLE
+            lda         ZP_IO_CNT
 :
-            jsr         NS_NEXT
-            bne         @longest
-            lda         ZP_IO_TMP
+            sta         ZP_IO_TMP
+            cmp         #0
             bne         :+
             sec                                     ; (.A = 0: no match)
             rts
@@ -204,14 +209,39 @@ NS_RESOLVE:
             beq         @hidden
             cmp         #NS_MOUNT
             bne         @bind
+            ldy         #NS_TARGET                  ; A spec (mount hfs /rom x: "/x")?
+            lda         (ZP_IO_CHUNK),Y
+            bne         @spec
             lda         ZP_IO_TMP
             jsr         NS_CUT                      ; The rest of the name, for the server
+            bra         @device
+
+@spec:                                              ; The spec's path, then the rest, for the server; and the
+            jsr         NS_TARGET_IN                ;   request says so (the server may serve what only a spec
+            bcs         @too_long                   ;   names: hfs's disks in memory)
+            lda         #1
+            ldy         #IO_BLK_SPEC
+            sta         (ZP_IO_XFER),Y
+
+@device:
             ldy         #NS_DEV
             lda         (ZP_IO_CHUNK),Y
             clc
             rts
 
 @bind:                                              ; The name = the target, then the rest of the name
+            jsr         NS_TARGET_IN
+            bcs         @too_long
+            jmp         @again                      ; (The new name can match an entry too)
+
+@too_long:
+            lda         #ERR_IO_NAME
+            rts
+
+; The name in the data area = entry ZP_IO_CHUNK's target (NS_TARGET: a bind's, or a mount's spec), then the name's
+; rest, after its first ZP_IO_TMP characters.  OUT: C = 0; or C = 1: too long.  Modifies: .A, .X, .Y, ZP_IO_CNT,
+; ZP_IO_LEFT
+NS_TARGET_IN:
             ldy         #NS_TARGET
 :
             lda         (ZP_IO_CHUNK),Y
@@ -224,7 +254,7 @@ NS_RESOLVE:
             sbc         #NS_TARGET
             sta         ZP_IO_CNT                   ; The target's length
             jsr         NS_SHIFT                    ; The rest: from offset ZP_IO_TMP to ZP_IO_CNT
-            bcs         @too_long
+            bcs         @done
             lda         #<(-NS_TARGET)              ; (ZP_IO_LEFT),Y with .Y = NS_TARGET + n = the
             sta         ZP_IO_LEFT                  ;   name's character n
             ldx         ZP_IO_DATA + 1
@@ -234,16 +264,30 @@ NS_RESOLVE:
 
 @target:
             lda         (ZP_IO_CHUNK),Y
-            beq         @rewritten
+            beq         @done                       ; (C = 0: from NS_SHIFT)
             sta         (ZP_IO_LEFT),Y
             iny
             bra         @target
 
-@rewritten:
-            jmp         @again                      ; (The new name can match an entry too)
+@done:
+            rts
 
-@too_long:
-            lda         #ERR_IO_NAME
+; .A = the longest prefix in the table (NS_TABLE's) that matches the name (ZP_IO_LEFT: NS_NAME_PTR); 0: none.
+; Modifies: .X, .Y, ZP_IO_TMP, ZP_IO_CHUNK
+NS_LONGEST:
+            stz         ZP_IO_TMP
+            jsr         NS_FIRST
+
+@entry:
+            jsr         NS_MATCH
+            bcs         :+
+            cmp         ZP_IO_TMP
+            bcc         :+
+            sta         ZP_IO_TMP
+:
+            jsr         NS_NEXT
+            bne         @entry
+            lda         ZP_IO_TMP
             rts
 
 ; ZP_IO_LEFT: (ZP_IO_LEFT),Y with .Y = NS_PREFIX + n = the data area's name's character n.  Modifies: .A, .X
@@ -628,12 +672,35 @@ NS_SHIFT:
 
 ; ZP_IO_CHUNK = this task's first namespace entry, .X = NS_ENTRIES.  Modifies: .A
 NS_FIRST:
-            stz         ZP_IO_CHUNK                 ; (IO_BLK_NS: a page's start)
+            stz         ZP_IO_CHUNK                 ; (IO_BLK_NS, NS_SYS: a page's start)
+            jsr         NS_BASE
+            sta         ZP_IO_CHUNK + 1
+            ldx         #NS_ENTRIES
+            rts
+
+; .A = the first page of the table the routines use now (IO_BLK_NSTAB): the task's (its area's IO_BLK_NS) or the
+; system's (NS_SYS).  Preserves .X, .Y
+NS_BASE:
+            phy
+            ldy         #IO_BLK_NSTAB
+            lda         (ZP_IO_XFER),Y
+            ply
+            cmp         #0
+            beq         :+
+            lda         #>NS_SYS
+            rts
+:
             lda         ZP_IO_XFER + 1
             clc
             adc         #>IO_BLK_NS
-            sta         ZP_IO_CHUNK + 1
-            ldx         #NS_ENTRIES
+            rts
+
+; The table the routines use: .A = 0 the task's, 1 the system's (IO_BLK_NSTAB).  Preserves .A, .X, .Y
+NS_TABLE:
+            phy
+            ldy         #IO_BLK_NSTAB
+            sta         (ZP_IO_XFER),Y
+            ply
             rts
 
 ; ZP_IO_CHUNK = the next entry; Z = 1 after the last one.  Modifies: .A, .X
@@ -643,7 +710,7 @@ NS_NEXT:
             adc         #NS_ENTRY_SIZE
             sta         ZP_IO_CHUNK
             bcc         :+
-            inc         ZP_IO_CHUNK + 1             ; (The namespace's second page)
+            inc         ZP_IO_CHUNK + 1             ; (The table's next page)
 :
             dex
             rts
@@ -667,6 +734,24 @@ NS_CLEAR_ALL:
             lda         ZP_IO_TMP
             cmp         #MAX_TASK_NUMBER + 1
             bne         @task
+            _M_IO_MAP_XFER                          ; The system's table, in each bank: no entries
+            ldy         #IO_XFER_BANK
+
+@bank:
+            sty         RAM_BANK_REG
+            stz         ZP_IO_CHUNK
+            lda         #>NS_SYS
+            sta         ZP_IO_CHUNK + 1
+            ldx         #NS_ENTRIES
+:
+            lda         #NS_FREE
+            sta         (ZP_IO_CHUNK)               ; (NS_TYPE)
+            jsr         NS_NEXT
+            bne         :-
+            iny
+            cpy         #IO_XFER_BANK + IO_XFER_BANKS
+            bne         @bank
+            _M_IO_UNMAP
             rts
 
 ; Clear this task's namespace (IO_CLOSE_ALL, when the task ends).  Modifies: .A, .X, .Y
@@ -689,6 +774,9 @@ NS_CLEAR_MAPPED:
             sta         (ZP_IO_XFER),Y
             iny
             sta         (ZP_IO_XFER),Y              ; (IO_BLK_CMD)
+            ldy         #IO_BLK_UFD                 ; (No union's directory read through)
+            sta         (ZP_IO_XFER),Y
+            jsr         NS_TABLE                    ; (The task's: .A = 0)
             jsr         NS_FIRST
 
 @entry:
@@ -698,9 +786,10 @@ NS_CLEAR_MAPPED:
             bne         @entry
             rts
 
-; Give task .A a copy of this task's namespace and current directory (IO_INHERIT).  Its area can be in the
-; other transfer bank, so each byte is read with this task's bank mapped, and written with its.
-; Modifies: .A, .X, .Y, ZP_IO_TMP, ZP_IO_CHUNK
+; Give task .A a copy of this task's namespace and current directory (IO_INHERIT).  Its area can be in
+; another transfer bank, so each byte is read with this task's bank mapped, and written with its.  Only the
+; entries in use are copied (the first ones: the table has no gaps), and then a free one after them.
+; Modifies: .A, .X, .Y, ZP_IO_TMP, ZP_IO_CHUNK, ZP_IO_LEFT, ZP_IO_BYTE
 NS_COPY_TO:
             jsr         IO_XFER_OF                  ; Its area, and its bank (ZP_IO_TMP)
             sta         ZP_IO_LEFT + 1
@@ -708,27 +797,63 @@ NS_COPY_TO:
             sty         ZP_IO_TMP
             jsr         IO_XFER_SETUP
             _M_IO_MAP_XFER
+            lda         #0                          ; (This task's table)
+            jsr         NS_TABLE
+            jsr         NS_USED                     ; .A = its entries in use
+            sta         ZP_IO_BYTE
             lda         RAM_BANK_REG                ; This task's bank (ZP_IO_CHUNK)
             sta         ZP_IO_CHUNK
             ldy         #IO_BLK_CWD                 ; The current directory: to the request block page's end
             jsr         @bytes
             .assert     IO_BLK_CWD + IO_CWD_MAX = $100, error, "NS_COPY_TO: the current directory to $FF"
-            lda         ZP_IO_XFER + 1              ; The namespace: its two pages
+            lda         ZP_IO_XFER + 1              ; The namespace: its entries in use
             pha
             clc
             adc         #>IO_BLK_NS
             sta         ZP_IO_XFER + 1
             lda         ZP_IO_LEFT + 1
+            clc
             adc         #>IO_BLK_NS
             sta         ZP_IO_LEFT + 1
+            lda         ZP_IO_BYTE
+            cmp         #NS_ENTRIES                 ; (C = 1: all of them, so no free one after)
+            php
             ldy         #0
-            jsr         @bytes
-            inc         ZP_IO_XFER + 1
+
+@entry:
+            lda         ZP_IO_BYTE
+            beq         @end
+            dec         ZP_IO_BYTE
+:
+            ldx         ZP_IO_CHUNK                 ; Its bytes (8 entries a page: none crosses one)
+            stx         RAM_BANK_REG
+            lda         (ZP_IO_XFER),Y
+            ldx         ZP_IO_TMP
+            stx         RAM_BANK_REG
+            sta         (ZP_IO_LEFT),Y
+            iny
+            tya
+            and         #NS_ENTRY_SIZE - 1
+            bne         :-
+            tya
+            bne         @entry
+            inc         ZP_IO_XFER + 1              ; (The next page)
             inc         ZP_IO_LEFT + 1
-            jsr         @bytes
+            bra         @entry
+
+@end:
+            plp
+            bcs         :+
+            ldx         ZP_IO_TMP                   ; Then a free one: the table's end
+            stx         RAM_BANK_REG
+            lda         #NS_FREE
+            sta         (ZP_IO_LEFT),Y              ; (NS_TYPE)
+            ldx         ZP_IO_CHUNK
+            stx         RAM_BANK_REG
+:
             pla
             sta         ZP_IO_XFER + 1
-            bra         NS_UNMAP_RTS
+            jmp         NS_UNMAP_RTS
 
 @bytes:                                             ; From .Y to the page's end
             ldx         ZP_IO_CHUNK
@@ -742,6 +867,7 @@ NS_COPY_TO:
             ldx         ZP_IO_CHUNK
             stx         RAM_BANK_REG
             rts
+.assert     NS_TYPE = 0 .and <IO_BLK_NS = 0 .and 256 .mod NS_ENTRY_SIZE = 0, error, "NS_COPY_TO: entries in pages"
 
 ; ****************************************************************************
 ; The calls
@@ -761,11 +887,178 @@ NS_COPY_TO:
             _M_IO_MAP_XFER
             lsr         ZP_IO_BYTE
             jsr         NS_NAMES_IN
+            bcs         :+
+            jsr         NS_CALL_TABLE
+:
 .endmacro
+
+; A call's table: the system's (NS_SYSTEM in the flags), for task 0 and the boot shell; or the task's.
+; OUT: C = 0; or .A = ERR_IO_PERM, C = 1.  Modifies: .A
+NS_CALL_TABLE:
+            lda         ZP_IO_MODE
+            and         #NS_SYSTEM
+            beq         @table                      ; (.A = 0: the task's)
+            lda         T_REGISTER
+            and         #$0F
+            beq         @system
+            cmp         #SHELL_TASK_NUM
+            beq         @system
+            lda         #ERR_IO_PERM
+            sec
+            rts
+
+@system:
+            lda         #1
+
+@table:
+            jsr         NS_TABLE
+            clc
+            rts
+
+; A call's end: after a change to the system's table, its copies in the other banks made the same (NS_SYS_SYNC).
+; Preserves .A and C.  Modifies: .X, .Y
+NS_CALL_END:
+            bcs         @done
+            pha
+            jsr         NS_BASE
+            cmp         #>NS_SYS
+            bne         :+
+            jsr         NS_SYS_SYNC
+:
+            pla
+            clc
+
+@done:
+            rts
+
+.pushseg
+.segment "HIGH_P2"      ; (Page 2's room above COMMON, $FE00)
+
+; The system's table, from this bank (the task's, mapped) to the other IO transfer banks, with no task switch
+; meanwhile (a name can't be resolved with half of it).  Modifies: .A, .X, .Y, ZP_IO_CHUNK, ZP_IO_TMP
+NS_SYS_SYNC:
+            inc         ZP_NO_PREEMPT
+            lda         RAM_BANK_REG
+            sta         ZP_IO_TMP                   ; (This bank)
+            ldx         #IO_XFER_BANK
+
+@bank:
+            cpx         ZP_IO_TMP
+            beq         @next
+            stz         ZP_IO_CHUNK
+            lda         #>NS_SYS
+            sta         ZP_IO_CHUNK + 1
+
+@page:
+            ldy         #0
+:
+            lda         ZP_IO_TMP
+            sta         RAM_BANK_REG
+            lda         (ZP_IO_CHUNK),Y
+            stx         RAM_BANK_REG
+            sta         (ZP_IO_CHUNK),Y
+            iny
+            bne         :-
+            inc         ZP_IO_CHUNK + 1
+            lda         ZP_IO_CHUNK + 1
+            cmp         #>NS_SYS + NS_PAGES
+            bne         @page
+
+@next:
+            inx
+            cpx         #IO_XFER_BANK + IO_XFER_BANKS
+            bne         @bank
+            lda         ZP_IO_TMP
+            sta         RAM_BANK_REG
+            jmp         PREEMPT
+
+; The task's table: if none of its entries is for the path (ZP_IO_LEFT: NS_PATH_PTR) but the system's are, a
+; copy of those after the task's last, so a change to that union starts from what the task sees (copy on write).
+; (The system's table: nothing.)  OUT: C = 0; or .A = ERR_IO_NS_FULL, C = 1.  Modifies: .A, .X, .Y, ZP_IO_CHUNK,
+; ZP_IO_CNT
+NS_COW:
+            jsr         NS_BASE
+            cmp         #>NS_SYS
+            bne         :+
+            clc                                     ; (The system's: as it is)
+            rts
+:
+            jsr         NS_FIRST                    ; The task's: one for the path?
+:
+            jsr         NS_SAME
+            beq         @done
+            jsr         NS_NEXT
+            bne         :-
+            ldx         #0                          ; No: the system's, each of the path's
+
+@entry:
+            lda         #1
+            jsr         NS_TABLE
+            txa
+            jsr         NS_AT
+            jsr         NS_SAME
+            bne         @next
+            lda         #0                          ; One: to the task's next free entry
+            jsr         NS_TABLE
+            phx
+            jsr         NS_USED                     ; (.A = it)
+            plx
+            cmp         #NS_ENTRIES
+            bcs         @full
+            jsr         NS_AT
+            lda         ZP_IO_CHUNK
+            sta         ZP_IO_CNT
+            lda         ZP_IO_CHUNK + 1
+            sta         ZP_IO_CNT + 1
+            lda         #1
+            jsr         NS_TABLE
+            txa
+            jsr         NS_AT
+            jsr         NS_MOVE
+
+@next:
+            inx
+            cpx         #NS_ENTRIES
+            bne         @entry
+
+@done:
+            lda         #0                          ; (The task's table again)
+            jsr         NS_TABLE
+            clc
+            rts
+
+@full:
+            lda         #ERR_IO_NS_FULL
+            sec
+            rts
+
+; Has the system's table an entry for the path (ZP_IO_LEFT: NS_PATH_PTR)?  OUT: C = 0 yes; C = 1 no.  Then the
+; task's table again.  Modifies: .A, .X, .Y, ZP_IO_CHUNK
+NS_SYS_HAS:
+            lda         #1
+            jsr         NS_TABLE
+            jsr         NS_FIRST
+:
+            jsr         NS_SAME
+            beq         @yes
+            jsr         NS_NEXT
+            bne         :-
+            sec
+            bra         @back
+
+@yes:
+            clc
+
+@back:
+            lda         #0
+            jmp         NS_TABLE                    ; (Preserves C)
+.popseg
 
 ; Attach a device's server at a path in this task's namespace: names under the path go to it, with the
 ; rest of the name.  .X's flags (0: the path's entries are replaced): NS_BEFORE, NS_AFTER, a member of a union
 ; before or after the path's others; NS_CREATE, a create in the union goes to it (NS_ADD).
+; NS_SPEC: ZP_IO_CNT = a spec, as Plan 9's mount's (mount hfs /rom x): the names under the path go to the server
+; as the spec's path and then theirs ("/x/bin"), and the request says a spec named them (IO_BLK_SPEC).
 ; IN: .A.Y = the path ("/...", 13 characters at most), ZP_IO_BUF = the device's name (e.g. "zero"), .X = flags
 ; OUT: C = 0; or .A = ERR_IO_NAME, ERR_IO_NOT_FOUND (no such device) or ERR_IO_NS_FULL, C = 1
 ; (The names are read as the caller sees them: NS_NAMES_IN.)
@@ -774,6 +1067,29 @@ IO_MOUNT:
             sec                                     ; (Both names)
             _M_NS_CALL_IN
             bcs         @done
+            lda         ZP_IO_MODE                  ; A spec (NS_SPEC: ZP_IO_CNT)?  To the data area's + $80, and
+            and         #NS_SPEC                    ;   checked: 14 characters at most (with a '/' in front of it,
+            beq         @dev                        ;   it's the entry's NS_TARGET)
+            lda         ZP_IO_CNT
+            ldy         ZP_IO_CNT + 1
+            jsr         FP_MAKE                     ; (.X: the caller's page, still)
+            lda         ZP_IO_DATA
+            ora         #NS_SPEC_AT
+            ldy         ZP_IO_DATA + 1
+            jsr         NS_NAME_COPY
+            bcs         @done
+            ldy         #NS_SPEC_AT
+:
+            lda         (ZP_IO_DATA),Y
+            beq         @dev
+            iny
+            cpy         #NS_SPEC_AT + NS_TARGET_MAX - 1
+            bne         :-
+            lda         #ERR_IO_NAME
+            sec
+            bra         @done
+
+@dev:
             lda         ZP_IO_BUF
             sta         ZP_IO_LEFT
             lda         ZP_IO_BUF + 1
@@ -787,6 +1103,27 @@ IO_MOUNT:
             tya
             ldy         #NS_DEV
             sta         (ZP_IO_CHUNK),Y
+            ldy         #NS_TARGET                  ; Its spec: "/" and it, or none
+            lda         #0
+            sta         (ZP_IO_CHUNK),Y
+            lda         ZP_IO_MODE
+            and         #NS_SPEC
+            beq         @typed
+            lda         #'/'
+            sta         (ZP_IO_CHUNK),Y
+            lda         #NS_SPEC_AT - NS_TARGET - 1 ; (ZP_IO_LEFT),Y with .Y = NS_TARGET + 1 + n = its character n
+            sta         ZP_IO_LEFT
+            lda         ZP_IO_DATA + 1
+            sta         ZP_IO_LEFT + 1
+            iny
+:
+            lda         (ZP_IO_LEFT),Y
+            sta         (ZP_IO_CHUNK),Y
+            beq         @typed
+            iny
+            bra         :-
+
+@typed:
             lda         #NS_MOUNT
             jsr         NS_SET_TYPE
             bra         @done
@@ -795,6 +1132,7 @@ IO_MOUNT:
             lda         #ERR_IO_NOT_FOUND
 
 @done:
+            jsr         NS_CALL_END
             _M_IO_UNMAP
             PULL_YX
             rts
@@ -867,6 +1205,7 @@ IO_BIND:
             sec
 
 @done:
+            jsr         NS_CALL_END
             _M_IO_UNMAP
             PULL_YX
             rts
@@ -876,11 +1215,25 @@ IO_BIND:
 ; IN: .A.Y = the path, .X, ZP_IO_BUF.  OUT: C = 0; or .A = ERR_IO_NOT_FOUND or ERR_IO_NAME, C = 1
 IO_UNMOUNT:
             PUSH_XY
-            cpx         #1                          ; (C = 1: the member's name too)
+            pha                                     ; (C = 1: the member's name too: .X's flags, but
+            txa                                     ;   NS_SYSTEM)
+            and         #<~NS_SYSTEM
+            cmp         #1
+            pla
             _M_NS_CALL_IN
-            bcs         @done
+            bcc         :+
+            jmp         @done
+:
             lda         ZP_IO_MODE
-            beq         @all
+            and         #<~NS_SYSTEM
+            bne         :+
+            jmp         @all
+:
+            jsr         NS_PATH_PTR                 ; (A union from the system's: the task's own copy first)
+            jsr         NS_COW
+            bcc         :+
+            jmp         @done
+:
             lda         ZP_IO_BUF                   ; The device the member names ($FF: none)
             sta         ZP_IO_LEFT
             lda         ZP_IO_BUF + 1
@@ -943,18 +1296,41 @@ IO_UNMOUNT:
 
 @all:
             jsr         NS_PATH_PTR
-            jsr         NS_DROP_ALL
+            jsr         NS_DROP_ALL                 ; (C = 1: there were none)
+            php
+            pha
+            jsr         NS_BASE
+            cmp         #>NS_SYS
+            beq         @plain                      ; (The system's table: that's all)
+            jsr         NS_SYS_HAS                  ; The task's: the system's too?  A hide over them
+            bcs         @plain
+            pla
+            plp
+            stz         ZP_IO_MODE
+            jsr         NS_ADD
+            bcs         @done
+            lda         #NS_HIDE
+            jsr         NS_SET_TYPE
+            bra         @done
+
+@plain:
+            pla
+            plp
 
 @done:
+            jsr         NS_CALL_END
             _M_IO_UNMAP
             PULL_YX
             rts
 
 ; Copy a call's names into the IO data area (the IO transfer bank mapped), reading them as the calling
 ; code sees them (far pointers: RAM, the paged ROM, or its own ROM page .X): the path (ZP_IO_OFS) to the
-; data area's start and, if C = 1, ZP_IO_BUF's name to its middle; ZP_IO_OFS and ZP_IO_BUF then point at
-; the copies.  OUT: C = 0; or .A = ERR_IO_NAME (unreadable, or 128 bytes with no end), C = 1.
-; Modifies: .A, .Y
+; data area's start and, if C = 1, ZP_IO_BUF's name to + NS_SECOND_AT; ZP_IO_OFS and ZP_IO_BUF then point at
+; the copies.  (IO_MOUNT's spec goes to + NS_SPEC_AT.)  OUT: C = 0; or .A = ERR_IO_NAME (unreadable, or 64 bytes
+; with no end), C = 1.  Modifies: .A, .Y.  Preserves .X
+NS_SECOND_AT    = $40
+NS_SPEC_AT      = $80
+NS_NAME_MAX     = $40
 NS_NAMES_IN:
             php                                     ; (C: the second name too)
             lda         ZP_IO_OFS
@@ -972,7 +1348,7 @@ NS_NAMES_IN:
             ldy         ZP_IO_BUF + 1
             jsr         FP_MAKE                     ; The second name
             lda         ZP_IO_DATA
-            ora         #$80
+            ora         #NS_SECOND_AT
             sta         ZP_IO_BUF
             ldy         ZP_IO_DATA + 1
             sty         ZP_IO_BUF + 1
@@ -985,11 +1361,11 @@ NS_NAMES_IN:
 @done:
             rts
 
-; ZP_FP's string -> .A.Y: 128 bytes at most, with its 0.  OUT: C = 0; or .A = ERR_IO_NAME, C = 1.
+; ZP_FP's string -> .A.Y: NS_NAME_MAX bytes at most, with its 0.  OUT: C = 0; or .A = ERR_IO_NAME, C = 1.
 ; Preserves .X
 NS_NAME_COPY:
             phx
-            ldx         #$80
+            ldx         #NS_NAME_MAX
             sec
             jsr         FP_COPY
             plx
@@ -1025,8 +1401,14 @@ NS_ADD:
             jsr         NS_PATH_PTR
             lda         ZP_IO_MODE
             and         #NS_BEFORE | NS_AFTER
-            bne         :+
+            bne         @join
             jsr         NS_DROP_ALL                 ; (Replaced: the path's entries go)
+            bra         :+
+
+@join:
+            jsr         NS_COW                      ; (A union from the system's: the task's own copy first)
+            bcc         :+
+            rts
 :
             jsr         NS_USED
             cmp         #NS_ENTRIES
@@ -1167,9 +1549,10 @@ NS_AT:
             lsr
             lsr
             lsr
+            sta         ZP_IO_CHUNK + 1             ; (Its page in the table)
+            jsr         NS_BASE
             clc
-            adc         ZP_IO_XFER + 1
-            adc         #>IO_BLK_NS
+            adc         ZP_IO_CHUNK + 1
             sta         ZP_IO_CHUNK + 1
             pla
             rts

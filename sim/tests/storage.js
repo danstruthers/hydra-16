@@ -48,9 +48,9 @@ module.exports = [
       '3 here @ 4 write .\\r3 here @ 2 write\\rioerr .\\r3 close\\r'],
     expect: ['| cat\nsdhc 1 MB 2048 blocks\n', '| cat\nsdsc 3 MB 6144 blocks\n', '| cat\nnone\n',
       'open .\n' + num(3) + '\n', 'c@ .\n' + num(9) + num(0x42) + '\n', 'write .\n' + num(1) + '\n',
-      '!IO ERR!', '/ram/1> ioerr .\n' + num(0x70) + '\n', '!IO ERR!', '/ram/1> ioerr .\n' + num(0x70) + '\n',
-      '!IO ERR!', '/ram/1> ioerr .\n' + num(0x79) + '\n',
-      'open .\n' + num(3) + '\n', '4 write .\n' + num(4) + '\n', '!IO ERR!', '/ram/1> ioerr .\n' + num(0x78) + '\n'],
+      '!IO ERR!', '/ram> ioerr .\n' + num(0x70) + '\n', '!IO ERR!', '/ram> ioerr .\n' + num(0x70) + '\n',
+      '!IO ERR!', '/ram> ioerr .\n' + num(0x79) + '\n',
+      'open .\n' + num(3) + '\n', '4 write .\n' + num(4) + '\n', '!IO ERR!', '/ram> ioerr .\n' + num(0x78) + '\n'],
     forbid: ['!DS PTR ERROR!', '!UNK WORD!'],
     check: (out, report, files) => {
       const img = fs.readFileSync(files.sds[1]);
@@ -198,12 +198,12 @@ module.exports = [
     sd: [{ dev: 0 }],
     args: ['--cycles', '100000000', '--input', BOOT + 'vols\\r' + P + '0 q^GAMES^ mkfs\\r' + P +
       'q^/sd/0/x^ 0 create . 3 close\\r0 q^TOYS^ relabel\\r0 fsck\\r0 fsfix\\r9 fsck\\rioerr .\\rvols\\r'],
-    expect: ['/ram/1> vols\n0: sdhc 1 MB 2048 blocks\n1: none\n', '7: none\n',
+    expect: ['/ram> vols\n0: sdhc 1 MB 2048 blocks\n1: none\n', '7: none\n',
       'mkfs\nsdhc 1 MB 2048 blocks\nhydrafs label=GAMES\nfree 1020 KB of 1020 KB\n',
       'relabel\nsdhc 1 MB 2048 blocks\nhydrafs label=TOYS\nfree 1016 KB of 1020 KB\n',
       'fsck\nsdhc 1 MB 2048 blocks\nhydrafs label=TOYS\nfree 1016 KB of 1020 KB\ncheck: lost 0, unmarked 0, twice 0\n',
-      'check: lost 0, unmarked 0, twice 0, fixed\n', '/ram/1> ioerr .\n' + num(0x70) + '\n',
-      '/ram/1> vols\n0: sdhc 1 MB 2048 blocks\nhydrafs label=TOYS\n'],
+      'check: lost 0, unmarked 0, twice 0, fixed\n', '/ram> ioerr .\n' + num(0x70) + '\n',
+      '/ram> vols\n0: sdhc 1 MB 2048 blocks\nhydrafs label=TOYS\n'],
     forbid: ['!DS PTR ERROR!', '!UNK WORD!'],
     check: (out, report, files) => {                            // The card the Hydra made: as the PC tool makes them
       const v = new hydrafs.Volume(files.sds[0]);
@@ -360,14 +360,14 @@ module.exports = [
     },
   },
   {
-    name: 'ram-disks', about: 'the RAM disks at boot: the RAM disk (r: the storage task\'s banks) and the shared one (s: shared banks), their ctl files (sizes, banks, HydraFS), /ram bound (/ram/s: the shared one, through it), the caches\' directories; a file bigger than a bank through each, back to a card as it was',
+    name: 'ram-disks', about: 'the RAM disks at boot: the RAM disk (r: the storage task\'s banks) and the shared one (s: shared banks), their ctl files (sizes, banks, HydraFS), /ram and /sram mounted (mount hfs /ram r/1, mount hfs /sram s), the caches\' directories; a file bigger than a bank through each, back to a card as it was',
     sd: [{ dev: 0, label: 'CARD', hfs: () => {} }],
-    args: ['--cycles', '150000000', '--input', BOOT + ['cat /dev/sd/r/ctl\\r', 'cat /dev/sd/s/ctl\\r', 'ns\\r', 'ls /ram\\r', 'ls /ram/1\\r', 'ls /ram/s\\r',
-      'cp /rom/songs/test.zsm /ram/s/t.zsm\\r', 'cp /ram/s/t.zsm s.zsm\\r', 'cp /rom/songs/test.zsm /ram/1/t.zsm\\r', 'cp /ram/1/t.zsm r.zsm\\r', 'ls /sd/s\\r'].join(P) + P],
+    args: ['--cycles', '150000000', '--input', BOOT + ['cat /dev/sd/r/ctl\\r', 'cat /dev/sd/s/ctl\\r', 'ns\\r', 'mount hfs /a r\\r', 'ls /a\\r', 'ls /ram\\r', 'ls /sram\\r',
+      'cp /rom/songs/test.zsm /sram/t.zsm\\r', 'cp /sram/t.zsm s.zsm\\r', 'cp /rom/songs/test.zsm /ram/t.zsm\\r', 'cp /ram/t.zsm r.zsm\\r', 'ls /sram\\r'].join(P) + P],
     expect: ['cat /dev/sd/r/ctl\nram 256 KB 512 blocks\nbanks $10-$2F\nhydrafs label=RAM\nfree 244 KB of 252 KB\n',
       'cat /dev/sd/s/ctl\nsram 512 KB 1024 blocks\nbanks $40-$7F\nhydrafs label=SRAM\nfree 504 KB of 508 KB\n',
-      '> ns\nmount hfs /sd\nmount proc /proc\nbind /sd/x /rom\nbind /sd/r /ram\n', '> ls /ram\n1/\n', '> ls /ram/1\nbin/\nlib/\n', '> ls /ram/s\nbin/\nlib/\n',
-      '> ls /sd/s\nbin/\nlib/\nt.zsm 14075\n'],
+      '> ns\nmount -s hfs /sd\nmount -s env /env\nmount -s proc /proc\nmount -s hfs /rom x\nmount -s hfs /sram s\nbind -cs /ram/bin /bin\nbind -as /sram/bin /bin\nbind -as /sd/0/bin /bin\nbind -as /rom/bin /bin\nbind -cs /ram/lib /lib\nbind -as /sram/lib /lib\nbind -as /sd/0/lib /lib\nbind -as /rom/lib /lib\nmount hfs /ram r/1\n', '> ls /a\n1/\n', '> ls /ram\nbin/\nlib/\n', '> ls /sram\nbin/\nlib/\n',
+      '> ls /sram\nbin/\nlib/\nt.zsm 14075\n'],
     forbid: ['!IO ERR!', '!UNK WORD!', 'No card:'],
     check: (out, report, files) => {
       const song = fs.readFileSync(path.join(__dirname, '../../os_rom/songs/test.zsm'));
@@ -383,23 +383,23 @@ module.exports = [
   },
   {
     name: 'ram-ctl', about: 'the RAM disks\' ctl files: stop (not with a file open: busy), start with a size (banks, K, M) and where from (modules; shared bank IDs, hex), started already (busy), no room (disk full), a bad size or range or text after it, the ROM disk (not supported); a small machine (1 module, 1 shared macro-page) gets less at boot',
-    args: ['--cycles', '200000000', '--input', BOOT + ['echo x > /ram/s/f\\r', 'q^/ram/s/f^ 1 open .\\r', 'q^/dev/sd/s/ctl^ q^stop^ ctl\\r', '3 close\\r',
+    args: ['--cycles', '200000000', '--input', BOOT + ['echo x > /sram/f\\r', 'q^/sram/f^ 1 open .\\r', 'q^/dev/sd/s/ctl^ q^stop^ ctl\\r', '3 close\\r',
       'q^/dev/sd/s/ctl^ q^stop^ ctl\\r', 'cat /dev/sd/s/ctl\\r', 'q^/dev/sd/s/ctl^ q^start 1M $10-$9F^ ctl\\r', 'cat /dev/sd/s/ctl\\r',
       'q^/dev/sd/r/ctl^ q^start 2^ ctl\\r', 'q^/dev/sd/r/ctl^ q^stop^ ctl\\r', 'q^/dev/sd/r/ctl^ q^start 255^ ctl\\r', 'q^/dev/sd/r/ctl^ q^start 3Q^ ctl\\r',
       'q^/dev/sd/r/ctl^ q^start 2 1-2 x^ ctl\\r', 'q^/dev/sd/r/ctl^ q^start 1 15-15^ ctl\\r', 'q^/dev/sd/x/ctl^ q^start 1^ ctl\\r',
-      'q^/dev/sd/r/ctl^ q^start 16k 1-1^ ctl\\r', 'cat /dev/sd/r/ctl\\r', 'echo y > /ram/1/g\\r', 'cat /ram/1/g\\r'].join(P) + P],
-    expect: ['open .\n' + num(3) + '\n', 'q^stop^ ctl\n\n !IO ERR! busy\n', '3 close\n', 'q^stop^ ctl\n\n/ram/1> cat /dev/sd/s/ctl\nnone\n',
+      'q^/dev/sd/r/ctl^ q^start 16k 1-1^ ctl\\r', 'cat /dev/sd/r/ctl\\r', 'echo y > /ram/g\\r', 'cat /ram/g\\r'].join(P) + P],
+    expect: ['open .\n' + num(3) + '\n', 'q^stop^ ctl\n\n !IO ERR! busy\n', '3 close\n', 'q^stop^ ctl\n\n/ram> cat /dev/sd/s/ctl\nnone\n',
       'cat /dev/sd/s/ctl\nsram 1024 KB 2048 blocks\nbanks $20-$9F\nhydrafs label=SRAM\n', 'q^start 2^ ctl\n\n !IO ERR! busy\n',
       'q^start 255^ ctl\n\n !IO ERR! disk full\n', 'q^start 3Q^ ctl\n\n !IO ERR! not supported\n', 'q^start 2 1-2 x^ ctl\n\n !IO ERR! not supported\n',
-      'q^start 1 15-15^ ctl\n\n !IO ERR! not supported\n', 'q^start 1^ ctl\n\n !IO ERR! not supported\n', 'q^start 16k 1-1^ ctl\n\n/ram/1> cat /dev/sd/r/ctl\nram 16 KB 32 blocks\nbanks $1E-$1F\n',
-      '> cat /ram/1/g\n\n !IO ERR! not found\n'],
+      'q^start 1 15-15^ ctl\n\n !IO ERR! not supported\n', 'q^start 1^ ctl\n\n !IO ERR! not supported\n', 'q^start 16k 1-1^ ctl\n\n/ram> cat /dev/sd/r/ctl\nram 16 KB 32 blocks\nbanks $1E-$1F\n',
+      '> cat /ram/g\n\n !IO ERR! not found\n'],
     forbid: ['!UNK WORD!'],
   },
   {
-    name: 'ram-speed', about: 'a program loads faster from the shared RAM disk than from a card: 16K (it only returns), run by its full path from the card, then copied to /ram/s/bin and run from there, at least 2.5 times as fast (3.2 now: every byte is copied from its bank to the block cache, to the transfer area, to the program)',
+    name: 'ram-speed', about: 'a program loads faster from the shared RAM disk than from a card: 16K (it only returns), run by its full path from the card, then copied to /sram/bin and run from there, at least 2.5 times as fast (3.5 now: every byte is copied from its bank to the block cache, to the transfer area, to the program, four bytes a turn of each loop)',
     sd: [{ dev: 0, label: 'SPEED', hfs: v => { v.put('big.hyx', hyx(0x0800, [0x60, ...new Array(16383).fill(0)])); } }],
-    args: ['--cycles', '200000000', '--mark', '> /sd/0/big', '--mark', '> /ram/s/bin/fast', '--mark', '> ', '--input', BOOT +
-      ['cp big.hyx /ram/s/bin/fast.hyx\\r', '/sd/0/big\\r', '/ram/s/bin/fast\\r'].join(P) + P],
+    args: ['--cycles', '200000000', '--mark', '> /sd/0/big', '--mark', '> /sram/bin/fast', '--mark', '> ', '--input', BOOT +
+      ['cp big.hyx /sram/bin/fast.hyx\\r', '/sd/0/big\\r', '/sram/bin/fast\\r'].join(P) + P],
     forbid: ['!IO ERR!', '!UNK WORD!'],
     check: (out, report) => {
       const prompts = [...report.matchAll(/mark: "> " at cycle (\d+)/g)].map(m => +m[1]);
@@ -409,7 +409,7 @@ module.exports = [
         const after = prompts.find(c => c > +m[1]);
         return after ? after - +m[1] : null;
       };
-      const card = took('/sd/0/big'), ram = took('/ram/s/bin/fast');
+      const card = took('/sd/0/big'), ram = took('/sram/bin/fast');
       if (!card || !ram) return 'a load wasn\'t timed (card ' + card + ', RAM ' + ram + ')';
       if (ram * 2.5 > card) return 'from the RAM disk: ' + ram + ' cycles; from the card: ' + card + ' (not 2.5 times as fast)';
     },

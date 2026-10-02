@@ -19,10 +19,11 @@ node sim/hydrasim.js -i            use the Hydra in your terminal, in the emulat
 
 ### **Documentation**
 
-All documentation is in **[docs/](docs/README.md)**:
+All documentation is in **[docs/](docs/README.md)**.  **[The Hydra-16 in one place](docs/hydra-16.md)** covers every part, hardware and software, with links to the rest; it's also one PDF, **[docs/hydra-16.pdf](docs/hydra-16.pdf)**, with every document in it.
 
 | | |
 | :-- | :-- |
+| [The Hydra-16 in one place](docs/hydra-16.md) | The master document: every part of the system, with links into the others |
 | [First steps](docs/tutorial.md) | A tutorial: the Hydra in the emulator, HyForth, files, a program in C and in assembly |
 | [Getting started](docs/getting-started.md) | Building, programming the chips, the serial terminal, first boot, the emulator |
 | [HyForth](docs/using/hyforth.md), [WOZMON](docs/using/wozmon.md) | Using the system |

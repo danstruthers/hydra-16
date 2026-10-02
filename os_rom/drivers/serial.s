@@ -17,7 +17,7 @@ SER_SEND_STATUS_ERROR = $FF
 ;   /dev/cons reads only for the foreground task (ZP_SER_CAPTURE: the shell to start with); others
 ;   wait until they're brought to the foreground.  /dev/ser is the raw port, and /dev/ser/ctl its settings
 ;   (baud rate, data bits, parity, stop bits: 9600 8-N-1 at boot).  The requests themselves are handled on
-;   ROM page 2 (ser_srv.s, serctl.s).
+;   ROM page 2 (ser_srv.s) and page 9 (serctl.s).
 ;   READ_CHAR / WRITE_CHAR use the task's fd 0 / fd 1, or the rings directly if the task has none.
 
 SERIAL_DRIVER:
@@ -35,7 +35,7 @@ TASK_GATE       SER_CALL_SET_CAPTURE, SERIAL_SET_CAPTURE, SERIAL_TASK_NUM
 ; Serve routines (page 2, ser_srv.s)
 FAR_GATE_INLINE CONS_SERVE,     PAGE2::CONS_SERVE,      2
 FAR_GATE_INLINE SER_SERVE,      PAGE2::SER_SERVE,       2
-FAR_GATE_INLINE SER_CONFIG,     PAGE2::SER_CONFIG,      2
+FAR_GATE_INLINE SER_CONFIG,     ::SER_CONFIG_P9,        9
 
 ; Driver init (runs in the serial task).  OUT: C = 0 on success, or C = 1 and .A = error (only if its IRQ
 ; handler can't be registered: without its files, /dev/cons and /dev/ser, the console still works)

@@ -35,6 +35,12 @@ FAR_GATE_INLINE     ENV_COPY,       ::ENV_COPY_P9,          9   ; (A new task's 
 FAR_GATE_INLINE     FP_MAKE,        PAGE5::FP_MAKE,         5   ; Far pointers (page 5): callers' names
 FAR_GATE_INLINE     FP_COPY,        PAGE5::FP_COPY,         5
 
+; ... and to the serial port's settings (page 9: serctl.s), for ser_srv.s
+FAR_GATE_INLINE     SER_SET,        ::SER_SET_P9,           9
+FAR_GATE_INLINE     SER_CTL_READ,   ::SER_CTL_READ_P9,      9
+FAR_GATE_INLINE     SER_CTL_WRITE,  ::SER_CTL_WRITE_P9,     9
+FAR_GATE_INLINE     CONSCTL_REQUEST, ::CONSCTL_REQUEST_P9,  9
+
 ; Page 2 copy of WRITE_HSTRING: the HString has to be read from page 2, where the caller's strings are.
 ; .A, .Y hold the addr of HString to write
 ; Clobbers .A, .Y; Preserves .X

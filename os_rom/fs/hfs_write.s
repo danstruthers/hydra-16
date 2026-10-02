@@ -1637,12 +1637,7 @@ HFS_W_RANGE:
             ldy         #0
             bit         HFS_WZERO
             bmi         @zeros
-:
-            lda         (SD_DST),Y                          ; SD_N bytes (1-256): the data area -> the cache
-            sta         (SD_SRC),Y
-            iny
-            cpy         SD_N                                ; (SD_N = 256: 0, so .Y wraps round to it)
-            bne         :-
+            _M_COPY_N   SD_DST, SD_SRC, SD_N                ; SD_N bytes (1-256; 0: 256): the data area -> the cache
             bra         @copied
 
 @zeros:                                                     ; (Or zeros: SD_N can be a whole block here, as

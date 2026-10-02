@@ -2,9 +2,9 @@
 
 Disks in memory, and what they let the rest of the system drop:
 * **The ROM disk:** the whole paged ROM (4 MB) as one read-only disk, so everything in ROM that isn't code is a
-  file.  **Built** (`/sd/x`, bound at `/rom`).
+  file.  **Built** (the disk `x`, mounted at `/rom`).
 * **RAM disks:** a program cache and scratch files, fast, with no card: an area for each task, and a shared one.
-  **Built** (`/sd/r` and `/sd/s`, bound at `/ram` and `/ram/s`).
+  **Built** (the disks `r` and `s`: each shell's own area mounted at `/ram`, and `/sram`).
 
 All of them are block devices under the HydraFS server, as the cards are, and [io.md](../programming/io.md#the-ram-disks-ram)
 describes them as they are.  The names put together from them (`/bin` over the caches, the cards and the ROM)
@@ -30,17 +30,16 @@ are the [namespace plan](NAMESPACES.md)'s, and a task's memory as files is the [
 
 | Name | What | On | Lasts |
 | :--- | :--- | :- | :---- |
-| `/rom` | The ROM's files: programs, songs, libraries, help (a bind to `/sd/x`) | The ROM disk, `x` | Read-only |
-| `/ram` | The RAM disk (a bind to `/sd/r`): its root holds the tasks' areas | The RAM disk, `r` | Until reset (or `stop`) |
-| `/ram/0` ... `/ram/f` | Task N's area: a directory for it and the tasks it starts | The RAM disk | Until task N ends (removed then), or reset |
-| `/ram/N/bin`, `/ram/N/lib` | Task N's own program and library cache | The RAM disk | |
-| `/ram/s` | The shared RAM disk (`/sd/s`), every task's, served by HydraFS inside the RAM disk | The shared RAM disk, `s` | Until reset (or `stop`) |
-| `/ram/s/bin`, `/ram/s/lib` | The shared program and library cache | The shared RAM disk | |
+| `/rom` | The ROM's files: programs, songs, libraries, help (`mount hfs /rom x`) | The ROM disk, `x` | Read-only |
+| `/ram` | A shell's own area on the RAM disk (`mount hfs /ram r/N`, N its task): a directory for it and the tasks it starts | The RAM disk, `r` | Until task N ends (removed then), or reset (or `stop`) |
+| `/ram/bin`, `/ram/lib` | The shell's own program and library cache | The RAM disk | |
+| `/sram` | The shared RAM disk, every task's (`mount hfs /sram s`) | The shared RAM disk, `s` | Until reset (or `stop`) |
+| `/sram/bin`, `/sram/lib` | The shared program and library cache | The shared RAM disk | |
 
 ```
 /> ls /rom/bin                            the programs in ROM
-/> cp game.hyx /ram/1/bin/game.hyx        into this shell's cache (/ram/1/bin) ...
-/> cp game.hyx /ram/s/bin/game.hyx        ... or the shared one, for every task
+/> cp game.hyx /ram/bin/game.hyx          into this shell's cache (/ram/bin) ...
+/> cp game.hyx /sram/bin/game.hyx         ... or the shared one, for every task
 /> game                                   found in a cache: loaded from RAM, not the card
 ```
 
@@ -64,9 +63,14 @@ by a letter that isn't one:
 | :--- | :--- | :----- | :----------- | :---------- |
 | `0`-`7` | SD cards on the board's SPI devices 0-7 | | `/sd/0` ... `/sd/7` | 0-7 |
 | `8`-`f` | SD cards on slot cards' SPI devices `$8`-`$F` (planned) | | `/sd/8` ... `/sd/f` | 11-15, handed out |
-| `x` | **The ROM disk** (built) | The paged ROM, all 256 banks | `/sd/x`, `/rom` | 8 |
-| `r` | The RAM disk (built) | The storage task's banks on the RAM modules | `/sd/r`, `/ram` (the areas `/ram/0-f`) | 9 |
-| `s` | The shared RAM disk (built) | Shared RAM banks (the board's 2 MB) | `/sd/s`, `/ram/s` (`/sd/r/s`) | 10 |
+| `x` | **The ROM disk** (built) | The paged ROM, all 256 banks | `/rom` | 8 |
+| `r` | The RAM disk (built) | The storage task's banks on the RAM modules | `/ram` (a shell's own area, `r/N`) | 9 |
+| `s` | The shared RAM disk (built) | Shared RAM banks (the board's 2 MB) | `/sram` | 10 |
+
+The disks in memory are never under `/sd`, which has the cards alone: they're mounts of the HydraFS server with a
+spec, as Plan 9's `mount` takes one (`mount hfs /rom x`), and the server serves them only through such a mount (the
+request says so: `IO_BLK_SPEC`), or for task 0.  Each is also a block device, `/dev/sd/x`, `/dev/sd/r`,
+`/dev/sd/s`, as a card is.
 
 * **A hex digit is the SPI device's, always:** the card on SPI device `$A` is `/sd/a`.  A slot card can decode SPI
   devices `$8`-`$F` (`SPI_A3`: [hardware.md](../hardware.md#spi-bus-via-port-b)), so `/sd/8` ... `/sd/f` are theirs,
@@ -87,7 +91,7 @@ So the card tools work on them: `vols` lists them, `check` on `/dev/sd/s/ctl` ch
 
 ### **The ROM disk**
 
-**Built.**  The paged ROM is the disk `x` (`/dev/sd/x`, `/sd/x`; disk 8 in the tables): block n is bank n / 32,
+**Built.**  The paged ROM is the disk `x` (`/dev/sd/x`; disk 8 in the tables): block n is bank n / 32,
 at `$A000 + (n % 32) * 512`, as the CPU sees it (8,192 blocks).  It starts with a partition table, as a card can:
 
 | Blocks | Banks | What |
@@ -102,7 +106,8 @@ at `$A000 + (n % 32) * 512`, as the CPU sees it (8,192 blocks).  It starts with 
   the HydraFS server (create, write, remove, wstat), each before anything changes, the block cache included.
 * **The HydraFS server** finds the `$7F` partition as on a card, so nothing in it is special to the ROM but
   `HFS_RO_DISK`.
-* **`/rom`** is a bind to `/sd/x`, which the boot shell makes; its tasks inherit it.  The IO layer's built-in
+* **`/rom`** is a mount of the HydraFS server with the spec `x` (`mount -s hfs /rom x`), in the system
+  namespace, which the boot shell makes; every task sees it.  The IO layer's built-in
   `/rom` prefix, the `/rom` server (`servers/rom_srv.s`, BIOS ROM page D), its gate and its image format
   (`HYROM1`, `mkromfs.js`) are gone.
 * **The build** (`sim/tools/mkromdisk.js`, after the link): the volume made with the HydraFS PC tool from the
@@ -151,8 +156,8 @@ A file on the ROM disk can lie across banks (`jukebox.hyx` is in banks 4 and 5 n
 and a write to a ctl file stops one and starts it again with another size, from other memory (`boot.hys` can do it):
 
 ```
-echo start 256K 1-2 > /dev/sd/r/ctl        the RAM disk: 256K, from RAM modules 1 and 2 (the areas /ram/0-f)
-echo start 1M $20-$9F > /dev/sd/s/ctl      the shared RAM disk: 1 MB, from shared bank IDs $20-$9F (/ram/s)
+echo start 256K 1-2 > /dev/sd/r/ctl        the RAM disk: 256K, from RAM modules 1 and 2 (the areas: /ram)
+echo start 1M $20-$9F > /dev/sd/s/ctl      the shared RAM disk: 1 MB, from shared bank IDs $20-$9F (/sram)
 echo stop > /dev/sd/s/ctl                  stop one (its files go; not while one is open)
 cat /dev/sd/r/ctl                          its size, its banks, its HydraFS: "ram 256 KB 512 blocks", "banks $10-$2F"
 ```
@@ -167,7 +172,7 @@ cat /dev/sd/r/ctl                          its size, its banks, its HydraFS: "ra
   there's no limit for one area but the disk's size.
 * **`start SIZE FROM-TO` on `s`:** the shared bank IDs it comes from (`U << 4 | bank`, as `memory.md` numbers
   them: `$20-$9F` is macro-pages 2-9, 1 MB), taken with `SH_BANK_ALLOC` (a run, with no handle: nothing else
-  hands them out, and `stop` gives them back).  The system's own banks (`$00`, the IO transfer bank `$09`) and
+  hands them out, and `stop` gives them back).  The system's own banks (`$00`, the IO transfer banks `$09-$0C`) and
   banks in use are never taken.  Why the lower half by default: `SH_ALLOC` takes from the top down with IRQs
   off, looking past every bank in use above a free one, and 64 of them there made a shared allocation hold IRQs
   off too long (the `irqs-off` test).
@@ -183,10 +188,10 @@ server checks it on the RAM disk (`HFS_AREA_CHECK`), before a walk and before a 
 
 | Area | Who | What |
 | :--- | :-- | :--- |
-| `/ram/N` | Task N, and the tasks it started (and theirs: its family) | Read and write |
-| `/ram/N` | Any other task | Nothing: `ERR_IO_PERM` (`$88`, "not allowed") |
-| `/ram`'s other names (`/ram/zz`) | Every task but 0 | Nothing: not an area |
-| `/ram`, `/ram/s` and all in it | Every task | Read and write |
+| Area `r/N` | Task N, and the tasks it started (and theirs: its family) | Read and write |
+| Area `r/N` | Any other task | Nothing: `ERR_IO_PERM` (`$88`, "not allowed") |
+| The RAM disk's other names (`r/zz`) | Every task but 0 | Nothing: not an area |
+| The RAM disk's root (its listing), `/sram` and all in it | Every task | Read and write |
 | `/rom/...` | Every task | Read only (`ERR_IO_MODE` for the rest) |
 | Everything | Task 0, the system task | Read and write (the ROM disk still read-only) |
 
@@ -195,8 +200,8 @@ server checks it on the RAM disk (`HFS_AREA_CHECK`), before a walk and before a 
 * **Task 0 passes every check.**  It's the system's own task (the boot, the kernel's work for other tasks), so a
   request from it is never refused for permission, here or (planned) in `/proc` ([PROC.md](PROC.md)).  Only code
   the system runs in task 0 has that: a program never runs there.
-* **An area itself** can't be renamed, or its mode changed, but by task 0 (`HFS_AREA_WSTAT`): renaming `/ram/1` to
-  `/ram/2` would take task 2's.
+* **An area itself** can't be renamed, or its mode changed, but by task 0 (`HFS_AREA_WSTAT`): renaming `r/1` to
+  `r/2` would take task 2's.
 * **Owners kept right:** when a task ends, the tasks it started get its owner instead (`TASK_ORPHANS`, page 5, from
   `TASK_EXIT_NOTED`), as Unix gives orphans to `init`, so a new task in its slot isn't taken for their parent.
 * **One check for both:** "may task A use task N's things?" is the kernel's `TASK_MAY` (page 5: `.A` = A, `.X` = N),
@@ -204,8 +209,8 @@ server checks it on the RAM disk (`HFS_AREA_CHECK`), before a walk and before a 
   `.Y` = 1 the other way, for the `/proc` server (A started N: a debugger and its program,
   [PROC.md](PROC.md#who-can-use-it)).  Task 0 is always yes.
 * **An open file stays usable** by whoever has the fd, as in Unix and Plan 9.
-* **`/sd/r`** is the same disk by another name: the server checks it there too.
-* **Permissions are the server's,** not the namespace's (Plan 9's way): a bind or a mount can rename `/ram/2`, but
+* **Any mount of the disk** (`mount hfs /a r`, then `/a/2`) is checked the same: the server checks the area.
+* **Permissions are the server's,** not the namespace's (Plan 9's way): a bind or a mount can rename an area, but
   the server still checks who's asking.  The namespace can add hiding, for any device ([NAMESPACES.md](NAMESPACES.md)).
 
 ---
@@ -223,8 +228,8 @@ server checks it on the RAM disk (`HFS_AREA_CHECK`), before a walk and before a 
 * `DISK_FROM_NAME` (`include/io.inc`) knows `r` and `s` (disks 9 and 10).
 
 **In the HydraFS server** (page 6):
-* `/r/s` is the shared disk: `HFS_WALK` takes `/r/s/...` as `/s/...`, so the one bind, `/ram`, gives `/ram/s` too.
-  (Two binds would have left one free namespace entry of the 5 with `/sd` and `/rom`: the IO self test needs two.)
+* (`/r/s` was the shared disk too, so that one bind gave both; with each shell's own area at `/ram`, the shared
+  disk has a bind of its own, `/sram`, and that's gone.)
 * the areas' check (`HFS_AREA_CHECK`, `HFS_AREA_WSTAT`: `ERR_IO_PERM`);
 * **an area removed as its task ends:** the task-end path (`TASK_EXIT_NOTED`, after `MM_TASK_RESET` has closed the
   task's fds) calls `TASK_ORPHANS` (page 5), which gives the task's children its owner, then looks at the storage
@@ -235,17 +240,29 @@ server checks it on the RAM disk (`HFS_AREA_CHECK`), before a walk and before a 
   until the area itself is gone and its bit cleared.  A file still open (a task it started may have one) stops
   it, and the bit stays for the next time; a parent waiting for the task (`TASK_JOIN`) goes on only after it.
 
-**Names:** the boot shell binds `/ram` to `/sd/r` (`SH_BINDS`), and makes the caches' directories (`SH_RAM_DIRS`):
-`/ram/s/bin`, `/ram/s/lib`, and its own area `/ram/1` with `bin` and `lib`.
+**Names:** the boot shell mounts `/sram` (`mount -s hfs /sram s`: `SH_MOUNTS`) and makes the shared caches'
+directories, `/sram/bin` and `/sram/lib` (`SH_RAM_DIRS`).  Each shell mounts its own area at `/ram` (`mount hfs
+/ram r/N`, in its own namespace) and makes it, with `bin` and `lib` (`SH_OWN_AREA`: the boot shell's from `SH_BOOT`,
+one started with `shell` from `SHELL_MAIN`); the programs, scripts and pipelines it runs inherit that.
 
-**Speed.**  A block from RAM or ROM is a 512-byte copy, about 8,000 cycles; from a card it's the bit-banged SPI,
+**Speed.**  A block from RAM or ROM is a 512-byte copy, about 7,000 cycles; from a card it's the bit-banged SPI,
 about 150,000 (the `sd-speed` test's budget).  The rest of a load is the same either way, and it's most of the
-RAM disk's time: every byte is copied three times, from its bank to the block cache (`SD_RAM_READ`), to the
-client's transfer area (`HFS_FILE_READ`), and to the program (`IO_COPY_OUT`), about 90 cycles a byte in all.  So a
-16K program loads in 1.5 million cycles from the RAM disk against 4.8 million from a card, 3.2 times as fast
-(`ram-speed`), and a program found by name in a cache pays for the places looked in first (the current
-directory's three misses on the card, then the task's own cache).  Faster: the server could read a memory disk's
-blocks straight into the client's transfer area, past the cache, which takes out one copy.
+RAM disk's time.  Profiled (`sim/hydrasim.js --profile N-M`), a 16K program from the shared RAM disk takes 1.34
+million cycles, against 4.69 million from a card (3.5 times as fast: `ram-speed`):
+* **Three copies of every byte, 55%:** from the disk's bank to the block cache (`SD_RAM_READ`), to the client's
+  transfer area (`HFS_FILE_READ`), and to the program (`IO_COPY_OUT`), each a page four bytes a turn of the loop
+  (`_M_COPY_PAGE`: 13.75 cycles a byte).  The RAM disk's bank and the transfer area are both seen at `$8000`, so
+  the cache's copy can't be skipped without switching banks for every byte, which costs about as much.
+* **Each request, 31%:** the file is read 256 bytes at a time (`IO_UNIT`), 64 requests, each with its task calls,
+  gates and scheduling, HydraFS's place in the file (`HFS_EXT_TRY`, `HFS_FILE_BLOCK`) and the IO layer's
+  bookkeeping: about 6,000 cycles a request.  Bigger requests would halve it.
+* **Starting the program, 14%:** the shell's word lookup and name search, the new task (its namespace: only the
+  entries in use are copied), the MMU.
+
+The ROM disk's blocks are read where they are: the paged ROM is at `$A000`, apart from the transfer area, so
+HydraFS copies a file's bytes from it straight into the transfer area (`HFS_BLOCK_AT`), with no copy into the
+cache (a ROM block never changes), about 16 cycles a byte less.  A program found by name in a cache pays for the
+places looked in first (the current directory, on the card).
 
 ---
 
@@ -258,13 +275,13 @@ blocks straight into the client's transfer area, past the cache, which takes out
    partition, as on a card).  `/rom` is bound if the ROM disk has a volume (an image without one, or a blank
    paged ROM, has no table: no `/rom`, and everything else works).  *Done:* the boot shell binds a name only if
    what it stands for opens (`SH_BINDS`; the `rom-none` test).
-3. **The namespace from a file:** the boot shell reads `/rom/lib/namespace`, the default list of binds and mounts
+3. **(Done)** **The namespace from a file:** the boot shell reads `/rom/lib/namespace`, the default list of binds and mounts
    (`/ram`, `/bin` and `/lib` unions), then a card's `/lib/namespace` ([NAMESPACES.md](NAMESPACES.md)).  The list
    is a file in ROM, not code: changing it is a rebuild of the ROM disk, not of a BIOS page.
 4. **The current directory:** the first card with a HydraFS, as now; with no card, the shell's own area,
-   `/ram/1`, so files can be saved (until reset) on a machine with no card at all.  *Done* (`SH_VOLUMES`).
+   `/ram`, so files can be saved (until reset) on a machine with no card at all.  *Done* (`SH_VOLUMES`).
 5. **The boot script:** a card's `boot.hys`; with no card, `/rom/boot.hys` (now a line saying so; later it can
-   copy the ROM's programs into `/ram/s/bin`, set `PATH`, print help).  *Done:* `SH_VOLUMES` says which
+   copy the ROM's programs into `/sram/bin`, set `PATH`, print help).  *Done:* `SH_VOLUMES` says which
    (`BOOTFLAG` 1 or 2).
 
 ---
@@ -279,9 +296,9 @@ Every piece of the ROM that isn't code can be a file, and every place that searc
 | The test song in bank 2, and the player's ROM mode (`ZSM_PLAY_ROM`, `SND_SONG_BANK`, the bank walk in `ZSM_BYTE`, `songs/test_rom.s`) | `sndtest` plays `/rom/songs/test.zsm` (already on the disk) as `play` does any file | **Done:** bank 2 is the volume's, and the only cross-bank pointer is gone |
 | HyForth's training scripts and sample binary words in bank 0 (`ftrain`, words compiled at `COPYSTART` offsets) | Files in `/rom/forth`, read with `include` | Planned: bank 0 keeps only `COPYTORAM` and the variables |
 | New HyForth words: assembly on page 1 (196 bytes free) or page A (530) | Forth source libraries in `/rom/lib` (`lib name`, which reads files already) | From now on, where speed allows |
-| The shell's search: the current directory, `$PATH`, the card's `/bin`, then `/rom/bin` (and `$LIBPATH`, `/lib`, `/rom/lib`) | `.` then `/bin`, a union of the caches, the card and the ROM ([NAMESPACES.md](NAMESPACES.md)) | With the namespace plan |
-| A built-in default namespace (code in the boot shell) | `/rom/lib/namespace`, a file | With the namespace plan |
-| No card: nowhere to save | `/ram/1` (the shell's area) as the current directory | **Done** |
+| The shell's search: the current directory, `$PATH`, the card's `/bin`, then `/rom/bin` (and `$LIBPATH`, `/lib`, `/rom/lib`) | `.` then `/bin`, a union of the caches, the card and the ROM ([NAMESPACES.md](NAMESPACES.md)) | **Done** |
+| A built-in default namespace (code in the boot shell) | `/rom/lib/namespace`, a file | **Done** (the mounts and the card's binds stay the boot shell's) |
+| No card: nowhere to save | `/ram` (the shell's area) as the current directory | **Done** |
 | Slow program loads from a card, and no resident programs | The caches: a program copied to RAM once | **Done** |
 | A task's memory: summaries in `/proc/N/pages`; far pointers refuse other tasks' RAM | `/proc/N/mem`, the bytes, for the family and task 0 ([PROC.md](PROC.md)) | Planned |
 | ROM programs on BIOS pages (the editor, page 8; the song player, page C) | Could be `.hyx` files in `/rom/bin`, loaded into task RAM | An option: BIOS pages aren't short, but files can change without a BIOS rebuild |
@@ -294,25 +311,24 @@ address before any IO is up (`COPYTORAM` and its variables, bank 0).
 
 ### **The program caches**
 
-Two caches: a task's own (`/ram/N/bin`, and its children's, since they share its area) and the shared one
-(`/ram/s/bin`).  For a program typed with no `/`, the shell looks in (`SH_FIND`, `shell/run.s`):
-1. the current directory (Plan 9's `.` first: `path=(. /bin)`);
-2. the task's own cache, `/ram/N/bin`, then its owner's, up to three owners up (`SH_CACHE_LEVELS`: a pipeline's
-   stage, or a program's own shell, finds the shell's cache);
-3. the shared cache, `/ram/s/bin`;
-4. `$PATH`'s directories (or `/bin` on the current directory's card);
-5. `/rom/bin`.
+Two caches: the boot shell's own (`/ram/bin`, its area's, and its children's, since they share its namespace)
+and the shared one (`/sram/bin`).  For a program typed with no `/`, the shell looks in the current directory
+(Plan 9's `.` first: `path=(. /bin)`), then `/bin` (`SH_FIND`, `shell/run.s`), a union in the namespace
+([NAMESPACES.md](NAMESPACES.md)) of:
+1. the shell's cache, `/ram/bin` (`-c`: a copy into `/bin` goes there);
+2. the shared cache, `/sram/bin`;
+3. the boot card's `/bin`;
+4. `/rom/bin`;
 
-Libraries the same, in `lib`, with `lib` and `$LIBPATH`.  A name with a `/` is used as given, so
-`/sd/0/bin/game` always loads the card's copy.  With the [namespace plan](NAMESPACES.md), 2-5 become `/bin`
-itself, a union of the same directories in the same order, and the shell looks in `.` and then `/bin`.
+then `$PATH`'s directories.  Libraries the same, in `/lib`, then `$LIBPATH`.  A name with a `/` is used as
+given, so `/sd/0/bin/game` always loads the card's copy.
 
-* **Caching is copying:** `cp game.hyx /ram/s/bin/game.hyx`, and `rm` takes it out.  (The `cache` and `uncache`
+* **Caching is copying:** `cp game.hyx /sram/bin/game.hyx`, and `rm` takes it out.  (The `cache` and `uncache`
   commands this plan had are left out: a copy says the same, and HyForth's page 1 has under 200 bytes.)
 * **Not checked against the card:** after rebuilding a program, copy it again (or remove it), or the old copy
   keeps running.  (A program in the current directory runs before a cached copy, so the new one runs from the
   build's folder.)
-* `boot.hys` can copy the programs used most into `/ram/s/bin`, for every task.
+* `boot.hys` can copy the programs used most into `/sram/bin`, for every task.
 
 ---
 
@@ -321,7 +337,8 @@ itself, a union of the same directories in the same order, and the shell looks i
 In the emulator:
 * **The ROM disk (done):** `/rom` listed, read, a program run by name from `/rom/bin`, read-only everywhere
   (`rom`); every file copied to a card and compared with its source (`rom-copy`); the build's read-back check;
-  `/sd/x` and `/dev/sd/x/ctl` (`rom 4 MB 8192 blocks`), `ns` showing the bind, `/sd/8` no disk (`rom`).
+  `/dev/sd/x/ctl` (`rom 4 MB 8192 blocks`), the ROM disk not under `/sd`, `ns` showing the mount, `/sd/8` no disk
+  (`rom`).
 * **The RAM disks (done):** the defaults at boot, their ctl files, `/ram` bound, the caches' directories, a file
   bigger than a bank through each and back to a card, compared (`ram-disks`); `stop` (busy with a file open) and
   `start` with sizes and ranges, busy, no room, bad text, the ROM disk refused (`ram-ctl`); less on a small machine
@@ -336,11 +353,11 @@ In the emulator:
 * **An area kept while a task its task started has a file in it open (done):** a script starts `upper` in the
   background, writing into the script's area; the area stays when the script ends, and goes at the next end of a
   task in that slot (`ram-area-busy`).
-* **The speed (done):** a 16K program by its full path from the card, then from `/ram/s/bin`: at least 2.5 times
+* **The speed (done):** a 16K program by its full path from the card, then from `/sram/bin`: at least 2.5 times
   as fast (`ram-speed`).
 * **The boot (done):** no `/rom` bind, and no `/rom/boot.hys`, with a paged ROM image that has no volume
-  (`rom-none`); `/rom/boot.hys` run with no card (`rom`), not with one (`ram-disks`); `/ram/1` as the current
-  directory with no card (every test without a card: the prompt `/ram/1> `).
+  (`rom-none`); `/rom/boot.hys` run with no card (`rom`), not with one (`ram-disks`); `/ram` as the current
+  directory with no card (every test without a card: the prompt `/ram> `).
 * **The test song as a file (done):** `sndtest` plays it from the ROM disk (`sound`).
 
 ---
@@ -351,13 +368,13 @@ In the emulator:
    HydraFS; `/rom` as a bind; `mkromdisk.js` with its read-back check; the `rom-copy` test; the old server and
    format gone; new tasks starting on bank 0.
 2. **The RAM disks.**  *Done:* the memory manager's `MM_BANK_ALLOC_IN` and `SH_BANK_ALLOC`/`SH_BANK_FREE`; `r` and
-   `s` (disks 9 and 10) in the storage driver, `start` and `stop`, the defaults at boot; `/ram` (and `/ram/s`
+   `s` (disks 9 and 10) in the storage driver, `start` and `stop`, the defaults at boot; `/ram` (and `/sram`
    through HydraFS); the areas' check and `ERR_IO_PERM`; `TASK_ORPHANS`; the caches in the shell's search and their
    directories; the tests; the docs.
 3. **An area removed when its task ends.**  *Done:* `TASK_AREA_END`, `HFS_AREA_END`, `RAMD_AREAS`.
 4. **The test song as a file.**  *Done:* `sndtest` plays `/rom/songs/test.zsm` (`ZSM_PLAY_TEST`); the player's ROM
    mode and bank 2 are gone, and the volume starts at bank 2.
-5. **The boot.**  *Done:* `/rom` (and `/ram`) bound only when there; `/rom/boot.hys`; with no card, `/ram/1` as the
+5. **The boot.**  *Done:* `/rom` (and `/ram`) bound only when there; `/rom/boot.hys`; with no card, `/ram` as the
    current directory.
 6. **`TASK_MAY` as a kernel routine.**  *Done* (page 5), with the way `/proc` will need.
 7. Cards on SPI devices `$8`-`$F`, with the slot map, whenever a slot card has one.

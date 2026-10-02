@@ -26,7 +26,7 @@ SH_BOOT:
             lda         #<SH_S_ENV
             ldy         #>SH_S_ENV
             ldx         #IO_DEV_CALLER_TASK
-            jsr         DEV_REGISTER                        ;   needs no mount: io.s)
+            jsr         DEV_REGISTER                        ;   mounted below)
             LOAD_ADDR   ::RAM_SERVE, ZP_TC_VEC              ; The RAM itself, for task 0: /dev/ram (in its
             lda         #<SH_S_RAMDEV                       ;   client's task: task 0's)
             ldy         #>SH_S_RAMDEV
@@ -37,45 +37,42 @@ SH_BOOT:
             ldy         #>SH_S_TIME
             ldx         #IO_DEV_CALLER_TASK
             jsr         DEV_REGISTER
-            LOAD_ADDR   SH_S_HFS, ZP_IO_BUF                 ; The cards' files at /sd (inherited too)
-            lda         #<SH_S_SD
-            ldy         #>SH_S_SD
-            ldx         #0                                  ; (No flags: IO_BIND's too)
+            LOAD_ADDR   SH_S_HFS, ZP_IO_BUF                 ; The cards' files at /sd: in the system namespace,
+            lda         #<SH_S_SD                           ;   which every task sees (NS_SYSTEM), as all of
+            ldy         #>SH_S_SD                           ;   these but /ram (a shell's own)
+            ldx         #NS_SYSTEM
+            jsr         IO_MOUNT
+            LOAD_ADDR   (SH_S_ENVP + 1), ZP_IO_BUF          ; The environment at /env
+            lda         #<SH_S_ENVP
+            ldy         #>SH_S_ENVP
+            ldx         #NS_SYSTEM
             jsr         IO_MOUNT
             LOAD_ADDR   (SH_S_PROC + 1), ZP_IO_BUF          ; The tasks at /proc (the device proc: /dev/proc
             lda         #<SH_S_PROC                         ;   too), as Plan 9 has them
             ldy         #>SH_S_PROC
-            ldx         #0
+            ldx         #NS_SYSTEM
             jsr         IO_MOUNT
-            ldx         #0                                  ; The disks in memory by their names: /rom, /ram
-                                                            ;   (the shared RAM disk too, as /ram/s: HydraFS's),
-@bind:                                                      ;   each if it's there (a paged ROM with no ROM disk:
-            phx                                             ;   no /rom).  Bound: inherited too (DISKS.md)
-            lda         SH_BINDS + 2,X
-            ldy         SH_BINDS + 3,X
-            ldx         #IO_MODE_READ
-            jsr         IO_OPEN
-            bcs         @next
-            jsr         IO_CLOSE
-            plx
-            phx
-            lda         SH_BINDS + 2,X
-            sta         ZP_IO_BUF
-            lda         SH_BINDS + 3,X
-            sta         ZP_IO_BUF + 1
-            lda         SH_BINDS,X
-            ldy         SH_BINDS + 1,X
-            ldx         #0
-            jsr         IO_BIND
-
-@next:
+            ldx         #0                                  ; The disks in memory: /rom, /sram (the shared RAM
+                                                            ;   disk), each if it's there (a paged ROM with no
+@mount:                                                     ;   ROM disk: no /rom).  Mounts of hfs with a spec,
+            phx                                             ;   inherited too (DISKS.md)
+            lda         SH_MOUNTS + 2,X
+            sta         ZP_IO_CNT
+            lda         SH_MOUNTS + 3,X
+            sta         ZP_IO_CNT + 1
+            lda         SH_MOUNTS,X
+            ldy         SH_MOUNTS + 1,X
+            ldx         #NS_SYSTEM
+            jsr         SH_MOUNT_SPEC
+            jsr         SH_IF_THERE
             pla
             clc
             adc         #4
             tax
-            cpx         #SH_BINDS_END - SH_BINDS
-            bne         @bind
-            jsr         SH_RAM_DIRS                         ; The program caches' directories
+            cpx         #SH_MOUNTS_END - SH_MOUNTS
+            bne         @mount
+            jsr         SH_RAM_DIRS                         ; The shared program caches' directories
+            jsr         SH_OWN_AREA                         ; This shell's area, at /ram
             jsr         SH_VOLUMES                          ; (.A = the boot script: BOOTFLAG's, after
             pha                                             ;   COPYTORAM sets HyForth's variables)
             jsr         SH_CLOCK
@@ -87,31 +84,109 @@ SH_BOOT:
 
 SH_S_SD:    .byte   "/sd", 0
 SH_S_PROC:  .byte   "/proc", 0                          ; (And the device's name: "proc")
-SH_S_ENV:   .byte   "env", 0
+SH_S_ENVP:  .byte   "/env", 0                           ; (... "env")
+SH_S_ENV    = SH_S_ENVP + 1
 SH_S_TIME:  .byte   "time", 0
 SH_S_RAMDEV: .byte  "ram", 0
 SH_S_HFS:   .byte   "hfs", 0
-SH_BINDS:   .word   SH_S_ROM, SH_S_ROMDISK              ; The boot shell's binds: a name, what it stands for
-            .word   SH_S_RAM, SH_S_RAMDISK              ;   (the ROM disk; the RAM disk: the tasks' areas,
-SH_BINDS_END:                                           ;   and the shared RAM disk in it as /ram/s)
+SH_MOUNTS:  .word   SH_S_ROM, SH_S_SPEC_ROM             ; The boot shell's mounts of hfs: a name, its spec
+            .word   SH_S_SRAM, SH_S_SPEC_SRAM           ;   (the ROM disk; the shared RAM disk)
+SH_MOUNTS_END:
 SH_S_ROM:   .byte   "/rom", 0
-SH_S_ROMDISK: .byte "/sd/", DISK_NAME_ROM, 0
+SH_S_SPEC_ROM: .byte DISK_NAME_ROM, 0
+SH_S_SRAM:  .byte   "/sram", 0
+SH_S_SPEC_SRAM: .byte DISK_NAME_SRAM, 0
 SH_S_RAM:   .byte   "/ram", 0
-SH_S_RAMDISK: .byte "/sd/", DISK_NAME_RAM, 0
 SH_S_VOLS:  .byte   "hydrafs", 0
 
-; The program caches' directories on the RAM disks (docs/plans/DISKS.md): the shared /ram/s/bin and /ram/s/lib,
-; and this task's area, /ram/N, with its own bin and lib.  (Errors, or no RAM disk: left as they are.)
-SH_RAM_DIRS:
-            lda         #SH_SHARED_AREA
-            jsr         SH_RAM_NAME                         ; SHBUF = /ram/s (.X = its length): its bin, lib
-            jsr         SH_RAM_SUBDIRS
+; This shell's own area on the RAM disk, r/N (N: its task), mounted at /ram (mount hfs /ram r/N), and made, with
+; its bin and lib (its caches: /ram/bin and /ram/lib, the first members of /bin and /lib): the boot shell's
+; (SH_BOOT), and each shell's started later (SHELL_MAIN), so the programs, scripts and pipelines a shell runs use
+; its area, as they inherit its namespace (docs/plans/DISKS.md).  (No RAM disk: no /ram.)  Modifies: .A, .X, .Y
+SH_OWN_AREA:
+            lda         #DISK_NAME_RAM                      ; PAGE1::SHBUF2 = the spec: r/N
+            sta         PAGE1::SHBUF2
+            lda         #'/'
+            sta         PAGE1::SHBUF2 + 1
             lda         T_REGISTER
-            jsr         SH_AREA_NAME                        ; /ram/N: this task's area ...
-            stx         PAGE1::SHN
-            stz         PAGE1::SHBUF,X
-            jsr         SH_MKDIR_BUF
-            ldx         PAGE1::SHN                          ; ... and its bin and lib
+            and         #$0F
+            cmp         #10
+            bcc         :+
+            adc         #'a' - '0' - 10 - 1                 ; (C = 1)
+:
+            adc         #'0'
+            sta         PAGE1::SHBUF2 + 2
+            stz         PAGE1::SHBUF2 + 3
+            LOAD_ADDR   PAGE1::SHBUF2, ZP_IO_CNT
+            lda         #<SH_S_RAM                          ; (In this shell's own namespace: .X = 0)
+            ldy         #>SH_S_RAM
+            ldx         #0
+            jsr         SH_MOUNT_SPEC
+            jsr         SH_MKDIR                            ; The area itself (there already: as it is) ...
+            lda         #<SH_S_RAM                          ; ... its bin and lib
+            ldy         #>SH_S_RAM
+            jsr         SH_BUF_DIRS
+            lda         #<SH_S_RAM                          ; There?  (Else no /ram)
+            ldy         #>SH_S_RAM
+            ldx         #0
+            bra         SH_IF_THERE
+
+; Mount hfs at .A.Y with the spec at ZP_IO_CNT (SH_MOUNTS, SH_OWN_AREA), in the namespace .X says: NS_SYSTEM, or
+; 0, this task's.  Preserves .A, .X, .Y
+SH_MOUNT_SPEC:
+            phx
+            pha
+            LOAD_ADDR   SH_S_HFS, ZP_IO_BUF                 ; (It changes .A)
+            txa
+            ora         #NS_SPEC
+            tax
+            pla
+            pha
+            jsr         IO_MOUNT                            ; (Preserves .X, .Y)
+            pla
+            plx
+            rts
+
+; The mount at .A.Y kept if its disk is there (the path opens); else unmounted (from the namespace .X says, as
+; SH_MOUNT_SPEC's).  Modifies: .A, .X, .Y
+SH_IF_THERE:
+            pha
+            phy
+            phx
+            ldx         #IO_MODE_READ
+            jsr         IO_OPEN
+            bcs         @gone
+            jsr         IO_CLOSE
+            plx
+            ply
+            pla
+            rts
+
+@gone:
+            plx
+            ply
+            pla
+            jmp         IO_UNMOUNT
+
+; The shared program caches' directories, on the shared RAM disk: /sram/bin and /sram/lib.  (Errors, or no
+; RAM disk: left as they are.)
+SH_RAM_DIRS:
+            lda         #<SH_S_SRAM
+            ldy         #>SH_S_SRAM
+
+; SHBUF = the directory at .A.Y (on this page), and its bin and lib made (SH_RAM_SUBDIRS).  Modifies: .A, .X, .Y
+SH_BUF_DIRS:
+            jsr         SH_KEEP                             ; (SH_PTR)
+            ldy         #0
+:
+            lda         (SH_PTR),Y
+            sta         PAGE1::SHBUF,Y
+            beq         :+
+            iny
+            bra         :-
+:
+            tya
+            tax
 
 ; SHBUF up to .X: a directory to make /bin and /lib in (SH_S_DIRS' names)
 SH_RAM_SUBDIRS:
@@ -140,7 +215,7 @@ SH_MKDIR_BUF:
 
 ; Find the HydraFS volumes: /sd/0 ... /sd/7 opened (so each card is started, and its superblock read),
 ; the ones that have one listed ("hydrafs 0 2"), and the lowest made the current directory (none: this
-; task's own area on the RAM disk, /ram/N).  OUT: .A = the boot script (BOOTFLAG): 1, boot.hys there (a card's);
+; task's own area on the RAM disk, /ram).  OUT: .A = the boot script (BOOTFLAG): 1, boot.hys there (a card's);
 ; 2, with no card, /rom/boot.hys
 SH_VOLUMES:
             stz         PAGE1::SHN
@@ -181,10 +256,13 @@ SH_VOLUMES:
             jsr         SH_CRLF
             lda         PAGE1::SHSEL
             jsr         SH_CARD_PATH
+            jsr         SH_CARD_BINS                        ; Its bin and lib: /bin and /lib
 
 @chdir:
             lda         #<PAGE1::SHBUF
             ldy         #>PAGE1::SHBUF
+
+@chdir_ay:
             jsr         IO_CHDIR
             lda         #1                                  ; (Its boot script: a card's, or the ROM's)
             ldx         PAGE1::SHSEL
@@ -195,10 +273,9 @@ SH_VOLUMES:
             rts
 
 @no_card:                                                   ; No card: this task's own area on the RAM disk,
-            lda         T_REGISTER                          ;   /ram/N, so files can be saved (until a reset).
-            jsr         SH_AREA_NAME                        ;   (No RAM disk: "/", as it was)
-            stz         PAGE1::SHBUF,X
-            bra         @chdir
+            lda         #<SH_S_RAM                          ;   /ram, so files can be saved (until a reset).
+            ldy         #>SH_S_RAM                          ;   (No RAM disk: "/", as it was)
+            bra         @chdir_ay
 
 ; The clock chip: looked for (RTC_BOOT, page 9: the clock set from it, if there's one), and its line printed:
 ; "clock 2026-09-30 14:05:00", "clock stopped: set the time" or "no clock"
@@ -213,6 +290,45 @@ SH_CLOCK:
             cpx         ZP_PROC_IDX
             bne         :-
             rts
+
+; The boot card's bin and lib (SHBUF = its root, "/sd/N") bound at /bin and /lib: they start those unions, and
+; /rom/lib/namespace puts the program caches before them and the ROM's after (docs/plans/NAMESPACES.md).  SHBUF
+; stays the root.  Modifies: .A, .X, .Y
+SH_BINLIB_LEN   = 5
+SH_CARD_PATH_LEN = 5                                    ; ("/sd/N")
+SH_CARD_BINS:
+            ldx         #0
+
+@dir:
+            ldy         #0
+:
+            lda         SH_S_BINLIB,X                       ; SHBUF = /sd/N/bin (/lib)
+            sta         PAGE1::SHBUF + SH_CARD_PATH_LEN,Y
+            inx
+            iny
+            cmp         #0
+            bne         :-
+            phx
+            LOAD_ADDR   PAGE1::SHBUF, ZP_IO_BUF
+            txa                                             ; .A.Y = its /bin (/lib)
+            sec
+            sbc         #SH_BINLIB_LEN
+            clc
+            adc         #<SH_S_BINLIB
+            ldy         #>SH_S_BINLIB
+            bcc         :+
+            iny
+:
+            ldx         #NS_SYSTEM
+            jsr         IO_BIND
+            plx
+            cpx         #SH_S_BINLIB_END - SH_S_BINLIB
+            bne         @dir
+            stz         PAGE1::SHBUF + SH_CARD_PATH_LEN
+            rts
+
+SH_S_BINLIB:    .byte   "/bin", 0, "/lib", 0
+SH_S_BINLIB_END:
 
 ; SHBUF = card .A's root, "/sd/N".  Modifies: .A
 SH_CARD_PATH:

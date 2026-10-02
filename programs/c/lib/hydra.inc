@@ -24,6 +24,9 @@ GET_CHAR        = $F88D     ; -> .A = a key (waits; echoed)
 IO_DUP2         = $F890     ; .A = fd, .X = another: .X is .A's file too (closed first, if it was open)
 IO_PIPE         = $F893     ; -> .A = its reading end's fd, .X = its writing end's
 IO_DUP          = $F896     ; .A = fd -> .A = a new fd for the same file
+IO_MOUNT        = $F89C     ; .A.Y = a path, ZP_IO_BUF = a device's name, .X = NS_* flags
+IO_BIND         = $F89F     ; .A.Y = a path, ZP_IO_BUF = what it stands for, .X = NS_* flags (NS_HIDDEN: a hide)
+IO_UNMOUNT      = $F8A2     ; .A.Y = a path, .X = 0: all its entries; else the member ZP_IO_BUF names
 IO_CREATE       = $F8C9     ; .A.Y = name, .X = mode, ZP_IO_BUF (low byte) = its HFS_M_* bits -> .A = fd
 IO_REMOVE       = $F8CC     ; .A.Y = name
 IO_WSTAT        = $F8CF     ; .A = fd, ZP_IO_BUF = a stat record (rename, mode bits)
@@ -57,6 +60,11 @@ IO_MODE_STAT    = $04       ; (A directory: its entries as stat records)
 IO_MODE_TRUNC   = $08
 IO_MODE_NONBLOCK = $80      ; (A read with nothing yet: ERR_IO_WOULD_BLOCK)
 HFS_M_DIR       = $80       ; A new file's mode bits (IO_CREATE): a directory
+NS_AFTER        = $01       ; IO_MOUNT, IO_BIND's flags: a union's member after the path's others ...
+NS_BEFORE       = $02       ;   before them
+NS_CREATE       = $04       ;   files made in the union go to it
+NS_HIDDEN       = $08       ; IO_BIND: a hide
+NS_SPEC         = $10       ; IO_MOUNT: ZP_IO_CNT = a spec
 IO_STAT_SIZE    = 48        ; A stat record (IO_STAT) ...
 IO_ST_NAME      = 0         ;   its name (32 bytes, zero-terminated)
 IO_ST_MODE      = 32        ;   HFS_M_* bits

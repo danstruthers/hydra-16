@@ -133,8 +133,8 @@ function createMachine(opt) {
     else iOffTop.push([n, from, to, at]);
     iOffTop.sort((a, b) => b[0] - a[0]); if (iOffTop.length > 8) iOffTop.pop();
   }
-  const trace = [], pcHist = new Map(), profHist = new Map(), profTask = new Array(16).fill(0);
-  let profCount = 0;
+  const trace = [], pcHist = new Map(), profHist = new Map(), profCyc = new Map(), profTask = new Array(16).fill(0);
+  let profCount = 0, profCycles = 0;
   cpu.PC = rd(0xFFFC) | (rd(0xFFFD) << 8); cpu.P |= FLAGS.I;  // RESET
 
   // The devices, brought up to cycle t (at the start of each instruction, and at each I/O access: the access's cycle)
@@ -149,7 +149,8 @@ function createMachine(opt) {
   const nextEvent = () => Math.min(via.nextEvent(), ym.nextEvent(devCyc), acia.nextEvent());
 
   // Run until cycle limit (or a halt)
-  const traceLen = opt.trace === undefined ? 25 : opt.trace, pcWatches = opt.pcWatches || [], profileFrom = opt.profile === undefined ? -1 : opt.profile;
+  const traceLen = opt.trace === undefined ? 25 : opt.trace, pcWatches = opt.pcWatches || [], profileFrom = opt.profile === undefined ? -1 : opt.profile,
+    profileTo = opt.profileTo === undefined ? Infinity : opt.profileTo;
   const I = FLAGS.I;
   function run(limit) {
     while (cpu.cyc < limit && !cpu.halted) {
@@ -164,9 +165,13 @@ function createMachine(opt) {
       trace.push([W, T, PC, cpu.A, cpu.X, cpu.Y, cpu.S, P]); if (trace.length > traceLen) trace.shift();
       for (const w of pcWatches) if (w.pc === PC && (w.page < 0 || w.page === W))
         log('pc: ' + hx(W, 1) + ':' + hx(PC, 4) + ' T=' + hx(T, 1) + ' A=' + hx(cpu.A) + ' X=' + hx(cpu.X) + ' Y=' + hx(cpu.Y) + ' S=' + hx(cpu.S) + ' P=' + hx(P) + ' at cycle ' + cpu.cyc);
+      const pT = T, pW = W, c0 = cpu.cyc;                      // (The profile's: the instruction's task, page and cycles)
       cpu.step(irqVector);
       const k = W * 65536 + cpu.PC; pcHist.set(k, (pcHist.get(k) || 0) + 1);
-      if (profileFrom >= 0 && cpu.cyc >= profileFrom) { const pk = T * 1048576 + W * 65536 + cpu.lastPC; profHist.set(pk, (profHist.get(pk) || 0) + 1); profTask[T]++; profCount++; }
+      if (profileFrom >= 0 && c0 >= profileFrom && c0 < profileTo) {
+        const pk = pT * 1048576 + pW * 65536 + cpu.lastPC, dc = cpu.cyc - c0;
+        profHist.set(pk, (profHist.get(pk) || 0) + 1); profCyc.set(pk, (profCyc.get(pk) || 0) + dc); profTask[pT]++; profCount++; profCycles += dc;
+      }
     }
   }
 
@@ -179,9 +184,9 @@ function createMachine(opt) {
     cpu.reset();
   }
 
-  Object.assign(m, { cpu, acia, via, ym, rtc, taskRam, vecRam, trace, pcHist, iOffTop, stackLow, stackLowAt, profHist, profTask, run, hwReset, rd });
+  Object.assign(m, { cpu, acia, via, ym, rtc, taskRam, vecRam, trace, pcHist, iOffTop, stackLow, stackLowAt, profHist, profCyc, profTask, run, hwReset, rd });
   Object.defineProperties(m, {                                // (The pseudo-registers and the profile's count, as they are now)
-    T: { get: () => T }, U: { get: () => U }, V: { get: () => V }, W: { get: () => W }, profCount: { get: () => profCount },
+    T: { get: () => T }, U: { get: () => U }, V: { get: () => V }, W: { get: () => W }, profCount: { get: () => profCount }, profCycles: { get: () => profCycles },
   });
   return m;
 }

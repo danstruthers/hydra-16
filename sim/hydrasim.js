@@ -83,8 +83,10 @@
 //   --ym-dump           Show the YM2151's registers at the end (as the chip has them: its levels with the volumes)
 //   --ym-vgm FILE       Write what the ROM wrote to the YM2151 as a VGM file (with the time between writes), to
 //                       hear it in any VGM player (VGMPlay, foobar2000 with its VGM plugin ...)
-//   --profile N         From cycle N on, count the instructions run in each routine (named from the
-//                       build's debug info, ../os_rom/obj/os_rom_C02.dbg) and in each task, and report them
+//   --profile N[-M]     From cycle N on (to M), count the instructions and cycles run in each routine (named
+//                       from the build's debug info, ../os_rom/obj/os_rom_C02.dbg) and in each task, and report
+//                       them, by cycles
+//   --profile-top N     How many of the busiest routines the profile lists (default 30)
 //
 // Output: serial output, the last instructions (W T PC A X Y S P), the hottest PCs (useful to find a
 // loop the code is stuck in), and final state.
@@ -132,7 +134,8 @@ for (let i = 0; i < argv.length; i++) {
     case '--dump': opt.dumps.push(next()); break;
     case '--pc': { const m = /^(?:([0-9A-Fa-f]):)?([0-9A-Fa-f]+)$/.exec(next()); opt.pcWatches.push({ pc: parseInt(m[2], 16), page: m[1] === undefined ? -1 : parseInt(m[1], 16) }); break; }
     case '--mark': opt.marks.push(next().replace(/\\r/g, '\r').replace(/\\n/g, '\n')); break;
-    case '--profile': opt.profile = +next(); break;
+    case '--profile-top': opt.profileTop = +next(); break;
+    case '--profile': { const [a, b] = next().split('-'); opt.profile = +a; if (b) opt.profileTo = +b; break; }
     case '--seed': opt.seed = +next() >>> 0; break;
     case '--ym-log': opt.ymLog = true; break;
     case '--ym-dump': opt.ymDump = true; break;
@@ -254,11 +257,16 @@ function profileReport() {
     return (key === 'R' ? 'RAM:' : key === 'A' ? 'PROM:' : hx(w, 1) + ':') + (best || hx(pc, 4));
   };
   const byName = new Map();
-  for (const [k, c] of m.profHist) { const n = "T" + hx(Math.floor(k / 1048576), 1) + " " + nameOf((k >> 16) & 15, k & 0xFFFF); byName.set(n, (byName.get(n) || 0) + c); }
-  console.log('--- profile: ' + m.profCount + ' instructions from cycle ' + opt.profile + ' (by task: ' +
+  for (const [k, c] of m.profHist) {
+    const n = "T" + hx(Math.floor(k / 1048576), 1) + " " + nameOf((k >> 16) & 15, k & 0xFFFF), e = byName.get(n) || [0, 0];
+    e[0] += c; e[1] += m.profCyc.get(k) || 0; byName.set(n, e);
+  }
+  console.log('--- profile: ' + m.profCycles + ' cycles, ' + m.profCount + ' instructions, from cycle ' + opt.profile +
+    (opt.profileTo !== undefined ? ' to ' + opt.profileTo : '') + ' (instructions by task: ' +
     m.profTask.map((c, t) => c ? hx(t, 1) + ' ' + (100 * c / m.profCount).toFixed(1) + '%' : '').filter(x => x).join(', ') + ') ---');
-  for (const [n, c] of [...byName.entries()].sort((a, b) => b[1] - a[1]).slice(0, 30))
-    console.log((100 * c / m.profCount).toFixed(1).padStart(5) + '%  ' + String(c).padStart(9) + '  ' + n);
+  console.log('   cycles      (%)  instructions  routine');
+  for (const [n, [c, cy]] of [...byName.entries()].sort((a, b) => b[1][1] - a[1][1]).slice(0, opt.profileTop || 30))
+    console.log(String(cy).padStart(9) + (' (' + (100 * cy / m.profCycles).toFixed(1) + '%)').padStart(9) + String(c).padStart(14) + '  ' + n);
 }
 
 // ---- run: in one go with a report (batch), or live on the terminal (--interactive)

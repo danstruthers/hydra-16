@@ -1300,6 +1300,9 @@ def_far "echo", "echo"
 ; send N line  shell N (task N, one this shell started) runs the line, as if typed at its prompt: now, if it's
 ;              waiting there, or when it's next there (/proc/N/cmd)
 def_far "send", "send"
+;
+; # text  a comment: the rest of the line is nothing (scripts; the namespace files)
+def_far "#", "comment"
 .popseg
 lib_end
 ;
@@ -1493,10 +1496,12 @@ lib_begin LIBN_IO
 ;
 ; Namespaces, as Plan 9's (docs/io.md).  Each has a parsing form, which takes its arguments from the words
 ; after it on the line, and a stack form in parentheses, which takes q^...^ strings and no flags.
-; mount [-abc] device path  attach a device at a path in this task's namespace: names under the path go to
-;                           the device (e.g. mount zero /z  then  q^/z^ 1 open).  With none of -a -b,
+; mount [-abc] device path [spec]  attach a device at a path in this task's namespace: names under the path
+;                           go to the device (e.g. mount zero /z  then  q^/z^ 1 open); with a spec, as Plan 9's,
+;                           the spec's path first (mount hfs /rom x: the ROM disk).  With none of -a -b,
 ;                           it replaces the path's entries; -b puts it before them in the path's union,
-;                           -a after; -c: a file made in the union is made in it
+;                           -a after; -c: a file made in the union is made in it; -s: in the system
+;                           namespace, which every task sees (the boot shell and task 0 only)
 def_far "mount", "mount"
 ;
 ; bind [-abc] new old  names under old stand for names under new (e.g. bind /dev/cons /tty); -a -b -c: as

@@ -1,1 +1,1 @@
-echo No card: /ram/1 keeps your files until a reset.  ls /rom/bin for the programs.
+echo No card: /ram keeps your files until a reset.  ls /rom/bin for the programs.

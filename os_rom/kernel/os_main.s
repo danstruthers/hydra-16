@@ -60,11 +60,13 @@ FAR_GATE_INLINE     BOOT_SHELL,     ::SH_BOOT_P7,           7   ; The boot shell
 ; its parent's namespace (/sd mounted) and current directory
 SHELL_MAIN:
             jsr                 IO_STD_OPEN                         ; fds 0-2 on /dev/cons (inherited by the tasks the shell starts)
+            jsr                 SH_OWN_AREA                         ; Its own area on the RAM disk, at /ram
             jsr                 COPYTORAM
             jsr                 forth_main                          ; (No clear screen: boot messages, e.g. a driver's FAIL, stay)
             jsr                 MON_START                           ; (It doesn't come back)
 
 FAR_GATE_INLINE     MON_START,      ::MON_START_P4,         4   ; WOZMON (page 4)
+FAR_GATE_INLINE     SH_OWN_AREA,    ::SH_OWN_AREA_P7,       7   ; (shell.s)
 
 ; The address POST (tests/post.s, on page 4) checks on ROM page 1: page 4 comes before PAGE1 in all.s
 POST_P1_PROBE   = PAGE1::forth_main

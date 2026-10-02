@@ -213,21 +213,11 @@ PROC_READ:
             inc         ZP_IO_REQ + 1                       ; (The data area: PROC_PUT)
             cmp         #PROC_FID_PAGES
             beq         @mem
-            lda         ZP_PROC_OWN                         ; cwd: in its IO transfer area ("/" for none),
-            and         #7                                  ;   at $8000 + (task & 7) * $400 in its bank, which
-            asl                                             ;   may not be the client's: read a byte at a time
-            asl                                             ;   with its mapped (ZP_PROC_LEN), and written with
-            ora         #>PAGED_RAM_BASE                    ;   the client's (ZP_ENV_P)
-            sta         ZP_ENV_Q + 1
-            lda         #IO_BLK_CWD
-            sta         ZP_ENV_Q
-            lda         ZP_PROC_OWN
-            and         #8
-            lsr
-            lsr
-            lsr                                             ; (C = 0)
-            adc         #IO_XFER_BANK
-            sta         ZP_PROC_LEN
+            jsr         PROC_AREA                           ; cwd: in its IO transfer area ("/" for none), in
+            stx         ZP_PROC_LEN                         ;   its bank, which may not be the client's: read a
+            lda         #IO_BLK_CWD                         ;   byte at a time with its mapped (ZP_PROC_LEN), and
+            sta         ZP_ENV_Q                            ;   written with the client's (ZP_ENV_P)
+            .assert     ZP_ENV_Q = ZP_PROC_PTR, error, "proc's cwd: PROC_AREA's page is ZP_ENV_Q's"
             lda         RAM_BANK_REG                        ; (The client's, mapped: ZP_ENV_P)
             sta         ZP_ENV_P
             ldx         #0
@@ -737,23 +727,23 @@ PROC_CMD_PTR:
             lda         #IO_BLK_CMDST
             sta         ZP_PROC_PTR
 
-; ZP_PROC_PTR + 1 = task ZP_PROC_OWN's IO transfer area's first page ($8000 + (task & 7) * $400), .X = its
-; bank (IO_XFER_OF's).  Modifies: .A
+; ZP_PROC_PTR + 1 = task ZP_PROC_OWN's IO transfer area's first page ($8000 + (task & 3) * IO_XFER_SIZE), .X =
+; its bank (IO_XFER_BANK + task / 4: IO_XFER_OF's).  Modifies: .A
 PROC_AREA:
             lda         ZP_PROC_OWN
-            and         #7
-            asl
-            asl
-            ora         #>PAGED_RAM_BASE
+            and         #IO_XFER_PER_BANK - 1
+            tax
+            lda         PROC_XFER_PAGE,X
             sta         ZP_PROC_PTR + 1
             lda         ZP_PROC_OWN
-            and         #8
             lsr
             lsr
-            lsr                                             ; (C = 0)
+            clc
             adc         #IO_XFER_BANK
             tax
             rts
+
+PROC_XFER_PAGE: .byte   IO_XFER_PAGES
 
 ; Break task .X alone (not the tasks it started, as TASK_SIGNAL does), if it's busy and not a driver: as
 ; TASK_FLAG does (page 0), it stops waiting.  Modifies: .A, .Y
@@ -779,7 +769,7 @@ PROC_BREAK:
 ; Plan 9's ns prints them: "mount [-ac] device /path", "bind [-ac] /target /path", "hide /path"; a union's
 ; members after its first get -a, and NS_C c.  Printed (IO_NS_LIST: PROC_NS_LIST), or a read's text
 ; (/proc/N/ns: PROC_NS_READ).  The scratch: ZP_PROC_* (above)
-.assert     IO_BLK_NS = $200 .and NS_ENTRIES <= 16, error, "PROC_NS_GETC: the entries are $200-$3FF of the area"
+.assert     <IO_BLK_NS = 0 .and NS_ENTRIES <= 64, error, "PROC_NS_GETC: the entries start a page"
 
 ; Print this task's namespace (IO_NS_LIST, through page 0's gate).  OUT: C = 0.  Preserves .A, .X, .Y
 PROC_NS_LIST:
@@ -833,8 +823,19 @@ PROC_NS_READ:
             jsr         IO_SRV_COUNT
             jmp         PROC_OK
 
-; Task ZP_PROC_OWN's namespace, as text (PROC_NS_PUT: ZP_PROC_FG).  Modifies: .A, .X, .Y
+; Task ZP_PROC_OWN's namespace, as text (PROC_NS_PUT: ZP_PROC_FG): the system namespace's lines (-s), then its
+; own.  Modifies: .A, .X, .Y
 PROC_NS_TEXT:
+            lda         ZP_PROC_OWN                         ; (Bit 7: the system's table, PROC_NS_GETC)
+            ora         #$80
+            sta         ZP_PROC_OWN
+            jsr         PROC_NS_TABLE
+            lda         ZP_PROC_OWN
+            and         #$7F
+            sta         ZP_PROC_OWN
+
+; ... a table's lines
+PROC_NS_TABLE:
             stz         ZP_PROC_NSE
 
 @entry:
@@ -871,7 +872,11 @@ PROC_NS_TEXT:
             lda         ZP_PROC_TYPE
             and         #NS_C
             ora         ZP_PROC_A
+            ldx         ZP_PROC_OWN                         ; (The system's: s)
+            bmi         :+
+            cmp         #0
             beq         @names
+:
             ldx         #PROC_S_FLAG - PROC_NS_WORDS        ; " -"
             jsr         PROC_NS_STR
             lda         ZP_PROC_A
@@ -880,8 +885,13 @@ PROC_NS_TEXT:
             jsr         PROC_NS_PUT
 :
             bit         ZP_PROC_TYPE                        ; (NS_C: bit 7)
-            bpl         @names
+            bpl         :+
             lda         #'c'
+            jsr         PROC_NS_PUT
+:
+            bit         ZP_PROC_OWN
+            bpl         @names
+            lda         #'s'
             jsr         PROC_NS_PUT
 
 @names:
@@ -908,6 +918,19 @@ PROC_NS_TEXT:
 @prefix:
             ldy         #NS_PREFIX
             jsr         PROC_NS_PUTS
+            lda         ZP_PROC_TYPE                        ; A mount's spec, after: "mount hfs /rom x"
+            and         #NS_KIND
+            cmp         #NS_MOUNT
+            bne         @line
+            ldy         #NS_TARGET
+            jsr         PROC_NS_GETC
+            beq         @line
+            lda         #' '
+            jsr         PROC_NS_PUT
+            ldy         #NS_TARGET + 1                      ; (After its '/')
+            jsr         PROC_NS_PUTS
+
+@line:
             lda         #ASCII_CR
             jsr         PROC_NS_PUT
             lda         #ASCII_LF
@@ -974,8 +997,8 @@ PROC_NS_DEV:
             rts
 .assert     <IO_DEV_TABLE = 0 .and IO_MAX_DEVS * IO_DEV_SIZE <= 256, error, "PROC_NS_DEV: the device table, a page"
 
-; Byte .Y of entry ZP_PROC_NSE of task ZP_PROC_OWN's namespace: at $8000 + (task & 7) * $400 + IO_BLK_NS +
-; entry * 32 in its transfer area's bank (IO_XFER_OF's).  OUT: .A (and Z).  Preserves .X, .Y
+; Byte .Y of entry ZP_PROC_NSE of task ZP_PROC_OWN's namespace: at its IO transfer area + IO_BLK_NS + entry * 32,
+; in its bank (PROC_AREA).  OUT: .A (and Z).  Preserves .X, .Y
 PROC_NS_GETC:
             phx
             lda         ZP_PROC_NSE
@@ -985,13 +1008,25 @@ PROC_NS_GETC:
             asl
             asl
             sta         ZP_PROC_PTR
+            lda         ZP_PROC_OWN                         ; The system's table (bit 7): NS_SYS, in any IO
+            bpl         :+                                  ;   transfer bank (they're the same)
+            lda         #>NS_SYS
+            ldx         #IO_XFER_BANK
+            bra         @page
+:
             jsr         PROC_AREA                           ; .X = its bank
-            lda         ZP_PROC_NSE                         ; (Entries 8-15: the next page)
+            lda         ZP_PROC_PTR + 1
+            clc
+            adc         #>IO_BLK_NS
+
+@page:
+            sta         ZP_PROC_PTR + 1
+            lda         ZP_PROC_NSE                         ; (8 entries a page)
             lsr
             lsr
             lsr
-            ora         #>IO_BLK_NS
-            ora         ZP_PROC_PTR + 1
+            clc
+            adc         ZP_PROC_PTR + 1
             sta         ZP_PROC_PTR + 1
             jsr         PROC_FAR_PEEK
             plx

@@ -89,10 +89,10 @@ int main (int argc, char* argv[])
     check (chdir ("..") == 0 && rmdir ("ctdir") == 0, "rmdir");
 
     /* the heap */
-    p = malloc (10000);
-    check (p != 0, "malloc 10000");
-    memset (p, 0x5A, 10000);
-    check (p[9999] == 0x5A, "the heap's memory");
+    p = malloc (8000);
+    check (p != 0, "malloc 8000");
+    memset (p, 0x5A, 8000);
+    check (p[7999] == 0x5A, "the heap's memory");
     free (p);
     check (malloc (40000u) == 0, "malloc too much");
 
@@ -151,6 +151,22 @@ int main (int argc, char* argv[])
     check (i > 0 && hy_wait (i, msg) == 1 && strcmp (msg, "oops") == 0, "hy_spawn, hy_wait: a message");
     check (system ("1 2 + drop") == 0, "system: HyForth");
     check (system ("run bin/code.hyx 4") == 4, "system: run");
+
+    /* the namespace: a bind, a union (no create in it with no HY_MCREATE member), a hide, unmounts, a mount */
+    check (hy_bind ("/rom/bin", "/ctu", HY_MREPL) == 0 && stat ("/ctu/code.hyx", &st) == 0, "hy_bind");
+    check (hy_bind ("/rom/songs", "/ctu", HY_MAFTER) == 0 && stat ("/ctu/test.zsm", &st) == 0
+        && stat ("/ctu/code.hyx", &st) == 0, "hy_bind: a union");
+    check (fopen ("/ctu/new", "w") == 0, "a create in a union with no HY_MCREATE member: refused");
+    check (hy_unmount ("/rom/songs", "/ctu") == 0 && stat ("/ctu/test.zsm", &st) != 0 && stat ("/ctu/hello.hyx", &st) == 0,
+        "hy_unmount: a member");
+    check (hy_hide ("/ctu/code.hyx") == 0 && stat ("/ctu/code.hyx", &st) != 0 && stat ("/ctu/hello.hyx", &st) == 0, "hy_hide");
+    check (hy_unmount (0, "/ctu") == 0 && hy_unmount (0, "/ctu/code.hyx") == 0 && stat ("/ctu/hello.hyx", &st) != 0
+        && hy_unmount (0, "/ctu") == -1, "hy_unmount: all of them");
+    fd = -1;
+    check (hy_mount ("zero", "/ctz", HY_MREPL, 0) == 0 && (fd = open ("/ctz", O_RDONLY)) >= 0 && read (fd, msg, 2) == 2
+        && msg[0] == 0 && msg[1] == 0, "hy_mount");
+    close (fd);
+    check (hy_unmount (0, "/ctz") == 0 && hy_mount ("nodev", "/ctz", HY_MREPL, 0) == -1, "hy_mount: no such device");
 
     /* clock, isatty */
     c = clock ();

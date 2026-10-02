@@ -15,7 +15,7 @@ What the Hydra-16 has, what's missing for hobbyists and programmers, and an orde
 The Hydra already does more than most homebrew 65C02 machines:
 * **The system:**
   * 16 hardware tasks, preemptive scheduling, per-task memory and shared memory;
-  * Plan 9-style IO: files, pipes, namespaces, `/env`, `/dev/proc`, exit statuses, background jobs, semaphores.
+  * Plan 9-style IO: files, pipes, namespaces, `/env`, `/proc`, exit statuses, background jobs, semaphores.
 * **Files:** SD cards with a real filesystem (HydraFS: directories, sparse files, a checker, partitions), a clock chip, and files built into the ROM (`/rom`).
 * **The shell and languages:**
   * a shell that's also a language (HyForth: pipelines, redirection, scripts, libraries from files);
@@ -23,7 +23,7 @@ The Hydra already does more than most homebrew 65C02 machines:
   * a line editor;
   * WOZMON with a disassembler.
 * **Sound:** the YM2151, with a library, `/dev/snd`, a ZSM song player and a score language.
-* **Tools:** an emulator that runs the real ROM, 51 regression tests, a hardware test, and documentation for every part.
+* **Tools:** an emulator that runs the real ROM, 69 regression tests, a hardware test, and documentation for every part.
 
 What's missing is mostly **on-ramps** (ways to start without the author's setup) and **things to make** (a screen, input, games, hardware projects, languages beginners know).
 
@@ -178,8 +178,8 @@ Each milestone leaves the project in a state worth showing.
 4. `CONTRIBUTING.md`.
 
 **2. Storage and names, then programming and making things** (the order set for it):
-1. RAM and ROM disks ([DISKS.md](DISKS.md)).  *Done:* the paged ROM is the disk `/sd/x`, a HydraFS volume bound at `/rom`; the RAM disks `/sd/r` and `/sd/s` (`/ram`, `/ram/s`), the tasks' areas, the program caches; the test song a file; with no card, `/ram/1` and `/rom/boot.hys`; `/dev/ram` for task 0.
-2. **Next:** namespaces the Plan 9 way ([NAMESPACES.md](NAMESPACES.md)).  *Done:* 16 entries a task, unions (`bind -a`, `-b`, `-c`), `hide`, `unmount new old`, `ns` as `bind` lines.  *To do:* union directory listings, a default namespace from `/rom/lib/namespace`, `.` then `/bin` in place of search paths.
+1. RAM and ROM disks ([DISKS.md](DISKS.md)).  *Done:* the paged ROM is the disk `x`, a HydraFS volume mounted at `/rom`; the RAM disks `r` and `s` (each shell's own area at `/ram`, and `/sram`), the tasks' areas, the program caches; the test song a file; with no card, `/ram` and `/rom/boot.hys`; `/dev/ram` for task 0.
+2. **Next:** namespaces the Plan 9 way ([NAMESPACES.md](NAMESPACES.md)).  *Done:* 32 entries a task and 32 in the system namespace every task sees (`-s`), mounts with a spec, unions (`bind -a`, `-b`, `-c`) and their listings, `hide`, `unmount new old`, `ns` as `bind` lines; the default namespace (`/rom/lib/namespace`, a card's `lib/namespace`), `.` then `/bin` in place of search paths; C's `hy_bind` and the rest.  *To do:* `newns`.
 3. `/proc` ([PROC.md](PROC.md)).  *Done:* `/proc` mounted, `ns`, `pages`, `ctl` for the family only, and `/proc/N/cmd` (`send N line`: shell N runs it as if typed).  *To do:* `/proc/N/mem` and `/proc/N/ram`, a task's memory as files, for its family and task 0.
 4. EhyBASIC, adapted to the system (a `.hyx`, and `/rom/bin/basic`).
 5. `/pc`: a PC folder over the serial port (then XMODEM).

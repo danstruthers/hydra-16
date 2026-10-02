@@ -52,7 +52,7 @@ EXIT_S_BREAK:   .byte   "interrupt", 0
 EXIT_S_KILLED:  .byte   "killed", 0
 
 ; As this task ends: the tasks it started (their ZP_TASK_OWNER: it) get its owner instead, as Unix gives its
-; orphans to init, so a new task in its slot isn't taken for their parent: the RAM disk's areas (/ram/N, for N's
+; orphans to init, so a new task in its slot isn't taken for their parent: the RAM disk's areas (r/N, for N's
 ; family) and kills follow the owner chain (docs/plans/DISKS.md).  Then its own area goes (TASK_AREA_END).
 ; (From TASK_EXIT_NOTED, after MM_TASK_RESET has closed its fds; IRQs on.)  Modifies: .A, .X, .Y, ZP_TEMP, ZP_TEMP_2
 TASK_ORPHANS:
@@ -73,7 +73,7 @@ TASK_ORPHANS:
             sty         T_REGISTER
             plp
 
-; As this task ends: its area on the RAM disk (/ram/N), if it may have one, removed with all that's in it
+; As this task ends: its area on the RAM disk (r/N), if it may have one, removed with all that's in it
 ; (HFS_AREA_END, run in the storage task: TASK_CALL).  Which areas there may be is the storage task's RAMD_AREAS:
 ; a quick look.  Modifies: .A, .X, .Y, ZP_TEMP, ZP_TEMP_2
 TASK_AREA_END:

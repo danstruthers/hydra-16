@@ -188,7 +188,7 @@ module.exports = [
       'run e.hys\nxA=x\nB=two\n', '0:/> ls /env\nA=x\nstatus=\n\n',     // The script's B: its own copy's; $status ""
       'cat /env/NOPE\n\n !IO ERR! ', 'ioerr .\n' + num(0x70) + '\n', 'ioerr .\n' + num(0x77) + '\n',   // (= in a name)
       'rm /env/A\n', '0:/> ls /env\nstatus=IO ERR\n\n',             // ($status: the last error's) '0:/> seven\n\n !UNK WORD!\n',
-      'PATH\n\n0:/> seven\n' + num(7) + '\n', '0:/> eight\n\n !UNK WORD!\n',   // (PATH, not the card's /bin)
+      'PATH\n\n0:/> seven\n' + num(7) + '\n', '0:/> eight\n' + num(8) + '\n',         // (/bin: the card's, then $PATH)
       'eight\n' + num(8) + '\n0:/> seven\n' + num(7) + '\n',
       '0:/tools> pwd\n/sd/0/tools\n',                                   // cd alone: HOME
       'cat /dev/proc/1/cwd\n/sd/0/tools\n', 'cat /dev/proc/1/env\nPATH=/sd/0/bin:/sd/0/tools\nstatus=UNK WORD\nHOME=/sd/0/tools\n',
@@ -198,7 +198,7 @@ module.exports = [
   {
     name: 'sleep', about: 'TASK_SLEEP (HyForth sleep): 400 ticks take 2 s, and Ctrl-C ends a long one',
     args: ['--cycles', '40000000', '--mark', '400 sleep', '--mark', '> ', '--input', BOOT + '400 sleep\\r' + W(5) + '30000 sleep\\r' + W(1) + '\\x03' + W(1) + '1 2 + .\\r'],
-    expect: ['/ram/1> 400 sleep\n', '/ram/1> 30000 sleep\n', '!BREAK!', '/ram/1> 1 2 + .\n' + num(3)],
+    expect: ['/ram> 400 sleep\n', '/ram> 30000 sleep\n', '!BREAK!', '/ram> 1 2 + .\n' + num(3)],
     forbid: ['!DS PTR ERROR!', '!UNK WORD!'],
     check: (out, report) => {                                   // The line typed to the prompt: 2 s is 7.16M cycles at 3.58 MHz
       const typed = +/mark: "400 sleep" at cycle (\d+)/.exec(report)[1];
@@ -212,7 +212,7 @@ module.exports = [
     args: ['--cycles', '90000000', '--input', BOOT + 'shell\\r' + W(1) + '\\x1dB' + W(1) + '\\rq^/dev/sd/0/data^ 1 open .\\r' + W(1) +
       '6 here @ 600 read '.repeat(12) + '\\r\\x1d1q^/dev/sd/0/data^ 1 open .\\r' + '3 here @ 600 read . '.repeat(6) + '\\r' + W(12) +
       '\\x1dB' + W(1) + '\\r' + '+ '.repeat(11) + '.\\r'],             // (B's 12 counts, added up: 7200 = $1C20)
-    expect: ['/ram/1> q^/dev/sd/0/data^ 1 open .\n' + num(6), '[1]q^/dev/sd/0/data^ 1 open .\n' + num(3), '[B]', '+ .\n' + num(7200) + '\n'],
+    expect: ['/ram> q^/dev/sd/0/data^ 1 open .\n' + num(6), '[1]q^/dev/sd/0/data^ 1 open .\n' + num(3), '[B]', '+ .\n' + num(7200) + '\n'],
     forbid: ['!IO ERR!', '!DS PTR ERROR!', '!UNK WORD!'],
     check: out => {                                             // Shell 1's 6 reads (B's prompt can come out among them)
       const n = (out.slice(out.indexOf('[1]'), out.lastIndexOf('[B]')).match(/0258/g) || []).length;
