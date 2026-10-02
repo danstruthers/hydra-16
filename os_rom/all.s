@@ -193,6 +193,13 @@ TIME_DIV8_P9    = PAGE9::TIME_DIV8
 ZSM_PLAY_PC     = PAGEC::ZSM_PLAY       ; (For page 7: SH_SONG)
 ZSM_PLAY_TEST_PC = PAGEC::ZSM_PLAY_TEST ; (For page B: SND_CTL_TEST)
 
+; BIOS ROM page D (W = $D): /dev/spi, the SPI devices as files (in the storage task)
+.scope PAGED
+.include "servers/paged.s"        ; must be first in the scope
+.include "servers/spi_srv.s"      ; /dev/spi
+.endscope
+SPI_SRV_INIT_PD = PAGED::SPI_SRV_INIT   ; (For page 3: STORAGE_INIT3)
+
 ; BIOS ROM page 0 (W = 0)
 .include "kernel/print.s"
 .include "drivers/serial.s"

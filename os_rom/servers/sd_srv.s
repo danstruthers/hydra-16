@@ -89,6 +89,8 @@ STORAGE_INIT3:
             jsr         MM_LOCK
             sta         RAMD_AREA_PATH
             sty         RAMD_AREA_PATH + 1
+            jsr         SPI_SRV_INIT                        ; /dev/spi's devices and their pages
+            bcs         @done
             jsr         RAMD_BOOT                           ; The RAM disks, as io.inc has them
             clc
 

@@ -1,11 +1,15 @@
-// sd.js - SPI on VIA port B (PB0 SCLK, PB1 /CS enable, PB2 MOSI, PB3-PB5 device 0-7, PB6 = 0 for the board's
-// devices, PB7 MISO; mode 0), with up to 8 SD cards (SPI mode) on devices 0-7.  A card is SDHC (block addresses),
+// sd.js - SPI on VIA port B (PB0 SCLK, PB1 /CS enable, PB2 MOSI, PB3-PB5 device 0-7, PB6 = 1 for devices 8-15
+// (the slots'), PB7 MISO; devices sample on SCLK's rising edge: modes 0 and 3), with up to 8 SD cards (SPI mode)
+// on devices 0-7, and test devices (echo: for /dev/spi) on any of the 16.  An echo device answers each byte with
+// the one it got before it; its first after a select is $A0 if SCLK was low when it was selected (mode 0), $A3 if
+// it was high (mode 3).  A card is SDHC (block addresses),
 // or standard capacity (sdsc: byte addresses, CSD v1); its blocks come from a block device: { blocks, read(n) ->
 // 512 bytes, write(n, bytes) } (a file, in hydrasim.js; anything, elsewhere).
 'use strict';
 
-function createSpi(devices) {
+function createSpi(devices, echoes = []) {
   const cards = [];                                           // By device: a card, or undefined
+  for (const dev of echoes) cards[dev] = { dev, echo: true, bit: 0, inB: 0, cur: 0xFF, miso: 1 };
   for (const d of devices) cards[d.dev] = { dev: d.dev, store: d, blocks: d.blocks, sdsc: !!d.sdsc, bit: 0, inB: 0, cur: 0xFF, miso: 1,
     q: [], cmd: [], idle: true, app: false, acmd41: 0, writeAt: -1, wr: null };
   let sel = null, clk = 0;                                    // The selected card (null: none), SCLK
@@ -51,6 +55,7 @@ function createSpi(devices) {
     return b;
   }
   function byteIn(sd, b) {                                    // Byte b came in: the next byte out
+    if (sd.echo) return b;
     if (sd.wr) {                                                // A block for CMD24: token, 512 bytes, CRC
       if (sd.wr.data.length === 0 && b !== 0xFE) return 0xFF;
       sd.wr.data.push(b);
@@ -73,9 +78,13 @@ function createSpi(devices) {
   return {
     // Port B's output bits changed
     portB(v) {
-      const card = !(v & 0x02) && !(v & 0x40) ? cards[(v >> 3) & 7] || null : null;
-      if (card !== sel) { if (sel) cardReset(sel); sel = card; }
+      const card = !(v & 0x02) ? cards[((v >> 3) & 7) | ((v >> 3) & 8)] || null : null;
       const c = v & 1;
+      if (card !== sel) {
+        if (sel && !sel.echo) cardReset(sel);
+        sel = card;
+        if (card && card.echo) { card.bit = 0; card.cur = c ? 0xA3 : 0xA0; card.miso = (card.cur >> 7) & 1; }
+      }
       if (c && !clk && card) {                                  // Rising edge: both sides sample
         card.miso = (card.cur >> (7 - card.bit)) & 1;
         card.inB = ((card.inB << 1) | ((v >> 2) & 1)) & 0xFF;

@@ -23,7 +23,7 @@ The Hydra already does more than most homebrew 65C02 machines:
   * a line editor;
   * WOZMON with a disassembler.
 * **Sound:** the YM2151, with a library, `/dev/snd`, a ZSM song player and a score language.
-* **Tools:** an emulator that runs the real ROM, 71 regression tests, a hardware test, and documentation for every part.
+* **Tools:** an emulator that runs the real ROM, 72 regression tests, a hardware test, and documentation for every part.
 
 What's missing is mostly **on-ramps** (ways to start without the author's setup) and **things to make** (a screen, input, games, hardware projects, languages beginners know).
 
@@ -113,7 +113,7 @@ Sizes are rough: **S** a few days, **M** a few weeks, **L** longer.
 
 The board already has the connections: the VIA's port A on J27 (6 free pins and CA1/CA2), I2C on J27 and every slot, 8 SPI device headers, and 6 slots.  It needs drivers and examples, in this order:
 * **`/dev/i2c` (M):** the bit-banged bus as a file per address (`/dev/i2c/50` an EEPROM, `/dev/i2c/68` a sensor), with reads and writes as transfers.  Vera X's input controller needs it anyway.
-* **`/dev/spi` (S-M):** raw access to SPI devices 1-15 (0 is the SD card; 8-15 are decoded by cards), for displays, ADCs and radio modules.
+* **`/dev/spi` (S-M):** raw access to SPI devices 0-f (8-f are decoded by cards), for displays, ADCs and radio modules.  *(Built: `/dev/spi/N`, a transaction a write and the bytes that came back read after, modes 0 and 3: [io.md](../programming/io.md#spi-devices-devspi).)*
 * **`/dev/gpio` (S):**
   * `echo 1 > /dev/gpio/2` lights an LED;
   * `cat /dev/gpio/3` reads a button;
@@ -181,8 +181,8 @@ Each milestone leaves the project in a state worth showing.
 1. RAM and ROM disks ([DISKS.md](DISKS.md)).  *Done:* the paged ROM is the disk `x`, a HydraFS volume mounted at `/rom`; the RAM disks `r` and `s` (each shell's own area at `/ram`, and `/sram`), the tasks' areas, the program caches; the test song a file; with no card, `/ram` and `/rom/boot.hys`; `/dev/ram` for task 0.
 2. Namespaces the Plan 9 way ([NAMESPACES.md](NAMESPACES.md)).  *Done:* 32 entries a task and 32 in the system namespace every task sees (`-s`), mounts with a spec, unions (`bind -a`, `-b`, `-c`) and their listings, `hide`, `unmount new old`, `ns` as `bind` lines; the default namespace (`/rom/lib/namespace`, a card's `lib/namespace`), `.` then `/bin` in place of search paths; C's `hy_bind` and the rest; `newns [file]`, a fresh namespace (C's `hy_newns`).
 3. `/proc` ([PROC.md](PROC.md)).  *Done:* `/proc` mounted, `ns`, `pages`, `ctl` for the family only, and `/proc/N/cmd` (`send N line`: shell N runs it as if typed); `/proc/N/mem` and `/proc/N/ram`, a task's memory as files, for its family and task 0.  *To do:* `regs` and `fd`, then the debugger's `ctl` commands with the debugger.
-4. **Next:** `/dev/spi`.
-5. `/dev/gpio`, with a hardware project tutorial.
+4. `/dev/spi`.  *Done:* `/dev/spi/N` and its `ctl` (modes 0 and 3), shared with the SD cards (a device with a card started is busy, and a card isn't started on an open one).
+5. **Next:** `/dev/gpio`, with a hardware project tutorial.
 6. `/pc`: a PC folder over the serial port, then XMODEM.
 7. Not yet placed in the order: EhyBASIC, adapted to the system (a `.hyx`, and `/rom/bin/basic`), and `/dev/i2c`.
 

@@ -35,6 +35,12 @@ SD_INIT:
             bcc         :+
             jmp         SD_DISK_INIT
 :
+            lda         SPI_REFS,X                          ; (Open as /dev/spi/N: not a card's now)
+            beq         :+
+            lda         #ERR_IO_BUSY
+            sec
+            rts
+:
             stz         SD_CARD_STATE,X
             jsr         SPI_INIT
             lda         #10                                 ; 80 clocks, nothing selected

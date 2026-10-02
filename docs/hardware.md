@@ -386,7 +386,7 @@ SPI is bit-banged on the VIA's port B (the VIA's shift register uses CB1/CB2, wh
 | 5 | +5 V |
 | 6 | GND |
 
-The ROM runs SPI in mode 0, and its storage server serves an SD card on any device (`/dev/sd/N`); device 0 (J18) is the usual place for an SD card adapter.  The headers supply +5 V, so the adapter must regulate and level-shift to 3.3 V for the card (common SD card modules do).
+The ROM runs SPI in mode 0 for SD cards, and its storage server serves an SD card on any device (`/dev/sd/N`); device 0 (J18) is the usual place for an SD card adapter.  Any other device is a file, `/dev/spi/N` (modes 0 and 3: [io.md](programming/io.md#spi-devices-devspi)).  The headers supply +5 V, so the adapter must regulate and level-shift to 3.3 V for the card (common SD card modules do).
 
 ---
 

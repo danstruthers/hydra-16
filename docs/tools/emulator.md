@@ -54,6 +54,7 @@ node hydrasim.js [options]
 | `--stuck-irq N` | Hold IRQ line N active the whole time |
 | `--sd [N:]FILE[@B]` | An SD card (SDHC) on SPI device N (0-7, the board's SPI headers J18-J25; default 0), backed by the image FILE (512-byte blocks; writes go to the file).  Up to 8 cards, one per device, e.g. `--sd card0.img --sd 3:C:/images/card3.img`.  `@B`: the card says it has B blocks, more than the file (a big card from a small file: blocks past the file's end read as zeros, and writing one makes the file longer), e.g. `--sd card.img@500170752` for a 244 GB card.  Models the VIA's port B SPI bit by bit (device select as the board's 74HC138 does it), and the SD commands the ROM uses (CMD0, 8, 9, 16, 17, 24, 55, 58, ACMD41; CMD9's CSD gives the image's size) |
 | `--sdsc N` | Make the card on device N a standard capacity one (SDSC): byte addresses, and a v1 CSD register |
+| `--spi-echo N` | A test device on SPI device N (0-f, hex; 8-f are the slots'), for `/dev/spi`: it answers each byte with the one it got before; its first after a select is `$A0`, or `$A3` if SCLK was high then (mode 3) |
 | `--ram-fault BANK:An:high\|low` | Address line An (0-12) stuck high or low on the RAM chip holding BANK (a shared chip holds 4 bank IDs, e.g. `F0-F3`; a task RAM module 16 banks), e.g. `F0:A0:high`.  The POST `RAM` line should report it |
 | `--model M` | Hardware what-ifs: `sharedlow`, `nostack`, `zponly`, `noshared` |
 | `--raw` | Print serial output as-is (by default ESC shows as `<ESC>`) |
@@ -216,7 +217,7 @@ plays, run the emulator with `--ym-vgm`.
   has gone), as on the board: turning it on while TDRE is already on doesn't interrupt.
 * VIA timer 1 (one-shot and free-running, latches, interrupt flag and enable registers) on IRQ line 0: the
   scheduler's tick; timer 2 (one-shot); the shift register's timing and flag (its CB1/CB2 lines aren't
-  brought out: shifting in reads 1s); port B as the SPI bus (see `--sd`); port A's inputs read high (the
+  brought out: shifting in reads 1s); port B as the SPI bus, its 16 devices (see `--sd`, `--spi-echo`); port A's inputs read high (the
   I2C bus's pull-ups; no I2C devices).  The handshake lines aren't modelled.
 * YM2151: busy (status bit 7) for 64 of its clocks (3.58 MHz) after each data write.  A write while it's busy
   would be lost on the chip: the report counts them.  Key-ons are reported (`--ym-log`).  Its timers A and B
@@ -239,7 +240,7 @@ in a web page too:
 | `machine.js` | `createMachine(opt)`: memory (tasks, banks, the paged ROM and its bit swaps), `T`/`U`/`V`/`W`, the vector RAM, I/O, IRQ lines, the run loop (`run(cycle)`), the reset button, and what's watched as it runs (the trace, hot PCs, IRQs-off stretches, stack depth, the profile) |
 | `cpu65c02.js` | The W65C02S: `step()`, `interrupt()`, `reset()`, the cycle count |
 | `acia.js`, `via.js`, `ym2151.js`, `ds1747.js` | The devices: each has `read`/`write`, `tick` (cycles gone), `irqActive`, `nextEvent` (for `WAI`) and `reset` |
-| `sd.js` | The SPI bus on the VIA's port B, and SD cards on it: each card's blocks come from a block device (`{ blocks, read(n), write(n, data) }`): a file in `hydrasim.js` |
+| `sd.js` | The SPI bus on the VIA's port B, and SD cards and echo devices (`--spi-echo`) on it: each card's blocks come from a block device (`{ blocks, read(n), write(n, data) }`): a file in `hydrasim.js` |
 
 A new device (a card in a slot: the VERA, [plans/VIDEO.md](../plans/VIDEO.md)) is a module like these, which
 `machine.js` connects to its I/O ports and IRQ line.

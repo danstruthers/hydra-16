@@ -63,6 +63,8 @@
 //                       (e.g. --sd card0.img --sd 3:C:/images/card3.img).  @B: the card says it has B
 //                       blocks, more than the file (a big card from a small file: blocks past the file's end
 //                       read as zeros, and a write there makes the file longer)
+//   --spi-echo N        A test device on SPI device N (0-f, hex): it answers each byte with the one before;
+//                       its first after a select is $A0 (SCLK low then: mode 0) or $A3 (high: mode 3)
 //   --rtc TIME|now|stopped|unset   A DS1747 in U7 (a 512K task RAM with a clock): its clock registers are
 //                       task F's $7FF8-$7FFF.  TIME (YYYY-MM-DDThh:mm[:ss]) or now (this PC's time): the time it has
 //                       at power-up, running; stopped: its oscillator off (OSC set), at 2000-01-01; unset: its
@@ -98,7 +100,7 @@ const { createMachine } = require('./lib/machine.js');
 
 // ---- options
 const opt = { rom: path.join(__dirname, '..', 'os_rom', 'bin'), cycles: 20000000, input: '', modules: 3,
-  aciaLine: 1, stuckIrq: -1, model: '', raw: false, trace: 25, dumps: [], watches: [], pcWatches: [], sharedU: 16, ramFault: null, sds: [], sdsc: [], interactive: false, speed: 1, acia: 'rockwell', marks: [], profile: -1, seed: -1, ymLog: false, clock: 3.579545 };
+  aciaLine: 1, stuckIrq: -1, model: '', raw: false, trace: 25, dumps: [], watches: [], pcWatches: [], sharedU: 16, ramFault: null, sds: [], sdsc: [], spiEcho: [], interactive: false, speed: 1, acia: 'rockwell', marks: [], profile: -1, seed: -1, ymLog: false, clock: 3.579545 };
 const argv = process.argv.slice(2);
 for (let i = 0; i < argv.length; i++) {
   const a = argv[i], next = () => argv[++i];
@@ -124,6 +126,7 @@ for (let i = 0; i < argv.length; i++) {
       if (opt.sds.some(c => c.dev === dev)) { console.error('Two SD cards on device ' + dev); process.exit(1); }
       opt.sds.push({ dev, file: m ? m[2] : f, blocks: b ? +b[2] : 0 }); break; }
     case '--sdsc': opt.sdsc.push(+next()); break;
+    case '--spi-echo': opt.spiEcho.push(parseInt(next(), 16)); break;
     case '--raw': opt.raw = true; break;
     case '--rtc': { const s = next(), m = /^(\d{4})-(\d\d)-(\d\d)[T ](\d\d):(\d\d)(?::(\d\d))?$/.exec(s);
       if (!m && !/^(now|stopped|unset)$/.test(s)) { console.error('--rtc YYYY-MM-DDThh:mm[:ss] | now | stopped | unset'); process.exit(1); }

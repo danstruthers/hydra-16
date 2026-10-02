@@ -80,7 +80,7 @@ Fit the CPU clock jumper J7 (3.58 MHz) and the RDY jumper J4, then power up.  Yo
 POST ZP:T ST:T LO:T 7D:T SH:S P1:4C
 RAM U:0 F0:0/00/0000 F4:0/00/0000 F8:0/00/0000 FC:0/00/0000 00:0/00/0000 10:0/00/0000 20:0/00/0000
 
-Welcome to the HYDRA-16!  OS 1.8C_0.5
+Welcome to the HYDRA-16!  OS 1.8C_0.6
 
 HyForth 0.91
 No card: /ram keeps your files until a reset.  ls /rom/bin for the programs.

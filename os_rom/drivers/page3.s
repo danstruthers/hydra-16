@@ -24,6 +24,7 @@ FAR_GATE_INLINE     WRITE_CHAR,     ::WRITE_CHAR,           0   ; (Progress: str
 
 ; Gates to the HydraFS server's routines /dev/sd uses (page 6; the aliases are in all.s)
 FAR_GATE_INLINE     HFS_FORGET,     ::HFS_FORGET_P6,        6   ; (A card started again)
+FAR_GATE_INLINE     SPI_SRV_INIT,   ::SPI_SRV_INIT_PD,      $D  ; (/dev/spi: spi_srv.s)
 FAR_GATE_INLINE     HFS_META_NEW,   ::HFS_META_NEW_P6,      6   ; (Format and label: hfs_format.s)
 FAR_GATE_INLINE     HFS_META_AT,    ::HFS_META_AT_P6,       6
 FAR_GATE_INLINE     HFS_META_CHANGED, ::HFS_META_CHANGED_P6, 6

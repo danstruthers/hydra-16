@@ -28,7 +28,8 @@ Both come from one build (`os_rom/all.s`, linked by `os_rom/os_rom_C02.cfg`); af
 | A | `PAGE1::FAR` | HyForth's far words (their code: the shell's and IO words, tasks, sound, memory records, multiply and divide ...; their headers are on page 1), its error messages and `MALLOC`, and the disassembler | `hyforth/pagea.s`, `hyforth/farwords.s`, `monitor/disasm.s` |
 | B | `PAGEB` | Sound: the YM2151's library (the registers' shadow, volumes, notes, patches, claims), `/dev/snd`, the patches (the X16's General MIDI set), the console bell (`YM_BEEP`) | `sound/` |
 | C | `PAGEC` | The song player (ZSM): a ROM program the shell starts in a task of its own (`play`), a client of `/dev/snd` | `sound/pagec.s`, `sound/player.s` |
-| D-F | | Empty (`/rom` was page D's server; it's now the ROM disk, which page 3's storage driver reads: `SD_ROM_READ`) | |
+| D | `PAGED` | `/dev/spi`, the SPI devices as files, served in the storage task (a request's bytes through page 3's `SPI_XFER_N` and `SPI_RECV_N`) | `servers/paged.s`, `servers/spi_srv.s` |
+| E-F | | Empty | |
 
 Every build prints the space left on each page (`tools/rom_space.js`; `node tools/rom_space.js --table` in `os_rom` shows where), and warns when page 0 or COMMON is nearly full.  Page 0 (the kernel) and page 1 (HyForth) have a few hundred bytes each, so new code goes on another page behind gates, and a new HyForth word's code on page A (a far word: see below), with only its header on page 1.  Each page's room above COMMON, `$FE00-$FEFF`, has a segment of its own (`HIGH_Pn`, declared in `kernel/high.s`; page 1's is `FORTH_TOP`) for code that fits nowhere else.  The link map (`os_rom/obj/os_rom_C02.map`) shows each page's segments.
 

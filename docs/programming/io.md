@@ -108,6 +108,7 @@ A program that prints a partial line and then computes for a long time without a
 | `/dev/snd` | Sound driver (`$E`) | The YM2151 (below) |
 | `/dev/sd/N/data` | Storage (`$C`) | Disk N as bytes at the fd's offset (`IO_SEEK`); the first 4 GB.  N is one character: for an SD card, its SPI device's number as a hex digit, `0`-`7` (`8`-`f`, slot cards' SPI devices, are planned), started at the first open (`ERR_IO_DEVICE` if there's none); other disks are letters that aren't hex digits: `x`, the ROM disk, the paged ROM ([read-only](#the-roms-files-rom)); `r` and `s`, the [RAM disks](#the-ram-disks-ram) |
 | `/dev/sd/N/ctl` | Storage | Read: the disk as a line, e.g. `sdhc 7580 MB 15523840 blocks` (or `sdsc`, `rom`, or `none`), and for a HydraFS its label, free space and last check.  Write: `init` starts the card again (e.g. after changing it); `format`, `label`, `check` ([below](#the-files-on-a-card)) |
+| `/dev/spi/N`, `/dev/spi/N/ctl` | Storage (page D) | SPI device N (`0`-`f`) as a file: a transaction a write, the bytes it sends back read after ([below](#spi-devices-devspi)) |
 | `/sd/N/...` | Storage | The **files** on disk N: the HydraFS server (the device `hfs`, mounted at `/sd`; [below](#the-files-on-a-card)) |
 | `/dev/pipe` | Pipe server (`$D`) | Made by `IO_PIPE`, not opened by name |
 | `/dev/proc` | IO layer (in the reading task) | The tasks (below) |
@@ -211,6 +212,20 @@ Everything else goes to the chip as written (except the timers' interrupt enable
 | 7 | `SND_CTL_CLOCK` | The sound clock, a song player's tick: the YM2151's timer B, its interrupt counting ticks (`SND_CLK`, from 0) and waking the waiting player at its time (`sound/ymfast.s`).  `.Y` = K: a period of K units of 1,024 of the chip's clocks (286 us) or K + 1, as often as the fraction written to `SND_R_CLOCK_F` (`$0C`, and `$0D`, the high byte: 65536ths) says, so the rate is exact on average; 0 stops it.  This fd's while it runs (`ERR_IO_BUSY`: another's); its last close stops it.  Timer A stays the clients' (CSM) |
 
 HyForth's `patch`, `note`, `noteoff` and `ywrite` ([HyForth](../using/hyforth.md#tasks-and-the-console)) and C's `snd.h` ([the C guide](c.md#sound-sndh)) use it.
+
+#### **SPI devices: `/dev/spi`**
+
+The SPI bus's 16 devices (0-7 the board's headers J18-J25, 8-f the slots' cards: [hardware](../hardware.md#spi-bus-via-port-b)), each a file, as Plan 9 has them.  Served in the storage task, which owns the bus, so a transfer never meets an SD card's (`servers/spi_srv.s`, BIOS ROM page D).
+
+| Name | Read | Write |
+| :--- | :--- | :---- |
+| `/dev/spi/N` | The bytes the device sent back during the last write; or, with none kept, as many as asked, clocked in as a transaction of their own (sending `$FF`) | Its bytes, sent with the device selected: one transaction a write request (up to 256 bytes), and the bytes that come back meanwhile are kept |
+| `/dev/spi/N/ctl` | `mode 0` or `mode 3` | `mode 0` (SCLK idles low) or `mode 3` (it idles high); 1 and 2 are `ERR_IO_BAD_REQ`.  Kept until changed |
+
+* **A command and its answer** are one write and one read: write the command and as many dummy bytes as the answer has, then read them all back (the first bytes are what came back while the command went out).  A read with nothing kept is for a device that just talks: `read` 4 bytes of an ADC's sample.
+* **Bits:** MSB first, sent and sampled on SCLK's rising edge (modes 0 and 3), at about 100 kHz (bit-banged on the VIA's port B: `drivers/spi.s`).  The device is deselected after each request.
+* **One open at a time:** another open of the same device is `ERR_IO_BUSY` (the fd's dups share it).  So is a device with an SD card started on it (`/dev/sd/N`), and while `/dev/spi/N` is open, the SD driver doesn't start a card there (`ERR_IO_BUSY`, and its `ctl` reads `none`).
+* **From HyForth:** `"/dev/spi/1" 3 open`, then `write` and `read` on the fd ([files and devices](../using/hyforth.md#files-and-devices)); from C, `open`, `write`, `read`.
 
 #### **The tasks: `/proc`**
 

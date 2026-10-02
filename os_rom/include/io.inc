@@ -375,6 +375,20 @@ SD_CSD              = $0228     ; The last CSD register read (16 bytes)
 SD_CARD_STATE       = $0900     ; Each disk's state: 0 = not started, SD_STATE_*
 SD_CARD_BLOCKS      = $0920     ;   and size in blocks (4 bytes each: a card's from its CSD register)
 
+; /dev/spi (servers/spi_srv.s, page 3, in the storage task, which owns the bus): each SPI device (16) as a file.
+; A fid is SPI_FID_* | the device.  Its state, in the storage task's RAM (after HydraFS's scratch, below the
+; disks' tables), and the bytes kept from its last write (SPI_RX_PAGES: a page each, from the MMU)
+SPI_FID_DATA        = $00       ; /dev/spi/N: the device's transfers
+SPI_FID_CTL         = $10       ; /dev/spi/N/ctl: its mode
+SPI_REFS            = $08B0     ; Each device's fds on its data file (0: not open; one open at a time, dups too)
+SPI_MODE            = $08C0     ;   its mode: SPI_M_IDLE (SCLK idles high: mode 3, else 0), SPI_M_FULL
+SPI_RXN             = $08D0     ;   the bytes kept from its last write, still to read (with SPI_M_FULL: 256)
+SPI_RXAT            = $08E0     ;   where the next of them is in its page
+SPI_RX_PAGES        = $08F0     ; The pages' first one (16 pages: device N's is SPI_RX_PAGES + N)
+SPI_M_IDLE          = SPI_BIT_CLK   ; (The port's SCLK bit: high while idle in mode 3)
+SPI_M_FULL          = $80       ; All 256 of a write's bytes are kept (SPI_RXN = 0)
+.assert     HFS_BLK + 2 <= SPI_REFS .and SPI_RX_PAGES < SD_CARD_STATE, error, "SPI_*: between HydraFS's scratch and the disks' tables"
+
 ; HydraFS: the files on the cards, /sd/N/... (fs/hfs_srv.s, ROM page 3, in the storage task, on the SD
 ; driver's block cache).  The device is "hfs"; the shell mounts it at /sd, so /sd/0 is card 0's root
 ; directory, and the tasks it starts inherit the mount.  The format is in docs/plans/HYDRAFS.md, and

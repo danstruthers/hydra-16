@@ -51,7 +51,7 @@ function createMachine(opt) {
   const m = { out: '' };                                      // The serial output (the ACIA's)
   const acia = createAcia({ clock: opt.clock, wdc: opt.acia === 'wdc', paste: opt.paste, input: opt.input,
     onTx: (v, t) => { m.out += String.fromCharCode(v); for (const k of opt.marks || []) if (m.out.endsWith(k)) log('mark: ' + JSON.stringify(k) + ' at cycle ' + t); } });
-  const spi = createSpi(opt.sd || []);
+  const spi = createSpi(opt.sd || [], opt.spiEcho || []);
   const via = createVia({ portB: spi.portB, miso: spi.miso });
   const ym = createYm({ clock: opt.clock, log: !!opt.ymLog });
 

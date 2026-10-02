@@ -2,7 +2,8 @@
 
 ; ****************************************************************************
 ; SPI, bit-banged on the VIA's port B (BIOS ROM page 3, the storage page; included inside `.scope PAGE3`,
-; see all.s).  Only the storage task uses it (the SD card server), so its state is that task's ZP.
+; see all.s).  Only the storage task uses it (the SD card server, and /dev/spi: page D), so its state is that
+; task's ZP.
 ;
 ;   Port B: PB0 = SCLK, PB1 = /CS enable (low: the device selected by PB3-PB6 is selected), PB2 = MOSI,
 ;   PB3-PB5 = device 0-7 (a 74HC138 on the board: /nSPI_CS0-7, the SPI headers J18-J25), PB6 = 1 for
@@ -118,6 +119,30 @@ SPI_RECV:
             plx
             ora         #0                                  ; N/Z from the byte (SD_CMD waits for one with bit 7
             rts                                             ;   clear: its bpl), as the pulls have clobbered them
+
+; /dev/spi's (page D: spi_srv.s), a request's bytes at a time, the device selected: send SD_N bytes (1-256; 0:
+; 256) from (SD_SRC), and put the bytes that come back at (SD_DST); or (SPI_RECV_N) receive SD_N bytes there,
+; sending $FF.  Modifies: .A, .Y
+SPI_XFER_N:
+            ldy         #0
+:
+            lda         (SD_SRC),Y
+            jsr         SPI_XFER                            ; (Keeps .X, .Y)
+            sta         (SD_DST),Y
+            iny
+            cpy         SD_N
+            bne         :-
+            rts
+
+SPI_RECV_N:
+            ldy         #0
+:
+            jsr         SPI_RECV
+            sta         (SD_DST),Y
+            iny
+            cpy         SD_N
+            bne         :-
+            rts
 
 ; Clock .A * 8 cycles with nothing selected and MOSI high (an SD card needs 74 before it starts).
 ; Modifies: .A
