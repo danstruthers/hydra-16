@@ -5,7 +5,8 @@
 ; .A = the line and the frame begun on the interrupted task's stack (A, X, W; the CPU's P and PC).  The line's
 ; owner (TA_OWNERS: every task has a copy, so the interrupted task's is read where it is) gets the interrupt in
 ; its own task: T switched to it (its zero page, its stack below its frame, its banks: its module at $A000), its
-; irq entry (TA_IRQVEC) called with .A = the line.  The entry answers .A = 0, or IRQ_RESCHED for a task switch
+; irq entry (TA_IRQVEC) called with .A = the line, .X = the task interrupted.  The entry answers .A = 0, or
+; IRQ_RESCHED for a task switch
 ; (it woke a task; the tick asks every time); the interrupted task is switched out unless it holds preemption
 ; (then the switch is noted: TK_DUE).
 ;
@@ -30,26 +31,41 @@ IRQ_DISPATCH:
             ldx         TK_SP
             txs                                             ; Its stack: below its frame (or the same, if it's the
             pha                                             ;   interrupted task).  The interrupted task, for later
+            tax                                             ; .X = the interrupted task
             tya                                             ; .A = the line
             jsr         IRQ_HANDLER
             ply                                             ; ---- Back to the interrupted task
             sty         T_REGISTER
             ldx         TK_SP
             txs
+@answer:
             and         #IRQ_RESCHED                        ; A task switch, please?
             beq         IRQ_RESTORE
-            lda         TK_PREEMPT                          ; Not while it holds the CPU (or is in the scheduler):
+            ldx         TK_PREEMPT                          ; Not while it holds the CPU (or is in the scheduler):
             bne         @due                                ;   then it's noted, for PREEMPT_ON or the next YIELD
             lda         U_REGISTER                          ; The frame's last byte, then the switch
             pha
             jmp         K_SCHED_SWITCH
 
 @due:
-            lda         #1
-            sta         TK_DUE
-            bra         IRQ_RESTORE
+            sta         TK_DUE                              ; (.A = IRQ_RESCHED: not 0)
+            ply
+            jmp         IRQ_EXIT
 
-@stray:                                                     ; Nobody's: counted (a line must be owned before its
+@stray:
+            cpy         #LINE_NONE                          ; A BRK?  (Line 15's entry, and B set in the P it pushed:
+            bne         @count                              ;   the frame is Y, W, X, A, P ...)
+            ldx         TK_SP
+            lda         $0105,X
+            and         #$10
+            beq         @count
+            lda         #1 << NOTE_BRK                      ; The note sys: brk, taken (notes.s) when the switch
+            tsb         TK_NOTES                            ;   back to it finds it in its own code
+            sta         TK_NOTED
+            lda         #IRQ_RESCHED
+            bra         @answer
+
+@count:                                                     ; Nobody's: counted (a line must be owned before its
             ldx         T_REGISTER                          ;   device interrupts: a held line comes straight back)
             stz         T_REGISTER
             lda         K_IRQ_STRAY,Y
@@ -101,32 +117,27 @@ IRQ_INIT:
             lda         #KERNEL_TASK
             jmp         IRQ_SET_OWNER
 
-; The kernel task's irq entry: the VIA's timer 1, the tick (the only line it owns).  The tick count and the clock;
-; a task switch every tick (the scheduler wakes the sleepers whose time has come).  OUT: .A = IRQ_RESCHED or 0
+; The kernel task's irq entry: the VIA's timer 1, the tick (the only line it owns).  The tick count (32 bits: the
+; clock will be the boot's time and the ticks since), and the tick charged to the task it interrupted (its CPU
+; time); a task switch every tick (the scheduler wakes the sleepers whose time has come).  It's in every tick's
+; IRQs-off time: keep it short.  IN: .X = the task interrupted.  OUT: .A = IRQ_RESCHED or 0
 K_KIRQ:
-            lda         VIA_IFR
-            and         #VIA_IRQ_T1
-            beq         @not
+            bit         VIA_IFR                             ; (V: timer 1's flag)
+            bvc         @not
             lda         VIA_T1CL                            ; (Clears its flag)
-            inc         K0_TICKS
+            inc         K_CPU_LO,X
             bne         :+
-            inc         K0_TICKS + 1
+            inc         K_CPU_MID,X
+            bne         :+
+            inc         K_CPU_HI,X
 :
-            dec         K0_CLOCKSUB                         ; A second gone?
-            bmi         @second
-            lda         #IRQ_RESCHED
-            rts
-
-@second:
-            lda         #TICK_HZ - 1
-            sta         K0_CLOCKSUB
-            inc         K0_CLOCK
+            inc         K0_TICKS
             bne         @resched
-            inc         K0_CLOCK + 1
+            inc         K0_TICKS + 1
             bne         @resched
-            inc         K0_CLOCK + 2
+            inc         K0_TICKS + 2
             bne         @resched
-            inc         K0_CLOCK + 3
+            inc         K0_TICKS + 3
 @resched:
             lda         #IRQ_RESCHED
             rts

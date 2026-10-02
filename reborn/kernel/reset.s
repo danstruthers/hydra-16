@@ -7,7 +7,7 @@
 ;
 ; The boot, in task 0 (the kernel task), with IRQs off:
 ;   1. every task's OS zero page and bank registers, and the kernel task's tables
-;   2. the RAM modules probed; the bring-up console; the banner
+;   2. the bring-up console, the banner, POST (page 4: post.s), which finds the RAM modules
 ;   3. the IRQ vectors and the lines' owners (the VIA's line is the kernel's: the tick)
 ;   4. the modules: the boot drivers (tasks F, E ...), then init (task 1) (task.s: K_TASK_BOOT)
 ;   5. the tick, IRQs on, and task 0 becomes the idle task
@@ -115,6 +115,8 @@ BOOT:
             stz         TK_PREEMPT
             stz         TK_DUE
             stz         TK_BUSY
+            stz         TK_NOTED
+            stz         TK_INNOTE
             lda         #FRAME_SP
             sta         TK_SP
             stz         TA_IRQVEC + 1                       ; (No irq entry, no serve entry)
@@ -148,6 +150,16 @@ BOOT:
             stz         K_IRQ_STRAY,X
             stz         K_EXIT_STATE,X
             stz         K_TASK_TYPE,X
+            stz         K_CPU_LO,X
+            stz         K_CPU_MID,X
+            stz         K_CPU_HI,X
+            stz         K_SEG_COUNT,X                       ; (No shared segments; nobody attached)
+            stz         K_SEG_REFS,X
+            stz         K_SEGATT_LO,X
+            stz         K_SEGATT_HI,X
+            stz         K_SHMAP,X
+            txa
+            sta         K_NGROUP,X                          ; (Each task a note group of its own)
             dex
             bpl         @tables
             lda         #<K_KDISPATCH                       ; KCALLs run here: the kernel task's serve entry
@@ -165,13 +177,14 @@ BOOT:
             dex
             bpl         @name
 
-; 2. The RAM modules, the console, the banner
-            jsr         K_PROBE
+; 2. The console, the banner, POST (page 4: it finds the RAM modules, and the RAM to leave unused)
             jsr         K_CONS_INIT
             KPRINT      K_STR_BANNER
+            FARCALL     K_POST
+            KPRINT      K_STR_MODULES
             lda         K0_MODCOUNT
             jsr         K_PUTHEX
-            KPRINT      K_STR_MODULES
+            KPRINT      K_STR_CRLF
 
 ; 3. Interrupts: the vectors, the owners; the VIA is the kernel's
             jsr         IRQ_INIT
@@ -190,6 +203,7 @@ BOOT:
             sta         VIA_T1CH                            ; (Loads and starts it)
             lda         #VIA_IER_SET | VIA_IRQ_T1
             sta         VIA_IER
+BOOT_DONE:                                                  ; (The tests' IRQs-off budget counts from here)
             cli
 
 ; The idle task: whatever can run runs; when nothing can, the CPU sleeps until an interrupt
@@ -201,5 +215,5 @@ BOOT:
 .segment "KRODATA"
 K_STR_KERNEL:   .byte   "kernel", 0
 K_STR_KERNEL_END:
-K_STR_BANNER:   .byte   CR, LF, "Hydra-16 reborn: kernel 0.1, ABI 1", CR, LF, "RAM modules: ", 0
-K_STR_MODULES:  .byte   CR, LF, 0
+K_STR_BANNER:   .byte   CR, LF, "Hydra-16 reborn: kernel 0.1, ABI 1", 0
+K_STR_MODULES:  .byte   "RAM modules: ", 0

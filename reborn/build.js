@@ -4,8 +4,10 @@
 //   1. tools/apigen.js     spec/ -> the jump table, the error codes and texts, the SDK's hydra.inc, the reference
 //   2. the kernel          kernel/*.s and the generated sources -> bin/bios.bin (the 128K BIOS ROM), with its map
 //                          and labels in obj/kernel/
-//   3. the modules         modules/NAME/*.s -> obj/modules/NAME.bin; tests/mod/NAME/*.s -> obj/tests/NAME.bin
-//   4. the paged ROM       modules/rom.txt -> bin/prom.bin (tools/romimg.js)
+//   3. the modules         modules/NAME/*.s -> obj/modules/NAME.bin; tests/mod/NAME/*.s -> obj/tests/NAME.bin;
+//                          each checked: only the kernel writes T, V and W (tools/check.js)
+//   4. the paged ROM       modules/rom.txt -> bin/prom.bin (tools/romimg.js), with the hardware test in bank 1
+//                          (from ../os_rom/bin/paged_rom_C02.bin) and the ROMs' checksums for it
 //   5. the budgets         sizes, and room left (tools/budget.js)
 //
 // Usage: node build.js [--clock 1|2] [--acia rockwell|wdc] [--quiet]
@@ -20,6 +22,7 @@ const { execFileSync } = require('child_process');
 const apigen = require('./tools/apigen.js');
 const romimg = require('./tools/romimg.js');
 const budget = require('./tools/budget.js');
+const check = require('./tools/check.js');
 
 const ROOT = __dirname;
 const at = (...p) => path.join(ROOT, ...p);
@@ -57,7 +60,15 @@ function buildModule(dir, objdir, defines) {
   const objs = assemble(sources(dir), od, [at('obj', 'sdk'), at('sdk', 'asm'), at('include'), dir, path.dirname(dir)], defines);
   const bin = path.join(objdir, name + '.bin');
   run(LD65, ['-C', at('modules', 'module.cfg'), '-o', bin, '-m', path.join(od, name + '.map'), '-Ln', path.join(od, name + '.lbl'), ...objs]);
-  return fs.readFileSync(bin);
+  const data = fs.readFileSync(bin);
+  check.checkModule(name, data);                              // (Only the kernel writes T, V and W)
+  return data;
+}
+
+// The hardware test: bank 1 of the old system's paged ROM image (os_rom/bin, in Git), or null without it
+const HWTEST_IMAGE = path.join(ROOT, '..', 'os_rom', 'bin', 'paged_rom_C02.bin');
+function hwtest() {
+  return fs.existsSync(HWTEST_IMAGE) ? fs.readFileSync(HWTEST_IMAGE) : null;
 }
 
 // modules/rom.txt: { init, modules: [names] }
@@ -87,7 +98,8 @@ function build(opt = {}) {
   const kobj = at('obj', 'kernel');
   const kfiles = [...sources(at('kernel')), at('obj', 'gen', 'jumptable.s'), at('obj', 'gen', 'errtext.s')];
   const objs = assemble(kfiles, kobj, [at('include'), at('obj', 'gen'), at('kernel')], defines);
-  run(LD65, ['-C', at('kernel', 'bios.cfg'), '-o', at('bin', 'bios.bin'), '-m', path.join(kobj, 'bios.map'), '-Ln', path.join(kobj, 'bios.lbl'), ...objs]);
+  run(LD65, ['-C', at('kernel', 'bios.cfg'), '-o', at('bin', 'bios.bin'), '-m', path.join(kobj, 'bios.map'), '-Ln', path.join(kobj, 'bios.lbl'),
+    '--dbgfile', path.join(kobj, 'bios.dbg'), ...objs]);
 
   // The modules and the test modules
   const modules = {}, tests = {};
@@ -100,7 +112,10 @@ function build(opt = {}) {
   // The paged ROM
   const manifest = readManifest(at('modules', 'rom.txt'));
   for (const n of manifest.modules) if (!modules[n]) throw new Error('modules/rom.txt: no module ' + n);
-  const { image, entries } = romimg.build({ modules: manifest.modules.map(n => ({ file: n, data: modules[n] })), init: manifest.init });
+  const hwt = hwtest();
+  if (!hwt) say('(no ' + path.relative(ROOT, HWTEST_IMAGE) + ': the paged ROM has no hardware test)');
+  const { image, entries } = romimg.build({ modules: manifest.modules.map(n => ({ file: n, data: modules[n] })), init: manifest.init,
+    hwtest: hwt, bios: fs.readFileSync(at('bin', 'bios.bin')) });
   fs.writeFileSync(at('bin', 'prom.bin'), image);
 
   const report = budget.report(ROOT, { modules, tests, entries });
@@ -118,4 +133,4 @@ if (require.main === module) {
   }
   try { build(opt); } catch (e) { console.error('build: ' + e.message); process.exit(1); }
 }
-module.exports = { build, buildModule, readManifest };
+module.exports = { build, buildModule, readManifest, hwtest };

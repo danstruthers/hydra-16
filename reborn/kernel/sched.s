@@ -51,6 +51,8 @@ K_SCHED_SWITCH:
             sty         T_REGISTER                          ; ---- The next task
             ldx         TK_SP
             txs
+            lda         TK_NOTED                            ; A note for it?  (notes.s)
+            bne         K_SCHED_NOTED
 
 ; Unwind a frame: U and Y here, then W, X, A and RTI in the COMMON block
 K_SCHED_RESUME:
@@ -58,6 +60,23 @@ K_SCHED_RESUME:
             sta         U_REGISTER
             ply
             jmp         IRQ_EXIT
+
+; A note pending: taken now (the trampoline, in the task) if the task is in its own code, W = 0 and its PC below
+; $E000, and its handler isn't running (but for a kill); else when it is
+K_SCHED_NOTED:
+            lda         TK_INNOTE
+            beq         :+
+            lda         #1 << NOTE_KILL
+            and         TK_NOTES
+            beq         K_SCHED_RESUME
+:
+            tsx
+            lda         $0100 + FR_W,X
+            bne         K_SCHED_RESUME
+            lda         $0100 + FR_PCH,X
+            cmp         #>BIOS_BASE
+            bcs         K_SCHED_RESUME
+            jmp         K_NOTE_TRAMP
 
 ; The next task to run: the next ST_READY task after this one (1-15, round robin, this one last), a sleeper whose
 ; time has come counting as ready (it's made ST_READY); else the kernel task (to idle).  IN, OUT: IRQs off (a
@@ -183,7 +202,7 @@ K_WAKE:
             rts
 
 ; ****************************************************************************
-; Time.  The tick count and the clock are the kernel task's (K0_TICKS, K0_CLOCK), counted by its irq entry
+; Time.  The tick count is the kernel task's (K0_TICKS: 32 bits), counted by its irq entry
 ; (irq.s: K_KIRQ)
 
 ; TICKS: .A/.X = the tick count.  Modifies .Y
@@ -199,7 +218,7 @@ K_TICKS:
             clc
             rts
 
-; SLEEP: .A/.X = ticks (0-32767)
+; SLEEP: .A/.X = ticks (0-32767).  OUT: C = 0; or C = 1, .A = E_INTR (a note woke it early: taken on the way out)
 K_SLEEP:
             sta         K_PTR
             stx         K_PTR + 1
@@ -231,7 +250,15 @@ K_SLEEP_UNTIL:
             lda         #ST_SLEEP
             sta         TK_STATE
             jsr         K_YIELD
+            lda         TK_NOTED                            ; Woken early by a note: E_INTR, and the note
+            bne         @intr
 @done:
             plp
             clc
-            rts
+            jmp         K_NOTE_CHECK
+
+@intr:
+            plp
+            lda         #E_INTR
+            sec
+            jmp         K_NOTE_RETURN

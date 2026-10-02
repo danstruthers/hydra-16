@@ -118,6 +118,11 @@ K_START_MODULE:
             sta         K_TASK_TYPE,X
             lda         #$FF
             sta         K_PARENT,X
+            stz         K_CPU_LO,X                          ; (No CPU time yet)
+            stz         K_CPU_MID,X
+            stz         K_CPU_HI,X
+            txa
+            sta         K_NGROUP,X                          ; (A note group of its own: SPAWN may change it)
             txa
             clc
 @done:
@@ -228,6 +233,13 @@ K_TASK_SETUP:
             stz         TK_PREEMPT
             stz         TK_DUE
             stz         TK_BUSY
+            stz         TK_NOTED                            ; (No notes, no handler)
+            stz         TK_NOTES
+            stz         TK_NOTES + 1
+            stz         TK_NOTES + 2
+            stz         TK_NOTES + 3
+            stz         TK_INNOTE
+            stz         TA_NOTIFY + 1
             stz         T_REGISTER                          ; ---- Back (a moment)
             plp
             php
@@ -396,6 +408,7 @@ K_TASK_GO:
 ; Every program's first instructions (its first frame's PC): on page 0, IRQs on.  Its entry point with r0 = its
 ; arguments; if it returns, EXITS with code 0
 K_TASK_MAIN:
+            FARCALL     K_MEM_START                         ; (Its break, its maps: mem.s)
             lda         #<TA_ARGS
             sta         r0
             lda         #>TA_ARGS
@@ -411,6 +424,7 @@ K_TASK_MAIN:
 
 ; Every driver's: its init (C = 0, or C = 1 and .A = an error), then idle: it runs for calls and interrupts only
 K_DRIVER_MAIN:
+            FARCALL     K_MEM_START                         ; (Its break, its maps: mem.s)
             jsr         @entry
             bcs         @failed
             sei
@@ -523,6 +537,7 @@ K_TASK_BOOT:
 ; SPAWN: start a program.  IN: r0 = "#m/NAME"; r1 = its arguments (zero-terminated, up to 255 characters), or 0;
 ; .A = flags (0).  OUT: C = 0, .A = the task; or C = 1, .A = E_NOENT, E_NAMETOOLONG, E_TOOBIG, E_NOEXEC, E_NOTASK
 K_SPAWN:
+            sta         K_TMP2                              ; Its flags (SPAWN_*), for the KCALL
             ldy         #2                                  ; "#m/"
 :
             lda         (r0),Y
@@ -575,6 +590,7 @@ K_SPAWN:
             bne         @start
             inc         K_CNT + 1                           ; (255 characters and the 0: 256)
 @start:
+            lda         K_TMP2
             KCALL       K_SPAWN_K                           ; .A = the task, set up
             bcs         @done
             sta         K_Y
@@ -612,6 +628,7 @@ K_SPAWN:
 ; In the kernel task (KCALL): the module named in the caller's TA_SCRATCH, started; the caller its parent.
 ; IN: .Y = the caller
 K_SPAWN_K:
+            sta         K0_SPAWNF
             sty         K0_TMP3
             lda         #<K_NAMEBUF                         ; Its name, from the caller
             sta         K_PTR
@@ -636,8 +653,15 @@ K_SPAWN_K:
             jsr         K_START_MODULE
             bcs         @done
             tax
-            lda         K0_TMP3
+            ldy         K0_TMP3
+            tya
             sta         K_PARENT,X
+            lda         K0_SPAWNF                           ; Its note group: the caller's, or its own
+            and         #SPAWN_NEWGROUP
+            bne         :+
+            lda         K_NGROUP,Y
+            sta         K_NGROUP,X
+:
             txa
             clc
 @done:
@@ -684,6 +708,8 @@ K_EXIT_K:
             sta         K_EXIT_CODE,Y
             sty         K0_TMP
             jsr         IRQ_RELEASE_ALL                     ; Its lines
+            FARCALL     K_SEG_EXIT                          ; Its shared segments (mem.s)
+            ldy         K0_TMP
             stz         K0_TMP3                             ; (Records moved to init: it's woken too)
             lda         #INIT_TASK                          ; Its children's new parent
             cpy         #INIT_TASK
@@ -782,8 +808,16 @@ K_WAIT:
             bcc         @got
             cmp         #E_AGAIN
             bne         @fail
-            jsr         K_PAUSE                             ; Till a child ends (it wakes its parent)
+            lda         TK_NOTED                            ; A note: E_INTR, and the note (notes.s)
+            bne         @intr
+            jsr         K_PAUSE                             ; Till a child ends (it wakes its parent), or a note
             bra         @look
+
+@intr:
+            jsr         K_PREEMPT_ON
+            lda         #E_INTR
+            sec
+            jmp         K_NOTE_RETURN
 
 @got:
             sta         K_A
@@ -808,11 +842,11 @@ K_WAIT:
             lda         K_A
             ldx         K_X
             clc
-            rts
+            jmp         K_NOTE_CHECK                        ; (A note pending: taken on the way out)
 
 @fail:
             jsr         K_PREEMPT_ON                        ; (Keeps .A and C)
-            rts
+            jmp         K_NOTE_CHECK
 
 ; In the kernel task (KCALL): a held exit record of the caller's (task .Y's) child .A ($FF: any).  OUT: C = 0,
 ; .A = the child, .X = its code (the record released); or C = 1, .A = E_AGAIN (a child is still running) or E_CHILD

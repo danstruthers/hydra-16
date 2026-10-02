@@ -31,11 +31,11 @@ function readApi(file) {
     let m;
     if ((m = line.match(/^group\s+(\w+)\s+(\$[0-9A-Fa-f]+)\s+(\d+)\s+"([^"]*)"$/))) {
       groups.push({ name: m[1], base: num(m[2]), slots: +m[3], doc: m[4], calls: [] }); call = null;
-    } else if ((m = line.match(/^call\s+(\w+)\s+(\w+)\s+impl=(\w+)$/))) {
+    } else if ((m = line.match(/^call\s+(\w+)\s+(\w+)\s+impl=(\w+)(\s+far)?$/))) {
       const g = groups.find(x => x.name === m[2]);
       if (!g) fail(file, n, 'no group ' + m[2]);
       if (calls.find(c => c.name === m[1])) fail(file, n, 'call ' + m[1] + ' twice');
-      call = { name: m[1], group: g.name, impl: m[3], in: [], out: [], errors: [], blocks: '', doc: [], line: n };
+      call = { name: m[1], group: g.name, impl: m[3], far: !!m[4], in: [], out: [], errors: [], blocks: '', doc: [], line: n };
       call.slot = g.calls.length;
       if (call.slot >= g.slots) fail(file, n, 'group ' + g.name + ' is full (' + g.slots + ' slots)');
       call.addr = g.base + 3 * call.slot;
@@ -87,8 +87,10 @@ const pad = (s, n) => (s.length >= n ? s + ' ' : s + ' '.repeat(n - s.length));
 function jumptable(api) {
   const impls = [...new Set(api.calls.map(c => c.impl))];
   let s = header(';', 'jumptable.s - the system calls\' jump table, on BIOS ROM page 0');
-  s += '; Each slot is a jmp to the kernel\'s routine; a spare slot is a jmp to K_NOSYS (E_NOSYS).' + CRLF + CRLF;
-  s += '.import     K_NOSYS' + CRLF;
+  s += '; Each slot is a jmp to the kernel\'s routine; a spare slot is a jmp to K_NOSYS (E_NOSYS).  A call whose' + CRLF;
+  s += '; routine is on another BIOS ROM page ("far" in the specification) jumps to a stub here, on page 0, which' + CRLF;
+  s += '; gives K_FARJMP the routine\'s page and address (kernel/far.s): .A, .X, .Y and C pass both ways.' + CRLF + CRLF;
+  s += '.import     K_NOSYS' + (api.calls.some(c => c.far) ? ', K_FARJMP' : '') + CRLF;
   for (let i = 0; i < impls.length; i += 6) s += '.import     ' + impls.slice(i, i + 6).join(', ') + CRLF;
   s += CRLF + '.segment "JUMPTABLE"' + CRLF;
   let at = 0xF800;
@@ -96,12 +98,20 @@ function jumptable(api) {
     if (g.base > at) s += CRLF + '            .repeat     ' + (g.base - at) / 3 + CRLF + '            jmp         K_NOSYS' + CRLF + '            .endrepeat' + CRLF;
     s += CRLF + '; ---- ' + g.name + ': ' + g.doc + CRLF;
     s += 'API_' + g.name.toUpperCase() + ':' + CRLF;
-    for (const c of g.calls) s += '            jmp         ' + pad(c.impl, 24) + '; ' + hx(c.addr, 4) + ' ' + c.name + CRLF;
+    for (const c of g.calls)
+      s += '            jmp         ' + pad(c.far ? 'FAR_' + c.name : c.impl, 24) + '; ' + hx(c.addr, 4) + ' ' + c.name + (c.far ? ' (far)' : '') + CRLF;
     if (g.slots > g.calls.length) s += '            .repeat     ' + (g.slots - g.calls.length) + CRLF + '            jmp         K_NOSYS' + CRLF + '            .endrepeat' + CRLF;
     s += '.assert     API_' + g.name.toUpperCase() + ' = ' + hx(g.base, 4) + ', lderror, "The jump table\'s group ' + g.name + ' has moved"' + CRLF;
     at = g.base + 3 * g.slots;
   }
   s += CRLF + '.export     API_END' + CRLF + 'API_END:' + CRLF;
+  const far = api.calls.filter(c => c.far);
+  if (far.length) {
+    s += CRLF + '; ---- The far calls\' stubs (6 bytes each, on page 0)' + CRLF + '.segment "KCODE"' + CRLF;
+    for (const c of far)
+      s += 'FAR_' + c.name + ':' + CRLF + '            jsr         K_FARJMP' + CRLF +
+        '            .byte       <.bank(' + c.impl + ')' + CRLF + '            .word       ' + c.impl + CRLF;
+  }
   return s;
 }
 

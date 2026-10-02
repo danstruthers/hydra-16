@@ -27,10 +27,10 @@ Every task has its own `$0000`-`$7FFF` (the `T` register selects it) and its own
 | `$00`, `$01` | Its RAM bank (`$8000`-`$9FFF`) and paged ROM bank (`$A000`-`$DFFF`) registers |
 | `$02`-`$21` | `r0`-`r15`, the call registers |
 | `$22`-`$7F` | The program's own zero page: never touched by the system |
-| `$80`-`$FF` | The OS zero page (`TK_*` the task's state, `KC_*` kcopy's, `K_*` the call stubs' scratch; `$A2`-`$FF` free for the kernel's growth) |
+| `$80`-`$FF` | The OS zero page (`TK_*` the task's state, `KC_*` kcopy's, `KF_*` the far call's, `K_*` the call stubs' scratch, `TN_*` the notes'; `$AF`-`$FF` free for the kernel's growth) |
 | `$0100`-`$01FF` | Its stack; a task that isn't running has its frame on top (`U Y W X A P PCL PCH`) |
-| `$0200`-`$03FF` | The OS area (`TA_*`): the request block, its entries, its name, its copy of the IRQ lines' owners, its arguments at `$0300` |
-| `$0400`-`$7FF7` | The program's RAM: its data and BSS (task F's top 8 bytes are the DS1747's registers) |
+| `$0200`-`$03FF` | The OS area (`TA_*`): the request block, its entries, its break, its note handler, its name, its copy of the IRQ lines' owners, its page and bank maps, its arguments at `$0300` |
+| `$0400`-`$7FFF` | The program's RAM: its data and BSS, then its break (`BREAK`); pages from the top down (`PAGES_ALLOC`).  Task F's top page is the DS1747's |
 
 The kernel task (task 0) keeps the kernel's state: its program zero page (`K0_*`) and its RAM from `$0400`
 (`K_*` tables).  Every fixed address is in `include/layout.inc`, and nowhere else.
@@ -55,11 +55,31 @@ The kernel task (task 0) keeps the kernel's state: its program zero page (`K0_*`
   changes with `T`), then `T` back (`QL_GET`, `QL_PUT`, `K0_GET`, `K0_PUT` in `kernel/kdefs.inc`).  `T` is
   written only by quick looks, the IRQ path, the scheduler, SCALL and kcopy.
 * **SCALL** runs a task's serve entry in that task (its zero page, stack and banks); **KCALL** runs a kernel
-  routine in the kernel task.  A task serves one call at a time.
-* **kcopy** copies between this task's memory and another's, each side as its task sees it.
+  routine (on any page) in the kernel task, the routine named in the caller's own zero page.  A task serves one
+  call at a time.
+* **kcopy** copies between this task's memory and another's, each side as its task sees it.  Its pointer is in
+  the partner's zero page, so the partner must be one that can't be in a kcopy of its own: the caller of a call
+  being served, the task called, the kernel task, a task not started.  Anything else is read with quick looks.
 * **Scratch ownership**: `K_A` and `K_X` are SCALL's (a call changes them); `TK_PICKS` is the scheduler's (it runs
   in the zero page of the task being switched out, at any moment); `K0_*` belong to the KCALL running; an irq
   entry uses its own task's memory.  Nothing that can be preempted keeps a value in another layer's scratch.
+
+## The kernel's pages
+
+* BIOS ROM page 0 has what runs often (the interrupt path, the scheduler, SCALL, kcopy, the calls that wait);
+  page 1 tasks' and memory's other work; page 4 POST.  Page 0 is the scarce one.
+* The kernel calls a routine on another page with `FARCALL` (the COMMON block's `K_FAR`: `.A`, `.X`, `.Y` and C
+  both ways).  A system call on another page is marked `far` in `spec/api.def`: its jump table slot goes to a
+  6-byte stub on page 0.
+* A system call that waits ends through `K_NOTE_CHECK` (or `K_NOTE_RETURN` with `E_INTR`), at the program's
+  return address, so a note that came is taken on the way out: so a far call can't wait.
+
+## Notes
+
+* A note is taken in the task's own code, never inside the kernel: at the switch into it (when its frame is in
+  its own code), or at the end of a system call that waits.  A handler (`NOTIFY`) gets `.A` = the note and returns
+  C = 0 to go on, C = 1 for the default; the default ends the task with 128 + the note's Unix number.
+* A program's own notes are 16-31.  A kill is never the handler's.
 
 ## Interrupts
 
@@ -91,9 +111,12 @@ The kernel task (task 0) keeps the kernel's state: its program zero page (`K0_*`
 * Each file starts with a `; ****` line and a paragraph saying what it is and how it works; each routine with a
   comment saying what it does, its `IN:`, `OUT:` and what it changes.  Comments are sentences.
 * `; ---- ` marks the steps of a long routine, and a switch of `T` (`; ---- The new task`, `; ---- Back`).
+* A macro defines no labels but unnamed ones (`:`), so the cheap locals of the routine using it keep their scope;
+  a test's strings follow its `jsr` (`tests/mod/testlib.inc`).
 * Names: `UPPER_SNAKE` for constants, calls and kernel routines; a call `NAME` is implemented by `K_NAME`, and
   its kernel-task half (a KCALL) by `K_NAME_K`; cheap locals (`@name`) inside a routine.  Prefixes: `TK_` (OS
   zero page), `TA_` (OS area), `K_` (kernel task's tables, or call scratch), `K0_` (kernel task's zero page),
-  `KC_` (kcopy), `HX_`/`HT_`/`HF_` (the module header), `MD_`/`ME_` (the module directory), `E_` (errors), `ST_`
-  (states).
+  `KC_` (kcopy), `KF_` (the far call), `HX_`/`HT_`/`HF_` (the module header), `MD_`/`ME_` (the module directory),
+  `E_` (errors), `ST_` (states), `TI_` (TASKINFO's answer), `NOTE_` (notes), `P_` (POST), `m_`/`n_` (mem.s and
+  notes.s's own helpers).
 * Text files have CRLF line endings in the working copy (Git stores LF).

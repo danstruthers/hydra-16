@@ -118,14 +118,31 @@ K_SCALL:
 @entry:
             jmp         (TA_SERVEVEC)
 
-; KCALL (the macro in kdefs.inc sets K0_FNVEC, then comes here): .A, .X = the arguments
+; KCALL (the macro in kdefs.inc names the routine in K_FNVEC and K_FNPAGE, then comes here): .A, .X = the arguments
 K_KCALL:
             ldy         #KERNEL_TASK
             jmp         K_SCALL
 
-; The kernel task's serve entry: the KCALL's routine
+; The kernel task's serve entry: the routine the caller (.Y) named, on its page (a far call, page 0's too)
 K_KDISPATCH:
-            jmp         (K0_FNVEC)
+            pha
+            phx
+            php
+            sei
+            sty         T_REGISTER                          ; ---- The caller: the routine it named
+            lda         K_FNVEC
+            ldx         K_FNVEC + 1
+            stz         T_REGISTER                          ; ---- Back
+            sta         KF_VEC
+            stx         KF_VEC + 1
+            sty         T_REGISTER                          ; ---- The caller: its page
+            lda         K_FNPAGE
+            stz         T_REGISTER                          ; ---- Back
+            sta         KF_PAGE
+            plp
+            plx
+            pla
+            jmp         K_FAR
 
 ; ****************************************************************************
 ; kcopy: K_CNT bytes between K_PTR (this task) and K_PTR2 (task .A); C = 0 from here to there, C = 1 from there

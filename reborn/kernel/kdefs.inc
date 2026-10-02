@@ -9,10 +9,10 @@
 .setcpu "65C02"
 
 ; ---- reset.s: boot
-.global     BOOT, RESET_ENTRY
+.global     BOOT, BOOT_DONE, RESET_ENTRY
 ; ---- common.s: the COMMON block (the same on every BIOS ROM page)
 .global     IRQ_ENTRY, IRQ_EXIT, NMI_ENTRY
-.global     IRQ_STUB_0, IRQ_STUB_F
+.global     IRQ_STUB_0, IRQ_STUB_F, K_FAR, K_FAR_GO, K_PEEK_PAGE
 ; ---- irq.s: interrupts
 .global     IRQ_DISPATCH, IRQ_INIT, IRQ_SET_OWNER, IRQ_RELEASE_ALL, NMI_HANDLER, K_KIRQ
 ; ---- sched.s: the scheduler, waiting, time
@@ -21,12 +21,22 @@
 ; ---- call.s: calls into other tasks, and kcopy
 .global     K_SCALL, K_KCALL, K_KDISPATCH, K_KCOPY
 ; ---- task.s: tasks and modules
-.global     K_SPAWN, K_EXITS, K_WAIT, K_GETPID, K_TASK_BOOT, K_TASK_RESERVE
+.global     K_SPAWN, K_EXITS, K_WAIT, K_GETPID, K_TASK_BOOT, K_TASK_RESERVE, K_MD_VALID, K_STR_CRLF
 ; ---- cons.s: the bring-up console (polled)
 .global     K_CONS_INIT, K_PUTC, K_PUTS, K_GETC, K_PUTHEX, K_PUTNIB, K_PUTSTR
 ; ---- sys.s: the small calls
-.global     K_SYSINFO, K_ERRSTR, K_NOSYS, K_IRQ_OWN, K_IRQ_RELEASE, K_DBG_KCOPY, K_DBG_PS
-.global     K_PROBE
+.global     K_SYSINFO, K_ERRSTR, K_NOSYS, K_IRQ_OWN, K_IRQ_RELEASE, K_DBG_KCOPY
+; ---- mem.s: memory (page 1)
+.global     K_MEM_START, K_SEG_EXIT, K_BRK, K_PAGES_ALLOC, K_PAGES_FREE, K_BANKS, K_BANKS_ALLOC, K_BANKS_FREE
+.global     K_SEG_CREATE, K_SEG_ATTACH, K_SEG_DETACH, K_SEG_MAP
+; ---- notes.s: notes (signals)
+.global     K_NOTE, K_UPAUSE, K_NOTE_CHECK, K_NOTE_RETURN, K_NOTE_TRAMP, K_NOTIFY
+; ---- info.s: what the kernel knows of the tasks (page 1)
+.global     K_TASKINFO, K_DBG_PS
+; ---- far.s: the jump table's way to calls on other pages
+.global     K_FARJMP
+; ---- post.s: the power-on self test (page 4)
+.global     K_POST
 ; ---- errtext.s (made from spec/errors.def)
 .global     ERR_TEXTS
 
@@ -61,24 +71,43 @@
             sty         T_REGISTER
 .endmacro
 
-; Run routine in the kernel task, one KCALL at a time (call.s: K_KCALL); the kernel task is never preempted, so
-; the routine runs to its end.  It gets .A and .X as they are here, and .Y = the calling task; it gives back .A,
-; .X and C.  IRQs must be on: they stay off from naming the routine until the kernel task runs it (so no other
-; KCALL can name another meanwhile), and are on again after.
+; Run routine (on any BIOS ROM page) in the kernel task, one KCALL at a time (call.s: K_KCALL); the kernel task
+; is never preempted, so the routine runs to its end.  It gets .A and .X as they are here, and .Y = the calling
+; task; it gives back .A, .X and C.  The routine is named in the caller's own zero page (K_FNVEC, K_FNPAGE), where
+; the kernel task reads it.  KCALL from page 0, KCALL_FAR from the others
 .macro KCALL    routine
-            pha
-            phx
-            ldx         T_REGISTER
-            sei
-            lda         #<routine
-            stz         T_REGISTER
-            sta         K0_FNVEC
-            lda         #>routine
-            sta         K0_FNVEC + 1
-            stx         T_REGISTER
-            plx
-            pla
+            KCALL_NAME  routine
             jsr         K_KCALL
+.endmacro
+
+.macro KCALL_FAR routine
+            KCALL_NAME  routine
+            FARCALL     K_KCALL
+.endmacro
+
+.macro KCALL_NAME routine
+            pha
+            lda         #<routine
+            sta         K_FNVEC
+            lda         #>routine
+            sta         K_FNVEC + 1
+            lda         #<.bank(routine)
+            sta         K_FNPAGE
+            pla
+.endmacro
+
+; Call routine on whichever BIOS ROM page it's on (its bank in bios.cfg), and come back to this one
+; (common.s: K_FAR).  .A, .X, .Y and C pass both ways; N and Z don't.  About 60 cycles more than a jsr
+.macro FARCALL  routine
+            pha
+            lda         #<.bank(routine)
+            sta         KF_PAGE
+            lda         #<routine
+            sta         KF_VEC
+            lda         #>routine
+            sta         KF_VEC + 1
+            pla
+            jsr         K_FAR
 .endmacro
 
 ; Print a string on the bring-up console (cons.s: K_PUTSTR).  Keeps .X, .Y

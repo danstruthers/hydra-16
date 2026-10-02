@@ -14,7 +14,7 @@ const fs = require('fs');
 const path = require('path');
 const { boot, labels } = require('./run.js');
 const romimg = require('../tools/romimg.js');
-const { readManifest } = require('../build.js');
+const { readManifest, hwtest } = require('../build.js');
 const { tests, IRQ_OFF_MAX } = require('../tests/tests.js');
 
 const ROOT = path.join(__dirname, '..');
@@ -25,23 +25,25 @@ function image(t) {
   const own = [...(t.modules || [])];
   if (!sys.includes(t.init) && !own.includes(t.init)) own.unshift(t.init);
   const mods = [...sys.map(n => ({ file: n, data: bin('modules', n) })), ...own.map(n => ({ file: n, data: bin('tests', n) }))];
-  return romimg.build({ modules: mods, init: t.init }).image;
+  return romimg.build({ modules: mods, init: t.init, hwtest: hwtest(), bios: fs.readFileSync(path.join(ROOT, 'bin', 'bios.bin')) }).image;
 }
 
 function runTest(t, opt) {
-  const BOOTED = 'task 1: ' + t.init + '\r\n';               // (The boot's last line: IRQs go on)
+  const bootDone = labels().byName.get('BOOT_DONE');          // (The boot's cli: IRQs-off stretches count from it)
   const marks = {}, failures = [], lines = [];
-  const markNames = [...new Set([...(t.budgets || []).flatMap(b => [b.from, b.to, ...(b.minus || [])]), ...(t.send ? [t.send.after] : []), BOOTED])];
+  const markNames = [...new Set([...(t.budgets || []).flatMap(b => [b.from, b.to, ...(b.minus || [])]), ...(t.send ? [t.send.after] : [])])];
   let m = null;
   const log = s => {
+    const p = s.match(/^pc: .* at cycle (\d+)$/);
+    if (p) { if (m.acia.typedAt < 0) m.acia.typedAt = +p[1]; return; }
     const k = s.match(/^mark: (".*") at cycle (\d+)$/);
     if (!k) { if (opt.verbose) console.log('  [sim] ' + s); return; }
     const name = JSON.parse(k[1]), at = +k[2];
     if (!(name in marks)) marks[name] = at;
-    if (name === BOOTED) m.acia.typedAt = at;               // (IRQs-off stretches: from the boot's end)
     if (t.send && name === t.send.after) m.acia.send(t.send.bytes);
   };
-  m = boot({ prom: image(t), seed: opt.seed, marks: markNames, log, trace: 40 });
+  m = boot(Object.assign({ prom: image(t), seed: opt.seed, marks: markNames, log, trace: 40,
+    pcWatches: bootDone === undefined ? [] : [{ pc: bootDone, page: 0 }] }, t.machine || {}));
   const done = new RegExp('^' + t.init + ': (PASS|FAIL)', 'm');
   const target = t.expect ? null : done;
   let status = '';
@@ -93,7 +95,7 @@ function main(argv) {
     console.log((ok ? 'PASS ' : 'FAIL ') + t.name.padEnd(8) + t.what + '  (' + r.lines.length + ' checks, ' + (r.m.cpu.cyc / 1e6).toFixed(1) + 'M cycles)');
     if (opt.verbose) console.log(r.out.split('\n').map(l => '    | ' + l).join('\n'));
     for (const b of r.budgets) {
-      const at = b.what.replace(/(\w):([0-9A-F]{4})/g, (_, w, pc) => w + ':' + pc + ' ' + lbl.at(parseInt(pc, 16)));
+      const at = b.what.replace(/(\w):([0-9A-F]{4})/g, (_, w, pc) => w + ':' + pc + ' ' + lbl.at(parseInt(pc, 16), parseInt(w, 16)));
       console.log('       ' + (b.value > b.max ? 'OVER ' : '     ') + at + ': ' + (Number.isInteger(b.value) ? b.value : b.value.toFixed(1)) + ' cycles (budget ' + b.max + ')');
     }
     for (const n of r.notes) console.log('       ' + n);

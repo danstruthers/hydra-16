@@ -7,9 +7,15 @@
 ;   "p"         pause until woken (WAKE), then end with code "p"
 ;   "o"         start "t_child e9" and end at once with code "o" (leaving an orphan)
 ;   "c" hh      call task F's serve entry (the test driver, t_drv): op 3, sleep hh ticks; end with its .A
+;   "g" hh      attach to shared segment hh, and end with the byte at its first bank's $8000 ($EE: no segment)
+;   "n"         a note handler that keeps the note and goes on; PAUSE; end with the note it kept
+;   "d"         a note handler that asks for the default (C = 1); then pause, for ever
+;   "t"         note init (task 1) with note 20; then pause, for ever
+;   "b"         a BRK
 ;   anything else: end with code $EE
 
 .include "hydra.inc"
+.include "hw.inc"
 .include "hyx2.inc"
 .include "macros.inc"
 
@@ -19,6 +25,7 @@
 args:       .res        2
 param:      .res        1
 start:      .res        2
+kept:       .res        1                                   ; ("n": the note its handler kept)
 
 .code
 main:
@@ -26,75 +33,126 @@ main:
             ldy         #1                                  ; The hex byte after the letter, if any
             jsr         hex
             sta         param
-            lda         (args)
-            cmp         #'e'
-            beq         @e
-            cmp         #'s'
-            beq         @s
-            cmp         #'y'
-            beq         @y
-            cmp         #'k'
-            beq         @k
-            cmp         #'p'
-            beq         @p
-            cmp         #'o'
-            beq         @o
-            cmp         #'c'
-            beq         @c
+            lda         (args)                              ; The letter: its routine
+            ldx         #OPS - 1
+:
+            cmp         ops,X
+            beq         :+
+            dex
+            bpl         :-
             lda         #$EE
-            bra         @end
+            bra         end
+:
+            txa
+            asl
+            tax
+            jmp         (op_vec,X)
 
-@e:
+; Each ends with .A = its code (end), or ends itself
+op_e:
             MOVR        r0, args
             ldy         #1
             lda         (args),Y
             jmp         EXITS
 
-@s:
+op_s:
             jsr         TICKS
             sta         start
-@spin:
+:
             jsr         TICKS
             sec
             sbc         start
             cmp         param
-            bcc         @spin
+            bcc         :-
             lda         #0
-            bra         @end
+            bra         end
 
-@y:
+op_y:
             lda         param
-            beq         @end
+            beq         end
             jsr         YIELD
             dec         param
-            bra         @y
+            bra         op_y
 
-@k:
+op_k:
             jsr         TICKS
-            bra         @end
+            bra         end
 
-@p:
+op_p:
             jsr         PAUSE
             lda         #'p'
-            bra         @end
+            bra         end
 
-@o:
+op_o:
             LDR         r0, s_child
             LDR         r1, s_e9
             lda         #0
             jsr         SPAWN
             lda         #'o'
-            bra         @end
+            bra         end
 
-@c:
+op_c:
             lda         #3
             ldx         param
             ldy         #$0F
             jsr         DBG_SCALL
-@end:
+end:
             stz         r0
             stz         r0 + 1
             jmp         EXITS
+
+op_g:
+            lda         param
+            jsr         SEG_ATTACH
+            bcs         :+
+            lda         param
+            ldx         #0
+            jsr         SEG_MAP
+            bcs         :+
+            sta         U_REGISTER
+            stx         RAM_BANK
+            lda         BANK_WINDOW
+            bra         end
+:
+            lda         #$EE
+            bra         end
+
+op_n:
+            stz         kept
+            LDR         r0, keep
+            jsr         NOTIFY
+            jsr         PAUSE                               ; (A note: the handler, then back here)
+            lda         kept
+            bra         end
+
+op_d:
+            LDR         r0, refuse
+            jsr         NOTIFY
+            bra         forever
+
+op_t:
+            lda         #1
+            ldx         #20
+            jsr         NOTE
+forever:
+            jsr         PAUSE
+            bra         forever
+
+op_b:
+            brk                                             ; (sys: brk: the end, 133)
+            .byte       0
+            lda         #$EE
+            bra         end
+
+; Note handlers: keep the note and go on, or ask for the default
+keep:
+            sta         kept
+            clc
+            rts
+
+refuse:
+            sec
+            rts
 
 ; .A = the hex byte at (args),Y (two digits), or 0
 hex:
@@ -135,5 +193,8 @@ hex:
             rts
 
 .rodata
+ops:        .byte       "esykpocgndtb"
+OPS         = * - ops
+op_vec:     .word       op_e, op_s, op_y, op_k, op_p, op_o, op_c, op_g, op_n, op_d, op_t, op_b
 s_child:    .byte       "#m/t_child", 0
 s_e9:       .byte       "e9", 0

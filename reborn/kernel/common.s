@@ -1,12 +1,16 @@
 ; ****************************************************************************
 ; common.s - the COMMON block: the same code at the same address ($FD00) on every BIOS ROM page, so it keeps
 ; running when W changes under it (the next instruction is fetched from the new page, at the same address).
-; Only interrupt entry and exit need it: everything outside the kernel runs with W = 0 (principle P2).
+; Only interrupt entry and exit, and the kernel's own calls between its pages, need it: everything outside the
+; kernel runs with W = 0 (principle P2).
 ;   IRQ_STUB_0 ... IRQ_STUB_F   each line's vector points at its stub: .A = the line, on to IRQ_ENTRY
 ;   IRQ_ENTRY                   the frame's X and W, then page 0 and the dispatcher (irq.s)
 ;   IRQ_EXIT                    back to the interrupted page, and RTI
 ;   NMI_ENTRY                   page 0's NMI_HANDLER, and back
-; Labels are defined by page 0's copy; the others are checked to line up with it.
+;   K_FAR, K_FAR_GO             the kernel's far call (FARCALL: kdefs.inc)
+;   K_PEEK_PAGE                 a byte on another page (POST's test of the W lines)
+; Labels are defined by page 0's copy; the others are checked to line up with it.  After the block, at $FDFF,
+; each page has its number.
 
 .include "kdefs.inc"
 
@@ -56,38 +60,43 @@ name:
             sta         W_REGISTER                          ; Back (this same code)
             pla
             rti
+
+; The kernel's far call (FARCALL): routine KF_VEC on page KF_PAGE, then back to the caller's page.  .A, .X, .Y
+; and C pass both ways (N and Z don't).  KF_* are taken before the routine runs, so it can make far calls too
+            CLABEL      K_FAR
+            sta         KF_A                                ; (.A, a moment)
+            lda         W_REGISTER
+            pha                                             ; The caller's page, for the way back
+            lda         KF_PAGE
+            sta         W_REGISTER                          ; ---- The routine's page (this same code)
+            lda         KF_A
+            jsr         K_FAR_GO
+            sta         KF_A
+            pla
+            sta         W_REGISTER                          ; ---- Back (this same code)
+            lda         KF_A
+            rts
+
+            CLABEL      K_FAR_GO
+            jmp         (KF_VEC)
+
+; .A = the byte at (KF_VEC) on page .X.  Keeps .X, .Y
+            CLABEL      K_PEEK_PAGE
+            lda         W_REGISTER
+            pha
+            stx         W_REGISTER                          ; ---- Page .X (this same code)
+            lda         (KF_VEC)
+            sta         KF_A
+            pla
+            sta         W_REGISTER                          ; ---- Back (this same code)
+            lda         KF_A
+            rts
 .endmacro
 
-.segment "COMMON_P0"
+.repeat 16, P
+.segment .sprintf("COMMON_P%X", P)
             COMMON_BLOCK
 common_define .set 0
-.segment "COMMON_P1"
-            COMMON_BLOCK
-.segment "COMMON_P2"
-            COMMON_BLOCK
-.segment "COMMON_P3"
-            COMMON_BLOCK
-.segment "COMMON_P4"
-            COMMON_BLOCK
-.segment "COMMON_P5"
-            COMMON_BLOCK
-.segment "COMMON_P6"
-            COMMON_BLOCK
-.segment "COMMON_P7"
-            COMMON_BLOCK
-.segment "COMMON_P8"
-            COMMON_BLOCK
-.segment "COMMON_P9"
-            COMMON_BLOCK
-.segment "COMMON_PA"
-            COMMON_BLOCK
-.segment "COMMON_PB"
-            COMMON_BLOCK
-.segment "COMMON_PC"
-            COMMON_BLOCK
-.segment "COMMON_PD"
-            COMMON_BLOCK
-.segment "COMMON_PE"
-            COMMON_BLOCK
-.segment "COMMON_PF"
-            COMMON_BLOCK
+.segment .sprintf("ID_P%X", P)
+            .byte       P                                   ; (This page's number)
+.endrepeat

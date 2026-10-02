@@ -19,6 +19,7 @@ kids:       .res        16
 
 .bss
 msg:        .res        32
+info:       .res        TI_SIZE                             ; (TASKINFO's answer)
 
 .code
 
@@ -155,9 +156,47 @@ main:
             cmp         #40
             bcs         :+
             NOTOK       "the spinning child ended after its 40 ticks"
-            bra         @preempt
+            bra         @info
 :
             OK          "the spinning child ended after its 40 ticks"
+
+; ---- TASKINFO: a child spinning while this one sleeps gets the CPU time
+@info:
+            CHILD       s_s14                               ; (20 ticks of spinning)
+            sta         child
+            lda         #10
+            ldx         #0
+            jsr         SLEEP
+            LDR         r0, info
+            lda         child
+            jsr         TASKINFO
+            EXPECT_OK   "TASKINFO of a child"
+            lda         info + TI_STATE
+            EXPECT_A    1, "TASKINFO: it's ready (spinning)"
+            lda         info + TI_PARENT
+            EXPECT_A    1, "TASKINFO: its parent is init"
+            lda         info + TI_NAME
+            EXPECT_A    't', "TASKINFO: its name"
+            lda         info + TI_CPU + 1
+            ora         info + TI_CPU + 2
+            bne         @cpubad
+            lda         info + TI_CPU
+            cmp         #8
+            bcc         @cpubad
+            cmp         #13
+            bcs         @cpubad
+            OK          "TASKINFO: its CPU time, 8-12 ticks of the 10 it had"
+            bra         @cpudone
+
+@cpubad:
+            lda         info + TI_CPU
+            NOTOK       "TASKINFO: its CPU time, 8-12 ticks of the 10 it had"
+@cpudone:
+            WAITFOR     child
+            LDR         r0, info
+            lda         #16
+            jsr         TASKINFO
+            EXPECT_ERR  E_SRCH, "TASKINFO of task 16: E_SRCH"
 
 ; ---- PREEMPT_OFF: a new child doesn't start till PREEMPT_ON
 @preempt:
@@ -261,6 +300,7 @@ s_e1:       .byte       "e1", 0
 s_e2:       .byte       "e2", 0
 s_e3:       .byte       "e3", 0
 s_s28:      .byte       "s28", 0
+s_s14:      .byte       "s14", 0
 s_k:        .byte       "k", 0
 s_p:        .byte       "p", 0
 s_o:        .byte       "o", 0

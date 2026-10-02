@@ -4,7 +4,8 @@
 #
 # The format:
 #   group NAME BASE SLOTS "what it's for"      a block of the jump table: SLOTS entries of 3 bytes from BASE
-#   call NAME GROUP impl=SYMBOL                a call: the next free slot of its group; SYMBOL is the kernel's routine
+#   call NAME GROUP impl=SYMBOL [far]          a call: the next free slot of its group; SYMBOL is the kernel's routine
+#                                              (far: on another BIOS ROM page, reached through a stub on page 0)
 #     in:     the registers it takes            (indented lines, until the next call; "-" for none)
 #     out:    what it gives back
 #     errors: the error codes it can give       (C = 1, .A = the code; see errors.def)
@@ -56,19 +57,20 @@ call EXITS task impl=K_EXITS
 call WAIT task impl=K_WAIT
   in:     .A = a task this one started, or $FF for any; r0 = a buffer for the message (32 bytes), or 0
   out:    .A = the task that ended; .X = its exit code; its message in r0's buffer ("" for none)
-  errors: E_CHILD (no such child, or none at all)
+  errors: E_CHILD (no such child, or none at all), E_INTR (a note came: taken on the way out)
   blocks: yes
   doc:    Wait for a child to end, and take its exit status.  A child that has ended already isn't waited for.
 
 call SPAWN task impl=K_SPAWN
   in:     r0 = the program: "#m/NAME" (a module in the paged ROM); r1 = its arguments (zero-terminated, up
-  in:     to 255 characters), or 0; .A = flags (0)
+  in:     to 255 characters), or 0; .A = flags (SPAWN_NEWGROUP: a note group of its own)
   out:    .A = the new task
   errors: E_NOENT (no such program), E_NOEXEC (not a program), E_NOTASK (no free task), E_NAMETOOLONG
   blocks: no
   doc:    Start a program in a task of its own.  It starts at its entry point with r0 pointing to its arguments
-  doc:    (at TASK_ARGS).  Its parent is the caller, which can WAIT for it.  (Paths through the namespace come
-  doc:    with the file layer, in phase 2.)
+  doc:    (at TASK_ARGS).  Its parent is the caller, which can WAIT for it.  It's in the caller's note group
+  doc:    unless SPAWN_NEWGROUP starts one (its number: the child's).  (Paths through the namespace come with
+  doc:    the file layer, in phase 2.)
 
 call GETPID task impl=K_GETPID
   in:     -
@@ -87,14 +89,14 @@ call YIELD task impl=K_YIELD
 call SLEEP task impl=K_SLEEP
   in:     .A/.X = ticks (TICK_HZ a second; 0-32767)
   out:    -
-  errors: -
+  errors: E_INTR (a note woke it early: taken on the way out)
   blocks: yes
   doc:    Sleep for a number of ticks.  The other tasks run meanwhile, or the system idles.
 
 call SLEEP_UNTIL task impl=K_SLEEP_UNTIL
   in:     .A/.X = a tick count (at most 32767 ticks ahead)
   out:    -
-  errors: -
+  errors: E_INTR (a note woke it early: taken on the way out)
   blocks: yes
   doc:    Sleep until the tick count reaches a value: for steady timing (a time that's passed returns at once).
 
@@ -119,6 +121,110 @@ call PREEMPT_ON task impl=K_PREEMPT_ON
   blocks: no
   doc:    Undo PREEMPT_OFF; a task switch that came due meanwhile happens now.
 
+call TASKINFO task impl=K_TASKINFO far
+  in:     .A = a task (0-15); r0 = a buffer (TI_SIZE bytes)
+  out:    the buffer: TI_STATE, TI_FLAGS, TI_PARENT, TI_CPU (3 bytes: ticks), TI_BANK, TI_TYPE, TI_NAME (16)
+  errors: E_SRCH (not a task)
+  blocks: no
+  doc:    What the kernel knows of a task, for ps (and /proc's source).  A task's CPU time is the ticks that
+  doc:    interrupted it.  TI_STATE is 0 for a free task.
+
+call NOTIFY task impl=K_NOTIFY far
+  in:     r0 = the note handler, or 0 for none
+  out:    -
+  errors: -
+  blocks: no
+  doc:    Set the task's note handler (Plan 9's notify).  A note runs it in the task, in its own code (never in
+  doc:    the middle of a system call), with .A = the note: it returns C = 0 to go on where the task was, or
+  doc:    C = 1 for the default; it may call EXITS.  A note that comes meanwhile waits for it to return.
+
+call NOTE task impl=K_NOTE
+  in:     .A = a task, or NOTE_GROUP | a note group; .X = the note (1-31: NOTE_*)
+  out:    -
+  errors: E_INVAL (no such note), E_SRCH (no task, or nobody in the group), E_PERM (the kernel task, a driver)
+  blocks: no
+  doc:    Send a note (Plan 9's postnote).  It wakes the task if it waits: WAIT, PAUSE, SLEEP and GETC end with
+  doc:    E_INTR.  With no handler, and for NOTE_KILL always, the task ends with 128 + the note's Unix number
+  doc:    (130 for NOTE_INTERRUPT, 137 for NOTE_KILL) and its name as the message.
+
+# ---- memory (BIOS ROM page 1)
+
+call BREAK memory impl=K_BRK far
+  in:     r0 = the new end of the program's data (the first byte past it), or 0 to ask
+  out:    r0 = the end
+  errors: E_INVAL (below the program's own data), E_NOMEM (over pages PAGES_ALLOC gave, or past the top of RAM)
+  blocks: no
+  doc:    Move the end of the program's data area: Unix's brk (BRK is the 65C02's instruction, so the call is
+  doc:    BREAK).  It starts at the top of the module's data and BSS.  The top of a task's RAM is $7FFF ($7EFF
+  doc:    in task F).
+
+call PAGES_ALLOC memory impl=K_PAGES_ALLOC far
+  in:     .A = pages (256 bytes each)
+  out:    r0 = the first one's address; .A = its page
+  errors: E_INVAL (0), E_NOMEM
+  blocks: no
+  doc:    A run of pages of the task's RAM, above the break, taken from the top down: for a language runtime's
+  doc:    heap, or a buffer.
+
+call PAGES_FREE memory impl=K_PAGES_FREE far
+  in:     .A = pages; r0 = the first one's address
+  out:    -
+  errors: E_INVAL (not pages PAGES_ALLOC gave this task)
+  blocks: no
+  doc:    Give pages back.
+
+call BANKS memory impl=K_BANKS far
+  in:     -
+  out:    .A = the banks the task has (16 for each good RAM module); r0 = the good modules (bit = module)
+  errors: -
+  blocks: no
+  doc:    The task's own RAM banks: module m's are $m0-$mF, selected by writing $00 (the X16's way).  Modules
+  doc:    POST found bad aren't counted.
+
+call BANKS_ALLOC memory impl=K_BANKS_ALLOC far
+  in:     .A = banks
+  out:    .A = the first (for $00)
+  errors: E_INVAL (0), E_NOMEM
+  blocks: no
+  doc:    A run of the task's banks, from the lowest.  Only bookkeeping, so that the libraries in one program
+  doc:    don't use the same banks: a program may use its banks without it.
+
+call BANKS_FREE memory impl=K_BANKS_FREE far
+  in:     .A = the first bank; .X = how many
+  out:    -
+  errors: E_INVAL (not banks BANKS_ALLOC gave this task)
+  blocks: no
+  doc:    Give banks back.
+
+call SEG_CREATE memory impl=K_SEG_CREATE far
+  in:     .A = banks (1-128, 8K each)
+  out:    .A = the segment (0-15)
+  errors: E_INVAL (0), E_NOMEM
+  blocks: no
+  doc:    A shared segment: shared RAM banks any task can attach to, with the calling task attached.  It
+  doc:    stays while a task is attached (SEG_DETACH, or the task's end).
+
+call SEG_ATTACH memory impl=K_SEG_ATTACH far
+  in:     .A = a segment
+  out:    -
+  errors: E_INVAL (no such segment)
+  blocks: no
+  doc:    Attach the calling task to a segment (attaching twice is once).
+
+call SEG_DETACH memory impl=K_SEG_DETACH far
+  in:     .A = a segment
+  out:    -
+  errors: E_INVAL (not attached)
+  blocks: no
+  doc:    Detach the calling task from a segment; the last task to go frees it.
+
+call SEG_MAP memory impl=K_SEG_MAP far
+  in:     .A = a segment; .X = one of its banks (0 on)
+  out:    .A = the value for U; .X = the value for $00
+  errors: E_INVAL (not attached), E_RANGE (no such bank in it)
+  blocks: no
+  doc:    How to reach a bank of a segment: write U, then $00, and it's at $8000-$9FFF.
+
 # ---- cons (the bring-up console: polled, on the serial port, until the console driver comes in phase 2)
 
 call PUTC cons impl=K_PUTC
@@ -138,7 +244,7 @@ call PUTS cons impl=K_PUTS
 call GETC cons impl=K_GETC
   in:     -
   out:    .A = a byte
-  errors: -
+  errors: E_INTR (a note came: taken on the way out)
   blocks: yes
   doc:    Read a byte from stdin, waiting for one (the X16's CHRIN, unechoed).
 
@@ -175,12 +281,13 @@ call WAKE server impl=K_WAKE
   doc:    Make a waiting task (PAUSE) runnable.  From a task or an irq entry.  Waking a task that isn't
   doc:    waiting does nothing.
 
-call PAUSE server impl=K_PAUSE
+call PAUSE server impl=K_UPAUSE
   in:     -
   out:    -
   errors: -
   blocks: yes
-  doc:    Wait until another task or an irq entry WAKEs this one.  (Wake-ups can come early: look again after.)
+  doc:    Wait until another task or an irq entry WAKEs this one, or a note comes (taken on the way out).
+  doc:    (Wake-ups can come early: look again after.)
 
 # ---- dbg (for the tests and the debugger: unstable)
 
@@ -200,12 +307,12 @@ call DBG_KCOPY dbg impl=K_DBG_KCOPY
   blocks: no
   doc:    Copy bytes between this task's memory and another's (the kernel's kcopy).
 
-call DBG_PS dbg impl=K_DBG_PS
+call DBG_PS dbg impl=K_DBG_PS far
   in:     -
   out:    -
   errors: -
   blocks: yes
-  doc:    Print a line for each task in use: its number, state and parent.
+  doc:    Print a line for each task in use: its number, state, flags, parent, CPU time and name.
 
 # ---- constants for programs
 
@@ -221,6 +328,23 @@ const HT_DRIVER       2
 const HT_LIBRARY      3
 const HF_INPLACE      $01      "HYX2 flags: runs in place in the paged ROM"
 const HF_BOOT         $02      "HYX2 flags: a driver the kernel starts at boot"
+const TI_STATE        0        "TASKINFO's answer: the task's state (0: free, 1 ready, 2 wait, 3 call, 4 idle, 5 new, 6 sleep, 7 blocked)"
+const TI_FLAGS        1        "TASKINFO: its flags ($01: a driver)"
+const TI_PARENT       2        "TASKINFO: its parent ($FF: none)"
+const TI_CPU          3        "TASKINFO: its CPU time, in ticks (3 bytes)"
+const TI_BANK         6        "TASKINFO: its module's paged ROM bank ($FF: none)"
+const TI_TYPE         7        "TASKINFO: its module's type (HT_*; 0: none)"
+const TI_NAME         8        "TASKINFO: its name, zero-terminated (16 bytes)"
+const TI_GROUP        24       "TASKINFO: its note group"
+const TI_SIZE         25       "TASKINFO: the answer's size"
+const NOTE_INTERRUPT  1        "Notes: Ctrl-C (default: the end, 130)"
+const NOTE_KILL       2        "Notes: kill, never caught (137)"
+const NOTE_HANGUP     3        "Notes: hangup (129)"
+const NOTE_ALARM      4        "Notes: alarm (142)"
+const NOTE_BRK        5        "Notes: sys: brk, a BRK instruction (133)"
+const NOTE_USER       16       "Notes: 16-31 are the programs' own (128 + the note)"
+const NOTE_GROUP      $80      "NOTE's .A: a note group, not a task"
+const SPAWN_NEWGROUP  $01      "SPAWN's flags: the child starts a note group of its own"
 const r0  $02 "The call registers r0-r15: arguments and results"
 const r1  $04
 const r2  $06

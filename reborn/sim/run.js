@@ -31,22 +31,32 @@ const STATES = ['free', 'ready', 'wait', 'call', 'idle', 'new', 'sleep', 'block'
 // The OS zero page (include/layout.inc): what the report reads in each task
 const TK = { SP: 0x80, STATE: 0x81, FLAGS: 0x82, PREEMPT: 0x83, BUSY: 0x85 }, TA_NAME = 0x0230;
 
-// The kernel's labels (obj/kernel/bios.lbl): { byName: Map, at(pc) -> "NAME+n" }
-function labels(file = path.join(ROOT, 'obj', 'kernel', 'bios.lbl')) {
-  const byName = new Map(), list = [];
-  if (fs.existsSync(file))
-    for (const line of fs.readFileSync(file, 'latin1').split(/\r?\n/)) {
-      const m = line.match(/^al ([0-9A-F]+) \.(\w+)/);
-      if (m && !m[2].startsWith('@')) { const v = parseInt(m[1], 16); byName.set(m[2], v); list.push([v, m[2]]); }
+// The kernel's labels, by BIOS ROM page (obj/kernel/bios.dbg: each label's segment, and each segment's place in
+// the image): { byName: Map (address), pageOf: Map (page), at(pc, page) -> "NAME+n" }
+function labels(file = path.join(ROOT, 'obj', 'kernel', 'bios.dbg')) {
+  const byName = new Map(), pageOf = new Map(), lists = [...Array(16)].map(() => []), segPage = new Map();
+  if (fs.existsSync(file)) {
+    const text = fs.readFileSync(file, 'latin1').split(/\r?\n/);
+    for (const line of text) {
+      const m = line.match(/^seg\tid=(\d+),.*ooffs=(\d+)/);
+      if (m) segPage.set(+m[1], Math.floor(+m[2] / 0x2000));
     }
-  list.sort((a, b) => a[0] - b[0]);
-  const at = pc => {
+    for (const line of text) {
+      const m = line.match(/^sym\tid=\d+,name="(\w+)",.*val=0x([0-9A-F]+),seg=(\d+),type=lab/);
+      if (!m || !segPage.has(+m[3])) continue;
+      const v = parseInt(m[2], 16), page = segPage.get(+m[3]);
+      lists[page].push([v, m[1]]);
+      if (!byName.has(m[1]) || page === 0) { byName.set(m[1], v); pageOf.set(m[1], page); }
+    }
+  }
+  for (const l of lists) l.sort((a, b) => a[0] - b[0]);
+  const at = (pc, page = 0) => {
     if (pc < 0xE000) return pc >= 0xA000 ? 'PROM:' + hx(pc, 4) : 'RAM:' + hx(pc, 4);
     let best = null;
-    for (const e of list) { if (e[0] <= pc) best = e; else break; }
+    for (const e of lists[pc >= 0xFD00 ? 0 : page & 15]) { if (e[0] <= pc) best = e; else break; }   // (COMMON: page 0's names)
     return best ? best[1] + (pc > best[0] ? '+' + (pc - best[0]) : '') : hx(pc, 4);
   };
-  return { byName, at };
+  return { byName, pageOf, at };
 }
 
 // The machine, booted from the images.  opt: createMachine's (sim/lib/machine.js), and bios, prom (files or bytes)
@@ -75,7 +85,7 @@ function state(m) {
 function report(m, lbl) {
   const cpu = m.cpu;
   console.log('--- stopped at cycle ' + cpu.cyc + ' (' + (cpu.cyc / (CLOCK * 1e6)).toFixed(2) + ' s), task ' + hx(m.T, 1) +
-    ', page ' + hx(m.W, 1) + ', PC ' + hx(cpu.PC, 4) + ' (' + lbl.at(cpu.PC) + ')' + (cpu.waiting ? ', idle (WAI)' : '') + (cpu.halted ? ', HALTED: ' + cpu.halted : ''));
+    ', page ' + hx(m.W, 1) + ', PC ' + hx(cpu.PC, 4) + ' (' + lbl.at(cpu.PC, m.W) + ')' + (cpu.waiting ? ', idle (WAI)' : '') + (cpu.halted ? ', HALTED: ' + cpu.halted : ''));
   console.log('--- tasks: T STATE  FLAGS PREEMPT BUSY  SP  NAME   (stack low water)');
   for (const s of state(m))
     console.log('           ' + hx(s.task, 1) + ' ' + s.state.padEnd(6) + ' ' + hx(s.flags) + '    ' + hx(s.preempt) + '      ' + hx(s.busy) + '    ' +
@@ -86,7 +96,7 @@ function report(m, lbl) {
   }
   console.log('--- the last instructions: page:PC (label) T A X Y S P');
   for (const [w, t, pc, a, x, y, s, p] of m.trace)
-    console.log('   ' + hx(w, 1) + ':' + hx(pc, 4) + ' ' + lbl.at(pc).padEnd(24) + ' T' + hx(t, 1) + ' A=' + hx(a) + ' X=' + hx(x) + ' Y=' + hx(y) + ' S=' + hx(s) + ' P=' + hx(p));
+    console.log('   ' + hx(w, 1) + ':' + hx(pc, 4) + ' ' + lbl.at(pc, w).padEnd(24) + ' T' + hx(t, 1) + ' A=' + hx(a) + ' X=' + hx(x) + ' Y=' + hx(y) + ' S=' + hx(s) + ' P=' + hx(p));
 }
 
 function interactive(m, opt) {
@@ -161,7 +171,7 @@ function main(argv) {
     else if (a === '--watch-pc') {
       const w = next(), pc = lbl.byName.has(w) ? lbl.byName.get(w) : parseInt(w.replace(/^\$/, ''), 16);
       if (!(pc >= 0)) { console.error('--watch-pc: ' + w + '?'); process.exit(2); }
-      opt.pcWatches.push({ pc, page: 0 });
+      opt.pcWatches.push({ pc, page: lbl.pageOf.get(w) || 0 });
     } else { console.error('run.js: ' + a + '?  (see the top of sim/run.js)'); process.exit(2); }
   }
   const m = boot(opt);

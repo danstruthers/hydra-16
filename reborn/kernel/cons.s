@@ -94,7 +94,8 @@ K_PUTSTR:
             pla
             rts
 
-; GETC: a byte from the serial port, waiting for one (the other tasks run meanwhile).  OUT: .A
+; GETC: a byte from the serial port, waiting for one (the other tasks run meanwhile).  OUT: .A; or C = 1,
+; .A = E_INTR (a note came: taken on the way out)
 K_GETC:
             php
             sei
@@ -108,8 +109,15 @@ K_GETC:
 
 @none:
             plp
+            lda         TK_NOTED                            ; A note: E_INTR, and the note (notes.s)
+            bne         @intr
             jsr         K_YIELD
             bra         K_GETC
+
+@intr:
+            lda         #E_INTR
+            sec
+            jmp         K_NOTE_RETURN
 
 ; PUTHEX: .A as two hex digits.  Keeps .A, .X, .Y
 K_PUTHEX:
