@@ -1216,13 +1216,18 @@ IO_BIND:
 IO_UNMOUNT:
             PUSH_XY
             pha                                     ; (C = 1: the member's name too: .X's flags, but
-            txa                                     ;   NS_SYSTEM)
-            and         #<~NS_SYSTEM
+            txa                                     ;   NS_SYSTEM and NS_FRESH)
+            and         #<~(NS_SYSTEM | NS_FRESH)
             cmp         #1
             pla
             _M_NS_CALL_IN
             bcc         :+
             jmp         @done
+:
+            lda         ZP_IO_MODE
+            and         #NS_FRESH
+            beq         :+
+            jmp         @fresh
 :
             lda         ZP_IO_MODE
             and         #<~NS_SYSTEM
@@ -1316,12 +1321,50 @@ IO_UNMOUNT:
 @plain:
             pla
             plp
+            bra         @done
+
+@fresh:                                             ; A fresh namespace: the task's own entries, all but
+            lda         #0                          ;   its /ram mount, deleted from the last on
+            jsr         NS_TABLE
+            ldx         #NS_ENTRIES
+
+@f_entry:
+            dex
+            bmi         @f_done
+            txa
+            jsr         NS_AT
+            lda         (ZP_IO_CHUNK)               ; (NS_TYPE)
+            beq         @f_entry
+            and         #NS_KIND
+            cmp         #NS_MOUNT
+            bne         @f_drop
+            ldy         #NS_PREFIX
+:
+            lda         (ZP_IO_CHUNK),Y
+            cmp         NS_RAM_PATH - NS_PREFIX,Y
+            bne         @f_drop
+            iny
+            cmp         #0
+            bne         :-
+            bra         @f_entry                    ; (/ram: kept)
+
+@f_drop:
+            phx
+            txa
+            jsr         NS_DELETE
+            plx
+            bra         @f_entry
+
+@f_done:
+            clc
 
 @done:
             jsr         NS_CALL_END
             _M_IO_UNMAP
             PULL_YX
             rts
+
+NS_RAM_PATH:    .byte   "/ram", 0
 
 ; Copy a call's names into the IO data area (the IO transfer bank mapped), reading them as the calling
 ; code sees them (far pointers: RAM, the paged ROM, or its own ROM page .X): the path (ZP_IO_OFS) to the

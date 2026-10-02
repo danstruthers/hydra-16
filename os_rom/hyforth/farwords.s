@@ -1905,6 +1905,24 @@ hide:                       ; hide path
     ldx #NS_HIDDEN
     jsr IO_BIND
     bra NSDONE
+.pushseg
+.segment "HIGH_PA"      ; (Page A's room above COMMON)
+newns:                      ; newns [file]
+    lda #<NSROOT
+    ldy #>NSROOT
+    ldx #NS_FRESH       ; (The path: "/", unused)
+    jsr IO_UNMOUNT
+    bcs NSFRESHFAIL
+    jsr ARGGET          ; A file: its lines, as include reads them
+    bcs NSFRESHOK
+    jmp INCGO
+NSFRESHOK:
+    jmp next
+NSFRESHFAIL:
+    jmp IOFAIL
+NSROOT:
+    .byte "/", 0
+.popseg
 NSNAME:
     lda #ERR_IO_NAME
     bra NSFAIL

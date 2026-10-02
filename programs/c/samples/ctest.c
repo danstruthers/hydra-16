@@ -167,6 +167,8 @@ int main (int argc, char* argv[])
         && msg[0] == 0 && msg[1] == 0, "hy_mount");
     close (fd);
     check (hy_unmount (0, "/ctz") == 0 && hy_mount ("nodev", "/ctz", HY_MREPL, 0) == -1, "hy_mount: no such device");
+    check (hy_bind ("/rom/bin", "/ctu", HY_MREPL) == 0 && hy_hide ("/sram") == 0 && hy_newns () == 0
+        && stat ("/ctu/code.hyx", &st) != 0 && stat ("/sram/bin", &st) == 0 && stat ("/ram", &st) == 0, "hy_newns");
 
     /* clock, isatty */
     c = clock ();

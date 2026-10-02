@@ -227,7 +227,7 @@ Everything is a file.  A task opens names and reads and writes fds; the IO layer
 | `/dev/snd` | [The YM2151](programming/io.md#sound-devsnd) |
 | `/dev/sd/N/data`, `/dev/sd/N/ctl` | A disk as bytes, and its control file |
 | `/sd/N/...` | [The files on a card](programming/io.md#the-files-on-a-card) (HydraFS) |
-| `/proc/N/...` | [The tasks](programming/io.md#the-tasks-proc): status, `ctl`, `ns`, `cmd` (`send`) |
+| `/proc/N/...` | [The tasks](programming/io.md#the-tasks-proc): status, `ctl`, `ns`, `cmd` (`send`), and their memory as files, `mem` and `ram` |
 | `/env/NAME` | [The environment](programming/io.md#the-environment-env) |
 | `/dev/time` | [The clock](programming/io.md#the-clock-devtime) |
 | `/dev/ram` | [The RAM itself](programming/io.md#the-ram-itself-devram) (task 0's only) |
@@ -247,7 +247,7 @@ Names are put together the Plan 9 way: binds and mounts build one tree, and entr
 
 * **Two tables:** each task's own (32 entries, inherited by the tasks it starts) and the **system namespace** (32 entries every task sees, under its own).  A name resolves to the longest matching prefix in either; on a tie, the task's own wins.
 * **Mounts with a spec**, as Plan 9's `mount` takes one: `mount -s hfs /rom x` serves the ROM disk at `/rom`, and each shell's `mount hfs /ram r/N` gives it its own area of the RAM disk at `/ram`.
-* **The default namespace** comes from `/rom/lib/namespace`, then a card's `lib/namespace`; `ns` prints the current one as the lines that would make it:
+* **The default namespace** comes from `/rom/lib/namespace`, then a card's `lib/namespace`; `newns [file]` starts a task afresh from it (its own entries go but its `/ram`, then the file's lines); `ns` prints the current one as the lines that would make it:
 
 ```
 mount -s hfs /sd
@@ -264,8 +264,8 @@ mount hfs /ram r/1
 ```
 
 * In full: [namespaces](programming/io.md#namespaces) (the calls, the flags, how a name resolves, the namespace at boot).
-* In the shell: [HyForth's files and devices](using/hyforth.md#files-and-devices) (`mount`, `bind`, `unmount`, `ns`).
-* In C: [files and devices](programming/c.md#5-files-and-devices) (`hy_mount`, `hy_bind`, `hy_unmount`).
+* In the shell: [HyForth's files and devices](using/hyforth.md#files-and-devices) (`mount`, `bind`, `unmount`, `hide`, `newns`, `ns`).
+* In C: [files and devices](programming/c.md#5-files-and-devices) (`hy_mount`, `hy_bind`, `hy_unmount`, `hy_hide`, `hy_newns`).
 * The design, and what's left: [NAMESPACES.md](plans/NAMESPACES.md).
 
 ---
@@ -380,8 +380,8 @@ The plans record the design's reasoning and what's to come; parts of them are hi
 | :--- | :--- | :----- |
 | [NEXT_STEPS.md](plans/NEXT_STEPS.md) | What's missing to make the Hydra fun and useful, and the [milestones](plans/NEXT_STEPS.md#milestones) | The roadmap |
 | [IDEAS.md](plans/IDEAS.md) | The next features in order, wait states for board V2, open issues | Ongoing |
-| [NAMESPACES.md](plans/NAMESPACES.md) | Unions, the default namespace, `/bin` and `/lib` | Mostly done |
-| [PROC.md](plans/PROC.md) | `/proc`, and a task's memory as files | `/proc` done; the memory files to do |
+| [NAMESPACES.md](plans/NAMESPACES.md) | Unions, the default namespace, `/bin` and `/lib`, `newns` | Done |
+| [PROC.md](plans/PROC.md) | `/proc`, and a task's memory as files | Done but `regs`, `fd` and the debugger's commands |
 | [DISKS.md](plans/DISKS.md) | The ROM and RAM disks, the program caches | Done |
 | [VIDEO.md](plans/VIDEO.md) | The Vera X card in slot 0 | Planned |
 | [SOUND.md](plans/SOUND.md) | The YM2151 library, the player, the test song | Done; importing music to do |

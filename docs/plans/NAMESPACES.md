@@ -3,8 +3,7 @@
 A plan to make the namespace the way names are found, as Plan 9 does, in place of search paths.  Directories are
 mapped onto other paths (bound, mounted) and stacked into **unions**, so `/bin` is one directory that holds the
 program caches, the cards' programs and the ROM's, and the shell just looks in `/bin`.  It goes with the
-[RAM and ROM disks](DISKS.md), which give it most of what it puts together.  Built: steps 1-5 below (`newns`
-is still to come).
+[RAM and ROM disks](DISKS.md), which give it most of what it puts together.  Built: steps 1-6 below, `newns` included.
 
 ### **Contents**
 1. [Where it stands](#where-it-stands)
@@ -160,7 +159,8 @@ anything, only take a name away.
   `ns` does, so a namespace can be saved and read back.
 * **HyForth:** `bind [-abc] new old`, `mount [-abc] device old`, `unmount [new] old`, `hide path` take their
   arguments from the line, as the shell's commands do (stack forms `(bind)`, `(mount)`, `(unmount)`, with no
-  flags); `ns`; `#` for comments; `newns` (to come) would start a fresh namespace from a file.  The namespace
+  flags); `ns`; `#` for comments; `newns [file]` (built) starts a fresh namespace: the task's own entries go but its
+  `/ram`, so it sees the system namespace, then the file's lines run (`IO_UNMOUNT` with `NS_FRESH`; C's `hy_newns`).  The namespace
   files are scripts of those lines, run by the boot shell.
 * **C:** `hy_bind(new, old, flags)`, `hy_mount`, `hy_unmount`, `hy_hide`.
 
@@ -192,10 +192,11 @@ programs found in `/bin` from a cache, a card and the ROM, in that order; `$PATH
 1. **(Done)** The namespace bank: 16 entries a task, `NS_RESOLVE` and `IO_INHERIT` on it, longer names; every test passing.
 2. **(Done)** Unions: the flags, lookups through the members, creates, `unmount` of one member, union directory
    reads (one fd a task); `hide`, `ns` printing `bind` lines, the words (`ns-unions` in `sim/tests/devices.js`).
-3. **(Done, but `newns`)** The default namespace: `/env` and `/proc` are mounts (the IO layer's special prefix is
+3. **(Done)** The default namespace: `/env` and `/proc` are mounts (the IO layer's special prefix is
    gone), made by the boot shell with `/sd`, `/rom`, `/ram` and the boot card's `bin` and `lib` (they're needed to
    read any file, and with no ROM disk there's no file); `/rom/lib/namespace` adds the caches and the ROM's to
-   `/bin` and `/lib`, then the card's `lib/namespace` runs (`ns-default`).
+   `/bin` and `/lib`, then the card's `lib/namespace` runs (`ns-default`).  `newns [file]` gives a task a fresh one:
+   the system namespace and its `/ram`, then the file's lines (`ns-newns`).
 4. **(Done)** The shell: programs in the current directory then `/bin`, libraries in `/lib`, `$PATH` and
    `$LIBPATH` after them; a copy into `/bin` goes to the `-c` member.
 5. **(Done)** C's calls: `hy_bind`, `hy_mount`, `hy_unmount`, `hy_hide` (`ctest`).

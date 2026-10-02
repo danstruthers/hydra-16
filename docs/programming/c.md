@@ -186,7 +186,9 @@ Use 0 for success, 1 with a message for a failure, and 2 for a usage error, as U
 | `/dev/cons` | The console |
 | `/dev/null`, `/dev/zero` | As on Unix |
 | `/dev/time` | The clock, as text: `2026-09-30 14:05:00`; write one to set it |
-| `/dev/proc/N/...` | Task N: its `cwd`, `env`, `mem` |
+| `/rom/...`, `/ram/...`, `/sram/...` | The ROM's files; the shell's own area of the RAM disk; the shared RAM disk |
+| `/bin`, `/lib` | The programs and libraries: unions of `/ram`'s, `/sram`'s, the card's and `/rom`'s |
+| `/proc/N/...` | Task N: its `status`, `cwd`, `env`, `pages`, `ns`; and for a task this program started (or itself), its memory: `mem` (its addresses) and `ram` (its banks) |
 | `/dev/snd` | The YM2151 sound chip ([below](#sound-sndh)) |
 | `/env/NAME` | An environment variable (below) |
 
@@ -605,6 +607,7 @@ The CPU does about 3.6 million simple operations a second, and cc65's code isn't
 | `int hy_kill (int task)` | End a task and the tasks it started (its status: 137) |
 | `int hy_bind (new, old, flags)`, `int hy_mount (dev, old, flags, spec)` | The namespace, as Plan 9's `bind` and `mount`: names under `old` stand for names under `new` (or are device `dev`'s, such as `"zero"`; `spec`: `NULL`, or what the server serves there, as Plan 9's, `hy_mount ("hfs", "/a", HY_MREPL, "r")`).  `flags`: `HY_MREPL` (replace `old`'s entries), `HY_MBEFORE`, `HY_MAFTER` (a union's member, before or after the others), `HY_MCREATE` (files made in the union go to it).  0, or -1 |
 | `int hy_unmount (new, old)`, `int hy_hide (path)` | Take `old`'s member `new` out (`NULL`: all of `old`'s entries); make nothing under `path` found.  0, or -1 |
+| `int hy_newns (void)` | A fresh namespace, as Plan 9's `newns`: the program's own entries go, but its `/ram`, so it sees the system namespace.  0, or -1 |
 | `void hy_exits (const char* msg)` | End with a message (code 1), or success (`NULL`, `""`) |
 | `int hy_sem_new (unsigned char count)`, `int hy_mutex_new (void)` | A semaphore (1-16), or -1 |
 | `int hy_sem_acquire (s)`, `hy_sem_try (s)`, `hy_sem_release (s)`, `hy_sem_free (s)` | [Semaphores](#9-tasks-working-together-semaphores) |

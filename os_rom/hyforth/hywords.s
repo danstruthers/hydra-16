@@ -1517,6 +1517,10 @@ def_far "unmount", "unmount"
 ; hide path  nothing under the path is found (in this task, and the tasks it starts)
 def_far "hide", "hide"
 ;
+; newns [file]  a fresh namespace, as Plan 9's: this task's own entries go, but its /ram, so it sees the
+;               system namespace (as a new shell does); then the file's lines (bind, mount ...), as include
+def_far "newns", "newns"
+;
 ; ( sz-dev sz-path -- )  (mount)
 def_far "(mount)", "pmount"
 ;

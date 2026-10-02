@@ -13,6 +13,10 @@
 ;   /proc/N/ns              read: its namespace, as the lines that would make it (ns: PROC_NS_LIST)
 ;   /proc/N/cmd             write: a line for task N's shell to run, as if typed (PROC_CMD); for its family
 ;                           and task 0
+;   /proc/N/mem             read, write: its address space as it sees it, offset = address (PROC_MEM_IO); for
+;                           its family and task 0
+;   /proc/N/ram             read, write: its banks on the RAM modules, offset = bank * 8K + offset in it; the
+;                           same
 ; A line is "N S O" and CR LF: the task, its state (R runnable, W waiting for IO, P paused: waiting for a
 ; task it started, D a driver, - free) and the task that started it (- none), then " *" for the
 ; foreground task.  The text is made again for each read, from the fd's offset.
@@ -26,6 +30,8 @@ ZP_PROC_A       = ZP_CS + 10        ; -a: after a member with the same path
 ZP_PROC_T       = ZP_CS + 11        ; (PROC_FAR_PEEK's)
 ZP_PROC_C       = ZP_CS + 12        ; (A character, compared)
             CS_FITS     ZP_PROC_NSE, 9
+ZP_PROC_TASK    = ZP_CS + 4         ; mem and ram (PROC_MEM_IO): the task
+ZP_PROC_PAGE    = ZP_CS + 5         ;   its BIOS ROM page
 
 .segment "SYS_P9"
 
@@ -45,8 +51,7 @@ PROC_SERVE:
 :
             cmp         #H9_STAT
             bne         :+
-            jsr         STAT_ZERO
-            bra         PROC_OK
+            jmp         PROC_STAT
 :
             cmp         #H9_CTL
             beq         PROC_BAD                            ; H9_CLUNK, H9_DUP: nothing to do
@@ -116,6 +121,13 @@ PROC_OPEN:
 
 @fid:
             ora         ZP_PROC_OWN
+            cmp         #PROC_FID_MEM
+            bcc         @open
+            sta         ZP_PROC_IDX                         ; mem, ram: a busy task, and the asker its family
+            ldx         ZP_PROC_OWN                         ;   or task 0
+            jsr         PROC_MEM_MAY
+            bcs         @refused
+            lda         ZP_PROC_IDX
             bra         @open
 
 @list:
@@ -125,6 +137,12 @@ PROC_OPEN:
             dec         ZP_IO_REQ + 1
             jsr         IO_SRV_UNMAP                        ; (Keeps .A)
             clc
+            rts
+
+@refused:
+            dec         ZP_IO_REQ + 1
+            jsr         IO_SRV_UNMAP
+            sec
             rts
 
 @not_found:
@@ -149,8 +167,9 @@ PROC_MATCH:
 
 PROC_S_MEM:     .byte   "pages floor "
 PROC_S_MEM_END:
-PROC_NAMES:     .byte   "status", 0, "ctl", 0, "cwd", 0, "env", 0, "pages", 0, "ns", 0, "cmd", 0, 0
+PROC_NAMES:     .byte   "status", 0, "ctl", 0, "cwd", 0, "env", 0, "pages", 0, "ns", 0, "cmd", 0, "mem", 0, "ram", 0, 0
 PROC_FIDS:      .byte   PROC_FID_STATUS, PROC_FID_CTL, PROC_FID_CWD, PROC_FID_ENV, PROC_FID_PAGES, PROC_FID_NS, PROC_FID_CMD
+                .byte   PROC_FID_MEM, PROC_FID_RAM
 
 ; .A = a hex digit's value (0-F; upper or lower case).  OUT: C = 0; or C = 1 (not a hex digit)
 PROC_HEX_DIGIT:
@@ -177,6 +196,11 @@ PROC_HEX_DIGIT:
 PROC_READ:
             tya
             and         #$F0
+            cmp         #PROC_FID_MEM
+            bcc         :+
+            clc                                             ; mem, ram
+            jmp         PROC_MEM_IO
+:
             cmp         #PROC_FID_CTL
             beq         @empty
             cmp         #PROC_FID_CMD
@@ -464,6 +488,10 @@ PROC_PUT:
 PROC_WRITE:
             tya
             and         #$F0
+            cmp         #PROC_FID_MEM
+            bcc         :+
+            jmp         PROC_MEM_IO                         ; mem, ram (C = 1: a write)
+:
             cmp         #PROC_FID_CMD
             bne         :+
             jmp         PROC_CMD_WRITE
@@ -573,6 +601,351 @@ PROC_MAY:
             lda         #ERR_IO_PERM
 :
             rts
+
+; ****************************************************************************
+; /proc/N/mem and /proc/N/ram: task N's memory, copied with T its own (MEM_COPY, ram_srv.s), MC_MAX bytes at most
+; a request and not past a 256-byte page's end (a short read or write: the IO layer asks again).
+;   mem:    $0000-$7FFF its task RAM; $8000-$9FFF the bank it has there (its $00, and U for a shared one);
+;           $A000-$DFFF its paged ROM bank; $E000-$FEFF the BIOS ROM page it's on; $FF00-$FFFF zeros (the I/O
+;           space isn't read: a read can have effects).  Past $FFFF: the end.  It writes $0000-$9FFF only.
+;   ram:    its bank b ($00-$EF) at b * $2000, if it has it (the MMU's bank map; else ERR_IO_NOT_FOUND).
+; Its $00 is its own (in task RAM); U and W are in its frame when the scheduler switched it out.  In a call
+; (TASK_CALLING_FLAG), a driver, or the asker itself, it has no frame there: page 0 and U 0 (where its calls are).
+
+; May the asker use task .X's mem and ram?  It's busy, and the asker is its family, or task 0 (PROC_MAY).
+; OUT: C = 0 yes, ZP_PROC_OWN = .X; or C = 1, .A = ERR_IO_NOT_FOUND or ERR_IO_PERM.  Modifies: .A, .X, .Y
+PROC_MEM_MAY:
+            jsr         PROC_PEEK
+            stx         ZP_PROC_OWN                         ; (PROC_PEEK's is its owner)
+            and         #TASK_BUSY_FLAG
+            bne         :+
+            lda         #ERR_IO_NOT_FOUND
+            sec
+            rts
+:
+            jmp         PROC_MAY
+
+; Read (C = 0) or write (C = 1) /proc/N/mem or ram (.Y = the fid)
+PROC_MEM_IO:
+            ror         ZP_PROC_FG                          ; (Bit 7: a write)
+            tya
+            and         #$F0
+            sta         ZP_PROC_IDX                         ; mem or ram
+            tya
+            and         #$0F
+            sta         ZP_PROC_TASK
+            tax
+            jsr         PROC_MEM_MAY
+            bcc         :+
+            rts
+:
+            lda         T_REGISTER                          ; (The client: this task)
+            and         #$0F
+            tax
+            jsr         IO_SRV_MAP
+            jsr         MEM_COUNT                           ; MC_N
+            lda         ZP_PROC_TASK
+            sta         MC_TASK
+            ldy         #IO_BLK_OFS
+            lda         (ZP_IO_REQ),Y
+            sta         MC_ADDR
+            lda         #$FF
+            sta         MC_BANK                             ; (Its address space as it is, so far)
+            sta         MC_U
+            ldy         #IO_BLK_OFS + 3
+            lda         (ZP_IO_REQ),Y
+            bne         @past
+            dey
+            lda         ZP_PROC_IDX
+            cmp         #PROC_FID_RAM
+            beq         @ram
+            lda         (ZP_IO_REQ),Y                       ; mem: 64K
+            bne         @past
+            dey
+            lda         (ZP_IO_REQ),Y
+            sta         MC_ADDR + 1
+            bpl         @copy                               ; $0000-$7FFF: its task RAM
+            cmp         #>PAGED_ROM_BASE
+            bcs         @rom
+            jsr         PROC_WINDOW                         ; $8000-$9FFF: its bank there
+            bra         @copy
+
+@rom:
+            bit         ZP_PROC_FG
+            bmi         @refuse                             ; (No writes: ROM, and the I/O space)
+            cmp         #>$E000
+            bcc         @copy                               ; $A000-$DFFF: its paged ROM bank (its $01)
+            cmp         #>IO_PORT_BASE
+            bcs         @zeros
+            jsr         PROC_BIOS                           ; $E000-$FEFF: its BIOS ROM page
+            bra         @count
+
+@zeros:
+            inc         ZP_IO_REQ + 1                       ; (The data area)
+            ldy         #0
+            tya
+:
+            sta         (ZP_IO_REQ),Y
+            iny
+            cpy         MC_N
+            bne         :-
+            dec         ZP_IO_REQ + 1
+            bra         @count
+
+@ram:                                                       ; ram: bank (offset bits 13-20) $00-$EF, one it has
+            lda         (ZP_IO_REQ),Y
+            cmp         #(MMU_BANK_TOP + 1) >> 3
+            bcs         @past
+            asl
+            asl
+            asl
+            sta         MC_T
+            dey
+            lda         (ZP_IO_REQ),Y
+            pha
+            and         #$1F                                ; (The window: $8000 + the offset in the bank)
+            ora         #>PAGED_RAM_BASE
+            sta         MC_ADDR + 1
+            pla
+            lsr
+            lsr
+            lsr
+            lsr
+            lsr
+            ora         MC_T
+            sta         MC_BANK
+            lsr                                             ; Its byte of the bank map ...
+            lsr
+            lsr
+            tax
+            lda         ZP_PROC_TASK
+            jsr         PROC_BANKS_PEEK
+            pha
+            lda         MC_BANK                             ; ... and its bit
+            and         #7
+            tax
+            pla
+            and         PROC_BITS,X
+            bne         @copy
+            lda         #ERR_IO_NOT_FOUND
+            bra         @error
+
+@past:
+            bit         ZP_PROC_FG
+            bmi         @refuse
+            lda         #0                                  ; (A read: end of file)
+            bra         @counted
+
+@refuse:
+            lda         #ERR_IO_MODE
+
+@error:
+            jsr         IO_SRV_UNMAP
+            sec
+            rts
+
+@copy:
+            bit         ZP_PROC_FG
+            bmi         @write
+            jsr         MEM_READ
+            bra         @count
+
+@write:
+            jsr         MEM_WRITE
+
+@count:
+            lda         MC_N
+
+@counted:
+            jsr         IO_SRV_COUNT
+            jmp         PROC_OK
+
+PROC_BITS:      .byte   $01, $02, $04, $08, $10, $20, $40, $80   ; (The MMU's bitmaps: MMU_BIT_MASKS)
+
+; MC_BANK, MC_U = the bank task ZP_PROC_TASK has at $8000 (its $00), and its U for a shared one (MC_U stays $FF
+; for one of its own).  Modifies: .A, .X, .Y
+PROC_WINDOW:
+            lda         T_REGISTER
+            and         #$0F
+            cmp         ZP_PROC_TASK
+            bne         @other
+            lda         ZP_IO_SAVEB                         ; The asker itself: as it was before IO_SRV_MAP
+            ldx         ZP_IO_SAVEU
+            bra         @bank
+
+@other:
+            ldx         #RAM_BANK_REG                       ; (Its own, in its task RAM)
+            lda         ZP_PROC_TASK
+            jsr         PROC_ZP_PEEK
+            pha
+            ldx         #1                                  ; (U: its frame's first byte)
+            jsr         PROC_FRAMED
+            tax
+            pla
+
+@bank:
+            sta         MC_BANK
+            cmp         #$F0
+            bcc         :+
+            stx         MC_U
+:
+            rts
+
+; Read MC_N bytes at MC_ADDR ($E000-$FEFF) from the BIOS ROM page task ZP_PROC_TASK is on, to the data area
+; (PEEK_PAGE, IRQs on).  Modifies: .A, .X, .Y
+PROC_BIOS:
+            ldx         #6                                  ; (W: its frame's sixth byte)
+            jsr         PROC_FRAMED
+            sta         ZP_PROC_PAGE
+            lda         ZP_FP                               ; (PEEK_PAGE's pointer: ZP_FP's address)
+            pha
+            lda         ZP_FP + 1
+            pha
+            lda         MC_ADDR
+            sta         ZP_FP
+            lda         MC_ADDR + 1
+            sta         ZP_FP + 1
+            inc         ZP_IO_REQ + 1                       ; (The data area)
+            ldy         #0
+:
+            lda         ZP_PROC_PAGE
+            jsr         PEEK_PAGE                           ; (Keeps .Y)
+            sta         (ZP_IO_REQ),Y
+            iny
+            cpy         MC_N
+            bne         :-
+            dec         ZP_IO_REQ + 1
+            pla
+            sta         ZP_FP + 1
+            pla
+            sta         ZP_FP
+            rts
+
+; .A = byte .X of task ZP_PROC_TASK's frame (1: U, 6: W), or 0 if it has none: in a call, a driver, or the
+; asker itself.  Modifies: .X, .Y
+PROC_FRAMED:
+            lda         T_REGISTER
+            and         #$0F
+            cmp         ZP_PROC_TASK
+            beq         @none
+            phx
+            ldx         ZP_PROC_TASK
+            jsr         PROC_PEEK                           ; (Its state; ZP_PROC_OWN: its owner)
+            plx
+            and         #TASK_CALLING_FLAG | TASK_RESIDENT_FLAG
+            bne         @none
+            lda         ZP_PROC_TASK
+            php                                             ; The byte: $0100 + its SP + .X
+            sei
+            ldy         T_REGISTER
+            sta         T_REGISTER                          ; Quick look (no stack use!)
+            txa
+            clc
+            adc         STACK_SAVE_REG
+            tax
+            lda         $0100,X
+            sty         T_REGISTER
+            plp
+            rts
+
+@none:
+            lda         #0
+            rts
+
+; .A = task .A's zero page byte .X.  Modifies: .Y
+PROC_ZP_PEEK:
+            php
+            sei
+            ldy         T_REGISTER
+            sta         T_REGISTER                          ; Quick look (no stack use!)
+            lda         $00,X
+            sty         T_REGISTER
+            plp
+            rts
+
+; .A = byte .X of task .A's MMU bank map (bit n: bank n, the MMU's way).  Preserves .X.  Modifies: .Y
+PROC_BANKS_PEEK:
+            php
+            sei
+            ldy         T_REGISTER
+            sta         T_REGISTER                          ; Quick look (no stack use!)
+            lda         MMU_BANK_MAP,X
+            sty         T_REGISTER
+            plp
+            rts
+
+; Stat: zeros, and for mem its size (64K), for ram up to the last bank task N has.  .Y = the fid, .X = the client
+PROC_STAT:
+            phy
+            jsr         STAT_ZERO
+            pla
+            tay
+            and         #$F0
+            cmp         #PROC_FID_MEM
+            bcc         @done
+            stz         ZP_PROC_LEN                         ; (The size's bits 13-20: 0)
+            tax
+            tya
+            and         #$0F
+            cpx         #PROC_FID_RAM
+            beq         @ram
+            lda         #1 << 3                             ; mem: 64K (bit 16)
+            bra         @size
+
+@ram:
+            ldx         #MMU_BANK_TOP >> 3                  ; ram: its highest bank's byte of the map ...
+
+@byte:
+            pha
+            jsr         PROC_BANKS_PEEK
+            ply
+            cmp         #0
+            bne         @found
+            tya
+            dex
+            bpl         @byte
+            bra         @done                               ; (None: 0)
+
+@found:
+            ldy         #8                                  ; ... and bit: banks up to it
+:
+            dey
+            asl
+            bcc         :-
+            sty         ZP_PROC_LEN
+            txa
+            asl
+            asl
+            asl
+            ora         ZP_PROC_LEN
+            inc                                             ; (Banks: $F0 at most)
+
+@size:
+            sta         ZP_PROC_LEN                         ; Size = .A * $2000
+            lda         T_REGISTER
+            and         #$0F
+            tax
+            jsr         IO_SRV_MAP
+            inc         ZP_IO_REQ + 1                       ; (The data area: the stat record)
+            lda         ZP_PROC_LEN
+            asl
+            asl
+            asl
+            asl
+            asl
+            ldy         #IO_ST_SIZE + 1
+            sta         (ZP_IO_REQ),Y
+            lda         ZP_PROC_LEN
+            lsr
+            lsr
+            lsr
+            iny
+            sta         (ZP_IO_REQ),Y
+            dec         ZP_IO_REQ + 1
+            jsr         IO_SRV_UNMAP
+
+@done:
+            jmp         PROC_OK
 
 ; ****************************************************************************
 ; /proc/N/cmd: a line for task N's shell to run, as if typed at its prompt.  It waits in task N's IO transfer area

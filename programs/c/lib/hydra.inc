@@ -65,6 +65,7 @@ NS_BEFORE       = $02       ;   before them
 NS_CREATE       = $04       ;   files made in the union go to it
 NS_HIDDEN       = $08       ; IO_BIND: a hide
 NS_SPEC         = $10       ; IO_MOUNT: ZP_IO_CNT = a spec
+NS_FRESH        = $40       ; IO_UNMOUNT: a fresh namespace (all the task's own entries but its /ram)
 IO_STAT_SIZE    = 48        ; A stat record (IO_STAT) ...
 IO_ST_NAME      = 0         ;   its name (32 bytes, zero-terminated)
 IO_ST_MODE      = 32        ;   HFS_M_* bits

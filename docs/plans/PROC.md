@@ -5,7 +5,7 @@ A plan to move `/dev/proc` to `/proc`, as Plan 9 has it, and to add a task's **m
 debugger, a memory dump or a core file is just a program reading files.  Who may read and write them is the same
 rule as the RAM disks' areas ([DISKS.md](DISKS.md#who-can-use-which-area)), and **task 0, the system task, may use
 everything**.  Built so far: `/proc` mounted, `pages`, `ns`, `cmd` and `ctl` checked by `TASK_MAY` (step 2 below,
-and `ns` from step 4); the memory files are next.
+and `ns` from step 4), and the memory files, `mem` and `ram` (step 3); `regs` and `fd` are next.
 
 ### **Contents**
 1. [Where it stands](#where-it-stands)
@@ -25,10 +25,11 @@ and `ns` from step 4); the memory files are next.
 
 `/proc` ([io.md](../programming/io.md#the-tasks-proc)), the device `proc` mounted by the boot shell (`/dev/proc` is
 the same files), lists the busy tasks, and for each task N has `status`, `ctl` (`kill`, `break`, `fg`), `cwd`, `env`,
-`pages` (a **summary**: `pages PP floor FF`; it was `mem`), `ns` (its namespace, as `ns` prints it) and `cmd` (a line
-for its shell to run: HyForth's `send`).  It's served in its client's task, from BIOS ROM page 9
-(`servers/proc_srv.s`).  Any task can read the status files; `ctl` and `cmd` are for the task's family and task 0.  A task's RAM can't be reached from another task at all: far pointers refuse it
-(`FP_READ` on another task's RAM: the MMU test's step 9).
+`pages` (a **summary**: `pages PP floor FF`; it was `mem`), `ns` (its namespace, as `ns` prints it), `cmd` (a line
+for its shell to run: HyForth's `send`), and its memory, `mem` and `ram`.  It's served in its client's task, from BIOS
+ROM page 9 (`servers/proc_srv.s`).  Any task can read the status files; `ctl`, `cmd`, `mem` and `ram` are for the
+task's family and task 0.  Far pointers still refuse another task's RAM (`FP_READ`: the MMU test's step 9): the
+files are the one way to it, and they check who asks.
 
 ---
 
@@ -122,19 +123,23 @@ task 0 passing both.  Two things it needs first:
 
 ### **How it works**
 
-The proc server runs in its client's task (page 9), as now.  Reading task N's memory has to happen with `T` = N,
-since every task's `$0000-$7FFF` and its banks are only seen while `T` is that task:
-* **`TASK_CALL`** runs a copy routine in task N's context (its zero page, its banks), as `mem`'s summary is
-  counted now.  The routine copies up to 256 bytes between task N's address and the client's IO transfer area,
-  mapping the transfer area at `$8000` only while it touches it, and putting task N's own `$00`, `$01` and `U`
-  back after each byte when the address is in task N's bank window (`$8000-$9FFF`), since both use that window.
-  It runs from BIOS ROM (page 9 or 5), so its own code is never in the window.
-* **ROM areas** (`$A000-$FEFF`): the copy selects task N's ROM bank or reads its BIOS page (`PEEK_PAGE`), as far
-  pointers do.
-* **IRQs stay on** for the copy: a byte at a time with the banks switched in the task's own registers is what
-  far pointers already do, and the `irqs-off` test's limit holds.
-* **`/proc/N/ram`** is the same routine with task N's `$00` set to bank `b` for the copy.
-* **A free task** gives `ERR_IO_NOT_FOUND`; a driver task's memory, only task 0.
+*(Built, as below.  The plan was a copy routine run in task N through `TASK_CALL`, with IRQs on; but that
+call writes task N's zero page and stack while it runs, so the copy wouldn't read them as N has them.)*
+
+The proc server runs in its client's task (page 9), as before.  Reading task N's memory has to happen with
+`T` = N, since every task's `$0000-$7FFF` and its banks are only seen while `T` is that task:
+* **`MEM_COPY`** (`servers/ram_srv.s`, shared with `/dev/ram`) sets `T` to N with IRQs off and no stack use, and
+  N's `$00` to the client's IO transfer bank, so the client's data area and the copy's numbers (`MC_AREA`, after
+  the system namespace in each transfer bank) are seen.  It copies up to 64 bytes (about 2,000 cycles: the
+  `irqs-off` test's limit is 5,000), then puts N's `$00` and the 8 zero page bytes it borrowed back; a read of
+  them gives N's values, and a write to them lands in them.
+* **N's bank window** (`$8000-$9FFF`): the copy switches N's `$00` to its bank and back for each byte (and `U`
+  for a shared one), since the transfer bank uses the window too.
+* **ROM areas:** `$A000-$DFFF` is read with `T` = N, so it's N's paged ROM bank; the BIOS page (`$E000-$FEFF`) is
+  N's `W`, read with IRQs on through `PEEK_PAGE`.  `U` and `W` come from N's frame on its stack, where the
+  scheduler left them; a task in a `TASK_CALL`, a driver or the asker itself has none there (`U` 0, page 0).
+* **`/proc/N/ram`** is the same copy with N's `$00` set to bank `b`, if N's MMU bank map has it.
+* **A free task** gives `ERR_IO_NOT_FOUND`; a driver task's memory, only task 0 (`TASK_MAY`).
 
 ---
 
@@ -164,7 +169,8 @@ chain after a task ends and its slot is reused; the `irqs-off` limit while copyi
 1. *Done:* the owner chain kept right at task end; `TASK_MAY` (task 0 passes).
 2. **(Done)** `/proc` as a mount (`/dev/proc` stays: the same device); `pages` for the old `mem`; `ctl` checked by
    `TASK_MAY`; and `cmd` (`send`), a line for another running shell (the `send` and `proc` tests).
-3. `/proc/N/mem` and `/proc/N/ram`: the copy routine through `TASK_CALL`, reads then writes.
+3. **(Done)** `/proc/N/mem` and `/proc/N/ram`, reads and writes: `MEM_COPY` with `T` = N and IRQs off (the
+   `proc-mem` test: another shell's RAM and bank read and written, the ROM and I/O areas, refusals, a 64K copy).
 4. `regs`, `fd` (`ns`: done in step 2).
 5. The debugger's `ctl` commands (`stop`, `start`, `step`, `break ADDR`) with the debugger itself.
 6. Docs: `io.md` (`/proc`), `tasks.md` (owners, task 0), `hyforth.md` (`ps`).

@@ -185,6 +185,17 @@ module.exports = [
     forbid: ['!UNK WORD!'],
   },
   {
+    name: 'ns-newns', about: 'newns: a fresh namespace, as Plan 9\'s: the shell\'s own entries (a bind, a hide, its copy of /bin\'s union with a member added) go, but its /ram, so it sees the system namespace again; newns file: then the file\'s lines',
+    args: ['--cycles', '150000000', '--input', BOOT + ['bind /rom/songs /x', 'hide /sram', 'bind -a /rom/songs /bin', 'ns', 'newns', 'ns', 'ls /sram', 'ls /x',
+      'echo bind /rom/songs /y > myns', 'newns myns', 'ns', 'ls /y'].join('\\r' + P) + '\\r' + P],
+    expect: (() => {
+      const sys = 'mount -s hfs /sd\nmount -s env /env\nmount -s proc /proc\nmount -s hfs /rom x\nmount -s hfs /sram s\nbind -cs /ram/bin /bin\nbind -as /sram/bin /bin\nbind -as /rom/bin /bin\nbind -cs /ram/lib /lib\nbind -as /sram/lib /lib\nbind -as /rom/lib /lib\n';
+      return ['/ram> ns\n' + sys + 'mount hfs /ram r/1\nbind /rom/songs /x\nhide /sram\n', 'bind -a /rom/songs /bin\n', '/ram> newns\n\n/ram> ns\n' + sys + 'mount hfs /ram r/1\n\n',
+        '> ls /sram\nbin/\nlib/\n', '> ls /x\n\n !IO ERR! not found\n', '/ram> ns\n' + sys + 'mount hfs /ram r/1\nbind /rom/songs /y\n\n', '> ls /y\ntest.zsm 14075\n'];
+    })(),
+    forbid: ['!UNK WORD!'],
+  },
+  {
     name: 'ns-default', about: 'the default namespace: the boot card\'s bin at /bin, /rom/lib/namespace\'s caches before it and the ROM\'s after, then the card\'s lib/namespace (a # comment, a tools directory after them all); a program by its name from the tools and the ROM through /bin; a copy into /bin goes to the shell\'s cache (-c); ls /bin: every member\'s',
     sd: [{ dev: 0, label: 'NSDEF', hfs: v => {
       v.mkdir('tools'); v.put('tools/seven.hys', Buffer.from('7 .\r\n'));
@@ -206,6 +217,33 @@ module.exports = [
         '/ram> cat /proc/f/ns\nmount -s hfs /sd\nmount -s env /env\nmount -s proc /proc\nmount -s hfs /rom x\nmount -s hfs /sram s\nbind -cs /ram/bin /bin\nbind -as /sram/bin /bin\nbind -as /rom/bin /bin\nbind -cs /ram/lib /lib\nbind -as /sram/lib /lib\nbind -as /rom/lib /lib\n\n/ram> '];
     })(),
     forbid: ['!UNK WORD!'],
+  },
+  {
+    name: 'proc-mem', about: '/proc/N/mem and ram: a shell this shell started (task B) stores a number at $6000 and a 16K bank allocation (its bank $2E: banks are top-down, 3 modules), then waits at its prompt; this one reads the number through mem, writes another that B prints, reads the BIOS ROM ($E000: the reset entry, the same on every page) and the I/O space (zeros), a ROM write refused, past the end nothing; ram reads and writes B\'s bank, a bank it hasn\'t got not found, past the last bank nothing; B can\'t read its parent\'s, nor anyone a driver\'s or a free task\'s; a 64K copy of B\'s mem; the copies with IRQs off kept short',
+    args: ['--cycles', '300000000', '--input', BOOT + 'shell\\r' + W(1) + 'send b $1234 $6000 !\\r' + W(2) + 'send b $4000 1 halloc $6004 !\\r' + W(2) + 'send b $6004 @ hlock $ABCD swap ! 0 c@ .\\r' + W(2) + [
+      'q^/proc/b/mem^ 3 open .', '3 $6000 0 seek 3 here @ 2 read . here @ @ .', '$5678 here @ ! 3 $6002 0 seek 3 here @ 2 write .'].join('\\r' + P) + '\\r' +
+      W(1) + 'send b $6002 @ .\\r' + W(2) + [
+      '3 $E000 0 seek 3 here @ 2 read . here @ @ $E000 @ = .', '3 $FF00 0 seek 3 here @ 2 read . here @ @ .', '3 $A000 0 seek 3 here @ 2 write .',
+      '3 0 1 seek 3 here @ 2 read .', '3 close', 'q^/proc/b/ram^ 3 open .', '3 $C000 5 seek 3 here @ 2 read . here @ @ .',
+      '$1357 here @ ! 3 $C002 5 seek 3 here @ 2 write .', '3 $C002 5 seek 3 here @ 2 read . here @ @ .'].join('\\r' + P) + '\\r' + W(1) +
+      'send b $6004 @ hlock 2 + @ .\\r' + W(2) + [
+      '3 0 0 seek 3 here @ 2 read .', '3 0 $1E seek 3 here @ 2 read .', '3 close', 'q^/proc/9/mem^ 1 open .', 'cat /proc/f/mem'].join('\\r' + P) + '\\r' + P +
+      'send b q^/proc/1/mem^ 1 open .\\r' + W(2) + 'cp /proc/b/mem /sram/core\\r' + P + 'ls /sram\\r' + P],
+    expect: ['$ABCD swap ! 0 c@ .\n' + num(0x2E) + '\n', '> q^/proc/b/mem^ 3 open .\n' + num(3), '> 3 $6000 0 seek 3 here @ 2 read . here @ @ .\n' + num(2) + num(0x1234),
+      '> $5678 here @ ! 3 $6002 0 seek 3 here @ 2 write .\n' + num(2), '> $6002 @ .\n', num(0x5678),
+      '> 3 $E000 0 seek 3 here @ 2 read . here @ @ $E000 @ = .\n' + num(2) + num(0xFFFF), '> 3 $FF00 0 seek 3 here @ 2 read . here @ @ .\n' + num(2) + num(0),
+      '> 3 $A000 0 seek 3 here @ 2 write .\n\n !IO ERR! not opened for that\n', '> 3 0 1 seek 3 here @ 2 read .\n' + num(0),
+      '> q^/proc/b/ram^ 3 open .\n' + num(3), '> 3 $C000 5 seek 3 here @ 2 read . here @ @ .\n' + num(2) + num(0xABCD),
+      '> $1357 here @ ! 3 $C002 5 seek 3 here @ 2 write .\n' + num(2), '> 3 $C002 5 seek 3 here @ 2 read . here @ @ .\n' + num(2) + num(0x1357),
+      '> $6004 @ hlock 2 + @ .\n', num(0x1357),
+      '> 3 0 0 seek 3 here @ 2 read .\n\n !IO ERR! not found\n', '> 3 0 $1E seek 3 here @ 2 read .\n' + num(0),
+      '> q^/proc/9/mem^ 1 open .\n\n !IO ERR! not found\n', '> cat /proc/f/mem\n\n !IO ERR! not allowed\n',
+      '> q^/proc/1/mem^ 1 open .\n', ' !IO ERR! not allowed\n', '> ls /sram\n', 'core 65536\n'],
+    forbid: ['!UNK WORD!', '!DS PTR ERROR!'],
+    check: (out, report) => {
+      const m = /longest with IRQs off.*?at cycle\): (\d+): (\S+) -> (\S+)/.exec(report);
+      if (m && +m[1] > 5000) return 'IRQs were off for ' + m[1] + ' cycles (from ' + m[2] + ' to ' + m[3] + ')';
+    },
   },
   {
     name: 'rom-copy', about: 'the ROM disk read back on the machine: every file in /rom (romfs.txt) copied to a card is its source, byte for byte, the ones across a bank boundary too (sd.s: SD_ROM_READ)',

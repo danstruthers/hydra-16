@@ -406,6 +406,7 @@ Hello, world
 | `bind [-abc] new old` | `(bind) ( sz-new sz-old -- )` | Make a path stand for another: `bind /dev/cons /tty`.  With no flags it replaces old's entries; `-b` and `-a` add it to old's **union**, before or after its members, which are looked in, in order, for a name (`bind -a /rom/bin /bin`); `-c`: a file made in the union is made in it; `-s`: in the **system namespace**, which every task sees (the boot shell's lines, and `/rom/lib/namespace`'s: the boot shell and task 0 only) |
 | `unmount [new] old` | `(unmount) ( sz-old -- )` | Remove old's mounts and binds; or just one member of its union: `unmount /rom/bin /bin` |
 | `hide path` | | Nothing under the path is found, in this task and the tasks it starts |
+| `newns [file]` | | A fresh namespace, as Plan 9's: this shell's own entries go (its binds, mounts and hides, and its copies of the system's unions), but its `/ram`, so it sees the system namespace, as a new shell does; then the file's lines, as `include` reads them: `newns /sd/0/lib/work` |
 | `ns` | | List the namespace, as the lines that would make it: `bind -a /rom /u` |
 | `stty` | `( sz -- )` | Change the serial port's settings: `"b19200" stty`, `"l7 pe s1" stty` (b = baud rate, l = data bits, p = parity n/o/e/m/s, s = stop bits).  Output so far goes out first; then switch the terminal |
 | `stty?` | | Show the serial port's settings, e.g. `b9600 l8 pn s1` |
@@ -514,7 +515,7 @@ A line with `|` (with spaces around it, outside `"..."` and `q^...^` strings) is
 | `forth` | `( -- n )` | The same, but a bare Forth: only the base loaded (see [the base and its libraries](#the-base-and-its-libraries)) |
 | `fg` | `( n -- )` | Bring task n to the front: it gets the keyboard, and the others wait to print |
 | `kill` | `( n -- )` | Kill task n and the tasks it started |
-| `ps` | | List the tasks (from `/proc`: its files also give each task's directory, environment, memory and namespace: `cat /proc/1/pages`, `cat /proc/1/ns`) |
+| `ps` | | List the tasks (from `/proc`: its files also give each task's directory, environment, memory and namespace: `cat /proc/1/pages`, `cat /proc/1/ns`; and a task this shell started has its memory there as files: `cp /proc/3/mem core3`, or `"/proc/3/mem" 3 open`, `seek` to an address, `read` and `write`) |
 | `sleep` | `( n -- )` | Sleep n ticks (200 a second; `200 sleep` is 1 s); Ctrl-C ends it |
 | `sem` | `( n -- s )` | A semaphore of n: n takes before a task has to wait; s = its number (1-16), which every task can use |
 | `mutex` | `( -- s )` | A mutex: a semaphore of 1 that only the task that took it can release (released if that task ends) |

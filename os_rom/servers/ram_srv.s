@@ -8,24 +8,13 @@
 ;   $0080000-$027FFFF   shared RAM: shared bank ID s at $80000 + s * $2000
 ;   $0280000-$207FFFF   the RAM modules: module m (0-14), task t's bank b (its bank ID m << 4 | b) at
 ;                       $280000 + m * $200000 + t * $20000 + b * $2000
-; A read gives up to RAW_MAX bytes, and stops at a 256-byte page's end (a short read: read again).  It switches T
-; (and the bank) to the RAM's task with IRQs off, and copies straight into task 0's transfer area, which the
-; request block's spare bytes (RAW_*) also hold the copy's numbers in: the one RAM every task sees with $00 at the
-; IO transfer bank.  The task's own $00 and the zero page bytes the copy uses are put back, and read as they were.
+; A read gives up to MC_MAX bytes, and stops at a 256-byte page's end (a short read: read again).  It's a copy
+; with T the RAM's task (MEM_COPY, below, which /proc/N/mem and ram use too).
 
 .segment "SYS_P9"
 
-RAW_MAX         = 64                                    ; Bytes a read (with IRQs off: about 45 cycles each)
 RAW_BLK         = PAGED_RAM_BASE                        ; Task 0's request block, when mapped (IO_SRV_MAP)
 RAW_DATA        = RAW_BLK + IO_BLK_DATA                 ;   and its data area
-RAW_TASK        = RAW_BLK + $10                         ; The copy's task (whose T it reads with)
-RAW_BANK        = RAW_BLK + $11                         ;   its bank ($00), or $FF: task RAM (when RAW_U is $FF)
-RAW_U           = RAW_BLK + $12                         ;   U for a shared bank, or $FF: a module's bank
-RAW_SRC         = RAW_BLK + $13                         ;   where (2 bytes)
-RAW_N           = RAW_BLK + $15                         ;   how many bytes
-RAW_SAVE        = RAW_BLK + $16                         ;   the task's $00, ZP_TEMP_VEC (2): put back after
-RAW_T           = RAW_BLK + $19                         ;   scratch
-.assert     IO_BLK_CALL < $10 .and RAW_T < RAW_BLK + IO_BLK_NS, error, "RAW_*: the request block's spare bytes"
 
 ; IN: .A = request, .X = client, .Y = fid
 RAM_SERVE:
@@ -75,29 +64,15 @@ RAM_OPEN:
             sec
             rts
 
-; A read at the fd's offset: the offset as a task and an address, then RAW_COPY.  Past the RAM: none (end of file)
+; A read at the fd's offset: the offset as a task and an address, then MEM_READ.  Past the RAM: none (end of file)
 RAM_READ:
             ldx         #SYSTEM_TASK_NUM                    ; (The client: task 0)
             jsr         IO_SRV_MAP
-            lda         RAW_BLK + IO_BLK_COUNT              ; How many: the count, RAW_MAX at most, and to the
-            beq         :+                                  ;   page's end (0: 256)
-            cmp         #RAW_MAX + 1
-            bcc         :++
-:
-            lda         #RAW_MAX
-:
-            sta         RAW_N
+            jsr         MEM_COUNT                           ; MC_N: the count, MC_MAX at most, and to the page's end
             lda         RAW_BLK + IO_BLK_OFS
-            sta         RAW_SRC
-            beq         :+
-            eor         #$FF                                ; (256 - the offset's low byte)
-            inc
-            cmp         RAW_N
-            bcs         :+
-            sta         RAW_N
-:
+            sta         MC_ADDR
             lda         #$FF
-            sta         RAW_U                               ; (Not a shared bank, yet)
+            sta         MC_U                                ; (Not a shared bank, yet)
             lda         RAW_BLK + IO_BLK_OFS + 3
             bne         @module                             ; (16 MB on: a module's)
             lda         RAW_BLK + IO_BLK_OFS + 2
@@ -108,12 +83,12 @@ RAM_READ:
             lda         RAW_BLK + IO_BLK_OFS + 2
             rol
             and         #MAX_TASK_NUMBER
-            sta         RAW_TASK
+            sta         MC_TASK
             lda         RAW_BLK + IO_BLK_OFS + 1
             and         #$7F
-            sta         RAW_SRC + 1
+            sta         MC_ADDR + 1
             lda         #$FF
-            sta         RAW_BANK
+            sta         MC_BANK
             bra         @copy
 
 @shared:
@@ -127,25 +102,25 @@ RAM_READ:
             lsr
             lsr
             lsr
-            sta         RAW_U
+            sta         MC_U
             pla
             and         #$0F
             ora         #$F0
-            sta         RAW_BANK
-            stz         RAW_TASK                            ; (Seen from any task: task 0's own T)
+            sta         MC_BANK
+            stz         MC_TASK                             ; (Seen from any task: task 0's own T)
             bra         @copy
 
 @module:
             lda         RAW_BLK + IO_BLK_OFS + 2            ; A module: the offset from the first's, in 64K
-            sec                                             ;   units (9 bits: RAW_T, and C)
+            sec                                             ;   units (9 bits: MC_T, and C)
             sbc         #>(RAW_MODULES >> 8)
-            sta         RAW_T
+            sta         MC_T
             lda         RAW_BLK + IO_BLK_OFS + 3
             sbc         #0
             cmp         #2
             bcs         @past
             lsr                                             ; (C = bit 8: modules 8-14)
-            lda         RAW_T
+            lda         MC_T
             ror                                             ; .A = the module * 8 + the task / 2 ...
             pha
             and         #$F0
@@ -161,21 +136,21 @@ RAM_READ:
             asl
             asl
             pha
-            lda         RAW_T                               ; ... the task (bits 17-20) ...
+            lda         MC_T                                ; ... the task (bits 17-20) ...
             lsr
             and         #MAX_TASK_NUMBER
-            sta         RAW_TASK
-            lda         RAW_T                               ; ... and its bank (bits 13-16)
+            sta         MC_TASK
+            lda         MC_T                                ; ... and its bank (bits 13-16)
             jsr         RAM_BANK_OF
             and         #$0F
-            sta         RAW_T
+            sta         MC_T
             pla
-            ora         RAW_T
-            sta         RAW_BANK
+            ora         MC_T
+            sta         MC_BANK
 
 @copy:
-            jsr         RAW_COPY
-            lda         RAW_N
+            jsr         MEM_READ
+            lda         MC_N
             bra         @count
 
 @past:
@@ -183,11 +158,10 @@ RAM_READ:
 
 @count:
             jsr         IO_SRV_COUNT
-            jsr         IO_SRV_UNMAP
             jmp         RAM_OK
 
 ; An 8K bank's number from the offset (.A = its bits 16-23, its bits 8-15 in the request block), and the address
-; in the window ($8000-$9FFF) in RAW_SRC + 1.  OUT: .A = bits 13-20 of the offset.  Modifies: .X
+; in the window ($8000-$9FFF) in MC_ADDR + 1.  OUT: .A = bits 13-20 of the offset.  Modifies: .X
 RAM_BANK_OF:
             asl
             asl
@@ -196,110 +170,271 @@ RAM_BANK_OF:
             lda         RAW_BLK + IO_BLK_OFS + 1
             and         #$1F
             ora         #>PAGED_RAM_BASE
-            sta         RAW_SRC + 1
+            sta         MC_ADDR + 1
             lda         RAW_BLK + IO_BLK_OFS + 1
             lsr
             lsr
             lsr
             lsr
             lsr
-            stx         RAW_T
-            ora         RAW_T
+            stx         MC_T
+            ora         MC_T
             rts
 
 RAW_SHARED      = $80000
 RAW_MODULES     = $280000
 
-; Copy RAW_N bytes from RAW_SRC, with T = RAW_TASK and (but for task RAM) its $00 = RAW_BANK and U = RAW_U (a shared
-; bank), to the data area (task 0's transfer area, mapped).  IRQs off throughout, and no stack while T is another
-; task's: its zero page and stack are what's at $0000-$01FF then.  The task's $00 and the zero page bytes used
-; (ZP_TEMP_VEC) are saved in RAW_SAVE and put back, and a copy of them reads as they were.  Modifies: .A, .X, .Y
-RAW_COPY:
+; ****************************************************************************
+; Another task's memory, copied to or from the client's data area (for /dev/ram, /proc/N/mem and /proc/N/ram).
+; The client's transfer area is mapped (IO_SRV_MAP: ZP_IO_REQ, its $00 at its transfer bank, U = 0), and its
+; MC_TASK, MC_BANK, MC_U, MC_ADDR and MC_N set.  T is the task's for the copy, with IRQs off throughout and no
+; stack use (its zero page and stack are what's at $0000-$01FF then), and its $00 at the client's transfer bank,
+; so the data area and MC_AREA are seen; its own $00 and the zero page bytes the copy uses (MC_ZP) are saved in
+; MC_SAVE and put back, and read (or are written) as if they hadn't been used.
+;   MC_BANK = $FF:  its address space as it is (task RAM, its paged ROM bank): MC_ADDR straight
+;   MC_U = $FF:     its bank MC_BANK at $8000, switched in for each byte (the transfer bank uses the window too)
+;   else:           shared bank MC_BANK of U = MC_U, the same way
+; Modifies: .A, .X, .Y
+MC_ZP           = ZP_TEMP_VEC                           ; The task's zero page bytes the copy uses:
+MC_ZP_N         = 8                                     ;   ZP_TEMP_VEC-ZP_TEMP_VEC4
+MC_P_MEM        = MC_ZP                                 ; The memory's pointer
+MC_P_DATA       = MC_ZP + 2                             ;   and the data area's
+MC_Z_BANK       = MC_ZP + 4                             ; MC_BANK
+MC_Z_XBANK      = MC_ZP + 5                             ; MC_XBANK
+MC_Z_U          = MC_ZP + 6                             ; MC_U
+.assert     ZP_TEMP_VEC4 + 2 = MC_ZP + MC_ZP_N .and RAM_BANK_REG = 0, error, "MC_ZP: ZP_TEMP_VEC-ZP_TEMP_VEC4, and $00"
+
+; Copy MC_N bytes from the task's memory to the data area
+MEM_READ:
+            lda         #0
+            bra         MEM_COPY
+
+; Copy MC_N bytes from the data area to the task's memory
+MEM_WRITE:
+            lda         #1
+
+MEM_COPY:
+            sta         MC_WRITE
+            lda         T_REGISTER                          ; The client: this task, its transfer bank and
+            and         #$0F                                ;   data area (mapped)
+            sta         MC_CLIENT
+            lda         RAM_BANK_REG
+            sta         MC_XBANK
+            ldx         ZP_IO_REQ + 1
+            inx
+            stx         MC_DATA + 1
+            stz         MC_DATA
             php
             sei
-            ldx         RAW_TASK
+            ldx         MC_TASK
             stx         T_REGISTER                          ; (Its $00, its zero page, from here)
             ldy         RAM_BANK_REG                        ; Its $00 (task RAM mirrors it) ...
-            lda         #IO_XFER_BANK
-            sta         RAM_BANK_REG                        ; ... and the transfer area seen with it (U = 0)
-            sty         RAW_SAVE
-            lda         ZP_TEMP_VEC
-            sta         RAW_SAVE + 1
-            lda         ZP_TEMP_VEC + 1
-            sta         RAW_SAVE + 2
-            lda         RAW_SRC
-            sta         ZP_TEMP_VEC
-            lda         RAW_SRC + 1
-            sta         ZP_TEMP_VEC + 1
+            sta         RAM_BANK_REG                        ; ... and the client's transfer bank seen with it
+            sty         MC_SAVE
+            ldx         #MC_ZP_N - 1
+:
+            lda         MC_ZP,X
+            sta         MC_SAVE + 1,X
+            dex
+            bpl         :-
+            lda         MC_ADDR
+            sta         MC_P_MEM
+            lda         MC_ADDR + 1
+            sta         MC_P_MEM + 1
+            lda         MC_DATA
+            sta         MC_P_DATA
+            lda         MC_DATA + 1
+            sta         MC_P_DATA + 1
+            lda         MC_BANK
+            sta         MC_Z_BANK
+            lda         MC_XBANK
+            sta         MC_Z_XBANK
+            lda         MC_U
+            sta         MC_Z_U
             ldy         #0
-            lda         RAW_U                               ; (A shared bank first: its $00 can be $FF too)
+            cmp         #$FF                                ; (A shared bank first: its MC_BANK can be $FF too)
+            beq         :+
+            jmp         @shared
+:
+            lda         MC_BANK
             cmp         #$FF
-            bne         @shared
-            lda         RAW_BANK
-            cmp         #$FF
-            beq         @task_ram
+            bne         @bank
+            lda         MC_WRITE                            ; Its address space as it is: straight (the transfer
+            bne         @w_direct                           ;   bank stays at $8000)
 
-@module:                                                    ; A module's bank: $00 its, then the transfer
-            lda         RAW_BANK                            ;   area's, a byte at a time
-            sta         RAM_BANK_REG
-            lda         (ZP_TEMP_VEC),Y
-            ldx         #IO_XFER_BANK
-            stx         RAM_BANK_REG
-            sta         RAW_DATA,Y
+@r_direct:
+            lda         (MC_P_MEM),Y
+            sta         (MC_P_DATA),Y
             iny
-            cpy         RAW_N
-            bne         @module
-            bra         @done
-
-@shared:                                                    ; A shared bank: U and $00 (both read before U
-            ldx         RAW_BANK                            ;   changes: the transfer area is U 0's)
-            lda         RAW_U
-            sta         U_REGISTER
-            stx         RAM_BANK_REG
-            lda         (ZP_TEMP_VEC),Y
-            stz         U_REGISTER
-            ldx         #IO_XFER_BANK
-            stx         RAM_BANK_REG
-            sta         RAW_DATA,Y
-            iny
-            cpy         RAW_N
-            bne         @shared
-            bra         @done
-
-@task_ram:
-            lda         (ZP_TEMP_VEC),Y
-            sta         RAW_DATA,Y
-            iny
-            cpy         RAW_N
-            bne         @task_ram
-            lda         RAW_SRC + 1                         ; Its zero page: $00 and the copy's pointer as they
-            bne         @done                               ;   were
-            ldx         #2
+            cpy         MC_N
+            bne         @r_direct
+            lda         MC_P_MEM + 1                        ; Its zero page: $00 and the copy's bytes as they were
+            beq         :+
+            jmp         @done
+:
+            ldx         #MC_ZP_N                            ; (MC_SAVE + .X: 0 is $00, 1 on MC_ZP + .X - 1)
 
 @fix:
-            lda         RAW_ZP_USED,X
+            txa
+            beq         :+
+            clc
+            adc         #MC_ZP - 1
+:
             sec
-            sbc         RAW_SRC
-            bcc         @next
-            cmp         RAW_N
-            bcs         @next
+            sbc         MC_P_MEM
+            bcc         @fix_next
+            cmp         MC_N
+            bcs         @fix_next
             tay
-            lda         RAW_SAVE,X
-            sta         RAW_DATA,Y
+            lda         MC_SAVE,X
+            sta         (MC_P_DATA),Y
 
-@next:
+@fix_next:
             dex
             bpl         @fix
+            jmp         @done
+
+@w_direct:
+            lda         MC_P_MEM + 1
+            beq         @w_zero
+
+@w_straight:
+            lda         (MC_P_DATA),Y
+            sta         (MC_P_MEM),Y
+            iny
+            cpy         MC_N
+            bne         @w_straight
+            jmp         @done
+
+@w_zero:                                                    ; Its zero page: $00 and the copy's bytes go to
+            tya                                             ;   MC_SAVE (put in place as the copy ends)
+            clc
+            adc         MC_P_MEM                            ; (The address)
+            ldx         #0
+            cmp         #RAM_BANK_REG
+            beq         @w_saved
+            sec
+            sbc         #MC_ZP
+            cmp         #MC_ZP_N
+            bcs         @w_plain
+            tax
+            inx
+
+@w_saved:
+            lda         (MC_P_DATA),Y
+            sta         MC_SAVE,X
+            bra         @w_next
+
+@w_plain:
+            lda         (MC_P_DATA),Y
+            sta         (MC_P_MEM),Y
+
+@w_next:
+            iny
+            cpy         MC_N
+            bne         @w_zero
+            bra         @done
+
+@bank:                                                      ; A bank: its $00, then the transfer bank's, for
+            lda         MC_WRITE                            ;   each byte
+            bne         @w_bank
+
+@r_bank:
+            ldx         MC_Z_BANK
+            stx         RAM_BANK_REG
+            lda         (MC_P_MEM),Y
+            ldx         MC_Z_XBANK
+            stx         RAM_BANK_REG
+            sta         (MC_P_DATA),Y
+            iny
+            cpy         MC_N
+            bne         @r_bank
+            bra         @done
+
+@w_bank:
+            lda         (MC_P_DATA),Y
+            ldx         MC_Z_BANK
+            stx         RAM_BANK_REG
+            sta         (MC_P_MEM),Y
+            ldx         MC_Z_XBANK
+            stx         RAM_BANK_REG
+            iny
+            cpy         MC_N
+            bne         @w_bank
+            bra         @done
+
+@shared:                                                    ; A shared bank: U and $00 (and U back to 0 before
+            lda         MC_WRITE                            ;   the transfer bank: it's U 0's)
+            bne         @w_shared
+
+@r_shared:
+            ldx         MC_Z_U
+            stx         U_REGISTER
+            ldx         MC_Z_BANK
+            stx         RAM_BANK_REG
+            lda         (MC_P_MEM),Y
+            stz         U_REGISTER
+            ldx         MC_Z_XBANK
+            stx         RAM_BANK_REG
+            sta         (MC_P_DATA),Y
+            iny
+            cpy         MC_N
+            bne         @r_shared
+            bra         @done
+
+@w_shared:
+            lda         (MC_P_DATA),Y
+            ldx         MC_Z_U
+            stx         U_REGISTER
+            ldx         MC_Z_BANK
+            stx         RAM_BANK_REG
+            sta         (MC_P_MEM),Y
+            stz         U_REGISTER
+            ldx         MC_Z_XBANK
+            stx         RAM_BANK_REG
+            iny
+            cpy         MC_N
+            bne         @w_shared
 
 @done:
-            lda         RAW_SAVE + 1
-            sta         ZP_TEMP_VEC
-            lda         RAW_SAVE + 2
-            sta         ZP_TEMP_VEC + 1
-            lda         RAW_SAVE
+            ldx         #MC_ZP_N - 1                        ; Its zero page as it was (or as written)
+:
+            lda         MC_SAVE + 1,X
+            sta         MC_ZP,X
+            dex
+            bpl         :-
+            lda         MC_SAVE
+            ldx         MC_CLIENT
             sta         RAM_BANK_REG                        ; Its $00 as it was
-            stz         T_REGISTER                          ; Back to task 0, the client
+            stx         T_REGISTER                          ; Back to the client
             plp
             rts
 
-RAW_ZP_USED:    .byte   RAM_BANK_REG, ZP_TEMP_VEC, ZP_TEMP_VEC + 1  ; (In RAW_SAVE's order)
+; MC_N = how many bytes a copy: the request's count (ZP_IO_REQ: mapped), MC_MAX at most, and not past the end of
+; the offset's 256-byte page.  OUT: .A = MC_N.  Modifies: .Y
+MEM_COUNT:
+            ldy         #IO_BLK_COUNT + 1
+            lda         (ZP_IO_REQ),Y
+            bne         @most                               ; (256 or more)
+            dey
+            lda         (ZP_IO_REQ),Y
+            beq         @most                               ; (A count is 1-256: 0 here is 256)
+            cmp         #MC_MAX + 1
+            bcc         :+
+
+@most:
+            lda         #MC_MAX
+:
+            sta         MC_N
+            ldy         #IO_BLK_OFS
+            lda         (ZP_IO_REQ),Y
+            beq         @done
+            eor         #$FF                                ; (256 - the offset's low byte)
+            inc
+            cmp         MC_N
+            bcs         @done
+            sta         MC_N
+
+@done:
+            lda         MC_N
+            rts

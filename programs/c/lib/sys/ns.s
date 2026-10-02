@@ -1,8 +1,8 @@
 ; ****************************************************************************
-; ns.s - the namespace calls for C (include/hydra.h): hy_bind, hy_mount, hy_unmount, hy_hide (IO_BIND, IO_MOUNT,
-; IO_UNMOUNT: os_rom/io/ns.s).  A failed call sets _oserror and errno, and returns -1.
+; ns.s - the namespace calls for C (include/hydra.h): hy_bind, hy_mount, hy_unmount, hy_hide, hy_newns (IO_BIND,
+; IO_MOUNT, IO_UNMOUNT: os_rom/io/ns.s).  A failed call sets _oserror and errno, and returns -1.
 
-        .export     _hy_bind, _hy_mount, _hy_unmount, _hy_hide
+        .export     _hy_bind, _hy_mount, _hy_unmount, _hy_hide, _hy_newns
         .import     ___mappederrno, popax
 
         .include    "zeropage.inc"
@@ -75,6 +75,15 @@ _hy_hide:
         pla
         ldx         #NS_HIDDEN
         jsr         IO_BIND
+        bra         done
+
+; int hy_newns (void): a fresh namespace, as Plan 9's newns: this task's own entries go, but its /ram, so it sees
+; the system namespace (IO_UNMOUNT with NS_FRESH)
+_hy_newns:
+        lda         #<root
+        ldy         #>root
+        ldx         #NS_FRESH
+        jsr         IO_UNMOUNT
 
 done:
         bcs         error
@@ -84,3 +93,7 @@ done:
 
 error:
         jmp         ___mappederrno
+
+        .rodata
+
+root:   .byte       "/", 0                              ; (hy_newns's path: unused)

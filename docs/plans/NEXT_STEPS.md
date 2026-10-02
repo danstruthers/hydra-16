@@ -23,7 +23,7 @@ The Hydra already does more than most homebrew 65C02 machines:
   * a line editor;
   * WOZMON with a disassembler.
 * **Sound:** the YM2151, with a library, `/dev/snd`, a ZSM song player and a score language.
-* **Tools:** an emulator that runs the real ROM, 69 regression tests, a hardware test, and documentation for every part.
+* **Tools:** an emulator that runs the real ROM, 71 regression tests, a hardware test, and documentation for every part.
 
 What's missing is mostly **on-ramps** (ways to start without the author's setup) and **things to make** (a screen, input, games, hardware projects, languages beginners know).
 
@@ -179,13 +179,12 @@ Each milestone leaves the project in a state worth showing.
 
 **2. Storage and names, then programming and making things** (the order set for it):
 1. RAM and ROM disks ([DISKS.md](DISKS.md)).  *Done:* the paged ROM is the disk `x`, a HydraFS volume mounted at `/rom`; the RAM disks `r` and `s` (each shell's own area at `/ram`, and `/sram`), the tasks' areas, the program caches; the test song a file; with no card, `/ram` and `/rom/boot.hys`; `/dev/ram` for task 0.
-2. **Next:** namespaces the Plan 9 way ([NAMESPACES.md](NAMESPACES.md)).  *Done:* 32 entries a task and 32 in the system namespace every task sees (`-s`), mounts with a spec, unions (`bind -a`, `-b`, `-c`) and their listings, `hide`, `unmount new old`, `ns` as `bind` lines; the default namespace (`/rom/lib/namespace`, a card's `lib/namespace`), `.` then `/bin` in place of search paths; C's `hy_bind` and the rest.  *To do:* `newns`.
-3. `/proc` ([PROC.md](PROC.md)).  *Done:* `/proc` mounted, `ns`, `pages`, `ctl` for the family only, and `/proc/N/cmd` (`send N line`: shell N runs it as if typed).  *To do:* `/proc/N/mem` and `/proc/N/ram`, a task's memory as files, for its family and task 0.
-4. EhyBASIC, adapted to the system (a `.hyx`, and `/rom/bin/basic`).
-5. `/pc`: a PC folder over the serial port (then XMODEM).
-6. `/dev/i2c`.
-7. `/dev/spi`.
-8. `/dev/gpio`, with a hardware project tutorial.
+2. Namespaces the Plan 9 way ([NAMESPACES.md](NAMESPACES.md)).  *Done:* 32 entries a task and 32 in the system namespace every task sees (`-s`), mounts with a spec, unions (`bind -a`, `-b`, `-c`) and their listings, `hide`, `unmount new old`, `ns` as `bind` lines; the default namespace (`/rom/lib/namespace`, a card's `lib/namespace`), `.` then `/bin` in place of search paths; C's `hy_bind` and the rest; `newns [file]`, a fresh namespace (C's `hy_newns`).
+3. `/proc` ([PROC.md](PROC.md)).  *Done:* `/proc` mounted, `ns`, `pages`, `ctl` for the family only, and `/proc/N/cmd` (`send N line`: shell N runs it as if typed); `/proc/N/mem` and `/proc/N/ram`, a task's memory as files, for its family and task 0.  *To do:* `regs` and `fd`, then the debugger's `ctl` commands with the debugger.
+4. **Next:** `/dev/spi`.
+5. `/dev/gpio`, with a hardware project tutorial.
+6. `/pc`: a PC folder over the serial port, then XMODEM.
+7. Not yet placed in the order: EhyBASIC, adapted to the system (a `.hyx`, and `/rom/bin/basic`), and `/dev/i2c`.
 
 **3. A computer on its own:**
 1. The emulator's VERA, then the Vera X carrier card.

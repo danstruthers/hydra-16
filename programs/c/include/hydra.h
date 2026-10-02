@@ -60,7 +60,8 @@ int __fastcall__ hy_sem_release (unsigned char s);      /* Give one back: 0 */
 int __fastcall__ hy_sem_free (unsigned char s);         /* Free it (the tasks waiting for it get -1): 0 */
 
 /* ---- The namespace, as Plan 9's (docs/programming/io.md#namespaces): each task has its own, a copy of its
-** starter's (up to 16 entries).  A bind or mount with no flags replaces old's entries; HY_MBEFORE and HY_MAFTER
+** starter's (up to 32 entries), over the system namespace every task sees (32 more).  A bind or mount with no
+** flags replaces old's entries; HY_MBEFORE and HY_MAFTER
 ** add it to old's union, before or after its members, which are looked in, in order, for a name; HY_MCREATE: a
 ** file made in the union is made in it.  0, or -1 */
 
@@ -74,6 +75,8 @@ int __fastcall__ hy_mount (const char* dev, const char* old, int flags, const ch
                                                         **   dev's ("zero"); spec: NULL, or as Plan 9's ("x") */
 int __fastcall__ hy_unmount (const char* new, const char* old);   /* old's member new (NULL: all of old's) */
 int __fastcall__ hy_hide (const char* path);            /* Nothing under path is found */
+int hy_newns (void);                                    /* A fresh namespace (Plan 9's newns): this task's own
+                                                        **   entries go, but its /ram: the system's is left */
 
 /* ---- Files: what POSIX has and cc65's headers don't, for this target */
 

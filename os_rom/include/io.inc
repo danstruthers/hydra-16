@@ -199,6 +199,8 @@ NS_SPEC             = $10       ; IO_MOUNT: ZP_IO_CNT = a spec (14 characters at
                                 ;   "x", "r/1"), as Plan 9's mount's
 NS_SYSTEM           = $20       ; IO_MOUNT, IO_BIND, IO_UNMOUNT: the system namespace's entry (for task 0 and the
                                 ;   boot shell: ERR_IO_PERM for others)
+NS_FRESH            = $40       ; IO_UNMOUNT: a fresh namespace (Plan 9's newns): all of the task's own entries go
+                                ;   but its /ram mount, so it sees the system namespace and its area (the path: "/")
 IO_BLK_NSTAB        = 15        ; The namespace's routines: the table they use now, 0 the task's, 1 the system's
 .assert     IO_BLK_SPEC < $10 .and IO_BLK_SPEC > IO_BLK_CALL .and IO_BLK_NSTAB < $10 .and IO_BLK_NSTAB > IO_BLK_SPEC, error, "IO_BLK_SPEC, IO_BLK_NSTAB: the request block's spare bytes"
 ; The system namespace: entries every task sees, under its own (a task's entry with the same path, or a longer
@@ -206,6 +208,24 @@ IO_BLK_NSTAB        = 15        ; The namespace's routines: the table they use n
 ; at NS_SYS in each IO transfer bank, the same in each (NS_SYS_SYNC), so a name resolves with no bank switch
 NS_SYS              = $9800
 .assert     NS_SYS >= PAGED_RAM_BASE + IO_XFER_PER_BANK * IO_XFER_SIZE .and NS_SYS + NS_ENTRIES * NS_ENTRY_SIZE <= $9FFF .and <NS_SYS = 0, error, "NS_SYS: after the areas, below $9FFF"
+
+; Another task's memory copied with IRQs off (ram_srv.s, MEM_COPY: /dev/ram, /proc/N/mem and ram): T is the other
+; task's for the copy, with its $00 set to the client's transfer bank, so the copy's numbers are here, at the same
+; place in each IO transfer bank (only one copy runs at a time: IRQs are off)
+MC_AREA             = NS_SYS + NS_ENTRIES * NS_ENTRY_SIZE
+MC_TASK             = MC_AREA + 0   ; The task whose memory it is (T for the copy)
+MC_BANK             = MC_AREA + 1   ; Its $00 for the copy: a bank ID; or $FF: its address space as it is
+MC_U                = MC_AREA + 2   ; U for a shared bank ID ($F0-$FF); or $FF
+MC_ADDR             = MC_AREA + 3   ; Where, as the task sees it (2 bytes)
+MC_N                = MC_AREA + 5   ; How many bytes (1-MC_MAX)
+MC_WRITE            = MC_AREA + 6   ; 0: read (the memory to the data area); else write (the data area to it)
+MC_XBANK            = MC_AREA + 7   ; The client's: its transfer bank,
+MC_DATA             = MC_AREA + 8   ;   its data area (2 bytes),
+MC_CLIENT           = MC_AREA + 10  ;   and its task
+MC_T                = MC_AREA + 11  ; (Scratch: /dev/ram's offsets)
+MC_SAVE             = MC_AREA + 12  ; The task's $00, then its zero page bytes the copy uses (MC_ZP_N): put back
+MC_MAX              = 64            ; Bytes a copy at most (IRQs off: about 45 cycles each)
+.assert     MC_SAVE + 9 <= $9FFF, error, "MC_AREA: after the system namespace, below $9FFF"
 ; IO_OPEN's own, in the transfer area's spare bytes (the request block page): the tidy name, for a union's next
 ; member (NS_RETRY), how many of the first union's members it has skipped, and how many are left after the one used
 IO_BLK_ORIG         = $20
@@ -628,3 +648,5 @@ PROC_FID_ENV        = $40       ; /dev/proc/N/env: its environment, as /env's li
 PROC_FID_PAGES      = $50       ; /dev/proc/N/pages: its memory: the MMU pages it has, its page floor (read)
 PROC_FID_NS         = $60       ; /dev/proc/N/ns: its namespace, as ns lists it (read)
 PROC_FID_CMD        = $70       ; /dev/proc/N/cmd: a line for its shell to run (write)
+PROC_FID_MEM        = $80       ; /dev/proc/N/mem: its address space, as it sees it (read; write its RAM)
+PROC_FID_RAM        = $90       ; /dev/proc/N/ram: its banks on the RAM modules, bank * 8K + offset (read, write)
