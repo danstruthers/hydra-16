@@ -17,5 +17,7 @@ jobs:
           echo "CC65_HOME=$RUNNER_TEMP/cc65" >> "$GITHUB_ENV"
       - name: Build and test
         run: node build.js test
+      - name: Reborn (the rebuild from scratch), build and test
+        run: node reborn/build.js && node reborn/sim/test.js
       - name: The images, if they changed (the ones in Git should be the build's)
         run: git status --short -- os_rom/bin programs

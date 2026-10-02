@@ -1,0 +1,46 @@
+# ****************************************************************************
+# errors.def - the error codes (C = 1 from a call, the code in .A), with POSIX names so C's errno maps one to
+# one, and the text ERRSTR gives.  tools/apigen.js makes errors.inc, the kernel's text table, and the reference.
+#
+#   error NAME CODE "text"
+
+# ---- general ($01-$1F)
+error E_PERM          $01 "not allowed"
+error E_INVAL         $02 "invalid argument"
+error E_NOSYS         $03 "no such call"
+error E_AGAIN         $04 "not yet: try again"
+error E_INTR          $05 "interrupted"
+error E_NOMEM         $06 "out of memory"
+error E_BUSY          $07 "busy"
+error E_RANGE         $08 "out of range"
+error E_FAULT         $09 "bad address"
+error E_NAMETOOLONG   $0A "name too long"
+error E_TOOBIG        $0B "too big"
+
+# ---- files ($20-$3F)
+error E_NOENT         $20 "not found"
+error E_EXIST         $21 "already exists"
+error E_NOTDIR        $22 "not a directory"
+error E_ISDIR         $23 "is a directory"
+error E_NOTEMPTY      $24 "directory not empty"
+error E_BADF          $25 "bad file descriptor"
+error E_MFILE         $26 "no free file descriptor"
+error E_NFILE         $27 "too many open files"
+error E_NOSPC         $28 "disk full"
+error E_ROFS          $29 "read-only"
+error E_IO            $2A "i/o error"
+error E_NODEV         $2B "no such device"
+error E_PIPE          $2C "broken pipe"
+error E_NOEXEC        $2D "not a program"
+error E_EOF           $2E "end of file"
+error E_NOTFS         $2F "no file system"
+error E_MEDIA         $30 "medium error"
+
+# ---- tasks ($40-$4F)
+error E_NOTASK        $40 "no free task"
+error E_SRCH          $41 "no such task"
+error E_CHILD         $42 "no such child"
+
+# ---- names ($50-$5F)
+error E_NSFULL        $50 "namespace full"
+error E_NSLOOP        $51 "too many binds"

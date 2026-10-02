@@ -1,0 +1,3 @@
+# The build's: node build.js makes them
+obj/
+bin/

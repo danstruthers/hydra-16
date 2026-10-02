@@ -1,0 +1,239 @@
+# ****************************************************************************
+# api.def - the Hydra-16's system calls: the one source of truth (tools/apigen.js makes the jump table, the
+# assembly include, the reference, and the emulator's call names from it).
+#
+# The format:
+#   group NAME BASE SLOTS "what it's for"      a block of the jump table: SLOTS entries of 3 bytes from BASE
+#   call NAME GROUP impl=SYMBOL                a call: the next free slot of its group; SYMBOL is the kernel's routine
+#     in:     the registers it takes            (indented lines, until the next call; "-" for none)
+#     out:    what it gives back
+#     errors: the error codes it can give       (C = 1, .A = the code; see errors.def)
+#     blocks: yes or no                         whether it can wait
+#     doc:    what it does                      (more doc: lines go on with it)
+#   const NAME VALUE "what it is"              a constant for programs (hydra.inc)
+#
+# The rules (docs/conventions.md): .A, .X, .Y and r0-r15 in and out; 16-bit results in .A (low) and .X (high);
+# C = 0 success, C = 1 failure with the code in .A, always.  Calls are only ever appended to a group: a slot
+# never moves, and a withdrawn call keeps its slot and gives E_NOSYS.
+
+group system   $F800 16 "System information and services"
+group task     $F830 32 "Tasks: starting and ending them, waiting, scheduling, ticks"
+group memory   $F890 16 "Memory: the break, pages, banks, shared segments (phase 1.8)"
+group file     $F8C0 32 "Files (phase 2)"
+group name     $F920 16 "Namespaces (phase 2)"
+group cons     $F950 16 "Console helpers: a byte or a string to stdout, a byte from stdin"
+group time     $F980 16 "The clock (phase 5)"
+group server   $F9B0 32 "Servers and drivers"
+group dbg      $FA10 16 "Debugging and tests: unstable, may change in any version"
+
+# ---- system
+
+call SYSINFO system impl=K_SYSINFO
+  in:     -
+  out:    .A = the ABI version (1); .X = how many RAM modules are installed; r0 = the free tasks (bit = task)
+  errors: -
+  blocks: no
+  doc:    What the system has.
+
+call ERRSTR system impl=K_ERRSTR
+  in:     .A = an error code; r0 = a buffer (32 bytes)
+  out:    the error's text in the buffer, zero-terminated ("error $xx" for an unknown code)
+  errors: -
+  blocks: no
+  doc:    An error code as text, for messages.
+
+# ---- task
+
+call EXITS task impl=K_EXITS
+  in:     .A = the exit code (0: success); r0 = a message (zero-terminated, 31 characters at most), or 0 for none
+  out:    (doesn't return)
+  errors: -
+  blocks: no
+  doc:    End the calling task, with an exit status (Plan 9's exits).  Returning from a program's entry point
+  doc:    is EXITS with code 0 and no message.  Everything the task had is released; its parent can WAIT for
+  doc:    the status.
+
+call WAIT task impl=K_WAIT
+  in:     .A = a task this one started, or $FF for any; r0 = a buffer for the message (32 bytes), or 0
+  out:    .A = the task that ended; .X = its exit code; its message in r0's buffer ("" for none)
+  errors: E_CHILD (no such child, or none at all)
+  blocks: yes
+  doc:    Wait for a child to end, and take its exit status.  A child that has ended already isn't waited for.
+
+call SPAWN task impl=K_SPAWN
+  in:     r0 = the program: "#m/NAME" (a module in the paged ROM); r1 = its arguments (zero-terminated, up
+  in:     to 255 characters), or 0; .A = flags (0)
+  out:    .A = the new task
+  errors: E_NOENT (no such program), E_NOEXEC (not a program), E_NOTASK (no free task), E_NAMETOOLONG
+  blocks: no
+  doc:    Start a program in a task of its own.  It starts at its entry point with r0 pointing to its arguments
+  doc:    (at TASK_ARGS).  Its parent is the caller, which can WAIT for it.  (Paths through the namespace come
+  doc:    with the file layer, in phase 2.)
+
+call GETPID task impl=K_GETPID
+  in:     -
+  out:    .A = this task's number
+  errors: -
+  blocks: no
+  doc:    The calling task's number (0-15).
+
+call YIELD task impl=K_YIELD
+  in:     -
+  out:    -
+  errors: -
+  blocks: no
+  doc:    Let the other tasks run; come back when it's this one's turn again (at once, if nothing else can run).
+
+call SLEEP task impl=K_SLEEP
+  in:     .A/.X = ticks (TICK_HZ a second; 0-32767)
+  out:    -
+  errors: -
+  blocks: yes
+  doc:    Sleep for a number of ticks.  The other tasks run meanwhile, or the system idles.
+
+call SLEEP_UNTIL task impl=K_SLEEP_UNTIL
+  in:     .A/.X = a tick count (at most 32767 ticks ahead)
+  out:    -
+  errors: -
+  blocks: yes
+  doc:    Sleep until the tick count reaches a value: for steady timing (a time that's passed returns at once).
+
+call TICKS task impl=K_TICKS
+  in:     -
+  out:    .A/.X = the tick count (TICK_HZ a second; it wraps after about 5.5 minutes)
+  errors: -
+  blocks: no
+  doc:    The scheduler's tick count.
+
+call PREEMPT_OFF task impl=K_PREEMPT_OFF
+  in:     -
+  out:    -
+  errors: -
+  blocks: no
+  doc:    Hold the CPU: no task switch until the matching PREEMPT_ON (they nest).  Interrupts keep running.
+
+call PREEMPT_ON task impl=K_PREEMPT_ON
+  in:     -
+  out:    -
+  errors: -
+  blocks: no
+  doc:    Undo PREEMPT_OFF; a task switch that came due meanwhile happens now.
+
+# ---- cons (the bring-up console: polled, on the serial port, until the console driver comes in phase 2)
+
+call PUTC cons impl=K_PUTC
+  in:     .A = a byte
+  out:    -
+  errors: -
+  blocks: yes
+  doc:    Write a byte to stdout (the X16's CHROUT).
+
+call PUTS cons impl=K_PUTS
+  in:     r0 = a string, zero-terminated
+  out:    -
+  errors: -
+  blocks: yes
+  doc:    Write a string to stdout.
+
+call GETC cons impl=K_GETC
+  in:     -
+  out:    .A = a byte
+  errors: -
+  blocks: yes
+  doc:    Read a byte from stdin, waiting for one (the X16's CHRIN, unechoed).
+
+call PUTHEX cons impl=K_PUTHEX
+  in:     .A = a byte
+  out:    -
+  errors: -
+  blocks: yes
+  doc:    Write a byte to stdout as two hex digits (for debugging).
+
+# ---- server
+
+call IRQ_OWN server impl=K_IRQ_OWN
+  in:     .A = an IRQ line (0-14)
+  out:    -
+  errors: E_BUSY (another task owns it), E_RANGE (not a line), E_INVAL (the task has no IRQ entry)
+  blocks: no
+  doc:    Own an IRQ line: its interrupts run the calling task's irq entry, in the calling task.  The entry gets
+  doc:    the line in .A, and returns .A = 0, or IRQ_RESCHED to ask for a task switch (it woke a task).  It
+  doc:    runs with interrupts off and must not make calls that wait.  A task's lines are released when it ends.
+
+call IRQ_RELEASE server impl=K_IRQ_RELEASE
+  in:     .A = an IRQ line
+  out:    -
+  errors: E_PERM (not the caller's), E_RANGE
+  blocks: no
+  doc:    Give an IRQ line back.
+
+call WAKE server impl=K_WAKE
+  in:     .A = a task
+  out:    -
+  errors: -
+  blocks: no
+  doc:    Make a waiting task (PAUSE) runnable.  From a task or an irq entry.  Waking a task that isn't
+  doc:    waiting does nothing.
+
+call PAUSE server impl=K_PAUSE
+  in:     -
+  out:    -
+  errors: -
+  blocks: yes
+  doc:    Wait until another task or an irq entry WAKEs this one.  (Wake-ups can come early: look again after.)
+
+# ---- dbg (for the tests and the debugger: unstable)
+
+call DBG_SCALL dbg impl=K_SCALL
+  in:     .Y = a driver task; .A, .X = what its serve entry gets
+  out:    .A, .X and C from its serve entry
+  errors: E_SRCH (not a task), E_NODEV (it's free or ended, or has no serve entry: a program)
+  blocks: yes
+  doc:    Call a driver's serve entry directly, in the driver's task (the file layer will make these calls in
+  doc:    phase 2).  A driver serves one call at a time: a second caller waits.
+
+call DBG_KCOPY dbg impl=K_DBG_KCOPY
+  in:     .A = another task; r0 = an address in this task; r1 = an address in that task; r2 = a byte count;
+  in:     C = 0 to copy from this task to that one, C = 1 the other way
+  out:    -
+  errors: E_SRCH (not a task)
+  blocks: no
+  doc:    Copy bytes between this task's memory and another's (the kernel's kcopy).
+
+call DBG_PS dbg impl=K_DBG_PS
+  in:     -
+  out:    -
+  errors: -
+  blocks: yes
+  doc:    Print a line for each task in use: its number, state and parent.
+
+# ---- constants for programs
+
+const ABI_VERSION     1        "The ABI version this include describes"
+const TICK_HZ         200      "Ticks a second"
+const PROG_ZP         $22      "A program's own zero page: $22-$7F"
+const PROG_ZP_END     $80
+const TASK_ARGS       $0300    "A task's arguments, zero-terminated"
+const TASK_NAME       $0230    "A task's name, zero-terminated"
+const IRQ_RESCHED     $80      "An irq entry's answer: a task switch, please"
+const HT_PROGRAM      1        "HYX2 module types"
+const HT_DRIVER       2
+const HT_LIBRARY      3
+const HF_INPLACE      $01      "HYX2 flags: runs in place in the paged ROM"
+const HF_BOOT         $02      "HYX2 flags: a driver the kernel starts at boot"
+const r0  $02 "The call registers r0-r15: arguments and results"
+const r1  $04
+const r2  $06
+const r3  $08
+const r4  $0A
+const r5  $0C
+const r6  $0E
+const r7  $10
+const r8  $12
+const r9  $14
+const r10 $16
+const r11 $18
+const r12 $1A
+const r13 $1C
+const r14 $1E
+const r15 $20

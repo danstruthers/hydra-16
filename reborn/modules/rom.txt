@@ -1,0 +1,5 @@
+; rom.txt - the paged ROM's modules, in its order (each a folder in modules/), and the one started as init.
+; build.js reads it; tools/romimg.js puts them in banks 1 on.
+init        init
+module      init
+module      hello
