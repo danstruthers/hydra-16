@@ -7,7 +7,8 @@
 //   3. the modules         modules/NAME/*.s -> obj/modules/NAME.bin; tests/mod/NAME/*.s -> obj/tests/NAME.bin;
 //                          the test RAM programs, tests/ram/NAME/*.s -> obj/tests/NAME.hyx (sdk/asm/hyx2.cfg); the
 //                          ROM disk's programs (its bin), programs/NAME/*.s -> obj/programs/NAME.hyx; the SDK's
-//                          samples (its sample), sdk/asm/samples/NAME/*.s -> obj/samples/NAME.hyx; each checked:
+//                          samples (its sample), sdk/asm/samples/NAME/*.s -> obj/samples/NAME.hyx (a driver's,
+//                          NAME.bin: a module, for a test's ROM); each checked:
 //                          only the kernel writes T, V and W (tools/check.js)
 //   4. the paged ROM       modules/rom.txt -> bin/prom.bin (tools/romimg.js), with the hardware test in bank 1
 //                          (from ../os_rom/bin/paged_rom_C02.bin) and the ROMs' checksums for it, and the ROM
@@ -87,6 +88,7 @@ function sdk() {
   for (const f of fs.readdirSync(at('sdk', 'asm')).filter(f => /\.(inc|s|cfg|md)$/.test(f)))
     fs.copyFileSync(at('sdk', 'asm', f), path.join(out, f));
   fs.copyFileSync(at('obj', 'sdk', 'hydra.inc'), path.join(out, 'hydra.inc'));
+  for (const f of ['module.cfg', 'module2.cfg']) fs.copyFileSync(at('modules', f), path.join(out, f));   // (A module's links)
   for (const d of fs.readdirSync(at('sdk', 'asm', 'samples'), { withFileTypes: true }).filter(d => d.isDirectory())) {
     mkdir(path.join(out, 'samples', d.name));
     for (const f of sources(at('sdk', 'asm', 'samples', d.name))) fs.copyFileSync(f, path.join(out, 'samples', d.name, path.basename(f)));
@@ -153,8 +155,13 @@ function build(opt = {}) {
   if (fs.existsSync(at('programs')))
     for (const d of fs.readdirSync(at('programs'), { withFileTypes: true }).filter(d => d.isDirectory()))
       programs[d.name] = buildModule(at('programs', d.name), at('obj', 'programs'), defines, true);
-  for (const d of fs.readdirSync(at('sdk', 'asm', 'samples'), { withFileTypes: true }).filter(d => d.isDirectory()))
-    samples[d.name] = buildModule(at('sdk', 'asm', 'samples', d.name), at('obj', 'samples'), defines, true);
+  for (const d of fs.readdirSync(at('sdk', 'asm', 'samples'), { withFileTypes: true }).filter(d => d.isDirectory())) {
+    const dir = at('sdk', 'asm', 'samples', d.name);
+    const driver = sources(dir).some(f => /^\s+HYX2_DRIVER\b/m.test(fs.readFileSync(f, 'latin1')));   // (A module)
+    const data = buildModule(dir, at('obj', 'samples'), defines, !driver);
+    if (driver) modules['sample ' + d.name] = data;
+    else samples[d.name] = data;
+  }
   sdk();
 
   // The paged ROM

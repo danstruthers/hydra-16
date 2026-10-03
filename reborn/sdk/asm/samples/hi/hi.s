@@ -9,7 +9,7 @@
 
 .include "hydra.inc"                                        ; The calls and constants (made from spec/api.def)
 .include "hyx2.inc"                                         ; The header: HYX2_PROGRAM
-.include "macros.inc"                                       ; LDR, MOVR, PRINT
+.include "macros.inc"                                       ; LDR, MOVR, PRINT, CALL, CHECK
 
             HYX2_PROGRAM "hi", main                         ; Its name, and where it starts
 
@@ -30,9 +30,9 @@ main:
             bne         @name
             LDR         arg, s_you                          ; None: you
 @name:
-            PRINT       s_hello                             ; "Hello, NAME!"
+            PRINT       "Hello, "                           ; "Hello, NAME!"
             MOVR        r0, arg
-            jsr         PUTS
+            CALL        PUTS
             PRINT       s_bang
 :
             lda         (arg)                               ; The next: past this one's 0
@@ -44,22 +44,22 @@ main:
             bne         :--
             lda         (arg)
             bne         @name
-            PRINT       s_task                              ; Its task: 0-15, in decimal
-            jsr         GETPID
+            PRINT       "I'm task "                         ; Its task: 0-15, in decimal
+            CALL        GETPID
             cmp         #10
             bcc         :+
             pha
             lda         #'1'
-            jsr         PUTC
+            CALL        PUTC
             pla
             sec
             sbc         #10
 :
             ora         #'0'
-            jsr         PUTC
-            PRINT       s_in                                ; Its current directory
+            CALL        PUTC
+            PRINT       ", in "                             ; Its current directory
             LDR         r0, cwd
-            jsr         GETCWD
+            CALL        GETCWD
             PRINT       cwd
             LDR         r0, s_window                        ; Its window, if its environment has one
             LDR         r1, window
@@ -67,11 +67,11 @@ main:
             stz         r3
             stz         r3 + 1
             lda         #$FF                                ; (This task's)
-            jsr         ENV_GET
-            bcs         @end
+            CALL        ENV_GET
+            CHECK       @end                                ; (Not there: C = 1, .A = E_NOENT)
             tax
             stz         window,X                            ; (Its value: zero-terminated)
-            PRINT       s_inw
+            PRINT       ", in window "
             PRINT       window
 @end:
             PRINT       s_end
@@ -79,10 +79,6 @@ main:
 
 .rodata
 s_you:      .byte       "you", 0, 0
-s_hello:    .byte       "Hello, ", 0
 s_bang:     .byte       "!", LF, 0
-s_task:     .byte       "I'm task ", 0
-s_in:       .byte       ", in ", 0
 s_window:   .byte       "window", 0
-s_inw:      .byte       ", in window ", 0
 s_end:      .byte       ".", LF, 0

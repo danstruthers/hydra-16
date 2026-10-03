@@ -12,11 +12,11 @@ The SDK is this folder; `node build.js` also copies it, with the generated `hydr
 | `hydra.inc` | The system calls (their addresses in the jump table), the error codes and the constants.  Made from `spec/api.def` by the build (`obj/sdk/hydra.inc`); never edit it |
 | `hyx2.inc` | The header: `HYX2_PROGRAM "name", main` |
 | `hyx2.cfg` | The link for a program in a file: header, code and data from `$0800`, the BSS after them |
-| `macros.inc` | `LDR reg, value` (a call register = a 16-bit value), `MOVR to, from` (one register = another), `PRINT label` (a string to fd 1); `CR`, `LF`, `TAB` |
+| `macros.inc` | `CALL name` (a system call), `CHECK label` (on to label if the call failed), `LDR reg, value` (a call register = a 16-bit value), `MOVR to, from` (one register = another), `PRINT label` or `PRINT "text"` (a string to fd 1); `CR`, `LF`, `TAB` |
 | `toollib.inc`, `toollib.s` | What the system's tools share: flags, errors and exit statuses as Plan 9's, buffered output, input a file at a time, directories, paths, numbers (the comment at its top lists them) |
 | `srvlib.inc`, `srvlib.s` | A file server's library (the system's drivers use it) |
 | `nslib.s` | A task's default namespace, from the namespace file (Plan 9's `newns`) |
-| `samples/` | `hi` (arguments, task, directory, environment), `upper` (a filter on `toollib`), `tick` (a note handler) |
+| `samples/` | `hi` (arguments, task, directory, environment), `upper` (a filter on `toollib`), `tick` (a note handler), `counter` (a server: a driver, a module that runs in place, on `srvlib`) |
 
 The calls are described in `/rom/doc/api.md` on the Hydra (the build's `obj/gen/api.md`), and the rules the
 system keeps in `docs/conventions.md`.
@@ -32,21 +32,20 @@ system keeps in `docs/conventions.md`.
 
 .code
 main:                                       ; r0: the arguments
-            PRINT       s_hello
+            PRINT       "Hello"
+            lda         #LF
+            CALL        PUTC
             lda         #0                  ; (Returning: EXITS with code 0)
             rts
-
-.rodata
-s_hello:    .byte       "Hello", LF, 0
 ```
 
 * `main` gets `r0` pointing at its arguments: zero-terminated strings one after another, an empty one after the
   last (`hello a b`: `"a", 0, "b", 0, 0`).  Its name is the header's (11 characters at most).
 * Returning ends the task with code 0.  `EXITS` ends it with a code (`.A`) and a message (`r0`, or 0): rc's
   `$status` is the message if there is one, else the code (true is 0).
-* A call is a `jsr` to its name.  Arguments and results are `.A`, `.X`, `.Y` and the call registers `r0`-`r15`
-  (`$02`-`$21`); a call may change all of them.  C = 0 is success; C = 1 is failure, with the error in `.A`
-  (`ERRSTR` gives its text: `"not found"`).
+* A call is a `jsr` to its name (`CALL name` says the same).  Arguments and results are `.A`, `.X`, `.Y` and the
+  call registers `r0`-`r15` (`$02`-`$21`); a call may change all of them.  C = 0 is success; C = 1 is failure,
+  with the error in `.A` (`ERRSTR` gives its text: `"not found"`); `CHECK label` goes on to label on a failure.
 * The program's own zero page is `$22`-`$7F` (`.zeropage`: no call touches it); its RAM is `$0800` up to its
   break (`BREAK` moves it), and pages above (`PAGES_ALLOC`), to `$7FFF`.  It has its own RAM banks at
   `$8000`-`$9FFF` too (16 a RAM module: `BANKS`), and its stack.
@@ -71,8 +70,11 @@ ca65 --cpu 65C02 -D HYX2_RAM -I sdk/asm -o hello.o hello.s
 ld65 -C sdk/asm/hyx2.cfg -o hello.hyx hello.o
 ```
 
-(`-D HYX2_RAM`: a program in a file.  Without it, `hyx2.inc` makes a module of the paged ROM, run in place; those
-are the system's, built into the ROM with `modules/rom.txt`.)
+(`-D HYX2_RAM`: a program in a file.  Without it, `hyx2.inc` makes a module of the paged ROM, run in place, linked
+with `module.cfg` (`module2.cfg` for one of two banks); those are the system's, built into the ROM with
+`modules/rom.txt`.  A server is one: a
+driver, `HYX2_DRIVER`, which registers a device letter and answers its clients' requests through `srvlib`.  The
+sample `counter` is one; the build makes it a module, and the tools test puts it in its ROM.)
 
 ## Running it
 

@@ -264,6 +264,16 @@ const TOOL_LINES = [
   ].join('\n')],
   ["/rom/sample/hi Ann Bob","Hello, Ann!\nHello, Bob!\nI'm task 3, in /, in window 0."],
   ["echo Hello there | /rom/sample/upper","HELLO THERE"],
+  ["cat '#k/count'; echo add 5 >'#k/ctl'; echo add 2 >'#k/ctl'; cat '#k/count' '#k/ctl'; echo reset >'#k/ctl'; cat '#k/ctl'", [
+    "0",
+    "7",
+    "7",
+    "0",
+  ].join('\n')],
+  ["echo frob >'#k/ctl'; echo add >'#k/ctl'", [
+    "echo: write error: invalid argument",
+    "echo: write error: invalid argument",
+  ].join('\n')],
 ];
 
 module.exports = {
@@ -470,8 +480,8 @@ module.exports = {
       },
     },
     {
-      name: 'tools', what: 'the core tools at rc: files, text, tasks, the disks\' (/rom/bin); /proc\'s args, cwd, ns',
-      init: 't_rc', cycles: 400e6,
+      name: 'tools', what: 'the core tools at rc: files, text, tasks, the disks\' (/rom/bin); /proc\'s args, cwd, ns; the SDK\'s samples',
+      init: 't_rc', modules: ['counter'], cycles: 400e6,
       // (Each line typed at its prompt: its output (null: none; a third element true: how it starts), then the next
       // prompt.  Then top, for 2 seconds or so, and Ctrl-C; more, its --more-- answered with Enter; and the SDK's tick, and
       // Ctrl-C: its handler's, not the default)
