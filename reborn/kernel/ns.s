@@ -1265,6 +1265,105 @@ str_same:
 @done:
             rts
 
+; ****************************************************************************
+; NSINFO: a namespace's mount entry.  IN: .A = a task ($FF: this one); .X = which (0 on, in the table's order); r0 =
+; a buffer (NI_SIZE bytes).  OUT: the entry in it (NI_*); or C = 1, .A = E_RANGE (past the last), E_SRCH
+K_NSINFO:
+            KCALL_FAR   K_NSINFO_K
+            rts
+
+; NSINFO's (a KCALL: .Y = the caller): the entry made in K_XBUF, then copied to the caller's buffer
+K_NSINFO_K:
+            sty         K0_TMP2                             ; (The caller)
+            cmp         #$FF
+            bne         :+
+            tya
+:
+            cmp         #TASKS
+            bcs         @srch
+            stx         K0_TMP3                             ; (Which)
+            tax
+            lda         K_TASK_NS,X                         ; Its namespace's entries
+            bmi         @range                              ; (None: none)
+            sta         K0_TMP
+            ldx         #0
+@entry:
+            lda         K_MT_NS,X
+            cmp         K0_TMP
+            bne         @next
+            lda         K0_TMP3
+            beq         @this
+            dec         K0_TMP3
+@next:
+            inx
+            bpl         @entry
+            .assert     MT_MAX = 128, error, "K_NSINFO_K: .X counts the entries to 128"
+@range:
+            FAIL        E_RANGE
+
+@srch:
+            FAIL        E_SRCH
+
+@this:
+            phx                                             ; Its mount point and path
+            lda         K_MT_FROM,X
+            ldx         #NI_FROM
+            jsr         ni_str
+            plx
+            phx
+            lda         K_MT_PATH,X
+            ldx         #NI_PATH
+            jsr         ni_str
+            plx
+            lda         K_MT_DEV,X                          ; Its device, spec, flags and place
+            sta         K_XBUF + NI_DEV
+            .repeat     8, I
+            lda         K_MT_SPEC + I * MT_MAX,X
+            sta         K_XBUF + NI_SPEC + I
+            .endrepeat
+            stz         K_XBUF + NI_SPEC + 8
+            lda         K_MT_FLAGS,X
+            sta         K_XBUF + NI_FLAGS
+            lda         K_MT_SEQ,X
+            sta         K_XBUF + NI_SEQ
+            lda         #<K_XBUF                            ; To the caller's buffer
+            sta         K_PTR
+            lda         #>K_XBUF
+            sta         K_PTR + 1
+            ldx         K0_TMP2
+            ldy         T_REGISTER
+            php
+            sei
+            QL_GET      r0
+            sta         K_PTR2
+            QL_GET      r0 + 1
+            sta         K_PTR2 + 1
+            plp
+            lda         #NI_SIZE
+            sta         K_CNT
+            stz         K_CNT + 1
+            lda         K0_TMP2
+            clc
+            FARCALL     K_KCOPY
+            clc
+            rts
+
+; String .A (the pool's) into K_XBUF at .X, zero-terminated
+ni_str:
+            jsr         sp_addr
+            ldy         #0
+:
+            lda         (K0_SA),Y
+            sta         K_XBUF,X
+            beq         @done
+            inx
+            iny
+            cpy         #PATH_MAX
+            bne         :-
+            stz         K_XBUF,X
+@done:
+            rts
+
 ; K0_SA = string .A.  Keeps .X, .Y
 sp_addr:
             stz         K0_SA + 1

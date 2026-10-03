@@ -1,148 +1,156 @@
 ; ****************************************************************************
-; ps - each task, as /proc has it: its number, then its status file's line (its name, state, parent, CPU time and
-; note group), on fd 1.  It reads #p (the kernel's devices': /proc), not the namespace's /proc.
+; ps [-a] - the tasks in use (TASKINFO), a line each under a heading: its number, state, parent, CPU time (in
+; seconds, to a tenth), note group and name; -a: its arguments after its name (TASKREAD).
 
 .include "hydra.inc"
 .include "hyx2.inc"
 .include "macros.inc"
+.include "toollib.inc"
 
             HYX2_PROGRAM "ps", main
 
-LINE_LEN        = 96
-
-.zeropage
-rec:        .res        2                                   ; A stat record, in buf
+F_A             = $01           ; -a
 
 .bss
-buf:        .res        16 * SR_SIZE                        ; #p's records (a task each: 16 at most)
-left:       .res        2
-fd:         .res        1
-name:       .res        24                                  ; "#p/N/status"
-line:       .res        LINE_LEN
-llen:       .res        1
+task:       .res        1
+info:       .res        TI_SIZE
+args:       .res        ARGS_MAX
 
 .code
 main:
-            LDR         r0, s_hp
-            lda         #O_READ
-            jsr         OPEN
-            bcs         @done
-            sta         fd
-            LDR         r0, buf
-            LDR         r1, 16 * SR_SIZE
-            lda         fd
-            jsr         READ
-            sta         left
-            stx         left + 1
-            lda         fd
-            jsr         CLOSE
-            LDR         rec, buf
-@record:
-            lda         left + 1
-            bne         :+
-            lda         left
-            cmp         #SR_SIZE
-            bcc         @done
+            jsr         tl_start
+            LDR         r0, s_head
+            jsr         tl_puts
+            stz         task
+@task:
+            LDR         r0, info
+            lda         task
+            jsr         TASKINFO
+            bcs         @next
+            lda         task                                ; (The kernel task's, always)
+            beq         :+
+            lda         info + TI_STATE
+            beq         @next                               ; (Free)
 :
-            jsr         task
-            clc
-            lda         rec
-            adc         #SR_SIZE
-            sta         rec
+            jsr         line
+@next:
+            inc         task
+            lda         task
+            cmp         #16
+            bne         @task
+            jmp         tl_end
+
+; Task task's line
+line:
+            lda         task                                ; Its number
+            jsr         tl_setnum
+            lda         #4
+            jsr         tl_dec
+            jsr         tl_space
+            jsr         tl_space
+            lda         info + TI_STATE                     ; Its state
+            cmp         #STATES
             bcc         :+
-            inc         rec + 1
+            lda         #STATES
 :
-            sec
-            lda         left
-            sbc         #SR_SIZE
-            sta         left
-            bcs         @record
-            dec         left + 1
-            bra         @record
-
-@done:
-            lda         #0
-            rts
-
-; The task record rec names: "N  " and its status's line
-task:
-            ldx         #0                                  ; line: its number, a space or two
-            ldy         #0
-:
-            lda         (rec),Y
-            beq         :+
-            sta         line,X
-            inx
-            iny
-            bra         :-
-:
-            lda         #' '
-:
-            sta         line,X
-            inx
-            cpx         #4
-            bcc         :-
-            stx         llen
-            ldx         #0                                  ; name: "#p/N/status"
-:
-            lda         s_hps,X
-            sta         name,X
-            inx
-            cpx         #3
-            bne         :-
-            ldy         #0
-:
-            lda         (rec),Y
-            beq         :+
-            sta         name,X
-            inx
-            iny
-            bra         :-
-:
-            ldy         #0
-:
-            lda         s_status,Y
-            sta         name,X
-            beq         :+
-            inx
-            iny
-            bra         :-
-:
-            LDR         r0, name
-            lda         #O_READ
-            jsr         OPEN
-            bcs         @write
-            sta         fd
-            clc                                             ; Its line, after the number
-            lda         #<line
-            adc         llen
+            asl
+            tax
+            lda         states,X
             sta         r0
-            lda         #>line
-            adc         #0
+            lda         states + 1,X
             sta         r0 + 1
-            sec
-            lda         #LINE_LEN
-            sbc         llen
-            sta         r1
-            stz         r1 + 1
-            lda         fd
-            jsr         READ
-            bcs         :+
-            clc
-            adc         llen
-            sta         llen
+            lda         #8
+            jsr         tl_field
+            lda         info + TI_PARENT                    ; Its parent
+            bpl         :+
+            LDR         r0, s_none
+            lda         #7
+            jsr         tl_field
+            bra         @cpu
+
 :
-            lda         fd
-            jsr         CLOSE
-@write:
-            LDR         r0, line
-            lda         llen
-            sta         r1
-            stz         r1 + 1
-            lda         #1
-            jmp         WRITE
+            jsr         tl_setnum
+            lda         #2
+            jsr         tl_dec
+            LDR         r0, s_none + 1
+            lda         #5
+            jsr         tl_field
+@cpu:
+            lda         info + TI_CPU                       ; Its CPU time: tenths of a second, then whole ones
+            sta         tl_num
+            lda         info + TI_CPU + 1
+            sta         tl_num + 1
+            lda         info + TI_CPU + 2
+            sta         tl_num + 2
+            stz         tl_num + 3
+            lda         #TICK_HZ / 10
+            ldx         #0
+            ldy         #0
+            jsr         tl_by
+            lda         #10
+            ldx         #0
+            ldy         #0
+            jsr         tl_by
+            lda         tl_rem
+            pha
+            lda         #5
+            jsr         tl_dec
+            lda         #'.'
+            jsr         tl_putc
+            pla
+            ora         #'0'
+            jsr         tl_putc
+            lda         info + TI_GROUP                     ; Its note group
+            jsr         tl_setnum
+            lda         #6
+            jsr         tl_dec
+            jsr         tl_space
+            jsr         tl_space
+            LDR         r0, info + TI_NAME                  ; Its name
+            jsr         tl_puts
+            lda         tl_flags                            ; -a: its arguments
+            and         #F_A
+            beq         @nl
+            LDR         r0, args
+            lda         task
+            ldx         #TR_ARGS
+            jsr         TASKREAD
+            bcs         @nl
+            ldy         #0
+@arg:
+            lda         args,Y                              ; (An empty one: the end)
+            beq         @nl
+            jsr         tl_space
+@char:
+            cpy         #ARGS_MAX
+            bcs         @nl
+            lda         args,Y
+            iny
+            cmp         #0
+            beq         @arg
+            jsr         tl_putc
+            bra         @char
+
+@nl:
+            jmp         tl_nl
 
 .rodata
-s_hp:       .byte       "#p", 0
-s_hps:      .byte       "#p/"
-s_status:   .byte       "/status", 0
+STATES      = 9                                             ; (TASKINFO's states: 0-8, then any other)
+states:     .word       s_free, s_ready, s_wait, s_call, s_idle, s_new, s_sleep, s_blocked, s_event, s_other
+s_free:     .byte       "free", 0
+s_ready:    .byte       "ready", 0
+s_wait:     .byte       "wait", 0
+s_call:     .byte       "call", 0
+s_idle:     .byte       "idle", 0
+s_new:      .byte       "new", 0
+s_sleep:    .byte       "sleep", 0
+s_blocked:  .byte       "blocked", 0
+s_event:    .byte       "event", 0
+s_other:    .byte       "?", 0
+s_none:     .byte       "-", 0
+s_head:     .byte       "task  state   parent     cpu group  name", LF, 0
+tl_name:    .byte       "ps", 0
+tl_flagset: .byte       "a", 0
+tl_usage:   .byte       "ps [-a]", 0
+
+.include "toollib.s"

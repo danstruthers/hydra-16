@@ -245,6 +245,15 @@ TI_TYPE         = 7             ; Its module's type (HT_*), 0: none
 TI_NAME         = 8             ; (16) Its name, zero-terminated
 TI_GROUP        = 24            ; Its note group
 TI_SIZE         = 25
+TR_ARGS         = 0             ; TASKREAD: a task's arguments (TA_ARGS_MAX + 1 bytes) ...
+TR_CWD          = 1             ;   or its current directory (PATH_MAX + 1 bytes)
+NI_FROM         = 0             ; NSINFO's answer: the mount point (PATH_MAX + 1) ...
+NI_PATH         = 64            ;   the path in the device ...
+NI_DEV          = 128           ;   the device letter ...
+NI_SPEC         = 129           ;   the spec (8, zero-padded, and a 0) ...
+NI_FLAGS        = 138           ;   the flags (MCREATE) ...
+NI_SEQ          = 139           ;   and its place among the union's members
+NI_SIZE         = 140
 
 ; ---- Files: the request block (TA_REQ in the client, TA_INBOX in the server: docs/reimplementation-from-
 ; scratch.md, appendix B), its requests, the open modes, the stat record
@@ -383,6 +392,7 @@ K_ENV_N         = $2D66         ; (2)   a count ...
 K_ENV_U         = $2D68         ; (2)   the environment's bytes in use (with its end) ...
 K_ENV_MN        = $2D6A         ; (2)   and a move's count (e_move)
 K_ENV_SRC       = $2D6C         ; (2) The caller's bytes (ENV_PUT) or buffer (ENV_GET)
+K_XBUF          = $2E00         ; (176) TASKREAD's bytes, or NSINFO's answer, on their way to the caller
 K_ENV           = $3000         ; (16 x ENV_SIZE) Each task's environment: its variables, each its name's length (1:
                                 ;   1-ENV_NAME_MAX), its name, its value's length (2) and its value; ending with 0
 ENV_SIZE        = 1024
@@ -447,4 +457,4 @@ ME_TYPE         = 2             ;   HT_*
 ME_FLAGS        = 3             ;   HF_*
 ME_NAME         = 4             ;   (12) its name, zero-padded
 ME_SIZE         = 16
-MD_MAX          = 31
+MD_MAX          = 127           ; ($A200-$A9FF: 31 till phase 4.3, when the tools needed more)

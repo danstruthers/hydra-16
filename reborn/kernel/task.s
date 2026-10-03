@@ -342,6 +342,7 @@ K_TASK_SETUP:
             lda         #'/'
             sta         TA_CWD
             stz         TA_CWD + 1
+            stz         TA_ARGS                             ; (No arguments: SPAWN's come after)
             stz         T_REGISTER                          ; ---- Back (a moment)
             plp
             lda         K0_NEWBANK
@@ -682,14 +683,15 @@ K_TASK_BOOT_INIT:
             lda         MD_INIT
             cmp         MD_COUNT
             bcs         @noinit
-            asl                                             ; Its entry: MD_ENTRIES + 16 * MD_INIT
+            stz         K0_PTR + 1                          ; Its entry: MD_ENTRIES + 16 * MD_INIT (past entry 15,
+            .repeat     4                                   ;   over 8 bits)
             asl
-            asl
-            asl
+            rol         K0_PTR + 1
+            .endrepeat
             clc
             adc         #<MD_ENTRIES
             sta         K0_PTR
-            lda         #0
+            lda         K0_PTR + 1
             adc         #>MD_ENTRIES
             sta         K0_PTR + 1
             ldx         #INIT_TASK                          ; (Before it can run: the kernel task isn't preempted)

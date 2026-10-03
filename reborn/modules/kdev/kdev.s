@@ -26,6 +26,9 @@ SRV_STAT        = mod_stat                                  ; (srvlib: a module'
 
 PIPE_N          = 8
 PIPE_SIZE       = 512
+MD_N            = 127                                       ; The module directory's entries, at most (MD_MAX)
+NS_N            = 32                                        ; /proc/N/ns: a namespace's entries shown, at most ...
+NSBUF_MAX       = 2048                                      ;   and its text's bytes
 E_FIDS          = 16                                        ; #e's fids ...
 EF_DIR          = 1                                         ;   each the directory ...
 EF_VAR          = 2                                         ;   or a variable (0: free)
@@ -40,14 +43,30 @@ tk:         .res        1                                   ; A task
 cnt:        .res        1
 want:       .res        1                                   ; A module type wanted (0: any)
 left:       .res        1
+mp:         .res        2                                   ; A module's entry in mdir
 
 .bss
 me:         .res        ME_SIZE                             ; A module (MODINFO)
+mdir:       .res        MD_N * ME_SIZE                      ; The module directory, kept (it never changes) ...
+mlen:       .res        MD_N * 2                            ;   each module's image's length ...
+mcount:     .res        1                                   ;   and how many there are
+mcur:       .res        1
 last_want:  .res        1                                   ; The last module h_list named: of this type ($FF:
 last_k:     .res        1                                   ;   none yet), the k-th ...
 last_cnt:   .res        1                                   ;   at this entry
-chunk:      .res        256                                 ; A page of one (ROMREAD)
+chunk:      .res        256                                 ; A page of one (ROMREAD); a task's args or cwd
 info:       .res        TI_SIZE                             ; A task (TASKINFO)
+nse:        .res        NS_N * NI_SIZE                      ; A task's mount entries (NSINFO's), for its ns ...
+nsn:        .res        1                                   ;   how many ...
+nsbuf:      .res        NSBUF_MAX                           ;   and its ns, the text
+nslen:      .res        2
+nsseq:      .res        1                                   ; (ns_union's: the last member's place ...
+nsfirst:    .res        1                                   ;   0 for the union's first ...
+nsi:        .res        1                                   ;   the entries it's looking at ...
+nsj:        .res        1
+nsbest:     .res        1                                   ;   the next to say ...
+nsbseq:     .res        1                                   ;   its place ...
+nsm:        .res        1                                   ;   and <> 0 for a mount's line)
 p_used:     .res        PIPE_N                              ; Each pipe: in use ...
 p_rdl:      .res        PIPE_N                              ;   where the next read is ...
 p_rdh:      .res        PIPE_N
@@ -74,6 +93,7 @@ init:
             bpl         :-
             lda         #$FF
             sta         last_want
+            jsr         md_init
             ldx         #0
 @letter:
             lda         SRV_TREES,X
@@ -253,13 +273,78 @@ mod_next:
 @done:
             rts
 
-; Module .A: its entry in me, its name in srv_dname.  OUT: C = 0; or C = 1: no such module
-mod_name:
-            pha
-            LDR         r0, me
-            pla
+; The module directory, kept: each entry (MODINFO's) and its image's length (from its header: its last bank's,
+; after 16K for each bank before it).  At init: the directory never changes, and looking a module up through the
+; kernel each time (a KCALL an entry) made SPAWN and ls /bin grow with every module in the ROM
+md_init:
+            stz         mcount
+@entry:
+            lda         mcount
+            cmp         #MD_N
+            bcs         @done
+            jsr         md_at
+            MOVR        r0, mp
+            lda         mcount
             jsr         MODINFO
             bcs         @done
+            LDR         r0, PROM_WINDOW + HX_LENGTH         ; Its length
+            LDR         r1, n
+            LDR         r2, 2
+            ldy         #ME_BANK
+            lda         (mp),Y
+            jsr         ROMREAD
+            bcc         :+
+            stz         n
+            stz         n + 1
+:
+            ldy         #ME_BANKS
+            lda         (mp),Y
+            dec         a
+            .repeat     6                                   ; (Banks before the last: 64 pages each)
+            asl
+            .endrepeat
+            clc
+            adc         n + 1
+            sta         n + 1
+            lda         mcount
+            asl
+            tax
+            lda         n
+            sta         mlen,X
+            lda         n + 1
+            sta         mlen + 1,X
+            inc         mcount
+            bra         @entry
+
+@done:
+            rts
+
+; mp = module .A's entry in mdir
+md_at:
+            stz         mp + 1
+            .repeat     4
+            asl
+            rol         mp + 1
+            .endrepeat
+            clc
+            adc         #<mdir
+            sta         mp
+            lda         mp + 1
+            adc         #>mdir
+            sta         mp + 1
+            rts
+
+; Module .A: its entry in me, its name in srv_dname.  OUT: C = 0; or C = 1, .A = E_NOENT (no such module)
+mod_name:
+            cmp         mcount
+            bcs         @none
+            jsr         md_at
+            ldy         #ME_SIZE - 1
+:
+            lda         (mp),Y
+            sta         me,Y
+            dey
+            bpl         :-
             ldx         #0
 :
             lda         me + ME_NAME,X
@@ -271,27 +356,24 @@ mod_name:
             stz         srv_dname,X
 :
             clc
-@done:
             rts
 
-; Module .A: its entry in me, and its image's length in n (from its header: its last bank's, after 16K for each bank
-; before it).  OUT: C = 0; or C = 1, .A = E_NOENT (no such module)
+@none:
+            lda         #E_NOENT
+            sec
+            rts
+
+; Module .A: its entry in me, and its image's length in n.  OUT: C = 0; or C = 1, .A = E_NOENT (no such module)
 mod_length:
+            sta         mcur
             jsr         mod_name
             bcs         @done
-            LDR         r0, PROM_WINDOW + HX_LENGTH
-            LDR         r1, n
-            LDR         r2, 2
-            lda         me + ME_BANK
-            jsr         ROMREAD
-            bcs         @done
-            lda         me + ME_BANKS
-            dec         a
-            .repeat     6                                   ; (Banks before the last: 64 pages each)
+            lda         mcur
             asl
-            .endrepeat
-            clc
-            adc         n + 1
+            tax
+            lda         mlen,X
+            sta         n
+            lda         mlen + 1,X
             sta         n + 1
             clc
 @done:
@@ -1159,6 +1241,365 @@ space:
             lda         #' '
             jmp         srv_tputc
 
+; args: its arguments, a space between each (TASKREAD)
+gen_args:
+            LDR         r0, chunk
+            lda         z:srv_id
+            ldx         #TR_ARGS
+            jsr         TASKREAD
+            bcs         @done
+            ldy         #0
+@arg:
+            lda         chunk,Y                             ; (An empty one: the end)
+            beq         @end
+            cpy         #0
+            beq         @char
+            lda         #' '
+            jsr         srv_tputc
+@char:
+            cpy         #ARGS_MAX
+            bcs         @end
+            lda         chunk,Y
+            iny
+            cmp         #0
+            beq         @arg
+            jsr         srv_tputc
+            bra         @char
+
+@end:
+            lda         #LF
+            jsr         srv_tputc
+            clc
+@done:
+            rts
+
+; cwd: its current directory (TASKREAD)
+gen_cwd:
+            LDR         r0, chunk
+            lda         z:srv_id
+            ldx         #TR_CWD
+            jsr         TASKREAD
+            bcs         @done
+            lda         #<chunk
+            ldx         #>chunk
+            jsr         srv_tputs
+            lda         #LF
+            jsr         srv_tputc
+            clc
+@done:
+            rts
+
+; ns: its namespace, as the binds and mounts that make it, a line each (made anew by a read from its start)
+h_ns:
+            cmp         #R_READ
+            beq         :+
+            clc
+            rts
+
+:
+            lda         TASK_INBOX + RQ_OFFSET
+            ora         TASK_INBOX + RQ_OFFSET + 1
+            ora         TASK_INBOX + RQ_OFFSET + 2
+            ora         TASK_INBOX + RQ_OFFSET + 3
+            bne         :+
+            jsr         ns_make
+            bcs         @done
+:
+            MOVR        n, nslen
+            jsr         img_left                            ; m: what to send
+            lda         m
+            ora         m + 1
+            beq         @end
+            clc                                             ; From the text at the offset, to the client
+            lda         #<nsbuf
+            adc         TASK_INBOX + RQ_OFFSET
+            sta         r0
+            lda         #>nsbuf
+            adc         TASK_INBOX + RQ_OFFSET + 1
+            sta         r0 + 1
+            MOVR        r1, TASK_INBOX + RQ_BUF
+            MOVR        r2, m
+            jsr         CLIENT_WRITE
+            MOVR        TASK_INBOX + RQ_DONE, m
+@end:
+            clc
+@done:
+            rts
+
+; Task srv_id's namespace: its entries into nse (NSINFO's), then its text into nsbuf (nslen): each mount point's
+; union, at its first entry.  OUT: C = 0; or C = 1, .A = the error
+ns_make:
+            stz         nsn
+            stz         nslen
+            stz         nslen + 1
+@get:
+            lda         nsn
+            cmp         #NS_N
+            bcs         @got
+            jsr         ns_at
+            lda         z:srv_id
+            ldx         nsn
+            jsr         NSINFO
+            bcs         @end
+            inc         nsn
+            bra         @get
+
+@end:
+            cmp         #E_RANGE                            ; (The last: E_RANGE)
+            beq         @got
+            sec
+            rts
+
+@got:
+            lda         nsn                                 ; (The kernel gives entries from its table's top: the
+            sta         nsi                                 ;   last first, so the first made is the last here)
+@entry:
+            lda         nsi
+            beq         @done
+            dec         nsi
+            jsr         ns_seen
+            bcs         @entry
+            jsr         ns_union
+            bra         @entry
+
+@done:
+            clc
+            rts
+
+; r0 = entry .A of nse
+ns_at:
+            tax
+            LDR         r0, nse
+:
+            cpx         #0
+            beq         :+
+            clc
+            lda         r0
+            adc         #NI_SIZE
+            sta         r0
+            bcc         @on
+            inc         r0 + 1
+@on:
+            dex
+            bra         :-
+:
+            rts
+
+; Has entry nsi's mount point an entry after it (made before it)?  OUT: C = 1 if so
+ns_seen:
+            lda         nsi
+            sta         nsj
+@j:
+            inc         nsj
+            lda         nsj
+            cmp         nsn
+            bcs         @no
+            jsr         ns_same
+            beq         @yes
+            bra         @j
+
+@no:
+            clc
+            rts
+
+@yes:
+            sec
+            rts
+
+; Have entries nsi and nsj the same mount point?  OUT: Z = 1 if so; r0 = entry nsi, r1 = entry nsj
+ns_same:
+            lda         nsj
+            jsr         ns_at
+            MOVR        r1, r0
+            lda         nsi
+            jsr         ns_at
+            ldy         #NI_FROM
+:
+            lda         (r0),Y
+            cmp         (r1),Y
+            bne         @done
+            cmp         #0
+            beq         @done
+            iny
+            bne         :-
+@done:
+            rts
+
+; Entry nsi's union, its members in their order (NI_SEQ, lowest first): a line each
+ns_union:
+            stz         nsfirst                             ; (0: none said yet)
+@pick:
+            lda         #$FF                                ; The next: the lowest place after the last said
+            sta         nsbest
+            stz         nsj
+@cand:
+            lda         nsj
+            cmp         nsn
+            bcs         @chosen
+            jsr         ns_same
+            bne         @next
+            ldy         #NI_SEQ
+            lda         (r1),Y
+            ldx         nsfirst
+            beq         :+
+            cmp         nsseq
+            beq         @next
+            bcc         @next
+:
+            ldx         nsbest
+            bmi         @take
+            cmp         nsbseq
+            bcs         @next
+@take:
+            sta         nsbseq
+            lda         nsj
+            sta         nsbest
+@next:
+            inc         nsj
+            bra         @cand
+
+@chosen:
+            lda         nsbest
+            bmi         @done
+            jsr         ns_line
+            lda         nsbseq
+            sta         nsseq
+            lda         #1
+            sta         nsfirst
+            bra         @pick
+
+@done:
+            rts
+
+; Entry .A's line: "bind [-ac] '#Dspec/path' old", or for a device with a spec and no path, "mount [-ac] '#D'
+; old spec" (-a: not the union's first; -c: MCREATE)
+ns_line:
+            jsr         ns_at
+            stz         nsm
+            ldy         #NI_PATH
+            lda         (r0),Y
+            bne         @bind
+            ldy         #NI_SPEC
+            lda         (r0),Y
+            beq         @bind
+            inc         nsm                                 ; (A mount)
+            LDR         r1, s_mount
+            bra         :+
+
+@bind:
+            LDR         r1, s_bind
+:
+            jsr         ns_s
+            ldy         #NI_FLAGS                           ; Its flags
+            lda         (r0),Y
+            and         #MCREATE
+            ora         nsfirst
+            beq         @dev
+            LDR         r1, s_dash
+            jsr         ns_s
+            lda         nsfirst
+            beq         :+
+            lda         #'a'
+            jsr         ns_c
+:
+            ldy         #NI_FLAGS
+            lda         (r0),Y
+            and         #MCREATE
+            beq         @dev
+            lda         #'c'
+            jsr         ns_c
+@dev:
+            LDR         r1, s_qhash                         ; '#D ...
+            jsr         ns_s
+            ldy         #NI_DEV
+            lda         (r0),Y
+            jsr         ns_c
+            lda         nsm
+            bne         @old
+            lda         #NI_SPEC                            ;   (a bind's: its spec and path)
+            jsr         ns_r1
+            jsr         ns_s
+            ldy         #NI_PATH
+            lda         (r0),Y
+            beq         @old
+            ldy         #NI_DEV                             ;   (#/'s root: no / between)
+            lda         (r0),Y
+            cmp         #'/'
+            bne         :+
+            ldy         #NI_SPEC
+            lda         (r0),Y
+            beq         :++
+:
+            lda         #'/'
+            jsr         ns_c
+:
+            lda         #NI_PATH
+            jsr         ns_r1
+            jsr         ns_s
+@old:
+            lda         #$27                                ; ' old
+            jsr         ns_c
+            lda         #' '
+            jsr         ns_c
+            lda         #NI_FROM
+            jsr         ns_r1
+            jsr         ns_s
+            lda         nsm                                 ; (A mount's: its spec)
+            beq         @nl
+            lda         #' '
+            jsr         ns_c
+            lda         #NI_SPEC
+            jsr         ns_r1
+            jsr         ns_s
+@nl:
+            lda         #LF
+; .A onto nsbuf (full: dropped).  Keeps .X, .Y
+ns_c:
+            pha
+            lda         nslen + 1
+            cmp         #>NSBUF_MAX
+            bcs         @full
+            clc
+            lda         #<nsbuf
+            adc         nslen
+            sta         pt
+            lda         #>nsbuf
+            adc         nslen + 1
+            sta         pt + 1
+            pla
+            sta         (pt)
+            inc         nslen
+            bne         :+
+            inc         nslen + 1
+:
+            rts
+
+@full:
+            pla
+            rts
+
+; The string at r1 onto nsbuf.  Keeps .X
+ns_s:
+            ldy         #0
+:
+            lda         (r1),Y
+            beq         :+
+            jsr         ns_c
+            iny
+            bne         :-
+:
+            rts
+
+; r1 = r0 + .A
+ns_r1:
+            clc
+            adc         r0
+            sta         r1
+            lda         r0 + 1
+            adc         #0
+            sta         r1 + 1
+            rts
+
 ; ctl: kill, interrupt, note N
 c_kill:
             ldx         #NOTE_KILL
@@ -1538,6 +1979,9 @@ tree_procs:
             SRV_ENTRY   s_slash,   SE_TEMPLATE, SK_DIR, 0,  SM_READ,            0     ; (Each task's directory)
             SRV_ENTRY   s_status,  1,   SK_TEXT, gen_status, SM_READ,           0
             SRV_ENTRY   s_ctl,     1,   SK_CTL,  proc_cmds, SM_WRITE,           0
+            SRV_ENTRY   s_args,    1,   SK_TEXT, gen_args,  SM_READ,            0
+            SRV_ENTRY   s_cwd,     1,   SK_TEXT, gen_cwd,   SM_READ,            0
+            SRV_ENTRY   s_ns,      1,   SK_DATA, h_ns,      SM_READ,            0
             .word       0
 tree_pipe:
             SRV_ENTRY   s_slash,   $FF, SK_DIR,  0,         SM_READ,            0
@@ -1576,6 +2020,13 @@ s_zero:     .byte       "zero", 0
 s_ticks:    .byte       "ticks", 0
 s_status:   .byte       "status", 0
 s_ctl:      .byte       "ctl", 0
+s_args:     .byte       "args", 0
+s_cwd:      .byte       "cwd", 0
+s_ns:       .byte       "ns", 0
+s_bind:     .byte       "bind", 0
+s_mount:    .byte       "mount", 0
+s_dash:     .byte       " -", 0
+s_qhash:    .byte       " '#", 0
 s_pipe:     .byte       "pipe", 0
 s_kill:     .byte       "kill", 0
 s_interrupt: .byte      "interrupt", 0

@@ -5,7 +5,7 @@
 // time budgets (IRQ latency, SCALL, kcopy, load times) are measured by the tests: sim/test.js.
 //
 // Usage: node tools/budget.js          (after a build)
-// From Node: report(root, { modules, tests, progs, entries }) gives { text, page0Free, ... }.
+// From Node: report(root, { modules, tests, progs, programs, entries }) gives { text, page0Free, ... }.
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -55,12 +55,16 @@ function report(root, built = {}) {
   };
   mods('Modules:', built.modules);
   mods('Test modules:', built.tests);
-  const progs = Object.keys(built.progs || {}).sort();
-  if (progs.length) lines.push('Test RAM programs:');
-  for (const n of progs) {
-    const d = built.progs[n], load = d.readUInt16LE(8), top = d.readUInt16LE(22), bss = d.readUInt16LE(20);
-    lines.push('  ' + n.padEnd(12) + String(d.length).padStart(6) + ' bytes   RAM ' + hx(load) + '-' + hx(top - 1) + ' (BSS ' + bss + ')');
-  }
+  const rams = (title, set) => {
+    const names = Object.keys(set || {}).sort();
+    if (names.length) lines.push(title);
+    for (const n of names) {
+      const d = set[n], load = d.readUInt16LE(8), top = d.readUInt16LE(22), bss = d.readUInt16LE(20);
+      lines.push('  ' + n.padEnd(12) + String(d.length).padStart(6) + ' bytes   RAM ' + hx(load) + '-' + hx(top - 1) + ' (BSS ' + bss + ')');
+    }
+  };
+  rams('The ROM disk\'s programs (/rom/bin):', built.programs);
+  rams('Test RAM programs:', built.progs);
   if (page0Free < 512) lines.push('WARNING: under 512 bytes left on BIOS ROM page 0');
   return { text: lines.join('\n'), page0Free, kernelEnd, segments: seg };
 }

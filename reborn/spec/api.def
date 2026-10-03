@@ -195,6 +195,15 @@ call ENV_NAME task impl=K_ENV_NAME far
   blocks: no
   doc:    The variables of an environment, one at a time, in the order they were made.
 
+call TASKREAD task impl=K_TASKREAD far
+  in:     .A = a task ($FF: this one); .X = what: TR_ARGS (its arguments: ARGS_MAX bytes) or TR_CWD (its current
+  in:     directory: PATH_MAX + 1 bytes); r0 = a buffer that big
+  out:    the bytes in the buffer
+  errors: E_SRCH, E_INVAL (another what)
+  blocks: no
+  doc:    Another task's arguments or current directory, as they are now: /proc's args and cwd, ps.  The kernel
+  doc:    task copies them a byte at a time, with IRQs off for each.
+
 # ---- memory (BIOS ROM page 1)
 
 call BREAK memory impl=K_BRK far
@@ -272,6 +281,14 @@ call SEG_MAP memory impl=K_SEG_MAP far
   errors: E_INVAL (not attached), E_RANGE (no such bank in it)
   blocks: no
   doc:    How to reach a bank of a segment: write U, then $00, and it's at $8000-$9FFF.
+
+call SEGINFO memory impl=K_SEGINFO far
+  in:     -
+  out:    .A = the shared banks segments can have (8K each: the good chips'); .X = those segments have now; r0 =
+  out:    the segments in use (bit = segment)
+  errors: -
+  blocks: no
+  doc:    The shared RAM, as free shows it.
 
 # ---- file (BIOS ROM page 2)
 
@@ -420,6 +437,15 @@ call UNMOUNT name impl=K_UNMOUNT far
   errors: E_NOENT, E_INVAL, E_NSFULL, E_NAMETOOLONG
   blocks: yes
   doc:    Undo a bind or a mount at old: all of what's there (r0 = 0), or new's member (as BIND finds new).
+
+call NSINFO name impl=K_NSINFO far
+  in:     .A = a task ($FF: this one); .X = which entry of its namespace (0 on); r0 = a buffer (NI_SIZE bytes)
+  out:    the entry in the buffer (NI_*): its mount point, its device letter and spec, the path in that device,
+  out:    its flags (MCREATE) and its place among the union's members
+  errors: E_RANGE (past the last), E_SRCH
+  blocks: no
+  doc:    A namespace's mount entries, one at a time, in the order of the kernel's table: each a member of the
+  doc:    union at its mount point, the members in NI_SEQ's order (lowest first).  /proc's ns, and ns.
 
 # ---- cons: helpers for stdin and stdout (fds 0 and 1: init's #c/cons), or the serial port, polled, for a task
 # without them (the boot's messages, a driver's)
@@ -650,6 +676,15 @@ const MREPL           0        "BIND's and MOUNT's flags: in place of what's at 
 const MBEFORE         1        "BIND's and MOUNT's flags: a union, new first"
 const MAFTER          2        "BIND's and MOUNT's flags: a union, new last"
 const MCREATE         4        "BIND's and MOUNT's flags: a CREATE in the union comes to new"
+const TR_ARGS         0        "TASKREAD: a task's arguments (ARGS_MAX bytes)"
+const TR_CWD          1        "TASKREAD: a task's current directory (PATH_MAX + 1 bytes)"
+const NI_FROM         0        "NSINFO's answer (NI_SIZE bytes): the mount point (PATH_MAX + 1 bytes, zero-terminated)"
+const NI_PATH         64       "NSINFO: the path in the device (zero-terminated, no leading /)"
+const NI_DEV          128      "NSINFO: the device letter"
+const NI_SPEC         129      "NSINFO: the spec (8 bytes, zero-padded, and a 0)"
+const NI_FLAGS        138      "NSINFO: the flags (MCREATE)"
+const NI_SEQ          139      "NSINFO: its place among the union's members (lowest first)"
+const NI_SIZE         140
 const KEY_UP          $80      "Keys: a raw console read gives the terminal's cursor and function keys as one code each"
 const KEY_DOWN        $81
 const KEY_RIGHT       $82
@@ -694,6 +729,7 @@ const SR_SIZE         64
 const QT_DIR          $80      "Qid types: a directory"
 const QT_FILE         $00
 const DM_DIR          $80      "A mode's high byte: a directory"
+const DM_APPEND       $40      "A mode's high byte: append-only (writes go to the end)"
 const TASK_INBOX      $0200    "A server's copy of the request it's serving (RQ_*)"
 const TASK_PATH       $02C0    "A server's copy of the name a request names (64 bytes)"
 const RQ_TYPE         0        "The request block (RQ_SIZE bytes): the request (R_*)"

@@ -1,106 +1,73 @@
 ; ****************************************************************************
-; ls [names] - each name: a directory's names (its stat records), a / after a directory's, one a line; a file's
-; own name (none: the current directory, .).  A name that isn't there is said on fd 2 ("ls: name: why"), and ls
-; ends with code 1.  Its lines are written a buffer at a time; a write that fails is said ("ls: write error: why"),
-; and ls ends with "write error" (code 1).
+; ls [-ld] [name ...] - each name: a directory's entries (its stat records, read whole), or a file's own record;
+; none: the current directory (.).  A line an entry: its name, and a / after a directory's.  -l: its mode, device
+; and instance, length, time and name ("d-rwxrwxrwx f r     512 2000-01-01 00:00 lib"); -d: a directory itself,
+; not its entries.  A name that isn't there is said ("ls: name: why"), and ls ends with code 1.
 
 .include "hydra.inc"
 .include "hyx2.inc"
 .include "macros.inc"
+.include "toollib.inc"
 
             HYX2_PROGRAM "ls", main
 
+F_L             = $01           ; -l
+F_D             = $02           ; -d
+
 .zeropage
-arg:        .res        2                                   ; An argument
-rec:        .res        2                                   ; A stat record, in buf
+rec:        .res        2                                   ; An entry's stat record
+name:       .res        2                                   ;   and the name shown for it
 
 .bss
-buf:        .res        512
-out:        .res        256                                 ; Lines to write
-olen:       .res        1
-left:       .res        2                                   ; The bytes of records a read gave, still to show
-fd:         .res        1
-code:       .res        1
-msg:        .res        32
 st:         .res        SR_SIZE
+left:       .res        2                                   ; A directory's entries still to show
+bits:       .res        1                                   ; (A mode's permissions, shifting out)
 
 .code
 main:
-            MOVR        arg, r0
-            stz         code
-            stz         olen
-            lda         (arg)
-            bne         @name
-            LDR         arg, s_dot                          ; None: .
-@name:
-            lda         (arg)
-            beq         @end
+            jsr         tl_start
+            lda         (tl_arg)
+            bne         @arg
+            LDR         r0, s_dot                           ; None: .
             jsr         one
-@next:
-            lda         (arg)
-            beq         :+
-            inc         arg
-            bne         @next
-            inc         arg + 1
-            bra         @next
-:
-            inc         arg
-            bne         @name
-            inc         arg + 1
-            bra         @name
+            jmp         tl_end
 
-@end:
-            jsr         flush
-            stz         r0                                  ; (Its code: EXITS, as returning is 0)
-            stz         r0 + 1
-            lda         code
-            jmp         EXITS
+@arg:
+            MOVR        r0, tl_arg
+            jsr         one
+            jsr         tl_next
+            bne         @arg
+            jmp         tl_end
 
-; The name at arg: a directory's names, or its own
+; The name at r0: a directory's entries, or its own
 one:
-            MOVR        r0, arg
+            MOVR        name, r0
             LDR         r1, st
             jsr         STAT
             bcs         @failed
+            LDR         rec, st
             lda         st + SR_QTYPE
             and         #QT_DIR
-            bne         @dir
-            LDR         rec, st                             ; A file: its name, as given
-            MOVR        r0, arg
-            jmp         line_r0
-
-@failed:
-            jsr         say
-            lda         #1
-            sta         code
-            rts
-
-@dir:
-            MOVR        r0, arg
-            lda         #O_READ
-            jsr         OPEN
+            beq         line                                ; (A file: its record, by the name given)
+            lda         tl_flags
+            and         #F_D
+            bne         line
+            MOVR        r0, name                            ; A directory: its entries
+            jsr         tl_readdir
             bcs         @failed
-            sta         fd
-@read:
-            LDR         r0, buf
-            LDR         r1, 512
-            lda         fd
-            jsr         READ
-            bcs         @close
             sta         left
             stx         left + 1
-            ora         left + 1
-            beq         @close
-            LDR         rec, buf
-@record:
-            lda         left + 1                            ; A whole record left?
-            bne         :+
+            MOVR        rec, r0
+            lda         r0                                  ; (Its records' memory, for after)
+            pha
+            lda         r0 + 1
+            pha
+@entry:
             lda         left
-            cmp         #SR_SIZE
-            bcc         @read
-:
-            MOVR        r0, rec                             ; Its name (SR_NAME: 0)
-            jsr         line_r0
+            ora         left + 1
+            beq         @done
+            MOVR        name, rec                           ; (Its name: the record's own)
+            jsr         line
             clc
             lda         rec
             adc         #SR_SIZE
@@ -108,112 +75,122 @@ one:
             bcc         :+
             inc         rec + 1
 :
-            sec
             lda         left
-            sbc         #SR_SIZE
-            sta         left
-            bcs         @record
+            bne         :+
             dec         left + 1
-            bra         @record
-
-@close:
-            lda         fd
-            jmp         CLOSE
-
-; A line: the string at r0, a / if record rec is a directory's, a new line
-line_r0:
-            ldy         #0
 :
-            lda         (r0),Y
-            beq         :+
-            jsr         put
-            iny
-            bne         :-
-:
-            ldy         #SR_QTYPE
+            dec         left
+            bra         @entry
+
+@done:
+            pla
+            sta         r0 + 1
+            pla
+            sta         r0
+            jmp         tl_free
+
+@failed:
+            pha
+            MOVR        r0, name
+            pla
+            jmp         tl_err
+
+; An entry's line: record rec, by name
+line:
+            lda         tl_flags
+            and         #F_L
+            beq         @name
+            ldy         #SR_QTYPE                           ; -l: its mode: d (a directory), a (append-only), or -
             lda         (rec),Y
             and         #QT_DIR
             beq         :+
-            lda         #'/'
-            jsr         put
-:
-            lda         #LF
-; .A into the lines (full: written first).  Keeps .Y
-put:
-            ldx         olen
-            sta         out,X
-            inc         olen
-            bne         :+
-            phy
-            lda         #0                                  ; (256)
-            jsr         write
-            ply
-:
-            rts
+            lda         #'d'
+            bra         @type
 
-; The lines written
-flush:
-            lda         olen
-            bne         write
-            rts
-
-; The same, .A bytes of them (0: 256)
-write:
-            pha
-            LDR         r0, out
-            pla
-            sta         r1
-            stz         r1 + 1
-            bne         :+
-            inc         r1 + 1                              ; (0: 256)
 :
-            lda         #1
-            jsr         WRITE
-            stz         olen
-            bcs         :+
-            rts
-:
-            pha                                             ; A failed write: said, and ls ends
-            LDR         arg, s_werr
-            pla
-            jsr         say
-            LDR         r0, s_werr
-            lda         #1
-            jmp         EXITS
-
-; Error .A on fd 2: "ls: name: why"
-say:
-            pha
-            jsr         flush
-            LDR         r0, s_ls
-            jsr         puts2
-            MOVR        r0, arg
-            jsr         puts2
-            LDR         r0, s_colon
-            jsr         puts2
-            LDR         r0, msg
-            pla
-            jsr         ERRSTR
-            LDR         r0, msg
-            jsr         puts2
-            LDR         r0, s_nl
-; The string at r0 on fd 2
-puts2:
-            ldy         #0
-:
-            lda         (r0),Y
+            ldy         #SR_MODE + 1
+            lda         (rec),Y
+            and         #DM_APPEND
             beq         :+
-            iny
-            bne         :-
+            lda         #'a'
+            bra         @type
+
 :
-            sty         r1
-            stz         r1 + 1
-            lda         #2
-            jmp         WRITE
+            lda         #'-'
+@type:
+            jsr         tl_putc
+            lda         #'-'
+            jsr         tl_putc
+            ldy         #SR_MODE                            ; ... rwxrwxrwx (its low 9 bits)
+            lda         (rec),Y
+            sta         bits
+            iny
+            lda         (rec),Y
+            lsr         a                                   ; (C: bit 8)
+            ldx         #0
+@bit:
+            lda         #'-'
+            bcc         :+
+            lda         s_rwx,X
+:
+            jsr         tl_putc
+            inx
+            cpx         #9
+            beq         :+
+            asl         bits                                ; (C: the next bit)
+            bra         @bit
+
+:
+            jsr         tl_space
+            ldy         #SR_DEV                             ; Its device and instance
+            lda         (rec),Y
+            jsr         tl_putc
+            iny
+            lda         (rec),Y
+            bne         :+
+            lda         #'-'
+:
+            jsr         tl_putc
+            ldy         #SR_LENGTH + 3                      ; Its length
+            ldx         #3
+:
+            lda         (rec),Y
+            sta         tl_num,X
+            dey
+            dex
+            bpl         :-
+            lda         #9
+            jsr         tl_dec
+            jsr         tl_space
+            clc                                             ; Its time
+            lda         rec
+            adc         #SR_MTIME
+            sta         r0
+            lda         rec + 1
+            adc         #0
+            sta         r0 + 1
+            jsr         tl_date
+            jsr         tl_space
+@name:
+            MOVR        r0, name                            ; Its name (a / after a directory's, but with -l)
+            jsr         tl_puts
+            lda         tl_flags
+            and         #F_L
+            bne         @nl
+            ldy         #SR_QTYPE
+            lda         (rec),Y
+            and         #QT_DIR
+            beq         @nl
+            lda         #'/'
+            jsr         tl_putc
+@nl:
+            jmp         tl_nl
 
 .rodata
-s_dot:      .byte       ".", 0, 0
-s_ls:       .byte       "ls: ", 0
-s_colon:    .byte       ": ", 0
-s_nl:       .byte       LF, 0
-s_werr:     .byte       "write error", 0
+s_dot:      .byte       ".", 0
+s_rwx:      .byte       "rwxrwxrwx"
+tl_name:    .byte       "ls", 0
+tl_flagset: .byte       "ld", 0
+tl_usage:   .byte       "ls [-ld] [name ...]", 0
+
+.include "toollib.s"

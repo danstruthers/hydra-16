@@ -4,7 +4,7 @@
 // (docs/reimplementation-from-scratch.md, §11), and the ROM disk's volume after them (tools/romfs.js).
 //
 //   bank 0, $A000-$A1FF   block 0: a signature line, and the ROM disk's partition table (romfs.js)
-//   bank 0, $A200-$A3FF   the module directory (include/layout.inc: MD_*, ME_*): "HYMD", its version, the count,
+//   bank 0, $A200-$A9FF   the module directory (include/layout.inc: MD_*, ME_*): "HYMD", its version, the count,
 //                         init's entry, whether bank 1 has the hardware test, then 16 bytes a module: its bank,
 //                         banks, type, flags and name
 //   bank 1                the hardware test (os_rom/hwtest, unchanged: its $A000-$DEFF copied from the old
@@ -27,7 +27,7 @@ const path = require('path');
 const romfs = require('./romfs.js');
 
 const BANK = 0x4000, WINDOW = 0xA000, PAGE = 0x2000;
-const MD_BASE = 0xA200, MD_VERSION = 1, MD_MAX = 31, ME_SIZE = 16, NAME_LEN = 12;
+const MD_BASE = 0xA200, MD_VERSION = 1, MD_MAX = 127, ME_SIZE = 16, NAME_LEN = 12;
 const HX = { MAGIC: 0, HSIZE: 4, TYPE: 5, FLAGS: 6, ABI: 7, LOAD: 8, LENGTH: 10, BANKS: 33, NAME: 36, SIZE: 48 };
 const TYPES = { 1: 'program', 2: 'driver', 3: 'library' };
 const SIGNATURE = 'Hydra-16 reborn paged ROM: block 0 this and the ROM disk\'s partition table, then the module directory; ' +
@@ -97,7 +97,7 @@ function build({ modules, init, hwtest, bios, romfs: files }) {
   if (SIGNATURE.length > 0x1BE) throw new Error('the signature reaches the partition table');
   block0.write(SIGNATURE, 'latin1');
   put(image, 0, WINDOW, block0);
-  const md = Buffer.alloc(512, 0);
+  const md = Buffer.alloc(8 + MD_MAX * ME_SIZE, 0);
   md.write('HYMD', 0, 'latin1');
   md[4] = MD_VERSION; md[5] = entries.length; md[6] = initIndex; md[7] = hwtest ? 1 : 0;
   entries.forEach((e, i) => {

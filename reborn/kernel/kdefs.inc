@@ -31,7 +31,7 @@
 .global     K_SYSINFO, K_ERRSTR, K_NOSYS, K_IRQ_OWN, K_IRQ_RELEASE, K_DBG_KCOPY
 ; ---- mem.s: memory (page 1)
 .global     K_MEM_START, K_SEG_EXIT, K_BRK, K_PAGES_ALLOC, K_PAGES_FREE, K_BANKS, K_BANKS_ALLOC, K_BANKS_FREE
-.global     K_SEG_CREATE, K_SEG_ATTACH, K_SEG_DETACH, K_SEG_MAP
+.global     K_SEG_CREATE, K_SEG_ATTACH, K_SEG_DETACH, K_SEG_MAP, K_SEGINFO
 ; ---- notes.s: notes (signals)
 .global     K_NOTE, K_NOTE_POST, K_NOTE_QUEUE, K_NOTE_QUEUED, K_UPAUSE, K_NOTE_CHECK, K_NOTE_RETURN, K_NOTE_TRAMP, K_NOTIFY
 ; ---- file.s: files (page 2)
@@ -40,11 +40,11 @@
 .global     K_FILE_EXIT, K_FD_INHERIT, K_CHDIR, K_GETCWD, K_PIPE, K_BIND, K_MOUNT, K_UNMOUNT, K_DEV_FIND_K
 ; ---- ns.s: namespaces (page 3)
 .global     K_NS_INIT, K_NS_FRESH, K_NS_INHERIT, K_NS_EXIT, K_NS_FIND_K, K_NS_NEXT_K, K_NS_CWD_K, K_NS_UNION_K
-.global     K_NS_UNEXT_K, K_NS_UREL_K, K_NS_BIND_K, K_NS_MOUNT_K, K_NS_UNMOUNT_K
+.global     K_NS_UNEXT_K, K_NS_UREL_K, K_NS_BIND_K, K_NS_MOUNT_K, K_NS_UNMOUNT_K, K_NSINFO
 ; ---- env.s: environments (page 2)
 .global     K_ENV_GET, K_ENV_PUT, K_ENV_DEL, K_ENV_NAME, K_ENV_INHERIT, K_ENV_CLEAR
 ; ---- info.s: what the kernel knows of the tasks (page 1)
-.global     K_TASKINFO, K_DBG_PS
+.global     K_TASKINFO, K_DBG_PS, K_TASKREAD
 ; ---- far.s: the jump table's way to calls on other pages
 .global     K_FARJMP
 ; ---- post.s: the power-on self test (page 4)

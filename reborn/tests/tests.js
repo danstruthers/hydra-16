@@ -101,6 +101,16 @@ function loadCard() {
 }
 const BIG_LENGTH = () => fs.statSync(path.join(__dirname, '..', 'obj', 'tests', 't_big.hyx')).size;
 
+// /bin's programs in the rc and tools tests: the ROM's program modules (their headers' type, HT_PROGRAM), the ROM
+// disk's bin, and t_rc (init)
+function BIN_COUNT() {
+  const root = path.join(__dirname, '..'), { readManifest } = require('../build.js');
+  const mods = readManifest(path.join(root, 'modules', 'rom.txt')).modules
+    .filter(n => fs.readFileSync(path.join(root, 'obj', 'modules', n + '.bin'))[5] === 1);
+  const disk = fs.readFileSync(path.join(root, 'romfs', 'romfs.txt'), 'latin1').split(/\r?\n/).filter(l => /^bin\//.test(l));
+  return mods.length + disk.length + 1;
+}
+
 // The rc test's lines, and what each says
 const RC_LINES = [
   ["echo hello","hello"],
@@ -149,6 +159,111 @@ const RC_LINES = [
   ["! ~ a b && echo not; echo $status","not\n"],
 ];
 
+const TOOL_LINES = [
+  ["mkdir /ram/t /ram/t/a; ls /ram/t","a/"],
+  ["mkdir /ram/t; echo $status","mkdir: /ram/t: already exists\n1"],
+  ["mkdir -p /ram/t/b/c/d; ls /ram/t/b/c","d/"],
+  ["touch /ram/t/f /ram/t/a/g; ls /ram/t","a/\nb/\nf"],
+  ["echo hi >/ram/t/f; cp /ram/t/f /ram/t/f2; cat /ram/t/f2","hi"],
+  ["cp /ram/t/f /ram/t/f; echo $status","cp: /ram/t/f: the same file\n1"],
+  ["cp -r /ram/t /ram/u; ls /ram/u /ram/u/a /ram/u/b/c","a/\nb/\nf\nf2\ng\nd/"],
+  ["mv /ram/t/f2 /ram/t/f3; ls /ram/t","a/\nb/\nf\nf3"],
+  ["mv /ram/t/f3 /ram/u; ls /ram/u","a/\nb/\nf\nf2\nf3"],
+  ["mv /ram/u/f3 /sram/f3; cat /sram/f3; ls /ram/u","hi\na/\nb/\nf\nf2"],
+  ["rm /ram/t/a; echo $status","rm: /ram/t/a: directory not empty\n1"],
+  ["rm -r /ram/t; ls /ram","bin/\nlib/\nu/"],
+  ["rmdir /ram/u/b/c/d; ls /ram/u/b/c",null],
+  ["rmdir /ram/u/f; echo $status","rmdir: /ram/u/f: not a directory\n1"],
+  ["ls -ld /rom/lib /rom", [
+    "d-r--r--r-- fx        0 2000-01-01 00:00 /rom/lib",
+    "d-r--r--r-- fx        0 2000-01-01 00:00 /rom",
+  ].join('\n')],
+  ["ls -d /rom /ram","/rom/\n/ram/"],
+  ["rm -f /nothing; echo $status",""],
+  ["ls -x; echo $status","usage: ls [-ld] [name ...]\nusage"],
+  ["du /ram/u; du -a /ram/u/a","0\t/ram/u/a\n0\t/ram/u/b/c\n0\t/ram/u/b\n2\t/ram/u\n0\t/ram/u/a/g\n0\t/ram/u/a"],
+  ["df","disk  kind   size        free        label\nx     rom    ",true],
+  ["cat /proc/$task/args; cd /ram/u; cat /proc/$task/cwd; cd","-l\n/ram/u"],
+  ["ns", [
+    "bind '#/' /",
+    "bind '#/dev' /dev",
+    "bind -a '#c' /dev",
+    "bind -a '#n' /dev",
+    "bind -a '#t' /dev",
+    "bind '#d' /dev/sd",
+    "bind '#S' /dev/spi",
+    "bind '#m' /dev/mod",
+    "bind '#e' /env",
+    "bind '#p' /proc",
+    "bind '#f' /sd",
+    "mount '#f' /rom x",
+    "mount '#f' /sram s",
+    "mount -c '#f' /ram r/2",
+    "bind -c '#fr/2/bin' /bin",
+    "bind -a '#fs/bin' /bin",
+    "bind -a '#fx/bin' /bin",
+    "bind -a '#m/bin' /bin",
+    "bind -c '#fr/2/lib' /lib",
+    "bind -a '#fs/lib' /lib",
+    "bind -a '#fx/lib' /lib",
+  ].join('\n')],
+  ["ps -a","task  state   parent     cpu group  name\n   0  ready   -",true],
+  ["mods", [
+    "bank   type     name",
+    "  2    program  init",
+    "  3    program  hello",
+    "  4    boot     cons",
+    "  5- 6 boot     storage",
+    "",
+  ].join('\n'), true],
+  ["free","ram     256 KB a task (2 modules)\nshared  1024 KB, 256 KB in segments (1), 768 KB free"],
+  ["sleep 30 & sleep 30 & kill $apid; slay sleep; wait; ps","task  state",true],
+  ["kill 9; kill x; echo $status","kill: 9: no such task\nkill: x: invalid argument\n1"],
+  ["sleep 1; echo slept","slept"],
+  ["ls /rom/bin; whatis mkfs","fsck\nlabel\nmkfs\n/bin/mkfs"],
+  ["label s; label s Shared Disk; label s","SRAM\nShared Disk"],
+  ["fsck s","hydrafs label=Shared Disk\nfree 244 KB of 252 KB\ncheck: lost 0, unmarked 0, twice 0"],
+  ["mkfs s Fresh; ls /sram; label s; echo $status","Fresh\n"],
+  ["mkfs; label nodisk","usage: mkfs [-fp] disk [label ...]\nlabel: nodisk: not found"],
+  ["echo one two >/ram/w; echo three >>/ram/w; wc /ram/w; wc -l /ram/w /ram/w; echo a b | wc -w", [
+    "      2       3      14 /ram/w",
+    "      2 /ram/w",
+    "      2 /ram/w",
+    "      4 total",
+    "      2",
+  ].join('\n')],
+  ["for(i in 1 2 3 4 5 6 7 8 9 10 11 12) echo $i >>/ram/n; head -3 /ram/n; tail -2 /ram/n; head /ram/n | tail -1", [
+    "1",
+    "2",
+    "3",
+    "11",
+    "12",
+    "10",
+  ].join('\n')],
+  ["echo hi | tee /ram/t1 /ram/t2; cat /ram/t2; echo more | tee -a /ram/t2 >/dev/null; cat /ram/t2", [
+    "hi",
+    "hi",
+    "hi",
+    "more",
+  ].join('\n')],
+  ["for(i in a a b b b c a) echo $i >>/ram/q; uniq /ram/q; uniq -c /ram/q", [
+    "a",
+    "b",
+    "c",
+    "a",
+    "      2 a",
+    "      3 b",
+    "      1 c",
+    "      1 a",
+  ].join('\n')],
+  ["echo hello there | xd","0000000  68 65 6c 6c 6f 20 74 68 65 72 65 0a              hello there."],
+  ["cmp /ram/t1 /ram/t1; echo $status; cmp /ram/t1 /ram/t2; cmp /ram/w /ram/t1", [
+    "",
+    "cmp: end of /ram/t1",
+    "/ram/w /ram/t1 differ: byte 1",
+  ].join('\n')],
+];
+
 module.exports = {
   IRQ_OFF_MAX,
   tests: [
@@ -168,7 +283,7 @@ module.exports = {
       machine: { input: 'āls \'#fr\'\r' + 'āls /ram\r' + 'āls /bin\r' + 'āt_child f\r' + 'āls \'#fr\'/2\r' + 'ācat /rom/lib/profile\r' +
         'ācat /dev/sd/s/ctl\r' + 'āecho $window\r' + 'ā\x1dc' + 'āecho $window\r' + 'āls \'#fr\'\r' + 'āls /ram\r' + 'āls /dev\r' },
       expect: ['% ls \'#fr\'\n1/\n2/\n%', '% ls /ram\nbin/\nlib/\n%',
-        '% ls /bin\ninit\nhello\nrc\nwstart\necho\ncat\nls\nps\npwd\nt_child\n%', '% ls \'#fr\'/2\nbin/\nlib/\nmark\n%',
+        '% ls /bin\nfsck\nlabel\nmkfs\ninit\nhello\nrc\nwstart\n', 't_child\n% t_child f\n', '% ls \'#fr\'/2\nbin/\nlib/\nmark\n%',
         'prompt=(', '% cat /dev/sd/s/ctl\nsram 512 KB 1024 blocks\nhydrafs label=SRAM\n', '% echo $window\n0\n%',
         '% echo $window\n1\n%', '% ls \'#fr\'\n1/\n2/\n4/\n%', '% ls /ram\nbin/\nlib/\n%', '\ncons\nconsctl\nwctl\nwnew\nser\nserctl\n%'],
     },
@@ -321,9 +436,9 @@ module.exports = {
           per: n, max: o => o.clock === 2 ? 320 + 64 : 320 },
         { what: 'the same from the RAM disk, a byte', from: '<rbig', to: 'rbig>', per: n, max: 90 },
         { what: 'SPAWN of a module in place (#m/t_child), the caller\'s time', from: '<msp', to: 'msp>', minus: ['<b0', 'b0>'],
-          per: 1, max: 70000 },
+          per: 1, max: 55000 },
         { what: 'the same by /bin/t_child (the card\'s bin first, then #m/bin)', from: '<sp', to: 'sp>', minus: ['<b0', 'b0>'], per: 1,
-          max: 150000 }];
+          max: 120000 }];
       },
     },
     {
@@ -344,10 +459,28 @@ module.exports = {
           '\n% echo $status\ninterrupt\n%'];
       },
       // (t_rc's, before rc -l starts: rc's own start and end, and ls /bin through its union (the RAM disks' empty
-      // caches, then #m/bin), into #n/null)
-      budgets: [{ what: 'rc -c \'x=1\': SPAWN to its end', from: '<rc', to: 'rc>', minus: ['<b0', 'b0>'], per: 1, max: 145000 },
-        { what: 'ls /bin (the caches, then #m/bin): SPAWN to its end', from: '<ls', to: 'ls>', minus: ['<b0', 'b0>'], per: 1,
-          max: 600000 }],
+      // caches, the ROM disk's bin, then #m/bin), into #n/null: for each program it shows, as it grows with them)
+      get budgets() {
+        const n = BIN_COUNT();
+        return [{ what: 'rc -c \'x=1\': SPAWN to its end', from: '<rc', to: 'rc>', minus: ['<b0', 'b0>'], per: 1, max: 145000 },
+          { what: 'ls /bin (the caches, /rom/bin, #m/bin: ' + n + ' programs): SPAWN to its end, a program', from: '<ls', to: 'ls>',
+            minus: ['<b0', 'b0>'], per: n, max: 25000 }];
+      },
+    },
+    {
+      name: 'tools', what: 'the core tools at rc: files, text, tasks, the disks\' (/rom/bin); /proc\'s args, cwd, ns',
+      init: 't_rc', cycles: 400e6,
+      // (Each line typed at its prompt: its output (null: none; a third element true: how it starts), then the next
+      // prompt.  Then top, for 2 seconds or so, and Ctrl-C; and more, its --more-- answered with Enter)
+      get machine() {
+        return { input: TOOL_LINES.map(l => 'ā' + l[0] + '\r').join('') + 'ātop\rĀĀĀĀ\x03' +
+          'āecho $status\r' + 'ācat /ram/n /ram/n /ram/n | more\rĀĀ\r' };
+      },
+      get expect() {
+        return [...TOOL_LINES.map(l => '% ' + l[0] + '\n' + (l[2] ? l[1] : (l[1] === null ? '' : l[1] + '\n') + '%')),
+          '\x1b[H\x1b[2Jtask  state    cpu  name\n', '% echo $status\ninterrupt\n%',
+          '\n9\n10\n--more--\n11\n12\n1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n%'];
+      },
     },
     {
       name: 'cons', what: 'the console: lines, editing, history, raw keys, Ctrl-C, windows (shown, repainted, made, gone), 115200',

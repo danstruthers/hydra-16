@@ -310,6 +310,63 @@ K_SEG_MAP:
             KCALL_FAR   K_SEG_MAP_K
             rts
 
+; SEGINFO: the shared RAM.  OUT: .A = the banks segments can have (the good chips'); .X = those segments have; r0 =
+; the segments in use (bit = segment).  Quick looks at the kernel task's tables; its scratch, TA_SCRATCH
+K_SEGINFO:
+            stz         r0
+            stz         r0 + 1
+            stz         TA_SCRATCH                          ; (The banks given)
+            ldy         T_REGISTER
+            ldx         #SEG_MAX - 1
+@seg:
+            php
+            sei
+            K0_GET      {K_SEG_COUNT,X}
+            plp
+            cmp         #0
+            beq         @next
+            clc
+            adc         TA_SCRATCH
+            sta         TA_SCRATCH
+            txa                                             ; Its bit
+            and         #7
+            phx
+            tax
+            lda         M_BIT8,X
+            plx
+            cpx         #8
+            bcs         :+
+            tsb         r0
+            bra         @next
+
+:
+            tsb         r0 + 1
+@next:
+            dex
+            bpl         @seg
+            php                                             ; The good chips' banks: SEG_IDS / 4 each
+            sei
+            K0_GET      K0_BADSHARED
+            plp
+            ldx         #4
+            stz         TA_SCRATCH + 1
+:
+            lsr
+            bcs         :+
+            pha
+            lda         TA_SCRATCH + 1
+            clc
+            adc         #($100 - SEG_IDS) / 4
+            sta         TA_SCRATCH + 1
+            pla
+:
+            dex
+            bne         :--
+            lda         TA_SCRATCH + 1
+            ldx         TA_SCRATCH
+            clc
+            rts
+
 ; ---- In the kernel task (KCALLs): .Y = the calling task
 
 K_SEG_CREATE_K:

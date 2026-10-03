@@ -191,6 +191,7 @@ BOOT:
             sta         TA_NAME,X
             dex
             bpl         @name
+            stz         TA_ARGS                             ; (No arguments)
 
 ; 2. The console, the banner, POST (page 4: it finds the RAM modules, and the RAM to leave unused)
             jsr         K_CONS_INIT

@@ -1,9 +1,10 @@
 ; ****************************************************************************
-; t_rc - rc (phase 4.2), run as init: the RAM disks started (r and s: 64K each; s's bin and lib) and its namespace
-; built (nslib's ns_default).  Then, its fds 0-2 still closed (its lines go out on the bring-up console), the times:
-; rc -c 'x=1' from SPAWN to its end, and ls /bin (the caches, then #m/bin; its output to #n/null).  Then its fds
-; 0-2 #c/cons, $window 0, and rc -l (newns, then /rom/lib/profile) in a note group of its own, waited for: "t_rc:
-; rc ended" when it does.  tests.js types rc's commands and looks for what they say.
+; t_rc - rc (phase 4.2), run as init: the RAM disks started (r and s: 256K each, as init has them; s's bin and
+; lib) and its namespace built (nslib's ns_default).  Then, its fds 0-2 still closed (its lines go out on the
+; bring-up console), the times: rc -c 'x=1' from SPAWN to its end, and ls /bin (the caches, /rom/bin, then #m/bin;
+; its output to #n/null).  Then its fds 0-2 #c/cons, $window 0, and rc -l (newns, then /rom/lib/profile) in a note
+; group of its own, waited for: "t_rc: rc ended" when it does.  tests.js types rc's commands (the rc and tools
+; tests) and looks for what they say.
 
 .include "hydra.inc"
 .include "hyx2.inc"
@@ -126,14 +127,14 @@ wait:
             sta         code
             rts
 
-; The RAM disk whose ctl is r0 started: 8 banks
+; The RAM disk whose ctl is r0 started: 32 banks
 start:
             lda         #O_WRITE
             jsr         OPEN
             bcs         @done
             sta         fd
             LDR         r0, s_start
-            LDR         r1, 7
+            LDR         r1, 8
             lda         fd
             jsr         WRITE
             lda         fd
@@ -155,7 +156,7 @@ mkdir:
 s_cons:     .byte       "#c/cons", 0
 s_ctlr:     .byte       "#d/r/ctl", 0
 s_ctls:     .byte       "#d/s/ctl", 0
-s_start:    .byte       "start 8"
+s_start:    .byte       "start 32"
 s_sbin:     .byte       "#fs/bin", 0
 s_slib:     .byte       "#fs/lib", 0
 s_null:     .byte       "#n/null", 0

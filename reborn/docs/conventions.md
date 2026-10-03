@@ -112,7 +112,8 @@ The kernel task (task 0) keeps the kernel's state: its program zero page (`K0_*`
   `HYX2_DRIVER "name", init, serve, irq, stop, flags`: `init` (C = 1 and `.A` = an error ends it), then `serve`
   for its calls (`.Y` = the caller) and `irq` for its lines; `HF_BOOT` starts it at boot.
 * The module directory (paged ROM bank 0 at `$A200`, written by `tools/romimg.js`) lists each module's bank, type,
-  flags and name; `#m/NAME` reads as a module's image, and `#m/bin` lists the programs (bound at `/bin`).
+  flags and name, 127 modules at most; `#m/NAME` reads as a module's image, and `#m/bin` lists the programs (bound
+  at `/bin`).  A module's data is copied and its BSS cleared by its own task as it starts (`K_TASK_DATA`).
 * `SPAWN` takes a path, through the caller's namespace (`/bin/NAME`, `#m/NAME`), and reads the file's HYX2
   header: a module (`HF_INPLACE`) runs in place, found in the module directory by the header's name; any other
   program is a RAM program, read into its task's RAM at its load address by the task itself as it starts (the file
@@ -124,7 +125,14 @@ The kernel task (task 0) keeps the kernel's state: its program zero page (`K0_*`
   with a zero byte, and its functions as `fn#NAME`.
 * A RAM program is assembled with `-D HYX2_RAM` (`hyx2.inc`: no `HF_INPLACE`, loaded at `$0800`) and linked by
   `sdk/asm/hyx2.cfg`: its header, code, read-only data and data one image from `$0800`, its BSS after them.  The
-  test RAM programs are `tests/ram/NAME/`, built into `obj/tests/NAME.hyx`.
+  test RAM programs are `tests/ram/NAME/`, built into `obj/tests/NAME.hyx`; the ROM disk's programs (`/rom/bin`,
+  listed in `romfs/romfs.txt`) are `programs/NAME/`, built into `obj/programs/NAME.hyx`.
+* **The tools** (`modules/NAME`, or `programs/NAME` for the ROM disk) are built on `sdk/asm/toollib.s`
+  (`toollib.inc` at the top, for its zero page; `toollib.s` at the end), and behave as Plan 9's: flags first
+  (`-abc`), then names; a name that fails is said on fd 2 as `tool: name: why` and the rest go on, the tool ending
+  with code 1; a write to fd 1 that fails is `tool: write error: why`, and the tool ends with `write error`; a bad
+  flag or too few names is `usage: ...`, and the tool ends with `usage`.  A tool's output goes out 256 bytes at a
+  time.  What reads files reads fd 0 when it's given none.
 * The boot starts the drivers (`HF_BOOT`, task F down, in the directory's order), waits for their inits (their
   devices registered; 2 seconds at most), then starts init.  The system's modules are in `modules/rom.txt`.
 * A module bigger than a bank has two (`HYX2_DRIVER ..., 2`, linked by `modules/module2.cfg` when its sources use

@@ -1,6 +1,6 @@
 ; ****************************************************************************
-; info.s - what the kernel knows of the tasks (BIOS ROM page 1: far calls).  TASKINFO for programs (ps; /proc's
-; source when it comes), and DBG_PS, a table of them all on the console.
+; info.s - what the kernel knows of the tasks (BIOS ROM page 1: far calls).  TASKINFO and TASKREAD for programs
+; (ps; /proc's source), and DBG_PS, a table of them all on the console.
 ;
 ; Another task's bytes are read with quick looks, 4 at a time with IRQs off, not with kcopy: kcopy keeps its
 ; pointer in its partner's zero page, and a task chosen at random may be in the middle of a kcopy of its own.
@@ -81,6 +81,88 @@ K_TASKINFO:
             sta         (r0),Y
             dey
             bpl         :-
+            clc
+            rts
+
+; TASKREAD: a task's arguments or current directory.  IN: .A = a task ($FF: this one); .X = TR_ARGS or TR_CWD; r0
+; = a buffer (TA_ARGS_MAX + 1 or PATH_MAX + 1 bytes).  OUT: the bytes in it; or C = 1, .A = E_SRCH, E_INVAL
+K_TASKREAD:
+            cpx         #TR_CWD + 1
+            bcc         :+
+            FAIL        E_INVAL
+
+:
+            KCALL_FAR   K_TASKREAD_K
+            rts
+
+; TASKREAD's (a KCALL: .Y = the caller): the bytes into K_XBUF, a byte at a time with IRQs off for each (the
+; task's OS area, read with T switched to it: an index register free, as T comes back to 0), then to the caller
+K_TASKREAD_K:
+            sty         K0_TMP2                             ; (The caller)
+            stx         K0_TMP3                             ; (What)
+            cmp         #$FF
+            bne         :+
+            tya
+:
+            cmp         #TASKS
+            bcs         @srch
+            tax
+            ldy         T_REGISTER
+            php
+            sei
+            QL_GET      TK_STATE
+            plp
+            cmp         #ST_FREE
+            beq         @srch
+            ldy         #0
+            lda         K0_TMP3
+            bne         @cwd
+@args:
+            php
+            sei
+            stx         T_REGISTER                          ; ---- The task
+            lda         TA_ARGS,Y
+            stz         T_REGISTER                          ; ---- Back
+            plp
+            sta         K_XBUF,Y
+            iny
+            cpy         #TA_ARGS_MAX + 1
+            bne         @args
+            bra         @copy
+
+@srch:
+            FAIL        E_SRCH
+
+@cwd:
+            php
+            sei
+            stx         T_REGISTER                          ; ---- The task
+            lda         TA_CWD,Y
+            stz         T_REGISTER                          ; ---- Back
+            plp
+            sta         K_XBUF,Y
+            iny
+            cpy         #PATH_MAX + 1
+            bne         @cwd
+@copy:
+            sty         K_CNT                               ; To the caller's buffer
+            stz         K_CNT + 1
+            lda         #<K_XBUF
+            sta         K_PTR
+            lda         #>K_XBUF
+            sta         K_PTR + 1
+            ldx         K0_TMP2
+            ldy         T_REGISTER
+            php
+            sei
+            QL_GET      r0
+            sta         K_PTR2
+            QL_GET      r0 + 1
+            sta         K_PTR2 + 1
+            plp
+            lda         K0_TMP2
+            clc
+            FARCALL     K_KCOPY
             clc
             rts
 

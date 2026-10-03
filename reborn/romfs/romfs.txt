@@ -8,3 +8,6 @@ README              README
 lib/namespace       lib/namespace       ; The default namespace (the plan's appendix E): init runs it
 lib/profile         lib/profile         ; What each shell runs as it starts (rc's: phase 4)
 doc/api.md          ../obj/gen/api.md   ; The system calls' reference (tools/apigen.js makes it at the build)
+bin/mkfs            ../obj/programs/mkfs.hyx    ; The disk tools: RAM programs (programs/), loaded from here
+bin/fsck            ../obj/programs/fsck.hyx
+bin/label           ../obj/programs/label.hyx

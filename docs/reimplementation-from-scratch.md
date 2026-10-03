@@ -741,6 +741,8 @@ Small programs, each a module in the paged ROM (in place) or a C program in `/ro
 
 Whether each is assembly or C is chosen by size and speed: C first where it saves time (`sort`, `grep`, `fsck`'s report), assembly for what runs often (`ls`, `cat`, `echo`).
 
+(As built, phase 4.3: the file, text and system tools are modules in assembly, on a library they share (`reborn/sdk/asm/toollib.s`: flags, errors and exit statuses as Plan 9's, buffered output, directories read whole, a tree walked); `mkfs`, `fsck` and `label` are RAM programs on the ROM disk's `/rom/bin`, bound at `/bin` after the caches.  `grep` and `sort` wait for C (4.5), `date` for the clock (phase 5), and `hwtest` for a way to reset into it.  `/proc`'s args, cwd and ns came with them (the calls `TASKREAD` and `NSINFO`; ns reads as the binds and mounts that make the namespace, as Plan 9's does), and the module directory now holds 127 modules.)
+
 #### **15.4 Programs in C**
 
 The cc65 target becomes a proper one (`-t hydra`):

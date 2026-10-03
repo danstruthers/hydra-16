@@ -11,10 +11,11 @@ K_SYSINFO:
             stz         r0 + 1
             ldx         #TASKS - 1
             ldy         T_REGISTER
-            php
-            sei
 @task:
+            php                                             ; (IRQs off for each look alone: all 16 at once
+            sei                                             ;   held them off for 478 cycles)
             QL_GET      TK_STATE
+            plp
             cmp         #ST_FREE + 1                        ; (C = 0: free)
             rol         r0
             rol         r0 + 1
@@ -26,6 +27,8 @@ K_SYSINFO:
             lda         r0 + 1
             eor         #$FF
             sta         r0 + 1
+            php
+            sei
             K0_GET      K0_MODCOUNT
             plp
             tax
