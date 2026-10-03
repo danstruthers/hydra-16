@@ -13,6 +13,10 @@ bin/fsck            ../obj/programs/fsck.hyx
 bin/label           ../obj/programs/label.hyx
 bin/grep            ../obj/programs/grep.hyx    ; The tools in C (programs/grep, programs/sort)
 bin/sort            ../obj/programs/sort.hyx
+bin/scom            bin/scom                    ; A song run by its name (an rc script: #!/bin/rc)
+songs/scom.zsm      songs/scom.zsm              ; Songs (play /rom/songs/test.zsm): ZSM files, the X16's
+songs/test.zsm      songs/test.zsm              ;   (the old system's test song, from os_rom/songs/test.mml)
+songs/allub.zsm     songs/allub.zsm
 sample/hi           ../obj/samples/hi.hyx       ; The assembly SDK's samples, built (sdk/asm/samples/)
 sample/upper        ../obj/samples/upper.hyx
 sample/tick         ../obj/samples/tick.hyx
@@ -21,4 +25,5 @@ sample/c/upper      ../obj/samples/c/upper.hyx
 sample/c/code       ../obj/samples/c/code.hyx
 sample/c/keys       ../obj/samples/c/keys.hyx
 sample/c/tones      ../obj/samples/c/tones.hyx
+sample/c/jukebox    ../obj/samples/c/jukebox.hyx
 sample/c/ctest      ../obj/samples/c/ctest.hyx

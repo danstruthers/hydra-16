@@ -5,7 +5,9 @@
 ;   program, a built-in, a function and a { } all see them the same way; a program gets rc's fds 0 to
 ;   CHILD_FDS - 1 (SPAWN_FDMAP), and none of rc's own above them.
 ;   A program's name without a / is looked for in each of $path's directories: SPAWN of dir/name, the next one on
-;   E_NOENT.  Before it starts, the variables go to the environment (var.s).
+;   E_NOENT.  A file that isn't a program but starts with #! is a script, Plan 9's way: the program named after the
+;   #! runs it, with its path and its arguments (#!/bin/rc).  Before it starts, the variables go to the environment
+;   (var.s).
 ;   A pipeline's stages, a background command and `{}'s command run as programs: a simple command's program
 ;   itself, anything else (a built-in, a function, a { }, an if ...) rc -c with its text.
 ;   Background tasks are kept (their records waited for as they end: run_bg_reap, before each prompt).
@@ -36,6 +38,7 @@ bg_tasks:   .res        16                                  ; Background tasks n
 msgbuf:     .res        32                                  ; An exit message
 pathbuf:    .res        PATH_MAX + 1
 fdmap:      .res        CHILD_FDS + 1                       ; SPAWN's map: rc's fds 0 to CHILD_FDS - 1
+bang:       .res        BANG_MAX + 1                        ; A script's first line (#!, its interpreter)
 
 .code
 
@@ -911,14 +914,107 @@ pput:
 :
             rts
 
-; SPAWN of pathbuf, its arguments p2, xf's flags and the map.  OUT: C = 0, .A = the task; or C = 1, .A
+; SPAWN of pathbuf, its arguments p2, xf's flags and the map; a file that isn't a program, a script (script).  OUT:
+; C = 0, .A = the task; or C = 1, .A
 spawn_it:
             LDR         r0, pathbuf
             MOVR        r1, p2
+            jsr         spawn_r
+            bcc         @done
+            cmp         #E_NOEXEC
+            beq         script
+            sec
+@done:
+            rts
+
+; SPAWN of r0, its arguments r1, xf's flags and the map.  OUT: as SPAWN
+spawn_r:
             LDR         r2, fdmap
             lda         xf
             ora         #SPAWN_FDMAP
             jmp         SPAWN
+
+; Pathbuf, which isn't a program: a script if it starts with #! (Plan 9's), the program named after it (up to a
+; space or the line's end) run with pathbuf and p2's arguments after it.  OUT: as SPAWN (E_NOEXEC: not a script)
+script:
+            LDR         r0, pathbuf
+            lda         #O_READ
+            jsr         OPEN
+            bcs         @noexec
+            sta         xt
+            LDR         r0, bang                            ; Its first bytes
+            LDR         r1, BANG_MAX
+            lda         xt
+            jsr         READ
+            php
+            pha
+            lda         xt
+            jsr         CLOSE
+            pla
+            plp
+            bcs         @noexec
+            tax
+            stz         bang,X
+            lda         bang                                ; #!?
+            cmp         #'#'
+            bne         @noexec
+            lda         bang + 1
+            cmp         #'!'
+            bne         @noexec
+            ldx         #2                                  ; Its interpreter: to a space or the line's end
+:
+            lda         bang,X
+            beq         :+
+            cmp         #' '
+            beq         :+
+            cmp         #CR
+            beq         :+
+            cmp         #LF
+            beq         :+
+            inx
+            bra         :-
+:
+            cpx         #3
+            bcc         @noexec                             ; (None named)
+            stz         bang,X
+            jsr         script_args
+            LDR         r0, bang + 2
+            MOVR        r1, p2
+            jmp         spawn_r
+
+@noexec:
+            lda         #E_NOEXEC
+            sec
+            rts
+
+; p2: a script's interpreter's arguments, in the arena: pathbuf (the script), then p2's (the script's own)
+script_args:
+            MOVR        p0, p2
+            jsr         arena_mark
+            sta         p2
+            stx         p2 + 1
+            ldx         #0                                  ; (.X: the bytes, for aput)
+            ldy         #0
+:
+            lda         pathbuf,Y                           ; The script's path, and its 0
+            jsr         aput
+            iny
+            cmp         #0
+            bne         :-
+            ldy         #0                                  ; Then its own, to the empty one that ends them
+            lda         (p0)
+            beq         @end
+@byte:
+            lda         (p0),Y
+            jsr         aput
+            iny
+            cmp         #0
+            bne         @byte
+            lda         (p0),Y
+            bne         @byte
+@end:
+            lda         #0
+            jmp         aput
 
 ; p2: the words of xw after the first, as SPAWN's arguments (each with its 0; a 0 after them), in the arena
 args_block:

@@ -130,6 +130,8 @@ The kernel task (task 0) keeps the kernel's state: its program zero page (`K0_*`
   listed in `romfs/romfs.txt`) are `programs/NAME/`, built into `obj/programs/NAME.hyx`; the SDK's samples are
   `sdk/asm/samples/NAME/` (`/rom/sample`); and a program of one's own, anywhere, `node build.js prog DIR`
   (`sdk/asm/README.md`).
+* A script is a file that starts with `#!` and its interpreter's path (Plan 9's: `#!/bin/rc`): rc runs that
+  program with the script's path and arguments when the file isn't a program (`/rom/bin/scom`).
 * A C program is a folder of `.c` files (and `.s` files, if it has any) in the same places (`sdk/c/samples/NAME/`
   for `/rom/sample/c`), compiled by cc65 for its target `none` and linked by `sdk/c/hydra.cfg` with the C library,
   `obj/sdk/c/hydra.lib`: cc65's `none.lib` with `sdk/c/lib`'s modules in place of cc65's, each named as the module

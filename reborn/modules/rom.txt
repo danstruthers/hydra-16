@@ -38,3 +38,4 @@ module      xd
 module      cmp
 module      more
 module      edit
+module      play

@@ -16,7 +16,7 @@ The SDK is this folder; `node build.js` builds the library and also copies the S
 | `hydra.cfg` | The link: the header, code and data from `$0800`, the BSS after them, the heap, and the C stack (2K) down from `$7F00` |
 | `lib/hydra.lib` | The library: cc65's `none.lib`, with the modules of `lib/` in place of cc65's that a target gives (the build: `obj/sdk/c/hydra.lib`) |
 | `lib/` | Its sources: `crt0.s` (the header, the start, `exit`), the files and stdio's buffers, the environment, `system`, `signal`, `time` and `clock`, conio, errors |
-| `samples/` | `hello` (arguments), `upper` (a filter), `code` (exit statuses), `keys` (conio: the screen and raw keys), `tones` (sound: `snd.h`), `ctest` (the library's test) |
+| `samples/` | `hello` (arguments), `upper` (a filter), `code` (exit statuses), `keys` (conio: the screen and raw keys), `tones` (sound: `snd.h`), `jukebox` (a song in the background: `snd_play`), `ctest` (the library's test) |
 
 ## A program
 
@@ -50,7 +50,7 @@ int main (int argc, char* argv[])
   `cgetc` reads keys raw (no echo, each as it's typed, the cursor and function keys as one code each: `CH_*` in
   `hydra.h`) until the program ends.
 * Sound (`snd.h`): claim the channels it uses (`snd_claim`), then patches, notes, volumes, bends and drums on
-  them; they're given back as it ends.
+  them; they're given back as it ends.  `snd_play` plays a song in the background (`play`, in a task of its own).
 * `time` and `clock` count from the program's start (`time` from 2000-01-01, till the system has a clock);
   `sleep` and `hy_sleep_ticks` let the other tasks run.
 * Its RAM: `$0800` to `$7F00`, for the program, its BSS, the heap (`malloc`) and the C stack (2K); its own RAM

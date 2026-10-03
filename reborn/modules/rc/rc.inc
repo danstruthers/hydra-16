@@ -93,6 +93,7 @@ ARENA_SIZE      = 10240         ; The commands' trees, and what expanding them m
 HEAP_SIZE       = 8192          ; Variables and functions
 SRC_MAX         = 8             ; Input sources, nested (., eval, functions)
 SAVE_MAX        = 16            ; Fds saved by redirections
+BANG_MAX        = 63            ; A script's first line read (#! and its interpreter's path: PATH_MAX at most)
 RC_FD_HIGH      = 10            ; rc's own fds (scripts', saved ones) from here: a command gets 0-9
 CHILD_FDS       = 10
 

@@ -114,7 +114,7 @@ function build({ modules, init, hwtest, bios, romfs: files }) {
     if (code[0] !== 0x78) throw new Error('the old paged ROM\'s bank 1 isn\'t the hardware test (no sei at $A000)');
     put(image, HWT_BANK, WINDOW, code);
     if (!bios) throw new Error('the hardware test\'s checksums need the BIOS ROM image');
-    put(image, HWT_BANK, HWT_SUMS, sums(bios, image));
+    put(image, HWT_BANK, HWT_SUMS, sums(bios, image, bank));
   }
   if (disk) {                                                 // Every file read back, as the CPU sees the disk
     const block = n => { const b = Buffer.alloc(512); for (let i = 0; i < 512; i++) b[i] = read(image, Math.floor(n / BLOCKS_PER_BANK), WINDOW + (n % BLOCKS_PER_BANK) * 512 + i); return b; };
@@ -124,9 +124,11 @@ function build({ modules, init, hwtest, bios, romfs: files }) {
 }
 
 // The hardware test's table of the ROMs' checksums (os_rom/tools/romsum.js): the BIOS pages (1 byte), the paged
-// banks (1), then a CRC of each page ($E000-$FEFF) and of each bank as the CPU sees it ($A000-$DEFF), low first
-function sums(bios, image) {
-  const pages = bios.length / PAGE, banks = image.length / BANK;
+// banks (1), then a CRC of each page ($E000-$FEFF) and of each bank as the CPU sees it ($A000-$DEFF), low first.
+// The banks are the banks used (0 to banks - 1, as the CPU selects them), not the image's: past bank 63 the board's
+// swapped bank bits (6 and 7) put a bank at 128 and up, and the image grows to hold it
+function sums(bios, image, banks) {
+  const pages = bios.length / PAGE;
   if (2 + 2 * (pages + banks) > HWT_SUMS_SIZE) throw new Error('too many pages and banks for the hardware test\'s table');
   const table = Buffer.alloc(HWT_SUMS_SIZE);
   table[0] = pages;

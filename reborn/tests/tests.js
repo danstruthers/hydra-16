@@ -222,7 +222,7 @@ const TOOL_LINES = [
   ["sleep 30 & sleep 30 & kill $apid; slay sleep; wait; ps","task  state",true],
   ["kill 9; kill x; echo $status","kill: 9: no such task\nkill: x: invalid argument\n1"],
   ["sleep 1; echo slept","slept"],
-  ["ls /rom/bin; whatis mkfs","fsck\ngrep\nlabel\nmkfs\nsort\n/bin/mkfs"],
+  ["ls /rom/bin; whatis mkfs","fsck\ngrep\nlabel\nmkfs\nscom\nsort\n/bin/mkfs"],
   ["label s; label s Shared Disk; label s","SRAM\nShared Disk"],
   ["fsck s","hydrafs label=Shared Disk\nfree 244 KB of 252 KB\ncheck: lost 0, unmarked 0, twice 0"],
   ["mkfs s Fresh; ls /sram; label s; echo $status","Fresh\n"],
@@ -344,6 +344,40 @@ const SND_LINES = [
   ["echo x >/dev/bell",null],
 ];
 
+// The song player's test lines (as the tools test's): play's errors; a file run by its name that isn't a program
+// (no #!); a song (allub, at 60 Hz: its key-ons timed in
+// check) with its channels claimed while it plays and given back when it's stopped; scom, a song that runs by its
+// name (an rc script); the C sample jukebox (snd_play)
+const PLAY_LINES = [
+  ["play; echo $status","usage: play [-l] song [n]\nusage"],
+  ["/rom/README; whatis scom","rc: /rom/README: not a program\n/bin/scom"],
+  ["play /rom/README; echo $status","play: /rom/README: not a song\nnot a song"],
+  ["play /rom/nosuch; echo $status","play: /rom/nosuch: not found\n1"],
+  ["play /rom/songs/allub.zsm & sleep 4; cat /dev/sndctl; kill $apid; wait; cat /dev/sndctl", [
+    "volume 100",
+    "claimed 0 1 2 3 4 5",
+    "volume 100",
+    "claimed",
+  ].join('\n')],
+  ["scom & sleep 1; cat /dev/sndctl; slay play; wait; cat /dev/sndctl","volume 100\nclaimed 0 1\nvolume 100\nclaimed"],
+  ["/rom/sample/c/jukebox /rom/songs/scom.zsm 2","2\n1\nstopped: 137"],
+];
+
+// A ZSM song's key-ons: { rate, ticks: [the song tick of each] }
+function ZSM_KEYONS(file) {
+  const b = fs.readFileSync(file), ticks = [];
+  let i = 16, tick = 0;
+  while (i < b.length) {
+    const c = b[i++];
+    if (c < 0x40) i++;
+    else if (c === 0x40) i += 1 + (b[i] & 0x3F);
+    else if (c < 0x80) { for (let k = 0; k < (c & 0x3F); k++, i += 2) if (b[i] === 8 && (b[i + 1] & 0x78)) ticks.push(tick); }
+    else if (c === 0x80) break;
+    else tick += c & 0x7F;
+  }
+  return { rate: (b[12] | b[13] << 8) || 60, ticks };
+}
+
 module.exports = {
   IRQ_OFF_MAX,
   tests: [
@@ -363,7 +397,7 @@ module.exports = {
       machine: { input: 'āls \'#fr\'\r' + 'āls /ram\r' + 'āls /bin\r' + 'āt_child f\r' + 'āls \'#fr\'/2\r' + 'ācat /rom/lib/profile\r' +
         'ācat /dev/sd/s/ctl\r' + 'āecho $window\r' + 'ā\x1dc' + 'āecho $window\r' + 'āls \'#fr\'\r' + 'āls /ram\r' + 'āls /dev\r' },
       expect: ['% ls \'#fr\'\n1/\n2/\n%', '% ls /ram\nbin/\nlib/\n%',
-        '% ls /bin\nfsck\ngrep\nlabel\nmkfs\nsort\ninit\nhello\nrc\nwstart\n', 't_child\n% t_child f\n', '% ls \'#fr\'/2\nbin/\nlib/\nmark\n%',
+        '% ls /bin\nfsck\ngrep\nlabel\nmkfs\nscom\nsort\ninit\nhello\nrc\nwstart\n', 't_child\n% t_child f\n', '% ls \'#fr\'/2\nbin/\nlib/\nmark\n%',
         'prompt=(', '% cat /dev/sd/s/ctl\nsram 512 KB 1024 blocks\nhydrafs label=SRAM\n', '% echo $window\n0\n%',
         '% echo $window\n1\n%', '% ls \'#fr\'\n1/\n2/\n4/\n%', '% ls /ram\nbin/\nlib/\n%', '\ncons\nconsctl\nwctl\nwnew\nser\nserctl\n%'],
     },
@@ -485,7 +519,7 @@ module.exports = {
     },
     {
       name: 'rom', what: 'the ROM disk: /rom (#f, spec x) walked on the Hydra, every file read back against its source (romfs/romfs.txt)',
-      init: 't_rom', cycles: 60e6,
+      init: 't_rom', cycles: 200e6,
       check(m, out) {
         const romfs = require('../tools/romfs.js'), { crc16 } = require('../tools/romimg.js');
         const files = romfs.manifest(path.join(__dirname, '..', 'romfs', 'romfs.txt')), seen = new Map(), f = [];
@@ -609,6 +643,30 @@ module.exports = {
         for (const ch of [0, 1, 2, 3, 7]) if (!m.ym.keyOns.some(k => k.startsWith('ch ' + ch + ' '))) f.push('no key-on on channel ' + ch + ': ' + keys);
         if (m.ym.lost) f.push(m.ym.lost + ' writes to the YM2151 while it was busy');
         this.notes = ['the YM2151: ' + m.ym.keyOns.length + ' key-ons'];
+        return f;
+      },
+    },
+    {
+      name: 'play', what: 'the song player: its errors; a song timed (its key-ons against its stream), its channels claimed and given back; scom; jukebox',
+      init: 't_rc', cycles: 150e6,
+      get machine() { return { input: PLAY_LINES.map(l => '\u0101' + l[0] + '\r').join('') }; },
+      get expect() { return PLAY_LINES.map(l => '% ' + l[0] + '\n' + (l[2] ? l[1] : (l[1] === null ? '' : l[1] + '\n') + '%')); },
+      // (allub's key-ons from its 20th song tick to its 60th key-on, each against its song tick: they keep time to
+      // within two system ticks, so the tempo neither drifts nor jitters more.  The first ticks are left out: tick 0
+      // sets six voices up, hundreds of writes, and its key-ons go out late)
+      check(m) {
+        const f = [], mult = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'obj', 'build.json'), 'utf8')).clock || 1;
+        const song = ZSM_KEYONS(path.join(__dirname, '..', 'romfs', 'songs', 'allub.zsm'));
+        const cyc = m.ym.keyOns.map(k => +k.match(/at cycle (\d+)/)[1]), N = 60, K0 = song.ticks.findIndex(t => t >= 20);
+        const perTick = 3579545 * mult / song.rate, slack = 2 * 3579545 * mult / 200;
+        if (cyc.length < N) return ['allub: ' + cyc.length + ' key-ons (' + N + ' wanted)'];
+        const e = [];
+        for (let k = K0; k < N; k++) e.push(cyc[k] - song.ticks[k] * perTick);
+        const spread = Math.max(...e) - Math.min(...e), span = (song.ticks[N - 1] - song.ticks[K0]) * perTick;
+        this.notes = ['allub (60 Hz) timed: key-ons ' + K0 + '-' + (N - 1) + ' over ' + Math.round(span) + ' cycles, off their times by ' +
+          Math.round(spread) + ' cycles at most from each other (at most ' + Math.round(slack) + ': two system ticks)'];
+        if (spread > slack) f.push('allub: its key-ons ' + Math.round(spread) + ' cycles apart from their times (two system ticks: ' + Math.round(slack) + ')');
+        if (m.ym.lost) f.push(m.ym.lost + ' writes to the YM2151 while it was busy');
         return f;
       },
     },
