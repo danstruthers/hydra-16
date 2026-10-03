@@ -1,11 +1,12 @@
 ; ****************************************************************************
-; init - the first program (task 1), for phase 2: its fds 0-2 on the console (#c/cons, the console driver's window
-; 0; or, without it, none, and the bring-up console's); its namespace, built in till there are disks (the plan's
-; appendix E, as far as the devices there are go: #/ at /, #c, #n and #t at /dev, #m at /dev/mod, #p at /proc, #d
-; at /dev/sd, #S at /dev/spi); the tasks listed; hello run and waited for; then the shells (tsh, till rc comes in
-; phase 4): window 0's, and the windows' starter (tsh w: a shell in each window the user asks for, Ctrl-] c), each
-; started again when it ends.  It waits for every task left to it (the windows' shells are).  Its note handler keeps
-; it going.
+; init - the first program (task 1): its fds 0-2 on the console (#c/cons, the console driver's window 0; or, without
+; it, none, and the bring-up console's); the RAM disks started (r: 256K, s: 512K, each halved till it fits); its
+; namespace from the namespace file (nslib.s's ns_default: its own area of the RAM disk, /rom/lib/namespace, a card's
+; /lib/namespace; with no /rom/lib/namespace, the one built in here: the devices at their places); the tasks listed;
+; hello run and waited for; then the shells (tsh, till rc comes in phase 4), each with a namespace of its own (it
+; builds it: ns_default): window 0's, and the windows' starter (tsh w: a shell in each window the user asks for,
+; Ctrl-] c), each started again when it ends.  It waits for every task left to it (the windows' shells are).  Its
+; note handler keeps it going.
 
 .include "hydra.inc"
 .include "hyx2.inc"
@@ -17,6 +18,8 @@
 child:      .res        1
 sh0:        .res        1                                   ; Window 0's shell ...
 sw:         .res        1                                   ;   and the windows' starter
+fd:         .res        1
+banks:      .res        1                                   ; A RAM disk's size, in 8K banks
 
 .bss
 msg:        .res        32                                  ; An exit message, an error's text
@@ -34,7 +37,12 @@ main:
             lda         #0
             jsr         DUP
 :
+            jsr         ramdisks
+            jsr         ns_default                          ; Its namespace: the file's
+            bcc         :+
+            PRINT       s_builtin                           ; (None: the one built in)
             jsr         namespace
+:
             PRINT       s_up
             jsr         GETPID
             jsr         PUTHEX
@@ -97,7 +105,7 @@ shells:
 shell0:
             LDR         r0, s_tsh
             LDR         r1, s_w0
-            lda         #SPAWN_NEWGROUP
+            lda         #SPAWN_NEWGROUP | SPAWN_NEWNS
             jsr         SPAWN
             sta         sh0
             bcc         :+
@@ -109,7 +117,7 @@ shell0:
 starter:
             LDR         r0, s_tsh
             LDR         r1, s_ww
-            lda         #0
+            lda         #SPAWN_NEWNS
             jsr         SPAWN
             sta         sw
             bcc         :+
@@ -117,6 +125,89 @@ starter:
             sta         sw
 :
             rts
+
+; The RAM disks started: the RAM disk (r: 256K of the storage driver's banks) and the shared one (s: 512K of shared
+; RAM), each halved till it fits (a machine with less); each gets an empty HydraFS, and the shared one bin and lib
+; (the shared caches).  One that can't start is said
+ramdisks:
+            LDR         r0, s_ctlr
+            lda         #32
+            jsr         ramdisk
+            LDR         r0, s_ctls
+            lda         #64
+            jsr         ramdisk
+            LDR         r0, s_sbin                          ; The shared caches: its bin and lib
+            jsr         mkdir
+            LDR         r0, s_slib
+
+; Make directory r0 (there already, or no disk: as it is)
+mkdir:
+            lda         #O_READ
+            ldx         #DM_DIR
+            jsr         CREATE
+            bcs         :+
+            jmp         CLOSE
+:
+            rts
+
+; RAM disk ctl file r0 started, .A banks, or half that ... (one started already: as it is)
+ramdisk:
+            sta         banks
+            lda         #O_WRITE
+            jsr         OPEN
+            bcs         @error
+            sta         fd
+@try:
+            ldx         #0                                  ; "start N"
+:
+            lda         s_start,X
+            sta         msg,X
+            inx
+            cpx         #6
+            bne         :-
+            lda         banks
+            cmp         #10
+            bcc         @one
+            ldy         #'0' - 1                            ; (Its tens)
+:
+            iny
+            sec
+            sbc         #10
+            bcs         :-
+            adc         #10
+            pha
+            tya
+            sta         msg,X
+            inx
+            pla
+@one:
+            ora         #'0'
+            sta         msg,X
+            inx
+            stx         r1
+            stz         r1 + 1
+            LDR         r0, msg
+            lda         fd
+            jsr         WRITE
+            bcc         @done
+            cmp         #E_BUSY                             ; (Started already)
+            beq         @done
+            cmp         #E_NOMEM
+            bne         @failed
+            lsr         banks                               ; (Too big: half)
+            bne         @try
+            lda         #E_NOMEM
+@failed:
+            pha
+            lda         fd
+            jsr         CLOSE
+            pla
+@error:
+            jmp         error
+
+@done:
+            lda         fd
+            jmp         CLOSE
 
 ; The namespace, built in (a bind each: its flags, new, old): what can't be bound is said, and the rest goes on
 namespace:
@@ -176,6 +267,12 @@ s_close:    .byte       ")"
 s_crlf:     .byte       CR, LF, 0
 s_error:    .byte       "init: ", 0
 s_tsh:      .byte       "#m/tsh", 0
+s_builtin:  .byte       "init: no /rom/lib/namespace: the one built in", CR, LF, 0
+s_ctlr:     .byte       "#d/r/ctl", 0
+s_ctls:     .byte       "#d/s/ctl", 0
+s_sbin:     .byte       "#fs/bin", 0
+s_slib:     .byte       "#fs/lib", 0
+s_start:    .byte       "start "
 s_w0:       .byte       "0", 0
 s_ww:       .byte       "w", 0
 ns_table:   .byte       MREPL                               ; bind '#/' /
@@ -209,3 +306,5 @@ s_devmod:   .byte       "/dev/mod", 0
 s_proc:     .byte       "/proc", 0
 s_devsd:    .byte       "/dev/sd", 0
 s_devspi:   .byte       "/dev/spi", 0
+
+.include "nslib.s"

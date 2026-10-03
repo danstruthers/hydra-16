@@ -18,6 +18,7 @@
 ;   "h"         open /hello (its namespace's): end with code 0 ($E0 + the error, if one)
 ;   "m"         bind #T/sub at / (in place), then open /inner: end with code 0 ($E0 + the error, if one)
 ;   "j"         claim console window 1's notes ("group" to #c1/consctl), then as "i"
+;   "f"         create /ram/mark (its namespace's): end with code 0 ($E0 + the error, if one)
 ;   anything else: end with code $EE
 
 .include "hydra.inc"
@@ -219,6 +220,20 @@ open:
             ora         #$E0
             jmp         end
 
+; Create /ram/mark
+op_f:
+            LDR         r0, s_mark
+            lda         #O_WRITE
+            ldx         #0
+            jsr         CREATE
+            bcs         :+
+            jsr         CLOSE
+            lda         #0
+            jmp         end
+:
+            ora         #$E0
+            jmp         end
+
 op_m:
             LDR         r0, s_tsub
             LDR         r1, s_root
@@ -289,13 +304,14 @@ hex:
             rts
 
 .rodata
-ops:        .byte       "esykpocgndtbrwihmj"
+ops:        .byte       "esykpocgndtbrwihmjf"
 OPS         = * - ops
 op_vec:     .word       op_e, op_s, op_y, op_k, op_p, op_o, op_c, op_g, op_n, op_d, op_t, op_b, op_r, op_w, op_i
-            .word       op_h, op_m, op_j
+            .word       op_h, op_m, op_j, op_f
 s_c1ctl:    .byte       "#c1/consctl", 0
 s_group:    .byte       "group"
 s_hello:    .byte       "/hello", 0
+s_mark:     .byte       "/ram/mark", 0
 s_inner:    .byte       "/inner", 0
 s_tsub:     .byte       "#T/sub", 0
 s_root:     .byte       "/", 0

@@ -1,7 +1,8 @@
 ; ****************************************************************************
 ; tsh - the test shell, till rc comes (phase 4): one in each console window.  "tsh N" is window N's: its fds 0-2
-; the window's cons, the window's notes its own note group's (consctl's group), and the window's console at /dev in
-; its namespace.  A line at a time:
+; the window's cons, the window's notes its own note group's (consctl's group); its namespace its own, built as it
+; starts (init starts it with an empty one: nslib.s's ns_default, from /rom/lib/namespace, with its own area of the
+; RAM disk at /ram), and the window's console at /dev in it.  A line at a time:
 ;   ps          the tasks
 ;   ls PATH     a directory's names (a / after each directory's)
 ;   cat PATH    a file
@@ -9,7 +10,8 @@
 ;   NAME ...    the module NAME (#m/NAME) run with the rest of the line as its arguments, and waited for (Ctrl-C
 ;               ends it: the shell's note handler keeps the shell going)
 ; "tsh w" starts the windows' shells: it waits for the user's Ctrl-] c (a read of #c/wnew: the window made), starts
-; "tsh N" there, and ends (init starts it again; the new shell is init's to wait for then).
+; "tsh N" there (with an empty namespace: it builds its own), and ends (init starts it again; the new shell is
+; init's to wait for then).
 
 .include "hydra.inc"
 .include "hyx2.inc"
@@ -57,6 +59,8 @@ main:
             sta         win
             jsr         names
             jsr         window
+            jsr         ns_default                          ; Its namespace
+            jsr         console
             PRINT       s_hello
             lda         win
             jsr         PUTC
@@ -342,8 +346,7 @@ names:
             sta         n_cons + 3 + 5
             rts
 
-; Its fds 0-2 the window's cons, its notes its own note group's, and its console at /dev (but window 0's, which is
-; there already).  A window that isn't there: the end
+; Its fds 0-2 the window's cons, and its notes its own note group's.  A window that isn't there: the end
 window:
             lda         #0
             jsr         CLOSE
@@ -374,6 +377,10 @@ window:
             lda         fd
             jsr         CLOSE
 :
+            rts
+
+; Its window's console at /dev, in place of window 0's (the namespace file's; window 0's: as it is)
+console:
             lda         win
             cmp         #'0'
             beq         @done
@@ -406,7 +413,7 @@ starter:
             stz         buf + 1                             ; ("N": its argument)
             LDR         r0, s_tsh
             LDR         r1, buf
-            lda         #SPAWN_NEWGROUP
+            lda         #SPAWN_NEWGROUP | SPAWN_NEWNS
             jsr         SPAWN
             lda         #0
 @end:
@@ -454,3 +461,5 @@ s_cd:       .byte       "cd", 0
 s_pwd:      .byte       "pwd", 0
 cmd_names:  .word       s_ps, s_ls, s_cat, s_cd, s_pwd, 0
 cmd_vec:    .word       DBG_PS, ls, cat, cd, pwd
+
+.include "nslib.s"

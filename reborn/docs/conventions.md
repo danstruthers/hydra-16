@@ -164,6 +164,9 @@ The kernel task (task 0) keeps the kernel's state: its program zero page (`K0_*`
   members, in order, each with the rest of the name.  `OPEN`, `REMOVE` and the stat calls try them in turn till
   one isn't `E_NOENT`; `CREATE` goes to the `MCREATE` member (or the first).  A directory opened at a mount point
   with more members than one is a union directory: `READ` gives every member's records, one member after another.
+* A task's default namespace comes from the namespace file, `/rom/lib/namespace` (and a card's after it), by
+  `sdk/asm/nslib.s`'s `ns_default`, Plan 9's `newns`: init's own, and each shell's, which init starts with an empty
+  one (`SPAWN_NEWNS`).  `$task` in it is the task, whose own area of the RAM disk (`r/N`) is its `/ram`.
 
 ## Source style
 

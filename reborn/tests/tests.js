@@ -85,10 +85,32 @@ module.exports = {
   tests: [
     {
       name: 'boot', what: 'the kernel boots, POST finds nothing wrong; init runs hello and waits for it',
-      init: 'init', cycles: 6e6,
+      init: 'init', cycles: 20e6,
       expect: ['Hydra-16 reborn: kernel 0.1, ABI 1', 'POST ZP:0 ST:0 OS:0 HI:0 SH:S W:0',
         'RAM U:0 F0:0/00/0000 F4:0/00/0000 F8:0/00/0000 FC:0/00/0000 00:0/00/0000 10:0/00/0000', 'POST ok', 'RAM modules: 02',
         'task F: cons', 'task 1: init', 'init: up in task 01', 'hello, from init', 'init: hello ended: code $07 (bye)'],
+    },
+    {
+      name: 'init', what: 'init from files: the RAM disks started, the namespace file run, each shell\'s own namespace and /ram (a window\'s too)',
+      init: 'init', modules: ['t_child'], cycles: 250e6,
+      // (ā: wait for a prompt; \x1d c: Ctrl-] c, a window made, its shell started.  t_child f makes /ram/mark: in
+      // its shell's area, 2, and not in window 1's shell's, 4)
+      machine: { input: 'āls #fr\r' + 'āls /ram\r' + 'āt_child f\r' + 'āls #fr/2\r' + 'ācat /rom/lib/profile\r' +
+        'ācat /dev/sd/s/ctl\r' + 'ā\x1dc' + 'āls #fr\r' + 'āls /ram\r' + 'āls /dev\r' },
+      expect: ['tsh 0> ls #fr\n1/\n2/\ntsh 0>', 'tsh 0> ls /ram\nbin/\nlib/\ntsh 0>', 'tsh 0> ls #fr/2\nbin/\nlib/\nmark\ntsh 0>',
+        'prompt=(', 'tsh 0> cat /dev/sd/s/ctl\nsram 512 KB 1024 blocks\nhydrafs label=SRAM\n', 'tsh: window 1',
+        'tsh 1> ls #fr\n1/\n2/\n4/\ntsh 1>', 'tsh 1> ls /ram\nbin/\nlib/\ntsh 1>', '\ncons\nconsctl\nwctl\nwnew\nser\nserctl\ntsh 1>'],
+    },
+    {
+      name: 'newns', what: 'the default namespace\'s library (nslib): an old area emptied, a namespace file run (quotes, comments, $task, flags, bad lines)',
+      init: 't_newns', cycles: 60e6,
+      check(m, out) {
+        const f = [];
+        for (const l of ['newns: frob /dev: invalid argument', 'newns: bind /tmp: invalid argument'])
+          if (!out.includes(l + '\n')) f.push('not said: ' + l);
+        if (/newns: .*(null zero|mount|bind -b|bind '#n')/.test(out)) f.push('a good line said as a bad one');
+        return f;
+      },
     },
     {
       name: 'post-t', what: 'POST: a T line stuck low (U7)',
