@@ -17,8 +17,8 @@
 // (modules, sharedU, model, ramFault, u7Fault, aciaLine, stuckIrq, acia, paste, input, sd: block devices, rtc,
 // rtcBatteryLow, clock, trace, watches, pcWatches, marks, profile, ymLog), and opt.log(text) for the watches and
 // marks.  opt.pcHost: what the serial port sends goes through its push(byte, cycle), which gives back the bytes that
-// are the console's (the rest are /pc's frames: hydrasim.js --pc-dir).  run(limit) runs to a cycle; the rest is its
-// state, for a report.
+// are the console's (the rest are /pc's frames: pchost.js, run.js --pc-dir), and its send(bytes) is what the PC
+// sends.  run(limit) runs to a cycle; the rest is its state, for a report.
 'use strict';
 const { createCpu, FLAGS } = require('./cpu65c02.js');
 const { createAcia } = require('./acia.js');
@@ -56,6 +56,7 @@ function createMachine(opt) {
   const acia = createAcia({ clock: opt.clock, wdc: opt.acia === 'wdc', paste: opt.paste, input: opt.input, consoleOnly: !!opt.pcHost,
     onTx: (v, t) => { for (const b of opt.pcHost ? opt.pcHost.push(v, t) : [v]) out(b, t); } });
   function out(v, t) { if (opt.pcHost) acia.shown(v, t); m.out += String.fromCharCode(v); for (const k of opt.marks || []) if (m.out.endsWith(k)) log('mark: ' + JSON.stringify(k) + ' at cycle ' + t); }
+  if (opt.pcHost) opt.pcHost.send = bytes => acia.send(bytes);   // (The PC's replies: on the line, at its rate)
   const spi = createSpi(opt.sd || [], opt.spiEcho || []);
   const i2c = opt.i2c ? createI2c({ devices: opt.i2c }) : null;     // (opt.i2c: { address: size }, memories)
   const via = createVia({ portB: spi.portB, miso: spi.miso, portAIn: opt.gpioIn, i2c });

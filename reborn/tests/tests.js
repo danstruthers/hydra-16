@@ -12,6 +12,8 @@
 //   expect           lines the output must have (for a test without "PASS")
 //   machine          the emulator's options for it (sim/lib/machine.js): faults, keys typed (input), modules
 //   send             { after: a mark, bytes: [...] }: the PC sends them, back to back, when the mark is out
+//   pc               { files, readOnly, damage }: a folder at /pc, the emulator the PC tool (sim/test.js: pcFolder);
+//                    check(m) has it as m.pc ({ dir, host })
 //   budgets          [{ what, from, to, minus, per, max }]: the cycles between two marks (less those between the
 //                    two marks in minus, a baseline), divided by per, at most max (a number, or a function of the
 //                    build's options: { clock, acia }, obj/build.json)
@@ -210,6 +212,7 @@ const TOOL_LINES = [
     "bind -c '#fr/2/lib' /lib",
     "bind -a '#fs/lib' /lib",
     "bind -a '#fx/lib' /lib",
+    "bind '#P' /pc",
   ].join('\n')],
   ["ps -a","task  state   parent     cpu group  name\n   0  ready   -",true],
   ["mods", [
@@ -427,6 +430,59 @@ function ZSM_KEYONS(file) {
     else tick += c & 0x7F;
   }
   return { rate: (b[12] | b[13] << 8) || 60, ticks };
+}
+
+// The /pc tests' folder (the emulator as the PC tool: sim/lib/pchost.js), and the pc test's lines (as the tools
+// test's): a listing, a file read, a file made by a redirect, a copy to the PC compared (its 512-byte writes go in
+// frames of 128 bytes: the rest of each in the same request block, a fid other than the first's, as another /pc
+// file is open), a directory made, a rename, a program run from the PC (by its path, and by its name through a
+// bind), cd into it and a relative name, a directory and a file removed, missing names, the folder's files
+const PC_FILES = () => ({ 'hello.txt': 'Hello from the PC\nline two\n', 'sub/x': 'x', 'sub/deep/': '',
+  'bin/hi': fs.readFileSync(path.join(__dirname, '..', 'obj', 'samples', 'hi.hyx')) });
+const PC_LINES = [
+  ["ls /pc","bin/\nhello.txt\nsub/"],
+  ["cat /pc/hello.txt","Hello from the PC\nline two"],
+  ["ls -l /pc/sub","d-rw-rw-rw- P-        0 2026-10-03 15:04 deep\n--rw-rw-rw- P-        1 2026-10-03 15:04 x"],
+  ["echo hi >/pc/new.txt; cat /pc/new.txt","hi"],
+  ["{cp /rom/README /pc/r} </pc/hello.txt; cmp /rom/README /pc/r; echo $status",""],
+  ["mkdir /pc/d; mv /pc/r /pc/rr; ls /pc","bin/\nd/\nhello.txt\nnew.txt\nrr\nsub/"],
+  ["/pc/bin/hi Ann","Hello, Ann!",true],
+  ["bind -a /pc/bin /bin; hi Bob","Hello, Bob!",true],
+  ["cd /pc/sub; pwd; cat ../hello.txt | wc -l; cd","/pc/sub\n      2"],
+  ["rmdir /pc/d; rm /pc/sub/x; cat /pc/nope; rm /pc/nope","cat: /pc/nope: not found\nrm: /pc/nope: not found"],
+  ["ls /pc /pc/sub","bin/\nhello.txt\nnew.txt\nrr\nsub/\ndeep/"],
+];
+// The pc-ro test's lines: the folder served read-only
+const PC_RO_LINES = [
+  ["cat /pc/hello.txt","Hello"],
+  ["echo no >/pc/x","rc: /pc/x: read-only"],
+  ["echo no >/pc/hello.txt","rc: /pc/hello.txt: read-only"],
+  ["rm /pc/hello.txt; mkdir /pc/d; mv /pc/hello.txt /pc/h","rm: /pc/hello.txt: read-only\nmkdir: /pc/d: read-only\nmv: /pc/hello.txt: read-only"],
+  ["ls -l /pc","--r--r--r-- P-        6 2026-10-03 15:04 hello.txt"],
+];
+// A file of 120 lines (pc-two's), and a song (pc-song's: a note, then its loop, another, 0.6 s apart at 60 Hz)
+const PC_BIG = () => Buffer.from([...Array(120)].map((_, i) => 'line ' + i + ' of the big file on the PC\n').join(''));
+function PC_SONG() {
+  const fm = pairs => [0x40 | pairs.length / 2, ...pairs];
+  const voice = [0x20, 0xC7, 0x38, 0x00];
+  for (const op of [0x00, 0x08, 0x10, 0x18]) voice.push(0x40 + op, 0x01, 0x60 + op, 0x10, 0x80 + op, 0x1F, 0xA0 + op, 0x00, 0xC0 + op, 0x00, 0xE0 + op, 0x0F);
+  const note = kc => [...fm([0x28, kc, 0x30, 0x00, 0x08, 0x78]), 0x80 + 30, ...fm([0x08, 0x00]), 0x80 + 6];
+  const intro = [...fm(voice), 0x05, 0x3F, 0x40, 0x82, 0x12, 0x34, ...note(0x3E)];    // (A PSG write; an extension)
+  const loop = [...note(0x44)];
+  const loopAt = 16 + intro.length;
+  const hdr = [0x7A, 0x6D, 1, loopAt & 255, loopAt >> 8 & 255, loopAt >> 16, 0, 0, 0, 0x01, 0, 0, 60, 0, 0, 0];
+  return Buffer.from([...hdr, ...intro, ...loop, 0x80]);
+}
+// A test's lines typed, each at its prompt, and its expect (as the tools test's)
+const typed = lines => lines.map(l => 'ā' + l[0] + '\r').join('');
+const expected = lines => lines.map(l => '% ' + l[0] + '\n' + (l[2] ? l[1] : (l[1] === null ? '' : l[1] + '\n') + '%'));
+// The PC host's report (its note), checked: attaches, damaged frames, repeats
+function pcReport(m, attaches, naks, repeats) {
+  const h = m.pc.host, f = [];
+  if (h.attaches !== attaches) f.push('/pc: ' + h.attaches + ' attach(es), not ' + attaches);
+  if (h.naks !== naks) f.push('/pc: ' + h.naks + ' damaged, not ' + naks);
+  if (h.fsrv.stats.repeats !== repeats) f.push('/pc: ' + h.fsrv.stats.repeats + ' repeated, not ' + repeats);
+  return f;
 }
 
 module.exports = {
@@ -754,6 +810,68 @@ module.exports = {
           (r[4] & 7) !== 5 || (r[1] & 0x80)) f.push('the DS1747: ' + hex(r) + ' (2024-02-29 12:00, day 5, running wanted)');
         return f;
       },
+    },
+    {
+      name: 'pc', what: '/pc (#P, the console driver\'s): a folder on the PC through the serial port, its frames between the console\'s bytes; files read, made, copied, renamed, removed; a program run from it',
+      init: 't_rc', cycles: 250e6, pc: { files: PC_FILES },
+      get machine() { return { input: typed(PC_LINES) }; },
+      get expect() { return expected(PC_LINES); },
+      check(m) {
+        const f = pcReport(m, 1, 0, 0), at = n => path.join(m.pc.dir, n);
+        if (fs.readFileSync(at('new.txt'), 'latin1') !== 'hi\n') f.push('new.txt on the PC: ' + JSON.stringify(fs.readFileSync(at('new.txt'), 'latin1')));
+        if (!fs.readFileSync(at('rr')).equals(fs.readFileSync(path.join(__dirname, '..', 'romfs', 'README')))) f.push('rr on the PC isn\'t /rom/README');
+        for (const n of ['d', 'r', 'sub/x']) if (fs.existsSync(at(n))) f.push(n + ' is still on the PC');
+        return f;
+      },
+    },
+    {
+      name: 'pc-two', what: '/pc from two tasks at once (a pipeline: one reads a file, the other writes its copy): one request at a time, the other waiting its turn',
+      init: 't_rc', cycles: 400e6, pc: { files: { big: PC_BIG } },
+      machine: { input: 'ācat /pc/big | cat >/pc/copy; cmp /pc/big /pc/copy; echo $status\r' },
+      expect: ['% cat /pc/big | cat >/pc/copy; cmp /pc/big /pc/copy; echo $status\n\n%'],
+      check(m) {
+        const f = pcReport(m, 1, 0, 0);
+        if (!fs.readFileSync(path.join(m.pc.dir, 'copy')).equals(PC_BIG())) f.push('the copy on the PC isn\'t big');
+        return f;
+      },
+    },
+    {
+      name: 'pc-song', what: 'a song played from /pc (play /pc/t.zsm 2), its loop twice more, in time: a read on the line doesn\'t hold a note up',
+      init: 't_rc', cycles: 120e6, pc: { files: { 't.zsm': PC_SONG } },
+      machine: { input: 'āplay /pc/t.zsm 2; echo $status\r' },
+      expect: ['% play /pc/t.zsm 2; echo $status\n\n%'],
+      check(m) {
+        const f = pcReport(m, 1, 0, 0), mult = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'obj', 'build.json'), 'utf8')).clock || 1;
+        const on = m.ym.keyOns.map(k => +k.match(/at cycle (\d+)/)[1]), want = 0.6 * 3579545 * mult, slack = 2 * 3579545 * mult / 200;
+        if (on.length !== 4) return [...f, 'key-ons: ' + on.length + ', not 4'];
+        for (let k = 1; k < 4; k++) if (Math.abs(on[k] - on[k - 1] - want) > slack)
+          f.push('key-on ' + k + ' came ' + (on[k] - on[k - 1]) + ' cycles after the last, not 0.6 s (' + Math.round(want) + ', give or take two system ticks)');
+        return f;
+      },
+    },
+    {
+      name: 'pc-ro', what: '/pc served read-only (the PC tool\'s --read-only): files read; a write, a create, a remove, a mkdir, a rename refused; the folder as it was',
+      init: 't_rc', cycles: 120e6, pc: { files: { 'hello.txt': 'Hello\n' }, readOnly: true },
+      get machine() { return { input: typed(PC_RO_LINES) }; },
+      get expect() { return expected(PC_RO_LINES); },
+      check(m) {
+        const f = pcReport(m, 1, 0, 0);
+        if (fs.readdirSync(m.pc.dir).join() !== 'hello.txt' || fs.readFileSync(path.join(m.pc.dir, 'hello.txt'), 'latin1') !== 'Hello\n') f.push('the folder changed: ' + fs.readdirSync(m.pc.dir).join());
+        return f;
+      },
+    },
+    {
+      name: 'pc-none', what: '/pc with no PC tool: the attach (its bytes on the terminal) unanswered, an error a second on, each time; the console goes on',
+      init: 't_rc', cycles: 80e6,
+      machine: { input: 'āls /pc\rācat /pc/x\rāecho still here\r' },
+      expect: ['% ls /pc\n\x1eA', 'ls: /pc: i/o error\n%', '% cat /pc/x\n\x1eA', 'cat: /pc/x: i/o error\n%', '% echo still here\nstill here\n%'],
+    },
+    {
+      name: 'pc-damage', what: '/pc\'s frames damaged on the line: requests (the PC tool asks for them again: its NAK), a reply (the Hydra asks again, and the PC tool answers from its last reply); the answers right, nothing damaged shown',
+      init: 't_rc', cycles: 120e6, pc: { files: { 'hello.txt': 'Hello from the PC\n' }, damage: ['q3', 'r4', 'q6'] },
+      machine: { input: 'āls /pc\rācat /pc/hello.txt\rācat /pc/hello.txt\r' },
+      expect: ['% ls /pc\nhello.txt\n%', '% cat /pc/hello.txt\nHello from the PC\n% cat /pc/hello.txt\nHello from the PC\n%'],
+      check: m => pcReport(m, 1, 2, 1),
     },
     {
       name: 'cons', what: 'the console: lines, editing, history, raw keys, Ctrl-C, windows (shown, repainted, made, gone), 115200, the bell',

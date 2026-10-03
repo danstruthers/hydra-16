@@ -13,6 +13,7 @@
 const fs = require('fs');
 const path = require('path');
 const { boot, labels } = require('./run.js');
+const { createPcHost } = require('./lib/pchost.js');
 const romimg = require('../tools/romimg.js');
 const romfs = require('../tools/romfs.js');
 const { readManifest, hwtest } = require('../build.js');
@@ -37,6 +38,26 @@ function image(t) {
     romfs: romfs.manifest(path.join(ROOT, 'romfs', 'romfs.txt')) }).image;
 }
 
+// A test's PC folder (t.pc: { files: { name: text or bytes (or a function giving them), 'dir/': '' } (or a function
+// giving that), readOnly, damage }), made afresh in
+// obj/pc/NAME, its files stamped 2026-10-03 15:04:05; and the PC tool for it (sim/lib/pchost.js).  OUT: { dir, host }
+function pcFolder(t, opt) {
+  const dir = path.join(ROOT, 'obj', 'pc', t.name), when = new Date(2026, 9, 3, 15, 4, 5);
+  fs.rmSync(dir, { recursive: true, force: true });
+  fs.mkdirSync(dir, { recursive: true });
+  const files = typeof t.pc.files === 'function' ? t.pc.files() : t.pc.files || {};
+  for (const [n, data] of Object.entries(files)) {
+    const f = path.join(dir, n);
+    if (n.endsWith('/')) fs.mkdirSync(f, { recursive: true });
+    else { fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, typeof data === 'function' ? data() : data); }
+  }
+  const stamp = d => { for (const n of fs.readdirSync(d)) { const f = path.join(d, n); if (fs.statSync(f).isDirectory()) stamp(f); fs.utimesSync(f, when, when); } };
+  stamp(dir);
+  const host = createPcHost({ dir, readOnly: !!t.pc.readOnly, damage: t.pc.damage || [],
+    log: opt.verbose ? s => console.log('  [pc] ' + s) : undefined });
+  return { dir, host };
+}
+
 function runTest(t, opt) {
   const bootDone = labels().byName.get('BOOT_DONE');          // (The boot's cli: IRQs-off stretches count from it)
   const marks = {}, failures = [], lines = [];
@@ -51,8 +72,10 @@ function runTest(t, opt) {
     if (!(name in marks)) marks[name] = at;
     if (t.send && name === t.send.after) m.acia.send(t.send.bytes);
   };
+  const pc = t.pc ? pcFolder(t, opt) : null;
   m = boot(Object.assign({ prom: image(t), seed: opt.seed, marks: markNames, log, trace: 40,
-    pcWatches: bootDone === undefined ? [] : [{ pc: bootDone, page: 0 }] }, t.machine || {}));
+    pcWatches: bootDone === undefined ? [] : [{ pc: bootDone, page: 0 }] }, t.machine || {}, pc ? { pcHost: pc.host } : {}));
+  m.pc = pc;
   const done = new RegExp('^' + t.init + ': (PASS|FAIL)', 'm');
   const target = t.expect ? null : done;
   let status = '';
@@ -81,7 +104,8 @@ function runTest(t, opt) {
   if (ioff) budgets.push({ what: 'longest IRQs-off stretch (' + ioff[1] + ' - ' + ioff[2] + ')', value: ioff[0], max: IRQ_OFF_MAX, total: true });
   if (ioff && ioff[0] > IRQ_OFF_MAX) failures.push('IRQs off for ' + ioff[0] + ' cycles at ' + ioff[1] + ' - ' + ioff[2] + ' (budget ' + IRQ_OFF_MAX + ')');
   if (t.check) failures.push(...t.check(m, out));
-  return { m, out, lines, failures, budgets, notes: t.notes || [] };
+  const notes = [...(t.notes || []), ...(pc ? [pc.host.report() + '; ' + m.acia.pcLost + ' reply byte(s) lost'] : [])];
+  return { m, out, lines, failures, budgets, notes };
 }
 
 function main(argv) {

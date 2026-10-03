@@ -1,6 +1,7 @@
 ; ****************************************************************************
 ; cmp file1 file2 - the two compared, byte by byte: the first that differs said ("file1 file2 differ: byte 5"), or
-; where one ends first ("cmp: end of file1"), and cmp ends with code 1; the same, nothing said, and code 0.
+; where one ends first ("cmp: end of file1"), and cmp ends with code 1; the same, nothing said, and code 0.  Each
+; file's read 255 bytes at a time, the reads that come short (a pipe's, /pc's) filled up.
 
 .include "hydra.inc"
 .include "hyx2.inc"
@@ -13,6 +14,7 @@
 name1:      .res        2
 name2:      .res        2
 which:      .res        2                                   ; (The one that ended first)
+bp:         .res        2                                   ; (fill's buffer)
 
 .bss
 fd1:        .res        1
@@ -23,6 +25,8 @@ len1:       .res        1
 len2:       .res        1
 at:         .res        4                                   ; The byte (1 on) being compared
 i:          .res        1
+fd:         .res        1                                   ; (fill's: the file ...
+got:        .res        1                                   ;   and what it has so far)
 
 .code
 main:
@@ -58,19 +62,17 @@ main:
             stz         at + 2
             stz         at + 3
 @block:
-            LDR         r0, buf1                            ; The next 255 of each
-            LDR         r1, 255
+            LDR         bp, buf1                            ; The next 255 of each
             lda         fd1
-            jsr         READ
+            jsr         fill
             bcc         :+
             jmp         @fail1
 
 :
             sta         len1
-            LDR         r0, buf2
-            LDR         r1, 255
+            LDR         bp, buf2
             lda         fd2
-            jsr         READ
+            jsr         fill
             bcc         :+
             jmp         @fail2
 
@@ -153,6 +155,40 @@ main:
 @fail:
             jsr         tl_err
             jmp         tl_end
+
+; The next 255 bytes of fd .A into the buffer at bp: fewer only at the file's end (a pipe's reads, or /pc's, can
+; come short).  OUT: .A = how many; or C = 1, .A = the error.  Modifies .X, .Y, r0, r1
+fill:
+            sta         fd
+            stz         got
+@read:
+            clc                                             ; The rest, at its place
+            lda         bp
+            adc         got
+            sta         r0
+            lda         bp + 1
+            adc         #0
+            sta         r0 + 1
+            sec
+            lda         #255
+            sbc         got
+            sta         r1
+            stz         r1 + 1
+            lda         fd
+            jsr         READ
+            bcs         @done
+            cmp         #0                                  ; (Nothing: the end)
+            beq         @end
+            clc
+            adc         got
+            sta         got
+            cmp         #255
+            bne         @read
+@end:
+            lda         got
+            clc
+@done:
+            rts
 
 .rodata
 s_eof:      .byte       "end of ", 0

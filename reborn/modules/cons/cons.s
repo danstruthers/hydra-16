@@ -1,6 +1,6 @@
 ; ****************************************************************************
 ; cons - the console driver (docs/reimplementation-from-scratch.md, §14.2): the serial port, its rings, and the
-; device #c, on srvlib (a boot driver: task F).
+; devices #c and #P (/pc, a folder on the PC), on srvlib (a boot driver: task F).
 ;
 ; Windows, Plan 9's way (rio's, on a text terminal), not job control: several consoles on the one terminal, each a
 ; window with its own cons and consctl, line editor, raw mode, note group and text (its last 2K of output).  One
@@ -33,6 +33,24 @@
 ; doesn't work, and on the board the Rockwell's sending back to back at 115200 loses characters (2 idle bits then;
 ; 1 otherwise).  The interrupts' work is a few dozen cycles each: the IRQs-off budget (200 cycles) has the
 ; dispatch's 115 in it.
+;
+; /pc (#P, docs/plans/PC.md): a folder on the PC, served by the PC tool (sim/tools/hydrapc.js, which is the
+; terminal too) over the serial port, in frames between the console's bytes (sim/lib/pcproto.js): PC_MARK, then the
+; type, the tag, the payload's length (2) and the payload, and a CRC-16 of those, PC_MARK and PC_ESC stuffed (PC_ESC,
+; then the byte ^ $20; the PC's frames stuff Ctrl-C, Ctrl-\ and Ctrl-] too, which the irq entry acts on).  Version
+; 2 of what they carry: a request is its request block (RQ_SIZE bytes) and its data (a name, a write's bytes, a stat
+; record); the reply its status (0, or an error), the fid, the count done, the qid type, and its data (a read's, a
+; stat record).  So the PC tool does each request as HydraFS's #f would (sim/tools/pcfs.js).
+;   A request goes out as a frame (the send ring's, ahead of the windows' text), and its client waits (E_AGAIN);
+; the frame back is taken out of the receive ring as the keys are handed out, and the client, asking again, gets
+; its answer from it.  One request at a time: another client waits for it (the event count changes as it ends).
+; A frame back damaged (its CRC) or stopping part-way (PC_QUIET ticks: a byte lost, an overrun at 115200), the PC's
+; PC_T_NAK, or no answer in its time: the request again (the PC tool answers a tag it's just answered with its last
+; reply, not doing it twice), PC_TRIES tries in all; then the PC is taken as gone (E_IO).  The first request, or the
+; first after that, attaches first (PC_T_ATTACH: the PC tool forgets the fids it had, and learns the version), one
+; try in PC_WAIT_ATTACH ticks: with no PC tool, E_IO that soon.  While a request is out, timer 2 runs on when
+; there's nothing to send, adding to the event count every PC_NAP rounds, so a client waiting for a reply that
+; doesn't come looks at the time.  Frames carry PC_DATA bytes of data at most, so a reply fits the receive ring.
 
 .include "hydra.inc"
 .include "hw.inc"
@@ -72,6 +90,26 @@ CTRL_RB         = $1D           ; (Ctrl-]: the windows' key)
 DEL             = $7F
 RATE_BOOT       = 5             ; 9600: the kernel's bring-up console's
 ENT_CONSCTL     = 2             ; srv_tree's consctl (its fids counted)
+PC_MARK         = $1E           ; /pc's frames: one starts (from the PC, PC_MARK then PC_ESC is a typed $1E, Ctrl-^)
+PC_ESC          = $1F           ;   the next byte ^ $20 is the byte
+PC_T_ATTACH     = 'A'           ; The Hydra's: a new session (the PC forgets its fids); its payload: PC_VERSION
+PC_T_REQ        = 'Q'           ;   a request: the request block, then its data
+PC_T_REPLY      = 'R'           ; The PC's: status, fid, count (2), qid type (the attach's: the version), then data
+PC_T_NAK        = 'N'           ;   the request came damaged: send it again
+PC_VERSION      = 2             ; (The old system's: 1)
+PC_REPLY_HDR    = 5
+PC_DATA         = 128           ; A frame's data at most (a read's, a write's)
+PC_RX_MAX       = PC_REPLY_HDR + PC_DATA ; A reply's payload at most (a longer frame isn't one of ours)
+PC_TX_SIZE      = 4 + RQ_SIZE + PC_DATA + 2 ; The frames: header, payload, CRC
+PC_RX_SIZE      = 4 + PC_RX_MAX + 2
+PC_TRIES        = 3             ; A request's tries (damaged, or no answer in time); then the PC is gone
+PC_WAIT_REQ     = TICK_HZ * 2   ; A reply's time (ticks): the frames' bytes both ways (at 9600, 0.2 s), and the PC's
+PC_WAIT_ATTACH  = TICK_HZ       ;   an attach's (no PC tool: E_IO this soon)
+PC_STALE        = TICK_HZ       ; A request this long past its time is given up (its client stopped asking)
+PC_QUIET        = TICK_HZ / 10  ; A frame coming in that stops this long has lost a byte
+PC_NAP          = 8             ; Timer 2's rounds (about 65,000 cycles) between looks at the time, a reply awaited
+PS_ATTACH       = 1             ; pc_step: the attach is out ...
+PS_REQ          = 2             ;   the request is out
 
 .zeropage
 rx_head:    .res        1                                   ; The receive ring: the irq entry's end ...
@@ -144,14 +182,42 @@ w_iqt:      .res        WIN_MAX
 bell:       .res        1                                   ; <> 0: a BEL the shown window sent (ring's) ...
 bell_st:    .res        1                                   ;   #a/bell: 0 not opened yet, 1 open, 2 none ...
 bell_fd:    .res        1                                   ;   and its fd
+pc_txbuf:   .res        PC_TX_SIZE                          ; /pc: the frame going out ...
+pc_rxbuf:   .res        PC_RX_SIZE                          ;   the frame come in ...
+pc_req:     .res        RQ_NAMELEN + 1                      ;   the request out, as its client asked it ...
+pc_first:                                                   ; ---- (init: 0)
+pc_step:    .res        1                                   ;   0, PS_ATTACH, PS_REQ ...
+pc_online:  .res        1                                   ;   <> 0: attached ...
+pc_tag:     .res        1                                   ;   the tag ...
+pc_tries:   .res        1                                   ;   the tries left ...
+pc_until:   .res        2                                   ;   the tick its reply's due by ...
+pc_len:     .res        1                                   ;   the frame out: its length (with its CRC) ...
+pc_txi:     .res        1                                   ;   the next of its bytes into the send ring ...
+pc_txe:     .res        1                                   ;   a byte to send as it is first (PC_MARK; an escaped
+                                                            ;   one's second), or 0 ...
+pc_rxs:     .res        1                                   ;   a frame coming in: 0 none, 1 in, $81 in but skipped ...
+pc_rxi:     .res        1                                   ;   its bytes so far ...
+pc_rxl:     .res        1                                   ;   all of them (from its header) ...
+pc_rxe:     .res        1                                   ;   <> 0: the next is escaped ...
+pc_rxf:     .res        1                                   ;   <> 0: it's whole, for the request out ...
+pc_rxn:     .res        1                                   ;   its bytes when last looked at (pc_waiting) ...
+pc_rxt:     .res        2                                   ;   and the tick then
+pc_last:                                                    ; ---- (Its end)
+pc_owner:   .res        1                                   ;   the client whose request it is ($FF: none) ...
+pc_t:       .res        2                                   ;   scratch
+pc_n:       .res        1
+pc_k:       .res        1
+pc_crc:     .res        2                                   ;   a CRC
 
 .assert     ST_N <= ST_SIZE, error, "A window's editor state is bigger than ST_SIZE"
+.assert     PC_TX_SIZE <= 256 .and PC_RX_SIZE <= 256, error, "/pc's frames: 8-bit indexes"
+.assert     RQ_NAMELEN < RQ_SIZE .and RQ_FLAGS < RQ_NAMELEN, error, "/pc: pc_same's fields"
 .assert     WIN_MAX * INQ_SIZE = 256 .and WIN_MAX = 4, error, "iq_put and iq_get: 4 queues of 64, a page"
 .assert     TEXT_SIZE = 2048, error, "t_at: a window's text is 8 pages"
 
 .code
 ; ****************************************************************************
-; The driver's init: window 0, its lines, the rate, the ACIA's receive interrupt on, the device
+; The driver's init: window 0, its lines, the rate, the ACIA's receive interrupt on, /pc idle, the devices
 init:
             ldx         #cnt - rx_head                      ; (Its zero page: all 0)
 :
@@ -163,6 +229,13 @@ init:
             stz         w_used,X
             dex
             bpl         :-
+            ldx         #pc_last - pc_first - 1
+:
+            stz         pc_first,X
+            dex
+            bpl         :-
+            lda         #$FF                                ; (No request out)
+            sta         pc_owner
             lda         #$FF
             sta         lw
             ldx         #0                                  ; Window 0: shown, init's group's
@@ -184,6 +257,9 @@ init:
             lda         ACIA_DATA
             cli
             lda         #'c'
+            jsr         SRV_REGISTER
+            bcs         @done
+            lda         #'P'
             jmp         SRV_REGISTER                        ; (Its error is init's)
 
 @done:
@@ -245,9 +321,10 @@ irq:
             lda         #0
             rts
 
-; Timer 2 ran out: the next byte (a character's time since the last went), or nothing more to send
+; Timer 2 ran out: the next byte (a character's time since the last went), or nothing more to send (and /pc's reply
+; awaited: its wait, PC_NAP rounds of about 65,000 cycles, the rounds a slow rate's are)
 t2_next:
-            dec         t2_left                             ; (A slow rate: another round)
+            dec         t2_left                             ; (A slow rate, or /pc's wait: another round)
             bne         @round
             ldy         tx_tail
             cpy         tx_head
@@ -267,9 +344,20 @@ t2_next:
             rts
 
 @idle:
-            lda         VIA_T2CL                            ; (Its interrupt cleared)
             stz         tx_busy
-            inc         TASK_EVENT                          ; (The writers waiting for room look again)
+            inc         TASK_EVENT                          ; (The writers waiting for room look again; /pc's
+            lda         pc_step                             ;   client looks at the time)
+            beq         @stop
+            lda         #PC_NAP                             ; A /pc reply awaited: timer 2 runs on, its rounds
+            sta         t2_left                             ;   $FFxx cycles (tx_start puts the rate's back)
+            lda         #$FF
+            sta         t2_hi
+            sta         VIA_T2CH
+            lda         #0
+            rts
+
+@stop:
+            lda         VIA_T2CL                            ; (Its interrupt cleared)
             lda         #0
             rts
 
@@ -288,6 +376,9 @@ tx_start:
             cpy         tx_head
             beq         @done
             inc         tx_busy
+            ldy         rate                                ; (A character's time: /pc's wait may have had timer 2)
+            lda         rate_hi,Y
+            sta         t2_hi
             lda         t2_rounds
             sta         t2_left
             lda         t2_lo
@@ -331,14 +422,22 @@ rx_get:
 ; ****************************************************************************
 ; The windows
 
-; Before each request: the keys come in, each to the window shown (its queue), Ctrl-] and the key after it acted on.
-; None while /ser is open for reading: the keys are its
+; Before each request: the keys come in, each to the window shown (its queue), Ctrl-] and the key after it acted on;
+; /pc's frames taken out (pc_rx).  None while /ser is open for reading: the bytes are its
 distribute:
             lda         ser_rd
             bne         @done
 @byte:
             jsr         rx_get
             bcs         @done
+            ldx         pc_rxs                              ; A /pc frame's?
+            bne         @frame
+            cmp         #PC_MARK
+            bne         @keys
+@frame:
+            jsr         pc_rx
+            bcc         @byte
+@keys:
             ldx         d_pfx
             bne         @command
             cmp         #CTRL_RB
@@ -670,9 +769,19 @@ w_room:
 @done:
             rts
 
-; After each request: the shown window's text out, as the send ring has room (each LF as CR LF); a window just shown
-; first: the screen cleared, and its text from the start of its last SCREEN_ROWS lines
+; After each request: /pc's frame out first, all of it (and a request long past its time given up); then the shown
+; window's text, as the send ring has room (each LF as CR LF); a window just shown first: the screen cleared, and its
+; text from the start of its last SCREEN_ROWS lines
 pump:
+            lda         pc_step
+            beq         :+
+            lda         #PC_STALE
+            jsr         pc_late
+            bcc         :+
+            jsr         pc_release
+:
+            jsr         pc_pump
+            bcs         @done
             lda         repaint
             beq         @text
             jsr         tx_free
@@ -1912,6 +2021,608 @@ gen_serctl:
             clc
             rts
 
+; ****************************************************************************
+; /pc (#P)
+
+; A request for #P (srvlib's: its tree is entry 0 alone, SK_RAW).  IN: .A = the request.  It goes to the PC as a
+; frame, and the client waits (E_AGAIN) for the frame back; asking again, it's answered from that.  One request out
+; at a time: another client's waits till it's done (or given up: pump).  R_FLUSH: the client gave its request up
+; (a note)
+pc_serve:
+            ldx         TASK_INBOX + RQ_CLIENT
+            cmp         #R_FLUSH
+            bne         @ask
+            cpx         pc_owner
+            bne         :+
+            jsr         pc_release
+:
+            clc
+            rts
+
+@ask:
+            lda         pc_owner
+            bmi         @take                               ; (None out)
+            cpx         pc_owner
+            beq         @mine
+            jmp         again                               ; Another's: wait till it's done
+
+@take:
+            stx         pc_owner
+            stz         pc_step
+            stz         pc_rxf
+@mine:
+            lda         pc_step
+            cmp         #PS_REQ
+            bne         :+
+            jsr         pc_same                             ; Its request out, or another (it gave that one up:
+            bcs         :+                                  ;   a non-blocking one)?
+            stz         pc_step                             ; Another: this one, from the start
+            stz         pc_rxf
+:
+            lda         pc_step
+            bne         pc_waiting
+            lda         pc_online
+            bne         pc_request
+            lda         #PS_ATTACH                          ; Not attached: the attach first, one try
+            sta         pc_step
+            lda         #1
+            sta         pc_tries
+            inc         pc_tag
+            lda         #PC_T_ATTACH
+            sta         pc_txbuf
+            lda         #PC_VERSION
+            sta         pc_txbuf + 4
+            lda         #1
+            jsr         pc_frame
+            lda         #<PC_WAIT_ATTACH
+            ldx         #>PC_WAIT_ATTACH
+            bra         pc_sent
+
+; The request: out as a frame, with a new tag
+pc_request:
+            lda         #PS_REQ
+            sta         pc_step
+            lda         #PC_TRIES
+            sta         pc_tries
+            inc         pc_tag
+            jsr         pc_build
+
+pc_resent:
+            lda         #<PC_WAIT_REQ
+            ldx         #>PC_WAIT_REQ
+
+pc_sent:                                                    ; Its reply's due .A/.X ticks from now: the client
+            jsr         pc_from_now                         ;   waits for it
+            jmp         again
+
+; The frame's out: its reply, or its time; or a frame back that stops part-way (a byte lost: an overrun at 115200)
+pc_waiting:
+            lda         pc_rxf
+            bne         @reply
+            lda         pc_rxs                              ; A frame coming in?
+            beq         @time
+            lda         pc_rxi
+            cmp         pc_rxn
+            beq         @stopped
+            sta         pc_rxn                              ; More of it: its time from now
+            jsr         TICKS
+            sta         pc_rxt
+            stx         pc_rxt + 1
+            jmp         again
+
+@stopped:
+            jsr         TICKS                               ; Nothing more for PC_QUIET ticks: it's dropped, and
+            sec                                             ;   the request goes again
+            sbc         pc_rxt
+            tay
+            txa
+            sbc         pc_rxt + 1
+            bne         :+
+            cpy         #PC_QUIET
+            bcc         @wait
+:
+            stz         pc_rxs
+            bra         pc_again
+
+@time:
+            lda         #0
+            jsr         pc_late
+            bcs         pc_again                            ; Its time has come: again
+@wait:
+            jmp         again                               ; (Woken early: wait on)
+
+@reply:
+            stz         pc_rxf
+            jsr         pc_check
+            bcc         @good
+            tax
+            bne         pc_again                            ; Damaged: again
+            jmp         again                               ; An older request's: wait on
+
+@good:
+            cmp         #PC_T_REPLY                         ; (PC_T_NAK: it reached the PC damaged)
+            bne         pc_again
+            lda         pc_rxbuf + 2                        ; (Shorter than a reply: not one)
+            cmp         #PC_REPLY_HDR
+            bcc         pc_again
+            lda         pc_step
+            cmp         #PS_ATTACH
+            bne         pc_answer
+            lda         pc_rxbuf + 4 + PC_REPLY_HDR - 1     ; Attached, if the PC tool speaks this version: now
+            cmp         #PC_VERSION                         ;   the request
+            bne         pc_gone
+            lda         #1
+            sta         pc_online
+            jmp         pc_request
+
+; Once more, if it has tries left; else the PC is gone
+pc_again:
+            dec         pc_tries
+            beq         pc_gone
+            jsr         pc_resend
+            jmp         pc_resent
+
+pc_gone:
+            stz         pc_online
+            lda         #E_IO
+            bra         pc_error
+
+; The reply: its status; its count, and an open's fid and qid type, into the request block (only an open's: the
+; block goes back to the client, and the rest of a short write goes in it); its data (a read's, a stat record) to the
+; client's buffer, no more than the client has room for
+pc_answer:
+            lda         pc_rxbuf + 4                        ; (Its status: 0, or the error)
+            bne         pc_error
+            lda         pc_rxbuf + 6
+            sta         TASK_INBOX + RQ_DONE
+            lda         pc_rxbuf + 7
+            sta         TASK_INBOX + RQ_DONE + 1
+            lda         TASK_INBOX + RQ_TYPE                ; A new fid: R_OPEN, R_CREATE, R_DUP
+            cmp         #R_OPEN
+            beq         :+
+            cmp         #R_CREATE
+            beq         :+
+            cmp         #R_DUP
+            bne         @data
+:
+            lda         pc_rxbuf + 5
+            sta         TASK_INBOX + RQ_FID
+            lda         pc_rxbuf + 8
+            sta         TASK_INBOX + RQ_PERM
+@data:
+            sec                                             ; The data: the payload after the reply's header
+            lda         pc_rxbuf + 2
+            sbc         #PC_REPLY_HDR
+            beq         @done
+            sta         r2
+            ldx         TASK_INBOX + RQ_TYPE                ; The room: a stat record, or the count asked for
+            lda         #SR_SIZE
+            cpx         #R_STAT
+            beq         @room
+            cpx         #R_READ
+            bne         @done
+            lda         TASK_INBOX + RQ_COUNT + 1
+            bne         @copy
+            lda         TASK_INBOX + RQ_COUNT
+@room:
+            cmp         r2
+            bcs         @copy
+            sta         r2
+@copy:
+            stz         r2 + 1
+            LDR         r0, pc_rxbuf + 4 + PC_REPLY_HDR
+            MOVR        r1, TASK_INBOX + RQ_BUF
+            jsr         CLIENT_WRITE
+@done:
+            jsr         pc_release
+            clc
+            rts
+
+; Done, with an error.  IN: .A = the error
+pc_error:
+            jsr         pc_release
+            sec
+            rts
+
+; The request's done, or given up: the next may go out (the clients waiting their turn look again).  Keeps .A
+pc_release:
+            stz         pc_step
+            ldx         #$FF
+            stx         pc_owner
+            stz         pc_rxf
+            inc         TASK_EVENT
+            rts
+
+; Is this the request out, its client asking again, or another (it gave that one up: a non-blocking one)?  Its
+; block's fields to RQ_NAMELEN, but its flags, and its name.  OUT: C = 1 the same.  Modifies .A, .X
+pc_same:
+            ldx         #RQ_NAMELEN
+@field:
+            cpx         #RQ_FLAGS
+            beq         :+
+            lda         TASK_INBOX,X
+            cmp         pc_req,X
+            bne         @no
+:
+            dex
+            bpl         @field
+            jsr         pc_named
+            bcc         @yes
+            jsr         pc_namelen                          ; (RQ_NAMELEN's the same: the same length)
+:
+            lda         TASK_PATH,X
+            cmp         pc_txbuf + 4 + RQ_SIZE,X
+            bne         @no
+            dex
+            bpl         :-
+@yes:
+            sec
+            rts
+
+@no:
+            clc
+            rts
+
+; C = 1 if the request has a name (R_OPEN, R_CREATE, R_REMOVE: TASK_PATH).  Keeps .X
+pc_named:
+            lda         TASK_INBOX + RQ_TYPE
+            cmp         #R_OPEN
+            beq         @yes
+            cmp         #R_CREATE
+            beq         @yes
+            cmp         #R_REMOVE
+            beq         @yes
+            clc
+            rts
+
+@yes:
+            sec
+            rts
+
+; .X = the name's length (RQ_NAMELEN), PATH_MAX at most: its 0's place in TASK_PATH
+pc_namelen:
+            ldx         TASK_INBOX + RQ_NAMELEN
+            cpx         #PATH_MAX
+            bcc         :+
+            ldx         #PATH_MAX
+:
+            rts
+
+; The request's frame: PC_T_REQ, the request block, then its data: a name (with its 0), a write's bytes, or a stat
+; record (R_WSTAT).  A read's or a write's count is PC_DATA at most (the frame's block says so)
+pc_build:
+            ldx         #RQ_SIZE - 1                        ; The block (and its client's fields: pc_same)
+@block:
+            lda         TASK_INBOX,X
+            sta         pc_txbuf + 4,X
+            cpx         #RQ_NAMELEN + 1
+            bcs         :+
+            sta         pc_req,X
+:
+            dex
+            bpl         @block
+            stz         pc_n                                ; (pc_n: the data's length)
+            lda         TASK_INBOX + RQ_TYPE
+            cmp         #R_READ
+            beq         @read
+            cmp         #R_WRITE
+            beq         @write
+            cmp         #R_WSTAT
+            beq         @stat
+            jsr         pc_named
+            bcc         @frame
+            jsr         pc_namelen                          ; The name, and its 0
+            stx         pc_n
+            inc         pc_n
+:
+            lda         TASK_PATH,X
+            sta         pc_txbuf + 4 + RQ_SIZE,X
+            dex
+            bpl         :-
+            bra         @frame
+
+@read:
+            jsr         pc_cap
+            stz         pc_n                                ; (No data)
+            bra         @frame
+
+@write:
+            jsr         pc_cap
+            bra         @client
+
+@stat:
+            lda         #SR_SIZE
+            sta         pc_n
+@client:
+            lda         pc_n                                ; The client's bytes
+            sta         r2
+            stz         r2 + 1
+            LDR         r0, pc_txbuf + 4 + RQ_SIZE
+            MOVR        r1, TASK_INBOX + RQ_BUF
+            jsr         CLIENT_READ
+@frame:
+            lda         #PC_T_REQ
+            sta         pc_txbuf
+            lda         pc_n
+            clc
+            adc         #RQ_SIZE
+                                                            ; (On to pc_frame)
+
+; The frame in pc_txbuf, its type there: its tag, its payload's length (.A, after the header) and its CRC put in,
+; and out it goes (pump: pc_pump)
+pc_frame:
+            sta         pc_txbuf + 2
+            stz         pc_txbuf + 3
+            ldx         pc_tag
+            stx         pc_txbuf + 1
+            clc
+            adc         #4                                  ; The header and the payload
+            sta         pc_len
+            tax
+            LDR         p, pc_txbuf
+            jsr         pc_crc_of
+            ldx         pc_len
+            lda         pc_crc
+            sta         pc_txbuf,X
+            lda         pc_crc + 1
+            sta         pc_txbuf + 1,X
+            inx
+            inx
+            stx         pc_len
+
+; The frame out again: from its start, PC_MARK first
+pc_resend:
+            stz         pc_txi
+            lda         #PC_MARK
+            sta         pc_txe
+            rts
+
+; A read's or a write's count, PC_DATA at most: in the frame's block, and pc_n
+pc_cap:
+            lda         #PC_DATA
+            ldx         TASK_INBOX + RQ_COUNT + 1
+            bne         :+
+            cmp         TASK_INBOX + RQ_COUNT
+            bcc         :+
+            lda         TASK_INBOX + RQ_COUNT
+:
+            sta         pc_txbuf + 4 + RQ_COUNT
+            stz         pc_txbuf + 4 + RQ_COUNT + 1
+            sta         pc_n
+            rts
+
+; pump's: the frame going out (pc_txbuf, pc_len bytes, from pc_txi), into the send ring as it has room: PC_MARK
+; first, then its bytes, PC_MARK and PC_ESC stuffed (PC_ESC, then the byte ^ $20).  OUT: C = 1: not all of it yet
+; (the windows' text waits).  Modifies .A, .X, .Y
+pc_pump:
+            lda         pc_txe                              ; A byte as it is first (PC_MARK, or an escaped one's
+            beq         @next                               ;   second)?
+            jsr         tx_free
+            beq         @full
+            lda         pc_txe
+            stz         pc_txe
+            jsr         tx_put
+@next:
+            ldx         pc_txi                              ; The frame's next byte
+            cpx         pc_len
+            bcs         @done                               ; (All of it out)
+            jsr         tx_free
+            beq         @full
+            inc         pc_txi
+            lda         pc_txbuf,X
+            cmp         #PC_MARK
+            beq         :+
+            cmp         #PC_ESC
+            bne         @put
+:
+            eor         #$20
+            sta         pc_txe
+            lda         #PC_ESC
+@put:
+            jsr         tx_put
+            bra         pc_pump
+
+@done:
+            clc
+            rts
+
+@full:
+            sec
+            rts
+
+; distribute's: a byte of a /pc frame (PC_MARK starts one): its body into pc_rxbuf, unstuffed, and when it's whole,
+; pc_rxf, if a request's out (else it's dropped).  One that comes while the last is still to be looked at is
+; skipped.  IN: .A = the byte.  OUT: C = 0; or C = 1, .A = a key (PC_MARK then PC_ESC: a typed $1E).  Modifies .X
+pc_rx:
+            cmp         #PC_MARK
+            bne         @body
+            ldx         #1                                  ; A frame starts (one cut short is dropped)
+            lda         pc_rxf
+            beq         :+
+            ldx         #$81                                ; (Skipped)
+:
+            stx         pc_rxs
+            stz         pc_rxi
+            stz         pc_rxe
+            lda         #$FF                                ; (pc_waiting: none of it seen yet)
+            sta         pc_rxn
+            clc
+            rts
+
+@body:
+            cmp         #PC_ESC
+            bne         @plain
+            ldx         pc_rxi
+            bne         @escape
+            stz         pc_rxs                              ; PC_MARK then PC_ESC: a typed $1E, a key
+            lda         #PC_MARK
+            sec
+            rts
+
+@escape:
+            sta         pc_rxe                              ; (<> 0) The next byte is escaped
+            clc
+            rts
+
+@plain:
+            ldx         pc_rxe
+            beq         :+
+            stz         pc_rxe
+            eor         #$20
+:
+            ldx         pc_rxi
+            bit         pc_rxs                              ; (Skipped: not kept)
+            bmi         :+
+            sta         pc_rxbuf,X
+:
+            inc         pc_rxi
+            cpx         #2
+            bcc         @more                               ; (The type, the tag)
+            beq         @low
+            cpx         #3
+            beq         @high
+            inx                                             ; The payload and the CRC: all of it?
+            cpx         pc_rxl
+            bne         @more
+            ldx         pc_rxs                              ; It's whole
+            stz         pc_rxs
+            bmi         @more                               ; (Skipped)
+            lda         pc_step                             ; (No request out: dropped)
+            sta         pc_rxf
+@more:
+            clc
+            rts
+
+@low:                                                       ; The payload's length: PC_RX_MAX at most, or it's not
+            sta         pc_rxl                              ;   one of ours
+            clc
+            rts
+
+@high:
+            cmp         #0
+            bne         @drop
+            lda         pc_rxl
+            cmp         #PC_RX_MAX + 1
+            bcs         @drop
+            adc         #4 + 2                              ; (C = 0) All of it: the header, payload and CRC
+            sta         pc_rxl
+            clc
+            rts
+
+@drop:
+            stz         pc_rxs
+            clc
+            rts
+
+; The frame in pc_rxbuf: its CRC, and its tag.  OUT: C = 0, .A = its type; or C = 1, .A = 0: not the request's (an
+; older one's), .A <> 0: damaged
+pc_check:
+            lda         pc_rxbuf + 2                        ; The header and the payload
+            clc
+            adc         #4
+            tax
+            LDR         p, pc_rxbuf
+            jsr         pc_crc_of
+            lda         (p)                                 ; (p: just after them, the CRC)
+            cmp         pc_crc
+            bne         @damaged
+            ldy         #1
+            lda         (p),Y
+            cmp         pc_crc + 1
+            bne         @damaged
+            lda         pc_rxbuf + 1
+            cmp         pc_tag
+            bne         @not_its
+            lda         pc_rxbuf
+            clc
+            rts
+
+@not_its:
+            lda         #0
+            sec
+            rts
+
+@damaged:
+            lda         #1
+            sec
+            rts
+
+; The CRC-16 (CCITT: $1021, from $FFFF) of .X bytes (1-255) at (p).  OUT: pc_crc; p just after them.  Modifies .A,
+; .X, .Y
+pc_crc_of:
+            stx         pc_k
+            lda         #$FF
+            sta         pc_crc
+            sta         pc_crc + 1
+@byte:
+            lda         (p)                                 ; (Greg Cook's, a byte at a time, no table)
+            eor         pc_crc + 1
+            sta         pc_crc + 1
+            lsr
+            lsr
+            lsr
+            lsr
+            tax
+            asl
+            eor         pc_crc
+            sta         pc_crc
+            txa
+            eor         pc_crc + 1
+            sta         pc_crc + 1
+            asl
+            asl
+            asl
+            tax
+            asl
+            asl
+            eor         pc_crc + 1
+            tay
+            txa
+            rol
+            eor         pc_crc
+            sta         pc_crc + 1
+            sty         pc_crc
+            inc         p
+            bne         :+
+            inc         p + 1
+:
+            dec         pc_k
+            bne         @byte
+            rts
+
+; pc_until = the tick count .A/.X ticks from now.  Modifies .A, .X, .Y
+pc_from_now:
+            sta         pc_t
+            stx         pc_t + 1
+            jsr         TICKS
+            clc
+            adc         pc_t
+            sta         pc_until
+            txa
+            adc         pc_t + 1
+            sta         pc_until + 1
+            rts
+
+; Is it .A ticks past the reply's time (pc_until), or more?  OUT: C = 1 yes.  Modifies .A, .X, .Y
+pc_late:
+            clc
+            adc         pc_until
+            sta         pc_t
+            lda         pc_until + 1
+            adc         #0
+            sta         pc_t + 1
+            jsr         TICKS                               ; Now - that: not negative once it's come
+            sec
+            sbc         pc_t
+            txa
+            sbc         pc_t + 1
+            bmi         :+
+            sec
+            rts
+:
+            clc
+            rts
+
 .rodata
 ; ****************************************************************************
 ; The keys
@@ -1967,7 +2678,16 @@ rate_name_hi: .byte     >s_300, >s_600, >s_1200, >s_2400, >s_4800, >s_9600, >s_1
 .assert     ACIA_RATE_9600 = $0E .and ACIA_RATE_19200 = $0F, error, "The rates' codes"
 
 ; ****************************************************************************
-; The device
+; The devices
+SRV_TREES:
+            .byte       'c'
+            .word       srv_tree
+            .byte       'P'
+            .word       pc_tree
+            .byte       0
+pc_tree:
+            SRV_ENTRY   s_root,    $FF, SK_RAW,  pc_serve,    SM_READ | SM_WRITE, 0     ; (#P: pc_serve does it all)
+            .word       0
 srv_tree:
             SRV_ENTRY   s_root,    $FF, SK_DIR,  0,           SM_READ,            0     ; 0
             SRV_ENTRY   s_cons,    0,   SK_DATA, h_cons,      SM_READ | SM_WRITE, 0     ; 1

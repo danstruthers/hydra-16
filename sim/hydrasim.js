@@ -193,7 +193,7 @@ function pcHost() {
   const reader = P.createReader({ types: [P.T_ATTACH, P.T_REQ],
     onFrame: f => {
       if (f.type === P.T_ATTACH) h.attaches++; else h.requests++;
-      reply(P.encode(P.T_REPLY, f.tag, f.type === P.T_ATTACH ? fsrv.attach() : fsrv.request(f.tag, f.payload)));
+      reply(P.encode(P.T_REPLY, f.tag, f.type === P.T_ATTACH ? fsrv.attach(f.payload) : fsrv.request(f.tag, f.payload)));
     },
     onBad: f => { h.naks++; reply(P.encode(P.T_NAK, f.tag)); } });
   h.push = b => {

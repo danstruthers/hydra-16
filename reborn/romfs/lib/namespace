@@ -37,4 +37,4 @@ bind -a /sd/0/lib /lib
 bind -a /rom/lib /lib
 
 # the PC
-#mount '#P' /pc            # (phase 5)
+mount '#P' /pc              # a folder on the PC, through the serial port (the PC tool)

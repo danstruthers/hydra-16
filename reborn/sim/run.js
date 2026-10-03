@@ -20,11 +20,18 @@
 //   --bios FILE, --prom FILE   other images
 //   --sd FILE           a card image (../sim/tools/hydrafs.js makes them), SD device 0, then 1 ...: read and
 //                       written in the file itself, as the Hydra reads and writes it
+//   --pc-dir DIR        /pc: the PC tool's part (../sim/tools/hydrapc.js) is played here, serving the folder DIR:
+//                       the frames the Hydra sends for /pc are answered, at the line's rate (sim/lib/pchost.js)
+//   --pc-read-only      /pc can't be changed: its writes, creates, removes and renames are refused
+//   --pc-log            list /pc's requests as they're served (opens, creates, removes, renames, errors)
+//   --pc-damage F[,F...]  damage /pc's frames on the line, to try the resends: qN the Nth frame the Hydra sends, rN
+//                       the Nth reply (a byte of its body gets bit 6 flipped)
 // From Node: boot(opt) gives the machine; labels() the kernel's labels; state(m) each task's state.
 'use strict';
 const fs = require('fs');
 const path = require('path');
 const { createMachine } = require('./lib/machine.js');
+const { createPcHost } = require('./lib/pchost.js');
 
 const ROOT = path.join(__dirname, '..');
 const hx = (v, n = 2) => v.toString(16).toUpperCase().padStart(n, '0');
@@ -179,18 +186,26 @@ function main(argv) {
     else if (a === '--bios') opt.bios = next();
     else if (a === '--prom') opt.prom = next();
     else if (a === '--sd') { opt.sd = opt.sd || []; opt.sd.push(cardFile(opt.sd.length, next())); }
+    else if (a === '--pc-dir') opt.pcDir = next();
+    else if (a === '--pc-read-only') opt.pcReadOnly = true;
+    else if (a === '--pc-log') opt.pcLog = true;
+    else if (a === '--pc-damage') opt.pcDamage = next().split(',').map(s => s.trim().toLowerCase());
     else if (a === '--watch-pc') {
       const w = next(), pc = lbl.byName.has(w) ? lbl.byName.get(w) : parseInt(w.replace(/^\$/, ''), 16);
       if (!(pc >= 0)) { console.error('--watch-pc: ' + w + '?'); process.exit(2); }
       opt.pcWatches.push({ pc, page: lbl.pageOf.get(w) || 0 });
     } else { console.error('run.js: ' + a + '?  (see the top of sim/run.js)'); process.exit(2); }
   }
+  if (opt.pcDir) opt.pcHost = createPcHost({ dir: opt.pcDir, readOnly: !!opt.pcReadOnly, damage: opt.pcDamage,
+    log: opt.pcLog ? t => (opt.interactive ? process.stdout.write('\r\n[pc] ' + t + '\r\n') : console.log('[pc] ' + t)) : undefined });
   const m = boot(opt);
   if (opt.interactive) return interactive(m, opt);
   m.run(opt.cycles);
+  if (opt.pcHost) for (const b of opt.pcHost.flush()) m.out += String.fromCharCode(b);   // (A frame cut short: the output's)
   process.stdout.write(m.out.replace(/\r\n/g, '\n').replace(/\r/g, '\n'));
   if (!m.out.endsWith('\n')) console.log();
   report(m, lbl);
+  if (opt.pcHost) console.log('--- ' + opt.pcHost.report() + '; ' + m.acia.pcLost + ' reply byte(s) lost (they came while the last was unread)');
   process.exit(m.cpu.halted ? 1 : 0);
 }
 

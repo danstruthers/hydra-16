@@ -3,7 +3,8 @@
 // hydrapc.js - the PC tool for /pc: a terminal on the Hydra-16's serial port that also serves a folder on this PC to
 // it, so the Hydra sees the folder at /pc (docs/plans/PC.md).  What the Hydra prints shows here and the keys typed go
 // to it, as with any terminal; the frames /pc's requests and replies travel in (lib/pcproto.js) go between those
-// bytes, and don't show.  The folder's files are served as tools/pcfs.js says; nothing outside it is reached.
+// bytes, and don't show.  The folder's files are served as tools/pcfs.js says; nothing outside it is reached.  It
+// serves either system: the old one (the protocol's version 1) or reborn (version 2), as the Hydra's attach says.
 //
 // Usage: node hydrapc.js PORT FOLDER [options]
 //          PORT     the serial port (COM3, /dev/ttyUSB0 ...); node hydrapc.js --list shows them
@@ -77,7 +78,7 @@ function run(portName, folder) {
 
   // The Hydra's bytes: frames to the file server, the rest to the screen
   const reader = P.createReader({ types: [P.T_ATTACH, P.T_REQ],
-    onFrame: f => port.write(Buffer.from(P.encode(P.T_REPLY, f.tag, f.type === P.T_ATTACH ? fsrv.attach() : fsrv.request(f.tag, f.payload)))),
+    onFrame: f => port.write(Buffer.from(P.encode(P.T_REPLY, f.tag, f.type === P.T_ATTACH ? fsrv.attach(f.payload) : fsrv.request(f.tag, f.payload)))),
     onBad: f => port.write(Buffer.from(P.encode(P.T_NAK, f.tag))) });
   let quiet = null;
   port.on('data', buf => {
