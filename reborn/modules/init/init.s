@@ -3,8 +3,8 @@
 ; it, none, and the bring-up console's); the RAM disks started (r: 256K, s: 512K, each halved till it fits); its
 ; namespace from the namespace file (nslib.s's ns_default: its own area of the RAM disk, /rom/lib/namespace, a card's
 ; /lib/namespace; with no /rom/lib/namespace, the one built in here: the devices at their places); the tasks listed;
-; hello run and waited for; then the shells (tsh, till rc comes in phase 4), each with a namespace of its own (it
-; builds it: ns_default): window 0's, and the windows' starter (tsh w: a shell in each window the user asks for,
+; hello run and waited for; then window 0's shell (rc -l, a namespace of its own: it builds it, newns, and its
+; profile puts its window at /dev) and the windows' starter (wstart: rc -l in the next window the user asks for,
 ; Ctrl-] c), each started again when it ends.  It waits for every task left to it (the windows' shells are).  Its
 ; note handler keeps it going.
 
@@ -103,8 +103,8 @@ shells:
 
 ; Window 0's shell (a note group of its own: its window's notes are its), or the windows' starter, started
 shell0:
-            LDR         r0, s_tsh
-            LDR         r1, s_w0
+            LDR         r0, s_rc
+            LDR         r1, s_l
             lda         #SPAWN_NEWGROUP | SPAWN_NEWNS
             jsr         SPAWN
             sta         sh0
@@ -115,9 +115,9 @@ shell0:
             rts
 
 starter:
-            LDR         r0, s_tsh
-            LDR         r1, s_ww
-            lda         #SPAWN_NEWNS
+            LDR         r0, s_wstart
+            LDR         r1, s_none
+            lda         #SPAWN_NEWNS                        ; (Its own: it uses only #c, #m)
             jsr         SPAWN
             sta         sw
             bcc         :+
@@ -260,21 +260,22 @@ notes:
 s_cons:     .byte       "#c/cons", 0
 s_up:       .byte       "init: up in task ", 0
 s_hello:    .byte       "#m/hello", 0
-s_args:     .byte       "from init", 0
+s_args:     .byte       "from init", 0, 0
 s_ended:    .byte       "init: hello ended: code $", 0
 s_open:     .byte       " (", 0
 s_close:    .byte       ")"
 s_crlf:     .byte       CR, LF, 0
 s_error:    .byte       "init: ", 0
-s_tsh:      .byte       "#m/tsh", 0
+s_rc:       .byte       "#m/rc", 0
+s_wstart:   .byte       "#m/wstart", 0
 s_builtin:  .byte       "init: no /rom/lib/namespace: the one built in", CR, LF, 0
 s_ctlr:     .byte       "#d/r/ctl", 0
 s_ctls:     .byte       "#d/s/ctl", 0
 s_sbin:     .byte       "#fs/bin", 0
 s_slib:     .byte       "#fs/lib", 0
 s_start:    .byte       "start "
-s_w0:       .byte       "0", 0
-s_ww:       .byte       "w", 0
+s_l:        .byte       "-l", 0, 0
+s_none:     .byte       0                                   ; (No arguments)
 ns_table:   .byte       MREPL                               ; bind '#/' /
             .word       s_hroot, s_root
             .byte       MAFTER                              ; bind -a '#c' /dev

@@ -3,8 +3,8 @@
 ;
 ; A module (HYX2: layout.inc) in the paged ROM runs in place: its task's ROM bank register selects its bank, so
 ; its code is at $A000 in that task alone; its initialised data is copied into the task's RAM, and its BSS
-; cleared.  A program starts at K_TASK_MAIN (its entry point with r0 = its arguments; EXITS 0 if it returns); a RAM
-; program (load.s) at K_TASK_LOAD, which loads it first.
+; cleared, by the task itself as it starts (K_TASK_DATA).  A program starts at K_TASK_MAIN (its entry point with r0
+; = its arguments; EXITS 0 if it returns); a RAM program (load.s) at K_TASK_LOAD, which loads it first.
 ; A driver starts at K_DRIVER_MAIN: its init, then it's ST_IDLE, running only for calls and interrupts; while
 ; its init runs it's busy (TK_BUSY), and calls to it wait.  Programs take the lowest free task (init is first:
 ; task 1); drivers the highest (task F first: the DS1747's registers are task F's top bytes, and a driver's
@@ -185,6 +185,7 @@ K_START_TASK:
             jsr         K_TASK_SETUP
             bcs         @bad
             ldx         K0_NEW
+            FARCALL     K_ENV_CLEAR                         ; (An empty environment: SPAWN copies its parent's)
             lda         K0_NEWBANK
             sta         K_TASK_BANK,X
             lda         K0_NEWTYPE
@@ -383,42 +384,7 @@ K_TASK_SETUP:
             stz         T_REGISTER                          ; ---- Back (a moment)
             plp
             cpy         #HX_NAME_MAX + 1
-            bne         @name
-            php
-            sei
-            stx         T_REGISTER                          ; ---- The new task
-            lda         PROM_WINDOW + HX_DATA_LOAD          ; Its data: r0 from, r1 to, r2 bytes (its own
-            sta         r0                                  ;   r-registers: it isn't running yet)
-            lda         PROM_WINDOW + HX_DATA_LOAD + 1
-            sta         r0 + 1
-            lda         PROM_WINDOW + HX_DATA_RUN
-            sta         r1
-            lda         PROM_WINDOW + HX_DATA_RUN + 1
-            sta         r1 + 1
-            lda         PROM_WINDOW + HX_DATA_LEN
-            sta         r2
-            lda         PROM_WINDOW + HX_DATA_LEN + 1
-            sta         r2 + 1
-            stz         T_REGISTER                          ; ---- Back
-            plp
-            ldy         #0
-            jsr         K_TASK_FILL
-            ldx         K0_NEW
-            php
-            sei
-            stx         T_REGISTER                          ; ---- Its BSS: r1, r2 bytes
-            lda         PROM_WINDOW + HX_BSS
-            sta         r1
-            lda         PROM_WINDOW + HX_BSS + 1
-            sta         r1 + 1
-            lda         PROM_WINDOW + HX_BSS_LEN
-            sta         r2
-            lda         PROM_WINDOW + HX_BSS_LEN + 1
-            sta         r2 + 1
-            stz         T_REGISTER                          ; ---- Back
-            plp
-            ldy         #1
-            jsr         K_TASK_FILL
+            bne         @name                               ; (Its data and BSS: its own, as it starts)
 @first:
             ldx         K0_NEW                              ; Its first frame: where it starts (and a driver's flags)
             ldy         T_REGISTER
@@ -498,46 +464,67 @@ K_TASK_SETUP:
             FARCALL     K_KCOPY
             jmp         @first
 
-; In task K0_NEW (it isn't running yet: its r-registers are ours to use): r2 bytes to (r1), from (r0) (.Y = 0) or
-; zeros (.Y <> 0).  A byte at a time with IRQs off, the caller's I flag between.  In the kernel task.
-; Modifies .A, .X
-K_TASK_FILL:
-            ldx         K0_NEW
-@byte:
-            php
-            sei
-            stx         T_REGISTER                          ; ---- The task
-            lda         r2
-            ora         r2 + 1
-            beq         @done
-            tya
-            bne         @zero
-            lda         (r0)                                ; (Its module, at $A000)
-            inc         r0
-            bne         @put
+; A module's task, as it starts (from K_TASK_MAIN and K_DRIVER_MAIN, in the task itself, IRQs on): its data
+; copied from its module and its BSS cleared, as its header has them (its first bank is at $A000).  So the kernel
+; task doesn't do it a byte at a time from outside, with IRQs off for each (rc's 4.3K of BSS: 257,000 cycles that
+; way, 39,000 this).  Modifies .A, .X, .Y, r0, r1
+K_TASK_DATA:
+            lda         PROM_WINDOW + HX_DATA_LOAD          ; Its data: r0 from, r1 to
+            sta         r0
+            lda         PROM_WINDOW + HX_DATA_LOAD + 1
+            sta         r0 + 1
+            lda         PROM_WINDOW + HX_DATA_RUN
+            sta         r1
+            lda         PROM_WINDOW + HX_DATA_RUN + 1
+            sta         r1 + 1
+            ldy         #0
+            ldx         PROM_WINDOW + HX_DATA_LEN + 1       ; Its whole pages ...
+            beq         @part
+@page:
+            lda         (r0),Y
+            sta         (r1),Y
+            iny
+            bne         @page
             inc         r0 + 1
-            bra         @put
-
-@zero:
-            lda         #0
-@put:
-            sta         (r1)                                ; (Its RAM)
-            inc         r1
-            bne         :+
             inc         r1 + 1
+            dex
+            bne         @page
+@part:
+            ldx         PROM_WINDOW + HX_DATA_LEN           ; ... and the rest
+            beq         @bss
 :
-            lda         r2
-            bne         :+
-            dec         r2 + 1
+            lda         (r0),Y
+            sta         (r1),Y
+            iny
+            dex
+            bne         :-
+@bss:
+            lda         PROM_WINDOW + HX_BSS                ; Its BSS: r1, 4 bytes at a time in whole pages
+            sta         r1
+            lda         PROM_WINDOW + HX_BSS + 1
+            sta         r1 + 1
+            lda         #0
+            tay
+            ldx         PROM_WINDOW + HX_BSS_LEN + 1
+            beq         @bpart
+@bpage:
+            .repeat     4
+            sta         (r1),Y
+            iny
+            .endrepeat
+            bne         @bpage
+            inc         r1 + 1
+            dex
+            bne         @bpage
+@bpart:
+            ldx         PROM_WINDOW + HX_BSS_LEN
+            beq         @done
 :
-            dec         r2
-            stz         T_REGISTER                          ; ---- Back (a moment for interrupts)
-            plp
-            bra         @byte
-
+            sta         (r1),Y
+            iny
+            dex
+            bne         :-
 @done:
-            stz         T_REGISTER
-            plp
             rts
 
 .segment "KCODE"
@@ -554,9 +541,12 @@ K_TASK_GO:
             txa
             rts
 
-; Every program's first instructions (its first frame's PC): on page 0, IRQs on.  Its entry point with r0 = its
-; arguments; if it returns, EXITS with code 0
+; Every module program's first instructions (its first frame's PC): on page 0, IRQs on.  Its data and BSS
+; (K_TASK_DATA); then (K_TASK_START: a RAM program's, once it's loaded) its entry point with r0 = its arguments; if
+; it returns, EXITS with code 0
 K_TASK_MAIN:
+            FARCALL     K_TASK_DATA
+K_TASK_START:
             FARCALL     K_MEM_START                         ; (Its break, its maps: mem.s)
             lda         #<TA_ARGS
             sta         r0
@@ -575,13 +565,15 @@ K_TASK_MAIN:
 ; program does.  One that can't be loaded ends at once, with the error as its code
 K_TASK_LOAD:
             FARCALL     K_LOAD
-            bcc         K_TASK_MAIN
+            bcc         K_TASK_START
             stz         r0
             stz         r0 + 1
             jmp         K_EXITS
 
-; Every driver's: its init (C = 0, or C = 1 and .A = an error), then idle: it runs for calls and interrupts only
+; Every driver's: its data and BSS (K_TASK_DATA), its init (C = 0, or C = 1 and .A = an error), then idle: it
+; runs for calls and interrupts only
 K_DRIVER_MAIN:
+            FARCALL     K_TASK_DATA
             FARCALL     K_MEM_START                         ; (Its break, its maps: mem.s)
             jsr         @entry
             bcs         @failed
@@ -810,6 +802,7 @@ K_SPAWN_K:
 :
             FARCALL     K_FD_INHERIT                        ; Its fds: the map's (file.s)
             FARCALL     K_NS_INHERIT                        ; Its namespace: the caller's, or its own (ns.s)
+            FARCALL     K_ENV_INHERIT                       ; Its environment: a copy of the caller's, or empty
             txa
             clc
 @done:

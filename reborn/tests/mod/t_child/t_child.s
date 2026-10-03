@@ -19,6 +19,7 @@
 ;   "m"         bind #T/sub at / (in place), then open /inner: end with code 0 ($E0 + the error, if one)
 ;   "j"         claim console window 1's notes ("group" to #c1/consctl), then as "i"
 ;   "f"         create /ram/mark (its namespace's): end with code 0 ($E0 + the error, if one)
+;   "v"         its environment's x: end with its first byte ($EE: none), after setting x to "C" (its own copy)
 ;   anything else: end with code $EE
 
 .include "hydra.inc"
@@ -303,11 +304,40 @@ hex:
             sec
             rts
 
+op_v:
+            LDR         r0, s_x
+            LDR         r1, buf
+            LDR         r2, 1
+            stz         r3
+            stz         r3 + 1
+            lda         #$FF
+            jsr         ENV_GET
+            bcs         @none
+            cmp         #0
+            beq         @none
+            lda         buf
+            pha
+            LDR         r0, s_x                             ; x = "C", in its own copy
+            LDR         r1, s_cc
+            LDR         r2, 1
+            stz         r3
+            stz         r3 + 1
+            lda         #$FF
+            jsr         ENV_PUT
+            pla
+            jmp         end
+
+@none:
+            lda         #$EE
+            jmp         end
+
 .rodata
-ops:        .byte       "esykpocgndtbrwihmjf"
+ops:        .byte       "esykpocgndtbrwihmjfv"
 OPS         = * - ops
 op_vec:     .word       op_e, op_s, op_y, op_k, op_p, op_o, op_c, op_g, op_n, op_d, op_t, op_b, op_r, op_w, op_i
-            .word       op_h, op_m, op_j, op_f
+            .word       op_h, op_m, op_j, op_f, op_v
+s_x:        .byte       "x", 0
+s_cc:       .byte       "C"
 s_c1ctl:    .byte       "#c1/consctl", 0
 s_group:    .byte       "group"
 s_hello:    .byte       "/hello", 0
@@ -316,6 +346,6 @@ s_inner:    .byte       "/inner", 0
 s_tsub:     .byte       "#T/sub", 0
 s_root:     .byte       "/", 0
 s_child:    .byte       "#m/t_child", 0
-s_e9:       .byte       "e9", 0
+s_e9:       .byte       "e9", 0, 0
 s_wait:     .byte       "#T/wait", 0
 s_w:        .byte       "W"

@@ -101,6 +101,54 @@ function loadCard() {
 }
 const BIG_LENGTH = () => fs.statSync(path.join(__dirname, '..', 'obj', 'tests', 't_big.hyx')).size;
 
+// The rc test's lines, and what each says
+const RC_LINES = [
+  ["echo hello","hello"],
+  ["x=(a b c); echo $x $#x $x(2)","a b c 3 b"],
+  ["echo 'a  b' 'it''s'","a  b it's"],
+  ["echo $\"x","a b c"],
+  ["echo x^$x $x^1 $x^$x","xa xb xc a1 b1 c1 aa bb cc"],
+  ["y=1 echo $y; echo $#y","1\n0"],
+  ["echo $x(2-) $x(1-2)","b c a b"],
+  ["echo one >/ram/f; echo two >>/ram/f; cat /ram/f","one\ntwo"],
+  ["cat </ram/f >[2=1]","one\ntwo"],
+  ["echo piped | cat","piped"],
+  ["echo a b | cat | cat","a b"],
+  ["if(~ a a) echo yes; if not echo no","yes"],
+  ["if(~ a b) echo yes; if not echo no","no"],
+  ["for(i in 1 2 3) echo $i","1\n2\n3"],
+  ["n=(); while(! ~ $#n 3) n=($n x); echo $#n","3"],
+  ["switch(b){case a; echo A; case b c; echo B}","B"],
+  ["fn greet {echo hi $1 $#*}; greet you there","hi you 2"],
+  ["echo `{echo inner} after","inner after"],
+  ["~ a a && echo and; ~ a b || echo or","and\nor"],
+  ["cat /nothing; echo status $status","cat: /nothing: not found\nstatus 1"],
+  ["echo /rom/lib/n*","/rom/lib/namespace"],
+  ["echo /rom/lib/*","/rom/lib/namespace /rom/lib/profile"],
+  ["echo 'no*match'*","no*match*"],
+  ["cd /rom/lib; pwd; cd","/rom/lib"],
+  ["rc -c 'echo sub $x'","sub a b c"],
+  ["{echo in a block} >/ram/g; cat /ram/g","in a block"],
+  ["whatis greet","fn greet {echo hi $1 $#*}"],
+  ["{echo back >/ram/bg} & wait; cat /ram/bg; echo $#apid","back\n1"],
+  ["echo 'echo script $1 $0' >/ram/s; rc /ram/s arg","script arg /ram/s"],
+  ["echo 'z=sourced' >/ram/d; . /ram/d; echo $z","sourced"],
+  ["echo x >/dev/sd/x/data; whatis status","echo: write error: read-only\nstatus='write error'"],
+  ["eval echo evaled $x(1)","evaled a"],
+  ["fn sh {shift; echo $*}; sh a b c","b c"],
+  ["rc -c 'exit oops'; echo $status","oops"],
+  ["echo (a","rc: syntax error"],
+  ["whatis echo x; q=('it''s' '' a.b); whatis q","/bin/echo\nx=(a b c)\nq=('it''s' '' a.b)"],
+  ["bind '#n' /mnt; ls /mnt","null\nzero"],
+  ["ls /rom/lib","namespace\nprofile"],
+  ["cat /bin/echo >/ram/hi; cd /ram; hi from dot; cd","from dot"],
+  ["cat /nothing >[2]/ram/e; cat /ram/e","cat: /nothing: not found"],
+  ["cat /nothing |[2] cat >/ram/p; echo -n 'p: '; cat /ram/p","p: cat: /nothing: not found"],
+  ["echo $task $#path $path # a comment","2 2 . /bin"],
+  ["path=(); ls; path=(. /bin); ls /rom/lib","rc: ls: not found\nnamespace\nprofile"],
+  ["! ~ a b && echo not; echo $status","not\n"],
+];
+
 module.exports = {
   IRQ_OFF_MAX,
   tests: [
@@ -114,15 +162,15 @@ module.exports = {
     {
       name: 'init', what: 'init from files: the RAM disks started, the namespace file run, each shell\'s own namespace and /ram (a window\'s too)',
       init: 'init', modules: ['t_child'], cycles: 250e6,
-      // (ā: wait for a prompt; \x1d c: Ctrl-] c, a window made, its shell started.  /bin: the RAM disks' caches (empty),
-      // then #m/bin, whose t_child runs by its name.  t_child f makes /ram/mark: in its shell's area, 2, and not in
-      // window 1's shell's, 4)
-      machine: { input: 'āls #fr\r' + 'āls /ram\r' + 'āls /bin\r' + 'āt_child f\r' + 'āls #fr/2\r' + 'ācat /rom/lib/profile\r' +
-        'ācat /dev/sd/s/ctl\r' + 'ā\x1dc' + 'āls #fr\r' + 'āls /ram\r' + 'āls /dev\r' },
-      expect: ['tsh 0> ls #fr\n1/\n2/\ntsh 0>', 'tsh 0> ls /ram\nbin/\nlib/\ntsh 0>',
-        'tsh 0> ls /bin\ninit\nhello\ntsh\nt_child\ntsh 0>', 'tsh 0> ls #fr/2\nbin/\nlib/\nmark\ntsh 0>',
-        'prompt=(', 'tsh 0> cat /dev/sd/s/ctl\nsram 512 KB 1024 blocks\nhydrafs label=SRAM\n', 'tsh: window 1',
-        'tsh 1> ls #fr\n1/\n2/\n4/\ntsh 1>', 'tsh 1> ls /ram\nbin/\nlib/\ntsh 1>', '\ncons\nconsctl\nwctl\nwnew\nser\nserctl\ntsh 1>'],
+      // (ā: wait for a prompt; '#fr' quoted, as # starts a comment; \x1d c: Ctrl-] c, a window made, wstart's rc
+      // started there.  /bin: the RAM disks' caches (empty), then #m/bin, whose t_child runs by its name.  t_child f
+      // makes /ram/mark: in window 0's rc's area, 2, and not in window 1's rc's, 4 (wstart, 3, has none))
+      machine: { input: 'āls \'#fr\'\r' + 'āls /ram\r' + 'āls /bin\r' + 'āt_child f\r' + 'āls \'#fr\'/2\r' + 'ācat /rom/lib/profile\r' +
+        'ācat /dev/sd/s/ctl\r' + 'āecho $window\r' + 'ā\x1dc' + 'āecho $window\r' + 'āls \'#fr\'\r' + 'āls /ram\r' + 'āls /dev\r' },
+      expect: ['% ls \'#fr\'\n1/\n2/\n%', '% ls /ram\nbin/\nlib/\n%',
+        '% ls /bin\ninit\nhello\nrc\nwstart\necho\ncat\nls\nps\npwd\nt_child\n%', '% ls \'#fr\'/2\nbin/\nlib/\nmark\n%',
+        'prompt=(', '% cat /dev/sd/s/ctl\nsram 512 KB 1024 blocks\nhydrafs label=SRAM\n', '% echo $window\n0\n%',
+        '% echo $window\n1\n%', '% ls \'#fr\'\n1/\n2/\n4/\n%', '% ls /ram\nbin/\nlib/\n%', '\ncons\nconsctl\nwctl\nwnew\nser\nserctl\n%'],
     },
     {
       name: 'newns', what: 'the default namespace\'s library (nslib): an old area emptied, a namespace file run (quotes, comments, $task, flags, bad lines)',
@@ -193,8 +241,10 @@ module.exports = {
       // (A card: the bit loops, 144 cycles a byte in; the old system's was 298 cycles a byte, in 256-byte reads)
       name: 'disk', what: 'the disks (storage): #d, the ROM disk, SD cards (SDHC and SDSC), RAM disks, their ctl files, the time a byte takes',
       init: 't_disk', cycles: 60e6, machine: { sd: DISK_CARDS, spiEcho: [3] },
+      // (A card's block read is kept in the storage driver's cache too: about 16 cycles a byte more)
       budgets: [{ what: 'a card, 4096 bytes read (8 blocks), a byte', from: '<card', to: 'card>', minus: ['<b0', 'b0>'], per: 4096,
-        max: o => o.clock === 2 ? 280 + 64 : 280 },
+        max: o => o.clock === 2 ? 300 + 64 : 300 },
+        { what: 'the same again, from the cache, a byte', from: '<hit', to: 'hit>', minus: ['<b0', 'b0>'], per: 4096, max: 80 },
         { what: 'a RAM disk, 4096 bytes read, a byte', from: '<ram', to: 'ram>', minus: ['<b0', 'b0>'], per: 4096, max: 70 }],
       check() {
         const f = [], c0 = DISK_CARDS[0].data, c1 = DISK_CARDS[1].data;
@@ -264,8 +314,7 @@ module.exports = {
       name: 'load', what: 'SPAWN by path and the loader: modules in place (#m/bin), RAM programs from a card (arguments, fd maps), errors',
       init: 't_load', modules: ['t_child'], cycles: 200e6,
       get machine() { return { sd: loadCard() }; },
-      // (A name through /bin looks in the card's bin first: the storage driver keeps one block, so each look reads the
-      // card's directories again, most of that time)
+      // (A name through /bin looks in the card's bin first: its directories come from the storage driver's cache)
       get budgets() {
         const n = BIG_LENGTH();
         return [{ what: 'a RAM program loaded from a card (t_big, ' + n + ' bytes: SPAWN to its first instruction), a byte', from: '<big', to: 'big>',
@@ -274,8 +323,31 @@ module.exports = {
         { what: 'SPAWN of a module in place (#m/t_child), the caller\'s time', from: '<msp', to: 'msp>', minus: ['<b0', 'b0>'],
           per: 1, max: 70000 },
         { what: 'the same by /bin/t_child (the card\'s bin first, then #m/bin)', from: '<sp', to: 'sp>', minus: ['<b0', 'b0>'], per: 1,
-          max: o => o.clock === 2 ? 550000 : 450000 }];
+          max: 150000 }];
       },
+    },
+    {
+      name: 'env', what: 'environments: ENV_GET, ENV_PUT, ENV_DEL, ENV_NAME, a child\'s copy, #e (/env) as files',
+      init: 't_env', modules: ['t_child'], cycles: 40e6,
+    },
+    {
+      name: 'rc', what: 'rc: quoting, lists, redirections, pipelines, if, for, while, switch, functions, globs, scripts, Ctrl-C, its start',
+      init: 't_rc', cycles: 400e6,
+      // (Each line typed at its prompt: its output, then the next prompt.  Then a command of three lines, each after
+      // the one before has been read (\u0100: a moment), and cat, waiting for input, interrupted by Ctrl-C)
+      get machine() {
+        return { input: RC_LINES.map(l => '\u0101' + l[0] + '\r').join('') + '\u0101if(~ a a){\r\u0100echo multi\r\u0100}\r' +
+          '\u0101cat\r\u0100\x03\u0101echo $status\r' };
+      },
+      get expect() {
+        return [...RC_LINES.map(l => '% ' + l[0] + '\n' + l[1] + '\n%'), '% if(~ a a){\n\techo multi\n\t}\nmulti\n%',
+          '\n% echo $status\ninterrupt\n%'];
+      },
+      // (t_rc's, before rc -l starts: rc's own start and end, and ls /bin through its union (the RAM disks' empty
+      // caches, then #m/bin), into #n/null)
+      budgets: [{ what: 'rc -c \'x=1\': SPAWN to its end', from: '<rc', to: 'rc>', minus: ['<b0', 'b0>'], per: 1, max: 145000 },
+        { what: 'ls /bin (the caches, then #m/bin): SPAWN to its end', from: '<ls', to: 'ls>', minus: ['<b0', 'b0>'], per: 1,
+          max: 600000 }],
     },
     {
       name: 'cons', what: 'the console: lines, editing, history, raw keys, Ctrl-C, windows (shown, repainted, made, gone), 115200',

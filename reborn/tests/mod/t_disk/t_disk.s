@@ -6,7 +6,7 @@
 ; checks the cards' writes afterwards.  #d's listing; the ROM disk (the paged ROM's block 0, its size, read only,
 ; its end); the cards: started by an open, read, written across a block's end and whole, their ends, their ctl
 ; files, a card's SPI device busy; no card; the RAM disks started, written, read, stopped; and the time 4096
-; bytes take from a card and from a RAM disk.
+; bytes take from a card, the same again (from the storage driver's cache of the cards' blocks), and from a RAM disk.
 
 .include "hydra.inc"
 .include "hyx2.inc"
@@ -226,6 +226,12 @@ main:
             MARK        "card>"
             lda         total
             EXPECT_A    0, "4096 bytes from card 0"
+            SEEK_       fd, 16 * 512                        ; The same again: from the cache
+            MARK        "<hit"
+            jsr         read4k
+            MARK        "hit>"
+            lda         total
+            EXPECT_A    0, "the same 4096 bytes again (from the cache)"
             lda         fd
             jsr         CLOSE
 

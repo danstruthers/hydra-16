@@ -14,7 +14,8 @@
 ;           devices, x the ROM disk (the paged ROM, read only), r the RAM disk (this task's banks), s the shared
 ;           one (a shared segment)
 ;     N/data  the disk as a file of bytes, at the fd's offset (its first 4 GB), through the block buffer; writes
-;             go to the disk at once.  Opening a card's starts it (E_NODEV: no card; E_BUSY: open in #S)
+;             go to the disk at once.  A card's blocks are cached (L2_SLOTS of them, written through).  Opening a
+;             card's starts it (E_NODEV: no card; E_BUSY: open in #S)
 ;     N/ctl   reads as the disk: "sdhc 7580 MB 15523840 blocks" (sdsc, rom; ram and sram in KB), or "none".
 ;             init: the card started again (after it's changed); start SIZE: a RAM disk of SIZE 8K banks (or
 ;             SIZE K, SIZE M: 256K, 1M), and an empty HydraFS on it; stop: its banks given back (not while it's
@@ -38,6 +39,8 @@
             HYX2_DRIVER "storage", init, srv_serve, 0, 0, HF_BOOT, 2
 
 SPI_KEEP        = 256                                       ; A transaction's bytes, at most
+L2_SLOTS        = 16                                        ; The cards' block cache: its blocks ...
+L2_HOT          = 12                                        ;   and the hot ones (used again), at most
 ROM_BLOCKS      = 256 * (PROM_BANK_SIZE / BLOCK)            ; The paged ROM's 256 banks
 
 .assert     PROM_BANK_SIZE .mod BLOCK = 0 .and BANK_SIZE .mod BLOCK = 0, error, "A block is inside one bank"
@@ -60,6 +63,9 @@ within:     .res        2                                   ;   and where it sta
 sd_cnt:     .res        2                                   ; (The SD layer's tries)
 num:        .res        4                                   ; A number
 bufp:       .res        2                                   ; A block's 512 bytes (blk_read, blk_write)
+l2_ptr:     .res        2                                   ; A cached block ...
+l2_from:    .res        2                                   ;   and a copy's ends
+l2_to:      .res        2
 
 .bss
 spi_open:   .res        SPI_DEVS                            ; Each SPI device: its data file's fids (one open) ...
@@ -83,12 +89,34 @@ sd_r1:      .res        1                                   ;   the card's last 
 sd_tmp:     .res        1
 sd_csd:     .res        16                                  ;   and its CSD register
 blk:        .res        BLOCK                               ; The block buffer
+l2_data:    .res        L2_SLOTS * BLOCK                    ; The cards' block cache: each slot's block ...
+l2_disk:    .res        L2_SLOTS                            ;   its disk ($FF: free) ...
+l2_b0:      .res        L2_SLOTS                            ;   its number (4 bytes) ...
+l2_b1:      .res        L2_SLOTS
+l2_b2:      .res        L2_SLOTS
+l2_b3:      .res        L2_SLOTS
+l2_agel:    .res        L2_SLOTS                            ;   when it was last used (l2_clock) ...
+l2_ageh:    .res        L2_SLOTS
+l2_hot:     .res        L2_SLOTS                            ;   and 1: used again since it came
+l2_clock:   .res        2
+l2_card:    .res        1                                   ; (l2_find's: bit 7, a card)
+l2_want:    .res        1                                   ; (l2_oldest's)
+l2_pick:    .res        1
+l2_minl:    .res        1
+l2_minh:    .res        1
 
 .code
 ; ****************************************************************************
-; Init: the module's banks, port B (nothing selected), the ROM disk, HydraFS, and each device's letter
+; Init: the module's banks, port B (nothing selected), the cache (empty), the ROM disk, HydraFS, and each device's
+; letter
 init:
             HYX2_BANKS_INIT
+            ldx         #L2_SLOTS - 1
+            lda         #$FF
+:
+            sta         l2_disk,X
+            dex
+            bpl         :-
             lda         #SPI_CSB | SPI_MOSI                 ; Deselected, SCLK low, MOSI high
             sta         port
             sta         VIA_PORTB
@@ -541,6 +569,7 @@ sd_init:
             rts
 :
             stz         d_state,X
+            jsr         blk_forget                          ; (It may be another card now)
             lda         #10                                 ; 80 clocks, nothing selected
             jsr         spi_idle_clocks
             lda         dk
@@ -1135,27 +1164,42 @@ blk_claim:
             clc
             rts
 
-; Nothing of disk dk's in blk.  Keeps .X
+; Nothing of disk dk's in blk, or the cache.  Keeps .X
 blk_forget:
             lda         c_disk
             cmp         dk
             bne         :+
             stz         c_ok
 :
-            rts
+            jmp         l2_forget
 
 ; Block lba of disk dk into the 512 bytes at bufp (blk_read), or them to it (blk_write: then blk is that block, if
-; they were blk's; if not, blk forgets it, if it had it).  OUT: C = 0; or C = 1, .A = the error
+; they were blk's; if not, blk forgets it, if it had it); a card's through the cache.  OUT: C = 0; or C = 1, .A =
+; the error
 blk_read:
             jsr         blk_check
             bcs         blk_failed
+            phx
+            jsr         l2_get                              ; (A card's block kept: from the cache)
+            plx
+            bcs         :+
+            rts
+:
+            jsr         @go
+            bcs         blk_failed
+            jmp         l2_put
+
+@go:
             jmp         (blk_readers,X)
 
 blk_write:
             jsr         blk_check
             bcs         blk_failed
             jsr         @go
-            bcs         blk_failed
+            bcc         :+
+            jmp         l2_drop                             ; (What the card has is unknown now)
+:
+            jsr         l2_put
             lda         bufp
             cmp         #<blk
             bne         @other
@@ -1211,6 +1255,246 @@ on_disk:
             sbc         d_blocks + 2,X
             lda         lba + 3
             sbc         d_blocks + 3,X
+            rts
+
+; ****************************************************************************
+; The cards' block cache: L2_SLOTS blocks in this task's RAM, under blk_read and blk_write (and so under blk, which
+; holds the block being worked on), and always what's on the card: a block read from a card is kept, a block
+; written to one is kept as written, and a block that's kept is copied from here (about 6,000 cycles; the card's
+; read is 131,000).  So a name looked up again (a program's, through /bin) costs no card reads.  A block used again
+; is hot: a new block takes a free slot, else the oldest cold one's, else the oldest hot one's, so a file read
+; through doesn't push the directories out; L2_HOT at most are hot.  A card started (or started again: its ctl's
+; init) or stopped has none here.
+
+; Block lba of disk dk from the cache into the 512 bytes at bufp, if it's a card's and kept.  OUT: C = 0: it was;
+; C = 1: it wasn't.  Modifies: .A, .X, .Y
+l2_get:
+            jsr         l2_find
+            bcs         @done
+            jsr         l2_at                               ; From its slot
+            MOVR        l2_from, l2_ptr
+            MOVR        l2_to, bufp
+            jsr         l2_copy
+            jsr         l2_touch
+            jsr         l2_heat
+            clc
+@done:
+            rts
+
+; The 512 bytes at bufp (just read from block lba of disk dk, or written to it) kept, if it's a card's: in its
+; slot, or a new one.  OUT: C = 0.  Modifies: .A, .X, .Y
+l2_put:
+            jsr         l2_find
+            bcc         @slot
+            bit         l2_card                             ; (Not a card's: nothing kept)
+            bpl         @done
+            jsr         l2_victim                           ; A new slot: the block's, cold
+            lda         dk
+            sta         l2_disk,X
+            lda         lba
+            sta         l2_b0,X
+            lda         lba + 1
+            sta         l2_b1,X
+            lda         lba + 2
+            sta         l2_b2,X
+            lda         lba + 3
+            sta         l2_b3,X
+            stz         l2_hot,X
+@slot:
+            jsr         l2_at
+            MOVR        l2_from, bufp
+            MOVR        l2_to, l2_ptr
+            jsr         l2_copy
+            jsr         l2_touch
+@done:
+            clc
+            rts
+
+; Block lba of disk dk not kept (its write failed: what the card has is unknown).  Keeps .A and C
+l2_drop:
+            php
+            pha
+            jsr         l2_find
+            bcs         :+
+            lda         #$FF
+            sta         l2_disk,X
+:
+            pla
+            plp
+            rts
+
+; Disk dk's blocks not kept.  Keeps .X
+l2_forget:
+            phx
+            ldx         #L2_SLOTS - 1
+@slot:
+            lda         l2_disk,X
+            cmp         dk
+            bne         :+
+            lda         #$FF
+            sta         l2_disk,X
+:
+            dex
+            bpl         @slot
+            plx
+            rts
+
+; The slot keeping block lba of disk dk; l2_card's bit 7: dk is a card.  OUT: C = 0, .X = it; or C = 1: none
+l2_find:
+            stz         l2_card
+            lda         dk
+            cmp         #SPI_DEVS
+            bcs         @none
+            dec         l2_card
+            ldx         #L2_SLOTS - 1
+@slot:
+            lda         l2_disk,X
+            cmp         dk
+            bne         @next
+            lda         l2_b0,X
+            cmp         lba
+            bne         @next
+            lda         l2_b1,X
+            cmp         lba + 1
+            bne         @next
+            lda         l2_b2,X
+            cmp         lba + 2
+            bne         @next
+            lda         l2_b3,X
+            cmp         lba + 3
+            beq         @found
+@next:
+            dex
+            bpl         @slot
+@none:
+            sec
+            rts
+
+@found:
+            clc
+            rts
+
+; l2_ptr = slot .X's block: l2_data + .X * 512.  Keeps .X
+l2_at:
+            lda         #<l2_data
+            sta         l2_ptr
+            txa
+            asl
+            clc
+            adc         #>l2_data
+            sta         l2_ptr + 1
+            rts
+
+; 512 bytes from l2_from to l2_to.  Modifies: .A, .Y
+l2_copy:
+            ldy         #0
+:
+            lda         (l2_from),Y
+            sta         (l2_to),Y
+            iny
+            bne         :-
+            inc         l2_from + 1
+            inc         l2_to + 1
+:
+            lda         (l2_from),Y
+            sta         (l2_to),Y
+            iny
+            bne         :-
+            rts
+
+; Slot .X used now: its age the clock's (the clock wrapped: every slot as old as the others first).  Keeps .X
+l2_touch:
+            inc         l2_clock
+            bne         @age
+            inc         l2_clock + 1
+            bne         @age
+            phx
+            ldx         #L2_SLOTS - 1
+:
+            stz         l2_agel,X
+            stz         l2_ageh,X
+            dex
+            bpl         :-
+            plx
+            inc         l2_clock
+@age:
+            lda         l2_clock
+            sta         l2_agel,X
+            lda         l2_clock + 1
+            sta         l2_ageh,X
+            rts
+
+; Slot .X used again: hot (and the oldest other hot one cold, if that's more than L2_HOT).  Keeps .X
+l2_heat:
+            lda         l2_hot,X
+            bne         @done
+            inc         l2_hot,X
+            phx
+            ldy         #0                                  ; The hot ones
+            ldx         #L2_SLOTS - 1
+:
+            lda         l2_hot,X
+            beq         :+
+            iny
+:
+            dex
+            bpl         :--
+            cpy         #L2_HOT + 1
+            bcc         :+
+            lda         #1                                  ; (Slot .X is the newest: not the oldest)
+            jsr         l2_oldest
+            stz         l2_hot,X
+:
+            plx
+@done:
+            rts
+
+; The slot a new block takes: a free one, else the oldest cold one, else the oldest hot one.  OUT: .X
+l2_victim:
+            ldx         #L2_SLOTS - 1
+:
+            lda         l2_disk,X
+            cmp         #$FF
+            beq         @done
+            dex
+            bpl         :-
+            lda         #0
+            jsr         l2_oldest
+            bcc         @done
+            lda         #1
+            jsr         l2_oldest
+@done:
+            rts
+
+; The oldest slot whose hot flag is .A (0 or 1).  OUT: C = 0, .X = it; or C = 1: none.  Modifies: .A, .Y
+l2_oldest:
+            sta         l2_want
+            lda         #$FF
+            sta         l2_pick
+            ldy         #L2_SLOTS - 1
+@slot:
+            lda         l2_hot,Y
+            cmp         l2_want
+            bne         @next
+            lda         l2_pick                             ; The first, or older than the oldest so far?
+            cmp         #$FF
+            beq         @take
+            lda         l2_agel,Y
+            cmp         l2_minl
+            lda         l2_ageh,Y
+            sbc         l2_minh
+            bcs         @next
+@take:
+            sty         l2_pick
+            lda         l2_agel,Y
+            sta         l2_minl
+            lda         l2_ageh,Y
+            sta         l2_minh
+@next:
+            dey
+            bpl         @slot
+            ldx         l2_pick
+            cpx         #$FF                                ; (C = 1: none)
             rts
 
 ; ****************************************************************************

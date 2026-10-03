@@ -267,5 +267,5 @@ s_m:        .byte       "/m", 0
 s_m_hello:  .byte       "/m/hello", 0
 s_spec:     .byte       "abc", 0
 s_child:    .byte       "#m/t_child", 0
-s_h:        .byte       "h", 0
-s_m_op:     .byte       "m", 0
+s_h:        .byte       "h", 0, 0
+s_m_op:     .byte       "m", 0, 0

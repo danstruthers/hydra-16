@@ -19,7 +19,7 @@ seg_bank:   .res        1
 
 .bss
 buf:        .res        64
-args:       .res        4                                   ; "gNN" for t_child
+args:       .res        5                                   ; "gNN" for t_child (a list: its 0, then the empty one)
 
 .code
 main:
@@ -155,6 +155,7 @@ main:
             lda         seg
             jsr         hexbyte
             stz         args + 3
+            stz         args + 4                            ; (The empty one that ends the list)
             LDR         r0, s_child
             LDR         r1, args
             lda         #0

@@ -17,7 +17,7 @@
 .segment "KCODE_P1"
 
 ; ****************************************************************************
-; A task's start (from K_TASK_MAIN and K_DRIVER_MAIN, in the new task): its break at its module's top (a RAM
+; A task's start (from K_TASK_START and K_DRIVER_MAIN, in the new task): its break at its module's top (a RAM
 ; program's: set as it loaded, load.s), nothing given out.  Modifies .A, .X
 K_MEM_START:
             lda         TA_MODBANK

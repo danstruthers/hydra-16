@@ -170,4 +170,4 @@ local:
 .rodata
 s_drv:      .byte       "#m/t_drv", 0
 s_child:    .byte       "#m/t_child", 0
-s_c0a:      .byte       "c0a", 0
+s_c0a:      .byte       "c0a", 0, 0

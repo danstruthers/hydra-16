@@ -1,4 +1,10 @@
-# /rom/lib/profile: what each shell runs as it starts, after the namespace file and before its first prompt; a
-# card's /lib/profile runs after it.  rc reads it (phase 4); the test shell before it, tsh, doesn't.
+# /rom/lib/profile: what each shell runs as it starts (rc -l: after newns), before its first prompt.  $window is
+# its window (init's, wstart's): its console goes at /dev, and its notes (Ctrl-C) to the shell's note group.
 
-prompt=('% ' '	')       # the prompt, and the one for a line that goes on
+prompt=('% ' '	')
+if(~ $#window 0) window=0
+if(! ~ $window 0){
+	unmount '#c' /dev
+	bind -a '#c'^$window /dev
+}
+echo -n group >/dev/consctl

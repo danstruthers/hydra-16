@@ -13,10 +13,10 @@
 
 .segment "KCODE_P3"
 
-; SPAWN: start a program.  IN: r0 = its path; r1 = its arguments (zero-terminated, up to 175 characters), or 0;
-; .A = flags (SPAWN_*); with SPAWN_FDMAP, r2 = an fd map (a count, SPAWN_FDS at most, then the caller's fd for each
-; of the child's from 0, $FF for none; without it, fds 0, 1 and 2).  OUT: C = 0, .A = the task; or C = 1, .A =
-; E_TOOBIG, E_INVAL, E_NOEXEC, E_NOTASK, or OPEN's and READ's errors
+; SPAWN: start a program.  IN: r0 = its path; r1 = its arguments (zero-terminated strings, ended by an empty one:
+; 176 bytes at most), or 0; .A = flags (SPAWN_*); with SPAWN_FDMAP, r2 = an fd map (a count, SPAWN_FDS at most,
+; then the caller's fd for each of the child's from 0, $FF for none; without it, fds 0, 1 and 2).  OUT: C = 0, .A =
+; the task; or C = 1, .A = E_TOOBIG, E_INVAL, E_NOEXEC, E_NOTASK, or OPEN's and READ's errors
 K_SPAWN:
             and         #<~SPAWN_LOAD                       ; (The kernel's own)
             sta         L_FLAGS
@@ -24,19 +24,26 @@ K_SPAWN:
             sta         L_ARGS
             lda         r1 + 1
             sta         L_ARGS + 1
-            stz         L_ARGLEN                            ; Its arguments' length with the 0 (checked first)
-            ora         r1
+            stz         L_ARGLEN                            ; Its arguments' length: each string and its 0, and
+            ora         r1                                  ;   the empty one that ends them (checked first)
             beq         @map
             ldy         #0
-:
-            lda         (r1),Y
-            beq         :+
+@arg:
+            lda         (r1),Y                              ; (Empty: the end)
+            beq         @end
+@char:
             iny
-            cpy         #TA_ARGS_MAX + 1
-            bne         :-
+            cpy         #TA_ARGS_MAX
+            bcs         @toobig
+            lda         (r1),Y
+            bne         @char
+            iny
+            bra         @arg
+
+@toobig:
             FAIL        E_TOOBIG
 
-:
+@end:
             iny
             sty         L_ARGLEN
 @map:                                                       ; The fd map, into TA_SCRATCH + SP_MAP
@@ -99,6 +106,18 @@ K_SPAWN:
             rts
 :
             sta         L_TASK
+            lda         #<TA_CWD                            ; Its current directory: the caller's
+            sta         K_PTR
+            sta         K_PTR2
+            lda         #>TA_CWD
+            sta         K_PTR + 1
+            sta         K_PTR2 + 1
+            lda         #PATH_MAX + 1
+            sta         K_CNT
+            stz         K_CNT + 1
+            lda         L_TASK
+            clc
+            FARCALL     K_KCOPY
             lda         L_ARGLEN                            ; Its arguments, into its TA_ARGS
             beq         @noargs
             sta         K_CNT

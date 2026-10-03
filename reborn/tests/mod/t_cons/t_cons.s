@@ -322,7 +322,7 @@ s_cons:     .byte       "#c/cons", 0
 s_consctl:  .byte       "#c/consctl", 0
 s_serctl:   .byte       "#c/serctl", 0
 s_child:    .byte       "#m/t_child", 0
-s_i:        .byte       "i", 0
+s_i:        .byte       "i", 0, 0
 s_rawon:    .byte       "rawon"
 s_rawoff:   .byte       "rawoff"
 s_wctl:     .byte       "#c/wctl", 0
@@ -332,7 +332,7 @@ s_c2:       .byte       "#c2/cons", 0
 s_new:      .byte       "new"
 s_cur0:     .byte       "current 0"
 s_hidden:   .byte       "w1 hidden text", LF
-s_j:        .byte       "j", 0
+s_j:        .byte       "j", 0, 0
 s_b115200:  .byte       "b115200"
 s_abc:      .byte       "abc", LF
 s_p1:       .byte       "1> ", 0

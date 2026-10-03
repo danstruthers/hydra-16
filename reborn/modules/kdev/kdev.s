@@ -11,7 +11,8 @@
 ;           group) and ctl (kill, interrupt, note N)
 ;   #|      pipes: opening pipe makes a new one (its read end; for O_WRITE, its write end), and R_DUP its other end
 ;           (PIPE does both); 512 bytes each, 8 of them
-; To come: #e (the environment), and /proc's other files (args, cwd, fd, ns ...).
+;   #e      the environment of the task asking (the kernel keeps it: ENV_GET ...), a file a variable
+; To come: /proc's other files (args, cwd, fd, ns ...).
 
 .include "hydra.inc"
 .include "hw.inc"
@@ -25,6 +26,9 @@ SRV_STAT        = mod_stat                                  ; (srvlib: a module'
 
 PIPE_N          = 8
 PIPE_SIZE       = 512
+E_FIDS          = 16                                        ; #e's fids ...
+EF_DIR          = 1                                         ;   each the directory ...
+EF_VAR          = 2                                         ;   or a variable (0: free)
 
 .zeropage
 pp:         .res        1                                   ; A pipe ...
@@ -39,6 +43,9 @@ left:       .res        1
 
 .bss
 me:         .res        ME_SIZE                             ; A module (MODINFO)
+last_want:  .res        1                                   ; The last module h_list named: of this type ($FF:
+last_k:     .res        1                                   ;   none yet), the k-th ...
+last_cnt:   .res        1                                   ;   at this entry
 chunk:      .res        256                                 ; A page of one (ROMREAD)
 info:       .res        TI_SIZE                             ; A task (TASKINFO)
 p_used:     .res        PIPE_N                              ; Each pipe: in use ...
@@ -51,6 +58,10 @@ p_cnth:     .res        PIPE_N
 p_readers:  .res        PIPE_N                              ;   its ends' fids
 p_writers:  .res        PIPE_N
 p_buf:      .res        PIPE_N * PIPE_SIZE
+ef_kind:    .res        E_FIDS                              ; #e's fids: each its kind (EF_*) ...
+ef_task:    .res        E_FIDS                              ;   the task whose environment it's in ...
+ef_name:    .res        E_FIDS * (ENV_NAME_MAX + 1)         ;   and a variable's name
+ename:      .res        ENV_NAME_MAX + 1                    ; A request's name
 
 .code
 ; ****************************************************************************
@@ -61,6 +72,8 @@ init:
             stz         p_used,X
             dex
             bpl         :-
+            lda         #$FF
+            sta         last_want
             ldx         #0
 @letter:
             lda         SRV_TREES,X
@@ -170,15 +183,33 @@ h_list:
             lda         z:srv_k                             ; DYN_NAME: the srv_k-th of those wanted
             sta         left
             stz         cnt
+            lda         want                                ; (The one after the last named: on from it, not
+            cmp         last_want                           ;   from the start again, as a directory is read)
+            bne         @name
+            lda         last_k
+            inc         a
+            cmp         z:srv_k
+            bne         @name
+            ldx         last_cnt
+            inx
+            stx         cnt
+            stz         left
 @name:
             jsr         mod_next
             bcs         @done
             lda         left
-            beq         @this
+            beq         @named
             dec         left
             inc         cnt
             bra         @name
 
+@named:
+            lda         want
+            sta         last_want
+            lda         z:srv_k
+            sta         last_k
+            lda         cnt
+            sta         last_cnt
 @this:
             lda         cnt
             clc
@@ -402,6 +433,552 @@ mod_stat:
             bcs         @done
             MOVR        srv_stat + SR_LENGTH, n
 @done:
+            rts
+
+; ****************************************************************************
+; #e: the environment of the task asking (the kernel's: ENV_GET, ENV_PUT, ENV_DEL, ENV_NAME), a file a variable.  A
+; raw device (SK_RAW: its fids its own, E_FIDS of them): a fid is the directory, or a variable (its name, and the
+; task whose it is: the opener's, so a child given the fd reads its parent's).  Opening one with O_TRUNC, or
+; creating one, empties it (or makes it); a write sets the value from its offset to its end (rc writes a variable
+; whole, from 0); a read past the end is the end.  The directory reads as a stat record a variable, in the order
+; they were made.
+
+h_env:
+            ldx         #E_NREQ - 1
+:
+            cmp         e_reqs,X
+            beq         :+
+            dex
+            bpl         :-
+            lda         #E_NOSYS
+            sec
+            rts
+:
+            txa
+            asl
+            tax
+            jmp         (e_reqvec,X)
+
+; R_OPEN: the directory (for reading), or a variable there is
+e_open:
+            jsr         e_path
+            bcs         e_done
+            beq         @dir
+            jsr         e_length                            ; (There?)
+            bcs         e_done
+            lda         TASK_INBOX + RQ_MODE
+            and         #O_TRUNC
+            beq         :+
+            jsr         e_empty
+            bcs         e_done
+:
+            lda         #EF_VAR
+            jmp         e_newfid
+
+@dir:
+            lda         TASK_INBOX + RQ_MODE
+            and         #O_RW_MASK | O_TRUNC
+            beq         :+
+            lda         #E_ISDIR
+            sec
+            rts
+:
+            lda         #EF_DIR
+            jmp         e_newfid
+
+; R_CREATE: a variable, empty (made, or emptied)
+e_create:
+            jsr         e_path
+            bcs         e_done
+            beq         @perm
+            lda         TASK_INBOX + RQ_PERM                ; (No directories)
+            and         #DM_DIR
+            bne         @perm
+            jsr         e_empty
+            bcs         e_done
+            lda         #EF_VAR
+            jmp         e_newfid
+
+@perm:
+            lda         #E_PERM
+            sec
+e_done:
+            rts
+
+; R_REMOVE: a variable
+e_remove:
+            jsr         e_path
+            bcs         e_done
+            beq         @perm
+            LDR         r0, ename
+            lda         TASK_INBOX + RQ_CLIENT
+            jmp         ENV_DEL
+
+@perm:
+            lda         #E_PERM
+            sec
+            rts
+
+; R_CLUNK
+e_clunk:
+            jsr         e_fid
+            bcs         e_done
+            stz         ef_kind,X
+e_ok:
+            clc
+            rts
+
+; R_DUP: another fid as the request's
+e_dup:
+            jsr         e_fid
+            bcs         e_done
+            stx         cnt
+            jsr         e_slot                              ; (.X: a free one)
+            bcs         e_done
+            ldy         cnt
+            lda         ef_kind,Y
+            sta         ef_kind,X
+            lda         ef_task,Y
+            sta         ef_task,X
+            lda         cnt                                 ; Its name: the old one's
+            jsr         e_namep
+            MOVR        pt, r0
+            txa
+            jsr         e_namep
+            ldy         #ENV_NAME_MAX
+:
+            lda         (pt),Y
+            sta         (r0),Y
+            dey
+            bpl         :-
+            jmp         e_answer
+
+; R_STAT: the directory's record, or the variable's
+e_stat:
+            jsr         e_fid
+            bcs         e_done
+            jsr         e_record
+            bcs         e_done
+            LDR         r0, srv_stat
+            MOVR        r1, TASK_INBOX + RQ_BUF
+            LDR         r2, SR_SIZE
+            MOVR        TASK_INBOX + RQ_DONE, r2
+            jsr         CLIENT_WRITE
+            clc
+            rts
+
+; R_READ: the directory's records, or the value from the offset (256 bytes at a time, through chunk)
+e_read:
+            jsr         e_fid
+            bcs         @done
+            stz         TASK_INBOX + RQ_DONE
+            stz         TASK_INBOX + RQ_DONE + 1
+            lda         ef_kind,X
+            cmp         #EF_DIR
+            bne         @value
+            jmp         e_readdir
+
+@value:
+            lda         TASK_INBOX + RQ_OFFSET + 2          ; (Past 64K: past the end)
+            ora         TASK_INBOX + RQ_OFFSET + 3
+            bne         @end
+@part:
+            jsr         e_part                              ; n: what's left of the count, 256 at most
+            beq         @end
+            ldx         TASK_INBOX + RQ_FID
+            jsr         e_at                                ; r0: the name; r3: the offset + what's done
+            LDR         r1, chunk
+            MOVR        r2, n
+            lda         ef_task,X
+            jsr         ENV_GET
+            bcs         @done
+            sta         m                                   ; n: what came (the value's rest, n at most)
+            stx         m + 1
+            lda         m
+            cmp         n
+            lda         m + 1
+            sbc         n + 1
+            bcs         :+
+            MOVR        n, m
+:
+            lda         n
+            ora         n + 1
+            beq         @end
+            LDR         r0, chunk                           ; To the client, after what's sent
+            jsr         e_client
+            MOVR        r2, n
+            jsr         CLIENT_WRITE
+            jsr         e_moved
+            lda         n + 1                               ; (A whole 256: there may be more)
+            bne         @part
+@end:
+            clc
+@done:
+            rts
+
+; R_WRITE: the value from the offset, 256 bytes at a time (through chunk)
+e_write:
+            jsr         e_fid
+            bcs         @done
+            stz         TASK_INBOX + RQ_DONE
+            stz         TASK_INBOX + RQ_DONE + 1
+            lda         ef_kind,X
+            cmp         #EF_DIR
+            beq         @isdir
+            lda         TASK_INBOX + RQ_OFFSET + 2          ; (Past 64K: no room)
+            ora         TASK_INBOX + RQ_OFFSET + 3
+            bne         @nomem
+@part:
+            jsr         e_part
+            beq         @end
+            LDR         r0, chunk                           ; From the client ...
+            jsr         e_client
+            MOVR        r2, n
+            jsr         CLIENT_READ
+            ldx         TASK_INBOX + RQ_FID                 ; ... into the value
+            jsr         e_at
+            LDR         r1, chunk
+            MOVR        r2, n
+            lda         ef_task,X
+            jsr         ENV_PUT
+            bcs         @done
+            jsr         e_moved
+            bra         @part
+
+@end:
+            clc
+@done:
+            rts
+
+@isdir:
+            lda         #E_ISDIR
+            sec
+            rts
+
+@nomem:
+            lda         #E_NOMEM
+            sec
+            rts
+
+; The directory's records from the offset (a record's start), as many as the count holds: a variable each
+e_readdir:
+            lda         TASK_INBOX + RQ_OFFSET              ; (A record's start)
+            and         #SR_SIZE - 1
+            bne         @inval
+            lda         TASK_INBOX + RQ_OFFSET + 2
+            ora         TASK_INBOX + RQ_OFFSET + 3
+            bne         @end
+            lda         TASK_INBOX + RQ_OFFSET + 1          ; cnt: the first record's number (offset / 64)
+            sta         cnt
+            lda         TASK_INBOX + RQ_OFFSET
+            asl
+            rol         cnt
+            asl
+            rol         cnt
+@record:
+            sec                                             ; Room for another?
+            lda         TASK_INBOX + RQ_COUNT
+            sbc         TASK_INBOX + RQ_DONE
+            tay
+            lda         TASK_INBOX + RQ_COUNT + 1
+            sbc         TASK_INBOX + RQ_DONE + 1
+            bne         :+
+            cpy         #SR_SIZE
+            bcc         @end
+:
+            LDR         r0, ename
+            ldx         TASK_INBOX + RQ_FID
+            lda         ef_task,X
+            ldx         cnt
+            jsr         ENV_NAME                            ; (Past the last: the end)
+            bcs         @end
+            jsr         e_varrec
+            LDR         r0, srv_stat
+            jsr         e_client
+            LDR         r2, SR_SIZE
+            jsr         CLIENT_WRITE
+            clc
+            lda         TASK_INBOX + RQ_DONE
+            adc         #SR_SIZE
+            sta         TASK_INBOX + RQ_DONE
+            bcc         :+
+            inc         TASK_INBOX + RQ_DONE + 1
+:
+            inc         cnt
+            bra         @record
+
+@end:
+            clc
+            rts
+
+@inval:
+            lda         #E_INVAL
+            sec
+            rts
+
+; ---- #e's pieces
+
+; The request's name (TASK_PATH, past its slashes) into ename.  OUT: C = 0, Z = 1: none (the directory); Z = 0: a
+; variable's; or C = 1, .A = E_NOENT (a name in a variable), E_NAMETOOLONG
+e_path:
+            ldx         #0
+:
+            lda         TASK_PATH,X
+            cmp         #'/'
+            bne         :+
+            inx
+            bra         :-
+:
+            ldy         #0
+@char:
+            lda         TASK_PATH,X
+            sta         ename,Y
+            beq         @end
+            cmp         #'/'
+            beq         @noent
+            inx
+            iny
+            cpy         #ENV_NAME_MAX + 1
+            bne         @char
+            lda         #E_NAMETOOLONG
+            sec
+            rts
+
+@end:
+            cpy         #0                                  ; (Z: none)
+            clc
+            rts
+
+@noent:
+            lda         #E_NOENT
+            sec
+            rts
+
+; The client's variable ename: its length in n.  OUT: C = 0; or C = 1, .A = E_NOENT
+e_length:
+            LDR         r0, ename
+            stz         r2
+            stz         r2 + 1
+            stz         r3
+            stz         r3 + 1
+            lda         TASK_INBOX + RQ_CLIENT
+            jsr         ENV_GET
+            sta         n
+            stx         n + 1
+            rts
+
+; The client's variable ename, empty (made, if it isn't there).  OUT: C = 0; or C = 1, .A = ENV_PUT's error
+e_empty:
+            LDR         r0, ename
+            stz         r2
+            stz         r2 + 1
+            stz         r3
+            stz         r3 + 1
+            lda         TASK_INBOX + RQ_CLIENT
+            jmp         ENV_PUT
+
+; A fid made, of kind .A, for the client and ename; the answer: RQ_FID, RQ_PERM.  OUT: C = 0; or C = 1, .A = E_NFILE
+e_newfid:
+            pha
+            jsr         e_slot
+            pla
+            bcc         :+
+            rts
+:
+            sta         ef_kind,X
+            lda         TASK_INBOX + RQ_CLIENT
+            sta         ef_task,X
+            txa
+            jsr         e_namep
+            ldy         #ENV_NAME_MAX
+:
+            lda         ename,Y
+            sta         (r0),Y
+            dey
+            bpl         :-
+e_answer:                                                   ; (Fid .X: the answer)
+            stx         TASK_INBOX + RQ_FID
+            lda         ef_kind,X
+            cmp         #EF_DIR
+            lda         #QT_FILE
+            bcc         :+
+            lda         #QT_DIR
+:
+            sta         TASK_INBOX + RQ_PERM
+            clc
+            rts
+
+; A free fid.  OUT: C = 0, .X = it; or C = 1, .A = E_NFILE
+e_slot:
+            ldx         #E_FIDS - 1
+:
+            lda         ef_kind,X
+            beq         @got
+            dex
+            bpl         :-
+            lda         #E_NFILE
+            sec
+            rts
+
+@got:
+            clc
+            rts
+
+; The request's fid: .X.  OUT: C = 0; or C = 1, .A = E_BADF
+e_fid:
+            ldx         TASK_INBOX + RQ_FID
+            cpx         #E_FIDS
+            bcs         @badf
+            lda         ef_kind,X
+            beq         @badf
+            clc
+            rts
+
+@badf:
+            lda         #E_BADF
+            sec
+            rts
+
+; r0 = fid .A's name (ef_name + .A * 32).  Keeps .X
+e_namep:
+            stz         r0 + 1
+            .repeat     5
+            asl
+            rol         r0 + 1
+            .endrepeat
+            clc
+            adc         #<ef_name
+            sta         r0
+            lda         r0 + 1
+            adc         #>ef_name
+            sta         r0 + 1
+            rts
+
+.assert     ENV_NAME_MAX + 1 = 32, error, "e_namep: a fid's name is 32 bytes"
+
+; r0 = fid .X's name; r3 = the request's offset + what's done.  Keeps .X
+e_at:
+            txa
+            jsr         e_namep
+            clc
+            lda         TASK_INBOX + RQ_OFFSET
+            adc         TASK_INBOX + RQ_DONE
+            sta         r3
+            lda         TASK_INBOX + RQ_OFFSET + 1
+            adc         TASK_INBOX + RQ_DONE + 1
+            sta         r3 + 1
+            rts
+
+; n = what's left of the request's count (256 at most).  OUT: Z = 1: none
+e_part:
+            sec
+            lda         TASK_INBOX + RQ_COUNT
+            sbc         TASK_INBOX + RQ_DONE
+            sta         n
+            lda         TASK_INBOX + RQ_COUNT + 1
+            sbc         TASK_INBOX + RQ_DONE + 1
+            sta         n + 1
+            beq         :+
+            lda         #1                                  ; (256)
+            sta         n + 1
+            stz         n
+:
+            lda         n
+            ora         n + 1
+            rts
+
+; r1 = the client's buffer, after what's done
+e_client:
+            clc
+            lda         TASK_INBOX + RQ_BUF
+            adc         TASK_INBOX + RQ_DONE
+            sta         r1
+            lda         TASK_INBOX + RQ_BUF + 1
+            adc         TASK_INBOX + RQ_DONE + 1
+            sta         r1 + 1
+            rts
+
+; RQ_DONE += n
+e_moved:
+            clc
+            lda         TASK_INBOX + RQ_DONE
+            adc         n
+            sta         TASK_INBOX + RQ_DONE
+            lda         TASK_INBOX + RQ_DONE + 1
+            adc         n + 1
+            sta         TASK_INBOX + RQ_DONE + 1
+            rts
+
+; srv_stat: fid .X's record (the directory's, or its variable's: its length now).  OUT: C = 0; or C = 1, .A = ENV_GET's
+; error (the variable gone)
+e_record:
+            lda         ef_kind,X
+            cmp         #EF_DIR
+            beq         @dir
+            phx
+            txa
+            jsr         e_namep
+            ldy         #ENV_NAME_MAX                       ; Its name, into ename
+:
+            lda         (r0),Y
+            sta         ename,Y
+            dey
+            bpl         :-
+            plx
+            LDR         r0, ename
+            stz         r2
+            stz         r2 + 1
+            stz         r3
+            stz         r3 + 1
+            lda         ef_task,X
+            jsr         ENV_GET
+            bcc         e_varrec                            ; (.A/.X: its length)
+            rts
+
+@dir:
+            jsr         e_blank
+            lda         #'/'
+            sta         srv_stat + SR_NAME
+            lda         #QT_DIR
+            sta         srv_stat + SR_QTYPE
+            lda         #$6D                                ; (r-x for all, a directory)
+            sta         srv_stat + SR_MODE
+            lda         #$01 | DM_DIR
+            sta         srv_stat + SR_MODE + 1
+            clc
+            rts
+
+; srv_stat: a variable's record (ename, .A/.X its length).  OUT: C = 0
+e_varrec:
+            pha
+            phx
+            jsr         e_blank
+            ldx         #ENV_NAME_MAX
+:
+            lda         ename,X
+            sta         srv_stat + SR_NAME,X
+            dex
+            bpl         :-
+            lda         #$B6                                ; (rw for all)
+            sta         srv_stat + SR_MODE
+            lda         #$01
+            sta         srv_stat + SR_MODE + 1
+            pla
+            sta         srv_stat + SR_LENGTH + 1
+            pla
+            sta         srv_stat + SR_LENGTH
+            clc
+            rts
+
+; srv_stat empty, but for its device
+e_blank:
+            ldx         #SR_SIZE - 1
+:
+            stz         srv_stat,X
+            dex
+            bpl         :-
+            lda         #'e'
+            sta         srv_stat + SR_DEV
             rts
 
 ; ****************************************************************************
@@ -917,6 +1494,8 @@ SRV_TREES:
             .word       tree_procs
             .byte       '|'
             .word       tree_pipe
+            .byte       'e'
+            .word       tree_env
             .byte       0
 
 tree_root:
@@ -964,6 +1543,12 @@ tree_pipe:
             SRV_ENTRY   s_slash,   $FF, SK_DIR,  0,         SM_READ,            0
             SRV_ENTRY   s_pipe,    0,   SK_DATA, h_pipe,    SM_READ | SM_WRITE, 0
             .word       0
+tree_env:
+            SRV_ENTRY   s_slash,   $FF, SK_RAW,  h_env,     SM_READ | SM_WRITE, 0
+            .word       0
+e_reqs:     .byte       R_OPEN, R_CREATE, R_READ, R_WRITE, R_CLUNK, R_STAT, R_REMOVE, R_FLUSH, R_DUP
+E_NREQ      = * - e_reqs
+e_reqvec:   .word       e_open, e_create, e_read, e_write, e_clunk, e_stat, e_remove, e_ok, e_dup
 proc_cmds:
             .word       s_kill, c_kill
             .word       s_interrupt, c_intr

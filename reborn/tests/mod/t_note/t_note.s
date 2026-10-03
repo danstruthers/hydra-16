@@ -234,9 +234,9 @@ nap:
 
 .rodata
 s_child:    .byte       "#m/t_child", 0
-s_p:        .byte       "p", 0
-s_s28:      .byte       "s28", 0
-s_b:        .byte       "b", 0
-s_n:        .byte       "n", 0
-s_d:        .byte       "d", 0
-s_t:        .byte       "t", 0
+s_p:        .byte       "p", 0, 0
+s_s28:      .byte       "s28", 0, 0
+s_b:        .byte       "b", 0, 0
+s_n:        .byte       "n", 0, 0
+s_d:        .byte       "d", 0, 0
+s_t:        .byte       "t", 0, 0

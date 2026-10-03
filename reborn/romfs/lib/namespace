@@ -16,7 +16,7 @@ bind -a '#t' /dev           # ticks
 bind '#d' /dev/sd
 bind '#S' /dev/spi
 bind '#m' /dev/mod
-#mount '#e' /env           # (phase 4)
+mount '#e' /env            # the environment
 mount '#p' /proc
 
 # the disks

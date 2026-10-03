@@ -15,6 +15,7 @@ child:      .res        1
 t0:         .res        2
 count:      .res        1
 sum:        .res        1
+spawned:    .res        1                                   ; (The ticks a SPAWN took)
 kids:       .res        16
 
 .bss
@@ -140,10 +141,14 @@ main:
             stx         t0 + 1
             CHILD       s_s28                               ; (40 ticks of spinning)
             sta         child
+            jsr         elapsed                             ; (The SPAWN's own time not counted)
+            sta         spawned
             lda         #5
             ldx         #0
             jsr         SLEEP
             jsr         elapsed
+            sec
+            sbc         spawned
             cmp         #8
             bcc         :+
             NOTOK       "preempted: SLEEP 5 ends while a child spins"
@@ -295,12 +300,12 @@ s_child:    .byte       "#m/t_child", 0
 s_nope:     .byte       "#m/nope", 0
 s_badpath:  .byte       "#x/t_child", 0
 s_long:     .byte       "#m/t_child_is_a_name_long_enough_to_make_this_path_over_63_characters", 0
-s_e7:       .byte       "e7", 0
-s_e1:       .byte       "e1", 0
-s_e2:       .byte       "e2", 0
-s_e3:       .byte       "e3", 0
-s_s28:      .byte       "s28", 0
-s_s14:      .byte       "s14", 0
-s_k:        .byte       "k", 0
-s_p:        .byte       "p", 0
-s_o:        .byte       "o", 0
+s_e7:       .byte       "e7", 0, 0
+s_e1:       .byte       "e1", 0, 0
+s_e2:       .byte       "e2", 0, 0
+s_e3:       .byte       "e3", 0, 0
+s_s28:      .byte       "s28", 0, 0
+s_s14:      .byte       "s14", 0, 0
+s_k:        .byte       "k", 0, 0
+s_p:        .byte       "p", 0, 0
+s_o:        .byte       "o", 0, 0

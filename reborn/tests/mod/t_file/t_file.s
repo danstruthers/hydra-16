@@ -306,5 +306,5 @@ s_kick:     .byte       "kick"
 s_reset:    .byte       "reset"
 s_digits:   .byte       "0123456789"
 s_child:    .byte       "#m/t_child", 0
-s_r:        .byte       "r", 0
-s_w:        .byte       "w", 0
+s_r:        .byte       "r", 0, 0
+s_w:        .byte       "w", 0, 0

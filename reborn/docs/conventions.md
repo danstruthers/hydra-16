@@ -33,7 +33,7 @@ Every task has its own `$0000`-`$7FFF` (the `T` register selects it) and its own
 | `$0400`-`$7FFF` | The program's RAM: its data and BSS, then its break (`BREAK`); pages from the top down (`PAGES_ALLOC`).  Task F's top page is the DS1747's |
 
 The kernel task (task 0) keeps the kernel's state: its program zero page (`K0_*`) and its RAM from `$0400`
-(`K_*` tables).  Every fixed address is in `include/layout.inc`, and nowhere else.
+(`K_*` tables; the environments, 1K a task, from `$3000`).  Every fixed address is in `include/layout.inc`, and nowhere else.
 
 ## Tasks
 
@@ -107,7 +107,8 @@ The kernel task (task 0) keeps the kernel's state: its program zero page (`K0_*`
 * A module is a HYX2 image (`sdk/asm/hyx2.inc`: the 48-byte header, then the code), linked by
   `modules/module.cfg` to run in place at `$A000` in its own paged ROM bank; its data is copied into its task's
   RAM and its BSS cleared before it starts.
-* `HYX2_PROGRAM "name", main`: `main` gets `r0` = its arguments; returning is `EXITS` with code 0.
+* `HYX2_PROGRAM "name", main`: `main` gets `r0` = its arguments (`TASK_ARGS`: zero-terminated strings, an empty
+  one after the last); returning is `EXITS` with code 0.
   `HYX2_DRIVER "name", init, serve, irq, stop, flags`: `init` (C = 1 and `.A` = an error ends it), then `serve`
   for its calls (`.Y` = the caller) and `irq` for its lines; `HF_BOOT` starts it at boot.
 * The module directory (paged ROM bank 0 at `$A200`, written by `tools/romimg.js`) lists each module's bank, type,
@@ -115,7 +116,12 @@ The kernel task (task 0) keeps the kernel's state: its program zero page (`K0_*`
 * `SPAWN` takes a path, through the caller's namespace (`/bin/NAME`, `#m/NAME`), and reads the file's HYX2
   header: a module (`HF_INPLACE`) runs in place, found in the module directory by the header's name; any other
   program is a RAM program, read into its task's RAM at its load address by the task itself as it starts (the file
-  its fd 15 meanwhile).  The child's fds are the caller's 0, 1 and 2, or with `SPAWN_FDMAP` the map at `r2`.
+  its fd 15 meanwhile).  The child's fds are the caller's 0, 1 and 2, or with `SPAWN_FDMAP` the map at `r2`; its
+  current directory is the caller's, and its environment a copy of the caller's (`SPAWN_NOENV`: an empty one).
+* **A task's environment** is 1K of the kernel task's RAM (`K_ENV`, a block a task): its variables, each a name
+  and a value of bytes (`ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`; any task's, by number).  `#e` serves the
+  caller's as files, mounted at `/env`, as Plan 9's.  rc keeps its variables there, a list's words each ending
+  with a zero byte, and its functions as `fn#NAME`.
 * A RAM program is assembled with `-D HYX2_RAM` (`hyx2.inc`: no `HF_INPLACE`, loaded at `$0800`) and linked by
   `sdk/asm/hyx2.cfg`: its header, code, read-only data and data one image from `$0800`, its BSS after them.  The
   test RAM programs are `tests/ram/NAME/`, built into `obj/tests/NAME.hyx`.

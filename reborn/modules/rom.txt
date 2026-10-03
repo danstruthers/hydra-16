@@ -6,4 +6,10 @@ module      hello
 module      cons
 module      storage
 module      kdev
-module      tsh
+module      rc
+module      wstart
+module      echo
+module      cat
+module      ls
+module      ps
+module      pwd

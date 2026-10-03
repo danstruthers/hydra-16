@@ -116,4 +116,4 @@ irq:
 
 .rodata
 s_child:    .byte       "#m/t_child", 0
-s_sff:      .byte       "sff", 0
+s_sff:      .byte       "sff", 0, 0

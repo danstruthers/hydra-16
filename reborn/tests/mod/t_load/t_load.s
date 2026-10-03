@@ -1,12 +1,12 @@
 ; ****************************************************************************
 ; t_load - SPAWN by path and the loader (phase 4.1), run as init (its fds 0-2 closed: its lines, and its children's,
-; go out on the bring-up console; the fds it opens are moved to 5 on), with t_child, and a card (tests.js) whose bin has t_ram and t_big (RAM programs:
-; tests/ram), t_short (t_ram cut short) and t_low (t_ram's header saying $0400), and hello.txt.  /bin is the card's
-; bin, then #m/bin (as the namespace file has it): a module found there runs in place; a RAM program from the card is
-; read into its task's RAM, given its arguments and the fds of a map (and the same with an empty namespace).  SPAWN's
-; errors: a file that isn't a program, none at all, a program loading below $0800, a map too long, a driver; a file
-; ending before its image does (its task ends, E_NOEXEC).  The time to load 16K from the card, and from the RAM disk;
-; and SPAWN's own time for a module in place.
+; go out on the bring-up console; the fds it opens are moved to 5 on), with t_child, and a card (tests.js) whose bin
+; has t_ram and t_big (RAM programs: tests/ram), t_short (t_ram cut short) and t_low (t_ram's header saying $0400),
+; and hello.txt.  /bin is the card's bin, then #m/bin (as the namespace file has it): a module found there runs in
+; place; a RAM program from the card is read into its task's RAM, given its arguments and the fds of a map (and the
+; same with an empty namespace).  SPAWN's errors: a file that isn't a program, none at all, a program loading below
+; $0800, a map too long, a driver; a file ending before its image does (its task ends, E_NOEXEC).  The time to load
+; 16K from the card, and from the RAM disk; and SPAWN's own time for a module in place.
 
 .include "hydra.inc"
 .include "hyx2.inc"
@@ -129,18 +129,22 @@ main:
             SPAWNED     "SPAWN of t_big from the RAM disk"
             lda         code
             EXPECT_A    $E9, "t_big: its image read whole, in order (its check)"
-            MARK        "<b0"                               ; (A baseline: the marks' own time)
-            MARK        "b0>"
+            jsr         PREEMPT_OFF                         ; (SPAWN's time alone: not the child's too, which
+            MARK        "<b0"                               ;   could run before the caller went on)
+            MARK        "b0>"                               ; (A baseline: the marks' own time)
             MARK        "<sp"
             SPAWN_      s_bchild, s_e7, 0
             sta         child
             MARK        "sp>"
+            jsr         PREEMPT_ON
             WAITCHILD
             EXPECT_A    '7', "t_child, by /bin's union, the card's bin first"
+            jsr         PREEMPT_OFF
             MARK        "<msp"
             SPAWN_      s_mchild, s_e7, 0
             sta         child
             MARK        "msp>"
+            jsr         PREEMPT_ON
             WAITCHILD
             EXPECT_A    '7', "t_child, by #m/t_child"
             DONE        "t_load"
@@ -260,6 +264,6 @@ s_rbig:     .byte       "#fr/t_big", 0
 s_kdev:     .byte       "#m/kdev", 0
 s_ctlr:     .byte       "#d/r/ctl", 0
 s_start:    .byte       "start 4"
-s_e7:       .byte       "e7", 0
-s_abc:      .byte       "a b c", 0
-s_r:        .byte       "r", 0
+s_e7:       .byte       "e7", 0, 0
+s_abc:      .byte       "a b c", 0, 0
+s_r:        .byte       "r", 0, 0

@@ -144,7 +144,7 @@ main:
             lda         fd
             jsr         CLOSE
             lda         buf + 2 * SR_SIZE + SR_NAME
-            EXPECT_A    't', "#m/bin: the programs alone (init, hello, then tsh: not cons, storage, kdev)"
+            EXPECT_A    'r', "#m/bin: the programs alone (init, hello, then rc: not cons, storage, kdev)"
             OPEN_       s_modhello, O_READ
             sta         fd
             EXPECT_OK   "OPEN #m/hello"
@@ -437,6 +437,6 @@ s_root:     .byte       "/", 0
 s_dev:      .byte       "/dev", 0
 s_devzero:  .byte       "/dev/zero", 0
 s_child:    .byte       "#m/t_child", 0
-s_p:        .byte       "p", 0
-s_w:        .byte       "w", 0
-s_i:        .byte       "i", 0
+s_p:        .byte       "p", 0, 0
+s_w:        .byte       "w", 0, 0
+s_i:        .byte       "i", 0, 0
