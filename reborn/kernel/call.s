@@ -15,6 +15,8 @@
 ; kcopy moves bytes between this task's memory and another's, each side as that task sees it (its own RAM, its
 ; RAM bank, its paged ROM bank): with T = the source for a byte's read and T = the destination for its write,
 ; each task's pointer in its own zero page (KC_PTR).  IRQs are off for a burst of 4 bytes at most.
+;
+; ROMREAD copies from any paged ROM bank, for a module run in place, whose own bank is at $A000 meanwhile.
 
 .include "kdefs.inc"
 
@@ -281,3 +283,50 @@ K_KCOPY:
             sta         T_REGISTER
             plp
             rts
+
+; ****************************************************************************
+; ROMREAD: r2 bytes from paged ROM bank .A at r0 ($A000-$DFFF) to r1 (not at $A000-$DFFF), in this task, with its
+; ROM bank put back after.  IRQs stay on: the bank register is this task's own (a switch keeps it), and another
+; task's irq entry runs in its own; but this task's own irq entry would find the wrong bank, so a task that owns a
+; line can't.  OUT: C = 0; or C = 1, .A = E_PERM
+K_ROMREAD:
+            tay
+            lda         T_REGISTER                          ; An owner of a line?
+            ldx         #IRQ_LINES - 1
+:
+            cmp         TA_OWNERS,X
+            beq         @perm
+            dex
+            bpl         :-
+            lda         ROM_BANK                            ; (Its mirror: this task's module)
+            pha
+            sty         ROM_BANK
+            ldy         #0
+            ldx         r2 + 1                              ; Whole pages ...
+            beq         @part
+@page:
+            lda         (r0),Y
+            sta         (r1),Y
+            iny
+            bne         @page
+            inc         r0 + 1
+            inc         r1 + 1
+            dex
+            bne         @page
+@part:
+            ldx         r2                                  ; ... then the rest
+            beq         @done
+@byte:
+            lda         (r0),Y
+            sta         (r1),Y
+            iny
+            dex
+            bne         @byte
+@done:
+            pla
+            sta         ROM_BANK
+            clc
+            rts
+
+@perm:
+            FAIL        E_PERM

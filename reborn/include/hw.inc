@@ -67,6 +67,14 @@ VIA_IRQ_T2      = $20
 VIA_IRQ_CA1     = $02
 VIA_IER_SET     = $80           ; IER: set (1) or clear (0) the bits given
 
+; ---- SPI, bit-banged on the VIA's port B.  Devices 0-7 are the headers (a 74HC138: /nSPI_CS0-7), 8-15 the slots'
+SPI_SCLK        = $01           ; PB0: the clock (bit 0, so INC and DEC clock it)
+SPI_CSB         = $02           ; PB1: /CS enable (low: the device on PB3-PB6 selected)
+SPI_MOSI        = $04           ; PB2
+SPI_DEV         = $78           ; PB3-PB5: device 0-7; PB6: 1 for devices 8-15
+SPI_MISO        = $80           ; PB7 (an input; bit 7, so BIT puts it in N)
+SPI_DDR         = $7F           ; Port B's directions: all out but MISO
+
 ; ---- ACIA, 65C51 (port 1, $FF10): the serial port.  Its clock is 1.790 MHz (V1 erratum): every rate is 2.9% slow
 ACIA_DATA       = $FF10
 ACIA_STATUS     = $FF11         ; (Write: a programmed reset)

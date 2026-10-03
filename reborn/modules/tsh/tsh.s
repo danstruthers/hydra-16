@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; tsh - the test shell, till rc comes (phase 3): one in each console window.  "tsh N" is window N's: its fds 0-2
+; tsh - the test shell, till rc comes (phase 4): one in each console window.  "tsh N" is window N's: its fds 0-2
 ; the window's cons, the window's notes its own note group's (consctl's group), and the window's console at /dev in
 ; its namespace.  A line at a time:
 ;   ps          the tasks

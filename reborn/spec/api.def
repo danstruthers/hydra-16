@@ -503,6 +503,14 @@ call NOTE_QUEUE server impl=K_NOTE_QUEUE
   doc:    A note to a note group, from an irq entry (a console's Ctrl-C): queued, and posted by the kernel task
   doc:    as soon as it runs.  Short enough for an irq entry: nothing is checked.
 
+call ROMREAD server impl=K_ROMREAD
+  in:     .A = a paged ROM bank; r0 = where in it ($A000-$DFFF); r1 = a buffer (not at $A000-$DFFF); r2 = a count
+  out:    the bytes in the buffer
+  errors: E_PERM (the task owns an IRQ line: its irq entry would find the wrong bank at $A000)
+  blocks: no
+  doc:    Copy from any bank of the paged ROM, for a module run in place (the storage driver's ROM disk): the
+  doc:    bank is the task's own meanwhile, and its module's is put back.
+
 # ---- dbg (for the tests and the debugger: unstable)
 
 call DBG_SCALL dbg impl=K_SCALL

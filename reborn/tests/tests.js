@@ -13,13 +13,22 @@
 //   machine          the emulator's options for it (sim/lib/machine.js): faults, keys typed (input), modules
 //   send             { after: a mark, bytes: [...] }: the PC sends them, back to back, when the mark is out
 //   budgets          [{ what, from, to, minus, per, max }]: the cycles between two marks (less those between the
-//                    two marks in minus, a baseline), divided by per, at most max
+//                    two marks in minus, a baseline), divided by per, at most max (a number, or a function of the
+//                    build's options: { clock, acia }, obj/build.json)
 //   check(m, out)    more checks on the machine afterwards: gives a list of failures
 // Every test also checks the longest IRQs-off stretch after the boot (IRQ_OFF_MAX).
 'use strict';
 
 const IRQ_OFF_MAX = 200;                                      // (docs/reimplementation-from-scratch.md, §8: 115200)
 const S1_BYTES = 2000;
+
+// An SD card for the emulator (sim/lib/sd.js) on SPI device dev, its blocks in memory: byte i of block n is fill(n, i)
+function card(dev, blocks, sdsc, fill) {
+  const data = new Uint8Array(blocks * 512);
+  for (let n = 0; n < blocks; n++) for (let i = 0; i < 512; i++) data[n * 512 + i] = fill(n, i) & 0xFF;
+  return { dev, blocks, sdsc, data, read: n => data.slice(n * 512, n * 512 + 512), write: (n, b) => data.set(b, n * 512) };
+}
+const DISK_CARDS = [card(0, 2048, false, (n, i) => n * 7 + i), card(1, 4096, true, (n, i) => n * 13 + i + 1)];
 
 module.exports = {
   IRQ_OFF_MAX,
@@ -58,7 +67,7 @@ module.exports = {
     },
     {
       name: 'task', what: 'tasks and the scheduler: SPAWN, EXITS, WAIT, SLEEP, preemption, PAUSE and WAKE, orphans',
-      init: 't_task', modules: ['t_child'], without: ['cons', 'kdev'], cycles: 60e6,
+      init: 't_task', modules: ['t_child'], without: ['cons', 'storage', 'kdev'], cycles: 60e6,
     },
     {
       name: 'note', what: 'notes: the defaults, handlers, a note to oneself, WAIT ended by one, note groups',
@@ -75,6 +84,33 @@ module.exports = {
     {
       name: 'dev', what: 'the kernel\'s devices (kdev): #/, #n, #t, #m, #p; pipes; a union keeping what was there',
       init: 't_dev', modules: ['t_child'], cycles: 40e6,
+    },
+    {
+      name: 'spi', what: 'SPI and #S (storage): transactions, kept bytes, modes 0 and 3, one open at a time, the time a byte takes',
+      init: 't_spi', cycles: 30e6, machine: { spiEcho: [3, 9] },
+      // (The bit loops: 18 cycles a bit in, 33 out; the rest is the request and the copy to or from the client.  At
+      // 7.16 MHz the receive loop is padded, 8 cycles a bit, to keep SCLK under an SD card's 400 kHz)
+      budgets: [{ what: 'SPI, 256 bytes clocked in (READ), a byte', from: '<rx', to: 'rx>', minus: ['<b0', 'b0>'], per: 256,
+        max: o => o.clock === 2 ? 280 + 64 : 280 },
+        { what: 'SPI, 256 bytes sent (WRITE), a byte', from: '<tx', to: 'tx>', minus: ['<b0', 'b0>'], per: 256, max: 430 }],
+    },
+    {
+      // (A card: the bit loops, 144 cycles a byte in; the old system's was 298 cycles a byte, in 256-byte reads)
+      name: 'disk', what: 'the disks (storage): #d, the ROM disk, SD cards (SDHC and SDSC), RAM disks, their ctl files, the time a byte takes',
+      init: 't_disk', cycles: 60e6, machine: { sd: DISK_CARDS, spiEcho: [3] },
+      budgets: [{ what: 'a card, 4096 bytes read (8 blocks), a byte', from: '<card', to: 'card>', minus: ['<b0', 'b0>'], per: 4096,
+        max: o => o.clock === 2 ? 280 + 64 : 280 },
+        { what: 'a RAM disk, 4096 bytes read, a byte', from: '<ram', to: 'ram>', minus: ['<b0', 'b0>'], per: 4096, max: 70 }],
+      check() {
+        const f = [], c0 = DISK_CARDS[0].data, c1 = DISK_CARDS[1].data;
+        const has = (d, at, text) => [...text].every((ch, i) => d[at + i] === ch.charCodeAt(0));
+        if (!has(c0, 508, '0123456789')) f.push('card 0: not 0123456789 at 508 (across blocks 0 and 1)');
+        if (!c0.subarray(4096, 4608).every(b => b === 0x5A)) f.push('card 0: block 8 not all Z');
+        if (!has(c0, 2048 * 512 - 2, 'en')) f.push('card 0: not "en" at its end');
+        if (c0[512 + 10] !== ((7 + 10) & 0xFF)) f.push('card 0: block 1 changed past the write');
+        if (!has(c1, 5 * 512 + 10, 'sdsc')) f.push('card 1: not sdsc at byte 10 of block 5');
+        return f;
+      },
     },
     {
       name: 'cons', what: 'the console: lines, editing, history, raw keys, Ctrl-C, windows (shown, repainted, made, gone), 115200',
@@ -99,7 +135,7 @@ module.exports = {
     },
     {
       name: 'scall', what: 'spike S3: calls into a driver\'s task, its errors, a busy driver, the round trip',
-      init: 't_scall', modules: ['t_child', 't_drv'], without: ['cons', 'kdev'], cycles: 40e6,
+      init: 't_scall', modules: ['t_child', 't_drv'], without: ['cons', 'storage', 'kdev'], cycles: 40e6,
       budgets: [{ what: 'SCALL round trip (DBG_SCALL, less the same loop calling the code in place)', from: '<scall', to: 'scall>',
         minus: ['<base', 'base>'], per: 1000, max: 200 }],
     },
@@ -110,7 +146,7 @@ module.exports = {
     },
     {
       name: 'irq', what: 'spike S1: 115200 received by an irq entry while tasks spin',
-      init: 't_irq', modules: ['t_child'], without: ['cons', 'kdev'], cycles: 30e6,
+      init: 't_irq', modules: ['t_child'], without: ['cons', 'storage', 'kdev'], cycles: 30e6,
       send: { after: 'ready>', bytes: Array.from({ length: S1_BYTES }, (_, i) => (3 + 7 * i) & 0xFF) },
       check(m) {
         const f = [], l = m.acia.rxLat, char = m.acia.charCycles();

@@ -680,13 +680,13 @@ The default namespace file is in [Appendix E](#appendix-e-the-default-namespace)
 #### **14.3 Storage: `storage`** (a driver module; task E)
 
 One driver owns the SPI bus and every disk:
-* **SPI** (the current bit-banged loops, 18 cycles a bit in, unchanged) and **`#S`**: `/dev/spi/0-f` and their ctl files, as today, arbitrated with the SD cards (a device in use as one isn't the other).
+* **SPI** (the current bit-banged loops, 18 cycles a bit in, unchanged) and **`#S`**: `/dev/spi/N/data` and `/dev/spi/N/ctl` (`N` = 0-f: a directory a device, as `#d` has; today's `/dev/spi/N` is the data file, with its ctl under it), arbitrated with the SD cards (a device in use as one isn't the other).
 * **The block layer:** SD cards (SDSC and SDHC; the current command layer), the ROM disk `x` (read through the kernel's `ROMREAD`: the driver's own `$01` holds its code, so a kernel routine on page 0 selects the ROM disk's bank, copies the block and puts the driver's bank back), and the RAM disks `r` and `s` (started, sized and stopped through their ctl files, as today).  Two 512-byte block buffers and the metadata buffer.
 * **`#d`**: `/dev/sd/N/data` and `/dev/sd/N/ctl` (`N` = one hex digit for SPI devices, `x r s` for the others, as now).
 * **`#f`**: HydraFS, mounted with a spec (`mount '#f' /rom x`), the on-disk format unchanged (v1 and v2 read, v2 quick format, partitions, sparse files, the check).  The code is ported from `fs/hfs_*.s` into the module's structure: its state in the storage task's RAM with one layout file, its zero page in `$22-$7F` of its own task (no borrowing), and srvlib for the requests.
 * **Open files:** 32 (not 8), each with its copy of the directory entry, as now.
 
-#### **14.4 Sound: `snd`** (a driver module; task D)
+#### **14.4 Sound: `snd`** (a driver module; task C)
 
 * The YM2151 library, ported: the register shadow, the General MIDI volume curve, the X16's patch set (2-clause BSD, its notice kept), notes, bends, drums, claims.
 * **`#a`**: `/dev/snd` (register/value pairs and the library's commands, as today: a song's raw stream and a program's notes go the same way), `/dev/sndctl` (`claim`, `release`, `volume`, `reset`, `clock`), reads giving the shadow.
@@ -710,7 +710,7 @@ One driver owns the SPI bus and every disk:
 
 1. **Reset** (on any page): `W` = 0, task 0, the stack.  **POST** (polled serial, interrupts off, as today; `T` typed jumps to the hardware test).
 2. **The kernel's set-up:** the hardware probe (RAM modules, shared RAM chips, the DS1747), the kernel task's tables, the IRQ vectors, the module directory.
-3. **The boot drivers:** `cons` (task F), then `storage` (task E).  A failure prints a line and the boot goes on.
+3. **The boot drivers:** `cons` (task F), then `storage` (task E), then `kdev` (task D: the kernel's own devices, a driver of their own as built).  A failure prints a line and the boot goes on.
 4. **`init`** (task 1), a module: it mounts and binds from `/rom/lib/namespace` (and a card's `/lib/namespace`), starts the drivers listed in `/rom/lib/drivers` (`snd`, later `vid`, `input`), runs `/rom/lib/profile` (and a card's), and starts the console's shell in window 0 on fds 0-2 = `/dev/cons`; for each window the user asks for (a read of `/dev/wnew`) it starts another shell in that window, with that window at `/dev`.  When window 0's shell exits or is killed, `init` starts another (the kernel no longer special-cases the shell: A1).  `init` also adopts orphans and reaps their records.
 5. **The tick starts; task 0 idles.**
 

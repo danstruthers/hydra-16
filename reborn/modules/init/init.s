@@ -1,10 +1,11 @@
 ; ****************************************************************************
 ; init - the first program (task 1), for phase 2: its fds 0-2 on the console (#c/cons, the console driver's window
 ; 0; or, without it, none, and the bring-up console's); its namespace, built in till there are disks (the plan's
-; appendix E, as far as the devices there are go: #/ at /, #c, #n and #t at /dev, #m at /dev/mod, #p at /proc); the
-; tasks listed; hello run and waited for; then the shells (tsh, till rc comes in phase 3): window 0's, and the
-; windows' starter (tsh w: a shell in each window the user asks for, Ctrl-] c), each started again when it ends.
-; It waits for every task left to it (the windows' shells are).  Its note handler keeps it going.
+; appendix E, as far as the devices there are go: #/ at /, #c, #n and #t at /dev, #m at /dev/mod, #p at /proc, #d
+; at /dev/sd, #S at /dev/spi); the tasks listed; hello run and waited for; then the shells (tsh, till rc comes in
+; phase 4): window 0's, and the windows' starter (tsh w: a shell in each window the user asks for, Ctrl-] c), each
+; started again when it ends.  It waits for every task left to it (the windows' shells are).  Its note handler keeps
+; it going.
 
 .include "hydra.inc"
 .include "hyx2.inc"
@@ -189,6 +190,10 @@ ns_table:   .byte       MREPL                               ; bind '#/' /
             .word       s_hmod, s_devmod
             .byte       MREPL                               ; bind '#p' /proc
             .word       s_hproc, s_proc
+            .byte       MREPL                               ; bind '#d' /dev/sd
+            .word       s_hsd, s_devsd
+            .byte       MREPL                               ; bind '#S' /dev/spi
+            .word       s_hspi, s_devspi
             .byte       $FF
 s_hroot:    .byte       "#/", 0
 s_hcons:    .byte       "#c", 0
@@ -196,7 +201,11 @@ s_hnull:    .byte       "#n", 0
 s_htime:    .byte       "#t", 0
 s_hmod:     .byte       "#m", 0
 s_hproc:    .byte       "#p", 0
+s_hsd:      .byte       "#d", 0
+s_hspi:     .byte       "#S", 0
 s_root:     .byte       "/", 0
 s_dev:      .byte       "/dev", 0
 s_devmod:   .byte       "/dev/mod", 0
 s_proc:     .byte       "/proc", 0
+s_devsd:    .byte       "/dev/sd", 0
+s_devspi:   .byte       "/dev/spi", 0

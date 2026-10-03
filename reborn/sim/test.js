@@ -17,6 +17,12 @@ const romimg = require('../tools/romimg.js');
 const { readManifest, hwtest } = require('../build.js');
 const { tests, IRQ_OFF_MAX } = require('../tests/tests.js');
 
+// The options the image was built with (build.js: obj/build.json)
+function built() {
+  try { return JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'obj', 'build.json'), 'utf8')); }
+  catch (e) { return { clock: 1, acia: 'rockwell' }; }
+}
+
 const ROOT = path.join(__dirname, '..');
 const bin = (dir, n) => fs.readFileSync(path.join(ROOT, 'obj', dir, n + '.bin'));
 
@@ -60,12 +66,13 @@ function runTest(t, opt) {
   if (!status) failures.push(t.expect ? 'missing: ' + t.expect.filter(e => !out.includes(e)).map(e => JSON.stringify(e)).join(', ')
     : 'no result in ' + t.cycles + ' cycles');
   else if (status === 'FAIL' && !failures.length) failures.push(t.init + ': FAIL');
-  const budgets = [];
+  const budgets = [], options = built();
   for (const b of t.budgets || []) {
     if (![b.from, b.to, ...(b.minus || [])].every(k => k in marks)) { failures.push('budget ' + b.what + ': no marks'); continue; }
     const v = (marks[b.to] - marks[b.from] - (b.minus ? marks[b.minus[1]] - marks[b.minus[0]] : 0)) / b.per;
-    budgets.push({ what: b.what, value: v, max: b.max });
-    if (v > b.max) failures.push(b.what + ': ' + v.toFixed(1) + ' cycles (budget ' + b.max + ')');
+    const max = typeof b.max === 'function' ? b.max(options) : b.max;
+    budgets.push({ what: b.what, value: v, max });
+    if (v > max) failures.push(b.what + ': ' + v.toFixed(1) + ' cycles (budget ' + max + ')');
   }
   const ioff = m.iOffTop[0];
   if (ioff) budgets.push({ what: 'longest IRQs-off stretch (' + ioff[1] + ' - ' + ioff[2] + ')', value: ioff[0], max: IRQ_OFF_MAX, total: true });

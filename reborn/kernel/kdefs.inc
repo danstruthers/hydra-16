@@ -19,7 +19,7 @@
 .global     K_SCHED_SWITCH, K_SCHED_RESUME, K_YIELD, K_PAUSE, K_WAKE, K_EVWAIT, K_PREEMPT_OFF, K_PREEMPT_ON
 .global     K_SLEEP, K_SLEEP_UNTIL, K_TICKS
 ; ---- call.s: calls into other tasks, and kcopy
-.global     K_SCALL, K_KCALL, K_KDISPATCH, K_KCOPY
+.global     K_SCALL, K_KCALL, K_KDISPATCH, K_KCOPY, K_ROMREAD
 ; ---- task.s: tasks and modules
 .global     K_SPAWN, K_EXITS, K_WAIT, K_GETPID, K_TASK_BOOT, K_TASK_BOOT_INIT, K_BOOT_STARTED, K_TASK_RESERVE
 .global     K_MD_VALID, K_STR_CRLF, K_MODINFO

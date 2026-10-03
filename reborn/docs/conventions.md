@@ -135,6 +135,9 @@ The kernel task (task 0) keeps the kernel's state: its program zero page (`K0_*`
   several.  Control is text written to ctl files.
 * The kernel's own devices (`#/`, `#n`, `#t`, `#m`, `#p`, `#|`) are a driver module like any other (`kdev`), not
   the kernel task's.
+* **One driver owns the SPI bus and every disk** (`storage`): the SPI devices (`#S`), the cards, the ROM disk and
+  the RAM disks (`#d`), and HydraFS on them (`#f`), so a transfer never meets another.  An SPI device is a card's or
+  `#S`'s, never both at once (`E_BUSY`).
 * **The console is windows, not job control** (Plan 9's way, rio's): each window a whole console (`#cN`), chosen
   for a shell by its namespace (`#cN` at `/dev`).  There's no foreground group and no `fg`: which program gets
   the keys is which window is shown, and a window's interrupts go to its note group.

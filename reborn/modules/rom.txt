@@ -4,5 +4,6 @@ init        init
 module      init
 module      hello
 module      cons
+module      storage
 module      kdev
 module      tsh

@@ -9,6 +9,7 @@
 //   4. the paged ROM       modules/rom.txt -> bin/prom.bin (tools/romimg.js), with the hardware test in bank 1
 //                          (from ../os_rom/bin/paged_rom_C02.bin) and the ROMs' checksums for it
 //   5. the budgets         sizes, and room left (tools/budget.js)
+// and obj/build.json: the options it was built with ({ clock, acia }: sim/test.js's budgets can depend on them).
 //
 // Usage: node build.js [--clock 1|2] [--acia rockwell|wdc] [--quiet]
 //   --clock 2: for a 7.16 MHz board (jumper J7); --acia wdc: a WDC W65C51N in the serial port (its TDRE bug)
@@ -117,6 +118,7 @@ function build(opt = {}) {
   const { image, entries } = romimg.build({ modules: manifest.modules.map(n => ({ file: n, data: modules[n] })), init: manifest.init,
     hwtest: hwt, bios: fs.readFileSync(at('bin', 'bios.bin')) });
   fs.writeFileSync(at('bin', 'prom.bin'), image);
+  fs.writeFileSync(at('obj', 'build.json'), JSON.stringify({ clock: opt.clock || 1, acia: opt.acia || 'rockwell' }) + '\n');
 
   const report = budget.report(ROOT, { modules, tests, entries });
   say(report.text);
