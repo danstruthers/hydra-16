@@ -36,3 +36,4 @@ module      uniq
 module      xd
 module      cmp
 module      more
+module      edit

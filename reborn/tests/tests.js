@@ -561,6 +561,28 @@ module.exports = {
       },
     },
     {
+      name: 'edit', what: 'edit, the line editor: a file made, printed, changed and written; its errors; q twice; Ctrl-C at its prompt; w name',
+      init: 't_rc', cycles: 80e6,
+      // (rc's prompt waited for, then each session typed ahead: the console keeps the keys till edit reads its lines)
+      machine: { input: '\u0101edit /ram/e\r' + 'a\rone\rtwo\rthree\r.\r2p\ri 1\rzero\r.\rp\r2,3d\rc 2\rTHREE\r.\rp\rw\rq\r' +
+        '\u0101cat /ram/e\r' + '\u0101edit /ram/e\r' + '9p\rx\rd\ra\rfour\r.\rq\rq\r' +
+        '\u0101edit /ram/e\r\u0100\x03\u0100' + 'Q\r' + '\u0101echo $status\r' +
+        '\u0101edit\r' + 'a\rx\r.\rw\rw /ram/f\r1,$p\r0a\rfirst\r.\r$p\rh\rQ\r' + '\u0101cat /ram/f; edit a b; echo $status\r' },
+      expect: [
+        '% edit /ram/e\n/ram/e: new file\n*a\none\ntwo\nthree\n.\n*2p\n   2 two\n*i 1\nzero\n.\n*p\n   1 zero\n   2 one\n' +
+          '   3 two\n   4 three\n*2,3d\n*c 2\nTHREE\n.\n*p\n   1 zero\n   2 THREE\n*w\n/ram/e: 11 bytes\n*q\n%',
+        '% cat /ram/e\nzero\nTHREE\n%',
+        '% edit /ram/e\n/ram/e: 2 lines\n*9p\n? no such line\n*x\n? h: help\n*d\n? which lines?\n*a\nfour\n.\n*q\n' +
+          '? not written: q again to quit anyway\n*q\n%',
+        '% edit /ram/e\n/ram/e: 2 lines\n*\n?\n*Q\n',
+        '% echo $status\n\n%',
+        '% edit\n*a\nx\n.\n*w\n? no file name (w name)\n*w /ram/f\n/ram/f: 2 bytes\n*1,$p\n   1 x\n*0a\nfirst\n.\n*$p\n   2 x\n' +
+          '*h\np [a[,b]]  print (all)       a [n]      add after n (the last)\n',
+          'n: a number, or $ (the last).  Lines typed after a, i or c end with a .\n*Q\n%',
+        '% cat /ram/f; edit a b; echo $status\nx\nusage: edit [file]\nusage\n%',
+      ],
+    },
+    {
       name: 'cons', what: 'the console: lines, editing, history, raw keys, Ctrl-C, windows (shown, repainted, made, gone), 115200',
       init: 't_cons', modules: ['t_child'], cycles: 80e6,
       // (ā: wait for a prompt, "N> ")
