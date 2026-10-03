@@ -60,7 +60,8 @@ function buildModule(dir, objdir, defines) {
   const name = path.basename(dir), od = path.join(objdir, name);
   const objs = assemble(sources(dir), od, [at('obj', 'sdk'), at('sdk', 'asm'), at('include'), dir, path.dirname(dir)], defines);
   const bin = path.join(objdir, name + '.bin');
-  run(LD65, ['-C', at('modules', 'module.cfg'), '-o', bin, '-m', path.join(od, name + '.map'), '-Ln', path.join(od, name + '.lbl'), ...objs]);
+  const two = sources(dir).some(f => /\.segment\s+"CODE2"/i.test(fs.readFileSync(f, 'latin1')));   // (Two banks: module2.cfg)
+  run(LD65, ['-C', at('modules', two ? 'module2.cfg' : 'module.cfg'), '-o', bin, '-m', path.join(od, name + '.map'), '-Ln', path.join(od, name + '.lbl'), ...objs]);
   const data = fs.readFileSync(bin);
   check.checkModule(name, data);                              // (Only the kernel writes T, V and W)
   return data;

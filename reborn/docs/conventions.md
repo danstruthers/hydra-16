@@ -114,6 +114,11 @@ The kernel task (task 0) keeps the kernel's state: its program zero page (`K0_*`
   flags and name.  `SPAWN "#m/NAME"` starts a program from it.
 * The boot starts the drivers (`HF_BOOT`, task F down, in the directory's order), waits for their inits (their
   devices registered; 2 seconds at most), then starts init.  The system's modules are in `modules/rom.txt`.
+* A module bigger than a bank has two (`HYX2_DRIVER ..., 2`, linked by `modules/module2.cfg` when its sources use
+  the segment `CODE2`): its second bank's code and read-only data in `CODE2` and `RODATA2`, at the same addresses
+  as the first's, reached through `FAR2` (and back through `FAR1`), trampolines in its RAM that switch its own bank
+  register (`HYX2_BANKS_INIT` notes its banks).  Such a module owns no IRQ line.  The header's `HX_LENGTH` is the
+  image's length in its last bank.
 
 ## Files and servers
 
@@ -132,7 +137,9 @@ The kernel task (task 0) keeps the kernel's state: its program zero page (`K0_*`
 * Servers are built on srvlib (`sdk/asm/srvlib.inc` at the top, `srvlib.s` at the end): a tree of entries
   (directories, text files made on each read, ctl files of commands, data files with a handler, dynamic directories
   whose children a handler makes), the fids, the stat records; a tree a device letter (`SRV_TREES`) for a server of
-  several.  Control is text written to ctl files.
+  several; and a raw device (`SK_RAW`), all of whose requests go to one handler, with fids of its own (a file
+  system: `#f`).  Control is text written to ctl files: a command's words after it, the last of them the rest of
+  the line.
 * The kernel's own devices (`#/`, `#n`, `#t`, `#m`, `#p`, `#|`) are a driver module like any other (`kdev`), not
   the kernel task's.
 * **One driver owns the SPI bus and every disk** (`storage`): the SPI devices (`#S`), the cards, the ROM disk and

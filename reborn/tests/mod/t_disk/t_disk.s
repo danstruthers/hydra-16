@@ -240,9 +240,12 @@ main:
             WRITE_      ctl, s_start4, 7
             EXPECT_ERR  E_BUSY, "start again: E_BUSY"
             jsr         ctl_read
-            EXPECT_A    20, "r/ctl: ram 32 KB 64 blocks (20 bytes)"
+            lda         buf + 19
+            EXPECT_A    LF, "r/ctl: ram 32 KB 64 blocks, its first line"
             lda         buf + 4
             EXPECT_A    '3', "32 KB"
+            lda         buf + 20 + 14
+            EXPECT_A    'R', "then its HydraFS (start makes one): hydrafs label=RAM"
             OPEN_       s_datar, O_RDWR, 5
             sta         fd
             EXPECT_OK   "OPEN #d/r/data"
@@ -278,7 +281,10 @@ main:
             WRITE_      ctl, s_start16k, 9
             EXPECT_OK   "s/ctl: start 16k (2 banks)"
             jsr         ctl_read
-            EXPECT_A    21, "s/ctl: sram 16 KB 32 blocks (21 bytes)"
+            lda         buf + 20
+            EXPECT_A    LF, "s/ctl: sram 16 KB 32 blocks, its first line"
+            lda         buf + 21 + 14
+            EXPECT_A    'S', "then hydrafs label=SRAM"
             OPEN_       s_datas, O_RDWR, 5
             sta         fd
             SEEK_       fd, 20 * 512

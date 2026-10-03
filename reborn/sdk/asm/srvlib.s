@@ -25,6 +25,8 @@
 ;                            or C = 1) or DYN_IDNAME (child .X's name into srv_dname); SE_AUX is the entry each
 ;                            child is (its template: parent SE_TEMPLATE), so a child can be a directory of its
 ;                            own entries.  A node under a child has the child's id: srv_id (and srv_fid_aux)
+;                   SK_RAW   a tree of this entry alone (entry 0): every request for the device goes to its handler
+;                            (.A = the request), which does it all, its fids its own (a file system's: #f)
 ;   SRV_FLUSH       (optional, defined before the .include) a routine for R_FLUSH: client .Y forgotten
 ;   SRV_OPENED      (optional) a routine for each fid made (R_OPEN, R_DUP: srv_rq): .X = it, its entry srv_ent; it
 ;                   may set srv_fid_aux,X (from the request's spec: which of the device's instances), or refuse
@@ -91,6 +93,17 @@ srv_serve:
             jsr         SRV_PRE
             pla
 .endif
+            pha                                             ; A raw device (SK_RAW): its handler does the
+            lda         #0                                  ;   request
+            jsr         srv_entry
+            ldy         #SE_KIND
+            lda         (srv_ent),Y
+            cmp         #SK_RAW                             ; (The last kind: C = 1 for it)
+            pla
+            bcc         :+
+            jsr         srv_handler
+            bra         @reply
+:
             ldx         #SRV_NREQ - 1
 :
             cmp         srv_reqs,X
@@ -1020,6 +1033,9 @@ srv_words:
             jsr         srv_number                          ; (Its number, if it is one)
 @scan:
             inc         srv_argn
+            lda         srv_argn                            ; The last word there can be: the rest of the
+            cmp         #SRV_ARGS                           ;   line, spaces and all
+            beq         @rest
 :
             lda         srv_ctl,X                           ; To its end
             beq         @end
@@ -1032,6 +1048,14 @@ srv_words:
             inx
             bra         @word
 
+@rest:
+            lda         srv_ctl,X                           ; (To a control character, or the end)
+            cmp         #' '
+            bcc         :+
+            inx
+            bra         @rest
+:
+            stz         srv_ctl,X
 @end:
             lda         srv_argn
             bmi         @inval                              ; (No command)

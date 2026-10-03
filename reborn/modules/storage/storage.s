@@ -1,6 +1,7 @@
 ; ****************************************************************************
 ; storage - the storage driver (docs/reimplementation-from-scratch.md, §14.3), a boot driver on srvlib (task E): it
-; owns the SPI bus and every disk.  Its devices:
+; owns the SPI bus and every disk, and HydraFS on them.  A module of two banks: this file is its first (srvlib, SPI,
+; the disks, #S and #d); hfs.s its second (HydraFS: #f).  Its devices:
 ;   #S      the SPI devices, a directory each: 0-f (0-7 the board's headers, 8-f the slots' cards)
 ;     N/data  write: its bytes sent with device N selected, a transaction a request (256 bytes at most: a longer
 ;             WRITE is one a 256), and the bytes the device sends back meanwhile kept.  Read: the bytes kept, as
@@ -16,7 +17,11 @@
 ;             go to the disk at once.  Opening a card's starts it (E_NODEV: no card; E_BUSY: open in #S)
 ;     N/ctl   reads as the disk: "sdhc 7580 MB 15523840 blocks" (sdsc, rom; ram and sram in KB), or "none".
 ;             init: the card started again (after it's changed); start SIZE: a RAM disk of SIZE 8K banks (or
-;             SIZE K, SIZE M: 256K, 1M); stop: its banks given back (not while it's open)
+;             SIZE K, SIZE M: 256K, 1M), and an empty HydraFS on it; stop: its banks given back (not while it's
+;             open).  And HydraFS's: format [-f] [-p] [-s SIZE] [LABEL], label TEXT, check [fix] (hfs.s), and its
+;             lines in the text (the label, the space free, the last check's results)
+;   #f      HydraFS (hfs.s): the cards' file systems (a directory each: 0-f), or with a spec, one disk's (x, r,
+;           s, a card's), or a directory of one (r/5)
 ; SPI is bit-banged on the VIA's port B (hw.inc), which only this task touches.  The loops are the old OS's
 ; (drivers/spi.s: 18 cycles a bit in, 33 out), unchanged: their timing is proven on the board; so is the SD card
 ; layer (drivers/sd.s).  The ROM disk is read through the kernel's ROMREAD (this module runs in place in its own
@@ -28,21 +33,11 @@
 .include "hyx2.inc"
 .include "macros.inc"
 .include "srvlib.inc"
+.include "storage.inc"
 
-            HYX2_DRIVER "storage", init, srv_serve, 0, 0, HF_BOOT
+            HYX2_DRIVER "storage", init, srv_serve, 0, 0, HF_BOOT, 2
 
-SPI_DEVS        = 16
 SPI_KEEP        = 256                                       ; A transaction's bytes, at most
-DISKS           = 19                                        ; The disks: 0-15 the SPI devices' cards ...
-DISK_X          = 16                                        ;   the ROM disk ...
-DISK_R          = 17                                        ;   the RAM disk ...
-DISK_S          = 18                                        ;   and the shared one
-DS_SDSC         = 1                                         ; A disk's state (0: not started): a card, standard
-DS_SDHC         = 2                                         ;   capacity or high (SDHC, SDXC) ...
-DS_ROM          = 3                                         ;   the ROM disk ...
-DS_RAM          = 4                                         ;   a RAM disk ...
-DS_SRAM         = 5                                         ;   the shared one
-BLOCK           = 512
 ROM_BLOCKS      = 256 * (PROM_BANK_SIZE / BLOCK)            ; The paged ROM's 256 banks
 
 .assert     PROM_BANK_SIZE .mod BLOCK = 0 .and BANK_SIZE .mod BLOCK = 0, error, "A block is inside one bank"
@@ -64,6 +59,7 @@ part:       .res        2                                   ;   this block's par
 within:     .res        2                                   ;   and where it starts in the block
 sd_cnt:     .res        2                                   ; (The SD layer's tries)
 num:        .res        4                                   ; A number
+bufp:       .res        2                                   ; A block's 512 bytes (blk_read, blk_write)
 
 .bss
 spi_open:   .res        SPI_DEVS                            ; Each SPI device: its data file's fids (one open) ...
@@ -77,7 +73,8 @@ d_state:    .res        DISKS                               ; Each disk: its sta
 d_blocks:   .res        DISKS * 4                           ;   its size in blocks ...
 d_open:     .res        DISKS                               ;   its data file's fids ...
 d_aux:      .res        DISKS                               ;   and a RAM disk's first bank (r) or segment (s)
-c_disk:     .res        1                                   ; The block in blk: its disk ($FF: none) ...
+c_ok:       .res        1                                   ; <> 0: blk holds a block ...
+c_disk:     .res        1                                   ;   its disk ...
 c_lba:      .res        4                                   ;   and its number
 was_bank:   .res        1                                   ; (ram_map's: $00 and U as they were)
 was_u:      .res        1
@@ -89,21 +86,21 @@ blk:        .res        BLOCK                               ; The block buffer
 
 .code
 ; ****************************************************************************
-; Init: port B (nothing selected), the ROM disk, and each device's letter
+; Init: the module's banks, port B (nothing selected), the ROM disk, HydraFS, and each device's letter
 init:
+            HYX2_BANKS_INIT
             lda         #SPI_CSB | SPI_MOSI                 ; Deselected, SCLK low, MOSI high
             sta         port
             sta         VIA_PORTB
             lda         #SPI_DDR
             sta         VIA_DDRB
-            lda         #$FF                                ; (Nothing in the block buffer)
-            sta         c_disk
             lda         #DS_ROM
             sta         d_state + DISK_X
             lda         #<ROM_BLOCKS
             sta         d_blocks + DISK_X * 4
             lda         #>ROM_BLOCKS
             sta         d_blocks + DISK_X * 4 + 1
+            FAR2        hfs_init
             ldx         #0
 @letter:
             lda         SRV_TREES,X
@@ -647,7 +644,7 @@ sd_refused:
             sec
             rts
 
-; Block lba of card dk into blk.  OUT: C = 0; or C = 1, .A = the error.  Modifies: .A, .X, .Y
+; Block lba of card dk into the 512 bytes at bufp.  OUT: C = 0; or C = 1, .A = the error.  Modifies: .A, .X, .Y
 sd_read:
             jsr         sd_block_arg
             lda         dk
@@ -661,21 +658,23 @@ sd_read:
             ldy         #0                                  ; 512 bytes
 @first:
             jsr         spi_recv
-            sta         blk,Y
+            sta         (bufp),Y
             iny
             bne         @first
+            inc         bufp + 1
 @second:
             jsr         spi_recv
-            sta         blk + 256,Y
+            sta         (bufp),Y
             iny
             bne         @second
+            dec         bufp + 1
             jsr         spi_recv                            ; (The CRC: not checked)
             jsr         spi_recv
             jsr         sd_end
             clc
             rts
 
-; blk to block lba of card dk.  OUT: C = 0; or C = 1, .A = the error.  Modifies: .A, .X, .Y
+; The 512 bytes at bufp to block lba of card dk.  OUT: C = 0; or C = 1, .A = the error.  Modifies: .A, .X, .Y
 sd_write:
             jsr         sd_block_arg
             lda         dk
@@ -688,15 +687,17 @@ sd_write:
             jsr         spi_xfer
             ldy         #0
 @first:
-            lda         blk,Y
+            lda         (bufp),Y
             jsr         spi_xfer
             iny
             bne         @first
+            inc         bufp + 1
 @second:
-            lda         blk + 256,Y
+            lda         (bufp),Y
             jsr         spi_xfer
             iny
             bne         @second
+            dec         bufp + 1
             lda         #$FF                                ; (The CRC: not checked in SPI mode)
             jsr         spi_xfer
             lda         #$FF
@@ -705,7 +706,9 @@ sd_write:
             sta         sd_r1
             and         #$1F
             cmp         #$05
-            bne         sd_refused
+            beq         :+
+            jmp         sd_refused
+:
             jsr         sd_busy_wait                        ; While it writes
             bcc         :+
             jsr         sd_end
@@ -947,7 +950,7 @@ sd_end:
 ; ****************************************************************************
 ; The ROM disk and the RAM disks
 
-; Block lba of the ROM disk into blk: bank lba / 32, at $A000 + (lba % 32) * 512, through ROMREAD
+; Block lba of the ROM disk into the 512 bytes at bufp: bank lba / 32, at $A000 + (lba % 32) * 512, through ROMREAD
 rom_read:
             lda         lba + 1                             ; The bank: lba / 32 (13 bits: 8 of them)
             asl
@@ -968,7 +971,7 @@ rom_read:
             adc         #>PROM_WINDOW                       ; (C = 0: the asl's bit 7 was 0)
             sta         r0 + 1
             stz         r0
-            LDR         r1, blk
+            MOVR        r1, bufp
             LDR         r2, BLOCK
             pla
             jmp         ROMREAD
@@ -978,22 +981,24 @@ rom_write:
             sec
             rts
 
-; Block lba of RAM disk dk into blk (ram_read), or blk to it (ram_write)
+; Block lba of RAM disk dk into the 512 bytes at bufp (ram_read), or them to it (ram_write)
 ram_read:
             jsr         ram_map
             bcs         @done
             ldy         #0
 :
             lda         (bp),Y
-            sta         blk,Y
+            sta         (bufp),Y
             iny
             bne         :-
             inc         bp + 1
+            inc         bufp + 1
 :
             lda         (bp),Y
-            sta         blk + 256,Y
+            sta         (bufp),Y
             iny
             bne         :-
+            dec         bufp + 1
             jmp         ram_unmap
 
 @done:
@@ -1004,16 +1009,18 @@ ram_write:
             bcs         @done
             ldy         #0
 :
-            lda         blk,Y
+            lda         (bufp),Y
             sta         (bp),Y
             iny
             bne         :-
             inc         bp + 1
+            inc         bufp + 1
 :
-            lda         blk + 256,Y
+            lda         (bufp),Y
             sta         (bp),Y
             iny
             bne         :-
+            dec         bufp + 1
             jmp         ram_unmap
 
 @done:
@@ -1076,28 +1083,41 @@ ram_unmap:
 ; ****************************************************************************
 ; Blocks: the block buffer, and each kind of disk's reads and writes
 
-; Block lba of disk dk in blk: read, unless it's there already.  OUT: C = 0; or C = 1, .A = the error
+; Block lba of disk dk in blk (and bufp = blk): read, unless it's there already.  OUT: C = 0; or C = 1, .A = the
+; error
 blk_get:
+            lda         #<blk
+            sta         bufp
+            lda         #>blk
+            sta         bufp + 1
+            jsr         blk_here
+            bcc         @done
+            stz         c_ok                                ; (Nothing there, if the read fails)
+            jsr         blk_read
+            bcs         @done
+            jsr         blk_claim
+@done:
+            rts
+
+; Is block lba of disk dk the one in blk?  OUT: C = 0: it is.  Modifies: .A, .X
+blk_here:
+            lda         c_ok
+            beq         @no
             lda         c_disk
             cmp         dk
-            bne         @read
+            bne         @no
             ldx         #3
 :
             lda         c_lba,X
             cmp         lba,X
-            bne         @read
+            bne         @no
             dex
             bpl         :-
             clc
             rts
 
-@read:
-            lda         #$FF                                ; (Nothing there, if the read fails)
-            sta         c_disk
-            jsr         blk_read
-            bcs         @done
-            jsr         blk_claim
-@done:
+@no:
+            sec
             rts
 
 ; blk is block lba of disk dk.  OUT: C = 0
@@ -1110,6 +1130,8 @@ blk_claim:
             sta         c_lba,X
             dex
             bpl         :-
+            lda         #1
+            sta         c_ok
             clc
             rts
 
@@ -1118,12 +1140,12 @@ blk_forget:
             lda         c_disk
             cmp         dk
             bne         :+
-            lda         #$FF
-            sta         c_disk
+            stz         c_ok
 :
             rts
 
-; Block lba of disk dk into blk (blk_read), or blk to it (blk_write).  OUT: C = 0; or C = 1, .A = the error
+; Block lba of disk dk into the 512 bytes at bufp (blk_read), or them to it (blk_write: then blk is that block, if
+; they were blk's; if not, blk forgets it, if it had it).  OUT: C = 0; or C = 1, .A = the error
 blk_read:
             jsr         blk_check
             bcs         blk_failed
@@ -1132,6 +1154,25 @@ blk_read:
 blk_write:
             jsr         blk_check
             bcs         blk_failed
+            jsr         @go
+            bcs         blk_failed
+            lda         bufp
+            cmp         #<blk
+            bne         @other
+            lda         bufp + 1
+            cmp         #>blk
+            bne         @other
+            jmp         blk_claim
+
+@other:
+            jsr         blk_here
+            bcs         :+
+            stz         c_ok
+:
+            clc
+            rts
+
+@go:
             jmp         (blk_writers,X)
 
 blk_failed:
@@ -1375,8 +1416,12 @@ dd_write:
             sec
             rts
 
-; pos = the request's offset; done = 0
+; pos = the request's offset; done = 0; bufp = blk
 dd_setup:
+            lda         #<blk
+            sta         bufp
+            lda         #>blk
+            sta         bufp + 1
             ldx         #3
 :
             lda         TASK_INBOX + RQ_OFFSET,X
@@ -1489,6 +1534,7 @@ c_init:
             cmp         #SPI_DEVS
             bcs         @done                               ; (Not a card: nothing to do)
             jsr         blk_forget
+            FAR2        hfs_forget                          ; (Another card may be in it now)
             jmp         sd_init
 
 @done:
@@ -1537,7 +1583,7 @@ c_start:
             sta         d_blocks,X
             stz         d_blocks + 2,X
             stz         d_blocks + 3,X
-            clc
+            FAR2        hfs_format_ram                      ; An empty HydraFS on it
 @done:
             rts
 
@@ -1557,12 +1603,12 @@ c_stop:
             ldx         dk
             lda         d_state,X
             beq         @done                               ; (Not started: C = 0)
-            lda         d_open,X
-            beq         :+
-            lda         #E_BUSY
-            sec
-            rts
-:
+            lda         d_open,X                            ; (Not while it's open: as a disk, or a file on it)
+            bne         @busy
+            FAR2        hfs_in_use
+            bcs         @failed
+            FAR2        hfs_forget
+            ldx         dk
             jsr         blk_forget
             stz         d_state,X
             lda         d_aux,X                             ; Its banks back
@@ -1587,9 +1633,38 @@ c_stop:
 @shared:
             jmp         SEG_DETACH
 
+@busy:
+            lda         #E_BUSY
+            sec
+            rts
+
 @done:
             clc
 @failed:
+            rts
+
+; format [-f] [-p] [-s SIZE] [LABEL], label TEXT, check [fix]: HydraFS's (hfs.s)
+c_format:
+            lda         z:srv_id
+            sta         dk
+            FAR2        hfs_format
+            rts
+
+c_label:
+            lda         z:srv_id
+            sta         dk
+            FAR2        hfs_label
+            rts
+
+c_check:
+            lda         z:srv_id
+            sta         dk
+            FAR2        hfs_check
+            rts
+
+; #f: HydraFS (hfs.s), every request
+h_fs:
+            FAR2        hfs_serve
             rts
 
 ; dk = the ctl's disk, a RAM disk.  OUT: C = 0; or C = 1, .A = E_INVAL (not one)
@@ -1750,6 +1825,7 @@ gen_disk:
             lda         #<s_blocks
             ldx         #>s_blocks
             jsr         srv_tputs
+            FAR2        hfs_ctl_lines                       ; (Its HydraFS, if it has one)
             clc
             rts
 
@@ -1817,6 +1893,8 @@ SRV_TREES:
             .word       tree_spi
             .byte       'd'
             .word       tree_sd
+            .byte       'f'
+            .word       tree_fs
             .byte       0
 
 tree_spi:
@@ -1833,6 +1911,9 @@ tree_sd:
             SRV_ENTRY   s_ctl,     1,   SK_CTL,  disk_cmds, SM_READ | SM_WRITE, 4     ; 3 (reads as 4)
             SRV_ENTRY   s_ctl,     $FE, SK_TEXT, gen_disk,  SM_READ,            0     ; 4 (its state: in no directory)
             .word       0
+tree_fs:
+            SRV_ENTRY   s_slash,   $FF, SK_RAW,  h_fs,      SM_READ | SM_WRITE, 0     ; (All of it: hfs.s)
+            .word       0
 spi_cmds:
             .word       s_mode, c_mode
             .word       0
@@ -1840,6 +1921,9 @@ disk_cmds:
             .word       s_init, c_init
             .word       s_start, c_start
             .word       s_stop, c_stop
+            .word       s_format, c_format
+            .word       s_label, c_label
+            .word       s_check, c_check
             .word       0
 blk_readers: .word      0, sd_read, sd_read, rom_read, ram_read, ram_read       ; (By state: DS_*)
 blk_writers: .word      0, sd_write, sd_write, rom_write, ram_write, ram_write
@@ -1852,6 +1936,9 @@ s_mode:     .byte       "mode", 0
 s_init:     .byte       "init", 0
 s_start:    .byte       "start", 0
 s_stop:     .byte       "stop", 0
+s_format:   .byte       "format", 0
+s_label:    .byte       "label", 0
+s_check:    .byte       "check", 0
 s_none:     .byte       "none", LF, 0
 s_sdsc:     .byte       "sdsc ", 0
 s_sdhc:     .byte       "sdhc ", 0

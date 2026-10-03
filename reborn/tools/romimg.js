@@ -49,10 +49,10 @@ function readHeader(data, what) {
   if (data[HX.HSIZE] !== HX.SIZE) fail('a header of ' + data[HX.HSIZE] + ' bytes (48 expected)');
   if (!TYPES[data[HX.TYPE]]) fail('type ' + data[HX.TYPE] + '?');
   if (data.readUInt16LE(HX.LOAD) !== WINDOW) fail('not built to run in place (load address $' + data.readUInt16LE(HX.LOAD).toString(16) + ')');
-  const length = data.readUInt16LE(HX.LENGTH);
-  if (length !== data.length) fail('its header says ' + length + ' bytes, the file has ' + data.length);
-  const banks = Math.ceil(data.length / BANK);
-  if (banks !== 1 || data[HX.BANKS] !== 1) fail('more than one bank (16K): not yet');
+  const banks = data[HX.BANKS], length = data.readUInt16LE(HX.LENGTH);   // (Its length in its last bank)
+  if (banks < 1 || banks > 2) fail(banks + ' banks: one or two');
+  if (length < 1 || length > BANK || (banks - 1) * BANK + length !== data.length)
+    fail('its header says ' + banks + ' banks, the last ' + length + ' bytes long; the file has ' + data.length);
   const raw = data.subarray(HX.NAME, HX.NAME + NAME_LEN), end = raw.indexOf(0);
   if (end < 1) fail('no name');
   const name = raw.toString('latin1', 0, end);

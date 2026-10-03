@@ -679,7 +679,7 @@ The default namespace file is in [Appendix E](#appendix-e-the-default-namespace)
 
 #### **14.3 Storage: `storage`** (a driver module; task E)
 
-One driver owns the SPI bus and every disk:
+One driver owns the SPI bus and every disk (as built, a module of two banks: HydraFS is its second):
 * **SPI** (the current bit-banged loops, 18 cycles a bit in, unchanged) and **`#S`**: `/dev/spi/N/data` and `/dev/spi/N/ctl` (`N` = 0-f: a directory a device, as `#d` has; today's `/dev/spi/N` is the data file, with its ctl under it), arbitrated with the SD cards (a device in use as one isn't the other).
 * **The block layer:** SD cards (SDSC and SDHC; the current command layer), the ROM disk `x` (read through the kernel's `ROMREAD`: the driver's own `$01` holds its code, so a kernel routine on page 0 selects the ROM disk's bank, copies the block and puts the driver's bank back), and the RAM disks `r` and `s` (started, sized and stopped through their ctl files, as today).  Two 512-byte block buffers and the metadata buffer.
 * **`#d`**: `/dev/sd/N/data` and `/dev/sd/N/ctl` (`N` = one hex digit for SPI devices, `x r s` for the others, as now).

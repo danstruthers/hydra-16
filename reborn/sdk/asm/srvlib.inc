@@ -15,6 +15,7 @@ SK_TEXT         = 2
 SK_CTL          = 3
 SK_DATA         = 4
 SK_DYN          = 5
+SK_RAW          = 6             ; (Entry 0 alone: a device whose every request goes to its handler)
 SE_TEMPLATE     = $FD           ; SE_PARENT of a dynamic directory's template (its children are it)
 DYN_NAME        = 0             ; An SK_DYN handler's requests: the srv_k-th child's id and name ...
 DYN_FIND        = 1             ;   the child named at srv_p ...
@@ -27,7 +28,7 @@ SC_HANDLER      = 2             ;   and its handler
 SC_SIZE         = 4
 SRV_FIDS        = 32            ; Fids open at once
 SRV_TEXT_MAX    = 255           ; A text file's length at most
-SRV_ARGS        = 4             ; A ctl command's words after it, at most
+SRV_ARGS        = 4             ; A ctl command's words after it, at most (the last: the rest of the line)
 SRV_CTL_MAX     = 63            ; A ctl write's length at most
 
 ; An entry of srv_tree: name, parent, kind, handler, mode, aux

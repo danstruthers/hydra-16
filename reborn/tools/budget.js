@@ -43,8 +43,13 @@ function report(root, built = {}) {
     if (!names.length) return;
     lines.push(title);
     for (const n of names) {
-      const d = set[n], top = d.readUInt16LE(22), data = d.readUInt16LE(16), bss = d.readUInt16LE(20);
-      lines.push('  ' + n.padEnd(12) + String(d.length).padStart(6) + ' bytes ROM (' + Math.round(d.length * 100 / 0x4000) + '% of a bank)' +
+      const d = set[n], top = d.readUInt16LE(22), data = d.readUInt16LE(16), bss = d.readUInt16LE(20), banks = d[33];
+      let first = 0x4000;                                     // (A two-bank module's first bank is filled out with $FF:
+      if (banks > 1) while (first > 0 && d[first - 1] === 0xFF) first--;   //   what's used, about)
+      const rom = banks > 1 ? String(first).padStart(6) + ' + ' + (d.length - 0x4000) + ' bytes ROM (two banks: ' +
+        Math.round(first * 100 / 0x4000) + '% and ' + Math.round((d.length - 0x4000) * 100 / 0x4000) + '%)' :
+        String(d.length).padStart(6) + ' bytes ROM (' + Math.round(d.length * 100 / 0x4000) + '% of a bank)';
+      lines.push('  ' + n.padEnd(12) + rom +
         (top > 0x0400 ? '   RAM ' + hx(0x0400) + '-' + hx(top - 1) + ' (data ' + data + ', BSS ' + bss + ')' : '   no RAM'));
     }
   };

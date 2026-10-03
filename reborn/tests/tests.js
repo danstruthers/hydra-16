@@ -18,6 +18,9 @@
 //   check(m, out)    more checks on the machine afterwards: gives a list of failures
 // Every test also checks the longest IRQs-off stretch after the boot (IRQ_OFF_MAX).
 'use strict';
+const fs = require('fs');
+const path = require('path');
+const hydrafs = require('../../sim/tools/hydrafs.js');
 
 const IRQ_OFF_MAX = 200;                                      // (docs/reimplementation-from-scratch.md, §8: 115200)
 const S1_BYTES = 2000;
@@ -29,6 +32,53 @@ function card(dev, blocks, sdsc, fill) {
   return { dev, blocks, sdsc, data, read: n => data.slice(n * 512, n * 512 + 512), write: (n, b) => data.set(b, n * 512) };
 }
 const DISK_CARDS = [card(0, 2048, false, (n, i) => n * 7 + i), card(1, 4096, true, (n, i) => n * 13 + i + 1)];
+
+// An SD card on SPI device dev from an image file, claiming blocks (those past the file's end read as zeros); its
+// writes kept, and save() puts them in the file (for the PC tool to look at)
+const CARD_DIR = path.join(__dirname, '..', 'obj', 'cards'), OLD_CARDS = path.join(__dirname, '..', '..', 'sim', 'cards');
+function imageCard(dev, file, blocks) {
+  const base = fs.readFileSync(file), written = new Map();
+  return { dev, blocks, file,
+    read: n => written.get(n) || Buffer.concat([n * 512 < base.length ? base.subarray(n * 512, n * 512 + 512) : Buffer.alloc(0)], 512),
+    write: (n, b) => written.set(n, Buffer.from(b)),
+    save() { const fd = fs.openSync(file, 'r+'); for (const [n, b] of written) fs.writeSync(fd, b, 0, 512, n * 512); fs.closeSync(fd); } };
+}
+
+// The fs test's cards: 0, a HydraFS made by the PC tool (hello.txt, games/star.txt, big.bin: byte i is i * 7); 1, blank;
+// 2 and 3, the old system's fixture cards (sim/cards: a version 1 volume, a version 2 one), copies; 4, partitioned (a FAT
+// partition first, the PC's, then the HydraFS: part.txt); 5, the version 1 card with a cluster marked in use that
+// nothing uses (a lost one, for the check to find); 6, a blank 1 GB card
+function fsCards() {
+  fs.mkdirSync(CARD_DIR, { recursive: true });
+  hydrafs.setNow(0x1000);
+  const f0 = path.join(CARD_DIR, 'fs0.img'), f1 = path.join(CARD_DIR, 'fs1.img');
+  const f2 = path.join(CARD_DIR, 'fs2.img'), f3 = path.join(CARD_DIR, 'fs3.img');
+  hydrafs.mkfs(f0, 8, 'TESTS', undefined, true);
+  const v = new hydrafs.Volume(f0);
+  v.put('hello.txt', Buffer.from('hello, hydrafs\n'));
+  v.mkdir('games');
+  v.put('games/star.txt', Buffer.from('a star\n'));
+  v.put('big.bin', Buffer.from(Array.from({ length: 9000 }, (_, i) => (i * 7) & 0xFF)));
+  v.close();
+  fs.writeFileSync(f1, Buffer.alloc(512));
+  fs.copyFileSync(path.join(OLD_CARDS, 'tests-v1.img'), f2);
+  fs.copyFileSync(path.join(OLD_CARDS, 'quick-v2.img'), f3);
+  const f4 = path.join(CARD_DIR, 'fs4.img'), f5 = path.join(CARD_DIR, 'fs5.img'), f6 = path.join(CARD_DIR, 'fs6.img');
+  hydrafs.mkfs(f4, 8, 'PART', undefined, true, 1);
+  const v4 = new hydrafs.Volume(f4);
+  v4.put('part.txt', Buffer.from('in a partition\n'));
+  v4.close();
+  fs.copyFileSync(path.join(OLD_CARDS, 'tests-v1.img'), f5);
+  const v5 = new hydrafs.Volume(f5);
+  let lost = 1000;
+  while (v5.used(lost)) lost++;
+  v5.setUsed(lost, true);
+  v5.freeCount = v5.freeCount - 1;
+  v5.close();
+  fs.writeFileSync(f6, Buffer.alloc(512));
+  return [imageCard(0, f0, 16384), imageCard(1, f1, 8192), imageCard(2, f2, 131072), imageCard(3, f3, 131072),
+    imageCard(4, f4, 16384), imageCard(5, f5, 131072), imageCard(6, f6, 2097152)];
+}
 
 module.exports = {
   IRQ_OFF_MAX,
@@ -113,6 +163,37 @@ module.exports = {
       },
     },
     {
+      name: 'fs', what: 'HydraFS (#f): files and directories, create, write, holes, remove, rename, format, label, check, old cards, mounts',
+      init: 't_fs', cycles: 600e6,
+      get machine() { this.cards = fsCards(); return { sd: this.cards }; },
+      budgets: [{ what: 'a HydraFS file, 8192 bytes read from a card (512 a READ), a byte', from: '<file', to: 'file>', minus: ['<b0', 'b0>'],
+        per: 8192, max: o => o.clock === 2 ? 290 + 64 : 290 }],
+      check() {
+        const f = [];
+        for (const c of this.cards) c.save();
+        const text = (v, p) => { const e = v.tryWalk(p); return e ? v.read(e).toString('latin1') : null; };
+        const each = (i, what) => { const v = new hydrafs.Volume(this.cards[i].file); for (const p of v.check()) f.push('card ' + i + ': ' + p); what(v); v.close(); };
+        each(0, v => {
+          if (text(v, 'renamed.txt') !== 'trunc') f.push('card 0: renamed.txt isn\'t "trunc"');
+          if (v.tryWalk('new.txt') || v.tryWalk('dir')) f.push('card 0: new.txt or dir is still there');
+          if (text(v, 'hello.txt') !== 'hello, hydrafs\n') f.push('card 0: hello.txt changed');
+        });
+        each(1, v => {
+          if (v.label !== 'NEW NAME') f.push('card 1: its label is "' + v.label + '"');
+          if (v.version !== 1) f.push('card 1: version ' + v.version + ' (a full format makes version 1)');
+          if (text(v, 'a.txt') !== 'on card 1') f.push('card 1: a.txt isn\'t "on card 1"');
+        });
+        for (const i of [2, 3]) each(i, v => { if (text(v, 'hydra.txt') !== 'from reborn') f.push('card ' + i + ': hydra.txt isn\'t "from reborn"'); });
+        each(4, () => {});
+        each(5, () => {});
+        each(6, v => {
+          if (v.label !== 'BIG' || v.version !== 2) f.push('card 6: label "' + v.label + '", version ' + v.version + ' (BIG, 2)');
+          if (text(v, 'big.txt') !== 'on a big card') f.push('card 6: big.txt isn\'t "on a big card"');
+        });
+        return f;
+      },
+    },
+    {
       name: 'cons', what: 'the console: lines, editing, history, raw keys, Ctrl-C, windows (shown, repainted, made, gone), 115200',
       init: 't_cons', modules: ['t_child'], cycles: 80e6,
       // (ā: wait for a prompt, "N> ")
@@ -132,6 +213,10 @@ module.exports = {
     {
       name: 'mem', what: 'memory: BREAK, pages, banks, a shared segment between tasks (and kcopy from it)',
       init: 't_mem', modules: ['t_child'], cycles: 30e6,
+    },
+    {
+      name: 'banks', what: 'a module of two banks: calls between them (FAR2, FAR1), registers and C, each bank\'s data',
+      init: 't_bank2', cycles: 10e6,
     },
     {
       name: 'scall', what: 'spike S3: calls into a driver\'s task, its errors, a busy driver, the round trip',
