@@ -6,6 +6,8 @@
 //   obj/gen/errors.inc    the error codes, for the kernel
 //   obj/gen/errtext.s     their texts, for ERRSTR
 //   obj/sdk/hydra.inc     the calls' addresses, the error codes and the constants, for programs in assembly
+//   obj/sdk/c/hydracalls.h   the same for C (HY_ before each name: cc65's headers have some of them)
+//   obj/sdk/c/oserrmap.inc   the C library's map from the error codes to errno (errors.def's last column)
 //   obj/gen/api.md        the reference: every call, its registers, its errors
 //   obj/gen/api.json      the same as data (the emulator names calls with it: sim/run.js --trace-calls)
 //
@@ -66,12 +68,12 @@ function readErrors(file) {
   fs.readFileSync(file, 'utf8').split(/\r?\n/).forEach((raw, i) => {
     const line = raw.trim();
     if (!line || line.startsWith('#')) return;
-    const m = line.match(/^error\s+(E_\w+)\s+(\$[0-9A-Fa-f]{2})\s+"([^"]+)"$/);
+    const m = line.match(/^error\s+(E_\w+)\s+(\$[0-9A-Fa-f]{2})\s+"([^"]+)"\s+(E[A-Z]+)$/);
     if (!m) fail(file, i + 1, 'what is "' + line + '"?');
     const code = num(m[2]);
     if (errors.find(e => e.code === code || e.name === m[1])) fail(file, i + 1, m[1] + ': its name or code is used twice');
     if (m[3].length > 31) fail(file, i + 1, m[1] + ': its text is over 31 characters (ERRSTR\'s buffer is 32 bytes)');
-    errors.push({ name: m[1], code, text: m[3] });
+    errors.push({ name: m[1], code, text: m[3], errno: m[4] });
   });
   return errors;
 }
@@ -150,6 +152,34 @@ function sdkInc(api, errors) {
   return s;
 }
 
+// C: the calls (their slots: hy_call), the error codes and the constants, each name with HY_ before it
+function cHeader(api, errors) {
+  const cx = v => '0x' + v.toString(16).toUpperCase();
+  const def = (name, value, doc) => ('#define ' + pad('HY_' + name, 24) + pad(value, 10) + (doc ? '/* ' + doc.replace(/\*\//g, '* /') + ' */' : '')).trimEnd() + CRLF;
+  let s = '/*' + CRLF + '** hydracalls.h - the Hydra-16\'s system calls, error codes and constants, for C (cc65).  Made by tools/apigen.js' + CRLF;
+  s += '** from spec/: don\'t edit.  hydra.h includes it.  A call\'s name is its slot in the jump table, for hy_call; the' + CRLF;
+  s += '** registers are in spec/api.def and the reference (/rom/doc/api.md).  Each name has HY_ before it (cc65\'s' + CRLF;
+  s += '** headers have some of them: O_RDWR, say).' + CRLF + '*/' + CRLF + CRLF + '#ifndef _HYDRACALLS_H' + CRLF + '#define _HYDRACALLS_H' + CRLF;
+  for (const g of api.groups) {
+    if (!g.calls.length) continue;
+    s += CRLF + '/* ---- ' + g.name + ': ' + g.doc + ' */' + CRLF;
+    for (const c of g.calls) s += def(c.name, cx(c.addr), '');
+  }
+  s += CRLF + '/* ---- error codes (_oserror) */' + CRLF;
+  for (const e of errors) s += def(e.name, cx(e.code), e.text);
+  s += CRLF + '/* ---- constants */' + CRLF;
+  for (const k of api.consts) s += def(k.name, k.text.startsWith('$') ? '0x' + k.text.slice(1) : k.text, k.doc);
+  s += CRLF + '#endif' + CRLF;
+  return s;
+}
+
+// The C library's errno for each error code (oserror.s includes it: .byte code, errno)
+function oserrMap(errors) {
+  let s = header(';', 'oserrmap.inc - the error codes\' errno, for the C library\'s __osmaperrno');
+  for (const e of errors) s += '            .byte       ' + pad(e.name + ',', 16) + e.errno + CRLF;
+  return s;
+}
+
 function apiMd(api, errors) {
   let s = '## **The system calls**' + CRLF + CRLF;
   s += 'Made by `tools/apigen.js` from `spec/api.def` and `spec/errors.def`: don\'t edit.  The rules for every call are in [conventions.md](../../docs/conventions.md#the-abi): `.A`, `.X`, `.Y` and `r0-r15` in and out, 16-bit results in `.A`/`.X`, and C = 1 with the error code in `.A` on failure.' + CRLF;
@@ -176,6 +206,8 @@ function generate(root) {
   write(path.join(gen, 'errors.inc'), errorsInc(errors));
   write(path.join(gen, 'errtext.s'), errText(errors));
   write(path.join(root, 'obj', 'sdk', 'hydra.inc'), sdkInc(api, errors));
+  write(path.join(root, 'obj', 'sdk', 'c', 'hydracalls.h'), cHeader(api, errors));
+  write(path.join(root, 'obj', 'sdk', 'c', 'oserrmap.inc'), oserrMap(errors));
   write(path.join(gen, 'api.md'), apiMd(api, errors));
   write(path.join(gen, 'api.json'), JSON.stringify({
     calls: api.calls.map(c => ({ name: c.name, addr: c.addr, group: c.group, in: c.in.join(' '), out: c.out.join(' '), errors: c.errors, blocks: c.blocks })),

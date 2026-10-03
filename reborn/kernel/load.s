@@ -78,6 +78,10 @@ K_SPAWN:
             dey
             bne         :-
 @open:
+            lda         r0                                  ; (Its path, kept: a name for it)
+            sta         L_PATH
+            lda         r0 + 1
+            sta         L_PATH + 1
             jsr         l_header                            ; The file (L_FD), its header in TA_PATH
             bcc         :+
             rts
@@ -90,6 +94,10 @@ K_SPAWN:
             lda         TA_PATH + HX_NAME,X
             sta         TA_SCRATCH + SP_NAME,X
             bra         :-
+:
+            lda         TA_PATH + HX_NAME                   ; None in its header (a C program's: crt0 is the
+            bne         :+                                  ;   library's): its file's, the path's last part
+            jsr         l_name
 :
             lda         TA_PATH + HX_FLAGS
             and         #HF_INPLACE
@@ -158,6 +166,36 @@ l_header:
             sta         L_FD
             jsr         l_rdhead
             bcs         l_close
+            rts
+
+; The last part of the path at L_PATH (past its last /), HX_NAME_MAX characters at most, as the program's name
+; (TA_SCRATCH + SP_NAME, zero-padded)
+l_name:
+            ldy         #0
+            ldx         #0                                  ; (.X: past the last / so far)
+@find:
+            lda         (L_PATH),Y
+            beq         @copy
+            iny
+            cmp         #'/'
+            bne         @find
+            tya
+            tax
+            bra         @find
+
+@copy:
+            txa
+            tay
+            ldx         #0
+:
+            lda         (L_PATH),Y
+            beq         @done
+            sta         TA_SCRATCH + SP_NAME,X
+            iny
+            inx
+            cpx         #HX_NAME_MAX
+            bne         :-
+@done:
             rts
 
 ; L_FD closed.  Keeps .A and C

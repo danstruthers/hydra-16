@@ -102,7 +102,8 @@ L_ARGLEN        = $C7           ;   their length with the 0 (0: none) ...
 L_TASK          = $C8           ;   and the child.  The loader's, in the child: ...
 L_AT            = $C9           ; (2)   where the next bytes go ...
 L_LEFT          = $CB           ; (2)   and how many are still to come
-OS_ZP_END       = $CD           ; (Checked: the OS zero page's end, at most $100)
+L_PATH          = $CD           ; (2) SPAWN's, in the caller: the program's path (a name for one whose header has none)
+OS_ZP_END       = $CF           ; (Checked: the OS zero page's end, at most $100)
 .assert     OS_ZP_END <= $100, error, "The OS zero page runs past $FF"
 
 ; Task states (TK_STATE): the state of the context on top of the task's stack.  Only ST_READY runs (and

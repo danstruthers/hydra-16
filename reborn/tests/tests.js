@@ -220,7 +220,7 @@ const TOOL_LINES = [
   ["sleep 30 & sleep 30 & kill $apid; slay sleep; wait; ps","task  state",true],
   ["kill 9; kill x; echo $status","kill: 9: no such task\nkill: x: invalid argument\n1"],
   ["sleep 1; echo slept","slept"],
-  ["ls /rom/bin; whatis mkfs","fsck\nlabel\nmkfs\n/bin/mkfs"],
+  ["ls /rom/bin; whatis mkfs","fsck\ngrep\nlabel\nmkfs\nsort\n/bin/mkfs"],
   ["label s; label s Shared Disk; label s","SRAM\nShared Disk"],
   ["fsck s","hydrafs label=Shared Disk\nfree 244 KB of 252 KB\ncheck: lost 0, unmarked 0, twice 0"],
   ["mkfs s Fresh; ls /sram; label s; echo $status","Fresh\n"],
@@ -276,6 +276,57 @@ const TOOL_LINES = [
   ].join('\n')],
 ];
 
+// The C test's lines (as the tools test's): the C SDK's samples, the library's test (ctest: its "ok" lines), and the
+// tools in C (sort and grep)
+const C_LINES = [
+  ["/rom/sample/c/hello world","hello from C, world"],
+  ["echo hello there | /rom/sample/c/upper","HELLO THERE"],
+  ["/rom/sample/c/code 3; echo $status","3"],
+  ["/rom/sample/c/code oops; echo $status","oops"],
+  ["cd /ram; /rom/sample/c/ctest a 'b c'","ok - arguments",true],
+  ["for(w in pear apple fig Apple banana 10 9 07) echo $w >>/ram/s; sort /ram/s", [
+    "07",
+    "10",
+    "9",
+    "Apple",
+    "apple",
+    "banana",
+    "fig",
+    "pear",
+  ].join('\n')],
+  ["sort -n /ram/s; sort -rf /ram/s | head -4; sort -fu /ram/s | wc -l", [
+    "Apple",
+    "apple",
+    "banana",
+    "fig",
+    "pear",
+    "07",
+    "9",
+    "10",
+    "pear",
+    "fig",
+    "banana",
+    "apple",
+    "      7",
+  ].join('\n')],
+  ["grep an /ram/s; grep -n '^[a-f]' /ram/s; grep -i -c apple /ram/s","banana\n2:apple\n3:fig\n5:banana\n2"],
+  ["grep -v 'e|a' /ram/s; grep -c '^-?[0-9]+$' /ram/s","fig\n10\n9\n07\n3"],
+  ["echo pineapple >/ram/s2; grep 'p+le$' /ram/s /ram/s2; grep -l fig /ram/s /ram/s2","/ram/s:apple\n/ram/s:Apple\n/ram/s2:pineapple\n/ram/s"],
+  ["grep zzz /ram/s; echo $status; grep '(ab' /ram/s; echo $status; grep x /ram/nosuch; echo $status", [
+    "no matches",
+    "grep: bad expression: no )",
+    "bad expression",
+    "grep: /ram/nosuch: not found",
+    "1",
+  ].join('\n')],
+  ["sort -x; echo $status; grep; echo $status", [
+    "usage: sort [-bfnru] [file ...]",
+    "usage",
+    "usage: grep [-chilnsv] [-e] pattern [file ...]",
+    "usage",
+  ].join('\n')],
+];
+
 module.exports = {
   IRQ_OFF_MAX,
   tests: [
@@ -295,7 +346,7 @@ module.exports = {
       machine: { input: 'āls \'#fr\'\r' + 'āls /ram\r' + 'āls /bin\r' + 'āt_child f\r' + 'āls \'#fr\'/2\r' + 'ācat /rom/lib/profile\r' +
         'ācat /dev/sd/s/ctl\r' + 'āecho $window\r' + 'ā\x1dc' + 'āecho $window\r' + 'āls \'#fr\'\r' + 'āls /ram\r' + 'āls /dev\r' },
       expect: ['% ls \'#fr\'\n1/\n2/\n%', '% ls /ram\nbin/\nlib/\n%',
-        '% ls /bin\nfsck\nlabel\nmkfs\ninit\nhello\nrc\nwstart\n', 't_child\n% t_child f\n', '% ls \'#fr\'/2\nbin/\nlib/\nmark\n%',
+        '% ls /bin\nfsck\ngrep\nlabel\nmkfs\nsort\ninit\nhello\nrc\nwstart\n', 't_child\n% t_child f\n', '% ls \'#fr\'/2\nbin/\nlib/\nmark\n%',
         'prompt=(', '% cat /dev/sd/s/ctl\nsram 512 KB 1024 blocks\nhydrafs label=SRAM\n', '% echo $window\n0\n%',
         '% echo $window\n1\n%', '% ls \'#fr\'\n1/\n2/\n4/\n%', '% ls /ram\nbin/\nlib/\n%', '\ncons\nconsctl\nwctl\nwnew\nser\nserctl\n%'],
     },
@@ -493,6 +544,20 @@ module.exports = {
         return [...TOOL_LINES.map(l => '% ' + l[0] + '\n' + (l[2] ? l[1] : (l[1] === null ? '' : l[1] + '\n') + '%')),
           '\x1b[H\x1b[2Jtask  state    cpu  name\n', '% echo $status\ninterrupt\n%',
           '\n9\n10\n--more--\n11\n12\n1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n%', '% /rom/sample/tick\n.', ' seconds\n\n% echo $status\n\n%'];
+      },
+    },
+    {
+      name: 'c', what: 'the C target (cc65): its samples at rc, the library\'s test (ctest), conio\'s raw keys (and raw ended with the program)',
+      init: 't_rc', cycles: 150e6,
+      // (Each line typed at its prompt, as the tools test's.  Then keys: three keys and q; and again, ended by Ctrl-C,
+      // its window cooked again for rc)
+      get machine() {
+        return { input: C_LINES.map(l => 'ā' + l[0] + '\r').join('') + 'ā/rom/sample/c/keys\rĀĀab\x1b[Aq' +
+          'ā/rom/sample/c/keys\rĀĀ\x03' + 'āecho $status\r' };
+      },
+      get expect() {
+        return [...C_LINES.map(l => '% ' + l[0] + '\n' + (l[2] ? l[1] : (l[1] === null ? '' : l[1] + '\n') + '%')),
+          '\nctest: 0 failed\n%', 'codes:\x1b[27m 61 62 80\nended at 15,2\n%', '% echo $status\ninterrupt\n%'];
       },
     },
     {

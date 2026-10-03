@@ -11,7 +11,8 @@
 ;               an empty line is the end of the input.  Or (raw: consctl's rawon) each key as it comes, the
 ;               terminal's cursor and function keys as one code each (KEY_*; an Escape alone waits for the key
 ;               after it).  A write goes into the window's text, and out if the window is shown (each LF as CR LF)
-;   /consctl    rawon, rawoff; group (the window's notes go to the writer's note group).  It reads as the state
+;   /consctl    rawon, rawoff (raw lasts till the window's last consctl closes, as Plan 9's does); group (the
+;               window's notes go to the writer's note group).  It reads as the state
 ;   /wctl       new (a window), current N (window N shown).  It reads as the windows, a line each (* the shown one)
 ;   /wnew       a read waits for the user's Ctrl-] c, then makes a window, shown, and gives its number (init's: it
 ;               starts a shell there)
@@ -42,6 +43,7 @@
 
 SRV_FLUSH       = flush                                     ; (srvlib: a reader's call ended by a note)
 SRV_OPENED      = opened                                    ;   (a fid made: its window)
+SRV_CLUNKED     = clunked                                   ;   (a fid forgotten: consctl's counted)
 SRV_PRE         = distribute                                ;   (before each request: the keys to the windows)
 SRV_POST        = pump                                      ;   (and after it: the shown window's text out)
 
@@ -67,6 +69,7 @@ CTRL_BSL        = $1C           ; (Ctrl-\)
 CTRL_RB         = $1D           ; (Ctrl-]: the windows' key)
 DEL             = $7F
 RATE_BOOT       = 5             ; 9600: the kernel's bring-up console's
+ENT_CONSCTL     = 2             ; srv_tree's consctl (its fids counted)
 
 .zeropage
 rx_head:    .res        1                                   ; The receive ring: the irq entry's end ...
@@ -127,6 +130,7 @@ iobuf:      .res        IOBUF
 w_used:     .res        WIN_MAX                             ; Each window: <> 0, it's there ...
 w_group:    .res        WIN_MAX                             ;   its note group (Ctrl-C's) ...
 w_cons:     .res        WIN_MAX                             ;   its cons fids ...
+w_ctl:      .res        WIN_MAX                             ;   its consctl fids (raw ends with the last) ...
 w_hl:       .res        WIN_MAX                             ;   its text's place: where the next byte goes ...
 w_hh:       .res        WIN_MAX
 w_sl:       .res        WIN_MAX                             ;   the next byte out (the shown one's) ...
@@ -422,6 +426,7 @@ w_init:
             stz         w_iqh,X
             stz         w_iqt,X
             stz         w_cons,X
+            stz         w_ctl,X
             lda         #INIT_TASK
             sta         w_group,X
             cpx         lw                                  ; (Its old state, if it was loaded: gone)
@@ -758,7 +763,7 @@ replay:
             rts
 
 ; A fid made (srvlib): its window, from the spec (none: window 0); a window that isn't there: E_NOENT.  (R_DUP's
-; keeps its old fid's.)  IN: .X = the fid.  Keeps .X
+; keeps its old fid's.)  A consctl's counted.  IN: .X = the fid.  Keeps .X
 opened:
             lda         z:srv_rq
             cmp         #R_OPEN
@@ -778,12 +783,39 @@ opened:
 @zero:
             sta         srv_fid_aux,X
 @ok:
+            lda         z:srv_e
+            cmp         #ENT_CONSCTL
+            bne         :+
+            ldy         srv_fid_aux,X
+            lda         w_ctl,Y
+            inc         a
+            sta         w_ctl,Y
+:
             clc
             rts
 
 @noent:
             lda         #E_NOENT
             sec
+            rts
+
+; A fid forgotten (srvlib): a consctl's count down; with its window's last, raw ends (Plan 9's: raw lasts while
+; consctl is open, so a program that ends raw, or is ended, leaves its window cooked).  IN: .X = the fid
+clunked:
+            lda         z:srv_e
+            cmp         #ENT_CONSCTL
+            bne         @done
+            ldy         z:srv_id
+            lda         w_ctl,Y
+            beq         @done
+            dec         a
+            sta         w_ctl,Y
+            bne         @done
+            tya
+            jsr         load
+            stz         raw
+@done:
+            clc
             rts
 
 ; ****************************************************************************
@@ -1896,7 +1928,7 @@ rate_name_hi: .byte     >s_300, >s_600, >s_1200, >s_2400, >s_4800, >s_9600, >s_1
 srv_tree:
             SRV_ENTRY   s_root,    $FF, SK_DIR,  0,           SM_READ,            0     ; 0
             SRV_ENTRY   s_cons,    0,   SK_DATA, h_cons,      SM_READ | SM_WRITE, 0     ; 1
-            SRV_ENTRY   s_consctl, 0,   SK_CTL,  cons_cmds,   SM_READ | SM_WRITE, 7     ; 2 (reads as 7)
+            SRV_ENTRY   s_consctl, 0,   SK_CTL,  cons_cmds,   SM_READ | SM_WRITE, 7     ; 2 (reads as 7: ENT_CONSCTL)
             SRV_ENTRY   s_wctl,    0,   SK_CTL,  wctl_cmds,   SM_READ | SM_WRITE, 8     ; 3 (reads as 8)
             SRV_ENTRY   s_wnew,    0,   SK_DATA, h_wnew,      SM_READ,            0     ; 4
             SRV_ENTRY   s_ser,     0,   SK_DATA, h_ser,       SM_READ | SM_WRITE, 0     ; 5

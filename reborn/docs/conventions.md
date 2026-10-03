@@ -13,10 +13,11 @@ the rules as built.
 * Arguments and results: `.A`, `.X`, `.Y` and the call registers `r0`-`r15` (`$02`-`$21`).  A 16-bit value is
   `.A` (low) and `.X` (high), or a call register.
 * **C = 0 is success; C = 1 is failure, with the error code in `.A`.  Always**, for every call, with the codes of
-  `spec/errors.def`.
+  `spec/errors.def` (each with its text, and the C library's `errno` for it).
 * A call may change `.A`, `.X`, `.Y`, `r0`-`r15` and the flags; it never touches `$22`-`$7F`.
 * Everything outside the kernel runs with `W = 0` (BIOS ROM page 0 at `$E000`).
-* Never edit what's made from `spec/` (`obj/gen/*`, `obj/sdk/hydra.inc`): change the specification and build.
+* Never edit what's made from `spec/` (`obj/gen/*`, `obj/sdk/hydra.inc`, `obj/sdk/c/hydracalls.h` and
+  `oserrmap.inc`): change the specification and build.
 
 ## Memory
 
@@ -27,7 +28,7 @@ Every task has its own `$0000`-`$7FFF` (the `T` register selects it) and its own
 | `$00`, `$01` | Its RAM bank (`$8000`-`$9FFF`) and paged ROM bank (`$A000`-`$DFFF`) registers |
 | `$02`-`$21` | `r0`-`r15`, the call registers |
 | `$22`-`$7F` | The program's own zero page: never touched by the system |
-| `$80`-`$FF` | The OS zero page (`TK_*` the task's state, `KC_*` kcopy's, `KF_*` the far call's, `K_*` the call stubs' scratch, `TN_*` and `TQ_*` the notes', `F_*` the file calls', `L_*` SPAWN's and the loader's; `$CD`-`$FF` free for the kernel's growth).  One byte of it is a program's to write: its event count, `TASK_EVENT` (`$BD`) |
+| `$80`-`$FF` | The OS zero page (`TK_*` the task's state, `KC_*` kcopy's, `KF_*` the far call's, `K_*` the call stubs' scratch, `TN_*` and `TQ_*` the notes', `F_*` the file calls', `L_*` SPAWN's and the loader's; `$CF`-`$FF` free for the kernel's growth).  One byte of it is a program's to write: its event count, `TASK_EVENT` (`$BD`) |
 | `$0100`-`$01FF` | Its stack; a task that isn't running has its frame on top (`U Y W X A P PCL PCH`) |
 | `$0200`-`$03FF` | The OS area (`TA_*`): a server's request being served (`TASK_INBOX`), its entries, its break, its note handler, its name, its copy of the IRQ lines' owners, its page and bank maps, the request it's making, the name a request names (`TASK_PATH`), its fds, its current directory, its arguments at `$0350` (`TASK_ARGS`) |
 | `$0400`-`$7FFF` | The program's RAM: its data and BSS, then its break (`BREAK`); pages from the top down (`PAGES_ALLOC`).  Task F's top page is the DS1747's |
@@ -129,6 +130,14 @@ The kernel task (task 0) keeps the kernel's state: its program zero page (`K0_*`
   listed in `romfs/romfs.txt`) are `programs/NAME/`, built into `obj/programs/NAME.hyx`; the SDK's samples are
   `sdk/asm/samples/NAME/` (`/rom/sample`); and a program of one's own, anywhere, `node build.js prog DIR`
   (`sdk/asm/README.md`).
+* A C program is a folder of `.c` files (and `.s` files, if it has any) in the same places (`sdk/c/samples/NAME/`
+  for `/rom/sample/c`), compiled by cc65 for its target `none` and linked by `sdk/c/hydra.cfg` with the C library,
+  `obj/sdk/c/hydra.lib`: cc65's `none.lib` with `sdk/c/lib`'s modules in place of cc65's, each named as the module
+  it replaces (a cc65 module whose functions the library has under another name is dropped: `build.js`'s
+  `CC65_DROPPED`).  cc65's runtime has the zero page from `$22` (26 bytes).  A library routine that C calls may
+  change the runtime's scratch (`ptr1`-`ptr4`, `tmp1`-`tmp4`); one that cc65's own assembly calls (`_cputc`,
+  `_fgetc`) keeps what that code keeps across it (`ptr1`-`ptr4`, `tmp1`), so it's in assembly, or saves them
+  around its C.
 * **The tools** (`modules/NAME`, or `programs/NAME` for the ROM disk) are built on `sdk/asm/toollib.s`
   (`toollib.inc` at the top, for its zero page; `toollib.s` at the end), and behave as Plan 9's: flags first
   (`-abc`), then names; a name that fails is said on fd 2 as `tool: name: why` and the rest go on, the tool ending

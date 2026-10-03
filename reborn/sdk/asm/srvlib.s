@@ -32,6 +32,8 @@
 ;   SRV_OPENED      (optional) a routine for each fid made (R_OPEN, R_DUP: srv_rq): .X = it, its entry srv_ent; it
 ;                   may set srv_fid_aux,X (from the request's spec: which of the device's instances), or refuse
 ;                   (C = 1, .A = the error).  A data file's handler is told after it
+;   SRV_CLUNKED     (optional) a routine for each fid forgotten (R_CLUNK): .X = it, its entry srv_e / srv_ent, its
+;                   aux srv_id (a data file's handler is told before it)
 ;   SRV_PRE, SRV_POST (optional) routines run before every request, and after it (before the answer goes back)
 ;   SRV_STAT        (optional) a routine for each stat record made (srv_stat, of entry srv_e / srv_ent, id srv_id):
 ;                   it may fill in more of it (a data file's length)
@@ -508,7 +510,7 @@ srv_rstat:
 @done:
             rts
 
-; R_CLUNK: the fid forgotten (a data file's handler told first)
+; R_CLUNK: the fid forgotten (a data file's handler told first, then the server's SRV_CLUNKED)
 srv_clunk:
             jsr         srv_getfid
             bcs         @done
@@ -520,6 +522,10 @@ srv_clunk:
             ldx         srv_fid
             jsr         srv_handler
 :
+.ifdef SRV_CLUNKED
+            ldx         srv_fid
+            jsr         SRV_CLUNKED
+.endif
             ldx         srv_fid
             lda         #$FF
             sta         srv_fid_entry,X

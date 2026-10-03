@@ -177,6 +177,16 @@ main:
             WRITE_      ctl, s_rawoff, 6
             EXPECT_OK   "consctl: rawoff"
 
+; ---- Raw lasts while consctl is open (Plan 9's): rawon, then consctl closed
+            WRITE_      ctl, s_rawon, 5
+            lda         ctl
+            jsr         CLOSE
+            OPEN_       s_consctl, O_RDWR
+            sta         ctl
+            READ_       ctl, 64
+            lda         buf + 4
+            EXPECT_A    'f', "rawon, consctl closed: raw ends with it (rawoff)"
+
 ; ---- Ctrl-C: the foreground group's note.  A child reading (in this task's group) ends, 130; this task's
 ; handler keeps it
             stz         got

@@ -676,6 +676,7 @@ const MREPL           0        "BIND's and MOUNT's flags: in place of what's at 
 const MBEFORE         1        "BIND's and MOUNT's flags: a union, new first"
 const MAFTER          2        "BIND's and MOUNT's flags: a union, new last"
 const MCREATE         4        "BIND's and MOUNT's flags: a CREATE in the union comes to new"
+const EXIT_MSG_MAX    31       "An exit message's length at most (WAIT's buffer: 32 bytes)"
 const TR_ARGS         0        "TASKREAD: a task's arguments (ARGS_MAX bytes)"
 const TR_CWD          1        "TASKREAD: a task's current directory (PATH_MAX + 1 bytes)"
 const NI_FROM         0        "NSINFO's answer (NI_SIZE bytes): the mount point (PATH_MAX + 1 bytes, zero-terminated)"

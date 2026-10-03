@@ -741,7 +741,7 @@ Small programs, each a module in the paged ROM (in place) or a C program in `/ro
 
 Whether each is assembly or C is chosen by size and speed: C first where it saves time (`sort`, `grep`, `fsck`'s report), assembly for what runs often (`ls`, `cat`, `echo`).
 
-(As built, phase 4.3: the file, text and system tools are modules in assembly, on a library they share (`reborn/sdk/asm/toollib.s`: flags, errors and exit statuses as Plan 9's, buffered output, directories read whole, a tree walked); `mkfs`, `fsck` and `label` are RAM programs on the ROM disk's `/rom/bin`, bound at `/bin` after the caches.  `grep` and `sort` wait for C (4.5), `date` for the clock (phase 5), and `hwtest` for a way to reset into it.  `/proc`'s args, cwd and ns came with them (the calls `TASKREAD` and `NSINFO`; ns reads as the binds and mounts that make the namespace, as Plan 9's does), and the module directory now holds 127 modules.)
+(As built, phase 4.3: the file, text and system tools are modules in assembly, on a library they share (`reborn/sdk/asm/toollib.s`: flags, errors and exit statuses as Plan 9's, buffered output, directories read whole, a tree walked); `mkfs`, `fsck` and `label` are RAM programs on the ROM disk's `/rom/bin`, bound at `/bin` after the caches.  `grep` and `sort` came in C with 4.5, `date` waits for the clock (phase 5), and `hwtest` for a way to reset into it.  `/proc`'s args, cwd and ns came with them (the calls `TASKREAD` and `NSINFO`; ns reads as the binds and mounts that make the namespace, as Plan 9's does), and the module directory now holds 127 modules.)
 
 #### **15.4 Programs in C**
 
@@ -750,6 +750,8 @@ The cc65 target becomes a proper one (`-t hydra`):
 * `crt0.s`: the header, data and BSS set-up, `argc`/`argv` from the OS area, `exit` through `EXITS` with `atexit` functions run.
 * **The library:** stdio over fds with buffering in the library; `open`, `read`, `write`, `lseek` (through `SEEK`), `stat` and `fstat` (64-byte records), `dirent.h` (stat records, no text parsing), the environment as `/env` files, `errno` mapped from the error codes 1:1 ([Appendix D](#appendix-d-error-codes) uses POSIX names), `strerror` from the kernel's `ERRSTR`, `time` and `clock`, `system` (`rc -c`), conio over raw mode and ANSI, `signal` over notes, the bank calls for big data.
 * `hydra.h` and the binding glue **generated** from the API spec.
+
+(As built, phase 4.5, `reborn/sdk/c`: cc65's own target `none`, with the Hydra's `crt0.s`, `hydra.cfg` and a library over cc65's `none.lib` (a `-t hydra` of its own would be a target in cc65's sources).  The library is the plan's but in four places: the environment is rc's variables through the `ENV_*` calls, as the kernel keeps it, not `/env`'s files; `errno` is cc65's (its 18 values), `spec/errors.def` giving each error code one, and `_oserror` keeps the code itself; `time` counts from the program's start (from 2000-01-01) till the clock (5.4); and the calls' C functions are written by hand on one `hy_call`, with `hydracalls.h` generated (every call's slot, every error code and constant).  stdio's buffering is the library's own (cc65's reads a byte a call): a buffer for each fd, a console's line buffered.  The samples `tones` and `jukebox` wait for the sound driver (5.1); `grep` and `sort` are C programs on the ROM disk.)
 
 #### **15.5 Programs in assembly**
 
