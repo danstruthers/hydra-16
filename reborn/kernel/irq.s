@@ -18,7 +18,8 @@
 ; VIA timer 2 is a line of its own, LINE_VIA_T2 (16), so its owner (the console: its paced sending) gets it in one
 ; step: the VIA's stub sends its interrupt there (common.s: IRQ_VIA).  Owning the line is owning the timer: IRQ_OWN
 ; sets it one-shot, its interrupt on; the owner starts it (T2CL, then T2CH) and its interrupt clears its flag
-; (reading T2CL, or starting it again).
+; (reading T2CL, or starting it again).  CA1 is one too, LINE_VIA_CA1 (17): owning it turns CA1's interrupt on (off
+; again as it's given back), and the owner (the GPIO driver) clears its flag (IFR).
 
 .assert     LINE_VIA = 0, error, "IRQ_VIA's .A = 0 is the VIA's line"
 
@@ -56,6 +57,8 @@ IRQ_STRAY:
 @count:                                                     ; Nobody's: counted (a line must be owned before its
             cpy         #LINE_VIA_T2                        ;   device interrupts: a held line comes straight back)
             beq         @t2
+            cpy         #LINE_VIA_CA1
+            beq         @ca1
             ldx         T_REGISTER
             stz         T_REGISTER
             lda         K_IRQ_STRAY,Y
@@ -68,6 +71,10 @@ IRQ_STRAY:
 
 @t2:                                                        ; (Timer 2 with no owner: its interrupt off, its flag
             jsr         T2_OFF                              ;   cleared)
+            jmp         IRQ_RESTORE
+
+@ca1:                                                       ; (CA1 the same)
+            jsr         CA1_OFF
             jmp         IRQ_RESTORE
 
 ; ****************************************************************************
@@ -153,7 +160,22 @@ T2_OFF:
 
 .assert     VIA_IRQ_T2 = $20, error, "T2_ON's ACR bit 5 is VIA_IRQ_T2's"
 
-; Line .X's owner = .A ($FF: none), in every task's copy (and timer 2 its owner's, or nobody's: T2_ON, T2_OFF).
+; CA1's interrupt on (its flag cleared first: an edge from before isn't counted), or off (its flag cleared)
+CA1_ON:
+            lda         #VIA_IRQ_CA1
+            sta         VIA_IFR
+            lda         #VIA_IER_SET | VIA_IRQ_CA1
+            sta         VIA_IER
+            rts
+
+CA1_OFF:
+            lda         #VIA_IRQ_CA1
+            sta         VIA_IER
+            sta         VIA_IFR
+            rts
+
+; Line .X's owner = .A ($FF: none), in every task's copy (and timer 2 its owner's, or nobody's: T2_ON, T2_OFF; CA1's
+; interrupt on or off: CA1_ON, CA1_OFF).
 ; In the kernel task (a KCALL, or the boot); keeps the I flag.  Modifies .Y
 IRQ_SET_OWNER:
             ldy         #TASKS - 1
@@ -166,6 +188,8 @@ IRQ_SET_OWNER:
             plp
             dey
             bpl         @task
+            cpx         #LINE_VIA_CA1                       ; CA1: its interrupt on for its owner, or off
+            beq         @ca1
             cpx         #LINE_VIA_T2                        ; Timer 2: on for its owner, or off
             bne         @done
             php
@@ -181,6 +205,21 @@ IRQ_SET_OWNER:
             pla
             plp
 @done:
+            rts
+
+@ca1:
+            php
+            sei
+            pha
+            cmp         #$FF
+            beq         :+
+            jsr         CA1_ON
+            bra         :++
+:
+            jsr         CA1_OFF
+:
+            pla
+            plp
             rts
 
 ; IRQ_OWN: own a line.  IN: .A = the line.  OUT: C = 0; or C = 1, .A = E_RANGE, E_INVAL (no irq entry), E_BUSY

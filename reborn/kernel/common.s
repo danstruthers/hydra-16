@@ -4,7 +4,8 @@
 ; Only interrupt entry and exit, and the kernel's own calls between its pages, need it: everything outside the
 ; kernel runs with W = 0 (principle P2).
 ;   IRQ_STUB_0 ... IRQ_STUB_F   each line's vector points at its stub: .A = the line, on to IRQ_ENTRY (the
-;                               VIA's by IRQ_VIA: timer 2 is a line of its own, LINE_VIA_T2)
+;                               VIA's by IRQ_VIA: timer 2 and CA1 are lines of their own, LINE_VIA_T2 and
+;                               LINE_VIA_CA1)
 ;   IRQ_ENTRY                   the frame's X and W, then page 0 and the dispatcher (irq.s): its main path is
 ;                               here, to save two jumps on every interrupt
 ;   IRQ_RESTORE, IRQ_EXIT       back to the interrupted page, and RTI
@@ -38,13 +39,19 @@ name:
 .endif
 .endrepeat
 
-; The VIA's line: timer 2's interrupt (its own on, and run out) is LINE_VIA_T2's, the rest the VIA's (.A = 0)
+; The VIA's line: timer 2's interrupt (its own on, and run out) is LINE_VIA_T2's, CA1's LINE_VIA_CA1's, the rest
+; the VIA's (.A = 0: the tick)
             CLABEL      IRQ_VIA
             lda         VIA_IFR
             and         VIA_IER
-            and         #VIA_IRQ_T2
-            beq         :+                                  ; (IRQ_ENTRY: this copy's)
-            lda         #LINE_VIA_T2                        ; (Then on into IRQ_ENTRY)
+            bit         #VIA_IRQ_T2
+            beq         :+
+            lda         #LINE_VIA_T2
+            bra         :++                                 ; (IRQ_ENTRY: this copy's)
+:
+            and         #VIA_IRQ_CA1
+            beq         :+                                  ; (.A = 0)
+            lda         #LINE_VIA_CA1                       ; (Then on into IRQ_ENTRY)
 
 ; .A = the line.  The frame so far: A, then the CPU's P and PC
 :

@@ -123,7 +123,9 @@ BUSY_NOSERVE    = $80           ; TK_BUSY: no serve entry (a program): a call to
 IRQ_RESCHED     = $80           ; An irq entry's answer: a task switch, please (it woke a task)
 LINE_VIA_T2     = 16            ; A line of its own for VIA timer 2 (the VIA's line is the tick's): the VIA's stub
                                 ;   sends timer 2's interrupts here (common.s: IRQ_VIA).  The console's pacing
-IRQ_LINES       = LINES + 1     ; The lines with owners: the hardware's, and LINE_VIA_T2
+LINE_VIA_CA1    = 17            ; And one for the VIA's CA1 (an edge on J27's pin 11): the GPIO driver's, while it
+                                ;   has /ca1 open (owning it turns CA1's interrupt on)
+IRQ_LINES       = LINES + 2     ; The lines with owners: the hardware's, LINE_VIA_T2 and LINE_VIA_CA1
 
 ; A switched-out task's frame, on its own stack, top first (TK_SP points just below it)
 ;   U, Y, W, X, A, P, PCL, PCH          (as the IRQ path and YIELD build it; SCHED_RESUME unwinds it)
@@ -149,10 +151,10 @@ TA_BRK          = $0228         ; (2) The end of its data area (BREAK) ...
 TA_BRKMIN       = $022A         ; (2)   and the lowest it may go: its module's HX_TOP
 TA_NOTIFY       = $022C         ; (2) Its note handler (NOTIFY), or 0
 TA_NAME         = $0230         ; (16) Its name, zero-terminated
-TA_OWNERS       = $0240         ; (17: IRQ_LINES) Each IRQ line's owner task ($FF: none): a copy in every task, so
+TA_OWNERS       = $0240         ; (18: IRQ_LINES) Each IRQ line's owner task ($FF: none): a copy in every task, so
                                 ;   the IRQ dispatcher reads it where it is (IRQ_OWN writes them all)
-TA_PAGEMAP      = $0251         ; (16) Its pages given out by PAGES_ALLOC (bit = page)
-TA_BANKMAP      = $0261         ; (30) Its banks given out by BANKS_ALLOC (bit = bank, $00-$EF)
+TA_PAGEMAP      = $0252         ; (16) Its pages given out by PAGES_ALLOC (bit = page)
+TA_BANKMAP      = $0262         ; (30) Its banks given out by BANKS_ALLOC (bit = bank, $00-$EF)
 TA_SCRATCH      = $0280         ; (32) The call stubs' scratch: what a call copies in or out
 TA_REQ          = $02A0         ; (32) A request it's making (RQ_*: the server takes it with SRV_TAKE)
 TA_PATH         = $02C0         ; (64) The path a request names: the rest after its device (a server's copy too)

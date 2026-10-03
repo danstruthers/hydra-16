@@ -7,7 +7,7 @@ spikes measured, and what measuring changed.
 ## In short
 
 Phases 0, 1 and 3 (storage) are done, phase 2 is all but done, phase 4 (programs) is all but done: its loader, rc, the core tools, the assembly SDK, the C target and `edit`; and
-phase 5 (the remaining devices) has sound and the song player.  The kernel boots in the emulator, runs POST (with the old
+phase 5 (the remaining devices) has sound, the song player, GPIO and I2C.  The kernel boots in the emulator, runs POST (with the old
 hardware test a key away), starts its modules from the paged ROM in tasks of their own, schedules them
 preemptively, runs calls between tasks and copies between them, takes every interrupt through one path, manages
 task RAM, banks and shared segments, and delivers notes.  The file layer is in: fds, channels, requests to
@@ -33,7 +33,8 @@ assembly (`sdk/asm`) or in C (`sdk/c`: cc65, with a library of the Hydra's own u
 buffered stdio, the environment, `system`, `signal` over notes, conio on the console's raw mode); `grep` and
 `sort` are C programs.  `edit` is the old system's line editor, a program now.  The sound driver (`snd`, task C) serves the
 YM2151 at `#a` (`/dev/snd`, `sndctl`, `bell`), with the old system's library (patches, notes, volumes, drums,
-claims); the console rings its bell; `play` plays songs (the X16's ZSM files, on the ROM disk at `/rom/songs`).
+claims); the console rings its bell; `play` plays songs (the X16's ZSM files, on the ROM disk at `/rom/songs`).  The VIA's port A is `/dev/gpio` (its
+pins, CA1 and CA2) and `/dev/i2c` (the I2C bus on two of its pins).
 
 ```
 PASS boot    the kernel boots, POST finds nothing wrong; init runs hello and waits for it
@@ -59,6 +60,7 @@ PASS c       the C target (cc65): its samples at rc, the library's test (ctest),
 PASS edit    edit, the line editor: a file made, printed, changed and written; its errors; q twice; Ctrl-C at its prompt; w name
 PASS snd     sound (#a): snd, sndctl and bell; the volume, claims (one another program holds), the shadow, tones (C, snd.h)
 PASS play    the song player: its errors; a song timed (its key-ons against its stream), its channels claimed and given back; scom; jukebox
+PASS gpio    GPIO (#g) and I2C (#i): CA1's edges (its own line), pins, the port, ctl; the I2C bus, a memory written and read
 PASS init    init from files: the RAM disks started, the namespace file run, each shell's own namespace and /ram (a window's too)
 PASS newns   the default namespace's library (nslib): an old area emptied, a namespace file run (quotes, comments, $task, flags, bad lines)  (13 checks)
 PASS cons    the console: lines, editing, history, raw keys, Ctrl-C, windows (shown, repainted, made, gone), 115200, the bell
@@ -71,7 +73,7 @@ PASS irq     spike S1: 115200 received by an irq entry while tasks spin  (6 chec
 
 The same with the power-up's RAM from other seeds; the console, file, namespace and device tests the same with a
 WDC W65C51N build, the console test with a 7.16 MHz build, and the SPI, disk, file system, init, load, env, rc,
-tools, C, edit, sound and player tests with both.  The hardware test, entered from POST in the emulator, passes its whole quick run, its BIOS and
+tools, C, edit, sound, player and GPIO tests with both.  The hardware test, entered from POST in the emulator, passes its whole quick run, its BIOS and
 paged ROM checksums included.
 
 ## The spikes and budgets (3.58 MHz)
@@ -218,10 +220,12 @@ through the COMMON block (`FARCALL`).
 |---|---|---|
 | 5.1 Sound | Done | `modules/snd`, a boot driver (task C), on srvlib: the YM2151 and the old system's library for it (`os_rom/sound`), ported.  `#a` (at `/dev`): `snd` takes register/value pairs through the library and reads as the registers as written (the shadow, 256 bytes); `sndctl` takes `claim N`, `release N`, `volume N` and `reset`, and reads as the volume and the channels claimed; `bell`, written, is the console's beep (channel 7, unless it's claimed).  The library as it was: a carrier's level goes to the chip with its channel's volume and the master volume (0-200) added, a new algorithm writes the levels again, and the registers the chip doesn't have are commands for the channel `SND_R_CH` chose (patch, note with a bend, off, volume, speakers, a General MIDI drum; now in the specification, `SND_R_*`); the X16's 163 patches and drum map, their notice kept (`patches.s`).  Claims are per task, not per fid as they were: a file is the task's that opened it (a child writes as its parent through a file it was given), and a task's channels go back as its last file of `#a` closes.  The old sound clock (timer B counting a song's ticks, its interrupt waking the player) is gone, as the player had stopped using it (on the board timer B didn't keep its period): the driver owns no IRQ line, keeps the timers' interrupts off, and only its task writes the chip, so a register write needs no IRQs off.  The bell: `cons` writes `#a/bell` when the shown window sends a BEL (the one call from a driver to another; no sound driver, no bell).  The C library's `snd.h` (the old one's calls: pairs to `/dev/snd`, words to `/dev/sndctl`) and the sample `tones`.  With it: rc's `>[3]file` when fd 3 was free (`OPEN` gave the file fd 3 itself, which rc then closed: `{cmd >[1=3]} >[3]file` went to the console); and kdev finds `#m/NAME` comparing the names in its copy of the module directory where they are, the one found alone copied (it copied each entry and its name to compare: two more modules took the WDC build's `SPAWN` of `#m/t_child` over its budget): `SPAWN` of `#m/t_child` 50,956 cycles to 34,723 (its budget now 45,000), by `/bin` 108,247 to 93,258 (110,000) |
 | 5.2 `play` | Done | `modules/play`, a tool module: the old system's song player (`os_rom/sound/player.s`), a program now.  `play [-l] song [n]`: a ZSM song (the X16's format, which Furnace exports) to its end, its loop n more times, or (`-l`) till it's stopped.  Its channels claimed (`sndctl`'s `claim`, from the header), each tick's register pairs one write to `/dev/snd`, and the time kept by the system's tick with a fraction (`SLEEP_UNTIL`), as the old player came to: the CPU held for the song (`PREEMPT_OFF`; the hold is the task's, so a switch comes only as it sleeps), the file read ahead as it waits.  Its end, or Ctrl-C, gives the channels back.  The songs are on the ROM disk (`/rom/songs`: the old system's test song, allub, scom), and `scom` runs by its name: a script.  rc runs a file that isn't a program but starts with `#!` by the program named after it (Plan 9's: `#!/bin/rc`), with its path and arguments; one without is `not a program`.  The C library's `snd_play` (`play` in a task of its own) and the sample `jukebox`.  The play test times allub (60 Hz: a song tick is 3⅓ system ticks): its key-ons keep to their times within two system ticks, the first ticks left out (tick 0 sets six voices up, and its key-ons go out about 0.1 s late).  With the songs the paged ROM passes bank 63, and the board's swapped bank bits put bank 64 at 128: the image grows to hold it, and the hardware test's table of checksums now counts the banks used (`tools/romimg.js`), not the image's; the ROM disk test reads them back on the Hydra |
+| 5.3 GPIO and I2C | Done | `modules/gpio`, a boot driver (task B), on srvlib, serving two devices, so their changes to port A never meet.  `#g` (at `/dev/gpio`), the VIA's port A on J27 as the old system's `/dev/gpio` was: `0`-`7` (a pin: its level; a write of 0 or 1 sets it, the pin an output), `port` (all 8, a byte), `ctl` (`in N`, `out N`, `ddr N`, `ca1 rise` or `fall`, `ca2 0`, `1` or `in`; it reads as the pins' directions and levels, CA1's edge and count, CA2), `ca1` (a read waits for CA1's next edge, then gives the count).  `#i` (at `/dev/i2c`, new): the I2C bus bit-banged on PA0 and PA1 (open drain: a line driven low by making its pin an output at 0, let go by making it an input), a file each device address (the directory lists those that answer a probe; any address 08-77 opens), each read and write one transaction (64 bytes at most), with `subaddress 1` or `2` the offset written first as the device's register (and a repeated start before a read), and `ctl` (`speed N` kHz, `subaddress N`).  CA1 is an interrupt line of its own now, `LINE_VIA_CA1` (17), as timer 2 is: the VIA's stub sends CA1's interrupt there, and owning the line turns CA1's interrupt on; the driver owns it while a `/ca1` is open, so a floating CA1 can't flood the system (the COMMON block is 243 bytes of 255 now; each task's owners table 18 bytes, its page and bank maps a byte on).  The emulator has an I2C bus on port A (`sim/lib/i2c.js`: memories, as a 24C02 is), and the gpio test drives CA1's edges, the pins' levels and two memories on the bus |
 
 ## Next
 
-1. Phase 5.3: GPIO (`#g`, with CA1) and I2C (`#i`).  Then the clock (`date`), `/pc`, `xmodem` and the rest of `/proc`.
+1. Phase 5.4: the clock, the DS1747 (ported from `drivers/rtc.s`), `/dev/time`, and `date`.  Then `/pc`, `xmodem` and
+   the rest of `/proc`.
 2. HydraFS's clusters are 4K (8 blocks), as the old system's were for cards, so a RAM disk holds few files (a 64K
    one, 15 files and directories); its superblock has the cluster's size, so a RAM disk could have smaller ones.
 3. `ls /bin` takes about 13,000 cycles more for each program in `#m/bin` (760,000 for 36): kdev's records, made

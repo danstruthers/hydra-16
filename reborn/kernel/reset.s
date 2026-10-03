@@ -131,6 +131,7 @@ BOOT:
             dey
             bpl         :-
             sta         TA_OWNERS + LINE_VIA_T2
+            sta         TA_OWNERS + LINE_VIA_CA1
             dex
             bpl         @task                               ; (Ends with T = 0)
             lda         #ST_READY                           ; The kernel task runs (the boot, then the idle loop),

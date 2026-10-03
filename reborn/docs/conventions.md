@@ -95,7 +95,9 @@ The kernel task (task 0) keeps the kernel's state: its program zero page (`K0_*`
   owner gets the interrupt in its own task, at its irq entry, with the line in `.A`.  The entry answers `.A = 0`,
   or `IRQ_RESCHED` for a task switch.  It runs with IRQs off and never waits.
 * VIA timer 2 is a line of its own, `LINE_VIA_T2` (16): the VIA's stub sends its interrupt there.  Owning it is
-  owning the timer (one-shot, its interrupt on); the VIA's other registers stay the kernel's.
+  owning the timer (one-shot, its interrupt on).  CA1 is one too, `LINE_VIA_CA1` (17): owning it turns CA1's
+  interrupt on, and the owner clears its flag.  Port A is the GPIO driver's (`#g`, `#i`); port B is the storage
+  driver's (the SPI bus); the VIA's other registers stay the kernel's.
 * **An irq entry has about 85 cycles** of the 200 (the dispatch takes about 115): it wakes clients by adding 1 to
   its event count (`inc TASK_EVENT`), never with `WAKE`, and sends a note to a group with `NOTE_QUEUE`.
 * **IRQs off**: no masked stretch of code over 200 cycles anywhere (a character at 115200 is 320 cycles at

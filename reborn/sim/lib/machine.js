@@ -8,8 +8,9 @@
 //   * BIOS ROM $E000-$FFFF (8K pages by W); I/O at $FF00-$FFEF; T/U/V/W at $FFF0-$FFF3;
 //   * IRQ vector RAM ($FFFE/F): written at index V[0..3]; read at index IRQ_NUMBER(n) = n ^ 7 of the lowest active
 //     IRQ line, or V[0..3] when no line is active (and for BRK);
-//   * the devices: the ACIA (port 1, acia.js), the VIA (port 0, via.js) with SD cards on its SPI port (sd.js), the
-//     YM2151 (port 4, ym2151.js), a DS1747 in U7 (ds1747.js).
+//   * the devices: the ACIA (port 1, acia.js), the VIA (port 0, via.js) with SD cards on its SPI port (sd.js) and
+//     an I2C bus on port A (i2c.js: opt.i2c, its devices), the YM2151 (port 4, ym2151.js), a DS1747 in U7
+//     (ds1747.js).
 // RAM and the pseudo-registers power up random, like the hardware (seeded: opt.seed >= 0, the same each time).
 //
 // createMachine(opt): opt.osrom, opt.pagedrom (the images, Uint8Arrays) and the options hydrasim.js documents
@@ -22,6 +23,7 @@
 const { createCpu, FLAGS } = require('./cpu65c02.js');
 const { createAcia } = require('./acia.js');
 const { createVia } = require('./via.js');
+const { createI2c } = require('./i2c.js');
 const { createSpi } = require('./sd.js');
 const { createYm } = require('./ym2151.js');
 const { createRtc, RTC_REGS, RTC_TASK } = require('./ds1747.js');
@@ -55,7 +57,8 @@ function createMachine(opt) {
     onTx: (v, t) => { for (const b of opt.pcHost ? opt.pcHost.push(v, t) : [v]) out(b, t); } });
   function out(v, t) { if (opt.pcHost) acia.shown(v, t); m.out += String.fromCharCode(v); for (const k of opt.marks || []) if (m.out.endsWith(k)) log('mark: ' + JSON.stringify(k) + ' at cycle ' + t); }
   const spi = createSpi(opt.sd || [], opt.spiEcho || []);
-  const via = createVia({ portB: spi.portB, miso: spi.miso, portAIn: opt.gpioIn });
+  const i2c = opt.i2c ? createI2c({ devices: opt.i2c }) : null;     // (opt.i2c: { address: size }, memories)
+  const via = createVia({ portB: spi.portB, miso: spi.miso, portAIn: opt.gpioIn, i2c });
   // CA1's pulses (opt.ca1: cycles): low at each, high again 500 cycles on (its edges, in order)
   const ca1Edges = [];
   for (const t of (opt.ca1 || []).slice().sort((a, b) => a - b)) ca1Edges.push([t, 0], [t + 500, 1]);
@@ -199,7 +202,7 @@ function createMachine(opt) {
     cpu.reset();
   }
 
-  Object.assign(m, { cpu, acia, via, ym, rtc, taskRam, vecRam, trace, pcHist, iOffTop, stackLow, stackLowAt, profHist, profCyc, profTask, run, hwReset, rd });
+  Object.assign(m, { cpu, acia, via, i2c, ym, rtc, taskRam, vecRam, trace, pcHist, iOffTop, stackLow, stackLowAt, profHist, profCyc, profTask, run, hwReset, rd });
   Object.defineProperties(m, {                                // (The pseudo-registers and the profile's count, as they are now)
     T: { get: () => T }, U: { get: () => U }, V: { get: () => V }, W: { get: () => W }, profCount: { get: () => profCount }, profCycles: { get: () => profCycles },
   });

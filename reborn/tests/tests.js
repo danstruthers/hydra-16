@@ -192,6 +192,8 @@ const TOOL_LINES = [
     "bind -a '#n' /dev",
     "bind -a '#t' /dev",
     "bind -a '#a' /dev",
+    "bind '#g' /dev/gpio",
+    "bind '#i' /dev/i2c",
     "bind '#d' /dev/sd",
     "bind '#S' /dev/spi",
     "bind '#m' /dev/mod",
@@ -363,6 +365,39 @@ const PLAY_LINES = [
   ["/rom/sample/c/jukebox /rom/songs/scom.zsm 2","2\n1\nstopped: 137"],
 ];
 
+// The GPIO and I2C test's lines (as the tools test's): CA1's edges (the machine's pulses, at cycles 30 and 40
+// million: the first line is waiting for them by then), the files, the pins' levels (the machine's: $A5, PA0 and
+// PA1 the I2C bus's, high), outputs and the ctl commands, their errors; the I2C bus (a 256-byte memory at $50, a
+// 16-byte one at $68): its devices listed, a write and a read through a register address, a device that isn't there
+const GPIO_LINES = [
+  ["head -1 /dev/gpio/ca1; head -1 /dev/gpio/ca1","1\n2"],
+  ["ls /dev/gpio; ls /dev/i2c","0\n1\n2\n3\n4\n5\n6\n7\nport\nctl\nca1\nctl\n50\n68"],
+  ["cat /dev/gpio/2 /dev/gpio/3; xd /dev/gpio/port","1\n0\n0000000  a7                                               ."],
+  ["echo 1 >/dev/gpio/4; echo out 6 >/dev/gpio/ctl; echo ca2 1 >/dev/gpio/ctl; echo ca1 rise >/dev/gpio/ctl; cat /dev/gpio/ctl", [
+    "0 in 1",
+    "1 in 1",
+    "2 in 1",
+    "3 in 0",
+    "4 out 1",
+    "5 in 1",
+    "6 out 0",
+    "7 in 1",
+    "ca1 rise 2",
+    "ca2 1",
+  ].join('\n')],
+  ["echo ddr 0 >/dev/gpio/ctl; echo frob >/dev/gpio/ctl; echo in 9 >/dev/gpio/ctl; echo 2 >/dev/gpio/5; grep out /dev/gpio/ctl", [
+    "echo: write error: invalid argument",
+    "echo: write error: invalid argument",
+    "echo: write error: invalid argument",
+  ].join('\n')],
+  ["echo subaddress 1 >/dev/i2c/ctl; echo hello >/dev/i2c/50; head -1 /dev/i2c/50; cat /dev/i2c/ctl","hello\nspeed 40\nsubaddress 1"],
+  ["echo x >/dev/i2c/51; echo speed 0 >/dev/i2c/ctl; echo speed 100 >/dev/i2c/ctl; grep speed /dev/i2c/ctl", [
+    "echo: write error: i/o error",
+    "echo: write error: invalid argument",
+    "speed 100",
+  ].join('\n')],
+];
+
 // A ZSM song's key-ons: { rate, ticks: [the song tick of each] }
 function ZSM_KEYONS(file) {
   const b = fs.readFileSync(file), ticks = [];
@@ -439,7 +474,7 @@ module.exports = {
     },
     {
       name: 'task', what: 'tasks and the scheduler: SPAWN, EXITS, WAIT, SLEEP, preemption, PAUSE and WAKE, orphans',
-      init: 't_task', modules: ['t_child'], without: ['cons', 'storage', 'snd'], cycles: 60e6,
+      init: 't_task', modules: ['t_child'], without: ['cons', 'storage', 'snd', 'gpio'], cycles: 60e6,
     },
     {
       name: 'note', what: 'notes: the defaults, handlers, a note to oneself, WAIT ended by one, note groups',
@@ -671,6 +706,22 @@ module.exports = {
       },
     },
     {
+      name: 'gpio', what: 'GPIO (#g) and I2C (#i): CA1\'s edges (its own line), pins, the port, ctl; the I2C bus, a memory written and read',
+      init: 't_rc', cycles: 120e6,
+      get machine() {
+        return { input: GPIO_LINES.map(l => '\u0101' + l[0] + '\r').join(''), gpioIn: 0xA5, ca1: [30e6, 40e6], i2c: { 0x50: 256, 0x68: 16 } };
+      },
+      get expect() { return GPIO_LINES.map(l => '% ' + l[0] + '\n' + (l[2] ? l[1] : (l[1] === null ? '' : l[1] + '\n') + '%')); },
+      check(m) {
+        const f = [], mem = Buffer.from(m.i2c.devices.get(0x50).mem.subarray(0, 6)).toString('latin1');
+        if (mem !== 'hello\n') f.push('the I2C memory at $50: ' + JSON.stringify(mem) + ', not "hello\\n"');
+        if (m.via.ier & 0x02) f.push('CA1\'s interrupt on with /dev/gpio/ca1 closed');
+        if ((m.via.r[0x0C] & 0x0F) !== 0x0F) f.push('PCR: $' + m.via.r[0x0C].toString(16) + ' (CA1 rising, CA2 high wanted)');
+        this.notes = ['the I2C bus: ' + m.i2c.stats.starts + ' starts, ' + m.i2c.stats.taken + ' bytes taken, ' + m.i2c.stats.given + ' given'];
+        return f;
+      },
+    },
+    {
       name: 'cons', what: 'the console: lines, editing, history, raw keys, Ctrl-C, windows (shown, repainted, made, gone), 115200, the bell',
       init: 't_cons', modules: ['t_child'], cycles: 80e6,
       // (ā: wait for a prompt, "N> ")
@@ -698,7 +749,7 @@ module.exports = {
     },
     {
       name: 'scall', what: 'spike S3: calls into a driver\'s task, its errors, a busy driver, the round trip',
-      init: 't_scall', modules: ['t_child', 't_drv'], without: ['cons', 'storage', 'snd'], cycles: 40e6,
+      init: 't_scall', modules: ['t_child', 't_drv'], without: ['cons', 'storage', 'snd', 'gpio'], cycles: 40e6,
       budgets: [{ what: 'SCALL round trip (DBG_SCALL, less the same loop calling the code in place)', from: '<scall', to: 'scall>',
         minus: ['<base', 'base>'], per: 1000, max: 200 }],
     },
@@ -709,7 +760,7 @@ module.exports = {
     },
     {
       name: 'irq', what: 'spike S1: 115200 received by an irq entry while tasks spin',
-      init: 't_irq', modules: ['t_child'], without: ['cons', 'storage', 'snd'], cycles: 30e6,
+      init: 't_irq', modules: ['t_child'], without: ['cons', 'storage', 'snd', 'gpio'], cycles: 30e6,
       send: { after: 'ready>', bytes: Array.from({ length: S1_BYTES }, (_, i) => (3 + 7 * i) & 0xFF) },
       check(m) {
         const f = [], l = m.acia.rxLat, char = m.acia.charCycles();

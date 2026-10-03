@@ -1,6 +1,8 @@
 // via.js - the 65C22 VIA (port 0, IRQ line 0): timer 1 (one-shot or free-running, IFR/IER: the scheduler's tick),
 // timer 2 (one-shot), the shift register's timing and flag, port B (the SPI bus: env.portB(v) is told its output
-// bits, env.miso() gives PB7), port A's inputs (env.portAIn: their levels, the I2C pull-ups' FF if none given),
+// bits, env.miso() gives PB7), port A's inputs (env.portAIn: their levels, the I2C pull-ups' FF if none given; with
+// env.i2c, an I2C bus on PA0 and PA1 (i2c.js): told the lines the port drives low after each write to it or its DDR,
+// and their levels read back),
 // CA1 (env's v.ca1(level): its active edge, PCR bit 0, sets IFR bit 1; reading or writing ORA with the handshake,
 // register 1, clears CA1's and CA2's flags, as the chip does); the other registers are plain storage.
 'use strict';
@@ -16,7 +18,17 @@ function createVia(env) {
   };
   const r = v.r;
   const portB = () => env.portB((r[0] & r[2]) | (~r[2] & 0x7F));
-  const pinsA = () => (env.portAIn === undefined ? 0xFF : env.portAIn);
+  const pinsA = () => {
+    const p = env.portAIn === undefined ? 0xFF : env.portAIn;
+    if (!env.i2c) return p;
+    const l = env.i2c.levels();
+    return (p & ~3) | l.scl | (l.sda << 1);
+  };
+  const portA = () => {                                        // (A pin low: an output at 0)
+    if (!env.i2c) return;
+    const low = r[3] & ~r[1];
+    env.i2c.bus(low & 1 ? 0 : 1, low & 2 ? 0 : 1);
+  };
   let ca1Level = 1;
   v.ca1 = level => {                                          // CA1's input changed: its active edge sets the flag
     if (level === ca1Level) return;
@@ -56,10 +68,10 @@ function createVia(env) {
     else if (n === 0x0D) v.ifr &= ~(b & 0x7F);
     else if (n === 0x0E) { if (b & 0x80) v.ier |= b & 0x7F; else v.ier &= ~(b & 0x7F); }
     else if (n === 0x0A) { r[0x0A] = b; srStart(); }
-    else if (n === 0x0F) r[1] = b;
-    else if (n === 1) { r[1] = b; v.ifr &= ~0x03; }
+    else if (n === 0x0F) { r[1] = b; portA(); }
+    else if (n === 1) { r[1] = b; v.ifr &= ~0x03; portA(); }
     else if (n === 0x0B) { r[0x0B] = b; if (!(b & 0x1C)) v.srLeft = -1; }
-    else { r[n] = b; if (n === 0 || n === 2) portB(); }
+    else { r[n] = b; if (n === 0 || n === 2) portB(); if (n === 3) portA(); }
   };
   v.tick = d => {                                            // (d can span several T1 periods: a WAI skipped ahead)
     if (v.srLeft >= 0 && (v.srLeft -= d) < 0) v.ifr |= 0x04;

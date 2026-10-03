@@ -481,7 +481,7 @@ call PUTHEX cons impl=K_PUTHEX
 # ---- server
 
 call IRQ_OWN server impl=K_IRQ_OWN
-  in:     .A = an IRQ line (0-14), or LINE_VIA_T2 (VIA timer 2)
+  in:     .A = an IRQ line (0-14), or LINE_VIA_T2 (VIA timer 2), or LINE_VIA_CA1 (VIA CA1)
   out:    -
   errors: E_BUSY (another task owns it), E_RANGE (not a line), E_INVAL (the task has no IRQ entry)
   blocks: no
@@ -491,7 +491,8 @@ call IRQ_OWN server impl=K_IRQ_OWN
   doc:    must stay under the 200-cycle budget: about 70 cycles of its own (TASK_EVENT, not WAKE, to wake
   doc:    clients; NOTE_QUEUE for a group).  A task's lines are released when it ends.  LINE_VIA_T2 is VIA
   doc:    timer 2: owning it sets the timer one-shot with its interrupt on; the owner starts it (T2CL, then
-  doc:    T2CH), and its entry clears the interrupt (reading T2CL, or starting it again).
+  doc:    T2CH), and its entry clears the interrupt (reading T2CL, or starting it again).  LINE_VIA_CA1 is CA1:
+  doc:    owning it turns CA1's interrupt on (off as it's given back), and the entry clears CA1's flag (IFR).
 
 call IRQ_RELEASE server impl=K_IRQ_RELEASE
   in:     .A = an IRQ line
@@ -615,6 +616,7 @@ const ARGS_MAX        176      "SPAWN's arguments: their bytes at most (each str
 const TASK_NAME       $0230    "A task's name, zero-terminated"
 const IRQ_RESCHED     $80      "An irq entry's answer: a task switch, please"
 const LINE_VIA_T2     16       "IRQ_OWN's line for VIA timer 2 (the hardware's lines: hw.inc)"
+const LINE_VIA_CA1    17       "IRQ_OWN's line for VIA CA1 (J27's pin 11): owning it turns CA1's interrupt on; the owner clears its flag"
 const TASK_EVENT      $BD      "A task's event count: a server adds 1 (inc TASK_EVENT) when what its clients wait for has happened"
 const HT_PROGRAM      1        "HYX2 module types"
 const HT_DRIVER       2
