@@ -1,0 +1,5 @@
+#!/bin/rc
+# scom [-l | n]: the old riff (the old system's first sound test, from programs/songs/scom.mml), a song: once;
+# its loop n more times; or -l, till it's stopped
+if(~ $1 -l) play -l /rom/songs/scom.zsm
+if not play /rom/songs/scom.zsm $*
