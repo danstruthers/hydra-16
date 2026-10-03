@@ -4,8 +4,9 @@
 ;       FAR_NAME:   jsr K_FARJMP
 ;                   .byte <.bank(K_NAME)
 ;                   .word K_NAME
-; K_FARJMP takes the page and address from after the jsr, and goes on to the kernel's far call (common.s: K_FAR),
-; which returns to the program.  .A, .X, .Y and C pass both ways.  About 90 cycles more than a call on page 0.
+; K_FARJMP takes the page and address from after the jsr, makes the kernel's far call (common.s: K_FAR), and
+; returns to the program through the notes (notes.s: a call that waited may have been ended by one).  .A, .X, .Y
+; and C pass both ways.  About 100 cycles more than a call on page 0.
 
 .include "kdefs.inc"
 
@@ -31,4 +32,5 @@ K_FARJMP:
             sta         KF_VEC
             ply
             lda         KF_A
-            jmp         K_FAR                               ; (It returns to the program, past the jump table)
+            jsr         K_FAR
+            jmp         K_NOTE_CHECK                        ; (At the program's return address: past the jump table)

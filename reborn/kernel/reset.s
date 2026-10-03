@@ -9,8 +9,8 @@
 ;   1. every task's OS zero page and bank registers, and the kernel task's tables
 ;   2. the bring-up console, the banner, POST (page 4: post.s), which finds the RAM modules
 ;   3. the IRQ vectors and the lines' owners (the VIA's line is the kernel's: the tick)
-;   4. the modules: the boot drivers (tasks F, E ...), then init (task 1) (task.s: K_TASK_BOOT)
-;   5. the tick, IRQs on, and task 0 becomes the idle task
+;   4. the boot drivers (tasks F, E ...: task.s, K_TASK_BOOT)
+;   5. the tick, IRQs on; once the drivers have started, init (task 1); and task 0 becomes the idle task
 
 .include "kdefs.inc"
 
@@ -117,16 +117,20 @@ BOOT:
             stz         TK_BUSY
             stz         TK_NOTED
             stz         TK_INNOTE
+            stz         TK_WOKEN
+            stz         TK_EVENT
             lda         #FRAME_SP
             sta         TK_SP
             stz         TA_IRQVEC + 1                       ; (No irq entry, no serve entry)
             stz         TA_SERVEVEC + 1
-            ldy         #LINES - 1                          ; Its copy of the lines' owners: nobody
+            ldy         #LINES - 1                          ; Its copy of the lines' owners: nobody; its fds closed
             lda         #$FF
 :
             sta         TA_OWNERS,Y
+            sta         TA_FD,Y
             dey
             bpl         :-
+            sta         TA_OWNERS + LINE_VIA_T2
             dex
             bpl         @task                               ; (Ends with T = 0)
             lda         #ST_READY                           ; The kernel task runs (the boot, then the idle loop),
@@ -162,6 +166,17 @@ BOOT:
             sta         K_NGROUP,X                          ; (Each task a note group of its own)
             dex
             bpl         @tables
+            ldx         #CH_MAX - 1                         ; No channels, no devices
+:
+            stz         K_CH_REFS,X
+            dex
+            bpl         :-
+            ldx         #DEV_MAX - 1
+:
+            stz         K_DEV_LETTER,X
+            dex
+            bpl         :-
+            FARCALL     K_NS_INIT                           ; No namespaces (page 3)
             lda         #<K_KDISPATCH                       ; KCALLs run here: the kernel task's serve entry
             sta         TA_SERVEVEC
             lda         #>K_KDISPATCH
@@ -189,10 +204,10 @@ BOOT:
 ; 3. Interrupts: the vectors, the owners; the VIA is the kernel's
             jsr         IRQ_INIT
 
-; 4. The modules: the boot drivers, then init
-            jsr         K_TASK_BOOT
+; 4. The boot drivers (they run when IRQs go on: page 1)
+            FARCALL     K_TASK_BOOT
 
-; 5. The tick (VIA timer 1, free-running: TICK_HZ a second), then the idle loop
+; 5. The tick (VIA timer 1, free-running: TICK_HZ a second); the drivers started; init; then the idle loop
             lda         VIA_ACR
             and         #$3F
             ora         #VIA_ACR_T1_FREE
@@ -205,10 +220,18 @@ BOOT:
             sta         VIA_IER
 BOOT_DONE:                                                  ; (The tests' IRQs-off budget counts from here)
             cli
+            FARCALL     K_BOOT_STARTED                      ; (Their inits run: their devices registered)
+            FARCALL     K_TASK_BOOT_INIT
 
-; The idle task: whatever can run runs; when nothing can, the CPU sleeps until an interrupt
+; The idle task: whatever can run runs; when nothing can, the CPU sleeps until an interrupt.  And the notes irq
+; entries queued for groups, posted (the scheduler runs this then: notes.s)
 @idle:
             jsr         K_YIELD
+            lda         K0_NQ_ANY
+            beq         :+
+            jsr         K_NOTE_QUEUED
+            bra         @idle
+:
             wai
             bra         @idle
 

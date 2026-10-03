@@ -3,9 +3,11 @@
 ; running when W changes under it (the next instruction is fetched from the new page, at the same address).
 ; Only interrupt entry and exit, and the kernel's own calls between its pages, need it: everything outside the
 ; kernel runs with W = 0 (principle P2).
-;   IRQ_STUB_0 ... IRQ_STUB_F   each line's vector points at its stub: .A = the line, on to IRQ_ENTRY
-;   IRQ_ENTRY                   the frame's X and W, then page 0 and the dispatcher (irq.s)
-;   IRQ_EXIT                    back to the interrupted page, and RTI
+;   IRQ_STUB_0 ... IRQ_STUB_F   each line's vector points at its stub: .A = the line, on to IRQ_ENTRY (the
+;                               VIA's by IRQ_VIA: timer 2 is a line of its own, LINE_VIA_T2)
+;   IRQ_ENTRY                   the frame's X and W, then page 0 and the dispatcher (irq.s): its main path is
+;                               here, to save two jumps on every interrupt
+;   IRQ_RESTORE, IRQ_EXIT       back to the interrupted page, and RTI
 ;   NMI_ENTRY                   page 0's NMI_HANDLER, and back
 ;   K_FAR, K_FAR_GO             the kernel's far call (FARCALL: kdefs.inc)
 ;   K_PEEK_PAGE                 a byte on another page (POST's test of the W lines)
@@ -29,26 +31,71 @@ name:
             CLABEL      .ident(.sprintf("IRQ_STUB_%X", I))
             pha
             lda         #I
-.if I < 15
+.if I = LINE_VIA
+            jmp         IRQ_VIA
+.else
             jmp         IRQ_ENTRY
 .endif
-.endrepeat                                                  ; (The last runs on into IRQ_ENTRY)
+.endrepeat
+
+; The VIA's line: timer 2's interrupt (its own on, and run out) is LINE_VIA_T2's, the rest the VIA's (.A = 0)
+            CLABEL      IRQ_VIA
+            lda         VIA_IFR
+            and         VIA_IER
+            and         #VIA_IRQ_T2
+            beq         :+                                  ; (IRQ_ENTRY: this copy's)
+            lda         #LINE_VIA_T2                        ; (Then on into IRQ_ENTRY)
 
 ; .A = the line.  The frame so far: A, then the CPU's P and PC
+:
             CLABEL      IRQ_ENTRY
             phx
             ldx         W_REGISTER
             phx
             stz         W_REGISTER                          ; Page 0 from here (this same code)
-            jmp         IRQ_DISPATCH
 
-; The frame's W, X and A, then RTI (the dispatcher and the scheduler come here on page 0)
+; The dispatcher (irq.s), here to save its jumps: .A = the line.  The stack: the frame's W, X, A, P, PCL, PCH
+            phy                                             ; (The frame's Y)
+            tay                                             ; .Y = the line
+            tsx
+            stx         TK_SP                               ; The interrupted task's stack pointer, for the way back
+            ldx         TA_OWNERS,Y                         ; .X = the line's owner
+            bmi         :++                                 ; (Nobody's: IRQ_STRAY)
+            lda         T_REGISTER                          ; .A = the interrupted task
+            stx         T_REGISTER                          ; ---- The owner: its zero page and stack page (not S yet)
+            ldx         TK_SP
+            txs                                             ; Its stack: below its frame (or the same, if it's the
+            pha                                             ;   interrupted task).  The interrupted task, for later
+            tax                                             ; .X = the interrupted task
+            tya                                             ; .A = the line
+            jsr         IRQ_HANDLER
+            ply                                             ; ---- Back to the interrupted task
+            sty         T_REGISTER
+            ldx         TK_SP
+            txs
+            and         #IRQ_RESCHED                        ; A task switch, please?
+            beq         :+
+            ldx         TK_PREEMPT                          ; Not while it holds the CPU (or is in the scheduler):
+            beq         :+++                                ;   then it's noted, for PREEMPT_ON or the next YIELD
+            sta         TK_DUE                              ;   (.A = IRQ_RESCHED: not 0).  Else IRQ_SWITCH
+
+; The end of an interrupt with no task switch (IRQ_STRAY's too): the frame's Y ...
+:
+            CLABEL      IRQ_RESTORE
+            ply
+
+; ... and W, X and A, then RTI (the scheduler comes here on page 0)
             CLABEL      IRQ_EXIT
             pla
             sta         W_REGISTER                          ; Back on the interrupted page (this same code)
             plx
             pla
             rti
+
+:
+            jmp         IRQ_STRAY
+:
+            jmp         IRQ_SWITCH
 
             CLABEL      NMI_ENTRY
             pha

@@ -19,8 +19,192 @@
 ; .A = E_INVAL (no such note), E_SRCH (no such task, or nobody in the group), E_PERM (the kernel task, or a
 ; driver).  A note to this task (or its group) is taken on the way out
 K_NOTE:
-            KCALL       K_NOTE_K
+            jsr         K_NOTE_POST
             jmp         K_NOTE_CHECK
+
+; NOTE_POST: NOTE's work, without taking the caller's own notes: from a task, or an irq entry (quick looks only,
+; IRQs off for each task; but a note to a group is too long for an irq entry: NOTE_QUEUE).  IN, OUT: as NOTE's.
+; Its scratch: TQ_*, in the calling task's OS zero page (an irq entry's own: they don't nest)
+K_NOTE_POST:
+            cpx         #1
+            bcc         @inval
+            cpx         #NOTE_MAX + 1
+            bcs         @inval
+            sta         TQ_WHO
+            txa                                             ; Its bit, and its byte in TK_NOTES
+            and         #7
+            tay
+            lda         N_BIT8,Y
+            sta         TQ_MASK
+            txa
+            lsr
+            lsr
+            lsr
+            sta         TQ_INDEX
+            lda         TQ_WHO
+            bmi         @group
+            cmp         #TASKS
+            bcs         @srch
+            tax
+            jmp         q_post
+
+@group:
+            and         #TASKS - 1
+            sta         TQ_WHO
+            stz         TQ_POSTED
+            ldx         #TASKS - 1
+@member:
+            ldy         T_REGISTER                          ; Its group: the kernel task's table (a quick look)
+            php
+            sei
+            stz         T_REGISTER
+            lda         K_NGROUP,X
+            sty         T_REGISTER
+            plp
+            cmp         TQ_WHO
+            bne         @next
+            jsr         q_post
+            bcs         @next                               ; (Not one to take notes: the next)
+            inc         TQ_POSTED
+@next:
+            dex
+            bne         @member                             ; (Not the kernel task)
+            lda         TQ_POSTED
+            beq         @srch
+            clc
+            rts
+
+@inval:
+            FAIL        E_INVAL
+
+@srch:
+            FAIL        E_SRCH
+
+; NOTE_QUEUE: a note to a note group, from an irq entry (a console's Ctrl-C): queued in the kernel task, which posts
+; it as soon as it runs (the scheduler runs it then: sched.s).  As short as can be: nothing is checked.  IN: IRQs
+; off; .X = the group (0-15); .A = the note's bit: 1 << (note - 1), for a note 1-8.  Keeps .X
+K_NOTE_QUEUE:
+            ldy         T_REGISTER
+            stz         T_REGISTER                          ; ---- The kernel task
+            ora         K0_NQ,X
+            sta         K0_NQ,X
+            sta         K0_NQ_ANY                           ; (Not 0)
+            sty         T_REGISTER                          ; ---- Back
+            rts
+
+; The notes irq entries queued, posted (and the tasks woken): in the kernel task, IRQs on (its idle loop)
+K_NOTE_QUEUED:
+            stz         K0_NQ_ANY
+            ldx         #TASKS - 1                          ; Each group's ...
+@group:
+            sei
+            lda         K0_NQ,X
+            stz         K0_NQ,X
+            cli
+            sta         TN_A
+            phx
+            ldx         #1                                  ; ... notes, from 1
+@note:
+            lsr         TN_A
+            bcc         @next
+            pla                                             ; (The group)
+            pha
+            phx
+            ora         #NOTE_GROUP
+            jsr         K_NOTE_POST                         ; (Its errors: nobody to tell)
+            plx
+@next:
+            inx
+            lda         TN_A
+            bne         @note
+            plx
+            dex
+            bpl         @group
+            rts
+
+; The note (TQ_MASK in byte TQ_INDEX) to task .X: pending, and the task woken if it waits (or its next PAUSE won't:
+; between a look for notes and a PAUSE).  OUT: C = 0; or C = 1, .A = E_PERM (the kernel task, a driver), E_SRCH
+; (free, or not started).  Keeps .X
+q_post:
+            cpx         #KERNEL_TASK
+            beq         @perm
+            ldy         T_REGISTER
+            php
+            sei
+            stx         T_REGISTER                          ; ---- The task: one to take notes?
+            lda         TK_STATE
+            beq         @srch
+            cmp         #ST_NEW
+            beq         @srch
+            lda         TK_FLAGS
+            and         #TF_DRIVER
+            bne         @perm_back
+            sty         T_REGISTER                          ; ---- Back: its byte, its bit
+            lda         TQ_INDEX
+            beq         @b0
+            cmp         #2
+            bcc         @b1
+            beq         @b2
+            lda         TQ_MASK
+            stx         T_REGISTER                          ; ---- The task
+            ora         TK_NOTES + 3
+            sta         TK_NOTES + 3
+            bra         @noted
+
+@b0:
+            lda         TQ_MASK
+            stx         T_REGISTER
+            ora         TK_NOTES
+            sta         TK_NOTES
+            bra         @noted
+
+@b1:
+            lda         TQ_MASK
+            stx         T_REGISTER
+            ora         TK_NOTES + 1
+            sta         TK_NOTES + 1
+            bra         @noted
+
+@b2:
+            lda         TQ_MASK
+            stx         T_REGISTER
+            ora         TK_NOTES + 2
+            sta         TK_NOTES + 2
+@noted:
+            lda         #1
+            sta         TK_NOTED
+            lda         TK_STATE                            ; Woken, if it waits
+            cmp         #ST_WAIT
+            beq         @wake
+            cmp         #ST_SLEEP
+            beq         @wake
+            cmp         #ST_BLOCKED
+            beq         @wake
+            cmp         #ST_EVENT
+            beq         @wake
+            lda         #1
+            sta         TK_WOKEN
+            bra         @done
+
+@wake:
+            lda         #ST_READY
+            sta         TK_STATE
+@done:
+            sty         T_REGISTER                          ; ---- Back
+            plp
+            clc
+            rts
+
+@srch:
+            sty         T_REGISTER
+            plp
+            FAIL        E_SRCH
+
+@perm_back:
+            sty         T_REGISTER
+            plp
+@perm:
+            FAIL        E_PERM
 
 ; PAUSE, as programs call it: a note pending (it wakes the task) is taken on the way out
 K_UPAUSE:
@@ -200,104 +384,3 @@ K_NOTIFY:
             clc
             rts
 
-; In the kernel task (KCALL): NOTE's work.  .A = the task or group, .X = the note, .Y = the caller
-K_NOTE_K:
-            cpx         #1
-            bcc         @inval
-            cpx         #NOTE_MAX + 1
-            bcs         @inval
-            stx         K0_TMP                              ; The note
-            cmp         #NOTE_GROUP
-            bcs         @group
-            cmp         #TASKS
-            bcs         @srch
-            tax
-            jmp         n_post
-
-@group:
-            and         #TASKS - 1
-            sta         K0_TMP2                             ; The group
-            stz         K0_TMP3                             ; (Posted to any?)
-            ldx         #TASKS - 1
-@member:
-            lda         K_NGROUP,X
-            cmp         K0_TMP2
-            bne         @next
-            jsr         n_post
-            bcs         @next                               ; (Not one to take notes: the next)
-            inc         K0_TMP3
-@next:
-            dex
-            bne         @member                             ; (Not the kernel task)
-            lda         K0_TMP3
-            beq         @srch
-            clc
-            rts
-
-@inval:
-            FAIL        E_INVAL
-
-@srch:
-            FAIL        E_SRCH
-
-; Note K0_TMP to task .X: pending, and the task woken if it waits.  OUT: C = 0; or C = 1, .A = E_PERM (the kernel
-; task, a driver), E_SRCH (free, or not started).  Keeps .X
-n_post:
-            cpx         #KERNEL_TASK
-            beq         @perm
-            php
-            sei
-            stx         T_REGISTER                          ; ---- The task: its state and flags
-            lda         TK_STATE
-            ldy         TK_FLAGS
-            stz         T_REGISTER                          ; ---- Back
-            plp
-            cmp         #ST_FREE
-            beq         @srch
-            cmp         #ST_NEW
-            beq         @srch
-            tya
-            and         #TF_DRIVER
-            bne         @perm
-            lda         K0_TMP                              ; Its bit: byte note >> 3, bit note & 7
-            lsr
-            lsr
-            lsr
-            tay
-            lda         K0_TMP
-            and         #7
-            phx
-            tax
-            lda         N1_BIT8,X
-            plx
-            php
-            sei
-            stx         T_REGISTER                          ; ---- The task: the note pending ...
-            ora         TK_NOTES,Y
-            sta         TK_NOTES,Y
-            lda         #1
-            sta         TK_NOTED
-            lda         TK_STATE                            ;   ... and it woken, if it waits
-            cmp         #ST_WAIT
-            beq         @wake
-            cmp         #ST_SLEEP
-            beq         @wake
-            cmp         #ST_BLOCKED
-            bne         @done
-@wake:
-            lda         #ST_READY
-            sta         TK_STATE
-@done:
-            stz         T_REGISTER                          ; ---- Back
-            plp
-            clc
-            rts
-
-@perm:
-            FAIL        E_PERM
-
-@srch:
-            FAIL        E_SRCH
-
-.segment "KRODATA_P1"
-N1_BIT8:    .byte       $01, $02, $04, $08, $10, $20, $40, $80

@@ -12,10 +12,24 @@
 ; An ended task's exit record (its code and message) waits in the kernel task for its parent's WAIT, and the
 ; task isn't used again till then (a parent that ends first leaves its children, and their records, to init).
 ; The task table, the parents and the exit records are the kernel task's (K_*: layout.inc): changed in KCALLs.
+;
+; What runs in the kernel task (the KCALLs, setting a task up, the boot) is on BIOS ROM page 1; what runs in the
+; calling task (SPAWN, EXITS, WAIT) and the tasks' first instructions, on page 0.
 
 .include "kdefs.inc"
 
-.segment "KCODE"
+; Print a string of this page's on the bring-up console (t_putstr).  Keeps .A, .X, .Y
+.macro TPRINT   label
+            pha
+            lda         #<label
+            sta         r0
+            lda         #>label
+            sta         r0 + 1
+            pla
+            jsr         t_putstr
+.endmacro
+
+.segment "KCODE_P1"
 
 ; ****************************************************************************
 ; The module directory (paged ROM bank 0: the kernel task's ROM bank is always 0)
@@ -82,6 +96,59 @@ K_MD_FIND:
             bne         @entry
 @none:
             FAIL        E_NOENT
+
+; MODINFO: the module directory's entry .A (ME_*: its bank, type, flags and name), into r0 (ME_SIZE bytes).
+; OUT: C = 0; or C = 1, .A = E_NOENT (past the last)
+K_MODINFO:
+            KCALL_FAR   K_MODINFO_K                         ; (Into TA_SCRATCH)
+            bcs         @done
+            ldy         #ME_SIZE - 1
+:
+            lda         TA_SCRATCH,Y
+            sta         (r0),Y
+            dey
+            bpl         :-
+            clc
+@done:
+            rts
+
+; In the kernel task (KCALL): entry .A, into the caller's (.Y's) TA_SCRATCH
+K_MODINFO_K:
+            sty         K0_TMP
+            sta         K0_TMP2
+            jsr         K_MD_VALID
+            bcs         @noent
+            lda         K0_TMP2
+            cmp         MD_COUNT
+            bcs         @noent
+            stz         K_PTR + 1                           ; MD_ENTRIES + ME_SIZE * .A
+            .repeat     4
+            asl
+            rol         K_PTR + 1
+            .endrepeat
+            clc
+            adc         #<MD_ENTRIES
+            sta         K_PTR
+            lda         K_PTR + 1
+            adc         #>MD_ENTRIES
+            sta         K_PTR + 1
+            lda         #<TA_SCRATCH
+            sta         K_PTR2
+            lda         #>TA_SCRATCH
+            sta         K_PTR2 + 1
+            lda         #ME_SIZE
+            sta         K_CNT
+            stz         K_CNT + 1
+            lda         K0_TMP
+            clc
+            FARCALL     K_KCOPY
+            clc
+            rts
+
+@noent:
+            FAIL        E_NOENT
+
+.assert     ME_SIZE = 16, error, "K_MODINFO_K: an entry is 16 bytes"
 
 ; ****************************************************************************
 ; Starting a module
@@ -239,7 +306,29 @@ K_TASK_SETUP:
             stz         TK_NOTES + 2
             stz         TK_NOTES + 3
             stz         TK_INNOTE
+            stz         TK_WOKEN
+            stz         TK_EVENT
             stz         TA_NOTIFY + 1
+            stz         T_REGISTER                          ; ---- Back (a moment)
+            plp
+            lda         #$FF                                ; Its fds: closed (SPAWN gives a program its parent's
+            php                                             ;   0, 1 and 2); its directory: /
+            sei
+            stx         T_REGISTER                          ; ---- The new task
+            .repeat     FD_MAX / 2, I
+            sta         TA_FD + I
+            .endrepeat
+            stz         T_REGISTER                          ; ---- Back (a moment)
+            plp
+            php
+            sei
+            stx         T_REGISTER                          ; ---- The new task
+            .repeat     FD_MAX / 2, I
+            sta         TA_FD + FD_MAX / 2 + I
+            .endrepeat
+            lda         #'/'
+            sta         TA_CWD
+            stz         TA_CWD + 1
             stz         T_REGISTER                          ; ---- Back (a moment)
             plp
             php
@@ -393,6 +482,8 @@ K_TASK_FILL:
             plp
             rts
 
+.segment "KCODE"
+
 ; A task set up: it runs now.  IN: .A = the task.  From any task.  Keeps .A
 K_TASK_GO:
             tax
@@ -447,16 +538,19 @@ K_DRIVER_MAIN:
             jmp         (TA_ENTRY)
 
 ; ****************************************************************************
-; At boot, in the kernel task, IRQs off: the boot drivers (each with HF_BOOT), then init (the directory's
-; MD_INIT), each said on the console: "task F: cons", or "module NAME: error $xx"
+.segment "KCODE_P1"
+
+; At boot, in the kernel task (FARCALL): the boot drivers (each with HF_BOOT: K_TASK_BOOT, IRQs off), then, once
+; they've started (K_BOOT_STARTED), init (the directory's MD_INIT: K_TASK_BOOT_INIT).  Each said on the console:
+; "task F: cons", or "module NAME: error $xx"
 K_TASK_BOOT:
             jsr         K_MD_VALID
             bcc         :+
-            KPRINT      K_STR_NOMODS
+            TPRINT      T_S_NOMODS
             rts
 :
             lda         MD_COUNT
-            beq         @init
+            beq         @done
             sta         K0_TMP3
             lda         #<MD_ENTRIES
             sta         K0_PTR
@@ -471,7 +565,7 @@ K_TASK_BOOT:
             lda         (K0_PTR),Y
             and         #HF_BOOT
             beq         @next
-            jsr         @start
+            jsr         boot_start
 @next:
             lda         K0_PTR
             clc
@@ -482,7 +576,50 @@ K_TASK_BOOT:
 :
             dec         K0_TMP3
             bne         @entry
-@init:
+@done:
+            rts
+
+; Wait (yielding: the kernel task, IRQs on) till each driver has started: none still in its init, so its device
+; letters are registered before init needs them.  2 seconds at most (a driver whose init waits for good).  (The
+; kernel task can't SLEEP: the scheduler runs it whenever nothing else can run)
+K_BOOT_STARTED:
+            FARCALL     K_TICKS
+            stx         K0_TMP3                             ; (The tick count's high byte: 256 ticks a step)
+@look:
+            ldx         #TASKS - 1                          ; A driver neither idle nor gone?
+@task:
+            ldy         T_REGISTER
+            php
+            sei
+            QL_GET      TK_FLAGS
+            and         #TF_DRIVER
+            beq         :+
+            QL_GET      TK_STATE
+            cmp         #ST_IDLE
+            beq         :+
+            cmp         #ST_FREE
+            bne         @starting
+:
+            plp
+            dex
+            bne         @task
+            rts
+
+@starting:
+            plp
+            FARCALL     K_YIELD                             ; (The drivers run meanwhile)
+            FARCALL     K_TICKS                             ; 2 seconds gone?  (256-511 ticks)
+            txa
+            sec
+            sbc         K0_TMP3
+            cmp         #2
+            bcc         @look
+            rts
+
+; Init: the directory's MD_INIT, started, with an empty namespace of its own (it builds it)
+K_TASK_BOOT_INIT:
+            jsr         K_MD_VALID
+            bcs         @noinit
             lda         MD_INIT
             cmp         MD_COUNT
             bcs         @noinit
@@ -496,29 +633,32 @@ K_TASK_BOOT:
             lda         #0
             adc         #>MD_ENTRIES
             sta         K0_PTR + 1
-            jmp         @start
+            ldx         #INIT_TASK                          ; (Before it can run: the kernel task isn't preempted)
+            FARCALL     K_NS_FRESH
+            jmp         boot_start
 
 @noinit:
-            KPRINT      K_STR_NOINIT
+            TPRINT      T_S_NOINIT
             rts
 
-@start:                                                     ; Start the module at K0_PTR, and say so
+; Start the module at K0_PTR, and say so
+boot_start:
             jsr         K_START_MODULE
             bcs         @failed
-            jsr         K_TASK_GO
-            KPRINT      K_STR_TASK
-            jsr         K_PUTNIB
-            KPRINT      K_STR_COLON
+            FARCALL     K_TASK_GO
+            TPRINT      T_S_TASK
+            FARCALL     K_PUTNIB
+            TPRINT      T_S_COLON
             jsr         @name
-            KPRINT      K_STR_CRLF
+            TPRINT      T_S_CRLF
             rts
 
 @failed:
-            KPRINT      K_STR_MODULE
+            TPRINT      T_S_MODULE
             jsr         @name
-            KPRINT      K_STR_ERROR
-            jsr         K_PUTHEX
-            KPRINT      K_STR_CRLF
+            TPRINT      T_S_ERROR
+            FARCALL     K_PUTHEX
+            TPRINT      T_S_CRLF
             rts
 
 @name:                                                      ; Its name, from the directory.  Keeps .A
@@ -531,10 +671,29 @@ K_TASK_BOOT:
             adc         #0
             sta         r0 + 1
             pla
-            jmp         K_PUTSTR
+            jmp         t_putstr
+
+; The string at r0 (this page's, or the module directory's) on the bring-up console, by far calls to K_PUTC (page
+; 0's K_PUTSTR would read page 0 for this page's strings).  Keeps .A, .X, .Y
+t_putstr:
+            pha
+            phy
+            ldy         #0
+@next:
+            lda         (r0),Y
+            beq         @done
+            FARCALL     K_PUTC
+            iny
+            bne         @next
+@done:
+            ply
+            pla
+            rts
 
 ; ****************************************************************************
-; SPAWN: start a program.  IN: r0 = "#m/NAME"; r1 = its arguments (zero-terminated, up to 255 characters), or 0;
+.segment "KCODE"
+
+; SPAWN: start a program.  IN: r0 = "#m/NAME"; r1 = its arguments (zero-terminated, up to 175 characters), or 0;
 ; .A = flags (0).  OUT: C = 0, .A = the task; or C = 1, .A = E_NOENT, E_NAMETOOLONG, E_TOOBIG, E_NOEXEC, E_NOTASK
 K_SPAWN:
             sta         K_TMP2                              ; Its flags (SPAWN_*), for the KCALL
@@ -581,14 +740,13 @@ K_SPAWN:
             lda         (r1),Y
             beq         :+
             iny
+            cpy         #TA_ARGS_MAX + 1
             bne         :-
             FAIL        E_TOOBIG
 
 :
             iny
             sty         K_CNT
-            bne         @start
-            inc         K_CNT + 1                           ; (255 characters and the 0: 256)
 @start:
             lda         K_TMP2
             KCALL       K_SPAWN_K                           ; .A = the task, set up
@@ -625,6 +783,8 @@ K_SPAWN:
 @done:
             rts
 
+.segment "KCODE_P1"
+
 ; In the kernel task (KCALL): the module named in the caller's TA_SCRATCH, started; the caller its parent.
 ; IN: .Y = the caller
 K_SPAWN_K:
@@ -643,7 +803,7 @@ K_SPAWN_K:
             stz         K_CNT + 1
             tya
             sec
-            jsr         K_KCOPY
+            FARCALL     K_KCOPY
             jsr         K_MD_FIND
             bcs         @done
             ldy         #ME_TYPE                            ; (Programs only: drivers start at boot)
@@ -662,6 +822,8 @@ K_SPAWN_K:
             lda         K_NGROUP,Y
             sta         K_NGROUP,X
 :
+            FARCALL     K_FD_INHERIT                        ; Its fds 0, 1 and 2: the caller's (file.s)
+            FARCALL     K_NS_INHERIT                        ; Its namespace: the caller's, or its own (ns.s)
             txa
             clc
 @done:
@@ -671,8 +833,13 @@ K_SPAWN_K:
             FAIL        E_NOEXEC
 
 ; ****************************************************************************
+.segment "KCODE"
+
 ; EXITS: end this task.  IN: .A = the exit code; r0 = a message (31 characters at most), or 0.  Doesn't return
 K_EXITS:
+            pha
+            FARCALL     K_CLOSE_ALL                         ; Its fds (file.s: the last of a channel clunks it)
+            pla
             jsr         K_PREEMPT_OFF                       ; (Nothing else runs till it's done)
             sta         K_A
             ldy         #0                                  ; The message, into TA_SCRATCH (for the kernel task)
@@ -701,15 +868,19 @@ K_EXITS:
 @gone:
             bra         @gone
 
+.segment "KCODE_P1"
+
 ; In the kernel task (KCALL): task .Y has ended with code .A, its message in its TA_SCRATCH.  Its IRQ lines,
 ; nobody's; its record, for its parent (none if it has none); its children and their records, init's (nobody's,
 ; if it's init)
 K_EXIT_K:
             sta         K_EXIT_CODE,Y
             sty         K0_TMP
-            jsr         IRQ_RELEASE_ALL                     ; Its lines
+            FARCALL     IRQ_RELEASE_ALL                     ; Its lines
             FARCALL     K_SEG_EXIT                          ; Its shared segments (mem.s)
             ldy         K0_TMP
+            FARCALL     K_FILE_EXIT                         ; Its device letters; the channels it served (file.s)
+            FARCALL     K_NS_EXIT                           ; Its namespace (ns.s)
             stz         K0_TMP3                             ; (Records moved to init: it's woken too)
             lda         #INIT_TASK                          ; Its children's new parent
             cpy         #INIT_TASK
@@ -723,7 +894,7 @@ K_EXIT_K:
             lda         #EX_HELD
             sta         K_EXIT_STATE,Y
             tya                                             ; Its message: to K_EXIT_MSG + 32 * the task
-            jsr         K_EXIT_MSG_AT
+            FARCALL     K_EXIT_MSG_AT
             lda         K_PTR2
             sta         K_PTR
             lda         K_PTR2 + 1
@@ -737,7 +908,7 @@ K_EXIT_K:
             stz         K_CNT + 1
             lda         K0_TMP
             sec
-            jsr         K_KCOPY
+            FARCALL     K_KCOPY
 @orphans:
             ldx         #TASKS - 1
 @kid:
@@ -763,12 +934,12 @@ K_EXIT_K:
             ldy         K0_TMP
             lda         K_PARENT,Y                          ; Its parent, woken (it may be waiting for it)
             bmi         :+
-            jsr         K_WAKE
+            FARCALL     K_WAKE
 :
             lda         K0_TMP3                             ; And init, if it has records now
             beq         :+
             bmi         :+
-            jsr         K_WAKE
+            FARCALL     K_WAKE
 :
             lda         #$FF
             sta         K_PARENT,Y
@@ -777,6 +948,8 @@ K_EXIT_K:
             sta         K_TASK_TYPE,Y
             clc
             rts
+
+.segment "KCODE"
 
 ; K_PTR2 = K_EXIT_MSG + 32 * task .A (the kernel task's address of its exit message)
 K_EXIT_MSG_AT:
@@ -848,6 +1021,8 @@ K_WAIT:
             jsr         K_PREEMPT_ON                        ; (Keeps .A and C)
             jmp         K_NOTE_CHECK
 
+.segment "KCODE_P1"
+
 ; In the kernel task (KCALL): a held exit record of the caller's (task .Y's) child .A ($FF: any).  OUT: C = 0,
 ; .A = the child, .X = its code (the record released); or C = 1, .A = E_AGAIN (a child is still running) or E_CHILD
 K_WAIT_K:
@@ -893,6 +1068,8 @@ K_WAIT_K:
 @again:
             FAIL        E_AGAIN
 
+.segment "KCODE"
+
 ; GETPID: .A = this task
 K_GETPID:
             lda         T_REGISTER
@@ -901,13 +1078,16 @@ K_GETPID:
             rts
 
 .segment "KRODATA"
+K_STR_MODPATH:  .byte   "#m/"
+K_STR_CRLF:     .byte   CR, LF, 0
+
+.segment "KRODATA_P1"
 K_STR_HYMD:     .byte   "HYMD"
 K_STR_HYX2:     .byte   "HYX2"
-K_STR_MODPATH:  .byte   "#m/"
-K_STR_NOMODS:   .byte   "no modules (no directory in paged ROM bank 0)", CR, LF, 0
-K_STR_NOINIT:   .byte   "no init", CR, LF, 0
-K_STR_TASK:     .byte   "task ", 0
-K_STR_COLON:    .byte   ": ", 0
-K_STR_MODULE:   .byte   "module ", 0
-K_STR_ERROR:    .byte   ": error $", 0
-K_STR_CRLF:     .byte   CR, LF, 0
+T_S_NOMODS:     .byte   "no modules (no directory in paged ROM bank 0)", CR, LF, 0
+T_S_NOINIT:     .byte   "no init", CR, LF, 0
+T_S_TASK:       .byte   "task ", 0
+T_S_COLON:      .byte   ": ", 0
+T_S_MODULE:     .byte   "module ", 0
+T_S_ERROR:      .byte   ": error $", 0
+T_S_CRLF:       .byte   CR, LF, 0

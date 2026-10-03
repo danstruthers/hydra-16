@@ -5,7 +5,9 @@
 //
 //   name, what       the test
 //   init             the module started as init (a test module, or the system's init)
-//   modules          more modules for the image (the system's are always there)
+//   modules          more modules for the image (the system's are always there, but those in without)
+//   without          system modules left out (a test that owns the serial port itself, or needs its driver as
+//                    task F)
 //   cycles           at most this many (3.58 MHz: 3579545 a second)
 //   expect           lines the output must have (for a test without "PASS")
 //   machine          the emulator's options for it (sim/lib/machine.js): faults, keys typed (input), modules
@@ -27,7 +29,7 @@ module.exports = {
       init: 'init', cycles: 6e6,
       expect: ['Hydra-16 reborn: kernel 0.1, ABI 1', 'POST ZP:0 ST:0 OS:0 HI:0 SH:S W:0',
         'RAM U:0 F0:0/00/0000 F4:0/00/0000 F8:0/00/0000 FC:0/00/0000 00:0/00/0000 10:0/00/0000', 'POST ok', 'RAM modules: 02',
-        'task 1: init', 'init: up in task 01', 'hello, from init', 'init: hello ended: code $07 (bye)'],
+        'task F: cons', 'task 1: init', 'init: up in task 01', 'hello, from init', 'init: hello ended: code $07 (bye)'],
     },
     {
       name: 'post-t', what: 'POST: a T line stuck low (U7)',
@@ -56,11 +58,38 @@ module.exports = {
     },
     {
       name: 'task', what: 'tasks and the scheduler: SPAWN, EXITS, WAIT, SLEEP, preemption, PAUSE and WAKE, orphans',
-      init: 't_task', modules: ['t_child'], cycles: 60e6,
+      init: 't_task', modules: ['t_child'], without: ['cons', 'kdev'], cycles: 60e6,
     },
     {
       name: 'note', what: 'notes: the defaults, handlers, a note to oneself, WAIT ended by one, note groups',
       init: 't_note', modules: ['t_child'], cycles: 40e6,
+    },
+    {
+      name: 'file', what: 'files and servers: OPEN, READ, WRITE, SEEK, STAT, DUP; text, ctl, data, directories; waiting',
+      init: 't_file', modules: ['t_child', 't_srv'], cycles: 40e6,
+    },
+    {
+      name: 'ns', what: 'namespaces: BIND, MOUNT, UNMOUNT, unions and union directories, CHDIR, clean names, inheritance',
+      init: 't_ns', modules: ['t_child', 't_srv'], cycles: 40e6,
+    },
+    {
+      name: 'dev', what: 'the kernel\'s devices (kdev): #/, #n, #t, #m, #p; pipes; a union keeping what was there',
+      init: 't_dev', modules: ['t_child'], cycles: 40e6,
+    },
+    {
+      name: 'cons', what: 'the console: lines, editing, history, raw keys, Ctrl-C, the foreground group, 115200',
+      init: 't_cons', modules: ['t_child'], cycles: 80e6,
+      // (ā: wait for a prompt, "N> ")
+      machine: { input: 'āhello\r' + 'āabX\x08c\r' + 'āac\x1b[Db\r' + 'ābc\x1b[Ha\x1b[Fd\r' +
+        'āxyz\x15ok\r' + 'āabXc\x1b[D\x1b[D\x1b[3~\r' + 'ā\x1b[A\x1b[A\r' + 'ā\x04' + 'āparts\r' +
+        'āx\x1b[A' + 'ā\x03' + 'āz\r' },
+      check(m) {
+        const f = [], a = m.acia, want = a.wdc ? 1 : 2;
+        this.notes = ['at 115200, the shortest idle time between characters sent: ' + a.gapMin.toFixed(2) + ' bits (at least ' + want + ')'];
+        if (!(a.gapMin >= want - 0.05)) f.push('at 115200, characters ' + a.gapMin.toFixed(2) + ' bits apart: less than ' + want);
+        if (a.overruns) f.push(a.overruns + ' bytes written to the ACIA while it was still sending');
+        return f;
+      },
     },
     {
       name: 'mem', what: 'memory: BREAK, pages, banks, a shared segment between tasks (and kcopy from it)',
@@ -68,7 +97,7 @@ module.exports = {
     },
     {
       name: 'scall', what: 'spike S3: calls into a driver\'s task, its errors, a busy driver, the round trip',
-      init: 't_scall', modules: ['t_child', 't_drv'], cycles: 40e6,
+      init: 't_scall', modules: ['t_child', 't_drv'], without: ['cons', 'kdev'], cycles: 40e6,
       budgets: [{ what: 'SCALL round trip (DBG_SCALL, less the same loop calling the code in place)', from: '<scall', to: 'scall>',
         minus: ['<base', 'base>'], per: 1000, max: 200 }],
     },
@@ -79,7 +108,7 @@ module.exports = {
     },
     {
       name: 'irq', what: 'spike S1: 115200 received by an irq entry while tasks spin',
-      init: 't_irq', modules: ['t_child'], cycles: 30e6,
+      init: 't_irq', modules: ['t_child'], without: ['cons', 'kdev'], cycles: 30e6,
       send: { after: 'ready>', bytes: Array.from({ length: S1_BYTES }, (_, i) => (3 + 7 * i) & 0xFF) },
       check(m) {
         const f = [], l = m.acia.rxLat, char = m.acia.charCycles();

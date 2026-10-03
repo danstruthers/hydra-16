@@ -1,7 +1,8 @@
 ; ****************************************************************************
-; cons.s - the bring-up console: the serial port, polled, at 9600 8N1.  Enough to boot, print and read keys
-; until the console driver (phase 2) owns the ACIA; then PUTC, PUTS and GETC become writes and reads on fds 1
-; and 0.  The ACIA's own interrupts stay off here.
+; cons.s - PUTC, PUTS and GETC: a write to fd 1 and a read from fd 0 when the task has them (the console driver
+; serves them, through init's #c/cons), else the bring-up console: the serial port, polled, at 9600 8N1, for the
+; boot and the kernel's own messages until the console driver owns the ACIA.  The ACIA's own interrupts stay off
+; here.
 ;   Rockwell R65C51: wait for TDRE before each byte.  WDC W65C51N (ACIA_CHIP): its TDRE always reads 1, so wait a
 ;   character's time after each byte instead.
 ; Every routine keeps the caller's I flag (the boot prints with IRQs off).
@@ -22,9 +23,14 @@ K_CONS_INIT:
             lda         ACIA_DATA                           ; (Nothing received yet)
             rts
 
-; PUTC: .A to the serial port.  Keeps .A, .X, .Y
+; PUTC: .A to stdout (fd 1), or the serial port.  Keeps .A, .X, .Y (and r0, r1: the kernel's KPRINT uses it)
 K_PUTC:
-            php
+            pha
+            lda         TA_FD + 1                           ; Fd 1 open?
+            cmp         #CH_MAX
+            pla
+            bcc         @fd
+            php                                             ; ---- The serial port, polled
             pha
 .if ACIA_CHIP = ACIA_ROCKWELL
 @wait:
@@ -62,8 +68,74 @@ K_PUTC:
             clc
             rts
 
-; PUTS: the string at r0 (any length).  Modifies .A, .Y, r0
+@fd:                                                        ; ---- A write to fd 1
+            sta         TA_PUTC
+            pha
+            phx
+            phy
+            lda         r0
+            pha
+            lda         r0 + 1
+            pha
+            lda         r1
+            pha
+            lda         r1 + 1
+            pha
+            lda         #<TA_PUTC
+            sta         r0
+            lda         #>TA_PUTC
+            sta         r0 + 1
+            lda         #1
+            sta         r1
+            stz         r1 + 1
+            FARCALL     K_WRITE
+            pla
+            sta         r1 + 1
+            pla
+            sta         r1
+            pla
+            sta         r0 + 1
+            pla
+            sta         r0
+            ply
+            plx
+            pla
+            clc
+            rts
+
+; PUTS: the string at r0 (any length) to stdout.  OUT: C = 0; or C = 1, .A: the write's error.  Modifies .A, .Y,
+; r0-r2
 K_PUTS:
+            lda         TA_FD + 1                           ; Fd 1 open: one write
+            cmp         #CH_MAX
+            bcs         @polled
+            lda         r0                                  ; Its length: r1
+            sta         r2
+            lda         r0 + 1
+            sta         r2 + 1
+            stz         r1
+            stz         r1 + 1
+@length:
+            lda         (r2)
+            beq         @write
+            inc         r1
+            bne         :+
+            inc         r1 + 1
+:
+            inc         r2
+            bne         @length
+            inc         r2 + 1
+            bra         @length
+
+@write:
+            lda         #1
+            FARCALL     K_WRITE
+            bcs         :+
+            clc
+:
+            jmp         K_NOTE_CHECK                        ; (A note while it waited: taken on the way out)
+
+@polled:
             ldy         #0
 @next:
             lda         (r0),Y
@@ -94,9 +166,35 @@ K_PUTSTR:
             pla
             rts
 
-; GETC: a byte from the serial port, waiting for one (the other tasks run meanwhile).  OUT: .A; or C = 1,
-; .A = E_INTR (a note came: taken on the way out)
+; GETC: a byte from stdin (fd 0), or the serial port, waiting for one (the other tasks run meanwhile).  OUT: .A;
+; or C = 1, .A = E_EOF (the end of stdin), E_INTR (a note came: taken on the way out), or the read's error
 K_GETC:
+            lda         TA_FD                               ; Fd 0 open: a read
+            cmp         #CH_MAX
+            bcs         @polled
+            lda         #<TA_PUTC
+            sta         r0
+            lda         #>TA_PUTC
+            sta         r0 + 1
+            lda         #1
+            sta         r1
+            stz         r1 + 1
+            lda         #0
+            FARCALL     K_READ
+            bcs         @end
+            cmp         #0
+            beq         @eof
+            lda         TA_PUTC
+            clc
+@end:
+            jmp         K_NOTE_CHECK
+
+@eof:
+            lda         #E_EOF
+            sec
+            bra         @end
+
+@polled:
             php
             sei
             lda         ACIA_STATUS
@@ -112,7 +210,7 @@ K_GETC:
             lda         TK_NOTED                            ; A note: E_INTR, and the note (notes.s)
             bne         @intr
             jsr         K_YIELD
-            bra         K_GETC
+            bra         @polled
 
 @intr:
             lda         #E_INTR

@@ -11,17 +11,18 @@
 ; ---- reset.s: boot
 .global     BOOT, BOOT_DONE, RESET_ENTRY
 ; ---- common.s: the COMMON block (the same on every BIOS ROM page)
-.global     IRQ_ENTRY, IRQ_EXIT, NMI_ENTRY
+.global     IRQ_ENTRY, IRQ_RESTORE, IRQ_EXIT, NMI_ENTRY
 .global     IRQ_STUB_0, IRQ_STUB_F, K_FAR, K_FAR_GO, K_PEEK_PAGE
 ; ---- irq.s: interrupts
-.global     IRQ_DISPATCH, IRQ_INIT, IRQ_SET_OWNER, IRQ_RELEASE_ALL, NMI_HANDLER, K_KIRQ
+.global     IRQ_HANDLER, IRQ_SWITCH, IRQ_STRAY, IRQ_INIT, IRQ_SET_OWNER, IRQ_RELEASE_ALL, NMI_HANDLER, K_KIRQ
 ; ---- sched.s: the scheduler, waiting, time
-.global     K_SCHED_SWITCH, K_SCHED_RESUME, K_YIELD, K_PAUSE, K_WAKE, K_PREEMPT_OFF, K_PREEMPT_ON
+.global     K_SCHED_SWITCH, K_SCHED_RESUME, K_YIELD, K_PAUSE, K_WAKE, K_EVWAIT, K_PREEMPT_OFF, K_PREEMPT_ON
 .global     K_SLEEP, K_SLEEP_UNTIL, K_TICKS
 ; ---- call.s: calls into other tasks, and kcopy
 .global     K_SCALL, K_KCALL, K_KDISPATCH, K_KCOPY
 ; ---- task.s: tasks and modules
-.global     K_SPAWN, K_EXITS, K_WAIT, K_GETPID, K_TASK_BOOT, K_TASK_RESERVE, K_MD_VALID, K_STR_CRLF
+.global     K_SPAWN, K_EXITS, K_WAIT, K_GETPID, K_TASK_BOOT, K_TASK_BOOT_INIT, K_BOOT_STARTED, K_TASK_RESERVE
+.global     K_MD_VALID, K_STR_CRLF, K_MODINFO
 ; ---- cons.s: the bring-up console (polled)
 .global     K_CONS_INIT, K_PUTC, K_PUTS, K_GETC, K_PUTHEX, K_PUTNIB, K_PUTSTR
 ; ---- sys.s: the small calls
@@ -30,7 +31,14 @@
 .global     K_MEM_START, K_SEG_EXIT, K_BRK, K_PAGES_ALLOC, K_PAGES_FREE, K_BANKS, K_BANKS_ALLOC, K_BANKS_FREE
 .global     K_SEG_CREATE, K_SEG_ATTACH, K_SEG_DETACH, K_SEG_MAP
 ; ---- notes.s: notes (signals)
-.global     K_NOTE, K_UPAUSE, K_NOTE_CHECK, K_NOTE_RETURN, K_NOTE_TRAMP, K_NOTIFY
+.global     K_NOTE, K_NOTE_POST, K_NOTE_QUEUE, K_NOTE_QUEUED, K_UPAUSE, K_NOTE_CHECK, K_NOTE_RETURN, K_NOTE_TRAMP, K_NOTIFY
+; ---- file.s: files (page 2)
+.global     K_OPEN, K_CREATE, K_CLOSE, K_CLOSE_ALL, K_DUP, K_DUP2, K_READ, K_WRITE, K_SEEK, K_FSTAT, K_FWSTAT
+.global     K_STAT, K_WSTAT, K_REMOVE, K_SRV_REGISTER, K_SRV_TAKE, K_SRV_REPLY, K_CLIENT_READ, K_CLIENT_WRITE
+.global     K_FILE_EXIT, K_FD_INHERIT, K_CHDIR, K_GETCWD, K_PIPE, K_BIND, K_MOUNT, K_UNMOUNT, K_DEV_FIND_K
+; ---- ns.s: namespaces (page 3)
+.global     K_NS_INIT, K_NS_FRESH, K_NS_INHERIT, K_NS_EXIT, K_NS_FIND_K, K_NS_NEXT_K, K_NS_CWD_K, K_NS_UNION_K
+.global     K_NS_UNEXT_K, K_NS_UREL_K, K_NS_BIND_K, K_NS_MOUNT_K, K_NS_UNMOUNT_K
 ; ---- info.s: what the kernel knows of the tasks (page 1)
 .global     K_TASKINFO, K_DBG_PS
 ; ---- far.s: the jump table's way to calls on other pages
@@ -130,9 +138,6 @@
 
 CR              = $0D
 LF              = $0A
-
-; ---- More of the per-task OS area: a call stub's scratch (64 bytes), for what a call copies in or out
-TA_SCRATCH      = $0280
 
 ; ---- More of the kernel task's RAM
 K_NAMEBUF       = $0700         ; (16) A module's name being looked for (SPAWN)

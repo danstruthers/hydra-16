@@ -1,58 +1,44 @@
 ; ****************************************************************************
 ; irq.s - interrupts: one path for every line (docs/reimplementation-from-scratch.md, §10.3).
 ;
-; A line's vector points at its stub in the COMMON block (common.s), which goes to IRQ_DISPATCH on page 0 with
-; .A = the line and the frame begun on the interrupted task's stack (A, X, W; the CPU's P and PC).  The line's
-; owner (TA_OWNERS: every task has a copy, so the interrupted task's is read where it is) gets the interrupt in
-; its own task: T switched to it (its zero page, its stack below its frame, its banks: its module at $A000), its
-; irq entry (TA_IRQVEC) called with .A = the line, .X = the task interrupted.  The entry answers .A = 0, or
-; IRQ_RESCHED for a task switch
-; (it woke a task; the tick asks every time); the interrupted task is switched out unless it holds preemption
-; (then the switch is noted: TK_DUE).
+; A line's vector points at its stub in the COMMON block (common.s), which goes on, on page 0, to the dispatcher
+; (its main path is in the COMMON block too: it saves two jumps) with .A = the line and the frame begun on the
+; interrupted task's stack (A, X, W; the CPU's P and PC).  The line's owner (TA_OWNERS: every task has a copy, so
+; the interrupted task's is read where it is) gets the interrupt in its own task: T switched to it (its zero
+; page, its stack below its frame, its banks: its module at $A000), its irq entry (TA_IRQVEC) called with .A =
+; the line, .X = the task interrupted.  The entry answers .A = 0, or IRQ_RESCHED for a task switch (the tick
+; asks every time); the interrupted task is switched out unless it holds preemption (then the switch is noted:
+; TK_DUE).  Here: what's off that path, a line nobody owns (IRQ_STRAY) and the switch (IRQ_SWITCH).
 ;
 ; The owner can be the interrupted task itself (the tick, in the idle task): the same steps work, on its stack.
-; IRQs stay off throughout, and handlers never wait.  The budget: about 80 cycles from the interrupt to the
-; handler's first instruction (sim/test.js measures it: the irq test).
+; IRQs stay off throughout, and handlers never wait.  The budget: about 75 cycles from the interrupt to the
+; handler's first instruction, and 115 for the whole path less the handler (sim/test.js measures them: the
+; IRQs-off stretches), so a handler has about 85 of the 200 cycles any IRQs-off stretch may take.
+;
+; VIA timer 2 is a line of its own, LINE_VIA_T2 (16), so its owner (the console: its paced sending) gets it in one
+; step: the VIA's stub sends its interrupt there (common.s: IRQ_VIA).  Owning the line is owning the timer: IRQ_OWN
+; sets it one-shot, its interrupt on; the owner starts it (T2CL, then T2CH) and its interrupt clears its flag
+; (reading T2CL, or starting it again).
+
+.assert     LINE_VIA = 0, error, "IRQ_VIA's .A = 0 is the VIA's line"
 
 .include "kdefs.inc"
 
 .segment "KCODE"
 
-; IN: .A = the line; IRQs off; on page 0.  The stack: the frame's W, X, A, P, PCL, PCH.  (The CPU cleared D)
-IRQ_DISPATCH:
-            phy                                             ; (The frame's Y)
-            tay                                             ; .Y = the line
-            tsx
-            stx         TK_SP                               ; The interrupted task's stack pointer, for the way back
-            ldx         TA_OWNERS,Y                         ; .X = the line's owner
-            bmi         @stray
-            lda         T_REGISTER                          ; .A = the interrupted task
-            stx         T_REGISTER                          ; ---- The owner: its zero page and stack page (not S yet)
-            ldx         TK_SP
-            txs                                             ; Its stack: below its frame (or the same, if it's the
-            pha                                             ;   interrupted task).  The interrupted task, for later
-            tax                                             ; .X = the interrupted task
-            tya                                             ; .A = the line
-            jsr         IRQ_HANDLER
-            ply                                             ; ---- Back to the interrupted task
-            sty         T_REGISTER
-            ldx         TK_SP
-            txs
-@answer:
-            and         #IRQ_RESCHED                        ; A task switch, please?
-            beq         IRQ_RESTORE
-            ldx         TK_PREEMPT                          ; Not while it holds the CPU (or is in the scheduler):
-            bne         @due                                ;   then it's noted, for PREEMPT_ON or the next YIELD
+; The owner's irq entry (the dispatcher's jsr)
+IRQ_HANDLER:
+            jmp         (TA_IRQVEC)
+
+; An interrupt's task switch, from the dispatcher: back in the interrupted task (it doesn't hold the CPU), its
+; frame's Y on its stack.  It's switched out
+IRQ_SWITCH:
             lda         U_REGISTER                          ; The frame's last byte, then the switch
             pha
             jmp         K_SCHED_SWITCH
 
-@due:
-            sta         TK_DUE                              ; (.A = IRQ_RESCHED: not 0)
-            ply
-            jmp         IRQ_EXIT
-
-@stray:
+; A line nobody owns, from the dispatcher: .Y = the line; in the interrupted task, its frame's Y on its stack
+IRQ_STRAY:
             cpy         #LINE_NONE                          ; A BRK?  (Line 15's entry, and B set in the P it pushed:
             bne         @count                              ;   the frame is Y, W, X, A, P ...)
             ldx         TK_SP
@@ -62,11 +48,15 @@ IRQ_DISPATCH:
             lda         #1 << NOTE_BRK                      ; The note sys: brk, taken (notes.s) when the switch
             tsb         TK_NOTES                            ;   back to it finds it in its own code
             sta         TK_NOTED
-            lda         #IRQ_RESCHED
-            bra         @answer
+            lda         TK_PREEMPT                          ; A switch, if it doesn't hold the CPU; else noted
+            beq         IRQ_SWITCH
+            sta         TK_DUE
+            jmp         IRQ_RESTORE
 
 @count:                                                     ; Nobody's: counted (a line must be owned before its
-            ldx         T_REGISTER                          ;   device interrupts: a held line comes straight back)
+            cpy         #LINE_VIA_T2                        ;   device interrupts: a held line comes straight back)
+            beq         @t2
+            ldx         T_REGISTER
             stz         T_REGISTER
             lda         K_IRQ_STRAY,Y
             inc         a
@@ -74,14 +64,11 @@ IRQ_DISPATCH:
             sta         K_IRQ_STRAY,Y
 :
             stx         T_REGISTER
+            jmp         IRQ_RESTORE
 
-; The end of an interrupt with no task switch (and the end of SCHED_RESUME's unwinding, in sched.s)
-IRQ_RESTORE:
-            ply
-            jmp         IRQ_EXIT
-
-IRQ_HANDLER:
-            jmp         (TA_IRQVEC)
+@t2:                                                        ; (Timer 2 with no owner: its interrupt off, its flag
+            jsr         T2_OFF                              ;   cleared)
+            jmp         IRQ_RESTORE
 
 ; ****************************************************************************
 ; Point every line's vector at its stub, and give the VIA's line (the tick) to the kernel task.  At boot, in task
@@ -113,6 +100,7 @@ IRQ_INIT:
             bne         @vector
             lda         #IRQ_INDEX(LINE_NONE)               ; V back on BRK's entry
             sta         V_REGISTER
+            jsr         T2_OFF                              ; Timer 2: nobody's
             ldx         #LINE_VIA                           ; The tick: the kernel task's
             lda         #KERNEL_TASK
             jmp         IRQ_SET_OWNER
@@ -146,8 +134,27 @@ K_KIRQ:
             lda         #0
             rts
 
-; Line .X's owner = .A ($FF: none), in every task's copy.  In the kernel task (a KCALL, or the boot); keeps the
-; I flag.  Modifies .Y
+; Timer 2 its owner's: one-shot, its flag cleared, its interrupt on (T2_ON); or nobody's: its interrupt off, its
+; flag cleared (T2_OFF).  IRQs off.  Modifies .A
+T2_ON:
+            lda         VIA_ACR                             ; (ACR bit 5 = 0: one-shot)
+            and         #<~VIA_IRQ_T2
+            sta         VIA_ACR
+            lda         VIA_T2CL
+            lda         #VIA_IER_SET | VIA_IRQ_T2
+            sta         VIA_IER
+            rts
+
+T2_OFF:
+            lda         #VIA_IRQ_T2
+            sta         VIA_IER
+            lda         VIA_T2CL
+            rts
+
+.assert     VIA_IRQ_T2 = $20, error, "T2_ON's ACR bit 5 is VIA_IRQ_T2's"
+
+; Line .X's owner = .A ($FF: none), in every task's copy (and timer 2 its owner's, or nobody's: T2_ON, T2_OFF).
+; In the kernel task (a KCALL, or the boot); keeps the I flag.  Modifies .Y
 IRQ_SET_OWNER:
             ldy         #TASKS - 1
 @task:
@@ -159,11 +166,28 @@ IRQ_SET_OWNER:
             plp
             dey
             bpl         @task
+            cpx         #LINE_VIA_T2                        ; Timer 2: on for its owner, or off
+            bne         @done
+            php
+            sei
+            pha
+            cmp         #$FF
+            beq         :+
+            jsr         T2_ON
+            bra         :++
+:
+            jsr         T2_OFF
+:
+            pla
+            plp
+@done:
             rts
 
 ; IRQ_OWN: own a line.  IN: .A = the line.  OUT: C = 0; or C = 1, .A = E_RANGE, E_INVAL (no irq entry), E_BUSY
 K_IRQ_OWN:
-            cmp         #LINE_NONE
+            cmp         #LINE_NONE                          ; (0-14, and LINE_VIA_T2)
+            beq         @range
+            cmp         #IRQ_LINES
             bcs         @range
             ldx         TA_IRQVEC + 1
             beq         @inval
@@ -178,10 +202,10 @@ K_IRQ_OWN:
 
 ; In the kernel task (KCALL): line .A for task .Y, if it's nobody's (or the task's already)
 K_IRQ_OWN_K:
+            sty         K0_TMP
             tax
             lda         TA_OWNERS,X
             bmi         @take
-            sty         K0_TMP
             cmp         K0_TMP
             beq         @ours
             FAIL        E_BUSY
@@ -196,6 +220,8 @@ K_IRQ_OWN_K:
 ; IRQ_RELEASE: give a line back.  IN: .A = the line.  OUT: C = 0; or C = 1, .A = E_RANGE, E_PERM
 K_IRQ_RELEASE:
             cmp         #LINE_NONE
+            beq         @range
+            cmp         #IRQ_LINES
             bcs         @range
             KCALL       K_IRQ_RELEASE_K
             rts
@@ -219,7 +245,7 @@ K_IRQ_RELEASE_K:
 
 ; Every line task .Y owns, nobody's (its end).  In the kernel task.  Modifies .A, .X
 IRQ_RELEASE_ALL:
-            ldx         #LINES - 1
+            ldx         #IRQ_LINES - 1
 @line:
             tya
             cmp         TA_OWNERS,X

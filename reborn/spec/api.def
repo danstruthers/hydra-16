@@ -63,7 +63,7 @@ call WAIT task impl=K_WAIT
 
 call SPAWN task impl=K_SPAWN
   in:     r0 = the program: "#m/NAME" (a module in the paged ROM); r1 = its arguments (zero-terminated, up
-  in:     to 255 characters), or 0; .A = flags (SPAWN_NEWGROUP: a note group of its own)
+  in:     to 175 characters), or 0; .A = flags (SPAWN_NEWGROUP: a note group of its own)
   out:    .A = the new task
   errors: E_NOENT (no such program), E_NOEXEC (not a program), E_NOTASK (no free task), E_NAMETOOLONG
   blocks: no
@@ -147,6 +147,13 @@ call NOTE task impl=K_NOTE
   doc:    E_INTR.  With no handler, and for NOTE_KILL always, the task ends with 128 + the note's Unix number
   doc:    (130 for NOTE_INTERRUPT, 137 for NOTE_KILL) and its name as the message.
 
+call MODINFO task impl=K_MODINFO far
+  in:     .A = an entry of the module directory (0 on); r0 = a buffer (ME_SIZE bytes)
+  out:    the buffer: ME_BANK, ME_BANKS, ME_TYPE (HT_*), ME_FLAGS (HF_*), ME_NAME (12, zero-padded)
+  errors: E_NOENT (past the last)
+  blocks: no
+  doc:    A module in the paged ROM (SPAWN's #m/NAME), as the module directory has it.
+
 # ---- memory (BIOS ROM page 1)
 
 call BREAK memory impl=K_BRK far
@@ -225,7 +232,156 @@ call SEG_MAP memory impl=K_SEG_MAP far
   blocks: no
   doc:    How to reach a bank of a segment: write U, then $00, and it's at $8000-$9FFF.
 
-# ---- cons (the bring-up console: polled, on the serial port, until the console driver comes in phase 2)
+# ---- file (BIOS ROM page 2)
+
+call OPEN file impl=K_OPEN far
+  in:     r0 = a path; .A = the mode (O_READ, O_WRITE, O_RDWR; | O_TRUNC, O_NONBLOCK)
+  out:    .A = an fd
+  errors: E_NOENT, E_NODEV (no such device), E_NAMETOOLONG, E_MFILE (no fd free), E_NFILE (no channel free)
+  blocks: yes
+  doc:    Open a file.  Its server may answer other errors.  (Until namespaces, a path names a device: "#x",
+  doc:    then "/" and the path in it.)
+
+call CREATE file impl=K_CREATE far
+  in:     r0 = a path; .A = the mode; .X = the new file's mode, high byte (DM_DIR: a directory)
+  out:    .A = an fd
+  errors: E_NOENT, E_NODEV, E_NAMETOOLONG, E_MFILE, E_NFILE, E_EXIST
+  blocks: yes
+  doc:    Make a file or a directory, and open it.
+
+call CLOSE file impl=K_CLOSE far
+  in:     .A = an fd
+  out:    -
+  errors: E_BADF (not open)
+  blocks: yes
+  doc:    Close an fd.  The last fd naming a channel (DUP, SPAWN share them) tells its server.
+
+call READ file impl=K_READ far
+  in:     .A = an fd; r0 = a buffer; r1 = a count
+  out:    .A/.X = the count read (0: the end of the file)
+  errors: E_BADF (not open for reading), E_AGAIN (non-blocking: nothing yet), E_INTR (a note: taken on the way out)
+  blocks: yes
+  doc:    Read from the fd's offset, and move it on.  A count short of the one asked for is all there is for now
+  doc:    (a console line, say).  A directory reads as stat records (SR_SIZE bytes each).
+
+call WRITE file impl=K_WRITE far
+  in:     .A = an fd; r0 = the data; r1 = its count
+  out:    .A/.X = the count written
+  errors: E_BADF (not open for writing), E_AGAIN, E_INTR
+  blocks: yes
+  doc:    Write at the fd's offset, and move it on.
+
+call SEEK file impl=K_SEEK far
+  in:     .A = an fd; r0, r1 = an offset (low word, high word: signed); .X = from: 0 the start, 1 the offset, 2 the end
+  out:    r0, r1 = the new offset
+  errors: E_BADF, E_INVAL (before the start, or no such from)
+  blocks: yes
+  doc:    Move an fd's offset (shared by the fds that DUP or SPAWN made of it).
+
+call STAT file impl=K_STAT far
+  in:     r0 = a path; r1 = a buffer (SR_SIZE bytes)
+  out:    the file's stat record in the buffer (SR_*)
+  errors: E_NOENT, E_NODEV, E_NAMETOOLONG, E_MFILE, E_NFILE
+  blocks: yes
+  doc:    A file's stat record: its name, qid, mode, length, time, device letter.
+
+call FSTAT file impl=K_FSTAT far
+  in:     .A = an fd; r0 = a buffer (SR_SIZE bytes)
+  out:    the stat record in the buffer
+  errors: E_BADF
+  blocks: yes
+  doc:    An open file's stat record.
+
+call WSTAT file impl=K_WSTAT far
+  in:     r0 = a path; r1 = a stat record
+  out:    -
+  errors: E_NOENT, E_NODEV, E_NAMETOOLONG, E_MFILE, E_NFILE, E_NOSYS (its server changes nothing)
+  blocks: yes
+  doc:    Change a file from a stat record: its name, its mode (what its server allows).
+
+call FWSTAT file impl=K_FWSTAT far
+  in:     .A = an fd; r0 = a stat record
+  out:    -
+  errors: E_BADF, E_NOSYS
+  blocks: yes
+  doc:    Change an open file from a stat record.
+
+call REMOVE file impl=K_REMOVE far
+  in:     r0 = a path
+  out:    -
+  errors: E_NOENT, E_NODEV, E_NAMETOOLONG, E_NOTEMPTY, E_NOSYS
+  blocks: yes
+  doc:    Remove a file, or an empty directory.
+
+call DUP file impl=K_DUP far
+  in:     .A = an fd
+  out:    .A = a new fd (the lowest free), on the same channel (the same offset)
+  errors: E_BADF, E_MFILE
+  blocks: no
+  doc:    Another fd for an open file.
+
+call DUP2 file impl=K_DUP2 far
+  in:     .A = an fd; .X = another (0-15)
+  out:    -
+  errors: E_BADF
+  blocks: yes
+  doc:    Make fd .X name the same channel as fd .A, closing what it named first.
+
+call CHDIR file impl=K_CHDIR far
+  in:     r0 = a directory's path
+  out:    -
+  errors: E_NOTDIR, E_NOENT, E_NODEV, E_NAMETOOLONG
+  blocks: yes
+  doc:    Change the current directory: the name a relative path starts from.  It's kept whole and clean
+  doc:    (GETCWD).
+
+call GETCWD file impl=K_GETCWD far
+  in:     r0 = a buffer (PATH_MAX + 1 bytes)
+  out:    .A = the current directory's length; the directory in the buffer, zero-terminated
+  errors: -
+  blocks: no
+  doc:    The current directory.
+
+call PIPE file impl=K_PIPE far
+  in:     -
+  out:    .A = an fd to read from; .X = an fd to write to
+  errors: E_NODEV (no pipe server), E_MFILE, E_NFILE, E_NOMEM (no pipe free)
+  blocks: yes
+  doc:    A pipe (#|): what's written to one end is read from the other, 512 bytes held between them.  A read
+  doc:    waits for something to read, and is the end (0) once no writer is left; a write waits for room, and is
+  doc:    E_PIPE once no reader is left.
+
+# ---- name: the namespace (BIOS ROM page 3).  Its names are found here, Plan 9's way: the longest mount point a
+# name starts with (whole elements), then that union's members in order, each with the rest of the name.  A bind
+# binds what new is when it's made (a mount point: all of its members).  A # name is its device's, in no namespace
+
+call BIND name impl=K_BIND far
+  in:     r0 = new (a path); r1 = old (a path: absolute); .A = MREPL, MBEFORE or MAFTER, and MCREATE
+  out:    -
+  errors: E_NOENT, E_INVAL, E_NSFULL, E_NODEV, E_NAMETOOLONG
+  blocks: yes
+  doc:    Bind new at old: in old's place (MREPL), or a union with what's there, new first (MBEFORE) or last
+  doc:    (MAFTER); with MCREATE, a CREATE in the union comes to new.  New is what it is now: a mount point
+  doc:    itself is all of its union's members, anything else the first of its candidates that's there.  A
+  doc:    union's first bind at a directory that's there (and isn't a mount point itself) keeps it as a member.
+
+call MOUNT name impl=K_MOUNT far
+  in:     .X = a device letter; r0 = its spec (a string, 8 characters at most), or 0; r1 = old; .A = BIND's flags
+  out:    -
+  errors: E_NODEV, E_NOENT, E_INVAL, E_NSFULL, E_NAMETOOLONG
+  blocks: yes
+  doc:    Mount a device's server, with a spec (which of its file trees: '#f' with x is the ROM disk), at old,
+  doc:    as BIND does.
+
+call UNMOUNT name impl=K_UNMOUNT far
+  in:     r0 = new, or 0; r1 = old
+  out:    -
+  errors: E_NOENT, E_INVAL, E_NSFULL, E_NAMETOOLONG
+  blocks: yes
+  doc:    Undo a bind or a mount at old: all of what's there (r0 = 0), or new's member (as BIND finds new).
+
+# ---- cons: helpers for stdin and stdout (fds 0 and 1: init's #c/cons), or the serial port, polled, for a task
+# without them (the boot's messages, a driver's)
 
 call PUTC cons impl=K_PUTC
   in:     .A = a byte
@@ -237,14 +393,14 @@ call PUTC cons impl=K_PUTC
 call PUTS cons impl=K_PUTS
   in:     r0 = a string, zero-terminated
   out:    -
-  errors: -
+  errors: E_INTR (a note came while it waited: taken on the way out)
   blocks: yes
   doc:    Write a string to stdout.
 
 call GETC cons impl=K_GETC
   in:     -
   out:    .A = a byte
-  errors: E_INTR (a note came: taken on the way out)
+  errors: E_EOF (the end of stdin), E_INTR (a note came: taken on the way out)
   blocks: yes
   doc:    Read a byte from stdin, waiting for one (the X16's CHRIN, unechoed).
 
@@ -258,13 +414,17 @@ call PUTHEX cons impl=K_PUTHEX
 # ---- server
 
 call IRQ_OWN server impl=K_IRQ_OWN
-  in:     .A = an IRQ line (0-14)
+  in:     .A = an IRQ line (0-14), or LINE_VIA_T2 (VIA timer 2)
   out:    -
   errors: E_BUSY (another task owns it), E_RANGE (not a line), E_INVAL (the task has no IRQ entry)
   blocks: no
   doc:    Own an IRQ line: its interrupts run the calling task's irq entry, in the calling task.  The entry gets
   doc:    the line in .A, and returns .A = 0, or IRQ_RESCHED to ask for a task switch (it woke a task).  It
-  doc:    runs with interrupts off and must not make calls that wait.  A task's lines are released when it ends.
+  doc:    runs with interrupts off and must not make calls that wait, and with the dispatch's own cycles it
+  doc:    must stay under the 200-cycle budget: about 70 cycles of its own (TASK_EVENT, not WAKE, to wake
+  doc:    clients; NOTE_QUEUE for a group).  A task's lines are released when it ends.  LINE_VIA_T2 is VIA
+  doc:    timer 2: owning it sets the timer one-shot with its interrupt on; the owner starts it (T2CL, then
+  doc:    T2CH), and its entry clears the interrupt (reading T2CL, or starting it again).
 
 call IRQ_RELEASE server impl=K_IRQ_RELEASE
   in:     .A = an IRQ line
@@ -288,6 +448,60 @@ call PAUSE server impl=K_UPAUSE
   blocks: yes
   doc:    Wait until another task or an irq entry WAKEs this one, or a note comes (taken on the way out).
   doc:    (Wake-ups can come early: look again after.)
+
+call NOTE_POST server impl=K_NOTE_POST
+  in:     .A = a task, or NOTE_GROUP | a note group; .X = the note
+  out:    -
+  errors: E_INVAL, E_SRCH, E_PERM
+  blocks: no
+  doc:    NOTE without taking the caller's own notes: the note posted, the tasks woken.  From a task, or an irq
+  doc:    entry for a task (a group is too many tasks to look at with interrupts off: NOTE_QUEUE).
+
+call SRV_REGISTER server impl=K_SRV_REGISTER far
+  in:     .A = a device letter (printable; not #)
+  out:    -
+  errors: E_INVAL (not a letter), E_EXIST (another task's), E_NOMEM (no room)
+  blocks: no
+  doc:    Serve a device: its requests ("#x...") come to the calling task's serve entry.  A task may serve
+  doc:    several letters (the request block names it: RQ_DEV).  Freed when the task ends.
+
+call SRV_TAKE server impl=K_SRV_TAKE far
+  in:     -
+  out:    .A = the request (R_*); .Y = the client; the request block in TASK_INBOX, and (R_OPEN, R_CREATE,
+  out:    R_REMOVE) the name in TASK_PATH
+  errors: -
+  blocks: no
+  doc:    In the serve entry: take the request being served from the client (srvlib does it).  It notes the
+  doc:    server's event count (TASK_EVENT) in RQ_EVENT: a client answered E_AGAIN waits for it to change.
+
+call SRV_REPLY server impl=K_SRV_REPLY far
+  in:     TASK_INBOX's RQ_FID, RQ_DONE, RQ_PERM, RQ_EVENT: what the request returns; .A, C: the answer
+  out:    .A and C kept
+  errors: -
+  blocks: no
+  doc:    At the end of the serve entry: what the request returns, back to the client (srvlib does it).
+
+call CLIENT_READ server impl=K_CLIENT_READ far
+  in:     r0 = here; r1 = there, in the client's view; r2 = a count
+  out:    -
+  errors: -
+  blocks: no
+  doc:    Bytes from the client of the request being served (kcopy).
+
+call CLIENT_WRITE server impl=K_CLIENT_WRITE far
+  in:     r0 = here (the data); r1 = there, in the client's view; r2 = a count
+  out:    -
+  errors: -
+  blocks: no
+  doc:    Bytes to the client of the request being served (kcopy).
+
+call NOTE_QUEUE server impl=K_NOTE_QUEUE
+  in:     IRQs off; .X = a note group (0-15); .A = the note's bit: 1 << (note - 1), for a note 1-8
+  out:    .X kept
+  errors: -
+  blocks: no
+  doc:    A note to a note group, from an irq entry (a console's Ctrl-C): queued, and posted by the kernel task
+  doc:    as soon as it runs.  Short enough for an irq entry: nothing is checked.
 
 # ---- dbg (for the tests and the debugger: unstable)
 
@@ -318,17 +532,26 @@ call DBG_PS dbg impl=K_DBG_PS far
 
 const ABI_VERSION     1        "The ABI version this include describes"
 const TICK_HZ         200      "Ticks a second"
+const INIT_TASK       1        "init's task (and its note group: the console's foreground at first)"
 const PROG_ZP         $22      "A program's own zero page: $22-$7F"
 const PROG_ZP_END     $80
-const TASK_ARGS       $0300    "A task's arguments, zero-terminated"
+const TASK_ARGS       $0350    "A task's arguments, zero-terminated (175 characters at most)"
 const TASK_NAME       $0230    "A task's name, zero-terminated"
 const IRQ_RESCHED     $80      "An irq entry's answer: a task switch, please"
+const LINE_VIA_T2     16       "IRQ_OWN's line for VIA timer 2 (the hardware's lines: hw.inc)"
+const TASK_EVENT      $BD      "A task's event count: a server adds 1 (inc TASK_EVENT) when what its clients wait for has happened"
 const HT_PROGRAM      1        "HYX2 module types"
 const HT_DRIVER       2
 const HT_LIBRARY      3
 const HF_INPLACE      $01      "HYX2 flags: runs in place in the paged ROM"
 const HF_BOOT         $02      "HYX2 flags: a driver the kernel starts at boot"
-const TI_STATE        0        "TASKINFO's answer: the task's state (0: free, 1 ready, 2 wait, 3 call, 4 idle, 5 new, 6 sleep, 7 blocked)"
+const ME_BANK         0        "MODINFO's answer (ME_SIZE bytes): the module's first paged ROM bank"
+const ME_BANKS        1        "MODINFO: the banks it spans"
+const ME_TYPE         2        "MODINFO: its type (HT_*)"
+const ME_FLAGS        3        "MODINFO: its flags (HF_*)"
+const ME_NAME         4        "MODINFO: its name (12 bytes, zero-padded)"
+const ME_SIZE         16
+const TI_STATE        0        "TASKINFO's answer: the task's state (0: free, 1 ready, 2 wait, 3 call, 4 idle, 5 new, 6 sleep, 7 blocked, 8 event)"
 const TI_FLAGS        1        "TASKINFO: its flags ($01: a driver)"
 const TI_PARENT       2        "TASKINFO: its parent ($FF: none)"
 const TI_CPU          3        "TASKINFO: its CPU time, in ticks (3 bytes)"
@@ -345,6 +568,85 @@ const NOTE_BRK        5        "Notes: sys: brk, a BRK instruction (133)"
 const NOTE_USER       16       "Notes: 16-31 are the programs' own (128 + the note)"
 const NOTE_GROUP      $80      "NOTE's .A: a note group, not a task"
 const SPAWN_NEWGROUP  $01      "SPAWN's flags: the child starts a note group of its own"
+const SPAWN_NEWNS     $02      "SPAWN's flags: the child starts with an empty namespace of its own (else it shares its parent's)"
+const MREPL           0        "BIND's and MOUNT's flags: in place of what's at old"
+const MBEFORE         1        "BIND's and MOUNT's flags: a union, new first"
+const MAFTER          2        "BIND's and MOUNT's flags: a union, new last"
+const MCREATE         4        "BIND's and MOUNT's flags: a CREATE in the union comes to new"
+const KEY_UP          $80      "Keys: a raw console read gives the terminal's cursor and function keys as one code each"
+const KEY_DOWN        $81
+const KEY_RIGHT       $82
+const KEY_LEFT        $83
+const KEY_HOME        $84
+const KEY_END         $85
+const KEY_INS         $86
+const KEY_DEL         $87
+const KEY_PGUP        $88
+const KEY_PGDN        $89
+const KEY_F1          $8A      "Keys: F1-F12 are $8A-$95"
+const KEY_F2          $8B
+const KEY_F3          $8C
+const KEY_F4          $8D
+const KEY_F5          $8E
+const KEY_F6          $8F
+const KEY_F7          $90
+const KEY_F8          $91
+const KEY_F9          $92
+const KEY_F10         $93
+const KEY_F11         $94
+const KEY_F12         $95
+const O_READ          0        "Open modes"
+const O_WRITE         1
+const O_RDWR          2
+const O_RW_MASK       3
+const O_TRUNC         $10      "Open modes: empty the file first"
+const O_NONBLOCK      $40      "Open modes: E_AGAIN rather than wait"
+const FD_MAX          16       "Fds a task has (0 stdin, 1 stdout, 2 stderr)"
+const PATH_MAX        63       "A path's length at most"
+const IO_UNIT         512      "The most a READ or WRITE asks of a server in one request"
+const SR_NAME         0        "The stat record (SR_SIZE bytes): its name (32, zero-terminated)"
+const SR_QTYPE        32       "Stat: the qid's type (QT_*)"
+const SR_QVERS        33       "Stat: the qid's version"
+const SR_QPATH        34       "Stat: the qid's path (4: unique in its server)"
+const SR_MODE         38       "Stat: the mode (2: permissions; high byte DM_DIR)"
+const SR_LENGTH       40       "Stat: the length (4)"
+const SR_MTIME        44       "Stat: the time it changed (4: seconds since 2000)"
+const SR_DEV          48       "Stat: the device letter"
+const SR_INST         49       "Stat: the device's instance (its spec's first character)"
+const SR_SIZE         64
+const QT_DIR          $80      "Qid types: a directory"
+const QT_FILE         $00
+const DM_DIR          $80      "A mode's high byte: a directory"
+const TASK_INBOX      $0200    "A server's copy of the request it's serving (RQ_*)"
+const TASK_PATH       $02C0    "A server's copy of the name a request names (64 bytes)"
+const RQ_TYPE         0        "The request block (RQ_SIZE bytes): the request (R_*)"
+const RQ_FID          1        "Request: the fid (out: the new fid, R_OPEN and R_CREATE)"
+const RQ_MODE         2        "Request: the open mode"
+const RQ_CLIENT       3        "Request: the client task"
+const RQ_U            4        "Request: the client's U"
+const RQ_FLAGS        5        "Request: RF_*"
+const RQ_OFFSET       6        "Request: the offset (4)"
+const RQ_COUNT        10       "Request: the count asked for (2)"
+const RQ_DONE         12       "Request: the count done (2, out)"
+const RQ_BUF          14       "Request: the buffer, in the client's view (2)"
+const RQ_PERM         16       "Request: R_CREATE's new mode (high byte); out (R_OPEN, R_CREATE): the qid type"
+const RQ_NAMELEN      17       "Request: the name's length"
+const RQ_GROUP        18       "Request: the client's note group"
+const RQ_DEV          19       "Request: the device letter"
+const RQ_SPEC         20       "Request: the mount's spec (8, zero-padded)"
+const RQ_EVENT        28       "Request: the server's event count as it took it (after E_AGAIN, the client waits for a change)"
+const RQ_SIZE         32
+const RF_NONBLOCK     $01      "Request flags: answer E_AGAIN rather than wait"
+const R_OPEN          1        "Requests"
+const R_CREATE        2
+const R_READ          3
+const R_WRITE         4
+const R_CLUNK         5
+const R_STAT          6
+const R_WSTAT         7
+const R_REMOVE        8
+const R_FLUSH         9
+const R_DUP           10
 const r0  $02 "The call registers r0-r15: arguments and results"
 const r1  $04
 const r2  $06

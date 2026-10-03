@@ -21,7 +21,7 @@ const ROOT = path.join(__dirname, '..');
 const bin = (dir, n) => fs.readFileSync(path.join(ROOT, 'obj', dir, n + '.bin'));
 
 function image(t) {
-  const sys = readManifest(path.join(ROOT, 'modules', 'rom.txt')).modules;
+  const sys = readManifest(path.join(ROOT, 'modules', 'rom.txt')).modules.filter(n => !(t.without || []).includes(n));
   const own = [...(t.modules || [])];
   if (!sys.includes(t.init) && !own.includes(t.init)) own.unshift(t.init);
   const mods = [...sys.map(n => ({ file: n, data: bin('modules', n) })), ...own.map(n => ({ file: n, data: bin('tests', n) }))];

@@ -85,46 +85,47 @@ K_TASKINFO:
             rts
 
 ; DBG_PS: a line for each task in use: "T ST FL PA CPU    NAME" (its number, state, flags, parent, CPU time in
-; ticks, all hex; its name).  Its scratch: K_TASK, and TA_SCRATCH + PS_INFO for TASKINFO's answers
-PS_INFO         = 32
+; ticks, all hex; its name).  Its scratch: K_TASK, and PS_INFO (its TA_PATH: it makes no request) for
+; TASKINFO's answers
+PS_INFO         = TA_PATH
 
 K_DBG_PS:
             ldx         #PS_S_HEAD - PS_STRINGS
             jsr         ps_puts
             stz         K_TASK
 @task:
-            lda         #<(TA_SCRATCH + PS_INFO)
+            lda         #<(PS_INFO)
             sta         r0
-            lda         #>(TA_SCRATCH + PS_INFO)
+            lda         #>(PS_INFO)
             sta         r0 + 1
             lda         K_TASK
             jsr         K_TASKINFO
             lda         K_TASK
             beq         :+                                  ; (The kernel task: always)
-            lda         TA_SCRATCH + PS_INFO + TI_STATE
+            lda         PS_INFO + TI_STATE
             beq         @next                               ; (Free)
 :
             lda         K_TASK
             jsr         ps_putnib
-            lda         TA_SCRATCH + PS_INFO + TI_STATE
+            lda         PS_INFO + TI_STATE
             jsr         @hex
-            lda         TA_SCRATCH + PS_INFO + TI_FLAGS
+            lda         PS_INFO + TI_FLAGS
             jsr         @hex
-            lda         TA_SCRATCH + PS_INFO + TI_PARENT
+            lda         PS_INFO + TI_PARENT
             jsr         @hex
             lda         #' '
             jsr         ps_putc
-            lda         TA_SCRATCH + PS_INFO + TI_CPU + 2
+            lda         PS_INFO + TI_CPU + 2
             jsr         ps_puthex
-            lda         TA_SCRATCH + PS_INFO + TI_CPU + 1
+            lda         PS_INFO + TI_CPU + 1
             jsr         ps_puthex
-            lda         TA_SCRATCH + PS_INFO + TI_CPU
+            lda         PS_INFO + TI_CPU
             jsr         ps_puthex
             lda         #' '
             jsr         ps_putc
-            lda         #<(TA_SCRATCH + PS_INFO + TI_NAME)  ; (In RAM: page 0's routine can read it)
+            lda         #<(PS_INFO + TI_NAME)  ; (In RAM: page 0's routine can read it)
             sta         r0
-            lda         #>(TA_SCRATCH + PS_INFO + TI_NAME)
+            lda         #>(PS_INFO + TI_NAME)
             sta         r0 + 1
             jsr         ps_putstr
             ldx         #PS_S_CRLF - PS_STRINGS

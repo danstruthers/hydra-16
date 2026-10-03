@@ -75,11 +75,30 @@ TN_Y            = $AA
 TN_P            = $AB
 K_FNVEC         = $AC           ; (2) KCALL: the routine the caller names (the kernel task reads it here) ...
 K_FNPAGE        = $AE           ;   and its BIOS ROM page
-OS_ZP_END       = $AF           ; (Checked: the OS zero page's end, at most $100)
+TK_WOKEN        = $AF           ; A WAKE came while it wasn't waiting: its next PAUSE returns at once
+F_SRV           = $B0           ; The file calls' scratch: the server of the request being made ...
+F_CH            = $B1           ;   its channel ...
+F_FD            = $B2           ;   its fd ...
+F_LEFT          = $B3           ; (2)   the count still to move ...
+F_TOTAL         = $B5           ; (2)   and the count moved
+F_CHUNK         = $B7           ; (2) The count asked for in one request
+TQ_WHO          = $B9           ; NOTE_POST's scratch (its caller's: a task's, or an irq entry's): the task or
+TQ_MASK         = $BA           ;   group, the note's bit in its byte ...
+TQ_INDEX        = $BB           ;   its byte in TK_NOTES ...
+TQ_POSTED       = $BC           ;   and the tasks it went to
+TK_EVENT        = $BD           ; Its event count (TASK_EVENT): a server adds 1 when something its clients may be
+                                ;   waiting for has happened (a byte in, room to send), even in its irq entry
+TK_EVTASK       = $BE           ; ST_EVENT: the server whose event count it waits on ...
+TK_EVV          = $BF           ;   and the count it waits to see change
+F_NMEM          = $C0           ; The file calls' name: its mount point's members (1: a # name) ...
+F_EXACT         = $C1           ;   <> 0: the name is the mount point itself (a union directory, if it has more) ...
+F_ROOT          = $C2           ;   and its root's length, as it's cleaned (1: /, 2: #x)
+OS_ZP_END       = $C3           ; (Checked: the OS zero page's end, at most $100)
 .assert     OS_ZP_END <= $100, error, "The OS zero page runs past $FF"
 
 ; Task states (TK_STATE): the state of the context on top of the task's stack.  Only ST_READY runs (and
-; ST_SLEEP once its time has come, ST_BLOCKED once its task is free: the scheduler makes them ST_READY)
+; ST_SLEEP once its time has come, ST_BLOCKED once its task is free, ST_EVENT once its server's event count has
+; changed: the scheduler makes them ST_READY)
 ST_FREE         = 0             ; Not in use
 ST_READY        = 1             ; Runnable
 ST_WAIT         = 2             ; Waiting for a wake (WAKE, a wait mask)
@@ -88,9 +107,13 @@ ST_IDLE         = 4             ; A driver between requests: runs only for its c
 ST_NEW          = 5             ; Being set up
 ST_SLEEP        = 6             ; Sleeping till a tick count (K_WAKE_LO/HI, the kernel task's)
 ST_BLOCKED      = 7             ; Waiting to SCALL a busy task (TK_BLOCKEDON)
+ST_EVENT        = 8             ; Waiting for its server's event count to change (TK_EVTASK, TK_EVV), or a wake
 TF_DRIVER       = $01           ; TK_FLAGS: a driver
 BUSY_NOSERVE    = $80           ; TK_BUSY: no serve entry (a program): a call to it is E_NODEV
 IRQ_RESCHED     = $80           ; An irq entry's answer: a task switch, please (it woke a task)
+LINE_VIA_T2     = 16            ; A line of its own for VIA timer 2 (the VIA's line is the tick's): the VIA's stub
+                                ;   sends timer 2's interrupts here (common.s: IRQ_VIA).  The console's pacing
+IRQ_LINES       = LINES + 1     ; The lines with owners: the hardware's, and LINE_VIA_T2
 
 ; A switched-out task's frame, on its own stack, top first (TK_SP points just below it)
 ;   U, Y, W, X, A, P, PCL, PCH          (as the IRQ path and YIELD build it; SCHED_RESUME unwinds it)
@@ -111,16 +134,24 @@ TA_IRQVEC       = $0220         ; (2) Its interrupt handler (for the lines it ow
 TA_SERVEVEC     = $0222         ; (2) Its serve entry (SCALL)
 TA_ENTRY        = $0224         ; (2) Where it starts: main, or a driver's init
 TA_MODBANK      = $0226         ; Its module's paged ROM bank (in place), or $FF (a RAM program)
+TA_PUTC         = $0227         ; PUTC's and GETC's byte (to and from fds 1 and 0)
 TA_BRK          = $0228         ; (2) The end of its data area (BREAK) ...
 TA_BRKMIN       = $022A         ; (2)   and the lowest it may go: its module's HX_TOP
 TA_NOTIFY       = $022C         ; (2) Its note handler (NOTIFY), or 0
 TA_NAME         = $0230         ; (16) Its name, zero-terminated
-TA_OWNERS       = $0240         ; (16) Each IRQ line's owner task ($FF: none): a copy in every task, so the IRQ
-                                ;   dispatcher reads it where it is (IRQ_OWN writes them all)
-TA_PAGEMAP      = $0250         ; (16) Its pages given out by PAGES_ALLOC (bit = page)
-TA_BANKMAP      = $0260         ; (30) Its banks given out by BANKS_ALLOC (bit = bank, $00-$EF)
-TA_ARGS         = $0300         ; (256) Its arguments, zero-terminated (SPAWN copies them here; r0 at the start)
-TA_ARGS_MAX     = 255
+TA_OWNERS       = $0240         ; (17: IRQ_LINES) Each IRQ line's owner task ($FF: none): a copy in every task, so
+                                ;   the IRQ dispatcher reads it where it is (IRQ_OWN writes them all)
+TA_PAGEMAP      = $0251         ; (16) Its pages given out by PAGES_ALLOC (bit = page)
+TA_BANKMAP      = $0261         ; (30) Its banks given out by BANKS_ALLOC (bit = bank, $00-$EF)
+TA_SCRATCH      = $0280         ; (32) The call stubs' scratch: what a call copies in or out
+TA_REQ          = $02A0         ; (32) A request it's making (RQ_*: the server takes it with SRV_TAKE)
+TA_PATH         = $02C0         ; (64) The path a request names: the rest after its device (a server's copy too)
+TA_FD           = $0300         ; (16) Its fds: a channel number each ($FF: closed)
+TA_CWD          = $0310         ; (64) Its current directory (CHDIR), zero-terminated
+TA_ARGS         = $0350         ; (176) Its arguments, zero-terminated (SPAWN copies them here; r0 at the start)
+TA_ARGS_MAX     = 175
+PATH_MAX        = 63            ; (A path: 63 characters and the 0)
+FD_MAX          = 16
 
 ; ---- The kernel task's program zero page (task 0's $22-$7F)
 K0_TICKS        = $22           ; (4) The tick count (TICK_HZ a second; TICKS gives its low 16 bits)
@@ -138,7 +169,33 @@ K0_NEWTYPE      = $3C           ;   and type (HT_*)
 K0_BADMODS      = $3D           ; (2) POST: the RAM modules with bad lines (bit = module): not used
 K0_BADSHARED    = $3F           ; POST: the shared RAM chips with bad lines (bit = chip, 0-3): not used
 K0_POSTFAULT    = $40           ; POST: what it found wrong (PF_*), 0 for nothing
-K0_END          = $41
+K0_NQ_ANY       = $41           ; <> 0: notes to groups that irq entries queued (NOTE_QUEUE) for the kernel task to
+K0_NQ           = $42           ; (16)  post (notes.s; the scheduler runs it while there are any): each group's
+                                ;   (bit n - 1: note n, 1-8)
+K0_SA           = $52           ; (2) Namespaces' KCALLs (ns.s): a string ...
+K0_SB           = $54           ; (2)   another (a name) ...
+K0_SC           = $56           ; (2)   a task's 64 bytes in K_RES or K_CAND ...
+K0_NC           = $58           ;   the calling task ...
+K0_NN           = $59           ;   its namespace ...
+K0_NF           = $5A           ;   a mount point (a string) ...
+K0_NL           = $5B           ;   a length ...
+K0_NV           = $5C           ;   the flags, or the mode ...
+K0_NW           = $5D           ;   BIND's source, UNMOUNT's what ...
+K0_NS1          = $5E           ;   the source union's namespace and mount point ...
+K0_NS2          = $5F
+K0_NQS          = $60           ;   the next seq to give ...
+K0_NT           = $61           ;   a count, a candidate's flags ...
+K0_NR           = $62           ;   ns_rel's namespace ...
+K0_C1           = $63           ;   the lowest seq at a mount point ...
+K0_C2           = $64           ;   and the highest
+K0_PN           = $65           ; pick's: the namespace ...
+K0_PF           = $66           ;   the mount point ...
+K0_PA           = $67           ;   the seq to pick after (0: the first) ...
+K0_PB           = $68           ;   the lowest seq after it so far ...
+K0_PE           = $69           ;   and its entry
+K0_CO           = $6A           ; ns_clone's: the namespace copied ...
+K0_CN           = $6B           ;   and the copy
+K0_END          = $6C
 K0_POST         = $70           ; (16) POST's scratch, at boot only
 PF_T            = $01           ; K0_POSTFAULT: a T line (tasks' memory not apart)
 PF_SHARED       = $02           ;   shared RAM not shared between tasks
@@ -176,6 +233,59 @@ TI_NAME         = 8             ; (16) Its name, zero-terminated
 TI_GROUP        = 24            ; Its note group
 TI_SIZE         = 25
 
+; ---- Files: the request block (TA_REQ in the client, TA_INBOX in the server: docs/reimplementation-from-
+; scratch.md, appendix B), its requests, the open modes, the stat record
+RQ_TYPE         = 0             ; The request (R_*)
+RQ_FID          = 1             ; The fid (in); the new fid (out: R_OPEN, R_CREATE)
+RQ_MODE         = 2             ; The open mode (O_*), or the channel's
+RQ_CLIENT       = 3             ; The client task (the kernel fills it in)
+RQ_U            = 4             ; The client's U
+RQ_FLAGS        = 5             ; RF_*
+RQ_OFFSET       = 6             ; (4)
+RQ_COUNT        = 10            ; (2) The count asked for
+RQ_DONE         = 12            ; (2) The count done (out)
+RQ_BUF          = 14            ; (2) The buffer, in the client's view
+RQ_PERM         = 16            ; R_CREATE: the new file's mode (DM_DIR for a directory); out: R_OPEN, R_CREATE:
+                                ;   the file's qid type (QT_DIR ...)
+RQ_NAMELEN      = 17            ; The name's length (R_OPEN, R_CREATE, R_REMOVE: the name is the client's TA_PATH)
+RQ_GROUP        = 18            ; The client's note group
+RQ_DEV          = 19            ; The device letter
+RQ_SPEC         = 20            ; (8) The mount's spec, zero-padded
+RQ_EVENT        = 28            ; The server's event count as it took the request (SRV_TAKE): after E_AGAIN, the
+                                ;   client waits for it to change (ST_EVENT)
+RQ_SIZE         = 32
+R_OPEN          = 1             ; The requests
+R_CREATE        = 2
+R_READ          = 3
+R_WRITE         = 4
+R_CLUNK         = 5
+R_STAT          = 6
+R_WSTAT         = 7
+R_REMOVE        = 8
+R_FLUSH         = 9
+R_DUP           = 10
+RF_NONBLOCK     = $01           ; RQ_FLAGS: answer E_AGAIN rather than wait
+O_READ          = 0             ; Open modes
+O_WRITE         = 1
+O_RDWR          = 2
+O_RW_MASK       = 3
+O_TRUNC         = $10
+O_NONBLOCK      = $40
+SR_NAME         = 0             ; The stat record (64 bytes): its name (32) ...
+SR_QTYPE        = 32            ;   its qid: type (QT_*) ...
+SR_QVERS        = 33            ;     version ...
+SR_QPATH        = 34            ; (4)   and path (unique in its server) ...
+SR_MODE         = 38            ; (2) its mode (permissions; DM_DIR) ...
+SR_LENGTH       = 40            ; (4) its length ...
+SR_MTIME        = 44            ; (4) its time (seconds since 2000) ...
+SR_DEV          = 48            ;   its device letter ...
+SR_INST         = 49            ;   and instance (the spec's first character)
+SR_SIZE         = 64
+QT_DIR          = $80           ; Qid types
+QT_FILE         = $00
+DM_DIR          = $80           ; The mode's high byte: a directory
+IO_UNIT         = 512           ; The most a READ or WRITE asks of a server in one request
+
 ; Notes (numbers, as Plan 9's are strings): what they are, and the exit code of a task a note ends
 NOTE_INTERRUPT  = 1             ; Ctrl-C (130)
 NOTE_KILL       = 2             ; Kill: not caught (137)
@@ -185,7 +295,22 @@ NOTE_BRK        = 5             ; sys: brk, a BRK instruction (133)
 NOTE_USER       = 16            ; 16-31: the programs' own (128 + the note)
 NOTE_MAX        = 31
 NOTE_GROUP      = $80           ; NOTE's .A: a note group, not a task
-SPAWN_NEWGROUP  = $01           ; SPAWN's flags: the child starts a note group of its own
+SPAWN_NEWGROUP  = $01           ; SPAWN's flags: the child starts a note group of its own ...
+SPAWN_NEWNS     = $02           ;   and a namespace of its own, empty (else it shares its parent's)
+CH_MAX          = 48            ; The channels: open files, shared by the fds that name them ...
+K_CH_REFS       = $0800         ; (48)   the fds naming it (0: free) ...
+K_CH_SRV        = $0830         ; (48)   its server's task ($FF: the server ended) ...
+K_CH_DEV        = $0860         ; (48)   its device letter ...
+K_CH_FID        = $0890         ; (48)   the server's fid ...
+K_CH_MODE       = $08C0         ; (48)   its open mode ...
+K_CH_QTYPE      = $08F0         ; (48)   its qid type (QT_DIR ...) ...
+K_CH_OFF0       = $0920         ; (48)   and its offset (4 bytes, low first)
+K_CH_OFF1       = $0950         ; (48)
+K_CH_OFF2       = $0980         ; (48)
+K_CH_OFF3       = $09B0         ; (48)
+DEV_MAX         = 32            ; The servers' device letters (SRV_REGISTER) ...
+K_DEV_LETTER    = $0A00         ; (32)   the letter (0: a free entry) ...
+K_DEV_TASK      = $0A20         ; (32)   and its server's task
 K_SEG_FIRST     = $0740         ; (16) Each shared segment's first shared bank ID ...
 K_SEG_COUNT     = $0750         ; (16)   its banks (0: the segment isn't in use) ...
 K_SEG_REFS      = $0760         ; (16)   and the tasks attached
@@ -199,6 +324,46 @@ K_EXIT_MSG      = $0500         ; (16 x 32) The exit records' messages
 EXIT_MSG_MAX    = 31            ;   (31 characters and the 0)
 EX_NONE         = 0
 EX_HELD         = 1
+
+; ---- Namespaces (kernel/ns.s, BIOS ROM page 3).  A namespace is the mount entries with its number; a task names
+; one (tasks share one till one of them changes it: then it gets a copy).  An entry is one member of the union at
+; a mount point: a server's device letter and spec, and a path in that server.  The mount points and the paths are
+; strings in a pool, shared, each counted by the entries using it
+NS_MAX          = 8             ; Namespaces ...
+K_NS_REFS       = $0A40         ; (8)   the tasks (and union channels) using it (0: free)
+K_TASK_NS       = $0A48         ; (16) Each task's namespace ($FF: none: only # names)
+K_RES_FROM      = $0A58         ; (16) Each task's name being resolved (in K_RES): its mount point (a string) ...
+K_RES_LEN       = $0A68         ; (16)   the length of the part that matched it ...
+K_RES_STATE     = $0A78         ; (16)   RS_* ...
+K_RES_SEQ       = $0A88         ; (16)   the last member tried (its K_MT_SEQ) ...
+K_RES_NS        = $0A98         ; (16)   and the namespace
+K_CH_UFROM      = $0AC0         ; (48) A channel on a union directory: the mount point ($FF: not a union) ...
+K_CH_UNS        = $0AF0         ; (48)   its namespace ...
+K_CH_USEQ       = $0B20         ; (48)   and the member it's reading
+MT_MAX          = 128           ; The mount entries ...
+K_MT_NS         = $0B80         ; (128)  the namespace ($FF: a free entry) ...
+K_MT_FROM       = $0C00         ; (128)  the mount point (a string) ...
+K_MT_SEQ        = $0C80         ; (128)  its order among the union's members (lowest first) ...
+K_MT_DEV        = $0D00         ; (128)  the device letter ...
+K_MT_PATH       = $0D80         ; (128)  the path in the device (a string, with no leading /) ...
+K_MT_FLAGS      = $0E00         ; (128)  MCREATE ...
+K_MT_SPEC       = $0E80         ; (8 x 128) and the spec, zero-padded: byte n of entry e at K_MT_SPEC + 128 * n + e
+SP_MAX          = 64            ; The strings (PATH_MAX characters and the 0, 64 bytes each) ...
+K_SP_REFS       = $1280         ; (64)   the entries using it (0: free) ...
+K_SP            = $1400         ; (64 x 64) the strings
+K_RES           = $2400         ; (16 x 64) Each task's name being resolved: absolute and clean, or a # name
+K_CAND          = $2800         ; (16 x 64) Each task's last candidate (BIND's new): its path in its server ...
+K_CAND_DS       = $2C00         ; (16 x 16)  its device letter and spec (9 bytes: as RQ_DEV and RQ_SPEC are)
+K_NS_PATH       = $2D00         ; (64) A path, a moment (BIND's old)
+RS_NONE         = 0             ; K_RES_STATE: nothing found
+RS_NS           = 1             ;   a mount point found: its members, in order
+RS_DEV          = 2             ;   a # name: one candidate, its device
+RS_DONE         = 3             ;   no more candidates
+MREPL           = 0             ; BIND's and MOUNT's flags: in place of what's there ...
+MBEFORE         = 1             ;   a union, this first ...
+MAFTER          = 2             ;   a union, this last ...
+MORDER          = 3
+MCREATE         = 4             ;   and a CREATE in the union comes here
 
 ; ---- The executable and module header, HYX2 (docs/conventions.md): 48 bytes, programs and modules alike
 HX_MAGIC        = 0             ; "HYX2"

@@ -27,7 +27,7 @@ const { createMachine } = require('./lib/machine.js');
 const ROOT = path.join(__dirname, '..');
 const hx = (v, n = 2) => v.toString(16).toUpperCase().padStart(n, '0');
 const CLOCK = 3.579545;
-const STATES = ['free', 'ready', 'wait', 'call', 'idle', 'new', 'sleep', 'block'];
+const STATES = ['free', 'ready', 'wait', 'call', 'idle', 'new', 'sleep', 'block', 'event'];
 // The OS zero page (include/layout.inc): what the report reads in each task
 const TK = { SP: 0x80, STATE: 0x81, FLAGS: 0x82, PREEMPT: 0x83, BUSY: 0x85 }, TA_NAME = 0x0230;
 

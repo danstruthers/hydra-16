@@ -5,13 +5,15 @@
 ;   U, Y, W, X, A, P, PCL, PCH          (top first; TK_SP is just below it)
 ; A switch saves the stack pointer, picks the next task, writes T, loads that task's stack pointer and unwinds
 ; its frame (K_SCHED_RESUME).  Round robin over tasks 1-15; the kernel task (0) runs only when nothing else can,
-; and sleeps the CPU (its idle loop: reset.s).  Only ST_READY runs (TK_STATE: the state of the context on top of
+; and sleeps the CPU (its idle loop: reset.s), or when irq entries have queued notes to groups for it to post (then
+; it takes its turn in the round).  Only ST_READY runs (TK_STATE: the state of the context on top of
 ; the task's stack, so a driver serving a call is ST_READY while the call runs, and can be switched out).
 ;
 ; Waiting is always the same: set ST_WAIT, YIELD, and when woken (WAKE: ST_READY), look again.  A wake for
-; nothing costs a look.  Two waits the scheduler ends itself, as it looks for the next task: ST_SLEEP, once the
-; time in the kernel task's table has come (so the tick's interrupt does no more than count), and ST_BLOCKED, once
-; the task it's waiting to call is free (so a call's end wakes nobody).
+; nothing costs a look.  Three waits the scheduler ends itself, as it looks for the next task: ST_SLEEP, once the
+; time in the kernel task's table has come (so the tick's interrupt does no more than count); ST_BLOCKED, once
+; the task it's waiting to call is free (so a call's end wakes nobody); and ST_EVENT, once the event count of the
+; server it's waiting on has changed (so an irq entry wakes its clients by adding 1 to a byte: file.s).
 
 .include "kdefs.inc"
 
@@ -92,7 +94,7 @@ K_SCHED_PICK:
             txa
             and         #TASKS - 1
             tax
-            beq         @skip                               ; (The kernel task isn't in the round)
+            beq         @kernel
             stx         T_REGISTER                          ; A quick look at it
             lda         TK_STATE
             sty         T_REGISTER
@@ -102,6 +104,8 @@ K_SCHED_PICK:
             beq         @sleeper
             cmp         #ST_BLOCKED
             beq         @blocked
+            cmp         #ST_EVENT
+            beq         @event
 @skip:
             cli                                             ; (A moment for interrupts)
             nop
@@ -137,6 +141,27 @@ K_SCHED_PICK:
             beq         @ready
             bra         @skip
 
+@event:                                                     ; Has its server's event count changed?  (Or the server
+            stx         T_REGISTER                          ;   gone: it asks again, and finds out)
+            lda         TK_EVTASK
+            sta         T_REGISTER                          ; ---- The server
+            lda         TK_STATE
+            beq         @ready                              ; (ST_FREE)
+            lda         TK_EVENT
+            stx         T_REGISTER                          ; ---- The waiter
+            cmp         TK_EVV
+            sty         T_REGISTER                          ; ---- Back
+            bne         @ready
+            bra         @skip
+
+@kernel:                                                    ; The kernel task is in the round only while it has
+            stz         T_REGISTER                          ;   notes queued to post (notes.s: K_NOTE_QUEUED, from
+            lda         K0_NQ_ANY                           ;   its idle loop)
+            sty         T_REGISTER
+            beq         @skip
+            txa                                             ; (KERNEL_TASK)
+            rts
+
 ; ****************************************************************************
 ; PREEMPT_OFF: hold the CPU (no task switch: interrupts go on).  They nest.  Keeps everything
 K_PREEMPT_OFF:
@@ -164,19 +189,27 @@ K_PREEMPT_ON:
             rts
 
 ; ****************************************************************************
-; PAUSE: wait until woken (WAKE).  Keeps everything
+; PAUSE: wait until woken (WAKE); at once if a wake came since the last (TK_WOKEN: so a wake between asking for
+; something and waiting for it isn't lost).  Keeps everything
 K_PAUSE:
             php
             sei
             pha
+            lda         TK_WOKEN
+            bne         @woken
             lda         #ST_WAIT
             sta         TK_STATE
             pla
             jsr         K_YIELD
+            pha
+@woken:
+            stz         TK_WOKEN
+            pla
             plp
             rts
 
-; WAKE: task .A, if it's waiting, can run.  From any task, or an irq entry.  Keeps everything
+; WAKE: task .A, if it's waiting, can run; if it isn't, its next PAUSE won't wait (TK_WOKEN).  From any task, or
+; an irq entry.  Keeps everything
 K_WAKE:
             php
             sei
@@ -189,9 +222,16 @@ K_WAKE:
             stx         T_REGISTER                          ; A quick look
             lda         TK_STATE
             cmp         #ST_WAIT
-            bne         :+
+            beq         :+
+            cmp         #ST_EVENT
+            bne         :++
+:
             lda         #ST_READY
             sta         TK_STATE
+            bra         :++
+:
+            lda         #1
+            sta         TK_WOKEN
 :
             sty         T_REGISTER
             pla
@@ -199,6 +239,25 @@ K_WAKE:
             plx
             plp
             clc
+            rts
+
+; Wait till task .A's event count (TK_EVENT) isn't .X: a server's, as it took a request that answered E_AGAIN
+; (file.s); or a WAKE, or a note.  At once if a wake or a note came since.  Modifies .A, .X, .Y
+K_EVWAIT:
+            php
+            sei
+            ldy         TK_WOKEN
+            bne         @woken
+            ldy         TK_NOTED
+            bne         @woken
+            sta         TK_EVTASK
+            stx         TK_EVV
+            lda         #ST_EVENT
+            sta         TK_STATE
+            jsr         K_YIELD                             ; (The scheduler looks at the count: K_SCHED_PICK)
+@woken:
+            stz         TK_WOKEN
+            plp
             rts
 
 ; ****************************************************************************

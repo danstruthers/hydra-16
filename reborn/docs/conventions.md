@@ -27,9 +27,9 @@ Every task has its own `$0000`-`$7FFF` (the `T` register selects it) and its own
 | `$00`, `$01` | Its RAM bank (`$8000`-`$9FFF`) and paged ROM bank (`$A000`-`$DFFF`) registers |
 | `$02`-`$21` | `r0`-`r15`, the call registers |
 | `$22`-`$7F` | The program's own zero page: never touched by the system |
-| `$80`-`$FF` | The OS zero page (`TK_*` the task's state, `KC_*` kcopy's, `KF_*` the far call's, `K_*` the call stubs' scratch, `TN_*` the notes'; `$AF`-`$FF` free for the kernel's growth) |
+| `$80`-`$FF` | The OS zero page (`TK_*` the task's state, `KC_*` kcopy's, `KF_*` the far call's, `K_*` the call stubs' scratch, `TN_*` and `TQ_*` the notes', `F_*` the file calls'; `$C0`-`$FF` free for the kernel's growth).  One byte of it is a program's to write: its event count, `TASK_EVENT` (`$BD`) |
 | `$0100`-`$01FF` | Its stack; a task that isn't running has its frame on top (`U Y W X A P PCL PCH`) |
-| `$0200`-`$03FF` | The OS area (`TA_*`): the request block, its entries, its break, its note handler, its name, its copy of the IRQ lines' owners, its page and bank maps, its arguments at `$0300` |
+| `$0200`-`$03FF` | The OS area (`TA_*`): a server's request being served (`TASK_INBOX`), its entries, its break, its note handler, its name, its copy of the IRQ lines' owners, its page and bank maps, the request it's making, the name a request names (`TASK_PATH`), its fds, its current directory, its arguments at `$0350` (`TASK_ARGS`) |
 | `$0400`-`$7FFF` | The program's RAM: its data and BSS, then its break (`BREAK`); pages from the top down (`PAGES_ALLOC`).  Task F's top page is the DS1747's |
 
 The kernel task (task 0) keeps the kernel's state: its program zero page (`K0_*`) and its RAM from `$0400`
@@ -39,12 +39,14 @@ The kernel task (task 0) keeps the kernel's state: its program zero page (`K0_*`
 
 * **States** (`TK_STATE`, the state of the context on top of the task's stack): `FREE`, `READY`, `WAIT` (for a
   `WAKE`), `CALL` (calling another task), `IDLE` (a driver between calls), `NEW`, `SLEEP` (till a tick count),
-  `BLOCKED` (waiting to call a busy task).  Only `READY` runs; the scheduler makes a `SLEEP` whose time has come,
-  and a `BLOCKED` whose task is free, `READY` as it looks for the next task.
+  `BLOCKED` (waiting to call a busy task), `EVENT` (waiting for a server's event count to change, or a `WAKE`).
+  Only `READY` runs; the scheduler makes a `SLEEP` whose time has come, a `BLOCKED` whose task is free, and an
+  `EVENT` whose server's count has changed `READY` as it looks for the next task.
 * **Waiting** is always the same: set the state, `YIELD`, and look again when back.  A wake for nothing costs a
-  look.
+  look.  A wake that comes before the wait (`TK_WOKEN`) makes the wait return at once.
 * **The kernel task** is never preempted (its `TK_PREEMPT` is always at least 1): a `KCALL` runs to its end, so
-  the kernel's tables need no locks.  When nothing can run it idles the CPU (`WAI`).
+  the kernel's tables need no locks.  When nothing can run it idles the CPU (`WAI`); it takes a turn in the round
+  only when irq entries have queued notes to groups for it to post (`NOTE_QUEUE`).
 * **Programs** take the lowest free task (init is task 1); **drivers** the highest (task F first).
 * A task's **exit record** (its code and message) waits for its parent's `WAIT`, and the task isn't used again
   till then; a parent that ends first leaves its children and their records to init.
@@ -66,13 +68,17 @@ The kernel task (task 0) keeps the kernel's state: its program zero page (`K0_*`
 
 ## The kernel's pages
 
-* BIOS ROM page 0 has what runs often (the interrupt path, the scheduler, SCALL, kcopy, the calls that wait);
-  page 1 tasks' and memory's other work; page 4 POST.  Page 0 is the scarce one.
+* BIOS ROM page 0 has what runs often (the interrupt path, the scheduler, SCALL, kcopy, a task's side of the
+  calls that wait); page 1 the kernel task's side of the task calls (the KCALLs, setting a task up, the boot),
+  memory, TASKINFO; page 2 files; page 3 namespaces; page 4 POST.  Page 0 is the scarce one.
 * The kernel calls a routine on another page with `FARCALL` (the COMMON block's `K_FAR`: `.A`, `.X`, `.Y` and C
   both ways).  A system call on another page is marked `far` in `spec/api.def`: its jump table slot goes to a
   6-byte stub on page 0.
 * A system call that waits ends through `K_NOTE_CHECK` (or `K_NOTE_RETURN` with `E_INTR`), at the program's
-  return address, so a note that came is taken on the way out: so a far call can't wait.
+  return address, so a note that came is taken on the way out.  A far call's stub ends through `K_NOTE_CHECK`
+  itself, so a far call may wait too: it returns `E_INTR`, and the stub takes the note.
+* Code on page 1 or later reaches page 0's routines by `FARCALL` too (`KPRINT`'s `K_PUTSTR` reads page 0's ROM:
+  a page's own strings are printed a byte at a time, as `task.s` and `post.s` do).
 
 ## Notes
 
@@ -84,9 +90,13 @@ The kernel task (task 0) keeps the kernel's state: its program zero page (`K0_*`
 ## Interrupts
 
 * One path for every line: a line's vector points at its stub in the COMMON block (the same on all 16 BIOS ROM
-  pages), which saves `W` and comes to the dispatcher on page 0; the line's owner gets the interrupt in its own
-  task, at its irq entry, with the line in `.A`.  The entry answers `.A = 0`, or `IRQ_RESCHED` for a task
-  switch.  It runs with IRQs off and never waits.
+  pages), which saves `W` and goes on to the dispatcher, whose main path is in the COMMON block too; the line's
+  owner gets the interrupt in its own task, at its irq entry, with the line in `.A`.  The entry answers `.A = 0`,
+  or `IRQ_RESCHED` for a task switch.  It runs with IRQs off and never waits.
+* VIA timer 2 is a line of its own, `LINE_VIA_T2` (16): the VIA's stub sends its interrupt there.  Owning it is
+  owning the timer (one-shot, its interrupt on); the VIA's other registers stay the kernel's.
+* **An irq entry has about 85 cycles** of the 200 (the dispatch takes about 115): it wakes clients by adding 1 to
+  its event count (`inc TASK_EVENT`), never with `WAKE`, and sends a note to a group with `NOTE_QUEUE`.
 * **IRQs off**: no masked stretch of code over 200 cycles anywhere (a character at 115200 is 320 cycles at
   3.58 MHz).  Long work runs in steps with a moment between: `cli`, `nop`, `sei` (or `php`/`sei` ... `plp`).
 * A line must be owned (`IRQ_OWN`) before its device interrupts: a line nobody owns is counted and ignored, and
@@ -102,6 +112,44 @@ The kernel task (task 0) keeps the kernel's state: its program zero page (`K0_*`
   for its calls (`.Y` = the caller) and `irq` for its lines; `HF_BOOT` starts it at boot.
 * The module directory (paged ROM bank 0 at `$A200`, written by `tools/romimg.js`) lists each module's bank, type,
   flags and name.  `SPAWN "#m/NAME"` starts a program from it.
+* The boot starts the drivers (`HF_BOOT`, task F down, in the directory's order), waits for their inits (their
+  devices registered; 2 seconds at most), then starts init.  The system's modules are in `modules/rom.txt`.
+
+## Files and servers
+
+* A task's fds (`TA_FD`: 16) name channels, the kernel task's table of open files (48); a channel names its
+  server, its fid there, its mode and offset.  `DUP` and inheritance share a channel, and its offset.  A child
+  gets its parent's fds 0, 1 and 2.
+* A request is a block (`RQ_*`, 32 bytes) the client fills in its own `TA_REQ`; the server's serve entry takes it
+  into its `TASK_INBOX` (`SRV_TAKE`), moves the data with `CLIENT_READ` and `CLIENT_WRITE`, and answers
+  (`SRV_REPLY`).  `READ` and `WRITE` ask for `IO_UNIT` (512) bytes at most a request; a short read ends the
+  `READ`, a short write is sent again for the rest.
+* **A server never waits.**  When it can't answer yet, it answers `E_AGAIN`, and the kernel has the client wait
+  for the server's event count to change from what it was as the server took the request (`RQ_EVENT`), or for a
+  `WAKE` (a wait mask's), then sends the request again; a note ends the wait (`R_FLUSH` to the server, `E_INTR`).
+  A server adds 1 to its event count (`inc TASK_EVENT`) whenever something its clients may be waiting for has
+  happened.
+* Servers are built on srvlib (`sdk/asm/srvlib.inc` at the top, `srvlib.s` at the end): a tree of entries
+  (directories, text files made on each read, ctl files of commands, data files with a handler, dynamic directories
+  whose children a handler makes), the fids, the stat records; a tree a device letter (`SRV_TREES`) for a server of
+  several.  Control is text written to ctl files.
+* The kernel's own devices (`#/`, `#n`, `#t`, `#m`, `#p`, `#|`) are a driver module like any other (`kdev`), not
+  the kernel task's.
+* `PUTC`, `PUTS` and `GETC` are a write to fd 1 and a read from fd 0; a task without them (the kernel, a driver)
+  has the bring-up console, polled.
+
+## Names
+
+* A name is made whole and clean before it's looked up: a relative one after the current directory (`TA_CWD`),
+  then `.`, `..` and empty elements gone.  A `#x` name is device `x`'s own, in no namespace.
+* A namespace is a table of mount entries in the kernel task (`kernel/ns.s`); tasks share one till one of them
+  changes it, which copies it first.  An entry is one member of the union at a mount point: a device, a spec and
+  a path in that device.  Binds are resolved when they're made, as in Plan 9: binding a mount point binds all its
+  members; anything else binds the first of its candidates that's there.
+* A name's mount point is the longest one it starts with, in whole elements; its candidates are that union's
+  members, in order, each with the rest of the name.  `OPEN`, `REMOVE` and the stat calls try them in turn till
+  one isn't `E_NOENT`; `CREATE` goes to the `MCREATE` member (or the first).  A directory opened at a mount point
+  with more members than one is a union directory: `READ` gives every member's records, one member after another.
 
 ## Source style
 
@@ -117,6 +165,7 @@ The kernel task (task 0) keeps the kernel's state: its program zero page (`K0_*`
   its kernel-task half (a KCALL) by `K_NAME_K`; cheap locals (`@name`) inside a routine.  Prefixes: `TK_` (OS
   zero page), `TA_` (OS area), `K_` (kernel task's tables, or call scratch), `K0_` (kernel task's zero page),
   `KC_` (kcopy), `KF_` (the far call), `HX_`/`HT_`/`HF_` (the module header), `MD_`/`ME_` (the module directory),
-  `E_` (errors), `ST_` (states), `TI_` (TASKINFO's answer), `NOTE_` (notes), `P_` (POST), `m_`/`n_` (mem.s and
-  notes.s's own helpers).
+  `E_` (errors), `ST_` (states), `TI_` (TASKINFO's answer), `NOTE_` (notes), `RQ_`/`R_`/`O_`/`SR_` (requests, open
+  modes, stat records), `F_` (the file calls' scratch), `srv_` (srvlib), `P_` (POST), `m_`/`n_`/`f_`/`t_` (mem.s,
+  notes.s, file.s and task.s's own helpers).
 * Text files have CRLF line endings in the working copy (Git stores LF).

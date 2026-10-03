@@ -12,6 +12,11 @@
 ;   "d"         a note handler that asks for the default (C = 1); then pause, for ever
 ;   "t"         note init (task 1) with note 20; then pause, for ever
 ;   "b"         a BRK
+;   "r"         open #T/wait (t_srv) and read 3 bytes: end with the first ($E0 + the error, if one)
+;   "w"         write "W" to fd 1: end with code 0 ($E0 + the error, if one)
+;   "i"         read a byte from fd 0: end with it ($EF: the end of the input; $E0 + the error, if one)
+;   "h"         open /hello (its namespace's): end with code 0 ($E0 + the error, if one)
+;   "m"         bind #T/sub at / (in place), then open /inner: end with code 0 ($E0 + the error, if one)
 ;   anything else: end with code $EE
 
 .include "hydra.inc"
@@ -26,6 +31,7 @@ args:       .res        2
 param:      .res        1
 start:      .res        2
 kept:       .res        1                                   ; ("n": the note its handler kept)
+buf:        .res        4                                   ; ("r": what it read)
 
 .code
 main:
@@ -144,6 +150,76 @@ op_b:
             lda         #$EE
             bra         end
 
+op_r:
+            LDR         r0, s_wait
+            lda         #O_READ
+            jsr         OPEN
+            bcs         @err
+            sta         param                               ; (The fd)
+            LDR         r0, buf
+            LDR         r1, 3
+            lda         param
+            jsr         READ
+            bcs         @err
+            lda         buf
+            jmp         end
+
+@err:
+            ora         #$E0
+            jmp         end
+
+op_i:
+            LDR         r0, buf
+            LDR         r1, 1
+            lda         #0
+            jsr         READ
+            bcs         @err
+            cmp         #0
+            beq         @eof
+            lda         buf
+            jmp         end
+
+@eof:
+            lda         #$EF
+            jmp         end
+
+@err:
+            ora         #$E0
+            jmp         end
+
+op_h:
+            LDR         r0, s_hello
+open:
+            lda         #O_READ
+            jsr         OPEN
+            bcs         :+
+            lda         #0
+            jmp         end
+:
+            ora         #$E0
+            jmp         end
+
+op_m:
+            LDR         r0, s_tsub
+            LDR         r1, s_root
+            lda         #MREPL
+            jsr         BIND
+            bcs         :-
+            LDR         r0, s_inner
+            bra         open
+
+op_w:
+            LDR         r0, s_w
+            LDR         r1, 1
+            lda         #1
+            jsr         WRITE
+            bcs         :+
+            lda         #0
+            jmp         end
+:
+            ora         #$E0
+            jmp         end
+
 ; Note handlers: keep the note and go on, or ask for the default
 keep:
             sta         kept
@@ -193,8 +269,15 @@ hex:
             rts
 
 .rodata
-ops:        .byte       "esykpocgndtb"
+ops:        .byte       "esykpocgndtbrwihm"
 OPS         = * - ops
-op_vec:     .word       op_e, op_s, op_y, op_k, op_p, op_o, op_c, op_g, op_n, op_d, op_t, op_b
+op_vec:     .word       op_e, op_s, op_y, op_k, op_p, op_o, op_c, op_g, op_n, op_d, op_t, op_b, op_r, op_w, op_i
+            .word       op_h, op_m
+s_hello:    .byte       "/hello", 0
+s_inner:    .byte       "/inner", 0
+s_tsub:     .byte       "#T/sub", 0
+s_root:     .byte       "/", 0
 s_child:    .byte       "#m/t_child", 0
 s_e9:       .byte       "e9", 0
+s_wait:     .byte       "#T/wait", 0
+s_w:        .byte       "W"

@@ -31,7 +31,7 @@ function report(root, built = {}) {
     (seg.KCODE ? seg.KCODE.size : 0) + ', data ' + (seg.KRODATA ? seg.KRODATA.size : 0) + '); ' + page0Free + ' free before the jump table');
   lines.push('  jump table    ' + hx(0xF800) + '-' + hx(0xF800 + jt - 1) + '  ' + String(jt).padStart(5) + ' bytes (' + jt / 3 + ' slots)');
   if (seg.COMMON_P0) lines.push('  COMMON block  ' + hx(seg.COMMON_P0.start) + '-' + hx(seg.COMMON_P0.end) + '  ' + String(seg.COMMON_P0.size).padStart(5) + ' bytes, on every page');
-  for (const [p, what] of [[1, 'tasks, memory, notes'], [4, 'POST']]) {
+  for (const [p, what] of [[1, 'tasks, memory, notes'], [2, 'files, names, pipes'], [3, 'namespaces'], [4, 'POST']]) {
     const code = seg['KCODE_P' + p], data = seg['KRODATA_P' + p];
     if (!code && !data) continue;
     const used = (code ? code.size : 0) + (data ? data.size : 0);
