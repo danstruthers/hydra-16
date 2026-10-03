@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; t_scall - calls into another task (phase 1, spike S3), run as init, with t_drv (task F) and t_child: a driver's
+; t_scall - calls into another task (phase 1, spike S3), run as init, with t_drv (task E) and t_child: a driver's
 ; serve entry run in its task, results and errors back, the caller seen, the errors of a call to no driver, a
 ; busy driver making its other callers wait, and the round trip's time (the marks "<scall" and "scall>" around
 ; 1000 calls: sim/test.js divides).
@@ -11,7 +11,7 @@
 
             HYX2_PROGRAM "t_scall", main
 
-DRV             = $0F                                       ; t_drv: the only boot driver, so task F
+DRV             = $0E                                       ; t_drv: the boot driver after kdev, so task E
 CALLS           = 1000
 
 .zeropage
@@ -26,7 +26,7 @@ main:
             lda         #5
             ldy         #DRV
             jsr         DBG_SCALL
-            EXPECT_A    $5A, "the driver's init ran, in its task (task F)"
+            EXPECT_A    $5A, "the driver's init ran, in its task (task E)"
             lda         #0
             ldx         #$41
             ldy         #DRV

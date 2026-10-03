@@ -53,10 +53,10 @@ main:
             EXPECT_ERR  E_NOENT, "SPAWN of a module that isn't there: E_NOENT"
             LDR         r0, s_badpath
             jsr         SPAWN
-            EXPECT_ERR  E_NOENT, "SPAWN of a name not in #m: E_NOENT"
+            EXPECT_ERR  E_NODEV, "SPAWN of a path through a device that isn't there: E_NODEV"
             LDR         r0, s_long
             jsr         SPAWN
-            EXPECT_ERR  E_NAMETOOLONG, "SPAWN of a name over 11 characters: E_NAMETOOLONG"
+            EXPECT_ERR  E_NAMETOOLONG, "SPAWN of a path over 63 characters: E_NAMETOOLONG"
             lda         #$FF
             stz         r0
             stz         r0 + 1
@@ -249,7 +249,7 @@ main:
 @full:
             EXPECT_ERR  E_NOTASK, "SPAWN with every task in use: E_NOTASK"
             lda         count
-            EXPECT_A    14, "14 tasks for programs (2-F)"
+            EXPECT_A    13, "13 tasks for programs (2-E: kdev is F)"
             lda         #2                                  ; (Time to pause, all of them)
             ldx         #0
             jsr         SLEEP
@@ -267,7 +267,7 @@ main:
             bra         @waitall
 :
             lda         sum
-            EXPECT_A    14, "each woken, each waited for"
+            EXPECT_A    13, "each woken, each waited for"
 
 ; ---- An orphan: init (this task) inherits it
             CHILD       s_o
@@ -294,7 +294,7 @@ elapsed:
 s_child:    .byte       "#m/t_child", 0
 s_nope:     .byte       "#m/nope", 0
 s_badpath:  .byte       "#x/t_child", 0
-s_long:     .byte       "#m/t_child_is_long", 0
+s_long:     .byte       "#m/t_child_is_a_name_long_enough_to_make_this_path_over_63_characters", 0
 s_e7:       .byte       "e7", 0
 s_e1:       .byte       "e1", 0
 s_e2:       .byte       "e2", 0

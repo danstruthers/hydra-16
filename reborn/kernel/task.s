@@ -3,7 +3,8 @@
 ;
 ; A module (HYX2: layout.inc) in the paged ROM runs in place: its task's ROM bank register selects its bank, so
 ; its code is at $A000 in that task alone; its initialised data is copied into the task's RAM, and its BSS
-; cleared.  A program starts at K_TASK_MAIN (its entry point with r0 = its arguments; EXITS 0 if it returns).
+; cleared.  A program starts at K_TASK_MAIN (its entry point with r0 = its arguments; EXITS 0 if it returns); a RAM
+; program (load.s) at K_TASK_LOAD, which loads it first.
 ; A driver starts at K_DRIVER_MAIN: its init, then it's ST_IDLE, running only for calls and interrupts; while
 ; its init runs it's busy (TK_BUSY), and calls to it wait.  Programs take the lowest free task (init is first:
 ; task 1); drivers the highest (task F first: the DS1747's registers are task F's top bytes, and a driver's
@@ -14,7 +15,8 @@
 ; The task table, the parents and the exit records are the kernel task's (K_*: layout.inc): changed in KCALLs.
 ;
 ; What runs in the kernel task (the KCALLs, setting a task up, the boot) is on BIOS ROM page 1; what runs in the
-; calling task (SPAWN, EXITS, WAIT) and the tasks' first instructions, on page 0.
+; calling task (EXITS, WAIT) and the tasks' first instructions, on page 0; SPAWN's side and the loader, on page 3
+; (load.s).
 
 .include "kdefs.inc"
 
@@ -157,8 +159,15 @@ K_MODINFO_K:
 ; parent.  In the kernel task (a KCALL, or the boot).  OUT: C = 0, .A = the task; or C = 1, .A = E_NOEXEC,
 ; E_NOTASK.  Keeps K0_PTR
 K_START_MODULE:
+            ldy         #ME_BANK
+            lda         (K0_PTR),Y
+            sta         K0_NEWBANK
             ldy         #ME_TYPE
             lda         (K0_PTR),Y
+
+; The same for a module of type .A in bank K0_NEWBANK; or for a RAM program (K0_NEWBANK $FF, its name in
+; K_NAMEBUF), which loads itself as it starts (K_TASK_LOAD)
+K_START_TASK:
             sta         K0_NEWTYPE
             cmp         #HT_PROGRAM
             beq         @program
@@ -173,9 +182,6 @@ K_START_MODULE:
             jsr         K_TASK_RESERVE
             bcs         @done
             sta         K0_NEW
-            ldy         #ME_BANK
-            lda         (K0_PTR),Y
-            sta         K0_NEWBANK
             jsr         K_TASK_SETUP
             bcs         @bad
             ldx         K0_NEW
@@ -264,19 +270,25 @@ K_TASK_RESERVE:
             rts
 
 ; Set task K0_NEW up to run the module in bank K0_NEWBANK, a K0_NEWTYPE: its banks, its entries and its name (from
-; the module's header), its OS zero page, its data copied, its BSS cleared, its first frame.  In the kernel task;
-; keeps the I flag (the boot's are off).  It's in the new task's memory in short steps, with IRQs off for each
-; and a moment between.  OUT: C = 0; or C = 1, .A = E_NOEXEC (not a module this kernel can run).
-; Modifies .A, .X, .Y
+; the module's header), its OS zero page, its data copied, its BSS cleared, its first frame.  A RAM program
+; (K0_NEWBANK $FF) has no header yet: its name is K_NAMEBUF, and the rest is its own, as it loads (K_TASK_LOAD).
+; In the kernel task; keeps the I flag (the boot's are off).  It's in the new task's memory in short steps, with
+; IRQs off for each and a moment between.  OUT: C = 0; or C = 1, .A = E_NOEXEC (not a module this kernel can
+; run).  Modifies .A, .X, .Y
 K_TASK_SETUP:
             ldx         K0_NEW
             lda         K0_NEWBANK
             php
             sei
             stx         T_REGISTER                          ; ---- The new task (not its stack: no jsr, no pha)
-            sta         ROM_BANK                            ; Its module, at $A000
-            sta         TA_MODBANK
+            sta         TA_MODBANK                          ; Its module, at $A000
             stz         RAM_BANK
+            cmp         #$FF
+            bne         :+
+            stz         ROM_BANK                            ; (A RAM program: bank 0's at $A000, and no header)
+            bra         @header
+:
+            sta         ROM_BANK
             ldy         #3
 :
             lda         PROM_WINDOW + HX_MAGIC,Y
@@ -311,8 +323,8 @@ K_TASK_SETUP:
             stz         TA_NOTIFY + 1
             stz         T_REGISTER                          ; ---- Back (a moment)
             plp
-            lda         #$FF                                ; Its fds: closed (SPAWN gives a program its parent's
-            php                                             ;   0, 1 and 2); its directory: /
+            lda         #$FF                                ; Its fds: closed (SPAWN gives a program those its map
+            php                                             ;   names); its directory: /
             sei
             stx         T_REGISTER                          ; ---- The new task
             .repeat     FD_MAX / 2, I
@@ -331,6 +343,11 @@ K_TASK_SETUP:
             stz         TA_CWD + 1
             stz         T_REGISTER                          ; ---- Back (a moment)
             plp
+            lda         K0_NEWBANK
+            cmp         #$FF
+            bne         :+
+            jmp         @ram
+:
             php
             sei
             stx         T_REGISTER                          ; ---- The new task
@@ -402,6 +419,7 @@ K_TASK_SETUP:
             plp
             ldy         #1
             jsr         K_TASK_FILL
+@first:
             ldx         K0_NEW                              ; Its first frame: where it starts (and a driver's flags)
             ldy         T_REGISTER
             php
@@ -423,9 +441,19 @@ K_TASK_SETUP:
             bra         @frame
 
 @program:
+            lda         K0_NEWBANK
+            cmp         #$FF
+            beq         @load
             lda         #<K_TASK_MAIN
             QL_PUT      $0100 + FRAME_SP + FR_PCL
             lda         #>K_TASK_MAIN
+            QL_PUT      $0100 + FRAME_SP + FR_PCH
+            bra         @frame
+
+@load:                                                      ; (A RAM program: it loads itself first)
+            lda         #<K_TASK_LOAD
+            QL_PUT      $0100 + FRAME_SP + FR_PCL
+            lda         #>K_TASK_LOAD
             QL_PUT      $0100 + FRAME_SP + FR_PCH
 @frame:
             stx         T_REGISTER                          ; ---- The rest of the frame: U, Y, W, X, A 0; P 0 (IRQs on)
@@ -439,6 +467,36 @@ K_TASK_SETUP:
             plp
             clc
             rts
+
+@ram:                                                       ; A RAM program: no entries yet, no calls served ...
+            php
+            sei
+            stx         T_REGISTER                          ; ---- The new task
+            stz         TA_ENTRY
+            stz         TA_ENTRY + 1
+            stz         TA_SERVEVEC
+            stz         TA_SERVEVEC + 1
+            stz         TA_IRQVEC
+            stz         TA_IRQVEC + 1
+            lda         #BUSY_NOSERVE
+            sta         TK_BUSY
+            stz         T_REGISTER                          ; ---- Back
+            plp
+            lda         #<K_NAMEBUF                         ; ... its name (its header's, SPAWN's: there as it
+            sta         K_PTR                               ;   loads)
+            lda         #>K_NAMEBUF
+            sta         K_PTR + 1
+            lda         #<TA_NAME
+            sta         K_PTR2
+            lda         #>TA_NAME
+            sta         K_PTR2 + 1
+            lda         #HX_NAME_MAX + 1
+            sta         K_CNT
+            stz         K_CNT + 1
+            lda         K0_NEW
+            clc
+            FARCALL     K_KCOPY
+            jmp         @first
 
 ; In task K0_NEW (it isn't running yet: its r-registers are ours to use): r2 bytes to (r1), from (r0) (.Y = 0) or
 ; zeros (.Y <> 0).  A byte at a time with IRQs off, the caller's I flag between.  In the kernel task.
@@ -512,6 +570,15 @@ K_TASK_MAIN:
 
 @entry:
             jmp         (TA_ENTRY)
+
+; A RAM program's first instructions (its first frame's PC): it loads itself (load.s: K_LOAD), then starts as every
+; program does.  One that can't be loaded ends at once, with the error as its code
+K_TASK_LOAD:
+            FARCALL     K_LOAD
+            bcc         K_TASK_MAIN
+            stz         r0
+            stz         r0 + 1
+            jmp         K_EXITS
 
 ; Every driver's: its init (C = 0, or C = 1 and .A = an error), then idle: it runs for calls and interrupts only
 K_DRIVER_MAIN:
@@ -691,102 +758,11 @@ t_putstr:
             rts
 
 ; ****************************************************************************
-.segment "KCODE"
-
-; SPAWN: start a program.  IN: r0 = "#m/NAME"; r1 = its arguments (zero-terminated, up to 175 characters), or 0;
-; .A = flags (0).  OUT: C = 0, .A = the task; or C = 1, .A = E_NOENT, E_NAMETOOLONG, E_TOOBIG, E_NOEXEC, E_NOTASK
-K_SPAWN:
-            sta         K_TMP2                              ; Its flags (SPAWN_*), for the KCALL
-            ldy         #2                                  ; "#m/"
-:
-            lda         (r0),Y
-            cmp         K_STR_MODPATH,Y
-            bne         @noent
-            dey
-            bpl         :-
-            bra         @path
-
-@noent:
-            FAIL        E_NOENT
-
-@path:
-            ldy         #3                                  ; The name, into TA_SCRATCH (12 bytes, zero-padded)
-            ldx         #0
-@name:
-            lda         (r0),Y
-            sta         TA_SCRATCH,X
-            beq         @pad
-            iny
-            inx
-            cpx         #HX_NAME_MAX + 1
-            bne         @name
-            FAIL        E_NAMETOOLONG
-
-@pad:
-            cpx         #HX_NAME_MAX + 1
-            beq         @args
-            stz         TA_SCRATCH,X
-            inx
-            bra         @pad
-
-@args:                                                      ; Its arguments' length with the 0 (checked first)
-            stz         K_CNT
-            stz         K_CNT + 1
-            lda         r1
-            ora         r1 + 1
-            beq         @start
-            ldy         #0
-:
-            lda         (r1),Y
-            beq         :+
-            iny
-            cpy         #TA_ARGS_MAX + 1
-            bne         :-
-            FAIL        E_TOOBIG
-
-:
-            iny
-            sty         K_CNT
-@start:
-            lda         K_TMP2
-            KCALL       K_SPAWN_K                           ; .A = the task, set up
-            bcs         @done
-            sta         K_Y
-            lda         K_CNT                               ; Its arguments, into its TA_ARGS
-            ora         K_CNT + 1
-            beq         @noargs
-            lda         r1
-            sta         K_PTR
-            lda         r1 + 1
-            sta         K_PTR + 1
-            lda         #<TA_ARGS
-            sta         K_PTR2
-            lda         #>TA_ARGS
-            sta         K_PTR2 + 1
-            lda         K_Y
-            clc
-            jsr         K_KCOPY
-            bra         @go
-
-@noargs:
-            ldx         K_Y
-            ldy         T_REGISTER
-            php
-            sei
-            lda         #0
-            QL_PUT      TA_ARGS
-            plp
-@go:
-            lda         K_Y
-            jsr         K_TASK_GO
-            clc
-@done:
-            rts
-
 .segment "KCODE_P1"
 
-; In the kernel task (KCALL): the module named in the caller's TA_SCRATCH, started; the caller its parent.
-; IN: .Y = the caller
+; In the kernel task (KCALL from SPAWN, load.s): the program, started; the caller its parent.  IN: .Y = the caller;
+; .A = SPAWN's flags (SPAWN_LOAD: a RAM program); the caller's TA_SCRATCH: the program's name (SP_NAME: a module's
+; in the directory, or a RAM program's from its header) and the fd map (SP_MAP)
 K_SPAWN_K:
             sta         K0_SPAWNF
             sty         K0_TMP3
@@ -804,13 +780,23 @@ K_SPAWN_K:
             tya
             sec
             FARCALL     K_KCOPY
-            jsr         K_MD_FIND
+            lda         K0_SPAWNF
+            bmi         @ram
+            jsr         K_MD_FIND                           ; In place: the directory's module of its name
             bcs         @done
             ldy         #ME_TYPE                            ; (Programs only: drivers start at boot)
             lda         (K0_PTR),Y
             cmp         #HT_PROGRAM
             bne         @noexec
             jsr         K_START_MODULE
+            bra         @started
+
+@ram:
+            lda         #$FF                                ; A RAM program
+            sta         K0_NEWBANK
+            lda         #HT_PROGRAM
+            jsr         K_START_TASK
+@started:
             bcs         @done
             tax
             ldy         K0_TMP3
@@ -822,7 +808,7 @@ K_SPAWN_K:
             lda         K_NGROUP,Y
             sta         K_NGROUP,X
 :
-            FARCALL     K_FD_INHERIT                        ; Its fds 0, 1 and 2: the caller's (file.s)
+            FARCALL     K_FD_INHERIT                        ; Its fds: the map's (file.s)
             FARCALL     K_NS_INHERIT                        ; Its namespace: the caller's, or its own (ns.s)
             txa
             clc
@@ -1078,7 +1064,6 @@ K_GETPID:
             rts
 
 .segment "KRODATA"
-K_STR_MODPATH:  .byte   "#m/"
 K_STR_CRLF:     .byte   CR, LF, 0
 
 .segment "KRODATA_P1"

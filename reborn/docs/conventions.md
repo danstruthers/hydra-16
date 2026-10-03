@@ -27,7 +27,7 @@ Every task has its own `$0000`-`$7FFF` (the `T` register selects it) and its own
 | `$00`, `$01` | Its RAM bank (`$8000`-`$9FFF`) and paged ROM bank (`$A000`-`$DFFF`) registers |
 | `$02`-`$21` | `r0`-`r15`, the call registers |
 | `$22`-`$7F` | The program's own zero page: never touched by the system |
-| `$80`-`$FF` | The OS zero page (`TK_*` the task's state, `KC_*` kcopy's, `KF_*` the far call's, `K_*` the call stubs' scratch, `TN_*` and `TQ_*` the notes', `F_*` the file calls'; `$C0`-`$FF` free for the kernel's growth).  One byte of it is a program's to write: its event count, `TASK_EVENT` (`$BD`) |
+| `$80`-`$FF` | The OS zero page (`TK_*` the task's state, `KC_*` kcopy's, `KF_*` the far call's, `K_*` the call stubs' scratch, `TN_*` and `TQ_*` the notes', `F_*` the file calls', `L_*` SPAWN's and the loader's; `$CD`-`$FF` free for the kernel's growth).  One byte of it is a program's to write: its event count, `TASK_EVENT` (`$BD`) |
 | `$0100`-`$01FF` | Its stack; a task that isn't running has its frame on top (`U Y W X A P PCL PCH`) |
 | `$0200`-`$03FF` | The OS area (`TA_*`): a server's request being served (`TASK_INBOX`), its entries, its break, its note handler, its name, its copy of the IRQ lines' owners, its page and bank maps, the request it's making, the name a request names (`TASK_PATH`), its fds, its current directory, its arguments at `$0350` (`TASK_ARGS`) |
 | `$0400`-`$7FFF` | The program's RAM: its data and BSS, then its break (`BREAK`); pages from the top down (`PAGES_ALLOC`).  Task F's top page is the DS1747's |
@@ -111,7 +111,14 @@ The kernel task (task 0) keeps the kernel's state: its program zero page (`K0_*`
   `HYX2_DRIVER "name", init, serve, irq, stop, flags`: `init` (C = 1 and `.A` = an error ends it), then `serve`
   for its calls (`.Y` = the caller) and `irq` for its lines; `HF_BOOT` starts it at boot.
 * The module directory (paged ROM bank 0 at `$A200`, written by `tools/romimg.js`) lists each module's bank, type,
-  flags and name.  `SPAWN "#m/NAME"` starts a program from it.
+  flags and name; `#m/NAME` reads as a module's image, and `#m/bin` lists the programs (bound at `/bin`).
+* `SPAWN` takes a path, through the caller's namespace (`/bin/NAME`, `#m/NAME`), and reads the file's HYX2
+  header: a module (`HF_INPLACE`) runs in place, found in the module directory by the header's name; any other
+  program is a RAM program, read into its task's RAM at its load address by the task itself as it starts (the file
+  its fd 15 meanwhile).  The child's fds are the caller's 0, 1 and 2, or with `SPAWN_FDMAP` the map at `r2`.
+* A RAM program is assembled with `-D HYX2_RAM` (`hyx2.inc`: no `HF_INPLACE`, loaded at `$0800`) and linked by
+  `sdk/asm/hyx2.cfg`: its header, code, read-only data and data one image from `$0800`, its BSS after them.  The
+  test RAM programs are `tests/ram/NAME/`, built into `obj/tests/NAME.hyx`.
 * The boot starts the drivers (`HF_BOOT`, task F down, in the directory's order), waits for their inits (their
   devices registered; 2 seconds at most), then starts init.  The system's modules are in `modules/rom.txt`.
 * A module bigger than a bank has two (`HYX2_DRIVER ..., 2`, linked by `modules/module2.cfg` when its sources use

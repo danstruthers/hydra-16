@@ -7,8 +7,8 @@
 ;   ls PATH     a directory's names (a / after each directory's)
 ;   cat PATH    a file
 ;   cd PATH     the current directory (pwd: what it is)
-;   NAME ...    the module NAME (#m/NAME) run with the rest of the line as its arguments, and waited for (Ctrl-C
-;               ends it: the shell's note handler keeps the shell going)
+;   NAME ...    the program /bin/NAME (or NAME, a path, if it has a /) run with the rest of the line as its
+;               arguments, and waited for (Ctrl-C ends it: the shell's note handler keeps the shell going)
 ; "tsh w" starts the windows' shells: it waits for the user's Ctrl-] c (a read of #c/wnew: the window made), starts
 ; "tsh N" there (with an empty namespace: it builds its own), and ends (init starts it again; the new shell is
 ; init's to wait for then).
@@ -37,7 +37,7 @@ buf:        .res        512
 n_cons:     .res        16                                  ; "#cN/cons" ...
 n_ctl:      .res        16                                  ;   "#cN/consctl" ...
 n_dev:      .res        8                                   ;   and "#cN"
-n_prog:     .res        20                                  ; "#m/NAME"
+n_prog:     .res        PATH_MAX + 1                        ; "/bin/NAME", or a path
 
 .code
 main:
@@ -98,19 +98,32 @@ shell:
 @go:
             jmp         (cmd_vec,X)
 
-@run:                                                       ; Not one of them: a module of that name
+@run:                                                       ; Not one of them: a program of that name
             jsr         run
             bra         shell
 
-; NAME ...: #m/NAME run, the rest of the line its arguments; waited for, its code said if it isn't 0
+; NAME ...: /bin/NAME run (NAME as it is, if it has a /: a path), the rest of the line its arguments; waited for,
+; its code said if it isn't 0
 run:
-            ldx         #0                                  ; "#m/" and the name
+            ldx         #0
+            ldy         #0                                  ; A path?
 :
-            lda         s_mod,X
+            lda         line,Y
+            beq         @bin
+            cmp         #' '
+            beq         @bin
+            cmp         #'/'
+            beq         @name
+            iny
+            bra         :-
+
+@bin:
+            lda         s_bin,X                             ; Else /bin/ first
             sta         n_prog,X
             inx
-            cpx         #3
-            bne         :-
+            cpx         #5
+            bne         @bin
+@name:
             ldy         #0
 :
             lda         line,Y
@@ -120,7 +133,7 @@ run:
             sta         n_prog,X
             inx
             iny
-            cpx         #3 + 12
+            cpx         #PATH_MAX
             bcc         :-
 @args:
             stz         n_prog,X
@@ -446,7 +459,7 @@ s_error:    .byte       "tsh: ", 0
 s_code:     .byte       "code $", 0
 s_open:     .byte       " (", 0
 s_close:    .byte       ")", CR, LF, 0
-s_mod:      .byte       "#m/"
+s_bin:      .byte       "/bin/"
 s_cpre:     .byte       "#c"
 s_consctl:  .byte       "/consctl", 0
 s_group:    .byte       "group"

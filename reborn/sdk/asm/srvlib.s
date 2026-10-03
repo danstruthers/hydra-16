@@ -24,7 +24,8 @@
 ;                            srv_dname; C = 1: no more), DYN_FIND (the child named at srv_p: C = 0, .A = its id;
 ;                            or C = 1) or DYN_IDNAME (child .X's name into srv_dname); SE_AUX is the entry each
 ;                            child is (its template: parent SE_TEMPLATE), so a child can be a directory of its
-;                            own entries.  A node under a child has the child's id: srv_id (and srv_fid_aux)
+;                            own entries.  A node under a child has the child's id: srv_id (and srv_fid_aux).
+;                            Entries of its own (parent it) come first, before its handler's (#m's bin)
 ;                   SK_RAW   a tree of this entry alone (entry 0): every request for the device goes to its handler
 ;                            (.A = the request), which does it all, its fids its own (a file system's: #f)
 ;   SRV_FLUSH       (optional, defined before the .include) a routine for R_FLUSH: client .Y forgotten
@@ -32,6 +33,8 @@
 ;                   may set srv_fid_aux,X (from the request's spec: which of the device's instances), or refuse
 ;                   (C = 1, .A = the error).  A data file's handler is told after it
 ;   SRV_PRE, SRV_POST (optional) routines run before every request, and after it (before the answer goes back)
+;   SRV_STAT        (optional) a routine for each stat record made (srv_stat, of entry srv_e / srv_ent, id srv_id):
+;                   it may fill in more of it (a data file's length)
 ;   SRV_TREES       (optional) several devices, a tree each: .byte the letter, .word its tree; ending with 0.  A
 ;                   request's device (RQ_DEV) chooses the tree.  Without it, the one tree is srv_tree
 ; srvlib gives: srv_serve; the fids (srv_fid_entry, srv_fid_mode, srv_fid_aux: a byte the handler may keep: a node
@@ -331,10 +334,6 @@ srv_readdir:
             rol         srv_k                               ; (srv_k: the first record's number)
             stz         TASK_INBOX + RQ_DONE
             stz         TASK_INBOX + RQ_DONE + 1
-            lda         TASK_INBOX + RQ_BUF                 ; r1: where the next one goes
-            sta         r1
-            lda         TASK_INBOX + RQ_BUF + 1
-            sta         r1 + 1
 @record:
             lda         TASK_INBOX + RQ_COUNT + 1           ; Room for another?  (The count left >= 64)
             bne         :+
@@ -349,6 +348,13 @@ srv_readdir:
             sta         r0
             lda         #>srv_stat
             sta         r0 + 1
+            clc                                             ; r1: the client's buffer, after the records sent
+            lda         TASK_INBOX + RQ_BUF                 ;   (handlers may use the r-registers)
+            adc         TASK_INBOX + RQ_DONE
+            sta         r1
+            lda         TASK_INBOX + RQ_BUF + 1
+            adc         TASK_INBOX + RQ_DONE + 1
+            sta         r1 + 1
             lda         #SR_SIZE
             sta         r2
             stz         r2 + 1
@@ -359,13 +365,6 @@ srv_readdir:
             sta         TASK_INBOX + RQ_DONE
             bcc         :+
             inc         TASK_INBOX + RQ_DONE + 1
-:
-            clc
-            lda         r1
-            adc         #SR_SIZE
-            sta         r1
-            bcc         :+
-            inc         r1 + 1
 :
             sec
             lda         TASK_INBOX + RQ_COUNT
@@ -584,19 +583,44 @@ srv_newfid:
             rts
 
 ; The srv_k-th entry of directory srv_n (srv_e, srv_ent; a dynamic one's child: its template, srv_id its id).
-; OUT: C = 0; or C = 1: there isn't one
+; A dynamic directory's own entries come first, then its handler's children.  OUT: C = 0; or C = 1: there isn't one
 srv_nth:
             lda         srv_n
             jsr         srv_entry
             ldy         #SE_KIND
             lda         (srv_ent),Y
-            cmp         #SK_DYN
-            beq         :+
+            pha
             lda         srv_k
-            jmp         srv_child
+            jsr         srv_child
+            pla
+            bcc         @done
+            cmp         #SK_DYN
+            sec
+            bne         @done
+            lda         srv_k                               ; Its handler's: srv_k less its own entries, a moment
+            pha
+            ldx         #0
+@own:
+            phx
+            txa
+            jsr         srv_child
+            plx
+            bcs         :+
+            inx
+            bra         @own
 :
+            stx         srv_x
+            pla
+            pha
+            sec
+            sbc         srv_x
+            sta         srv_k
+            lda         srv_n
+            jsr         srv_entry
             lda         #DYN_NAME
             jsr         srv_handler                         ; (srv_k: which)
+            plx
+            stx         srv_k
             bcs         @done
             sta         srv_id
             lda         srv_n
@@ -666,16 +690,17 @@ srv_walk:
             ldy         #SE_KIND                            ; A name in a directory, so this must be one
             lda         (srv_ent),Y
             cmp         #SK_DYN
-            beq         @dyn
+            beq         :+
             cmp         #SK_DIR
             bne         @notdir
+:
             lda         srv_e
             sta         srv_n
             stz         srv_k
 @child:
-            lda         srv_k                               ; Each of its entries
+            lda         srv_k                               ; Each of its own entries
             jsr         srv_child
-            bcs         @noent
+            bcs         @others
             ldy         #SE_NAME
             lda         (srv_ent),Y
             sta         r3
@@ -711,8 +736,14 @@ srv_walk:
             clc
             rts
 
-@dyn:                                                       ; A dynamic directory: its handler finds the child;
-            lda         srv_e                               ;   the node is its template, with the child's id
+@others:                                                    ; Not one of them: a dynamic directory's handler finds
+            lda         srv_n                               ;   the child; the node is its template, with the
+            jsr         srv_entry                           ;   child's id
+            ldy         #SE_KIND
+            lda         (srv_ent),Y
+            cmp         #SK_DYN
+            bne         @noent
+            lda         srv_e
             pha
             lda         #DYN_FIND
             jsr         srv_handler
@@ -965,6 +996,9 @@ srv_makestat:
             lda         srv_tlen
             sta         srv_stat + SR_LENGTH
 :
+.ifdef SRV_STAT
+            jsr         SRV_STAT                            ; (The server's say: a data file's length)
+.endif
             rts
 
 ; Call entry srv_ent's handler: .A, .X and .Y as given

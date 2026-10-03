@@ -6,7 +6,7 @@
 ;   "k"         end with code = the tick count's low byte when it started
 ;   "p"         pause until woken (WAKE), then end with code "p"
 ;   "o"         start "t_child e9" and end at once with code "o" (leaving an orphan)
-;   "c" hh      call task F's serve entry (the test driver, t_drv): op 3, sleep hh ticks; end with its .A
+;   "c" hh      call task E's serve entry (the test driver, t_drv): op 3, sleep hh ticks; end with its .A
 ;   "g" hh      attach to shared segment hh, and end with the byte at its first bank's $8000 ($EE: no segment)
 ;   "n"         a note handler that keeps the note and goes on; PAUSE; end with the note it kept
 ;   "d"         a note handler that asks for the default (C = 1); then pause, for ever
@@ -102,7 +102,7 @@ op_o:
 op_c:
             lda         #3
             ldx         param
-            ldy         #$0F
+            ldy         #$0E
             jsr         DBG_SCALL
 end:
             stz         r0

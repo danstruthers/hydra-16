@@ -29,8 +29,8 @@ mount -c '#f' /ram r/$task  # this shell's own area of the RAM disk
 bind -c /ram/bin /bin
 bind -a /sram/bin /bin
 bind -a /sd/0/bin /bin      # (added only if the card has one)
-#bind -a /rom/bin /bin      # (phase 4: programs on the ROM disk)
-#bind -a '#m/bin' /bin      # the ROM's program modules (phase 4)
+#bind -a /rom/bin /bin      # (phase 4.3: programs on the ROM disk)
+bind -a '#m/bin' /bin       # the ROM's program modules
 bind -c /ram/lib /lib
 bind -a /sram/lib /lib
 bind -a /sd/0/lib /lib

@@ -1408,17 +1408,25 @@ K_FILE_EXIT:
             bpl         @ch
             rts
 
-; A child's fds 0, 1 and 2: its parent's, the channels' fds counted (FARCALL from K_SPAWN_K: .X = the child,
-; K0_TMP3 = the parent)
+; A child's fds: the parent's that SPAWN's map names (the parent's TA_SCRATCH + SP_MAP: its fd for each of the
+; child's, $FF for none), the channels' fds counted (FARCALL from K_SPAWN_K: .X = the child, K0_TMP3 = the parent)
 K_FD_INHERIT:
             stx         K0_TMP
-            ldy         #2
+            ldy         #FD_MAX - 1
 @fd:
-            ldx         K0_TMP3                             ; The parent's ...
+            ldx         K0_TMP3                             ; The parent's fd for it, and that fd's channel ...
             php
             sei
             stx         T_REGISTER
-            lda         TA_FD,Y
+            lda         TA_SCRATCH + SP_MAP,Y
+            cmp         #FD_MAX
+            bcc         :+
+            lda         #$FF                                ; (None: no channel)
+            bra         :++
+:
+            tax
+            lda         TA_FD,X
+:
             stz         T_REGISTER
             plp
             cmp         #CH_MAX

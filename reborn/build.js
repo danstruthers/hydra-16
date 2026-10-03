@@ -5,7 +5,8 @@
 //   2. the kernel          kernel/*.s and the generated sources -> bin/bios.bin (the 128K BIOS ROM), with its map
 //                          and labels in obj/kernel/
 //   3. the modules         modules/NAME/*.s -> obj/modules/NAME.bin; tests/mod/NAME/*.s -> obj/tests/NAME.bin;
-//                          each checked: only the kernel writes T, V and W (tools/check.js)
+//                          the test RAM programs, tests/ram/NAME/*.s -> obj/tests/NAME.hyx (sdk/asm/hyx2.cfg); each
+//                          checked: only the kernel writes T, V and W (tools/check.js)
 //   4. the paged ROM       modules/rom.txt -> bin/prom.bin (tools/romimg.js), with the hardware test in bank 1
 //                          (from ../os_rom/bin/paged_rom_C02.bin) and the ROMs' checksums for it, and the ROM
 //                          disk's volume after the modules (romfs/romfs.txt: tools/romfs.js), each file read back
@@ -57,15 +58,18 @@ function assemble(files, objdir, includes, defines) {
   });
 }
 
-// A module: the .s files in dir, linked with modules/module.cfg.  OUT: its image (a Buffer)
-function buildModule(dir, objdir, defines) {
+// A module: the .s files in dir, linked with modules/module.cfg; or a RAM program (ram: assembled with HYX2_RAM,
+// linked with sdk/asm/hyx2.cfg, NAME.hyx).  OUT: its image (a Buffer)
+function buildModule(dir, objdir, defines, ram = false) {
   const name = path.basename(dir), od = path.join(objdir, name);
-  const objs = assemble(sources(dir), od, [at('obj', 'sdk'), at('sdk', 'asm'), at('include'), dir, path.dirname(dir)], defines);
-  const bin = path.join(objdir, name + '.bin');
+  const objs = assemble(sources(dir), od, [at('obj', 'sdk'), at('sdk', 'asm'), at('include'), dir, path.dirname(dir),
+    ...(ram ? [at('tests', 'mod')] : [])], ram ? [...defines, 'HYX2_RAM'] : defines);
+  const bin = path.join(objdir, name + (ram ? '.hyx' : '.bin'));
   const two = sources(dir).some(f => /\.segment\s+"CODE2"/i.test(fs.readFileSync(f, 'latin1')));   // (Two banks: module2.cfg)
-  run(LD65, ['-C', at('modules', two ? 'module2.cfg' : 'module.cfg'), '-o', bin, '-m', path.join(od, name + '.map'), '-Ln', path.join(od, name + '.lbl'), ...objs]);
+  const cfg = ram ? at('sdk', 'asm', 'hyx2.cfg') : at('modules', two ? 'module2.cfg' : 'module.cfg');
+  run(LD65, ['-C', cfg, '-o', bin, '-m', path.join(od, name + '.map'), '-Ln', path.join(od, name + '.lbl'), ...objs]);
   const data = fs.readFileSync(bin);
-  check.checkModule(name, data);                              // (Only the kernel writes T, V and W)
+  check.checkModule(name, data, ram ? 0x0800 : 0xA000);       // (Only the kernel writes T, V and W)
   return data;
 }
 
@@ -105,13 +109,16 @@ function build(opt = {}) {
   run(LD65, ['-C', at('kernel', 'bios.cfg'), '-o', at('bin', 'bios.bin'), '-m', path.join(kobj, 'bios.map'), '-Ln', path.join(kobj, 'bios.lbl'),
     '--dbgfile', path.join(kobj, 'bios.dbg'), ...objs]);
 
-  // The modules and the test modules
-  const modules = {}, tests = {};
+  // The modules, the test modules and the test RAM programs
+  const modules = {}, tests = {}, progs = {};
   for (const d of fs.readdirSync(at('modules'), { withFileTypes: true }).filter(d => d.isDirectory()))
     modules[d.name] = buildModule(at('modules', d.name), at('obj', 'modules'), defines);
   if (fs.existsSync(at('tests', 'mod')))
     for (const d of fs.readdirSync(at('tests', 'mod'), { withFileTypes: true }).filter(d => d.isDirectory()))
       tests[d.name] = buildModule(at('tests', 'mod', d.name), at('obj', 'tests'), defines);
+  if (fs.existsSync(at('tests', 'ram')))
+    for (const d of fs.readdirSync(at('tests', 'ram'), { withFileTypes: true }).filter(d => d.isDirectory()))
+      progs[d.name] = buildModule(at('tests', 'ram', d.name), at('obj', 'tests'), defines, true);
 
   // The paged ROM
   const manifest = readManifest(at('modules', 'rom.txt'));
@@ -123,14 +130,14 @@ function build(opt = {}) {
   fs.writeFileSync(at('bin', 'prom.bin'), image);
   fs.writeFileSync(at('obj', 'build.json'), JSON.stringify({ clock: opt.clock || 1, acia: opt.acia || 'rockwell' }) + '\n');
 
-  const report = budget.report(ROOT, { modules, tests, entries });
+  const report = budget.report(ROOT, { modules, tests, progs, entries });
   say(report.text);
   if (disk) {
     const bytes = disk.files.reduce((n, f) => n + f.size, 0), used = disk.volume.length / 512, first = disk.start / 32;
     say('ROM disk: ' + disk.files.length + ' files, ' + bytes + ' bytes; its volume uses ' + used + ' of ' + disk.blocks + ' blocks (paged ROM banks ' +
       first + '-' + (first + Math.ceil(used / 32) - 1) + '); every file read back as its source');
   }
-  return { modules, tests, manifest, report };
+  return { modules, tests, progs, manifest, report };
 }
 
 if (require.main === module) {

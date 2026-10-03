@@ -61,16 +61,24 @@ call WAIT task impl=K_WAIT
   blocks: yes
   doc:    Wait for a child to end, and take its exit status.  A child that has ended already isn't waited for.
 
-call SPAWN task impl=K_SPAWN
-  in:     r0 = the program: "#m/NAME" (a module in the paged ROM); r1 = its arguments (zero-terminated, up
-  in:     to 175 characters), or 0; .A = flags (SPAWN_NEWGROUP: a note group of its own)
+call SPAWN task impl=K_SPAWN far
+  in:     r0 = the program's path (through the namespace: /bin/NAME; or #m/NAME, a module in the paged ROM);
+  in:     r1 = its arguments (zero-terminated, up to 175 characters), or 0; .A = flags (SPAWN_NEWGROUP,
+  in:     SPAWN_NEWNS, SPAWN_FDMAP); r2 = an fd map (with SPAWN_FDMAP)
   out:    .A = the new task
-  errors: E_NOENT (no such program), E_NOEXEC (not a program), E_NOTASK (no free task), E_NAMETOOLONG
-  blocks: no
-  doc:    Start a program in a task of its own.  It starts at its entry point with r0 pointing to its arguments
-  doc:    (at TASK_ARGS).  Its parent is the caller, which can WAIT for it.  It's in the caller's note group
-  doc:    unless SPAWN_NEWGROUP starts one (its number: the child's).  (Paths through the namespace come with
-  doc:    the file layer, in phase 2.)
+  errors: E_NOENT (no such file), E_NOEXEC (not a program this kernel runs), E_NOTASK (no free task), E_TOOBIG
+  errors: (the arguments), E_INVAL (the map), E_MFILE, E_INTR (and what else OPEN and READ give)
+  blocks: yes
+  doc:    Start a program in a task of its own.  SPAWN opens the file and reads its HYX2 header (HX_*): a module of
+  doc:    the paged ROM (HF_INPLACE: #m's files) runs in place, in its bank (the module directory's of its name); any
+  doc:    other program is read into the new task's RAM at its load address ($0800), by the task itself as it
+  doc:    starts, and its BSS cleared (one that can't be read ends at once, with the error as its exit code).  It
+  doc:    starts at its entry point with r0 pointing to its arguments (at TASK_ARGS), its name the header's.  Its
+  doc:    fds: the caller's 0, 1 and 2; or with SPAWN_FDMAP, the map's: a count (SPAWN_FDS at most), then for each
+  doc:    of the child's fds from 0 the caller's fd that becomes it ($FF, or a closed one: closed).  Each shares the
+  doc:    caller's channel and offset; the rest are closed.  Its parent is
+  doc:    the caller, which can WAIT for it.  It's in the caller's note group unless SPAWN_NEWGROUP starts one (its
+  doc:    number: the child's), and it shares the caller's namespace unless SPAWN_NEWNS gives it an empty one.
 
 call GETPID task impl=K_GETPID
   in:     -
@@ -553,6 +561,28 @@ const HT_DRIVER       2
 const HT_LIBRARY      3
 const HF_INPLACE      $01      "HYX2 flags: runs in place in the paged ROM"
 const HF_BOOT         $02      "HYX2 flags: a driver the kernel starts at boot"
+const HX_MAGIC        0        "The HYX2 header (HX_SIZE bytes, a program's first): HYX2"
+const HX_HSIZE        4        "HYX2: the header's size (48)"
+const HX_TYPE         5        "HYX2: the type (HT_*)"
+const HX_FLAGS        6        "HYX2: the flags (HF_*)"
+const HX_ABI          7        "HYX2: the ABI version it was built for"
+const HX_LOAD         8        "HYX2: its load address (2: $A000 in place, $0800 a RAM program)"
+const HX_LENGTH       10       "HYX2: its image's length (2: in its last bank, in place)"
+const HX_DATA_LOAD    12       "HYX2: its data, where it is in the image (2) ..."
+const HX_DATA_RUN     14       "HYX2: ... where it runs (2) ..."
+const HX_DATA_LEN     16       "HYX2: ... and its length (2)"
+const HX_BSS          18       "HYX2: its BSS (2) ..."
+const HX_BSS_LEN      20       "HYX2: ... and its length (2: cleared as it starts)"
+const HX_TOP          22       "HYX2: the top of the RAM it uses (2: its break starts there)"
+const HX_MAIN         24       "HYX2: entry: main (a program), init (a driver)"
+const HX_SERVE        26       "HYX2: entry: serve (a driver)"
+const HX_IRQ          28       "HYX2: entry: irq (a driver)"
+const HX_STOP         30       "HYX2: entry: stop (a driver)"
+const HX_DEVICE       32       "HYX2: its device letter (a driver)"
+const HX_BANKS        33       "HYX2: the banks it spans (in place)"
+const HX_VERSION      34       "HYX2: its version (2)"
+const HX_NAME         36       "HYX2: its name (12: zero-terminated)"
+const HX_SIZE         48
 const ME_BANK         0        "MODINFO's answer (ME_SIZE bytes): the module's first paged ROM bank"
 const ME_BANKS        1        "MODINFO: the banks it spans"
 const ME_TYPE         2        "MODINFO: its type (HT_*)"
@@ -577,6 +607,8 @@ const NOTE_USER       16       "Notes: 16-31 are the programs' own (128 + the no
 const NOTE_GROUP      $80      "NOTE's .A: a note group, not a task"
 const SPAWN_NEWGROUP  $01      "SPAWN's flags: the child starts a note group of its own"
 const SPAWN_NEWNS     $02      "SPAWN's flags: the child starts with an empty namespace of its own (else it shares its parent's)"
+const SPAWN_FDMAP     $04      "SPAWN's flags: the child's fds are r2's map (else the caller's 0, 1 and 2)"
+const SPAWN_FDS       15       "SPAWN's fd map: the child's fds it can give, at most (its fd 15 is its loader's as it starts)"
 const MREPL           0        "BIND's and MOUNT's flags: in place of what's at old"
 const MBEFORE         1        "BIND's and MOUNT's flags: a union, new first"
 const MAFTER          2        "BIND's and MOUNT's flags: a union, new last"

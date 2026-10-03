@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; t_drv - a test driver (started at boot: task F, the first driver), for t_scall.  Its serve entry takes an op
+; t_drv - a test driver (started at boot: task E, the driver after kdev), for t_scall.  Its serve entry takes an op
 ; in .A and an argument in .X:
 ;   0   .A = .X + 1                         (the lean round trip: spike S3)
 ;   1   .A = the caller (.Y)

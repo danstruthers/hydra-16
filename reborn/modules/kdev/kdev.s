@@ -5,7 +5,8 @@
 ;           proc ram rom sd sram tmp, and in dev: gpio i2c mod sd spi), so ls / and ls /dev show them
 ;   #n      null (reads as nothing, takes every write), zero (reads as zeros, takes every write)
 ;   #t      ticks: the tick count (its low 16 bits, TICK_HZ a second), in decimal
-;   #m      the modules in the paged ROM, a file each: its type and bank
+;   #m      the modules in the paged ROM, a file each: its image (its header first: SPAWN reads it); bin, the
+;           programs alone (bound at /bin)
 ;   #p      the tasks, a directory each (its number): status (its name, state, parent, CPU time in ticks and note
 ;           group) and ctl (kill, interrupt, note N)
 ;   #|      pipes: opening pipe makes a new one (its read end; for O_WRITE, its write end), and R_DUP its other end
@@ -13,11 +14,14 @@
 ; To come: #e (the environment), and /proc's other files (args, cwd, fd, ns ...).
 
 .include "hydra.inc"
+.include "hw.inc"
 .include "hyx2.inc"
 .include "macros.inc"
 .include "srvlib.inc"
 
             HYX2_DRIVER "kdev", init, srv_serve, 0, 0, HF_BOOT
+
+SRV_STAT        = mod_stat                                  ; (srvlib: a module's file's length)
 
 PIPE_N          = 8
 PIPE_SIZE       = 512
@@ -30,9 +34,12 @@ m:          .res        2                                   ; Another
 pt:         .res        2                                   ; A pointer
 tk:         .res        1                                   ; A task
 cnt:        .res        1
+want:       .res        1                                   ; A module type wanted (0: any)
+left:       .res        1
 
 .bss
 me:         .res        ME_SIZE                             ; A module (MODINFO)
+chunk:      .res        256                                 ; A page of one (ROMREAD)
 info:       .res        TI_SIZE                             ; A task (TASKINFO)
 p_used:     .res        PIPE_N                              ; Each pipe: in use ...
 p_rdl:      .res        PIPE_N                              ;   where the next read is ...
@@ -145,17 +152,35 @@ gen_ticks:
             rts
 
 ; ****************************************************************************
-; #m: the modules, a file each (its id: its entry in the module directory)
+; #m: the modules, a file each (its id: its entry in the module directory), read as its image in the paged ROM, its
+; header first (SPAWN reads it so: a module runs in place); #m/bin, the programs alone (bind -a '#m/bin' /bin)
+
+h_bins:
+            ldy         #HT_PROGRAM                         ; (#m/bin: the programs)
+            bra         h_list
 
 h_mods:
+            ldy         #0                                  ; (#m: every module)
+h_list:
+            sty         want
             cmp         #DYN_FIND
             beq         @find
             cmp         #DYN_IDNAME
             beq         @idname
-            lda         z:srv_k                             ; DYN_NAME: the srv_k-th
-            jsr         mod_name
+            lda         z:srv_k                             ; DYN_NAME: the srv_k-th of those wanted
+            sta         left
+            stz         cnt
+@name:
+            jsr         mod_next
             bcs         @done
-            lda         z:srv_k
+            lda         left
+            beq         @this
+            dec         left
+            inc         cnt
+            bra         @name
+
+@this:
+            lda         cnt
             clc
 @done:
             rts
@@ -167,23 +192,34 @@ h_mods:
 @find:                                                      ; The one named at srv_p
             stz         cnt
 @try:
-            lda         cnt
-            jsr         mod_name
+            jsr         mod_next
             bcs         @noent
             LDR         r3, srv_dname
             jsr         srv_same
-            beq         @found
+            beq         @this
             inc         cnt
             bra         @try
-
-@found:
-            lda         cnt
-            clc
-            rts
 
 @noent:
             lda         #E_NOENT
             sec
+            rts
+
+; The first module wanted (want: a type, or 0 for any) from entry cnt on: cnt = it, its entry in me, its name in
+; srv_dname.  OUT: C = 0; or C = 1: no more
+mod_next:
+            lda         cnt
+            jsr         mod_name
+            bcs         @done
+            lda         want
+            beq         @done                               ; (C = 0)
+            cmp         me + ME_TYPE
+            clc
+            beq         @done
+            inc         cnt
+            bra         mod_next
+
+@done:
             rts
 
 ; Module .A: its entry in me, its name in srv_dname.  OUT: C = 0; or C = 1: no such module
@@ -207,30 +243,164 @@ mod_name:
 @done:
             rts
 
-; A module's file: "program bank 3", or a driver's, or a library's
-gen_mod:
-            lda         z:srv_id
+; Module .A: its entry in me, and its image's length in n (from its header: its last bank's, after 16K for each bank
+; before it).  OUT: C = 0; or C = 1, .A = E_NOENT (no such module)
+mod_length:
             jsr         mod_name
             bcs         @done
-            lda         me + ME_TYPE
-            and         #3
-            asl
-            tax
-            lda         type_words,X
-            pha
-            lda         type_words + 1,X
-            tax
-            pla
-            jsr         srv_tputs
-            lda         #<s_bank
-            ldx         #>s_bank
-            jsr         srv_tputs
+            LDR         r0, PROM_WINDOW + HX_LENGTH
+            LDR         r1, n
+            LDR         r2, 2
             lda         me + ME_BANK
-            ldx         #0
-            jsr         srv_tputdec
-            lda         #LF
-            jsr         srv_tputc
+            jsr         ROMREAD
+            bcs         @done
+            lda         me + ME_BANKS
+            dec         a
+            .repeat     6                                   ; (Banks before the last: 64 pages each)
+            asl
+            .endrepeat
             clc
+            adc         n + 1
+            sta         n + 1
+            clc
+@done:
+            rts
+
+; A module's file: from the read's offset, a page of the paged ROM at a time (through chunk: ROMREAD) to the client.
+; Opens and clunks: nothing to do
+h_image:
+            cmp         #R_READ
+            beq         :+
+            clc
+            rts
+:
+            lda         srv_fid_aux,X
+            jsr         mod_length                          ; n: its length
+            bcs         @done
+            jsr         img_left                            ; m: what to send
+            MOVR        pt, TASK_INBOX + RQ_OFFSET          ; pt: where in the image
+@part:
+            lda         m
+            ora         m + 1
+            beq         @end
+            jsr         img_part
+            bcc         @part
+            rts
+
+@end:
+            clc
+@done:
+            rts
+
+; m = what's left of the image (n bytes) after the read's offset (none past its end), or what the read asks for if
+; less; RQ_DONE = 0
+img_left:
+            stz         TASK_INBOX + RQ_DONE
+            stz         TASK_INBOX + RQ_DONE + 1
+            stz         m
+            stz         m + 1
+            lda         TASK_INBOX + RQ_OFFSET + 2
+            ora         TASK_INBOX + RQ_OFFSET + 3
+            bne         @done
+            sec
+            lda         n
+            sbc         TASK_INBOX + RQ_OFFSET
+            tax
+            lda         n + 1
+            sbc         TASK_INBOX + RQ_OFFSET + 1
+            bcc         @done
+            stx         m
+            sta         m + 1
+            lda         TASK_INBOX + RQ_COUNT
+            cmp         m
+            lda         TASK_INBOX + RQ_COUNT + 1
+            sbc         m + 1
+            bcs         @done
+            MOVR        m, TASK_INBOX + RQ_COUNT
+@done:
+            rts
+
+; The next part, to pt's page's end (or m bytes, if less), from the paged ROM to the client, after what's sent;
+; pt, m and RQ_DONE moved on.  OUT: C = 0; or C = 1, .A = ROMREAD's error
+img_part:
+            lda         #0                                  ; r2: to the page's end (256 - pt's low byte) ...
+            sec
+            sbc         pt
+            sta         r2
+            lda         #1
+            sbc         #0
+            sta         r2 + 1
+            lda         m                                   ;   or what's left, if less
+            cmp         r2
+            lda         m + 1
+            sbc         r2 + 1
+            bcs         :+
+            MOVR        r2, m
+:
+            lda         pt                                  ; r0: where in its bank (pt's bank: pt / 16K after
+            sta         r0                                  ;   its first)
+            lda         pt + 1
+            and         #$3F
+            ora         #>PROM_WINDOW
+            sta         r0 + 1
+            LDR         r1, chunk
+            lda         pt + 1
+            rol
+            rol
+            rol
+            and         #3
+            clc
+            adc         me + ME_BANK
+            jsr         ROMREAD
+            bcs         @done
+            LDR         r0, chunk                           ; To the client: its buffer, after what's sent
+            clc
+            lda         TASK_INBOX + RQ_BUF
+            adc         TASK_INBOX + RQ_DONE
+            sta         r1
+            lda         TASK_INBOX + RQ_BUF + 1
+            adc         TASK_INBOX + RQ_DONE + 1
+            sta         r1 + 1
+            jsr         CLIENT_WRITE
+            clc
+            lda         TASK_INBOX + RQ_DONE
+            adc         r2
+            sta         TASK_INBOX + RQ_DONE
+            lda         TASK_INBOX + RQ_DONE + 1
+            adc         r2 + 1
+            sta         TASK_INBOX + RQ_DONE + 1
+            clc
+            lda         pt
+            adc         r2
+            sta         pt
+            lda         pt + 1
+            adc         r2 + 1
+            sta         pt + 1
+            sec
+            lda         m
+            sbc         r2
+            sta         m
+            lda         m + 1
+            sbc         r2 + 1
+            sta         m + 1
+            clc
+@done:
+            rts
+
+; srvlib's SRV_STAT: a module's file's length, its image's
+mod_stat:
+            ldy         #SE_HANDLER                         ; (A module's file: h_image's)
+            lda         (srv_ent),Y
+            cmp         #<h_image
+            bne         @done
+            iny
+            lda         (srv_ent),Y
+            cmp         #>h_image
+            bne         @done
+            lda         z:srv_id
+            jsr         mod_length
+            bcs         @done
+            MOVR        srv_stat + SR_LENGTH, n
 @done:
             rts
 
@@ -720,12 +890,6 @@ p_at:
 
 .rodata
 zeros:      .res        64, 0
-s_bank:     .byte       " bank ", 0
-type_words: .word       s_unknown, s_program, s_driver, s_library
-s_unknown:  .byte       "module", 0
-s_program:  .byte       "program", 0
-s_driver:   .byte       "driver", 0
-s_library:  .byte       "library", 0
 STATES      = 9
 state_words: .word      s_free, s_ready, s_wait, s_call, s_idle, s_new, s_sleep, s_blocked, s_event
 s_free:     .byte       "free", 0
@@ -786,7 +950,9 @@ tree_time:
             .word       0
 tree_mods:
             SRV_ENTRY   s_slash,   $FF, SK_DYN,  h_mods,    SM_READ,            1
-            SRV_ENTRY   s_slash,   SE_TEMPLATE, SK_TEXT, gen_mod, SM_READ,      0     ; (Each module's file)
+            SRV_ENTRY   s_slash,   SE_TEMPLATE, SK_DATA, h_image, SM_READ,      0     ; (Each module's file)
+            SRV_ENTRY   s_bin,     0,   SK_DYN,  h_bins,    SM_READ,            3     ; bin
+            SRV_ENTRY   s_slash,   SE_TEMPLATE, SK_DATA, h_image, SM_READ,      0     ; (Each program's file)
             .word       0
 tree_procs:
             SRV_ENTRY   s_slash,   $FF, SK_DYN,  h_procs,   SM_READ,            1

@@ -1,8 +1,8 @@
 ; ****************************************************************************
 ; t_dev - the kernel's devices (phase 2.6: kdev) and PIPE, run as init with t_child, its fds 0-2 on #c/cons: #/ (the
-; mount points), #n (null, zero), #t (ticks), #m (the modules), #p (a task's status; ctl's kill); a pipe (its two
-; ends, the end of it, a broken one), a child writing into one and a child waiting on one; and a union's first bind
-; keeping what was there (bind -a #n /dev: #/'s dev first).
+; mount points), #n (null, zero), #t (ticks), #m (the modules: their images, as SPAWN reads them, and bin), #p (a
+; task's status; ctl's kill); a pipe (its two ends, the end of it, a broken one), a child writing into one and a
+; child waiting on one; and a union's first bind keeping what was there (bind -a #n /dev: #/'s dev first).
 
 .include "hydra.inc"
 .include "hyx2.inc"
@@ -18,6 +18,9 @@ wfd:        .res        1
 saved:      .res        1
 child:      .res        1
 total:      .res        2
+ptr:        .res        2
+cnt:        .res        1
+diffs:      .res        1
 
 .bss
 buf:        .res        512
@@ -125,22 +128,94 @@ main:
             NOTOK       "#t/ticks: some digits"
 :
 
-; ---- #m
+; ---- #m: bin, then each module; a module's file its image (its header first); #m/bin, the programs
             OPEN_       s_hmod, O_READ
             sta         fd
-            READ_       fd, SR_SIZE
+            READ_       fd, 2 * SR_SIZE
             lda         fd
             jsr         CLOSE
             lda         buf + SR_NAME
-            EXPECT_A    'i', "#m: init first (the module directory's order)"
+            EXPECT_A    'b', "#m: bin first (its own entry)"
+            lda         buf + SR_SIZE + SR_NAME
+            EXPECT_A    'i', "#m: then init (the module directory's order)"
+            OPEN_       s_mbin, O_READ
+            sta         fd
+            READ_       fd, 3 * SR_SIZE
+            lda         fd
+            jsr         CLOSE
+            lda         buf + 2 * SR_SIZE + SR_NAME
+            EXPECT_A    't', "#m/bin: the programs alone (init, hello, then tsh: not cons, storage, kdev)"
             OPEN_       s_modhello, O_READ
             sta         fd
             EXPECT_OK   "OPEN #m/hello"
             READ_       fd, 64
+            pha
             lda         fd
             jsr         CLOSE
-            lda         buf
-            EXPECT_A    'p', "#m/hello: a program"
+            pla
+            EXPECT_A    64, "#m/hello: 64 bytes read"
+            lda         buf + HX_MAGIC
+            EXPECT_A    'H', "#m/hello: its image, its header first (HYX2)"
+            lda         buf + HX_FLAGS
+            and         #HF_INPLACE
+            EXPECT_A    HF_INPLACE, "#m/hello: run in place"
+            LDR         r0, s_mbinhello
+            LDR         r1, buf + 256
+            jsr         STAT
+            lda         buf + 256 + SR_LENGTH
+            eor         buf + HX_LENGTH
+            sta         diffs
+            lda         buf + 256 + SR_LENGTH + 1
+            eor         buf + HX_LENGTH + 1
+            ora         diffs
+            EXPECT_A    0, "STAT #m/bin/hello: its length, its header's"
+            OPEN_       s_modself, O_READ                   ; This module's file: its code at $A000?
+            sta         fd
+            stz         total
+            stz         total + 1
+            stz         diffs
+@chunk:
+            READ_       fd, 200                             ; (Reads across pages)
+            bcs         @read
+            cmp         #0
+            beq         @read
+            sta         cnt
+            lda         total
+            sta         ptr
+            lda         total + 1
+            clc
+            adc         #>HYX2_LOAD
+            sta         ptr + 1
+            ldy         #0
+@byte:
+            lda         buf,Y
+            cmp         (ptr),Y
+            beq         :+
+            inc         diffs
+:
+            iny
+            cpy         cnt
+            bne         @byte
+            clc
+            lda         total
+            adc         cnt
+            sta         total
+            bcc         @chunk
+            inc         total + 1
+            bra         @chunk
+
+@read:
+            lda         fd
+            jsr         CLOSE
+            lda         diffs
+            EXPECT_A    0, "#m/t_dev read whole, 200 bytes a read: this module's code at $A000, byte for byte"
+            lda         total
+            eor         HYX2_LOAD + HX_LENGTH
+            sta         diffs
+            lda         total + 1
+            eor         HYX2_LOAD + HX_LENGTH + 1
+            ora         diffs
+            EXPECT_A    0, "#m/t_dev: as long as its header says"
 
 ; ---- #p: this task's status, and a child killed by its ctl
             OPEN_       s_status, O_READ
@@ -349,6 +424,9 @@ s_hnull:    .byte       "#n", 0
 s_ticks:    .byte       "#t/ticks", 0
 s_hmod:     .byte       "#m", 0
 s_modhello: .byte       "#m/hello", 0
+s_mbin:     .byte       "#m/bin", 0
+s_mbinhello: .byte      "#m/bin/hello", 0
+s_modself:  .byte       "#m/t_dev", 0
 s_status:   .byte       "#p/1/status", 0
 s_pre:      .byte       "#p/"
 s_ctl:      .byte       "/ctl", 0

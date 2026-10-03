@@ -27,9 +27,9 @@ function storesToRegisters(data, load = 0xA000) {
   return finds;
 }
 
-// Throw if module name's image writes one
-function checkModule(name, data) {
-  const finds = storesToRegisters(data);
+// Throw if module name's image (loaded at load: $0800 for a RAM program) writes one
+function checkModule(name, data, load = 0xA000) {
+  const finds = storesToRegisters(data, load);
   if (finds.length)
     throw new Error(name + ': only the kernel writes T, V and W: ' +
       finds.map(f => f.op + ' ' + f.register + ' at $' + f.at.toString(16).toUpperCase()).join(', '));

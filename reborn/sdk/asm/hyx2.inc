@@ -1,7 +1,9 @@
 ; ****************************************************************************
 ; hyx2.inc - a module's HYX2 header (docs/conventions.md, "Modules"), for programs and drivers in assembly.  Use
 ; it with hydra.inc (the calls and constants: made by tools/apigen.js) and modules/module.cfg (the link: code at
-; $A000 in the module's own paged ROM bank, run in place; data and BSS in its task's RAM, from $0400).
+; $A000 in the module's own paged ROM bank, run in place; data and BSS in its task's RAM, from $0400).  Or, for a
+; RAM program (a program in a file, which SPAWN's loader reads into its task's RAM), assemble with -D HYX2_RAM and
+; link with sdk/asm/hyx2.cfg: its header, code and data from $0800, its BSS after them.
 ;
 ;   HYX2_PROGRAM "name", main [, banks]                 a program: main gets r0 = its arguments; returning is
 ;                                                       EXITS with code 0
@@ -21,9 +23,16 @@
 ; first thing in its init or main, notes the module's banks.  Such a module owns no IRQ line: its irq entry runs
 ; in its own task, and might find the other bank at $A000.
 
-.import     __DATA_LOAD__, __DATA_RUN__, __DATA_SIZE__, __BSS_RUN__, __BSS_SIZE__, __ROM_LAST__, __RAM_LAST__
+.import     __DATA_LOAD__, __DATA_RUN__, __DATA_SIZE__, __BSS_RUN__, __BSS_SIZE__, __RAM_LAST__
 
-HYX2_LOAD       = $A000
+.ifdef HYX2_RAM
+HYX2_LOAD       = $0800                                     ; (A RAM program: read there by SPAWN)
+HYX2_INPLACE    = 0
+.else
+.import     __ROM_LAST__
+HYX2_LOAD       = $A000                                     ; (A module of the paged ROM: run in place)
+HYX2_INPLACE    = HF_INPLACE
+.endif
 HYX2_NAME_LEN   = 12
 
 .macro HYX2_HEADER  name, type, flags, main, serve, irq, stop, device, banks
@@ -34,15 +43,20 @@ HYX2_BANKS      = 1
 HYX2_BANKS      = banks
 .endif
 .assert     HYX2_BANKS = 1 .or HYX2_BANKS = 2, error, "A module is one bank or two"
+.ifdef HYX2_RAM
+.assert     HYX2_BANKS = 1, error, "A RAM program is one image"
+.endif
 .pushseg
 .segment "HEADER"
             .byte       "HYX2"                              ; HX_MAGIC
             .byte       48                                  ; HX_HSIZE
             .byte       type                                ; HX_TYPE
-            .byte       flags | HF_INPLACE                  ; HX_FLAGS
+            .byte       flags | HYX2_INPLACE                ; HX_FLAGS
             .byte       ABI_VERSION                         ; HX_ABI
             .word       HYX2_LOAD                           ; HX_LOAD
-.if HYX2_BANKS = 1
+.ifdef HYX2_RAM
+            .word       __DATA_LOAD__ + __DATA_SIZE__ - HYX2_LOAD ; HX_LENGTH (to its data's end)
+.elseif HYX2_BANKS = 1
             .word       __ROM_LAST__ - HYX2_LOAD            ; HX_LENGTH (in its last bank)
 .else
 .import     __ROM2_LAST__

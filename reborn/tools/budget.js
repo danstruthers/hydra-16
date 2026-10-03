@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 // ****************************************************************************
 // budget.js - what the build used, and what's left (docs/reimplementation-from-scratch.md, §16): BIOS ROM page 0
-// (the kernel, its jump table, the COMMON block), and each module's ROM and RAM.  The time budgets (IRQ latency,
-// SCALL, kcopy) are measured by the tests: sim/test.js.
+// (the kernel, its jump table, the COMMON block), each module's ROM and RAM, and each test RAM program's RAM.  The
+// time budgets (IRQ latency, SCALL, kcopy, load times) are measured by the tests: sim/test.js.
 //
 // Usage: node tools/budget.js          (after a build)
-// From Node: report(root, { modules, tests, entries }) gives { text, page0Free, ... }.
+// From Node: report(root, { modules, tests, progs, entries }) gives { text, page0Free, ... }.
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -31,7 +31,7 @@ function report(root, built = {}) {
     (seg.KCODE ? seg.KCODE.size : 0) + ', data ' + (seg.KRODATA ? seg.KRODATA.size : 0) + '); ' + page0Free + ' free before the jump table');
   lines.push('  jump table    ' + hx(0xF800) + '-' + hx(0xF800 + jt - 1) + '  ' + String(jt).padStart(5) + ' bytes (' + jt / 3 + ' slots)');
   if (seg.COMMON_P0) lines.push('  COMMON block  ' + hx(seg.COMMON_P0.start) + '-' + hx(seg.COMMON_P0.end) + '  ' + String(seg.COMMON_P0.size).padStart(5) + ' bytes, on every page');
-  for (const [p, what] of [[1, 'tasks, memory, notes'], [2, 'files, names, pipes'], [3, 'namespaces'], [4, 'POST']]) {
+  for (const [p, what] of [[1, 'tasks, memory, notes'], [2, 'files, names, pipes'], [3, 'namespaces, SPAWN and the loader'], [4, 'POST']]) {
     const code = seg['KCODE_P' + p], data = seg['KRODATA_P' + p];
     if (!code && !data) continue;
     const used = (code ? code.size : 0) + (data ? data.size : 0);
@@ -55,6 +55,12 @@ function report(root, built = {}) {
   };
   mods('Modules:', built.modules);
   mods('Test modules:', built.tests);
+  const progs = Object.keys(built.progs || {}).sort();
+  if (progs.length) lines.push('Test RAM programs:');
+  for (const n of progs) {
+    const d = built.progs[n], load = d.readUInt16LE(8), top = d.readUInt16LE(22), bss = d.readUInt16LE(20);
+    lines.push('  ' + n.padEnd(12) + String(d.length).padStart(6) + ' bytes   RAM ' + hx(load) + '-' + hx(top - 1) + ' (BSS ' + bss + ')');
+  }
   if (page0Free < 512) lines.push('WARNING: under 512 bytes left on BIOS ROM page 0');
   return { text: lines.join('\n'), page0Free, kernelEnd, segments: seg };
 }

@@ -80,6 +80,27 @@ function fsCards() {
     imageCard(4, f4, 16384), imageCard(5, f5, 131072), imageCard(6, f6, 2097152)];
 }
 
+// The load test's card: hello.txt, and in bin the test RAM programs as built (tests/ram: obj/tests/NAME.hyx): t_ram,
+// t_big, t_short (t_ram cut short: its header whole) and t_low (t_ram, its header saying it loads at $0400)
+function loadCard() {
+  fs.mkdirSync(CARD_DIR, { recursive: true });
+  hydrafs.setNow(0x1000);
+  const f = path.join(CARD_DIR, 'load0.img'), prog = n => fs.readFileSync(path.join(__dirname, '..', 'obj', 'tests', n + '.hyx'));
+  const ram = prog('t_ram'), low = Buffer.from(ram);
+  low.writeUInt16LE(0x0400, 8);
+  hydrafs.mkfs(f, 8, 'LOAD', undefined, true);
+  const v = new hydrafs.Volume(f);
+  v.put('hello.txt', Buffer.from('hello, hydrafs\n'));
+  v.mkdir('bin');
+  v.put('bin/t_ram', ram);
+  v.put('bin/t_big', prog('t_big'));
+  v.put('bin/t_short', ram.subarray(0, 300));
+  v.put('bin/t_low', low);
+  v.close();
+  return [imageCard(0, f, 16384)];
+}
+const BIG_LENGTH = () => fs.statSync(path.join(__dirname, '..', 'obj', 'tests', 't_big.hyx')).size;
+
 module.exports = {
   IRQ_OFF_MAX,
   tests: [
@@ -93,11 +114,13 @@ module.exports = {
     {
       name: 'init', what: 'init from files: the RAM disks started, the namespace file run, each shell\'s own namespace and /ram (a window\'s too)',
       init: 'init', modules: ['t_child'], cycles: 250e6,
-      // (ā: wait for a prompt; \x1d c: Ctrl-] c, a window made, its shell started.  t_child f makes /ram/mark: in
-      // its shell's area, 2, and not in window 1's shell's, 4)
-      machine: { input: 'āls #fr\r' + 'āls /ram\r' + 'āt_child f\r' + 'āls #fr/2\r' + 'ācat /rom/lib/profile\r' +
+      // (ā: wait for a prompt; \x1d c: Ctrl-] c, a window made, its shell started.  /bin: the RAM disks' caches (empty),
+      // then #m/bin, whose t_child runs by its name.  t_child f makes /ram/mark: in its shell's area, 2, and not in
+      // window 1's shell's, 4)
+      machine: { input: 'āls #fr\r' + 'āls /ram\r' + 'āls /bin\r' + 'āt_child f\r' + 'āls #fr/2\r' + 'ācat /rom/lib/profile\r' +
         'ācat /dev/sd/s/ctl\r' + 'ā\x1dc' + 'āls #fr\r' + 'āls /ram\r' + 'āls /dev\r' },
-      expect: ['tsh 0> ls #fr\n1/\n2/\ntsh 0>', 'tsh 0> ls /ram\nbin/\nlib/\ntsh 0>', 'tsh 0> ls #fr/2\nbin/\nlib/\nmark\ntsh 0>',
+      expect: ['tsh 0> ls #fr\n1/\n2/\ntsh 0>', 'tsh 0> ls /ram\nbin/\nlib/\ntsh 0>',
+        'tsh 0> ls /bin\ninit\nhello\ntsh\nt_child\ntsh 0>', 'tsh 0> ls #fr/2\nbin/\nlib/\nmark\ntsh 0>',
         'prompt=(', 'tsh 0> cat /dev/sd/s/ctl\nsram 512 KB 1024 blocks\nhydrafs label=SRAM\n', 'tsh: window 1',
         'tsh 1> ls #fr\n1/\n2/\n4/\ntsh 1>', 'tsh 1> ls /ram\nbin/\nlib/\ntsh 1>', '\ncons\nconsctl\nwctl\nwnew\nser\nserctl\ntsh 1>'],
     },
@@ -139,7 +162,7 @@ module.exports = {
     },
     {
       name: 'task', what: 'tasks and the scheduler: SPAWN, EXITS, WAIT, SLEEP, preemption, PAUSE and WAKE, orphans',
-      init: 't_task', modules: ['t_child'], without: ['cons', 'storage', 'kdev'], cycles: 60e6,
+      init: 't_task', modules: ['t_child'], without: ['cons', 'storage'], cycles: 60e6,
     },
     {
       name: 'note', what: 'notes: the defaults, handlers, a note to oneself, WAIT ended by one, note groups',
@@ -238,6 +261,23 @@ module.exports = {
       },
     },
     {
+      name: 'load', what: 'SPAWN by path and the loader: modules in place (#m/bin), RAM programs from a card (arguments, fd maps), errors',
+      init: 't_load', modules: ['t_child'], cycles: 200e6,
+      get machine() { return { sd: loadCard() }; },
+      // (A name through /bin looks in the card's bin first: the storage driver keeps one block, so each look reads the
+      // card's directories again, most of that time)
+      get budgets() {
+        const n = BIG_LENGTH();
+        return [{ what: 'a RAM program loaded from a card (t_big, ' + n + ' bytes: SPAWN to its first instruction), a byte', from: '<big', to: 'big>',
+          per: n, max: o => o.clock === 2 ? 320 + 64 : 320 },
+        { what: 'the same from the RAM disk, a byte', from: '<rbig', to: 'rbig>', per: n, max: 90 },
+        { what: 'SPAWN of a module in place (#m/t_child), the caller\'s time', from: '<msp', to: 'msp>', minus: ['<b0', 'b0>'],
+          per: 1, max: 70000 },
+        { what: 'the same by /bin/t_child (the card\'s bin first, then #m/bin)', from: '<sp', to: 'sp>', minus: ['<b0', 'b0>'], per: 1,
+          max: o => o.clock === 2 ? 550000 : 450000 }];
+      },
+    },
+    {
       name: 'cons', what: 'the console: lines, editing, history, raw keys, Ctrl-C, windows (shown, repainted, made, gone), 115200',
       init: 't_cons', modules: ['t_child'], cycles: 80e6,
       // (ā: wait for a prompt, "N> ")
@@ -264,7 +304,7 @@ module.exports = {
     },
     {
       name: 'scall', what: 'spike S3: calls into a driver\'s task, its errors, a busy driver, the round trip',
-      init: 't_scall', modules: ['t_child', 't_drv'], without: ['cons', 'storage', 'kdev'], cycles: 40e6,
+      init: 't_scall', modules: ['t_child', 't_drv'], without: ['cons', 'storage'], cycles: 40e6,
       budgets: [{ what: 'SCALL round trip (DBG_SCALL, less the same loop calling the code in place)', from: '<scall', to: 'scall>',
         minus: ['<base', 'base>'], per: 1000, max: 200 }],
     },
@@ -275,7 +315,7 @@ module.exports = {
     },
     {
       name: 'irq', what: 'spike S1: 115200 received by an irq entry while tasks spin',
-      init: 't_irq', modules: ['t_child'], without: ['cons', 'storage', 'kdev'], cycles: 30e6,
+      init: 't_irq', modules: ['t_child'], without: ['cons', 'storage'], cycles: 30e6,
       send: { after: 'ready>', bytes: Array.from({ length: S1_BYTES }, (_, i) => (3 + 7 * i) & 0xFF) },
       check(m) {
         const f = [], l = m.acia.rxLat, char = m.acia.charCycles();
