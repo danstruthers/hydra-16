@@ -11,3 +11,6 @@ doc/api.md          ../obj/gen/api.md   ; The system calls' reference (tools/api
 bin/mkfs            ../obj/programs/mkfs.hyx    ; The disk tools: RAM programs (programs/), loaded from here
 bin/fsck            ../obj/programs/fsck.hyx
 bin/label           ../obj/programs/label.hyx
+sample/hi           ../obj/samples/hi.hyx       ; The assembly SDK's samples, built (sdk/asm/samples/)
+sample/upper        ../obj/samples/upper.hyx
+sample/tick         ../obj/samples/tick.hyx

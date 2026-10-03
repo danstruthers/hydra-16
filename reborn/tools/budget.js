@@ -5,7 +5,7 @@
 // time budgets (IRQ latency, SCALL, kcopy, load times) are measured by the tests: sim/test.js.
 //
 // Usage: node tools/budget.js          (after a build)
-// From Node: report(root, { modules, tests, progs, programs, entries }) gives { text, page0Free, ... }.
+// From Node: report(root, { modules, tests, progs, programs, samples, entries }) gives { text, page0Free, ... }.
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -64,6 +64,7 @@ function report(root, built = {}) {
     }
   };
   rams('The ROM disk\'s programs (/rom/bin):', built.programs);
+  rams('The SDK\'s samples (/rom/sample):', built.samples);
   rams('Test RAM programs:', built.progs);
   if (page0Free < 512) lines.push('WARNING: under 512 bytes left on BIOS ROM page 0');
   return { text: lines.join('\n'), page0Free, kernelEnd, segments: seg };

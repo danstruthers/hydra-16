@@ -126,7 +126,9 @@ The kernel task (task 0) keeps the kernel's state: its program zero page (`K0_*`
 * A RAM program is assembled with `-D HYX2_RAM` (`hyx2.inc`: no `HF_INPLACE`, loaded at `$0800`) and linked by
   `sdk/asm/hyx2.cfg`: its header, code, read-only data and data one image from `$0800`, its BSS after them.  The
   test RAM programs are `tests/ram/NAME/`, built into `obj/tests/NAME.hyx`; the ROM disk's programs (`/rom/bin`,
-  listed in `romfs/romfs.txt`) are `programs/NAME/`, built into `obj/programs/NAME.hyx`.
+  listed in `romfs/romfs.txt`) are `programs/NAME/`, built into `obj/programs/NAME.hyx`; the SDK's samples are
+  `sdk/asm/samples/NAME/` (`/rom/sample`); and a program of one's own, anywhere, `node build.js prog DIR`
+  (`sdk/asm/README.md`).
 * **The tools** (`modules/NAME`, or `programs/NAME` for the ROM disk) are built on `sdk/asm/toollib.s`
   (`toollib.inc` at the top, for its zero page; `toollib.s` at the end), and behave as Plan 9's: flags first
   (`-abc`), then names; a name that fails is said on fd 2 as `tool: name: why` and the rest go on, the tool ending

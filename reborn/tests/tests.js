@@ -262,6 +262,8 @@ const TOOL_LINES = [
     "cmp: end of /ram/t1",
     "/ram/w /ram/t1 differ: byte 1",
   ].join('\n')],
+  ["/rom/sample/hi Ann Bob","Hello, Ann!\nHello, Bob!\nI'm task 3, in /, in window 0."],
+  ["echo Hello there | /rom/sample/upper","HELLO THERE"],
 ];
 
 module.exports = {
@@ -471,15 +473,16 @@ module.exports = {
       name: 'tools', what: 'the core tools at rc: files, text, tasks, the disks\' (/rom/bin); /proc\'s args, cwd, ns',
       init: 't_rc', cycles: 400e6,
       // (Each line typed at its prompt: its output (null: none; a third element true: how it starts), then the next
-      // prompt.  Then top, for 2 seconds or so, and Ctrl-C; and more, its --more-- answered with Enter)
+      // prompt.  Then top, for 2 seconds or so, and Ctrl-C; more, its --more-- answered with Enter; and the SDK's tick, and
+      // Ctrl-C: its handler's, not the default)
       get machine() {
         return { input: TOOL_LINES.map(l => 'ā' + l[0] + '\r').join('') + 'ātop\rĀĀĀĀ\x03' +
-          'āecho $status\r' + 'ācat /ram/n /ram/n /ram/n | more\rĀĀ\r' };
+          'āecho $status\r' + 'ācat /ram/n /ram/n /ram/n | more\rĀĀ\r' + 'ā/rom/sample/tick\rĀĀĀĀĀ\x03' + 'āecho $status\r' };
       },
       get expect() {
         return [...TOOL_LINES.map(l => '% ' + l[0] + '\n' + (l[2] ? l[1] : (l[1] === null ? '' : l[1] + '\n') + '%')),
           '\x1b[H\x1b[2Jtask  state    cpu  name\n', '% echo $status\ninterrupt\n%',
-          '\n9\n10\n--more--\n11\n12\n1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n%'];
+          '\n9\n10\n--more--\n11\n12\n1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n%', '% /rom/sample/tick\n.', ' seconds\n\n% echo $status\n\n%'];
       },
     },
     {

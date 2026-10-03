@@ -18,6 +18,8 @@
 //   --trace N           the last N instructions in the report (default 25)
 //   --watch-pc ADDR     log each time the PC reaches ADDR (hex, or a kernel label), on BIOS page 0
 //   --bios FILE, --prom FILE   other images
+//   --sd FILE           a card image (../sim/tools/hydrafs.js makes them), SD device 0, then 1 ...: read and
+//                       written in the file itself, as the Hydra reads and writes it
 // From Node: boot(opt) gives the machine; labels() the kernel's labels; state(m) each task's state.
 'use strict';
 const fs = require('fs');
@@ -151,6 +153,14 @@ function interactive(m, opt) {
   tick();
 }
 
+// A card from an image file, SD device dev: its blocks read and written in the file
+function cardFile(dev, file) {
+  const fd = fs.openSync(file, 'r+'), blocks = Math.floor(fs.fstatSync(fd).size / 512);
+  return { dev, blocks, file,
+    read: n => { const b = Buffer.alloc(512); fs.readSync(fd, b, 0, 512, n * 512); return b; },
+    write: (n, b) => { fs.writeSync(fd, Buffer.from(b), 0, 512, n * 512); } };
+}
+
 function main(argv) {
   const opt = { cycles: 30000000, speed: 1, clock: CLOCK, pcWatches: [] }, lbl = labels();
   const unescape = s => s.replace(/\\r|\\n/g, '\r').replace(/\\w/g, 'Ā').replace(/\\t/g, '\t');
@@ -168,6 +178,7 @@ function main(argv) {
     else if (a === '--trace') opt.trace = +next();
     else if (a === '--bios') opt.bios = next();
     else if (a === '--prom') opt.prom = next();
+    else if (a === '--sd') { opt.sd = opt.sd || []; opt.sd.push(cardFile(opt.sd.length, next())); }
     else if (a === '--watch-pc') {
       const w = next(), pc = lbl.byName.has(w) ? lbl.byName.get(w) : parseInt(w.replace(/^\$/, ''), 16);
       if (!(pc >= 0)) { console.error('--watch-pc: ' + w + '?'); process.exit(2); }
