@@ -13,7 +13,13 @@ extern const char* _hy_exitmsg;                         /* crt0.s: the message _
 
 static struct hy_regs r;
 
-/* ---- The tick */
+/* ---- The clock, the tick */
+
+unsigned long hy_time (void)
+{
+    hy_call (HY_TIME, &r);
+    return (unsigned long) r.r[0] | ((unsigned long) r.r[1] << 16);
+}
 
 unsigned hy_ticks (void)
 {

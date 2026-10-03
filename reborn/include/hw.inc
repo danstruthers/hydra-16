@@ -106,4 +106,7 @@ YM_DATA         = $FF41         ; Write: the selected register; read: the status
 
 ; ---- The DS1747 clock in U7 (if fitted): its registers are task F's $7FF8-$7FFF
 RTC_TASK        = $0F
-RTC_REGS        = $7FF8
+RTC_REGS        = $7FF8         ; Control (the century, BCD; W, R), seconds (OSC: bit 7), minutes, hours, day (BF: bit 7;
+                                ;   FT: bit 6), date, month, year: BCD
+RTC_W           = $80           ; Control: W, updates halted for a write (clearing it sets the clock from them)
+RTC_R           = $40           ; Control: R, updates halted for a read

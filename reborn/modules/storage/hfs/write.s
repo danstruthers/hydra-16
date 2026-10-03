@@ -233,23 +233,35 @@ HFS_CARD_X:
 ; ****************************************************************************
 ; The card's counters, and entries
 
-; A modification stamp into HFS_T4.  Till there's a clock (phase 5: its time, seconds since 2000-01-01), the
-; disk's latest (HFS_V_STAMP) and 1: a counter, as the first ROMs had.  The disk's superblock keeps the latest
-; (HFS_V_STAMP: it gets it at the end of the request).  Modifies: .A, .X, .Y
+; A modification stamp into HFS_T4: the clock's time (TIME: seconds since 2000-01-01; r0-r3 kept, as the call
+; changes them).  The disk's superblock keeps the latest (HFS_V_STAMP: it gets it at the end of the request).
+; Modifies: .A, .X, .Y
 HFS_TAKE_STAMP:
-            jsr         HFS_CARD_X
-            inc         HFS_V_STAMP,X
-            bne         :+
-            inc         HFS_V_STAMP + 1,X
-            bne         :+
-            inc         HFS_V_STAMP + 2,X
-            bne         :+
-            inc         HFS_V_STAMP + 3,X
+            ldx         #7                                  ; (r0-r3 kept)
 :
+            lda         r0,X
+            pha
+            dex
+            bpl         :-
+            jsr         TIME
+            ldx         #3
+:
+            lda         r0,X
+            sta         HFS_T4,X
+            dex
+            bpl         :-
+            ldx         #0
+:
+            pla
+            sta         r0,X
+            inx
+            cpx         #8
+            bne         :-
+            jsr         HFS_CARD_X
             ldy         #0
 :
-            lda         HFS_V_STAMP,X
-            sta         HFS_T4,Y
+            lda         HFS_T4,Y
+            sta         HFS_V_STAMP,X
             inx
             iny
             cpy         #4

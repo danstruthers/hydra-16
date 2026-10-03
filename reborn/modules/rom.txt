@@ -28,6 +28,7 @@ module      slay
 module      sleep
 module      mods
 module      free
+module      date
 module      ns
 module      top
 module      wc

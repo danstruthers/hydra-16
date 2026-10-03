@@ -543,7 +543,7 @@ As Plan 9's notes, with numbers instead of strings (a message can go with them):
 
 #### **10.9 Time**
 
-* The tick count (`TICKS`), sleeping (`SLEEP` ticks, `SLEEP_UNTIL` a tick count), the clock (seconds since 2000-01-01, as now), and the DS1747 if it's there: found at boot, read and written by the kernel time device (§14.1).  The calendar text (`YYYY-MM-DD hh:mm:ss`) is in one routine, used by `/dev/time` and by `ls`'s library.
+* The tick count (`TICKS`), sleeping (`SLEEP` ticks, `SLEEP_UNTIL` a tick count), the clock (seconds since 2000-01-01, as now), and the DS1747 if it's there: found at boot, read and written by the kernel time device (§14.1).  The calendar text (`YYYY-MM-DD hh:mm:ss`) is in one routine, used by `/dev/time` and by `ls`'s library.  (As built, phase 5.4: the kernel keeps the clock as the boot's time and the ticks since (`TIME`, `TIME_SET`) and reaches the DS1747's registers for kdev (`RTC`); the calendar is kdev's, which sets the clock from the chip as it starts, so the boot doesn't wait for the chip's second to turn.  `ls -l`'s dates are toollib's own (`tl_date`, to the minute): a module can't call another's code, so the calendar is in two places.)
 
 ---
 

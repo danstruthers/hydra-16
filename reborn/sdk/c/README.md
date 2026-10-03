@@ -51,8 +51,8 @@ int main (int argc, char* argv[])
   `hydra.h`) until the program ends.
 * Sound (`snd.h`): claim the channels it uses (`snd_claim`), then patches, notes, volumes, bends and drums on
   them; they're given back as it ends.  `snd_play` plays a song in the background (`play`, in a task of its own).
-* `time` and `clock` count from the program's start (`time` from 2000-01-01, till the system has a clock);
-  `sleep` and `hy_sleep_ticks` let the other tasks run.
+* `time` is the system's clock (`/dev/time`; `hy_time`, in seconds since 2000), `clock` the ticks since the
+  program's start; `sleep` and `hy_sleep_ticks` let the other tasks run.
 * Its RAM: `$0800` to `$7F00`, for the program, its BSS, the heap (`malloc`) and the C stack (2K); its own RAM
   banks at `$8000`-`$9FFF` (`hy_banks_alloc`, `hy_bank`).  The 6502's stack is 256 bytes: deep recursion runs
   out of it.  cc65's runtime has the zero page from `$22` (26 bytes); the program's own goes after it, to `$7F`.

@@ -81,6 +81,21 @@ ef_kind:    .res        E_FIDS                              ; #e's fids: each it
 ef_task:    .res        E_FIDS                              ;   the task whose environment it's in ...
 ef_name:    .res        E_FIDS * (ENV_NAME_MAX + 1)         ;   and a variable's name
 ename:      .res        ENV_NAME_MAX + 1                    ; A request's name
+secs:       .res        4                                   ; #t's: a time (seconds since 2000-01-01) ...
+days:       .res        2                                   ;   its days since then ...
+f_year:     .res        2                                   ;   its fields: the year ...
+f_mon:      .res        1                                   ;   the month (1-12), date, hour, minute and second (in
+f_date:     .res        1                                   ;   this order: fields_text, text_fields)
+f_hour:     .res        1
+f_min:      .res        1
+f_sec:      .res        1
+yr:         .res        2                                   ; (The calendar's year at hand)
+q:          .res        4                                   ; (div8's and muladd's number ...
+mq:         .res        4                                   ;   and muladd's multiplicand)
+t:          .res        2
+regs:       .res        8                                   ; The DS1747's registers (RTC)
+rtc_state:  .res        1                                   ; What was found at init (RTC_*)
+tbuf:       .res        21                                  ; A time written
 
 .code
 ; ****************************************************************************
@@ -94,6 +109,7 @@ init:
             lda         #$FF
             sta         last_want
             jsr         md_init
+            jsr         time_init                           ; (The clock from the DS1747)
             ldx         #0
 @letter:
             lda         SRV_TREES,X
@@ -174,7 +190,7 @@ h_zero:
             rts
 
 ; ****************************************************************************
-; #t
+; #t: the ticks, and the time
 
 gen_ticks:
             jsr         TICKS
@@ -183,6 +199,719 @@ gen_ticks:
             jsr         srv_tputc
             clc
             rts
+
+; #t's time.  /time reads as the clock (TIME: seconds since 2000-01-01) in the calendar, "2026-10-03 15:04:05"
+; and an LF; a write of that text (and an LF, or not) sets the clock (TIME_SET), and the DS1747 if there's one
+; (RTC).  As kdev starts, the clock is set from the chip, if it holds a date and time (BCD, each field in its
+; range) and its oscillator runs (OSC clear).  /rtc reads as what was found then: "running" (and " battery low":
+; its BF clear), "stopped" (OSC set: set the time), or "none".  The calendar is here, in one place: seconds to
+; fields and back, for 2000-2135 (a leap year every fourth, but 2100).
+
+RTC_NONE        = 0             ; rtc_state: no DS1747 (no date and time in its registers) ...
+RTC_RUNNING     = 1             ;   one running ...
+RTC_STOPPED     = 2             ;   or one with its oscillator stopped
+
+; Init's: the clock from the chip, if it has a date and time and runs; rtc_state says what was found
+time_init:
+            LDR         r0, regs
+            lda         #0
+            jsr         RTC
+            stz         rtc_state
+            jsr         regs_valid
+            bcs         @done
+            lda         #RTC_STOPPED
+            sta         rtc_state
+            bit         regs + 1                            ; (OSC: stopped)
+            bmi         @done
+            lda         #RTC_RUNNING
+            sta         rtc_state
+            jsr         regs_fields
+            jsr         fields_secs
+            bcs         @done
+            MOVR        r0, secs
+            MOVR        r1, secs + 2
+            jsr         TIME_SET
+@done:
+            rts
+
+; /time: the clock, as text
+gen_time:
+            jsr         TIME
+            MOVR        secs, r0
+            MOVR        secs + 2, r1
+            jsr         secs_fields
+            jsr         fields_text
+            lda         #LF
+            jsr         srv_tputc
+            clc
+            rts
+
+; /time: a read: the clock's text (gen_time), from the offset; a write: "YYYY-MM-DD hh:mm:ss" (and an LF, or not):
+; the clock set, and the chip (its oscillator on)
+h_time:
+            cmp         #R_READ
+            bne         :+
+            stz         z:srv_tlen
+            jsr         gen_time
+            jmp         give_text
+:
+            cmp         #R_WRITE
+            beq         :+
+            clc
+            rts
+:
+            lda         TASK_INBOX + RQ_COUNT + 1           ; (19 bytes, or 20 with an LF)
+            bne         @inval
+            lda         TASK_INBOX + RQ_COUNT
+            cmp         #19
+            bcc         @inval
+            cmp         #21
+            bcs         @inval
+            sta         r2
+            stz         r2 + 1
+            LDR         r0, tbuf
+            MOVR        r1, TASK_INBOX + RQ_BUF
+            jsr         CLIENT_READ
+            jsr         text_fields
+            bcs         @inval
+            jsr         fields_secs
+            bcs         @inval
+            MOVR        r0, secs
+            MOVR        r1, secs + 2
+            jsr         TIME_SET
+            lda         rtc_state                           ; The chip too, if there's one: it runs from now
+            beq         :+
+            jsr         fields_regs
+            LDR         r0, regs
+            lda         #1
+            jsr         RTC
+            lda         #RTC_RUNNING
+            sta         rtc_state
+:
+            MOVR        TASK_INBOX + RQ_DONE, TASK_INBOX + RQ_COUNT
+            clc
+            rts
+
+@inval:
+            lda         #E_INVAL
+            sec
+            rts
+
+; srv_text (srv_tlen bytes) to the client, from the request's offset (past its end: nothing)
+give_text:
+            stz         TASK_INBOX + RQ_DONE
+            stz         TASK_INBOX + RQ_DONE + 1
+            lda         TASK_INBOX + RQ_OFFSET + 1
+            ora         TASK_INBOX + RQ_OFFSET + 2
+            ora         TASK_INBOX + RQ_OFFSET + 3
+            bne         @done
+            lda         TASK_INBOX + RQ_OFFSET
+            cmp         z:srv_tlen
+            bcs         @done
+            sec                                             ; r2: what's left, or what's asked if less
+            lda         z:srv_tlen
+            sbc         TASK_INBOX + RQ_OFFSET
+            sta         r2
+            stz         r2 + 1
+            lda         TASK_INBOX + RQ_COUNT + 1
+            bne         :+
+            lda         TASK_INBOX + RQ_COUNT
+            cmp         r2
+            bcs         :+
+            sta         r2
+:
+            clc
+            lda         #<srv_text
+            adc         TASK_INBOX + RQ_OFFSET
+            sta         r0
+            lda         #>srv_text
+            adc         #0
+            sta         r0 + 1
+            jsr         srv_toclient
+@done:
+            clc
+            rts
+
+; /rtc: what was found as kdev started
+gen_rtc:
+            ldx         rtc_state
+            lda         rtc_lo,X
+            pha
+            lda         rtc_hi,X
+            tax
+            pla
+            jsr         srv_tputs
+            lda         rtc_state
+            cmp         #RTC_RUNNING
+            bne         :+
+            bit         regs + 4                            ; (BF: set while its battery's good)
+            bmi         :+
+            lda         #<s_batlow
+            ldx         #>s_batlow
+            jsr         srv_tputs
+:
+            lda         #LF
+            jsr         srv_tputc
+            clc
+            rts
+
+; ****************************************************************************
+; The calendar.  The fields: f_year (2, binary), f_mon (1-12), f_date (1-31), f_hour, f_min, f_sec (in that order);
+; secs (4): seconds since 2000-01-01; days (2): days since then
+
+; secs -> the fields, and days
+secs_fields:
+            ldx         #3
+:
+            lda         secs,X
+            sta         q,X
+            dex
+            bpl         :-
+            lda         #60
+            jsr         div8
+            sta         f_sec
+            lda         #60
+            jsr         div8
+            sta         f_min
+            lda         #24
+            jsr         div8
+            sta         f_hour
+            lda         q                                   ; (The days: 16 bits, to 2179)
+            sta         days
+            lda         q + 1
+            sta         days + 1
+            lda         #<2000                              ; The year: each one's days off while there are as many
+            sta         yr
+            lda         #>2000
+            sta         yr + 1
+@year:
+            jsr         year_days                           ; (t)
+            lda         q
+            cmp         t
+            lda         q + 1
+            sbc         t + 1
+            bcc         @years
+            lda         q
+            sbc         t                                   ; (C = 1)
+            sta         q
+            lda         q + 1
+            sbc         t + 1
+            sta         q + 1
+            inc         yr
+            bne         @year
+            inc         yr + 1
+            bra         @year
+@years:
+            lda         yr
+            sta         f_year
+            lda         yr + 1
+            sta         f_year + 1
+            ldx         #1                                  ; The month: each one's days off, the same way
+@mon:
+            jsr         month_days
+            ldy         q + 1
+            bne         :+
+            cmp         q
+            beq         :+
+            bcs         @date                               ; (q < its days)
+:
+            sta         t
+            sec
+            lda         q
+            sbc         t
+            sta         q
+            lda         q + 1
+            sbc         #0
+            sta         q + 1
+            inx
+            bra         @mon
+@date:
+            stx         f_mon
+            lda         q
+            inc         a
+            sta         f_date
+            rts
+
+; The fields -> secs, and days.  OUT: C = 0; or C = 1: not a date the calendar has (the year out of 2000-2135, or
+; the date past its month's days)
+fields_secs:
+            lda         f_year + 1
+            cmp         #>2000                              ; (2000-2135: $07D0-$0857)
+            bcc         @bad
+            bne         :+
+            lda         f_year
+            cmp         #<2000
+            bcc         @bad
+:
+            lda         f_year + 1
+            cmp         #>2136
+            bcc         :+
+            bne         @bad
+            lda         f_year
+            cmp         #<2136
+            bcs         @bad
+:
+            lda         f_year                              ; Its date within its month
+            sta         yr
+            lda         f_year + 1
+            sta         yr + 1
+            ldx         f_mon
+            jsr         month_days
+            cmp         f_date
+            bcs         @ok
+@bad:
+            sec
+            rts
+
+@ok:
+            stz         days                                ; days: the years before it ...
+            stz         days + 1
+            lda         #<2000
+            sta         yr
+            lda         #>2000
+            sta         yr + 1
+@year:
+            lda         yr
+            cmp         f_year
+            bne         :+
+            lda         yr + 1
+            cmp         f_year + 1
+            beq         @months
+:
+            jsr         year_days
+            clc
+            lda         days
+            adc         t
+            sta         days
+            lda         days + 1
+            adc         t + 1
+            sta         days + 1
+            inc         yr
+            bne         @year
+            inc         yr + 1
+            bra         @year
+@months:
+            ldx         #1                                  ;   the months before it ...
+@mon:
+            cpx         f_mon
+            beq         @date
+            jsr         month_days
+            clc
+            adc         days
+            sta         days
+            bcc         :+
+            inc         days + 1
+:
+            inx
+            bra         @mon
+@date:
+            lda         f_date                              ;   and its days before it
+            dec         a
+            clc
+            adc         days
+            sta         days
+            sta         q
+            lda         days + 1
+            adc         #0
+            sta         days + 1
+            sta         q + 1
+            stz         q + 2
+            stz         q + 3
+            lda         #24                                 ; secs = ((days * 24 + hour) * 60 + minute) * 60 + second
+            ldx         f_hour
+            jsr         muladd
+            lda         #60
+            ldx         f_min
+            jsr         muladd
+            lda         #60
+            ldx         f_sec
+            jsr         muladd
+            ldx         #3
+:
+            lda         q,X
+            sta         secs,X
+            dex
+            bpl         :-
+            clc
+            rts
+
+; t = yr's days: 365, or 366 in a leap year
+year_days:
+            lda         #<365
+            sta         t
+            lda         #>365
+            sta         t + 1
+            jsr         is_leap
+            bne         :+
+            inc         t
+:
+            rts
+
+; Is yr a leap year (2000-2135: divisible by 4, but 2100)?  OUT: Z = 1 yes.  Keeps .X
+is_leap:
+            lda         yr
+            and         #3
+            bne         @no
+            lda         yr + 1
+            cmp         #>2100
+            bne         @yes
+            lda         yr
+            cmp         #<2100
+            beq         @no
+@yes:
+            lda         #0
+            rts
+
+@no:
+            lda         #1
+            rts
+
+; .A = month .X's days in yr.  Keeps .X
+month_days:
+            cpx         #2
+            beq         :+
+            lda         mdays - 1,X
+            rts
+:
+            jsr         is_leap                             ; February: 29 in a leap year
+            beq         :+
+            lda         #28
+            rts
+:
+            lda         #29
+            rts
+
+; q (4 bytes) / .A: the quotient in q, the remainder in .A.  Modifies .X
+div8:
+            sta         t
+            lda         #0
+            ldx         #32
+@bit:
+            asl         q
+            rol         q + 1
+            rol         q + 2
+            rol         q + 3
+            rol         a
+            bcs         @sub                                ; (Past 255: more than .A)
+            cmp         t
+            bcc         @next
+@sub:
+            sbc         t                                   ; (C = 1)
+            inc         q
+@next:
+            dex
+            bne         @bit
+            rts
+
+; q = q * .A + .X (4 bytes).  Modifies .Y, t, mq
+muladd:
+            sta         t
+            ldy         #3                                  ; mq: q; q: .X
+:
+            lda         q,Y
+            sta         mq,Y
+            lda         #0
+            sta         q,Y
+            dey
+            bpl         :-
+            stx         q
+            ldy         #8                                  ; + mq * .A, a bit at a time
+@bit:
+            lsr         t
+            bcc         @shift
+            clc
+            ldx         #0
+:
+            lda         q,X
+            adc         mq,X
+            sta         q,X
+            inx
+            txa                                             ; (eor, not cpx: the carry goes on)
+            eor         #4
+            bne         :-
+@shift:
+            asl         mq
+            rol         mq + 1
+            rol         mq + 2
+            rol         mq + 3
+            dey
+            bne         @bit
+            rts
+
+; The fields as text (srv_tputc): "2026-10-03 15:04:05"
+fields_text:
+            lda         f_year
+            ldx         f_year + 1
+            jsr         srv_tputdec
+            ldy         #0                                  ; (.Y: srv_tputc keeps it, not .X)
+@field:
+            lda         t_sep,Y
+            jsr         srv_tputc
+            lda         f_mon,Y
+            jsr         two
+            iny
+            cpy         #5
+            bne         @field
+            rts
+
+; .A (0-99) as two digits.  Keeps .X
+two:
+            phx
+            ldx         #'0' - 1
+            sec
+:
+            inx
+            sbc         #10
+            bcs         :-
+            adc         #10 + '0'
+            pha
+            txa
+            jsr         srv_tputc
+            pla
+            jsr         srv_tputc
+            plx
+            rts
+
+; tbuf's text -> the fields: "YYYY-MM-DD hh:mm:ss", each in its range (the month 1-12, the date 1-31, 0-23, 0-59,
+; 0-59; the date against its month: fields_secs).  OUT: C = 0; or C = 1: not that
+text_fields:
+            ldy         #0
+            jsr         digits2                             ; The year: two pairs of digits
+            bcs         @bad
+            sta         q
+            jsr         digits2
+            bcs         @bad
+            tax
+            stz         q + 1
+            stz         q + 2
+            stz         q + 3
+            lda         #100
+            phy
+            jsr         muladd                              ; (q * 100 + the second pair)
+            ply
+            lda         q
+            sta         f_year
+            lda         q + 1
+            sta         f_year + 1
+            ldx         #0                                  ; The rest: a separator, then two digits in range
+@field:
+            lda         tbuf,Y
+            cmp         t_sep,X
+            bne         @bad
+            iny
+            jsr         digits2
+            bcs         @bad
+            cmp         t_min,X
+            bcc         @bad
+            cmp         t_max,X
+            beq         :+
+            bcs         @bad
+:
+            sta         f_mon,X
+            inx
+            cpx         #5
+            bne         @field
+            lda         TASK_INBOX + RQ_COUNT               ; (Then the end, or an LF)
+            cmp         #20
+            bcc         :+
+            lda         tbuf,Y
+            cmp         #LF
+            bne         @bad
+:
+            clc
+            rts
+
+@bad:
+            sec
+            rts
+
+; Two digits from tbuf at .Y: .A their value.  OUT: C = 0; or C = 1: not two digits.  .Y past them; keeps .X
+digits2:
+            lda         tbuf,Y
+            sec
+            sbc         #'0'
+            cmp         #10
+            bcs         @bad
+            sta         t + 1                               ; (* 10: * 8 + * 2)
+            asl
+            asl
+            adc         t + 1
+            asl
+            sta         t + 1
+            iny
+            lda         tbuf,Y
+            sec
+            sbc         #'0'
+            cmp         #10
+            bcs         @bad
+            clc
+            adc         t + 1
+            iny
+            clc
+            rts
+
+@bad:
+            sec
+            rts
+
+; Do the chip's registers (regs) hold a date and time?  Each field BCD and in its range (the century 20 or 21), and
+; the bits that aren't the fields' 0 (but OSC, BF, W and R).  (The date against its month: fields_secs.)  OUT: C = 0
+; yes; or C = 1
+regs_valid:
+            ldx         #7
+@field:
+            lda         regs,X
+            and         rtc_unused,X
+            bne         @no
+            lda         regs,X
+            and         rtc_field,X
+            cmp         rtc_min,X
+            bcc         @no
+            cmp         rtc_max,X
+            beq         :+
+            bcs         @no
+:
+            and         #$0F                                ; (The low digit: 0-9)
+            cmp         #10
+            bcs         @no
+            dex
+            bpl         @field
+            clc
+            rts
+
+@no:
+            sec
+            rts
+
+; The chip's registers -> the fields
+regs_fields:
+            lda         regs                                ; The year: the century * 100 + the year
+            and         #$3F
+            jsr         unbcd
+            sta         q
+            stz         q + 1
+            stz         q + 2
+            stz         q + 3
+            lda         regs + 7
+            jsr         unbcd
+            tax
+            lda         #100
+            jsr         muladd
+            lda         q
+            sta         f_year
+            lda         q + 1
+            sta         f_year + 1
+            ldx         #4                                  ; The rest, from their registers
+@field:
+            ldy         rtc_reg,X
+            lda         regs,Y
+            and         rtc_field,Y
+            jsr         unbcd
+            sta         f_mon,X
+            dex
+            bpl         @field
+            rts
+
+; The fields (and days) -> the chip's registers: the day of the week 1-7 from Sunday (2000-01-01 was a Saturday, 7);
+; OSC clear (it runs), BF and FT 0, the control its century (W clear: RTC writes it last)
+fields_regs:
+            ldx         #4
+@field:
+            lda         f_mon,X
+            jsr         bcd
+            ldy         rtc_reg,X
+            sta         regs,Y
+            dex
+            bpl         @field
+            lda         f_year                              ; The century and the year: f_year / 100
+            sta         q
+            lda         f_year + 1
+            sta         q + 1
+            stz         q + 2
+            stz         q + 3
+            lda         #100
+            jsr         div8
+            jsr         bcd
+            sta         regs + 7
+            lda         q
+            jsr         bcd
+            sta         regs
+            lda         days                                ; The day of the week: (days + 6) mod 7 + 1
+            sta         q
+            lda         days + 1
+            sta         q + 1
+            stz         q + 2
+            stz         q + 3
+            lda         #7
+            jsr         div8
+            clc
+            adc         #6
+            cmp         #7
+            bcc         :+
+            sbc         #7
+:
+            inc         a
+            sta         regs + 4
+            rts
+
+; .A (0-99) in BCD.  Keeps .X
+bcd:
+            phx
+            ldx         #$FF
+            sec
+:
+            inx
+            sbc         #10
+            bcs         :-
+            adc         #10
+            sta         t
+            txa
+            asl
+            asl
+            asl
+            asl
+            ora         t
+            plx
+            rts
+
+; .A (BCD) in binary
+unbcd:
+            pha
+            lsr
+            lsr
+            lsr
+            lsr
+            sta         t                                   ; (Tens: * 10 = * 8 + * 2)
+            asl
+            asl
+            adc         t
+            asl
+            sta         t
+            pla
+            and         #$0F
+            clc
+            adc         t
+            rts
+
+.rodata
+mdays:      .byte       31, 0, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31  ; (February: month_days')
+t_sep:      .byte       "-- ::"                             ; Before the month, date, hour, minute, second
+t_min:      .byte       1, 1, 0, 0, 0
+t_max:      .byte       12, 31, 23, 59, 59
+rtc_reg:    .byte       6, 5, 3, 2, 1                       ; The month's, date's, hour's, minute's, second's register
+;                         ctl  sec  min  hour day  date mon  year
+rtc_field:  .byte       $3F, $7F, $7F, $3F, $07, $3F, $1F, $FF
+rtc_unused: .byte       $00, $00, $80, $C0, $78, $C0, $E0, $00 ; (The day: FT too, never set)
+rtc_min:    .byte       $20, $00, $00, $00, $01, $01, $01, $00
+rtc_max:    .byte       $21, $59, $59, $23, $07, $31, $12, $99
+rtc_lo:     .lobytes    s_none, s_running, s_stopped
+rtc_hi:     .hibytes    s_none, s_running, s_stopped
+s_none:     .byte       "none", 0
+s_running:  .byte       "running", 0
+s_stopped:  .byte       "stopped", 0
+s_batlow:   .byte       " battery low", 0
+
+.code
 
 ; ****************************************************************************
 ; #m: the modules, a file each (its id: its entry in the module directory), read as its image in the paged ROM, its
@@ -536,8 +1265,20 @@ img_part:
 @done:
             rts
 
-; srvlib's SRV_STAT: a module's file's length, its image's
+; srvlib's SRV_STAT: a module's file's length, its image's; /time's, 20
 mod_stat:
+            ldy         #SE_HANDLER                         ; (/time: h_time's)
+            lda         (srv_ent),Y
+            cmp         #<h_time
+            bne         :+
+            iny
+            lda         (srv_ent),Y
+            cmp         #>h_time
+            bne         :+
+            lda         #20
+            sta         srv_stat + SR_LENGTH
+            rts
+:
             ldy         #SE_HANDLER                         ; (A module's file: h_image's)
             lda         (srv_ent),Y
             cmp         #<h_image
@@ -2003,6 +2744,8 @@ tree_null:
 tree_time:
             SRV_ENTRY   s_slash,   $FF, SK_DIR,  0,         SM_READ,            0
             SRV_ENTRY   s_ticks,   0,   SK_TEXT, gen_ticks, SM_READ,            0
+            SRV_ENTRY   s_time,    0,   SK_DATA, h_time,    SM_READ | SM_WRITE, 0
+            SRV_ENTRY   s_rtc,     0,   SK_TEXT, gen_rtc,   SM_READ,            0
             .word       0
 tree_mods:
             SRV_ENTRY   s_slash,   $FF, SK_DYN,  h_mods,    SM_READ,            1
@@ -2054,6 +2797,8 @@ s_spi:      .byte       "spi", 0
 s_null:     .byte       "null", 0
 s_zero:     .byte       "zero", 0
 s_ticks:    .byte       "ticks", 0
+s_time:     .byte       "time", 0
+s_rtc:      .byte       "rtc", 0
 s_status:   .byte       "status", 0
 s_ctl:      .byte       "ctl", 0
 s_args:     .byte       "args", 0

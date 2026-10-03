@@ -52,8 +52,7 @@ HFS_SB_DATA         = 24        ; The data area's first block
 HFS_SB_FREE         = 28        ; Free clusters (a hint: "check" recounts it)
 HFS_SB_HINT         = 32        ; Where to look for free clusters next (a hint)
 HFS_SB_NEXT_QID     = 36        ; The next qid id to give out
-HFS_SB_STAMP        = 40        ; The latest modification stamp given (the clock's time, seconds since 2000;
-                                ;   till there's a clock, a counter's next)
+HFS_SB_STAMP        = 40        ; The latest modification stamp given (the clock's time, seconds since 2000)
 HFS_SB_MAPINIT      = 44        ; Version 2: the free map's blocks written so far (from its first); the rest
                                 ;   haven't been, and read as all free (version 1: ignored, all written)
 HFS_SB_ROOT         = 64        ; The root directory's entry

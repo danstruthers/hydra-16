@@ -278,6 +278,7 @@ const TOOL_LINES = [
     "echo: write error: invalid argument",
     "echo: write error: invalid argument",
   ].join('\n')],
+  ["cat /dev/rtc; date","none\n2000-01-01 00:0",true],
 ];
 
 // The C test's lines (as the tools test's): the C SDK's samples, the library's test (ctest: its "ok" lines), and the
@@ -396,6 +397,21 @@ const GPIO_LINES = [
     "echo: write error: invalid argument",
     "speed 100",
   ].join('\n')],
+];
+
+// The clock test's lines (as the tools test's; a third element true: how its output starts): a DS1747 set to
+// 2026-10-03 15:04:05 (the machine's), the clock from it; the time set across the end of a month (2030: no leap
+// year), of February in 2100 (no leap year either) and a leap day; the time's errors; a file's stamp
+const CLOCK_LINES = [
+  ["cat /dev/rtc; date","running\n2026-10-03 15:04:",true],
+  ["echo 2030-02-28 23:59:58 >/dev/time; sleep 3; date","2030-03-01 00:00:0",true],
+  ["echo 2100-02-28 23:59:59 >/dev/time; sleep 1; date","2100-03-01 00:00:0",true],
+  ["echo 2023-02-29 12:00:00 >/dev/time; echo junk >/dev/time; date x", [
+    "echo: write error: invalid argument",
+    "echo: write error: invalid argument",
+    "usage: date [-n]",
+  ].join('\n')],
+  ["echo 2024-02-29 12:00:00 >/dev/time; date -n; touch /ram/f; ls -l /ram/f","76252320",true],
 ];
 
 // A ZSM song's key-ons: { rate, ticks: [the song tick of each] }
@@ -718,6 +734,24 @@ module.exports = {
         if (m.via.ier & 0x02) f.push('CA1\'s interrupt on with /dev/gpio/ca1 closed');
         if ((m.via.r[0x0C] & 0x0F) !== 0x0F) f.push('PCR: $' + m.via.r[0x0C].toString(16) + ' (CA1 rising, CA2 high wanted)');
         this.notes = ['the I2C bus: ' + m.i2c.stats.starts + ' starts, ' + m.i2c.stats.taken + ' bytes taken, ' + m.i2c.stats.given + ' given'];
+        return f;
+      },
+    },
+    {
+      name: 'clock', what: 'the clock: from a DS1747 at its start, /dev/time and date, the calendar (month ends, leap years), the chip set, stamps',
+      init: 't_rc', cycles: 80e6,
+      get machine() {
+        return { input: CLOCK_LINES.map(l => '\u0101' + l[0] + '\r').join(''), rtc: Date.UTC(2026, 9, 3, 15, 4, 5) / 1000 };
+      },
+      get expect() {
+        return [...CLOCK_LINES.map(l => '% ' + l[0] + '\n' + (l[2] ? l[1] : (l[1] === null ? '' : l[1] + '\n') + '%')),
+          ' 2024-02-29 12:00 /ram/f\n%'];
+      },
+      // (The chip as the last time set it: 2024-02-29 12:00, a Thursday: day 5 from Sunday)
+      check(m) {
+        const r = m.rtc.regs(), f = [], hex = a => a.map(b => b.toString(16).padStart(2, '0')).join(' ');
+        if ((r[0] & 0x3F) !== 0x20 || r[7] !== 0x24 || (r[6] & 0x1F) !== 0x02 || (r[5] & 0x3F) !== 0x29 || (r[3] & 0x3F) !== 0x12 ||
+          (r[4] & 7) !== 5 || (r[1] & 0x80)) f.push('the DS1747: ' + hex(r) + ' (2024-02-29 12:00, day 5, running wanted)');
         return f;
       },
     },

@@ -45,6 +45,8 @@
 .global     K_ENV_GET, K_ENV_PUT, K_ENV_DEL, K_ENV_NAME, K_ENV_INHERIT, K_ENV_CLEAR
 ; ---- info.s: what the kernel knows of the tasks (page 1)
 .global     K_TASKINFO, K_DBG_PS, K_TASKREAD
+; ---- time.s: the clock, and the DS1747 (page 1)
+.global     K_TIME, K_TIME_SET, K_RTC
 ; ---- far.s: the jump table's way to calls on other pages
 .global     K_FARJMP
 ; ---- post.s: the power-on self test (page 4)

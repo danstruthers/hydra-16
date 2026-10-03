@@ -42,7 +42,10 @@ int __fastcall__ isatty (int fd);                           /* fd: a console (#c
 int __fastcall__ setenv (const char* name, const char* value, int overwrite);
 int __fastcall__ unsetenv (const char* name);
 
-/* ---- The tick, sleeping */
+/* ---- The clock, the tick, sleeping */
+
+unsigned long hy_time (void);                               /* The clock: seconds since 2000-01-01 (time(): since
+                                                            **   1970); /dev/time sets it */
 
 #ifndef CLOCKS_PER_SEC
 #define CLOCKS_PER_SEC      HY_TICK_HZ  /* clock(): the ticks since the program started */

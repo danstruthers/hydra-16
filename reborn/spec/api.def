@@ -480,6 +480,31 @@ call PUTHEX cons impl=K_PUTHEX
 
 # ---- server
 
+call TIME time impl=K_TIME far
+  in:     -
+  out:    r0/r1 = the clock: seconds since 2000-01-01 00:00:00
+  errors: -
+  blocks: no
+  doc:    The clock: the boot's time and the ticks since.  It starts at 0 (2000-01-01) unless kdev finds a DS1747
+  doc:    with a date and time as it starts; a write of /dev/time sets it (and the chip).
+
+call TIME_SET time impl=K_TIME_SET far
+  in:     r0/r1 = seconds since 2000-01-01 00:00:00
+  out:    -
+  errors: -
+  blocks: no
+  doc:    Set the clock (from now: the boot's time becomes the clock less the ticks since).  The DS1747 is the
+  doc:    caller's to set (RTC).
+
+call RTC time impl=K_RTC far
+  in:     .A = 0, read, or 1, write; r0 = 8 bytes: the DS1747's registers (RTC_REGS, hw.inc), BCD
+  out:    -
+  errors: E_INVAL (.A neither)
+  blocks: no
+  doc:    The DS1747 in U7, its registers a byte at a time (task F's $7FF8-$7FFF): read with its updates halted
+  doc:    (R) for the copy; written with W set, the control (its century) last with W clear, which starts it from
+  doc:    them.  No chip: the RAM there, as it is.  A read must check the fields hold a date and time.
+
 call IRQ_OWN server impl=K_IRQ_OWN
   in:     .A = an IRQ line (0-14), or LINE_VIA_T2 (VIA timer 2), or LINE_VIA_CA1 (VIA CA1)
   out:    -

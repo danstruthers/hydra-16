@@ -169,6 +169,8 @@ FD_MAX          = 16
 ; ---- The kernel task's program zero page (task 0's $22-$7F)
 K0_TICKS        = $22           ; (4) The tick count (TICK_HZ a second; TICKS gives its low 16 bits)
 K0_SPAWNF       = $27           ; SPAWN's flags (SPAWN_*), in its KCALL
+K0_BOOT         = $28           ; (4) The clock at tick 0: seconds since 2000-01-01 (time.s: TIME is it + the ticks
+                                ;   since, in seconds)
 K0_MODMASK      = $2F           ; (2) The RAM modules installed (bit = module)
 K0_MODCOUNT     = $31           ;   and how many
 K0_PTR          = $32           ; (2) KCALL routines' pointers and scratch
