@@ -104,9 +104,12 @@ main:
             OPEN_       s_xctl, O_RDWR, 6
             sta         ctl
             jsr         ctl_read
-            EXPECT_A    21, "x/ctl: rom 4 MB 8192 blocks (21 bytes)"
+            lda         buf + 20
+            EXPECT_A    LF, "x/ctl: rom 4 MB 8192 blocks, its first line"
             lda         buf + 4
             EXPECT_A    '4', "4 MB"
+            lda         buf + 21 + 14
+            EXPECT_A    'R', "then its HydraFS: hydrafs label=ROM"
             lda         ctl
             jsr         CLOSE
 

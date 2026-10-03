@@ -1,0 +1,10 @@
+; ****************************************************************************
+; romfs.txt - the ROM disk's files (tools/romfs.js): a line a file, its path on the ROM disk (/rom), then its source,
+; relative to this folder; ';' starts a comment.  The build makes a read-only HydraFS volume of them in the paged ROM,
+; in the banks after the modules (the disk x: mount '#f' /rom x), and reads every file back from the image to check
+; it.  The directories are made for the paths.
+
+README              README
+lib/namespace       lib/namespace       ; The default namespace (the plan's appendix E): init runs it
+lib/profile         lib/profile         ; What each shell runs as it starts (rc's: phase 4)
+doc/api.md          ../obj/gen/api.md   ; The system calls' reference (tools/apigen.js makes it at the build)

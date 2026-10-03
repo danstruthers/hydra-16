@@ -14,6 +14,7 @@ const fs = require('fs');
 const path = require('path');
 const { boot, labels } = require('./run.js');
 const romimg = require('../tools/romimg.js');
+const romfs = require('../tools/romfs.js');
 const { readManifest, hwtest } = require('../build.js');
 const { tests, IRQ_OFF_MAX } = require('../tests/tests.js');
 
@@ -31,7 +32,8 @@ function image(t) {
   const own = [...(t.modules || [])];
   if (!sys.includes(t.init) && !own.includes(t.init)) own.unshift(t.init);
   const mods = [...sys.map(n => ({ file: n, data: bin('modules', n) })), ...own.map(n => ({ file: n, data: bin('tests', n) }))];
-  return romimg.build({ modules: mods, init: t.init, hwtest: hwtest(), bios: fs.readFileSync(path.join(ROOT, 'bin', 'bios.bin')) }).image;
+  return romimg.build({ modules: mods, init: t.init, hwtest: hwtest(), bios: fs.readFileSync(path.join(ROOT, 'bin', 'bios.bin')),
+    romfs: romfs.manifest(path.join(ROOT, 'romfs', 'romfs.txt')) }).image;
 }
 
 function runTest(t, opt) {

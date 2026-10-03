@@ -1,0 +1,4 @@
+# /rom/lib/profile: what each shell runs as it starts, after the namespace file and before its first prompt; a
+# card's /lib/profile runs after it.  rc reads it (phase 4); the test shell before it, tsh, doesn't.
+
+prompt=('% ' '	')       # the prompt, and the one for a line that goes on

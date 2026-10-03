@@ -1,0 +1,18 @@
+The Hydra-16's ROM disk
+=======================
+
+This is /rom: files kept in the paged ROM, read only, there with no card in the
+machine.  It's a HydraFS volume, as a card's is, in the paged ROM's banks after
+the modules (the disk x: mount '#f' /rom x).
+
+  README          this
+  lib/namespace   the default namespace: what's bound and mounted where.
+                  init runs it as it starts, and a card's /lib/namespace
+                  after it
+  lib/profile     what each shell runs as it starts (and a card's
+                  /lib/profile after it)
+  doc/api.md      the system calls, their registers and their errors
+
+The modules in the paged ROM (the drivers, init, the programs) are under
+/dev/mod (#m), a file each.  Cards are under /sd (/sd/0 ... /sd/f), the RAM
+disks at /ram (each shell's own area) and /sram (shared).

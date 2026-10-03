@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // ****************************************************************************
-// romimg.js - the paged ROM image: the module directory in bank 0, and each module in banks of its own, run in
-// place (docs/reimplementation-from-scratch.md, §11).
+// romimg.js - the paged ROM image: the module directory in bank 0, each module in banks of its own, run in place
+// (docs/reimplementation-from-scratch.md, §11), and the ROM disk's volume after them (tools/romfs.js).
 //
-//   bank 0, $A000-$A1FF   block 0: a signature (the partition table, when the ROM disk comes: phase 4)
+//   bank 0, $A000-$A1FF   block 0: a signature line, and the ROM disk's partition table (romfs.js)
 //   bank 0, $A200-$A3FF   the module directory (include/layout.inc: MD_*, ME_*): "HYMD", its version, the count,
 //                         init's entry, whether bank 1 has the hardware test, then 16 bytes a module: its bank,
 //                         banks, type, flags and name
@@ -11,24 +11,28 @@
 //                         system's paged ROM image), with the ROMs' checksums at $DF00 (as os_rom/tools/romsum.js
 //                         makes them: a CRC-16 of each BIOS ROM page and paged ROM bank, here of reborn's images)
 //   banks 2 ...           the modules, each at $A000 of its first bank (its HYX2 header first)
+//   the banks after them  the ROM disk's HydraFS volume (/rom), to the paged ROM's end; its used blocks only
 //
 // The image is the chips' view, not the CPU's: the board swaps A13 (each bank's $C000 half comes first), and on
 // the V1 board a bank number's bits 2 and 3, and 6 and 7, trade places before they reach the chips, so bank b
 // sits at bank swap(b)'s place (sim/lib/machine.js: romBank).
 //
-// Usage: node tools/romimg.js OUT.bin --init NAME [--hwtest OLD_PAGED_ROM.bin --bios BIOS.bin] MODULE.bin ...
-//   (--list: what's where)
-// From Node: build({ modules: [Buffer, ...], init: 'name', hwtest, bios }) gives { image, entries }.
+// Usage: node tools/romimg.js OUT.bin --init NAME [--hwtest OLD_PAGED_ROM.bin --bios BIOS.bin] [--romfs MANIFEST]
+//        MODULE.bin ...  (--list: what's where)
+// From Node: build({ modules: [Buffer, ...], init: 'name', hwtest, bios, romfs: romfs.js's files }) gives { image,
+// entries, disk } (disk: the ROM disk, its files read back from the image: romfs.js's readBack, or null).
 'use strict';
 const fs = require('fs');
 const path = require('path');
+const romfs = require('./romfs.js');
 
 const BANK = 0x4000, WINDOW = 0xA000, PAGE = 0x2000;
 const MD_BASE = 0xA200, MD_VERSION = 1, MD_MAX = 31, ME_SIZE = 16, NAME_LEN = 12;
 const HX = { MAGIC: 0, HSIZE: 4, TYPE: 5, FLAGS: 6, ABI: 7, LOAD: 8, LENGTH: 10, BANKS: 33, NAME: 36, SIZE: 48 };
 const TYPES = { 1: 'program', 2: 'driver', 3: 'library' };
-const SIGNATURE = 'Hydra-16 reborn paged ROM: block 0 this, then the module directory; bank 1 the hardware test; ' +
-  'the modules from bank 2\r\n';
+const SIGNATURE = 'Hydra-16 reborn paged ROM: block 0 this and the ROM disk\'s partition table, then the module directory; ' +
+  'bank 1 the hardware test; the modules from bank 2, then the ROM disk\'s volume\r\n';
+const BLOCKS_PER_BANK = BANK / 512, ROM_BANKS = 256;
 const HWT_BANK = 1, HWT_SUMS = 0xDF00, HWT_SUMS_SIZE = 256, FIRST_MODULE_BANK = 2;
 const romBank = b => (b & 0x33) | ((b & 0x04) << 1) | ((b & 0x08) >> 1) | ((b & 0x40) << 1) | ((b & 0x80) >> 1);
 
@@ -69,7 +73,7 @@ function put(image, bank, addr, bytes) {
 
 // hwtest: the old system's paged ROM image (its bank 1 is the hardware test), or none; bios: the BIOS ROM image,
 // for the checksums (with hwtest)
-function build({ modules, init, hwtest, bios }) {
+function build({ modules, init, hwtest, bios, romfs: files }) {
   const entries = modules.map((m, i) => readHeader(m.data || m, m.file || 'module ' + i));
   if (entries.length > MD_MAX) throw new Error(entries.length + ' modules: ' + MD_MAX + ' at most');
   const names = new Set();
@@ -79,11 +83,18 @@ function build({ modules, init, hwtest, bios }) {
   if (initIndex !== 0xFF && entries[initIndex].type !== 1) throw new Error(init + ' is not a program');
   let bank = FIRST_MODULE_BANK;
   for (const e of entries) { e.bank = bank; bank += e.banks; }
-  if (bank > 256) throw new Error('the modules need ' + bank + ' banks: 256 at most');
+  let disk = null;                                            // The ROM disk: its volume in the banks after them
+  if (files && bank < ROM_BANKS) {
+    const start = bank * BLOCKS_PER_BANK, blocks = ROM_BANKS * BLOCKS_PER_BANK - start;
+    disk = { start, blocks, volume: romfs.volume(files, blocks) };
+    bank += Math.ceil(disk.volume.length / BANK);
+  }
+  if (bank > ROM_BANKS) throw new Error('the modules and the ROM disk need ' + bank + ' banks: ' + ROM_BANKS + ' at most');
   let top = 0;
   for (let b = 0; b < bank; b++) top = Math.max(top, romBank(b));
   const image = Buffer.alloc((top + 1) * BANK, 0xFF);
-  const block0 = Buffer.alloc(512, 0);
+  const block0 = disk ? romfs.table(disk.start, disk.blocks) : Buffer.alloc(512, 0);
+  if (SIGNATURE.length > 0x1BE) throw new Error('the signature reaches the partition table');
   block0.write(SIGNATURE, 'latin1');
   put(image, 0, WINDOW, block0);
   const md = Buffer.alloc(512, 0);
@@ -96,6 +107,7 @@ function build({ modules, init, hwtest, bios }) {
   });
   put(image, 0, MD_BASE, md);
   for (const e of entries) put(image, e.bank, WINDOW, e.data);
+  if (disk) put(image, disk.start / BLOCKS_PER_BANK, WINDOW, disk.volume);
   if (hwtest) {
     const code = Buffer.alloc(HWT_SUMS - WINDOW);
     for (let a = WINDOW; a < HWT_SUMS; a++) code[a - WINDOW] = read(hwtest, HWT_BANK, a);
@@ -104,7 +116,11 @@ function build({ modules, init, hwtest, bios }) {
     if (!bios) throw new Error('the hardware test\'s checksums need the BIOS ROM image');
     put(image, HWT_BANK, HWT_SUMS, sums(bios, image));
   }
-  return { image, entries };
+  if (disk) {                                                 // Every file read back, as the CPU sees the disk
+    const block = n => { const b = Buffer.alloc(512); for (let i = 0; i < 512; i++) b[i] = read(image, Math.floor(n / BLOCKS_PER_BANK), WINDOW + (n % BLOCKS_PER_BANK) * 512 + i); return b; };
+    disk.files = romfs.readBack(block, disk.start + disk.volume.length / 512, files);
+  }
+  return { image, entries, disk };
 }
 
 // The hardware test's table of the ROMs' checksums (os_rom/tools/romsum.js): the BIOS pages (1 byte), the paged
@@ -128,20 +144,23 @@ function read(image, bank, addr) {
 }
 
 function main(argv) {
-  const out = argv[0], files = [];
-  let init = null, list = false, hwtest = null, bios = null;
+  const out = argv[0], mods = [];
+  let init = null, list = false, hwtest = null, bios = null, files = null;
   for (let i = 1; i < argv.length; i++) {
     if (argv[i] === '--init') init = argv[++i];
     else if (argv[i] === '--list') list = true;
     else if (argv[i] === '--hwtest') hwtest = fs.readFileSync(argv[++i]);
     else if (argv[i] === '--bios') bios = fs.readFileSync(argv[++i]);
-    else files.push(argv[i]);
+    else if (argv[i] === '--romfs') files = romfs.manifest(argv[++i]);
+    else mods.push(argv[i]);
   }
-  if (!out || !files.length) { console.error('usage: romimg.js OUT.bin [--init NAME] [--hwtest OLD.bin --bios BIOS.bin] [--list] MODULE.bin ...'); process.exit(2); }
-  const { image, entries } = build({ modules: files.map(f => ({ file: f, data: fs.readFileSync(f) })), init, hwtest, bios });
+  if (!out || !mods.length) { console.error('usage: romimg.js OUT.bin [--init NAME] [--hwtest OLD.bin --bios BIOS.bin] [--romfs MANIFEST] [--list] MODULE.bin ...'); process.exit(2); }
+  const { image, entries, disk } = build({ modules: mods.map(f => ({ file: f, data: fs.readFileSync(f) })), init, hwtest, bios, romfs: files });
   fs.writeFileSync(out, image);
   if (list) for (const e of entries)
     console.log('bank ' + e.bank.toString(16).padStart(2, '0') + '  ' + TYPES[e.type].padEnd(8) + e.name.padEnd(12) + e.data.length + ' bytes' + (e.name === init ? '  (init)' : ''));
+  if (list && disk) for (const f of disk.files)
+    console.log('/rom' + f.path.padEnd(24) + String(f.size).padStart(7) + ' bytes, banks ' + f.banks.map(b => b.toString(16).padStart(2, '0')).join(','));
 }
 
 if (require.main === module) {

@@ -6,7 +6,7 @@ spikes measured, and what measuring changed.
 
 ## In short
 
-Phases 0 and 1 are done, phase 2 is all but done, and phase 3 (storage) is two-thirds done.  The kernel boots in the emulator, runs POST (with the old
+Phases 0 and 1 are done, phase 2 is all but done, and phase 3 (storage) is all but done.  The kernel boots in the emulator, runs POST (with the old
 hardware test a key away), starts its modules from the paged ROM in tasks of their own, schedules them
 preemptively, runs calls between tasks and copies between them, takes every interrupt through one path, manages
 task RAM, banks and shared segments, and delivers notes.  The file layer is in: fds, channels, requests to
@@ -19,7 +19,8 @@ their own (`kdev`): the root's mount points, null and zero, the ticks, the modul
 builds its namespace (the plan's appendix E, as far as its devices go) and runs a test shell (`tsh`) in window 0,
 and one in each window the user asks for (Ctrl-] c).  The storage driver (`storage`, task E) owns the SPI bus and
 the disks: `#S` (the SPI devices), `#d` (SD cards, the ROM disk, the RAM disks, through a block buffer), and
-HydraFS on them (`#f`, the old system's, ported: the module's second bank).
+HydraFS on them (`#f`, the old system's, ported: the module's second bank).  The paged ROM holds the ROM disk's
+volume after the modules (`/rom`: `romfs/`).
 
 ```
 PASS boot    the kernel boots, POST finds nothing wrong; init runs hello and waits for it
@@ -35,7 +36,8 @@ PASS ns      namespaces: BIND, MOUNT, UNMOUNT, unions and union directories, CHD
 PASS dev     the kernel's devices (kdev): #/, #n, #t, #m, #p; pipes; a union keeping what was there  (35 checks)
 PASS spi     SPI and #S (storage): transactions, kept bytes, modes 0 and 3, one open at a time, the time a byte takes  (43 checks)
 PASS disk    the disks (storage): #d, the ROM disk, SD cards (SDHC and SDSC), RAM disks, their ctl files, the time a byte takes  (60 checks)
-PASS fs      HydraFS (#f): files and directories, create, write, holes, remove, rename, format, label, check, old cards, mounts  (80 checks)
+PASS fs      HydraFS (#f): files and directories, create, write, holes, remove, rename, format, label, check, old cards, mounts  (82 checks)
+PASS rom     the ROM disk: /rom (#f, spec x) walked on the Hydra, every file read back against its source (romfs/romfs.txt)
 PASS cons    the console: lines, editing, history, raw keys, Ctrl-C, windows (shown, repainted, made, gone), 115200
 PASS mem     memory: BREAK, pages, banks, a shared segment between tasks (and kcopy from it)  (38 checks)
 PASS banks   a module of two banks: calls between them (FAR2, FAR1), registers and C, each bank's data  (6 checks)
@@ -118,7 +120,7 @@ cycles):
 
 | Step | | Notes |
 |---|---|---|
-| 0.1 The tree | Done | `reborn/`; `sdk/c/` and `romfs/` come when there's something to put in them |
+| 0.1 The tree | Done | `reborn/`; `romfs/` came with the ROM disk (3.5); `sdk/c/` comes with the C target (4.5) |
 | 0.2 Conventions | Done | [conventions.md](conventions.md) |
 | 0.3 The specification and `apigen.js` | Done | The calls in 9 groups; the jump table (and the stubs of calls on other pages), `hydra.inc`, `errors.inc`, the error texts, `api.md`, `api.json` |
 | 0.4 The build | Done, but the program link | `build.js`: the BIOS link (16 pages, each with its number; COMMON at `$FD00`, the vectors), the module link (`$A000`, data copied to RAM), `romimg.js`, the checks, the budget report.  The RAM program link (`$0800`) comes with loading programs from files (phase 4) |
@@ -168,13 +170,13 @@ through the COMMON block (`FARCALL`).
 | 3.2 The block layer | Done, but the RAM disks at boot | SD cards (the old `drivers/sd.s`, ported: SDHC and SDXC; SDSC, CSD v1 too), the ROM disk `x` (the paged ROM's 256 banks as 8192 blocks, read through the kernel's new `ROMREAD`, as the plan says: the driver runs in place in its own bank, so a routine on page 0 selects the block's bank, copies it and puts the driver's back; a task that owns an IRQ line can't use it), the RAM disks `r` (the driver's own banks: `BANKS_ALLOC`) and `s` (a shared segment: `SEG_CREATE`, each block's bank found by `SEG_MAP`), started by `start SIZE` (8K banks, or `K`, `M`) and stopped by `stop`; one block buffer.  A card started isn't an `#S` device, nor the other way round (`E_BUSY`).  Still to do: the RAM disks started (and formatted) at boot, with HydraFS; `start`'s FROM-TO (`BANKS_ALLOC` and `SEG_CREATE` take the lowest banks free) |
 | 3.3 `#d` | Done, but HydraFS's ctl commands | A directory for each disk started (`x` from the boot; a card from its first open): `data`, the disk as bytes at the fd's offset (its first 4 GB; a read is short at the end, a write past it is `E_NOSPC`; writes go to the disk at once), and `ctl`, which reads as the disk (`sdhc 1 MB 2048 blocks`; `sdsc`, `rom`; `ram` and `sram` in KB; or `none`) and takes `init`, `start` and `stop`.  `format`, `label` and `check` come with HydraFS |
 | 3.4 HydraFS (`#f`) | Done, but the progress line and the clock | `modules/storage/hfs.s` and `hfs/*.s`: the old `fs/hfs_*.s` ported into the module's second bank (the first module of two banks: `FAR2` and `FAR1`, trampolines in its RAM; `modules/module2.cfg`).  The format is unchanged (versions 1 and 2, partitions, sparse files): walks, reads, writes, create, remove, wstat (a name; read-only, append-only), quick and full format, label, check and fix, 32 open files (the old 8).  `#f` with no spec is the cards' directory (`0`-`f`, those started); a spec names one disk (`x`, `r`, `s`, or a card) or a directory on it (`r/5`), so the disks in memory are reached only through a spec, and a shell's area of the RAM disk is a matter for its namespace, not the server (the old per-task areas and their checks are gone).  Directories read as stat records (Plan 9's way: the old text listing is gone); names come cleaned by the kernel (no `.` or `..`); errors are reborn's codes (`E_NOTFS`, `E_NOSPC` ...).  A RAM disk's `start` puts an empty HydraFS on it.  srvlib grew raw devices (`SK_RAW`: every request for a device to one handler, for a file system) and a ctl command's last word taking the rest of its line (a label with spaces).  Still to do: the progress a long full format or check shows (the old system printed `10% 20% ...`; a driver has no console of its own), stamps from the clock (a counter till phase 5) |
-| 3.5 The ROM disk image | Next | |
-| 3.6 init from files | | |
+| 3.5 The ROM disk image | Done | `romfs/`: `README`, `lib/namespace` (the plan's appendix E, the devices still to come commented out with their phases), `lib/profile` (for rc), and `doc/api.md` (the calls' reference, made at the build); `romfs.txt`, the manifest.  `tools/romfs.js` (from the old `mkromdisk.js`) makes the HydraFS volume with the PC tool, stamped 2000-01-01, so each build is the same; `romimg.js` puts it in the banks after the modules, with the partition table in block 0 (after the signature line: partition 1 the system's banks, type `$DA`; partition 2 the volume, type `$7F`, to the paged ROM's end), and reads every file back from the image as the CPU sees it; every test's image has it too.  On the Hydra, the rom test walks `/rom` and reads every file, and the harness checks each one's size and CRC against its source.  The files are bytes for the Hydra (LF line ends: `.gitattributes` keeps Git from changing them), so the image is the same on every checkout |
+| 3.6 init from files | Next | |
 
 ## Next
 
-1. Phase 3.5: the ROM disk's image (`romfs/`, its manifest, made at the build and checked against its sources);
-   then 3.6, init from files (`/rom/lib/namespace`, the RAM disks started at boot, each shell's `/ram`).
+1. Phase 3.6: init from files: `/rom/lib/namespace` read and run (bind and mount lines, `$task`), the RAM disks
+   started at boot, each shell's `/ram` (`mount -c '#f' /ram r/$task`), a card's `/lib/namespace` after.
 2. Phase 4: rc, with what it needs here first: `#e` and the rest of `/proc`; SPAWN of a program by its path
    (`/bin/NAME` through the namespace).
 3. On the board: the boot, POST, the tick, the console at 115200, and a real card read and written.

@@ -8,7 +8,7 @@
 ; write, read back; a write past the end (a hole); mkdir, a directory not empty, remove; a rename; a file open can't
 ; be removed; O_TRUNC; read-only; a full format and a label on a blank card; check; the old cards read and written;
 ; a partitioned card; the check finding a lost cluster, and fixing it; a big card's quick format; mounts with a spec
-; (the ROM disk, no HydraFS; a RAM disk; a directory on it); and the time a byte takes.
+; (the ROM disk, read only; a RAM disk; a directory on it); and the time a byte takes.
 
 .include "hydra.inc"
 .include "hyx2.inc"
@@ -427,8 +427,16 @@ main:
             lda         #MREPL
             jsr         MOUNT
             EXPECT_OK   "mount '#f' /rom x"
-            OPEN_       s_rom, O_READ, 5
-            EXPECT_ERR  E_NOTFS, "/rom: no HydraFS on the ROM disk yet (E_NOTFS)"
+            OPEN_       s_romread, O_READ, 5
+            sta         fd
+            EXPECT_OK   "OPEN /rom/README: the ROM disk's HydraFS"
+            READ_       fd, 16
+            lda         buf + 4
+            EXPECT_A    'H', "The Hydra-16's ROM disk"
+            lda         fd
+            jsr         CLOSE
+            CREATE_     s_romnew, O_WRITE, 0, 5
+            EXPECT_ERR  E_ROFS, "CREATE /rom/new: read only (E_ROFS)"
             OPEN_       s_fx, O_READ, 5
             EXPECT_ERR  E_NOENT, "#f/x: a disk in memory only through a spec"
             CTL_        s_ctlr, s_start, 7
@@ -639,6 +647,8 @@ s_v2new:    .byte       "#f/3/hydra.txt", 0
 s_hroot:    .byte       "#/", 0
 s_root:     .byte       "/", 0
 s_rom:      .byte       "/rom", 0
+s_romread:  .byte       "/rom/README", 0
+s_romnew:   .byte       "/rom/new", 0
 s_ram:      .byte       "/ram", 0
 s_tmp:      .byte       "/tmp", 0
 s_fx:       .byte       "#f/x", 0

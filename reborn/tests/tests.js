@@ -194,6 +194,28 @@ module.exports = {
       },
     },
     {
+      name: 'rom', what: 'the ROM disk: /rom (#f, spec x) walked on the Hydra, every file read back against its source (romfs/romfs.txt)',
+      init: 't_rom', cycles: 60e6,
+      check(m, out) {
+        const romfs = require('../tools/romfs.js'), { crc16 } = require('../tools/romimg.js');
+        const files = romfs.manifest(path.join(__dirname, '..', 'romfs', 'romfs.txt')), seen = new Map(), f = [];
+        for (const l of out.split('\n')) {
+          const k = l.match(/^rom: (\S+) ([0-9A-F]{4}) ([0-9A-F]{4})$/);
+          if (k) seen.set(k[1], { size: parseInt(k[2], 16), crc: parseInt(k[3], 16) });
+        }
+        for (const x of files) {
+          const p = '/rom' + x.path, s = seen.get(p), crc = crc16(i => x.data[i], x.data.length);
+          if (!s) { f.push(p + ': not found on the Hydra'); continue; }
+          seen.delete(p);
+          if (s.size !== (x.data.length & 0xFFFF) || s.crc !== crc)
+            f.push(p + ': read back as ' + s.size + ' bytes, CRC ' + s.crc.toString(16) + '; its source (' + x.src + ') is ' + x.data.length + ', ' + crc.toString(16));
+        }
+        for (const p of seen.keys()) f.push(p + ': on the Hydra, but not in the manifest');
+        this.notes = ['the ROM disk: ' + files.length + ' files read back on the Hydra, each as its source'];
+        return f;
+      },
+    },
+    {
       name: 'cons', what: 'the console: lines, editing, history, raw keys, Ctrl-C, windows (shown, repainted, made, gone), 115200',
       init: 't_cons', modules: ['t_child'], cycles: 80e6,
       // (ā: wait for a prompt, "N> ")

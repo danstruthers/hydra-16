@@ -1,0 +1,40 @@
+# /rom/lib/namespace: the default namespace (docs/reimplementation-from-scratch.md, appendix E).  init runs it as
+# it starts, and a card's /lib/namespace after it.  A line a bind or a mount, as rc's built-ins take them:
+#   bind [-a | -b] [-c] new old         new at old (-a after what's there, -b before it; -c: creates go there)
+#   mount [-a | -b] [-c] dev old [spec] a device's server at old, with a spec
+# $task is the shell's task.  The lines for the devices still to come are kept here, commented out, with the
+# phase that brings them.
+
+# the root and the devices
+bind '#/' /
+bind -a '#c' /dev           # cons consctl ser serctl
+bind -a '#n' /dev           # null zero
+bind -a '#t' /dev           # ticks
+#bind -a '#g' /dev/gpio     # (phase 5)
+#bind -a '#i' /dev/i2c      # (phase 5)
+#bind -a '#a' /dev          # snd sndctl (phase 5)
+bind '#d' /dev/sd
+bind '#S' /dev/spi
+bind '#m' /dev/mod
+#mount '#e' /env           # (phase 4)
+mount '#p' /proc
+
+# the disks
+mount '#f' /sd              # the cards: /sd/0 ... /sd/f
+mount '#f' /rom x           # the ROM disk
+mount '#f' /sram s          # the shared RAM disk
+mount -c '#f' /ram r/$task  # this shell's own area of the RAM disk
+
+# programs and libraries: unions, the caches first
+bind -c /ram/bin /bin
+bind -a /sram/bin /bin
+bind -a /sd/0/bin /bin      # (added only if the card has one)
+bind -a /rom/bin /bin
+bind -a '#m/bin' /bin       # the ROM's program modules
+bind -c /ram/lib /lib
+bind -a /sram/lib /lib
+bind -a /sd/0/lib /lib
+bind -a /rom/lib /lib
+
+# the PC
+#mount '#P' /pc            # (phase 5)
