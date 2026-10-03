@@ -761,6 +761,20 @@ const R_WSTAT         7
 const R_REMOVE        8
 const R_FLUSH         9
 const R_DUP           10
+const SND_CHANNELS    8        "Sound (#a, the YM2151): its channels, 0-7"
+const SND_PATCHES     163      "Sound: its patches (0-127: General MIDI's programs; 128-162: drums and percussion)"
+const SND_DRUMS       128      "Sound: General MIDI's drums (MIDI channel 10's notes)"
+const SND_R_CH        $02      "Sound: a command, at a register the chip doesn't have: the channel the next commands are for (0-7)"
+const SND_R_PATCH     $03      "Sound: load patch n into the channel (its speakers stay)"
+const SND_R_NOTE      $04      "Sound: key on MIDI note n (60: middle C; 69: A, 440 Hz), with the channel's bend"
+const SND_R_OFF       $05      "Sound: key off (the release)"
+const SND_R_VOL       $06      "Sound: the channel's volume (0-127, as General MIDI's)"
+const SND_R_PAN       $07      "Sound: the channel's speakers (SND_PAN_*)"
+const SND_R_BEND      $09      "Sound: the channel's bend (signed: 64ths of a semitone; the note playing too)"
+const SND_R_DRUM      $0A      "Sound: a General MIDI drum (its patch and pitch), keyed on"
+const SND_PAN_LEFT    1        "Sound: SND_R_PAN's speakers"
+const SND_PAN_RIGHT   2
+const SND_PAN_BOTH    3
 const r0  $02 "The call registers r0-r15: arguments and results"
 const r1  $04
 const r2  $06

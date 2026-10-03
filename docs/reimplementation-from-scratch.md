@@ -693,6 +693,8 @@ One driver owns the SPI bus and every disk (as built, a module of two banks: Hyd
 * The **song player** is a program (`play`), not part of the driver: a client of `/dev/snd` like any other, with today's timing (the system tick, a fraction, read ahead without waiting).
 * Later: the VERA's PSG and PCM as more channels (phase 8).
 
+(As built, phase 5.1, `reborn/modules/snd`: the library and `#a` as above, with `sndctl`'s `claim`, `release`, `volume` and `reset`, and `#a/bell` for the console's bell.  Claims are a task's (the task's that opened the file), given back as its last file of `#a` closes.  There's no `clock`: the old player had stopped timing songs by timer B (on the board it didn't keep its period), so the driver owns no interrupt and keeps the chip's timers quiet.)
+
 #### **14.5 The rest**
 
 | Device | Where | When |

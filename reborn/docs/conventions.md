@@ -180,6 +180,10 @@ The kernel task (task 0) keeps the kernel's state: its program zero page (`K0_*`
 * **The console is windows, not job control** (Plan 9's way, rio's): each window a whole console (`#cN`), chosen
   for a shell by its namespace (`#cN` at `/dev`).  There's no foreground group and no `fg`: which program gets
   the keys is which window is shown, and a window's interrupts go to its note group.
+* **One driver owns the YM2151** (`snd`, `#a`), and only its task writes the chip.  The one call from a driver to
+  another is the console's bell: `cons` writes `#a/bell` when the shown window sends a BEL.  What's a task's in a
+  driver (a claim of channels) is the task's that opened the file it came through, given back as that task's last
+  file of the device closes.
 * `PUTC`, `PUTS` and `GETC` are a write to fd 1 and a read from fd 0; a task without them (the kernel, a driver)
   has the bring-up console, polled.
 

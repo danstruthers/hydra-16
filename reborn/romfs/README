@@ -15,7 +15,7 @@ the modules (the disk x: mount '#f' /rom x).
   bin             programs read into RAM to run: mkfs, fsck, label, and
                   grep and sort (in C); bound at /bin after the RAM disks'
   sample          the SDKs' samples: hi, upper and tick in assembly; in
-                  sample/c, hello, upper, code, keys and ctest in C
+                  sample/c, hello, upper, code, keys, tones and ctest in C
 
 The modules in the paged ROM (the drivers, init, the programs) are under
 /dev/mod (#m), a file each.  Cards are under /sd (/sd/0 ... /sd/f), the RAM

@@ -1566,7 +1566,9 @@ redir_apply:
             stx         xw + 1
             lda         (xw)
             cmp         #LIST_END
-            beq         @bad
+            bne         :+
+            jmp         @bad
+:
             jsr         list_next_x                         ; (One word only)
             lda         (p0)
             cmp         #LIST_END
@@ -1618,6 +1620,12 @@ redir_apply:
             clc
 @opened:
             bcs         @failed
+            cmp         t1                                  ; (Opened as fd t1 itself: t1 was closed, and is
+            bne         :+                                  ;   closed again after)
+            jsr         save_closed
+            clc
+            rts
+:
             pha                                             ; Fd t1 = it (the old one saved)
             ldx         t1
             jsr         redir_dup
@@ -1685,6 +1693,21 @@ save_fd:
             sta         fd_save_to,X
             inc         fd_save_depth
             pla
+            rts
+
+@many:
+            LDR         r0, s_fds
+            jmp         rc_error
+
+; Fd .A noted as closed (a redirection opened it there): for redir_restore, which closes it again
+save_closed:
+            ldx         fd_save_depth
+            cpx         #SAVE_MAX
+            bcs         @many
+            sta         fd_save_fd,X
+            lda         #$FF
+            sta         fd_save_to,X
+            inc         fd_save_depth
             rts
 
 @many:

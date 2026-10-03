@@ -240,16 +240,52 @@ h_list:
             txa
             jmp         mod_name
 
-@find:                                                      ; The one named at srv_p
+@find:                                                      ; The one named at srv_p: the directory's names
+            sec                                             ;   compared where they are, the one found alone
+            lda         z:srv_p                             ;   copied (mod_name: a copy of each made SPAWN of
+            sbc         #ME_NAME                            ;   #m/NAME grow with every module before it).  (r3:
+            sta         r3                                  ;   srv_p less ME_NAME, so .Y walks both)
+            lda         z:srv_p + 1
+            sbc         #0
+            sta         r3 + 1
             stz         cnt
 @try:
-            jsr         mod_next
+            lda         cnt
+            cmp         mcount
             bcs         @noent
-            LDR         r3, srv_dname
-            jsr         srv_same
-            beq         @this
+            jsr         md_at
+            lda         want                                ; (A type wanted: the others passed over)
+            beq         :+
+            ldy         #ME_TYPE
+            cmp         (mp),Y
+            bne         @skip
+:
+            ldy         #ME_NAME                            ; Its name (12 bytes at most, zero-padded) ...
+@char:
+            lda         (mp),Y
+            beq         @end
+            cmp         (r3),Y
+            bne         @skip
+            iny
+            cpy         #ME_NAME + 12
+            bne         @char
+@end:
+            lda         (r3),Y                              ;   and srv_p's ends there too (as srv_same's)
+            beq         @found
+            cmp         #'/'
+            beq         @found
+            cmp         #' '
+            beq         @found
+            cmp         #LF
+            beq         @found
+@skip:
             inc         cnt
             bra         @try
+
+@found:
+            lda         cnt
+            jsr         mod_name
+            bra         @this
 
 @noent:
             lda         #E_NOENT

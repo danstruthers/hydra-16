@@ -111,6 +111,11 @@ main:
             lda         buf + 13
             EXPECT_A    '1', "group 1: init's"
 
+; ---- A BEL printed: the sound driver's bell too (#a/bell: tests.js looks for channel 7's key-on)
+            lda         #$07
+            jsr         PUTC
+            EXPECT_OK   "a BEL printed (the bell)"
+
 ; ---- A line
             PRINT       s_p1
             READ_       #0, 64

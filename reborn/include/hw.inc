@@ -100,8 +100,9 @@ ACIA_CHIP       = ACIA_ROCKWELL
 .endif
 
 ; ---- YM2151 (port 4, $FF40)
-YM_REG          = $FF40         ; Write: select a register; read: the status (bit 7 busy)
-YM_DATA         = $FF41         ; Write: the selected register
+YM_REG          = $FF40         ; Write: select a register
+YM_DATA         = $FF41         ; Write: the selected register; read: the status (bit 7 busy, bits 0-1 the timers'
+                                ;   flags), as the old system's driver read it on the board (docs/plans/SOUND.md)
 
 ; ---- The DS1747 clock in U7 (if fitted): its registers are task F's $7FF8-$7FFF
 RTC_TASK        = $0F

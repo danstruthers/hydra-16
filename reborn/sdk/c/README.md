@@ -10,12 +10,13 @@ The SDK is this folder; `node build.js` builds the library and also copies the S
 
 | File | What it is |
 |---|---|
+| `include/snd.h` | The YM2151, through the sound driver: channels claimed, patches, notes, volumes, bends, drums, raw registers |
 | `include/hydra.h` | The Hydra's own calls (tasks and exit statuses, the namespace, the tick, RAM banks, any call by `hy_call`), and what cc65's headers leave to a target: `setenv`, `fstat`, `isatty`, conio's colours and keys |
 | `hydracalls.h` | Every system call's address, error code and constant, each with `HY_` before its name.  Made from `spec/` by the build (`obj/sdk/c/hydracalls.h`); never edit it.  `hydra.h` includes it |
 | `hydra.cfg` | The link: the header, code and data from `$0800`, the BSS after them, the heap, and the C stack (2K) down from `$7F00` |
 | `lib/hydra.lib` | The library: cc65's `none.lib`, with the modules of `lib/` in place of cc65's that a target gives (the build: `obj/sdk/c/hydra.lib`) |
 | `lib/` | Its sources: `crt0.s` (the header, the start, `exit`), the files and stdio's buffers, the environment, `system`, `signal`, `time` and `clock`, conio, errors |
-| `samples/` | `hello` (arguments), `upper` (a filter), `code` (exit statuses), `keys` (conio: the screen and raw keys), `ctest` (the library's test) |
+| `samples/` | `hello` (arguments), `upper` (a filter), `code` (exit statuses), `keys` (conio: the screen and raw keys), `tones` (sound: `snd.h`), `ctest` (the library's test) |
 
 ## A program
 
@@ -48,6 +49,8 @@ int main (int argc, char* argv[])
 * conio (`conio.h`) works the console as an ANSI terminal: `clrscr`, `gotoxy`, `textcolor`, `revers`, `cursor`;
   `cgetc` reads keys raw (no echo, each as it's typed, the cursor and function keys as one code each: `CH_*` in
   `hydra.h`) until the program ends.
+* Sound (`snd.h`): claim the channels it uses (`snd_claim`), then patches, notes, volumes, bends and drums on
+  them; they're given back as it ends.
 * `time` and `clock` count from the program's start (`time` from 2000-01-01, till the system has a clock);
   `sleep` and `hy_sleep_ticks` let the other tasks run.
 * Its RAM: `$0800` to `$7F00`, for the program, its BSS, the heap (`malloc`) and the C stack (2K); its own RAM
@@ -74,5 +77,5 @@ ld65 -C sdk/c/hydra.cfg -o hello.hyx hello.o sdk/c/lib/hydra.lib
 
 As an assembly program is run (`sdk/asm/README.md`): copy it to a card or the RAM disk, and type its path, or its
 name if it's in `.` or a `bin`.  The samples are on the ROM disk: `/rom/sample/c/hello you`,
-`echo hi | /rom/sample/c/upper`, `/rom/sample/c/keys`; `cd /ram; /rom/sample/c/ctest a 'b c'` runs the
+`echo hi | /rom/sample/c/upper`, `/rom/sample/c/keys`, `/rom/sample/c/tones`; `cd /ram; /rom/sample/c/ctest a 'b c'` runs the
 library's test.

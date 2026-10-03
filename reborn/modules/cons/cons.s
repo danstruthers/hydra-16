@@ -10,7 +10,8 @@
 ;               Home and End (and Ctrl-A, Ctrl-E), Ctrl-U, the history with Up and Down; Enter ends it, Ctrl-D on
 ;               an empty line is the end of the input.  Or (raw: consctl's rawon) each key as it comes, the
 ;               terminal's cursor and function keys as one code each (KEY_*; an Escape alone waits for the key
-;               after it).  A write goes into the window's text, and out if the window is shown (each LF as CR LF)
+;               after it).  A write goes into the window's text, and out if the window is shown (each LF as CR LF;
+;               a BEL rings the sound driver's bell too, #a/bell: the one call from a driver to another)
 ;   /consctl    rawon, rawoff (raw lasts till the window's last consctl closes, as Plan 9's does); group (the
 ;               window's notes go to the writer's note group).  It reads as the state
 ;   /wctl       new (a window), current N (window N shown).  It reads as the windows, a line each (* the shown one)
@@ -62,6 +63,7 @@ CTRL_A          = $01
 CTRL_C          = $03
 CTRL_D          = $04
 CTRL_E          = $05
+BEL             = $07
 BS              = $08
 CTRL_U          = $15
 ESC             = $1B
@@ -139,6 +141,9 @@ w_cl:       .res        WIN_MAX                             ;   the bytes there 
 w_ch:       .res        WIN_MAX
 w_iqh:      .res        WIN_MAX                             ;   and its keys: the next in, the next out
 w_iqt:      .res        WIN_MAX
+bell:       .res        1                                   ; <> 0: a BEL the shown window sent (ring's) ...
+bell_st:    .res        1                                   ;   #a/bell: 0 not opened yet, 1 open, 2 none ...
+bell_fd:    .res        1                                   ;   and its fd
 
 .assert     ST_N <= ST_SIZE, error, "A window's editor state is bigger than ST_SIZE"
 .assert     WIN_MAX * INQ_SIZE = 256 .and WIN_MAX = 4, error, "iq_put and iq_get: 4 queues of 64, a page"
@@ -1102,6 +1107,13 @@ w_write:
             sta         budget
 @put:
             lda         iobuf,X
+            cmp         #BEL                                ; (The shown window's BEL: the bell, at the end)
+            bne         :+
+            ldy         lw
+            cpy         w_in
+            bne         :+
+            sta         bell
+:
             jsr         w_put
             inc         n
             bne         :+
@@ -1113,6 +1125,7 @@ w_write:
             bra         @part
 
 @end:
+            jsr         ring
             lda         n
             ora         n + 1
             bne         :+
@@ -1120,6 +1133,35 @@ w_write:
 :
             MOVR        TASK_INBOX + RQ_DONE, n
             clc
+            rts
+
+; The bell: a BEL the shown window sent rings the sound driver's, by a write to #a/bell (opened the first time:
+; the one call from a driver to another).  No sound driver: no bell, from then on.  Modifies .A, .X, .Y, r0-r2
+ring:
+            lda         bell
+            beq         @done
+            stz         bell
+            lda         bell_st
+            cmp         #1
+            beq         @write
+            bcs         @done                               ; (2: none)
+            LDR         r0, s_bell
+            lda         #O_WRITE
+            jsr         OPEN
+            ldx         #2
+            bcs         :+
+            sta         bell_fd
+            ldx         #1
+:
+            stx         bell_st
+            cpx         #1
+            bne         @done
+@write:
+            LDR         r0, bell_st                         ; (A byte: anything)
+            LDR         r1, 1
+            lda         bell_fd
+            jsr         WRITE
+@done:
             rts
 
 ; /ser: a write, straight into the send ring as it is, as much as there's room for; none: E_AGAIN
@@ -1890,6 +1932,7 @@ edit_vec:   .word       ed_cr, ed_lf, ed_eof, ed_bs, ed_bs, ed_del, ed_left, ed_
             .word       ed_kill, ed_up, ed_down
 .assert     * - edit_vec = EDIT_N * 2, error, "edit_keys and edit_vec don't match"
 s_clear:    .byte       ESC, "[H", ESC, "[2J", 0            ; (The terminal's screen cleared, the cursor home)
+s_bell:     .byte       "#a/bell", 0
 
 ; ****************************************************************************
 ; The rates: the ACIA's code, and timer 2 for a character (10 bits, and the idle bits after it: 2 at 115200 on

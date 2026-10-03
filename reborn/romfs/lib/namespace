@@ -12,7 +12,7 @@ bind -a '#n' /dev           # null zero
 bind -a '#t' /dev           # ticks
 #bind -a '#g' /dev/gpio     # (phase 5)
 #bind -a '#i' /dev/i2c      # (phase 5)
-#bind -a '#a' /dev          # snd sndctl (phase 5)
+bind -a '#a' /dev           # snd sndctl bell
 bind '#d' /dev/sd
 bind '#S' /dev/spi
 bind '#m' /dev/mod

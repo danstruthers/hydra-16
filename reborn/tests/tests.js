@@ -122,6 +122,7 @@ const RC_LINES = [
   ["echo $x(2-) $x(1-2)","b c a b"],
   ["echo one >/ram/f; echo two >>/ram/f; cat /ram/f","one\ntwo"],
   ["cat </ram/f >[2=1]","one\ntwo"],
+  ["{echo b >[1=3]} >[3]/ram/y >/dev/null; cat /ram/y","b"],
   ["echo piped | cat","piped"],
   ["echo a b | cat | cat","a b"],
   ["if(~ a a) echo yes; if not echo no","yes"],
@@ -190,6 +191,7 @@ const TOOL_LINES = [
     "bind -a '#c' /dev",
     "bind -a '#n' /dev",
     "bind -a '#t' /dev",
+    "bind -a '#a' /dev",
     "bind '#d' /dev/sd",
     "bind '#S' /dev/spi",
     "bind '#m' /dev/mod",
@@ -327,6 +329,21 @@ const C_LINES = [
   ].join('\n')],
 ];
 
+// The sound test's lines (as the tools test's): #a's files, the volume, claims (one another program holds), its
+// errors, the shadow, the C sample tones, and the bell
+const SND_LINES = [
+  ["ls /dev | grep snd; cat /dev/sndctl","snd\nsndctl\nvolume 100\nclaimed"],
+  ["echo volume 150 >/dev/sndctl; cat /dev/sndctl; echo volume 100 >/dev/sndctl","volume 150\nclaimed"],
+  ["{echo claim 5 >[1=3]; cat /dev/sndctl} >[3]/dev/sndctl; cat /dev/sndctl","volume 100\nclaimed 0 2\nvolume 100\nclaimed"],
+  ["echo frob >/dev/sndctl; echo claim >/dev/sndctl", [
+    "echo: write error: invalid argument",
+    "echo: write error: invalid argument",
+  ].join('\n')],
+  ["wc -c /dev/snd","    256 /dev/snd"],
+  ["/rom/sample/c/tones 0 & sleep 1; echo claim 1 >/dev/sndctl; wait","echo: write error: busy\ntones: patch 0, $20 C4, $28 4C"],
+  ["echo x >/dev/bell",null],
+];
+
 module.exports = {
   IRQ_OFF_MAX,
   tests: [
@@ -388,7 +405,7 @@ module.exports = {
     },
     {
       name: 'task', what: 'tasks and the scheduler: SPAWN, EXITS, WAIT, SLEEP, preemption, PAUSE and WAKE, orphans',
-      init: 't_task', modules: ['t_child'], without: ['cons', 'storage'], cycles: 60e6,
+      init: 't_task', modules: ['t_child'], without: ['cons', 'storage', 'snd'], cycles: 60e6,
     },
     {
       name: 'note', what: 'notes: the defaults, handlers, a note to oneself, WAIT ended by one, note groups',
@@ -499,9 +516,9 @@ module.exports = {
           per: n, max: o => o.clock === 2 ? 320 + 64 : 320 },
         { what: 'the same from the RAM disk, a byte', from: '<rbig', to: 'rbig>', per: n, max: 90 },
         { what: 'SPAWN of a module in place (#m/t_child), the caller\'s time', from: '<msp', to: 'msp>', minus: ['<b0', 'b0>'],
-          per: 1, max: 55000 },
+          per: 1, max: 45000 },
         { what: 'the same by /bin/t_child (the card\'s bin first, then #m/bin)', from: '<sp', to: 'sp>', minus: ['<b0', 'b0>'], per: 1,
-          max: 120000 }];
+          max: 110000 }];
       },
     },
     {
@@ -583,7 +600,20 @@ module.exports = {
       ],
     },
     {
-      name: 'cons', what: 'the console: lines, editing, history, raw keys, Ctrl-C, windows (shown, repainted, made, gone), 115200',
+      name: 'snd', what: 'sound (#a): snd, sndctl and bell; the volume, claims (one another program holds), the shadow, tones (C, snd.h)',
+      init: 't_rc', cycles: 120e6,
+      get machine() { return { input: SND_LINES.map(l => '\u0101' + l[0] + '\r').join('') }; },
+      get expect() { return SND_LINES.map(l => '% ' + l[0] + '\n' + (l[2] ? l[1] : (l[1] === null ? '' : l[1] + '\n') + '%')); },
+      check(m) {
+        const f = [], keys = m.ym.keyOns.join(', ');
+        for (const ch of [0, 1, 2, 3, 7]) if (!m.ym.keyOns.some(k => k.startsWith('ch ' + ch + ' '))) f.push('no key-on on channel ' + ch + ': ' + keys);
+        if (m.ym.lost) f.push(m.ym.lost + ' writes to the YM2151 while it was busy');
+        this.notes = ['the YM2151: ' + m.ym.keyOns.length + ' key-ons'];
+        return f;
+      },
+    },
+    {
+      name: 'cons', what: 'the console: lines, editing, history, raw keys, Ctrl-C, windows (shown, repainted, made, gone), 115200, the bell',
       init: 't_cons', modules: ['t_child'], cycles: 80e6,
       // (ā: wait for a prompt, "N> ")
       machine: { input: 'āhello\r' + 'āabX\x08c\r' + 'āac\x1b[Db\r' + 'ābc\x1b[Ha\x1b[Fd\r' +
@@ -596,6 +626,7 @@ module.exports = {
         this.notes = ['at 115200, the shortest idle time between characters sent: ' + a.gapMin.toFixed(2) + ' bits (at least ' + want + ')'];
         if (!(a.gapMin >= want - 0.05)) f.push('at 115200, characters ' + a.gapMin.toFixed(2) + ' bits apart: less than ' + want);
         if (a.overruns) f.push(a.overruns + ' bytes written to the ACIA while it was still sending');
+        if (!m.ym.keyOns.some(k => k.startsWith('ch 7 '))) f.push('a BEL printed: no bell (no key-on on channel 7)');
         return f;
       },
     },
@@ -609,7 +640,7 @@ module.exports = {
     },
     {
       name: 'scall', what: 'spike S3: calls into a driver\'s task, its errors, a busy driver, the round trip',
-      init: 't_scall', modules: ['t_child', 't_drv'], without: ['cons', 'storage'], cycles: 40e6,
+      init: 't_scall', modules: ['t_child', 't_drv'], without: ['cons', 'storage', 'snd'], cycles: 40e6,
       budgets: [{ what: 'SCALL round trip (DBG_SCALL, less the same loop calling the code in place)', from: '<scall', to: 'scall>',
         minus: ['<base', 'base>'], per: 1000, max: 200 }],
     },
@@ -620,7 +651,7 @@ module.exports = {
     },
     {
       name: 'irq', what: 'spike S1: 115200 received by an irq entry while tasks spin',
-      init: 't_irq', modules: ['t_child'], without: ['cons', 'storage'], cycles: 30e6,
+      init: 't_irq', modules: ['t_child'], without: ['cons', 'storage', 'snd'], cycles: 30e6,
       send: { after: 'ready>', bytes: Array.from({ length: S1_BYTES }, (_, i) => (3 + 7 * i) & 0xFF) },
       check(m) {
         const f = [], l = m.acia.rxLat, char = m.acia.charCycles();
