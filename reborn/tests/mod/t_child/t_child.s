@@ -17,6 +17,7 @@
 ;   "i"         read a byte from fd 0: end with it ($EF: the end of the input; $E0 + the error, if one)
 ;   "h"         open /hello (its namespace's): end with code 0 ($E0 + the error, if one)
 ;   "m"         bind #T/sub at / (in place), then open /inner: end with code 0 ($E0 + the error, if one)
+;   "j"         claim console window 1's notes ("group" to #c1/consctl), then as "i"
 ;   anything else: end with code $EE
 
 .include "hydra.inc"
@@ -168,6 +169,25 @@ op_r:
             ora         #$E0
             jmp         end
 
+op_j:
+            LDR         r0, s_c1ctl
+            lda         #O_WRITE
+            jsr         OPEN
+            bcs         @err
+            sta         param
+            LDR         r0, s_group
+            LDR         r1, 5
+            lda         param
+            jsr         WRITE
+            bcs         @err
+            lda         param
+            jsr         CLOSE
+            bra         op_i
+
+@err:
+            ora         #$E0
+            jmp         end
+
 op_i:
             LDR         r0, buf
             LDR         r1, 1
@@ -269,10 +289,12 @@ hex:
             rts
 
 .rodata
-ops:        .byte       "esykpocgndtbrwihm"
+ops:        .byte       "esykpocgndtbrwihmj"
 OPS         = * - ops
 op_vec:     .word       op_e, op_s, op_y, op_k, op_p, op_o, op_c, op_g, op_n, op_d, op_t, op_b, op_r, op_w, op_i
-            .word       op_h, op_m
+            .word       op_h, op_m, op_j
+s_c1ctl:    .byte       "#c1/consctl", 0
+s_group:    .byte       "group"
 s_hello:    .byte       "/hello", 0
 s_inner:    .byte       "/inner", 0
 s_tsub:     .byte       "#T/sub", 0

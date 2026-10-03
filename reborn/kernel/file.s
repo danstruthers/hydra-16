@@ -726,21 +726,27 @@ f_path:
 @noent:
             FAIL        E_NOENT
 
-; TA_PATH cleaned in place, from its root (/, or #x): no empty elements, no ".", and ".." taking the element before
-; it (never the root).  OUT: C = 0; or C = 1, .A = E_NOENT (a # with no device letter, or more than one)
+; TA_PATH cleaned in place, from its root (/, or #x and its spec, as Plan 9's #I1: #c2 is the console's window 2): no
+; empty elements, no ".", and ".." taking the element before it (never the root).  OUT: C = 0; or C = 1, .A = E_NOENT
+; (a # with no device letter, or a spec longer than 8)
 f_clean:
             ldx         #1                                  ; (.X: where the next byte goes; .Y: the next one read)
             lda         TA_PATH
             cmp         #'#'
             bne         @root
-            lda         TA_PATH + 1                         ; #x, then nothing or a /
+            lda         TA_PATH + 1                         ; #x, its spec, then nothing or a /
             beq         @noent
-            lda         TA_PATH + 2
-            beq         :+
-            cmp         #'/'
-            bne         @noent
-:
             inx
+:
+            lda         TA_PATH,X
+            beq         @root
+            cmp         #'/'
+            beq         @root
+            inx
+            cpx         #2 + 8 + 1
+            bcc         :-
+            bra         @noent
+
 @root:
             stx         F_ROOT
             txa

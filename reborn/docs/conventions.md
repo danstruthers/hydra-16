@@ -135,13 +135,17 @@ The kernel task (task 0) keeps the kernel's state: its program zero page (`K0_*`
   several.  Control is text written to ctl files.
 * The kernel's own devices (`#/`, `#n`, `#t`, `#m`, `#p`, `#|`) are a driver module like any other (`kdev`), not
   the kernel task's.
+* **The console is windows, not job control** (Plan 9's way, rio's): each window a whole console (`#cN`), chosen
+  for a shell by its namespace (`#cN` at `/dev`).  There's no foreground group and no `fg`: which program gets
+  the keys is which window is shown, and a window's interrupts go to its note group.
 * `PUTC`, `PUTS` and `GETC` are a write to fd 1 and a read from fd 0; a task without them (the kernel, a driver)
   has the bring-up console, polled.
 
 ## Names
 
 * A name is made whole and clean before it's looked up: a relative one after the current directory (`TA_CWD`),
-  then `.`, `..` and empty elements gone.  A `#x` name is device `x`'s own, in no namespace.
+  then `.`, `..` and empty elements gone.  A `#x` name is device `x`'s own, in no namespace; what follows the
+  letter, up to the `/`, is its spec, as in Plan 9 (`#c2/cons`: the console's window 2).
 * A namespace is a table of mount entries in the kernel task (`kernel/ns.s`); tasks share one till one of them
   changes it, which copies it first.  An entry is one member of the union at a mount point: a device, a spec and
   a path in that device.  Binds are resolved when they're made, as in Plan 9: binding a mount point binds all its

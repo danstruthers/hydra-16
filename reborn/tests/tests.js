@@ -77,14 +77,16 @@ module.exports = {
       init: 't_dev', modules: ['t_child'], cycles: 40e6,
     },
     {
-      name: 'cons', what: 'the console: lines, editing, history, raw keys, Ctrl-C, the foreground group, 115200',
+      name: 'cons', what: 'the console: lines, editing, history, raw keys, Ctrl-C, windows (shown, repainted, made, gone), 115200',
       init: 't_cons', modules: ['t_child'], cycles: 80e6,
       // (ā: wait for a prompt, "N> ")
       machine: { input: 'āhello\r' + 'āabX\x08c\r' + 'āac\x1b[Db\r' + 'ābc\x1b[Ha\x1b[Fd\r' +
         'āxyz\x15ok\r' + 'āabXc\x1b[D\x1b[D\x1b[3~\r' + 'ā\x1b[A\x1b[A\r' + 'ā\x04' + 'āparts\r' +
-        'āx\x1b[A' + 'ā\x03' + 'āz\r' },
-      check(m) {
+        'āx\x1b[A' + 'ā\x03' +
+        'ā\x1d1z\r\x1d0' + 'ā\x1d1\x03\x1d0' + 'ā\x1dc' },
+      check(m, out) {
         const f = [], a = m.acia, want = a.wdc ? 1 : 2;
+        if (!out.includes('\x1b[2J') || !out.includes('w1 hidden text')) f.push('window 1 shown: no repaint of its text');
         this.notes = ['at 115200, the shortest idle time between characters sent: ' + a.gapMin.toFixed(2) + ' bits (at least ' + want + ')'];
         if (!(a.gapMin >= want - 0.05)) f.push('at 115200, characters ' + a.gapMin.toFixed(2) + ' bits apart: less than ' + want);
         if (a.overruns) f.push(a.overruns + ' bytes written to the ACIA while it was still sending');

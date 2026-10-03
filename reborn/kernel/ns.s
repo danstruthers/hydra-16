@@ -639,7 +639,8 @@ cand_entry:
             jsr         sp_addr                             ; K0_SA: its path
             bra         cand_path
 
-; A # name's candidate: its device (the name's second character), no spec, and the rest after "#x"
+; A # name's candidate: its device (the name's second character), its spec (what's between that and the /, as
+; Plan 9's #I1: 8 characters at most, f_clean saw to that), and the rest
 cand_dev:
             stz         K0_NT
             lda         K0_NC
@@ -654,9 +655,21 @@ cand_dev:
             .repeat     8, I
             stz         K_CAND_DS + 1 + I,X
             .endrepeat
-            clc                                             ; The rest
-            lda         K0_SB
-            adc         #2
+            iny
+@spec:
+            lda         (K0_SB),Y
+            beq         @rest
+            cmp         #'/'
+            beq         @rest
+            sta         K_CAND_DS + 1,X
+            inx
+            iny
+            cpy         #2 + 8
+            bcc         @spec
+@rest:
+            tya                                             ; The rest
+            clc
+            adc         K0_SB
             sta         K0_SB
             bcc         :+
             inc         K0_SB + 1

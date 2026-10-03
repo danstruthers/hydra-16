@@ -482,7 +482,7 @@ From it the build makes:
 * **States are a small enum** (free, starting, ready, waiting, sleeping, calling, exiting) plus a few independent bits (driver, note pending, guest switched out); the scheduler's test is one table lookup.
 * **Numbering:** task 0 is the kernel and the idle task; task 1 is `init`; drivers are given tasks from the top down (`$F`, `$E` ...) as they start, so task F is always a driver (§6, the DS1747); programs get the lowest free task.  No number is fixed anywhere but 0 and 1 (A4).
 * **One parent**, the task that spawned it.  When a task ends, its children's parent becomes `init` (as Unix gives orphans to `init`), which also collects their exit records (H3).
-* **Note groups** (Plan 9's): a task joins its parent's note group unless it asks for a new one.  The console sends an interrupt to its foreground note group; `kill` of a group ends all of it.  This replaces the owner-chain walks.
+* **Note groups** (Plan 9's): a task joins its parent's note group unless it asks for a new one.  The console sends an interrupt to the note group of the window that has the keyboard (§14.2); `kill` of a group ends all of it.  This replaces the owner-chain walks.
 
 #### **10.3 Interrupts: one path, made fast**
 
@@ -520,7 +520,7 @@ The kernel manages **pages and banks**; fine-grained allocation belongs to the l
 #### **10.6 Starting and ending tasks**
 
 One call starts a task: **`SPAWN`**.
-* **In:** `r0` = the program's path, `r1` = an argument list (a block of zero-terminated strings ending in an empty one), `.A` = flags (as Plan 9's `rfork`: copy the namespace or start a clean one; copy the environment or start empty; join the note group or start one; foreground), `r2` = an fd map (which of the parent's fds become the child's 0, 1, 2 ...; others aren't inherited unless marked).
+* **In:** `r0` = the program's path, `r1` = an argument list (a block of zero-terminated strings ending in an empty one), `.A` = flags (as Plan 9's `rfork`: copy the namespace or start a clean one; copy the environment or start empty; join the note group or start one), `r2` = an fd map (which of the parent's fds become the child's 0, 1, 2 ...; others aren't inherited unless marked).
 * **Out:** `.A` = the new task.  The child starts at its program's entry with its arguments and name in its OS area (`argc`/`argv` ready for C).
 * The **loader** (kernel page 3) opens the file, reads its header ([Appendix C](#appendix-c-the-executable-and-module-header-hyx2)): a RAM program is read into the new task at its load address and its BSS cleared; a module that runs in place has the task's `$01` set to its bank and its data segment copied into RAM.  Either way the same header, the same call.
 * **`EXITS`** (`.A` = code, `r0` = message or 0) ends the calling task, as Plan 9's `exits`; returning from the entry point is `EXITS` with 0.  Everything the task had (its channels, pages, banks, segments' references, IRQ ownership, semaphores) is released by the kernel, in one place.
@@ -619,7 +619,7 @@ Data moves once, by kcopy, between the client's buffer (wherever it is in the cl
 
 #### **12.5 Control: ctl files only**
 
-Every device's control is text written to a ctl file, and its state is text read from it (P7).  There is no binary ctl call; `IO_CTL`'s codes become words: `/dev/serctl` takes `b19200 l8 pn s1`, `/dev/consctl` takes `rawon`, `rawoff`, `fg 5`; `/dev/sndctl` takes `claim 0x03`, `release 0x03`, `volume 90`, `reset`; the disks' ctl files take `init`, `format`, `label`, `check`, `start`, `stop` as today.  Anything that can write text can control anything: rc's `echo`, Forth, hylang, C's `fprintf`.
+Every device's control is text written to a ctl file, and its state is text read from it (P7).  There is no binary ctl call; `IO_CTL`'s codes become words: `/dev/serctl` takes `b19200 l8 pn s1`, `/dev/consctl` takes `rawon`, `rawoff`, `group`; `/dev/wctl` takes `new`, `current 2`; `/dev/sndctl` takes `claim 0x03`, `release 0x03`, `volume 90`, `reset`; the disks' ctl files take `init`, `format`, `label`, `check`, `start`, `stop` as today.  Anything that can write text can control anything: rc's `echo`, Forth, hylang, C's `fprintf`.
 
 #### **12.6 Directories and stat**
 
@@ -658,7 +658,7 @@ The default namespace file is in [Appendix E](#appendix-e-the-default-namespace)
 | :----- | :---- | :---- |
 | `#/` root | `/` and its mount points | |
 | `#e` env | `/env/NAME` | Each task's environment (copied or empty at spawn); 1K a task |
-| `#p` proc | `/proc/N/status`, `ctl`, `note`, `ns`, `fd`, `mem`, `ram`, `regs`, `args`, `cwd`, `env` | Plan 9's set: `mem` and `ram` as today; `regs` (the saved frame), `fd` (open files) and `note` (send one) are new.  `ctl` takes `kill`, `stop`, `start`, `fg` |
+| `#p` proc | `/proc/N/status`, `ctl`, `note`, `ns`, `fd`, `mem`, `ram`, `regs`, `args`, `cwd`, `env` | Plan 9's set: `mem` and `ram` as today; `regs` (the saved frame), `fd` (open files) and `note` (send one) are new.  `ctl` takes `kill`, `stop`, `start` |
 | `#\|` pipe | `/dev/pipe` (made by `PIPE`) | Pipes of 512 bytes in task 0's banks; 16 of them |
 | `#t` time | `/dev/time`, `/dev/ticks` | The clock as text (set by writing), the DS1747 |
 | `#n` null and zero | `/dev/null`, `/dev/zero` | |
@@ -670,12 +670,12 @@ The default namespace file is in [Appendix E](#appendix-e-the-default-namespace)
 #### **14.2 The console: `cons`** (a driver module; task F)
 
 * The ACIA (Rockwell, or WDC with timer 2 pacing, as build options), receive and transmit rings, sending paced at 115200 (the current, board-proven logic).
-* **`#c`**: `/dev/cons`, `/dev/consctl`, `/dev/ser`, `/dev/serctl`.
+* **`#c`**: `/dev/cons`, `/dev/consctl` (each window's: below), `/dev/wctl`, `/dev/wnew`, `/dev/ser`, `/dev/serctl`.
 * **Line discipline, cooked mode, in one place:** the console edits a line (Backspace, Delete, Left, Right, Home, End, Ctrl-U, the history with Up and Down) and delivers it on Enter, so every program gets line editing: rc, Forth, hylang, C's `fgets`.  (Today it's HyForth's alone, and a C program sees raw backspaces.)  Raw mode (`rawon`) gives each key as it comes, with the terminal's cursor and function keys decoded to single codes.
-* **Job control:** the foreground note group gets the keyboard and may write; others wait; Ctrl-C sends interrupt and Ctrl-\\ kill to the foreground group; Ctrl-] then a task brings its group forward.
+* **Windows, Plan 9's way, not job control.**  There's no foreground group, no `fg`, no stop key.  As rio gives each window a console of its own, `cons` serves several windows on the one terminal, each a whole console: its own `cons` and `consctl`, line editor, raw mode, note group, and its text (the last of its output, a screenful and more).  A window's files are `#c` with its number as the spec (`#c2/cons`, or `mount '#c' /dev 2`), so a shell's namespace gives it its window at `/dev`; plain `#c` is window 0, init's.  One window is shown and gets the keys; Ctrl-] then a digit shows another (Ctrl-] `n` the next), and `cons` repaints the terminal from that window's text.  A window that isn't shown runs on: its output goes into its text, its reads wait for keys.  Ctrl-C sends interrupt, and Ctrl-\\ kill, to the shown window's note group (the group of the program that claimed it: `group` in its `consctl`).  Windows are made by writing `new` to `/dev/wctl`, or by the user: Ctrl-] `c` answers a read of `/dev/wnew` (init's, which starts a shell in the window); a window goes when the last of its `cons` is closed.
 * **The bell:** a BEL sent to the console asks the sound driver for its beep (a call from `cons` to `snd`, the only driver-to-driver call, documented as such).
 * **`/pc`** (`#P`): the PC folder over the serial line, served in this task, which owns the line.  The framing, CRC, resends and the PC tool's file server stay; the request header changes to Appendix B's, so the protocol's version goes to 2 and the PC tool learns both.
-* **Later (phase 8):** the console becomes a multiplexer with two back ends, the serial terminal and the Vera X screen with its keyboard, chosen in `consctl` (`screen`, `serial`, `both`), as [VIDEO.md](plans/VIDEO.md) plans.
+* **Later (phase 8):** the console gets a second back end, the Vera X screen with its keyboard, chosen in `consctl` (`screen`, `serial`, `both`), as [VIDEO.md](plans/VIDEO.md) plans: the windows are the same, shown on either.
 
 #### **14.3 Storage: `storage`** (a driver module; task E)
 
@@ -711,7 +711,7 @@ One driver owns the SPI bus and every disk:
 1. **Reset** (on any page): `W` = 0, task 0, the stack.  **POST** (polled serial, interrupts off, as today; `T` typed jumps to the hardware test).
 2. **The kernel's set-up:** the hardware probe (RAM modules, shared RAM chips, the DS1747), the kernel task's tables, the IRQ vectors, the module directory.
 3. **The boot drivers:** `cons` (task F), then `storage` (task E).  A failure prints a line and the boot goes on.
-4. **`init`** (task 1), a module: it mounts and binds from `/rom/lib/namespace` (and a card's `/lib/namespace`), starts the drivers listed in `/rom/lib/drivers` (`snd`, later `vid`, `input`), runs `/rom/lib/profile` (and a card's), and starts the console's shell on fds 0-2 = `/dev/cons`.  When the shell exits or is killed, `init` starts another (the kernel no longer special-cases the shell: A1).  `init` also adopts orphans and reaps their records.
+4. **`init`** (task 1), a module: it mounts and binds from `/rom/lib/namespace` (and a card's `/lib/namespace`), starts the drivers listed in `/rom/lib/drivers` (`snd`, later `vid`, `input`), runs `/rom/lib/profile` (and a card's), and starts the console's shell in window 0 on fds 0-2 = `/dev/cons`; for each window the user asks for (a read of `/dev/wnew`) it starts another shell in that window, with that window at `/dev`.  When window 0's shell exits or is killed, `init` starts another (the kernel no longer special-cases the shell: A1).  `init` also adopts orphans and reaps their records.
 5. **The tick starts; task 0 idles.**
 
 #### **15.2 rc**
@@ -930,10 +930,10 @@ Each phase ends with something that runs, a set of tests that pass in the emulat
 | 2.4 | **Channels and the request path**: fd tables, the channel table, `OPEN`, `CREATE`, `READ`, `WRITE`, `CLOSE`, `SEEK`, `STAT`, `FSTAT`, `WSTAT`, `REMOVE`, `DUP`, `DUP2`; blocking and retry; FLUSH on a note | L |
 | 2.5 | **Namespaces**: `#` names, `#/`, the mount tables and string pool, resolution, unions and union directories, `BIND`, `MOUNT`, `UNMOUNT`, `CHDIR`, `GETCWD`, inheritance and clean namespaces | L |
 | 2.6 | **The kernel devices**: `#n`, `#e`, `#p` (status, ctl, ns, fd, args), `#\|` with `PIPE`, `#t` | M |
-| 2.7 | **The console driver**: the ACIA (both chips; pacing at 115200: ported from `drivers/serial.s` and `servers/serfast.s`), the rings, `#c`, cooked mode with line editing and history, raw mode with key decoding, `consctl`, `serctl`, job control with note groups, the break and kill keys | L |
+| 2.7 | **The console driver**: the ACIA (both chips; pacing at 115200: ported from `drivers/serial.s` and `servers/serfast.s`), the rings, `#c`, cooked mode with line editing and history, raw mode with key decoding, `consctl`, `serctl`, windows (a console each, rio's way: `#c` with a spec, switched with Ctrl-] and a digit, repainted from their text), the break and kill keys | L |
 | 2.8 | **A first `init`**: mounts from a namespace built into its module (no disk yet), starts a test shell that echoes lines and runs `ls`-like listings of `#` devices | S |
 
-**Tests:** a server built on srvlib in a test module (every request, errors, text files at offsets, ctl commands); opens through binds, unions (lookup order, creates, union directory reads on two fds), hides, inheritance; pipes between tasks (full, empty, broken, end of file); the console (cooked editing keys, raw keys, Ctrl-C to a foreground group, background waiting, 115200 output and a 1000-character paste at 57600 with nothing lost, as today's tests).  **On the board:** the console at 9600 and 115200, both ACIA variants if both chips are available.
+**Tests:** a server built on srvlib in a test module (every request, errors, text files at offsets, ctl commands); opens through binds, unions (lookup order, creates, union directory reads on two fds), hides, inheritance; pipes between tasks (full, empty, broken, end of file); the console (cooked editing keys, raw keys, Ctrl-C to the shown window's note group, windows made, switched, repainted and gone, a window not shown waiting for keys, 115200 output and a 1000-character paste at 57600 with nothing lost, as today's tests).  **On the board:** the console at 9600 and 115200, both ACIA variants if both chips are available.
 
 #### **Phase 3: Storage**
 
@@ -1048,7 +1048,7 @@ Phases 6, 7 and 8 depend only on phase 5 and can go in any order or in parallel;
 | `IO_CTL` codes | ctl files | 2 |
 | Text directory listings | Stat records only | 2 |
 | `/dev/null`, `/dev/zero`, `/dev/pipe`, `/env`, `/proc` (and `/dev/proc`), `/dev/time`, `/dev/ram`, `/`, `/dev` | `#n`, `#\|`, `#e`, `#p` (one name: `/proc`), `#t`, `#r`, `#/` | 2 |
-| `/dev/cons`, `/dev/cons/ctl`, `/dev/ser`, `/dev/ser/ctl`, foreground, console keys | `#c`: `cons`, `consctl`, `ser`, `serctl`, note groups; line editing for everyone | 2 |
+| `/dev/cons`, `/dev/cons/ctl`, `/dev/ser`, `/dev/ser/ctl`, foreground, console keys | `#c`: `cons`, `consctl`, `ser`, `serctl`, note groups; windows in place of the foreground; line editing for everyone | 2 |
 | Namespaces: 32 + 32 entries, unions, `hide`, specs, `newns` | Kept, with `#` names, longer paths, union directories on any fd, no `/dev` fallback, no `$PATH` | 2 |
 | Current directory | Kept | 2 |
 | `/dev/spi` | `#S` | 3 |

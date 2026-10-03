@@ -1,24 +1,36 @@
 ; ****************************************************************************
 ; cons - the console driver (docs/reimplementation-from-scratch.md, §14.2): the serial port, its rings, and the
 ; device #c, on srvlib (a boot driver: task F).
-;   /cons       the console.  A read is the foreground note group's (the others' wait: consctl's fg), and gets a
-;               line, edited here (cooked): Backspace and Delete, Left, Right, Home and End (and Ctrl-A, Ctrl-E),
-;               Ctrl-U, the history with Up and Down; Enter ends it, Ctrl-D on an empty line is the end of the
-;               input.  Or (raw: consctl's rawon) each key as it comes, the terminal's cursor and function keys as
-;               one code each (KEY_*; an Escape alone waits for the key after it).  A write goes out with each LF
-;               as CR LF
-;   /consctl    rawon, rawoff; fg N (note group N's reads go on, the others' wait).  It reads as the state
-;   /ser        the serial port, raw: bytes in and out as they are
+;
+; Windows, Plan 9's way (rio's, on a text terminal), not job control: several consoles on the one terminal, each a
+; window with its own cons and consctl, line editor, raw mode, note group and text (its last 2K of output).  One
+; window is shown and gets the keys; the others run on, their output going into their text, their reads waiting
+; for keys.  A window's files are #c with its number as the spec: #c2/cons (or mount '#c' /dev 2); #c is window 0.
+;   /cons       the window's console.  A read gets a line, edited here (cooked): Backspace and Delete, Left, Right,
+;               Home and End (and Ctrl-A, Ctrl-E), Ctrl-U, the history with Up and Down; Enter ends it, Ctrl-D on
+;               an empty line is the end of the input.  Or (raw: consctl's rawon) each key as it comes, the
+;               terminal's cursor and function keys as one code each (KEY_*; an Escape alone waits for the key
+;               after it).  A write goes into the window's text, and out if the window is shown (each LF as CR LF)
+;   /consctl    rawon, rawoff; group (the window's notes go to the writer's note group).  It reads as the state
+;   /wctl       new (a window), current N (window N shown).  It reads as the windows, a line each (* the shown one)
+;   /wnew       a read waits for the user's Ctrl-] c, then makes a window, shown, and gives its number (init's: it
+;               starts a shell there)
+;   /ser        the serial port, raw: bytes in and out as they are.  While it's open for reading, the keys are its,
+;               not the windows'
 ;   /serctl     the rate: b300, b600, b1200, b2400, b4800, b9600, b19200, b115200.  It reads as it
-; Ctrl-C and Ctrl-\ are the foreground group's notes (interrupt, kill), in either mode: a raw program that wants
-; them as keys catches the notes.
+; The keys: Ctrl-] then a digit shows that window (Ctrl-] n the next; Ctrl-] c asks for a new one, for /wnew's
+; reader; Ctrl-] Ctrl-] is a Ctrl-]); Ctrl-C and Ctrl-\ are notes (interrupt, kill) to the shown window's note
+; group, in either mode.  A window goes when the last of its cons fids closes (but window 0).
 ;
 ; Receiving: the ACIA's interrupt (LINE_ACIA) puts each byte into the receive ring and adds 1 to the event count
-; (TASK_EVENT: the readers waiting on it look again).  Sending: the serve entry puts bytes into the send ring and
-; sends the first; VIA timer 2 (LINE_VIA_T2) runs a character's time and a margin, and its interrupt sends the
-; next.  Paced, at every rate, on both chips: the WDC W65C51N's TDRE doesn't work, and on the board the
-; Rockwell's sending back to back at 115200 loses characters (2 idle bits then; 1 otherwise).  The interrupts'
-; work is a few dozen cycles each: the IRQs-off budget (200 cycles) has the dispatch's 115 in it.
+; (TASK_EVENT: the clients waiting look again); before each request the keys are handed to the windows' queues
+; (Ctrl-] and the key after it acted on there).  Sending: a window's output goes into its text; after each request
+; the shown window's text goes into the send ring, as there's room (a window just shown: the screen cleared, and its
+; last 24 lines from their start).  VIA timer 2 (LINE_VIA_T2) runs a character's time and a margin, and its
+; interrupt sends the next byte of the send ring.  Paced, at every rate, on both chips: the WDC W65C51N's TDRE
+; doesn't work, and on the board the Rockwell's sending back to back at 115200 loses characters (2 idle bits then;
+; 1 otherwise).  The interrupts' work is a few dozen cycles each: the IRQs-off budget (200 cycles) has the
+; dispatch's 115 in it.
 
 .include "hydra.inc"
 .include "hw.inc"
@@ -29,11 +41,20 @@
             HYX2_DRIVER "cons", init, srv_serve, irq, 0, HF_BOOT
 
 SRV_FLUSH       = flush                                     ; (srvlib: a reader's call ended by a note)
+SRV_OPENED      = opened                                    ;   (a fid made: its window)
+SRV_PRE         = distribute                                ;   (before each request: the keys to the windows)
+SRV_POST        = pump                                      ;   (and after it: the shown window's text out)
 
+WIN_MAX         = 4             ; Windows
+TEXT_SIZE       = 2048          ; Each window's text: its last output ...
+TEXT_MAX        = TEXT_SIZE - 1 ;   (of which this much is kept)
+INQ_SIZE        = 64            ; Each window's keys, waiting to be read
+SCREEN_ROWS     = 24            ; A window shown again: its text's last 24 lines
 LINE_MAX        = 127           ; A line's length at most (and its LF)
-HIST_N          = 8             ; Lines in the history ...
+HIST_N          = 4             ; Each window's history: its lines ...
 HIST_SIZE       = 128           ;   each its length, then LINE_MAX characters
-ECHO_ROOM       = LINE_MAX + 13 ; The most a key's echo puts into the send ring (a key waits for this much room)
+ST_SIZE         = 16            ; Each window's editor state, kept while another's is in use (st_first on)
+ECHO_ROOM       = LINE_MAX + 13 ; The most a key's echo puts into the text (a key waits for this much room)
 IOBUF           = 64            ; A write's bytes, a part at a time
 CTRL_A          = $01
 CTRL_C          = $03
@@ -43,22 +64,31 @@ BS              = $08
 CTRL_U          = $15
 ESC             = $1B
 CTRL_BSL        = $1C           ; (Ctrl-\)
+CTRL_RB         = $1D           ; (Ctrl-]: the windows' key)
 DEL             = $7F
 RATE_BOOT       = 5             ; 9600: the kernel's bring-up console's
 
 .zeropage
 rx_head:    .res        1                                   ; The receive ring: the irq entry's end ...
-rx_tail:    .res        1                                   ;   and the readers'
-tx_head:    .res        1                                   ; The send ring: the writers' end ...
+rx_tail:    .res        1                                   ;   and the serve entry's
+tx_head:    .res        1                                   ; The send ring: the serve entry's end ...
 tx_tail:    .res        1                                   ;   and timer 2's
 tx_busy:    .res        1                                   ; <> 0: a byte is going (timer 2 runs)
 t2_lo:      .res        1                                   ; Timer 2 for a character: a round's count ...
 t2_hi:      .res        1
 t2_rounds:  .res        1                                   ;   the rounds (more than 1 at slow rates) ...
 t2_left:    .res        1                                   ;   and those left of this one
-fg:         .res        1                                   ; The foreground note group
-raw:        .res        1                                   ; <> 0: raw
 rate:       .res        1                                   ; The rate (its index in the tables)
+pfx:        .res        1                                   ; The irq entry's: <> 0, the last key was Ctrl-] ...
+win_grp:    .res        1                                   ;   and the note group of the window with the keys
+d_pfx:      .res        1                                   ; Handing the keys out: <> 0, the last was Ctrl-]
+w_in:       .res        1                                   ; The window shown, which gets the keys
+repaint:    .res        1                                   ; <> 0: it's just been shown (its screen to repaint)
+want_new:   .res        1                                   ; <> 0: Ctrl-] c, a window wanted (for /wnew's reader)
+ser_rd:     .res        1                                   ; /ser's fids for reading (while there are any, the
+                                                            ;   keys are /ser's)
+lw:         .res        1                                   ; The window whose editor state is here ($FF: none)
+st_first:                                                   ; ---- The loaded window's editor state (ST_N bytes)
 ln_len:     .res        1                                   ; The line being edited: its length ...
 ln_pos:     .res        1                                   ;   the cursor ...
 ln_ready:   .res        1                                   ;   ended: its length with its LF (0: not yet) ...
@@ -73,29 +103,63 @@ key_pb:     .res        1                                   ; A key put back (th
 hi_n:       .res        1                                   ; The history: its lines ...
 hi_top:     .res        1                                   ;   the newest's slot ...
 hi_at:      .res        1                                   ;   and Up and Down's place (0: the line being typed)
-xlate:      .res        1                                   ; A write: <> 0: each LF as CR LF
+raw:        .res        1                                   ; <> 0: raw
+st_last:                                                    ; ---- (Its end)
+ST_N        = st_last - st_first
+tp:         .res        2                                   ; A window's text: a byte's address ...
+tq:         .res        2                                   ;   and its place (t_at)
 n:          .res        2                                   ; Scratch
+m:          .res        2
 p:          .res        2
 cnt:        .res        1
+budget:     .res        1                                   ; A write to the shown window: the send ring's room
 
 .bss
 rx_buf:     .res        256
 tx_buf:     .res        256
-ln_buf:     .res        LINE_MAX + 1
-hist:       .res        HIST_N * HIST_SIZE
+text:       .res        WIN_MAX * TEXT_SIZE                 ; Each window's text
+inq:        .res        WIN_MAX * INQ_SIZE                  ; Each window's keys
+lines:      .res        WIN_MAX * (LINE_MAX + 1)            ; Each window's line, while another's is loaded
+hist:       .res        WIN_MAX * HIST_N * HIST_SIZE        ; Each window's history
+w_state:    .res        WIN_MAX * ST_SIZE                   ; Each window's editor state, while another's is loaded
+ln_buf:     .res        LINE_MAX + 1                        ; The loaded window's line
 iobuf:      .res        IOBUF
+w_used:     .res        WIN_MAX                             ; Each window: <> 0, it's there ...
+w_group:    .res        WIN_MAX                             ;   its note group (Ctrl-C's) ...
+w_cons:     .res        WIN_MAX                             ;   its cons fids ...
+w_hl:       .res        WIN_MAX                             ;   its text's place: where the next byte goes ...
+w_hh:       .res        WIN_MAX
+w_sl:       .res        WIN_MAX                             ;   the next byte out (the shown one's) ...
+w_sh:       .res        WIN_MAX
+w_cl:       .res        WIN_MAX                             ;   the bytes there are (TEXT_MAX at most) ...
+w_ch:       .res        WIN_MAX
+w_iqh:      .res        WIN_MAX                             ;   and its keys: the next in, the next out
+w_iqt:      .res        WIN_MAX
+
+.assert     ST_N <= ST_SIZE, error, "A window's editor state is bigger than ST_SIZE"
+.assert     WIN_MAX * INQ_SIZE = 256 .and WIN_MAX = 4, error, "iq_put and iq_get: 4 queues of 64, a page"
+.assert     TEXT_SIZE = 2048, error, "t_at: a window's text is 8 pages"
 
 .code
 ; ****************************************************************************
-; The driver's init: its lines, the rate, the ACIA's receive interrupt on, the device
+; The driver's init: window 0, its lines, the rate, the ACIA's receive interrupt on, the device
 init:
             ldx         #cnt - rx_head                      ; (Its zero page: all 0)
 :
             stz         rx_head,X
             dex
             bpl         :-
-            lda         #INIT_TASK                          ; The foreground: init's group
-            sta         fg
+            ldx         #WIN_MAX - 1
+:
+            stz         w_used,X
+            dex
+            bpl         :-
+            lda         #$FF
+            sta         lw
+            ldx         #0                                  ; Window 0: shown, init's group's
+            jsr         w_init
+            lda         #INIT_TASK
+            sta         win_grp
             lda         #LINE_ACIA
             jsr         IRQ_OWN
             bcs         @done
@@ -125,29 +189,49 @@ irq:
             and         #ACIA_ST_RDRF
             beq         @none
             lda         ACIA_DATA
+            ldx         pfx
+            bne         @after
             cmp         #CTRL_C
             beq         @intr
             cmp         #CTRL_BSL
             beq         @kill
+            cmp         #CTRL_RB
+            bne         @store
+            sta         pfx                                 ; (Ctrl-]: it goes into the ring too)
+@store:
             ldy         rx_head                             ; Into the ring
             sta         rx_buf,Y
             iny
             cpy         rx_tail
             beq         @none                               ; (Full: the byte's dropped)
             sty         rx_head
-            inc         TASK_EVENT                          ; (The readers look again)
+            inc         TASK_EVENT                          ; (The clients waiting look again)
 @none:
             lda         #0
             rts
 
-@intr:                                                      ; The foreground's notes
+@after:                                                     ; The key after Ctrl-]: a digit is the window that has
+            stz         pfx                                 ;   the keys now (its note group Ctrl-C's: the serve
+            tax                                             ;   entry acts on the rest)
+            sec
+            sbc         #'0'
+            cmp         #WIN_MAX
+            bcs         :+
+            tay
+            lda         w_group,Y
+            sta         win_grp
+:
+            txa
+            bra         @store
+
+@intr:                                                      ; The notes, to the shown window's group
             lda         #1 << (NOTE_INTERRUPT - 1)
             bra         @note
 
 @kill:
             lda         #1 << (NOTE_KILL - 1)
 @note:
-            ldx         fg
+            ldx         win_grp
             jsr         NOTE_QUEUE
             lda         #0
             rts
@@ -181,7 +265,7 @@ t2_next:
             rts
 
 ; ****************************************************************************
-; The send ring
+; The send and receive rings
 
 ; Timer 2 started, if nothing's going and there's something to send: it sends the first byte a character's time
 ; from now, and the rest after it.  (Not at once: the kernel's bring-up console may have sent a byte just now; and
@@ -205,7 +289,7 @@ tx_start:
             plp
             rts
 
-; .A into the ring (the caller has made sure of the room).  Keeps .A, .X
+; .A into the send ring (the caller has made sure of the room).  Keeps .A, .X
 tx_put:
             ldy         tx_head
             sta         tx_buf,Y
@@ -213,7 +297,7 @@ tx_put:
             sty         tx_head
             rts
 
-; .A = the room in the ring
+; .A = the room in the send ring
 tx_free:
             sec
             lda         tx_tail
@@ -236,8 +320,476 @@ rx_get:
             rts
 
 ; ****************************************************************************
+; The windows
+
+; Before each request: the keys come in, each to the window shown (its queue), Ctrl-] and the key after it acted on.
+; None while /ser is open for reading: the keys are its
+distribute:
+            lda         ser_rd
+            bne         @done
+@byte:
+            jsr         rx_get
+            bcs         @done
+            ldx         d_pfx
+            bne         @command
+            cmp         #CTRL_RB
+            bne         @key
+            inc         d_pfx
+            bra         @byte
+
+@key:
+            ldx         w_in
+            jsr         iq_put
+            bra         @byte
+
+@command:                                                   ; The key after Ctrl-]
+            stz         d_pfx
+            cmp         #CTRL_RB                            ; (Ctrl-] again: a Ctrl-])
+            beq         @key
+            cmp         #'c'                                ; c: a window wanted (for /wnew's reader)
+            beq         @new
+            cmp         #'n'                                ; n: the next window
+            beq         @next
+            sec                                             ; A digit: that window
+            sbc         #'0'
+            cmp         #WIN_MAX
+            bcs         @same
+            tax
+            lda         w_used,X
+            beq         @same
+            jsr         w_show
+            bra         @byte
+
+@next:
+            ldx         w_in
+:
+            inx
+            cpx         #WIN_MAX
+            bcc         :+
+            ldx         #0
+:
+            lda         w_used,X
+            beq         :--
+            jsr         w_show
+            bra         @byte
+
+@new:
+            lda         #1
+            sta         want_new
+            inc         TASK_EVENT
+@same:                                                      ; (No window shown anew: the keys' note group the shown
+            ldx         w_in                                ;   one's still)
+            lda         w_group,X
+            sta         win_grp
+            bra         @byte
+
+@done:
+            rts
+
+; Window .X shown, with the keys: repainted (pump)
+w_show:
+            stx         w_in
+            lda         w_group,X
+            sta         win_grp
+            lda         #1
+            sta         repaint
+            inc         TASK_EVENT                          ; (Its readers and writers, and the last one's, look
+            rts                                             ;   again)
+
+; A window made: the lowest free.  OUT: C = 0, .X = it; or C = 1, .A = E_NOMEM
+w_make:
+            ldx         #0
+:
+            lda         w_used,X
+            beq         w_init
+            inx
+            cpx         #WIN_MAX
+            bcc         :-
+            lda         #E_NOMEM
+            sec
+            rts
+
+; Window .X, new: empty, init's group's.  OUT: C = 0.  Keeps .X
+w_init:
+            lda         #1
+            sta         w_used,X
+            stz         w_hl,X
+            stz         w_hh,X
+            stz         w_sl,X
+            stz         w_sh,X
+            stz         w_cl,X
+            stz         w_ch,X
+            stz         w_iqh,X
+            stz         w_iqt,X
+            stz         w_cons,X
+            lda         #INIT_TASK
+            sta         w_group,X
+            cpx         lw                                  ; (Its old state, if it was loaded: gone)
+            bne         :+
+            lda         #$FF
+            sta         lw
+:
+            jsr         st_addr                             ; Its editor state: all 0
+            ldy         #ST_SIZE - 1
+            lda         #0
+:
+            sta         (p),Y
+            dey
+            bpl         :-
+            clc
+            rts
+
+; Window .X gone (its last cons closed); if it was shown, window 0 is
+w_free:
+            stz         w_used,X
+            cpx         lw
+            bne         :+
+            lda         #$FF
+            sta         lw
+:
+            cpx         w_in
+            bne         :+
+            ldx         #0
+            jsr         w_show
+:
+            rts
+
+; Window .A's editor state loaded (st_*, ln_buf), the one that was, back to its own place first
+load:
+            cmp         lw
+            beq         @done
+            pha
+            ldx         lw
+            bmi         @in
+            jsr         st_addr
+            ldy         #ST_N - 1
+:
+            lda         st_first,Y
+            sta         (p),Y
+            dey
+            bpl         :-
+            jsr         ln_addr
+            ldy         #LINE_MAX
+:
+            lda         ln_buf,Y
+            sta         (p),Y
+            dey
+            bpl         :-
+@in:
+            pla
+            sta         lw
+            tax
+            jsr         st_addr
+            ldy         #ST_N - 1
+:
+            lda         (p),Y
+            sta         st_first,Y
+            dey
+            bpl         :-
+            jsr         ln_addr
+            ldy         #LINE_MAX
+:
+            lda         (p),Y
+            sta         ln_buf,Y
+            dey
+            bpl         :-
+@done:
+            rts
+
+; p = window .X's editor state (st_addr), or its line (ln_addr).  Keeps .X
+st_addr:
+            txa
+            asl
+            asl
+            asl
+            asl
+            clc
+            adc         #<w_state
+            sta         p
+            lda         #>w_state
+            adc         #0
+            sta         p + 1
+            rts
+
+ln_addr:
+            txa
+            lsr
+            sta         p + 1
+            lda         #0
+            ror
+            clc
+            adc         #<lines
+            sta         p
+            lda         p + 1
+            adc         #>lines
+            sta         p + 1
+            rts
+
+.assert     ST_SIZE = 16 .and LINE_MAX + 1 = 128, error, "st_addr and ln_addr: 16 and 128 bytes a window"
+
+; Key .A into window .X's queue (dropped if it's full).  Keeps .X
+iq_put:
+            pha
+            lda         w_iqh,X
+            inc         a
+            and         #INQ_SIZE - 1
+            cmp         w_iqt,X
+            beq         @full
+            sta         n
+            txa                                             ; (Its queue: 64 * the window)
+            lsr
+            ror
+            ror
+            ora         w_iqh,X
+            tay
+            pla
+            sta         inq,Y
+            lda         n
+            sta         w_iqh,X
+            rts
+
+@full:
+            pla
+            rts
+
+; A key from the loaded window's queue.  OUT: C = 0, .A = it; or C = 1: none.  Modifies .X, .Y
+iq_get:
+            ldx         lw
+            lda         w_iqt,X
+            cmp         w_iqh,X
+            beq         @none
+            txa
+            lsr
+            ror
+            ror
+            ora         w_iqt,X
+            tay
+            lda         w_iqt,X
+            inc         a
+            and         #INQ_SIZE - 1
+            sta         w_iqt,X
+            lda         inq,Y
+            clc
+            rts
+
+@none:
+            sec
+            rts
+
+; tp = window .X's text at place tq (its low 11 bits).  Keeps .X, .Y
+t_at:
+            txa
+            asl
+            asl
+            asl
+            sta         tp + 1
+            lda         tq + 1
+            and         #>TEXT_MAX
+            ora         tp + 1
+            sta         tp + 1
+            clc
+            lda         tq
+            adc         #<text
+            sta         tp
+            lda         tp + 1
+            adc         #>text
+            sta         tp + 1
+            rts
+
+; .A into the loaded window's text (the writers have made sure of the room: w_room).  Keeps .A, .X, .Y
+w_put:
+            phx
+            phy
+            pha
+            ldx         lw
+            lda         w_hl,X
+            sta         tq
+            lda         w_hh,X
+            sta         tq + 1
+            jsr         t_at
+            pla
+            pha
+            sta         (tp)
+            inc         w_hl,X                              ; The place on ...
+            bne         :+
+            inc         w_hh,X
+:
+            lda         w_ch,X                              ;   and the bytes there are, TEXT_MAX at most
+            cmp         #>TEXT_MAX
+            bcc         @more
+            lda         w_cl,X
+            cmp         #<TEXT_MAX
+            bcs         @kept
+@more:
+            inc         w_cl,X
+            bne         @kept
+            inc         w_ch,X
+@kept:
+            pla
+            ply
+            plx
+            rts
+
+; m = the room in the loaded window's text: all of it if it isn't shown (its oldest bytes go), else as much as
+; doesn't overtake what's still to go out.  Modifies .A, .X
+w_room:
+            lda         #<TEXT_MAX
+            sta         m
+            lda         #>TEXT_MAX
+            sta         m + 1
+            ldx         lw
+            cpx         w_in
+            bne         @done
+            sec                                             ; Less what's still to go out
+            lda         w_hl,X
+            sbc         w_sl,X
+            sta         n
+            lda         w_hh,X
+            sbc         w_sh,X
+            sta         n + 1
+            sec
+            lda         m
+            sbc         n
+            sta         m
+            lda         m + 1
+            sbc         n + 1
+            sta         m + 1
+            bcs         @done
+            stz         m
+            stz         m + 1
+@done:
+            rts
+
+; After each request: the shown window's text out, as the send ring has room (each LF as CR LF); a window just shown
+; first: the screen cleared, and its text from the start of its last SCREEN_ROWS lines
+pump:
+            lda         repaint
+            beq         @text
+            jsr         tx_free
+            cmp         #8
+            bcc         @done
+            ldx         #0
+:
+            lda         s_clear,X
+            beq         :+
+            jsr         tx_put
+            inx
+            bra         :-
+:
+            jsr         replay
+            stz         repaint
+@text:
+            ldx         w_in                                ; All of it out?
+            lda         w_sl,X
+            cmp         w_hl,X
+            bne         @byte
+            lda         w_sh,X
+            cmp         w_hh,X
+            beq         @done
+@byte:
+            jsr         tx_free                             ; (Room for a CR LF)
+            cmp         #2
+            bcc         @done
+            ldx         w_in
+            lda         w_sl,X
+            sta         tq
+            lda         w_sh,X
+            sta         tq + 1
+            jsr         t_at
+            inc         w_sl,X
+            bne         :+
+            inc         w_sh,X
+:
+            lda         (tp)
+            cmp         #LF
+            bne         :+
+            lda         #CR
+            jsr         tx_put
+            lda         #LF
+:
+            jsr         tx_put
+            bra         @text
+
+@done:
+            jmp         tx_start
+
+; The shown window's next byte out: the start of its text's last SCREEN_ROWS lines (or its oldest byte)
+replay:
+            ldx         w_in
+            lda         w_hl,X                              ; tq: back from the end ...
+            sta         tq
+            lda         w_hh,X
+            sta         tq + 1
+            lda         w_cl,X                              ;   m: no further than this
+            sta         m
+            lda         w_ch,X
+            sta         m + 1
+            stz         cnt                                 ; (The LFs passed)
+@back:
+            lda         m
+            ora         m + 1
+            beq         @start
+            lda         tq
+            bne         :+
+            dec         tq + 1
+:
+            dec         tq
+            lda         m
+            bne         :+
+            dec         m + 1
+:
+            dec         m
+            jsr         t_at
+            lda         (tp)
+            cmp         #LF
+            bne         @back
+            inc         cnt
+            lda         cnt
+            cmp         #SCREEN_ROWS
+            bcc         @back
+            inc         tq                                  ; (From the byte after that LF)
+            bne         @start
+            inc         tq + 1
+@start:
+            lda         tq
+            sta         w_sl,X
+            lda         tq + 1
+            sta         w_sh,X
+            rts
+
+; A fid made (srvlib): its window, from the spec (none: window 0); a window that isn't there: E_NOENT.  (R_DUP's
+; keeps its old fid's.)  IN: .X = the fid.  Keeps .X
+opened:
+            lda         z:srv_rq
+            cmp         #R_OPEN
+            bne         @ok
+            lda         TASK_INBOX + RQ_SPEC                ; A digit, or nothing
+            beq         @zero
+            sec
+            sbc         #'0'
+            cmp         #WIN_MAX
+            bcs         @noent
+            ldy         TASK_INBOX + RQ_SPEC + 1
+            bne         @noent
+            tay
+            lda         w_used,Y
+            beq         @noent
+            tya
+@zero:
+            sta         srv_fid_aux,X
+@ok:
+            clc
+            rts
+
+@noent:
+            lda         #E_NOENT
+            sec
+            rts
+
+; ****************************************************************************
 ; The files
 
+; /cons: a read, a write; its fids counted (its window goes with its last)
 h_cons:
             cmp         #R_READ
             bne         :+
@@ -245,12 +797,36 @@ h_cons:
 :
             cmp         #R_WRITE
             bne         :+
-            lda         #1                                  ; (Each LF as CR LF)
-            jmp         write
+            jmp         w_write
 :
-            clc                                             ; (Opens and clunks: nothing to do)
+            ldy         srv_fid_aux,X
+            cmp         #R_OPEN
+            beq         @open
+            cmp         #R_DUP
+            beq         @open
+            cmp         #R_CLUNK
+            bne         @done
+            lda         w_cons,Y                            ; (Its last: the window goes, but window 0)
+            beq         @done
+            dec         a
+            sta         w_cons,Y
+            bne         @done
+            tya
+            beq         @done
+            tax
+            jsr         w_free
+@done:
+            clc
             rts
 
+@open:
+            lda         w_cons,Y
+            inc         a
+            sta         w_cons,Y
+            clc
+            rts
+
+; /ser: a read, a write; its fids for reading counted
 h_ser:
             cmp         #R_READ
             bne         :+
@@ -258,17 +834,61 @@ h_ser:
 :
             cmp         #R_WRITE
             bne         :+
-            lda         #0
-            jmp         write
+            jmp         s_write
 :
+            tay                                             ; (.Y: the request)
+            lda         srv_fid_mode,X                      ; For reading?
+            and         #O_RW_MASK
+            cmp         #O_WRITE
+            beq         @done
+            cpy         #R_OPEN
+            beq         @open
+            cpy         #R_DUP
+            beq         @open
+            cpy         #R_CLUNK
+            bne         @done
+            lda         ser_rd
+            beq         @done
+            dec         ser_rd
+@done:
             clc
             rts
 
-; /cons: a read.  The foreground group's only; cooked, a line (or what's left of one); raw, the keys there are
+@open:
+            inc         ser_rd
+            clc
+            rts
+
+; /wnew: a read waits for Ctrl-] c, then makes a window: "N" and an LF
+h_wnew:
+            cmp         #R_READ
+            beq         :+
+            clc
+            rts
+:
+            lda         want_new
+            bne         :+
+            jmp         again
+:
+            stz         want_new
+            jsr         w_make
+            bcs         @done
+            jsr         w_show                              ; (The user's: shown, as rio's new window is)
+            txa
+            ora         #'0'
+            sta         iobuf
+            lda         #LF
+            sta         iobuf + 1
+            ldx         #2
+            jmp         r_give
+
+@done:
+            rts
+
+; /cons: a read.  Cooked, a line (or what's left of one); raw, the keys there are.  IN: .X = the fid
 r_cons:
-            lda         TASK_INBOX + RQ_GROUP
-            cmp         fg
-            bne         again
+            lda         srv_fid_aux,X
+            jsr         load
             lda         raw
             bne         r_keys
 @line:
@@ -323,7 +943,7 @@ r_cons:
             clc
             rts
 
-; Not yet: the client waits for the event count to change (a byte in, room to send, the foreground changed)
+; Not yet: the client waits for the event count to change (a key in, room to send, a window shown)
 again:
             lda         #E_AGAIN
             sec
@@ -388,14 +1008,32 @@ r_give:
             clc
             rts
 
-; /cons, /ser: a write, as much of it as the send ring takes (the kernel sends the rest again); none: E_AGAIN.
-; IN: .A <> 0: each LF as CR LF
-write:
-            sta         xlate
+; /cons: a write, into the window's text.  A window that isn't shown takes it all (its oldest text goes); the shown
+; one as much as the send ring has room for now (each LF as CR LF; none while its text has more to go out), so all
+; of it goes out at this request's end, and the writer, waiting for room, comes back for the rest (the kernel sends
+; it again).  None taken: E_AGAIN.  IN: .X = the fid
+w_write:
+            lda         srv_fid_aux,X
+            jsr         load
+            lda         #$FF                                ; budget: the shown window's room
+            sta         budget
+            ldx         lw
+            cpx         w_in
+            bne         :+
+            stz         budget
+            lda         w_hl,X                              ; (Its text all out?)
+            cmp         w_sl,X
+            bne         :+
+            lda         w_hh,X
+            cmp         w_sh,X
+            bne         :+
+            jsr         tx_free
+            sta         budget
+:
             stz         n                                   ; (n: the count done)
             stz         n + 1
 @part:
-            sec                                             ; p: the count left
+            sec                                             ; This part: IOBUF at most, the rest if less
             lda         TASK_INBOX + RQ_COUNT
             sbc         n
             sta         p
@@ -404,16 +1042,74 @@ write:
             sta         p + 1
             ora         p
             beq         @end
-            jsr         tx_free                             ; This part: the room (half, if an LF takes 2) ...
-            ldx         xlate
-            beq         :+
-            lsr
+            lda         #IOBUF
+            ldx         p + 1
+            bne         :+
+            cmp         p
+            bcc         :+
+            lda         p
 :
-            cmp         #IOBUF                              ;   IOBUF at most ...
+            sta         cnt
+            jsr         from_client                         ; Its bytes, into iobuf
+            ldx         #0
+@byte:
+            lda         lw                                  ; The shown window's: room in the send ring?
+            cmp         w_in
+            bne         @put
+            ldy         #1                                  ; (It takes 1, or an LF 2: CR LF)
+            lda         iobuf,X
+            cmp         #LF
+            bne         :+
+            iny
+:
+            sty         m
+            lda         budget
+            cmp         m
+            bcc         @end
+            sbc         m                                   ; (C = 1)
+            sta         budget
+@put:
+            lda         iobuf,X
+            jsr         w_put
+            inc         n
+            bne         :+
+            inc         n + 1
+:
+            inx
+            cpx         cnt
+            bne         @byte
+            bra         @part
+
+@end:
+            lda         n
+            ora         n + 1
+            bne         :+
+            jmp         again
+:
+            MOVR        TASK_INBOX + RQ_DONE, n
+            clc
+            rts
+
+; /ser: a write, straight into the send ring as it is, as much as there's room for; none: E_AGAIN
+s_write:
+            stz         n
+            stz         n + 1
+@part:
+            sec
+            lda         TASK_INBOX + RQ_COUNT
+            sbc         n
+            sta         p
+            lda         TASK_INBOX + RQ_COUNT + 1
+            sbc         n + 1
+            sta         p + 1
+            ora         p
+            beq         @end
+            jsr         tx_free
+            cmp         #IOBUF
             bcc         :+
             lda         #IOBUF
 :
-            ldx         p + 1                               ;   and what's left, if less
+            ldx         p + 1
             bne         :+
             cmp         p
             bcc         :+
@@ -421,33 +1117,15 @@ write:
 :
             sta         cnt
             cmp         #0
-            beq         @end                                ; (No room)
-            sta         r2
-            stz         r2 + 1
-            LDR         r0, iobuf
-            clc
-            lda         TASK_INBOX + RQ_BUF
-            adc         n
-            sta         r1
-            lda         TASK_INBOX + RQ_BUF + 1
-            adc         n + 1
-            sta         r1 + 1
-            jsr         CLIENT_READ
+            beq         @end
+            jsr         from_client
             ldx         #0
-@byte:
+:
             lda         iobuf,X
-            cmp         #LF
-            bne         @put
-            ldy         xlate
-            beq         @put
-            lda         #CR
-            jsr         tx_put
-            lda         #LF
-@put:
             jsr         tx_put
             inx
             cpx         cnt
-            bne         @byte
+            bne         :-
             clc
             lda         n
             adc         cnt
@@ -455,7 +1133,7 @@ write:
             bcc         :+
             inc         n + 1
 :
-            jsr         tx_start                            ; (Going while the next part comes)
+            jsr         tx_start
             bra         @part
 
 @end:
@@ -469,8 +1147,25 @@ write:
             clc
             rts
 
-; A reader's call ended by a note (R_FLUSH): the line it was typing, gone
+; cnt bytes of the client's write, from its buffer + n, into iobuf
+from_client:
+            lda         cnt
+            sta         r2
+            stz         r2 + 1
+            LDR         r0, iobuf
+            clc
+            lda         TASK_INBOX + RQ_BUF
+            adc         n
+            sta         r1
+            lda         TASK_INBOX + RQ_BUF + 1
+            adc         n + 1
+            sta         r1 + 1
+            jmp         CLIENT_READ
+
+; A reader's call ended by a note (R_FLUSH): the line the shown window was typing, gone
 flush:
+            lda         w_in
+            jsr         load
             lda         ln_ready
             bne         :+
             stz         ln_len
@@ -483,8 +1178,8 @@ flush:
 ; ****************************************************************************
 ; Keys
 
-; The next key, the terminal's sequences decoded (KEY_*).  OUT: C = 0, .A = it; or C = 1: none yet (a sequence
-; part-way in waits for the next call).  Modifies .X, .Y
+; The next key of the loaded window, the terminal's sequences decoded (KEY_*).  OUT: C = 0, .A = it; or C = 1: none
+; yet (a sequence part-way in waits for the next call).  Modifies .X, .Y
 key_next:
             lda         key_pb
             beq         @byte
@@ -493,7 +1188,7 @@ key_next:
             rts
 
 @byte:
-            jsr         rx_get
+            jsr         iq_get
             bcs         @done
             ldx         esc_st
             bne         @seq
@@ -607,14 +1302,18 @@ key_next:
             rts
 
 ; ****************************************************************************
-; The line editor (cooked)
+; The line editor (cooked), in the loaded window: its echo goes into the window's text
 
-; Keys into the line, echoed, while there are keys and the send ring has room for a key's echo.  OUT: C = 0: a
-; line ended (ln_ready), or the input did (eof); C = 1: not yet
+; Keys into the line, echoed, while there are keys and the text has room for a key's echo.  OUT: C = 0: a line
+; ended (ln_ready), or the input did (eof); C = 1: not yet
 edit:
-            jsr         tx_free
+            jsr         w_room
+            lda         m + 1
+            bne         :+
+            lda         m
             cmp         #ECHO_ROOM
             bcc         @wait
+:
             jsr         key_next
             bcs         @wait
             cmp         #LF                                 ; An LF just after a CR: the same Enter
@@ -631,12 +1330,10 @@ edit:
             dex
             bpl         :-
             cmp         #' '                                ; Else a character, if it's one
-            bcc         @next
+            bcc         edit
             cmp         #DEL
-            bcs         @next
+            bcs         edit
             jsr         ed_insert
-@next:
-            jsr         tx_start
             bra         edit
 
 @special:
@@ -644,7 +1341,6 @@ edit:
             asl
             tax
             jsr         @go
-            jsr         tx_start
             bcc         edit                                ; (C = 1: the line, or the input, ended)
             clc
             rts
@@ -653,7 +1349,6 @@ edit:
             jmp         (edit_vec,X)
 
 @wait:
-            jsr         tx_start
             sec
             rts
 
@@ -698,10 +1393,8 @@ ed_lf:
             inx
             stx         ln_ready
             stz         ln_off
-            lda         #CR
-            jsr         tx_put
-            lda         #LF
-            jsr         tx_put
+            lda         #LF                                 ; (Out as CR LF)
+            jsr         w_put
             sec
             rts
 
@@ -726,7 +1419,7 @@ ed_bs:
             beq         ed_none
             dec         ln_pos
             lda         #BS
-            jsr         tx_put
+            jsr         w_put
             bra         ed_cut
 
 ; Delete: the character at the cursor
@@ -761,7 +1454,7 @@ ed_left:
             beq         ed_none
             dec         ln_pos
             lda         #BS
-            jsr         tx_put
+            jsr         w_put
             clc
             rts
 
@@ -770,7 +1463,7 @@ ed_right:
             cpx         ln_len
             bcs         ed_none
             lda         ln_buf,X
-            jsr         tx_put
+            jsr         w_put
             inc         ln_pos
             clc
             rts
@@ -845,7 +1538,7 @@ hist_show:                                                  ; The line hi_at bac
             rts
 
 ; ****************************************************************************
-; The history
+; The history (the loaded window's)
 
 ; The line (not if it's empty) as the newest
 hist_add:
@@ -874,7 +1567,7 @@ hist_add:
 @done:
             rts
 
-; p = the slot of the line .A back (1: the newest)
+; p = the slot of the line .A back (1: the newest), in the loaded window's history
 hist_slot:
             sta         p
             lda         hi_top
@@ -892,13 +1585,18 @@ hist_slot:
             lda         p + 1
             adc         #>hist
             sta         p + 1
+            lda         lw                                  ; + the window's (HIST_N * HIST_SIZE: 2 pages)
+            asl
+            clc
+            adc         p + 1
+            sta         p + 1
             rts
 
-.assert     HIST_SIZE = 128, error, "hist_slot: a slot is 128 bytes"
+.assert     HIST_SIZE = 128 .and HIST_N * HIST_SIZE = 512, error, "hist_slot: 4 slots of 128 bytes a window"
 .assert     HIST_SIZE > LINE_MAX, error, "A history slot holds a line"
 
 ; ****************************************************************************
-; Echo: into the send ring (edit has made sure of the room)
+; Echo: into the loaded window's text (edit has made sure of the room)
 
 ; The line from the cursor to its end
 echo_rest:
@@ -907,7 +1605,7 @@ echo_rest:
             cpx         ln_len
             bcs         :+
             lda         ln_buf,X
-            jsr         tx_put
+            jsr         w_put
             inx
             bra         :-
 :
@@ -916,11 +1614,11 @@ echo_rest:
 ; The line erased from the cursor: ESC [ K
 echo_erase:
             lda         #ESC
-            jsr         tx_put
+            jsr         w_put
             lda         #'['
-            jsr         tx_put
+            jsr         w_put
             lda         #'K'
-            jmp         tx_put
+            jmp         w_put
 
 ; ESC [ .A .X (the cursor moved .A places: .X = 'C' right, 'D' left); nothing if .A = 0
 echo_csi:
@@ -928,13 +1626,13 @@ echo_csi:
             beq         @done
             pha
             lda         #ESC
-            jsr         tx_put
+            jsr         w_put
             lda         #'['
-            jsr         tx_put
+            jsr         w_put
             pla
             jsr         echo_dec
             txa
-            jmp         tx_put
+            jmp         w_put
 
 @done:
             rts
@@ -967,47 +1665,47 @@ echo_dec:
 @out:
             pha
             tya
-            jsr         tx_put
+            jsr         w_put
             pla
             inc         cnt
 @none:
             rts
 
 ; ****************************************************************************
-; consctl and serctl
+; consctl, wctl and serctl
 
+; rawon, rawoff: the window's
 c_rawon:
+            lda         z:srv_id
+            jsr         load
             lda         #1
             sta         raw
             clc
             rts
 
 c_rawoff:
+            lda         z:srv_id
+            jsr         load
             stz         raw
             clc
             rts
 
-; fg N: note group N's reads go on (the others' wait)
-c_fg:
-            lda         z:srv_argn
-            beq         @inval
-            lda         srv_arg + 1
-            bne         @inval
-            lda         srv_arg
-            cmp         #16
-            bcs         @inval
-            sta         fg
-            inc         TASK_EVENT                          ; (The readers waiting look again)
+; group: the window's notes (Ctrl-C, Ctrl-\) go to the writer's note group
+c_group:
+            ldx         z:srv_id
+            lda         TASK_INBOX + RQ_GROUP
+            sta         w_group,X
+            cpx         w_in
+            bne         :+
+            sta         win_grp
+:
             clc
             rts
 
-@inval:
-            lda         #E_INVAL
-            sec
-            rts
-
-; consctl's state: "rawon" or "rawoff", and "fg N"
+; consctl's state: "rawon" or "rawoff", "group N", "window N"
 gen_consctl:
+            lda         z:srv_id
+            jsr         load
             lda         #<s_rawon
             ldx         #>s_rawon
             ldy         raw
@@ -1016,14 +1714,75 @@ gen_consctl:
             ldx         #>s_rawoff
 :
             jsr         srv_tputs
-            lda         #<s_fg
-            ldx         #>s_fg
+            lda         #<s_group
+            ldx         #>s_group
             jsr         srv_tputs
-            lda         fg
+            ldx         z:srv_id
+            lda         w_group,X
+            ldx         #0
+            jsr         srv_tputdec
+            lda         #<s_window
+            ldx         #>s_window
+            jsr         srv_tputs
+            lda         z:srv_id
             ldx         #0
             jsr         srv_tputdec
             lda         #LF
             jsr         srv_tputc
+            clc
+            rts
+
+; wctl: new (a window), current N (window N shown)
+c_new:
+            jsr         w_make
+            bcs         :+
+            clc
+:
+            rts
+
+c_current:
+            lda         z:srv_argn
+            beq         @inval
+            lda         srv_arg + 1
+            bne         @inval
+            ldx         srv_arg
+            cpx         #WIN_MAX
+            bcs         @inval
+            lda         w_used,X
+            beq         @inval
+            jsr         w_show
+            clc
+            rts
+
+@inval:
+            lda         #E_INVAL
+            sec
+            rts
+
+; wctl's state: the windows, a line each: "N", and " *" for the one shown
+gen_wctl:
+            stz         cnt
+@window:
+            ldx         cnt
+            lda         w_used,X
+            beq         @next
+            txa
+            ora         #'0'
+            jsr         srv_tputc
+            ldx         cnt
+            cpx         w_in
+            bne         :+
+            lda         #<s_shown
+            ldx         #>s_shown
+            jsr         srv_tputs
+:
+            lda         #LF
+            jsr         srv_tputc
+@next:
+            inc         cnt
+            lda         cnt
+            cmp         #WIN_MAX
+            bcc         @window
             clc
             rts
 
@@ -1098,6 +1857,7 @@ edit_keys:  .byte       CR, LF, CTRL_D, BS, DEL, KEY_DEL, KEY_LEFT, KEY_RIGHT, K
 edit_vec:   .word       ed_cr, ed_lf, ed_eof, ed_bs, ed_bs, ed_del, ed_left, ed_right, ed_home, ed_home, ed_end, ed_end
             .word       ed_kill, ed_up, ed_down
 .assert     * - edit_vec = EDIT_N * 2, error, "edit_keys and edit_vec don't match"
+s_clear:    .byte       ESC, "[H", ESC, "[2J", 0            ; (The terminal's screen cleared, the cursor home)
 
 ; ****************************************************************************
 ; The rates: the ACIA's code, and timer 2 for a character (10 bits, and the idle bits after it: 2 at 115200 on
@@ -1136,16 +1896,23 @@ rate_name_hi: .byte     >s_300, >s_600, >s_1200, >s_2400, >s_4800, >s_9600, >s_1
 srv_tree:
             SRV_ENTRY   s_root,    $FF, SK_DIR,  0,           SM_READ,            0     ; 0
             SRV_ENTRY   s_cons,    0,   SK_DATA, h_cons,      SM_READ | SM_WRITE, 0     ; 1
-            SRV_ENTRY   s_consctl, 0,   SK_CTL,  cons_cmds,   SM_READ | SM_WRITE, 5     ; 2 (reads as 5)
-            SRV_ENTRY   s_ser,     0,   SK_DATA, h_ser,       SM_READ | SM_WRITE, 0     ; 3
-            SRV_ENTRY   s_serctl,  0,   SK_CTL,  ser_cmds,    SM_READ | SM_WRITE, 6     ; 4 (reads as 6)
-            SRV_ENTRY   s_consctl, $FE, SK_TEXT, gen_consctl, SM_READ,            0     ; 5 (consctl's state: in no
-            SRV_ENTRY   s_serctl,  $FE, SK_TEXT, gen_serctl,  SM_READ,            0     ; 6   directory)
+            SRV_ENTRY   s_consctl, 0,   SK_CTL,  cons_cmds,   SM_READ | SM_WRITE, 7     ; 2 (reads as 7)
+            SRV_ENTRY   s_wctl,    0,   SK_CTL,  wctl_cmds,   SM_READ | SM_WRITE, 8     ; 3 (reads as 8)
+            SRV_ENTRY   s_wnew,    0,   SK_DATA, h_wnew,      SM_READ,            0     ; 4
+            SRV_ENTRY   s_ser,     0,   SK_DATA, h_ser,       SM_READ | SM_WRITE, 0     ; 5
+            SRV_ENTRY   s_serctl,  0,   SK_CTL,  ser_cmds,    SM_READ | SM_WRITE, 9     ; 6 (reads as 9)
+            SRV_ENTRY   s_consctl, $FE, SK_TEXT, gen_consctl, SM_READ,            0     ; 7 (the ctl files' states:
+            SRV_ENTRY   s_wctl,    $FE, SK_TEXT, gen_wctl,    SM_READ,            0     ; 8   in no directory)
+            SRV_ENTRY   s_serctl,  $FE, SK_TEXT, gen_serctl,  SM_READ,            0     ; 9
             .word       0
 cons_cmds:
             .word       s_rawon_w, c_rawon
             .word       s_rawoff_w, c_rawoff
-            .word       s_fg_w, c_fg
+            .word       s_group_w, c_group
+            .word       0
+wctl_cmds:
+            .word       s_new_w, c_new
+            .word       s_current_w, c_current
             .word       0
 ser_cmds:
             .word       s_b300, c_b300
@@ -1160,14 +1927,20 @@ ser_cmds:
 s_root:     .byte       "/", 0
 s_cons:     .byte       "cons", 0
 s_consctl:  .byte       "consctl", 0
+s_wctl:     .byte       "wctl", 0
+s_wnew:     .byte       "wnew", 0
 s_ser:      .byte       "ser", 0
 s_serctl:   .byte       "serctl", 0
 s_rawon_w:  .byte       "rawon", 0
 s_rawoff_w: .byte       "rawoff", 0
-s_fg_w:     .byte       "fg", 0
+s_group_w:  .byte       "group", 0
+s_new_w:    .byte       "new", 0
+s_current_w: .byte      "current", 0
 s_rawon:    .byte       "rawon", LF, 0
 s_rawoff:   .byte       "rawoff", LF, 0
-s_fg:       .byte       "fg ", 0
+s_group:    .byte       "group ", 0
+s_window:   .byte       LF, "window ", 0
+s_shown:    .byte       " *", 0
 s_b300:     .byte       "b"
 s_300:      .byte       "300", 0
 s_b600:     .byte       "b"

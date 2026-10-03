@@ -26,6 +26,10 @@
 ;                            child is (its template: parent SE_TEMPLATE), so a child can be a directory of its
 ;                            own entries.  A node under a child has the child's id: srv_id (and srv_fid_aux)
 ;   SRV_FLUSH       (optional, defined before the .include) a routine for R_FLUSH: client .Y forgotten
+;   SRV_OPENED      (optional) a routine for each fid made (R_OPEN, R_DUP: srv_rq): .X = it, its entry srv_ent; it
+;                   may set srv_fid_aux,X (from the request's spec: which of the device's instances), or refuse
+;                   (C = 1, .A = the error).  A data file's handler is told after it
+;   SRV_PRE, SRV_POST (optional) routines run before every request, and after it (before the answer goes back)
 ;   SRV_TREES       (optional) several devices, a tree each: .byte the letter, .word its tree; ending with 0.  A
 ;                   request's device (RQ_DEV) chooses the tree.  Without it, the one tree is srv_tree
 ; srvlib gives: srv_serve; the fids (srv_fid_entry, srv_fid_mode, srv_fid_aux: a byte the handler may keep: a node
@@ -82,6 +86,11 @@ srv_serve:
             pla
             bcs         @nodev
             stz         srv_id
+.ifdef SRV_PRE
+            pha
+            jsr         SRV_PRE
+            pla
+.endif
             ldx         #SRV_NREQ - 1
 :
             cmp         srv_reqs,X
@@ -97,6 +106,13 @@ srv_serve:
             tax
             jsr         @go
 @reply:
+.ifdef SRV_POST
+            php
+            pha
+            jsr         SRV_POST
+            pla
+            plp
+.endif
             jmp         SRV_REPLY                           ; (It keeps .A and C)
 
 @go:
@@ -182,6 +198,11 @@ srv_open:
 ; answer: RQ_FID, RQ_PERM (its qid type)
 srv_opened:
             sta         srv_rq
+.ifdef SRV_OPENED
+            ldx         srv_fid                             ; The server's say, for every fid
+            jsr         SRV_OPENED
+            bcs         @refused
+.endif
             ldy         #SE_KIND                            ; Its handler's say, for data files
             lda         (srv_ent),Y
             cmp         #SK_DATA
@@ -191,6 +212,7 @@ srv_opened:
             ldy         srv_old
             jsr         srv_handler
             bcc         @ok
+@refused:
             ldx         srv_fid                             ; (Refused: the fid back)
             pha
             lda         #$FF

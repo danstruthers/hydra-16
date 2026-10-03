@@ -1,14 +1,10 @@
 ; ****************************************************************************
-; init - the first program (task 1), for phase 2: its fds 0-2 on the console (#c/cons, the console driver's; or,
-; without it, none, and the bring-up console's); its namespace, built in till there are disks (the plan's appendix
-; E, as far as the devices there are go: #/ at /, #c, #n and #t at /dev, #m at /dev/mod, #p at /proc); the tasks
-; listed; hello run and waited for; then a test shell till rc comes (phase 3), a line at a time:
-;   ps          the tasks
-;   ls PATH     a directory's names (a / after each directory's)
-;   cat PATH    a file
-;   cd PATH     the current directory (pwd: what it is)
-;   anything else comes back with a ?
-; Its note handler keeps it going (Ctrl-C is the foreground group's, and init's group is the foreground at first).
+; init - the first program (task 1), for phase 2: its fds 0-2 on the console (#c/cons, the console driver's window
+; 0; or, without it, none, and the bring-up console's); its namespace, built in till there are disks (the plan's
+; appendix E, as far as the devices there are go: #/ at /, #c, #n and #t at /dev, #m at /dev/mod, #p at /proc); the
+; tasks listed; hello run and waited for; then the shells (tsh, till rc comes in phase 3): window 0's, and the
+; windows' starter (tsh w: a shell in each window the user asks for, Ctrl-] c), each started again when it ends.
+; It waits for every task left to it (the windows' shells are).  Its note handler keeps it going.
 
 .include "hydra.inc"
 .include "hyx2.inc"
@@ -16,19 +12,13 @@
 
             HYX2_PROGRAM "init", main
 
-LINE_MAX        = 127
-
 .zeropage
 child:      .res        1
-fd:         .res        1
-len:        .res        1
-rec:        .res        2                                   ; A stat record, in buf
-left:       .res        2                                   ; The bytes of them a read gave, still to show
+sh0:        .res        1                                   ; Window 0's shell ...
+sw:         .res        1                                   ;   and the windows' starter
 
 .bss
 msg:        .res        32                                  ; An exit message, an error's text
-line:       .res        LINE_MAX + 1
-buf:        .res        512
 
 .code
 main:
@@ -66,217 +56,66 @@ main:
             PRINT       s_open
             PRINT       msg
             PRINT       s_close
-            bra         shell
+            bra         shells
 
 @failed:
             jsr         error
 
 ; ****************************************************************************
-; The test shell
-shell:
-            PRINT       s_prompt
-            jsr         getline
-            bcs         shell
-            lda         len                                 ; (An empty line: nothing)
-            beq         shell
-            ldx         #0                                  ; Its command
-@command:
-            lda         cmd_names,X
-            sta         r0
-            lda         cmd_names + 1,X
-            sta         r0 + 1
-            ora         r0
-            beq         @what
-            jsr         is_cmd                              ; (It keeps .X)
-            beq         @run
-            inx
-            inx
-            bra         @command
+; The shells: window 0's and the windows' starter, started again when they end; the rest just waited for
+shells:
+            jsr         shell0
+            jsr         starter
+@wait:
+            stz         r0
+            stz         r0 + 1
+            lda         #$FF
+            jsr         WAIT
+            bcc         @ended
+            cmp         #E_CHILD                            ; (None: a moment, then try again)
+            bne         @wait
+            lda         #TICK_HZ
+            ldx         #0
+            jsr         SLEEP
+            jsr         shell0
+            jsr         starter
+            bra         @wait
 
-@run:
-            jsr         @go
-            bra         shell
-
-@go:
-            jmp         (cmd_vec,X)
-
-@what:
-            PRINT       line                                ; Not one of them
-            PRINT       s_what
-            bra         shell
-
-; cd PATH, pwd
-cd:
-            LDR         r0, line + 3
-            jsr         CHDIR
-            bcc         :+
-            jmp         error
-:
-            rts
-
-pwd:
-            LDR         r0, line
-            jsr         GETCWD
-            PRINT       line
-            PRINT       s_crlf
-            rts
-
-; A line from fd 0 into line (its LF dropped, zero-terminated, len long); or, with no fd 0, from the bring-up
-; console, a key at a time, echoed.  OUT: C = 0; or C = 1 (a note, the end of the input: nothing)
-getline:
-            LDR         r0, line
-            LDR         r1, LINE_MAX
-            lda         #0
-            jsr         READ
-            bcs         @polled
-            cmp         #0
-            beq         @none                               ; (The end of the input)
-            tax
-            lda         line - 1,X                          ; (Its LF, if it has one)
-            cmp         #LF
+@ended:
+            cmp         sh0
             bne         :+
-            dex
+            jsr         shell0
+            bra         @wait
 :
-            stz         line,X
-            stx         len
-            clc
-            rts
+            cmp         sw
+            bne         @wait
+            jsr         starter
+            bra         @wait
 
-@polled:
-            cmp         #E_BADF
-            bne         @none
-            stz         len
-@key:
-            jsr         GETC
-            bcs         @none
-            cmp         #CR
-            beq         @end
-            ldx         len
-            cpx         #LINE_MAX
-            bcs         @key
-            sta         line,X
-            inc         len
-            jsr         PUTC
-            bra         @key
-
-@end:
-            PRINT       s_crlf
-            ldx         len
-            stz         line,X
-            clc
-            rts
-
-@none:
-            PRINT       s_crlf
-            sec
-            rts
-
-; Z = 1 if line starts with the command at r0 (zero-terminated), followed by a space or the line's end
-is_cmd:
-            ldy         #0
+; Window 0's shell (a note group of its own: its window's notes are its), or the windows' starter, started
+shell0:
+            LDR         r0, s_tsh
+            LDR         r1, s_w0
+            lda         #SPAWN_NEWGROUP
+            jsr         SPAWN
+            sta         sh0
+            bcc         :+
+            lda         #$FF
+            sta         sh0
 :
-            lda         (r0),Y
-            beq         :+
-            cmp         line,Y
-            bne         @no
-            iny
-            bra         :-
-:
-            lda         line,Y
-            beq         @yes
-            cmp         #' '
-            beq         @yes
-@no:
-            lda         #1
             rts
 
-@yes:
+starter:
+            LDR         r0, s_tsh
+            LDR         r1, s_ww
             lda         #0
+            jsr         SPAWN
+            sta         sw
+            bcc         :+
+            lda         #$FF
+            sta         sw
+:
             rts
-
-; ls PATH: the names in a directory (its stat records), one a line
-ls:
-            LDR         r0, line + 3
-            lda         #O_READ
-            jsr         OPEN
-            bcc         :+
-            jmp         error
-:
-            sta         fd
-@read:
-            LDR         r0, buf
-            LDR         r1, 512
-            lda         fd
-            jsr         READ
-            bcs         @end
-            sta         left
-            stx         left + 1
-            ora         left + 1
-            beq         @end
-            LDR         rec, buf
-@record:
-            lda         left + 1                            ; A whole record left?
-            bne         :+
-            lda         left
-            cmp         #SR_SIZE
-            bcc         @read
-:
-            MOVR        r0, rec                             ; Its name (SR_NAME: 0) ...
-            jsr         PUTS
-            ldy         #SR_QTYPE                           ;   a / if it's a directory's
-            lda         (rec),Y
-            and         #QT_DIR
-            beq         :+
-            lda         #'/'
-            jsr         PUTC
-:
-            PRINT       s_crlf
-            clc
-            lda         rec
-            adc         #SR_SIZE
-            sta         rec
-            bcc         :+
-            inc         rec + 1
-:
-            sec
-            lda         left
-            sbc         #SR_SIZE
-            sta         left
-            bcs         @record
-            dec         left + 1
-            bra         @record
-
-@end:
-            lda         fd
-            jmp         CLOSE
-
-; cat PATH: a file, to stdout
-cat:
-            LDR         r0, line + 4
-            lda         #O_READ
-            jsr         OPEN
-            bcc         :+
-            jmp         error
-:
-            sta         fd
-@read:
-            LDR         r0, buf
-            LDR         r1, 512
-            lda         fd
-            jsr         READ
-            bcs         @end
-            sta         r1
-            stx         r1 + 1
-            ora         r1 + 1
-            beq         @end
-            LDR         r0, buf
-            lda         #1
-            jsr         WRITE
-            bra         @read
-
-@end:
-            lda         fd
-            jmp         CLOSE
 
 ; The namespace, built in (a bind each: its flags, new, old): what can't be bound is said, and the rest goes on
 namespace:
@@ -335,15 +174,9 @@ s_open:     .byte       " (", 0
 s_close:    .byte       ")"
 s_crlf:     .byte       CR, LF, 0
 s_error:    .byte       "init: ", 0
-s_prompt:   .byte       "init> ", 0
-s_what:     .byte       "?", CR, LF, 0
-s_ps:       .byte       "ps", 0
-s_ls:       .byte       "ls", 0
-s_cat:      .byte       "cat", 0
-s_cd:       .byte       "cd", 0
-s_pwd:      .byte       "pwd", 0
-cmd_names:  .word       s_ps, s_ls, s_cat, s_cd, s_pwd, 0
-cmd_vec:    .word       DBG_PS, ls, cat, cd, pwd
+s_tsh:      .byte       "#m/tsh", 0
+s_w0:       .byte       "0", 0
+s_ww:       .byte       "w", 0
 ns_table:   .byte       MREPL                               ; bind '#/' /
             .word       s_hroot, s_root
             .byte       MAFTER                              ; bind -a '#c' /dev
