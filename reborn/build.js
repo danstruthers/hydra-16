@@ -87,20 +87,30 @@ function assemble(files, objdir, includes, defines) {
   });
 }
 
-// A module: the .s files in dir, linked with modules/module.cfg; or a RAM program (ram: assembled with HYX2_RAM,
-// linked with sdk/asm/hyx2.cfg, NAME.hyx).  Its includes: the SDK's, the system's, its own, and what apigen makes
-// (forth's sys- words: obj/gen/forthsys.inc).  OUT: its image (a Buffer)
-function buildModule(dir, objdir, defines, ram = false) {
+// A module: the .s files in dir, linked with modules/module.cfg (moduleN.cfg, for N banks), or with dir's own
+// NAME.cfg if it has one, whose files %O.LIBRARY are library modules of its own (hylang's: put in libs, by name); or
+// a RAM program (ram: assembled with HYX2_RAM, linked with sdk/asm/hyx2.cfg, NAME.hyx).  Its includes: the SDK's,
+// the system's, its own, and what apigen makes (forth's sys- words: obj/gen/forthsys.inc).  OUT: its image (a
+// Buffer)
+function buildModule(dir, objdir, defines, ram = false, libs = {}) {
   const name = path.basename(dir), od = path.join(objdir, name);
   const objs = assemble(sources(dir), od, [at('obj', 'sdk'), at('sdk', 'asm'), at('include'), at('obj', 'gen'), dir, path.dirname(dir),
     ...(ram ? [at('tests', 'mod')] : [])], ram ? [...defines, 'HYX2_RAM'] : defines);
   const bin = path.join(objdir, name + (ram ? '.hyx' : '.bin'));
   const banks = Math.max(1, ...sources(dir).map(f => Math.max(0, ...[...fs.readFileSync(f, 'latin1').matchAll(/\.segment\s+"CODE([2-4])"/gi)]
     .map(m => +m[1]))));                                      // (Its last bank's CODEn: moduleN.cfg)
-  const cfg = ram ? at('sdk', 'asm', 'hyx2.cfg') : at('modules', banks > 1 ? 'module' + banks + '.cfg' : 'module.cfg');
+  const own = path.join(dir, name + '.cfg');
+  const cfg = ram ? at('sdk', 'asm', 'hyx2.cfg') : fs.existsSync(own) ? own
+    : at('modules', banks > 1 ? 'module' + banks + '.cfg' : 'module.cfg');
   run(LD65, ['-C', cfg, '-o', bin, '-m', path.join(od, name + '.map'), '-Ln', path.join(od, name + '.lbl'), ...objs]);
   const data = fs.readFileSync(bin);
   check.checkModule(name, data, ram ? 0x0800 : 0xA000);       // (Only the kernel writes T, V and W)
+  if (cfg === own) for (const [, lib] of fs.readFileSync(own, 'latin1').matchAll(/"%O\.(\w+)"/g)) {
+    const file = path.join(objdir, lib + '.bin');               // (A library module of its own: NAME.bin, as any module)
+    fs.renameSync(bin + '.' + lib, file);
+    libs[lib] = fs.readFileSync(file);
+    check.checkModule(lib, libs[lib], 0xA000);
+  }
   return data;
 }
 
@@ -242,7 +252,7 @@ function build(opt = {}) {
     : buildModule(dir, objdir, defines, true);
   const modules = {}, tests = {}, progs = {}, programs = {}, samples = {};
   for (const d of fs.readdirSync(at('modules'), { withFileTypes: true }).filter(d => d.isDirectory()))
-    modules[d.name] = buildModule(at('modules', d.name), at('obj', 'modules'), defines);
+    modules[d.name] = buildModule(at('modules', d.name), at('obj', 'modules'), defines, false, modules);
   if (fs.existsSync(at('tests', 'mod')))
     for (const d of fs.readdirSync(at('tests', 'mod'), { withFileTypes: true }).filter(d => d.isDirectory()))
       tests[d.name] = buildModule(at('tests', 'mod', d.name), at('obj', 'tests'), defines);

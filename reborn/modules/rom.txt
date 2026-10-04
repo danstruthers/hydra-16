@@ -44,3 +44,5 @@ module      play
 module      xmodem
 module      forth
 module      hylang
+module      hylnum
+module      hylstr

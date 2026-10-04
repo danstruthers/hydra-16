@@ -11,6 +11,10 @@
 ;                                                       a driver: init (C = 1 and .A = an error: it ends), then
 ;                                                       serve for its calls (.Y = the caller) and irq for its lines
 ;                                                       (0 for none); flags HF_BOOT: started at boot
+;   HYX2_LIBRARY "name", "segment", "memory"          a library module of a program's, assembled with it and
+;                                                       linked by its own config into a module of its own (one
+;                                                       bank: the memory area's), its header in the segment; the
+;                                                       program finds its bank (MODINFO) and calls it with FARN
 ;
 ; The header is the first 48 bytes of the module (the HEADER segment).  Its DATA is copied into the task's RAM
 ; and its BSS cleared before it starts.
@@ -93,6 +97,31 @@ HYX2_BANKS      = banks
 
 .macro HYX2_DRIVER  name, init, serve, irq, stop, flags, banks
             HYX2_HEADER name, HT_DRIVER, flags, init, serve, irq, stop, 0, banks
+.endmacro
+
+; A library module's header: its code and read-only data in the memory area mem (a bank's, at $A000), linked with
+; the program it's part of, which calls it in place; no data, BSS or entries of its own (the program's RAM is its)
+.macro HYX2_LIBRARY name, seg, mem
+.assert     .strlen(name) < HYX2_NAME_LEN, error, "A module's name is 11 characters at most"
+.import     .ident(.sprintf("__%s_LAST__", mem))
+.pushseg
+.segment seg
+            .byte       "HYX2"                              ; HX_MAGIC
+            .byte       48                                  ; HX_HSIZE
+            .byte       HT_LIBRARY                          ; HX_TYPE
+            .byte       HF_INPLACE                          ; HX_FLAGS
+            .byte       ABI_VERSION                         ; HX_ABI
+            .word       $A000                               ; HX_LOAD
+            .word       .ident(.sprintf("__%s_LAST__", mem)) - $A000 ; HX_LENGTH
+            .word       0, 0, 0                             ; HX_DATA_LOAD, HX_DATA_RUN, HX_DATA_LEN
+            .word       0, 0, 0                             ; HX_BSS, HX_BSS_LEN, HX_TOP
+            .word       0, 0, 0, 0                          ; HX_MAIN, HX_SERVE, HX_IRQ, HX_STOP
+            .byte       0                                   ; HX_DEVICE
+            .byte       1                                   ; HX_BANKS
+            .word       1                                   ; HX_VERSION
+            .byte       name                                ; HX_NAME
+            .res        HYX2_NAME_LEN - .strlen(name), 0
+.popseg
 .endmacro
 
 ; A module's trampolines (one of two banks or more), in its RAM, and their zero page

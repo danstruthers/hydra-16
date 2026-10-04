@@ -74,7 +74,8 @@ ld65 -C sdk/asm/hyx2.cfg -o hello.hyx hello.o
 with `module.cfg` (`module2.cfg` to `module4.cfg` for one of two to four banks); those are the system's, built into the ROM with
 `modules/rom.txt`.  A server is one: a
 driver, `HYX2_DRIVER`, which registers a device letter and answers its clients' requests through `srvlib`.  The
-sample `counter` is one; the build makes it a module, and the tools test puts it in its ROM.)
+sample `counter` is one; the build makes it a module, and the tools test puts it in its ROM.  A module may have
+library modules of its own, `HYX2_LIBRARY`, linked by its own config: `docs/conventions.md`.)
 
 ## Running it
 

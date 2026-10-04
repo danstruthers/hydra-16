@@ -209,3 +209,9 @@ module may have, with 7.4b-d to come: next, a core module and library modules (t
 function applied to them there (a built-in reads them in place; a function binds them from there), not put in a
 list made for each call: a loop's step is 14% faster (17,655 cycles to 15,215).  Only what wants a list makes one
 (`list`, `&_`).  hylang is in the system's ROM now.
+
+**Library modules** (after 7.4a).  hylang is a program of two banks (the evaluator and the REPL; the reader, the
+printer and the core's built-ins) and library modules, each a module of the paged ROM of its own (`HT_LIBRARY`),
+assembled with it and run in place in its task: `hylnum`, the numbers (7.3), which hylang won't start without, and
+`hylstr`, strings and hashes (7.4a), whose built-ins aren't there without it.  hylang finds them as it starts (the
+module directory, by name).  7.4b-d's built-ins are libraries too.

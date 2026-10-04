@@ -572,7 +572,7 @@ A driver module has `init`, `serve`, `irq` and `stop` entries and a device lette
 
 A library module is code other modules call: the server library (§12.3), a big-number library for hylang, a graphics library for the Vera X.  A module calls a routine in another bank with **`XCALL`** (`.A` = bank, `r15` = address; registers pass through), which the kernel does from BIOS page 0, switching the caller's `$01` and back, as the X16's `jsrfar` does.
 
-(As built: no `XCALL` yet.  srvlib is assembled into each server, and a module of up to four banks calls between its own banks itself, through trampolines in its RAM (`FAR2`, `FAR1`, and `FARN` from any bank to any), so hylang's numbers are its own third bank, not a library module.)
+(As built: no `XCALL` yet.  srvlib is assembled into each server, and a module of up to four banks calls between its own banks itself, through trampolines in its RAM (`FAR2`, `FAR1`, and `FARN` from any bank to any).  A program may have library modules of its own (`HT_LIBRARY`), assembled with it and run in its task, called through the same trampolines with the library's bank, which the program finds in the module directory: hylang's numbers are `hylnum`, its strings and hashes `hylstr`.)
 
 ---
 
@@ -833,6 +833,8 @@ danlang (`C:\source\danlang`, C# on .NET 6, by Daniel and Simon Struthers, GPLv3
 (As built, phase 7.2: the evaluator is the machine above, its stack two banks of its own (16K: some 1300 calls nested, not in tail position), each frame's continuation a fixnum, so the collector takes the whole stack as roots; a function's body, `if`'s branches and the last of `do`, `let`, `eval` and a loop's body run in the caller's place, and a value or a symbol is evaluated with no frame at all.  Ctrl-C is checked at each call and each loop step, not by a step counter.  The module is two banks, but what both use (the heap, the objects, the scopes and names, I/O) is in the task's RAM, so both call it directly, with no `XCALL`; a built-in is a constant (`BUILTIN0 + 2n`, no object), its code in the second bank.  Scopes are frames of bindings down to the global scope, whose values are in the symbols; a symbol never bound in a frame is looked up there at once.  Its REPL is danlang's, and it loads `globals.hl` as it starts (1.6 s).  At 3.58 MHz a loop's step, a call of a function with three built-ins and an `if`, takes 17,000 cycles.)
 
 (As built, phase 7.3: the tower's integers past a fixnum are one kind of object, its sign and up to 126 bytes, not 32-bit integers and a separate bignum library; the tower and all of danlang's bases are a third bank of the module, not library modules loaded on first use, as a module may have four banks now.)
+
+(As built, after 7.4a: hylang is a program of two banks and library modules, `hylnum` (the numbers) and `hylstr` (strings and hashes), each a module of its own, assembled with it.)
 
 (As built, after 7.4a: a call's arguments are pushed on the evaluation stack as they're evaluated, and the function applied to them there, not put in a list made for each call; a loop's step is 14% faster.  danlang's GPLv3 license is off (the user's decision), and hylang is in the system's ROM.)
 

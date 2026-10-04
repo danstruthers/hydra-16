@@ -12,8 +12,8 @@
 ; (its K_* codes fixnums), and so are the registers ev_x to ev_s, so the collector takes them all as roots (env.inc
 ; has the stack, scopes and names, which the built-ins use too).
 ;   A call's arguments are pushed on the stack as they're evaluated (env.inc), and the function applied to them
-; there.  A built-in (builtins.inc) is native code, in the second bank, the third (BF_BANK3: numbers.inc) or the
-; fourth (BF_BANK4: strings.inc, hashes.inc), called through hyx2_farn, given its arguments' values (arg_next), or
+; there.  A built-in (builtins.inc) is native code, in the second bank, or a library's (BF_BANK3: hylnum's,
+; numbers.inc; BF_BANK4: hylstr's, strings.inc, hashes.inc), called through hyx2_farn, given its arguments' values (arg_next), or
 ; as they're written (BF_RAW: defined?), ev_v its value (or, ev_again set, ev_f applied to the arguments it has left,
 ; as if it were the call: hash-call's methods); they're taken off the stack after it.  An error among the values is
 ; the call's value, unless the built-in takes errors (BF_ERRORS: print, error-message ...).  A special form
@@ -54,8 +54,8 @@ K_SPACE         = 23            ; [blocks, env]: <=>'s number
 BF_SPECIAL      = $01           ; Its arguments as they're written (ev_r), its own way
 BF_ERRORS       = $02           ; An error among its arguments is an argument (not the call's value)
 BF_RAW          = $04           ; Its arguments as they're written, in ev_a (native code, that evaluates none)
-BF_BANK3        = $08           ; Its code is in the third bank (numbers.inc), not the second ...
-BF_BANK4        = $10           ;   or the fourth (strings.inc, hashes.inc)
+BF_BANK3        = $08           ; Its code is in hylnum (numbers.inc), not the second bank ...
+BF_BANK4        = $10           ;   or in hylstr (strings.inc, hashes.inc)
 
 .code
 
@@ -115,7 +115,10 @@ eval_init:
             MOVR        err_room, h_v
             FAR2        builtins_init
             bcs         @no
+            lda         hyx2_bank4                          ; (Hashes: if hylstr's there)
+            beq         :+
             FARN        4, hash_init
+:
             rts
 @no:
             sec
@@ -459,13 +462,19 @@ ev_apply:
             jsr         ev_set
             jmp         ev_no_room
 @native:
-            lda         bi_flags,x                          ; (Native code: in the second bank, the third or the
-            and         #BF_BANK3 | BF_BANK4                ; fourth)
-            lsr
-            lsr
-            lsr
-            tay
-            lda         hyx2_bank2,y
+            lda         bi_flags,x                          ; (Native code: in the second bank, or a library's,
+            and         #BF_BANK3 | BF_BANK4                ; hylnum's or hylstr's)
+            beq         @two
+            cmp         #BF_BANK4
+            beq         @four
+            lda         hyx2_bank3
+            bra         :+
+@four:
+            lda         hyx2_bank4
+            bra         :+
+@two:
+            lda         hyx2_bank2
+:
             sta         hyx2_n
             lda         ev_j
             sta         hyx2_to

@@ -709,6 +709,18 @@ module.exports = {
         '% hylang\nhylang (danlang on the Hydra-16), exit to end\nhylang> (exit 3)\n% echo $status\n3\n%'],
     },
     {
+      name: 'hylibs', what: 'hylang\'s library modules: hylnum in the module directory (mods), a library; hylang without hylstr (strings and hashes), its built-ins unbound and the rest as it was',
+      init: 't_rc', without: ['hylstr'], cycles: 60e6,
+      machine: { input: '\u0101mods\r\u0101hylang\r\u0101(/ 1 3)\r\u0101(str-upper "a")\r\u0101(len "abc")\r\u0101exit\r' },
+      expect: [' library  hylnum\n', 'hylang> (/ 1 3)\n=> 1/3\nhylang> (str-upper "a")\n=> Error: Unbound Symbol \'str-upper\'\nhylang> (len "abc")\n=> 3\n'],
+    },
+    {
+      name: 'hylnum', what: 'hylang without hylnum, its numbers: it says so, and won\'t start',
+      init: 't_rc', without: ['hylnum'], cycles: 30e6,
+      machine: { input: '\u0101hylang\r\u0101echo $status\r' },
+      expect: ['hylang: its library hylnum isn\'t in the ROM\n% echo $status\n1\n'],
+    },
+    {
       name: 'spi', what: 'SPI and #S (storage): transactions, kept bytes, modes 0 and 3, one open at a time, the time a byte takes',
       init: 't_spi', cycles: 30e6, machine: { spiEcho: [3, 9] },
       // (The bit loops: 18 cycles a bit in, 33 out; the rest is the request and the copy to or from the client.  At

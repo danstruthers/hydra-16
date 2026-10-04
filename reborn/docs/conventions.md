@@ -169,6 +169,14 @@ The kernel task (task 0) keeps the kernel's state: its program zero page (`K0_*`
   in the module's `DATA` too, as `hylang`'s core is (its heap, objects, scopes and I/O): it runs with either bank at
   `$A000`, so it calls nothing of either bank's and reads no table of theirs (a text its caller hands it is fine:
   the caller's bank is there); a call from it into a bank saves the bank register and sets it (`eval_nested`).
+* A program may have library modules of its own (`HT_LIBRARY`), as `hylang` has `hylnum` and `hylstr`: each is
+  assembled with the program (its .s files include them), its code and read-only data a bank of their own with a
+  header first (`HYX2_LIBRARY "name", "segment", "memory"`), and the module's folder has its own link, `NAME.cfg`,
+  whose memory areas with `file = "%O.LIBRARY"` `build.js` makes the modules LIBRARY (`obj/modules/LIBRARY.bin`),
+  each named in `modules/rom.txt`.  A library has no data, BSS or entries of its own: it runs in the program's
+  task, in place, with the program's RAM, called through `FARN` with its bank, which the program finds as it starts
+  (`MODINFO`'s module directory: its type and name); SPAWN won't run one.  The program decides what it does
+  without one (`hylang` won't start without `hylnum`; without `hylstr` its built-ins are unbound).
 
 ## Files and servers
 

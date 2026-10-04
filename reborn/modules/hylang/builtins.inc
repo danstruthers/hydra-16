@@ -56,8 +56,16 @@ builtins_init:
             lda         (ev_j)
             cmp         #$FF
             beq         @done
-            tay                                             ; (Its name: a symbol, if it has one)
+            tay                                             ; (Its name: a symbol, if it has one, and if its code's
+            beq         @named                              ; there: hylstr's, if hylstr is in the ROM)
+            iny
+            lda         (ev_j),y
+            dey                                             ; (.Y: the name's length, for intern)
+            and         #BF_BANK4
+            beq         :+
+            lda         hyx2_bank4
             beq         @named
+:
             clc
             lda         ev_j
             adc         #1
