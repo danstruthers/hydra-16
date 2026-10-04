@@ -134,6 +134,14 @@ The kernel task (task 0) keeps the kernel's state: its program zero page (`K0_*`
   (`sdk/asm/README.md`).
 * A script is a file that starts with `#!` and its interpreter's path (Plan 9's: `#!/bin/rc`): rc runs that
   program with the script's path and arguments when the file isn't a program (`/rom/bin/scom`).
+* **HyForth's libraries:** `forth`'s module is its core (the Core word set and the words that load files); every
+  other word set is a library, `forthlib/NAME.s`, built into `/lib/forth/NAME.fl` (`tools/forthlib.js`) and loaded
+  into the dictionary at HERE by INCLUDED (`REQUIRE NAME.fl`; `/lib/forth/startup.fs` has those forth starts with).
+  A library includes `forthlib.inc` first, makes its words with `HEADER` as the core does, keeps its variables in
+  its own BSS, and may have a `lib_init`.  It calls the core by its labels (`obj/gen/forthcore.inc`), never another
+  library: code that the core or two libraries use, or that compiled definitions call (a runtime: `dovalue` ...),
+  is the core's, headerless, and the library's header is a `jmp` to it.  A library is for the core it was built
+  with (its id); the build makes both together.  New words go in a library unless the core can't work without them.
 * A C program is a folder of `.c` files (and `.s` files, if it has any) in the same places (`sdk/c/samples/NAME/`
   for `/rom/sample/c`), compiled by cc65 for its target `none` and linked by `sdk/c/hydra.cfg` with the C library,
   `obj/sdk/c/hydra.lib`: cc65's `none.lib` with `sdk/c/lib`'s modules in place of cc65's, each named as the module

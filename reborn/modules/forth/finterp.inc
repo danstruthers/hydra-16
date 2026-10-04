@@ -374,18 +374,7 @@ catch:                                                      ; ( ... xt -- ... 0 
 exec_w:
             jmp         (w)
 
-            HEADER      "CATCH", 0
-catch_w:                                                    ; CATCH's, for a program: an error it catches has no
-            jsr         catch                               ;   place for QUIT to show
-            lda         dlo,x
-            ora         dhi,x
-            beq         :+
-            stz         err_noted
-            stz         throw_named
-:
-            rts
-
-            HEADER      "THROW", 0
+; THROW's (the Exception library's header: exception.fl)
 throw:                                                      ; ( k*x n -- k*x | i*x n ): 0 nothing; else to CATCH's
             lda         dlo,x
             ora         dhi,x
@@ -709,8 +698,8 @@ s_error:    .byte       "error ", 0
 s_line:     .byte       "line ", 0
 s_colon:    .byte       ": ", 0
 err_code:   .word       -3 & $FFFF, -4 & $FFFF, -8 & $FFFF, -10 & $FFFF, -14 & $FFFF, -16 & $FFFF, -17 & $FFFF
-            .word       -22 & $FFFF, -24 & $FFFF, -28 & $FFFF, -49 & $FFFF, -50 & $FFFF, -258 & $FFFF, 0
-err_text:   .word       e_3, e_4, e_8, e_10, e_14, e_16, e_17, e_22, e_24, e_28, e_49, e_50, e_258
+            .word       -22 & $FFFF, -24 & $FFFF, -28 & $FFFF, -49 & $FFFF, -50 & $FFFF, -258 & $FFFF, -259 & $FFFF, 0
+err_text:   .word       e_3, e_4, e_8, e_10, e_14, e_16, e_17, e_22, e_24, e_28, e_49, e_50, e_258, e_259
 e_3:        .byte       "stack overflow", 0
 e_4:        .byte       "stack underflow", 0
 e_8:        .byte       "dictionary full", 0
@@ -724,6 +713,7 @@ e_28:       .byte       "interrupt", 0
 e_49:       .byte       "search order full", 0
 e_50:       .byte       "search order empty", 0
 e_258:      .byte       "sources nested too deeply", 0
+e_259:      .byte       "not this forth's library", 0
 
 ; ---- The rest
 
@@ -740,52 +730,6 @@ bye:                                                        ; (At the console: t
             stz         r0 + 1
             lda         #0
             jmp         EXITS
-
-            HEADER      "WORDS", 0
-words:                                                      ; The first word list in the order: its names, newest first
-            lda         order_n
-            beq         @done
-            lda         order
-            sta         w
-            lda         order + 1
-            sta         w + 1
-            ldy         #1
-            lda         (w),y
-            pha
-            lda         (w)
-            sta         w
-            pla
-            sta         w + 1
-@hdr:
-            lda         w
-            ora         w + 1
-            beq         @done
-            ldy         #2
-            lda         (w),y
-            and         #F_HIDDEN
-            bne         @next
-            lda         (w),y
-            and         #LEN_MASK
-            sta         cnt
-            ldy         #3
-:
-            lda         (w),y
-            jsr         emit_a
-            iny
-            dec         cnt
-            bne         :-
-            jsr         space
-@next:
-            ldy         #1
-            lda         (w),y
-            pha
-            lda         (w)
-            sta         w
-            pla
-            sta         w + 1
-            bra         @hdr
-@done:
-            jmp         cr
 
             HEADER      "ENVIRONMENT?", 0
 environmentq:                                               ; ( c-addr u -- false ): none known

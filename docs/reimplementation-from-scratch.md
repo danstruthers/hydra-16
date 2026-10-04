@@ -787,6 +787,8 @@ A new Forth, written from scratch, added in phase 6 when files, the console's mo
 
 (As built, phase 6.4: `forth file.fs [argument ...]` (`ARGC`, `ARG`; code 1 after an error), and a first line `#!...` skipped, so `#!/bin/forth` scripts run by their names; in pipelines too.  A name INCLUDED that isn't in the current directory, with no `/`, is `/lib/forth`'s (the current directory first, as INCLUDED's standard meaning has it).  `LIBRARY name` and `END-LIBRARY` give a library its own word list, first in the search order: `REQUIRE hydra.fs`.  Some words are in the second bank now, their headers in RAM, run through `FAR2`.)
 
+(As built, after 6.4 (6.5, at the user's asking): `forth`'s module is its core, the Core word set and the words that load files, 9.4K of one bank; the other word sets, the Hydra words among them, are libraries pre-compiled at the build (`reborn/forthlib`, `tools/forthlib.js`: relocatable images, `/lib/forth/NAME.fl`) that INCLUDED loads into the dictionary, so `REQUIRE tools.fl` as `REQUIRE graphics.fs`.  `/lib/forth/startup.fs` names those forth starts with (Core Extension, Exception, File Access, Programming-Tools); a card's or the RAM disk's takes the ROM's place.  A library calls only the core; a library file is for the core it was built with.)
+
 ---
 
 ### **17. hylang: danlang on the Hydra**

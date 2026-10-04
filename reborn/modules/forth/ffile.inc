@@ -1,6 +1,7 @@
 ; ****************************************************************************
-; ffile.inc - forth's File Access words, and including files (included by forth.s).  A fileid is the system's fd (0,
-; 1 and 2 stdin, stdout and stderr); an ior is 0, or -512 less the system's error code (THROW shows its text).  A
+; ffile.inc - forth's files: including them (INCLUDED, INCLUDE, REQUIRED, REQUIRE) and loading a library (included by
+; forth.s; the other File Access words are a library, forthlib/file.s).  A fileid is the system's fd (0, 1 and 2
+; stdin, stdout and stderr); an ior is 0, or -512 less the system's error code (THROW shows its text).  A
 ; file being included is read a line at a time into its own buffer (lbufs: as deep as it's nested), the way READ-LINE
 ; reads one: a line and 2 bytes read, and the fd's offset moved back to the line's end, so the file's offset is
 ; always where its next line starts (SAVE-INPUT keeps a line's place; RESTORE-INPUT seeks there and reads it again).
@@ -284,53 +285,10 @@ push_ior:
             PUSHAY
             rts
 
-; ( x -- 0 0 ior ): a failed call's (.A the error), its double 0
-ud_err:
-            pha
-            jsr         zero_tos
-            dex
-            jsr         zero_tos
-            pla
-            sec
-            bra         push_ior
+; ---- Opening
 
-; statbuf: a record that changes nothing (Plan 9's: its name empty, the rest $FF).  Keeps .X
-stat_none:
-            ldy         #SR_SIZE - 1
-            lda         #$FF
-:
-            sta         statbuf,y
-            dey
-            bpl         :-
-            stz         statbuf + SR_NAME
-            rts
-
-; ---- The words
-
-            HEADER      "R/O", 0
-ro:
-            lda         #O_READ
-fam:
-            ldy         #0
-            PUSHAY
-            rts
-
-            HEADER      "W/O", 0
-wo:
-            lda         #O_WRITE
-            bra         fam
-
-            HEADER      "R/W", 0
-rw:
-            lda         #O_RDWR
-            bra         fam
-
-            HEADER      "BIN", 0
-bin:
-            rts
-
-            HEADER      "OPEN-FILE", 0
-openfile:                                                   ; ( c-addr u fam -- fileid ior )
+; OPEN-FILE's ( c-addr u fam -- fileid ior ) (the File Access library's header: file.fl), INCLUDED's
+openfile:
             lda         dlo,x
             pha
             inx
@@ -342,356 +300,9 @@ openfile:                                                   ; ( c-addr u fam -- 
             ldx         xsave
             jmp         fid_ior
 
-            HEADER      "CREATE-FILE", 0
-createfile:                                                 ; ( c-addr u fam -- fileid ior ): one that's there is
-            lda         dlo,x                               ;   emptied
-            pha
-            inx
-            jsr         to_path
-            LDR         r0, pathbuf
-            pla
-            stx         xsave
-            ldx         #0
-            jsr         CREATE
-            ldx         xsave
-            jmp         fid_ior
-
-            HEADER      "CLOSE-FILE", 0
-closefile:                                                  ; ( fileid -- ior )
-            lda         dlo,x
-            inx
-            stx         xsave
-            jsr         CLOSE
-            ldx         xsave
-            jmp         push_ior
-
-            HEADER      "DELETE-FILE", 0
-deletefile:                                                 ; ( c-addr u -- ior )
-            jsr         to_path
-            LDR         r0, pathbuf
-            stx         xsave
-            jsr         REMOVE
-            ldx         xsave
-            jmp         push_ior
-
-            HEADER      "READ-FILE", 0
-readfile:                                                   ; ( c-addr u1 fileid -- u2 ior ): u2 < u1 at the end
-            lda         dlo,x                               ;   (stdin's read ahead first: the interpreter's)
-            bne         @read
-            lda         ipos
-            cmp         ilen
-            lda         ipos + 1
-            sbc         ilen + 1
-            bcs         @read
-            lda         dlo + 2,x
-            sta         w2
-            lda         dhi + 2,x
-            sta         w2 + 1
-            lda         dlo + 1,x
-            sta         tmp2
-            lda         dhi + 1,x
-            sta         tmp2 + 1
-            inx
-            inx
-            stz         tmp3
-            stz         tmp3 + 1
-@byte:
-            lda         tmp3                                ; (As many as asked for, or as there are)
-            cmp         tmp2
-            lda         tmp3 + 1
-            sbc         tmp2 + 1
-            bcs         @got
-            lda         ipos
-            cmp         ilen
-            lda         ipos + 1
-            sbc         ilen + 1
-            bcs         @got
-            jsr         getc_in
-            sta         (w2)
-            inc         w2
-            bne         :+
-            inc         w2 + 1
-:
-            inc         tmp3
-            bne         @byte
-            inc         tmp3 + 1
-            bra         @byte
-@got:
-            lda         tmp3
-            sta         dlo,x
-            lda         tmp3 + 1
-            sta         dhi,x
-            clc
-            jmp         push_ior
-
-@read:
-            sta         rl_fd
-            lda         dlo + 1,x
-            sta         r1
-            lda         dhi + 1,x
-            sta         r1 + 1
-            lda         dlo + 2,x
-            sta         r0
-            lda         dhi + 2,x
-            sta         r0 + 1
-            inx
-            inx
-            lda         rl_fd
-            stx         xsave
-            jsr         READ
-            bcs         @error
-            sta         tmp
-            stx         tmp + 1
-            ldx         xsave
-            lda         tmp
-            sta         dlo,x
-            lda         tmp + 1
-            sta         dhi,x
-            clc
-            jmp         push_ior
-@error:
-            ldx         xsave
-            pha
-            jsr         zero_tos
-            pla
-            sec
-            jmp         push_ior
-
-            HEADER      "READ-LINE", 0
-readline:                                                   ; ( c-addr u1 fileid -- u2 flag ior ): the buffer u1 + 2
-            lda         dlo + 2,x                           ;   long; flag false at the end
-            sta         w2
-            lda         dhi + 2,x
-            sta         w2 + 1
-            lda         dlo + 1,x
-            sta         tmp2
-            lda         dhi + 1,x
-            sta         tmp2 + 1
-            lda         dlo,x
-            inx
-            cmp         #0
-            bne         @file
-            jsr         read_line                           ; (stdin's: as the interpreter reads it)
-            bcc         @line
-            lda         #0
-            bra         @end
-@file:
-            jsr         read_line_fd
-            bcs         @end
-@line:
-            sta         dlo + 1,x
-            sty         dhi + 1,x
-            jsr         true_tos
-            clc
-            jmp         push_ior
-@end:
-            pha                                             ; (The end, or an error: 0 false ior)
-            jsr         zero_tos
-            stz         dlo + 1,x
-            stz         dhi + 1,x
-            pla
-            cmp         #1                                  ; (C = 1 for an error)
-            jmp         push_ior
-
-            HEADER      "WRITE-FILE", 0
-writefile:                                                  ; ( c-addr u fileid -- ior )
-            jsr         flush                               ; (TYPE's first, for stdout's order)
-            lda         dlo,x
-            sta         rl_fd
-            lda         dlo + 1,x
-            sta         r1
-            lda         dhi + 1,x
-            sta         r1 + 1
-            lda         dlo + 2,x
-            sta         r0
-            lda         dhi + 2,x
-            sta         r0 + 1
-            inx
-            inx
-            inx
-            lda         rl_fd
-write_fd:
-            stx         xsave
-            jsr         WRITE
-            ldx         xsave
-            jmp         push_ior
-
-            HEADER      "WRITE-LINE", 0
-writeline:                                                  ; ( c-addr u fileid -- ior ): and an LF
-            lda         dlo,x
-            pha
-            jsr         writefile
-            pla
-            ldy         dlo,x
-            bne         :+
-            ldy         dhi,x
-            bne         :+
-            inx
-            pha
-            lda         #LF
-            sta         numtmp
-            LDR         r0, numtmp
-            LDR         r1, 1
-            pla
-            bra         write_fd
-:
-            rts
-
-            HEADER      "FILE-POSITION", 0
-fileposition:                                               ; ( fileid -- ud ior )
-            stz         r0
-            stz         r0 + 1
-            stz         r1
-            stz         r1 + 1
-            lda         dlo,x
-            stx         xsave
-            ldx         #1
-            jsr         SEEK
-            ldx         xsave
-            bcc         :+
-            jmp         ud_err
-:
-            lda         r0
-            sta         dlo,x
-            lda         r0 + 1
-            sta         dhi,x
-            lda         r1
-            ldy         r1 + 1
-            PUSHAY
-            clc
-            jmp         push_ior
-
-            HEADER      "REPOSITION-FILE", 0
-repositionfile:                                             ; ( ud fileid -- ior )
-            lda         dlo + 2,x
-            sta         r0
-            lda         dhi + 2,x
-            sta         r0 + 1
-            lda         dlo + 1,x
-            sta         r1
-            lda         dhi + 1,x
-            sta         r1 + 1
-            lda         dlo,x
-            inx
-            inx
-            inx
-            stx         xsave
-            ldx         #0
-            jsr         SEEK
-            ldx         xsave
-            jmp         push_ior
-
-            HEADER      "FILE-SIZE", 0
-filesize:                                                   ; ( fileid -- ud ior )
-            LDR         r0, statbuf
-            lda         dlo,x
-            stx         xsave
-            jsr         FSTAT
-            ldx         xsave
-            bcc         :+
-            jmp         ud_err
-:
-            lda         statbuf + SR_LENGTH
-            sta         dlo,x
-            lda         statbuf + SR_LENGTH + 1
-            sta         dhi,x
-            lda         statbuf + SR_LENGTH + 2
-            ldy         statbuf + SR_LENGTH + 3
-            PUSHAY
-            clc
-            jmp         push_ior
-
-            HEADER      "RESIZE-FILE", 0
-resizefile:                                                 ; ( ud fileid -- ior ): longer with zeros, or cut short
-            jsr         stat_none                           ;   (a WSTAT of its length)
-            lda         dlo + 2,x
-            sta         statbuf + SR_LENGTH
-            lda         dhi + 2,x
-            sta         statbuf + SR_LENGTH + 1
-            lda         dlo + 1,x
-            sta         statbuf + SR_LENGTH + 2
-            lda         dhi + 1,x
-            sta         statbuf + SR_LENGTH + 3
-            LDR         r0, statbuf
-            lda         dlo,x
-            inx
-            inx
-            inx
-            stx         xsave
-            jsr         FWSTAT
-            ldx         xsave
-            jmp         push_ior
-
-            HEADER      "RENAME-FILE", 0
-renamefile:                                                 ; ( c-addr1 u1 c-addr2 u2 -- ior ): in its directory, the
-            jsr         stat_none                           ;   new name's last part its name
-            lda         dlo + 1,x
-            sta         w
-            lda         dhi + 1,x
-            sta         w + 1
-            lda         dlo,x
-            sta         tmp
-            ldy         #0                                  ; (cnt: past its last /)
-            stz         cnt
-@scan:
-            cpy         tmp
-            beq         @copy
-            lda         (w),y
-            iny
-            cmp         #'/'
-            bne         @scan
-            sty         cnt
-            bra         @scan
-@copy:
-            ldy         cnt
-            phx
-            ldx         #0
-:
-            cpy         tmp
-            beq         :+
-            cpx         #LNAME_SIZE - 1
-            beq         :+
-            lda         (w),y
-            sta         statbuf + SR_NAME,x
-            iny
-            inx
-            bra         :-
-:
-            stz         statbuf + SR_NAME,x
-            plx
-            inx
-            inx
-            jsr         to_path
-            LDR         r0, pathbuf
-            LDR         r1, statbuf
-            stx         xsave
-            jsr         WSTAT
-            ldx         xsave
-            jmp         push_ior
-
-            HEADER      "FILE-STATUS", 0
-filestatus:                                                 ; ( c-addr u -- x ior ): x its mode
-            jsr         to_path
-            LDR         r0, pathbuf
-            LDR         r1, statbuf
-            stx         xsave
-            jsr         STAT
-            ldx         xsave
-            pha
-            lda         statbuf + SR_MODE
-            ldy         statbuf + SR_MODE + 1
-            PUSHAY
-            pla
-            jmp         push_ior
-
-            HEADER      "FLUSH-FILE", 0
-flushfile:                                                  ; ( fileid -- ior ): nothing's kept but TYPE's
-            jsr         flush
-            jmp         zero_tos
-
 ; ---- Including files
 
-            HEADER      "INCLUDE-FILE", 0
+; INCLUDE-FILE's (the File Access library's header: file.fl)
 includefile:                                                ; ( i*x fileid -- j*x ): its lines, from its offset, as
             lda         src_fdep                            ;   the source; closed at its end
             cmp         #INC_MAX
@@ -817,14 +428,14 @@ included:                                                   ; ( i*x c-addr u -- 
             bne         @fail
             inx
             inx
-            FAR2        lib_name
+            jsr         lib_name
             bcs         @none
             jsr         open_ro
             lda         dlo,x
             ora         dhi,x
             bne         @fail
             inx
-            jmp         includefile
+            jmp         inc_or_load
 @none:
             dex                                             ; (Its ior again)
             lda         #<(-512 - E_NOENT)
@@ -844,7 +455,286 @@ included:                                                   ; ( i*x c-addr u -- 
             sta         dhi + 2,x
             inx
             inx
+            jmp         inc_or_load
+
+; INCLUDED's file ( fileid ): a library (it starts "HYFL": a word set's, made at the build) loaded into the
+; dictionary; or else included, from its start
+inc_or_load:
+            lda         dlo,x
+            sta         rl_fd
+            LDR         r0, numtmp
+            LDR         r1, 4
+            lda         rl_fd
+            stx         xsave
+            jsr         READ
+            ldx         xsave
+            bcs         @source
+            cmp         #4
+            bne         @source
+            ldy         #3
+:
+            lda         numtmp,y
+            cmp         s_hyfl,y
+            bne         @source
+            dey
+            bpl         :-
+            jmp         lib_load
+@source:
+            stz         r0                                  ; (Back to its start)
+            stz         r0 + 1
+            stz         r1
+            stz         r1 + 1
+            lda         rl_fd
+            stx         xsave
+            ldx         #0
+            jsr         SEEK
+            ldx         xsave
             jmp         includefile
+
+s_hyfl:     .byte       "HYFL"
+
+LH_VERSION      = 0             ; A library file's header, after its magic (tools/forthlib.js): its form's version ...
+LH_CORE         = 1             ;   the core's id (2) ...
+LH_IMAGE        = 3             ;   its image's length (2) ...
+LH_BSS          = 5             ;   its BSS's (2) ...
+LH_FIRST        = 7             ;   its first header's link, an offset ($FFFF: none) ...
+LH_LAST         = 9             ;   its last header ...
+LH_INIT         = 11            ;   its init ($FFFF: none) ...
+LH_RELOCS       = 13            ;   its relocations' count
+LH_SIZE         = 15
+
+; lib_load's ends: no room (THROW -8), another core's (THROW -259), the file closed first
+lib_full:
+            jsr         lib_close
+            lda         #<-8
+            jmp         throw_a
+lib_bad:
+            jsr         lib_close
+            lda         #<-259
+            sta         tmp
+            lda         #>-259
+            sta         tmp + 1
+            jmp         throw_tmp
+lib_close:
+            lda         rl_fd
+            stx         xsave
+            jsr         CLOSE
+            ldx         xsave
+            rts
+
+; A library from fileid ( fileid -- ), its magic read (tools/forthlib.js has its form): its image read to HERE, its
+; BSS zeros after it, its relocations (read after that) applied (HERE added to each), its headers linked into the
+; compilation word list, HERE past it, the file closed, and its init run.  Another core's: THROW -259
+lib_load:
+            lda         dlo,x
+            sta         rl_fd
+            inx
+            LDR         r0, statbuf                         ; Its header
+            LDR         r1, LH_SIZE
+            jsr         lib_read
+            cmp         #LH_SIZE
+            bne         lib_bad
+            lda         statbuf + LH_VERSION
+            cmp         #1
+            bne         lib_bad
+            lda         statbuf + LH_CORE
+            cmp         core_id
+            bne         lib_bad
+            lda         statbuf + LH_CORE + 1
+            cmp         core_id + 1
+            bne         lib_bad
+            clc                                             ; w: its image's end; w2: its BSS's (no further than
+            lda         here                                ;   the dictionary's end)
+            adc         statbuf + LH_IMAGE
+            sta         w
+            lda         here + 1
+            adc         statbuf + LH_IMAGE + 1
+            sta         w + 1
+            clc
+            lda         w
+            adc         statbuf + LH_BSS
+            sta         w2
+            lda         w + 1
+            adc         statbuf + LH_BSS + 1
+            sta         w2 + 1
+            bcs         lib_full
+            cmp         #>DICT_END
+            bcs         lib_full
+            lda         here                                ; Its image
+            sta         r0
+            lda         here + 1
+            sta         r0 + 1
+            lda         statbuf + LH_IMAGE
+            sta         r1
+            lda         statbuf + LH_IMAGE + 1
+            sta         r1 + 1
+            jsr         lib_read
+            cmp         statbuf + LH_IMAGE
+            bne         :+
+            cpy         statbuf + LH_IMAGE + 1
+            beq         :++
+:
+            jmp         lib_bad
+:
+            lda         w2                                  ; Its relocations, after its BSS (what's left of the file)
+            sta         r0
+            lda         w2 + 1
+            sta         r0 + 1
+            sec
+            lda         #<DICT_END
+            sbc         w2
+            sta         r1
+            lda         #>DICT_END
+            sbc         w2 + 1
+            sta         r1 + 1
+            jsr         lib_read
+            jsr         lib_close
+            lda         w                                   ; Its BSS: zeros
+            sta         w3
+            lda         w + 1
+            sta         w3 + 1
+:
+            lda         w3
+            cmp         w2
+            lda         w3 + 1
+            sbc         w2 + 1
+            bcs         :+
+            lda         #0
+            sta         (w3)
+            inc         w3
+            bne         :-
+            inc         w3 + 1
+            bra         :-
+:
+            lda         w2                                  ; Its relocations (p1, tmp2 of them)
+            sta         p1
+            lda         w2 + 1
+            sta         p1 + 1
+            lda         statbuf + LH_RELOCS
+            sta         tmp2
+            lda         statbuf + LH_RELOCS + 1
+            sta         tmp2 + 1
+@reloc:
+            lda         tmp2
+            ora         tmp2 + 1
+            beq         @link
+            ldy         #1
+            lda         (p1),y                              ; (p2: where, here + its offset; .Y: its kind)
+            and         #$3F
+            clc
+            adc         here + 1
+            sta         p2 + 1
+            lda         (p1)
+            clc
+            adc         here
+            sta         p2
+            bcc         :+
+            inc         p2 + 1
+:
+            lda         (p1),y
+            rol
+            rol
+            rol
+            and         #3
+            tay
+            beq         @word
+            dey
+            beq         @low
+            ldy         #2                                  ; A high byte: its address's low byte (after it) +
+            lda         (p1),y                              ;   HERE's, for the carry
+            clc
+            adc         here
+            lda         (p2)
+            adc         here + 1
+            sta         (p2)
+            inc         p1                                  ; (Its 3rd byte)
+            bne         @next
+            inc         p1 + 1
+            bra         @next
+@word:
+            clc
+            lda         (p2)
+            adc         here
+            sta         (p2)
+            ldy         #1
+            lda         (p2),y
+            adc         here + 1
+            sta         (p2),y
+            bra         @next
+@low:
+            clc
+            lda         (p2)
+            adc         here
+            sta         (p2)
+@next:
+            clc
+            lda         p1
+            adc         #2
+            sta         p1
+            bcc         :+
+            inc         p1 + 1
+:
+            lda         tmp2
+            bne         :+
+            dec         tmp2 + 1
+:
+            dec         tmp2
+            bra         @reloc
+@link:
+            lda         statbuf + LH_FIRST + 1              ; Its headers, in the compilation word list
+            cmp         #$FF
+            beq         @here
+            clc                                             ; (Its first header's link: the word list's last)
+            lda         here
+            adc         statbuf + LH_FIRST
+            sta         p2
+            lda         here + 1
+            adc         statbuf + LH_FIRST + 1
+            sta         p2 + 1
+            jsr         current_w3
+            lda         (w3)
+            sta         (p2)
+            ldy         #1
+            lda         (w3),y
+            sta         (p2),y
+            clc                                             ; (The word list's last: its last header)
+            lda         here
+            adc         statbuf + LH_LAST
+            sta         (w3)
+            lda         here + 1
+            adc         statbuf + LH_LAST + 1
+            sta         (w3),y
+@here:
+            clc                                             ; Its init's address (before HERE moves on)
+            lda         here
+            adc         statbuf + LH_INIT
+            sta         w
+            lda         here + 1
+            adc         statbuf + LH_INIT + 1
+            sta         w + 1
+            lda         w2                                  ; HERE past it
+            sta         here
+            lda         w2 + 1
+            sta         here + 1
+            lda         statbuf + LH_INIT + 1               ; Its init
+            cmp         #$FF
+            beq         :+
+            jmp         exec_w
+:
+            rts
+; READ rl_fd into r0, r1 bytes.  OUT: .A/.Y the count (0 after an error).  Keeps .X
+lib_read:
+            lda         rl_fd
+            stx         xsave
+            jsr         READ
+            bcc         :+
+            lda         #0
+            tax
+:
+            phx
+            ply
+            ldx         xsave
+            rts
 
 ; ( c-addr u -- fileid ior ): OPEN-FILE, read only
 open_ro:
@@ -955,3 +845,55 @@ inc_add:
             bra         @copy
 @full:
             rts
+
+; ( c-addr u -- c-addr' u' ): a bare name (no /) as /lib/forth's, in pathbuf (INCLUDED's).  OUT: C = 1, the name left
+; as it was, if it isn't bare (or is too long)
+lib_name:
+            lda         dhi,x
+            bne         @not
+            lda         dlo,x
+            beq         @not
+            cmp         #PATH_SIZE - LIB_LEN - 1
+            bcs         @not
+            sta         cnt
+            lda         dlo + 1,x
+            sta         w
+            lda         dhi + 1,x
+            sta         w + 1
+            ldy         #0                                  ; (A / in it: not bare)
+:
+            lda         (w),y
+            cmp         #'/'
+            beq         @not
+            iny
+            cpy         cnt
+            bne         :-
+            ldy         #LIB_LEN - 1                        ; /lib/forth/, then it
+:
+            lda         s_lib,y
+            sta         pathbuf,y
+            dey
+            bpl         :-
+            ldy         #0
+:
+            lda         (w),y
+            sta         pathbuf + LIB_LEN,y
+            iny
+            cpy         cnt
+            bne         :-
+            clc
+            lda         dlo,x
+            adc         #LIB_LEN
+            sta         dlo,x
+            lda         #<pathbuf
+            sta         dlo + 1,x
+            lda         #>pathbuf
+            sta         dhi + 1,x
+            clc
+            rts
+@not:
+            sec
+            rts
+
+s_lib:      .byte       "/lib/forth/"
+LIB_LEN     = * - s_lib

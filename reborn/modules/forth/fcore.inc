@@ -41,8 +41,7 @@ over:
 over_end:
             rts
 
-            HEADERI     "NIP", nip
-nip:
+nip:                                                        ; ( a b -- b ) (the Core Extension library's NIP: a copy)
             lda         dlo,x
             sta         dlo + 1,x
             lda         dhi,x
@@ -50,11 +49,6 @@ nip:
             inx
 nip_end:
             rts
-
-            HEADER      "TUCK", 0
-tuck:                                                       ; ( a b -- b a b )
-            jsr         swap
-            jmp         over
 
             HEADER      "ROT", 0
 rot:                                                        ; ( a b c -- b c a )
@@ -136,7 +130,7 @@ depth:
             PUSHAY
             rts
 
-            HEADER      "PICK", 0
+; PICK's (the Core Extension library's header)
 pick:                                                       ; ( xu ... x0 u -- xu ... x0 xu )
             txa
             clc
@@ -148,7 +142,7 @@ pick:                                                       ; ( xu ... x0 u -- x
             sta         dhi,x
             rts
 
-            HEADER      "ROLL", 0
+; ROLL's (the Core Extension library's header)
 roll:                                                       ; ( xu xu-1 ... x0 u -- xu-1 ... x0 xu )
             lda         dlo,x
             inx
@@ -211,60 +205,6 @@ rfetch:
             sta         dlo,x
             sty         dhi,x
 rfetch_end:
-            rts
-
-            HEADERI     "2>R", twotor
-twotor:
-            lda         dhi + 1,x
-            pha
-            lda         dlo + 1,x
-            pha
-            lda         dhi,x
-            pha
-            lda         dlo,x
-            pha
-            inx
-            inx
-twotor_end:
-            rts
-
-            HEADERI     "2R>", tworfrom
-tworfrom:
-            dex
-            dex
-            pla
-            sta         dlo,x
-            pla
-            sta         dhi,x
-            pla
-            sta         dlo + 1,x
-            pla
-            sta         dhi + 1,x
-tworfrom_end:
-            rts
-
-            HEADERI     "2R@", tworfetch
-tworfetch:
-            stx         xsave
-            tsx
-            lda         $0101,x
-            sta         tmp
-            lda         $0102,x
-            sta         tmp + 1
-            lda         $0103,x
-            sta         tmp2
-            lda         $0104,x
-            ldx         xsave
-            dex
-            dex
-            sta         dhi + 1,x
-            lda         tmp2
-            sta         dlo + 1,x
-            lda         tmp
-            sta         dlo,x
-            lda         tmp + 1
-            sta         dhi,x
-tworfetch_end:
             rts
 
             HEADERI     "UNLOOP", unloop
@@ -516,11 +456,6 @@ equal:
             inx
             bra         zero_tos
 
-            HEADER      "<>", 0
-notequal:
-            jsr         equal
-            jmp         invert
-
             HEADER      "<", 0
 less:
             jsr         lt_flag
@@ -539,11 +474,6 @@ uless:
             jsr         ult_flag
             bra         flag_c
 
-            HEADER      "U>", 0
-ugreater:
-            jsr         swap
-            jmp         uless
-
             HEADER      "0=", 0
 zequal:
             lda         dlo,x
@@ -551,61 +481,11 @@ zequal:
             beq         true_tos
             bra         zero_tos
 
-            HEADER      "0<>", 0
-znotequal:
-            lda         dlo,x
-            ora         dhi,x
-            bne         true_tos
-            bra         zero_tos
-
             HEADER      "0<", 0
 zless:
             lda         dhi,x
             bmi         true_tos
             bra         zero_tos
-
-            HEADER      "0>", 0
-zgreater:
-            lda         dhi,x
-            bmi         @no
-            ora         dlo,x
-            beq         @no
-            jmp         true_tos
-@no:
-            jmp         zero_tos
-
-            HEADER      "WITHIN", 0
-within:                                                     ; ( n lo hi -- flag ): n - lo U< hi - lo
-            sec
-            lda         dlo,x
-            sbc         dlo + 1,x
-            sta         tmp
-            lda         dhi,x
-            sbc         dhi + 1,x
-            sta         tmp + 1
-            sec
-            lda         dlo + 2,x
-            sbc         dlo + 1,x
-            sta         dlo + 2,x
-            lda         dhi + 2,x
-            sbc         dhi + 1,x
-            sta         dhi + 2,x
-            inx
-            lda         tmp
-            sta         dlo,x
-            lda         tmp + 1
-            sta         dhi,x
-            jmp         uless
-
-            HEADER      "TRUE", 0
-true:
-            dex
-            jmp         true_tos
-
-            HEADER      "FALSE", 0
-false:
-            dex
-            jmp         zero_tos
 
 ; ---- Memory
 
@@ -735,7 +615,6 @@ move:                                                       ; ( from to u -- ): 
             bcc         cmove_up
             jmp         cmove
 
-            HEADER      "CMOVE", 0
 cmove:                                                      ; ( from to u -- ): a byte at a time, up
             jsr         move_args
 @page:
@@ -764,7 +643,6 @@ cmove:                                                      ; ( from to u -- ): 
 @done:
             rts
 
-            HEADER      "CMOVE>", 0
 cmove_up:                                                   ; ( from to u -- ): a byte at a time, from the end down
             jsr         move_args
             clc                                             ; (w, w2: their last pages)
@@ -855,12 +733,6 @@ fill_a:                                                     ; tmp bytes of .A at
             bne         :-
 @done:
             rts
-
-            HEADER      "ERASE", 0
-erase:
-            dex
-            jsr         zero_tos
-            jmp         fill
 
             HEADER      "COUNT", 0
 count:                                                      ; ( c-addr -- addr u )
@@ -959,19 +831,6 @@ ccomma:
             inx
             jmp         ccomma_a
 
-            HEADER      "UNUSED", 0
-unused:
-            sec
-            lda         #<DICT_END
-            sbc         here
-            pha
-            lda         #>DICT_END
-            sbc         here + 1
-            tay
-            pla
-            PUSHAY
-            rts
-
 ; ---- Variables and constants of the system
 
             HEADER      "BASE", 0
@@ -986,9 +845,7 @@ decimal:
             lda         #10
             bra         set_base
 
-            HEADER      "HEX", 0
-hex:
-            lda         #16
+; BASE .A (DECIMAL's; and HEX's: the Core Extension library's)
 set_base:
             sta         base
             stz         base + 1
@@ -1005,13 +862,6 @@ state_:
 toin:
             lda         #<to_in
             ldy         #>to_in
-            PUSHAY
-            rts
-
-            HEADER      "PAD", 0
-pad_:
-            lda         #<pad
-            ldy         #>pad
             PUSHAY
             rts
 

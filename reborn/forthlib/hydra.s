@@ -1,11 +1,26 @@
 ; ****************************************************************************
-; fhydra.inc - forth's Hydra words (included by forth.s): the sys- words' call (their headers are made in RAM as forth
-; starts: fsys.inc, in the second bank, from the specification's table), zero-terminated strings, SH and RUN, the
-; bank and segment words, and Ctrl-C.
+; hydra.s - HyForth's Hydra library (/lib/forth/hydra.fl): a sys- word for each system call a program makes (their
+; headers forthsys.inc's, tools/apigen.js's, from the specification), zero-terminated strings, SH and RUN, the bank and
+; segment words, and forth's arguments (ARGC, ARG).
 ;   A sys- word is a system call with its registers as stack items, in the specification's order (spec/api.def;
 ; /rom/doc/api.md has each one's), the first deepest: its inputs, then its outputs and, if the call can fail, an ior
 ; (0, or -512 less the error code; its outputs 0 then).  A register is a cell (rN, .A/.X: 16 bits; .A, .X, .Y: a
 ; byte), or a double (rN and the next: r0/r1).  A name is a zero-terminated string's address (>Z).
+
+.include "forthlib.inc"
+
+.bss
+zbufs:      .res        PATH_SIZE * 2                       ; >Z's two buffers, in turn ...
+zbuf_n:     .res        1                                   ;   the one last used
+argbuf:     .res        ARGS_MAX                            ; SH's and RUN's program's arguments
+sys_a:      .res        1                                   ; A sys- word's call: .A, .X and .Y, in and out ...
+sys_x:      .res        1
+sys_y:      .res        1
+sys_p:      .res        1                                   ;   its flags (C: it failed) ...
+sys_f:      .res        1                                   ;   its descriptor's flags ($80: an ior) ...
+sys_to:     .res        2                                   ;   and its address
+.assert     sys_y = sys_a + 2 .and sys_x = sys_a + 1, error, "sys_a, sys_x, sys_y: in that order (sys_pop, sys_push)"
+.code
 
 ; ---- The sys- words
 
@@ -202,26 +217,8 @@ toz:                                                        ; ( c-addr u -- z-ad
             rts
 
             HEADER      "ZCOUNT", 0
-zcount:                                                     ; ( z-addr -- c-addr u )
-            lda         dlo,x
-            sta         w
-            lda         dhi,x
-            sta         w + 1
-            stz         tmp
-            stz         tmp + 1
-:
-            lda         (w)
-            beq         :+
-            jsr         w_inc
-            inc         tmp
-            bne         :-
-            inc         tmp + 1
-            bra         :-
-:
-            lda         tmp
-            ldy         tmp + 1
-            PUSHAY
-            rts
+zcount_w:                                                   ; ( z-addr -- c-addr u )
+            jmp         zcount
 
 ; ---- Programs
 
@@ -512,79 +509,91 @@ segbankstore:                                               ; ( seg n -- ior ): 
             ldx         xsave
             jmp         push_ior
 
-; ---- Ctrl-C: the note handler (forth.s's notes) sets intr; a word interpreted, a loop (compiled: comp_poll; DO's:
-; xloop, xploop) and a wait (KEY, MS, a file's line) THROW -28 then
+; ---- forth's arguments
 
-; THROW -28, intr cleared
-intr_throw:
-            stz         intr
-            lda         #<-28
-            jmp         throw_a
-
-; ---- The second bank's words: each one's code (its header in RAM) is jsr far_word, then its code's address there
-
-; A second bank's word: its code, through FAR2 (the return address is its caller's)
-far_word:
-            pla
-            sta         p1
-            pla
-            sta         p1 + 1
-            ldy         #1
-            lda         (p1),y
-            sta         hyx2_to
-            iny
-            lda         (p1),y
-            sta         hyx2_to + 1
-            jmp         hyx2_far2
-
-; ---- Scripts and libraries
-
-; forth file.fs [argument ...]: the file INCLUDED (a name with no / not there: /lib/forth's), then the end: code 0,
-; or 1 after an error's message (its file and line)
-run_script:
-            lda         argp
-            ldy         argp + 1
+            HEADER      "ARGC", 0
+argc:                                                       ; ( -- n ): forth's arguments (forth file.fs a b: 3, the
+            jsr         argl_first                           ;   file's name the first); at the console, 0
+            stz         cnt
+@arg:
+            bcs         @push
+            inc         cnt
+            jsr         argl_next
+            bra         @arg
+@push:
+            lda         cnt
+            ldy         #0
             PUSHAY
-            jsr         zcount
-            lda         #<included
-            ldy         #>included
-            PUSHAY
-            jsr         catch
-            lda         dlo,x
-            ora         dhi,x
-            beq         :+
-            jsr         show_error
-            lda         #1
-:
-            pha
-            jsr         flush
-            stz         r0
-            stz         r0 + 1
-            pla
-            jmp         EXITS
-
-            HEADER      "LIBRARY", 0
-library:                                                    ; ( "name" -- wid ): a library's start: name a CONSTANT,
-            jsr         getcurrent                          ;   a new word list, which goes first in the search order
-            jsr         wordlist                            ;   and takes the definitions; wid the compilation word
-            jsr         dup                                 ;   list before (END-LIBRARY's)
-            jsr         constant
-            jsr         dup
-            jsr         setcurrent
-            lda         order_n                             ; (First in the order, before the rest)
-            bne         :+
-            inc         order_n
-            bra         @first
-:
-            jsr         also
-@first:
-            lda         dlo,x
-            sta         order
-            lda         dhi,x
-            sta         order + 1
-            inx
             rts
 
-            HEADER      "END-LIBRARY", 0
-endlibrary:                                                 ; ( wid -- ): a library's end: definitions where they were,
-            jmp         setcurrent                          ;   its word list kept in the order
+            HEADER      "ARG", 0
+arg:                                                        ; ( n -- c-addr u ): argument n (0: the file's name); past
+            lda         dhi,x                               ;   the last, 0 0
+            bne         @none
+            lda         dlo,x
+            sta         cnt
+            jsr         argl_first
+@find:
+            bcs         @none
+            lda         cnt
+            beq         @found
+            dec         cnt
+            jsr         argl_next
+            bra         @find
+@found:
+            lda         w
+            sta         dlo,x
+            lda         w + 1
+            sta         dhi,x
+            ldy         #0                                  ; (Its length)
+:
+            lda         (w),y
+            beq         :+
+            iny
+            bne         :-
+:
+            tya
+            ldy         #0
+            PUSHAY
+            rts
+@none:
+            stz         dlo,x
+            stz         dhi,x
+            dex
+            stz         dlo,x
+            stz         dhi,x
+            rts
+
+; w = the first argument.  OUT: C = 1 if there's none
+argl_first:
+            lda         argp
+            sta         w
+            lda         argp + 1
+            sta         w + 1
+            ora         w
+            bne         argl_is
+            sec
+            rts
+
+; w past its argument, to the next.  OUT: C = 1 if there's none (the empty one after the last)
+argl_next:
+            lda         (w)
+            pha
+            inc         w
+            bne         :+
+            inc         w + 1
+:
+            pla
+            bne         argl_next
+argl_is:
+            lda         (w)
+            bne         :+
+            sec
+            rts
+:
+            clc
+            rts
+
+; ---- The sys- words' headers
+
+.include "forthsys.inc"

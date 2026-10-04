@@ -236,18 +236,6 @@ refill_in:
 @done:
             rts
 
-            HEADER      "REFILL", 0
-refill:                                                     ; ( -- flag ): a string's (EVALUATE) can't
-            lda         src_id + 1
-            bmi         @false
-            jsr         refill_src
-            bcs         @false
-            dex
-            jmp         true_tos
-@false:
-            dex
-            jmp         zero_tos
-
 ; REFILL for stdin or a file (the source's).  OUT: C = 1 at its end
 refill_src:
             lda         src_id
@@ -473,14 +461,7 @@ skip_delims:
 @done:
             rts
 
-            HEADER      "PARSE", 0
-parse:                                                      ; ( char "ccc<char>" -- c-addr u )
-            lda         dlo,x
-            inx
-            sta         cnt
-            jmp         parse_to
-
-            HEADER      "PARSE-NAME", 0
+; PARSE-NAME's (the Core Extension library's header), the interpreter's
 parse_name:                                                 ; ( "<spaces>name<space>" -- c-addr u )
             lda         #' '
             sta         cnt
@@ -534,130 +515,6 @@ source:
             PUSHAY
             rts
 
-            HEADER      "SOURCE-ID", 0
-sourceid:
-            lda         src_id
-            ldy         src_id + 1
-            PUSHAY
-            rts
-
-            HEADER      "SAVE-INPUT", 0
-saveinput:                                                  ; ( -- pos pos-hi line >in id 5 )
-            lda         src_pos
-            ldy         src_pos + 1
-            PUSHAY
-            lda         src_pos + 2
-            ldy         src_pos + 3
-            PUSHAY
-            lda         src_line
-            ldy         src_line + 1
-            PUSHAY
-            lda         to_in
-            ldy         to_in + 1
-            PUSHAY
-            lda         src_id
-            ldy         src_id + 1
-            PUSHAY
-            lda         #5
-            ldy         #0
-            PUSHAY
-            rts
-
-            HEADER      "RESTORE-INPUT", 0
-restoreinput:                                               ; ( pos pos-hi line >in id 5 -- flag ): false if it
-            lda         dlo,x                               ;   could: the same source, and its line still in the
-            cmp         #5                                  ;   buffer (a file's: read again, from where it was)
-            bne         @fail_n
-            lda         dhi,x
-            bne         @fail_n
-            lda         dlo + 1,x
-            cmp         src_id
-            bne         @fail
-            lda         dhi + 1,x
-            cmp         src_id + 1
-            bne         @fail
-            ora         src_id                              ; (A file?)
-            beq         @line
-            cmp         #$FF
-            beq         @line
-            jsr         ri_file
-            bcs         @fail
-            bra         @set
-@line:
-            lda         dlo + 3,x
-            cmp         src_line
-            bne         @fail
-            lda         dhi + 3,x
-            cmp         src_line + 1
-            bne         @fail
-@set:
-            lda         dlo + 3,x
-            sta         src_line
-            lda         dhi + 3,x
-            sta         src_line + 1
-            lda         dlo + 2,x
-            sta         to_in
-            lda         dhi + 2,x
-            sta         to_in + 1
-            txa
-            clc
-            adc         #5
-            tax
-            jmp         zero_tos
-@fail_n:
-            lda         dlo,x
-            bra         :+
-@fail:
-            lda         #5
-:
-            stx         xsave
-            clc
-            adc         xsave
-            tax
-            jmp         true_tos
-
-; RESTORE-INPUT's, for a file: its line, unless it's the one SAVE-INPUT's place says, read again from there.
-; OUT: C = 1 if it can't be
-ri_file:
-            lda         dlo + 5,x
-            cmp         src_pos
-            bne         @seek
-            lda         dhi + 5,x
-            cmp         src_pos + 1
-            bne         @seek
-            lda         dlo + 4,x
-            cmp         src_pos + 2
-            bne         @seek
-            lda         dhi + 4,x
-            cmp         src_pos + 3
-            bne         @seek
-            clc
-            rts
-@seek:
-            lda         dlo + 5,x
-            sta         src_pos
-            sta         r0
-            lda         dhi + 5,x
-            sta         src_pos + 1
-            sta         r0 + 1
-            lda         dlo + 4,x
-            sta         src_pos + 2
-            sta         r1
-            lda         dhi + 4,x
-            sta         src_pos + 3
-            sta         r1 + 1
-            stz         src_cons
-            stz         src_cons + 1
-            stx         xsave
-            lda         src_id
-            ldx         #0
-            jsr         SEEK
-            ldx         xsave
-            bcs         @done
-            jmp         refill_file
-@done:
-            rts
-
             HEADER      "(", F_IMMEDIATE
 paren:                                                      ; To ")": a comment; a file's (or stdin's but the
             lda         #')'                                ;   console's) on over lines, till there is one
@@ -704,13 +561,6 @@ backslash:
             sta         to_in + 1
             rts
 
-            HEADER      ".(", F_IMMEDIATE
-dotparen:
-            lda         #')'
-            sta         cnt
-            jsr         parse_to
-            jmp         type
-
             HEADER      "CHAR", 0
 char:
             jsr         parse_name
@@ -753,28 +603,6 @@ hold_a:
             sta         w3 + 1
             pla
             sta         (w3)
-            rts
-
-            HEADER      "HOLDS", 0
-holds:                                                      ; ( addr u -- )
-:
-            lda         dlo,x
-            ora         dhi,x
-            beq         @done
-            jsr         oneminus
-            clc
-            lda         dlo + 1,x
-            adc         dlo,x
-            sta         w
-            lda         dhi + 1,x
-            adc         dhi,x
-            sta         w + 1
-            lda         (w)
-            jsr         hold_a
-            bra         :-
-@done:
-            inx
-            inx
             rts
 
             HEADER      "#", 0
@@ -860,66 +688,6 @@ udot:
             jsr         u_text
             jsr         type
             jmp         space
-
-; ( addr u w -- ): spaces to w, then the text
-right:
-            sec
-            lda         dlo,x
-            sbc         dlo + 1,x
-            sta         dlo,x
-            lda         dhi,x
-            sbc         dhi + 1,x
-            sta         dhi,x
-            jsr         spaces
-            jmp         type
-
-            HEADER      ".R", 0
-dotr:                                                       ; ( n w -- )
-            jsr         save_top
-            jsr         n_text
-            jsr         push_tmp3
-            bra         right
-
-            HEADER      "U.R", 0
-udotr:
-            jsr         save_top
-            jsr         u_text
-            jsr         push_tmp3
-            bra         right
-
-            HEADER      "?", 0
-question:
-            jsr         fetch
-            jmp         dot
-
-            HEADER      ".S", 0
-dots:                                                       ; ( -- ): "<depth> items", the top last
-            lda         #'<'
-            jsr         emit_a
-            jsr         depth
-            jsr         u_text
-            jsr         type
-            lda         #'>'
-            jsr         emit_a
-            jsr         space
-            stx         tmp3                                ; (The top's index; tmp3 + 1: the next item's, + 1)
-            lda         #DS_N
-            sta         tmp3 + 1
-@item:
-            dec         tmp3 + 1                            ; The deepest first, to the top
-            lda         tmp3 + 1
-            cmp         tmp3
-            bcc         @done
-            tay
-            dex
-            lda         dlo,y
-            sta         dlo,x
-            lda         dhi,y
-            sta         dhi,x
-            jsr         dot
-            bra         @item
-@done:
-            rts
 
 ; ---- Numbers in: >NUMBER, and the interpreter's
 
@@ -1310,121 +1078,3 @@ dotquote:
             lda         #<xdotq
             ldy         #>xdotq
             jmp         comp_str
-
-            HEADERQ     "C", F_IMMEDIATE
-cquote:
-            lda         #'"'
-            sta         cnt
-            jsr         parse_to
-            lda         #<xcquote
-            ldy         #>xcquote
-            jmp         comp_str
-
-            HEADERQ     "S\", F_IMMEDIATE
-sbquote:                                                    ; S" with escapes: \a \b \e \f \l \m \n \q \r \t \v \z
-            jsr         src_rest                            ;   \" \\ \xHH (into wbuf, then as S")
-            lda         #<wbuf
-            sta         w2
-            lda         #>wbuf
-            sta         w2 + 1
-            stz         cnt                                 ; (cnt: the bytes in wbuf)
-@char:
-            jsr         @get
-            bcs         @end
-            cmp         #'"'
-            beq         @end
-            cmp         #'\'
-            bne         @put
-            jsr         @get
-            bcs         @end
-            ldy         #ESC_N - 1
-:
-            cmp         esc_from,y
-            beq         @esc
-            dey
-            bpl         :-
-            cmp         #'x'
-            beq         @hex
-            cmp         #'m'
-            bne         @put
-            lda         #$0D                                ; (\m: CR LF)
-            jsr         @store
-            lda         #LF
-            bra         @put
-@esc:
-            lda         esc_to,y
-@put:
-            jsr         @store
-            bra         @char
-@hex:
-            jsr         @get
-            jsr         @nibble
-            asl
-            asl
-            asl
-            asl
-            sta         tmp2
-            jsr         @get
-            jsr         @nibble
-            ora         tmp2
-            bra         @put
-@end:
-            dex
-            lda         #<wbuf
-            sta         dlo,x
-            lda         #>wbuf
-            sta         dhi,x
-            dex
-            lda         cnt
-            sta         dlo,x
-            stz         dhi,x
-            jmp         str_comp
-
-@get:                                                       ; The source's next char (C = 1: none), >IN past it
-            lda         tmp
-            ora         tmp + 1
-            beq         @none
-            lda         (w)
-            pha
-            jsr         in_next
-            inc         w
-            bne         :+
-            inc         w + 1
-:
-            lda         tmp
-            bne         :+
-            dec         tmp + 1
-:
-            dec         tmp
-            pla
-            clc
-            rts
-@none:
-            sec
-            rts
-
-@store:
-            ldy         cnt
-            cpy         #255
-            bcs         :+
-            sta         (w2),y
-            inc         cnt
-:
-            rts
-
-@nibble:
-            phx                                             ; (A hex digit, any base)
-            ldx         base
-            ldy         #16
-            sty         base
-            jsr         digit
-            stx         base
-            plx
-            bcc         :+
-            lda         #0
-:
-            rts
-
-esc_from:   .byte       "abefnqrtvz", $22, $5C, "l"
-ESC_N       = * - esc_from
-esc_to:     .byte       7, 8, 27, 12, LF, $22, $0D, 9, 11, 0, $22, $5C, LF

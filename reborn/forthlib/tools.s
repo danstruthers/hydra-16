@@ -1,7 +1,93 @@
 ; ****************************************************************************
-; ftools.inc - forth's Programming-Tools words (included by forth.s): DUMP and SEE, [IF] [ELSE] [THEN] and their
-; kind, the control-flow stack's, the return stack's, SYNONYM, and the name tokens' (an nt is a header's address).
-; .S, ?, WORDS, AHEAD and BYE are with the words they're like.
+; tools.s - HyForth's Programming-Tools library (/lib/forth/tools.fl: REQUIRE tools.fl): .S ? WORDS DUMP SEE, AHEAD,
+; [IF] [ELSE] [THEN] and their kind, the control-flow stack's, the return stack's, SYNONYM, and the name tokens' (an
+; nt is a header's address).  BYE is the core's.
+
+.include "forthlib.inc"
+
+            HEADER      "AHEAD", F_IMMEDIATE
+ahead:
+            jmp         comp_fwd
+
+            HEADER      "?", 0
+question:
+            jsr         fetch
+            jmp         dot
+
+            HEADER      ".S", 0
+dots:                                                       ; ( -- ): "<depth> items", the top last
+            lda         #'<'
+            jsr         emit_a
+            jsr         depth
+            jsr         u_text
+            jsr         type
+            lda         #'>'
+            jsr         emit_a
+            jsr         space
+            stx         tmp3                                ; (The top's index; tmp3 + 1: the next item's, + 1)
+            lda         #DS_N
+            sta         tmp3 + 1
+@item:
+            dec         tmp3 + 1                            ; The deepest first, to the top
+            lda         tmp3 + 1
+            cmp         tmp3
+            bcc         @done
+            tay
+            dex
+            lda         dlo,y
+            sta         dlo,x
+            lda         dhi,y
+            sta         dhi,x
+            jsr         dot
+            bra         @item
+@done:
+            rts
+
+            HEADER      "WORDS", 0
+words:                                                      ; The first word list in the order: its names, newest first
+            lda         order_n
+            beq         @done
+            lda         order
+            sta         w
+            lda         order + 1
+            sta         w + 1
+            ldy         #1
+            lda         (w),y
+            pha
+            lda         (w)
+            sta         w
+            pla
+            sta         w + 1
+@hdr:
+            lda         w
+            ora         w + 1
+            beq         @done
+            ldy         #2
+            lda         (w),y
+            and         #F_HIDDEN
+            bne         @next
+            lda         (w),y
+            and         #LEN_MASK
+            sta         cnt
+            ldy         #3
+:
+            lda         (w),y
+            jsr         emit_a
+            iny
+            dec         cnt
+            bne         :-
+            jsr         space
+@next:
+            ldy         #1
+            lda         (w),y
+            pha
+            lda         (w)
+            sta         w
+            pla
+            sta         w + 1
+            bra         @hdr
+@done:
+            jmp         cr
 
             HEADER      "DUMP", 0
 dump:                                                       ; ( addr u -- ): 8 bytes a line, in hex and as text
@@ -537,10 +623,10 @@ inline_at:
             rts
 
 see_xt:     .word       xsquote, xdotq, xcquote, xabortq, do_does, xdo, xqdo, xloop, xploop, dovar, dovalue
-            .word       domarker, sys_call, far_word, 0
+            .word       domarker, 0
 see_text:   .word       s_squote, s_dotq, s_cquote, s_abortq, s_does, s_do, s_qdo, s_loop, s_ploop, s_create
-            .word       s_value, s_marker, s_sys, s_far
-see_after:  .byte       $80, $80, $80, $80, 3, 0, 5, 9, 9, $7F, $7F, $7F, $7F, $7F
+            .word       s_value, s_marker
+see_after:  .byte       $80, $80, $80, $80, 3, 0, 5, 9, 9, $7F, $7F, $7F
 see_lit:    .byte       OP_DEX, OP_LDA_IMM, 0, OP_STA_ZPX, dlo, OP_LDA_IMM, 0, OP_STA_ZPX, dhi
 see_if:     .byte       OP_INX, OP_LDA_ZPX, dlo - 1, OP_ORA_ZPX, dhi - 1, OP_BNE, 3
 s_squote:   .byte       "S", $22, 0
@@ -555,8 +641,6 @@ s_ploop:    .byte       "+LOOP", 0
 s_create:   .byte       "CREATE", 0
 s_value:    .byte       "VALUE", 0
 s_marker:   .byte       "MARKER", 0
-s_sys:      .byte       "(a system call)", 0
-s_far:      .byte       "(the second bank's)", 0
 s_exit:     .byte       "EXIT ", 0
 s_immed:    .byte       " IMMEDIATE", 0
 s_jmp:      .byte       "jmp ", 0

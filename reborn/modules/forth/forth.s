@@ -1,19 +1,22 @@
 ; ****************************************************************************
 ; forth - HyForth, rebuilt (docs/reimplementation-from-scratch.md, §16): a Forth 2012 system, a program run in place
 ; from its paged ROM module.  `forth` at rc's prompt starts it; `forth <file` runs a file of source (its lines from
-; stdin, as typed ones).  The word sets: Core and Core Extension, Exception, File Access, Facility, String,
-; Search-Order and Programming-Tools, with their extensions (but the editor's, the assembler's and EKEY's); and the
-; Hydra's words: a sys- word for each system call a program makes (made from the specification), SH and RUN, banks
-; and segments.  Ctrl-C (a note) is THROW -28 at the next word, loop or wait.  `forth file.fs [argument ...]` runs a
-; script (the file INCLUDED, then the end: code 1 after an error); a file's first line #!... is skipped; a name
-; INCLUDED that isn't there, with no / in it, is /lib/forth's (REQUIRE hydra.fs).  A module of two banks: the second
-; has some words (their headers made in RAM as forth starts: FARWORD) and the sys- words' table.
+; stdin, as typed ones).  This module is the core: the Core word set, and INCLUDED, INCLUDE, REQUIRED, REQUIRE, \ and
+; BYE, to load the rest.  The other word sets are libraries, pre-compiled (forthlib/NAME.s, tools/forthlib.js:
+; /lib/forth/NAME.fl), loaded into the dictionary as INCLUDED or REQUIRE names them: Core Extension, Exception, File
+; Access, Facility, String, Search-Order and Programming-Tools, with their extensions (but the editor's, the
+; assembler's and EKEY's), Double-Number (a few words), and the Hydra's (a sys- word for each system call a program
+; makes, made from the specification; SH and RUN, banks and segments, ARGC and ARG).  As it starts, forth INCLUDEs
+; /lib/forth/startup.fs, if there is one (the ROM disk's: REQUIRE coreext.fl exception.fl file.fl tools.fl).  Ctrl-C
+; (a note) is THROW -28 at the next word, loop or wait.  `forth file.fs [argument ...]` runs a script (the file
+; INCLUDED, then the end: code 1 after an error); a file's first line #!... is skipped; a name INCLUDED that isn't
+; there, with no / in it, is /lib/forth's (REQUIRE hydra.fs).
 ;   Subroutine threaded: a word's execution token is its code's address, and a definition is a run of `jsr xt`
 ; (literals and IF's test compiled inline; a few short words, the return stack's among them, copied in whole: F_INLINE).
 ; The data stack is the program's zero page, low bytes and high bytes apart (dlo, dhi), indexed by .X, which every
 ; word keeps as the stack pointer (DS_N: empty; it grows down); the return stack is the 6502's.  The dictionary is the
 ; task's RAM after the BSS, to DICT_END; the words in ROM have their headers beside their code, chained into the same
-; list as the ones defined in RAM (FORTH's: a word list is a chain of headers).  A header: the link (2: the one before,
+; list as the ones loaded or defined in RAM (FORTH's: a word list is a chain of headers).  A header: the link (2: the one before,
 ; 0 at the first), the name's length and flags (1: F_IMMEDIATE, F_HIDDEN, F_INLINE), the name (as typed: found
 ; ignoring case), then (F_INLINE) the code's length; the code, its xt, follows.  A header's address is its nt.
 ;   Input: stdin, a line at a time (the console's cooked lines, or a file's, through rc's <), or a file's (INCLUDED),
@@ -23,45 +26,20 @@
 ; being included closed, and on with the next line.
 ;   The parts: fcore.inc (stacks, arithmetic, memory), fmath.inc (multiplication and division), ftext.inc (input,
 ; output, numbers, strings, parsing), fcomp.inc (the compiler: definitions, control flow, defining words), finterp.inc
-; (the text interpreter, QUIT, CATCH and THROW, EVALUATE), fsearch.inc (word lists and the search order), ffile.inc
-; (files, and including them), fstring.inc (strings, the Facility words), ftools.inc (the Programming-Tools words),
-; fhydra.inc (the Hydra's words).  Their words are in that order in the dictionary, then the second bank's and the
-; sys- words (in RAM).  The second bank: fsys.inc (the RAM headers made), fbank2.inc (its words: UNESCAPE, REPLACES,
-; SUBSTITUTE, ARGC, ARG; INCLUDED's /lib/forth), and the sys- words' table (obj/gen/forthsys.inc, apigen's).
+; (the text interpreter, QUIT, CATCH and THROW, EVALUATE), ffile.inc (files: including them, loading a library),
+; fscript.inc (Ctrl-C, scripts); fdefs.inc has the constants and HEADER, which the libraries use too.  Their words are
+; in that order in the dictionary, then the libraries' as they're loaded.  A library calls the core's code by its
+; label (obj/gen/forthcore.inc, the build's: the core's labels, as equates; a library is for the core it was built
+; with, core_id); the core's code that it uses itself (PICK, AGAIN, CATCH, OPEN-FILE ...), and what compiled
+; definitions call (?DO's, VALUE's, DEFER's ...), stays here, headerless, and the library's header jumps to it.
 
 .include "hydra.inc"
 .include "hw.inc"
 .include "hyx2.inc"
 .include "macros.inc"
+.include "fdefs.inc"
 
-            HYX2_PROGRAM "forth", main, 2
-
-DS_N            = 32            ; The data stack's cells
-F_IMMEDIATE     = $80           ; A header's flags (with the name's length, 0-31) ...
-F_HIDDEN        = $40           ;   a definition not finished yet ...
-F_INLINE        = $20           ;   code copied into a definition, not called (its length after the name)
-LEN_MASK        = $1F
-DICT_END        = $7F00         ; The dictionary's end (the break's)
-TIB_SIZE        = 128           ; A line of input at most
-IBUF_SIZE       = 256           ; stdin's bytes, read ahead
-OBUF_SIZE       = 128           ; The output, waiting to be written
-HOLD_SIZE       = 70            ; Pictured numeric output (2 * 32 + 2 for a binary double, and more)
-PAD_SIZE        = 100
-WBUF_SIZE       = 257           ; WORD's counted string (255 at most, and a space after it)
-SBUF_SIZE       = 100           ; S" while interpreting: two of them, in turn
-ORDER_MAX       = 8             ; The search order's word lists, at most
-SRC_MAX         = 16            ; Sources nested (the source stack's records)
-INC_MAX         = 8             ; Files included, nested
-LINE_MAX        = 128           ; A file's line, at most (a longer one: the rest is the next) ...
-LINE_BUF        = LINE_MAX + 2  ;   in a buffer of that and 2 (READ-LINE's)
-LNAME_SIZE      = 32            ; A file being included: its name (counted, 31 at most)
-INCN_SIZE       = 256           ; The names of the files INCLUDED (REQUIRED's)
-SUBST_SIZE      = 255           ; REPLACES's names and texts (offsets in a byte)
-PATH_SIZE       = 128           ; A file's name, for the system
-JSR_OP          = $20           ; Opcodes the compiler lays down
-JMP_OP          = $4C
-RTS_OP          = $60
-BL_CHAR         = $20
+            HYX2_PROGRAM "forth", main
 
 .zeropage
 dlo:        .res        DS_N                                ; The data stack: low bytes ...
@@ -126,9 +104,7 @@ rl_len:     .res        2
 cond_lvl:   .res        1                                   ; [IF]'s skipping: how deep, and whether [ELSE] ends it
 cond_else:  .res        1
 incn_len:   .res        2                                   ; The files INCLUDED (REQUIRED's): their bytes in incn
-subst_len:  .res        1                                   ; REPLACES's: their bytes in substs
 raw:        .res        1                                   ; <> 0: the console in raw mode (KEY, KEY?)
-kq_fd:      .res        1                                   ; KEY?'s fd (/dev/cons, non-blocking), $FF: not open
 key_pend:   .res        1                                   ; <> 0: KEY? has a key (key_char) for KEY
 key_char:   .res        1
 ibuf:       .res        IBUF_SIZE
@@ -144,71 +120,11 @@ numtmp:     .res        4                                   ;   and another)
 lbufs:      .res        LINE_BUF * INC_MAX                  ; The files being included: each one's line ...
 lnames:     .res        LNAME_SIZE * INC_MAX                ;   and name (counted: INCLUDED's)
 incn:       .res        INCN_SIZE                           ; The files INCLUDED: counted names
-substs:     .res        SUBST_SIZE                          ; REPLACES's: each a counted name, then a counted text
 pathbuf:    .res        PATH_SIZE                           ; A file's name, zero-terminated (for the system)
 statbuf:    .res        SR_SIZE                             ; A stat record
-zbufs:      .res        PATH_SIZE * 2                       ; >Z's two buffers, in turn ...
-zbuf_n:     .res        1                                   ;   the one last used
-argbuf:     .res        ARGS_MAX                            ; SH's and RUN's program's arguments
-sys_a:      .res        1                                   ; A sys- word's call: .A, .X and .Y, in and out ...
-sys_x:      .res        1
-sys_y:      .res        1
-sys_p:      .res        1                                   ;   its flags (C: it failed) ...
-sys_f:      .res        1                                   ;   its descriptor's flags ($80: an ior) ...
-sys_to:     .res        2                                   ;   and its address
 argp:       .res        2                                   ; forth's arguments (main's r0): a script's name first
 script:     .res        1                                   ; <> 0: forth file.fs (the file run, then the end)
-.assert     sys_y = sys_a + 2 .and sys_x = sys_a + 1, error, "sys_a, sys_x, sys_y: in that order (sys_pop, sys_push)"
 dict:                                                       ; The dictionary, from here
-
-; ****************************************************************************
-; The headers: HEADER "NAME", flags before a word's code (its label after); HEADERI "NAME", label for an inline
-; word, whose code ends at label_end (an rts there, for EXECUTE).  Each header is hdr_N, its link hdr_N-1's (the
-; first's 0): hdr_n counts them
-hdr_n       .set        0
-
-.macro HEADER name, flags
-.ident(.sprintf("hdr_%d", hdr_n + 1)):
-.if hdr_n = 0
-            .word       0
-.else
-            .word       .ident(.sprintf("hdr_%d", hdr_n))
-.endif
-hdr_n       .set        hdr_n + 1
-            .byte       (flags) | .strlen(name)
-            .byte       name
-.endmacro
-
-; HEADERQ "NAME", flags: a name ending in a " (NAME", as ca65's strings can't hold one)
-.macro HEADERQ name, flags
-.ident(.sprintf("hdr_%d", hdr_n + 1)):
-            .word       .ident(.sprintf("hdr_%d", hdr_n))
-hdr_n       .set        hdr_n + 1
-            .byte       (flags) | (.strlen(name) + 1)
-            .byte       name, $22
-.endmacro
-
-.macro HEADERI name, label
-            HEADER      name, F_INLINE
-            .byte       .ident(.concat(.string(label), "_end")) - label
-.endmacro
-
-; FARWORD "NAME", label, flags: a word in the second bank (its code at label, there), its entry in far_table, from
-; which its header is made in RAM as forth starts (sys_build)
-.macro FARWORD name, label, flags
-.pushseg
-.segment "RODATA2"
-            .byte       (flags) | .strlen(name), name
-            .word       label
-.popseg
-.endmacro
-
-; Push .A (low) and .Y (high); pop into .A (low) and .Y (high)
-.macro PUSHAY
-            dex
-            sta         dlo,x
-            sty         dhi,x
-.endmacro
 
 .segment "DATA"
 ; The note handler, in RAM (either bank may be at $A000 when a note comes): Ctrl-C (NOTE_INTERRUPT) noted in intr,
@@ -227,7 +143,7 @@ notes:
 .code
 ; ****************************************************************************
 ; The start: the dictionary after the BSS, its end claimed (BREAK), decimal, stdin a console or not, Ctrl-C a
-; THROW; the sys- words' headers made (the second bank's sys_build); then QUIT
+; THROW; the banner (not a script's), and startup.fs (its libraries); then the script, or QUIT
 main:
             lda         r0                                  ; Its arguments: a script's name, and its own
             sta         argp
@@ -240,7 +156,6 @@ main:
             beq         :+
             inc         script
 :
-            HYX2_BANKS_INIT
             LDR         r0, DICT_END
             jsr         BREAK
             LDR         r0, notes
@@ -262,7 +177,10 @@ main:
             ldy         #>forth_wl
             sty         wl_last + 1
             sty         current + 1
-            jsr         only
+            sta         order
+            sty         order + 1
+            lda         #1
+            sta         order_n
             ldy         #SRC_SIZE - 1                       ; The source: stdin (no line yet), none nested
 :
             lda         #0
@@ -275,11 +193,9 @@ main:
             stz         inc_named
             stz         incn_len
             stz         incn_len + 1
-            stz         subst_len
             stz         raw
             stz         key_pend
             stz         intr
-            stz         zbuf_n
             lda         #10
             sta         base
             stz         base + 1
@@ -293,7 +209,6 @@ main:
             stz         sbuf_n
             lda         #$FF
             sta         ctlfd
-            sta         kq_fd
             stz         interactive                         ; The console on stdin: prompts
             stx         xsave
             LDR         r0, pad                             ; (Its stat record, in pad: unused yet)
@@ -309,10 +224,10 @@ main:
             bne         :+
             jsr         banner
 :
-            FAR2        sys_build
             tsx
             stx         rsp0
             ldx         #DS_N
+            jsr         startup
             lda         script
             beq         :+
             jmp         run_script
@@ -325,26 +240,48 @@ banner:
 
 s_banner:   .byte       "HyForth (Forth 2012), BYE to end", LF, 0
 
+; /lib/forth/startup.fs, if there is one, INCLUDED: the libraries forth starts with (the ROM's, or a card's or the
+; RAM disk's before it, through the /lib union).  An error in it: its message, and on
+startup:
+            lda         #<s_startup
+            ldy         #>s_startup
+            PUSHAY
+            lda         #S_STARTUP_LEN
+            ldy         #0
+            PUSHAY
+            lda         #<included
+            ldy         #>included
+            PUSHAY
+            jsr         catch
+            lda         dlo,x
+            ora         dhi,x
+            beq         @done
+            lda         dlo,x                               ; (None: nothing said)
+            cmp         #<(-512 - E_NOENT)
+            bne         @say
+            lda         dhi,x
+            cmp         #>(-512 - E_NOENT)
+            bne         @say
+            stz         throw_named
+            stz         err_noted
+@done:
+            inx
+            rts
+@say:
+            jmp         show_error
+
+s_startup:  .byte       "/lib/forth/startup.fs"
+S_STARTUP_LEN = * - s_startup
+
+; The core's id (tools/forthlib.js: a CRC of its image, patched in), which a library must have
+core_id:    .word       0
+
 .include "fcore.inc"
 .include "fmath.inc"
 .include "ftext.inc"
 .include "fcomp.inc"
 .include "finterp.inc"
-.include "fsearch.inc"
 .include "ffile.inc"
-.include "fstring.inc"
-.include "ftools.inc"
-.include "fhydra.inc"
+.include "fscript.inc"
 
 forth_last  = .ident(.sprintf("hdr_%d", hdr_n))             ; (The last ROM header: the word list's start)
-
-; ****************************************************************************
-; The second bank: its words (far_table: FARWORD's entries), the sys- words' table
-.segment "RODATA2"
-far_table:
-.segment "CODE2"
-.include "fsys.inc"
-.include "fbank2.inc"
-.segment "RODATA2"
-            .byte       0                                   ; (far_table's end)
-.include "forthsys.inc"

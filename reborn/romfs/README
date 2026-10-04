@@ -11,8 +11,12 @@ the modules (the disk x: mount '#f' /rom x).
                   after it
   lib/profile     what each shell runs as it starts (and a card's
                   /lib/profile after it)
-  lib/forth       HyForth's libraries (REQUIRE finds them): hydra.fs, the
-                  system's constants and error codes (REQUIRE hydra.fs)
+  lib/forth       HyForth's libraries (REQUIRE finds them): its word sets,
+                  pre-compiled (REQUIRE tools.fl): coreext.fl, exception.fl,
+                  file.fl, facility.fl, string.fl, search.fl, tools.fl,
+                  double.fl, and hydra.fl (the sys- words, SH, RUN, banks);
+                  hydra.fs, the system's constants and error codes; and
+                  startup.fs, what forth loads as it starts
   doc/api.md      the system calls, their registers and their errors
   bin             programs read into RAM to run: mkfs, fsck, label, and
                   grep and sort (in C); scom, a song (an rc script); bound

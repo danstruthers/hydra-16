@@ -1,24 +1,235 @@
 ; ****************************************************************************
-; fbank2.inc - forth's words in its second bank (included by forth.s, in CODE2): each has its header in RAM, made as
-; forth starts (FARWORD's entries in far_table: fsys.inc's sys_build), and its code here, run through FAR2 (far_word),
-; calling the first bank's routines through FAR1 (a THROW then goes back to its CATCH, in the first bank, with that
-; bank there).  What it reads it reads in RAM (or this bank).
-;   REPLACES's substitutions are in substs, each its name (counted) then its text (counted): SUBSTITUTE finds a name
-; in either case.  forth's arguments (forth file.fs a b) are the list main was given (argp): ARGC, ARG.
+; string.s - HyForth's String library (/lib/forth/string.fl): -TRAILING /STRING BLANK COMPARE SEARCH SLITERAL, CMOVE
+; and CMOVE> (the core's, as MOVE uses them), UNESCAPE, REPLACES and SUBSTITUTE.  REPLACES's substitutions are in
+; substs, each its name (counted) then its text (counted): SUBSTITUTE finds a name in either case.
 
-; .A in upper case (the first bank's upper)
-upper2:
-            cmp         #'a'
-            bcc         :+
-            cmp         #'z' + 1
-            bcs         :+
-            and         #$DF
+.include "forthlib.inc"
+
+.bss
+subst_len:  .res        1                                   ; REPLACES's: their bytes in substs ...
+substs:     .res        SUBST_SIZE                          ;   each a counted name, then a counted text
+.code
+
+            HEADER      "CMOVE", 0
+cmove_w:                                                    ; ( from to u -- ): a byte at a time, up
+            jmp         cmove
+
+            HEADER      "CMOVE>", 0
+cmove_up_w:                                                 ; ( from to u -- ): a byte at a time, from the end down
+            jmp         cmove_up
+
+            HEADER      "-TRAILING", 0
+dtrailing:                                                  ; ( c-addr u1 -- c-addr u2 ): without the spaces at its end
+            lda         dlo + 1,x
+            sta         w
+            lda         dhi + 1,x
+            sta         w + 1
+@char:
+            lda         dlo,x
+            ora         dhi,x
+            beq         @done
+            clc                                             ; (Its last char: w + u - 1)
+            lda         w
+            adc         dlo,x
+            sta         w2
+            lda         w + 1
+            adc         dhi,x
+            sta         w2 + 1
+            lda         w2
+            bne         :+
+            dec         w2 + 1
 :
+            dec         w2
+            lda         (w2)
+            cmp         #' '
+            bne         @done
+            jsr         oneminus
+            bra         @char
+@done:
             rts
 
-; ---- Strings
+            HEADER      "/STRING", 0
+slashstring:                                                ; ( c-addr u n -- c-addr+n u-n )
+            clc
+            lda         dlo + 2,x
+            adc         dlo,x
+            sta         dlo + 2,x
+            lda         dhi + 2,x
+            adc         dhi,x
+            sta         dhi + 2,x
+            sec
+            lda         dlo + 1,x
+            sbc         dlo,x
+            sta         dlo + 1,x
+            lda         dhi + 1,x
+            sbc         dhi,x
+            sta         dhi + 1,x
+            inx
+            rts
 
-            FARWORD     "UNESCAPE", unescape, 0
+            HEADER      "BLANK", 0
+blank:                                                      ; ( c-addr u -- )
+            dex
+            lda         #' '
+            sta         dlo,x
+            stz         dhi,x
+            jmp         fill
+
+            HEADER      "COMPARE", 0
+compare:                                                    ; ( c-addr1 u1 c-addr2 u2 -- n ): -1, 0, 1, by its chars'
+            lda         dlo + 3,x                           ;   values (and a shorter one first)
+            sta         w
+            lda         dhi + 3,x
+            sta         w + 1
+            lda         dlo + 2,x
+            sta         tmp
+            lda         dhi + 2,x
+            sta         tmp + 1
+            lda         dlo + 1,x
+            sta         w2
+            lda         dhi + 1,x
+            sta         w2 + 1
+            lda         dlo,x
+            sta         tmp2
+            lda         dhi,x
+            sta         tmp2 + 1
+            inx
+            inx
+            inx
+@char:
+            lda         tmp
+            ora         tmp + 1
+            bne         :+
+            lda         tmp2
+            ora         tmp2 + 1
+            beq         @equal
+            bra         @less
+:
+            lda         tmp2
+            ora         tmp2 + 1
+            beq         @more
+            lda         (w)
+            cmp         (w2)
+            bcc         @less
+            bne         @more
+            inc         w
+            bne         :+
+            inc         w + 1
+:
+            inc         w2
+            bne         :+
+            inc         w2 + 1
+:
+            lda         tmp
+            bne         :+
+            dec         tmp + 1
+:
+            dec         tmp
+            lda         tmp2
+            bne         :+
+            dec         tmp2 + 1
+:
+            dec         tmp2
+            bra         @char
+@equal:
+            jmp         zero_tos
+@less:
+            jmp         true_tos
+@more:
+            lda         #1
+            sta         dlo,x
+            stz         dhi,x
+            rts
+
+            HEADER      "SEARCH", 0
+search:                                                     ; ( c-addr1 u1 c-addr2 u2 -- c-addr3 u3 flag ): c-addr3
+            lda         dlo + 3,x                           ;   u3 from where c-addr2 u2 is in it; or (false)
+            sta         w                                   ;   c-addr1 u1
+            lda         dhi + 3,x
+            sta         w + 1
+            lda         dlo + 2,x
+            sta         tmp
+            lda         dhi + 2,x
+            sta         tmp + 1
+            lda         dlo + 1,x
+            sta         w2
+            lda         dhi + 1,x
+            sta         w2 + 1
+            lda         dlo,x
+            sta         tmp2
+            lda         dhi,x
+            sta         tmp2 + 1
+            inx
+@try:
+            lda         tmp                                 ; Shorter than it: not there
+            cmp         tmp2
+            lda         tmp + 1
+            sbc         tmp2 + 1
+            bcc         @no
+            lda         w                                   ; Here?
+            sta         w3
+            lda         w + 1
+            sta         w3 + 1
+            lda         w2
+            sta         p1
+            lda         w2 + 1
+            sta         p1 + 1
+            lda         tmp2
+            sta         p2
+            lda         tmp2 + 1
+            sta         p2 + 1
+@cmp:
+            lda         p2
+            ora         p2 + 1
+            beq         @yes
+            lda         (w3)
+            cmp         (p1)
+            bne         @next
+            inc         w3
+            bne         :+
+            inc         w3 + 1
+:
+            inc         p1
+            bne         :+
+            inc         p1 + 1
+:
+            lda         p2
+            bne         :+
+            dec         p2 + 1
+:
+            dec         p2
+            bra         @cmp
+@next:
+            inc         w
+            bne         :+
+            inc         w + 1
+:
+            lda         tmp
+            bne         :+
+            dec         tmp + 1
+:
+            dec         tmp
+            bra         @try
+@yes:
+            lda         w
+            sta         dlo + 2,x
+            lda         w + 1
+            sta         dhi + 2,x
+            lda         tmp
+            sta         dlo + 1,x
+            lda         tmp + 1
+            sta         dhi + 1,x
+            jmp         true_tos
+@no:
+            jmp         zero_tos
+
+            HEADER      "SLITERAL", F_IMMEDIATE
+sliteral:                                                   ; ( c-addr u -- ): compiled, as S" is
+            lda         #<xsquote
+            ldy         #>xsquote
+            jmp         comp_str
+
+            HEADER      "UNESCAPE", 0
 unescape:                                                   ; ( c-addr1 u1 c-addr2 -- c-addr2 u2 ): each % doubled
             lda         dlo,x
             sta         w2
@@ -77,7 +288,7 @@ unescape:                                                   ; ( c-addr1 u1 c-add
 :
             rts
 
-            FARWORD     "REPLACES", replaces, 0
+            HEADER      "REPLACES", 0
 replaces:                                                   ; ( c-addr1 u1 c-addr2 u2 -- ): SUBSTITUTE's %c-addr2%
             lda         dlo + 1,x                           ;   (its name) c-addr1 u1, copied (no room: THROW -79)
             sta         p2
@@ -146,7 +357,7 @@ replaces:                                                   ; ( c-addr1 u1 c-add
             rts
 @full:
             lda         #<-79
-            FAR1        throw_a
+            jmp         throw_a
 @copy:                                                      ; .A bytes from (p2), counted, into substs at .Y
             sta         cnt
             sta         substs,y
@@ -184,11 +395,11 @@ subst_find:
             cpy         #0
             beq         @found
             lda         (p1),y
-            jsr         upper2
+            jsr         upper
             sta         numtmp
             dey
             lda         (p2),y
-            jsr         upper2
+            jsr         upper
             cmp         numtmp
             bne         @next
             bra         @char
@@ -221,7 +432,7 @@ subst_find:
             sec
             rts
 
-            FARWORD     "SUBSTITUTE", substitute, 0
+            HEADER      "SUBSTITUTE", 0
 substitute:                                                 ; ( c-addr1 u1 c-addr2 u2 -- c-addr2 u3 n ): c-addr1 u1
             lda         dlo,x                               ;   into c-addr2, each %name% REPLACES's text (n of
             sta         tmp2                                ;   them), %% a %; n -78: no room, or the two overlap
@@ -403,142 +614,3 @@ substitute:                                                 ; ( c-addr1 u1 c-add
             lda         #1
             sta         numacc + 2
             rts
-
-; ---- forth's arguments
-
-            FARWORD     "ARGC", argc, 0
-argc:                                                       ; ( -- n ): forth's arguments (forth file.fs a b: 3, the
-            jsr         argl_first                           ;   file's name the first); at the console, 0
-            stz         cnt
-@arg:
-            bcs         @push
-            inc         cnt
-            jsr         argl_next
-            bra         @arg
-@push:
-            lda         cnt
-            ldy         #0
-            PUSHAY
-            rts
-
-            FARWORD     "ARG", arg, 0
-arg:                                                        ; ( n -- c-addr u ): argument n (0: the file's name); past
-            lda         dhi,x                               ;   the last, 0 0
-            bne         @none
-            lda         dlo,x
-            sta         cnt
-            jsr         argl_first
-@find:
-            bcs         @none
-            lda         cnt
-            beq         @found
-            dec         cnt
-            jsr         argl_next
-            bra         @find
-@found:
-            lda         w
-            sta         dlo,x
-            lda         w + 1
-            sta         dhi,x
-            ldy         #0                                  ; (Its length)
-:
-            lda         (w),y
-            beq         :+
-            iny
-            bne         :-
-:
-            tya
-            ldy         #0
-            PUSHAY
-            rts
-@none:
-            stz         dlo,x
-            stz         dhi,x
-            dex
-            stz         dlo,x
-            stz         dhi,x
-            rts
-
-; w = the first argument.  OUT: C = 1 if there's none
-argl_first:
-            lda         argp
-            sta         w
-            lda         argp + 1
-            sta         w + 1
-            ora         w
-            bne         argl_is
-            sec
-            rts
-
-; w past its argument, to the next.  OUT: C = 1 if there's none (the empty one after the last)
-argl_next:
-            lda         (w)
-            pha
-            inc         w
-            bne         :+
-            inc         w + 1
-:
-            pla
-            bne         argl_next
-argl_is:
-            lda         (w)
-            bne         :+
-            sec
-            rts
-:
-            clc
-            rts
-
-; ---- Libraries: INCLUDED's name, not found as it is
-
-; ( c-addr u -- c-addr' u' ): a bare name (no /) as /lib/forth's, in argbuf (INCLUDED's, through FAR2).  OUT: C = 1,
-; the name left as it was, if it isn't bare (or is too long)
-lib_name:
-            lda         dhi,x
-            bne         @not
-            lda         dlo,x
-            beq         @not
-            cmp         #ARGS_MAX - LIB_LEN - 1
-            bcs         @not
-            sta         cnt
-            lda         dlo + 1,x
-            sta         w
-            lda         dhi + 1,x
-            sta         w + 1
-            ldy         #0                                  ; (A / in it: not bare)
-:
-            lda         (w),y
-            cmp         #'/'
-            beq         @not
-            iny
-            cpy         cnt
-            bne         :-
-            ldy         #LIB_LEN - 1                        ; /lib/forth/, then it
-:
-            lda         s_lib,y
-            sta         argbuf,y
-            dey
-            bpl         :-
-            ldy         #0
-:
-            lda         (w),y
-            sta         argbuf + LIB_LEN,y
-            iny
-            cpy         cnt
-            bne         :-
-            clc
-            lda         dlo,x
-            adc         #LIB_LEN
-            sta         dlo,x
-            lda         #<argbuf
-            sta         dlo + 1,x
-            lda         #>argbuf
-            sta         dhi + 1,x
-            clc
-            rts
-@not:
-            sec
-            rts
-
-s_lib:      .byte       "/lib/forth/"
-LIB_LEN     = * - s_lib

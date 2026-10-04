@@ -149,8 +149,7 @@ stod:
 :
             jmp         true_tos
 
-            HEADER      "DNEGATE", 0
-dnegate:                                                    ; ( d -- -d )
+dnegate:                                                    ; ( d -- -d ) (DNEGATE's: the Double-Number library's header)
             sec
             lda         #0
             sbc         dlo + 1,x
@@ -166,8 +165,7 @@ dnegate:                                                    ; ( d -- -d )
             sta         dhi,x
             rts
 
-            HEADER      "DABS", 0
-dabs:
+dabs:                                                       ; ( d -- |d| ) (DABS's: the Double-Number library's header)
             lda         dhi,x
             bmi         dnegate
             rts

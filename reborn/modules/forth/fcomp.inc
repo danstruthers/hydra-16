@@ -6,18 +6,6 @@
 ; less it, with its sign bit flipped (so +LOOP's crossing of the limit is an overflow); LOOP is `jsr xloop; bvs +3;
 ; jmp body` and the four `pla`s of UNLOOP after it, where LEAVE goes.  The control-flow stack is the data stack.
 
-OP_INX          = $E8           ; The opcodes compiled
-OP_DEX          = $CA
-OP_LDA_IMM      = $A9
-OP_STA_ZPX      = $95
-OP_LDA_ZPX      = $B5
-OP_ORA_ZPX      = $15
-OP_BNE          = $D0
-OP_BVS          = $70
-OP_PLA          = $68
-OP_BIT_ZP       = $24
-OP_BPL          = $10
-
 ; ---- Laying code down
 
 ; jsr .A/.Y
@@ -249,17 +237,6 @@ semicolon:
             jsr         reveal
             jmp         lbracket
 
-            HEADER      ":NONAME", 0
-noname:                                                     ; ( -- xt )
-            stz         lasthdr
-            stz         lasthdr + 1
-            lda         here
-            sta         lastxt
-            ldy         here + 1
-            sty         lastxt + 1
-            PUSHAY
-            jmp         rbracket
-
             HEADER      "IMMEDIATE", 0
 immediate:
             lda         lasthdr
@@ -298,7 +275,7 @@ literal:
             inx
             jmp         comp_lit
 
-            HEADER      "COMPILE,", 0
+; COMPILE,'s (the Core Extension library's header)
 compilecomma:                                               ; ( xt -- ): its header's way, if it has one
             jsr         hdr_of_xt
             bcs         :+
@@ -396,11 +373,6 @@ comp_hdr_rt:
             inx
             jmp         comp_hdr
 
-            HEADER      "[COMPILE]", F_IMMEDIATE
-bracketcompile:
-            jsr         name_hdr
-            jmp         comp_hdr
-
 ; ---- Control flow
 
             HEADER      "IF", F_IMMEDIATE
@@ -417,10 +389,6 @@ else_:                                                      ; ( orig1 -- orig2 )
             jsr         swap
             jmp         resolve
 
-            HEADER      "AHEAD", F_IMMEDIATE
-ahead:
-            jmp         comp_fwd
-
             HEADER      "BEGIN", F_IMMEDIATE
 begin:
             jmp         here_
@@ -431,7 +399,7 @@ until:                                                      ; ( dest -- )
             jsr         comp_test
             jmp         resolve_to                          ; (Its jmp: to dest)
 
-            HEADER      "AGAIN", F_IMMEDIATE
+; AGAIN's (the Core Extension library's header), REPEAT's
 again:
             jsr         comp_poll
 again_jmp:                                                  ; ( dest -- ): jmp dest (LOOP's: xloop polls)
@@ -490,23 +458,6 @@ do_rest:                                                    ; ( -- leaves dest )
             PUSHAY
             stz         leaves
             stz         leaves + 1
-            jmp         here_
-
-            HEADER      "?DO", F_IMMEDIATE
-qdo:
-            lda         leaves                              ; (Its skip: a LEAVE of this loop's)
-            ldy         leaves + 1
-            PUSHAY
-            stz         leaves
-            stz         leaves + 1
-            lda         #<xqdo
-            ldy         #>xqdo
-            jsr         comp_jsr
-            lda         #OP_BNE
-            jsr         ccomma_a
-            lda         #3
-            jsr         ccomma_a
-            jsr         leave_jmp
             jmp         here_
 
             HEADER      "LEAVE", F_IMMEDIATE
@@ -692,43 +643,6 @@ j:                                                          ; ( -- index ): the 
             sta         dlo,x
             rts
 
-            HEADER      "CASE", F_IMMEDIATE
-case:
-            dex                                             ; (0: the ENDOFs' end)
-            jmp         zero_tos
-
-            HEADER      "OF", F_IMMEDIATE
-of:                                                         ; OVER = IF DROP
-            lda         #<over
-            ldy         #>over
-            jsr         comp_jsr
-            lda         #<equal
-            ldy         #>equal
-            jsr         comp_jsr
-            jsr         comp_test
-            lda         #<drop
-            ldy         #>drop
-            jmp         comp_jsr
-
-            HEADER      "ENDOF", F_IMMEDIATE
-endof:
-            jmp         else_
-
-            HEADER      "ENDCASE", F_IMMEDIATE
-endcase:                                                    ; DROP, and each ENDOF's jmp here
-            lda         #<drop
-            ldy         #>drop
-            jsr         comp_jsr
-:
-            lda         dlo,x
-            ora         dhi,x
-            beq         :+
-            jsr         resolve
-            bra         :-
-:
-            inx
-            rts
-
 ; ---- Defining words
 
 ; A header for the next name, shown, and jsr .A/.Y after it (CREATE's, VALUE's ...)
@@ -775,34 +689,6 @@ constant:                                                   ; ( x "name" -- ): a
             lda         #RTS_OP
             jmp         ccomma_a
 
-            HEADER      "2CONSTANT", 0
-twoconstant:                                                ; ( x1 x2 "name" -- ): two literals and rts
-            lda         #0
-            jsr         make_hdr
-            jsr         twoliteral
-            lda         #RTS_OP
-            jmp         ccomma_a
-
-            HEADER      "2VARIABLE", 0
-twovariable:
-            jsr         variable
-            lda         #0
-            tay
-            jmp         comma_ay
-
-            HEADER      "2LITERAL", F_IMMEDIATE
-twoliteral:                                                 ; ( x1 x2 -- ): compiled, x1 pushed first
-            jsr         swap
-            jsr         literal
-            jmp         literal
-
-            HEADER      "VALUE", 0
-value:                                                      ; ( x "name" -- )
-            lda         #<dovalue
-            ldy         #>dovalue
-            jsr         make_word
-            jmp         comma
-
 ; A VALUE's: the cell after its jsr
 dovalue:
             pla
@@ -819,19 +705,6 @@ dovalue:
             PUSHAY
             rts
 
-            HEADER      "TO", F_IMMEDIATE
-to:                                                         ; ( x "name" -- ): the VALUE's cell
-            jsr         tick
-            jsr         body_
-            lda         state
-            beq         @now
-            jsr         literal
-            lda         #<store
-            ldy         #>store
-            jmp         comp_jsr
-@now:
-            jmp         store
-
             HEADER      ">BODY", 0
 body_:
             clc
@@ -842,11 +715,6 @@ body_:
             inc         dhi,x
 :
             rts
-
-            HEADER      "BUFFER:", 0
-bufferc:                                                    ; ( u "name" -- )
-            jsr         create
-            jmp         allot
 
             HEADER      "DOES>", F_IMMEDIATE
 does:                                                       ; jsr do_does, then the child's code: jsr dodoes ...
@@ -899,74 +767,11 @@ dodoes:
             PUSHAY
             jmp         (w)
 
-            HEADER      "DEFER", 0
-defer:                                                      ; jmp to its xt (none yet: THROW -256)
-            lda         #0
-            jsr         make_hdr
-            lda         #<defer_none
-            ldy         #>defer_none
-            jmp         comp_jmp
-
 defer_none:
             lda         #<-256
             jmp         throw_a
 
-            HEADER      "DEFER!", 0
-deferstore:                                                 ; ( xt2 xt1 -- )
-            jsr         oneplus
-            jmp         store
-
-            HEADER      "DEFER@", 0
-deferfetch:
-            jsr         oneplus
-            jmp         fetch
-
-            HEADER      "IS", F_IMMEDIATE
-is:
-            jsr         tick
-            lda         state
-            beq         deferstore
-            jsr         literal
-            lda         #<deferstore
-            ldy         #>deferstore
-            jmp         comp_jsr
-
-            HEADER      "ACTION-OF", F_IMMEDIATE
-actionof:
-            jsr         tick
-            lda         state
-            beq         deferfetch
-            jsr         literal
-            lda         #<deferfetch
-            ldy         #>deferfetch
-            jmp         comp_jsr
-
-            HEADER      "MARKER", 0
-marker:                                                     ; Its word: HERE, the compilation word list and the
-            lda         here                                ;   search order as before it
-            pha
-            lda         here + 1
-            pha
-            lda         #<domarker
-            ldy         #>domarker
-            jsr         make_word
-            pla
-            tay
-            pla
-            jsr         comma_ay                            ; (lo, hi swapped back: comma_ay is .A low)
-            lda         current
-            ldy         current + 1
-            jsr         comma_ay
-            ldy         #0
-:
-            lda         order_n,y                           ; (order_n, then order)
-            jsr         ccomma_a
-            iny
-            cpy         #ORDER_MAX * 2 + 1
-            bne         :-
-            rts
-
-; A MARKER's: all three as they were, and each word list without the words (and word lists) made since: a header or
+; A MARKER's: all four as they were, and each word list without the words (and word lists) made since: a header or
 ; word list in RAM at HERE or after
 domarker:
             stx         xsave
@@ -994,6 +799,12 @@ domarker:
             inx
             cpx         #ORDER_MAX * 2 + 1
             bne         :-
+            iny                                             ; The files INCLUDED since: not noted
+            lda         (w),y
+            sta         incn_len
+            iny
+            lda         (w),y
+            sta         incn_len + 1
             lda         wl_last                             ; The word lists made since: gone
             ldy         wl_last + 1
 @wl:

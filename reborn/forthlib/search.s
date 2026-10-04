@@ -1,8 +1,11 @@
 ; ****************************************************************************
-; fsearch.inc - forth's word lists and search order: the Search-Order words (included by forth.s).  A word list (its
-; wid) is 4 bytes: its last header (0: none yet), then the word list made before it (wl_last's chain: WORDLIST's are
-; in the dictionary, FORTH's in the BSS).  The search order is order: order_n wids, the first searched first; new
-; definitions go into current's.
+; search.s - HyForth's Search-Order library (/lib/forth/search.fl): the word lists' and the search order's words, and
+; LIBRARY and END-LIBRARY, a library's own word list.  A word list (its wid) is 4 bytes: its last header (0: none
+; yet), then the word list made before it (wl_last's chain: WORDLIST's are in the dictionary, FORTH's in the core's
+; BSS).  The search order is order: order_n wids, the first searched first (the core's find_name); new definitions
+; go into current's.
+
+.include "forthlib.inc"
 
             HEADER      "FORTH-WORDLIST", 0
 forthwordlist:
@@ -234,3 +237,29 @@ wl_name:
 
 s_forth:    .byte       "FORTH ", 0
 s_current:  .byte       " current: ", 0
+
+            HEADER      "LIBRARY", 0
+library:                                                    ; ( "name" -- wid ): a library's start: name a CONSTANT,
+            jsr         getcurrent                          ;   a new word list, which goes first in the search order
+            jsr         wordlist                            ;   and takes the definitions; wid the compilation word
+            jsr         dup                                 ;   list before (END-LIBRARY's)
+            jsr         constant
+            jsr         dup
+            jsr         setcurrent
+            lda         order_n                             ; (First in the order, before the rest)
+            bne         :+
+            inc         order_n
+            bra         @first
+:
+            jsr         also
+@first:
+            lda         dlo,x
+            sta         order
+            lda         dhi,x
+            sta         order + 1
+            inx
+            rts
+
+            HEADER      "END-LIBRARY", 0
+endlibrary:                                                 ; ( wid -- ): a library's end: definitions where they were,
+            jmp         setcurrent                          ;   its word list kept in the order

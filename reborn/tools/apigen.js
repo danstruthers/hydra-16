@@ -10,7 +10,7 @@
 //   obj/sdk/c/oserrmap.inc   the C library's map from the error codes to errno (errors.def's last column)
 //   obj/gen/api.md        the reference: every call, its registers, its errors (and its HyForth word)
 //   obj/gen/api.json      the same as data (the emulator names calls with it: sim/run.js --trace-calls)
-//   obj/gen/forthsys.inc  HyForth's sys- words: a table its second bank makes their headers from (modules/forth)
+//   obj/gen/forthsys.inc  HyForth's sys- words, for its Hydra library (forthlib/hydra.s)
 //   obj/gen/hydra.fs      the constants and error codes for HyForth, a library on the ROM disk (/lib/forth)
 //
 // Usage: node tools/apigen.js [ROOT]       (ROOT: the reborn folder; default: this file's parent)
@@ -217,20 +217,20 @@ function forthEffect(c) {
 }
 
 function forthSys(api) {
-  let s = header(';', 'forthsys.inc - HyForth\'s sys- words, for its second bank (modules/forth/fsys.inc)');
-  s += '; An entry a word: its name, counted; the call\'s address; flags ($80: it gives an ior); its inputs, a count and' + CRLF;
-  s += '; their registers, the top\'s first; its outputs, a count and their registers, the first pushed first.  A' + CRLF;
-  s += '; register: $0N rN, $1N rN and the next (a double), $20 .A, $21 .X, $22 .Y, $23 .A/.X.  A 0 ends the table.' + CRLF + CRLF;
-  s += 'sys_table:' + CRLF;
+  let s = header(';', 'forthsys.inc - HyForth\'s sys- words, for its Hydra library (forthlib/hydra.s)');
+  s += '; A word each, its header (HEADER: fdefs.inc), then its code: jsr sys_call and its descriptor, the call\'s address;' + CRLF;
+  s += '; flags ($80: it gives an ior); its inputs, a count and their registers, the top\'s first; its outputs, a count' + CRLF;
+  s += '; and their registers, the first pushed first.  A register: $0N rN, $1N rN and the next (a double), $20 .A, $21' + CRLF;
+  s += '; .X, $22 .Y, $23 .A/.X.' + CRLF;
   for (const c of forthCalls(api)) {
     const n = forthName(c), ins = regsOf(c, c.in), outs = regsOf(c, c.out);
     if (n.length > 31) fail('spec/api.def', c.line, n + ': a Forth name is 31 characters at most');
     const codes = [c.errors.length ? 0x80 : 0, ins.length, ...ins.reverse().map(r => r.code), outs.length, ...outs.map(r => r.code)];
-    s += '            .byte       ' + n.length + ', "' + n + '"' + CRLF;
+    s += CRLF + '            HEADER      "' + n + '", 0' + CRLF;
+    s += '            jsr         sys_call' + CRLF;
     s += '            .word       ' + pad(hx(c.addr, 4), 36) + '; ' + forthEffect(c) + CRLF;
     s += '            .byte       ' + codes.map(v => hx(v, 2)).join(', ') + CRLF;
   }
-  s += '            .byte       0' + CRLF;
   return s;
 }
 
@@ -243,7 +243,7 @@ function forthLib(api, errors) {
   let s = '\\ hydra.fs - the Hydra-16\'s constants and error codes, for HyForth: REQUIRE hydra.fs (/lib/forth\'s).  Made by' + LF;
   s += '\\ tools/apigen.js from spec/: don\'t edit.  A library: its words in a word list of its own, HYDRA, which goes first' + LF;
   s += '\\ in the search order.  An error code\'s ior (a file word\'s, a sys- word\'s) is -512 less it.' + LF;
-  s += LF + 'LIBRARY HYDRA' + LF;
+  s += LF + 'REQUIRE search.fl            \\ (LIBRARY)' + LF + 'LIBRARY HYDRA' + LF;
   s += LF + '\\ ---- constants' + LF;
   for (const k of api.consts) if (!FORTH_CONSTS_OUT.test(k.name)) s += line(k.value, k.name, k.doc);
   s += LF + '\\ ---- error codes' + LF;

@@ -9,6 +9,16 @@ lib/namespace       lib/namespace       ; The default namespace (the plan's appe
 lib/profile         lib/profile         ; What each shell runs as it starts (rc's: phase 4)
 doc/api.md          ../obj/gen/api.md   ; The system calls' reference (tools/apigen.js makes it at the build)
 lib/forth/hydra.fs  ../obj/gen/hydra.fs ; HyForth's constants and error codes (tools/apigen.js makes it too)
+lib/forth/startup.fs lib/forth/startup.fs ; What HyForth loads as it starts
+lib/forth/coreext.fl ../obj/forthlib/coreext.fl ; HyForth's libraries: a word set each, pre-compiled (tools/forthlib.js)
+lib/forth/exception.fl ../obj/forthlib/exception.fl
+lib/forth/file.fl   ../obj/forthlib/file.fl
+lib/forth/facility.fl ../obj/forthlib/facility.fl
+lib/forth/string.fl ../obj/forthlib/string.fl
+lib/forth/search.fl ../obj/forthlib/search.fl
+lib/forth/tools.fl  ../obj/forthlib/tools.fl
+lib/forth/double.fl ../obj/forthlib/double.fl
+lib/forth/hydra.fl  ../obj/forthlib/hydra.fl
 bin/mkfs            ../obj/programs/mkfs.hyx    ; The disk tools: RAM programs (programs/), loaded from here
 bin/fsck            ../obj/programs/fsck.hyx
 bin/label           ../obj/programs/label.hyx

@@ -9,7 +9,9 @@
 //                          ROM disk's programs (its bin), programs/NAME/*.s -> obj/programs/NAME.hyx; the SDK's
 //                          samples (its sample), sdk/asm/samples/NAME/*.s -> obj/samples/NAME.hyx (a driver's,
 //                          NAME.bin: a module, for a test's ROM); each checked:
-//                          only the kernel writes T, V and W (tools/check.js)
+//                          only the kernel writes T, V and W (tools/check.js); and HyForth's libraries,
+//                          forthlib/NAME.s -> obj/forthlib/NAME.fl (tools/forthlib.js: the core's id patched into
+//                          obj/modules/forth.bin first), for the ROM disk's /lib/forth
 //   4. the paged ROM       modules/rom.txt -> bin/prom0.bin, prom1.bin ... (tools/romimg.js): a 512K image for
 //                          each socket it fills, in order, as many as it needs; with the hardware test in bank 1
 //                          (from ../os_rom/bin/paged_rom_C02.bin) and the ROMs' checksums for it, and the ROM
@@ -40,6 +42,7 @@ const { execFileSync } = require('child_process');
 const apigen = require('./tools/apigen.js');
 const romimg = require('./tools/romimg.js');
 const romfs = require('./tools/romfs.js');
+const forthlib = require('./tools/forthlib.js');
 const budget = require('./tools/budget.js');
 const check = require('./tools/check.js');
 
@@ -258,6 +261,7 @@ function build(opt = {}) {
   for (const d of fs.readdirSync(at('sdk', 'c', 'samples'), { withFileTypes: true }).filter(d => d.isDirectory()))
     samples['c/' + d.name] = ram(at('sdk', 'c', 'samples', d.name), at('obj', 'samples', 'c'));
   sdk();
+  forthlib.build({ root: ROOT, modules, assemble: (files, od, inc) => assemble(files, od, inc, defines), ld65: args => run(LD65, args) });
 
   // The paged ROM
   const manifest = readManifest(at('modules', 'rom.txt'));
