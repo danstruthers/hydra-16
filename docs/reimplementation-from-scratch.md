@@ -834,6 +834,8 @@ danlang (`C:\source\danlang`, C# on .NET 6, by Daniel and Simon Struthers, GPLv3
 
 (As built, phase 7.3: the tower's integers past a fixnum are one kind of object, its sign and up to 126 bytes, not 32-bit integers and a separate bignum library; the tower and all of danlang's bases are a third bank of the module, not library modules loaded on first use, as a module may have four banks now.)
 
+(As built, phase 7.4a: strings of up to 4096 bytes, a chain of cells past 126, made in a buffer and copied whole to be searched; danlang's hashes, changed in place, with their tags and methods (`&0` a proxy of the hash); the `str-` functions and `sort`.  They're the module's fourth bank, which makes it the most a module may have, so the rest of 7.4 waits on a core module and library modules, as this plan has them for the big numbers.)
+
 #### **17.4 hylang as the shell**
 
 hylang becomes the login shell in phase 7, over rc:

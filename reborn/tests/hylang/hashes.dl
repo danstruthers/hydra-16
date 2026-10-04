@@ -1,0 +1,97 @@
+; hashes.dl - hashes: keys (atoms, strings and numbers), get, put, remove, len, keys and values, clone, methods (&0),
+; tags (private, locked, read-only, not-nil), to# and from#, equality
+
+(def {hs} #({{:a 1} {"s" 2} {3 :three}}))
+(check <(hs :a) 1)
+(check <(hs "s") 2)
+(check <(hs 3) :three)
+(check <(hs :none) NIL)
+(check (len hs) 3)
+(check (hash-key? hs "s") T)
+(check (hash-key? hs :s) NIL)
+(check (hash-key? hs 3) T)
+(check (len (hash-keys hs)) 3)
+(check (in? "s" (hash-keys hs)) T)
+(check (in? 3 (hash-keys hs)) T)
+(check (in? :a (hash-keys hs)) T)
+(check (sort (filter num? (hash-values hs))) {1 2})
+(check (type-of hs) :hash)
+(check (hash-get NIL :a) NIL)
+(check-error (hash-get 5 :a))
+(check-error <(hs {1}))
+
+; put: the old value back (NIL if there was none); putting NIL takes the entry out
+(check (hash-put hs {:b 5}) NIL)
+(check <(hs :b) 5)
+(check (hash-put hs {:b 6}) 5)
+(check <(hs :b) 6)
+(check (hash-put hs {:x 1} {:y 2}) {NIL NIL})
+(hash-put hs {:a NIL})
+(check (hash-key? hs :a) NIL)
+
+; remove
+(check (hash-remove hs :b) 6)
+(check (hash-key? hs :b) NIL)
+(check (hash-remove hs :b) NIL)
+(check (hash-remove hs "s") 2)
+(check-error (hash-remove 5 :a))
+
+; clone: a copy of its own
+(def {hs2} (hash-clone hs))
+(hash-put hs2 {:c 1})
+(check (hash-key? hs :c) NIL)
+(check (hash-key? hs2 :c) T)
+(check <((hash-clone hs {:c 9}) :c) 9)
+
+; methods: hash-call runs a function in the hash with &0 the hash
+(def {obj} #({
+  {:n 5}
+  {:get @({} {<(&0 :n)})}
+  {:add @({x} {>(&0 {:n (+ x <(&0 :n))})})}
+}))
+(check *(obj :get) 5)
+*(obj :add 3)
+(check *(obj :get) 8)
+(check-error *(obj :n))
+
+; tags
+(def {hp} #({{:secret 1} {:get @({} {<(&0 :secret)})}}))
+(hash-make-private hp :secret)
+(check (hash-private? hp :secret) T)
+(check-error <(hp :secret))
+(check *(hp :get) 1)
+(def {hl} #({{:a 1}}))
+(hash-lock hl)
+(check (hash-locked? hl) T)
+(check-error (hash-put hl {:new 1}))
+(check (hash-put hl {:a 2}) 1)
+(def {hc} #({{:a 1}}))
+(hash-make-const hc)
+(check (hash-const? hc) T)
+(check-error (hash-put hc {:a 2}))
+(check-error (hash-remove hc :a))
+(def {hn} #({{:k 1}}))
+(hash-make-not-nil hn :k)
+(check-error (hash-put hn {:k NIL}))
+(def {ht} #())
+(hash-add-tag ht :mytag)
+(check (hash-tag? ht :mytag) T)
+(check (hash-tag? ht :other) NIL)
+
+; to# and from#
+(check (from# #({{:a 1}})) {{:a 1}})
+(check <((to# {{:a 1} {"b" 2}}) "b") 2)
+(check (from# (to# {{:x 5}})) {{:x 5}})
+(check-error (to# 5))
+(check-error (from# 5))
+
+; equality: the same keys and values
+(check (eq #({{:a 1}}) #({{:a 1}})) T)
+(check (eq #({{:a 1}}) #({{:a 2}})) NIL)
+(check (eq #({{:a 1}}) #({{:a 1} {:b 2}})) NIL)
+(check (eq #() #()) T)
+
+; hash-create, by name
+(check (len (hash-create)) 0)
+(check <((hash-create {{:k 1}}) :k) 1)
+(check (hash-private? hp) NIL)

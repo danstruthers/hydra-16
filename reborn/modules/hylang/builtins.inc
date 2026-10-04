@@ -33,6 +33,7 @@ str_a:      .res        STR_MAX + 2                         ; Two texts, copied 
 str_b:      .res        STR_MAX + 2
 str_an:     .res        1                                   ;   and their lengths
 str_bn:     .res        1
+ix_at:      .res        1                                   ; index-of's place in a list (equal has bi_n)
 bi_fd:      .res        1                                   ; load's file
 ld_n:       .res        2                                   ; load's text: its length in the buffer ...
 ld_lim:     .res        2                                   ;   how much of it's read now ...
@@ -163,6 +164,13 @@ text_copy:
             rts
 @string:
             jsr         deref
+            lda         (h_p)
+            cmp         #OT_STRING
+            beq         :+
+            lda         #0                                  ; (A long one: none, here)
+            sec
+            rts
+:
             ldy         #1
             lda         (h_p),y
             ldx         #2
@@ -779,18 +787,39 @@ bi_len:
             beq         @list
             cmp         #TY_STRING
             beq         @string
+            cmp         #TY_HASH
+            beq         @hash
             LDR         r0, bs_len_type
             jmp         bi_error_text
+@hash:
+            jsr         hash_real                           ; (Its entries)
+            ldy         #3
+            lda         (h_p),y
+            tax
+            dey
+            lda         (h_p),y
+            sta         h_v
+            stx         h_v + 1
+            bra         :+
 @list:
             jsr         list_of
-            jsr         count_h
-            bra         :+
-@string:
-            jsr         deref
-            ldy         #1
-            lda         (h_p),y
 :
-            ldx         #0
+            stz         bi_n                                ; (Its items, any number of them)
+            stz         bi_n + 1
+@count:
+            lda         h_v + 1
+            beq         @counted
+            jsr         cdr
+            inc         bi_n
+            bne         @count
+            inc         bi_n + 1
+            bra         @count
+@counted:
+            lda         bi_n
+            ldx         bi_n + 1
+            jmp         int_fx
+@string:
+            jsr         str_len
             jmp         int_fx
 
 ; (item-at list n): its item n (0 on); NIL past its end
@@ -883,22 +912,34 @@ bi_reverse:
 @room:
             jmp         bi_no_room
 @string:
-            MOVR        h_v, ev_x                           ; (A string: str_a backwards, in str_b)
-            jsr         text_a
-            tax
-            ldy         #0
+            MOVR        h_v, ev_x                           ; (A string: its text, backwards, caught)
+            jsr         str_arg
+            clc
+            lda         #<text
+            adc         fl_n1
+            sta         bi_q
+            lda         #>text
+            adc         fl_n1 + 1
+            sta         bi_q + 1
+            jsr         cap_start
+@back:
+            lda         bi_q
+            cmp         #<text
+            bne         :+
+            lda         bi_q + 1
+            cmp         #>text
+            beq         @made
 :
-            cpx         #0
-            beq         :+
-            dex
-            lda         str_a,x
-            sta         str_b,y
-            iny
-            bra         :-
+            lda         bi_q
+            bne         :+
+            dec         bi_q + 1
 :
-            LDR         r0, str_b
-            lda         str_an
-            jsr         buf_string
+            dec         bi_q
+            lda         (bi_q)
+            jsr         out_char
+            bra         @back
+@made:
+            jsr         cap_string
             MOVR        ev_v, h_v
             rts
 
@@ -1514,39 +1555,25 @@ compare:
             cmp         #3
             beq         @lists
 @shown:
-            MOVR        h_v, ev_x                           ; ---- As the REPL shows them
+            MOVR        h_v, ev_x                           ; ---- As the REPL shows them (in text, and cap_buf)
             jsr         cap_start
             jsr         print_repr
-            stz         cap_on
-            lda         cap_n
-            sta         str_an
-            tax
-:
-            dex
-            bmi         :+
-            lda         cap_buf,x
-            sta         str_a,x
-            bra         :-
-:
+            jsr         cap_text
             MOVR        h_v, ev_w
             jsr         cap_start
             jsr         print_repr
-            stz         cap_on
-            lda         cap_n
-            sta         str_bn
-            tax
-:
-            dex
-            bmi         :+
-            lda         cap_buf,x
-            sta         str_b,x
-            bra         :-
-:
-            jmp         text_cmp
+            jsr         cap_end
+            jmp         flat_cmp
 @error:
             jsr         err_msg_x                           ; (Errors: their messages)
 @text:
+            MOVR        fl_b, ev_w                          ; (Strings and characters, of any length)
             MOVR        h_v, ev_x
+            jsr         str_cmp2
+            bcs         :+
+            rts
+:
+            MOVR        h_v, ev_x                           ; (Symbols and atoms: their names)
             jsr         text_a
             MOVR        h_v, ev_w
             jsr         text_b
@@ -1689,7 +1716,7 @@ equal:
             bne         @diff
             lda         eq_a + 1
             cmp         eq_b + 1
-            beq         @same
+            jeq         @same
 @diff:
             MOVR        h_v, eq_b
             jsr         type_of
@@ -1699,11 +1726,13 @@ equal:
             cmp         eq_t
             bne         @no
             cmp         #TY_STRING
-            beq         @text
+            beq         @string
+            cmp         #TY_HASH
+            jeq         @hash
             cmp         #TY_SYMBOL
             beq         @text
             cmp         #TY_ERROR
-            beq         @error
+            jeq         @error
             cmp         #TY_LIST
             jeq         @lists
             cmp         #TY_SEXPR
@@ -1720,8 +1749,15 @@ equal:
             sta         ev_bank
             clc
             rts
+@string:
+            MOVR        fl_b, eq_b                          ; ---- Strings
+            MOVR        h_v, eq_a
+            jsr         str_cmp2
+            cmp         #0
+            bne         @no
+            bra         @same
 @text:
-            MOVR        h_v, eq_a                           ; ---- Strings, symbols (a reference and its symbol)
+            MOVR        h_v, eq_a                           ; ---- Symbols (a reference and its symbol)
             jsr         text_a
             MOVR        h_v, eq_b
             jsr         text_b
@@ -1752,7 +1788,7 @@ equal:
             MOVR        h_v, eq_b
             FARN        3, num_cmp
             cmp         #0
-            bne         @no
+            jne         @no
             jmp         @same
 @lists:
             ldy         #2                                  ; ---- Lists: their chains
@@ -1796,6 +1832,25 @@ equal:
             ldy         #2                                  ;   and the formals now)
             jsr         eq_fields
             jmp         @chains
+@hash:
+            MOVR        h_v, eq_a                           ; ---- Hashes: of a size, and each key's values
+            jsr         hash_real                           ; (pairs to compare: eq_entries, the fourth bank's)
+            MOVR        eq_a, h_v
+            MOVR        h_v, eq_b
+            jsr         hash_real
+            MOVR        eq_b, h_v
+            lda         eq_a
+            cmp         eq_b
+            bne         :+
+            lda         eq_a + 1
+            cmp         eq_b + 1
+            jeq         @same
+:
+            jsr         ev_deep
+            jcs         @no
+            FARN        4, eq_entries
+            jcc         @no
+            jmp         @same
 
 ; One more pair on the stack, for equal
 eq_more:
@@ -2192,12 +2247,19 @@ bi_char_at:
             jsr         arg_next
             jsr         int_arg
             bcs         @done
-            cpx         #0
+            cpx         fl_n1 + 1                           ; (Past its end: outside; a negative too)
+            bcc         :+
             bne         @outside
-            cmp         str_an
+            cmp         fl_n1
             bcs         @outside
-            tax
-            lda         str_a,x
+:
+            clc
+            adc         #<text
+            sta         io_p
+            txa
+            adc         #>text
+            sta         io_p + 1
+            lda         (io_p)
             jmp         make_char
 @outside:
             LDR         r0, bs_char_at_outside
@@ -2205,18 +2267,16 @@ bi_char_at:
 @done:
             rts
 
-; h_v, a string (or a character) argument: its text in str_a.  OUT: C = 1, it isn't one (ev_v an error)
+; h_v, a string (or a character) argument: its text in text, fl_n1 bytes (h_v changed).  OUT: C = 1, it isn't one
+; (ev_v an error)
 str_arg:
             jsr         h_is_error_v
             bcs         @error
-            jsr         type_of
-            cmp         #TY_STRING
-            beq         :+
-            cmp         #TY_CHAR
-            bne         @not
-:
-            jsr         text_a
-            clc
+            LDR         io_p, text
+            jsr         str_flat
+            bcs         @not
+            sta         fl_n1
+            stx         fl_n1 + 1
             rts
 @not:
             LDR         r0, bs_expects_string
@@ -2245,13 +2305,16 @@ bi_char_code:
             jsr         arg_next
             jsr         str_arg
             bcs         @done
-            lda         str_an
+            lda         fl_n1 + 1
+            bne         :+
+            lda         fl_n1
             cmp         #1
-            beq         :+
+            beq         :++
+:
             LDR         r0, bs_char_code_one
             jmp         bi_error_text
 :
-            lda         str_a
+            lda         text
             ldx         #0
             jmp         int_fx
 @done:
@@ -2296,41 +2359,50 @@ bi_substring:
             jsr         arg_next
             jsr         int_arg
             bcs         @done
-            cpx         #0
+            cpx         fl_n1 + 1                           ; (Past its end, or negative: outside)
+            bcc         :+
             bne         @outside
-            cmp         str_an
+            cmp         fl_n1
             beq         :+
             bcs         @outside
 :
             sta         bi_n                                ; (from)
+            stx         bi_n + 1
             sec
-            lda         str_an
+            lda         fl_n1
             sbc         bi_n
             sta         bi_m                                ; (n: the rest, or less)
+            lda         fl_n1 + 1
+            sbc         bi_n + 1
+            sta         bi_m + 1
             jsr         arg_next
             bcs         @make
             jsr         int_arg
             bcs         @done
-            cpx         #0
-            bne         @negative
+            cpx         #$80
+            bcs         @outside
+            cpx         bi_m + 1
+            bcc         :+
+            bne         @make
             cmp         bi_m
             bcs         @make
+:
             sta         bi_m
+            stx         bi_m + 1
 @make:
             clc
-            lda         #<str_a
+            lda         #<text
             adc         bi_n
             sta         r0
-            lda         #>str_a
-            adc         #0
+            lda         #>text
+            adc         bi_n + 1
             sta         r0 + 1
             lda         bi_m
+            ldx         bi_m + 1
             jsr         buf_string
             MOVR        ev_v, h_v
 @done:
             rts
-@negative:
-            bpl         @make                               ; (More than 255: the rest)
 @outside:
             LDR         r0, bs_substring_outside
             jmp         bi_error_text
@@ -2367,54 +2439,32 @@ bi_last_index_of:
             cmp         #TY_CHAR
             bne         @wrong
 :
-            MOVR        h_v, ev_s                           ; ---- A string in a string
-            jsr         text_a
-            MOVR        h_v, ev_t
+            MOVR        h_v, ev_t                           ; ---- A string in a string (126 bytes at most)
             jsr         text_b
+            bcs         @wrong
+            MOVR        h_v, ev_s
+            jsr         str_arg
             lda         #$FF
             sta         bi_n                                ; (Where it's found: none yet)
-            ldx         #0
+            sta         bi_n + 1
+            stz         io_n
+            stz         io_n + 1
 @at:
-            txa                                             ; (At .X: the rest long enough?)
-            clc
-            adc         str_bn
-            bcs         @found
-            cmp         str_an
-            beq         :+
-            bcs         @found
-:
-            stx         bi_t
-            ldy         #0
-@byte:
-            cpy         str_bn
-            beq         @match
-            tya
-            clc
-            adc         bi_t
-            tax
-            lda         str_a,x
-            cmp         str_b,y
-            bne         @no_match
-            iny
-            bra         @byte
-@no_match:
-            ldx         bi_t
-            inx
-            bra         @at
-@match:
-            ldx         bi_t
-            stx         bi_n
+            jsr         text_find
+            bcc         @found
+            lda         io_n
+            sta         bi_n
+            lda         io_n + 1
+            sta         bi_n + 1
             lda         ev_i
             beq         @found
-            inx
+            inc         io_n
+            bne         @at
+            inc         io_n + 1
             bra         @at
 @found:
             lda         bi_n
-            ldx         #0
-            cmp         #$FF
-            bne         :+
-            dex
-:
+            ldx         bi_n + 1
             jmp         int_fx
 @wrong:
             LDR         r0, bs_index_of_types
@@ -2424,7 +2474,7 @@ bi_last_index_of:
             jsr         list_of
             MOVR        ev_s, h_v
             lda         #$FF
-            sta         bi_n + 1                            ; (Where: none yet)
+            sta         ix_at                               ; (Where: none yet)
             stz         ev_c
 @item:
             lda         ev_s + 1
@@ -2436,7 +2486,7 @@ bi_last_index_of:
             jsr         equal
             bcc         :+
             lda         ev_c
-            sta         bi_n + 1
+            sta         ix_at
             lda         ev_i
             beq         @listed
 :
@@ -2446,9 +2496,13 @@ bi_last_index_of:
             inc         ev_c
             bra         @item
 @listed:
-            lda         bi_n + 1
-            sta         bi_n
-            bra         @found
+            lda         ix_at                               ; (-1: none)
+            ldx         #0
+            cmp         #$FF
+            bne         :+
+            dex
+:
+            jmp         int_fx
 
 ; ---- Reading
 
@@ -2461,19 +2515,11 @@ bi_read:
             jmp         bi_error_text
 :
             jsr         arg_next
-            jsr         str_arg
+            jsr         str_arg                             ; (Its text in the text buffer)
             bcs         @done
-            ldx         str_an                              ; (Its text in the text buffer)
-:
-            dex
-            bmi         :+
-            lda         str_a,x
-            sta         text,x
-            bra         :-
-:
             LDR         r0, text
-            lda         str_an
-            ldx         #0
+            lda         fl_n1
+            ldx         fl_n1 + 1
             jsr         read_start
             LDR         ev_a, NIL
             LDR         ev_t, NIL
@@ -2908,16 +2954,16 @@ order_true: .byte       $FF, 1                              ; (<: less; >: more)
 nk2_of:     .byte       0, 2, 1, 3                          ; (OT_BIG, OT_RAT, OT_FIX, OT_COMPLEX: num_kind2's)
 
 ; compare's kinds, by type (TY_*): 1 a text, 2 an error, 3 a list, 0 the rest
-cmp_kinds:  .byte       0, 3, 0, 0, 0, 1, 1, 1, 1, 3, 2, 0, 0, 0
+cmp_kinds:  .byte       0, 3, 0, 0, 0, 1, 1, 1, 1, 3, 2, 0, 0, 0, 0
 
 ; The types is_type's predicates ask about (TY_*: t?, nil? (aside), num?, atom?, symbol? ...)
 is_types:   .byte       TY_T, 0, TY_NUM, TY_ATOM, TY_SYMBOL, TY_STRING, TY_CHAR, TY_FUNC, TY_ERROR, TY_LIST, TY_SEXPR
 
 ; type-of's names (TY_*), each counted
 type_names_lo: .lobytes tn_number, tn_list, tn_t, tn_exit, tn_function, tn_char, tn_string, tn_symbol, tn_atom
-            .lobytes    tn_sexpr, tn_error, tn_unknown, tn_unknown, tn_unknown
+            .lobytes    tn_sexpr, tn_error, tn_unknown, tn_unknown, tn_unknown, tn_hash
 type_names_hi: .hibytes tn_number, tn_list, tn_t, tn_exit, tn_function, tn_char, tn_string, tn_symbol, tn_atom
-            .hibytes    tn_sexpr, tn_error, tn_unknown, tn_unknown, tn_unknown
+            .hibytes    tn_sexpr, tn_error, tn_unknown, tn_unknown, tn_unknown, tn_hash
 tn_number:  .byte       6, "number"
 tn_list:    .byte       4, "list"
 tn_t:       .byte       1, "t"
@@ -2930,6 +2976,7 @@ tn_atom:    .byte       4, "atom"
 tn_sexpr:   .byte       5, "sexpr"
 tn_error:   .byte       5, "error"
 tn_unknown: .byte       7, "unknown"
+tn_hash:    .byte       4, "hash"
 
 ; The built-ins, in their numbers' order (BI_RUN first)
 bi_table:
@@ -3014,6 +3061,46 @@ bi_table:
             BUILTIN     "last-index-of", 0, bi_last_index_of
             BUILTIN     "read", 0, bi_read
             BUILTIN     "load", 0, bi_load
+            BUILTIN     "str-split", BF_BANK4, ss_split
+            BUILTIN     "str-upper", BF_BANK4, ss_upper
+            BUILTIN     "str-lower", BF_BANK4, ss_lower
+            BUILTIN     "str-trim", BF_BANK4, ss_trim
+            BUILTIN     "str-replace", BF_BANK4, ss_replace
+            BUILTIN     "str-join", BF_BANK4, ss_join
+            BUILTIN     "str-chars", BF_BANK4, ss_chars
+            BUILTIN     "str-pad-left", BF_BANK4, ss_pad_left
+            BUILTIN     "str-pad-right", BF_BANK4, ss_pad_right
+            BUILTIN     "str-repeat", BF_BANK4, ss_repeat
+            BUILTIN     "alpha?", BF_BANK4, ss_alpha_p
+            BUILTIN     "digit?", BF_BANK4, ss_digit_p
+            BUILTIN     "space?", BF_BANK4, ss_space_p
+            BUILTIN     "upper?", BF_BANK4, ss_upper_p
+            BUILTIN     "lower?", BF_BANK4, ss_lower_p
+            BUILTIN     "to-sym", BF_BANK4, ss_to_sym
+            BUILTIN     "to-atom", BF_BANK4, ss_to_atom
+            BUILTIN     "gensym", BF_BANK4, ss_gensym
+            BUILTIN     "subset", BF_BANK4, ss_subset
+            BUILTIN     "sort", BF_BANK4, ss_sort
+            BUILTIN     "hash-create", BF_BANK4, bh_create
+            BUILTIN     "hash-get", BF_BANK4, bh_get
+            BUILTIN     "hash-put", BF_BANK4, bh_put
+            BUILTIN     "to#", BF_BANK4, bh_to_hash
+            BUILTIN     "from#", BF_BANK4, bh_from_hash
+            BUILTIN     "hash-key?", BF_BANK4, bh_key_p
+            BUILTIN     "hash-keys", BF_BANK4, bh_keys
+            BUILTIN     "hash-values", BF_BANK4, bh_values
+            BUILTIN     "hash-call", BF_BANK4, bh_call
+            BUILTIN     "hash-clone", BF_BANK4, bh_clone
+            BUILTIN     "hash-remove", BF_BANK4, bh_remove
+            BUILTIN     "hash-add-tag", BF_BANK4, bh_add_tag
+            BUILTIN     "hash-lock", BF_BANK4, bh_lock
+            BUILTIN     "hash-make-const", BF_BANK4, bh_const
+            BUILTIN     "hash-make-private", BF_BANK4, bh_private
+            BUILTIN     "hash-make-not-nil", BF_BANK4, bh_not_nil
+            BUILTIN     "hash-tag?", BF_BANK4, bh_tag_p
+            BUILTIN     "hash-locked?", BF_BANK4, bh_locked_p
+            BUILTIN     "hash-private?", BF_BANK4, bh_private_p
+            BUILTIN     "hash-const?", BF_BANK4, bh_const_p
             .byte       $FF
 
 bs_none:    .byte       0

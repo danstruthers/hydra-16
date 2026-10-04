@@ -42,6 +42,8 @@ sym_rest:   .res        2                                   ; &_
 sym_err:    .res        2                                   ; &err
 sym_code:   .res        2                                   ; &code
 atom_intr:  .res        2                                   ; :intr
+ev_again:   .res        1                                   ; Not 0: a built-in's value is ev_f applied to ev_a
+                                                            ; (hash-call's: the evaluator applies it)
 err_room:   .res        2                                   ; The error "No room", made at the start
 ev_name:    .res        8                                   ; &n's name, made
 msg:        .res        128                                 ; An error's message, made ...

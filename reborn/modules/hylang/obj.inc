@@ -28,6 +28,10 @@ TY_ERROR        = 11
 TY_FRAME        = 12            ; (The evaluator's: a scope)
 TY_PAIR         = 13            ; (A list's: a bare pair)
 TY_OTHER        = 14
+TY_HASH         = 15
+
+; A hash's flags (OT_HASH's second byte)
+HF_PROXY        = $80           ; A method's &0 (hash-call's): the hash its first value, its private entries open
 
 ; A function's flags (OT_FUNC's second byte)
 FN_FEXPR        = $01           ; Its arguments come unevaluated
@@ -324,6 +328,26 @@ make_list:
 @no:
             rts
 
+; h_v, a hash: the hash itself (a proxy's, the hash it stands for), h_p its cell (its bank selected).  OUT: C = 1,
+; it was a proxy (a method's &0, which has the private entries)
+hash_real:
+            jsr         deref
+            ldy         #1
+            lda         (h_p),y
+            asl
+            bcc         @done
+            ldy         #3
+            lda         (h_p),y
+            tax
+            dey
+            lda         (h_p),y
+            sta         h_v
+            stx         h_v + 1
+            jsr         deref
+            sec
+@done:
+            rts
+
 ; h_v (a Q- or S-expression) = its list (a chain of pairs: NIL for NIL)
 list_of:
             lda         h_v + 1
@@ -398,5 +422,5 @@ error_text:
 .segment "DATA"
 ; Each object type's type (OT_*: TY_*)
 ot_type:    .byte       TY_OTHER, TY_STRING, TY_OTHER, TY_LIST, TY_SEXPR, TY_SYMBOL, TY_ATOM, TY_FUNC, TY_ERROR
-            .byte       TY_FRAME, TY_SYMBOL, TY_NUM, TY_NUM, TY_NUM, TY_NUM
+            .byte       TY_FRAME, TY_SYMBOL, TY_NUM, TY_NUM, TY_NUM, TY_NUM, TY_STRING, TY_HASH
 .code

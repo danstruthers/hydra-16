@@ -165,8 +165,8 @@ task's RAM.
 * **Special forms** are built-ins given their arguments as they're written: `if`, `do`, `and`, `or`, `let`,
   `try`, `eval`, `def`, `set`, `set!`, `while`, `each`, `dotimes` (a `{name list}` body is made a function of the
   name), `output-of`, `<=>`.  `defined?` and `expr?` take theirs as written too.
-* **As yet**: a string is 126 bytes at most (7.4); no hashes, streams or system library (7.4).  `load` takes a
-  path, or a bare name in `/lib/hylang`, `.hl` left off or not.
+* **As yet**: a string is 126 bytes at most (7.4a: 4096); no hashes (7.4a), streams or system library (7.4).
+  `load` takes a path, or a bare name in `/lib/hylang`, `.hl` left off or not.
 
 The hylang test runs the suite's `scope.dl`, `control.dl` and `errors.dl` as danlang's master has them
 (`tests/hylang`), from an emulated card, with `core.hl`, hylang's own checks.
@@ -181,3 +181,26 @@ plan had the exotic ones loaded from a library module: as built, they're in the 
 `globals.hl` is danlang's `globals.dl` whole.  The hylang test runs `reader.dl` (but its two checks of hashes, 7.4)
 and `numbers.dl` too; `eval.dl` passes, but takes 22 minutes at 3.58 MHz, so the test runs `core.hl`'s smaller
 copies of its checks.
+
+**7.4a** (`modules/hylang`: `strings.inc`, `hashes.inc`, in the module's fourth bank).  Strings and hashes:
+
+* **A string** is 4096 bytes at most (danlang's have no limit): one of 126 bytes or fewer is a cell, a longer one
+  a chain of them with its length.  What's made from strings is written to a buffer of 4096 bytes and made a
+  string after (`+`, `format`, `repr`, `to-str`, `output-of`, the `str-` functions), so nothing's made while
+  values are printed; what's searched or cut is copied whole to the text buffer first (`substring`, `char-at`,
+  `index-of`, `reverse`, `str-split` ...).  A pattern (a separator, what `str-replace` replaces, `index-of`'s
+  string) is 126 bytes at most, and so is a name made from a string (122).
+* **The str- functions**, the character tests (`alpha?`, `digit?`, `space?`, `upper?`, `lower?`, ASCII's
+  letters), `to-sym`, `to-atom`, `gensym`, `subset` and `sort` (a stable merge sort, by `cmp`'s order or by a
+  function of two items) are danlang's.
+* **A hash** is danlang's `LHash`: its entries (a key, an atom, a string or a number; its value; its tags) and
+  its own tags, all kept in order, the entries looked for one by one; it's changed in place (`hash-put`,
+  `hash-remove`, the tags), and a copy is `hash-clone`'s.  The reserved tags are danlang's: `__locked`,
+  `__read-only` (`hash-make-const`), `__private`, `__not_nil`.  `hash-call` applies a method with `&0` bound
+  to a proxy of the hash, through which its private entries are had; the evaluator applies it, so a method's call
+  is a tail call like any other's.  A hash prints as danlang's, `<hash>` and `from#`'s list.
+
+The hylang test runs `lists.dl`, `strings.dl`, `hashes.dl` and `types.dl` too, and all of `reader.dl`: 574
+checks, `types.dl`'s `(type-of stdout)` failing till 7.4b has streams.  hylang is four banks now, the most a
+module may have, with 7.4b-d to come: next, a core module and library modules (the plan's), and a built-in's
+arguments on the evaluation stack, not in a list made for each call.

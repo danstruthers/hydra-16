@@ -11,9 +11,10 @@
 ; takes no stack), and so are if's branches, do's last, let's last and eval's.  Every entry of the stack is a value
 ; (its K_* codes fixnums), and so are the registers ev_x to ev_s, so the collector takes them all as roots (env.inc
 ; has the stack, scopes and names, which the built-ins use too).
-;   A built-in (builtins.inc) is native code, in the second bank or the third (BF_BANK3: numbers.inc), called through
-; hyx2_farn, given its arguments'
-; values in ev_a (a chain), or as they're written (BF_RAW: defined?), ev_v its value; an error among the values is
+;   A built-in (builtins.inc) is native code, in the second bank, the third (BF_BANK3: numbers.inc) or the fourth
+; (BF_BANK4: strings.inc, hashes.inc), called through hyx2_farn, given its arguments' values in ev_a (a chain), or
+; as they're written (BF_RAW: defined?), ev_v its value (or, ev_again set, ev_f applied to ev_a, as if it were the
+; call: hash-call's methods); an error among the values is
 ; the call's value, unless the built-in takes errors (BF_ERRORS: print, error-message ...).  A special form
 ; (BF_SPECIAL: if, do, let, while ...) is the first bank's, given its arguments as they're written (ev_r), and goes
 ; on its own way, with the frames K_IF, K_DO ... .  Native code that wants a value evaluated, or a function applied,
@@ -52,7 +53,8 @@ K_SPACE         = 23            ; [blocks, env]: <=>'s number
 BF_SPECIAL      = $01           ; Its arguments as they're written (ev_r), its own way
 BF_ERRORS       = $02           ; An error among its arguments is an argument (not the call's value)
 BF_RAW          = $04           ; Its arguments as they're written, in ev_a (native code, that evaluates none)
-BF_BANK3        = $08           ; Its code is in the third bank (numbers.inc), not the second
+BF_BANK3        = $08           ; Its code is in the third bank (numbers.inc), not the second ...
+BF_BANK4        = $10           ;   or the fourth (strings.inc, hashes.inc)
 
 .code
 
@@ -72,6 +74,7 @@ eval_init:
             LDR         ev_sp, $8000
             stz         ev_nest
             stz         ev_intr
+            stz         ev_again
             ldx         #EV_REGS - 1                        ; (The registers: NIL)
 :
             stz         ev_x,x
@@ -91,7 +94,7 @@ eval_init:
             LDR         r0, es_amp_err
             lda         #OT_SYMBOL
             jsr         intern_counted
-            bcs         @no
+            jcs         @no
             MOVR        sym_err, h_v
             jsr         sym_local
             LDR         r0, es_amp_code
@@ -110,6 +113,8 @@ eval_init:
             bcs         @no
             MOVR        err_room, h_v
             FAR2        builtins_init
+            bcs         @no
+            FARN        4, hash_init
             rts
 @no:
             sec
@@ -422,19 +427,25 @@ ev_apply:
             MOVR        ev_r, ev_a
             jmp         (ev_j)
 :
-            lda         ev_j                                ; (Native code: in the second bank, or the third)
-            sta         hyx2_to
+            lda         ev_j                                ; (Native code: in the second bank, the third or the
+            sta         hyx2_to                             ; fourth)
             lda         ev_j + 1
             sta         hyx2_to + 1
-            ldy         hyx2_bank2
             lda         bi_flags,x
-            and         #BF_BANK3
-            beq         :+
-            ldy         hyx2_bank3
-:
-            sty         hyx2_n
+            and         #BF_BANK3 | BF_BANK4
+            lsr
+            lsr
+            lsr
+            tay
+            lda         hyx2_bank2,y
+            sta         hyx2_n
             jsr         hyx2_farn
+            lda         ev_again                            ; (Its value a call: hash-call's)
+            bne         :+
             jmp         ev_return
+:
+            stz         ev_again
+            jmp         ev_apply
 
 ; The built-in ev_f's number: .X (page 3's 0-127, page 4's 128-255)
 bi_index:
@@ -1797,12 +1808,14 @@ sf_output:
             bpl         :+
             LDR         r0, oc_buf
             lda         oc_n
+            ldx         oc_n + 1
             jsr         buf_string
             MOVR        ev_s, h_v
 :
             lda         #$80
             sta         oc_on
             stz         oc_n
+            stz         oc_n + 1
             LDR         ev_v, NIL
 output_step:
             lda         ev_r + 1
@@ -1829,6 +1842,7 @@ output_end:
             bcs         :+
             LDR         r0, oc_buf
             lda         oc_n
+            ldx         oc_n + 1
             jsr         buf_string
             MOVR        ev_v, h_v
 :
@@ -1840,24 +1854,13 @@ output_end:
             beq         @done
 :
             stz         oc_n
+            stz         oc_n + 1
             MOVR        h_v, ev_s
-            jsr         type_of
-            cmp         #TY_STRING
-            bne         @on
-            jsr         deref
-            ldy         #1
-            lda         (h_p),y
+            LDR         io_p, oc_buf
+            jsr         str_flat
+            bcs         @on
             sta         oc_n
-            ldx         #0
-            iny
-:
-            cpx         oc_n
-            beq         @on
-            lda         (h_p),y
-            sta         oc_buf,x
-            inx
-            iny
-            bra         :-
+            stx         oc_n + 1
 @on:
             lda         #$80
             sta         oc_on

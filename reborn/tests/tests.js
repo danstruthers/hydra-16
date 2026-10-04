@@ -542,8 +542,9 @@ function forthCard() {
 
 // hylang's card: danlang's suite's files (tests/hylang: those that pass as yet, in run.dl's order, and hylang's own),
 // and a run.hl that loads harness.dl, then each in turn (a file that stops with an error counts as a failure, as
-// danlang's run.dl has it), and prints the count.  reader.dl's two checks of hashes fail till step 7.4 has them
-const HYLANG_SUITE = ['reader.dl', 'scope.dl', 'control.dl', 'errors.dl', 'numbers.dl', 'core.hl'];
+// danlang's run.dl has it), and prints the count.  types.dl's check of stdout's type fails till step 7.4b has streams
+const HYLANG_SUITE = ['reader.dl', 'scope.dl', 'control.dl', 'errors.dl', 'lists.dl', 'strings.dl', 'numbers.dl', 'hashes.dl',
+  'types.dl', 'core.hl'];
 function hylangCard() {
   fs.mkdirSync(CARD_DIR, { recursive: true });
   hydrafs.setNow(0x1000);
@@ -694,7 +695,7 @@ module.exports = {
       },
     },
     {
-      name: 'hylang', what: 'hylang (danlang, phase 7): danlang\'s regression suite\'s files that pass as yet (reader but its hashes, scope, control, errors, numbers) and hylang\'s own checks (core.hl), loaded from a card with the suite\'s harness; at the console: a line evaluated as danlang\'s REPL has it, an expression over lines with a here string, an error, Ctrl-C (an evaluation, and the prompt), exit, and (exit n)\'s status',
+      name: 'hylang', what: 'hylang (danlang, phase 7): danlang\'s regression suite\'s files that pass as yet (reader, scope, control, errors, lists, strings, numbers, hashes, types but its stream) and hylang\'s own checks (core.hl), loaded from a card with the suite\'s harness; at the console: a line evaluated as danlang\'s REPL has it, an expression over lines with a here string, an error, Ctrl-C (an evaluation, and the prompt), exit, and (exit n)\'s status',
       init: 't_rc', modules: ['hylang'], cycles: 900e6,
       // (Each line at its prompt, but a continued expression's, a moment after the last; (f) loops till Ctrl-C, which rc
       // gets too: its prompt on a new line after hylang ends)
@@ -702,9 +703,8 @@ module.exports = {
         return { sd: hylangCard(), input: 'ācd /sd/0; hylang\r' + 'ā(load "run.hl")\r' + 'ā+ 1 2\r' + 'ā(list 1\rĀ  2 """a\rĀb""")\r' +
           'ā(error "x" :e)\r' + 'ā(def {f} (fn {} {f}))\r' + 'ā(f)\rĀĀ\u0003' + 'ĀĀ\u0003' + 'āexit\r' + 'āhylang\r' + 'ā(exit 3)\r' + 'āecho $status\r' };
       },
-      expect: ['FAIL reader.dl: (hash-get sh-h :a) gave Error: Unbound Symbol \'hash-get\', not 1\n' +
-        'FAIL reader.dl: (do (hash-put sh-h {:b 2}) (hash-get sh-h :b)) gave Error: Unbound Symbol \'hash-put\', not 2\n' +
-        '321 checks, 2 failed\n=> NIL\n', 'hylang> + 1 2\n=> 3\nhylang> (list 1\n\t<   2 """a\n\t< b""")\n=> {1 2 "a\\nb"}\n' +
+      expect: ['FAIL types.dl: (type-of stdout) gave :error, not :stream\n' +
+        '574 checks, 1 failed\n=> NIL\n', 'hylang> + 1 2\n=> 3\nhylang> (list 1\n\t<   2 """a\n\t< b""")\n=> {1 2 "a\\nb"}\n' +
         'hylang> (error "x" :e)\n=> Error: x\nhylang> (def {f} (fn {} {f}))\n=> NIL\nhylang> (f)\n=> Error: interrupted\nhylang> \nhylang> exit\n=> exit\n\n' +
         '% hylang\nhylang (danlang on the Hydra-16), exit to end\nhylang> (exit 3)\n% echo $status\n3\n%'],
     },

@@ -1,0 +1,58 @@
+; lists.dl - list, head, tail, init, end, join, len, item-at, subset, reverse, sort, index-of and last-index-of on
+; lists, and equality
+
+(check (list 1 (+ 1 1) "x") {1 2 "x"})
+(check (list) {})
+(check (head {1 2 3}) {1})
+(check (tail {1 2 3}) {2 3})
+(check (tail {1}) {})
+(check (init {1 2 3}) {1 2})
+(check (end {1 2 3}) {3})
+(check (join {1} {2 3} {}) {1 2 3})
+(check (join {}) {})
+(check-error (head {}))
+(check-error (tail {}))
+(check-error (init {}))
+(check-error (end {}))
+(check-error (head 5))
+(check-error (join {1} 2))
+
+(check (len {1 2}) 2)
+(check (len {}) 0)
+(check (len {{1 2} 3}) 2)
+(check-error (len 5))
+
+(check (item-at {10 20 30} 0) 10)
+(check (item-at {10 20 30} 2) 30)
+(check (item-at {10} 5) NIL)
+(check-error (item-at {10} :a))
+(check (subset {1 2 3 4} 1) {2 3 4})
+(check (subset {1 2 3 4} 1 2) {2 3})
+(check (subset {1 2 3 4} 2 10) {3 4})
+
+(check (reverse {1 2 3}) {3 2 1})
+(check (reverse {}) {})
+(check (reverse "abc") "cba")
+(check-error (reverse 5))
+
+; sort: by cmp, or by a function that's T when its first goes first; stable
+(check (sort {3 1 2}) {1 2 3})
+(check (sort {}) {})
+(check (sort {"b" "a" "c"}) {"a" "b" "c"})
+(check (sort {2 1/2 1.5 -1}) {-1 1/2 1.5 2})
+(check (sort {3 1 2} >) {3 2 1})
+(check (sort {{2 :b} {1 :a}} (fn {x y} {< (fst x) (fst y)})) {{1 :a} {2 :b}})
+(check (sort {{1 :a} {0 :x} {1 :b}} (fn {x y} {< (fst x) (fst y)})) {{0 :x} {1 :a} {1 :b}})
+(check-error (sort 5))
+(check-error (sort {1 2} 5))
+(check-error (sort {1 2} (fn {x y} {error "cmp"})))
+
+(check (index-of {1 2 3 2} 2) 1)
+(check (last-index-of {1 2 3 2} 2) 3)
+(check (index-of {1} 9) -1)
+(check (index-of {:a "b" {c}} {c}) 2)
+
+; equality is by value, all the way down
+(check (eq {1 {2 "x"}} {1 {2 "x"}}) T)
+(check (eq {1 2} {1 2 3}) NIL)
+(check (neq {1} {2}) T)
