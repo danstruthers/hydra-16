@@ -90,6 +90,6 @@ The PC answers as reborn's HydraFS (`#f`) does: a directory reads as 64-byte sta
 **The emulator** plays the PC tool's part with the same file server: `node reborn/sim/run.js -i --pc-dir C:\hydra` (`--pc-read-only`, `--pc-log`, `--pc-damage`), and the tests' `pc` field (`reborn/sim/lib/pchost.js`).  **Tests**: `pc`, `pc-two`, `pc-song` (in time with its blocking reads: 128 bytes at a time fit between its ticks), `pc-ro`, `pc-none`, `pc-damage`.
 
 ### **Not yet**
-* **XMODEM**, for a terminal program other than this one ([NEXT_STEPS.md](NEXT_STEPS.md)).
+* **XMODEM**, for a terminal program other than this one ([NEXT_STEPS.md](NEXT_STEPS.md)): built in reborn (`xmodem`, phase 5.6).
 * **A faster line**, with the PC tool and the Hydra changing rate together.
 * **More than one request out at a time** (the tags allow it): the line, not the round trips, is what limits it at 9600.

@@ -7,7 +7,7 @@ spikes measured, and what measuring changed.
 ## In short
 
 Phases 0, 1 and 3 (storage) are done, phase 2 is all but done, phase 4 (programs) is all but done: its loader, rc, the core tools, the assembly SDK, the C target and `edit`; and
-phase 5 (the remaining devices) has sound, the song player, GPIO and I2C, the clock, and `/pc`.  The kernel boots in the emulator, runs POST (with the old
+phase 5 (the remaining devices) has sound, the song player, GPIO and I2C, the clock, `/pc`, and `xmodem`.  The kernel boots in the emulator, runs POST (with the old
 hardware test a key away), starts its modules from the paged ROM in tasks of their own, schedules them
 preemptively, runs calls between tasks and copies between them, takes every interrupt through one path, manages
 task RAM, banks and shared segments, and delivers notes.  The file layer is in: fds, channels, requests to
@@ -36,7 +36,8 @@ YM2151 at `#a` (`/dev/snd`, `sndctl`, `bell`), with the old system's library (pa
 claims); the console rings its bell; `play` plays songs (the X16's ZSM files, on the ROM disk at `/rom/songs`).  The VIA's port A is `/dev/gpio` (its
 pins, CA1 and CA2) and `/dev/i2c` (the I2C bus on two of its pins).  The clock is set from the DS1747 as the
 system starts, if there's one: `/dev/time`, and `date`.  A folder on the PC is `/pc` (`#P`, the console driver's),
-served over the serial line by the PC tool (`../sim/tools/hydrapc.js`, which is the terminal too).
+served over the serial line by the PC tool (`../sim/tools/hydrapc.js`, which is the terminal too); `xmodem` sends
+and receives a file with any terminal program.
 
 ```
 PASS boot    the kernel boots, POST finds nothing wrong; init runs hello and waits for it
@@ -69,6 +70,7 @@ PASS pc-two  /pc from two tasks at once (a pipeline: one reads a file, the other
 PASS pc-song a song played from /pc (play /pc/t.zsm 2), its loop twice more, in time: a read on the line doesn't hold a note up
 PASS pc-ro   /pc served read-only (the PC tool's --read-only): files read; a write, a create, a remove, a mkdir, a rename refused; the folder as it was
 PASS pc-none /pc with no PC tool: the attach (its bytes on the terminal) unanswered, an error a second on, each time; the console goes on
+PASS xmodem  xmodem: a file received (1K blocks, a CRC; one damaged, one sent twice) and sent back (128-byte blocks, a checksum, one NAKed; 1K ones), the same; Ctrl-C at its start; the PC cancelling; 115200
 PASS pc-damage /pc's frames damaged on the line: requests (the PC tool asks for them again: its NAK), a reply (the Hydra asks again, and the PC tool answers from its last reply); the answers right, nothing damaged shown
 PASS init    init from files: the RAM disks started, the namespace file run, each shell's own namespace and /ram (a window's too)
 PASS newns   the default namespace's library (nslib): an old area emptied, a namespace file run (quotes, comments, $task, flags, bad lines)  (13 checks)
@@ -82,7 +84,7 @@ PASS irq     spike S1: 115200 received by an irq entry while tasks spin  (6 chec
 
 The same with the power-up's RAM from other seeds; the console, file, namespace and device tests the same with a
 WDC W65C51N build, the console test with a 7.16 MHz build, and the SPI, disk, file system, init, load, env, rc,
-tools, C, edit, sound, player, GPIO, clock and `/pc` tests with both.  The hardware test, entered from POST in the emulator, passes its whole quick run, its BIOS and
+tools, C, edit, sound, player, GPIO, clock, `/pc` and `xmodem` tests with both.  The hardware test, entered from POST in the emulator, passes its whole quick run, its BIOS and
 paged ROM checksums included.
 
 ## The spikes and budgets (3.58 MHz)
@@ -234,12 +236,15 @@ through the COMMON block (`FARCALL`).
 | 5.4 The clock | Done | `kernel/time.s` (page 1): the clock is the boot's time (`K0_BOOT`) and the ticks since, as the plan has it, so the tick stays a count: `TIME` and `TIME_SET` (seconds since 2000-01-01), and `RTC`, the DS1747's 8 registers read (its updates halted: R) or written (W, the control last), a byte at a time by quick looks at task F's `$7FF8`-`$7FFF`.  The calendar is kdev's (`#t`: seconds to fields and back, 2000-2135, a leap year every fourth but 2100), and as kdev starts it sets the clock from the chip, if its registers hold a date and time and its oscillator runs (it doesn't wait for the chip's second to turn, as the old probe did: the clock may start up to a second behind it).  `/dev/time` reads as the time, `2026-10-03 15:04:05`, and is set by writing that (the chip too); `/dev/rtc` reads as what was found: `running` (and `battery low`), `stopped` (set the time), or `none`.  `date` (`-n`: the seconds).  HydraFS's stamps are the clock's now (a counter till now), and so is the C library's `time` (`hy_time`).  The clock test sets the emulator's DS1747, crosses the end of a month and February in 2100, sets a leap day, and reads the chip back; the tools test has no chip (`none`, and the clock from 2000-01-01) |
 | The paged ROM's chips | Done | After 5.5: the paged ROM is built as a 512K image for each socket it fills (`bin/prom0.bin`, `prom1.bin` ...), as many as what's in it needs (now three: 66 banks), in place of one 2 MB `bin/prom.bin`.  The V1 board swaps the bank number's bits 6 and 7 on their way to the sockets, so banks 64 and up are in the fifth socket on; the image is now laid out in socket order (the Nth bank used is the CPU's bank N with bits 6 and 7 swapped: banks 0-63, then 128 ...), the modules and the ROM disk alike (a module of two banks kept from straddling the 64th), and the storage driver reads the ROM disk the same way, so the sockets fill in turn.  The ROM disk's volume is as big as its files need, in whole banks (it claimed the paged ROM to its end).  The old hardware test's checksum table counts banks in a row, so it has banks 0-63, the first two sockets' (it passes its quick run).  `sim/run.js` loads the chips' images, one after another |
 | 5.5 `/pc` | Done | In the console driver, which owns the line: `#P` (mounted at `/pc` by `/rom/lib/namespace`), a raw srvlib tree beside `#c` (`SRV_TREES`), whose handler sends each request to the PC tool and answers from its reply.  The old system's frames, tags, CRC and resends, with version 2 of what they carry (the attach says which): a request is the whole request block (appendix B) and its data (a name, a write's bytes, a stat record); a reply its status (reborn's errors), the fid, the count done, the qid type and its data.  The PC tool's file server (`../sim/tools/pcfs.js`) speaks both versions, version 2 as reborn's HydraFS answers (64-byte stat records, `E_ROFS` for a read-only folder), so one PC tool serves either system; the PC stuffs Ctrl-C, Ctrl-\ and Ctrl-] too, which the console's irq entry acts on.  The irq entry stays as it was: the frames come in with the keys, into the receive ring, and are taken out as the keys are handed out (`SRV_PRE`); the frame out goes into the send ring whole, ahead of the windows' text (`SRV_POST`); 128 bytes of data a frame, so a reply fits the ring.  A client waits for its reply with `E_AGAIN`; with nothing to send, timer 2 runs on in rounds of about 65,000 cycles, changing the event count every 8, so a reply that doesn't come is timed (2 s, 3 tries; an attach 1 s, once; then `E_IO`), and a frame that stops part-way for 0.1 s (a byte lost) is asked for again.  One request at a time; another client's waits for it; one given up (a non-blocking read whose client stopped asking) is dropped a second after its reply was due.  The emulator plays the PC tool (`sim/lib/pchost.js`: `run.js --pc-dir`, `--pc-read-only`, `--pc-log`, `--pc-damage`; a test's `pc`).  With it: `cmp` fills its reads (a short one, a pipe's or `/pc`'s, was its end) |
+| 5.6 `xmodem` | Done | `modules/xmodem`, a program: `xmodem -r file` receives (the first block asked for with a CRC, `C`, every 3 seconds, and after 4 asks with a checksum, NAK, for a minute; 128-byte blocks and 1K ones; each ACKed, or NAKed once the line's quiet; a block sent again, its ACK lost, ACKed and dropped), `xmodem -s [-k] file` sends (128-byte blocks, or 1K ones with a CRC; each again on a NAK or 10 seconds' silence; then EOT); 10 tries a block, then CAN CAN CAN; the PC's CAN CAN, or Ctrl-C before the first block, cancels.  The padding at the end of the last block (SUB) isn't kept: the SUBs at a block's end are held back till data comes after them, so a SUB inside the file stays.  It reads `/dev/ser` without waiting, sleeping a tick between looks, for its timeouts (the kernel has no timed read).  The console: while `/dev/ser` is open for reading, the line is its reader's: the irq entry stores every byte as it is (Ctrl-C, Ctrl-\ and Ctrl-] too: `pfx` $FF, tested where the key after Ctrl-] was, and the digit test after it made 2 cycles shorter, `eor` for `sec`/`sbc`, so the longest stretch stays 194), the windows' text (and `/pc`'s frames) wait, kept as a hidden window's is, and its last close repaints the window shown.  At 115200, 1K blocks can't be taken in (each byte's interrupt is 190 of a character's 311 cycles: a block bigger than the receive ring overruns it); 128-byte ones can, a byte lost now and then and the block sent again.  The test plays the PC's end (`sim/lib/xmpeer.js`, on the machine's PC hook) |
 
 ## Next
 
-1. Phase 5.6: `xmodem`, as a program.  Then the rest of `/proc` (5.7).
+1. Phase 5.7: the rest of `/proc` (`mem`, `ram`, `regs`, `note`, `cwd`, `env`).
 2. At 115200, `/pc` loses a reply's byte now and then (see the budgets): a reply could wake its client once it's
-   whole, not for every byte, if the irq entry could tell a frame's bytes from keys cheaply.
+   whole, not for every byte, if the irq entry could tell a frame's bytes from keys cheaply.  And `xmodem` can't take
+   1K blocks in at 115200 (128-byte ones work): each byte's interrupt is 190 of the 311 cycles a character takes, so
+   a block bigger than the receive ring (255 bytes) overruns it.
 3. HydraFS's clusters are 4K (8 blocks), as the old system's were for cards, so a RAM disk holds few files (a 64K
    one, 15 files and directories); its superblock has the cluster's size, so a RAM disk could have smaller ones.
 4. `ls /bin` takes about 13,000 cycles more for each program in `#m/bin` (760,000 for 36): kdev's records, made

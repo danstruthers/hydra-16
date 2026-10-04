@@ -23,6 +23,7 @@
 const fs = require('fs');
 const path = require('path');
 const hydrafs = require('../../sim/tools/hydrafs.js');
+const { createXmodemPeer } = require('../sim/lib/xmpeer.js');
 
 const IRQ_OFF_MAX = 200;                                      // (docs/reimplementation-from-scratch.md, §8: 115200)
 const S1_BYTES = 2000;
@@ -473,6 +474,10 @@ function PC_SONG() {
   const hdr = [0x7A, 0x6D, 1, loopAt & 255, loopAt >> 8 & 255, loopAt >> 16, 0, 0, 0, 0x01, 0, 0, 60, 0, 0, 0];
   return Buffer.from([...hdr, ...intro, ...loop, 0x80]);
 }
+// The xmodem test's file: 3000 bytes, every value (Ctrl-C, Ctrl-], the frame marks ... too), its second 1K all SUB
+// (the padding's byte: held back, then written, as data comes after it), its last byte not SUB
+const XM_DATA = () => Buffer.from(Array.from({ length: 3000 }, (_, i) => i >= 1024 && i < 2048 ? 0x1A : i === 2999 ? 0x41 : (i * 7 + (i >> 8)) & 0xFF));
+
 // A test's lines typed, each at its prompt, and its expect (as the tools test's)
 const typed = lines => lines.map(l => 'ā' + l[0] + '\r').join('');
 const expected = lines => lines.map(l => '% ' + l[0] + '\n' + (l[2] ? l[1] : (l[1] === null ? '' : l[1] + '\n') + '%'));
@@ -872,6 +877,45 @@ module.exports = {
       machine: { input: 'āls /pc\rācat /pc/hello.txt\rācat /pc/hello.txt\r' },
       expect: ['% ls /pc\nhello.txt\n%', '% cat /pc/hello.txt\nHello from the PC\n% cat /pc/hello.txt\nHello from the PC\n%'],
       check: m => pcReport(m, 1, 2, 1),
+    },
+    {
+      name: 'xmodem', what: 'xmodem: a file received (1K blocks, a CRC; one damaged, one sent twice) and sent back (128-byte blocks, a checksum, one NAKed; 1K ones), the same; Ctrl-C at its start; the PC cancelling; 115200',
+      init: 't_rc', cycles: 200e6,
+      // (The emulator the PC's end: sim/lib/xmpeer.js.  The -s sessions' start, NAK or C, typed as a key.  At 115200,
+      // 128-byte blocks received: a 1K block comes faster than it can be taken, as the console's receive ring holds 255)
+      get machine() {
+        this.peer = createXmodemPeer([
+          { trigger: 'xmodem -r /ram/x\r\n', role: 'send', data: XM_DATA(), k: true, damage: [2], again: [1] },
+          { trigger: 'xmodem -s /ram/x\r\n', role: 'receive', crc: false, nak: [3] },
+          { trigger: 'xmodem -s -k /ram/x\r\n', role: 'receive', crc: true },
+          { trigger: 'xmodem -r /ram/y\r\n', role: 'send', data: XM_DATA(), cancel: 2 },
+          { trigger: 'xmodem -r /ram/w\r\n', role: 'send', data: XM_DATA() },
+          { trigger: 'xmodem -s -k /ram/w\r\n', role: 'receive', crc: true },
+        ]);
+        return { pcHost: this.peer, input: 'āxmodem -r /ram/x\r' + 'āxmodem -s /ram/x\rĀ\x15' + 'āxmodem -s -k /ram/x\rĀC' +
+          'āxmodem -r /ram/z\rĀ\x03' + 'āxmodem -r /ram/y\r' + 'āecho $status; xmodem /ram/x\r' +
+          'āecho b115200 >/dev/serctl; xmodem -r /ram/w\r' + 'āxmodem -s -k /ram/w\rĀC' };
+      },
+      expect: ['% xmodem -r /ram/x\n/ram/x: 3000 bytes\n%', '% xmodem -s /ram/x\n/ram/x: 3000 bytes\n%', '% xmodem -s -k /ram/x\n/ram/x: 3000 bytes\n%',
+        'xmodem: /ram/z: cancelled\n%', '% xmodem -r /ram/y\nxmodem: /ram/y: cancelled\n%',
+        '% echo $status; xmodem /ram/x\ncancelled\nusage: xmodem -r file | -s [-k] file\n%',
+        '% echo b115200 >/dev/serctl; xmodem -r /ram/w\n/ram/w: 3000 bytes\n%', '% xmodem -s -k /ram/w\n/ram/w: 3000 bytes\n%'],
+      // (Each session's data back as the file, and SUBs to its blocks' end: 128-byte blocks, and 1K ones)
+      check() {
+        const f = [], [rx, tx, tk, can, rx115, tk115] = this.peer.sessions, data = XM_DATA();
+        this.notes = this.peer.sessions.map((s, i) => 'session ' + (i + 1) + ': ' + (s.log || ['never armed']).join(', '));
+        if (rx.done !== true || !rx.log.includes('damaged 2') || !rx.log.includes('again 1')) f.push('receiving: ' + (rx.log || []).join(', '));
+        if (tx.done !== true || !tx.log.includes('nak 3')) f.push('sending back: ' + (tx.log || []).join(', '));
+        if (tk.done !== true || tk.log.filter(l => / 1K$/.test(l)).length !== 3) f.push('sending back, 1K: ' + (tk.log || []).join(', '));
+        if (rx115.done !== true) f.push('receiving at 115200: ' + (rx115.log || []).join(', '));
+        for (const [s, block] of [[tx, 128], [tk, 1024], [tk115, 1024]]) {
+          const back = Buffer.from(s.got || []), pad = Math.ceil(data.length / block) * block;
+          if (back.length !== pad || !back.subarray(0, data.length).equals(data) || back.subarray(data.length).some(b => b !== 0x1A))
+            f.push('sent back in ' + block + '-byte blocks: ' + back.length + ' bytes, not the file (' + data.length + ') and SUBs to ' + pad);
+        }
+        if (can.done !== 'cancelled') f.push('the PC\'s cancel: ' + (can.log || []).join(', '));
+        return f;
+      },
     },
     {
       name: 'cons', what: 'the console: lines, editing, history, raw keys, Ctrl-C, windows (shown, repainted, made, gone), 115200, the bell',

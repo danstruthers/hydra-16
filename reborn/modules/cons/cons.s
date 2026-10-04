@@ -17,8 +17,9 @@
 ;   /wctl       new (a window), current N (window N shown).  It reads as the windows, a line each (* the shown one)
 ;   /wnew       a read waits for the user's Ctrl-] c, then makes a window, shown, and gives its number (init's: it
 ;               starts a shell there)
-;   /ser        the serial port, raw: bytes in and out as they are.  While it's open for reading, the keys are its,
-;               not the windows'
+;   /ser        the serial port, raw: bytes in and out as they are.  While it's open for reading, the line is its
+;               (xmodem's): every byte in is its, Ctrl-C and the rest too, and the windows' text (and /pc's frames)
+;               wait, kept as a hidden window's is, till its last close repaints the window shown
 ;   /serctl     the rate: b300, b600, b1200, b2400, b4800, b9600, b19200, b115200.  It reads as it
 ; The keys: Ctrl-] then a digit shows that window (Ctrl-] n the next; Ctrl-] c asks for a new one, for /wnew's
 ; reader; Ctrl-] Ctrl-] is a Ctrl-]); Ctrl-C and Ctrl-\ are notes (interrupt, kill) to the shown window's note
@@ -122,14 +123,15 @@ t2_hi:      .res        1
 t2_rounds:  .res        1                                   ;   the rounds (more than 1 at slow rates) ...
 t2_left:    .res        1                                   ;   and those left of this one
 rate:       .res        1                                   ; The rate (its index in the tables)
-pfx:        .res        1                                   ; The irq entry's: <> 0, the last key was Ctrl-] ...
+pfx:        .res        1                                   ; The irq entry's: <> 0, the last key was Ctrl-] ($FF:
+                                                            ;   /ser's, no key acted on) ...
 win_grp:    .res        1                                   ;   and the note group of the window with the keys
 d_pfx:      .res        1                                   ; Handing the keys out: <> 0, the last was Ctrl-]
 w_in:       .res        1                                   ; The window shown, which gets the keys
 repaint:    .res        1                                   ; <> 0: it's just been shown (its screen to repaint)
 want_new:   .res        1                                   ; <> 0: Ctrl-] c, a window wanted (for /wnew's reader)
 ser_rd:     .res        1                                   ; /ser's fids for reading (while there are any, the
-                                                            ;   keys are /ser's)
+                                                            ;   line is /ser's: h_ser)
 lw:         .res        1                                   ; The window whose editor state is here ($FF: none)
 st_first:                                                   ; ---- The loaded window's editor state (ST_N bytes)
 ln_len:     .res        1                                   ; The line being edited: its length ...
@@ -155,7 +157,8 @@ n:          .res        2                                   ; Scratch
 m:          .res        2
 p:          .res        2
 cnt:        .res        1
-budget:     .res        1                                   ; A write to the shown window: the send ring's room
+budget:     .res        1                                   ; A write to the shown window: the send ring's room ...
+live:       .res        1                                   ;   <> 0: its text goes out (w_out)
 
 .bss
 rx_buf:     .res        256
@@ -295,11 +298,11 @@ irq:
             lda         #0
             rts
 
-@after:                                                     ; The key after Ctrl-]: a digit is the window that has
-            stz         pfx                                 ;   the keys now (its note group Ctrl-C's: the serve
-            tax                                             ;   entry acts on the rest)
-            sec
-            sbc         #'0'
+@after:                                                     ; (pfx $FF: /ser's, the bytes as they are)
+            bmi         @store
+            stz         pfx                                 ; The key after Ctrl-]: a digit is the window that has
+            tax                                             ;   the keys now (its note group Ctrl-C's: the serve
+            eor         #'0'                                ;   entry acts on the rest).  ($30-$33 alone give 0-3)
             cmp         #WIN_MAX
             bcs         :+
             tay
@@ -739,15 +742,23 @@ w_put:
             plx
             rts
 
-; m = the room in the loaded window's text: all of it if it isn't shown (its oldest bytes go), else as much as
-; doesn't overtake what's still to go out.  Modifies .A, .X
+; Is window .X's text going out: is it shown, and the line not /ser's?  OUT: Z = 1 yes.  Keeps .X, .Y
+w_out:
+            cpx         w_in
+            bne         :+
+            lda         ser_rd
+:
+            rts
+
+; m = the room in the loaded window's text: all of it if it isn't going out (w_out: its oldest bytes go), else as
+; much as doesn't overtake what's still to go out.  Modifies .A, .X
 w_room:
             lda         #<TEXT_MAX
             sta         m
             lda         #>TEXT_MAX
             sta         m + 1
             ldx         lw
-            cpx         w_in
+            jsr         w_out
             bne         @done
             sec                                             ; Less what's still to go out
             lda         w_hl,X
@@ -771,8 +782,10 @@ w_room:
 
 ; After each request: /pc's frame out first, all of it (and a request long past its time given up); then the shown
 ; window's text, as the send ring has room (each LF as CR LF); a window just shown first: the screen cleared, and its
-; text from the start of its last SCREEN_ROWS lines
+; text from the start of its last SCREEN_ROWS lines.  None while the line is /ser's
 pump:
+            lda         ser_rd
+            bne         @done
             lda         pc_step
             beq         :+
             lda         #PC_STALE
@@ -972,7 +985,7 @@ h_cons:
             clc
             rts
 
-; /ser: a read, a write; its fids for reading counted
+; /ser: a read, a write; its fids for reading counted (with any, the line is /ser's)
 h_ser:
             cmp         #R_READ
             bne         :+
@@ -996,12 +1009,19 @@ h_ser:
             lda         ser_rd
             beq         @done
             dec         ser_rd
+            bne         @done
+            stz         pfx                                 ; Its last: the line the console's again, the keys
+            lda         #1                                  ;   acted on, the shown window repainted
+            sta         repaint
+            inc         TASK_EVENT                          ; (Its writers look again)
 @done:
             clc
             rts
 
 @open:
             inc         ser_rd
+            lda         #$FF                                ; The line's /ser's: the irq entry stores every byte
+            sta         pfx                                 ;   as it is (Ctrl-C, Ctrl-\, Ctrl-] too)
             clc
             rts
 
@@ -1154,18 +1174,20 @@ r_give:
             clc
             rts
 
-; /cons: a write, into the window's text.  A window that isn't shown takes it all (its oldest text goes); the shown
-; one as much as the send ring has room for now (each LF as CR LF; none while its text has more to go out), so all
-; of it goes out at this request's end, and the writer, waiting for room, comes back for the rest (the kernel sends
-; it again).  None taken: E_AGAIN.  IN: .X = the fid
+; /cons: a write, into the window's text.  A window that isn't shown takes it all (its oldest text goes), as does
+; the shown one while the line is /ser's; the shown one as much as the send ring has room for now (each LF as CR LF;
+; none while its text has more to go out), so all of it goes out at this request's end, and the writer, waiting for
+; room, comes back for the rest (the kernel sends it again).  None taken: E_AGAIN.  IN: .X = the fid
 w_write:
             lda         srv_fid_aux,X
             jsr         load
             lda         #$FF                                ; budget: the shown window's room
             sta         budget
+            stz         live
             ldx         lw
-            cpx         w_in
+            jsr         w_out
             bne         :+
+            inc         live                                ; (Its text goes out)
             stz         budget
             lda         w_hl,X                              ; (Its text all out?)
             cmp         w_sl,X
@@ -1199,9 +1221,8 @@ w_write:
             jsr         from_client                         ; Its bytes, into iobuf
             ldx         #0
 @byte:
-            lda         lw                                  ; The shown window's: room in the send ring?
-            cmp         w_in
-            bne         @put
+            lda         live                                ; Going out: room in the send ring?
+            beq         @put
             ldy         #1                                  ; (It takes 1, or an LF 2: CR LF)
             lda         iobuf,X
             cmp         #LF
@@ -1218,9 +1239,8 @@ w_write:
             lda         iobuf,X
             cmp         #BEL                                ; (The shown window's BEL: the bell, at the end)
             bne         :+
-            ldy         lw
-            cpy         w_in
-            bne         :+
+            ldy         live
+            beq         :+
             sta         bell
 :
             jsr         w_put

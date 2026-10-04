@@ -186,7 +186,8 @@ The kernel task (task 0) keeps the kernel's state: its program zero page (`K0_*`
   the keys is which window is shown, and a window's interrupts go to its note group.
 * **One driver owns the serial line** (`cons`): the console's windows (`#c`) and `/pc` (`#P`), whose frames go
   between the console's bytes.  Its irq entry knows only keys: a frame comes in with them, into the receive ring,
-  and is taken out in the serve entry.
+  and is taken out in the serve entry.  While `/dev/ser` is open for reading (`xmodem`), the line is its reader's:
+  every byte in is its, and the windows' text waits.
 * **A server times a wait itself.**  The kernel has no timed `E_AGAIN`: a client waits for the server's event
   count to change.  A server that must give up on something that doesn't come (`/pc`'s reply) makes the count
   change now and then from an interrupt it owns (the console's timer 2, run on in rounds), and its client, asking
