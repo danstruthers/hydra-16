@@ -19,6 +19,7 @@ lib/forth/search.fl ../obj/forthlib/search.fl
 lib/forth/tools.fl  ../obj/forthlib/tools.fl
 lib/forth/double.fl ../obj/forthlib/double.fl
 lib/forth/hydra.fl  ../obj/forthlib/hydra.fl
+lib/hylang/globals.hl lib/hylang/globals.hl ; hylang's library (danlang's globals.dl): what it loads as it starts
 bin/mkfs            ../obj/programs/mkfs.hyx    ; The disk tools: RAM programs (programs/), loaded from here
 bin/fsck            ../obj/programs/fsck.hyx
 bin/label           ../obj/programs/label.hyx

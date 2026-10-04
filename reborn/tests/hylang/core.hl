@@ -1,0 +1,65 @@
+; core.hl - hylang's own checks (step 7.2), run with the suite's harness.dl: what eval.dl and reader.dl check, at
+; sizes fixnums hold (those files read numbers past them: they run with step 7.3), and what's hylang's own
+
+; tail calls: a call in tail position (a function's last, through if, do, let and eval) takes its caller's place, so
+; these loops take no more of the evaluation stack (16K: some 1300 calls nested) than one call
+(fun {c-loop n} ?{(zero? n) :done (c-loop (- n 1))})
+(check (c-loop 3000) :done)
+(fun {c-loop-do n} ?{(zero? n) :done (do (+ 1 1) (c-loop-do (- n 1)))})
+(check (c-loop-do 3000) :done)
+(fun {c-loop-let n} {let {{m (- n 1)}} ?((< m 0) :done (c-loop-let m))})
+(check (c-loop-let 3000) :done)
+(fun {c-loop-eval n} ?{(zero? n) :done (eval {c-loop-eval (- n 1)})})
+(check (c-loop-eval 2000) :done)
+(fun {c-even n} ?{(zero? n) T (c-odd (- n 1))})
+(fun {c-odd n} ?{(zero? n) NIL (c-even (- n 1))})
+(check (c-even 3001) NIL)
+(check (c-even 3000) T)
+(fun {c-sum-to n acc} ?{(zero? n) acc (c-sum-to (- n 1) (+ acc n))})
+(check (c-sum-to 100 0) 5050)
+
+; depth: calls that aren't in tail position nest as deep as the stack (or the heap) holds; deeper is an error
+(fun {c-deep n} ?{(zero? n) 0 (+ 1 (c-deep (- n 1)))})
+(check (c-deep 1000) 1000)
+(check-error (c-deep 16000))
+
+; the reader: strings, here strings, characters, atoms, symbols, comments, the shorthands, read
+(check (len "a\tb") 3)
+(check "\x41\x42" "AB")
+(check """a"b""" (+ "a" (code-char 34) "b"))
+(check """x
+y""" "x\ny")
+(check (char-code \space) 32)
+(check (char-code \lcurly) 123)
+(check :ABC :abc)
+(def {CMixed} 5)
+(check cmixed 5)
+(check (len {1 ; two
+  3}) 2)
+(check '(1 (+ 1 1)) {1 2})
+(check ^({1 2 3}) {1})
+(check $({1 2 3}) {2 3})
+(check .(+ {1 2 3}) 6)
+(check |({1} {2 3}) {1 2 3})
+(check (@({x} {* x 2}) 4) 8)
+(check !({+ 1 2}) 3)
+(check ?(NIL 1 2) 2)
+(check ~("{}+{}" 1 2) "1+2")
+(check (read "1 (+ 2 3)") {1 (+ 2 3)})
+(check (eval (read "+ 1 2")) 3)
+(check-error (read "(1 2"))
+(check-error (read "1 2)"))
+
+; equality and order, of lists too
+(check (eq {1 {2 "x"} :a} {1 {2 "x"} :a}) T)
+(check (eq {1 2} {1 2 3}) NIL)
+(check (eq (fn {a} {a}) (fn {a} {a})) T)
+(check (cmp {1 9} {1 10}) -1)
+(check (cmp "b" "a") 1)
+(check (< \a \b) T)
+
+; output caught, nested; a value's text
+(check (output-of (write "a" (output-of (write "b")) "c")) "abc")
+(check (output-of (print 1 "x" {2 "y"})) "1 x {2 \"y\"}\n")
+(check (repr "a\nb") "\"a\\nb\"")
+(check (to-str {1 "a" \b}) "{1 \"a\" \\b}")

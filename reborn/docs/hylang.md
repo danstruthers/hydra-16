@@ -112,7 +112,7 @@ All of danlang's built-ins and library, but where the table below says otherwise
 | :--- | :------- | :-- |
 | **Strings** | Bytes: a character is a code 0-255 (`code-char` past 255 is an error); `upper?`, `alpha?` and the rest are ASCII's | The Hydra's text is 8-bit |
 | **Numbers** | The whole tower, as danlang has it; integers 15-bit in the value, 32-bit boxed, bignums from a library module (§17.2); fixed decimals, rationals and complex numbers on them; the exotic bases (balanced, negative, little-endian, custom digits) from a library module loaded on first use | Most numbers are small; the rest costs only when used |
-| **Call depth** | Less than danlang's 10,000 (the evaluation stack's bank decides it); deeper is the same error | Memory |
+| **Call depth** | Less than danlang's 10,000: some 1300 calls nested, not in tail position (the evaluation stack's two banks decide it, or the heap); deeper is an error | Memory |
 | **`random`** | The kernel's entropy and a generator | |
 | **`load` and `use`** | A bare name is `/lib/hylang/name.hl`, through the namespace (as forth's `/lib/forth`), so a card's or the RAM disk's `/lib/hylang` adds to the ROM's | Plan 9 names |
 | **Streams** | Over the system's fds: `stdin`, `stdout`, `stderr` are fds 0-2; `output-of` points fd 1 at a buffer meanwhile | |
@@ -142,3 +142,33 @@ These are the user's (the plan's §22 has them too); the drafts are what this sp
 (tail calls, closures, fexprs, errors, notes); 7.3 numbers; 7.4 data and I/O, the system library and the Hydra's
 built-ins; 7.5 the shell layer, the device libraries and the `sys-` functions; 7.6 the library; 7.7 hylang as the
 login shell.  Each step runs the suite's files it makes pass, and none that passed may fail.
+
+## As built
+
+**7.2** (`modules/hylang`; `status.md` has what it measured).  `hylang` is a module of two banks, run at rc: its
+first bank has the evaluator (`eval.inc`) and the REPL (`hylang.s`), its second the reader (`read.inc`), the printer
+(`print.inc`) and the built-ins' code (`builtins.inc`); what both use, the heap (`heap.inc`), the objects
+(`obj.inc`), I/O (`io.inc`) and the scopes, names, evaluation stack and errors' messages (`env.inc`), is in the
+task's RAM.
+
+* **The REPL** is danlang's: a line's expressions are one S-expression (`+ 1 2` is 3); a line that doesn't close
+  goes on at a `<` prompt; `=> ` and the value's REPL form; `exit`, or the input's end, ends it.  It loads
+  `/lib/hylang/globals.hl` as it starts: danlang's `globals.dl`, but for its fixed decimals' constants (7.3).
+* **The evaluator** is a machine with a stack of its own (two banks): each frame a continuation (a fixnum) and
+  the values it keeps, so the collector takes the stack as roots and a program nests as deep as the stack holds,
+  not the 6502's.  A function's body runs in its caller's place, and so do `if`'s branches and the last of `do`,
+  `let`, `eval` and a loop's body: tail calls take no stack.  A value or a symbol is evaluated with no frame.
+* **Scopes** are frames (a parent and a list of bindings) down to the global one, where a symbol's value is in the
+  symbol; a symbol never bound in a frame is looked up there at once.  A call's frame has the formals, `&1`... and
+  `&_` for the arguments past them (`&_` NIL when there are none).  An fexpr's arguments keep the caller's scope
+  (a symbol as a reference to it with the scope, an S- or Q-expression as a copy with it).
+* **Special forms** are built-ins given their arguments as they're written: `if`, `do`, `and`, `or`, `let`,
+  `try`, `eval`, `def`, `set`, `set!`, `while`, `each`, `dotimes` (a `{name list}` body is made a function of the
+  name), `output-of`, `<=>`.  `defined?` and `expr?` take theirs as written too.
+* **As yet**: numbers are fixnums (-16384 to 16383; past them, or a division that isn't exact, is an error: 7.3);
+  a string is 126 bytes at most (7.4); no hashes, streams or system library (7.4).  `load` takes a path, or a bare
+  name in `/lib/hylang`, `.hl` left off or not.
+
+The hylang test runs the suite's `scope.dl`, `control.dl` and `errors.dl` as danlang's master has them
+(`tests/hylang`), from an emulated card, with `core.hl`, hylang's own checks for what `eval.dl` and `reader.dl` hold
+(those read numbers past fixnums, so they run from 7.3).

@@ -13,6 +13,7 @@
 ; roots_lo/hi) marked; each marked object scanned from the mark stack (a bank of its own: 4096 values), a list's run
 ; of cdrs in place, so a list costs no stack.  A full stack is noted (mark_over), and then the marked cells are
 ; scanned again till nothing new is marked.  Then a page with nothing marked is free; the others are swept lazily.
+;   Its code and tables are in the task's RAM (the module's DATA), where both of hylang's banks see them.
 ;   Allocation: each kind fills a page in order (cur_page, cur_off): a page that was free, every cell taken in turn,
 ; or, after a collection, one of its pages with cells live (page_sweep), its unmarked cells taken in turn (the lazy
 ; sweep: nothing's linked, and a collection's pause is its marking); then a free page; then a collection.
@@ -37,9 +38,19 @@ PK_C64          = 7
 PK_C128         = 8             ;   ... to 128
 PK_KINDS        = 9
 
-; An object's type (a cell's first byte)
+; An object's type (a cell's first byte).  Its references (the values the collector follows) come after the type
+; and the byte after it, and ot_refs says how many (for a vector: its length)
 OT_STRING       = 1             ; Its length, then its bytes
 OT_VECTOR       = 2             ; Its length in values, then the values
+OT_QEXPR        = 3             ; Its list (a chain of pairs), and the scope it was written in (NIL: none yet)
+OT_SEXPR        = 4             ; Its list, and the scope it was written in (NIL: none; an fexpr's argument has one)
+OT_SYMBOL       = 5             ; Its name's length; the next in its bucket, its global value; its name
+OT_ATOM         = 6             ; Its name's length; the next in its bucket, NIL; its name
+OT_FUNC         = 7             ; Its flags; its formals, body, closure (a frame), and the arguments bound so far
+OT_ERROR        = 8             ; Its message (a string), its code (an atom, or NIL)
+OT_FRAME        = 9             ; Its parent (a frame, or GLOBAL), its bindings (a list: a symbol, its value, ...)
+OT_SYMREF       = 10            ; A symbol, and the scope it was written in (an fexpr's argument)
+OT_TYPES        = 11
 
 .zeropage
 h_v:        .res        2                                   ; A value, in and out
@@ -76,7 +87,8 @@ rs_off:     .res        1
 rs_kind:    .res        1
 gc_count:   .res        2                                   ; Collections made
 gc_rescans: .res        1                                   ; Rescans made (the mark stack full)
-.code
+gc_hook:    .res        2                                   ; The program's roots: a routine that marks them (mark_root)
+.segment "DATA"
 
 ; ---- Making it
 
@@ -121,6 +133,7 @@ heap_init:
             stz         gc_count
             stz         gc_count + 1
             stz         gc_rescans
+            LDR         gc_hook, gc_no_hook
             clc
 @done:
             rts
@@ -161,9 +174,15 @@ kind_of:
 :
             rts
 
-; car and cdr: h_v (a pair) = its car, or its cdr
+; car and cdr: h_v (a pair) = its car, or its cdr (each with deref's code: they're the most used)
 car:
-            jsr         deref
+            ldx         h_v + 1
+            lda         page_bank,x
+            sta         RAM_BANK
+            lda         page_addr,x
+            sta         h_p + 1
+            lda         h_v
+            sta         h_p
             ldy         #1
             lda         (h_p),y
             tax
@@ -173,7 +192,13 @@ car:
             rts
 
 cdr:
-            jsr         deref
+            ldx         h_v + 1
+            lda         page_bank,x
+            sta         RAM_BANK
+            lda         page_addr,x
+            sta         h_p + 1
+            lda         h_v
+            sta         h_p
             ldy         #3
             lda         (h_p),y
             tax
@@ -425,6 +450,7 @@ gc:
             jsr         mark_root
             MOVR        h_c, h_d
             jsr         mark_root
+            jsr         gc_more_roots                       ; (The program's: symbols, its stack ...)
             ldx         #0
 @root:
             cpx         root_n
@@ -468,6 +494,13 @@ gc:
             bne         :+
             inc         gc_count + 1
 :
+            rts
+
+; The program's roots marked (gc_hook: it sets h_c to each and calls mark_root)
+gc_more_roots:
+            jmp         (gc_hook)
+
+gc_no_hook:
             rts
 
 ; h_c marked, and pushed to be scanned, if it's an object not marked yet
@@ -608,17 +641,20 @@ scan:
             cmp         #PK_PAIR
             beq         @pair
 @cell:
-            lda         page_bank,x                         ; ---- A cell: a vector's values (.X its page)
-            sta         RAM_BANK
-            lda         page_addr,x
+            lda         page_bank,x                         ; ---- A cell: its references (.X its page), from its
+            sta         RAM_BANK                            ; third byte on, as many as its type has (a vector: its
+            lda         page_addr,x                         ; length)
             sta         h_p + 1
             lda         h_t
             sta         h_p
             lda         (h_p)
-            cmp         #OT_VECTOR
-            bne         @done
+            tax
+            lda         ot_refs,x
+            cmp         #$FF
+            bne         :+
             ldy         #1
             lda         (h_p),y
+:
             sta         h_n
             ldy         #2
 @value:
@@ -818,8 +854,11 @@ free_pages:
             tya
             rts
 
-.rodata
+.segment "DATA"
 kind_size:  .byte       0, 0, 0, 4, 8, 16, 32, 64, 128
+
+; Each type's references (OT_*: $FF, a vector's length)
+ot_refs:    .byte       0, 0, $FF, 2, 2, 2, 2, 4, 2, 2, 2
 
 ; A place in a page: its mark's table (the high byte of marks + 256 (place / 32)), and its bit
 mark_tab:

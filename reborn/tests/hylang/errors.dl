@@ -1,0 +1,39 @@
+; errors.dl - errors are values that stop what they reach: a call with one as an argument is that error (an fexpr's
+; and a built-in's arguments aside); do and let stop at one; try catches them
+
+(check (error? (error "x")) T)
+(check (type-of (error "x")) :error)
+(check (error-message (error (+ "a" "b"))) "ab")
+(check-error (error "x") "x")
+
+; through built-ins
+(check-error (+ 1 (error "x")) "x")
+(check-error (- 1 (error "x")) "x")
+(check-error (list 1 (error "x")) "x")
+(check-error (len (error "x")) "x")
+
+; through functions: the function isn't run
+(def {er-ran} NIL)
+(fun {er-mark x} {def {er-ran} T})
+(check-error (er-mark (error "e")) "e")
+(check er-ran NIL)
+(check-error ((fn {a b} {+ a b}) 1 (error "second")) "second")
+
+; do and let stop at the first
+(def {er-after} NIL)
+(check-error (do (error "first") (def {er-after} T)) "first")
+(check er-after NIL)
+(check-error (let {{a 1}} (error "in let") 2) "in let")
+
+; the common ones
+(check-error er-undefined-symbol "Unbound Symbol 'er-undefined-symbol'")
+(check-error (1 2))
+(check-error (/ 1 0) "Division by zero.")
+(check-error (- 1 "a"))
+(check-error (head {}))
+(check-error (eval))
+(check-error (cond {NIL 1}) "Selection not found")
+(check-error (case 3 {1 :one}) "Case not found")
+(check-error (to-str 1 "#q?"))
+(check-error (to-str 1 "#1r"))
+(check-error (substring "abc" 5))

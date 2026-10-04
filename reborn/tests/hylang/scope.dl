@@ -1,0 +1,76 @@
+; scope.dl - lexical scope: closures, set! on a closure's variables, a Q-expression run where it was written, let,
+; and fexprs
+
+; a function's body sees its own scope and the scope it was made in, not its caller's
+(fun {sc-make-adder n} {fn {x} {+ x n}})
+(def {n} 100)
+(check ((sc-make-adder 5) 1) 6)
+(def {sc-x} :global)
+(fun {sc-get-x} {sc-x})
+(fun {sc-call-with-x sc-x} {sc-get-x})
+(check (sc-call-with-x :local) :global)
+(fun {sc-no-caller-vars} {sc-callers-local})
+(fun {sc-caller} {do =(sc-callers-local 1) (sc-no-caller-vars)})
+(check-error (sc-caller))
+
+; closures keep their own variables
+(fun {sc-make-counter} {do =(c 0) (fn {} {do (set! {c} (+ c 1)) c})})
+(def {sc-c1} (sc-make-counter))
+(def {sc-c2} (sc-make-counter))
+(sc-c1)
+(sc-c1)
+(check (sc-c1) 3)
+(check (sc-c2) 1)
+
+; each closure made in a loop has its own variable
+(def {sc-fs} {})
+(each {i {1 2 3}} (set! {sc-fs} (join sc-fs (list (fn {} {i})))))
+(def {sc-got} {})
+(each {f sc-fs} (set! {sc-got} (join sc-got (list (f)))))
+(check sc-got {1 2 3})
+
+; a function made inside another (fun or fn) keeps that one's scope
+(fun {sc-outer x} {do (fun {sc-inner y} {+ x y}) (sc-inner 1)})
+(check (sc-outer 10) 11)
+(check (sc-inner 2) 12)
+
+; a Q-expression is run in the scope it was written in, wherever it's evaluated
+(fun {sc-run c} {eval c})
+(fun {sc-qscope} {do =(secret 42) (sc-run {secret})})
+(check (sc-qscope) 42)
+(fun {sc-classify x} {cond {(< x 0) :neg} {(> x 0) :pos} {T :zero}})
+(check (sc-classify -5) :neg)
+(check (sc-classify 5) :pos)
+(check (sc-classify 0) :zero)
+(fun {sc-twice c} {do (eval c) (eval c)})
+(fun {sc-count-twice} {do =(k 0) (sc-twice {set! {k} (+ k 1)}) k})
+(check (sc-count-twice) 2)
+
+; let: a scope of its own, its bindings made in turn
+(check (let {{a 1} {b (+ a 1)}} (+ a b)) 3)
+(def {sc-la} :outer)
+(check (let {{sc-la :inner}} sc-la) :inner)
+(check sc-la :outer)
+(check (let {do =(sc-lb 5) (* sc-lb 2)}) 10)
+(check (defined? sc-lb) NIL)
+(check (let {{a}} a) NIL)
+(check (let {{a 1}} (+ a 1) (+ a 2)) 3)
+(check-error (let {{1 2}} 3))
+(check-error (let {{a (error "x")}} a))
+
+; fexprs: their arguments as they're written; (eval x) evaluates one where it was written
+(def {sc-my-if} (fexpr {c a b} {if (eval c) (eval a) (eval b)}))
+(check (sc-my-if T 1 (error "not evaluated")) 1)
+(check (sc-my-if NIL (error "not evaluated") 2) 2)
+(def {sc-quote} (fexpr {x} {x}))
+(check (sc-quote (+ 1 2)) (item-at {(+ 1 2)} 0))
+(check (sc-quote sym) (item-at {sym} 0))
+(check (sc-quote (error "x")) (item-at {(error "x")} 0))
+(fun {sc-use-fexpr} {do =(v 10) (sc-my-if T v 0)})
+(check (sc-use-fexpr) 10)
+(def {sc-unless} (fexpr {c body} {if (eval c) NIL (eval body)}))
+(check (sc-unless NIL :ran) :ran)
+(check (sc-unless T :ran) NIL)
+(def {sc-fexpr-args} (fexpr {} {len &_}))
+(check (sc-fexpr-args a b (c d)) 3)
+(check (function? sc-my-if) T)

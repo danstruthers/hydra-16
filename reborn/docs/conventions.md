@@ -163,7 +163,10 @@ The kernel task (task 0) keeps the kernel's state: its program zero page (`K0_*`
   as the first's, reached through `FAR2` (and back through `FAR1`), trampolines in its RAM that switch its own bank
   register (`HYX2_BANKS_INIT` notes its banks).  Such a module owns no IRQ line, and keeps a note handler (`NOTIFY`)
   in its RAM: a note may come while either bank is at `$A000`, and the kernel calls the handler with the bank that's
-  there.  The header's `HX_LENGTH` is the image's length in its last bank.
+  there.  The header's `HX_LENGTH` is the image's length in its last bank.  Code that both banks call often can be
+  in the module's `DATA` too, as `hylang`'s core is (its heap, objects, scopes and I/O): it runs with either bank at
+  `$A000`, so it calls nothing of either bank's and reads no table of theirs (a text its caller hands it is fine:
+  the caller's bank is there); a call from it into a bank saves the bank register and sets it (`eval_nested`).
 
 ## Files and servers
 

@@ -138,7 +138,7 @@ const RC_LINES = [
   ["~ a a && echo and; ~ a b || echo or","and\nor"],
   ["cat /nothing; echo status $status","cat: /nothing: not found\nstatus 1"],
   ["echo /rom/lib/n*","/rom/lib/namespace"],
-  ["echo /rom/lib/*","/rom/lib/forth /rom/lib/namespace /rom/lib/profile"],
+  ["echo /rom/lib/*","/rom/lib/forth /rom/lib/hylang /rom/lib/namespace /rom/lib/profile"],
   ["echo 'no*match'*","no*match*"],
   ["cd /rom/lib; pwd; cd","/rom/lib"],
   ["rc -c 'echo sub $x'","sub a b c"],
@@ -154,12 +154,12 @@ const RC_LINES = [
   ["echo (a","rc: syntax error"],
   ["whatis echo x; q=('it''s' '' a.b); whatis q","/bin/echo\nx=(a b c)\nq=('it''s' '' a.b)"],
   ["bind '#n' /mnt; ls /mnt","null\nzero"],
-  ["ls /rom/lib","forth/\nnamespace\nprofile"],
+  ["ls /rom/lib","forth/\nhylang/\nnamespace\nprofile"],
   ["cat /bin/echo >/ram/hi; cd /ram; hi from dot; cd","from dot"],
   ["cat /nothing >[2]/ram/e; cat /ram/e","cat: /nothing: not found"],
   ["cat /nothing |[2] cat >/ram/p; echo -n 'p: '; cat /ram/p","p: cat: /nothing: not found"],
   ["echo $task $#path $path # a comment","2 2 . /bin"],
-  ["path=(); ls; path=(. /bin); ls /rom/lib","rc: ls: not found\nforth/\nnamespace\nprofile"],
+  ["path=(); ls; path=(. /bin); ls /rom/lib","rc: ls: not found\nforth/\nhylang/\nnamespace\nprofile"],
   ["! ~ a b && echo not; echo $status","not\n"],
 ];
 
@@ -540,6 +540,24 @@ function forthCard() {
   return [imageCard(0, f, 16384)];
 }
 
+// hylang's card: danlang's suite's files (tests/hylang: those that pass as yet, and hylang's own), and a run.hl that
+// loads harness.dl, then each in turn (a file that stops with an error counts as a failure, as danlang's run.dl has
+// it), and prints the count
+const HYLANG_SUITE = ['scope.dl', 'control.dl', 'errors.dl', 'core.hl'];
+function hylangCard() {
+  fs.mkdirSync(CARD_DIR, { recursive: true });
+  hydrafs.setNow(0x1000);
+  const f = path.join(CARD_DIR, 'hylang0.img');
+  hydrafs.mkfs(f, 8, 'HYLANG', undefined, true);
+  const v = new hydrafs.Volume(f);
+  for (const n of ['harness.dl', ...HYLANG_SUITE]) v.put(n, fs.readFileSync(path.join(__dirname, 'hylang', n)));
+  v.put('run.hl', Buffer.from('(load "harness.dl")\n(each {f {' + HYLANG_SUITE.map(n => '"' + n + '"').join(' ') + '}}\n' +
+    '  (def {test-file} f)\n  (try (load f)\n    (do (def {test-fails} (+ test-fails 1)) (print (format "FAIL {}: stopped: {}" f &err)))))\n' +
+    '(print (format "{} checks, {} failed" test-count test-fails))\n'));
+  v.close();
+  return [imageCard(0, f, 16384)];
+}
+
 // A test's lines typed, each at its prompt, and its expect (as the tools test's)
 const typed = lines => lines.map(l => 'ā' + l[0] + '\r').join('');
 const expected = lines => lines.map(l => '% ' + l[0] + '\n' + (l[2] ? l[1] : (l[1] === null ? '' : l[1] + '\n') + '%'));
@@ -674,6 +692,19 @@ module.exports = {
         if (undef) f.push('an undefined word: ' + undef[1]);
         return f;
       },
+    },
+    {
+      name: 'hylang', what: 'hylang (danlang, phase 7): danlang\'s regression suite\'s files that pass as yet (scope, control, errors) and hylang\'s own checks (core.hl), loaded from a card with the suite\'s harness; at the console: a line evaluated as danlang\'s REPL has it, an expression over lines with a here string, an error, Ctrl-C (an evaluation, and the prompt), exit, and (exit n)\'s status',
+      init: 't_rc', modules: ['hylang'], cycles: 900e6,
+      // (Each line at its prompt, but a continued expression's, a moment after the last; (f) loops till Ctrl-C, which rc
+      // gets too: its prompt on a new line after hylang ends)
+      get machine() {
+        return { sd: hylangCard(), input: 'ācd /sd/0; hylang\r' + 'ā(load "run.hl")\r' + 'ā+ 1 2\r' + 'ā(list 1\rĀ  2 """a\rĀb""")\r' +
+          'ā(error "x" :e)\r' + 'ā(def {f} (fn {} {f}))\r' + 'ā(f)\rĀĀ\u0003' + 'ĀĀ\u0003' + 'āexit\r' + 'āhylang\r' + 'ā(exit 3)\r' + 'āecho $status\r' };
+      },
+      expect: ['163 checks, 0 failed\n=> NIL\n', 'hylang> + 1 2\n=> 3\nhylang> (list 1\n\t<   2 """a\n\t< b""")\n=> {1 2 "a\\nb"}\n' +
+        'hylang> (error "x" :e)\n=> Error: x\nhylang> (def {f} (fn {} {f}))\n=> NIL\nhylang> (f)\n=> Error: interrupted\nhylang> \nhylang> exit\n=> exit\n\n' +
+        '% hylang\nhylang (danlang on the Hydra-16), exit to end\nhylang> (exit 3)\n% echo $status\n3\n%'],
     },
     {
       name: 'spi', what: 'SPI and #S (storage): transactions, kept bytes, modes 0 and 3, one open at a time, the time a byte takes',
