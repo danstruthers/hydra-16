@@ -10,7 +10,8 @@
 ;                       again at every read, so nothing is kept between reads
 ;   Writing             at the fd's offset (an append-only file's end), up to the end and past it (with a hole
 ;                       between: sparse.s); O_TRUNC empties a file as it's opened.  CREATE (a file that's there
-;                       already is emptied, as in Plan 9), REMOVE, WSTAT (its name, in its directory; its mode)
+;                       already is emptied, as in Plan 9), REMOVE, WSTAT (its name, in its directory; its mode;
+;                       its length: longer with zeros, or cut short)
 ; A disk with no HydraFS on it gives E_NOTFS.
 ;
 ; What reaches the disk when: a file's data at once, a block at a time through the block buffer (storage.s's blk);

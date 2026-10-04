@@ -122,7 +122,8 @@ getc_in:
             lda         ipos + 1
             sbc         ilen + 1
             bcc         @have
-            jsr         flush                               ; (What's out first: a prompt)
+            jsr         flush                               ; (What's out first: a prompt; the console cooked)
+            jsr         raw_off
             stx         xsave
             LDR         r0, ibuf
             LDR         r1, IBUF_SIZE
@@ -204,7 +205,7 @@ read_line:
             sec
             rts
 
-; REFILL for stdin: the next line in tib, SOURCE and >IN for it.  OUT: C = 1 at stdin's end
+; REFILL for stdin: the next line in tib, SOURCE and >IN for it, and its number.  OUT: C = 1 at stdin's end
 refill_in:
             LDR         w2, tib
             LDR         tmp2, TIB_SIZE
@@ -220,22 +221,33 @@ refill_in:
             stz         to_in + 1
             stz         src_id
             stz         src_id + 1
+            inc         src_line
+            bne         :+
+            inc         src_line + 1
+:
             clc
 @done:
             rts
 
             HEADER      "REFILL", 0
 refill:                                                     ; ( -- flag ): a string's (EVALUATE) can't
-            lda         src_id
-            ora         src_id + 1
-            bne         @false
-            jsr         refill_in
+            lda         src_id + 1
+            bmi         @false
+            jsr         refill_src
             bcs         @false
             dex
             jmp         true_tos
 @false:
             dex
             jmp         zero_tos
+
+; REFILL for stdin or a file (the source's).  OUT: C = 1 at its end
+refill_src:
+            lda         src_id
+            bne         :+
+            jmp         refill_in
+:
+            jmp         refill_file
 
             HEADER      "ACCEPT", 0
 accept:                                                     ; ( c-addr +n1 -- +n2 )
@@ -258,45 +270,74 @@ accept:                                                     ; ( c-addr +n1 -- +n
             rts
 
             HEADER      "KEY", 0
-key:                                                        ; ( -- char ): the console's raw mode, a key
+key:                                                        ; ( -- char ): the console's raw mode, a key (KEY?'s,
+            lda         key_pend                            ;   if it has one); not the console, stdin's next byte
+            beq         :+                                  ;   (its end: 4)
+            stz         key_pend
+            lda         key_char
+            bra         @push
+:
             lda         interactive
             bne         @raw
-            jsr         getc_in                             ; (Not the console: stdin's next byte; its end, 4)
-            bcc         :+
+            jsr         getc_in
+            bcc         @push
             lda         #4
-:
+            bra         @push
+
+@raw:
+            jsr         flush
+            jsr         raw_on
+            stx         xsave
+            LDR         r0, numtmp
+            LDR         r1, 1
+            lda         #0
+            jsr         READ
+            ldx         xsave
+            lda         numtmp
+@push:
             ldy         #0
             PUSHAY
             rts
 
-@raw:
-            jsr         flush
-            stx         xsave
+; The console in raw mode (KEY's, KEY?'s), till a line's wanted (raw_off).  Keeps .X, .Y
+raw_on:
+            lda         raw
+            bne         @done
+            phx
+            phy
             lda         ctlfd
             bpl         :+
             LDR         r0, s_consctl
             lda         #O_WRITE
             jsr         OPEN
-            bcs         @done
+            bcs         @fail
             sta         ctlfd
 :
             LDR         r0, s_rawon
             LDR         r1, 5
             lda         ctlfd
             jsr         WRITE
-            LDR         r0, numtmp
-            LDR         r1, 1
-            lda         #0
-            jsr         READ
+            inc         raw
+@fail:
+            ply
+            plx
+@done:
+            rts
+
+; The console cooked again, for a line.  Keeps .X, .Y
+raw_off:
+            lda         raw
+            beq         @done
+            stz         raw
+            phx
+            phy
             LDR         r0, s_rawoff
             LDR         r1, 6
             lda         ctlfd
             jsr         WRITE
+            ply
+            plx
 @done:
-            ldx         xsave
-            lda         numtmp
-            ldy         #0
-            PUSHAY
             rts
 
 s_consctl:  .byte       "/dev/consctl", 0
@@ -489,31 +530,158 @@ sourceid:
             rts
 
             HEADER      "SAVE-INPUT", 0
-saveinput:                                                  ; ( -- >in 1 )
+saveinput:                                                  ; ( -- pos pos-hi line >in id 5 )
+            lda         src_pos
+            ldy         src_pos + 1
+            PUSHAY
+            lda         src_pos + 2
+            ldy         src_pos + 3
+            PUSHAY
+            lda         src_line
+            ldy         src_line + 1
+            PUSHAY
             lda         to_in
             ldy         to_in + 1
             PUSHAY
-            lda         #1
+            lda         src_id
+            ldy         src_id + 1
+            PUSHAY
+            lda         #5
             ldy         #0
             PUSHAY
             rts
 
             HEADER      "RESTORE-INPUT", 0
-restoreinput:                                               ; ( >in 1 -- false )
+restoreinput:                                               ; ( pos pos-hi line >in id 5 -- flag ): false if it
+            lda         dlo,x                               ;   could: the same source, and its line still in the
+            cmp         #5                                  ;   buffer (a file's: read again, from where it was)
+            bne         @fail_n
+            lda         dhi,x
+            bne         @fail_n
             lda         dlo + 1,x
-            sta         to_in
+            cmp         src_id
+            bne         @fail
             lda         dhi + 1,x
+            cmp         src_id + 1
+            bne         @fail
+            ora         src_id                              ; (A file?)
+            beq         @line
+            cmp         #$FF
+            beq         @line
+            jsr         ri_file
+            bcs         @fail
+            bra         @set
+@line:
+            lda         dlo + 3,x
+            cmp         src_line
+            bne         @fail
+            lda         dhi + 3,x
+            cmp         src_line + 1
+            bne         @fail
+@set:
+            lda         dlo + 3,x
+            sta         src_line
+            lda         dhi + 3,x
+            sta         src_line + 1
+            lda         dlo + 2,x
+            sta         to_in
+            lda         dhi + 2,x
             sta         to_in + 1
-            inx
+            txa
+            clc
+            adc         #5
+            tax
             jmp         zero_tos
+@fail_n:
+            lda         dlo,x
+            bra         :+
+@fail:
+            lda         #5
+:
+            stx         xsave
+            clc
+            adc         xsave
+            tax
+            jmp         true_tos
+
+; RESTORE-INPUT's, for a file: its line, unless it's the one SAVE-INPUT's place says, read again from there.
+; OUT: C = 1 if it can't be
+ri_file:
+            lda         dlo + 5,x
+            cmp         src_pos
+            bne         @seek
+            lda         dhi + 5,x
+            cmp         src_pos + 1
+            bne         @seek
+            lda         dlo + 4,x
+            cmp         src_pos + 2
+            bne         @seek
+            lda         dhi + 4,x
+            cmp         src_pos + 3
+            bne         @seek
+            clc
+            rts
+@seek:
+            lda         dlo + 5,x
+            sta         src_pos
+            sta         r0
+            lda         dhi + 5,x
+            sta         src_pos + 1
+            sta         r0 + 1
+            lda         dlo + 4,x
+            sta         src_pos + 2
+            sta         r1
+            lda         dhi + 4,x
+            sta         src_pos + 3
+            sta         r1 + 1
+            stz         src_cons
+            stz         src_cons + 1
+            stx         xsave
+            lda         src_id
+            ldx         #0
+            jsr         SEEK
+            ldx         xsave
+            bcs         @done
+            jmp         refill_file
+@done:
+            rts
 
             HEADER      "(", F_IMMEDIATE
-paren:
-            lda         #')'
+paren:                                                      ; To ")": a comment; a file's (or stdin's but the
+            lda         #')'                                ;   console's) on over lines, till there is one
             sta         cnt
             jsr         parse_to
             inx
             inx
+            lda         to_in                               ; (Ended by it: the char before >IN)
+            ora         to_in + 1
+            beq         @more
+            clc
+            lda         src_addr
+            adc         to_in
+            sta         w
+            lda         src_addr + 1
+            adc         to_in + 1
+            sta         w + 1
+            lda         w
+            bne         :+
+            dec         w + 1
+:
+            dec         w
+            lda         (w)
+            cmp         #')'
+            beq         @done
+@more:
+            lda         src_id + 1                          ; (A string's: no more)
+            bmi         @done
+            lda         src_id
+            bne         :+
+            lda         interactive
+            bne         @done
+:
+            jsr         refill_src
+            bcc         paren
+@done:
             rts
 
             HEADER      "\", F_IMMEDIATE
@@ -1142,12 +1310,12 @@ cquote:
 
             HEADERQ     "S\", F_IMMEDIATE
 sbquote:                                                    ; S" with escapes: \a \b \e \f \l \m \n \q \r \t \v \z
-            jsr         src_rest                            ;   \" \\ \xHH (into pad, then as S")
-            lda         #<pad
+            jsr         src_rest                            ;   \" \\ \xHH (into wbuf, then as S")
+            lda         #<wbuf
             sta         w2
-            lda         #>pad
+            lda         #>wbuf
             sta         w2 + 1
-            stz         cnt                                 ; (cnt: the bytes in pad)
+            stz         cnt                                 ; (cnt: the bytes in wbuf)
 @char:
             jsr         @get
             bcs         @end
@@ -1190,9 +1358,9 @@ sbquote:                                                    ; S" with escapes: \
             bra         @put
 @end:
             dex
-            lda         #<pad
+            lda         #<wbuf
             sta         dlo,x
-            lda         #>pad
+            lda         #>wbuf
             sta         dhi,x
             dex
             lda         cnt
@@ -1225,7 +1393,7 @@ sbquote:                                                    ; S" with escapes: \
 
 @store:
             ldy         cnt
-            cpy         #PAD_SIZE
+            cpy         #255
             bcs         :+
             sta         (w2),y
             inc         cnt

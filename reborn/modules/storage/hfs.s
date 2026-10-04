@@ -215,6 +215,8 @@ HFS_WLEFT:  .res        2                                   ;   and SD_DONE, kep
 HFS_WDONE:  .res        2
 HFS_WK:     .res        4                                   ;   and the gap's whole clusters (a hole)
 HFS_HOLEF:  .res        1                                   ; A read: <> 0: the block is in a hole (zeros)
+HFS_KEEP:   .res        4                                   ; A file cut short (HFS_SHRINK): the clusters it keeps ...
+HFS_TOTAL:  .res        4                                   ;   and those its extents have (before the last)
 .assert     HFS_POSO = HFS_POSB + 4, error, "A place is HFS_POSB then HFS_POSO (HFS_POS_SIZE bytes)"
 ; The check (check.s)
 HFS_CK_DEPTH: .res      1                                   ; How many directories deep its walk is

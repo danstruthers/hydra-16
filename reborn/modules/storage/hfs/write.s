@@ -2032,7 +2032,8 @@ HFS_REMOVE_AT:
 
 ; R_WSTAT: a stat record (the client's: RQ_BUF) changes the file: its name (SR_NAME: in its directory, where the
 ; new name mustn't be yet; a 0 first byte keeps it), and its mode (SR_MODE: no w bits, read-only; DM_APPEND,
-; append-only; a directory stays one; $FFFF keeps it).  The record's other fields are left alone.
+; append-only; a directory stays one; $FFFF keeps it), and its length (SR_LENGTH: a file's; $FFFFFFFF keeps it).
+; The record's other fields are left alone.
 HFS_WSTAT_REQ:
             jsr         HFS_FID_CHECK
             bcs         :+
@@ -2164,9 +2165,13 @@ HFS_WSTAT:
 @done:
             rts
 
-; The mode, unless the record's is $FFFF: read-only if it has no w bits, append-only if it has DM_APPEND (a
-; directory stays one); then the entry (a new qid version and stamp) is written
+; The length (HFS_WSTAT_LEN); then the mode, unless the record's is $FFFF: read-only if it has no w bits,
+; append-only if it has DM_APPEND (a directory stays one); then the entry (a new qid version and stamp) is written
 HFS_WSTAT_MODE:
+            jsr         HFS_WSTAT_LEN
+            bcc         :+
+            rts
+:
             lda         HFS_STAT + SR_MODE
             and         HFS_STAT + SR_MODE + 1
             cmp         #$FF
@@ -2189,3 +2194,393 @@ HFS_WSTAT_MODE:
 @write:
             jsr         HFS_TOUCH
             jmp         HFS_ENT_PUT
+
+; The length, unless the record's is $FFFFFFFF: a file's (not a directory's, nor a read-only one's) made that, as
+; Plan 9's wstat does: longer, with zeros after its end (HFS_EXTEND, as a write past it would); or shorter
+; (HFS_SHRINK).  OUT: C = 0; or C = 1, .A = error
+HFS_WSTAT_LEN:
+            lda         HFS_STAT + SR_LENGTH
+            and         HFS_STAT + SR_LENGTH + 1
+            and         HFS_STAT + SR_LENGTH + 2
+            and         HFS_STAT + SR_LENGTH + 3
+            cmp         #$FF
+            beq         @keep
+            ldy         #HFS_E_MODE
+            lda         (HFS_FP),Y
+            bit         #HFS_M_DIR
+            bne         @dir
+            and         #HFS_M_RO
+            bne         @ro
+            ldy         #HFS_E_SIZE                         ; Shorter than it is?
+            ldx         #0
+            sec
+:
+            lda         HFS_STAT + SR_LENGTH,X
+            sbc         (HFS_FP),Y
+            iny
+            inx
+            txa                                             ; (cpx would change C)
+            eor         #4
+            bne         :-
+            bcc         HFS_SHRINK
+            ldx         #3                                  ; No: the file made that long (as long as it is:
+:                                                           ;   nothing)
+            lda         HFS_STAT + SR_LENGTH,X
+            sta         SD_POS,X
+            dex
+            bpl         :-
+            jmp         HFS_EXTEND
+
+@keep:
+            clc
+            rts
+
+@dir:
+            lda         #E_ISDIR
+            sec
+            rts
+
+@ro:
+            lda         #E_PERM
+            sec
+            rts
+
+; The file at HFS_FP cut to the record's length: its size first (the entry written), then its clusters past the
+; new end freed, from its last extent back.  Each extent goes out of the list (an extent block left empty, out of
+; the chain) or is cut short before its clusters are freed, so a crash leaves lost clusters, never ones in use
+; twice.  OUT: C = 0; or C = 1, .A = error
+HFS_SHRINK:
+            ldy         #HFS_E_SIZE                         ; The size
+            ldx         #0
+:
+            lda         HFS_STAT + SR_LENGTH,X
+            sta         (HFS_FP),Y
+            iny
+            inx
+            cpx         #4
+            bne         :-
+            jsr         HFS_ENT_PUT
+            bcc         :+
+            rts
+:
+            clc                                             ; HFS_KEEP = the clusters kept: (size + 4095) >> 12
+            lda         HFS_STAT + SR_LENGTH
+            adc         #<(HFS_CLUSTER_BLOCKS * HFS_BLOCK - 1)
+            lda         HFS_STAT + SR_LENGTH + 1
+            adc         #>(HFS_CLUSTER_BLOCKS * HFS_BLOCK - 1)
+            sta         HFS_KEEP
+            lda         HFS_STAT + SR_LENGTH + 2
+            adc         #0
+            sta         HFS_KEEP + 1
+            lda         HFS_STAT + SR_LENGTH + 3
+            adc         #0
+            sta         HFS_KEEP + 2
+            stz         HFS_KEEP + 3
+            rol         HFS_KEEP + 3                        ; (The carry: a 33rd bit)
+            ldx         #HFS_CSHIFT + 9 - 8                 ; (>> 8 so far: then >> 4)
+:
+            lsr         HFS_KEEP + 3
+            ror         HFS_KEEP + 2
+            ror         HFS_KEEP + 1
+            ror         HFS_KEEP
+            dex
+            bne         :-
+            ldx         #3                                  ; HFS_TOTAL = the clusters the extents have
+:
+            stz         HFS_TOTAL,X
+            stz         HFS_POSB,X
+            dex
+            bpl         :-
+            lda         #HFS_E_EXT1
+            sta         HFS_POSO
+            stz         HFS_POSO + 1
+
+@sum:
+            jsr         HFS_POS_PTR
+            bcc         :+
+            rts
+:
+            ldy         #4
+            lda         (HFS_PTR),Y
+            clc
+            adc         HFS_TOTAL
+            sta         HFS_TOTAL
+            iny
+            lda         (HFS_PTR),Y
+            adc         HFS_TOTAL + 1
+            sta         HFS_TOTAL + 1
+            bcc         :+
+            inc         HFS_TOTAL + 2
+            bne         :+
+            inc         HFS_TOTAL + 3
+:
+            jsr         HFS_POS_NEXT
+            bcc         @sum
+            cmp         #0
+            beq         @cut
+            sec                                             ; (A card error)
+            rts
+
+@cut:
+            lda         HFS_KEEP                            ; The last extent, while there are too many
+            cmp         HFS_TOTAL
+            lda         HFS_KEEP + 1
+            sbc         HFS_TOTAL + 1
+            lda         HFS_KEEP + 2
+            sbc         HFS_TOTAL + 2
+            lda         HFS_KEEP + 3
+            sbc         HFS_TOTAL + 3
+            bcc         :+
+            clc
+            rts
+:
+            jsr         HFS_LAST_EXT
+            bcc         :+
+            rts
+:
+            sec                                             ; HFS_TOTAL = the clusters before it
+            lda         HFS_TOTAL
+            sbc         HFS_XLEN
+            sta         HFS_TOTAL
+            lda         HFS_TOTAL + 1
+            sbc         HFS_XLEN + 1
+            sta         HFS_TOTAL + 1
+            lda         HFS_TOTAL + 2
+            sbc         #0
+            sta         HFS_TOTAL + 2
+            lda         HFS_TOTAL + 3
+            sbc         #0
+            sta         HFS_TOTAL + 3
+            lda         HFS_TOTAL                           ; Some of it kept (HFS_KEEP - HFS_TOTAL > 0)?
+            cmp         HFS_KEEP
+            lda         HFS_TOTAL + 1
+            sbc         HFS_KEEP + 1
+            lda         HFS_TOTAL + 2
+            sbc         HFS_KEEP + 2
+            lda         HFS_TOTAL + 3
+            sbc         HFS_KEEP + 3
+            bcc         @short
+            jsr         HFS_EXT_DROP                        ; No: all of it out of the list, and freed
+            bcc         @cut
+            rts
+
+@short:
+            jsr         HFS_LAST_PTR                        ; It's cut short: HFS_KEEP - HFS_TOTAL clusters
+            bcs         @done
+            sec
+            lda         HFS_KEEP
+            sbc         HFS_TOTAL
+            sta         HFS_HK
+            ldy         #4
+            sta         (HFS_PTR),Y
+            lda         HFS_KEEP + 1
+            sbc         HFS_TOTAL + 1
+            sta         HFS_HK + 1
+            iny
+            sta         (HFS_PTR),Y
+            jsr         HFS_ENT_PUT                         ; (Its entry, in case it's there)
+            bcs         @done
+            sec                                             ; The rest of it freed: HFS_XLEN - kept clusters
+            lda         HFS_XLEN                            ;   from HFS_XCL + kept
+            sbc         HFS_HK
+            sta         HFS_XLEN
+            lda         HFS_XLEN + 1
+            sbc         HFS_HK + 1
+            sta         HFS_XLEN + 1
+            jsr         HFS_IS_HOLE
+            beq         @ok
+            clc
+            lda         HFS_XCL
+            adc         HFS_HK
+            sta         HFS_XCL
+            lda         HFS_XCL + 1
+            adc         HFS_HK + 1
+            sta         HFS_XCL + 1
+            bcc         :+
+            inc         HFS_XCL + 2
+            bne         :+
+            inc         HFS_XCL + 3
+:
+            jmp         HFS_FREE_RUN
+
+@ok:
+            clc
+
+@done:
+            rts
+
+; Free the clusters of the extent HFS_XCL / HFS_XLEN, unless it's a hole.  OUT: as HFS_FREE_RUN
+HFS_FREE_EXT:
+            jsr         HFS_IS_HOLE
+            beq         :+
+            jmp         HFS_FREE_RUN
+:
+            clc
+            rts
+
+; Is the extent HFS_XCL a hole?  OUT: Z = 1: it is.  Modifies: .A
+HFS_IS_HOLE:
+            lda         HFS_XCL
+            and         HFS_XCL + 1
+            and         HFS_XCL + 2
+            and         HFS_XCL + 3
+            cmp         #HFS_HOLE
+            rts
+
+; The extent HFS_LAST_EXT found taken out of the file's list, then its clusters freed: out of the entry (the
+; entry written), or its extent block's count one less.  An extent block that leaves empty goes out of the chain
+; (the link to it made 0, in the entry or in the block before it), and its cluster is freed too.
+; OUT: C = 0; or C = 1, .A = error.  Modifies: .A, .X, .Y
+HFS_EXT_DROP:
+            lda         HFS_LASTB
+            ora         HFS_LASTB + 1
+            ora         HFS_LASTB + 2
+            ora         HFS_LASTB + 3
+            bne         @block
+            lda         HFS_LASTO                           ; In the entry: no clusters there now
+            clc
+            adc         #HFS_EXT_SIZE - 1
+            tay
+            ldx         #HFS_EXT_SIZE
+            lda         #0
+:
+            sta         (HFS_FP),Y
+            dey
+            dex
+            bne         :-
+            jsr         HFS_ENT_PUT
+            bcc         HFS_FREE_EXT
+            rts
+
+@block:
+            jsr         HFS_LASTB_GET                       ; One less in its block
+            bcc         :+
+            rts
+:
+            lda         #HFS_X_COUNT
+            sta         HFS_OFS
+            stz         HFS_OFS + 1
+            jsr         HFS_META_AT
+            lda         (HFS_PTR)
+            beq         @empty                              ; (None: an empty block)
+            dec
+            sta         (HFS_PTR)
+            jsr         HFS_META_CHANGED
+            lda         (HFS_PTR)
+            bne         HFS_FREE_EXT
+
+@empty:
+            lda         HFS_FP                              ; Empty: the link to it, the entry's ...
+            sta         HFS_PTR
+            lda         HFS_FP + 1
+            sta         HFS_PTR + 1
+            ldy         #HFS_E_EXTBLK
+            jsr         HFS_IS_LASTB
+            bne         @chain
+            lda         #0
+            ldy         #HFS_E_EXTBLK + 3
+:
+            sta         (HFS_FP),Y
+            dey
+            cpy         #HFS_E_EXTBLK - 1
+            bne         :-
+            jsr         HFS_ENT_PUT
+            bcc         @free
+            rts
+
+@chain:
+            ldy         #HFS_E_EXTBLK                       ; ... or a block's, down the chain
+            ldx         #0
+:
+            lda         (HFS_FP),Y
+            sta         SD_LBA,X
+            iny
+            inx
+            cpx         #4
+            bne         :-
+
+@link:
+            jsr         HFS_META_GET                        ; (SD_LBA: a block in the chain)
+            bcc         :+
+            rts
+:
+            stz         HFS_OFS
+            stz         HFS_OFS + 1
+            jsr         HFS_META_AT
+            ldy         #HFS_X_NEXT                         ; Its link: to the empty one?
+            jsr         HFS_IS_LASTB
+            beq         @unlink
+            ldy         #HFS_X_NEXT                         ; No: on to the block it links to
+            ldx         #0
+:
+            lda         (HFS_PTR),Y
+            sta         SD_LBA,X
+            iny
+            inx
+            cpx         #4
+            bne         :-
+            lda         SD_LBA
+            ora         SD_LBA + 1
+            ora         SD_LBA + 2
+            ora         SD_LBA + 3
+            bne         @link
+            lda         #E_INVAL                            ; (Not in the chain: never)
+            sec
+            rts
+
+@unlink:
+            lda         #0
+            ldy         #HFS_X_NEXT + 3
+:
+            sta         (HFS_PTR),Y
+            dey
+            bpl         :-
+            jsr         HFS_META_CHANGED
+
+@free:
+            jsr         HFS_FREE_EXT                        ; Its extent's clusters (it was the last in it)
+            bcs         @done
+            jsr         HFS_CARD_X                          ; Then the block's own: (it - the data area) / 8
+            sec
+            lda         HFS_LASTB
+            sbc         HFS_V_DATA,X
+            sta         HFS_XCL
+            lda         HFS_LASTB + 1
+            sbc         HFS_V_DATA + 1,X
+            sta         HFS_XCL + 1
+            lda         HFS_LASTB + 2
+            sbc         HFS_V_DATA + 2,X
+            sta         HFS_XCL + 2
+            lda         HFS_LASTB + 3
+            sbc         HFS_V_DATA + 3,X
+            sta         HFS_XCL + 3
+            ldx         #HFS_CSHIFT
+:
+            lsr         HFS_XCL + 3
+            ror         HFS_XCL + 2
+            ror         HFS_XCL + 1
+            ror         HFS_XCL
+            dex
+            bne         :-
+            lda         #1
+            sta         HFS_XLEN
+            stz         HFS_XLEN + 1
+            jmp         HFS_FREE_RUN
+
+@done:
+            rts
+
+; Is the link at (HFS_PTR),Y (4 bytes) to block HFS_LASTB?  OUT: Z = 1: it is.  Modifies: .A, .X, .Y
+HFS_IS_LASTB:
+            ldx         #0
+:
+            lda         (HFS_PTR),Y
+            cmp         HFS_LASTB,X
+            bne         @done
+            iny
+            inx
+            cpx         #4
+            bne         :-
+
+@done:
+            rts

@@ -781,6 +781,8 @@ A new Forth, written from scratch, added in phase 6 when files, the console's mo
 
 (As built, phase 6.1: `modules/forth`, 7.9K of one bank.  Short words are copied into definitions whole (DUP, +, @ ..., and the return stack's, which can't be called); IF's test and literals are inline.  The ROM words' headers are beside their code, in the same chain as the RAM ones.  Input is stdin's lines, so `forth <file` runs a file before 6.4's `forth file.fs`; CATCH and THROW came with the core, as QUIT's error handling.  The suite's preliminary, Core, Core Plus and Core Extension tests pass, from an emulated card.)
 
+(As built, phase 6.2: the Exception, File Access, Facility, String, Search-Order and Programming-Tools word sets, with the suite's tests of them all passing; 15.1K of the bank, so the Hydra words (6.3) need a second.  An ior is -512 less the system's error code, as in Gforth, and QUIT shows its text; a file being included is read a line at a time, READ-LINE's way, and SAVE-INPUT's place is a line's offset; CATCH and THROW unwind the source stack, closing the files they leave.  Word lists replace `LIBSET`'s bits (I4).  RESIZE-FILE needed HydraFS's WSTAT to take a length, as Plan 9's does.)
+
 ---
 
 ### **17. hylang: danlang on the Hydra**

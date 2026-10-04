@@ -9,8 +9,8 @@
 //   2  reborn's requests (its request block, appendix B of docs/reimplementation-from-scratch.md), answered the way
 //      reborn's HydraFS (#f) does: a directory reads as 64-byte stat records (SR_*), whole ones from a record's
 //      start; R_CREATE of a file that's there empties it, and with DM_DIR makes a directory; R_REMOVE takes a file
-//      or an empty directory; R_WSTAT renames in the directory (a name whose first byte isn't 0) and sets the mode
-//      (no w bits: read-only; $FFFF keeps it); R_DUP is the same fid again; the errors are reborn's
+//      or an empty directory; R_WSTAT renames in the directory (a name whose first byte isn't 0), sets a file's
+//      length ($FFFFFFFF keeps it) and the mode (no w bits: read-only; $FFFF keeps it); R_DUP is the same fid again; the errors are reborn's
 //      (reborn/spec/errors.def).
 // Nothing outside the folder is reached: a name's elements may not be "." or "..", or hold a '\' or a ':'.
 //
@@ -284,6 +284,12 @@ function createPcFs({ root, readOnly = false, log = () => {} }) {
         if (f.file === root) throw 'PERM';
         const newName = nameIn(data.subarray(0, 32)), m = data.length >= 40 ? data[38] | data[39] << 8 : 0xFFFF;
         if (newName) rename(f, newName);
+        const len = data.length >= 44 ? data.readUInt32LE(40) : 0xFFFFFFFF;
+        if (len !== 0xFFFFFFFF) {                                               // (A file's length: longer, with zeros, or cut)
+          if (f.dir) throw 'IS_DIR';
+          fs.truncateSync(f.file, len);
+          log('length ' + rel(f.file) + ' ' + len);
+        }
         if (m !== 0xFFFF && !f.dir) setReadOnly(f, !(m & 0o222));
         break;
       }

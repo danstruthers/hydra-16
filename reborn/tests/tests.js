@@ -508,14 +508,23 @@ function PC_SONG() {
 const XM_DATA = () => Buffer.from(Array.from({ length: 3000 }, (_, i) => i >= 1024 && i < 2048 ? 0x1A : i === 2999 ? 0x41 : (i * 7 + (i >> 8)) & 0xFF));
 
 // The forth test's card: SD device 0, the Forth 2012 test suite (tests/forth) as one file, suite.fs, in its order
-const FORTH_SUITE = ['prelimtest.fth', 'tester.fr', 'core.fr', 'coreplustest.fth', 'utilities.fth', 'errorreport.fth', 'coreexttest.fth'];
+// The forth test's card: the Forth 2012 test suite's files (tests/forth), each as itself, and run.fs, which INCLUDEs
+// them in the suite's own order (runtests.fth's, those of the word sets HyForth has), with a line for core.fr's ACCEPT
+// test after it (stdin's next line); and bad.fs, a file with an error in it
+const FORTH_SUITE = ['prelimtest.fth', 'tester.fr', 'core.fr', 'coreplustest.fth', 'utilities.fth', 'errorreport.fth',
+  'coreexttest.fth', 'exceptiontest.fth', 'facilitytest.fth', 'filetest.fth', 'toolstest.fth', 'searchordertest.fth',
+  'stringtest.fth'];
+const FORTH_HELPERS = ['required-helper1.fth', 'required-helper2.fth'];
 function forthCard() {
   fs.mkdirSync(CARD_DIR, { recursive: true });
   hydrafs.setNow(0x1000);
   const f = path.join(CARD_DIR, 'forth0.img');
   hydrafs.mkfs(f, 8, 'FORTH', undefined, true);
   const v = new hydrafs.Volume(f);
-  v.put('suite.fs', Buffer.concat(FORTH_SUITE.map(n => fs.readFileSync(path.join(__dirname, 'forth', n)))));
+  for (const n of [...FORTH_SUITE, ...FORTH_HELPERS]) v.put(n, fs.readFileSync(path.join(__dirname, 'forth', n)));
+  v.put('run.fs', Buffer.from(FORTH_SUITE.map(n => 'S" ' + n + '" INCLUDED\n' + (n === 'core.fr' ? 'A line for ACCEPT\n' : '')).join('') +
+    'REPORT-ERRORS\n'));
+  v.put('bad.fs', Buffer.from(': ok1 1 ;\nok1 .\nfoo\n.( not here)\n'));
   v.close();
   return [imageCard(0, f, 16384)];
 }
@@ -616,16 +625,26 @@ module.exports = {
       init: 't_proc', modules: ['t_child'], cycles: 40e6,
     },
     {
-      name: 'forth', what: 'HyForth (Forth 2012): the test suite\'s Core, Core Plus and Core Extension tests, from a card (forth <file); at the console: a definition, errors, BYE',
-      init: 't_rc', cycles: 400e6,
-      // (The console's lines: each a moment after the last, as forth's prompt is its ok)
+      name: 'forth', what: 'HyForth (Forth 2012): the test suite (Core, Core Extension, Exception, Facility, File Access, Programming-Tools, Search-Order, String), its files INCLUDED from a card; at the console: a definition, KEY? and KEY, errors (a file\'s, the system\'s), BYE',
+      init: 't_rc', cycles: 800e6,
+      // (The console's lines: each a moment after the last, as forth's prompt is its ok; w waits for a key, z, in raw
+      // mode, not echoed, and the line after it is cooked again)
       get machine() {
-        return { sd: forthCard(), input: 'āforth </sd/0/suite.fs; echo $status\r' +
-          'āforth\rĀ: sq dup * ; 7 sq .\rĀ' + '1 0 /\rĀ' + 'foo\rĀ' + '-5 3 mod . bye\r' + 'āecho $status\r' };
+        return { sd: forthCard(), input: 'ācd /sd/0; forth <run.fs; echo $status\r' +
+          'āforth\rĀ: sq dup * ; 7 sq .\rĀ' + 'key? . cr\rĀ' + ': w begin key? until key ; w\rĀzĀ' + 'emit cr 1 2 + .\rĀ' +
+          '1 0 /\rĀ' + 'foo\rĀ' + 'include bad.fs\rĀ' + 's" none.fs" included\rĀ' + '-5 3 mod . bye\r' + 'āecho $status\r' };
       },
       expect: ['0 tests failed out of 57 additional tests', 'End of Core word set tests', 'End of additional Core tests',
-        'End of Core Extension word tests\n\n%',
-        'HyForth (Forth 2012), BYE to end\n: sq dup * ; 7 sq .\n49  ok\n1 0 /\ndivision by zero\nfoo\nfoo ?\n-5 3 mod . bye\n-2 \n% echo $status\n\n%'],
+        'End of Core Extension word tests', 'End of Exception word tests', 'End of Facility word tests',
+        'End of File-Access word set tests', 'End of Programming Tools word tests', 'End of Search Order word tests',
+        'End of String word tests',
+        'Core                    0\nCore extension          0\nBlock                   -\nDouble number           -\n' +
+        'Exception               0\nFacility                0\nFile-access             0\nLocals                  -\n' +
+        'Memory-allocation       -\nProgramming-tools       0\nSearch-order            0\nString                  0\n' +
+        '---------------------------\nTotal                   0\n---------------------------\n',
+        'HyForth (Forth 2012), BYE to end\n: sq dup * ; 7 sq .\n49  ok\nkey? . cr\n0 \n ok\n: w begin key? until key ; w\n ok\n' +
+        'emit cr 1 2 + .\nz\n3  ok\n1 0 /\ndivision by zero\nfoo\nfoo ?\n' +
+        'include bad.fs\n1 bad.fs:3: foo ?\ns" none.fs" included\nnone.fs: not found\n-5 3 mod . bye\n-2 \n% echo $status\n\n%'],
       check(m, out) {
         const f = [];
         for (const bad of ['INCORRECT RESULT', 'WRONG NUMBER OF RESULTS', 'Error: #'])
@@ -665,7 +684,7 @@ module.exports = {
       },
     },
     {
-      name: 'fs', what: 'HydraFS (#f): files and directories, create, write, holes, remove, rename, format, label, check, old cards, mounts',
+      name: 'fs', what: 'HydraFS (#f): files and directories, create, write, holes, remove, rename, a length, format, label, check, old cards, mounts',
       init: 't_fs', cycles: 600e6,
       get machine() { this.cards = fsCards(); return { sd: this.cards }; },
       budgets: [{ what: 'a HydraFS file, 8192 bytes read from a card (512 a READ), a byte', from: '<file', to: 'file>', minus: ['<b0', 'b0>'],

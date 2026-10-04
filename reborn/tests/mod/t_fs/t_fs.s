@@ -6,9 +6,10 @@
 ; (tests-v1, a version 1 volume; quick-v2, a version 2 one); 4, partitioned (a FAT partition first); 5, tests-v1 with
 ; a lost cluster planted; 6, a blank 1 GB card.  The cards' directory; reading files and directories; stat; create,
 ; write, read back; a write past the end (a hole); mkdir, a directory not empty, remove; a rename; a file open can't
-; be removed; O_TRUNC; read-only; a full format and a label on a blank card; check; the old cards read and written;
-; a partitioned card; the check finding a lost cluster, and fixing it; a big card's quick format; mounts with a spec
-; (the ROM disk, read only; a RAM disk; a directory on it); and the time a byte takes.
+; be removed; O_TRUNC; read-only; a length cut short and made longer; a full format and a label on a blank card;
+; check; the old cards read and written; a partitioned card; the check finding a lost cluster, and fixing it; a big
+; card's quick format; mounts with a spec (the ROM disk, read only; a RAM disk; a directory on it); and the time a
+; byte takes.
 
 .include "hydra.inc"
 .include "hyx2.inc"
@@ -253,11 +254,7 @@ main:
             EXPECT_ERR  E_NOENT, "it's gone"
 
 ; ---- A rename; an open file can't be removed; O_TRUNC; read-only
-            ldx         #SR_SIZE - 1                        ; A record: the new name, the mode kept ($FFFF)
-:
-            stz         rec,X
-            dex
-            bpl         :-
+            jsr         rec_mode                            ; A record: the new name, nothing else
             ldx         #0
 :
             lda         s_renamed,X
@@ -266,9 +263,6 @@ main:
             inx
             bra         :-
 :
-            lda         #$FF
-            sta         rec + SR_MODE
-            sta         rec + SR_MODE + 1
             LDR         r0, s_new
             LDR         r1, rec
             jsr         WSTAT
@@ -316,6 +310,46 @@ main:
             LDR         r0, s_ren
             LDR         r1, rec
             jsr         WSTAT
+
+; ---- A length (FWSTAT): cut short (an extent in an extent block, a hole, part of an extent), made longer (zeros)
+            CREATE_     s_cut, O_RDWR, 0, 5
+            sta         fd
+            EXPECT_OK   "CREATE #f/0/cut.bin"
+            lda         #15
+            sta         cnt
+:
+            WRITE_      fd, pat, 600
+            dec         cnt
+            bne         :-
+            SEEK_       fd, 20000                           ; (9000 bytes: 3 clusters; then a hole of 1; then 1,
+            WRITE_      fd, s_end, 3                        ;   in an extent block)
+            LDR         r0, 5000
+            jsr         cut_len
+            EXPECT_OK   "FWSTAT: cut.bin cut to 5000 bytes"
+            LDR         r0, rec
+            lda         fd
+            jsr         FSTAT
+            lda         rec + SR_LENGTH + 1
+            EXPECT_A    >5000, "its length: 5000"
+            SEEK_       fd, 4990
+            READ_       fd, 64
+            EXPECT_A    10, "at 4990: 10 bytes"
+            lda         buf
+            EXPECT_A    190, "as written"
+            LDR         r0, 7000
+            jsr         cut_len
+            EXPECT_OK   "FWSTAT: made 7000 bytes"
+            SEEK_       fd, 4998
+            READ_       fd, 64
+            EXPECT_A    64, "at 4998: 64 bytes (of 2002)"
+            lda         buf + 1
+            EXPECT_A    199, "as written"
+            lda         buf + 2
+            EXPECT_A    0, "then zeros"
+            lda         fd
+            jsr         CLOSE
+            REMOVE_     s_cut
+            EXPECT_OK   "REMOVE cut.bin"
 
 ; ---- Format and label a blank card; check card 0
             OPEN_       s_card1, O_READ, 5
@@ -475,14 +509,30 @@ main:
             EXPECT_OK   "it's /ram/sub/in.txt"
             DONE        "t_fs"
 
-; Mode bits into rec (a record: the name kept)
+; A record that changes nothing, in rec: its name empty, the rest $FF, as Plan 9's (the caller puts in what it
+; changes)
 rec_mode:
             ldx         #SR_SIZE - 1
+            lda         #$FF
 :
-            stz         rec,X
+            sta         rec,X
             dex
             bpl         :-
+            stz         rec + SR_NAME
             rts
+
+; fd's file made r0 bytes long (FWSTAT).  OUT: C
+cut_len:
+            jsr         rec_mode
+            lda         r0
+            sta         rec + SR_LENGTH
+            lda         r0 + 1
+            sta         rec + SR_LENGTH + 1
+            stz         rec + SR_LENGTH + 2
+            stz         rec + SR_LENGTH + 3
+            LDR         r0, rec
+            lda         fd
+            jmp         FWSTAT
 
 ; .A = the character after "label=" in the ctl text in buf (total long), or 0
 has_label:
@@ -632,6 +682,7 @@ s_big:      .byte       "#f/0/big.bin", 0
 s_new:      .byte       "#f/0/new.txt", 0
 s_ren:      .byte       "#f/0/renamed.txt", 0
 s_renamed:  .byte       "renamed.txt", 0
+s_cut:      .byte       "#f/0/cut.bin", 0
 s_dir:      .byte       "#f/0/dir", 0
 s_dirf:     .byte       "#f/0/dir/f.txt", 0
 s_card1:    .byte       "#f/1", 0

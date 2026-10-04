@@ -148,8 +148,8 @@ hdr_xt:
 
 ; ---- Headers and definitions
 
-; A header for the next name in the input, linked in (hidden with .A = F_HIDDEN): lasthdr, lastxt.  An empty name:
-; THROW -16
+; A header for the next name in the input, linked into the compilation word list (hidden with .A = F_HIDDEN):
+; lasthdr, lastxt.  An empty name: THROW -16
 make_hdr:
             sta         tmp3
             jsr         parse_name
@@ -172,8 +172,11 @@ make_hdr:
             sta         lasthdr
             lda         here + 1
             sta         lasthdr + 1
-            lda         latest
-            ldy         latest + 1
+            jsr         current_w3                          ; (Its link: the word list's last)
+            ldy         #1
+            lda         (w3),y
+            tay
+            lda         (w3)
             jsr         comma_ay
             lda         dlo,x
             ora         tmp3
@@ -195,14 +198,24 @@ make_hdr:
 :
             inx
             inx
-            lda         lasthdr                             ; In the list
-            sta         latest
+            jsr         current_w3                          ; In the list
+            lda         lasthdr
+            sta         (w3)
+            ldy         #1
             lda         lasthdr + 1
-            sta         latest + 1
+            sta         (w3),y
             lda         here
             sta         lastxt
             lda         here + 1
             sta         lastxt + 1
+            rts
+
+; w3 = the compilation word list
+current_w3:
+            lda         current
+            sta         w3
+            lda         current + 1
+            sta         w3 + 1
             rts
 
 ; lasthdr shown (F_HIDDEN off)
@@ -295,11 +308,11 @@ compilecomma:                                               ; ( xt -- ): its hea
             inx
             jmp         comp_jsr
 
-; The header whose xt is the top: C = 0, w it; or C = 1 (a :NONAME's)
+; The header in FORTH whose xt is the top: C = 0, w it; or C = 1 (a :NONAME's, another word list's)
 hdr_of_xt:
-            lda         latest
+            lda         forth_wl
             sta         w
-            lda         latest + 1
+            lda         forth_wl + 1
             sta         w + 1
 @hdr:
             lda         w
@@ -736,6 +749,27 @@ constant:                                                   ; ( x "name" -- ): a
             lda         #RTS_OP
             jmp         ccomma_a
 
+            HEADER      "2CONSTANT", 0
+twoconstant:                                                ; ( x1 x2 "name" -- ): two literals and rts
+            lda         #0
+            jsr         make_hdr
+            jsr         twoliteral
+            lda         #RTS_OP
+            jmp         ccomma_a
+
+            HEADER      "2VARIABLE", 0
+twovariable:
+            jsr         variable
+            lda         #0
+            tay
+            jmp         comma_ay
+
+            HEADER      "2LITERAL", F_IMMEDIATE
+twoliteral:                                                 ; ( x1 x2 -- ): compiled, x1 pushed first
+            jsr         swap
+            jsr         literal
+            jmp         literal
+
             HEADER      "VALUE", 0
 value:                                                      ; ( x "name" -- )
             lda         #<dovalue
@@ -882,8 +916,8 @@ actionof:
             jmp         comp_jsr
 
             HEADER      "MARKER", 0
-marker:                                                     ; Its word: HERE and the list as before it
-            lda         here                                ; (Before its header)
+marker:                                                     ; Its word: HERE, the compilation word list and the
+            lda         here                                ;   search order as before it
             pha
             lda         here + 1
             pha
@@ -894,17 +928,22 @@ marker:                                                     ; Its word: HERE and
             tay
             pla
             jsr         comma_ay                            ; (lo, hi swapped back: comma_ay is .A low)
-            lda         lasthdr                             ; (The list before it: its header's link)
-            sta         w
-            lda         lasthdr + 1
-            sta         w + 1
-            ldy         #1
-            lda         (w),y
-            tay
-            lda         (w)
-            jmp         comma_ay
+            lda         current
+            ldy         current + 1
+            jsr         comma_ay
+            ldy         #0
+:
+            lda         order_n,y                           ; (order_n, then order)
+            jsr         ccomma_a
+            iny
+            cpy         #ORDER_MAX * 2 + 1
+            bne         :-
+            rts
 
+; A MARKER's: all three as they were, and each word list without the words (and word lists) made since: a header or
+; word list in RAM at HERE or after
 domarker:
+            stx         xsave
             pla
             sta         w
             pla
@@ -917,8 +956,82 @@ domarker:
             sta         here + 1
             iny
             lda         (w),y
-            sta         latest
+            sta         current
             iny
             lda         (w),y
-            sta         latest + 1
+            sta         current + 1
+            ldx         #0
+:
+            iny
+            lda         (w),y
+            sta         order_n,x
+            inx
+            cpx         #ORDER_MAX * 2 + 1
+            bne         :-
+            lda         wl_last                             ; The word lists made since: gone
+            ldy         wl_last + 1
+@wl:
+            jsr         since
+            bcs         :+
+            sta         w
+            sty         w + 1
+            ldy         #3
+            lda         (w),y
+            pha
+            dey
+            lda         (w),y
+            ply
+            bra         @wl
+:
+            sta         wl_last
+            sty         wl_last + 1
+@list:                                                      ; Each one's words made since: gone
+            sta         w2
+            sty         w2 + 1
+            ora         w2 + 1
+            beq         @done
+            ldy         #1
+            lda         (w2),y
+            tay
+            lda         (w2)
+@hdr:
+            jsr         since
+            bcs         :+
+            sta         w
+            sty         w + 1
+            ldy         #1
+            lda         (w),y
+            tay
+            lda         (w)
+            bra         @hdr
+:
+            sta         (w2)
+            tya
+            ldy         #1
+            sta         (w2),y
+            ldy         #3                                  ; The next word list
+            lda         (w2),y
+            pha
+            dey
+            lda         (w2),y
+            ply
+            bra         @list
+@done:
+            ldx         xsave
+            rts
+
+; Is .A/.Y (an address) in RAM at HERE or after (made since)?  OUT: C = 0 yes; or C = 1.  Keeps .A, .Y
+since:
+            cpy         #>DICT_END                          ; (ROM's, at $8000 and up; or 0)
+            bcs         @no
+            pha
+            cmp         here
+            tya
+            sbc         here + 1
+            pla
+            bcc         @no
+            clc
+            rts
+@no:
+            sec
             rts

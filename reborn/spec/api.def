@@ -356,7 +356,8 @@ call WSTAT file impl=K_WSTAT far
   out:    -
   errors: E_NOENT, E_NODEV, E_NAMETOOLONG, E_MFILE, E_NFILE, E_NOSYS (its server changes nothing)
   blocks: yes
-  doc:    Change a file from a stat record: its name, its mode (what its server allows).
+  doc:    Change a file from a stat record: its name, its mode, its length (what its server allows: HydraFS a file's
+  doc:    length, longer with zeros or shorter).  What's all $FF in the record (an empty name) is left as it is.
 
 call FWSTAT file impl=K_FWSTAT far
   in:     .A = an fd; r0 = a stat record
