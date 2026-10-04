@@ -10,7 +10,8 @@
 //                          samples (its sample), sdk/asm/samples/NAME/*.s -> obj/samples/NAME.hyx (a driver's,
 //                          NAME.bin: a module, for a test's ROM); each checked:
 //                          only the kernel writes T, V and W (tools/check.js)
-//   4. the paged ROM       modules/rom.txt -> bin/prom.bin (tools/romimg.js), with the hardware test in bank 1
+//   4. the paged ROM       modules/rom.txt -> bin/prom0.bin, prom1.bin ... (tools/romimg.js): a 512K image for
+//                          each socket it fills, in order, as many as it needs; with the hardware test in bank 1
 //                          (from ../os_rom/bin/paged_rom_C02.bin) and the ROMs' checksums for it, and the ROM
 //                          disk's volume after the modules (romfs/romfs.txt: tools/romfs.js), each file read back
 //   5. the budgets         sizes, and room left (tools/budget.js)
@@ -262,9 +263,10 @@ function build(opt = {}) {
   for (const n of manifest.modules) if (!modules[n]) throw new Error('modules/rom.txt: no module ' + n);
   const hwt = hwtest();
   if (!hwt) say('(no ' + path.relative(ROOT, HWTEST_IMAGE) + ': the paged ROM has no hardware test)');
-  const { image, entries, disk } = romimg.build({ modules: manifest.modules.map(n => ({ file: n, data: modules[n] })), init: manifest.init,
+  const { image, entries, disk, banks, chips } = romimg.build({ modules: manifest.modules.map(n => ({ file: n, data: modules[n] })), init: manifest.init,
     hwtest: hwt, bios: fs.readFileSync(at('bin', 'bios.bin')), romfs: romfs.manifest(at('romfs', 'romfs.txt')) });
-  fs.writeFileSync(at('bin', 'prom.bin'), image);
+  for (const f of fs.readdirSync(at('bin')).filter(f => /^prom\d*\.bin$/.test(f))) fs.rmSync(at('bin', f));   // (The last build's)
+  for (let k = 0; k < chips; k++) fs.writeFileSync(at('bin', 'prom' + k + '.bin'), image.subarray(k * romimg.CHIP, (k + 1) * romimg.CHIP));
   fs.writeFileSync(at('obj', 'build.json'), JSON.stringify({ clock: opt.clock || 1, acia: opt.acia || 'rockwell' }) + '\n');
 
   const report = budget.report(ROOT, { modules, tests, progs, programs, samples, entries });
@@ -272,8 +274,10 @@ function build(opt = {}) {
   if (disk) {
     const bytes = disk.files.reduce((n, f) => n + f.size, 0), used = disk.volume.length / 512, first = disk.start / 32;
     say('ROM disk: ' + disk.files.length + ' files, ' + bytes + ' bytes; its volume uses ' + used + ' of ' + disk.blocks + ' blocks (paged ROM banks ' +
-      first + '-' + (first + Math.ceil(used / 32) - 1) + '); every file read back as its source');
+      first + '-' + (first + disk.blocks / 32 - 1) + ', in socket order); every file read back as its source');
   }
+  say('Paged ROM: ' + banks + ' banks of 256, ' + chips + ' chip' + (chips === 1 ? '' : 's') + ' of 512K: ' +
+    [...Array(chips)].map((_, k) => 'bin/prom' + k + '.bin').join(', '));
   return { modules, tests, progs, programs, samples, manifest, report };
 }
 

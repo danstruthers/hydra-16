@@ -9,9 +9,10 @@
 //   block 0               bank 0's first block: romimg.js's signature line, then the partition table (an MBR)
 //   blocks 1 ... S-1      partition 1, type $DA (not a file system): the module directory, the hardware test, the
 //                         modules
-//   blocks S ... 8191     partition 2, type $7F: the HydraFS volume, from the bank after the modules to the paged
-//                         ROM's end
-// Only the blocks the volume uses are in the image: the rest of the ROM reads as erased ($FF), and nothing reads it.
+//   blocks S ...          partition 2, type $7F: the HydraFS volume, from the bank after the modules, as many whole
+//                         banks as its files need
+// The disk is the paged ROM in socket order (romimg.js: socketBank).  Only the blocks the volume uses are in the
+// image: the rest of it reads as erased ($FF), and nothing reads it.
 //
 // From Node: manifest(file) gives the files ([{ path, data, src }]); volume(files, blocks) the volume's blocks up to
 // its last used one (a Buffer); table(start, blocks) block 0's partition table; readBack(read, blocks, files) checks

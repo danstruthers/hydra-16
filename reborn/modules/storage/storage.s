@@ -979,7 +979,9 @@ sd_end:
 ; ****************************************************************************
 ; The ROM disk and the RAM disks
 
-; Block lba of the ROM disk into the 512 bytes at bufp: bank lba / 32, at $A000 + (lba % 32) * 512, through ROMREAD
+; Block lba of the ROM disk into the 512 bytes at bufp: bank lba / 32, at $A000 + (lba % 32) * 512, through ROMREAD.
+; The disk is the paged ROM in socket order (hw.inc: PROM_SOCKET_BANKS), so a disk's blocks fill the sockets in
+; turn: its bank i is the CPU's bank i with bits 6 and 7 swapped
 rom_read:
             lda         lba + 1                             ; The bank: lba / 32 (13 bits: 8 of them)
             asl
@@ -993,6 +995,16 @@ rom_read:
             lsr
             lsr
             ora         num
+            tay                                             ; Bits 6 and 7 swapped: both flipped if they differ
+            and         #$C0
+            beq         :+
+            cmp         #$C0
+            beq         :+
+            tya
+            eor         #$C0
+            tay
+:
+            tya
             pha
             lda         lba                                 ; Where in it
             and         #$1F

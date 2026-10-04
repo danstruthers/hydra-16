@@ -25,6 +25,9 @@ BANK_WINDOW     = $8000         ; $8000-$9FFF: the selected RAM bank
 BANK_SIZE       = $2000
 PROM_WINDOW     = $A000         ; $A000-$DFFF: the selected paged ROM bank
 PROM_BANK_SIZE  = $4000
+PROM_SOCKET_BANKS = 32          ; A paged ROM socket's banks (a 512K chip; 8 sockets).  The V1 board swaps ROM_BANK's
+                                ;   bits 6 and 7 (and 2 and 3) on their way to the sockets: socket k holds the banks
+                                ;   whose numbers, bits 6 and 7 swapped, are 32k to 32k + 31 (socket 2: 128-159)
 BIOS_BASE       = $E000         ; $E000-$FEFF: BIOS ROM page W
 SHARED_BANK     = $F0           ; RAM_BANK values $F0-$FF: shared RAM, macro-page U
 RAM_MODULES     = 15            ; Task RAM modules on daughter cards: 0-14 (banks $m0-$mF)

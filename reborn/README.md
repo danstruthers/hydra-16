@@ -15,8 +15,9 @@ Node.js 18 or later, and cc65 (`ca65`, `ld65`, and for the C programs `cc65`, `a
 `lib`): `$CC65_BIN`, `$CC65_HOME/bin`, `C:\source\cc65\win64_snapshot\bin`, or the PATH.
 
 ```
-node build.js                       the BIOS ROM (bin/bios.bin), the paged ROM (bin/prom.bin: the modules, and the old
-                                    hardware test in bank 1), the budget report
+node build.js                       the BIOS ROM (bin/bios.bin), the paged ROM (bin/prom0.bin, prom1.bin ...: a 512K
+                                    image for each socket it fills; the modules, the old hardware test in bank 1, the
+                                    ROM disk), the budget report
 node sim/run.js                     boot them in the emulator for a while, then report (the output, the tasks)
 node sim/run.js -i                  the Hydra's serial console, live (Ctrl-A x quits, Ctrl-A h helps)
 node sim/run.js -i --sd card.img    the same with a card in SD device 0 (an image: ../sim/tools/hydrafs.js)

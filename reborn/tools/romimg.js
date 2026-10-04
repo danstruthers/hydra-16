@@ -11,16 +11,21 @@
 //                         system's paged ROM image), with the ROMs' checksums at $DF00 (as os_rom/tools/romsum.js
 //                         makes them: a CRC-16 of each BIOS ROM page and paged ROM bank, here of reborn's images)
 //   banks 2 ...           the modules, each at $A000 of its first bank (its HYX2 header first)
-//   the banks after them  the ROM disk's HydraFS volume (/rom), to the paged ROM's end; its used blocks only
+//   the banks after them  the ROM disk's HydraFS volume (/rom), as big as its files need (whole banks)
+// Banks in socket order: the Nth bank used is the CPU's bank N with bits 6 and 7 swapped (socketBank), so what's
+// there fills the sockets (512K chips, 32 banks each) in turn, and the storage driver reads the ROM disk the same way
+// (rom_read).  A module of two banks doesn't straddle the 64th: its banks are N and N + 1 to the CPU too.
 //
 // The image is the chips' view, not the CPU's: the board swaps A13 (each bank's $C000 half comes first), and on
 // the V1 board a bank number's bits 2 and 3, and 6 and 7, trade places before they reach the chips, so bank b
-// sits at bank swap(b)'s place (sim/lib/machine.js: romBank).
+// sits at bank swap(b)'s place (sim/lib/machine.js: romBank).  It's whole chips, as many as what's there needs: chip k
+// is its 512K from k * 512K (build.js writes each to bin/promK.bin).
 //
 // Usage: node tools/romimg.js OUT.bin --init NAME [--hwtest OLD_PAGED_ROM.bin --bios BIOS.bin] [--romfs MANIFEST]
 //        MODULE.bin ...  (--list: what's where)
 // From Node: build({ modules: [Buffer, ...], init: 'name', hwtest, bios, romfs: romfs.js's files }) gives { image,
-// entries, disk } (disk: the ROM disk, its files read back from the image: romfs.js's readBack, or null).
+// entries, disk, banks, chips } (disk: the ROM disk, its files read back from the image: romfs.js's readBack, or
+// null; banks: the banks used, in socket order; chips: the image's 512K chips).
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -32,9 +37,10 @@ const HX = { MAGIC: 0, HSIZE: 4, TYPE: 5, FLAGS: 6, ABI: 7, LOAD: 8, LENGTH: 10,
 const TYPES = { 1: 'program', 2: 'driver', 3: 'library' };
 const SIGNATURE = 'Hydra-16 reborn paged ROM: block 0 this and the ROM disk\'s partition table, then the module directory; ' +
   'bank 1 the hardware test; the modules from bank 2, then the ROM disk\'s volume\r\n';
-const BLOCKS_PER_BANK = BANK / 512, ROM_BANKS = 256;
+const BLOCKS_PER_BANK = BANK / 512, ROM_BANKS = 256, CHIP = 32 * BANK, CPU_SUMMED = 64;
 const HWT_BANK = 1, HWT_SUMS = 0xDF00, HWT_SUMS_SIZE = 256, FIRST_MODULE_BANK = 2;
 const romBank = b => (b & 0x33) | ((b & 0x04) << 1) | ((b & 0x08) >> 1) | ((b & 0x40) << 1) | ((b & 0x80) >> 1);
+const socketBank = n => (n & 0x3F) | ((n & 0x40) << 1) | ((n & 0x80) >> 1);   // (The Nth bank in socket order)
 
 // CRC-16/CCITT-FALSE (polynomial $1021, from $FFFF), of n bytes from get(i): the hardware test's (hwt_rom.s)
 function crc16(get, n) {
@@ -81,18 +87,26 @@ function build({ modules, init, hwtest, bios, romfs: files }) {
   let initIndex = 0xFF;
   if (init) { initIndex = entries.findIndex(e => e.name === init); if (initIndex < 0) throw new Error('no module ' + init + ' for init'); }
   if (initIndex !== 0xFF && entries[initIndex].type !== 1) throw new Error(init + ' is not a program');
-  let bank = FIRST_MODULE_BANK;
-  for (const e of entries) { e.bank = bank; bank += e.banks; }
-  let disk = null;                                            // The ROM disk: its volume in the banks after them
-  if (files && bank < ROM_BANKS) {
-    const start = bank * BLOCKS_PER_BANK, blocks = ROM_BANKS * BLOCKS_PER_BANK - start;
-    disk = { start, blocks, volume: romfs.volume(files, blocks) };
-    bank += Math.ceil(disk.volume.length / BANK);
+  let bank = FIRST_MODULE_BANK;                               // (In socket order: the CPU's socketBank(bank))
+  for (const e of entries) {
+    if (e.banks === 2 && bank % 64 === 63) bank++;            // (Two banks: N and N + 1 to the CPU as well)
+    e.bank = socketBank(bank);
+    bank += e.banks;
+  }
+  let disk = null;                                            // The ROM disk: its volume in the banks after them,
+  if (files && bank < ROM_BANKS) {                            //   whole banks, as many as its files need
+    const start = bank * BLOCKS_PER_BANK, most = ROM_BANKS * BLOCKS_PER_BANK - start;   // (From the blocks written: a
+    let blocks = Math.ceil(romfs.volume(files, most).length / BANK) * BLOCKS_PER_BANK, volume = null;  //   file's last
+    while (!volume) {                                         //   zeros aren't, but they're its)
+      try { volume = romfs.volume(files, blocks); }
+      catch (e) { if (!/full/.test(e.message) || blocks >= most) throw e; blocks = Math.min(blocks + BLOCKS_PER_BANK, most); }
+    }
+    disk = { start, blocks, volume };
+    bank += blocks / BLOCKS_PER_BANK;
   }
   if (bank > ROM_BANKS) throw new Error('the modules and the ROM disk need ' + bank + ' banks: ' + ROM_BANKS + ' at most');
-  let top = 0;
-  for (let b = 0; b < bank; b++) top = Math.max(top, romBank(b));
-  const image = Buffer.alloc((top + 1) * BANK, 0xFF);
+  const chips = Math.ceil(bank * BANK / CHIP);
+  const image = Buffer.alloc(chips * CHIP, 0xFF);
   const block0 = disk ? romfs.table(disk.start, disk.blocks) : Buffer.alloc(512, 0);
   if (SIGNATURE.length > 0x1BE) throw new Error('the signature reaches the partition table');
   block0.write(SIGNATURE, 'latin1');
@@ -107,26 +121,28 @@ function build({ modules, init, hwtest, bios, romfs: files }) {
   });
   put(image, 0, MD_BASE, md);
   for (const e of entries) put(image, e.bank, WINDOW, e.data);
-  if (disk) put(image, disk.start / BLOCKS_PER_BANK, WINDOW, disk.volume);
+  if (disk)                                                   // (A bank at a time: socket order)
+    for (let i = 0; i * BANK < disk.volume.length; i++)
+      put(image, socketBank(disk.start / BLOCKS_PER_BANK + i), WINDOW, disk.volume.subarray(i * BANK, (i + 1) * BANK));
   if (hwtest) {
     const code = Buffer.alloc(HWT_SUMS - WINDOW);
     for (let a = WINDOW; a < HWT_SUMS; a++) code[a - WINDOW] = read(hwtest, HWT_BANK, a);
     if (code[0] !== 0x78) throw new Error('the old paged ROM\'s bank 1 isn\'t the hardware test (no sei at $A000)');
     put(image, HWT_BANK, WINDOW, code);
     if (!bios) throw new Error('the hardware test\'s checksums need the BIOS ROM image');
-    put(image, HWT_BANK, HWT_SUMS, sums(bios, image, bank));
+    put(image, HWT_BANK, HWT_SUMS, sums(bios, image, Math.min(bank, CPU_SUMMED)));
   }
   if (disk) {                                                 // Every file read back, as the CPU sees the disk
-    const block = n => { const b = Buffer.alloc(512); for (let i = 0; i < 512; i++) b[i] = read(image, Math.floor(n / BLOCKS_PER_BANK), WINDOW + (n % BLOCKS_PER_BANK) * 512 + i); return b; };
+    const block = n => { const b = Buffer.alloc(512); for (let i = 0; i < 512; i++) b[i] = read(image, socketBank(Math.floor(n / BLOCKS_PER_BANK)), WINDOW + (n % BLOCKS_PER_BANK) * 512 + i); return b; };
     disk.files = romfs.readBack(block, disk.start + disk.volume.length / 512, files);
   }
-  return { image, entries, disk };
+  return { image, entries, disk, banks: bank, chips };
 }
 
 // The hardware test's table of the ROMs' checksums (os_rom/tools/romsum.js): the BIOS pages (1 byte), the paged
 // banks (1), then a CRC of each page ($E000-$FEFF) and of each bank as the CPU sees it ($A000-$DEFF), low first.
-// The banks are the banks used (0 to banks - 1, as the CPU selects them), not the image's: past bank 63 the board's
-// swapped bank bits (6 and 7) put a bank at 128 and up, and the image grows to hold it
+// The banks are 0 to banks - 1, as the CPU selects them: the first two sockets' at most (CPU_SUMMED), as the
+// socket order goes on at bank 128 (the old test counts banks in a row)
 function sums(bios, image, banks) {
   const pages = bios.length / PAGE;
   if (2 + 2 * (pages + banks) > HWT_SUMS_SIZE) throw new Error('too many pages and banks for the hardware test\'s table');
@@ -168,4 +184,4 @@ function main(argv) {
 if (require.main === module) {
   try { main(process.argv.slice(2)); } catch (e) { console.error('romimg: ' + e.message); process.exit(1); }
 }
-module.exports = { build, read, readHeader, romBank, sums, crc16 };
+module.exports = { build, read, readHeader, romBank, socketBank, sums, crc16, CHIP };

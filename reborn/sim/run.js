@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 // ****************************************************************************
 // run.js - the reborn system in the emulator (sim/lib: the Hydra-16 V1 board, cycle by cycle).  It boots
-// bin/bios.bin and bin/prom.bin (node build.js), and either runs for a while and reports (the console's output,
-// each task's state, the longest IRQs-off stretches, the stacks' depths), or is the serial console, live.
+// bin/bios.bin and the paged ROM's chips, bin/prom0.bin ... (node build.js), and either runs for a while and
+// reports (the console's output, each task's state, the longest IRQs-off stretches, the stacks' depths), or is the
+// serial console, live.
 //
 // Usage: node sim/run.js [options]
 //   -i, --interactive   the terminal is the Hydra's serial console, in real time.  Ctrl-A x quits, Ctrl-A r resets,
@@ -17,7 +18,7 @@
 //   --seed N            the power-up's random RAM and registers, repeatable (default: random)
 //   --trace N           the last N instructions in the report (default 25)
 //   --watch-pc ADDR     log each time the PC reaches ADDR (hex, or a kernel label), on BIOS page 0
-//   --bios FILE, --prom FILE   other images
+//   --bios FILE, --prom FILE   other images (--prom: the whole paged ROM, its sockets' images one after another)
 //   --sd FILE           a card image (../sim/tools/hydrafs.js makes them), SD device 0, then 1 ...: read and
 //                       written in the file itself, as the Hydra reads and writes it
 //   --pc-dir DIR        /pc: the PC tool's part (../sim/tools/hydrapc.js) is played here, serving the folder DIR:
@@ -68,14 +69,23 @@ function labels(file = path.join(ROOT, 'obj', 'kernel', 'bios.dbg')) {
   return { byName, pageOf, at };
 }
 
-// The machine, booted from the images.  opt: createMachine's (sim/lib/machine.js), and bios, prom (files or bytes)
+// The paged ROM's chips as build.js writes them (bin/prom0.bin, prom1.bin ...: 512K each, socket 0 on), one image
+function chips() {
+  const out = [];
+  for (let k = 0; fs.existsSync(path.join(ROOT, 'bin', 'prom' + k + '.bin')); k++) out.push(fs.readFileSync(path.join(ROOT, 'bin', 'prom' + k + '.bin')));
+  if (!out.length) throw new Error('no bin/prom0.bin: node build.js');
+  return Buffer.concat(out);
+}
+
+// The machine, booted from the images.  opt: createMachine's (sim/lib/machine.js), and bios, prom (files or bytes;
+// the paged ROM a whole image, the sockets' in order; none: the chips' images)
 function boot(opt = {}) {
   const img = (v, f) => v instanceof Uint8Array ? v : fs.readFileSync(v || path.join(ROOT, 'bin', f));
+  const prom = opt.prom instanceof Uint8Array ? opt.prom : opt.prom ? fs.readFileSync(opt.prom) : chips();
   return createMachine(Object.assign({
-    osrom: img(opt.bios, 'bios.bin'), pagedrom: img(opt.prom, 'prom.bin'),
     modules: 2, sharedU: 16, aciaLine: 1, stuckIrq: -1, acia: 'rockwell', clock: CLOCK, trace: 25,
     pcWatches: [], watches: [], marks: [], log: s => console.log('[sim] ' + s),
-  }, opt, { osrom: img(opt.bios, 'bios.bin'), pagedrom: img(opt.prom, 'prom.bin') }));
+  }, opt, { osrom: img(opt.bios, 'bios.bin'), pagedrom: prom }));
 }
 
 // Each task in use: { task, state, flags, preempt, guest, sp, name }
