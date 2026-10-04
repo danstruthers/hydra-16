@@ -249,9 +249,16 @@ through the COMMON block (`FARCALL`).
 
 ## Next
 
-1. The parity checkpoint (the plan's, after phase 5: the tutorial's steps for rc, and a day of use on the board) is
-   the user's; then phase 7, hylang (7.0: the language's specification, from danlang's interpreter and library).
-   `/proc/N/fd` is still to come (a channel keeps no name to show).
+1. Phase 7, hylang: 7.0's specification is drafted (`docs/hylang.md`), and danlang, the C# reference, has been
+   readied for the port (lexical scope, tail calls, fexprs, try, loops, the missing basics, its number bugs fixed)
+   with a regression suite (965 checks) that hylang will run unchanged, and a system library a PC has too (files,
+   programs and the shell, the environment, the clock, bits and bytes, the Hydra's error codes).  The spec has
+   hylang's Hydra layers: the Hydra's built-ins (notes, namespaces, memory and banks, tasks, keys), device
+   libraries in hylang (console, GPIO, I2C, SPI, sound, disks, /proc, the clock's chip) and a sys- function for
+   every call.  Three decisions are the user's: the file
+   extension (`.hl` drafted), whether `$` reaches the environment, and danlang's GPLv3 license in the ROM.  Next:
+   7.1, spike S5 (values, the heap over the task's banks, the collector).  The parity checkpoint (the plan's, after
+   phase 5) is still the user's.  `/proc/N/fd` is still to come (a channel keeps no name to show).
 2. rc's note handler is in its first bank's code: a note taken while rc runs its second bank (parsing a line) would
    jump into that bank instead.  The kernel calls a handler with the bank that's there, so a module of two banks keeps
    its handler in its RAM, as `forth` does now (conventions.md).
