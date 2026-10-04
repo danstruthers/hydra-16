@@ -785,6 +785,8 @@ A new Forth, written from scratch, added in phase 6 when files, the console's mo
 
 (As built, phase 6.3: 58 `sys-` words, from the calls' `in:` and `out:` lines (apigen reads their registers), a table in `forth`'s second bank from which their headers are made in RAM as it starts (one bank is at `$A000` at a time); their stack effects are in the reference, and the constants a program uses are `/lib/forth/hydra.fs` on the ROM disk.  `SH` (`rc -c`), `RUN` (a program and its arguments, no shell), `BANK!`, `BANK@`, `SEG-BANK!`, `>Z`.  Ctrl-C is a note forth handles: THROW -28 at the next word, loop or wait.  The first bank is full, so 6.4 moves words to the second.)
 
+(As built, phase 6.4: `forth file.fs [argument ...]` (`ARGC`, `ARG`; code 1 after an error), and a first line `#!...` skipped, so `#!/bin/forth` scripts run by their names; in pipelines too.  A name INCLUDED that isn't in the current directory, with no `/`, is `/lib/forth`'s (the current directory first, as INCLUDED's standard meaning has it).  `LIBRARY name` and `END-LIBRARY` give a library its own word list, first in the search order: `REQUIRE hydra.fs`.  Some words are in the second bank now, their headers in RAM, run through `FAR2`.)
+
 ---
 
 ### **17. hylang: danlang on the Hydra**

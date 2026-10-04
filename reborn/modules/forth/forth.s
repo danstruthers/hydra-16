@@ -4,8 +4,10 @@
 ; stdin, as typed ones).  The word sets: Core and Core Extension, Exception, File Access, Facility, String,
 ; Search-Order and Programming-Tools, with their extensions (but the editor's, the assembler's and EKEY's); and the
 ; Hydra's words: a sys- word for each system call a program makes (made from the specification), SH and RUN, banks
-; and segments.  Ctrl-C (a note) is THROW -28 at the next word, loop or wait.  A module of two banks: the second has
-; the sys- words' table, which their headers are made from in RAM as forth starts.
+; and segments.  Ctrl-C (a note) is THROW -28 at the next word, loop or wait.  `forth file.fs [argument ...]` runs a
+; script (the file INCLUDED, then the end: code 1 after an error); a file's first line #!... is skipped; a name
+; INCLUDED that isn't there, with no / in it, is /lib/forth's (REQUIRE hydra.fs).  A module of two banks: the second
+; has some words (their headers made in RAM as forth starts: FARWORD) and the sys- words' table.
 ;   Subroutine threaded: a word's execution token is its code's address, and a definition is a run of `jsr xt`
 ; (literals and IF's test compiled inline; a few short words, the return stack's among them, copied in whole: F_INLINE).
 ; The data stack is the program's zero page, low bytes and high bytes apart (dlo, dhi), indexed by .X, which every
@@ -23,8 +25,9 @@
 ; output, numbers, strings, parsing), fcomp.inc (the compiler: definitions, control flow, defining words), finterp.inc
 ; (the text interpreter, QUIT, CATCH and THROW, EVALUATE), fsearch.inc (word lists and the search order), ffile.inc
 ; (files, and including them), fstring.inc (strings, the Facility words), ftools.inc (the Programming-Tools words),
-; fhydra.inc (the Hydra's words).  Their words are in that order in the dictionary, then the sys- words (in RAM).
-; The second bank: fsys.inc, and the table (obj/gen/forthsys.inc, tools/apigen.js's).
+; fhydra.inc (the Hydra's words).  Their words are in that order in the dictionary, then the second bank's and the
+; sys- words (in RAM).  The second bank: fsys.inc (the RAM headers made), fbank2.inc (its words: UNESCAPE, REPLACES,
+; SUBSTITUTE, ARGC, ARG; INCLUDED's /lib/forth), and the sys- words' table (obj/gen/forthsys.inc, apigen's).
 
 .include "hydra.inc"
 .include "hw.inc"
@@ -153,6 +156,8 @@ sys_y:      .res        1
 sys_p:      .res        1                                   ;   its flags (C: it failed) ...
 sys_f:      .res        1                                   ;   its descriptor's flags ($80: an ior) ...
 sys_to:     .res        2                                   ;   and its address
+argp:       .res        2                                   ; forth's arguments (main's r0): a script's name first
+script:     .res        1                                   ; <> 0: forth file.fs (the file run, then the end)
 .assert     sys_y = sys_a + 2 .and sys_x = sys_a + 1, error, "sys_a, sys_x, sys_y: in that order (sys_pop, sys_push)"
 dict:                                                       ; The dictionary, from here
 
@@ -188,6 +193,16 @@ hdr_n       .set        hdr_n + 1
             .byte       .ident(.concat(.string(label), "_end")) - label
 .endmacro
 
+; FARWORD "NAME", label, flags: a word in the second bank (its code at label, there), its entry in far_table, from
+; which its header is made in RAM as forth starts (sys_build)
+.macro FARWORD name, label, flags
+.pushseg
+.segment "RODATA2"
+            .byte       (flags) | .strlen(name), name
+            .word       label
+.popseg
+.endmacro
+
 ; Push .A (low) and .Y (high); pop into .A (low) and .Y (high)
 .macro PUSHAY
             dex
@@ -214,6 +229,17 @@ notes:
 ; The start: the dictionary after the BSS, its end claimed (BREAK), decimal, stdin a console or not, Ctrl-C a
 ; THROW; the sys- words' headers made (the second bank's sys_build); then QUIT
 main:
+            lda         r0                                  ; Its arguments: a script's name, and its own
+            sta         argp
+            lda         r0 + 1
+            sta         argp + 1
+            stz         script
+            ora         r0
+            beq         :+
+            lda         (r0)
+            beq         :+
+            inc         script
+:
             HYX2_BANKS_INIT
             LDR         r0, DICT_END
             jsr         BREAK
@@ -279,12 +305,18 @@ main:
             cmp         #'c'
             bne         :+
             inc         interactive
+            lda         script                              ; (The banner: not a script's)
+            bne         :+
             jsr         banner
 :
             FAR2        sys_build
             tsx
             stx         rsp0
             ldx         #DS_N
+            lda         script
+            beq         :+
+            jmp         run_script
+:
             jmp         quit
 
 banner:
@@ -307,8 +339,12 @@ s_banner:   .byte       "HyForth (Forth 2012), BYE to end", LF, 0
 forth_last  = .ident(.sprintf("hdr_%d", hdr_n))             ; (The last ROM header: the word list's start)
 
 ; ****************************************************************************
-; The second bank
+; The second bank: its words (far_table: FARWORD's entries), the sys- words' table
+.segment "RODATA2"
+far_table:
 .segment "CODE2"
 .include "fsys.inc"
+.include "fbank2.inc"
 .segment "RODATA2"
+            .byte       0                                   ; (far_table's end)
 .include "forthsys.inc"

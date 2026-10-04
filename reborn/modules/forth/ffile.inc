@@ -181,6 +181,24 @@ refill_file:
             bne         :+
             inc         src_line + 1
 :
+            lda         src_line                            ; Its first line #!...: none (a script's: #!/bin/forth)
+            cmp         #1
+            bne         @line
+            lda         src_line + 1
+            ora         src_len + 1
+            bne         @line
+            lda         src_len
+            cmp         #2
+            bcc         @line
+            lda         (w2)
+            cmp         #'#'
+            bne         @line
+            ldy         #1
+            lda         (w2),y
+            cmp         #'!'
+            bne         @line
+            stz         src_len
+@line:
             clc
 @done:
             rts
@@ -786,21 +804,55 @@ included:                                                   ; ( i*x c-addr u -- 
             sta         throw_name + 1
             lda         dlo,x
             sta         throw_nlen
-            dex
-            lda         #O_READ
-            sta         dlo,x
-            stz         dhi,x
-            jsr         openfile
+            jsr         twodup
+            jsr         open_ro
             lda         dlo,x
             ora         dhi,x
-            beq         :+
+            beq         @found
+            lda         dlo,x                               ; Not there, and a bare name (no /): /lib/forth's
+            cmp         #<(-512 - E_NOENT)
+            bne         @fail
+            lda         dhi,x
+            cmp         #>(-512 - E_NOENT)
+            bne         @fail
+            inx
+            inx
+            FAR2        lib_name
+            bcs         @none
+            jsr         open_ro
+            lda         dlo,x
+            ora         dhi,x
+            bne         @fail
+            inx
+            jmp         includefile
+@none:
+            dex                                             ; (Its ior again)
+            lda         #<(-512 - E_NOENT)
+            sta         dlo,x
+            lda         #>(-512 - E_NOENT)
+            sta         dhi,x
+@fail:
             stz         inc_named
             lda         #1
             sta         throw_named
             jmp         throw
-:
+@found:
+            inx                                             ; ( c-addr u fileid -- fileid )
+            lda         dlo,x
+            sta         dlo + 2,x
+            lda         dhi,x
+            sta         dhi + 2,x
+            inx
             inx
             jmp         includefile
+
+; ( c-addr u -- fileid ior ): OPEN-FILE, read only
+open_ro:
+            dex
+            lda         #O_READ
+            sta         dlo,x
+            stz         dhi,x
+            jmp         openfile
 
             HEADER      "REQUIRED", 0
 required:                                                   ; ( i*x c-addr u -- j*x ): INCLUDED, unless it has been

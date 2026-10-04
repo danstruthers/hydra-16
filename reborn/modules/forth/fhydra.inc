@@ -520,3 +520,71 @@ intr_throw:
             stz         intr
             lda         #<-28
             jmp         throw_a
+
+; ---- The second bank's words: each one's code (its header in RAM) is jsr far_word, then its code's address there
+
+; A second bank's word: its code, through FAR2 (the return address is its caller's)
+far_word:
+            pla
+            sta         p1
+            pla
+            sta         p1 + 1
+            ldy         #1
+            lda         (p1),y
+            sta         hyx2_to
+            iny
+            lda         (p1),y
+            sta         hyx2_to + 1
+            jmp         hyx2_far2
+
+; ---- Scripts and libraries
+
+; forth file.fs [argument ...]: the file INCLUDED (a name with no / not there: /lib/forth's), then the end: code 0,
+; or 1 after an error's message (its file and line)
+run_script:
+            lda         argp
+            ldy         argp + 1
+            PUSHAY
+            jsr         zcount
+            lda         #<included
+            ldy         #>included
+            PUSHAY
+            jsr         catch
+            lda         dlo,x
+            ora         dhi,x
+            beq         :+
+            jsr         show_error
+            lda         #1
+:
+            pha
+            jsr         flush
+            stz         r0
+            stz         r0 + 1
+            pla
+            jmp         EXITS
+
+            HEADER      "LIBRARY", 0
+library:                                                    ; ( "name" -- wid ): a library's start: name a CONSTANT,
+            jsr         getcurrent                          ;   a new word list, which goes first in the search order
+            jsr         wordlist                            ;   and takes the definitions; wid the compilation word
+            jsr         dup                                 ;   list before (END-LIBRARY's)
+            jsr         constant
+            jsr         dup
+            jsr         setcurrent
+            lda         order_n                             ; (First in the order, before the rest)
+            bne         :+
+            inc         order_n
+            bra         @first
+:
+            jsr         also
+@first:
+            lda         dlo,x
+            sta         order
+            lda         dhi,x
+            sta         order + 1
+            inx
+            rts
+
+            HEADER      "END-LIBRARY", 0
+endlibrary:                                                 ; ( wid -- ): a library's end: definitions where they were,
+            jmp         setcurrent                          ;   its word list kept in the order
