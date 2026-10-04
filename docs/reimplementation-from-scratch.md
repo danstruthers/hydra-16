@@ -826,6 +826,8 @@ danlang (`C:\source\danlang`, C# on .NET 6, by Daniel and Simon Struthers, GPLv3
 * **The reader and printer** keep danlang's syntax exactly, prefix shorthands and number bases included (the exotic bases' parsing and printing live in a library module, loaded on first use).
 * **Where it runs:** the interpreter in place from its paged ROM module (two banks, with `XCALL` for the cold parts), the heap in the task's banks, the evaluation stack in another bank, the program zero page for the registers of the evaluator.
 
+(As built, phase 7.1: spike S5 confirmed the values and the heap, `reborn/modules/hylang/heap.inc`.  A page holds one kind (BIBOP): 4-byte pairs with no header, or cells of 8-128 bytes with a type, so a value's kind is a look-up of its high byte; the marks are a bit for each 4 bytes, in the task's RAM; there are no free lists: the pages with nothing marked are freed, and the rest swept lazily as each kind allocates from them, so a pause is the marking.  At 3.58 MHz a pair takes 141 cycles to make (278 from a swept page), and a collection 142 cycles a live pair: 0.36 s with 9000.)
+
 #### **17.4 hylang as the shell**
 
 hylang becomes the login shell in phase 7, over rc:

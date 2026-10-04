@@ -1056,6 +1056,14 @@ module.exports = {
         minus: ['<base', 'base>'], per: 1000, max: 200 }],
     },
     {
+      name: 'heap', what: 'spike S5: hylang\'s heap (modules/hylang/heap.inc): values and their kinds, pairs, strings and vectors, the collector (a list kept while garbage is taken back, a mark stack that overflows, the heap filled and emptied); pairs made and collections timed',
+      init: 't_heap', cycles: 400e6,
+      budgets: [{ what: 'a pair made (cons), in a fresh heap', from: '<cons', to: 'cons>', per: 1000, max: 160 },
+        { what: 'a pair made (cons), from swept pages', from: '<cons2', to: 'cons2>', per: 1000, max: 320 },
+        { what: 'a collection, 1000 pairs live, a pair', from: '<gc1k', to: 'gc1k>', per: 1000, max: 200 },
+        { what: 'a collection, 9000 pairs live, a pair', from: '<gc9k', to: 'gc9k>', per: 9000, max: 165 }],
+    },
+    {
       name: 'kcopy', what: 'spike S2: copying between tasks',
       init: 't_kcopy', cycles: 40e6,
       budgets: [{ what: 'kcopy, 4096 bytes (DBG_KCOPY)', from: '<kc', to: 'kc>', per: 4096, max: 40 }],

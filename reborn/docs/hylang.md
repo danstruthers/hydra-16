@@ -4,7 +4,8 @@ hylang is danlang on the Hydra-16: the lisp the plan makes the preferred command
 ([../../docs/reimplementation-from-scratch.md](../../docs/reimplementation-from-scratch.md), §17; phase 7).  This is
 its specification (step 7.0): what hylang 1 is, how it's checked against danlang, where the two may differ, and what
 hylang adds to make the Hydra's own things easy to reach.  The runtime's design (16-bit values, the heap over the
-task's banks, the collector) is the plan's §17.3, to be confirmed by spike S5 (step 7.1).
+task's banks, the collector) is the plan's §17.3, confirmed by spike S5 (step 7.1: `modules/hylang/heap.inc`;
+`status.md` has what it measured).
 
 ## The reference
 
