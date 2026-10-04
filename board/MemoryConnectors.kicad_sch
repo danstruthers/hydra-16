@@ -3727,7 +3727,7 @@
 			)
 		)
 	)
-	(global_label "RWB"
+	(global_label "RWB_M"
 		(shape input)
 		(at 113.03 66.04 0)
 		(fields_autoplaced yes)
@@ -4453,7 +4453,7 @@
 			)
 		)
 	)
-	(global_label "RWB"
+	(global_label "RWB_M"
 		(shape input)
 		(at 71.12 64.77 0)
 		(fields_autoplaced yes)
@@ -4893,7 +4893,7 @@
 			)
 		)
 	)
-	(global_label "RWB"
+	(global_label "RWB_M"
 		(shape input)
 		(at 210.82 134.62 0)
 		(fields_autoplaced yes)
@@ -6081,7 +6081,7 @@
 			)
 		)
 	)
-	(global_label "RWB"
+	(global_label "RWB_M"
 		(shape input)
 		(at 118.11 134.62 0)
 		(fields_autoplaced yes)
@@ -6785,7 +6785,7 @@
 			)
 		)
 	)
-	(global_label "RWB"
+	(global_label "RWB_M"
 		(shape input)
 		(at 162.56 68.58 0)
 		(fields_autoplaced yes)
@@ -7819,7 +7819,7 @@
 			)
 		)
 	)
-	(global_label "RWB"
+	(global_label "RWB_M"
 		(shape input)
 		(at 165.1 134.62 0)
 		(fields_autoplaced yes)
@@ -8303,7 +8303,7 @@
 			)
 		)
 	)
-	(global_label "RWB"
+	(global_label "RWB_M"
 		(shape input)
 		(at 67.31 134.62 0)
 		(fields_autoplaced yes)

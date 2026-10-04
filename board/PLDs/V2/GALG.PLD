@@ -1,0 +1,36 @@
+Name     GALG ;
+PartNo   ATF16V8C ;
+Date     10/4/2026 ;
+Revision 01 ;
+Designer Engineer ;
+Company  Data Tuning ;
+Assembly Hydra 16 V2 ;
+Location U87 ;
+Device   g16v8a ;
+
+/* GAL G - OS ROM bank lines (replaces U72, U73)
+   $E000-$EFFF (A12 = 0): W = RW register;  $F000-$FFFF (A12 = 1): W = 0 (fixed bank). */
+
+/* *************** INPUT PINS *********************/
+PIN 2  = RW0 ;
+PIN 3  = RW1 ;
+PIN 4  = RW2 ;
+PIN 5  = RW3 ;
+PIN 6  = RW4 ;
+PIN 7  = RW5 ;
+PIN 8  = A12 ;
+
+/* *************** OUTPUT PINS *********************/
+PIN 19 = W0 ;
+PIN 18 = W1 ;
+PIN 17 = W2 ;
+PIN 16 = W3 ;
+PIN 15 = W4 ;
+PIN 14 = W5 ;
+
+W0 = RW0 & !A12 ;
+W1 = RW1 & !A12 ;
+W2 = RW2 & !A12 ;
+W3 = RW3 & !A12 ;
+W4 = RW4 & !A12 ;
+W5 = RW5 & !A12 ;

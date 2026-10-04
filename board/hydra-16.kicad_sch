@@ -14261,7 +14261,7 @@
 			)
 		)
 	)
-	(global_label "RDY"
+	(global_label "CPU_RDY"
 		(shape bidirectional)
 		(at 25.4 149.86 180)
 		(fields_autoplaced yes)
@@ -14921,7 +14921,7 @@
 			)
 		)
 	)
-	(global_label "BE"
+	(global_label "DMAB_S"
 		(shape bidirectional)
 		(at 25.4 152.4 180)
 		(fields_autoplaced yes)
@@ -18672,6 +18672,48 @@
 		)
 	)
 	(sheet
+		(at 157.48 181.61)
+		(size 16.51 6.35)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "3d67b1b1-9a28-4462-8a4d-19765afeaafe")
+		(property "Sheetname" "WaitStates"
+			(at 157.48 180.8984 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "WaitStates.kicad_sch"
+			(at 157.48 188.5446 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c"
+					(page "12")
+				)
+			)
+		)
+	)
+	(sheet
 		(at 127 181.61)
 		(size 16.51 6.35)
 		(exclude_from_sim no)
@@ -18961,6 +19003,48 @@
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c"
 					(page "2")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 182.88 181.61)
+		(size 16.51 6.35)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "efe336ef-825f-401b-9d92-8ebbe0473f23")
+		(property "Sheetname" "Support"
+			(at 182.88 180.8984 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "Support.kicad_sch"
+			(at 182.88 188.5446 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c"
+					(page "13")
 				)
 			)
 		)

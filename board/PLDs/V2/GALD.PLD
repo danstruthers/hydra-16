@@ -1,0 +1,65 @@
+Name     GALD ;
+PartNo   ATF22V10C ;
+Date     10/4/2026 ;
+Revision 01 ;
+Designer Engineer ;
+Company  Data Tuning ;
+Assembly Hydra 16 V2 ;
+Location U84 ;
+Device   g22v10 ;
+
+/* GAL D - wait-state generator (replaces U63, U65-U71)
+   Wait register $FFF5 (write-only, cleared by RESB):
+     bits 1:0 banked RAM, bits 3:2 banked ROM, bits 5:4 I/O $FF20-$FFFF;  waits = 3 - value.
+   STALL while (cycles already stalled) < waits for the current region.
+   CPU_RDY is driven low only while stalling (open-drain style; R4 pulls it up). */
+
+/* *************** INPUT PINS *********************/
+PIN 1  = PHI1 ;       /* clock: rising edge = PHI2 falling edge   */
+PIN 2  = D0 ;
+PIN 3  = D1 ;
+PIN 4  = D2 ;
+PIN 5  = D3 ;
+PIN 6  = D4 ;
+PIN 7  = D5 ;
+PIN 8  = nWSWR ;      /* $FFF5 write, from GAL B2                 */
+PIN 9  = nBRA_S ;
+PIN 10 = nBRO_S ;
+PIN 11 = nIOSLOW ;
+PIN 13 = RESB ;
+
+/* *************** OUTPUT / BURIED PINS ***************/
+PIN 23 = CPU_RDY ;    /* open-drain style: low while STALL           */
+PIN 22 = STALL ;      /* combinational (test point)                  */
+PIN 21 = CNT1 ;       /* buried: stalled-cycle counter               */
+PIN 20 = CNT0 ;
+PIN 19 = WS5 ;        /* buried: wait register                       */
+PIN 18 = WS4 ;
+PIN 17 = WS3 ;
+PIN 16 = WS2 ;
+PIN 15 = WS1 ;
+PIN 14 = WS0 ;
+
+/* waits = 3 - field  ->  (count < waits)  for a 2-bit field f1:f0 and count c1:c0 */
+STALL = !nBRA_S  & (!WS1 & !CNT1  #  !WS1 & !WS0 & !CNT0  #  !WS0 & !CNT1 & !CNT0)
+      # !nBRO_S  & (!WS3 & !CNT1  #  !WS3 & !WS2 & !CNT0  #  !WS2 & !CNT1 & !CNT0)
+      # !nIOSLOW & (!WS5 & !CNT1  #  !WS5 & !WS4 & !CNT0  #  !WS4 & !CNT1 & !CNT0) ;
+
+CPU_RDY    = 'b'0 ;
+CPU_RDY.oe = STALL ;
+
+/* counter: counts stalled cycles, clears whenever the CPU is not stalled */
+CNT0.d = STALL & !CNT0 ;
+CNT1.d = STALL & (CNT1 $ CNT0) ;
+
+/* wait register: loaded on the PHI2 falling edge of a write to $FFF5 */
+WS0.d = !nWSWR & D0 # nWSWR & WS0 ;
+WS1.d = !nWSWR & D1 # nWSWR & WS1 ;
+WS2.d = !nWSWR & D2 # nWSWR & WS2 ;
+WS3.d = !nWSWR & D3 # nWSWR & WS3 ;
+WS4.d = !nWSWR & D4 # nWSWR & WS4 ;
+WS5.d = !nWSWR & D5 # nWSWR & WS5 ;
+
+[WS0..5, CNT0..1].oe = 'b'0 ;          /* buried registers: pins not driven */
+[WS0..5, CNT0..1].ar = !RESB ;         /* reset -> field 0 = 3 waits everywhere */
+[WS0..5, CNT0..1].sp = 'b'0 ;

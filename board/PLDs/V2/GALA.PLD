@@ -1,0 +1,49 @@
+Name     GALA ;
+PartNo   ATF22V10C ;
+Date     10/4/2026 ;
+Revision 01 ;
+Designer Engineer ;
+Company  Data Tuning ;
+Assembly Hydra 16 V2 ;
+Location U81 ;
+Device   g22v10 ;
+
+/* GAL A - main address decode (replaces U8, U10, U12, U13 and parts of U14/U15/U16) */
+
+/* *************** INPUT PINS *********************/
+PIN 1  = A15 ;
+PIN 2  = A14 ;
+PIN 3  = A13 ;
+PIN 4  = A12 ;
+PIN 5  = A11 ;
+PIN 6  = A10 ;
+PIN 7  = A9 ;
+PIN 8  = A8 ;
+PIN 9  = A7 ;
+PIN 10 = A6 ;
+PIN 11 = A5 ;
+PIN 13 = A4 ;
+
+/* *************** OUTPUT PINS (all active low) *****/
+PIN 22 = nIO_S ;      /* $FF00-$FFFF  I/O page (slots, U16)          */
+PIN 21 = nIOP0_S ;    /* $FF00-$FF0F  VIA                             */
+PIN 20 = nIOP1_S ;    /* $FF10-$FF1F  ACIA                            */
+PIN 19 = nIOP15_S ;   /* $FFF0-$FFFF  registers / vectors (GAL B1/B2) */
+PIN 18 = nBRA_S ;     /* $8000-$9FFF  banked RAM window               */
+PIN 17 = nBRO_S ;     /* $A000-$DFFF  banked ROM window               */
+PIN 16 = nOSR1 ;      /* $E000-$FEFF  OS ROM (vectors added in B1)    */
+PIN 15 = nIOSLOW ;    /* $FF20-$FFFF  I/O wait-state region           */
+PIN 14 = nZP0 ;       /* $0000-$000F  page-zero detect for GAL B2     */
+
+FIELD hi = [A15..A8] ;
+
+io       = hi:FF00 ;       /* field constants use the address bit positions (A15..A8) */
+!nIO_S    = io ;
+!nIOP0_S  = io & !A7 & !A6 & !A5 & !A4 ;
+!nIOP1_S  = io & !A7 & !A6 & !A5 &  A4 ;
+!nIOP15_S = io &  A7 &  A6 &  A5 &  A4 ;
+!nBRA_S   = A15 & !A14 & !A13 ;
+!nBRO_S   = A15 & (A14 $ A13) ;
+!nOSR1    = A15 & A14 & A13 & !io ;
+!nIOSLOW  = io & (A7 # A6 # A5) ;
+!nZP0     = hi:0000 & !A7 & !A6 & !A5 & !A4 ;

@@ -1,0 +1,72 @@
+Name     GALE ;
+PartNo   ATF22V10C ;
+Date     10/4/2026 ;
+Revision 01 ;
+Designer Engineer ;
+Company  Data Tuning ;
+Assembly Hydra 16 V2 ;
+Location U85 ;
+Device   g22v10 ;
+
+/* GAL E - IRQ priority encoder + vector latch (replaces U37, U38, U39, U74)
+   IVL = number of the lowest-numbered active nIRQ (0 = highest priority), 15 if none.
+   Registers load on every PHI2 rising edge while VPB is high and hold while VPB is low,
+   so both vector bytes ($FFFE/$FFFF) come from the same IRQ. IRQB (to CPU) is held the same way. */
+
+/* *************** INPUT PINS *********************/
+PIN 1  = PHI2 ;
+PIN 2  = nIRQ0 ;   /* VIA          */
+PIN 3  = nIRQ1 ;   /* ACIA         */
+PIN 4  = nIRQ2 ;
+PIN 5  = nIRQ3 ;
+PIN 6  = nIRQ4 ;   /* YM2151       */
+PIN 7  = nIRQ5 ;
+PIN 8  = nIRQ6 ;
+PIN 9  = nIRQ7 ;
+PIN 10 = nIRQ8 ;
+PIN 11 = nIRQ9 ;
+PIN 13 = nIRQ10 ;
+PIN 14 = nIRQ11 ;
+PIN 15 = nIRQ12 ;
+PIN 16 = nIRQ13 ;
+PIN 17 = nIRQ14 ;
+PIN 18 = VPB ;
+
+/* *************** OUTPUT PINS *********************/
+PIN 19 = IVL2 ;
+PIN 20 = IVL1 ;
+PIN 21 = IVL0 ;
+PIN 22 = IVL3 ;
+PIN 23 = IRQB ;
+
+t0  = !nIRQ0 ;
+t1  = nIRQ0 & !nIRQ1 ;
+t2  = nIRQ0 & nIRQ1 & !nIRQ2 ;
+t3  = nIRQ0 & nIRQ1 & nIRQ2 & !nIRQ3 ;
+t4  = nIRQ0 & nIRQ1 & nIRQ2 & nIRQ3 & !nIRQ4 ;
+t5  = nIRQ0 & nIRQ1 & nIRQ2 & nIRQ3 & nIRQ4 & !nIRQ5 ;
+t6  = nIRQ0 & nIRQ1 & nIRQ2 & nIRQ3 & nIRQ4 & nIRQ5 & !nIRQ6 ;
+t7  = nIRQ0 & nIRQ1 & nIRQ2 & nIRQ3 & nIRQ4 & nIRQ5 & nIRQ6 & !nIRQ7 ;
+lo8 = nIRQ0 & nIRQ1 & nIRQ2 & nIRQ3 & nIRQ4 & nIRQ5 & nIRQ6 & nIRQ7 ;
+t8  = lo8 & !nIRQ8 ;
+t9  = lo8 & nIRQ8 & !nIRQ9 ;
+t10 = lo8 & nIRQ8 & nIRQ9 & !nIRQ10 ;
+t11 = lo8 & nIRQ8 & nIRQ9 & nIRQ10 & !nIRQ11 ;
+t12 = lo8 & nIRQ8 & nIRQ9 & nIRQ10 & nIRQ11 & !nIRQ12 ;
+t13 = lo8 & nIRQ8 & nIRQ9 & nIRQ10 & nIRQ11 & nIRQ12 & !nIRQ13 ;
+t14 = lo8 & nIRQ8 & nIRQ9 & nIRQ10 & nIRQ11 & nIRQ12 & nIRQ13 & !nIRQ14 ;
+none = lo8 & nIRQ8 & nIRQ9 & nIRQ10 & nIRQ11 & nIRQ12 & nIRQ13 & nIRQ14 ;
+
+c0 = t1 # t3 # t5 # t7 # t9 # t11 # t13 # none ;
+c1 = t2 # t3 # t6 # t7 # t10 # t11 # t14 # none ;
+c2 = t4 # t5 # t6 # t7 # t12 # t13 # t14 # none ;
+c3 = lo8 ;
+
+IVL0.d = VPB & c0 # !VPB & IVL0 ;
+IVL1.d = VPB & c1 # !VPB & IVL1 ;
+IVL2.d = VPB & c2 # !VPB & IVL2 ;
+IVL3.d = VPB & c3 # !VPB & IVL3 ;
+IRQB.d = VPB & none # !VPB & IRQB ;       /* active low: high when no IRQ */
+
+[IVL0..3, IRQB].ar = 'b'0 ;
+[IVL0..3, IRQB].sp = 'b'0 ;

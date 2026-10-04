@@ -1,0 +1,51 @@
+Name     GALB2 ;
+PartNo   ATF22V10C ;
+Date     10/4/2026 ;
+Revision 01 ;
+Designer Engineer ;
+Company  Data Tuning ;
+Assembly Hydra 16 V2 ;
+Location U83 ;
+Device   g22v10 ;
+
+/* GAL B2 - write qualification, ZP mirror-RAM control, Z/WS register decode, DMA request sync
+   (replaces U11, U23, U76, U77, part of U9/U12/U70 and the U34 helper inverters) */
+
+/* *************** INPUT PINS *********************/
+PIN 1  = PHI1 ;       /* clock: rising edge = PHI2 falling edge        */
+PIN 2  = RWB ;
+PIN 3  = nZP0 ;       /* $0000-$000F from GAL A                         */
+PIN 4  = A3 ;
+PIN 5  = A2 ;
+PIN 6  = A1 ;
+PIN 7  = A0 ;
+PIN 8  = nBRA_S ;
+PIN 9  = nBRO_S ;
+PIN 10 = nIOP15_S ;
+PIN 11 = DMAB ;       /* slot DMA request (pull-up)                     */
+PIN 13 = BE ;         /* slot bus-enable (pull-up), treated like DMAB   */
+
+/* *************** OUTPUT PINS *********************/
+PIN 23 = DMAB_S ;     /* registered: DMA request synchronised to PHI2 falling */
+PIN 22 = nWR_Q ;      /* PHI2-qualified write strobe (to U56 -> RWB_M)      */
+PIN 21 = nZPR_WE ;    /* ZP mirror RAM /WE                                  */
+PIN 20 = ZPCE_N ;     /* ZP mirror RAM /CE                                  */
+PIN 19 = ZPA0 ;       /* ZP mirror RAM A0 (0 = RAM bank reg, 1 = ROM bank)  */
+PIN 18 = nZREG_RD ;   /* $FFF4 read: Z jumper buffer enable                 */
+PIN 17 = nWSWR ;      /* $FFF5 write (unqualified): wait-register load      */
+
+FIELD lo = [A3..A0] ;
+
+zpw = !nZP0 & lo:[0..1] & !RWB ;    /* write to $0000/$0001 (bank registers) */
+fffx = !nIOP15_S ;
+
+!nWR_Q   = !PHI1 & !RWB ;
+!nZPR_WE = zpw & !PHI1 ;
+ZPCE_N   = nBRA_S & nBRO_S & !zpw ;
+ZPA0     = (A0 & zpw) $ !nBRO_S ;
+!nZREG_RD = fffx & lo:4 & RWB ;
+!nWSWR    = fffx & lo:5 & !RWB ;
+
+DMAB_S.d  = DMAB & BE ;
+DMAB_S.ar = 'b'0 ;
+DMAB_S.sp = 'b'0 ;

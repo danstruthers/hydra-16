@@ -1,0 +1,49 @@
+Name     GALF ;
+PartNo   ATF22V10C ;
+Date     10/4/2026 ;
+Revision 01 ;
+Designer Engineer ;
+Company  Data Tuning ;
+Assembly Hydra 16 V2 ;
+Location U86 ;
+Device   g22v10 ;
+
+/* GAL F - vector RAM address mux (replaces U40, U51 and the U14 select gate)
+   IRQ pending and reading -> address = latched IRQ number; otherwise -> V register. */
+
+/* *************** INPUT PINS *********************/
+PIN 1  = IRQB ;       /* latched, from GAL E (active low) */
+PIN 2  = IVL0 ;
+PIN 3  = IVL1 ;
+PIN 4  = IVL2 ;
+PIN 5  = IVL3 ;
+PIN 6  = V0 ;
+PIN 7  = V1 ;
+PIN 8  = V2 ;
+PIN 9  = V3 ;
+PIN 10 = V4 ;
+PIN 11 = V5 ;
+PIN 13 = V6 ;
+PIN 14 = V7 ;
+PIN 15 = RWB ;
+
+/* *************** OUTPUT PINS *********************/
+PIN 23 = q0 ;
+PIN 22 = q1 ;
+PIN 21 = q2 ;
+PIN 20 = q3 ;
+PIN 19 = q4 ;
+PIN 18 = q5 ;
+PIN 17 = q6 ;
+PIN 16 = q7 ;
+
+sel = !IRQB & RWB ;
+
+q0 = sel & IVL0 # !sel & V0 ;
+q1 = sel & IVL1 # !sel & V1 ;
+q2 = sel & IVL2 # !sel & V2 ;
+q3 = sel & IVL3 # !sel & V3 ;
+q4 = !sel & V4 ;
+q5 = !sel & V5 ;
+q6 = !sel & V6 ;
+q7 = !sel & V7 ;
