@@ -85,10 +85,11 @@ function assemble(files, objdir, includes, defines) {
 }
 
 // A module: the .s files in dir, linked with modules/module.cfg; or a RAM program (ram: assembled with HYX2_RAM,
-// linked with sdk/asm/hyx2.cfg, NAME.hyx).  OUT: its image (a Buffer)
+// linked with sdk/asm/hyx2.cfg, NAME.hyx).  Its includes: the SDK's, the system's, its own, and what apigen makes
+// (forth's sys- words: obj/gen/forthsys.inc).  OUT: its image (a Buffer)
 function buildModule(dir, objdir, defines, ram = false) {
   const name = path.basename(dir), od = path.join(objdir, name);
-  const objs = assemble(sources(dir), od, [at('obj', 'sdk'), at('sdk', 'asm'), at('include'), dir, path.dirname(dir),
+  const objs = assemble(sources(dir), od, [at('obj', 'sdk'), at('sdk', 'asm'), at('include'), at('obj', 'gen'), dir, path.dirname(dir),
     ...(ram ? [at('tests', 'mod')] : [])], ram ? [...defines, 'HYX2_RAM'] : defines);
   const bin = path.join(objdir, name + (ram ? '.hyx' : '.bin'));
   const two = sources(dir).some(f => /\.segment\s+"CODE2"/i.test(fs.readFileSync(f, 'latin1')));   // (Two banks: module2.cfg)

@@ -2,7 +2,10 @@
 ; forth - HyForth, rebuilt (docs/reimplementation-from-scratch.md, §16): a Forth 2012 system, a program run in place
 ; from its paged ROM module.  `forth` at rc's prompt starts it; `forth <file` runs a file of source (its lines from
 ; stdin, as typed ones).  The word sets: Core and Core Extension, Exception, File Access, Facility, String,
-; Search-Order and Programming-Tools, with their extensions (but the editor's, the assembler's and EKEY's).
+; Search-Order and Programming-Tools, with their extensions (but the editor's, the assembler's and EKEY's); and the
+; Hydra's words: a sys- word for each system call a program makes (made from the specification), SH and RUN, banks
+; and segments.  Ctrl-C (a note) is THROW -28 at the next word, loop or wait.  A module of two banks: the second has
+; the sys- words' table, which their headers are made from in RAM as forth starts.
 ;   Subroutine threaded: a word's execution token is its code's address, and a definition is a run of `jsr xt`
 ; (literals and IF's test compiled inline; a few short words, the return stack's among them, copied in whole: F_INLINE).
 ; The data stack is the program's zero page, low bytes and high bytes apart (dlo, dhi), indexed by .X, which every
@@ -19,14 +22,16 @@
 ;   The parts: fcore.inc (stacks, arithmetic, memory), fmath.inc (multiplication and division), ftext.inc (input,
 ; output, numbers, strings, parsing), fcomp.inc (the compiler: definitions, control flow, defining words), finterp.inc
 ; (the text interpreter, QUIT, CATCH and THROW, EVALUATE), fsearch.inc (word lists and the search order), ffile.inc
-; (files, and including them), fstring.inc (strings, the Facility words), ftools.inc (the Programming-Tools words).
-; Their words are in that order in the dictionary.
+; (files, and including them), fstring.inc (strings, the Facility words), ftools.inc (the Programming-Tools words),
+; fhydra.inc (the Hydra's words).  Their words are in that order in the dictionary, then the sys- words (in RAM).
+; The second bank: fsys.inc, and the table (obj/gen/forthsys.inc, tools/apigen.js's).
 
 .include "hydra.inc"
+.include "hw.inc"
 .include "hyx2.inc"
 .include "macros.inc"
 
-            HYX2_PROGRAM "forth", main
+            HYX2_PROGRAM "forth", main, 2
 
 DS_N            = 32            ; The data stack's cells
 F_IMMEDIATE     = $80           ; A header's flags (with the name's length, 0-31) ...
@@ -69,6 +74,7 @@ cnt:        .res        1
 here:       .res        2                                   ; The dictionary's next byte
 p1:         .res        2                                   ; Pointers (strings, SEE)
 p2:         .res        2
+intr:       .res        1                                   ; $80: Ctrl-C came (the note handler's), for THROW -28
 
 .bss
 forth_wl:   .res        4                                   ; FORTH-WORDLIST: a word list is its last header (0: none),
@@ -138,6 +144,16 @@ incn:       .res        INCN_SIZE                           ; The files INCLUDED
 substs:     .res        SUBST_SIZE                          ; REPLACES's: each a counted name, then a counted text
 pathbuf:    .res        PATH_SIZE                           ; A file's name, zero-terminated (for the system)
 statbuf:    .res        SR_SIZE                             ; A stat record
+zbufs:      .res        PATH_SIZE * 2                       ; >Z's two buffers, in turn ...
+zbuf_n:     .res        1                                   ;   the one last used
+argbuf:     .res        ARGS_MAX                            ; SH's and RUN's program's arguments
+sys_a:      .res        1                                   ; A sys- word's call: .A, .X and .Y, in and out ...
+sys_x:      .res        1
+sys_y:      .res        1
+sys_p:      .res        1                                   ;   its flags (C: it failed) ...
+sys_f:      .res        1                                   ;   its descriptor's flags ($80: an ior) ...
+sys_to:     .res        2                                   ;   and its address
+.assert     sys_y = sys_a + 2 .and sys_x = sys_a + 1, error, "sys_a, sys_x, sys_y: in that order (sys_pop, sys_push)"
 dict:                                                       ; The dictionary, from here
 
 ; ****************************************************************************
@@ -179,12 +195,30 @@ hdr_n       .set        hdr_n + 1
             sty         dhi,x
 .endmacro
 
+.segment "DATA"
+; The note handler, in RAM (either bank may be at $A000 when a note comes): Ctrl-C (NOTE_INTERRUPT) noted in intr,
+; for the next word, loop or wait to THROW -28, forth going on; another note, the default
+notes:
+            cmp         #NOTE_INTERRUPT
+            bne         :+
+            lda         #$80
+            sta         intr
+            clc
+            rts
+:
+            sec
+            rts
+
 .code
 ; ****************************************************************************
-; The start: the dictionary after the BSS, its end claimed (BREAK), decimal, stdin a console or not; then QUIT
+; The start: the dictionary after the BSS, its end claimed (BREAK), decimal, stdin a console or not, Ctrl-C a
+; THROW; the sys- words' headers made (the second bank's sys_build); then QUIT
 main:
+            HYX2_BANKS_INIT
             LDR         r0, DICT_END
             jsr         BREAK
+            LDR         r0, notes
+            jsr         NOTIFY
             ldx         #DS_N
             lda         #<dict
             sta         here
@@ -218,6 +252,8 @@ main:
             stz         subst_len
             stz         raw
             stz         key_pend
+            stz         intr
+            stz         zbuf_n
             lda         #10
             sta         base
             stz         base + 1
@@ -245,6 +281,7 @@ main:
             inc         interactive
             jsr         banner
 :
+            FAR2        sys_build
             tsx
             stx         rsp0
             ldx         #DS_N
@@ -265,5 +302,13 @@ s_banner:   .byte       "HyForth (Forth 2012), BYE to end", LF, 0
 .include "ffile.inc"
 .include "fstring.inc"
 .include "ftools.inc"
+.include "fhydra.inc"
 
 forth_last  = .ident(.sprintf("hdr_%d", hdr_n))             ; (The last ROM header: the word list's start)
+
+; ****************************************************************************
+; The second bank
+.segment "CODE2"
+.include "fsys.inc"
+.segment "RODATA2"
+.include "forthsys.inc"

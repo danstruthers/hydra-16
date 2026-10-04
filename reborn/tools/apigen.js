@@ -8,8 +8,10 @@
 //   obj/sdk/hydra.inc     the calls' addresses, the error codes and the constants, for programs in assembly
 //   obj/sdk/c/hydracalls.h   the same for C (HY_ before each name: cc65's headers have some of them)
 //   obj/sdk/c/oserrmap.inc   the C library's map from the error codes to errno (errors.def's last column)
-//   obj/gen/api.md        the reference: every call, its registers, its errors
+//   obj/gen/api.md        the reference: every call, its registers, its errors (and its HyForth word)
 //   obj/gen/api.json      the same as data (the emulator names calls with it: sim/run.js --trace-calls)
+//   obj/gen/forthsys.inc  HyForth's sys- words: a table its second bank makes their headers from (modules/forth)
+//   obj/gen/hydra.fs      the constants and error codes for HyForth, a library on the ROM disk (/lib/forth)
 //
 // Usage: node tools/apigen.js [ROOT]       (ROOT: the reborn folder; default: this file's parent)
 // From Node: require('./apigen.js').generate(root) gives { calls, errors, consts, groups }.
@@ -180,15 +182,81 @@ function oserrMap(errors) {
   return s;
 }
 
+// ---- HyForth (modules/forth): a sys- word for each call a program makes (not a server's, nor a debugging one; nor
+// NOTIFY, as forth has its own note handler), the call's registers as stack items in the specification's order, the
+// first deepest: in, then out, then an ior (0, or -512 less the error code) if the call can fail
+const FORTH_GROUPS_OUT = ['server', 'dbg'], FORTH_CALLS_OUT = ['NOTIFY'];
+const forthCalls = api => api.calls.filter(c => !FORTH_GROUPS_OUT.includes(c.group) && !FORTH_CALLS_OUT.includes(c.name));
+const forthName = c => 'sys-' + c.name.toLowerCase().replace(/_/g, '-');
+
+// The registers a call's in: or out: lines name, in order, each { code, text }: rN ($0N: 16 bits), rN and the next
+// ($1N: a double, its low cell rN; "r0, r1" or "r0/r1"), .A, .X, .Y ($20-$22: a byte), .A/.X ($23: 16 bits)
+function regsOf(c, lines) {
+  let t = lines.join(' ');
+  for (let u; (u = t.replace(/\([^()]*\)/g, '')) !== t; ) t = u;
+  const regs = [];
+  for (const part of t.split(';')) {
+    const p = part.trim();
+    let m;
+    if ((m = p.match(/^r(\d+)\s*[,\/]\s*r(\d+)\s*=/))) {
+      if (+m[2] !== +m[1] + 1 || +m[2] > 15) fail('spec/api.def', c.line, c.name + ': "' + m[0] + '": a register and the next?');
+      regs.push({ code: 0x10 + +m[1], text: 'r' + m[1] + '/r' + m[2] });
+    } else if ((m = p.match(/^r(\d+)\s*=/))) {
+      if (+m[1] > 15) fail('spec/api.def', c.line, c.name + ': no register r' + m[1]);
+      regs.push({ code: +m[1], text: 'r' + m[1] });
+    } else if (/^\.A\/\.X\s*=/.test(p)) regs.push({ code: 0x23, text: '.A/.X' });
+    else if ((m = p.match(/^\.([AXY])\s*=/))) regs.push({ code: 0x20 + 'AXY'.indexOf(m[1]), text: '.' + m[1] });
+  }
+  return regs;
+}
+
+// A call's sys- word: its stack effect, as text
+function forthEffect(c) {
+  const ins = regsOf(c, c.in), outs = regsOf(c, c.out);
+  return '( ' + [...ins.map(r => r.text), '--', ...outs.map(r => r.text), ...(c.errors.length ? ['ior'] : [])].join(' ') + ' )';
+}
+
+function forthSys(api) {
+  let s = header(';', 'forthsys.inc - HyForth\'s sys- words, for its second bank (modules/forth/fsys.inc)');
+  s += '; An entry a word: its name, counted; the call\'s address; flags ($80: it gives an ior); its inputs, a count and' + CRLF;
+  s += '; their registers, the top\'s first; its outputs, a count and their registers, the first pushed first.  A' + CRLF;
+  s += '; register: $0N rN, $1N rN and the next (a double), $20 .A, $21 .X, $22 .Y, $23 .A/.X.  A 0 ends the table.' + CRLF + CRLF;
+  s += 'sys_table:' + CRLF;
+  for (const c of forthCalls(api)) {
+    const n = forthName(c), ins = regsOf(c, c.in), outs = regsOf(c, c.out);
+    if (n.length > 31) fail('spec/api.def', c.line, n + ': a Forth name is 31 characters at most');
+    const codes = [c.errors.length ? 0x80 : 0, ins.length, ...ins.reverse().map(r => r.code), outs.length, ...outs.map(r => r.code)];
+    s += '            .byte       ' + n.length + ', "' + n + '"' + CRLF;
+    s += '            .word       ' + pad(hx(c.addr, 4), 36) + '; ' + forthEffect(c) + CRLF;
+    s += '            .byte       ' + codes.map(v => hx(v, 2)).join(', ') + CRLF;
+  }
+  s += '            .byte       0' + CRLF;
+  return s;
+}
+
+// hydra.fs: the constants a program uses (not the servers', nor the kernel's own addresses), and the error codes,
+// as CONSTANTs.  LF line ends, as the ROM disk's files have, and short lines (a file's line is 128 at most)
+const FORTH_CONSTS_OUT = /^(r\d+$|RQ_|R_|RF_|TASK_INBOX$|TASK_PATH$|TASK_EVENT$|PROG_ZP|IRQ_RESCHED$|LINE_|HX_|TM_|INIT_TASK$)/;
+function forthLib(api, errors) {
+  const LF = '\n', line = (v, name, doc) => ('$' + v.toString(16).toUpperCase().padStart(2, '0') + ' CONSTANT ' + pad(name, 16) + '\\ ' + doc).slice(0, 110).trimEnd() + LF;
+  let s = '\\ hydra.fs - the Hydra-16\'s constants and error codes, for HyForth: INCLUDE /lib/forth/hydra.fs.  Made by' + LF;
+  s += '\\ tools/apigen.js from spec/: don\'t edit.  An error code\'s ior (a file word\'s, a sys- word\'s) is -512 less it.' + LF;
+  s += LF + '\\ ---- constants' + LF;
+  for (const k of api.consts) if (!FORTH_CONSTS_OUT.test(k.name)) s += line(k.value, k.name, k.doc);
+  s += LF + '\\ ---- error codes' + LF;
+  for (const e of errors) s += line(e.code, e.name, e.text);
+  return s;
+}
+
 function apiMd(api, errors) {
   let s = '## **The system calls**' + CRLF + CRLF;
   s += 'Made by `tools/apigen.js` from `spec/api.def` and `spec/errors.def`: don\'t edit.  The rules for every call are in [conventions.md](../../docs/conventions.md#the-abi): `.A`, `.X`, `.Y` and `r0-r15` in and out, 16-bit results in `.A`/`.X`, and C = 1 with the error code in `.A` on failure.' + CRLF;
   for (const g of api.groups) {
     s += CRLF + '### **' + g.name + '** (`' + hx(g.base, 4) + '`, ' + g.slots + ' slots)' + CRLF + CRLF + g.doc + '.' + CRLF;
     if (!g.calls.length) { s += CRLF + '(No calls yet.)' + CRLF; continue; }
-    s += CRLF + '| Call | Address | In | Out | Errors | Waits |' + CRLF + '| :--- | :------ | :- | :-- | :----- | :---- |' + CRLF;
-    const esc = t => t.replace(/\|/g, '\\|');
-    for (const c of g.calls) s += '| `' + c.name + '` | `' + hx(c.addr, 4) + '` | ' + esc(c.in.join(' ') || '-') + ' | ' + esc(c.out.join(' ') || '-') + ' | ' + esc(c.errorsText || '-') + ' | ' + (c.blocks || '-') + ' |' + CRLF;
+    s += CRLF + '| Call | Address | In | Out | Errors | Waits | HyForth |' + CRLF + '| :--- | :------ | :- | :-- | :----- | :---- | :------ |' + CRLF;
+    const esc = t => t.replace(/\|/g, '\\|'), fc = forthCalls(api);
+    for (const c of g.calls) s += '| `' + c.name + '` | `' + hx(c.addr, 4) + '` | ' + esc(c.in.join(' ') || '-') + ' | ' + esc(c.out.join(' ') || '-') + ' | ' + esc(c.errorsText || '-') + ' | ' + (c.blocks || '-') + ' | ' + (fc.includes(c) ? '`' + forthName(c) + ' ' + forthEffect(c) + '`' : '-') + ' |' + CRLF;
     s += CRLF;
     for (const c of g.calls) s += '* **`' + c.name + '`**: ' + c.doc.join(' ') + CRLF;
   }
@@ -209,6 +277,8 @@ function generate(root) {
   write(path.join(root, 'obj', 'sdk', 'c', 'hydracalls.h'), cHeader(api, errors));
   write(path.join(root, 'obj', 'sdk', 'c', 'oserrmap.inc'), oserrMap(errors));
   write(path.join(gen, 'api.md'), apiMd(api, errors));
+  write(path.join(gen, 'forthsys.inc'), forthSys(api));
+  write(path.join(gen, 'hydra.fs'), forthLib(api, errors));
   write(path.join(gen, 'api.json'), JSON.stringify({
     calls: api.calls.map(c => ({ name: c.name, addr: c.addr, group: c.group, in: c.in.join(' '), out: c.out.join(' '), errors: c.errors, blocks: c.blocks })),
     errors, consts: api.consts.map(k => ({ name: k.name, value: k.value })),

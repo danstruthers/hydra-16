@@ -153,8 +153,9 @@ The kernel task (task 0) keeps the kernel's state: its program zero page (`K0_*`
 * A module bigger than a bank has two (`HYX2_DRIVER ..., 2`, linked by `modules/module2.cfg` when its sources use
   the segment `CODE2`): its second bank's code and read-only data in `CODE2` and `RODATA2`, at the same addresses
   as the first's, reached through `FAR2` (and back through `FAR1`), trampolines in its RAM that switch its own bank
-  register (`HYX2_BANKS_INIT` notes its banks).  Such a module owns no IRQ line.  The header's `HX_LENGTH` is the
-  image's length in its last bank.
+  register (`HYX2_BANKS_INIT` notes its banks).  Such a module owns no IRQ line, and keeps a note handler (`NOTIFY`)
+  in its RAM: a note may come while either bank is at `$A000`, and the kernel calls the handler with the bank that's
+  there.  The header's `HX_LENGTH` is the image's length in its last bank.
 
 ## Files and servers
 

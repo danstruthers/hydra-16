@@ -138,7 +138,7 @@ const RC_LINES = [
   ["~ a a && echo and; ~ a b || echo or","and\nor"],
   ["cat /nothing; echo status $status","cat: /nothing: not found\nstatus 1"],
   ["echo /rom/lib/n*","/rom/lib/namespace"],
-  ["echo /rom/lib/*","/rom/lib/namespace /rom/lib/profile"],
+  ["echo /rom/lib/*","/rom/lib/forth /rom/lib/namespace /rom/lib/profile"],
   ["echo 'no*match'*","no*match*"],
   ["cd /rom/lib; pwd; cd","/rom/lib"],
   ["rc -c 'echo sub $x'","sub a b c"],
@@ -154,12 +154,12 @@ const RC_LINES = [
   ["echo (a","rc: syntax error"],
   ["whatis echo x; q=('it''s' '' a.b); whatis q","/bin/echo\nx=(a b c)\nq=('it''s' '' a.b)"],
   ["bind '#n' /mnt; ls /mnt","null\nzero"],
-  ["ls /rom/lib","namespace\nprofile"],
+  ["ls /rom/lib","forth/\nnamespace\nprofile"],
   ["cat /bin/echo >/ram/hi; cd /ram; hi from dot; cd","from dot"],
   ["cat /nothing >[2]/ram/e; cat /ram/e","cat: /nothing: not found"],
   ["cat /nothing |[2] cat >/ram/p; echo -n 'p: '; cat /ram/p","p: cat: /nothing: not found"],
   ["echo $task $#path $path # a comment","2 2 . /bin"],
-  ["path=(); ls; path=(. /bin); ls /rom/lib","rc: ls: not found\nnamespace\nprofile"],
+  ["path=(); ls; path=(. /bin); ls /rom/lib","rc: ls: not found\nforth/\nnamespace\nprofile"],
   ["! ~ a b && echo not; echo $status","not\n"],
 ];
 
@@ -625,14 +625,17 @@ module.exports = {
       init: 't_proc', modules: ['t_child'], cycles: 40e6,
     },
     {
-      name: 'forth', what: 'HyForth (Forth 2012): the test suite (Core, Core Extension, Exception, Facility, File Access, Programming-Tools, Search-Order, String), its files INCLUDED from a card; at the console: a definition, KEY? and KEY, errors (a file\'s, the system\'s), BYE',
-      init: 't_rc', cycles: 800e6,
+      name: 'forth', what: 'HyForth (Forth 2012): the test suite (Core, Core Extension, Exception, Facility, File Access, Programming-Tools, Search-Order, String), its files INCLUDED from a card; at the console: a definition, KEY? and KEY, errors (a file\'s, the system\'s), SH, RUN, a sys- word, a bank, the constants library, Ctrl-C, BYE',
+      init: 't_rc', cycles: 900e6,
       // (The console's lines: each a moment after the last, as forth's prompt is its ok; w waits for a key, z, in raw
-      // mode, not echoed, and the line after it is cooked again)
+      // mode, not echoed, and the line after it is cooked again; l loops till Ctrl-C, which rc gets too: its prompt
+      // on a new line after forth ends)
       get machine() {
         return { sd: forthCard(), input: 'ācd /sd/0; forth <run.fs; echo $status\r' +
           'āforth\rĀ: sq dup * ; 7 sq .\rĀ' + 'key? . cr\rĀ' + ': w begin key? until key ; w\rĀzĀ' + 'emit cr 1 2 + .\rĀ' +
-          '1 0 /\rĀ' + 'foo\rĀ' + 'include bad.fs\rĀ' + 's" none.fs" included\rĀ' + '-5 3 mod . bye\r' + 'āecho $status\r' };
+          '1 0 /\rĀ' + 'foo\rĀ' + 'include bad.fs\rĀ' + 's" none.fs" included\rĀ' + 's" echo hi" sh .\rĀ' +
+          's" echo there" run .\rĀ' + 's" /none" >z pad sys-stat .\rĀ' + '1 sys-banks-alloc throw bank! 1234 bank-window ! bank-window @ .\rĀ' +
+          'include /lib/forth/hydra.fs O_RDWR . E_NOENT .\rĀĀĀĀĀĀĀĀ' + ': l begin again ; l\rĀ\u0003Ā' + '-5 3 mod . bye\r' + 'āecho $status\r' };
       },
       expect: ['0 tests failed out of 57 additional tests', 'End of Core word set tests', 'End of additional Core tests',
         'End of Core Extension word tests', 'End of Exception word tests', 'End of Facility word tests',
@@ -644,7 +647,11 @@ module.exports = {
         '---------------------------\nTotal                   0\n---------------------------\n',
         'HyForth (Forth 2012), BYE to end\n: sq dup * ; 7 sq .\n49  ok\nkey? . cr\n0 \n ok\n: w begin key? until key ; w\n ok\n' +
         'emit cr 1 2 + .\nz\n3  ok\n1 0 /\ndivision by zero\nfoo\nfoo ?\n' +
-        'include bad.fs\n1 bad.fs:3: foo ?\ns" none.fs" included\nnone.fs: not found\n-5 3 mod . bye\n-2 \n% echo $status\n\n%'],
+        'include bad.fs\n1 bad.fs:3: foo ?\ns" none.fs" included\nnone.fs: not found\ns" echo hi" sh .\nhi\n0  ok\n' +
+        's" echo there" run .\nthere\n0  ok\ns" /none" >z pad sys-stat .\n-544  ok\n' +
+        '1 sys-banks-alloc throw bank! 1234 bank-window ! bank-window @ .\n1234  ok\n' +
+        'include /lib/forth/hydra.fs O_RDWR . E_NOENT .\n2 32  ok\n: l begin again ; l\ninterrupt\n' +
+        '-5 3 mod . bye\n-2 \n\n% echo $status\n\n%'],
       check(m, out) {
         const f = [];
         for (const bad of ['INCORRECT RESULT', 'WRONG NUMBER OF RESULTS', 'Error: #'])

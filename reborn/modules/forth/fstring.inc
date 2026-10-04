@@ -667,6 +667,11 @@ ms:                                                         ; ( u -- ): u millis
             ldx         numacc + 1
             jsr         SLEEP
             ldx         xsave
+            bcc         :+
+            cmp         #E_INTR
+            bne         :+
+            jmp         intr_throw
+:
             rts
 
 ; numacc (32 bits) / .A (8 bits): numacc the quotient, .A the remainder.  Keeps .X

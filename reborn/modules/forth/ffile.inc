@@ -27,7 +27,12 @@ read_line_fd:
             lda         rl_fd
             jsr         READ
             bcc         :+
-            ldx         xsave                               ; (An error)
+            ldx         xsave                               ; (An error; Ctrl-C's: THROW -28)
+            cmp         #E_INTR
+            bne         @error
+            jmp         intr_throw
+@error:
+            sec
             rts
 :
             sta         rl_n
@@ -205,6 +210,12 @@ lbuf_w2:
 
 ; ( c-addr u -- ): the name into pathbuf, zero-terminated (PATH_SIZE - 1 chars at most)
 to_path:
+            lda         #<pathbuf
+            sta         w2
+            lda         #>pathbuf
+            sta         w2 + 1
+; ( c-addr u -- ): the string into (w2), zero-terminated (PATH_SIZE - 1 chars at most)
+to_z:
             lda         dlo + 1,x
             sta         w
             lda         dhi + 1,x
@@ -218,12 +229,12 @@ to_path:
             tay
 :
             lda         #0
-            sta         pathbuf,y
+            sta         (w2),y
 @copy:
             dey
             bmi         @done
             lda         (w),y
-            sta         pathbuf,y
+            sta         (w2),y
             bra         @copy
 @done:
             inx

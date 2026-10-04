@@ -161,6 +161,10 @@ interpret:
 @execute:
             jsr         exec_w2
 @check:
+            bit         intr                                ; Ctrl-C?
+            bpl         :+
+            jmp         intr_throw
+:
             cpx         #DS_N + 1                           ; Underflow, overflow
             bcc         :+
             lda         #<-4
@@ -705,8 +709,8 @@ s_error:    .byte       "error ", 0
 s_line:     .byte       "line ", 0
 s_colon:    .byte       ": ", 0
 err_code:   .word       -3 & $FFFF, -4 & $FFFF, -8 & $FFFF, -10 & $FFFF, -14 & $FFFF, -16 & $FFFF, -17 & $FFFF
-            .word       -22 & $FFFF, -24 & $FFFF, -49 & $FFFF, -50 & $FFFF, -258 & $FFFF, 0
-err_text:   .word       e_3, e_4, e_8, e_10, e_14, e_16, e_17, e_22, e_24, e_49, e_50, e_258
+            .word       -22 & $FFFF, -24 & $FFFF, -28 & $FFFF, -49 & $FFFF, -50 & $FFFF, -258 & $FFFF, 0
+err_text:   .word       e_3, e_4, e_8, e_10, e_14, e_16, e_17, e_22, e_24, e_28, e_49, e_50, e_258
 e_3:        .byte       "stack overflow", 0
 e_4:        .byte       "stack underflow", 0
 e_8:        .byte       "dictionary full", 0
@@ -716,6 +720,7 @@ e_16:       .byte       "no name", 0
 e_17:       .byte       "number too long", 0
 e_22:       .byte       "control structure mismatch", 0
 e_24:       .byte       "invalid numeric argument", 0
+e_28:       .byte       "interrupt", 0
 e_49:       .byte       "search order full", 0
 e_50:       .byte       "search order empty", 0
 e_258:      .byte       "sources nested too deeply", 0

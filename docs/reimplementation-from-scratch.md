@@ -783,6 +783,8 @@ A new Forth, written from scratch, added in phase 6 when files, the console's mo
 
 (As built, phase 6.2: the Exception, File Access, Facility, String, Search-Order and Programming-Tools word sets, with the suite's tests of them all passing; 15.1K of the bank, so the Hydra words (6.3) need a second.  An ior is -512 less the system's error code, as in Gforth, and QUIT shows its text; a file being included is read a line at a time, READ-LINE's way, and SAVE-INPUT's place is a line's offset; CATCH and THROW unwind the source stack, closing the files they leave.  Word lists replace `LIBSET`'s bits (I4).  RESIZE-FILE needed HydraFS's WSTAT to take a length, as Plan 9's does.)
 
+(As built, phase 6.3: 58 `sys-` words, from the calls' `in:` and `out:` lines (apigen reads their registers), a table in `forth`'s second bank from which their headers are made in RAM as it starts (one bank is at `$A000` at a time); their stack effects are in the reference, and the constants a program uses are `/lib/forth/hydra.fs` on the ROM disk.  `SH` (`rc -c`), `RUN` (a program and its arguments, no shell), `BANK!`, `BANK@`, `SEG-BANK!`, `>Z`.  Ctrl-C is a note forth handles: THROW -28 at the next word, loop or wait.  The first bank is full, so 6.4 moves words to the second.)
+
 ---
 
 ### **17. hylang: danlang on the Hydra**

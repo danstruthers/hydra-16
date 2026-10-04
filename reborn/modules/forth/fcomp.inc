@@ -15,6 +15,8 @@ OP_ORA_ZPX      = $15
 OP_BNE          = $D0
 OP_BVS          = $70
 OP_PLA          = $68
+OP_BIT_ZP       = $24
+OP_BPL          = $10
 
 ; ---- Laying code down
 
@@ -425,11 +427,14 @@ begin:
 
             HEADER      "UNTIL", F_IMMEDIATE
 until:                                                      ; ( dest -- )
+            jsr         comp_poll
             jsr         comp_test
             jmp         resolve_to                          ; (Its jmp: to dest)
 
             HEADER      "AGAIN", F_IMMEDIATE
 again:
+            jsr         comp_poll
+again_jmp:                                                  ; ( dest -- ): jmp dest (LOOP's: xloop polls)
             lda         dlo,x
             ldy         dhi,x
             inx
@@ -444,6 +449,20 @@ while:                                                      ; ( dest -- orig des
 repeat:                                                     ; ( orig dest -- )
             jsr         again
             jmp         resolve
+
+; Ctrl-C's poll, in a loop before its branch back: bit intr; bpl +3; jmp intr_throw
+comp_poll:
+            lda         #OP_BIT_ZP
+            jsr         ccomma_a
+            lda         #intr
+            jsr         ccomma_a
+            lda         #OP_BPL
+            jsr         ccomma_a
+            lda         #3
+            jsr         ccomma_a
+            lda         #<intr_throw
+            ldy         #>intr_throw
+            jmp         comp_jmp
 
 ; ( dest orig -- ): orig's jmp to dest
 resolve_to:
@@ -524,7 +543,7 @@ loop_end:                                                   ; ( leaves dest -- )
             jsr         ccomma_a
             lda         #3
             jsr         ccomma_a
-            jsr         again
+            jsr         again_jmp
 :
             lda         leaves                              ; Each LEAVE's jmp: here
             ora         leaves + 1
@@ -597,8 +616,10 @@ xdo:
             lda         cnt                                 ; (?DO's flag)
             rts
 
-; LOOP's: the index on one (V = 1: its limit crossed)
+; LOOP's: the index on one (V = 1: its limit crossed); Ctrl-C first
 xloop:
+            bit         intr
+            bmi         intr_j
             stx         xsave
             tsx
             clc
@@ -611,8 +632,10 @@ xloop:
             ldx         xsave
             rts
 
-; +LOOP's: ( n -- ): the index on n (V = 1: crossed)
+; +LOOP's: ( n -- ): the index on n (V = 1: crossed); Ctrl-C first
 xploop:
+            bit         intr
+            bmi         intr_j
             lda         dlo,x
             sta         tmp
             lda         dhi,x
@@ -629,6 +652,9 @@ xploop:
             sta         $0104,x
             ldx         xsave
             rts
+
+intr_j:
+            jmp         intr_throw
 
             HEADER      "I", 0
 i:                                                          ; ( -- index ): the parameters under the return address

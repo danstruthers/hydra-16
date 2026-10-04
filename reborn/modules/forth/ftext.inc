@@ -156,6 +156,13 @@ getc_in:
 
 @error:
             ldx         xsave
+            cmp         #E_INTR                             ; (Ctrl-C: a new line, and again)
+            bne         @end
+            stz         intr
+            lda         #LF
+            jsr         emit_a
+            ply
+            jmp         getc_in
 @end:
             stz         ilen
             stz         ilen + 1
@@ -293,6 +300,11 @@ key:                                                        ; ( -- char ): the c
             lda         #0
             jsr         READ
             ldx         xsave
+            bcc         :+
+            cmp         #E_INTR
+            bne         :+
+            jmp         intr_throw
+:
             lda         numtmp
 @push:
             ldy         #0
