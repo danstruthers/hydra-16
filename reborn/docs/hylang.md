@@ -9,7 +9,7 @@ task's banks, the collector) is the plan's §17.3, to be confirmed by spike S5 (
 ## The reference
 
 **hylang 1 is danlang as it is in `C:\source\danlang`** (the C# interpreter, its `lib/` and its `readme.md`, which
-describes the language; branch `feature/hylang-prep`), after the work of October 2026 that readied it to be ported:
+describes the language; its `master`), after the work of October 2026 that readied it to be ported:
 
 * **Lexical scope.**  A function's body sees its own variables and the scope it was made in (closures), never its
   caller's.  A Q-expression remembers the scope it was written in, and `eval` runs it there, so code handed to a
