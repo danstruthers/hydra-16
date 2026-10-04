@@ -7,15 +7,16 @@
 ; and while an expression is evaluated, the error interrupted.
 ;   The parts: heap.inc (the values, the heap, the collector: step 7.1), obj.inc (the objects: symbols, lists,
 ; errors), io.inc (output through a buffer; lines in) and env.inc (scopes, names, the evaluation stack, errors'
-; messages), in the task's RAM, where both banks see them; eval.inc (the evaluator: step 7.2b) and this REPL, in the
-; module's first bank; read.inc (the reader), print.inc (the printer) and builtins.inc (the built-ins) in its second.
+; messages), in the task's RAM, where every bank sees them; eval.inc (the evaluator: step 7.2b) and this REPL, in the
+; module's first bank; read.inc (the reader), print.inc (the printer) and builtins.inc (the built-ins) in its second;
+; bignum.inc, numbers.inc and bases.inc (the numbers: step 7.3) in its third.
 
 .include "hydra.inc"
 .include "hw.inc"
 .include "hyx2.inc"
 .include "macros.inc"
 
-            HYX2_PROGRAM "hylang", main, 2
+            HYX2_PROGRAM "hylang", main, 3
 
 .macpack longbranch
 
@@ -30,6 +31,10 @@ TEXT_SIZE       = 4096          ; The text being read: the REPL's line (or lines
 .include "read.inc"
 .include "print.inc"
 .include "builtins.inc"
+.segment "CODE3"                                            ; (The third)
+.include "bignum.inc"
+.include "numbers.inc"
+.include "bases.inc"
 
 .bss
 text:       .res        TEXT_SIZE

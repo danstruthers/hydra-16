@@ -44,11 +44,16 @@ function report(root, built = {}) {
     lines.push(title);
     for (const n of names) {
       const d = set[n], top = d.readUInt16LE(22), data = d.readUInt16LE(16), bss = d.readUInt16LE(20), banks = d[33];
-      let first = 0x4000;                                     // (A two-bank module's first bank is filled out with $FF:
-      if (banks > 1) while (first > 0 && d[first - 1] === 0xFF) first--;   //   what's used, about)
-      const rom = banks > 1 ? String(first).padStart(6) + ' + ' + (d.length - 0x4000) + ' bytes ROM (two banks: ' +
-        Math.round(first * 100 / 0x4000) + '% and ' + Math.round((d.length - 0x4000) * 100 / 0x4000) + '%)' :
-        String(d.length).padStart(6) + ' bytes ROM (' + Math.round(d.length * 100 / 0x4000) + '% of a bank)';
+      const used = [];                                        // (Each bank but a module's last is filled out with
+      for (let b = 0; b < banks; b++) {                       //   $FF: what's used, about)
+        let end = Math.min(d.length, (b + 1) * 0x4000);
+        if (b < banks - 1) while (end > b * 0x4000 && d[end - 1] === 0xFF) end--;
+        used.push(end - b * 0x4000);
+      }
+      const pc = n => Math.round(n * 100 / 0x4000) + '%';
+      const rom = banks > 1 ? String(used[0]).padStart(6) + ' + ' + used.slice(1).join(' + ') + ' bytes ROM (' + ['', '', 'two', 'three', 'four'][banks] +
+        ' banks: ' + used.slice(0, -1).map(pc).join(', ') + ' and ' + pc(used[banks - 1]) + ')' :
+        String(d.length).padStart(6) + ' bytes ROM (' + pc(d.length) + ' of a bank)';
       lines.push('  ' + n.padEnd(12) + rom +
         (top > 0x0400 ? '   RAM ' + hx(0x0400) + '-' + hx(top - 1) + ' (data ' + data + ', BSS ' + bss + ')' : '   no RAM'));
     }

@@ -652,6 +652,78 @@ set_car:
             sta         (h_p),y
             rts
 
+; ---- A built-in's arguments (the second bank's and the third's)
+
+; The next argument: h_v = it, ev_a moved on (so it's to be held in a register before anything's made).  OUT: C = 1,
+; there's none
+arg_next:
+            lda         ev_a + 1
+            bne         :+
+            sec
+            rts
+:
+            MOVR        h_v, ev_a
+            jsr         deref
+            ldy         #2
+            lda         (h_p),y
+            sta         ev_a
+            iny
+            lda         (h_p),y
+            sta         ev_a + 1
+            ldy         #1
+            lda         (h_p),y
+            tax
+            lda         (h_p)
+            sta         h_v
+            stx         h_v + 1
+            clc
+            rts
+
+; .A = how many arguments are left (255 at most)
+count_a:
+            MOVR        h_v, ev_a
+            jmp         count_h
+
+; C = 1 if h_v is an error (h_v kept; h_is_error_v: and ev_v = it, if it is)
+h_is_error:
+            lda         h_v
+            lsr
+            bcs         @no
+            ldx         h_v + 1
+            lda         page_kind,x
+            cmp         #PK_C8
+            bcc         @no
+            jsr         deref
+            lda         (h_p)
+            cmp         #OT_ERROR
+            beq         @yes
+@no:
+            clc
+            rts
+@yes:
+            sec
+            rts
+
+h_is_error_v:
+            jsr         h_is_error
+            bcc         :+
+            MOVR        ev_v, h_v
+:
+            rts
+
+; ev_v = the error No room
+bi_no_room:
+            MOVR        ev_v, err_room
+            rts
+
+; ev_v = T if C = 1, else NIL
+bi_bool:
+            LDR         ev_v, NIL
+            bcc         :+
+            LDR         ev_v, T_VAL
+:
+            rts
+
 ; ---- Errors, and their messages
 
 ; A message begun: the text at r0

@@ -14,7 +14,7 @@ BUILTIN0        = $0300         ; The built-ins: BUILTIN0 + 2n (256 at most) ...
 BUILTIN_END     = $0500         ;   and past them
 
 ; Types (type_of)
-TY_NUM          = 1             ; A number (as yet a fixnum)
+TY_NUM          = 1             ; A number: a fixnum, or an object (OT_BIG, OT_RAT, OT_FIX, OT_COMPLEX)
 TY_LIST         = 2             ; NIL and the Q-expressions
 TY_T            = 3
 TY_EXIT         = 4
@@ -398,5 +398,5 @@ error_text:
 .segment "DATA"
 ; Each object type's type (OT_*: TY_*)
 ot_type:    .byte       TY_OTHER, TY_STRING, TY_OTHER, TY_LIST, TY_SEXPR, TY_SYMBOL, TY_ATOM, TY_FUNC, TY_ERROR
-            .byte       TY_FRAME, TY_SYMBOL
+            .byte       TY_FRAME, TY_SYMBOL, TY_NUM, TY_NUM, TY_NUM, TY_NUM
 .code

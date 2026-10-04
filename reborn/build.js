@@ -95,8 +95,9 @@ function buildModule(dir, objdir, defines, ram = false) {
   const objs = assemble(sources(dir), od, [at('obj', 'sdk'), at('sdk', 'asm'), at('include'), at('obj', 'gen'), dir, path.dirname(dir),
     ...(ram ? [at('tests', 'mod')] : [])], ram ? [...defines, 'HYX2_RAM'] : defines);
   const bin = path.join(objdir, name + (ram ? '.hyx' : '.bin'));
-  const two = sources(dir).some(f => /\.segment\s+"CODE2"/i.test(fs.readFileSync(f, 'latin1')));   // (Two banks: module2.cfg)
-  const cfg = ram ? at('sdk', 'asm', 'hyx2.cfg') : at('modules', two ? 'module2.cfg' : 'module.cfg');
+  const banks = Math.max(1, ...sources(dir).map(f => Math.max(0, ...[...fs.readFileSync(f, 'latin1').matchAll(/\.segment\s+"CODE([2-4])"/gi)]
+    .map(m => +m[1]))));                                      // (Its last bank's CODEn: moduleN.cfg)
+  const cfg = ram ? at('sdk', 'asm', 'hyx2.cfg') : at('modules', banks > 1 ? 'module' + banks + '.cfg' : 'module.cfg');
   run(LD65, ['-C', cfg, '-o', bin, '-m', path.join(od, name + '.map'), '-Ln', path.join(od, name + '.lbl'), ...objs]);
   const data = fs.readFileSync(bin);
   check.checkModule(name, data, ram ? 0x0800 : 0xA000);       // (Only the kernel writes T, V and W)
@@ -163,7 +164,7 @@ function sdk() {
   for (const f of fs.readdirSync(at('sdk', 'asm')).filter(f => /\.(inc|s|cfg|md)$/.test(f)))
     fs.copyFileSync(at('sdk', 'asm', f), path.join(out, f));
   fs.copyFileSync(at('obj', 'sdk', 'hydra.inc'), path.join(out, 'hydra.inc'));
-  for (const f of ['module.cfg', 'module2.cfg']) fs.copyFileSync(at('modules', f), path.join(out, f));   // (A module's links)
+  for (const f of ['module.cfg', 'module2.cfg', 'module3.cfg', 'module4.cfg']) fs.copyFileSync(at('modules', f), path.join(out, f));   // (A module's links)
   for (const d of fs.readdirSync(at('sdk', 'asm', 'samples'), { withFileTypes: true }).filter(d => d.isDirectory())) {
     mkdir(path.join(out, 'samples', d.name));
     for (const f of sources(at('sdk', 'asm', 'samples', d.name))) fs.copyFileSync(f, path.join(out, 'samples', d.name, path.basename(f)));

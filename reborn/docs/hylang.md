@@ -111,7 +111,7 @@ All of danlang's built-ins and library, but where the table below says otherwise
 | Area | hylang 1 | Why |
 | :--- | :------- | :-- |
 | **Strings** | Bytes: a character is a code 0-255 (`code-char` past 255 is an error); `upper?`, `alpha?` and the rest are ASCII's | The Hydra's text is 8-bit |
-| **Numbers** | The whole tower, as danlang has it; integers 15-bit in the value, 32-bit boxed, bignums from a library module (§17.2); fixed decimals, rationals and complex numbers on them; the exotic bases (balanced, negative, little-endian, custom digits) from a library module loaded on first use | Most numbers are small; the rest costs only when used |
+| **Numbers** | The whole tower, as danlang has it: integers 15-bit in the value, and past that objects of any size to some 300 digits (danlang's have no limit); fixed decimals, rationals and complex numbers on them; all of danlang's bases (balanced, negative, little-endian, custom digits) | Most numbers are small; the rest costs only when used |
 | **Call depth** | Less than danlang's 10,000: some 1300 calls nested, not in tail position (the evaluation stack's two banks decide it, or the heap); deeper is an error | Memory |
 | **`random`** | The kernel's entropy and a generator | |
 | **`load` and `use`** | A bare name is `/lib/hylang/name.hl`, through the namespace (as forth's `/lib/forth`), so a card's or the RAM disk's `/lib/hylang` adds to the ROM's | Plan 9 names |
@@ -165,10 +165,19 @@ task's RAM.
 * **Special forms** are built-ins given their arguments as they're written: `if`, `do`, `and`, `or`, `let`,
   `try`, `eval`, `def`, `set`, `set!`, `while`, `each`, `dotimes` (a `{name list}` body is made a function of the
   name), `output-of`, `<=>`.  `defined?` and `expr?` take theirs as written too.
-* **As yet**: numbers are fixnums (-16384 to 16383; past them, or a division that isn't exact, is an error: 7.3);
-  a string is 126 bytes at most (7.4); no hashes, streams or system library (7.4).  `load` takes a path, or a bare
-  name in `/lib/hylang`, `.hl` left off or not.
+* **As yet**: a string is 126 bytes at most (7.4); no hashes, streams or system library (7.4).  `load` takes a
+  path, or a bare name in `/lib/hylang`, `.hl` left off or not.
 
 The hylang test runs the suite's `scope.dl`, `control.dl` and `errors.dl` as danlang's master has them
-(`tests/hylang`), from an emulated card, with `core.hl`, hylang's own checks for what `eval.dl` and `reader.dl` hold
-(those read numbers past fixnums, so they run from 7.3).
+(`tests/hylang`), from an emulated card, with `core.hl`, hylang's own checks.
+
+**7.3** (`modules/hylang`: `bignum.inc`, `numbers.inc`, `bases.inc`, in the module's third bank; a module may have
+four banks now).  danlang's tower: an integer past a fixnum is an object of its sign and 126 bytes at most (some 300
+decimal digits; danlang's integers have no limit, and past that hylang's is an error); fixed decimals (digits and
+places), rationals (in their lowest terms) and complex numbers are objects of two values.  The arithmetic is
+danlang's (Num's operators), and so are comparison by value, the reading and the writing of every base it has (the
+plan had the exotic ones loaded from a library module: as built, they're in the third bank with the rest), and
+`val`, `to-fixed`, `to-rational`, `rational.n`, `rational.d`, `truncate`, `complex`, `random` and `fib`.
+`globals.hl` is danlang's `globals.dl` whole.  The hylang test runs `reader.dl` (but its two checks of hashes, 7.4)
+and `numbers.dl` too; `eval.dl` passes, but takes 22 minutes at 3.58 MHz, so the test runs `core.hl`'s smaller
+copies of its checks.

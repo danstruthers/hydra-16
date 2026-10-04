@@ -10,7 +10,7 @@
 
 ; (Its long branches: longbranch's jeq and the rest, which hylang.s loads)
 RD_DEPTH        = 32            ; Lists open at once, at most
-TOK_SIZE        = 128           ; A token's text, at most
+TOK_SIZE        = 255           ; A token's text, at most (a number's: math.pi's is 151)
 CNAME_SIZE      = 20            ; A character's name, at most (the longest is 16)
 
 RD_END          = 1             ; read_expr's ends: no more text ...
@@ -515,107 +515,28 @@ rd_keyword:
             sec
             rts
 
-; The token as a number: an optional sign, then decimal digits (and _ between them).  OUT: C = 0, h_v = it (a
-; fixnum); or C = 1: .X = 0, it isn't a number; .X = RD_ERR, it's too big (h_v an error)
+; The token as a number, if it starts as one does (a digit, +, - or #): num_parse (numbers.inc, the third bank)
+; reads it, in the case it's written in.  OUT: C = 0, h_v = it; or C = 1: .X = 0, it isn't a number; .X = RD_ERR,
+; an error (h_v: too big, division by zero)
 rd_number:
-            ldx         #0
-            stz         io_n                                ; (Its size so far)
-            stz         io_n + 1
-            stz         rd_q                                ; (Its sign: $80, -)
-            stz         rd_x                                ; (Digits seen)
             lda         tok
             cmp         #'+'
-            beq         @sign
+            beq         @parse
             cmp         #'-'
-            bne         @digits
-            dec         rd_q
-@sign:
-            inx
-@digits:
-            cpx         tok_n
-            beq         @end
-            lda         tok,x
-            inx
-            cmp         #'_'
-            beq         @digits
+            beq         @parse
+            cmp         #'#'
+            beq         @parse
             sec
             sbc         #'0'
             cmp         #10
-            bcs         @not
-            pha                                             ; (io_n = 10 io_n + the digit)
-            lda         io_n
-            sta         h_v
-            lda         io_n + 1
-            sta         h_v + 1
-            asl         io_n
-            rol         io_n + 1
-            bcs         @big
-            asl         io_n
-            rol         io_n + 1
-            bcs         @big
-            clc
-            lda         io_n
-            adc         h_v
-            sta         io_n
-            lda         io_n + 1
-            adc         h_v + 1
-            sta         io_n + 1
-            bcs         @big
-            asl         io_n
-            rol         io_n + 1
-            bcs         @big
-            pla
-            clc
-            adc         io_n
-            sta         io_n
-            bcc         :+
-            inc         io_n + 1
-            beq         @big2
-:
-            inc         rd_x
-            bra         @digits
-@end:
-            lda         rd_x                                ; (No digits: + or - alone)
-            beq         @not
-            lda         io_n + 1                            ; (A fixnum: 16384 at most)
-            cmp         #>16384
-            bcc         @fits
-            bne         @big2
-            lda         io_n
-            bne         @big2
-            lda         rd_q                                ; (16384 only as -16384)
-            beq         @big2
-@fits:
-            lda         rd_q
-            beq         :+
-            sec                                             ; (Negative)
-            lda         #0
-            sbc         io_n
-            sta         io_n
-            lda         #0
-            sbc         io_n + 1
-            sta         io_n + 1
-:
-            lda         io_n                                ; (The fixnum: 2n + 1)
-            asl
-            ora         #1
-            sta         h_v
-            lda         io_n + 1
-            rol
-            sta         h_v + 1
-            clc
-            rts
-@big:
-            pla
-@big2:
-            LDR         r0, s_big
-            jsr         error_text
-            ldx         #RD_ERR
-            sec
-            rts
-@not:
+            bcc         @parse
             ldx         #0
             sec
+            rts
+@parse:
+            LDR         r0, tok
+            ldy         tok_n
+            FARN        3, num_parse
             rts
 
 ; The token \name: a character, by its name (rd_charnames: in either case, a - in it skipped), or as itself (its
@@ -1042,7 +963,6 @@ s_room:         .byte   "No room", 0
 s_long:         .byte   "A name too long", 0
 s_empty_atom:   .byte   "An atom with no name", 0
 s_no_char:      .byte   "A character with no name", 0
-s_big:          .byte   "A number too big (as yet)", 0
 s_incomplete:   .byte   "Incomplete string literal", 0
 s_newline:      .byte   "Newlines are not allowed in regular strings", 0
 s_escape:       .byte   "Unknown escape sequence", 0

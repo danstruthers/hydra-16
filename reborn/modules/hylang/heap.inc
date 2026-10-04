@@ -50,7 +50,11 @@ OT_FUNC         = 7             ; Its flags; its formals, body, closure (a frame
 OT_ERROR        = 8             ; Its message (a string), its code (an atom, or NIL)
 OT_FRAME        = 9             ; Its parent (a frame, or GLOBAL), its bindings (a list: a symbol, its value, ...)
 OT_SYMREF       = 10            ; A symbol, and the scope it was written in (an fexpr's argument)
-OT_TYPES        = 11
+OT_BIG          = 11            ; An integer past a fixnum: its length (bytes; $80: negative), its bytes, the low first
+OT_RAT          = 12            ; A rational: its numerator, its denominator (integers)
+OT_FIX          = 13            ; A fixed decimal: its digits (an integer), its places (a fixnum)
+OT_COMPLEX      = 14            ; A complex number: its real part, its imaginary part (each a number, not complex)
+OT_TYPES        = 15
 
 .zeropage
 h_v:        .res        2                                   ; A value, in and out
@@ -858,7 +862,7 @@ free_pages:
 kind_size:  .byte       0, 0, 0, 4, 8, 16, 32, 64, 128
 
 ; Each type's references (OT_*: $FF, a vector's length)
-ot_refs:    .byte       0, 0, $FF, 2, 2, 2, 2, 4, 2, 2, 2
+ot_refs:    .byte       0, 0, $FF, 2, 2, 2, 2, 4, 2, 2, 2, 0, 2, 2, 2
 
 ; A place in a page: its mark's table (the high byte of marks + 256 (place / 32)), and its bit
 mark_tab:

@@ -1,6 +1,9 @@
-; globals.hl - hylang's library, loaded as it starts: danlang's lib/globals.dl (its master, the reference), but
-; for its constants of fixed decimals (math.pi, math.e, math.phi, math.gamma), which come with them (step 7.3).
+; globals.hl - hylang's library, loaded as it starts: danlang's lib/globals.dl, as its master has it.
 ; Special thanks to buildyourownlisp.com for the inspiration from 'lispy'!
+:(math.pi    3.14159_26535_89793_23846_26433_83279_50288_41971_69399_37510_58209_74944_59230_78164_06286_20899_86280_34825_34211_70679_82148_08651_32823_06647_09384)
+:(math.e     2.71828_18284_59045_23536_02874_71352_66249_77572_47093_69995)
+:(math.phi   1.61803_39887_49894_84820_45868_34365_63811_77203_09179_80576)
+:(math.gamma 0.57721_56649_01532_86061)
 
 ; function definition: fun, fn, fexpr, def, set, set! and let are built in
 

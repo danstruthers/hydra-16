@@ -1,7 +1,8 @@
 ; ****************************************************************************
-; eval.inc - hylang's evaluator (step 7.2b), in the module's first bank: danlang's evaluation (its C#: LVal.Eval, EvalSExpr, Call, Apply, and
-; the built-ins with a tail position), as a machine whose continuations are frames on a stack of its own (banks of
-; its own: env.inc), so a program may nest as deeply as that holds, and the 6502's 256 bytes stay the machine's.
+; eval.inc - hylang's evaluator (step 7.2b), in the module's first bank: danlang's evaluation (its C#: LVal.Eval,
+; EvalSExpr, Call, Apply, and the built-ins with a tail position), as a machine whose continuations are frames on a
+; stack of its own (banks of its own: env.inc), so a program may nest as deeply as that holds, and the 6502's 256
+; bytes stay the machine's.
 ;   ev_eval evaluates ev_x in the scope ev_e: a symbol is looked up (the scope's frames, then its global value), a
 ; Q-expression keeps the scope it's evaluated in (a copy with it: eval runs it there), and an S-expression has its
 ; head evaluated, then, for a function, its arguments (an fexpr's as they're written, each with the scope), and the
@@ -10,7 +11,8 @@
 ; takes no stack), and so are if's branches, do's last, let's last and eval's.  Every entry of the stack is a value
 ; (its K_* codes fixnums), and so are the registers ev_x to ev_s, so the collector takes them all as roots (env.inc
 ; has the stack, scopes and names, which the built-ins use too).
-;   A built-in (builtins.inc) is native code, in the second bank (called through hyx2_far2), given its arguments'
+;   A built-in (builtins.inc) is native code, in the second bank or the third (BF_BANK3: numbers.inc), called through
+; hyx2_farn, given its arguments'
 ; values in ev_a (a chain), or as they're written (BF_RAW: defined?), ev_v its value; an error among the values is
 ; the call's value, unless the built-in takes errors (BF_ERRORS: print, error-message ...).  A special form
 ; (BF_SPECIAL: if, do, let, while ...) is the first bank's, given its arguments as they're written (ev_r), and goes
@@ -50,13 +52,14 @@ K_SPACE         = 23            ; [blocks, env]: <=>'s number
 BF_SPECIAL      = $01           ; Its arguments as they're written (ev_r), its own way
 BF_ERRORS       = $02           ; An error among its arguments is an argument (not the call's value)
 BF_RAW          = $04           ; Its arguments as they're written, in ev_a (native code, that evaluates none)
+BF_BANK3        = $08           ; Its code is in the third bank (numbers.inc), not the second
 
 .code
 
 ; ---- Making it
 
-; The evaluator: its stack (EV_BANKS banks), the collector told of its roots, Ctrl-C a note, the names it uses, the error
-; "No room" (so there's always one), and the built-ins (builtins.inc).  OUT: C = 1, no room
+; The evaluator: its stack (EV_BANKS banks), the collector told of its roots, Ctrl-C a note, the names it uses, the
+; error "No room" (so there's always one), and the built-ins (builtins.inc).  OUT: C = 1, no room
 eval_init:
             lda         #EV_BANKS
             jsr         BANKS_ALLOC
@@ -419,11 +422,18 @@ ev_apply:
             MOVR        ev_r, ev_a
             jmp         (ev_j)
 :
-            lda         ev_j                                ; (Native code: in the second bank)
+            lda         ev_j                                ; (Native code: in the second bank, or the third)
             sta         hyx2_to
             lda         ev_j + 1
             sta         hyx2_to + 1
-            jsr         hyx2_far2
+            ldy         hyx2_bank2
+            lda         bi_flags,x
+            and         #BF_BANK3
+            beq         :+
+            ldy         hyx2_bank3
+:
+            sty         hyx2_n
+            jsr         hyx2_farn
             jmp         ev_return
 
 ; The built-in ev_f's number: .X (page 3's 0-127, page 4's 128-255)
@@ -1612,9 +1622,16 @@ k_iter2:
             bra         @go
 @number:
             cmp         #TY_NUM
-            beq         @go
+            beq         :+
             lda         #10                                 ; ('dotimes' expects a Number)
             jmp         iter_error
+:
+            lda         ev_s                                ; (Not a fixnum: its integer part)
+            lsr
+            bcs         @go
+            MOVR        h_v, ev_s
+            FARN        3, num_trunc
+            MOVR        ev_s, h_v
 @go:
             LDR         ev_t, 1                             ; (The place: 0, a fixnum)
             ; (falls into iter_next)
@@ -1631,8 +1648,11 @@ iter_next:
             lda         page_kind,x
             cmp         #PK_PAIR
             beq         @pair
-            MOVR        h_v, ev_s                           ; (A string: its character at ev_t)
-            jsr         deref
+            MOVR        h_v, ev_s                           ; (A string: its character at ev_t; else a number
+            jsr         deref                               ; past a fixnum)
+            lda         (h_p)
+            cmp         #OT_STRING
+            jne         @big
             lda         ev_t + 1
             lsr
             lda         ev_t
@@ -1651,7 +1671,10 @@ iter_next:
             sta         ev_v + 1
             bra         @next
 @number:
-            sec                                             ; (A number: ev_t, while it's less)
+            lda         ev_t                                ; (A number: ev_t, while it's less)
+            lsr
+            jcc         @big
+            sec
             lda         ev_t
             sbc         ev_s
             lda         ev_t + 1
@@ -1659,8 +1682,14 @@ iter_next:
             bvc         :+
             eor         #$80
 :
-            bpl         @end
+            jpl         @end
             MOVR        ev_v, ev_t
+            lda         ev_t + 1                            ; (16383: the next isn't a fixnum)
+            cmp         #$7F
+            bne         @next
+            lda         ev_t
+            cmp         #$FF
+            jeq         @inc
 @next:
             clc                                             ; (The place, on)
             lda         ev_t
@@ -1688,6 +1717,20 @@ iter_next:
             bcs         @room
             MOVR        ev_a, h_v
             jmp         ev_apply
+@big:
+            MOVR        nx, ev_t                            ; (Past fixnums: numbers.inc's order and sum)
+            MOVR        h_v, ev_s
+            FARN        3, num_cmp
+            cmp         #$FF
+            bne         @end
+            MOVR        ev_v, ev_t
+@inc:
+            MOVR        nx, ev_t
+            LDR         h_v, 3
+            lda         #NO_ADD
+            FARN        3, num_op
+            MOVR        ev_t, h_v
+            jmp         @apply
 @end:
             LDR         ev_v, NIL
             jmp         ev_return
@@ -1873,24 +1916,11 @@ k_space:
             bcc         :+
             jmp         ev_return
 :
-            lda         ev_v                                ; (A number: its sign, ev_i: $FF, 0, 1)
-            lsr
-            bcs         :+
+            MOVR        h_v, ev_v                           ; (A number: its sign, ev_i: $FF, 0, 1, numbers.inc's)
+            FARN        3, num_sign_of
+            bcc         :+
             LDR         r0, es_space_num
             jmp         sf_error
-:
-            lda         ev_v + 1
-            bmi         @neg
-            ora         ev_v
-            cmp         #1
-            beq         @zero
-            lda         #1
-            bra         :+
-@neg:
-            lda         #$FF
-            bra         :+
-@zero:
-            lda         #0
 :
             sta         ev_i
 @block:

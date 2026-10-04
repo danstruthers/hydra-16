@@ -60,7 +60,7 @@ function readHeader(data, what) {
   if (!TYPES[data[HX.TYPE]]) fail('type ' + data[HX.TYPE] + '?');
   if (data.readUInt16LE(HX.LOAD) !== WINDOW) fail('not built to run in place (load address $' + data.readUInt16LE(HX.LOAD).toString(16) + ')');
   const banks = data[HX.BANKS], length = data.readUInt16LE(HX.LENGTH);   // (Its length in its last bank)
-  if (banks < 1 || banks > 2) fail(banks + ' banks: one or two');
+  if (banks < 1 || banks > 4) fail(banks + ' banks: one to four');
   if (length < 1 || length > BANK || (banks - 1) * BANK + length !== data.length)
     fail('its header says ' + banks + ' banks, the last ' + length + ' bytes long; the file has ' + data.length);
   const raw = data.subarray(HX.NAME, HX.NAME + NAME_LEN), end = raw.indexOf(0);
@@ -89,7 +89,7 @@ function build({ modules, init, hwtest, bios, romfs: files }) {
   if (initIndex !== 0xFF && entries[initIndex].type !== 1) throw new Error(init + ' is not a program');
   let bank = FIRST_MODULE_BANK;                               // (In socket order: the CPU's socketBank(bank))
   for (const e of entries) {
-    if (e.banks === 2 && bank % 64 === 63) bank++;            // (Two banks: N and N + 1 to the CPU as well)
+    if (bank % 64 + e.banks > 64) bank += 64 - bank % 64;    // (Banks N, N + 1 ... to the CPU as well: in a 64)
     e.bank = socketBank(bank);
     bank += e.banks;
   }

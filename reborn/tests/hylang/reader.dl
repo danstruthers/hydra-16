@@ -1,0 +1,98 @@
+; reader.dl - the reader: numbers, strings and their escapes, here strings, characters, atoms, symbols, T and NIL,
+; comments, Q- and S-expressions, the prefix shorthands, and read
+
+; numbers (numbers.dl has the rest)
+(check 42 42)
+(check -7 (- 7))
+(check 1_000_000 1000000)
+(check #xff 255)
+(check #b101 5)
+(check 0.5 1/2)
+(check (int? 6/3) T)
+
+; strings
+(check "a b" (+ "a" " " "b"))
+(check (len "") 0)
+(check (len "a\tb") 3)
+(check (char-code (char-at "\n" 0)) 10)
+(check (char-code (char-at "\t" 0)) 9)
+(check (char-code (char-at "\r" 0)) 13)
+(check (char-code (char-at "\0" 0)) 0)
+(check (char-code (char-at "\e" 0)) 27)
+(check "\x41\x42" "AB")
+(check (len "\\") 1)
+(check (char-code (char-at "\"" 0)) 34)
+(check-error (read "\"\\q\""))
+(check-error (read "\"open"))
+
+; here strings: as many quotes as open them close them; their text is as it is (no escapes)
+(check """a"b""" (+ "a" (code-char 34) "b"))
+(check """x
+y""" "x\ny")
+(check (len """a\nb""") 4)
+(check """""two "" quotes""""" (+ "two " (code-char 34) (code-char 34) " quotes"))
+
+; characters, by name or as themselves
+(check (char-code \a) 97)
+(check (char-code \A) 65)
+(check (char-code \space) 32)
+(check (char-code \tab) 9)
+(check (char-code \newline) 10)
+(check (char-code \lparen) 40)
+(check (char-code \rparen) 41)
+(check (char-code \lcurly) 123)
+(check (char-code \backslash) 92)
+(check (char-code \quote) 34)
+(check (type-of \x) :char)
+
+; atoms and symbols (both case-insensitive)
+(check (type-of :abc) :atom)
+(check :ABC :abc)
+(def {MixedCase} 5)
+(check mixedcase 5)
+(check MIXEDCASE 5)
+
+; T and NIL
+(check (type-of T) :t)
+(check NIL {})
+(check (nil? {}) T)
+(check (if NIL 1 2) 2)
+
+; comments
+(check (len {1 ; two
+  3}) 2)
+
+; Q-expressions are data; S-expressions are evaluated
+(check {1 2 3} (list 1 2 3))
+(check (len {(+ 1 2) x}) 2)
+(check (head {(+ 1 2)}) {(+ 1 2)})
+(check (5) 5)
+(check ((+ 1 2)) 3)
+
+; the prefix shorthands
+(check '(1 (+ 1 1)) {1 2})
+(check ^({1 2 3}) {1})
+(check $({1 2 3}) {2 3})
+(check .(+ {1 2 3}) 6)
+(check |({1} {2 3}) {1 2 3})
+(check (do =(sh-x 5) sh-x) 5)
+(check (do :(sh-def 9) sh-def) 9)
+(check (@({x} {* x 2}) 4) 8)
+(check !({+ 1 2}) 3)
+(check ?(NIL 1 2) 2)
+(check ~("{}+{}" 1 2) "1+2")
+(def {sh-h} #({{:a 1}}))
+(check <(sh-h :a) 1)
+(check (do >(sh-h {:b 2}) <(sh-h :b)) 2)
+(fun {sh-sign n} ?{(< n 0) -1 1})
+(check (sh-sign -3) -1)
+(check (sh-sign 3) 1)
+
+; read: text to expressions, unevaluated
+(check (read "1 (+ 2 3)") {1 (+ 2 3)})
+(check (read "") {})
+(check (eval (read "+ 1 2")) 3)
+(check (eval (read "(* 2 3)")) 6)
+(check-error (read "(1 2"))
+(check-error (read "1 2)"))
+(check-error (read 5))

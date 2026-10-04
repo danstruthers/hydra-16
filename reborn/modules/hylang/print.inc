@@ -35,7 +35,13 @@ pr_value:
             jmp         (ob_p)
 
 pr_num:
-            lda         h_v + 1                             ; (The fixnum's value: h_v >> 1, its sign kept)
+            lda         h_v                                 ; (A fixnum: its value, h_v >> 1, its sign kept; another,
+            lsr                                             ; num_print's, in the third bank)
+            bcs         :+
+            FARN        3, num_print
+            rts
+:
+            lda         h_v + 1
             cmp         #$80
             ror
             tax

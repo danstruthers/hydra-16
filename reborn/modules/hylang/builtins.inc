@@ -104,79 +104,9 @@ builtins_init:
 
 ; ---- Arguments, values, errors
 
-; The next argument: h_v = it, ev_a moved on (so it's to be held in a register before anything's made).  OUT: C = 1,
-; there's none
-arg_next:
-            lda         ev_a + 1
-            bne         :+
-            sec
-            rts
-:
-            MOVR        h_v, ev_a
-            jsr         deref
-            ldy         #2
-            lda         (h_p),y
-            sta         ev_a
-            iny
-            lda         (h_p),y
-            sta         ev_a + 1
-            ldy         #1
-            lda         (h_p),y
-            tax
-            lda         (h_p)
-            sta         h_v
-            stx         h_v + 1
-            clc
-            rts
-
-; .A = how many arguments are left (255 at most)
-count_a:
-            MOVR        h_v, ev_a
-            jmp         count_h
-
-; C = 1 if h_v is an error (h_v kept; h_is_error_v: and ev_v = it, if it is)
-h_is_error:
-            lda         h_v
-            lsr
-            bcs         @no
-            ldx         h_v + 1
-            lda         page_kind,x
-            cmp         #PK_C8
-            bcc         @no
-            jsr         deref
-            lda         (h_p)
-            cmp         #OT_ERROR
-            beq         @yes
-@no:
-            clc
-            rts
-@yes:
-            sec
-            rts
-
-h_is_error_v:
-            jsr         h_is_error
-            bcc         :+
-            MOVR        ev_v, h_v
-:
-            rts
-
 ; ev_v = the error whose message is the text at r0 (and rts, for a built-in's error)
 bi_error_text:
             jmp         ev_error_text
-
-; ev_v = the error No room
-bi_no_room:
-            MOVR        ev_v, err_room
-            rts
-
-; ev_v = T if C = 1, else NIL
-bi_bool:
-            LDR         ev_v, NIL
-            bcc         :+
-            LDR         ev_v, T_VAL
-:
-            rts
 
 ; h_v, a fixnum: .A/.X its value (signed)
 fx_int:
@@ -973,7 +903,7 @@ bi_reverse:
             rts
 
 ; (range n), (range from to), (range from to step): the numbers from 0 (or from) up to, not including, to (down to
-; it, with a negative step)
+; it, with a negative step); numbers of any kind
 bi_range:
             jsr         count_a
             cmp         #1
@@ -1004,18 +934,21 @@ bi_range:
             bne         @go
             jsr         arg_next
             jsr         range_num
-            bcs         @done
+            jcs         @done
             MOVR        ev_t, h_v
-            lda         h_v + 1
-            bne         @go
-            lda         h_v
-            cmp         #1
-            bne         @go
-            LDR         r0, bs_range_zero
-            jmp         bi_error_text
 @go:
             LDR         ev_a, NIL                           ; (ev_a: the list, ev_w its last: range_add)
             LDR         ev_w, NIL
+            lda         ev_x                                ; (Not all fixnums: numbers.inc's sums and order)
+            and         ev_s
+            and         ev_t
+            lsr
+            jcc         @generic
+            lda         ev_t + 1
+            bne         @next
+            lda         ev_t
+            cmp         #1
+            jeq         @zero
 @next:
             sec                                             ; (from - to: its sign, against the step's)
             lda         ev_x
@@ -1026,26 +959,59 @@ bi_range:
             eor         #$80
 :
             eor         ev_t + 1
-            bpl         @end
+            jpl         @end
             lda         ev_x                                ; (The same: none either way)
             cmp         ev_s
             bne         :+
             lda         ev_x + 1
             cmp         ev_s + 1
-            beq         @end
+            jeq         @end
 :
             MOVR        ev_v, ev_x
             jsr         range_add
-            bcs         @room
-            lda         ev_x                                ; (from + step)
+            jcs         @room
+            lda         ev_x                                ; (from + step: past fixnums, numbers.inc's)
             and         #$FE
             clc
             adc         ev_t
-            sta         ev_x
+            sta         bi_t
             lda         ev_x + 1
             adc         ev_t + 1
+            bvs         @gstep
             sta         ev_x + 1
-            bvc         @next
+            lda         bi_t
+            sta         ev_x
+            jmp         @next
+@generic:
+            MOVR        h_v, ev_t                           ; (The step's sign: the way it goes)
+            FARN        3, num_sign_of
+            cmp         #0
+            beq         @zero
+            sta         bi_s
+@gtest:
+            MOVR        nx, ev_x                            ; (from against to: less, going up; more, going
+            MOVR        h_v, ev_s                           ; down)
+            FARN        3, num_cmp
+            clc
+            adc         bi_s
+            bne         @end
+            MOVR        ev_v, ev_x
+            jsr         range_add
+            bcs         @room
+@gstep:
+            MOVR        nx, ev_x
+            MOVR        h_v, ev_t
+            lda         #NO_ADD
+            FARN        3, num_op
+            bcs         @gerr
+            MOVR        ev_x, h_v
+            bra         @gtest
+@gerr:
+            MOVR        ev_v, h_v
+            rts
+@zero:
+            LDR         r0, bs_range_zero
+            jmp         bi_error_text
 @end:
             MOVR        h_v, ev_a
             lda         #OT_QEXPR
@@ -1080,10 +1046,8 @@ range_add:
 
 ; h_v, one of range's numbers.  OUT: C = 1, it isn't one (ev_v an error)
 range_num:
-            lda         h_v
-            lsr
-            bcc         :+
-            clc
+            jsr         num_check
+            bcs         :+
             rts
 :
             jsr         h_is_error_v
@@ -1122,38 +1086,50 @@ arith:
 @first:
             jsr         arg_next
             MOVR        ev_v, h_v
-            lda         h_v
-            lsr
-            bcs         :+
+            jsr         num_check
+            bcc         :+
             lda         ev_i                                ; (Not a number: +'s text)
             jeq         add_first
             jmp         arith_not
 :
             lda         ev_a + 1
             bne         @next
-            lda         ev_i                                ; ((- n): -n, 2 - (2n + 1))
+            lda         ev_i                                ; ((- n): -n; a fixnum's 2 - (2n + 1))
             cmp         #1
             bne         @done
+            lda         ev_v
+            lsr
+            bcc         @negate
             sec
             lda         #2
             sbc         ev_v
-            sta         ev_v
+            sta         bi_t
             lda         #0
             sbc         ev_v + 1
+            bvs         @negate
             sta         ev_v + 1
-            bvs         @big
+            lda         bi_t
+            sta         ev_v
 @done:
+            rts
+@negate:
+            MOVR        h_v, ev_v
+            FARN        3, num_neg
+            MOVR        ev_v, h_v
             rts
 @next:
             jsr         arg_next
             bcs         @done
-            lda         h_v
-            lsr
-            bcs         :+
+            jsr         num_check
+            bcc         :+
             lda         ev_i
             jeq         add_text
             jmp         arith_not
 :
+            lda         ev_v                                ; (Not two fixnums: num_op's)
+            and         h_v
+            lsr
+            bcc         @slow
             lda         ev_i
             beq         @add
             cmp         #2
@@ -1165,26 +1141,28 @@ arith:
             sec
             lda         ev_v
             sbc         bi_t
-            sta         ev_v
+            sta         bi_t
             lda         ev_v + 1
             sbc         h_v + 1
-            sta         ev_v + 1
-            bvs         @big
-            bra         @next
+            bvs         @slow
+            bra         @fixnum
 @add:
             lda         ev_v                                ; ---- + : 2n + (2m + 1)
             and         #$FE
             clc
             adc         h_v
-            sta         ev_v
+            sta         bi_t
             lda         ev_v + 1
             adc         h_v + 1
+            bvs         @slow
+@fixnum:
             sta         ev_v + 1
-            bvs         @big
+            lda         bi_t
+            sta         ev_v
             bra         @next
 @mul:
             jsr         fx_mul                              ; ---- *
-            bcs         @big
+            bcs         @slow
             bra         @next
 @div:
             lda         h_v + 1                             ; ---- / (0: $0001)
@@ -1195,16 +1173,47 @@ arith:
 :
             jsr         fx_div
             bcc         @next
-            bvs         @inexact
-@big:
-            LDR         r0, bs_big
-            jmp         bi_error_text
+@slow:
+            MOVR        nx, ev_v                            ; ---- Past fixnums, or not one: num_op's (the third
+            lda         ev_i                                ; bank)
+            FARN        3, num_op
+            MOVR        ev_v, h_v
+            bcs         :+
+            jmp         @next
+:
+            rts
 @zero:
             LDR         r0, bs_div_zero
             jmp         bi_error_text
-@inexact:
-            LDR         r0, bs_inexact
-            jmp         bi_error_text
+
+; C = 1 if h_v isn't a number
+num_check:
+            lda         h_v
+            lsr
+            bcs         @yes
+            jsr         type_of
+            cmp         #TY_NUM
+            beq         @yes
+            sec
+            rts
+@yes:
+            clc
+            rts
+
+; The number h_v's kind: .A = 0 an integer, 1 a fixed decimal, 2 a rational, 3 a complex number
+num_kind2:
+            lda         h_v
+            lsr
+            lda         #0
+            bcs         @done
+            jsr         deref
+            lda         (h_p)
+            sec
+            sbc         #OT_BIG
+            tax
+            lda         nk2_of,x
+@done:
+            rts
 
 ; All parameters to operator '-' must be numbers.  (ev_i: the operator; an error: itself)
 arith_not:
@@ -1403,21 +1412,6 @@ fx_pack:
             sec
             rts
 
-; (truncate n): n's integer part (a fixnum's: itself, as yet)
-bi_truncate:
-            jsr         count_a
-            cmp         #1
-            beq         :+
-            LDR         r0, bs_one
-            jmp         bi_error_text
-:
-            jsr         arg_next
-            jsr         num_arg
-            bcs         :+
-            MOVR        ev_v, h_v
-:
-            rts
-
 ; (< a b), (> a b): T or NIL; (cmp a b): -1, 0 or 1, as a is less than b, the same, or more (compare's order)
 bi_lt:
             lda         #0
@@ -1491,7 +1485,18 @@ compare:
             lda         #0
             rts
 @texts:
-            MOVR        ev_w, h_v                           ; ---- Texts
+            MOVR        ev_w, h_v                           ; ---- Numbers: by value (num_cmp, the third bank)
+            jsr         num_check
+            bcs         @not_nums
+            MOVR        h_v, ev_x
+            jsr         num_check
+            bcs         @not_nums
+            MOVR        nx, ev_x
+            MOVR        h_v, ev_w
+            FARN        3, num_cmp
+            rts
+@not_nums:
+            MOVR        h_v, ev_w                           ; ---- Texts
             jsr         type_of
             sta         bi_s
             MOVR        h_v, ev_x
@@ -1700,13 +1705,15 @@ equal:
             cmp         #TY_ERROR
             beq         @error
             cmp         #TY_LIST
-            beq         @lists
+            jeq         @lists
             cmp         #TY_SEXPR
-            beq         @lists
+            jeq         @lists
             cmp         #TY_PAIR
-            beq         @chains
+            jeq         @chains
             cmp         #TY_FUNC
             jeq         @func
+            cmp         #TY_NUM
+            beq         @num
 @no:
             MOVR        ev_sp, eq_sp                        ; (Not equal: the stack as it was)
             lda         eq_bank
@@ -1740,6 +1747,13 @@ equal:
             ldy         #2                                  ; ---- Errors: their messages
             jsr         eq_field
             jmp         @diff
+@num:
+            MOVR        nx, eq_a                            ; ---- Numbers: by value
+            MOVR        h_v, eq_b
+            FARN        3, num_cmp
+            cmp         #0
+            bne         @no
+            jmp         @same
 @lists:
             ldy         #2                                  ; ---- Lists: their chains
             jsr         eq_field
@@ -1748,11 +1762,11 @@ equal:
             ora         eq_b + 1
             beq         @same
             lda         eq_a + 1
-            beq         @no
+            jeq         @no
             lda         eq_b + 1
-            beq         @no
+            jeq         @no
             jsr         ev_deep
-            bcs         @no
+            jcs         @no
             MOVR        h_v, eq_a
             jsr         car
             PUSHV       h_v
@@ -1862,7 +1876,7 @@ bi_repr:
             MOVR        ev_v, h_v
             rts
 
-; (to-str x): x as print shows it, a string.  (A number's base: 7.3)
+; (to-str x [base]): x as print shows it, a string; a number in the base (bases.inc: "#x", "x", "#16r" ...)
 bi_to_str:
             jsr         count_a
             cmp         #1
@@ -1870,12 +1884,38 @@ bi_to_str:
             bcs         @base
             LDR         r0, bs_to_str_few
             jmp         bi_error_text
-@base:
-            LDR         r0, bs_to_str_base
-            jmp         bi_error_text
 :
             jsr         arg_next
             jsr         display_string
+            MOVR        ev_v, h_v
+            rts
+@base:
+            jsr         arg_next                            ; (A number, and a string)
+            MOVR        ev_x, h_v
+            jsr         num_check
+            bcc         :+
+            LDR         r0, bs_to_str_num
+            jmp         bi_error_text
+:
+            jsr         arg_next
+            jsr         type_of
+            cmp         #TY_STRING
+            beq         :+
+            LDR         r0, bs_to_str_str
+            jmp         bi_error_text
+:
+            jsr         text_b
+            LDR         bi_q, str_b                         ; (bs_spec: bases.inc's)
+            lda         str_bn
+            sta         bs_spec_n
+            jsr         cap_start
+            FARN        3, bn_to_base
+            bcc         :+
+            stz         cap_on
+            MOVR        ev_v, h_v
+            rts
+:
+            jsr         cap_string
             MOVR        ev_v, h_v
             rts
 
@@ -2119,7 +2159,10 @@ is_type:
             LDR         r0, bs_not_number
             jmp         bi_error_text
 :
-            cpx         #11
+            jsr         num_kind2                           ; (int? 11, fixed? 12, rational? 13, complex? 14: kinds
+            clc                                             ; 0 to 3)
+            adc         #11
+            cmp         ev_i
             beq         @yes
             clc
             jmp         bi_bool
@@ -2862,6 +2905,7 @@ sys_error:
 arith_none: .byte       1, 1, 3, 3                          ; (+ and -: 0; * and /: 1)
 arith_op:   .byte       "+-*/"
 order_true: .byte       $FF, 1                              ; (<: less; >: more)
+nk2_of:     .byte       0, 2, 1, 3                          ; (OT_BIG, OT_RAT, OT_FIX, OT_COMPLEX: num_kind2's)
 
 ; compare's kinds, by type (TY_*): 1 a text, 2 an error, 3 a list, 0 the rest
 cmp_kinds:  .byte       0, 3, 0, 0, 0, 1, 1, 1, 1, 3, 2, 0, 0, 0
@@ -2924,7 +2968,15 @@ bi_table:
             BUILTIN     "-", 0, bi_sub
             BUILTIN     "*", 0, bi_mul
             BUILTIN     "/", 0, bi_div
-            BUILTIN     "truncate", 0, bi_truncate
+            BUILTIN     "truncate", BF_BANK3, bn_truncate
+            BUILTIN     "complex", BF_BANK3, bn_complex
+            BUILTIN     "val", BF_BANK3, bn_val
+            BUILTIN     "to-fixed", BF_BANK3, bn_to_fixed
+            BUILTIN     "to-rational", BF_BANK3, bn_to_rational
+            BUILTIN     "rational.n", BF_BANK3, bn_rational_n
+            BUILTIN     "rational.d", BF_BANK3, bn_rational_d
+            BUILTIN     "random", BF_BANK3, bn_random
+            BUILTIN     "fib", BF_BANK3, bn_fib
             BUILTIN     "<", BF_ERRORS, bi_lt
             BUILTIN     ">", BF_ERRORS, bi_gt
             BUILTIN     "cmp", BF_ERRORS, bi_cmp
@@ -2998,7 +3050,8 @@ bs_two:     .byte       "Expects 2 parameters", 0
 bs_one:     .byte       "Expects 1 parameter", 0
 bs_repr_one: .byte      "'repr' requires 1 parameter", 0
 bs_to_str_few: .byte    "Too few parameters passed to 'to-str'", 0
-bs_to_str_base: .byte   "A number's base for 'to-str' (as yet)", 0
+bs_to_str_num: .byte    "Only a Number has a base for 'to-str'", 0
+bs_to_str_str: .byte    "Second 'to-str' parameter must be a String", 0
 bs_format_few: .byte    "Too few parameters passed to 'format'", 0
 bs_format_str: .byte    "'format' expects a String", 0
 bs_format_args_few: .byte "'format' has too few arguments for its {}s", 0
