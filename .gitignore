@@ -1,0 +1,21 @@
+# KiCad backups, autosaves and lock files
+*-bak
+*.bak
+*-backups/
+_autosave-*
+~*.lck
+\#auto_saved_files\#
+fp-info-cache
+
+# Freerouting intermediates (.bin is its saved session; ROM images under os_rom stay tracked)
+*.dsn
+*.ses
+*.rules
+autoroute.log
+board/**/*.bin
+
+# DRC/ERC reports
+report.txt
+
+# Office lock files
+.~lock.*#
