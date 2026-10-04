@@ -507,6 +507,19 @@ function PC_SONG() {
 // (the padding's byte: held back, then written, as data comes after it), its last byte not SUB
 const XM_DATA = () => Buffer.from(Array.from({ length: 3000 }, (_, i) => i >= 1024 && i < 2048 ? 0x1A : i === 2999 ? 0x41 : (i * 7 + (i >> 8)) & 0xFF));
 
+// The forth test's card: SD device 0, the Forth 2012 test suite (tests/forth) as one file, suite.fs, in its order
+const FORTH_SUITE = ['prelimtest.fth', 'tester.fr', 'core.fr', 'coreplustest.fth', 'utilities.fth', 'errorreport.fth', 'coreexttest.fth'];
+function forthCard() {
+  fs.mkdirSync(CARD_DIR, { recursive: true });
+  hydrafs.setNow(0x1000);
+  const f = path.join(CARD_DIR, 'forth0.img');
+  hydrafs.mkfs(f, 8, 'FORTH', undefined, true);
+  const v = new hydrafs.Volume(f);
+  v.put('suite.fs', Buffer.concat(FORTH_SUITE.map(n => fs.readFileSync(path.join(__dirname, 'forth', n)))));
+  v.close();
+  return [imageCard(0, f, 16384)];
+}
+
 // A test's lines typed, each at its prompt, and its expect (as the tools test's)
 const typed = lines => lines.map(l => 'ā' + l[0] + '\r').join('');
 const expected = lines => lines.map(l => '% ' + l[0] + '\n' + (l[2] ? l[1] : (l[1] === null ? '' : l[1] + '\n') + '%'));
@@ -601,6 +614,26 @@ module.exports = {
     {
       name: 'proc', what: '/proc/N\'s mem (its RAM, bank, ROMs, the I/O area), ram (its banks), regs, env and note; the kernel task\'s and a driver\'s refused',
       init: 't_proc', modules: ['t_child'], cycles: 40e6,
+    },
+    {
+      name: 'forth', what: 'HyForth (Forth 2012): the test suite\'s Core, Core Plus and Core Extension tests, from a card (forth <file); at the console: a definition, errors, BYE',
+      init: 't_rc', cycles: 400e6,
+      // (The console's lines: each a moment after the last, as forth's prompt is its ok)
+      get machine() {
+        return { sd: forthCard(), input: 'āforth </sd/0/suite.fs; echo $status\r' +
+          'āforth\rĀ: sq dup * ; 7 sq .\rĀ' + '1 0 /\rĀ' + 'foo\rĀ' + '-5 3 mod . bye\r' + 'āecho $status\r' };
+      },
+      expect: ['0 tests failed out of 57 additional tests', 'End of Core word set tests', 'End of additional Core tests',
+        'End of Core Extension word tests\n\n%',
+        'HyForth (Forth 2012), BYE to end\n: sq dup * ; 7 sq .\n49  ok\n1 0 /\ndivision by zero\nfoo\nfoo ?\n-5 3 mod . bye\n-2 \n% echo $status\n\n%'],
+      check(m, out) {
+        const f = [];
+        for (const bad of ['INCORRECT RESULT', 'WRONG NUMBER OF RESULTS', 'Error: #'])
+          if (out.includes(bad)) f.push('the suite: ' + out.slice(out.indexOf(bad), out.indexOf(bad) + 100).replace(/\n/g, ' | '));
+        const undef = /^(.*) \?$/m.exec(out.split('% forth\n')[0]);
+        if (undef) f.push('an undefined word: ' + undef[1]);
+        return f;
+      },
     },
     {
       name: 'spi', what: 'SPI and #S (storage): transactions, kept bytes, modes 0 and 3, one open at a time, the time a byte takes',

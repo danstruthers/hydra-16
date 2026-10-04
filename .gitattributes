@@ -2,3 +2,5 @@
 *.pdf binary
 # The ROM disk's files (reborn/romfs): bytes for the Hydra (LF line ends), the same on every checkout
 reborn/romfs/** -text
+# The Forth 2012 test suite (reborn/tests/forth): as it came, byte for byte
+reborn/tests/forth/** -text

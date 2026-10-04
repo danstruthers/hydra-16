@@ -779,6 +779,8 @@ A new Forth, written from scratch, added in phase 6 when files, the console's mo
 * **Interactive** through the console's cooked mode (line editing for free); `forth` at the rc prompt starts it, and `forth file.fs` runs a script.
 * **Tested** with the Forth 2012 test suite (Gerry Jackson's), in the emulator, as a regression test.
 
+(As built, phase 6.1: `modules/forth`, 7.9K of one bank.  Short words are copied into definitions whole (DUP, +, @ ..., and the return stack's, which can't be called); IF's test and literals are inline.  The ROM words' headers are beside their code, in the same chain as the RAM ones.  Input is stdin's lines, so `forth <file` runs a file before 6.4's `forth file.fs`; CATCH and THROW came with the core, as QUIT's error handling.  The suite's preliminary, Core, Core Plus and Core Extension tests pass, from an emulated card.)
+
 ---
 
 ### **17. hylang: danlang on the Hydra**
