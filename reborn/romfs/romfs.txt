@@ -16,7 +16,6 @@ bin/sort            ../obj/programs/sort.hyx
 bin/scom            bin/scom                    ; A song run by its name (an rc script: #!/bin/rc)
 songs/scom.zsm      songs/scom.zsm              ; Songs (play /rom/songs/test.zsm): ZSM files, the X16's
 songs/test.zsm      songs/test.zsm              ;   (the old system's test song, from os_rom/songs/test.mml)
-songs/allub.zsm     songs/allub.zsm
 sample/hi           ../obj/samples/hi.hyx       ; The assembly SDK's samples, built (sdk/asm/samples/)
 sample/upper        ../obj/samples/upper.hyx
 sample/tick         ../obj/samples/tick.hyx

@@ -352,15 +352,15 @@ const SND_LINES = [
 ];
 
 // The song player's test lines (as the tools test's): play's errors; a file run by its name that isn't a program
-// (no #!); a song (allub, at 60 Hz: its key-ons timed in
-// check) with its channels claimed while it plays and given back when it's stopped; scom, a song that runs by its
-// name (an rc script); the C sample jukebox (snd_play)
+// (no #!); a song from a card (PLAY_SONG, at 60 Hz: its key-ons timed in check) with its channels claimed while it
+// plays and given back when it's stopped; scom, a song that runs by its name (an rc script); the C sample jukebox
+// (snd_play)
 const PLAY_LINES = [
   ["play; echo $status","usage: play [-l] song [n]\nusage"],
   ["/rom/README; whatis scom","rc: /rom/README: not a program\n/bin/scom"],
   ["play /rom/README; echo $status","play: /rom/README: not a song\nnot a song"],
   ["play /rom/nosuch; echo $status","play: /rom/nosuch: not found\n1"],
-  ["play /rom/songs/allub.zsm & sleep 4; cat /dev/sndctl; kill $apid; wait; cat /dev/sndctl", [
+  ["play /sd/0/t.zsm & sleep 4; cat /dev/sndctl; kill $apid; wait; cat /dev/sndctl", [
     "volume 100",
     "claimed 0 1 2 3 4 5",
     "volume 100",
@@ -369,6 +369,35 @@ const PLAY_LINES = [
   ["scom & sleep 1; cat /dev/sndctl; slay play; wait; cat /dev/sndctl","volume 100\nclaimed 0 1\nvolume 100\nclaimed"],
   ["/rom/sample/c/jukebox /rom/songs/scom.zsm 2","2\n1\nstopped: 137"],
 ];
+// The play test's song: 60 Hz, six FM channels (a voice each, set up in tick 0), then a note every 2 ticks, round
+// the channels, 240 of them (as dense as the X16's tunes: songs come from cards); and its card, SD device 0
+function PLAY_SONG() {
+  const fm = pairs => {                                       // (63 pairs a command at most)
+    const out = [];
+    for (let i = 0; i < pairs.length; i += 126) out.push(0x40 | pairs.slice(i, i + 126).length / 2, ...pairs.slice(i, i + 126));
+    return out;
+  };
+  const voices = [];
+  for (let ch = 0; ch < 6; ch++) {
+    voices.push(0x20 + ch, 0xC7, 0x38 + ch, 0x00);
+    for (const op of [0x00, 0x08, 0x10, 0x18]) voices.push(0x40 + op + ch, 0x01, 0x60 + op + ch, 0x10, 0x80 + op + ch, 0x1F, 0xA0 + op + ch, 0x00,
+      0xC0 + op + ch, 0x00, 0xE0 + op + ch, 0x0F);
+  }
+  const notes = [];
+  for (let k = 0; k < 240; k++) { const ch = k % 6; notes.push(...fm([0x08, ch, 0x28 + ch, 0x30 + k % 12, 0x08, 0x78 | ch]), 0x82); }
+  const hdr = [0x7A, 0x6D, 1, 0, 0, 0, 0, 0, 0, 0x3F, 0, 0, 60, 0, 0, 0];
+  return Buffer.from([...hdr, ...fm(voices), 0x81, ...notes, 0x80]);
+}
+function playCard() {
+  fs.mkdirSync(CARD_DIR, { recursive: true });
+  hydrafs.setNow(0x1000);
+  const f = path.join(CARD_DIR, 'play0.img');
+  hydrafs.mkfs(f, 8, 'SONGS', undefined, true);
+  const v = new hydrafs.Volume(f);
+  v.put('t.zsm', PLAY_SONG());
+  v.close();
+  return [imageCard(0, f, 16384)];
+}
 
 // The GPIO and I2C test's lines (as the tools test's): CA1's edges (the machine's pulses, at cycles 30 and 40
 // million: the first line is waiting for them by then), the files, the pins' levels (the machine's: $A5, PA0 and
@@ -418,9 +447,9 @@ const CLOCK_LINES = [
   ["echo 2024-02-29 12:00:00 >/dev/time; date -n; touch /ram/f; ls -l /ram/f","76252320",true],
 ];
 
-// A ZSM song's key-ons: { rate, ticks: [the song tick of each] }
-function ZSM_KEYONS(file) {
-  const b = fs.readFileSync(file), ticks = [];
+// A ZSM song's key-ons (a file, or its bytes): { rate, ticks: [the song tick of each] }
+function ZSM_KEYONS(song) {
+  const b = Buffer.isBuffer(song) ? song : fs.readFileSync(song), ticks = [];
   let i = 16, tick = 0;
   while (i < b.length) {
     const c = b[i++];
@@ -761,23 +790,23 @@ module.exports = {
     {
       name: 'play', what: 'the song player: its errors; a song timed (its key-ons against its stream), its channels claimed and given back; scom; jukebox',
       init: 't_rc', cycles: 150e6,
-      get machine() { return { input: PLAY_LINES.map(l => '\u0101' + l[0] + '\r').join('') }; },
+      get machine() { return { input: PLAY_LINES.map(l => '\u0101' + l[0] + '\r').join(''), sd: playCard() }; },
       get expect() { return PLAY_LINES.map(l => '% ' + l[0] + '\n' + (l[2] ? l[1] : (l[1] === null ? '' : l[1] + '\n') + '%')); },
-      // (allub's key-ons from its 20th song tick to its 60th key-on, each against its song tick: they keep time to
-      // within two system ticks, so the tempo neither drifts nor jitters more.  The first ticks are left out: tick 0
-      // sets six voices up, hundreds of writes, and its key-ons go out late)
+      // (The card's song's key-ons from its 20th song tick to its 60th key-on, each against its song tick: they keep
+      // time to within two system ticks, so the tempo neither drifts nor jitters more.  The first ticks are left out:
+      // tick 0 sets six voices up, hundreds of writes, and its key-ons go out late)
       check(m) {
         const f = [], mult = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'obj', 'build.json'), 'utf8')).clock || 1;
-        const song = ZSM_KEYONS(path.join(__dirname, '..', 'romfs', 'songs', 'allub.zsm'));
+        const song = ZSM_KEYONS(PLAY_SONG());
         const cyc = m.ym.keyOns.map(k => +k.match(/at cycle (\d+)/)[1]), N = 60, K0 = song.ticks.findIndex(t => t >= 20);
         const perTick = 3579545 * mult / song.rate, slack = 2 * 3579545 * mult / 200;
-        if (cyc.length < N) return ['allub: ' + cyc.length + ' key-ons (' + N + ' wanted)'];
+        if (cyc.length < N) return ['the song: ' + cyc.length + ' key-ons (' + N + ' wanted)'];
         const e = [];
         for (let k = K0; k < N; k++) e.push(cyc[k] - song.ticks[k] * perTick);
         const spread = Math.max(...e) - Math.min(...e), span = (song.ticks[N - 1] - song.ticks[K0]) * perTick;
-        this.notes = ['allub (60 Hz) timed: key-ons ' + K0 + '-' + (N - 1) + ' over ' + Math.round(span) + ' cycles, off their times by ' +
+        this.notes = ['the song (60 Hz) timed: key-ons ' + K0 + '-' + (N - 1) + ' over ' + Math.round(span) + ' cycles, off their times by ' +
           Math.round(spread) + ' cycles at most from each other (at most ' + Math.round(slack) + ': two system ticks)'];
-        if (spread > slack) f.push('allub: its key-ons ' + Math.round(spread) + ' cycles apart from their times (two system ticks: ' + Math.round(slack) + ')');
+        if (spread > slack) f.push('the song: its key-ons ' + Math.round(spread) + ' cycles apart from their times (two system ticks: ' + Math.round(slack) + ')');
         if (m.ym.lost) f.push(m.ym.lost + ' writes to the YM2151 while it was busy');
         return f;
       },

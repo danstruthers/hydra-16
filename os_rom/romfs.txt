@@ -20,4 +20,3 @@ bin/scom.zsm        ../programs/songs/scom.zsm
 
 ; Songs (play /rom/songs/test.zsm: sndtest's, from songs/test.mml)
 songs/test.zsm      songs/test.zsm
-songs/allub.zsm     songs/allub.zsm
