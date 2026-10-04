@@ -834,6 +834,8 @@ danlang (`C:\source\danlang`, C# on .NET 6, by Daniel and Simon Struthers, GPLv3
 
 (As built, phase 7.3: the tower's integers past a fixnum are one kind of object, its sign and up to 126 bytes, not 32-bit integers and a separate bignum library; the tower and all of danlang's bases are a third bank of the module, not library modules loaded on first use, as a module may have four banks now.)
 
+(As built, after 7.4a: a call's arguments are pushed on the evaluation stack as they're evaluated, and the function applied to them there, not put in a list made for each call; a loop's step is 14% faster.  danlang's GPLv3 license is off (the user's decision), and hylang is in the system's ROM.)
+
 (As built, phase 7.4a: strings of up to 4096 bytes, a chain of cells past 126, made in a buffer and copied whole to be searched; danlang's hashes, changed in place, with their tags and methods (`&0` a proxy of the hash); the `str-` functions and `sort`.  They're the module's fourth bank, which makes it the most a module may have, so the rest of 7.4 waits on a core module and library modules, as this plan has them for the big numbers.)
 
 #### **17.4 hylang as the shell**
@@ -1127,7 +1129,7 @@ Phases 6, 7 and 8 depend only on phase 5 and can go in any order or in parallel;
 1. **The new system's name**, and whether it lives in this repository (a new folder) or a new one.
 2. **Device letters** (§14): the ones proposed follow Plan 9 where there's an equivalent; confirm or change.
 3. **hylang**: the file extension (`.hl`?), the rule for telling lisp lines from rc lines (§17.4), and whether `$` becomes environment access inside hylang.
-4. **danlang's license**: it's GPLv3 (Daniel and Simon Struthers).  hylang in the ROM makes the ROM image a combined work; choose a license for the Hydra's software as a whole, or relicense hylang.
+4. **danlang's license**: it's GPLv3 (Daniel and Simon Struthers).  hylang in the ROM makes the ROM image a combined work; choose a license for the Hydra's software as a whole, or relicense hylang.  (Decided: the user took danlang's GPLv3 license off, and hylang is in the system's ROM.)
 5. **Each shell's `/ram` permission check**: keep it (generalised in srvlib) or drop it as unnecessary on a single-user machine.
 6. **Binaries in Git**: move the ROM images to release artefacts, or keep committing them for people without a toolchain.
 7. **Which tools in C and which in assembly** (§15.3), once the C target's code size is measured in phase 4.

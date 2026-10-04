@@ -11,10 +11,11 @@
 ; takes no stack), and so are if's branches, do's last, let's last and eval's.  Every entry of the stack is a value
 ; (its K_* codes fixnums), and so are the registers ev_x to ev_s, so the collector takes them all as roots (env.inc
 ; has the stack, scopes and names, which the built-ins use too).
-;   A built-in (builtins.inc) is native code, in the second bank, the third (BF_BANK3: numbers.inc) or the fourth
-; (BF_BANK4: strings.inc, hashes.inc), called through hyx2_farn, given its arguments' values in ev_a (a chain), or
-; as they're written (BF_RAW: defined?), ev_v its value (or, ev_again set, ev_f applied to ev_a, as if it were the
-; call: hash-call's methods); an error among the values is
+;   A call's arguments are pushed on the stack as they're evaluated (env.inc), and the function applied to them
+; there.  A built-in (builtins.inc) is native code, in the second bank, the third (BF_BANK3: numbers.inc) or the
+; fourth (BF_BANK4: strings.inc, hashes.inc), called through hyx2_farn, given its arguments' values (arg_next), or
+; as they're written (BF_RAW: defined?), ev_v its value (or, ev_again set, ev_f applied to the arguments it has left,
+; as if it were the call: hash-call's methods); they're taken off the stack after it.  An error among the values is
 ; the call's value, unless the built-in takes errors (BF_ERRORS: print, error-message ...).  A special form
 ; (BF_SPECIAL: if, do, let, while ...) is the first bank's, given its arguments as they're written (ev_r), and goes
 ; on its own way, with the frames K_IF, K_DO ... .  Native code that wants a value evaluated, or a function applied,
@@ -133,6 +134,9 @@ ev_nested:
 ap_nested:
             jsr         ev_nest_in
             bcs         :+
+            MOVR        h_v, ev_a                           ; (The arguments, a list: pushed)
+            jsr         push_list
+            jcs         ev_deep_error
             jmp         ev_apply
 :
             rts
@@ -335,7 +339,9 @@ ev_head:
             bne         @special
             and         #BF_RAW
             beq         ev_args
-            MOVR        ev_a, ev_r                          ; (Native code, given them as they're written)
+            MOVR        h_v, ev_r                           ; (Native code, given them as they're written)
+            jsr         push_list
+            bcs         ev_deep_error
             jmp         ev_apply
 @special:
             lda         bi_lo,x
@@ -354,12 +360,19 @@ ev_head:
             bcs         :+
             jmp         apply_fn
 :
-            jmp         ev_no_room
+            jmp         ev_return
 
-; ev_f's arguments (ev_r) evaluated in turn, onto ev_a (an S-expression's with K_ARG); then ev_f applied
+; The stack's full: the error
+ev_deep_error:
+            LDR         r0, es_deep
+            jmp         sf_error
+
+; ev_f's arguments (ev_r) evaluated in turn, each pushed (ev_a their place; an S-expression's with K_ARG); then ev_f
+; applied
 ev_args:
-            LDR         ev_a, NIL
-            LDR         ev_t, NIL
+            jsr         ev_here
+            sta         ev_a
+            stx         ev_a + 1
 ev_next_arg:
             lda         ev_r + 1
             bne         :+
@@ -373,16 +386,13 @@ ev_next_arg:
             PUSHV       ev_f
             PUSHV       ev_r
             PUSHV       ev_a
-            PUSHV       ev_t
             PUSHV       ev_e
             PUSHK       K_ARG
             jmp         ev_eval
 
-; An argument's value: onto the arguments (an error, the call's value, unless the function's a built-in that takes
-; errors)
+; An argument's value: pushed (an error, the call's value, unless the function's a built-in that takes errors)
 k_arg:
             POPV        ev_e
-            POPV        ev_t
             POPV        ev_a
             POPV        ev_r
             POPV        ev_f
@@ -397,25 +407,37 @@ ev_arg:
             and         #BF_ERRORS
             bne         @add
 @error:
+            lda         ev_a                                ; (The arguments so far let go)
+            ldx         ev_a + 1
+            jsr         ev_set
             jmp         ev_return
 @add:
-            jsr         ev_append
-            bcs         @room
+            jsr         ev_deep
+            bcs         @deep
+            PUSHV       ev_v
             MOVR        h_v, ev_r
             jsr         cdr
             MOVR        ev_r, h_v
             jmp         ev_next_arg
-@room:
-            jmp         ev_no_room
+@deep:
+            lda         ev_a
+            ldx         ev_a + 1
+            jsr         ev_set
+            jmp         ev_deep_error
 
-; ev_f applied to ev_a: a function's body run (apply_fn), a built-in's code called (ev_v its value); a special form
-; is given the values as its arguments, as if they were written (it goes on its own way)
+; ev_f applied to the arguments on the stack from ev_a: a function's body run (apply_fn), a built-in's code called
+; (ev_v its value); a special form is given the values as its arguments, as if they were written (it goes on its own
+; way).  The arguments are taken off the stack
 ev_apply:
             lda         ev_f + 1
             cmp         #>BUILTIN_END
             bcc         :+
             jmp         apply_fn
 :
+            jsr         ev_here                             ; (The arguments: ev_a up to the top)
+            sta         ar_end
+            stx         ar_end + 1
+            MOVR        ar_at, ev_a
             jsr         bi_index
             lda         bi_lo,x
             sta         ev_j
@@ -423,28 +445,50 @@ ev_apply:
             sta         ev_j + 1
             lda         bi_flags,x
             and         #BF_SPECIAL
-            beq         :+
-            MOVR        ev_r, ev_a
+            beq         @native
+            jsr         args_list                           ; (A special form: the values, a list, as if written)
+            bcs         @room
+            MOVR        ev_r, h_v
+            lda         ev_a
+            ldx         ev_a + 1
+            jsr         ev_set
             jmp         (ev_j)
-:
-            lda         ev_j                                ; (Native code: in the second bank, the third or the
-            sta         hyx2_to                             ; fourth)
-            lda         ev_j + 1
-            sta         hyx2_to + 1
-            lda         bi_flags,x
-            and         #BF_BANK3 | BF_BANK4
+@room:
+            lda         ev_a
+            ldx         ev_a + 1
+            jsr         ev_set
+            jmp         ev_no_room
+@native:
+            lda         bi_flags,x                          ; (Native code: in the second bank, the third or the
+            and         #BF_BANK3 | BF_BANK4                ; fourth)
             lsr
             lsr
             lsr
             tay
             lda         hyx2_bank2,y
             sta         hyx2_n
+            lda         ev_j
+            sta         hyx2_to
+            lda         ev_j + 1
+            sta         hyx2_to + 1
+            lda         ev_a + 1                            ; (Where its arguments are, kept: they're let go after)
+            pha
+            lda         ev_a
+            pha
             jsr         hyx2_farn
+            pla
+            sta         ev_base
+            pla
+            sta         ev_base + 1
             lda         ev_again                            ; (Its value a call: hash-call's)
             bne         :+
+            lda         ev_base
+            ldx         ev_base + 1
+            jsr         ev_set
             jmp         ev_return
 :
-            stz         ev_again
+            stz         ev_again                            ; (The arguments it has left, the call's)
+            jsr         args_down
             jmp         ev_apply
 
 ; The built-in ev_f's number: .X (page 3's 0-127, page 4's 128-255)
@@ -459,11 +503,15 @@ bi_index:
 
 ; ---- Functions
 
-; ev_f (a function: fn's or fexpr's) applied to ev_a: its formals bound to the arguments in turn, those past them to
-; &1, &2 ... by their places, and &_ to a list of those; if formals are left, its value is the function with these
-; bound (partial application); if not, its body is evaluated in a new frame of the bindings, the function's closure
-; its parent (lexical scope), in the caller's place
+; ev_f (a function: fn's or fexpr's) applied to the arguments on the stack from ev_a: its formals bound to them in
+; turn, those past them to &1, &2 ... by their places, and &_ to a list of those; they're taken off the stack; if
+; formals are left, its value is the function with these bound (partial application); if not, its body is evaluated
+; in a new frame of the bindings, the function's closure its parent (lexical scope), in the caller's place
 apply_fn:
+            jsr         ev_here                             ; (The arguments: ev_a up to the top, ev_t; ev_e, the
+            sta         ev_t                                ; next)
+            stx         ev_t + 1
+            MOVR        ev_e, ev_a
             MOVR        h_v, ev_f
             jsr         deref
             ldy         #3                                  ; (ev_r: the formals left; ev_s: the bindings so far)
@@ -480,16 +528,28 @@ apply_fn:
             lda         (h_p),y
             sta         ev_s
             stx         ev_s + 1
-            LDR         ev_t, NIL                           ; (ev_t, ev_w: the arguments past the formals)
-            LDR         ev_w, NIL
+            LDR         ev_w, NIL                           ; (ev_w: where the arguments past the formals begin)
             stz         ev_i
 @arg:
-            lda         ev_a + 1
+            lda         ev_e                                ; (The next, if there's one)
+            cmp         ev_t
+            bne         :+
+            lda         ev_e + 1
+            cmp         ev_t + 1
             beq         @bound
+:
             inc         ev_i
-            MOVR        h_v, ev_a
-            jsr         car
+            lda         ev_e
+            ldx         ev_e + 1
+            jsr         pos_get
             MOVR        ev_v, h_v
+            clc
+            lda         ev_e
+            adc         #2
+            sta         ev_e
+            bcc         :+
+            inc         ev_e + 1
+:
             lda         ev_r + 1
             beq         @extra
             MOVR        h_v, ev_r                           ; (A formal's)
@@ -500,23 +560,32 @@ apply_fn:
             MOVR        ev_r, h_v
             bra         @bind
 @extra:
-            ldx         #ev_t - ev_x                        ; (Past them: &_'s, and &n's)
-            jsr         ev_append_x
-            jcs         @room
+            lda         ev_w                                ; (Past them: &_'s, and &n's)
+            ora         ev_w + 1
+            bne         :+
+            sec
+            lda         ev_e
+            sbc         #2
+            sta         ev_w
+            lda         ev_e + 1
+            sbc         #0
+            sta         ev_w + 1
+:
             jsr         amp_symbol
             jcs         @room
             MOVR        ev_x, h_v
 @bind:
             jsr         prepend_binding
             jcs         @room
-            MOVR        h_v, ev_a
-            jsr         cdr
-            MOVR        ev_a, h_v
-            bra         @arg
+            jmp         @arg
 @bound:
-            lda         ev_t + 1                            ; (&_: those past the formals, a Q-expression, if there
-            beq         @formals                            ; are any; a call's frame has it NIL else)
-            MOVR        h_v, ev_t
+            lda         ev_w                                ; (&_: those past the formals, a Q-expression, if there
+            ora         ev_w + 1                            ; are any; a call's frame has it NIL else)
+            beq         @formals
+            MOVR        ar_at, ev_w
+            MOVR        ar_end, ev_t
+            jsr         args_list
+            bcs         @room
             lda         #OT_QEXPR
             jsr         make_list
             bcs         @room
@@ -525,6 +594,9 @@ apply_fn:
             jsr         prepend_binding
             bcs         @room
 @formals:
+            lda         ev_a                                ; (The arguments let go)
+            ldx         ev_a + 1
+            jsr         ev_set
             lda         ev_r + 1                            ; (Formals left: the function with these bound)
             beq         @call
             jsr         partial_fn
@@ -555,6 +627,9 @@ apply_fn:
             stx         ev_r + 1
             jmp         ev_chain
 @room:
+            lda         ev_a
+            ldx         ev_a + 1
+            jsr         ev_set
             jmp         ev_no_room
 
 ; &n's symbol, n = ev_i (1-255).  OUT: C = 0, h_v = it; C = 1, no room
@@ -643,11 +718,12 @@ partial_fn:
             rts
 
 ; An fexpr's arguments, as they're written (ev_r), each remembering the scope ev_e: a symbol in a reference to it
-; with the scope, an S-expression or a Q-expression in a copy with it, anything else as it is.  OUT: ev_a; C = 1, no
-; room
+; with the scope, an S-expression or a Q-expression in a copy with it, anything else as it is; pushed (ev_a their
+; place).  OUT: C = 1, no room, or the stack's full (ev_v the error; none left pushed)
 fexpr_args:
-            LDR         ev_a, NIL
-            LDR         ev_t, NIL
+            jsr         ev_here
+            sta         ev_a
+            stx         ev_a + 1
 @next:
             lda         ev_r + 1
             beq         @done
@@ -676,15 +752,27 @@ fexpr_args:
             bcs         @no
             MOVR        ev_v, h_v
 @add:
-            jsr         ev_append
-            bcs         @no
+            jsr         ev_deep
+            bcs         @deep
+            PUSHV       ev_v
             MOVR        h_v, ev_r
             jsr         cdr
             MOVR        ev_r, h_v
             bra         @next
 @done:
             clc
+            rts
+@deep:
+            LDR         r0, es_deep
+            jsr         ev_error_text
+            bra         @drop
 @no:
+            MOVR        ev_v, err_room
+@drop:
+            lda         ev_a
+            ldx         ev_a + 1
+            jsr         ev_set
+            sec
             rts
 
 ; ---- Errors
@@ -1124,22 +1212,19 @@ k_try:
             jmp         ev_no_room
 
 k_tryh:
-            POPV        ev_a                                ; (The message)
+            POPV        ev_t                                ; (The message)
             MOVR        h_v, ev_v
             jsr         type_of
             cmp         #TY_FUNC
             beq         :+
             jmp         ev_return
 :
-            MOVR        h_a, ev_a                           ; (A function: called with it)
-            LDR         h_d, NIL
-            jsr         cons
-            bcs         :+
-            MOVR        ev_a, h_v
-            MOVR        ev_f, ev_v
+            MOVR        ev_f, ev_v                          ; (A function: called with it)
+            jsr         ev_here
+            sta         ev_a
+            stx         ev_a + 1
+            PUSHV       ev_t
             jmp         ev_apply
-:
-            jmp         ev_no_room
 
 ; (eval x): x's value run: a Q-expression as code, in its scope (or here); an fexpr's argument (an S-expression, a
 ; symbol) evaluated in its scope; anything else, itself.  In the caller's place
@@ -1722,11 +1807,10 @@ iter_next:
             PUSHV       ev_t
             PUSHV       ev_e
             PUSHK       K_ITER
-            MOVR        h_a, ev_v
-            LDR         h_d, NIL
-            jsr         cons
-            bcs         @room
-            MOVR        ev_a, h_v
+            jsr         ev_here                             ; (Its argument, pushed)
+            sta         ev_a
+            stx         ev_a + 1
+            PUSHV       ev_v
             jmp         ev_apply
 @big:
             MOVR        nx, ev_t                            ; (Past fixnums: numbers.inc's order and sum)

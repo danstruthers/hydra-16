@@ -23,7 +23,7 @@ fail after.
 its tail calls loop 50,000 times, 4,675M cycles in all (22 minutes at 3.58 MHz), so `core.hl` has its checks at
 smaller sizes.
 
-The suite's files are bytes, LF line ends (`.gitattributes`: not text to Git), danlang's terms (GPLv3: Daniel and
-Simon Struthers).  The test puts them on an emulated SD card with a `run.hl` of its own that loads `harness.dl`, then
+The suite's files are bytes, LF line ends (`.gitattributes`: not text to Git), danlang's (Daniel and Simon
+Struthers').  The test puts them on an emulated SD card with a `run.hl` of its own that loads `harness.dl`, then
 each file in turn (a file that stops with an error counts as a failure, as danlang's `run.dl` has it), and prints
 the count; then it runs `cd /sd/0; hylang` and types `(load "run.hl")`.

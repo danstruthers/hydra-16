@@ -400,7 +400,7 @@ make_error:
             rts
 
 ; An error whose message is the zero-terminated text at r0 (in the ROM, or the task's RAM), with no code.  OUT:
-; C = 0, h_v = it; or C = 1, no room
+; C = 0, h_v = it; or C = 1, no room for it (h_v the error "No room", made as hylang starts)
 error_text:
             ldy         #0
 :
@@ -415,8 +415,12 @@ error_text:
             bcs         @no
             MOVR        h_a, h_v
             LDR         h_d, NIL
-            jmp         make_error
+            jsr         make_error
+            bcc         @done
 @no:
+            MOVR        h_v, err_room
+            sec
+@done:
             rts
 
 .segment "DATA"

@@ -539,7 +539,8 @@ bi_expr:
 
 ; (list x ...): a Q-expression of the values, its scope this one
 bi_list:
-            MOVR        h_v, ev_a
+            jsr         args_list
+            bcs         bi_no_room1
             lda         #OT_QEXPR
             jsr         make_list
             bcs         bi_no_room1
@@ -1117,7 +1118,7 @@ bi_div:
             lda         #3
 arith:
             sta         ev_i
-            lda         ev_a + 1
+            jsr         args_none
             bne         @first
             ldx         ev_i                                ; (None)
             lda         arith_none,x
@@ -1133,7 +1134,7 @@ arith:
             jeq         add_first
             jmp         arith_not
 :
-            lda         ev_a + 1
+            jsr         args_none
             bne         @next
             lda         ev_i                                ; ((- n): -n; a fixnum's 2 - (2n + 1))
             cmp         #1
@@ -1718,6 +1719,10 @@ equal:
             cmp         eq_b + 1
             jeq         @same
 @diff:
+            lda         eq_a                                ; (Two fixnums: not the same)
+            and         eq_b
+            lsr
+            bcs         @no
             MOVR        h_v, eq_b
             jsr         type_of
             sta         eq_t
@@ -2033,7 +2038,7 @@ bi_format:
 @end:
             jsr         cap_string
             MOVR        ev_v, h_v
-            lda         ev_a + 1
+            jsr         args_none
             beq         :+
             LDR         r0, bs_format_args_many
             jmp         bi_error_text
@@ -2612,7 +2617,8 @@ bi_load:
             LDR         r0, bs_load_string
             jmp         bi_error_text
 :
-            PUSHV       ev_a                                ; (The paths left, and this one)
+            PUSHV       ar_at                               ; (The paths left, and this one)
+            PUSHV       ar_end
             PUSHV       ev_s
             stz         ev_c
             jsr         load_read                           ; (ev_t: its expressions)
@@ -2645,7 +2651,8 @@ bi_load:
             stz         ev_c
 @fail:
             POPV        ev_s                                ; ("path: message", but the system's own errors)
-            POPV        ev_a
+            POPV        ar_end
+            POPV        ar_at
             lda         ev_c
             bne         @done
             LDR         r0, bs_none
@@ -2661,7 +2668,8 @@ bi_load:
             rts
 @next:
             POPV        ev_s
-            POPV        ev_a
+            POPV        ar_end
+            POPV        ar_at
             jmp         @file
 
 ; The file ev_s names, read: ev_t = its expressions (a chain).  OUT: C = 1, ev_v an error (it can't be opened or

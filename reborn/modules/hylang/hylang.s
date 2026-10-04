@@ -75,6 +75,11 @@ main:
             stz         text_n                              ; ---- A new expression's lines
             stz         text_n + 1
             stz         ev_intr
+            ldx         #EV_REGS - 1                        ; (The registers let go: what the last line left there,
+:                                                           ; a failed call's bindings ..., isn't kept)
+            stz         ev_x,x
+            dex
+            bpl         :-
             LDR         r0, s_prompt
 @prompt:
             jsr         out_text

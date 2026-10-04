@@ -133,8 +133,9 @@ These are the user's (the plan's §22 has them too); the drafts are what this sp
 
 1. **The file extension**: `.hl` (drafted).  The suite keeps danlang's `.dl` names, loaded by their whole names.
 2. **`$` inside hylang**: drafted as danlang's tail shorthand only (`$(`), with the environment through `env`.
-3. **The license**: danlang is GPLv3 (Daniel and Simon Struthers); hylang in the ROM makes the image a combined
-   work, so either the Hydra's software takes a license that allows it, or hylang is relicensed.
+
+The third, danlang's license, is decided: the user took danlang's GPLv3 license off (danlang is the user's, with
+Simon Struthers), and hylang is in the system's ROM.
 
 ## The steps (the plan's phase 7)
 
@@ -202,5 +203,9 @@ copies of its checks.
 
 The hylang test runs `lists.dl`, `strings.dl`, `hashes.dl` and `types.dl` too, and all of `reader.dl`: 574
 checks, `types.dl`'s `(type-of stdout)` failing till 7.4b has streams.  hylang is four banks now, the most a
-module may have, with 7.4b-d to come: next, a core module and library modules (the plan's), and a built-in's
-arguments on the evaluation stack, not in a list made for each call.
+module may have, with 7.4b-d to come: next, a core module and library modules (the plan's).
+
+**Calls** (after 7.4a).  A call's arguments are pushed on the evaluation stack as they're evaluated, and the
+function applied to them there (a built-in reads them in place; a function binds them from there), not put in a
+list made for each call: a loop's step is 14% faster (17,655 cycles to 15,215).  Only what wants a list makes one
+(`list`, `&_`).  hylang is in the system's ROM now.

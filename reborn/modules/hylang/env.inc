@@ -8,9 +8,15 @@
 ; which the collector takes as roots (hylang_roots), as it does the registers ev_x to ev_s.
 ;   eval_nested and apply_nested run the evaluator from either bank: native code that wants an expression's value,
 ; or a function applied, calls them, and holds what it has on the stack meanwhile.
+;   A call's arguments are on the stack: each value pushed as it's evaluated, then the function applied to those
+; from its first (ev_a) to the top.  A place on the stack is a position, a fixnum (so the collector passes it by):
+; the entry's address, the second bank's $2000 on ($A000-$BFFE), bit 0 set, so positions are in order, two apart.
+; A built-in reads its arguments in place (arg_next, from ar_at to ar_end), and they're taken off the stack after
+; it.
 
 EV_BANKS        = 2             ; The evaluation stack's banks (16K: some 1300 calls nested, not in tail position)
 EV_LIMIT        = $9F00         ; The last bank's top, past which an evaluation isn't started (room for frames on it)
+.assert EV_BANKS = 2, error, "env.inc's positions are for a stack of two banks"
 FR_CALL         = $01           ; A frame's second byte: a function call's (its &_ is NIL, if it has none bound)
 
 .zeropage
@@ -18,7 +24,7 @@ ev_x:       .res        2                                   ; The expression at 
 ev_e:       .res        2                                   ; The scope it's in (a frame, or GLOBAL)
 ev_v:       .res        2                                   ; The value at hand
 ev_f:       .res        2                                   ; A function being applied ...
-ev_a:       .res        2                                   ;   its arguments (a chain) ...
+ev_a:       .res        2                                   ;   its arguments' place on the stack (a position) ...
 ev_t:       .res        2                                   ;   the last of them (as they're made)
 ev_w:       .res        2                                   ; Scratch values (roots, as the rest)
 ev_r:       .res        2
@@ -42,8 +48,12 @@ sym_rest:   .res        2                                   ; &_
 sym_err:    .res        2                                   ; &err
 sym_code:   .res        2                                   ; &code
 atom_intr:  .res        2                                   ; :intr
-ev_again:   .res        1                                   ; Not 0: a built-in's value is ev_f applied to ev_a
-                                                            ; (hash-call's: the evaluator applies it)
+ev_again:   .res        1                                   ; Not 0: a built-in's value is ev_f applied to the
+                                                            ; arguments it has left (hash-call's: the evaluator
+                                                            ; applies it)
+ar_at:      .res        2                                   ; A built-in's next argument (a position) ...
+ar_end:     .res        2                                   ;   and the place past its last
+ev_base:    .res        2                                   ; A built-in's arguments' place, as it's called
 err_room:   .res        2                                   ; The error "No room", made at the start
 ev_name:    .res        8                                   ; &n's name, made
 msg:        .res        128                                 ; An error's message, made ...
@@ -654,37 +664,224 @@ set_car:
             sta         (h_p),y
             rts
 
-; ---- A built-in's arguments (the second bank's and the third's)
+; ---- Positions on the stack, and a call's arguments
 
-; The next argument: h_v = it, ev_a moved on (so it's to be held in a register before anything's made).  OUT: C = 1,
-; there's none
-arg_next:
-            lda         ev_a + 1
-            bne         :+
-            sec
-            rts
+; .A/.X = the stack's top, a position
+ev_here:
+            lda         ev_sp + 1
+            ldx         ev_bank
+            cpx         ev_bank0
+            beq         :+
+            ora         #$20                                ; (The second bank's)
 :
-            MOVR        h_v, ev_a
-            jsr         deref
-            ldy         #2
-            lda         (h_p),y
-            sta         ev_a
-            iny
-            lda         (h_p),y
-            sta         ev_a + 1
+            tax
+            lda         ev_sp
+            ora         #1
+            rts
+
+; The stack's top = the position .A/.X (what's above it, let go)
+ev_set:
+            and         #$FE
+            sta         ev_sp
+            ldy         ev_bank0
+            txa
+            cmp         #$A0
+            bcc         :+
+            iny                                             ; (The second bank's)
+            and         #$9F
+:
+            sta         ev_sp + 1
+            sty         ev_bank
+            rts
+
+; h_p = the stack's entry at the position .A/.X (its bank selected)
+pos_at:
+            and         #$FE
+            sta         h_p
+            ldy         ev_bank0
+            txa
+            cmp         #$A0
+            bcc         :+
+            iny                                             ; (The second bank's)
+            and         #$9F
+:
+            sta         h_p + 1
+            sty         RAM_BANK
+            rts
+
+; h_v = the value at the position .A/.X (pos_get); or put there (pos_put)
+pos_get:
+            jsr         pos_at
             ldy         #1
             lda         (h_p),y
             tax
             lda         (h_p)
             sta         h_v
             stx         h_v + 1
+            rts
+pos_put:
+            jsr         pos_at
+            lda         h_v
+            sta         (h_p)
+            ldy         #1
+            lda         h_v + 1
+            sta         (h_p),y
+            rts
+
+; The chain h_v's items pushed, the arguments of a call: ev_a their place.  OUT: C = 1, the stack's full (none left
+; pushed)
+push_list:
+            jsr         ev_here
+            sta         ev_a
+            stx         ev_a + 1
+@next:
+            lda         h_v + 1
+            beq         @done
+            jsr         ev_deep
+            bcs         @full
+            lda         h_v + 1
+            pha
+            lda         h_v
+            pha
+            jsr         car
+            lda         h_v
+            ldx         h_v + 1
+            jsr         ev_push
+            pla
+            sta         h_v
+            pla
+            sta         h_v + 1
+            jsr         cdr
+            bra         @next
+@done:
             clc
+            rts
+@full:
+            lda         ev_a
+            ldx         ev_a + 1
+            jsr         ev_set
+            sec
+            rts
+
+; The next argument: h_v = it (on the stack till the built-in returns: it needn't be held elsewhere).  OUT: C = 1,
+; there's none
+arg_next:
+            lda         ar_at
+            cmp         ar_end
+            bne         :+
+            lda         ar_at + 1
+            cmp         ar_end + 1
+            bne         :+
+            sec
+            rts
+:
+            lda         ar_at
+            ldx         ar_at + 1
+            jsr         pos_get
+            clc
+            lda         ar_at
+            adc         #2
+            sta         ar_at
+            bcc         :+
+            inc         ar_at + 1
+:
+            clc
+            rts
+
+; Z = 1 if no argument's left
+args_none:
+            lda         ar_at
+            cmp         ar_end
+            bne         :+
+            lda         ar_at + 1
+            cmp         ar_end + 1
+:
             rts
 
 ; .A = how many arguments are left (255 at most)
 count_a:
-            MOVR        h_v, ev_a
-            jmp         count_h
+            sec
+            lda         ar_end
+            sbc         ar_at
+            tax
+            lda         ar_end + 1
+            sbc         ar_at + 1
+            cmp         #2
+            bcs         @many
+            lsr
+            txa
+            ror
+            rts
+@many:
+            lda         #255
+            rts
+
+; The arguments left, a chain: h_v (and none left).  OUT: C = 1, no room
+args_list:
+            LDR         h_v, NIL
+            jsr         root_push
+            bcs         @no
+@next:
+            jsr         args_none
+            beq         @done
+            sec                                             ; (From the last back)
+            lda         ar_end
+            sbc         #2
+            sta         ar_end
+            bcs         :+
+            dec         ar_end + 1
+:
+            lda         ar_end
+            ldx         ar_end + 1
+            jsr         pos_get
+            MOVR        h_a, h_v
+            jsr         root_get
+            MOVR        h_d, h_v
+            jsr         cons
+            bcs         @fail
+            jsr         root_set
+            bra         @next
+@done:
+            jsr         root_get
+            jsr         root_drop
+            clc
+            rts
+@fail:
+            jsr         root_drop
+            sec
+@no:
+            rts
+
+; The arguments left moved down to ev_base, a call's arguments (ev_a their place), the stack's top after them
+args_down:
+            MOVR        ev_a, ev_base
+@move:
+            jsr         args_none
+            beq         @done
+            lda         ar_at
+            ldx         ar_at + 1
+            jsr         pos_get
+            lda         ev_base
+            ldx         ev_base + 1
+            jsr         pos_put
+            clc
+            lda         ar_at
+            adc         #2
+            sta         ar_at
+            bcc         :+
+            inc         ar_at + 1
+:
+            clc
+            lda         ev_base
+            adc         #2
+            sta         ev_base
+            bcc         @move
+            inc         ev_base + 1
+            bra         @move
+@done:
+            lda         ev_base
+            ldx         ev_base + 1
+            jmp         ev_set
 
 ; C = 1 if h_v is an error (h_v kept; h_is_error_v: and ev_v = it, if it is)
 h_is_error:

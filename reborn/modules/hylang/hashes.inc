@@ -543,7 +543,7 @@ hs_put_tags:
 
 ; The entry h_v ({key value}: the value evaluated in ev_e; {key value tag ...}: not, as danlang has it; {tag}: the
 ; hash's tag, if it's no key's) put in the hash ev_s (hs_mem: a member's): ev_v = the value it had (NIL: none), or
-; an error.  Keeps ev_a, ev_w, ev_r, ev_s, ev_e
+; an error.  Keeps the arguments left (ar_at), ev_w, ev_r, ev_s, ev_e
 hs_put_entry:
             jsr         type_of
             cmp         #TY_LIST
@@ -587,10 +587,11 @@ hs_put_entry:
             jsr         cdr
             MOVR        ev_t, h_v
             lda         ev_t + 1
-            bne         @put
+            jne         @put
             lda         hs_mem                              ; (Its value evaluated: everything kept meanwhile)
             pha
-            PUSHV       ev_a
+            PUSHV       ar_at
+            PUSHV       ar_end
             PUSHV       ev_w
             PUSHV       ev_r
             PUSHV       ev_s
@@ -603,7 +604,8 @@ hs_put_entry:
             POPV        ev_s
             POPV        ev_r
             POPV        ev_w
-            POPV        ev_a
+            POPV        ar_end
+            POPV        ar_at
             pla
             sta         hs_mem
             MOVR        ev_f, ev_v
@@ -742,7 +744,9 @@ bh_clone:
             jsr         arg_next
             jsr         hs_arg
             jcs         @done
-            MOVR        ev_f, ev_a                          ; (The overrides)
+            jsr         args_list                           ; (The overrides)
+            jcs         @room
+            MOVR        ev_f, h_v
             MOVR        h_v, ev_s
             jsr         hs_clone
             jcs         @done

@@ -696,7 +696,7 @@ module.exports = {
     },
     {
       name: 'hylang', what: 'hylang (danlang, phase 7): danlang\'s regression suite\'s files that pass as yet (reader, scope, control, errors, lists, strings, numbers, hashes, types but its stream) and hylang\'s own checks (core.hl), loaded from a card with the suite\'s harness; at the console: a line evaluated as danlang\'s REPL has it, an expression over lines with a here string, an error, Ctrl-C (an evaluation, and the prompt), exit, and (exit n)\'s status',
-      init: 't_rc', modules: ['hylang'], cycles: 900e6,
+      init: 't_rc', cycles: 900e6,
       // (Each line at its prompt, but a continued expression's, a moment after the last; (f) loops till Ctrl-C, which rc
       // gets too: its prompt on a new line after hylang ends)
       get machine() {
