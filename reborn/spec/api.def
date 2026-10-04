@@ -196,13 +196,14 @@ call ENV_NAME task impl=K_ENV_NAME far
   doc:    The variables of an environment, one at a time, in the order they were made.
 
 call TASKREAD task impl=K_TASKREAD far
-  in:     .A = a task ($FF: this one); .X = what: TR_ARGS (its arguments: ARGS_MAX bytes) or TR_CWD (its current
-  in:     directory: PATH_MAX + 1 bytes); r0 = a buffer that big
+  in:     .A = a task ($FF: this one); .X = what: TR_ARGS (its arguments: ARGS_MAX bytes), TR_CWD (its current
+  in:     directory: PATH_MAX + 1 bytes), TR_ENV (its environment: ENV_SIZE bytes) or TR_FRAME (its state and the
+  in:     frame it left as it was switched out: TF_SIZE bytes, TF_*); r0 = a buffer that big
   out:    the bytes in the buffer
   errors: E_SRCH, E_INVAL (another what)
   blocks: no
-  doc:    Another task's arguments or current directory, as they are now: /proc's args and cwd, ps.  The kernel
-  doc:    task copies them a byte at a time, with IRQs off for each.
+  doc:    Another task's arguments, current directory, environment or registers, as they are now: /proc's args,
+  doc:    cwd, env and regs, ps.  The kernel task copies them a byte at a time, with IRQs off for each.
 
 # ---- memory (BIOS ROM page 1)
 
@@ -604,6 +605,19 @@ call ROMREAD server impl=K_ROMREAD
   doc:    Copy from any bank of the paged ROM, for a module run in place (the storage driver's ROM disk): the
   doc:    bank is the task's own meanwhile, and its module's is put back.
 
+call TASKMEM server impl=K_TASKMEM far
+  in:     .A = a task; .X = TM_READ or TM_WRITE, | TM_BANK; r0 = a buffer; r1 = an address in the task's view,
+  in:     $0000-$DFFF (with TM_BANK: $8000-$9FFF, in its RAM bank r3); r2 = a count (the range ends at $E000, or
+  in:     with TM_BANK at $A000, at most)
+  out:    -
+  errors: E_PERM (the caller isn't a driver), E_SRCH (not a task), E_INVAL (past the range)
+  blocks: no
+  doc:    Bytes from a task's memory into the buffer, or from the buffer into it: /proc's mem and ram (kdev, which
+  doc:    decides who may: a program reaches another task's memory only through those files).  Its task RAM, and
+  doc:    its RAM bank and paged ROM bank as it has them selected; or with TM_BANK any of its RAM banks (its bank
+  doc:    register points at it meanwhile: not for a driver, whose irq entry might run).  A byte at a time, IRQs
+  doc:    off for each.
+
 # ---- dbg (for the tests and the debugger: unstable)
 
 call DBG_SCALL dbg impl=K_SCALL
@@ -706,6 +720,23 @@ const MCREATE         4        "BIND's and MOUNT's flags: a CREATE in the union 
 const EXIT_MSG_MAX    31       "An exit message's length at most (WAIT's buffer: 32 bytes)"
 const TR_ARGS         0        "TASKREAD: a task's arguments (ARGS_MAX bytes)"
 const TR_CWD          1        "TASKREAD: a task's current directory (PATH_MAX + 1 bytes)"
+const TR_ENV          2        "TASKREAD: a task's environment (ENV_SIZE bytes)"
+const TR_FRAME        3        "TASKREAD: a task's state and frame (TF_SIZE bytes)"
+const TF_STATE        0        "TR_FRAME's: the task's state (0 free, 1 ready, 2 waiting, 3 calling, 4 idle, 5 new, 6 sleeping, 7 blocked, 8 waiting for an event)"
+const TF_S            1        "TR_FRAME's: its stack pointer, as it was before the frame"
+const TF_U            2        "TR_FRAME's: the frame: U"
+const TF_Y            3
+const TF_W            4
+const TF_X            5
+const TF_A            6
+const TF_P            7
+const TF_PC           8        "TR_FRAME's: PC (2)"
+const TF_RAM          10       "TR_FRAME's: its RAM bank register ($00)"
+const TF_ROM          11       "TR_FRAME's: its paged ROM bank register ($01)"
+const TF_SIZE         12
+const TM_READ         0        "TASKMEM: from the task's memory"
+const TM_WRITE        $01      "TASKMEM: to the task's memory"
+const TM_BANK         $80      "TASKMEM's flag: its RAM bank r3, at $8000-$9FFF"
 const NI_FROM         0        "NSINFO's answer (NI_SIZE bytes): the mount point (PATH_MAX + 1 bytes, zero-terminated)"
 const NI_PATH         64       "NSINFO: the path in the device (zero-terminated, no leading /)"
 const NI_DEV          128      "NSINFO: the device letter"

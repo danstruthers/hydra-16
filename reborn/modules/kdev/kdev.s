@@ -32,6 +32,8 @@ NSBUF_MAX       = 2048                                      ;   and its text's b
 E_FIDS          = 16                                        ; #e's fids ...
 EF_DIR          = 1                                         ;   each the directory ...
 EF_VAR          = 2                                         ;   or a variable (0: free)
+MBUF            = 512                                       ; /proc/N/mem and ram: a request's bytes at most
+TI_DRIVER       = $01                                       ; (TASKINFO's flags: a driver)
 
 .zeropage
 pp:         .res        1                                   ; A pipe ...
@@ -67,6 +69,11 @@ nsj:        .res        1
 nsbest:     .res        1                                   ;   the next to say ...
 nsbseq:     .res        1                                   ;   its place ...
 nsm:        .res        1                                   ;   and <> 0 for a mount's line)
+rq:         .res        1                                   ; /proc/N/mem's and ram's request (R_READ, R_WRITE) ...
+mbuf:       .res        MBUF                                ;   and their bytes
+ebuf:       .res        ENV_SIZE                            ; /proc/N/env: the environment (TASKREAD's) ...
+etext:      .res        ENV_SIZE                            ;   as text ...
+etlen:      .res        2                                   ;   its length
 p_used:     .res        PIPE_N                              ; Each pipe: in use ...
 p_rdl:      .res        PIPE_N                              ;   where the next read is ...
 p_rdh:      .res        PIPE_N
@@ -1279,6 +1286,40 @@ mod_stat:
             sta         srv_stat + SR_LENGTH
             rts
 :
+            ldy         #SE_HANDLER                         ; (/proc/N/mem: 64K)
+            lda         (srv_ent),Y
+            cmp         #<h_mem
+            bne         :+
+            iny
+            lda         (srv_ent),Y
+            cmp         #>h_mem
+            bne         :+
+            lda         #1
+            sta         srv_stat + SR_LENGTH + 2
+            rts
+:
+            ldy         #SE_HANDLER                         ; (/proc/N/ram: to the last good module's banks'
+            lda         (srv_ent),Y                         ;   end: 128K a module)
+            cmp         #<h_ram
+            bne         :+
+            iny
+            lda         (srv_ent),Y
+            cmp         #>h_ram
+            bne         :+
+            jsr         BANKS
+            ldx         #16
+@last:
+            dex
+            bmi         @none
+            jsr         mod_bit
+            beq         @last
+            inx                                             ; (Modules to it: * $20000)
+            txa
+            asl
+            sta         srv_stat + SR_LENGTH + 2
+@none:
+            rts
+:
             ldy         #SE_HANDLER                         ; (A module's file: h_image's)
             lda         (srv_ent),Y
             cmp         #<h_image
@@ -2066,6 +2107,592 @@ gen_cwd:
 @done:
             rts
 
+; May the client have task srv_id's memory and registers?  Not the kernel task's, nor a driver's (NOTE's rule; one
+; user, so any other task's, as Plan 9's owner may).  OUT: C = 0; or C = 1, .A = E_PERM, E_SRCH
+proc_may:
+            lda         z:srv_id
+            beq         @perm
+            jsr         in_use
+            bcs         @srch
+            lda         info + TI_FLAGS
+            and         #TI_DRIVER
+            bne         @perm
+            clc
+            rts
+
+@srch:
+            lda         #E_SRCH
+            sec
+            rts
+
+@perm:
+            lda         #E_PERM
+            sec
+            rts
+
+; mem: task srv_id's 64K as it sees it: its task RAM, and its RAM bank and paged ROM bank as it has them selected
+; (TASKMEM); the BIOS ROM's page 0 (its own code's: a program runs with W = 0); zeros for the I/O area.  A read or a
+; write takes what's in one of those, MBUF bytes at most (the rest in the next request: the kernel's READ ends at a
+; short count, and cat and cp read on); a write to a ROM, or the I/O area: E_PERM.  Past $FFFF: the end
+h_mem:
+            cmp         #R_OPEN
+            bne         :+
+            jmp         proc_may                            ; (The open: who may)
+:
+            jsr         rw_req
+            bcc         :+
+            clc
+            rts
+:
+            lda         TASK_INBOX + RQ_OFFSET + 2          ; Past $FFFF: the end
+            ora         TASK_INBOX + RQ_OFFSET + 3
+            beq         :+
+            clc
+            rts
+:
+            ldx         #>$A000                             ; n: its area's end: RAM to $A000, the paged ROM to
+            lda         TASK_INBOX + RQ_OFFSET + 1          ;   $E000, the BIOS ROM to $FF00, the I/O area to the
+            cmp         #>$A000                             ;   end (0)
+            bcc         @end
+            ldx         #>$E000
+            cmp         #>$E000
+            bcc         @end
+            ldx         #>$FF00
+            cmp         #>$FF00
+            bcc         @end
+            ldx         #0
+@end:
+            stz         n
+            stx         n + 1
+            sec                                             ; m: what this time
+            lda         n
+            sbc         TASK_INBOX + RQ_OFFSET
+            sta         m
+            lda         n + 1
+            sbc         TASK_INBOX + RQ_OFFSET + 1
+            sta         m + 1
+            jsr         clip
+            lda         TASK_INBOX + RQ_OFFSET + 1
+            cmp         #>$A000
+            bcc         @ram
+            lda         rq                                  ; The ROMs and the I/O area: not written
+            cmp         #R_WRITE
+            beq         @perm
+            lda         TASK_INBOX + RQ_OFFSET + 1
+            cmp         #>$E000
+            bcs         @bios
+            MOVR        r1, TASK_INBOX + RQ_OFFSET          ; Its paged ROM bank: TASKMEM
+            ldx         #TM_READ
+            jsr         taskmem
+            bcs         @done
+            jmp         mem_out
+
+@ram:
+            MOVR        r1, TASK_INBOX + RQ_OFFSET          ; Its RAM, and its bank: TASKMEM
+            jmp         mem_rw
+
+@bios:                                                      ; The BIOS ROM's page 0 (this task's, too), then zeros
+            MOVR        r0, TASK_INBOX + RQ_OFFSET
+            LDR         r1, mbuf
+            MOVR        r2, m
+@byte:
+            lda         r2
+            ora         r2 + 1
+            beq         @read
+            lda         #0
+            ldx         r0 + 1
+            cpx         #>$FF00
+            bcs         :+
+            lda         (r0)
+:
+            sta         (r1)
+            jsr         adv0
+            jsr         adv1
+            lda         r2
+            bne         :+
+            dec         r2 + 1
+:
+            dec         r2
+            bra         @byte
+
+@read:
+            jmp         mem_out
+
+@perm:
+            lda         #E_PERM
+            sec
+@done:
+            rts
+
+; ram: task srv_id's RAM banks, by its bank numbers: offset b * $2000 + o is byte o of its bank b (module m's banks
+; are $m0-$mF: the good modules', BANKS), through TASKMEM's TM_BANK, in one bank at a time (MBUF bytes at most).
+; Past the last good module's banks: the end (a write: E_RANGE); a bank on a module that's bad or missing: E_NOENT
+h_ram:
+            cmp         #R_OPEN
+            bne         :+
+            jmp         proc_may                            ; (The open: who may)
+:
+            jsr         rw_req
+            bcc         :+
+            clc
+            rts
+:
+            lda         TASK_INBOX + RQ_OFFSET + 3          ; Its bank: bits 13-20 of the offset
+            bne         @past
+            lda         TASK_INBOX + RQ_OFFSET + 2
+            cmp         #$20
+            bcs         @past
+            asl
+            asl
+            asl
+            sta         cnt
+            lda         TASK_INBOX + RQ_OFFSET + 1
+            lsr
+            lsr
+            lsr
+            lsr
+            lsr
+            ora         cnt
+            sta         r3                                  ; (TASKMEM's bank)
+            lsr                                             ; Its module: good?  Past the last good one: the end
+            lsr
+            lsr
+            lsr
+            sta         cnt
+            jsr         BANKS                               ; (r0: the good modules, a bit each)
+            ldx         cnt
+            jsr         mod_bit                             ; (Z = 0: good)
+            bne         @good
+            ldx         cnt
+@later:
+            inx                                             ; (A good one after it: E_NOENT)
+            cpx         #16
+            bcs         @past
+            jsr         mod_bit
+            beq         @later
+            lda         #E_NOENT
+            sec
+            rts
+
+@past:
+            lda         rq
+            cmp         #R_WRITE
+            beq         :+
+            clc                                             ; (A read: the end)
+            rts
+:
+            lda         #E_RANGE
+            sec
+            rts
+
+@good:
+            lda         TASK_INBOX + RQ_OFFSET              ; Its address in the bank window ...
+            sta         r1
+            lda         TASK_INBOX + RQ_OFFSET + 1
+            and         #>(BANK_SIZE - 1)
+            ora         #>BANK_WINDOW
+            sta         r1 + 1
+            sec                                             ;   and m: to the bank's end
+            lda         #<(BANK_WINDOW + BANK_SIZE)
+            sbc         r1
+            sta         m
+            lda         #>(BANK_WINDOW + BANK_SIZE)
+            sbc         r1 + 1
+            sta         m + 1
+            jsr         clip
+            lda         #TM_BANK                            ; (mem_rw: TM_BANK with it)
+            bra         mem_rw2
+
+; A read or a write of m bytes of task srv_id's at r1 (r3: the bank, with TM_BANK in .A), through mbuf
+mem_rw:
+            lda         #0
+mem_rw2:
+            sta         cnt
+            lda         rq
+            cmp         #R_WRITE
+            beq         @write
+            ldx         cnt                                 ; TM_READ
+            jsr         taskmem
+            bcs         @done
+            jmp         mem_out
+
+@write:
+            LDR         r0, mbuf                            ; The client's bytes, then TM_WRITE
+            MOVR        r1, TASK_INBOX + RQ_BUF
+            MOVR        r2, m
+            jsr         CLIENT_READ
+            lda         TASK_INBOX + RQ_OFFSET              ; (r1 again: as it was)
+            sta         r1
+            lda         TASK_INBOX + RQ_OFFSET + 1
+            bit         cnt
+            bpl         :+
+            and         #>(BANK_SIZE - 1)
+            ora         #>BANK_WINDOW
+:
+            sta         r1 + 1
+            lda         cnt
+            ora         #TM_WRITE
+            tax
+            jsr         taskmem
+            bcs         @done
+            MOVR        TASK_INBOX + RQ_DONE, m
+            clc
+@done:
+            rts
+
+; Z = 0 if module .X is a good one (bit .X of r0: BANKS's).  Keeps .X
+mod_bit:
+            lda         r0
+            cpx         #8
+            bcc         :+
+            lda         r0 + 1
+:
+            phx
+            pha
+            txa
+            and         #7
+            tax
+            pla
+:
+            dex
+            bmi         :+
+            lsr
+            bra         :-
+:
+            plx
+            and         #1
+            rts
+
+; mem's and ram's request, .A: C = 0, R_READ or R_WRITE (rq it, RQ_DONE 0); C = 1, another (nothing to do)
+rw_req:
+            cmp         #R_READ
+            beq         :+
+            cmp         #R_WRITE
+            beq         :+
+            sec
+            rts
+:
+            sta         rq
+            stz         TASK_INBOX + RQ_DONE
+            stz         TASK_INBOX + RQ_DONE + 1
+            clc
+            rts
+
+; m = m, the count asked and MBUF at most
+clip:
+            lda         TASK_INBOX + RQ_COUNT               ; The count asked, if less
+            cmp         m
+            lda         TASK_INBOX + RQ_COUNT + 1
+            sbc         m + 1
+            bcs         :+
+            MOVR        m, TASK_INBOX + RQ_COUNT
+:
+            lda         m + 1                               ; MBUF at most
+            cmp         #>MBUF
+            bcc         @done
+            bne         @max
+            lda         m
+            beq         @done
+@max:
+            LDR         m, MBUF
+@done:
+            rts
+
+; TASKMEM, .X its flags: m bytes between mbuf and task srv_id's at r1 (r3: its bank)
+taskmem:
+            LDR         r0, mbuf
+            MOVR        r2, m
+            lda         z:srv_id
+            jmp         TASKMEM
+
+; mbuf's m bytes to the client: RQ_DONE
+mem_out:
+            LDR         r0, mbuf
+            MOVR        r1, TASK_INBOX + RQ_BUF
+            MOVR        r2, m
+            jsr         CLIENT_WRITE
+            MOVR        TASK_INBOX + RQ_DONE, m
+            clc
+            rts
+
+; r0, r1 on a byte
+adv0:
+            inc         r0
+            bne         :+
+            inc         r0 + 1
+:
+            rts
+
+adv1:
+            inc         r1
+            bne         :+
+            inc         r1 + 1
+:
+            rts
+
+; regs: its registers as it was switched out (the frame it left: TASKREAD's TR_FRAME) and its bank registers, in
+; hex: "PC=A2FA A=00 X=66 Y=34 S=FD P=36 W=00 U=00 RAM=00 ROM=05".  (A task in a call is shown as it was when it
+; was last switched out)
+gen_regs:
+            jsr         proc_may
+            bcs         @done
+            LDR         r0, chunk
+            lda         z:srv_id
+            ldx         #TR_FRAME
+            jsr         TASKREAD
+            bcs         @done
+            ldx         #0
+@reg:
+            stx         cnt
+            lda         reg_name_lo,X
+            pha
+            lda         reg_name_hi,X
+            tax
+            pla
+            jsr         srv_tputs
+            ldx         cnt
+            ldy         reg_at,X
+            lda         chunk,Y
+            jsr         hex2
+            ldx         cnt
+            inx
+            cpx         #REGS_N
+            bcc         @reg
+            lda         #LF
+            jsr         srv_tputc
+            clc
+@done:
+            rts
+
+; .A as two hex digits
+hex2:
+            pha
+            lsr
+            lsr
+            lsr
+            lsr
+            jsr         @digit
+            pla
+            and         #$0F
+@digit:
+            cmp         #10
+            bcc         :+
+            adc         #'A' - '0' - 10 - 1                 ; (C = 1)
+:
+            adc         #'0'
+            jmp         srv_tputc
+
+; env: its environment, "name=value" a line each (TASKREAD's TR_ENV; a 0 in a value, after an rc list's word, as a
+; space, but at its end), made anew by a read from its start
+h_penv:
+            cmp         #R_READ
+            beq         :+
+            clc
+            rts
+
+:
+            lda         TASK_INBOX + RQ_OFFSET
+            ora         TASK_INBOX + RQ_OFFSET + 1
+            ora         TASK_INBOX + RQ_OFFSET + 2
+            ora         TASK_INBOX + RQ_OFFSET + 3
+            bne         :+
+            jsr         env_make
+            bcs         @done
+:
+            MOVR        n, etlen
+            jsr         img_left                            ; m: what to send
+            lda         m
+            ora         m + 1
+            beq         @end
+            clc                                             ; From the text at the offset, to the client
+            lda         #<etext
+            adc         TASK_INBOX + RQ_OFFSET
+            sta         r0
+            lda         #>etext
+            adc         TASK_INBOX + RQ_OFFSET + 1
+            sta         r0 + 1
+            MOVR        r1, TASK_INBOX + RQ_BUF
+            MOVR        r2, m
+            jsr         CLIENT_WRITE
+            MOVR        TASK_INBOX + RQ_DONE, m
+@end:
+            clc
+@done:
+            rts
+
+; Task srv_id's environment (ebuf: each variable its name's length, its name, its value's length (2), its value; a
+; 0 after the last) as text in etext (etlen).  OUT: C = 0; or C = 1, .A = the error
+env_make:
+            LDR         r0, ebuf
+            lda         z:srv_id
+            ldx         #TR_ENV
+            jsr         TASKREAD
+            bcc         :+
+            rts
+:
+            LDR         r0, ebuf
+            LDR         r1, etext
+@var:
+            lda         r0 + 1                              ; (Its end: no further)
+            cmp         #>(ebuf + ENV_SIZE)
+            bcs         @end
+            lda         (r0)                                ; Its name's length (0: the end)
+            beq         @end
+            tax
+            jsr         adv0
+@name:
+            lda         (r0)
+            sta         (r1)
+            jsr         adv0
+            jsr         adv1
+            dex
+            bne         @name
+            lda         #'='
+            sta         (r1)
+            jsr         adv1
+            lda         (r0)                                ; Its value's length ...
+            sta         n
+            jsr         adv0
+            lda         (r0)
+            sta         n + 1
+            jsr         adv0
+@value:                                                     ;   and its value
+            lda         n
+            ora         n + 1
+            beq         @line
+            lda         (r0)
+            bne         @put
+            lda         n + 1                               ; (A 0: a space; at its end, nothing: rc ends each
+            bne         :+                                  ;   word of a list with one)
+            lda         n
+            cmp         #1
+            beq         @skip
+:
+            lda         #' '
+@put:
+            sta         (r1)
+            jsr         adv1
+@skip:
+            jsr         adv0
+            lda         n
+            bne         :+
+            dec         n + 1
+:
+            dec         n
+            bra         @value
+
+@line:
+            lda         #LF
+            sta         (r1)
+            jsr         adv1
+            bra         @var
+
+@end:
+            sec
+            lda         r1
+            sbc         #<etext
+            sta         etlen
+            lda         r1 + 1
+            sbc         #>etext
+            sta         etlen + 1
+            clc
+@done:
+            rts
+
+; note: a note to the task, written by its name (interrupt, kill, hangup, alarm) or number (1-31): NOTE_POST
+h_pnote:
+            cmp         #R_WRITE
+            beq         :+
+            clc
+            rts
+
+:
+            lda         TASK_INBOX + RQ_COUNT + 1           ; Its text: 15 bytes at most
+            bne         @inval
+            lda         TASK_INBOX + RQ_COUNT
+            beq         @inval
+            cmp         #16
+            bcs         @inval
+            sta         m
+            sta         r2
+            stz         r2 + 1
+            LDR         r0, chunk
+            MOVR        r1, TASK_INBOX + RQ_BUF
+            jsr         CLIENT_READ
+            ldx         m                                   ; (A new line at its end: off)
+            stz         chunk,X
+            dex
+            lda         chunk,X
+            cmp         #LF
+            bne         :+
+            stz         chunk,X
+:
+            lda         chunk                               ; A number?
+            sec
+            sbc         #'0'
+            cmp         #10
+            bcc         @number
+            ldx         #NOTES_N - 1                        ; A name?
+@name:
+            lda         note_name_lo,X
+            sta         pt
+            lda         note_name_hi,X
+            sta         pt + 1
+            ldy         #$FF
+:
+            iny
+            lda         chunk,Y
+            cmp         (pt),Y
+            bne         :+
+            cmp         #0
+            bne         :-
+            lda         note_num,X                          ; (The same)
+            bra         @post
+:
+            dex
+            bpl         @name
+@inval:
+            lda         #E_INVAL
+            sec
+            rts
+
+@number:                                                    ; 1-31: one digit or two
+            sta         cnt
+            lda         chunk + 1
+            beq         @one
+            sec
+            sbc         #'0'
+            cmp         #10
+            bcs         @inval
+            ldx         chunk + 2
+            bne         @inval
+            tax                                             ; (cnt * 10 + it)
+            lda         cnt
+            asl
+            asl
+            clc
+            adc         cnt
+            asl
+            sta         cnt
+            txa
+            clc
+            adc         cnt
+            sta         cnt
+@one:
+            lda         cnt
+            beq         @inval
+            cmp         #32
+            bcs         @inval
+@post:
+            tax
+            lda         z:srv_id
+            jsr         NOTE_POST
+            bcs         @done
+            MOVR        TASK_INBOX + RQ_DONE, TASK_INBOX + RQ_COUNT
+            clc
+@done:
+            rts
+
 ; ns: its namespace, as the binds and mounts that make it, a line each (made anew by a read from its start)
 h_ns:
             cmp         #R_READ
@@ -2761,6 +3388,11 @@ tree_procs:
             SRV_ENTRY   s_args,    1,   SK_TEXT, gen_args,  SM_READ,            0
             SRV_ENTRY   s_cwd,     1,   SK_TEXT, gen_cwd,   SM_READ,            0
             SRV_ENTRY   s_ns,      1,   SK_DATA, h_ns,      SM_READ,            0
+            SRV_ENTRY   s_env,     1,   SK_DATA, h_penv,    SM_READ,            0
+            SRV_ENTRY   s_regs,    1,   SK_TEXT, gen_regs,  SM_READ,            0
+            SRV_ENTRY   s_mem,     1,   SK_DATA, h_mem,     SM_READ | SM_WRITE, 0
+            SRV_ENTRY   s_ram,     1,   SK_DATA, h_ram,     SM_READ | SM_WRITE, 0
+            SRV_ENTRY   s_note,    1,   SK_DATA, h_pnote,   SM_WRITE,           0
             .word       0
 tree_pipe:
             SRV_ENTRY   s_slash,   $FF, SK_DIR,  0,         SM_READ,            0
@@ -2812,5 +3444,28 @@ s_pipe:     .byte       "pipe", 0
 s_kill:     .byte       "kill", 0
 s_interrupt: .byte      "interrupt", 0
 s_note:     .byte       "note", 0
+s_mem:      .byte       "mem", 0
+s_regs:     .byte       "regs", 0
+s_hangup:   .byte       "hangup", 0
+s_alarm:    .byte       "alarm", 0
+note_name_lo: .byte     <s_interrupt, <s_kill, <s_hangup, <s_alarm         ; /proc/N/note's names
+note_name_hi: .byte     >s_interrupt, >s_kill, >s_hangup, >s_alarm
+note_num:   .byte       NOTE_INTERRUPT, NOTE_KILL, NOTE_HANGUP, NOTE_ALARM
+NOTES_N     = * - note_num
+s_rpc:      .byte       "PC=", 0                            ; /proc/N/regs's
+s_empty:    .byte       0
+s_ra:       .byte       " A=", 0
+s_rx:       .byte       " X=", 0
+s_ry:       .byte       " Y=", 0
+s_rs:       .byte       " S=", 0
+s_rp:       .byte       " P=", 0
+s_rw:       .byte       " W=", 0
+s_ru:       .byte       " U=", 0
+s_rram:     .byte       " RAM=", 0
+s_rrom:     .byte       " ROM=", 0
+reg_name_lo: .byte      <s_rpc, <s_empty, <s_ra, <s_rx, <s_ry, <s_rs, <s_rp, <s_rw, <s_ru, <s_rram, <s_rrom
+reg_name_hi: .byte      >s_rpc, >s_empty, >s_ra, >s_rx, >s_ry, >s_rs, >s_rp, >s_rw, >s_ru, >s_rram, >s_rrom
+reg_at:     .byte       TF_PC + 1, TF_PC, TF_A, TF_X, TF_Y, TF_S, TF_P, TF_W, TF_U, TF_RAM, TF_ROM
+REGS_N      = * - reg_at
 
 .include "srvlib.s"

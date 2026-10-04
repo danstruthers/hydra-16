@@ -599,6 +599,10 @@ module.exports = {
       init: 't_dev', modules: ['t_child'], cycles: 40e6,
     },
     {
+      name: 'proc', what: '/proc/N\'s mem (its RAM, bank, ROMs, the I/O area), ram (its banks), regs, env and note; the kernel task\'s and a driver\'s refused',
+      init: 't_proc', modules: ['t_child'], cycles: 40e6,
+    },
+    {
       name: 'spi', what: 'SPI and #S (storage): transactions, kept bytes, modes 0 and 3, one open at a time, the time a byte takes',
       init: 't_spi', cycles: 30e6, machine: { spiEcho: [3, 9] },
       // (The bit loops: 18 cycles a bit in, 33 out; the rest is the request and the copy to or from the client.  At

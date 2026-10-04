@@ -188,6 +188,9 @@ The kernel task (task 0) keeps the kernel's state: its program zero page (`K0_*`
   between the console's bytes.  Its irq entry knows only keys: a frame comes in with them, into the receive ring,
   and is taken out in the serve entry.  While `/dev/ser` is open for reading (`xmodem`), the line is its reader's:
   every byte in is its, and the windows' text waits.
+* **Another task's memory only through `/proc`** (`mem`, `ram`; `regs` too): any task's but the kernel task's and a
+  driver's, as `NOTE` lets any task note any other (one user: Plan 9's owner rule lets every task in).  The kernel's
+  `TASKMEM` serves only a driver (kdev), so the files are the one way in.
 * **A server times a wait itself.**  The kernel has no timed `E_AGAIN`: a client waits for the server's event
   count to change.  A server that must give up on something that doesn't come (`/pc`'s reply) makes the count
   change now and then from an interrupt it owns (the console's timer 2, run on in rounds), and its client, asking

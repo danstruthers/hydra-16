@@ -84,10 +84,11 @@ K_TASKINFO:
             clc
             rts
 
-; TASKREAD: a task's arguments or current directory.  IN: .A = a task ($FF: this one); .X = TR_ARGS or TR_CWD; r0
-; = a buffer (TA_ARGS_MAX + 1 or PATH_MAX + 1 bytes).  OUT: the bytes in it; or C = 1, .A = E_SRCH, E_INVAL
+; TASKREAD: a task's arguments, current directory, environment, or its state and frame.  IN: .A = a task ($FF:
+; this one); .X = TR_ARGS, TR_CWD, TR_ENV or TR_FRAME; r0 = a buffer (TA_ARGS_MAX + 1, PATH_MAX + 1, ENV_SIZE or
+; TF_SIZE bytes).  OUT: the bytes in it; or C = 1, .A = E_SRCH, E_INVAL
 K_TASKREAD:
-            cpx         #TR_CWD + 1
+            cpx         #TR_FRAME + 1
             bcc         :+
             FAIL        E_INVAL
 
@@ -116,7 +117,15 @@ K_TASKREAD_K:
             beq         @srch
             ldy         #0
             lda         K0_TMP3
-            bne         @cwd
+            cmp         #TR_ENV
+            bcc         :++
+            beq         :+
+            jmp         @frame
+:
+            jmp         @env
+:
+            cmp         #TR_CWD
+            beq         @cwd
 @args:
             php
             sei
@@ -151,6 +160,7 @@ K_TASKREAD_K:
             sta         K_PTR
             lda         #>K_XBUF
             sta         K_PTR + 1
+@kcopy:
             ldx         K0_TMP2
             ldy         T_REGISTER
             php
@@ -164,6 +174,218 @@ K_TASKREAD_K:
             clc
             FARCALL     K_KCOPY
             clc
+            rts
+
+@env:                                                       ; Its environment: the kernel task's own (K_ENV)
+            txa
+            asl
+            asl
+            clc
+            adc         #>K_ENV
+            sta         K_PTR + 1
+            lda         #<K_ENV
+            sta         K_PTR
+            lda         #<ENV_SIZE
+            sta         K_CNT
+            lda         #>ENV_SIZE
+            sta         K_CNT + 1
+            bra         @kcopy
+
+@frame:                                                     ; Its state, and the frame it left at TK_SP (on its
+            php                                             ;   stack: its own stack page), and its bank registers
+            sei                                             ;   (their mirrors)
+            stx         T_REGISTER                          ; ---- The task
+            lda         TK_STATE
+            ldy         TK_SP
+            stz         T_REGISTER                          ; ---- Back
+            plp
+            sta         K_XBUF + TF_STATE
+            tya
+            clc
+            adc         #FRAME_SIZE
+            sta         K_XBUF + TF_S
+.repeat     FRAME_SIZE, I
+            php
+            sei
+            stx         T_REGISTER                          ; ---- The task
+            lda         $0100 + FR_U + I,Y
+            stz         T_REGISTER                          ; ---- Back
+            plp
+            sta         K_XBUF + TF_U + I
+.endrepeat
+            php
+            sei
+            stx         T_REGISTER                          ; ---- The task
+            lda         RAM_BANK
+            ldy         ROM_BANK
+            stz         T_REGISTER                          ; ---- Back
+            plp
+            sta         K_XBUF + TF_RAM
+            sty         K_XBUF + TF_ROM
+            ldy         #TF_SIZE
+            jmp         @copy
+
+.assert     ENV_SIZE = $400 .and <K_ENV = 0, error, "TASKREAD's TR_ENV: 4 pages a task, from a page"
+.assert     TF_Y - TF_U = FR_Y - FR_U .and TF_PC - TF_U = FR_PCL - FR_U .and TF_RAM = TF_U + FRAME_SIZE, error, "TF_* and FR_*"
+
+; TASKMEM: bytes between a task's memory, as it sees it, and a buffer here (/proc/N/mem and ram).  IN: .A = the
+; task; .X = TM_READ or TM_WRITE, | TM_BANK; r0 = the buffer; r1 = the address in the task's view, $0000-$DFFF
+; (TM_BANK: $8000-$9FFF, of its RAM bank r3); r2 = the count.  OUT: C = 0; or C = 1, .A = E_PERM (the caller isn't
+; a driver: a program reaches another task's memory only through /proc, whose server decides who may), E_SRCH,
+; E_INVAL
+;   In the caller's task.  A byte at a time, IRQs off for each, T switched to the task and back: TM_PTR is each end's
+; pointer and TM_PARTNER the other task (as kcopy's KC_PTR and KC_PARTNER: TASKMEM's own, so a task part-way through a
+; kcopy is no matter).  The task's $8000-$DFFF are its bank and paged ROM as it has them selected (T's); with TM_BANK
+; its bank register points at bank r3 from the first byte to the last (it isn't running: only an irq entry of its own
+; could see it, and the caller isn't to ask it of a driver).  Modifies .A, .X, .Y, K_TASK, K_TMP, K_PTR, K_CNT
+K_TASKMEM:
+            tay                                             ; (A driver's call only)
+            lda         TK_FLAGS
+            and         #TF_DRIVER
+            bne         :+
+            FAIL        E_PERM
+
+:
+            tya
+            cmp         #TASKS
+            bcs         @srch
+            sta         K_TASK
+            stx         K_TMP
+            clc                                             ; The range's end (past it): $E000 at most; with
+            lda         r1                                  ;   TM_BANK, from $8000 to $A000
+            adc         r2
+            sta         K_PTR
+            lda         r1 + 1
+            adc         r2 + 1
+            sta         K_PTR + 1
+            bcs         @inval
+            ldx         #>BIOS_BASE
+            bit         K_TMP
+            bpl         :+
+            lda         r1 + 1
+            cmp         #>BANK_WINDOW
+            bcc         @inval
+            ldx         #>(BANK_WINDOW + BANK_SIZE)
+:
+            stx         K_CNT
+            lda         K_PTR + 1                           ; (The end at or below it)
+            cmp         K_CNT
+            bcc         @range
+            bne         @inval
+            lda         K_PTR
+            bne         @inval
+@range:
+            ldx         K_TASK
+            ldy         T_REGISTER
+            php
+            sei
+            QL_GET      TK_STATE
+            cmp         #ST_FREE
+            bne         :+
+            plp
+@srch:
+            FAIL        E_SRCH
+
+@inval:
+            FAIL        E_INVAL
+
+:
+            lda         r1                                  ; Its end, and its partner: us
+            QL_PUT      TM_PTR
+            lda         r1 + 1
+            QL_PUT      TM_PTR + 1
+            tya
+            QL_PUT      TM_PARTNER
+            lda         r0                                  ; Ours
+            sta         TM_PTR
+            lda         r0 + 1
+            sta         TM_PTR + 1
+            stx         TM_PARTNER
+            bit         K_TMP                               ; TM_BANK: its bank register at bank r3 (its own kept
+            bpl         :+                                  ;   in its TM_OLDBANK)
+            lda         r3
+            stx         T_REGISTER                          ; ---- The task
+            ldx         RAM_BANK
+            stx         TM_OLDBANK
+            sta         RAM_BANK
+            sty         T_REGISTER                          ; ---- Back
+:
+            plp
+            lda         r2
+            sta         K_CNT
+            lda         r2 + 1
+            sta         K_CNT + 1
+            ldy         #0
+            lda         K_TMP
+            lsr                                             ; (TM_WRITE)
+            bcs         @out
+@in:                                                        ; ---- Its to ours
+            lda         K_CNT
+            ora         K_CNT + 1
+            beq         @done
+            php
+            sei
+            ldx         TM_PARTNER
+            stx         T_REGISTER                          ; ---- The task
+            lda         (TM_PTR),Y
+            ldx         TM_PARTNER
+            stx         T_REGISTER                          ; ---- Back
+            sta         (TM_PTR),Y
+            plp
+            jsr         tm_next
+            bra         @in
+
+@out:                                                       ; ---- Ours to its
+            lda         K_CNT
+            ora         K_CNT + 1
+            beq         @done
+            php
+            sei
+            lda         (TM_PTR),Y
+            ldx         TM_PARTNER
+            stx         T_REGISTER                          ; ---- The task
+            sta         (TM_PTR),Y
+            ldx         TM_PARTNER
+            stx         T_REGISTER                          ; ---- Back
+            plp
+            jsr         tm_next
+            bra         @out
+
+@done:
+            bit         K_TMP                               ; TM_BANK: its own bank back
+            bpl         :+
+            ldx         K_TASK
+            ldy         T_REGISTER
+            php
+            sei
+            stx         T_REGISTER                          ; ---- The task
+            lda         TM_OLDBANK
+            sta         RAM_BANK
+            sty         T_REGISTER                          ; ---- Back
+            plp
+:
+            clc
+            rts
+
+; TASKMEM's next byte: .Y on (a page past: both ends' pointers on a page), K_CNT down.  Keeps .Y's meaning
+tm_next:
+            iny
+            bne         :+
+            inc         TM_PTR + 1                          ; (Ours ...
+            php
+            sei
+            ldx         TM_PARTNER
+            stx         T_REGISTER                          ; ---- The task
+            inc         TM_PTR + 1                          ;   ... and its)
+            ldx         TM_PARTNER
+            stx         T_REGISTER                          ; ---- Back
+            plp
+:
+            lda         K_CNT
+            bne         :+
+            dec         K_CNT + 1
+:
+            dec         K_CNT
             rts
 
 ; DBG_PS: a line for each task in use: "T ST FL PA CPU    NAME" (its number, state, flags, parent, CPU time in
