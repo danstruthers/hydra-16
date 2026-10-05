@@ -3,9 +3,9 @@
 ; does (a string's or a character's text as it is): its reference.md, section 2's "Printing", and LVal.cs's ToStr.
 ; Into the output (out.inc's out_byte).
 ;   Without recursion: each list being printed is on a stack (the cons it's at, its closer), PRINT_DEPTH deep (one
-; deeper is "..."); so is a function (its formals, then its body).  Nothing here allocates, so the values stay where
-; they are.  Numbers past a fixnum, hashes and streams get their own forms in the phases that make them (as yet, a
-; placeholder).
+; deeper is "..."); so is a function (its formals, then its body), and a hash's items (<hash>, then its entries
+; {key value tag...} and its tags as a list; a hash in a hash, its list alone).  Nothing here allocates, so the
+; values stay where they are.  Streams get their own form in the phase that makes them (as yet, a placeholder).
 
 PRINT_DEPTH     = 255
 
@@ -15,20 +15,23 @@ pn:         .res        2                                   ;   a count ...
 
 .bss
 pm:         .res        1                                   ;   the form (0: repr, 1: print's) ...
-pd:         .res        1                                   ;   and the lists open
+pd:         .res        1                                   ;   and the lists open ...
+p_inhash:   .res        1                                   ;   and the hashes' among them
 ps_lo:      .res        PRINT_DEPTH                         ; Each list open: the cons it's at (its car next) ...
 ps_hi:      .res        PRINT_DEPTH
-ps_close:   .res        PRINT_DEPTH                         ;   its closer ...
+ps_close:   .res        PRINT_DEPTH                         ;   its closer (bit 7: a hash's) ...
 ps_mode:    .res        PRINT_DEPTH                         ;   and what it is: 0 a list; 1, 2 a function, its formals
                                                             ;   or its body out
 p_digit:    .res        1                                   ; (char_name's: the code looked for)
 
 .segment "CODE2"
 
-; A value out.  IN: .A, .X = it; .Y = the form: 0 repr (the REPL's), 1 print's
+; A value out.  IN: .A, .X = it; .Y = the form: 0 repr (the REPL's), 1 print's (a string or a character, as it is;
+; what's in a list, as repr has it)
 print_val:
             sty         pm
             stz         pd
+            stz         p_inhash
 @value:
             sta         pv
             stx         pv + 1
@@ -62,8 +65,12 @@ print_val:
             jmp         @func
 @lb202:
             cmp         #PK_PARTIAL
-            bne         @lb18
+            bne         @lb201
             jmp         @partial
+@lb201:
+            cmp         #PK_HASH
+            bne         @lb18
+            jmp         @hash
 @lb18:
             cmp         #PK_BIGNUM                          ; (A number: numtext.inc's)
             bcc         :+
@@ -136,6 +143,7 @@ print_val:
             lda         pv + 1
             sta         ps_hi,x
             inc         pd
+            stz         pm                                  ; (What's in it: as repr has it, as danlang's ToStr)
             lda         pv                                  ; (Its formals first)
             ldx         pv + 1
             ldy         #0
@@ -170,7 +178,9 @@ print_val:
 :
             ldx         pd
             cpx         #PRINT_DEPTH
-            bcs         @deep
+            bcc         @lb301
+            jmp         @deep
+@lb301:
             lda         #' '
             jsr         out_byte
             lda         #')'
@@ -181,7 +191,45 @@ print_val:
             lda         pv + 1
             sta         ps_hi,x
             inc         pd
+            stz         pm                                  ; (What's in it: as repr has it, as danlang's ToStr)
             jmp         @item
+@hash:
+            lda         pv                                  ; (A hash: a proxy's, its own)
+            ldx         pv + 1
+            ldy         #H_FLAGS
+            jsr         cell_get
+            and         #H_PROXY
+            beq         :+
+            lda         pv
+            ldx         pv + 1
+            ldy         #H_REAL
+            jsr         cell_get
+            sta         pv
+            stx         pv + 1
+:
+            lda         p_inhash                            ; (<hash>, unless it's in a hash)
+            bne         :+
+            lda         #<s_hash
+            ldx         #>s_hash
+            jsr         out_text
+:
+            lda         pv                                  ; (Its items: a list; none, NIL)
+            ldx         pv + 1
+            ldy         #H_ITEMS
+            jsr         cell_get
+            sta         pv
+            stx         pv + 1
+            ora         pv + 1
+            bne         :+
+            lda         #<s_nil
+            ldx         #>s_nil
+            jsr         out_text
+            jmp         @after
+:
+            inc         p_inhash
+            lda         #'{'
+            ldy         #'}' | $80
+            jmp         @list
 @scoped:
             lda         pv                                  ; (A Q-expression and its scope: the Q-expression)
             ldx         pv + 1
@@ -208,6 +256,7 @@ print_val:
             lda         pv + 1
             sta         ps_hi,x
             inc         pd
+            stz         pm                                  ; (What's in it: as repr has it, as danlang's ToStr)
             bra         @item
 @deep:
             lda         #<s_deep
@@ -223,6 +272,10 @@ print_val:
             ora         ps_hi,x
             bne         @space
             lda         ps_close,x
+            bpl         :+
+            dec         p_inhash                            ; (A hash's end)
+            and         #$7F
+:
             jsr         out_byte
             dec         pd
             bra         @after

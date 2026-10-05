@@ -2113,6 +2113,81 @@ k_sort:
 :
             bra         sort_on
 
+; (hash-create [entries]), (to# entries), (hash-put h entry...): each entry's value evaluated in the caller's scope,
+; then put (hashes.inc's h_begin and h_step: a frame K_HASH while one is evaluated)
+bi_hash_create:
+            lda         #HM_CREATE
+            bra         hash_begin
+bi_to_hash:
+            lda         #HM_TO
+            bra         hash_begin
+bi_hash_put:
+            lda         #HM_PUT
+hash_begin:
+            sta         h_mode
+            jsr         frame_check
+            FARN        4, h_begin
+            bcc         :+
+            jmp         ev_nomem
+:
+            beq         hash_value
+            PUSHV       ee                                  ; (Its frame: [ee hash items entry state first last])
+            PUSHV       et
+            PUSHV       cr
+            lda         #0
+            tax
+            jsr         push
+            lda         h_st
+            ldx         #0
+            jsr         fix_ax
+            jsr         push
+            lda         #0
+            tax
+            jsr         push
+            jsr         push
+            PUSHK       K_HASH
+            lda         #$FF
+hash_on:
+            FARN        4, h_step
+            bcc         :+
+            lda         #HF_SIZE / 2 + 1                    ; (No room: its frame dropped, then the error)
+            jsr         drop
+            jsr         hash_done
+            jmp         ev_nomem
+:
+            bne         hash_eval
+            jsr         hash_done
+hash_value:
+            jmp         ev_return
+hash_eval:
+            jmp         ev_eval
+; Its frame dropped (h_step's)
+hash_done:
+            lda         depth
+            bne         :+
+            dec         depth + 1
+:
+            dec         depth
+            rts
+; A value evaluated, ex
+k_hash:
+            PUSHK       K_HASH
+            lda         #0
+            bra         hash_on
+
+; (hash-call h key x...): the method at key applied to the values after it (&0 the hash), as (h key x...) is
+bi_hash_call:
+            FARN        4, h_call
+            bcc         :+
+            jmp         ev_nomem
+:
+            bne         :+
+            stz         ev_inargs
+            jsr         drop_args
+            jmp         ev_return
+:
+            jmp         ev_apply_values
+
 ; (load path): the file's expressions evaluated in turn, in the global scope; the last's value.  Its error, or a
 ; reader's, is "path: message".  Read an item at a time (read_item), the reader's text refilled from the file; a load
 ; while it waits for a value (one nested) uses the text too, so when the value comes, if the text isn't its own any

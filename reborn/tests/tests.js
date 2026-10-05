@@ -540,11 +540,10 @@ function forthCard() {
   return [imageCard(0, f, 16384)];
 }
 
-// hylang's card (the hysuite test's): danlang's suite's files (tests/hylang), hylang's own (run5.hl), and danlang's
+// hylang's card (the hysuite test's): danlang's suite's files (tests/hylang), hylang's own (run6.hl), and danlang's
 // library (tests/hylang/lib: globals.dl, dice.dl, screen.dl) as /lib/hylang's NAME.hl, where load finds a bare name.
-// As yet (phase 5) types.dl's checks of a hash (phase 6) and a stream (phase 7) are left out, and bits.dl's of
-// streams (its last part)
-const hylangLater = l => /^\(check/.test(l) && /#\(\)|\bstdout\b/.test(l);
+// As yet (phase 6) types.dl's checks of a stream (phase 7) are left out, and bits.dl's of streams (its last part)
+const hylangLater = l => /^\(check/.test(l) && /\bstdout\b/.test(l);
 function hylangFile(n, data) {
   if (n === 'types.dl') return data.split('\n').filter(l => !hylangLater(l)).join('\n');
   if (n === 'bits.dl') return data.slice(0, data.indexOf('; bytes to and from a stream'));
@@ -616,7 +615,7 @@ const HYLANG_LINES = [
   ['(fun {mk n} {fn {x} {+ x n}})', 'NIL'], ['((mk 5) 1)', '6'],
   ['(def {my-if} (fexpr {c a b} {if (eval c) (eval a) (eval b)}))', 'NIL'], ['(my-if NIL (error "no") 2)', '2'],
   ['(/ 7 0)', 'Error: Division by zero.'], ['(* 200 200)', '40000'],
-  ['(hash-get 1 2)', 'Error: Not yet: \'hash-get\''], ['(fun {inf} {inf})', 'NIL'],
+  ['(time)', 'Error: Not yet: \'time\''], ['(fun {inf} {inf})', 'NIL'],
   ['(filter (fn {x} {> x 1}) {1 2 3})', '{2 3}'], ['(foldr - 0 {1 2 3})', '2'], ['((foldl +) 0 {1 2})', '3'],
   ['(list (any? neg? {1 -1}) (all? pos? {}) (find neg? {1 -2}) (count neg? {-1 2 -3}) (sum {1 2 3}) (product {2 3}))', '{T T -2 2 6 6}'],
   ['(map 5 {1})', 'Error: S-Expression starts with incorrect type. Got Number, Expected Function.'],
@@ -629,6 +628,17 @@ const HYLANG_LINES = [
   ['(list (to-str 255 "x") (to-str -7 "#m") (val "#zHYDRA") (to-fixed 2/3) (truncate -7/2) (fib 100))', '{"#xFF" "#mst" 30157606 0.6666666666 -3 354224848179261915075}'],
   ['(list (shl 1 40) (bit-and -1 #xffff) (hex 255 4) (bin 5) (lo -1) (word 52 18))', '{1099511627776 65535 "00FF" "101" 255 4660}'],
   ['(error-code (bit-and 1.5 1))', ':inval'], ['(< (random 100000000000000000000000) 100000000000000000000000)', 'T'],
+  ['(list (str-split "a,b;;c" {"," ";"}) (str-upper "hi") (char-at "abc" 1) (str-pad-left "7" 3 "0") (code-char 66))',
+    '{{"a" "b" "" "c"} "HI" \\b "007" \\B}'],
+  ['(list (str-trim " x ") (str-replace "a-b" "-" "+") (str-join {1 "a" :b} ",") (str-repeat "ab" 2) (alpha? "ab"))',
+    '{"x" "a+b" "1,a,:b" "abab" T}'],
+  ['(def {h} (hash-create {{:a 1} {"s" (+ 1 1)} {2 :two} :t}))', 'NIL'], ['h', '<hash>{{:a 1} {"s" 2} {2 :two} :t}'],
+  ['(list (h "s") (hash-get h 2.0) (hash-keys h) (len h) (from# (hash-clone h {:b 3})))',
+    '{2 :two {:a "s" 2} 3 {{:a 1} {"s" 2} {2 :two} {:b 3} :t}}'],
+  ['(def {o} (to# {{:n 1} {:inc (fn {} {hash-put &0 {:n (+ (&0 :n) 1)}})} {:k 7 :__private}}))', 'NIL'],
+  ['(list (o :inc) (hash-call o :inc) (o :n) (eq o (hash-clone o)))', '{1 2 3 T}'],
+  ['(o :k)', 'Error: hash-get error: cannot access private hash entry'],
+  ['(do (hash-lock h) (hash-put h {:new 1}))', 'Error: hash-put error: cannot add new entries to a locked hash'],
 ];
 // hylang -g's lines (a collection before every allocation)
 const HYLANG_G = [
@@ -640,6 +650,8 @@ const HYLANG_G = [
   ['(list (subset {1 2 3} 1) (to-atom "x"))', '{{2 3} :x}'],
   ['(list (* 99999999999 99999999999) (/ 7 2) (+ 0.5 0.25) (/ (complex 1 2) (complex 3 4)) (to-str 1/2 "#b"))', '{9999999999800000000001 7/2 0.75 11/25+2/25i "#b1/#b10"}'],
   ['(list (val "#[01]101") (fib 100) (shl -3 70) (to-fixed 1/3 5))', '{5 354224848179261915075 -3541774862152233910272 0.33333}'],
+  ['(def {g} (to# {{:a "x"} {:b {1 2}} :t}))', 'NIL'],
+  ['(list (g :b) (from# (hash-clone g {:c 3})) (str-split "a b" " ") (str-upper \\q))', '{{1 2} {{:a "x"} {:b {1 2}} {:c 3} :t} {"a" "b"} \\Q}'],
 ];
 
 // A test's lines typed, each at its prompt, and its expect (as the tools test's)
@@ -1169,7 +1181,7 @@ module.exports = {
         { what: 'a collection, 9000 cells live, a cell', from: '<gc9k', to: 'gc9k>', per: 9000, max: 255 }],
     },
     {
-      name: 'hylang', what: 'hylang\'s REPL, evaluator, built-ins and numbers (phases 3, 4 and 5): the reader\'s every form (in Q-expressions, printed as they\'re read) and its errors, an expression over lines, 255 brackets open; lines evaluated: def, fn, fun, recursion 1,000 deep (2,500 the most: deeper, an error), a tail loop, errors, partial application, too many arguments, &_, let, the loops, output-of, try, map, format, + of strings, cmp, closures, fexprs, a built-in not yet made; numbers past a fixnum, fractions, fixed decimals and complex numbers, read in bases and written in them, to-fixed, truncate, fib, random, the bits; filter, the folds, any?, all?, find, count, sum, product, sort (by cmp, by a function, its error), subset, index-of, gensym, to-atom, random; Ctrl-C at the prompt and in a loop; (exit 3); stdin a pipe, its end; hylang -g (a collection before every allocation)',
+      name: 'hylang', what: 'hylang\'s REPL, evaluator, built-ins, numbers, strings and hashes (phases 3 to 6): the reader\'s every form (in Q-expressions, printed as they\'re read) and its errors, an expression over lines, 255 brackets open; lines evaluated: def, fn, fun, recursion 1,000 deep (2,500 the most: deeper, an error), a tail loop, errors, partial application, too many arguments, &_, let, the loops, output-of, try, map, format, + of strings, cmp, closures, fexprs, a built-in not yet made; numbers past a fixnum, fractions, fixed decimals and complex numbers, read in bases and written in them, to-fixed, truncate, fib, random, the bits; the string built-ins; hashes (made with their values evaluated, called, a method with &0, a private entry, a locked hash, cloned, listed); filter, the folds, any?, all?, find, count, sum, product, sort (by cmp, by a function, its error), subset, index-of, gensym, to-atom, random; Ctrl-C at the prompt and in a loop; (exit 3); stdin a pipe, its end; hylang -g (a collection before every allocation)',
       init: 't_rc', cycles: 600e6,
       // (Each line typed at a prompt: hylang> and, for more lines, the closers it wants then " <")
       get machine() {
@@ -1180,7 +1192,7 @@ module.exports = {
           '\u0101hylang -g\r' + HYLANG_G.map(l => '\u0101' + l[0] + '\r').join('') + '\u0101(list 1 (list 2 (list 3)) {5\r\u0101"""6\r\u01017"""})\r' +
           '\u0101exit\r' + '\u0101echo $status\r' };
       },
-      expect: ['hylang (danlang on the Hydra-16), phase 5: its numbers\nType \'exit\' to Exit\n\n',
+      expect: ['hylang (danlang on the Hydra-16), phase 6: its strings and hashes\nType \'exit\' to Exit\n\n',
         HYLANG_LINES.map(l => (l[2] || 'hylang> ') + l[0] + '\n' + (l[1] === undefined ? '' : '=> ' + l[1] + '\n')).join(''),
         'hylang> (list 1\n\t) <\nhylang> (inf)\n=> Error: interrupted\nhylang> (exit 3)\n\n% echo $status\n3\n%',
         'hylang> \t} <=> Error: missing }\n', 'hylang> => 42\nhylang> => exit\n\n%',
@@ -1189,10 +1201,10 @@ module.exports = {
           'hylang> exit\n=> exit\n% echo $status\n\n%'],
     },
     {
-      name: 'hysuite', what: 'hylang\'s suite (phase 5): danlang\'s eval.dl, scope.dl, control.dl, errors.dl, lists.dl, numbers.dl, types.dl, bits.dl and library.dl (their checks of hashes and streams left out), with its harness and its library (globals.dl, dice.dl, screen.dl: /lib/hylang\'s, where load finds a bare name, and use), loaded from a card (load reads a file an item at a time, refilled as it goes; a load nested in another), and a tail loop of 50,000 steps',
+      name: 'hysuite', what: 'hylang\'s suite (phase 6): danlang\'s eval.dl, scope.dl, control.dl, errors.dl, lists.dl, numbers.dl, strings.dl, hashes.dl, types.dl, bits.dl and library.dl (their checks of streams left out), with its harness and its library (globals.dl, dice.dl, screen.dl: /lib/hylang\'s, where load finds a bare name, and use), loaded from a card (load reads a file an item at a time, refilled as it goes; a load nested in another), and a tail loop of 50,000 steps',
       init: 't_rc', cycles: 6500e6,
-      get machine() { return { sd: hylangCard(), input: '\u0101cd /sd/0; hylang\r' + '\u0101(load "run5.hl")\r' + '\u0101exit\r' }; },
-      expect: ['hylang> (load "run5.hl")\n738 checks, 0 failed\n=> NIL\nhylang> '],
+      get machine() { return { sd: hylangCard(), input: '\u0101cd /sd/0; hylang\r' + '\u0101(load "run6.hl")\r' + '\u0101exit\r' }; },
+      expect: ['hylang> (load "run6.hl")\n929 checks, 0 failed\n=> NIL\nhylang> '],
     },
     {
       name: 'kcopy', what: 'spike S2: copying between tasks',

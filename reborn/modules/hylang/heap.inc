@@ -10,9 +10,9 @@
 ;   A page holds one kind of cell (PK_*), all of one size (kd_size: 4 to 64 bytes), each word a value but those
 ; kd_raw says aren't (a length, a blob, flags).  Each kind's free cells are a list (fl_lo/fl_hi: a free cell's first
 ; word the next), filled from a free page as it needs one; cell_alloc takes the first, its words NILs.
-;   Blobs (a string's bytes, a bignum's, a symbol's name, a hash's table) are in banks of their own (up to 16), each
-; filled upward from byte 4: the owner (the cell whose blob it is: kd_blob says which word), the size, then the
-; bytes, a whole number of words.  A blob reference is its bank (bits 15-12) and its place in words (bits 11-0).
+;   Blobs (a string's bytes, a bignum's, a symbol's name) are in banks of their own (up to 16), each filled upward
+; from byte 4: the owner (the cell whose blob it is: kd_blob says which word), the size, then the bytes, a whole
+; number of words.  A blob reference is its bank (bits 15-12) and its place in words (bits 11-0).
 ;   The collector (gc_collect) marks (a bit for each 4 bytes of the cell heap, in marks) from the roots: the value
 ; registers (VR0-VR7 and hv), the root stack (root_push, root_pop), the symbols (sym_lo/hi) and what gc_hook marks
 ; (the evaluator's, from phase 3).  Each cell marked is pushed on the mark stack and scanned: its values marked, its
@@ -1606,11 +1606,11 @@ kd_size:    .byte       0, 0, 0                             ; (PK_NONE, PK_IMM, 
             .byte       8, 16, 32, 64                       ; (The frames)
 kd_raw:     .byte       0, 0, 0
             .byte       %0000, %0000, %0000, %0011, %0011, %0000, %0000, %0000, %0000
-            .byte       %0000, %1001, %1001, %1000, %1101, %1111
+            .byte       %0000, %1001, %1001, %1000, %1000, %1111
             .byte       %0000, %0000, %0000, %0000
 kd_blob:    .byte       $FF, $FF, $FF
             .byte       $FF, $FF, $FF, 1, 1, $FF, $FF, $FF, $FF
-            .byte       $FF, 0, 0, $FF, 0, 2
+            .byte       $FF, 0, 0, $FF, $FF, 2
             .byte       $FF, $FF, $FF, $FF
 kd_spine:   .byte       $FF, $FF, $FF
             .byte       1, 1, 0, $FF, $FF, $FF, $FF, $FF, $FF

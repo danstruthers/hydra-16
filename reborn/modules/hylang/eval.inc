@@ -73,7 +73,9 @@ K_EACHF3        = 28            ; [f]: each's list evaluated (its function first
 K_DOTF2         = 29            ; [cr ee]: dotimes' count evaluated (its function next)
 K_DOTF3         = 30            ; [n]: dotimes' function evaluated (its count first)
 K_SORT          = 31            ; [less runs next nlast a b out olast]: sort's less given two items
-K_KINDS         = 32
+K_HKEY          = 32            ; [cf cr ee]: a hash call's key evaluated (cf: the hash)
+K_HASH          = 33            ; [ee hash items entry state first last]: a hash's entry evaluated, or its value
+K_KINDS         = 34
 
 .macro PUSHK k
             lda         #<FIX(k)
@@ -659,8 +661,12 @@ ev_head:
             jmp         ev_fcall
 :
             cmp         #PK_PARTIAL
-            bne         @notfn
+            bne         :+
             jmp         ev_pcall
+:
+            cmp         #PK_HASH
+            bne         @notfn
+            jmp         ev_hcall
 @notfn:
             lda         cr                                  ; (No arguments: itself)
             ora         cr + 1
@@ -674,6 +680,43 @@ ev_head:
             LDAX        s_expected
             jsr         msg_out
             jmp         ev_err_end
+
+; A hash called (ex), (h key arg...): with no arguments, itself; else its key evaluated, then the value there
+; (hashes.inc's h_at): a function, a method (&0 the hash), called with the arguments after it as any function is;
+; anything else the value, and arguments after it an error
+ev_hcall:
+            lda         cr
+            ora         cr + 1
+            bne         :+
+            jmp         ev_return
+:
+            MOVW        cf, ex
+            jsr         cr_next                             ; (Its key)
+            jsr         is_call
+            bcs         @frame
+            jsr         ev_simple
+            bra         hcall_key
+@frame:
+            jsr         frame_check
+            PUSHV       cf
+            PUSHV       cr
+            PUSHV       ee
+            PUSHK       K_HKEY
+            jmp         ev_eval
+k_hkey:
+            POPV        ee
+            POPV        cr
+            POPV        cf
+hcall_key:
+            jsr         is_err
+            bcc         :+
+            jmp         ev_return
+:
+            FARN        4, h_at
+            bcc         :+
+            jmp         ev_nomem
+:
+            jmp         ev_head
 
 ; (exit n): the status evaluated, then the end
 ev_exit:
@@ -2026,9 +2069,11 @@ s_nomem_n = * - s_nomem
 k_tab:      .word       k_top, k_head, k_arg, k_if, k_do, k_and, k_or, k_eval, k_exit, k_defn, k_defv, k_letb
             .word       k_letx, k_try, k_tryh, k_wtest, k_wbody, k_eachf, k_eachb, k_eachl, k_dotf, k_dotb
             .word       k_dotn, k_space, k_output, k_walk, k_load, k_eachf2, k_eachf3, k_dotf2, k_dotf3, k_sort
+            .word       k_hkey, k_hash
 k_info:     .byte       1, 0,   0, 2,   1, $FF, 0, 2,   0, 2,   0, 2,   0, 2,   0, 1,   0, 0,   0, 3,   1, 4
             .byte       0, 4,   0, 2,   1, 2,   0, 1,   0, 3,   0, 3,   0, 2,   0, 5,   0, 3,   0, 3,   0, 6
             .byte       0, 3,   0, 2,   1, 3,   0, 6,   1, 4,   0, 2,   0, 1,   0, 2,   0, 1,   0, 8
+            .byte       0, 3,   1, 7
 
 .code
 

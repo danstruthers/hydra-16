@@ -1,15 +1,15 @@
 ; ****************************************************************************
-; hylang - danlang on the Hydra-16 (docs/hylang.md), written again from scratch.  As yet (phase 5) its REPL, its
-; evaluator, the list and type built-ins, the library's and the numbers: a line read (with the lines that go on with
-; it, while a bracket or a here string is open), evaluated, its value printed as danlang's REPL prints it.  hylang -g
-; collects before every allocation (a test of what's kept as a root).
-;   A program of four banks: the evaluator, its special forms, the dispatch and the built-ins that run it in the
-; first (eval.inc, forms.inc, builtins.inc); the reader, the printer, the list built-ins and those that write values
-; in the second (read.inc, print.inc, lists.inc, eqcmp.inc, valout.inc); the numbers in the third (nums.inc, numreg.inc,
-; numval.inc, numtext.inc, numbi.inc, numbits.inc); strings, hashes, streams and the system in the fourth, with the
-; most of the RAM code (DATA4, hylang.cfg: copied to the RAM as hylang starts).  What every bank calls is in the
-; task's RAM: the heap (heap.inc), the output (out.inc), the evaluation stack (stack.inc), and the note handler here;
-; a bank calls another through FARN.
+; hylang - danlang on the Hydra-16 (docs/hylang.md), written again from scratch.  As yet (phase 6) its REPL, its
+; evaluator, the list and type built-ins, the library's, the numbers, the strings and the hashes: a line read (with
+; the lines that go on with it, while a bracket or a here string is open), evaluated, its value printed as danlang's
+; REPL prints it.  hylang -g collects before every allocation (a test of what's kept as a root).
+;   A program of four banks: the evaluator, its special forms, the dispatch and the built-ins that run it in the first
+; (eval.inc, forms.inc, builtins.inc); the reader, the printer, the list built-ins and those that write values in the
+; second (read.inc, print.inc, lists.inc, eqcmp.inc, valout.inc); the numbers in the third (nums.inc, numreg.inc,
+; numval.inc, numtext.inc, numbi.inc, numbits.inc); the hashes, the strings (hashes.inc, strs.inc), streams and the
+; system in the fourth, with the most of the RAM code (DATA4, hylang.cfg: copied to the RAM as hylang starts).  What
+; every bank calls is in the task's RAM: the heap (heap.inc), the output (out.inc), the evaluation stack (stack.inc),
+; and the note handler here; a bank calls another through FARN.
 
 .include "hydra.inc"
 .include "hyx2.inc"
@@ -38,6 +38,8 @@ HL_DATA4        = 1             ; (The RAM code in DATA4: hylang.cfg)
 .include "numtext.inc"
 .include "numbi.inc"
 .include "numbits.inc"
+.include "hashes.inc"
+.include "strs.inc"
 
 IBUF_SIZE       = 128           ; stdin read this much at a time
 
@@ -332,7 +334,7 @@ getc_in:
             rts
 
 .rodata
-s_banner:   .byte       "hylang (danlang on the Hydra-16), phase 5: its numbers", LF
+s_banner:   .byte       "hylang (danlang on the Hydra-16), phase 6: its strings and hashes", LF
             .byte       "Type 'exit' to Exit", LF, LF, 0
 s_prompt:   .byte       "hylang> ", 0
 s_more:     .byte       " <", 0

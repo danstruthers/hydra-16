@@ -8,8 +8,9 @@
 ; machine (BF_MACHINE) are jumped to.
 
 ANY             = 255           ; (The most a built-in takes: any number)
-B2              = 1             ; (Its code in the second bank, or the third: BF_BANK's)
+B2              = 1             ; (Its code in the second bank, the third or the fourth: BF_BANK's)
 B3              = 2
+B4              = 3
 
 BI_N            .set 0
 
@@ -81,25 +82,25 @@ BIN_MUL         = BI_N
             BI          "index-of", 2, 2, B2, bl_index_of
             BI          "last-index-of", 2, 2, B2, bl_last_index_of
             BI          "substring", 2, 3, B2, bo_substring
-            BI          "char-at", 2, 2, B3, bi_notyet
-            BI          "str-split", 1, 2, B3, bi_notyet
-            BI          "str-upper", 1, 1, B3, bi_notyet
-            BI          "str-lower", 1, 1, B3, bi_notyet
-            BI          "str-trim", 1, 1, B3, bi_notyet
-            BI          "str-replace", 3, 3, B3, bi_notyet
-            BI          "str-join", 1, 2, B3, bi_notyet
-            BI          "str-chars", 1, 1, B3, bi_notyet
-            BI          "str-pad-left", 2, 3, B3, bi_notyet
-            BI          "str-pad-right", 2, 3, B3, bi_notyet
-            BI          "str-repeat", 2, 2, B3, bi_notyet
+            BI          "char-at", 2, 2, B4, bi_char_at
+            BI          "str-split", 1, 2, B4, bi_str_split
+            BI          "str-upper", 1, 1, B4, bi_str_upper
+            BI          "str-lower", 1, 1, B4, bi_str_lower
+            BI          "str-trim", 1, 1, B4, bi_str_trim
+            BI          "str-replace", 3, 3, B4, bi_str_replace
+            BI          "str-join", 1, 2, B4, bi_str_join
+            BI          "str-chars", 1, 1, B4, bi_str_chars
+            BI          "str-pad-left", 2, 3, B4, bi_str_pad_left
+            BI          "str-pad-right", 2, 3, B4, bi_str_pad_right
+            BI          "str-repeat", 2, 2, B4, bi_str_repeat
             BI          "format", 1, ANY, B2, bo_format
-            BI          "char-code", 1, 1, B3, bi_notyet
-            BI          "code-char", 1, 1, B3, bi_notyet
-            BI          "alpha?", 1, 1, B3, bi_notyet
-            BI          "digit?", 1, 1, B3, bi_notyet
-            BI          "space?", 1, 1, B3, bi_notyet
-            BI          "upper?", 1, 1, B3, bi_notyet
-            BI          "lower?", 1, 1, B3, bi_notyet
+            BI          "char-code", 1, 1, B4, bi_char_code
+            BI          "code-char", 1, 1, B4, bi_code_char
+            BI          "alpha?", 1, 1, B4, bi_alpha_p
+            BI          "digit?", 1, 1, B4, bi_digit_p
+            BI          "space?", 1, 1, B4, bi_space_p
+            BI          "upper?", 1, 1, B4, bi_upper_p
+            BI          "lower?", 1, 1, B4, bi_lower_p
             BI          "read", 1, 1, B3, bi_notyet
             BI          "open", 1, 2, B3, bi_notyet
             BI          "close", 1, 1, B3, bi_notyet
@@ -138,26 +139,26 @@ BIN_MUL         = BI_N
             BI          "expr?", 0, 1, BF_SPECIAL, sf_expr
             BI          "qexpr?", 1, 1, BF_ERRORS | B3, bi_is_qexpr
             BI          "sexpr?", 1, 1, BF_ERRORS | B3, bi_is_sexpr
-            BI          "hash-create", 0, 1, B3, bi_notyet
-            BI          "hash-get", 2, 2, B3, bi_notyet
-            BI          "hash-put", 2, ANY, B3, bi_notyet
-            BI          "to#", 1, 1, B3, bi_notyet
-            BI          "from#", 1, 1, B3, bi_notyet
-            BI          "hash-key?", 2, 2, B3, bi_notyet
-            BI          "hash-keys", 1, 1, B3, bi_notyet
-            BI          "hash-values", 1, 1, B3, bi_notyet
-            BI          "hash-call", 2, ANY, B3, bi_notyet
-            BI          "hash-clone", 1, ANY, B3, bi_notyet
-            BI          "hash-remove", 2, 2, B3, bi_notyet
-            BI          "hash-add-tag", 2, ANY, B3, bi_notyet
-            BI          "hash-lock", 1, ANY, B3, bi_notyet
-            BI          "hash-make-const", 1, ANY, B3, bi_notyet
-            BI          "hash-make-private", 1, ANY, B3, bi_notyet
-            BI          "hash-make-not-nil", 1, ANY, B3, bi_notyet
-            BI          "hash-tag?", 2, 2, B3, bi_notyet
-            BI          "hash-locked?", 1, 2, B3, bi_notyet
-            BI          "hash-private?", 1, 2, B3, bi_notyet
-            BI          "hash-const?", 1, 2, B3, bi_notyet
+            BI          "hash-create", 0, 1, BF_MACHINE, bi_hash_create
+            BI          "hash-get", 2, 2, B4, bi_hash_get
+            BI          "hash-put", 2, ANY, BF_MACHINE, bi_hash_put
+            BI          "to#", 1, 1, BF_MACHINE, bi_to_hash
+            BI          "from#", 1, 1, B4, bi_from_hash
+            BI          "hash-key?", 2, 2, B4, bi_hash_key_p
+            BI          "hash-keys", 1, 1, B4, bi_hash_keys
+            BI          "hash-values", 1, 1, B4, bi_hash_values
+            BI          "hash-call", 2, ANY, BF_MACHINE, bi_hash_call
+            BI          "hash-clone", 1, ANY, B4, bi_hash_clone
+            BI          "hash-remove", 2, 2, B4, bi_hash_remove
+            BI          "hash-add-tag", 2, ANY, B4, bi_hash_add_tag
+            BI          "hash-lock", 1, ANY, B4, bi_hash_lock
+            BI          "hash-make-const", 1, ANY, B4, bi_hash_make_const
+            BI          "hash-make-private", 1, ANY, B4, bi_hash_make_private
+            BI          "hash-make-not-nil", 1, ANY, B4, bi_hash_make_not_nil
+            BI          "hash-tag?", 2, 2, B4, bi_hash_tag_p
+            BI          "hash-locked?", 1, 2, B4, bi_hash_locked_p
+            BI          "hash-private?", 1, 2, B4, bi_hash_private_p
+            BI          "hash-const?", 1, 2, B4, bi_hash_const_p
             BI          "read-file", 1, 1, B3, bi_notyet
             BI          "read-lines", 1, 1, B3, bi_notyet
             BI          "write-file", 1, ANY, B3, bi_notyet

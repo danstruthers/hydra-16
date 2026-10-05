@@ -535,6 +535,16 @@ bl_len:
             jsr         cell_get
             jmp         l_fix
 :
+            cmp         #PK_HASH                            ; (A hash: its count)
+            bne         :+
+            lda         ex
+            ldx         ex + 1
+            FARN        4, h_count_of
+            sta         ex
+            stx         ex + 1
+            clc
+            rts
+:
             LDAX        s_llen
             jmp         l_error
 

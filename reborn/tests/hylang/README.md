@@ -13,9 +13,9 @@ pass, from an emulated card, and none that passed may fail after:
 | File | What | Runs from |
 | :--- | :--- | :--- |
 | `harness.dl` | The checks: `check`, `check-error`, the count of each and of the failures | 3 |
-| `run5.hl` | hylang's own: phase 5's `run.dl` (danlang's library loaded, the files it runs, then a tail loop of 50,000 steps); the `hysuite` test's card leaves out the checks of hashes and of streams | 5, till `run.dl` runs whole |
+| `run6.hl` | hylang's own: phase 6's `run.dl` (danlang's library loaded, the files it runs, then a tail loop of 50,000 steps); the `hysuite` test's card leaves out the checks of streams | 6, till `run.dl` runs whole |
 | `lib/` | danlang's library, `lib/` there (`globals.dl`, `dice.dl`, `screen.dl`), copied whole: the card's `/lib/hylang` (as `NAME.hl`) | 4, till phase 8 puts hylang's in the ROM |
-| `run.dl` | Loads `harness.dl`, then each file, and prints the count; its status is 1 if a check failed | 7 (it wants `args`; `run4.hl` till then) |
+| `run.dl` | Loads `harness.dl`, then each file, and prints the count; its status is 1 if a check failed | 7 (it wants `args`; `run6.hl` till then) |
 | `reader.dl` | The reader: numbers in every base, strings, here strings, characters, atoms, symbols, comments, `[...]`, the shorthand, bytes, `read` | 7 (the reader is phase 2's, checked by the emulator's `hylang` test till then; the file needs `read`, and its numbers phase 5) |
 | `eval.dl` | Calls, partial application, extra arguments, too many, tail calls (50,000 deep), nesting | 3 (its numbers past a fixnum made smaller); 5 whole |
 | `scope.dl` | Lexical scope, closures, `set!`, a Q-expression run where it was written, `let`, fexprs | 3 |

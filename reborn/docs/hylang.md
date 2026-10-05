@@ -17,7 +17,7 @@ seven prefixes (`?` if, `=` set, `:` def, `#` hash-create, `@` fn, `.` unpack, `
 key up (`(h :k)`, a method `(obj :add 3)`); extra arguments are `&1`, `&2` ... past the formals; `$name` is the
 environment's variable; every ordinary built-in gets its arguments' values, the first error stopping it.
 
-**The conformance suite is danlang's regression suite**, `tests/regress/` (1,188 checks), copied to `tests/hylang`
+**The conformance suite is danlang's regression suite**, `tests/regress/` (1,195 checks), copied to `tests/hylang`
 (its README says which phase runs which file).  It's written in danlang, so hylang runs it unchanged, from an
 emulated card (`hylang run.dl`, status 0 when every check passes).  A change to the language is made in danlang
 first, with its checks, then in hylang.  What only the Hydra has is checked by a file of its own, `hydra.dl`.
@@ -124,8 +124,8 @@ The plan has it whole; in short:
   are immutable and shared, never copied; hashes, streams and scopes change.
 * **Memory** (`modules/hylang/heap.inc`, in the task's RAM): each 512-byte page of the cell heap holds one kind of
   cell (a 256-byte table gives a value's type); a list is its first cons, its page saying code or data; strings,
-  bignums, symbols' names and hash tables are blobs in banks of their own, each owned by one cell; symbols are
-  interned and hold their global value; a scope is a frame, its symbol-value pairs side by side.  Mark and sweep: a
+  bignums and symbols' names are blobs in banks of their own, each owned by one cell; symbols are interned and
+  hold their global value; a scope is a frame, its symbol-value pairs side by side.  Mark and sweep: a
   mark stack of 255 (a list's spine followed in place, so it costs none), every marked cell scanned again if it
   fills; a free list per kind; the blobs nothing owns dropped and the rest slid down.  Banks are taken as they're
   needed (up to 16 for cells, 16 for blobs, 4 for the stack), and a collection while the prompt waits too.
@@ -160,12 +160,22 @@ The plan has it whole; in short:
   abort point, which a result too big goes back to from however deep.  The reader gives each word that starts
   like a number to danlang's grammar, whole (every base: digits of its own, balanced, negative, least digit
   first); `+`, `-` and `*` keep a fixnum's quick way.
+* **Strings and hashes** (`strs.inc`, `hashes.inc`, in the fourth bank): a string built-in reads its arguments'
+  bytes where they are, two at once (a character is a string of one), and makes its value by capturing output.  A
+  hash is a cell of its items: its entries, each a list `{key value tag...}` never changed in place (a change puts
+  a new one in its place), in the order they were put, then its own tags; so `from#` and the printer have it as
+  it is, and a key is found by a walk along them (a hash is small: danlang's objects).  A key is an atom, a string
+  or an integer (`2.0` is `2`).  `hash-create`, `to#` and `hash-put` evaluate each entry's value through the
+  machine, in a frame of their own.  A hash called, `(h key arg...)`, evaluates its key, then calls the function
+  there with the arguments as any function is called, `&0` the hash (a proxy, through which its private entries
+  are had) in a scope of its own between the function and its scope.
 * **The module**: the core (all of danlang) is one program of four banks: the evaluator, its special forms, the
   dispatch and the built-ins that run the machine in the first; the reader, the printer, the list built-ins,
-  equality and order in the second; the numbers (and, as yet, `fn`, the type tests and `error`) in the third; strings, hashes, streams, the system and the errors' messages in the fourth.  What every bank calls is in
-  the task's RAM (the heap, the output, the evaluation stack): the most of that code is kept in the fourth bank
-  and copied to the RAM as hylang starts (`hylang.cfg`'s DATA4), so the first bank's room is the evaluator's.
-  The Hydra layers are library modules beside it.
+  equality and order in the second; the numbers (and, as yet, `fn`, the type tests and `error`) in the third;
+  strings, hashes, streams, the system and the errors' messages in the fourth.  What every bank calls is in the
+  task's RAM (the heap, the output, the evaluation stack): the most of that code is kept in the fourth bank and
+  copied to the RAM as hylang starts (`hylang.cfg`'s DATA4), so the first bank's room is the evaluator's.  The
+  Hydra layers are library modules beside it.
 * **Budgets** (at 3.58 MHz): a parameter looked up in 150 cycles, a call of two arguments in 1,500, a tail loop's
   step in 3,000 (the first hylang's: 10,600).  Measured in phase 1 (the heap test): a cons made and listed in 460
   cycles (its fixnum made, its words set), a collection 212 cycles a live cell (9,000 live: 1.9 M, 0.5 s).
@@ -203,7 +213,13 @@ The plan has it whole; in short:
    conversions, `fib`, `random`), `numbits.inc` (bits and bytes).  `numbers.dl` passes, `bits.dl` but for its
    streams (phase 7), and `eval.dl` and `library.dl` whole: 738 checks with the rest so far (the `hysuite` test);
    and 2,100 random expressions and number texts give the same in danlang and hylang.
-6. **Strings, characters and hashes**.
+6. **Strings, characters and hashes**.  Done: danlang first (a hash's bad entry, override or tag is an error that
+   says what; `hash-clone`'s overrides each an argument of its own; 1,195 checks); `strs.inc` (the string and
+   character built-ins), `hashes.inc` (hashes, their built-ins, methods and `&0`); hashes printed, compared,
+   ordered, counted by `len`; and print's form shows what's in a list as repr does, as danlang's.  `strings.dl`
+   and `hashes.dl` pass, and `types.dl` whole but its stream: 929 checks with the rest so far (the `hysuite`
+   test); and 2,800 random expressions of strings and hashes give the same in danlang and hylang, 150 more with
+   a collection before every allocation.
 7. **Streams, I/O and the system library**.
 8. **The library** (`globals.hl`, `dice.hl`, `screen.hl`), tuning to the budgets, the ROM.
 

@@ -222,8 +222,13 @@ q_same:
             jmp         @error
 @lb204:
             cmp         #QK_FUNCTION
-            bne         @lb26
+            bne         @lb27
             jmp         @function
+@lb27:
+            cmp         #QK_HASH
+            bne         @lb26
+            FARN        4, h_qsame                          ; (Two hashes: hashes.inc's)
+            rts
 @lb26:
             cmp         #QK_NUMBER
             bne         @no
@@ -440,6 +445,16 @@ q_kind:
             lda         pk,x
             tax
             lda         q_kinds,x
+            rts
+
+; q_a, q_b, two strings: .A = 0 if they're the same bytes (for another bank, through FARN)
+q_streq:
+            jsr         q_strcmp
+            beq         :+
+            lda         #1
+            rts
+:
+            lda         #0
             rts
 
 ; q_a, q_b, two strings (or, q_isname set, names): compared by their bytes.  OUT: Z = 1 if they're the same; else
@@ -739,7 +754,10 @@ q_compare:
             cmp         #QK_ERROR
             beq         @error
             cmp         #QK_FUNCTION
+            beq         @lb202
+            cmp         #QK_HASH
             bne         @lb203
+@lb202:
             jmp         @function
 @lb203:
             rts                                             ; (T, and the rest: the same)
@@ -800,8 +818,11 @@ q_compare:
             jsr         q_firsts
             jmp         q_push
 @function:
-            jsr         q_same_fn                           ; (Equal: the same)
-            bcs         @same
+            jsr         q_same_fn                           ; (Equal: the same; two functions or two hashes)
+            bcc         :+
+            stz         q_r                                 ; (Their order 0, whatever a key's compare left)
+            rts
+:
             jsr         q_printed                           ; (Else as they print)
             bra         @string
 
