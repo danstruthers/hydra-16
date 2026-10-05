@@ -22,7 +22,7 @@ spill_bank: .res        SPILLS / 4                          ;   and the banks th
 stk_t:      .res        2                                   ; (Scratch)
 nomem_err:  .res        2                                   ; The error "out of memory", made as hylang starts
 
-.segment "DATA"
+.segment "DATA4"
 ; The stack made, empty
 stk_init:
             lda         #>(stk_raw + 255)
@@ -240,6 +240,10 @@ spill:
             sec
             sbc         #>SPILL
             sta         sp + 1
+            lda         argp + 1                            ; (A built-in's arguments moved down with the rest: it
+            sec                                             ;   may push, as eq's do, and read them after)
+            sbc         #>SPILL
+            sta         argp + 1
             inc         spilled
             ply
             plx

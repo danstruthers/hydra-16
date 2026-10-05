@@ -1,0 +1,88 @@
+; dice.dl - dice for games: (load "dice") (harn.dl does)
+
+; Dice
+(fun {die+ sides mod}    {+ 1 mod (random sides)})
+(fun {die sides}         {die+ sides 0})
+
+(fun {d3+ m} {die+ 3 m})
+(fun {d3} {d3+ 0})
+(fun {d4+ m} {die+ 4 m})
+(fun {d4} {d4+ 0})
+(fun {d6+ m} {die+ 6 m})
+(fun {d6} {d6+ 0})
+(fun {d8+ m} {die+ 8 m})
+(fun {d8} {d8+ 0})
+(fun {d10+ m} {die+ 10 m})
+(fun {d10} {d10+ 0})
+(fun {d12+ m} {die+ 12 m})
+(fun {d12} {d12+ 0})
+(fun {d20+ m} {die+ 20 m})
+(fun {d20} {d20+ 0})
+(fun {d24+ m} {die+ 24 m})
+(fun {d24} {d24+ 0})
+(fun {d30+ m} {die+ 30 m})
+(fun {d30} {d30+ 0})
+(fun {d60+ m} {die+ 60 m})
+(fun {d60} {d60+ 0})
+(fun {d100+ m} {die+ 100 m})
+(fun {d100} {d100+ 0})
+
+(fun {dice+ n sides mod} ?{(=0 n) mod (+ (die sides) (dice+ (1- n) sides mod))})
+(fun {dice n sides}      {dice+ n sides 0})
+:(roll repeat)
+(fun {sumrolls d} ?{
+  d
+  (+
+    (let {
+      do
+        =(hd (fst d))
+        (cond
+          {(num? hd) (die hd)}
+          {(qexpr? hd)
+            (case (len hd) 
+              {1 .(die hd)}
+              {2 .(dice hd)}
+              {3 .(dice+ hd)}
+            )
+          }
+        )
+    })
+    (sumrolls (tail d))
+  )
+  0
+})
+
+(fun {special-die sides cases} .{case (cons (die sides) cases)})
+
+; open ended dice rolls
+(fun {oe-die+ sides mod} {
+  do
+    =(rl (die+ sides 0))
+    ?((eq rl sides) (+ sides (oe-die+ sides mod)) (+ rl mod))
+})
+(fun {oe-die sides}         {oe-die+ sides 0})
+(fun {oe-dice+ n sides mod} ?{(=0 n) mod (+ (oe-die sides) (oe-dice+ (1- n) sides mod))})
+(fun {oe-dice n sides}      {oe-dice+ n sides 0})
+
+
+(fun {best-of-rolls a b f} {best-of a (roll b f)})
+(fun {worst-of-rolls a b f} {worst-of a (roll b f)})
+
+(fun {dnd-attr-rolls} ?{
+  (defined? &1)
+  (roll &1 {
+    take 6 (sort-desc (roll 8 {sum (best-of-rolls 3 4 {d6})}))
+  })
+  (dnd-attr-rolls 1)
+})
+
+(fun {dnd-attr-rolls-detailed} ?{
+  (defined? &1)
+  (roll &1 {do
+    take 6 (sort-desc (roll 8 {do
+      =(rs (sort-desc (roll 4 {d6})))
+      [(sum (take 3 rs)) rs]
+    }))
+  })
+  (dnd-attr-rolls-detailed 1)
+})

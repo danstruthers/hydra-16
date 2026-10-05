@@ -1,8 +1,8 @@
 ; ****************************************************************************
 ; valout.inc - hylang's built-ins that write values or make strings of them (phase 3), in its second bank with the
-; printer: print, write, repr, format, + of strings, to-str, substring, to-sym.  A string is made by capturing what's
-; written (out.inc), as danlang's StringBuilder.  Each gets its values at argp (cn of them) and gives back ex (C = 1
-; if there's no room).
+; printer: print, write, repr, format, + of strings, to-str, substring, to-sym, to-atom, gensym (phase 4).  A string
+; is made by capturing what's written (out.inc), as danlang's StringBuilder.  Each gets its values at argp (cn of
+; them) and gives back ex (C = 1 if there's no room).
 
 .segment "CODE2"
 
@@ -451,6 +451,117 @@ bo_to_sym:
             LDAX        s_otoolong
             jmp         l_error
 
+; (to-atom x): an atom: of an atom, a symbol, a string or a number (its text as print shows it, in lower case)
+bo_to_atom:
+            jsr         l_arg0
+            lda         ex
+            ldx         ex + 1
+            jsr         kind_of
+            cmp         #PK_ATOM
+            bne         :+
+            clc
+            rts
+:
+            cmp         #PK_SYMBOL
+            beq         @text
+            cmp         #PK_STRING
+            beq         @text
+            cmp         #PK_FIXNUM
+            beq         @text
+            cmp         #PK_BIGNUM
+            bcc         @not
+            cmp         #PK_COMPLEX + 1
+            bcc         @text
+@not:
+            LDAX        s_otoatom
+            jmp         l_error
+@text:
+            jsr         cap_begin
+            sta         o_start
+            stx         o_start + 1
+            lda         ex
+            ldx         ex + 1
+            ldy         #1
+            jsr         print_val
+            lda         #PK_ATOM
+            bra         o_intern
+
+; (gensym [prefix]): a symbol no other has: g__1, g__2 ... (prefix__1 ...: the count is hylang's)
+bo_gensym:
+            lda         cn
+            beq         :+
+            jsr         l_arg0                              ; (The prefix: a string or a character)
+            lda         ex
+            ldx         ex + 1
+            jsr         kind_of
+            cmp         #PK_STRING
+            beq         :+
+            lda         ex + 1
+            and         #$FE
+            cmp         #>CHAR0
+            beq         :+
+            LDAX        s_ogensym
+            jmp         l_error
+:
+            inc         o_gensym
+            bne         :+
+            inc         o_gensym + 1
+:
+            jsr         cap_begin
+            sta         o_start
+            stx         o_start + 1
+            lda         cn
+            bne         :+
+            lda         #'g'
+            jsr         out_byte
+            bra         @count
+:
+            lda         ex
+            ldx         ex + 1
+            ldy         #1
+            jsr         print_val
+@count:
+            lda         #'_'
+            jsr         out_byte
+            jsr         out_byte
+            lda         o_gensym
+            ldx         o_gensym + 1
+            jsr         out_dec
+            lda         #PK_SYMBOL
+; The capture begun at o_start ended, and its text (in lower case) interned: ex = the symbol or the atom (.A, its
+; kind).  OUT: C = 1 if there's no room
+o_intern:
+            sta         o_kind
+            lda         o_start
+            ldx         o_start + 1
+            jsr         cap_end
+            bcs         @rts
+            MOVW        ex, hv
+            lda         hv
+            ldx         hv + 1
+            jsr         kind_of
+            cmp         #PK_ERROR
+            beq         @done                               ; ("Too long")
+            lda         ex
+            ldx         ex + 1
+            jsr         q_strat
+            jsr         o_name
+            bcs         @long
+            LDHQ        scratch, 0
+            lda         o_len
+            sta         hn
+            lda         o_kind
+            jsr         intern
+            bcs         @rts
+            MOVW        ex, hv
+@done:
+            clc
+@rts:
+            rts
+@long:
+            LDAX        s_otoolong
+            jmp         l_error
+
 ; hp, hn: a name's bytes: copied to scratch, in lower case; o_len its length.  OUT: C = 1 if it's past 255 bytes
 o_name:
             lda         hn + 1
@@ -529,6 +640,8 @@ o_len:      .res        2                                   ;   a character's by
 o_at:       .res        2
 o_n:        .res        2
 o_char:     .res        1
+o_kind:     .res        1                                   ; (o_intern's: a symbol's or an atom's)
+o_gensym:   .res        2                                   ; (gensym's count)
 
 .segment "RODATA2"
 n_substring: .byte      "substring", 0
@@ -544,3 +657,5 @@ s_osubout:  .byte       "'substring': index ", 0
 s_osubout2: .byte       " is outside the string", 0
 s_otosym:   .byte       "Only atoms and strings can be converted into symbols", 0
 s_otoolong: .byte       "Too long: a name of more than 255 bytes", 0
+s_otoatom:  .byte       "Only symbols, strings and numbers can be converted to atoms", 0
+s_ogensym:  .byte       "'gensym' expects a String", 0

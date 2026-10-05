@@ -1,8 +1,8 @@
 ; ****************************************************************************
 ; forms.inc - hylang's special forms (phase 3), in its first bank, with the evaluator (eval.inc): each gets its
 ; arguments as they're written (cr; bi_count of them) in ee, and runs the machine its own way, a frame for each
-; value it waits for; and the built-ins that run it too (map, load: BF_MACHINE).  Each as danlang's (Builtins.cs),
-; its errors' messages too.
+; value it waits for; and the built-ins that run it too (BF_MACHINE: map, filter, the folds, any?, all?, find,
+; count, sum, product and sort, from phase 4; load).  Each as danlang's (Builtins.cs), its errors' messages too.
 
 .bss
 ou_start:   .res        2                                   ; (output-of's capture: where it began)
@@ -1691,11 +1691,64 @@ sf_expr:
             stz         ex + 1
             jmp         ev_return
 
-; ---- map, load: built-ins that run the machine (their values on the stack, at argp)
+; ---- map, the folds, sort, load: built-ins that run the machine (their values on the stack, at argp)
 
-; (map f list): f applied to each item in turn, a list of the values; the first error stops it
+; map, filter, foldl, foldr, any?, all?, find, count, sum and product: a list walked, its function given each item in
+; turn (foldl's the value so far and the item; foldr's the item and the value so far, from the last item), as
+; danlang's (LibraryBuiltins.cs); the first error stops it.  Its frame, on the stack as it walks (its code pushed for
+; each call): the function, the items left, the value so far (map's and filter's list: its first cons, and its last),
+; the item given, the walk (W_*, a fixnum)
+W_MAP           = 0             ; The values, a list
+W_FILTER        = 1             ; The items whose value isn't NIL, a list
+W_FOLDL         = 2             ; The last value (sum's and product's too: + from 0, * from 1)
+W_FOLDR         = 3
+W_ANY           = 4             ; T at the first value that isn't NIL; else NIL
+W_ALL           = 5             ; NIL at the first value that's NIL; else T
+W_FIND          = 6             ; The item whose value first isn't NIL; else NIL
+W_COUNT         = 7             ; The values that aren't NIL, counted
+W_SUM           = 8
+W_PRODUCT       = 9
+WK_F            = 0             ; (The frame's words: their places)
+WK_ITEMS        = 2
+WK_ACC          = 4
+WK_LAST         = 6
+WK_ITEM         = 8
+WK_OP           = 10
+WK_SIZE         = 12
+
 bi_map:
-            ldy         #2                                  ; (Its list)
+            lda         #W_MAP
+            bra         walk
+bi_filter:
+            lda         #W_FILTER
+            bra         walk
+bi_foldl:
+            lda         #W_FOLDL
+            bra         walk
+bi_foldr:
+            lda         #W_FOLDR
+            bra         walk
+bi_any:
+            lda         #W_ANY
+            bra         walk
+bi_all:
+            lda         #W_ALL
+            bra         walk
+bi_find:
+            lda         #W_FIND
+            bra         walk
+bi_count_if:
+            lda         #W_COUNT
+            bra         walk
+bi_sum:
+            lda         #W_SUM
+            bra         walk
+bi_product:
+            lda         #W_PRODUCT
+walk:
+            sta         wk_op
+            tax
+            ldy         wk_list,x                           ; (Its list: its last argument)
             lda         (argp),y
             pha
             iny
@@ -1704,76 +1757,361 @@ bi_map:
             pla
             jsr         q_conses
             bcc         :+
-            LDAX        s_mapargs
-            jmp         ev_error_args
+            jsr         err_begin                           ; ("'map' expects a function and a list")
+            lda         #$27
+            jsr         out_byte
+            ldx         bi_n
+            FARN        2, bi_name
+            ldx         wk_op
+            lda         wk_what_lo,x
+            pha
+            lda         wk_what_hi,x
+            tax
+            pla
+            jsr         msg_out
+            jmp         ev_err_end_args
 :
             sta         cr
             stx         cr + 1
+            stz         et                                  ; (The value so far: none)
+            stz         et + 1
+            ldx         wk_op
+            cpx         #W_SUM
+            bcc         @fn
+            lda         #<FIX(0)                            ; (sum: + from 0; product: * from 1)
+            ldy         #<(BUILTIN0 + 2 * BIN_ADD)
+            cpx         #W_SUM
+            beq         :+
+            lda         #<FIX(1)
+            ldy         #<(BUILTIN0 + 2 * BIN_MUL)
+:
+            sta         et
+            sty         cf
+            lda         #>(BUILTIN0 + 2 * BIN_ADD)
+            sta         cf + 1
+            lda         #W_FOLDL
+            sta         wk_op
+            bra         @frame
+@fn:
             lda         (argp)                              ; (Its function)
             sta         cf
             ldy         #1
             lda         (argp),y
             sta         cf + 1
+            cpx         #W_COUNT
+            bne         :+
+            lda         #<FIX(0)
+            sta         et
+            bra         @frame
+:
+            cpx         #W_FOLDL
+            beq         @from
+            cpx         #W_FOLDR
+            bne         @frame
+            jsr         wk_reverse
+@from:
+            ldy         #2                                  ; (The folds': from their value)
+            lda         (argp),y
+            sta         et
+            iny
+            lda         (argp),y
+            sta         et + 1
+@frame:
+            jsr         frame_check
             stz         ev_inargs
             jsr         drop_args
-            stz         et                                  ; (The values' list: its first and last cons)
-            stz         et + 1
-            stz         eu
-            stz         eu + 1
-; cf, the items left (cr), the list so far (et its first, eu its last)
-map_next:
-            lda         cr
-            ora         cr + 1
-            bne         :+
-            MOVW        ex, et
-            jmp         ev_return
-:
-            jsr         cr_next
-            jsr         frame_check
             PUSHV       cf
             PUSHV       cr
             PUSHV       et
-            PUSHV       eu
-            PUSHK       K_MAP
+            lda         #0
+            tax
+            jsr         push
+            jsr         push
+            lda         wk_op
+            asl
+            ora         #1
+            jsr         push
+; The walk's frame on top (its code not): the next item given to its function, or none left, its value
+walk_next:
+            jsr         wk_at
+            ldy         #WK_ITEMS
+            lda         (hq),y
+            sta         cr
+            iny
+            lda         (hq),y
+            sta         cr + 1
+            ora         cr
+            beq         walk_end
+            jsr         cr_next                             ; (ex: the item)
+            ldy         #WK_ITEMS
+            lda         cr
+            sta         (hq),y
+            iny
+            lda         cr + 1
+            sta         (hq),y
+            ldy         #WK_ITEM
+            lda         ex
+            sta         (hq),y
+            iny
+            lda         ex + 1
+            sta         (hq),y
+            ldy         #WK_F
+            lda         (hq),y
+            sta         cf
+            iny
+            lda         (hq),y
+            sta         cf + 1
+            ldy         #WK_ACC
+            lda         (hq),y
+            sta         et
+            iny
+            lda         (hq),y
+            sta         et + 1
+            ldy         #WK_OP
+            lda         (hq),y
+            lsr
+            sta         wk_op
+            PUSHK       K_WALK
+            lda         wk_op
+            cmp         #W_FOLDL
+            beq         @acc_item
+            cmp         #W_FOLDR
+            beq         @item_acc
             PUSHV       ex
             lda         #1
+            bra         @apply
+@acc_item:
+            PUSHV       et
+            PUSHV       ex
+            bra         @two
+@item_acc:
+            PUSHV       ex
+            PUSHV       et
+@two:
+            lda         #2
+@apply:
             sta         cn
             stz         cn + 1
             jmp         ev_apply_values
-k_map:
-            MOVW        et, ex                              ; (The value, in a cons: made while the frame's words
-            stz         eu                                  ;   are still on the stack)
+; No items left: the walk's value (hq, its frame)
+walk_end:
+            ldy         #WK_OP
+            lda         (hq),y
+            lsr
+            tax
+            ldy         #WK_ACC                             ; (map's, filter's, the folds', count's: the value so far)
+            lda         (hq),y
+            sta         ex
+            iny
+            lda         (hq),y
+            sta         ex + 1
+            cpx         #W_ANY
+            bcc         walk_done
+            cpx         #W_COUNT
+            beq         walk_done
+            stz         ex                                  ; (any?'s and find's: NIL; all?'s: T)
+            stz         ex + 1
+            cpx         #W_ALL
+            bne         walk_done
+            lda         #<T_VAL
+            sta         ex
+; The walk's value, ex: its frame dropped
+walk_done:
+            lda         #WK_SIZE / 2
+            jsr         drop
+            jmp         ev_return
+
+; The function's value, ex, for the walk on top
+k_walk:
+            ldy         #0                                  ; (.Y = 1 if it isn't NIL)
+            lda         ex
+            ora         ex + 1
+            beq         :+
+            iny
+:
+            jsr         wk_at
+            phy
+            ldy         #WK_OP
+            lda         (hq),y
+            lsr
+            tax
+            ply
+            cpx         #W_FOLDL
+            bcs         @fold
+            cpx         #W_FILTER
+            bne         @add                                ; (map's: the value put in its list)
+            tya                                             ; (filter's: the item, if the value isn't NIL)
+            bne         @lb103
+            jmp         walk_next
+@lb103:
+            ldy         #WK_ITEM
+            lda         (hq),y
+            sta         ex
+            iny
+            lda         (hq),y
+            sta         ex + 1
+@add:
+            MOVW        et, ex                              ; (In a cons, at the list's end)
+            stz         eu
             stz         eu + 1
             lda         #PK_QCONS
             jsr         make2
             bcc         :+
-            lda         #4
+            lda         #WK_SIZE / 2
             jsr         pop_n
             jmp         ev_nomem
 :
             MOVW        ex, hv
-            POPV        eu
-            POPV        et
-            POPV        cr
-            POPV        cf
-            lda         et                                  ; (At the list's end)
-            ora         et + 1
-            bne         :+
-            MOVW        et, ex
-            MOVW        eu, ex
-            jmp         map_next
-:
-            lda         eu
-            ldx         eu + 1
-            jsr         deref
-            ldy         #2
+            jsr         wk_at
+            ldy         #WK_LAST
+            lda         (hq),y
+            sta         hv
+            iny
+            lda         (hq),y
+            sta         hv + 1
+            ora         hv
+            bne         @link
+            ldy         #WK_ACC                             ; (The first)
             lda         ex
-            sta         (hp),y
+            sta         (hq),y
             iny
             lda         ex + 1
-            sta         (hp),y
-            MOVW        eu, ex
-            jmp         map_next
+            sta         (hq),y
+            bra         @last
+@link:
+            lda         ex
+            ldx         ex + 1
+            ldy         #1
+            jsr         cell_set
+@last:
+            ldy         #WK_LAST
+            lda         ex
+            sta         (hq),y
+            iny
+            lda         ex + 1
+            sta         (hq),y
+            jmp         walk_next
+@fold:
+            cpx         #W_ANY
+            bcs         @test
+            ldy         #WK_ACC                             ; (The folds': the value so far)
+            lda         ex
+            sta         (hq),y
+            iny
+            lda         ex + 1
+            sta         (hq),y
+            jmp         walk_next
+@test:
+            cpx         #W_ALL
+            bne         :+
+            tya                                             ; (all?: NIL, at the first NIL)
+            beq         @lb102
+            jmp         walk_next
+@lb102:
+            jmp         walk_done
+:
+            tya
+            bne         @lb101
+            jmp         walk_next
+@lb101:
+            cpx         #W_COUNT
+            bne         :+
+            ldy         #WK_ACC                             ; (count: one more)
+            lda         (hq),y
+            clc
+            adc         #2
+            sta         (hq),y
+            iny
+            lda         (hq),y
+            adc         #0
+            sta         (hq),y
+            jmp         walk_next
+:
+            cpx         #W_FIND
+            bne         :+
+            ldy         #WK_ITEM                            ; (find: the item)
+            lda         (hq),y
+            sta         ex
+            iny
+            lda         (hq),y
+            sta         ex + 1
+            jmp         walk_done
+:
+            lda         #<T_VAL                             ; (any?: T)
+            sta         ex
+            stz         ex + 1
+            jmp         walk_done
+
+; hq = the walk's frame (on top, its code not)
+wk_at:
+            sec
+            lda         sp
+            sbc         #WK_SIZE
+            sta         hq
+            lda         sp + 1
+            sbc         #0
+            sta         hq + 1
+            rts
+
+; cr, a list's conses: its items the other way round (foldr's), in new conses.  The arguments are on the stack
+wk_reverse:
+            stz         eu
+            stz         eu + 1
+@item:
+            lda         cr
+            ora         cr + 1
+            beq         @done
+            jsr         cr_next
+            MOVW        et, ex
+            lda         #PK_QCONS
+            jsr         make2
+            bcc         :+
+            jmp         ev_nomem
+:
+            MOVW        eu, hv
+            bra         @item
+@done:
+            MOVW        cr, eu
+            rts
+
+; (sort l [less]): the items in order, stable: by cmp, or by less, a function of two that's T when its first goes
+; first.  A merge sort, its runs merged a pair at a time (lists.inc's sort_begin and sort_step: its frame, K_SORT's,
+; with its code on top as it goes); less called here, given b's first item and a's: T, b's goes first
+bi_sort:
+            jsr         frame_check
+            FARN        2, sort_begin
+            bcc         :+
+            jmp         ev_nomem
+:
+            beq         sort_value
+            PUSHK       K_SORT
+            lda         #$FF
+sort_on:
+            FARN        2, sort_step
+            beq         @done
+            PUSHV       q_a                                 ; (less wanted: cf)
+            PUSHV       q_b
+            lda         #2
+            sta         cn
+            stz         cn + 1
+            jmp         ev_apply_values
+@done:
+            lda         depth                               ; (Its frame dropped)
+            bne         :+
+            dec         depth + 1
+:
+            dec         depth
+sort_value:
+            jmp         ev_return
+; less's value, ex: 1 (b's first goes first) if it isn't NIL, else 0
+k_sort:
+            PUSHK       K_SORT
+            lda         ex
+            ora         ex + 1
+            beq         :+
+            lda         #1
+:
+            bra         sort_on
 
 ; (load path): the file's expressions evaluated in turn, in the global scope; the last's value.  Its error, or a
 ; reader's, is "path: message".  Read an item at a time (read_item), the reader's text refilled from the file; a load
@@ -1990,23 +2328,30 @@ ld_err:     .res        1                                   ; (load's: the syste
 ld_errbuf:  .res        32                                  ;   the offset of its next byte)
 ld_fdv:     .res        1
 ld_off:     .res        2
+wk_op:      .res        1                                   ; (A walk: map, filter ... W_*)
+fo_at:      .res        1                                   ; (file_open's: its name's place in scratch)
 
 .code
 
 .segment "CODE4"
 
-; cf, a path: its file opened to read.  OUT: C = 0, .A = its fd; or C = 1 and ld_err = the system's error ($FF:
-; a name longer than 255 bytes)
+; cf, a path: its file opened to read: as it is, or with .hl; then, a bare name (no /), /lib/hylang's (as danlang's
+; FindFile, lib/'s).  OUT: C = 0, .A = its fd; or C = 1 and ld_err = the system's error (the first's)
+LIB_LEN         = 12            ; (/lib/hylang/)
 file_open:
-            lda         cf                                  ; (Its name, zero-terminated: in scratch)
+            lda         cf                                  ; (Its name: in scratch, after room for /lib/hylang/)
             ldx         cf + 1
             jsr         deref
             lda         (hp)
             sta         fm_n
             ldy         #1
             lda         (hp),y
-            beq         :+
-            lda         #$FF
+            bne         @long
+            lda         fm_n
+            cmp         #PATH_MAX + 1
+            bcc         :+
+@long:
+            lda         #E_NAMETOOLONG
             sta         ld_err
             sec
             rts
@@ -2024,19 +2369,95 @@ file_open:
             cpy         fm_n
             beq         :+
             lda         (hp),y
-            sta         scratch,y
+            sta         scratch + LIB_LEN,y
             iny
             bne         :-
 :
-            lda         #0
-            sta         scratch,y
-            LDR         r0, scratch
-            lda         #O_READ
-            jsr         OPEN
+            ldx         #LIB_LEN
+            jsr         fo_name
             bcc         @rts
             sta         ld_err
+            ldy         fm_n                                ; (A bare name?)
+@slash:
+            dey
+            cpy         #$FF
+            beq         @bare
+            lda         scratch + LIB_LEN,y
+            cmp         #'/'
+            bne         @slash
+            sec
 @rts:
             rts
+@bare:
+            ldx         #LIB_LEN - 1
+:
+            lda         s_libdir,x
+            sta         scratch,x
+            dex
+            bpl         :-
+            ldx         #0
+            jsr         fo_name
+            rts
+
+; The name at scratch + .X (to scratch + LIB_LEN + fm_n) opened; or, not found, with .hl after it (unless it ends
+; with .hl).  OUT: C = 0, .A = the fd; or C = 1, .A = the error (the first's)
+fo_name:
+            stx         fo_at
+            lda         fm_n
+            clc
+            adc         #LIB_LEN
+            tay
+            lda         #0
+            sta         scratch,y
+            jsr         fo_open
+            bcc         @rts
+            cmp         #E_NOENT
+            bne         @fail
+            sta         fm_m
+            ldx         #2                                  ; (Ends with .hl?)
+:
+            dey
+            lda         scratch,y
+            cmp         s_hl,x
+            bne         @hl
+            dex
+            bpl         :-
+            bra         @nf
+@hl:
+            lda         fm_n
+            clc
+            adc         #LIB_LEN
+            tay
+            ldx         #0
+:
+            lda         s_hl,x
+            sta         scratch,y
+            iny
+            inx
+            cpx         #3
+            bcc         :-
+            lda         #0
+            sta         scratch,y
+            jsr         fo_open
+            bcc         @rts
+@nf:
+            lda         fm_m
+@fail:
+            sec
+@rts:
+            rts
+
+; scratch + fo_at opened to read.  OUT: as OPEN's
+fo_open:
+            lda         fo_at
+            clc
+            adc         #<scratch
+            sta         r0
+            lda         #>scratch
+            adc         #0
+            sta         r0 + 1
+            lda         #O_READ
+            jmp         OPEN
 
 .code
 
@@ -2052,6 +2473,11 @@ space_a:    .byte       '=', '<', '>', '<', '>', '=', '<', '='
 space_b:    .byte       0, '>', 0, 0, '=', '>', '=', '<'
 space_true: .byte       %010, %101, %100, %001, %110, %110, %011, %011
 sign_bit:   .byte       %001, %010, %100                    ; (Indexed by fm_n: 0 <, 1 =, 2 >)
+
+; The walks' lists: the argument (its place) and what its error says it wants (W_* order)
+wk_list:    .byte       2, 2, 4, 4, 2, 2, 2, 2, 0, 0
+wk_what_lo: .lobytes    s_wfnlist, s_wfnlist, s_wfold, s_wfold, s_wfnlist, s_wfnlist, s_wfnlist, s_wfnlist, s_wlist, s_wlist
+wk_what_hi: .hibytes    s_wfnlist, s_wfnlist, s_wfold, s_wfold, s_wfnlist, s_wfnlist, s_wfnlist, s_wfnlist, s_wlist, s_wlist
 
 .segment "RODATA4"                                          ; (Messages: read through msg_out, msg_err)
 s_iffew:    .byte       "'if' supplied too few parameters", 0
@@ -2080,11 +2506,15 @@ s_spacecase: .byte      "Operator '<=>' received one or more invalid case blocks
 s_spacenum: .byte       "First parameter to '<=>' must evaluate to a Number", 0
 s_spacelast: .byte      "All but last body block of a '<=>' operator must have comparator", 0
 s_spacetest: .byte      "Unknown comparison test ", 0
-s_mapargs:  .byte       "'map' expects a function and a list", 0
+s_wfnlist:  .byte       "' expects a function and a list", 0
+s_wfold:    .byte       "' expects a function, a value and a list", 0
+s_wlist:    .byte       "' expects a list", 0
 s_loadone:  .byte       "Not yet: 'load' of more than one file (phase 7)", 0
 s_loadstr:  .byte       "'load' passed non-string parameter(s)", 0
 s_missing:  .byte       "missing ", 0
 s_colon:    .byte       ": ", 0
+s_libdir:   .byte       "/lib/hylang/"                      ; (load's library: file_open's, LIB_LEN bytes)
+s_hl:       .byte       ".hl"
 fn_def:     .byte       "def", 0
 fn_set:     .byte       "set", 0
 fn_setb:    .byte       "set!", 0

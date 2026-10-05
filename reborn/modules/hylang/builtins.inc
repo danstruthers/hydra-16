@@ -34,7 +34,7 @@ BI_N        .set BI_N + 1
             BI          "let", 1, ANY, BF_SPECIAL, sf_let
             BI          "do", 0, ANY, BF_SPECIAL, sf_do
             BI          "fexpr", 2, 2, B3, bi_fexpr
-            BI          "gensym", 0, 1, B3, bi_notyet
+            BI          "gensym", 0, 1, B2, bo_gensym
             BI          "list", 0, ANY, B2, bl_list
             BI          "head", 1, 1, B2, bl_head
             BI          "tail", 1, 1, B2, bl_tail
@@ -44,17 +44,19 @@ BI_N        .set BI_N + 1
             BI          "eval", 1, 1, BF_SPECIAL, sf_eval
             BI          "len", 1, 1, B2, bl_len
             BI          "item-at", 2, 2, B2, bl_item_at
-            BI          "subset", 2, 3, B3, bi_notyet
+            BI          "subset", 2, 3, B2, bl_subset
             BI          "reverse", 1, 1, B2, bl_reverse
             BI          "range", 1, 3, B2, bl_range
-            BI          "sort", 1, 2, B3, bi_notyet
+            BI          "sort", 1, 2, BF_MACHINE, bi_sort
+BIN_ADD         = BI_N          ; (+ and *: sum's and product's)
             BI          "+", 0, ANY, B3, bi_add
             BI          "-", 0, ANY, B3, bi_sub
+BIN_MUL         = BI_N
             BI          "*", 0, ANY, B3, bi_mul
             BI          "/", 0, ANY, B3, bi_div
             BI          "rational.n", 1, 1, B3, bi_notyet
             BI          "rational.d", 1, 1, B3, bi_notyet
-            BI          "random", 1, 1, B3, bi_notyet
+            BI          "random", 1, 1, B3, bi_random
             BI          "and", 0, ANY, BF_SPECIAL, sf_and
             BI          "or", 0, ANY, BF_SPECIAL, sf_or
             BI          "while", 1, ANY, BF_SPECIAL, sf_while
@@ -76,8 +78,8 @@ BI_N        .set BI_N + 1
             BI          "print", 0, ANY, BF_ERRORS | B2, bo_print
             BI          "write", 0, ANY, BF_ERRORS | B2, bo_write
             BI          "output-of", 0, ANY, BF_SPECIAL, sf_output
-            BI          "index-of", 2, 2, B3, bi_notyet
-            BI          "last-index-of", 2, 2, B3, bi_notyet
+            BI          "index-of", 2, 2, B2, bl_index_of
+            BI          "last-index-of", 2, 2, B2, bl_last_index_of
             BI          "substring", 2, 3, B2, bo_substring
             BI          "char-at", 2, 2, B3, bi_notyet
             BI          "str-split", 1, 2, B3, bi_notyet
@@ -116,7 +118,7 @@ BI_N        .set BI_N + 1
             BI          "to-str", 1, 2, B2, bo_to_str
             BI          "repr", 1, 1, BF_ERRORS | B2, bo_repr
             BI          "to-sym", 1, 1, B2, bo_to_sym
-            BI          "to-atom", 1, 1, B3, bi_notyet
+            BI          "to-atom", 1, 1, B2, bo_to_atom
             BI          "fib", 1, 1, B3, bi_notyet
             BI          "defined?", 0, 1, BF_SPECIAL, sf_defined
             BI          "type-of", 1, 1, BF_ERRORS | B3, bi_type_of
@@ -230,15 +232,15 @@ BI_N        .set BI_N + 1
             BI          "elem?", 2, 2, B2, bq_elem
             BI          "in?", 2, 2, B2, bq_in
             BI          "map", 2, 2, BF_MACHINE, bi_map
-            BI          "filter", 2, 2, B3, bi_notyet
-            BI          "foldl", 3, 3, B3, bi_notyet
-            BI          "foldr", 3, 3, B3, bi_notyet
-            BI          "any?", 2, 2, B3, bi_notyet
-            BI          "all?", 2, 2, B3, bi_notyet
-            BI          "find", 2, 2, B3, bi_notyet
-            BI          "count", 2, 2, B3, bi_notyet
-            BI          "sum", 1, 1, B3, bi_notyet
-            BI          "product", 1, 1, B3, bi_notyet
+            BI          "filter", 2, 2, BF_MACHINE, bi_filter
+            BI          "foldl", 3, 3, BF_MACHINE, bi_foldl
+            BI          "foldr", 3, 3, BF_MACHINE, bi_foldr
+            BI          "any?", 2, 2, BF_MACHINE, bi_any
+            BI          "all?", 2, 2, BF_MACHINE, bi_all
+            BI          "find", 2, 2, BF_MACHINE, bi_find
+            BI          "count", 2, 2, BF_MACHINE, bi_count_if
+            BI          "sum", 1, 1, BF_MACHINE, bi_sum
+            BI          "product", 1, 1, BF_MACHINE, bi_product
             BI          "min", 1, ANY, B2, bq_min
             BI          "max", 1, ANY, B2, bq_max
 

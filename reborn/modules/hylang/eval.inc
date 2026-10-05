@@ -66,13 +66,14 @@ K_DOTB          = 21            ; [i n rest body name ee]: a dotimes body expres
 K_DOTN          = 22            ; [body name ee]: dotimes' count evaluated
 K_SPACE         = 23            ; [cases ee]: <=>'s number evaluated
 K_OUTPUT        = 24            ; [cr ee start]: an output-of expression evaluated
-K_MAP           = 25            ; [f items head tail]: map's function given an item
+K_WALK          = 25            ; [f items acc last item walk]: map's (filter's, a fold's ...) function given an item
 K_LOAD          = 26            ; [path fd next]: a loaded file's expression evaluated (next: two fixnums)
 K_EACHF2        = 27            ; [cr ee]: each's function evaluated (its list next)
 K_EACHF3        = 28            ; [f]: each's list evaluated (its function first)
 K_DOTF2         = 29            ; [cr ee]: dotimes' count evaluated (its function next)
 K_DOTF3         = 30            ; [n]: dotimes' function evaluated (its count first)
-K_KINDS         = 31
+K_SORT          = 31            ; [less runs next nlast a b out olast]: sort's less given two items
+K_KINDS         = 32
 
 .macro PUSHK k
             lda         #<FIX(k)
@@ -356,7 +357,7 @@ is_nil:
             sec
             rts
 
-.segment "DATA"                                            ; (These in the task's RAM: every bank's)
+.segment "DATA4"                                            ; (These in the task's RAM: every bank's)
 
 ; IN: .A, .X = a value.  OUT: .A = its kind as a list: 0 not one; 1 NIL or (); PK_SCONS or PK_QCONS (a cons);
 ; PK_SCOPED (a scoped one).  Keeps .X, .Y
@@ -2024,10 +2025,10 @@ s_nomem_n = * - s_nomem
 ; The frames: what each does with a value, whether it takes an error, its words but its code
 k_tab:      .word       k_top, k_head, k_arg, k_if, k_do, k_and, k_or, k_eval, k_exit, k_defn, k_defv, k_letb
             .word       k_letx, k_try, k_tryh, k_wtest, k_wbody, k_eachf, k_eachb, k_eachl, k_dotf, k_dotb
-            .word       k_dotn, k_space, k_output, k_map, k_load, k_eachf2, k_eachf3, k_dotf2, k_dotf3
+            .word       k_dotn, k_space, k_output, k_walk, k_load, k_eachf2, k_eachf3, k_dotf2, k_dotf3, k_sort
 k_info:     .byte       1, 0,   0, 2,   1, $FF, 0, 2,   0, 2,   0, 2,   0, 2,   0, 1,   0, 0,   0, 3,   1, 4
             .byte       0, 4,   0, 2,   1, 2,   0, 1,   0, 3,   0, 3,   0, 2,   0, 5,   0, 3,   0, 3,   0, 6
-            .byte       0, 3,   0, 2,   1, 3,   0, 4,   1, 4,   0, 2,   0, 1,   0, 2,   0, 1
+            .byte       0, 3,   0, 2,   1, 3,   0, 6,   1, 4,   0, 2,   0, 1,   0, 2,   0, 1,   0, 8
 
 .code
 

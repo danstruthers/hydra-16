@@ -60,7 +60,7 @@ rd_owner:   .res        1                                   ; Whose text it is: 
 rf_keep:    .res        2                                   ; (rd_fill's: where what's kept begins, the bytes dropped)
 rf_drop:    .res        2
 
-.segment "DATA"
+.segment "DATA4"
 ; The levels' lists marked, while a text is read (gc_hook's: hylang.s's)
 rd_roots:
             lda         rd_on

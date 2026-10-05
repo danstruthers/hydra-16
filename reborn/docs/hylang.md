@@ -17,7 +17,7 @@ seven prefixes (`?` if, `=` set, `:` def, `#` hash-create, `@` fn, `.` unpack, `
 key up (`(h :k)`, a method `(obj :add 3)`); extra arguments are `&1`, `&2` ... past the formals; `$name` is the
 environment's variable; every ordinary built-in gets its arguments' values, the first error stopping it.
 
-**The conformance suite is danlang's regression suite**, `tests/regress/` (1,179 checks), copied to `tests/hylang`
+**The conformance suite is danlang's regression suite**, `tests/regress/` (1,182 checks), copied to `tests/hylang`
 (its README says which phase runs which file).  It's written in danlang, so hylang runs it unchanged, from an
 emulated card (`hylang run.dl`, status 0 when every check passes).  A change to the language is made in danlang
 first, with its checks, then in hylang.  What only the Hydra has is checked by a file of its own, `hydra.dl`.
@@ -31,10 +31,10 @@ first, with its checks, then in hylang.  What only the Hydra has is checked by a
 | **Strings made** | 8,184 bytes at most for one string made by `+`, `format`, `repr`, `output-of` ... (those it's made in, nested, together) | A capture bank, and a blob's most |
 | **Call depth** | 2,500 frames nested, about as many calls not in tail position (danlang 10,000); deeper is danlang's error, `Too deep: more than 2500 calls nested` | The evaluation stack: 6K in the task's RAM, spilled to 4 banks (32K) |
 | **`range`, strings, lists** | As memory allows (danlang caps `range` at 1,000,000) | Memory |
-| **`load` and `use`** | A bare name is `/lib/hylang/name.hl`, through the namespace (as forth's `/lib/forth`), so a card's or the RAM disk's `/lib/hylang` adds to the ROM's | Plan 9 names |
+| **`load` and `use`** | A path as it is, or with `.hl`; then a bare name is `/lib/hylang/name` or `name.hl`, through the namespace (as forth's `/lib/forth`), so a card's or the RAM disk's `/lib/hylang` adds to the ROM's | Plan 9 names |
 | **Streams** | Over the system's fds: `stdin`, `stdout`, `stderr` are fds 0-2; `output-of` points fd 1 at a buffer meanwhile | |
 | **Ctrl-C** | The window's `interrupt` note: the error `interrupted` (`:intr`) at the next call or loop step | As forth's THROW -28 |
-| **`random`** | The kernel's entropy and a generator | |
+| **`random`** | A generator (a 16-bit xorshift) seeded by the tick count as it's first wanted | |
 | **Start-up** | `/lib/hylang/globals.hl` (danlang's `globals.dl`), loaded as text, then `/lib/hylang/profile.hl` if there is one | A ROM snapshot of the loaded heap later, if starting is too slow |
 | **Files** | `.hl` (the suite keeps danlang's `.dl` names, loaded by their whole names) | |
 
@@ -140,7 +140,10 @@ The plan has it whole; in short:
   and its code on top, all values or fixnums, so the collector marks the stack whole.  A call in tail position (a
   body, `if`'s branches, `do`'s, `let`'s and `eval`'s last) pushes nothing; an argument that isn't a call is
   evaluated where it's met, with no frame; a call's values go on the stack, and a built-in reads them there.
-  `map` and the loops are frames too, so what they call nests like any call and Ctrl-C stops it.  An error passes
+  `map`, `filter`, the folds, `any?`, `all?`, `find`, `count`, `sum`, `product` (one walk over a list, its frame
+  kept on the stack as it goes), `sort` (a merge sort, its runs relinked, its state its frame; `less` called
+  through the machine) and the loops are frames too, so what they call nests like any call and Ctrl-C stops it.
+  An error passes
   every frame that doesn't take one (`try`'s, a built-in's that takes errors).  A scope is a frame cell of
   name-value pairs; a symbol never bound in one is looked up at its global value at once.  A Q-expression
   evaluated, and an fexpr's argument, remember their scope (a scoped cell).  `load` reads a file an item at a time,
@@ -148,11 +151,13 @@ The plan has it whole; in short:
 * **Built-ins**: a table of all danlang's (its arity, flags, the bank its code is in), so partial application, too
   many arguments and taking errors are the dispatcher's; those a later phase writes answer `Not yet: 'name'`.
   Strings are made by capturing output (a bank of its own), as danlang's `StringBuilder`.
-* **The module**: the core (all of danlang) is one program of four banks: the evaluator, its special forms and
-  the dispatch in the first; the reader, the printer, the list built-ins, equality and order in the second; the
-  numbers (and, as yet, `fn`, the type tests and `error`) in the third; strings, hashes, streams, the system and
-  the errors' messages in the fourth.  What every bank calls is in the task's RAM (the heap, the output, the
-  evaluation stack).  The Hydra layers are library modules beside it.
+* **The module**: the core (all of danlang) is one program of four banks: the evaluator, its special forms, the
+  dispatch and the built-ins that run the machine in the first; the reader, the printer, the list built-ins,
+  equality and order in the second; the numbers (and, as yet, `fn`, the type tests, `error` and `random`) in the
+  third; strings, hashes, streams, the system and the errors' messages in the fourth.  What every bank calls is in
+  the task's RAM (the heap, the output, the evaluation stack): the most of that code is kept in the fourth bank
+  and copied to the RAM as hylang starts (`hylang.cfg`'s DATA4), so the first bank's room is the evaluator's.
+  The Hydra layers are library modules beside it.
 * **Budgets** (at 3.58 MHz): a parameter looked up in 150 cycles, a call of two arguments in 1,500, a tail loop's
   step in 3,000 (the first hylang's: 10,600).  Measured in phase 1 (the heap test): a cons made and listed in 460
   cycles (its fixnum made, its words set), a collection 212 cycles a live cell (9,000 live: 1.9 M, 0.5 s).
@@ -175,7 +180,14 @@ The plan has it whole; in short:
    files need (lists, equality and order, output, fixnums), `load` (a file an item at a time), the REPL
    evaluating; `eval.dl` (its numbers past a fixnum made smaller), `scope.dl`, `control.dl` and `errors.dl` pass
    (221 checks), and a tail loop of 50,000 steps (the `hysuite` test).
-4. **Built-ins and lists**, and the library's built-ins.
+4. **Built-ins and lists**, and the library's built-ins.  Done: danlang first (`map`, `filter` and the folds
+   given what isn't a function: the evaluator's error, not a .NET exception; 1,182 checks); `filter`, `foldl`,
+   `foldr`, `any?`, `all?`, `find`, `count`, `sum`, `product` (one walk, with `map`, in `forms.inc`), `sort` (a
+   merge sort, stable, by `cmp` or by `less`), `subset`, `index-of` and `last-index-of` (lists and strings),
+   `gensym`, `to-atom`, `random`; `load` finds a bare name in `/lib/hylang`.  `lists.dl`, `types.dl` and
+   `library.dl` pass but for their checks of phase 5's numbers (and of a hash and a stream), with danlang's
+   library loaded from a card's `/lib/hylang` (`globals.dl` but its constants, `dice.dl`, `screen.dl`): 510 checks
+   with phase 3's files (the `hysuite` test).
 5. **Numbers**: bignums, the tower, every base.
 6. **Strings, characters and hashes**.
 7. **Streams, I/O and the system library**.

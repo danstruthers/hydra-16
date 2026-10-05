@@ -99,7 +99,11 @@ i_len:      .res        1                                   ;   the next in it)
 i_hash:     .res        1
 i_next:     .res        2
 
-.segment "DATA"
+.ifdef HL_DATA4
+.segment "DATA4"                                            ; (hylang's: from its fourth bank, hylang.cfg)
+.else
+.segment "DATA"                                             ; (A module of one bank's: t_heap)
+.endif
 
 ; ---- Making the heap
 

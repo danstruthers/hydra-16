@@ -26,7 +26,7 @@ od_n:       .res        2                                   ; (out_dec's: the ma
 od_digit:   .res        1
 od_diff:    .res        1
 
-.segment "DATA"
+.segment "DATA4"
 ; .A out (to stdout, or the capture open).  Keeps .A, .X, .Y and the window ($00)
 out_byte:
             phy

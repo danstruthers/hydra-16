@@ -1,0 +1,17 @@
+; run4.hl - hylang's own: the suite's files phase 4 runs, as run.dl runs them.  First danlang's library (globals.dl:
+; the test's card has it as /lib/hylang/globals.hl, as it has dice.dl and screen.dl, its constants past a fixnum left
+; out), then each file's checks in turn (a file that stops with an error counts as a failure): their checks of
+; numbers phase 5 makes, of hashes and of streams left out by the card too, and eval.dl's numbers past a fixnum made
+; smaller; then a tail loop of 50,000 steps (its counts fixnums), and the count
+(load "globals")
+(load "harness.dl")
+(each {f {"eval" "scope" "control" "errors" "lists" "types" "library"}}
+  (def {test-file} f)
+  (try (load (+ f ".dl"))
+    (do
+      (def {test-fails} (+ test-fails 1))
+      (print (format "FAIL {}: stopped: {}" f &err)))))
+(fun {run4-tail n m} ?{(zero? n) ?((zero? m) :done (run4-tail 10000 (- m 1))) (run4-tail (- n 1) m)})
+(def {test-file} "run4")
+(check (run4-tail 10000 4) :done)
+(print (format "{} checks, {} failed" test-count test-fails))

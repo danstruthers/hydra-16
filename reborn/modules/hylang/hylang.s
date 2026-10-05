@@ -1,13 +1,14 @@
 ; ****************************************************************************
-; hylang - danlang on the Hydra-16 (docs/hylang.md), written again from scratch.  As yet (phase 3) its REPL, its
-; evaluator and the built-ins the evaluator's checks need: a line read (with the lines that go on with it, while a
+; hylang - danlang on the Hydra-16 (docs/hylang.md), written again from scratch.  As yet (phase 4) its REPL, its
+; evaluator, the list and type built-ins and the library's: a line read (with the lines that go on with it, while a
 ; bracket or a here string is open), evaluated, its value printed as danlang's REPL prints it.  hylang -g collects
 ; before every allocation (a test of what's kept as a root).
-;   A program of four banks: the evaluator, its special forms, the dispatch and the hot built-ins in the first
-; (eval.inc, forms.inc, builtins.inc); the reader, the printer, the list built-ins and those that write values in
-; the second (read.inc, print.inc, lists.inc, eqcmp.inc, valout.inc); the numbers in the third; strings, hashes,
-; streams and the system in the fourth.  What every bank calls is in the task's RAM: the heap (heap.inc), the output
-; (out.inc), the evaluation stack (stack.inc), and the note handler here; a bank calls another through FARN.
+;   A program of four banks: the evaluator, its special forms, the dispatch and the built-ins that run it in the
+; first (eval.inc, forms.inc, builtins.inc); the reader, the printer, the list built-ins and those that write values
+; in the second (read.inc, print.inc, lists.inc, eqcmp.inc, valout.inc); the numbers in the third; strings, hashes,
+; streams and the system in the fourth, with the most of the RAM code (DATA4, hylang.cfg: copied to the RAM as hylang
+; starts).  What every bank calls is in the task's RAM: the heap (heap.inc), the output (out.inc), the evaluation
+; stack (stack.inc), and the note handler here; a bank calls another through FARN.
 
 .include "hydra.inc"
 .include "hyx2.inc"
@@ -15,6 +16,8 @@
 .include "hylang.inc"
 
             HYX2_PROGRAM "hylang", main, 4
+
+HL_DATA4        = 1             ; (The RAM code in DATA4: hylang.cfg)
 
 .include "heap.inc"
 .include "regs.inc"
@@ -43,7 +46,7 @@ intr:       .res        1                                   ; Ctrl-C ($80), note
 rl_any:     .res        1                                   ; (read_line's: some of a line read)
 stress:     .res        1                                   ; (hylang -g)
 
-.segment "DATA"
+.segment "DATA4"
 ; The note handler, in RAM (any bank may be at $A000 when a note comes): Ctrl-C (NOTE_INTERRUPT) noted in intr;
 ; another, the default
 notes:
@@ -63,6 +66,7 @@ notes:
 ; or stdin's end.  Ctrl-C gives the line up
 main:
             HYX2_BANKS_INIT
+            FARN        4, data4_init                       ; (The most of the RAM code: from the fourth bank)
             stz         stress
             lda         r0                                  ; (hylang -g: stress)
             ora         r0 + 1
@@ -322,7 +326,7 @@ getc_in:
             rts
 
 .rodata
-s_banner:   .byte       "hylang (danlang on the Hydra-16), phase 3: its evaluator", LF
+s_banner:   .byte       "hylang (danlang on the Hydra-16), phase 4: its built-ins and lists", LF
             .byte       "Type 'exit' to Exit", LF, LF, 0
 s_prompt:   .byte       "hylang> ", 0
 s_more:     .byte       " <", 0
@@ -338,5 +342,37 @@ bank_three:
             rts
 
 .segment "CODE4"                                            ; (Strings, hashes, streams, the system: phases 6, 7)
-bank_four:
+; DATA4 (hylang.cfg's: the most of the RAM code, kept in this bank) copied to the task's RAM, as hylang starts
+.import __DATA4_LOAD__, __DATA4_RUN__, __DATA4_SIZE__
+data4_init:
+            lda         #<__DATA4_LOAD__
+            sta         hq
+            lda         #>__DATA4_LOAD__
+            sta         hq + 1
+            lda         #<__DATA4_RUN__
+            sta         hb
+            lda         #>__DATA4_RUN__
+            sta         hb + 1
+            ldy         #0
+            ldx         #>__DATA4_SIZE__                    ; (Its whole pages ...
+            beq         @part
+@page:
+            lda         (hq),y
+            sta         (hb),y
+            iny
+            bne         @page
+            inc         hq + 1
+            inc         hb + 1
+            dex
+            bne         @page
+@part:
+            ldx         #<__DATA4_SIZE__                    ;   and the rest)
+            beq         @done
+:
+            lda         (hq),y
+            sta         (hb),y
+            iny
+            dex
+            bne         :-
+@done:
             rts

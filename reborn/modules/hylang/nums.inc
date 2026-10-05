@@ -912,6 +912,92 @@ bi_abs:
             clc
             rts
 
+; (random n): an integer from 0 up to, not including, n (an integer, 1 or more): a 16-bit xorshift's, seeded by
+; the tick count as it's first wanted; drawn again while it's past n
+bi_random:
+            jsr         n_arg0
+            lda         ex
+            lsr
+            bcs         :+
+            LDAX        s_randint
+            jmp         n_error
+:
+            lda         ex
+            ldx         ex + 1
+            jsr         unfix
+            sta         nm_n
+            stx         nm_n + 1
+            txa
+            bmi         @low
+            ora         nm_n
+            bne         :+
+@low:
+            LDAX        s_randpos
+            jmp         n_error
+:
+            lda         rn_x                                ; (Seeded: the tick count, not 0)
+            ora         rn_x + 1
+            bne         :+
+            jsr         TICKS
+            eor         #$5A
+            sta         rn_x
+            txa
+            eor         #$A5
+            sta         rn_x + 1
+            ora         rn_x
+            bne         :+
+            inc         rn_x
+:
+            lda         nm_n                                ; (n - 1, and the least mask that covers it)
+            sec
+            sbc         #1
+            sta         nm_m
+            lda         nm_n + 1
+            sbc         #0
+            sta         nm_m + 1
+            stz         nm_p
+            stz         nm_p + 1
+@grow:
+            lda         nm_p
+            cmp         nm_m
+            lda         nm_p + 1
+            sbc         nm_m + 1
+            bcs         @draw
+            sec
+            rol         nm_p
+            rol         nm_p + 1
+            bra         @grow
+@draw:
+            lda         rn_x + 1                            ; (The next: xorshift 7, 9, 8)
+            lsr
+            lda         rn_x
+            ror
+            eor         rn_x + 1
+            sta         rn_x + 1
+            ror
+            eor         rn_x
+            sta         rn_x
+            eor         rn_x + 1
+            sta         rn_x + 1
+            lda         rn_x                                ; (Masked: again if it's n or more)
+            and         nm_p
+            sta         nm_m
+            lda         rn_x + 1
+            and         nm_p + 1
+            sta         nm_m + 1
+            lda         nm_m
+            cmp         nm_n
+            lda         nm_m + 1
+            sbc         nm_n + 1
+            bcs         @draw
+            lda         nm_m
+            ldx         nm_m + 1
+            jsr         fix_ax
+            sta         ex
+            stx         ex + 1
+            clc
+            rts
+
 ; ---- Errors, types
 
 ; (error message [code]): an error, its message as print shows message, its code an atom
@@ -1163,6 +1249,7 @@ bi_not:
 
 .bss
 nu_start:    .res        2                                   ; (An error's capture: where it began)
+rn_x:       .res        2                                   ; (random's generator: 0 till it's seeded)
 
 .segment "RODATA3"
 ; Types as danlang's errors name them (LVal.LEName)
@@ -1201,6 +1288,8 @@ s_addnum:   .byte       "'+' adds numbers, or joins values to a string", 0
 s_opnum:    .byte       "All parameters to operator '", 0
 s_mustnum:  .byte       "' must be numbers.", 0
 s_divzero:  .byte       "Division by zero.", 0
+s_randint:  .byte       "'random' expects an integer", 0
+s_randpos:  .byte       "'random' expects a number above 0", 0
 s_numpast:  .byte       "Not yet: a number past a fixnum, or a fraction (phase 5)", 0
 s_absnum:   .byte       "Cannot perform 'abs' on non-number", 0
 s_errcode:  .byte       "An error's code must be an atom", 0

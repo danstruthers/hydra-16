@@ -76,6 +76,10 @@
 (check ((foldl +) 0 {1 2}) 3)
 (check (function? (map 1+)) T)
 (check-error (fst {1} {2}))
+; their function must be one
+(check-error (map 5 {1}))
+(check-error (foldl :f 0 {1}))
+(check (map 5 {}) {})
 ; a count or an index is a whole number (2.0 and 4/2 are too); a count isn't negative
 (check-error (take -1 {1 2}))
 (check-error (drop -1 {1 2}))
