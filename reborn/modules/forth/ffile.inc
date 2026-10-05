@@ -362,7 +362,7 @@ includefile:                                                ; ( i*x fileid -- j*
 @end:
             jmp         src_pop
 
-            HEADER      "INCLUDED", 0
+            HEADER      "included", 0
 included:                                                   ; ( i*x c-addr u -- j*x ): the file named, opened and
             jsr         inc_find                            ;   included (and noted, for REQUIRED)
             bcc         :+
@@ -681,29 +681,50 @@ lib_load:
             dec         tmp2
             bra         @reloc
 @link:
-            lda         statbuf + LH_FIRST + 1              ; Its headers, in the compilation word list
+            stz         p1                                  ; Its headers (p1 its first, p2 its last; 0: none), in the
+            stz         p1 + 1                              ;   compilation word list
+            lda         statbuf + LH_FIRST + 1
             cmp         #$FF
-            beq         @here
-            clc                                             ; (Its first header's link: the word list's last)
+            beq         @note
+            clc
             lda         here
             adc         statbuf + LH_FIRST
-            sta         p2
+            sta         p1
             lda         here + 1
             adc         statbuf + LH_FIRST + 1
-            sta         p2 + 1
-            jsr         current_w3
-            lda         (w3)
-            sta         (p2)
-            ldy         #1
-            lda         (w3),y
-            sta         (p2),y
-            clc                                             ; (The word list's last: its last header)
+            sta         p1 + 1
+            clc
             lda         here
             adc         statbuf + LH_LAST
-            sta         (w3)
+            sta         p2
             lda         here + 1
             adc         statbuf + LH_LAST + 1
+            sta         p2 + 1
+            jsr         current_w3                          ; (Its first header's link: the word list's last)
+            lda         (w3)
+            sta         (p1)
+            ldy         #1
+            lda         (w3),y
+            sta         (p1),y
+            lda         p2                                  ; (The word list's last: its last header)
+            sta         (w3)
+            lda         p2 + 1
             sta         (w3),y
+@note:
+            lda         here                                ; Noted in libtab, by the name INCLUDED had for it
+            sta         tmp2
+            lda         here + 1
+            sta         tmp2 + 1
+            LDR         w, lib_noname
+            lda         inc_named
+            beq         :+
+            stz         inc_named
+            lda         src_fdep
+            inc
+            jsr         lname_w
+:
+            lda         #0
+            jsr         lib_add
 @here:
             clc                                             ; Its init's address (before HERE moves on)
             lda         here
@@ -736,6 +757,143 @@ lib_read:
             ldx         xsave
             rts
 
+; ---- The libraries loaded (libtab): what libs, lib, -lib and words (the Programming-Tools library's) know of each
+
+; A library loaded noted in libtab, if there's room: its image tmp2, its end w2, its headers p1 (its first) to p2 (its
+; last) in the compilation word list (p1 0: none), its flags .A (LRF_SOURCE), its name w (counted: a file's, of which
+; the part after its last / and before its first . is kept, LR_NAME_MAX at most).  Keeps .X
+lib_add:
+            pha
+            jsr         lib_prune
+            pla
+            ldy         libs_n
+            cpy         #LIB_MAX
+            bcc         :+
+            rts
+:
+            pha                                             ; (Its flags first, while .A has them)
+            tya
+            jsr         lib_rec
+            pla
+            ldy         #LR_FLAGS
+            sta         (w3),y
+            inc         libs_n
+            ldy         #LR_START
+            lda         tmp2
+            sta         (w3),y
+            iny
+            lda         tmp2 + 1
+            sta         (w3),y
+            iny                                             ; LR_END
+            lda         w2
+            sta         (w3),y
+            iny
+            lda         w2 + 1
+            sta         (w3),y
+            iny                                             ; LR_FIRST
+            lda         p1
+            sta         (w3),y
+            iny
+            lda         p1 + 1
+            sta         (w3),y
+            iny                                             ; LR_LAST
+            lda         p2
+            sta         (w3),y
+            iny
+            lda         p2 + 1
+            sta         (w3),y
+            iny                                             ; LR_WID
+            lda         current
+            sta         (w3),y
+            iny
+            lda         current + 1
+            sta         (w3),y
+            lda         (w)                                 ; Its name: from after its last / (tmp + 1, .Y the char
+            sta         tmp                                 ;   before it) ...
+            ldy         #0
+            sty         tmp + 1
+@slash:
+            cpy         tmp
+            beq         @name
+            iny
+            lda         (w),y
+            cmp         #'/'
+            bne         @slash
+            sty         tmp + 1
+            bra         @slash
+@name:
+            stz         cnt                                 ;   to its first . or its end
+@char:
+            ldy         tmp + 1
+            cpy         tmp
+            beq         @named
+            iny
+            sty         tmp + 1
+            lda         (w),y
+            cmp         #'.'
+            beq         @named
+            ldy         cnt
+            cpy         #LR_NAME_MAX
+            beq         @named
+            pha
+            tya
+            clc
+            adc         #LR_NAME + 1
+            tay
+            pla
+            sta         (w3),y
+            inc         cnt
+            bra         @char
+@named:
+            lda         cnt
+            ldy         #LR_NAME
+            sta         (w3),y
+            rts
+
+; The records of the libraries a MARKER has taken out (their images at HERE or after) let go of: the last ones, as
+; they're in the order they were loaded.  Keeps .X
+lib_prune:
+            lda         libs_n
+            beq         @done
+            dec
+            jsr         lib_rec
+            ldy         #LR_START + 1
+            lda         (w3),y
+            cmp         here + 1
+            bcc         @done
+            bne         @drop
+            dey
+            lda         (w3),y
+            cmp         here
+            bcc         @done
+@drop:
+            dec         libs_n
+            bra         lib_prune
+@done:
+            rts
+
+; w3 = library .A's record (0 ...).  Keeps .X
+lib_rec:
+            tay
+            lda         #<libtab
+            sta         w3
+            lda         #>libtab
+            sta         w3 + 1
+@next:
+            dey
+            bmi         @done
+            clc
+            lda         w3
+            adc         #LR_SIZE
+            sta         w3
+            bcc         @next
+            inc         w3 + 1
+            bra         @next
+@done:
+            rts
+
+lib_noname: .byte       0                                   ; (A library INCLUDED had no name for: too deep)
+
 ; ( c-addr u -- fileid ior ): OPEN-FILE, read only
 open_ro:
             dex
@@ -744,7 +902,7 @@ open_ro:
             stz         dhi,x
             jmp         openfile
 
-            HEADER      "REQUIRED", 0
+            HEADER      "required", 0
 required:                                                   ; ( i*x c-addr u -- j*x ): INCLUDED, unless it has been
             jsr         inc_find
             bcc         :+
@@ -754,12 +912,12 @@ required:                                                   ; ( i*x c-addr u -- 
             inx
             rts
 
-            HEADER      "INCLUDE", 0
+            HEADER      "include", 0
 include:                                                    ; ( i*x "name" -- j*x )
             jsr         parse_name
             jmp         included
 
-            HEADER      "REQUIRE", 0
+            HEADER      "require", 0
 require:                                                    ; ( i*x "name" -- j*x )
             jsr         parse_name
             bra         required

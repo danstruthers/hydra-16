@@ -1,7 +1,7 @@
 ; ****************************************************************************
 ; hydra.s - HyForth's Hydra library (/lib/forth/hydra.fl): a sys- word for each system call a program makes (their
 ; headers forthsys.inc's, tools/apigen.js's, from the specification), zero-terminated strings, SH and RUN, the bank and
-; segment words, and forth's arguments (ARGC, ARG).
+; segment words, forth's arguments (ARGC, ARG), and SYS (machine code, called with its registers).
 ;   A sys- word is a system call with its registers as stack items, in the specification's order (spec/api.def;
 ; /rom/doc/api.md has each one's), the first deepest: its inputs, then its outputs and, if the call can fail, an ior
 ; (0, or -512 less the error code; its outputs 0 then).  A register is a cell (rN, .A/.X: 16 bits; .A, .X, .Y: a
@@ -193,7 +193,7 @@ sys_push:
 
 ; ---- Zero-terminated strings
 
-            HEADER      ">Z", 0
+            HEADER      ">z", 0
 toz:                                                        ; ( c-addr u -- z-addr ): a copy, zero-terminated (127
             lda         zbuf_n                              ;   chars at most), in one of two buffers in turn
             eor         #1
@@ -216,13 +216,70 @@ toz:                                                        ; ( c-addr u -- z-ad
             PUSHAY
             rts
 
-            HEADER      "ZCOUNT", 0
+            HEADER      "zcount", 0
 zcount_w:                                                   ; ( z-addr -- c-addr u )
             jmp         zcount
 
+            HEADER      "ctl", 0
+ctl:                                                        ; ( c-addr1 u1 c-addr2 u2 -- ): the text c-addr2 u2
+            lda         dlo + 1,x                           ;   written to the file c-addr1 u1 in one write, as rc's
+            sta         p1                                  ;   echo -n text >file writes it (a device's ctl: s"
+            lda         dhi + 1,x                           ;   /dev/sd/0/ctl" s" check" ctl); a failure THROWs,
+            sta         p1 + 1                              ;   named by the file
+            lda         dlo,x
+            sta         p2
+            lda         dhi,x
+            sta         p2 + 1
+            inx
+            inx
+            lda         dlo + 1,x                           ; (The file's name, for an error)
+            sta         throw_name
+            lda         dhi + 1,x
+            sta         throw_name + 1
+            lda         dlo,x
+            sta         throw_nlen
+            jsr         toz
+            lda         dlo,x
+            sta         r0
+            lda         dhi,x
+            sta         r0 + 1
+            inx
+            lda         #O_WRITE
+            stx         xsave
+            jsr         OPEN
+            ldx         xsave
+            bcs         @fail
+            sta         cnt
+            lda         p1
+            sta         r0
+            lda         p1 + 1
+            sta         r0 + 1
+            lda         p2
+            sta         r1
+            lda         p2 + 1
+            sta         r1 + 1
+            lda         cnt
+            stx         xsave
+            jsr         WRITE
+            php
+            pha
+            lda         cnt
+            jsr         CLOSE
+            pla
+            plp
+            ldx         xsave
+            bcs         @fail
+            rts
+@fail:
+            pha
+            lda         #1
+            sta         throw_named
+            pla
+            jmp         throw_os
+
 ; ---- Programs
 
-            HEADER      "SH", 0
+            HEADER      "sh", 0
 sh:                                                         ; ( c-addr u -- status ): the command line, as rc runs
             LDR         w2, argbuf                          ;   one (rc -c: /bin/rc, else the ROM's): its exit code,
             LDR         p2, argbuf + ARGS_MAX - 2           ;   or its status if that's a number
@@ -269,7 +326,7 @@ sh:                                                         ; ( c-addr u -- stat
 :
             jmp         throw_os
 
-            HEADER      "RUN", 0
+            HEADER      "run", 0
 run:                                                        ; ( c-addr u -- status ): a program and its arguments,
             lda         dlo + 1,x                           ;   split at blanks (a name with no / in it is /bin's):
             sta         w                                   ;   its exit code
@@ -471,28 +528,25 @@ s_mrc:      .byte       "#m/rc", 0
 ; ---- Banks and shared segments: a bank at $8000-$9FFF (BANK-WINDOW), the task's own (sys-banks-alloc gives them)
 ; or a shared segment's (sys-seg-create, sys-seg-attach)
 
-            HEADER      "BANK-WINDOW", 0
+            HEADER      "bank-window", 0
 bankwindow:                                                 ; ( -- addr ): $8000, where the bank selected is
-            lda         #<BANK_WINDOW
-            ldy         #>BANK_WINDOW
-            PUSHAY
-            rts
+            CONSTCODE   BANK_WINDOW
 
-            HEADER      "BANK!", 0
+            HEADER      "bank!", 0
 bankstore:                                                  ; ( bank -- ): one of the task's at BANK-WINDOW
             lda         dlo,x
             sta         RAM_BANK
             inx
             rts
 
-            HEADER      "BANK@", 0
+            HEADER      "bank@", 0
 bankfetch:                                                  ; ( -- bank ): the bank at BANK-WINDOW
             lda         RAM_BANK
             ldy         #0
             PUSHAY
             rts
 
-            HEADER      "SEG-BANK!", 0
+            HEADER      "seg-bank!", 0
 segbankstore:                                               ; ( seg n -- ior ): bank n of shared segment seg (attached)
             lda         dlo + 1,x                           ;   at BANK-WINDOW (SEG_MAP: U and its bank register)
             ldy         dlo,x
@@ -511,7 +565,7 @@ segbankstore:                                               ; ( seg n -- ior ): 
 
 ; ---- forth's arguments
 
-            HEADER      "ARGC", 0
+            HEADER      "argc", 0
 argc:                                                       ; ( -- n ): forth's arguments (forth file.fs a b: 3, the
             jsr         argl_first                           ;   file's name the first); at the console, 0
             stz         cnt
@@ -526,7 +580,7 @@ argc:                                                       ; ( -- n ): forth's 
             PUSHAY
             rts
 
-            HEADER      "ARG", 0
+            HEADER      "arg", 0
 arg:                                                        ; ( n -- c-addr u ): argument n (0: the file's name); past
             lda         dhi,x                               ;   the last, 0 0
             bne         @none
@@ -593,6 +647,46 @@ argl_is:
 :
             clc
             rts
+
+; ---- Machine code: SYS, the old HyForth's
+
+            HEADER      "sys", 0
+sys:                                                        ; ( addr a x y -- a x y p ): the machine code at addr
+            lda         dlo,x                               ;   called (jsr) with .A, .X and .Y (each cell's low
+            sta         sys_y                               ;   byte), and what they were after it, with its flags
+            lda         dlo + 1,x                           ;   (P: C is bit 0).  forth's data stack is .X and the
+            sta         sys_x                               ;   zero page from $22: the code must leave them be
+            lda         dlo + 2,x
+            sta         sys_a
+            lda         dlo + 3,x
+            sta         sys_to
+            lda         dhi + 3,x
+            sta         sys_to + 1
+            phx
+            lda         sys_a
+            ldx         sys_x
+            ldy         sys_y
+            jsr         @call
+            php
+            sta         sys_a
+            stx         sys_x
+            sty         sys_y
+            pla
+            plx
+            sta         dlo,x
+            lda         sys_y
+            sta         dlo + 1,x
+            lda         sys_x
+            sta         dlo + 2,x
+            lda         sys_a
+            sta         dlo + 3,x
+            stz         dhi,x
+            stz         dhi + 1,x
+            stz         dhi + 2,x
+            stz         dhi + 3,x
+            rts
+@call:
+            jmp         (sys_to)
 
 ; ---- The sys- words' headers
 

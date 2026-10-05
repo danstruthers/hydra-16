@@ -73,7 +73,7 @@ divisor:
 :
             rts
 
-            HEADER      "UM*", 0
+            HEADER      "um*", 0
 umstar:                                                     ; ( u1 u2 -- ud )
             lda         dlo,x
             sta         tmp
@@ -95,7 +95,7 @@ put_acc:                                                    ; The top two = numa
             sta         dhi,x
             rts
 
-            HEADER      "UM/MOD", 0
+            HEADER      "um/mod", 0
 ummod:                                                      ; ( ud u -- urem uquot )
             jsr         divisor
 get_acc:                                                    ; numacc = the double on top, then
@@ -119,7 +119,7 @@ put_qr:                                                     ; The top two: the r
             sta         dhi,x
             rts
 
-            HEADER      "M*", 0
+            HEADER      "m*", 0
 mstar:                                                      ; ( n1 n2 -- d )
             lda         dhi,x                               ; (The product's sign)
             eor         dhi + 1,x
@@ -140,7 +140,7 @@ star:
             inx
             rts
 
-            HEADER      "S>D", 0
+            HEADER      "s>d", 0
 stod:
             dex
             lda         dhi + 1,x
@@ -170,7 +170,7 @@ dabs:                                                       ; ( d -- |d| ) (DABS
             bmi         dnegate
             rts
 
-            HEADER      "SM/REM", 0
+            HEADER      "sm/rem", 0
 smrem:                                                      ; ( d n -- rem quot ): symmetric
             lda         dhi + 1,x                           ; (The remainder's sign: the dividend's ...
             pha
@@ -193,7 +193,7 @@ smrem:                                                      ; ( d n -- rem quot 
 :
             rts
 
-            HEADER      "FM/MOD", 0
+            HEADER      "fm/mod", 0
 fmmod:                                                      ; ( d n -- rem quot ): floored
             lda         dhi,x                               ; (The divisor, kept)
             pha
@@ -221,7 +221,7 @@ fmmod:                                                      ; ( d n -- rem quot 
 @done:
             rts
 
-            HEADER      "/MOD", 0
+            HEADER      "/mod", 0
 slashmod:                                                   ; ( n1 n2 -- rem quot )
             jsr         save_top
             jsr         stod
@@ -233,13 +233,13 @@ slash:
             jsr         slashmod
             jmp         nip
 
-            HEADER      "MOD", 0
+            HEADER      "mod", 0
 mod:
             jsr         slashmod
             inx
             rts
 
-            HEADER      "*/MOD", 0
+            HEADER      "*/mod", 0
 starslashmod:                                               ; ( n1 n2 n3 -- rem quot ): n1 * n2, 32 bits, / n3
             jsr         save_top
             jsr         mstar

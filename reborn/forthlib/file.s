@@ -29,33 +29,27 @@ stat_none:
 
 ; ---- The words
 
-            HEADER      "R/O", 0
+            HEADER      "r/o", 0
 ro:
-            lda         #O_READ
-fam:
-            ldy         #0
-            PUSHAY
-            rts
+            CONSTCODE   O_READ
 
-            HEADER      "W/O", 0
+            HEADER      "w/o", 0
 wo:
-            lda         #O_WRITE
-            bra         fam
+            CONSTCODE   O_WRITE
 
-            HEADER      "R/W", 0
+            HEADER      "r/w", 0
 rw:
-            lda         #O_RDWR
-            bra         fam
+            CONSTCODE   O_RDWR
 
-            HEADER      "BIN", 0
+            HEADER      "bin", 0
 bin:
             rts
 
-            HEADER      "OPEN-FILE", 0
+            HEADER      "open-file", 0
 openfile_w:                                                 ; ( c-addr u fam -- fileid ior )
             jmp         openfile
 
-            HEADER      "CREATE-FILE", 0
+            HEADER      "create-file", 0
 createfile:                                                 ; ( c-addr u fam -- fileid ior ): one that's there is
             lda         dlo,x                               ;   emptied
             pha
@@ -69,7 +63,7 @@ createfile:                                                 ; ( c-addr u fam -- 
             ldx         xsave
             jmp         fid_ior
 
-            HEADER      "CLOSE-FILE", 0
+            HEADER      "close-file", 0
 closefile:                                                  ; ( fileid -- ior )
             lda         dlo,x
             inx
@@ -78,7 +72,7 @@ closefile:                                                  ; ( fileid -- ior )
             ldx         xsave
             jmp         push_ior
 
-            HEADER      "DELETE-FILE", 0
+            HEADER      "delete-file", 0
 deletefile:                                                 ; ( c-addr u -- ior )
             jsr         to_path
             LDR         r0, pathbuf
@@ -87,7 +81,7 @@ deletefile:                                                 ; ( c-addr u -- ior 
             ldx         xsave
             jmp         push_ior
 
-            HEADER      "READ-FILE", 0
+            HEADER      "read-file", 0
 readfile:                                                   ; ( c-addr u1 fileid -- u2 ior ): u2 < u1 at the end
             lda         dlo,x                               ;   (stdin's read ahead first: the interpreter's)
             bne         @read
@@ -170,7 +164,7 @@ readfile:                                                   ; ( c-addr u1 fileid
             sec
             jmp         push_ior
 
-            HEADER      "READ-LINE", 0
+            HEADER      "read-line", 0
 readline:                                                   ; ( c-addr u1 fileid -- u2 flag ior ): the buffer u1 + 2
             lda         dlo + 2,x                           ;   long; flag false at the end
             sta         w2
@@ -206,7 +200,7 @@ readline:                                                   ; ( c-addr u1 fileid
             cmp         #1                                  ; (C = 1 for an error)
             jmp         push_ior
 
-            HEADER      "WRITE-FILE", 0
+            HEADER      "write-file", 0
 writefile:                                                  ; ( c-addr u fileid -- ior )
             jsr         flush                               ; (TYPE's first, for stdout's order)
             lda         dlo,x
@@ -229,7 +223,7 @@ write_fd:
             ldx         xsave
             jmp         push_ior
 
-            HEADER      "WRITE-LINE", 0
+            HEADER      "write-line", 0
 writeline:                                                  ; ( c-addr u fileid -- ior ): and an LF
             lda         dlo,x
             pha
@@ -250,7 +244,7 @@ writeline:                                                  ; ( c-addr u fileid 
 :
             rts
 
-            HEADER      "FILE-POSITION", 0
+            HEADER      "file-position", 0
 fileposition:                                               ; ( fileid -- ud ior )
             stz         r0
             stz         r0 + 1
@@ -274,7 +268,7 @@ fileposition:                                               ; ( fileid -- ud ior
             clc
             jmp         push_ior
 
-            HEADER      "REPOSITION-FILE", 0
+            HEADER      "reposition-file", 0
 repositionfile:                                             ; ( ud fileid -- ior )
             lda         dlo + 2,x
             sta         r0
@@ -294,7 +288,7 @@ repositionfile:                                             ; ( ud fileid -- ior
             ldx         xsave
             jmp         push_ior
 
-            HEADER      "FILE-SIZE", 0
+            HEADER      "file-size", 0
 filesize:                                                   ; ( fileid -- ud ior )
             LDR         r0, statbuf
             lda         dlo,x
@@ -314,7 +308,7 @@ filesize:                                                   ; ( fileid -- ud ior
             clc
             jmp         push_ior
 
-            HEADER      "RESIZE-FILE", 0
+            HEADER      "resize-file", 0
 resizefile:                                                 ; ( ud fileid -- ior ): longer with zeros, or cut short
             jsr         stat_none                           ;   (a WSTAT of its length)
             lda         dlo + 2,x
@@ -335,7 +329,7 @@ resizefile:                                                 ; ( ud fileid -- ior
             ldx         xsave
             jmp         push_ior
 
-            HEADER      "RENAME-FILE", 0
+            HEADER      "rename-file", 0
 renamefile:                                                 ; ( c-addr1 u1 c-addr2 u2 -- ior ): in its directory, the
             jsr         stat_none                           ;   new name's last part its name
             lda         dlo + 1,x
@@ -382,7 +376,7 @@ renamefile:                                                 ; ( c-addr1 u1 c-add
             ldx         xsave
             jmp         push_ior
 
-            HEADER      "FILE-STATUS", 0
+            HEADER      "file-status", 0
 filestatus:                                                 ; ( c-addr u -- x ior ): x its mode
             jsr         to_path
             LDR         r0, pathbuf
@@ -397,11 +391,11 @@ filestatus:                                                 ; ( c-addr u -- x io
             pla
             jmp         push_ior
 
-            HEADER      "FLUSH-FILE", 0
+            HEADER      "flush-file", 0
 flushfile:                                                  ; ( fileid -- ior ): nothing's kept but TYPE's
             jsr         flush
             jmp         zero_tos
 
-            HEADER      "INCLUDE-FILE", 0
+            HEADER      "include-file", 0
 includefile_w:                                              ; ( i*x fileid -- j*x ): its lines, from its offset, as
             jmp         includefile                         ;   the source; closed at its end

@@ -124,6 +124,10 @@ pathbuf:    .res        PATH_SIZE                           ; A file's name, zer
 statbuf:    .res        SR_SIZE                             ; A stat record
 argp:       .res        2                                   ; forth's arguments (main's r0): a script's name first
 script:     .res        1                                   ; <> 0: forth file.fs (the file run, then the end)
+login:      .res        1                                   ; <> 0: forth -l (newns, then profile.fs)
+lastc:      .res        1                                   ; The last character out (emit_a's)
+libs_n:     .res        1                                   ; The libraries loaded, oldest first: how many records ...
+libtab:     .res        LR_SIZE * LIB_MAX                   ;   and they (LR_*)
 dict:                                                       ; The dictionary, from here
 
 .segment "DATA"
@@ -145,16 +149,28 @@ notes:
 ; The start: the dictionary after the BSS, its end claimed (BREAK), decimal, stdin a console or not, Ctrl-C a
 ; THROW; the banner (not a script's), and startup.fs (its libraries); then the script, or QUIT
 main:
-            lda         r0                                  ; Its arguments: a script's name, and its own
+            lda         r0                                  ; Its arguments: a script's name, and its own; or -l
             sta         argp
             lda         r0 + 1
             sta         argp + 1
             stz         script
+            stz         login
             ora         r0
             beq         :+
             lda         (r0)
             beq         :+
             inc         script
+            cmp         #'-'                                ; (-l: a login shell, no script)
+            bne         :+
+            ldy         #1
+            lda         (r0),y
+            cmp         #'l'
+            bne         :+
+            iny
+            lda         (r0),y
+            bne         :+
+            stz         script
+            inc         login
 :
             LDR         r0, DICT_END
             jsr         BREAK
@@ -193,6 +209,9 @@ main:
             stz         inc_named
             stz         incn_len
             stz         incn_len + 1
+            stz         libs_n
+            lda         #LF
+            sta         lastc
             stz         raw
             stz         key_pend
             stz         intr
@@ -227,7 +246,17 @@ main:
             tsx
             stx         rsp0
             ldx         #DS_N
+            lda         login                               ; (forth -l: its namespace first, as rc -l's: before it,
+            beq         :+                                  ;   there's no /lib to load anything from)
+            jsr         do_newns
+:
+            LDR         w, s_startup
             jsr         startup
+            lda         login
+            beq         :+
+            LDR         w, s_profile
+            jsr         startup
+:
             lda         script
             beq         :+
             jmp         run_script
@@ -238,15 +267,23 @@ banner:
             LDR         w, s_banner
             jmp         type_z
 
-s_banner:   .byte       "HyForth (Forth 2012), BYE to end", LF, 0
+s_banner:   .byte       "HyForth (Forth 2012), bye to end", LF, 0
 
-; /lib/forth/startup.fs, if there is one, INCLUDED: the libraries forth starts with (the ROM's, or a card's or the
-; RAM disk's before it, through the /lib union).  An error in it: its message, and on
+; The file w (a counted name), if there is one, INCLUDED: /lib/forth/startup.fs, the libraries forth starts with (the
+; ROM's, or a card's or the RAM disk's before it, through the /lib union); or, for forth -l, /lib/forth/profile.fs.
+; An error in it: its message, and on
 startup:
-            lda         #<s_startup
-            ldy         #>s_startup
+            lda         (w)
+            pha
+            clc
+            lda         w
+            adc         #1
+            ldy         w + 1
+            bcc         :+
+            iny
+:
             PUSHAY
-            lda         #S_STARTUP_LEN
+            pla
             ldy         #0
             PUSHAY
             lda         #<included
@@ -270,8 +307,28 @@ startup:
 @say:
             jmp         show_error
 
-s_startup:  .byte       "/lib/forth/startup.fs"
-S_STARTUP_LEN = * - s_startup
+s_startup:  .byte       S_STARTUP_LEN, "/lib/forth/startup.fs"
+S_STARTUP_LEN = * - s_startup - 1
+s_profile:  .byte       S_PROFILE_LEN, "/lib/forth/profile.fs"
+S_PROFILE_LEN = * - s_profile - 1
+
+; The default namespace (nslib's newns, as init and rc build theirs): forth -l's, and NEWNS's (the Hydra's shell
+; library: shell.fl).  Its buffers are the dictionary's last NS_BSS_SIZE bytes, so the dictionary must end below
+; them: else THROW -8
+do_newns:
+            lda         here
+            cmp         #<NS_BSS
+            lda         here + 1
+            sbc         #>NS_BSS
+            bcc         :+
+            lda         #<-8
+            jmp         throw_a
+:
+            jsr         flush
+            phx
+            jsr         ns_default
+            plx
+            rts
 
 ; The core's id (tools/forthlib.js: a CRC of its image, patched in), which a library must have
 core_id:    .word       0
@@ -285,3 +342,19 @@ core_id:    .word       0
 .include "fscript.inc"
 
 forth_last  = .ident(.sprintf("hdr_%d", hdr_n))             ; (The last ROM header: the word list's start)
+
+; nslib (the SDK's: newns), with forth's scratch for its zero page (nothing of forth's runs in it) and the
+; dictionary's top for its buffers (do_newns)
+NS_ZP       = 1
+ns_p        = w
+ns_end      = w2
+ns_w        = w3
+ns_task     = tmp
+ns_n        = tmp + 1
+ns_fl       = tmp2
+ns_fd       = tmp2 + 1
+ns_d        = tmp3
+ns_len      = tmp3 + 1
+ns_line     = p1
+NS_BSS      = DICT_END - NS_BSS_SIZE
+.include "nslib.s"

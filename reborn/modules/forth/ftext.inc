@@ -3,8 +3,9 @@
 
 ; ---- Output: fd 1, through obuf
 
-; .A out.  Keeps .X, .Y
+; .A out (lastc: it, so the shell's prompt knows a line's been ended).  Keeps .X, .Y
 emit_a:
+            sta         lastc
             phy
             ldy         olen
             sta         obuf,y
@@ -67,13 +68,13 @@ type_w:
 @done:
             rts
 
-            HEADER      "EMIT", 0
+            HEADER      "emit", 0
 emit:
             lda         dlo,x
             inx
             jmp         emit_a
 
-            HEADER      "TYPE", 0
+            HEADER      "type", 0
 type:                                                       ; ( addr u -- )
             lda         dlo + 1,x
             sta         w
@@ -87,17 +88,17 @@ type:                                                       ; ( addr u -- )
             inx
             jmp         type_w
 
-            HEADER      "CR", 0
+            HEADER      "cr", 0
 cr:
             lda         #LF
             jmp         emit_a
 
-            HEADER      "SPACE", 0
+            HEADER      "space", 0
 space:
             lda         #' '
             jmp         emit_a
 
-            HEADER      "SPACES", 0
+            HEADER      "spaces", 0
 spaces:                                                     ; ( n -- ): none if n < 1
             lda         dhi,x
             bmi         @done
@@ -244,7 +245,7 @@ refill_src:
 :
             jmp         refill_file
 
-            HEADER      "ACCEPT", 0
+            HEADER      "accept", 0
 accept:                                                     ; ( c-addr +n1 -- +n2 )
             lda         dlo,x
             sta         tmp2
@@ -264,7 +265,7 @@ accept:                                                     ; ( c-addr +n1 -- +n
             sty         dhi,x
             rts
 
-            HEADER      "KEY", 0
+            HEADER      "key", 0
 key:                                                        ; ( -- char ): the console's raw mode, a key (KEY?'s,
             lda         key_pend                            ;   if it has one); not the console, stdin's next byte
             beq         :+                                  ;   (its end: 4)
@@ -468,7 +469,7 @@ parse_name:                                                 ; ( "<spaces>name<sp
             jsr         skip_delims
             jmp         parse_to
 
-            HEADER      "WORD", 0
+            HEADER      "word", 0
 word:                                                       ; ( char "<chars>ccc<char>" -- c-addr )
             lda         dlo,x
             inx
@@ -505,7 +506,7 @@ to_wbuf:
             sta         dhi,x
             rts
 
-            HEADER      "SOURCE", 0
+            HEADER      "source", 0
 source:
             lda         src_addr
             ldy         src_addr + 1
@@ -561,7 +562,7 @@ backslash:
             sta         to_in + 1
             rts
 
-            HEADER      "CHAR", 0
+            HEADER      "char", 0
 char:
             jsr         parse_name
             inx                                             ; (Its first char)
@@ -577,7 +578,7 @@ lessnum:
             sta         hld + 1
             rts
 
-            HEADER      "HOLD", 0
+            HEADER      "hold", 0
 hold:
             lda         dlo,x
             inx
@@ -616,7 +617,7 @@ num:                                                        ; ( ud -- ud' )
             ora         #'0'
             bra         hold_a
 
-            HEADER      "#S", 0
+            HEADER      "#s", 0
 nums:
 :
             jsr         num
@@ -642,7 +643,7 @@ numgreater:                                                 ; ( ud -- addr u )
             sta         dhi,x
             rts
 
-            HEADER      "SIGN", 0
+            HEADER      "sign", 0
 sign:
             lda         dhi,x
             inx
@@ -683,7 +684,7 @@ dot:
             jsr         type
             jmp         space
 
-            HEADER      "U.", 0
+            HEADER      "u.", 0
 udot:
             jsr         u_text
             jsr         type
@@ -691,7 +692,7 @@ udot:
 
 ; ---- Numbers in: >NUMBER, and the interpreter's
 
-            HEADER      ">NUMBER", 0
+            HEADER      ">number", 0
 tonumber:                                                   ; ( ud1 c-addr1 u1 -- ud2 c-addr2 u2 )
 :
             lda         dlo,x
@@ -1058,7 +1059,7 @@ to_sbuf:
             sta         dhi + 1,x
             rts
 
-            HEADERQ     "S", F_IMMEDIATE
+            HEADERQ     "s", F_IMMEDIATE
 squote:
             lda         #'"'
             sta         cnt

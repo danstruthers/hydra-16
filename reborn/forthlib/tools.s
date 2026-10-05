@@ -1,11 +1,25 @@
 ; ****************************************************************************
-; tools.s - HyForth's Programming-Tools library (/lib/forth/tools.fl: REQUIRE tools.fl): .S ? WORDS DUMP SEE, AHEAD,
-; [IF] [ELSE] [THEN] and their kind, the control-flow stack's, the return stack's, SYNONYM, and the name tokens' (an
-; nt is a header's address).  BYE is the core's.
+; tools.s - HyForth's Programming-Tools library (/lib/forth/tools.fl: require tools.fl): .s ? words dump see, ahead,
+; [if] [else] [then] and their kind, the control-flow stack's, the return stack's, synonym, and the name tokens' (an
+; nt is a header's address); and the libraries' (the core's libtab): libs, lib, -lib.  bye is the core's.
 
 .include "forthlib.inc"
 
-            HEADER      "AHEAD", F_IMMEDIATE
+WD_COL      = 25                                            ; WORDS: a word's place on the line, at least
+
+.bss
+wd_pos:     .res        1                                   ; WORDS: where the line has got to ...
+wd_next:    .res        1                                   ;   where the next word goes on it ...
+wd_width:   .res        1                                   ;   and its width ($COLUMNS, else 80)
+wd_i:       .res        1                                   ; A libtab record's number (the next one's)
+wd_buf:     .res        4                                   ; $COLUMNS's value
+lib_nm:     .res        LR_NAME_MAX + 4                     ; LIB's file's name: the name, and .fl or .fs
+lib_inc:    .res        2                                   ; LIB: INCLUDED's names' bytes, before it tried NAME.fl
+lib_last:   .res        2                                   ; LIB, a .fs: the compilation word list's last before ...
+lib_wid:    .res        2                                   ;   and it
+.code
+
+            HEADER      "ahead", F_IMMEDIATE
 ahead:
             jmp         comp_fwd
 
@@ -14,7 +28,7 @@ question:
             jsr         fetch
             jmp         dot
 
-            HEADER      ".S", 0
+            HEADER      ".s", 0
 dots:                                                       ; ( -- ): "<depth> items", the top last
             lda         #'<'
             jsr         emit_a
@@ -43,8 +57,14 @@ dots:                                                       ; ( -- ): "<depth> i
 @done:
             rts
 
-            HEADER      "WORDS", 0
-words:                                                      ; The first word list in the order: its names, newest first
+; ---- WORDS
+
+            HEADER      "words", 0
+words:                                                      ; The first word list in the order, newest first: each
+            jsr         lib_prune                           ;   word's xt in hex, its kind (l a literal, i immediate,
+            jsr         columns                             ;   a or f assembly or Forth) and its name, as many to a
+            stz         wd_pos                              ;   line as the screen's width has room for
+            stz         wd_next
             lda         order_n
             beq         @done
             lda         order
@@ -62,21 +82,15 @@ words:                                                      ; The first word lis
             lda         w
             ora         w + 1
             beq         @done
+            bit         intr                                ; (Ctrl-C)
+            bpl         :+
+            jmp         intr_throw
+:
             ldy         #2
             lda         (w),y
             and         #F_HIDDEN
             bne         @next
-            lda         (w),y
-            and         #LEN_MASK
-            sta         cnt
-            ldy         #3
-:
-            lda         (w),y
-            jsr         emit_a
-            iny
-            dec         cnt
-            bne         :-
-            jsr         space
+            jsr         word_out
 @next:
             ldy         #1
             lda         (w),y
@@ -89,7 +103,622 @@ words:                                                      ; The first word lis
 @done:
             jmp         cr
 
-            HEADER      "DUMP", 0
+; Header w out: " xxxx lif name" (its xt, its kind), at wd_next (spaces to it), or on the next line if it wouldn't
+; fit on this one
+word_out:
+            ldy         #2                                  ; (tmp3: its width, " xxxx lif " and its name)
+            lda         (w),y
+            and         #LEN_MASK
+            clc
+            adc         #10
+            sta         tmp3
+            lda         wd_pos                              ; Room on the line?
+            beq         @out
+            clc
+            lda         wd_next
+            adc         tmp3
+            bcs         @line
+            cmp         wd_width
+            bcc         @pad
+@line:
+            jsr         cr
+            stz         wd_pos
+            stz         wd_next
+            bra         @out
+@pad:
+            lda         wd_pos
+            cmp         wd_next
+            bcs         @out
+            jsr         space
+            inc         wd_pos
+            bra         @pad
+@out:
+            jsr         hdr_xt                              ; Its xt (w2; cnt its flags)
+            jsr         space
+            lda         w2 + 1
+            jsr         hex2
+            lda         w2
+            jsr         hex2
+            jsr         space
+            jsr         word_lit                            ; l: a literal
+            lda         #'-'
+            bcs         :+
+            lda         #'l'
+:
+            jsr         emit_a
+            lda         #'-'                                ; i: immediate
+            bit         cnt
+            bpl         :+
+            lda         #'i'
+:
+            jsr         emit_a
+            jsr         hdr_asm                             ; a or f: assembly or Forth
+            lda         #'f'
+            bcc         :+
+            lda         #'a'
+:
+            jsr         emit_a
+            jsr         space
+            jsr         hdr_out                             ; Its name (and a space)
+            sec                                             ; Where the line's got to, and where the next goes: at a
+            lda         wd_next                             ;   multiple of WD_COL
+            adc         tmp3
+            sta         wd_pos
+            sta         tmp3
+            lda         #0
+:
+            cmp         tmp3
+            bcs         :+
+            adc         #WD_COL
+            bcc         :-
+            lda         #$FF
+:
+            sta         wd_next
+            rts
+
+; Is the word whose xt is w2 a literal: its code a literal (lit_at) and rts, or two (a 2CONSTANT's) and rts?  OUT:
+; C = 0 yes
+word_lit:
+            lda         w2
+            sta         w3
+            lda         w2 + 1
+            sta         w3 + 1
+            jsr         lit_at
+            bcs         @no
+            jsr         @past
+            lda         (w3)
+            cmp         #RTS_OP
+            beq         @yes
+            jsr         lit_at
+            bcs         @no
+            jsr         @past
+            lda         (w3)
+            cmp         #RTS_OP
+            beq         @yes
+@no:
+            sec
+            rts
+@yes:
+            clc
+            rts
+@past:
+            clc
+            lda         w3
+            adc         #9
+            sta         w3
+            bcc         :+
+            inc         w3 + 1
+:
+            rts
+
+; Is the code at w3 a literal's (dex, lda #lo, sta dlo,x, lda #hi, sta dhi,x: see_lit, its bytes 2 and 6 the
+; number's)?  OUT: C = 0 yes
+lit_at:
+            ldy         #8
+@byte:
+            cpy         #2
+            beq         @next
+            cpy         #6
+            beq         @next
+            lda         (w3),y
+            cmp         see_lit,y
+            bne         @no
+@next:
+            dey
+            bpl         @byte
+            clc
+            rts
+@no:
+            sec
+            rts
+
+; Is header w assembly: the core's (in its ROM, from $A000), or in a library's image (not a .fs's: libtab's)?  OUT:
+; C = 1 yes.  Keeps .X
+hdr_asm:
+            lda         w + 1
+            cmp         #$A0
+            bcs         @yes
+            stz         wd_i
+@rec:
+            lda         wd_i
+            cmp         libs_n
+            bcs         @no
+            jsr         lib_rec
+            inc         wd_i
+            ldy         #LR_FLAGS
+            lda         (w3),y
+            and         #LRF_SOURCE
+            bne         @rec
+            lda         w                                   ; (Its image's start <= w ...
+            cmp         (w3)
+            ldy         #LR_START + 1
+            lda         w + 1
+            sbc         (w3),y
+            bcc         @rec
+            ldy         #LR_END                             ;   < its end)
+            lda         w
+            cmp         (w3),y
+            iny
+            lda         w + 1
+            sbc         (w3),y
+            bcs         @rec
+@yes:
+            sec
+            rts
+@no:
+            clc
+            rts
+
+; wd_width: the screen's width, $COLUMNS, else 80
+columns:
+            lda         #80
+            sta         wd_width
+            LDR         r0, s_columns
+            LDR         r1, wd_buf
+            LDR         r2, 4
+            stz         r3
+            stz         r3 + 1
+            lda         #$FF
+            stx         xsave
+            jsr         ENV_GET
+            sta         tmp                                 ; (Its length)
+            ldx         xsave
+            bcs         @done
+            stz         tmp + 1                             ; (Its number, in decimal: 3 digits at most)
+            ldy         #0
+@digit:
+            cpy         tmp
+            beq         @got
+            cpy         #3
+            beq         @got
+            lda         wd_buf,y
+            sec
+            sbc         #'0'
+            cmp         #10
+            bcs         @got
+            pha
+            lda         tmp + 1
+            asl
+            asl
+            clc
+            adc         tmp + 1
+            asl
+            sta         tmp + 1
+            pla
+            clc
+            adc         tmp + 1
+            sta         tmp + 1
+            iny
+            bra         @digit
+@got:
+            lda         tmp + 1
+            beq         @done
+            sta         wd_width
+@done:
+            rts
+
+s_columns:  .byte       "COLUMNS", 0
+
+; ---- The libraries (libtab, the core's: each library loaded, as INCLUDED or LIB loaded it)
+
+            HEADER      "libs", 0
+libs:                                                       ; ( -- ): the libraries loaded, the core (forth) first, then
+            jsr         lib_prune                           ;   the oldest first; (name): one not searched (-lib)
+            LDR         w, s_core
+            jsr         type_z
+            stz         wd_i
+@rec:
+            lda         wd_i
+            cmp         libs_n
+            bcs         @done
+            jsr         lib_rec
+            inc         wd_i
+            jsr         space
+            ldy         #LR_FLAGS
+            lda         (w3),y
+            bpl         :+
+            lda         #'('
+            jsr         emit_a
+:
+            ldy         #LR_NAME
+            lda         (w3),y
+            sta         tmp
+@char:
+            lda         tmp
+            beq         :+
+            dec         tmp
+            iny
+            lda         (w3),y
+            jsr         emit_a
+            bra         @char
+:
+            ldy         #LR_FLAGS
+            lda         (w3),y
+            bpl         @rec
+            lda         #')'
+            jsr         emit_a
+            bra         @rec
+@done:
+            jmp         cr
+
+s_core:     .byte       "forth", 0
+
+            HEADER      "lib", 0
+lib:                                                        ; ( "name" -- ): library name searched again (after
+            jsr         parse_name                          ;   -lib), or else loaded: name.fl, or if there's none,
+            jsr         lib_prune                           ;   name.fs, by REQUIRED (so /lib/forth's)
+            jsr         lib_find
+            bcs         @load
+            inx
+            inx
+            ldy         #LR_FLAGS
+            lda         (w3),y
+            bpl         @done
+            jmp         lib_relink
+@done:
+            rts
+@load:
+            lda         dhi,x                               ; (Too long a name: none of its)
+            bne         @long
+            lda         dlo,x
+            beq         @long
+            cmp         #LR_NAME_MAX + 1
+            bcc         :+
+@long:
+            jmp         lib_unknown
+:
+            sta         lib_nm                              ; Its file's name, in lib_nm: name.fl
+            lda         dlo + 1,x
+            sta         p1
+            lda         dhi + 1,x
+            sta         p1 + 1
+            inx
+            inx
+            ldy         #0
+:
+            lda         (p1),y
+            sta         lib_nm + 1,y
+            iny
+            cpy         lib_nm
+            bne         :-
+            lda         #'.'
+            sta         lib_nm + 1,y
+            lda         #'f'
+            sta         lib_nm + 2,y
+            lda         #'l'
+            sta         lib_nm + 3,y
+            lda         incn_len                            ; REQUIRED name.fl, caught
+            sta         lib_inc
+            lda         incn_len + 1
+            sta         lib_inc + 1
+            jsr         lib_file
+            lda         #<required
+            ldy         #>required
+            PUSHAY
+            jsr         catch
+            lda         dlo,x
+            ora         dhi,x
+            bne         :+
+            inx
+            rts
+:
+            lda         dlo,x                               ; Not there: name.fs, not name.fl noted as INCLUDED
+            cmp         #<(-512 - E_NOENT)
+            bne         @throw
+            lda         dhi,x
+            cmp         #>(-512 - E_NOENT)
+            beq         :+
+@throw:
+            jmp         throw
+:
+            inx
+            inx
+            inx
+            lda         lib_inc
+            sta         incn_len
+            lda         lib_inc + 1
+            sta         incn_len + 1
+            ldy         lib_nm
+            lda         #'s'
+            sta         lib_nm + 3,y
+            jsr         current_w3                          ; (The compilation word list and its last, before)
+            lda         w3
+            sta         lib_wid
+            lda         w3 + 1
+            sta         lib_wid + 1
+            lda         (w3)
+            sta         lib_last
+            ldy         #1
+            lda         (w3),y
+            sta         lib_last + 1
+            lda         here                                ; (Its image's start)
+            pha
+            lda         here + 1
+            pha
+            jsr         lib_file
+            jsr         required
+            pla                                             ; Noted: what it compiled, its headers (if they're in the
+            sta         tmp2 + 1                            ;   word list they started in)
+            pla
+            sta         tmp2
+            lda         here
+            sta         w2
+            lda         here + 1
+            sta         w2 + 1
+            stz         p1
+            stz         p1 + 1
+            jsr         current_w3
+            lda         w3
+            cmp         lib_wid
+            bne         @note
+            lda         w3 + 1
+            cmp         lib_wid + 1
+            bne         @note
+            lda         (w3)                                ; (p2 its last header; p1 its first, the one whose link is
+            sta         p2                                  ;   the word list's last before: none if it's that)
+            ldy         #1
+            lda         (w3),y
+            sta         p2 + 1
+            lda         p2
+            sta         w3
+            lda         p2 + 1
+            sta         w3 + 1
+@first:
+            lda         w3
+            cmp         lib_last
+            bne         :+
+            lda         w3 + 1
+            cmp         lib_last + 1
+            beq         @note
+:
+            lda         w3
+            ora         w3 + 1
+            beq         @note
+            lda         w3
+            sta         p1
+            lda         w3 + 1
+            sta         p1 + 1
+            ldy         #1
+            lda         (w3),y
+            pha
+            lda         (w3)
+            sta         w3
+            pla
+            sta         w3 + 1
+            bra         @first
+@note:
+            LDR         w, lib_nm
+            lda         #LRF_SOURCE
+            jmp         lib_add
+
+; ( -- c-addr u ): lib_nm, the file LIB loads
+lib_file:
+            lda         #<(lib_nm + 1)
+            ldy         #>(lib_nm + 1)
+            PUSHAY
+            clc
+            lda         lib_nm
+            adc         #3
+            ldy         #0
+            PUSHAY
+            rts
+
+            HEADER      "-lib", 0
+unlib:                                                      ; ( "name" -- ): library name's words not searched: its
+            jsr         parse_name                          ;   headers out of their word list (lib puts them back),
+            jsr         lib_prune                           ;   its code kept (what uses it still runs); this library
+            jsr         lib_find                            ;   can't be (-21: LIB would be gone)
+            bcs         lib_unknown
+            inx
+            inx
+            ldy         #LR_FLAGS
+            lda         (w3),y
+            bmi         @done
+            lda         #<unlib                             ; (This library's)
+            cmp         (w3)
+            ldy         #LR_START + 1
+            lda         #>unlib
+            sbc         (w3),y
+            bcc         @other
+            ldy         #LR_END
+            lda         #<unlib
+            cmp         (w3),y
+            iny
+            lda         #>unlib
+            sbc         (w3),y
+            bcs         @other
+            lda         #<-21
+            jmp         throw_a
+@other:
+            ldy         #LR_FIRST + 1                       ; (No headers: only noted)
+            lda         (w3),y
+            beq         @hide
+            jsr         lib_slot
+            bcs         @hide
+            ldy         #LR_FIRST                           ; The place that held its last: its first's link
+            lda         (w3),y
+            sta         p1
+            iny
+            lda         (w3),y
+            sta         p1 + 1
+            lda         (p1)
+            sta         (w2)
+            ldy         #1
+            lda         (p1),y
+            sta         (w2),y
+@hide:
+            ldy         #LR_FLAGS
+            lda         (w3),y
+            ora         #LRF_HIDDEN
+            sta         (w3),y
+@done:
+            rts
+
+; A library LIB or -lib can't find ( c-addr u ): THROW -13, its name's
+lib_unknown:
+            jmp         throw_undef
+
+; The record of the library named c-addr u (the top two, kept; either case)?  OUT: C = 0, w3 it; or C = 1
+lib_find:
+            stz         wd_i
+            lda         dlo + 1,x
+            sta         p1
+            lda         dhi + 1,x
+            sta         p1 + 1
+@rec:
+            lda         wd_i
+            cmp         libs_n
+            bcs         @no
+            jsr         lib_rec
+            inc         wd_i
+            lda         dhi,x
+            bne         @no
+            ldy         #LR_NAME
+            lda         (w3),y
+            cmp         dlo,x
+            bne         @rec
+            sta         tmp + 1
+            ldy         #0
+@char:
+            cpy         tmp + 1
+            beq         @yes
+            lda         (p1),y
+            jsr         upper
+            sta         tmp
+            iny
+            phy
+            tya
+            clc
+            adc         #LR_NAME
+            tay
+            lda         (w3),y
+            jsr         upper
+            ply
+            cmp         tmp
+            beq         @char
+            bra         @rec
+@yes:
+            clc
+            rts
+@no:
+            sec
+            rts
+
+; w2 = the place (its word list's last, or a header's link) that holds library w3's last header.  OUT: C = 1: none
+lib_slot:
+            ldy         #LR_WID
+            lda         (w3),y
+            sta         w2
+            iny
+            lda         (w3),y
+            sta         w2 + 1
+@look:
+            lda         (w2)
+            ldy         #LR_LAST
+            cmp         (w3),y
+            bne         @next
+            ldy         #1
+            lda         (w2),y
+            ldy         #LR_LAST + 1
+            cmp         (w3),y
+            beq         @found
+@next:
+            ldy         #1
+            lda         (w2),y
+            pha
+            lda         (w2)
+            sta         w2
+            pla
+            sta         w2 + 1
+            ora         w2
+            bne         @look
+            sec
+            rts
+@found:
+            clc
+            rts
+
+; Library w3's headers back in their word list, where they were: after the newest header older than they (a word
+; list's headers in RAM are newest first, then the core's in ROM, as a MARKER takes them)
+lib_relink:
+            ldy         #LR_FIRST + 1                       ; (No headers: only noted)
+            lda         (w3),y
+            beq         @shown
+            ldy         #LR_WID
+            lda         (w3),y
+            sta         w2
+            iny
+            lda         (w3),y
+            sta         w2 + 1
+@look:
+            ldy         #1                                  ; The next one newer (in RAM, after its last)?
+            lda         (w2),y
+            cmp         #$A0
+            bcs         @here
+            ldy         #LR_LAST + 1
+            cmp         (w3),y
+            bcc         @here
+            bne         @next
+            lda         (w2)
+            ldy         #LR_LAST
+            cmp         (w3),y
+            bcc         @here
+@next:
+            ldy         #1
+            lda         (w2),y
+            pha
+            lda         (w2)
+            sta         w2
+            pla
+            sta         w2 + 1
+            bra         @look
+@here:
+            ldy         #LR_FIRST                           ; Its first's link: what's there; there: its last
+            lda         (w3),y
+            sta         p1
+            iny
+            lda         (w3),y
+            sta         p1 + 1
+            lda         (w2)
+            sta         (p1)
+            ldy         #1
+            lda         (w2),y
+            sta         (p1),y
+            ldy         #LR_LAST
+            lda         (w3),y
+            sta         (w2)
+            iny
+            lda         (w3),y
+            ldy         #1
+            sta         (w2),y
+@shown:
+            ldy         #LR_FLAGS
+            lda         (w3),y
+            and         #<~LRF_HIDDEN
+            sta         (w3),y
+            rts
+
+            HEADER      "dump", 0
 dump:                                                       ; ( addr u -- ): 8 bytes a line, in hex and as text
             lda         dlo + 1,x
             sta         w
@@ -202,12 +831,51 @@ hex2:
 
 ; ---- SEE
 
-            HEADER      "SEE", 0
+; The assembly word w shown by disasm.fl's (see-code) ( nt -- ), if it's loaded (a library calls only the core, so
+; it's found by its name).  OUT: C = 0, shown; or C = 1, w as it was (it isn't loaded)
+see_code:
+            lda         w
+            pha
+            lda         w + 1
+            pha
+            lda         #<s_seecode
+            ldy         #>s_seecode
+            PUSHAY
+            lda         #S_SEECODE_LEN
+            ldy         #0
+            PUSHAY
+            jsr         find_name
+            inx
+            inx
+            pla                                             ; (The word's nt: .A/.Y)
+            tay
+            pla
+            bcs         @none
+            PUSHAY
+            jsr         hdr_xt
+            jsr         exec_w2
+            clc
+            rts
+@none:
+            sta         w
+            sty         w + 1
+            rts
+
+s_seecode:  .byte       "(see-code)"
+S_SEECODE_LEN = * - s_seecode
+
+            HEADER      "see", 0
 see:                                                        ; ( "name" -- ): its definition: a word's name for a call
             jsr         name_hdr                            ;   (or the address), a literal's number, a branch's and
-            lda         #':'                                ;   IF's address, a string's text, an inline word's name
-            jsr         emit_a                              ;   for its code (or the bytes); to the rts past every
-            jsr         space                               ;   branch's address
+            jsr         hdr_asm                             ;   IF's address, a string's text, an inline word's name
+            bcc         :+                                  ;   for its code (or the bytes); to the rts past every
+            jsr         see_code                            ;   branch's address.  An assembly word, with disasm.fl
+            bcs         :+                                  ;   loaded: its instructions
+            rts
+:
+            lda         #':'
+            jsr         emit_a
+            jsr         space
             jsr         hdr_out
             jsr         hdr_xt
             lda         cnt
@@ -381,22 +1049,8 @@ see:                                                        ; ( "name" -- ): its
             jmp         @adv
 
 @lit:
-            ldy         #8                                  ; dex, lda #lo, sta dlo,x, lda #hi, sta dhi,x?
-:
-            lda         (w3),y
-            cmp         see_lit,y
-            bne         :+
-            dey
-            bpl         :-
-            bra         @number
-:
-            cpy         #2                                  ; (Its bytes 2 and 6 are the number's)
-            beq         :+
-            cpy         #6
-            bne         @code_j
-:
-            dey
-            bpl         :---
+            jsr         lit_at
+            bcs         @code_j
 @number:
             ldy         #6
             lda         (w3),y
@@ -629,27 +1283,27 @@ see_text:   .word       s_squote, s_dotq, s_cquote, s_abortq, s_does, s_do, s_qd
 see_after:  .byte       $80, $80, $80, $80, 3, 0, 5, 9, 9, $7F, $7F, $7F
 see_lit:    .byte       OP_DEX, OP_LDA_IMM, 0, OP_STA_ZPX, dlo, OP_LDA_IMM, 0, OP_STA_ZPX, dhi
 see_if:     .byte       OP_INX, OP_LDA_ZPX, dlo - 1, OP_ORA_ZPX, dhi - 1, OP_BNE, 3
-s_squote:   .byte       "S", $22, 0
+s_squote:   .byte       "s", $22, 0
 s_dotq:     .byte       ".", $22, 0
-s_cquote:   .byte       "C", $22, 0
-s_abortq:   .byte       "ABORT", $22, 0
-s_does:     .byte       "DOES>", 0
-s_do:       .byte       "DO", 0
-s_qdo:      .byte       "?DO", 0
-s_loop:     .byte       "LOOP", 0
-s_ploop:    .byte       "+LOOP", 0
-s_create:   .byte       "CREATE", 0
-s_value:    .byte       "VALUE", 0
-s_marker:   .byte       "MARKER", 0
-s_exit:     .byte       "EXIT ", 0
-s_immed:    .byte       " IMMEDIATE", 0
+s_cquote:   .byte       "c", $22, 0
+s_abortq:   .byte       "abort", $22, 0
+s_does:     .byte       "does>", 0
+s_do:       .byte       "do", 0
+s_qdo:      .byte       "?do", 0
+s_loop:     .byte       "loop", 0
+s_ploop:    .byte       "+loop", 0
+s_create:   .byte       "create", 0
+s_value:    .byte       "value", 0
+s_marker:   .byte       "marker", 0
+s_exit:     .byte       "exit ", 0
+s_immed:    .byte       " immediate", 0
 s_jmp:      .byte       "jmp ", 0
 s_branch:   .byte       "branch ", 0
 s_qbranch:  .byte       "?branch ", 0
 
 ; ---- Conditional compiling: the words skipped are parsed (refilling, from a file), so a [THEN] in a comment counts
 
-            HEADER      "[IF]", F_IMMEDIATE
+            HEADER      "[if]", F_IMMEDIATE
 bif:                                                        ; ( flag -- ): false, the words skipped to its [ELSE]
             lda         dlo,x                               ;   or [THEN]
             ora         dhi,x
@@ -661,7 +1315,7 @@ bif:                                                        ; ( flag -- ): false
 @done:
             rts
 
-            HEADER      "[ELSE]", F_IMMEDIATE
+            HEADER      "[else]", F_IMMEDIATE
 belse:                                                      ; The words skipped to its [THEN]
             lda         #0
 
@@ -714,7 +1368,7 @@ skip_cond:
             inx
             rts
 
-            HEADER      "[THEN]", F_IMMEDIATE
+            HEADER      "[then]", F_IMMEDIATE
 bthen:
             rts
 
@@ -751,7 +1405,7 @@ s_bif:      .byte       4, "[IF]"
 s_belse:    .byte       6, "[ELSE]"
 s_bthen:    .byte       6, "[THEN]"
 
-            HEADER      "[DEFINED]", F_IMMEDIATE
+            HEADER      "[defined]", F_IMMEDIATE
 bdefined:                                                   ; ( "name" -- flag ): in the search order
             jsr         parse_name
             jsr         find_name
@@ -761,22 +1415,22 @@ bdefined:                                                   ; ( "name" -- flag )
 :
             jmp         true_tos
 
-            HEADER      "[UNDEFINED]", F_IMMEDIATE
+            HEADER      "[undefined]", F_IMMEDIATE
 bundefined:
             jsr         bdefined
             jmp         zequal
 
 ; ---- The control-flow stack (the data stack: an orig or a dest a cell) and the return stack
 
-            HEADER      "CS-PICK", 0
+            HEADER      "cs-pick", 0
 cspick:
             jmp         pick
 
-            HEADER      "CS-ROLL", 0
+            HEADER      "cs-roll", 0
 csroll:
             jmp         roll
 
-            HEADER      "N>R", 0
+            HEADER      "n>r", 0
 ntor:                                                       ; ( i*x n -- ) R: ( -- i*x n )
             pla
             sta         tmp
@@ -809,7 +1463,7 @@ ntor:                                                       ; ( i*x n -- ) R: ( 
             pha
             rts
 
-            HEADER      "NR>", 0
+            HEADER      "nr>", 0
 nrfrom:                                                     ; ( -- i*x n ) R: ( i*x n -- )
             pla
             sta         tmp
@@ -842,7 +1496,7 @@ nrfrom:                                                     ; ( -- i*x n ) R: ( 
 
 ; ---- Names
 
-            HEADER      "SYNONYM", 0
+            HEADER      "synonym", 0
 synonym:                                                    ; ( "newname" "oldname" -- ): newname as oldname is (its
             lda         #F_HIDDEN                           ;   code copied if it's inline; else a jmp to it)
             jsr         make_hdr
@@ -878,7 +1532,7 @@ synonym:                                                    ; ( "newname" "oldna
             jsr         comp_jmp
             jmp         reveal
 
-            HEADER      "TRAVERSE-WORDLIST", 0
+            HEADER      "traverse-wordlist", 0
 traversewordlist:                                           ; ( i*x xt wid -- j*x ): xt ( k*x nt -- l*x flag ) for
             lda         dlo,x                               ;   each word in it, newest first, till a false flag
             sta         w
@@ -934,7 +1588,7 @@ traversewordlist:                                           ; ( i*x xt wid -- j*
             pla
             rts
 
-            HEADER      "NAME>STRING", 0
+            HEADER      "name>string", 0
 nametostring:                                               ; ( nt -- c-addr u )
             lda         dlo,x
             sta         w
@@ -956,7 +1610,7 @@ nametostring:                                               ; ( nt -- c-addr u )
             PUSHAY
             rts
 
-            HEADER      "NAME>INTERPRET", 0
+            HEADER      "name>interpret", 0
 nametointerpret:                                            ; ( nt -- xt )
             lda         dlo,x
             sta         w
@@ -969,7 +1623,7 @@ nametointerpret:                                            ; ( nt -- xt )
             sta         dhi,x
             rts
 
-            HEADER      "NAME>COMPILE", 0
+            HEADER      "name>compile", 0
 nametocompile:                                              ; ( nt -- xt xt2 ): xt2 COMPILE, (or, immediate, EXECUTE)
             jsr         nametointerpret
             lda         #<compilecomma

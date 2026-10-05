@@ -4,7 +4,7 @@
 
 .include "forthlib.inc"
 
-            HEADER      "2CONSTANT", 0
+            HEADER      "2constant", 0
 twoconstant:                                                ; ( x1 x2 "name" -- ): two literals and rts
             lda         #0
             jsr         make_hdr
@@ -12,23 +12,23 @@ twoconstant:                                                ; ( x1 x2 "name" -- 
             lda         #RTS_OP
             jmp         ccomma_a
 
-            HEADER      "2VARIABLE", 0
+            HEADER      "2variable", 0
 twovariable:
             jsr         variable
             lda         #0
             tay
             jmp         comma_ay
 
-            HEADER      "2LITERAL", F_IMMEDIATE
+            HEADER      "2literal", F_IMMEDIATE
 twoliteral:                                                 ; ( x1 x2 -- ): compiled, x1 pushed first
             jsr         swap
             jsr         literal
             jmp         literal
 
-            HEADER      "DNEGATE", 0
+            HEADER      "dnegate", 0
 dnegate_w:                                                  ; ( d -- -d )
             jmp         dnegate
 
-            HEADER      "DABS", 0
+            HEADER      "dabs", 0
 dabs_w:                                                     ; ( d -- |d| )
             jmp         dabs

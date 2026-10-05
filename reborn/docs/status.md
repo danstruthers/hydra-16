@@ -2,7 +2,7 @@
 
 Where the rebuild stands against the plan's phases
 ([../../docs/reimplementation-from-scratch.md](../../docs/reimplementation-from-scratch.md), Part III), what the
-spikes measured, and what measuring changed.
+spikes measured, and what measuring changed.  HyForth's, from step 6.6 on: [forth-status.md](forth-status.md).
 
 ## In short
 

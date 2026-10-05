@@ -6,7 +6,7 @@
 
 .include "forthlib.inc"
 
-            HEADER      "TUCK", 0
+            HEADER      "tuck", 0
 tuck:                                                       ; ( a b -- b a b )
             jsr         swap
             jmp         over
@@ -16,7 +16,7 @@ notequal:
             jsr         equal
             jmp         invert
 
-            HEADER      "U>", 0
+            HEADER      "u>", 0
 ugreater:
             jsr         swap
             jmp         uless
@@ -40,7 +40,7 @@ zgreater:
 @no:
             jmp         zero_tos
 
-            HEADER      "WITHIN", 0
+            HEADER      "within", 0
 within:                                                     ; ( n lo hi -- flag ): n - lo U< hi - lo
             sec
             lda         dlo,x
@@ -63,17 +63,15 @@ within:                                                     ; ( n lo hi -- flag 
             sta         dhi,x
             jmp         uless
 
-            HEADER      "TRUE", 0
+            HEADER      "true", 0
 true:
-            dex
-            jmp         true_tos
+            CONSTCODE   $FFFF
 
-            HEADER      "FALSE", 0
+            HEADER      "false", 0
 false:
-            dex
-            jmp         zero_tos
+            CONSTCODE   0
 
-            HEADERI     "2>R", twotor
+            HEADERI     "2>r", twotor
 twotor:
             lda         dhi + 1,x
             pha
@@ -88,7 +86,7 @@ twotor:
 twotor_end:
             rts
 
-            HEADERI     "2R>", tworfrom
+            HEADERI     "2r>", tworfrom
 tworfrom:
             dex
             dex
@@ -103,7 +101,7 @@ tworfrom:
 tworfrom_end:
             rts
 
-            HEADERI     "2R@", tworfetch
+            HEADERI     "2r@", tworfetch
 tworfetch:
             stx         xsave
             tsx
@@ -127,13 +125,13 @@ tworfetch:
 tworfetch_end:
             rts
 
-            HEADER      "ERASE", 0
+            HEADER      "erase", 0
 erase:
             dex
             jsr         zero_tos
             jmp         fill
 
-            HEADER      "UNUSED", 0
+            HEADER      "unused", 0
 unused:
             sec
             lda         #<DICT_END
@@ -146,19 +144,19 @@ unused:
             PUSHAY
             rts
 
-            HEADER      "PAD", 0
+            HEADER      "pad", 0
 pad_:
             lda         #<pad
             ldy         #>pad
             PUSHAY
             rts
 
-            HEADER      "HEX", 0
+            HEADER      "hex", 0
 hex:
             lda         #16
             jmp         set_base
 
-            HEADERI     "NIP", nip_l
+            HEADERI     "nip", nip_l
 nip_l:
             lda         dlo,x
             sta         dlo + 1,x
@@ -168,15 +166,15 @@ nip_l:
 nip_l_end:
             rts
 
-            HEADER      "PICK", 0
+            HEADER      "pick", 0
 pick_w:                                                     ; ( xu ... x0 u -- xu ... x0 xu )
             jmp         pick
 
-            HEADER      "ROLL", 0
+            HEADER      "roll", 0
 roll_w:                                                     ; ( xu xu-1 ... x0 u -- xu-1 ... x0 xu )
             jmp         roll
 
-            HEADER      ":NONAME", 0
+            HEADER      ":noname", 0
 noname:                                                     ; ( -- xt )
             stz         lasthdr
             stz         lasthdr + 1
@@ -187,20 +185,20 @@ noname:                                                     ; ( -- xt )
             PUSHAY
             jmp         rbracket
 
-            HEADER      "COMPILE,", 0
+            HEADER      "compile,", 0
 compilecomma_w:                                             ; ( xt -- ): its header's way, if it has one
             jmp         compilecomma
 
-            HEADER      "[COMPILE]", F_IMMEDIATE
+            HEADER      "[compile]", F_IMMEDIATE
 bracketcompile:
             jsr         name_hdr
             jmp         comp_hdr
 
-            HEADER      "AGAIN", F_IMMEDIATE
+            HEADER      "again", F_IMMEDIATE
 again_w:                                                    ; ( dest -- )
             jmp         again
 
-            HEADER      "?DO", F_IMMEDIATE
+            HEADER      "?do", F_IMMEDIATE
 qdo:
             lda         leaves                              ; (Its skip: a LEAVE of this loop's)
             ldy         leaves + 1
@@ -217,12 +215,12 @@ qdo:
             jsr         leave_jmp
             jmp         here_
 
-            HEADER      "CASE", F_IMMEDIATE
+            HEADER      "case", F_IMMEDIATE
 case:
             dex                                             ; (0: the ENDOFs' end)
             jmp         zero_tos
 
-            HEADER      "OF", F_IMMEDIATE
+            HEADER      "of", F_IMMEDIATE
 of:                                                         ; OVER = IF DROP
             lda         #<over
             ldy         #>over
@@ -235,11 +233,11 @@ of:                                                         ; OVER = IF DROP
             ldy         #>drop
             jmp         comp_jsr
 
-            HEADER      "ENDOF", F_IMMEDIATE
+            HEADER      "endof", F_IMMEDIATE
 endof:
             jmp         else_
 
-            HEADER      "ENDCASE", F_IMMEDIATE
+            HEADER      "endcase", F_IMMEDIATE
 endcase:                                                    ; DROP, and each ENDOF's jmp here
             lda         #<drop
             ldy         #>drop
@@ -254,14 +252,14 @@ endcase:                                                    ; DROP, and each END
             inx
             rts
 
-            HEADER      "VALUE", 0
+            HEADER      "value", 0
 value:                                                      ; ( x "name" -- )
             lda         #<dovalue
             ldy         #>dovalue
             jsr         make_word
             jmp         comma
 
-            HEADER      "TO", F_IMMEDIATE
+            HEADER      "to", F_IMMEDIATE
 to:                                                         ; ( x "name" -- ): the VALUE's cell
             jsr         tick
             jsr         body_
@@ -274,12 +272,12 @@ to:                                                         ; ( x "name" -- ): t
 @now:
             jmp         store
 
-            HEADER      "BUFFER:", 0
+            HEADER      "buffer:", 0
 bufferc:                                                    ; ( u "name" -- )
             jsr         create
             jmp         allot
 
-            HEADER      "DEFER", 0
+            HEADER      "defer", 0
 defer:                                                      ; jmp to its xt (none yet: THROW -256)
             lda         #0
             jsr         make_hdr
@@ -287,17 +285,17 @@ defer:                                                      ; jmp to its xt (non
             ldy         #>defer_none
             jmp         comp_jmp
 
-            HEADER      "DEFER!", 0
+            HEADER      "defer!", 0
 deferstore:                                                 ; ( xt2 xt1 -- )
             jsr         oneplus
             jmp         store
 
-            HEADER      "DEFER@", 0
+            HEADER      "defer@", 0
 deferfetch:
             jsr         oneplus
             jmp         fetch
 
-            HEADER      "IS", F_IMMEDIATE
+            HEADER      "is", F_IMMEDIATE
 is:
             jsr         tick
             lda         state
@@ -307,7 +305,7 @@ is:
             ldy         #>deferstore
             jmp         comp_jsr
 
-            HEADER      "ACTION-OF", F_IMMEDIATE
+            HEADER      "action-of", F_IMMEDIATE
 actionof:
             jsr         tick
             lda         state
@@ -317,7 +315,7 @@ actionof:
             ldy         #>deferfetch
             jmp         comp_jsr
 
-            HEADER      "MARKER", 0
+            HEADER      "marker", 0
 marker:                                                     ; Its word: HERE, the compilation word list, the search
             lda         here                                ;   order and the files INCLUDED as before it
             pha
@@ -344,7 +342,7 @@ marker:                                                     ; Its word: HERE, th
             ldy         incn_len + 1
             jmp         comma_ay
 
-            HEADER      "REFILL", 0
+            HEADER      "refill", 0
 refill:                                                     ; ( -- flag ): a string's (EVALUATE) can't
             lda         src_id + 1
             bmi         @false
@@ -356,25 +354,25 @@ refill:                                                     ; ( -- flag ): a str
             dex
             jmp         zero_tos
 
-            HEADER      "PARSE", 0
+            HEADER      "parse", 0
 parse:                                                      ; ( char "ccc<char>" -- c-addr u )
             lda         dlo,x
             inx
             sta         cnt
             jmp         parse_to
 
-            HEADER      "PARSE-NAME", 0
+            HEADER      "parse-name", 0
 parse_name_w:                                               ; ( "<spaces>name<space>" -- c-addr u )
             jmp         parse_name
 
-            HEADER      "SOURCE-ID", 0
+            HEADER      "source-id", 0
 sourceid:
             lda         src_id
             ldy         src_id + 1
             PUSHAY
             rts
 
-            HEADER      "SAVE-INPUT", 0
+            HEADER      "save-input", 0
 saveinput:                                                  ; ( -- pos pos-hi line >in id 5 )
             lda         src_pos
             ldy         src_pos + 1
@@ -396,7 +394,7 @@ saveinput:                                                  ; ( -- pos pos-hi li
             PUSHAY
             rts
 
-            HEADER      "RESTORE-INPUT", 0
+            HEADER      "restore-input", 0
 restoreinput:                                               ; ( pos pos-hi line >in id 5 -- flag ): false if it
             lda         dlo,x                               ;   could: the same source, and its line still in the
             cmp         #5                                  ;   buffer (a file's: read again, from where it was)
@@ -498,7 +496,7 @@ dotparen:
             jsr         parse_to
             jmp         type
 
-            HEADER      "HOLDS", 0
+            HEADER      "holds", 0
 holds:                                                      ; ( addr u -- )
 :
             lda         dlo,x
@@ -532,21 +530,21 @@ right:
             jsr         spaces
             jmp         type
 
-            HEADER      ".R", 0
+            HEADER      ".r", 0
 dotr:                                                       ; ( n w -- )
             jsr         save_top
             jsr         n_text
             jsr         push_tmp3
             bra         right
 
-            HEADER      "U.R", 0
+            HEADER      "u.r", 0
 udotr:
             jsr         save_top
             jsr         u_text
             jsr         push_tmp3
             bra         right
 
-            HEADERQ     "C", F_IMMEDIATE
+            HEADERQ     "c", F_IMMEDIATE
 cquote:
             lda         #'"'
             sta         cnt
@@ -555,7 +553,7 @@ cquote:
             ldy         #>xcquote
             jmp         comp_str
 
-            HEADERQ     "S\", F_IMMEDIATE
+            HEADERQ     "s\", F_IMMEDIATE
 sbquote:                                                    ; S" with escapes: \a \b \e \f \l \m \n \q \r \t \v \z
             jsr         src_rest                            ;   \" \\ \xHH (into wbuf, then as S")
             lda         #<wbuf

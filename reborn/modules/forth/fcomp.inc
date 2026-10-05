@@ -237,7 +237,7 @@ semicolon:
             jsr         reveal
             jmp         lbracket
 
-            HEADER      "IMMEDIATE", 0
+            HEADER      "immediate", 0
 immediate:
             lda         lasthdr
             sta         w
@@ -249,7 +249,7 @@ immediate:
             sta         (w),y
             rts
 
-            HEADER      "RECURSE", F_IMMEDIATE
+            HEADER      "recurse", F_IMMEDIATE
 recurse:
             lda         lastxt
             ldy         lastxt + 1
@@ -268,7 +268,7 @@ rbracket:
             sta         state + 1
             rts
 
-            HEADER      "LITERAL", F_IMMEDIATE
+            HEADER      "literal", F_IMMEDIATE
 literal:
             lda         dlo,x
             ldy         dhi,x
@@ -344,12 +344,12 @@ brackettick:
             jsr         tick
             jmp         literal
 
-            HEADER      "[CHAR]", F_IMMEDIATE
+            HEADER      "[char]", F_IMMEDIATE
 bracketchar:
             jsr         char
             jmp         literal
 
-            HEADER      "POSTPONE", F_IMMEDIATE
+            HEADER      "postpone", F_IMMEDIATE
 postpone:                                                   ; Immediate: compiled; else, code that compiles it
             jsr         name_hdr
             ldy         #2
@@ -375,25 +375,25 @@ comp_hdr_rt:
 
 ; ---- Control flow
 
-            HEADER      "IF", F_IMMEDIATE
+            HEADER      "if", F_IMMEDIATE
 if_:
             jmp         comp_test
 
-            HEADER      "THEN", F_IMMEDIATE
+            HEADER      "then", F_IMMEDIATE
 then:
             jmp         resolve
 
-            HEADER      "ELSE", F_IMMEDIATE
+            HEADER      "else", F_IMMEDIATE
 else_:                                                      ; ( orig1 -- orig2 )
             jsr         comp_fwd
             jsr         swap
             jmp         resolve
 
-            HEADER      "BEGIN", F_IMMEDIATE
+            HEADER      "begin", F_IMMEDIATE
 begin:
             jmp         here_
 
-            HEADER      "UNTIL", F_IMMEDIATE
+            HEADER      "until", F_IMMEDIATE
 until:                                                      ; ( dest -- )
             jsr         comp_poll
             jsr         comp_test
@@ -408,12 +408,12 @@ again_jmp:                                                  ; ( dest -- ): jmp d
             inx
             jmp         comp_jmp
 
-            HEADER      "WHILE", F_IMMEDIATE
+            HEADER      "while", F_IMMEDIATE
 while:                                                      ; ( dest -- orig dest )
             jsr         comp_test
             jmp         swap
 
-            HEADER      "REPEAT", F_IMMEDIATE
+            HEADER      "repeat", F_IMMEDIATE
 repeat:                                                     ; ( orig dest -- )
             jsr         again
             jmp         resolve
@@ -447,7 +447,7 @@ resolve_to:
             inx
             rts
 
-            HEADER      "DO", F_IMMEDIATE
+            HEADER      "do", F_IMMEDIATE
 do:
             lda         #<xdo
             ldy         #>xdo
@@ -460,7 +460,7 @@ do_rest:                                                    ; ( -- leaves dest )
             stz         leaves + 1
             jmp         here_
 
-            HEADER      "LEAVE", F_IMMEDIATE
+            HEADER      "leave", F_IMMEDIATE
 leave:
 leave_jmp:                                                  ; jmp, to the loop's end: in the chain of LEAVEs
             lda         #JMP_OP
@@ -478,13 +478,13 @@ leave_jmp:                                                  ; jmp, to the loop's
             sta         leaves
             rts
 
-            HEADER      "LOOP", F_IMMEDIATE
+            HEADER      "loop", F_IMMEDIATE
 loop:
             lda         #<xloop
             ldy         #>xloop
             bra         loop_end
 
-            HEADER      "+LOOP", F_IMMEDIATE
+            HEADER      "+loop", F_IMMEDIATE
 plusloop:
             lda         #<xploop
             ldy         #>xploop
@@ -607,7 +607,7 @@ xploop:
 intr_j:
             jmp         intr_throw
 
-            HEADER      "I", 0
+            HEADER      "i", 0
 i:                                                          ; ( -- index ): the parameters under the return address
             stx         xsave
             tsx
@@ -625,7 +625,7 @@ i:                                                          ; ( -- index ): the 
             sta         dlo,x
             rts
 
-            HEADER      "J", 0
+            HEADER      "j", 0
 j:                                                          ; ( -- index ): the outer loop's
             stx         xsave
             tsx
@@ -655,7 +655,7 @@ make_word:
             pla
             jmp         comp_jsr
 
-            HEADER      "CREATE", 0
+            HEADER      "create", 0
 create:
             lda         #<dovar
             ldy         #>dovar
@@ -674,14 +674,14 @@ dovar:
             PUSHAY
             rts
 
-            HEADER      "VARIABLE", 0
+            HEADER      "variable", 0
 variable:
             jsr         create
             lda         #0
             tay
             jmp         comma_ay
 
-            HEADER      "CONSTANT", 0
+            HEADER      "constant", 0
 constant:                                                   ; ( x "name" -- ): a literal and rts
             lda         #0
             jsr         make_hdr
@@ -705,7 +705,7 @@ dovalue:
             PUSHAY
             rts
 
-            HEADER      ">BODY", 0
+            HEADER      ">body", 0
 body_:
             clc
             lda         dlo,x
@@ -716,7 +716,7 @@ body_:
 :
             rts
 
-            HEADER      "DOES>", F_IMMEDIATE
+            HEADER      "does>", F_IMMEDIATE
 does:                                                       ; jsr do_does, then the child's code: jsr dodoes ...
             lda         #<do_does
             ldy         #>do_does

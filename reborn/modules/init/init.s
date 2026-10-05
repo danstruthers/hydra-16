@@ -4,9 +4,11 @@
 ; namespace from the namespace file (nslib.s's ns_default: its own area of the RAM disk, /rom/lib/namespace, a card's
 ; /lib/namespace; with no /rom/lib/namespace, the one built in here: the devices at their places); the tasks listed;
 ; hello run and waited for; then window 0's shell (rc -l, a namespace of its own: it builds it, newns, and its
-; profile puts its window at /dev) and the windows' starter (wstart: rc -l in the next window the user asks for,
-; Ctrl-] c), each started again when it ends.  It waits for every task left to it (the windows' shells are).  Its
-; note handler keeps it going.
+; profile puts its window at /dev) and the windows' starter (wstart: the shell in the next window the user asks for,
+; Ctrl-] c), each started again when it ends.  The shell is /lib/shell's line, if there is one (its program and
+; arguments: /bin/forth -l, HyForth as a shell; a card's /lib/shell, or the shared RAM disk's, /sram/lib/shell), read
+; each time one's started, else rc -l; wstart is given it as its arguments.  It waits for every task left to it (the
+; windows' shells are).  Its note handler keeps it going.
 
 .include "hydra.inc"
 .include "hyx2.inc"
@@ -21,8 +23,14 @@ sw:         .res        1                                   ;   and the windows'
 fd:         .res        1
 banks:      .res        1                                   ; A RAM disk's size, in 8K banks
 
+SH_MAX      = 64                                            ; /lib/shell's bytes read, at most
+
 .bss
 msg:        .res        32                                  ; An exit message, an error's text
+shraw:      .res        SH_MAX                              ; /lib/shell, as read ...
+shline:     .res        SH_MAX + 2                          ;   its line's words: the shell's program, then its
+shargs:     .res        2                                   ;   arguments (shargs: where), SPAWN's way (each one
+                                                            ;   zero-terminated, an empty one after the last)
 
 .code
 main:
@@ -101,10 +109,15 @@ shells:
             jsr         starter
             bra         @wait
 
-; Window 0's shell (a note group of its own: its window's notes are its), or the windows' starter, started
+; Window 0's shell (a note group of its own: its window's notes are its), or the windows' starter (in init's
+; namespace, so the shell's program is found as here; the shell given it as its arguments), started
 shell0:
-            LDR         r0, s_rc
-            LDR         r1, s_l
+            jsr         shell_line
+            LDR         r0, shline
+            lda         shargs
+            sta         r1
+            lda         shargs + 1
+            sta         r1 + 1
             lda         #SPAWN_NEWGROUP | SPAWN_NEWNS
             jsr         SPAWN
             sta         sh0
@@ -115,15 +128,98 @@ shell0:
             rts
 
 starter:
+            jsr         shell_line
             LDR         r0, s_wstart
-            LDR         r1, s_none
-            lda         #SPAWN_NEWNS                        ; (Its own: it uses only #c, #m)
+            LDR         r1, shline
+            lda         #0
             jsr         SPAWN
             sta         sw
             bcc         :+
             lda         #$FF
             sta         sw
 :
+            rts
+
+; The shell (shline, shargs): /lib/shell's first line's words, or, with no /lib/shell or none in it, rc -l
+shell_line:
+            LDR         r0, s_lshell
+            lda         #O_READ
+            jsr         OPEN
+            bcs         @default
+            sta         fd
+            LDR         r0, shraw
+            LDR         r1, SH_MAX
+            lda         fd
+            jsr         READ
+            php
+            pha
+            lda         fd
+            jsr         CLOSE
+            pla
+            plp
+            bcs         @default
+            sta         r2                                  ; (Its bytes)
+            ldy         #0                                  ; Its words, to its line's end (.Y in, .X out)
+            ldx         #0
+            stz         shargs
+@skip:
+            jsr         @at
+            bcs         @end
+            cmp         #' ' + 1
+            bcs         @word
+            iny
+            bra         @skip
+@word:
+            jsr         @at
+            bcs         @ended
+            cmp         #' ' + 1
+            bcc         @ended
+            sta         shline,X
+            inx
+            iny
+            bra         @word
+@ended:
+            stz         shline,X                            ; (A word's 0; after the first, its arguments)
+            inx
+            lda         shargs
+            bne         @skip
+            stx         shargs
+            bra         @skip
+@end:
+            lda         shargs
+            beq         @default
+            stz         shline,X                            ; (The empty one after the last)
+            clc
+            lda         shargs
+            adc         #<shline
+            sta         shargs
+            lda         #>shline
+            adc         #0
+            sta         shargs + 1
+            rts
+@default:
+            ldx         #S_RCL_LEN - 1
+:
+            lda         s_rcl,X
+            sta         shline,X
+            dex
+            bpl         :-
+            LDR         shargs, shline + S_RC_LEN
+            rts
+@at:                                                        ; (Byte .Y, if it's on the first line and there's room
+            cpy         r2                                  ;   for it: C = 0; else C = 1)
+            bcs         :+
+            cpx         #SH_MAX - 1
+            bcs         :+
+            lda         shraw,Y
+            cmp         #LF
+            beq         :+
+            cmp         #CR
+            beq         :+
+            clc
+            rts
+:
+            sec
             rts
 
 ; The RAM disks started: the RAM disk (r: 256K of the storage driver's banks) and the shared one (s: 512K of shared
@@ -266,7 +362,11 @@ s_open:     .byte       " (", 0
 s_close:    .byte       ")"
 s_crlf:     .byte       CR, LF, 0
 s_error:    .byte       "init: ", 0
-s_rc:       .byte       "#m/rc", 0
+s_rcl:      .byte       "#m/rc", 0                          ; The shell with no /lib/shell: rc -l
+S_RC_LEN    = * - s_rcl
+            .byte       "-l", 0, 0
+S_RCL_LEN   = * - s_rcl
+s_lshell:   .byte       "/lib/shell", 0
 s_wstart:   .byte       "#m/wstart", 0
 s_builtin:  .byte       "init: no /rom/lib/namespace: the one built in", CR, LF, 0
 s_ctlr:     .byte       "#d/r/ctl", 0
@@ -274,8 +374,6 @@ s_ctls:     .byte       "#d/s/ctl", 0
 s_sbin:     .byte       "#fs/bin", 0
 s_slib:     .byte       "#fs/lib", 0
 s_start:    .byte       "start "
-s_l:        .byte       "-l", 0, 0
-s_none:     .byte       0                                   ; (No arguments)
 ns_table:   .byte       MREPL                               ; bind '#/' /
             .word       s_hroot, s_root
             .byte       MAFTER                              ; bind -a '#c' /dev

@@ -3,7 +3,7 @@
 
 ; ---- The data stack
 
-            HEADERI     "DUP", dup
+            HEADERI     "dup", dup
 dup:
             dex
             lda         dlo + 1,x
@@ -13,13 +13,13 @@ dup:
 dup_end:
             rts
 
-            HEADERI     "DROP", drop
+            HEADERI     "drop", drop
 drop:
             inx
 drop_end:
             rts
 
-            HEADER      "SWAP", 0
+            HEADER      "swap", 0
 swap:
             lda         dlo,x
             ldy         dlo + 1,x
@@ -31,7 +31,7 @@ swap:
             sty         dhi,x
             rts
 
-            HEADERI     "OVER", over
+            HEADERI     "over", over
 over:
             dex
             lda         dlo + 2,x
@@ -50,7 +50,7 @@ nip:                                                        ; ( a b -- b ) (the 
 nip_end:
             rts
 
-            HEADER      "ROT", 0
+            HEADER      "rot", 0
 rot:                                                        ; ( a b c -- b c a )
             ldy         dlo + 2,x
             lda         dlo + 1,x
@@ -66,7 +66,7 @@ rot:                                                        ; ( a b c -- b c a )
             sty         dhi,x
             rts
 
-            HEADER      "?DUP", 0
+            HEADER      "?dup", 0
 qdup:
             lda         dlo,x
             ora         dhi,x
@@ -75,18 +75,18 @@ qdup:
 :
             rts
 
-            HEADER      "2DUP", 0
+            HEADER      "2dup", 0
 twodup:
             jsr         over
             jmp         over
 
-            HEADER      "2DROP", 0
+            HEADER      "2drop", 0
 twodrop:
             inx
             inx
             rts
 
-            HEADER      "2SWAP", 0
+            HEADER      "2swap", 0
 twoswap:                                                    ; ( a b c d -- c d a b ): cells 0 and 2, 1 and 3
             lda         dlo,x
             ldy         dlo + 2,x
@@ -106,7 +106,7 @@ twoswap:                                                    ; ( a b c d -- c d a
             sty         dhi + 1,x
             rts
 
-            HEADER      "2OVER", 0
+            HEADER      "2over", 0
 twoover:                                                    ; ( a b c d -- a b c d a b )
             dex
             dex
@@ -120,7 +120,7 @@ twoover:                                                    ; ( a b c d -- a b c
             sta         dhi,x
             rts
 
-            HEADER      "DEPTH", 0
+            HEADER      "depth", 0
 depth:
             stx         tmp
             sec
@@ -174,7 +174,7 @@ roll:                                                       ; ( xu xu-1 ... x0 u
 
 ; ---- The return stack (copied into definitions: they work on the definition's own return stack)
 
-            HEADERI     ">R", tor
+            HEADERI     ">r", tor
 tor:
             lda         dhi,x
             pha
@@ -184,7 +184,7 @@ tor:
 tor_end:
             rts
 
-            HEADERI     "R>", rfrom
+            HEADERI     "r>", rfrom
 rfrom:
             dex
             pla
@@ -194,7 +194,7 @@ rfrom:
 rfrom_end:
             rts
 
-            HEADERI     "R@", rfetch
+            HEADERI     "r@", rfetch
 rfetch:
             stx         xsave
             tsx
@@ -207,7 +207,7 @@ rfetch:
 rfetch_end:
             rts
 
-            HEADERI     "UNLOOP", unloop
+            HEADERI     "unloop", unloop
 unloop:
             pla
             pla
@@ -216,7 +216,7 @@ unloop:
 unloop_end:
             rts
 
-            HEADERI     "EXIT", exit
+            HEADERI     "exit", exit
 exit:
             rts
 exit_end:
@@ -284,7 +284,7 @@ twoslash:
             ror         dlo,x
             rts
 
-            HEADER      "NEGATE", 0
+            HEADER      "negate", 0
 negate:
             sec
             lda         #0
@@ -295,13 +295,13 @@ negate:
             sta         dhi,x
             rts
 
-            HEADER      "ABS", 0
+            HEADER      "abs", 0
 abs:
             lda         dhi,x
             bmi         negate
             rts
 
-            HEADERI     "INVERT", invert
+            HEADERI     "invert", invert
 invert:
             lda         dlo,x
             eor         #$FF
@@ -312,7 +312,7 @@ invert:
 invert_end:
             rts
 
-            HEADERI     "AND", and_
+            HEADERI     "and", and_
 and_:
             lda         dlo,x
             and         dlo + 1,x
@@ -324,7 +324,7 @@ and_:
 and__end:
             rts
 
-            HEADERI     "OR", or_
+            HEADERI     "or", or_
 or_:
             lda         dlo,x
             ora         dlo + 1,x
@@ -336,7 +336,7 @@ or_:
 or__end:
             rts
 
-            HEADERI     "XOR", xor_
+            HEADERI     "xor", xor_
 xor_:
             lda         dlo,x
             eor         dlo + 1,x
@@ -348,7 +348,7 @@ xor_:
 xor__end:
             rts
 
-            HEADER      "LSHIFT", 0
+            HEADER      "lshift", 0
 lshift:                                                     ; ( x u -- x << u )
             ldy         dlo,x
             inx
@@ -367,7 +367,7 @@ lshift:                                                     ; ( x u -- x << u )
 @done:
             rts
 
-            HEADER      "RSHIFT", 0
+            HEADER      "rshift", 0
 rshift:
             ldy         dlo,x
             inx
@@ -385,14 +385,14 @@ rshift:
 @done:
             rts
 
-            HEADER      "MIN", 0
+            HEADER      "min", 0
 min:
             jsr         lt_flag                             ; (C = 1: a < b, and a stays)
             bcc         nip_call
             inx
             rts
 
-            HEADER      "MAX", 0
+            HEADER      "max", 0
 max:
             jsr         lt_flag
             bcs         nip_call
@@ -469,7 +469,7 @@ greater:
             jsr         swap
             jmp         less
 
-            HEADER      "U<", 0
+            HEADER      "u<", 0
 uless:
             jsr         ult_flag
             bra         flag_c
@@ -519,7 +519,7 @@ store:                                                      ; ( x addr -- )
 store_end:
             rts
 
-            HEADERI     "C@", cfetch
+            HEADERI     "c@", cfetch
 cfetch:
             lda         dlo,x
             sta         w
@@ -531,7 +531,7 @@ cfetch:
 cfetch_end:
             rts
 
-            HEADERI     "C!", cstore
+            HEADERI     "c!", cstore
 cstore:
             lda         dlo,x
             sta         w
@@ -606,7 +606,7 @@ twostore:                                                   ; ( x1 x2 addr -- )
             inx
             rts
 
-            HEADER      "MOVE", 0
+            HEADER      "move", 0
 move:                                                       ; ( from to u -- ): as if through a buffer
             lda         dlo + 2,x                           ; From below to: from the end down; else up
             cmp         dlo + 1,x
@@ -697,7 +697,7 @@ move_args:
             inx
             rts
 
-            HEADER      "FILL", 0
+            HEADER      "fill", 0
 fill:                                                       ; ( addr u char -- )
             lda         dlo + 2,x
             sta         w
@@ -734,7 +734,7 @@ fill_a:                                                     ; tmp bytes of .A at
 @done:
             rts
 
-            HEADER      "COUNT", 0
+            HEADER      "count", 0
 count:                                                      ; ( c-addr -- addr u )
             lda         dlo,x
             sta         w
@@ -749,39 +749,39 @@ count:                                                      ; ( c-addr -- addr u
             PUSHAY
             rts
 
-            HEADER      "ALIGN", 0
+            HEADER      "align", 0
 align:
             rts
 
-            HEADER      "ALIGNED", 0
+            HEADER      "aligned", 0
 aligned:
             rts
 
-            HEADER      "CELLS", 0
+            HEADER      "cells", 0
 cells:
             jmp         twostar
 
-            HEADER      "CELL+", 0
+            HEADER      "cell+", 0
 cellplus:
             jsr         oneplus
             jmp         oneplus
 
-            HEADER      "CHARS", 0
+            HEADER      "chars", 0
 chars:
             rts
 
-            HEADER      "CHAR+", 0
+            HEADER      "char+", 0
 charplus:
             jmp         oneplus
 
-            HEADER      "HERE", 0
+            HEADER      "here", 0
 here_:
             lda         here
             ldy         here + 1
             PUSHAY
             rts
 
-            HEADER      "ALLOT", 0
+            HEADER      "allot", 0
 allot:                                                      ; ( n -- ): no further than the dictionary's end
             clc
             lda         here
@@ -825,7 +825,7 @@ ccomma_a:
             ply
             rts
 
-            HEADER      "C,", 0
+            HEADER      "c,", 0
 ccomma:
             lda         dlo,x
             inx
@@ -833,14 +833,14 @@ ccomma:
 
 ; ---- Variables and constants of the system
 
-            HEADER      "BASE", 0
+            HEADER      "base", 0
 base_:
             lda         #<base
             ldy         #>base
             PUSHAY
             rts
 
-            HEADER      "DECIMAL", 0
+            HEADER      "decimal", 0
 decimal:
             lda         #10
             bra         set_base
@@ -851,28 +851,25 @@ set_base:
             stz         base + 1
             rts
 
-            HEADER      "STATE", 0
+            HEADER      "state", 0
 state_:
             lda         #<state
             ldy         #>state
             PUSHAY
             rts
 
-            HEADER      ">IN", 0
+            HEADER      ">in", 0
 toin:
             lda         #<to_in
             ldy         #>to_in
             PUSHAY
             rts
 
-            HEADER      "BL", 0
+            HEADER      "bl", 0
 bl:
-            lda         #BL_CHAR
-            ldy         #0
-            PUSHAY
-            rts
+            CONSTCODE   BL_CHAR
 
-            HEADER      "EXECUTE", 0
+            HEADER      "execute", 0
 execute:
             lda         dlo,x
             sta         w

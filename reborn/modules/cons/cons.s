@@ -21,6 +21,8 @@
 ;               (xmodem's): every byte in is its, Ctrl-C and the rest too, and the windows' text (and /pc's frames)
 ;               wait, kept as a hidden window's is, till its last close repaints the window shown
 ;   /serctl     the rate: b300, b600, b1200, b2400, b4800, b9600, b19200, b115200.  It reads as it
+;   /kbdin      a write's bytes are the window's keys, as if typed (rio's kbdin: a line sent to another window's
+;               shell, forth's send); as many as its keys' queue has room for
 ; The keys: Ctrl-] then a digit shows that window (Ctrl-] n the next; Ctrl-] c asks for a new one, for /wnew's
 ; reader; Ctrl-] Ctrl-] is a Ctrl-]); Ctrl-C and Ctrl-\ are notes (interrupt, kill) to the shown window's note
 ; group, in either mode.  A window goes when the last of its cons fids closes (but window 0).
@@ -1048,6 +1050,47 @@ h_wnew:
             ldx         #2
             jmp         r_give
 
+@done:
+            rts
+
+; /kbdin: a write's bytes are the window's keys, as if typed (Plan 9's rio's kbdin: forth's send writes a line, and
+; its Enter, a CR, there); its queue's room at most (INQ_SIZE - 1), the rest dropped
+h_kbdin:
+            cmp         #R_WRITE
+            beq         :+
+            clc
+            rts
+:
+            lda         #IOBUF                              ; (A write's first IOBUF bytes, at most)
+            ldy         TASK_INBOX + RQ_COUNT + 1
+            bne         :+
+            cmp         TASK_INBOX + RQ_COUNT
+            bcc         :+
+            lda         TASK_INBOX + RQ_COUNT
+:
+            sta         cnt
+            stz         n
+            stz         n + 1
+            phx
+            jsr         from_client
+            plx
+            bcs         @done
+            lda         srv_fid_aux,X                       ; Its window's queue
+            tax
+            ldy         #0
+:
+            cpy         cnt
+            beq         :+
+            lda         iobuf,Y
+            phy
+            jsr         iq_put
+            ply
+            iny
+            bra         :-
+:
+            inc         TASK_EVENT                          ; (Its reader looks again)
+            MOVR        TASK_INBOX + RQ_DONE, TASK_INBOX + RQ_COUNT
+            clc
 @done:
             rts
 
@@ -2719,6 +2762,7 @@ srv_tree:
             SRV_ENTRY   s_consctl, $FE, SK_TEXT, gen_consctl, SM_READ,            0     ; 7 (the ctl files' states:
             SRV_ENTRY   s_wctl,    $FE, SK_TEXT, gen_wctl,    SM_READ,            0     ; 8   in no directory)
             SRV_ENTRY   s_serctl,  $FE, SK_TEXT, gen_serctl,  SM_READ,            0     ; 9
+            SRV_ENTRY   s_kbdin,   0,   SK_DATA, h_kbdin,     SM_WRITE,           0     ; 10
             .word       0
 cons_cmds:
             .word       s_rawon_w, c_rawon
@@ -2746,6 +2790,7 @@ s_wctl:     .byte       "wctl", 0
 s_wnew:     .byte       "wnew", 0
 s_ser:      .byte       "ser", 0
 s_serctl:   .byte       "serctl", 0
+s_kbdin:    .byte       "kbdin", 0
 s_rawon_w:  .byte       "rawon", 0
 s_rawoff_w: .byte       "rawoff", 0
 s_group_w:  .byte       "group", 0

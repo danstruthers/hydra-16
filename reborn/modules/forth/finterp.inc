@@ -99,7 +99,7 @@ find_wl:
             sec
             rts
 
-            HEADER      "FIND", 0
+            HEADER      "find", 0
 find:                                                       ; ( c-addr -- c-addr 0 | xt 1 | xt -1 )
             jsr         dup
             jsr         count
@@ -197,7 +197,7 @@ interpret:
 exec_w2:
             jmp         (w2)
 
-            HEADER      "EVALUATE", 0
+            HEADER      "evaluate", 0
 evaluate:                                                   ; ( c-addr u -- ): it as the source, then the one before
             jsr         src_push
             lda         dlo,x
@@ -295,7 +295,7 @@ src_rec:
 
 ; ---- QUIT, CATCH and THROW
 
-            HEADER      "QUIT", 0
+            HEADER      "quit", 0
 quit:                                                       ; The return stack emptied, the sources nested let go of,
             ldx         rsp0                                ;   and the user's lines
             txs
@@ -307,22 +307,30 @@ quit:                                                       ; The return stack e
             stz         state
             stz         state + 1
 @line:
+            lda         interactive                         ; (The console's: the shell's prompt, if it's loaded)
+            beq         :+
+            jsr         shell_prompt
+:
             jsr         refill_in
             bcc         :+
             jmp         bye
 :
-            lda         #<interpret
-            ldy         #>interpret
+            lda         #<quit_line
+            ldy         #>quit_line
             PUSHAY
             jsr         catch
             lda         dlo,x
             ora         dhi,x
             bne         @error
             inx
-            lda         interactive                         ; (The console's: ok)
-            beq         @line
+            lda         interactive                         ; (The console's: ok, but in the shell, if the line
+            beq         @line                               ;   has left it loaded: its prompt instead)
             lda         state
             bne         @line
+            lda         #<s_shprompt
+            ldy         #>s_shprompt
+            jsr         find_hook
+            bcc         @line
             LDR         w, s_ok
             jsr         type_z
             bra         @line
@@ -338,6 +346,65 @@ quit:                                                       ; The return stack e
             bra         @line
 
 s_ok:       .byte       " ok", LF, 0
+
+; A line typed at the console, interpreting: the shell's ((shell-line) ( -- flag ), if it's loaded: true, it took the
+; line, an rc command line); else interpreted
+quit_line:
+            lda         interactive
+            beq         @forth
+            lda         state
+            ora         state + 1
+            bne         @forth
+            lda         #<s_shline
+            ldy         #>s_shline
+            jsr         find_hook
+            bcs         @forth
+            jsr         exec_w2
+            lda         dlo,x
+            ora         dhi,x
+            php
+            inx
+            plp
+            beq         @forth
+            rts
+@forth:
+            jmp         interpret
+
+; The shell's prompt ((shell-prompt) ( -- ), if it's loaded)
+shell_prompt:
+            lda         #<s_shprompt
+            ldy         #>s_shprompt
+            jsr         find_hook
+            bcs         :+
+            jmp         exec_w2
+:
+            rts
+
+; The word named by the counted string at .A/.Y, in the search order (the shell's hooks: a library's, found by
+; name, so they're there only while it's loaded and searched).  OUT: C = 0, w2 its xt; or C = 1
+find_hook:
+            sta         w
+            sty         w + 1
+            clc
+            adc         #1
+            bcc         :+
+            iny
+:
+            PUSHAY
+            lda         (w)
+            ldy         #0
+            PUSHAY
+            jsr         find_name
+            inx
+            inx
+            bcs         :+
+            jsr         hdr_xt
+            clc
+:
+            rts
+
+s_shline:   .byte       12, "(shell-line)"
+s_shprompt: .byte       14, "(shell-prompt)"
 
 ; CATCH's frame: the data stack's pointer, the source stack's depth, and the handler before; handler = the 6502's
 ; stack pointer at it.  THROW goes back to it: the stacks as they were, and the sources nested since let go of
@@ -482,12 +549,12 @@ note_where:
 @done:
             rts
 
-            HEADER      "ABORT", 0
+            HEADER      "abort", 0
 abort:
             lda         #<-1
             jmp         throw_a
 
-            HEADERQ     "ABORT", F_IMMEDIATE
+            HEADERQ     "abort", F_IMMEDIATE
 abortquote:
             lda         #'"'
             sta         cnt
@@ -698,8 +765,9 @@ s_error:    .byte       "error ", 0
 s_line:     .byte       "line ", 0
 s_colon:    .byte       ": ", 0
 err_code:   .word       -3 & $FFFF, -4 & $FFFF, -8 & $FFFF, -10 & $FFFF, -14 & $FFFF, -16 & $FFFF, -17 & $FFFF
-            .word       -22 & $FFFF, -24 & $FFFF, -28 & $FFFF, -49 & $FFFF, -50 & $FFFF, -258 & $FFFF, -259 & $FFFF, 0
-err_text:   .word       e_3, e_4, e_8, e_10, e_14, e_16, e_17, e_22, e_24, e_28, e_49, e_50, e_258, e_259
+            .word       -21 & $FFFF, -22 & $FFFF, -24 & $FFFF, -28 & $FFFF, -49 & $FFFF, -50 & $FFFF, -258 & $FFFF
+            .word       -259 & $FFFF, 0
+err_text:   .word       e_3, e_4, e_8, e_10, e_14, e_16, e_17, e_21, e_22, e_24, e_28, e_49, e_50, e_258, e_259
 e_3:        .byte       "stack overflow", 0
 e_4:        .byte       "stack underflow", 0
 e_8:        .byte       "dictionary full", 0
@@ -707,6 +775,7 @@ e_10:       .byte       "division by zero", 0
 e_14:       .byte       "compile only", 0
 e_16:       .byte       "no name", 0
 e_17:       .byte       "number too long", 0
+e_21:       .byte       "unsupported operation", 0
 e_22:       .byte       "control structure mismatch", 0
 e_24:       .byte       "invalid numeric argument", 0
 e_28:       .byte       "interrupt", 0
@@ -717,7 +786,7 @@ e_259:      .byte       "not this forth's library", 0
 
 ; ---- The rest
 
-            HEADER      "BYE", 0
+            HEADER      "bye", 0
 bye:                                                        ; (At the console: the line ended, for rc's prompt)
             lda         interactive
             beq         :+
@@ -731,7 +800,7 @@ bye:                                                        ; (At the console: t
             lda         #0
             jmp         EXITS
 
-            HEADER      "ENVIRONMENT?", 0
+            HEADER      "environment?", 0
 environmentq:                                               ; ( c-addr u -- false ): none known
             inx
             jmp         zero_tos
