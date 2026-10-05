@@ -18,7 +18,8 @@
 ; task's RAM after the BSS, to DICT_END; the words in ROM have their headers beside their code, chained into the same
 ; list as the ones loaded or defined in RAM (FORTH's: a word list is a chain of headers).  A header: the link (2: the one before,
 ; 0 at the first), the name's length and flags (1: F_IMMEDIATE, F_HIDDEN, F_INLINE), the name (as typed: found
-; ignoring case), then (F_INLINE) the code's length; the code, its xt, follows.  A header's address is its nt.
+; ignoring case), then (F_INLINE) a byte, the code's length (0: called) and F_COMPILE (compile-only: interpreted,
+; THROW -14); the code, its xt, follows.  A header's address is its nt.
 ;   Input: stdin, a line at a time (the console's cooked lines, or a file's, through rc's <), or a file's (INCLUDED),
 ; or a string's (EVALUATE): the source before a nested one is kept on the source stack.  Output: fd 1, buffered.  A
 ; fileid is the system's fd; an ior is 0, or -512 less the system's error code (Gforth's way).  Errors are THROWs

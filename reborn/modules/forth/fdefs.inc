@@ -6,7 +6,10 @@
 DS_N            = 32            ; The data stack's cells
 F_IMMEDIATE     = $80           ; A header's flags (with the name's length, 0-31) ...
 F_HIDDEN        = $40           ;   a definition not finished yet ...
-F_INLINE        = $20           ;   code copied into a definition, not called (its length after the name)
+F_INLINE        = $20           ;   a byte after the name: the code's length, copied into a definition, not called
+                                ;   (0: called, as any word's) ...
+F_COMPILE       = $80           ;   and in that byte, compile-only: interpreted, THROW -14 (Forth's undefined
+CODE_MASK       = $7F           ;   interpretation semantics); the rest, the length
 LEN_MASK        = $1F
 DICT_END        = $7F00         ; The dictionary's end (the break's)
 TIB_SIZE        = 128           ; A line of input at most
@@ -55,8 +58,9 @@ OP_BIT_ZP       = $24
 OP_BPL          = $10
 
 ; ****************************************************************************
-; The headers: HEADER "NAME", flags before a word's code (its label after); HEADERI "NAME", label for an inline
-; word, whose code ends at label_end (an rts there, for EXECUTE).  Each header is hdr_N, its link hdr_N-1's (the
+; The headers: HEADER "NAME", flags before a word's code (its label after); HEADERI "NAME", label[, F_COMPILE] for
+; an inline word, whose code ends at label_end (an rts there, for EXECUTE); HEADERC "NAME", flags for a compile-only
+; word that's called (or, immediate, run), HEADERQC its HEADERQ.  Each header is hdr_N, its link hdr_N-1's (the
 ; first's 0): hdr_n counts them
 hdr_n       .set        0
 
@@ -81,9 +85,23 @@ hdr_n       .set        hdr_n + 1
             .byte       name, $22
 .endmacro
 
-.macro HEADERI name, label
+.macro HEADERI name, label, compile
             HEADER      name, F_INLINE
+.ifblank compile
             .byte       .ident(.concat(.string(label), "_end")) - label
+.else
+            .byte       (.ident(.concat(.string(label), "_end")) - label) | (compile)
+.endif
+.endmacro
+
+.macro HEADERC name, flags
+            HEADER      name, (flags) | F_INLINE
+            .byte       F_COMPILE
+.endmacro
+
+.macro HEADERQC name, flags
+            HEADERQ     name, (flags) | F_INLINE
+            .byte       F_COMPILE
 .endmacro
 
 ; A constant's code, as CONSTANT compiles one (the literal, then rts), so WORDS knows it for a literal and SEE

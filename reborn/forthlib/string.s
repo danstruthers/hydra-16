@@ -223,7 +223,7 @@ search:                                                     ; ( c-addr1 u1 c-add
 @no:
             jmp         zero_tos
 
-            HEADER      "sliteral", F_IMMEDIATE
+            HEADERC     "sliteral", F_IMMEDIATE
 sliteral:                                                   ; ( c-addr u -- ): compiled, as S" is
             lda         #<xsquote
             ldy         #>xsquote

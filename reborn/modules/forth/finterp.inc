@@ -130,7 +130,7 @@ found_xt:
 ; ---- The text interpreter
 
 ; The source, word by word, from >IN: each executed, or compiled (STATE); a number pushed or compiled; else
-; THROW -13.  The stack checked after each
+; THROW -13; a compile-only word (F_COMPILE) not in a definition, THROW -14.  The stack checked after each
 interpret:
 @next:
             jsr         parse_name
@@ -153,11 +153,20 @@ interpret:
             inx
             jsr         hdr_xt
             lda         state
-            beq         @execute
+            beq         @interp
             bit         cnt                                 ; (F_IMMEDIATE)
             bmi         @execute
             jsr         comp_hdr
             bra         @check
+@interp:
+            lda         cnt                                 ; Compile-only?  (F_INLINE, and F_COMPILE in its byte:
+            and         #F_INLINE                           ;   hdr_xt's .Y, the xt's offset, past it)
+            beq         @execute
+            dey
+            lda         (w),y
+            bpl         @execute
+            lda         #<-14
+            jmp         throw_a
 @execute:
             jsr         exec_w2
 @check:
@@ -554,7 +563,7 @@ abort:
             lda         #<-1
             jmp         throw_a
 
-            HEADERQ     "abort", F_IMMEDIATE
+            HEADERQC    "abort", F_IMMEDIATE
 abortquote:
             lda         #'"'
             sta         cnt
@@ -580,8 +589,9 @@ xabortq:
 :
             rts
 
-; QUIT's: error n (on top, dropped) said, after its place: -1 nothing; -2 ABORT"'s message; -13 the name and ?; an
-; ior the system's text for it (after the file's name, INCLUDED's); else the table's text, or "error n"
+; QUIT's: error n (on top, dropped) said, after its place: -1 nothing; -2 ABORT"'s message; -13 the name and ?; -14
+; the name and the text; an ior the system's text for it (after the file's name, INCLUDED's); else the table's text,
+; or "error n"
 show_error:
             lda         dlo,x
             sta         tmp
@@ -612,15 +622,14 @@ show_error:
             jmp         @type
 :
             cmp         #<-13
+            beq         :+
+            cmp         #<-14
             bne         @table
-            lda         throw_name
-            sta         w
-            lda         throw_name + 1
-            sta         w + 1
-            lda         throw_nlen
-            sta         tmp
-            stz         tmp + 1
-            jsr         type_w
+            jsr         @namec                              ; ("name: compile only")
+            LDR         w, e_14
+            bra         @z
+:
+            jsr         @name
             LDR         w, s_undef
             bra         @z
 @os:
@@ -633,16 +642,7 @@ show_error:
             lda         throw_named                         ; INCLUDED's file's name first
             beq         :+
             stz         throw_named
-            lda         throw_name
-            sta         w
-            lda         throw_name + 1
-            sta         w + 1
-            lda         throw_nlen
-            sta         tmp
-            stz         tmp + 1
-            jsr         type_w
-            LDR         w, s_colon
-            jsr         type_z
+            jsr         @namec
 :
             LDR         r0, wbuf
             pla
@@ -688,6 +688,19 @@ show_error:
 @type:
             jsr         type_w
             jmp         cr
+@namec:                                                     ; (The name noted, and ": ")
+            jsr         @name
+            LDR         w, s_colon
+            jmp         type_z
+@name:                                                      ; (The name noted)
+            lda         throw_name
+            sta         w
+            lda         throw_name + 1
+            sta         w + 1
+            lda         throw_nlen
+            sta         tmp
+            stz         tmp + 1
+            jmp         type_w
 
 ; The error's place, if THROW noted one: "name:line: " (a file INCLUDED), or "line N: ".  Keeps tmp
 show_where:

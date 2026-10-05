@@ -19,7 +19,7 @@ lib_last:   .res        2                                   ; LIB, a .fs: the co
 lib_wid:    .res        2                                   ;   and it
 .code
 
-            HEADER      "ahead", F_IMMEDIATE
+            HEADERC     "ahead", F_IMMEDIATE
 ahead:
             jmp         comp_fwd
 
@@ -1251,7 +1251,8 @@ inline_at:
             sta         w3 + 1
             pla
             sta         w3
-            ldy         tmp
+            ldy         tmp                                 ; (0: called, a compile-only word)
+            beq         @next
 :
             dey
             bmi         @found
@@ -1498,10 +1499,13 @@ nrfrom:                                                     ; ( -- i*x n ) R: ( 
 
             HEADER      "synonym", 0
 synonym:                                                    ; ( "newname" "oldname" -- ): newname as oldname is (its
-            lda         #F_HIDDEN                           ;   code copied if it's inline; else a jmp to it)
-            jsr         make_hdr
+            lda         #F_HIDDEN                           ;   code copied if it's inline; else a jmp to it), and
+            jsr         make_hdr                            ;   compile-only if it is
             jsr         name_hdr
             jsr         hdr_xt
+            dey                                             ; (F_INLINE: its byte, F_COMPILE too: tmp2)
+            lda         (w),y
+            sta         tmp2
             lda         lasthdr
             sta         w
             lda         lasthdr + 1
@@ -1514,8 +1518,10 @@ synonym:                                                    ; ( "newname" "oldna
             lda         cnt
             and         #F_INLINE
             beq         @jmp
-            lda         tmp                                 ; Its code's length, its code and the rts after it
-            jsr         ccomma_a
+            lda         tmp2                                ; Its byte (its code's length), its code and the rts
+            jsr         ccomma_a                            ;   after it (none: a jmp to it)
+            lda         tmp
+            beq         @jmp
             ldy         #0
 :
             lda         (w2),y

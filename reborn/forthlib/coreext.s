@@ -71,7 +71,7 @@ true:
 false:
             CONSTCODE   0
 
-            HEADERI     "2>r", twotor
+            HEADERI     "2>r", twotor, F_COMPILE
 twotor:
             lda         dhi + 1,x
             pha
@@ -86,7 +86,7 @@ twotor:
 twotor_end:
             rts
 
-            HEADERI     "2r>", tworfrom
+            HEADERI     "2r>", tworfrom, F_COMPILE
 tworfrom:
             dex
             dex
@@ -101,7 +101,7 @@ tworfrom:
 tworfrom_end:
             rts
 
-            HEADERI     "2r@", tworfetch
+            HEADERI     "2r@", tworfetch, F_COMPILE
 tworfetch:
             stx         xsave
             tsx
@@ -189,16 +189,16 @@ noname:                                                     ; ( -- xt )
 compilecomma_w:                                             ; ( xt -- ): its header's way, if it has one
             jmp         compilecomma
 
-            HEADER      "[compile]", F_IMMEDIATE
+            HEADERC     "[compile]", F_IMMEDIATE
 bracketcompile:
             jsr         name_hdr
             jmp         comp_hdr
 
-            HEADER      "again", F_IMMEDIATE
+            HEADERC     "again", F_IMMEDIATE
 again_w:                                                    ; ( dest -- )
             jmp         again
 
-            HEADER      "?do", F_IMMEDIATE
+            HEADERC     "?do", F_IMMEDIATE
 qdo:
             lda         leaves                              ; (Its skip: a LEAVE of this loop's)
             ldy         leaves + 1
@@ -215,12 +215,12 @@ qdo:
             jsr         leave_jmp
             jmp         here_
 
-            HEADER      "case", F_IMMEDIATE
+            HEADERC     "case", F_IMMEDIATE
 case:
             dex                                             ; (0: the ENDOFs' end)
             jmp         zero_tos
 
-            HEADER      "of", F_IMMEDIATE
+            HEADERC     "of", F_IMMEDIATE
 of:                                                         ; OVER = IF DROP
             lda         #<over
             ldy         #>over
@@ -233,11 +233,11 @@ of:                                                         ; OVER = IF DROP
             ldy         #>drop
             jmp         comp_jsr
 
-            HEADER      "endof", F_IMMEDIATE
+            HEADERC     "endof", F_IMMEDIATE
 endof:
             jmp         else_
 
-            HEADER      "endcase", F_IMMEDIATE
+            HEADERC     "endcase", F_IMMEDIATE
 endcase:                                                    ; DROP, and each ENDOF's jmp here
             lda         #<drop
             ldy         #>drop
@@ -544,7 +544,7 @@ udotr:
             jsr         push_tmp3
             bra         right
 
-            HEADERQ     "c", F_IMMEDIATE
+            HEADERQC    "c", F_IMMEDIATE
 cquote:
             lda         #'"'
             sta         cnt

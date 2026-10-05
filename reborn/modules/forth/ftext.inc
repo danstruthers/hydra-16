@@ -1081,7 +1081,7 @@ str_comp:                                                   ; Compiling: S" in t
             ldy         #>xsquote
             jmp         comp_str
 
-            HEADERQ     ".", F_IMMEDIATE
+            HEADERQC    ".", F_IMMEDIATE
 dotquote:
             lda         #'"'
             sta         cnt

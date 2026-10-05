@@ -19,7 +19,7 @@ twovariable:
             tay
             jmp         comma_ay
 
-            HEADER      "2literal", F_IMMEDIATE
+            HEADERC     "2literal", F_IMMEDIATE
 twoliteral:                                                 ; ( x1 x2 -- ): compiled, x1 pushed first
             jsr         swap
             jsr         literal

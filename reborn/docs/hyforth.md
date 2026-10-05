@@ -57,6 +57,26 @@ as fit the screen's width (`$COLUMNS`, else 80), the newest first.
 | `i` | Immediate: it runs while compiling |
 | `a` / `f` | Assembly (the core's, or a library's, `NAME.fl`) or Forth (made by the compiler from source: `:`, `create`, `constant` ...) |
 
+## Compile-only words
+
+Forth 2012 leaves some words' interpretation semantics undefined, and interpreting one is an ambiguous condition
+whose THROW code is -14 ("interpreting a compile-only word").  Interpreted, HyForth's broke it: `1 >r` typed at the
+prompt pushed onto the interpreter's own return stack and ended forth (a login shell with it), and `1 then` stored
+HERE at address 1.  So they're compile-only (6.14): outside a definition the text interpreter THROWs -14, said with
+the word's name (`>r: compile only`), and forth goes on.  In a definition they're compiled as before.
+
+| Compile-only | Words |
+| :--- | :--- |
+| The return stack's | `>r`, `r>`, `r@`, `2>r`, `2r>`, `2r@`, `unloop`, `i`, `j`, `exit` (typed at the shell's prompt, `exit` is the shell's, which ends forth) |
+| The control structures' | `if`, `else`, `then`, `begin`, `until`, `while`, `repeat`, `again`, `ahead`, `do`, `?do`, `loop`, `+loop`, `leave`, `case`, `of`, `endof`, `endcase` |
+| The other compiling words | `;`, `recurse`, `does>`, `literal`, `2literal`, `sliteral`, `[']`, `[char]`, `postpone`, `[compile]`, `."` (`.(` is its interpreted form), `abort"`, `c"` |
+
+Not compile-only: the words another word set gives interpretation semantics (`s"` and `s\"`, File Access's; `to`,
+`is`, `action-of`), `[`, and `cs-pick` and `cs-roll` (the control-flow stack is the data stack, so they're only
+stack words then).  The mark is in the byte an inline word has after its name (its code's length): bit 7,
+`F_COMPILE`; a compile-only word that's called (`i`, or an immediate one) has that byte with a length of 0.  A
+`synonym` of one is one too.  `'` and `find` still give its xt, as the standard has them.
+
 ## The terminal's words
 
 The Hydra's console is an ANSI terminal (`page` and `at-xy` already send its sequences), so these are its
@@ -111,6 +131,27 @@ isn't a program's (the shell's rule runs a word before a program), and the sys- 
 A note for a handler is taken where Ctrl-C is: the core's note handler marks it, and the next word interpreted, or a
 loop's step, runs the handler (a wait it ends, KEY or a line's read, waits again first; MS ends early).  Preemption's
 words aren't added: `hold` is Forth's (pictured output), and `sys-preempt-off` and `sys-preempt-on` say it.
+
+## The devices (hylang's layer 3)
+
+hylang's device libraries, as Forth source (6.13): `/lib/forth/NAME.fs`, `lib NAME` (`lib` finds a `.fs` when
+there's no `.fl`), each over its device's files (the driver's own words, nothing new in the system), hylang's names
+and its order (the device, pin or task first).  Each uses only the words forth starts with (File Access's, mostly),
+so it's a worked example of reaching that device by hand too, and none needs another (a library a library loads
+isn't one `lib` can take out on its own).  A failure THROWs the system's error (`ior>text` has its text); a text read
+is in the library's buffer till its next.  Where hylang gives a list or a hash, Forth gives the driver's text.
+
+| Library | Device | Words | hylang's, not here |
+| :--- | :--- | :--- | :--- |
+| `cons` | `#c` (`/dev`) | `window ( -- n )` (`$window`; none: 0), `windows ( -- c-addr u )` (`wctl`'s lines, `*` the one shown), `new-window`, `show-window ( n -- )` | `raw-on`, `raw-off` (`key` and `ekey` set the raw mode, a line read ends it), `beep` (Facility's) |
+| `gpio` | `#g` (`/dev/gpio`) | `gpio ( pin -- level )`, `gpio! ( pin level -- )` (an output, set), `gpio-in`, `gpio-out ( pin -- )`, `gpio-port ( -- byte )`, `gpio-port! ( byte -- )`, `gpio-ddr! ( byte -- )`, `gpio-ca1! ( rise? -- )`, `gpio-ca2! ( n -- )` (0, 1, -1 an input), `gpio-wait ( -- count )` (CA1's next edge), `gpio-state ( -- c-addr u )` (`ctl`'s lines) | |
+| `i2c` | `#i` (`/dev/i2c`) | `i2c-read`, `i2c-write ( addr reg c-addr u -- )` (at the device's register, `i2c-reg-size` bytes of it: 0, none), `i2c-speed ( khz -- )`, `i2c-reg-size ( n -- )`, `i2c-devices ( -- )` (the addresses that answer, typed), `i2c? ( addr -- flag )` | |
+| `spi` | `#S` (`/dev/spi`) | `spi ( dev c-addr u -- )` (a transaction: the bytes that came back in the bytes' place), `spi-read ( dev c-addr u -- )` (u clocked in), `spi-mode ( dev mode -- )` (0 or 3) | |
+| `proc` | `#p` (`/proc`) | `task-args`, `task-cwd`, `task-env`, `task-ns`, `task-regs ( task -- c-addr u )`, `task-mem ( task addr c-addr u -- )`, `task-ram ( task bank offset c-addr u -- )` | |
+| `clock` | `#t` (`/dev`) | `set-date ( c-addr u -- )` (`2026-10-04 12:00:00`: the clock and the DS1747), `rtc ( -- c-addr u )` (`running`, `stopped` or `none`, and `battery low`) | |
+| `disk` | `#d` (`/dev/sd`) | `disk-ctl ( disk -- c-addr u )` (its ctl's text; a disk by its letter: `[char] x`), `disk-start`, `disk-stop ( disk -- )`, `cards ( -- mask )` (bit n: a card on SPI device n) | `disks` (`disk-ctl` of each), `df` (the program) |
+| `pc` | `#P` (`/pc`) | `pc? ( -- flag )` (the PC tool answers; none: a second, then false) | |
+| `sound` | `#a` (`/dev`) | (in `sound.fl`, beside 6.8's words) `note-of ( c-addr u -- n )` (`C#4`, `Db4`, `B-1`: a MIDI number, 60 middle C; not a note: THROW -24), `tune ( c-addr u ch tempo -- )` (`C4 1 E4 1 - 1 G4 2`: notes and their beats, `-` a rest; tempo beats a minute; Ctrl-C ends it, the note off) | `play` (the program) |
 
 ## The shell
 
@@ -177,9 +218,10 @@ shell, and `-lib shell` (or a `marker` that takes it out) a plain Forth again.
 
 ## The steps
 
-6.6 to 6.10 done (October 2026), then 6.11 and 6.12, from comparing the shell with hylang's;
+6.6 to 6.10 done (October 2026), then 6.11 to 6.13, from comparing the shell with hylang's, and 6.14;
 [forth-status.md](forth-status.md) has each one's notes, the sizes and what's next.  The tests: `forth` (the Forth
-2012 suite, still passing), `hyforth` (6.6-6.8), `fshell` (6.9 and 6.11), `lshell` (6.10) and `fhydra` (6.12).
+2012 suite, still passing), `hyforth` (6.6-6.8 and 6.14), `fshell` (6.9 and 6.11), `lshell` (6.10), `fhydra` (6.12)
+and `fdev` (6.13).
 
 | Step | | Tested |
 | :--- | :--- | :--- |
@@ -190,3 +232,5 @@ shell, and `-lib shell` (or a `marker` that takes it out) a plain Forth again.
 | 6.10 | `/lib/shell` for init and wstart; `send` and `#cN/kbdin` | A card's `/lib/shell`: forth in window 0 and in a window made (`$window`); a line sent to window 0, run there |
 | 6.11 | The shell's next: `%`, the second prompt (`prompt2`); programs as values: `sh-out`, `output-of`, `\|` and `piped`, `spawn`; the programs' code in the core (`fprog.inc`), the output's hook | `% free` past a word `free`; a definition's second line (its tab); a line's output and a word's, strings; a word's output into `wc` (`\|`, `piped`), into `head`, which ends first, and stopped by Ctrl-C; `spawn` and `wait`; `sh` and `run` as before (the forth test) |
 | 6.12 | The Hydra's words (hylang's layer 2): the directories' (Gforth's), `=mkdir`, `unsetenv`, `note`, `note-group`, `on-note` (the core's note handler and its polls), `pause`, `ior>text` | A directory read, one made; the directory set and got (the prompt follows); an error's text; a variable set, read, removed; a note to itself taken by a handler between words and in a loop, and one it says no to |
+| 6.13 | The device libraries (hylang's layer 3): `gpio`, `i2c`, `spi`, `cons`, `proc`, `clock`, `disk`, `pc` as source; `sound.fl`'s `note-of` and `tune` | Pins read and set, the port, `ctl`'s lines, CA1's edge; a memory written and read at a register, the devices; an echo device's transactions, mode 3; the window; a task's args, cwd, regs and memory; the chip, the time set; the ROM disk's ctl, a card; the PC tool; notes' numbers, a tune's notes on the YM2151 in time, a bad note |
+| 6.14 | Compile-only words: THROW -14 interpreted (`F_COMPILE`) | `>r`, `if`, `."`, a `synonym` of `>r` and a library's `2>r` typed (each `name: compile only`, forth going on); `>r`, `i`, `r>` and the synonym compiled and run; the Forth 2012 suite |

@@ -5,7 +5,8 @@
 ; /dev/sndctl takes the words that claim and release channels, set the master volume and clear the chip.  Each is
 ; opened the first time it's wanted, and stays open (a task's claimed channels go back as its last one closes, at
 ; its end).  A channel's command is written with the channel in one write, so another program's can't come
-; between.  A failure is a THROW of the system's error, named by the file (/dev/snd: busy).
+; between.  A failure is a THROW of the system's error, named by the file (/dev/snd: busy).  And hylang's note-of (a
+; note's MIDI number, by its name) and tune (notes and their beats played).
 ;   Songs are play's (the program: play song.zsm at the shell, or s" play song.zsm" sh), not words.
 
 .include "forthlib.inc"
@@ -16,6 +17,12 @@ ctl_fd:     .res        1                                   ;   and /dev/sndctl'
 cmd:        .res        4                                   ; A write: SND_R_CH, the channel, the command, its value
 ctl_buf:    .res        16                                  ; sndctl's line ...
 ctl_len:    .res        1                                   ;   its length so far
+tune_tpb:   .res        2                                   ; TUNE: a beat's ticks ...
+tune_ch:    .res        1                                   ;   the channel ...
+tune_left:  .res        1                                   ;   the tune's bytes left (from p1) ...
+tune_note:  .res        1                                   ;   the note ...
+tune_on:    .res        1                                   ;   <> 0: a note (not a rest) ...
+tune_beats: .res        1                                   ;   and its beats
 .code
 
 ; Its start: neither open
@@ -225,3 +232,270 @@ s_reset:    .byte       "reset", 0
 s_volume:   .byte       "volume", 0
 s_claim:    .byte       "claim", 0
 s_release:  .byte       "release", 0
+
+; ---- Notes by name, and tunes (hylang's note-of and tune)
+
+            HEADER      "note-of", 0
+noteof:                                                     ; ( c-addr u -- n ): a note's MIDI number, by its name: a
+            jsr         str_wt                              ;   letter, # or b, and an octave (-1 to 9): C4 60 (middle
+            jsr         note_name                           ;   C), C#4 and Db4 61, A4 69 (440 Hz); not a note: THROW
+            bcs         bad_tune                            ;   -24
+            ldy         #0
+            PUSHAY
+            rts
+
+; Not a note, or a tune that isn't one: THROW -24 (invalid numeric argument)
+bad_tune:
+            lda         #<-24
+            jmp         throw_a
+
+            HEADER      "tune", 0
+tune:                                                       ; ( c-addr u ch tempo -- ): the tune played on channel ch,
+            lda         #<12000                             ;   tempo beats a minute: notes and their beats, blanks
+            ldy         #>12000                             ;   between (C4 1 E4 1 G4 2: a note's name as note-of's,
+            PUSHAY                                          ;   or - a rest; beats 1-255), each keyed on, then off
+            jsr         swap                                ;   as its time ends; Ctrl-C ends it (the note off)
+            dex
+            stz         dlo,x
+            stz         dhi,x
+            jsr         swap                                ; ( c-addr u ch 12000 0 tempo -- ... ticks a beat )
+            jsr         ummod
+            lda         dlo,x
+            sta         tune_tpb
+            lda         dhi,x
+            sta         tune_tpb + 1
+            inx
+            inx
+            lda         dlo,x
+            sta         tune_ch
+            inx
+            jsr         str_wt                              ; The tune: p1, tune_left bytes
+            lda         w
+            sta         p1
+            lda         w + 1
+            sta         p1 + 1
+            lda         tmp
+            sta         tune_left
+@pair:
+            stz         tune_on                             ; Its note, or a rest
+            jsr         tune_word
+            bcc         :+
+            rts
+@bad:
+            jmp         bad_tune
+:
+            lda         tmp
+            cmp         #1
+            bne         :+
+            lda         (w)
+            cmp         #'-'
+            beq         @beats
+:
+            jsr         note_name
+            bcs         @bad
+            sta         tune_note
+            inc         tune_on
+@beats:
+            jsr         tune_word                           ; Its beats (decimal, 1-255)
+            bcs         @bad
+            ldy         #0
+            sty         tune_beats
+:
+            lda         (w),y
+            sec
+            sbc         #'0'
+            cmp         #10
+            bcs         @bad
+            pha
+            lda         tune_beats
+            asl
+            asl
+            clc
+            adc         tune_beats
+            asl
+            sta         tune_beats
+            pla
+            clc
+            adc         tune_beats
+            sta         tune_beats
+            iny
+            cpy         tmp
+            bne         :-
+            lda         tune_on                             ; Keyed on ...
+            beq         :+
+            jsr         tune_push
+            lda         tune_note
+            ldy         #0
+            PUSHAY
+            jsr         sndnote
+:
+            lda         tune_beats                          ;   its time (its beats' ticks, 32767 at most) ...
+            ldy         #0
+            PUSHAY
+            lda         tune_tpb
+            ldy         tune_tpb + 1
+            PUSHAY
+            jsr         umstar
+            inx
+            lda         dhi,x
+            and         #$7F
+            sta         tmp + 1
+            lda         dlo,x
+            sta         tmp
+            inx
+            stx         xsave
+            lda         tmp
+            ldx         tmp + 1
+            jsr         SLEEP
+            ldx         xsave
+            lda         tune_on                             ;   and off (a note ending the wait too)
+            beq         :+
+            jsr         tune_push
+            jsr         sndoff
+:
+            bit         intr                                ; (Ctrl-C: the end, THROW -28)
+            bvs         :+
+            jmp         @pair
+:
+            jmp         intr_throw
+
+; ( -- ch ): the tune's channel pushed
+tune_push:
+            lda         tune_ch
+            ldy         #0
+            PUSHAY
+            rts
+
+; w and tmp: the next word of the tune (p1, tune_left bytes left).  OUT: C = 1, none left
+tune_word:
+@skip:
+            lda         tune_left
+            beq         @none
+            lda         (p1)
+            cmp         #' ' + 1
+            bcs         @word
+            jsr         @next
+            bra         @skip
+@word:
+            lda         p1
+            sta         w
+            lda         p1 + 1
+            sta         w + 1
+            stz         tmp
+:
+            lda         tune_left
+            beq         :+
+            lda         (p1)
+            cmp         #' ' + 1
+            bcc         :+
+            inc         tmp
+            jsr         @next
+            bra         :-
+:
+            clc
+            rts
+@none:
+            sec
+            rts
+@next:
+            inc         p1
+            bne         :+
+            inc         p1 + 1
+:
+            dec         tune_left
+            rts
+
+; ( c-addr u -- ): w and tmp the string (255 chars at most)
+str_wt:
+            lda         dlo + 1,x
+            sta         w
+            lda         dhi + 1,x
+            sta         w + 1
+            lda         dhi,x
+            beq         :+
+            lda         #255
+            bra         :++
+:
+            lda         dlo,x
+:
+            sta         tmp
+            inx
+            inx
+            rts
+
+; The note named at w (tmp chars): .A its MIDI number (0-127).  OUT: C = 1, not a note
+note_name:
+            ldy         #0
+            cpy         tmp
+            beq         @bad
+            lda         (w),y                               ; Its letter: its semitone in the octave
+            and         #$DF
+            sec
+            sbc         #'A'
+            cmp         #7
+            bcs         @bad
+            phy
+            tay
+            lda         semitones,y
+            ply
+            sta         tmp2
+            iny
+            cpy         tmp
+            beq         @bad
+            lda         (w),y                               ; # or b
+            cmp         #'#'
+            bne         :+
+            inc         tmp2
+            iny
+            bra         @octave
+:
+            cmp         #'b'
+            bne         @octave
+            dec         tmp2
+            iny
+@octave:
+            stz         tmp2 + 1                            ; Its octave, -1 to 9
+            cpy         tmp
+            beq         @bad
+            lda         (w),y
+            cmp         #'-'
+            bne         :+
+            inc         tmp2 + 1
+            iny
+            cpy         tmp
+            beq         @bad
+            lda         (w),y
+:
+            sec
+            sbc         #'0'
+            cmp         #10
+            bcs         @bad
+            iny
+            cpy         tmp
+            bne         @bad
+            ldy         tmp2 + 1
+            beq         :+
+            cmp         #1                                  ; (-1: octave 0's start, 0)
+            bne         @bad
+            lda         #0
+            bra         @sum
+:
+            inc                                             ; ((octave + 1) * 12)
+            asl
+            asl
+            sta         tmp3
+            asl
+            clc
+            adc         tmp3
+@sum:
+            clc
+            adc         tmp2                                ; (A flat C: one less; past 127, or less than 0: none)
+            cmp         #128
+            bcs         @bad
+            clc
+            rts
+@bad:
+            sec
+            rts
+
+semitones:  .byte       9, 11, 0, 2, 4, 5, 7                ; A B C D E F G

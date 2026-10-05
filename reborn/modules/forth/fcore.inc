@@ -174,7 +174,7 @@ roll:                                                       ; ( xu xu-1 ... x0 u
 
 ; ---- The return stack (copied into definitions: they work on the definition's own return stack)
 
-            HEADERI     ">r", tor
+            HEADERI     ">r", tor, F_COMPILE
 tor:
             lda         dhi,x
             pha
@@ -184,7 +184,7 @@ tor:
 tor_end:
             rts
 
-            HEADERI     "r>", rfrom
+            HEADERI     "r>", rfrom, F_COMPILE
 rfrom:
             dex
             pla
@@ -194,7 +194,7 @@ rfrom:
 rfrom_end:
             rts
 
-            HEADERI     "r@", rfetch
+            HEADERI     "r@", rfetch, F_COMPILE
 rfetch:
             stx         xsave
             tsx
@@ -207,7 +207,7 @@ rfetch:
 rfetch_end:
             rts
 
-            HEADERI     "unloop", unloop
+            HEADERI     "unloop", unloop, F_COMPILE
 unloop:
             pla
             pla
@@ -216,7 +216,7 @@ unloop:
 unloop_end:
             rts
 
-            HEADERI     "exit", exit
+            HEADERI     "exit", exit, F_COMPILE
 exit:
             rts
 exit_end:
