@@ -91,6 +91,27 @@ C's conio's colour numbers (0-7 the terminal's eight, 8-15 their bright ones) an
 | `k-shift-mask`, `k-ctrl-mask`, `k-alt-mask` | `( -- x )` | Never set: the console decodes no modifiers | Facility Ext |
 | `emit?` | `( -- flag )` | Always true | Facility Ext |
 
+## The Hydra's words (hylang's layer 2)
+
+What hylang has built in for the Hydra, as Forth names it (6.12): Gforth's names where Forth has some, a name that
+isn't a program's (the shell's rule runs a word before a program), and the sys- words still there for the raw call.
+
+| Word | Stack | Does | hylang |
+| :--- | :--- | :--- | :--- |
+| `get-dir` | `( c-addr1 u1 -- c-addr2 u2 )` | The current directory, in the buffer (Gforth's) | `cwd` |
+| `set-dir` | `( c-addr u -- wior )` | The current directory changed (Gforth's; the shell's `cd` is its parsing form) | `cd` |
+| `open-dir`, `read-dir`, `close-dir` | `( c-addr u -- wdirid wior )`, `( c-addr u1 wdirid -- u2 flag wior )`, `( wdirid -- wior )` | A directory's names, one at a time (Gforth's: a directory reads as stat records, which `read-dir` takes the names of) | `ls`, `dir` |
+| `=mkdir` | `( c-addr u wmode -- wior )` | A directory made (Gforth's name: `mkdir` is the program's) | `mkdir` |
+| `unsetenv` | `( c-addr u -- )` | A variable of the environment removed (beside `getenv` and `setenv`, in `shell.fl`) | `unsetenv` |
+| `note`, `note-group` | `( task n -- )`, `( group n -- )` | A note sent (Plan 9's postnote) | `note`, `note-group` |
+| `on-note` | `( xt -- )` | The notes that come (but Ctrl-C and kill) given to xt `( n -- flag )` at the next word interpreted or loop step: true, forth goes on; false, as Ctrl-C (THROW -28).  0: none | `on-note` |
+| `pause` | `( -- )` | The other tasks' turn (Forth's name for it: `YIELD`) | `yield` |
+| `ior>text` | `( ior -- c-addr u )` | A system error's text (`not found`) | `errstr` |
+
+A note for a handler is taken where Ctrl-C is: the core's note handler marks it, and the next word interpreted, or a
+loop's step, runs the handler (a wait it ends, KEY or a line's read, waits again first; MS ends early).  Preemption's
+words aren't added: `hold` is Forth's (pictured output), and `sys-preempt-off` and `sys-preempt-on` say it.
+
 ## The shell
 
 **The rule.**  A line typed at the shell's prompt is Forth if its first word is a Forth word (found in the search
@@ -156,9 +177,9 @@ shell, and `-lib shell` (or a `marker` that takes it out) a plain Forth again.
 
 ## The steps
 
-6.6 to 6.10 done (October 2026), then 6.11, the first of what comparing the shell with hylang's suggested;
+6.6 to 6.10 done (October 2026), then 6.11 and 6.12, from comparing the shell with hylang's;
 [forth-status.md](forth-status.md) has each one's notes, the sizes and what's next.  The tests: `forth` (the Forth
-2012 suite, still passing), `hyforth` (6.6-6.8), `fshell` (6.9 and 6.11) and `lshell` (6.10).
+2012 suite, still passing), `hyforth` (6.6-6.8), `fshell` (6.9 and 6.11), `lshell` (6.10) and `fhydra` (6.12).
 
 | Step | | Tested |
 | :--- | :--- | :--- |
@@ -168,3 +189,4 @@ shell, and `-lib shell` (or a `marker` that takes it out) a plain Forth again.
 | 6.9 | The shell: `shell.fl`, `forth -l`, `profile.fs` | The rule (a number, a word, a pipeline, a redirection), `cd` and the prompt (its format), a definition over lines, `status` and `$status`, `&` and `wait`, Ctrl-C, errors and a usage, `-lib shell` and `lib shell`, `exit` |
 | 6.10 | `/lib/shell` for init and wstart; `send` and `#cN/kbdin` | A card's `/lib/shell`: forth in window 0 and in a window made (`$window`); a line sent to window 0, run there |
 | 6.11 | The shell's next: `%`, the second prompt (`prompt2`); programs as values: `sh-out`, `output-of`, `\|` and `piped`, `spawn`; the programs' code in the core (`fprog.inc`), the output's hook | `% free` past a word `free`; a definition's second line (its tab); a line's output and a word's, strings; a word's output into `wc` (`\|`, `piped`), into `head`, which ends first, and stopped by Ctrl-C; `spawn` and `wait`; `sh` and `run` as before (the forth test) |
+| 6.12 | The Hydra's words (hylang's layer 2): the directories' (Gforth's), `=mkdir`, `unsetenv`, `note`, `note-group`, `on-note` (the core's note handler and its polls), `pause`, `ior>text` | A directory read, one made; the directory set and got (the prompt follows); an error's text; a variable set, read, removed; a note to itself taken by a handler between words and in a loop, and one it says no to |

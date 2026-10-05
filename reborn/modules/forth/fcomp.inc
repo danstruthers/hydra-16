@@ -418,7 +418,8 @@ repeat:                                                     ; ( orig dest -- )
             jsr         again
             jmp         resolve
 
-; Ctrl-C's poll, in a loop before its branch back: bit intr; bpl +3; jmp intr_throw
+; Ctrl-C's poll (and a note's, for a program's handler), in a loop before its branch back: bit intr; bpl +3; jsr
+; intr_check
 comp_poll:
             lda         #OP_BIT_ZP
             jsr         ccomma_a
@@ -428,9 +429,9 @@ comp_poll:
             jsr         ccomma_a
             lda         #3
             jsr         ccomma_a
-            lda         #<intr_throw
-            ldy         #>intr_throw
-            jmp         comp_jmp
+            lda         #<intr_check
+            ldy         #>intr_check
+            jmp         comp_jsr
 
 ; ( dest orig -- ): orig's jmp to dest
 resolve_to:
@@ -567,10 +568,12 @@ xdo:
             lda         cnt                                 ; (?DO's flag)
             rts
 
-; LOOP's: the index on one (V = 1: its limit crossed); Ctrl-C first
+; LOOP's: the index on one (V = 1: its limit crossed); Ctrl-C (or a note) first
 xloop:
             bit         intr
-            bmi         intr_j
+            bpl         :+
+            jsr         intr_check
+:
             stx         xsave
             tsx
             clc
@@ -583,10 +586,12 @@ xloop:
             ldx         xsave
             rts
 
-; +LOOP's: ( n -- ): the index on n (V = 1: crossed); Ctrl-C first
+; +LOOP's: ( n -- ): the index on n (V = 1: crossed); Ctrl-C (or a note) first
 xploop:
             bit         intr
-            bmi         intr_j
+            bpl         :+
+            jsr         intr_check
+:
             lda         dlo,x
             sta         tmp
             lda         dhi,x
@@ -603,9 +608,6 @@ xploop:
             sta         $0104,x
             ldx         xsave
             rts
-
-intr_j:
-            jmp         intr_throw
 
             HEADER      "i", 0
 i:                                                          ; ( -- index ): the parameters under the return address

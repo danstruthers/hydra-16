@@ -78,7 +78,7 @@ disasm:                                                     ; ( addr u -- ): u i
             ora         tmp3 + 1
             beq         @done
             bit         intr                                ; (Ctrl-C)
-            bpl         :+
+            bvc         :+
             jmp         intr_throw
 :
             jsr         da_line
@@ -110,7 +110,7 @@ see_code:
             jsr         da_limit
 @line:
             bit         intr                                ; (Ctrl-C)
-            bpl         :+
+            bvc         :+
             pla
             jmp         intr_throw
 :

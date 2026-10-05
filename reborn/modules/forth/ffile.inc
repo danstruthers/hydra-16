@@ -28,10 +28,12 @@ read_line_fd:
             lda         rl_fd
             jsr         READ
             bcc         :+
-            ldx         xsave                               ; (An error; Ctrl-C's: THROW -28)
-            cmp         #E_INTR
+            ldx         xsave                               ; (An error; Ctrl-C's: THROW -28; another note's: again,
+            cmp         #E_INTR                             ;   the next word taking it)
             bne         @error
-            jmp         intr_throw
+            jsr         intr_wait
+            lda         rl_fd
+            jmp         read_line_fd
 @error:
             sec
             rts

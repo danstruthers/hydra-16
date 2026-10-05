@@ -1,7 +1,9 @@
 ; ****************************************************************************
 ; hydra.s - HyForth's Hydra library (/lib/forth/hydra.fl): a sys- word for each system call a program makes (their
-; headers forthsys.inc's, tools/apigen.js's, from the specification), zero-terminated strings, SH and RUN, the bank and
-; segment words, forth's arguments (ARGC, ARG), and SYS (machine code, called with its registers).
+; headers forthsys.inc's, tools/apigen.js's, from the specification), zero-terminated strings, sh and run, the bank and
+; segment words, forth's arguments (argc, arg), ctl, hylang's Hydra built-ins as Forth names them (a directory's
+; names: Gforth's open-dir read-dir close-dir, =mkdir, get-dir, set-dir; note, note-group, on-note; pause; ior>text),
+; and sys (machine code, called with its registers).
 ;   A sys- word is a system call with its registers as stack items, in the specification's order (spec/api.def;
 ; /rom/doc/api.md has each one's), the first deepest: its inputs, then its outputs and, if the call can fail, an ior
 ; (0, or -512 less the error code; its outputs 0 then).  A register is a cell (rN, .A/.X: 16 bits; .A, .X, .Y: a
@@ -12,6 +14,7 @@
 .bss
 zbufs:      .res        PATH_SIZE * 2                       ; >Z's two buffers, in turn ...
 zbuf_n:     .res        1                                   ;   the one last used
+errbuf:     .res        32                                  ; IOR>TEXT's text (ERRSTR's)
 sys_a:      .res        1                                   ; A sys- word's call: .A, .X and .Y, in and out ...
 sys_x:      .res        1
 sys_y:      .res        1
@@ -421,6 +424,232 @@ argl_is:
             rts
 :
             clc
+            rts
+
+; ---- Directories (Gforth's words), notes, a task's turn, errors' texts: hylang's Hydra built-ins, as Forth names
+; them.  (mkdir is =mkdir, Gforth's name, so the shell's prompt still runs the mkdir program)
+
+            HEADER      "get-dir", 0
+getdir:                                                     ; ( c-addr1 u1 -- c-addr2 u2 ): the current directory, in
+            LDR         r0, pathbuf                         ;   the buffer c-addr1 u1 (as much of it as fits)
+            stx         xsave
+            jsr         GETCWD
+            ldx         xsave
+            bcc         :+
+            lda         #0
+:
+            sta         tmp                                 ; (Its length, the buffer's at most)
+            lda         dhi,x
+            bne         :+
+            lda         dlo,x
+            cmp         tmp
+            bcs         :+
+            sta         tmp
+:
+            lda         dlo + 1,x
+            sta         w
+            lda         dhi + 1,x
+            sta         w + 1
+            ldy         #0
+:
+            cpy         tmp
+            beq         :+
+            lda         pathbuf,y
+            sta         (w),y
+            iny
+            bra         :-
+:
+            lda         tmp
+            sta         dlo,x
+            stz         dhi,x
+            rts
+
+            HEADER      "set-dir", 0
+setdir:                                                     ; ( c-addr u -- wior ): the current directory c-addr u
+            jsr         z_r0                                ;   (the shell's cd, in a definition)
+            stx         xsave
+            jsr         CHDIR
+            ldx         xsave
+            jmp         push_ior
+
+            HEADER      "open-dir", 0
+opendir:                                                    ; ( c-addr u -- wdirid wior ): a directory, for read-dir
+            jsr         z_r0
+            lda         #O_READ
+            stx         xsave
+            jsr         OPEN
+            ldx         xsave
+            jmp         fid_ior
+
+            HEADER      "read-dir", 0
+readdir:                                                    ; ( c-addr u1 wdirid -- u2 flag wior ): its next name (a
+            LDR         r0, statbuf                         ;   stat record's) in the buffer c-addr u1, u2 long (as
+            LDR         r1, SR_SIZE                         ;   much of it as fits); flag false at its end
+            lda         dlo,x
+            stx         xsave
+            jsr         READ
+            ldx         xsave
+            bcc         :+
+            pha                                             ; (An error: 0 false ior)
+            jsr         rd_none
+            pla
+            sec
+            bra         rd_ior
+:
+            cmp         #SR_SIZE                            ; (Its end: 0 false 0)
+            bcs         :+
+            jsr         rd_none
+            clc
+            bra         rd_ior
+:
+            ldy         #0                                  ; Its name's length (the buffer's at most)
+:
+            lda         statbuf + SR_NAME,y
+            beq         :+
+            iny
+            cpy         #SR_QTYPE
+            bne         :-
+:
+            sty         tmp
+            lda         dhi + 1,x
+            bne         :+
+            lda         dlo + 1,x
+            cmp         tmp
+            bcs         :+
+            sta         tmp
+:
+            lda         dlo + 2,x
+            sta         w
+            lda         dhi + 2,x
+            sta         w + 1
+            ldy         #0
+:
+            cpy         tmp
+            beq         :+
+            lda         statbuf + SR_NAME,y
+            sta         (w),y
+            iny
+            bra         :-
+:
+            lda         tmp                                 ; ( u2 true 0 )
+            sta         dlo + 2,x
+            stz         dhi + 2,x
+            lda         #$FF
+            sta         dlo + 1,x
+            sta         dhi + 1,x
+            clc
+rd_ior:                                                     ; (The top: the ior, C and .A's)
+            inx
+            jmp         push_ior
+rd_none:                                                    ; (0 false under the top)
+            stz         dlo + 2,x
+            stz         dhi + 2,x
+            stz         dlo + 1,x
+            stz         dhi + 1,x
+            rts
+
+            HEADER      "close-dir", 0
+closedir:                                                   ; ( wdirid -- wior )
+            lda         dlo,x
+            inx
+            stx         xsave
+            jsr         CLOSE
+            ldx         xsave
+            jmp         push_ior
+
+            HEADER      "=mkdir", 0
+mkdir:                                                      ; ( c-addr u wmode -- wior ): a directory made (wmode: as
+            inx                                             ;   it comes, the system's own)
+            jsr         z_r0
+            lda         #O_READ
+            phx
+            ldx         #DM_DIR
+            jsr         CREATE
+            plx
+            bcs         :+
+            stx         xsave
+            jsr         CLOSE
+            ldx         xsave
+            clc
+:
+            jmp         push_ior
+
+; ( c-addr u -- ): r0 the name, zero-terminated (>Z's buffers)
+z_r0:
+            jsr         toz
+            lda         dlo,x
+            sta         r0
+            lda         dhi,x
+            sta         r0 + 1
+            inx
+            rts
+
+            HEADER      "note", 0
+note:                                                       ; ( task n -- ): note n to the task (Plan 9's postnote: 1
+            lda         dlo + 1,x                           ;   interrupt, 3 hangup, 4 alarm, 16-31 a program's own);
+note_a:                                                     ;   a failure THROWs
+            sta         tmp
+            lda         dlo,x
+            inx
+            inx
+            stx         xsave
+            tax
+            lda         tmp
+            jsr         NOTE
+            ldx         xsave
+            bcc         :+
+            jmp         throw_os
+:
+            rts
+
+            HEADER      "note-group", 0
+notegroup:                                                  ; ( group n -- ): the note to a note group's every task
+            lda         dlo + 1,x
+            ora         #NOTE_GROUP
+            bra         note_a
+
+            HEADER      "on-note", 0
+onnote:                                                     ; ( xt -- ): xt ( n -- flag ) takes the notes that come
+            lda         dlo,x                               ;   (but Ctrl-C's and kill's): at the next word interpreted
+            sta         note_xt                             ;   or loop step, given the note; true, forth goes on;
+            lda         dhi,x                               ;   false, as Ctrl-C (THROW -28).  0: none (a note's
+            sta         note_xt + 1                         ;   default, the end)
+            inx
+            rts
+
+            HEADER      "pause", 0
+pause:                                                      ; ( -- ): the other tasks' turn (YIELD)
+            stx         xsave
+            jsr         YIELD
+            ldx         xsave
+            rts
+
+            HEADER      "ior>text", 0
+iortext:                                                    ; ( ior -- c-addr u ): a system error's text (an ior of a
+            lda         dhi,x                               ;   file word's or a sys- word's: -512 less the error,
+            cmp         #$FD                                ;   $FDxx); another, ""
+            bne         @none
+            lda         dlo,x                               ; (The error: -512 - ior)
+            eor         #$FF
+            inc
+            sta         tmp
+            LDR         r0, errbuf
+            lda         tmp
+            stx         xsave
+            jsr         ERRSTR
+            ldx         xsave
+            inx
+            lda         #<errbuf
+            ldy         #>errbuf
+            PUSHAY
+            jmp         zcount
+@none:
+            dex
+            jsr         zero_tos
+            lda         #<errbuf
+            sta         dlo + 1,x
+            lda         #>errbuf
+            sta         dhi + 1,x
             rts
 
 ; ---- Machine code: SYS, the old HyForth's

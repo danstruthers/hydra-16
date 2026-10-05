@@ -161,9 +161,9 @@ interpret:
 @execute:
             jsr         exec_w2
 @check:
-            bit         intr                                ; Ctrl-C?
+            bit         intr                                ; Ctrl-C, or a note for a program's handler?
             bpl         :+
-            jmp         intr_throw
+            jsr         intr_check
 :
             cpx         #DS_N + 1                           ; Underflow, overflow
             bcc         :+

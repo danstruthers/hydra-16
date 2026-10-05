@@ -83,7 +83,7 @@ words:                                                      ; The first word lis
             ora         w + 1
             beq         @done
             bit         intr                                ; (Ctrl-C)
-            bpl         :+
+            bvc         :+
             jmp         intr_throw
 :
             ldy         #2

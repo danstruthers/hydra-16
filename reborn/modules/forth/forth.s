@@ -56,7 +56,8 @@ cnt:        .res        1
 here:       .res        2                                   ; The dictionary's next byte
 p1:         .res        2                                   ; Pointers (strings, SEE)
 p2:         .res        2
-intr:       .res        1                                   ; $80: Ctrl-C came (the note handler's), for THROW -28
+intr:       .res        1                                   ; $C0: Ctrl-C came (the note handler's), for THROW -28;
+                                                            ;   $80: a note for a program's handler (note_pend)
 
 .bss
 forth_wl:   .res        4                                   ; FORTH-WORDLIST: a word list is its last header (0: none),
@@ -128,6 +129,8 @@ script:     .res        1                                   ; <> 0: forth file.f
 login:      .res        1                                   ; <> 0: forth -l (newns, then profile.fs)
 lastc:      .res        1                                   ; The last character out (emit_a's)
 out_hook:   .res        2                                   ; <> 0: what flush gives the output to (the shell's)
+note_xt:    .res        2                                   ; A program's note handler (on-note's xt), 0: none ...
+note_pend:  .res        1                                   ;   and the note waiting for it
 argbuf:     .res        ARGS_MAX                            ; A program's arguments (fprog.inc's) ...
 prog_map:   .res        4                                   ;   and its fds (SPAWN_FDMAP's: 3, then fds 0-2)
 libs_n:     .res        1                                   ; The libraries loaded, oldest first: how many records ...
@@ -135,16 +138,30 @@ libtab:     .res        LR_SIZE * LIB_MAX                   ;   and they (LR_*)
 dict:                                                       ; The dictionary, from here
 
 .segment "DATA"
-; The note handler, in RAM (either bank may be at $A000 when a note comes): Ctrl-C (NOTE_INTERRUPT) noted in intr,
-; for the next word, loop or wait to THROW -28, forth going on; another note, the default
+; The note handler, in RAM (either bank may be at $A000 when a note comes): Ctrl-C (NOTE_INTERRUPT) noted in intr
+; ($C0), for the next word, loop step or wait to THROW -28, forth going on; another, if a program has a handler for
+; it (on-note's: note_xt), noted too (intr $80, note_pend the note), for the next word or loop step to give it to;
+; else the default
 notes:
             cmp         #NOTE_INTERRUPT
-            bne         :+
-            lda         #$80
+            bne         @other
+            lda         #$C0
             sta         intr
             clc
             rts
-:
+@other:
+            pha
+            lda         note_xt + 1
+            beq         @default
+            pla
+            sta         note_pend
+            lda         intr
+            ora         #$80
+            sta         intr
+            clc
+            rts
+@default:
+            pla
             sec
             rts
 
@@ -218,6 +235,9 @@ main:
             sta         lastc
             stz         out_hook
             stz         out_hook + 1
+            stz         note_xt
+            stz         note_xt + 1
+            stz         note_pend
             stz         raw
             stz         key_pend
             stz         intr

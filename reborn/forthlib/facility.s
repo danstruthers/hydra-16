@@ -84,7 +84,7 @@ ms:                                                         ; ( u -- ): u millis
             bcc         :+
             cmp         #E_INTR
             bne         :+
-            jmp         intr_throw
+            jsr         intr_wait
 :
             rts
 

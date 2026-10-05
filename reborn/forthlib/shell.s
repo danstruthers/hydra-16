@@ -333,7 +333,7 @@ rc_rest:
 @wait:
             jsr         prog_wait
             bit         intr                                ; (A Ctrl-C ended it: the shell goes on, on a new
-            bpl         :+                                  ;   line, as rc does)
+            bvc         :+                                  ;   line, as rc does)
             stz         intr
             jsr         cr
 :
@@ -806,7 +806,7 @@ unmount:                                                    ; ( "[new] old" -- )
             LDR         w2, pword2
             jsr         sh_word
             bcc         :+
-            LDR         r1, pword                            ; (One: old)
+            LDR         r1, pword                           ; (One: old)
             stz         r0
             stz         r0 + 1
             LDR         w2, pword
@@ -1261,7 +1261,7 @@ wait:                                                       ; ( task -- ): a tas
             HEADER      "getenv", 0
 getenv:                                                     ; ( c-addr1 u1 -- c-addr2 u2 ): the environment's variable
             jsr         env_name                            ;   named c-addr1 u1 (u2 0: none; a list's words with
-            LDR         r0, pword                            ;   spaces between, rc's)
+            LDR         r0, pword                           ;   spaces between, rc's)
             LDR         r1, envbuf
             LDR         r2, 127
             stz         r3
@@ -1357,6 +1357,24 @@ setenv:                                                     ; ( c-addr1 u1 c-add
             jsr         ENV_PUT
             ldx         xsave
             bcc         :+
+            pha
+            LDR         w2, pword
+            pla
+            jmp         failed
+:
+            rts
+
+            HEADER      "unsetenv", 0
+unsetenv:                                                   ; ( c-addr u -- ): the environment's variable named c-addr
+            jsr         env_name                            ;   u removed (there or not)
+            LDR         r0, pword
+            lda         #$FF
+            stx         xsave
+            jsr         ENV_DEL
+            ldx         xsave
+            bcc         :+
+            cmp         #E_NOENT
+            beq         :+
             pha
             LDR         w2, pword
             pla

@@ -299,9 +299,10 @@ key:                                                        ; ( -- char ): the c
             jsr         READ
             ldx         xsave
             bcc         :+
-            cmp         #E_INTR
-            bne         :+
-            jmp         intr_throw
+            cmp         #E_INTR                             ; (Ctrl-C: THROW -28; another note: again, the next word
+            bne         :+                                  ;   taking it)
+            jsr         intr_wait
+            bra         @raw
 :
             lda         numtmp
 @push:
