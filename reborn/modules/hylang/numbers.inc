@@ -43,7 +43,7 @@ rnd_t:      .res        4                                   ;   and its shifted 
 dg_n:       .res        2                                   ; Digits made: how many ...
 dg_neg:     .res        1                                   ;   $80: the number's negative ...
 dg:         .res        DG_SIZE                             ;   and they, the last first
-.segment "CODE3"
+.segment "NUMCODE"
 
 ; ---- The roots, a stack
 
@@ -1375,7 +1375,7 @@ num_trunc:
 @done:
             rts
 
-; ---- Built-ins (the third bank's: BF_BANK3)
+; ---- Built-ins (hylnum's: BF_NUM)
 
 ; (truncate n): n's integer part, toward 0 (a rational's, a fixed decimal's; a complex number's real part's)
 bn_truncate:
@@ -1905,7 +1905,7 @@ bn_to_base:
             MOVR        h_v, ev_x
             jmp         num_to_base
 
-.segment "RODATA3"
+.segment "NUMDATA"
 nk_of:      .byte       NK_INT, NK_RAT, NK_FIX, NK_COMPLEX  ; (OT_BIG, OT_RAT, OT_FIX, OT_COMPLEX)
 io_of_no:   .byte       IO_ADD, IO_SUB, IO_MUL              ; (num_op's integers)
 np_lo:      .lobytes    np_int, np_fix, np_rat, np_cpx
@@ -1926,4 +1926,4 @@ nm_rat_num: .byte       "Argument is not a number", 0
 nm_random:  .byte       "'random' expects an integer more than 0", 0
 nm_fib:     .byte       "'fib' expects one parameter of type Number", 0
 nm_fib_neg: .byte       "'fib' parameter 'n' cannot be negative", 0
-.segment "CODE3"
+.segment "NUMCODE"

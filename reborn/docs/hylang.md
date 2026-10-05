@@ -215,3 +215,12 @@ printer and the core's built-ins) and library modules, each a module of the page
 assembled with it and run in place in its task: `hylnum`, the numbers (7.3), which hylang won't start without, and
 `hylstr`, strings and hashes (7.4a), whose built-ins aren't there without it.  hylang finds them as it starts (the
 module directory, by name).  7.4b-d's built-ins are libraries too.
+
+**Built-ins, partially applied; the library's functions, built in** (after 7.4a; danlang first).  A list's items are
+as they're written: `fst`, `nth`, `last` ... don't evaluate them, nor does what passes them on (`map`, `elem?`
+...).  A built-in given fewer arguments than it needs is partially applied (`((eq 1) 1)` is T), but a special form;
+given more than it takes, it's an error, and so is a function given more than its formals, unless its body names
+`&_` or `&N`.  What each built-in takes is danlang's `Arity` table's.  The library's most used functions are built
+in (`not`, `==`, `1+`, `fst`, `nth`, `take`, `sum`, `min` ... in the core's third bank; `map`, `filter`, `foldl`,
+`foldr`, `any?`, `all?`, `find`, `count` run by the evaluator, a frame for each item), as they are in danlang: on a
+list of 100, 8 to 27 times faster than as hylang code.

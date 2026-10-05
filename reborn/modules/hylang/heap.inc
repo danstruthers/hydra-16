@@ -57,7 +57,8 @@ OT_COMPLEX      = 14            ; A complex number: its real part, its imaginary
 OT_LSTR         = 15            ; A string of more than 126 bytes: its cells (a chain of OT_STRING), its length
 OT_HASH         = 16            ; A hash: its entries (a chain of lists: a key, its value, its tags), its tags (a
                                 ; chain of atoms); its second byte HF_PROXY: a method's &0, the hash it stands for
-OT_TYPES        = 17
+OT_PBUILT       = 17            ; A built-in partially applied: the built-in, the values given it so far (a chain)
+OT_TYPES        = 18
 
 .zeropage
 h_v:        .res        2                                   ; A value, in and out
@@ -865,7 +866,7 @@ free_pages:
 kind_size:  .byte       0, 0, 0, 4, 8, 16, 32, 64, 128
 
 ; Each type's references (OT_*: $FF, a vector's length)
-ot_refs:    .byte       0, 0, $FF, 2, 2, 2, 2, 4, 2, 2, 2, 0, 2, 2, 2, 2, 2
+ot_refs:    .byte       0, 0, $FF, 2, 2, 2, 2, 4, 2, 2, 2, 0, 2, 2, 2, 2, 2, 2
 
 ; A place in a page: its mark's table (the high byte of marks + 256 (place / 32)), and its bit
 mark_tab:

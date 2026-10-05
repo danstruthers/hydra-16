@@ -29,6 +29,9 @@ eq_n        = bi_p + 2                                      ;   and the pairs on
 bi_flags:   .res        256                                 ; Each built-in's flags (BF_*) ...
 bi_lo:      .res        256                                 ;   and its code
 bi_hi:      .res        256
+bi_ar:      .res        256                                 ;   and what it takes: the arguments it needs, the most
+                                                            ;   in the high nibble (ANY: no most)
+be_n:       .res        1                                   ; (bi_entry's count)
 str_a:      .res        STR_MAX + 2                         ; Two texts, copied (text_copy) ...
 str_b:      .res        STR_MAX + 2
 str_an:     .res        1                                   ;   and their lengths
@@ -41,10 +44,13 @@ ld_from:    .res        2                                   ;   where an express
 ld_eof:     .res        1                                   ;   and not 0 at the file's end
 .segment "CODE2"
 
-; A built-in in bi_table: its name, its flags, its code
-.macro BUILTIN name, flags, code
+; A built-in in bi_table: its name, its flags, its code, and what it takes: the arguments it needs (given fewer, it's
+; partially applied: a function waiting for the rest; not a special form) and the most (given more, an error; ANY:
+; no most), danlang's (its Builtins.cs's Arity)
+.macro BUILTIN name, flags, code, min, max
             .byte       .strlen(name), name, flags
             .addr       code
+            .byte       (min) | ((max) << 4)
 .endmacro
 
 ; The built-ins' names, each a symbol whose global value is the built-in; their flags and code, by number.  OUT:
@@ -61,9 +67,9 @@ builtins_init:
             iny
             lda         (ev_j),y
             dey                                             ; (.Y: the name's length, for intern)
-            and         #BF_BANK4
+            and         #BF_STR
             beq         :+
-            lda         hyx2_bank4
+            lda         lib_str
             beq         @named
 :
             clc
@@ -97,6 +103,9 @@ builtins_init:
             lda         (ev_j),y
             sta         bi_hi,x
             iny
+            lda         (ev_j),y
+            sta         bi_ar,x
+            iny
             tya
             clc
             adc         ev_j
@@ -112,6 +121,86 @@ builtins_init:
             rts
 
 ; ---- Arguments, values, errors
+
+; ob_p = the built-in .A's (its number's) entry in bi_table: its name's length, then its name ...
+bi_entry:
+            sta         be_n
+            LDR         ob_p, bi_table
+@next:
+            lda         be_n
+            beq         @done
+            lda         (ob_p)                              ; (Past this one: its name, flags, code and what it
+            clc                                             ; takes)
+            adc         #5
+            adc         ob_p
+            sta         ob_p
+            bcc         :+
+            inc         ob_p + 1
+:
+            dec         be_n
+            bra         @next
+@done:
+            rts
+
+; ev_v = the error: the built-in .X (its number) given .A arguments, more than it takes ("'eq' takes 2 arguments,
+; not 3"; "... at most 3 ...")
+arity_error:
+            sta         bi_n                                ; (Given ...
+            lda         bi_ar,x                             ;   and the most)
+            lsr
+            lsr
+            lsr
+            lsr
+            sta         bi_n + 1
+            txa
+            pha
+            LDR         r0, bs_quote
+            jsr         msg_start
+            pla
+            jsr         bi_name                             ; ('name')
+            LDR         r0, bs_takes
+            jsr         msg_text
+            ldx         bi_s
+            lda         bi_ar,x
+            and         #$0F
+            cmp         bi_n + 1
+            beq         :+
+            LDR         r0, bs_at_most
+            jsr         msg_text
+:
+            lda         bi_n + 1
+            jsr         msg_dec
+            LDR         r0, bs_argument
+            jsr         msg_text
+            lda         bi_n + 1
+            cmp         #1
+            beq         :+
+            lda         #'s'
+            jsr         msg_char
+:
+            LDR         r0, bs_not
+            jsr         msg_text
+            lda         bi_n
+            jsr         msg_dec
+            jmp         msg_error
+
+; The built-in .A's (its number's) name added to the message (bi_s = .A)
+bi_name:
+            sta         bi_s
+            jsr         bi_entry
+            lda         (ob_p)
+            sta         bi_t
+            ldy         #0
+:
+            cpy         bi_t
+            beq         :+
+            iny
+            lda         (ob_p),y
+            jsr         msg_char
+            bra         :-
+:
+            lda         #$27                                ; (Its closing ')
+            jmp         msg_char
 
 ; ev_v = the error whose message is the text at r0 (and rts, for a built-in's error)
 bi_error_text:
@@ -1034,14 +1123,14 @@ bi_range:
             jmp         @next
 @generic:
             MOVR        h_v, ev_t                           ; (The step's sign: the way it goes)
-            FARN        3, num_sign_of
+            FARX        lib_num, num_sign_of
             cmp         #0
             beq         @zero
             sta         bi_s
 @gtest:
             MOVR        nx, ev_x                            ; (from against to: less, going up; more, going
             MOVR        h_v, ev_s                           ; down)
-            FARN        3, num_cmp
+            FARX        lib_num, num_cmp
             clc
             adc         bi_s
             bne         @end
@@ -1052,7 +1141,7 @@ bi_range:
             MOVR        nx, ev_x
             MOVR        h_v, ev_t
             lda         #NO_ADD
-            FARN        3, num_op
+            FARX        lib_num, num_op
             bcs         @gerr
             MOVR        ev_x, h_v
             bra         @gtest
@@ -1164,7 +1253,7 @@ arith:
             rts
 @negate:
             MOVR        h_v, ev_v
-            FARN        3, num_neg
+            FARX        lib_num, num_neg
             MOVR        ev_v, h_v
             rts
 @next:
@@ -1226,7 +1315,7 @@ arith:
 @slow:
             MOVR        nx, ev_v                            ; ---- Past fixnums, or not one: num_op's (the third
             lda         ev_i                                ; bank)
-            FARN        3, num_op
+            FARX        lib_num, num_op
             MOVR        ev_v, h_v
             bcs         :+
             jmp         @next
@@ -1543,7 +1632,7 @@ compare:
             bcs         @not_nums
             MOVR        nx, ev_x
             MOVR        h_v, ev_w
-            FARN        3, num_cmp
+            FARX        lib_num, num_cmp
             rts
 @not_nums:
             MOVR        h_v, ev_w                           ; ---- Texts
@@ -1799,7 +1888,7 @@ equal:
 @num:
             MOVR        nx, eq_a                            ; ---- Numbers: by value
             MOVR        h_v, eq_b
-            FARN        3, num_cmp
+            FARX        lib_num, num_cmp
             cmp         #0
             jne         @no
             jmp         @same
@@ -1837,12 +1926,35 @@ equal:
             lda         eq_b + 1
             cmp         #>BUILTIN_END
             jcc         @no
+            MOVR        h_v, eq_a                           ; (Of a kind: functions, or partial built-ins)
+            jsr         deref
+            lda         (h_p)
+            sta         eq_t
+            MOVR        h_v, eq_b
+            jsr         deref
+            lda         (h_p)
+            cmp         eq_t
+            jne         @no
+            cmp         #OT_PBUILT
+            beq         @pbuilt
             ldy         #4                                  ; (The bodies, to compare after ...
             jsr         eq_field
             PUSHV       eq_a
             PUSHV       eq_b
             jsr         eq_more
             ldy         #2                                  ;   and the formals now)
+            jsr         eq_fields
+            jmp         @chains
+@pbuilt:
+            ldy         #2                                  ; (Partial built-ins: the same built-in, and their
+            jsr         eq_field                            ; values equal)
+            lda         eq_a
+            cmp         eq_b
+            jne         @no
+            lda         eq_a + 1
+            cmp         eq_b + 1
+            jne         @no
+            ldy         #4
             jsr         eq_fields
             jmp         @chains
 @hash:
@@ -1861,7 +1973,7 @@ equal:
 :
             jsr         ev_deep
             jcs         @no
-            FARN        4, eq_entries
+            FARX        lib_str, eq_entries
             jcc         @no
             jmp         @same
 
@@ -1977,7 +2089,7 @@ bi_to_str:
             lda         str_bn
             sta         bs_spec_n
             jsr         cap_start
-            FARN        3, bn_to_base
+            FARX        lib_num, bn_to_base
             bcc         :+
             stz         cap_on
             MOVR        ev_v, h_v
@@ -2996,127 +3108,160 @@ tn_hash:    .byte       4, "hash"
 
 ; The built-ins, in their numbers' order (BI_RUN first)
 bi_table:
-            BUILTIN     "", BF_SPECIAL, sf_run
-            BUILTIN     "if", BF_SPECIAL, sf_if
-            BUILTIN     "do", BF_SPECIAL, sf_do
-            BUILTIN     "and", BF_SPECIAL, sf_and
-            BUILTIN     "or", BF_SPECIAL, sf_or
-            BUILTIN     "let", BF_SPECIAL, sf_let
-            BUILTIN     "try", BF_SPECIAL, sf_try
-            BUILTIN     "eval", BF_SPECIAL, sf_eval
-            BUILTIN     "def", BF_SPECIAL, sf_def
-            BUILTIN     "set", BF_SPECIAL, sf_set
-            BUILTIN     "set!", BF_SPECIAL, sf_setbang
-            BUILTIN     "while", BF_SPECIAL, sf_while
-            BUILTIN     "each", BF_SPECIAL, sf_each
-            BUILTIN     "dotimes", BF_SPECIAL, sf_dotimes
-            BUILTIN     "output-of", BF_SPECIAL, sf_output
-            BUILTIN     "<=>", BF_SPECIAL, sf_space
-            BUILTIN     "defined?", BF_RAW, bi_defined
-            BUILTIN     "expr?", BF_RAW, bi_expr
-            BUILTIN     "fn", 0, bi_fn
-            BUILTIN     "fexpr", 0, bi_fexpr
-            BUILTIN     "fun", 0, bi_fun
-            BUILTIN     "list", 0, bi_list
-            BUILTIN     "head", 0, bi_head
-            BUILTIN     "tail", 0, bi_tail
-            BUILTIN     "init", 0, bi_init
-            BUILTIN     "end", 0, bi_end
-            BUILTIN     "join", 0, bi_join
-            BUILTIN     "len", 0, bi_len
-            BUILTIN     "item-at", 0, bi_item_at
-            BUILTIN     "reverse", 0, bi_reverse
-            BUILTIN     "range", 0, bi_range
-            BUILTIN     "+", 0, bi_add
-            BUILTIN     "-", 0, bi_sub
-            BUILTIN     "*", 0, bi_mul
-            BUILTIN     "/", 0, bi_div
-            BUILTIN     "truncate", BF_BANK3, bn_truncate
-            BUILTIN     "complex", BF_BANK3, bn_complex
-            BUILTIN     "val", BF_BANK3, bn_val
-            BUILTIN     "to-fixed", BF_BANK3, bn_to_fixed
-            BUILTIN     "to-rational", BF_BANK3, bn_to_rational
-            BUILTIN     "rational.n", BF_BANK3, bn_rational_n
-            BUILTIN     "rational.d", BF_BANK3, bn_rational_d
-            BUILTIN     "random", BF_BANK3, bn_random
-            BUILTIN     "fib", BF_BANK3, bn_fib
-            BUILTIN     "<", BF_ERRORS, bi_lt
-            BUILTIN     ">", BF_ERRORS, bi_gt
-            BUILTIN     "cmp", BF_ERRORS, bi_cmp
-            BUILTIN     "eq", BF_ERRORS, bi_eq
-            BUILTIN     "neq", BF_ERRORS, bi_neq
-            BUILTIN     "print", BF_ERRORS, bi_print
-            BUILTIN     "write", BF_ERRORS, bi_write
-            BUILTIN     "repr", BF_ERRORS, bi_repr
-            BUILTIN     "to-str", 0, bi_to_str
-            BUILTIN     "format", 0, bi_format
-            BUILTIN     "error", 0, bi_error
-            BUILTIN     "error-message", BF_ERRORS, bi_error_message
-            BUILTIN     "error-code", BF_ERRORS, bi_error_code
-            BUILTIN     "type-of", BF_ERRORS, bi_type_of
-            BUILTIN     "t?", BF_ERRORS, bi_is_t
-            BUILTIN     "nil?", BF_ERRORS, bi_is_nil
-            BUILTIN     "num?", BF_ERRORS, bi_is_num
-            BUILTIN     "atom?", BF_ERRORS, bi_is_atom
-            BUILTIN     "symbol?", BF_ERRORS, bi_is_symbol
-            BUILTIN     "string?", BF_ERRORS, bi_is_string
-            BUILTIN     "char?", BF_ERRORS, bi_is_char
-            BUILTIN     "function?", BF_ERRORS, bi_is_function
-            BUILTIN     "error?", BF_ERRORS, bi_is_error
-            BUILTIN     "qexpr?", BF_ERRORS, bi_is_qexpr
-            BUILTIN     "sexpr?", BF_ERRORS, bi_is_sexpr
-            BUILTIN     "int?", BF_ERRORS, bi_is_int
-            BUILTIN     "fixed?", BF_ERRORS, bi_is_fixed
-            BUILTIN     "rational?", BF_ERRORS, bi_is_rational
-            BUILTIN     "complex?", BF_ERRORS, bi_is_complex
-            BUILTIN     "char-at", 0, bi_char_at
-            BUILTIN     "char-code", 0, bi_char_code
-            BUILTIN     "code-char", 0, bi_code_char
-            BUILTIN     "substring", 0, bi_substring
-            BUILTIN     "index-of", 0, bi_index_of
-            BUILTIN     "last-index-of", 0, bi_last_index_of
-            BUILTIN     "read", 0, bi_read
-            BUILTIN     "load", 0, bi_load
-            BUILTIN     "str-split", BF_BANK4, ss_split
-            BUILTIN     "str-upper", BF_BANK4, ss_upper
-            BUILTIN     "str-lower", BF_BANK4, ss_lower
-            BUILTIN     "str-trim", BF_BANK4, ss_trim
-            BUILTIN     "str-replace", BF_BANK4, ss_replace
-            BUILTIN     "str-join", BF_BANK4, ss_join
-            BUILTIN     "str-chars", BF_BANK4, ss_chars
-            BUILTIN     "str-pad-left", BF_BANK4, ss_pad_left
-            BUILTIN     "str-pad-right", BF_BANK4, ss_pad_right
-            BUILTIN     "str-repeat", BF_BANK4, ss_repeat
-            BUILTIN     "alpha?", BF_BANK4, ss_alpha_p
-            BUILTIN     "digit?", BF_BANK4, ss_digit_p
-            BUILTIN     "space?", BF_BANK4, ss_space_p
-            BUILTIN     "upper?", BF_BANK4, ss_upper_p
-            BUILTIN     "lower?", BF_BANK4, ss_lower_p
-            BUILTIN     "to-sym", BF_BANK4, ss_to_sym
-            BUILTIN     "to-atom", BF_BANK4, ss_to_atom
-            BUILTIN     "gensym", BF_BANK4, ss_gensym
-            BUILTIN     "subset", BF_BANK4, ss_subset
-            BUILTIN     "sort", BF_BANK4, ss_sort
-            BUILTIN     "hash-create", BF_BANK4, bh_create
-            BUILTIN     "hash-get", BF_BANK4, bh_get
-            BUILTIN     "hash-put", BF_BANK4, bh_put
-            BUILTIN     "to#", BF_BANK4, bh_to_hash
-            BUILTIN     "from#", BF_BANK4, bh_from_hash
-            BUILTIN     "hash-key?", BF_BANK4, bh_key_p
-            BUILTIN     "hash-keys", BF_BANK4, bh_keys
-            BUILTIN     "hash-values", BF_BANK4, bh_values
-            BUILTIN     "hash-call", BF_BANK4, bh_call
-            BUILTIN     "hash-clone", BF_BANK4, bh_clone
-            BUILTIN     "hash-remove", BF_BANK4, bh_remove
-            BUILTIN     "hash-add-tag", BF_BANK4, bh_add_tag
-            BUILTIN     "hash-lock", BF_BANK4, bh_lock
-            BUILTIN     "hash-make-const", BF_BANK4, bh_const
-            BUILTIN     "hash-make-private", BF_BANK4, bh_private
-            BUILTIN     "hash-make-not-nil", BF_BANK4, bh_not_nil
-            BUILTIN     "hash-tag?", BF_BANK4, bh_tag_p
-            BUILTIN     "hash-locked?", BF_BANK4, bh_locked_p
-            BUILTIN     "hash-private?", BF_BANK4, bh_private_p
-            BUILTIN     "hash-const?", BF_BANK4, bh_const_p
+            BUILTIN     "", BF_SPECIAL, sf_run, 0, ANY
+            BUILTIN     "if", BF_SPECIAL, sf_if, 2, 3
+            BUILTIN     "do", BF_SPECIAL, sf_do, 0, ANY
+            BUILTIN     "and", BF_SPECIAL, sf_and, 0, ANY
+            BUILTIN     "or", BF_SPECIAL, sf_or, 0, ANY
+            BUILTIN     "let", BF_SPECIAL, sf_let, 1, ANY
+            BUILTIN     "try", BF_SPECIAL, sf_try, 1, 2
+            BUILTIN     "eval", BF_SPECIAL, sf_eval, 1, 1
+            BUILTIN     "def", BF_SPECIAL, sf_def, 1, ANY
+            BUILTIN     "set", BF_SPECIAL, sf_set, 1, ANY
+            BUILTIN     "set!", BF_SPECIAL, sf_setbang, 1, ANY
+            BUILTIN     "while", BF_SPECIAL, sf_while, 1, ANY
+            BUILTIN     "each", BF_SPECIAL, sf_each, 2, ANY
+            BUILTIN     "dotimes", BF_SPECIAL, sf_dotimes, 2, ANY
+            BUILTIN     "output-of", BF_SPECIAL, sf_output, 0, ANY
+            BUILTIN     "<=>", BF_SPECIAL, sf_space, 1, ANY
+            BUILTIN     "defined?", BF_RAW, bi_defined, 0, 1
+            BUILTIN     "expr?", BF_RAW, bi_expr, 0, 1
+            BUILTIN     "fn", 0, bi_fn, 2, 2
+            BUILTIN     "fexpr", 0, bi_fexpr, 2, 2
+            BUILTIN     "fun", 0, bi_fun, 2, 2
+            BUILTIN     "list", 0, bi_list, 0, ANY
+            BUILTIN     "head", 0, bi_head, 1, 1
+            BUILTIN     "tail", 0, bi_tail, 1, 1
+            BUILTIN     "init", 0, bi_init, 1, 1
+            BUILTIN     "end", 0, bi_end, 1, 1
+            BUILTIN     "join", 0, bi_join, 1, ANY
+            BUILTIN     "len", 0, bi_len, 1, 1
+            BUILTIN     "item-at", 0, bi_item_at, 2, 2
+            BUILTIN     "reverse", 0, bi_reverse, 1, 1
+            BUILTIN     "range", 0, bi_range, 1, 3
+            BUILTIN     "+", 0, bi_add, 0, ANY
+            BUILTIN     "-", 0, bi_sub, 0, ANY
+            BUILTIN     "*", 0, bi_mul, 0, ANY
+            BUILTIN     "/", 0, bi_div, 0, ANY
+            BUILTIN     "truncate", BF_NUM, bn_truncate, 1, 1
+            BUILTIN     "complex", BF_NUM, bn_complex, 2, 2
+            BUILTIN     "val", BF_NUM, bn_val, 1, 1
+            BUILTIN     "to-fixed", BF_NUM, bn_to_fixed, 1, 2
+            BUILTIN     "to-rational", BF_NUM, bn_to_rational, 1, 1
+            BUILTIN     "rational.n", BF_NUM, bn_rational_n, 1, 1
+            BUILTIN     "rational.d", BF_NUM, bn_rational_d, 1, 1
+            BUILTIN     "random", BF_NUM, bn_random, 1, 1
+            BUILTIN     "fib", BF_NUM, bn_fib, 1, 1
+            BUILTIN     "<", BF_ERRORS, bi_lt, 2, 2
+            BUILTIN     ">", BF_ERRORS, bi_gt, 2, 2
+            BUILTIN     "cmp", BF_ERRORS, bi_cmp, 2, 2
+            BUILTIN     "eq", BF_ERRORS, bi_eq, 2, 2
+            BUILTIN     "neq", BF_ERRORS, bi_neq, 2, 2
+            BUILTIN     "print", BF_ERRORS, bi_print, 0, ANY
+            BUILTIN     "write", BF_ERRORS, bi_write, 0, ANY
+            BUILTIN     "repr", BF_ERRORS, bi_repr, 1, 1
+            BUILTIN     "to-str", 0, bi_to_str, 1, 2
+            BUILTIN     "format", 0, bi_format, 1, ANY
+            BUILTIN     "error", 0, bi_error, 1, 2
+            BUILTIN     "error-message", BF_ERRORS, bi_error_message, 1, 1
+            BUILTIN     "error-code", BF_ERRORS, bi_error_code, 1, 1
+            BUILTIN     "type-of", BF_ERRORS, bi_type_of, 1, 1
+            BUILTIN     "t?", BF_ERRORS, bi_is_t, 1, 1
+            BUILTIN     "nil?", BF_ERRORS, bi_is_nil, 1, 1
+            BUILTIN     "num?", BF_ERRORS, bi_is_num, 1, 1
+            BUILTIN     "atom?", BF_ERRORS, bi_is_atom, 1, 1
+            BUILTIN     "symbol?", BF_ERRORS, bi_is_symbol, 1, 1
+            BUILTIN     "string?", BF_ERRORS, bi_is_string, 1, 1
+            BUILTIN     "char?", BF_ERRORS, bi_is_char, 1, 1
+            BUILTIN     "function?", BF_ERRORS, bi_is_function, 1, 1
+            BUILTIN     "error?", BF_ERRORS, bi_is_error, 1, 1
+            BUILTIN     "qexpr?", BF_ERRORS, bi_is_qexpr, 1, 1
+            BUILTIN     "sexpr?", BF_ERRORS, bi_is_sexpr, 1, 1
+            BUILTIN     "int?", BF_ERRORS, bi_is_int, 1, 1
+            BUILTIN     "fixed?", BF_ERRORS, bi_is_fixed, 1, 1
+            BUILTIN     "rational?", BF_ERRORS, bi_is_rational, 1, 1
+            BUILTIN     "complex?", BF_ERRORS, bi_is_complex, 1, 1
+            BUILTIN     "char-at", 0, bi_char_at, 2, 2
+            BUILTIN     "char-code", 0, bi_char_code, 1, 1
+            BUILTIN     "code-char", 0, bi_code_char, 1, 1
+            BUILTIN     "substring", 0, bi_substring, 2, 3
+            BUILTIN     "index-of", 0, bi_index_of, 2, 2
+            BUILTIN     "last-index-of", 0, bi_last_index_of, 2, 2
+            BUILTIN     "read", 0, bi_read, 1, 1
+            BUILTIN     "load", 0, bi_load, 1, ANY
+            BUILTIN     "str-split", BF_STR, ss_split, 1, 2
+            BUILTIN     "str-upper", BF_STR, ss_upper, 1, 1
+            BUILTIN     "str-lower", BF_STR, ss_lower, 1, 1
+            BUILTIN     "str-trim", BF_STR, ss_trim, 1, 1
+            BUILTIN     "str-replace", BF_STR, ss_replace, 3, 3
+            BUILTIN     "str-join", BF_STR, ss_join, 1, 2
+            BUILTIN     "str-chars", BF_STR, ss_chars, 1, 1
+            BUILTIN     "str-pad-left", BF_STR, ss_pad_left, 2, 3
+            BUILTIN     "str-pad-right", BF_STR, ss_pad_right, 2, 3
+            BUILTIN     "str-repeat", BF_STR, ss_repeat, 2, 2
+            BUILTIN     "alpha?", BF_STR, ss_alpha_p, 1, 1
+            BUILTIN     "digit?", BF_STR, ss_digit_p, 1, 1
+            BUILTIN     "space?", BF_STR, ss_space_p, 1, 1
+            BUILTIN     "upper?", BF_STR, ss_upper_p, 1, 1
+            BUILTIN     "lower?", BF_STR, ss_lower_p, 1, 1
+            BUILTIN     "to-sym", BF_STR, ss_to_sym, 1, 1
+            BUILTIN     "to-atom", BF_STR, ss_to_atom, 1, 1
+            BUILTIN     "gensym", BF_STR, ss_gensym, 0, 1
+            BUILTIN     "subset", BF_STR, ss_subset, 2, 3
+            BUILTIN     "sort", BF_STR, ss_sort, 1, 2
+            BUILTIN     "hash-create", BF_STR, bh_create, 0, 1
+            BUILTIN     "hash-get", BF_STR, bh_get, 2, 2
+            BUILTIN     "hash-put", BF_STR, bh_put, 2, ANY
+            BUILTIN     "to#", BF_STR, bh_to_hash, 1, 1
+            BUILTIN     "from#", BF_STR, bh_from_hash, 1, 1
+            BUILTIN     "hash-key?", BF_STR, bh_key_p, 2, 2
+            BUILTIN     "hash-keys", BF_STR, bh_keys, 1, 1
+            BUILTIN     "hash-values", BF_STR, bh_values, 1, 1
+            BUILTIN     "hash-call", BF_STR, bh_call, 2, ANY
+            BUILTIN     "hash-clone", BF_STR, bh_clone, 1, ANY
+            BUILTIN     "hash-remove", BF_STR, bh_remove, 2, 2
+            BUILTIN     "hash-add-tag", BF_STR, bh_add_tag, 2, ANY
+            BUILTIN     "hash-lock", BF_STR, bh_lock, 1, ANY
+            BUILTIN     "hash-make-const", BF_STR, bh_const, 1, ANY
+            BUILTIN     "hash-make-private", BF_STR, bh_private, 1, ANY
+            BUILTIN     "hash-make-not-nil", BF_STR, bh_not_nil, 1, ANY
+            BUILTIN     "hash-tag?", BF_STR, bh_tag_p, 2, 2
+            BUILTIN     "hash-locked?", BF_STR, bh_locked_p, 1, 2
+            BUILTIN     "hash-private?", BF_STR, bh_private_p, 1, 2
+            BUILTIN     "hash-const?", BF_STR, bh_const_p, 1, 2
+            BUILTIN     "not", BF_LIB, lb_not, 1, 1
+            BUILTIN     "==", BF_LIB, lb_eqq, 2, 2
+            BUILTIN     ">=", BF_LIB, lb_ge, 2, 2
+            BUILTIN     "<=", BF_LIB, lb_le, 2, 2
+            BUILTIN     "neg?", BF_LIB, lb_neg, 1, 1
+            BUILTIN     "pos?", BF_LIB, lb_pos, 1, 1
+            BUILTIN     "zero?", BF_LIB, lb_zero, 1, 1
+            BUILTIN     "one?", BF_LIB, lb_one, 1, 1
+            BUILTIN     "1+", BF_LIB, lb_1plus, 1, 1
+            BUILTIN     "1-", BF_LIB, lb_1minus, 1, 1
+            BUILTIN     "abs", BF_LIB, lb_abs, 1, 1
+            BUILTIN     "cons", BF_LIB, lb_cons, 2, 2
+            BUILTIN     "fst", BF_LIB, lb_fst, 1, 1
+            BUILTIN     "snd", BF_LIB, lb_snd, 1, 1
+            BUILTIN     "thd", BF_LIB, lb_thd, 1, 1
+            BUILTIN     "nth", BF_LIB, lb_nth, 2, 2
+            BUILTIN     "last", BF_LIB, lb_last, 1, 1
+            BUILTIN     "take", BF_LIB, lb_take, 2, 2
+            BUILTIN     "drop", BF_LIB, lb_drop, 2, 2
+            BUILTIN     "elem?", BF_LIB, lb_elem, 2, 2
+            BUILTIN     "in?", BF_LIB, lb_elem, 2, 2
+            BUILTIN     "sum", BF_LIB, lb_sum, 1, 1
+            BUILTIN     "product", BF_LIB, lb_product, 1, 1
+            BUILTIN     "min", BF_LIB, lb_min, 1, ANY
+            BUILTIN     "max", BF_LIB, lb_max, 1, ANY
+            BUILTIN     "map", BF_CONT, bk_map, 2, 2
+            BUILTIN     "filter", BF_CONT, bk_filter, 2, 2
+            BUILTIN     "foldl", BF_CONT, bk_foldl, 3, 3
+            BUILTIN     "foldr", BF_CONT, bk_foldr, 3, 3
+            BUILTIN     "any?", BF_CONT, bk_any, 2, 2
+            BUILTIN     "all?", BF_CONT, bk_all, 2, 2
+            BUILTIN     "find", BF_CONT, bk_find, 2, 2
+            BUILTIN     "count", BF_CONT, bk_count, 2, 2
             .byte       $FF
 
 bs_none:    .byte       0
@@ -3151,6 +3296,11 @@ bs_div_zero: .byte      "Division by zero.", 0
 bs_inexact: .byte       "A division that isn't exact (as yet)", 0
 bs_two:     .byte       "Expects 2 parameters", 0
 bs_one:     .byte       "Expects 1 parameter", 0
+bs_quote:   .byte       $27, 0
+bs_takes:   .byte       " takes ", 0
+bs_at_most: .byte       "at most ", 0
+bs_argument: .byte      " argument", 0
+bs_not:     .byte       ", not ", 0
 bs_repr_one: .byte      "'repr' requires 1 parameter", 0
 bs_to_str_few: .byte    "Too few parameters passed to 'to-str'", 0
 bs_to_str_num: .byte    "Only a Number has a base for 'to-str'", 0

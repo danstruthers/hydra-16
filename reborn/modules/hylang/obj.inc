@@ -35,6 +35,8 @@ HF_PROXY        = $80           ; A method's &0 (hash-call's): the hash its firs
 
 ; A function's flags (OT_FUNC's second byte)
 FN_FEXPR        = $01           ; Its arguments come unevaluated
+FN_SCANNED      = $02           ; Its body's been scanned for &_, &1 ... (fn_extras) ...
+FN_EXTRAS       = $04           ;   and names one: it takes extra arguments
 
 ; Where a symbol's or atom's fields are
 SYM_NEXT        = 2             ; The next in its bucket
@@ -426,5 +428,5 @@ error_text:
 .segment "DATA"
 ; Each object type's type (OT_*: TY_*)
 ot_type:    .byte       TY_OTHER, TY_STRING, TY_OTHER, TY_LIST, TY_SEXPR, TY_SYMBOL, TY_ATOM, TY_FUNC, TY_ERROR
-            .byte       TY_FRAME, TY_SYMBOL, TY_NUM, TY_NUM, TY_NUM, TY_NUM, TY_STRING, TY_HASH
+            .byte       TY_FRAME, TY_SYMBOL, TY_NUM, TY_NUM, TY_NUM, TY_NUM, TY_STRING, TY_HASH, TY_FUNC
 .code

@@ -7,38 +7,25 @@
 
 ; function definition: fun, fn, fexpr, def, set, set! and let are built in
 
-; join a single element to the front of a list
-(fun {cons a b} |{'(a) b})
+; cons (an item onto the front of a list) is built in
 
 ; composition helpers
 (fun {flip f a b} {f b a})
 (fun {ghost}      !{&_})
 (fun {comp f g x} {f (g x)}) ; Compose
 
-; comparisons
-(fun {not a}  ?{a NIL T})
-(fun {>= a b} {not (< a b)})
-(fun {<= a b} {not (> a b)})
-(fun {== a b} {eq a b})
-(fun {neg? a} {< a 0})
-(fun {pos? a} {< 0 a})
+; comparisons: not, ==, >=, <=, neg? and pos? are built in
 
 :({<> !=} neq neq)
 
-; test helpers
-:(nil?   (== NIL))
-:(t?     (== T))
-:(zero?  (== 0))
-:(one?   (== 1))
+; test helpers: nil?, t?, zero? and one? are built in
 :({=0 =1}  zero? one?)
 :({0? 1?}  zero? one?)
 
 ; logical operators
 (fun {xor a b} {and (or a b) (not (and a b))})
 
-; math helper functions
-(fun {1+ n}     {+ n 1})
-(fun {1- n}     {- n 1})
+; math helper functions (1+ and 1- are built in)
 (fun {>=0 n}    {>= n 0})
 (fun {<=0 n}    {<= n 0})
 (fun {>0 n}     {> n 0})
@@ -58,49 +45,22 @@
 
 :({apply curry uncurry} unpack unpack pack)
 
-; nth element 
-(fun {fst l} {eval ^(l)})
-(fun {snd l} {eval ^($(l))})
-(fun {thd l} {eval ^($($(l)))})
-
-; zero-based element of list (evaluated)
-(fun {nth n l} ?{
-  (zero? n)
-  (fst l)
-  (nth (1- n) $(l))
-})
-
+; a list's items, as they're written (not evaluated): fst, snd, thd, nth (from 0) and last are built in; past the
+; list's end is an error
 :({first second third fourth fifth sixth seventh eighth ninth tenth}
   (nth 0) (nth 1) (nth 2) (nth 3) (nth 4) (nth 5) (nth 6) (nth 7) (nth 8) (nth 9))
-
-(fun {last l} {nth (1- (len l)) l})
 
 ; coalescing operator to find first non-nil argument in the list
 (fun {?? a} ?{a a ?(&_ .(?? &_))})
 
-; take n items (as many as there are)
-(fun {take n l} ?{
-  (and (!=0 n) l)
-  |(^(l) (take (1- n) $(l)))
-})
-
-; drop n items (as many as there are)
-(fun {drop n l} ?{
-  (or (zero? n) (nil? l))
-  l
-  (drop (1- n) $(l))
-})
+; take n items, and drop n (as many as there are) are built in
 
 :(skip drop)
 
 ; split list at N
 (fun {split n l} '{(take n l) (drop n l)})
 
-; is x in l?
-(fun {elem? x l} ?{
-  l
-  ?((eq x (fst l)) T (elem? x $(l)))
-})
+; is x in l? (elem? x l) is built in
 
 (fun {has-element? l x} {elem? x l})
 
@@ -108,31 +68,7 @@
 :(begin do)
 :(block do)
 
-; map
-(fun {map f l} ?{
-  l
-  (cons (f (fst l)) (map f $(l)))
-})
-
-; filter
-(fun {filter f l} ?{
-  l
-  |(?((f (fst l)) ^(l) NIL) (filter f $(l)))
-})
-
-; fold left
-(fun {foldl f z l} ?{
-  l
-  (foldl f (f z (fst l)) $(l))
-  z
-})
-
-; fold right
-(fun {foldr f z l} ?{
-  l
-  (f (fst l) (foldr f z $(l)))
-  z
-})
+; map, filter, foldl and foldr are built in
 
 ; pairs of items, one from each list, as long as both have them
 (fun {zip a b} ?{
@@ -141,13 +77,7 @@
   NIL
 })
 
-; is f true of any item? of every item?
-(fun {any? f l} ?{l ?((f (fst l)) T (any? f $(l))) NIL})
-(fun {all? f l} ?{l ?((f (fst l)) (all? f $(l)) NIL) T})
-
-; the first item f is true of (NIL if there's none), and how many it's true of
-(fun {find f l} ?{l ?((f (fst l)) (fst l) (find f $(l))) NIL})
-(fun {count f l} {len (filter f l)})
+; is f true of any item? of every item? the first it's true of, and how many: any?, all?, find and count are built in
 
 ; a list's items, and the items of the lists in it, in one list
 (fun {flatten l} ?{
@@ -161,18 +91,15 @@
 ; the items, each once (the first time it comes)
 (fun {distinct l} ?{l (cons (fst l) (distinct (remove-all (fst l) $(l)))) NIL})
 
-(fun {sum s}     {foldl + 0 s})
+; sum, product, min and max are built in
 (fun {avg s}     {/ (sum s) (len s)})
-(fun {product p} {foldl * 1 p})
-
-(fun {min} {foldl @(NIL ?{(< &1 &2) &1 &2}) (fst &_) $(&_)})
-(fun {max} {foldl @(NIL ?{(> &1 &2) &1 &2}) (fst &_) $(&_)})
 
 ; Switch/Cond
+; a clause's test and value run where the clause was written (each the first of a list, made code: eval ^(...))
 (fun {cond} ?{
   &_
-  ?((fst (fst &_))
-    (snd (fst &_))
+  ?((eval ^((fst &_)))
+    (eval ^($((fst &_))))
     .(cond $(&_)))
   (error "Selection not found")
 })
@@ -181,18 +108,13 @@
 
 (fun {case x} ?{
   &_
-  ?((eq x (fst (fst &_)))
-    (snd (fst &_))
+  ?((eq x (eval ^((fst &_))))
+    (eval ^($((fst &_))))
     .(case (cons x $(&_))))
   (error "Case not found")
 })
 
-; math functions
-(fun {abs a} ?{
-  (num? a)
-  ?((<0 a) (- a) a)
-  (error "Cannot perform 'abs' on non-number")
-})
+; math functions (abs is built in)
 
 (fun {floor a} {
   let {
@@ -290,7 +212,7 @@
 })
 
 ; sort and related
-(fun {in?} ?{&2 (or (eq &1 (fst &2)) (in? &1 $(&2)))})
+; (in? x l) is built in
 (fun {remove-fst f l} ?{
   l
   (do

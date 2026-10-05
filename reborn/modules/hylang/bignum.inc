@@ -45,7 +45,7 @@ n_sa:       .res        1                                   ; Signs kept
 n_sb:       .res        1
 n_bit:      .res        1                                   ; mag_div's bit, and its byte's offset
 n_byte:     .res        1
-.segment "CODE3"
+.segment "NUMCODE"
 
 .macro NQ ptr, buf
             LDR         ptr, buf
@@ -979,9 +979,9 @@ int_sign:
 
 ; ---- Its texts
 
-.segment "RODATA3"
+.segment "NUMDATA"
 io_lo:      .lobytes    io_add, io_sub, io_mul, io_quo, io_rem, io_gcd
 io_hi:      .hibytes    io_add, io_sub, io_mul, io_quo, io_rem, io_gcd
 nm_big:     .byte       "A number too big (a few hundred digits at most)", 0
 nm_div_zero: .byte      "Division by zero.", 0
-.segment "CODE3"
+.segment "NUMCODE"

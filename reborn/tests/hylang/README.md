@@ -17,7 +17,7 @@ fail after.
 | `numbers.dl` | Integers of any size, fixed decimals, rationals, complex numbers: arithmetic, comparison, conversion, bases, `random`, `fib` | 7.3 |
 | `hashes.dl` | Keys, `hash-get`, `hash-put`, `hash-remove`, `len`, keys and values, `hash-clone`, methods (`&0`), tags (private, locked, read-only, not-nil), `to#` and `from#`, equality | 7.4a |
 | `types.dl` | `type-of`, the type tests, `to-sym`, `to-atom`, `gensym`, `defined?` (its check of `stdout`'s type fails till 7.4b has streams, and the test expects it to) | 7.4a |
-| `core.hl` | hylang's own (not danlang's): what `eval.dl` checks, at sizes the test has time for; equality and order of lists; `output-of` nested | 7.2 |
+| `core.hl` | hylang's own (not danlang's): what `eval.dl` checks, at sizes the test has time for (built-ins partially applied, too many arguments too); `library.dl`'s checks of the library's built-in functions (it runs from 7.4c); equality and order of lists; `output-of` nested | 7.2 |
 
 `eval.dl` (calls, `fn`, partial application, `&N`, `def`, tail calls, the call depth) passes too, but isn't in the test:
 its tail calls loop 50,000 times, 4,675M cycles in all (22 minutes at 3.58 MHz), so `core.hl` has its checks at

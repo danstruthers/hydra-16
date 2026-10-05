@@ -38,7 +38,7 @@ pr_num:
             lda         h_v                                 ; (A fixnum: its value, h_v >> 1, its sign kept; another,
             lsr                                             ; num_print's, in the third bank)
             bcs         :+
-            FARN        3, num_print
+            FARX        lib_num, num_print
             rts
 :
             lda         h_v + 1
@@ -77,6 +77,9 @@ pr_func:
             jmp         out_text
 :
             jsr         deref                               ; (A function: <function>(fn {formals} {body}))
+            lda         (h_p)
+            cmp         #OT_PBUILT
+            jeq         pr_pbuilt
             ldy         #1
             lda         (h_p),y
             and         #FN_FEXPR
@@ -372,6 +375,46 @@ pr_error:
 pr_frame:
             LDR         r0, ps_env
             jmp         out_text
+
+; A partial built-in: <function>(its name, the values given it)
+pr_pbuilt:
+            ldy         #5                                  ; (Its values, for after)
+            lda         (h_p),y
+            pha
+            dey
+            lda         (h_p),y
+            pha
+            dey                                             ; (Its built-in's number)
+            lda         (h_p),y
+            lsr
+            dey
+            lda         (h_p),y
+            ror
+            eor         #$80
+            pha
+            LDR         r0, ps_function
+            jsr         out_text
+            pla
+            jsr         bi_entry                            ; (Its name)
+            lda         (ob_p)
+            sta         pr_hi
+            ldy         #0
+:
+            cpy         pr_hi
+            beq         :+
+            iny
+            lda         (ob_p),y
+            jsr         out_char
+            bra         :-
+:
+            pla
+            sta         h_v
+            pla
+            sta         h_v + 1
+            stz         pr_display
+            lda         #')'
+            ldx         #1
+            jmp         pr_items
 
 ; A hash: <hash>, then its entries and tags as from# has them (a hash an entry's value, without its <hash>)
 pr_hash:

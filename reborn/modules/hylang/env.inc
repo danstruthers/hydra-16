@@ -53,6 +53,9 @@ ev_again:   .res        1                                   ; Not 0: a built-in'
                                                             ; applies it)
 ar_at:      .res        2                                   ; A built-in's next argument (a position) ...
 ar_end:     .res        2                                   ;   and the place past its last
+fx_base:    .res        2                                   ; fn_extras's stack, where it begins
+pb_k:       .res        1                                   ; A partial built-in's values: how many ...
+pb_room:    .res        1                                   ;   and their room on the stack (bytes)
 ev_base:    .res        2                                   ; A built-in's arguments' place, as it's called
 err_room:   .res        2                                   ; The error "No room", made at the start
 ev_name:    .res        8                                   ; &n's name, made

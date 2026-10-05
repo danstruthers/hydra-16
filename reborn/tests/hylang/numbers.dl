@@ -68,7 +68,9 @@
 (check (- (complex 1 2)) (complex -1 -2))
 (check (+ (complex 1 2) 1.5) (complex 2.5 2))
 (check (complex? (complex 1 2)) T)
-(check-error (complex 1))
+(check ((complex 1) 2) (complex 1 2))
+(def {nu-one} 1)
+(check (complex nu-one 2) (complex 1 2))
 (check-error (complex :a 1))
 
 ; conversions

@@ -222,6 +222,19 @@ hyx2_bank4: .byte       0
             jsr         hyx2_farn
 .endmacro
 
+; Call routine in the bank in var (a library module's: FARX var, routine), from any, as FARN
+.macro FARX var, routine
+            sta         hyx2_a
+            lda         #<routine
+            sta         hyx2_to
+            lda         #>routine
+            sta         hyx2_to + 1
+            lda         var
+            sta         hyx2_n
+            lda         hyx2_a
+            jsr         hyx2_farn
+.endmacro
+
 .macro FAR1 routine
             sta         hyx2_a
             lda         #<routine

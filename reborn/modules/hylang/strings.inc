@@ -18,7 +18,7 @@ s_t:        .res        2                                   ; A value (sort's)
 s_pn:       .res        1                                   ; str-split's separators: their bytes' length ...
 s_pats:     .res        256                                 ;   and each its length, its bytes; then $FF
 gensym_n:   .res        2                                   ; gensym's count
-.segment "CODE4"
+.segment "STRCODE"
 
 ; ---- Arguments, and what's made
 
@@ -937,7 +937,7 @@ ss_to_atom:
             lda         #OT_ATOM
             jmp         s_text_name
 @number:
-            FARN        3, num_trunc                        ; (Its digits, caught)
+            FARX        lib_num, num_trunc                  ; (Its digits, caught)
             jsr         cap_start
             FARN        2, print_display
             jsr         cap_end
@@ -1376,7 +1376,7 @@ s_less:
             lda         s_c
             rts
 
-.segment "RODATA4"
+.segment "STRDATA"
 ss_white:   .byte       1, ' ', 1, TAB, 1, LF, 1, CR, $FF   ; (str-split's white space)
 ss_white_end:
 ss_one:     .byte       "Expects 1 parameter", 0
@@ -1401,4 +1401,4 @@ ss_gensym_args: .byte   "'gensym' expects maybe a prefix", 0
 ss_subset_args: .byte   "'subset' expects a list, an index and maybe a count", 0
 ss_sort_args: .byte     "'sort' expects a list and maybe a function", 0
 ss_sort_fn: .byte       "Second 'sort' parameter must be a function", 0
-.segment "CODE4"
+.segment "STRCODE"

@@ -834,7 +834,7 @@ danlang (`C:\source\danlang`, C# on .NET 6, by Daniel and Simon Struthers, GPLv3
 
 (As built, phase 7.3: the tower's integers past a fixnum are one kind of object, its sign and up to 126 bytes, not 32-bit integers and a separate bignum library; the tower and all of danlang's bases are a third bank of the module, not library modules loaded on first use, as a module may have four banks now.)
 
-(As built, after 7.4a: hylang is a program of two banks and library modules, `hylnum` (the numbers) and `hylstr` (strings and hashes), each a module of its own, assembled with it.)
+(As built, after 7.4a: hylang is a program of three banks and library modules, `hylnum` (the numbers) and `hylstr` (strings and hashes), each a module of its own, assembled with it.  danlang changed, and hylang with it: built-ins are partially applied, too many arguments is an error, a list's items are as they're written, and the library's most used functions are built in.)
 
 (As built, after 7.4a: a call's arguments are pushed on the evaluation stack as they're evaluated, and the function applied to them there, not put in a list made for each call; a loop's step is 14% faster.  danlang's GPLv3 license is off (the user's decision), and hylang is in the system's ROM.)
 

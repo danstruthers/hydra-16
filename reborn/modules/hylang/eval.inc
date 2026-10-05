@@ -12,10 +12,11 @@
 ; (its K_* codes fixnums), and so are the registers ev_x to ev_s, so the collector takes them all as roots (env.inc
 ; has the stack, scopes and names, which the built-ins use too).
 ;   A call's arguments are pushed on the stack as they're evaluated (env.inc), and the function applied to them
-; there.  A built-in (builtins.inc) is native code, in the second bank, or a library's (BF_BANK3: hylnum's,
-; numbers.inc; BF_BANK4: hylstr's, strings.inc, hashes.inc), called through hyx2_farn, given its arguments' values (arg_next), or
-; as they're written (BF_RAW: defined?), ev_v its value (or, ev_again set, ev_f applied to the arguments it has left,
-; as if it were the call: hash-call's methods); they're taken off the stack after it.  An error among the values is
+; there.  A built-in (builtins.inc) is native code, in the second bank, the third (BF_LIB: library.inc) or a
+; library's (BF_NUM: hylnum's, numbers.inc; BF_STR: hylstr's, strings.inc, hashes.inc), called through hyx2_farn,
+; given its arguments' values (arg_next), or as they're written (BF_RAW: defined?), ev_v its value (or, ev_again
+; set, ev_f applied to the arguments it has left, as if it were the call: hash-call's methods); they're taken off the
+; stack after it.  An error among the values is
 ; the call's value, unless the built-in takes errors (BF_ERRORS: print, error-message ...).  A special form
 ; (BF_SPECIAL: if, do, let, while ...) is the first bank's, given its arguments as they're written (ev_r), and goes
 ; on its own way, with the frames K_IF, K_DO ... .  Native code that wants a value evaluated, or a function applied,
@@ -49,13 +50,27 @@ K_ITER          = 20            ; [function, items left, place, env]: the functi
 K_RUN           = 21            ; [rest, env]: one of a body run (each's, dotimes's), not its last
 K_OUTPUT        = 22            ; [the text caught before, rest, env]: one of output-of's
 K_SPACE         = 23            ; [blocks, env]: <=>'s number
+K_FOLD          = 24            ; [kind, f, rest, acc, last, item]: map's (filter's ...) f's value for an item
 
 ; A built-in's flags (bi_flags)
 BF_SPECIAL      = $01           ; Its arguments as they're written (ev_r), its own way
 BF_ERRORS       = $02           ; An error among its arguments is an argument (not the call's value)
 BF_RAW          = $04           ; Its arguments as they're written, in ev_a (native code, that evaluates none)
-BF_BANK3        = $08           ; Its code is in hylnum (numbers.inc), not the second bank ...
-BF_BANK4        = $10           ;   or in hylstr (strings.inc, hashes.inc)
+BF_NUM          = $08           ; Its code is in hylnum (numbers.inc), not the second bank ...
+BF_STR          = $10           ;   or in hylstr (strings.inc, hashes.inc) ...
+BF_LIB          = $18           ;   or in the third bank (library.inc)
+BF_CONT         = $20           ; Its code is the first bank's, jumped to with its arguments' values (map, foldl ...)
+ANY             = 15            ; What a built-in takes (bi_ar): no most
+
+; map, filter ... (fold_*): their kinds
+FD_MAP          = 0
+FD_FILTER       = 1
+FD_FOLDL        = 2
+FD_FOLDR        = 3
+FD_ANY          = 4
+FD_ALL          = 5
+FD_FIND         = 6
+FD_COUNT        = 7
 
 .code
 
@@ -101,7 +116,7 @@ eval_init:
             LDR         r0, es_amp_code
             lda         #OT_SYMBOL
             jsr         intern_counted
-            bcs         @no
+            jcs         @no
             MOVR        sym_code, h_v
             jsr         sym_local
             LDR         r0, es_intr
@@ -115,9 +130,11 @@ eval_init:
             MOVR        err_room, h_v
             FAR2        builtins_init
             bcs         @no
-            lda         hyx2_bank4                          ; (Hashes: if hylstr's there)
+            FARN        3, lib_init
+            bcs         @no
+            lda         lib_str                             ; (Hashes: if hylstr's there)
             beq         :+
-            FARN        4, hash_init
+            FARX        lib_str, hash_init
 :
             rts
 @no:
@@ -347,11 +364,32 @@ ev_head:
             bcs         ev_deep_error
             jmp         ev_apply
 @special:
+            lda         bi_ar,x                             ; (Its arguments as written: more than it takes, an
+            lsr                                             ; error)
+            lsr
+            lsr
+            lsr
+            cmp         #ANY
+            beq         @go
+            sta         ev_c
+            jsr         count_r
+            cmp         ev_c
+            beq         :+
+            bcs         @many
+:
+            jsr         bi_index
+@go:
             lda         bi_lo,x
             sta         ev_j
             lda         bi_hi,x
             sta         ev_j + 1
             jmp         (ev_j)
+@many:
+            pha
+            jsr         bi_index
+            pla
+            FAR2        arity_error
+            jmp         ev_return
 @fn:
             MOVR        h_v, ev_f                           ; ---- A function: an fexpr's arguments as they're
             jsr         deref                               ; written
@@ -441,7 +479,28 @@ ev_apply:
             sta         ar_end
             stx         ar_end + 1
             MOVR        ar_at, ev_a
-            jsr         bi_index
+            jsr         count_a                             ; ---- What it takes: given more, an error; given
+            sta         ev_c                                ; fewer than it needs, the built-in with those, waiting
+            jsr         bi_index                            ; for the rest (not a special form)
+            lda         bi_ar,x
+            lsr
+            lsr
+            lsr
+            lsr
+            cmp         #ANY
+            beq         :+
+            cmp         ev_c
+            bcc         @many
+:
+            lda         bi_flags,x
+            and         #BF_SPECIAL | BF_RAW
+            bne         :+
+            lda         bi_ar,x
+            and         #$0F
+            cmp         ev_c
+            beq         :+
+            bcs         @partial
+:
             lda         bi_lo,x
             sta         ev_j
             lda         bi_hi,x
@@ -461,16 +520,48 @@ ev_apply:
             ldx         ev_a + 1
             jsr         ev_set
             jmp         ev_no_room
+@many:
+            lda         ev_a                                ; (The arguments let go)
+            ldx         ev_a + 1
+            jsr         ev_set
+            jsr         bi_index
+            lda         ev_c
+            FAR2        arity_error
+            jmp         ev_return
+@partial:
+            jsr         args_list                           ; (A partial built-in: OT_PBUILT, the built-in and the
+            bcs         @room                               ; values given it)
+            MOVR        h_d, h_v
+            MOVR        h_a, ev_f
+            lda         #OT_PBUILT
+            ldx         #0
+            jsr         make_cell2
+            bcs         @room
+            MOVR        ev_v, h_v
+            lda         ev_a
+            ldx         ev_a + 1
+            jsr         ev_set
+            jmp         ev_return
 @native:
-            lda         bi_flags,x                          ; (Native code: in the second bank, or a library's,
-            and         #BF_BANK3 | BF_BANK4                ; hylnum's or hylstr's)
+            lda         bi_flags,x                          ; (The first bank's: jumped to)
+            and         #BF_CONT
+            beq         :+
+            jmp         (ev_j)
+:
+            lda         bi_flags,x                          ; (Native code: in the second bank or the third, or a
+            and         #BF_LIB                             ; library's, hylnum's or hylstr's)
             beq         @two
-            cmp         #BF_BANK4
-            beq         @four
-            lda         hyx2_bank3
+            cmp         #BF_LIB
+            beq         @three
+            cmp         #BF_STR
+            beq         @str
+            lda         lib_num
             bra         :+
-@four:
-            lda         hyx2_bank4
+@str:
+            lda         lib_str
+            bra         :+
+@three:
+            lda         hyx2_bank3
             bra         :+
 @two:
             lda         hyx2_bank2
@@ -517,6 +608,11 @@ bi_index:
 ; formals are left, its value is the function with these bound (partial application); if not, its body is evaluated
 ; in a new frame of the bindings, the function's closure its parent (lexical scope), in the caller's place
 apply_fn:
+            MOVR        h_v, ev_f                           ; (A partial built-in: its built-in's call, with its
+            jsr         deref                               ; values first)
+            lda         (h_p)
+            cmp         #OT_PBUILT
+            jeq         pb_apply
             jsr         ev_here                             ; (The arguments: ev_a up to the top, ev_t; ev_e, the
             sta         ev_t                                ; next)
             stx         ev_t + 1
@@ -589,8 +685,10 @@ apply_fn:
             jmp         @arg
 @bound:
             lda         ev_w                                ; (&_: those past the formals, a Q-expression, if there
-            ora         ev_w + 1                            ; are any; a call's frame has it NIL else)
-            beq         @formals
+            ora         ev_w + 1                            ; are any, and its body takes them; a call's frame has
+            beq         @formals                            ; it NIL else)
+            jsr         fn_extras
+            jcc         @extra_args
             MOVR        ar_at, ev_w
             MOVR        ar_end, ev_t
             jsr         args_list
@@ -640,6 +738,250 @@ apply_fn:
             ldx         ev_a + 1
             jsr         ev_set
             jmp         ev_no_room
+@extra_args:
+            sec                                             ; ("The function takes 1 argument, not 2": the extra
+            lda         ev_t                                ; ones (ev_w to ev_t) aren't its)
+            sbc         ev_w
+            tax
+            lda         ev_t + 1
+            sbc         ev_w + 1
+            lsr
+            txa
+            ror
+            sta         ev_c                                ; (How many: 255 at most)
+            lda         ev_a
+            ldx         ev_a + 1
+            jsr         ev_set
+            LDR         r0, es_fn_takes
+            jsr         msg_start
+            sec
+            lda         ev_i
+            sbc         ev_c
+            sta         ev_c
+            jsr         msg_dec
+            LDR         r0, es_argument
+            jsr         msg_text
+            lda         ev_c
+            cmp         #1
+            beq         :+
+            lda         #'s'
+            jsr         msg_char
+:
+            LDR         r0, es_not
+            jsr         msg_text
+            lda         ev_i
+            jsr         msg_dec
+            jsr         msg_error
+            jmp         ev_return
+
+; C = 1 if the function ev_f's body names &_ or &1, &2 ... (so it takes extra arguments): its body scanned the first
+; time it's asked, the answer kept in its flags (FN_SCANNED, FN_EXTRAS).  The scan's lists are on the stack meanwhile
+fn_extras:
+            MOVR        h_v, ev_f
+            jsr         deref
+            ldy         #1
+            lda         (h_p),y
+            bit         #FN_SCANNED
+            beq         @scan
+            and         #FN_EXTRAS
+            cmp         #1
+            rts
+@scan:
+            jsr         ev_here                             ; (Where the scan's stack begins)
+            sta         fx_base
+            stx         fx_base + 1
+            ldy         #5                                  ; (Its body)
+            lda         (h_p),y
+            tax
+            dey
+            lda         (h_p),y
+            jsr         ev_push
+@next:
+            jsr         ev_here                             ; (Nothing left: none named)
+            cmp         fx_base
+            bne         :+
+            cpx         fx_base + 1
+            jeq         @none
+:
+            jsr         ev_pop
+            sta         h_v
+            stx         h_v + 1
+            lsr
+            bcs         @next                               ; (A fixnum)
+            lda         page_kind,x
+            cmp         #PK_PAIR
+            beq         @pair
+            bcc         @next                               ; (A constant, a character)
+            jsr         deref
+            lda         (h_p)
+            cmp         #OT_SYMBOL
+            beq         @symbol
+            cmp         #OT_QEXPR
+            beq         @list
+            cmp         #OT_SEXPR
+            bne         @next
+@list:
+            ldy         #3                                  ; (A Q- or S-expression: its chain)
+            lda         (h_p),y
+            beq         @next
+            tax
+            dey
+            lda         (h_p),y
+            jsr         ev_push
+            bra         @next
+@pair:
+            jsr         deref                               ; (A pair: its cdr, then its car)
+            ldy         #3
+            lda         (h_p),y
+            beq         :+
+            tax
+            dey
+            lda         (h_p),y
+            jsr         ev_push
+            jsr         deref
+:
+            ldy         #1
+            lda         (h_p),y
+            tax
+            lda         (h_p)
+            jsr         ev_push
+            bra         @next
+@symbol:
+            ldy         #1                                  ; (&_, or & and digits)
+            lda         (h_p),y
+            and         #$7F
+            cmp         #2
+            bcc         @next
+            sta         ev_c
+            ldy         #SYM_NAME
+            lda         (h_p),y
+            cmp         #'&'
+            bne         @next
+            iny
+            lda         (h_p),y
+            cmp         #'_'
+            bne         @digits
+            lda         ev_c
+            cmp         #2
+            beq         @found
+            jmp         @next
+@digits:
+            lda         (h_p),y
+            cmp         #'0'
+            jcc         @next
+            cmp         #'9' + 1
+            jcs         @next
+            iny
+            dec         ev_c
+            lda         ev_c
+            cmp         #1
+            bne         @digits
+@found:
+            lda         fx_base                             ; (The scan's stack let go)
+            ldx         fx_base + 1
+            jsr         ev_set
+            lda         #FN_SCANNED | FN_EXTRAS
+            jsr         @mark
+            sec
+            rts
+@none:
+            lda         #FN_SCANNED
+            jsr         @mark
+            clc
+            rts
+@mark:
+            pha                                             ; (The answer kept in its flags)
+            MOVR        h_v, ev_f
+            jsr         deref
+            pla
+            ldy         #1
+            ora         (h_p),y
+            sta         (h_p),y
+            rts
+
+; ev_f, a partial built-in (OT_PBUILT): its values put on the stack before the arguments (from ev_a), and its
+; built-in applied to them all
+pb_apply:
+            ldy         #5                                  ; (Its values, a chain)
+            lda         (h_p),y
+            sta         ev_t + 1
+            dey
+            lda         (h_p),y
+            sta         ev_t
+            dey
+            lda         (h_p),y                             ; (Its built-in)
+            sta         ev_f + 1
+            dey
+            lda         (h_p),y
+            sta         ev_f
+            MOVR        h_v, ev_t
+            jsr         count_h
+            sta         pb_k
+            asl                                             ; (Their room: 2k bytes)
+            sta         pb_room
+            jsr         ev_here                             ; (The arguments' end, before)
+            sta         ev_w
+            stx         ev_w + 1
+            ldx         pb_k                                ; (k entries more on the stack)
+:
+            beq         :+
+            phx
+            lda         #<NIL
+            ldx         #>NIL
+            jsr         ev_push
+            plx
+            dex
+            bra         :-
+:
+@move:
+            lda         ev_w                                ; (Each argument, from the last, k entries on)
+            cmp         ev_a
+            bne         :+
+            lda         ev_w + 1
+            cmp         ev_a + 1
+            beq         @fill
+:
+            sec
+            lda         ev_w
+            sbc         #2
+            sta         ev_w
+            bcs         :+
+            dec         ev_w + 1
+:
+            lda         ev_w
+            ldx         ev_w + 1
+            jsr         pos_get
+            clc
+            lda         ev_w
+            adc         pb_room
+            pha
+            lda         ev_w + 1
+            adc         #0
+            tax
+            pla
+            jsr         pos_put
+            bra         @move
+@fill:
+            lda         ev_t + 1                            ; (Its values, from ev_a on)
+            beq         @apply
+            MOVR        h_v, ev_t
+            jsr         car
+            lda         ev_w
+            ldx         ev_w + 1
+            jsr         pos_put
+            clc
+            lda         ev_w
+            adc         #2
+            sta         ev_w
+            bcc         :+
+            inc         ev_w + 1
+:
+            MOVR        h_v, ev_t
+            jsr         cdr
+            MOVR        ev_t, h_v
+            bra         @fill
+@apply:
+            jmp         ev_apply
 
 ; &n's symbol, n = ev_i (1-255).  OUT: C = 0, h_v = it; C = 1, no room
 amp_symbol:
@@ -797,10 +1139,243 @@ sf_error:
             jmp         ev_return
 
 ; Ctrl-C: ev_v = the error interrupted (its code :intr), for the frame waiting
+; ---- map, filter, foldl, foldr, any?, all?, find, count (BF_CONT): f applied to a list's items in turn, by the
+; machine (K_FOLD), so f's call is like any other's (nested as deep as calls go; Ctrl-C stops it).  ev_f is f, ev_x
+; the items left, ev_w the result (a list, its last pair ev_r; an accumulator; a count, a fixnum), ev_t the item,
+; ev_c the kind (FD_*)
+
+; (map f l): f's value for each item, a list.  (filter f l): the items it's T for.  (any? f l): T if it's T for any
+; (at the first).  (all? f l): T if it's T for all (NIL at the first it isn't).  (find f l): the first item it's T
+; for (NIL: none).  (count f l): how many it's T for
+bk_map:
+            lda         #FD_MAP
+            bra         fold_f
+bk_filter:
+            lda         #FD_FILTER
+            bra         fold_f
+bk_any:
+            lda         #FD_ANY
+            bra         fold_f
+bk_all:
+            lda         #FD_ALL
+            bra         fold_f
+bk_find:
+            lda         #FD_FIND
+            bra         fold_f
+bk_count:
+            lda         #FD_COUNT
+fold_f:
+            sta         ev_c
+            jsr         arg_next
+            MOVR        ev_f, h_v
+            LDR         ev_w, NIL
+            lda         ev_c
+            cmp         #FD_COUNT
+            bne         fold_l
+            LDR         ev_w, 1                             ; (0)
+            bra         fold_l
+
+; (foldl f z l): f of the value so far (z first) and each item in turn.  (foldr f z l): f of each item and the value
+; so far, from the last (z first)
+bk_foldl:
+            lda         #FD_FOLDL
+            bra         :+
+bk_foldr:
+            lda         #FD_FOLDR
+:
+            sta         ev_c
+            jsr         arg_next
+            MOVR        ev_f, h_v
+            jsr         arg_next
+            MOVR        ev_w, h_v
+fold_l:
+            jsr         arg_next                            ; (The list: its chain)
+            MOVR        ev_x, h_v
+            lda         ev_a                                ; (The arguments let go)
+            ldx         ev_a + 1
+            jsr         ev_set
+            MOVR        h_v, ev_x
+            jsr         type_of
+            cmp         #TY_LIST
+            jne         @not_list
+            jsr         list_of
+            MOVR        ev_x, h_v
+            LDR         ev_r, NIL
+            lda         ev_x + 1                            ; (Items: f a function)
+            jeq         fold_end
+            MOVR        h_v, ev_f
+            jsr         type_of
+            cmp         #TY_FUNC
+            bne         @not_fn
+            lda         ev_c                                ; (foldr: the items from the last)
+            cmp         #FD_FOLDR
+            bne         fold_next
+@reverse:
+            lda         ev_x + 1
+            beq         @reversed
+            MOVR        h_v, ev_x
+            jsr         car
+            MOVR        h_a, h_v
+            MOVR        h_d, ev_r
+            jsr         cons
+            jcs         ev_no_room
+            MOVR        ev_r, h_v
+            MOVR        h_v, ev_x
+            jsr         cdr
+            MOVR        ev_x, h_v
+            bra         @reverse
+@reversed:
+            MOVR        ev_x, ev_r
+            LDR         ev_r, NIL
+            bra         fold_next
+@not_list:
+            LDR         r0, es_fold_list
+            jmp         sf_error
+@not_fn:
+            LDR         r0, es_fold_fn
+            jmp         sf_error
+
+; The next item: f applied to it (with what it needs: foldl's value so far, then the item; foldr's, the item, then
+; it), the state in K_FOLD's frame
+fold_next:
+            lda         ev_intr                             ; (Ctrl-C: an error, here)
+            beq         :+
+            stz         ev_intr
+            jmp         ev_interrupted
+:
+            lda         ev_x + 1
+            jeq         fold_end
+            MOVR        h_v, ev_x
+            jsr         car
+            MOVR        ev_t, h_v
+            MOVR        h_v, ev_x
+            jsr         cdr
+            MOVR        ev_x, h_v
+            lda         ev_c
+            asl
+            ora         #1
+            ldx         #0
+            jsr         ev_push
+            PUSHV       ev_f
+            PUSHV       ev_x
+            PUSHV       ev_w
+            PUSHV       ev_r
+            PUSHV       ev_t
+            PUSHK       K_FOLD
+            jsr         ev_here                             ; (f's arguments)
+            sta         ev_a
+            stx         ev_a + 1
+            lda         ev_c
+            cmp         #FD_FOLDL
+            bne         :+
+            PUSHV       ev_w
+:
+            PUSHV       ev_t
+            lda         ev_c
+            cmp         #FD_FOLDR
+            bne         :+
+            PUSHV       ev_w
+:
+            jmp         ev_apply
+
+; f's value for an item (an error: the value)
+k_fold:
+            POPV        ev_t
+            POPV        ev_r
+            POPV        ev_w
+            POPV        ev_x
+            POPV        ev_f
+            jsr         ev_pop
+            lsr
+            sta         ev_c
+            jsr         ev_is_error
+            bcc         :+
+            jmp         ev_return
+:
+            lda         ev_v                                ; (Z: NIL)
+            ora         ev_v + 1
+            ldx         ev_c
+            beq         @add                                ; (map: it, added)
+            dex
+            beq         @filter
+            dex
+            beq         @fold
+            dex
+            beq         @fold
+            dex
+            beq         @any
+            dex
+            beq         @all
+            dex
+            beq         @find
+            tax                                             ; (count: one more, if it's T)
+            beq         @next
+            clc
+            lda         ev_w
+            adc         #2
+            sta         ev_w
+            bcc         @next
+            inc         ev_w + 1
+            bra         @next
+@filter:
+            tay                                             ; (The item, if it's T)
+            beq         @next
+            MOVR        ev_v, ev_t
+@add:
+            ldx         #ev_w - ev_x
+            jsr         ev_append_x
+            jcs         ev_no_room
+            bra         @next
+@fold:
+            MOVR        ev_w, ev_v
+            bra         @next
+@any:
+            tay
+            beq         @next
+            LDR         ev_v, T_VAL
+            jmp         ev_return
+@all:
+            tay
+            bne         @next
+            jmp         ev_return
+@find:
+            tay
+            beq         @next
+            MOVR        ev_v, ev_t
+            jmp         ev_return
+@next:
+            jmp         fold_next
+
+; The items done: map's or filter's list, foldl's or foldr's value, count's count; any? NIL, all? T, find NIL
+fold_end:
+            lda         ev_c
+            cmp         #FD_FOLDL
+            bcs         :+
+            MOVR        h_v, ev_w
+            lda         #OT_QEXPR
+            jsr         make_list
+            jcs         ev_no_room
+            MOVR        ev_v, h_v
+            jmp         ev_return
+:
+            cmp         #FD_ANY
+            bcc         @value
+            cmp         #FD_COUNT
+            beq         @value
+            LDR         ev_v, NIL
+            cmp         #FD_ALL
+            bne         :+
+            LDR         ev_v, T_VAL
+:
+            jmp         ev_return
+@value:
+            MOVR        ev_v, ev_w
+            jmp         ev_return
+
 ev_interrupted:
             LDR         r0, es_interrupted
             jsr         error_text
-            bcs         ev_no_room
+            jcs         ev_no_room
             jsr         deref
             ldy         #4
             lda         atom_intr
@@ -1735,7 +2310,7 @@ k_iter2:
             lsr
             bcs         @go
             MOVR        h_v, ev_s
-            FARN        3, num_trunc
+            FARX        lib_num, num_trunc
             MOVR        ev_s, h_v
 @go:
             LDR         ev_t, 1                             ; (The place: 0, a fixnum)
@@ -1824,7 +2399,7 @@ iter_next:
 @big:
             MOVR        nx, ev_t                            ; (Past fixnums: numbers.inc's order and sum)
             MOVR        h_v, ev_s
-            FARN        3, num_cmp
+            FARX        lib_num, num_cmp
             cmp         #$FF
             bne         @end
             MOVR        ev_v, ev_t
@@ -1832,7 +2407,7 @@ iter_next:
             MOVR        nx, ev_t
             LDR         h_v, 3
             lda         #NO_ADD
-            FARN        3, num_op
+            FARX        lib_num, num_op
             MOVR        ev_t, h_v
             jmp         @apply
 @end:
@@ -2013,7 +2588,7 @@ k_space:
             jmp         ev_return
 :
             MOVR        h_v, ev_v                           ; (A number: its sign, ev_i: $FF, 0, 1, numbers.inc's)
-            FARN        3, num_sign_of
+            FARX        lib_num, num_sign_of
             bcc         :+
             LDR         r0, es_space_num
             jmp         sf_error
@@ -2121,8 +2696,10 @@ space_test:
 .rodata
 k_lo:       .lobytes    k_done, k_head, k_arg, k_if, k_do, k_and, k_or, k_letb, k_lets, k_letr, k_try, k_tryh, k_eval
             .lobytes    k_exit, k_defn, k_def, k_whilet, k_whileb, k_iter1, k_iter2, k_iter, k_run, k_output, k_space
+            .lobytes    k_fold
 k_hi:       .hibytes    k_done, k_head, k_arg, k_if, k_do, k_and, k_or, k_letb, k_lets, k_letr, k_try, k_tryh, k_eval
             .hibytes    k_exit, k_defn, k_def, k_whilet, k_whileb, k_iter1, k_iter2, k_iter, k_run, k_output, k_space
+            .hibytes    k_fold
 
 ; Each type's name (TY_*), as danlang's messages have it (LVal.LEName)
 ty_name_lo: .lobytes    es_ty_num, es_ty_qexpr, es_ty_unknown, es_ty_unknown, es_ty_fun, es_ty_char, es_ty_str
@@ -2152,6 +2729,11 @@ es_amp_code: .byte      5, "&code"
 es_intr:    .byte       4, "intr"
 es_no_room: .byte       "No room", 0
 es_nested:  .byte       "Too deep: native code's evaluations nested", 0
+es_fn_takes: .byte      "The function takes ", 0
+es_fold_list: .byte     "Expects a function and a list", 0
+es_fold_fn: .byte       "Expects a function first", 0
+es_argument: .byte      " argument", 0
+es_not:     .byte       ", not ", 0
 es_deep:    .byte       "Too deep: calls nested", 0
 es_interrupted: .byte   "interrupted", 0
 es_not_fn1: .byte       "S-Expression starts with incorrect type. Got ", 0

@@ -27,7 +27,7 @@ bs_from:    .res        1                                   ; The digits: their 
 bs_k:       .res        1                                   ;   the digits after a . ...
 bs_pt:      .res        1                                   ;   not 0: a . seen
 bs_spec_n:  .res        1                                   ; num_to_base's base: its text's length
-.segment "CODE3"
+.segment "NUMCODE"
 
 ; ---- Reading
 
@@ -837,7 +837,7 @@ bs_write:
 @done:
             rts
 
-.segment "RODATA3"
+.segment "NUMDATA"
 ; The named bases (danlang's): each its letter, its flags, its digits' count and where they are
 BS_NAMED        = 19
 bs_named:
@@ -890,4 +890,4 @@ bs_y:       .byte       "zyxwvutsrqponmlkjihgfedcba0ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 bs_std:     .byte       "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-=+`~!@#$%^&*,;:|?"
 nm_complex_base: .byte  "A complex number has no form in another base", 0
 nm_bad_base: .byte      "Invalid base specifier ", 0
-.segment "CODE3"
+.segment "NUMCODE"

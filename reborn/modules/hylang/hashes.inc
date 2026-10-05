@@ -30,7 +30,7 @@ hs_x:       .res        2                                   ;   and its entry
 hs_n:       .res        1                                   ; A count, or a reserved tag (TG_*)
 hs_ty:      .res        1                                   ; A key's type (hs_key_eq's)
 hs_depth:   .res        1                                   ; hs_clone's, hs_to_list's: hashes nested
-.segment "CODE4"
+.segment "STRCODE"
 
 ; The reserved tags and &0.  OUT: C = 1, no room
 hash_init:
@@ -147,7 +147,7 @@ hs_key_eq:
             bne         @no
             MOVR        nx, hs_t                            ; (Numbers: by value)
             MOVR        h_v, hs_k
-            FARN        3, num_cmp
+            FARX        lib_num, num_cmp
             bra         @same
 @string:
             MOVR        fl_b, hs_k                          ; (Strings: by text)
@@ -1660,7 +1660,7 @@ eq_entries:
             clc
             rts
 
-.segment "RODATA4"
+.segment "STRDATA"
 hs_tag_lo:  .lobytes    hn_locked, hn_ro, hn_priv, hn_notnil
 hs_tag_hi:  .hibytes    hn_locked, hn_ro, hn_priv, hn_notnil
 hn_locked:  .byte       8, "__locked"
@@ -1692,4 +1692,4 @@ hm_remove_ro: .byte     "hash-remove error: cannot modify read-only hash", 0
 hm_remove_private: .byte "hash-remove error: cannot access private hash entry", 0
 hm_remove_locked: .byte "hash-remove error: cannot remove an entry from a locked hash", 0
 hm_deep:    .byte       "Hashes nested too deeply", 0
-.segment "CODE4"
+.segment "STRCODE"

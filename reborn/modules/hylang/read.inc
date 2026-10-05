@@ -536,7 +536,7 @@ rd_number:
 @parse:
             LDR         r0, tok
             ldy         tok_n
-            FARN        3, num_parse
+            FARX        lib_num, num_parse
             rts
 
 ; The token \name: a character, by its name (rd_charnames: in either case, a - in it skipped), or as itself (its

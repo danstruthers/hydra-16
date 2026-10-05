@@ -704,7 +704,7 @@ module.exports = {
           'ā(error "x" :e)\r' + 'ā(def {f} (fn {} {f}))\r' + 'ā(f)\rĀĀ\u0003' + 'ĀĀ\u0003' + 'āexit\r' + 'āhylang\r' + 'ā(exit 3)\r' + 'āecho $status\r' };
       },
       expect: ['FAIL types.dl: (type-of stdout) gave :error, not :stream\n' +
-        '574 checks, 1 failed\n=> NIL\n', 'hylang> + 1 2\n=> 3\nhylang> (list 1\n\t<   2 """a\n\t< b""")\n=> {1 2 "a\\nb"}\n' +
+        '612 checks, 1 failed\n=> NIL\n', 'hylang> + 1 2\n=> 3\nhylang> (list 1\n\t<   2 """a\n\t< b""")\n=> {1 2 "a\\nb"}\n' +
         'hylang> (error "x" :e)\n=> Error: x\nhylang> (def {f} (fn {} {f}))\n=> NIL\nhylang> (f)\n=> Error: interrupted\nhylang> \nhylang> exit\n=> exit\n\n' +
         '% hylang\nhylang (danlang on the Hydra-16), exit to end\nhylang> (exit 3)\n% echo $status\n3\n%'],
     },
