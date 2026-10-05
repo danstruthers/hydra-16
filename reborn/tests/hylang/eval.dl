@@ -14,6 +14,13 @@
 (check (function? ev-sq) T)
 (check ((fn {} {42})) 42)
 (check-error (fun {} {1}))
+; a function's formals are a list of symbols, its body a list: checked as it's made
+(check-error (fn {1} {1}) "'fn' expects a list of symbols first")
+(check-error (fn 5 {1}) "'fn' expects a list of symbols first")
+(check-error (fn {x} 1) "'fn' expects a QExpr body")
+(check-error (fexpr {"x"} {1}) "'fexpr' expects a list of symbols first")
+(check-error (fun {f x} 1) "'fun' expects a QExpr body")
+(check (repr (fn {} {})) "<function>(fn NIL NIL)")
 
 ; partial application
 (def {ev-add3} (fn {a b c} {+ a b c}))

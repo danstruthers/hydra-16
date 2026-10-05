@@ -630,9 +630,19 @@ blob_data:
 :
             rts
 
-; IN: hq = bytes in the task's RAM, hn = how many.  OUT: hv = a string of them; C = 1 and .A = E_NOMEM if there's
-; no room.  It may collect
+; IN: hq = bytes in the task's RAM (or the caller's bank), hn = how many.  OUT: hv = a string of them; C = 1 and
+; .A = E_NOMEM if there's no room.  It may collect
 string_make:
+            jsr         string_alloc
+            bcs         @rts
+            jsr         copy_in
+            clc
+@rts:
+            rts
+
+; IN: hn = a length.  OUT: hv = a string of that many bytes, not set yet: hp their address, in the window; C = 1 and
+; .A = E_NOMEM if there's no room.  It may collect
+string_alloc:
             lda         #PK_STRING
             jsr         cell_alloc
             bcs         @rts
@@ -655,16 +665,19 @@ string_make:
             lda         hb                                  ; (Its bytes)
             ldx         hb + 1
             jsr         blob_data
-            jsr         copy_in
             clc
 @rts:
             rts
 
-; IN: hq = a message's bytes in the task's RAM, hn = how many.  OUT: hv = an error of it (its code NIL); C = 1 and
-; .A = E_NOMEM if there's no room.  It may collect
+; IN: hq = a message's bytes in the task's RAM (or the caller's bank), hn = how many.  OUT: hv = an error of it (its
+; code NIL); C = 1 and .A = E_NOMEM if there's no room.  It may collect
 error_make:
             jsr         string_make
-            bcs         @rts
+            bcc         error_wrap
+            rts
+; IN: hv = a string.  OUT: hv = an error, the string its message (its code NIL); C = 1 and .A = E_NOMEM if there's
+; no room.  It may collect
+error_wrap:
             lda         hv                                  ; (The message kept while the error's made)
             ldx         hv + 1
             jsr         root_push
@@ -672,16 +685,16 @@ error_make:
             lda         #PK_ERROR
             jsr         cell_alloc
             jsr         root_pop                            ; (Keeps C)
-            bcs         @rts
+            bcs         @nomem
             sta         (hp)                                ; (Its message)
             txa
             ldy         #1
             sta         (hp),y
             clc
-@rts:
             rts
 @nomem:
             lda         #E_NOMEM
+            sec
             rts
 
 ; hn bytes from hq (the task's RAM) to hp (the window).  Keeps hq, hp, hn
@@ -1590,7 +1603,7 @@ kd_size:    .byte       0, 0, 0                             ; (PK_NONE, PK_IMM, 
 kd_raw:     .byte       0, 0, 0
             .byte       %0000, %0000, %0000, %0011, %0011, %0000, %0000, %0000, %0000
             .byte       %0000, %1001, %1001, %1000, %1101, %1111
-            .byte       %0010, %0010, %0010, %0010
+            .byte       %0000, %0000, %0000, %0000
 kd_blob:    .byte       $FF, $FF, $FF
             .byte       $FF, $FF, $FF, 1, 1, $FF, $FF, $FF, $FF
             .byte       $FF, 0, 0, $FF, 0, 2

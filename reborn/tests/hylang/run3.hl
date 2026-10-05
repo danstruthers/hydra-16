@@ -1,0 +1,15 @@
+; run3.hl - hylang's own: the suite's files phase 3 runs (eval.dl's numbers past a fixnum made smaller: the test's
+; card does that), as run.dl runs them: each file's checks in turn (a file that stops with an error counts as a
+; failure); then a tail loop of 50,000 steps (its counts fixnums), and the count
+(load "prelude.hl")
+(load "harness.dl")
+(each {f {"eval" "scope" "control" "errors"}}
+  (def {test-file} f)
+  (try (load (+ f ".dl"))
+    (do
+      (def {test-fails} (+ test-fails 1))
+      (print (format "FAIL {}: stopped: {}" f &err)))))
+(fun {run3-tail n m} ?{(zero? n) ?((zero? m) :done (run3-tail 10000 (- m 1))) (run3-tail (- n 1) m)})
+(def {test-file} "run3")
+(check (run3-tail 10000 4) :done)
+(print (format "{} checks, {} failed" test-count test-fails))
