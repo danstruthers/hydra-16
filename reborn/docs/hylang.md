@@ -115,30 +115,36 @@ Ctrl-C at the prompt stops what's running and the prompt comes back.
 
 The plan has it whole; in short:
 
-* **Values** are 16-bit words: a fixnum (15 bits, bit 0 set), a reference to a 4-byte cell (its own address: bits
-  15-13 a bank of 8, bits 12-0 the offset in the `$8000` window), or an immediate (a character, a built-in, T).  NIL
-  is cell 0.  Lists, strings and numbers are immutable and shared, never copied; hashes, streams and scopes change.
-* **Memory**: each 256-byte page of the cell heap holds one kind of cell (a 256-byte table in the task's RAM gives a
-  value's type); a list is its first cons, its page saying code or data; strings, bignums and hash tables are blobs
-  in banks of their own, each owned by one cell; symbols are interned and hold their global value; a scope is a
-  frame, its symbol-value pairs side by side.  Mark and sweep (marking by pointer reversal, a free list per page
-  kind), and a collection while the prompt waits too.  Banks are taken as they're needed (up to 8 for cells, 16 for
-  blobs, 4 for the stack).
+* **Values** are 16-bit words: a fixnum (15 bits, bit 0 set), or a reference (bit 0 clear) counting 2-byte units:
+  bits 15-12 one of 16 banks, bits 11-0 times 2 the place in the `$8000` window, so the cell heap is 128K (16,384
+  conses would have been too few: `globals.dl`, `dice.dl` and `harn.dl` take 7,300 cells once read).  Below `$0600`
+  a reference is an immediate (NIL `$0000`, T, (), exit, the characters, the built-ins).  Lists, strings and numbers
+  are immutable and shared, never copied; hashes, streams and scopes change.
+* **Memory** (`modules/hylang/heap.inc`, in the task's RAM): each 512-byte page of the cell heap holds one kind of
+  cell (a 256-byte table gives a value's type); a list is its first cons, its page saying code or data; strings,
+  bignums, symbols' names and hash tables are blobs in banks of their own, each owned by one cell; symbols are
+  interned and hold their global value; a scope is a frame, its symbol-value pairs side by side.  Mark and sweep: a
+  mark stack of 255 (a list's spine followed in place, so it costs none), every marked cell scanned again if it
+  fills; a free list per kind; the blobs nothing owns dropped and the rest slid down.  Banks are taken as they're
+  needed (up to 16 for cells, 16 for blobs, 4 for the stack), and a collection while the prompt waits too.
 * **The evaluator** is a loop over a stack of frames (8K in the task's RAM, spilled to banks), never the 65C02's
   stack: tail calls take no frame; an ordinary built-in gets its arguments' values from it; `map`, `filter`, the
   folds and the loops are frames too, so what they call nests like any call and Ctrl-C stops it.
 * **The module**: the core (all of danlang) is one program of four banks: the evaluator, heap and dispatch in the
   first, with the hot built-ins; the reader, printer and list built-ins; the numbers; strings, hashes, streams and
   the system.  The Hydra layers are library modules beside it.
-* **Budgets** (at 3.58 MHz, to confirm in phase 1): a parameter looked up in 150 cycles, a call of two arguments in
-  1,500, a tail loop's step in 3,000 (the first hylang's: 10,600), a full collection in 1.5 M.
+* **Budgets** (at 3.58 MHz): a parameter looked up in 150 cycles, a call of two arguments in 1,500, a tail loop's
+  step in 3,000 (the first hylang's: 10,600).  Measured in phase 1 (the heap test): a cons made and listed in 460
+  cycles (its fixnum made, its words set), a collection 212 cycles a live cell (9,000 live: 1.9 M, 0.5 s).
 
 ## The phases (phase 7, again)
 
 0. **The spec**: danlang's fixes, its rules made one, its reference (`reference.md`), its cleanup; the old hylang
    deleted; the suite copied here.  Done.
 1. **The runtime**: the module's four banks, the memory map, the cell and blob heaps, symbols, fixnums, the collector;
-   a measure of 16-bit values against real programs.
+   a measure of 16-bit values against real programs.  Done: `modules/hylang` (a program of four banks, as yet its
+   heap made and each bank answering), `heap.inc`, and the heap test (`tests/mod/t_heap`: a million cells made and
+   dropped with none lost, the heap grown to 16 banks and E_NOMEM).
 2. **Reader, printer and REPL**.
 3. **The evaluator**: frames, scopes, the special forms, tail calls, partial application, errors, Ctrl-C.
 4. **Built-ins and lists**, and the library's built-ins.

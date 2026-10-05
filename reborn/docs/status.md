@@ -82,6 +82,7 @@ PASS mem     memory: BREAK, pages, banks, a shared segment between tasks (and kc
 PASS banks   a module of two banks: calls between them (FAR2, FAR1), registers and C, each bank's data  (6 checks)
 PASS banks3  a module of three banks: calls from any bank to any (FARN), registers and C, each bank's data, each bank set again  (7 checks)
 PASS scall   spike S3: calls into a driver's task, its errors, a busy driver, the round trip  (12 checks)
+PASS heap    hylang's runtime (modules/hylang/heap.inc, phase 1): values and fixnums, cells, symbols and atoms, strings; the collector (a list kept while garbage is taken back, a structure deeper than the mark stack, blobs dropped and the rest moved down); the heap growing, a million cells made and dropped with none lost, and its end (E_NOMEM)  (46 checks)
 PASS kcopy   spike S2: copying between tasks  (6 checks)
 PASS irq     spike S1: 115200 received by an irq entry while tasks spin  (6 checks)
 ```
@@ -260,6 +261,21 @@ the Hydra layers.  Phase 0, the spec, is done: in danlang, its fixes, its rules 
 callable hashes, one argument convention, its cleanup, and `reference.md`; here, the suite copied to `tests/hylang`
 (1,155 checks).  The steps below are the first hylang's, kept as its record and for what they measured.
 
+**Phase 1, the runtime: done.**  `modules/hylang`, a program of four banks (as yet its heap made and each bank
+answering a far call; not in the ROM till it has a REPL), and `heap.inc`, its values, heap and collector, in the
+task's RAM (2.6K of code, 7K of tables).  Measured first: danlang's library and `harn.dl` take 7,300 cells once
+read, 45% of a 64K heap of 4-byte cells, so a reference counts 2-byte units (bits 15-12 a bank, bits 11-0 times 2
+its place): a 128K cell heap of 16 banks, values still 16 bits, a deref one shift dearer.  A 512-byte page holds
+one kind of cell (22 kinds, of 4 to 64 bytes, each word a value but those its kind says aren't); a free list a
+kind, filled a page at a time; blobs (strings' bytes, symbols' names, bignums, tables) in banks of their own, each
+owned by one cell; symbols and atoms interned (256 buckets).  The collector: a mark bit for each 4 bytes (4K,
+aligned so a mark is a table read and an OR), a mark stack of 255 (a list's spine followed in place; a full stack
+rescanned), the sweep by mark bytes (8 live conses skipped at a time), the blobs compacted, the owners' references
+moved with them.  Banks are taken as they're needed: a page, then a collection, then a bank (or one more after a
+collection that leaves less than a quarter free).  Measured: a cons made and listed in 460 cycles; a collection 212
+cycles a live cell with 9,000 live (it was 507 before the collector's ways for two-value cells, aligned marks and
+the sweep by bytes).  The heap test (46 checks) makes and drops a million cells with none lost.
+
 | Step | | Notes |
 |---|---|---|
 | 7.0 The language's specification | Draft (three decisions are the user's) | `docs/hylang.md`: hylang 1 is danlang (`C:\source\danlang`, its `master`), readied for the port in C# first (lexical scope, tail calls, fexprs, `try`, loops, the missing basics, its number bugs fixed, and a system library a PC has too: files, programs and the shell, the environment, the clock, bits and bytes, the system's errors as codes), with its regression suite (965 checks) run unchanged on both; where the two may differ (8-bit strings, the call depth, `/lib/hylang`, Ctrl-C an error); and what makes it the Hydra's, in four layers: the system library, the Hydra's built-ins (notes, namespaces, tasks, memory and banks, keys), device libraries in hylang over the devices' files (console, GPIO, I2C, SPI, sound, disks, `/proc`, the clock's chip, `/pc`), and a `sys-` function for every call.  To decide: the extension (`.hl`), `$`, danlang's license in the ROM |
@@ -275,8 +291,8 @@ callable hashes, one argument convention, its cleanup, and `reference.md`; here,
 
 1. Phase 7, hylang, started again: phase 0 (the spec) is done, in danlang (its fixes, rules, new shorthand, bytes,
    callable hashes, one argument convention, `reference.md`) and here (the first hylang deleted, the suite in
-   `tests/hylang`, `docs/hylang.md` rewritten).  Next: phase 1, the runtime (the module's four banks, the cell and
-   blob heaps, symbols, fixnums, the collector), and a measure of 16-bit values against real programs.  The parity
+   `tests/hylang`, `docs/hylang.md` rewritten), and so is phase 1, the runtime (`heap.inc`: a 128K cell heap,
+   blobs, symbols, the collector).  Next: phase 2, the reader, the printer and the REPL.  The parity
    checkpoint (the plan's, after phase 5) is still the user's.  `/proc/N/fd` is still to come (a channel keeps no
    name to show).
 2. rc's note handler is in its first bank's code: a note taken while rc runs its second bank (parsing a line) would
