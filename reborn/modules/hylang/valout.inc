@@ -130,14 +130,8 @@ bo_to_str:
             lda         cn
             cmp         #2
             bcc         bo_display
-            lda         ex                                  ; (A base: only a number's)
-            lsr
-            bcs         :+
-            LDAX        s_otostr
-            jmp         l_error
-:
-            LDAX        s_otobase
-            jmp         l_error
+            FARN        3, n_to_str2                        ; (A number in a base: numbi.inc's)
+            rts
 
 ; (format text x...): the text with each {} the next value, as print shows it ({{ and }}: a brace)
 bo_format:
@@ -646,8 +640,6 @@ o_gensym:   .res        2                                   ; (gensym's count)
 .segment "RODATA2"
 n_substring: .byte      "substring", 0
 o_nilname:  .byte       "nil"
-s_otostr:   .byte       "Only a Number has a base for 'to-str'", 0
-s_otobase:  .byte       "Not yet: 'to-str' with a base (phase 5)", 0
 s_oformat:  .byte       "'format' expects a String", 0
 s_ofew:     .byte       "'format' has too few arguments for its {}s", 0
 s_omany:    .byte       "'format' has more arguments than {}s", 0

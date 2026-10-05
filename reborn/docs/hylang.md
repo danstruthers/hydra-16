@@ -17,7 +17,7 @@ seven prefixes (`?` if, `=` set, `:` def, `#` hash-create, `@` fn, `.` unpack, `
 key up (`(h :k)`, a method `(obj :add 3)`); extra arguments are `&1`, `&2` ... past the formals; `$name` is the
 environment's variable; every ordinary built-in gets its arguments' values, the first error stopping it.
 
-**The conformance suite is danlang's regression suite**, `tests/regress/` (1,182 checks), copied to `tests/hylang`
+**The conformance suite is danlang's regression suite**, `tests/regress/` (1,188 checks), copied to `tests/hylang`
 (its README says which phase runs which file).  It's written in danlang, so hylang runs it unchanged, from an
 emulated card (`hylang run.dl`, status 0 when every check passes).  A change to the language is made in danlang
 first, with its checks, then in hylang.  What only the Hydra has is checked by a file of its own, `hydra.dl`.
@@ -26,8 +26,8 @@ first, with its checks, then in hylang.  What only the Hydra has is checked by a
 
 | Area | hylang | Why |
 | :--- | :----- | :-- |
-| **Integers** | Up to 255 bytes (about 614 digits; danlang's have no limit); 15 bits in the value, an object past that | Most numbers are small; the rest costs only when used |
-| **Reading** | 255 brackets open at once; a name of 255 bytes at most; a word or an expression typed at the REPL of 4,096 bytes at most; a value printed 255 lists deep (deeper: `...`) | The reader's and the printer's stacks, in the task's RAM |
+| **Integers** | Up to 255 bytes (about 614 digits; danlang's have no limit), each step of working one out too (a product, a rational's parts); past that, the error `Too big: an integer past 255 bytes`; 15 bits in the value, an object past that | Most numbers are small; the rest costs only when used |
+| **Reading** | 255 brackets open at once; a name or a number of 255 bytes at most; a word or an expression typed at the REPL of 4,096 bytes at most; a value printed 255 lists deep (deeper: `...`) | The reader's and the printer's stacks, in the task's RAM |
 | **Strings made** | 8,184 bytes at most for one string made by `+`, `format`, `repr`, `output-of` ... (those it's made in, nested, together) | A capture bank, and a blob's most |
 | **Call depth** | 2,500 frames nested, about as many calls not in tail position (danlang 10,000); deeper is danlang's error, `Too deep: more than 2500 calls nested` | The evaluation stack: 6K in the task's RAM, spilled to 4 banks (32K) |
 | **`range`, strings, lists** | As memory allows (danlang caps `range` at 1,000,000) | Memory |
@@ -143,18 +143,26 @@ The plan has it whole; in short:
   `map`, `filter`, the folds, `any?`, `all?`, `find`, `count`, `sum`, `product` (one walk over a list, its frame
   kept on the stack as it goes), `sort` (a merge sort, its runs relinked, its state its frame; `less` called
   through the machine) and the loops are frames too, so what they call nests like any call and Ctrl-C stops it.
-  An error passes
-  every frame that doesn't take one (`try`'s, a built-in's that takes errors).  A scope is a frame cell of
-  name-value pairs; a symbol never bound in one is looked up at its global value at once.  A Q-expression
-  evaluated, and an fexpr's argument, remember their scope (a scoped cell).  `load` reads a file an item at a time,
-  the reader's text refilled from it, and seeks it back if a nested `load` used the text meanwhile.
+  An error passes every frame that doesn't take one (`try`'s, a built-in's that takes errors).  A scope is a
+  frame cell of name-value pairs; a symbol never bound in one is looked up at its global value at once.  A
+  Q-expression evaluated, and an fexpr's argument, remember their scope (a scoped cell).  `load` reads a file an
+  item at a time, the reader's text refilled from it, and seeks it back if a nested `load` used the text
+  meanwhile.
 * **Built-ins**: a table of all danlang's (its arity, flags, the bank its code is in), so partial application, too
   many arguments and taking errors are the dispatcher's; those a later phase writes answer `Not yet: 'name'`.
   Strings are made by capturing output (a bank of its own), as danlang's `StringBuilder`.
+* **Numbers** (`numreg.inc`, `numval.inc`, `numtext.inc`, `numbi.inc`, `numbits.inc`, in the third bank): an integer
+  is a fixnum, or a bignum (its sign and length in its cell, its bytes in a blob, least first); a fixed decimal its
+  digits and places, a rational its numerator and denominator (in lowest terms), a complex number its real parts.
+  Integers are worked in registers, pages of the reader's scratch, so a sum or a product of bignums makes nothing
+  on the heap till its value is made; a real number is worked there as a fraction, n/d, then made the kind
+  danlang's rules give; a complex number by its parts, on the root stack.  Each entry to the number code sets an
+  abort point, which a result too big goes back to from however deep.  The reader gives each word that starts
+  like a number to danlang's grammar, whole (every base: digits of its own, balanced, negative, least digit
+  first); `+`, `-` and `*` keep a fixnum's quick way.
 * **The module**: the core (all of danlang) is one program of four banks: the evaluator, its special forms, the
   dispatch and the built-ins that run the machine in the first; the reader, the printer, the list built-ins,
-  equality and order in the second; the numbers (and, as yet, `fn`, the type tests, `error` and `random`) in the
-  third; strings, hashes, streams, the system and the errors' messages in the fourth.  What every bank calls is in
+  equality and order in the second; the numbers (and, as yet, `fn`, the type tests and `error`) in the third; strings, hashes, streams, the system and the errors' messages in the fourth.  What every bank calls is in
   the task's RAM (the heap, the output, the evaluation stack): the most of that code is kept in the fourth bank
   and copied to the RAM as hylang starts (`hylang.cfg`'s DATA4), so the first bank's room is the evaluator's.
   The Hydra layers are library modules beside it.
@@ -188,7 +196,13 @@ The plan has it whole; in short:
    `library.dl` pass but for their checks of phase 5's numbers (and of a hash and a stream), with danlang's
    library loaded from a card's `/lib/hylang` (`globals.dl` but its constants, `dice.dl`, `screen.dl`): 510 checks
    with phase 3's files (the `hysuite` test).
-5. **Numbers**: bignums, the tower, every base.
+5. **Numbers**: bignums, the tower, every base.  Done: danlang first (`to-rational` and a fraction in a base other
+   than 10 give an integer when it's whole; the bit, byte and path built-ins' argument errors keep their own
+   messages, code `:inval`; 1,188 checks); `numreg.inc` (integers in registers), `numval.inc` (the tower),
+   `numtext.inc` (written, read in danlang's grammar, written in a base), `numbi.inc` (the arithmetic and
+   conversions, `fib`, `random`), `numbits.inc` (bits and bytes).  `numbers.dl` passes, `bits.dl` but for its
+   streams (phase 7), and `eval.dl` and `library.dl` whole: 738 checks with the rest so far (the `hysuite` test);
+   and 2,100 random expressions and number texts give the same in danlang and hylang.
 6. **Strings, characters and hashes**.
 7. **Streams, I/O and the system library**.
 8. **The library** (`globals.hl`, `dice.hl`, `screen.hl`), tuning to the budgets, the ROM.

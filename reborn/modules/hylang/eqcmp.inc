@@ -214,13 +214,29 @@ q_same:
             cmp         #QK_SLIST
             beq         @list
             cmp         #QK_STRING
-            beq         @string
+            bne         @lb205
+            jmp         @string
+@lb205:
             cmp         #QK_ERROR
-            beq         @error
+            bne         @lb204
+            jmp         @error
+@lb204:
             cmp         #QK_FUNCTION
             bne         @lb26
             jmp         @function
 @lb26:
+            cmp         #QK_NUMBER
+            bne         @no
+            lda         q_a                                 ; (Two numbers: by value, but two fixnums
+            and         q_b                                 ;   aren't the same value)
+            lsr
+            bcs         @no
+            FARN        3, n_qcmp
+            lda         q_r
+            bne         @no
+            sec
+            clv
+            rts
 @no:
             clc                                             ; (Anything else: equal only if it's the same value)
             rts
@@ -707,7 +723,7 @@ q_compare:
             bra         @more
 @kind:
             cmp         #QK_NUMBER
-            beq         @number
+            beq         @numval
             cmp         #QK_CHAR
             beq         @number                             ; (A character's value: its code, in order too)
             cmp         #QK_STRING
@@ -723,7 +739,9 @@ q_compare:
             cmp         #QK_ERROR
             beq         @error
             cmp         #QK_FUNCTION
-            beq         @function
+            bne         @lb203
+            jmp         @function
+@lb203:
             rts                                             ; (T, and the rest: the same)
 @less:
             lda         #$FF
@@ -732,6 +750,13 @@ q_compare:
 @more:
             lda         #1
             sta         q_r
+            rts
+@numval:
+            lda         q_a                                 ; (Two numbers: fixnums here, else numval.inc's)
+            and         q_b
+            lsr
+            bcs         @number
+            FARN        3, n_qcmp
             rts
 @number:
             lda         q_a                                 ; (Signed, the values' order: a fixnum's or a character's)

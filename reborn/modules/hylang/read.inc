@@ -8,7 +8,7 @@
 ; is built in order), each item made as it's read and put at the end of its level's list.  The first error ends it
 ; (as the first token in error is danlang's), made an error value; the text's end with a bracket open, or in a here
 ; string, asks for more (RD_MORE, the closers wanted as danlang's REPL shows them), and the REPL reads it all again
-; with its next line.  Numbers, as yet, are the decimal integers a fixnum holds (the rest: phase 5).
+; with its next line.  A number's word is read by numtext.inc's num_parse (phase 5).
 ;   What it makes may collect: an item is in VR0 till it's in its list, and the levels' lists are marked (rd_roots,
 ; gc_hook's).  An error, however deep, goes back to read_text's caller through the stack read_text began with.
 
@@ -27,11 +27,11 @@ re:         .res        2                                   ;   the text's end (
 rw:         .res        2                                   ;   a word's first byte, and its length ...
 rn:         .res        2
 rs:         .res        2                                   ;   where a string's next byte goes (in scratch) ...
+
+.bss
 rq:         .res        1                                   ;   a here string's quotes ...
 rd:         .res        1                                   ;   the level it's at (0: the text's own) ...
 rc:         .res        1                                   ;   and a byte (an item's first)
-
-.bss
 text:       .res        TEXT_SIZE + 1                       ; The text (and a 0 after it)
 t_len:      .res        2
 scratch:    .res        SCRATCH_SIZE
@@ -45,11 +45,7 @@ rd_on:      .res        1                                   ; <> 0: a text being
 closers:    .res        256                                 ; The closers wanted (RD_MORE's, an error's): innermost last
 cl_len:     .res        1
 rd_sp:      .res        1                                   ; (The stack as read_text began)
-rd_v:       .res        2                                   ; (A number's value, a digit, its sign, a digit seen, too
-rd_d:       .res        1                                   ;   big; a name's length (char_named's); a word's so far)
-rd_neg:     .res        1
-rd_dig:     .res        1
-rd_big:     .res        1
+rd_d:       .res        1                                   ; (A name's length: char_named's; a word's so far)
 rd_t:       .res        2
 rd_fd:      .res        1                                   ; The source: $FF the text as it is; else a file to refill
 rd_eof:     .res        1                                   ;   it from, at its end?, its bytes read so far ...
@@ -1121,116 +1117,36 @@ rd_atom:
             lda         #PK_ATOM
             jmp         rd_append_name
 
-; A word that starts like a number: as yet, a decimal integer ([+-]?[0-9_]+, a digit in it) that a fixnum holds (one
-; past it: an error till phase 5); any other, a symbol (phase 5: the reference's numbers)
+; A word that starts like a number (a digit, +, - or #): a number if it's one (numtext.inc's num_parse: any of the
+; reference's forms, in any base); a rational of 0 below, an error; any other, a symbol
 rd_number:
             lda         rn + 1
-            beq         :+
-            jmp         rd_symbol
+            bne         rd_symbol
+            lda         rw
+            sta         hq
+            lda         rw + 1
+            sta         hq + 1
+            lda         rn
+            sta         hn
+            FARN        3, num_parse
+            bcc         :+
+            jmp         rd_nomem
 :
-            stz         rd_v
-            stz         rd_v + 1
-            stz         rd_neg
-            stz         rd_dig
-            stz         rd_big
-            ldy         #0
-            lda         (rw)
-            cmp         #'+'
-            beq         @sign
-            cmp         #'-'
-            bne         @digits
-            inc         rd_neg
-@sign:
-            iny
-@digits:
-            cpy         rn
+            lda         n_abt
+            beq         @lb201
+            jmp         rd_e_toobig
+@lb201:
+            lda         n_res
             bne         :+
-            jmp         @end
-:
-            lda         (rw),y
-            iny
-            cmp         #'_'
-            beq         @digits
-            sec
-            sbc         #'0'
-            cmp         #10
-            bcc         :+
-            jmp         rd_symbol
-:
-            sta         rd_d
-            sta         rd_dig
-            inc         rd_dig                              ; (A digit seen: <> 0)
-            lda         rd_big
-            bne         @digits
-            lda         rd_v + 1                            ; (Past 16384 after this digit: too big)
-            cmp         #>1639
-            bcc         @times
-            bne         @big
-            lda         rd_v
-            cmp         #<1639
-            bcs         @big
-@times:
-            asl         rd_v                                ; (Times 10, and the digit)
-            rol         rd_v + 1
-            lda         rd_v
-            sta         rd_t
-            lda         rd_v + 1
-            sta         rd_t + 1
-            asl         rd_v
-            rol         rd_v + 1
-            asl         rd_v
-            rol         rd_v + 1
-            clc
-            lda         rd_v
-            adc         rd_t
-            sta         rd_v
-            lda         rd_v + 1
-            adc         rd_t + 1
-            sta         rd_v + 1
-            clc
-            lda         rd_v
-            adc         rd_d
-            sta         rd_v
-            bcc         :+
-            inc         rd_v + 1
-:
-            lda         rd_v + 1
-            cmp         #>16384
-            bcc         @more
-            bne         @big
-            lda         rd_v
-            bne         @big
-@more:
-            jmp         @digits
-@big:
-            lda         #1
-            sta         rd_big
-            jmp         @digits
-@end:
-            lda         rd_dig
-            beq         @symbol
-            lda         rd_big
-            bne         @bignum
-            lda         rd_neg
-            beq         @make
-            sec
-            lda         #0
-            sbc         rd_v
-            sta         rd_v
-            lda         #0
-            sbc         rd_v + 1
-            sta         rd_v + 1
-@make:
-            lda         rd_v
-            ldx         rd_v + 1
-            jsr         fix_make
-            bcs         @bignum
             jsr         rd_glued
             jmp         rd_append_hv
-@bignum:
-            jmp         rd_e_bignum
-@symbol:
-            jmp         rd_symbol
+:
+            cmp         #NP_DIVZ
+            bne         rd_symbol
+            ldx         #M_DIVZERO                          ; ("Division by zero: 1/0")
+            jsr         msg_n
+            jsr         msg_word
+            jmp         rd_fail
 
 ; A symbol (its name in lower case): T, NIL and exit are theirs
 rd_symbol:
@@ -1353,8 +1269,8 @@ rd_e_quotes:
 rd_e_wordlong:
             ldx         #M_WORDLONG
             bra         rd_fail_m
-rd_e_bignum:
-            ldx         #M_BIGNUM
+rd_e_toobig:
+            ldx         #M_TOOBIG
 rd_fail_m:
             jsr         msg_n
 ; The message (scratch, sc_len bytes) an error: read_text's value
@@ -1651,14 +1567,15 @@ M_QEXPR         = 15
 M_DEEP          = 16
 M_LONG          = 17
 M_QUOTES        = 18
-M_BIGNUM        = 19
+M_TOOBIG        = 19
 M_WORDLONG      = 20
+M_DIVZERO       = 21
 m_lo:       .lobytes    m_control, m_ascii, m_newline, m_incomplete, m_escape, m_hex, m_noname, m_charname
             .lobytes    m_quote, m_touches, m_space, m_dollar, m_env, m_list, m_sexpr, m_qexpr, m_deep, m_long
-            .lobytes    m_quotes, m_bignum, m_wordlong
+            .lobytes    m_quotes, m_toobig, m_wordlong, m_divzero
 m_hi:       .hibytes    m_control, m_ascii, m_newline, m_incomplete, m_escape, m_hex, m_noname, m_charname
             .hibytes    m_quote, m_touches, m_space, m_dollar, m_env, m_list, m_sexpr, m_qexpr, m_deep, m_long
-            .hibytes    m_quotes, m_bignum, m_wordlong
+            .hibytes    m_quotes, m_toobig, m_wordlong, m_divzero
 m_control:  .byte       "Control sequences not allowed", 0
 m_ascii:    .byte       "Non-ASCII character outside of string literal", 0
 m_newline:  .byte       "Newlines are not allowed in regular strings", 0
@@ -1678,5 +1595,6 @@ m_qexpr:    .byte       "Closed a QExpr without opening: ", 0
 m_deep:     .byte       "Too deep: more than 255 brackets open", 0
 m_long:     .byte       "Too long: a name of more than 255 bytes", 0
 m_quotes:   .byte       "Too long: a here string", $27, "s quotes, more than 255", 0
-m_bignum:   .byte       "Not yet: an integer past a fixnum (phase 5)", 0
+m_toobig:   .byte       "Too big: an integer past 255 bytes", 0
 m_wordlong: .byte       "Too long: a word of more than 4096 bytes", 0
+m_divzero:  .byte       "Division by zero: ", 0

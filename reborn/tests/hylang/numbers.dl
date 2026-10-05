@@ -103,6 +103,9 @@
 (to-fixed nb-q 4)
 (check nb-q -1/3)
 (check (to-rational 0.75) 3/4)
+; a rational whose denominator is 1 is an integer
+(check (int? (to-rational 5)) T)
+(check (int? (to-rational 2.0)) T)
 (check (truncate 7/2) 3)
 (check (truncate -7/2) -3)
 (check (truncate 2.75) 2)
@@ -145,6 +148,8 @@
 (check (fixed? 1.5) T)
 (check (rational? 1/2) T)
 (check (rational? 1) NIL)
+(check (int? #b1.0) T)
+(check #b1.1 3/2)
 (check (complex? 1) NIL)
 ; anything else isn't one either
 (check (int? "a") NIL)

@@ -83,8 +83,8 @@ PASS banks   a module of two banks: calls between them (FAR2, FAR1), registers a
 PASS banks3  a module of three banks: calls from any bank to any (FARN), registers and C, each bank's data, each bank set again  (7 checks)
 PASS scall   spike S3: calls into a driver's task, its errors, a busy driver, the round trip  (12 checks)
 PASS heap    hylang's runtime (modules/hylang/heap.inc, phase 1): values and fixnums, cells, symbols and atoms, strings; the collector (a list kept while garbage is taken back, a structure deeper than the mark stack, blobs dropped and the rest moved down); the heap growing, a million cells made and dropped with none lost, and its end (E_NOMEM)  (46 checks)
-PASS hylang  hylang's REPL, evaluator and built-ins (phases 3 and 4): the reader's every form (in Q-expressions, printed as they're read) and its errors, an expression over lines, 255 brackets open; lines evaluated: def, fn, fun, recursion 1,000 deep (2,500 the most: deeper, an error), a tail loop, errors, partial application, too many arguments, &_, let, the loops, output-of, try, map, format, + of strings, cmp, closures, fexprs, numbers past a fixnum (phase 5), a built-in not yet made; filter, the folds, any?, all?, find, count, sum, product, sort (by cmp, by a function, its error), subset, index-of, gensym, to-atom, random; Ctrl-C at the prompt and in a loop; (exit 3); stdin a pipe, its end; hylang -g (a collection before every allocation)
-PASS hysuite hylang's suite (phase 4): danlang's eval.dl (its numbers past a fixnum made smaller), scope.dl, control.dl, errors.dl, lists.dl, types.dl and library.dl (their checks of phase 5's numbers, of hashes and of streams left out), with its harness and its library (globals.dl, dice.dl, screen.dl: /lib/hylang's, where load finds a bare name, and use), loaded from a card (load reads a file an item at a time, refilled as it goes; a load nested in another), and a tail loop of 50,000 steps
+PASS hylang  hylang's REPL, evaluator, built-ins and numbers (phases 3, 4 and 5): the reader's every form (in Q-expressions, printed as they're read) and its errors, an expression over lines, 255 brackets open; lines evaluated: def, fn, fun, recursion 1,000 deep (2,500 the most: deeper, an error), a tail loop, errors, partial application, too many arguments, &_, let, the loops, output-of, try, map, format, + of strings, cmp, closures, fexprs, a built-in not yet made; numbers past a fixnum, fractions, fixed decimals and complex numbers, read in bases and written in them, to-fixed, truncate, fib, random, the bits; filter, the folds, any?, all?, find, count, sum, product, sort (by cmp, by a function, its error), subset, index-of, gensym, to-atom, random; Ctrl-C at the prompt and in a loop; (exit 3); stdin a pipe, its end; hylang -g (a collection before every allocation)
+PASS hysuite hylang's suite (phase 5): danlang's eval.dl, scope.dl, control.dl, errors.dl, lists.dl, numbers.dl, types.dl, bits.dl and library.dl (their checks of hashes and streams left out), with its harness and its library (globals.dl, dice.dl, screen.dl: /lib/hylang's, where load finds a bare name, and use), loaded from a card (load reads a file an item at a time, refilled as it goes; a load nested in another), and a tail loop of 50,000 steps
 PASS kcopy   spike S2: copying between tasks  (6 checks)
 PASS irq     spike S1: 115200 received by an irq entry while tasks spin  (6 checks)
 ```
@@ -261,7 +261,7 @@ the hylang, hylibs, hylnum and heap tests; `a0973eb` has them all), and hylang i
 to the plan "danlang: review and 65C02 plan" and `docs/hylang.md`, its phases 0 to 8 reaching danlang parity, then
 the Hydra layers.  Phase 0, the spec, is done: in danlang, its fixes, its rules made one, its new shorthand, bytes,
 callable hashes, one argument convention, its cleanup, and `reference.md`; here, the suite copied to `tests/hylang`
-(1,182 checks).  The steps below are the first hylang's, kept as its record and for what they measured.
+(1,188 checks).  The steps below are the first hylang's, kept as its record and for what they measured.
 
 **Phase 1, the runtime: done.**  `modules/hylang`, a program of four banks (as yet its heap made and each bank
 answering a far call; not in the ROM till it has a REPL), and `heap.inc`, its values, heap and collector, in the
@@ -320,6 +320,22 @@ and a stream, with phase 3's files: 510 checks), and the new built-ins with a co
 Measured, untuned: `map` of `1+` 3,500 cycles an item, of a function 6,000; `sort` of 200 items 1.9 M cycles by `cmp`, 2.9 M
 by `<`.
 
+**Phase 5, the numbers: done.**  danlang first: `to-rational`, and a fraction in a base other than 10 (`#b1.0`),
+gave a rational of denominator 1; an integer now, as the reference's rule has it.  The bit, byte and path built-ins'
+argument errors were .NET's (`1.5: invalid argument`), their own messages now, code `:inval` (1,188 checks).  Then
+the third bank's numbers, as danlang's: integers to 255 bytes, fixed decimals, rationals, complex numbers.
+`numreg.inc`: integers worked in registers (pages of the reader's scratch), their arithmetic, and abort points, so
+a result too big is an error from however deep.  `numval.inc`: the tower, a real number worked as a fraction and
+made the kind the rules give; a complex number by its parts on the root stack.  `numtext.inc`: a number written,
+read (danlang's grammar whole: every base, digits of its own, balanced, negative, least digit first) and written
+in a base.  `numbi.inc`: `+ - * /` (a fixnum's quick way first), `abs`, the conversions, `complex`, `val`, `fib`,
+`random`; `numbits.inc`: the bits and bytes.  The reader, the printer, `eq`, `cmp` and the order, whole-number
+arguments, `range`, `to-str` and `<=>` take every number.  To make room in the zero page for the numbers'
+pointers, five of the reader's and printer's bytes moved to the BSS.  Checked: the `hylang` test, and `hysuite`
+(`numbers.dl`; `bits.dl` but its streams; `eval.dl` and `library.dl` whole: 738 checks), 2,100 random expressions
+and number texts that danlang and hylang work out the same, and 250 of them with a collection before each
+allocation.
+
 | Step | | Notes |
 |---|---|---|
 | 7.0 The language's specification | Draft (three decisions are the user's) | `docs/hylang.md`: hylang 1 is danlang (`C:\source\danlang`, its `master`), readied for the port in C# first (lexical scope, tail calls, fexprs, `try`, loops, the missing basics, its number bugs fixed, and a system library a PC has too: files, programs and the shell, the environment, the clock, bits and bytes, the system's errors as codes), with its regression suite (965 checks) run unchanged on both; where the two may differ (8-bit strings, the call depth, `/lib/hylang`, Ctrl-C an error); and what makes it the Hydra's, in four layers: the system library, the Hydra's built-ins (notes, namespaces, tasks, memory and banks, keys), device libraries in hylang over the devices' files (console, GPIO, I2C, SPI, sound, disks, `/proc`, the clock's chip, `/pc`), and a `sys-` function for every call.  To decide: the extension (`.hl`), `$`, danlang's license in the ROM |
@@ -336,8 +352,8 @@ by `<`.
 1. Phase 7, hylang, started again: phase 0 (the spec) is done, in danlang (its fixes, rules, new shorthand, bytes,
    callable hashes, one argument convention, `reference.md`) and here (the first hylang deleted, the suite in
    `tests/hylang`, `docs/hylang.md` rewritten), and so is phase 1, the runtime (`heap.inc`: a 128K cell heap,
-   blobs, symbols, the collector), phase 2, the reader, the printer and the REPL, phase 3, the evaluator, and phase
-   4, the built-ins and lists.  Next: phase 5, the numbers.
+   blobs, symbols, the collector), phase 2, the reader, the printer and the REPL, phase 3, the evaluator, phase 4,
+   the built-ins and lists, and phase 5, the numbers.  Next: phase 6, strings, characters and hashes.
    The parity
    checkpoint (the plan's, after phase 5) is still the user's.  `/proc/N/fd` is still to come (a channel keeps no
    name to show).

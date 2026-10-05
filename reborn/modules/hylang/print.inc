@@ -12,10 +12,10 @@ PRINT_DEPTH     = 255
 .zeropage
 pv:         .res        2                                   ; The printer's: a value ...
 pn:         .res        2                                   ;   a count ...
-pm:         .res        1                                   ;   the form (0: repr, 1: print's) ...
-pd:         .res        1                                   ;   and the lists open
 
 .bss
+pm:         .res        1                                   ;   the form (0: repr, 1: print's) ...
+pd:         .res        1                                   ;   and the lists open
 ps_lo:      .res        PRINT_DEPTH                         ; Each list open: the cons it's at (its car next) ...
 ps_hi:      .res        PRINT_DEPTH
 ps_close:   .res        PRINT_DEPTH                         ;   its closer ...
@@ -58,11 +58,22 @@ print_val:
             cmp         #PK_ERROR
             beq         @error
             cmp         #PK_FUNC
-            beq         @func
+            bne         @lb202
+            jmp         @func
+@lb202:
             cmp         #PK_PARTIAL
             bne         @lb18
             jmp         @partial
 @lb18:
+            cmp         #PK_BIGNUM                          ; (A number: numtext.inc's)
+            bcc         :+
+            cmp         #PK_COMPLEX + 1
+            bcs         :+
+            lda         pv
+            ldx         pv + 1
+            FARN        3, num_print
+            jmp         @after
+:
             tax                                             ; (The rest, as yet: a placeholder)
             lda         pt_hi,x
             pha

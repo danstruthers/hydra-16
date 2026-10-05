@@ -54,8 +54,8 @@ BIN_ADD         = BI_N          ; (+ and *: sum's and product's)
 BIN_MUL         = BI_N
             BI          "*", 0, ANY, B3, bi_mul
             BI          "/", 0, ANY, B3, bi_div
-            BI          "rational.n", 1, 1, B3, bi_notyet
-            BI          "rational.d", 1, 1, B3, bi_notyet
+            BI          "rational.n", 1, 1, B3, bi_rational_n
+            BI          "rational.d", 1, 1, B3, bi_rational_d
             BI          "random", 1, 1, B3, bi_random
             BI          "and", 0, ANY, BF_SPECIAL, sf_and
             BI          "or", 0, ANY, BF_SPECIAL, sf_or
@@ -110,25 +110,25 @@ BIN_MUL         = BI_N
             BI          "tell", 1, 1, B3, bi_notyet
             BI          "print-to", 1, ANY, BF_ERRORS | B3, bi_notyet
             BI          "write-to", 1, ANY, BF_ERRORS | B3, bi_notyet
-            BI          "val", 1, 1, B3, bi_notyet
-            BI          "to-fixed", 1, 2, B3, bi_notyet
-            BI          "to-rational", 1, 1, B3, bi_notyet
-            BI          "truncate", 1, 1, B3, bi_notyet
-            BI          "complex", 2, 2, B3, bi_notyet
+            BI          "val", 1, 1, B3, bi_val
+            BI          "to-fixed", 1, 2, B3, bi_to_fixed
+            BI          "to-rational", 1, 1, B3, bi_to_rational
+            BI          "truncate", 1, 1, B3, bi_truncate
+            BI          "complex", 2, 2, B3, bi_complex
             BI          "to-str", 1, 2, B2, bo_to_str
             BI          "repr", 1, 1, BF_ERRORS | B2, bo_repr
             BI          "to-sym", 1, 1, B2, bo_to_sym
             BI          "to-atom", 1, 1, B2, bo_to_atom
-            BI          "fib", 1, 1, B3, bi_notyet
+            BI          "fib", 1, 1, B3, bi_fib
             BI          "defined?", 0, 1, BF_SPECIAL, sf_defined
             BI          "type-of", 1, 1, BF_ERRORS | B3, bi_type_of
             BI          "t?", 1, 1, BF_ERRORS | B3, bi_is_t
             BI          "nil?", 1, 1, BF_ERRORS | B3, bi_is_nil
             BI          "num?", 1, 1, BF_ERRORS | B3, bi_is_num
             BI          "fixed?", 1, 1, BF_ERRORS | B3, bi_is_fixed
-            BI          "rational?", 1, 1, BF_ERRORS | B3, bi_is_fixed
+            BI          "rational?", 1, 1, BF_ERRORS | B3, bi_is_rational
             BI          "int?", 1, 1, BF_ERRORS | B3, bi_is_int
-            BI          "complex?", 1, 1, BF_ERRORS | B3, bi_is_fixed
+            BI          "complex?", 1, 1, BF_ERRORS | B3, bi_is_complex
             BI          "atom?", 1, 1, BF_ERRORS | B3, bi_is_atom
             BI          "symbol?", 1, 1, BF_ERRORS | B3, bi_is_symbol
             BI          "string?", 1, 1, BF_ERRORS | B3, bi_is_string
@@ -192,20 +192,20 @@ BIN_MUL         = BI_N
             BI          "ticks", 0, 0, B3, bi_notyet
             BI          "tick-rate", 0, 0, B3, bi_notyet
             BI          "sleep", 1, 1, B3, bi_notyet
-            BI          "bit-and", 1, ANY, B3, bi_notyet
-            BI          "bit-or", 1, ANY, B3, bi_notyet
-            BI          "bit-xor", 1, ANY, B3, bi_notyet
-            BI          "bit-not", 1, 1, B3, bi_notyet
-            BI          "shl", 2, 2, B3, bi_notyet
-            BI          "shr", 2, 2, B3, bi_notyet
-            BI          "bit?", 2, 2, B3, bi_notyet
-            BI          "hex", 1, 2, B3, bi_notyet
-            BI          "bin", 1, 2, B3, bi_notyet
-            BI          "lo", 1, 1, B3, bi_notyet
-            BI          "hi", 1, 1, B3, bi_notyet
-            BI          "word", 2, 2, B3, bi_notyet
-            BI          "bytes", 1, 1, B3, bi_notyet
-            BI          "from-bytes", 1, 1, B3, bi_notyet
+            BI          "bit-and", 1, ANY, B3, bi_bit_and
+            BI          "bit-or", 1, ANY, B3, bi_bit_or
+            BI          "bit-xor", 1, ANY, B3, bi_bit_xor
+            BI          "bit-not", 1, 1, B3, bi_bit_not
+            BI          "shl", 2, 2, B3, bi_shl
+            BI          "shr", 2, 2, B3, bi_shr
+            BI          "bit?", 2, 2, B3, bi_bit_p
+            BI          "hex", 1, 2, B3, bi_hex
+            BI          "bin", 1, 2, B3, bi_bin
+            BI          "lo", 1, 1, B3, bi_lobyte
+            BI          "hi", 1, 1, B3, bi_hibyte
+            BI          "word", 2, 2, B3, bi_word
+            BI          "bytes", 1, 1, B3, bi_bytes
+            BI          "from-bytes", 1, 1, B3, bi_from_bytes
             BI          "read-bytes", 2, 2, B3, bi_notyet
             BI          "write-bytes", 2, 2, B3, bi_notyet
             BI          "platform", 0, 0, B3, bi_notyet

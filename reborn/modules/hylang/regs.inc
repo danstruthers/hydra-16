@@ -14,3 +14,7 @@ argp:       .res        2                                   ;   and, as a built-
 
 q_pa:       .res        2                                   ; (eqcmp.inc's q_strcmp: the strings' bytes)
 q_pb:       .res        2
+na:         .res        2                                   ; (The numbers': registers' bytes, numcore.inc's)
+nb:         .res        2
+nc:         .res        2
+nd:         .res        2

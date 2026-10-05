@@ -170,17 +170,24 @@ l_cdr:
             ply
             rts
 
-; ex, a number that's whole (a fixnum, as yet): l_n its value.  OUT: C = 1 and ex = the error "'fn': what must be a
-; whole number, not x" if it isn't (fn: l_fn, what: .A, .X)
+; ex, a number that's whole (an integer, or a number equal to one: 2.0): l_n its value (past 16 bits, -32768 or
+; 32767).  OUT: C = 1 and ex = the error "'fn': what must be a whole number, not x" if it isn't (fn: l_fn, what: .A, .X)
 l_whole:
             sta         l_what
             stx         l_what + 1
-            lda         ex
+            lda         ex                                  ; (A fixnum here; else numbi.inc's n_whole)
             lsr
-            bcc         @not
+            bcc         @far
             lda         ex
             ldx         ex + 1
             jsr         unfix
+            bra         @whole
+@far:
+            lda         ex
+            ldx         ex + 1
+            FARN        3, n_whole
+            bcs         @not
+@whole:
             sta         l_n
             stx         l_n + 1
             clc
@@ -721,8 +728,8 @@ bl_range:
             LDAX        s_lstep0
             jmp         l_error
 @notnum:
-            LDAX        s_lrange
-            jmp         l_error
+            FARN        3, n_range                          ; (Past fixnums, or not numbers: numbi.inc's)
+            rts
 @made:
             jsr         lb_begin
 @next:
@@ -767,8 +774,8 @@ bl_range:
             tax
             jmp         lb_done
 @past:
-            LDAX        s_lnumpast
-            jmp         l_error
+            FARN        3, n_range
+            rts
 @rts:
             rts
 
@@ -1775,9 +1782,7 @@ s_lwhole:   .byte       "': ", 0
 s_lmustwhole: .byte     " must be a whole number, not ", 0
 s_lnoitem:  .byte       ": the list has no item ", 0
 s_lreverse: .byte       "'reverse' expects a QExpr or a String", 0
-s_lrange:   .byte       "'range' expects Numbers", 0
 s_lstep0:   .byte       "'range' step cannot be 0", 0
-s_lnumpast: .byte       "Not yet: a number past a fixnum, or a fraction (phase 5)", 0
 s_lcons:    .byte       "'cons' expects a list second", 0
 s_lalist:   .byte       " expects a list", 0
 s_lnosuch:  .byte       "'nth': the list has no such item", 0
