@@ -18,22 +18,31 @@ emit_a:
             ply
             rts
 
-; The output written (a failed write: no matter).  Keeps .X, .Y
+; The output written (a failed write: no matter); or, while a word's output is taken (out_hook: the shell's
+; output-of and piped), given to the hook (.A its length, in obuf).  Keeps .X, .Y
 flush:
             lda         olen
             beq         @done
             phy
             stx         xsave
+            ldy         out_hook + 1
+            bne         @hook
             sta         r1
             stz         r1 + 1
             LDR         r0, obuf
             lda         #1
             jsr         WRITE
+@out:
             ldx         xsave
             stz         olen
             ply
 @done:
             rts
+@hook:
+            jsr         @call
+            bra         @out
+@call:
+            jmp         (out_hook)
 
 ; The zero-terminated string at w out.  Keeps .X
 type_z:

@@ -12,7 +12,6 @@
 .bss
 zbufs:      .res        PATH_SIZE * 2                       ; >Z's two buffers, in turn ...
 zbuf_n:     .res        1                                   ;   the one last used
-argbuf:     .res        ARGS_MAX                            ; SH's and RUN's program's arguments
 sys_a:      .res        1                                   ; A sys- word's call: .A, .X and .Y, in and out ...
 sys_x:      .res        1
 sys_y:      .res        1
@@ -281,249 +280,25 @@ ctl:                                                        ; ( c-addr1 u1 c-add
 
             HEADER      "sh", 0
 sh:                                                         ; ( c-addr u -- status ): the command line, as rc runs
-            LDR         w2, argbuf                          ;   one (rc -c: /bin/rc, else the ROM's): its exit code,
-            LDR         p2, argbuf + ARGS_MAX - 2           ;   or its status if that's a number
-            lda         #'-'
-            jsr         arg_put
-            lda         #'c'
-            jsr         arg_put
-            lda         #0
-            jsr         arg_put
-            lda         dlo + 1,x                           ; The line, whole
-            sta         w
-            lda         dhi + 1,x
-            sta         w + 1
-            lda         dlo,x
-            sta         tmp
-            lda         dhi,x
-            sta         tmp + 1
-            inx
-            inx
-:
-            lda         tmp
-            ora         tmp + 1
-            beq         :+
-            lda         (w)
-            jsr         arg_put
-            jsr         arg_next
-            bra         :-
-:
-            lda         #0                                  ; (Its 0, and the empty one after it)
-            sta         (w2)
-            ldy         #1
-            sta         (w2),y
-            LDR         r0, s_binrc
-            jsr         spawn
-            bcs         :+
-            jmp         wait_task
-:
-            cmp         #E_NOENT
-            bne         :+
-            LDR         r0, s_mrc
-            jsr         spawn
-            bcs         :+
-            jmp         wait_task
-:
-            jmp         throw_os
+            jsr         prog_rc                             ;   one (rc -c: /bin/rc, else the ROM's): its exit code,
+            lda         #0                                  ;   or its status if that's a number
+            jsr         rc_spawn
+            bra         ran
 
             HEADER      "run", 0
 run:                                                        ; ( c-addr u -- status ): a program and its arguments,
-            lda         dlo + 1,x                           ;   split at blanks (a name with no / in it is /bin's):
-            sta         w                                   ;   its exit code
-            lda         dhi + 1,x
-            sta         w + 1
-            lda         dlo,x
-            sta         tmp
-            lda         dhi,x
-            sta         tmp + 1
-            inx
-            inx
-            LDR         w2, pathbuf + 5                     ; Its name (room for /bin/ before it)
-            LDR         p2, pathbuf + PATH_SIZE - 1
-            jsr         next_arg
+            jsr         prog_args                           ;   split at blanks (a name with no / in it is /bin's):
+            lda         #0                                  ;   its exit code
+            jsr         prog_spawn
+ran:                                                        ; (Started, or not: waited for, its code pushed)
             bcc         :+
-            lda         #<-16                               ; (None: no name)
-            jmp         throw_a
-:
-            LDR         r0, pathbuf + 5
-            lda         pathbuf + 5
-            cmp         #'#'
-            beq         @args
-            ldy         #0
-:
-            lda         pathbuf + 5,y
-            beq         @bin
-            iny
-            cmp         #'/'
-            bne         :-
-            bra         @args
-@bin:
-            ldy         #4                                  ; (/bin/ before it)
-:
-            lda         s_binrc,y
-            sta         pathbuf,y
-            dey
-            bpl         :-
-            LDR         r0, pathbuf
-@args:
-            LDR         w2, argbuf                          ; Its arguments, each zero-terminated, then an empty one
-            LDR         p2, argbuf + ARGS_MAX - 1
-:
-            jsr         next_arg
-            bcc         :-
-            lda         #0
-            sta         (w2)
-            jsr         spawn
-            bcc         wait_task
             jmp         throw_os
-
-; ( -- status ): task .A waited for (a note ending the wait: waited for again): its exit code, or, if that's 1 and
-; its message is a number (rc's $status), the number
-wait_task:
-            sta         tmp
-@wait:
-            LDR         r0, statbuf
-            lda         tmp
-            stx         xsave
-            jsr         WAIT
-            stx         tmp2
-            ldx         xsave
-            bcc         @ended
-            cmp         #E_INTR
-            beq         @wait
-            jmp         throw_os
-@ended:
-            stz         tmp2 + 1
-            lda         tmp2
-            cmp         #1
-            bne         @push
-            lda         statbuf                             ; (A number?)
-            sec
-            sbc         #'0'
-            cmp         #10
-            bcs         @push
-            stz         tmp2
-            ldy         #0
-@digit:
-            lda         statbuf,y
-            sec
-            sbc         #'0'
-            cmp         #10
-            bcs         @push
-            pha
-            asl         tmp2                                ; (* 10: * 2, kept, * 4, and the kept added)
-            rol         tmp2 + 1
-            lda         tmp2
-            sta         numtmp
-            lda         tmp2 + 1
-            sta         numtmp + 1
-            asl         tmp2
-            rol         tmp2 + 1
-            asl         tmp2
-            rol         tmp2 + 1
-            clc
-            lda         tmp2
-            adc         numtmp
-            sta         tmp2
-            lda         tmp2 + 1
-            adc         numtmp + 1
-            sta         tmp2 + 1
-            clc
-            pla
-            adc         tmp2
-            sta         tmp2
-            bcc         :+
-            inc         tmp2 + 1
 :
-            iny
-            bra         @digit
-@push:
+            jsr         prog_wait
             lda         tmp2
             ldy         tmp2 + 1
             PUSHAY
             rts
-
-; SPAWN r0's program with argbuf's arguments (the output waiting out first: r0 kept over its WRITE).  OUT: C, .A:
-; SPAWN's
-spawn:
-            lda         r0
-            pha
-            lda         r0 + 1
-            pha
-            jsr         flush
-            pla
-            sta         r0 + 1
-            pla
-            sta         r0
-            LDR         r1, argbuf
-            stx         xsave
-            lda         #0
-            jsr         SPAWN
-            ldx         xsave
-            rts
-
-; The next word of the string at w (tmp chars left) into (w2), zero-terminated, w2 past its 0.  OUT: C = 1 if there
-; was none (nothing stored)
-next_arg:
-@skip:
-            lda         tmp
-            ora         tmp + 1
-            beq         @none
-            lda         (w)
-            cmp         #' ' + 1
-            bcs         @word
-            jsr         arg_next
-            bra         @skip
-@word:
-            lda         tmp
-            ora         tmp + 1
-            beq         @end
-            lda         (w)
-            cmp         #' ' + 1
-            bcc         @end
-            jsr         arg_put
-            jsr         arg_next
-            bra         @word
-@end:
-            lda         #0
-            jsr         arg_put
-            clc
-            rts
-@none:
-            sec
-            rts
-
-; w on a char, tmp one less
-arg_next:
-            jsr         w_inc
-            lda         tmp
-            bne         :+
-            dec         tmp + 1
-:
-            dec         tmp
-            rts
-
-; .A into (w2), w2 on; at p2 (the buffer's end): THROW the ior of E_NAMETOOLONG.  Keeps .Y
-arg_put:
-            pha
-            lda         w2
-            cmp         p2
-            lda         w2 + 1
-            sbc         p2 + 1
-            pla
-            bcc         :+
-            lda         #E_NAMETOOLONG
-            jmp         throw_os
-:
-            sta         (w2)
-            inc         w2
-            bne         :+
-            inc         w2 + 1
-:
-            rts
-
-s_binrc:    .byte       "/bin/rc", 0
-s_mrc:      .byte       "#m/rc", 0
 
 ; ---- Banks and shared segments: a bank at $8000-$9FFF (BANK-WINDOW), the task's own (sys-banks-alloc gives them)
 ; or a shared segment's (sys-seg-create, sys-seg-attach)

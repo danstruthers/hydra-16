@@ -131,6 +131,23 @@ finds it; each window's shell still starts in an empty namespace of its own, whi
 `#cN/kbdin`, a file of the console's (rio's `kbdin`: a write's bytes are the window's keys, as typed; 63 at most, as
 its keys' queue holds), so rc can do it too: `echo ls >'#c2/kbdin'` (its LF is a new line, as the console's Enter).
 
+**`%`** sends the rest of a line to rc whatever its first word: `% free` runs the `free` program though a Forth word
+`free` shadows it (as Memory-Allocation's will), and a script's line can be rc's the same way.  While a definition is
+being compiled the prompt is the second one, rc's (a tab), which `prompt2 ( c-addr u -- )` sets as `prompt` does the
+first.
+
+**Programs as values**, with hylang's names (its `sh-out`, `output-of`, `sh` with input, `spawn`), beside `sh` and
+`run` (`hydra.fl`'s): `sh-out ( c-addr u -- c-addr2 u2 )` (a command line's output, a string; its code `status`),
+`output-of ( xt -- c-addr u )` (what a word writes: forth's own output, not a program's), `' words | wc -l` (`|` takes
+the rest of the line as the command, and what the word writes is its input: the old HyForth's `words | wc`, without a
+grammar of the shell's in Forth) and its stack form `piped ( xt c-addr u -- )` (as `include` and `included`), and
+`spawn ( c-addr u -- task )` (a program, as `run`'s, not waited for: `$apid`, `wait`).  The strings are in the
+dictionary's free space, 256 bytes past HERE: they last till something's added to the dictionary (the word given
+`output-of` mustn't add any).  A program that stops reading early (`head`) leaves forth going on; Ctrl-C stops the word
+and the program both.  The core has the code that starts programs and waits for them (`fprog.inc`, headerless: `sh`,
+`run` and the shell's rc lines use it, as what two libraries use is the core's), and its output's flush takes a hook
+(`out_hook`) that `output-of` and `piped` give it while they run.
+
 **`shell.fl`** holds the shell's words.  The core finds two of them by name, as `see` finds `(see-code)`, so they
 work only while the library's loaded and searched: `(shell-prompt)`, the prompt, shown before each line typed at the
 console (in place of ` ok` after it; none while a definition's being compiled; on a new line if forth's output since
@@ -139,8 +156,9 @@ shell, and `-lib shell` (or a `marker` that takes it out) a plain Forth again.
 
 ## The steps
 
-All done (October 2026); [forth-status.md](forth-status.md) has each one's notes, the sizes and what's next.  The tests: `forth` (the Forth 2012 suite, still
-passing), `hyforth` (6.6-6.8), `fshell` (6.9) and `lshell` (6.10).
+6.6 to 6.10 done (October 2026), then 6.11, the first of what comparing the shell with hylang's suggested;
+[forth-status.md](forth-status.md) has each one's notes, the sizes and what's next.  The tests: `forth` (the Forth
+2012 suite, still passing), `hyforth` (6.6-6.8), `fshell` (6.9 and 6.11) and `lshell` (6.10).
 
 | Step | | Tested |
 | :--- | :--- | :--- |
@@ -149,3 +167,4 @@ passing), `hyforth` (6.6-6.8), `fshell` (6.9) and `lshell` (6.10).
 | 6.8 | The terminal's words, `sound.fl`, `ctl` | The sequences sent; `form`; an arrow key and a character read raw; notes keyed on (the emulator's YM2151), a claim, the volume; `ctl` and its error |
 | 6.9 | The shell: `shell.fl`, `forth -l`, `profile.fs` | The rule (a number, a word, a pipeline, a redirection), `cd` and the prompt (its format), a definition over lines, `status` and `$status`, `&` and `wait`, Ctrl-C, errors and a usage, `-lib shell` and `lib shell`, `exit` |
 | 6.10 | `/lib/shell` for init and wstart; `send` and `#cN/kbdin` | A card's `/lib/shell`: forth in window 0 and in a window made (`$window`); a line sent to window 0, run there |
+| 6.11 | The shell's next: `%`, the second prompt (`prompt2`); programs as values: `sh-out`, `output-of`, `\|` and `piped`, `spawn`; the programs' code in the core (`fprog.inc`), the output's hook | `% free` past a word `free`; a definition's second line (its tab); a line's output and a word's, strings; a word's output into `wc` (`\|`, `piped`), into `head`, which ends first, and stopped by Ctrl-C; `spawn` and `wait`; `sh` and `run` as before (the forth test) |

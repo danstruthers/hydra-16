@@ -27,7 +27,8 @@
 ;   The parts: fcore.inc (stacks, arithmetic, memory), fmath.inc (multiplication and division), ftext.inc (input,
 ; output, numbers, strings, parsing), fcomp.inc (the compiler: definitions, control flow, defining words), finterp.inc
 ; (the text interpreter, QUIT, CATCH and THROW, EVALUATE), ffile.inc (files: including them, loading a library),
-; fscript.inc (Ctrl-C, scripts); fdefs.inc has the constants and HEADER, which the libraries use too.  Their words are
+; fscript.inc (Ctrl-C, scripts), fprog.inc (programs started and waited for: the libraries' SH, RUN and the shell's);
+; fdefs.inc has the constants and HEADER, which the libraries use too.  Their words are
 ; in that order in the dictionary, then the libraries' as they're loaded.  A library calls the core's code by its
 ; label (obj/gen/forthcore.inc, the build's: the core's labels, as equates; a library is for the core it was built
 ; with, core_id); the core's code that it uses itself (PICK, AGAIN, CATCH, OPEN-FILE ...), and what compiled
@@ -126,6 +127,9 @@ argp:       .res        2                                   ; forth's arguments 
 script:     .res        1                                   ; <> 0: forth file.fs (the file run, then the end)
 login:      .res        1                                   ; <> 0: forth -l (newns, then profile.fs)
 lastc:      .res        1                                   ; The last character out (emit_a's)
+out_hook:   .res        2                                   ; <> 0: what flush gives the output to (the shell's)
+argbuf:     .res        ARGS_MAX                            ; A program's arguments (fprog.inc's) ...
+prog_map:   .res        4                                   ;   and its fds (SPAWN_FDMAP's: 3, then fds 0-2)
 libs_n:     .res        1                                   ; The libraries loaded, oldest first: how many records ...
 libtab:     .res        LR_SIZE * LIB_MAX                   ;   and they (LR_*)
 dict:                                                       ; The dictionary, from here
@@ -212,6 +216,8 @@ main:
             stz         libs_n
             lda         #LF
             sta         lastc
+            stz         out_hook
+            stz         out_hook + 1
             stz         raw
             stz         key_pend
             stz         intr
@@ -340,6 +346,7 @@ core_id:    .word       0
 .include "finterp.inc"
 .include "ffile.inc"
 .include "fscript.inc"
+.include "fprog.inc"
 
 forth_last  = .ident(.sprintf("hdr_%d", hdr_n))             ; (The last ROM header: the word list's start)
 
