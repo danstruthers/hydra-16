@@ -19,6 +19,11 @@
 (check (/ 1 3 2) 1/6)
 (check-error (/ 1 0) "Division by zero.")
 (check-error (/ 1 0.0))
+; one number: its reciprocal
+(check (/ 4) 1/4)
+(check (/ 1/2) 2)
+(check (/ 0.5) 2)
+(check-error (/ 0) "Division by zero.")
 
 ; fixed decimals: a sum or product of fixed and integer is fixed
 (check (+ 0.5 0.25) 0.75)
@@ -54,6 +59,10 @@
 (check (cmp 1 2) -1)
 (check (cmp 1 1.0) 0)
 (check (< -3 -2) T)
+; T isn't a number (it's after them, as every other kind is: sort's order)
+(check (eq T 1) NIL)
+(check (cmp T 1) 1)
+(check (cmp 1 "1") -1)
 
 ; complex numbers
 (check (complex 1 2) (complex 1 2))
@@ -68,6 +77,8 @@
 (check (- (complex 1 2)) (complex -1 -2))
 (check (+ (complex 1 2) 1.5) (complex 2.5 2))
 (check (complex? (complex 1 2)) T)
+(check (complex? (complex 1 0)) NIL)
+(check (complex 1.5 0) 1.5)
 (check ((complex 1) 2) (complex 1 2))
 (def {nu-one} 1)
 (check (complex nu-one 2) (complex 1 2))
@@ -81,6 +92,13 @@
 (check (to-fixed 1/3 4) 0.3333)
 (check (to-fixed -1/3 2) -0.33)
 (check (to-fixed 1/4) 0.25)
+(check (to-fixed 2/3) 0.6666666666)
+(check-error (to-fixed 1/3 1.5))
+(check-error (to-fixed 1/3 -1))
+(check-error (to-fixed (complex 1 2)))
+(check-error (to-rational (complex 1 2)))
+(check-error (truncate (complex 1 2)))
+(check-error (rational.n (complex 1 2)))
 (def {nb-q} -1/3)
 (to-fixed nb-q 4)
 (check nb-q -1/3)
@@ -128,9 +146,20 @@
 (check (rational? 1/2) T)
 (check (rational? 1) NIL)
 (check (complex? 1) NIL)
+; anything else isn't one either
+(check (int? "a") NIL)
+(check (fixed? :a) NIL)
+(check (rational? {1}) NIL)
+(check (complex? "1") NIL)
 
 ; random and fib
 (check (< (random 10) 10) T)
 (check (>= (random 10) 0) T)
+(check (random 1) 0)
+(check (< (random 100000000000000000000000) 100000000000000000000000) T)
+(check-error (random 0))
+(check-error (random -5))
+(check-error (random 1.5))
+(check-error (random "a"))
 (check (fib 10) 55)
 (check (fib 100) 354224848179261915075)

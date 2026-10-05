@@ -138,7 +138,7 @@ const RC_LINES = [
   ["~ a a && echo and; ~ a b || echo or","and\nor"],
   ["cat /nothing; echo status $status","cat: /nothing: not found\nstatus 1"],
   ["echo /rom/lib/n*","/rom/lib/namespace"],
-  ["echo /rom/lib/*","/rom/lib/forth /rom/lib/hylang /rom/lib/namespace /rom/lib/profile"],
+  ["echo /rom/lib/*","/rom/lib/forth /rom/lib/namespace /rom/lib/profile"],
   ["echo 'no*match'*","no*match*"],
   ["cd /rom/lib; pwd; cd","/rom/lib"],
   ["rc -c 'echo sub $x'","sub a b c"],
@@ -154,12 +154,12 @@ const RC_LINES = [
   ["echo (a","rc: syntax error"],
   ["whatis echo x; q=('it''s' '' a.b); whatis q","/bin/echo\nx=(a b c)\nq=('it''s' '' a.b)"],
   ["bind '#n' /mnt; ls /mnt","null\nzero"],
-  ["ls /rom/lib","forth/\nhylang/\nnamespace\nprofile"],
+  ["ls /rom/lib","forth/\nnamespace\nprofile"],
   ["cat /bin/echo >/ram/hi; cd /ram; hi from dot; cd","from dot"],
   ["cat /nothing >[2]/ram/e; cat /ram/e","cat: /nothing: not found"],
   ["cat /nothing |[2] cat >/ram/p; echo -n 'p: '; cat /ram/p","p: cat: /nothing: not found"],
   ["echo $task $#path $path # a comment","2 2 . /bin"],
-  ["path=(); ls; path=(. /bin); ls /rom/lib","rc: ls: not found\nforth/\nhylang/\nnamespace\nprofile"],
+  ["path=(); ls; path=(. /bin); ls /rom/lib","rc: ls: not found\nforth/\nnamespace\nprofile"],
   ["! ~ a b && echo not; echo $status","not\n"],
 ];
 
@@ -540,25 +540,6 @@ function forthCard() {
   return [imageCard(0, f, 16384)];
 }
 
-// hylang's card: danlang's suite's files (tests/hylang: those that pass as yet, in run.dl's order, and hylang's own),
-// and a run.hl that loads harness.dl, then each in turn (a file that stops with an error counts as a failure, as
-// danlang's run.dl has it), and prints the count.  types.dl's check of stdout's type fails till step 7.4b has streams
-const HYLANG_SUITE = ['reader.dl', 'scope.dl', 'control.dl', 'errors.dl', 'lists.dl', 'strings.dl', 'numbers.dl', 'hashes.dl',
-  'types.dl', 'core.hl'];
-function hylangCard() {
-  fs.mkdirSync(CARD_DIR, { recursive: true });
-  hydrafs.setNow(0x1000);
-  const f = path.join(CARD_DIR, 'hylang0.img');
-  hydrafs.mkfs(f, 8, 'HYLANG', undefined, true);
-  const v = new hydrafs.Volume(f);
-  for (const n of ['harness.dl', ...HYLANG_SUITE]) v.put(n, fs.readFileSync(path.join(__dirname, 'hylang', n)));
-  v.put('run.hl', Buffer.from('(load "harness.dl")\n(each {f {' + HYLANG_SUITE.map(n => '"' + n + '"').join(' ') + '}}\n' +
-    '  (def {test-file} f)\n  (try (load f)\n    (do (def {test-fails} (+ test-fails 1)) (print (format "FAIL {}: stopped: {}" f &err)))))\n' +
-    '(print (format "{} checks, {} failed" test-count test-fails))\n'));
-  v.close();
-  return [imageCard(0, f, 16384)];
-}
-
 // A test's lines typed, each at its prompt, and its expect (as the tools test's)
 const typed = lines => lines.map(l => 'ā' + l[0] + '\r').join('');
 const expected = lines => lines.map(l => '% ' + l[0] + '\n' + (l[2] ? l[1] : (l[1] === null ? '' : l[1] + '\n') + '%'));
@@ -693,32 +674,6 @@ module.exports = {
         if (undef) f.push('an undefined word: ' + undef[1]);
         return f;
       },
-    },
-    {
-      name: 'hylang', what: 'hylang (danlang, phase 7): danlang\'s regression suite\'s files that pass as yet (reader, scope, control, errors, lists, strings, numbers, hashes, types but its stream) and hylang\'s own checks (core.hl), loaded from a card with the suite\'s harness; at the console: a line evaluated as danlang\'s REPL has it, an expression over lines with a here string, an error, Ctrl-C (an evaluation, and the prompt), exit, and (exit n)\'s status',
-      init: 't_rc', cycles: 900e6,
-      // (Each line at its prompt, but a continued expression's, a moment after the last; (f) loops till Ctrl-C, which rc
-      // gets too: its prompt on a new line after hylang ends)
-      get machine() {
-        return { sd: hylangCard(), input: 'ācd /sd/0; hylang\r' + 'ā(load "run.hl")\r' + 'ā+ 1 2\r' + 'ā(list 1\rĀ  2 """a\rĀb""")\r' +
-          'ā(error "x" :e)\r' + 'ā(def {f} (fn {} {f}))\r' + 'ā(f)\rĀĀ\u0003' + 'ĀĀ\u0003' + 'āexit\r' + 'āhylang\r' + 'ā(exit 3)\r' + 'āecho $status\r' };
-      },
-      expect: ['FAIL types.dl: (type-of stdout) gave :error, not :stream\n' +
-        '612 checks, 1 failed\n=> NIL\n', 'hylang> + 1 2\n=> 3\nhylang> (list 1\n\t<   2 """a\n\t< b""")\n=> {1 2 "a\\nb"}\n' +
-        'hylang> (error "x" :e)\n=> Error: x\nhylang> (def {f} (fn {} {f}))\n=> NIL\nhylang> (f)\n=> Error: interrupted\nhylang> \nhylang> exit\n=> exit\n\n' +
-        '% hylang\nhylang (danlang on the Hydra-16), exit to end\nhylang> (exit 3)\n% echo $status\n3\n%'],
-    },
-    {
-      name: 'hylibs', what: 'hylang\'s library modules: hylnum in the module directory (mods), a library; hylang without hylstr (strings and hashes), its built-ins unbound and the rest as it was',
-      init: 't_rc', without: ['hylstr'], cycles: 60e6,
-      machine: { input: '\u0101mods\r\u0101hylang\r\u0101(/ 1 3)\r\u0101(str-upper "a")\r\u0101(len "abc")\r\u0101exit\r' },
-      expect: [' library  hylnum\n', 'hylang> (/ 1 3)\n=> 1/3\nhylang> (str-upper "a")\n=> Error: Unbound Symbol \'str-upper\'\nhylang> (len "abc")\n=> 3\n'],
-    },
-    {
-      name: 'hylnum', what: 'hylang without hylnum, its numbers: it says so, and won\'t start',
-      init: 't_rc', without: ['hylnum'], cycles: 30e6,
-      machine: { input: '\u0101hylang\r\u0101echo $status\r' },
-      expect: ['hylang: its library hylnum isn\'t in the ROM\n% echo $status\n1\n'],
     },
     {
       name: 'spi', what: 'SPI and #S (storage): transactions, kept bytes, modes 0 and 3, one open at a time, the time a byte takes',
@@ -1103,14 +1058,6 @@ module.exports = {
       init: 't_scall', modules: ['t_child', 't_drv'], without: ['cons', 'storage', 'snd', 'gpio'], cycles: 40e6,
       budgets: [{ what: 'SCALL round trip (DBG_SCALL, less the same loop calling the code in place)', from: '<scall', to: 'scall>',
         minus: ['<base', 'base>'], per: 1000, max: 200 }],
-    },
-    {
-      name: 'heap', what: 'spike S5: hylang\'s heap (modules/hylang/heap.inc): values and their kinds, pairs, strings and vectors, the collector (a list kept while garbage is taken back, a mark stack that overflows, the heap filled and emptied); pairs made and collections timed',
-      init: 't_heap', cycles: 400e6,
-      budgets: [{ what: 'a pair made (cons), in a fresh heap', from: '<cons', to: 'cons>', per: 1000, max: 160 },
-        { what: 'a pair made (cons), from swept pages', from: '<cons2', to: 'cons2>', per: 1000, max: 320 },
-        { what: 'a collection, 1000 pairs live, a pair', from: '<gc1k', to: 'gc1k>', per: 1000, max: 200 },
-        { what: 'a collection, 9000 pairs live, a pair', from: '<gc9k', to: 'gc9k>', per: 9000, max: 165 }],
     },
     {
       name: 'kcopy', what: 'spike S2: copying between tasks',

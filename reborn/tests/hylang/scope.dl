@@ -55,6 +55,10 @@
 (check (defined? sc-lb) NIL)
 (check (let {{a}} a) NIL)
 (check (let {{a 1}} (+ a 1) (+ a 2)) 3)
+; a name's value is itself, a list too (only a Q-expression written there is run)
+(check (let {{x {1 2}}} x) {1 2})
+(check (let {{x {1 2}}} x (len x)) 2)
+(check (let {{x 1}} {+ x 1}) 2)
 (check-error (let {{1 2}} 3))
 (check-error (let {{a (error "x")}} a))
 

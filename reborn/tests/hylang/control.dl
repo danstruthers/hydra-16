@@ -13,16 +13,20 @@
 (check-error (if (error "x") 1 2))
 (check-error (if T))
 
-; and, or: T or NIL, short-circuited
+; and, or: the value that decided them, short-circuited; an error stops them
 (check (and) T)
 (check (or) NIL)
 (check (and T T) T)
 (check (and T NIL) NIL)
-(check (and 1 2) T)
-(check (or NIL 5) T)
+(check (and 1 2) 2)
+(check (or NIL 5) 5)
 (check (or NIL NIL) NIL)
 (check (or T (error "not evaluated")) T)
 (check (and NIL (error "not evaluated")) NIL)
+(check-error (and (error "boom") T) "boom")
+(check-error (and T (error "boom")) "boom")
+(check-error (or (error "boom")) "boom")
+(check-error (or NIL (error "boom") T) "boom")
 
 ; <=>: a number's sign, compared in case blocks, the last a default
 (check (<=> (cmp 3 5) {< :less} {= :same} {:more}) :less)
@@ -30,7 +34,9 @@
 (check (<=> (cmp 7 5) {< :less} {= :same} {:more}) :more)
 (check (<=> 1 {<> :not-zero} {:zero}) :not-zero)
 (check (<=> 0 {>= :non-negative} {:negative}) :non-negative)
+(check (<=> 0 {> :a} {< :b} {<> :c} {= :d} {:e}) :d)
 (check-error (<=> :a {:x}))
+(check-error (<=> 1))
 
 ; while: its body as long as its test isn't NIL; the last value
 (check (do =(wi 0) (while (< wi 5) =(wi (+ wi 1))) wi) 5)
@@ -57,6 +63,7 @@
 (check (output-of (dotimes {i 0} (write i))) "")
 (check (do =(dsum 0) (dotimes {i 5} (set! {dsum} (+ dsum i))) dsum) 10)
 (check-error (dotimes {i :a} 1))
+(check-error (dotimes {i 2.5} 1))
 
 ; range
 (check (range 5) {0 1 2 3 4})

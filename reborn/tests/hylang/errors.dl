@@ -1,16 +1,32 @@
 ; errors.dl - errors are values that stop what they reach: a call with one as an argument is that error (an fexpr's
-; and a built-in's arguments aside); do and let stop at one; try catches them
+; arguments, and those of the built-ins that look at values, aside); do and let stop at one; try catches them
 
 (check (error? (error "x")) T)
 (check (type-of (error "x")) :error)
 (check (error-message (error (+ "a" "b"))) "ab")
 (check-error (error "x") "x")
 
-; through built-ins
+; through built-ins: every ordinary one, its arguments evaluated first, the first error the call's value
 (check-error (+ 1 (error "x")) "x")
 (check-error (- 1 (error "x")) "x")
 (check-error (list 1 (error "x")) "x")
 (check-error (len (error "x")) "x")
+(check-error (eq (error "e1") 1) "e1")
+(check-error (cmp 1 (error "e2")) "e2")
+(check-error (< (error "e3") 1) "e3")
+(check-error (fn (error "e4") {1}) "e4")
+(check-error (hash-get (error "e5") :a) "e5")
+(check-error (str-split (error "e6")) "e6")
+(check-error (to-sym (error "e7")) "e7")
+(check-error (eq (error "first") (error "second")) "first")
+(check-error ((eq 1) (error "e8")) "e8")
+(check-error (map (fn {x} {x}) (error "e9")) "e9")
+; but those that look at values take one as a value
+(check (num? (error "e")) NIL)
+(check (string? (error "e")) NIL)
+(check (error-code (error "e" :c)) :c)
+(check (repr (error "e")) "Error: e")
+(check (output-of (print (error "e"))) "Error: e\n")
 
 ; through functions: the function isn't run
 (def {er-ran} NIL)
@@ -37,3 +53,5 @@
 (check-error (to-str 1 "#q?"))
 (check-error (to-str 1 "#1r"))
 (check-error (substring "abc" 5))
+(check-error (def 1 2) "'def' cannot define non-symbols")
+(check-error (set "x" 2) "'set' cannot define non-symbols")

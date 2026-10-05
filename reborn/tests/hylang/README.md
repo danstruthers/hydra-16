@@ -1,29 +1,29 @@
 # hylang's tests: danlang's regression suite
 
-The hylang test (`tests/tests.js`) runs danlang's own regression suite on hylang: the files of `tests/regress/` from
-danlang's master (<https://github.com/SNSTRUTHERS/danlang>), as it has them, each as itself.  danlang is the
-reference (`docs/hylang.md`), and each step of the plan's phase 7 runs the files it makes pass; none that passed may
-fail after.
+These are danlang's regression suite, `tests/regress/` from <https://github.com/SNSTRUTHERS/danlang>, as it has them
+(copied whole, line ends LF).  danlang, the C# interpreter, is hylang's reference, and `reference.md` there its
+specification: the suite is that specification's executable form, so hylang passes it unchanged.  A change to the
+language goes into danlang first, with checks here, and is copied over.
+
+The old hylang (phase 7 as first built, to commit `a0973eb`) is gone: hylang is being written again from scratch, to
+the plan "danlang: review and 65C02 plan" (`docs/hylang.md` has its design).  Each phase of it runs the files it makes
+pass, from an emulated card, and none that passed may fail after:
 
 | File | What | Runs from |
 | :--- | :--- | :--- |
-| `harness.dl` | The checks: `check`, `check-error`, the count of each and of the failures | 7.2 |
-| `reader.dl` | The reader: numbers, strings and their escapes, here strings, characters, atoms, symbols, comments, the shorthands, `read` (its two checks of hashes, from 7.4a) | 7.3 |
-| `scope.dl` | Lexical scope: closures, `set!` on a closure's variables, a Q-expression run where it was written, `let`, fexprs | 7.2 |
-| `control.dl` | `if`, `and`, `or`, `<=>`, `while`, `each`, `dotimes`, `range`, `try`, `error-message` | 7.2 |
-| `errors.dl` | Errors as values: through built-ins, functions, `do` and `let`; `try`; the common ones | 7.2 |
-| `lists.dl` | `list`, `head`, `tail`, `init`, `end`, `join`, `len`, `item-at`, `subset`, `reverse`, `sort`, `index-of` in a list; equality | 7.4a |
-| `strings.dl` | `+` of strings, `substring`, `char-at`, `str-split`, `index-of`, the `str-` functions, `format`, character codes and tests, comparison, `to-str`, `repr`, `print`, `write` | 7.4a |
-| `numbers.dl` | Integers of any size, fixed decimals, rationals, complex numbers: arithmetic, comparison, conversion, bases, `random`, `fib` | 7.3 |
-| `hashes.dl` | Keys, `hash-get`, `hash-put`, `hash-remove`, `len`, keys and values, `hash-clone`, methods (`&0`), tags (private, locked, read-only, not-nil), `to#` and `from#`, equality | 7.4a |
-| `types.dl` | `type-of`, the type tests, `to-sym`, `to-atom`, `gensym`, `defined?` (its check of `stdout`'s type fails till 7.4b has streams, and the test expects it to) | 7.4a |
-| `core.hl` | hylang's own (not danlang's): what `eval.dl` checks, at sizes the test has time for (built-ins partially applied, too many arguments too); `library.dl`'s checks of the library's built-in functions (it runs from 7.4c); equality and order of lists; `output-of` nested | 7.2 |
-
-`eval.dl` (calls, `fn`, partial application, `&N`, `def`, tail calls, the call depth) passes too, but isn't in the test:
-its tail calls loop 50,000 times, 4,675M cycles in all (22 minutes at 3.58 MHz), so `core.hl` has its checks at
-smaller sizes.
-
-The suite's files are bytes, LF line ends (`.gitattributes`: not text to Git), danlang's (Daniel and Simon
-Struthers').  The test puts them on an emulated SD card with a `run.hl` of its own that loads `harness.dl`, then
-each file in turn (a file that stops with an error counts as a failure, as danlang's `run.dl` has it), and prints
-the count; then it runs `cd /sd/0; hylang` and types `(load "run.hl")`.
+| `harness.dl` | The checks: `check`, `check-error`, the count of each and of the failures | 3 |
+| `run.dl` | Loads `harness.dl`, then each file, and prints the count; its status is 1 if a check failed | 3 |
+| `reader.dl` | The reader: numbers in every base, strings, here strings, characters, atoms, symbols, comments, `[...]`, the shorthand, bytes, `read` | 2 |
+| `eval.dl` | Calls, partial application, extra arguments, too many, tail calls (50,000 deep), nesting | 3 |
+| `scope.dl` | Lexical scope, closures, `set!`, a Q-expression run where it was written, `let`, fexprs | 3 |
+| `control.dl` | `if`, `and`, `or`, `<=>`, `while`, `each`, `dotimes`, `range`, `try` | 3 |
+| `errors.dl` | Errors as values: through calls and built-ins, `try`, the error texts | 3 |
+| `lists.dl` | The list built-ins, `sort` | 4 |
+| `types.dl` | `type-of`, the type tests, symbols and atoms | 4 |
+| `library.dl` | The library's built-ins and `globals.dl`'s functions | 4 (its numbers 5) |
+| `numbers.dl` | The tower, every base, the conversions | 5 |
+| `bits.dl` | Bits and bytes | 5 |
+| `strings.dl` | Strings and characters | 6 |
+| `hashes.dl` | Hashes, tags, methods | 6 |
+| `io.dl` | Streams, `load`, `save`, `read` | 7 |
+| `system.dl` | Files, programs, the environment, the clock | 7 |

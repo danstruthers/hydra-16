@@ -7,7 +7,7 @@ spikes measured, and what measuring changed.
 ## In short
 
 Phases 0, 1 and 3 (storage) are done, phase 2 is all but done, phase 4 (programs) is all but done: its loader, rc, the core tools, the assembly SDK, the C target and `edit`; and
-phase 5 (the remaining devices) is done: sound, the song player, GPIO and I2C, the clock, `/pc`, `xmodem`, and `/proc`'s files for a task's memory and state; phase 6 (HyForth) is done: `forth`, a Forth 2012 system (Core, Core Extension, Exception, Facility, File Access, Programming-Tools, Search-Order and String) that passes the Forth 2012 test suite's tests of them, with a `sys-` word for each system call a program makes (made from the specification), `SH`, `RUN`, banks and segments, Ctrl-C, libraries from `/lib/forth` and scripts (`forth file.fs`, `#!/bin/forth`); its ROM core is the Core word set, and the other word sets are pre-compiled libraries it loads into its dictionary (`/lib/forth/startup.fs` names those it starts with).  Phase 7 (hylang) is under way: its specification (`docs/hylang.md`, a draft), its heap (spike S5: 16-bit values, objects in the task's banks, a mark-and-sweep collector that never moves them), its reader, printer and evaluator (7.2: danlang's REPL, lexical closures, partial application, fexprs, tail calls, errors as values, `try`, Ctrl-C, the built-ins of lists, text and types, `load`, and danlang's library loaded as it starts), its numbers (7.3: danlang's tower, integers of any size, fixed decimals, rationals and complex numbers, and danlang's bases), and its strings and hashes (7.4a: strings of up to 4096 bytes, the `str-` functions, `sort`, danlang's hashes with their tags and methods); it passes the suite's reader, eval, scope, control, errors, lists, strings, numbers and hashes files, and types but for its stream.  A call's arguments are on the evaluation stack now, not in a list made for each call (14% off a loop's step).  A module may have four banks now (`FARN` calls from any to any), and library modules of its own: hylang is a program of three banks and two libraries, `hylnum` (the numbers, which it needs) and `hylstr` (strings and hashes: without it, its built-ins aren't there).  danlang changed, and hylang with it: a built-in given fewer arguments than it needs is partially applied, too many arguments is always an error (a function takes extra ones only if its body names `&_` or `&N`), a list's items (`fst`, `nth`, `map` ...) are as they're written, not evaluated, and the library's most used functions are built in (`map`, `foldl`, `nth`, `sum`, `==` ...: 8 to 27 times faster).  hylang is in the system's ROM now: the user took danlang's GPLv3 license off.  The kernel boots in the emulator, runs POST (with the old
+phase 5 (the remaining devices) is done: sound, the song player, GPIO and I2C, the clock, `/pc`, `xmodem`, and `/proc`'s files for a task's memory and state; phase 6 (HyForth) is done: `forth`, a Forth 2012 system (Core, Core Extension, Exception, Facility, File Access, Programming-Tools, Search-Order and String) that passes the Forth 2012 test suite's tests of them, with a `sys-` word for each system call a program makes (made from the specification), `SH`, `RUN`, banks and segments, Ctrl-C, libraries from `/lib/forth` and scripts (`forth file.fs`, `#!/bin/forth`); its ROM core is the Core word set, and the other word sets are pre-compiled libraries it loads into its dictionary (`/lib/forth/startup.fs` names those it starts with).  Phase 7 (hylang) has started again: the first hylang (7.1 to 7.4a, its library modules and its built-ins partially applied, to commit `a0973eb`) was deleted after a review of danlang and of it.  danlang, the reference, was fixed first (its 22 bugs, its quirks, one rule for each inconsistency, its shorthand made seven prefixes and `[...]`, callable hashes, text as bytes, one argument convention for its built-ins, and `reference.md`, its specification), and hylang is being written again from scratch to the plan the review led to (`docs/hylang.md`).  The kernel boots in the emulator, runs POST (with the old
 hardware test a key away), starts its modules from the paged ROM in tasks of their own, schedules them
 preemptively, runs calls between tasks and copies between them, takes every interrupt through one path, manages
 task RAM, banks and shared segments, and delivers notes.  The file layer is in: fds, channels, requests to
@@ -82,17 +82,13 @@ PASS mem     memory: BREAK, pages, banks, a shared segment between tasks (and kc
 PASS banks   a module of two banks: calls between them (FAR2, FAR1), registers and C, each bank's data  (6 checks)
 PASS banks3  a module of three banks: calls from any bank to any (FARN), registers and C, each bank's data, each bank set again  (7 checks)
 PASS scall   spike S3: calls into a driver's task, its errors, a busy driver, the round trip  (12 checks)
-PASS hylang  hylang (danlang, phase 7): danlang's regression suite's files that pass as yet (reader, scope, control, errors, lists, strings, numbers, hashes, types but its stream) and hylang's own checks (core.hl), loaded from a card with the suite's harness; at the console: a line evaluated as danlang's REPL has it, an expression over lines with a here string, an error, Ctrl-C (an evaluation, and the prompt), exit, and (exit n)'s status
-PASS hylibs  hylang's library modules: hylnum in the module directory (mods), a library; hylang without hylstr (strings and hashes), its built-ins unbound and the rest as it was  (3 checks)
-PASS hylnum  hylang without hylnum, its numbers: it says so, and won't start  (3 checks)
-PASS heap    spike S5: hylang's heap (modules/hylang/heap.inc): values and their kinds, pairs, strings and vectors, the collector (a list kept while garbage is taken back, a mark stack that overflows, the heap filled and emptied); pairs made and collections timed  (41 checks)
 PASS kcopy   spike S2: copying between tasks  (6 checks)
 PASS irq     spike S1: 115200 received by an irq entry while tasks spin  (6 checks)
 ```
 
 The same with the power-up's RAM from other seeds; the console, file, namespace and device tests the same with a
 WDC W65C51N build, the console test with a 7.16 MHz build, and the SPI, disk, file system, init, load, env, rc,
-tools, C, edit, sound, player, GPIO, clock, `/pc`, `xmodem` and hylang tests with both.  The hardware test, entered from POST in the emulator, passes its whole quick run, its BIOS and
+tools, C, edit, sound, player, GPIO, clock, `/pc` and `xmodem` tests with both.  The hardware test, entered from POST in the emulator, passes its whole quick run, its BIOS and
 paged ROM checksums included.
 
 ## The spikes and budgets (3.58 MHz)
@@ -104,8 +100,8 @@ paged ROM checksums included.
 | No IRQs-off stretch over 200 cycles | 200 | **189**, the console's timer 2 sending a byte (stub to `RTI`); the tick **170**; the longest stretch of masked code, **171**, a switch into a task waking from a sleep | Every test, from the boot's end |
 | S2: kcopy | 40 cycles a byte | **36.7** | 4096 bytes to the kernel task (the kcopy test) |
 | S3: SCALL | 200 cycles a round trip | **181.3** | 1000 calls to a driver, less the same loop calling the driver's code in place (the scall test) |
-| S5: hylang's heap, a pair made | (The plan's: pairs a second) | **141 cycles** from a page that was free (25,000 a second); **278** from a page swept lazily, half its cells live (12,900 a second) | 1000 `cons` each (the heap test) |
-| S5: hylang's collector | (The plan's: its pauses) | **142 cycles a live pair**, 9000 live (1.3 million cycles: 0.36 s); 172 with 1000 (about 25,000 cycles of each collection clear the marks and look over the pages) | A collection with 1000 and with 9000 pairs live (the heap test) |
+| S5: the first hylang's heap, a pair made | (The plan's: pairs a second) | **141 cycles** from a page that was free (25,000 a second); **278** from a page swept lazily, half its cells live (12,900 a second) | 1000 `cons` each (the heap test) |
+| S5: the first hylang's collector | (The plan's: its pauses) | **142 cycles a live pair**, 9000 live (1.3 million cycles: 0.36 s); 172 with 1000 (about 25,000 cycles of each collection clear the marks and look over the pages) | A collection with 1000 and with 9000 pairs live (the heap test) |
 | SPI through `#S` | The old bit loops, unchanged | **246 cycles a byte** clocked in (256 bytes a READ), **393** sent; 302 in at 7.16 MHz, where the receive loop is padded to keep SCLK under an SD card's 400 kHz | The spi test, less the marks' own time |
 | Reading a card | The old system's 298 cycles a byte | **257 cycles a byte** (about 14 KB/s at 3.58 MHz): 4096 bytes in 512-byte reads of `#d/0/data`; a RAM disk **61**.  With the cards' block cache (4.2): **279** the first time (each block kept too), **65** again | The disk test, less the marks' own time |
 | Reading a HydraFS file | The card's | **260 cycles a byte**: 8192 bytes of a file on a card, in 512-byte reads; the file system costs next to nothing over the card | The fs test |
@@ -256,6 +252,14 @@ through the COMMON block (`FARCALL`).
 
 ## Phase 7: hylang
 
+**Started again (October 2026).**  After a full review of danlang and of the first hylang, the first hylang was
+deleted (`modules/hylang`, its library modules `hylnum` and `hylstr`, the heap spike's `t_heap`, `globals.hl`, and
+the hylang, hylibs, hylnum and heap tests; `a0973eb` has them all), and hylang is being written again from scratch,
+to the plan "danlang: review and 65C02 plan" and `docs/hylang.md`, its phases 0 to 8 reaching danlang parity, then
+the Hydra layers.  Phase 0, the spec, is done: in danlang, its fixes, its rules made one, its new shorthand, bytes,
+callable hashes, one argument convention, its cleanup, and `reference.md`; here, the suite copied to `tests/hylang`
+(1,155 checks).  The steps below are the first hylang's, kept as its record and for what they measured.
+
 | Step | | Notes |
 |---|---|---|
 | 7.0 The language's specification | Draft (three decisions are the user's) | `docs/hylang.md`: hylang 1 is danlang (`C:\source\danlang`, its `master`), readied for the port in C# first (lexical scope, tail calls, fexprs, `try`, loops, the missing basics, its number bugs fixed, and a system library a PC has too: files, programs and the shell, the environment, the clock, bits and bytes, the system's errors as codes), with its regression suite (965 checks) run unchanged on both; where the two may differ (8-bit strings, the call depth, `/lib/hylang`, Ctrl-C an error); and what makes it the Hydra's, in four layers: the system library, the Hydra's built-ins (notes, namespaces, tasks, memory and banks, keys), device libraries in hylang over the devices' files (console, GPIO, I2C, SPI, sound, disks, `/proc`, the clock's chip, `/pc`), and a `sys-` function for every call.  To decide: the extension (`.hl`), `$`, danlang's license in the ROM |
@@ -269,25 +273,12 @@ through the COMMON block (`FARCALL`).
 
 ## Next
 
-1. Phase 7, hylang: 7.0's specification is drafted (`docs/hylang.md`), and danlang, the C# reference, has been
-   readied for the port (lexical scope, tail calls, fexprs, try, loops, the missing basics, its number bugs fixed)
-   with a regression suite (965 checks) that hylang will run unchanged, and a system library a PC has too (files,
-   programs and the shell, the environment, the clock, bits and bytes, the Hydra's error codes).  The spec has
-   hylang's Hydra layers: the Hydra's built-ins (notes, namespaces, memory and banks, tasks, keys), device
-   libraries in hylang (console, GPIO, I2C, SPI, sound, disks, /proc, the clock's chip) and a sys- function for
-   every call.  Two decisions are the user's: the file extension (`.hl` drafted) and whether `$` reaches the
-   environment (the third, danlang's license, is decided: the user took its GPLv3 license off, and hylang is in the
-   system's ROM).  7.1, spike S5,
-   is done (the heap, `modules/hylang/heap.inc`: the spikes' table has what it measured), and so are 7.2, the
-   reader, printer and evaluator, 7.3, the numbers, and 7.4a, strings and hashes: the suite's reader, eval, scope,
-   control, errors, lists, strings, numbers and hashes files pass, and types but for its stream; a call's arguments
-   are on the evaluation stack (a loop's step, 15,200 cycles), hylang is three banks and two library modules
-   (`hylnum`, `hylstr`), and the library's most used functions are built in (with partial application of
-   built-ins, and too many arguments an error, in danlang too).  Next: 7.4b, streams and `save`; then the system
-   library and the Hydra's built-ins, each a library module.  The first two banks are nearly full: more of the
-   second's built-ins could go to the third.  A frame's bindings could be a cell, not a list: a function's call makes
-   two pairs a parameter, and a look-up walks them (some 25% of a loop's step).  The parity checkpoint (the plan's, after
-   phase 5) is still the user's.  `/proc/N/fd` is still to come (a channel keeps no name to show).
+1. Phase 7, hylang, started again: phase 0 (the spec) is done, in danlang (its fixes, rules, new shorthand, bytes,
+   callable hashes, one argument convention, `reference.md`) and here (the first hylang deleted, the suite in
+   `tests/hylang`, `docs/hylang.md` rewritten).  Next: phase 1, the runtime (the module's four banks, the cell and
+   blob heaps, symbols, fixnums, the collector), and a measure of 16-bit values against real programs.  The parity
+   checkpoint (the plan's, after phase 5) is still the user's.  `/proc/N/fd` is still to come (a channel keeps no
+   name to show).
 2. rc's note handler is in its first bank's code: a note taken while rc runs its second bank (parsing a line) would
    jump into that bank instead.  The kernel calls a handler with the bank that's there, so a module of two banks keeps
    its handler in its RAM, as `forth` does now (conventions.md).

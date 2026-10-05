@@ -838,6 +838,8 @@ danlang (`C:\source\danlang`, C# on .NET 6, by Daniel and Simon Struthers, GPLv3
 
 (As built, after 7.4a: a call's arguments are pushed on the evaluation stack as they're evaluated, and the function applied to them there, not put in a list made for each call; a loop's step is 14% faster.  danlang's GPLv3 license is off (the user's decision), and hylang is in the system's ROM.)
 
+(Started again, October 2026: after a review of danlang and of the first hylang, the first hylang was deleted, danlang fixed first (its bugs and quirks, one rule for each inconsistency, a new shorthand, text as bytes, and `reference.md`, its specification), and hylang is being written again from scratch, to the plan "danlang: review and 65C02 plan"; `reborn/docs/hylang.md` has its design and phases.  The notes above are the first hylang's.)
+
 (As built, phase 7.4a: strings of up to 4096 bytes, a chain of cells past 126, made in a buffer and copied whole to be searched; danlang's hashes, changed in place, with their tags and methods (`&0` a proxy of the hash); the `str-` functions and `sort`.  They're the module's fourth bank, which makes it the most a module may have, so the rest of 7.4 waits on a core module and library modules, as this plan has them for the big numbers.)
 
 #### **17.4 hylang as the shell**

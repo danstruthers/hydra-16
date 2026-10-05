@@ -43,6 +43,8 @@
 (check (to-atom "ab") :ab)
 (check (to-atom (to-sym "x")) :x)
 (check (to-atom 5) (to-atom "5"))
+(check (to-atom 1.5) (to-atom "1.5"))
+(check (to-atom 1/2) (to-atom "1/2"))
 (check-error (to-sym 5))
 (check-error (to-atom {1}))
 (check (symbol? (gensym)) T)

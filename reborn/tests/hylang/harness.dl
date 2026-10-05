@@ -30,7 +30,7 @@
 (def {check-error} (fexpr {x} {do
   (def {test-count} (+ test-count 1))
   =(got (test-value x))
-  =(msg ?((defined? &2) (test-value &2) NIL))
+  =(msg ?((defined? &1) (test-value &1) NIL))
   ?((and (error? got) (or (nil? msg) (eq (error-message got) msg)))
     T
     (test-failed x got ?(msg (error msg) :an-error)))
