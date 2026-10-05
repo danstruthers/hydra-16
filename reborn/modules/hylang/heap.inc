@@ -84,6 +84,9 @@ fp_next:    .res        1                                   ; (Where find_page l
 fp_size:    .res        1                                   ;   and their references' step)
 fp_step:    .res        1
 gc_count:   .res        2                                   ; The collections so far
+gc_fresh:   .res        1                                   ; Pages made a kind's since the last (the REPL's: collect
+                                                            ;   while the prompt waits)
+gc_stress:  .res        1                                   ; <> 0: collect before every allocation (a test's: hylang -g)
 gc_save:    .res        11                                  ; (The scratch registers, hp to ht, while it collects)
 g_bank:     .res        1                                   ; (The blob bank being compacted: its index, its bank ...
 g_index:    .res        1
@@ -163,6 +166,8 @@ heap_init:
             stz         movf
             stz         gc_count
             stz         gc_count + 1
+            stz         gc_fresh
+            stz         gc_stress
             jsr         take_cell_bank
             bcs         @rts
             jsr         take_cell_bank
@@ -290,10 +295,13 @@ fix_value:
 
 ; ---- Cells
 
-; IN: .A = a kind (a cell's).  OUT: hv = a new cell of it, its words NIL; C = 1 and .A = E_NOMEM if there's no room.
-; It may collect
+; IN: .A = a kind (a cell's).  OUT: hv = a new cell of it, its words NIL (hp its address, in the window); C = 1 and
+; .A = E_NOMEM if there's no room.  It may collect (and with gc_stress, does)
 cell_alloc:
             sta         hk
+            lda         gc_stress
+            beq         @again
+            jsr         gc_collect
 @again:
             ldx         hk
             lda         fl_lo,x
@@ -383,6 +391,10 @@ find_page:
             lda         hk
             sta         pk,x
             dec         free_pages
+            inc         gc_fresh
+            bne         :+
+            dec         gc_fresh                            ; (255 at most)
+:
             stx         ht + 1                              ; (Its first cell)
             stz         ht
             lda         #0
@@ -499,6 +511,9 @@ blob_alloc:
             cmp         #$20
             bcs         @nomem                              ; (Bigger than a bank)
             stz         b_tried
+            lda         gc_stress
+            beq         @try
+            jsr         gc_collect
 @try:
             ldx         #0
 @bank:
@@ -643,6 +658,30 @@ string_make:
             jsr         copy_in
             clc
 @rts:
+            rts
+
+; IN: hq = a message's bytes in the task's RAM, hn = how many.  OUT: hv = an error of it (its code NIL); C = 1 and
+; .A = E_NOMEM if there's no room.  It may collect
+error_make:
+            jsr         string_make
+            bcs         @rts
+            lda         hv                                  ; (The message kept while the error's made)
+            ldx         hv + 1
+            jsr         root_push
+            bcs         @nomem
+            lda         #PK_ERROR
+            jsr         cell_alloc
+            jsr         root_pop                            ; (Keeps C)
+            bcs         @rts
+            sta         (hp)                                ; (Its message)
+            txa
+            ldy         #1
+            sta         (hp),y
+            clc
+@rts:
+            rts
+@nomem:
+            lda         #E_NOMEM
             rts
 
 ; hn bytes from hq (the task's RAM) to hp (the window).  Keeps hq, hp, hn
@@ -822,6 +861,7 @@ gc_collect:
             bne         :+
             inc         gc_count + 1
 :
+            stz         gc_fresh
             lda         marks                               ; (The marks cleared: 256 bytes a bank taken)
             sta         mp
             lda         marks + 1

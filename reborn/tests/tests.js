@@ -1067,6 +1067,54 @@ module.exports = {
         { what: 'a collection, 9000 cells live, a cell', from: '<gc9k', to: 'gc9k>', per: 9000, max: 255 }],
     },
     {
+      name: 'hylang', what: 'hylang\'s reader, printer and REPL (phase 2: what a line reads to, printed as danlang\'s REPL prints a value): atoms, symbols, T, NIL, exit, lists of three kinds, strings and here strings with their escapes, characters by name, the shorthand, $name, decimal fixnums; an expression over lines, a comment, a here string; the reader\'s errors; 255 brackets open; Ctrl-C at the prompt; exit; stdin a pipe, its end; hylang -g (a collection before every allocation)',
+      init: 't_rc', cycles: 400e6,
+      // (Each line typed at a prompt: hylang> and, for more lines, the closers it wants then " <")
+      get machine() {
+        const lines = ['42', '', '1 2 3', '(+ 1 2)', '{a B :C T nil exit () {} [] [1 2]}',
+          '{"a\\nb" "\\e[1m\\x01\\x7f" """x"y""" "" """""" "\\x41\\x4a2" "tab\\there" "\\\\\\""}',
+          '{\\a \\A \\space \\( \\] \\lf \\LineFeed \\line-feed \\null \\\\ \\" \\; \\escape \\del \\x}',
+          '{?(c a b) ?{c} =(x 1) :(y 2) #(z) @({x} {x}) .(f l) ~("s") ?x a:b :}', '$HOME $Mixed_Case $',
+          '{1 -2 +3 16383 -16384 1_000 1_ +_1 007 -0 - + 1+ -_ 1a _1 #x10 1.5}',
+          '{a ; a comment', 'b}', '(a', '{b', 'c})', '"""x', 'y"""',
+          '(1 2]', ')', '{a)', '[a}', 'f(x)', 'x[1]', '+#(a)', '$(x)', '"\\q"', '"abc', '"\\x"', '\\zzz', '\\', '70000', '16384',
+          '('.repeat(100), '('.repeat(100), '('.repeat(55) + '1' + ')'.repeat(55), ')'.repeat(100), ')'.repeat(100),
+          '('.repeat(100), '('.repeat(100), '('.repeat(56)];
+        return { input: '\u0101hylang\r' + lines.map(l => '\u0101' + l + '\r').join('') + '\u0101(a\r\u0101\x03' +
+          '\u0101exit\r' + '\u0101echo $status\r' +
+          '\u0101echo \'(1 2) $x {a\' | hylang; echo \'42\' | hylang; echo $status\r' +
+          '\u0101hylang -g\r' + '\u0101{"a" "b" (c d) [e f] $G :h \\i 123 "c\\x41"}\r' + '\u0101(1 (2 (3 (4))) {5\r\u0101"""6\r\u01017"""})\r' +
+          '\u0101(1 2]\r' + '\u0101exit\r' + '\u0101echo $status\r' };
+      },
+      expect: ['hylang (danlang on the Hydra-16), phase 2: it reads, and prints what it read\nType \'exit\' to Exit\n\n' +
+        'hylang> 42\n=> 42\nhylang> \n=> NIL\nhylang> 1 2 3\n=> (1 2 3)\nhylang> (+ 1 2)\n=> (+ 1 2)\n' +
+        'hylang> {a B :C T nil exit () {} [] [1 2]}\n=> {a b :c T NIL exit NIL NIL (list) (list 1 2)}\n',
+        '=> {"a\\nb" "\\e[1m\\x01\\x7F" "x\\"y" "" "" "AJ2" "tab\\there" "\\\\\\""}\n',
+        '=> {\\a \\A \\space \\lparen \\rbracket \\lf \\lf \\lf \\null \\backslash \\quote \\semicolon \\escape \\delete \\x}\n',
+        '=> {(if c a b) {if c} (set x 1) (def y 2) (hash-create z) (fn {x} {x}) (unpack f l) (format "s") ?x a:b :}\n',
+        '=> ((env "HOME") (env "Mixed_Case") $)\n',
+        '=> {1 -2 3 16383 -16384 1000 1 1 7 0 - + 1+ -_ 1a _1 #x10 1.5}\n',
+        'hylang> {a ; a comment\n\t} <b}\n=> {a b}\nhylang> (a\n\t) <{b\n\t)} <c})\n=> (a {b c})\n' +
+          'hylang> """x\n\t""" <y"""\n=> "x\\ny"\n',
+        'hylang> (1 2]\n=> Error: Closed a list without opening: )\nhylang> )\n=> Error: Closed a SExpr without opening: \n' +
+          'hylang> {a)\n=> Error: Closed a SExpr without opening: }\nhylang> [a}\n=> Error: Closed a QExpr without opening: ]\n' +
+          'hylang> f(x)\n=> Error: \'f\' touches \'(\': put a space between them\n' +
+          'hylang> x[1]\n=> Error: \'x\' touches \'[\': put a space between them\n' +
+          'hylang> +#(a)\n=> Error: \'+#\' touches \'(\': put a space between them\n' +
+          'hylang> $(x)\n=> Error: \'$(\' isn\'t danlang: $name is the environment\'s variable\n' +
+          'hylang> "\\q"\n=> Error: Unknown escape sequence \\q\nhylang> "abc\n=> Error: Newlines are not allowed in regular strings\n' +
+          'hylang> "\\x"\n=> Error: \\x needs a hex digit\nhylang> \\zzz\n=> Error: Unknown character name \\zzz\n' +
+          'hylang> \\\n=> Error: A character needs a name\n' +
+          'hylang> 70000\n=> Error: Not yet: an integer past a fixnum (phase 5)\nhylang> 16384\n=> Error: Not yet: an integer past a fixnum (phase 5)\n',
+        ' <' + ')'.repeat(100) + '\n=> ' + '('.repeat(255) + '1' + ')'.repeat(255) + '\n',
+        ' <' + '('.repeat(56) + '\n=> Error: Too deep: more than 255 brackets open\nhylang> ',
+        '\nhylang> exit\n=> exit\n\n% echo $status\n\n%',
+        'hylang> \t} <=> Error: missing }\n', 'hylang> => 42\nhylang> => exit\n\n%',
+        'hylang> {"a" "b" (c d) [e f] $G :h \\i 123 "c\\x41"}\n=> {"a" "b" (c d) (list e f) (env "G") :h \\i 123 "cA"}\n' +
+          'hylang> (1 (2 (3 (4))) {5\n\t)} <"""6\n\t)}""" <7"""})\n=> (1 (2 (3 (4))) {5 "6\\n7"})\n' +
+          'hylang> (1 2]\n=> Error: Closed a list without opening: )\nhylang> exit\n=> exit\n% echo $status\n\n%'],
+    },
+    {
       name: 'kcopy', what: 'spike S2: copying between tasks',
       init: 't_kcopy', cycles: 40e6,
       budgets: [{ what: 'kcopy, 4096 bytes (DBG_KCOPY)', from: '<kc', to: 'kc>', per: 4096, max: 40 }],

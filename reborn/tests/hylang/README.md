@@ -13,7 +13,7 @@ pass, from an emulated card, and none that passed may fail after:
 | :--- | :--- | :--- |
 | `harness.dl` | The checks: `check`, `check-error`, the count of each and of the failures | 3 |
 | `run.dl` | Loads `harness.dl`, then each file, and prints the count; its status is 1 if a check failed | 3 |
-| `reader.dl` | The reader: numbers in every base, strings, here strings, characters, atoms, symbols, comments, `[...]`, the shorthand, bytes, `read` | 2 |
+| `reader.dl` | The reader: numbers in every base, strings, here strings, characters, atoms, symbols, comments, `[...]`, the shorthand, bytes, `read` | 7 (the reader is phase 2's, checked by the emulator's `hylang` test till then; the file needs `read`, and its numbers phase 5) |
 | `eval.dl` | Calls, partial application, extra arguments, too many, tail calls (50,000 deep), nesting | 3 |
 | `scope.dl` | Lexical scope, closures, `set!`, a Q-expression run where it was written, `let`, fexprs | 3 |
 | `control.dl` | `if`, `and`, `or`, `<=>`, `while`, `each`, `dotimes`, `range`, `try` | 3 |

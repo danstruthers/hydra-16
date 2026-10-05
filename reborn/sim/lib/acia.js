@@ -3,7 +3,7 @@
 // garbled on the chip).  A character takes the time its baud rate, word length, parity and stop bits give, from
 // its 1.790 MHz clock.  What it sends goes to env.onTx; what it receives comes from its input queue (keys, and
 // '\u0100': wait 2M cycles before the next one; '\u0101': wait for a prompt, the output (grown since) ending with
-// "> " or ">" (the old system's) or "% " (rc's), and quiet for a while), a key every 20000 cycles from cycle 200000, or as fast as the line goes (env.paste: then a byte
+// "> " or ">" (the old system's), "% " (rc's) or " <" (hylang's for more lines), and quiet for a while), a key every 20000 cycles from cycle 200000, or as fast as the line goes (env.paste: then a byte
 // arriving while the last is unread is lost, as on the chip).  send(bytes): what the PC sends on its own (a /pc reply: hydrasim.js
 // --pc-dir), back to back at the line's rate, ahead of the keys (a byte arriving while the last is unread is lost, and counted).
 'use strict';
@@ -29,7 +29,7 @@ function createAcia(env) {
   // A prompt: sent since the wait began, and nothing after it for PROMPT_QUIET cycles (lines typed ahead are still
   // running until the output goes quiet)
   const PROMPT_QUIET = 300000;
-  const prompted = t => a.sent > a.promptFrom && (a.tail.endsWith('> ') || a.tail.endsWith('>') || a.tail.endsWith('% ')) && t - a.sentAt >= PROMPT_QUIET;
+  const prompted = t => a.sent > a.promptFrom && (a.tail.endsWith('> ') || a.tail.endsWith('>') || a.tail.endsWith('% ') || a.tail.endsWith(' <')) && t - a.sentAt >= PROMPT_QUIET;
   // The character time in CPU cycles: the baud rate, the word length and stop bits, and parity
   a.charCycles = () => {
     const bits = 1 + (8 - ((a.ctrl >> 5) & 3)) + ((a.cmd & 0x20) ? 1 : 0) + ((a.ctrl & 0x80) ? 2 : 1);

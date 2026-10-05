@@ -17,7 +17,7 @@ seven prefixes (`?` if, `=` set, `:` def, `#` hash-create, `@` fn, `.` unpack, `
 key up (`(h :k)`, a method `(obj :add 3)`); extra arguments are `&1`, `&2` ... past the formals; `$name` is the
 environment's variable; every ordinary built-in gets its arguments' values, the first error stopping it.
 
-**The conformance suite is danlang's regression suite**, `tests/regress/` (1,155 checks), copied to `tests/hylang`
+**The conformance suite is danlang's regression suite**, `tests/regress/` (1,173 checks), copied to `tests/hylang`
 (its README says which phase runs which file).  It's written in danlang, so hylang runs it unchanged, from an
 emulated card (`hylang run.dl`, status 0 when every check passes).  A change to the language is made in danlang
 first, with its checks, then in hylang.  What only the Hydra has is checked by a file of its own, `hydra.dl`.
@@ -27,6 +27,7 @@ first, with its checks, then in hylang.  What only the Hydra has is checked by a
 | Area | hylang | Why |
 | :--- | :----- | :-- |
 | **Integers** | Up to 255 bytes (about 614 digits; danlang's have no limit); 15 bits in the value, an object past that | Most numbers are small; the rest costs only when used |
+| **Reading** | 255 brackets open at once; a name of 255 bytes at most; an expression typed at the REPL of 4,096 bytes at most; a value printed 255 lists deep (deeper: `...`) | The reader's and the printer's stacks, in the task's RAM |
 | **Call depth** | About 2,500 calls nested, not in tail position (danlang 10,000); deeper is danlang's error | The evaluation stack: 8K in the task's RAM, spilled to 4 banks |
 | **`range`, strings, lists** | As memory allows (danlang caps `range` at 1,000,000) | Memory |
 | **`load` and `use`** | A bare name is `/lib/hylang/name.hl`, through the namespace (as forth's `/lib/forth`), so a card's or the RAM disk's `/lib/hylang` adds to the ROM's | Plan 9 names |
@@ -127,6 +128,12 @@ The plan has it whole; in short:
   mark stack of 255 (a list's spine followed in place, so it costs none), every marked cell scanned again if it
   fills; a free list per kind; the blobs nothing owns dropped and the rest slid down.  Banks are taken as they're
   needed (up to 16 for cells, 16 for blobs, 4 for the stack), and a collection while the prompt waits too.
+* **The reader and the printer** (`read.inc`, `print.inc`, in the second bank) are danlang's, in one pass without
+  tokens: a level for each bracket open (its closer, its list so far and its last cons, the levels' lists marked
+  as roots), each item made as it's read and put at its level's end; the first error ends it, as the first token in
+  error is danlang's, with danlang's message.  At the REPL, the text so far is read again with each line while a
+  bracket or a here string is open.  The printer is a loop too, over a stack of the lists it's in.  `hylang -g`
+  collects before every allocation: a test of what's kept as a root.
 * **The evaluator** is a loop over a stack of frames (8K in the task's RAM, spilled to banks), never the 65C02's
   stack: tail calls take no frame; an ordinary built-in gets its arguments' values from it; `map`, `filter`, the
   folds and the loops are frames too, so what they call nests like any call and Ctrl-C stops it.
@@ -145,7 +152,9 @@ The plan has it whole; in short:
    a measure of 16-bit values against real programs.  Done: `modules/hylang` (a program of four banks, as yet its
    heap made and each bank answering), `heap.inc`, and the heap test (`tests/mod/t_heap`: a million cells made and
    dropped with none lost, the heap grown to 16 banks and E_NOMEM).
-2. **Reader, printer and REPL**.
+2. **Reader, printer and REPL**.  Done: `read.inc` and `print.inc`, and the REPL (it prints what a line reads to,
+   till phase 3 evaluates it); the emulator's `hylang` test, and 250 lines read by both danlang and hylang the same
+   (but for the numbers phase 5 reads), with a collection before every allocation too.
 3. **The evaluator**: frames, scopes, the special forms, tail calls, partial application, errors, Ctrl-C.
 4. **Built-ins and lists**, and the library's built-ins.
 5. **Numbers**: bignums, the tower, every base.
