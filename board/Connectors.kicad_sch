@@ -3121,6 +3121,12 @@
 		(color 0 0 0 0)
 		(uuid "f7d3e24a-3c47-4539-82a6-3cdcac71f616")
 	)
+	(junction
+		(at 130.81 106.68)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "55de31eb-de3c-4a81-bf77-9369e5b59ff9")
+	)
 	(no_connect
 		(at 245.11 156.21)
 		(uuid "5019dcc7-79f2-41e6-8721-ab27c1439913")
@@ -10633,13 +10639,23 @@
 	)
 	(bus
 		(pts
-			(xy 129.54 106.68) (xy 190.5 106.68)
+			(xy 129.54 106.68) (xy 130.81 106.68)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
 		(uuid "fca20f85-c927-4f85-b91c-b8b644951d3d")
+	)
+	(bus
+		(pts
+			(xy 130.81 106.68) (xy 190.5 106.68)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "08e43fe7-ff35-4603-bba4-21af5857e9ed")
 	)
 	(bus
 		(pts
