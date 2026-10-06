@@ -2188,40 +2188,58 @@ bi_hash_call:
 :
             jmp         ev_apply_values
 
-; (load path): the file's expressions evaluated in turn, in the global scope; the last's value.  Its error, or a
-; reader's, is "path: message".  Read an item at a time (read_item), the reader's text refilled from the file; a load
-; while it waits for a value (one nested) uses the text too, so when the value comes, if the text isn't its own any
-; more (rd_owner), it seeks the file back to its next byte (its frame's) and reads on from there
+; (load path...): each file's expressions evaluated in turn, in the global scope; the last's value.  Its error, or
+; a reader's, is "path: message" (a file not there: the system's error, :noent).  Read an item at a time (read_item),
+; the reader's text refilled from the file; a load while it waits for a value (one nested) uses the text too, so when
+; the value comes, if the text isn't its own any more (rd_owner), it seeks the file back to its next byte (its
+; frame's) and reads on from there
 bi_load:
-            lda         (argp)                              ; (Its path: a string)
-            sta         ex
-            ldy         #1
+            ldy         #0                                  ; (Its paths: strings)
+@path:
             lda         (argp),y
-            sta         ex + 1
-            lda         cn
-            cmp         #2
-            bcc         :+
-            LDAX        s_loadone
-            jmp         ev_error_args
-:
-            lda         ex
-            ldx         ex + 1
+            pha
+            iny
+            lda         (argp),y
+            tax
+            pla
+            iny
             jsr         kind_of
             cmp         #PK_STRING
             beq         :+
             LDAX        s_loadstr
             jmp         ev_error_args
 :
+            tya
+            lsr
+            cmp         cn
+            bcc         @path
+            jsr         args_list                           ; (cf: the first; cr: the rest)
+            lda         hv
+            ldx         hv + 1
+            ldy         #1
+            jsr         cell_get
+            sta         cr
+            stx         cr + 1
+            lda         hv
+            ldx         hv + 1
+            ldy         #0
+            jsr         cell_get
+            sta         cf
+            stx         cf + 1
             stz         ev_inargs
             jsr         drop_args
-            MOVW        cf, ex                              ; (cf: the path)
+            stz         ex
+            stz         ex + 1
+; cf, a path: its file opened (load's next), cr the paths after it
+load_open:
             FARN        4, file_open                        ; (The file opened: its fd)
             bcc         :+
-            jsr         err_begin                           ; ("path: not found")
-            jsr         out_path
-            lda         ld_err
-            jsr         out_errstr
-            jmp         ev_err_end
+            lda         ld_err                              ; ("path: not found", :noent)
+            FARN        5, y_loaderr
+            bcs         @lb402
+            jmp         load_value
+@lb402:
+            jmp         ev_nomem
 :
             sta         ld_fdv
             stz         ld_off
@@ -2245,7 +2263,24 @@ load_next:
             pla
             cmp         #RD_END
             bne         :+
-            jmp         ev_return                           ; (Its end: the last value)
+            lda         cr                                  ; (Its end: the next file's, or the last value)
+            ora         cr + 1
+            bne         @lb401
+            jmp         load_value
+@lb401:
+            lda         cr
+            ldx         cr + 1
+            ldy         #0
+            jsr         cell_get
+            sta         cf
+            stx         cf + 1
+            lda         cr
+            ldx         cr + 1
+            ldy         #1
+            jsr         cell_get
+            sta         cr
+            stx         cr + 1
+            jmp         load_open
 :
             cmp         #RD_ERROR
             bne         :+
@@ -2282,6 +2317,7 @@ load_next:
             sbc         ld_off + 1
             sta         ld_off + 1
             jsr         frame_check
+            PUSHV       cr
             PUSHV       cf
             lda         ld_fdv
             ldx         #0
@@ -2311,6 +2347,7 @@ k_load:
             jsr         unfix
             sta         ld_fdv
             POPV        cf
+            POPV        cr
             jsr         is_err
             bcc         :+
             jsr         ld_close
@@ -2343,6 +2380,9 @@ k_load:
             jsr         SEEK
             jsr         ld_text
             jmp         load_next
+; The last value
+load_value:
+            jmp         ev_return
 
 ; The reader's text empty, the file ld_fdv's from its byte ld_off on
 ld_text:
@@ -2584,7 +2624,6 @@ s_spacetest: .byte      "Unknown comparison test ", 0
 s_wfnlist:  .byte       "' expects a function and a list", 0
 s_wfold:    .byte       "' expects a function, a value and a list", 0
 s_wlist:    .byte       "' expects a list", 0
-s_loadone:  .byte       "Not yet: 'load' of more than one file (phase 7)", 0
 s_loadstr:  .byte       "'load' passed non-string parameter(s)", 0
 s_missing:  .byte       "missing ", 0
 s_colon:    .byte       ": ", 0

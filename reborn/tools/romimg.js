@@ -60,7 +60,7 @@ function readHeader(data, what) {
   if (!TYPES[data[HX.TYPE]]) fail('type ' + data[HX.TYPE] + '?');
   if (data.readUInt16LE(HX.LOAD) !== WINDOW) fail('not built to run in place (load address $' + data.readUInt16LE(HX.LOAD).toString(16) + ')');
   const banks = data[HX.BANKS], length = data.readUInt16LE(HX.LENGTH);   // (Its length in its last bank)
-  if (banks < 1 || banks > 4) fail(banks + ' banks: one to four');
+  if (banks < 1 || banks > 8) fail(banks + ' banks: one to eight');
   if (length < 1 || length > BANK || (banks - 1) * BANK + length !== data.length)
     fail('its header says ' + banks + ' banks, the last ' + length + ' bytes long; the file has ' + data.length);
   const raw = data.subarray(HX.NAME, HX.NAME + NAME_LEN), end = raw.indexOf(0);

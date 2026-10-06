@@ -1399,8 +1399,145 @@ n_to_str2:
             jsr         nu_end
             jmp         n_leave
 
+; ---- For the system library (the fifth bank's): integers to and from four bytes (lengths, offsets, times), ticks
+
+; hv = the integer of the four bytes at n_w32 (least first; unsigned).  OUT: C = 1 if there's no room
+n_u32:
+            jsr         n_enter
+            stz         nrc
+            jsr         r_c
+            ldx         nrc
+            stz         r_neg,x
+            ldy         #3
+:
+            lda         n_w32,y
+            sta         (nc),y
+            dey
+            bpl         :-
+            lda         #4
+            sta         r_len,x
+            jsr         r_store
+            jmp         n_leave
+
+; n_w32 = the integer .A, .X (0 to 2^32 - 1), or the number equal to one (2.0).  OUT: C = 1 if it isn't one
+n_to_u32:
+            sta         n_v
+            stx         n_v + 1
+            jsr         n_kind
+            beq         @int
+            cmp         #NK_FIX
+            bne         @no
+            lda         n_v                                 ; (A fixed decimal of no places: its digits)
+            ldx         n_v + 1
+            ldy         #1
+            jsr         cell_get
+            cmp         #<FIX(0)
+            bne         @no
+            cpx         #0
+            bne         @no
+            lda         n_v
+            ldx         n_v + 1
+            ldy         #0
+            jsr         cell_get
+            sta         n_v
+            stx         n_v + 1
+@int:
+            stz         nrc
+            lda         n_v
+            ldx         n_v + 1
+            jsr         r_load
+            ldx         #0
+            lda         r_neg,x
+            bne         @no
+            lda         r_len,x
+            cmp         #5
+            bcs         @no
+            sta         n_t
+            stz         nrc
+            jsr         r_c
+            ldy         #0
+:
+            lda         #0
+            cpy         n_t
+            bcs         :+
+            lda         (nc),y
+:
+            sta         n_w32,y
+            iny
+            cpy         #4
+            bcc         :--
+            clc
+            rts
+@no:
+            sec
+            rts
+
+; n_w32 = the ticks in .A, .X seconds, a real number 0 or more (TICK_HZ a second, the fraction's floor: sleep's;
+; 2^32 - 1 at most).  OUT: C = 1 if it isn't one
+n_ticks:
+            sta         n_v
+            stx         n_v + 1
+            jsr         n_kind
+            cmp         #NK_CPX
+            bcs         @no
+            jsr         n_enter
+            lda         n_v
+            ldx         n_v + 1
+            ldy         #0
+            jsr         n_load                              ; (R0 / R1)
+            ldx         #0
+            lda         r_neg,x
+            bne         @neg
+            stz         nrc
+            lda         #TICK_HZ
+            jsr         r_mulsmall
+            stz         nra
+            lda         #1
+            sta         nrb
+            lda         #2
+            sta         nrq
+            lda         #3
+            sta         nrr
+            jsr         r_divmod
+            ldx         #2                                  ; (R2: past 4 bytes, the most)
+            lda         r_len,x
+            cmp         #5
+            bcc         :+
+            lda         #$FF
+            sta         n_w32
+            sta         n_w32 + 1
+            sta         n_w32 + 2
+            sta         n_w32 + 3
+            clc
+            jmp         n_leave
+:
+            sta         n_t
+            lda         #2
+            sta         nrc
+            jsr         r_c
+            ldy         #0
+:
+            lda         #0
+            cpy         n_t
+            bcs         :+
+            lda         (nc),y
+:
+            sta         n_w32,y
+            iny
+            cpy         #4
+            bcc         :--
+            clc
+            jmp         n_leave
+@neg:
+            sec
+            jmp         n_leave
+@no:
+            sec
+            rts
+
 .bss
 n_opc2:     .res        1                                   ; (nm_general's operation)
+n_w32:      .res        4                                   ; (n_u32's and n_to_u32's four bytes, least first)
 
 .segment "RODATA3"
 n_torat:    .byte       "to-rational", 0

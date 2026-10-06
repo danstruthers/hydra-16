@@ -1,6 +1,6 @@
 ; ****************************************************************************
-; nums.inc - hylang's fn, fexpr, fun, error, the type tests and not, and "Not yet", in its third bank, with the
-; numbers (numreg.inc, numval.inc, numtext.inc, numbi.inc, numbits.inc).  Each built-in gets its values at argp (cn
+; nums.inc - hylang's fn, fexpr, fun, error, the type tests and not, in its third bank, with the numbers (numreg.inc,
+; numval.inc, numtext.inc, numbi.inc, numbits.inc).  Each built-in gets its values at argp (cn
 ; of them) and gives back ex (C = 1 if there's no room).
 
 .segment "CODE3"
@@ -120,19 +120,6 @@ nu_ex_set:
             txa
             sta         (hp),y
             rts
-
-; ---- Not yet
-
-; A built-in a later phase makes: "Not yet: 'name'"
-bi_notyet:
-            jsr         nu_begin
-            LDAX        s_notyet
-            jsr         out_text
-            ldx         bi_n
-            FARN        2, bi_name
-            lda         #$27
-            jsr         out_byte
-            jmp         nu_end
 
 ; ---- Functions
 
@@ -772,7 +759,6 @@ tn_exit:    .byte       "Exit", 0
 tn_sexpr:   .byte       "S-Expression", 0
 tn_qexpr:   .byte       "Q-Expression", 0
 
-s_notyet:   .byte       "Not yet: '", 0
 s_fn:       .byte       "fn", 0
 s_fexpr:    .byte       "fexpr", 0
 s_fnformals: .byte      "' expects a list of symbols first", 0

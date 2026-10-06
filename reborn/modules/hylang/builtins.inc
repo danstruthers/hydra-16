@@ -1,16 +1,16 @@
 ; ****************************************************************************
 ; builtins.inc - hylang's built-ins (phase 3): the table of all danlang's (Builtins.cs's Arity: each one's name,
 ; the arguments it needs and the most it takes, its flags, its code), and the code of those in the first bank.  A
-; built-in is the value BUILTIN0 + 2 * its number; each is bound to its name as hylang starts (bi_bind).  Those not
-; written yet answer "Not yet" (bi_notyet): the phases that make them replace it.
+; built-in is the value BUILTIN0 + 2 * its number; each is bound to its name as hylang starts (bi_bind).
 ;   An ordinary built-in's code gets its values at argp (cn of them, on the stack: roots), ee the caller's scope;
 ; it gives back ex, or C = 1 if there's no room.  A special form's (BF_SPECIAL: forms.inc) and one that runs the
 ; machine (BF_MACHINE) are jumped to.
 
 ANY             = 255           ; (The most a built-in takes: any number)
-B2              = 1             ; (Its code in the second bank, the third or the fourth: BF_BANK's)
+B2              = 1             ; (Its code in the second bank, the third, the fourth or the fifth: BF_BANK's)
 B3              = 2
 B4              = 3
+B5              = 4
 
 BI_N            .set 0
 
@@ -73,8 +73,9 @@ BIN_MUL         = BI_N
             BI          "<", 2, 2, B2, bq_lt
             BI          "cmp", 2, 2, B2, bq_cmp
             BI          "<=>", 2, ANY, BF_SPECIAL, sf_space
+BIN_LOAD        = BI_N          ; (A script's: hylang file)
             BI          "load", 1, ANY, BF_MACHINE, bi_load
-            BI          "save", 1, ANY, B3, bi_notyet
+            BI          "save", 1, ANY, B5, bi_save
             BI          "error", 1, 2, B3, bi_error
             BI          "print", 0, ANY, BF_ERRORS | B2, bo_print
             BI          "write", 0, ANY, BF_ERRORS | B2, bo_write
@@ -101,16 +102,16 @@ BIN_MUL         = BI_N
             BI          "space?", 1, 1, B4, bi_space_p
             BI          "upper?", 1, 1, B4, bi_upper_p
             BI          "lower?", 1, 1, B4, bi_lower_p
-            BI          "read", 1, 1, B3, bi_notyet
-            BI          "open", 1, 2, B3, bi_notyet
-            BI          "close", 1, 1, B3, bi_notyet
-            BI          "read-line", 0, 1, B3, bi_notyet
-            BI          "read-byte", 0, 1, B3, bi_notyet
-            BI          "read-all", 0, 1, B3, bi_notyet
-            BI          "seek", 2, 2, B3, bi_notyet
-            BI          "tell", 1, 1, B3, bi_notyet
-            BI          "print-to", 1, ANY, BF_ERRORS | B3, bi_notyet
-            BI          "write-to", 1, ANY, BF_ERRORS | B3, bi_notyet
+            BI          "read", 1, 1, B5, bi_read
+            BI          "open", 1, 2, B5, bi_open
+            BI          "close", 1, 1, B5, bi_close
+            BI          "read-line", 0, 1, B5, bi_read_line
+            BI          "read-byte", 0, 1, B5, bi_read_byte
+            BI          "read-all", 0, 1, B5, bi_read_all
+            BI          "seek", 2, 2, B5, bi_seek
+            BI          "tell", 1, 1, B5, bi_tell
+            BI          "print-to", 1, ANY, BF_ERRORS | B5, bi_print_to
+            BI          "write-to", 1, ANY, BF_ERRORS | B5, bi_write_to
             BI          "val", 1, 1, B3, bi_val
             BI          "to-fixed", 1, 2, B3, bi_to_fixed
             BI          "to-rational", 1, 1, B3, bi_to_rational
@@ -159,40 +160,40 @@ BIN_MUL         = BI_N
             BI          "hash-locked?", 1, 2, B4, bi_hash_locked_p
             BI          "hash-private?", 1, 2, B4, bi_hash_private_p
             BI          "hash-const?", 1, 2, B4, bi_hash_const_p
-            BI          "read-file", 1, 1, B3, bi_notyet
-            BI          "read-lines", 1, 1, B3, bi_notyet
-            BI          "write-file", 1, ANY, B3, bi_notyet
-            BI          "append-file", 1, ANY, B3, bi_notyet
-            BI          "ls", 0, 1, B3, bi_notyet
-            BI          "dir", 0, 1, B3, bi_notyet
-            BI          "stat", 1, 1, B3, bi_notyet
-            BI          "exists?", 1, 1, B3, bi_notyet
-            BI          "dir?", 1, 1, B3, bi_notyet
-            BI          "file?", 1, 1, B3, bi_notyet
-            BI          "mkdir", 1, 1, B3, bi_notyet
-            BI          "remove", 1, 1, B3, bi_notyet
-            BI          "rename", 2, 2, B3, bi_notyet
-            BI          "copy-file", 2, 2, B3, bi_notyet
-            BI          "cd", 0, 1, B3, bi_notyet
-            BI          "cwd", 0, 0, B3, bi_notyet
-            BI          "glob", 1, 1, B3, bi_notyet
-            BI          "run", 1, ANY, B3, bi_notyet
-            BI          "sh", 1, 2, B3, bi_notyet
-            BI          "sh-out", 1, 2, B3, bi_notyet
-            BI          "spawn", 1, ANY, B3, bi_notyet
-            BI          "wait", 1, 1, B3, bi_notyet
-            BI          "kill", 1, 1, B3, bi_notyet
-            BI          "pid", 0, 0, B3, bi_notyet
-            BI          "env", 0, 1, B3, bi_notyet
-            BI          "setenv", 2, 2, B3, bi_notyet
-            BI          "unsetenv", 1, 1, B3, bi_notyet
-            BI          "time", 0, 0, B3, bi_notyet
-            BI          "date", 0, 1, B3, bi_notyet
-            BI          "date-parts", 0, 1, B3, bi_notyet
-            BI          "seconds-of", 3, 6, B3, bi_notyet
-            BI          "ticks", 0, 0, B3, bi_notyet
-            BI          "tick-rate", 0, 0, B3, bi_notyet
-            BI          "sleep", 1, 1, B3, bi_notyet
+            BI          "read-file", 1, 1, B5, bi_read_file
+            BI          "read-lines", 1, 1, B5, bi_read_lines
+            BI          "write-file", 1, ANY, B5, bi_write_file
+            BI          "append-file", 1, ANY, B5, bi_append_file
+            BI          "ls", 0, 1, B5, bi_ls
+            BI          "dir", 0, 1, B5, bi_dir
+            BI          "stat", 1, 1, B5, bi_stat
+            BI          "exists?", 1, 1, B5, bi_exists_p
+            BI          "dir?", 1, 1, B5, bi_dir_p
+            BI          "file?", 1, 1, B5, bi_file_p
+            BI          "mkdir", 1, 1, B5, bi_mkdir
+            BI          "remove", 1, 1, B5, bi_remove
+            BI          "rename", 2, 2, B5, bi_rename
+            BI          "copy-file", 2, 2, B5, bi_copy_file
+            BI          "cd", 0, 1, B5, bi_cd
+            BI          "cwd", 0, 0, B5, bi_cwd
+            BI          "glob", 1, 1, B5, bi_glob
+            BI          "run", 1, ANY, B5, bi_run
+            BI          "sh", 1, 2, B5, bi_sh
+            BI          "sh-out", 1, 2, B5, bi_sh_out
+            BI          "spawn", 1, ANY, B5, bi_spawn
+            BI          "wait", 1, 1, B5, bi_wait
+            BI          "kill", 1, 1, B5, bi_kill
+            BI          "pid", 0, 0, B5, bi_pid
+            BI          "env", 0, 1, B5, bi_env
+            BI          "setenv", 2, 2, B5, bi_setenv
+            BI          "unsetenv", 1, 1, B5, bi_unsetenv
+            BI          "time", 0, 0, B5, bi_time
+            BI          "date", 0, 1, B5, bi_date
+            BI          "date-parts", 0, 1, B5, bi_date_parts
+            BI          "seconds-of", 3, 6, B5, bi_seconds_of
+            BI          "ticks", 0, 0, B5, bi_ticks
+            BI          "tick-rate", 0, 0, B5, bi_tick_rate
+            BI          "sleep", 1, 1, B5, bi_sleep
             BI          "bit-and", 1, ANY, B3, bi_bit_and
             BI          "bit-or", 1, ANY, B3, bi_bit_or
             BI          "bit-xor", 1, ANY, B3, bi_bit_xor
@@ -207,10 +208,10 @@ BIN_MUL         = BI_N
             BI          "word", 2, 2, B3, bi_word
             BI          "bytes", 1, 1, B3, bi_bytes
             BI          "from-bytes", 1, 1, B3, bi_from_bytes
-            BI          "read-bytes", 2, 2, B3, bi_notyet
-            BI          "write-bytes", 2, 2, B3, bi_notyet
-            BI          "platform", 0, 0, B3, bi_notyet
-            BI          "hydra?", 0, 0, B3, bi_notyet
+            BI          "read-bytes", 2, 2, B5, bi_read_bytes
+            BI          "write-bytes", 2, 2, B5, bi_write_bytes
+            BI          "platform", 0, 0, B5, bi_platform
+            BI          "hydra?", 0, 0, B5, bi_hydra_p
             BI          "not", 1, 1, B3, bi_not
             BI          "==", 2, 2, B2, bq_eq
             BI          ">=", 2, 2, B2, bq_ge

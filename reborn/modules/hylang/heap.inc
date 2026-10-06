@@ -1610,7 +1610,7 @@ kd_raw:     .byte       0, 0, 0
             .byte       %0000, %0000, %0000, %0000
 kd_blob:    .byte       $FF, $FF, $FF
             .byte       $FF, $FF, $FF, 1, 1, $FF, $FF, $FF, $FF
-            .byte       $FF, 0, 0, $FF, $FF, 2
+            .byte       $FF, 0, 0, $FF, $FF, $FF
             .byte       $FF, $FF, $FF, $FF
 kd_spine:   .byte       $FF, $FF, $FF
             .byte       1, 1, 0, $FF, $FF, $FF, $FF, $FF, $FF

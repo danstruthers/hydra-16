@@ -71,7 +71,7 @@ ld65 -C sdk/asm/hyx2.cfg -o hello.hyx hello.o
 ```
 
 (`-D HYX2_RAM`: a program in a file.  Without it, `hyx2.inc` makes a module of the paged ROM, run in place, linked
-with `module.cfg` (`module2.cfg` to `module4.cfg` for one of two to four banks); those are the system's, built into the ROM with
+with `module.cfg` (`module2.cfg` to `module8.cfg` for one of two to eight banks); those are the system's, built into the ROM with
 `modules/rom.txt`.  A server is one: a
 driver, `HYX2_DRIVER`, which registers a device letter and answers its clients' requests through `srvlib`.  The
 sample `counter` is one; the build makes it a module, and the tools test puts it in its ROM.  A module may have

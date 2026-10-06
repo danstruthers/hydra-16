@@ -59,8 +59,10 @@ h_start:    .res        2                                   ; (An error's captur
 h_mode:     .res        1                                   ; (hash-create's, to#'s, hash-put's: HM_*; the frame's
 h_st:       .res        1                                   ;   state; the first step)
 h_first:    .res        1
-h_sp:       .res        1                                   ; The abort point: the 65C02's stack, the root stack
-h_rsp:      .res        1
+h_sp:       .res        1                                   ; The abort point: the 65C02's stack, the root stack,
+h_rsp:      .res        1                                   ;   the captures open and their length
+h_cap:      .res        1
+h_clen:     .res        2
 
 .segment "CODE4"
 
@@ -74,6 +76,12 @@ h_enter:
             stx         h_sp
             lda         rsp
             sta         h_rsp
+            lda         cap_on
+            sta         h_cap
+            lda         cap_len
+            sta         h_clen
+            lda         cap_len + 1
+            sta         h_clen + 1
             lda         h_tags + 1
             ora         h_tags
             bne         @done
@@ -116,12 +124,18 @@ h_enter:
 @done:
             rts
 
-; No room: back from the entry, C = 1, the root stack as it was
+; No room: back from the entry, C = 1, the root stack and the captures as they were
 h_nomem:
             ldx         h_sp
             txs
             lda         h_rsp
             sta         rsp
+            lda         h_cap
+            sta         cap_on
+            lda         h_clen
+            sta         cap_len
+            lda         h_clen + 1
+            sta         cap_len + 1
             sec
             rts
 
@@ -2117,6 +2131,47 @@ bi_hash_clone:
             jmp         h_open
 
 ; ---- What the other banks call
+
+; hv = a hash of the entries {key value} in the list cf, put as a member puts them (the fifth bank's stat, date-parts,
+; env).  OUT: C = 1 if there's no room
+h_fromlist:
+            jsr         h_enter
+            jsr         h_new
+            MOVW        h_h, hv
+            lda         hv
+            ldx         hv + 1
+            jsr         h_rpush
+            lda         #$FF
+            sta         h_mem
+            lda         cf
+            ldx         cf + 1
+@entry:
+            sta         h_e
+            stx         h_e + 1
+            ora         h_e + 1
+            beq         @done
+            lda         h_e                                 ; (The list walked: on the 65C02's stack)
+            pha
+            lda         h_e + 1
+            pha
+            ldy         #0
+            lda         h_e
+            jsr         cell_get
+            sta         h_e
+            stx         h_e + 1
+            jsr         h_putent1
+            pla
+            tax
+            pla
+            ldy         #1
+            jsr         cell_get
+            bra         @entry
+@done:
+            jsr         root_pop
+            sta         hv
+            stx         hv + 1
+            clc
+            rts
 
 ; .A, .X = the count of the hash .A, .X (a fixnum: len's)
 h_count_of:

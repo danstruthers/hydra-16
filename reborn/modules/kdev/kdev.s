@@ -1072,12 +1072,20 @@ md_init:
             ldy         #ME_BANKS
             lda         (mp),Y
             dec         a
+            cmp         #4                                  ; (Past four banks, 64K: a file's most, its first 64K)
+            bcc         :+
+            lda         #$FF
+            sta         n
+            sta         n + 1
+            bra         @len
+:
             .repeat     6                                   ; (Banks before the last: 64 pages each)
             asl
             .endrepeat
             clc
             adc         n + 1
             sta         n + 1
+@len:
             lda         mcount
             asl
             tax

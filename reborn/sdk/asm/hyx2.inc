@@ -19,11 +19,11 @@
 ; The header is the first 48 bytes of the module (the HEADER segment).  Its DATA is copied into the task's RAM
 ; and its BSS cleared before it starts.
 ;
-; A module of two to four banks (banks = 2-4, linked by modules/module2.cfg ... module4.cfg) has its second bank's
-; code and read-only data in the segments CODE2 and RODATA2, its third's in CODE3 and RODATA3, its fourth's in CODE4
-; and RODATA4, all at the same addresses as the first's ($A000-$DFFF), so no bank calls another directly: FAR2
-; routine calls a routine in the second bank from the first, FAR1 routine one in the first from the second, and
-; FARN bank, routine one in any bank (1-4) from any, the caller's bank set again after (.A, .X, .Y and C go in and
+; A module of two to eight banks (banks = 2-8, linked by modules/module2.cfg ... module8.cfg) has its second bank's
+; code and read-only data in the segments CODE2 and RODATA2, its third's in CODE3 and RODATA3, and so on to its last's,
+; all at the same addresses as the first's ($A000-$DFFF), so no bank calls another directly: FAR2 routine calls a
+; routine in the second bank from the first, FAR1 routine one in the first from the second, and FARN bank, routine
+; one in any bank (1-8) from any, the caller's bank set again after (.A, .X, .Y and C go in and
 ; come back; N and Z are .A's).  The trampolines are in the module's RAM (its DATA), where every bank sees them,
 ; and switch the task's own bank register ($01); HYX2_BANKS_INIT, first thing in its init or main, notes the
 ; module's banks.  Such a module owns no IRQ line: its irq entry runs in its own task, and might find another bank
@@ -48,7 +48,7 @@ HYX2_BANKS      = 1
 .else
 HYX2_BANKS      = banks
 .endif
-.assert     HYX2_BANKS >= 1 .and HYX2_BANKS <= 4, error, "A module is one bank to four"
+.assert     HYX2_BANKS >= 1 .and HYX2_BANKS <= 8, error, "A module is one bank to eight"
 .ifdef HYX2_RAM
 .assert     HYX2_BANKS = 1, error, "A RAM program is one image"
 .endif
@@ -180,6 +180,18 @@ hyx2_bank3: .byte       0
 .if HYX2_BANKS > 3
 hyx2_bank4: .byte       0
 .endif
+.if HYX2_BANKS > 4
+hyx2_bank5: .byte       0
+.endif
+.if HYX2_BANKS > 5
+hyx2_bank6: .byte       0
+.endif
+.if HYX2_BANKS > 6
+hyx2_bank7: .byte       0
+.endif
+.if HYX2_BANKS > 7
+hyx2_bank8: .byte       0
+.endif
 .endmacro
 
 ; The module's banks noted: the first (this one, as it starts) and those after it.  Modifies: .A
@@ -196,10 +208,26 @@ hyx2_bank4: .byte       0
             inc
             sta         hyx2_bank4
 .endif
+.if HYX2_BANKS > 4
+            inc
+            sta         hyx2_bank5
+.endif
+.if HYX2_BANKS > 5
+            inc
+            sta         hyx2_bank6
+.endif
+.if HYX2_BANKS > 6
+            inc
+            sta         hyx2_bank7
+.endif
+.if HYX2_BANKS > 7
+            inc
+            sta         hyx2_bank8
+.endif
 .endmacro
 
 ; Call routine in the second bank, from the first (FAR2), or in the first from the second (FAR1), or in bank n
-; (1-4) from any (FARN n, routine)
+; (1-8) from any (FARN n, routine)
 .macro FAR2 routine
             sta         hyx2_a
             lda         #<routine

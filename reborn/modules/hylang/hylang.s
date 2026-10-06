@@ -1,22 +1,24 @@
 ; ****************************************************************************
-; hylang - danlang on the Hydra-16 (docs/hylang.md), written again from scratch.  As yet (phase 6) its REPL, its
-; evaluator, the list and type built-ins, the library's, the numbers, the strings and the hashes: a line read (with
-; the lines that go on with it, while a bracket or a here string is open), evaluated, its value printed as danlang's
-; REPL prints it.  hylang -g collects before every allocation (a test of what's kept as a root).
-;   A program of four banks: the evaluator, its special forms, the dispatch and the built-ins that run it in the first
+; hylang - danlang on the Hydra-16 (docs/hylang.md), written again from scratch.  As yet (phase 7) all of danlang but
+; its library: a line read (with the lines that go on with it, while a bracket or a here string is open), evaluated,
+; its value printed as danlang's REPL prints it; or, hylang file args..., the file run (args: its path and the args),
+; its status 0, 1 after an error (on stderr), or (exit n)'s.  hylang -g collects before every allocation (a test of
+; what's kept as a root).
+;   A program of five banks: the evaluator, its special forms, the dispatch and the built-ins that run it in the first
 ; (eval.inc, forms.inc, builtins.inc); the reader, the printer, the list built-ins and those that write values in the
 ; second (read.inc, print.inc, lists.inc, eqcmp.inc, valout.inc); the numbers in the third (nums.inc, numreg.inc,
-; numval.inc, numtext.inc, numbi.inc, numbits.inc); the hashes, the strings (hashes.inc, strs.inc), streams and the
-; system in the fourth, with the most of the RAM code (DATA4, hylang.cfg: copied to the RAM as hylang starts).  What
-; every bank calls is in the task's RAM: the heap (heap.inc), the output (out.inc), the evaluation stack (stack.inc),
-; and the note handler here; a bank calls another through FARN.
+; numval.inc, numtext.inc, numbi.inc, numbits.inc); the hashes and the strings in the fourth (hashes.inc, strs.inc),
+; with the most of the RAM code (DATA4, hylang.cfg: copied to the RAM as hylang starts); the streams and the system
+; library in the fifth (sys.inc, streams.inc, system.inc).  What every bank calls is in the task's RAM: the heap
+; (heap.inc), the output (out.inc), the evaluation stack (stack.inc), and the note handler here; a bank calls another
+; through FARN.
 
 .include "hydra.inc"
 .include "hyx2.inc"
 .include "macros.inc"
 .include "hylang.inc"
 
-            HYX2_PROGRAM "hylang", main, 4
+            HYX2_PROGRAM "hylang", main, 5
 
 HL_DATA4        = 1             ; (The RAM code in DATA4: hylang.cfg)
 
@@ -40,6 +42,9 @@ HL_DATA4        = 1             ; (The RAM code in DATA4: hylang.cfg)
 .include "numbits.inc"
 .include "hashes.inc"
 .include "strs.inc"
+.include "sys.inc"
+.include "streams.inc"
+.include "system.inc"
 
 IBUF_SIZE       = 128           ; stdin read this much at a time
 
@@ -53,6 +58,7 @@ ipos:       .res        1
 intr:       .res        1                                   ; Ctrl-C ($80), noted by the note handler
 rl_any:     .res        1                                   ; (read_line's: some of a line read)
 stress:     .res        1                                   ; (hylang -g)
+hl_argp:    .res        2                                   ; (Its arguments after -g: args, a script's path first)
 
 .segment "DATA4"
 ; The note handler, in RAM (any bank may be at $A000 when a note comes): Ctrl-C (NOTE_INTERRUPT) noted in intr;
@@ -76,6 +82,7 @@ main:
             HYX2_BANKS_INIT
             FARN        4, data4_init                       ; (The most of the RAM code: from the fourth bank)
             stz         stress
+            MOVW        hl_argp, r0
             lda         r0                                  ; (hylang -g: stress)
             ora         r0 + 1
             beq         @args
@@ -90,6 +97,13 @@ main:
             lda         (r0),y
             bne         @args
             inc         stress
+            clc                                             ; (The rest: past "-g" and its 0)
+            lda         r0
+            adc         #3
+            sta         hl_argp
+            lda         r0 + 1
+            adc         #0
+            sta         hl_argp + 1
 @args:
             stz         olen
             stz         ilen
@@ -111,6 +125,8 @@ main:
             jsr         ev_init
             bcs         @noroom
             FARN        2, bi_bind
+            bcs         @noroom
+            FARN        5, y_init                           ; (stdin, stdout, stderr; args; a script's (load path))
             bcc         :+
 @noroom:
             LDAX        s_noheap
@@ -120,6 +136,21 @@ main:
 :
             lda         stress
             sta         gc_stress
+            lda         hv                                  ; (A script: run, its status 0, or 1 after an error
+            ora         hv + 1                              ;   (on stderr), or (exit n)'s)
+            beq         @repl
+            MOVW        ex, hv
+            stz         ee
+            stz         ee + 1
+            jsr         ev_run
+            jsr         is_err
+            lda         #0
+            bcc         :+
+            FARN        5, y_errout
+            lda         #1
+:
+            jmp         quit
+@repl:
             LDAX        s_banner
             jsr         out_text
 @expr:
@@ -334,7 +365,7 @@ getc_in:
             rts
 
 .rodata
-s_banner:   .byte       "hylang (danlang on the Hydra-16), phase 6: its strings and hashes", LF
+s_banner:   .byte       "hylang (danlang on the Hydra-16), phase 7: its streams and system", LF
             .byte       "Type 'exit' to Exit", LF, LF, 0
 s_prompt:   .byte       "hylang> ", 0
 s_more:     .byte       " <", 0
@@ -349,7 +380,11 @@ s_noheap:   .byte       "hylang: no room for its heap", LF, 0
 bank_three:
             rts
 
-.segment "CODE4"                                            ; (Strings, hashes, streams, the system: phases 6, 7)
+.segment "CODE5"                                            ; (Streams, I/O and the system library: phase 7)
+bank_five:
+            rts
+
+.segment "CODE4"                                            ; (Strings and hashes: phase 6; the RAM code's image)
 ; DATA4 (hylang.cfg's: the most of the RAM code, kept in this bank) copied to the task's RAM, as hylang starts
 .import __DATA4_LOAD__, __DATA4_RUN__, __DATA4_SIZE__
 data4_init:

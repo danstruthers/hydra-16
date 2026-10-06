@@ -14,7 +14,7 @@ pv:         .res        2                                   ; The printer's: a v
 pn:         .res        2                                   ;   a count ...
 
 .bss
-pm:         .res        1                                   ;   the form (0: repr, 1: print's) ...
+pm:         .res        1                                   ;   the form (0: repr, 1: print's, 2: save's) ...
 pd:         .res        1                                   ;   and the lists open ...
 p_inhash:   .res        1                                   ;   and the hashes' among them
 ps_lo:      .res        PRINT_DEPTH                         ; Each list open: the cons it's at (its car next) ...
@@ -143,7 +143,8 @@ print_val:
             lda         pv + 1
             sta         ps_hi,x
             inc         pd
-            stz         pm                                  ; (What's in it: as repr has it, as danlang's ToStr)
+            lsr         pm                                  ; (What's in it: as repr has it, as danlang's ToStr;
+            asl         pm                                  ;   save's as save's)
             lda         pv                                  ; (Its formals first)
             ldx         pv + 1
             ldy         #0
@@ -191,7 +192,8 @@ print_val:
             lda         pv + 1
             sta         ps_hi,x
             inc         pd
-            stz         pm                                  ; (What's in it: as repr has it, as danlang's ToStr)
+            lsr         pm                                  ; (What's in it: as repr has it, as danlang's ToStr;
+            asl         pm                                  ;   save's as save's)
             jmp         @item
 @hash:
             lda         pv                                  ; (A hash: a proxy's, its own)
@@ -207,6 +209,14 @@ print_val:
             sta         pv
             stx         pv + 1
 :
+            lda         pm                                  ; (save's: #( ... ), and in a hash too)
+            cmp         #2
+            bne         :+
+            lda         #<s_hashopen
+            ldx         #>s_hashopen
+            jsr         out_text
+            bra         :++
+:
             lda         p_inhash                            ; (<hash>, unless it's in a hash)
             bne         :+
             lda         #<s_hash
@@ -221,8 +231,14 @@ print_val:
             stx         pv + 1
             ora         pv + 1
             bne         :+
-            lda         #<s_nil
+            lda         #<s_nil                             ; (None: NIL; save's {})
             ldx         #>s_nil
+            ldy         pm
+            cpy         #2
+            bne         @nilout
+            lda         #<s_hashnone
+            ldx         #>s_hashnone
+@nilout:
             jsr         out_text
             jmp         @after
 :
@@ -256,7 +272,8 @@ print_val:
             lda         pv + 1
             sta         ps_hi,x
             inc         pd
-            stz         pm                                  ; (What's in it: as repr has it, as danlang's ToStr)
+            lsr         pm                                  ; (What's in it: as repr has it, as danlang's ToStr;
+            asl         pm                                  ;   save's as save's)
             bra         @item
 @deep:
             lda         #<s_deep
@@ -273,8 +290,13 @@ print_val:
             bne         @space
             lda         ps_close,x
             bpl         :+
-            dec         p_inhash                            ; (A hash's end)
+            dec         p_inhash                            ; (A hash's end: save's, })
             and         #$7F
+            ldy         pm
+            cpy         #2
+            bne         :+
+            jsr         out_byte
+            lda         #')'
 :
             jsr         out_byte
             dec         pd
@@ -335,6 +357,21 @@ print_imm:
             bcs         @char
             cpx         #0
             bne         @other                              ; (Page 1: none)
+            lda         pm                                  ; (save's: NIL {}, () ())
+            cmp         #2
+            bne         :+
+            lda         pv
+            cmp         #<SNIL + 1
+            bcs         :+
+            lsr
+            tax
+            lda         ser_lo,x
+            pha
+            lda         ser_hi,x
+            tax
+            pla
+            jmp         out_text
+:
             lda         pv
             cmp         #UNBOUND + 2
             bcs         @other
@@ -357,7 +394,8 @@ print_imm:
             lda         pv
             ror
             ldx         pm
-            bne         @raw
+            cpx         #1
+            beq         @raw
             pha
             lda         #'\'
             jsr         out_byte
@@ -444,7 +482,8 @@ print_string:
             pla
             jsr         blob_data
             lda         pm
-            bne         @bytes
+            cmp         #1
+            beq         @bytes
             lda         #'"'
             jsr         out_byte
 @bytes:
@@ -453,7 +492,8 @@ print_string:
             beq         @end
             lda         (hp)
             ldx         pm
-            bne         @raw
+            cpx         #1
+            beq         @raw
             jsr         out_escaped
             bra         @on
 @raw:
@@ -471,7 +511,8 @@ print_string:
             bra         @bytes
 @end:
             lda         pm
-            bne         @done
+            cmp         #1
+            beq         @done
             lda         #'"'
             jsr         out_byte
 @done:
@@ -566,6 +607,12 @@ s_fnopen:   .byte       "<function>(", 0
 s_number:   .byte       "<number>", 0
 s_function: .byte       "<function>", 0
 s_hash:     .byte       "<hash>", 0
+s_hashopen: .byte       "#(", 0
+s_hashnone: .byte       "{})", 0
+ser_lo:     .lobytes    s_qnone, s_t, s_snone
+ser_hi:     .hibytes    s_qnone, s_t, s_snone
+s_qnone:    .byte       "{}", 0
+s_snone:    .byte       "()", 0
 s_stream:   .byte       "<stream>", 0
 s_scope:    .byte       "<scope>", 0
 s_error:    .byte       "Error: ", 0

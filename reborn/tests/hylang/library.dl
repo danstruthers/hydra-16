@@ -228,7 +228,7 @@
 (check (between? 1 100 (d100)) T)
 (check (between? 2 7 (d6+ 1)) T)
 (check (between? 2 7 (die+ 6 1)) T)
-(check (between? 4 13 (dice+ 2 6 2)) T)
+(check (between? 4 14 (dice+ 2 6 2)) T)
 (check (>= (oe-dice 2 6) 2) T)
 (check (between? 1 6 (special-die 6 {{1 1} {2 2} {3 3} {4 4} {5 5} {6 6}})) T)
 (check (len (best-of-rolls 2 3 {d6})) 2)

@@ -67,7 +67,7 @@ K_DOTN          = 22            ; [body name ee]: dotimes' count evaluated
 K_SPACE         = 23            ; [cases ee]: <=>'s number evaluated
 K_OUTPUT        = 24            ; [cr ee start]: an output-of expression evaluated
 K_WALK          = 25            ; [f items acc last item walk]: map's (filter's, a fold's ...) function given an item
-K_LOAD          = 26            ; [path fd next]: a loaded file's expression evaluated (next: two fixnums)
+K_LOAD          = 26            ; [rest path fd next]: a loaded file's expression evaluated (next: two fixnums)
 K_EACHF2        = 27            ; [cr ee]: each's function evaluated (its list next)
 K_EACHF3        = 28            ; [f]: each's list evaluated (its function first)
 K_DOTF2         = 29            ; [cr ee]: dotimes' count evaluated (its function next)
@@ -2072,7 +2072,7 @@ k_tab:      .word       k_top, k_head, k_arg, k_if, k_do, k_and, k_or, k_eval, k
             .word       k_hkey, k_hash
 k_info:     .byte       1, 0,   0, 2,   1, $FF, 0, 2,   0, 2,   0, 2,   0, 2,   0, 1,   0, 0,   0, 3,   1, 4
             .byte       0, 4,   0, 2,   1, 2,   0, 1,   0, 3,   0, 3,   0, 2,   0, 5,   0, 3,   0, 3,   0, 6
-            .byte       0, 3,   0, 2,   1, 3,   0, 6,   1, 4,   0, 2,   0, 1,   0, 2,   0, 1,   0, 8
+            .byte       0, 3,   0, 2,   1, 3,   0, 6,   1, 5,   0, 2,   0, 1,   0, 2,   0, 1,   0, 8
             .byte       0, 3,   1, 7
 
 .code

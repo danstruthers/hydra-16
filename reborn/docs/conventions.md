@@ -158,9 +158,9 @@ The kernel task (task 0) keeps the kernel's state: its program zero page (`K0_*`
   time.  What reads files reads fd 0 when it's given none.
 * The boot starts the drivers (`HF_BOOT`, task F down, in the directory's order), waits for their inits (their
   devices registered; 2 seconds at most), then starts init.  The system's modules are in `modules/rom.txt`.
-* A module bigger than a bank has two to four (`HYX2_DRIVER ..., 2`, linked by `modules/module2.cfg` when its .s
-  sources use the segment `CODE2`, `module3.cfg` for `CODE3`, `module4.cfg` for `CODE4`): its second bank's code and
-  read-only data in `CODE2` and `RODATA2`, its third's in `CODE3` and `RODATA3` ..., at the same addresses as the
+* A module bigger than a bank has two to eight (`HYX2_DRIVER ..., 2`, linked by `modules/module2.cfg` when its .s
+  sources use the segment `CODE2`, `module3.cfg` for `CODE3` ... `module8.cfg` for `CODE8`): its second bank's code
+  and read-only data in `CODE2` and `RODATA2`, its third's in `CODE3` and `RODATA3` ..., at the same addresses as the
   first's, reached through `FAR2` (and back through `FAR1`), or from any bank to any through `FARN bank, routine`
   (the caller's bank set again after), trampolines in its RAM that switch its own bank register (`HYX2_BANKS_INIT`
   notes its banks).  Its banks are one after the other to the CPU (the ROM image keeps them in one group of 64).  Such a module owns no IRQ line, and keeps a note handler (`NOTIFY`)

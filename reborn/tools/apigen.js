@@ -5,6 +5,7 @@
 //   obj/gen/jumptable.s   the jump table on BIOS ROM page 0 ($F800 up), a jmp per slot (spare slots: K_NOSYS)
 //   obj/gen/errors.inc    the error codes, for the kernel
 //   obj/gen/errtext.s     their texts, for ERRSTR
+//   obj/gen/errnames.inc  their names, lower case without E_ (hylang's error codes: :noent ...), a table's macro
 //   obj/sdk/hydra.inc     the calls' addresses, the error codes and the constants, for programs in assembly
 //   obj/sdk/c/hydracalls.h   the same for C (HY_ before each name: cc65's headers have some of them)
 //   obj/sdk/c/oserrmap.inc   the C library's map from the error codes to errno (errors.def's last column)
@@ -131,6 +132,15 @@ function errText(errors) {
   s += '.export     ERR_TEXTS' + CRLF + '.segment "KRODATA"' + CRLF + 'ERR_TEXTS:' + CRLF;
   for (const e of errors) s += '            .byte       ' + hx(e.code, 2) + ', "' + e.text + '", 0' + CRLF;
   s += '            .byte       0' + CRLF;
+  return s;
+}
+
+function errNames(errors) {
+  let s = header(';', 'errnames.inc - the error codes\' names, lower case without E_ (hylang\'s error codes, :noent ...)');
+  s += '; ERR_NAMES: the table, where it\'s used.  Entries: the code, then the name, zero-terminated; a code of 0 ends it.' + CRLF + CRLF;
+  s += '.macro ERR_NAMES' + CRLF;
+  for (const e of errors) s += '            .byte       ' + hx(e.code, 2) + ', "' + e.name.replace(/^E_/, '').toLowerCase() + '", 0' + CRLF;
+  s += '            .byte       0' + CRLF + '.endmacro' + CRLF;
   return s;
 }
 
@@ -277,6 +287,7 @@ function generate(root) {
   write(path.join(gen, 'jumptable.s'), jumptable(api));
   write(path.join(gen, 'errors.inc'), errorsInc(errors));
   write(path.join(gen, 'errtext.s'), errText(errors));
+  write(path.join(gen, 'errnames.inc'), errNames(errors));
   write(path.join(root, 'obj', 'sdk', 'hydra.inc'), sdkInc(api, errors));
   write(path.join(root, 'obj', 'sdk', 'c', 'hydracalls.h'), cHeader(api, errors));
   write(path.join(root, 'obj', 'sdk', 'c', 'oserrmap.inc'), oserrMap(errors));
