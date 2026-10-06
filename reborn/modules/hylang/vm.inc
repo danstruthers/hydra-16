@@ -76,7 +76,7 @@ VO_LOCALS       = $50           ; kt kn tbl names: the frame's scope's slot (NIL
 VO_LOCALH       = $52           ; y sym: a local's value (a hole: sym's past this frame)
 VO_SETL         = $54           ; y: the argument or local at y = ex; ex = NIL
 VO_SETBL        = $56           ; y sym: set! of a local (a hole: SETBG's)
-VO_LQ           = $58           ; s y c: ex = quick op s (VO_ADD ... VO_EQC; bit 0: ex pushed) on the argument at y
+VO_LQ           = $58           ; s y c: ex = quick op s (VO_ADD ... VO_EQC) on the argument at y
                                 ;   (and the fixnum c): LOCAL y, then s (the compiler's, joined)
 VO_JLQ          = $5A           ; s y c t: LQ's, then JF's to t
 VO_STT          = $5C           ; the word on top = ex
@@ -97,7 +97,8 @@ VO_JQ           = $78           ; s c t: quick op s (VO_INC ... VO_EQC) on ex (a
 VO_LL           = $7A           ; s y1 y2: ex = quick op s (VO_ADD ... VO_NEQ; bit 0: pushed) on the arguments at y1
                                 ;   and y2: LPUSH y1, LOCAL y2, s
 VO_JLL          = $7C           ; s y1 y2 t: LL's, then JF's to t
-VO_COUNT        = $7E
+VO_LQP          = $7E           ; s y c: LQ's, its value pushed (LQ, then PUSH)
+VO_COUNT        = $80
 
 ; The rare ops (EXT's: after it, in the same form; VM_R the same)
 VX_EVAL         = $00           ; e h r: e, a call, the evaluator's (ev_call), in this frame's scope
@@ -1877,6 +1878,8 @@ op_tself:
             dex
             bne         @arg
 @args:
+            bit         vm_mat                              ; (A scope made: the record's none again)
+            bpl         :+
             iny
             iny
             lda         #0
@@ -1884,6 +1887,7 @@ op_tself:
             iny
             sta         (vm_s),y
             stz         vm_mat
+:
             lda         vm_rb                               ; (The stack cut back to the record's end: its locals
             clc                                             ;   made again by the code's LOCALS)
             adc         #4
@@ -3168,9 +3172,22 @@ op_tryf:
 
 ; vm_a = the value popped, vm_b = ex (an op of 1 byte)
 vm_pop2:
+            lda         sp
+            beq         @page
+            sec
+            sbc         #2
+            sta         sp
+            ldy         #1
+            lda         (sp),y
+            sta         vm_a + 1
+            lda         (sp)
+            sta         vm_a
+            bra         :+
+@page:
             jsr         pop
             sta         vm_a
             stx         vm_a + 1
+:
             MOVW        vm_b, ex
             lda         #1
             sta         vm_fl
@@ -3556,10 +3573,15 @@ vm_lqg:
             lda         #5
 vm_qpush:
             pha
-            ldy         #1                                  ; (s's bit 0: pushed)
+            lda         (vm_ip)                             ; (LQP, or s's bit 0: pushed)
+            and         #$7F
+            cmp         #VO_LQP
+            beq         @push
+            ldy         #1
             lda         (vm_ip),y
             lsr
             bcc         :+
+@push:
             lda         ex
             ldx         ex + 1
             VPUSH
@@ -3628,9 +3650,13 @@ vm_jqg:
 op_lq:
             ldy         #1
             lda         (vm_ip),y
-            and         #$FE
             tax
             jmp         (lq_tab - VO_ADD,x)
+op_lqp:
+            ldy         #1
+            lda         (vm_ip),y
+            tax
+            jmp         (lqp_tab - VO_ADD,x)
 op_jlq:
             ldy         #1
             lda         (vm_ip),y
@@ -3798,8 +3824,7 @@ lq_addc:
             adc         vm_a + 1
             bvs         @g
             sta         ex + 1
-            lda         #5
-            jmp         vm_lqend
+            jmp         vm_n5
 @g:
             jmp         vm_lqg
 
@@ -3818,8 +3843,7 @@ lq_subc:
             sbc         (vm_ip),y
             bvs         @g
             sta         ex + 1
-            lda         #5
-            jmp         vm_lqend
+            jmp         vm_n5
 @g:
             jmp         vm_lqg
 
@@ -3833,8 +3857,7 @@ lq_inc:
             adc         #0
             bvs         @g
             sta         ex + 1
-            lda         #5
-            jmp         vm_lqend
+            jmp         vm_n5
 @g:
             jmp         vm_lqg
 
@@ -3848,8 +3871,83 @@ lq_dec:
             sbc         #0
             bvs         @g
             sta         ex + 1
-            lda         #5
-            jmp         vm_lqend
+            jmp         vm_n5
+@g:
+            jmp         vm_lqg
+
+lqp_addc:
+            LQLOAD       @g
+            ldy         #3
+            lda         (vm_ip),y
+            and         #$FE
+            clc
+            adc         vm_a
+            sta         ex
+            iny
+            lda         (vm_ip),y
+            adc         vm_a + 1
+            bvs         @g
+            sta         ex + 1
+            lda         ex
+            ldx         ex + 1
+            VPUSH
+            jmp         vm_n5
+@g:
+            jmp         vm_lqg
+
+lqp_subc:
+            LQLOAD       @g
+            ldy         #3
+            lda         (vm_ip),y
+            and         #$FE
+            sta         vm_k
+            lda         vm_a
+            sec
+            sbc         vm_k
+            sta         ex
+            iny
+            lda         vm_a + 1
+            sbc         (vm_ip),y
+            bvs         @g
+            sta         ex + 1
+            lda         ex
+            ldx         ex + 1
+            VPUSH
+            jmp         vm_n5
+@g:
+            jmp         vm_lqg
+
+lqp_inc:
+            LQLOAD       @g
+            lda         vm_a
+            clc
+            adc         #2
+            sta         ex
+            lda         vm_a + 1
+            adc         #0
+            bvs         @g
+            sta         ex + 1
+            lda         ex
+            ldx         ex + 1
+            VPUSH
+            jmp         vm_n5
+@g:
+            jmp         vm_lqg
+
+lqp_dec:
+            LQLOAD       @g
+            lda         vm_a
+            sec
+            sbc         #2
+            sta         ex
+            lda         vm_a + 1
+            sbc         #0
+            bvs         @g
+            sta         ex + 1
+            lda         ex
+            ldx         ex + 1
+            VPUSH
+            jmp         vm_n5
 @g:
             jmp         vm_lqg
 
@@ -4742,7 +4840,7 @@ vc_def:
             rts
 
 ; PUSH emitted: the frame a word higher (joined to the op just before it, if it can be: a LOCAL, a CONST: LPUSH,
-; CPUSH; LQ, LL: s's bit 0)
+; CPUSH; LQ: LQP; LL: s's bit 0)
 vc_push:
             jsr         vc_last
             bcc         @push
@@ -4759,11 +4857,17 @@ vc_push:
             bra         vc_hinc
 :
             cmp         #VO_LQ
-            beq         :+
+            bne         :+
+            lda         (ht)                                ; (LQ: LQP)
+            and         #VM_R
+            ora         #VO_LQP
+            sta         (ht)
+            stz         vc_lend + 1
+            bra         vc_hinc
+:
             cmp         #VO_LL
             bne         @push
-:
-            ldy         #1                                  ; (LQ, LL: s's bit 0)
+            ldy         #1                                  ; (LL: s's bit 0)
             lda         (ht),y
             ora         #1
             sta         (ht),y
@@ -7398,10 +7502,9 @@ vc_try:
             .word       op_lec, op_gec, op_eqc, op_lpush, op_cpush, op_shead, op_cself, op_tself
             .word       op_locals, op_localh, op_setl, op_setbl, op_lq, op_jlq, op_stt, op_popx
             .word       op_loop, op_block, op_localb, op_setlb, op_setblb, op_dotn, op_doti, op_dotinc
-            .word       op_eachl, op_eachi, op_drop, op_trye, op_jq, op_ll, op_jll
-            .res        128 - VO_COUNT, $FF
+            .word       op_eachl, op_eachi, op_drop, op_trye, op_jq, op_ll, op_jll, op_lqp
 .endmacro
-.assert     VO_COUNT = 63 * 2, error, "vm.inc: vm_ops has an op too few or too many"
+.assert     VO_COUNT = 64 * 2, error, "vm.inc: vm_ops has an op too few or too many"
 vm_ops:
             VM_OPS
             VM_OPS
@@ -7423,6 +7526,9 @@ vm_qf:      .word       vf_add, vf_sub, vf_lt, vf_gt, vf_le, vf_ge, vf_eq, vf_in
 lq_tab:     .word       vm_lqg, vm_lqg, vm_lqg, vm_lqg, vm_lqg, vm_lqg
             .word       vm_lqg, lq_inc, lq_dec, vm_lqg, vm_lqg, lq_addc
             .word       lq_subc, vm_lqg, vm_lqg, vm_lqg, vm_lqg, vm_lqg
+lqp_tab:    .word       vm_lqg, vm_lqg, vm_lqg, vm_lqg, vm_lqg, vm_lqg
+            .word       vm_lqg, lqp_inc, lqp_dec, vm_lqg, vm_lqg, lqp_addc
+            .word       lqp_subc, vm_lqg, vm_lqg, vm_lqg, vm_lqg, vm_lqg
 jlq_tab:    .word       vm_jlqg, vm_jlqg, vm_jlqg, vm_jlqg, vm_jlqg, vm_jlqg
             .word       vm_jlqg, vm_jlqg, vm_jlqg, jlq_zerop, jlq_onep, vm_jlqg
             .word       vm_jlqg, jlq_ltc, jlq_gtc, jlq_lec, jlq_gec, jlq_eqc
