@@ -3,7 +3,8 @@
 ; on srvlib (a boot driver), not by the kernel task: it keeps only tables.  One tree each:
 ;   #/      the root: an empty directory for each mount point of the default namespace (bin dev env lib mnt pc
 ;           proc ram rom sd sram tmp, and in dev: gpio i2c mod sd spi), so ls / and ls /dev show them
-;   #n      null (reads as nothing, takes every write), zero (reads as zeros, takes every write)
+;   #n      null (reads as nothing, takes every write), zero (reads as zeros, takes every write), kmesg (the
+;           kernel's messages: what it printed on the bring-up console, the boot's too, its last KMESG_SIZE: KMESG)
 ;   #t      ticks: the tick count (its low 16 bits, TICK_HZ a second), in decimal
 ;   #m      the modules in the paged ROM, a file each: its image (its header first: SPAWN reads it); bin, the
 ;           programs alone (bound at /bin)
@@ -2502,6 +2503,60 @@ hex2:
             adc         #'0'
             jmp         srv_tputc
 
+; kmesg: the kernel's messages (KMESG), the read's part at its offset, through etext
+h_kmesg:
+            cmp         #R_READ
+            beq         :+
+            clc
+            rts
+
+:
+            stz         TASK_INBOX + RQ_DONE
+            stz         TASK_INBOX + RQ_DONE + 1
+            lda         TASK_INBOX + RQ_OFFSET + 2          ; (Past 64K: nothing)
+            ora         TASK_INBOX + RQ_OFFSET + 3
+            beq         :+
+            clc
+            rts
+
+:
+            MOVR        m, TASK_INBOX + RQ_COUNT            ; m: the most (IO_UNIT)
+            lda         m + 1
+            cmp         #>IO_UNIT
+            bcc         :+
+            LDR         m, IO_UNIT
+:
+            LDR         r0, etext
+            MOVR        r1, m
+            MOVR        r2, TASK_INBOX + RQ_OFFSET
+            jsr         KMESG
+            bcs         @done
+            sec                                             ; n: what it copied (those held from the offset, m at
+            sbc         TASK_INBOX + RQ_OFFSET              ;   most)
+            sta         n
+            txa
+            sbc         TASK_INBOX + RQ_OFFSET + 1
+            sta         n + 1
+            bcc         @end
+            ora         n
+            beq         @end
+            lda         m
+            cmp         n
+            lda         m + 1
+            sbc         n + 1
+            bcs         :+
+            MOVR        n, m
+:
+            LDR         r0, etext                           ; To the client
+            MOVR        r1, TASK_INBOX + RQ_BUF
+            MOVR        r2, n
+            jsr         CLIENT_WRITE
+            MOVR        TASK_INBOX + RQ_DONE, n
+@end:
+            clc
+@done:
+            rts
+
 ; env: its environment, "name=value" a line each (a 0 in a value, after an rc list's word, as a space, but at its
 ; end).  An environment may be ENV_MAX bytes, so each read makes the text from the start again and keeps only its
 ; own part (et_*), reading the environment a part at a time (TASKREAD's TR_ENVAT, into ebuf: eb_*)
@@ -3490,6 +3545,7 @@ tree_null:
             SRV_ENTRY   s_slash,   $FF, SK_DIR,  0,         SM_READ,            0
             SRV_ENTRY   s_null,    0,   SK_DATA, h_null,    SM_READ | SM_WRITE, 0
             SRV_ENTRY   s_zero,    0,   SK_DATA, h_zero,    SM_READ | SM_WRITE, 0
+            SRV_ENTRY   s_kmesg,   0,   SK_DATA, h_kmesg,   SM_READ,            0
             .word       0
 tree_time:
             SRV_ENTRY   s_slash,   $FF, SK_DIR,  0,         SM_READ,            0
@@ -3551,6 +3607,7 @@ s_mod:      .byte       "mod", 0
 s_spi:      .byte       "spi", 0
 s_null:     .byte       "null", 0
 s_zero:     .byte       "zero", 0
+s_kmesg:    .byte       "kmesg", 0
 s_ticks:    .byte       "ticks", 0
 s_time:     .byte       "time", 0
 s_rtc:      .byte       "rtc", 0

@@ -1,6 +1,6 @@
 ; ****************************************************************************
 ; t_dev - the kernel's devices (phase 2.6: kdev) and PIPE, run as init with t_child, its fds 0-2 on #c/cons: #/ (the
-; mount points), #n (null, zero), #t (ticks), #m (the modules: their images, as SPAWN reads them, and bin), #p (a
+; mount points), #n (null, zero, kmesg), #t (ticks), #m (the modules: their images, as SPAWN reads them, and bin), #p (a
 ; task's status; ctl's kill); a pipe (its two ends, the end of it, a broken one), a child writing into one and a
 ; child waiting on one; and a union's first bind keeping what was there (bind -a #n /dev: #/'s dev first).
 
@@ -369,7 +369,7 @@ main:
             lda         fd
             jsr         CLOSE
             lda         total
-            EXPECT_A    <(7 * SR_SIZE), "/dev: #/'s 5 mount points, then null and zero (7 records)"
+            EXPECT_A    <(8 * SR_SIZE), "/dev: #/'s 5 mount points, then null, zero and kmesg (8 records)"
             lda         buf + SR_NAME
             EXPECT_A    'g', "/dev: gpio first: #/'s dev"
             OPEN_       s_devzero, O_READ

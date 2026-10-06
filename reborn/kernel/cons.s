@@ -30,6 +30,7 @@ K_PUTC:
             cmp         #CH_MAX
             pla
             bcc         @fd
+            jsr         K_KMESG_PUT                         ; (The kernel's messages keep it)
             php                                             ; ---- The serial port, polled
             pha
 .if ACIA_CHIP = ACIA_ROCKWELL
@@ -101,6 +102,46 @@ K_PUTC:
             plx
             pla
             clc
+            rts
+
+; .A onto the kernel's messages (K_KMESG_BUF, a ring in the kernel task's RAM: KMESG and /dev/kmesg read it), from any
+; task: a quick look, IRQs off for some 40 cycles and no stack meanwhile (KM_PTR the kernel task's).  Keeps .A, .X,
+; .Y and the I flag
+K_KMESG_PUT:
+            php
+            phx
+            phy
+            pha
+            sei
+            ldy         T_REGISTER                          ; (.Y: this task, to come back to)
+            tax                                             ; (.X: the byte)
+            stz         T_REGISTER                          ; ---- The kernel task
+            lda         K_KMESG_HEAD
+            sta         KM_PTR
+            lda         K_KMESG_HEAD + 1
+            ora         #>K_KMESG_BUF
+            sta         KM_PTR + 1
+            txa
+            sta         (KM_PTR)
+            inc         K_KMESG_HEAD                        ; The next place, round the ring
+            bne         :+
+            lda         K_KMESG_HEAD + 1
+            inc         a
+            and         #>(KMESG_SIZE - 1)
+            sta         K_KMESG_HEAD + 1
+:
+            lda         K_KMESG_LEN + 1                     ; One more held, till it's full
+            cmp         #>KMESG_SIZE
+            beq         :+
+            inc         K_KMESG_LEN
+            bne         :+
+            inc         K_KMESG_LEN + 1
+:
+            sty         T_REGISTER                          ; ---- Back
+            pla
+            ply
+            plx
+            plp
             rts
 
 ; PUTS: the string at r0 (any length) to stdout.  OUT: C = 0; or C = 1, .A: the write's error.  Modifies .A, .Y,

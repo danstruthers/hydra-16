@@ -106,7 +106,8 @@ L_PATH          = $CD           ; (2) SPAWN's, in the caller: the program's path
 TM_PTR          = $CF           ; (2) TASKMEM's, as kcopy's KC_PTR: this task's end of the copy ...
 TM_PARTNER      = $D1           ;   the other task ...
 TM_OLDBANK      = $D2           ;   and (the task read) its own RAM bank, while the copy has its bank register
-OS_ZP_END       = $D3           ; (Checked: the OS zero page's end, at most $100)
+KM_PTR          = $D3           ; (2) The kernel task's, a moment: where a byte of the kernel's messages goes (cons.s)
+OS_ZP_END       = $D5           ; (Checked: the OS zero page's end, at most $100)
 .assert     OS_ZP_END <= $100, error, "The OS zero page runs past $FF"
 
 ; Task states (TK_STATE): the state of the context on top of the task's stack.  Only ST_READY runs (and
@@ -427,6 +428,11 @@ K_XBUF          = $2E00         ; (176) TASKREAD's bytes, or NSINFO's answer, on
 ; first variables, whole, in ENV_SIZE
 K_ENV_BASE      = $3000         ; The environments' first bank ($m0: module m's), or $FF: no RAM module (none)
 K_ENV_ZERO      = $3001         ; A 0 (TASKREAD's TR_ENV puts it after the variables that fit)
+K_KMESG_HEAD    = $3002         ; (2) The kernel's messages (KMESG, /dev/kmesg): where the next byte goes in the ring ...
+K_KMESG_LEN     = $3004         ; (2)   and the bytes held (KMESG_SIZE at most: then the oldest go)
+K_KMESG_BUF     = $7000         ; (KMESG_SIZE) The ring: what the kernel prints on the bring-up console, the boot's too
+KMESG_SIZE      = $1000
+.assert     <K_KMESG_BUF = 0 .and (>K_KMESG_BUF & >(KMESG_SIZE - 1)) = 0 .and K_KMESG_BUF + KMESG_SIZE <= $8000, error, "K_KMESG_BUF: a ring on a KMESG_SIZE boundary"
 K_ENV_BOUNCE    = $3100         ; (256) A copy from one environment's bank to another's (SPAWN's), on its way
 ENV_WINDOW      = BANK_WINDOW   ; (Where an environment is, its bank selected)
 ENV_MAX         = BANK_SIZE

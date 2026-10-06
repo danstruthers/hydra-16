@@ -8,7 +8,7 @@
 # the root and the devices
 bind '#/' /
 bind -a '#c' /dev           # cons consctl ser serctl
-bind -a '#n' /dev           # null zero
+bind -a '#n' /dev           # null zero kmesg
 bind -a '#t' /dev           # ticks
 bind '#g' /dev/gpio         # 0-7 port ctl ca1: the VIA's port A on J27
 bind '#i' /dev/i2c          # ctl, and a file each I2C device on PA0 and PA1

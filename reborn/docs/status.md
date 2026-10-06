@@ -16,7 +16,8 @@ binds, mounts, unions and union directories, a current directory, shared by a ta
 them.  The console driver (`cons`, task F) serves `#c`: windows, Plan 9's way (rio's, on the serial terminal: a
 console each, shown with Ctrl-] and a digit, repainted from its text), lines edited at the console, raw keys,
 Ctrl-C and Ctrl-\ to the shown window's note group, and paced sending up to 115200.  The kernel's own devices are a driver of
-their own (`kdev`): the root's mount points, null and zero, the ticks, the modules, the tasks, pipes, and the
+their own (`kdev`): the root's mount points, null and zero, the kernel's messages (`/dev/kmesg`: what it printed on the
+bring-up console, the boot's too, its last 4K, kept in the kernel task's RAM), the ticks, the modules, the tasks, pipes, and the
 environment.  The storage driver (`storage`, task E) owns the SPI bus and the disks: `#S` (the SPI devices), `#d`
 (SD cards, through a cache of their blocks; the ROM disk; the RAM disks), and HydraFS on them (`#f`, the old
 system's, ported: the module's second bank).  The paged ROM holds the ROM disk's volume after the modules (`/rom`:
@@ -59,7 +60,8 @@ PASS disk    the disks (storage): #d, the ROM disk, SD cards (SDHC and SDSC), RA
 PASS fs      HydraFS (#f): files and directories, create, write, holes, remove, rename, a length, format, label, check, old cards, mounts  (92 checks)
 PASS rom     the ROM disk: /rom (#f, spec x) walked on the Hydra, every file read back against its source (romfs/romfs.txt)
 PASS load    SPAWN by path and the loader: modules in place (#m/bin), RAM programs from a card (arguments, fd maps), errors  (49 checks)
-PASS env     environments: ENV_GET, ENV_PUT, ENV_DEL, ENV_NAME, a child's copy, #e (/env) as files  (52 checks)
+PASS env     environments: ENV_GET, ENV_PUT, ENV_DEL, ENV_NAME, a child's copy, #e (/env) as files  (62 checks)
+PASS kmesg   the kernel's messages: KMESG (the boot's banner first, at offsets, the ring full: its last KMESG_SIZE) and /dev/kmesg (kdev's #n/kmesg) read in parts  (12 checks)
 PASS rc      rc: quoting, lists, redirections, pipelines, if, for, while, switch, functions, globs, scripts, Ctrl-C, its start  (3 checks)
 PASS tools   the core tools at rc: files, text, tasks, the disks' (/rom/bin); /proc's args, cwd, ns  (3 checks)
 PASS c       the C target (cc65): its samples at rc, the library's test (ctest), conio's raw keys (and raw ended with the program)  (60 checks)

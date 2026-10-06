@@ -153,7 +153,7 @@ const RC_LINES = [
   ["rc -c 'exit oops'; echo $status","oops"],
   ["echo (a","rc: syntax error"],
   ["whatis echo x; q=('it''s' '' a.b); whatis q","/bin/echo\nx=(a b c)\nq=('it''s' '' a.b)"],
-  ["bind '#n' /mnt; ls /mnt","null\nzero"],
+  ["bind '#n' /mnt; ls /mnt","null\nzero\nkmesg"],
   ["ls /rom/lib","forth/\nhylang/\nnamespace\nprofile"],
   ["cat /bin/echo >/ram/hi; cd /ram; hi from dot; cd","from dot"],
   ["cat /nothing >[2]/ram/e; cat /ram/e","cat: /nothing: not found"],
@@ -1209,6 +1209,10 @@ module.exports = {
     {
       name: 'env', what: 'environments: ENV_GET, ENV_PUT, ENV_DEL, ENV_NAME, a child\'s copy, #e (/env) as files',
       init: 't_env', modules: ['t_child'], cycles: 40e6,
+    },
+    {
+      name: 'kmesg', what: 'the kernel\'s messages: KMESG (the boot\'s banner first, at offsets, the ring full: its last KMESG_SIZE) and /dev/kmesg (kdev\'s #n/kmesg) read in parts',
+      init: 't_kmesg', cycles: 60e6,
     },
     {
       name: 'rc', what: 'rc: quoting, lists, redirections, pipelines, if, for, while, switch, functions, globs, scripts, Ctrl-C, its start',

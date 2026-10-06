@@ -205,7 +205,9 @@ bank t).  Every fixed address is in `include/layout.inc`, and nowhere else.
   system: `#f`).  Control is text written to ctl files: a command's words after it, the last of them the rest of
   the line.
 * The kernel's own devices (`#/`, `#n`, `#t`, `#m`, `#p`, `#|`) are a driver module like any other (`kdev`), not
-  the kernel task's.
+  the kernel task's.  What the kernel prints on the bring-up console (the boot, POST, a driver's own lines) it also
+  keeps, its last 4K in its RAM (`K_KMESG_BUF`): `KMESG` reads them, and kdev serves them as `#n/kmesg`
+  (`/dev/kmesg`, Plan 9's).
 * **One driver owns the SPI bus and every disk** (`storage`): the SPI devices (`#S`), the cards, the ROM disk and
   the RAM disks (`#d`), and HydraFS on them (`#f`), so a transfer never meets another.  An SPI device is a card's or
   `#S`'s, never both at once (`E_BUSY`).

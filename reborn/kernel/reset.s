@@ -194,7 +194,12 @@ BOOT:
             bpl         @name
             stz         TA_ARGS                             ; (No arguments)
 
-; 2. The console, the banner, POST (page 4: it finds the RAM modules, and the RAM to leave unused)
+; 2. The console, the banner, POST (page 4: it finds the RAM modules, and the RAM to leave unused); what's printed
+; kept in the kernel's messages, from here on
+            stz         K_KMESG_HEAD
+            stz         K_KMESG_HEAD + 1
+            stz         K_KMESG_LEN
+            stz         K_KMESG_LEN + 1
             jsr         K_CONS_INIT
             KPRINT      K_STR_BANNER
             FARCALL     K_POST

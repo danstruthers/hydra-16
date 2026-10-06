@@ -64,6 +64,15 @@ call ERRSTR system impl=K_ERRSTR
   hl:     .A=n r0=buf(32) -> buf=z
   doc:    An error code as text, for messages.
 
+call KMESG system impl=K_KMESG far
+  in:     r0 = a buffer; r1 = its size, the most it copies; r2 = an offset in the messages held, 0 the oldest
+  out:    .A/.X = the bytes held, KMESG_SIZE at most; the buffer has those from r2, r1 at most
+  errors: -
+  blocks: no
+  hl:     r0=buf r1=count r2=n? -> buf .A/.X
+  doc:    The kernel's messages: what it printed on the bring-up console (the banner, POST, the boot's tasks, a
+  doc:    driver's own lines), its last KMESG_SIZE bytes.  /dev/kmesg (kdev's #n/kmesg) is them as a file.
+
 # ---- task
 
 call EXITS task impl=K_EXITS
@@ -802,6 +811,7 @@ const MBEFORE         1        "BIND's and MOUNT's flags: a union, new first"
 const MAFTER          2        "BIND's and MOUNT's flags: a union, new last"
 const MCREATE         4        "BIND's and MOUNT's flags: a CREATE in the union comes to new"
 const EXIT_MSG_MAX    31       "An exit message's length at most (WAIT's buffer: 32 bytes)"
+const KMESG_SIZE      4096     "KMESG: the kernel's messages held at most (then the oldest go)"
 const TR_ARGS         0        "TASKREAD: a task's arguments (ARGS_MAX bytes)"
 const TR_CWD          1        "TASKREAD: a task's current directory (PATH_MAX + 1 bytes)"
 const TR_ENV          2        "TASKREAD: a task's environment's first variables, whole, and a 0 (ENV_SIZE bytes at most)"

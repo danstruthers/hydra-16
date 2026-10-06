@@ -465,6 +465,136 @@ ps_putstr:
             FARCALL     K_PUTSTR
             rts
 
+; ****************************************************************************
+; KMESG: the kernel's messages (what it printed on the bring-up console, the boot's too: K_KMESG_BUF, a ring of
+; KMESG_SIZE in the kernel task's RAM), the part from r2 on.  IN: r0 = a buffer; r1 = its size; r2 = an offset in
+; the bytes held (0: the oldest).  OUT: .A/.X = the bytes held; as many of them from r2 as fit, in the buffer.  The
+; ring's head and length by quick looks, its bytes by kcopy from the kernel task (not running, so in no kcopy of its
+; own): r3 the head, r4 the bytes held, r5 where r2 is in the ring, r6 the room to its end, r7 what's left after
+; it.  Modifies r3-r8
+K_KMESG:
+            ldy         T_REGISTER
+            php
+            sei
+            K0_GET      K_KMESG_HEAD
+            sta         r3
+            K0_GET      K_KMESG_HEAD + 1
+            sta         r3 + 1
+            K0_GET      K_KMESG_LEN
+            sta         r4
+            K0_GET      K_KMESG_LEN + 1
+            sta         r4 + 1
+            plp
+            sec                                             ; K_CNT: the bytes held from r2 (none past them) ...
+            lda         r4
+            sbc         r2
+            sta         K_CNT
+            lda         r4 + 1
+            sbc         r2 + 1
+            sta         K_CNT + 1
+            bcs         :+
+            stz         K_CNT
+            stz         K_CNT + 1
+:
+            lda         r1                                  ;   r1 at most
+            cmp         K_CNT
+            lda         r1 + 1
+            sbc         K_CNT + 1
+            bcs         :+
+            lda         r1
+            sta         K_CNT
+            lda         r1 + 1
+            sta         K_CNT + 1
+:
+            sec                                             ; r5 = (the head - those held + r2), round the ring
+            lda         r3
+            sbc         r4
+            sta         r5
+            lda         r3 + 1
+            sbc         r4 + 1
+            sta         r5 + 1
+            clc
+            lda         r5
+            adc         r2
+            sta         r5
+            lda         r5 + 1
+            adc         r2 + 1
+            and         #>(KMESG_SIZE - 1)
+            sta         r5 + 1
+            sec                                             ; r6: the room from there to the ring's end
+            lda         #<KMESG_SIZE
+            sbc         r5
+            sta         r6
+            lda         #>KMESG_SIZE
+            sbc         r5 + 1
+            sta         r6 + 1
+            stz         r7                                  ; More than that: r7, the rest, from its start
+            stz         r7 + 1
+            lda         r6
+            cmp         K_CNT
+            lda         r6 + 1
+            sbc         K_CNT + 1
+            bcs         @copy
+            sec
+            lda         K_CNT
+            sbc         r6
+            sta         r7
+            lda         K_CNT + 1
+            sbc         r6 + 1
+            sta         r7 + 1
+            lda         r6
+            sta         K_CNT
+            lda         r6 + 1
+            sta         K_CNT + 1
+@copy:
+            lda         r0                                  ; K_PTR: the buffer; K_PTR2: the ring at r5
+            sta         K_PTR
+            lda         r0 + 1
+            sta         K_PTR + 1
+            clc
+            lda         r5
+            adc         #<K_KMESG_BUF
+            sta         K_PTR2
+            lda         r5 + 1
+            adc         #>K_KMESG_BUF
+            sta         K_PTR2 + 1
+            jsr         km_copy
+            lda         r7                                  ; Then the rest, from the ring's start
+            sta         K_CNT
+            lda         r7 + 1
+            sta         K_CNT + 1
+            lda         #<K_KMESG_BUF
+            sta         K_PTR2
+            lda         #>K_KMESG_BUF
+            sta         K_PTR2 + 1
+            jsr         km_copy
+            lda         r4
+            ldx         r4 + 1
+            clc
+            rts
+
+; K_CNT bytes (0 too) from the kernel task's K_PTR2 to K_PTR here, K_PTR moved on past them.  Modifies r8, K_CNT
+km_copy:
+            lda         K_CNT
+            ora         K_CNT + 1
+            beq         @done
+            clc
+            lda         K_PTR
+            adc         K_CNT
+            sta         r8
+            lda         K_PTR + 1
+            adc         K_CNT + 1
+            sta         r8 + 1
+            lda         #KERNEL_TASK
+            sec
+            FARCALL     K_KCOPY
+            lda         r8
+            sta         K_PTR
+            lda         r8 + 1
+            sta         K_PTR + 1
+@done:
+            rts
+
 .segment "KRODATA_P1"
 PS_STRINGS:
 PS_S_HEAD:  .byte       "T ST FL PA CPU    NAME"
