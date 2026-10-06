@@ -298,11 +298,64 @@ ud_base:
             rts
 
 ; ud (the double at stack index .Y: its high cell, its low under it) = ud * BASE + .A.  Keeps .X.  Modifies tmp,
-; tmp2, tmp3, numacc
+; tmp2, tmp3, numacc, numtmp, cnt.  A BASE under 256 (any the standard has): ud shifted and added for each of its bits, from the
+; digit (numacc: the sum; numtmp: ud, doubled each bit); else two 16 x 16 multiplies
 ud_mul_add:
+            sty         cnt
+            ldy         base + 1
+            bne         ud_mul_add16
+            sty         numacc + 1
+            sty         numacc + 2
+            sty         numacc + 3
+            sta         numacc
+            ldy         cnt
+            lda         dlo + 1,y
+            sta         numtmp
+            lda         dhi + 1,y
+            sta         numtmp + 1
+            lda         dlo,y
+            sta         numtmp + 2
+            lda         dhi,y
+            sta         numtmp + 3
+            lda         base
+            sta         tmp
+@bit:
+            lsr         tmp
+            bcc         @next
+            clc
+            lda         numacc
+            adc         numtmp
+            sta         numacc
+            lda         numacc + 1
+            adc         numtmp + 1
+            sta         numacc + 1
+            lda         numacc + 2
+            adc         numtmp + 2
+            sta         numacc + 2
+            lda         numacc + 3
+            adc         numtmp + 3
+            sta         numacc + 3
+@next:
+            lda         tmp
+            beq         @done
+            asl         numtmp
+            rol         numtmp + 1
+            rol         numtmp + 2
+            rol         numtmp + 3
+            bra         @bit
+@done:
+            lda         numacc
+            sta         dlo + 1,y
+            lda         numacc + 1
+            sta         dhi + 1,y
+            lda         numacc + 2
+            sta         dlo,y
+            lda         numacc + 3
+            sta         dhi,y
+            rts
+ud_mul_add16:
             sta         tmp3
             stz         tmp3 + 1
-            sty         cnt
             lda         base                                ; The high cell * base (its low 16 bits)
             sta         tmp
             lda         base + 1

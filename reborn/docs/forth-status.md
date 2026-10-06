@@ -32,7 +32,8 @@ where `1 >r` at the prompt had ended forth.  Then (6.15) housekeeping: an index 
 the task's, so a search reads one chain of a few names, not every header (15 times faster; files load 2.5 to 3.3
 times faster); the libraries' shared helpers in the core; and a guide, [using/hyforth.md](using/hyforth.md).  And
 (6.16-6.19) the standard's other word sets, each a library passing its file of the Forth 2012 suite:
-Memory-Allocation (`lib memory`), all of Double-Number, Locals (`lib locals`) and Block (`lib block`).
+Memory-Allocation (`lib memory`), all of Double-Number, Locals (`lib locals`) and Block (`lib block`).  Then (6.20)
+files load about twice as fast: a read-ahead buffer, numbers by BASE's bits, the parser's own loops.
 
 ```
 PASS forth   HyForth (Forth 2012): the test suite (Core, Core Extension, Double-Number, Exception, Facility, File Access, Locals, Memory-Allocation, Programming-Tools, Search-Order, String, Block) in three sessions, its files INCLUDED from a card, the word sets' libraries REQUIREd from /lib/forth; scripts (forth file.fs, #!/bin/forth: arguments, REQUIRE from /lib/forth, a library, an error, a pipeline); at the console: startup.fs's Programming-Tools (.S), libraries REQUIREd (and again after a MARKER), a definition, KEY? and KEY, errors (a file's, the system's), SH, RUN, a sys- word, a bank, the constants library, Ctrl-C, BYE
@@ -41,18 +42,19 @@ PASS fshell  HyForth as a shell (forth -l, shell.fl): its namespace and profile;
 PASS fhydra  HyForth's Hydra words (hylang's layer 2): argc under forth -l (0: -l isn't an argument); a directory read (open-dir, read-dir, close-dir), =mkdir, get-dir and set-dir (the prompt follows), ior>text; setenv, getenv, unsetenv; a note to itself taken by on-note's handler, between words and in a loop, and one it says no to (as Ctrl-C); pause
 PASS fdev    HyForth's device libraries (hylang's layer 3, source over the devices' files): gpio (pins, the port, ctl, CA1's edge), i2c (a memory written and read at a register, the devices), spi (an echo device's transactions, mode 3), cons (the window, the windows), proc (a task's args, cwd, regs, memory), clock (the chip, the time set), disk (a disk's ctl, the cards: one on SPI device 5), pc (the PC tool answers; a file of its read), and sound's note-of and tune (its notes on the YM2151, in time)
 PASS findex  HyForth's index of the word lists (a bank's chains by a name's hash): a word redefined, a definition hidden till ;, a MARKER's words gone, MARKERs till the bank's full (started again), more word lists than records, EVALUATE of a bank's text (no index), the index's bank overwritten (started again); 500 searches of a name that isn't there in under 150 ticks (620 without the index)
+PASS fload   HyForth loading a file: its read-ahead (a CR LF across its 512-byte buffers, CR LF and CR line ends, a line of 130 cut at 128, a last line ended by a CR and the file's end), names between tabs, numbers with each prefix, in base 36, a double; hydra.fs REQUIREd in under 300 ticks (383 before 6.20)
 PASS lshell  the shell /lib/shell names (a card's: /bin/forth -l): init's in window 0, wstart's in a window made (Ctrl-] c: $window); send, a line typed in another window (#cN/kbdin), run there
 ```
 
 The rest of the system's 44 tests pass with these changes (the console's, init's, wstart's and nslib's among them):
-51 in all.
+52 in all.
 
 ## Sizes
 
 | What | Size |
 | :--- | :--- |
-| The core (`forth`, in place in its paged ROM bank) | 12,731 bytes, 78% of the bank (9,636 before 6.6: the library table, the shell's hooks, nslib for `forth -l`; 6.11's programs' code and output hook; 6.12's notes for a handler; 6.14's compile-only words, 50 bytes; 6.15's index, 823 bytes, and the libraries' `hex2` and `hdr_out`; 6.16-6.19's heap, locals and block hooks, `do2value`, and three error texts) |
-| The dictionary free at the prompt | `forth`: 21,556 bytes (23,781 before 6.6: `tools.fl`'s new words, the core's table and its programs' arguments; 6.19's 512 bytes of names INCLUDED); `forth -l`: 18,152 (`shell.fl` too).  The index, and `newns`'s buffers: none of it, in a bank of the task's (the last of its 16 a module) |
+| The core (`forth`, in place in its paged ROM bank) | 13,666 bytes, 83% of the bank (9,636 before 6.6: the library table, the shell's hooks, nslib for `forth -l`; 6.11's programs' code and output hook; 6.12's notes for a handler; 6.14's compile-only words, 50 bytes; 6.15's index, 823 bytes, and the libraries' `hex2` and `hdr_out`; 6.16-6.19's heap, locals and block hooks, `do2value`, and three error texts; 6.20's read-ahead, faster numbers and parser, 935 bytes) |
+| The dictionary free at the prompt | `forth`: 21,536 bytes (23,781 before 6.6: `tools.fl`'s new words, the core's table and its programs' arguments; 6.19's 512 bytes of names INCLUDED); `forth -l`: 18,132 (`shell.fl` too).  The index, `newns`'s buffers and the files' read-ahead: none of it, in a bank of the task's (the last of its 16 a module) |
 | The libraries (`/lib/forth/NAME.fl`: their images and relocations) | `coreext` 1,776, `exception` 56, `file` 1,045, `tools` 3,508 (these four as forth starts); `facility` 2,186, `string` 1,205, `search` 690, `double` 906 (119 before 6.17), `hydra` 3,091, `disasm` 1,571, `bits` 149, `random` 419, `sound` 1,240 (683 before 6.13's `note-of` and `tune`), `shell` 3,633, `memory` 736, `locals` 1,085, `block` 1,217 |
 | The dictionary 6.16-6.19's libraries take, loaded | `memory` 675 (and its heap, as it's wanted), `double` 772, `locals` 1,077, `block` 3,117 (its two buffers, 2K) |
 | The device libraries (`/lib/forth/NAME.fs`: the dictionary each takes, compiled, its buffers too) | `gpio` 1,454, `i2c` 1,585, `spi` 743, `cons` 716, `proc` 1,415 (a 512-byte buffer), `clock` 243, `disk` 1,068, `pc` 44: 7,268 all eight, of `forth -l`'s 18,152 |
@@ -75,6 +77,7 @@ The rest of the system's 44 tests pass with these changes (the console's, init's
 | 6.17 Double-Number | Done | `double.fl` has the rest: `d+`, `d-`, `d.`, `d.r`, `d0<`, `d0=`, `d2*`, `d2/`, `d<`, `d=`, `d>s`, `dmax`, `dmin`, `m+`, `m*/` (three cells, then divided a cell at a time, symmetrically, as `/` is), and the extension's `2rot`, `2value`, `du<`.  A `2value` is a call to the core's `do2value` and two cells; Core Extension's `to` knows one by it and stores with `2!`.  `doubletest.fth` uses `core.fr`'s `<TRUE>`, so it runs in the suite's first session |
 | 6.18 Locals | Done | `locals.fl` (`lib locals`): `{: args \| vals -- comment :}`, `(local)`, `locals\|`; 16 locals a definition (ENVIRONMENT? `#LOCALS`, the core's ENVIRONMENT? asking the library: it had answered none).  A frame on the 6502's stack (`loc_enter`, `loc_leave`), its first cell in the zero page's `lp` (the core's: 2 of the 7 bytes left), so DO and `>r` above it don't move it; the frame before is kept under it; CATCH keeps `lp` and THROW gives it back.  A local is 12 bytes of code (`ldy #offset; lda (lp),y` ...).  The core calls the library (`loc_vec`, its `loc_call`) for each name it compiles (before the search order and numbers: a local named `dup`, `bead` or `i` is the local), at `;`, EXIT (Core's, through `comp_hdr`; the shell's own), DOES> (the defining word's frame let go, the child's own locals next) and `to`; a MARKER that takes the library out clears `loc_vec` |
 | 6.19 Block | Done | `block.fl` (`lib block`): `block`, `buffer`, `update`, `save-buffers`, `flush`, `load`, `blk`, `empty-buffers`, `list`, `scr`, `thru`, `open-blocks` (Gforth's).  Block u at u * 1024 of `blocks.fb` (the current directory's as it's first wanted, made if it isn't there) or `open-blocks`'s file; two buffers in the library, past the file's end spaces.  The core's source record has BLK (`src_blk`): `src_push` sets it to 0 (EVALUATE's, a file's), LOAD to its block; `src_pop` asks the library (`blk_vec`) for a block source's buffer again, as a LOAD since (or THROW unwinding) may have taken it.  `\` in a block goes to its 64-character line's end; REFILL to the next block; SAVE-INPUT and RESTORE-INPUT keep the block (6 cells now).  The record of files INCLUDED holds 512 bytes (256: the suite's first session, with `doubletest.fth`, filled it, and REQUIRE INCLUDED a file again).  The suite runs in three sessions now (the second ran out of dictionary): 639M cycles |
+| 6.20 Loading files faster | Done | Next's "faster file loading", at the user's choosing (hyforth.md's "Loading files").  A profile of `require hydra.fs` (6.8M cycles) put the storage driver at 34% and the system calls at 12% (a READ of 130 bytes and a SEEK back for each line), the lines' scan 10%, the numbers 7%, the parser 9%.  A read-ahead buffer for the file being included (`ra_line`: 512 bytes in the index's bank, below `newns`'s buffers; the index 1,018 nodes), the line copied as it's scanned; numbers by BASE's bits (`ud_mul_add`: any BASE under 256), not two 16 x 16 multiplies; PARSE-NAME's own loops (a line's: one by an index register); the index's name compare exact first, its hash's characters by bit 5, its two last word lists' records remembered, its saves in variables.  `require hydra.fs` 3.7M cycles (203 ticks, not 383), the eight device libraries 9.5M (508 ticks, not 690), the Forth 2012 suite's run 491M (639M).  What's left is mostly the storage driver's: the ROM disk's reading, and `/lib`'s four-directory union, where a name that isn't there takes 65 ms.  The `fload` test |
 
 ## HyForth and hylang's shell
 
@@ -103,13 +106,15 @@ of the Hydra it reaches), so that the two shells can do the same things.
 ## Next
 
 1. **The board:** `forth -l` as a window's shell, at 115200, a real card's `/lib/shell`, the device libraries on
-   the real pins, the index's bank on a real memory module.  And, if loading files is still slow there: the lines'
-   scan and the numbers' conversion (6.15's profile).
-2. **For hylang's prompt, so the two stay alike:** `cd`, `bind`, `mount`, `unmount` and `newns` the shell's own, an
+   the real pins, the index's bank and the read-ahead on a real memory module.
+2. **Not HyForth's, found by 6.20:** a name looked up in a union (`/lib`, `/bin`) that isn't there costs each
+   directory's lookup in the storage driver, 65 ms in `/lib`'s four (2 in one directory); a cache of names not
+   found, or a faster HydraFS lookup, would help every `lib`, REQUIRE and command line.
+3. **For hylang's prompt, so the two stay alike:** `cd`, `bind`, `mount`, `unmount` and `newns` the shell's own, an
    `&` at a line's end kept (`$apid`, `wait`), `$status`; `hylang -l` (newns by nslib, a profile for its window), so
    `/bin/hylang -l` in `/lib/shell` works; the prompt's format codes; `screen.hl` with HyForth's terminal set
    (danlang's first).
-3. **The standard's last word set, if it's wanted:** Floating-Point (and its extension), a library of software
+4. **The standard's last word set, if it's wanted:** Floating-Point (and its extension), a library of software
    floating point; every other word set of Forth 2012's is there now, and passes the suite's file for it.
 
 Not kept from the old HyForth: the prompt's `%l` (a card's label: its ctl read for each prompt), `rand32`'s Galois

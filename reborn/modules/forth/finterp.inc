@@ -107,13 +107,16 @@ name_is:
 @char:
             cpy         tmp3
             beq         @yes
-            lda         (w2),y
+            lda         (w2),y                              ; (The same: on; else in upper case)
+            cmp         (w3),y
+            beq         @next
             jsr         upper
             sta         cnt
             lda         (w3),y
             jsr         upper
             cmp         cnt
             bne         @no
+@next:
             iny
             bra         @char
 @yes:
@@ -140,8 +143,10 @@ IDX_RECS    = BANK_WINDOW + 5                               ;   the records: a w
 IDX_RMAX    = ORDER_MAX                                     ;   its chains' first nodes (2 each, 0: none) ...
 IDX_RSIZE   = 4 + 128
 IDX_TAILS   = IDX_RECS + IDX_RMAX * IDX_RSIZE               ;   the chains' last nodes, as a record's are made ...
-IDX_NODES   = (IDX_TAILS + 128 + 3) & $FFFC                 ;   then the nodes, 4 bytes each (1,146) ...
-IDX_END     = NS_BSS & $FF00                                ;   to nslib's buffers' page (forth.s: newns's)
+IDX_NODES   = (IDX_TAILS + 128 + 3) & $FFFC                 ;   then the nodes, 4 bytes each (1,018) ...
+IDX_END     = RA_BUF                                        ;   to the read-ahead buffer (ffile.inc's ra_line) ...
+RA_SIZE     = 512
+RA_BUF      = (NS_BSS & $FF00) - RA_SIZE                    ;   and nslib's buffers' page (forth.s: newns's)
 
 ; The word named ( c-addr u ) (kept on the stack) in word list w, by the index: .A = 0 and C = 0, w its header, or
 ; C = 1; or .A <> 0, no index (none, or the name in the bank's window, $8000-$9FFF: EVALUATE of a bank's text).
@@ -159,11 +164,11 @@ idx_find:
             rts
 :
             lda         RAM_BANK                            ; The bank, and the word list's record (made again if it
-            pha                                             ;   isn't current: tmp its chains)
-            lda         tmp
-            pha
+            sta         idx_savb                            ;   isn't current: tmp its chains; tmp and the bank kept
+            lda         tmp                                 ;   meanwhile)
+            sta         idx_savt
             lda         tmp + 1
-            pha
+            sta         idx_savt + 1
             lda         idx_bank
             sta         RAM_BANK
             jsr         idx_wl
@@ -224,20 +229,12 @@ idx_find:
 
 ; (idx_find's end: tmp and the bank as they were.  Keeps C)
 idx_out:
-            ply                                             ; (Its return address: .Y and w3)
-            sty         w3
-            ply
-            sty         w3 + 1
-            pla
-            sta         tmp + 1
-            pla
+            lda         idx_savt
             sta         tmp
-            pla
+            lda         idx_savt + 1
+            sta         tmp + 1
+            lda         idx_savb
             sta         RAM_BANK
-            ldy         w3 + 1
-            phy
-            ldy         w3
-            phy
             rts
 
 ; tmp = word list w's chains (its record's), current (made again if they aren't), the bank selected: C = 0; or
@@ -306,6 +303,24 @@ idx_wl:
 
 ; tmp = the record of word list w (the bank selected): C = 0; or C = 1, none (tmp the next free one's place)
 idx_rec:
+            ldy         #2                                  ; (One of the two found last: idx_last's)
+@last:
+            lda         w
+            cmp         idx_lastw,y
+            bne         :+
+            lda         w + 1
+            cmp         idx_lastw + 1,y
+            bne         :+
+            lda         idx_lastr,y
+            sta         tmp
+            lda         idx_lastr + 1,y
+            sta         tmp + 1
+            clc
+            rts
+:
+            dey
+            dey
+            bpl         @last
             LDR         tmp, IDX_RECS
             ldy         IDX_N
 @rec:
@@ -320,8 +335,7 @@ idx_rec:
             lda         (tmp),y
             ply
             cmp         w + 1
-            clc
-            beq         @done
+            beq         @found
 :
             clc
             lda         tmp
@@ -331,11 +345,33 @@ idx_rec:
             adc         #>IDX_RSIZE
             sta         tmp + 1
             bra         @rec
+@found:
+            lda         idx_lastw                           ; (Found last: the one before it the other)
+            sta         idx_lastw + 2
+            lda         idx_lastw + 1
+            sta         idx_lastw + 3
+            lda         idx_lastr
+            sta         idx_lastr + 2
+            lda         idx_lastr + 1
+            sta         idx_lastr + 3
+            lda         w
+            sta         idx_lastw
+            lda         w + 1
+            sta         idx_lastw + 1
+            lda         tmp
+            sta         idx_lastr
+            lda         tmp + 1
+            sta         idx_lastr + 1
+            clc
 @done:
             rts
 
 ; The index started again (the bank selected): no records, every node free
 idx_reset:
+            stz         idx_lastw                           ; (None found last)
+            stz         idx_lastw + 1
+            stz         idx_lastw + 2
+            stz         idx_lastw + 3
             lda         #'i'
             sta         IDX_SIG
             lda         #'x'
@@ -562,15 +598,15 @@ idx_hdr_hash:
             adc         #0
             sta         w2 + 1
 ; The chain of the name at w2, tmp3 long: .Y its place (2 bytes each), from its hash: its length * 8, and its first
-; and last characters in upper case, the sum's low 6 bits.  Keeps w3
+; and last characters with bit 5 off (a letter in upper case), the sum's low 6 bits.  Keeps w3
 idx_hash:
-            lda         (w2)
-            jsr         upper
+            lda         (w2)                                ; (Bit 5 off: a letter's case, and a few other
+            and         #$DF                                ;   characters', the same: the names are compared after)
             sta         cnt
             ldy         tmp3
             dey
             lda         (w2),y
-            jsr         upper
+            and         #$DF
             clc
             adc         cnt
             sta         cnt

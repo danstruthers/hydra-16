@@ -89,8 +89,9 @@ with `BANKS_ALLOC` as forth starts), where it costs the dictionary nothing and n
   last header as it was indexed, and 64 chains of nodes (a header, the next node), newest first, one for each hash
   of a name: its length * 8 plus its first and last characters in upper case, the low 6 bits (over the 561 names
   of the core, the libraries and `hydra.fs`: 9 a chain, 16 at most).  A search reads one chain, comparing a node's
-  header's length, then its name.  The nodes (1,146) are shared, taken as they're needed; the bank's last 2.4K are
-  nslib's buffers, for `newns` (6.16: they were the dictionary's top).
+  header's length, then its name.  The nodes (1,018) are shared, taken as they're needed; the bank's last 2.4K are
+  nslib's buffers, for `newns` (6.16: they were the dictionary's top), and the 512 bytes before them the files'
+  read-ahead (6.20).
 - **Kept current.**  A word made goes into its word list's record as it's made (at its chain's start), if the
   record was current.  Whatever else changes a word list (a library loaded, a MARKER) leaves its record behind its
   last header, and the next search of it makes its chains again; `-lib` and `lib` (which change FORTH's in the
@@ -103,6 +104,32 @@ Searching is 15 times faster (500 searches for a name that isn't there: 620 tick
 `hydra.fs`; `dup`: 641, now 62), loading `hydra.fs` 2.5 times (952 ticks, now 383) and the eight device
 libraries 3.3 times (2,260, now 690); the Forth 2012 suite's run takes 385M cycles, not 678M.  What's left of a
 file's loading is mostly its reading (the storage driver, the line's scan) and its numbers' conversion.
+
+## Loading files
+
+A profile of `require hydra.fs` after the index (the emulator's, 6.8M cycles) showed where a file's loading went:
+the storage driver's task 34% and the system calls 12%, as each line was a READ of 130 bytes and a SEEK back past
+it; the line's scan 10%; the numbers' conversion 7% (two 16 x 16 multiplies a digit); the parser 9% (two calls a
+character); the index's fixed cost a search.  So (6.20):
+
+- **A read-ahead buffer** for the file being included, 512 bytes in the index's bank (below `newns`'s buffers:
+  the index keeps 1,018 nodes): a line is copied from it as it's scanned (CR or LF looked for only among the
+  control characters), and the file read and seeked once for 512 bytes, not twice a line.  The buffer is the
+  innermost file's: a file read, or one nested in it ended, reads it again from the line's place (`src_pos`), so
+  SAVE-INPUT and RESTORE-INPUT keep working by a line's place, as they did.  A line that runs past the buffer's end
+  reads it again from the line's start; a short read, more after it.  No bank: as before.
+- **Numbers**: a digit is the double times BASE, shifted and added for each of BASE's bits (any BASE under 256: the
+  standard's 2-36), not two 16 x 16 multiplies.
+- **The parser**: PARSE-NAME (the interpreter's) has loops of its own, one over a line's characters by an index
+  register (a source with 256 or more left: 255 at a time).
+- **The index**: a name's bytes compared as they are first, in either case only if they differ; the hash takes bit
+  5 off its two characters rather than upper-casing them; the two word lists searched last have their records
+  remembered (`hydra.fs`'s and FORTH alternate); a search keeps the bank and `tmp` in variables, not on the stack.
+
+`require hydra.fs` takes 3.7M cycles now (6.8M; 203 ticks, not 383), the eight device libraries 9.5M (12.7M; 508
+ticks, not 690), and the Forth 2012 suite's run 491M (639M).  The rest is mostly the storage driver's: reading the ROM disk, and finding names in `/lib`, a
+union of four directories, where a name that isn't there costs 65 ms (13 ticks; 2 in a single directory) and
+`lib` looks for `NAME.fl` before `NAME.fs`.
 
 ## The standard's other word sets
 
@@ -260,11 +287,11 @@ shell, and `-lib shell` (or a `marker` that takes it out) a plain Forth again.
 
 ## The steps
 
-6.6 to 6.10 done (October 2026), then 6.11 to 6.13, from comparing the shell with hylang's, then 6.14 to 6.19;
+6.6 to 6.10 done (October 2026), then 6.11 to 6.13, from comparing the shell with hylang's, then 6.14 to 6.20;
 [forth-status.md](forth-status.md) has each one's notes, the sizes and what's next, and
 [using/hyforth.md](using/hyforth.md) is the guide for using it.  The tests: `forth` (the Forth 2012 suite, still
 passing, and its files for 6.16-6.19's word sets), `hyforth` (6.6-6.8 and 6.14), `fshell` (6.9 and 6.11), `lshell`
-(6.10), `fhydra` (6.12), `fdev` (6.13) and `findex` (6.15).
+(6.10), `fhydra` (6.12), `fdev` (6.13), `findex` (6.15) and `fload` (6.20).
 
 | Step | | Tested |
 | :--- | :--- | :--- |
@@ -282,3 +309,4 @@ passing, and its files for 6.16-6.19's word sets), `hyforth` (6.6-6.8 and 6.14),
 | 6.17 | Double-Number (`double.fl`), and its extension's `2rot`, `2value` (`do2value`, the core's; `to`), `du<` | `doubletest.fth` (its numbers read with prefixes and signs; `d.` and `d.r`'s lines as they should be) |
 | 6.18 | Locals (`locals.fl`): `{:`, `(local)`, `locals\|`; the core's `lp`, `loc_vec` and its calls; CATCH keeps `lp` | `localstest.fth` (its Search-Order part too) |
 | 6.19 | Block (`block.fl`) and its extension; the source record's BLK, `blk_vec`; `\`, REFILL, SAVE-INPUT and RESTORE-INPUT in a block; 512 bytes of names INCLUDED | `blocktest.fth` (its blocks 20-29 in `blocks.fb` on the card; 64 characters a line, as it works out) |
+| 6.20 | Loading files faster: the read-ahead buffer (in the index's bank), numbers by BASE's bits, PARSE-NAME's own loops, the index's fixed cost | A file made for the read-ahead (a CR LF across its buffers, CR LF and CR ends, a line cut at 128, a last line ended by a CR and the file's end), names between tabs, numbers with each prefix and in base 36, a double; `hydra.fs` in under 300 ticks; the suite (its files, SAVE-INPUT and RESTORE-INPUT in them) |

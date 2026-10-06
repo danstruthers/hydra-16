@@ -543,6 +543,27 @@ function forthCard() {
   return [imageCard(0, f, 16384)];
 }
 
+// The fload test's card: load.fs, its lines made for HyForth's read-ahead (512 bytes of a file at a time, from where
+// a line starts): a line from 500 whose CR is the first buffer's last byte (its LF the next one's first), lines
+// ended by CR LF and by CR alone, one of 130 characters (cut at 128: the rest, a tab and 6, the next), names between
+// tabs, numbers with each prefix and in base 36, a double, and a last line ended by a CR and the file's end
+function floadCard() {
+  fs.mkdirSync(CARD_DIR, { recursive: true });
+  hydrafs.setNow(0x1000);
+  const f = path.join(CARD_DIR, 'fload0.img');
+  hydrafs.mkfs(f, 8, 'FLOAD', undefined, true);
+  const v = new hydrafs.Volume(f);
+  let s = ': t1 1 ;\n';
+  while (s.length < 500 - 40) s += '\\ ' + 'a'.repeat(30) + '\n';
+  s += '\\' + ' '.repeat(500 - s.length - 2) + '\n';
+  if (s.length !== 500) throw new Error('load.fs: its line at 500 is at ' + s.length);
+  s += ': t2 2 ;   \r\n: t3 3 ;\r\n: t4 4 ;\r: t5 5 ;' + ' '.repeat(120) + '\t6\n';
+  s += 't1\tt2 + t3 + t4 + t5 + . . %101 . #99 . $ff . \'A\' . 36 base ! z decimal . 65537. . . cr\r';
+  v.put('load.fs', Buffer.from(s, 'latin1'));
+  v.close();
+  return [imageCard(0, f, 16384)];
+}
+
 // The lshell test's card: /lib/shell, HyForth as the shell
 function shellCard() {
   fs.mkdirSync(CARD_DIR, { recursive: true });
@@ -853,6 +874,15 @@ module.exports = {
       expect: ['/> : dup 1 ; 5 dup . .\n1 5 \n', '/> marker m : zz 7 ; zz . m zz\n7 zz ?\n', '/> : yy yy ;\nyy ?\n',
         'cyc zz\nzz ?\n', 'wl9 2 3 + .\n0 0 0 0 0 0 0 0 0 0 5 \n', 'bank-window 7 evaluate\n5 \n', '0 bank-window ! 6 7 + .\n13 \n',
         'b 150 < .\n-1 \n/> exit\n'],
+    },
+    {
+      name: 'fload', what: 'HyForth loading a file: its read-ahead (a CR LF across its 512-byte buffers, CR LF and CR line ends, a line of 130 cut at 128, a last line ended by a CR and the file\'s end), names between tabs, numbers with each prefix, in base 36, a double; hydra.fs REQUIREd in under 300 ticks (383 before 6.20)',
+      init: 't_rc', cycles: 150e6,
+      get machine() {
+        return { sd: floadCard(), input: ['echo b115200 >/dev/serctl', 'forth -l', 'cd /sd/0', 'include load.fs', 'lib hydra',
+          'sys-ticks require hydra.fs sys-ticks swap - 300 < .', 'exit'].map(l => 'ā' + l + '\r').join('') };
+      },
+      expect: ['include load.fs\n15 6 5 99 255 65 35 1 1 \n', 'swap - 300 < .\n-1 \n'],
     },
     {
       name: 'lshell', what: 'the shell /lib/shell names (a card\'s: /bin/forth -l): init\'s in window 0, wstart\'s in a window made (Ctrl-] c: $window); send, a line typed in another window (#cN/kbdin), run there',

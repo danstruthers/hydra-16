@@ -508,12 +508,155 @@ skip_delims:
 @done:
             rts
 
-; PARSE-NAME's (the Core Extension library's header), the interpreter's
+; PARSE-NAME's (the Core Extension library's header), the interpreter's: skip_delims and parse_to's, for a space
+; (any control char a delimiter too), in loops of its own: with fewer than 256 characters left (a line's), one over
+; them (.Y their index); else 255 characters a part.  Keeps .X
 parse_name:                                                 ; ( "<spaces>name<space>" -- c-addr u )
-            lda         #' '
+            jsr         src_rest
+            lda         tmp + 1
+            bne         @skip
+            ldy         #0                                  ; The delimiters before it ...
+@skip1:
+            cpy         tmp
+            beq         @at1
+            lda         (w),y
+            cmp         #' ' + 1
+            bcs         @at1
+            iny
+            bra         @skip1
+@at1:
+            sty         tmp2                                ;   its start (tmp2) ...
+@char1:
+            cpy         tmp
+            beq         @end1
+            lda         (w),y
+            cmp         #' ' + 1
+            bcc         @delim1
+            iny
+            bra         @char1
+@delim1:
+            sty         cnt                                 ;   its end (cnt), and >IN past it, a delimiter too
+            iny
+            bra         :+
+@end1:
+            sty         cnt
+:
+            tya                                             ; (>IN on .Y)
+            clc
+            adc         to_in
+            sta         to_in
+            bcc         :+
+            inc         to_in + 1
+:
+            clc                                             ; ( w + start, end - start )
+            lda         w
+            adc         tmp2
+            pha
+            lda         w + 1
+            adc         #0
+            tay
+            pla
+            PUSHAY
+            sec
+            lda         cnt
+            sbc         tmp2
+            ldy         #0
+            PUSHAY
+            lda         #' '                                ; (cnt the delimiter, as parse_to's callers have it)
             sta         cnt
-            jsr         skip_delims
-            jmp         parse_to
+            rts
+@skip:
+            jsr         @limit                              ; The delimiters before it
+            ldy         #0
+:
+            cpy         cnt
+            beq         :+
+            lda         (w),y
+            cmp         #' ' + 1
+            bcs         :+
+            iny
+            bra         :-
+:
+            jsr         @adv
+            cpy         cnt                                 ; (A part all delimiters, and more: on)
+            bne         @at
+            lda         tmp
+            ora         tmp + 1
+            bne         @skip
+@at:
+            lda         w                                   ; Its start
+            ldy         w + 1
+            PUSHAY
+            stz         tmp2                                ; Its characters (tmp2: how many)
+            stz         tmp2 + 1
+@part:
+            jsr         @limit
+            ldy         #0
+@char:
+            cpy         cnt
+            beq         @past
+            lda         (w),y
+            cmp         #' ' + 1
+            bcc         @delim
+            iny
+            bra         @char
+@delim:
+            jsr         @took                               ; (>IN past it too)
+            inc         w
+            bne         @end
+            inc         w + 1
+            bra         @end
+@past:
+            jsr         @took                               ; The part's end: the source's, or on
+            lda         tmp
+            ora         tmp + 1
+            bne         @part
+@end:
+            sec                                             ; >IN: where it got to
+            lda         w
+            sbc         src_addr
+            sta         to_in
+            lda         w + 1
+            sbc         src_addr + 1
+            sta         to_in + 1
+            lda         #' '                                ; (cnt the delimiter, as parse_to's callers have it)
+            sta         cnt
+            lda         tmp2
+            ldy         tmp2 + 1
+            PUSHAY
+            rts
+@limit:                                                     ; (cnt: what a part looks at, 255 at most)
+            lda         #255
+            ldy         tmp + 1
+            bne         :+
+            lda         tmp
+:
+            sta         cnt
+            rts
+@took:                                                      ; (tmp2 on .Y characters; then as @adv)
+            tya
+            clc
+            adc         tmp2
+            sta         tmp2
+            bcc         @adv
+            inc         tmp2 + 1
+@adv:                                                       ; (w on .Y characters, tmp less them.  Keeps .Y)
+            tya
+            clc
+            adc         w
+            sta         w
+            bcc         :+
+            inc         w + 1
+:
+            tya
+            eor         #$FF
+            sec
+            adc         tmp
+            sta         tmp
+            bcs         :+
+            dec         tmp + 1
+:
+            rts
 
             HEADER      "word", 0
 word:                                                       ; ( char "<chars>ccc<char>" -- c-addr )

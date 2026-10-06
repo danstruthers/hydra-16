@@ -72,7 +72,16 @@ order:      .res        ORDER_MAX * 2                       ;   and they (the fi
 lastxt:     .res        2                                   ; The definition being made: its xt (RECURSE, DOES>) ...
 lasthdr:    .res        2                                   ;   and its header (; shows it)
 idx_bank:   .res        1                                   ; The word lists' index (finterp.inc): its bank ($FF:
-idx_node:   .res        2                                   ;   none), and the node a search is at
+idx_node:   .res        2                                   ;   none), the node a search is at, and the two word
+idx_lastw:  .res        4                                   ;   lists whose records were found last (0: none) and
+idx_lastr:  .res        4                                   ;   they; a search's bank and tmp before it
+idx_savb:   .res        1
+idx_savt:   .res        2
+ra_dep:     .res        1                                   ; The read-ahead buffer (ffile.inc's ra_line, in the
+ra_fd:      .res        1                                   ;   index's bank): the file's depth (0: none), its fd ...
+ra_pos:     .res        4                                   ;   the buffer's place in it ...
+ra_len:     .res        2                                   ;   the bytes in it ...
+ra_bank:    .res        1                                   ;   and the bank that was selected
 heap_lo:    .res        2                                   ; ALLOCATE's heap's start (memory.fl's), to DICT_END: the
                                                             ;   dictionary ends below its page (none: DICT_END)
 loc_vec:    .res        2                                   ; The locals library's routine (locals.fl's), for the
@@ -219,6 +228,11 @@ main:
             stz         blk_vec + 1
             lda         #1
             sta         lp + 1
+            stz         idx_lastw
+            stz         idx_lastw + 1
+            stz         idx_lastw + 2
+            stz         idx_lastw + 3
+            stz         ra_dep
             lda         #$FF                                ; The index's bank: the task's last (all taken, then all
             sta         idx_bank                            ;   but it given back; else one; else none), started
             jsr         BANKS                               ;   at the first search ("ix" not there yet)
