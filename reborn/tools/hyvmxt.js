@@ -480,12 +480,9 @@ tpl('call', `${STUB} | TF_MISS`, `
   sta vm_ip + 1
   jmp vm_next
 @s:`);
-// The check of CSELF and TSELF (SELFQ's): as many arguments as the formals, this frame's function under them, no
-// Ctrl-C nor a note; ht its place
+// The check of CSELF and TSELF (SELFQ's): this frame's function under the arguments, no Ctrl-C nor a note; ht its
+// place.  (As many arguments as the formals, vm_rb M: vc_self's, which makes CSELF and TSELF only of so many)
 const SELF = `
-  lda vm_rb
-  cmp #{M 1}
-  bne @s
   lda sp
   sec
   sbc #{M 1}
@@ -512,9 +509,9 @@ tpl('cself', STUB, SELF + DEPTH + RECORD + `
 :
   jmp {C}
 @s:`);
-// TSELF m code 0: the arguments to this frame's, its record's scope none again if one was made, the stack cut back to
-// the record's end, its code from its start
-tpl('tself', STUB, SELF + `
+// TSELF m code 0: the arguments to this frame's (in line for 0 to 4: tself0 ..., vx_tpl's choice), its record's scope
+// none again if one was made, the stack cut back to the record's end, its code from its start
+const TSELF = (m) => SELF + (m === null ? `
   ldx #{B 1}
   beq @args
   ldy #2
@@ -527,10 +524,17 @@ tpl('tself', STUB, SELF + `
   iny
   dex
   bne @arg
-@args:
+@args:` : m === 0 ? '' : `
+  ldy #2` + [...Array(m)].map((_, i) => `
+  lda (ht),y
+  sta (vm_s),y
+  iny
+  lda (ht),y
+  sta (vm_s),y` + (i < m - 1 ? `
+  iny` : '')).join('')) + `
   bit vm_mat
   bpl @kept
-  ldy vm_rb
+  ldy #{M 1}
   iny
   iny
   lda #0
@@ -539,7 +543,7 @@ tpl('tself', STUB, SELF + `
   sta (vm_s),y
   stz vm_mat
 @kept:
-  lda vm_rb
+  lda #{M 1}
   clc
   adc #4
   adc vm_s
@@ -554,7 +558,9 @@ tpl('tself', STUB, SELF + `
   jsr unspill
 @go:
   jmp {C}
-@s:`);
+@s:`;
+tpl('tself', STUB, TSELF(null));
+for (let m = 0; m <= 4; m++) tpl('tself' + m, STUB, TSELF(m));
 // RET: to its caller's code, in this bank (another, the evaluator's call: its stub), the frame dropped: its return
 // pad (past the call's data) finds the caller's frame again; an error, vm_reterr's (returned by the caller too if
 // its call's r says)
@@ -878,7 +884,7 @@ set(OPI.GT, 'vxt_q_gt'); set(OPI.LE, 'vxt_q_le'); set(OPI.GE, 'vxt_q_ge'); set(O
 set(OPI.CONST, 'vxt_const'); set(OPI.LOCAL, 'vxt_local'); set(OPI.PUSH, 'vxt_push'); set(OPI.JF, 'vxt_jf'); set(OPI.JT, 'vxt_jt');
 set(OPI.JMP, 'vxt_jmp'); set(OPI.LPUSH, 'vxt_lpush'); set(OPI.CPUSH, 'vxt_cpush'); set(OPI.SETL, 'vxt_setl'); set(OPI.LOOP, 'vxt_loop');
 set(OPI.DOTI, 'vxt_doti'); set(OPI.DOTINC, 'vxt_dotinc'); set(OPI.STT, 'vxt_stt'); set(OPI.POPX, 'vxt_popx'); set(OPI.DROP, 'vxt_drop');
-lines.push('; Each op\'s template (0: its stub alone; the fused ones: by s, below)');
+lines.push('; Each op\'s template (0: its stub alone; the fused ones: by s, below; TSELF\'s by its count, vx_ttself)');
 for (let i = 0; i < 64; i += 8) lines.push((i ? '            ' : 'vx_tmain:   ') + '.word       ' + main.slice(i, i + 8).join(', '));
 const S = ['ADD', 'SUB', 'LT', 'GT', 'LE', 'GE', 'NEQ', 'INC', 'DEC', 'ZEROP', 'ONEP', 'ADDC', 'SUBC', 'LTC', 'GTC', 'LEC', 'GEC', 'EQC'];
 const fused = {
@@ -896,6 +902,8 @@ for (const [tn, m] of Object.entries(fused)) {
   lines.push(tn + ':'.padEnd(12 - tn.length) + '.word       ' + row.slice(0, 9).join(', '));
   lines.push('            .word       ' + row.slice(9).join(', '));
 }
+lines.push('', '; TSELF\'s, of 0 to 4 arguments (more: vx_tmain\'s)',
+  'vx_ttself:  .word       ' + [0, 1, 2, 3, 4].map(m => main[OPI.TSELF] === '0' ? '0' : 'vxt_tself' + m).join(', '));
 lines.push('', '; BLOCK\'s template\'s length (0: none): its data is past it and its stub (the blocks\' table\'s, a block\'s parent\'s)',
   'VXT_BLOCK_D     = ' + (main[OPI.BLOCK] === '0' ? '0' : 'vxt_block_e - vxt_block_c'));
 fs.writeFileSync(out, lines.join('\r\n') + '\r\n');

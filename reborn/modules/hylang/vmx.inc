@@ -435,7 +435,24 @@ vx_tpl:
             rts
 @head:
             lda         #VO_HEAD
+            bra         @tm
 :
+            cmp         #VO_TSELF                           ; (TSELF's: by its count, its copies in line, to 4)
+            bne         @tm
+            ldy         #1
+            lda         (hq),y
+            cmp         #5
+            bcs         @tsn
+            asl
+            tax
+            lda         vx_ttself,x
+            sta         vx_tp
+            lda         vx_ttself + 1,x
+            sta         vx_tp + 1
+            bra         @hdr
+@tsn:
+            lda         #VO_TSELF
+@tm:
             tax
             lda         vx_tmain,x
             sta         vx_tp

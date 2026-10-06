@@ -626,20 +626,24 @@ evaluator's resume at `HEAD`'s t, past the pad, found h and r in the pad's code 
 
 Milestone 5, the fused ops: those of a local or `ex` and a constant work from the value where it is (`bit #1`,
 the 65C02's, for a fixnum's bit, not `lsr` on a copy in `ht`), LQP pushes its value from `.A`, and LL's and
-JLL's read their second local where it is.  A tail loop's step is 328 cycles (`hyspeed`, from 363).
+JLL's read their second local where it is.  A tail loop's step is 328 cycles (`hyspeed`, from 363).  Milestone 6,
+the calls of a function by its own name: `CSELF` and `TSELF` no longer look at the frame's count (`vc_self` makes
+them only of as many arguments as the formals, so `vm_rb` is M), and `TSELF` copies 0 to 4 arguments in line (a
+template for each count, `vx_ttself`, `vx_tpl`'s choice).  A tail loop's step is 306 cycles.
 
-| Benchmark | Bytecode (ms) | M2 (ms) | M3 (ms) | M4 (ms) | M5 (ms) | HyForth (ms) | hylang/HyForth |
-|---|---|---|---|---|---|---|---|
-| loop | 925 | 550 | 545 | 545 | 490 | 76 | 6.4x |
-| calls | 1,005 | 640 | 640 | 575 | 555 | 65 | 8.5x |
-| fib | 980 | 655 | 655 | 550 | 530 | 181 | 2.9x |
-| sieve | 1,905 | 1,430 | 1,160 | 1,160 | 1,140 | 332 | 3.4x |
-| sort | 3,275 | 2,710 | 1,915 | 1,915 | 1,890 | 480 | 3.9x |
-| gcd | 960 | 600 | 600 | 570 | 540 | 350 | 1.5x |
-| all | 9,050 | 6,585 | 5,515 | 5,315 | 5,145 | 1,484 | 3.5x (geometric mean 3.9x, from 6.9x) |
+| Benchmark | Bytecode (ms) | M2 (ms) | M3 (ms) | M4 (ms) | M5 (ms) | M6 (ms) | HyForth (ms) | hylang/HyForth |
+|---|---|---|---|---|---|---|---|---|
+| loop | 925 | 550 | 545 | 545 | 490 | 460 | 76 | 6.0x |
+| calls | 1,005 | 640 | 640 | 575 | 555 | 540 | 65 | 8.3x |
+| fib | 980 | 655 | 655 | 550 | 530 | 515 | 181 | 2.8x |
+| sieve | 1,905 | 1,430 | 1,160 | 1,160 | 1,140 | 1,105 | 332 | 3.3x |
+| sort | 3,275 | 2,710 | 1,915 | 1,915 | 1,890 | 1,855 | 480 | 3.9x |
+| gcd | 960 | 600 | 600 | 570 | 540 | 520 | 350 | 1.5x |
+| all | 9,050 | 6,585 | 5,515 | 5,315 | 5,145 | 4,995 | 1,484 | 3.4x (geometric mean 3.7x, from 6.9x) |
 
-What's left: the global's head pushed for a tail loop (`SHEAD`, then `TSELF`'s look at it), a tail call's
-arguments copied in a loop, the depth and Ctrl-C at each call; `*`, not a quick op; and `map` and its kin, whose
+What's left: the global's head pushed for a tail loop (`SHEAD`, then `TSELF`'s look at it: the compiler could
+leave it out when the arguments call nothing), the depth and Ctrl-C at each call, a template's `jmp` past its
+stub; `*`, not a quick op; and `map` and its kin, whose
 function is called through the evaluator (an item 2,951 cycles).
 
 | Step | | Notes |
