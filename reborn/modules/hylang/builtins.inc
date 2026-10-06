@@ -289,6 +289,8 @@ BIN_DEC         = BI_N
             BI          "key", 0, 0, B5, bi_key
             BI          "key?", 0, 0, B5, bi_keyp
             BI          "hold", 0, ANY, BF_SPECIAL, sf_hold
+BIN_SYS         = BI_N          ; (The sys- functions': hysys.inc's sys_lazy)
+            BI          "sys", 1, ANY, B6, bi_sys
 
 BI_COUNT        = BI_N
 .assert     BI_COUNT <= 256, error, "builtins.inc: 256 built-ins at most (BUILTIN0 + 2 * n, below IMM_PAGES)"

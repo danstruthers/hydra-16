@@ -97,12 +97,29 @@ Each is hylang over the device's files, so it's also a working example of drivin
 
 ### 4. Every system call (`sys-`)
 
-Each call a program makes (`spec/api.def`'s, but the servers' and the debugging calls, as forth's `sys-` words) is
-a function, `sys-` and its name in lower case (`sys-open`, `sys-sleep-until`), its inputs as arguments in the
-specification's order and its outputs as its value (one, or a list of them; NIL for none).  A name the call takes
-(zero-terminated) is a string; a buffer it fills is a count (the value is a string of the bytes); a stat record is
-a hash; a failure is the system's error.  `tools/apigen.js` makes them from the specification, as it makes forth's,
-so a new call is a new function with no more work.
+Each call a program makes (`spec/api.def`'s, but the servers', the debugging calls and `NOTIFY`, as forth's `sys-`
+words) is a function, `sys-` and its name in lower case (`sys-open`, `sys-sleep-until`): `(sys-open "x" 0)` is
+`(sys :open "x" 0)`, `sys` being the built-in that makes any of them by name.  A `sys-` name is bound as it's first
+looked up, to `sys` partially applied to the name's atom (`<function>(sys :open)`), so 58 functions cost one
+built-in.  The arguments are the registers the call takes, in the order of its `hl:` line in `spec/api.def`, and
+its value is what it gives (one, or a list of them; NIL for none):
+
+* a register: a whole number (a character, its code), at most the register's size (`SEEK`'s offset may be
+  negative); some may be left out, as 0;
+* a name the call takes (zero-terminated): a string (an atom's or a symbol's name will do); bytes it reads
+  (`WRITE`'s, `ENV_PUT`'s): a string, its length the count; `SPAWN`'s arguments: a list of strings (the
+  program's name isn't one of them);
+* a buffer it fills: a string of its bytes (`READ`'s: an argument, the count, and the string as long as what was
+  read; a name's, its text);
+* a stat record: a hash, as `stat` gives (`WSTAT`'s: `:name`, `:mode`, `:length`, `:mtime`, what isn't in it left as
+  it is).
+
+A failure is the system's error, about the call's first string (`(sys-open "x")`: `x: not found`, `:noent`).
+hylang's output is written before the call (so `sys-puts` comes after it).  A call's strings and buffer share
+1,536 bytes (`TASKREAD`'s, `ENV_SIZE`, fits).  `tools/apigen.js` makes the calls' records from the `hl:` lines
+(`obj/gen/hylsys.inc`), checking each register against the call's `in:` and `out:` lines, and the reference
+(`obj/gen/api.md`) has each call's; a call a program makes needs its `hl:` line (apigen fails without one), and is a
+function with no more work.
 
 ## The prompt
 
@@ -274,6 +291,9 @@ Then the Hydra layers (the plan's phases 9 to 12: its section "The Hydra layers"
    namespace is its own once it changes it, so rc's `newns` can't build hylang's.  `tests/hyhydra/hydra.hl`'s 62
    checks pass, and the built-ins that make values with a collection before every allocation too (the `hyhydra`
    test, which also types raw keys and gives Ctrl-C to an `on-note` function).  248 built-ins of 256.
-10. **Every system call** (`sys-`).
+10. **Every system call** (`sys-`).  Done: `hysys.inc` in the sixth bank, `sys` and the `sys-` functions bound as
+   they're first looked up, from `spec/api.def`'s `hl:` lines (`obj/gen/hylsys.inc`, apigen's).
+   `tests/hyhydra/hydra.hl`'s 125 checks (a call of each group, and the errors) pass, and with a collection before
+   every allocation too.  249 built-ins of 256.
 11. **The device libraries**.
 12. **The prompt**.

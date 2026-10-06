@@ -2559,11 +2559,20 @@ value_of:
             clc
             rts
 
-; ex, a symbol: its value (value_of's).  Unbound: the error "Unbound Symbol 'x'"
+; ex, a symbol: its value (value_of's).  Unbound: sys-x, a call's function, bound now (hysys.inc's sys_lazy); else
+; the error "Unbound Symbol 'x'"
 lookup:
             jsr         value_of
             bcs         :+
             rts
+:
+            FARN        6, sys_lazy
+            bcs         :+
+            rts
+:
+            cmp         #E_NOMEM
+            bne         :+
+            jmp         ev_nomem
 :
             jsr         err_begin                           ; ("Unbound Symbol 'x'")
             LDAX        s_unbsym

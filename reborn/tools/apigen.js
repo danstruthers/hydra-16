@@ -12,6 +12,7 @@
 //   obj/gen/api.md        the reference: every call, its registers, its errors (and its HyForth word)
 //   obj/gen/api.json      the same as data (the emulator names calls with it: sim/run.js --trace-calls)
 //   obj/gen/forthsys.inc  HyForth's sys- words, for its Hydra library (forthlib/hydra.s)
+//   obj/gen/hylsys.inc    hylang's sys- functions, the calls' records (modules/hylang/hysys.inc), from the hl: lines
 //   obj/gen/hydra.fs      the constants and error codes for HyForth, a library on the ROM disk (/lib/forth)
 //
 // Usage: node tools/apigen.js [ROOT]       (ROOT: the reborn folder; default: this file's parent)
@@ -47,11 +48,12 @@ function readApi(file) {
       g.calls.push(call); calls.push(call);
     } else if ((m = line.match(/^const\s+(\w+)\s+(\$?[0-9A-Fa-f]+)(?:\s+"([^"]*)")?$/))) {
       consts.push({ name: m[1], value: num(m[2]), text: m[2], doc: m[3] || '' }); call = null;
-    } else if ((m = line.match(/^\s+(in|out|errors|blocks|doc):\s*(.*)$/))) {
+    } else if ((m = line.match(/^\s+(in|out|errors|blocks|doc|hl):\s*(.*)$/))) {
       if (!call) fail(file, n, m[1] + ': outside a call');
       const v = m[2].trim();
       if (m[1] === 'errors') { if (v !== '-') call.errors.push(...v.replace(/\([^)]*\)/g, '').split(/[\s,]+/).filter(Boolean)); call.errorsText = (call.errorsText ? call.errorsText + ' ' : '') + v; }
       else if (m[1] === 'blocks') call.blocks = v;
+      else if (m[1] === 'hl') { if (call.hl !== undefined) fail(file, n, call.name + ': two hl: lines'); call.hl = v; call.hlLine = n; }
       else if (v !== '-') call[m[1]].push(v);
     } else fail(file, n, 'what is "' + line.trim() + '"?');
   });
@@ -244,6 +246,118 @@ function forthSys(api) {
   return s;
 }
 
+// ---- hylang (modules/hylang): a sys- function for each call a program makes (forth's), from its hl: line (the
+// format: spec/api.def's header).  hylsys.inc: each call's record, read by hysys.inc's sys: its name (lower case, no
+// sys-, a 0), its address, the arguments it needs and the most it takes, its inputs (a count, then each one's kind,
+// register and parameter: bytes' count register, a byte; buf's and io's size, a word) and its outputs (a count,
+// then each one's kind and register).  A register as forth's: $0N rN, $1N rN and the next, $20 .A, $21 .X, $22 .Y,
+// $23 .A/.X
+const HL_IN = { n: 1, 'n?': 2, i: 3, s: 4, 's?': 5, 'args?': 6, 'map?': 7, bytes: 8, bufn: 9, buf: 10, count: 11, size: 12, io: 13, stat: 14 };
+const HL_OPT = ['n?', 's?', 'args?', 'map?', 'io'], HL_NOARG = ['bufn', 'buf', 'size'], HL_ROOM = ['s', 's?', 'args?', 'map?', 'bytes', 'bufn', 'io', 'stat'];
+const HL_OUT = { reg: 1, buf: 2, z: 3, bufreg: 4, stat: 5 };
+const HL_ARGS_MAX = 8;          // (hysys.inc's: sys's most arguments, less its name)
+const hlName = c => 'sys-' + c.name.toLowerCase().replace(/_/g, '-');
+
+// A register's code, from its name in an hl: line
+function hlReg(c, t) {
+  let m;
+  if (t === '.A/.X') return 0x23;
+  if ((m = t.match(/^\.([AXY])$/))) return 0x20 + 'AXY'.indexOf(m[1]);
+  if ((m = t.match(/^r(\d+)\/r(\d+)$/)) && +m[2] === +m[1] + 1 && +m[2] <= 15) return 0x10 + +m[1];
+  if ((m = t.match(/^r(\d+)$/)) && +m[1] <= 15) return +m[1];
+  fail('spec/api.def', c.hlLine, c.name + ': no register "' + t + '"');
+}
+
+// A call's hl: line read and checked: { ins: [{ kind, reg, param }], outs: [{ kind, reg }], min, max }
+function hlOf(c, consts) {
+  const where = msg => fail('spec/api.def', c.hlLine, c.name + ': ' + msg);
+  const [inText, outText, more] = c.hl.split('->');
+  if (outText === undefined || more !== undefined) where('an hl: line has one ->');
+  const inRegs = regsOf(c, c.in).map(r => r.code), outRegs = regsOf(c, c.out).map(r => r.code);
+  const size = t => t.split('+').reduce((v, p) => {
+    p = p.trim();
+    if (/^\d+$/.test(p)) return v + +p;
+    const k = consts.find(x => x.name === p);
+    if (!k) where('no const ' + p);
+    return v + k.value;
+  }, 0);
+  const ins = [], outs = [];
+  let buffer = null, args = 0, min = 0;
+  for (const tok of inText.trim().split(/\s+/).filter(Boolean)) {
+    const m = tok.match(/^([^=]+)=(\w+\??)(?:\(([^)]*)\))?$/);
+    if (!m) where('what is "' + tok + '"?');
+    const reg = hlReg(c, m[1]);
+    if (!inRegs.includes(reg)) where(m[1] + ' isn\'t among in:\'s registers');
+    let kind = m[2], param = null;
+    if (kind === 'buf' && m[3] !== undefined) kind = 'bufn';
+    if (!(kind in HL_IN)) where('no kind ' + kind);
+    if (['bytes', 'bufn', 'io'].includes(kind) !== (m[3] !== undefined)) where(kind + ': its parameter?');
+    if (kind === 'bytes') { param = hlReg(c, m[3]); if (!inRegs.includes(param) || param > 15) where(m[3] + ': a count register, rN'); }
+    if (kind === 'bufn' || kind === 'io') param = size(m[3]);
+    if (kind === 'i' && (reg & 0xF0) !== 0x10) where('i: a 32-bit register\'s');
+    if (['s', 's?', 'args?', 'map?', 'bytes', 'bufn', 'buf', 'io', 'stat'].includes(kind) && reg > 15) where(kind + ': a pointer, rN');
+    if (HL_ROOM.includes(kind) && buffer && buffer.kind === 'buf') where(kind + ' after buf: buf is the room that\'s left');
+    if (['bufn', 'buf', 'io'].includes(kind)) { if (buffer) where('one buffer at most'); buffer = { kind }; }
+    if ((kind === 'count' || kind === 'size') && (!buffer || buffer.kind !== 'buf' || buffer.sized)) where(kind + ': after buf, once');
+    if (kind === 'count' || kind === 'size') buffer.sized = true;
+    if (!HL_NOARG.includes(kind)) { args++; if (!HL_OPT.includes(kind)) min = args; }
+    ins.push({ kind, reg, param });
+  }
+  if (buffer && buffer.kind === 'buf' && !buffer.sized) where('buf: no count or size');
+  if (args > HL_ARGS_MAX) where('more than ' + HL_ARGS_MAX + ' arguments');
+  for (const tok of outText.trim().split(/\s+/).filter(Boolean)) {
+    const m = tok.match(/^buf(?:=(.+))?$/);
+    if (m) {
+      if (!buffer) where(tok + ': no buffer');
+      if (m[1] === undefined) outs.push({ kind: 'buf', reg: 0 });
+      else if (m[1] === 'z' || m[1] === 'stat') outs.push({ kind: m[1], reg: 0 });
+      else {
+        const reg = hlReg(c, m[1]);
+        if (!outRegs.includes(reg)) where(m[1] + ' isn\'t among out:\'s registers');
+        outs.push({ kind: 'bufreg', reg });
+      }
+      if (m[1] === 'stat' && (buffer.kind !== 'bufn' || ins.find(x => x.kind === 'bufn').param !== consts.find(x => x.name === 'SR_SIZE').value)) where('buf=stat: buf(SR_SIZE)\'s');
+    } else {
+      const reg = hlReg(c, tok);
+      if (!outRegs.includes(reg)) where(tok + ' isn\'t among out:\'s registers');
+      outs.push({ kind: 'reg', reg });
+    }
+  }
+  return { ins, outs, min, max: args };
+}
+
+function hylSys(api) {
+  let s = header(';', 'hylsys.inc - hylang\'s sys- functions, the calls\' records (hysys.inc\'s sys reads them)');
+  s += '; A record each: its name (lower case, no sys-, a 0), its address, the arguments it needs and the most it takes;' + CRLF;
+  s += '; its inputs, a count, then each one\'s kind (SK_*), register and parameter (SK_BYTES\'s: its count\'s register;' + CRLF;
+  s += '; SK_BUFN\'s and SK_IO\'s: a size, a word); its outputs, a count, then each one\'s kind (SO_*) and register.  A' + CRLF;
+  s += '; register: $0N rN, $1N rN and the next (32 bits), $20 .A, $21 .X, $22 .Y, $23 .A/.X.' + CRLF + CRLF;
+  for (const [k, v] of Object.entries(HL_IN)) s += pad('SK_' + k.replace('?', 'Q').toUpperCase(), 16) + '= ' + v + CRLF;
+  for (const [k, v] of Object.entries(HL_OUT)) s += pad('SO_' + k.toUpperCase(), 16) + '= ' + v + CRLF;
+  const calls = forthCalls(api);
+  s += pad('SYS_CALLS', 16) + '= ' + calls.length + CRLF;
+  s += pad('SYS_ARGS', 16) + '= ' + HL_ARGS_MAX + CRLF + CRLF;
+  s += 'sys_calls:' + CRLF;
+  calls.forEach((c, i) => { s += '            .word       hs_' + i + CRLF; });
+  calls.forEach((c, i) => {
+    const h = hlOf(c, api.consts), n = c.name.toLowerCase().replace(/_/g, '-');
+    if (n.length > 27) fail('spec/api.def', c.hlLine, n + ': a sys- name is 31 characters at most');
+    const ins = [h.ins.length], outs = [h.outs.length];
+    for (const x of h.ins) {
+      ins.push(HL_IN[x.kind], x.reg);
+      if (x.kind === 'bytes') ins.push(x.param);
+      if (x.kind === 'bufn' || x.kind === 'io') ins.push(x.param & 0xFF, x.param >> 8);
+    }
+    for (const x of h.outs) outs.push(HL_OUT[x.kind], x.reg);
+    s += CRLF + pad('hs_' + i + ':', 12) + '.byte       "' + n + '", 0' + CRLF;
+    s += '            .word       ' + pad(hx(c.addr, 4), 36) + '; ' + hlName(c) + ': ' + c.hl + CRLF;
+    s += '            .byte       ' + [h.min, h.max].join(', ') + CRLF;
+    s += '            .byte       ' + ins.map(v => hx(v, 2)).join(', ') + CRLF;
+    s += '            .byte       ' + outs.map(v => hx(v, 2)).join(', ') + CRLF;
+  });
+  return s;
+}
+
 // hydra.fs: the constants a program uses (not the servers', nor the kernel's own addresses), and the error codes,
 // as constants, a library (its own word list, hydra); every name in lower case, as forth's are.  LF line ends, as
 // the ROM disk's files have, and short lines (a file's line is 128 at most)
@@ -268,9 +382,9 @@ function apiMd(api, errors) {
   for (const g of api.groups) {
     s += CRLF + '### **' + g.name + '** (`' + hx(g.base, 4) + '`, ' + g.slots + ' slots)' + CRLF + CRLF + g.doc + '.' + CRLF;
     if (!g.calls.length) { s += CRLF + '(No calls yet.)' + CRLF; continue; }
-    s += CRLF + '| Call | Address | In | Out | Errors | Waits | HyForth |' + CRLF + '| :--- | :------ | :- | :-- | :----- | :---- | :------ |' + CRLF;
+    s += CRLF + '| Call | Address | In | Out | Errors | Waits | HyForth | hylang |' + CRLF + '| :--- | :------ | :- | :-- | :----- | :---- | :------ | :----- |' + CRLF;
     const esc = t => t.replace(/\|/g, '\\|'), fc = forthCalls(api);
-    for (const c of g.calls) s += '| `' + c.name + '` | `' + hx(c.addr, 4) + '` | ' + esc(c.in.join(' ') || '-') + ' | ' + esc(c.out.join(' ') || '-') + ' | ' + esc(c.errorsText || '-') + ' | ' + (c.blocks || '-') + ' | ' + (fc.includes(c) ? '`' + forthName(c) + ' ' + forthEffect(c) + '`' : '-') + ' |' + CRLF;
+    for (const c of g.calls) s += '| `' + c.name + '` | `' + hx(c.addr, 4) + '` | ' + esc(c.in.join(' ') || '-') + ' | ' + esc(c.out.join(' ') || '-') + ' | ' + esc(c.errorsText || '-') + ' | ' + (c.blocks || '-') + ' | ' + (fc.includes(c) ? '`' + forthName(c) + ' ' + forthEffect(c) + '`' : '-') + ' | ' + (fc.includes(c) ? '`' + esc(hlName(c) + ' ' + c.hl) + '`' : '-') + ' |' + CRLF;
     s += CRLF;
     for (const c of g.calls) s += '* **`' + c.name + '`**: ' + c.doc.join(' ') + CRLF;
   }
@@ -283,6 +397,11 @@ function generate(root) {
   const api = readApi(path.join(root, 'spec', 'api.def'));
   const errors = readErrors(path.join(root, 'spec', 'errors.def'));
   for (const c of api.calls) for (const e of c.errors) if (!errors.find(x => x.name === e)) fail('spec/api.def', c.line, c.name + ': no error ' + e);
+  const fc = forthCalls(api);
+  for (const c of api.calls) {
+    if (fc.includes(c) && c.hl === undefined) fail('spec/api.def', c.line, c.name + ': no hl: line (hylang\'s ' + hlName(c) + ')');
+    if (!fc.includes(c) && c.hl !== undefined) fail('spec/api.def', c.hlLine, c.name + ': an hl: line, and not a call a program makes');
+  }
   const gen = path.join(root, 'obj', 'gen');
   write(path.join(gen, 'jumptable.s'), jumptable(api));
   write(path.join(gen, 'errors.inc'), errorsInc(errors));
@@ -293,6 +412,7 @@ function generate(root) {
   write(path.join(root, 'obj', 'sdk', 'c', 'oserrmap.inc'), oserrMap(errors));
   write(path.join(gen, 'api.md'), apiMd(api, errors));
   write(path.join(gen, 'forthsys.inc'), forthSys(api));
+  write(path.join(gen, 'hylsys.inc'), hylSys(api));
   write(path.join(gen, 'hydra.fs'), forthLib(api, errors));
   write(path.join(gen, 'api.json'), JSON.stringify({
     calls: api.calls.map(c => ({ name: c.name, addr: c.addr, group: c.group, in: c.in.join(' '), out: c.out.join(' '), errors: c.errors, blocks: c.blocks })),

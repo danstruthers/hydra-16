@@ -46,6 +46,7 @@ HL_DATA4        = 1             ; (The RAM code in DATA4: hylang.cfg)
 .include "streams.inc"
 .include "system.inc"
 .include "hydrabi.inc"
+.include "hysys.inc"
 
 IBUF_SIZE       = 128           ; stdin read this much at a time
 

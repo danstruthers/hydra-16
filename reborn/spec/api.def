@@ -11,11 +11,30 @@
 #     errors: the error codes it can give       (C = 1, .A = the code; see errors.def)
 #     blocks: yes or no                         whether it can wait
 #     doc:    what it does                      (more doc: lines go on with it)
+#     hl:     hylang's sys- function            (a call a program makes: not a server's, nor dbg's, nor NOTIFY)
 #   const NAME VALUE "what it is"              a constant for programs (hydra.inc)
 #
 # The rules (docs/conventions.md): .A, .X, .Y and r0-r15 in and out; 16-bit results in .A (low) and .X (high);
 # C = 0 success, C = 1 failure with the code in .A, always.  Calls are only ever appended to a group: a slot
 # never moves, and a withdrawn call keeps its slot and gives E_NOSYS.
+#
+# An hl: line (docs/hylang.md, "Every system call"): the registers the call takes, in the order of its sys-
+# function's arguments, each REG=KIND; then -> and what it gives, a value each (one: the value; more: a list of
+# them; none: NIL).  REG is .A, .X, .Y, .A/.X, rN or rN/rM (32 bits), as in: and out: name them.  A KIND:
+#   n         a whole number (or a character: its code), the register's size; n? the same, or NIL or left out: 0
+#   i         a number, -2^31 to 2^32 - 1 (32 bits)
+#   s         a string (an atom's or a symbol's name), its bytes and a 0; s? the same, or NIL or left out: 0
+#   args?     a list of strings, each with a 0, then an empty one (SPAWN's); NIL or left out: 0
+#   map?      a list of bytes, after their count (SPAWN's fd map); NIL or left out: 0
+#   bytes(R)  a string's bytes, their count in R
+#   buf(N)    a buffer of N bytes the call fills (no argument; N a number, a const, NAME+1)
+#   buf       a buffer of what room there is (no argument), sized by count (an argument: at most that room) or
+#             size (no argument: the room)
+#   io(N)     a buffer of N bytes the call reads and fills: a string's bytes, or NIL or left out: zeros
+#   stat      a hash, as stat gives it, made a stat record (:name, :mode, :length, :mtime: what isn't there is
+#             left as it is: all $FF, an empty name)
+# and what it gives: REG (a whole number), buf (the buffer, a string), buf=z (its text, to its 0), buf=REG (its
+# first REG bytes) or buf=stat (the stat record, a hash as stat gives).  A failure is the system's error.
 
 group system   $F800 16 "System information and services"
 group task     $F830 32 "Tasks: starting and ending them, waiting, scheduling, ticks"
@@ -34,6 +53,7 @@ call SYSINFO system impl=K_SYSINFO
   out:    .A = the ABI version (1); .X = how many RAM modules are installed; r0 = the free tasks (bit = task)
   errors: -
   blocks: no
+  hl:     -> .A .X r0
   doc:    What the system has.
 
 call ERRSTR system impl=K_ERRSTR
@@ -41,6 +61,7 @@ call ERRSTR system impl=K_ERRSTR
   out:    the error's text in the buffer, zero-terminated ("error $xx" for an unknown code)
   errors: -
   blocks: no
+  hl:     .A=n r0=buf(32) -> buf=z
   doc:    An error code as text, for messages.
 
 # ---- task
@@ -50,6 +71,7 @@ call EXITS task impl=K_EXITS
   out:    (doesn't return)
   errors: -
   blocks: no
+  hl:     .A=n? r0=s? ->
   doc:    End the calling task, with an exit status (Plan 9's exits).  Returning from a program's entry point
   doc:    is EXITS with code 0 and no message.  Everything the task had is released; its parent can WAIT for
   doc:    the status.
@@ -59,6 +81,7 @@ call WAIT task impl=K_WAIT
   out:    .A = the task that ended; .X = its exit code; its message in r0's buffer ("" for none)
   errors: E_CHILD (no such child, or none at all), E_INTR (a note came: taken on the way out)
   blocks: yes
+  hl:     .A=n r0=buf(32) -> .A .X buf=z
   doc:    Wait for a child to end, and take its exit status.  A child that has ended already isn't waited for.
 
 call SPAWN task impl=K_SPAWN far
@@ -69,6 +92,7 @@ call SPAWN task impl=K_SPAWN far
   errors: E_NOENT (no such file), E_NOEXEC (not a program this kernel runs), E_NOTASK (no free task), E_TOOBIG
   errors: (the arguments), E_INVAL (the map), E_MFILE, E_INTR (and what else OPEN and READ give)
   blocks: yes
+  hl:     r0=s r1=args? .A=n? r2=map? -> .A
   doc:    Start a program in a task of its own.  SPAWN opens the file and reads its HYX2 header (HX_*): a module of
   doc:    the paged ROM (HF_INPLACE: #m's files) runs in place, in its bank (the module directory's of its name); any
   doc:    other program is read into the new task's RAM at its load address ($0800), by the task itself as it
@@ -86,6 +110,7 @@ call GETPID task impl=K_GETPID
   out:    .A = this task's number
   errors: -
   blocks: no
+  hl:     -> .A
   doc:    The calling task's number (0-15).
 
 call YIELD task impl=K_YIELD
@@ -93,6 +118,7 @@ call YIELD task impl=K_YIELD
   out:    -
   errors: -
   blocks: no
+  hl:     ->
   doc:    Let the other tasks run; come back when it's this one's turn again (at once, if nothing else can run).
 
 call SLEEP task impl=K_SLEEP
@@ -100,6 +126,7 @@ call SLEEP task impl=K_SLEEP
   out:    -
   errors: E_INTR (a note woke it early: taken on the way out)
   blocks: yes
+  hl:     .A/.X=n ->
   doc:    Sleep for a number of ticks.  The other tasks run meanwhile, or the system idles.
 
 call SLEEP_UNTIL task impl=K_SLEEP_UNTIL
@@ -107,6 +134,7 @@ call SLEEP_UNTIL task impl=K_SLEEP_UNTIL
   out:    -
   errors: E_INTR (a note woke it early: taken on the way out)
   blocks: yes
+  hl:     .A/.X=n ->
   doc:    Sleep until the tick count reaches a value: for steady timing (a time that's passed returns at once).
 
 call TICKS task impl=K_TICKS
@@ -114,6 +142,7 @@ call TICKS task impl=K_TICKS
   out:    .A/.X = the tick count (TICK_HZ a second; it wraps after about 5.5 minutes)
   errors: -
   blocks: no
+  hl:     -> .A/.X
   doc:    The scheduler's tick count.
 
 call PREEMPT_OFF task impl=K_PREEMPT_OFF
@@ -121,6 +150,7 @@ call PREEMPT_OFF task impl=K_PREEMPT_OFF
   out:    -
   errors: -
   blocks: no
+  hl:     ->
   doc:    Hold the CPU: no task switch until the matching PREEMPT_ON (they nest).  Interrupts keep running.
 
 call PREEMPT_ON task impl=K_PREEMPT_ON
@@ -128,6 +158,7 @@ call PREEMPT_ON task impl=K_PREEMPT_ON
   out:    -
   errors: -
   blocks: no
+  hl:     ->
   doc:    Undo PREEMPT_OFF; a task switch that came due meanwhile happens now.
 
 call TASKINFO task impl=K_TASKINFO far
@@ -135,6 +166,7 @@ call TASKINFO task impl=K_TASKINFO far
   out:    the buffer: TI_STATE, TI_FLAGS, TI_PARENT, TI_CPU (3 bytes: ticks), TI_BANK, TI_TYPE, TI_NAME (16)
   errors: E_SRCH (not a task)
   blocks: no
+  hl:     .A=n r0=buf(TI_SIZE) -> buf
   doc:    What the kernel knows of a task, for ps (and /proc's source).  A task's CPU time is the ticks that
   doc:    interrupted it.  TI_STATE is 0 for a free task.
 
@@ -152,6 +184,7 @@ call NOTE task impl=K_NOTE
   out:    -
   errors: E_INVAL (no such note), E_SRCH (no task, or nobody in the group), E_PERM (the kernel task, a driver)
   blocks: no
+  hl:     .A=n .X=n ->
   doc:    Send a note (Plan 9's postnote).  It wakes the task if it waits: WAIT, PAUSE, SLEEP and GETC end with
   doc:    E_INTR.  With no handler, and for NOTE_KILL always, the task ends with 128 + the note's Unix number
   doc:    (130 for NOTE_INTERRUPT, 137 for NOTE_KILL) and its name as the message.
@@ -161,6 +194,7 @@ call MODINFO task impl=K_MODINFO far
   out:    the buffer: ME_BANK, ME_BANKS, ME_TYPE (HT_*), ME_FLAGS (HF_*), ME_NAME (12, zero-padded)
   errors: E_NOENT (past the last)
   blocks: no
+  hl:     .A=n r0=buf(ME_SIZE) -> buf
   doc:    A module in the paged ROM (SPAWN's #m/NAME), as the module directory has it.
 
 call ENV_GET task impl=K_ENV_GET far
@@ -169,6 +203,7 @@ call ENV_GET task impl=K_ENV_GET far
   out:    .A/.X = the value's length from the offset (0 at its end or past it); as much of it as fits, in the buffer
   errors: E_NOENT (no such variable), E_SRCH (no such task), E_INVAL (an empty name, or one with a /), E_NAMETOOLONG
   blocks: no
+  hl:     .A=n r0=s r1=buf r2=size r3=n? -> .A/.X buf=.A/.X
   doc:    A variable of a task's environment (each task has its own: ENV_MAX bytes; SPAWN copies its parent's).
   doc:    A value is any bytes (rc's lists: each word and a 0).  #e serves the caller's as files, /env/NAME.
 
@@ -180,6 +215,7 @@ call ENV_PUT task impl=K_ENV_PUT far
   errors: E_INVAL (past the value's end; a bad name), E_SRCH
   errors: E_NOENT (an offset given, and no such variable), E_NAMETOOLONG
   blocks: no
+  hl:     .A=n r0=s r1=bytes(r2) r3=n? ->
   doc:    Set a variable, or make it (offset 0).  An offset is for writing a long value in parts.
 
 call ENV_DEL task impl=K_ENV_DEL far
@@ -187,6 +223,7 @@ call ENV_DEL task impl=K_ENV_DEL far
   out:    -
   errors: E_NOENT, E_SRCH, E_INVAL, E_NAMETOOLONG
   blocks: no
+  hl:     .A=n r0=s ->
   doc:    Remove a variable.
 
 call ENV_NAME task impl=K_ENV_NAME far
@@ -194,17 +231,20 @@ call ENV_NAME task impl=K_ENV_NAME far
   out:    its name in the buffer, zero-terminated; .A/.X = its value's length
   errors: E_NOENT (past the last), E_SRCH
   blocks: no
+  hl:     .A=n .X=n r0=buf(ENV_NAME_MAX+1) -> buf=z .A/.X
   doc:    The variables of an environment, one at a time, in the order they were made.
 
 call TASKREAD task impl=K_TASKREAD far
   in:     .A = a task ($FF: this one); .X = what: TR_ARGS (its arguments: ARGS_MAX bytes), TR_CWD (its current
   in:     directory: PATH_MAX + 1 bytes), TR_ENV (its environment's first variables, whole, and a 0: ENV_SIZE bytes
   in:     at most), TR_FRAME (its state and the frame it left as it was switched out: TF_SIZE bytes, TF_*) or
-  in:     TR_ENVAT (part of its environment: r1 bytes at most, from offset r2); r0 = a buffer that big
-  out:    the bytes in the buffer; TR_ENVAT: .A/.X = the environment's bytes in use (its 0 too: it copied as many as
-  out:    there are from r2, r1 at most)
+  in:     TR_ENVAT (part of its environment); r0 = a buffer that big; r1 = TR_ENVAT's count (the most it copies);
+  in:     r2 = TR_ENVAT's offset
+  out:    the bytes in the buffer; .A/.X = TR_ENVAT's: the environment's bytes in use (its 0 too: it copied as many
+  out:    as there are from r2, r1 at most)
   errors: E_SRCH, E_INVAL (another what)
   blocks: no
+  hl:     .A=n .X=n r0=buf r1=count r2=n? -> buf .A/.X
   doc:    Another task's arguments, current directory, environment or registers, as they are now: /proc's args,
   doc:    cwd, env and regs, ps.  The kernel task copies them a byte at a time, with IRQs off for each.  An
   doc:    environment may be ENV_MAX bytes: TR_ENVAT reads one whole, a part at a time.
@@ -216,6 +256,7 @@ call BREAK memory impl=K_BRK far
   out:    r0 = the end
   errors: E_INVAL (below the program's own data), E_NOMEM (over pages PAGES_ALLOC gave, or past the top of RAM)
   blocks: no
+  hl:     r0=n? -> r0
   doc:    Move the end of the program's data area: Unix's brk (BRK is the 65C02's instruction, so the call is
   doc:    BREAK).  It starts at the top of the module's data and BSS.  The top of a task's RAM is $7FFF ($7EFF
   doc:    in task F).
@@ -225,6 +266,7 @@ call PAGES_ALLOC memory impl=K_PAGES_ALLOC far
   out:    r0 = the first one's address; .A = its page
   errors: E_INVAL (0), E_NOMEM
   blocks: no
+  hl:     .A=n -> r0 .A
   doc:    A run of pages of the task's RAM, above the break, taken from the top down: for a language runtime's
   doc:    heap, or a buffer.
 
@@ -233,6 +275,7 @@ call PAGES_FREE memory impl=K_PAGES_FREE far
   out:    -
   errors: E_INVAL (not pages PAGES_ALLOC gave this task)
   blocks: no
+  hl:     .A=n r0=n ->
   doc:    Give pages back.
 
 call BANKS memory impl=K_BANKS far
@@ -240,6 +283,7 @@ call BANKS memory impl=K_BANKS far
   out:    .A = the banks the task has (16 for each good RAM module); r0 = the good modules (bit = module)
   errors: -
   blocks: no
+  hl:     -> .A r0
   doc:    The task's own RAM banks: module m's are $m0-$mF, selected by writing $00 (the X16's way).  Modules
   doc:    POST found bad aren't counted.
 
@@ -248,6 +292,7 @@ call BANKS_ALLOC memory impl=K_BANKS_ALLOC far
   out:    .A = the first (for $00)
   errors: E_INVAL (0), E_NOMEM
   blocks: no
+  hl:     .A=n -> .A
   doc:    A run of the task's banks, from the lowest.  Only bookkeeping, so that the libraries in one program
   doc:    don't use the same banks: a program may use its banks without it.
 
@@ -256,6 +301,7 @@ call BANKS_FREE memory impl=K_BANKS_FREE far
   out:    -
   errors: E_INVAL (not banks BANKS_ALLOC gave this task)
   blocks: no
+  hl:     .A=n .X=n ->
   doc:    Give banks back.
 
 call SEG_CREATE memory impl=K_SEG_CREATE far
@@ -263,6 +309,7 @@ call SEG_CREATE memory impl=K_SEG_CREATE far
   out:    .A = the segment (0-15)
   errors: E_INVAL (0), E_NOMEM
   blocks: no
+  hl:     .A=n -> .A
   doc:    A shared segment: shared RAM banks any task can attach to, with the calling task attached.  It
   doc:    stays while a task is attached (SEG_DETACH, or the task's end).
 
@@ -271,6 +318,7 @@ call SEG_ATTACH memory impl=K_SEG_ATTACH far
   out:    -
   errors: E_INVAL (no such segment)
   blocks: no
+  hl:     .A=n ->
   doc:    Attach the calling task to a segment (attaching twice is once).
 
 call SEG_DETACH memory impl=K_SEG_DETACH far
@@ -278,6 +326,7 @@ call SEG_DETACH memory impl=K_SEG_DETACH far
   out:    -
   errors: E_INVAL (not attached)
   blocks: no
+  hl:     .A=n ->
   doc:    Detach the calling task from a segment; the last task to go frees it.
 
 call SEG_MAP memory impl=K_SEG_MAP far
@@ -285,6 +334,7 @@ call SEG_MAP memory impl=K_SEG_MAP far
   out:    .A = the value for U; .X = the value for $00
   errors: E_INVAL (not attached), E_RANGE (no such bank in it)
   blocks: no
+  hl:     .A=n .X=n -> .A .X
   doc:    How to reach a bank of a segment: write U, then $00, and it's at $8000-$9FFF.
 
 call SEGINFO memory impl=K_SEGINFO far
@@ -293,6 +343,7 @@ call SEGINFO memory impl=K_SEGINFO far
   out:    the segments in use (bit = segment)
   errors: -
   blocks: no
+  hl:     -> .A .X r0
   doc:    The shared RAM, as free shows it.
 
 # ---- file (BIOS ROM page 2)
@@ -302,6 +353,7 @@ call OPEN file impl=K_OPEN far
   out:    .A = an fd
   errors: E_NOENT, E_NODEV (no such device), E_NAMETOOLONG, E_MFILE (no fd free), E_NFILE (no channel free)
   blocks: yes
+  hl:     r0=s .A=n? -> .A
   doc:    Open a file.  Its server may answer other errors.  (Until namespaces, a path names a device: "#x",
   doc:    then "/" and the path in it.)
 
@@ -310,6 +362,7 @@ call CREATE file impl=K_CREATE far
   out:    .A = an fd
   errors: E_NOENT, E_NODEV, E_NAMETOOLONG, E_MFILE, E_NFILE, E_EXIST
   blocks: yes
+  hl:     r0=s .A=n? .X=n? -> .A
   doc:    Make a file or a directory, and open it.
 
 call CLOSE file impl=K_CLOSE far
@@ -317,6 +370,7 @@ call CLOSE file impl=K_CLOSE far
   out:    -
   errors: E_BADF (not open)
   blocks: yes
+  hl:     .A=n ->
   doc:    Close an fd.  The last fd naming a channel (DUP, SPAWN share them) tells its server.
 
 call READ file impl=K_READ far
@@ -324,6 +378,7 @@ call READ file impl=K_READ far
   out:    .A/.X = the count read (0: the end of the file)
   errors: E_BADF (not open for reading), E_AGAIN (non-blocking: nothing yet), E_INTR (a note: taken on the way out)
   blocks: yes
+  hl:     .A=n r0=buf r1=count -> buf=.A/.X
   doc:    Read from the fd's offset, and move it on.  A count short of the one asked for is all there is for now
   doc:    (a console line, say).  A directory reads as stat records (SR_SIZE bytes each).
 
@@ -332,6 +387,7 @@ call WRITE file impl=K_WRITE far
   out:    .A/.X = the count written
   errors: E_BADF (not open for writing), E_AGAIN, E_INTR
   blocks: yes
+  hl:     .A=n r0=bytes(r1) -> .A/.X
   doc:    Write at the fd's offset, and move it on.
 
 call SEEK file impl=K_SEEK far
@@ -339,6 +395,7 @@ call SEEK file impl=K_SEEK far
   out:    r0, r1 = the new offset
   errors: E_BADF, E_INVAL (before the start, or no such from)
   blocks: yes
+  hl:     .A=n r0/r1=i .X=n? -> r0/r1
   doc:    Move an fd's offset (shared by the fds that DUP or SPAWN made of it).
 
 call STAT file impl=K_STAT far
@@ -346,6 +403,7 @@ call STAT file impl=K_STAT far
   out:    the file's stat record in the buffer (SR_*)
   errors: E_NOENT, E_NODEV, E_NAMETOOLONG, E_MFILE, E_NFILE
   blocks: yes
+  hl:     r0=s r1=buf(SR_SIZE) -> buf=stat
   doc:    A file's stat record: its name, qid, mode, length, time, device letter.
 
 call FSTAT file impl=K_FSTAT far
@@ -353,6 +411,7 @@ call FSTAT file impl=K_FSTAT far
   out:    the stat record in the buffer
   errors: E_BADF
   blocks: yes
+  hl:     .A=n r0=buf(SR_SIZE) -> buf=stat
   doc:    An open file's stat record.
 
 call WSTAT file impl=K_WSTAT far
@@ -360,6 +419,7 @@ call WSTAT file impl=K_WSTAT far
   out:    -
   errors: E_NOENT, E_NODEV, E_NAMETOOLONG, E_MFILE, E_NFILE, E_NOSYS (its server changes nothing)
   blocks: yes
+  hl:     r0=s r1=stat ->
   doc:    Change a file from a stat record: its name, its mode, its length (what its server allows: HydraFS a file's
   doc:    length, longer with zeros or shorter).  What's all $FF in the record (an empty name) is left as it is.
 
@@ -368,6 +428,7 @@ call FWSTAT file impl=K_FWSTAT far
   out:    -
   errors: E_BADF, E_NOSYS
   blocks: yes
+  hl:     .A=n r0=stat ->
   doc:    Change an open file from a stat record.
 
 call REMOVE file impl=K_REMOVE far
@@ -375,6 +436,7 @@ call REMOVE file impl=K_REMOVE far
   out:    -
   errors: E_NOENT, E_NODEV, E_NAMETOOLONG, E_NOTEMPTY, E_NOSYS
   blocks: yes
+  hl:     r0=s ->
   doc:    Remove a file, or an empty directory.
 
 call DUP file impl=K_DUP far
@@ -382,6 +444,7 @@ call DUP file impl=K_DUP far
   out:    .A = a new fd (the lowest free), on the same channel (the same offset)
   errors: E_BADF, E_MFILE
   blocks: no
+  hl:     .A=n -> .A
   doc:    Another fd for an open file.
 
 call DUP2 file impl=K_DUP2 far
@@ -389,6 +452,7 @@ call DUP2 file impl=K_DUP2 far
   out:    -
   errors: E_BADF
   blocks: yes
+  hl:     .A=n .X=n ->
   doc:    Make fd .X name the same channel as fd .A, closing what it named first.
 
 call CHDIR file impl=K_CHDIR far
@@ -396,6 +460,7 @@ call CHDIR file impl=K_CHDIR far
   out:    -
   errors: E_NOTDIR, E_NOENT, E_NODEV, E_NAMETOOLONG
   blocks: yes
+  hl:     r0=s ->
   doc:    Change the current directory: the name a relative path starts from.  It's kept whole and clean
   doc:    (GETCWD).
 
@@ -404,6 +469,7 @@ call GETCWD file impl=K_GETCWD far
   out:    .A = the current directory's length; the directory in the buffer, zero-terminated
   errors: -
   blocks: no
+  hl:     r0=buf(PATH_MAX+1) -> buf=z
   doc:    The current directory.
 
 call PIPE file impl=K_PIPE far
@@ -411,6 +477,7 @@ call PIPE file impl=K_PIPE far
   out:    .A = an fd to read from; .X = an fd to write to
   errors: E_NODEV (no pipe server), E_MFILE, E_NFILE, E_NOMEM (no pipe free)
   blocks: yes
+  hl:     -> .A .X
   doc:    A pipe (#|): what's written to one end is read from the other, 512 bytes held between them.  A read
   doc:    waits for something to read, and is the end (0) once no writer is left; a write waits for room, and is
   doc:    E_PIPE once no reader is left.
@@ -424,6 +491,7 @@ call BIND name impl=K_BIND far
   out:    -
   errors: E_NOENT, E_INVAL, E_NSFULL, E_NODEV, E_NAMETOOLONG
   blocks: yes
+  hl:     r0=s r1=s .A=n? ->
   doc:    Bind new at old: in old's place (MREPL), or a union with what's there, new first (MBEFORE) or last
   doc:    (MAFTER); with MCREATE, a CREATE in the union comes to new.  New is what it is now: a mount point
   doc:    itself is all of its union's members, anything else the first of its candidates that's there.  A
@@ -434,6 +502,7 @@ call MOUNT name impl=K_MOUNT far
   out:    -
   errors: E_NODEV, E_NOENT, E_INVAL, E_NSFULL, E_NAMETOOLONG
   blocks: yes
+  hl:     .X=n r0=s? r1=s .A=n? ->
   doc:    Mount a device's server, with a spec (which of its file trees: '#f' with x is the ROM disk), at old,
   doc:    as BIND does.
 
@@ -442,6 +511,7 @@ call UNMOUNT name impl=K_UNMOUNT far
   out:    -
   errors: E_NOENT, E_INVAL, E_NSFULL, E_NAMETOOLONG
   blocks: yes
+  hl:     r0=s? r1=s ->
   doc:    Undo a bind or a mount at old: all of what's there (r0 = 0), or new's member (as BIND finds new).
 
 call NSINFO name impl=K_NSINFO far
@@ -450,6 +520,7 @@ call NSINFO name impl=K_NSINFO far
   out:    its flags (MCREATE) and its place among the union's members
   errors: E_RANGE (past the last), E_SRCH
   blocks: no
+  hl:     .A=n .X=n r0=buf(NI_SIZE) -> buf
   doc:    A namespace's mount entries, one at a time, in the order of the kernel's table: each a member of the
   doc:    union at its mount point, the members in NI_SEQ's order (lowest first).  /proc's ns, and ns.
 
@@ -461,6 +532,7 @@ call PUTC cons impl=K_PUTC
   out:    -
   errors: -
   blocks: yes
+  hl:     .A=n ->
   doc:    Write a byte to stdout (the X16's CHROUT).
 
 call PUTS cons impl=K_PUTS
@@ -468,6 +540,7 @@ call PUTS cons impl=K_PUTS
   out:    -
   errors: E_INTR (a note came while it waited: taken on the way out)
   blocks: yes
+  hl:     r0=s ->
   doc:    Write a string to stdout.
 
 call GETC cons impl=K_GETC
@@ -475,6 +548,7 @@ call GETC cons impl=K_GETC
   out:    .A = a byte
   errors: E_EOF (the end of stdin), E_INTR (a note came: taken on the way out)
   blocks: yes
+  hl:     -> .A
   doc:    Read a byte from stdin, waiting for one (the X16's CHRIN, unechoed).
 
 call PUTHEX cons impl=K_PUTHEX
@@ -482,6 +556,7 @@ call PUTHEX cons impl=K_PUTHEX
   out:    -
   errors: -
   blocks: yes
+  hl:     .A=n ->
   doc:    Write a byte to stdout as two hex digits (for debugging).
 
 # ---- server
@@ -491,6 +566,7 @@ call TIME time impl=K_TIME far
   out:    r0/r1 = the clock: seconds since 2000-01-01 00:00:00
   errors: -
   blocks: no
+  hl:     -> r0/r1
   doc:    The clock: the boot's time and the ticks since.  It starts at 0 (2000-01-01) unless kdev finds a DS1747
   doc:    with a date and time as it starts; a write of /dev/time sets it (and the chip).
 
@@ -499,6 +575,7 @@ call TIME_SET time impl=K_TIME_SET far
   out:    -
   errors: -
   blocks: no
+  hl:     r0/r1=n ->
   doc:    Set the clock (from now: the boot's time becomes the clock less the ticks since).  The DS1747 is the
   doc:    caller's to set (RTC).
 
@@ -507,6 +584,7 @@ call RTC time impl=K_RTC far
   out:    -
   errors: E_INVAL (.A neither)
   blocks: no
+  hl:     .A=n r0=io(8) -> buf
   doc:    The DS1747 in U7, its registers a byte at a time (task F's $7FF8-$7FFF): read with its updates halted
   doc:    (R) for the copy; written with W set, the control (its century) last with W clear, which starts it from
   doc:    them.  No chip: the RAM there, as it is.  A read must check the fields hold a date and time.

@@ -1419,8 +1419,15 @@ n_u32:
             jsr         r_store
             jmp         n_leave
 
-; n_w32 = the integer .A, .X (0 to 2^32 - 1), or the number equal to one (2.0).  OUT: C = 1 if it isn't one
+; n_w32 = the integer .A, .X (0 to 2^32 - 1), or the number equal to one (2.0).  OUT: C = 1 if it isn't one.
+; n_to_i32: -2^31 to 2^32 - 1, a negative one's two's complement (an offset: SEEK's)
+n_to_i32:
+            sec
+            bra         :+
 n_to_u32:
+            clc
+:
+            ror         n_sgn
             sta         n_v
             stx         n_v + 1
             jsr         n_kind
@@ -1448,7 +1455,10 @@ n_to_u32:
             jsr         r_load
             ldx         #0
             lda         r_neg,x
-            bne         @no
+            beq         :+
+            bit         n_sgn                               ; (Negative: n_to_i32's)
+            bpl         @no
+:
             lda         r_len,x
             cmp         #5
             bcs         @no
@@ -1466,6 +1476,22 @@ n_to_u32:
             iny
             cpy         #4
             bcc         :--
+            ldx         #0
+            lda         r_neg,x
+            beq         @ok
+            ldy         #0                                  ; (Its two's complement: 2^31 at most)
+            sec
+:
+            lda         #0
+            sbc         n_w32,y
+            sta         n_w32,y
+            iny
+            tya
+            eor         #4
+            bne         :-
+            lda         n_w32 + 3
+            bpl         @no
+@ok:
             clc
             rts
 @no:
@@ -1538,6 +1564,7 @@ n_ticks:
 .bss
 n_opc2:     .res        1                                   ; (nm_general's operation)
 n_w32:      .res        4                                   ; (n_u32's and n_to_u32's four bytes, least first)
+n_sgn:      .res        1                                   ; (n_to_i32's: bit 7, a negative one taken)
 
 .segment "RODATA3"
 n_torat:    .byte       "to-rational", 0
