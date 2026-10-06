@@ -38,6 +38,7 @@ BIN_SET         = BI_N
             BI          "set", 1, ANY, BF_SPECIAL, sf_set
 BIN_SETB        = BI_N
             BI          "set!", 1, ANY, BF_SPECIAL, sf_setb
+BIN_LET         = BI_N
             BI          "let", 1, ANY, BF_SPECIAL, sf_let
 BIN_DO          = BI_N
             BI          "do", 0, ANY, BF_SPECIAL, sf_do
@@ -74,8 +75,11 @@ BIN_OR          = BI_N
             BI          "or", 0, ANY, BF_SPECIAL, sf_or
 BIN_WHILE       = BI_N
             BI          "while", 1, ANY, BF_SPECIAL, sf_while
+BIN_EACH        = BI_N
             BI          "each", 2, ANY, BF_SPECIAL, sf_each
+BIN_DOTIMES     = BI_N
             BI          "dotimes", 2, ANY, BF_SPECIAL, sf_dotimes
+BIN_TRY         = BI_N
             BI          "try", 1, 2, BF_SPECIAL, sf_try
             BI          "error-message", 1, 1, BF_ERRORS | B3, bi_error_message
             BI          "error-code", 1, 1, BF_ERRORS | B3, bi_error_code

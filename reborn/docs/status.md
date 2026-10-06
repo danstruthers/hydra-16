@@ -538,6 +538,24 @@ hylang does, and its `:intr` error is made once.  hylang's was made at each call
 bytecode machine's).  `on-note` takes a function (a built-in, a function, one partially applied) or NIL, as
 danlang's; anything else is an error.  `system.dl`'s 3 checks of it: the suite is 1,337.
 
+**The bytecode machine, step 3: `let`, `each`, `dotimes`, `try`.**  A block (a `let`'s bindings, a step of `each`
+or `dotimes`, `try`'s handler with `&err` and `&code`) is compiled in place: its variables are words in the frame
+(after the locals; the compiler reserves them, a second pass if the first ran out), each a hole till it's bound,
+and a word for its scope, NIL till one's wanted.  `BLOCK` begins it (again at each step of a loop, so a closure
+made in a step keeps that step's variables); `LOCALB`, `SETLB` and `SETBLB` read and set a variable, in its word
+or, once the block has a scope, in the scope's pair.  When a scope is wanted, the function's table of its blocks
+(each one's code, and the block it's in) gives the blocks the code is in, each made then, outermost first.
+`dotimes` keeps its count and `i` on the stack (`DOTN`, `DOTI`, `DOTINC`), `each` its list (`EACHL`, `EACHI`); `try`
+runs its expression, and an error binds the handler's variables (`TRYE`, `TRYV`) and calls its value with the
+message if it's a function (`TRYH`, `TRYF`).  A step of `dotimes` or `each`: 1,140 cycles compiled (7,900 and 6,300
+evaluated); a `let` of two, 1,360 (10,090); a `while` loop over a `let`'s two variables, 1,850 a step (12,160); a
+`try` with no error, some 400 cycles more than its expression (4,100); one whose handler, a `fn`, takes the error,
+15,900 (18,200).  Two faults found on the way: a frame with no locals said it had a `LOCALS` op (`vm_lplace`'s
+carry), so its scope was made from bytes that weren't one, and wrote into the heap (`newns.hl`'s `ns-line` lost
+its body); and a function first called from compiled code had that call counted twice, so it was compiled at
+once (a `try`'s handler, made at each call, was compiled at each).  `bench.hl` uses none of these forms: hylang is
+8.6 times HyForth's time still.
+
 | Step | | Notes |
 |---|---|---|
 | 7.0 The language's specification | Draft (three decisions are the user's) | `docs/hylang.md`: hylang 1 is danlang (`C:\source\danlang`, its `master`), readied for the port in C# first (lexical scope, tail calls, fexprs, `try`, loops, the missing basics, its number bugs fixed, and a system library a PC has too: files, programs and the shell, the environment, the clock, bits and bytes, the system's errors as codes), with its regression suite (965 checks) run unchanged on both; where the two may differ (8-bit strings, the call depth, `/lib/hylang`, Ctrl-C an error); and what makes it the Hydra's, in four layers: the system library, the Hydra's built-ins (notes, namespaces, tasks, memory and banks, keys), device libraries in hylang over the devices' files (console, GPIO, I2C, SPI, sound, disks, `/proc`, the clock's chip, `/pc`), and a `sys-` function for every call.  To decide: the extension (`.hl`), `$`, danlang's license in the ROM |

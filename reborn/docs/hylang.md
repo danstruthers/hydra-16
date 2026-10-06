@@ -249,8 +249,13 @@ The plan has it whole; in short:
   value comes back through a `K_VM` frame.  A frame's scope is made only when it's wanted (a Q-expression with
   names in it, the evaluator, the built-ins that keep their caller's scope: `list`, `fn`, `fun`, `fexpr` and the hash
   makers), its formals and locals bound there in order (holes too), and they're read and set there after, so a
-  closure or `eval` sees what the code sees.  `let`, `each`, `dotimes` and `try` are the evaluator's still.  Errors are values, as the evaluator's: an op that may give one
-  returns it from the function, unless what it's for takes errors (`error?`'s argument, say).  The compiler counts on
+  closure or `eval` sees what the code sees.  `let`, a step of `each` or `dotimes`, and `try`'s handler are blocks:
+  a block's variables are words in the frame too (after the locals, each a hole till it's bound), with a word for
+  its scope, NIL till one's wanted; `BLOCK` begins it (again at each step of a loop, so a closure keeps its step's
+  variables).  A scope wanted, the function's table of its blocks (each one's code, and the block it's in) gives
+  those the code is in, each made then, outermost first, its variables bound there and read and set there after.
+  Errors are values, as the evaluator's: an op that may give one returns it from the function, unless what it's
+  for takes errors (`error?`'s argument, say).  The compiler counts on
   a name's built-in value (a special form, an operator) only while no frame has bound the name, and marks it
   (`SF_INLINED`); bound in a frame then, or bound again globally, every function's code is dropped and compiled again
   as it's next called.  Ctrl-C and notes are taken at each call, as the evaluator takes them.  The arena full,

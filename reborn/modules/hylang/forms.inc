@@ -481,6 +481,21 @@ k_defv:
             sta         (hp),y
             jmp         var_next
 
+; ex, dotimes' count, not a whole number: ex = its error ("'dotimes': a count must be a whole number, not :a"); each's
+; list, not one: ex = its error.  OUT: C = 1 if there's no room (the bytecode machine's DOTN, EACHL)
+dot_err:
+            jsr         err_begin
+            LDAX        s_dotcount
+            jsr         msg_out
+            lda         ex
+            ldx         ex + 1
+            ldy         #0
+            FARN        2, print_val
+            jmp         err_end
+each_err:
+            LDAX        s_eachlist
+            jmp         err_text
+
 ; set! of lk_s to eu (the bytecode machine's SETBG): where it's bound nearest, from ee; else its global value (none:
 ; the error "Unbound Symbol 'x'").  OUT: ex = NIL, or the error; C = 1 if there's no room
 set_bang:
