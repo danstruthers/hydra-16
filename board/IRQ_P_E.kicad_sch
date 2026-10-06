@@ -1922,6 +1922,17 @@
 			(embedded_fonts no)
 		)
 	)
+	(text "VECTOR SELECT (U86): while an IRQ is pending, $FFFE/F read the entry of the highest-priority IRQ;\notherwise they read entry V (firmware software interrupts: write V, then BRK).\nCaveats: a BRK executed with IRQs masked while one is pending goes to that IRQ entry, and an IRQ\nwithdrawn before the vector fetch goes to entry V - handlers should check the B flag."
+		(exclude_from_sim no)
+		(at 60.96 33.02 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left top)
+		)
+		(uuid "2c790319-493a-46c8-b0bc-3aeae610cd62")
+	)
 	(junction
 		(at 72.39 171.45)
 		(diameter 0)
@@ -6969,16 +6980,5 @@
 				)
 			)
 		)
-	)
-	(text "VECTOR SELECT (U86): while an IRQ is pending, $FFFE/F read the entry of the highest-priority IRQ;\notherwise they read entry V (firmware software interrupts: write V, then BRK).\nCaveats: a BRK executed with IRQs masked while one is pending goes to that IRQ entry, and an IRQ\nwithdrawn before the vector fetch goes to entry V - handlers should check the B flag."
-		(exclude_from_sim no)
-		(at 60.96 33.02 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left top)
-		)
-		(uuid "2c790319-493a-46c8-b0bc-3aeae610cd62")
 	)
 )

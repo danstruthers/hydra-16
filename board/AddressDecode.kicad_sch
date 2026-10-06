@@ -3513,6 +3513,10 @@
 		(uuid "0eb9637c-c140-41c8-9cd3-2b59ff11e816")
 	)
 	(no_connect
+		(at 210.82 118.11)
+		(uuid "36dadc96-c093-4829-a0d5-8fc2fbd55f09")
+	)
+	(no_connect
 		(at 146.05 45.72)
 		(uuid "537520e7-47c4-4963-b6c2-e84af3274701")
 	)
@@ -3551,10 +3555,6 @@
 	(no_connect
 		(at 269.24 66.04)
 		(uuid "e7b31c74-6db0-4dfd-84e5-134818c1bbb3")
-	)
-	(no_connect
-		(at 210.82 118.11)
-		(uuid "36dadc96-c093-4829-a0d5-8fc2fbd55f09")
 	)
 	(bus_entry
 		(at 114.3 48.26)
@@ -4844,6 +4844,16 @@
 	)
 	(wire
 		(pts
+			(xy 185.42 118.11) (xy 182.88 118.11)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "98157f31-bd17-4030-a22e-0fbbe4b207a6")
+	)
+	(wire
+		(pts
 			(xy 43.18 147.32) (xy 43.18 149.86)
 		)
 		(stroke
@@ -5071,6 +5081,16 @@
 			(type default)
 		)
 		(uuid "b64c866c-2413-4359-a5f5-ab9a3277f95f")
+	)
+	(wire
+		(pts
+			(xy 134.62 190.5) (xy 132.08 190.5)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "b7734269-498e-4cf3-a58b-6fb1f73746e4")
 	)
 	(wire
 		(pts
@@ -5501,26 +5521,6 @@
 			(type default)
 		)
 		(uuid "fcc18382-2282-42b4-af9a-0dee6fe2d23c")
-	)
-	(wire
-		(pts
-			(xy 185.42 118.11) (xy 182.88 118.11)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "98157f31-bd17-4030-a22e-0fbbe4b207a6")
-	)
-	(wire
-		(pts
-			(xy 134.62 190.5) (xy 132.08 190.5)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "b7734269-498e-4cf3-a58b-6fb1f73746e4")
 	)
 	(label "A6"
 		(at 118.11 50.8 0)
@@ -5998,6 +5998,28 @@
 					(size 1.27 1.27)
 				)
 				(justify left)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "nIO_S"
+		(shape input)
+		(at 132.08 190.5 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "4694fbbd-3504-4ddd-9183-0fd97c579b09")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 132.08 190.5 180)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
 				(hide yes)
 			)
 		)
@@ -7863,28 +7885,6 @@
 		(uuid "fbde342b-6802-4988-adc5-259f46b72686")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 236.22 68.58 180)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-				(hide yes)
-			)
-		)
-	)
-	(global_label "nIO_S"
-		(shape input)
-		(at 132.08 190.5 180)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right)
-		)
-		(uuid "4694fbbd-3504-4ddd-9183-0fd97c579b09")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 132.08 190.5 180)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10088,6 +10088,72 @@
 		)
 	)
 	(symbol
+		(lib_id "power:GND")
+		(at 182.88 118.11 270)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "c911e030-c723-4506-965a-cd7fd014c8de")
+		(property "Reference" "#PWR2248"
+			(at 182.88 118.11 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 177.8 118.11 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Footprint" ""
+			(at 182.88 118.11 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 182.88 118.11 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\""
+			(at 182.88 118.11 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "57b906be-da95-40a3-87b0-f94ae9eabf34")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/e447d2ea-fe27-4cfd-bb5f-eaf105a9519f"
+					(reference "#PWR2248")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Device:C_Small")
 		(at 73.66 144.78 0)
 		(unit 1)
@@ -10491,70 +10557,15 @@
 			)
 		)
 	)
-	(symbol
-		(lib_id "power:GND")
-		(at 182.88 118.11 270)
-		(unit 1)
+	(text "DMA: DMAB or BE low releases the bus. GAL B2 (U83) synchronises the request to the end of PHI2,\nso the CPU clock gate and buffer enables only change while PHI2 is low. Cards drive the bus after that edge."
 		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "c911e030-c723-4506-965a-cd7fd014c8de")
-		(property "Reference" "#PWR2248"
-			(at 182.88 118.11 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
+		(at 251.206 101.064 0)
+		(effects
+			(font
+				(size 1.27 1.27)
 			)
+			(justify left top)
 		)
-		(property "Value" "GND"
-			(at 177.8 118.11 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Footprint" ""
-			(at 182.88 118.11 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" ""
-			(at 182.88 118.11 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Power symbol creates a global label with name \"GND\""
-			(at 182.88 118.11 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "57b906be-da95-40a3-87b0-f94ae9eabf34")
-		)
-		(instances
-			(project "hydra-16"
-				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/e447d2ea-fe27-4cfd-bb5f-eaf105a9519f"
-					(reference "#PWR2248")
-					(unit 1)
-				)
-			)
-		)
+		(uuid "08a3e46c-da8b-44f6-aebd-97c896d12057")
 	)
 )
