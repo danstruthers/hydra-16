@@ -37,7 +37,7 @@ lib/forth/clock.fs  lib/forth/clock.fs
 lib/forth/disk.fs   lib/forth/disk.fs
 lib/forth/pc.fs     lib/forth/pc.fs
 lib/hylang/globals.hl lib/hylang/globals.hl ; hylang's library: danlang's (lib/ there), globals loaded as hylang starts
-lib/hylang/hylib.hl lib/hylang/hylib.hl     ;   (hylib.hl loads it, then hylang's own: clock)
+lib/hylang/hylib.hl lib/hylang/hylib.hl     ;   (hylib.hl loads it, then hylang's own: clock ...)
 lib/hylang/dice.hl  lib/hylang/dice.hl      ;   (from its snapshot, the module hysnap) and the others by (load "dice")
 lib/hylang/screen.hl lib/hylang/screen.hl
 lib/hylang/newns.hl lib/hylang/newns.hl     ; (newns): the default namespace built again, in hylang's own

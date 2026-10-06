@@ -1,6 +1,6 @@
 ; hylib.hl - hylang's library, loaded as it starts (from its snapshot; without one, as text): danlang's, globals.hl
 ; (its lib/globals.dl, as it is), then what hylang has as library code where danlang has built-ins (its table of
-; built-ins is full: 256).
+; built-ins is full: 256): clock, buffer-cmp.
 
 (load "globals")
 
@@ -11,3 +11,31 @@
   =(d (mod (- (ticks) (fst clock.start)) 32768))
   =(s (* (tick-rate) (- (time) (snd clock.start))))
   (to-fixed (/ (+ d (* 32768 (round (/ (- s d) 32768)))) (tick-rate)) 3)})
+
+; (buffer-cmp b at x [i [n]]): -1, 0 or 1, as cmp orders strings: b's bytes from at on (as many as there are, at most
+; as many as x's) against x's, a buffer's or a string's, from i (0) on, n of them (to its end).  Each argument checked
+; in turn, its error given on (as an argument, it calls nothing)
+(fun {buffer-cmp b at x} {
+  if (not (buffer? b)) (error (+ "'buffer-cmp' expects a buffer, not " (to-str b)))
+  (if (not (or (buffer? x) (string? x))) (error (+ "'buffer-cmp' expects a buffer or a string, not " (to-str x)))
+    (buffer.cmp1 b (buffer.index at (len b)) (if (string? x) (buffer x) x) &_))})
+(fun {buffer.cmp1 b at x more} {
+  buffer.cmp2 b at x (if more (buffer.index (fst more) (len x)) 0) (if more (tail more) NIL)})
+(fun {buffer.cmp2 b at x i more} {
+  buffer.cmp3 b at x i (if more (buffer.count (fst more) (- (len x) i)) (- (len x) i))})
+(fun {buffer.cmp3 b at x i m} {buffer.run b at (min m (- (len b) at)) x i m 0})
+
+; The first byte that differs, or the shorter first (n of b's from at, m of x's from i; k compared so far)
+(fun {buffer.run b at n x i m k} {
+  if (>= k (min n m)) (cmp n m)
+  (do
+    =(d (- (b (+ at k)) (x (+ i k))))
+    (if (== d 0) (buffer.run b at n x i m (+ k 1)) (if (< d 0) -1 1)))})
+
+; An index of something n long (0 to n), or a count (0 on) of what's left (at most it): it; else the error
+(fun {buffer.index i n} {
+  if (not (int? i)) (error (+ "'buffer-cmp': an index must be a whole number, not " (to-str i)))
+  (if (or (< i 0) (> i n)) (error (+ "'buffer-cmp': index " (to-str i) " is outside the buffer")) i)})
+(fun {buffer.count c left} {
+  if (not (int? c)) (error (+ "'buffer-cmp': a count must be a whole number, not " (to-str c)))
+  (if (< c 0) (error "'buffer-cmp': a count can't be negative") (min c left))})

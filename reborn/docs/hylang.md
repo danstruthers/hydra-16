@@ -10,14 +10,14 @@ This is its specification: the language, where it may differ from danlang, what 
 ## The reference
 
 **hylang is danlang**: the C# interpreter in `C:\source\danlang` (<https://github.com/SNSTRUTHERS/danlang>, its
-`master`, and its `feature/speed` to `9755ce1`: buffers, `open`'s `:update`, `clock`, `key`, `round`), whose `reference.md` specifies the language: its syntax, its evaluation, and every built-in's arguments,
+`master`, and its `feature/speed` to `744d4db`: buffers, `open`'s `:update`, `clock`, `key`, `round`), whose `reference.md` specifies the language: its syntax, its evaluation, and every built-in's arguments,
 value and errors.  danlang's review (October 2026) fixed its bugs and its quirks there first, and settled every rule
 that was inconsistent, so the two are one language: text is bytes; `[a b c]` is a list of values; the shorthand is
 seven prefixes (`?` if, `=` set, `:` def, `#` hash-create, `@` fn, `.` unpack, `~` format); a hash is called to look a
 key up (`(h :k)`, a method `(obj :add 3)`); extra arguments are `&1`, `&2` ... past the formals; `$name` is the
 environment's variable; every ordinary built-in gets its arguments' values, the first error stopping it.
 
-**The conformance suite is danlang's regression suite**, `tests/regress/` (1,317 checks), copied to `tests/hylang`
+**The conformance suite is danlang's regression suite**, `tests/regress/` (1,334 checks), copied to `tests/hylang`
 (its README says which phase runs which file).  It's written in danlang, so hylang runs it unchanged, from an
 emulated card (`hylang run.dl`, status 0 when every check passes).  A change to the language is made in danlang
 first, with its checks, then in hylang.  What only the Hydra has is checked by a file of its own, `hydra.dl`.
@@ -38,6 +38,7 @@ first, with its checks, then in hylang.  What only the Hydra has is checked by a
 | **Start-up** | `/lib/hylang/globals.hl` (danlang's `globals.dl`) as it is when loaded, from a snapshot in the ROM (the module `hysnap`, made at the build); a ROM without it, loaded as text.  A login shell (`hylang -l`) then runs `#fx/lib/hylang/login.hl`: its namespace made, then `/lib/hylang/profile.hl` (the shell's, below) | Loaded as text, it takes 8 M cycles (2.3 s); from the snapshot, 286,000 (0.08 s) |
 | **Files** | `.hl` (the suite keeps danlang's `.dl` names, loaded by their whole names) | |
 | **Buffers** | 8,184 bytes at most | A blob's most |
+| **`buffer-cmp`** | Library code (`hylib.hl`'s), a byte at a time | The table of built-ins is full |
 | **`clock`** | To the tick (5 ms), library code (`hylib.hl`'s) over `clock.start`, the ticks and the time as hylang started; a clock set meanwhile (`set-date`) throws it off | danlang's is to the millisecond; the table of built-ins is full |
 | **A file read** | Run an item at a time as it's read, so what comes before a read error has run (danlang reads the whole file first); the error says the line, as danlang's (`file.hl:12: missing )}`: the line of the bracket left open) | The text buffer's 4K, and a file's any length |
 | **Where an error was made** | Not shown: an error that ends a program is its message, without danlang's trace on stderr (the file, the line and the calls it was in), and there's no `-w` (its warnings when `def` or `fun` replaces a built-in or a global of another kind) | Code carries no places: each list's file and line would cost heap for every list read |
@@ -70,7 +71,7 @@ system's error: its text (`ERRSTR`'s, after the name it's about: `x: not found`)
 | **The clock** | `time` (seconds since 2000-01-01), `date`, `date-parts`, `seconds-of`, `ticks`, `tick-rate` (200), `sleep` (seconds: `(sleep 1/10)`), `clock` (the seconds since the program started, a fixed decimal) | `TIME`, `TICKS`, `SLEEP`; `sleep` ends early, with `:intr`, on a note; `clock` to the tick |
 | **Keys** | `(key)` (the next key, raw: a character, or an atom for the terminal's keys, `:up` ... `:f12`), `(key?)` (whether one's waiting) | The console raw (`consctl`'s `rawon`) till the next line is read |
 | **Bits and bytes** | `bit-and`, `bit-or`, `bit-xor`, `bit-not`, `shl`, `shr`, `bit?`, `hex`, `bin`, `lo`, `hi`, `word`, `bytes`, `from-bytes`, `read-bytes`, `write-bytes` (a buffer's, or a part of one) | |
-| **Buffers** | Bytes changed in place (shared, as a hash is): `(buffer n [fill])`, `(buffer s)`, `(buffer l)`, `(buffer b)`, `buffer?`, `(b i)` and `buffer-get`, `buffer-put` (its old byte), `buffer-fill`, `buffer-copy` (overlapping too), `read-buffer` (how many; NIL at the stream's end); `len`, `bytes`, `from-bytes`, `eq`, `cmp` and `save` take one; printed `<buffer>{1 2}` | `modules/hylang/buffers.inc`: a string's cell, its blob changed in place |
+| **Buffers** | Bytes changed in place (shared, as a hash is): `(buffer n [fill])`, `(buffer s)`, `(buffer l)`, `(buffer b)`, `buffer?`, `(b i)` and `buffer-get`, `buffer-put` (its old byte), `buffer-fill`, `buffer-copy` (overlapping too), `buffer-cmp` (a part of one against a string's or a buffer's bytes, as `cmp` orders strings), `read-buffer` (how many; NIL at the stream's end); `len`, `bytes`, `from-bytes`, `eq`, `cmp` and `save` take one; printed `<buffer>{1 2}` | `modules/hylang/buffers.inc`: a string's cell, its blob changed in place |
 | **Where** | `(platform)`, `(hydra?)` | `:hydra`, T |
 | **The screen** | `(use "screen")`: `cls`, `at`, `color`, `bold`, `plain`, `clear-line`, `cursor-off`, `cursor-on` | The console is a terminal (ANSI) |
 
@@ -330,10 +331,10 @@ Then the Hydra layers (the plan's phases 9 to 12: its section "The Hydra layers"
    lines that stand alone at hylang's prompt, as at rc's, and the shell's own; `hywin` has a card's `/lib/shell`
    name `/bin/hylang -l`, and window 0 and a window made start in hylang.
 
-Then danlang's `feature/speed` (October 2026, to `9755ce1`): its speed is its own, and what it changed in the language
+Then danlang's `feature/speed` (October 2026, to `744d4db`): its speed is its own, and what it changed in the language
 hylang has too.  Buffers (`buffers.inc`, a new kind of cell, `PK_BUFFER`: a string's, its blob changed in place),
-`open`'s `:update`, `clock` and `round` (library code: `hylib.hl` loads `globals.hl`, danlang's `globals.dl` as it
+`open`'s `:update`, `clock`, `buffer-cmp` and `round` (library code: `hylib.hl` loads `globals.hl`, danlang's `globals.dl` as it
 is, then hylang's own), `key` and `key?` (the Hydra's already), and a file's read error with its line.  The rest was
 there already: values shared, not copied; an integer key and an atom's different keys; 64-bit edges.  The suite's
-1,317 checks pass (`hysuite1` to `hysuite5`).  The table of built-ins is full: 256 of 256, so danlang's next built-ins
+1,334 checks pass (`hysuite1` to `hysuite5`).  The table of built-ins is full: 256 of 256, so danlang's next built-ins
 need library code, or a wider table.

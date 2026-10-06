@@ -462,9 +462,9 @@ name at `/` (`(use "dev")`, `(use "proc")`) is the library's, not `/dev`'s.  Che
 lines that stand alone, 34 of its 45, at hylang's prompt as at rc's; the shell's own lines) and `hywin` (a card's
 `/lib/shell` naming `/bin/hylang -l`: window 0's shell and a new window's).
 
-**danlang's `feature/speed`, at parity** (to `9755ce1`).  danlang was made faster there, and gained what hylang now has
+**danlang's `feature/speed`, at parity** (to `744d4db`).  danlang was made faster there, and gained what hylang now has
 too: buffers (bytes changed in place: `buffer`, `buffer?`, a buffer called `(b i)`, `buffer-get`, `buffer-put`,
-`buffer-fill`, `buffer-copy`, `read-buffer`; `len`, `bytes`, `from-bytes`, `write-bytes`, `eq`, `cmp` and the
+`buffer-fill`, `buffer-copy`, `buffer-cmp`, `read-buffer`; `len`, `bytes`, `from-bytes`, `write-bytes`, `eq`, `cmp` and the
 printer take one), `open`'s `:update`, `clock`, `key` and `key?`, `round`, and a file's read error naming the line
 (`file.hl:3: missing ))`, the innermost bracket's; the reader counts lines, load's frame keeps the line across a nested
 load).  A buffer is a new kind of cell (`PK_BUFFER`), a string's cell whose blob is changed in place, so the collector,
@@ -474,8 +474,10 @@ blob through a chunk of RAM.  The table of built-ins is full now (256 of 256: `b
 (danlang's `globals.dl`, with `round`, as it is), then defines it over `clock.start`, bound as hylang starts.  What
 danlang changed but didn't need hylang to (values shared, not copied; an integer key not an atom's; 64-bit edges)
 passed as it was.  Not taken: danlang's trace on stderr of where an error was made, and `-w`'s warnings (hylang's code
-carries no places).  The suite's 1,317 checks pass (`hysuite5` has `buffers.dl`: 1,125), and `hylang -g` makes,
-copies and reads buffers with a collection before every allocation.
+carries no places).  The suite's 1,334 checks pass (`hysuite5` has `buffers.dl`: 1,142), and `hylang -g` makes,
+copies and reads buffers with a collection before every allocation.  `buffer-cmp` is library code too (`hylib.hl`).
+The library's growth left no free page for the first call of a function of two arguments, so `hyspeed`'s timed call
+had a collection in it: an untimed call just before its pair takes it (a call is 3,686 cycles still).
 
 | Step | | Notes |
 |---|---|---|

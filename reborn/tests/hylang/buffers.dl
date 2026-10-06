@@ -1,5 +1,6 @@
 ; buffers.dl - buffers: bytes, changed in place (buffer, buffer?, a buffer called, buffer-get, buffer-put, buffer-fill,
-; buffer-copy, read-buffer, and len, bytes, from-bytes, write-bytes of one); shared, not copied; equal by their bytes
+; buffer-copy, buffer-cmp, read-buffer, and len, bytes, from-bytes, write-bytes of one); shared, not copied; equal by
+; their bytes
 
 ; made: a count (and a fill), a string, a list of bytes, another buffer (a copy)
 (check (bytes (buffer 3)) {0 0 0})
@@ -84,6 +85,26 @@
 (check (bytes bu-g) {98 9 8 3 5})
 (check-error (buffer-copy bu-g 6 bu-g))
 (check-error (buffer-copy bu-g 0 "abc"))
+
+; compared: a part of one against a buffer's or a string's bytes (or a part of them), as cmp orders strings
+(def {bu-c} (buffer "abcdef"))
+(check (buffer-cmp bu-c 0 "abc") 0)
+(check (buffer-cmp bu-c 2 "cd") 0)
+(check (buffer-cmp bu-c 2 (buffer "cde")) 0)
+(check (buffer-cmp bu-c 2 "ce") -1)
+(check (buffer-cmp bu-c 2 "cc") 1)
+(check (buffer-cmp bu-c 4 "efg") -1)
+(check (buffer-cmp bu-c 6 "") 0)
+(check (buffer-cmp bu-c 6 "a") -1)
+(check (buffer-cmp bu-c 1 "xbcd" 1) 0)
+(check (buffer-cmp bu-c 1 "xbcz" 1 2) 0)
+(check (buffer-cmp bu-c 1 (buffer "xbcz") 1 3) -1)
+(check (buffer-cmp (buffer {0 255}) 0 "\x00\xff") 0)
+(check (buffer-cmp (buffer {0 255}) 0 "\x00\xfe") 1)
+(check-error (buffer-cmp bu-c 7 "a"))
+(check-error (buffer-cmp bu-c 0 "a" 2))
+(check-error (buffer-cmp bu-c 0 {97}))
+(check-error (buffer-cmp "abc" 0 "a"))
 
 ; bytes and strings, equality and order
 (check (from-bytes (buffer "a\x00\xff")) "a\x00\xff")

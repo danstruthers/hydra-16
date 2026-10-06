@@ -27,7 +27,7 @@ pass, from an emulated card, and none that passed may fail after:
 | `library.dl` | The library's built-ins and `globals.dl`'s functions | 4 (its numbers: 5) |
 | `numbers.dl` | The tower, every base, the conversions | 5 |
 | `bits.dl` | Bits and bytes | 5 (its streams: 7) |
-| `buffers.dl` | Buffers: made, read, written, filled, copied, from a stream and to one; equal, ordered | danlang's `feature/speed` (to `9755ce1`), with `clock`, `round` and `:update` |
+| `buffers.dl` | Buffers: made, read, written, filled, copied, from a stream and to one; equal, ordered | danlang's `feature/speed` (to `744d4db`), with `clock`, `round` and `:update` |
 | `strings.dl` | Strings and characters | 6 |
 | `hashes.dl` | Hashes, tags, methods | 6 |
 | `io.dl` | Streams, `load`, `save`, `read` | 7 |
