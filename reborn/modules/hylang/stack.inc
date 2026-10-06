@@ -370,6 +370,7 @@ make2:
 ; hylang's roots (gc_hook's): the machine's registers (ex to eu), the error kept, the stack (in RAM and spilled),
 ; and the reader's levels.  (The collector keeps hp to ht as they were: hq walks the stack)
 hl_roots:
+            jsr         vm_epnext                           ; (The machine's caches dropped: a function may be taken)
             ldx         #0
 @reg:
             lda         ex,x

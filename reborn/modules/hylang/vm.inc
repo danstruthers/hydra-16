@@ -38,7 +38,9 @@ VO_HEAD         = $14           ; m c t: ex, the function of call c (m arguments
                                 ;   a partially applied one, a buffer given an index, pushed; an error, or not a
                                 ;   function and c has no arguments: to t (past the call); else c (from its
                                 ;   arguments) the evaluator's, its value for t
-VO_CALL         = $16           ; m h r: the function under the m arguments on top called
+VO_CALL         = $16           ; m ret fn ep code bank idx h r: the function under the m arguments on top called (its
+                                ;   return ret); fn, the one it called last, at epoch ep (vm_ep: its cache), its code
+                                ;   at code (in bank, idx)
 VO_TCALL        = $18           ; m h 0: the same, in tail position
 VO_BCALL        = $1A           ; b m h r: built-in b called, its m arguments on top
 VO_EVAL         = $1C           ; e h r: e, a call, the evaluator's (ev_call), in this frame's scope
@@ -64,9 +66,9 @@ VO_GEC          = $42
 VO_EQC          = $44
 VO_LPUSH        = $46           ; y: LOCAL y, PUSH
 VO_CPUSH        = $48           ; v: CONST v, PUSH
-VO_SHEAD        = $4A           ; m c t sym: HEAD of sym's global value (the function's own name: this frame's
-                                ;   function pushed at once)
-VO_CSELF        = $4C           ; m code h r: CALL of this frame's function (else CALL's way), its code at code
+VO_SHEAD        = $4A           ; m c t sym ep v: HEAD of sym's global value; v, its value at epoch ep (vm_ep: its
+                                ;   cache), pushed at once
+VO_CSELF        = $4C           ; m code ret h r: CALL of this frame's function (else CALL's way), its code at code
 VO_TSELF        = $4E           ; m code 0: TCALL, the same
 VO_LOCALS       = $50           ; kt kn tbl names: the frame's scope's slot (NIL: none made), then kt slots, holes
                                 ;   (UNBOUND) till they're set: the function's kn locals (names theirs), its blocks'
@@ -140,6 +142,12 @@ vm_bk:      .res        1
 vm_bv:      .res        1
 vm_bj:      .res        1
 vm_bc:      .res        1
+vm_ep:      .res        2                                   ; The globals' epoch: one more each time one's bound again
+                                                            ;   (or a name's first bound in a frame): SHEAD's cache
+vm_shc:     .res        1                                   ; ($80: SHEAD's cache filled as its value's pushed)
+vm_r:       .res        2                                   ; A call's return (its place, compiled: CALL's, CSELF's)
+vm_ccf:     .res        1                                   ; ($80: CALL's cache filled as its function's code is run ...
+vm_cb:      .res        1                                   ;   from its code's bank)
 
 ; The compiler's: in the reader's scratch, past its number registers (hysys.inc's room: idle as a function's compiled)
 vc_ws           = sy_area
@@ -242,12 +250,28 @@ vm_go1:
 ; time: if code compiled counts on its value (SF_INLINED: a special form inlined, a quick op, a built-in called),
 ; it's all dropped (vm_flush).  Keeps hp and the window
 vm_rebind:
+            jsr         vm_epnext
             ldy         #6
             lda         (hp),y
             and         #SF_INLINED
             beq         @no
             FARN        7, vm_flush
 @no:
+            rts
+
+; The globals' epoch moved on (a global bound again, a name bound in a frame for the first time, a collection: the
+; machine's caches of global values and functions dropped).  Run out ($FFFF), it stays: no cache is filled, and the
+; arena's emptied at the next line (vm_full), the epoch 1 again.  Keeps .X, .Y
+vm_epnext:
+            inc         vm_ep
+            bne         @rts
+            inc         vm_ep + 1
+            bne         @rts
+            dec         vm_ep
+            dec         vm_ep + 1
+            lda         #1
+            sta         vm_full
+@rts:
             rts
 
 .segment "CODE7"
@@ -263,6 +287,9 @@ vm_init:
 ; The arena emptied, every function's code dropped (ev_run's, when it's full: no frame of the machine's is left)
 vm_reset:
             jsr         vm_flush
+            lda         #1                                  ; (The epoch: none of the code's caches yet)
+            sta         vm_ep
+            stz         vm_ep + 1
             stz         ar_cur
             stz         ar_top
             lda         #$80
@@ -373,9 +400,11 @@ vm_decode:
             txa
             and         #$60
             cmp         vm_idx                              ; (Its bank: the same, as a rule)
-            bne         :+
+            bne         vm_newidx
             rts
-:
+
+; .A = a code's index in the arena (times 32), not vm_idx's: vm_idx, vm_bank its
+vm_newidx:
             sta         vm_idx
             lsr
             lsr
@@ -939,25 +968,87 @@ op_ret:
             dec         depth + 1
 :
             dec         depth
-            lda         vm_s
+            lda         vm_s                                ; (The stack cut back to the frame)
+            sta         sp
             ldx         vm_s + 1
-            jsr         vm_setsp
-            lda         vm_t
-            ora         vm_t + 1
+            stx         sp + 1
+            cpx         stk_basep
             bne         :+
-            stz         vm_on                               ; (The evaluator's call: the value for its frame on top)
+            lda         spilled
+            beq         :+
+            jsr         unspill
+:
+            lda         vm_t                                ; (NIL: the evaluator's call, the value for its frame on
+            bne         :+                                  ;   top)
+            stz         vm_on
             LDAX        ev_return
             jmp         vm_go1
 :
+            lda         vm_t + 1                            ; (Its caller's code: vm_decode's)
+            lsr
+            tax
             lda         vm_t
-            ldx         vm_t + 1
-            jsr         vm_decode
-            jsr         vm_callsite
+            ror
+            sta         vm_ip
+            txa
+            and         #$1F
+            ora         #$80
+            sta         vm_ip + 1
+            txa
+            and         #$60
+            cmp         vm_idx
+            beq         :+
+            jsr         vm_newidx
+:
+            lda         vm_bank                             ; (Its caller's frame: vm_callsite's)
+            sta         $00
+            lda         vm_ip
+            sec
+            sbc         #2
+            sta         ht
+            lda         vm_ip + 1
+            sbc         #0
+            sta         ht + 1
+            lda         (ht)
+            asl
+            sta         vm_k
+            lda         vm_s
+            sec
+            sbc         vm_k
+            sta         vm_s
+            bcs         :+
+            dec         vm_s + 1
+:
+            ldy         #1
+            lda         (ht),y
+            tax
+            and         #$FE
+            sta         vm_rb
+            tay                                             ; (vm_mat: vm_matget's)
+            iny
+            iny
+            lda         (vm_s),y
+            lsr
+            bcc         :+
+            iny
+            iny
+:
+            iny
+            lda         (vm_s),y
+            cmp         #IMM_PAGES
+            lda         #0
+            bcc         :+
+            lda         #$80
+:
+            sta         vm_mat
+            txa                                             ; (R: its error returned)
+            lsr
             bcc         :+
             jsr         vm_iserr
-            bcs         vm_ret
+            bcc         :+
+            jmp         vm_ret
 :
-            jmp         vm_next
+            jmp         vm_nextf
 
 ; ee = the scope where the code at vm_opa runs: this frame's (made if it isn't yet: its parent the function's own
 ; scope, its formals and locals bound in order, holes too; where they're read and set from then on), or the
@@ -1332,6 +1423,36 @@ vm_cargs:
 
 ; ---- The ops
 
+; CSELF's and TSELF's: vm_m = its arguments; ht = the function's word under them; to no unless it's this frame's
+; function, as many arguments as its formals, and no Ctrl-C nor a note
+.macro SELFQ no
+            ldy         #1
+            lda         (vm_ip),y
+            sta         vm_m
+            asl
+            adc         #2
+            cmp         vm_rb
+            bne         no
+            sta         vm_k
+            lda         sp
+            sec
+            sbc         vm_k
+            sta         ht
+            lda         sp + 1
+            sbc         #0
+            sta         ht + 1
+            ldy         #1
+            lda         (ht),y
+            cmp         (vm_s),y
+            bne         no
+            lda         (ht)
+            cmp         (vm_s)
+            bne         no
+            bit         intr
+            bmi         no
+            bvs         no
+.endmacro
+
 op_const:
             ldy         #1
             lda         (vm_ip),y
@@ -1540,10 +1661,31 @@ op_je:
 ; SHEAD: the global value of the symbol at 6 (a function's own name, as it was compiled): this frame's function,
 ; pushed at once; anything else, HEAD's way
 op_shead:
-            lda         #8
+            bit         vm_mat                              ; (Its cache: the global's value, as it was at this
+            bmi         @slow                               ;   epoch; no scope made)
+            ldy         #8
+            lda         (vm_ip),y
+            cmp         vm_ep
+            bne         @slow
+            iny
+            lda         (vm_ip),y
+            cmp         vm_ep + 1
+            bne         @slow
+            ldy         #11
+            lda         (vm_ip),y
+            tax
+            dey
+            lda         (vm_ip),y
+            VPUSH
+            lda         #12
+            jmp         vm_na
+@slow:
+            lda         #12
             sta         vm_fl
+            stz         vm_shc
             bit         vm_mat
             bmi         @look
+            dec         vm_shc                              ; (Read where it is: its cache filled)
             ldy         #7
             lda         (vm_ip),y
             tax
@@ -1565,7 +1707,8 @@ op_shead:
             bne         @other
             ldx         ex + 1
             VPUSH
-            lda         #8
+            jsr         vm_shfill
+            lda         #12
             jmp         vm_adv
 @other:
             lda         ex
@@ -1575,14 +1718,39 @@ op_shead:
             cmp         #>UNBOUND
             bne         vm_head
 @look:
+            stz         vm_shc
             ldy         #6
             jsr         vm_glook
             bra         vm_head
+
+; SHEAD's cache: ex, at this epoch (none if it's run out)
+vm_shfill:
+            lda         vm_bank
+            sta         $00
+            lda         vm_ep
+            and         vm_ep + 1
+            cmp         #$FF
+            beq         @rts
+            ldy         #8
+            lda         vm_ep
+            sta         (vm_ip),y
+            iny
+            lda         vm_ep + 1
+            sta         (vm_ip),y
+            iny
+            lda         ex
+            sta         (vm_ip),y
+            iny
+            lda         ex + 1
+            sta         (vm_ip),y
+@rts:
+            rts
 
 ; HEAD: ex, the function of a call of m arguments (c the call, t past it); vm_fl, the op's length
 op_head:
             lda         #6
             sta         vm_fl
+            stz         vm_shc
 vm_head:
             lda         ex
             lsr
@@ -1648,6 +1816,10 @@ vm_head:
             lda         ex
             ldx         ex + 1
             VPUSH
+            bit         vm_shc
+            bpl         :+
+            jsr         vm_shfill
+:
             lda         vm_fl
             jmp         vm_adv
 @eval:
@@ -1668,12 +1840,10 @@ vm_head:
             LDAX        ev_head
             jmp         vm_out0
 
-; CSELF m code h r, TSELF m code 0: a call of this frame's function (as compiled: else CALL's and TCALL's way), its
-; code at code
+; CSELF m code ret h r, TSELF m code 0: a call of this frame's function (as compiled: else CALL's and TCALL's way),
+; its code at code (CSELF's return, ret)
 op_tself:
-            MOVW        vm_opa, vm_ip
-            jsr         vm_selfq
-            bcs         @call
+            SELFQ       @call
             ldy         #2                                  ; (Its arguments to this frame's; its return kept, no
             ldx         vm_m                                ;   scope)
             beq         @args
@@ -1703,17 +1873,38 @@ op_tself:
             adc         #0
             tax
             pla
-            jsr         vm_setsp
+            sta         sp
+            stx         sp + 1
+            cpx         stk_basep
+            bne         :+
+            lda         spilled
+            beq         :+
+            jsr         unspill
+:
             jmp         vm_scode
 @call:
+            MOVW        vm_opa, vm_ip
+            stz         vm_ccf
             lda         #$80
             ldx         #5
             jmp         vm_scall
 
 op_cself:
+            SELFQ       @call
+            bra         @self
+@call:
             MOVW        vm_opa, vm_ip
-            jsr         vm_selfq
-            bcs         @call
+            ldy         #4                                  ; (CALL's way: its return, compiled)
+            lda         (vm_ip),y
+            sta         vm_r
+            iny
+            lda         (vm_ip),y
+            sta         vm_r + 1
+            stz         vm_ccf
+            lda         #0
+            ldx         #8
+            jmp         vm_scall
+@self:
             lda         depth + 1                           ; (Too deep: CALL's way, its error)
             cmp         #>MAX_DEPTH
             bcc         :+
@@ -1722,15 +1913,11 @@ op_cself:
             cmp         #<MAX_DEPTH
             bcs         @call
 :
-            lda         vm_ip                               ; (Its frame: its return, past the op; no scope)
-            clc
-            adc         #6
-            pha
-            lda         vm_ip + 1
-            adc         #0
+            ldy         #5                                  ; (Its frame: its return, past the op; no scope)
+            lda         (vm_ip),y
             tax
-            pla
-            jsr         vm_encode
+            dey
+            lda         (vm_ip),y
             VPUSH
             lda         #0
             tax
@@ -1751,10 +1938,6 @@ op_cself:
             bne         vm_scode
             inc         depth + 1
             bra         vm_scode
-@call:
-            lda         #0
-            ldx         #6
-            bra         vm_scall
 
 ; The code at the op's bytes 2 and 3 (this function's) run
 vm_scode:
@@ -1781,10 +1964,22 @@ vm_scall:
 :
             jmp         vm_call
 
-; CSELF's and TSELF's: vm_m = its arguments; ht = the function's word under them.  OUT: C = 0 if it's this frame's
-; function, as many arguments as its formals, and no Ctrl-C nor a note
-vm_selfq:
-            ldy         #1
+op_tcall:
+            lda         #$80
+            sta         vm_tl
+            stz         vm_ccf
+            lda         #4
+            jmp         vm_callop
+op_call:
+            ldy         #6                                  ; (Its cache: at this epoch ...
+            lda         (vm_ip),y
+            cmp         vm_ep
+            bne         @miss
+            iny
+            lda         (vm_ip),y
+            cmp         vm_ep + 1
+            bne         @miss
+            ldy         #1                                  ;   the function it called last, under the arguments)
             lda         (vm_ip),y
             sta         vm_m
             asl
@@ -1797,43 +1992,97 @@ vm_selfq:
             lda         sp + 1
             sbc         #0
             sta         ht + 1
-            lda         vm_k
-            cmp         vm_rb
-            bne         @no
+            ldy         #4
+            lda         (vm_ip),y
+            cmp         (ht)
+            bne         @miss
+            iny
+            lda         (vm_ip),y
             ldy         #1
-            lda         (ht),y
-            cmp         (vm_s),y
-            bne         @no
-            lda         (ht)
-            cmp         (vm_s)
-            bne         @no
-            bit         intr
-            bmi         @no
-            bvs         @no
-            clc
-            rts
-@no:
-            sec
-            rts
-
-op_tcall:
-            lda         #$80
-            bra         :+
-op_call:
+            cmp         (ht),y
+            bne         @miss
+            bit         intr                                ; (Ctrl-C, a note, too deep: CALL's way)
+            bmi         @miss
+            bvs         @miss
+            lda         depth + 1
+            cmp         #>MAX_DEPTH
+            bcc         @hit
+            bne         @miss
+            lda         depth
+            cmp         #<MAX_DEPTH
+            bcc         @hit
+@miss:
+            jmp         @slow
+@hit:
+            ldy         #3                                  ; (Its frame: its return, no scope)
+            lda         (vm_ip),y
+            tax
+            dey
+            lda         (vm_ip),y
+            VPUSH
             lda         #0
+            tax
+            VPUSH
+            lda         vm_k
+            sta         vm_rb
+            clc
+            adc         #4
+            sta         vm_k
+            lda         sp
+            sec
+            sbc         vm_k
+            sta         vm_s
+            lda         sp + 1
+            sbc         #0
+            sta         vm_s + 1
+            stz         vm_mat
+            inc         depth
+            bne         :+
+            inc         depth + 1
 :
-            sta         vm_tl
+            ldy         #11                                 ; (Its code)
+            lda         (vm_ip),y
+            cmp         vm_idx
+            beq         :+
+            sta         vm_idx
+            dey
+            lda         (vm_ip),y
+            sta         vm_bank
+:
+            ldy         #9
+            lda         (vm_ip),y
+            tax
+            dey
+            lda         (vm_ip),y
+            sta         vm_ip
+            stx         vm_ip + 1
+            jmp         vm_next
+@slow:
+            stz         vm_tl
+            lda         #$80                                ; (Its cache filled, if it's a compiled function's)
+            sta         vm_ccf
+            ldy         #2                                  ; (Its return: past it, compiled)
+            lda         (vm_ip),y
+            sta         vm_r
+            iny
+            lda         (vm_ip),y
+            sta         vm_r + 1
+            lda         #14
+; CALL's and TCALL's: .A, the op's length
+vm_callop:
+            pha
             MOVW        vm_opa, vm_ip
             ldy         #1
             lda         (vm_ip),y
             sta         vm_m
-            lda         vm_ip                               ; (ip: past it, where its value goes)
+            pla                                             ; (ip: past it, where its value goes)
             clc
-            adc         #4
+            adc         vm_ip
             sta         vm_ip
             bcc         vm_call
             inc         vm_ip + 1
-; A call: vm_m arguments on top, the function under them; vm_tl $80 in tail position; ip past the op
+; A call: vm_m arguments on top, the function under them; vm_tl $80 in tail position (else vm_r its return); ip
+; past the op
 vm_call:
             jsr         vm_below                            ; (cf: the function, under its arguments)
             lda         (ht)
@@ -1916,11 +2165,10 @@ vm_cfunc:
             cmp         #<MAX_DEPTH
             bcs         vm_cdeep
 :
-            lda         vm_ip                               ; (Its return: this code past the call)
-            ldx         vm_ip + 1
-            jsr         vm_encode
+            lda         vm_r                                ; (Its return: this code past the call)
             sta         vm_t
-            stx         vm_t + 1
+            lda         vm_r + 1
+            sta         vm_t + 1
             jsr         vm_frame0
             bra         @code
 @tail:
@@ -1958,9 +2206,15 @@ vm_cfunc:
             dec         depth
             jsr         vm_frame0
 @code:
+            lda         vm_bank                             ; (The caller's: its CALL's cache filled after)
+            sta         vm_cb
             lda         vm_u
             ldx         vm_u + 1
             jsr         vm_decode
+            bit         vm_ccf
+            bpl         :+
+            jsr         vm_cfill
+:
             jmp         vm_next
 
 ; Too deep: the error, the call's value
@@ -1995,6 +2249,44 @@ vm_cintr:
             MOVW        ex, nomem_err
             bra         vm_cdrop
 
+; CALL's cache (the op at vm_opa, in the caller's bank vm_cb): cf, at this epoch (none if it's run out), its code
+; at vm_ip (vm_bank, vm_idx)
+vm_cfill:
+            stz         vm_ccf
+            lda         vm_ep
+            and         vm_ep + 1
+            cmp         #$FF
+            beq         @rts
+            lda         vm_cb
+            sta         $00
+            MOVW        ht, vm_opa
+            ldy         #4
+            lda         cf
+            sta         (ht),y
+            iny
+            lda         cf + 1
+            sta         (ht),y
+            iny
+            lda         vm_ep
+            sta         (ht),y
+            iny
+            lda         vm_ep + 1
+            sta         (ht),y
+            iny
+            lda         vm_ip
+            sta         (ht),y
+            iny
+            lda         vm_ip + 1
+            sta         (ht),y
+            iny
+            lda         vm_bank
+            sta         (ht),y
+            iny
+            lda         vm_idx
+            sta         (ht),y
+@rts:
+            rts
+
 ; Not a function's cell: a buffer given an index (its byte, buffers.inc's buf_at); a function partially applied (the
 ; evaluator's ev_apply_values: its values first); else the evaluator's
 vm_cother:
@@ -2009,7 +2301,7 @@ vm_cother:
 :
             lda         #1                                  ; (Its word)
             jsr         drop
-            bra         vm_cvalue
+            jmp         vm_cvalue
 @partial:
             cmp         #PK_PARTIAL
             beq         @lb846
@@ -4363,6 +4655,10 @@ vc_generic:
             lda         vc_hd
             ldx         vc_hd + 1
             jsr         vc_word
+            lda         #0                                  ; (Its cache: none yet, epoch 0)
+            tax
+            jsr         vc_word
+            jsr         vc_word
             jmp         @args
 @head:
             lda         #M_OK                               ; (Its function: an error's for HEAD)
@@ -4407,6 +4703,8 @@ vc_generic:
             lda         #VO_CSELF
             jsr         vc_byte
             jsr         vc_mcode
+            lda         #4
+            jsr         vc_retw
             bra         @hr
 @call:
             lda         L_tail,x
@@ -4420,6 +4718,12 @@ vc_generic:
             ldx         vc_lv
             lda         L_m,x
             jsr         vc_byte
+            ldx         vc_lv
+            lda         L_tail,x
+            bne         @hr
+            lda         #12
+            jsr         vc_retw
+            jsr         vc_ccache
 @hr:
             ldx         vc_lv
             lda         L_h0,x
@@ -4432,6 +4736,37 @@ vc_generic:
             lda         L_t,x
             jsr         vc_def
             jmp         vc_je
+
+; CALL's cache emitted: none yet (fn, epoch 0, code, bank, idx)
+vc_ccache:
+            ldx         #8
+:
+            lda         #0
+            jsr         vc_byte
+            dex
+            bne         :-
+            rts
+
+; A call's return emitted: the place (a fixnum, vm_encode's) of the code .A bytes on (the call's end: its return,
+; CALL's cache, h and r)
+vc_retw:
+            clc
+            adc         hq
+            sta         vc_t
+            lda         hq + 1
+            adc         #0
+            and         #$1F
+            ora         vc_idx
+            sta         vc_t + 1
+            lda         vc_t
+            asl
+            ora         #1
+            pha
+            lda         vc_t + 1
+            rol
+            tax
+            pla
+            jmp         vc_word
 
 ; HEAD's operands: m (the call's arguments), c (the call), t (its label)
 vc_mct:
@@ -5975,6 +6310,13 @@ vc_try:
             jsr         vc_byte
             lda         #1
             jsr         vc_byte
+            ldx         vc_lv
+            lda         L_tail,x
+            bne         :+
+            lda         #12
+            jsr         vc_retw
+            jsr         vc_ccache
+:
             ldx         vc_lv
             lda         L_h0,x
             jsr         vc_byte
