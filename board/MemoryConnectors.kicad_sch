@@ -5,7 +5,7 @@
 	(uuid "24476a6f-01a7-4313-b588-378a3d3700ec")
 	(paper "A4")
 	(title_block
-		(title "Memory Card Connectors")
+		(title "Expansion Slots, SPI Headers and Port A")
 		(date "2026-10-06")
 		(rev "2.0D")
 		(company "Data Tuning")

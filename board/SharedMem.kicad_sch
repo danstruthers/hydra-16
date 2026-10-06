@@ -5,7 +5,7 @@
 	(uuid "b969dcb7-e8b6-435c-b2b5-830c0f20c16b")
 	(paper "USLetter")
 	(title_block
-		(title "Banked and Shared RAM ($8000-$9FFF)")
+		(title "Expansion Slots, SPI Headers and Port A")
 		(date "2026-10-06")
 		(rev "2.0D")
 		(company "Data Tuning")

@@ -5,7 +5,7 @@
 	(uuid "1696e10c-bedf-46e8-8722-33005f8ecfa6")
 	(paper "USLetter")
 	(title_block
-		(title "Zero-Page Bank Register Mirror")
+		(title "Expansion Slots, SPI Headers and Port A")
 		(date "2026-10-06")
 		(rev "2.0D")
 		(company "Data Tuning")

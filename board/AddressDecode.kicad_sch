@@ -5,7 +5,7 @@
 	(uuid "79155e48-6eb7-460a-b652-c21991f69013")
 	(paper "USLetter")
 	(title_block
-		(title "Address Decode and Bus Strobes (GALs)")
+		(title "Expansion Slots, SPI Headers and Port A")
 		(date "2026-10-06")
 		(rev "2.0D")
 		(company "Data Tuning")

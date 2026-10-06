@@ -5,7 +5,7 @@
 	(uuid "72e79d6c-ac75-42e4-b9be-b62b28977783")
 	(paper "USLetter")
 	(title_block
-		(title "Power: ATX, Front Panel, Reset, Soft Power")
+		(title "Expansion Slots, SPI Headers and Port A")
 		(date "2026-10-06")
 		(rev "2.0D")
 		(company "Data Tuning")

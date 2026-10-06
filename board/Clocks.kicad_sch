@@ -5,7 +5,7 @@
 	(uuid "9f726555-4589-46c0-9263-2b9f48cb81d7")
 	(paper "USLetter")
 	(title_block
-		(title "Clocks: Oscillators and Bus Clock Generator")
+		(title "Expansion Slots, SPI Headers and Port A")
 		(date "2026-10-06")
 		(rev "2.0D")
 		(company "Data Tuning")

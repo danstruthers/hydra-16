@@ -5,7 +5,7 @@
 	(uuid "cbfdfe9f-2945-490c-8c5e-2ec87d0a0e9c")
 	(paper "USLetter")
 	(title_block
-		(title "Banked ROM ($A000-$DFFF)")
+		(title "Expansion Slots, SPI Headers and Port A")
 		(date "2026-10-06")
 		(rev "2.0D")
 		(company "Data Tuning")

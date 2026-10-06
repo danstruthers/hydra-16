@@ -5,7 +5,7 @@
 	(uuid "ef29fc71-3fec-48b5-8a1a-46bee537a98c")
 	(paper "USLetter")
 	(title_block
-		(title "Hydra-16 Main Board: CPU, Serial, Task RAM, OS ROM")
+		(title "Expansion Slots, SPI Headers and Port A")
 		(date "2026-10-06")
 		(rev "2.0D")
 		(company "Data Tuning")

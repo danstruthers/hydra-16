@@ -5,7 +5,7 @@
 	(uuid "11c69442-62a2-4f3a-8518-2da7bd0910b6")
 	(paper "USLetter")
 	(title_block
-		(title "T / U / V / RW Registers ($FFF0-$FFF3)")
+		(title "Expansion Slots, SPI Headers and Port A")
 		(date "2026-10-06")
 		(rev "2.0D")
 		(company "Data Tuning")

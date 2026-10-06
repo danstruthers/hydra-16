@@ -579,12 +579,12 @@
 	(net 404 "/Power/PWR_ON")
 	(net 405 "Net-(R26-Pad2)")
 	(net 406 "Net-(R27-Pad2)")
-	(net 407 "Net-(LS1-Pad1)")
-	(net 408 "Net-(LS2-Pad1)")
-	(net 409 "Net-(U89A-+)")
-	(net 410 "Net-(U89B-+)")
-	(net 411 "/Power/BTN")
-	(net 412 "/Power/PWR_NQ")
+	(net 407 "Net-(U89A-+)")
+	(net 408 "Net-(U89B-+)")
+	(net 409 "/Power/BTN")
+	(net 410 "/Power/PWR_NQ")
+	(net 411 "Net-(J40-Pin_1)")
+	(net 412 "Net-(J41-Pin_1)")
 	(footprint "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"
 		(layer "F.Cu")
 		(uuid "00cec1c6-101e-4eac-ba80-288be1e19e2b")
@@ -6063,7 +6063,7 @@
 			(drill 0.8)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
-			(net 408 "Net-(LS2-Pad1)")
+			(net 412 "Net-(J41-Pin_1)")
 			(pintype "passive")
 			(uuid "855e86d7-6a12-4cc7-808c-9a158d17a802")
 		)
@@ -10851,7 +10851,7 @@
 			)
 		)
 		(property ki_fp_filters "DIP*W7.62mm*")
-		(path "/18057e61-facc-4a14-82c5-5f534ac6d8bb/cce47879-e5ec-4165-a52b-8921f853c686")
+		(path "/18057e61-facc-4a14-82c5-5f534ac6d8bb/eaa9e044-7b85-422e-ad77-9adb103ea6e9")
 		(sheetname "/Sound/")
 		(sheetfile "Sound.kicad_sch")
 		(attr through_hole)
@@ -11070,7 +11070,7 @@
 			(drill 0.8)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
-			(net 410 "Net-(U89B-+)")
+			(net 408 "Net-(U89B-+)")
 			(pinfunction "+")
 			(pintype "input")
 			(uuid "2c673e33-b125-49f5-a7cc-52038398ff75")
@@ -11081,7 +11081,7 @@
 			(drill 0.8)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
-			(net 409 "Net-(U89A-+)")
+			(net 407 "Net-(U89A-+)")
 			(pinfunction "+")
 			(pintype "input")
 			(uuid "7f14cdb9-6422-4445-8dd9-0d4a9b03f2ec")
@@ -26950,7 +26950,7 @@
 			(drill 1)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
-			(net 409 "Net-(U89A-+)")
+			(net 407 "Net-(U89A-+)")
 			(pinfunction "2")
 			(pintype "passive")
 			(uuid "227d89b5-9f92-4cb5-858f-55e887e6f1eb")
@@ -26983,7 +26983,7 @@
 			(drill 1)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
-			(net 410 "Net-(U89B-+)")
+			(net 408 "Net-(U89B-+)")
 			(pinfunction "5")
 			(pintype "passive")
 			(uuid "dba83a93-9661-4113-ab0b-de1a4ee3e300")
@@ -33348,7 +33348,7 @@
 	(footprint "Oscillator:Oscillator_DIP-8"
 		(layer "F.Cu")
 		(uuid "55ccf25c-6d30-4d79-b3b5-6dae869b72d6")
-		(at -186.161 -152.633)
+		(at 141.4972 215.62)
 		(descr "Oscillator, DIP8,http://cdn-reichelt.de/documents/datenblatt/B400/OSZI.pdf")
 		(tags "oscillator")
 		(property "Reference" "X1"
@@ -33977,7 +33977,7 @@
 	(footprint "Oscillator:Oscillator_DIP-8"
 		(layer "F.Cu")
 		(uuid "5a574516-5d08-470d-b232-52a73cdee73c")
-		(at -186.161 -138.383)
+		(at 141.4972 229.87)
 		(descr "Oscillator, DIP8,http://cdn-reichelt.de/documents/datenblatt/B400/OSZI.pdf")
 		(tags "oscillator")
 		(property "Reference" "X2"
@@ -45166,14 +45166,14 @@
 			)
 		)
 	)
-	(footprint "Hydra16:Speaker_D32mm_P15.24mm_P17.50mm"
+	(footprint "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical"
 		(layer "F.Cu")
 		(uuid "7c638366-1c6c-40ef-8211-1979c76e0a5a")
 		(at 136.54 135.665)
-		(descr "Mini PCB-mount speaker up to 32 mm diameter with two alternative pad pairs: 15.24 mm (0.6 in, e.g. Adafruit 1898, 29 mm) on the X axis and 17.5 mm (e.g. Kitronik 3316, 32 mm) on the Y axis. Pads with the same number must be joined by copper.")
-		(tags "speaker mini 8ohm")
-		(property "Reference" "LS2"
-			(at 0 -17.6 0)
+		(descr "Through hole straight pin header, 1x02, 2.54mm pitch, single row")
+		(tags "Through hole pin header THT 1x02 2.54mm single row")
+		(property "Reference" "J41"
+			(at 0 -2.38 0)
 			(layer "F.SilkS")
 			(uuid "34b6f85e-9fe6-4077-b1c1-d5c64d44c7da")
 			(effects
@@ -45183,8 +45183,8 @@
 				)
 			)
 		)
-		(property "Value" "8R mini"
-			(at 0 17.6 0)
+		(property "Value" "SPEAKER R"
+			(at 0 4.92 0)
 			(layer "F.Fab")
 			(uuid "9b526485-cb52-44e9-8daf-b9d9718a1d2e")
 			(effects
@@ -45194,104 +45194,187 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "~"
 			(at 0 0 0)
-			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
 			(uuid "461965e0-ed44-4946-96db-db853618f776")
 			(effects
 				(font
-					(size 1 1)
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "2-pin header for an external 8 ohm mini speaker, right channel (pin 1 speaker, pin 2 GNDA); muted while a plug is in J18"
 			(at 0 0 0)
-			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
 			(uuid "326559b6-7e6b-44da-b268-ee5e45db4c77")
 			(effects
 				(font
-					(size 1 1)
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
 		)
+		(property ki_fp_filters "Connector*:*_1x??_*")
 		(path "/18057e61-facc-4a14-82c5-5f534ac6d8bb/b58c1f2b-c084-47b5-81e5-51e56caf75dc")
 		(sheetname "/Sound/")
 		(sheetfile "Sound.kicad_sch")
 		(attr through_hole)
-		(fp_circle
-			(center 0 0)
-			(end 16.1 0)
+		(fp_line
+			(start -1.38 -1.38)
+			(end 0 -1.38)
 			(stroke
 				(width 0.12)
 				(type solid)
 			)
-			(fill no)
 			(layer "F.SilkS")
-			(uuid "3a358f2e-5da2-4a6a-b890-42e3ce12dac6")
+			(uuid "cd39c691-9f04-4f74-a109-f8bdae0d69eb")
 		)
-		(fp_circle
-			(center 0 0)
-			(end 16.5 0)
+		(fp_line
+			(start -1.38 0)
+			(end -1.38 -1.38)
+			(stroke
+				(width 0.12)
+				(type solid)
+			)
+			(layer "F.SilkS")
+			(uuid "b5f08564-8501-40b8-a8d7-7a10311618ac")
+		)
+		(fp_line
+			(start -1.38 1.27)
+			(end -1.38 3.92)
+			(stroke
+				(width 0.12)
+				(type solid)
+			)
+			(layer "F.SilkS")
+			(uuid "b442c7cb-eee0-44da-a006-f135d7b7a1e7")
+		)
+		(fp_line
+			(start -1.38 1.27)
+			(end 1.38 1.27)
+			(stroke
+				(width 0.12)
+				(type solid)
+			)
+			(layer "F.SilkS")
+			(uuid "f77b2359-c81e-4574-b18c-4ca12cbaff91")
+		)
+		(fp_line
+			(start -1.38 3.92)
+			(end 1.38 3.92)
+			(stroke
+				(width 0.12)
+				(type solid)
+			)
+			(layer "F.SilkS")
+			(uuid "e59f15eb-73c1-4a81-b96b-64ead3b7c295")
+		)
+		(fp_line
+			(start 1.38 1.27)
+			(end 1.38 3.92)
+			(stroke
+				(width 0.12)
+				(type solid)
+			)
+			(layer "F.SilkS")
+			(uuid "582762ff-ed22-4229-a795-5990b92aecb9")
+		)
+		(fp_line
+			(start -1.77 -1.77)
+			(end -1.77 4.32)
 			(stroke
 				(width 0.05)
 				(type solid)
 			)
-			(fill no)
 			(layer "F.CrtYd")
-			(uuid "59b55089-76ad-400c-99c5-3279acd7c3e7")
+			(uuid "9b76ce26-e92e-4af6-8f0b-fefaf6edf8bf")
 		)
-		(fp_circle
-			(center 0 0)
-			(end 14.5 0)
+		(fp_line
+			(start -1.77 4.32)
+			(end 1.77 4.32)
+			(stroke
+				(width 0.05)
+				(type solid)
+			)
+			(layer "F.CrtYd")
+			(uuid "e5ef9a1f-15ea-45ec-a420-e41e70819a8b")
+		)
+		(fp_line
+			(start 1.77 -1.77)
+			(end -1.77 -1.77)
+			(stroke
+				(width 0.05)
+				(type solid)
+			)
+			(layer "F.CrtYd")
+			(uuid "e769e1b3-c568-4487-8b6a-6d0dfe92a718")
+		)
+		(fp_line
+			(start 1.77 4.32)
+			(end 1.77 -1.77)
+			(stroke
+				(width 0.05)
+				(type solid)
+			)
+			(layer "F.CrtYd")
+			(uuid "89955997-bb9a-4d3b-b7ee-1a925b92c1b3")
+		)
+		(fp_line
+			(start -1.27 -0.635)
+			(end -0.635 -1.27)
 			(stroke
 				(width 0.1)
 				(type solid)
 			)
-			(fill no)
 			(layer "F.Fab")
-			(uuid "1fb841c2-d3c8-4494-8633-00c9f905ebb1")
+			(uuid "32fae407-b634-4b7a-9e4d-3bfd0566e2d0")
 		)
-		(fp_circle
-			(center 0 0)
-			(end 16 0)
+		(fp_line
+			(start -1.27 3.81)
+			(end -1.27 -0.635)
 			(stroke
 				(width 0.1)
 				(type solid)
 			)
-			(fill no)
 			(layer "F.Fab")
-			(uuid "43f15dd8-4329-4aad-9d13-957efacb7ae2")
+			(uuid "c5fd9dcf-58fb-4f83-9df0-9bd8c7a4953b")
 		)
-		(fp_text user "+"
-			(at -7.62 -2.6 0)
-			(layer "F.SilkS")
-			(uuid "2d6c2ce2-739e-4a4b-a5d4-2c7db0604514")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
+		(fp_line
+			(start -0.635 -1.27)
+			(end 1.27 -1.27)
+			(stroke
+				(width 0.1)
+				(type solid)
 			)
+			(layer "F.Fab")
+			(uuid "e9488df9-293c-4a5f-b747-d693e1fdc362")
 		)
-		(fp_text user "+"
-			(at -2.6 -8.75 0)
-			(layer "F.SilkS")
-			(uuid "bc1f26e3-a8d8-4659-b0ca-b14fe3f20a38")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
+		(fp_line
+			(start 1.27 -1.27)
+			(end 1.27 3.81)
+			(stroke
+				(width 0.1)
+				(type solid)
 			)
+			(layer "F.Fab")
+			(uuid "a43b64c4-767b-4a55-85ef-ce4fba317213")
+		)
+		(fp_line
+			(start 1.27 3.81)
+			(end -1.27 3.81)
+			(stroke
+				(width 0.1)
+				(type solid)
+			)
+			(layer "F.Fab")
+			(uuid "95a25713-8562-4280-a09b-ac50202bb886")
 		)
 		(fp_text user "${REFERENCE}"
-			(at 0 0 0)
+			(at 0 1.27 90)
 			(layer "F.Fab")
 			(uuid "99f33313-b663-4e8e-b305-3fc7fc9b1978")
 			(effects
@@ -45302,50 +45385,39 @@
 			)
 		)
 		(pad "1" thru_hole rect
-			(at -7.62 0)
-			(size 2.4 2.4)
-			(drill 1.2)
+			(at 0 0)
+			(size 1.7 1.7)
+			(drill 1)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
-			(net 408 "Net-(LS2-Pad1)")
-			(pinfunction "1")
-			(pintype "input")
+			(net 412 "Net-(J41-Pin_1)")
+			(pinfunction "Pin_1")
+			(pintype "passive")
 			(uuid "ac7080d6-e9b9-4ef4-8ed7-2c323aef2456")
 		)
-		(pad "1" thru_hole rect
-			(at 0 -8.75)
-			(size 2.4 2.4)
-			(drill 1.2)
-			(layers "*.Cu" "*.Mask")
-			(remove_unused_layers no)
-			(net 408 "Net-(LS2-Pad1)")
-			(pinfunction "1")
-			(pintype "input")
-			(uuid "38c8cde5-bdbc-4d2b-9f8a-be6df5641398")
-		)
 		(pad "2" thru_hole circle
-			(at 0 8.75)
-			(size 2.4 2.4)
-			(drill 1.2)
+			(at 0 2.54)
+			(size 1.7 1.7)
+			(drill 1)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net 249 "GNDA")
-			(pinfunction "2")
-			(pintype "input")
+			(pinfunction "Pin_2")
+			(pintype "passive")
 			(uuid "c0519a44-2a79-40b0-a6e0-6f68d37db9b0")
 		)
-		(pad "2" thru_hole circle
-			(at 7.62 0)
-			(size 2.4 2.4)
-			(drill 1.2)
-			(layers "*.Cu" "*.Mask")
-			(remove_unused_layers no)
-			(net 249 "GNDA")
-			(pinfunction "2")
-			(pintype "input")
-			(uuid "b06b6ec3-f6bf-49da-9ec2-174232d8bfc3")
-		)
 		(embedded_fonts no)
+		(model "${KICAD9_3DMODEL_DIR}/Connector_PinHeader_2.54mm.3dshapes/PinHeader_1x02_P2.54mm_Vertical.step"
+			(offset
+				(xyz 0 0 0)
+			)
+			(scale
+				(xyz 1 1 1)
+			)
+			(rotate
+				(xyz 0 0 0)
+			)
+		)
 	)
 	(footprint "Package_DIP:DIP-28_W7.62mm_Socket_LongPads"
 		(layer "F.Cu")
@@ -46038,7 +46110,7 @@
 			(drill 0.8)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
-			(net 407 "Net-(LS1-Pad1)")
+			(net 411 "Net-(J40-Pin_1)")
 			(pintype "passive")
 			(uuid "544f2a9a-125e-4c27-9c59-e80f3e78f581")
 		)
@@ -50979,7 +51051,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "~"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -50991,7 +51063,7 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "4 resistors with a common pin, SIP-5: VIA CB1/CB2 and SPI pull-ups"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -51004,7 +51076,7 @@
 			)
 		)
 		(property ki_fp_filters "R?Array?SIP*")
-		(path "/9e82ed5b-af5c-4fee-b6ce-87e97255963b/653f2a2b-97c2-42a0-a1ea-e8e7026bc1ea")
+		(path "/9e82ed5b-af5c-4fee-b6ce-87e97255963b/69fedcfb-fe1e-4afe-82db-a9f018ccace0")
 		(sheetname "/Connectors/")
 		(sheetfile "Connectors.kicad_sch")
 		(attr through_hole)
@@ -53701,14 +53773,14 @@
 			)
 		)
 	)
-	(footprint "Hydra16:Speaker_D32mm_P15.24mm_P17.50mm"
+	(footprint "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical"
 		(layer "F.Cu")
 		(uuid "a065e9f9-cacb-47f8-a6f8-e4b86c407cf4")
 		(at 136.54 101.615)
-		(descr "Mini PCB-mount speaker up to 32 mm diameter with two alternative pad pairs: 15.24 mm (0.6 in, e.g. Adafruit 1898, 29 mm) on the X axis and 17.5 mm (e.g. Kitronik 3316, 32 mm) on the Y axis. Pads with the same number must be joined by copper.")
-		(tags "speaker mini 8ohm")
-		(property "Reference" "LS1"
-			(at 0 -17.6 0)
+		(descr "Through hole straight pin header, 1x02, 2.54mm pitch, single row")
+		(tags "Through hole pin header THT 1x02 2.54mm single row")
+		(property "Reference" "J40"
+			(at 0 -2.38 0)
 			(layer "F.SilkS")
 			(uuid "3ed2a30a-0bec-410d-94a1-bab1194cc130")
 			(effects
@@ -53718,8 +53790,8 @@
 				)
 			)
 		)
-		(property "Value" "8R mini"
-			(at 0 17.6 0)
+		(property "Value" "SPEAKER L"
+			(at 0 4.92 0)
 			(layer "F.Fab")
 			(uuid "141c5676-d43c-40b0-9cc7-6a78df7fdf9f")
 			(effects
@@ -53729,104 +53801,187 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "~"
 			(at 0 0 0)
-			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
 			(uuid "1b325d54-576f-463d-8215-ef3f52717d35")
 			(effects
 				(font
-					(size 1 1)
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "2-pin header for an external 8 ohm mini speaker, left channel (pin 1 speaker, pin 2 GNDA); muted while a plug is in J18"
 			(at 0 0 0)
-			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
 			(uuid "e7ad3ea7-d72b-4b40-a5a5-cc5aafbc046d")
 			(effects
 				(font
-					(size 1 1)
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
 		)
+		(property ki_fp_filters "Connector*:*_1x??_*")
 		(path "/18057e61-facc-4a14-82c5-5f534ac6d8bb/71d5c1ae-164b-4f8a-a545-ffbd08812382")
 		(sheetname "/Sound/")
 		(sheetfile "Sound.kicad_sch")
 		(attr through_hole)
-		(fp_circle
-			(center 0 0)
-			(end 16.1 0)
+		(fp_line
+			(start -1.38 -1.38)
+			(end 0 -1.38)
 			(stroke
 				(width 0.12)
 				(type solid)
 			)
-			(fill no)
 			(layer "F.SilkS")
-			(uuid "5e47bb76-10da-42aa-90a6-2a8557cfa429")
+			(uuid "0b6e3e27-1d54-42c3-a75c-1c8af32a189b")
 		)
-		(fp_circle
-			(center 0 0)
-			(end 16.5 0)
+		(fp_line
+			(start -1.38 0)
+			(end -1.38 -1.38)
+			(stroke
+				(width 0.12)
+				(type solid)
+			)
+			(layer "F.SilkS")
+			(uuid "e67d27d1-816f-4ab6-a446-ba51afefaae9")
+		)
+		(fp_line
+			(start -1.38 1.27)
+			(end -1.38 3.92)
+			(stroke
+				(width 0.12)
+				(type solid)
+			)
+			(layer "F.SilkS")
+			(uuid "12a58642-22fe-4372-96c0-754a3e70f700")
+		)
+		(fp_line
+			(start -1.38 1.27)
+			(end 1.38 1.27)
+			(stroke
+				(width 0.12)
+				(type solid)
+			)
+			(layer "F.SilkS")
+			(uuid "bd7aa040-4c72-4be5-8f2b-ed9f68d4e064")
+		)
+		(fp_line
+			(start -1.38 3.92)
+			(end 1.38 3.92)
+			(stroke
+				(width 0.12)
+				(type solid)
+			)
+			(layer "F.SilkS")
+			(uuid "84782cd6-4e01-4441-8483-6a7dead1dd51")
+		)
+		(fp_line
+			(start 1.38 1.27)
+			(end 1.38 3.92)
+			(stroke
+				(width 0.12)
+				(type solid)
+			)
+			(layer "F.SilkS")
+			(uuid "f7a193de-0ab7-4277-892a-a61b7164fae1")
+		)
+		(fp_line
+			(start -1.77 -1.77)
+			(end -1.77 4.32)
 			(stroke
 				(width 0.05)
 				(type solid)
 			)
-			(fill no)
 			(layer "F.CrtYd")
-			(uuid "8ec743e5-17fb-4b6c-9756-61c5da07188a")
+			(uuid "36f9daad-3604-48fe-82df-bc588f31a7e8")
 		)
-		(fp_circle
-			(center 0 0)
-			(end 14.5 0)
+		(fp_line
+			(start -1.77 4.32)
+			(end 1.77 4.32)
+			(stroke
+				(width 0.05)
+				(type solid)
+			)
+			(layer "F.CrtYd")
+			(uuid "3f46f8d5-522e-4917-bed2-8e203ca5b2a7")
+		)
+		(fp_line
+			(start 1.77 -1.77)
+			(end -1.77 -1.77)
+			(stroke
+				(width 0.05)
+				(type solid)
+			)
+			(layer "F.CrtYd")
+			(uuid "ee839905-fde6-4b9a-afe2-72088973780a")
+		)
+		(fp_line
+			(start 1.77 4.32)
+			(end 1.77 -1.77)
+			(stroke
+				(width 0.05)
+				(type solid)
+			)
+			(layer "F.CrtYd")
+			(uuid "8c3c098c-0d19-450f-8b55-952f9bc00141")
+		)
+		(fp_line
+			(start -1.27 -0.635)
+			(end -0.635 -1.27)
 			(stroke
 				(width 0.1)
 				(type solid)
 			)
-			(fill no)
 			(layer "F.Fab")
-			(uuid "fd86483b-7276-43a9-8b3c-3d7736a19645")
+			(uuid "12e8af71-1736-4c8f-9205-bb53ca50e1e0")
 		)
-		(fp_circle
-			(center 0 0)
-			(end 16 0)
+		(fp_line
+			(start -1.27 3.81)
+			(end -1.27 -0.635)
 			(stroke
 				(width 0.1)
 				(type solid)
 			)
-			(fill no)
 			(layer "F.Fab")
-			(uuid "80252666-fa2c-4a5b-beb8-be44d4e6bafb")
+			(uuid "7dae5d33-879a-4546-a118-df0dcbcc42be")
 		)
-		(fp_text user "+"
-			(at -7.62 -2.6 0)
-			(layer "F.SilkS")
-			(uuid "327b06d6-0153-48b1-a8de-41e945f75c5d")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
+		(fp_line
+			(start -0.635 -1.27)
+			(end 1.27 -1.27)
+			(stroke
+				(width 0.1)
+				(type solid)
 			)
+			(layer "F.Fab")
+			(uuid "85ee0675-7258-4870-8756-b19b4b3915cb")
 		)
-		(fp_text user "+"
-			(at -2.6 -8.75 0)
-			(layer "F.SilkS")
-			(uuid "bb4f785a-7a3e-4688-8320-0cc98aa2d60e")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
+		(fp_line
+			(start 1.27 -1.27)
+			(end 1.27 3.81)
+			(stroke
+				(width 0.1)
+				(type solid)
 			)
+			(layer "F.Fab")
+			(uuid "32e3ddd5-519e-486d-89b8-525fd174c55b")
+		)
+		(fp_line
+			(start 1.27 3.81)
+			(end -1.27 3.81)
+			(stroke
+				(width 0.1)
+				(type solid)
+			)
+			(layer "F.Fab")
+			(uuid "a89aafe6-f0fb-4cb9-8d3a-c3a22982031f")
 		)
 		(fp_text user "${REFERENCE}"
-			(at 0 0 0)
+			(at 0 1.27 90)
 			(layer "F.Fab")
 			(uuid "5a881c3b-542b-40af-abd6-cac44b376786")
 			(effects
@@ -53837,50 +53992,39 @@
 			)
 		)
 		(pad "1" thru_hole rect
-			(at -7.62 0)
-			(size 2.4 2.4)
-			(drill 1.2)
+			(at 0 0)
+			(size 1.7 1.7)
+			(drill 1)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
-			(net 407 "Net-(LS1-Pad1)")
-			(pinfunction "1")
-			(pintype "input")
+			(net 411 "Net-(J40-Pin_1)")
+			(pinfunction "Pin_1")
+			(pintype "passive")
 			(uuid "412a361f-4fe0-4589-b394-d8fe158ddb18")
 		)
-		(pad "1" thru_hole rect
-			(at 0 -8.75)
-			(size 2.4 2.4)
-			(drill 1.2)
-			(layers "*.Cu" "*.Mask")
-			(remove_unused_layers no)
-			(net 407 "Net-(LS1-Pad1)")
-			(pinfunction "1")
-			(pintype "input")
-			(uuid "556cf177-bf13-4493-863b-95d0ee060c4b")
-		)
 		(pad "2" thru_hole circle
-			(at 0 8.75)
-			(size 2.4 2.4)
-			(drill 1.2)
+			(at 0 2.54)
+			(size 1.7 1.7)
+			(drill 1)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net 249 "GNDA")
-			(pinfunction "2")
-			(pintype "input")
+			(pinfunction "Pin_2")
+			(pintype "passive")
 			(uuid "624c996f-7a5c-475a-8773-c6b1bc674737")
 		)
-		(pad "2" thru_hole circle
-			(at 7.62 0)
-			(size 2.4 2.4)
-			(drill 1.2)
-			(layers "*.Cu" "*.Mask")
-			(remove_unused_layers no)
-			(net 249 "GNDA")
-			(pinfunction "2")
-			(pintype "input")
-			(uuid "1f662401-54f9-4242-b7b4-a7b781b2a0f2")
-		)
 		(embedded_fonts no)
+		(model "${KICAD9_3DMODEL_DIR}/Connector_PinHeader_2.54mm.3dshapes/PinHeader_1x02_P2.54mm_Vertical.step"
+			(offset
+				(xyz 0 0 0)
+			)
+			(scale
+				(xyz 1 1 1)
+			)
+			(rotate
+				(xyz 0 0 0)
+			)
+		)
 	)
 	(footprint "Package_DIP:DIP-20_W7.62mm_Socket_LongPads"
 		(layer "F.Cu")
@@ -64647,7 +64791,7 @@
 			)
 		)
 		(property ki_fp_filters "DIP*W7.62mm*")
-		(path "/be1fd2da-2765-4044-ae46-297533c36c50/78a71040-3ad8-4ddd-8c35-63a74050d115")
+		(path "/be1fd2da-2765-4044-ae46-297533c36c50/95a1e154-7318-444f-91b2-4ccc9e7a090a")
 		(sheetname "/Buffers/")
 		(sheetfile "Buffers.kicad_sch")
 		(attr through_hole)
@@ -66540,7 +66684,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "~"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -66552,7 +66696,7 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "5 isolated resistors, SIP-10: 33R series terminations for the slot clocks"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -88499,7 +88643,7 @@
 			(drill 0.8)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
-			(net 411 "/Power/BTN")
+			(net 409 "/Power/BTN")
 			(pintype "output")
 			(uuid "3251e8db-bc28-480a-a0e3-8b7a6256a086")
 		)
@@ -91294,7 +91438,7 @@
 			)
 		)
 		(property ki_fp_filters "DIP*W7.62mm*")
-		(path "/efe336ef-825f-401b-9d92-8ebbe0473f23/8216b493-d411-449a-98a1-b49ff123cdbb")
+		(path "/efe336ef-825f-401b-9d92-8ebbe0473f23/cf5235c3-37e5-4ac6-a468-862a6f774071")
 		(sheetname "/Power/")
 		(sheetfile "Power.kicad_sch")
 		(attr through_hole)
@@ -91471,7 +91615,7 @@
 			(drill 0.8)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
-			(net 412 "/Power/PWR_NQ")
+			(net 410 "/Power/PWR_NQ")
 			(pinfunction "D")
 			(pintype "input")
 			(uuid "209eb2c0-e7df-4ce4-aa4c-731fc2c650e2")
@@ -91482,7 +91626,7 @@
 			(drill 0.8)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
-			(net 411 "/Power/BTN")
+			(net 409 "/Power/BTN")
 			(pinfunction "C")
 			(pintype "input")
 			(uuid "5493a399-29d7-4ff5-92d7-26637ceb96c1")
@@ -91515,7 +91659,7 @@
 			(drill 0.8)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
-			(net 412 "/Power/PWR_NQ")
+			(net 410 "/Power/PWR_NQ")
 			(pinfunction "~{Q}")
 			(pintype "output")
 			(uuid "e83a9556-1a40-4f37-8c42-35baeb8101c9")

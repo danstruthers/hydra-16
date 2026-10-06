@@ -5,7 +5,7 @@
 	(uuid "b6dacf4f-79f5-497f-983d-9d91a33fd7e9")
 	(paper "A")
 	(title_block
-		(title "CPU Bus Buffers and Slot Clock Drivers")
+		(title "Expansion Slots, SPI Headers and Port A")
 		(date "2026-10-06")
 		(rev "2.0D")
 		(company "Data Tuning")

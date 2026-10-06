@@ -5,7 +5,7 @@
 	(uuid "492e7973-3149-47c0-a25e-a8f2f6ed2943")
 	(paper "USLetter")
 	(title_block
-		(title "Interrupt Priority Encoder and Vector RAM")
+		(title "Expansion Slots, SPI Headers and Port A")
 		(date "2026-10-06")
 		(rev "2.0D")
 		(company "Data Tuning")
