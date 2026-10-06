@@ -402,9 +402,26 @@ tpl('shead', STUB, `
   ldx {D 11}` + PUSHAX + `
   jmp {N}
 @s:`);
+// HEAD 1 c t (vx_tpl's, one argument alone): a buffer (given its index) or a function partially applied, pushed
+tpl('head', STUB, `
+  lda ex
+  lsr
+  bcs @s
+  ldx ex + 1
+  cpx #IMM_PAGES
+  bcc @s
+  lda pk,x
+  cmp #PK_BUFFER
+  beq @p
+  cmp #PK_PARTIAL
+  bne @s
+@p:` + PUSHEX + `
+  jmp {N}
+@s:`);
 // CALL m ret fn ep code bank idx h r: the function it called last (its cache), at this epoch, under the arguments:
-// its frame (the return, no scope) and its code (in this bank: at once; another, through vm_next)
-tpl('call', STUB, `
+// its frame (the return, no scope) and its code (in this bank: at once; another, through vm_next); missed, its stub
+// to op_callm (TF_MISS: a buffer's byte, else the call's way)
+tpl('call', `${STUB} | TF_MISS`, `
   lda {D 6}
   cmp vm_ep
   bne @s
@@ -872,8 +889,8 @@ for (const t of T) {
 const main = Array(64).fill('0');
 const skip = new Set((process.env.HYVMXT_SKIP || '').split(',').filter(Boolean));   // (Templates left out: a test's)
 const set = (op, t) => { if (!skip.has(t.replace('vxt_', ''))) main[op] = t; };
-const OPI = { RET: 0, CALL: 11, SHEAD: 37, CSELF: 38, TSELF: 39, CONST: 1, LOCAL: 2, PUSH: 5, JF: 6, JT: 7, JMP: 8, LPUSH: 35, CPUSH: 36, SETL: 42, LOOP: 48, DOTI: 54, DOTINC: 55, STT: 46, POPX: 47, DROP: 58, LOCALS: 40, LOCALH: 41, SETBL: 43, BLOCK: 49, LOCALB: 50, SETLB: 51, SETBLB: 52, TRYE: 59, ADD: 17, SUB: 18, LT: 19, GT: 20, LE: 21, GE: 22, NEQ: 23 };
-set(OPI.RET, 'vxt_ret'); set(OPI.CALL, 'vxt_call'); set(OPI.SHEAD, 'vxt_shead'); set(OPI.CSELF, 'vxt_cself'); set(OPI.TSELF, 'vxt_tself');
+const OPI = { RET: 0, HEAD: 10, CALL: 11, SHEAD: 37, CSELF: 38, TSELF: 39, CONST: 1, LOCAL: 2, PUSH: 5, JF: 6, JT: 7, JMP: 8, LPUSH: 35, CPUSH: 36, SETL: 42, LOOP: 48, DOTI: 54, DOTINC: 55, STT: 46, POPX: 47, DROP: 58, LOCALS: 40, LOCALH: 41, SETBL: 43, BLOCK: 49, LOCALB: 50, SETLB: 51, SETBLB: 52, TRYE: 59, ADD: 17, SUB: 18, LT: 19, GT: 20, LE: 21, GE: 22, NEQ: 23 };
+set(OPI.RET, 'vxt_ret'); set(OPI.HEAD, 'vxt_head'); set(OPI.CALL, 'vxt_call'); set(OPI.SHEAD, 'vxt_shead'); set(OPI.CSELF, 'vxt_cself'); set(OPI.TSELF, 'vxt_tself');
 set(OPI.LOCALS, 'vxt_locals'); set(OPI.LOCALH, 'vxt_localh'); set(OPI.SETBL, 'vxt_setbl'); set(OPI.BLOCK, 'vxt_block'); set(OPI.LOCALB, 'vxt_localb');
 set(OPI.SETLB, 'vxt_setlb'); set(OPI.SETBLB, 'vxt_setblb'); set(OPI.TRYE, 'vxt_trye'); set(OPI.ADD, 'vxt_add'); set(OPI.SUB, 'vxt_sub'); set(OPI.LT, 'vxt_q_lt');
 set(OPI.GT, 'vxt_q_gt'); set(OPI.LE, 'vxt_q_le'); set(OPI.GE, 'vxt_q_ge'); set(OPI.NEQ, 'vxt_q_eq');

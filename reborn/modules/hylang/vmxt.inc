@@ -1479,7 +1479,39 @@ vxt_shead_p4 = * - 2
 vxt_shead_s:
 vxt_shead_e:
 
-vxt_call:   .byte       vxt_call_e - vxt_call_c, TF_STUB, 22
+vxt_head:   .byte       vxt_head_e - vxt_head_c, TF_STUB, 1
+            .byte       vxt_head_p0 - vxt_head_c, TPK_N, 0
+vxt_head_c:
+            lda         ex
+            lsr
+            bcs         vxt_head_s
+            ldx         ex + 1
+            cpx         #IMM_PAGES
+            bcc         vxt_head_s
+            lda         pk,x
+            cmp         #PK_BUFFER
+            beq         vxt_head_p
+            cmp         #PK_PARTIAL
+            bne         vxt_head_s
+vxt_head_p:
+            lda         ex
+            sta         (sp)
+            ldy         #1
+            lda         ex + 1
+            sta         (sp),y
+            lda         sp
+            clc
+            adc         #2
+            sta         sp
+            bne         :+
+            jsr         vm_page
+:
+            jmp         $0000
+vxt_head_p0 = * - 2
+vxt_head_s:
+vxt_head_e:
+
+vxt_call:   .byte       vxt_call_e - vxt_call_c, TF_STUB | TF_MISS, 22
             .byte       vxt_call_p0 - vxt_call_c, TPK_D, 6
             .byte       vxt_call_p1 - vxt_call_c, TPK_S, 0
             .byte       vxt_call_p2 - vxt_call_c, TPK_D, 7
@@ -2440,7 +2472,7 @@ vxt_q_eq_e:
 
 ; Each op's template (0: its stub alone; the fused ones: by s, below)
 vx_tmain:   .word       vxt_ret, vxt_const, vxt_local, 0, 0, vxt_push, vxt_jf, vxt_jt
-            .word       vxt_jmp, 0, 0, vxt_call, 0, 0, 0, 0
+            .word       vxt_jmp, 0, vxt_head, vxt_call, 0, 0, 0, 0
             .word       0, vxt_add, vxt_sub, vxt_q_lt, vxt_q_gt, vxt_q_le, vxt_q_ge, vxt_q_eq
             .word       0, 0, 0, 0, 0, 0, 0, 0
             .word       0, 0, 0, vxt_lpush, vxt_cpush, vxt_shead, vxt_cself, vxt_tself

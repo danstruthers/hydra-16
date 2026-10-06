@@ -276,7 +276,9 @@ The plan has it whole; in short:
   `tools/hyvmxt.js`), its operands patched in, with its stub after it as its slow way (not fixnums, a scope
   made, a cache missed, Ctrl-C).  In line: constants, arguments and locals, pushes, jumps, the fused ops, the
   quick ops of two values, blocks' and loops' ops, `SHEAD` and `CALL` while their caches hold, `CSELF`, `TSELF`,
-  and `RET` to a caller in the same bank.  The places in the data that are code (jumps' targets, blocks' parents
+  `RET` to a caller in the same bank, and `HEAD` of one argument (a buffer, or a function partially applied,
+  pushed).  A `CALL` whose cache missed goes on past its look at it (`op_callm`), where a buffer given a fixnum
+  index has its byte at once; `buffer-put` of three is the first thing `BCALL`'s code looks for.  The places in the data that are code (jumps' targets, blocks' parents
   and table, a function's start, calls' returns) are the native code's, so every op's code in the machine runs
   as it did.  Native code runs in the RAM window ($8000-$9FFF) a heap cell is read through, so whatever reads
   one is the machine's, in ROM, and sets the code's bank again before going on.

@@ -2039,7 +2039,7 @@ op_call:
             cmp         #<MAX_DEPTH
             bcc         @hit
 @miss:
-            jmp         @slow
+            jmp         op_callm
 @hit:
             ldy         #3                                  ; (Its frame: its return, no scope)
             lda         (vm_ip),y
@@ -2084,7 +2084,66 @@ op_call:
             sta         vm_ip
             stx         vm_ip + 1
             jmp         vm_next
-@slow:
+
+; CALL, its cache missed (native code's way in, its template having looked): a buffer given a fixnum index in it,
+; its byte here (vm_bget's; Ctrl-C or a note, CALL's way); else the call's way (vm_callg)
+op_callm:
+            ldy         #1
+            lda         (vm_ip),y
+            dec         a
+            bne         vm_callg
+            lda         sp                                  ; (ht: the buffer, under the index)
+            sec
+            sbc         #4
+            sta         ht
+            lda         sp + 1
+            sbc         #0
+            sta         ht + 1
+            lda         (ht)
+            lsr
+            bcs         vm_callg
+            ldy         #1
+            lda         (ht),y
+            tax
+            cpx         #IMM_PAGES
+            bcc         vm_callg
+            lda         pk,x
+            cmp         #PK_BUFFER
+            bne         vm_callg
+            bit         intr
+            bmi         vm_callg
+            bvs         vm_callg
+            ldy         #3                                  ; (Its index)
+            lda         (ht),y
+            tax
+            dey
+            lda         (ht),y
+            jsr         vm_bidx
+            bcs         vm_callg
+            ldy         #1
+            lda         (ht),y
+            tax
+            lda         (ht)
+            jsr         vm_bat
+            bcs         @no
+            lda         (hp)
+            jsr         vm_bfix
+            lda         ht                                  ; (The two words dropped)
+            sta         sp
+            ldx         ht + 1
+            stx         sp + 1
+            cpx         stk_basep
+            bne         :+
+            lda         spilled
+            beq         :+
+            jsr         unspill
+:
+            lda         #14
+            jmp         vm_adv
+@no:
+            lda         vm_bank
+            sta         $00
+vm_callg:
             stz         vm_tl
             lda         #$80                                ; (Its cache filled, if it's a compiled function's)
             sta         vm_ccf
@@ -2412,27 +2471,49 @@ vm_bidx:
 
 ; .A, .X = a buffer: hp = its byte vm_t's place (its blob's bank in the window), C = 0; C = 1 if vm_t isn't in it
 vm_bat:
-            jsr         deref
+            asl                                             ; (Its cell: deref's)
+            sta         hp
+            lda         bank_of,x
+            sta         $00
+            lda         ptr_hi,x
+            adc         #0
+            sta         hp + 1
             lda         vm_t                                ; (Below its length)
             cmp         (hp)
             ldy         #1
             lda         vm_t + 1
             sbc         (hp),y
             bcs         @rts
-            iny
+            iny                                             ; (Its blob: blob_deref's, its bytes past its header)
             lda         (hp),y
             pha
             iny
             lda         (hp),y
             tax
+            and         #$0F
+            sta         hp + 1
+            txa
+            lsr
+            lsr
+            lsr
+            lsr
+            tax
+            lda         blob_bank,x
+            sta         $00
             pla
-            jsr         blob_data
-            lda         hp
-            clc
+            asl
+            rol         hp + 1
             adc         vm_t
             sta         hp
             lda         hp + 1
             adc         vm_t + 1
+            sta         hp + 1
+            lda         hp
+            clc
+            adc         #4
+            sta         hp
+            lda         hp + 1
+            adc         #$80
             sta         hp + 1
             clc
 @rts:
@@ -2540,6 +2621,24 @@ vm_bcode:
             jmp         drop
 
 op_bcall:
+            ldy         #1                                  ; (buffer-put, of three: here, if it can be)
+            lda         (vm_ip),y
+            cmp         #BIN_BUFPUT
+            bne         @bc
+            iny
+            lda         (vm_ip),y
+            cmp         #3
+            bne         @bc
+            jsr         vm_bput
+            bcs         @bno
+            lda         #3
+            jsr         drop
+            lda         #5
+            jmp         vm_adv
+@bno:
+            lda         vm_bank
+            sta         $00
+@bc:
             MOVW        vm_opa, vm_ip
             ldy         #1
             lda         (vm_ip),y
@@ -2561,18 +2660,6 @@ op_bcall:
             lda         #>BUILTIN0
             adc         #0
             sta         cf + 1
-            ldx         bi_n
-            cpx         #BIN_BUFPUT                         ; (buffer-put: here, if it can be)
-            bne         :+
-            lda         vm_m
-            cmp         #3
-            bne         :+
-            jsr         vm_bput
-            bcs         :+
-            lda         #3
-            jsr         drop
-            jmp         vm_cvalue
-:
             ldx         bi_n
             lda         vb_flags,x
             and         #BF_MACHINE

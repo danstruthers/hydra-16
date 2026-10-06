@@ -605,18 +605,26 @@ Ctrl-C came (30,000 steps now).  A tail loop's step 370 cycles (`hyspeed`, 632 i
 function of two arguments 918 (1,146); a step of `dotimes` 436 (877), of `each` 521 (900), of a `while` over two
 locals 359 (702).
 
-| Benchmark | Bytecode (ms) | Native (ms) | HyForth (ms) | hylang/HyForth |
-|---|---|---|---|---|
-| loop | 925 | 550 | 76 | 7.2x |
-| calls | 1,005 | 640 | 65 | 9.8x |
-| fib | 980 | 655 | 181 | 3.6x |
-| sieve | 1,905 | 1,430 | 332 | 4.3x |
-| sort | 3,275 | 2,710 | 480 | 5.6x |
-| gcd | 960 | 600 | 350 | 1.7x |
-| all | 9,050 | 6,585 | 1,484 | 4.4x (geometric mean 4.7x, from 6.9x) |
+Milestone 3, the buffers: a buffer's byte, `(b i)`, read at once on `CALL`'s way past its cache (`op_callm`,
+where the `CALL` template's stub goes, the cache looked at already), not through the generic call; `buffer-put`
+of three the first thing `BCALL`'s code looks for; `HEAD` of one argument in line (a buffer, or a function
+partially applied, pushed); and a byte's place found in one routine (`vm_bat`: the cell's, the blob's, the
+byte's).  `(b-sort 60)` is 2.52M cycles, from 3.48M.  A fault found on the way, the evaluator's own: a buffer
+given two arguments made its error of a message in the wrong bank (`s_bufcall` was in `.rodata`; `RODATA4`, where
+`msg_err` reads, now).
 
-What's left: a call's frame (the function's word, the record, the depth, Ctrl-C), the global's head pushed even
-for a tail loop, and the buffers' bytes and `buffer-put` through the generic calls (the sieve and the sort).
+| Benchmark | Bytecode (ms) | Native, M2 (ms) | Native, M3 (ms) | HyForth (ms) | hylang/HyForth |
+|---|---|---|---|---|---|
+| loop | 925 | 550 | 545 | 76 | 7.1x |
+| calls | 1,005 | 640 | 640 | 65 | 9.8x |
+| fib | 980 | 655 | 655 | 181 | 3.6x |
+| sieve | 1,905 | 1,430 | 1,160 | 332 | 3.5x |
+| sort | 3,275 | 2,710 | 1,915 | 480 | 4.0x |
+| gcd | 960 | 600 | 600 | 350 | 1.7x |
+| all | 9,050 | 6,585 | 5,515 | 1,484 | 3.7x (geometric mean 4.3x, from 6.9x) |
+
+What's left: a call's frame (the function's word, the record, the depth, Ctrl-C) and its return (the caller's
+frame found again from its `CALL`), and the global's head pushed even for a tail loop.
 
 | Step | | Notes |
 |---|---|---|

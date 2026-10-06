@@ -22,6 +22,7 @@ VXK_R           = 5             ; A call's return: the place (a fixnum) past the
 ; A template's flags, its patches' kinds
 TF_STUB         = 1             ; Its op's stub after it (its slow way)
 TF_NOR          = 2             ; Not for an op with VM_R (its stub alone)
+TF_MISS         = 4             ; Its stub to the op's code past its cache's look, which it's made (CALL's: op_callm)
 TPK_B           = 1             ; The op's data byte
 TPK_U           = 2             ;   untagged (bit 0 clear)
 TPK_T           = 3             ; A jump's target in the data: its native place
@@ -227,12 +228,21 @@ vx_pass2:
             cpy         vx_len
             bne         :-
             lda         vx_tp + 1                           ; (Its template, then its stub if it has one)
-            beq         :+
+            beq         @stub
             jsr         vx_tcopy
             lda         vx_tfl
             lsr
-            bcc         @next
+            bcs         :+
+            jmp         @next
 :
+            lda         vx_tfl
+            and         #TF_MISS
+            beq         @stub
+            lda         #<op_callm
+            sta         vx_h
+            lda         #>op_callm
+            sta         vx_h + 1
+@stub:
             lda         ht                                  ; (Its data's place: past the stub)
             clc
             adc         #VX_STUB
@@ -361,6 +371,16 @@ vx_tpl:
             ldy         #>vx_tllp
             bra         @fused
 @main:
+            cmp         #VO_HEAD                            ; (HEAD's: of one argument alone)
+            bne         :+
+            ldy         #1
+            lda         (hq),y
+            cmp         #1
+            beq         @head
+            rts
+@head:
+            lda         #VO_HEAD
+:
             tax
             lda         vx_tmain,x
             sta         vx_tp
