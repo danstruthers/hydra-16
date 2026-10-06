@@ -491,11 +491,11 @@ shout:                                                      ; ( c-addr u -- c-ad
             sta         r0
             lda         cap_p + 1
             sta         r0 + 1
-            sec
-            lda         #<DICT_END
+            sec                                             ; (To the heap's page)
+            lda         #0
             sbc         cap_p
             sta         r1
-            lda         #>DICT_END
+            lda         heap_lo + 1
             sbc         cap_p + 1
             sta         r1 + 1
             bcc         @full                               ; (Past it: none)
@@ -570,7 +570,7 @@ cap_push:
             PUSHAY
             rts
 
-; cap_s and cap_p: where what's taken goes, 256 bytes past HERE (the dictionary's free space, to DICT_END)
+; cap_s and cap_p: where what's taken goes, 256 bytes past HERE (the dictionary's free space, to the heap's page)
 cap_start:
             clc
             lda         here
@@ -594,8 +594,8 @@ cap_hook:
 @byte:
             cpy         r1
             beq         @done
-            lda         r0 + 1                              ; (Room: below DICT_END)
-            cmp         #>DICT_END
+            lda         r0 + 1                              ; (Room: below the heap's page)
+            cmp         heap_lo + 1
             bcs         @done
             lda         obuf,y
             sta         (r0)
@@ -1248,6 +1248,8 @@ shexit:                                                     ; In a definition, F
             lda         status_v
             bra         exits_a
 :
+            lda         #2                                  ; (Its locals' frame let go first)
+            jsr         loc_call
             lda         #RTS_OP
             jmp         ccomma_a
 

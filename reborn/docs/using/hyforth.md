@@ -10,7 +10,7 @@ own (`docs/using/hyforth.md` at the repository's top); this one is the new syste
 Contents: [Starting it](#starting-it) · [The basics](#the-basics) · [Libraries](#libraries) ·
 [The shell](#the-shell) · [Files](#files) · [The Hydra's words](#the-hydras-words) ·
 [The terminal and keys](#the-terminal-and-keys) · [Sound](#sound) · [Devices](#devices) · [Tools](#tools) ·
-[Errors and Ctrl-C](#errors-and-ctrl-c) · [Memory](#memory)
+[Memory, locals and blocks](#memory-locals-and-blocks) · [Errors and Ctrl-C](#errors-and-ctrl-c) · [Memory](#memory)
 
 ## Starting it
 
@@ -107,7 +107,10 @@ the rest.
 | `facility.fl` | Facility: `key?`, `ms`, `time&date`, `page`, `at-xy`, structures; [the terminal's words and keys](#the-terminal-and-keys) |
 | `string.fl` | String: `compare`, `search`, `/string`, `-trailing`, `sliteral`, `substitute`, `replaces` ... |
 | `search.fl` | Search-Order: `wordlist`, `set-order`, `also`, `only`, `previous`, `definitions` ...; `library name` ... `end-library`, a source library's words in a word list of its own (`hydra.fs`'s) |
-| `double.fl` | A few Double-Number words: `2constant`, `2variable`, `2literal`, `dnegate`, `dabs` |
+| `double.fl` | Double-Number: `d+`, `d-`, `d.`, `d.r`, `d<`, `d=`, `dmax`, `m*/`, `2constant`, `2value`, `2rot` ... |
+| `memory.fl` | [Memory-Allocation](#memory-locals-and-blocks): `allocate`, `free`, `resize` |
+| `locals.fl` | [Locals](#memory-locals-and-blocks): `{: ... :}`, `(local)`, `locals\|` |
+| `block.fl` | [Block](#memory-locals-and-blocks): `block`, `buffer`, `update`, `flush`, `load`, `list`, `thru` ... |
 | `hydra.fl` | [The Hydra's words](#the-hydras-words): the sys- words, `sh`, `run`, banks, directories, notes, `argc`, `arg`, `sys`, `ctl` |
 | `hydra.fs` | The system's constants and error codes (`O_RDWR`, `E_NOENT` ...), in a word list of their own, `hydra` |
 | `disasm.fl` | `disasm`; with it, `see` of an assembly word shows its instructions |
@@ -331,6 +334,36 @@ code 2drop
 end-code
 ```
 
+## Memory, locals and blocks
+
+**`lib memory`**: `allocate ( u -- a-addr ior )`, `free ( a-addr -- ior )`, `resize ( a-addr u -- a-addr2 ior )`.
+The heap is the top of the dictionary's space, so what's allocated is space the dictionary hasn't; freeing gives
+it back.  At the shell's prompt, Forth's `free` then shadows the `free` program: `% free` runs the program.
+
+**`lib locals`**: a definition's named values, Forth 2012's way.  Between `{:` and `:}`: arguments, taken from the
+stack (the last is its top), then after `|` values that start undefined, then after `--` a comment.  A local's
+name pushes its value, `to name` sets it; it hides a word or number of that name till the definition's end.
+
+```
+/> lib locals
+/> : lt7 {: a b :} b a ; 7 8 lt7 . .
+7 8
+/> : lt12 {: a | b c :} 20 to b a 21 to a 22 to c a c b ; 19 lt12 .s
+<4> 19 21 22 20
+```
+
+**`lib block`**: Forth's blocks, each 1024 bytes of a file, `blocks.fb` in the current directory (made when it's
+first wanted) or the one `s" name" open-blocks` names.  `n block` gives a block's buffer (read in), `update` marks
+it changed, `flush` writes the changed ones; `n load` interprets a block (`\` skips to its 64-character line's end),
+`a b thru` blocks a to b, `n list` shows one.
+
+```
+/ram> lib block
+/ram> 1 block 1024 bl fill  s" 2 3 + . blk @ . \ the rest 7 ." 1 block swap move  update flush
+/ram> 1 load
+5 1
+```
+
 ## Errors and Ctrl-C
 
 An error says what it was (with the file and line, in a file being included) and empties both stacks; the prompt
@@ -345,8 +378,9 @@ Ctrl-C stops the word running (THROW -28, `interrupt`), whatever it's doing: a l
 
 The dictionary is forth's RAM after its own variables, up to `$7F00`: about 18K free at `forth -l`'s prompt
 (`unused`).  Libraries load into it; `-lib` takes a library out of the search but keeps its code, so it doesn't
-free anything, while a `marker` does (`marker -work` ... `-work` takes back everything made since).  PAD and
-the other buffers are forth's own.  The task's RAM banks (16 of 8K for each memory module) are at `$8000`
+free anything, while a `marker` does (`marker -work` ... `-work` takes back everything made since).  `allocate`'s
+heap (`lib memory`) takes its space from the top, so `unused` counts what's below it.  PAD and the other buffers
+are forth's own.  The task's RAM banks (16 of 8K for each memory module) are at `$8000`
 through `bank!`: take them with `sys-banks-alloc` so your program and libraries don't use the same ones.
 forth keeps the index of its words (by which it finds a name without reading every one) in the task's last
 bank, which it takes as it starts, so a program that writes to a bank it didn't take can spoil forth's search for

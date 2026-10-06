@@ -57,6 +57,8 @@ cnt:        .res        1
 here:       .res        2                                   ; The dictionary's next byte
 p1:         .res        2                                   ; Pointers (strings, SEE)
 p2:         .res        2
+lp:         .res        2                                   ; The running definition's locals (locals.fl's): its frame,
+                                                            ;   in page 1 (its high byte 1)
 intr:       .res        1                                   ; $C0: Ctrl-C came (the note handler's), for THROW -28;
                                                             ;   $80: a note for a program's handler (note_pend)
 
@@ -71,6 +73,12 @@ lastxt:     .res        2                                   ; The definition bei
 lasthdr:    .res        2                                   ;   and its header (; shows it)
 idx_bank:   .res        1                                   ; The word lists' index (finterp.inc): its bank ($FF:
 idx_node:   .res        2                                   ;   none), and the node a search is at
+heap_lo:    .res        2                                   ; ALLOCATE's heap's start (memory.fl's), to DICT_END: the
+                                                            ;   dictionary ends below its page (none: DICT_END)
+loc_vec:    .res        2                                   ; The locals library's routine (locals.fl's), for the
+                                                            ;   compiler (loc_call); 0: none
+blk_vec:    .res        2                                   ; The Block library's (block.fl's): a block source's
+                                                            ;   buffer (blk_call); 0: none
 state:      .res        2                                   ; STATE: 0 interpreting, -1 compiling
 base:       .res        2                                   ; BASE
 src_addr:   .res        2                                   ; The input source (SRC_SIZE bytes, in this order: the
@@ -81,7 +89,8 @@ src_pos:    .res        4                                   ;   a file's: where 
 src_cons:   .res        2                                   ;   the bytes it took (its end too) ...
 src_line:   .res        2                                   ;   its number (stdin's too) ...
 src_close:  .res        1                                   ;   <> 0: a file, closed at its end ...
-src_fdep:   .res        1                                   ;   and the files being included (1 ...: this file's)
+src_fdep:   .res        1                                   ;   the files being included (1 ...: this file's) ...
+src_blk:    .res        2                                   ;   and BLK: a block's (LOAD's, block.fl's; 0: none)
 SRC_SIZE    = * - src_addr
 ssp:        .res        1                                   ; The source stack's records (EVALUATE, INCLUDE-FILE)
 sstack:     .res        SRC_SIZE * SRC_MAX
@@ -200,6 +209,16 @@ main:
             jsr         BREAK
             LDR         r0, notes
             jsr         NOTIFY
+            lda         #<DICT_END                          ; No heap, no locals
+            sta         heap_lo
+            lda         #>DICT_END
+            sta         heap_lo + 1
+            stz         loc_vec
+            stz         loc_vec + 1
+            stz         blk_vec
+            stz         blk_vec + 1
+            lda         #1
+            sta         lp + 1
             lda         #$FF                                ; The index's bank: the task's last (all taken, then all
             sta         idx_bank                            ;   but it given back; else one; else none), started
             jsr         BANKS                               ;   at the first search ("ix" not there yet)
@@ -367,21 +386,25 @@ s_profile:  .byte       S_PROFILE_LEN, "/lib/forth/profile.fs"
 S_PROFILE_LEN = * - s_profile - 1
 
 ; The default namespace (nslib's newns, as init and rc build theirs): forth -l's, and NEWNS's (the Hydra's shell
-; library: shell.fl).  Its buffers are the dictionary's last NS_BSS_SIZE bytes, so the dictionary must end below
-; them: else THROW -8
+; library: shell.fl).  Its buffers are the last NS_BSS_SIZE bytes of the index's bank (finterp.inc), selected
+; meanwhile, so the dictionary (and ALLOCATE's heap at its top) needn't make room; no bank: THROW -21
 do_newns:
-            lda         here
-            cmp         #<NS_BSS
-            lda         here + 1
-            sbc         #>NS_BSS
-            bcc         :+
-            lda         #<-8
+            lda         idx_bank
+            cmp         #$FF
+            bne         :+
+            lda         #<-21
             jmp         throw_a
 :
             jsr         flush
+            lda         RAM_BANK
+            pha
+            lda         idx_bank
+            sta         RAM_BANK
             phx
             jsr         ns_default
             plx
+            pla
+            sta         RAM_BANK
             rts
 
 ; The core's id (tools/forthlib.js: a CRC of its image, patched in), which a library must have
@@ -398,8 +421,8 @@ core_id:    .word       0
 
 forth_last  = .ident(.sprintf("hdr_%d", hdr_n))             ; (The last ROM header: the word list's start)
 
-; nslib (the SDK's: newns), with forth's scratch for its zero page (nothing of forth's runs in it) and the
-; dictionary's top for its buffers (do_newns)
+; nslib (the SDK's: newns), with forth's scratch for its zero page (nothing of forth's runs in it) and the index's
+; bank's end for its buffers (do_newns)
 NS_ZP       = 1
 ns_p        = w
 ns_end      = w2
@@ -411,5 +434,5 @@ ns_fd       = tmp2 + 1
 ns_d        = tmp3
 ns_len      = tmp3 + 1
 ns_line     = p1
-NS_BSS      = DICT_END - NS_BSS_SIZE
+NS_BSS      = BANK_WINDOW + $2000 - NS_BSS_SIZE
 .include "nslib.s"

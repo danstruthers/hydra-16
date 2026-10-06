@@ -24,6 +24,9 @@ lib/forth/disasm.fl ../obj/forthlib/disasm.fl  ; The old HyForth's: disasm (and 
 lib/forth/bits.fl   ../obj/forthlib/bits.fl     ;   tbit sbit cbit
 lib/forth/random.fl ../obj/forthlib/random.fl   ; rand rand32 rseed random
 lib/forth/sound.fl  ../obj/forthlib/sound.fl    ;   the sound words (snd-note ...)
+lib/forth/memory.fl ../obj/forthlib/memory.fl   ; The standard's other word sets: Memory-Allocation ...
+lib/forth/locals.fl ../obj/forthlib/locals.fl   ;   Locals
+lib/forth/block.fl  ../obj/forthlib/block.fl    ;   Block
 lib/forth/shell.fl  ../obj/forthlib/shell.fl    ; HyForth as a shell (profile.fs loads it)
 lib/forth/gpio.fs   lib/forth/gpio.fs           ; The device libraries, source over the devices' files (hylang's)
 lib/forth/i2c.fs    lib/forth/i2c.fs

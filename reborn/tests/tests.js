@@ -507,16 +507,19 @@ function PC_SONG() {
 // (the padding's byte: held back, then written, as data comes after it), its last byte not SUB
 const XM_DATA = () => Buffer.from(Array.from({ length: 3000 }, (_, i) => i >= 1024 && i < 2048 ? 0x1A : i === 2999 ? 0x41 : (i * 7 + (i >> 8)) & 0xFF));
 
-// The forth test's card: the Forth 2012 test suite's files (tests/forth), each as itself; run.fs and run2.fs, which
-// INCLUDE them in the suite's own order (runtests.fth's, those of the word sets HyForth has) in two sessions (the
-// dictionary hasn't room for them all), each REQUIRing the libraries (.fl) its word sets are beyond startup.fs's
-// (filetest.fth uses String's /STRING and coreexttest.fth's SI_INC; toolstest.fth, the Search-Order words), run.fs
+// The forth test's card: the Forth 2012 test suite's files (tests/forth), each as itself; run.fs, run2.fs and run3.fs,
+// which INCLUDE them in the suite's own order (runtests.fth's, those of the word sets HyForth has) in three sessions
+// (the dictionary hasn't room for them all), each REQUIRing the libraries (.fl) its word sets are beyond startup.fs's
+// (filetest.fth uses String's /STRING and coreexttest.fth's SI_INC; doubletest.fth, core.fr's <TRUE>; localstest.fth
+// and toolstest.fth, the Search-Order words; blocktest.fth makes blocks.fb on the card), run.fs
 // with a line for core.fr's ACCEPT test after it (stdin's next line); bad.fs, a file with an error in it; and args.fs,
 // a script (#!/bin/forth: its arguments, the Hydra library, the constants library, a library of its own)
 const FORTH_RUNS = [['prelimtest.fth', 'tester.fr', 'core.fr', 'coreplustest.fth', 'utilities.fth', 'errorreport.fth',
-  'coreexttest.fth', 'exceptiontest.fth', 'string.fl', 'filetest.fth'],
-  ['facility.fl', 'tools.fl', 'search.fl', 'string.fl', 'double.fl', 'tester.fr', 'utilities.fth', 'errorreport.fth',
-  'facilitytest.fth', 'toolstest.fth', 'searchordertest.fth', 'stringtest.fth']];
+  'coreexttest.fth', 'double.fl', 'doubletest.fth', 'exceptiontest.fth', 'string.fl', 'filetest.fth'],
+  ['facility.fl', 'search.fl', 'string.fl', 'memory.fl', 'locals.fl', 'block.fl', 'tester.fr', 'utilities.fth',
+  'errorreport.fth', 'blocktest.fth', 'facilitytest.fth', 'localstest.fth', 'memorytest.fth'],
+  ['tools.fl', 'search.fl', 'string.fl', 'double.fl', 'tester.fr', 'utilities.fth', 'errorreport.fth', 'toolstest.fth',
+  'searchordertest.fth', 'stringtest.fth']];
 const FORTH_SUITE = [...new Set(FORTH_RUNS.flat().filter(n => !n.endsWith('.fl')))];
 const FORTH_HELPERS = ['required-helper1.fth', 'required-helper2.fth'];
 // The suite's error report (errorreport.fth's) for a session: the word sets it tested, each with no errors; the rest -
@@ -649,14 +652,14 @@ module.exports = {
       init: 't_proc', modules: ['t_child'], cycles: 40e6,
     },
     {
-      name: 'forth', what: 'HyForth (Forth 2012): the test suite (Core, Core Extension, Exception, Facility, File Access, Programming-Tools, Search-Order, String) in two sessions, its files INCLUDED from a card, the word sets\' libraries REQUIREd from /lib/forth; scripts (forth file.fs, #!/bin/forth: arguments, REQUIRE from /lib/forth, a library, an error, a pipeline); at the console: startup.fs\'s Programming-Tools (.S), libraries REQUIREd (and again after a MARKER), a definition, KEY? and KEY, errors (a file\'s, the system\'s), SH, RUN, a sys- word, a bank, the constants library, Ctrl-C, BYE',
-      init: 't_rc', cycles: 900e6,
+      name: 'forth', what: 'HyForth (Forth 2012): the test suite (Core, Core Extension, Double-Number, Exception, Facility, File Access, Locals, Memory-Allocation, Programming-Tools, Search-Order, String, Block) in three sessions, its files INCLUDED from a card, the word sets\' libraries REQUIREd from /lib/forth; scripts (forth file.fs, #!/bin/forth: arguments, REQUIRE from /lib/forth, a library, an error, a pipeline); at the console: startup.fs\'s Programming-Tools (.S), libraries REQUIREd (and again after a MARKER), a definition, KEY? and KEY, errors (a file\'s, the system\'s), SH, RUN, a sys- word, a bank, the constants library, Ctrl-C, BYE',
+      init: 't_rc', cycles: 1200e6,
       // (The console's lines: each a moment after the last, as forth's prompt is its ok; w waits for a key, z, in raw
       // mode, not echoed, and the line after it is cooked again; l loops till Ctrl-C, which rc gets too: its prompt
       // on a new line after forth ends.  hydra.fs is 171 lines compiled, three searches of the dictionary each, so
       // the line after it waits long enough: the window keeps 64 keys typed ahead, and that line is longer)
       get machine() {
-        return { sd: forthCard(), input: 'ācd /sd/0; forth <run.fs; forth <run2.fs; echo $status\r' +
+        return { sd: forthCard(), input: 'ācd /sd/0; forth <run.fs; forth <run2.fs; forth <run3.fs; echo $status\r' +
           'āforth args.fs a b; echo $status\r' + 'ā./args.fs x; echo $status\r' + 'āforth bad.fs; echo $status\r' +
           'āforth args.fs a b | wc\r' +
           'āforth\rĀ1 2 .s 2drop\rĀrequire facility.fl require hydra.fl\rĀĀĀ: sq dup * ; 7 sq .\rĀ' + 'key? . cr\rĀ' + ': w begin key? until key ; w\rĀzĀ' + 'emit cr 1 2 + .\rĀ' +
@@ -666,10 +669,11 @@ module.exports = {
           ': l begin again ; l\rĀ\u0003Ā' + '-5 3 mod . bye\r' + 'āecho $status\r' };
       },
       expect: ['0 tests failed out of 57 additional tests', 'End of Core word set tests', 'End of additional Core tests',
-        'End of Core Extension word tests', 'End of Exception word tests', 'End of Facility word tests',
-        'End of File-Access word set tests', 'End of Programming Tools word tests', 'End of Search Order word tests',
-        'End of String word tests', forthReport('Core', 'Core extension', 'Exception', 'File-access'),
-        forthReport('Core', 'Facility', 'Programming-tools', 'Search-order', 'String'),
+        'End of Core Extension word tests', 'End of Double-Number word tests', 'End of Exception word tests', 'End of File-Access word set tests',
+        forthReport('Core', 'Core extension', 'Double number', 'Exception', 'File-access'), 'End of Block word tests',
+        'End of Facility word tests', 'End of Locals word set tests', 'End of Memory-Allocation word tests',
+        forthReport('Core', 'Block', 'Facility', 'Locals', 'Memory-allocation'), 'End of Programming Tools word tests',
+        'End of Search Order word tests', 'End of String word tests', forthReport('Core', 'Programming-tools', 'Search-order', 'String'),
         '% forth args.fs a b; echo $status\n3 args.fs a b\n2 \n42 \n\n%', '% ./args.fs x; echo $status\n2 ./args.fs x \n2 \n42 \n\n%',
         '% forth bad.fs; echo $status\n1 bad.fs:3: foo ?\n1\n%', '% forth args.fs a b | wc\n      3       6      21\n%',
         'HyForth (Forth 2012), bye to end\n1 2 .s 2drop\n<2> 1 2  ok\nrequire facility.fl require hydra.fl\n ok\n: sq dup * ; 7 sq .\n49  ok\nkey? . cr\n0 \n ok\n: w begin key? until key ; w\n ok\n' +

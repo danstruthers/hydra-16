@@ -560,7 +560,7 @@ lib_load:
             adc         statbuf + LH_BSS + 1
             sta         w2 + 1
             bcs         lib_full
-            cmp         #>DICT_END
+            cmp         heap_lo + 1                         ; (The heap's page)
             bcs         lib_full
             lda         here                                ; Its image
             sta         r0
@@ -578,15 +578,15 @@ lib_load:
 :
             jmp         lib_bad
 :
-            lda         w2                                  ; Its relocations, after its BSS (what's left of the file)
-            sta         r0
+            lda         w2                                  ; Its relocations, after its BSS (what's left of the file),
+            sta         r0                                  ;   up to the heap's page
             lda         w2 + 1
             sta         r0 + 1
             sec
-            lda         #<DICT_END
+            lda         #0
             sbc         w2
             sta         r1
-            lda         #>DICT_END
+            lda         heap_lo + 1
             sbc         w2 + 1
             sta         r1 + 1
             jsr         lib_read

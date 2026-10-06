@@ -12,10 +12,14 @@ the word sets HyForth has):
 | `coreplustest.fth` | More Core tests | Gerry Jackson's: public domain |
 | `utilities.fth`, `errorreport.fth` | What the optional word sets' tests use (`REPORT-ERRORS`: the table at the end) | Gerry Jackson's: public domain |
 | `coreexttest.fth` | The Core Extension word set's tests | Gerry Jackson's: public domain |
+| `blocktest.fth` | Block (and its extension's words) | Steve Palmer's (with others' contributions): public domain |
+| `doubletest.fth` | Double-Number (and its extension's 2ROT, 2VALUE, DU<) | Gerry Jackson's: public domain |
 | `exceptiontest.fth` | Exception | Gerry Jackson's: public domain |
 | `facilitytest.fth` | Facility (its structures) | Gerry Jackson's: public domain |
 | `filetest.fth` | File Access | Gerry Jackson's: public domain |
 | `required-helper1.fth`, `required-helper2.fth` | What `filetest.fth` INCLUDEs and REQUIREs | Gerry Jackson's: public domain |
+| `localstest.fth` | Locals | Gerry Jackson's: public domain |
+| `memorytest.fth` | Memory-Allocation | Gerry Jackson's: public domain |
 | `toolstest.fth` | Programming-Tools | Gerry Jackson's: public domain |
 | `searchordertest.fth` | Search-Order | Gerry Jackson's: public domain |
 | `stringtest.fth` | String | Gerry Jackson's: public domain |

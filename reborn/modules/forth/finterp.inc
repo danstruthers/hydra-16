@@ -140,8 +140,8 @@ IDX_RECS    = BANK_WINDOW + 5                               ;   the records: a w
 IDX_RMAX    = ORDER_MAX                                     ;   its chains' first nodes (2 each, 0: none) ...
 IDX_RSIZE   = 4 + 128
 IDX_TAILS   = IDX_RECS + IDX_RMAX * IDX_RSIZE               ;   the chains' last nodes, as a record's are made ...
-IDX_NODES   = (IDX_TAILS + 128 + 3) & $FFFC                 ;   then the nodes, 4 bytes each (1,750) ...
-IDX_END     = BANK_WINDOW + $2000                           ;   to the bank's end
+IDX_NODES   = (IDX_TAILS + 128 + 3) & $FFFC                 ;   then the nodes, 4 bytes each (1,146) ...
+IDX_END     = NS_BSS & $FF00                                ;   to nslib's buffers' page (forth.s: newns's)
 
 ; The word named ( c-addr u ) (kept on the stack) in word list w, by the index: .A = 0 and C = 0, w its header, or
 ; C = 1; or .A <> 0, no index (none, or the name in the bank's window, $8000-$9FFF: EVALUATE of a bank's text).
@@ -633,6 +633,12 @@ interpret:
             sta         throw_name + 1
             lda         dlo,x
             sta         throw_nlen
+            lda         state                               ; (Compiling: a local's name first, a word's or a
+            beq         :+                                  ;   number's after: locals.fl's)
+            lda         #0
+            jsr         loc_call
+            bcc         @check
+:
             jsr         find_name
             bcs         @number
             inx
@@ -717,7 +723,7 @@ evaluate:                                                   ; ( c-addr u -- ): i
 ; ---- The source stack: the sources a nested one (EVALUATE's, INCLUDE-FILE's) was in, each a copy of the source's
 ; variables (SRC_SIZE bytes from src_addr)
 
-; The source onto the stack (it stays the source, for the caller to change).  Too deep: THROW -258
+; The source onto the stack (it stays the source, for the caller to change; not a block's).  Too deep: THROW -258
 src_push:
             lda         ssp
             cmp         #SRC_MAX
@@ -732,9 +738,12 @@ src_push:
             dey
             bpl         :-
             inc         ssp
+            stz         src_blk
+            stz         src_blk + 1
             rts
 
-; The source before (a file's that's ended: closed first).  Keeps .X
+; The source before (a file's that's ended: closed first; a block's: its buffer again, as one LOADed since may have
+; taken it).  Keeps .X
 src_pop:
             lda         src_close
             beq         :+
@@ -752,6 +761,22 @@ src_pop:
             sta         src_addr,y
             dey
             bpl         :-
+            lda         src_blk
+            ora         src_blk + 1
+            beq         :+
+            lda         #0
+            jmp         blk_call
+:
+            rts
+
+; The Block library's routine (blk_vec: block.fl's), .A the call: 0, src_addr the buffer of block src_blk (read in
+; if it isn't in one).  Keeps .X.  None: C = 1
+blk_call:
+            sec
+            ldy         blk_vec + 1
+            beq         :+
+            jmp         (blk_vec)
+:
             rts
 
 ; The sources nested since the stack had .A records let go of (THROW's, QUIT's)
@@ -901,8 +926,9 @@ find_hook:
 s_shline:   .byte       12, "(shell-line)"
 s_shprompt: .byte       14, "(shell-prompt)"
 
-; CATCH's frame: the data stack's pointer, the source stack's depth, and the handler before; handler = the 6502's
-; stack pointer at it.  THROW goes back to it: the stacks as they were, and the sources nested since let go of
+; CATCH's frame: the data stack's pointer, the source stack's depth, the locals' frame (lp), and the handler before;
+; handler = the 6502's stack pointer at it.  THROW goes back to it: the stacks (and lp) as they were, and the sources
+; nested since let go of
 catch:                                                      ; ( ... xt -- ... 0 | ... n )
             lda         dlo,x
             sta         w
@@ -912,6 +938,8 @@ catch:                                                      ; ( ... xt -- ... 0 
             txa
             pha
             lda         ssp
+            pha
+            lda         lp                                  ; (The locals' frame: THROW gives it back)
             pha
             lda         handler + 1
             pha
@@ -928,6 +956,7 @@ catch:                                                      ; ( ... xt -- ... 0 
             sta         handler
             pla
             sta         handler + 1
+            pla
             pla
             pla
             dex
@@ -960,6 +989,8 @@ throw_tmp:                                                  ; THROW tmp: its pla
             sta         handler
             pla
             sta         handler + 1
+            pla
+            sta         lp
             pla
             jsr         src_unwind
             pla
@@ -1264,9 +1295,10 @@ s_error:    .byte       "error ", 0
 s_line:     .byte       "line ", 0
 s_colon:    .byte       ": ", 0
 err_code:   .word       -3 & $FFFF, -4 & $FFFF, -8 & $FFFF, -10 & $FFFF, -14 & $FFFF, -16 & $FFFF, -17 & $FFFF
-            .word       -21 & $FFFF, -22 & $FFFF, -24 & $FFFF, -28 & $FFFF, -49 & $FFFF, -50 & $FFFF, -258 & $FFFF
-            .word       -259 & $FFFF, 0
-err_text:   .word       e_3, e_4, e_8, e_10, e_14, e_16, e_17, e_21, e_22, e_24, e_28, e_49, e_50, e_258, e_259
+            .word       -21 & $FFFF, -22 & $FFFF, -24 & $FFFF, -28 & $FFFF, -49 & $FFFF, -50 & $FFFF, -59 & $FFFF
+            .word       -60 & $FFFF, -61 & $FFFF, -258 & $FFFF, -259 & $FFFF, 0
+err_text:   .word       e_3, e_4, e_8, e_10, e_14, e_16, e_17, e_21, e_22, e_24, e_28, e_49, e_50, e_59, e_60, e_61
+            .word       e_258, e_259
 e_3:        .byte       "stack overflow", 0
 e_4:        .byte       "stack underflow", 0
 e_8:        .byte       "dictionary full", 0
@@ -1280,6 +1312,9 @@ e_24:       .byte       "invalid numeric argument", 0
 e_28:       .byte       "interrupt", 0
 e_49:       .byte       "search order full", 0
 e_50:       .byte       "search order empty", 0
+e_59:       .byte       "allocate failed", 0
+e_60:       .byte       "free failed", 0
+e_61:       .byte       "resize failed", 0
 e_258:      .byte       "sources nested too deeply", 0
 e_259:      .byte       "not this forth's library", 0
 
@@ -1300,6 +1335,11 @@ bye:                                                        ; (At the console: t
             jmp         EXITS
 
             HEADER      "environment?", 0
-environmentq:                                               ; ( c-addr u -- false ): none known
+environmentq:                                               ; ( c-addr u -- false ): none known but the locals
+            lda         #4                                  ;   library's #LOCALS ( -- n true )
+            jsr         loc_call
+            bcc         :+
             inx
             jmp         zero_tos
+:
+            rts

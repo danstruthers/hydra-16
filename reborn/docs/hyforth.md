@@ -89,7 +89,8 @@ with `BANKS_ALLOC` as forth starts), where it costs the dictionary nothing and n
   last header as it was indexed, and 64 chains of nodes (a header, the next node), newest first, one for each hash
   of a name: its length * 8 plus its first and last characters in upper case, the low 6 bits (over the 561 names
   of the core, the libraries and `hydra.fs`: 9 a chain, 16 at most).  A search reads one chain, comparing a node's
-  header's length, then its name.  The nodes (1,750) are shared, taken as they're needed.
+  header's length, then its name.  The nodes (1,146) are shared, taken as they're needed; the bank's last 2.4K are
+  nslib's buffers, for `newns` (6.16: they were the dictionary's top).
 - **Kept current.**  A word made goes into its word list's record as it's made (at its chain's start), if the
   record was current.  Whatever else changes a word list (a library loaded, a MARKER) leaves its record behind its
   last header, and the next search of it makes its chains again; `-lib` and `lib` (which change FORTH's in the
@@ -102,6 +103,21 @@ Searching is 15 times faster (500 searches for a name that isn't there: 620 tick
 `hydra.fs`; `dup`: 641, now 62), loading `hydra.fs` 2.5 times (952 ticks, now 383) and the eight device
 libraries 3.3 times (2,260, now 690); the Forth 2012 suite's run takes 385M cycles, not 678M.  What's left of a
 file's loading is mostly its reading (the storage driver, the line's scan) and its numbers' conversion.
+
+## The standard's other word sets
+
+Forth 2012's word sets HyForth hadn't, each a library (6.16 to 6.19), each passing the Forth 2012 test suite's
+file for it, which the `forth` test now runs too (in three sessions: the dictionary hasn't room for it all at once).
+
+| Library | Words | How |
+| :--- | :--- | :--- |
+| `memory.fl` | Memory-Allocation: `allocate`, `free`, `resize` | A heap at the top of the dictionary's space, from `heap_lo` (the core's) to `DICT_END`: it grows down as it's wanted, and gives its lowest pages back to the dictionary as they're freed, so the dictionary ends below `heap_lo`'s page (`allot`, `,`, a library's load, the shell's strings, `unused`).  A block: its size in the cell before it (bit 0, in use), first fit, free blocks joined as a search passes them, one split when 4 bytes or more are left over; `free` and `resize` take only an address `allocate` gave (else their ior and the heap as it was).  The iors are Forth 2012's codes, -59, -60, -61.  At the shell's prompt `free` shadows the `free` program: `% free` runs it.  So the heap can have the top, nslib's buffers for `newns` (2.4K) moved to the end of the index's bank |
+| `double.fl` | Double-Number: `d+`, `d-`, `d.`, `d.r`, `d0<`, `d0=`, `d2*`, `d2/`, `d<`, `d=`, `d>s`, `dmax`, `dmin`, `m+`, `m*/` (with 6.5's `2constant`, `2variable`, `2literal`, `dnegate`, `dabs`), and the extension's `2rot`, `2value`, `du<` | `m*/` multiplies to three cells and divides a cell at a time, symmetrically, as the core's `/` does.  A `2value`'s code is a call to `do2value`, the core's, by which Core Extension's `to` knows it to store two cells |
+| `locals.fl` | Locals: `{: args \| vals -- comment :}`, `(local)`, and the extension's `locals\|` (16 a definition: ENVIRONMENT? `#LOCALS`) | A frame on the 6502's stack, made where the locals are declared and let go at `;`, EXIT and DOES>; the zero page's `lp` (the core's) is its first cell, so DO's loop and `>r` above it don't move it, the frame before is kept under it, and CATCH keeps `lp` for THROW.  A local compiles as code that reads its cell through `lp` (12 bytes; after `to`, sets it).  The core asks the library (its `loc_vec`) about each name it compiles, before the search order and numbers, so a local's name hides a word's or a number's (`dup`, `bead`, `i` in a DO loop) till its definition's end; and at `;`, EXIT (Core's, and the shell's), DOES>, and ENVIRONMENT? |
+| `block.fl` | Block: `block`, `buffer`, `update`, `save-buffers`, `flush`, `load`, `blk`, and the extension's `empty-buffers`, `list`, `scr`, `thru`; `open-blocks` (Gforth's) | Block u is the 1024 bytes at u * 1024 of the block file: `blocks.fb` in the directory current as it's first wanted (made if it isn't there), or the one `open-blocks` names.  Two buffers in the library: a block read into the one not given last (written first if it was UPDATEd), past the file's end spaces.  `load` makes a block the source: the source record has BLK (`src_blk`), which EVALUATE's and a file's set to 0; when a source nested in a block's ends (or THROW unwinds to it) the core asks the library (`blk_vec`) for its buffer again, as a LOAD since may have taken it.  `\` in a block skips to its 64-character line's end, REFILL goes on to the next block, SAVE-INPUT and RESTORE-INPUT keep the block (Core Extension's, now 6 cells) |
+
+The record of files INCLUDED (REQUIRED's) holds 512 bytes of names now, not 256: the suite's first session filled
+it, and a file past it is INCLUDED again.
 
 ## The terminal's words
 
@@ -244,11 +260,11 @@ shell, and `-lib shell` (or a `marker` that takes it out) a plain Forth again.
 
 ## The steps
 
-6.6 to 6.10 done (October 2026), then 6.11 to 6.13, from comparing the shell with hylang's, then 6.14 and 6.15;
+6.6 to 6.10 done (October 2026), then 6.11 to 6.13, from comparing the shell with hylang's, then 6.14 to 6.19;
 [forth-status.md](forth-status.md) has each one's notes, the sizes and what's next, and
 [using/hyforth.md](using/hyforth.md) is the guide for using it.  The tests: `forth` (the Forth 2012 suite, still
-passing), `hyforth` (6.6-6.8 and 6.14), `fshell` (6.9 and 6.11), `lshell` (6.10), `fhydra` (6.12), `fdev` (6.13)
-and `findex` (6.15).
+passing, and its files for 6.16-6.19's word sets), `hyforth` (6.6-6.8 and 6.14), `fshell` (6.9 and 6.11), `lshell`
+(6.10), `fhydra` (6.12), `fdev` (6.13) and `findex` (6.15).
 
 | Step | | Tested |
 | :--- | :--- | :--- |
@@ -262,3 +278,7 @@ and `findex` (6.15).
 | 6.13 | The device libraries (hylang's layer 3): `gpio`, `i2c`, `spi`, `cons`, `proc`, `clock`, `disk`, `pc` as source; `sound.fl`'s `note-of` and `tune` | Pins read and set, the port, `ctl`'s lines, CA1's edge; a memory written and read at a register, the devices; an echo device's transactions, mode 3; the window; a task's args, cwd, regs and memory; the chip, the time set; the ROM disk's ctl, a card; the PC tool; notes' numbers, a tune's notes on the YM2151 in time, a bad note |
 | 6.14 | Compile-only words: THROW -14 interpreted (`F_COMPILE`) | `>r`, `if`, `."`, a `synonym` of `>r` and a library's `2>r` typed (each `name: compile only`, forth going on); `>r`, `i`, `r>` and the synonym compiled and run; the Forth 2012 suite |
 | 6.15 | Housekeeping: the word lists' index (in a bank); `hex2` and `hdr_out` the core's (`tools.fl`'s and `disasm.fl`'s copies gone); `argc` 0 under `forth -l`; the guide, [using/hyforth.md](using/hyforth.md) | A word redefined, a definition hidden till `;`, a MARKER's words gone, MARKERs till the bank's full, more word lists than records, EVALUATE of a bank's text, the index's bank overwritten; 500 searches under 150 ticks; the Forth 2012 suite (Search-Order's word lists among it); `argc` at `forth -l`'s prompt |
+| 6.16 | Memory-Allocation (`memory.fl`): the heap at the dictionary's top (`heap_lo`); `newns`'s buffers in the index's bank | `memorytest.fth`; `newns` at `forth -l`'s start (the shells' tests) |
+| 6.17 | Double-Number (`double.fl`), and its extension's `2rot`, `2value` (`do2value`, the core's; `to`), `du<` | `doubletest.fth` (its numbers read with prefixes and signs; `d.` and `d.r`'s lines as they should be) |
+| 6.18 | Locals (`locals.fl`): `{:`, `(local)`, `locals\|`; the core's `lp`, `loc_vec` and its calls; CATCH keeps `lp` | `localstest.fth` (its Search-Order part too) |
+| 6.19 | Block (`block.fl`) and its extension; the source record's BLK, `blk_vec`; `\`, REFILL, SAVE-INPUT and RESTORE-INPUT in a block; 512 bytes of names INCLUDED | `blocktest.fth` (its blocks 20-29 in `blocks.fb` on the card; 64 characters a line, as it works out) |

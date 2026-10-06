@@ -132,12 +132,12 @@ erase:
             jmp         fill
 
             HEADER      "unused", 0
-unused:
+unused:                                                     ; (To the heap's page: ALLOCATE's, memory.fl's)
             sec
-            lda         #<DICT_END
+            lda         #0
             sbc         here
             pha
-            lda         #>DICT_END
+            lda         heap_lo + 1
             sbc         here + 1
             tay
             pla
@@ -260,17 +260,57 @@ value:                                                      ; ( x "name" -- )
             jmp         comma
 
             HEADER      "to", F_IMMEDIATE
-to:                                                         ; ( x "name" -- ): the VALUE's cell
-            jsr         tick
+to:                                                         ; ( x "name" -- ): the VALUE's cell; or ( x1 x2 "name"
+            jsr         parse_name                          ;   -- ), a 2VALUE's two (its jsr do2value: the
+            lda         state                               ;   Double-Number library's), as 2! stores them; or,
+            beq         :+                                  ;   compiling, a local (the locals library's: first)
+            lda         #3
+            jsr         loc_call
+            bcs         :+
+            rts
+:
+            jsr         find_name
+            bcc         :+
+            jmp         throw_undef
+:
+            inx
+            inx
+            jsr         hdr_xt
+            lda         w2
+            ldy         w2 + 1
+            PUSHAY
+            sta         w
+            sty         w + 1
             jsr         body_
+            ldy         #1
+            lda         (w),y
+            cmp         #<do2value
+            bne         @one
+            iny
+            lda         (w),y
+            cmp         #>do2value
+            bne         @one
+            lda         #<twostore
+            ldy         #>twostore
+            bra         :+
+@one:
+            lda         #<store
+            ldy         #>store
+:
+            pha
+            phy
             lda         state
             beq         @now
             jsr         literal
-            lda         #<store
-            ldy         #>store
+            ply
+            pla
             jmp         comp_jsr
 @now:
-            jmp         store
+            ply
+            pla
+            sta         w
+            sty         w + 1
+            jmp         (w)
 
             HEADER      "buffer:", 0
 bufferc:                                                    ; ( u "name" -- )
@@ -343,7 +383,22 @@ marker:                                                     ; Its word: HERE, th
             jmp         comma_ay
 
             HEADER      "refill", 0
-refill:                                                     ; ( -- flag ): a string's (EVALUATE) can't
+refill:                                                     ; ( -- flag ): a block's, the next block (BLK + 1, the
+            lda         src_blk                             ;   Block library's); a string's (EVALUATE) can't
+            ora         src_blk + 1
+            beq         @src
+            inc         src_blk
+            bne         :+
+            inc         src_blk + 1
+:
+            stz         to_in
+            stz         to_in + 1
+            lda         #0
+            jsr         blk_call
+            bcs         @false
+            dex
+            jmp         true_tos
+@src:
             lda         src_id + 1
             bmi         @false
             jsr         refill_src
@@ -373,7 +428,10 @@ sourceid:
             rts
 
             HEADER      "save-input", 0
-saveinput:                                                  ; ( -- pos pos-hi line >in id 5 )
+saveinput:                                                  ; ( -- blk pos pos-hi line >in id 6 )
+            lda         src_blk
+            ldy         src_blk + 1
+            PUSHAY
             lda         src_pos
             ldy         src_pos + 1
             PUSHAY
@@ -389,16 +447,16 @@ saveinput:                                                  ; ( -- pos pos-hi li
             lda         src_id
             ldy         src_id + 1
             PUSHAY
-            lda         #5
+            lda         #6
             ldy         #0
             PUSHAY
             rts
 
             HEADER      "restore-input", 0
-restoreinput:                                               ; ( pos pos-hi line >in id 5 -- flag ): false if it
+restoreinput:                                               ; ( blk pos pos-hi line >in id 6 -- flag ): false if it
             lda         dlo,x                               ;   could: the same source, and its line still in the
-            cmp         #5                                  ;   buffer (a file's: read again, from where it was)
-            bne         @fail_n
+            cmp         #6                                  ;   buffer (a file's: read again, from where it was; a
+            bne         @fail_n                             ;   block's: that block, as BLOCK has it)
             lda         dhi,x
             bne         @fail_n
             lda         dlo + 1,x
@@ -407,7 +465,26 @@ restoreinput:                                               ; ( pos pos-hi line 
             lda         dhi + 1,x
             cmp         src_id + 1
             bne         @fail
-            ora         src_id                              ; (A file?)
+            lda         dlo + 6,x                           ; (A block?)
+            ora         dhi + 6,x
+            beq         @noblk
+            lda         src_blk
+            ora         src_blk + 1
+            beq         @fail
+            lda         dlo + 6,x
+            sta         src_blk
+            lda         dhi + 6,x
+            sta         src_blk + 1
+            lda         #0
+            jsr         blk_call
+            bcs         @fail
+            bra         @set
+@noblk:
+            lda         src_blk
+            ora         src_blk + 1
+            bne         @fail
+            lda         src_id                              ; (A file?)
+            ora         src_id + 1
             beq         @line
             cmp         #$FF
             beq         @line
@@ -432,14 +509,14 @@ restoreinput:                                               ; ( pos pos-hi line 
             sta         to_in + 1
             txa
             clc
-            adc         #5
+            adc         #6
             tax
             jmp         zero_tos
 @fail_n:
             lda         dlo,x
             bra         :+
 @fail:
-            lda         #5
+            lda         #6
 :
             stx         xsave
             clc

@@ -88,9 +88,40 @@ resolve:
             sta         (w),y
             rts
 
-; The word whose header is at w, compiled: its code copied (F_INLINE, a length), or a jsr to it
+; The locals library's routine (loc_vec: locals.fl's), .A the call: 0, the name ( c-addr u ) being compiled (a
+; local's: its code compiled, the name dropped, C = 0); 1, a definition's end (; DOES>: the locals' frame let go,
+; the locals forgotten); 2, EXIT (the frame let go); 3, TO's name ( c-addr u ) (as 0, the local set); 4,
+; ENVIRONMENT?'s ( c-addr u ) (#LOCALS: ( n true ), C = 0).  Nothing done (or none): C = 1
+loc_call:
+            sec
+            ldy         loc_vec + 1
+            beq         :+
+            jmp         (loc_vec)
+:
+            rts
+
+; The word whose header is at w, compiled: its code copied (F_INLINE, a length), or a jsr to it; EXIT's, the
+; locals' frame let go first
 comp_hdr:
             jsr         hdr_xt
+            lda         w2
+            cmp         #<exit
+            bne         @hdr
+            lda         w2 + 1
+            cmp         #>exit
+            bne         @hdr
+            lda         w + 1
+            pha
+            lda         w
+            pha
+            lda         #2
+            jsr         loc_call
+            pla
+            sta         w
+            pla
+            sta         w + 1
+            jsr         hdr_xt
+@hdr:
             bit         cnt                                 ; (hdr_xt: cnt its flags)
             bvs         @call                               ; (F_HIDDEN: as called)
             lda         cnt
@@ -236,6 +267,8 @@ colon:
 
             HEADERC     ";", F_IMMEDIATE
 semicolon:
+            lda         #1                                  ; (Its locals' frame let go)
+            jsr         loc_call
             lda         #RTS_OP
             jsr         ccomma_a
             jsr         reveal
@@ -711,6 +744,20 @@ dovalue:
             PUSHAY
             rts
 
+; A 2VALUE's (the Double-Number library's; Core Extension's TO knows it by this): the two cells after its jsr, as
+; 2@ has them
+do2value:
+            pla
+            clc
+            adc         #1
+            sta         tmp
+            pla
+            adc         #0
+            tay
+            lda         tmp
+            PUSHAY
+            jmp         twofetch
+
             HEADER      ">body", 0
 body_:
             clc
@@ -724,6 +771,8 @@ body_:
 
             HEADERC     "does>", F_IMMEDIATE
 does:                                                       ; jsr do_does, then the child's code: jsr dodoes ...
+            lda         #1                                  ;   (the defining word's locals let go: the child's
+            jsr         loc_call                            ;   code has its own)
             lda         #<do_does
             ldy         #>do_does
             jsr         comp_jsr
@@ -860,6 +909,13 @@ domarker:
             ply
             bra         @list
 @done:
+            lda         loc_vec                             ; The locals library, if it's gone
+            ldy         loc_vec + 1
+            jsr         since
+            bcs         :+
+            stz         loc_vec
+            stz         loc_vec + 1
+:
             ldx         xsave
             rts
 

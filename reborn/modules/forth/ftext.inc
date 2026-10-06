@@ -601,7 +601,20 @@ paren:                                                      ; To ")": a comment;
             rts
 
             HEADER      "\", F_IMMEDIATE
-backslash:
+backslash:                                                  ; The rest of the line: a block's, its 64-character one
+            lda         src_blk
+            ora         src_blk + 1
+            beq         :+
+            clc
+            lda         to_in
+            adc         #63
+            and         #$C0
+            sta         to_in
+            bcc         @done
+            inc         to_in + 1
+@done:
+            rts
+:
             lda         src_len
             sta         to_in
             lda         src_len + 1

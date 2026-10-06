@@ -782,15 +782,15 @@ here_:
             rts
 
             HEADER      "allot", 0
-allot:                                                      ; ( n -- ): no further than the dictionary's end
-            clc
+allot:                                                      ; ( n -- ): no further than the dictionary's end (the
+            clc                                             ;   heap's page)
             lda         here
             adc         dlo,x
             tay
             lda         here + 1
             adc         dhi,x
             inx
-            cmp         #>DICT_END
+            cmp         heap_lo + 1
             bcc         :+
             lda         #<-8                                ; (Dictionary overflow)
             jmp         throw_a
@@ -811,8 +811,8 @@ comma_ay:
 ; .A into the dictionary, a byte.  Keeps .X, .Y
 ccomma_a:
             phy
-            ldy         here + 1                            ; (Its end)
-            cpy         #>DICT_END
+            ldy         here + 1                            ; (Its end: the heap's page)
+            cpy         heap_lo + 1
             bcc         :+
             lda         #<-8
             jmp         throw_a
