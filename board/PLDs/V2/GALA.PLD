@@ -1,7 +1,7 @@
 Name     GALA ;
 PartNo   ATF22V10C ;
-Date     10/4/2026 ;
-Revision 01 ;
+Date     10/6/2026 ;
+Revision 02 ;
 Designer Engineer ;
 Company  Data Tuning ;
 Assembly Hydra 16 V2 ;
@@ -31,8 +31,8 @@ PIN 20 = nIOP1_S ;    /* $FF10-$FF1F  ACIA                            */
 PIN 19 = nIOP15_S ;   /* $FFF0-$FFFF  registers / vectors (GAL B1/B2) */
 PIN 18 = nBRA_S ;     /* $8000-$9FFF  banked RAM window               */
 PIN 17 = nBRO_S ;     /* $A000-$DFFF  banked ROM window               */
-PIN 16 = nOSR1 ;      /* $E000-$FEFF  OS ROM (vectors added in B1)    */
-PIN 15 = nIOSLOW ;    /* $FF20-$FFFF  I/O wait-state region           */
+PIN 16 = nOSR_CE ;    /* $E000-$FFFF  OS ROM /CE (OE qualified in B1) */
+PIN 15 = nIOSLOW ;    /* $FF20-$FFEF  slot I/O stretch region         */
 PIN 14 = nZP0 ;       /* $0000-$000F  page-zero detect for GAL B2     */
 
 FIELD hi = [A15..A8] ;
@@ -44,6 +44,6 @@ io       = hi:FF00 ;       /* field constants use the address bit positions (A15
 !nIOP15_S = io &  A7 &  A6 &  A5 &  A4 ;
 !nBRA_S   = A15 & !A14 & !A13 ;
 !nBRO_S   = A15 & (A14 $ A13) ;
-!nOSR1    = A15 & A14 & A13 & !io ;
-!nIOSLOW  = io & (A7 # A6 # A5) ;
+!nOSR_CE  = A15 & A14 & A13 ;
+!nIOSLOW  = io & (A7 # A6 # A5) & !(A7 & A6 & A5 & A4) ;
 !nZP0     = hi:0000 & !A7 & !A6 & !A5 & !A4 ;

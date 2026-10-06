@@ -1,7 +1,7 @@
 Name     GALB1 ;
 PartNo   ATF22V10C ;
-Date     10/4/2026 ;
-Revision 01 ;
+Date     10/6/2026 ;
+Revision 02 ;
 Designer Engineer ;
 Company  Data Tuning ;
 Assembly Hydra 16 V2 ;
@@ -12,19 +12,20 @@ Device   g22v10 ;
    (replaces U18, U47, U48 and parts of U9/U14/U15) */
 
 /* *************** INPUT PINS *********************/
-PIN 1  = PHI1 ;       /* inverted PHI2 (U19)                 */
+PIN 1  = PHI1 ;       /* complement of PHI2 (GAL C)          */
 PIN 2  = RWB ;
 PIN 3  = RESB ;
 PIN 4  = nIOP15_S ;   /* $FFF0-$FFFF from GAL A               */
-PIN 5  = nOSR1 ;      /* $E000-$FEFF from GAL A               */
+PIN 5  = nOSR_CE ;    /* $E000-$FFFF from GAL A               */
 PIN 6  = A3 ;
 PIN 7  = A2 ;
 PIN 8  = A1 ;
 PIN 9  = A0 ;
+PIN 10 = nIO_S ;      /* $FF00-$FFFF from GAL A               */
 
 /* *************** OUTPUT PINS *********************/
-PIN 23 = nOSR_S ;     /* OS ROM /CE: $E000-$FEFF and $FFFA-$FFFD  */
-PIN 22 = nVEC_S ;     /* vector RAM /CE: $FFFE-$FFFF              */
+PIN 23 = nOSR_OE ;    /* OS ROM /OE: reads of $E000-$FEFF and $FFFA-$FFFD */
+PIN 22 = nVEC_S ;     /* vector RAM /CE: $FFFE-$FFFF (writes only during PHI2) */
 PIN 21 = nFFF0_S ;    /* register read selects (541 G2)           */
 PIN 20 = nFFF1_S ;
 PIN 19 = nFFF2_S ;
@@ -39,8 +40,8 @@ FIELD lo = [A3..A0] ;
 fffx = !nIOP15_S ;
 wrq  = !PHI1 & !RWB & RESB ;      /* PHI2-qualified write, blocked during reset */
 
-!nOSR_S  = !nOSR1 # (fffx & A3 & (A2 $ A1)) ;
-!nVEC_S  = fffx & lo:[E..F] ;
+!nOSR_OE = RWB & !nOSR_CE & nIO_S # RWB & fffx & A3 & (A2 $ A1) ;
+!nVEC_S  = fffx & lo:[E..F] & (RWB # !PHI1) ;
 !nFFF0_S = fffx & lo:0 ;
 !nFFF1_S = fffx & lo:1 ;
 !nFFF2_S = fffx & lo:2 ;

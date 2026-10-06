@@ -5,9 +5,9 @@
 	(uuid "be5e29cc-0683-4ea3-b461-c05bfa83c87a")
 	(paper "A3")
 	(title_block
-		(title "Wait States and ROM Bank Gating (GALs)")
-		(date "2026-10-04")
-		(rev "2.0C")
+		(title "Clock-Stretch Control and OS ROM Paging (GALs)")
+		(date "2026-10-06")
+		(rev "2.0D")
 		(company "Data Tuning")
 		(comment 1 "Hydra 16")
 	)
@@ -1616,7 +1616,7 @@
 			(embedded_fonts no)
 		)
 	)
-	(text "WAIT-STATE REGISTER  $FFF5  (write-only, cleared by RESB) - logic in U84 (GAL D)\n  bits 1:0  banked RAM  $8000-$9FFF     waits = 3 - value\n  bits 3:2  banked ROM  $A000-$DFFF     waits = 3 - value\n  bits 5:4  I/O $FF20-$FFFF              waits = 3 - value\nReset leaves 3 waits everywhere. Main RAM, OS ROM and the VIA/ACIA never get waits.\nU84 drives CPU_RDY low only while stalling (R4 pulls it up; WAI still works).\nD1 lets a slot card pulling bus RDY low stall the CPU; the CPU's WAI is not seen on bus RDY.\nU87 (GAL G): OS ROM bank lines W = RW for $E000-$EFFF, 0 for $F000-$FFFF."
+	(text "CLOCK-STRETCH REGISTER $FFF5 (write-only, cleared by RESB) - U84 (GAL D)\n  bits 1:0  banked RAM  $8000-$9FFF\n  bits 3:2  banked ROM  $A000-$DFFF\n  bits 5:4  slot I/O    $FF20-$FFEF       extra PHI2-high periods = 3 - value (69.8 ns each at 7.16 MHz)\nReset leaves 3 extra periods everywhere. U88 (GAL C) also adds one PHI2-low period to every access in\nthese regions, so addresses, bank registers and chip selects settle before PHI2 rises.\nMain RAM, OS ROM, VIA/ACIA and $FFF0-$FFFF are never stretched.\nCards can still pull RDY (D1) for longer waits; the CPU then repeats the cycle (one PHI2 strobe per repeat).\nU87 (GAL G): OS ROM paging. $E000-$EFFF = 4K page RW6..RW0, $F000-$FFFF = fixed page at ROM offset $1000."
 		(exclude_from_sim no)
 		(at 139.7 120.65 0)
 		(effects
@@ -1636,16 +1636,8 @@
 		(uuid "1d4281df-ad82-4dc1-a8c7-7ee85bbdd02d")
 	)
 	(no_connect
-		(at 91.44 66.04)
-		(uuid "4887b6e7-d55e-47fe-8ee1-104cfce285f1")
-	)
-	(no_connect
 		(at 88.9 165.1)
 		(uuid "4fce7069-2c5c-4068-ace8-58cded54d8ca")
-	)
-	(no_connect
-		(at 88.9 162.56)
-		(uuid "5bef9d53-5fc2-4708-a39d-2ea61111e6ef")
 	)
 	(no_connect
 		(at 91.44 83.82)
@@ -1963,16 +1955,6 @@
 	)
 	(wire
 		(pts
-			(xy 63.5 167.64) (xy 60.96 167.64)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "a9a18be6-8dbe-4b5d-915d-dda9ac35db90")
-	)
-	(wire
-		(pts
 			(xy 163.83 93.98) (xy 166.37 93.98)
 		)
 		(stroke
@@ -2041,8 +2023,38 @@
 		)
 		(uuid "fcdad029-6121-41cb-8804-18c74a24e538")
 	)
-	(global_label "CPU_RDY"
-		(shape bidirectional)
+	(wire
+		(pts
+			(xy 91.44 66.04) (xy 101.6 66.04)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "13d8e30b-fe1e-4d21-8f31-bc86609cc20b")
+	)
+	(wire
+		(pts
+			(xy 63.5 167.64) (xy 60.96 167.64)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "1afb5a12-d899-4072-b971-90b47bb49224")
+	)
+	(wire
+		(pts
+			(xy 88.9 162.56) (xy 99.06 162.56)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "42f35270-f2ec-4901-b988-ad5070381472")
+	)
+	(global_label "N0"
+		(shape output)
 		(at 93.98 63.5 0)
 		(fields_autoplaced yes)
 		(effects
@@ -2679,6 +2691,72 @@
 			)
 		)
 	)
+	(global_label "N1"
+		(shape output)
+		(at 101.6 66.04 0)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "507ad5d6-31dd-49ac-8fe4-6f4269d316bd")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 101.6 66.04 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "RW6"
+		(shape input)
+		(at 60.96 167.64 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "aa36f0b8-6714-4c08-8b56-8534f121bbc2")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 60.96 167.64 180)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "ROM_A12"
+		(shape output)
+		(at 99.06 162.56 0)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "59606e3d-fe49-42b5-b361-c469e14723b5")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 99.06 162.56 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+				(hide yes)
+			)
+		)
+	)
 	(symbol
 		(lib_id "power:GND")
 		(at 60.96 147.32 270)
@@ -2945,72 +3023,6 @@
 		)
 	)
 	(symbol
-		(lib_id "power:GND")
-		(at 60.96 167.64 270)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "5cbe8f14-8f21-46f5-bef1-aa248f2b5513")
-		(property "Reference" "#PWR245"
-			(at 60.96 167.64 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Value" "GND"
-			(at 55.88 167.64 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Footprint" ""
-			(at 60.96 167.64 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" ""
-			(at 60.96 167.64 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Power symbol creates a global label with name \"GND\""
-			(at 60.96 167.64 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "998ffa67-e433-4ae6-94bd-03d2cc7212a1")
-		)
-		(instances
-			(project "hydra-16"
-				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/3d67b1b1-9a28-4462-8a4d-19765afeaafe"
-					(reference "#PWR245")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "Device:D_Schottky")
 		(at 160.02 93.98 0)
 		(unit 1)
@@ -3224,7 +3236,7 @@
 				)
 			)
 		)
-		(property "Value" "2.2k"
+		(property "Value" "1k"
 			(at 163.83 62.23 0)
 			(effects
 				(font
@@ -3754,7 +3766,7 @@
 				(hide yes)
 			)
 		)
-		(property "Datasheet" "GAL D - see board/PLDs/V2/GALD.PLD"
+		(property "Datasheet" "GAL D - clock-stretch register, see board/PLDs/V2/GALD.PLD"
 			(at 76.2 76.2 0)
 			(effects
 				(font

@@ -5,11 +5,11 @@
 
 CUPL(WM)        5.0a Serial# MW-10400000
 Device          g22v10  Library DLIB-h-40-1
-Created         Sun Oct 04 08:03:05 2026
+Created         Tue Oct 06 01:11:17 2026
 Name            GALD 
 Partno          ATF22V10C 
-Revision        01 
-Date            10/4/2026 
+Revision        02 
+Date            10/6/2026 
 Designer        Engineer 
 Company         Data Tuning 
 Assembly        Hydra 16 V2 
@@ -19,47 +19,15 @@ Location        U84
                             Expanded Product Terms
 ===============================================================================
 
-CNT0.d  =>
-    !CNT0 & STALL
+N0 =>
+    !WS0 & !nBRA_S
+  # !WS2 & !nBRO_S
+  # !WS4 & !nIOSLOW
 
-CNT0.ar  =>
-    !RESB
-
-CNT0.oe  =>
-    0 
-
-CNT0.sp  =>
-    0 
-
-CNT1.d  =>
-    CNT0 & !CNT1 & STALL
-  # !CNT0 & CNT1 & STALL
-
-CNT1.ar  =>
-    !RESB
-
-CNT1.oe  =>
-    0 
-
-CNT1.sp  =>
-    0 
-
-CPU_RDY =>
-    0 
-
-CPU_RDY.oe  =>
-    STALL
-
-STALL =>
-    !CNT1 & !WS1 & !nBRA_S
-  # !CNT0 & !CNT1 & !WS0 & !nBRA_S
-  # !CNT0 & !WS0 & !WS1 & !nBRA_S
-  # !CNT1 & !WS3 & !nBRO_S
-  # !CNT0 & !CNT1 & !WS2 & !nBRO_S
-  # !CNT0 & !WS2 & !WS3 & !nBRO_S
-  # !CNT1 & !WS5 & !nIOSLOW
-  # !CNT0 & !CNT1 & !WS4 & !nIOSLOW
-  # !CNT0 & !WS4 & !WS5 & !nIOSLOW
+N1 =>
+    !WS1 & !nBRA_S
+  # !WS3 & !nBRO_S
+  # !WS5 & !nIOSLOW
 
 WS0.d  =>
     D0 & !nWSWR
@@ -139,7 +107,10 @@ WS5.oe  =>
 WS5.sp  =>
     0 
 
-STALL.oe  =>
+N0.oe  =>
+    1 
+
+N1.oe  =>
     1 
 
 
@@ -151,27 +122,16 @@ Pin Variable                                    Pterms   Max     Min
 Pol   Name              Ext     Pin     Type     Used   Pterms  Level   
 --- --------            ---     ---     ----    ------  ------  -----   
 
-    CNT0                        20       V        -       -       -     
-    CNT0                d       20       X        1       14      1     
-    CNT0                ar      20       X        1       1       1     
-    CNT0                oe      20       X        1       1       1     
-    CNT0                sp      20       X        1       1       1     
-    CNT1                        21       V        -       -       -     
-    CNT1                d       21       X        2       12      1     
-    CNT1                ar      21       X        1       1       1     
-    CNT1                oe      21       X        1       1       1     
-    CNT1                sp      21       X        1       1       1     
-    CPU_RDY                     23       V        1       8       1     
-    CPU_RDY             oe      23       X        1       1       1     
     D0                          2        V        -       -       -     
     D1                          3        V        -       -       -     
     D2                          4        V        -       -       -     
     D3                          5        V        -       -       -     
     D4                          6        V        -       -       -     
     D5                          7        V        -       -       -     
+    N0                          23       V        3       8       1     
+    N1                          22       V        3       10      1     
     PHI1                        1        V        -       -       -     
     RESB                        13       V        -       -       -     
-    STALL                       22       V        9       10      1     
     WS0                         14       V        -       -       -     
     WS0                 d       14       X        2       8       1     
     WS0                 ar      14       X        1       1       1     
@@ -206,7 +166,8 @@ Pol   Name              Ext     Pin     Type     Used   Pterms  Level
     nBRO_S                      10       V        -       -       -     
     nIOSLOW                     11       V        -       -       -     
     nWSWR                       8        V        -       -       -     
-    STALL               oe      22       D        1       1       0     
+    N0                  oe      23       D        1       1       0     
+    N1                  oe      22       D        1       1       0     
 
 
 LEGEND    D : default variable         F : field      G : group
@@ -226,10 +187,10 @@ AR
  00000 -------------------------------------------x 
 
 Pin #23  05808 Mode  -- 
- 00044 ------x------------------------------------- 
- 00088 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
- 00132 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
- 00176 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 00044 -------------------------------------------- 
+ 00088 ---------------------------------x----x----- 
+ 00132 ------------------------------x------x------ 
+ 00176 ----------------------x------------------x-- 
  00220 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
  00264 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
  00308 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
@@ -237,20 +198,20 @@ Pin #23  05808 Mode  --
  00396 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
 Pin #22  05810 Mode  -- 
  00440 -------------------------------------------- 
- 00484 ----------x----------------------xx--------- 
- 00528 ----------x---x------------------x----x----- 
- 00572 --------------x------------------xx---x----- 
- 00616 ----------x---------------x----------x------ 
- 00660 ----------x---x---------------x------x------ 
- 00704 --------------x-----------x---x------x------ 
- 00748 ----------x-------x----------------------x-- 
- 00792 ----------x---x-------x------------------x-- 
- 00836 --------------x---x---x------------------x-- 
+ 00484 ---------------------------------xx--------- 
+ 00528 --------------------------x----------x------ 
+ 00572 ------------------x----------------------x-- 
+ 00616 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 00660 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 00704 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 00748 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 00792 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 00836 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
  00880 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
-Pin #21  05812 Mode  -x 
+Pin #21  05812 Mode  xx 
  00924 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
- 00968 ------x---x----x---------------------------- 
- 01012 ------x----x--x----------------------------- 
+ 00968 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 01012 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
  01056 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
  01100 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
  01144 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
@@ -261,9 +222,9 @@ Pin #21  05812 Mode  -x
  01364 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
  01408 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
  01452 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
-Pin #20  05814 Mode  -x 
+Pin #20  05814 Mode  xx 
  01496 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
- 01540 ------x-------x----------------------------- 
+ 01540 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
  01584 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
  01628 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
  01672 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
@@ -377,10 +338,10 @@ LEGEND    X : fuse not blown
                                ______________
                               |     GALD     |
                      PHI1 x---|1           24|---x Vcc                      
-                       D0 x---|2           23|---x CPU_RDY                  
-                       D1 x---|3           22|---x STALL                    
-                       D2 x---|4           21|---x CNT1                     
-                       D3 x---|5           20|---x CNT0                     
+                       D0 x---|2           23|---x N0                       
+                       D1 x---|3           22|---x N1                       
+                       D2 x---|4           21|---x                          
+                       D3 x---|5           20|---x                          
                        D4 x---|6           19|---x WS5                      
                        D5 x---|7           18|---x WS4                      
                     nWSWR x---|8           17|---x WS3                      

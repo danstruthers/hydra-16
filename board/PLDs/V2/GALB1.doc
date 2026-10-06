@@ -5,11 +5,11 @@
 
 CUPL(WM)        5.0a Serial# MW-10400000
 Device          g22v10  Library DLIB-h-40-1
-Created         Sun Oct 04 08:03:04 2026
+Created         Tue Oct 06 01:11:17 2026
 Name            GALB1 
 Partno          ATF22V10C 
-Revision        01 
-Date            10/4/2026 
+Revision        02 
+Date            10/6/2026 
 Designer        Engineer 
 Company         Data Tuning 
 Assembly        Hydra 16 V2 
@@ -49,13 +49,14 @@ lo =>
 !nFFF3_S =>
     A0 & A1 & !A2 & !A3 & !nIOP15_S
 
-!nOSR_S =>
-    !nOSR1
-  # !A1 & A2 & A3 & !nIOP15_S
-  # A1 & !A2 & A3 & !nIOP15_S
+!nOSR_OE =>
+    RWB & nIO_S & !nOSR_CE
+  # A1 & !A2 & A3 & RWB & !nIOP15_S
+  # !A1 & A2 & A3 & RWB & !nIOP15_S
 
 !nVEC_S =>
-    A1 & A2 & A3 & !nIOP15_S
+    A1 & A2 & A3 & !PHI1 & !nIOP15_S
+  # A1 & A2 & A3 & RWB & !nIOP15_S
 
 wrq =>
     !PHI1 & RESB & !RWB
@@ -84,7 +85,7 @@ nFFF2_S.oe  =>
 nFFF3_S.oe  =>
     1 
 
-nOSR_S.oe  =>
+nOSR_OE.oe  =>
     1 
 
 nVEC_S.oe  =>
@@ -117,9 +118,10 @@ Pol   Name              Ext     Pin     Type     Used   Pterms  Level
     nFFF2_S                     19       V        1       16      1     
     nFFF3_S                     18       V        1       16      1     
     nIOP15_S                    4        V        -       -       -     
-    nOSR1                       5        V        -       -       -     
-    nOSR_S                      23       V        3       8       1     
-    nVEC_S                      22       V        1       10      1     
+    nIO_S                       10       V        -       -       -     
+    nOSR_CE                     5        V        -       -       -     
+    nOSR_OE                     23       V        3       8       1     
+    nVEC_S                      22       V        2       10      1     
     wrq                         0        I        1       -       -     
     FFF0_L              oe      17       D        1       1       0     
     FFF1_L              oe      16       D        1       1       0     
@@ -129,7 +131,7 @@ Pol   Name              Ext     Pin     Type     Used   Pterms  Level
     nFFF1_S             oe      20       D        1       1       0     
     nFFF2_S             oe      19       D        1       1       0     
     nFFF3_S             oe      18       D        1       1       0     
-    nOSR_S              oe      23       D        1       1       0     
+    nOSR_OE             oe      23       D        1       1       0     
     nVEC_S              oe      22       D        1       1       0     
 
 
@@ -151,9 +153,9 @@ AR
 
 Pin #23  05808 Mode  x- 
  00044 -------------------------------------------- 
- 00088 -----------------x-------------------------- 
- 00132 -------------x------x---x----x-------------- 
- 00176 -------------x------x----x--x--------------- 
+ 00088 ----x------------x------------------x------- 
+ 00132 ----x--------x------x----x--x--------------- 
+ 00176 ----x--------x------x---x----x-------------- 
  00220 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
  00264 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
  00308 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
@@ -161,8 +163,8 @@ Pin #23  05808 Mode  x-
  00396 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
 Pin #22  05810 Mode  x- 
  00440 -------------------------------------------- 
- 00484 -------------x------x---x---x--------------- 
- 00528 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 00484 -x-----------x------x---x---x--------------- 
+ 00528 ----x--------x------x---x---x--------------- 
  00572 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
  00616 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
  00660 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
@@ -301,15 +303,15 @@ LEGEND    X : fuse not blown
                                ______________
                               |    GALB1     |
                      PHI1 x---|1           24|---x Vcc                      
-                      RWB x---|2           23|---x nOSR_S                   
+                      RWB x---|2           23|---x nOSR_OE                  
                      RESB x---|3           22|---x nVEC_S                   
                  nIOP15_S x---|4           21|---x nFFF0_S                  
-                    nOSR1 x---|5           20|---x nFFF1_S                  
+                  nOSR_CE x---|5           20|---x nFFF1_S                  
                        A3 x---|6           19|---x nFFF2_S                  
                        A2 x---|7           18|---x nFFF3_S                  
                        A1 x---|8           17|---x FFF0_L                   
                        A0 x---|9           16|---x FFF1_L                   
-                          x---|10          15|---x FFF2_L                   
+                    nIO_S x---|10          15|---x FFF2_L                   
                           x---|11          14|---x FFF3_L                   
                       GND x---|12          13|---x                          
                               |______________|

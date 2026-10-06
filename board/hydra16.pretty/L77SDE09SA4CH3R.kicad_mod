@@ -1,0 +1,413 @@
+(footprint "L77SDE09SA4CH3R"
+	(version 20241229)
+	(generator "pcbnew")
+	(generator_version "9.0")
+	(layer "F.Cu")
+	(descr "L77SDE09SA4CH3R_1")
+	(tags "Connector")
+	(property "Reference" "REF**"
+		(at -5.282 7.79 0)
+		(layer "F.SilkS")
+		(uuid "ac321782-a690-445b-b953-25971a8490f1")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.254)
+			)
+		)
+	)
+	(property "Value" "L77SDE09SA4CH3R"
+		(at -5.372 5.738 0)
+		(layer "F.SilkS")
+		(uuid "ef187e12-3d03-41d0-978c-ad48f29c8710")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.254)
+			)
+		)
+	)
+	(property "Datasheet" "https://cdn.amphenol-cs.com/media/wysiwyg/files/drawing/l77sdxxxsa4ch3r.pdf"
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "153b9540-b7d3-4033-bb8b-bca20941c4a1")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Description" "Dsub, Stamped Signal 3A, Right Angle PCB Through Hole, FP=8.08mm (0.318in), Row Pitch 2.84mm, 09 Socket, Flash Gold, Bright Tin Shell, M3 Rear Insert, Ground Tab with Boardlock"
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "b91629ba-bcb5-4370-8775-74ddcff77468")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Height" "12.93"
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "d63321e5-4af1-4a42-b1f9-5ad3a8f141ad")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Mouser Part Number" "523-L77SDE09SA4CH3R"
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "56c193fa-ca48-4223-84e3-59ae9b310f6e")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Mouser Price/Stock" "https://www.mouser.co.uk/ProductDetail/Amphenol-Commercial-Products/L77SDE09SA4CH3R?qs=mq7kV%2Fq8lk5b0JhxYc3I3g%3D%3D"
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "da56094d-eaf3-4f5c-9ca8-add088a9836c")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Manufacturer_Name" "Amphenol Communications Solutions"
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "0bdcb60b-0cf5-47ba-a452-e3027e1a2024")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Manufacturer_Part_Number" "L77SDE09SA4CH3R"
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "15b02788-c412-42b7-a9f6-100fd3ba9f4d")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(attr through_hole)
+	(fp_line
+		(start -20.965 -1.16)
+		(end 9.875 -1.16)
+		(stroke
+			(width 0.2)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "25a9d3f8-d20a-4d7b-bac1-892b7195bade")
+	)
+	(fp_line
+		(start -20.965 10.5)
+		(end -20.965 -1.16)
+		(stroke
+			(width 0.2)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "cf5ffb7e-50c3-456a-9bfb-6f10ee389f12")
+	)
+	(fp_line
+		(start 9.875 -1.16)
+		(end 9.875 10.5)
+		(stroke
+			(width 0.2)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "7c1362ab-9a18-439e-9c2d-e216c5c21307")
+	)
+	(fp_line
+		(start 10.3 0)
+		(end 10.3 0)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "f0861470-edd0-4f20-bfa7-728731b612c6")
+	)
+	(fp_line
+		(start 10.4 0)
+		(end 10.4 0)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "0d35671c-0698-4f52-ac65-ac75c86e59a7")
+	)
+	(fp_arc
+		(start 10.3 0)
+		(mid 10.35 -0.05)
+		(end 10.4 0)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "0047309f-214e-4bfa-8648-03a5ae270bff")
+	)
+	(fp_arc
+		(start 10.4 0)
+		(mid 10.35 0.05)
+		(end 10.3 0)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "d33f35c0-acc9-4045-bf18-51a26e6b945d")
+	)
+	(fp_line
+		(start -21.965 -2.16)
+		(end 11.4 -2.16)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.CrtYd")
+		(uuid "a69fd09d-93d7-40a7-8596-6122a334ebbc")
+	)
+	(fp_line
+		(start -21.965 17.74)
+		(end -21.965 -2.16)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.CrtYd")
+		(uuid "d241c222-3a5b-46d8-a8b0-eb22c985db79")
+	)
+	(fp_line
+		(start 11.4 -2.16)
+		(end 11.4 17.74)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.CrtYd")
+		(uuid "afe78ad5-942f-42d1-89f6-a685cf9a2bbc")
+	)
+	(fp_line
+		(start 11.4 17.74)
+		(end -21.965 17.74)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.CrtYd")
+		(uuid "6ba6d30c-7671-4a08-956b-5b8eb829297a")
+	)
+	(fp_line
+		(start -20.965 -1.16)
+		(end -20.965 10.94)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(uuid "ce795dd1-f665-40f5-ae05-13a7760192be")
+	)
+	(fp_line
+		(start -20.965 10.94)
+		(end 9.875 10.94)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(uuid "71c665f9-2fbf-4989-a132-3d07f670708d")
+	)
+	(fp_line
+		(start -13.645 10.94)
+		(end -13.645 16.74)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(uuid "90a7fd5e-47cf-4840-8ddc-8f08c7a2cf84")
+	)
+	(fp_line
+		(start -13.645 16.74)
+		(end 2.684 16.74)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(uuid "87847751-39da-40d3-a272-4385cf3bd0ac")
+	)
+	(fp_line
+		(start 2.684 16.74)
+		(end 2.684 10.94)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(uuid "c053d8d1-129d-48ce-a72a-2e5111d5aad2")
+	)
+	(fp_line
+		(start 9.875 -1.16)
+		(end -20.965 -1.16)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(uuid "de19a612-1d90-4db5-acf4-9345cd57be84")
+	)
+	(fp_line
+		(start 9.875 10.94)
+		(end 9.875 -1.16)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(uuid "3e29d40b-edf1-4192-8827-492c8f723408")
+	)
+	(fp_text user "${REFERENCE}"
+		(at -5.282 7.79 0)
+		(layer "F.Fab")
+		(uuid "f5d25e1f-95bf-4e28-abf1-7bd4b0fd477b")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.254)
+			)
+		)
+	)
+	(pad "1" thru_hole rect
+		(at 0 0)
+		(size 1.5 1.5)
+		(drill 1)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "10b2ca35-ea53-40a5-a9d6-3b3a2a3b147a")
+	)
+	(pad "2" thru_hole circle
+		(at -2.74 0)
+		(size 1.5 1.5)
+		(drill 1)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "b49ee19c-7ac7-4554-83d0-9123873ead80")
+	)
+	(pad "3" thru_hole circle
+		(at -5.48 0)
+		(size 1.5 1.5)
+		(drill 1)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "1755b905-897d-4cc6-8ebf-5679c8d6e064")
+	)
+	(pad "4" thru_hole circle
+		(at -8.22 0)
+		(size 1.5 1.5)
+		(drill 1)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "2332e2ea-6053-4d9d-b303-d2e999f3dcbd")
+	)
+	(pad "5" thru_hole circle
+		(at -10.96 0)
+		(size 1.5 1.5)
+		(drill 1)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "3f820455-593d-4e6c-9f3a-adf85b13a0d8")
+	)
+	(pad "6" thru_hole circle
+		(at -1.37 2.84)
+		(size 1.5 1.5)
+		(drill 1)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "8a9b774d-7bf4-40d1-b777-94bba11e5387")
+	)
+	(pad "7" thru_hole circle
+		(at -4.11 2.84)
+		(size 1.5 1.5)
+		(drill 1)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "9ca1e9b8-1e41-4108-832d-8277ede760ec")
+	)
+	(pad "8" thru_hole circle
+		(at -6.85 2.84)
+		(size 1.5 1.5)
+		(drill 1)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "a14bdb4d-0349-4f63-9640-c1c7de808480")
+	)
+	(pad "9" thru_hole circle
+		(at -9.59 2.84)
+		(size 1.5 1.5)
+		(drill 1)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "27e1fb15-e2af-42cb-b280-2dc775797394")
+	)
+	(pad "MH1" thru_hole circle
+		(at 6.95 1.42)
+		(size 4.8 4.8)
+		(drill 3.2)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "ca3cec84-57e2-42ae-9c36-6be0df61ca6d")
+	)
+	(pad "MH2" thru_hole circle
+		(at -18.04 1.42)
+		(size 4.8 4.8)
+		(drill 3.2)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "3c5cb5df-69da-457d-bc54-799799b252e4")
+	)
+	(embedded_fonts no)
+	(model "L77SDE09SA4CH3R.stp"
+		(offset
+			(xyz -5.280000131 -11.14000018 5.479999937)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz -180 0 0)
+		)
+	)
+)

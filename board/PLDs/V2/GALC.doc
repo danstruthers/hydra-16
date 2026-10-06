@@ -1,0 +1,375 @@
+
+*******************************************************************************
+                                     GALC
+*******************************************************************************
+
+CUPL(WM)        5.0a Serial# MW-10400000
+Device          g22v10  Library DLIB-h-40-1
+Created         Tue Oct 06 01:11:17 2026
+Name            GALC 
+Partno          ATF22V10C 
+Revision        01 
+Date            10/6/2026 
+Designer        Engineer 
+Company         Data Tuning 
+Assembly        Hydra 16 V2 
+Location        U88 
+
+===============================================================================
+                            Expanded Product Terms
+===============================================================================
+
+F0.d  =>
+    !F0
+
+F0.ar  =>
+    0 
+
+F0.sp  =>
+    0 
+
+K0.d  =>
+    !F0 & K0 & !nHALF
+  # !A14 & A15 & !K0 & !PHI2 & nHALF
+  # !A14 & A15 & F0 & !K0 & !PHI2
+  # !A13 & A15 & !K0 & !PHI2 & nHALF
+  # !A13 & A15 & F0 & !K0 & !PHI2
+  # !K0 & !PHI2 & nHALF & !nIOSLOW
+  # F0 & !K0 & !PHI2 & !nIOSLOW
+  # !K0 & !K1 & N1 & PHI2 & nHALF
+  # F0 & !K0 & !K1 & N1 & PHI2
+  # !K0 & N0 & N1 & PHI2 & nHALF
+  # F0 & !K0 & N0 & N1 & PHI2
+  # !K0 & !K1 & N0 & PHI2 & nHALF
+  # F0 & !K0 & !K1 & N0 & PHI2
+
+K0.ar  =>
+    0 
+
+K0.sp  =>
+    0 
+
+K1.d  =>
+    !F0 & K1 & !nHALF
+  # K0 & !K1 & N1 & PHI2 & nHALF
+  # F0 & K0 & !K1 & N1 & PHI2
+  # !K0 & K1 & N0 & N1 & PHI2 & nHALF
+  # F0 & !K0 & K1 & N0 & N1 & PHI2
+
+K1.ar  =>
+    0 
+
+K1.sp  =>
+    0 
+
+PH2B.d  =>
+    F0 & K0 & !PHI2
+  # K0 & !PHI2 & nHALF
+  # !A15 & !PHI2 & nHALF & nIOSLOW
+  # !A15 & F0 & !PHI2 & nIOSLOW
+  # A13 & A14 & F0 & !PHI2 & nIOSLOW
+  # A13 & A14 & !PHI2 & nHALF & nIOSLOW
+  # !F0 & PHI2 & !nHALF
+  # !K1 & N1 & PHI2
+  # !K0 & N0 & N1 & PHI2
+  # !K0 & !K1 & N0 & PHI2
+
+PH2B.ar  =>
+    0 
+
+PH2B.sp  =>
+    0 
+
+PHI2.d  =>
+    F0 & K0 & !PHI2
+  # K0 & !PHI2 & nHALF
+  # !A15 & !PHI2 & nHALF & nIOSLOW
+  # !A15 & F0 & !PHI2 & nIOSLOW
+  # A13 & A14 & F0 & !PHI2 & nIOSLOW
+  # A13 & A14 & !PHI2 & nHALF & nIOSLOW
+  # !F0 & PHI2 & !nHALF
+  # !K1 & N1 & PHI2
+  # !K0 & N0 & N1 & PHI2
+  # !K0 & !K1 & N0 & PHI2
+
+PHI2.ar  =>
+    0 
+
+PHI2.sp  =>
+    0 
+
+SND.d  =>
+    !F0 & SND
+  # F0 & !SND
+
+SND.ar  =>
+    0 
+
+SND.sp  =>
+    0 
+
+lt =>
+    !K1 & N1
+  # !K0 & !K1 & N0
+  # !K0 & N0 & N1
+
+slow =>
+    !A14 & A15
+  # !A13 & A15
+  # !nIOSLOW
+
+tick =>
+    nHALF
+  # F0
+
+F0.oe  =>
+    1 
+
+K0.oe  =>
+    1 
+
+K1.oe  =>
+    1 
+
+PH2B.oe  =>
+    1 
+
+PHI2.oe  =>
+    1 
+
+SND.oe  =>
+    1 
+
+
+===============================================================================
+                                 Symbol Table
+===============================================================================
+
+Pin Variable                                    Pterms   Max     Min    
+Pol   Name              Ext     Pin     Type     Used   Pterms  Level   
+--- --------            ---     ---     ----    ------  ------  -----   
+
+    A13                         4        V        -       -       -     
+    A14                         3        V        -       -       -     
+    A15                         2        V        -       -       -     
+    CLK14                       1        V        -       -       -     
+    F0                          23       V        -       -       -     
+    F0                  d       23       X        1       8       1     
+    F0                  ar      23       X        1       1       1     
+    F0                  sp      23       X        1       1       1     
+    K0                          19       V        -       -       -     
+    K0                  d       19       X        13      16      1     
+    K0                  ar      19       X        1       1       1     
+    K0                  sp      19       X        1       1       1     
+    K1                          18       V        -       -       -     
+    K1                  d       18       X        5       16      1     
+    K1                  ar      18       X        1       1       1     
+    K1                  sp      18       X        1       1       1     
+    N0                          6        V        -       -       -     
+    N1                          7        V        -       -       -     
+ !  PH2B                        16       V        -       -       -     
+ !  PH2B                d       16       X        10      12      1     
+    PH2B                ar      16       X        1       1       1     
+    PH2B                sp      16       X        1       1       1     
+    PHI2                        21       V        -       -       -     
+    PHI2                d       21       X        10      12      1     
+    PHI2                ar      21       X        1       1       1     
+    PHI2                sp      21       X        1       1       1     
+    SND                         22       V        -       -       -     
+    SND                 d       22       X        2       10      1     
+    SND                 ar      22       X        1       1       1     
+    SND                 sp      22       X        1       1       1     
+    lt                          0        I        3       -       -     
+    nHALF                       8        V        -       -       -     
+    nIOSLOW                     5        V        -       -       -     
+    slow                        0        I        3       -       -     
+    tick                        0        I        2       -       -     
+    F0                  oe      23       D        1       1       0     
+    K0                  oe      19       D        1       1       0     
+    K1                  oe      18       D        1       1       0     
+    PH2B                oe      16       D        1       1       0     
+    PHI2                oe      21       D        1       1       0     
+    SND                 oe      22       D        1       1       0     
+
+
+LEGEND    D : default variable         F : field      G : group
+          I : intermediate variable    N : node       M : extended node
+          U : undefined                V : variable   X : extended variable
+          T : function
+
+
+===============================================================================
+                                   Fuse Plot
+===============================================================================
+
+SP 
+ 05764 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+
+AR 
+ 00000 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+
+Pin #23  05808 Mode  -x 
+ 00044 -------------------------------------------- 
+ 00088 --x----------------------------------------- 
+ 00132 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 00176 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 00220 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 00264 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 00308 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 00352 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 00396 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+Pin #22  05810 Mode  -x 
+ 00440 -------------------------------------------- 
+ 00484 --x----x------------------------------------ 
+ 00528 ---x--x------------------------------------- 
+ 00572 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 00616 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 00660 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 00704 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 00748 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 00792 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 00836 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 00880 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+Pin #21  05812 Mode  -x 
+ 00924 -------------------------------------------- 
+ 00968 ---x------x--------x------------------------ 
+ 01012 ----------x--------x--------x--------------- 
+ 01056 -----x----x-----x-----------x--------------- 
+ 01100 ---x-x----x-----x--------------------------- 
+ 01144 ---x----x-x-x---x--------------------------- 
+ 01188 --------x-x-x---x-----------x--------------- 
+ 01232 --x--------x-----------------x-------------- 
+ 01276 -----------x----------x-x------------------- 
+ 01320 -----------x------x-x---x------------------- 
+ 01364 -----------x------x-x-x--------------------- 
+ 01408 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 01452 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+Pin #20  05814 Mode  xx 
+ 01496 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 01540 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 01584 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 01628 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 01672 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 01716 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 01760 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 01804 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 01848 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 01892 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 01936 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 01980 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 02024 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 02068 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 02112 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+Pin #19  05816 Mode  -x 
+ 02156 -------------------------------------------- 
+ 02200 --x----------------x---------x-------------- 
+ 02244 ----x----xx-------x---------x--------------- 
+ 02288 ---xx----xx-------x------------------------- 
+ 02332 ----x-----x--x----x---------x--------------- 
+ 02376 ---xx-----x--x----x------------------------- 
+ 02420 ----------x------xx---------x--------------- 
+ 02464 ---x------x------xx------------------------- 
+ 02508 -----------x------x---x-x---x--------------- 
+ 02552 ---x-------x------x---x-x------------------- 
+ 02596 -----------x------x-x---x---x--------------- 
+ 02640 ---x-------x------x-x---x------------------- 
+ 02684 -----------x------x-x-x-----x--------------- 
+ 02728 ---x-------x------x-x-x--------------------- 
+ 02772 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 02816 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 02860 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+Pin #18  05818 Mode  -x 
+ 02904 -------------------------------------------- 
+ 02948 --x--------------------x-----x-------------- 
+ 02992 -----------x-------x--x-x---x--------------- 
+ 03036 ---x-------x-------x--x-x------------------- 
+ 03080 -----------x------x-x--xx---x--------------- 
+ 03124 ---x-------x------x-x--xx------------------- 
+ 03168 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 03212 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 03256 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 03300 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 03344 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 03388 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 03432 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 03476 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 03520 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 03564 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 03608 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+Pin #17  05820 Mode  xx 
+ 03652 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 03696 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 03740 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 03784 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 03828 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 03872 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 03916 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 03960 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 04004 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 04048 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 04092 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 04136 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 04180 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 04224 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 04268 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+Pin #16  05822 Mode  xx 
+ 04312 -------------------------------------------- 
+ 04356 ---x------x--------x------------------------ 
+ 04400 ----------x--------x--------x--------------- 
+ 04444 -----x----x-----x-----------x--------------- 
+ 04488 ---x-x----x-----x--------------------------- 
+ 04532 ---x----x-x-x---x--------------------------- 
+ 04576 --------x-x-x---x-----------x--------------- 
+ 04620 --x--------x-----------------x-------------- 
+ 04664 -----------x----------x-x------------------- 
+ 04708 -----------x------x-x---x------------------- 
+ 04752 -----------x------x-x-x--------------------- 
+ 04796 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 04840 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+Pin #15  05824 Mode  xx 
+ 04884 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 04928 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 04972 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 05016 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 05060 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 05104 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 05148 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 05192 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 05236 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 05280 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 05324 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+Pin #14  05826 Mode  xx 
+ 05368 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 05412 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 05456 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 05500 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 05544 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 05588 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 05632 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 05676 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 05720 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+
+
+LEGEND    X : fuse not blown 
+          - : fuse blown 
+
+===============================================================================
+                                 Chip Diagram
+===============================================================================
+
+                               ______________
+                              |     GALC     |
+                    CLK14 x---|1           24|---x Vcc                      
+                      A15 x---|2           23|---x F0                       
+                      A14 x---|3           22|---x SND                      
+                      A13 x---|4           21|---x PHI2                     
+                  nIOSLOW x---|5           20|---x                          
+                       N0 x---|6           19|---x K0                       
+                       N1 x---|7           18|---x K1                       
+                    nHALF x---|8           17|---x                          
+                          x---|9           16|---x !PH2B                    
+                          x---|10          15|---x                          
+                          x---|11          14|---x                          
+                      GND x---|12          13|---x                          
+                              |______________|
+

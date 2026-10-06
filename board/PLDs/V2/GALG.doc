@@ -5,11 +5,11 @@
 
 CUPL(WM)        5.0a Serial# MW-10400000
 Device          g16v8as  Library DLIB-h-40-2
-Created         Sun Oct 04 08:03:05 2026
+Created         Tue Oct 06 01:11:18 2026
 Name            GALG 
 Partno          ATF16V8C 
-Revision        01 
-Date            10/4/2026 
+Revision        02 
+Date            10/6/2026 
 Designer        Engineer 
 Company         Data Tuning 
 Assembly        Hydra 16 V2 
@@ -19,23 +19,27 @@ Location        U87
                             Expanded Product Terms
 ===============================================================================
 
-W0 =>
-    !A12 & RW0
+ROMA12 =>
+    A12
+  # RW0
 
-W1 =>
+W0 =>
     !A12 & RW1
 
-W2 =>
+W1 =>
     !A12 & RW2
 
-W3 =>
+W2 =>
     !A12 & RW3
 
-W4 =>
+W3 =>
     !A12 & RW4
 
-W5 =>
+W4 =>
     !A12 & RW5
+
+W5 =>
+    !A12 & RW6
 
 
 ===============================================================================
@@ -47,12 +51,14 @@ Pol   Name              Ext     Pin     Type     Used   Pterms  Level
 --- --------            ---     ---     ----    ------  ------  -----   
 
     A12                         8        V        -       -       -     
+    ROMA12                      13       V        2       8       1     
     RW0                         2        V        -       -       -     
     RW1                         3        V        -       -       -     
     RW2                         4        V        -       -       -     
     RW3                         5        V        -       -       -     
     RW4                         6        V        -       -       -     
     RW5                         7        V        -       -       -     
+    RW6                         9        V        -       -       -     
     W0                          19       V        1       8       1     
     W1                          18       V        1       8       1     
     W2                          17       V        1       8       1     
@@ -74,7 +80,7 @@ LEGEND    D : default variable         F : field      G : group
 Syn   02192 - Ac0   02193 x 
 
 Pin #19  02048  Pol -  02120  Ac1 x 
- 00000 x------------------------x------ 
+ 00000 ----x--------------------x------ 
  00032 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
  00064 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
  00096 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
@@ -83,7 +89,7 @@ Pin #19  02048  Pol -  02120  Ac1 x
  00192 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
  00224 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
 Pin #18  02049  Pol -  02121  Ac1 x 
- 00256 ----x--------------------x------ 
+ 00256 --------x----------------x------ 
  00288 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
  00320 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
  00352 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
@@ -92,7 +98,7 @@ Pin #18  02049  Pol -  02121  Ac1 x
  00448 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
  00480 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
 Pin #17  02050  Pol -  02122  Ac1 x 
- 00512 --------x----------------x------ 
+ 00512 ------------x------------x------ 
  00544 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
  00576 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
  00608 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
@@ -101,7 +107,7 @@ Pin #17  02050  Pol -  02122  Ac1 x
  00704 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
  00736 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
 Pin #16  02051  Pol -  02123  Ac1 x 
- 00768 ------------x------------x------ 
+ 00768 ----------------x--------x------ 
  00800 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
  00832 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
  00864 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
@@ -110,7 +116,7 @@ Pin #16  02051  Pol -  02123  Ac1 x
  00960 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
  00992 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
 Pin #15  02052  Pol -  02124  Ac1 x 
- 01024 ----------------x--------x------ 
+ 01024 --------------------x----x------ 
  01056 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
  01088 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
  01120 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
@@ -119,7 +125,7 @@ Pin #15  02052  Pol -  02124  Ac1 x
  01216 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
  01248 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
 Pin #14  02053  Pol -  02125  Ac1 x 
- 01280 --------------------x----x------ 
+ 01280 -------------------------x--x--- 
  01312 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
  01344 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
  01376 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
@@ -127,9 +133,9 @@ Pin #14  02053  Pol -  02125  Ac1 x
  01440 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
  01472 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
  01504 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
-Pin #13  02054  Pol x  02126  Ac1 - 
- 01536 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
- 01568 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+Pin #13  02054  Pol -  02126  Ac1 x 
+ 01536 ------------------------x------- 
+ 01568 x------------------------------- 
  01600 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
  01632 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
  01664 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
@@ -163,8 +169,8 @@ LEGEND    X : fuse not blown
                       RW3 x---|5           16|---x W3                       
                       RW4 x---|6           15|---x W4                       
                       RW5 x---|7           14|---x W5                       
-                      A12 x---|8           13|---x                          
-                          x---|9           12|---x                          
+                      A12 x---|8           13|---x ROMA12                   
+                      RW6 x---|9           12|---x                          
                       GND x---|10          11|---x                          
                               |______________|
 
