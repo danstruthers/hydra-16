@@ -472,6 +472,7 @@ k_defv:
             lda         lk_s
             ldx         lk_s + 1
             jsr         deref
+            jsr         vm_rebind                           ; (A built-in's name: the machine's code compiled again)
             ldy         #2
             lda         eu
             sta         (hp),y

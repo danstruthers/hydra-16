@@ -166,21 +166,25 @@ HyForth), every value under 16,384 (hylang's fixnums, a cell that doesn't overfl
 /rom/bench/bench.fs [reps [quick]]`, on the board too), and `node sim/bench.js` runs both in the emulator and prints
 the table (`--quick`, the small sizes; `--hylang-reps`, `--forth-reps`: HyForth's default 20, as one of its runs is a
 few ticks).  The `bench` test runs both at the quick sizes and checks each result is the same.  In October 2026, at
-3.58 MHz, one run of each:
+3.58 MHz, one run of each: hylang's code evaluated (the evaluator alone, as it was), and compiled (the bytecode
+machine's, below):
 
-| Benchmark | What | Result | hylang | HyForth | hylang / HyForth |
-| :-------- | :--- | -----: | -----: | ------: | ---------------: |
-| `loop` | A counting loop of 4,000 steps | 4000 | 9,105 ms | 76 ms | 119x |
-| `calls` | 2,000 calls of a function of two arguments | 2000 | 7,660 ms | 65 ms | 118x |
-| `fib` | Fibonacci of 16, recursively (3,193 calls) | 987 | 6,775 ms | 181 ms | 37x |
-| `sieve` | The primes below 1,024, a byte each | 172 | 14,730 ms | 332 ms | 44x |
-| `sort` | 100 bytes sorted by insertion | 407 | 17,085 ms | 480 ms | 36x |
-| `gcd` | gcd(i, j) by subtraction, for i and j 1 to 20, summed | 880 | 9,340 ms | 350 ms | 27x |
-| All | | | 64,695 ms | 1,484 ms | 44x (the ratios' geometric mean 53x) |
+| Benchmark | What | Result | Evaluated | Compiled | HyForth | Compiled / HyForth |
+| :-------- | :--- | -----: | --------: | -------: | ------: | -----------------: |
+| `loop` | A counting loop of 4,000 steps | 4000 | 9,105 ms | 2,335 ms | 76 ms | 31x |
+| `calls` | 2,000 calls of a function of two arguments | 2000 | 7,660 ms | 2,215 ms | 65 ms | 34x |
+| `fib` | Fibonacci of 16, recursively (3,193 calls) | 987 | 6,775 ms | 1,905 ms | 181 ms | 10.5x |
+| `sieve` | The primes below 1,024, a byte each | 172 | 14,730 ms | 6,005 ms | 332 ms | 18x |
+| `sort` | 100 bytes sorted by insertion | 407 | 17,085 ms | 9,705 ms | 480 ms | 20x |
+| `gcd` | gcd(i, j) by subtraction, for i and j 1 to 20, summed | 880 | 9,340 ms | 2,535 ms | 350 ms | 7.2x |
+| All | | | 64,695 ms | 24,700 ms | 1,484 ms | 16.6x (the ratios' geometric mean 17.5x) |
 
-HyForth's code is threaded 65C02 code and its loop counter a register's; hylang evaluates its code, each step a call
-with its scope made on the heap.  So its tightest loops (`loop`, `calls`) are about 120 times HyForth's, and code that
-does more each step (a buffer's bytes, a comparison, arithmetic) about 30 to 45.
+HyForth's code is threaded 65C02 code and its loop counter a register's.  hylang's evaluator ran each step as a call
+with its scope made on the heap, so its tightest loops (`loop`, `calls`) were about 120 times HyForth's, and code
+that does more each step (a buffer's bytes, a comparison, arithmetic) about 30 to 45.  Compiled, a call makes nothing
+on the heap and an argument is a word at a fixed place, so recursion and arithmetic (`fib`, `gcd`) are 7 to 11
+times HyForth's; a loop's step is still a tail call through the machine (some 2,000 cycles), and a buffer called as
+a function still goes through the evaluator.
 
 ## The design
 
@@ -227,6 +231,24 @@ The plan has it whole; in short:
   Q-expression evaluated, and an fexpr's argument, remember their scope (a scoped cell).  `load` reads a file an
   item at a time, the reader's text refilled from it, and seeks it back if a nested `load` used the text
   meanwhile.
+* **The bytecode machine** (`vm.inc`, in the seventh bank): a function `fun` defines is compiled as it's defined,
+  any other at its second call, to the code of a small machine whose value register is `ex`; the code is in an
+  arena of RAM banks of its own (four at most, 32K), never moved, and the function's word 4 is its place (word 5
+  counts its calls till then).  A frame is the function's word and its arguments, where the caller pushed them on
+  the evaluation stack, then a record of two words (its return and its scope), so a call makes nothing on the heap
+  and an argument is a word at a fixed place; a call in tail position (`TCALL`) reuses its caller's frame.
+  Constants, arguments, globals, `if`, `do`, `and` and `or` are compiled in place; `+`, `-`, `1+`, `1-`, `zero?`,
+  `one?` and the comparisons are ops that work fixnums at once (with a constant, one op); a built-in is called at
+  once; any other call is `HEAD` (its function a function?) and `CALL`.  The evaluator does the rest: the other
+  special forms, an fexpr's call, a function not compiled (or with extras), a built-in that runs the machine; its
+  value comes back through a `K_VM` frame.  A frame's scope is made only when it's wanted (a Q-expression with
+  names in it, the evaluator, the built-ins that keep their caller's scope: `list`, `fn`, `fun`, `fexpr` and the hash
+  makers), and its arguments are read there after.  Errors are values, as the evaluator's: an op that may give one
+  returns it from the function, unless what it's for takes errors (`error?`'s argument, say).  The compiler counts on
+  a name's built-in value (a special form, an operator) only while no frame has bound the name, and marks it
+  (`SF_INLINED`); bound in a frame then, or bound again globally, every function's code is dropped and compiled again
+  as it's next called.  Ctrl-C and notes are taken at each call, as the evaluator takes them.  The arena full,
+  nothing is compiled till the evaluator's next start (a line at the prompt), which empties it.
 * **Built-ins**: a table of all danlang's (its arity, flags, the bank its code is in), so partial application, too
   many arguments and taking errors are the dispatcher's (till phase 7 made the last, those not made yet answered
   `Not yet: 'name'`).
@@ -257,19 +279,20 @@ The plan has it whole; in short:
   `spec/errors.def`: `obj/gen/errnames.inc`).  `sh` and `sh-out` run `rc -c`, their input and output through
   pipes; `date`, `date-parts` and `seconds-of` work the calendar on 32-bit seconds.  `hylang file args...` runs
   the file (`args`: its path and the args), its status 0, 1 after an error (on stderr), or `(exit n)`'s.
-* **The module**: hylang is one program of six banks (a module may have eight since phase 7): the evaluator, its
+* **The module**: hylang is one program of seven banks (a module may have eight since phase 7): the evaluator, its
   special forms, the dispatch and the built-ins that run the machine in the first; the reader, the printer, the
   list built-ins, equality and order in the second; the numbers (and, as yet, `fn`, the type tests and `error`)
   in the third; strings, hashes and the errors' messages in the fourth; streams, the system library and the
-  Hydra's built-ins (`hydrabi.inc`) in the fifth; the collector in the sixth.  What every bank calls is in the task's RAM (the heap, the
+  Hydra's built-ins (`hydrabi.inc`) in the fifth; the collector in the sixth; the bytecode machine in the seventh.  What every bank calls is in the task's RAM (the heap, the
   output, the evaluation stack): the most of that code is kept in the fourth bank and copied to the RAM as hylang
   starts (`hylang.cfg`'s DATA4), so the first bank's room is the evaluator's.  `+`, `-`, `1+`, `1-`, `zero?`,
   `one?` and the comparisons work fixnums in the first bank (`bi_fast`), without a far call.  The Hydra layers
   are library modules beside it.
 * **Budgets** (at 3.58 MHz, the library loaded; each from the REPL's echo to its `=>`, a difference of two lines'
   times so the REPL's own work drops out): start-up from the snapshot to the first prompt 300,000 cycles (286,000);
-  a parameter looked up 300 (279); a call of a function of two arguments 4,000 (3,683); a tail loop's step (`if`,
-  `zero?`, `-`, the call) 6,500 (6,059); `map` with a function of one argument 4,000 an item (3,652); a full
+  a parameter looked up 300 (279; compiled, 11); a call of a function of two arguments 4,000 (3,683; compiled,
+  2,033); a tail loop's step (`if`, `zero?`, `-`, the call) 6,500 (6,059; compiled, 1,729); `map` with a function of
+  one argument 4,000 an item (3,652; compiled, 3,193); a full
   collection of a full 64K cell heap 3,600,000 (213 cycles a live cell: 14,000 conses live, 3.8 M).  The `hyspeed`
   test checks the four of the evaluator on every run, the `heap` test the collector's (255 a cell, 9,000 live).
   They're phase 8's: the plan's were 150, 1,500, 3,000, 2,000 and 1,500,000, targets set before a spike, and

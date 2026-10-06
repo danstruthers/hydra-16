@@ -242,12 +242,15 @@ bi_fun:
             lda         lk_s                                ; (Defined globally)
             ldx         lk_s + 1
             jsr         deref
+            jsr         vm_rebind                           ; (A built-in's name: the machine's code compiled again)
             ldy         #2
             lda         ex
             sta         (hp),y
             iny
             lda         ex + 1
             sta         (hp),y
+            MOVW        cf, ex                              ; (Compiled now, for the bytecode machine: vm.inc's)
+            FARN        7, vm_compile
             stz         ex
             stz         ex + 1
             clc

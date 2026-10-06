@@ -488,6 +488,25 @@ HyForth's time in all (64.7 s to 1.5 s): 120 times in a counting loop and in cal
 a sort and gcds.  The `bench` test runs both at the small sizes and checks their results are the same.  A buffer's
 index that's a fixnum (the usual) is taken at once now, not through the number code.
 
+**A bytecode machine for hylang, step 1.**  The evaluator's costs were its shape (a scope made on the heap for each
+call, each name looked up, each step through the machine's frames), so tuning it could give little; danlang's
+`feature/speed` work, read for ideas, had one that carries over: compile code once.  So hylang compiles functions
+now: `vm.inc`, in a seventh bank, is a compiler and a small machine (docs/hylang.md, "The design", has it).  A
+function `fun` defines is compiled as it's defined (so a library's code runs the same from its first call: `snd.hl`'s
+`tune` kept time only so), any other at its second call; its code goes in an arena of RAM banks, its place in its
+cell (a function's cell is 16 bytes now).  A frame is its arguments where they were pushed, so a call makes nothing
+on the heap; `if`, `do`, `and`, `or`, constants, arguments, globals, the fixnum operators and the built-ins' calls are
+compiled, and the rest is the evaluator's, through a frame (`K_VM`) that brings its value back; a scope is made
+only when something wants one.  A name's built-in value is counted on only while no frame has bound it, and binding
+it then drops all the code compiled (so a library's own locals named `ns` or `note` cost nothing).  The machine's
+pointers are two zero-page words (the reader's `rn` and the printer's `pn` moved out for them).  At 3.58 MHz hylang
+is 16.6 times HyForth's time now (24.7 s to 1.48 s, from 64.7 s): `fib` 10.5 times, `gcd` 7.2, the sieve 18, the
+sort 20, the counting loop 31 and calls 34.  `hyspeed`: a call of a function of two arguments 2,033 cycles (3,686), a
+tail loop's step 1,729 (6,059), a parameter 11 (279), `map`'s item 3,193 (3,652; an untimed `map` first, as for the
+call, as the machine makes no frames and its collections fall elsewhere).  The suite's 1,334 checks pass, and all
+67 tests.  Next: the machine's own costs (a push, a call's checks: some 150 cycles an op), a buffer or a partially
+applied function called at once, not through the evaluator, and the loops (`while`, `dotimes`) compiled.
+
 | Step | | Notes |
 |---|---|---|
 | 7.0 The language's specification | Draft (three decisions are the user's) | `docs/hylang.md`: hylang 1 is danlang (`C:\source\danlang`, its `master`), readied for the port in C# first (lexical scope, tail calls, fexprs, `try`, loops, the missing basics, its number bugs fixed, and a system library a PC has too: files, programs and the shell, the environment, the clock, bits and bytes, the system's errors as codes), with its regression suite (965 checks) run unchanged on both; where the two may differ (8-bit strings, the call depth, `/lib/hylang`, Ctrl-C an error); and what makes it the Hydra's, in four layers: the system library, the Hydra's built-ins (notes, namespaces, tasks, memory and banks, keys), device libraries in hylang over the devices' files (console, GPIO, I2C, SPI, sound, disks, `/proc`, the clock's chip, `/pc`), and a `sys-` function for every call.  To decide: the extension (`.hl`), `$`, danlang's license in the ROM |

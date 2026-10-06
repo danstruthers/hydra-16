@@ -88,7 +88,8 @@ PK_ERROR        = 11            ; An error: its message, its code
 PK_PARTIAL      = 12            ; A partially applied built-in: the built-in, the values given it
 PK_SYMBOL       = 13            ; A symbol: its name (a blob), its global value, the next in its bucket, flags
 PK_ATOM         = 14            ; An atom: the same
-PK_FUNC         = 15            ; A function: its formals, its body, its scope, flags (and its formals' count)
+PK_FUNC         = 15            ; A function: its formals, its body, its scope, flags (and its formals' count), its
+                                ;   code (the bytecode machine's: vm.inc), its calls (till it's compiled)
 PK_HASH         = 16            ; A hash: its items (its entries, then its tags), a proxy's hash, its count, flags
 PK_STREAM       = 17            ; A stream: its fd and its flags (a word)
 PK_FRAME8       = 18            ; A scope's frame: its parent (NIL: the global scope), the cell its pairs go on in
@@ -101,10 +102,12 @@ PK_FIXNUM       = $FF           ; (kind_of's, for a fixnum: no page)
 
 ; A symbol's flags (its word 3)
 SF_LOCAL        = $01           ; It's been bound in a frame (else it's looked up at its global value at once)
+SF_INLINED      = $02           ; Code compiled counts on its global value (vm.inc's: bound again, it's compiled again)
 
 ; A function's flags (its word 3's low byte; its high byte its formals counted, as it's made)
 FN_FEXPR        = $01           ; Its arguments come as they're written (each with its caller's scope)
 FN_EXTRAS       = $02           ; Its body names &_ or &1, &2 ...: it takes arguments past its formals
+FN_NOVM         = $80           ; The bytecode machine can't compile it (vm.inc): its body's always evaluated
 
 ; A built-in's flags (builtins.inc's bi_flags)
 BF_SPECIAL      = $80           ; A special form: its arguments as they're written (its code runs the machine)
