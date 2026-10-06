@@ -32,6 +32,8 @@ TPK_C           = 7             ; The function's start
 TPK_RL          = 8             ; The next op's entry, as a return's place (a fixnum): its low byte ...
 TPK_RH          = 9             ;   its high
 TPK_S           = 10            ; The op's stub (past the template)
+TPK_DL          = 11            ; The place (a fixnum) of the op's data: its low byte ...
+TPK_DH          = 12            ;   its high
 
 .bss
 vx_end:     .res        2                                   ; The bytecode's end (its blocks' table there ...
@@ -468,9 +470,13 @@ vx_tcopy:
             ldy         #1
             lda         (hb),y
             cmp         #TPK_N
-            beq         @n
+            bne         :+
+            jmp         @n
+:
             cmp         #TPK_T
-            beq         @t
+            bne         :+
+            jmp         @t
+:
             cmp         #TPK_D
             beq         @d
             cmp         #TPK_M
@@ -483,13 +489,17 @@ vx_tcopy:
             beq         @rh
             cmp         #TPK_S
             beq         @st
+            cmp         #TPK_DL
+            beq         @dl
+            cmp         #TPK_DH
+            beq         @dh
             cmp         #TPK_U
             lda         vx_buf,x
             bcc         @b
             and         #$FE
 @b:
             jsr         vx_pb
-            bra         @pn
+            jmp         @pn
 @m:
             lda         vx_buf,x
             asl
@@ -526,6 +536,21 @@ vx_tcopy:
             lda         vx_a0
             ldx         vx_a0 + 1
             bra         @w
+@dl:
+            lda         vx_dd
+            asl
+            ora         #1
+            jmp         @b
+@dh:
+            lda         vx_dd + 1
+            and         #$1F
+            ora         vx_idx
+            sta         vx_k
+            lda         vx_dd
+            asl
+            lda         vx_k
+            rol
+            jmp         @b
 @st:
             lda         vx_dd
             sec
@@ -604,7 +629,7 @@ vx_table:
             jsr         vx_word                             ; (Its start: the BLOCK op's data)
             jsr         vm_xmap
             clc
-            adc         #VX_STUB
+            adc         #VX_STUB + VXT_BLOCK_D
             bcc         :+
             inx
 :
@@ -792,7 +817,7 @@ vx_patch:
             plx
             jsr         vm_xmap
             clc
-            adc         #VX_STUB
+            adc         #VX_STUB + VXT_BLOCK_D
             bcc         :+
             inx
 :

@@ -1947,15 +1947,538 @@ vxt_ret_go:
 vxt_ret_s:
 vxt_ret_e:
 
+vxt_locals: .byte       vxt_locals_e - vxt_locals_c, TF_STUB, 4
+            .byte       vxt_locals_p0 - vxt_locals_c, TPK_DL, 0
+            .byte       vxt_locals_p1 - vxt_locals_c, TPK_DH, 0
+            .byte       vxt_locals_p2 - vxt_locals_c, TPK_B, 1
+            .byte       vxt_locals_p3 - vxt_locals_c, TPK_N, 0
+vxt_locals_c:
+            ldy         vm_rb
+            iny
+            iny
+            lda         #0
+vxt_locals_p0 = * - 1
+            sta         (vm_s),y
+            iny
+            lda         #0
+vxt_locals_p1 = * - 1
+            sta         (vm_s),y
+            lda         #0
+            tax
+            sta         (sp)
+            ldy         #1
+            txa
+            sta         (sp),y
+            lda         sp
+            clc
+            adc         #2
+            sta         sp
+            bne         :+
+            jsr         vm_page
+:
+            ldx         #0
+vxt_locals_p2 = * - 1
+vxt_locals_h:
+            lda         #<UNBOUND
+            sta         (sp)
+            ldy         #1
+            lda         #>UNBOUND
+            sta         (sp),y
+            lda         sp
+            clc
+            adc         #2
+            sta         sp
+            bne         :+
+            jsr         vm_page
+:
+            dex
+            bne         vxt_locals_h
+            jmp         $0000
+vxt_locals_p3 = * - 2
+vxt_locals_s:
+vxt_locals_e:
+
+vxt_block:  .byte       vxt_block_e - vxt_block_c, TF_STUB, 4
+            .byte       vxt_block_p0 - vxt_block_c, TPK_B, 1
+            .byte       vxt_block_p1 - vxt_block_c, TPK_B, 2
+            .byte       vxt_block_p2 - vxt_block_c, TPK_B, 3
+            .byte       vxt_block_p3 - vxt_block_c, TPK_N, 0
+vxt_block_c:
+            ldy         #0
+vxt_block_p0 = * - 1
+            lda         #0
+            sta         (vm_s),y
+            iny
+            sta         (vm_s),y
+            ldx         #0
+vxt_block_p1 = * - 1
+            beq         vxt_block_d
+            ldy         #0
+vxt_block_p2 = * - 1
+vxt_block_h:
+            lda         #<UNBOUND
+            sta         (vm_s),y
+            iny
+            lda         #>UNBOUND
+            sta         (vm_s),y
+            iny
+            dex
+            bne         vxt_block_h
+vxt_block_d:
+            jmp         $0000
+vxt_block_p3 = * - 2
+vxt_block_s:
+vxt_block_e:
+
+vxt_localb: .byte       vxt_localb_e - vxt_localb_c, TF_STUB, 3
+            .byte       vxt_localb_p0 - vxt_localb_c, TPK_B, 2
+            .byte       vxt_localb_p1 - vxt_localb_c, TPK_B, 1
+            .byte       vxt_localb_p2 - vxt_localb_c, TPK_N, 0
+vxt_localb_c:
+            ldy         #0
+vxt_localb_p0 = * - 1
+            iny
+            lda         (vm_s),y
+            cmp         #IMM_PAGES
+            bcs         vxt_localb_s
+            ldy         #0
+vxt_localb_p1 = * - 1
+            lda         (vm_s),y
+            sta         ex
+            iny
+            lda         (vm_s),y
+            sta         ex + 1
+            bne         vxt_localb_ok
+            lda         ex
+            cmp         #<UNBOUND
+            beq         vxt_localb_s
+vxt_localb_ok:
+            jmp         $0000
+vxt_localb_p2 = * - 2
+vxt_localb_s:
+vxt_localb_e:
+
+vxt_setlb:  .byte       vxt_setlb_e - vxt_setlb_c, TF_STUB, 3
+            .byte       vxt_setlb_p0 - vxt_setlb_c, TPK_B, 2
+            .byte       vxt_setlb_p1 - vxt_setlb_c, TPK_B, 1
+            .byte       vxt_setlb_p2 - vxt_setlb_c, TPK_N, 0
+vxt_setlb_c:
+            ldy         #0
+vxt_setlb_p0 = * - 1
+            iny
+            lda         (vm_s),y
+            cmp         #IMM_PAGES
+            bcs         vxt_setlb_s
+            ldy         #0
+vxt_setlb_p1 = * - 1
+            lda         ex
+            sta         (vm_s),y
+            iny
+            lda         ex + 1
+            sta         (vm_s),y
+            stz         ex
+            stz         ex + 1
+            jmp         $0000
+vxt_setlb_p2 = * - 2
+vxt_setlb_s:
+vxt_setlb_e:
+
+vxt_setblb: .byte       vxt_setblb_e - vxt_setblb_c, TF_STUB, 4
+            .byte       vxt_setblb_p0 - vxt_setblb_c, TPK_B, 2
+            .byte       vxt_setblb_p1 - vxt_setblb_c, TPK_B, 1
+            .byte       vxt_setblb_p2 - vxt_setblb_c, TPK_B, 1
+            .byte       vxt_setblb_p3 - vxt_setblb_c, TPK_N, 0
+vxt_setblb_c:
+            ldy         #0
+vxt_setblb_p0 = * - 1
+            iny
+            lda         (vm_s),y
+            cmp         #IMM_PAGES
+            bcs         vxt_setblb_s
+            ldy         #0
+vxt_setblb_p1 = * - 1
+            iny
+            lda         (vm_s),y
+            bne         vxt_setblb_set
+            dey
+            lda         (vm_s),y
+            cmp         #<UNBOUND
+            beq         vxt_setblb_s
+vxt_setblb_set:
+            ldy         #0
+vxt_setblb_p2 = * - 1
+            lda         ex
+            sta         (vm_s),y
+            iny
+            lda         ex + 1
+            sta         (vm_s),y
+            stz         ex
+            stz         ex + 1
+            jmp         $0000
+vxt_setblb_p3 = * - 2
+vxt_setblb_s:
+vxt_setblb_e:
+
+vxt_localh: .byte       vxt_localh_e - vxt_localh_c, TF_STUB, 2
+            .byte       vxt_localh_p0 - vxt_localh_c, TPK_B, 1
+            .byte       vxt_localh_p1 - vxt_localh_c, TPK_N, 0
+vxt_localh_c:
+            bit         vm_mat
+            bmi         vxt_localh_s
+            ldy         #0
+vxt_localh_p0 = * - 1
+            lda         (vm_s),y
+            sta         ex
+            iny
+            lda         (vm_s),y
+            sta         ex + 1
+            bne         vxt_localh_ok
+            lda         ex
+            cmp         #<UNBOUND
+            beq         vxt_localh_s
+vxt_localh_ok:
+            jmp         $0000
+vxt_localh_p1 = * - 2
+vxt_localh_s:
+vxt_localh_e:
+
+vxt_setbl:  .byte       vxt_setbl_e - vxt_setbl_c, TF_STUB, 3
+            .byte       vxt_setbl_p0 - vxt_setbl_c, TPK_B, 1
+            .byte       vxt_setbl_p1 - vxt_setbl_c, TPK_B, 1
+            .byte       vxt_setbl_p2 - vxt_setbl_c, TPK_N, 0
+vxt_setbl_c:
+            bit         vm_mat
+            bmi         vxt_setbl_s
+            ldy         #0
+vxt_setbl_p0 = * - 1
+            iny
+            lda         (vm_s),y
+            bne         vxt_setbl_set
+            dey
+            lda         (vm_s),y
+            cmp         #<UNBOUND
+            beq         vxt_setbl_s
+vxt_setbl_set:
+            ldy         #0
+vxt_setbl_p1 = * - 1
+            lda         ex
+            sta         (vm_s),y
+            iny
+            lda         ex + 1
+            sta         (vm_s),y
+            stz         ex
+            stz         ex + 1
+            jmp         $0000
+vxt_setbl_p2 = * - 2
+vxt_setbl_s:
+vxt_setbl_e:
+
+vxt_trye:   .byte       vxt_trye_e - vxt_trye_c, 0, 1
+            .byte       vxt_trye_p0 - vxt_trye_c, TPK_T, 1
+vxt_trye_c:
+            jsr         vm_iserr
+            bcs         vxt_trye_on
+            jmp         $0000
+vxt_trye_p0 = * - 2
+vxt_trye_on:
+vxt_trye_e:
+
+vxt_add:    .byte       vxt_add_e - vxt_add_c, TF_STUB, 1
+            .byte       vxt_add_p0 - vxt_add_c, TPK_N, 0
+vxt_add_c:
+            lda         sp
+            beq         vxt_add_s
+            sec
+            sbc         #2
+            sta         sp
+            lda         (sp)
+            sta         ht
+            and         ex
+            lsr
+            bcc         vxt_add_u
+            ldy         #1
+            lda         (sp),y
+            sta         ht + 1
+            lda         ex
+            and         #$FE
+            clc
+            adc         ht
+            tax
+            lda         ex + 1
+            adc         ht + 1
+            bvs         vxt_add_u
+            sta         ex + 1
+            stx         ex
+            jmp         $0000
+vxt_add_p0 = * - 2
+vxt_add_u:
+            lda         sp
+            clc
+            adc         #2
+            sta         sp
+vxt_add_s:
+vxt_add_e:
+
+vxt_sub:    .byte       vxt_sub_e - vxt_sub_c, TF_STUB, 1
+            .byte       vxt_sub_p0 - vxt_sub_c, TPK_N, 0
+vxt_sub_c:
+            lda         sp
+            beq         vxt_sub_s
+            sec
+            sbc         #2
+            sta         sp
+            lda         (sp)
+            sta         ht
+            and         ex
+            lsr
+            bcc         vxt_sub_u
+            ldy         #1
+            lda         (sp),y
+            sta         ht + 1
+            lda         ex
+            and         #$FE
+            sta         hn
+            lda         ht
+            sec
+            sbc         hn
+            tax
+            lda         ht + 1
+            sbc         ex + 1
+            bvs         vxt_sub_u
+            sta         ex + 1
+            stx         ex
+            jmp         $0000
+vxt_sub_p0 = * - 2
+vxt_sub_u:
+            lda         sp
+            clc
+            adc         #2
+            sta         sp
+vxt_sub_s:
+vxt_sub_e:
+
+vxt_q_lt:   .byte       vxt_q_lt_e - vxt_q_lt_c, TF_STUB, 2
+            .byte       vxt_q_lt_p0 - vxt_q_lt_c, TPK_N, 0
+            .byte       vxt_q_lt_p1 - vxt_q_lt_c, TPK_N, 0
+vxt_q_lt_c:
+            lda         sp
+            beq         vxt_q_lt_s
+            sec
+            sbc         #2
+            sta         sp
+            lda         (sp)
+            sta         ht
+            and         ex
+            lsr
+            bcc         vxt_q_lt_u
+            ldy         #1
+            lda         (sp),y
+            sta         ht + 1
+            lda         ht
+            cmp         ex
+            lda         ht + 1
+            sbc         ex + 1
+            bvc         :+
+            eor         #$80
+:
+            bpl         vxt_q_lt_f
+            lda         #<T_VAL
+            sta         ex
+            stz         ex + 1
+            jmp         $0000
+vxt_q_lt_p0 = * - 2
+vxt_q_lt_f:
+            stz         ex
+            stz         ex + 1
+            jmp         $0000
+vxt_q_lt_p1 = * - 2
+vxt_q_lt_u:
+            lda         sp
+            clc
+            adc         #2
+            sta         sp
+vxt_q_lt_s:
+vxt_q_lt_e:
+
+vxt_q_gt:   .byte       vxt_q_gt_e - vxt_q_gt_c, TF_STUB, 2
+            .byte       vxt_q_gt_p0 - vxt_q_gt_c, TPK_N, 0
+            .byte       vxt_q_gt_p1 - vxt_q_gt_c, TPK_N, 0
+vxt_q_gt_c:
+            lda         sp
+            beq         vxt_q_gt_s
+            sec
+            sbc         #2
+            sta         sp
+            lda         (sp)
+            sta         ht
+            and         ex
+            lsr
+            bcc         vxt_q_gt_u
+            ldy         #1
+            lda         (sp),y
+            sta         ht + 1
+            lda         ex
+            cmp         ht
+            lda         ex + 1
+            sbc         ht + 1
+            bvc         :+
+            eor         #$80
+:
+            bpl         vxt_q_gt_f
+            lda         #<T_VAL
+            sta         ex
+            stz         ex + 1
+            jmp         $0000
+vxt_q_gt_p0 = * - 2
+vxt_q_gt_f:
+            stz         ex
+            stz         ex + 1
+            jmp         $0000
+vxt_q_gt_p1 = * - 2
+vxt_q_gt_u:
+            lda         sp
+            clc
+            adc         #2
+            sta         sp
+vxt_q_gt_s:
+vxt_q_gt_e:
+
+vxt_q_le:   .byte       vxt_q_le_e - vxt_q_le_c, TF_STUB, 2
+            .byte       vxt_q_le_p0 - vxt_q_le_c, TPK_N, 0
+            .byte       vxt_q_le_p1 - vxt_q_le_c, TPK_N, 0
+vxt_q_le_c:
+            lda         sp
+            beq         vxt_q_le_s
+            sec
+            sbc         #2
+            sta         sp
+            lda         (sp)
+            sta         ht
+            and         ex
+            lsr
+            bcc         vxt_q_le_u
+            ldy         #1
+            lda         (sp),y
+            sta         ht + 1
+            lda         ex
+            cmp         ht
+            lda         ex + 1
+            sbc         ht + 1
+            bvc         :+
+            eor         #$80
+:
+            bmi         vxt_q_le_f
+            lda         #<T_VAL
+            sta         ex
+            stz         ex + 1
+            jmp         $0000
+vxt_q_le_p0 = * - 2
+vxt_q_le_f:
+            stz         ex
+            stz         ex + 1
+            jmp         $0000
+vxt_q_le_p1 = * - 2
+vxt_q_le_u:
+            lda         sp
+            clc
+            adc         #2
+            sta         sp
+vxt_q_le_s:
+vxt_q_le_e:
+
+vxt_q_ge:   .byte       vxt_q_ge_e - vxt_q_ge_c, TF_STUB, 2
+            .byte       vxt_q_ge_p0 - vxt_q_ge_c, TPK_N, 0
+            .byte       vxt_q_ge_p1 - vxt_q_ge_c, TPK_N, 0
+vxt_q_ge_c:
+            lda         sp
+            beq         vxt_q_ge_s
+            sec
+            sbc         #2
+            sta         sp
+            lda         (sp)
+            sta         ht
+            and         ex
+            lsr
+            bcc         vxt_q_ge_u
+            ldy         #1
+            lda         (sp),y
+            sta         ht + 1
+            lda         ht
+            cmp         ex
+            lda         ht + 1
+            sbc         ex + 1
+            bvc         :+
+            eor         #$80
+:
+            bmi         vxt_q_ge_f
+            lda         #<T_VAL
+            sta         ex
+            stz         ex + 1
+            jmp         $0000
+vxt_q_ge_p0 = * - 2
+vxt_q_ge_f:
+            stz         ex
+            stz         ex + 1
+            jmp         $0000
+vxt_q_ge_p1 = * - 2
+vxt_q_ge_u:
+            lda         sp
+            clc
+            adc         #2
+            sta         sp
+vxt_q_ge_s:
+vxt_q_ge_e:
+
+vxt_q_eq:   .byte       vxt_q_eq_e - vxt_q_eq_c, TF_STUB, 2
+            .byte       vxt_q_eq_p0 - vxt_q_eq_c, TPK_N, 0
+            .byte       vxt_q_eq_p1 - vxt_q_eq_c, TPK_N, 0
+vxt_q_eq_c:
+            lda         sp
+            beq         vxt_q_eq_s
+            sec
+            sbc         #2
+            sta         sp
+            lda         (sp)
+            sta         ht
+            and         ex
+            lsr
+            bcc         vxt_q_eq_u
+            ldy         #1
+            lda         (sp),y
+            sta         ht + 1
+            lda         ht
+            cmp         ex
+            bne         vxt_q_eq_f
+            lda         ht + 1
+            cmp         ex + 1
+            bne         vxt_q_eq_f
+            lda         #<T_VAL
+            sta         ex
+            stz         ex + 1
+            jmp         $0000
+vxt_q_eq_p0 = * - 2
+vxt_q_eq_f:
+            stz         ex
+            stz         ex + 1
+            jmp         $0000
+vxt_q_eq_p1 = * - 2
+vxt_q_eq_u:
+            lda         sp
+            clc
+            adc         #2
+            sta         sp
+vxt_q_eq_s:
+vxt_q_eq_e:
+
 ; Each op's template (0: its stub alone; the fused ones: by s, below)
 vx_tmain:   .word       vxt_ret, vxt_const, vxt_local, 0, 0, vxt_push, vxt_jf, vxt_jt
             .word       vxt_jmp, 0, 0, vxt_call, 0, 0, 0, 0
-            .word       0, 0, 0, 0, 0, 0, 0, 0
+            .word       0, vxt_add, vxt_sub, vxt_q_lt, vxt_q_gt, vxt_q_le, vxt_q_ge, vxt_q_eq
             .word       0, 0, 0, 0, 0, 0, 0, 0
             .word       0, 0, 0, vxt_lpush, vxt_cpush, vxt_shead, vxt_cself, vxt_tself
-            .word       0, 0, vxt_setl, 0, 0, 0, vxt_stt, vxt_popx
-            .word       vxt_loop, 0, 0, 0, 0, 0, vxt_doti, vxt_dotinc
-            .word       0, 0, vxt_drop, 0, 0, 0, 0, 0
+            .word       vxt_locals, vxt_localh, vxt_setl, vxt_setbl, 0, 0, vxt_stt, vxt_popx
+            .word       vxt_loop, vxt_block, vxt_localb, vxt_setlb, vxt_setblb, 0, vxt_doti, vxt_dotinc
+            .word       0, 0, vxt_drop, vxt_trye, 0, 0, 0, 0
 
 ; The fused ops' templates, by s (VO_ADD's order: (s - VO_ADD) / 2)
 vx_tlq:     .word       0, 0, 0, 0, 0, 0, 0, vxt_lq_inc, vxt_lq_dec
@@ -1972,3 +2495,6 @@ vx_tllp:    .word       vxt_llp_add, vxt_llp_sub, 0, 0, 0, 0, 0, 0, 0
             .word       0, 0, 0, 0, 0, 0, 0, 0, 0
 vx_tjll:    .word       0, 0, vxt_jll_lt, vxt_jll_gt, vxt_jll_le, vxt_jll_ge, vxt_jll_eq, 0, 0
             .word       0, 0, 0, 0, 0, 0, 0, 0, 0
+
+; BLOCK's template's length (0: none): its data is past it and its stub (the blocks' table's, a block's parent's)
+VXT_BLOCK_D     = vxt_block_e - vxt_block_c

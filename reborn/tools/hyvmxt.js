@@ -647,12 +647,201 @@ tpl('ret', STUB, `
   jmp (vm_ip)
 @s:`);
 
+// ---- Locals and blocks: {DL}, {DH} the place (a fixnum) of the op's data (LOCALS': the record's scope word)
+// LOCALS kt kn tbl names: the record's scope word its place; the scope's slot NIL, then kt holes pushed
+tpl('locals', STUB, `
+  ldy vm_rb
+  iny
+  iny
+  lda #{DL}
+  sta (vm_s),y
+  iny
+  lda #{DH}
+  sta (vm_s),y
+  lda #0
+  tax` + PUSHAX + `
+  ldx #{B 1}
+@h:
+  lda #<UNBOUND
+  sta (sp)
+  ldy #1
+  lda #>UNBOUND
+  sta (sp),y
+  lda sp
+  clc
+  adc #2
+  sta sp
+  bne :+
+  jsr vm_page
+:
+  dex
+  bne @h
+  jmp {N}
+@s:`);
+// BLOCK fb k vb parent names: its frame slot NIL, its k variables holes (its data after it: the blocks' table's)
+tpl('block', STUB, `
+  ldy #{B 1}
+  lda #0
+  sta (vm_s),y
+  iny
+  sta (vm_s),y
+  ldx #{B 2}
+  beq @d
+  ldy #{B 3}
+@h:
+  lda #<UNBOUND
+  sta (vm_s),y
+  iny
+  lda #>UNBOUND
+  sta (vm_s),y
+  iny
+  dex
+  bne @h
+@d:
+  jmp {N}
+@s:`);
+// A block's variable (LOCALB y fb p sym, SETLB y fb p, SETBLB y fb p sym), in its slot while the block has no scope
+const NOSCOPE = `
+  ldy #{B 2}
+  iny
+  lda (vm_s),y
+  cmp #IMM_PAGES
+  bcs @s`;
+const HOLE = (yb) => `
+  ldy #{B ${yb}}
+  iny
+  lda (vm_s),y
+  bne @set
+  dey
+  lda (vm_s),y
+  cmp #<UNBOUND
+  beq @s
+@set:`;
+const STOREY = (yb) => `
+  ldy #{B ${yb}}
+  lda ex
+  sta (vm_s),y
+  iny
+  lda ex + 1
+  sta (vm_s),y
+  stz ex
+  stz ex + 1
+  jmp {N}
+@s:`;
+const LOADHOLE = (yb) => `
+  ldy #{B ${yb}}
+  lda (vm_s),y
+  sta ex
+  iny
+  lda (vm_s),y
+  sta ex + 1
+  bne @ok
+  lda ex
+  cmp #<UNBOUND
+  beq @s
+@ok:
+  jmp {N}
+@s:`;
+tpl('localb', STUB, NOSCOPE + LOADHOLE(1));
+tpl('setlb', STUB, NOSCOPE + STOREY(1));
+tpl('setblb', STUB, NOSCOPE + HOLE(1) + STOREY(1));
+// A local (LOCALH y sym, SETBL y sym), in its slot while no scope's made
+tpl('localh', STUB, `
+  bit vm_mat
+  bmi @s` + LOADHOLE(1));
+tpl('setbl', STUB, `
+  bit vm_mat
+  bmi @s` + HOLE(1) + STOREY(1));
+// TRYE t: ex not an error, to t
+tpl('trye', '0', `
+  jsr vm_iserr
+  bcs @on
+  jmp {T 1}
+@on:`);
+// The quick ops of two values (ADD ... NEQ): the first popped (not past the stack's page), fixnums
+const POP2 = `
+  lda sp
+  beq @s
+  sec
+  sbc #2
+  sta sp
+  lda (sp)
+  sta ht
+  and ex
+  lsr
+  bcc @u
+  ldy #1
+  lda (sp),y
+  sta ht + 1`;
+const UNPOP = `
+@u:
+  lda sp
+  clc
+  adc #2
+  sta sp
+@s:`;
+tpl('add', STUB, POP2 + `
+  lda ex
+  and #$FE
+  clc
+  adc ht
+  tax
+  lda ex + 1
+  adc ht + 1
+  bvs @u
+  sta ex + 1
+  stx ex
+  jmp {N}` + UNPOP);
+tpl('sub', STUB, POP2 + `
+  lda ex
+  and #$FE
+  sta hn
+  lda ht
+  sec
+  sbc hn
+  tax
+  lda ht + 1
+  sbc ex + 1
+  bvs @u
+  sta ex + 1
+  stx ex
+  jmp {N}` + UNPOP);
+const CMP2 = (k) => k === 'eq' ? `
+  lda ht
+  cmp ex
+  bne @f
+  lda ht + 1
+  cmp ex + 1
+  bne @f` : (k === 'lt' || k === 'ge' ? `
+  lda ht
+  cmp ex
+  lda ht + 1
+  sbc ex + 1` : `
+  lda ex
+  cmp ht
+  lda ex + 1
+  sbc ht + 1`) + `
+  bvc :+
+  eor #$80
+:
+  ${k === 'lt' || k === 'gt' ? 'bpl' : 'bmi'} @f`;
+for (const k of ['lt', 'gt', 'le', 'ge', 'eq'])
+  tpl('q_' + k, STUB, POP2 + CMP2(k) + `
+  lda #<T_VAL
+  sta ex
+  stz ex + 1
+  jmp {N}
+@f:
+  stz ex
+  stz ex + 1
+  jmp {N}` + UNPOP);
+
 // ---- The source
 const lines = ['; ****************************************************************************',
   '; vmxt.inc - the native code\'s templates (vmx.inc\'s), made by tools/hyvmxt.js: each its length, its flags (TF_STUB: its',
   '; op\'s stub after it, its slow way; TF_NOR: not for an op with VM_R), its patches (each its offset, its kind: TPK_B',
   '; a data byte, TPK_U one untagged, TPK_T a target\'s native place, TPK_N the next op\'s; and the data byte), its code', ''];
-const kinds = { B: 'TPK_B', U: 'TPK_U', T: 'TPK_T', N: 'TPK_N', D: 'TPK_D', M: 'TPK_M', C: 'TPK_C', RL: 'TPK_RL', RH: 'TPK_RH', S: 'TPK_S' };
+const kinds = { B: 'TPK_B', U: 'TPK_U', T: 'TPK_T', N: 'TPK_N', D: 'TPK_D', M: 'TPK_M', C: 'TPK_C', RL: 'TPK_RL', RH: 'TPK_RH', S: 'TPK_S', DL: 'TPK_DL', DH: 'TPK_DH' };
 // The long templates (their stub out of a branch's reach): each branch to @s an inverted one past a jmp {S}
 const FAR = new Set(['shead', 'call', 'cself', 'tself', 'ret']);
 const INV = { bne: 'beq', beq: 'bne', bcc: 'bcs', bcs: 'bcc', bmi: 'bpl', bpl: 'bmi', bvc: 'bvs', bvs: 'bvc' };
@@ -666,7 +855,7 @@ for (const t of T) {
     let l = raw.trim();
     if (!l) continue;
     l = l.replace(/@(\w+)/g, (_, x) => n + '_' + x);
-    const m = l.match(/\{(RL|RH|[BUTNDMCS])\s*(\d*)\}/);
+    const m = l.match(/\{(RL|RH|DL|DH|[BUTNDMCS])\s*(\d*)\}/);
     if (m) {
       const k = m[1], arg = m[2] ? +m[2] : 0, word = k === 'T' || k === 'N' || k === 'D' || k === 'C' || k === 'S';
       l = l.replace(m[0], !word ? '0' : /^jmp\b/.test(l) ? '$0000' : 'a:$0000');    // (Absolute: not $00, page zero)
@@ -683,8 +872,11 @@ for (const t of T) {
 const main = Array(64).fill('0');
 const skip = new Set((process.env.HYVMXT_SKIP || '').split(',').filter(Boolean));   // (Templates left out: a test's)
 const set = (op, t) => { if (!skip.has(t.replace('vxt_', ''))) main[op] = t; };
-const OPI = { RET: 0, CALL: 11, SHEAD: 37, CSELF: 38, TSELF: 39, CONST: 1, LOCAL: 2, PUSH: 5, JF: 6, JT: 7, JMP: 8, LPUSH: 35, CPUSH: 36, SETL: 42, LOOP: 48, DOTI: 54, DOTINC: 55, STT: 46, POPX: 47, DROP: 58 };
+const OPI = { RET: 0, CALL: 11, SHEAD: 37, CSELF: 38, TSELF: 39, CONST: 1, LOCAL: 2, PUSH: 5, JF: 6, JT: 7, JMP: 8, LPUSH: 35, CPUSH: 36, SETL: 42, LOOP: 48, DOTI: 54, DOTINC: 55, STT: 46, POPX: 47, DROP: 58, LOCALS: 40, LOCALH: 41, SETBL: 43, BLOCK: 49, LOCALB: 50, SETLB: 51, SETBLB: 52, TRYE: 59, ADD: 17, SUB: 18, LT: 19, GT: 20, LE: 21, GE: 22, NEQ: 23 };
 set(OPI.RET, 'vxt_ret'); set(OPI.CALL, 'vxt_call'); set(OPI.SHEAD, 'vxt_shead'); set(OPI.CSELF, 'vxt_cself'); set(OPI.TSELF, 'vxt_tself');
+set(OPI.LOCALS, 'vxt_locals'); set(OPI.LOCALH, 'vxt_localh'); set(OPI.SETBL, 'vxt_setbl'); set(OPI.BLOCK, 'vxt_block'); set(OPI.LOCALB, 'vxt_localb');
+set(OPI.SETLB, 'vxt_setlb'); set(OPI.SETBLB, 'vxt_setblb'); set(OPI.TRYE, 'vxt_trye'); set(OPI.ADD, 'vxt_add'); set(OPI.SUB, 'vxt_sub'); set(OPI.LT, 'vxt_q_lt');
+set(OPI.GT, 'vxt_q_gt'); set(OPI.LE, 'vxt_q_le'); set(OPI.GE, 'vxt_q_ge'); set(OPI.NEQ, 'vxt_q_eq');
 set(OPI.CONST, 'vxt_const'); set(OPI.LOCAL, 'vxt_local'); set(OPI.PUSH, 'vxt_push'); set(OPI.JF, 'vxt_jf'); set(OPI.JT, 'vxt_jt');
 set(OPI.JMP, 'vxt_jmp'); set(OPI.LPUSH, 'vxt_lpush'); set(OPI.CPUSH, 'vxt_cpush'); set(OPI.SETL, 'vxt_setl'); set(OPI.LOOP, 'vxt_loop');
 set(OPI.DOTI, 'vxt_doti'); set(OPI.DOTINC, 'vxt_dotinc'); set(OPI.STT, 'vxt_stt'); set(OPI.POPX, 'vxt_popx'); set(OPI.DROP, 'vxt_drop');
@@ -706,5 +898,7 @@ for (const [tn, m] of Object.entries(fused)) {
   lines.push(tn + ':'.padEnd(12 - tn.length) + '.word       ' + row.slice(0, 9).join(', '));
   lines.push('            .word       ' + row.slice(9).join(', '));
 }
+lines.push('', '; BLOCK\'s template\'s length (0: none): its data is past it and its stub (the blocks\' table\'s, a block\'s parent\'s)',
+  'VXT_BLOCK_D     = ' + (main[OPI.BLOCK] === '0' ? '0' : 'vxt_block_e - vxt_block_c'));
 fs.writeFileSync(out, lines.join('\r\n') + '\r\n');
 console.log(T.length + ' templates');
