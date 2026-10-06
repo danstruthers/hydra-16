@@ -14,6 +14,35 @@ IMM_PAGES       = 6             ; (The pages below this one are the immediates':
 
 .define FIX(n) (((n) * 2 + 1) & $FFFF)                      ; A fixnum's value
 
+; What follows in the collector's segment: hylang's fifth bank (CODE5: entered by GC_CALL, a far call), or, in another
+; module (t_heap's), the heap's (DATA)
+.macro GC_SEG
+.ifdef HL_DATA4
+.segment "CODE5"
+.else
+.segment "DATA"
+.endif
+.endmacro
+
+; A collection (gc_collect), from any bank or the RAM
+.macro GC_CALL
+.ifdef HL_DATA4
+            FARN        5, gc_collect
+.else
+            jsr         gc_collect
+.endif
+.endmacro
+
+; What follows in the segment of the state a snapshot keeps (hylang's PSTATE, hylang.cfg: the heap's and the
+; evaluator's; tools/hysnap.js copies it out, snap_restore back), or, in another module (t_heap's), in the BSS
+.macro PSTATE_SEG
+.ifdef HL_DATA4
+.segment "PSTATE"
+.else
+.bss
+.endif
+.endmacro
+
 ; .A, .X = an address (low, high)
 .macro LDAX addr
             lda         #<(addr)
@@ -59,7 +88,7 @@ PK_ERROR        = 11            ; An error: its message, its code
 PK_PARTIAL      = 12            ; A partially applied built-in: the built-in, the values given it
 PK_SYMBOL       = 13            ; A symbol: its name (a blob), its global value, the next in its bucket, flags
 PK_ATOM         = 14            ; An atom: the same
-PK_FUNC         = 15            ; A function: its formals, its body, its scope, flags
+PK_FUNC         = 15            ; A function: its formals, its body, its scope, flags (and its formals' count)
 PK_HASH         = 16            ; A hash: its items (its entries, then its tags), a proxy's hash, its count, flags
 PK_STREAM       = 17            ; A stream: its fd and its flags (a word)
 PK_FRAME8       = 18            ; A scope's frame: its parent (NIL: the global scope), the cell its pairs go on in
@@ -72,7 +101,7 @@ PK_FIXNUM       = $FF           ; (kind_of's, for a fixnum: no page)
 ; A symbol's flags (its word 3)
 SF_LOCAL        = $01           ; It's been bound in a frame (else it's looked up at its global value at once)
 
-; A function's flags (its word 3)
+; A function's flags (its word 3's low byte; its high byte its formals counted, as it's made)
 FN_FEXPR        = $01           ; Its arguments come as they're written (each with its caller's scope)
 FN_EXTRAS       = $02           ; Its body names &_ or &1, &2 ...: it takes arguments past its formals
 
@@ -80,4 +109,5 @@ FN_EXTRAS       = $02           ; Its body names &_ or &1, &2 ...: it takes argu
 BF_SPECIAL      = $80           ; A special form: its arguments as they're written (its code runs the machine)
 BF_ERRORS       = $40           ; It takes errors as values (error?, type-of, repr ...)
 BF_MACHINE      = $20           ; Its code runs the machine (map ...): jumped to, its values on the stack
+BF_FAST         = $10           ; Fixnums worked in the evaluator's bank first (eval.inc's bi_fast), without a far call
 BF_BANK         = $07           ; Its code's bank, less 1 (called through FARN: it gives back a value)

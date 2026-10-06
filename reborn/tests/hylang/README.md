@@ -3,8 +3,8 @@
 These are danlang's regression suite, `tests/regress/` from <https://github.com/SNSTRUTHERS/danlang>, as it has them
 (copied whole, line ends LF).  danlang, the C# interpreter, is hylang's reference, and `reference.md` there its
 specification: the suite is that specification's executable form, so hylang passes it unchanged.  A change to the
-language goes into danlang first, with checks here, and is copied over.  The `.hl` files are hylang's own (the
-phases' scaffolding till the suite runs whole).
+language goes into danlang first, with checks here, and is copied over.  danlang's library (its `lib/`) is hylang's
+own now, on the ROM disk (`romfs/lib/hylang`), and the `hysuite` test runs `run.dl` whole, as danlang runs it.
 
 The old hylang (phase 7 as first built, to commit `a0973eb`) is gone: hylang is being written again from scratch, to
 the plan "danlang: review and 65C02 plan" (`docs/hylang.md` has its design).  Each phase of it runs the files it makes
@@ -13,9 +13,7 @@ pass, from an emulated card, and none that passed may fail after:
 | File | What | Runs from |
 | :--- | :--- | :--- |
 | `harness.dl` | The checks: `check`, `check-error`, the count of each and of the failures | 3 |
-| `run7.hl` | hylang's own: `run.dl` as a script (`hylang run7.hl`), danlang's library loaded first, then a tail loop of 50,000 steps; the `hysuite` test | 7, till phase 8 puts the library in hylang |
-| `lib/` | danlang's library, `lib/` there (`globals.dl`, `dice.dl`, `screen.dl`), copied whole: the card's `/lib/hylang` (as `NAME.hl`) | 4, till phase 8 puts hylang's in the ROM |
-| `run.dl` | Loads `harness.dl`, then each file, and prints the count; its status is 1 if a check failed | 8 (it wants danlang's library loaded: `run7.hl` till then) |
+| `run.dl` | Loads `harness.dl`, then each file, and prints the count; its status is 1 if a check failed; the `hysuite` test (`hylang run.dl`) | 8 (it wants danlang's library loaded: from phase 4 to 7, a script of hylang's own loaded it first) |
 | `reader.dl` | The reader: numbers in every base, strings, here strings, characters, atoms, symbols, comments, `[...]`, the shorthand, bytes, `read` | 7 (the reader is phase 2's, checked by the emulator's `hylang` test till then) |
 | `eval.dl` | Calls, partial application, extra arguments, too many, tail calls (50,000 deep), nesting | 3 (its numbers past a fixnum made smaller); 5 whole |
 | `scope.dl` | Lexical scope, closures, `set!`, a Q-expression run where it was written, `let`, fexprs | 3 |

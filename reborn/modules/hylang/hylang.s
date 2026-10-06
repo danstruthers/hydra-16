@@ -48,6 +48,15 @@ HL_DATA4        = 1             ; (The RAM code in DATA4: hylang.cfg)
 
 IBUF_SIZE       = 128           ; stdin read this much at a time
 
+; A snapshot (the module hysnap, a library of data: tools/hysnap.js makes it at the build, from this hylang with its
+; library loaded): after its header, at SN_INDEX, its index: "HYSN", the id of the hylang it's of (snap_id's), its
+; cell banks and blob banks, PSTATE's size, a mask of each cell bank's pages kept (bit n: page n), each blob bank's
+; length; then, at SN_DATA, PSTATE's bytes, each page kept (512 bytes), each blob bank's bytes, each of them from a
+; 256-byte boundary (so none crosses a bank's end)
+SN_INDEX        = $A000 + 48
+SN_IDX_SIZE     = 10 + 32 + 32
+SN_DATA         = $A100
+
 .zeropage
 lp:         .res        2                                   ; read_line's place in text
 
@@ -59,6 +68,21 @@ intr:       .res        1                                   ; Ctrl-C ($80), note
 rl_any:     .res        1                                   ; (read_line's: some of a line read)
 stress:     .res        1                                   ; (hylang -g)
 hl_argp:    .res        2                                   ; (Its arguments after -g: args, a script's path first)
+lib_text:   .res        1                                   ; <> 0: no snapshot: its library loaded as text
+sn_me:      .res        ME_SIZE                             ; (snap_find's: a module's entry; the one at)
+sn_i:       .res        1
+sn_home:    .res        1                                   ; (snap_restore's: this bank, the snapshot's bank at,
+sn_rbank:   .res        1                                   ;   its id, its counts, pages and lengths (its index's),
+sn_key:     .res        2                                   ;   where it's at, where it goes, how many bytes)
+sn_idx:     .res        SN_IDX_SIZE
+sn_src:     .res        2
+sn_dst:     .res        2
+sn_len:     .res        2
+sn_k:       .res        1
+sn_j:       .res        1
+sn_mask:    .res        2
+
+.import __PSTATE_RUN__, __PSTATE_SIZE__
 
 .segment "DATA4"
 ; The note handler, in RAM (any bank may be at $A000 when a note comes): Ctrl-C (NOTE_INTERRUPT) noted in intr;
@@ -72,6 +96,323 @@ notes:
             rts
 @default:
             sec
+            rts
+
+.segment "DATA"
+sn_lowk:    .byte       1                                   ; (sn_step's addresses' low bytes 0-15, as assembled)
+
+; The heap and the evaluator's state (PSTATE) as the snapshot whose first bank is .A has them, its banks taken anew
+; (the heap's tables made, its value registers NIL).  In RAM (DATA: the fourth bank's room is DATA4's): it maps the
+; snapshot's banks at $A000.  OUT: C = 0; C =
+; 1, .A = 0 if it isn't a snapshot of this hylang (nothing changed), else .A = the error (E_NOMEM: no bank left)
+snap_restore:
+            sta         sn_rbank
+            lda         snap_id                             ; (This hylang's id, from its first bank)
+            sta         sn_key
+            lda         snap_id + 1
+            sta         sn_key + 1
+            lda         $01
+            sta         sn_home
+            lda         sn_rbank
+            sta         $01
+            lda         SN_INDEX                            ; ("HYSN", this hylang's id, PSTATE's size)
+            cmp         #'H'
+            bne         @not
+            lda         SN_INDEX + 1
+            cmp         #'Y'
+            bne         @not
+            lda         SN_INDEX + 2
+            cmp         #'S'
+            bne         @not
+            lda         SN_INDEX + 3
+            cmp         #'N'
+            bne         @not
+            lda         SN_INDEX + 4
+            cmp         sn_key
+            bne         @not
+            lda         SN_INDEX + 5
+            cmp         sn_key + 1
+            bne         @not
+            lda         SN_INDEX + 8
+            cmp         #<__PSTATE_SIZE__
+            bne         @not
+            lda         SN_INDEX + 9
+            cmp         #>__PSTATE_SIZE__
+            beq         :+
+@not:
+            lda         sn_home
+            sta         $01
+            lda         #0
+            sec
+            rts
+:
+            ldx         #SN_IDX_SIZE - 1                    ; (Its index, kept)
+:
+            lda         SN_INDEX,x
+            sta         sn_idx,x
+            dex
+            bpl         :-
+            jsr         heap_tables
+            lda         #<SN_DATA                           ; (PSTATE)
+            sta         sn_src
+            lda         #>SN_DATA
+            sta         sn_src + 1
+            lda         #<__PSTATE_RUN__
+            sta         sn_dst
+            lda         #>__PSTATE_RUN__
+            sta         sn_dst + 1
+            lda         #<__PSTATE_SIZE__
+            sta         sn_len
+            lda         #>__PSTATE_SIZE__
+            sta         sn_len + 1
+            jsr         sn_copy
+            stz         sn_k                                ; (Each cell bank: a bank of its own, the pages kept)
+@cells:
+            lda         sn_k
+            cmp         sn_idx + 6
+            bcs         @blobs
+            lda         #1
+            jsr         BANKS_ALLOC
+            bcc         @lb521
+            jmp         @full
+@lb521:
+            ldx         sn_k
+            sta         cell_bank,x
+            sta         $00
+            pha
+            txa
+            asl
+            asl
+            asl
+            asl
+            tax
+            pla
+            ldy         #16
+:
+            sta         bank_of,x
+            inx
+            dey
+            bne         :-
+            lda         sn_k                                ; (Its mask: a bit a page, page 0's first)
+            asl
+            tax
+            lda         sn_idx + 10,x
+            sta         sn_mask
+            lda         sn_idx + 11,x
+            sta         sn_mask + 1
+            stz         sn_j
+@page:
+            lsr         sn_mask + 1                         ; (Page sn_j kept? It and the kept ones after it, at
+            ror         sn_mask                             ;   once: 512 bytes each, to $8000 + 512 * sn_j)
+            bcc         @nopage
+            stz         sn_dst
+            lda         sn_j
+            asl
+            ora         #$80
+            sta         sn_dst + 1
+            stz         sn_len
+            lda         #2
+            sta         sn_len + 1
+@run:
+            inc         sn_j
+            lsr         sn_mask + 1
+            ror         sn_mask
+            bcc         @copy
+            inc         sn_len + 1
+            inc         sn_len + 1
+            bra         @run
+@copy:
+            jsr         sn_copy
+@nopage:
+            inc         sn_j
+            lda         sn_j
+            cmp         #16
+            bcc         @page
+            inc         sn_k
+            bra         @cells
+@blobs:
+            stz         sn_k                                ; (Each blob bank: a bank of its own, its bytes)
+@blob:
+            lda         sn_k
+            cmp         sn_idx + 7
+            bcs         @done
+            lda         #1
+            jsr         BANKS_ALLOC
+            bcs         @full
+            ldx         sn_k
+            sta         blob_bank,x
+            sta         $00
+            txa
+            asl
+            tax
+            lda         sn_idx + 42,x
+            sta         sn_len
+            lda         sn_idx + 43,x
+            sta         sn_len + 1
+            stz         sn_dst
+            lda         #$80
+            sta         sn_dst + 1
+            jsr         sn_copy
+            inc         sn_k
+            bra         @blob
+@done:
+            lda         sn_home
+            sta         $01
+            clc
+            rts
+@full:
+            pha
+            lda         sn_home
+            sta         $01
+            pla
+            sec
+            rts
+
+; sn_len bytes from sn_src (its bank sn_rbank, at $A000: $01 set) to sn_dst (RAM, or the window: $00 set): 256 at a
+; time, 16 loads and stores a step (their addresses set in the code: about 10 cycles a byte), then the rest; sn_src
+; then on to the next 256-byte boundary (past $DFFF: the next bank's $A000; a snapshot's runs start at 256-byte
+; boundaries, so none crosses a bank's end).  data4_init's too
+sn_copy:
+            lda         sn_len + 1
+            bne         :+
+            jmp         sn_rest
+:
+            lda         sn_src                              ; (Both from 256-byte boundaries, the addresses' low bytes
+            ora         sn_dst                              ;   0-15 already: their high bytes set; else all set)
+            bne         :+
+            lda         sn_lowk
+            beq         @lb532
+            jmp         sn_high
+@lb532:
+:
+            stz         sn_lowk
+            jsr         sn_setsrc
+            jsr         sn_setdst
+            lda         sn_src
+            ora         sn_dst
+            bne         sn_run
+            inc         sn_lowk
+sn_run:
+            ldy         #0
+            clc                                             ; (C stays 0 till .Y is back to 0)
+sn_step:
+.repeat 16, I
+            lda         $A000 + I,y
+            sta         $8000 + I,y
+.endrepeat
+            tya
+            adc         #16
+            tay
+            bne         sn_step
+            inc         sn_dst + 1
+            jsr         sn_next
+            dec         sn_len + 1
+            bne         :+
+            jmp         sn_rest
+:
+            lda         sn_src                              ; (Both from 256-byte boundaries: the addresses' high
+            ora         sn_dst                              ;   bytes set)
+            bne         sn_on
+sn_high:
+            lda         sn_src + 1
+.repeat 16, I
+            sta         sn_step + 6 * I + 2
+.endrepeat
+            lda         sn_dst + 1
+.repeat 16, I
+            sta         sn_step + 6 * I + 5
+.endrepeat
+            jmp         sn_run
+sn_on:
+.repeat 16, I
+            inc         sn_step + 6 * I + 5                 ; (The stores: 256 on)
+.endrepeat
+            lda         sn_src + 1                          ; (The loads: 256 on, or the next bank's)
+            cmp         #$A0
+            beq         :+
+.repeat 16, I
+            inc         sn_step + 6 * I + 2
+.endrepeat
+            jmp         sn_run
+:
+            jsr         sn_setsrc
+            jmp         sn_run
+sn_rest:
+            ldy         sn_len                              ; (The rest: from its last down, one less each)
+            beq         sn_end
+            lda         sn_src
+            sec
+            sbc         #1
+            sta         sn_r3 + 1
+            lda         sn_src + 1
+            sbc         #0
+            sta         sn_r3 + 2
+            lda         sn_dst
+            sec
+            sbc         #1
+            sta         sn_w3 + 1
+            lda         sn_dst + 1
+            sbc         #0
+            sta         sn_w3 + 2
+sn_r3:      lda         $A000,y
+sn_w3:      sta         $8000,y
+            dey
+            bne         sn_r3
+            jsr         sn_next
+sn_end:
+            rts
+
+; sn_step's loads' addresses: sn_src + 0 ... 15 (sn_setdst: its stores', sn_dst + 0 ... 15)
+sn_setsrc:
+            ldx         #0
+            ldy         #0
+:
+            txa
+            clc
+            adc         sn_src
+            sta         sn_step + 1,y
+            lda         sn_src + 1
+            adc         #0
+            sta         sn_step + 2,y
+            tya
+            adc         #6
+            tay
+            inx
+            cpx         #16
+            bne         :-
+            rts
+
+sn_setdst:
+            ldx         #0
+            ldy         #0
+:
+            txa
+            clc
+            adc         sn_dst
+            sta         sn_step + 4,y
+            lda         sn_dst + 1
+            adc         #0
+            sta         sn_step + 5,y
+            tya
+            adc         #6
+            tay
+            inx
+            cpx         #16
+            bne         :-
+            rts
+
+; sn_src on 256 bytes (past $DFFF: the next bank's $A000)
+sn_next:
+            inc         sn_src + 1
+            lda         sn_src + 1
+            cmp         #$E0
+            bcc         :+
+            lda         #$A0
+            sta         sn_src + 1
+            inc         sn_rbank
+            lda         sn_rbank
+            sta         $01
+:
             rts
 
 .code
@@ -112,9 +453,28 @@ main:
             jsr         cap_reset
             LDR         r0, notes
             jsr         NOTIFY
-            jsr         heap_init                           ; (The heap, the capture bank, the machine, the built-ins)
+            stz         lib_text                            ; (The heap: a snapshot's, with its library; or made)
+            lda         hyx2_bank5                          ; (The snapshot: where rom.txt puts it, the bank after
+            inc         a                                   ;   hylang's last; else the module directory's hysnap)
+            jsr         snap_restore
+            bcc         @heap
+            cmp         #0                                  ; (Not this hylang's: the heap made; no room: the end)
+            beq         @lb531
+            jmp         @noroom
+@lb531:
+            jsr         snap_find
+            bcs         @made
+            jsr         snap_restore
+            bcc         @heap
+            cmp         #0
+            bne         @noroom
+@made:
+            jsr         pstate_zero
+            jsr         heap_init
             bcs         @noroom
-            lda         #1
+            inc         lib_text
+@heap:
+            lda         #1                                  ; (The capture bank, the machine)
             jsr         BANKS_ALLOC
             bcs         @noroom
             sta         cap_bank
@@ -123,9 +483,17 @@ main:
             lda         #>hl_roots
             sta         gc_hook + 1
             jsr         ev_init
+            lda         lib_text                            ; (No snapshot: the symbols, the built-ins, the library)
+            beq         @init
+            jsr         ev_syms
             bcs         @noroom
             FARN        2, bi_bind
             bcs         @noroom
+            FARN        5, y_std
+            bcs         @noroom
+            jsr         lib_load
+            bcs         @noroom
+@init:
             FARN        5, y_init                           ; (stdin, stdout, stderr; args; a script's (load path))
             bcc         :+
 @noroom:
@@ -134,7 +502,8 @@ main:
             lda         #1
             jmp         quit
 :
-            lda         stress
+            stz         gc_fresh                            ; (No collection at the first prompt: what y_init made
+            lda         stress                              ;   is kept)
             sta         gc_stress
             lda         hv                                  ; (A script: run, its status 0, or 1 after an error
             ora         hv + 1                              ;   (on stderr), or (exit n)'s)
@@ -173,7 +542,7 @@ main:
             jsr         out_flush
             lda         gc_fresh                            ; (A collection while the prompt waits, if pages were
             beq         @line                               ;   made a kind's since the last)
-            jsr         gc_collect
+            GC_CALL
 @line:
             stz         intr
             jsr         read_line
@@ -259,6 +628,105 @@ quit:
             LDR         r0, 0
             pla
             jmp         EXITS
+
+; The library: (load "globals") (/lib/hylang/globals.hl: danlang's), its error out on stderr; then a collection, so
+; what's kept is compact (a snapshot's, tools/hysnap.js: it takes hylang's heap at its first prompt).  OUT: C = 1 if
+; there's no room
+lib_load:
+            LDHQ        s_globals, s_globals_n
+            jsr         string_make
+            bcs         @rts
+            MOVW        et, hv                              ; ((load "globals"))
+            stz         eu
+            stz         eu + 1
+            lda         #PK_SCONS
+            jsr         make2
+            bcs         @rts
+            MOVW        eu, hv
+            lda         #<(BUILTIN0 + 2 * BIN_LOAD)
+            sta         et
+            lda         #>(BUILTIN0 + 2 * BIN_LOAD)
+            sta         et + 1
+            lda         #PK_SCONS
+            jsr         make2
+            bcs         @rts
+            MOVW        ex, hv
+            stz         ee
+            stz         ee + 1
+            jsr         ev_run
+            jsr         is_err
+            bcc         :+
+            FARN        5, y_errout
+:
+            stz         ex
+            stz         ex + 1
+            stz         hv
+            stz         hv + 1
+            GC_CALL
+            jmp         lib_done
+@rts:
+            rts
+
+; (lib_load's end, the library loaded: where tools/hysnap.js takes the snapshot)
+lib_done:
+            clc
+            rts
+
+; PSTATE zeroed (the system zeroes the BSS, not it: what a snapshot replaces), for a heap made anew
+pstate_zero:
+            lda         #<__PSTATE_RUN__
+            sta         hp
+            lda         #>__PSTATE_RUN__
+            sta         hp + 1
+            lda         #0
+            tay
+            ldx         #>__PSTATE_SIZE__                   ; (Its whole pages ...
+            beq         @part
+@page:
+            sta         (hp),y
+            iny
+            bne         @page
+            inc         hp + 1
+            dex
+            bne         @page
+@part:
+            ldy         #<__PSTATE_SIZE__                   ;   and the rest)
+            beq         @done
+:
+            dey
+            sta         (hp),y
+            bne         :-
+@done:
+            rts
+
+; The snapshot: the module hysnap's first bank (.A).  OUT: C = 1 if there's none
+snap_find:
+            stz         sn_i
+@entry:
+            LDR         r0, sn_me
+            lda         sn_i
+            jsr         MODINFO
+            bcs         @rts
+            lda         sn_me + ME_TYPE
+            cmp         #HT_LIBRARY
+            bne         @next
+            ldx         #0
+:
+            lda         sn_me + ME_NAME,x
+            cmp         s_hysnap,x
+            bne         @next
+            inx
+            cmp         #0
+            bne         :-
+            lda         sn_me + ME_BANK
+            clc
+            rts
+@next:
+            inc         sn_i
+            bne         @entry
+            sec
+@rts:
+            rts
 
 ; closers out (the brackets an open expression wants)
 out_closers:
@@ -365,7 +833,7 @@ getc_in:
             rts
 
 .rodata
-s_banner:   .byte       "hylang (danlang on the Hydra-16), phase 7: its streams and system", LF
+s_banner:   .byte       "hylang (danlang on the Hydra-16)", LF
             .byte       "Type 'exit' to Exit", LF, LF, 0
 s_prompt:   .byte       "hylang> ", 0
 s_more:     .byte       " <", 0
@@ -375,6 +843,10 @@ s_missingl: .byte       "=> Error: missing ", 0
 s_long:     .byte       "=> Error: Too long: an expression of more than 4096 bytes", LF, 0
 s_nomemline: .byte      "=> Error: out of memory", LF, 0
 s_noheap:   .byte       "hylang: no room for its heap", LF, 0
+s_globals:  .byte       "globals"
+s_globals_n = * - s_globals
+s_hysnap:   .byte       "hysnap", 0
+snap_id:    .word       0                                   ; (This hylang's id: tools/hysnap.js patches it in, a CRC)
 
 .segment "CODE3"                                            ; (The numbers: phase 5)
 bank_three:
@@ -388,34 +860,18 @@ bank_five:
 ; DATA4 (hylang.cfg's: the most of the RAM code, kept in this bank) copied to the task's RAM, as hylang starts
 .import __DATA4_LOAD__, __DATA4_RUN__, __DATA4_SIZE__
 data4_init:
-            lda         #<__DATA4_LOAD__
-            sta         hq
+            lda         #<__DATA4_LOAD__                    ; (By sn_copy: in DATA, which the system has copied)
+            sta         sn_src
             lda         #>__DATA4_LOAD__
-            sta         hq + 1
+            sta         sn_src + 1
             lda         #<__DATA4_RUN__
-            sta         hb
+            sta         sn_dst
             lda         #>__DATA4_RUN__
-            sta         hb + 1
-            ldy         #0
-            ldx         #>__DATA4_SIZE__                    ; (Its whole pages ...
-            beq         @part
-@page:
-            lda         (hq),y
-            sta         (hb),y
-            iny
-            bne         @page
-            inc         hq + 1
-            inc         hb + 1
-            dex
-            bne         @page
-@part:
-            ldx         #<__DATA4_SIZE__                    ;   and the rest)
-            beq         @done
-:
-            lda         (hq),y
-            sta         (hb),y
-            iny
-            dex
-            bne         :-
-@done:
-            rts
+            sta         sn_dst + 1
+            lda         #<__DATA4_SIZE__
+            sta         sn_len
+            lda         #>__DATA4_SIZE__
+            sta         sn_len + 1
+            lda         $01
+            sta         sn_rbank
+            jmp         sn_copy

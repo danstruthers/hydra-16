@@ -35,7 +35,7 @@ first, with its checks, then in hylang.  What only the Hydra has is checked by a
 | **Streams** | Over the system's fds: `stdin`, `stdout`, `stderr` are fds 0-2; `output-of` points fd 1 at a buffer meanwhile | |
 | **Ctrl-C** | The window's `interrupt` note: the error `interrupted` (`:intr`) at the next call or loop step | As forth's THROW -28 |
 | **`random`** | A generator (a 16-bit xorshift) seeded by the tick count as it's first wanted | |
-| **Start-up** | `/lib/hylang/globals.hl` (danlang's `globals.dl`), loaded as text, then `/lib/hylang/profile.hl` if there is one | A ROM snapshot of the loaded heap later, if starting is too slow |
+| **Start-up** | `/lib/hylang/globals.hl` (danlang's `globals.dl`) as it is when loaded, from a snapshot in the ROM (the module `hysnap`, made at the build); a ROM without it, loaded as text; then `/lib/hylang/profile.hl` if there is one | Loaded as text, it takes 8 M cycles (2.3 s); from the snapshot, 286,000 (0.08 s) |
 | **Files** | `.hl` (the suite keeps danlang's `.dl` names, loaded by their whole names) | |
 
 ## Made for the Hydra
@@ -128,7 +128,17 @@ The plan has it whole; in short:
   hold their global value; a scope is a frame, its symbol-value pairs side by side.  Mark and sweep: a
   mark stack of 255 (a list's spine followed in place, so it costs none), every marked cell scanned again if it
   fills; a free list per kind; the blobs nothing owns dropped and the rest slid down.  Banks are taken as they're
-  needed (up to 16 for cells, 16 for blobs, 4 for the stack), and a collection while the prompt waits too.
+  needed (up to 16 for cells, 16 for blobs, 4 for the stack; a cell bank more after a collection while fewer pages
+  are free than used, so a collection's cost, which is what's live, is shared by as many cells made), and a
+  collection while the prompt waits too.  The collector's code is in the fifth bank, entered by a far call.
+* **The snapshot** (`tools/hysnap.js`, `hylang.s`'s `snap_restore`): what hylang keeps between collections (the
+  heap's tables, the symbols, the evaluator's own: `hylang.cfg`'s PSTATE segment) and the pages and blobs in use,
+  as they are once `globals.hl` is loaded, in the module `hysnap` (a library of data, two banks).  The build makes
+  it: hylang run in the emulator from a ROM without it, stopped once its library is loaded (`lib_done`), read from
+  its task's RAM; with hylang's id, a CRC-16 of its image patched into it (`snap_id`).  As hylang starts, it looks
+  for it in the bank after its own (where `rom.txt` puts it) or else in the module directory, and if it's this
+  hylang's, takes banks anew and copies it in (16 loads and stores a step, about 10 cycles a byte: 17K of it,
+  and `DATA4`'s 3K, are most of the 286,000 cycles to the first prompt); if not, it loads `globals.hl` as text.
 * **The reader and the printer** (`read.inc`, `print.inc`, in the second bank) are danlang's, in one pass without
   tokens: a level for each bracket open (its closer, its list so far and its last cons, the levels' lists marked
   as roots), each item made as it's read and put at its level's end; the first error ends it, as the first token in
@@ -182,17 +192,23 @@ The plan has it whole; in short:
   7): the evaluator, its special forms, the dispatch and the built-ins that run the machine in the first; the
   reader, the printer, the list built-ins, equality and order in the second; the numbers (and, as yet, `fn`, the
   type tests and `error`) in the third; strings, hashes and the errors' messages in the fourth; streams and the
-  system library in the fifth.  What every bank calls is in the task's RAM (the heap, the output, the evaluation
-  stack): the most of that code is kept in the fourth bank and copied to the RAM as hylang starts
-  (`hylang.cfg`'s DATA4), so the first bank's room is the evaluator's.  The Hydra layers are library modules
-  beside it.
+  system library (and the collector) in the fifth.  What every bank calls is in the task's RAM (the heap, the
+  output, the evaluation stack): the most of that code is kept in the fourth bank and copied to the RAM as hylang
+  starts (`hylang.cfg`'s DATA4), so the first bank's room is the evaluator's.  `+`, `-`, `1+`, `1-`, `zero?`,
+  `one?` and the comparisons work fixnums in the first bank (`bi_fast`), without a far call.  The Hydra layers
+  are library modules beside it.
 * **Budgets** (at 3.58 MHz): a parameter looked up in 150 cycles, a call of two arguments in 1,500, a tail loop's
   step in 3,000 (the first hylang's: 10,600).  Measured in phase 1 (the heap test): a cons made and listed in 460
   cycles (its fixnum made, its words set), a collection 212 cycles a live cell (9,000 live: 1.9 M, 0.5 s).
   Measured in phase 3, untuned: a tail loop's step (`zero?`, `-`, `if`, the call) 10,200 cycles; a call of a
-  function of two arguments 4,800 (phase 8 tunes them).
+  function of two arguments 4,800.  Measured in phase 8, with the library loaded (from the REPL's echo to its
+  `=>`, loops' differences): start-up from the snapshot 286,000 (300,000); a parameter looked up 300 (150); a call
+  of two arguments 3,700 (1,500); a tail loop's step 8,500 (3,000; 10,960 before phase 8's tuning: a function's
+  formals counted as it's made, the fixnum built-ins in the first bank, an ordinary built-in's arguments counted as
+  they're evaluated, a global's symbol read once, `pop` and `cell_get` quicker, the heap grown sooner); `map` with
+  a function of one argument 3,700 an item (2,000); a collection 213 cycles a live cons (14,000 live: 3.8 M).
 
-## The phases (phase 7, again)
+## The phases (phase 7, again; now its phase 8)
 
 0. **The spec**: danlang's fixes, its rules made one, its reference (`reference.md`), its cleanup; the old hylang
    deleted; the suite copied here.  Done.
@@ -235,8 +251,12 @@ The plan has it whole; in short:
    4 to 14; 1,197 checks); modules of up to eight banks (the SDK, the build, the ROM image, kdev's `#m`), and
    hylang's fifth: `sys.inc`, `streams.inc` (the streams, `save`, `read`), `system.inc` (files, `glob`,
    programs and the shell, the environment, the clock); `load` of several files; script mode and `args`.
-   `io.dl` and `system.dl` pass, and so does every file of `run.dl`'s: 1,198 checks run as a script (`hylang
-   run7.hl`, the `hysuite` test), with danlang's library loaded first (phase 8 puts it in hylang).
-8. **The library** (`globals.hl`, `dice.hl`, `screen.hl`), tuning to the budgets, the ROM.
+   `io.dl` and `system.dl` pass, and so does every file of `run.dl`'s: 1,198 checks run as a script (a script of
+   hylang's own, the `hysuite` test), with danlang's library loaded first.
+8. **The library** (`globals.hl`, `dice.hl`, `screen.hl`), tuning to the budgets, the ROM.  Done so far: the
+   library on the ROM disk (`romfs/lib/hylang`, danlang's `lib/` whole), `globals.hl` in hylang as it starts,
+   from its snapshot (the module `hysnap`, made at the build) or as text; `run.dl` passes whole as danlang runs it,
+   `hylang run.dl` (1,197 checks, the `hysuite` test), and `hytext` starts hylang without the snapshot.  Tuned:
+   start-up is within its budget, and a loop's step and a call are quicker (above), but not yet within theirs.
 
 Then the Hydra layers: its built-ins, the `sys-` functions, the device libraries, and the prompt.

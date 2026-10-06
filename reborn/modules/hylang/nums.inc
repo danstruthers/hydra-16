@@ -170,8 +170,11 @@ fn_make:
             ldx         ee + 1
             ldy         #2
             jsr         nu_ex_set
+            lda         et                                  ; (Its flags, and its formals counted: a call's)
+            ldx         et + 1
+            jsr         count_list
+            tax
             lda         fa_flags
-            ldx         #0
             ldy         #3
             jsr         nu_ex_set
             clc

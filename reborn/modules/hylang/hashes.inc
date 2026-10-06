@@ -51,8 +51,6 @@ h_t:        .res        2
 h_e:        .res        2
 h_w:        .res        2
 h_nc:       .res        2
-h_tags:     .res        8                                   ; The reserved tags' atoms (0: not made yet)
-h_amp0:     .res        2                                   ; The symbol &0
 h_depth:    .res        1                                   ; (Hashes in hashes, cloned or listed: how deep)
 h_n:        .res        1                                   ; (A count: a built-in's own)
 h_start:    .res        2                                   ; (An error's capture: where it began)
@@ -63,6 +61,10 @@ h_sp:       .res        1                                   ; The abort point: t
 h_rsp:      .res        1                                   ;   the captures open and their length
 h_cap:      .res        1
 h_clen:     .res        2
+
+PSTATE_SEG
+h_tags:     .res        8                                   ; The reserved tags' atoms (0: not made yet)
+h_amp0:     .res        2                                   ; The symbol &0
 
 .segment "CODE4"
 

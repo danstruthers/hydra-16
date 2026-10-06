@@ -49,9 +49,10 @@ BI_N        .set BI_N + 1
             BI          "reverse", 1, 1, B2, bl_reverse
             BI          "range", 1, 3, B2, bl_range
             BI          "sort", 1, 2, BF_MACHINE, bi_sort
-BIN_ADD         = BI_N          ; (+ and *: sum's and product's)
-            BI          "+", 0, ANY, B3, bi_add
-            BI          "-", 0, ANY, B3, bi_sub
+BIN_ADD         = BI_N          ; (+ and *: sum's and product's; those BF_FAST: bi_fast's)
+            BI          "+", 0, ANY, B3 | BF_FAST, bi_add
+BIN_SUB         = BI_N
+            BI          "-", 0, ANY, B3 | BF_FAST, bi_sub
 BIN_MUL         = BI_N
             BI          "*", 0, ANY, B3, bi_mul
             BI          "/", 0, ANY, B3, bi_div
@@ -69,8 +70,10 @@ BIN_MUL         = BI_N
             BI          "if", 2, 3, BF_SPECIAL, sf_if
             BI          "eq", 2, 2, B2, bq_eq
             BI          "neq", 2, 2, B2, bq_neq
-            BI          ">", 2, 2, B2, bq_gt
-            BI          "<", 2, 2, B2, bq_lt
+BIN_GT          = BI_N
+            BI          ">", 2, 2, B2 | BF_FAST, bq_gt
+BIN_LT          = BI_N
+            BI          "<", 2, 2, B2 | BF_FAST, bq_lt
             BI          "cmp", 2, 2, B2, bq_cmp
             BI          "<=>", 2, ANY, BF_SPECIAL, sf_space
 BIN_LOAD        = BI_N          ; (A script's: hylang file)
@@ -213,15 +216,22 @@ BIN_LOAD        = BI_N          ; (A script's: hylang file)
             BI          "platform", 0, 0, B5, bi_platform
             BI          "hydra?", 0, 0, B5, bi_hydra_p
             BI          "not", 1, 1, B3, bi_not
-            BI          "==", 2, 2, B2, bq_eq
-            BI          ">=", 2, 2, B2, bq_ge
-            BI          "<=", 2, 2, B2, bq_le
+BIN_EQ          = BI_N
+            BI          "==", 2, 2, B2 | BF_FAST, bq_eq
+BIN_GE          = BI_N
+            BI          ">=", 2, 2, B2 | BF_FAST, bq_ge
+BIN_LE          = BI_N
+            BI          "<=", 2, 2, B2 | BF_FAST, bq_le
             BI          "neg?", 1, 1, B2, bq_negp
             BI          "pos?", 1, 1, B2, bq_posp
-            BI          "zero?", 1, 1, B2, bq_zerop
-            BI          "one?", 1, 1, B2, bq_onep
-            BI          "1+", 1, 1, B3, bi_inc
-            BI          "1-", 1, 1, B3, bi_dec
+BIN_ZEROP       = BI_N
+            BI          "zero?", 1, 1, B2 | BF_FAST, bq_zerop
+BIN_ONEP        = BI_N
+            BI          "one?", 1, 1, B2 | BF_FAST, bq_onep
+BIN_INC         = BI_N
+            BI          "1+", 1, 1, B3 | BF_FAST, bi_inc
+BIN_DEC         = BI_N
+            BI          "1-", 1, 1, B3 | BF_FAST, bi_dec
             BI          "abs", 1, 1, B3, bi_abs
             BI          "cons", 2, 2, B2, bl_cons
             BI          "fst", 1, 1, B2, bl_fst

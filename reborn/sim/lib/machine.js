@@ -203,7 +203,9 @@ function createMachine(opt) {
     cpu.reset();
   }
 
-  Object.assign(m, { cpu, acia, via, i2c, ym, rtc, taskRam, vecRam, trace, pcHist, iOffTop, stackLow, stackLowAt, profHist, profCyc, profTask, run, hwReset, rd });
+  // (A task's RAM bank b, as it is: undefined if it was never written; tools/hysnap.js reads hylang's heap with it)
+  const taskBankMem = (t, b) => taskBank[t * 256 + b];
+  Object.assign(m, { cpu, acia, via, i2c, ym, rtc, taskRam, vecRam, trace, pcHist, iOffTop, stackLow, stackLowAt, profHist, profCyc, profTask, run, hwReset, rd, taskBankMem });
   Object.defineProperties(m, {                                // (The pseudo-registers and the profile's count, as they are now)
     T: { get: () => T }, U: { get: () => U }, V: { get: () => V }, W: { get: () => W }, profCount: { get: () => profCount }, profCycles: { get: () => profCycles },
   });

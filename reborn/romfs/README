@@ -17,6 +17,9 @@ the modules (the disk x: mount '#f' /rom x).
                   double.fl, and hydra.fl (the sys- words, SH, RUN, banks);
                   hydra.fs, the system's constants and error codes; and
                   startup.fs, what forth loads as it starts
+  lib/hylang      hylang's library (load finds a bare name there):
+                  danlang's, globals.hl (in hylang as it starts, from its
+                  snapshot in the paged ROM), dice.hl and screen.hl
   doc/api.md      the system calls, their registers and their errors
   bin             programs read into RAM to run: mkfs, fsck, label, and
                   grep and sort (in C); scom, a song (an rc script); bound

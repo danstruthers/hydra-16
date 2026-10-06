@@ -138,7 +138,7 @@ const RC_LINES = [
   ["~ a a && echo and; ~ a b || echo or","and\nor"],
   ["cat /nothing; echo status $status","cat: /nothing: not found\nstatus 1"],
   ["echo /rom/lib/n*","/rom/lib/namespace"],
-  ["echo /rom/lib/*","/rom/lib/forth /rom/lib/namespace /rom/lib/profile"],
+  ["echo /rom/lib/*","/rom/lib/forth /rom/lib/hylang /rom/lib/namespace /rom/lib/profile"],
   ["echo 'no*match'*","no*match*"],
   ["cd /rom/lib; pwd; cd","/rom/lib"],
   ["rc -c 'echo sub $x'","sub a b c"],
@@ -154,12 +154,12 @@ const RC_LINES = [
   ["echo (a","rc: syntax error"],
   ["whatis echo x; q=('it''s' '' a.b); whatis q","/bin/echo\nx=(a b c)\nq=('it''s' '' a.b)"],
   ["bind '#n' /mnt; ls /mnt","null\nzero"],
-  ["ls /rom/lib","forth/\nnamespace\nprofile"],
+  ["ls /rom/lib","forth/\nhylang/\nnamespace\nprofile"],
   ["cat /bin/echo >/ram/hi; cd /ram; hi from dot; cd","from dot"],
   ["cat /nothing >[2]/ram/e; cat /ram/e","cat: /nothing: not found"],
   ["cat /nothing |[2] cat >/ram/p; echo -n 'p: '; cat /ram/p","p: cat: /nothing: not found"],
   ["echo $task $#path $path # a comment","2 2 . /bin"],
-  ["path=(); ls; path=(. /bin); ls /rom/lib","rc: ls: not found\nforth/\nnamespace\nprofile"],
+  ["path=(); ls; path=(. /bin); ls /rom/lib","rc: ls: not found\nforth/\nhylang/\nnamespace\nprofile"],
   ["! ~ a b && echo not; echo $status","not\n"],
 ];
 
@@ -540,8 +540,8 @@ function forthCard() {
   return [imageCard(0, f, 16384)];
 }
 
-// hylang's card (the hysuite test's): danlang's suite's files (tests/hylang), hylang's own (run7.hl), and danlang's
-// library (tests/hylang/lib: globals.dl, dice.dl, screen.dl) as /lib/hylang's NAME.hl, where load finds a bare name
+// hylang's card (the hysuite test's): danlang's suite's files (tests/hylang); its library (danlang's) is the ROM
+// disk's, /lib/hylang
 function hylangCard() {
   fs.mkdirSync(CARD_DIR, { recursive: true });
   hydrafs.setNow(0x1000);
@@ -552,10 +552,6 @@ function hylangCard() {
   const dir = path.join(__dirname, 'hylang');
   const put = (from, to) => v.put(to, fs.readFileSync(from));
   for (const n of fs.readdirSync(dir).filter(n => /\.(dl|hl)$/.test(n))) put(path.join(dir, n), n);
-  v.mkdir('lib');
-  v.mkdir('lib/hylang');
-  for (const n of fs.readdirSync(path.join(dir, 'lib')).filter(n => n.endsWith('.dl')))
-    put(path.join(dir, 'lib', n), 'lib/hylang/' + n.replace(/\.dl$/, '.hl'));
   v.close();
   return [imageCard(0, f, 16384)];
 }
@@ -652,6 +648,11 @@ const HYLANG_G = [
   ['(list (val "#[01]101") (fib 100) (shl -3 70) (to-fixed 1/3 5))', '{5 354224848179261915075 -3541774862152233910272 0.33333}'],
   ['(def {g} (to# {{:a "x"} {:b {1 2}} :t}))', 'NIL'],
   ['(list (g :b) (from# (hash-clone g {:c 3})) (str-split "a b" " ") (str-upper \\q))', '{{1 2} {{:a "x"} {:b {1 2}} {:c 3} :t} {"a" "b"} \\Q}'],
+];
+// hytext's lines: hylang without its snapshot, its library loaded as text (globals.dl's definitions), a tail loop
+const HYTEXT_LINES = [
+  ['(list (square 7) (cube 3) (xor t nil) (flip - 1 10))', '{49 27 T 9}'], ['math.e', '2.71828182845904523536028747135266249775724709369995'],
+  ['(map square {1 2 3})', '{1 4 9}'], ['(fun {hy-tail n} {if (zero? n) :done (hy-tail (- n 1))})', 'NIL'], ['(hy-tail 50000)', ':done'],
 ];
 
 // A test's lines typed, each at its prompt, and its expect (as the tools test's)
@@ -1182,7 +1183,7 @@ module.exports = {
     },
     {
       name: 'hylang', what: 'hylang\'s REPL, evaluator, built-ins, numbers, strings, hashes, streams and system library (phases 3 to 7): the reader\'s every form (in Q-expressions, printed as they\'re read) and its errors, an expression over lines, 255 brackets open; lines evaluated: def, fn, fun, recursion 1,000 deep (2,500 the most: deeper, an error), a tail loop, errors, partial application, too many arguments, &_, let, the loops, output-of, try, map, format, + of strings, cmp, closures, fexprs; numbers past a fixnum, fractions, fixed decimals and complex numbers, read in bases and written in them, to-fixed, truncate, fib, random, the bits; the string built-ins; hashes (made with their values evaluated, called, a method with &0, a private entry, a locked hash, cloned, listed); read, the clock, rc\'s lines run (their output, their exit status), print-to and write-to stdout, save, the environment, a system error\'s code; filter, the folds, any?, all?, find, count, sum, product, sort (by cmp, by a function, its error), subset, index-of, gensym, to-atom, random; Ctrl-C at the prompt and in a loop; (exit 3); stdin a pipe, its end; hylang -g (a collection before every allocation)',
-      init: 't_rc', cycles: 600e6,
+      init: 't_rc', cycles: 1500e6,
       // (Each line typed at a prompt: hylang> and, for more lines, the closers it wants then " <")
       get machine() {
         const lines = HYLANG_LINES.map(l => l[0]);
@@ -1192,7 +1193,7 @@ module.exports = {
           '\u0101hylang -g\r' + HYLANG_G.map(l => '\u0101' + l[0] + '\r').join('') + '\u0101(list 1 (list 2 (list 3)) {5\r\u0101"""6\r\u01017"""})\r' +
           '\u0101exit\r' + '\u0101echo $status\r' };
       },
-      expect: ['hylang (danlang on the Hydra-16), phase 7: its streams and system\nType \'exit\' to Exit\n\n',
+      expect: ['hylang (danlang on the Hydra-16)\nType \'exit\' to Exit\n\n',
         HYLANG_LINES.map(l => (l[2] || 'hylang> ') + l[0] + '\n' + (l[1] === undefined ? '' : '=> ' + l[1] + '\n')).join(''),
         'hylang> (list 1\n\t) <\nhylang> (inf)\n=> Error: interrupted\nhylang> (exit 3)\n\n% echo $status\n3\n%',
         'hylang> \t} <=> Error: missing }\n', 'hylang> => 42\nhylang> => exit\n\n%',
@@ -1201,10 +1202,19 @@ module.exports = {
           'hylang> exit\n=> exit\n% echo $status\n\n%'],
     },
     {
-      name: 'hysuite', what: 'hylang\'s suite (phase 7): danlang\'s run.dl\'s files, all of them (reader.dl, eval.dl, scope.dl, control.dl, errors.dl, lists.dl, strings.dl, numbers.dl, hashes.dl, types.dl, io.dl, system.dl, bits.dl, library.dl), run as a script (hylang run7.hl: args its name, its status), with its harness and its library (globals.dl, dice.dl, screen.dl: /lib/hylang\'s, where load finds a bare name, and use), loaded from a card (load reads a file an item at a time, refilled as it goes; a load nested in another), files written there, programs run, the clock a DS1747\'s; and a tail loop of 50,000 steps',
+      name: 'hysuite', what: 'hylang\'s suite: danlang\'s run.dl whole, as danlang runs it (hylang run.dl: a script, args its name, its status), and all its files (reader.dl, eval.dl, scope.dl, control.dl, errors.dl, lists.dl, strings.dl, numbers.dl, hashes.dl, types.dl, io.dl, system.dl, bits.dl, library.dl) with its harness, loaded from a card (load reads a file an item at a time, refilled as it goes; a load nested in another); danlang\'s library, hylang\'s from its snapshot (globals.dl) and the ROM disk\'s /lib/hylang (dice.dl and screen.dl, where load finds a bare name, and use); files written on the card, programs run, the clock a DS1747\'s',
       init: 't_rc', cycles: 12000e6,
-      get machine() { return { sd: hylangCard(), rtc: Date.UTC(2026, 9, 5, 12, 0, 0) / 1000, input: '\u0101cd /sd/0; hylang run7.hl; echo status $status\r' }; },
-      expect: ['1198 checks, 0 failed\nstatus\n%'],
+      get machine() { return { sd: hylangCard(), rtc: Date.UTC(2026, 9, 5, 12, 0, 0) / 1000, input: '\u0101cd /sd/0; hylang run.dl; echo status $status\r' }; },
+      expect: ['1197 checks, 0 failed\nstatus\n%'],
+    },
+    {
+      name: 'hytext', what: 'hylang without its snapshot (a ROM without the module hysnap): its library loaded as text as it starts (/lib/hylang/globals.hl, the ROM disk\'s), the same banner, the library\'s definitions there; a tail loop of 50,000 steps',
+      init: 't_rc', without: ['hysnap'], cycles: 1200e6,
+      get machine() {
+        return { input: '\u0101hylang\r' + HYTEXT_LINES.map(l => '\u0101' + l[0] + '\r').join('') + '\u0101exit\r' };
+      },
+      expect: ['hylang (danlang on the Hydra-16)\nType \'exit\' to Exit\n\n' +
+        HYTEXT_LINES.map(l => 'hylang> ' + l[0] + '\n=> ' + l[1] + '\n').join('') + 'hylang> exit\n=> exit\n%'],
     },
     {
       name: 'kcopy', what: 'spike S2: copying between tasks',

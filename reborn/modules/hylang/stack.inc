@@ -20,7 +20,11 @@ stk_endp:   .res        1                                   ;   and the page aft
 spilled:    .res        1                                   ; Blocks spilled ...
 spill_bank: .res        SPILLS / 4                          ;   and the banks they're in (0: not taken yet)
 stk_t:      .res        2                                   ; (Scratch)
+
+PSTATE_SEG
 nomem_err:  .res        2                                   ; The error "out of memory", made as hylang starts
+
+.bss
 
 .segment "DATA4"
 ; The stack made, empty
@@ -65,12 +69,22 @@ push:
 @lb16:
             rts
 
-; OUT: .A, .X = the word popped (low, high).  Keeps .Y
+; OUT: .A, .X = the word popped (low, high).  Keeps .Y.  (Below a page's start: a block back, if one's spilled and
+; less than a page is left; within one, never, as what lowers sp, but pop, brings one back as it must)
 pop:
             lda         sp
-            bne         :+
+            beq         @page
+            dec         sp
+            dec         sp
+            phy
+            ldy         #1
+            lda         (sp),y
+            tax
+            lda         (sp)
+            ply
+            rts
+@page:
             dec         sp + 1
-:
             dec         sp
             dec         sp
             phy
