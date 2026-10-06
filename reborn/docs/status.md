@@ -504,8 +504,20 @@ is 16.6 times HyForth's time now (24.7 s to 1.48 s, from 64.7 s): `fib` 10.5 tim
 sort 20, the counting loop 31 and calls 34.  `hyspeed`: a call of a function of two arguments 2,033 cycles (3,686), a
 tail loop's step 1,729 (6,059), a parameter 11 (279), `map`'s item 3,193 (3,652; an untimed `map` first, as for the
 call, as the machine makes no frames and its collections fall elsewhere).  The suite's 1,334 checks pass, and all
-67 tests.  Next: the machine's own costs (a push, a call's checks: some 150 cycles an op), a buffer or a partially
-applied function called at once, not through the evaluator, and the loops (`while`, `dotimes`) compiled.
+67 tests.
+
+**The bytecode machine, step 1b: its own costs.**  A push done in the machine (`VPUSH`, not `push`'s, which keeps
+the registers); an argument or a constant pushed in one op (`LPUSH`, `CPUSH`: the compiler joins a `LOCAL` or
+`CONST` and the `PUSH` after it, unless a label is between); a global's function read and checked in one op
+(`SHEAD`), and a function calling itself by its name (`CSELF`, `TSELF`: checked as it runs, else a call's usual
+way) making its frame at once, no checks of the callee's cell, no code's place decoded; the quick ops with a
+constant worked on `ex` directly; a buffer given an index (`buf_at`) and a built-in partially applied (the
+evaluator's `ev_apply_values`) called at once, where both went through the evaluator with a scope made for them
+(the sieve and the sort did that each step).  hylang is 8.6 times HyForth's time now (12.8 s to 1.48 s): `gcd` 4.8,
+`fib` 7.4, the sieve 8.3, the sort 8.8, the counting loop 17 and calls 23.  `hyspeed`: a call 1,653 cycles, a tail
+loop's step 888, `map`'s item 2,987.  What's left is the machine's shape: an op dispatched and its `ip` moved on,
+some 25 cycles each; a counting loop's step is 13 ops and some 1,200 cycles, HyForth's 68.  Next: the loops
+(`while`, `dotimes`, `each`) and a function's own locals (`=(`, `let`) compiled.
 
 | Step | | Notes |
 |---|---|---|

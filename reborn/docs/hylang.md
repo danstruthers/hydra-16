@@ -171,20 +171,20 @@ machine's, below):
 
 | Benchmark | What | Result | Evaluated | Compiled | HyForth | Compiled / HyForth |
 | :-------- | :--- | -----: | --------: | -------: | ------: | -----------------: |
-| `loop` | A counting loop of 4,000 steps | 4000 | 9,105 ms | 2,335 ms | 76 ms | 31x |
-| `calls` | 2,000 calls of a function of two arguments | 2000 | 7,660 ms | 2,215 ms | 65 ms | 34x |
-| `fib` | Fibonacci of 16, recursively (3,193 calls) | 987 | 6,775 ms | 1,905 ms | 181 ms | 10.5x |
-| `sieve` | The primes below 1,024, a byte each | 172 | 14,730 ms | 6,005 ms | 332 ms | 18x |
-| `sort` | 100 bytes sorted by insertion | 407 | 17,085 ms | 9,705 ms | 480 ms | 20x |
-| `gcd` | gcd(i, j) by subtraction, for i and j 1 to 20, summed | 880 | 9,340 ms | 2,535 ms | 350 ms | 7.2x |
-| All | | | 64,695 ms | 24,700 ms | 1,484 ms | 16.6x (the ratios' geometric mean 17.5x) |
+| `loop` | A counting loop of 4,000 steps | 4000 | 9,105 ms | 1,290 ms | 76 ms | 17x |
+| `calls` | 2,000 calls of a function of two arguments | 2000 | 7,660 ms | 1,525 ms | 65 ms | 23x |
+| `fib` | Fibonacci of 16, recursively (3,193 calls) | 987 | 6,775 ms | 1,340 ms | 181 ms | 7.4x |
+| `sieve` | The primes below 1,024, a byte each | 172 | 14,730 ms | 2,755 ms | 332 ms | 8.3x |
+| `sort` | 100 bytes sorted by insertion | 407 | 17,085 ms | 4,240 ms | 480 ms | 8.8x |
+| `gcd` | gcd(i, j) by subtraction, for i and j 1 to 20, summed | 880 | 9,340 ms | 1,675 ms | 350 ms | 4.8x |
+| All | | | 64,695 ms | 12,825 ms | 1,484 ms | 8.6x (the ratios' geometric mean 10.0x) |
 
 HyForth's code is threaded 65C02 code and its loop counter a register's.  hylang's evaluator ran each step as a call
 with its scope made on the heap, so its tightest loops (`loop`, `calls`) were about 120 times HyForth's, and code
 that does more each step (a buffer's bytes, a comparison, arithmetic) about 30 to 45.  Compiled, a call makes nothing
-on the heap and an argument is a word at a fixed place, so recursion and arithmetic (`fib`, `gcd`) are 7 to 11
-times HyForth's; a loop's step is still a tail call through the machine (some 2,000 cycles), and a buffer called as
-a function still goes through the evaluator.
+on the heap and an argument is a word at a fixed place, so recursion, arithmetic and a buffer's bytes are 5 to 9
+times HyForth's; a counting loop's step is some 1,200 cycles (its 13 ops, a tail call among them, each dispatched:
+HyForth's is 68), so the tightest loops are 17 to 23 times.
 
 ## The design
 
@@ -239,7 +239,9 @@ The plan has it whole; in short:
   and an argument is a word at a fixed place; a call in tail position (`TCALL`) reuses its caller's frame.
   Constants, arguments, globals, `if`, `do`, `and` and `or` are compiled in place; `+`, `-`, `1+`, `1-`, `zero?`,
   `one?` and the comparisons are ops that work fixnums at once (with a constant, one op); a built-in is called at
-  once; any other call is `HEAD` (its function a function?) and `CALL`.  The evaluator does the rest: the other
+  once; any other call is `HEAD` (its function a function?) and `CALL` (a global's function, `SHEAD`: the global read
+  in the same op; the function's own, by its name, `CSELF` and `TSELF`, which make its frame at once; a buffer
+  given an index, or a built-in partially applied, called at once too).  The evaluator does the rest: the other
   special forms, an fexpr's call, a function not compiled (or with extras), a built-in that runs the machine; its
   value comes back through a `K_VM` frame.  A frame's scope is made only when it's wanted (a Q-expression with
   names in it, the evaluator, the built-ins that keep their caller's scope: `list`, `fn`, `fun`, `fexpr` and the hash
@@ -291,8 +293,8 @@ The plan has it whole; in short:
 * **Budgets** (at 3.58 MHz, the library loaded; each from the REPL's echo to its `=>`, a difference of two lines'
   times so the REPL's own work drops out): start-up from the snapshot to the first prompt 300,000 cycles (286,000);
   a parameter looked up 300 (279; compiled, 11); a call of a function of two arguments 4,000 (3,683; compiled,
-  2,033); a tail loop's step (`if`, `zero?`, `-`, the call) 6,500 (6,059; compiled, 1,729); `map` with a function of
-  one argument 4,000 an item (3,652; compiled, 3,193); a full
+  1,653); a tail loop's step (`if`, `zero?`, `-`, the call) 6,500 (6,059; compiled, 888); `map` with a function of
+  one argument 4,000 an item (3,652; compiled, 2,987); a full
   collection of a full 64K cell heap 3,600,000 (213 cycles a live cell: 14,000 conses live, 3.8 M).  The `hyspeed`
   test checks the four of the evaluator on every run, the `heap` test the collector's (255 a cell, 9,000 live).
   They're phase 8's: the plan's were 150, 1,500, 3,000, 2,000 and 1,500,000, targets set before a spike, and

@@ -34,8 +34,9 @@ VO_JF           = $0C           ; t: to t if ex is NIL or ()
 VO_JT           = $0E           ; t: to t if it isn't
 VO_JMP          = $10           ; t
 VO_JE           = $12           ; k t: an error: k words dropped, then to t
-VO_HEAD         = $14           ; c t: ex, call c's function: a function, an ordinary built-in, pushed; an error, or
-                                ;   not a function and c has no arguments: to t (past the call); else c (from its
+VO_HEAD         = $14           ; m c t: ex, the function of call c (m arguments): a function, an ordinary built-in,
+                                ;   a partially applied one, a buffer given an index, pushed; an error, or not a
+                                ;   function and c has no arguments: to t (past the call); else c (from its
                                 ;   arguments) the evaluator's, its value for t
 VO_CALL         = $16           ; m h r: the function under the m arguments on top called
 VO_TCALL        = $18           ; m h 0: the same, in tail position
@@ -61,7 +62,13 @@ VO_GTC          = $3E
 VO_LEC          = $40
 VO_GEC          = $42
 VO_EQC          = $44
-VO_COUNT        = $46
+VO_LPUSH        = $46           ; y: LOCAL y, PUSH
+VO_CPUSH        = $48           ; v: CONST v, PUSH
+VO_SHEAD        = $4A           ; m c t sym: HEAD of sym's global value (the function's own name: this frame's
+                                ;   function pushed at once)
+VO_CSELF        = $4C           ; m code h r: CALL of this frame's function (else CALL's way), its code at code
+VO_TSELF        = $4E           ; m code 0: TCALL, the same
+VO_COUNT        = $50
 VM_R            = $80           ; (An op's error returned)
 
 VF_SCOPE        = $01           ; (A built-in that looks at its caller's scope: vb_vf's)
@@ -140,7 +147,9 @@ vc_cm           = vc_x + 1                                  ;   (a part's way wi
 vc_cj           = vc_cm + 1
 vc_ch           = vc_cj + 1
 vc_sd           = vc_ch + 1
-vc_wend         = vc_sd + 1
+vc_lop          = vc_sd + 1                                 ;   (a LOCAL's or a CONST's place, and past it: vc_push's)
+vc_lend         = vc_lop + 2
+vc_wend         = vc_lend + 2
 .assert     vc_wend <= sy_end, error, "vm.inc: the compiler's room runs past the reader's scratch"
 
 .segment "DATA4"                                            ; (In the task's RAM: every bank's)
@@ -179,6 +188,8 @@ vm_rebind:
 vm_init:
             stz         vm_on
             stz         ar_n
+            lda         #$FF                                ; (No code's bank yet)
+            sta         vm_idx
 ; The arena emptied, every function's code dropped (ev_run's, when it's full: no frame of the machine's is left)
 vm_reset:
             jsr         vm_flush
@@ -262,21 +273,39 @@ vm_flush:
 
 ; ---- The machine
 
+; .A, .X pushed (push's, quicker: .Y not kept)
+.macro VPUSH
+            sta         (sp)
+            ldy         #1
+            txa
+            sta         (sp),y
+            lda         sp
+            clc
+            adc         #2
+            sta         sp
+            bne         *+5                                 ; (Past the jsr)
+            jsr         vm_page
+.endmacro
+
 ; IN: .A, .X = a code's place (a fixnum: vm_encode's).  vm_ip, vm_bank, vm_idx = it
 vm_decode:
             sta         vm_t
             txa
             lsr
-            sta         vm_t + 1                            ; (Its index, times 32, and the address's bits 12-8)
+            tax                                             ; (Its index, times 32, and the address's bits 12-8)
             lda         vm_t
             ror
             sta         vm_ip
-            lda         vm_t + 1
+            txa
             and         #$1F
             ora         #$80
             sta         vm_ip + 1
-            lda         vm_t + 1
+            txa
             and         #$60
+            cmp         vm_idx                              ; (Its bank: the same, as a rule)
+            bne         :+
+            rts
+:
             sta         vm_idx
             lsr
             lsr
@@ -391,6 +420,16 @@ vm_rbyte:
             lda         (ht)
             rts
 
+; sp's page crossed by VPUSH: the next (the stack's oldest block spilled if it's full)
+vm_page:
+            inc         sp + 1
+            lda         sp + 1
+            cmp         stk_endp
+            bcc         :+
+            jmp         spill
+:
+            rts
+
 ; .A, .X = sp: the stack cut back to there (a block spilled brought back, if it's down to its first page)
 vm_setsp:
             sta         sp
@@ -407,6 +446,7 @@ vm_setsp:
 vm_below:
             lda         vm_m
             asl
+            adc         #2
             sta         vm_k
             lda         sp
             sec
@@ -415,13 +455,6 @@ vm_below:
             lda         sp + 1
             sbc         #0
             sta         ht + 1
-            lda         ht
-            sec
-            sbc         #2
-            sta         ht
-            bcs         :+
-            dec         ht + 1
-:
             rts
 
 ; vm_mat from the record's scope (made: $80)
@@ -476,10 +509,10 @@ vm_callsite:
 vm_frame0:
             lda         vm_t
             ldx         vm_t + 1
-            jsr         push
+            VPUSH
             lda         #0
             tax
-            jsr         push
+            VPUSH
             lda         vm_m
             asl
             clc
@@ -512,7 +545,7 @@ vm_up:
 @push:
             lda         #0
             tax
-            jsr         push
+            VPUSH
             dec         vm_k
             bne         @push
             lda         vm_m
@@ -892,11 +925,11 @@ vm_symex:
             sta         ex + 1
             rts
 
-; OUT: .A, .X = the arguments, as written, of the call after the op (HEAD's)
+; OUT: .A, .X = the arguments, as written, of the call after the op (HEAD's, SHEAD's)
 vm_cargs:
             lda         vm_bank
             sta         $00
-            ldy         #2
+            ldy         #3
             lda         (vm_ip),y
             tax
             dey
@@ -915,6 +948,15 @@ op_const:
             sta         ex + 1
             jmp         vm_adv3
 
+op_cpush:
+            ldy         #2
+            lda         (vm_ip),y
+            tax
+            dey
+            lda         (vm_ip),y
+            VPUSH
+            jmp         vm_adv3
+
 op_local:
             ldy         #1
             lda         (vm_ip),y
@@ -928,7 +970,32 @@ op_local:
             sta         ex + 1
             jmp         vm_adv2
 @scope:
-            asl                                             ; (In the scope: its pair's value, at 2y + 2)
+            jsr         vm_slot
+            jmp         vm_adv2
+
+op_lpush:
+            ldy         #1
+            lda         (vm_ip),y
+            bit         vm_mat
+            bmi         @scope
+            tay
+            iny
+            lda         (vm_s),y
+            tax
+            dey
+            lda         (vm_s),y
+            VPUSH
+            jmp         vm_adv2
+@scope:
+            jsr         vm_slot
+            lda         ex
+            ldx         ex + 1
+            VPUSH
+            jmp         vm_adv2
+
+; .A = an argument's place (2 + 2k): ex = its value in the frame's scope (its pair's, at 2y + 2)
+vm_slot:
+            asl
             inc         a
             inc         a
             pha
@@ -948,7 +1015,7 @@ op_local:
             iny
             lda         (hp),y
             sta         ex + 1
-            jmp         vm_adv2
+            rts
 
 op_global:
             bit         vm_mat
@@ -973,16 +1040,30 @@ op_global:
 :
             jmp         vm_adv3
 @look:
-            stz         ee                                  ; (Unbound, or in a scope made: lookup's way)
+            ldy         #1
+            jsr         vm_glook
+            lda         #3
+            jmp         vm_valerr
+
+; ex = the value of the symbol at .Y in the op (lookup's: the scope made's, if there's one, else its global's)
+vm_glook:
+            stz         ee
             stz         ee + 1
             bit         vm_mat
             bpl         :+
+            phy
             jsr         vm_scope
+            ply
 :
-            jsr         vm_symex
+            lda         vm_bank
+            sta         $00
+            lda         (vm_ip),y
+            sta         ex
+            iny
+            lda         (vm_ip),y
+            sta         ex + 1
             FARN        1, lookup
-            lda         #3
-            jmp         vm_valerr
+            rts
 
 op_lookup:
             bit         vm_mat
@@ -1004,7 +1085,7 @@ op_lookup:
 op_push:
             lda         ex
             ldx         ex + 1
-            jsr         push
+            VPUSH
             jmp         vm_adv1
 
 op_jf:
@@ -1052,7 +1133,53 @@ op_je:
             ldy         #2
             jmp         vm_jumpy
 
+; SHEAD: the global value of the symbol at 6 (a function's own name, as it was compiled): this frame's function,
+; pushed at once; anything else, HEAD's way
+op_shead:
+            lda         #8
+            sta         vm_fl
+            bit         vm_mat
+            bmi         @look
+            ldy         #7
+            lda         (vm_ip),y
+            tax
+            dey
+            lda         (vm_ip),y
+            jsr         deref
+            ldy         #3
+            lda         (hp),y
+            sta         ex + 1
+            dey
+            lda         (hp),y
+            sta         ex
+            ldy         #1                                  ; (This frame's function?)
+            lda         (vm_s),y
+            cmp         ex + 1
+            bne         @other
+            lda         (vm_s)
+            cmp         ex
+            bne         @other
+            ldx         ex + 1
+            VPUSH
+            lda         #8
+            jmp         vm_adv
+@other:
+            lda         ex
+            cmp         #<UNBOUND
+            bne         vm_head
+            lda         ex + 1
+            cmp         #>UNBOUND
+            bne         vm_head
+@look:
+            ldy         #6
+            jsr         vm_glook
+            bra         vm_head
+
+; HEAD: ex, the function of a call of m arguments (c the call, t past it); vm_fl, the op's length
 op_head:
+            lda         #6
+            sta         vm_fl
+vm_head:
             lda         ex
             lsr
             bcs         @notfn
@@ -1076,23 +1203,34 @@ op_head:
             beq         @func
             cmp         #PK_ERROR
             beq         @error
-            cmp         #PK_PARTIAL
-            beq         @eval
+            cmp         #PK_PARTIAL                         ; (A function partially applied: CALL's, its values
+            beq         @push                               ;   first)
+            cmp         #PK_BUFFER                          ; (A buffer given an index: CALL's)
+            bne         @hash
+            lda         vm_bank
+            sta         $00
+            ldy         #1
+            lda         (vm_ip),y
+            cmp         #1
+            beq         @push
+            bra         @eval
+@hash:
             cmp         #PK_HASH
             beq         @eval
-            cmp         #PK_BUFFER
-            beq         @eval
 @notfn:
-            jsr         vm_cargs                            ; (Not a function: with no arguments, itself; else the
-            stx         vm_k                                ;   evaluator's, its error or exit's)
-            ora         vm_k
+            lda         vm_bank                             ; (Not a function: with no arguments, itself; else the
+            sta         $00                                 ;   evaluator's, its error or exit's)
+            ldy         #1
+            lda         (vm_ip),y
             bne         @eval
 @to:
             lda         vm_bank
             sta         $00
-            ldy         #3
+            ldy         #4
             jmp         vm_jumpy
 @error:
+            lda         vm_bank
+            sta         $00
             lda         (vm_ip)
             bpl         @to
             jmp         vm_ret
@@ -1105,8 +1243,9 @@ op_head:
 @push:
             lda         ex
             ldx         ex + 1
-            jsr         push
-            jmp         vm_adv5
+            VPUSH
+            lda         vm_fl
+            jmp         vm_adv
 @eval:
             jsr         vm_scope                            ; (The evaluator's, from the function: ev_head's, with
             jsr         vm_cargs                            ;   the arguments as written, in this frame's scope)
@@ -1114,7 +1253,7 @@ op_head:
             stx         cr + 1
             lda         vm_bank
             sta         $00
-            ldy         #3
+            ldy         #4
             lda         (vm_ip),y
             tax
             iny
@@ -1123,6 +1262,145 @@ op_head:
             stx         vm_ip
             LDAX        ev_head
             jmp         vm_out0
+
+; CSELF m code h r, TSELF m code 0: a call of this frame's function (as compiled: else CALL's and TCALL's way), its
+; code at code
+op_tself:
+            jsr         vm_selfq
+            bcs         @call
+            ldy         #2                                  ; (Its arguments to this frame's; its return kept, no
+            ldx         vm_m                                ;   scope)
+            beq         @args
+@arg:
+            lda         (ht),y
+            sta         (vm_s),y
+            iny
+            lda         (ht),y
+            sta         (vm_s),y
+            iny
+            dex
+            bne         @arg
+@args:
+            iny
+            iny
+            lda         #0
+            sta         (vm_s),y
+            iny
+            sta         (vm_s),y
+            stz         vm_mat
+            lda         ht                                  ; (The stack cut back to the function's word: the
+            ldx         ht + 1                              ;   record's end)
+            jsr         vm_setsp
+            bra         vm_scode
+@call:
+            lda         #$80
+            ldx         #5
+            jmp         vm_scall
+
+op_cself:
+            jsr         vm_selfq
+            bcs         @call
+            lda         depth + 1                           ; (Too deep: CALL's way, its error)
+            cmp         #>MAX_DEPTH
+            bcc         :+
+            bne         @call
+            lda         depth
+            cmp         #<MAX_DEPTH
+            bcs         @call
+:
+            lda         vm_ip                               ; (Its frame: its return, past the op; no scope)
+            clc
+            adc         #6
+            pha
+            lda         vm_ip + 1
+            adc         #0
+            tax
+            pla
+            jsr         vm_encode
+            VPUSH
+            lda         #0
+            tax
+            VPUSH
+            lda         vm_rb
+            clc
+            adc         #4
+            sta         vm_k
+            lda         sp
+            sec
+            sbc         vm_k
+            sta         vm_s
+            lda         sp + 1
+            sbc         #0
+            sta         vm_s + 1
+            stz         vm_mat
+            inc         depth
+            bne         vm_scode
+            inc         depth + 1
+            bra         vm_scode
+@call:
+            lda         #0
+            ldx         #6
+            bra         vm_scall
+
+; The code at the op's bytes 2 and 3 (this function's) run
+vm_scode:
+            lda         vm_bank
+            sta         $00
+            ldy         #3
+            lda         (vm_ip),y
+            tax
+            dey
+            lda         (vm_ip),y
+            sta         vm_ip
+            stx         vm_ip + 1
+            jmp         vm_next
+
+; Not this frame's function (or Ctrl-C, too deep ...): CALL's or TCALL's way (.A vm_tl, .X the op's length)
+vm_scall:
+            sta         vm_tl
+            txa
+            clc
+            adc         vm_ip
+            sta         vm_ip
+            bcc         :+
+            inc         vm_ip + 1
+:
+            jmp         vm_call
+
+; CSELF's and TSELF's: vm_m = its arguments; ht = the function's word under them.  OUT: C = 0 if it's this frame's
+; function, as many arguments as its formals, and no Ctrl-C nor a note
+vm_selfq:
+            ldy         #1
+            lda         (vm_ip),y
+            sta         vm_m
+            asl
+            adc         #2
+            sta         vm_k
+            lda         sp
+            sec
+            sbc         vm_k
+            sta         ht
+            lda         sp + 1
+            sbc         #0
+            sta         ht + 1
+            lda         vm_k
+            cmp         vm_rb
+            bne         @no
+            ldy         #1
+            lda         (ht),y
+            cmp         (vm_s),y
+            bne         @no
+            lda         (ht)
+            cmp         (vm_s)
+            bne         @no
+            bit         intr
+            bmi         @no
+            bvs         @no
+            clc
+            rts
+@no:
+            sec
+            rts
 
 op_tcall:
             lda         #$80
@@ -1138,9 +1416,10 @@ op_call:
             clc
             adc         #4
             sta         vm_ip
-            bcc         :+
+            bcc         vm_call
             inc         vm_ip + 1
-:
+; A call: vm_m arguments on top, the function under them; vm_tl $80 in tail position; ip past the op
+vm_call:
             jsr         vm_below                            ; (cf: the function, under its arguments)
             lda         (ht)
             sta         cf
@@ -1161,7 +1440,9 @@ op_call:
 :
             lda         pk,x
             cmp         #PK_FUNC
-            bne         vm_cout
+            beq         :+
+            jmp         vm_cother
+:
             lda         cf
             jsr         deref
             ldy         #6
@@ -1303,13 +1584,36 @@ vm_cintr:
             MOVW        ex, nomem_err
             bra         vm_cdrop
 
+; Not a function's cell: a buffer given an index (its byte, buffers.inc's buf_at); a function partially applied (the
+; evaluator's ev_apply_values: its values first); else the evaluator's
+vm_cother:
+            cmp         #PK_BUFFER
+            bne         @partial
+            jsr         pop                                 ; (Its index)
+            sta         ex
+            stx         ex + 1
+            FARN        6, buf_at
+            bcc         :+
+            MOVW        ex, nomem_err
+:
+            lda         #1                                  ; (Its word)
+            jsr         drop
+            bra         vm_cvalue
+@partial:
+            cmp         #PK_PARTIAL
+            beq         @lb846
+            jmp         vm_cout
+@lb846:
+            LDAX        ev_apply_values
+            jmp         vm_cout2
+
 ; A built-in called (cf, as HEAD let it through: not a special form, nor one that takes errors): here, unless it
 ; runs the machine or isn't given as many arguments as it takes (the evaluator's: partially applied, or an error)
 vm_cbuiltin:
             cpx         #>BUILTIN0
-            bcs         @lb724
+            bcs         @lb845
             jmp         vm_cout
-@lb724:
+@lb845:
             txa
             lsr
             lda         cf
@@ -1329,13 +1633,12 @@ vm_cbuiltin:
             jsr         vm_bcode
             lda         #1                                  ; (Its word too)
             jsr         drop
-            bra         vm_cvalue
+            jmp         vm_cvalue
 @out:
             lda         vb_vf,x
-            bne         @lb723
-            jmp         vm_cout
-@lb723:
+            beq         :+
             jsr         vm_scope
+:
             jmp         vm_cout
 
 ; Built-in bi_n's code given the vm_m values on top (cf the built-in): ex its value (no room: the error); the values
@@ -1495,54 +1798,8 @@ vm_one:
             sta         vm_fl
             rts
 
-op_add:
-            jsr         vm_pop2
-            bra         vm_add
-op_addc:
-            jsr         vm_cst2
-vm_add:
-            lda         vm_a
-            and         vm_b
-            lsr
-            bcc         vm_fslow
-            lda         vm_b
-            and         #$FE
-            clc
-            adc         vm_a
-            tax
-            lda         vm_b + 1
-            adc         vm_a + 1
-            bvs         vm_fslow
-vm_fix:
-            sta         ex + 1
-            stx         ex
-vm_fdone:
-            lda         vm_fl
-            jmp         vm_adv
-
-op_sub:
-            jsr         vm_pop2
-            bra         vm_sub
-op_subc:
-            jsr         vm_cst2
-vm_sub:
-            lda         vm_a
-            and         vm_b
-            lsr
-            bcc         vm_fslow
-            lda         vm_b
-            and         #$FE
-            sta         vm_k
-            lda         vm_a
-            sec
-            sbc         vm_k
-            tax
-            lda         vm_a + 1
-            sbc         vm_b + 1
-            bvs         vm_fslow
-            bra         vm_fix
-
-; Not fixnums (or past one): the op's built-in on its values, the usual way; its error returned if the op's VM_R
+; Not fixnums (or past one): the op's built-in on its values (vm_a, vm_b), the usual way; its error returned if the
+; op's VM_R; then past the op (vm_fl bytes)
 vm_fslow:
             lda         vm_bank
             sta         $00
@@ -1563,13 +1820,13 @@ vm_fslow:
             sta         cf + 1
             lda         vm_a
             ldx         vm_a + 1
-            jsr         push
+            VPUSH
             lda         vm_m
             cmp         #2
             bcc         :+
             lda         vm_b
             ldx         vm_b + 1
-            jsr         push
+            VPUSH
 :
             jsr         vm_bcode
             lda         vm_bank
@@ -1579,16 +1836,110 @@ vm_fslow:
             jsr         vm_iserr
             bcc         vm_fdone
             jmp         vm_ret
+vm_fdone:
+            lda         vm_fl
+            jmp         vm_adv
 
-vm_true:
+; The binary ones: (op a b), a pushed, b in ex
+op_add:
+            jsr         vm_pop2
+            lda         vm_a
+            and         vm_b
+            lsr
+            bcs         @lb844
+            jmp         vm_fslow
+@lb844:
+            lda         vm_b
+            and         #$FE
+            clc
+            adc         vm_a
+            tax
+            lda         vm_b + 1
+            adc         vm_a + 1
+            bvc         @lb843
+            jmp         vm_fslow
+@lb843:
+vm_fix1:
+            sta         ex + 1
+            stx         ex
+            jmp         vm_adv1
+
+op_sub:
+            jsr         vm_pop2
+            lda         vm_a
+            and         vm_b
+            lsr
+            bcs         @lb842
+            jmp         vm_fslow
+@lb842:
+            lda         vm_b
+            and         #$FE
+            sta         vm_k
+            lda         vm_a
+            sec
+            sbc         vm_k
+            tax
+            lda         vm_a + 1
+            sbc         vm_b + 1
+            bvc         @lb841
+            jmp         vm_fslow
+@lb841:
+            bra         vm_fix1
+
+op_lt:
+            jsr         vm_pop2
+            jsr         vm_fx2
+            jsr         vm_less
+            bcs         vm_t1
+            bra         vm_f1
+op_gt:
+            jsr         vm_pop2
+            jsr         vm_fx2
+            jsr         vm_more
+            bcs         vm_t1
+            bra         vm_f1
+op_le:
+            jsr         vm_pop2
+            jsr         vm_fx2
+            jsr         vm_more
+            bcc         vm_t1
+            bra         vm_f1
+op_ge:
+            jsr         vm_pop2
+            jsr         vm_fx2
+            jsr         vm_less
+            bcc         vm_t1
+            bra         vm_f1
+op_neq:
+            jsr         vm_pop2
+            jsr         vm_fx2
+            lda         vm_a
+            cmp         vm_b
+            bne         vm_f1
+            lda         vm_a + 1
+            cmp         vm_b + 1
+            bne         vm_f1
+vm_t1:
             lda         #<T_VAL
             sta         ex
             stz         ex + 1
-            jmp         vm_fdone
-vm_false:
+            jmp         vm_adv1
+vm_f1:
             stz         ex
             stz         ex + 1
-            jmp         vm_fdone
+            jmp         vm_adv1
+
+; vm_a and vm_b fixnums: back; else (its return dropped) the op's built-in's way
+vm_fx2:
+            lda         vm_a
+            and         vm_b
+            lsr
+            bcc         :+
+            rts
+:
+            pla
+            pla
+            jmp         vm_fslow
 
 ; OUT: C = 1 if vm_a < vm_b (vm_less), vm_b < vm_a (vm_more): fixnums, signed
 vm_less:
@@ -1612,167 +1963,171 @@ vm_more:
             asl
             rts
 
-op_lt:
-            jsr         vm_pop2
-            bra         vm_lt
-op_ltc:
-            jsr         vm_cst2
-vm_lt:
-            lda         vm_a
-            and         vm_b
-            lsr
-            bcs         @lb722
-            jmp         vm_fslow
-@lb722:
-            jsr         vm_less
-            bcs         vm_true
-            bra         vm_false
-
-op_gt:
-            jsr         vm_pop2
-            bra         vm_gt
-op_gtc:
-            jsr         vm_cst2
-vm_gt:
-            lda         vm_a
-            and         vm_b
-            lsr
-            bcs         @lb721
-            jmp         vm_fslow
-@lb721:
-            jsr         vm_more
-            bcs         vm_true
-            bra         vm_false
-
-op_le:
-            jsr         vm_pop2
-            bra         vm_le
-op_lec:
-            jsr         vm_cst2
-vm_le:
-            lda         vm_a
-            and         vm_b
-            lsr
-            bcs         @lb720
-            jmp         vm_fslow
-@lb720:
-            jsr         vm_more
-            bcs         vm_false
-            jmp         vm_true
-
-op_ge:
-            jsr         vm_pop2
-            bra         vm_ge
-op_gec:
-            jsr         vm_cst2
-vm_ge:
-            lda         vm_a
-            and         vm_b
-            lsr
-            bcs         @lb719
-            jmp         vm_fslow
-@lb719:
-            jsr         vm_less
-            bcc         @lb718
-            jmp         vm_false
-@lb718:
-            jmp         vm_true
-
-op_neq:
-            jsr         vm_pop2
-            bra         vm_neq
-op_eqc:
-            jsr         vm_cst2
-vm_neq:
-            lda         vm_a
-            and         vm_b
-            lsr
-            bcs         @lb717
-            jmp         vm_fslow
-@lb717:
-            lda         vm_a
-            cmp         vm_b
-            beq         @lb716
-            jmp         vm_false
-@lb716:
-            lda         vm_a + 1
-            cmp         vm_b + 1
-            beq         @lb715
-            jmp         vm_false
-@lb715:
-            jmp         vm_true
-
+; The unary ones: ex
 op_inc:
-            jsr         vm_one
-            lda         vm_a
+            lda         ex
             lsr
-            bcs         @lb714
-            jmp         vm_fslow
-@lb714:
-            lda         vm_a
+            bcc         vm_slow1
+            lda         ex
             clc
             adc         #2
             tax
-            lda         vm_a + 1
+            lda         ex + 1
             adc         #0
-            bvc         @lb713
-            jmp         vm_fslow
-@lb713:
-            jmp         vm_fix
-
+            bvs         vm_slow1
+            jmp         vm_fix1
 op_dec:
-            jsr         vm_one
-            lda         vm_a
+            lda         ex
             lsr
-            bcs         @lb712
-            jmp         vm_fslow
-@lb712:
-            lda         vm_a
+            bcc         vm_slow1
+            lda         ex
             sec
             sbc         #2
             tax
-            lda         vm_a + 1
+            lda         ex + 1
             sbc         #0
-            bvc         @lb711
-            jmp         vm_fslow
-@lb711:
-            jmp         vm_fix
-
+            bvs         vm_slow1
+            jmp         vm_fix1
 op_zerop:
-            jsr         vm_one
-            lda         vm_a
+            lda         ex
             lsr
-            bcs         @lb710
-            jmp         vm_fslow
-@lb710:
-            lda         vm_a
+            bcc         vm_slow1
+            lda         ex
             cmp         #<FIX(0)
-            beq         @lb709
-            jmp         vm_false
-@lb709:
-            lda         vm_a + 1
-            beq         @lb708
-            jmp         vm_false
-@lb708:
-            jmp         vm_true
-
+            bne         vm_f1
+            lda         ex + 1
+            bne         vm_f1
+            bra         vm_t1
 op_onep:
-            jsr         vm_one
-            lda         vm_a
+            lda         ex
             lsr
-            bcs         @lb707
-            jmp         vm_fslow
-@lb707:
-            lda         vm_a
+            bcc         vm_slow1
+            lda         ex
             cmp         #<FIX(1)
-            beq         @lb706
-            jmp         vm_false
-@lb706:
-            lda         vm_a + 1
-            beq         @lb705
-            jmp         vm_false
-@lb705:
-            jmp         vm_true
+            bne         vm_f1
+            lda         ex + 1
+            beq         @lb852
+            jmp         vm_f1
+@lb852:
+            jmp         vm_t1
+vm_slow1:
+            jsr         vm_one
+            jmp         vm_fslow
+
+; With a constant: ex and the fixnum after the op
+op_addc:
+            lda         ex
+            lsr
+            bcc         vm_slow3
+            ldy         #1
+            lda         (vm_ip),y
+            and         #$FE
+            clc
+            adc         ex
+            tax
+            iny
+            lda         (vm_ip),y
+            adc         ex + 1
+            bvs         vm_slow3
+vm_fix3:
+            sta         ex + 1
+            stx         ex
+            jmp         vm_adv3
+op_subc:
+            lda         ex
+            lsr
+            bcc         vm_slow3
+            ldy         #1
+            lda         (vm_ip),y
+            and         #$FE
+            sta         vm_k
+            lda         ex
+            sec
+            sbc         vm_k
+            tax
+            iny
+            lda         ex + 1
+            sbc         (vm_ip),y
+            bvs         vm_slow3
+            bra         vm_fix3
+vm_slow3:
+            jsr         vm_cst2
+            jmp         vm_fslow
+op_ltc:
+            lda         ex
+            lsr
+            bcc         vm_slow3
+            jsr         vm_xltc
+            bcs         vm_t3
+            bra         vm_f3
+op_gec:
+            lda         ex
+            lsr
+            bcc         vm_slow3
+            jsr         vm_xltc
+            bcc         vm_t3
+            bra         vm_f3
+op_gtc:
+            lda         ex
+            lsr
+            bcc         vm_slow3
+            jsr         vm_cltx
+            bcs         vm_t3
+            bra         vm_f3
+op_lec:
+            lda         ex
+            lsr
+            bcc         vm_slow3
+            jsr         vm_cltx
+            bcc         vm_t3
+            bra         vm_f3
+op_eqc:
+            lda         ex
+            lsr
+            bcc         vm_slow3
+            ldy         #1
+            lda         ex
+            cmp         (vm_ip),y
+            bne         vm_f3
+            iny
+            lda         ex + 1
+            cmp         (vm_ip),y
+            bne         vm_f3
+vm_t3:
+            lda         #<T_VAL
+            sta         ex
+            stz         ex + 1
+            jmp         vm_adv3
+vm_f3:
+            stz         ex
+            stz         ex + 1
+            jmp         vm_adv3
+
+; OUT: C = 1 if ex < the constant (vm_xltc), the constant < ex (vm_cltx): fixnums, signed
+vm_xltc:
+            ldy         #1
+            lda         ex
+            cmp         (vm_ip),y
+            iny
+            lda         ex + 1
+            sbc         (vm_ip),y
+            bvc         :+
+            eor         #$80
+:
+            asl
+            rts
+vm_cltx:
+            ldy         #1
+            lda         (vm_ip),y
+            cmp         ex
+            iny
+            lda         (vm_ip),y
+            sbc         ex + 1
+            bvc         :+
+            eor         #$80
+:
+            asl
+            rts
 
 ; ---- The compiler
 
@@ -1875,6 +2230,7 @@ vc_again:
             sta         vc_start + 1
             stz         vc_nlab
             stz         vc_lv
+            stz         vc_lend + 1
             lda         vc_n
             clc
             adc         #3
@@ -2085,10 +2441,35 @@ vc_def:
             sta         lb_hi,x
             lda         #1
             sta         lb_def,x
+            stz         vc_lend + 1                         ; (A label here: no PUSH joins the op before it)
             rts
 
-; PUSH emitted: the frame a word higher
+; PUSH emitted: the frame a word higher (a LOCAL or CONST just before it, no label between: LPUSH, CPUSH)
 vc_push:
+            lda         hq
+            cmp         vc_lend
+            bne         @push
+            lda         hq + 1
+            cmp         vc_lend + 1
+            bne         @push
+            stz         vc_lend + 1
+            lda         vc_lop
+            sta         ht
+            lda         vc_lop + 1
+            sta         ht + 1
+            lda         vc_bk
+            sta         $00
+            lda         (ht)
+            cmp         #VO_LOCAL
+            bne         :+
+            lda         #VO_LPUSH
+            bra         :++
+:
+            lda         #VO_CPUSH
+:
+            sta         (ht)
+            bra         vc_hinc
+@push:
             lda         #VO_PUSH
             jsr         vc_byte
 vc_hinc:
@@ -2380,7 +2761,8 @@ vc_expr:
             cmp         #PK_QCONS
             beq         @quote
 @const:
-            lda         #VO_CONST                           ; (Anything else: itself)
+            jsr         vc_mark                             ; (Anything else: itself)
+            lda         #VO_CONST
             jsr         vc_byte
             ldx         vc_lv
             lda         L_elo,x
@@ -2389,18 +2771,21 @@ vc_expr:
             tax
             pla
             jsr         vc_word
-            bra         @done
+            jsr         vc_marked
+            jmp         @done
 @imm:
             cmp         #0                                  ; (() is NIL)
             bne         @const
             lda         L_elo,x
             cmp         #<SNIL
             bne         @const
+            jsr         vc_mark
             lda         #VO_CONST
             jsr         vc_byte
             lda         #0
             tax
             jsr         vc_word
+            jsr         vc_marked
             bra         @done
 @call:
             jsr         vc_call
@@ -2434,10 +2819,12 @@ vc_expr:
             jsr         vc_formal
             bcs         @free
             pha
+            jsr         vc_mark
             lda         #VO_LOCAL
             jsr         vc_byte
             pla
             jsr         vc_byte
+            jsr         vc_marked
             bra         @done
 @free:
             lda         #VO_LOOKUP
@@ -2461,6 +2848,20 @@ vc_expr:
             lda         #VO_RET
             jmp         vc_byte
 :
+            rts
+
+; vc_lop = here, a LOCAL's or a CONST's place (vc_mark); vc_lend = here, past it (vc_marked): a PUSH next joins it
+vc_mark:
+            lda         hq
+            sta         vc_lop
+            lda         hq + 1
+            sta         vc_lop + 1
+            rts
+vc_marked:
+            lda         hq
+            sta         vc_lend
+            lda         hq + 1
+            sta         vc_lend + 1
             rts
 
 ; A call compiled (this level's expression, an S-expression): a special form inlined (if, do, and, or) or the
@@ -2624,8 +3025,23 @@ vc_generic:
             jsr         vc_lab
             ldx         vc_lv
             sta         L_t,x
+            stz         L_b,x
+            jsr         vc_ghead                            ; (A global's name: SHEAD; the function's own: CSELF)
+            bcc         @head
+            jsr         vc_self
+            ldx         vc_lv
+            rol         L_b,x
+            lda         #VO_SHEAD
+            jsr         vc_rop
+            jsr         vc_mct
+            lda         vc_hd
+            ldx         vc_hd + 1
+            jsr         vc_word
+            jmp         @args
+@head:
             lda         #M_OK                               ; (Its function: an error's for HEAD)
             sta         vc_cm
+            ldx         vc_lv
             lda         L_elo,x
             pha
             lda         L_ehi,x
@@ -2643,22 +3059,30 @@ vc_generic:
             jsr         vc_child
             lda         #VO_HEAD
             jsr         vc_rop
-            ldx         vc_lv
-            lda         L_elo,x
-            pha
-            lda         L_ehi,x
-            tax
-            pla
-            jsr         vc_word
-            ldx         vc_lv
-            lda         L_t,x
-            jsr         vc_ref
+            jsr         vc_mct
+@args:
             jsr         vc_hinc
             ldx         vc_lv                               ; (Its arguments: an error's the call's value)
             lda         L_t,x
             jsr         vc_amode
             jsr         vc_args
             ldx         vc_lv
+            lda         L_b,x
+            beq         @call
+            lda         L_tail,x                            ; (CSELF m code h r; TSELF m code 0)
+            beq         :+
+            lda         #VO_TSELF
+            jsr         vc_byte
+            jsr         vc_mcode
+            lda         #0
+            jsr         vc_byte
+            bra         @t
+:
+            lda         #VO_CSELF
+            jsr         vc_byte
+            jsr         vc_mcode
+            bra         @hr
+@call:
             lda         L_tail,x
             beq         :+
             lda         #VO_TCALL
@@ -2670,16 +3094,87 @@ vc_generic:
             ldx         vc_lv
             lda         L_m,x
             jsr         vc_byte
+@hr:
             ldx         vc_lv
             lda         L_h0,x
             jsr         vc_byte
             jsr         vc_rbyte
+@t:
             ldx         vc_lv
             lda         L_h0,x
             sta         vc_h
             lda         L_t,x
             jsr         vc_def
             jmp         vc_je
+
+; HEAD's operands: m (the call's arguments), c (the call), t (its label)
+vc_mct:
+            ldx         vc_lv
+            lda         L_m,x
+            jsr         vc_byte
+            ldx         vc_lv
+            lda         L_elo,x
+            pha
+            lda         L_ehi,x
+            tax
+            pla
+            jsr         vc_word
+            ldx         vc_lv
+            lda         L_t,x
+            jmp         vc_ref
+
+; CSELF's and TSELF's: m, the function's code's place
+vc_mcode:
+            ldx         vc_lv
+            lda         L_m,x
+            jsr         vc_byte
+            lda         vc_start
+            ldx         vc_start + 1
+            jmp         vc_word
+
+; OUT: C = 1 if this level's call's function (vc_hd) is a global's name: the function has no scope, and it's a
+; symbol, not a formal (SHEAD's)
+vc_ghead:
+            lda         vc_snil
+            bne         @no
+            lda         vc_hd
+            lsr
+            bcs         @no
+            ldx         vc_hd + 1
+            cpx         #IMM_PAGES
+            bcc         @no
+            lda         pk,x
+            cmp         #PK_SYMBOL
+            bne         @no
+            lda         vc_hd
+            jmp         vc_formal                           ; (Not a formal: C = 1)
+@no:
+            clc
+            rts
+
+; OUT: C = 1 if this level's call is of the function compiled by its own name (vc_ghead's, its global value cf), as
+; many arguments as its formals
+vc_self:
+            ldx         vc_lv
+            lda         L_m,x
+            cmp         vc_n
+            bne         @no
+            lda         vc_hd
+            ldx         vc_hd + 1
+            jsr         deref
+            ldy         #2
+            lda         (hp),y
+            cmp         cf
+            bne         @no
+            iny
+            lda         (hp),y
+            cmp         cf + 1
+            bne         @no
+            sec
+            rts
+@no:
+            clc
+            rts
 
 ; A built-in's call (L_b): its arguments pushed (taken as errors too, if it takes them), BCALL
 vc_bcall:
@@ -2940,10 +3435,10 @@ vc_const:
             .word       op_jmp, op_je, op_head, op_call, op_tcall, op_bcall, op_eval, op_quote
             .word       op_quote0, op_add, op_sub, op_lt, op_gt, op_le, op_ge, op_neq
             .word       op_inc, op_dec, op_zerop, op_onep, op_addc, op_subc, op_ltc, op_gtc
-            .word       op_lec, op_gec, op_eqc
+            .word       op_lec, op_gec, op_eqc, op_lpush, op_cpush, op_shead, op_cself, op_tself
             .res        128 - VO_COUNT, $FF
 .endmacro
-.assert     VO_COUNT = 35 * 2, error, "vm.inc: vm_ops has an op too few or too many"
+.assert     VO_COUNT = 40 * 2, error, "vm.inc: vm_ops has an op too few or too many"
 vm_ops:
             VM_OPS
             VM_OPS
