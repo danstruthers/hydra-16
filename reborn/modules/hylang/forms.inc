@@ -38,15 +38,25 @@ sf_if:
             LDAX        s_iffew
             jmp         sf_error
 :
-            jsr         cr_next
+            jsr         cr_next                             ; (The condition: not a call, or a quick one, here;
+            jsr         is_call                             ;   else in a frame)
+            bcc         @here
+            jsr         ev_quick
+            bcc         if_value
             jsr         frame_check
             PUSHV       cr
             PUSHV       ee
             PUSHK       K_IF
             jmp         ev_eval
+@here:
+            jsr         ev_simple
+            jsr         is_err
+            bcc         if_value
+            jmp         ev_return
 k_if:
             POPV        ee
             POPV        cr
+if_value:
             jsr         is_nil
             bcs         @else
             jsr         cr_first

@@ -24,8 +24,13 @@ depth:      .res        2                                   ; Frames on the stac
 ev_jv:      .res        2                                   ; (A jump's address: a frame's, a built-in's)
 bi_n:       .res        1                                   ; (A built-in called: its number, its arguments counted,
 bi_count:   .res        1                                   ;   to 255)
-bf_t:       .res        1                                   ; (bi_fast's: its first's high byte, the second less its
-bf_s:       .res        1                                   ;   tag bit)
+fx_a:       .res        2                                   ; (fx_op's: its values, how many, its built-in, scratch;
+fx_b:       .res        2                                   ;   ev_quick's: the call, its arguments as written)
+fx_k:       .res        1
+fx_n:       .res        1
+fx_s:       .res        1
+eq_x:       .res        2
+eq_r:       .res        2
 lk_f:       .res        2                                   ; (lookup's and frame_add's: the frame, the cell, its end,
 lk_c:       .res        2                                   ;   the symbol)
 lk_end:     .res        1
@@ -783,6 +788,15 @@ ev_builtin:
             sta         ev_jv + 1
             jmp         (ev_jv)
 @ordinary:
+            and         #BF_FAST                            ; (A quick one, its arguments quick: worked here)
+            beq         @args
+            stx         fx_n
+            MOVW        eq_x, ex
+            MOVW        eq_r, cr
+            jsr         eq_args
+            bcs         @args
+            jmp         ev_return
+@args:
             MOVW        cf, ex
             stz         cn
             stz         cn + 1
@@ -910,7 +924,9 @@ ev_args:
             inc         cn + 1
             bra         @next
 @frame:
-            jsr         frame_check                         ; (A call: its value first, in a frame)
+            jsr         ev_quick                            ; (A call: worked here if it's quick ...
+            bcc         @push
+            jsr         frame_check                         ;   else its value first, in a frame)
             stz         ev_inargs
             PUSHV       cf
             PUSHV       cr
@@ -1071,24 +1087,45 @@ ev_bapply:
 bi_jump:
             jmp         (ev_jv)
 
-; bi_n (BF_FAST's) on its cn values at argp, if they're fixnums and so is its answer (or it's T or NIL): + and - of
-; two, 1+, 1-, zero?, one?, and the comparisons.  OUT: C = 0, ex = its value; C = 1, not here (its own code's)
+; bi_n (BF_FAST's) on its cn values at argp, if they're fixnums and so is its answer (or it's T or NIL): fx_op's.
+; OUT: C = 0, ex = its value; C = 1, not here (its own code's)
 bi_fast:
             lda         cn + 1
             bne         @no
-            lda         (argp)                              ; (The first a fixnum)
-            lsr
-            bcc         @no
+            lda         cn
+            sta         fx_k
+            lda         bi_n
+            sta         fx_n
+            lda         (argp)                              ; (Its values: a second read whether it's there or not)
+            sta         fx_a
             ldy         #1
             lda         (argp),y
-            sta         bf_t                                ; (Its high byte: ex is set only when it's done)
-            lda         cn
+            sta         fx_a + 1
+            iny
+            lda         (argp),y
+            sta         fx_b
+            iny
+            lda         (argp),y
+            sta         fx_b + 1
+            jmp         fx_op
+@no:
+            sec
+            rts
+
+; fx_n (BF_FAST's) on fx_k values, fx_a and fx_b, if they're fixnums and so is its answer (or it's T or NIL): + and -
+; of two, 1+, 1-, zero?, one? of one, the comparisons of two.  OUT: C = 0, ex = its value; C = 1, not here (ex as
+; it was)
+fx_op:
+            lda         fx_a                                ; (The first a fixnum)
+            lsr
+            bcc         @no
+            ldx         fx_n
+            lda         fx_k
             cmp         #2
             beq         @two
             cmp         #1
             bne         @no
-            lda         (argp)
-            ldx         bi_n
+            lda         fx_a
             cpx         #BIN_ZEROP
             beq         @zero
             cpx         #BIN_ONEP
@@ -1107,7 +1144,7 @@ bi_fast:
             cmp         #<FIX(1)
 @is:
             bne         @false
-            lda         bf_t
+            lda         fx_a + 1
             bne         @false
 @true:
             lda         #<T_VAL
@@ -1123,14 +1160,14 @@ bi_fast:
             clc                                             ; (+ 2: the next fixnum)
             adc         #2
             tax
-            lda         bf_t
+            lda         fx_a + 1
             adc         #0
             bra         @fix
 @dec:
             sec
             sbc         #2
             tax
-            lda         bf_t
+            lda         fx_a + 1
             sbc         #0
 @fix:
             bvs         @no                                 ; (Past a fixnum: the built-in's own)
@@ -1139,32 +1176,37 @@ bi_fast:
             clc
             rts
 @two:
-            ldy         #2                                  ; (The second a fixnum too)
-            lda         (argp),y
+            lda         fx_b                                ; (The second a fixnum too)
             lsr
             bcc         @no
-            ldx         bi_n
             cpx         #BIN_ADD
             beq         @add
             cpx         #BIN_SUB
             beq         @sub
-            lda         (argp)                              ; (A comparison: the first less the second, as the
-            cmp         (argp),y                            ;   words are ordered as the fixnums are)
-            ldy         #1
-            lda         (argp),y
-            ldy         #3
-            sbc         (argp),y
+            cpx         #BIN_LT                             ; (A comparison, or none of these)
+            beq         @cmp
+            cpx         #BIN_GT
+            beq         @cmp
+            cpx         #BIN_LE
+            beq         @cmp
+            cpx         #BIN_GE
+            beq         @cmp
+            cpx         #BIN_EQ
+            bne         @no
+@cmp:
+            lda         fx_a                                ; (The first less the second, as the words are
+            cmp         fx_b                                ;   ordered as the fixnums are)
+            lda         fx_a + 1
+            sbc         fx_b + 1
             bvc         :+
             eor         #$80
 :
             bmi         @less                               ; (N: the first is less)
-            lda         (argp)                              ; (Equal?)
-            ldy         #2
-            cmp         (argp),y
+            lda         fx_a                                ; (Equal?)
+            cmp         fx_b
             bne         @more
-            lda         bf_t
-            ldy         #3
-            cmp         (argp),y
+            lda         fx_a + 1
+            cmp         fx_b + 1
             bne         @more
             cpx         #BIN_EQ                             ; (Equal: ==, <= and >= are T)
             beq         @true
@@ -1177,36 +1219,184 @@ bi_fast:
             cpx         #BIN_LT                             ; (Less: <, <= are T)
             beq         @true
             cpx         #BIN_LE
-            beq         @true
-            bra         @false
+            bne         @lb569
+            jmp         @true
+@lb569:
+            jmp         @false
 @more:
             cpx         #BIN_GT                             ; (More: >, >= are T)
-            beq         @true
+            bne         @lb568
+            jmp         @true
+@lb568:
             cpx         #BIN_GE
-            beq         @true
-            bra         @false
+            bne         @lb567
+            jmp         @true
+@lb567:
+            jmp         @false
 @add:
-            lda         (argp),y                            ; (The second, less its tag bit, and the first)
+            lda         fx_b                                ; (The second, less its tag bit, and the first)
             and         #$FE
             clc
-            adc         (argp)
+            adc         fx_a
             tax
-            ldy         #3
-            lda         (argp),y
-            adc         bf_t
-            bra         @fix
-@sub:
-            lda         (argp),y                            ; (The first less the second, its tag bit dropped)
-            and         #$FE
-            sta         bf_s
-            lda         (argp)
-            sec
-            sbc         bf_s
-            tax
-            lda         bf_t
-            ldy         #3
-            sbc         (argp),y
+            lda         fx_b + 1
+            adc         fx_a + 1
             jmp         @fix
+@sub:
+            lda         fx_b                                ; (The first less the second, its tag bit dropped)
+            and         #$FE
+            sta         fx_s
+            lda         fx_a
+            sec
+            sbc         fx_s
+            tax
+            lda         fx_a + 1
+            sbc         fx_b + 1
+            jmp         @fix
+
+; ex, a call, worked here if it's a quick one: its function a built-in with a fixnum way (BF_FAST), its arguments
+; one or two, each a fixnum or a name whose value is one, and its value a fixnum, T or NIL.  No frame, no machine,
+; nothing made.  OUT: C = 0, ex = its value; C = 1, not (ex as it was: the machine's way)
+ev_quick:
+            lda         ex
+            sta         eq_x
+            ldx         ex + 1
+            stx         eq_x + 1
+            jsr         deref
+            ldy         #2                                  ; (Its arguments, as written)
+            lda         (hp),y
+            sta         eq_r
+            iny
+            lda         (hp),y
+            sta         eq_r + 1
+            lda         (hp)                                ; (Its function: a name, its value a quick built-in)
+            sta         ex
+            ldy         #1
+            lda         (hp),y
+            sta         ex + 1
+            lda         ex
+            lsr
+            bcc         @lb566
+            jmp         eq_no
+@lb566:
+            ldx         ex + 1
+            cpx         #IMM_PAGES
+            bcs         @lb565
+            jmp         eq_no
+@lb565:
+            lda         pk,x
+            cmp         #PK_SYMBOL
+            beq         @lb564
+            jmp         eq_no
+@lb564:
+            jsr         value_of
+            bcc         @lb563
+            jmp         eq_no
+@lb563:
+            lda         ex
+            lsr
+            bcc         @lb562
+            jmp         eq_no
+@lb562:
+            lda         ex + 1
+            cmp         #>BUILTIN0
+            bcs         @lb561
+            jmp         eq_no
+@lb561:
+            cmp         #IMM_PAGES
+            bcs         eq_no
+            lsr
+            lda         ex
+            ror
+            tax
+            lda         bi_flags,x
+            and         #BF_FAST
+            beq         eq_no
+            stx         fx_n
+; eq_r, a quick built-in's arguments as written (fx_n the built-in; eq_x the call, for C = 1), worked if they're
+; quick: ev_quick's, and ev_builtin's.  OUT: as ev_quick's
+eq_args:
+            lda         eq_r
+            ora         eq_r + 1
+            beq         eq_no
+            lda         eq_r                                ; (The first)
+            ldx         eq_r + 1
+            jsr         deref
+            ldy         #2
+            lda         (hp),y
+            sta         eq_r
+            iny
+            lda         (hp),y
+            sta         eq_r + 1
+            lda         (hp)
+            sta         ex
+            ldy         #1
+            lda         (hp),y
+            sta         ex + 1
+            jsr         eq_fix
+            bcs         eq_no
+            sta         fx_a
+            stx         fx_a + 1
+            lda         #1
+            sta         fx_k
+            lda         eq_r                                ; (A second, the last)
+            ora         eq_r + 1
+            beq         @op
+            lda         eq_r
+            ldx         eq_r + 1
+            jsr         deref
+            ldy         #2
+            lda         (hp),y
+            iny
+            ora         (hp),y
+            bne         eq_no
+            lda         (hp)
+            sta         ex
+            ldy         #1
+            lda         (hp),y
+            sta         ex + 1
+            jsr         eq_fix
+            bcs         eq_no
+            sta         fx_b
+            stx         fx_b + 1
+            inc         fx_k
+@op:
+            jsr         fx_op
+            bcs         eq_no
+            rts
+eq_no:
+            lda         eq_x
+            sta         ex
+            lda         eq_x + 1
+            sta         ex + 1
+            sec
+            rts
+
+; ex, an argument as written.  OUT: C = 0, .A, .X = its value, if it's a fixnum or a name whose value is one; C = 1
+; if not
+eq_fix:
+            lda         ex
+            lsr
+            bcs         @fix
+            ldx         ex + 1
+            cpx         #IMM_PAGES
+            bcc         @no
+            lda         pk,x
+            cmp         #PK_SYMBOL
+            bne         @no
+            jsr         value_of
+            bcs         @no
+            lda         ex
+            lsr
+            bcc         @no
+@fix:
+            lda         ex
+            ldx         ex + 1
+            clc
+            rts
+@no:
+            sec
+            rts
 
 ; OUT: hv = the cn values on top of the stack (at argp), a list.  It may collect (ev_nomem, if there's no room)
 args_list:
@@ -2072,9 +2262,15 @@ frame_add:
 ; IN: ex = a symbol.  OUT: C = 0 and lk_c, .Y = the cell and place of its value in ee's frames (the nearest);
 ; C = 1 if none binds it, and .A = 0 if no frame ever has (hp its symbol's cell, then).  (lookup's and set!'s)
 find_bound:
+            ldx         ex + 1                              ; (Its cell: deref's, here)
+            lda         bank_of,x
+            sta         $00
             lda         ex
-            ldx         ex + 1
-            jsr         deref
+            asl
+            sta         hp
+            lda         ptr_hi,x
+            adc         #0
+            sta         hp + 1
             ldy         #6
             lda         (hp),y
             and         #SF_LOCAL
@@ -2089,9 +2285,15 @@ find_bound:
             beq         @none
             MOVW        lk_c, lk_f
 @cell:
+            ldx         lk_c + 1                            ; (The frame's cell: deref's, here)
+            lda         bank_of,x
+            sta         $00
             lda         lk_c
-            ldx         lk_c + 1
-            jsr         deref
+            asl
+            sta         hp
+            lda         ptr_hi,x
+            adc         #0
+            sta         hp + 1
             lda         pk,x
             tax
             lda         kd_size,x
@@ -2142,15 +2344,15 @@ find_bound:
             ldy         #1
             lda         (hp),y
             sta         lk_f + 1
-            bra         @frame
+            jmp         @frame
 @none:
             lda         #1                                  ; (hp a frame's)
             sec
             rts
 
-; ex, a symbol: its value in ee (the nearest frame binding it, else its global value).  Unbound: the error
-; "Unbound Symbol 'x'"
-lookup:
+; ex, a symbol: its value in ee (the nearest frame binding it, else its global value).  OUT: C = 1 if it's unbound
+; (ex as it was)
+value_of:
             jsr         find_bound
             bcs         @global
             lda         (hp),y                              ; (hp: the cell, from find_bound)
@@ -2160,6 +2362,7 @@ lookup:
             sta         ex + 1
             pla
             sta         ex
+            clc
             rts
 @global:
             cmp         #0                                  ; (hp the symbol's already?)
@@ -2177,6 +2380,20 @@ lookup:
             bne         @value
             cpx         #>UNBOUND
             bne         @value
+            sec
+            rts
+@value:
+            sta         ex
+            stx         ex + 1
+            clc
+            rts
+
+; ex, a symbol: its value (value_of's).  Unbound: the error "Unbound Symbol 'x'"
+lookup:
+            jsr         value_of
+            bcs         :+
+            rts
+:
             jsr         err_begin                           ; ("Unbound Symbol 'x'")
             LDAX        s_unbsym
             jsr         msg_out
@@ -2189,10 +2406,6 @@ lookup:
             bcc         :+
             jmp         ev_nomem
 :
-            rts
-@value:
-            sta         ex
-            stx         ex + 1
             rts
 
 ; IN: .A, .X = a symbol or an atom.  Its name out
