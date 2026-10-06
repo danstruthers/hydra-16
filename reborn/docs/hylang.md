@@ -31,11 +31,11 @@ first, with its checks, then in hylang.  What only the Hydra has is checked by a
 | **Strings made** | 8,184 bytes at most for one string made by `+`, `format`, `repr`, `output-of` ... (those it's made in, nested, together) | A capture bank, and a blob's most |
 | **Call depth** | 2,500 frames nested, about as many calls not in tail position (danlang 10,000); deeper is danlang's error, `Too deep: more than 2500 calls nested` | The evaluation stack: 6K in the task's RAM, spilled to 4 banks (32K) |
 | **`range`, strings, lists** | As memory allows (danlang caps `range` at 1,000,000) | Memory |
-| **`load` and `use`** | A path as it is, or with `.hl`; then a bare name is `/lib/hylang/name` or `name.hl`, through the namespace (as forth's `/lib/forth`), so a card's or the RAM disk's `/lib/hylang` adds to the ROM's | Plan 9 names |
+| **`load` and `use`** | A path as it is, or with `.hl`; then a bare name is `/lib/hylang/name` or `name.hl`, through the namespace (as forth's `/lib/forth`), so a card's or the RAM disk's `/lib/hylang` adds to the ROM's; a directory is passed over (at `/`, `(use "proc")` is the library, not `/proc`) | Plan 9 names |
 | **Streams** | Over the system's fds: `stdin`, `stdout`, `stderr` are fds 0-2; `output-of` points fd 1 at a buffer meanwhile | |
 | **Ctrl-C** | The window's `interrupt` note: the error `interrupted` (`:intr`) at the next call or loop step | As forth's THROW -28 |
 | **`random`** | A generator (a 16-bit xorshift) seeded by the tick count as it's first wanted | |
-| **Start-up** | `/lib/hylang/globals.hl` (danlang's `globals.dl`) as it is when loaded, from a snapshot in the ROM (the module `hysnap`, made at the build); a ROM without it, loaded as text; then `/lib/hylang/profile.hl` if there is one | Loaded as text, it takes 8 M cycles (2.3 s); from the snapshot, 286,000 (0.08 s) |
+| **Start-up** | `/lib/hylang/globals.hl` (danlang's `globals.dl`) as it is when loaded, from a snapshot in the ROM (the module `hysnap`, made at the build); a ROM without it, loaded as text.  A login shell (`hylang -l`) then runs `#fx/lib/hylang/login.hl`: its namespace made, then `/lib/hylang/profile.hl` (the shell's, below) | Loaded as text, it takes 8 M cycles (2.3 s); from the snapshot, 286,000 (0.08 s) |
 | **Files** | `.hl` (the suite keeps danlang's `.dl` names, loaded by their whole names) | |
 
 ## Made for the Hydra
@@ -126,12 +126,29 @@ function with no more work.
 
 ## The prompt
 
-hylang is the console's shell (after parity), over rc: **a line that starts with `(`, `{`, `[`, or a prefix right
-against `(` or `{` (`?(`, `=(`, `#(` ...) is hylang; any other is an rc command line** (the plan's §17.4), so
-`ls -l | wc` works as in rc, and `(map print (ls "/bin"))` as lisp.  rc's own forms stay rc's: `$x`, `# comment`,
-`. file`, `~ subject pattern`; rc's `@{...}` is written `@ {...}`.  A value is printed as the REPL's (`repr`); a
-line that doesn't close goes on with the open brackets shown, as danlang's does, each line edited by the console.
-Ctrl-C at the prompt stops what's running and the prompt comes back.
+hylang is the console's shell, over rc, as a login shell (`hylang -l`, as `/lib/shell` names it: init's in window
+0, wstart's in the windows made) or once `(use "shell")` turns its rule on: **a line that starts with `(`, `{`,
+`[`, or a character right against `(` or `{` (`?(`, `=(`, `#(` ...) is hylang; any other is an rc command line**
+(the plan's §17.4), run whole by rc (`rc -c`) and waited for, so `ls -l | wc` works as in rc, and `(map print (ls
+"/bin"))` as lisp.  The rules are HyForth's shell's ([hyforth.md](hyforth.md), "The shell"): each rc line is an rc of
+its own, so what one sets (a variable, a function) goes with it; its code is `status`, and `$status` (rc's) goes in
+the environment for the next line's rc.  rc's own forms stay rc's: `$x`, `# comment`, `. file`, `~ subject
+pattern`; a block that starts a line (`{...}`) is hylang's, so it comes after something (`rc -c '{...}'`), and rc's
+`@{...}` is written `@ {...}`.  What an rc line can't do to hylang (it runs in a task of its own) the shell does
+when it's the line's one command, its arguments parsed as rc's built-ins do (`'...'` quotes, `$name`): `cd` (the
+prompt follows it), `bind`, `mount`, `unmount`, `newns`; and `exit` ends hylang (its code `status`).  A line
+ending in `&` isn't waited for: its task is `$apid`, in a note group of its own.  A value is printed as the REPL's
+(`=> ` and its `repr`); a line that doesn't close goes on with the open brackets shown, as danlang's does, each line
+edited by the console.  Ctrl-C while rc runs is rc's, and the shell goes on, on a new line; at hylang's own line it
+stops what's running.  The prompt is `shell-prompt`'s: the directory and `> ` (`/rom/lib> `; on a card, `0:/games> `),
+and a function (or a string) of the user's in its place is the prompt.
+
+`hylang -l` runs `#fx/lib/hylang/login.hl` before its first prompt (a window's shell starts in an empty namespace,
+so it's read by its device's name): its namespace made, as `newns` makes it, then `/lib/hylang/profile.hl`, through
+the `/lib` union (a card's or the RAM disk's in the ROM's place), as rc's `/lib/profile`: the shell (`shell.hl`), the
+window at `/dev`, its notes to hylang's note group.  The REPL finds the shell by name, as HyForth's core does: an
+expression's first line that isn't hylang's goes to `shell-line` (a string), and the prompt is `shell-prompt`'s, each
+when it's bound.
 
 ## The design
 
@@ -302,4 +319,7 @@ Then the Hydra layers (the plan's phases 9 to 12: its section "The Hydra layers"
    `snd` (and `dev`, what they share), the table above's, each hylang over its device's files.
    `tests/hyhydra/devices.hl`'s 67 checks pass against the emulated devices (the `hydev` test: the pins and CA1,
    two I2C memories, an SPI echo device, a card, the DS1747, `/pc`), and a tune's key-ons on the YM2151 keep time.
-12. **The prompt**.
+12. **The prompt**.  Done: `hylang -l`, `login.hl`, `profile.hl` and `shell.hl` (the rule, rc's lines, the shell's own
+   commands, the prompt), and the REPL's hooks (`shell-line`, `shell-prompt`).  The `hysh` test runs the rc test's
+   lines that stand alone at hylang's prompt, as at rc's, and the shell's own; `hywin` has a card's `/lib/shell`
+   name `/bin/hylang -l`, and window 0 and a window made start in hylang.

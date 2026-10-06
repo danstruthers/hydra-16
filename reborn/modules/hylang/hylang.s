@@ -3,7 +3,9 @@
 ; its library: a line read (with the lines that go on with it, while a bracket or a here string is open), evaluated,
 ; its value printed as danlang's REPL prints it; or, hylang file args..., the file run (args: its path and the args),
 ; its status 0, 1 after an error (on stderr), or (exit n)'s.  hylang -g collects before every allocation (a test of
-; what's kept as a root).
+; what's kept as a root).  hylang -l is a login shell (phase 12: init's or wstart's, as /lib/shell names it): before
+; its first prompt it runs #fx/lib/hylang/login.hl (its namespace made, then /lib/hylang/profile.hl, which turns the
+; shell's rule on: shell.hl's shell-line and shell-prompt, which the REPL finds by name).
 ;   A program of five banks: the evaluator, its special forms, the dispatch and the built-ins that run it in the first
 ; (eval.inc, forms.inc, builtins.inc); the reader, the printer, the list built-ins and those that write values in the
 ; second (read.inc, print.inc, lists.inc, eqcmp.inc, valout.inc); the numbers in the third (nums.inc, numreg.inc,
@@ -74,8 +76,11 @@ hold_n:     .res        1                                   ; (hold's PREEMPT_OF
 kd_ctl:     .res        1                                   ; (key's: the console's consctl, raw, and a read of it that
 kd_nb:      .res        1                                   ;   doesn't wait, fds + 1; 0: not open)
 rl_any:     .res        1                                   ; (read_line's: some of a line read)
+sh_at:      .res        1                                   ; (sh_rule's: the line's first character)
 stress:     .res        1                                   ; (hylang -g)
-hl_argp:    .res        2                                   ; (Its arguments after -g: args, a script's path first)
+login:      .res        1                                   ; (hylang -l)
+hl_argp:    .res        2                                   ; (Its arguments after -g and -l: args, a script's path
+                                                            ;   first)
 lib_text:   .res        1                                   ; <> 0: no snapshot: its library loaded as text
 sn_me:      .res        ME_SIZE                             ; (snap_find's: a module's entry; the one at)
 sn_i:       .res        1
@@ -452,28 +457,36 @@ main:
             HYX2_BANKS_INIT
             FARN        4, data4_init                       ; (The most of the RAM code: from the fourth bank)
             stz         stress
+            stz         login
             MOVW        hl_argp, r0
-            lda         r0                                  ; (hylang -g: stress)
-            ora         r0 + 1
+@option:
+            lda         hl_argp                             ; (hylang -g: stress; -l: a login shell)
+            ora         hl_argp + 1
             beq         @args
+            MOVW        r0, hl_argp
             lda         (r0)
             cmp         #'-'
             bne         @args
-            ldy         #1
+            ldy         #2
             lda         (r0),y
+            bne         @args
+            dey
+            lda         (r0),y
+            ldx         #0
             cmp         #'g'
+            beq         :+
+            inx
+            cmp         #'l'
             bne         @args
-            iny
-            lda         (r0),y
-            bne         @args
-            inc         stress
-            clc                                             ; (The rest: past "-g" and its 0)
-            lda         r0
+:
+            inc         stress,x                            ; (stress, login)
+            clc                                             ; (The rest: past it and its 0)
+            lda         hl_argp
             adc         #3
             sta         hl_argp
-            lda         r0 + 1
-            adc         #0
-            sta         hl_argp + 1
+            bcc         @option
+            inc         hl_argp + 1
+            bra         @option
 @args:
             stz         olen
             stz         ilen
@@ -553,6 +566,9 @@ main:
 @repl:
             LDAX        s_banner
             jsr         out_text
+            lda         login                               ; (A login shell: login.hl's)
+            beq         @expr
+            jsr         sh_login
 @expr:
             stz         t_len
             stz         t_len + 1
@@ -560,6 +576,8 @@ main:
 @prompt:
             lda         cl_len
             bne         @more
+            jsr         sh_prompt                           ; (shell-prompt's, or hylang's)
+            bcc         @wait
             LDAX        s_prompt
             jsr         out_text
             bra         @wait
@@ -593,10 +611,25 @@ main:
 @lb14:
             lda         #0                                  ; (The text's end: a 0)
             sta         (lp)
+            lda         cl_len                              ; (An expression's first line: an rc command line, the
+            bne         @hylang                             ;   shell's?)
+            jsr         sh_rule
+            bcc         @hylang
+            stz         ee                                  ; ((shell-line "line"): its value dropped, but an error)
+            stz         ee + 1
+            jsr         ev_run
+            jsr         is_err
+            bcc         @shdone
+            FARN        5, y_errout
+@shdone:
+            jmp         @next
+@hylang:
             FARN        2, read_text
             bcs         @nomem
             cmp         #RD_MORE
-            beq         @prompt
+            bne         @lb721
+            jmp         @prompt
+@lb721:
             cmp         #RD_ERROR
             beq         @show
             MOVW        ex, hv                              ; (The line's items, a call: evaluated)
@@ -661,6 +694,198 @@ quit:
             LDR         r0, 0
             pla
             jmp         EXITS
+
+; The line in text, an expression's first: an rc command line, the shell's (phase 12)?  When shell-line is a
+; function (shell.hl's: the shell's rule on), a line whose first character (past blanks) isn't (, { or [, nor one
+; right against ( or {, is rc's.  OUT: C = 1, ex = (shell-line "the line"), its blanks and its LF trimmed; C = 0,
+; hylang's (an empty line too; with no room, the reader's to say so)
+sh_rule:
+            ldy         #0                                  ; (Its first character, past blanks)
+:
+            lda         text,y
+            cmp         #' '
+            beq         @blank
+            cmp         #TAB
+            bne         @first
+@blank:
+            iny
+            bne         :-
+@hylang:
+            clc
+            rts
+@first:
+            cmp         #LF
+            beq         @hylang
+            cmp         #'('
+            beq         @hylang
+            cmp         #'{'
+            beq         @hylang
+            cmp         #'['
+            beq         @hylang
+            lda         text + 1,y
+            cmp         #'('
+            beq         @hylang
+            cmp         #'{'
+            beq         @hylang
+            sty         sh_at
+            LDHQ        s_shline, S_SHLINE_N                ; (shell-line: a function?)
+            lda         #PK_SYMBOL
+            jsr         intern
+            bcs         @hylang
+            lda         hv
+            ldx         hv + 1
+            jsr         root_push
+            bcs         @hylang
+            jsr         sh_fn
+            jsr         kind_of
+            cmp         #PK_FUNC
+            bne         @pop
+@trim:
+            lda         lp                                  ; (The line's end: its LF and blanks trimmed)
+            bne         :+
+            dec         lp + 1
+:
+            dec         lp
+            lda         (lp)
+            cmp         #' ' + 1
+            bcc         @trim
+            lda         #<text                              ; (The line, a string)
+            clc
+            adc         sh_at
+            sta         hq
+            lda         #>text
+            adc         #0
+            sta         hq + 1
+            sec
+            lda         lp
+            sbc         hq
+            sta         hn
+            lda         lp + 1
+            sbc         hq + 1
+            sta         hn + 1
+            inc         hn
+            bne         :+
+            inc         hn + 1
+:
+            jsr         string_make
+            bcs         @pop
+            MOVW        et, hv                              ; ((shell-line "line"))
+            stz         eu
+            stz         eu + 1
+            lda         #PK_SCONS
+            jsr         make2
+            bcs         @pop
+            MOVW        eu, hv
+            jsr         sh_fn
+            sta         et
+            stx         et + 1
+            lda         #PK_SCONS
+            jsr         make2
+            bcs         @pop
+            jsr         root_pop
+            MOVW        ex, hv
+            sec
+            rts
+@pop:
+            jsr         root_pop
+            clc
+            rts
+
+; The prompt shell-prompt gives (shell.hl's: a string, or a function that gives one), out.  OUT: C = 1 if it's none
+sh_prompt:
+            lda         #$80                                ; (A Ctrl-C noted: dropped first, as at a line)
+            trb         intr
+            LDHQ        s_shprompt, S_SHPROMPT_N
+            lda         #PK_SYMBOL
+            jsr         intern
+            bcs         @none
+            lda         hv
+            ldx         hv + 1
+            jsr         root_push
+            bcs         @none
+            jsr         sh_fn
+            sta         ex
+            stx         ex + 1
+            jsr         kind_of
+            cmp         #PK_FUNC
+            bne         @value
+            MOVW        et, ex                              ; ((shell-prompt): its value)
+            stz         eu
+            stz         eu + 1
+            lda         #PK_SCONS
+            jsr         make2
+            bcs         @pop
+            MOVW        ex, hv
+            stz         ee
+            stz         ee + 1
+            jsr         ev_run
+@value:
+            lda         ex
+            ldx         ex + 1
+            jsr         kind_of
+            cmp         #PK_STRING
+            bne         @pop
+            jsr         root_pop
+            lda         ex
+            ldx         ex + 1
+            ldy         #1
+            FARN        2, print_val
+            stz         ex
+            stz         ex + 1
+            clc
+            rts
+@pop:
+            jsr         root_pop
+@none:
+            stz         ex
+            stz         ex + 1
+            sec
+            rts
+
+; A login shell's start: (load "#fx/lib/hylang/login.hl"), an error out on stderr
+sh_login:
+            LDHQ        s_login, S_LOGIN_N
+            jsr         string_make
+            bcs         @rts
+            MOVW        et, hv
+            stz         eu
+            stz         eu + 1
+            lda         #PK_SCONS
+            jsr         make2
+            bcs         @rts
+            MOVW        eu, hv
+            lda         #<(BUILTIN0 + 2 * BIN_LOAD)
+            sta         et
+            lda         #>(BUILTIN0 + 2 * BIN_LOAD)
+            sta         et + 1
+            lda         #PK_SCONS
+            jsr         make2
+            bcs         @rts
+            MOVW        ex, hv
+            stz         ee
+            stz         ee + 1
+            jsr         ev_run
+            jsr         is_err
+            bcc         @rts
+            FARN        5, y_errout
+@rts:
+            stz         ex
+            stz         ex + 1
+            rts
+
+; .A, .X = shell-line's global value (the symbol root_push kept last)
+sh_fn:
+            ldy         rsp
+            dey
+            lda         rs_lo,y
+            ldx         rs_hi,y
+            jsr         deref
+            ldy         #3
+            lda         (hp),y
+            tax
+            dey
+            lda         (hp),y
+            rts
 
 ; The library: (load "globals") (/lib/hylang/globals.hl: danlang's), its error out on stderr; then a collection, so
 ; what's kept is compact (a snapshot's, tools/hysnap.js: it takes hylang's heap at its first prompt).  OUT: C = 1 if
@@ -888,6 +1113,12 @@ raw_off:
 s_banner:   .byte       "hylang (danlang on the Hydra-16)", LF
             .byte       "Type 'exit' to Exit", LF, LF, 0
 s_prompt:   .byte       "hylang> ", 0
+s_shline:   .byte       "shell-line"
+S_SHLINE_N  = * - s_shline
+s_shprompt: .byte       "shell-prompt"
+S_SHPROMPT_N = * - s_shprompt
+s_login:    .byte       "#fx/lib/hylang/login.hl"
+S_LOGIN_N   = * - s_login
 s_more:     .byte       " <", 0
 s_is:       .byte       "=> ", 0
 s_bye:      .byte       "=> exit", LF, 0

@@ -2499,6 +2499,7 @@ ld_fdv:     .res        1
 ld_off:     .res        2
 wk_op:      .res        1                                   ; (A walk: map, filter ... W_*)
 fo_at:      .res        1                                   ; (file_open's: its name's place in scratch)
+fo_fd:      .res        1                                   ; (fo_open's: the file opened)
 
 .code
 
@@ -2616,7 +2617,8 @@ fo_name:
 @rts:
             rts
 
-; scratch + fo_at opened to read.  OUT: as OPEN's
+; scratch + fo_at opened to read.  OUT: as OPEN's; a directory is none (E_NOENT, closed): a bare name at / isn't
+; /dev, /proc or /pc, but the library of its name
 fo_open:
             lda         fo_at
             clc
@@ -2626,7 +2628,26 @@ fo_open:
             adc         #0
             sta         r0 + 1
             lda         #O_READ
-            jmp         OPEN
+            jsr         OPEN
+            bcs         @rts
+            sta         fo_fd
+            LDR         r0, y_buf                           ; (A directory?)
+            lda         fo_fd
+            jsr         FSTAT
+            bcs         @file
+            lda         y_buf + SR_MODE + 1
+            and         #DM_DIR
+            beq         @file
+            lda         fo_fd
+            jsr         CLOSE
+            lda         #E_NOENT
+            sec
+            rts
+@file:
+            lda         fo_fd
+            clc
+@rts:
+            rts
 
 .code
 

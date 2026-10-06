@@ -96,6 +96,8 @@ PASS hytext  hylang without its snapshot (a ROM without the module hysnap): its 
 PASS hyspeed hylang's budgets (phase 8's, at 3.58 MHz, its library loaded): a parameter looked up, a call of a function of two arguments, a tail loop's step (if, zero?, -, the call), map with a function of one argument, an item; each the difference of two lines' times, from the echo to the value
 PASS hyhydra hylang's Hydra built-ins and system calls (the plan's phases 9 and 10): hydra.hl as a script (sysinfo, mods, errstr; ps, task-info, yield, sleep-until; peek and poke, the task's banks, a shared segment, free; bind, mount, unmount, ns, newns; note, on-note; hold; key?; sys- functions of each group of calls, and their errors), and again with a collection before every allocation (sys- names bound, the calls' values made, puts and putc); at the prompt, raw keys (key: a character, the terminal's up key; key?) and Ctrl-C given to on-note's function
 PASS hydev   hylang's device libraries (the plan's phase 11: /lib/hylang's, loaded by use, over the devices' files), devices.hl as a script: gpio (pins, the port, ctl as a hash, CA1's edge), i2c (a memory written and read at a register, the devices, one that doesn't answer), spi (an echo device's transactions, mode 3), cons (the window, the windows, the bell), proc (a task's args, cwd, regs, memory, banks; its environment, its namespace), clock (the chip, the time set), disk (the disks, the cards: this one and one on SPI device 5; the ROM disk's room), pc (the PC tool answers; a file of its read), snd (note-of; a tune, its notes on the YM2151 in time; a channel's settings)
+PASS hysh    hylang as the shell (the plan's phase 12: hylang -l, login.hl, profile.hl, shell.hl): the rc test's lines that stand alone, each an rc line at hylang's prompt (rc -c), as at rc's; hylang's lines by their first character; cd and the prompt; $status and status; bind and unmount in hylang's namespace; a usage; & and $apid; Ctrl-C to cat, rc's; exit
+PASS hywin   hylang as a window's shell: a card's /lib/shell naming /bin/hylang -l, init's in window 0 and wstart's in a window made (Ctrl-] c: $window, cons.hl's window)
 PASS kcopy   spike S2: copying between tasks  (6 checks)
 PASS irq     spike S1: 115200 received by an irq entry while tasks spin  (6 checks)
 ```
@@ -447,6 +449,19 @@ one), and closed after, a failure's too (`try`).  `sys-write` (and `ENV_PUT`'s b
 as a string now.  Checked: the `hydev` test, `tests/hyhydra/devices.hl`'s 67 checks against the emulated devices
 (the machine `fdev` has), and a tune's key-ons on the YM2151 timed (a beat apart, and two, within two ticks).
 
+**Phase 12, the prompt: done, and with it the Hydra layers.**  hylang is a shell over rc, by HyForth's shell's rules:
+`hylang -l` (a login shell, as a card's or the shared RAM disk's `/lib/shell` names it) runs `#fx/lib/hylang/login.hl`
+(its namespace made, then `/lib/hylang/profile.hl`, through the `/lib` union: the shell, the window at `/dev`, its
+notes to its group).  At its prompt (`shell-prompt`'s: the directory and `> `) a line that starts with `(`, `{`, `[`
+or a character right against `(` or `{` is hylang's; any other the REPL hands to `shell-line` (`shell.hl`), which
+runs it whole by rc (`rc -c`), waits for it (Ctrl-C meanwhile rc's: the shell's `on-note` function takes it), and
+keeps its code in `status` and its message in `$status`; or, the line's one command, does in hylang's own task what
+an rc line can't (`cd`, `bind`, `mount`, `unmount`, `newns`, `exit`), parsing its words as rc's built-ins do; a line
+ending in `&` starts rc in a note group of its own, its task `$apid`.  `load` passes over a directory now, so a bare
+name at `/` (`(use "dev")`, `(use "proc")`) is the library's, not `/dev`'s.  Checked: the `hysh` test (the rc test's
+lines that stand alone, 34 of its 45, at hylang's prompt as at rc's; the shell's own lines) and `hywin` (a card's
+`/lib/shell` naming `/bin/hylang -l`: window 0's shell and a new window's).
+
 | Step | | Notes |
 |---|---|---|
 | 7.0 The language's specification | Draft (three decisions are the user's) | `docs/hylang.md`: hylang 1 is danlang (`C:\source\danlang`, its `master`), readied for the port in C# first (lexical scope, tail calls, fexprs, `try`, loops, the missing basics, its number bugs fixed, and a system library a PC has too: files, programs and the shell, the environment, the clock, bits and bytes, the system's errors as codes), with its regression suite (965 checks) run unchanged on both; where the two may differ (8-bit strings, the call depth, `/lib/hylang`, Ctrl-C an error); and what makes it the Hydra's, in four layers: the system library, the Hydra's built-ins (notes, namespaces, tasks, memory and banks, keys), device libraries in hylang over the devices' files (console, GPIO, I2C, SPI, sound, disks, `/proc`, the clock's chip, `/pc`), and a `sys-` function for every call.  To decide: the extension (`.hl`), `$`, danlang's license in the ROM |
@@ -467,9 +482,10 @@ as a string now.  Checked: the `hydev` test, `tests/hyhydra/devices.hl`'s 67 che
    the built-ins and lists, phase 5, the numbers, phase 6, strings, characters and hashes, and phase 7, streams,
    I/O and the system library, and phase 8, the library (in hylang from a snapshot in the ROM), tuning (its
    budgets revised to what it reached) and `run.dl` whole: danlang parity.  Then the Hydra layers (the plan's
-   phases 9 to 12): phase 9, the Hydra's built-ins, phase 10, every system call as a `sys-` function, and phase
-   11, the device libraries, are done.  Next: phase 12, the prompt (hylang as the console's shell, rc's command
-   lines at its prompt).
+   phases 9 to 12): the Hydra's built-ins, every system call as a `sys-` function, the device libraries, and the
+   prompt (hylang as a shell over rc, a window's as `/lib/shell` names it), all done.  The system's shell is still
+   rc unless a card or the shared RAM disk names another; whether the ROM's `/lib/shell` should name hylang is the
+   user's to say.
    The parity
    checkpoint (the plan's, after phase 5) is still the user's.  `/proc/N/fd` is still to come (a channel keeps no
    name to show).

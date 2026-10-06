@@ -163,6 +163,20 @@ const RC_LINES = [
   ["! ~ a b && echo not; echo $status","not\n"],
 ];
 
+// hylang as the shell (hysh): the rc test's lines that stand alone at hylang -l's prompt (each runs in an rc of its own:
+// not those that use what an earlier line set, $x or greet, nor $task, rc's own, nor a block first, which is hylang's);
+// then the shell's own: hylang's lines, cd (the prompt follows), $status and status, bind and unmount in hylang's own
+// namespace (an rc line after sees it), a usage, rc's not found, & and $apid, Ctrl-C to cat (rc's), exit
+const HYSH_RC = RC_LINES.filter(([l]) => l[0] !== '{' &&
+  !/^(echo \$"x|echo x\^|echo \$x\(2-\)|rc -c 'echo sub|whatis greet|whatis echo x|eval echo evaled|echo \$task)/.test(l));
+const HYSH_LINES = [
+  ['(+ 1 2)', '=> 3'], ['(map (fn {x} {* x x}) {1 2 3})', '=> {1 4 9}'], ['cd /rom/lib', null, '/rom/lib'], ['pwd', '/rom/lib'],
+  ['ls | wc -l', '      4'], ['cmp namespace profile >/dev/null', null], ['(+ status 0)', '=> 1'], ['echo $status', '1'],
+  ['cd /none', '/none: not found'], ['bind -x a b', 'usage: bind [-abc] new old'], ["bind -a '#n' /mnt", null], ['ls /mnt', 'null\nzero\nkmesg'],
+  ['unmount /mnt', null], ['ls /mnt', null], ['nosuch', 'rc: nosuch: not found'], ['sleep 1 &', null], ['echo $#apid', '1'],
+  ['cd', null, '/'],
+];
+
 const TOOL_LINES = [
   ["mkdir /ram/t /ram/t/a; ls /ram/t","a/"],
   ["mkdir /ram/t; echo $status","mkdir: /ram/t: already exists\n1"],
@@ -568,15 +582,15 @@ function floadCard() {
   return [imageCard(0, f, 16384)];
 }
 
-// The lshell test's card: /lib/shell, HyForth as the shell
-function shellCard() {
+// The lshell test's card: /lib/shell, HyForth as the shell (or the shell given: the hywin test's, hylang)
+function shellCard(line = '/bin/forth -l', name = 'shell0') {
   fs.mkdirSync(CARD_DIR, { recursive: true });
   hydrafs.setNow(0x1000);
-  const f = path.join(CARD_DIR, 'shell0.img');
+  const f = path.join(CARD_DIR, name + '.img');
   hydrafs.mkfs(f, 8, 'SHELL', undefined, true);
   const v = new hydrafs.Volume(f);
   v.mkdir('lib');
-  v.put('lib/shell', Buffer.from('/bin/forth -l\n'));
+  v.put('lib/shell', Buffer.from(line + '\n'));
   v.close();
   return [imageCard(0, f, 16384)];
 }
@@ -1580,6 +1594,31 @@ module.exports = {
       expect: ['127 checks, 0 failed\nstatus\n%', HYHYDRA_G.map(l => 'hylang> ' + l[0] + '\n' + (l[2] || '') + '=> ' + l[1] + '\n').join('') + 'hylang> exit\n=> exit\n%',
         'hylang> (key)\n=> \\q\nhylang> (key)\n=> :up\nhylang> (list (key?) (key))\n=> {NIL \\z}\n',
         'hylang> (hy-loop 3000)\n:interrupt\n=> :done\nhylang> exit\n=> exit\n\n%'],          // (rc had the Ctrl-C too: a new line)
+    },
+    {
+      name: 'hysh', what: 'hylang as the shell (the plan\'s phase 12: hylang -l, login.hl, profile.hl, shell.hl): the rc test\'s lines that stand alone, each an rc line at hylang\'s prompt (rc -c), as at rc\'s; hylang\'s lines by their first character; cd and the prompt; $status and status; bind and unmount in hylang\'s namespace; a usage; & and $apid; Ctrl-C to cat, rc\'s; exit',
+      init: 't_rc', cycles: 400e6,
+      machine: {
+        input: '\u0101hylang -l\r' + HYSH_RC.map(l => '\u0101' + l[0] + '\r').join('') + HYSH_LINES.map(l => '\u0101' + l[0] + '\r').join('') +
+          '\u0101cat\r\u0100\x03' + '\u0101echo $status\r' + '\u0101exit\r',
+      },
+      get expect() {
+        let at = '/', out = ['hylang (danlang on the Hydra-16)\nType \'exit\' to Exit\n\n/> '];
+        for (const [l, o] of HYSH_RC) out.push('/> ' + l + '\n' + o + '\n/> ');
+        for (const [l, o, cd] of HYSH_LINES) { const p = at + '> '; if (cd) at = cd; out.push(p + l + '\n' + (o === null ? '' : o + '\n') + at + '> '); }
+        out.push('/> cat\n\n/> echo $status\ninterrupt\n/> exit\n');
+        return out;
+      },
+    },
+    {
+      name: 'hywin', what: 'hylang as a window\'s shell: a card\'s /lib/shell naming /bin/hylang -l, init\'s in window 0 and wstart\'s in a window made (Ctrl-] c: $window, cons.hl\'s window)',
+      init: 'init', cycles: 200e6,
+      get machine() {
+        return { sd: shellCard('/bin/hylang -l', 'shellhy'), input: '\u0101(+ 1 2)\r' + '\u0101echo $window\r' + '\u0101\x1dc' +
+          '\u0101echo $window\r' + '\u0101(use "cons")\r' + '\u0101(window)\r' };
+      },
+      expect: ['/> (+ 1 2)\n=> 3\n/> echo $window\n\n/> ', 'hylang (danlang on the Hydra-16)\nType \'exit\' to Exit\n\n/> echo $window\n1\n' +
+        '/> (use "cons")\n=> NIL\n/> (window)\n=> 1\n/> '],
     },
     {
       name: 'hydev', what: 'hylang\'s device libraries (the plan\'s phase 11: /lib/hylang\'s, loaded by use, over the devices\' files), devices.hl as a script: gpio (pins, the port, ctl as a hash, CA1\'s edge), i2c (a memory written and read at a register, the devices, one that doesn\'t answer), spi (an echo device\'s transactions, mode 3), cons (the window, the windows, the bell), proc (a task\'s args, cwd, regs, memory, banks; its environment, its namespace), clock (the chip, the time set), disk (the disks, the cards: this one and one on SPI device 5; the ROM disk\'s room), pc (the PC tool answers; a file of its read), snd (note-of; a tune, its notes on the YM2151 in time; a channel\'s settings)',

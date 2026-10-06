@@ -63,13 +63,14 @@
 
 ; A tune played on the channel (0 if it isn't given) at a tempo (beats a minute: 120): a list of notes, each a note
 ; (a name, a number, or NIL for a rest) and its beats.  Each is keyed on at its beat, in step with the system's tick
-; (from the next one), the one before keyed off just before it; the same work before each, so they keep time
+; (from the next but one, so the first isn't late), the one before keyed off just before it; the same work before
+; each, so they keep time
 (fun {tune notes} {do
   =(ch ?(&_ (fst &_) 0))
   =(tempo ?((> (len &_) 1) (snd &_) 120))
   =(ns (map (fn {n} {list (snd.num (fst n)) (snd n)}) notes))
   (snd-off ch)
-  (snd.tune ch ns (+ (ticks) 1) 0 (/ (* 60 (tick-rate)) tempo))})
+  (snd.tune ch ns (+ (ticks) 2) 0 (/ (* 60 (tick-rate)) tempo))})
 (fun {snd.num n} {if (num? n) n (if (nil? n) NIL (note-of n))})
 (fun {snd.tune ch notes t0 at per} {do
   (sleep-until (bit-and (+ t0 (truncate (* at per))) 65535))
