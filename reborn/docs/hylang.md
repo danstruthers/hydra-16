@@ -157,6 +157,31 @@ window at `/dev`, its notes to hylang's note group.  The REPL finds the shell by
 expression's first line that isn't hylang's goes to `shell-line` (a string), and the prompt is `shell-prompt`'s, each
 when it's bound.
 
+## Against HyForth
+
+The same benchmarks are written in each, on the ROM disk at `/rom/bench`: `bench.hl` and `bench.fs`, the same
+algorithms and sizes, each loop the language's own (a tail call in hylang, `DO LOOP` or `BEGIN WHILE REPEAT` in
+HyForth), every value under 16,384 (hylang's fixnums, a cell that doesn't overflow).  Each prints a line a benchmark,
+`bench LANGUAGE NAME RESULT TICKS REPS`, for the reps run of it (`hylang /rom/bench/bench.hl [reps [quick]]`, `forth
+/rom/bench/bench.fs [reps [quick]]`, on the board too), and `node sim/bench.js` runs both in the emulator and prints
+the table (`--quick`, the small sizes; `--hylang-reps`, `--forth-reps`: HyForth's default 20, as one of its runs is a
+few ticks).  The `bench` test runs both at the quick sizes and checks each result is the same.  In October 2026, at
+3.58 MHz, one run of each:
+
+| Benchmark | What | Result | hylang | HyForth | hylang / HyForth |
+| :-------- | :--- | -----: | -----: | ------: | ---------------: |
+| `loop` | A counting loop of 4,000 steps | 4000 | 9,105 ms | 76 ms | 119x |
+| `calls` | 2,000 calls of a function of two arguments | 2000 | 7,660 ms | 65 ms | 118x |
+| `fib` | Fibonacci of 16, recursively (3,193 calls) | 987 | 6,775 ms | 181 ms | 37x |
+| `sieve` | The primes below 1,024, a byte each | 172 | 14,730 ms | 332 ms | 44x |
+| `sort` | 100 bytes sorted by insertion | 407 | 17,085 ms | 480 ms | 36x |
+| `gcd` | gcd(i, j) by subtraction, for i and j 1 to 20, summed | 880 | 9,340 ms | 350 ms | 27x |
+| All | | | 64,695 ms | 1,484 ms | 44x (the ratios' geometric mean 53x) |
+
+HyForth's code is threaded 65C02 code and its loop counter a register's; hylang evaluates its code, each step a call
+with its scope made on the heap.  So its tightest loops (`loop`, `calls`) are about 120 times HyForth's, and code that
+does more each step (a buffer's bytes, a comparison, arithmetic) about 30 to 45.
+
 ## The design
 
 The plan has it whole; in short:

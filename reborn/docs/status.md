@@ -98,6 +98,7 @@ PASS hyhydra hylang's Hydra built-ins and system calls (the plan's phases 9 and 
 PASS hydev   hylang's device libraries (the plan's phase 11: /lib/hylang's, loaded by use, over the devices' files), devices.hl as a script: gpio (pins, the port, ctl as a hash, CA1's edge), i2c (a memory written and read at a register, the devices, one that doesn't answer), spi (an echo device's transactions, mode 3), cons (the window, the windows, the bell), proc (a task's args, cwd, regs, memory, banks; its environment, its namespace), clock (the chip, the time set), disk (the disks, the cards: this one and one on SPI device 5; the ROM disk's room), pc (the PC tool answers; a file of its read), snd (note-of; a tune, its notes on the YM2151 in time; a channel's settings)
 PASS hysh    hylang as the shell (the plan's phase 12: hylang -l, login.hl, profile.hl, shell.hl): the rc test's lines that stand alone, each an rc line at hylang's prompt (rc -c), as at rc's; hylang's lines by their first character; cd and the prompt; $status and status; bind and unmount in hylang's namespace; a usage; & and $apid; Ctrl-C to cat, rc's; exit
 PASS hywin   hylang as a window's shell: a card's /lib/shell naming /bin/hylang -l, init's in window 0 and wstart's in a window made (Ctrl-] c: $window, cons.hl's window)
+PASS bench   hylang's and HyForth's benchmarks (romfs/bench: bench.hl, bench.fs; sim/bench.js times them against each other) at their quick sizes: each language's result of each the same (a counting loop, calls of a function of two arguments, Fibonacci, a sieve of bytes, an insertion sort of bytes, gcds by subtraction)
 PASS kcopy   spike S2: copying between tasks  (6 checks)
 PASS irq     spike S1: 115200 received by an irq entry while tasks spin  (6 checks)
 ```
@@ -478,6 +479,14 @@ carries no places).  The suite's 1,334 checks pass (`hysuite5` has `buffers.dl`:
 copies and reads buffers with a collection before every allocation.  `buffer-cmp` is library code too (`hylib.hl`).
 The library's growth left no free page for the first call of a function of two arguments, so `hyspeed`'s timed call
 had a collection in it: an untimed call just before its pair takes it (a call is 3,686 cycles still).
+
+**hylang against HyForth: benchmarks.**  The same six benchmarks in each language (`romfs/bench`: `bench.hl`,
+`bench.fs`; on the ROM disk at `/rom/bench`, to run on the board too), the same algorithms and sizes, each printing its
+result and the ticks it took; `node sim/bench.js` runs both in the emulator and prints them side by side
+(docs/hylang.md, "Against HyForth", has the table and how to run it).  At 3.58 MHz, hylang is about 44 times
+HyForth's time in all (64.7 s to 1.5 s): 120 times in a counting loop and in calls, 27 to 44 times in fib, a sieve,
+a sort and gcds.  The `bench` test runs both at the small sizes and checks their results are the same.  A buffer's
+index that's a fixnum (the usual) is taken at once now, not through the number code.
 
 | Step | | Notes |
 |---|---|---|

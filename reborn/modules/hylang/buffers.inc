@@ -262,6 +262,22 @@ bf_index_in:
             lda         #0
 bf_index:
             sta         bf_endok
+            phy                                             ; (A fixnum, 0 on: its value at once)
+            jsr         bf_arg
+            ply
+            sta         bf_l
+            stx         bf_l + 1
+            lsr
+            bcc         @slow
+            lda         bf_l + 1
+            bmi         @slow
+            lsr
+            sta         bf_i + 1
+            lda         bf_l
+            ror
+            sta         bf_i
+            bra         @range
+@slow:
             lda         #<s_bfindex
             jsr         bf_whole
             lda         n_w32 + 3                           ; (Negative, or 64K and more: outside)
@@ -271,6 +287,7 @@ bf_index:
             sta         bf_i
             lda         n_w32 + 1
             sta         bf_i + 1
+@range:
             lda         bf_i                                ; (Below its length: in)
             cmp         bf_len
             lda         bf_i + 1

@@ -1,0 +1,63 @@
+; bench.hl - hylang's side of the hylang/HyForth benchmarks (bench.fs is HyForth's: the same algorithms, the same
+; sizes, the same results).  hylang bench.hl [reps [quick]]: each benchmark run reps times (1), and a line for each,
+;   bench hylang NAME RESULT TICKS REPS
+; its value, and the ticks the reps took (200 a second).  quick: smaller sizes (the regression test's).  Each loop is
+; the language's own way: a tail call in hylang, DO LOOP or BEGIN WHILE REPEAT in HyForth.  Every value stays under
+; 16,384, so hylang's integers are its fixnums and HyForth's cells don't overflow.  sim/bench.js runs both and
+; compares them.
+
+(def {bench.reps} (if (> (len args) 1) (val (snd args)) 1))
+(def {bench.quick} (> (len args) 2))
+(fun {bench.size full quick} {if bench.quick quick full})
+
+; A benchmark: f's value (f a function of no arguments), run reps times, and the ticks they took, a line
+(fun {bench name f} {do
+  =(t0 (ticks))
+  =(r (bench.run f bench.reps NIL))
+  =(dt (bit-and (- (ticks) t0) 32767))
+  (print (format "bench hylang {} {} {} {}" name r dt bench.reps))})
+(fun {bench.run f n r} {if (zero? n) r (bench.run f (- n 1) (f))})
+
+; loop: n steps of a counting loop
+(fun {b-loop n acc} {if (zero? n) acc (b-loop (- n 1) (+ acc 1))})
+
+; calls: n calls of a function of two arguments
+(fun {add2 a b} {+ a b})
+(fun {b-calls n acc} {if (zero? n) acc (b-calls (- n 1) (add2 acc 1))})
+
+; fib: Fibonacci, recursively
+(fun {b-fib n} {if (< n 2) n (+ (b-fib (- n 1)) (b-fib (- n 2)))})
+
+; sieve: the primes below n, a byte each, a prime's multiples marked from its double
+(fun {b-sieve n} {b-sieve-i (buffer n 1) n 2 0})
+(fun {b-sieve-i f n i count} {
+  if (>= i n) count
+  (if (zero? (f i)) (b-sieve-i f n (+ i 1) count)
+    (do (b-sieve-mark f n (+ i i) i) (b-sieve-i f n (+ i 1) (+ count 1))))})
+(fun {b-sieve-mark f n j i} {if (>= j n) NIL (do (buffer-put f j 0) (b-sieve-mark f n (+ j i) i))})
+
+; sort: n bytes (x' = 13x + 7, mod 256, from 1) sorted by insertion; the first, the middle and the last added
+(fun {b-sort n} {do
+  =(b (buffer n))
+  (b-sort-fill b n 0 1)
+  (b-sort-i b n 1)
+  (+ (b 0) (b (- n 1)) (b (shr n 1)))})
+(fun {b-sort-fill b n i x} {if (>= i n) NIL (do (buffer-put b i x) (b-sort-fill b n (+ i 1) (bit-and (+ (* x 13) 7) 255)))})
+(fun {b-sort-i b n i} {if (>= i n) NIL (do (b-sort-ins b (- i 1) (b i)) (b-sort-i b n (+ i 1)))})
+(fun {b-sort-ins b j v} {
+  if (and (>= j 0) (> (b j) v)) (do (buffer-put b (+ j 1) (b j)) (b-sort-ins b (- j 1) v))
+  (buffer-put b (+ j 1) v)})
+
+; gcd: the sum of gcd(i, j) for i and j 1 to m, each by subtraction
+(fun {b-gcd a b} {if (== a b) a (if (> a b) (b-gcd (- a b) b) (b-gcd a (- b a)))})
+(fun {b-gcds m} {b-gcds-i m 1 0})
+(fun {b-gcds-i m i acc} {if (> i m) acc (b-gcds-i m (+ i 1) (b-gcds-j m i 1 acc))})
+(fun {b-gcds-j m i j acc} {if (> j m) acc (b-gcds-j m i (+ j 1) (+ acc (b-gcd i j)))})
+
+(bench "loop" (fn {} {b-loop (bench.size 4000 1000) 0}))
+(bench "calls" (fn {} {b-calls (bench.size 2000 500) 0}))
+(bench "fib" (fn {} {b-fib (bench.size 16 12)}))
+(bench "sieve" (fn {} {b-sieve (bench.size 1024 512)}))
+(bench "sort" (fn {} {b-sort (bench.size 100 40)}))
+(bench "gcd" (fn {} {b-gcds (bench.size 20 10)}))
+(print "bench hylang done")
