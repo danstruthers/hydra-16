@@ -1,42 +1,66 @@
 ; ****************************************************************************
-; hylang - danlang on the Hydra-16 (docs/hylang.md), written again from scratch.  As yet (phase 2) its REPL reads and
-; prints: a line's items read (with the lines that go on with it, while a bracket or a here string is open), and what
-; it read printed as danlang's REPL prints a value, not evaluated yet (phase 3).  hylang -g collects before every
-; allocation (a test of the collector).
-;   A program of four banks: the evaluator, the dispatch and the hot built-ins in the first; the reader, the printer
-; and the list built-ins in the second; the numbers in the third; strings, hashes, streams and the system in the
-; fourth.  heap.inc is in the task's RAM, where each bank calls it, as are the output and the note handler here; a
-; bank calls another through FARN.
+; hylang - danlang on the Hydra-16 (docs/hylang.md), written again from scratch.  As yet (phase 7) all of danlang but
+; its library: a line read (with the lines that go on with it, while a bracket or a here string is open), evaluated,
+; its value printed as danlang's REPL prints it; or, hylang file args..., the file run (args: its path and the args),
+; its status 0, 1 after an error (on stderr), or (exit n)'s.  hylang -g collects before every allocation (a test of
+; what's kept as a root).
+;   A program of five banks: the evaluator, its special forms, the dispatch and the built-ins that run it in the first
+; (eval.inc, forms.inc, builtins.inc); the reader, the printer, the list built-ins and those that write values in the
+; second (read.inc, print.inc, lists.inc, eqcmp.inc, valout.inc); the numbers in the third (nums.inc, numreg.inc,
+; numval.inc, numtext.inc, numbi.inc, numbits.inc); the hashes and the strings in the fourth (hashes.inc, strs.inc),
+; with the most of the RAM code (DATA4, hylang.cfg: copied to the RAM as hylang starts); the streams and the system
+; library in the fifth (sys.inc, streams.inc, system.inc).  What every bank calls is in the task's RAM: the heap
+; (heap.inc), the output (out.inc), the evaluation stack (stack.inc), and the note handler here; a bank calls another
+; through FARN.
 
 .include "hydra.inc"
 .include "hyx2.inc"
 .include "macros.inc"
 .include "hylang.inc"
 
-            HYX2_PROGRAM "hylang", main, 4
+            HYX2_PROGRAM "hylang", main, 5
+
+HL_DATA4        = 1             ; (The RAM code in DATA4: hylang.cfg)
 
 .include "heap.inc"
+.include "regs.inc"
+.include "out.inc"
+.include "stack.inc"
 .include "read.inc"
 .include "print.inc"
+.include "eval.inc"
+.include "forms.inc"
+.include "builtins.inc"
+.include "lists.inc"
+.include "eqcmp.inc"
+.include "valout.inc"
+.include "nums.inc"
+.include "numreg.inc"
+.include "numval.inc"
+.include "numtext.inc"
+.include "numbi.inc"
+.include "numbits.inc"
+.include "hashes.inc"
+.include "strs.inc"
+.include "sys.inc"
+.include "streams.inc"
+.include "system.inc"
 
 IBUF_SIZE       = 128           ; stdin read this much at a time
-OBUF_SIZE       = 128           ; The output written this much at a time
 
 .zeropage
-op:         .res        2                                   ; out_text's text
 lp:         .res        2                                   ; read_line's place in text
 
 .bss
 ibuf:       .res        IBUF_SIZE                           ; stdin's bytes read, how many, and the next
 ilen:       .res        1
 ipos:       .res        1
-obuf:       .res        OBUF_SIZE                           ; The output not written yet
-olen:       .res        1
 intr:       .res        1                                   ; Ctrl-C ($80), noted by the note handler
 rl_any:     .res        1                                   ; (read_line's: some of a line read)
 stress:     .res        1                                   ; (hylang -g)
+hl_argp:    .res        2                                   ; (Its arguments after -g: args, a script's path first)
 
-.segment "DATA"
+.segment "DATA4"
 ; The note handler, in RAM (any bank may be at $A000 when a note comes): Ctrl-C (NOTE_INTERRUPT) noted in intr;
 ; another, the default
 notes:
@@ -50,64 +74,15 @@ notes:
             sec
             rts
 
-; .A out (out_flush writes it).  Keeps .X, .Y
-out_byte:
-            phy
-            ldy         olen
-            sta         obuf,y
-            iny
-            sty         olen
-            cpy         #OBUF_SIZE
-            bcc         :+
-            jsr         out_flush
-:
-            ply
-            rts
-
-; What's out written, to stdout (a failure: no matter).  Keeps .X, .Y and the window ($00)
-out_flush:
-            lda         olen
-            beq         @done
-            phx
-            phy
-            sta         r1
-            stz         r1 + 1
-            lda         $00
-            pha
-            LDR         r0, obuf
-            lda         #1
-            jsr         WRITE
-            pla
-            sta         $00
-            stz         olen
-            ply
-            plx
-@done:
-            rts
-
-; The zero-terminated text at .A, .X (low, high: in the task's RAM, or in the caller's bank) out.  Keeps .Y
-out_text:
-            sta         op
-            stx         op + 1
-            phy
-            ldy         #0
-@byte:
-            lda         (op),y
-            beq         @done
-            jsr         out_byte
-            iny
-            bne         @byte
-@done:
-            ply
-            rts
-
 .code
 
-; The REPL: a line read (and more lines while it wants them), what it read printed (=> its repr: phase 3 evaluates
-; it), till exit or stdin's end.  Ctrl-C gives the line up
+; The REPL: a line read (and more lines while it wants them), evaluated, its value printed (=> its repr), till exit
+; or stdin's end.  Ctrl-C gives the line up
 main:
             HYX2_BANKS_INIT
+            FARN        4, data4_init                       ; (The most of the RAM code: from the fourth bank)
             stz         stress
+            MOVW        hl_argp, r0
             lda         r0                                  ; (hylang -g: stress)
             ora         r0 + 1
             beq         @args
@@ -122,29 +97,61 @@ main:
             lda         (r0),y
             bne         @args
             inc         stress
+            clc                                             ; (The rest: past "-g" and its 0)
+            lda         r0
+            adc         #3
+            sta         hl_argp
+            lda         r0 + 1
+            adc         #0
+            sta         hl_argp + 1
 @args:
             stz         olen
             stz         ilen
             stz         ipos
             stz         intr
+            jsr         cap_reset
             LDR         r0, notes
             jsr         NOTIFY
-            jsr         heap_init
+            jsr         heap_init                           ; (The heap, the capture bank, the machine, the built-ins)
+            bcs         @noroom
+            lda         #1
+            jsr         BANKS_ALLOC
+            bcs         @noroom
+            sta         cap_bank
+            lda         #<hl_roots                          ; (The reader's levels, the machine's stack: roots)
+            sta         gc_hook
+            lda         #>hl_roots
+            sta         gc_hook + 1
+            jsr         ev_init
+            bcs         @noroom
+            FARN        2, bi_bind
+            bcs         @noroom
+            FARN        5, y_init                           ; (stdin, stdout, stderr; args; a script's (load path))
             bcc         :+
-            lda         #<s_noheap
-            ldx         #>s_noheap
+@noroom:
+            LDAX        s_noheap
             jsr         out_text
             lda         #1
             jmp         quit
 :
             lda         stress
             sta         gc_stress
-            lda         #<rd_roots                          ; (The reader's levels: roots while it reads)
-            sta         gc_hook
-            lda         #>rd_roots
-            sta         gc_hook + 1
-            lda         #<s_banner
-            ldx         #>s_banner
+            lda         hv                                  ; (A script: run, its status 0, or 1 after an error
+            ora         hv + 1                              ;   (on stderr), or (exit n)'s)
+            beq         @repl
+            MOVW        ex, hv
+            stz         ee
+            stz         ee + 1
+            jsr         ev_run
+            jsr         is_err
+            lda         #0
+            bcc         :+
+            FARN        5, y_errout
+            lda         #1
+:
+            jmp         quit
+@repl:
+            LDAX        s_banner
             jsr         out_text
 @expr:
             stz         t_len
@@ -153,16 +160,14 @@ main:
 @prompt:
             lda         cl_len
             bne         @more
-            lda         #<s_prompt
-            ldx         #>s_prompt
+            LDAX        s_prompt
             jsr         out_text
             bra         @wait
 @more:
             lda         #TAB                                ; (Another line wanted: the closers it wants)
             jsr         out_byte
             jsr         out_closers
-            lda         #<s_more
-            ldx         #>s_more
+            LDAX        s_more
             jsr         out_text
 @wait:
             jsr         out_flush
@@ -177,9 +182,13 @@ main:
             jmp         @end
 :
             cmp         #2
-            beq         @ctrlc
+            bne         @lb15
+            jmp         @ctrlc
+@lb15:
             cmp         #3
-            beq         @long
+            bne         @lb14
+            jmp         @long
+@lb14:
             lda         #0                                  ; (The text's end: a 0)
             sta         (lp)
             FARN        2, read_text
@@ -188,10 +197,13 @@ main:
             beq         @prompt
             cmp         #RD_ERROR
             beq         @show
-            jsr         one_item
+            MOVW        ex, hv                              ; (The line's items, a call: evaluated)
+            stz         ee
+            stz         ee + 1
+            jsr         ev_run
+            MOVW        hv, ex
 @show:
-            lda         #<s_is
-            ldx         #>s_is
+            LDAX        s_is
             jsr         out_text
             lda         hv
             ldx         hv + 1
@@ -208,33 +220,33 @@ main:
             lda         #0
             jmp         quit
 @next:
+            stz         ex                                  ; (Nothing kept from the line)
+            stz         ex + 1
+            stz         hv
+            stz         hv + 1
             jmp         @expr
 @ctrlc:
             lda         #LF
             jsr         out_byte
             jmp         @expr
 @long:
-            lda         #<s_long
-            ldx         #>s_long
+            LDAX        s_long
             jsr         out_text
             jmp         @expr
 @nomem:
-            lda         #<s_nomem
-            ldx         #>s_nomem
+            LDAX        s_nomemline
             jsr         out_text
             jmp         @expr
 @end:
             lda         t_len                               ; (stdin's end: exit, or what an open expression is
             ora         t_len + 1                           ;   missing)
             bne         @missing
-            lda         #<s_bye
-            ldx         #>s_bye
+            LDAX        s_bye
             jsr         out_text
             lda         #0
             jmp         quit
 @missing:
-            lda         #<s_missing
-            ldx         #>s_missing
+            LDAX        s_missingl
             jsr         out_text
             jsr         out_closers
             lda         #LF
@@ -258,32 +270,6 @@ out_closers:
             jsr         out_byte
             inx
             bra         @closer
-@done:
-            rts
-
-; hv, a line's S-expression: if it has one item, that item (as evaluating (x) gives x)
-one_item:
-            lda         hv + 1
-            cmp         #IMM_PAGES
-            bcc         @done
-            tax
-            lda         pk,x
-            cmp         #PK_SCONS
-            bne         @done
-            lda         hv
-            ldx         hv + 1
-            ldy         #1
-            jsr         cell_get
-            cmp         #0
-            bne         @done
-            cpx         #0
-            bne         @done
-            lda         hv
-            ldx         hv + 1
-            ldy         #0
-            jsr         cell_get
-            sta         hv
-            stx         hv + 1
 @done:
             rts
 
@@ -379,21 +365,57 @@ getc_in:
             rts
 
 .rodata
-s_banner:   .byte       "hylang (danlang on the Hydra-16), phase 2: it reads, and prints what it read", LF
+s_banner:   .byte       "hylang (danlang on the Hydra-16), phase 7: its streams and system", LF
             .byte       "Type 'exit' to Exit", LF, LF, 0
 s_prompt:   .byte       "hylang> ", 0
 s_more:     .byte       " <", 0
 s_is:       .byte       "=> ", 0
 s_bye:      .byte       "=> exit", LF, 0
-s_missing:  .byte       "=> Error: missing ", 0
+s_missingl: .byte       "=> Error: missing ", 0
 s_long:     .byte       "=> Error: Too long: an expression of more than 4096 bytes", LF, 0
-s_nomem:    .byte       "=> Error: out of memory", LF, 0
+s_nomemline: .byte      "=> Error: out of memory", LF, 0
 s_noheap:   .byte       "hylang: no room for its heap", LF, 0
 
 .segment "CODE3"                                            ; (The numbers: phase 5)
 bank_three:
             rts
 
-.segment "CODE4"                                            ; (Strings, hashes, streams, the system: phases 6, 7)
-bank_four:
+.segment "CODE5"                                            ; (Streams, I/O and the system library: phase 7)
+bank_five:
+            rts
+
+.segment "CODE4"                                            ; (Strings and hashes: phase 6; the RAM code's image)
+; DATA4 (hylang.cfg's: the most of the RAM code, kept in this bank) copied to the task's RAM, as hylang starts
+.import __DATA4_LOAD__, __DATA4_RUN__, __DATA4_SIZE__
+data4_init:
+            lda         #<__DATA4_LOAD__
+            sta         hq
+            lda         #>__DATA4_LOAD__
+            sta         hq + 1
+            lda         #<__DATA4_RUN__
+            sta         hb
+            lda         #>__DATA4_RUN__
+            sta         hb + 1
+            ldy         #0
+            ldx         #>__DATA4_SIZE__                    ; (Its whole pages ...
+            beq         @part
+@page:
+            lda         (hq),y
+            sta         (hb),y
+            iny
+            bne         @page
+            inc         hq + 1
+            inc         hb + 1
+            dex
+            bne         @page
+@part:
+            ldx         #<__DATA4_SIZE__                    ;   and the rest)
+            beq         @done
+:
+            lda         (hq),y
+            sta         (hb),y
+            iny
+            dex
+            bne         :-
+@done:
             rts

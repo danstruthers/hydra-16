@@ -1,32 +1,37 @@
 ; ****************************************************************************
 ; print.inc - hylang's printer (phase 2), in its second bank: a value as danlang's REPL shows it (repr) or as print
 ; does (a string's or a character's text as it is): its reference.md, section 2's "Printing", and LVal.cs's ToStr.
-; Into the output (out_byte: hylang.s's).
+; Into the output (out.inc's out_byte).
 ;   Without recursion: each list being printed is on a stack (the cons it's at, its closer), PRINT_DEPTH deep (one
-; deeper is "...").  Nothing here allocates, so the values stay where they are.  Numbers past a fixnum, functions,
-; hashes and streams get their own forms in the phases that make them (as yet, a placeholder).
+; deeper is "..."); so is a function (its formals, then its body), and a hash's items (<hash>, then its entries
+; {key value tag...} and its tags as a list; a hash in a hash, its list alone).  Nothing here allocates, so the
+; values stay where they are.  Streams get their own form in the phase that makes them (as yet, a placeholder).
 
 PRINT_DEPTH     = 255
 
 .zeropage
 pv:         .res        2                                   ; The printer's: a value ...
 pn:         .res        2                                   ;   a count ...
-pm:         .res        1                                   ;   the form (0: repr, 1: print's) ...
-pd:         .res        1                                   ;   and the lists open
 
 .bss
+pm:         .res        1                                   ;   the form (0: repr, 1: print's, 2: save's) ...
+pd:         .res        1                                   ;   and the lists open ...
+p_inhash:   .res        1                                   ;   and the hashes' among them
 ps_lo:      .res        PRINT_DEPTH                         ; Each list open: the cons it's at (its car next) ...
 ps_hi:      .res        PRINT_DEPTH
-ps_close:   .res        PRINT_DEPTH                         ;   and its closer
-p_digit:    .res        1                                   ; (out_int's: a digit, and a difference)
-p_diff:     .res        1
+ps_close:   .res        PRINT_DEPTH                         ;   its closer (bit 7: a hash's) ...
+ps_mode:    .res        PRINT_DEPTH                         ;   and what it is: 0 a list; 1, 2 a function, its formals
+                                                            ;   or its body out
+p_digit:    .res        1                                   ; (char_name's: the code looked for)
 
 .segment "CODE2"
 
-; A value out.  IN: .A, .X = it; .Y = the form: 0 repr (the REPL's), 1 print's
+; A value out.  IN: .A, .X = it; .Y = the form: 0 repr (the REPL's), 1 print's (a string or a character, as it is;
+; what's in a list, as repr has it)
 print_val:
             sty         pm
             stz         pd
+            stz         p_inhash
 @value:
             sta         pv
             stx         pv + 1
@@ -36,11 +41,17 @@ print_val:
             bcc         @imm
             lda         pk,x
             cmp         #PK_SCONS
-            beq         @slist
+            bne         @lb21
+            jmp         @slist
+@lb21:
             cmp         #PK_QCONS
-            beq         @qlist
+            bne         @lb20
+            jmp         @qlist
+@lb20:
             cmp         #PK_SCOPED
-            beq         @scoped
+            bne         @lb19
+            jmp         @scoped
+@lb19:
             cmp         #PK_STRING
             beq         @string
             cmp         #PK_SYMBOL
@@ -49,6 +60,27 @@ print_val:
             beq         @atom
             cmp         #PK_ERROR
             beq         @error
+            cmp         #PK_FUNC
+            bne         @lb202
+            jmp         @func
+@lb202:
+            cmp         #PK_PARTIAL
+            bne         @lb201
+            jmp         @partial
+@lb201:
+            cmp         #PK_HASH
+            bne         @lb18
+            jmp         @hash
+@lb18:
+            cmp         #PK_BIGNUM                          ; (A number: numtext.inc's)
+            bcc         :+
+            cmp         #PK_COMPLEX + 1
+            bcs         :+
+            lda         pv
+            ldx         pv + 1
+            FARN        3, num_print
+            jmp         @after
+:
             tax                                             ; (The rest, as yet: a placeholder)
             lda         pt_hi,x
             pha
@@ -63,7 +95,7 @@ print_val:
             tax
             lda         pv
             ror
-            jsr         out_int
+            jsr         out_dec
             jmp         @after
 @imm:
             jsr         print_imm
@@ -95,6 +127,125 @@ print_val:
             pla
             sta         pm
             jmp         @after
+@func:
+            lda         #<s_fnform                          ; (<function>(fn formals body): an entry on the stack)
+            ldx         #>s_fnform
+            jsr         out_text
+            ldx         pd
+            cpx         #PRINT_DEPTH
+            bcc         @lb17
+            jmp         @deep
+@lb17:
+            lda         #1
+            sta         ps_mode,x
+            lda         pv
+            sta         ps_lo,x
+            lda         pv + 1
+            sta         ps_hi,x
+            inc         pd
+            lsr         pm                                  ; (What's in it: as repr has it, as danlang's ToStr;
+            asl         pm                                  ;   save's as save's)
+            lda         pv                                  ; (Its formals first)
+            ldx         pv + 1
+            ldy         #0
+            jsr         cell_get
+            jmp         @value
+@partial:
+            lda         #<s_fnopen                          ; (<function>(eq 1): the built-in, its values)
+            ldx         #>s_fnopen
+            jsr         out_text
+            lda         pv
+            ldx         pv + 1
+            ldy         #0
+            jsr         cell_get                            ; (Its number: the value's bits 8-1)
+            pha
+            txa
+            lsr
+            pla
+            ror
+            tax
+            jsr         bi_name
+            lda         pv                                  ; (Its values: a list's items, after a space)
+            ldx         pv + 1
+            ldy         #1
+            jsr         cell_get
+            sta         pv
+            stx         pv + 1
+            ora         pv + 1
+            bne         :+
+            lda         #')'
+            jsr         out_byte
+            jmp         @after
+:
+            ldx         pd
+            cpx         #PRINT_DEPTH
+            bcc         @lb301
+            jmp         @deep
+@lb301:
+            lda         #' '
+            jsr         out_byte
+            lda         #')'
+            sta         ps_close,x
+            stz         ps_mode,x
+            lda         pv
+            sta         ps_lo,x
+            lda         pv + 1
+            sta         ps_hi,x
+            inc         pd
+            lsr         pm                                  ; (What's in it: as repr has it, as danlang's ToStr;
+            asl         pm                                  ;   save's as save's)
+            jmp         @item
+@hash:
+            lda         pv                                  ; (A hash: a proxy's, its own)
+            ldx         pv + 1
+            ldy         #H_FLAGS
+            jsr         cell_get
+            and         #H_PROXY
+            beq         :+
+            lda         pv
+            ldx         pv + 1
+            ldy         #H_REAL
+            jsr         cell_get
+            sta         pv
+            stx         pv + 1
+:
+            lda         pm                                  ; (save's: #( ... ), and in a hash too)
+            cmp         #2
+            bne         :+
+            lda         #<s_hashopen
+            ldx         #>s_hashopen
+            jsr         out_text
+            bra         :++
+:
+            lda         p_inhash                            ; (<hash>, unless it's in a hash)
+            bne         :+
+            lda         #<s_hash
+            ldx         #>s_hash
+            jsr         out_text
+:
+            lda         pv                                  ; (Its items: a list; none, NIL)
+            ldx         pv + 1
+            ldy         #H_ITEMS
+            jsr         cell_get
+            sta         pv
+            stx         pv + 1
+            ora         pv + 1
+            bne         :+
+            lda         #<s_nil                             ; (None: NIL; save's {})
+            ldx         #>s_nil
+            ldy         pm
+            cpy         #2
+            bne         @nilout
+            lda         #<s_hashnone
+            ldx         #>s_hashnone
+@nilout:
+            jsr         out_text
+            jmp         @after
+:
+            inc         p_inhash
+            lda         #'{'
+            ldy         #'}' | $80
+            jmp         @list
 @scoped:
             lda         pv                                  ; (A Q-expression and its scope: the Q-expression)
             ldx         pv + 1
@@ -115,11 +266,14 @@ print_val:
             jsr         out_byte
             tya
             sta         ps_close,x
+            stz         ps_mode,x
             lda         pv
             sta         ps_lo,x
             lda         pv + 1
             sta         ps_hi,x
             inc         pd
+            lsr         pm                                  ; (What's in it: as repr has it, as danlang's ToStr;
+            asl         pm                                  ;   save's as save's)
             bra         @item
 @deep:
             lda         #<s_deep
@@ -129,10 +283,21 @@ print_val:
             ldx         pd
             beq         @done
             dex
+            lda         ps_mode,x
+            bne         @fmode
             lda         ps_lo,x
             ora         ps_hi,x
             bne         @space
             lda         ps_close,x
+            bpl         :+
+            dec         p_inhash                            ; (A hash's end: save's, })
+            and         #$7F
+            ldy         pm
+            cpy         #2
+            bne         :+
+            jsr         out_byte
+            lda         #')'
+:
             jsr         out_byte
             dec         pd
             bra         @after
@@ -165,6 +330,25 @@ print_val:
             jmp         @value
 @done:
             rts
+@fmode:
+            cmp         #1                                  ; (A function: its formals out, its body next ...
+            bne         @fend
+            inc         ps_mode,x
+            lda         #' '
+            jsr         out_byte
+            lda         ps_lo,x
+            pha
+            lda         ps_hi,x
+            tax
+            pla
+            ldy         #1
+            jsr         cell_get
+            jmp         @value
+@fend:
+            lda         #')'                                ;   its body out: its end)
+            jsr         out_byte
+            dec         pd
+            jmp         @after
 
 ; An immediate (pv) out: NIL, T, (), exit, a character, a built-in
 print_imm:
@@ -173,6 +357,21 @@ print_imm:
             bcs         @char
             cpx         #0
             bne         @other                              ; (Page 1: none)
+            lda         pm                                  ; (save's: NIL {}, () ())
+            cmp         #2
+            bne         :+
+            lda         pv
+            cmp         #<SNIL + 1
+            bcs         :+
+            lsr
+            tax
+            lda         ser_lo,x
+            pha
+            lda         ser_hi,x
+            tax
+            pla
+            jmp         out_text
+:
             lda         pv
             cmp         #UNBOUND + 2
             bcs         @other
@@ -195,7 +394,8 @@ print_imm:
             lda         pv
             ror
             ldx         pm
-            bne         @raw
+            cpx         #1
+            beq         @raw
             pha
             lda         #'\'
             jsr         out_byte
@@ -213,9 +413,17 @@ print_imm:
 @raw:
             jmp         out_byte
 @builtin:
-            lda         #<s_builtin
-            ldx         #>s_builtin
-            jmp         out_text
+            lda         #<s_fnopen                          ; (<function>(+))
+            ldx         #>s_fnopen
+            jsr         out_text
+            lda         pv + 1
+            lsr
+            lda         pv
+            ror
+            tax
+            jsr         bi_name
+            lda         #')'
+            jmp         out_byte
 
 ; The name a character (.A) prints by.  OUT: C = 0, hq = its entry in cn_table, .X = its name's length; C = 1 if
 ; it has none (.A kept)
@@ -274,7 +482,8 @@ print_string:
             pla
             jsr         blob_data
             lda         pm
-            bne         @bytes
+            cmp         #1
+            beq         @bytes
             lda         #'"'
             jsr         out_byte
 @bytes:
@@ -283,7 +492,8 @@ print_string:
             beq         @end
             lda         (hp)
             ldx         pm
-            bne         @raw
+            cpx         #1
+            beq         @raw
             jsr         out_escaped
             bra         @on
 @raw:
@@ -301,7 +511,8 @@ print_string:
             bra         @bytes
 @end:
             lda         pm
-            bne         @done
+            cmp         #1
+            beq         @done
             lda         #'"'
             jsr         out_byte
 @done:
@@ -368,64 +579,8 @@ print_name:
 @done:
             rts
 
-; A number (.A, .X: -32768 to 32767) out, in decimal
-out_int:
-            cpx         #$80
-            bcc         @plus
-            pha
-            lda         #'-'
-            jsr         out_byte
-            pla
-            eor         #$FF
-            clc
-            adc         #1
-            pha
-            txa
-            eor         #$FF
-            adc         #0
-            tax
-            pla
-@plus:
-            sta         pn
-            stx         pn + 1
-            ldy         #0                                  ; (Digits out: none, so 0s before them aren't)
-            ldx         #3
-@power:
-            lda         #'0'
-            sta         p_digit
-@less:
-            lda         pn                                  ; (The power of ten taken while it can be)
-            sec
-            sbc         pow_lo,x
-            sta         p_diff
-            lda         pn + 1
-            sbc         pow_hi,x
-            bcc         @digit
-            sta         pn + 1
-            lda         p_diff
-            sta         pn
-            inc         p_digit
-            bra         @less
-@digit:
-            lda         p_digit
-            cpy         #0
-            bne         @out
-            cmp         #'0'
-            beq         @next
-@out:
-            jsr         out_byte
-            iny
-@next:
-            dex
-            bpl         @power
-            lda         pn
-            ora         #'0'
-            jmp         out_byte
-
 .segment "RODATA2"
 
-pow_lo:     .lobytes    10, 100, 1000, 10000
-pow_hi:     .hibytes    10, 100, 1000, 10000
 hex_digit:  .byte       "0123456789ABCDEF"
 
 ; A control character's escape in a string (0: \xHH)
@@ -447,10 +602,17 @@ s_t:        .byte       "T", 0
 s_exitv:    .byte       "exit", 0
 s_unbound:  .byte       "<unbound>", 0
 s_imm:      .byte       "<?>", 0
-s_builtin:  .byte       "<function>(?)", 0
+s_fnform:   .byte       "<function>(fn ", 0
+s_fnopen:   .byte       "<function>(", 0
 s_number:   .byte       "<number>", 0
 s_function: .byte       "<function>", 0
 s_hash:     .byte       "<hash>", 0
+s_hashopen: .byte       "#(", 0
+s_hashnone: .byte       "{})", 0
+ser_lo:     .lobytes    s_qnone, s_t, s_snone
+ser_hi:     .hibytes    s_qnone, s_t, s_snone
+s_qnone:    .byte       "{}", 0
+s_snone:    .byte       "()", 0
 s_stream:   .byte       "<stream>", 0
 s_scope:    .byte       "<scope>", 0
 s_error:    .byte       "Error: ", 0

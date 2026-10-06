@@ -97,7 +97,7 @@ function buildModule(dir, objdir, defines, ram = false, libs = {}) {
   const objs = assemble(sources(dir), od, [at('obj', 'sdk'), at('sdk', 'asm'), at('include'), at('obj', 'gen'), dir, path.dirname(dir),
     ...(ram ? [at('tests', 'mod')] : [])], ram ? [...defines, 'HYX2_RAM'] : defines);
   const bin = path.join(objdir, name + (ram ? '.hyx' : '.bin'));
-  const banks = Math.max(1, ...sources(dir).map(f => Math.max(0, ...[...fs.readFileSync(f, 'latin1').matchAll(/\.segment\s+"CODE([2-4])"/gi)]
+  const banks = Math.max(1, ...sources(dir).map(f => Math.max(0, ...[...fs.readFileSync(f, 'latin1').matchAll(/\.segment\s+"CODE([2-8])"/gi)]
     .map(m => +m[1]))));                                      // (Its last bank's CODEn: moduleN.cfg)
   const own = path.join(dir, name + '.cfg');
   const cfg = ram ? at('sdk', 'asm', 'hyx2.cfg') : fs.existsSync(own) ? own

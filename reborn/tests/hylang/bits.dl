@@ -43,6 +43,9 @@
 (check-error (from-bytes {256}))
 (check-error (from-bytes {-1}))
 (check-error (from-bytes 5))
+; an argument they can't take: the error saying so, its code :inval
+(check (try (bit-and 1.5 1) &err) "'bit-and''s argument must be an integer")
+(check (try (from-bytes {256}) &code) :inval)
 
 ; bytes to and from a stream, as they are
 (def {bt-f} (+ regress-dir "bits.tmp"))

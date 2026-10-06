@@ -577,6 +577,26 @@ function shellCard() {
   return [imageCard(0, f, 16384)];
 }
 
+// hylang's card (the hysuite test's): danlang's suite's files (tests/hylang), hylang's own (run7.hl), and danlang's
+// library (tests/hylang/lib: globals.dl, dice.dl, screen.dl) as /lib/hylang's NAME.hl, where load finds a bare name
+function hylangCard() {
+  fs.mkdirSync(CARD_DIR, { recursive: true });
+  hydrafs.setNow(0x1000);
+  const f = path.join(CARD_DIR, 'hylang0.img');
+  fs.rmSync(f, { force: true });
+  hydrafs.mkfs(f, 8, 'HYLANG', undefined, true);
+  const v = new hydrafs.Volume(f);
+  const dir = path.join(__dirname, 'hylang');
+  const put = (from, to) => v.put(to, fs.readFileSync(from));
+  for (const n of fs.readdirSync(dir).filter(n => /\.(dl|hl)$/.test(n))) put(path.join(dir, n), n);
+  v.mkdir('lib');
+  v.mkdir('lib/hylang');
+  for (const n of fs.readdirSync(path.join(dir, 'lib')).filter(n => n.endsWith('.dl')))
+    put(path.join(dir, 'lib', n), 'lib/hylang/' + n.replace(/\.dl$/, '.hl'));
+  v.close();
+  return [imageCard(0, f, 16384)];
+}
+
 // The wcache test's lines: names looked up (there or not), then what changes them (a create, a rename, a remove, a
 // mkdir and rmdir, a rename of a directory, a create through /lib's union), and looked up again
 const WC_LINES = [
@@ -594,6 +614,100 @@ const WC_LINES = [
   ["echo c >/lib/nothere; cat /lib/nothere /ram/lib/nothere", "c\nc"],
   ["rm /lib/nothere; cat /lib/nothere", "cat: /lib/nothere: not found"],
   ["ls /rom/lib/forth/gpio.fs /lib/forth/gpio.fs", "/rom/lib/forth/gpio.fs\n/lib/forth/gpio.fs"],
+];
+
+// hylang's lines (the hylang test's): each typed at its prompt, what it prints (=> ...; none: it wants more), and its
+// prompt if it isn't hylang> (the closers wanted)
+const HYLANG_LINES = [
+  ['42', '42'], ['', 'NIL'], ['1 2 3', 'Error: S-Expression starts with incorrect type. Got Number, Expected Function.'],
+  ['(+ 1 2)', '3'], ['+ 1 2', '3'],
+  ['{a B :C T nil exit () {} [] [1 2]}', '{a b :c T NIL exit NIL NIL (list) (list 1 2)}'],
+  ['{"a\\nb" "\\e[1m\\x01\\x7f" """x"y""" "" """""" "\\x41\\x4a2" "tab\\there" "\\\\\\""}',
+    '{"a\\nb" "\\e[1m\\x01\\x7F" "x\\"y" "" "" "AJ2" "tab\\there" "\\\\\\""}'],
+  ['{\\a \\A \\space \\( \\] \\lf \\LineFeed \\line-feed \\null \\\\ \\" \\; \\escape \\del \\x}',
+    '{\\a \\A \\space \\lparen \\rbracket \\lf \\lf \\lf \\null \\backslash \\quote \\semicolon \\escape \\delete \\x}'],
+  ['{?(c a b) ?{c} =(x 1) :(y 2) #(z) @({x} {x}) .(f l) ~("s") ?x a:b :}',
+    '{(if c a b) {if c} (set x 1) (def y 2) (hash-create z) (fn {x} {x}) (unpack f l) (format "s") ?x a:b :}'],
+  ['{$HOME $Mixed_Case $}', '{(env "HOME") (env "Mixed_Case") $}'],
+  ['{1 -2 +3 16383 -16384 1_000 1_ +_1 007 -0 - + 1+ -_ 1a _1 #x10 1.5}', '{1 -2 3 16383 -16384 1000 1 1 7 0 - + 1+ -_ 1a _1 16 1.5}'],
+  ['{a ; a comment'], ['b}', '{a b}', '\t} <'], ['(list 1'], ['{b', undefined, '\t) <'], ['c})', '{1 {b c}}', '\t)} <'],
+  ['"""x'], ['y"""', '"x\\ny"', '\t""" <'],
+  ['(1 2]', 'Error: Closed a list without opening: )'], [')', 'Error: Closed a SExpr without opening: '],
+  ['{a)', 'Error: Closed a SExpr without opening: }'], ['[a}', 'Error: Closed a QExpr without opening: ]'],
+  ['f(x)', 'Error: \'f\' touches \'(\': put a space between them'], ['x[1]', 'Error: \'x\' touches \'[\': put a space between them'],
+  ['+#(a)', 'Error: \'+#\' touches \'(\': put a space between them'],
+  ['$(x)', 'Error: \'$(\' isn\'t danlang: $name is the environment\'s variable'], ['"\\q"', 'Error: Unknown escape sequence \\q'],
+  ['"abc', 'Error: Newlines are not allowed in regular strings'], ['"\\x"', 'Error: \\x needs a hex digit'],
+  ['\\zzz', 'Error: Unknown character name \\zzz'], ['\\', 'Error: A character needs a name'],
+  ['70000', '70000'], ['{1/2 6/4 -#b101 #[01]11 #16rff 0.50 1/x #<x01 #c+-}', '{1/2 3/2 -5 3 255 0.5 1/x 16 -2}'],
+  ['1/0', 'Error: Division by zero: 1/0'],
+  ['('.repeat(100)], ['('.repeat(100), undefined, '\t' + ')'.repeat(100) + ' <'],
+  ['('.repeat(55) + '1' + ')'.repeat(55), undefined, '\t' + ')'.repeat(200) + ' <'],
+  [')'.repeat(100), undefined, '\t' + ')'.repeat(200) + ' <'], [')'.repeat(100), '1', '\t' + ')'.repeat(100) + ' <'],
+  ['('.repeat(100)], ['('.repeat(100), undefined, '\t' + ')'.repeat(100) + ' <'],
+  ['('.repeat(56), 'Error: Too deep: more than 255 brackets open', '\t' + ')'.repeat(200) + ' <'],
+  ['(def {x} 10)', 'NIL'], ['(* x x)', '100'],
+  ['(fun {fact n} {if (zero? n) 1 (* n (fact (- n 1)))})', 'NIL'], ['(fact 7)', '5040'],
+  ['(fun {loop n} ?{(zero? n) :done (loop (- n 1))})', 'NIL'], ['(loop 16000)', ':done'],
+  ['(fun {deep n} ?{(zero? n) 0 (+ 1 (deep (- n 1)))})', 'NIL'], ['(deep 1000)', '1000'],
+  ['(deep 3000)', 'Error: Too deep: more than 2500 calls nested'],
+  ['undefined-thing', 'Error: Unbound Symbol \'undefined-thing\''],
+  ['((fn {a b c} {+ a b c}) 1)', '<function>(fn {b c} {+ a b c})'], ['(((fn {a b c} {+ a b c}) 1) 2 3)', '6'],
+  ['((eq 1) 1)', 'T'], ['(repr (eq 1))', '"<function>(eq 1)"'], ['eq', '<function>(eq)'],
+  ['(len {1} 2)', 'Error: \'len\' takes 1 argument, not 2'], ['((fn {x} {x}) 1 2)', 'Error: The function takes 1 argument, not 2'],
+  ['((fn {x} {&_}) 1 2 3)', '{2 3}'], ['((fn {} {&2}) :a :b)', ':b'],
+  ['(let {{a 1} {b (+ a 1)}} (+ a b))', '3'], ['(do (def {wi} 0) (while (< wi 5) =(wi (+ wi 1))) wi)', '5'],
+  ['(output-of (dotimes {i 3} (write i)) (each print {:a :b}))', '"012:a\\n:b\\n"'],
+  ['(try (error "x" :e) (list &err &code))', '{"x" :e}'], ['(try (+ 1 2) 0)', '3'],
+  ['(map (fn {x} {* x x}) (range 5))', '{0 1 4 9 16}'], ['(format "{} + {} = {}" 1 2 (+ 1 2))', '"1 + 2 = 3"'],
+  ['(+ "n=" 5 \\space :a)', '"n=5 :a"'], ['(cmp {1 2} {1 3})', '-1'], ['(eq {1 "a" (b)} {1 "a" (b)})', 'T'],
+  ['(fun {mk n} {fn {x} {+ x n}})', 'NIL'], ['((mk 5) 1)', '6'],
+  ['(def {my-if} (fexpr {c a b} {if (eval c) (eval a) (eval b)}))', 'NIL'], ['(my-if NIL (error "no") 2)', '2'],
+  ['(/ 7 0)', 'Error: Division by zero.'], ['(* 200 200)', '40000'],
+  ['(fun {inf} {inf})', 'NIL'],
+  ['(filter (fn {x} {> x 1}) {1 2 3})', '{2 3}'], ['(foldr - 0 {1 2 3})', '2'], ['((foldl +) 0 {1 2})', '3'],
+  ['(list (any? neg? {1 -1}) (all? pos? {}) (find neg? {1 -2}) (count neg? {-1 2 -3}) (sum {1 2 3}) (product {2 3}))', '{T T -2 2 6 6}'],
+  ['(map 5 {1})', 'Error: S-Expression starts with incorrect type. Got Number, Expected Function.'],
+  ['(sort {T {2} :c 1 {1 2} {1} x "s"})', '{1 "s" :c x {1} {1 2} {2} T}'], ['(sort (range 12) >)', '{11 10 9 8 7 6 5 4 3 2 1 0}'],
+  ['(sort {{1 :a} {0 :x} {1 :b}} (fn {x y} {< (fst x) (fst y)}))', '{{0 :x} {1 :a} {1 :b}}'], ['(sort {1 2} (fn {x y} {error "cmp"}))', 'Error: cmp'],
+  ['(list (subset {1 2 3 4} 1 2) (index-of "hello" \\l) (last-index-of {1 2 3 2} 2))', '{{2 3} 2 3}'],
+  ['(list (gensym) (gensym "TMP") (to-atom "AB") (to-atom 5) (< (random 6) 6))', '{g__1 tmp__2 :ab :5 T}'],
+  ['(* 99999999999 99999999999)', '9999999999800000000001'],
+  ['(list (/ 7 2) (* 1.5 2) (+ 1/2 0.5) (- 0 12345678901234567890) (* (complex 0 1) (complex 0 1)))', '{7/2 3 1 -12345678901234567890 -1}'],
+  ['(list (to-str 255 "x") (to-str -7 "#m") (val "#zHYDRA") (to-fixed 2/3) (truncate -7/2) (fib 100))', '{"#xFF" "#mst" 30157606 0.6666666666 -3 354224848179261915075}'],
+  ['(list (shl 1 40) (bit-and -1 #xffff) (hex 255 4) (bin 5) (lo -1) (word 52 18))', '{1099511627776 65535 "00FF" "101" 255 4660}'],
+  ['(error-code (bit-and 1.5 1))', ':inval'], ['(< (random 100000000000000000000000) 100000000000000000000000)', 'T'],
+  ['(list (str-split "a,b;;c" {"," ";"}) (str-upper "hi") (char-at "abc" 1) (str-pad-left "7" 3 "0") (code-char 66))',
+    '{{"a" "b" "" "c"} "HI" \\b "007" \\B}'],
+  ['(list (str-trim " x ") (str-replace "a-b" "-" "+") (str-join {1 "a" :b} ",") (str-repeat "ab" 2) (alpha? "ab"))',
+    '{"x" "a+b" "1,a,:b" "abab" T}'],
+  ['(def {h} (hash-create {{:a 1} {"s" (+ 1 1)} {2 :two} :t}))', 'NIL'], ['h', '<hash>{{:a 1} {"s" 2} {2 :two} :t}'],
+  ['(list (h "s") (hash-get h 2.0) (hash-keys h) (len h) (from# (hash-clone h {:b 3})))',
+    '{2 :two {:a "s" 2} 3 {{:a 1} {"s" 2} {2 :two} {:b 3} :t}}'],
+  ['(def {o} (to# {{:n 1} {:inc (fn {} {hash-put &0 {:n (+ (&0 :n) 1)}})} {:k 7 :__private}}))', 'NIL'],
+  ['(list (o :inc) (hash-call o :inc) (o :n) (eq o (hash-clone o)))', '{1 2 3 T}'],
+  ['(o :k)', 'Error: hash-get error: cannot access private hash entry'],
+  ['(do (hash-lock h) (hash-put h {:new 1}))', 'Error: hash-put error: cannot add new entries to a locked hash'],
+  ['(list (read "1 {2} (+ 3)") (platform) (hydra?) (tick-rate) (date 0) (seconds-of 2024 2 29))',
+    '{{1 {2} (+ 3)} :hydra T 200 "2000-01-01 00:00:00" 762480000}'],
+  ['(list (sh-out "echo hi there") (sh "exit 3") (sh-out "sort" "b\\na\\n"))', '{"hi there\\n" 3 "a\\nb\\n"}'],
+  ['(output-of (print-to stdout "a" 1) (write-to stdout "b") (save {1 "s" {} #({{:k 2}})}))',
+    '"a 1\\nb{1 \\"s\\" {} (hash-create {{:k 2}})}\\n"'],
+  ['(do (setenv :hyt "v") (list (env "hyt") $hyt (unsetenv "hyt") (env "hyt")))', '{"v" "v" NIL NIL}'],
+  ['(list (error-code (read-file "/nope")) (error-message (open "/nope")) (type-of stdin))', '{:noent "/nope: not found" :stream}'],
+];
+// hylang -g's lines (a collection before every allocation)
+const HYLANG_G = [
+  ['{"a" "b" (c d) [e f] $G :h \\i 123 "c\\x41"}', '{"a" "b" (c d) (list e f) (env "G") :h \\i 123 "cA"}'],
+  ['(fun {fact n} {if (zero? n) 1 (* n (fact (- n 1)))})', 'NIL'], ['(fact 7)', '5040'],
+  ['(map (fn {x} {* x x}) (range 5))', '{0 1 4 9 16}'], ['(let {{a 1} {b (+ a 1)}} (list a b))', '{1 2}'],
+  ['(output-of (each {c "ab"} (write c ".")))', '"a.b."'], ['(try (error "x") &err)', '"x"'],
+  ['(sort {3 1 2} >)', '{3 2 1}'], ['(filter (fn {x} {> x 1}) {1 2 3})', '{2 3}'], ['(foldr cons {} {1 2})', '{1 2}'],
+  ['(list (subset {1 2 3} 1) (to-atom "x"))', '{{2 3} :x}'],
+  ['(list (* 99999999999 99999999999) (/ 7 2) (+ 0.5 0.25) (/ (complex 1 2) (complex 3 4)) (to-str 1/2 "#b"))', '{9999999999800000000001 7/2 0.75 11/25+2/25i "#b1/#b10"}'],
+  ['(list (val "#[01]101") (fib 100) (shl -3 70) (to-fixed 1/3 5))', '{5 354224848179261915075 -3541774862152233910272 0.33333}'],
+  ['(def {g} (to# {{:a "x"} {:b {1 2}} :t}))', 'NIL'],
+  ['(list (g :b) (from# (hash-clone g {:c 3})) (str-split "a b" " ") (str-upper \\q))', '{{1 2} {{:a "x"} {:b {1 2}} {:c 3} :t} {"a" "b"} \\Q}'],
 ];
 
 // A test's lines typed, each at its prompt, and its expect (as the tools test's)
@@ -1326,52 +1440,30 @@ module.exports = {
         { what: 'a collection, 9000 cells live, a cell', from: '<gc9k', to: 'gc9k>', per: 9000, max: 255 }],
     },
     {
-      name: 'hylang', what: 'hylang\'s reader, printer and REPL (phase 2: what a line reads to, printed as danlang\'s REPL prints a value): atoms, symbols, T, NIL, exit, lists of three kinds, strings and here strings with their escapes, characters by name, the shorthand, $name, decimal fixnums; an expression over lines, a comment, a here string; the reader\'s errors; 255 brackets open; Ctrl-C at the prompt; exit; stdin a pipe, its end; hylang -g (a collection before every allocation)',
-      init: 't_rc', cycles: 400e6,
+      name: 'hylang', what: 'hylang\'s REPL, evaluator, built-ins, numbers, strings, hashes, streams and system library (phases 3 to 7): the reader\'s every form (in Q-expressions, printed as they\'re read) and its errors, an expression over lines, 255 brackets open; lines evaluated: def, fn, fun, recursion 1,000 deep (2,500 the most: deeper, an error), a tail loop, errors, partial application, too many arguments, &_, let, the loops, output-of, try, map, format, + of strings, cmp, closures, fexprs; numbers past a fixnum, fractions, fixed decimals and complex numbers, read in bases and written in them, to-fixed, truncate, fib, random, the bits; the string built-ins; hashes (made with their values evaluated, called, a method with &0, a private entry, a locked hash, cloned, listed); read, the clock, rc\'s lines run (their output, their exit status), print-to and write-to stdout, save, the environment, a system error\'s code; filter, the folds, any?, all?, find, count, sum, product, sort (by cmp, by a function, its error), subset, index-of, gensym, to-atom, random; Ctrl-C at the prompt and in a loop; (exit 3); stdin a pipe, its end; hylang -g (a collection before every allocation)',
+      init: 't_rc', cycles: 600e6,
       // (Each line typed at a prompt: hylang> and, for more lines, the closers it wants then " <")
       get machine() {
-        const lines = ['42', '', '1 2 3', '(+ 1 2)', '{a B :C T nil exit () {} [] [1 2]}',
-          '{"a\\nb" "\\e[1m\\x01\\x7f" """x"y""" "" """""" "\\x41\\x4a2" "tab\\there" "\\\\\\""}',
-          '{\\a \\A \\space \\( \\] \\lf \\LineFeed \\line-feed \\null \\\\ \\" \\; \\escape \\del \\x}',
-          '{?(c a b) ?{c} =(x 1) :(y 2) #(z) @({x} {x}) .(f l) ~("s") ?x a:b :}', '$HOME $Mixed_Case $',
-          '{1 -2 +3 16383 -16384 1_000 1_ +_1 007 -0 - + 1+ -_ 1a _1 #x10 1.5}',
-          '{a ; a comment', 'b}', '(a', '{b', 'c})', '"""x', 'y"""',
-          '(1 2]', ')', '{a)', '[a}', 'f(x)', 'x[1]', '+#(a)', '$(x)', '"\\q"', '"abc', '"\\x"', '\\zzz', '\\', '70000', '16384',
-          '('.repeat(100), '('.repeat(100), '('.repeat(55) + '1' + ')'.repeat(55), ')'.repeat(100), ')'.repeat(100),
-          '('.repeat(100), '('.repeat(100), '('.repeat(56)];
-        return { input: '\u0101hylang\r' + lines.map(l => '\u0101' + l + '\r').join('') + '\u0101(a\r\u0101\x03' +
-          '\u0101exit\r' + '\u0101echo $status\r' +
-          '\u0101echo \'(1 2) $x {a\' | hylang; echo \'42\' | hylang; echo $status\r' +
-          '\u0101hylang -g\r' + '\u0101{"a" "b" (c d) [e f] $G :h \\i 123 "c\\x41"}\r' + '\u0101(1 (2 (3 (4))) {5\r\u0101"""6\r\u01017"""})\r' +
-          '\u0101(1 2]\r' + '\u0101exit\r' + '\u0101echo $status\r' };
+        const lines = HYLANG_LINES.map(l => l[0]);
+        return { input: '\u0101hylang\r' + lines.map(l => '\u0101' + l + '\r').join('') +
+          '\u0101(list 1\r\u0101\x03' + '\u0101(inf)\r\u0100\x03' + '\u0101(exit 3)\r' + '\u0101echo $status\r' +
+          '\u0101echo \'(1 2) $x {a\' | hylang; echo \'(* 6 7)\' | hylang; echo $status\r' +
+          '\u0101hylang -g\r' + HYLANG_G.map(l => '\u0101' + l[0] + '\r').join('') + '\u0101(list 1 (list 2 (list 3)) {5\r\u0101"""6\r\u01017"""})\r' +
+          '\u0101exit\r' + '\u0101echo $status\r' };
       },
-      expect: ['hylang (danlang on the Hydra-16), phase 2: it reads, and prints what it read\nType \'exit\' to Exit\n\n' +
-        'hylang> 42\n=> 42\nhylang> \n=> NIL\nhylang> 1 2 3\n=> (1 2 3)\nhylang> (+ 1 2)\n=> (+ 1 2)\n' +
-        'hylang> {a B :C T nil exit () {} [] [1 2]}\n=> {a b :c T NIL exit NIL NIL (list) (list 1 2)}\n',
-        '=> {"a\\nb" "\\e[1m\\x01\\x7F" "x\\"y" "" "" "AJ2" "tab\\there" "\\\\\\""}\n',
-        '=> {\\a \\A \\space \\lparen \\rbracket \\lf \\lf \\lf \\null \\backslash \\quote \\semicolon \\escape \\delete \\x}\n',
-        '=> {(if c a b) {if c} (set x 1) (def y 2) (hash-create z) (fn {x} {x}) (unpack f l) (format "s") ?x a:b :}\n',
-        '=> ((env "HOME") (env "Mixed_Case") $)\n',
-        '=> {1 -2 3 16383 -16384 1000 1 1 7 0 - + 1+ -_ 1a _1 #x10 1.5}\n',
-        'hylang> {a ; a comment\n\t} <b}\n=> {a b}\nhylang> (a\n\t) <{b\n\t)} <c})\n=> (a {b c})\n' +
-          'hylang> """x\n\t""" <y"""\n=> "x\\ny"\n',
-        'hylang> (1 2]\n=> Error: Closed a list without opening: )\nhylang> )\n=> Error: Closed a SExpr without opening: \n' +
-          'hylang> {a)\n=> Error: Closed a SExpr without opening: }\nhylang> [a}\n=> Error: Closed a QExpr without opening: ]\n' +
-          'hylang> f(x)\n=> Error: \'f\' touches \'(\': put a space between them\n' +
-          'hylang> x[1]\n=> Error: \'x\' touches \'[\': put a space between them\n' +
-          'hylang> +#(a)\n=> Error: \'+#\' touches \'(\': put a space between them\n' +
-          'hylang> $(x)\n=> Error: \'$(\' isn\'t danlang: $name is the environment\'s variable\n' +
-          'hylang> "\\q"\n=> Error: Unknown escape sequence \\q\nhylang> "abc\n=> Error: Newlines are not allowed in regular strings\n' +
-          'hylang> "\\x"\n=> Error: \\x needs a hex digit\nhylang> \\zzz\n=> Error: Unknown character name \\zzz\n' +
-          'hylang> \\\n=> Error: A character needs a name\n' +
-          'hylang> 70000\n=> Error: Not yet: an integer past a fixnum (phase 5)\nhylang> 16384\n=> Error: Not yet: an integer past a fixnum (phase 5)\n',
-        ' <' + ')'.repeat(100) + '\n=> ' + '('.repeat(255) + '1' + ')'.repeat(255) + '\n',
-        ' <' + '('.repeat(56) + '\n=> Error: Too deep: more than 255 brackets open\nhylang> ',
-        '\nhylang> exit\n=> exit\n\n% echo $status\n\n%',
+      expect: ['hylang (danlang on the Hydra-16), phase 7: its streams and system\nType \'exit\' to Exit\n\n',
+        HYLANG_LINES.map(l => (l[2] || 'hylang> ') + l[0] + '\n' + (l[1] === undefined ? '' : '=> ' + l[1] + '\n')).join(''),
+        'hylang> (list 1\n\t) <\nhylang> (inf)\n=> Error: interrupted\nhylang> (exit 3)\n\n% echo $status\n3\n%',
         'hylang> \t} <=> Error: missing }\n', 'hylang> => 42\nhylang> => exit\n\n%',
-        'hylang> {"a" "b" (c d) [e f] $G :h \\i 123 "c\\x41"}\n=> {"a" "b" (c d) (list e f) (env "G") :h \\i 123 "cA"}\n' +
-          'hylang> (1 (2 (3 (4))) {5\n\t)} <"""6\n\t)}""" <7"""})\n=> (1 (2 (3 (4))) {5 "6\\n7"})\n' +
-          'hylang> (1 2]\n=> Error: Closed a list without opening: )\nhylang> exit\n=> exit\n% echo $status\n\n%'],
+        HYLANG_G.map(l => 'hylang> ' + l[0] + '\n=> ' + l[1] + '\n').join('') +
+          'hylang> (list 1 (list 2 (list 3)) {5\n\t)} <"""6\n\t)}""" <7"""})\n=> {1 {2 {3}} {5 "6\\n7"}}\n' +
+          'hylang> exit\n=> exit\n% echo $status\n\n%'],
+    },
+    {
+      name: 'hysuite', what: 'hylang\'s suite (phase 7): danlang\'s run.dl\'s files, all of them (reader.dl, eval.dl, scope.dl, control.dl, errors.dl, lists.dl, strings.dl, numbers.dl, hashes.dl, types.dl, io.dl, system.dl, bits.dl, library.dl), run as a script (hylang run7.hl: args its name, its status), with its harness and its library (globals.dl, dice.dl, screen.dl: /lib/hylang\'s, where load finds a bare name, and use), loaded from a card (load reads a file an item at a time, refilled as it goes; a load nested in another), files written there, programs run, the clock a DS1747\'s; and a tail loop of 50,000 steps',
+      init: 't_rc', cycles: 12000e6,
+      get machine() { return { sd: hylangCard(), rtc: Date.UTC(2026, 9, 5, 12, 0, 0) / 1000, input: '\u0101cd /sd/0; hylang run7.hl; echo status $status\r' }; },
+      expect: ['1198 checks, 0 failed\nstatus\n%'],
     },
     {
       name: 'kcopy', what: 'spike S2: copying between tasks',

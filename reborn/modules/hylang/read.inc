@@ -1,12 +1,14 @@
 ; ****************************************************************************
-; read.inc - hylang's reader (phase 2), in its second bank: text to values, as danlang's (its reference.md, section
-; 1, and Parser.cs).  read_text reads text (a line, and those that go on with it, each with its LF, then a 0) to the
-; S-expression of its items.
+; read.inc - hylang's reader (phases 2, 3), in its second bank: text to values, as danlang's (its reference.md,
+; section 1, and Parser.cs).  read_text reads text (a line, and those that go on with it, each with its LF, then a 0)
+; to the S-expression of its items; read_item reads a file's next item (load's), refilling text from it as it goes
+; (each time what's left is less than 2 bytes, so a byte and the one after it are always there but at the file's
+; end), what's left of a word being read kept.
 ;   One pass, without tokens: a level for each bracket open (its closer, its list so far and its last cons, so a list
 ; is built in order), each item made as it's read and put at the end of its level's list.  The first error ends it
 ; (as the first token in error is danlang's), made an error value; the text's end with a bracket open, or in a here
 ; string, asks for more (RD_MORE, the closers wanted as danlang's REPL shows them), and the REPL reads it all again
-; with its next line.  Numbers, as yet, are the decimal integers a fixnum holds (the rest: phase 5).
+; with its next line.  A number's word is read by numtext.inc's num_parse (phase 5).
 ;   What it makes may collect: an item is in VR0 till it's in its list, and the levels' lists are marked (rd_roots,
 ; gc_hook's).  An error, however deep, goes back to read_text's caller through the stack read_text began with.
 
@@ -14,9 +16,10 @@ TEXT_SIZE       = 4096          ; The text read at most: an expression's lines
 SCRATCH_SIZE    = TEXT_SIZE     ; A string's bytes (no more than its text's), a name's, a message's
 LEVELS          = 255           ; The brackets open at once, at most
 
-RD_DONE         = 0             ; read_text's: the text read ...
+RD_DONE         = 0             ; read_text's: the text read (read_item's: an item) ...
 RD_MORE         = 1             ;   more wanted ...
-RD_ERROR        = 2             ;   an error
+RD_ERROR        = 2             ;   an error ...
+RD_END          = 3             ;   (read_item's) no more items
 
 .zeropage
 rp:         .res        2                                   ; The reader's: the byte it's at ...
@@ -24,11 +27,11 @@ re:         .res        2                                   ;   the text's end (
 rw:         .res        2                                   ;   a word's first byte, and its length ...
 rn:         .res        2
 rs:         .res        2                                   ;   where a string's next byte goes (in scratch) ...
+
+.bss
 rq:         .res        1                                   ;   a here string's quotes ...
 rd:         .res        1                                   ;   the level it's at (0: the text's own) ...
 rc:         .res        1                                   ;   and a byte (an item's first)
-
-.bss
 text:       .res        TEXT_SIZE + 1                       ; The text (and a 0 after it)
 t_len:      .res        2
 scratch:    .res        SCRATCH_SIZE
@@ -42,14 +45,18 @@ rd_on:      .res        1                                   ; <> 0: a text being
 closers:    .res        256                                 ; The closers wanted (RD_MORE's, an error's): innermost last
 cl_len:     .res        1
 rd_sp:      .res        1                                   ; (The stack as read_text began)
-rd_v:       .res        2                                   ; (A number's value, a digit, its sign, a digit seen, too
-rd_d:       .res        1                                   ;   big; a name's length (char_named's); a word's so far)
-rd_neg:     .res        1
-rd_dig:     .res        1
-rd_big:     .res        1
+rd_d:       .res        1                                   ; (A name's length: char_named's; a word's so far)
 rd_t:       .res        2
+rd_fd:      .res        1                                   ; The source: $FF the text as it is; else a file to refill
+rd_eof:     .res        1                                   ;   it from, at its end?, its bytes read so far ...
+rd_total:   .res        2
+rd_one:     .res        1                                   ;   <> 0: an item at a time (read_item's) ...
+rd_inword:  .res        1                                   ;   <> 0: a word being read (from rw: kept as it refills)
+rd_owner:   .res        1                                   ; Whose text it is: a load's fd ($FF: the REPL's, or none)
+rf_keep:    .res        2                                   ; (rd_fill's: where what's kept begins, the bytes dropped)
+rf_drop:    .res        2
 
-.segment "DATA"
+.segment "DATA4"
 ; The levels' lists marked, while a text is read (gc_hook's: hylang.s's)
 rd_roots:
             lda         rd_on
@@ -77,8 +84,10 @@ rd_roots:
 ; and closers = what it wants (cl_len bytes: the open brackets' closers, outermost first, and a here string's quotes);
 ; or RD_ERROR and hv = the error.  C = 1 and .A = E_NOMEM if there's no room
 read_text:
-            tsx
-            stx         rd_sp
+            lda         #$FF                                ; (The text as it is: no file)
+            sta         rd_fd
+            sta         rd_owner
+            stz         rd_one
             lda         #<text
             sta         rp
             clc
@@ -88,6 +97,20 @@ read_text:
             sta         rp + 1
             adc         t_len + 1
             sta         re + 1
+            bra         rd_start
+
+; A file's next item read (load's: rd_fd the file, rp and re where the last one left them, text refilled from it).
+; OUT: .A = RD_DONE and hv = the item; RD_END, none left; RD_MORE (closers: what it wants), the file's end in one; or
+; RD_ERROR and hv = the error.  C = 1 and .A = E_NOMEM if there's no room
+read_item:
+            lda         #1
+            sta         rd_one
+            stz         rd_inword
+            jsr         rd_fill
+rd_start:
+            tsx
+            stx         rd_sp
+            stz         rd_inword
             stz         rd
             stz         lv_close
             stz         lv_head_lo
@@ -158,15 +181,167 @@ read_text:
 @ascii:
             jmp         rd_e_ascii
 
-; rp to the next byte.  Keeps .A, .X, .Y
+; rp to the next byte (a file's text refilled if less than 2 bytes are left).  Keeps .A, .X, .Y
 rd_adv:
             inc         rp
             bne         :+
             inc         rp + 1
 :
+            bit         rd_fd
+            bmi         :+
+            jmp         rd_fill
+:
             rts
 
-; OUT: C = 1 if rp is at the text's end
+; Less than 2 bytes left of a file's text (and not its end): what's left (from rw, if a word's being read) moved to
+; text's start, and the file's next bytes after it.  Keeps .A, .X, .Y
+rd_fill:
+            pha
+            phx
+            phy
+            lda         rd_eof
+            beq         :+
+            jmp         @done
+:
+            lda         re                                  ; (2 bytes left at least: nothing to do)
+            sec
+            sbc         rp
+            tax
+            lda         re + 1
+            sbc         rp + 1
+            beq         :+
+            jmp         @done
+:
+            cpx         #2
+            bcc         :+
+            jmp         @done
+:
+            lda         rp                                  ; (What's kept: from rw, or rp)
+            ldx         rp + 1
+            ldy         rd_inword
+            beq         :+
+            lda         rw
+            ldx         rw + 1
+:
+            sta         rf_keep
+            stx         rf_keep + 1
+            sec                                             ; (rf_drop: the bytes before it, dropped)
+            sbc         #<text
+            sta         rf_drop
+            txa
+            sbc         #>text
+            sta         rf_drop + 1
+            ora         rf_drop
+            bne         :+
+            lda         re + 1                              ; (Nothing to drop, and a full text: a word too long)
+            cmp         #>(text + TEXT_SIZE)
+            bcc         :+
+            jmp         rd_e_wordlong
+:
+            lda         hq                                  ; (The kept bytes moved down: hq from, hb to, kept)
+            pha
+            lda         hq + 1
+            pha
+            lda         hb
+            pha
+            lda         hb + 1
+            pha
+            MOVW        hq, rf_keep
+            lda         #<text
+            sta         hb
+            lda         #>text
+            sta         hb + 1
+@move:
+            lda         hq
+            cmp         re
+            lda         hq + 1
+            sbc         re + 1
+            bcs         @put
+            lda         (hq)
+            sta         (hb)
+            inc         hq
+            bne         :+
+            inc         hq + 1
+:
+            inc         hb
+            bne         @move
+            inc         hb + 1
+            bra         @move
+@put:
+            pla
+            sta         hb + 1
+            pla
+            sta         hb
+            pla
+            sta         hq + 1
+            pla
+            sta         hq
+@moved:
+            sec                                             ; (rp, rw, re: less the bytes dropped)
+            lda         rp
+            sbc         rf_drop
+            sta         rp
+            lda         rp + 1
+            sbc         rf_drop + 1
+            sta         rp + 1
+            sec
+            lda         rw
+            sbc         rf_drop
+            sta         rw
+            lda         rw + 1
+            sbc         rf_drop + 1
+            sta         rw + 1
+            sec
+            lda         re
+            sbc         rf_drop
+            sta         re
+            sta         r0
+            lda         re + 1
+            sbc         rf_drop + 1
+            sta         re + 1
+            sta         r0 + 1
+            lda         #<(text + TEXT_SIZE)                ; (The file's next bytes: as many as there's room for)
+            sec
+            sbc         re
+            sta         r1
+            lda         #>(text + TEXT_SIZE)
+            sbc         re + 1
+            sta         r1 + 1
+            lda         rd_fd
+            jsr         READ
+            bcs         @end
+            sta         rf_drop
+            stx         rf_drop + 1
+            ora         rf_drop + 1
+            beq         @end
+            clc
+            lda         re
+            adc         rf_drop
+            sta         re
+            lda         re + 1
+            adc         rf_drop + 1
+            sta         re + 1
+            clc
+            lda         rd_total
+            adc         rf_drop
+            sta         rd_total
+            lda         rd_total + 1
+            adc         rf_drop + 1
+            sta         rd_total + 1
+            bra         @zero
+@end:
+            lda         #1                                  ; (Its end, or an error: no more)
+            sta         rd_eof
+@zero:
+            lda         #0                                  ; (The text's end: a 0)
+            sta         (re)
+@done:
+            ply
+            plx
+            pla
+            rts
+
+; OUT: C = 1 if rp is at the text's end (a file's: rd_fill has refilled it, if there was more)
 rd_at_end:
             lda         rp
             cmp         re
@@ -245,8 +420,17 @@ rd_append_hv:
             sta         VR0
             lda         hv + 1
             sta         VR0 + 1
-; VR0 put at the end of the level's list: a cons of its kind (a Q-expression's or an S-expression's)
+; VR0 put at the end of the level's list: a cons of its kind (a Q-expression's or an S-expression's).  At level
+; 0, an item at a time (read_item's): the item is read_item's value
 rd_append:
+            ldx         rd
+            bne         :+
+            lda         rd_one
+            beq         :+
+            MOVW        hv, VR0
+            lda         #RD_DONE
+            jmp         rd_return
+:
             ldx         rd
             lda         #PK_SCONS
             ldy         lv_close,x
@@ -305,6 +489,11 @@ rd_end:
             stz         rq
             lda         rd
             bne         rd_more
+            lda         rd_one                              ; (An item at a time: none left)
+            beq         :+
+            lda         #RD_END
+            bra         rd_return
+:
             lda         lv_head_lo
             sta         hv
             lda         lv_head_hi
@@ -617,7 +806,10 @@ rd_item:
             sta         rw
             lda         rp + 1
             sta         rw + 1
+            lda         #1                                  ; (Kept, as text refills, till it's read)
+            sta         rd_inword
             jsr         rd_scan
+            stz         rd_inword
             sec
             lda         rp
             sbc         rw
@@ -925,116 +1117,36 @@ rd_atom:
             lda         #PK_ATOM
             jmp         rd_append_name
 
-; A word that starts like a number: as yet, a decimal integer ([+-]?[0-9_]+, a digit in it) that a fixnum holds (one
-; past it: an error till phase 5); any other, a symbol (phase 5: the reference's numbers)
+; A word that starts like a number (a digit, +, - or #): a number if it's one (numtext.inc's num_parse: any of the
+; reference's forms, in any base); a rational of 0 below, an error; any other, a symbol
 rd_number:
             lda         rn + 1
-            beq         :+
-            jmp         rd_symbol
+            bne         rd_symbol
+            lda         rw
+            sta         hq
+            lda         rw + 1
+            sta         hq + 1
+            lda         rn
+            sta         hn
+            FARN        3, num_parse
+            bcc         :+
+            jmp         rd_nomem
 :
-            stz         rd_v
-            stz         rd_v + 1
-            stz         rd_neg
-            stz         rd_dig
-            stz         rd_big
-            ldy         #0
-            lda         (rw)
-            cmp         #'+'
-            beq         @sign
-            cmp         #'-'
-            bne         @digits
-            inc         rd_neg
-@sign:
-            iny
-@digits:
-            cpy         rn
+            lda         n_abt
+            beq         @lb201
+            jmp         rd_e_toobig
+@lb201:
+            lda         n_res
             bne         :+
-            jmp         @end
-:
-            lda         (rw),y
-            iny
-            cmp         #'_'
-            beq         @digits
-            sec
-            sbc         #'0'
-            cmp         #10
-            bcc         :+
-            jmp         rd_symbol
-:
-            sta         rd_d
-            sta         rd_dig
-            inc         rd_dig                              ; (A digit seen: <> 0)
-            lda         rd_big
-            bne         @digits
-            lda         rd_v + 1                            ; (Past 16384 after this digit: too big)
-            cmp         #>1639
-            bcc         @times
-            bne         @big
-            lda         rd_v
-            cmp         #<1639
-            bcs         @big
-@times:
-            asl         rd_v                                ; (Times 10, and the digit)
-            rol         rd_v + 1
-            lda         rd_v
-            sta         rd_t
-            lda         rd_v + 1
-            sta         rd_t + 1
-            asl         rd_v
-            rol         rd_v + 1
-            asl         rd_v
-            rol         rd_v + 1
-            clc
-            lda         rd_v
-            adc         rd_t
-            sta         rd_v
-            lda         rd_v + 1
-            adc         rd_t + 1
-            sta         rd_v + 1
-            clc
-            lda         rd_v
-            adc         rd_d
-            sta         rd_v
-            bcc         :+
-            inc         rd_v + 1
-:
-            lda         rd_v + 1
-            cmp         #>16384
-            bcc         @more
-            bne         @big
-            lda         rd_v
-            bne         @big
-@more:
-            jmp         @digits
-@big:
-            lda         #1
-            sta         rd_big
-            jmp         @digits
-@end:
-            lda         rd_dig
-            beq         @symbol
-            lda         rd_big
-            bne         @bignum
-            lda         rd_neg
-            beq         @make
-            sec
-            lda         #0
-            sbc         rd_v
-            sta         rd_v
-            lda         #0
-            sbc         rd_v + 1
-            sta         rd_v + 1
-@make:
-            lda         rd_v
-            ldx         rd_v + 1
-            jsr         fix_make
-            bcs         @bignum
             jsr         rd_glued
             jmp         rd_append_hv
-@bignum:
-            jmp         rd_e_bignum
-@symbol:
-            jmp         rd_symbol
+:
+            cmp         #NP_DIVZ
+            bne         rd_symbol
+            ldx         #M_DIVZERO                          ; ("Division by zero: 1/0")
+            jsr         msg_n
+            jsr         msg_word
+            jmp         rd_fail
 
 ; A symbol (its name in lower case): T, NIL and exit are theirs
 rd_symbol:
@@ -1154,8 +1266,11 @@ rd_e_long:
 rd_e_quotes:
             ldx         #M_QUOTES
             bra         rd_fail_m
-rd_e_bignum:
-            ldx         #M_BIGNUM
+rd_e_wordlong:
+            ldx         #M_WORDLONG
+            bra         rd_fail_m
+rd_e_toobig:
+            ldx         #M_TOOBIG
 rd_fail_m:
             jsr         msg_n
 ; The message (scratch, sc_len bytes) an error: read_text's value
@@ -1452,13 +1567,15 @@ M_QEXPR         = 15
 M_DEEP          = 16
 M_LONG          = 17
 M_QUOTES        = 18
-M_BIGNUM        = 19
+M_TOOBIG        = 19
+M_WORDLONG      = 20
+M_DIVZERO       = 21
 m_lo:       .lobytes    m_control, m_ascii, m_newline, m_incomplete, m_escape, m_hex, m_noname, m_charname
             .lobytes    m_quote, m_touches, m_space, m_dollar, m_env, m_list, m_sexpr, m_qexpr, m_deep, m_long
-            .lobytes    m_quotes, m_bignum
+            .lobytes    m_quotes, m_toobig, m_wordlong, m_divzero
 m_hi:       .hibytes    m_control, m_ascii, m_newline, m_incomplete, m_escape, m_hex, m_noname, m_charname
             .hibytes    m_quote, m_touches, m_space, m_dollar, m_env, m_list, m_sexpr, m_qexpr, m_deep, m_long
-            .hibytes    m_quotes, m_bignum
+            .hibytes    m_quotes, m_toobig, m_wordlong, m_divzero
 m_control:  .byte       "Control sequences not allowed", 0
 m_ascii:    .byte       "Non-ASCII character outside of string literal", 0
 m_newline:  .byte       "Newlines are not allowed in regular strings", 0
@@ -1478,4 +1595,6 @@ m_qexpr:    .byte       "Closed a QExpr without opening: ", 0
 m_deep:     .byte       "Too deep: more than 255 brackets open", 0
 m_long:     .byte       "Too long: a name of more than 255 bytes", 0
 m_quotes:   .byte       "Too long: a here string", $27, "s quotes, more than 255", 0
-m_bignum:   .byte       "Not yet: an integer past a fixnum (phase 5)", 0
+m_toobig:   .byte       "Too big: an integer past 255 bytes", 0
+m_wordlong: .byte       "Too long: a word of more than 4096 bytes", 0
+m_divzero:  .byte       "Division by zero: ", 0

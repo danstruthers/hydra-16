@@ -51,7 +51,7 @@ function report(root, built = {}) {
         used.push(end - b * 0x4000);
       }
       const pc = n => Math.round(n * 100 / 0x4000) + '%';
-      const rom = banks > 1 ? String(used[0]).padStart(6) + ' + ' + used.slice(1).join(' + ') + ' bytes ROM (' + ['', '', 'two', 'three', 'four'][banks] +
+      const rom = banks > 1 ? String(used[0]).padStart(6) + ' + ' + used.slice(1).join(' + ') + ' bytes ROM (' + ['', '', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight'][banks] +
         ' banks: ' + used.slice(0, -1).map(pc).join(', ') + ' and ' + pc(used[banks - 1]) + ')' :
         String(d.length).padStart(6) + ' bytes ROM (' + pc(d.length) + ' of a bank)';
       lines.push('  ' + n.padEnd(12) + rom +
