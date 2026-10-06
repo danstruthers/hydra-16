@@ -1442,39 +1442,27 @@ vxt_jll_eq_p3 = * - 2
 vxt_jll_eq_s:
 vxt_jll_eq_e:
 
-vxt_shead:  .byte       vxt_shead_e - vxt_shead_c, TF_STUB, 8
-            .byte       vxt_shead_p0 - vxt_shead_c, TPK_S, 0
-            .byte       vxt_shead_p1 - vxt_shead_c, TPK_D, 8
-            .byte       vxt_shead_p2 - vxt_shead_c, TPK_S, 0
-            .byte       vxt_shead_p3 - vxt_shead_c, TPK_D, 9
-            .byte       vxt_shead_p4 - vxt_shead_c, TPK_S, 0
-            .byte       vxt_shead_p5 - vxt_shead_c, TPK_D, 10
-            .byte       vxt_shead_p6 - vxt_shead_c, TPK_D, 11
-            .byte       vxt_shead_p7 - vxt_shead_c, TPK_N, 0
+vxt_shead:  .byte       vxt_shead_e - vxt_shead_c, TF_STUB, 5
+            .byte       vxt_shead_p0 - vxt_shead_c, TPK_D, 8
+            .byte       vxt_shead_p1 - vxt_shead_c, TPK_D, 9
+            .byte       vxt_shead_p2 - vxt_shead_c, TPK_D, 10
+            .byte       vxt_shead_p3 - vxt_shead_c, TPK_D, 11
+            .byte       vxt_shead_p4 - vxt_shead_c, TPK_N, 0
 vxt_shead_c:
             bit         vm_mat
-            bpl         :+
-            jmp         $0000
+            bmi         vxt_shead_s
+            lda         a:$0000
 vxt_shead_p0 = * - 2
-:
+            cmp         vm_ep
+            bne         vxt_shead_s
             lda         a:$0000
 vxt_shead_p1 = * - 2
-            cmp         vm_ep
-            beq         :+
-            jmp         $0000
-vxt_shead_p2 = * - 2
-:
-            lda         a:$0000
-vxt_shead_p3 = * - 2
             cmp         vm_ep + 1
-            beq         :+
-            jmp         $0000
-vxt_shead_p4 = * - 2
-:
+            bne         vxt_shead_s
             lda         a:$0000
-vxt_shead_p5 = * - 2
+vxt_shead_p2 = * - 2
             ldx         a:$0000
-vxt_shead_p6 = * - 2
+vxt_shead_p3 = * - 2
             sta         (sp)
             ldy         #1
             txa
@@ -1487,7 +1475,7 @@ vxt_shead_p6 = * - 2
             jsr         vm_page
 :
             jmp         $0000
-vxt_shead_p7 = * - 2
+vxt_shead_p4 = * - 2
 vxt_shead_s:
 vxt_shead_e:
 
@@ -1759,23 +1747,15 @@ vxt_cself_p10 = * - 2
 vxt_cself_s:
 vxt_cself_e:
 
-vxt_tself:  .byte       vxt_tself_e - vxt_tself_c, TF_STUB, 8
+vxt_tself:  .byte       vxt_tself_e - vxt_tself_c, TF_STUB, 3
             .byte       vxt_tself_p0 - vxt_tself_c, TPK_M, 1
-            .byte       vxt_tself_p1 - vxt_tself_c, TPK_S, 0
-            .byte       vxt_tself_p2 - vxt_tself_c, TPK_S, 0
-            .byte       vxt_tself_p3 - vxt_tself_c, TPK_S, 0
-            .byte       vxt_tself_p4 - vxt_tself_c, TPK_S, 0
-            .byte       vxt_tself_p5 - vxt_tself_c, TPK_S, 0
-            .byte       vxt_tself_p6 - vxt_tself_c, TPK_B, 1
-            .byte       vxt_tself_p7 - vxt_tself_c, TPK_C, 0
+            .byte       vxt_tself_p1 - vxt_tself_c, TPK_B, 1
+            .byte       vxt_tself_p2 - vxt_tself_c, TPK_C, 0
 vxt_tself_c:
             lda         vm_rb
             cmp         #0
 vxt_tself_p0 = * - 1
-            beq         :+
-            jmp         $0000
-vxt_tself_p1 = * - 2
-:
+            bne         vxt_tself_s
             lda         sp
             sec
             sbc         vm_rb
@@ -1786,27 +1766,15 @@ vxt_tself_p1 = * - 2
             ldy         #1
             lda         (ht),y
             cmp         (vm_s),y
-            beq         :+
-            jmp         $0000
-vxt_tself_p2 = * - 2
-:
+            bne         vxt_tself_s
             lda         (ht)
             cmp         (vm_s)
-            beq         :+
-            jmp         $0000
-vxt_tself_p3 = * - 2
-:
+            bne         vxt_tself_s
             bit         intr
-            bpl         :+
-            jmp         $0000
-vxt_tself_p4 = * - 2
-:
-            bvc         :+
-            jmp         $0000
-vxt_tself_p5 = * - 2
-:
+            bmi         vxt_tself_s
+            bvs         vxt_tself_s
             ldx         #0
-vxt_tself_p6 = * - 1
+vxt_tself_p1 = * - 1
             beq         vxt_tself_args
             ldy         #2
 vxt_tself_arg:
@@ -1845,7 +1813,7 @@ vxt_tself_kept:
             jsr         unspill
 vxt_tself_go:
             jmp         $0000
-vxt_tself_p7 = * - 2
+vxt_tself_p2 = * - 2
 vxt_tself_s:
 vxt_tself_e:
 

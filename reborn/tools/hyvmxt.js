@@ -843,7 +843,7 @@ const lines = ['; **************************************************************
   '; a data byte, TPK_U one untagged, TPK_T a target\'s native place, TPK_N the next op\'s; and the data byte), its code', ''];
 const kinds = { B: 'TPK_B', U: 'TPK_U', T: 'TPK_T', N: 'TPK_N', D: 'TPK_D', M: 'TPK_M', C: 'TPK_C', RL: 'TPK_RL', RH: 'TPK_RH', S: 'TPK_S', DL: 'TPK_DL', DH: 'TPK_DH' };
 // The long templates (their stub out of a branch's reach): each branch to @s an inverted one past a jmp {S}
-const FAR = new Set(['shead', 'call', 'cself', 'tself', 'ret']);
+const FAR = new Set(['call', 'ret', 'cself']);
 const INV = { bne: 'beq', beq: 'bne', bcc: 'bcs', bcs: 'bcc', bmi: 'bpl', bpl: 'bmi', bvc: 'bvs', bvs: 'bvc' };
 for (const t of T) {
   const n = 'vxt_' + t.name;

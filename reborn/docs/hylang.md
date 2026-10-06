@@ -268,6 +268,18 @@ The plan has it whole; in short:
   (`SF_INLINED`); bound in a frame then, or bound again globally, every function's code is dropped and compiled again
   as it's next called.  Ctrl-C and notes are taken at each call, as the evaluator takes them.  The arena full,
   nothing is compiled till the evaluator's next start (a line at the prompt), which empties it.
+* **Native code** (`vmx.inc`, in the eighth bank): the machine's code is the 65C02's own.  The compiler writes a
+  function's bytecode in a scratch bank of its own (`vm_sb`, 4K at most: a bigger function is evaluated), and
+  `vm_xlate` makes it native code in the arena, in two passes (each op's place, in a map bank, `vm_mb`; then the
+  code).  An op is a stub (it points `vm_ip` at its data, the op as it was, and jumps to its code in the
+  machine, whose next op is `jmp (vm_ip)`), or in line: its own code from a template (`vmxt.inc`, made by
+  `tools/hyvmxt.js`), its operands patched in, with its stub after it as its slow way (not fixnums, a scope
+  made, a cache missed, Ctrl-C).  In line: constants, arguments and locals, pushes, jumps, the fused ops, the
+  quick ops of two values, blocks' and loops' ops, `SHEAD` and `CALL` while their caches hold, `CSELF`, `TSELF`,
+  and `RET` to a caller in the same bank.  The places in the data that are code (jumps' targets, blocks' parents
+  and table, a function's start, calls' returns) are the native code's, so every op's code in the machine runs
+  as it did.  Native code runs in the RAM window ($8000-$9FFF) a heap cell is read through, so whatever reads
+  one is the machine's, in ROM, and sets the code's bank again before going on.
 * **Built-ins**: a table of all danlang's (its arity, flags, the bank its code is in), so partial application, too
   many arguments and taking errors are the dispatcher's (till phase 7 made the last, those not made yet answered
   `Not yet: 'name'`).
@@ -298,12 +310,13 @@ The plan has it whole; in short:
   `spec/errors.def`: `obj/gen/errnames.inc`).  `sh` and `sh-out` run `rc -c`, their input and output through
   pipes; `date`, `date-parts` and `seconds-of` work the calendar on 32-bit seconds.  `hylang file args...` runs
   the file (`args`: its path and the args), its status 0, 1 after an error (on stderr), or `(exit n)`'s.
-* **The module**: hylang is one program of seven banks (a module may have eight since phase 7): the evaluator, its
+* **The module**: hylang is one program of eight banks (a module's most): the evaluator, its
   special forms, the dispatch and the built-ins that run the machine in the first; the reader, the printer, the
   list built-ins, equality and order in the second; the numbers (and, as yet, `fn`, the type tests and `error`)
   in the third; strings, hashes and the errors' messages in the fourth; streams, the system library and the
   Hydra's built-ins (`hydrabi.inc`) in the fifth; the collector and the bytecode machine's compiler in the sixth;
-  the machine in the seventh.  What every bank calls is in the task's RAM (the heap, the
+  the machine in the seventh; its native code's translator and templates in the eighth.  What every bank calls
+  is in the task's RAM (the heap, the
   output, the evaluation stack): the most of that code is kept in the fourth bank and copied to the RAM as hylang
   starts (`hylang.cfg`'s DATA4), so the first bank's room is the evaluator's.  `+`, `-`, `1+`, `1-`, `zero?`,
   `one?` and the comparisons work fixnums in the first bank (`bi_fast`), without a far call.  The Hydra layers

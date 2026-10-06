@@ -592,6 +592,32 @@ What's left of the gap is the machine itself: an op's fetch and jump, its operan
 frame's words on the evaluation stack.  Native code, compiled to the 65C02's own instructions, is next, on a
 branch of its own.
 
+**Native code (branch `reborn-hynat`).**  hylang's eighth bank, `vmx.inc`, makes each function's bytecode the
+65C02's own code in the arena (docs/hylang.md, "Native code").  Milestone 1: each op a stub that points `vm_ip`
+at its data and jumps to its code in the machine, whose next op is `jmp (vm_ip)`: every op as it was, a little
+slower than the bytecode (a call 1,185 cycles, 1,146).  Milestone 2: the usual ops in line, from templates
+(`vmxt.inc`, made by `tools/hyvmxt.js`, 66 of them), each with its stub after it for its slow way: constants,
+arguments, locals and pushes; jumps; the fused ops (LQ, LQP, JLQ, JQ, LL, JLL); the quick ops of two values;
+`LOCALS`, blocks' and loops' ops; and the calls (`SHEAD`, `CALL` while their caches hold, `CSELF`, `TSELF`, `RET`
+to a caller in its bank).  Two faults on the way: a word's place in a template was `$0000`, which ca65 made page
+zero's (two bytes, its patch over the opcode: `a:$0000` now); and hyhydra's loop for Ctrl-C ended before the
+Ctrl-C came (30,000 steps now).  A tail loop's step 370 cycles (`hyspeed`, 632 in the bytecode), a call of a
+function of two arguments 918 (1,146); a step of `dotimes` 436 (877), of `each` 521 (900), of a `while` over two
+locals 359 (702).
+
+| Benchmark | Bytecode (ms) | Native (ms) | HyForth (ms) | hylang/HyForth |
+|---|---|---|---|---|
+| loop | 925 | 550 | 76 | 7.2x |
+| calls | 1,005 | 640 | 65 | 9.8x |
+| fib | 980 | 655 | 181 | 3.6x |
+| sieve | 1,905 | 1,430 | 332 | 4.3x |
+| sort | 3,275 | 2,710 | 480 | 5.6x |
+| gcd | 960 | 600 | 350 | 1.7x |
+| all | 9,050 | 6,585 | 1,484 | 4.4x (geometric mean 4.7x, from 6.9x) |
+
+What's left: a call's frame (the function's word, the record, the depth, Ctrl-C), the global's head pushed even
+for a tail loop, and the buffers' bytes and `buffer-put` through the generic calls (the sieve and the sort).
+
 | Step | | Notes |
 |---|---|---|
 | 7.0 The language's specification | Draft (three decisions are the user's) | `docs/hylang.md`: hylang 1 is danlang (`C:\source\danlang`, its `master`), readied for the port in C# first (lexical scope, tail calls, fexprs, `try`, loops, the missing basics, its number bugs fixed, and a system library a PC has too: files, programs and the shell, the environment, the clock, bits and bytes, the system's errors as codes), with its regression suite (965 checks) run unchanged on both; where the two may differ (8-bit strings, the call depth, `/lib/hylang`, Ctrl-C an error); and what makes it the Hydra's, in four layers: the system library, the Hydra's built-ins (notes, namespaces, tasks, memory and banks, keys), device libraries in hylang over the devices' files (console, GPIO, I2C, SPI, sound, disks, `/proc`, the clock's chip, `/pc`), and a `sys-` function for every call.  To decide: the extension (`.hl`), `$`, danlang's license in the ROM |
