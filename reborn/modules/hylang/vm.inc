@@ -157,6 +157,8 @@ vm_bc:      .res        1
 vm_ep:      .res        2                                   ; The globals' epoch: one more each time one's bound again
                                                             ;   (or a name's first bound in a frame): SHEAD's cache
 vm_shc:     .res        1                                   ; ($80: SHEAD's cache filled as its value's pushed)
+vm_sb:      .res        1                                   ; The compiler's scratch banks: its bytecode, the translator's
+vm_mb:      .res        1                                   ;   map (vmx.inc; 0: not taken yet)
 vm_r:       .res        2                                   ; A call's return (its place, compiled: CALL's, CSELF's)
 vm_ccf:     .res        1                                   ; ($80: CALL's cache filled as its function's code is run ...
 vm_cb:      .res        1                                   ;   from its code's bank)
@@ -306,6 +308,7 @@ vm_epnext:
 ; The machine made, no code yet: as hylang starts (a snapshot's functions may have code from its build, not here)
 vm_init:
             stz         vm_on
+            stz         vm_sb
             stz         ar_n
             lda         #$FF                                ; (No code's bank yet)
             sta         vm_idx
@@ -480,9 +483,7 @@ vm_adv1:
 vm_next:
             lda         vm_bank
             sta         $00
-            lda         (vm_ip)
-            tax
-            jmp         (vm_ops,x)
+            jmp         (vm_ip)
 
 ; The next op, the code's bank in the window still (an op that didn't leave it): ip past this one first (vm_nN: N
 ; bytes; vm_na: .A bytes)
@@ -538,9 +539,7 @@ vm_n1:
             bne         vm_nextf
             inc         vm_ip + 1
 vm_nextf:
-            lda         (vm_ip)
-            tax
-            jmp         (vm_ops,x)
+            jmp         (vm_ip)
 
 ; ip = the address at ip + .Y (an op's target)
 vm_jumpy:
@@ -4700,26 +4699,22 @@ vm_compile:
             cmp         vc_v
             bne         @bad
             jsr         vc_locals                           ; (Its locals: set's names)
+            jsr         vc_scratch                          ; (Its scratch banks)
+            bcc         :+
+            jmp         vc_full
+:
             lda         ar_n                                ; (The arena: its first bank)
             bne         vc_again
             jsr         vc_bank
             bcc         vc_again
             jmp         vc_full
 vc_again:
-            ldx         ar_cur                              ; (At the arena's top)
-            lda         ar_bank,x
-            sta         vc_bk
-            txa
-            asl
-            asl
-            asl
-            asl
-            asl
-            sta         vc_idx
-            lda         ar_top
-            sta         hq
-            sta         vc_start
-            lda         ar_top + 1
+            lda         vm_sb                               ; (In the scratch bank, from its start: vmx.inc makes it
+            sta         vc_bk                               ;   native code, in the arena)
+            stz         vc_idx
+            stz         hq
+            stz         vc_start
+            lda         #$80
             sta         hq + 1
             sta         vc_start + 1
             stz         vc_nlab
@@ -4804,6 +4799,12 @@ vc_again:
             sta         vc_btot
             jmp         vc_again
 :
+            lda         hq                                  ; (Its code's end: the translator's)
+            sta         vx_end
+            lda         hq + 1
+            sta         vx_end + 1
+            lda         vc_ntbl
+            sta         vx_ntbl
             lda         vc_ntbl                             ; (Its blocks' table: after its code, LOCALS' tbl)
             beq         @notbl
             lda         vc_bk
@@ -4841,57 +4842,49 @@ vc_again:
             inc         vc_x
             bra         @entry
 @notbl:
-            lda         hq                                  ; (Its code's place: the function's word 4)
-            sta         ar_top
-            lda         hq + 1
-            sta         ar_top + 1
-            lda         vc_start
-            asl
-            ora         #1
-            sta         vc_t
-            lda         vc_start + 1
-            and         #$1F
-            ora         vc_idx
-            rol
-            sta         vc_t + 1
+            FARN        8, vm_xlate                         ; (Native code, in the arena: its place the function's
+            bcc         :+                                  ;   word 4)
+            cmp         #0
+            beq         @full
+            jmp         vc_novm
+@full:
+            sec
+            rts
+:
             lda         cf
             ldx         cf + 1
             jsr         deref
             ldy         #8
-            lda         vc_t
+            lda         vx_place
             sta         (hp),y
             iny
-            lda         vc_t + 1
+            lda         vx_place + 1
             sta         (hp),y
             clc
             rts
 
-; The bank filled: the code begun again in the next (taken, if it isn't yet), unless it began at a bank's start
+; The scratch banks (vm_sb, vm_mb), taken at the first function compiled.  OUT: C = 1 if there's no room
+vc_scratch:
+            lda         vm_sb
+            bne         @ok
+            lda         #1
+            jsr         BANKS_ALLOC
+            bcs         @rts
+            sta         vm_mb
+            lda         #1
+            jsr         BANKS_ALLOC
+            bcs         @rts
+            sta         vm_sb
+@ok:
+            clc
+@rts:
+            rts
+
+; The scratch filled (4K: the translator's map's room): the function's always evaluated
 vc_over:
             ldx         vc_s
             txs
-            lda         vc_start
-            bne         :+
-            lda         vc_start + 1
-            cmp         #$80
-            beq         vc_novm
-:
-            ldx         ar_cur
-            inx
-            cpx         ar_n
-            bcc         :+
-            cpx         #4
-            bcs         vc_full
-            jsr         vc_bank
-            bcs         vc_full
-            ldx         ar_cur
-            inx
-:
-            stx         ar_cur
-            stz         ar_top
-            lda         #$80
-            sta         ar_top + 1
-            jmp         vc_again
+            jmp         vc_novm
 
 ; The arena's full: nothing compiled till it's emptied
 vc_full:
@@ -4930,7 +4923,7 @@ vc_bank:
 ; .A emitted (hq, in the arena's bank vc_bk; past it, vc_over).  Keeps .X
 vc_byte:
             ldy         hq + 1
-            cpy         #$A0
+            cpy         #$90
             bcc         :+
             jmp         vc_over
 :
