@@ -624,18 +624,23 @@ size is a byte, and `CALL`'s grew past it (329 bytes: its pushes near a page's e
 checks branch to a jump to its stub in the template's middle; `vmxt.inc` asserts each op's size); and the
 evaluator's resume at `HEAD`'s t, past the pad, found h and r in the pad's code (`any?`'s answer wrong).
 
-| Benchmark | Bytecode (ms) | M2 (ms) | M3 (ms) | M4 (ms) | HyForth (ms) | hylang/HyForth |
-|---|---|---|---|---|---|---|
-| loop | 925 | 550 | 545 | 545 | 76 | 7.1x |
-| calls | 1,005 | 640 | 640 | 575 | 65 | 8.8x |
-| fib | 980 | 655 | 655 | 550 | 181 | 3.0x |
-| sieve | 1,905 | 1,430 | 1,160 | 1,160 | 332 | 3.5x |
-| sort | 3,275 | 2,710 | 1,915 | 1,915 | 480 | 4.0x |
-| gcd | 960 | 600 | 600 | 570 | 350 | 1.6x |
-| all | 9,050 | 6,585 | 5,515 | 5,315 | 1,484 | 3.6x (geometric mean 4.0x, from 6.9x) |
+Milestone 5, the fused ops: those of a local or `ex` and a constant work from the value where it is (`bit #1`,
+the 65C02's, for a fixnum's bit, not `lsr` on a copy in `ht`), LQP pushes its value from `.A`, and LL's and
+JLL's read their second local where it is.  A tail loop's step is 328 cycles (`hyspeed`, from 363).
+
+| Benchmark | Bytecode (ms) | M2 (ms) | M3 (ms) | M4 (ms) | M5 (ms) | HyForth (ms) | hylang/HyForth |
+|---|---|---|---|---|---|---|---|
+| loop | 925 | 550 | 545 | 545 | 490 | 76 | 6.4x |
+| calls | 1,005 | 640 | 640 | 575 | 555 | 65 | 8.5x |
+| fib | 980 | 655 | 655 | 550 | 530 | 181 | 2.9x |
+| sieve | 1,905 | 1,430 | 1,160 | 1,160 | 1,140 | 332 | 3.4x |
+| sort | 3,275 | 2,710 | 1,915 | 1,915 | 1,890 | 480 | 3.9x |
+| gcd | 960 | 600 | 600 | 570 | 540 | 350 | 1.5x |
+| all | 9,050 | 6,585 | 5,515 | 5,315 | 5,145 | 1,484 | 3.5x (geometric mean 3.9x, from 6.9x) |
 
 What's left: the global's head pushed for a tail loop (`SHEAD`, then `TSELF`'s look at it), a tail call's
-arguments copied in a loop, the depth and Ctrl-C at each call; and `*`, not a quick op.
+arguments copied in a loop, the depth and Ctrl-C at each call; `*`, not a quick op; and `map` and its kin, whose
+function is called through the evaluator (an item 2,951 cycles).
 
 | Step | | Notes |
 |---|---|---|

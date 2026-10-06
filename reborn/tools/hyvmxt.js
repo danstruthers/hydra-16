@@ -185,109 +185,92 @@ const TRUEFALSE = (t) => `
   stz ex + 1
   jmp {T ${t}}
 @s:`;
-// A local's value (data byte yb) to ht, a fixnum (else the stub)
-const LOADY = (yb) => `
+// A local's value (data byte 2) or ex, a fixnum (bit 0: else the stub), its low byte in .A (.Y the local's place);
+// its high byte (HI) after
+const LOADL = `
   bit vm_mat
   bmi @s
-  ldy #{B ${yb}}
+  ldy #{B 2}
   lda (vm_s),y
-  sta ht
-  lsr
-  bcc @s
-  iny
-  lda (vm_s),y
-  sta ht + 1`;
-const LOADEX = `
+  bit #1
+  beq @s`;
+const LOADX = `
   lda ex
-  sta ht
-  lsr
-  bcc @s
-  lda ex + 1
-  sta ht + 1`;
-// ht against the constant at data bytes c, c + 1 (signed): N = 1 if ht < c (lt), c < ht (gt)
-const CMPC = (kind, c) => kind === 'lt' ? `
-  lda ht
-  cmp #{B ${c}}
-  lda ht + 1
-  sbc #{B ${c + 1}}
-  bvc :+
-  eor #$80
-:` : `
-  lda #{B ${c}}
-  cmp ht
-  lda #{B ${c + 1}}
-  sbc ht + 1
-  bvc :+
-  eor #$80
-:`;
-const TESTC = (load, c, t, kind) => {
+  bit #1
+  beq @s`;
+const HI = { l: `
+  iny
+  lda (vm_s),y`, x: `
+  lda ex + 1` };
+// The value (l: the local, x: ex) against the constant at data bytes c, c + 1: =; or N = 1 if it's < c (lt), or c <
+// it (gt: the local to ht first)
+const TESTC = (v, c, t, kind) => {
+  const load = v === 'l' ? LOADL : LOADX;
   if (kind === 'zerop' || kind === 'onep' || kind === 'eqc') {
     const lo = kind === 'zerop' ? '<FIX(0)' : kind === 'onep' ? '<FIX(1)' : `{B ${c}}`;
     const hi = kind === 'zerop' || kind === 'onep' ? '0' : `{B ${c + 1}}`;
     return load + `
-  lda ht
   cmp #${lo}
-  bne @f
-  lda ht + 1
+  bne @f` + HI[v] + `
   cmp #${hi}
   bne @f` + TRUEFALSE(t);
   }
   const m = { ltc: ['lt', 'bpl'], gec: ['lt', 'bmi'], gtc: ['gt', 'bpl'], lec: ['gt', 'bmi'] }[kind];
-  return load + CMPC(m[0], c) + `
+  const w = v === 'l' ? 'ht' : 'ex';
+  return load + (m[0] === 'lt' ? `
+  cmp #{B ${c}}` + HI[v] + `
+  sbc #{B ${c + 1}}` : (v === 'l' ? `
+  sta ht` + HI[v] + `
+  sta ht + 1` : '') + `
+  lda #{B ${c}}
+  cmp ${w}
+  lda #{B ${c + 1}}
+  sbc ${w} + 1`) + `
+  bvc :+
+  eor #$80
+:
   ${m[1]} @f` + TRUEFALSE(t);
 };
 for (const k of ['zerop', 'onep', 'ltc', 'gtc', 'lec', 'gec', 'eqc']) {
-  tpl('jlq_' + k, STUB, TESTC(LOADY(2), 3, 5, k));
-  tpl('jq_' + k, STUB, TESTC(LOADEX, 2, 4, k));
+  tpl('jlq_' + k, STUB, TESTC('l', 3, 5, k));
+  tpl('jq_' + k, STUB, TESTC('x', 2, 4, k));
 }
-// LQ's (and LQP's) arithmetic: ex = ht + or - the constant (data 3, 4), 1+, 1-
+// LQ's (and LQP's) arithmetic: ex = the local + or - the constant (data 3, 4), 1+, 1- (its tag kept); LQP's pushed
+// from .A, its high byte
 const ARITH = {
-  addc: `
-  lda ht
-  clc
-  adc #{U 3}
-  sta ex
-  lda ht + 1
-  adc #{B 4}
-  bvs @s
-  sta ex + 1`,
-  subc: `
-  lda ht
-  sec
-  sbc #{U 3}
-  sta ex
-  lda ht + 1
-  sbc #{B 4}
-  bvs @s
-  sta ex + 1`,
-  inc: `
-  lda ht
-  clc
-  adc #2
-  sta ex
-  lda ht + 1
-  adc #0
-  bvs @s
-  sta ex + 1`,
-  dec: `
-  lda ht
-  sec
-  sbc #2
-  sta ex
-  lda ht + 1
-  sbc #0
-  bvs @s
-  sta ex + 1`,
+  addc: ['clc', 'adc #{U 3}', 'adc #{B 4}'],
+  subc: ['sec', 'sbc #{U 3}', 'sbc #{B 4}'],
+  inc: ['clc', 'adc #2', 'adc #0'],
+  dec: ['sec', 'sbc #2', 'sbc #0'],
 };
 for (const k of Object.keys(ARITH)) {
-  tpl('lq_' + k, STUB, LOADY(2) + ARITH[k] + `
+  const [c, lo, hi] = ARITH[k];
+  const body = LOADL + `
+  ${c}
+  ${lo}
+  sta ex` + HI.l + `
+  ${hi}
+  bvs @s
+  sta ex + 1`;
+  tpl('lq_' + k, STUB, body + `
   jmp {N}
 @s:`);
-  tpl('lqp_' + k, STUB, LOADY(2) + ARITH[k] + PUSHEX + `
+  tpl('lqp_' + k, STUB, body + `
+  ldy #1
+  sta (sp),y
+  lda ex
+  sta (sp)
+  lda sp
+  clc
+  adc #2
+  sta sp
+  bne :+
+  jsr vm_page
+:
   jmp {N}
 @s:`);
 }
-// LL's: the two locals (data 2, 3) to ht and hp, fixnums
+// LL's: the two locals (data 2, 3), fixnums: the first to ht, the second where it is (.Y its low byte's place)
 const LOAD2 = `
   bit vm_mat
   bmi @s
@@ -299,34 +282,30 @@ const LOAD2 = `
   sta ht + 1
   ldy #{B 3}
   lda (vm_s),y
-  sta hp
   and ht
   lsr
-  bcc @s
-  iny
-  lda (vm_s),y
-  sta hp + 1`;
+  bcc @s`;
 const LLA = {
   add: `
-  lda hp
+  lda (vm_s),y
   and #$FE
   clc
   adc ht
   sta ex
-  lda hp + 1
+  iny
+  lda (vm_s),y
   adc ht + 1
   bvs @s
   sta ex + 1`,
   sub: `
-  lda hp
-  and #$FE
-  sta hn
   lda ht
   sec
-  sbc hn
+  sbc (vm_s),y
+  ora #1
   sta ex
+  iny
   lda ht + 1
-  sbc hp + 1
+  sbc (vm_s),y
   bvs @s
   sta ex + 1`,
 };
@@ -338,18 +317,20 @@ for (const k of Object.keys(LLA)) {
   jmp {N}
 @s:`);
 }
-// JLL's: ht against hp
+// JLL's: ht against the second, where it is
 const CMPV = (kind) => kind === 'lt' ? `
   lda ht
-  cmp hp
+  cmp (vm_s),y
+  iny
   lda ht + 1
-  sbc hp + 1
+  sbc (vm_s),y
   bvc :+
   eor #$80
 :` : `
-  lda hp
+  lda (vm_s),y
   cmp ht
-  lda hp + 1
+  iny
+  lda (vm_s),y
   sbc ht + 1
   bvc :+
   eor #$80
@@ -359,10 +340,11 @@ for (const [k, m] of Object.entries({ lt: ['lt', 'bpl'], ge: ['lt', 'bmi'], gt: 
   ${m[1]} @f` + TRUEFALSE(4));
 tpl('jll_eq', STUB, LOAD2 + `
   lda ht
-  cmp hp
+  cmp (vm_s),y
   bne @f
+  iny
   lda ht + 1
-  cmp hp + 1
+  cmp (vm_s),y
   bne @f` + TRUEFALSE(4));
 
 // ---- Calls: {D k} the address of the op's data byte k (in its stub), {M k} 2 * data byte k + 2 (the frame's record
@@ -506,7 +488,7 @@ const SELF = `
   bne @s
   lda sp
   sec
-  sbc vm_rb
+  sbc #{M 1}
   sta ht
   lda sp + 1
   sbc #0

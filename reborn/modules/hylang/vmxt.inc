@@ -282,16 +282,12 @@ vxt_jlq_zerop_c:
             ldy         #0
 vxt_jlq_zerop_p0 = * - 1
             lda         (vm_s),y
-            sta         ht
-            lsr
-            bcc         vxt_jlq_zerop_s
-            iny
-            lda         (vm_s),y
-            sta         ht + 1
-            lda         ht
+            bit         #1
+            beq         vxt_jlq_zerop_s
             cmp         #<FIX(0)
             bne         vxt_jlq_zerop_f
-            lda         ht + 1
+            iny
+            lda         (vm_s),y
             cmp         #0
             bne         vxt_jlq_zerop_f
             lda         #<T_VAL
@@ -314,15 +310,11 @@ vxt_jq_zerop:.byte       vxt_jq_zerop_e - vxt_jq_zerop_c, TF_STUB, 2
             .byte       vxt_jq_zerop_p1 - vxt_jq_zerop_c, TPK_T, 4
 vxt_jq_zerop_c:
             lda         ex
-            sta         ht
-            lsr
-            bcc         vxt_jq_zerop_s
-            lda         ex + 1
-            sta         ht + 1
-            lda         ht
+            bit         #1
+            beq         vxt_jq_zerop_s
             cmp         #<FIX(0)
             bne         vxt_jq_zerop_f
-            lda         ht + 1
+            lda         ex + 1
             cmp         #0
             bne         vxt_jq_zerop_f
             lda         #<T_VAL
@@ -350,16 +342,12 @@ vxt_jlq_onep_c:
             ldy         #0
 vxt_jlq_onep_p0 = * - 1
             lda         (vm_s),y
-            sta         ht
-            lsr
-            bcc         vxt_jlq_onep_s
-            iny
-            lda         (vm_s),y
-            sta         ht + 1
-            lda         ht
+            bit         #1
+            beq         vxt_jlq_onep_s
             cmp         #<FIX(1)
             bne         vxt_jlq_onep_f
-            lda         ht + 1
+            iny
+            lda         (vm_s),y
             cmp         #0
             bne         vxt_jlq_onep_f
             lda         #<T_VAL
@@ -382,15 +370,11 @@ vxt_jq_onep:.byte       vxt_jq_onep_e - vxt_jq_onep_c, TF_STUB, 2
             .byte       vxt_jq_onep_p1 - vxt_jq_onep_c, TPK_T, 4
 vxt_jq_onep_c:
             lda         ex
-            sta         ht
-            lsr
-            bcc         vxt_jq_onep_s
-            lda         ex + 1
-            sta         ht + 1
-            lda         ht
+            bit         #1
+            beq         vxt_jq_onep_s
             cmp         #<FIX(1)
             bne         vxt_jq_onep_f
-            lda         ht + 1
+            lda         ex + 1
             cmp         #0
             bne         vxt_jq_onep_f
             lda         #<T_VAL
@@ -420,16 +404,12 @@ vxt_jlq_ltc_c:
             ldy         #0
 vxt_jlq_ltc_p0 = * - 1
             lda         (vm_s),y
-            sta         ht
-            lsr
-            bcc         vxt_jlq_ltc_s
-            iny
-            lda         (vm_s),y
-            sta         ht + 1
-            lda         ht
+            bit         #1
+            beq         vxt_jlq_ltc_s
             cmp         #0
 vxt_jlq_ltc_p1 = * - 1
-            lda         ht + 1
+            iny
+            lda         (vm_s),y
             sbc         #0
 vxt_jlq_ltc_p2 = * - 1
             bvc         :+
@@ -458,15 +438,11 @@ vxt_jq_ltc: .byte       vxt_jq_ltc_e - vxt_jq_ltc_c, TF_STUB, 4
             .byte       vxt_jq_ltc_p3 - vxt_jq_ltc_c, TPK_T, 4
 vxt_jq_ltc_c:
             lda         ex
-            sta         ht
-            lsr
-            bcc         vxt_jq_ltc_s
-            lda         ex + 1
-            sta         ht + 1
-            lda         ht
+            bit         #1
+            beq         vxt_jq_ltc_s
             cmp         #0
 vxt_jq_ltc_p0 = * - 1
-            lda         ht + 1
+            lda         ex + 1
             sbc         #0
 vxt_jq_ltc_p1 = * - 1
             bvc         :+
@@ -500,9 +476,9 @@ vxt_jlq_gtc_c:
             ldy         #0
 vxt_jlq_gtc_p0 = * - 1
             lda         (vm_s),y
+            bit         #1
+            beq         vxt_jlq_gtc_s
             sta         ht
-            lsr
-            bcc         vxt_jlq_gtc_s
             iny
             lda         (vm_s),y
             sta         ht + 1
@@ -538,17 +514,14 @@ vxt_jq_gtc: .byte       vxt_jq_gtc_e - vxt_jq_gtc_c, TF_STUB, 4
             .byte       vxt_jq_gtc_p3 - vxt_jq_gtc_c, TPK_T, 4
 vxt_jq_gtc_c:
             lda         ex
-            sta         ht
-            lsr
-            bcc         vxt_jq_gtc_s
-            lda         ex + 1
-            sta         ht + 1
+            bit         #1
+            beq         vxt_jq_gtc_s
             lda         #0
 vxt_jq_gtc_p0 = * - 1
-            cmp         ht
+            cmp         ex
             lda         #0
 vxt_jq_gtc_p1 = * - 1
-            sbc         ht + 1
+            sbc         ex + 1
             bvc         :+
             eor         #$80
 :
@@ -580,9 +553,9 @@ vxt_jlq_lec_c:
             ldy         #0
 vxt_jlq_lec_p0 = * - 1
             lda         (vm_s),y
+            bit         #1
+            beq         vxt_jlq_lec_s
             sta         ht
-            lsr
-            bcc         vxt_jlq_lec_s
             iny
             lda         (vm_s),y
             sta         ht + 1
@@ -618,17 +591,14 @@ vxt_jq_lec: .byte       vxt_jq_lec_e - vxt_jq_lec_c, TF_STUB, 4
             .byte       vxt_jq_lec_p3 - vxt_jq_lec_c, TPK_T, 4
 vxt_jq_lec_c:
             lda         ex
-            sta         ht
-            lsr
-            bcc         vxt_jq_lec_s
-            lda         ex + 1
-            sta         ht + 1
+            bit         #1
+            beq         vxt_jq_lec_s
             lda         #0
 vxt_jq_lec_p0 = * - 1
-            cmp         ht
+            cmp         ex
             lda         #0
 vxt_jq_lec_p1 = * - 1
-            sbc         ht + 1
+            sbc         ex + 1
             bvc         :+
             eor         #$80
 :
@@ -660,16 +630,12 @@ vxt_jlq_gec_c:
             ldy         #0
 vxt_jlq_gec_p0 = * - 1
             lda         (vm_s),y
-            sta         ht
-            lsr
-            bcc         vxt_jlq_gec_s
-            iny
-            lda         (vm_s),y
-            sta         ht + 1
-            lda         ht
+            bit         #1
+            beq         vxt_jlq_gec_s
             cmp         #0
 vxt_jlq_gec_p1 = * - 1
-            lda         ht + 1
+            iny
+            lda         (vm_s),y
             sbc         #0
 vxt_jlq_gec_p2 = * - 1
             bvc         :+
@@ -698,15 +664,11 @@ vxt_jq_gec: .byte       vxt_jq_gec_e - vxt_jq_gec_c, TF_STUB, 4
             .byte       vxt_jq_gec_p3 - vxt_jq_gec_c, TPK_T, 4
 vxt_jq_gec_c:
             lda         ex
-            sta         ht
-            lsr
-            bcc         vxt_jq_gec_s
-            lda         ex + 1
-            sta         ht + 1
-            lda         ht
+            bit         #1
+            beq         vxt_jq_gec_s
             cmp         #0
 vxt_jq_gec_p0 = * - 1
-            lda         ht + 1
+            lda         ex + 1
             sbc         #0
 vxt_jq_gec_p1 = * - 1
             bvc         :+
@@ -740,17 +702,13 @@ vxt_jlq_eqc_c:
             ldy         #0
 vxt_jlq_eqc_p0 = * - 1
             lda         (vm_s),y
-            sta         ht
-            lsr
-            bcc         vxt_jlq_eqc_s
-            iny
-            lda         (vm_s),y
-            sta         ht + 1
-            lda         ht
+            bit         #1
+            beq         vxt_jlq_eqc_s
             cmp         #0
 vxt_jlq_eqc_p1 = * - 1
             bne         vxt_jlq_eqc_f
-            lda         ht + 1
+            iny
+            lda         (vm_s),y
             cmp         #0
 vxt_jlq_eqc_p2 = * - 1
             bne         vxt_jlq_eqc_f
@@ -776,16 +734,12 @@ vxt_jq_eqc: .byte       vxt_jq_eqc_e - vxt_jq_eqc_c, TF_STUB, 4
             .byte       vxt_jq_eqc_p3 - vxt_jq_eqc_c, TPK_T, 4
 vxt_jq_eqc_c:
             lda         ex
-            sta         ht
-            lsr
-            bcc         vxt_jq_eqc_s
-            lda         ex + 1
-            sta         ht + 1
-            lda         ht
+            bit         #1
+            beq         vxt_jq_eqc_s
             cmp         #0
 vxt_jq_eqc_p0 = * - 1
             bne         vxt_jq_eqc_f
-            lda         ht + 1
+            lda         ex + 1
             cmp         #0
 vxt_jq_eqc_p1 = * - 1
             bne         vxt_jq_eqc_f
@@ -815,18 +769,14 @@ vxt_lq_addc_c:
             ldy         #0
 vxt_lq_addc_p0 = * - 1
             lda         (vm_s),y
-            sta         ht
-            lsr
-            bcc         vxt_lq_addc_s
-            iny
-            lda         (vm_s),y
-            sta         ht + 1
-            lda         ht
+            bit         #1
+            beq         vxt_lq_addc_s
             clc
             adc         #0
 vxt_lq_addc_p1 = * - 1
             sta         ex
-            lda         ht + 1
+            iny
+            lda         (vm_s),y
             adc         #0
 vxt_lq_addc_p2 = * - 1
             bvs         vxt_lq_addc_s
@@ -849,27 +799,22 @@ vxt_lqp_addc_c:
             ldy         #0
 vxt_lqp_addc_p0 = * - 1
             lda         (vm_s),y
-            sta         ht
-            lsr
-            bcc         vxt_lqp_addc_s
-            iny
-            lda         (vm_s),y
-            sta         ht + 1
-            lda         ht
+            bit         #1
+            beq         vxt_lqp_addc_s
             clc
             adc         #0
 vxt_lqp_addc_p1 = * - 1
             sta         ex
-            lda         ht + 1
+            iny
+            lda         (vm_s),y
             adc         #0
 vxt_lqp_addc_p2 = * - 1
             bvs         vxt_lqp_addc_s
             sta         ex + 1
+            ldy         #1
+            sta         (sp),y
             lda         ex
             sta         (sp)
-            ldy         #1
-            lda         ex + 1
-            sta         (sp),y
             lda         sp
             clc
             adc         #2
@@ -895,18 +840,14 @@ vxt_lq_subc_c:
             ldy         #0
 vxt_lq_subc_p0 = * - 1
             lda         (vm_s),y
-            sta         ht
-            lsr
-            bcc         vxt_lq_subc_s
-            iny
-            lda         (vm_s),y
-            sta         ht + 1
-            lda         ht
+            bit         #1
+            beq         vxt_lq_subc_s
             sec
             sbc         #0
 vxt_lq_subc_p1 = * - 1
             sta         ex
-            lda         ht + 1
+            iny
+            lda         (vm_s),y
             sbc         #0
 vxt_lq_subc_p2 = * - 1
             bvs         vxt_lq_subc_s
@@ -929,27 +870,22 @@ vxt_lqp_subc_c:
             ldy         #0
 vxt_lqp_subc_p0 = * - 1
             lda         (vm_s),y
-            sta         ht
-            lsr
-            bcc         vxt_lqp_subc_s
-            iny
-            lda         (vm_s),y
-            sta         ht + 1
-            lda         ht
+            bit         #1
+            beq         vxt_lqp_subc_s
             sec
             sbc         #0
 vxt_lqp_subc_p1 = * - 1
             sta         ex
-            lda         ht + 1
+            iny
+            lda         (vm_s),y
             sbc         #0
 vxt_lqp_subc_p2 = * - 1
             bvs         vxt_lqp_subc_s
             sta         ex + 1
+            ldy         #1
+            sta         (sp),y
             lda         ex
             sta         (sp)
-            ldy         #1
-            lda         ex + 1
-            sta         (sp),y
             lda         sp
             clc
             adc         #2
@@ -973,17 +909,13 @@ vxt_lq_inc_c:
             ldy         #0
 vxt_lq_inc_p0 = * - 1
             lda         (vm_s),y
-            sta         ht
-            lsr
-            bcc         vxt_lq_inc_s
-            iny
-            lda         (vm_s),y
-            sta         ht + 1
-            lda         ht
+            bit         #1
+            beq         vxt_lq_inc_s
             clc
             adc         #2
             sta         ex
-            lda         ht + 1
+            iny
+            lda         (vm_s),y
             adc         #0
             bvs         vxt_lq_inc_s
             sta         ex + 1
@@ -1003,25 +935,20 @@ vxt_lqp_inc_c:
             ldy         #0
 vxt_lqp_inc_p0 = * - 1
             lda         (vm_s),y
-            sta         ht
-            lsr
-            bcc         vxt_lqp_inc_s
-            iny
-            lda         (vm_s),y
-            sta         ht + 1
-            lda         ht
+            bit         #1
+            beq         vxt_lqp_inc_s
             clc
             adc         #2
             sta         ex
-            lda         ht + 1
+            iny
+            lda         (vm_s),y
             adc         #0
             bvs         vxt_lqp_inc_s
             sta         ex + 1
+            ldy         #1
+            sta         (sp),y
             lda         ex
             sta         (sp)
-            ldy         #1
-            lda         ex + 1
-            sta         (sp),y
             lda         sp
             clc
             adc         #2
@@ -1045,17 +972,13 @@ vxt_lq_dec_c:
             ldy         #0
 vxt_lq_dec_p0 = * - 1
             lda         (vm_s),y
-            sta         ht
-            lsr
-            bcc         vxt_lq_dec_s
-            iny
-            lda         (vm_s),y
-            sta         ht + 1
-            lda         ht
+            bit         #1
+            beq         vxt_lq_dec_s
             sec
             sbc         #2
             sta         ex
-            lda         ht + 1
+            iny
+            lda         (vm_s),y
             sbc         #0
             bvs         vxt_lq_dec_s
             sta         ex + 1
@@ -1075,25 +998,20 @@ vxt_lqp_dec_c:
             ldy         #0
 vxt_lqp_dec_p0 = * - 1
             lda         (vm_s),y
-            sta         ht
-            lsr
-            bcc         vxt_lqp_dec_s
-            iny
-            lda         (vm_s),y
-            sta         ht + 1
-            lda         ht
+            bit         #1
+            beq         vxt_lqp_dec_s
             sec
             sbc         #2
             sta         ex
-            lda         ht + 1
+            iny
+            lda         (vm_s),y
             sbc         #0
             bvs         vxt_lqp_dec_s
             sta         ex + 1
+            ldy         #1
+            sta         (sp),y
             lda         ex
             sta         (sp)
-            ldy         #1
-            lda         ex + 1
-            sta         (sp),y
             lda         sp
             clc
             adc         #2
@@ -1125,19 +1043,16 @@ vxt_ll_add_p0 = * - 1
             ldy         #0
 vxt_ll_add_p1 = * - 1
             lda         (vm_s),y
-            sta         hp
             and         ht
             lsr
             bcc         vxt_ll_add_s
-            iny
             lda         (vm_s),y
-            sta         hp + 1
-            lda         hp
             and         #$FE
             clc
             adc         ht
             sta         ex
-            lda         hp + 1
+            iny
+            lda         (vm_s),y
             adc         ht + 1
             bvs         vxt_ll_add_s
             sta         ex + 1
@@ -1165,19 +1080,16 @@ vxt_llp_add_p0 = * - 1
             ldy         #0
 vxt_llp_add_p1 = * - 1
             lda         (vm_s),y
-            sta         hp
             and         ht
             lsr
             bcc         vxt_llp_add_s
-            iny
             lda         (vm_s),y
-            sta         hp + 1
-            lda         hp
             and         #$FE
             clc
             adc         ht
             sta         ex
-            lda         hp + 1
+            iny
+            lda         (vm_s),y
             adc         ht + 1
             bvs         vxt_llp_add_s
             sta         ex + 1
@@ -1217,22 +1129,17 @@ vxt_ll_sub_p0 = * - 1
             ldy         #0
 vxt_ll_sub_p1 = * - 1
             lda         (vm_s),y
-            sta         hp
             and         ht
             lsr
             bcc         vxt_ll_sub_s
-            iny
-            lda         (vm_s),y
-            sta         hp + 1
-            lda         hp
-            and         #$FE
-            sta         hn
             lda         ht
             sec
-            sbc         hn
+            sbc         (vm_s),y
+            ora         #1
             sta         ex
+            iny
             lda         ht + 1
-            sbc         hp + 1
+            sbc         (vm_s),y
             bvs         vxt_ll_sub_s
             sta         ex + 1
             jmp         $0000
@@ -1259,22 +1166,17 @@ vxt_llp_sub_p0 = * - 1
             ldy         #0
 vxt_llp_sub_p1 = * - 1
             lda         (vm_s),y
-            sta         hp
             and         ht
             lsr
             bcc         vxt_llp_sub_s
-            iny
-            lda         (vm_s),y
-            sta         hp + 1
-            lda         hp
-            and         #$FE
-            sta         hn
             lda         ht
             sec
-            sbc         hn
+            sbc         (vm_s),y
+            ora         #1
             sta         ex
+            iny
             lda         ht + 1
-            sbc         hp + 1
+            sbc         (vm_s),y
             bvs         vxt_llp_sub_s
             sta         ex + 1
             lda         ex
@@ -1314,17 +1216,14 @@ vxt_jll_lt_p0 = * - 1
             ldy         #0
 vxt_jll_lt_p1 = * - 1
             lda         (vm_s),y
-            sta         hp
             and         ht
             lsr
             bcc         vxt_jll_lt_s
-            iny
-            lda         (vm_s),y
-            sta         hp + 1
             lda         ht
-            cmp         hp
+            cmp         (vm_s),y
+            iny
             lda         ht + 1
-            sbc         hp + 1
+            sbc         (vm_s),y
             bvc         :+
             eor         #$80
 :
@@ -1362,17 +1261,14 @@ vxt_jll_ge_p0 = * - 1
             ldy         #0
 vxt_jll_ge_p1 = * - 1
             lda         (vm_s),y
-            sta         hp
             and         ht
             lsr
             bcc         vxt_jll_ge_s
-            iny
-            lda         (vm_s),y
-            sta         hp + 1
             lda         ht
-            cmp         hp
+            cmp         (vm_s),y
+            iny
             lda         ht + 1
-            sbc         hp + 1
+            sbc         (vm_s),y
             bvc         :+
             eor         #$80
 :
@@ -1410,16 +1306,13 @@ vxt_jll_gt_p0 = * - 1
             ldy         #0
 vxt_jll_gt_p1 = * - 1
             lda         (vm_s),y
-            sta         hp
             and         ht
             lsr
             bcc         vxt_jll_gt_s
+            lda         (vm_s),y
+            cmp         ht
             iny
             lda         (vm_s),y
-            sta         hp + 1
-            lda         hp
-            cmp         ht
-            lda         hp + 1
             sbc         ht + 1
             bvc         :+
             eor         #$80
@@ -1458,16 +1351,13 @@ vxt_jll_le_p0 = * - 1
             ldy         #0
 vxt_jll_le_p1 = * - 1
             lda         (vm_s),y
-            sta         hp
             and         ht
             lsr
             bcc         vxt_jll_le_s
+            lda         (vm_s),y
+            cmp         ht
             iny
             lda         (vm_s),y
-            sta         hp + 1
-            lda         hp
-            cmp         ht
-            lda         hp + 1
             sbc         ht + 1
             bvc         :+
             eor         #$80
@@ -1506,18 +1396,15 @@ vxt_jll_eq_p0 = * - 1
             ldy         #0
 vxt_jll_eq_p1 = * - 1
             lda         (vm_s),y
-            sta         hp
             and         ht
             lsr
             bcc         vxt_jll_eq_s
-            iny
-            lda         (vm_s),y
-            sta         hp + 1
             lda         ht
-            cmp         hp
+            cmp         (vm_s),y
             bne         vxt_jll_eq_f
+            iny
             lda         ht + 1
-            cmp         hp + 1
+            cmp         (vm_s),y
             bne         vxt_jll_eq_f
             lda         #<T_VAL
             sta         ex
@@ -1728,15 +1615,16 @@ vxt_call_e:
 
 .assert vxt_call_e - vxt_call_c + VX_STUB + 48 < 256, error, "vxt_call: an op's code is at most 255 bytes"
 
-vxt_cself:  .byte       vxt_cself_e - vxt_cself_c, TF_STUB, 8
+vxt_cself:  .byte       vxt_cself_e - vxt_cself_c, TF_STUB, 9
             .byte       vxt_cself_p0 - vxt_cself_c, TPK_M, 1
-            .byte       vxt_cself_p1 - vxt_cself_c, TPK_RL, 0
-            .byte       vxt_cself_p2 - vxt_cself_c, TPK_RH, 0
-            .byte       vxt_cself_p3 - vxt_cself_c, TPK_S, 0
-            .byte       vxt_cself_p4 - vxt_cself_c, TPK_RL, 0
-            .byte       vxt_cself_p5 - vxt_cself_c, TPK_RH, 0
-            .byte       vxt_cself_p6 - vxt_cself_c, TPK_M, 1
-            .byte       vxt_cself_p7 - vxt_cself_c, TPK_C, 0
+            .byte       vxt_cself_p1 - vxt_cself_c, TPK_M, 1
+            .byte       vxt_cself_p2 - vxt_cself_c, TPK_RL, 0
+            .byte       vxt_cself_p3 - vxt_cself_c, TPK_RH, 0
+            .byte       vxt_cself_p4 - vxt_cself_c, TPK_S, 0
+            .byte       vxt_cself_p5 - vxt_cself_c, TPK_RL, 0
+            .byte       vxt_cself_p6 - vxt_cself_c, TPK_RH, 0
+            .byte       vxt_cself_p7 - vxt_cself_c, TPK_M, 1
+            .byte       vxt_cself_p8 - vxt_cself_c, TPK_C, 0
 vxt_cself_c:
             lda         vm_rb
             cmp         #0
@@ -1744,7 +1632,8 @@ vxt_cself_p0 = * - 1
             bne         vxt_cself_s
             lda         sp
             sec
-            sbc         vm_rb
+            sbc         #0
+vxt_cself_p1 = * - 1
             sta         ht
             lda         sp + 1
             sbc         #0
@@ -1771,11 +1660,11 @@ vxt_cself_ok:
             cmp         #$FC
             bcs         vxt_cself_r2
             lda         #0
-vxt_cself_p1 = * - 1
+vxt_cself_p2 = * - 1
             sta         (sp)
             ldy         #1
             lda         #0
-vxt_cself_p2 = * - 1
+vxt_cself_p3 = * - 1
             sta         (sp),y
             iny
             lda         #0
@@ -1792,14 +1681,14 @@ vxt_cself_p2 = * - 1
             bra         vxt_cself_r4
 vxt_cself_sx:
             jmp         $0000
-vxt_cself_p3 = * - 2
+vxt_cself_p4 = * - 2
 vxt_cself_r2:
             lda         #0
-vxt_cself_p4 = * - 1
-            ldx         #0
 vxt_cself_p5 = * - 1
-            ldy         #0
+            ldx         #0
 vxt_cself_p6 = * - 1
+            ldy         #0
+vxt_cself_p7 = * - 1
             jsr         vm_rec
 vxt_cself_r4:
             stz         vm_mat
@@ -1808,16 +1697,17 @@ vxt_cself_r4:
             inc         depth + 1
 :
             jmp         $0000
-vxt_cself_p7 = * - 2
+vxt_cself_p8 = * - 2
 vxt_cself_s:
 vxt_cself_e:
 
 .assert vxt_cself_e - vxt_cself_c + VX_STUB + 48 < 256, error, "vxt_cself: an op's code is at most 255 bytes"
 
-vxt_tself:  .byte       vxt_tself_e - vxt_tself_c, TF_STUB, 3
+vxt_tself:  .byte       vxt_tself_e - vxt_tself_c, TF_STUB, 4
             .byte       vxt_tself_p0 - vxt_tself_c, TPK_M, 1
-            .byte       vxt_tself_p1 - vxt_tself_c, TPK_B, 1
-            .byte       vxt_tself_p2 - vxt_tself_c, TPK_C, 0
+            .byte       vxt_tself_p1 - vxt_tself_c, TPK_M, 1
+            .byte       vxt_tself_p2 - vxt_tself_c, TPK_B, 1
+            .byte       vxt_tself_p3 - vxt_tself_c, TPK_C, 0
 vxt_tself_c:
             lda         vm_rb
             cmp         #0
@@ -1825,7 +1715,8 @@ vxt_tself_p0 = * - 1
             bne         vxt_tself_s
             lda         sp
             sec
-            sbc         vm_rb
+            sbc         #0
+vxt_tself_p1 = * - 1
             sta         ht
             lda         sp + 1
             sbc         #0
@@ -1841,7 +1732,7 @@ vxt_tself_p0 = * - 1
             bmi         vxt_tself_s
             bvs         vxt_tself_s
             ldx         #0
-vxt_tself_p1 = * - 1
+vxt_tself_p2 = * - 1
             beq         vxt_tself_args
             ldy         #2
 vxt_tself_arg:
@@ -1880,7 +1771,7 @@ vxt_tself_kept:
             jsr         unspill
 vxt_tself_go:
             jmp         $0000
-vxt_tself_p2 = * - 2
+vxt_tself_p3 = * - 2
 vxt_tself_s:
 vxt_tself_e:
 
