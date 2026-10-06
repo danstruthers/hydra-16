@@ -313,6 +313,7 @@ BIN_SYS         = BI_N          ; (The sys- functions': hysys.inc's sys_lazy)
             BI          "buffer", 1, 2, B6, bi_buffer           ; (Buffers: buffers.inc's; buffer? a type's test)
             BI          "buffer?", 1, 1, BF_ERRORS | B3, bi_is_buffer
             BI          "buffer-get", 2, 2, B6, bi_buffer_get
+BIN_BUFPUT      = BI_N
             BI          "buffer-put", 3, 3, B6, bi_buffer_put
             BI          "buffer-fill", 2, 4, B6, bi_buffer_fill
             BI          "buffer-copy", 3, 5, B6, bi_buffer_copy

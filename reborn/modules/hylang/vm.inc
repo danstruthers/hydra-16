@@ -2315,6 +2315,130 @@ vm_cfill:
 @rts:
             rts
 
+; A buffer's byte, here (buffers.inc's buf_at and buffer-put, for a fixnum index in the buffer): vm_bget, (b i): cf
+; the buffer, ex the index: ex = its byte, C = 0; C = 1 (ex kept) if the index isn't a fixnum in it.  vm_bput,
+; (buffer-put b i byte) with its arguments on top: ex = the old byte, the new one put, C = 0; C = 1 if they aren't
+; a buffer, a fixnum index in it and a fixnum 0-255 (buffer-put's way, then)
+vm_bget:
+            lda         ex
+            ldx         ex + 1
+            jsr         vm_bidx
+            bcs         vm_bno
+            lda         cf
+            ldx         cf + 1
+            jsr         vm_bat
+            bcs         vm_bno
+            lda         (hp)
+vm_bfix:
+            asl
+            sta         ex
+            lda         #0
+            rol
+            sta         ex + 1
+            inc         ex
+            clc
+vm_bno:
+            rts
+vm_bput:
+            lda         sp
+            sec
+            sbc         #6
+            sta         ht
+            lda         sp + 1
+            sbc         #0
+            sta         ht + 1
+            ldy         #4                                  ; (Its byte: 0-255)
+            lda         (ht),y
+            lsr
+            bcc         @no
+            sta         vm_k
+            iny
+            lda         (ht),y
+            cmp         #2
+            bcs         @no
+            lsr
+            bcc         :+
+            lda         vm_k
+            ora         #$80
+            sta         vm_k
+:
+            ldy         #3                                  ; (Its index)
+            lda         (ht),y
+            tax
+            dey
+            lda         (ht),y
+            jsr         vm_bidx
+            bcs         @no
+            ldy         #1                                  ; (Its buffer)
+            lda         (ht),y
+            tax
+            lda         (ht)
+            lsr
+            bcs         @no
+            cpx         #IMM_PAGES
+            bcc         @no
+            lda         pk,x
+            cmp         #PK_BUFFER
+            bne         @no
+            lda         (ht)
+            jsr         vm_bat
+            bcs         @no
+            lda         (hp)
+            pha
+            lda         vm_k
+            sta         (hp)
+            pla
+            bra         vm_bfix
+@no:
+            sec
+            rts
+
+; .A, .X = an index: vm_t = it, C = 0, if it's a fixnum 0 on; else C = 1
+vm_bidx:
+            sta         vm_t
+            lsr
+            bcc         @no
+            txa
+            bmi         @no
+            lsr
+            sta         vm_t + 1
+            lda         vm_t
+            ror
+            sta         vm_t
+            clc
+            rts
+@no:
+            sec
+            rts
+
+; .A, .X = a buffer: hp = its byte vm_t's place (its blob's bank in the window), C = 0; C = 1 if vm_t isn't in it
+vm_bat:
+            jsr         deref
+            lda         vm_t                                ; (Below its length)
+            cmp         (hp)
+            ldy         #1
+            lda         vm_t + 1
+            sbc         (hp),y
+            bcs         @rts
+            iny
+            lda         (hp),y
+            pha
+            iny
+            lda         (hp),y
+            tax
+            pla
+            jsr         blob_data
+            lda         hp
+            clc
+            adc         vm_t
+            sta         hp
+            lda         hp + 1
+            adc         vm_t + 1
+            sta         hp + 1
+            clc
+@rts:
+            rts
+
 ; Not a function's cell: a buffer given an index (its byte, buffers.inc's buf_at); a function partially applied (the
 ; evaluator's ev_apply_values: its values first); else the evaluator's
 vm_cother:
@@ -2323,6 +2447,8 @@ vm_cother:
             jsr         pop                                 ; (Its index)
             sta         ex
             stx         ex + 1
+            jsr         vm_bget                             ; (Here, a fixnum in it; else buf_at's way)
+            bcc         :+
             FARN        6, buf_at
             bcc         :+
             MOVW        ex, nomem_err
@@ -2436,6 +2562,18 @@ op_bcall:
             lda         #>BUILTIN0
             adc         #0
             sta         cf + 1
+            ldx         bi_n
+            cpx         #BIN_BUFPUT                         ; (buffer-put: here, if it can be)
+            bne         :+
+            lda         vm_m
+            cmp         #3
+            bne         :+
+            jsr         vm_bput
+            bcs         :+
+            lda         #3
+            jsr         drop
+            jmp         vm_cvalue
+:
             ldx         bi_n
             lda         vb_flags,x
             and         #BF_MACHINE
@@ -6379,6 +6517,12 @@ vc_andor:
             jsr         vc_child
             ldx         vc_lv
             lda         L_b,x
+            cmp         #VO_JF                              ; (and's JF: joined to the test, vc_jf)
+            bne         :+
+            lda         L_l2,x
+            jsr         vc_jf
+            bra         @next
+:
             jsr         vc_byte
             ldx         vc_lv
             lda         L_l2,x
