@@ -193,7 +193,9 @@ spill:
             phy
             lda         spilled
             cmp         #SPILLS
-            bcs         @deep
+            bcc         @lb704
+            jmp         @deep
+@lb704:
             lsr
             lsr
             tax
@@ -258,6 +260,10 @@ spill:
             sec                                             ;   may push, as eq's do, and read them after)
             sbc         #>SPILL
             sta         argp + 1
+            lda         vm_s + 1                            ; (So is the bytecode machine's frame: vm.inc's)
+            sec
+            sbc         #>SPILL
+            sta         vm_s + 1
             inc         spilled
             ply
             plx
@@ -332,6 +338,10 @@ unspill:
             clc
             adc         #>SPILL
             sta         sp + 1
+            lda         vm_s + 1                            ; (The bytecode machine's frame moved up with the rest)
+            clc
+            adc         #>SPILL
+            sta         vm_s + 1
             ply
             plx
             pla

@@ -33,7 +33,7 @@ first, with its checks, then in hylang.  What only the Hydra has is checked by a
 | **`range`, strings, lists** | As memory allows (danlang caps `range` at 1,000,000) | Memory |
 | **`load` and `use`** | A path as it is, or with `.hl`; then a bare name is `/lib/hylang/name` or `name.hl`, through the namespace (as forth's `/lib/forth`), so a card's or the RAM disk's `/lib/hylang` adds to the ROM's; a directory is passed over (at `/`, `(use "proc")` is the library, not `/proc`) | Plan 9 names |
 | **Streams** | Over the system's fds: `stdin`, `stdout`, `stderr` are fds 0-2; `output-of` points fd 1 at a buffer meanwhile | |
-| **Ctrl-C** | The window's `interrupt` note: the error `interrupted` (`:intr`) at the next call or loop step | As forth's THROW -28 |
+| **Ctrl-C** | The window's `interrupt` note: the error `interrupted` (`:intr`) at the next call or loop step, made once (it stops what it reaches as any error does, so `try`'s handler runs); `on-note`'s function, if there is one, is given it first, as danlang's | As forth's THROW -28 |
 | **`random`** | A generator (a 16-bit xorshift) seeded by the tick count as it's first wanted | |
 | **Start-up** | `/lib/hylang/globals.hl` (danlang's `globals.dl`) as it is when loaded, from a snapshot in the ROM (the module `hysnap`, made at the build); a ROM without it, loaded as text.  A login shell (`hylang -l`) then runs `#fx/lib/hylang/login.hl`: its namespace made, then `/lib/hylang/profile.hl` (the shell's, below) | Loaded as text, it takes 8 M cycles (2.3 s); from the snapshot, 286,000 (0.08 s) |
 | **Files** | `.hl` (the suite keeps danlang's `.dl` names, loaded by their whole names) | |
@@ -79,7 +79,7 @@ system's error: its text (`ERRSTR`'s, after the name it's about: `x: not found`)
 
 | Area | Functions |
 | :--- | :-------- |
-| **Notes** | `(note task n)` (Plan 9's postnote: `n` is `:interrupt`, `:kill`, `:hangup`, `:alarm`, `:brk`, or its number: 16-31 a program's own), `(note-group group n)`; `(on-note f)`: `f` is called with each note (but a kill) at the next call, the note an atom (`:interrupt`, `:hangup`, `:alarm`, `:brk`) or its number, and returns T to go on, NIL for the default (Ctrl-C's: the error `:intr`; another's, hylang's end, as the system's default: 129 for a hangup ...); `(on-note NIL)`: the defaults again |
+| **Notes** | `(note task n)` (Plan 9's postnote: `n` is `:interrupt`, `:kill`, `:hangup`, `:alarm`, `:brk`, or its number: 16-31 a program's own), `(note-group group n)`; `(on-note f)`: `f` is called with each note (but a kill) at the next call, the note an atom (`:interrupt`, `:hangup`, `:alarm`, `:brk`) or its number, and returns T to go on, NIL for the default (Ctrl-C's: the error `:intr`; another's, hylang's end, as the system's default: 129 for a hangup ...); `(on-note NIL)`: the defaults again; anything but a function or NIL, an error |
 | **Namespaces** | `(bind new old [:before \| :after] [:create])`, `(mount dev old [spec] [:before \| :after] [:create])` (`dev` a string: `"#f"`; `spec` which of its trees: `"x"`, the ROM disk), `(unmount old [new])`, `(ns)` (the binds and mounts, a list of hashes: `:old`, `:new` (the device's path: `"#fx/lib"`), `:create`), `(newns)` (the default namespace built again in hylang's own, as rc's `newns` builds it: `/lib/hylang/newns.hl`, loaded: its area of the RAM disk emptied and made, then `/rom/lib/namespace`'s lines and a card's) |
 | **Tasks** | `(ps)` (a list of hashes: `:task`, `:name`, `:state` (`:ready`, `:wait`, `:call`, `:idle`, `:new`, `:sleep`, `:blocked`, `:event`), `:parent`, `:cpu` (ticks), `:group`, `:args`), `(task-info task)` (one of them), `(yield)`, `(sleep-until tick)`, `(hold body...)` (no task switch meanwhile: `PREEMPT_OFF`, for a few ticks' timing; a note still comes; preemption back after an error too) |
 | **Memory** | `(peek addr)`, `(poke addr byte)`, `(peek-word addr)`, `(poke-word addr n)`: the task's own 64K, as it is as hylang runs (its fifth bank at `$A000`, a heap bank at `$8000`; the I/O area's chips belong to their drivers: poke them only knowing that); `(banks)` (the task's RAM banks), `(bank-alloc n)`, `(bank-free bank n)`, `(bank-read bank offset n)` (bytes, a list), `(bank-write bank offset bytes)` (what fits, then the error); shared segments: `(seg-create banks)`, `(seg-attach seg)`, `(seg-detach seg)`, `(seg-read seg bank offset n)`, `(seg-write seg bank offset bytes)`; `(free)` (the RAM, as `free` shows it, in K: `:ram` a task's, `:shared`, `:used`, `:free`, `:segments`) |
@@ -166,21 +166,25 @@ HyForth), every value under 16,384 (hylang's fixnums, a cell that doesn't overfl
 /rom/bench/bench.fs [reps [quick]]`, on the board too), and `node sim/bench.js` runs both in the emulator and prints
 the table (`--quick`, the small sizes; `--hylang-reps`, `--forth-reps`: HyForth's default 20, as one of its runs is a
 few ticks).  The `bench` test runs both at the quick sizes and checks each result is the same.  In October 2026, at
-3.58 MHz, one run of each:
+3.58 MHz, one run of each: hylang's code evaluated (the evaluator alone, as it was), and compiled (the bytecode
+machine's, below):
 
-| Benchmark | What | Result | hylang | HyForth | hylang / HyForth |
-| :-------- | :--- | -----: | -----: | ------: | ---------------: |
-| `loop` | A counting loop of 4,000 steps | 4000 | 9,105 ms | 76 ms | 119x |
-| `calls` | 2,000 calls of a function of two arguments | 2000 | 7,660 ms | 65 ms | 118x |
-| `fib` | Fibonacci of 16, recursively (3,193 calls) | 987 | 6,775 ms | 181 ms | 37x |
-| `sieve` | The primes below 1,024, a byte each | 172 | 14,730 ms | 332 ms | 44x |
-| `sort` | 100 bytes sorted by insertion | 407 | 17,085 ms | 480 ms | 36x |
-| `gcd` | gcd(i, j) by subtraction, for i and j 1 to 20, summed | 880 | 9,340 ms | 350 ms | 27x |
-| All | | | 64,695 ms | 1,484 ms | 44x (the ratios' geometric mean 53x) |
+| Benchmark | What | Result | Evaluated | Compiled | HyForth | Compiled / HyForth |
+| :-------- | :--- | -----: | --------: | -------: | ------: | -----------------: |
+| `loop` | A counting loop of 4,000 steps | 4000 | 9,105 ms | 1,290 ms | 76 ms | 17x |
+| `calls` | 2,000 calls of a function of two arguments | 2000 | 7,660 ms | 1,525 ms | 65 ms | 23x |
+| `fib` | Fibonacci of 16, recursively (3,193 calls) | 987 | 6,775 ms | 1,340 ms | 181 ms | 7.4x |
+| `sieve` | The primes below 1,024, a byte each | 172 | 14,730 ms | 2,755 ms | 332 ms | 8.3x |
+| `sort` | 100 bytes sorted by insertion | 407 | 17,085 ms | 4,240 ms | 480 ms | 8.8x |
+| `gcd` | gcd(i, j) by subtraction, for i and j 1 to 20, summed | 880 | 9,340 ms | 1,675 ms | 350 ms | 4.8x |
+| All | | | 64,695 ms | 12,825 ms | 1,484 ms | 8.6x (the ratios' geometric mean 10.0x) |
 
-HyForth's code is threaded 65C02 code and its loop counter a register's; hylang evaluates its code, each step a call
-with its scope made on the heap.  So its tightest loops (`loop`, `calls`) are about 120 times HyForth's, and code that
-does more each step (a buffer's bytes, a comparison, arithmetic) about 30 to 45.
+HyForth's code is threaded 65C02 code and its loop counter a register's.  hylang's evaluator ran each step as a call
+with its scope made on the heap, so its tightest loops (`loop`, `calls`) were about 120 times HyForth's, and code
+that does more each step (a buffer's bytes, a comparison, arithmetic) about 30 to 45.  Compiled, a call makes nothing
+on the heap and an argument is a word at a fixed place, so recursion, arithmetic and a buffer's bytes are 5 to 9
+times HyForth's; a counting loop's step is some 1,200 cycles (its 13 ops, a tail call among them, each dispatched:
+HyForth's is 68), so the tightest loops are 17 to 23 times.
 
 ## The design
 
@@ -227,6 +231,30 @@ The plan has it whole; in short:
   Q-expression evaluated, and an fexpr's argument, remember their scope (a scoped cell).  `load` reads a file an
   item at a time, the reader's text refilled from it, and seeks it back if a nested `load` used the text
   meanwhile.
+* **The bytecode machine** (`vm.inc`, in the seventh bank): a function `fun` defines is compiled as it's defined,
+  any other at its second call, to the code of a small machine whose value register is `ex`; the code is in an
+  arena of RAM banks of its own (four at most, 32K), never moved, and the function's word 4 is its place (word 5
+  counts its calls till then).  A frame is the function's word and its arguments, where the caller pushed them on
+  the evaluation stack, then a record of two words (its return and its scope), so a call makes nothing on the heap
+  and an argument is a word at a fixed place; a call in tail position (`TCALL`) reuses its caller's frame.
+  Constants, arguments, globals, `if`, `do`, `and`, `or` and `while` are compiled in place, and `set` (`=(...)`),
+  `set!` and `def` (each value compiled, the binding an op); the names a body binds with `set` are its locals, words
+  after the record, each a hole (UNBOUND) till it's set, read past the frame meanwhile (the evaluator's lookups pass
+  a hole by too); `+`, `-`, `1+`, `1-`, `zero?`,
+  `one?` and the comparisons are ops that work fixnums at once (with a constant, one op); a built-in is called at
+  once; any other call is `HEAD` (its function a function?) and `CALL` (a global's function, `SHEAD`: the global read
+  in the same op; the function's own, by its name, `CSELF` and `TSELF`, which make its frame at once; a buffer
+  given an index, or a built-in partially applied, called at once too).  The evaluator does the rest: the other
+  special forms, an fexpr's call, a function not compiled (or with extras), a built-in that runs the machine; its
+  value comes back through a `K_VM` frame.  A frame's scope is made only when it's wanted (a Q-expression with
+  names in it, the evaluator, the built-ins that keep their caller's scope: `list`, `fn`, `fun`, `fexpr` and the hash
+  makers), its formals and locals bound there in order (holes too), and they're read and set there after, so a
+  closure or `eval` sees what the code sees.  `let`, `each`, `dotimes` and `try` are the evaluator's still.  Errors are values, as the evaluator's: an op that may give one
+  returns it from the function, unless what it's for takes errors (`error?`'s argument, say).  The compiler counts on
+  a name's built-in value (a special form, an operator) only while no frame has bound the name, and marks it
+  (`SF_INLINED`); bound in a frame then, or bound again globally, every function's code is dropped and compiled again
+  as it's next called.  Ctrl-C and notes are taken at each call, as the evaluator takes them.  The arena full,
+  nothing is compiled till the evaluator's next start (a line at the prompt), which empties it.
 * **Built-ins**: a table of all danlang's (its arity, flags, the bank its code is in), so partial application, too
   many arguments and taking errors are the dispatcher's (till phase 7 made the last, those not made yet answered
   `Not yet: 'name'`).
@@ -257,19 +285,20 @@ The plan has it whole; in short:
   `spec/errors.def`: `obj/gen/errnames.inc`).  `sh` and `sh-out` run `rc -c`, their input and output through
   pipes; `date`, `date-parts` and `seconds-of` work the calendar on 32-bit seconds.  `hylang file args...` runs
   the file (`args`: its path and the args), its status 0, 1 after an error (on stderr), or `(exit n)`'s.
-* **The module**: hylang is one program of six banks (a module may have eight since phase 7): the evaluator, its
+* **The module**: hylang is one program of seven banks (a module may have eight since phase 7): the evaluator, its
   special forms, the dispatch and the built-ins that run the machine in the first; the reader, the printer, the
   list built-ins, equality and order in the second; the numbers (and, as yet, `fn`, the type tests and `error`)
   in the third; strings, hashes and the errors' messages in the fourth; streams, the system library and the
-  Hydra's built-ins (`hydrabi.inc`) in the fifth; the collector in the sixth.  What every bank calls is in the task's RAM (the heap, the
+  Hydra's built-ins (`hydrabi.inc`) in the fifth; the collector in the sixth; the bytecode machine in the seventh.  What every bank calls is in the task's RAM (the heap, the
   output, the evaluation stack): the most of that code is kept in the fourth bank and copied to the RAM as hylang
   starts (`hylang.cfg`'s DATA4), so the first bank's room is the evaluator's.  `+`, `-`, `1+`, `1-`, `zero?`,
   `one?` and the comparisons work fixnums in the first bank (`bi_fast`), without a far call.  The Hydra layers
   are library modules beside it.
 * **Budgets** (at 3.58 MHz, the library loaded; each from the REPL's echo to its `=>`, a difference of two lines'
   times so the REPL's own work drops out): start-up from the snapshot to the first prompt 300,000 cycles (286,000);
-  a parameter looked up 300 (279); a call of a function of two arguments 4,000 (3,683); a tail loop's step (`if`,
-  `zero?`, `-`, the call) 6,500 (6,059); `map` with a function of one argument 4,000 an item (3,652); a full
+  a parameter looked up 300 (279; compiled, 11); a call of a function of two arguments 4,000 (3,683; compiled,
+  1,653); a tail loop's step (`if`, `zero?`, `-`, the call) 6,500 (6,059; compiled, 888); `map` with a function of
+  one argument 4,000 an item (3,652; compiled, 2,987); a full
   collection of a full 64K cell heap 3,600,000 (213 cycles a live cell: 14,000 conses live, 3.8 M).  The `hyspeed`
   test checks the four of the evaluator on every run, the `heap` test the collector's (255 a cell, 9,000 live).
   They're phase 8's: the plan's were 150, 1,500, 3,000, 2,000 and 1,500,000, targets set before a spike, and

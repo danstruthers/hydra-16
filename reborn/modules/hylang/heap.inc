@@ -1643,7 +1643,7 @@ heap_free:
 ; fourth are all values), the word that's its blob ($FF: none), and its spine ($FF: none)
 kd_size:    .byte       0, 0, 0                             ; (PK_NONE, PK_IMM, PK_FREE)
             .byte       4, 4, 4, 4, 4, 4, 4, 4, 4           ; (PK_SCONS to PK_ERROR)
-            .byte       4, 8, 8, 8, 8, 8                    ; (PK_PARTIAL to PK_STREAM)
+            .byte       4, 8, 8, 16, 8, 8                   ; (PK_PARTIAL to PK_STREAM)
             .byte       8, 16, 32, 64                       ; (The frames)
             .byte       4                                   ; (PK_BUFFER)
 kd_raw:     .byte       0, 0, 0

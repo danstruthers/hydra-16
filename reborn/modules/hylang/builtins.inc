@@ -28,15 +28,23 @@ BI_N            .set 0
 BI_N        .set BI_N + 1
 .endmacro
 
+BIN_FN          = BI_N          ; (These the bytecode machine's compiler knows: vm.inc's)
             BI          "fn", 2, 2, B3, bi_fn
+BIN_FUN         = BI_N
             BI          "fun", 2, 2, B3, bi_fun
+BIN_DEF         = BI_N
             BI          "def", 1, ANY, BF_SPECIAL, sf_def
+BIN_SET         = BI_N
             BI          "set", 1, ANY, BF_SPECIAL, sf_set
+BIN_SETB        = BI_N
             BI          "set!", 1, ANY, BF_SPECIAL, sf_setb
             BI          "let", 1, ANY, BF_SPECIAL, sf_let
+BIN_DO          = BI_N
             BI          "do", 0, ANY, BF_SPECIAL, sf_do
+BIN_FEXPR       = BI_N
             BI          "fexpr", 2, 2, B3, bi_fexpr
             BI          "gensym", 0, 1, B2, bo_gensym
+BIN_LIST        = BI_N
             BI          "list", 0, ANY, B2, bl_list
             BI          "head", 1, 1, B2, bl_head
             BI          "tail", 1, 1, B2, bl_tail
@@ -60,14 +68,18 @@ BIN_MUL         = BI_N
             BI          "rational.n", 1, 1, B3, bi_rational_n
             BI          "rational.d", 1, 1, B3, bi_rational_d
             BI          "random", 1, 1, B3, bi_random
+BIN_AND         = BI_N
             BI          "and", 0, ANY, BF_SPECIAL, sf_and
+BIN_OR          = BI_N
             BI          "or", 0, ANY, BF_SPECIAL, sf_or
+BIN_WHILE       = BI_N
             BI          "while", 1, ANY, BF_SPECIAL, sf_while
             BI          "each", 2, ANY, BF_SPECIAL, sf_each
             BI          "dotimes", 2, ANY, BF_SPECIAL, sf_dotimes
             BI          "try", 1, 2, BF_SPECIAL, sf_try
             BI          "error-message", 1, 1, BF_ERRORS | B3, bi_error_message
             BI          "error-code", 1, 1, BF_ERRORS | B3, bi_error_code
+BIN_IF          = BI_N
             BI          "if", 2, 3, BF_SPECIAL, sf_if
             BI          "eq", 2, 2, B2, bq_eq
             BI          "neq", 2, 2, B2, bq_neq
@@ -144,9 +156,12 @@ BIN_LOAD        = BI_N          ; (A script's: hylang file)
             BI          "expr?", 0, 1, BF_SPECIAL, sf_expr
             BI          "qexpr?", 1, 1, BF_ERRORS | B3, bi_is_qexpr
             BI          "sexpr?", 1, 1, BF_ERRORS | B3, bi_is_sexpr
+BIN_HASH_CREATE = BI_N
             BI          "hash-create", 0, 1, BF_MACHINE, bi_hash_create
             BI          "hash-get", 2, 2, B4, bi_hash_get
+BIN_HASH_PUT    = BI_N
             BI          "hash-put", 2, ANY, BF_MACHINE, bi_hash_put
+BIN_TO_HASH     = BI_N
             BI          "to#", 1, 1, BF_MACHINE, bi_to_hash
             BI          "from#", 1, 1, B4, bi_from_hash
             BI          "hash-key?", 2, 2, B4, bi_hash_key_p

@@ -15,7 +15,7 @@
 (check (qexpr? ((sysinfo) :free-tasks)) T)
 (check ((fst (mods)) :name) "init")
 (check ((fst (mods)) :type) :program)
-(check ((find (fn {m} {== (m :name) "hylang"}) (mods)) :banks) 6)
+(check ((find (fn {m} {== (m :name) "hylang"}) (mods)) :banks) 7)
 (check ((find (fn {m} {== (m :name) "hysnap"}) (mods)) :type) :library)
 (check ((find (fn {m} {== (m :name) "cons"}) (mods)) :type) :driver)
 (check (errstr :noent) "not found")

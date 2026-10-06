@@ -88,7 +88,11 @@ K_HKEY          = 32            ; [cf cr ee]: a hash call's key evaluated (cf: t
 K_HASH          = 33            ; [ee hash items entry state first last]: a hash's entry evaluated, or its value
 K_NOTE          = 34            ; [ex ee note]: on-note's function given a note (ex the call it came before)
 K_HOLD          = 35            ; []: hold's body evaluated (an error too: PREEMPT_ON)
-K_KINDS         = 36
+K_VM            = 36            ; [resume]: a value for the bytecode machine (an error too: vm.inc's vm_resume), its
+                                ;   code's next op (resume, as a function's code is: vm.inc), its frame below this one
+K_VMNOTE        = 37            ; [cf cn note]: on-note's function given a note, then cf applied to the cn values below
+                                ;   (an error: they're dropped), a call the bytecode machine makes (ev_vmnote)
+K_KINDS         = 38
 
 .macro PUSHK k
             lda         #<FIX(k)
@@ -171,6 +175,10 @@ ev_syms:
 
 ; ex evaluated in ee.  IN: ex, ee.  OUT: ex = its value (an error, too).  The machine runs till then
 ev_run:
+            lda         vm_full                             ; (The bytecode machine's room filled: its code made again)
+            beq         :+
+            FARN        7, vm_reset
+:
             tsx
             stx         ev_s
             stz         depth
@@ -192,6 +200,11 @@ ev_nomem:
             txs
             MOVW        ex, nomem_err
 ev_abort:
+            lda         vm_on                               ; (The bytecode machine's frame on top: its way, vm.inc's)
+            beq         :+
+            LDAX        vm_abort
+            jmp         vm_go7
+:
             lda         ev_inargs
             beq         :+
             stz         ev_inargs
@@ -206,6 +219,7 @@ ev_toodeep:
             jsr         hold_release
             jsr         stk_init
             stz         ev_inargs
+            stz         vm_on
             jsr         cap_reset
             LDAX        s_full
             jsr         err_text
@@ -1567,12 +1581,43 @@ ev_fapply:
             sbc         cn
             tax
             lda         fa_flags
+            and         #<~FN_NOVM
             ldy         #3
             jsr         ex_set
             stz         ev_inargs
             jsr         drop_args
             jmp         ev_return
 @bind:
+            lda         fa_flags                            ; (Its body compiled: the bytecode machine runs it, vm.inc's;
+            and         #FN_EXTRAS | FN_NOVM                ;   else it's compiled at its second call)
+            bne         @eval
+            lda         cn + 1
+            bne         @eval
+            lda         cn
+            cmp         fa_k
+            bne         @eval
+            lda         cf
+            ldx         cf + 1
+            jsr         deref
+            ldy         #8
+            lda         (hp),y
+            iny
+            ora         (hp),y
+            bne         @vm
+            iny
+            lda         (hp),y
+            bne         @compile
+            lda         #<FIX(1)
+            sta         (hp),y
+            bra         @eval
+@compile:
+            FARN        7, vm_compile
+            bcs         @eval
+@vm:
+            jsr         frame_check
+            LDAX        vm_enter
+            jmp         vm_go7
+@eval:
             lda         fa_flags                            ; (Its scope: its formals, and, if it takes them, its
             and         #FN_EXTRAS                          ;   extras and &_)
             beq         @formals
@@ -2133,6 +2178,60 @@ ev_err_end_args:
 ; A note for on-note's function (intr's bit 6): the lowest taken, the function called with it (an atom, or its
 ; number), then the call ex in ee (k_note)
 ev_note:
+            jsr         note_take
+            bcs         @call
+            lda         nt_f
+            ora         nt_f + 1
+            bne         :+
+@call:
+            jmp         ev_call                             ; (None, or no function now: the note dropped)
+:
+            jsr         frame_check
+            PUSHV       ex
+            PUSHV       ee
+            lda         nt_n
+            ldx         #0
+            jsr         fix_ax
+            jsr         push
+            PUSHK       K_NOTE
+note_call:
+            jsr         note_value
+            jsr         push
+            MOVW        cf, nt_f
+            lda         #1
+            sta         cn
+            stz         cn + 1
+            sta         ev_inargs
+            jmp         ev_apply
+
+; The same before a call the bytecode machine makes through the evaluator (vm.inc's): cf applied to the cn values on
+; top of the stack (ev_inargs set), after on-note's function is given the note (k_vmnote)
+ev_vmnote:
+            jsr         note_take
+            bcs         @apply
+            lda         nt_f
+            ora         nt_f + 1
+            bne         :+
+@apply:
+            jmp         ev_apply
+:
+            jsr         frame_check
+            stz         ev_inargs                           ; (Its arguments under its frame now)
+            PUSHV       cf
+            lda         cn
+            ldx         #0
+            jsr         fix_ax
+            jsr         push
+            lda         nt_n
+            ldx         #0
+            jsr         fix_ax
+            jsr         push
+            PUSHK       K_VMNOTE
+            bra         note_call
+
+; The lowest note pending for on-note's function taken: its bit cleared (and intr's bit 6, if it's the last).  OUT:
+; C = 0, nt_n = it; C = 1 if there's none
+note_take:
             php
             sei
             ldx         #0
@@ -2145,7 +2244,8 @@ ev_note:
             lda         #$40                                ; (None: its bit cleared)
             trb         intr
             plp
-            jmp         ev_call
+            sec
+            rts
 @found:
             ldy         #0                                  ; (Its lowest bit, cleared)
 :
@@ -2175,20 +2275,12 @@ ev_note:
             trb         intr
 :
             plp
-            lda         nt_f
-            ora         nt_f + 1
-            bne         :+
-            jmp         ev_call                             ; (No function now: the note dropped)
-:
-            jsr         frame_check
-            PUSHV       ex
-            PUSHV       ee
+            clc
+            rts
+
+; OUT: .A, .X = note nt_n's value: an atom, or its number.  It may collect (ev_nomem)
+note_value:
             lda         nt_n
-            ldx         #0
-            jsr         fix_ax
-            jsr         push
-            PUSHK       K_NOTE
-            lda         nt_n                                ; (The note's value: an atom, or its number)
             cmp         #NOTE_BRK + 1
             bcs         @number
             asl
@@ -2213,18 +2305,10 @@ ev_note:
 :
             lda         hv
             ldx         hv + 1
-            bra         @give
+            rts
 @number:
             ldx         #0
-            jsr         fix_ax
-@give:
-            jsr         push
-            MOVW        cf, nt_f
-            lda         #1
-            sta         cn
-            stz         cn + 1
-            sta         ev_inargs
-            jmp         ev_apply
+            jmp         fix_ax
 
 ; on-note's function's value (ex): NIL, the note's default; else the call it came before (ex in ee) made
 k_note:
@@ -2241,11 +2325,11 @@ k_note:
 @default:
             lda         nt_n                                ; (Ctrl-C's: the error :intr, at once)
             cmp         #NOTE_INTERRUPT
-            bne         @end
+            bne         note_exit
             lda         #$80
             tsb         intr
             jmp         ev_call
-@end:
+note_exit:
             ldx         nt_n                                ; (Another's: the end, as the system's default: 128 +
             cpx         #NOTE_BRK + 1                       ;   its Unix number, its name)
             bcc         :+
@@ -2285,6 +2369,42 @@ k_note:
             pla
             jmp         EXITS
 
+; A value for the bytecode machine (vm.inc's): it goes on
+k_vm:
+            LDAX        vm_resume
+            jmp         vm_go7
+
+; on-note's function's value (ex), for a call the bytecode machine makes: NIL, the note's default; else the call
+; (cf applied to the cn values on top).  An error: the values dropped, it given to the frame on top
+k_vmnote:
+            jsr         pop
+            jsr         unfix
+            sta         nt_n
+            jsr         pop
+            jsr         unfix
+            sta         cn
+            stx         cn + 1
+            POPV        cf
+            lda         #1
+            sta         ev_inargs
+            jsr         is_err
+            bcc         :+
+            stz         ev_inargs
+            jsr         discard_args
+            jmp         ev_return
+:
+            jsr         is_nil
+            bcc         @apply
+            lda         nt_n                                ; (Ctrl-C's: the error :intr; another's, the end)
+            cmp         #NOTE_INTERRUPT
+            beq         @lb701
+            jmp         note_exit
+@lb701:
+            lda         #$80
+            tsb         intr
+@apply:
+            jmp         ev_apply
+
 ; hold's PREEMPT_OFFs undone (the machine's stack given up: its frames are gone)
 hold_release:
             lda         hold_n
@@ -2297,11 +2417,20 @@ hold_release:
 
 ; Ctrl-C: the error interrupted (:intr), given to the frame on top
 ev_intr:
-            LDAX        s_intr
-            jsr         err_text
+            jsr         intr_err
             bcc         :+
             jmp         ev_nomem
 :
+            jmp         ev_return
+
+; The error interrupted (:intr): ex, made once (Ctrl-C's flag cleared: it stops what it reaches as any error does,
+; so try's handler runs).  OUT: C = 1 if there's no room (the bytecode machine's too)
+intr_err:
+            lda         #$80
+            trb         intr
+            LDAX        s_intr
+            jsr         err_text
+            bcs         @rts
             lda         ex                                  ; (Its code)
             ldx         ex + 1
             jsr         deref
@@ -2311,7 +2440,9 @@ ev_intr:
             iny
             lda         atom_intr + 1
             sta         (hp),y
-            jmp         ev_return
+            clc
+@rts:
+            rts
 
 ; Built-in bi_n given bi_count arguments, more than it takes: "'len' takes 1 argument, not 2"
 ev_toomany:
@@ -2385,8 +2516,13 @@ frame_add:
             jsr         deref                               ; (The symbol: bound in a frame)
             ldy         #6
             lda         (hp),y
+            lsr
+            bcs         :+
+            lda         (hp),y
             ora         #SF_LOCAL
             sta         (hp),y
+            jsr         vm_rebind                           ; (Its first: a built-in's name, the machine's code again)
+:
             MOVW        lk_c, ee
 @cell:
             lda         lk_c
@@ -2489,7 +2625,9 @@ find_bound:
 @frame:
             lda         lk_f
             ora         lk_f + 1
-            beq         @none
+            bne         @lb911
+            jmp         @none
+@lb911:
             MOVW        lk_c, lk_f
 @cell:
             ldx         lk_c + 1                            ; (The frame's cell: deref's, here)
@@ -2516,7 +2654,19 @@ find_bound:
             lda         (hp),y
             cmp         ex + 1
             bne         @skip1
-            iny                                             ; (Found: its value at .Y)
+            iny                                             ; (Found: its value at .Y; but a hole, UNBOUND, isn't
+            lda         (hp),y                              ;   bound: the bytecode machine's local not set yet)
+            cmp         #<UNBOUND
+            bne         @found
+            iny
+            lda         (hp),y
+            dey
+            cmp         #>UNBOUND
+            bne         @found
+            iny
+            iny
+            bra         @pair
+@found:
             clc
             rts
 @skip:
@@ -2666,11 +2816,11 @@ s_nomem_n = * - s_nomem
 k_tab:      .word       k_top, k_head, k_arg, k_if, k_do, k_and, k_or, k_eval, k_exit, k_defn, k_defv, k_letb
             .word       k_letx, k_try, k_tryh, k_wtest, k_wbody, k_eachf, k_eachb, k_eachl, k_dotf, k_dotb
             .word       k_dotn, k_space, k_output, k_walk, k_load, k_eachf2, k_eachf3, k_dotf2, k_dotf3, k_sort
-            .word       k_hkey, k_hash, k_note, k_hold
+            .word       k_hkey, k_hash, k_note, k_hold, k_vm, k_vmnote
 k_info:     .byte       1, 0,   0, 2,   1, $FF, 0, 2,   0, 2,   0, 2,   0, 2,   0, 1,   0, 0,   0, 3,   1, 4
             .byte       0, 4,   0, 2,   1, 2,   0, 1,   0, 3,   0, 3,   0, 2,   0, 5,   0, 3,   0, 3,   0, 6
             .byte       0, 3,   0, 2,   1, 3,   0, 6,   1, 5,   0, 2,   0, 1,   0, 2,   0, 1,   0, 8
-            .byte       0, 3,   1, 7,   0, 3,   1, 0
+            .byte       0, 3,   1, 7,   0, 3,   1, 0,   1, 1,   1, 3
 
 .code
 

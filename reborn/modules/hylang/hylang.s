@@ -20,7 +20,7 @@
 .include "macros.inc"
 .include "hylang.inc"
 
-            HYX2_PROGRAM "hylang", main, 6
+            HYX2_PROGRAM "hylang", main, 7
 
 HL_DATA4        = 1             ; (The RAM code in DATA4: hylang.cfg)
 
@@ -50,6 +50,7 @@ HL_DATA4        = 1             ; (The RAM code in DATA4: hylang.cfg)
 .include "hydrabi.inc"
 .include "hysys.inc"
 .include "buffers.inc"
+.include "vm.inc"
 
 IBUF_SIZE       = 128           ; stdin read this much at a time
 
@@ -499,7 +500,7 @@ main:
             LDR         r0, notes
             jsr         NOTIFY
             stz         lib_text                            ; (The heap: a snapshot's, with its library; or made)
-            lda         hyx2_bank6                          ; (The snapshot: where rom.txt puts it, the bank after
+            lda         hyx2_bank7                          ; (The snapshot: where rom.txt puts it, the bank after
             inc         a                                   ;   hylang's last; else the module directory's hysnap)
             jsr         snap_restore
             bcc         @heap
@@ -512,11 +513,15 @@ main:
             jsr         snap_restore
             bcc         @heap
             cmp         #0
-            bne         @noroom
+            beq         @lb703
+            jmp         @noroom
+@lb703:
 @made:
             jsr         pstate_zero
             jsr         heap_init
-            bcs         @noroom
+            bcc         @lb702
+            jmp         @noroom
+@lb702:
             inc         lib_text
 @heap:
             lda         #1                                  ; (The capture bank, the machine)
@@ -528,6 +533,7 @@ main:
             lda         #>hl_roots
             sta         gc_hook + 1
             jsr         ev_init
+            FARN        7, vm_init                          ; (The bytecode machine: no code yet)
             lda         lib_text                            ; (No snapshot: the symbols, the built-ins, the library)
             beq         @init
             jsr         ev_syms

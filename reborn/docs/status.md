@@ -488,6 +488,56 @@ HyForth's time in all (64.7 s to 1.5 s): 120 times in a counting loop and in cal
 a sort and gcds.  The `bench` test runs both at the small sizes and checks their results are the same.  A buffer's
 index that's a fixnum (the usual) is taken at once now, not through the number code.
 
+**A bytecode machine for hylang, step 1.**  The evaluator's costs were its shape (a scope made on the heap for each
+call, each name looked up, each step through the machine's frames), so tuning it could give little; danlang's
+`feature/speed` work, read for ideas, had one that carries over: compile code once.  So hylang compiles functions
+now: `vm.inc`, in a seventh bank, is a compiler and a small machine (docs/hylang.md, "The design", has it).  A
+function `fun` defines is compiled as it's defined (so a library's code runs the same from its first call: `snd.hl`'s
+`tune` kept time only so), any other at its second call; its code goes in an arena of RAM banks, its place in its
+cell (a function's cell is 16 bytes now).  A frame is its arguments where they were pushed, so a call makes nothing
+on the heap; `if`, `do`, `and`, `or`, constants, arguments, globals, the fixnum operators and the built-ins' calls are
+compiled, and the rest is the evaluator's, through a frame (`K_VM`) that brings its value back; a scope is made
+only when something wants one.  A name's built-in value is counted on only while no frame has bound it, and binding
+it then drops all the code compiled (so a library's own locals named `ns` or `note` cost nothing).  The machine's
+pointers are two zero-page words (the reader's `rn` and the printer's `pn` moved out for them).  At 3.58 MHz hylang
+is 16.6 times HyForth's time now (24.7 s to 1.48 s, from 64.7 s): `fib` 10.5 times, `gcd` 7.2, the sieve 18, the
+sort 20, the counting loop 31 and calls 34.  `hyspeed`: a call of a function of two arguments 2,033 cycles (3,686), a
+tail loop's step 1,729 (6,059), a parameter 11 (279), `map`'s item 3,193 (3,652; an untimed `map` first, as for the
+call, as the machine makes no frames and its collections fall elsewhere).  The suite's 1,334 checks pass, and all
+67 tests.
+
+**The bytecode machine, step 1b: its own costs.**  A push done in the machine (`VPUSH`, not `push`'s, which keeps
+the registers); an argument or a constant pushed in one op (`LPUSH`, `CPUSH`: the compiler joins a `LOCAL` or
+`CONST` and the `PUSH` after it, unless a label is between); a global's function read and checked in one op
+(`SHEAD`), and a function calling itself by its name (`CSELF`, `TSELF`: checked as it runs, else a call's usual
+way) making its frame at once, no checks of the callee's cell, no code's place decoded; the quick ops with a
+constant worked on `ex` directly; a buffer given an index (`buf_at`) and a built-in partially applied (the
+evaluator's `ev_apply_values`) called at once, where both went through the evaluator with a scope made for them
+(the sieve and the sort did that each step).  hylang is 8.6 times HyForth's time now (12.8 s to 1.48 s): `gcd` 4.8,
+`fib` 7.4, the sieve 8.3, the sort 8.8, the counting loop 17 and calls 23.  `hyspeed`: a call 1,653 cycles, a tail
+loop's step 888, `map`'s item 2,987.  What's left is the machine's shape: an op dispatched and its `ip` moved on,
+some 25 cycles each; a counting loop's step is 13 ops and some 1,200 cycles, HyForth's 68.  Next: the loops
+(`while`, `dotimes`, `each`) and a function's own locals (`=(`, `let`) compiled.
+
+**The bytecode machine, step 2: locals, `set`, `set!`, `def`, `while`.**  The names a body binds with `set` (`=(x v)`,
+`(set {a b} 1 2)`) are its locals: words after the frame's record (`LOCALS` pushes them as the code starts), each a
+hole (UNBOUND) till it's set, so a read before then is the name's past the frame (`LOCALH`), as the evaluator has
+it; a set is `SETL`, the value compiled (an error too: it's bound, as `def`'s is).  `set!` sets a formal, a local
+(a hole: past the frame, `SETBL`), or what the scopes or the globals have (`SETBG`, the evaluator's `set_bang`);
+`def` is `DEFG`.  `while` is a loop in the code (its value a word on the stack; `LOOP` takes Ctrl-C), its test and
+body expressions Q-expressions run as code too.  When a scope is made for the frame, its locals are bound in it
+after the formals, holes and all, at the pairs their places say, so `eval`, a closure, or a `try`'s handler sees and
+changes the same; the evaluator's `find_bound` passes a hole by (the scope above it has the name).  `TSELF` cuts the
+stack back to the record's end (the locals are made again).  A loop of `while` and two locals: 1,324 cycles a step
+compiled, 13,575 evaluated.  `let`, `each` and `dotimes` (a scope for each step), `try` and the rest are the
+evaluator's still.
+
+**danlang's `on-note`** (`feature/speed`'s `bfb040c`): danlang gives Ctrl-C's note to an `on-note` function now, as
+hylang does, and its `:intr` error is made once.  hylang's was made at each call after Ctrl-C till the prompt (a
+`try`'s handler stopped too): the flag is cleared as the error's made now (`intr_err`, the evaluator's and the
+bytecode machine's).  `on-note` takes a function (a built-in, a function, one partially applied) or NIL, as
+danlang's; anything else is an error.  `system.dl`'s 3 checks of it: the suite is 1,337.
+
 | Step | | Notes |
 |---|---|---|
 | 7.0 The language's specification | Draft (three decisions are the user's) | `docs/hylang.md`: hylang 1 is danlang (`C:\source\danlang`, its `master`), readied for the port in C# first (lexical scope, tail calls, fexprs, `try`, loops, the missing basics, its number bugs fixed, and a system library a PC has too: files, programs and the shell, the environment, the clock, bits and bytes, the system's errors as codes), with its regression suite (965 checks) run unchanged on both; where the two may differ (8-bit strings, the call depth, `/lib/hylang`, Ctrl-C an error); and what makes it the Hydra's, in four layers: the system library, the Hydra's built-ins (notes, namespaces, tasks, memory and banks, keys), device libraries in hylang over the devices' files (console, GPIO, I2C, SPI, sound, disks, `/proc`, the clock's chip, `/pc`), and a `sys-` function for every call.  To decide: the extension (`.hl`), `$`, danlang's license in the ROM |

@@ -11,6 +11,8 @@ et:         .res        2                                   ;   all, as written)
 eu:         .res        2
 cn:         .res        2                                   ; A call's arguments evaluated so far (on the stack) ...
 argp:       .res        2                                   ;   and, as a built-in's called, the first's address
+vm_ip:      .res        2                                   ; The bytecode machine's (vm.inc's): its next op ...
+vm_s:       .res        2                                   ;   and the frame it runs in (its function's word)
 
 q_pa:       .res        2                                   ; (eqcmp.inc's q_strcmp: the strings' bytes)
 q_pb:       .res        2
