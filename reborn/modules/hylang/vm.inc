@@ -601,6 +601,36 @@ vm_rbyte:
             lda         (ht)
             rts
 
+; RET's in native code, ex an error, vm_ip its caller's return pad (not come to): the caller's frame (vm_callsite's),
+; and the error returned from it too if its call's r says; else on, to the pad (its frame again: the same)
+vm_reterr:
+            jsr         vm_callsite
+            bcc         :+
+            jmp         vm_ret
+:
+            jmp         vm_nextf
+
+; A frame's record pushed near a page's end (native code's CALL and CSELF; VPUSH's way, which may spill and move the
+; stack down): .A, .X its return, no scope; vm_s its function's word, .Y (M) bytes below the record
+vm_rec:
+            sty         vm_k
+            VPUSH
+            lda         #0
+            tax
+            VPUSH
+            lda         vm_k
+            clc
+            adc         #4
+            sta         vm_k
+            lda         sp
+            sec
+            sbc         vm_k
+            sta         vm_s
+            lda         sp + 1
+            sbc         #0
+            sta         vm_s + 1
+            rts
+
 ; sp's page crossed by VPUSH: the next (the stack's oldest block spilled if it's full)
 vm_page:
             inc         sp + 1
@@ -2086,7 +2116,7 @@ op_call:
             jmp         vm_next
 
 ; CALL, its cache missed (native code's way in, its template having looked): a buffer given a fixnum index in it,
-; its byte here (vm_bget's; Ctrl-C or a note, CALL's way); else the call's way (vm_callg)
+; its byte here (vm_bget's; Ctrl-C or a note, CALL's way), and on past its return pad; else the call's way (vm_callg)
 op_callm:
             ldy         #1
             lda         (vm_ip),y
@@ -2138,7 +2168,7 @@ op_callm:
             beq         :+
             jsr         unspill
 :
-            lda         #14
+            lda         #14 + VXT_PADL                      ; (Past its return pad: the frame's the same)
             jmp         vm_adv
 @no:
             lda         vm_bank

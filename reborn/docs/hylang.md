@@ -278,9 +278,14 @@ The plan has it whole; in short:
   quick ops of two values, blocks' and loops' ops, `SHEAD` and `CALL` while their caches hold, `CSELF`, `TSELF`,
   `RET` to a caller in the same bank, and `HEAD` of one argument (a buffer, or a function partially applied,
   pushed).  A `CALL` whose cache missed goes on past its look at it (`op_callm`), where a buffer given a fixnum
-  index has its byte at once; `buffer-put` of three is the first thing `BCALL`'s code looks for.  The places in the data that are code (jumps' targets, blocks' parents
-  and table, a function's start, calls' returns) are the native code's, so every op's code in the machine runs
-  as it did.  Native code runs in the RAM window ($8000-$9FFF) a heap cell is read through, so whatever reads
+  index has its byte at once; `buffer-put` of three is the first thing `BCALL`'s code looks for.  `CALL` and
+  `CSELF` have a return pad past their data, where their returns go: the caller's frame found again from the
+  call's h and r (`vm_s`, `vm_rb`, `vm_mat`), so `RET` in line only finds the caller's code, drops the frame and
+  looks for an error (the caller's r, the byte before the pad, says if it's returned too: `vm_reterr`).  The pad
+  gives the frame the machine found already, if it did, so the machine's `RET` and the evaluator's resume
+  (`HEAD`'s and `SHEAD`'s t are the pad, `VXK_Q`) go through it as well.  The places in the data that are code
+  (jumps' targets, blocks' parents and table, a function's start, calls' returns) are the native code's, so
+  every op's code in the machine runs as it did.  Native code runs in the RAM window ($8000-$9FFF) a heap cell is read through, so whatever reads
   one is the machine's, in ROM, and sets the code's bank again before going on.
 * **Built-ins**: a table of all danlang's (its arity, flags, the bank its code is in), so partial application, too
   many arguments and taking errors are the dispatcher's (till phase 7 made the last, those not made yet answered

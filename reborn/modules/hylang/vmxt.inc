@@ -15,6 +15,8 @@ vxt_const_p1 = * - 1
             sta         ex + 1
 vxt_const_e:
 
+.assert vxt_const_e - vxt_const_c + VX_STUB + 48 < 256, error, "vxt_const: an op's code is at most 255 bytes"
+
 vxt_push:   .byte       vxt_push_e - vxt_push_c, 0, 0
 vxt_push_c:
             lda         ex
@@ -30,6 +32,8 @@ vxt_push_c:
             jsr         vm_page
 :
 vxt_push_e:
+
+.assert vxt_push_e - vxt_push_c + VX_STUB + 48 < 256, error, "vxt_push: an op's code is at most 255 bytes"
 
 vxt_cpush:  .byte       vxt_cpush_e - vxt_cpush_c, 0, 2
             .byte       vxt_cpush_p0 - vxt_cpush_c, TPK_B, 1
@@ -51,6 +55,8 @@ vxt_cpush_p1 = * - 1
 :
 vxt_cpush_e:
 
+.assert vxt_cpush_e - vxt_cpush_c + VX_STUB + 48 < 256, error, "vxt_cpush: an op's code is at most 255 bytes"
+
 vxt_local:  .byte       vxt_local_e - vxt_local_c, TF_STUB | TF_NOR, 2
             .byte       vxt_local_p0 - vxt_local_c, TPK_B, 1
             .byte       vxt_local_p1 - vxt_local_c, TPK_N, 0
@@ -68,6 +74,8 @@ vxt_local_p0 = * - 1
 vxt_local_p1 = * - 2
 vxt_local_s:
 vxt_local_e:
+
+.assert vxt_local_e - vxt_local_c + VX_STUB + 48 < 256, error, "vxt_local: an op's code is at most 255 bytes"
 
 vxt_lpush:  .byte       vxt_lpush_e - vxt_lpush_c, TF_STUB | TF_NOR, 2
             .byte       vxt_lpush_p0 - vxt_lpush_c, TPK_B, 1
@@ -95,6 +103,8 @@ vxt_lpush_p1 = * - 2
 vxt_lpush_s:
 vxt_lpush_e:
 
+.assert vxt_lpush_e - vxt_lpush_c + VX_STUB + 48 < 256, error, "vxt_lpush: an op's code is at most 255 bytes"
+
 vxt_setl:   .byte       vxt_setl_e - vxt_setl_c, TF_STUB, 2
             .byte       vxt_setl_p0 - vxt_setl_c, TPK_B, 1
             .byte       vxt_setl_p1 - vxt_setl_c, TPK_N, 0
@@ -115,12 +125,16 @@ vxt_setl_p1 = * - 2
 vxt_setl_s:
 vxt_setl_e:
 
+.assert vxt_setl_e - vxt_setl_c + VX_STUB + 48 < 256, error, "vxt_setl: an op's code is at most 255 bytes"
+
 vxt_jmp:    .byte       vxt_jmp_e - vxt_jmp_c, 0, 1
             .byte       vxt_jmp_p0 - vxt_jmp_c, TPK_T, 1
 vxt_jmp_c:
             jmp         $0000
 vxt_jmp_p0 = * - 2
 vxt_jmp_e:
+
+.assert vxt_jmp_e - vxt_jmp_c + VX_STUB + 48 < 256, error, "vxt_jmp: an op's code is at most 255 bytes"
 
 vxt_jf:     .byte       vxt_jf_e - vxt_jf_c, 0, 1
             .byte       vxt_jf_p0 - vxt_jf_c, TPK_T, 1
@@ -137,6 +151,8 @@ vxt_jf_p0 = * - 2
 vxt_jf_no:
 vxt_jf_e:
 
+.assert vxt_jf_e - vxt_jf_c + VX_STUB + 48 < 256, error, "vxt_jf: an op's code is at most 255 bytes"
+
 vxt_jt:     .byte       vxt_jt_e - vxt_jt_c, 0, 1
             .byte       vxt_jt_p0 - vxt_jt_c, TPK_T, 1
 vxt_jt_c:
@@ -152,6 +168,8 @@ vxt_jt_p0 = * - 2
 vxt_jt_no:
 vxt_jt_e:
 
+.assert vxt_jt_e - vxt_jt_c + VX_STUB + 48 < 256, error, "vxt_jt: an op's code is at most 255 bytes"
+
 vxt_loop:   .byte       vxt_loop_e - vxt_loop_c, TF_STUB, 1
             .byte       vxt_loop_p0 - vxt_loop_c, TPK_T, 1
 vxt_loop_c:
@@ -161,6 +179,8 @@ vxt_loop_c:
 vxt_loop_p0 = * - 2
 vxt_loop_s:
 vxt_loop_e:
+
+.assert vxt_loop_e - vxt_loop_c + VX_STUB + 48 < 256, error, "vxt_loop: an op's code is at most 255 bytes"
 
 vxt_doti:   .byte       vxt_doti_e - vxt_doti_c, 0, 1
             .byte       vxt_doti_p0 - vxt_doti_c, TPK_T, 1
@@ -190,6 +210,8 @@ vxt_doti_p0 = * - 2
 vxt_doti_in:
 vxt_doti_e:
 
+.assert vxt_doti_e - vxt_doti_c + VX_STUB + 48 < 256, error, "vxt_doti: an op's code is at most 255 bytes"
+
 vxt_dotinc: .byte       vxt_dotinc_e - vxt_dotinc_c, 0, 0
 vxt_dotinc_c:
             lda         sp
@@ -209,6 +231,8 @@ vxt_dotinc_c:
             sta         (ht),y
 vxt_dotinc_e:
 
+.assert vxt_dotinc_e - vxt_dotinc_c + VX_STUB + 48 < 256, error, "vxt_dotinc: an op's code is at most 255 bytes"
+
 vxt_stt:    .byte       vxt_stt_e - vxt_stt_c, 0, 0
 vxt_stt_c:
             lda         sp
@@ -225,12 +249,16 @@ vxt_stt_c:
             sta         (ht),y
 vxt_stt_e:
 
+.assert vxt_stt_e - vxt_stt_c + VX_STUB + 48 < 256, error, "vxt_stt: an op's code is at most 255 bytes"
+
 vxt_popx:   .byte       vxt_popx_e - vxt_popx_c, 0, 0
 vxt_popx_c:
             jsr         pop
             sta         ex
             stx         ex + 1
 vxt_popx_e:
+
+.assert vxt_popx_e - vxt_popx_c + VX_STUB + 48 < 256, error, "vxt_popx: an op's code is at most 255 bytes"
 
 vxt_drop:   .byte       vxt_drop_e - vxt_drop_c, 0, 1
             .byte       vxt_drop_p0 - vxt_drop_c, TPK_B, 1
@@ -241,6 +269,8 @@ vxt_drop_p0 = * - 1
             stz         ex
             stz         ex + 1
 vxt_drop_e:
+
+.assert vxt_drop_e - vxt_drop_c + VX_STUB + 48 < 256, error, "vxt_drop: an op's code is at most 255 bytes"
 
 vxt_jlq_zerop:.byte       vxt_jlq_zerop_e - vxt_jlq_zerop_c, TF_STUB, 3
             .byte       vxt_jlq_zerop_p0 - vxt_jlq_zerop_c, TPK_B, 2
@@ -277,6 +307,8 @@ vxt_jlq_zerop_p2 = * - 2
 vxt_jlq_zerop_s:
 vxt_jlq_zerop_e:
 
+.assert vxt_jlq_zerop_e - vxt_jlq_zerop_c + VX_STUB + 48 < 256, error, "vxt_jlq_zerop: an op's code is at most 255 bytes"
+
 vxt_jq_zerop:.byte       vxt_jq_zerop_e - vxt_jq_zerop_c, TF_STUB, 2
             .byte       vxt_jq_zerop_p0 - vxt_jq_zerop_c, TPK_N, 0
             .byte       vxt_jq_zerop_p1 - vxt_jq_zerop_c, TPK_T, 4
@@ -305,6 +337,8 @@ vxt_jq_zerop_f:
 vxt_jq_zerop_p1 = * - 2
 vxt_jq_zerop_s:
 vxt_jq_zerop_e:
+
+.assert vxt_jq_zerop_e - vxt_jq_zerop_c + VX_STUB + 48 < 256, error, "vxt_jq_zerop: an op's code is at most 255 bytes"
 
 vxt_jlq_onep:.byte       vxt_jlq_onep_e - vxt_jlq_onep_c, TF_STUB, 3
             .byte       vxt_jlq_onep_p0 - vxt_jlq_onep_c, TPK_B, 2
@@ -341,6 +375,8 @@ vxt_jlq_onep_p2 = * - 2
 vxt_jlq_onep_s:
 vxt_jlq_onep_e:
 
+.assert vxt_jlq_onep_e - vxt_jlq_onep_c + VX_STUB + 48 < 256, error, "vxt_jlq_onep: an op's code is at most 255 bytes"
+
 vxt_jq_onep:.byte       vxt_jq_onep_e - vxt_jq_onep_c, TF_STUB, 2
             .byte       vxt_jq_onep_p0 - vxt_jq_onep_c, TPK_N, 0
             .byte       vxt_jq_onep_p1 - vxt_jq_onep_c, TPK_T, 4
@@ -369,6 +405,8 @@ vxt_jq_onep_f:
 vxt_jq_onep_p1 = * - 2
 vxt_jq_onep_s:
 vxt_jq_onep_e:
+
+.assert vxt_jq_onep_e - vxt_jq_onep_c + VX_STUB + 48 < 256, error, "vxt_jq_onep: an op's code is at most 255 bytes"
 
 vxt_jlq_ltc:.byte       vxt_jlq_ltc_e - vxt_jlq_ltc_c, TF_STUB, 5
             .byte       vxt_jlq_ltc_p0 - vxt_jlq_ltc_c, TPK_B, 2
@@ -411,6 +449,8 @@ vxt_jlq_ltc_p4 = * - 2
 vxt_jlq_ltc_s:
 vxt_jlq_ltc_e:
 
+.assert vxt_jlq_ltc_e - vxt_jlq_ltc_c + VX_STUB + 48 < 256, error, "vxt_jlq_ltc: an op's code is at most 255 bytes"
+
 vxt_jq_ltc: .byte       vxt_jq_ltc_e - vxt_jq_ltc_c, TF_STUB, 4
             .byte       vxt_jq_ltc_p0 - vxt_jq_ltc_c, TPK_B, 2
             .byte       vxt_jq_ltc_p1 - vxt_jq_ltc_c, TPK_B, 3
@@ -445,6 +485,8 @@ vxt_jq_ltc_f:
 vxt_jq_ltc_p3 = * - 2
 vxt_jq_ltc_s:
 vxt_jq_ltc_e:
+
+.assert vxt_jq_ltc_e - vxt_jq_ltc_c + VX_STUB + 48 < 256, error, "vxt_jq_ltc: an op's code is at most 255 bytes"
 
 vxt_jlq_gtc:.byte       vxt_jlq_gtc_e - vxt_jlq_gtc_c, TF_STUB, 5
             .byte       vxt_jlq_gtc_p0 - vxt_jlq_gtc_c, TPK_B, 2
@@ -487,6 +529,8 @@ vxt_jlq_gtc_p4 = * - 2
 vxt_jlq_gtc_s:
 vxt_jlq_gtc_e:
 
+.assert vxt_jlq_gtc_e - vxt_jlq_gtc_c + VX_STUB + 48 < 256, error, "vxt_jlq_gtc: an op's code is at most 255 bytes"
+
 vxt_jq_gtc: .byte       vxt_jq_gtc_e - vxt_jq_gtc_c, TF_STUB, 4
             .byte       vxt_jq_gtc_p0 - vxt_jq_gtc_c, TPK_B, 2
             .byte       vxt_jq_gtc_p1 - vxt_jq_gtc_c, TPK_B, 3
@@ -521,6 +565,8 @@ vxt_jq_gtc_f:
 vxt_jq_gtc_p3 = * - 2
 vxt_jq_gtc_s:
 vxt_jq_gtc_e:
+
+.assert vxt_jq_gtc_e - vxt_jq_gtc_c + VX_STUB + 48 < 256, error, "vxt_jq_gtc: an op's code is at most 255 bytes"
 
 vxt_jlq_lec:.byte       vxt_jlq_lec_e - vxt_jlq_lec_c, TF_STUB, 5
             .byte       vxt_jlq_lec_p0 - vxt_jlq_lec_c, TPK_B, 2
@@ -563,6 +609,8 @@ vxt_jlq_lec_p4 = * - 2
 vxt_jlq_lec_s:
 vxt_jlq_lec_e:
 
+.assert vxt_jlq_lec_e - vxt_jlq_lec_c + VX_STUB + 48 < 256, error, "vxt_jlq_lec: an op's code is at most 255 bytes"
+
 vxt_jq_lec: .byte       vxt_jq_lec_e - vxt_jq_lec_c, TF_STUB, 4
             .byte       vxt_jq_lec_p0 - vxt_jq_lec_c, TPK_B, 2
             .byte       vxt_jq_lec_p1 - vxt_jq_lec_c, TPK_B, 3
@@ -597,6 +645,8 @@ vxt_jq_lec_f:
 vxt_jq_lec_p3 = * - 2
 vxt_jq_lec_s:
 vxt_jq_lec_e:
+
+.assert vxt_jq_lec_e - vxt_jq_lec_c + VX_STUB + 48 < 256, error, "vxt_jq_lec: an op's code is at most 255 bytes"
 
 vxt_jlq_gec:.byte       vxt_jlq_gec_e - vxt_jlq_gec_c, TF_STUB, 5
             .byte       vxt_jlq_gec_p0 - vxt_jlq_gec_c, TPK_B, 2
@@ -639,6 +689,8 @@ vxt_jlq_gec_p4 = * - 2
 vxt_jlq_gec_s:
 vxt_jlq_gec_e:
 
+.assert vxt_jlq_gec_e - vxt_jlq_gec_c + VX_STUB + 48 < 256, error, "vxt_jlq_gec: an op's code is at most 255 bytes"
+
 vxt_jq_gec: .byte       vxt_jq_gec_e - vxt_jq_gec_c, TF_STUB, 4
             .byte       vxt_jq_gec_p0 - vxt_jq_gec_c, TPK_B, 2
             .byte       vxt_jq_gec_p1 - vxt_jq_gec_c, TPK_B, 3
@@ -673,6 +725,8 @@ vxt_jq_gec_f:
 vxt_jq_gec_p3 = * - 2
 vxt_jq_gec_s:
 vxt_jq_gec_e:
+
+.assert vxt_jq_gec_e - vxt_jq_gec_c + VX_STUB + 48 < 256, error, "vxt_jq_gec: an op's code is at most 255 bytes"
 
 vxt_jlq_eqc:.byte       vxt_jlq_eqc_e - vxt_jlq_eqc_c, TF_STUB, 5
             .byte       vxt_jlq_eqc_p0 - vxt_jlq_eqc_c, TPK_B, 2
@@ -713,6 +767,8 @@ vxt_jlq_eqc_p4 = * - 2
 vxt_jlq_eqc_s:
 vxt_jlq_eqc_e:
 
+.assert vxt_jlq_eqc_e - vxt_jlq_eqc_c + VX_STUB + 48 < 256, error, "vxt_jlq_eqc: an op's code is at most 255 bytes"
+
 vxt_jq_eqc: .byte       vxt_jq_eqc_e - vxt_jq_eqc_c, TF_STUB, 4
             .byte       vxt_jq_eqc_p0 - vxt_jq_eqc_c, TPK_B, 2
             .byte       vxt_jq_eqc_p1 - vxt_jq_eqc_c, TPK_B, 3
@@ -746,6 +802,8 @@ vxt_jq_eqc_p3 = * - 2
 vxt_jq_eqc_s:
 vxt_jq_eqc_e:
 
+.assert vxt_jq_eqc_e - vxt_jq_eqc_c + VX_STUB + 48 < 256, error, "vxt_jq_eqc: an op's code is at most 255 bytes"
+
 vxt_lq_addc:.byte       vxt_lq_addc_e - vxt_lq_addc_c, TF_STUB, 4
             .byte       vxt_lq_addc_p0 - vxt_lq_addc_c, TPK_B, 2
             .byte       vxt_lq_addc_p1 - vxt_lq_addc_c, TPK_U, 3
@@ -777,6 +835,8 @@ vxt_lq_addc_p2 = * - 1
 vxt_lq_addc_p3 = * - 2
 vxt_lq_addc_s:
 vxt_lq_addc_e:
+
+.assert vxt_lq_addc_e - vxt_lq_addc_c + VX_STUB + 48 < 256, error, "vxt_lq_addc: an op's code is at most 255 bytes"
 
 vxt_lqp_addc:.byte       vxt_lqp_addc_e - vxt_lqp_addc_c, TF_STUB, 4
             .byte       vxt_lqp_addc_p0 - vxt_lqp_addc_c, TPK_B, 2
@@ -822,6 +882,8 @@ vxt_lqp_addc_p3 = * - 2
 vxt_lqp_addc_s:
 vxt_lqp_addc_e:
 
+.assert vxt_lqp_addc_e - vxt_lqp_addc_c + VX_STUB + 48 < 256, error, "vxt_lqp_addc: an op's code is at most 255 bytes"
+
 vxt_lq_subc:.byte       vxt_lq_subc_e - vxt_lq_subc_c, TF_STUB, 4
             .byte       vxt_lq_subc_p0 - vxt_lq_subc_c, TPK_B, 2
             .byte       vxt_lq_subc_p1 - vxt_lq_subc_c, TPK_U, 3
@@ -853,6 +915,8 @@ vxt_lq_subc_p2 = * - 1
 vxt_lq_subc_p3 = * - 2
 vxt_lq_subc_s:
 vxt_lq_subc_e:
+
+.assert vxt_lq_subc_e - vxt_lq_subc_c + VX_STUB + 48 < 256, error, "vxt_lq_subc: an op's code is at most 255 bytes"
 
 vxt_lqp_subc:.byte       vxt_lqp_subc_e - vxt_lqp_subc_c, TF_STUB, 4
             .byte       vxt_lqp_subc_p0 - vxt_lqp_subc_c, TPK_B, 2
@@ -898,6 +962,8 @@ vxt_lqp_subc_p3 = * - 2
 vxt_lqp_subc_s:
 vxt_lqp_subc_e:
 
+.assert vxt_lqp_subc_e - vxt_lqp_subc_c + VX_STUB + 48 < 256, error, "vxt_lqp_subc: an op's code is at most 255 bytes"
+
 vxt_lq_inc: .byte       vxt_lq_inc_e - vxt_lq_inc_c, TF_STUB, 2
             .byte       vxt_lq_inc_p0 - vxt_lq_inc_c, TPK_B, 2
             .byte       vxt_lq_inc_p1 - vxt_lq_inc_c, TPK_N, 0
@@ -925,6 +991,8 @@ vxt_lq_inc_p0 = * - 1
 vxt_lq_inc_p1 = * - 2
 vxt_lq_inc_s:
 vxt_lq_inc_e:
+
+.assert vxt_lq_inc_e - vxt_lq_inc_c + VX_STUB + 48 < 256, error, "vxt_lq_inc: an op's code is at most 255 bytes"
 
 vxt_lqp_inc:.byte       vxt_lqp_inc_e - vxt_lqp_inc_c, TF_STUB, 2
             .byte       vxt_lqp_inc_p0 - vxt_lqp_inc_c, TPK_B, 2
@@ -966,6 +1034,8 @@ vxt_lqp_inc_p1 = * - 2
 vxt_lqp_inc_s:
 vxt_lqp_inc_e:
 
+.assert vxt_lqp_inc_e - vxt_lqp_inc_c + VX_STUB + 48 < 256, error, "vxt_lqp_inc: an op's code is at most 255 bytes"
+
 vxt_lq_dec: .byte       vxt_lq_dec_e - vxt_lq_dec_c, TF_STUB, 2
             .byte       vxt_lq_dec_p0 - vxt_lq_dec_c, TPK_B, 2
             .byte       vxt_lq_dec_p1 - vxt_lq_dec_c, TPK_N, 0
@@ -993,6 +1063,8 @@ vxt_lq_dec_p0 = * - 1
 vxt_lq_dec_p1 = * - 2
 vxt_lq_dec_s:
 vxt_lq_dec_e:
+
+.assert vxt_lq_dec_e - vxt_lq_dec_c + VX_STUB + 48 < 256, error, "vxt_lq_dec: an op's code is at most 255 bytes"
 
 vxt_lqp_dec:.byte       vxt_lqp_dec_e - vxt_lqp_dec_c, TF_STUB, 2
             .byte       vxt_lqp_dec_p0 - vxt_lqp_dec_c, TPK_B, 2
@@ -1034,6 +1106,8 @@ vxt_lqp_dec_p1 = * - 2
 vxt_lqp_dec_s:
 vxt_lqp_dec_e:
 
+.assert vxt_lqp_dec_e - vxt_lqp_dec_c + VX_STUB + 48 < 256, error, "vxt_lqp_dec: an op's code is at most 255 bytes"
+
 vxt_ll_add: .byte       vxt_ll_add_e - vxt_ll_add_c, TF_STUB, 3
             .byte       vxt_ll_add_p0 - vxt_ll_add_c, TPK_B, 2
             .byte       vxt_ll_add_p1 - vxt_ll_add_c, TPK_B, 3
@@ -1071,6 +1145,8 @@ vxt_ll_add_p1 = * - 1
 vxt_ll_add_p2 = * - 2
 vxt_ll_add_s:
 vxt_ll_add_e:
+
+.assert vxt_ll_add_e - vxt_ll_add_c + VX_STUB + 48 < 256, error, "vxt_ll_add: an op's code is at most 255 bytes"
 
 vxt_llp_add:.byte       vxt_llp_add_e - vxt_llp_add_c, TF_STUB, 3
             .byte       vxt_llp_add_p0 - vxt_llp_add_c, TPK_B, 2
@@ -1122,6 +1198,8 @@ vxt_llp_add_p2 = * - 2
 vxt_llp_add_s:
 vxt_llp_add_e:
 
+.assert vxt_llp_add_e - vxt_llp_add_c + VX_STUB + 48 < 256, error, "vxt_llp_add: an op's code is at most 255 bytes"
+
 vxt_ll_sub: .byte       vxt_ll_sub_e - vxt_ll_sub_c, TF_STUB, 3
             .byte       vxt_ll_sub_p0 - vxt_ll_sub_c, TPK_B, 2
             .byte       vxt_ll_sub_p1 - vxt_ll_sub_c, TPK_B, 3
@@ -1161,6 +1239,8 @@ vxt_ll_sub_p1 = * - 1
 vxt_ll_sub_p2 = * - 2
 vxt_ll_sub_s:
 vxt_ll_sub_e:
+
+.assert vxt_ll_sub_e - vxt_ll_sub_c + VX_STUB + 48 < 256, error, "vxt_ll_sub: an op's code is at most 255 bytes"
 
 vxt_llp_sub:.byte       vxt_llp_sub_e - vxt_llp_sub_c, TF_STUB, 3
             .byte       vxt_llp_sub_p0 - vxt_llp_sub_c, TPK_B, 2
@@ -1214,6 +1294,8 @@ vxt_llp_sub_p2 = * - 2
 vxt_llp_sub_s:
 vxt_llp_sub_e:
 
+.assert vxt_llp_sub_e - vxt_llp_sub_c + VX_STUB + 48 < 256, error, "vxt_llp_sub: an op's code is at most 255 bytes"
+
 vxt_jll_lt: .byte       vxt_jll_lt_e - vxt_jll_lt_c, TF_STUB, 4
             .byte       vxt_jll_lt_p0 - vxt_jll_lt_c, TPK_B, 2
             .byte       vxt_jll_lt_p1 - vxt_jll_lt_c, TPK_B, 3
@@ -1259,6 +1341,8 @@ vxt_jll_lt_f:
 vxt_jll_lt_p3 = * - 2
 vxt_jll_lt_s:
 vxt_jll_lt_e:
+
+.assert vxt_jll_lt_e - vxt_jll_lt_c + VX_STUB + 48 < 256, error, "vxt_jll_lt: an op's code is at most 255 bytes"
 
 vxt_jll_ge: .byte       vxt_jll_ge_e - vxt_jll_ge_c, TF_STUB, 4
             .byte       vxt_jll_ge_p0 - vxt_jll_ge_c, TPK_B, 2
@@ -1306,6 +1390,8 @@ vxt_jll_ge_p3 = * - 2
 vxt_jll_ge_s:
 vxt_jll_ge_e:
 
+.assert vxt_jll_ge_e - vxt_jll_ge_c + VX_STUB + 48 < 256, error, "vxt_jll_ge: an op's code is at most 255 bytes"
+
 vxt_jll_gt: .byte       vxt_jll_gt_e - vxt_jll_gt_c, TF_STUB, 4
             .byte       vxt_jll_gt_p0 - vxt_jll_gt_c, TPK_B, 2
             .byte       vxt_jll_gt_p1 - vxt_jll_gt_c, TPK_B, 3
@@ -1351,6 +1437,8 @@ vxt_jll_gt_f:
 vxt_jll_gt_p3 = * - 2
 vxt_jll_gt_s:
 vxt_jll_gt_e:
+
+.assert vxt_jll_gt_e - vxt_jll_gt_c + VX_STUB + 48 < 256, error, "vxt_jll_gt: an op's code is at most 255 bytes"
 
 vxt_jll_le: .byte       vxt_jll_le_e - vxt_jll_le_c, TF_STUB, 4
             .byte       vxt_jll_le_p0 - vxt_jll_le_c, TPK_B, 2
@@ -1398,6 +1486,8 @@ vxt_jll_le_p3 = * - 2
 vxt_jll_le_s:
 vxt_jll_le_e:
 
+.assert vxt_jll_le_e - vxt_jll_le_c + VX_STUB + 48 < 256, error, "vxt_jll_le: an op's code is at most 255 bytes"
+
 vxt_jll_eq: .byte       vxt_jll_eq_e - vxt_jll_eq_c, TF_STUB, 4
             .byte       vxt_jll_eq_p0 - vxt_jll_eq_c, TPK_B, 2
             .byte       vxt_jll_eq_p1 - vxt_jll_eq_c, TPK_B, 3
@@ -1442,6 +1532,8 @@ vxt_jll_eq_p3 = * - 2
 vxt_jll_eq_s:
 vxt_jll_eq_e:
 
+.assert vxt_jll_eq_e - vxt_jll_eq_c + VX_STUB + 48 < 256, error, "vxt_jll_eq: an op's code is at most 255 bytes"
+
 vxt_shead:  .byte       vxt_shead_e - vxt_shead_c, TF_STUB, 5
             .byte       vxt_shead_p0 - vxt_shead_c, TPK_D, 8
             .byte       vxt_shead_p1 - vxt_shead_c, TPK_D, 9
@@ -1479,6 +1571,8 @@ vxt_shead_p4 = * - 2
 vxt_shead_s:
 vxt_shead_e:
 
+.assert vxt_shead_e - vxt_shead_c + VX_STUB + 48 < 256, error, "vxt_shead: an op's code is at most 255 bytes"
+
 vxt_head:   .byte       vxt_head_e - vxt_head_c, TF_STUB, 1
             .byte       vxt_head_p0 - vxt_head_c, TPK_N, 0
 vxt_head_c:
@@ -1511,135 +1605,100 @@ vxt_head_p0 = * - 2
 vxt_head_s:
 vxt_head_e:
 
-vxt_call:   .byte       vxt_call_e - vxt_call_c, TF_STUB | TF_MISS, 22
+.assert vxt_head_e - vxt_head_c + VX_STUB + 48 < 256, error, "vxt_head: an op's code is at most 255 bytes"
+
+vxt_call:   .byte       vxt_call_e - vxt_call_c, TF_STUB | TF_MISS, 17
             .byte       vxt_call_p0 - vxt_call_c, TPK_D, 6
-            .byte       vxt_call_p1 - vxt_call_c, TPK_S, 0
-            .byte       vxt_call_p2 - vxt_call_c, TPK_D, 7
-            .byte       vxt_call_p3 - vxt_call_c, TPK_S, 0
-            .byte       vxt_call_p4 - vxt_call_c, TPK_M, 1
-            .byte       vxt_call_p5 - vxt_call_c, TPK_D, 4
-            .byte       vxt_call_p6 - vxt_call_c, TPK_S, 0
-            .byte       vxt_call_p7 - vxt_call_c, TPK_D, 5
-            .byte       vxt_call_p8 - vxt_call_c, TPK_S, 0
-            .byte       vxt_call_p9 - vxt_call_c, TPK_S, 0
-            .byte       vxt_call_p10 - vxt_call_c, TPK_S, 0
-            .byte       vxt_call_p11 - vxt_call_c, TPK_S, 0
-            .byte       vxt_call_p12 - vxt_call_c, TPK_S, 0
-            .byte       vxt_call_p13 - vxt_call_c, TPK_RL, 0
-            .byte       vxt_call_p14 - vxt_call_c, TPK_RH, 0
-            .byte       vxt_call_p15 - vxt_call_c, TPK_M, 1
-            .byte       vxt_call_p16 - vxt_call_c, TPK_M, 1
-            .byte       vxt_call_p17 - vxt_call_c, TPK_D, 11
-            .byte       vxt_call_p18 - vxt_call_c, TPK_D, 8
-            .byte       vxt_call_p19 - vxt_call_c, TPK_D, 10
-            .byte       vxt_call_p20 - vxt_call_c, TPK_D, 8
-            .byte       vxt_call_p21 - vxt_call_c, TPK_D, 9
+            .byte       vxt_call_p1 - vxt_call_c, TPK_D, 7
+            .byte       vxt_call_p2 - vxt_call_c, TPK_M, 1
+            .byte       vxt_call_p3 - vxt_call_c, TPK_D, 4
+            .byte       vxt_call_p4 - vxt_call_c, TPK_D, 5
+            .byte       vxt_call_p5 - vxt_call_c, TPK_RL, 0
+            .byte       vxt_call_p6 - vxt_call_c, TPK_RH, 0
+            .byte       vxt_call_p7 - vxt_call_c, TPK_S, 0
+            .byte       vxt_call_p8 - vxt_call_c, TPK_RL, 0
+            .byte       vxt_call_p9 - vxt_call_c, TPK_RH, 0
+            .byte       vxt_call_p10 - vxt_call_c, TPK_M, 1
+            .byte       vxt_call_p11 - vxt_call_c, TPK_M, 1
+            .byte       vxt_call_p12 - vxt_call_c, TPK_D, 11
+            .byte       vxt_call_p13 - vxt_call_c, TPK_D, 8
+            .byte       vxt_call_p14 - vxt_call_c, TPK_D, 10
+            .byte       vxt_call_p15 - vxt_call_c, TPK_D, 8
+            .byte       vxt_call_p16 - vxt_call_c, TPK_D, 9
 vxt_call_c:
             lda         a:$0000
 vxt_call_p0 = * - 2
             cmp         vm_ep
-            beq         :+
-            jmp         $0000
-vxt_call_p1 = * - 2
-:
+            bne         vxt_call_sx
             lda         a:$0000
-vxt_call_p2 = * - 2
+vxt_call_p1 = * - 2
             cmp         vm_ep + 1
-            beq         :+
-            jmp         $0000
-vxt_call_p3 = * - 2
-:
+            bne         vxt_call_sx
             lda         sp
             sec
             sbc         #0
-vxt_call_p4 = * - 1
+vxt_call_p2 = * - 1
             sta         ht
             lda         sp + 1
             sbc         #0
             sta         ht + 1
             lda         (ht)
             cmp         a:$0000
-vxt_call_p5 = * - 2
-            beq         :+
-            jmp         $0000
-vxt_call_p6 = * - 2
-:
+vxt_call_p3 = * - 2
+            bne         vxt_call_sx
             ldy         #1
             lda         (ht),y
             cmp         a:$0000
-vxt_call_p7 = * - 2
-            beq         :+
-            jmp         $0000
-vxt_call_p8 = * - 2
-:
+vxt_call_p4 = * - 2
+            bne         vxt_call_sx
             bit         intr
-            bpl         :+
-            jmp         $0000
-vxt_call_p9 = * - 2
-:
-            bvc         :+
-            jmp         $0000
-vxt_call_p10 = * - 2
-:
+            bmi         vxt_call_sx
+            bvs         vxt_call_sx
             lda         depth + 1
             cmp         #>MAX_DEPTH
             bcc         vxt_call_ok
-            beq         :+
-            jmp         $0000
-vxt_call_p11 = * - 2
-:
+            bne         vxt_call_s
             lda         depth
             cmp         #<MAX_DEPTH
-            bcc         :+
-            jmp         $0000
-vxt_call_p12 = * - 2
-:
+            bcs         vxt_call_s
 vxt_call_ok:
+            lda         sp
+            cmp         #$FC
+            bcs         vxt_call_r2
             lda         #0
-vxt_call_p13 = * - 1
-            ldx         #0
-vxt_call_p14 = * - 1
+vxt_call_p5 = * - 1
             sta         (sp)
             ldy         #1
-            txa
-            sta         (sp),y
-            lda         sp
-            clc
-            adc         #2
-            sta         sp
-            bne         :+
-            jsr         vm_page
-:
             lda         #0
-            tax
-            sta         (sp)
-            ldy         #1
-            txa
+vxt_call_p6 = * - 1
+            sta         (sp),y
+            iny
+            lda         #0
+            sta         (sp),y
+            iny
             sta         (sp),y
             lda         sp
-            clc
-            adc         #2
+            adc         #4
             sta         sp
-            bne         :+
-            jsr         vm_page
-:
-            lda         sp
-            sec
-            sbc         #0
-vxt_call_p15 = * - 1
+            lda         ht
             sta         vm_s
-            lda         sp + 1
-            sbc         #0
+            lda         ht + 1
             sta         vm_s + 1
-            lda         vm_s
-            sec
-            sbc         #4
-            sta         vm_s
-            bcs         :+
-            dec         vm_s + 1
-:
+            bra         vxt_call_r4
+vxt_call_sx:
+            jmp         $0000
+vxt_call_p7 = * - 2
+vxt_call_r2:
             lda         #0
-vxt_call_p16 = * - 1
+vxt_call_p8 = * - 1
+            ldx         #0
+vxt_call_p9 = * - 1
+            ldy         #0
+vxt_call_p10 = * - 1
+            jsr         vm_rec
+vxt_call_r4:
+            lda         #0
+vxt_call_p11 = * - 1
             sta         vm_rb
             stz         vm_mat
             inc         depth
@@ -1647,46 +1706,42 @@ vxt_call_p16 = * - 1
             inc         depth + 1
 :
             lda         a:$0000
-vxt_call_p17 = * - 2
+vxt_call_p12 = * - 2
             cmp         vm_idx
             bne         vxt_call_far
             jmp         ($0000)
-vxt_call_p18 = * - 2
+vxt_call_p13 = * - 2
 vxt_call_far:
             sta         vm_idx
             lda         a:$0000
-vxt_call_p19 = * - 2
+vxt_call_p14 = * - 2
             sta         vm_bank
             lda         a:$0000
-vxt_call_p20 = * - 2
+vxt_call_p15 = * - 2
             sta         vm_ip
             lda         a:$0000
-vxt_call_p21 = * - 2
+vxt_call_p16 = * - 2
             sta         vm_ip + 1
             jmp         vm_next
 vxt_call_s:
 vxt_call_e:
 
-vxt_cself:  .byte       vxt_cself_e - vxt_cself_c, TF_STUB, 11
+.assert vxt_call_e - vxt_call_c + VX_STUB + 48 < 256, error, "vxt_call: an op's code is at most 255 bytes"
+
+vxt_cself:  .byte       vxt_cself_e - vxt_cself_c, TF_STUB, 8
             .byte       vxt_cself_p0 - vxt_cself_c, TPK_M, 1
-            .byte       vxt_cself_p1 - vxt_cself_c, TPK_S, 0
-            .byte       vxt_cself_p2 - vxt_cself_c, TPK_S, 0
+            .byte       vxt_cself_p1 - vxt_cself_c, TPK_RL, 0
+            .byte       vxt_cself_p2 - vxt_cself_c, TPK_RH, 0
             .byte       vxt_cself_p3 - vxt_cself_c, TPK_S, 0
-            .byte       vxt_cself_p4 - vxt_cself_c, TPK_S, 0
-            .byte       vxt_cself_p5 - vxt_cself_c, TPK_S, 0
-            .byte       vxt_cself_p6 - vxt_cself_c, TPK_S, 0
-            .byte       vxt_cself_p7 - vxt_cself_c, TPK_S, 0
-            .byte       vxt_cself_p8 - vxt_cself_c, TPK_RL, 0
-            .byte       vxt_cself_p9 - vxt_cself_c, TPK_RH, 0
-            .byte       vxt_cself_p10 - vxt_cself_c, TPK_C, 0
+            .byte       vxt_cself_p4 - vxt_cself_c, TPK_RL, 0
+            .byte       vxt_cself_p5 - vxt_cself_c, TPK_RH, 0
+            .byte       vxt_cself_p6 - vxt_cself_c, TPK_M, 1
+            .byte       vxt_cself_p7 - vxt_cself_c, TPK_C, 0
 vxt_cself_c:
             lda         vm_rb
             cmp         #0
 vxt_cself_p0 = * - 1
-            beq         :+
-            jmp         $0000
-vxt_cself_p1 = * - 2
-:
+            bne         vxt_cself_s
             lda         sp
             sec
             sbc         vm_rb
@@ -1697,87 +1752,67 @@ vxt_cself_p1 = * - 2
             ldy         #1
             lda         (ht),y
             cmp         (vm_s),y
-            beq         :+
-            jmp         $0000
-vxt_cself_p2 = * - 2
-:
+            bne         vxt_cself_s
             lda         (ht)
             cmp         (vm_s)
-            beq         :+
-            jmp         $0000
-vxt_cself_p3 = * - 2
-:
+            bne         vxt_cself_s
             bit         intr
-            bpl         :+
-            jmp         $0000
-vxt_cself_p4 = * - 2
-:
-            bvc         :+
-            jmp         $0000
-vxt_cself_p5 = * - 2
-:
+            bmi         vxt_cself_s
+            bvs         vxt_cself_s
             lda         depth + 1
             cmp         #>MAX_DEPTH
             bcc         vxt_cself_ok
-            beq         :+
-            jmp         $0000
-vxt_cself_p6 = * - 2
-:
+            bne         vxt_cself_s
             lda         depth
             cmp         #<MAX_DEPTH
-            bcc         :+
-            jmp         $0000
-vxt_cself_p7 = * - 2
-:
+            bcs         vxt_cself_s
 vxt_cself_ok:
+            lda         sp
+            cmp         #$FC
+            bcs         vxt_cself_r2
             lda         #0
-vxt_cself_p8 = * - 1
-            ldx         #0
-vxt_cself_p9 = * - 1
+vxt_cself_p1 = * - 1
             sta         (sp)
             ldy         #1
-            txa
-            sta         (sp),y
-            lda         sp
-            clc
-            adc         #2
-            sta         sp
-            bne         :+
-            jsr         vm_page
-:
             lda         #0
-            tax
-            sta         (sp)
-            ldy         #1
-            txa
+vxt_cself_p2 = * - 1
+            sta         (sp),y
+            iny
+            lda         #0
+            sta         (sp),y
+            iny
             sta         (sp),y
             lda         sp
-            clc
-            adc         #2
-            sta         sp
-            bne         :+
-            jsr         vm_page
-:
-            lda         vm_rb
-            clc
             adc         #4
-            sta         hn
-            lda         sp
-            sec
-            sbc         hn
+            sta         sp
+            lda         ht
             sta         vm_s
-            lda         sp + 1
-            sbc         #0
+            lda         ht + 1
             sta         vm_s + 1
+            bra         vxt_cself_r4
+vxt_cself_sx:
+            jmp         $0000
+vxt_cself_p3 = * - 2
+vxt_cself_r2:
+            lda         #0
+vxt_cself_p4 = * - 1
+            ldx         #0
+vxt_cself_p5 = * - 1
+            ldy         #0
+vxt_cself_p6 = * - 1
+            jsr         vm_rec
+vxt_cself_r4:
             stz         vm_mat
             inc         depth
             bne         :+
             inc         depth + 1
 :
             jmp         $0000
-vxt_cself_p10 = * - 2
+vxt_cself_p7 = * - 2
 vxt_cself_s:
 vxt_cself_e:
+
+.assert vxt_cself_e - vxt_cself_c + VX_STUB + 48 < 256, error, "vxt_cself: an op's code is at most 255 bytes"
 
 vxt_tself:  .byte       vxt_tself_e - vxt_tself_c, TF_STUB, 3
             .byte       vxt_tself_p0 - vxt_tself_c, TPK_M, 1
@@ -1849,38 +1884,28 @@ vxt_tself_p2 = * - 2
 vxt_tself_s:
 vxt_tself_e:
 
-vxt_ret:    .byte       vxt_ret_e - vxt_ret_c, TF_STUB, 2
-            .byte       vxt_ret_p0 - vxt_ret_c, TPK_S, 0
-            .byte       vxt_ret_p1 - vxt_ret_c, TPK_S, 0
+.assert vxt_tself_e - vxt_tself_c + VX_STUB + 48 < 256, error, "vxt_tself: an op's code is at most 255 bytes"
+
+vxt_ret:    .byte       vxt_ret_e - vxt_ret_c, TF_STUB, 0
 vxt_ret_c:
             ldy         vm_rb
             lda         (vm_s),y
             sta         ht
-            bne         :+
-            jmp         $0000
-vxt_ret_p0 = * - 2
-:
+            beq         vxt_ret_s
             iny
             lda         (vm_s),y
             lsr
             tax
             lda         ht
             ror
-            sta         hp
+            sta         vm_ip
             txa
             and         #$60
             cmp         vm_idx
-            beq         :+
-            jmp         $0000
-vxt_ret_p1 = * - 2
-:
+            bne         vxt_ret_s
             txa
             and         #$1F
             ora         #$80
-            sta         hp + 1
-            lda         hp
-            sta         vm_ip
-            lda         hp + 1
             sta         vm_ip + 1
             lda         depth
             bne         :+
@@ -1897,29 +1922,38 @@ vxt_ret_p1 = * - 2
             beq         :+
             jsr         unspill
 :
-            lda         vm_ip
+            lda         ex
+            lsr
+            bcs         vxt_ret_go
+            ldx         ex + 1
+            cpx         #IMM_PAGES
+            bcc         vxt_ret_go
+            lda         pk,x
+            cmp         #PK_ERROR
+            bne         vxt_ret_go
+            jmp         vm_reterr
+vxt_ret_go:
+            jmp         (vm_ip)
+vxt_ret_s:
+vxt_ret_e:
+
+.assert vxt_ret_e - vxt_ret_c + VX_STUB + 48 < 256, error, "vxt_ret: an op's code is at most 255 bytes"
+
+vxt_pcall:  .byte       vxt_pcall_e - vxt_pcall_c, 0, 2
+            .byte       vxt_pcall_p0 - vxt_pcall_c, TPK_W, 12
+            .byte       vxt_pcall_p1 - vxt_pcall_c, TPK_U, 13
+vxt_pcall_c:
+            lda         sp
             sec
-            sbc         #2
-            sta         ht
-            lda         vm_ip + 1
             sbc         #0
-            sta         ht + 1
-            lda         (ht)
-            asl
-            sta         hn
-            lda         vm_s
-            sec
-            sbc         hn
+vxt_pcall_p0 = * - 1
             sta         vm_s
-            bcs         :+
-            dec         vm_s + 1
-:
-            ldy         #1
-            lda         (ht),y
-            tax
-            and         #$FE
-            sta         vm_rb
-            tay
+            lda         sp + 1
+            sbc         #0
+            sta         vm_s + 1
+            ldy         #0
+vxt_pcall_p1 = * - 1
+            sty         vm_rb
             iny
             iny
             lda         (vm_s),y
@@ -1936,16 +1970,40 @@ vxt_ret_p1 = * - 2
             lda         #$80
 :
             sta         vm_mat
-            txa
+vxt_pcall_e:
+
+vxt_pself:  .byte       vxt_pself_e - vxt_pself_c, 0, 2
+            .byte       vxt_pself_p0 - vxt_pself_c, TPK_W, 6
+            .byte       vxt_pself_p1 - vxt_pself_c, TPK_U, 7
+vxt_pself_c:
+            lda         sp
+            sec
+            sbc         #0
+vxt_pself_p0 = * - 1
+            sta         vm_s
+            lda         sp + 1
+            sbc         #0
+            sta         vm_s + 1
+            ldy         #0
+vxt_pself_p1 = * - 1
+            sty         vm_rb
+            iny
+            iny
+            lda         (vm_s),y
             lsr
-            bcc         vxt_ret_go
-            jsr         vm_iserr
-            bcc         vxt_ret_go
-            jmp         vm_ret
-vxt_ret_go:
-            jmp         (vm_ip)
-vxt_ret_s:
-vxt_ret_e:
+            bcc         :+
+            iny
+            iny
+:
+            iny
+            lda         (vm_s),y
+            cmp         #IMM_PAGES
+            lda         #0
+            bcc         :+
+            lda         #$80
+:
+            sta         vm_mat
+vxt_pself_e:
 
 vxt_locals: .byte       vxt_locals_e - vxt_locals_c, TF_STUB, 4
             .byte       vxt_locals_p0 - vxt_locals_c, TPK_DL, 0
@@ -1998,6 +2056,8 @@ vxt_locals_p3 = * - 2
 vxt_locals_s:
 vxt_locals_e:
 
+.assert vxt_locals_e - vxt_locals_c + VX_STUB + 48 < 256, error, "vxt_locals: an op's code is at most 255 bytes"
+
 vxt_block:  .byte       vxt_block_e - vxt_block_c, TF_STUB, 4
             .byte       vxt_block_p0 - vxt_block_c, TPK_B, 1
             .byte       vxt_block_p1 - vxt_block_c, TPK_B, 2
@@ -2030,6 +2090,8 @@ vxt_block_p3 = * - 2
 vxt_block_s:
 vxt_block_e:
 
+.assert vxt_block_e - vxt_block_c + VX_STUB + 48 < 256, error, "vxt_block: an op's code is at most 255 bytes"
+
 vxt_localb: .byte       vxt_localb_e - vxt_localb_c, TF_STUB, 3
             .byte       vxt_localb_p0 - vxt_localb_c, TPK_B, 2
             .byte       vxt_localb_p1 - vxt_localb_c, TPK_B, 1
@@ -2058,6 +2120,8 @@ vxt_localb_p2 = * - 2
 vxt_localb_s:
 vxt_localb_e:
 
+.assert vxt_localb_e - vxt_localb_c + VX_STUB + 48 < 256, error, "vxt_localb: an op's code is at most 255 bytes"
+
 vxt_setlb:  .byte       vxt_setlb_e - vxt_setlb_c, TF_STUB, 3
             .byte       vxt_setlb_p0 - vxt_setlb_c, TPK_B, 2
             .byte       vxt_setlb_p1 - vxt_setlb_c, TPK_B, 1
@@ -2082,6 +2146,8 @@ vxt_setlb_p1 = * - 1
 vxt_setlb_p2 = * - 2
 vxt_setlb_s:
 vxt_setlb_e:
+
+.assert vxt_setlb_e - vxt_setlb_c + VX_STUB + 48 < 256, error, "vxt_setlb: an op's code is at most 255 bytes"
 
 vxt_setblb: .byte       vxt_setblb_e - vxt_setblb_c, TF_STUB, 4
             .byte       vxt_setblb_p0 - vxt_setblb_c, TPK_B, 2
@@ -2119,6 +2185,8 @@ vxt_setblb_p3 = * - 2
 vxt_setblb_s:
 vxt_setblb_e:
 
+.assert vxt_setblb_e - vxt_setblb_c + VX_STUB + 48 < 256, error, "vxt_setblb: an op's code is at most 255 bytes"
+
 vxt_localh: .byte       vxt_localh_e - vxt_localh_c, TF_STUB, 2
             .byte       vxt_localh_p0 - vxt_localh_c, TPK_B, 1
             .byte       vxt_localh_p1 - vxt_localh_c, TPK_N, 0
@@ -2141,6 +2209,8 @@ vxt_localh_ok:
 vxt_localh_p1 = * - 2
 vxt_localh_s:
 vxt_localh_e:
+
+.assert vxt_localh_e - vxt_localh_c + VX_STUB + 48 < 256, error, "vxt_localh: an op's code is at most 255 bytes"
 
 vxt_setbl:  .byte       vxt_setbl_e - vxt_setbl_c, TF_STUB, 3
             .byte       vxt_setbl_p0 - vxt_setbl_c, TPK_B, 1
@@ -2173,6 +2243,8 @@ vxt_setbl_p2 = * - 2
 vxt_setbl_s:
 vxt_setbl_e:
 
+.assert vxt_setbl_e - vxt_setbl_c + VX_STUB + 48 < 256, error, "vxt_setbl: an op's code is at most 255 bytes"
+
 vxt_trye:   .byte       vxt_trye_e - vxt_trye_c, 0, 1
             .byte       vxt_trye_p0 - vxt_trye_c, TPK_T, 1
 vxt_trye_c:
@@ -2182,6 +2254,8 @@ vxt_trye_c:
 vxt_trye_p0 = * - 2
 vxt_trye_on:
 vxt_trye_e:
+
+.assert vxt_trye_e - vxt_trye_c + VX_STUB + 48 < 256, error, "vxt_trye: an op's code is at most 255 bytes"
 
 vxt_add:    .byte       vxt_add_e - vxt_add_c, TF_STUB, 1
             .byte       vxt_add_p0 - vxt_add_c, TPK_N, 0
@@ -2218,6 +2292,8 @@ vxt_add_u:
             sta         sp
 vxt_add_s:
 vxt_add_e:
+
+.assert vxt_add_e - vxt_add_c + VX_STUB + 48 < 256, error, "vxt_add: an op's code is at most 255 bytes"
 
 vxt_sub:    .byte       vxt_sub_e - vxt_sub_c, TF_STUB, 1
             .byte       vxt_sub_p0 - vxt_sub_c, TPK_N, 0
@@ -2256,6 +2332,8 @@ vxt_sub_u:
             sta         sp
 vxt_sub_s:
 vxt_sub_e:
+
+.assert vxt_sub_e - vxt_sub_c + VX_STUB + 48 < 256, error, "vxt_sub: an op's code is at most 255 bytes"
 
 vxt_q_lt:   .byte       vxt_q_lt_e - vxt_q_lt_c, TF_STUB, 2
             .byte       vxt_q_lt_p0 - vxt_q_lt_c, TPK_N, 0
@@ -2300,6 +2378,8 @@ vxt_q_lt_u:
 vxt_q_lt_s:
 vxt_q_lt_e:
 
+.assert vxt_q_lt_e - vxt_q_lt_c + VX_STUB + 48 < 256, error, "vxt_q_lt: an op's code is at most 255 bytes"
+
 vxt_q_gt:   .byte       vxt_q_gt_e - vxt_q_gt_c, TF_STUB, 2
             .byte       vxt_q_gt_p0 - vxt_q_gt_c, TPK_N, 0
             .byte       vxt_q_gt_p1 - vxt_q_gt_c, TPK_N, 0
@@ -2342,6 +2422,8 @@ vxt_q_gt_u:
             sta         sp
 vxt_q_gt_s:
 vxt_q_gt_e:
+
+.assert vxt_q_gt_e - vxt_q_gt_c + VX_STUB + 48 < 256, error, "vxt_q_gt: an op's code is at most 255 bytes"
 
 vxt_q_le:   .byte       vxt_q_le_e - vxt_q_le_c, TF_STUB, 2
             .byte       vxt_q_le_p0 - vxt_q_le_c, TPK_N, 0
@@ -2386,6 +2468,8 @@ vxt_q_le_u:
 vxt_q_le_s:
 vxt_q_le_e:
 
+.assert vxt_q_le_e - vxt_q_le_c + VX_STUB + 48 < 256, error, "vxt_q_le: an op's code is at most 255 bytes"
+
 vxt_q_ge:   .byte       vxt_q_ge_e - vxt_q_ge_c, TF_STUB, 2
             .byte       vxt_q_ge_p0 - vxt_q_ge_c, TPK_N, 0
             .byte       vxt_q_ge_p1 - vxt_q_ge_c, TPK_N, 0
@@ -2429,6 +2513,8 @@ vxt_q_ge_u:
 vxt_q_ge_s:
 vxt_q_ge_e:
 
+.assert vxt_q_ge_e - vxt_q_ge_c + VX_STUB + 48 < 256, error, "vxt_q_ge: an op's code is at most 255 bytes"
+
 vxt_q_eq:   .byte       vxt_q_eq_e - vxt_q_eq_c, TF_STUB, 2
             .byte       vxt_q_eq_p0 - vxt_q_eq_c, TPK_N, 0
             .byte       vxt_q_eq_p1 - vxt_q_eq_c, TPK_N, 0
@@ -2469,6 +2555,14 @@ vxt_q_eq_u:
             sta         sp
 vxt_q_eq_s:
 vxt_q_eq_e:
+
+.assert vxt_q_eq_e - vxt_q_eq_c + VX_STUB + 48 < 256, error, "vxt_q_eq: an op's code is at most 255 bytes"
+
+; A return pad's length (CALL's and CSELF's the same: VXK_Q's)
+VXT_PADL        = vxt_pcall_e - vxt_pcall_c
+.assert vxt_pself_e - vxt_pself_c = VXT_PADL, error, "the return pads are of a length"
+.assert vxt_call_e - vxt_call_c + VX_STUB + 14 + VXT_PADL < 256, error, "CALL's code is at most 255 bytes"
+.assert vxt_cself_e - vxt_cself_c + VX_STUB + 8 + VXT_PADL < 256, error, "CSELF's code is at most 255 bytes"
 
 ; Each op's template (0: its stub alone; the fused ones: by s, below)
 vx_tmain:   .word       vxt_ret, vxt_const, vxt_local, 0, 0, vxt_push, vxt_jf, vxt_jt

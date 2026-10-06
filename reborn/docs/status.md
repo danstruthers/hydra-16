@@ -613,18 +613,29 @@ byte's).  `(b-sort 60)` is 2.52M cycles, from 3.48M.  A fault found on the way, 
 given two arguments made its error of a message in the wrong bank (`s_bufcall` was in `.rodata`; `RODATA4`, where
 `msg_err` reads, now).
 
-| Benchmark | Bytecode (ms) | Native, M2 (ms) | Native, M3 (ms) | HyForth (ms) | hylang/HyForth |
-|---|---|---|---|---|---|
-| loop | 925 | 550 | 545 | 76 | 7.1x |
-| calls | 1,005 | 640 | 640 | 65 | 9.8x |
-| fib | 980 | 655 | 655 | 181 | 3.6x |
-| sieve | 1,905 | 1,430 | 1,160 | 332 | 3.5x |
-| sort | 3,275 | 2,710 | 1,915 | 480 | 4.0x |
-| gcd | 960 | 600 | 600 | 350 | 1.7x |
-| all | 9,050 | 6,585 | 5,515 | 1,484 | 3.7x (geometric mean 4.3x, from 6.9x) |
+Milestone 4, the calls: `CALL` and `CSELF` push their frame's record in one store of four bytes (two pushes near
+a page's end: `vm_rec`) and take `vm_s` from the function's word they've found; and their returns go to a pad
+past their data, which finds the caller's frame from the call's h and r, its numbers in it, so `RET` only finds
+the caller's code, drops the frame and looks for an error (the caller's r says if it's returned too:
+`vm_reterr`).  The pad gives the frame again whichever way it's come to: the machine's `RET`, and the
+evaluator's resume (`HEAD`'s and `SHEAD`'s t are the pad now, `VXK_Q`, as a resume reads h and r before it).  A
+call of a function of two arguments is 803 cycles (`hyspeed`, from 918).  Two faults on the way: an op's native
+size is a byte, and `CALL`'s grew past it (329 bytes: its pushes near a page's end are `vm_rec`'s now, and its
+checks branch to a jump to its stub in the template's middle; `vmxt.inc` asserts each op's size); and the
+evaluator's resume at `HEAD`'s t, past the pad, found h and r in the pad's code (`any?`'s answer wrong).
 
-What's left: a call's frame (the function's word, the record, the depth, Ctrl-C) and its return (the caller's
-frame found again from its `CALL`), and the global's head pushed even for a tail loop.
+| Benchmark | Bytecode (ms) | M2 (ms) | M3 (ms) | M4 (ms) | HyForth (ms) | hylang/HyForth |
+|---|---|---|---|---|---|---|
+| loop | 925 | 550 | 545 | 545 | 76 | 7.1x |
+| calls | 1,005 | 640 | 640 | 575 | 65 | 8.8x |
+| fib | 980 | 655 | 655 | 550 | 181 | 3.0x |
+| sieve | 1,905 | 1,430 | 1,160 | 1,160 | 332 | 3.5x |
+| sort | 3,275 | 2,710 | 1,915 | 1,915 | 480 | 4.0x |
+| gcd | 960 | 600 | 600 | 570 | 350 | 1.6x |
+| all | 9,050 | 6,585 | 5,515 | 5,315 | 1,484 | 3.6x (geometric mean 4.0x, from 6.9x) |
+
+What's left: the global's head pushed for a tail loop (`SHEAD`, then `TSELF`'s look at it), a tail call's
+arguments copied in a loop, the depth and Ctrl-C at each call; and `*`, not a quick op.
 
 | Step | | Notes |
 |---|---|---|

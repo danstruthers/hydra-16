@@ -18,6 +18,8 @@ VXK_P           = 2             ; A block's parent (0: none): its BLOCK op's dat
 VXK_B           = 3             ; The blocks' table (0: none): the native one's place
 VXK_C           = 4             ; The function's start
 VXK_R           = 5             ; A call's return: the place (a fixnum) past the op's data
+VXK_Q           = 6             ; HEAD's and SHEAD's t, the evaluator's resume: past their call's data (h and r there),
+                                ;   its return pad if it has one (the op past a pad has bit 6 of its map's high byte)
 
 ; A template's flags, its patches' kinds
 TF_STUB         = 1             ; Its op's stub after it (its slow way)
@@ -35,6 +37,7 @@ TPK_RH          = 9             ;   its high
 TPK_S           = 10            ; The op's stub (past the template)
 TPK_DL          = 11            ; The place (a fixnum) of the op's data: its low byte ...
 TPK_DH          = 12            ;   its high
+TPK_W           = 13            ; 2 * the data byte (a call's h: its caller's frame's words, in bytes)
 
 .bss
 vx_end:     .res        2                                   ; The bytecode's end (its blocks' table there ...
@@ -59,6 +62,10 @@ vx_tfl:     .res        1                                   ;   its flags ...
 vx_tnp:     .res        1                                   ;   its patches
 vx_tpp:     .res        2
 vx_tcode:   .res        2
+vx_pt:      .res        2                                   ; (An op's return pad: its template, 0 if none ...
+vx_pl:      .res        1                                   ;   its length)
+vx_qn:      .res        1                                   ; (Pass 1: $40 if the next op is past a pad ...
+vx_qf:      .res        1                                   ;   vm_xmap: the map's high byte, bit 6 that)
 vx_op:      .res        1                                   ;   its op ...
 vx_nx:      .res        2                                   ;   the next op's entry ...
 vx_pi:      .res        1                                   ;   its patches left ...
@@ -144,6 +151,7 @@ vm_xlate:
 ; Each op's stub's place (its entry), in the map: vm_mb at the op's place (its low byte), $1000 on (its high);
 ; vx_nat their end, vx_top the table's.  OUT: C = 1 if they don't fit in the bank (below $A000)
 vx_pass1:
+            stz         vx_qn
             stz         hq
             lda         #$80
             sta         hq + 1
@@ -164,6 +172,7 @@ vx_pass1:
             adc         #$10
             sta         hq + 1
             lda         ht + 1
+            ora         vx_qn
             sta         (hq)
             lda         hq + 1
             sec
@@ -171,6 +180,11 @@ vx_pass1:
             sta         hq + 1
             jsr         vx_size
             jsr         vx_htadd
+            lda         vx_pl                               ; (The next op past a pad: VXK_Q's)
+            beq         :+
+            lda         #$40
+:
+            sta         vx_qn
             lda         vx_len
             jsr         vx_hqadd
             lda         ht + 1
@@ -300,6 +314,16 @@ vx_pass2:
             iny
             dec         vx_k
             bne         :-
+            lda         vx_pt + 1                           ; (Its return pad, past its data)
+            beq         @next
+            lda         vx_d
+            clc
+            adc         vx_dl
+            sta         ht
+            lda         vx_d + 1
+            adc         #0
+            sta         ht + 1
+            jsr         vx_tpad
 @next:
             lda         vx_nx
             sta         ht
@@ -309,9 +333,16 @@ vx_pass2:
             jsr         vx_hqadd
             jmp         @op
 
-; .A = the op's native size (vx_oplen's, at hq): its stub; or its template (vx_tpl), and its stub if it has one
+; .A = the op's native size (vx_oplen's, at hq): its stub; or its template (vx_tpl), and its stub if it has one;
+; and its return pad (vx_padt) if it has one
 vx_size:
             jsr         vx_tpl
+            jsr         vx_padt
+            jsr         @size
+            clc
+            adc         vx_pl
+            rts
+@size:
             lda         vx_tp + 1
             bne         :+
             lda         vx_dl
@@ -329,6 +360,30 @@ vx_size:
             clc
             adc         #VX_STUB
             adc         vx_tln
+            rts
+
+; vx_pt = the op's return pad (CALL's, CSELF's: past its data, where its returns go), vx_pl its length; 0 if none
+vx_padt:
+            stz         vx_pl
+            stz         vx_pt + 1
+            lda         vx_op
+            and         #$7F
+            ldx         #<vxt_pcall
+            ldy         #>vxt_pcall
+            cmp         #VO_CALL
+            beq         @pad
+            ldx         #<vxt_pself
+            ldy         #>vxt_pself
+            cmp         #VO_CSELF
+            beq         @pad
+            rts
+@pad:
+            stx         vx_pt
+            sty         vx_pt + 1
+            stx         hb
+            sty         hb + 1
+            lda         (hb)
+            sta         vx_pl
             rts
 
 ; vx_tp = the op's template (at hq, in vm_sb; 0 if it has none: its stub alone), its header read (vx_tln ...)
@@ -417,6 +472,12 @@ vx_tpl:
             stz         vx_tp + 1
             rts
 :
+            jmp         vx_thdr
+@rts:
+            rts
+
+; hb = a template: its header read (vx_tln, vx_tnp, vx_tpp, vx_tcode)
+vx_thdr:
             lda         (hb)
             sta         vx_tln
             ldy         #2
@@ -438,8 +499,16 @@ vx_tpl:
             lda         vx_tpp + 1
             adc         #0
             sta         vx_tcode + 1
-@rts:
             rts
+
+; The op's return pad (vx_pt) at ht, its patches made (of the op's data)
+vx_tpad:
+            lda         vx_pt
+            sta         hb
+            lda         vx_pt + 1
+            sta         hb + 1
+            jsr         vx_thdr
+            jmp         vx_tcopy
 
 ; The op's template's code at ht (the arena's bank), its patches made; ht past it
 vx_tcopy:
@@ -508,11 +577,19 @@ vx_tcopy:
             cmp         #TPK_RH
             beq         @rh
             cmp         #TPK_S
-            beq         @st
+            bne         :+
+            jmp         @st
+:
             cmp         #TPK_DL
-            beq         @dl
+            bne         :+
+            jmp         @dl
+:
             cmp         #TPK_DH
-            beq         @dh
+            bne         :+
+            jmp         @dh
+:
+            cmp         #TPK_W
+            beq         @wk
             cmp         #TPK_U
             lda         vx_buf,x
             bcc         @b
@@ -526,21 +603,32 @@ vx_tcopy:
             clc
             adc         #2
             bra         @b
+@wk:
+            lda         vx_buf,x
+            asl
+            bra         @b
 @rl:
-            lda         vx_nx
+            lda         vx_dd                               ; (Past the data: its return pad)
+            clc
+            adc         vx_dl
             asl
             ora         #1
             bra         @b
 @rh:
-            lda         vx_nx + 1
+            lda         vx_dd
+            clc
+            adc         vx_dl
+            pha
+            lda         vx_dd + 1
+            adc         #0
             and         #$1F
             ora         vx_idx
             sta         vx_k
-            lda         vx_nx
+            pla
             asl
             lda         vx_k
             rol
-            bra         @b
+            jmp         @b
 @d:
             ldy         #2
             lda         (hb),y
@@ -736,6 +824,8 @@ vm_xmap:
             adc         #$10
             sta         hp + 1
             lda         (hp)
+            sta         vx_qf
+            and         #$BF
             tax
             pla
             rts
@@ -817,9 +907,13 @@ vx_patch:
             cmp         #VXK_C
             beq         @c
             cmp         #VXK_R
-            beq         @r
+            bne         :+
+            jmp         @r
+:
             cmp         #VXK_T
             beq         @t
+            cmp         #VXK_Q
+            beq         @q
             pha                                             ; (P, B: 0 stays 0)
             lda         vx_buf,x
             ora         vx_buf + 1,x
@@ -872,6 +966,26 @@ vx_patch:
             lda         vx_k
             sta         vx_buf + 1,x
             rts
+@q:
+            phx
+            lda         vx_buf + 1,x
+            pha
+            lda         vx_buf,x
+            plx
+            jsr         vm_xmap
+            bit         vx_qf                               ; (Past a pad: the pad)
+            bvc         :+
+            sec
+            sbc         #VXT_PADL
+            bcs         :+
+            dex
+:
+            stx         vx_k
+            plx
+            sta         vx_buf,x
+            lda         vx_k
+            sta         vx_buf + 1,x
+            rts
 @r:
             lda         vx_d                                ; (Past the data: vx_d + vx_dl, encoded)
             clc
@@ -909,10 +1023,10 @@ vx_tlen:    .byte       1, 3, 2, 3, 3, 1, 3, 3                          ; (RET C
             .byte       6, 0, 6, 4, 6, 1, 3, 1                          ; (LOOP BLOCK LOCALB SETLB SETBLB DOTN DOTI DOTINC)
             .byte       1, 3, 2, 3, 6, 4, 6, 5                          ; (EACHL EACHI DROP TRYE JQ LL JLL LQP)
 vx_ta1:     .byte       0, 0, 0, 0, 0, 0, VXA(1, VXK_T), VXA(1, VXK_T)
-            .byte       VXA(1, VXK_T), VXA(2, VXK_T), VXA(4, VXK_T), VXA(2, VXK_R), 0, 0, 0, 0
+            .byte       VXA(1, VXK_T), VXA(2, VXK_T), VXA(4, VXK_Q), VXA(2, VXK_R), 0, 0, 0, 0
             .byte       0, 0, 0, 0, 0, 0, 0, 0
             .byte       0, 0, 0, 0, 0, 0, 0, 0
-            .byte       0, 0, 0, 0, 0, VXA(4, VXK_T), VXA(2, VXK_C), VXA(2, VXK_C)
+            .byte       0, 0, 0, 0, 0, VXA(4, VXK_Q), VXA(2, VXK_C), VXA(2, VXK_C)
             .byte       VXA(3, VXK_B), 0, 0, 0, 0, VXA(5, VXK_T), 0, 0
             .byte       VXA(1, VXK_T), VXA(4, VXK_P), 0, 0, 0, 0, VXA(1, VXK_T), 0
             .byte       0, VXA(1, VXK_T), 0, VXA(1, VXK_T), VXA(4, VXK_T), 0, VXA(4, VXK_T), 0

@@ -388,6 +388,38 @@ const DEPTH = `
   cmp #<MAX_DEPTH
   bcs @s
 @ok:`;
+// A frame's record pushed (its return, no scope), vm_s its function's word (ht); near a page's end, vm_rec's (VPUSH's
+// way: vm_page may spill and move the stack down, vm_s from sp then).  @sx: the stub, for a branch from far before
+const RECORD = `
+  lda sp
+  cmp #$FC
+  bcs @r2
+  lda #{RL}
+  sta (sp)
+  ldy #1
+  lda #{RH}
+  sta (sp),y
+  iny
+  lda #0
+  sta (sp),y
+  iny
+  sta (sp),y
+  lda sp
+  adc #4
+  sta sp
+  lda ht
+  sta vm_s
+  lda ht + 1
+  sta vm_s + 1
+  bra @r4
+@sx:
+  jmp {S}
+@r2:
+  lda #{RL}
+  ldx #{RH}
+  ldy #{M 1}
+  jsr vm_rec
+@r4:`;
 // SHEAD m c t sym ep v: its cache (the global's value at epoch ep), pushed while it's this epoch and no scope's made
 tpl('shead', STUB, `
   bit vm_mat
@@ -424,10 +456,10 @@ tpl('head', STUB, `
 tpl('call', `${STUB} | TF_MISS`, `
   lda {D 6}
   cmp vm_ep
-  bne @s
+  bne @sx
   lda {D 7}
   cmp vm_ep + 1
-  bne @s
+  bne @sx
   lda sp
   sec
   sbc #{M 1}
@@ -437,32 +469,14 @@ tpl('call', `${STUB} | TF_MISS`, `
   sta ht + 1
   lda (ht)
   cmp {D 4}
-  bne @s
+  bne @sx
   ldy #1
   lda (ht),y
   cmp {D 5}
-  bne @s
+  bne @sx
   bit intr
-  bmi @s
-  bvs @s` + DEPTH + `
-  lda #{RL}
-  ldx #{RH}` + PUSHAX + `
-  lda #0
-  tax` + PUSHAX + `
-  lda sp
-  sec
-  sbc #{M 1}
-  sta vm_s
-  lda sp + 1
-  sbc #0
-  sta vm_s + 1
-  lda vm_s
-  sec
-  sbc #4
-  sta vm_s
-  bcs :+
-  dec vm_s + 1
-:
+  bmi @sx
+  bvs @sx` + DEPTH + RECORD + `
   lda #{M 1}
   sta vm_rb
   stz vm_mat
@@ -508,22 +522,7 @@ const SELF = `
   bmi @s
   bvs @s`;
 // CSELF m code ret h r: its frame (the return, no scope), its code from its start
-tpl('cself', STUB, SELF + DEPTH + `
-  lda #{RL}
-  ldx #{RH}` + PUSHAX + `
-  lda #0
-  tax` + PUSHAX + `
-  lda vm_rb
-  clc
-  adc #4
-  sta hn
-  lda sp
-  sec
-  sbc hn
-  sta vm_s
-  lda sp + 1
-  sbc #0
-  sta vm_s + 1
+tpl('cself', STUB, SELF + DEPTH + RECORD + `
   stz vm_mat
   inc depth
   bne :+
@@ -574,8 +573,9 @@ tpl('tself', STUB, SELF + `
 @go:
   jmp {C}
 @s:`);
-// RET: to its caller's code, in this bank (another, the evaluator's call: its stub); the caller's frame from its
-// call's h and r; its error returned if the call's r says
+// RET: to its caller's code, in this bank (another, the evaluator's call: its stub), the frame dropped: its return
+// pad (past the call's data) finds the caller's frame again; an error, vm_reterr's (returned by the caller too if
+// its call's r says)
 tpl('ret', STUB, `
   ldy vm_rb
   lda (vm_s),y
@@ -587,7 +587,7 @@ tpl('ret', STUB, `
   tax
   lda ht
   ror
-  sta hp
+  sta vm_ip
   txa
   and #$60
   cmp vm_idx
@@ -595,10 +595,6 @@ tpl('ret', STUB, `
   txa
   and #$1F
   ora #$80
-  sta hp + 1
-  lda hp
-  sta vm_ip
-  lda hp + 1
   sta vm_ip + 1
   lda depth
   bne :+
@@ -615,29 +611,34 @@ tpl('ret', STUB, `
   beq :+
   jsr unspill
 :
-  lda vm_ip
+  lda ex
+  lsr
+  bcs @go
+  ldx ex + 1
+  cpx #IMM_PAGES
+  bcc @go
+  lda pk,x
+  cmp #PK_ERROR
+  bne @go
+  jmp vm_reterr
+@go:
+  jmp (vm_ip)
+@s:`);
+// A return pad (vx_padt's: past CALL's and CSELF's data, where their returns go, and their code in the machine goes
+// on; HEAD's and SHEAD's t, VXK_Q): the caller's frame from the call's h and r, as the machine's RET finds it (vm_s
+// h words below the stack's top, vm_rb, vm_mat from its record's scope).  Whichever way it's come to, the stack's
+// top is where the call's function was, and the frame what the machine found already, if it did: the same again.
+// (Its error's check: RET's, the machine's, the evaluator's resume's)
+const PAD = (h, r) => `
+  lda sp
   sec
-  sbc #2
-  sta ht
-  lda vm_ip + 1
-  sbc #0
-  sta ht + 1
-  lda (ht)
-  asl
-  sta hn
-  lda vm_s
-  sec
-  sbc hn
+  sbc #{W ${h}}
   sta vm_s
-  bcs :+
-  dec vm_s + 1
-:
-  ldy #1
-  lda (ht),y
-  tax
-  and #$FE
-  sta vm_rb
-  tay
+  lda sp + 1
+  sbc #0
+  sta vm_s + 1
+  ldy #{U ${r}}
+  sty vm_rb
   iny
   iny
   lda (vm_s),y
@@ -653,16 +654,9 @@ tpl('ret', STUB, `
   bcc :+
   lda #$80
 :
-  sta vm_mat
-  txa
-  lsr
-  bcc @go
-  jsr vm_iserr
-  bcc @go
-  jmp vm_ret
-@go:
-  jmp (vm_ip)
-@s:`);
+  sta vm_mat`;
+tpl('pcall', '0', PAD(12, 13));
+tpl('pself', '0', PAD(6, 7));
 
 // ---- Locals and blocks: {DL}, {DH} the place (a fixnum) of the op's data (LOCALS': the record's scope word)
 // LOCALS kt kn tbl names: the record's scope word its place; the scope's slot NIL, then kt holes pushed
@@ -858,9 +852,9 @@ const lines = ['; **************************************************************
   '; vmxt.inc - the native code\'s templates (vmx.inc\'s), made by tools/hyvmxt.js: each its length, its flags (TF_STUB: its',
   '; op\'s stub after it, its slow way; TF_NOR: not for an op with VM_R), its patches (each its offset, its kind: TPK_B',
   '; a data byte, TPK_U one untagged, TPK_T a target\'s native place, TPK_N the next op\'s; and the data byte), its code', ''];
-const kinds = { B: 'TPK_B', U: 'TPK_U', T: 'TPK_T', N: 'TPK_N', D: 'TPK_D', M: 'TPK_M', C: 'TPK_C', RL: 'TPK_RL', RH: 'TPK_RH', S: 'TPK_S', DL: 'TPK_DL', DH: 'TPK_DH' };
+const kinds = { W: 'TPK_W', B: 'TPK_B', U: 'TPK_U', T: 'TPK_T', N: 'TPK_N', D: 'TPK_D', M: 'TPK_M', C: 'TPK_C', RL: 'TPK_RL', RH: 'TPK_RH', S: 'TPK_S', DL: 'TPK_DL', DH: 'TPK_DH' };
 // The long templates (their stub out of a branch's reach): each branch to @s an inverted one past a jmp {S}
-const FAR = new Set(['call', 'ret', 'cself']);
+const FAR = new Set([]);
 const INV = { bne: 'beq', beq: 'bne', bcc: 'bcs', bcs: 'bcc', bmi: 'bpl', bpl: 'bmi', bvc: 'bvs', bvs: 'bvc' };
 for (const t of T) {
   const n = 'vxt_' + t.name;
@@ -872,7 +866,7 @@ for (const t of T) {
     let l = raw.trim();
     if (!l) continue;
     l = l.replace(/@(\w+)/g, (_, x) => n + '_' + x);
-    const m = l.match(/\{(RL|RH|DL|DH|[BUTNDMCS])\s*(\d*)\}/);
+    const m = l.match(/\{(RL|RH|DL|DH|[BUTNDMCSW])\s*(\d*)\}/);
     if (m) {
       const k = m[1], arg = m[2] ? +m[2] : 0, word = k === 'T' || k === 'N' || k === 'D' || k === 'C' || k === 'S';
       l = l.replace(m[0], !word ? '0' : /^jmp\b/.test(l) ? '$0000' : 'a:$0000');    // (Absolute: not $00, page zero)
@@ -884,7 +878,12 @@ for (const t of T) {
   }
   lines.push(`${n}:`.padEnd(12) + `.byte       ${n}_e - ${n}_c, ${t.flags}, ${patches.length}`);
   lines.push(...patches, `${n}_c:`, ...code, `${n}_e:`, '');
+  if (!/^p(call|self)$/.test(t.name)) lines.push(`.assert ${n}_e - ${n}_c + VX_STUB + 48 < 256, error, "${n}: an op's code is at most 255 bytes"`, '');
 }
+lines.push('; A return pad\'s length (CALL\'s and CSELF\'s the same: VXK_Q\'s)', 'VXT_PADL        = vxt_pcall_e - vxt_pcall_c',
+  '.assert vxt_pself_e - vxt_pself_c = VXT_PADL, error, "the return pads are of a length"',
+  '.assert vxt_call_e - vxt_call_c + VX_STUB + 14 + VXT_PADL < 256, error, "CALL\'s code is at most 255 bytes"',
+  '.assert vxt_cself_e - vxt_cself_c + VX_STUB + 8 + VXT_PADL < 256, error, "CSELF\'s code is at most 255 bytes"', '');
 // ---- The tables: each op's template (by its number / 2), and the fused ones' by s
 const main = Array(64).fill('0');
 const skip = new Set((process.env.HYVMXT_SKIP || '').split(',').filter(Boolean));   // (Templates left out: a test's)
