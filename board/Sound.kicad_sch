@@ -577,148 +577,6 @@
 			)
 			(embedded_fonts no)
 		)
-		(symbol "Regulator_Linear:L7809"
-			(pin_names
-				(offset 0.254)
-			)
-			(exclude_from_sim no)
-			(in_bom yes)
-			(on_board yes)
-			(property "Reference" "U"
-				(at -3.81 3.175 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "Value" "L7809"
-				(at 0 3.175 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify left)
-				)
-			)
-			(property "Footprint" ""
-				(at 0.635 -3.81 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-						(italic yes)
-					)
-					(justify left)
-					(hide yes)
-				)
-			)
-			(property "Datasheet" "http://www.st.com/content/ccc/resource/technical/document/datasheet/41/4f/b3/b0/12/d4/47/88/CD00000444.pdf/files/CD00000444.pdf/jcr:content/translations/en.CD00000444.pdf"
-				(at 0 -1.27 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "Description" "Positive 1.5A 35V Linear Regulator, Fixed Output 9V, TO-220/TO-263/TO-252"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "ki_keywords" "Voltage Regulator 1.5A Positive"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "ki_fp_filters" "TO?252* TO?263* TO?220*"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(symbol "L7809_0_1"
-				(rectangle
-					(start -5.08 1.905)
-					(end 5.08 -5.08)
-					(stroke
-						(width 0.254)
-						(type default)
-					)
-					(fill
-						(type background)
-					)
-				)
-			)
-			(symbol "L7809_1_1"
-				(pin power_in line
-					(at -7.62 0 0)
-					(length 2.54)
-					(name "IN"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin power_in line
-					(at 0 -7.62 90)
-					(length 2.54)
-					(name "GND"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "2"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin power_out line
-					(at 7.62 0 180)
-					(length 2.54)
-					(name "OUT"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "3"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-			)
-			(embedded_fonts no)
-		)
 		(symbol "Device:R_Potentiometer_Dual_Separate"
 			(pin_names
 				(offset 1.016)
@@ -4268,18 +4126,6 @@
 		(uuid "f1cacb76-24f7-48b0-be7b-cf7088b055fc")
 	)
 	(junction
-		(at 254 30.48)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "c4a8a516-c3df-4e74-85d5-067fca1229da")
-	)
-	(junction
-		(at 284.48 30.48)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "88bf4dd3-a125-44d6-ae56-7e43b8bdd72b")
-	)
-	(junction
 		(at 294.64 30.48)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -5855,36 +5701,6 @@
 	)
 	(wire
 		(pts
-			(xy 254 25.4) (xy 254 30.48)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "2f020cc5-a5b3-4d73-bf82-ceef29c696f3")
-	)
-	(wire
-		(pts
-			(xy 254 30.48) (xy 261.62 30.48)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "62fa9e0c-f922-48cf-86c3-245597e5068b")
-	)
-	(wire
-		(pts
-			(xy 276.86 30.48) (xy 284.48 30.48)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "f537f3ea-8d37-4d56-9e06-3815ea649e45")
-	)
-	(wire
-		(pts
 			(xy 284.48 30.48) (xy 294.64 30.48)
 		)
 		(stroke
@@ -6363,6 +6179,16 @@
 		)
 		(uuid "edd68e47-106f-47c4-8541-e2bfd7a8276c")
 	)
+	(wire
+		(pts
+			(xy 274.32 30.48) (xy 276.86 30.48)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "2bcc888d-94d8-49b4-8d8d-461193f88e85")
+	)
 	(label "D4"
 		(at 71.12 99.06 0)
 		(effects
@@ -6443,7 +6269,7 @@
 		)
 		(uuid "fb6258d0-f933-4a15-b60c-ed45ba54fd1d")
 	)
-	(label "AMP_9V"
+	(label "AMP_5V"
 		(at 308.61 30.48 0)
 		(effects
 			(font
@@ -10013,475 +9839,6 @@
 		)
 	)
 	(symbol
-		(lib_id "power:+12V")
-		(at 254 25.4 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "c0ccc6c3-128a-4780-ba83-241b70d91a84")
-		(property "Reference" "#PWR2614"
-			(at 254 25.4 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Value" "+12V"
-			(at 254 21.59 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" ""
-			(at 254 25.4 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" ""
-			(at 254 25.4 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Power symbol creates a global label with name \"+12V\""
-			(at 254 25.4 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "703eeaa0-504c-44d0-8c31-84cab2c5aeb0")
-		)
-		(instances
-			(project "hydra-16"
-				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
-					(reference "#PWR2614")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:C")
-		(at 254 34.29 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "7a30d049-7b2c-45a7-8a9f-33b44626f865")
-		(property "Reference" "C124"
-			(at 256.54 33.02 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "330n"
-			(at 256.54 35.56 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"
-			(at 254 34.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 254 34.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Unpolarized capacitor"
-			(at 254 34.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "33d4219d-e3c5-4ec4-8ea8-320d2d1f8899")
-		)
-		(pin "2"
-			(uuid "ba83608e-5c26-4724-b7bf-5f160f26b7eb")
-		)
-		(instances
-			(project "hydra-16"
-				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
-					(reference "C124")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "power:GND")
-		(at 254 38.1 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "db19993c-70b3-47a2-a65f-98c767362b37")
-		(property "Reference" "#PWR2615"
-			(at 254 38.1 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Value" "GND"
-			(at 254 43.18 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" ""
-			(at 254 38.1 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" ""
-			(at 254 38.1 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Power symbol creates a global label with name \"GND\""
-			(at 254 38.1 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "6f51cd92-1195-4bda-9765-4cf5ffb64b2b")
-		)
-		(instances
-			(project "hydra-16"
-				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
-					(reference "#PWR2615")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Regulator_Linear:L7809")
-		(at 269.24 30.48 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "3b1cf16d-03f2-4276-8376-69956bfe80bc")
-		(property "Reference" "U90"
-			(at 265.43 27.305 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "L7809"
-			(at 269.24 27.305 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Package_TO_SOT_THT:TO-220-3_Vertical"
-			(at 269.24 30.48 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "http://www.st.com/content/ccc/resource/technical/document/datasheet/41/4f/b3/b0/12/d4/47/88/CD00000444.pdf/files/CD00000444.pdf/jcr:content/translations/en.CD00000444.pdf"
-			(at 269.24 30.48 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Positive 1.5A 35V Linear Regulator, Fixed Output 9V, TO-220"
-			(at 269.24 30.48 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "ed7069f1-9389-4fff-a56a-a735a5ff7f25")
-		)
-		(pin "2"
-			(uuid "eb5f1cb2-8cbc-4b54-a745-660ed6d9f06f")
-		)
-		(pin "3"
-			(uuid "a8c16ff2-8c11-469b-87ce-011a0a964448")
-		)
-		(instances
-			(project "hydra-16"
-				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
-					(reference "U90")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "power:GND")
-		(at 269.24 38.1 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "f1b2cb5c-d307-463f-b258-baa691fed913")
-		(property "Reference" "#PWR2616"
-			(at 269.24 38.1 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Value" "GND"
-			(at 269.24 43.18 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" ""
-			(at 269.24 38.1 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" ""
-			(at 269.24 38.1 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Power symbol creates a global label with name \"GND\""
-			(at 269.24 38.1 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "0a0c3b20-be2d-4e8b-8438-2aa9d5ef6041")
-		)
-		(instances
-			(project "hydra-16"
-				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
-					(reference "#PWR2616")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:C")
-		(at 284.48 34.29 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "4666cdfe-e1f9-4a1d-9198-6748d2d3ef34")
-		(property "Reference" "C125"
-			(at 287.02 33.02 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "100n"
-			(at 287.02 35.56 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"
-			(at 284.48 34.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 284.48 34.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Unpolarized capacitor"
-			(at 284.48 34.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "5b51e0e0-e9f5-4aa0-94c7-0c4f810ed846")
-		)
-		(pin "2"
-			(uuid "04939c80-522f-4259-87d6-992a53dca8d5")
-		)
-		(instances
-			(project "hydra-16"
-				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
-					(reference "C125")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "power:GND")
-		(at 284.48 38.1 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "c2015228-29c0-4886-b8d2-067d83d28531")
-		(property "Reference" "#PWR2617"
-			(at 284.48 38.1 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Value" "GND"
-			(at 284.48 43.18 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" ""
-			(at 284.48 38.1 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" ""
-			(at 284.48 38.1 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Power symbol creates a global label with name \"GND\""
-			(at 284.48 38.1 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "d0908f9d-0d6a-437d-99a1-0c87818d1252")
-		)
-		(instances
-			(project "hydra-16"
-				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
-					(reference "#PWR2617")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "Device:C_Polarized")
 		(at 294.64 34.29 0)
 		(unit 1)
@@ -10491,24 +9848,24 @@
 		(dnp no)
 		(uuid "00fe4f30-752b-4b0c-91d8-af684ff9f0ca")
 		(property "Reference" "C122"
-			(at 297.18 33.02 0)
+			(at 292.1 33.02 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(justify left)
+				(justify right)
 			)
 		)
-		(property "Value" "100u"
-			(at 297.18 35.56 0)
+		(property "Value" "1000u"
+			(at 292.1 35.56 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(justify left)
+				(justify right)
 			)
 		)
-		(property "Footprint" "Capacitor_THT:CP_Radial_D6.3mm_P2.50mm"
+		(property "Footprint" "Capacitor_THT:CP_Radial_D10.0mm_P5.00mm"
 			(at 294.64 34.29 0)
 			(effects
 				(font
@@ -11383,7 +10740,7 @@
 				)
 			)
 		)
-		(property "Value" "220k"
+		(property "Value" "470k"
 			(at 308.61 74.93 90)
 			(effects
 				(font
@@ -12356,7 +11713,7 @@
 				)
 			)
 		)
-		(property "Value" "220k"
+		(property "Value" "470k"
 			(at 308.61 119.38 90)
 			(effects
 				(font
@@ -13203,7 +12560,7 @@
 				)
 			)
 		)
-		(property "Value" "15 0.5W"
+		(property "Value" "2.2"
 			(at 307.34 170.18 90)
 			(effects
 				(font
@@ -13229,7 +12586,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor, 0.5 W"
+		(property "Description" "Resistor"
 			(at 307.34 167.64 0)
 			(effects
 				(font
@@ -13404,7 +12761,7 @@
 				)
 			)
 		)
-		(property "Value" "15 0.5W"
+		(property "Value" "2.2"
 			(at 307.34 185.42 90)
 			(effects
 				(font
@@ -13430,7 +12787,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor, 0.5 W"
+		(property "Description" "Resistor"
 			(at 307.34 182.88 0)
 			(effects
 				(font
@@ -13723,7 +13080,204 @@
 			)
 		)
 	)
-	(text "AUDIO OUTPUT\nLine level: U59 buffers -> R14/R15 + C103/C104 (AC coupling, 47k bleeders R16/R17) -> LINE_L/LINE_R\n-> J39 LINE OUT (about 0.9 V RMS at full scale) and the amplifier.\nAmplifier: R26/R27 (220k) into RV1 (dual 10k log) attenuate the line level by 27 dB at full volume.\nU89 TDA2822M (stereo, 39 dB fixed gain) runs on 9 V from U90 (L7809 off +12V): about 1 W per channel into 8 ohm.\nFor more volume from quiet material lower R26/R27 (100k = -21 dB).\nJ18 (3.5 mm, switched): a plug lifts T/R off TN/RN, muting the on-board speakers.\nHeadphones and external speakers on J18 are driven directly: turn RV1 down before plugging in headphones.\nLS1/LS2: 8 ohm mini speakers, footprint fits Adafruit 1898 (29 mm, pins 15.24 mm, 0.2 W)\nor Kitronik 3316 (32 mm, pins 17.5 mm, 0.15 W). R30/R31 (15R 0.5 W) keep them under 0.15 W at full output;\nuse 10R for 0.2 W speakers, 0R (link) for 1 W ones.\nGrounding: all audio parts return to GNDA. R18 (0R) is the only GNDA-GND tie: place it at U89 pin 4 and\nrun the J18 sleeve, LS1/LS2, the Zobels (C116/C117) and C122/C123 straight to that point.\nDecoupling: C105 at U57, C106 at U58, C107-C110 at U59, C122/C123 at U89 pin 2, C124/C125 at U90."
+	(symbol
+		(lib_id "power:+5V")
+		(at 274.32 30.48 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "ecd106d9-6e2e-411b-901e-9accc823321f")
+		(property "Reference" "#PWR2634"
+			(at 274.32 30.48 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "+5V"
+			(at 274.32 26.67 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 274.32 30.48 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 274.32 30.48 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"+5V\""
+			(at 274.32 30.48 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "4da36104-abde-4d71-8e89-726755aa751a")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "#PWR2634")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 280.67 30.48 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "68af500d-2818-4a0c-8ff3-12f8defe2ce2")
+		(property "Reference" "R32"
+			(at 280.67 27.94 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "1"
+			(at 280.67 33.02 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Resistor_THT:R_Axial_DIN0204_L3.6mm_D1.6mm_P5.08mm_Horizontal"
+			(at 280.67 30.48 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 280.67 30.48 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Resistor"
+			(at 280.67 30.48 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "bb6b02e0-42e8-4c31-baeb-b3baeced5a91")
+		)
+		(pin "2"
+			(uuid "7a15df6a-70fd-4f1b-8be2-aabb5aaecd92")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "R32")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:PWR_FLAG")
+		(at 320.04 30.48 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "6e788407-99c3-4c09-bab1-9842accb12be")
+		(property "Reference" "#FLG03"
+			(at 320.04 28.575 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "PWR_FLAG"
+			(at 320.04 26.67 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 320.04 30.48 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 320.04 30.48 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Special symbol for telling ERC where power comes from"
+			(at 320.04 30.48 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "4143110e-c38a-4ce9-969a-a88046e667f6")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "#FLG03")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(text "AUDIO OUTPUT\nLine level: U59 buffers -> R14/R15 + C103/C104 (AC coupling, 47k bleeders R16/R17) -> LINE_L/LINE_R\n-> J39 LINE OUT (about 0.9 V RMS at full scale) and the amplifier.\nAmplifier: R26/R27 (470k) into RV1 (dual 10k log) attenuate the line level by 34 dB at full volume.\nU89 TDA2822M (stereo, 39 dB fixed gain) runs from +5V through R32/C122 (1R + 1000u, a 160 Hz filter that keeps\nlogic noise out): about 0.25 W per channel into 8 ohm. For more volume from quiet material lower R26/R27 (220k = -27 dB).\nJ18 (3.5 mm, switched): a plug lifts T/R off TN/RN, muting the on-board speakers.\nHeadphones and external speakers on J18 are driven directly: turn RV1 down before plugging in headphones.\nLS1/LS2: 8 ohm mini speakers, footprint fits Adafruit 1898 (29 mm, pins 15.24 mm, 0.2 W)\nor Kitronik 3316 (32 mm, pins 17.5 mm, 0.15 W). R30/R31 (2.2R) hold them to about 0.15 W at full output;\nuse 0R (link) for 0.2 W speakers.\nGrounding: all audio parts return to GNDA. R18 (0R) is the only GNDA-GND tie: place it at U89 pin 4 and\nrun the J18 sleeve, LS1/LS2, the Zobels (C116/C117) and C122/C123 straight to that point.\nDecoupling: C105 at U57, C106 at U58, C107-C110 at U59, C122/C123 at U89 pin 2."
 		(exclude_from_sim no)
 		(at 254 205.74 0)
 		(effects
