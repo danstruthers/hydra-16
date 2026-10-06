@@ -248,7 +248,11 @@ vc_qy2          = vc_qy + 1
 vc_qt           = vc_qy2 + 1
 vc_qr           = vc_qt + 1
 vc_qc           = vc_qr + 1
-vc_wend         = vc_qc + 2
+L_st            = vc_qc + 2                                 ; Each level: <> 0, a statement of the function's body
+                                                            ;   (its do's, in order, errors returned) ...
+vc_cst          = L_st + VC_LV                              ;   (vc_child's: L_st)
+vc_da           = vc_cst + 1                                ; The locals set by such a statement so far (a bit each)
+vc_wend         = vc_da + 2
 .assert     vc_wend <= sy_end, error, "vm.inc: the compiler's room runs past the reader's scratch"
 
 .segment "DATA4"                                            ; (In the task's RAM: every bank's)
@@ -2836,9 +2840,22 @@ vm_bvar:
 
 ; LOCALB y fb p sym: a block variable's value; a hole, sym's where the block is (lookup's: past the hole)
 op_localb:
+            ldy         #2                                  ; (The block's scope: none, its slot)
+            lda         (vm_ip),y
+            tay
+            iny
+            lda         (vm_s),y
+            cmp         #IMM_PAGES
+            bcs         :+
+            ldy         #1
+            lda         (vm_ip),y
+            tay
+            bra         @slot
+:
             ldy         #2
             jsr         vm_bvar
             bcs         @pair
+@slot:
             lda         (vm_s),y
             sta         ex
             iny
@@ -2874,6 +2891,25 @@ op_localb:
 
 ; SETLB y fb p: a block variable = ex (its pair, if the block has a frame); ex = NIL
 op_setlb:
+            ldy         #2                                  ; (The block's scope: none, its slot)
+            lda         (vm_ip),y
+            tay
+            iny
+            lda         (vm_s),y
+            cmp         #IMM_PAGES
+            bcs         :+
+            ldy         #1
+            lda         (vm_ip),y
+            tay
+            lda         ex
+            sta         (vm_s),y
+            iny
+            lda         ex + 1
+            sta         (vm_s),y
+            stz         ex
+            stz         ex + 1
+            jmp         vm_n4
+:
             ldy         #2
             jsr         vm_setlb
             bcs         :+                                  ; (A slot: the bank as it was)
@@ -3230,7 +3266,8 @@ vm_fdone:
             lda         vm_fl
             jmp         vm_adv
 
-; ex = quick op .A's built-in (VO_ADD ...: vo_bin, vo_n) on vm_a (and vm_b), the usual way; the code's bank after
+; ex = quick op .A's built-in (VO_ADD ...: vo_bin, vo_n) on vm_a (and vm_b), the usual way (an error given: it, as
+; the evaluator has it, errors stopping what they reach); the code's bank after
 vm_qcall:
             sec
             sbc         #VO_ADD
@@ -3245,6 +3282,16 @@ vm_qcall:
             lda         #>BUILTIN0
             adc         #0
             sta         cf + 1
+            MOVW        ex, vm_a                            ; (An error given: the value)
+            jsr         vm_iserr
+            bcs         @bank
+            lda         vm_m
+            cmp         #2
+            bcc         :+
+            MOVW        ex, vm_b
+            jsr         vm_iserr
+            bcs         @bank
+:
             lda         vm_a
             ldx         vm_a + 1
             VPUSH
@@ -3256,6 +3303,7 @@ vm_qcall:
             VPUSH
 :
             jsr         vm_bcode
+@bank:
             lda         vm_bank
             sta         $00
             rts
@@ -4602,6 +4650,9 @@ vc_again:
 :
             lda         #1
             sta         L_tail
+            sta         L_st
+            stz         vc_da
+            stz         vc_da + 1
             lda         #M_R
             sta         L_mode
             jsr         vc_call
@@ -5077,6 +5128,9 @@ vc_child:
             lda         vc_cq
             sta         L_q,x
             stz         vc_cq
+            lda         vc_cst
+            sta         L_st,x
+            stz         vc_cst
             jsr         vc_expr
             dec         vc_lv
             rts
@@ -5304,10 +5358,22 @@ vc_expr:
             pla
             jsr         vc_byte
             jsr         vc_marked
-            bra         @done
+            jmp         @done
 @local:
             cpy         #2
             beq         @blkvar
+            jsr         vc_dtest                            ; (Set by a statement before: LOCAL, then LOCALH's JE)
+            beq         :+
+            pha
+            jsr         vc_mark
+            lda         #VO_LOCAL
+            jsr         vc_byte
+            pla
+            jsr         vc_byte
+            jsr         vc_marked
+            jsr         vc_je
+            jmp         @done
+:
             pha                                             ; (A local: LOCALH, its name for a hole)
             lda         #VO_LOCALH
             jsr         vc_rop
@@ -6050,6 +6116,7 @@ vc_fast:
             sta         L_t,x
             jsr         vc_amode
             jsr         vc_amset
+            jsr         vc_qok
             jsr         vc_next
             ldy         #0
             jsr         vc_child
@@ -6069,6 +6136,12 @@ vc_fast:
             bcs         @const
             jsr         vc_push
             jsr         vc_amset
+            lda         vc_cm                               ; (Its second: its error the op's value, as a JE has it)
+            cmp         #M_J
+            bne         :+
+            lda         #M_OK
+            sta         vc_cm
+:
             jsr         vc_next
             ldy         #0
             jsr         vc_child
@@ -6089,6 +6162,40 @@ vc_fast:
             lda         L_t,x
             jsr         vc_deff
             jmp         vc_je
+
+; A quick op's first argument: M_J's jump left out (M_OK) if the second is a name or a fixnum, or there's none (the
+; op given its error has it as its value, vm_qcall's, the second evaluated or not: the same)
+vc_qok:
+            lda         vc_cm
+            cmp         #M_J
+            bne         @rts
+            ldx         vc_lv
+            lda         L_m,x
+            cmp         #2
+            bcc         @ok
+            lda         L_alo,x                             ; (The second: its rest's first)
+            pha
+            lda         L_ahi,x
+            tax
+            pla
+            jsr         vc_split
+            lda         vc_q
+            ldx         vc_q + 1
+            jsr         vc_split
+            pha
+            lsr
+            pla
+            bcs         @ok
+            cpx         #IMM_PAGES
+            bcc         @rts
+            lda         pk,x
+            cmp         #PK_SYMBOL
+            bne         @rts
+@ok:
+            lda         #M_OK
+            sta         vc_cm
+@rts:
+            rts
 
 ; The evaluator's (EVAL): the expression evaluated in this frame's scope
 vc_eval:
@@ -6177,16 +6284,64 @@ vc_do:
             beq         @last
             dec         L_m,x
             jsr         vc_amset
+            jsr         vc_stmt
             jsr         vc_next
             ldy         #0
             jsr         vc_child
             bra         @next
 @last:
             jsr         vc_same
+            jsr         vc_stmt
             jsr         vc_nextt
             ldx         vc_lv
             lda         L_l2,x
             jmp         vc_def
+
+; The next part a statement (vc_cst), if this level's a statement and returns its errors (a do's parts)
+vc_stmt:
+            ldx         vc_lv
+            lda         L_st,x
+            beq         :+
+            lda         L_mode,x
+            cmp         #M_R
+            bne         :+
+            lda         #1
+            sta         vc_cst
+:
+            rts
+
+; .A = a local's place (rb + 6 + 2j): its bit in vc_da set (vc_dset), tested (vc_dtest: Z = 0 if it's set).  Keep .A
+vc_dset:
+            pha
+            jsr         vc_dbit
+            ora         vc_da,x
+            sta         vc_da,x
+            pla
+            rts
+vc_dtest:
+            pha
+            jsr         vc_dbit
+            and         vc_da,x
+            tax
+            pla
+            cpx         #0
+            rts
+vc_dbit:
+            sec
+            sbc         vc_rb
+            sec
+            sbc         #6
+            lsr
+            tax
+            and         #7
+            tay
+            txa
+            lsr
+            lsr
+            lsr
+            tax
+            lda         vc_bits,y
+            rts
 
 ; (and e...): the first NIL, or the last's value (none: T); (or e...): the first that isn't NIL, or the last's (none:
 ; NIL)
@@ -6574,7 +6729,14 @@ vc_bind:
             ldy         vc_lv
             ldx         L_b,y
             cpx         #BIN_SET
+            bne         :+
+            ldx         L_st,y                              ; (set, a statement: the local set from here)
             beq         @setl
+            jsr         vc_dset
+            bra         @setl
+:
+            jsr         vc_dtest                            ; (set! of one set: SETL)
+            bne         @setl
             pha                                             ; (set! of a local: SETBL)
             lda         #VO_SETBL
             jsr         vc_rop
@@ -7588,6 +7750,9 @@ vq_n:       .byte       2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1
 vq_op:      .byte       VO_ADD, VO_SUB, VO_LT, VO_GT, VO_LE, VO_GE, VO_NEQ, VO_INC, VO_DEC, VO_ZEROP, VO_ONEP
 
 ; The built-ins' flags again (vb_flags'), for this bank
+; A bit's mask, by its number
+vc_bits:    .byte       1, 2, 4, 8, 16, 32, 64, 128
+
 vc_bflags:
 .repeat BI_COUNT, I
             .byte       .ident(.sprintf("bi_fl_%d", I))
