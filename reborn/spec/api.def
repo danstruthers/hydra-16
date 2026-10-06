@@ -26,7 +26,7 @@
 #   s         a string (an atom's or a symbol's name), its bytes and a 0; s? the same, or NIL or left out: 0
 #   args?     a list of strings, each with a 0, then an empty one (SPAWN's); NIL or left out: 0
 #   map?      a list of bytes, after their count (SPAWN's fd map); NIL or left out: 0
-#   bytes(R)  a string's bytes, their count in R
+#   bytes(R)  a string's bytes (or a list of bytes), their count in R
 #   buf(N)    a buffer of N bytes the call fills (no argument; N a number, a const, NAME+1)
 #   buf       a buffer of what room there is (no argument), sized by count (an argument: at most that room) or
 #             size (no argument: the room)

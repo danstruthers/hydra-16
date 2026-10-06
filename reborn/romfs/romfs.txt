@@ -40,6 +40,16 @@ lib/hylang/globals.hl lib/hylang/globals.hl ; hylang's library: danlang's (lib/ 
 lib/hylang/dice.hl  lib/hylang/dice.hl      ;   (from its snapshot, the module hysnap) and the others by (load "dice")
 lib/hylang/screen.hl lib/hylang/screen.hl
 lib/hylang/newns.hl lib/hylang/newns.hl     ; (newns): the default namespace built again, in hylang's own
+lib/hylang/dev.hl   lib/hylang/dev.hl       ; The device libraries, (use "gpio") ...: hylang over the devices' files
+lib/hylang/gpio.hl  lib/hylang/gpio.hl      ;   (dev.hl: what they share)
+lib/hylang/i2c.hl   lib/hylang/i2c.hl
+lib/hylang/spi.hl   lib/hylang/spi.hl
+lib/hylang/cons.hl  lib/hylang/cons.hl
+lib/hylang/proc.hl  lib/hylang/proc.hl
+lib/hylang/clock.hl lib/hylang/clock.hl
+lib/hylang/disk.hl  lib/hylang/disk.hl
+lib/hylang/pc.hl    lib/hylang/pc.hl
+lib/hylang/snd.hl   lib/hylang/snd.hl
 bin/mkfs            ../obj/programs/mkfs.hyx    ; The disk tools: RAM programs (programs/), loaded from here
 bin/fsck            ../obj/programs/fsck.hyx
 bin/label           ../obj/programs/label.hyx

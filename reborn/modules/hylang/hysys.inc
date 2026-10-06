@@ -949,31 +949,77 @@ sk_map:
             LDAX        s_smap
             jmp         sy_fail
 
-; bytes(R): a string's bytes, their count in R (the parameter)
+; bytes(R): a string's bytes, or a list of bytes; their count in R (the parameter)
 sk_bytes:
-            jsr         sy_arg
-            jsr         sy_name
-            bcc         @lb702
-            jmp         sk_notstr
-@lb702:
-            MOVW        sy_t, hn
-            jsr         sy_take
-            lda         hq
-            ldx         hq + 1
-            jsr         sy_preg
             ldy         sy_p                                ; (Its count's register)
             lda         sy_rec,y
             iny
             sty         sy_p
             and         #$0F
             asl
-            tax
+            sta         sy_c
+            jsr         sy_arg
+            sta         sy_e
+            stx         sy_e + 1
+            jsr         sy_name
+            bcs         @list
+            MOVW        sy_t, hn
+            jsr         sy_take
+            lda         hq
+            ldx         hq + 1
+            jsr         sy_preg
+            MOVW        hn, sy_t
+            jsr         sy_copy
+@count:
+            ldx         sy_c
             lda         sy_t
             sta         r0,x
             lda         sy_t + 1
             sta         r0 + 1,x
-            MOVW        hn, sy_t
-            jmp         sy_copy
+            rts
+@list:
+            lda         sy_e                                ; (A list of bytes)
+            ldx         sy_e + 1
+            jsr         q_conses
+            bcs         @not
+            sta         sy_l
+            stx         sy_l + 1
+            lda         sy_next
+            ldx         sy_next + 1
+            jsr         sy_preg
+            stz         sy_t
+            stz         sy_t + 1
+@item:
+            lda         sy_l
+            ora         sy_l + 1
+            beq         @count
+            lda         sy_l
+            ldx         sy_l + 1
+            ldy         #0
+            jsr         cell_get
+            jsr         sy_byte
+            bcs         @not
+            pha
+            lda         #1
+            sta         hn
+            stz         hn + 1
+            jsr         sy_take
+            pla
+            sta         (hq)
+            inc         sy_t
+            bne         :+
+            inc         sy_t + 1
+:
+            lda         sy_l
+            ldx         sy_l + 1
+            ldy         #1
+            jsr         cell_get
+            sta         sy_l
+            stx         sy_l + 1
+            bra         @item
+@not:
+            LDAX        s_sbytes
+            jmp         sy_fail
 
 ; buf(N): a buffer of N bytes (the parameter), zeros
 sk_bufn:
@@ -1332,6 +1378,7 @@ s_sbyte:    .byte       " expects a whole number below 256", 0
 s_sword:    .byte       " expects a whole number below 65536", 0
 s_sint:     .byte       " expects an integer, -2^31 to 2^32 - 1", 0
 s_sstr:     .byte       " expects a string", 0
+s_sbytes:   .byte       " expects a string or a list of bytes", 0
 s_sargs:    .byte       " expects a list of strings", 0
 s_smap:     .byte       " expects a list of bytes", 0
 s_sstat:    .byte       " expects a stat hash", 0

@@ -1,0 +1,103 @@
+; devices.hl - hylang's device libraries (docs/hylang.md, "Made for the Hydra", 3), each checked against the
+; emulated device: the pins (the port's inputs $A5), CA1's edges, two I2C memories (at $50, 256 bytes; at $68, 16),
+; an SPI echo device (3), a card (on SPI device 5), the DS1747, the PC tool's folder, the YM2151.  Run as a script on
+; the hydev test's machine (danlang's harness.dl beside it on the card): the count, its status 1 if a check failed
+(def {hydra-dir} (do
+  =(here (fst args))
+  =(cut (max (last-index-of here "/") (last-index-of here "\\")))
+  (substring here 0 (+ cut 1))))
+
+(load (+ hydra-dir "harness.dl"))
+(def {test-file} "devices")
+
+; gpio: the port's inputs $A5, PA1 high too (the I2C bus's pull-up)
+(check (use "gpio") NIL)
+(check (list (gpio 2) (gpio 3)) {1 0})
+(check (gpio-port) 167)
+(check (gpio! 4 1) NIL)
+(check (gpio-out 6) NIL)
+(check (gpio-ca1! :rise) NIL)
+(check (gpio-ca2! 1) NIL)
+(check ((gpio-state) 4) {:out 1})
+(check ((gpio-state) 6) {:out 0})
+(check ((gpio-state) 3) {:in 0})
+(check (fst ((gpio-state) :ca1)) :rise)
+(check ((gpio-state) :ca2) 1)
+(check (> (gpio-wait) 0) T)
+(check (gpio-ca2! :in) NIL)
+(check ((gpio-state) :ca2) :in)
+(check-error (gpio-ca1! :up) "'gpio-ca1!' expects :rise or :fall")
+(check (gpio-in 4) NIL)
+(check (gpio-in 6) NIL)
+
+; i2c: a memory written and read at a register, the devices that answer
+(check (use "i2c") NIL)
+(check (i2c-reg-size 1) NIL)
+(check (i2c-write #x50 "hello" 0) NIL)
+(check (i2c-read #x50 5 0) {104 101 108 108 111})
+(check (i2c-write #x50 {1 2 3} 16) NIL)
+(check (i2c-read #x50 3 16) {1 2 3})
+(check (i2c-devices) {80 104})
+(check (error-code (i2c-read #x51 1)) :io)
+(check (i2c-speed 50) NIL)
+
+; spi: the echo device's first byte $A0 in mode 0, $A3 in mode 3, then each byte the one before
+(check (use "spi") NIL)
+(check (spi 3 {1 2 3}) {160 1 2})
+(check (spi-mode 3 3) NIL)
+(check (spi 3 "x") {163})
+(check (len (spi-read 3 2)) 2)
+(check (spi-mode 3 0) NIL)
+
+; cons
+(check (use "cons") NIL)
+(check (window) 0)
+(check (windows) {0})
+(check (shown-window) 0)
+(check (beep) NIL)
+
+; proc: a task's arguments, directory, registers, memory, environment, namespace
+(check (use "proc") NIL)
+(def {hy-t} (spawn "sleep" "50"))
+(check (task-args hy-t) {"50"})
+(check (task-cwd hy-t) (cwd))
+(check (num? ((task-regs hy-t) :pc)) T)
+(check (task-mem hy-t #xE000 2) (list (peek #xE000) (peek #xE001)))
+(check (len (task-ram hy-t 0 0 3)) 3)
+(check ((task-env (pid)) "window") "0")
+(check (> (len (task-ns (pid))) 0) T)
+(kill hy-t)
+
+; clock
+(check (use "clock") NIL)
+(check (rtc) {:running})
+(check (set-date "2030-01-02 03:04:05") NIL)
+(check (substring (date) 0 16) "2030-01-02 03:04")
+
+; disk: the ROM disk, the cards (this one on SPI device 0, and 5)
+(check (use "disk") NIL)
+(def {hy-rom} (fst (filter (fn {h} {== (h :disk) "x"}) (disks))))
+(check (list (hy-rom :kind) (hy-rom :blocks) (hy-rom :label)) {:rom 8192 "ROM"})
+(check (cards) {0 5})
+(check ((fst (filter (fn {h} {== (h :disk) "5"}) (disks))) :blocks) 2048)
+(def {hy-room} (fst (filter (fn {h} {== (h :disk) "x"}) (df))))
+(check (list (hy-room :label) (<= (hy-room :free) (hy-room :size))) {"ROM" T})
+
+; pc: the PC tool answers; a file of its folder read
+(check (use "pc") NIL)
+(check (pc?) T)
+(check (read-file "/pc/hi.txt") "hi from the PC\n")
+
+; snd: notes by name; a tune (the test times its key-ons); a channel's settings
+(check (use "snd") NIL)
+(check (map note-of {"C4" "C#4" "Db4" "A4" "B-1"}) {60 61 61 69 11})
+(check-error (note-of "H4") "'note-of' expects a note: C4, C#4, Db4 ...")
+(check (tune {{"C4" 1} {"E4" 1} {NIL 1} {"G4" 2}} 0 600) NIL)
+(check (snd-claim 1 2) NIL)
+(check (list (snd-patch 1 0) (snd-vol 1 100) (snd-pan 1 :both) (snd-bend 1 -8) (snd-note 1 60) (snd-off 1)) {NIL NIL NIL NIL NIL NIL})
+(check-error (snd-pan 1 :middle) "'snd-pan' expects :left, :right or :both")
+(check (snd-release 1 2) NIL)
+(check (snd-volume 100) NIL)
+
+(print (format "{} checks, {} failed" test-count test-fails))
+(exit ?((zero? test-fails) 0 1))

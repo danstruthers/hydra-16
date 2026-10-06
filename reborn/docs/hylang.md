@@ -81,18 +81,21 @@ system's error: its text (`ERRSTR`'s, after the name it's about: `x: not found`)
 
 ### 3. The device libraries (`/lib/hylang/NAME.hl`, `(use "NAME")`)
 
-Each is hylang over the device's files, so it's also a working example of driving the device by hand.
+Each is hylang over the device's files, so it's also a working example of driving the device by hand.  What they
+share is `dev.hl` (`(use "dev")`): a file opened for one request (a READ or a WRITE, by the `sys-` functions, so
+an I2C or SPI transaction is one) and closed after, a failure's file closed too.  Bytes are a list of integers
+(a string's will do where they're written); a failure is the system's error (`:io`, `:busy` ...).
 
 | Library | Device | Functions |
 | :------ | :----- | :-------- |
-| `cons` | `#c` (`/dev`) | `(window)` (this one's number), `(windows)`, `(new-window)` (made and shown, `wctl`'s `new`), `(show-window n)`, `(raw-on)`, `(raw-off)`, `(beep)` (`#a/bell`, or a BEL) |
-| `gpio` | `#g` (`/dev/gpio`) | `(gpio pin)` (its level, 0 or 1), `(gpio! pin level)` (the pin made an output, then set), `(gpio-in pin)`, `(gpio-out pin)`, `(gpio-port)` (all 8, a byte), `(gpio-port! byte)`, `(gpio-ddr! byte)` (1: an output), `(gpio-ca1! :rise \| :fall)`, `(gpio-ca2! 0 \| 1 \| :in)`, `(gpio-wait)` (CA1's next edge: its count), `(gpio-state)` (a hash from `ctl`) |
-| `i2c` | `#i` (`/dev/i2c`) | `(i2c-devices)` (the addresses that answer, a list), `(i2c-read addr n [reg])` (bytes; `reg` written first, a repeated start before the read), `(i2c-write addr bytes [reg])`, `(i2c-speed khz)`, `(i2c-reg-size 1 \| 2)` |
+| `cons` | `#c` (`/dev`) | `(window)` (this one's number, `$window`), `(windows)` (their numbers), `(shown-window)`, `(new-window)` (made and shown, `wctl`'s `new`), `(show-window n)`, `(raw-on)` (`consctl` kept open), `(raw-off)`, `(beep)` (`#a/bell`, or a BEL) |
+| `gpio` | `#g` (`/dev/gpio`) | `(gpio pin)` (its level, 0 or 1), `(gpio! pin level)` (the pin made an output, then set), `(gpio-in pin)`, `(gpio-out pin)`, `(gpio-port)` (all 8, a byte), `(gpio-port! byte)`, `(gpio-ddr! byte)` (1: an output), `(gpio-ca1! :rise \| :fall)`, `(gpio-ca2! 0 \| 1 \| :in)`, `(gpio-wait)` (CA1's next edge: its count), `(gpio-state)` (a hash from `ctl`: each pin its direction and level, `{:out 1}`; `:ca1` `{:rise 3}`; `:ca2` 0, 1 or `:in`) |
+| `i2c` | `#i` (`/dev/i2c`) | `(i2c-devices)` (the addresses that answer, a list), `(i2c-read addr n [reg])` (bytes, a list; `reg` written first, a repeated start before the read), `(i2c-write addr bytes [reg])`, `(i2c-speed khz)`, `(i2c-reg-size 1 \| 2)` |
 | `spi` | `#S` (`/dev/spi`) | `(spi dev bytes)` (a transaction: the bytes that came back), `(spi-read dev n)` (n clocked in), `(spi-mode dev 0 \| 3)` |
-| `snd` | `#a` (`/dev`) | `(snd-claim ch...)`, `(snd-release ch...)`, `(snd-patch ch n)` (the X16's 163), `(snd-note ch note)` (MIDI: 60 middle C), `(snd-off ch)`, `(snd-vol ch v)` (0-127), `(snd-pan ch :left \| :right \| :both)`, `(snd-bend ch n)`, `(snd-drum n)` (General MIDI's), `(snd-volume v)` (the master, 0-200), `(snd-reset)`, `(snd-reg reg value...)` (the chip's registers, pairs), `(note-of "C#4")` (a note's number), `(tune {{note beats} ...} [ch] [tempo])` (notes played, a rest NIL), `(play path [times])` (a ZSM song, by `play`) |
-| `disk` | `#d` (`/dev/sd`), `#f` | `(disks)` (hashes: `:disk`, `:kind`, `:size`, from each `ctl`), `(disk-start d)`, `(disk-stop d)`, `(df)` (each disk's free and used space), `(cards)` (the SD cards there, by number) |
-| `proc` | `#p` (`/proc`) | `(task-args task)`, `(task-cwd task)`, `(task-env task)` (a hash), `(task-ns task)`, `(task-regs task)` (a hash: `:pc`, `:a` ... `:rom`), `(task-mem task addr n)` (bytes), `(task-ram task bank offset n)` |
-| `clock` | `#t` (`/dev`) | `(set-date "2026-10-04 12:00:00")` (the clock and the DS1747), `(rtc)` (`:running`, `:stopped` or `:none`, and `:battery-low`) |
+| `snd` | `#a` (`/dev`) | `(snd-claim ch...)`, `(snd-release ch...)`, `(snd-patch ch n)` (the X16's 163), `(snd-note ch note)` (MIDI: 60 middle C), `(snd-off ch)`, `(snd-vol ch v)` (0-127), `(snd-pan ch :left \| :right \| :both)`, `(snd-bend ch n)`, `(snd-drum ch n)` (General MIDI's), `(snd-volume v)` (the master, 0-200), `(snd-reset)`, `(snd-reg reg value...)` (the chip's registers, pairs), `(note-of "C#4")` (a note's number), `(tune {{note beats} ...} [ch] [tempo])` (notes played in step with the tick, a rest NIL; 120 a minute), `(play path [times])` (a ZSM song, by `play`) |
+| `disk` | `#d` (`/dev/sd`), `#f` | `(disks)` (the disks started, hashes: `:disk`, `:kind`, `:blocks`, `:label`, from each `ctl`), `(disk-start d)`, `(disk-stop d)`, `(df)` (each file system's room, hashes: `:disk`, `:label`, `:free`, `:size`, in KB), `(cards)` (the SD cards there, their SPI devices) |
+| `proc` | `#p` (`/proc`) | `(task-args task)` (a list of strings), `(task-cwd task)`, `(task-env task)` (a hash, its names strings), `(task-ns task)` (a line each), `(task-regs task)` (a hash: `:pc`, `:a` ... `:rom`), `(task-mem task addr n)` (bytes, a list), `(task-ram task bank offset n)` |
+| `clock` | `#t` (`/dev`) | `(set-date "2026-10-04 12:00:00")` (the clock and the DS1747), `(rtc)` (a list: `:running`, `:stopped` or `:none`, and `:battery-low`) |
 | `pc` | `#P` (`/pc`) | `(pc?)` (whether the PC tool answers); `/pc`'s files are files, for everything else |
 
 ### 4. Every system call (`sys-`)
@@ -100,8 +103,8 @@ Each is hylang over the device's files, so it's also a working example of drivin
 Each call a program makes (`spec/api.def`'s, but the servers', the debugging calls and `NOTIFY`, as forth's `sys-`
 words) is a function, `sys-` and its name in lower case (`sys-open`, `sys-sleep-until`): `(sys-open "x" 0)` is
 `(sys :open "x" 0)`, `sys` being the built-in that makes any of them by name.  A `sys-` name is bound as it's first
-looked up, to `sys` partially applied to the name's atom (`<function>(sys :open)`), so 58 functions cost one
-built-in.  The arguments are the registers the call takes, in the order of its `hl:` line in `spec/api.def`, and
+looked up, to `sys` partially applied to the name's atom (`<function>(sys :open)`), so every call's function
+costs one built-in.  The arguments are the registers the call takes, in the order of its `hl:` line in `spec/api.def`, and
 its value is what it gives (one, or a list of them; NIL for none):
 
 * a register: a whole number (a character, its code), at most the register's size (`SEEK`'s offset may be
@@ -295,5 +298,8 @@ Then the Hydra layers (the plan's phases 9 to 12: its section "The Hydra layers"
    they're first looked up, from `spec/api.def`'s `hl:` lines (`obj/gen/hylsys.inc`, apigen's).
    `tests/hyhydra/hydra.hl`'s 125 checks (a call of each group, and the errors) pass, and with a collection before
    every allocation too.  249 built-ins of 256.
-11. **The device libraries**.
+11. **The device libraries**.  Done: `/lib/hylang`'s `gpio`, `i2c`, `spi`, `cons`, `proc`, `clock`, `disk`, `pc` and
+   `snd` (and `dev`, what they share), the table above's, each hylang over its device's files.
+   `tests/hyhydra/devices.hl`'s 67 checks pass against the emulated devices (the `hydev` test: the pins and CA1,
+   two I2C memories, an SPI echo device, a card, the DS1747, `/pc`), and a tune's key-ons on the YM2151 keep time.
 12. **The prompt**.

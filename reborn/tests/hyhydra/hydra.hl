@@ -138,7 +138,8 @@
 (check-error (sys-open "hy-sys2.txt") "hy-sys2.txt: not found")
 (def {hy-p} (sys-pipe))
 (check (sys-write (snd hy-p) "piped") 5)
-(check (sys-read (fst hy-p) 100) "piped")
+(check (sys-write (snd hy-p) {33 10}) 2)
+(check (sys-read (fst hy-p) 100) "piped!\n")
 (check (list (sys-close (fst hy-p)) (sys-close (snd hy-p))) {NIL NIL})
 (def {hy-cwd} (sys-getcwd))
 (check (sys-chdir "/") NIL)
@@ -160,6 +161,7 @@
 (check-error (sys-seek 0 -3000000000 1) "'sys-seek' expects an integer, -2^31 to 2^32 - 1")
 (check-error (sys-spawn "/bin/rc" {1}) "'sys-spawn' expects a list of strings")
 (check-error (sys-wstat "x" 5) "'sys-wstat' expects a stat hash")
+(check-error (sys-write 1 {1 300}) "'sys-write' expects a string or a list of bytes")
 
 ; keys: none waiting (raw till the end: a script reads no line)
 (check (key?) NIL)

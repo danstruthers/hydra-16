@@ -95,6 +95,7 @@ PASS hysuite5 hylang's suite, part 5 of 5: danlang's run.dl with eval6.dl, scope
 PASS hytext  hylang without its snapshot (a ROM without the module hysnap): its library loaded as text as it starts (/lib/hylang/globals.hl, the ROM disk's), the same banner, the library's definitions there; a tail loop of 50,000 steps
 PASS hyspeed hylang's budgets (phase 8's, at 3.58 MHz, its library loaded): a parameter looked up, a call of a function of two arguments, a tail loop's step (if, zero?, -, the call), map with a function of one argument, an item; each the difference of two lines' times, from the echo to the value
 PASS hyhydra hylang's Hydra built-ins and system calls (the plan's phases 9 and 10): hydra.hl as a script (sysinfo, mods, errstr; ps, task-info, yield, sleep-until; peek and poke, the task's banks, a shared segment, free; bind, mount, unmount, ns, newns; note, on-note; hold; key?; sys- functions of each group of calls, and their errors), and again with a collection before every allocation (sys- names bound, the calls' values made, puts and putc); at the prompt, raw keys (key: a character, the terminal's up key; key?) and Ctrl-C given to on-note's function
+PASS hydev   hylang's device libraries (the plan's phase 11: /lib/hylang's, loaded by use, over the devices' files), devices.hl as a script: gpio (pins, the port, ctl as a hash, CA1's edge), i2c (a memory written and read at a register, the devices, one that doesn't answer), spi (an echo device's transactions, mode 3), cons (the window, the windows, the bell), proc (a task's args, cwd, regs, memory, banks; its environment, its namespace), clock (the chip, the time set), disk (the disks, the cards: this one and one on SPI device 5; the ROM disk's room), pc (the PC tool answers; a file of its read), snd (note-of; a tune, its notes on the YM2151 in time; a channel's settings)
 PASS kcopy   spike S2: copying between tasks  (6 checks)
 PASS irq     spike S1: 115200 received by an irq entry while tasks spin  (6 checks)
 ```
@@ -435,6 +436,17 @@ string (`x: not found`, `:noent`).  `n_to_i32` (the third bank) takes `SEEK`'s n
 `TR_ENVAT`'s count and offset too.  Checked: `hydra.hl`'s 125 checks (63 new: a call of each group, the errors),
 and with a collection before every allocation, `sys-` names bound, the calls' values made, `sys-puts`' output.
 
+**Phase 11, the device libraries: done.**  `/lib/hylang` has a library for each device, loaded by `use`, each
+hylang over the device's files: `gpio` (pins, the port, `ctl` as a hash, CA1's edge), `i2c` (a device read and
+written, at a register; the devices that answer), `spi` (transactions, the mode), `cons` (the windows, raw keys,
+the bell), `proc` (a task's arguments, directory, environment, namespace, registers, memory and banks), `clock`
+(the time set, the chip's state), `disk` (the disks, their room, the cards), `pc` (whether the PC tool answers) and
+`snd` (the YM2151's channels, claims and registers; `note-of`, `tune` in step with the tick, `play`).  What they
+share is `dev.hl`: a file opened for one request, a READ or a WRITE by the `sys-` functions (so a transaction is
+one), and closed after, a failure's too (`try`).  `sys-write` (and `ENV_PUT`'s bytes) take a list of bytes as well
+as a string now.  Checked: the `hydev` test, `tests/hyhydra/devices.hl`'s 67 checks against the emulated devices
+(the machine `fdev` has), and a tune's key-ons on the YM2151 timed (a beat apart, and two, within two ticks).
+
 | Step | | Notes |
 |---|---|---|
 | 7.0 The language's specification | Draft (three decisions are the user's) | `docs/hylang.md`: hylang 1 is danlang (`C:\source\danlang`, its `master`), readied for the port in C# first (lexical scope, tail calls, fexprs, `try`, loops, the missing basics, its number bugs fixed, and a system library a PC has too: files, programs and the shell, the environment, the clock, bits and bytes, the system's errors as codes), with its regression suite (965 checks) run unchanged on both; where the two may differ (8-bit strings, the call depth, `/lib/hylang`, Ctrl-C an error); and what makes it the Hydra's, in four layers: the system library, the Hydra's built-ins (notes, namespaces, tasks, memory and banks, keys), device libraries in hylang over the devices' files (console, GPIO, I2C, SPI, sound, disks, `/proc`, the clock's chip, `/pc`), and a `sys-` function for every call.  To decide: the extension (`.hl`), `$`, danlang's license in the ROM |
@@ -455,8 +467,9 @@ and with a collection before every allocation, `sys-` names bound, the calls' va
    the built-ins and lists, phase 5, the numbers, phase 6, strings, characters and hashes, and phase 7, streams,
    I/O and the system library, and phase 8, the library (in hylang from a snapshot in the ROM), tuning (its
    budgets revised to what it reached) and `run.dl` whole: danlang parity.  Then the Hydra layers (the plan's
-   phases 9 to 12): phase 9, the Hydra's built-ins, and phase 10, every system call as a `sys-` function, are
-   done.  Next: phase 11, the device libraries (`.hl` files on the ROM disk, over the devices' files).
+   phases 9 to 12): phase 9, the Hydra's built-ins, phase 10, every system call as a `sys-` function, and phase
+   11, the device libraries, are done.  Next: phase 12, the prompt (hylang as the console's shell, rc's command
+   lines at its prompt).
    The parity
    checkpoint (the plan's, after phase 5) is still the user's.  `/proc/N/fd` is still to come (a channel keeps no
    name to show).
