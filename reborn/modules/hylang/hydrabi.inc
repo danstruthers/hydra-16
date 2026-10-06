@@ -1335,9 +1335,31 @@ hd_noteno:
 ; (on-note f): f called with each note that comes (but a kill) at the next call, the note an atom (:interrupt,
 ; :hangup, :alarm, :brk) or its number (16-31, a program's own): its value T to go on, NIL for the note's default
 ; (Ctrl-C's: the error :intr; another's, hylang's end, as the system's default ends it); (on-note NIL): the
-; defaults.  NIL
+; defaults.  NIL; f anything but a function or NIL, an error
 bi_on_note:
             jsr         y_arg0
+            pha                                             ; (A function: a built-in, a function's cell, one
+            lsr                                             ;   partially applied; or NIL)
+            pla
+            bcs         @bad
+            cpx         #IMM_PAGES
+            bcs         @cell
+            cpx         #>BUILTIN0
+            bcs         @ok
+            cpx         #0
+            bne         @bad
+            cmp         #0
+            beq         @ok
+@bad:
+            LDAX        s_hnotefn
+            jmp         y_fnerr
+@cell:
+            ldy         pk,x
+            cpy         #PK_FUNC
+            beq         @ok
+            cpy         #PK_PARTIAL
+            bne         @bad
+@ok:
             php
             sei
             sta         nt_f
@@ -1447,6 +1469,7 @@ kd_rawon:
 s_hflags:   .byte       "' expects :before, :after or :create", 0
 s_hdev:     .byte       "' expects a device: # and its letter", 0
 s_hnote:    .byte       "' expects a note: :interrupt, :kill, :hangup, :alarm, :brk, or 1-31", 0
+s_hnotefn:  .byte       "' expects a function or NIL", 0
 s_kold:     .byte       "old", 0
 s_knew:     .byte       "new", 0
 s_kcreate:  .byte       "create", 0

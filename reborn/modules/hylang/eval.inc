@@ -2423,8 +2423,11 @@ ev_intr:
 :
             jmp         ev_return
 
-; The error interrupted (:intr): ex.  OUT: C = 1 if there's no room (the bytecode machine's too)
+; The error interrupted (:intr): ex, made once (Ctrl-C's flag cleared: it stops what it reaches as any error does,
+; so try's handler runs).  OUT: C = 1 if there's no room (the bytecode machine's too)
 intr_err:
+            lda         #$80
+            trb         intr
             LDAX        s_intr
             jsr         err_text
             bcs         @rts

@@ -519,6 +519,12 @@ loop's step 888, `map`'s item 2,987.  What's left is the machine's shape: an op 
 some 25 cycles each; a counting loop's step is 13 ops and some 1,200 cycles, HyForth's 68.  Next: the loops
 (`while`, `dotimes`, `each`) and a function's own locals (`=(`, `let`) compiled.
 
+**danlang's `on-note`** (`feature/speed`'s `bfb040c`): danlang gives Ctrl-C's note to an `on-note` function now, as
+hylang does, and its `:intr` error is made once.  hylang's was made at each call after Ctrl-C till the prompt (a
+`try`'s handler stopped too): the flag is cleared as the error's made now (`intr_err`, the evaluator's and the
+bytecode machine's).  `on-note` takes a function (a built-in, a function, one partially applied) or NIL, as
+danlang's; anything else is an error.  `system.dl`'s 3 checks of it: the suite is 1,337.
+
 | Step | | Notes |
 |---|---|---|
 | 7.0 The language's specification | Draft (three decisions are the user's) | `docs/hylang.md`: hylang 1 is danlang (`C:\source\danlang`, its `master`), readied for the port in C# first (lexical scope, tail calls, fexprs, `try`, loops, the missing basics, its number bugs fixed, and a system library a PC has too: files, programs and the shell, the environment, the clock, bits and bytes, the system's errors as codes), with its regression suite (965 checks) run unchanged on both; where the two may differ (8-bit strings, the call depth, `/lib/hylang`, Ctrl-C an error); and what makes it the Hydra's, in four layers: the system library, the Hydra's built-ins (notes, namespaces, tasks, memory and banks, keys), device libraries in hylang over the devices' files (console, GPIO, I2C, SPI, sound, disks, `/proc`, the clock's chip, `/pc`), and a `sys-` function for every call.  To decide: the extension (`.hl`), `$`, danlang's license in the ROM |

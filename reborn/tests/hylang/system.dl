@@ -144,6 +144,9 @@
 (check (>= (- (clock) sy-c0) 0.09) T)
 (check (function? key) T)
 (check (function? key?) T)
+(check (on-note (fn {n} {T})) NIL)
+(check (on-note NIL) NIL)
+(check-error (on-note 5))
 (check-error (sleep -1))
 (check-error (sleep "x"))
 
