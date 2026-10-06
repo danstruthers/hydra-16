@@ -528,7 +528,10 @@ bl_len:
             ldx         ex + 1
             jsr         kind_of
             cmp         #PK_STRING
-            bne         :+
+            beq         :+
+            cmp         #PK_BUFFER                          ; (A buffer: its bytes, as a string's)
+            bne         :++
+:
             lda         ex
             ldx         ex + 1
             ldy         #0
@@ -1784,7 +1787,7 @@ n_sort:     .byte       "sort", 0
 s_lexpects: .byte       " expects a QExpr", 0
 s_lempty:   .byte       " passed an empty list", 0
 s_ljoin:    .byte       "Invalid parameter passed to 'join'.  Expected QExpr.", 0
-s_llen:     .byte       "'len' requires parameter of type string, list or hash", 0
+s_llen:     .byte       "'len' requires parameter of type string, list, hash or buffer", 0
 s_litemat:  .byte       "First 'item-at' parameter must be a QExpr", 0
 s_lindex:   .byte       "an index", 0
 s_lcount:   .byte       "a count", 0

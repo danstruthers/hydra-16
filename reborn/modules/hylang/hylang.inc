@@ -95,7 +95,8 @@ PK_FRAME8       = 18            ; A scope's frame: its parent (NIL: the global s
 PK_FRAME16      = 19            ;   (NIL: none), then names and values in pairs (a name NIL: no more), of 8 bytes (1
 PK_FRAME32      = 20            ;   pair), 16 (3), 32 (7) ...
 PK_FRAME64      = 21            ;   and 64 (15)
-PK_KINDS        = 22
+PK_BUFFER       = 22            ; A buffer: its length, its blob (a string's, but changed in place: buffers.inc)
+PK_KINDS        = 23
 PK_FIXNUM       = $FF           ; (kind_of's, for a fixnum: no page)
 
 ; A symbol's flags (its word 3)

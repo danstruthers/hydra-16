@@ -687,8 +687,12 @@ ev_head:
             jmp         ev_pcall
 :
             cmp         #PK_HASH
-            bne         @notfn
+            bne         :+
             jmp         ev_hcall
+:
+            cmp         #PK_BUFFER
+            bne         @notfn
+            jmp         ev_bcall
 @notfn:
             lda         cr                                  ; (No arguments: itself)
             ora         cr + 1
@@ -734,11 +738,43 @@ hcall_key:
             bcc         :+
             jmp         ev_return
 :
+            lda         cf                                  ; (A buffer's index: its byte, buffers.inc's)
+            ldx         cf + 1
+            jsr         kind_of
+            cmp         #PK_BUFFER
+            bne         :++
+            FARN        6, buf_at
+            bcc         :+
+            jmp         ev_nomem
+:
+            jmp         ev_return
+:
             FARN        4, h_at
             bcc         :+
             jmp         ev_nomem
 :
             jmp         ev_head
+
+; A buffer called (ex), (b i): with no index, itself; else its byte i (the index evaluated as a hash's key is,
+; hcall_key's); anything after the index, an error
+ev_bcall:
+            lda         cr
+            ora         cr + 1
+            bne         :+
+            jmp         ev_return
+:
+            lda         cr
+            ldx         cr + 1
+            ldy         #1
+            jsr         cell_get
+            cmp         #0
+            bne         @many
+            cpx         #0
+            bne         @many
+            jmp         ev_hcall
+@many:
+            LDAX        s_bufcall
+            jmp         ev_error
 
 ; (exit n): the status evaluated, then the end
 ev_exit:
@@ -2618,6 +2654,7 @@ s_nhangup:  .byte       "hangup", 0
 s_nalarm:   .byte       "alarm", 0
 s_nbrk:     .byte       "brk", 0
 s_note:     .byte       "note", 0
+s_bufcall:  .byte       "A buffer is called with an index: (b i)", 0
 amp_digits: .byte       "_123456789"
 n_err:      .byte       "&err"
 n_code:     .byte       "&code"

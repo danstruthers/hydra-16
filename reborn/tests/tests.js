@@ -632,14 +632,14 @@ function hylangCard(test, files = {}) {
 // the parts' files together are run.dl's, in its order.  Nearly all the suite's time is eval.dl's tail loops (50,000
 // steps each, 0.2-0.8 billion cycles apiece), so eval.dl is cut too, on the card (the file itself unchanged): eval1.dl
 // up to its first cut, then a piece from each cut (a line that starts with it, found once) to the next.  checks: a
-// part's count (the suite's: 1,197); about: more of what it checks
+// part's count (the suite's: 1,317); about: more of what it checks
 const HYSUITE_CUTS = { eval: ['(fun {ev-loop n}', '(fun {ev-loop-do n}', '(fun {ev-loop-let n}', '(fun {ev-loop-eval n}', '(fun {ev-sum-to n acc}'] };
 const HYSUITE_PARTS = [
   { files: ['reader', 'eval1', 'eval2'], checks: 187, about: 'run.dl a script, args its name, its status; with its harness, loaded from a card: load reads a file an item at a time, refilled as it goes; a load nested in another' },
   { files: ['eval3'], checks: 1 },
   { files: ['eval4'], checks: 1 },
   { files: ['eval5'], checks: 3 },
-  { files: ['eval6', 'scope', 'control', 'errors', 'lists', 'strings', 'numbers', 'hashes', 'types', 'io', 'system', 'bits', 'library'], checks: 1005,
+  { files: ['eval6', 'scope', 'control', 'errors', 'lists', 'strings', 'numbers', 'hashes', 'types', 'io', 'system', 'bits', 'buffers', 'library'], checks: 1125,
     about: 'danlang\'s library, hylang\'s from its snapshot (globals.dl) and the ROM disk\'s /lib/hylang (dice.dl and screen.dl, where load finds a bare name, and use); files written on the card, programs run, the clock a DS1747\'s' },
 ];
 // A part's own files for the card: part.dl (run.dl with the part's list) and the pieces it names of a file that's cut
@@ -781,6 +781,8 @@ const HYLANG_G = [
   ['(list (val "#[01]101") (fib 100) (shl -3 70) (to-fixed 1/3 5))', '{5 354224848179261915075 -3541774862152233910272 0.33333}'],
   ['(def {g} (to# {{:a "x"} {:b {1 2}} :t}))', 'NIL'],
   ['(list (g :b) (from# (hash-clone g {:c 3})) (str-split "a b" " ") (str-upper \\q))', '{{1 2} {{:a "x"} {:b {1 2}} {:c 3} :t} {"a" "b"} \\Q}'],
+  ['(do (def {bg} (buffer "abc")) (buffer-copy bg 1 (buffer {9 8})) (bytes bg))', '{97 9 8}'],
+  ['(list (from-bytes (buffer {104 105})) (bg 2) (buffer 2 7))', '{"hi" 8 <buffer>{7 7}}'],
 ];
 // hyspeed's: functions to time, then pairs of lines, each timed from its echo to its value (the same length), so
 // the REPL's work and the serial line's drop out of their difference

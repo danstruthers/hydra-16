@@ -49,6 +49,7 @@ HL_DATA4        = 1             ; (The RAM code in DATA4: hylang.cfg)
 .include "system.inc"
 .include "hydrabi.inc"
 .include "hysys.inc"
+.include "buffers.inc"
 
 IBUF_SIZE       = 128           ; stdin read this much at a time
 
@@ -1126,7 +1127,7 @@ s_missingl: .byte       "=> Error: missing ", 0
 s_long:     .byte       "=> Error: Too long: an expression of more than 4096 bytes", LF, 0
 s_nomemline: .byte      "=> Error: out of memory", LF, 0
 s_noheap:   .byte       "hylang: no room for its heap", LF, 0
-s_globals:  .byte       "globals"
+s_globals:  .byte       "hylib"                             ; (globals.hl, then hylang's own)
 s_globals_n = * - s_globals
 s_hysnap:   .byte       "hysnap", 0
 snap_id:    .word       0                                   ; (This hylang's id: tools/hysnap.js patches it in, a CRC)

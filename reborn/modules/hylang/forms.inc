@@ -1738,6 +1738,8 @@ sf_expr:
             beq         @no
             cmp         #PK_HASH
             beq         @no
+            cmp         #PK_BUFFER
+            beq         @no
             cmp         #PK_STREAM
             bne         @yes
 @no:
@@ -2242,8 +2244,9 @@ bi_hash_call:
 :
             jmp         ev_apply_values
 
-; (load path...): each file's expressions evaluated in turn, in the global scope; the last's value.  Its error, or
-; a reader's, is "path: message" (a file not there: the system's error, :noent).  Read an item at a time (read_item),
+; (load path...): each file's expressions evaluated in turn, in the global scope; the last's value.  Its error is
+; "path: message" (a file not there: the system's error, :noent), a reader's "path:LINE: message" (the line where
+; it stopped; a bracket left open, the innermost one's).  Read an item at a time (read_item),
 ; the reader's text refilled from the file; a load while it waits for a value (one nested) uses the text too, so when
 ; the value comes, if the text isn't its own any more (rd_owner), it seeks the file back to its next byte (its
 ; frame's) and reads on from there
@@ -2298,6 +2301,9 @@ load_open:
             sta         ld_fdv
             stz         ld_off
             stz         ld_off + 1
+            lda         #1                                  ; (Its first line)
+            sta         rd_line
+            stz         rd_line + 1
             jsr         ld_text
             stz         ex
             stz         ex + 1
@@ -2339,10 +2345,17 @@ load_next:
             cmp         #RD_ERROR
             bne         :+
             MOVW        ex, hv
-            jmp         load_error
+            lda         rd_line                             ; ("path:LINE: message": where it stopped)
+            ldx         rd_line + 1
+            jmp         load_rderr
 :
-            jsr         err_begin                           ; ("path: missing )")
-            jsr         out_path
+            jsr         err_begin                           ; ("path:LINE: missing )": the innermost bracket's)
+            ldx         rd
+            lda         lv_line_hi,x
+            pha
+            lda         lv_line_lo,x
+            plx
+            jsr         out_pathline
             LDAX        s_missing
             jsr         msg_out
             ldx         #0
@@ -2385,13 +2398,27 @@ load_next:
             ldx         #0
             jsr         fix_ax
             jsr         push
+            lda         rd_line
+            ldx         #0
+            jsr         fix_ax
+            jsr         push
+            lda         rd_line + 1
+            ldx         #0
+            jsr         fix_ax
+            jsr         push
             PUSHK       K_LOAD
             MOVW        ex, hv                              ; (The item, in the global scope)
             stz         ee
             stz         ee + 1
             jmp         ev_eval
 k_load:
-            jsr         pop                                 ; (Its frame: its next byte, its fd, its path)
+            jsr         pop                                 ; (Its frame: its line, its next byte, its fd, its path)
+            jsr         unfix
+            sta         ld_line + 1
+            jsr         pop
+            jsr         unfix
+            sta         ld_line
+            jsr         pop
             jsr         unfix
             sta         ld_off + 1
             jsr         pop
@@ -2421,6 +2448,7 @@ k_load:
             lda         rd_owner                            ; (The text its own still: on)
             cmp         ld_fdv
             bne         :+
+            MOVW        rd_line, ld_line
             jmp         load_next
 :
             lda         ld_off                              ; (Else the file back to its next byte)
@@ -2433,6 +2461,7 @@ k_load:
             lda         ld_fdv
             jsr         SEEK
             jsr         ld_text
+            MOVW        rd_line, ld_line                    ; (Its line, as it was)
             jmp         load_next
 ; The last value
 load_value:
@@ -2474,6 +2503,38 @@ load_error:
             FARN        2, print_val
             jmp         ev_err_end
 
+; ex, a reader's error in the file cf, on line .A, .X: "path:LINE: message", given to the frame on top
+load_rderr:
+            pha
+            phx
+            jsr         err_begin
+            plx
+            pla
+            jsr         out_pathline
+            lda         ex                                  ; (Its message)
+            ldx         ex + 1
+            ldy         #0
+            jsr         cell_get
+            ldy         #1
+            FARN        2, print_val
+            jmp         ev_err_end
+
+; cf, a path (a string), out, a colon, the line .A, .X, and ": "
+out_pathline:
+            pha
+            phx
+            lda         cf
+            ldx         cf + 1
+            ldy         #1
+            FARN        2, print_val
+            lda         #':'
+            jsr         out_byte
+            plx
+            pla
+            jsr         out_dec
+            LDAX        s_colon
+            jmp         msg_out
+
 ; cf, a path (a string), out, and ": "
 out_path:
             lda         cf
@@ -2497,6 +2558,7 @@ ld_err:     .res        1                                   ; (load's: the syste
 ld_errbuf:  .res        32                                  ;   the offset of its next byte)
 ld_fdv:     .res        1
 ld_off:     .res        2
+ld_line:    .res        2                                   ; (load's frame's: the line it's on)
 wk_op:      .res        1                                   ; (A walk: map, filter ... W_*)
 fo_at:      .res        1                                   ; (file_open's: its name's place in scratch)
 fo_fd:      .res        1                                   ; (fo_open's: the file opened)

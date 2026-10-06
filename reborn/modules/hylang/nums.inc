@@ -576,7 +576,7 @@ bool_out:
             bra         nil_out
 
 ; (type-of x): x's type, an atom: :number :string :char :atom :symbol :function :error :t :list :sexpr :hash
-; :stream :exit
+; :stream :exit :buffer
 bi_type_of:
             jsr         arg_seen                            ; (ex: x, a scoped one's expression)
             jsr         type_index
@@ -635,6 +635,7 @@ TY_SEXPR        = 9
 TY_HASH         = 10
 TY_STREAM       = 11
 TY_EXIT         = 12
+TY_BUFFER       = 13
 type_index:
             lda         ex
             lsr
@@ -699,6 +700,9 @@ bi_is_symbol:
 bi_is_string:
             lda         #TY_STRING
             bra         is_type
+bi_is_buffer:
+            lda         #TY_BUFFER
+            bra         is_type
 bi_is_char:
             lda         #TY_CHAR
             bra         is_type
@@ -743,11 +747,11 @@ CHAR_TYPE       = 4
 FN_TYPE         = 7
 T_TYPE          = 9
 type_lo:    .lobytes    tn_number, tn_error, tn_atom, tn_symbol, tn_char, tn_string, tn_hash, tn_function
-            .lobytes    tn_stream, tn_t, tn_exit, tn_sexpr, tn_qexpr
+            .lobytes    tn_stream, tn_t, tn_exit, tn_sexpr, tn_qexpr, tn_buffer
 type_hi:    .hibytes    tn_number, tn_error, tn_atom, tn_symbol, tn_char, tn_string, tn_hash, tn_function
-            .hibytes    tn_stream, tn_t, tn_exit, tn_sexpr, tn_qexpr
+            .hibytes    tn_stream, tn_t, tn_exit, tn_sexpr, tn_qexpr, tn_buffer
 imm_type:   .byte       12, 9, 11, 10, 9                    ; (NIL, T, (), exit, unbound)
-kind_type:  .byte       9, 9, 9, 11, 12, 12, 5, 0, 0, 0, 0, 1, 7, 3, 2, 7, 6, 8, 9, 9, 9, 9
+kind_type:  .byte       9, 9, 9, 11, 12, 12, 5, 0, 0, 0, 0, 1, 7, 3, 2, 7, 6, 8, 9, 9, 9, 9, 13
 tn_number:  .byte       "Number", 0
 tn_error:   .byte       "Error", 0
 tn_atom:    .byte       "Atom", 0
@@ -761,6 +765,7 @@ tn_t:       .byte       "T", 0
 tn_exit:    .byte       "Exit", 0
 tn_sexpr:   .byte       "S-Expression", 0
 tn_qexpr:   .byte       "Q-Expression", 0
+tn_buffer:  .byte       "Buffer", 0
 
 s_fn:       .byte       "fn", 0
 s_fexpr:    .byte       "fexpr", 0
@@ -779,10 +784,10 @@ s_errcode:  .byte       "An error's code must be an atom", 0
 
 ; The types' names (type-of's), each an atom's
 tyn_lo:     .lobytes    ty_number, ty_string, ty_char, ty_atom, ty_symbol, ty_function, ty_error, ty_t, ty_list
-            .lobytes    ty_sexpr, ty_hash, ty_stream, ty_exit
+            .lobytes    ty_sexpr, ty_hash, ty_stream, ty_exit, ty_buffer
 tyn_hi:     .hibytes    ty_number, ty_string, ty_char, ty_atom, ty_symbol, ty_function, ty_error, ty_t, ty_list
-            .hibytes    ty_sexpr, ty_hash, ty_stream, ty_exit
-tyn_len:    .byte       6, 6, 4, 4, 6, 8, 5, 1, 4, 5, 4, 6, 4
+            .hibytes    ty_sexpr, ty_hash, ty_stream, ty_exit, ty_buffer
+tyn_len:    .byte       6, 6, 4, 4, 6, 8, 5, 1, 4, 5, 4, 6, 4, 6
 ty_number:  .byte       "number"
 ty_string:  .byte       "string"
 ty_char:    .byte       "char"
@@ -796,8 +801,9 @@ ty_sexpr:   .byte       "sexpr"
 ty_hash:    .byte       "hash"
 ty_stream:  .byte       "stream"
 ty_exit:    .byte       "exit"
+ty_buffer:  .byte       "buffer"
 imm_ty:     .byte       TY_LIST, TY_T, TY_SEXPR, TY_EXIT, TY_T
 kind_ty:    .byte       TY_T, TY_T, TY_T, TY_SEXPR, TY_LIST, TY_LIST, TY_STRING, TY_NUMBER, TY_NUMBER, TY_NUMBER
             .byte       TY_NUMBER, TY_ERROR, TY_FUNCTION, TY_SYMBOL, TY_ATOM, TY_FUNCTION, TY_HASH, TY_STREAM
-            .byte       TY_T, TY_T, TY_T, TY_T
+            .byte       TY_T, TY_T, TY_T, TY_T, TY_BUFFER
 

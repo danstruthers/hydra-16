@@ -44,6 +44,19 @@
 (check-error (read-line io-s))
 (check (close io-s) NIL)
 
+; read and written in place (:update): the file's there, as it was, till it's written over
+(def {io-s} (open io-tmp :update))
+(check (read-line io-s) "line one 1")
+(seek io-s 0)
+(write-to io-s "LINE")
+(seek io-s 0)
+(check (read-line io-s) "LINE one 1")
+(close io-s)
+(def {io-s} (open io-tmp))
+(check (read-line io-s) "LINE one 1")
+(close io-s)
+(check (try (open (+ regress-dir "no-such-file.tmp") :update) &code) :noent)
+
 ; what can't be done
 (check-error (open (+ regress-dir "no-such-dir/x.txt")))
 (check-error (open io-tmp :sideways))

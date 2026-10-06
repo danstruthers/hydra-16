@@ -3,8 +3,9 @@
 ; Equals and CompareTo).  eq: numbers by value (as yet fixnums), characters, strings, atoms and symbols by their text,
 ; lists item by item (an S-expression isn't a Q-expression), T and exit as themselves, errors by their messages,
 ; functions by their formals and body, built-ins by which and the values given them.  cmp: by kind first (numbers,
-; characters, strings, atoms, symbols, Q-expressions, S-expressions, T, functions, hashes, streams, errors), then by
-; value; a list item by item, one that's the start of another first; two different functions as they print.
+; characters, strings, atoms, symbols, Q-expressions, S-expressions, T, functions, hashes, buffers, streams, errors),
+; then by value; a list item by item, one that's the start of another first; two different functions as they print.
+; A buffer is equal to another of the same bytes, and in their order, as a string is.
 ;   Lists nest as deep as they like: the pairs still to be compared are on the evaluation stack (q_n of them), not
 ; the 65C02's.  A scoped value is compared as its expression.
 
@@ -214,7 +215,10 @@ q_same:
             cmp         #QK_SLIST
             beq         @list
             cmp         #QK_STRING
+            beq         @lb206
+            cmp         #QK_BUFFER                          ; (Two buffers: by their bytes, as strings)
             bne         @lb205
+@lb206:
             jmp         @string
 @lb205:
             cmp         #QK_ERROR
@@ -398,9 +402,10 @@ QK_SLIST        = 6
 QK_T            = 7
 QK_FUNCTION     = 8
 QK_HASH         = 9
-QK_STREAM       = 10
-QK_ERROR        = 11
-QK_OTHER        = 12
+QK_BUFFER       = 10
+QK_STREAM       = 11
+QK_ERROR        = 12
+QK_OTHER        = 13
 q_kind:
             pha
             lsr
@@ -743,6 +748,8 @@ q_compare:
             beq         @number                             ; (A character's value: its code, in order too)
             cmp         #QK_STRING
             beq         @string
+            cmp         #QK_BUFFER
+            beq         @string
             cmp         #QK_ATOM
             beq         @name
             cmp         #QK_SYMBOL
@@ -930,4 +937,4 @@ s_qelem:    .byte       "'elem?' expects a list", 0
 ; Each kind of cell as eq and cmp see it
 q_kinds:    .byte       QK_OTHER, QK_OTHER, QK_OTHER, QK_SLIST, QK_QLIST, QK_QLIST, QK_STRING, QK_NUMBER
             .byte       QK_NUMBER, QK_NUMBER, QK_NUMBER, QK_ERROR, QK_FUNCTION, QK_SYMBOL, QK_ATOM, QK_FUNCTION
-            .byte       QK_HASH, QK_STREAM, QK_OTHER, QK_OTHER, QK_OTHER, QK_OTHER
+            .byte       QK_HASH, QK_STREAM, QK_OTHER, QK_OTHER, QK_OTHER, QK_OTHER, QK_BUFFER

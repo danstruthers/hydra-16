@@ -54,6 +54,33 @@ y_std:
 ; NIL if there's none
 y_init:
             jsr         y_enter
+            stz         cf                                  ; (clock.start: (ticks) and (time) as hylang starts,
+            stz         cf + 1                              ;   hylib.hl's clock's)
+            jsr         TICKS
+            sta         n_w32
+            txa
+            and         #$7F
+            sta         n_w32 + 1
+            stz         n_w32 + 2
+            stz         n_w32 + 3
+            jsr         y_u32
+            lda         hv
+            ldx         hv + 1
+            jsr         y_append
+            jsr         TIME
+            ldx         #3
+:
+            lda         r0,x
+            sta         n_w32,x
+            dex
+            bpl         :-
+            jsr         y_u32
+            lda         hv
+            ldx         hv + 1
+            jsr         y_append
+            MOVW        hv, cf
+            LDAX        s_clockst
+            jsr         y_bind
             stz         cf                                  ; (args: cf)
             stz         cf + 1
             MOVW        nb, hl_argp
@@ -309,7 +336,8 @@ y_endor:
 
 ; ---- The built-ins
 
-; (open path [mode]): a stream on the file: :read (the default), :write (made, or emptied) or :append
+; (open path [mode]): a stream on the file: :read (the default), :write (made, or emptied), :append or :update (read
+; and written in place: it must be there, else :noent; nothing emptied)
 bi_open:
             jsr         y_enter
             jsr         y_arg0                              ; (Its path: a string)
@@ -319,7 +347,7 @@ bi_open:
             LDAX        s_yexpects
             jmp         y_fnerr0
 :
-            stz         y_c                                 ; (Its mode: 0 read, 1 write, 2 append)
+            stz         y_c                                 ; (Its mode: 0 read, 1 write, 2 append, 3 update)
             lda         cn
             cmp         #2
             bcc         @path
@@ -332,7 +360,7 @@ bi_open:
             LDAX        s_openmode
             jmp         y_error
 :
-            ldx         #2
+            ldx         #3
 @mode:
             phx
             lda         mode_lo,x
@@ -393,7 +421,15 @@ bi_open:
             jsr         y_create
             bra         @made
 @append:
+            cmp         #3
+            beq         @update
             jsr         y_append_to
+            bra         @made
+@update:
+            lda         #SM_IN | SM_OUT                     ; (Read and written: as it is)
+            sta         y_sfl
+            lda         #O_RDWR
+            jsr         y_open
 @made:
             bcc         :+
             jmp         y_syserr0
@@ -846,7 +882,8 @@ y_done4:
             clc
             rts
 
-; (write-bytes s l): the bytes (a list of integers, 0-255) written as they are
+; (write-bytes s l), (write-bytes s b [i [n]]): the bytes (a list of integers, 0-255; a buffer's from i (0) on, n of
+; them (to its end): buffers.inc's) written as they are
 bi_write_bytes:
             jsr         y_enter
             ldy         #0
@@ -854,6 +891,19 @@ bi_write_bytes:
             bcs         y_done4
             jsr         y_canwrite
             bcs         y_done4
+            jsr         y_arg1
+            jsr         kind_of
+            cmp         #PK_BUFFER
+            bne         :+
+            FARN        6, bf_wbytes                        ; (Its bytes, as a string's are: y_begin's)
+            bra         @write
+:
+            lda         cn                                  ; (A list: no part of it)
+            cmp         #3
+            bcc         :+
+            LDAX        s_wpart
+            jmp         y_error
+:
             jsr         y_arg1
             jsr         q_conses
             bcc         :+
@@ -1202,17 +1252,20 @@ s_stdin:    .byte       "stdin", 0
 s_stdout:   .byte       "stdout", 0
 s_stderr:   .byte       "stderr", 0
 s_args:     .byte       "args", 0
-mode_lo:    .lobytes    s_mread, s_mwrite, s_mappend
-mode_hi:    .hibytes    s_mread, s_mwrite, s_mappend
+s_clockst:  .byte       "clock.start", 0
+mode_lo:    .lobytes    s_mread, s_mwrite, s_mappend, s_mupdate
+mode_hi:    .hibytes    s_mread, s_mwrite, s_mappend, s_mupdate
 s_mread:    .byte       "read", 0
 s_mwrite:   .byte       "write", 0
 s_mappend:  .byte       "append", 0
+s_mupdate:  .byte       "update", 0
 s_overwrite: .byte      "overwrite", 0
 s_append    = s_mappend
 s_ystream:   .byte       "' expects a stream", 0
 s_streamfirst: .byte    "' expects a stream first", 0
 s_yexpects: .byte       "' expects a String", 0
-s_openmode: .byte       "'open' mode must be :read, :write or :append", 0
+s_wpart:    .byte       "'write-bytes' takes a part (i n) only of a buffer", 0
+s_openmode: .byte       "'open' mode must be :read, :write, :append or :update", 0
 s_ynot:      .byte       ", not ", 0
 s_closecon: .byte       "Cannot close the console's streams", 0
 s_noread:   .byte       "Cannot read from this stream", 0

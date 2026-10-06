@@ -131,6 +131,11 @@
   }
 })
 
+; round: the nearest integer, a half away from zero
+(fun {round a} {
+  ?((neg? a) (- (floor (- 1/2 a))) (floor (+ a 1/2)))
+})
+
 ; div and mod: the quotient rounded down (toward minus infinity, as mod has it), so (+ (* b (div a b)) (mod a b)) is a
 (fun {div a b} ?{
   (and (num? a) (num? b))

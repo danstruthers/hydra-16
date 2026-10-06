@@ -138,6 +138,12 @@
 (sleep 0.1)
 (check (>= (mod (- (ticks) sy-t0) 32768) 15) T)
 (check (sleep 0) NIL)
+(check (>= (clock) 0) T)
+(def {sy-c0} (clock))
+(sleep 0.1)
+(check (>= (- (clock) sy-c0) 0.09) T)
+(check (function? key) T)
+(check (function? key?) T)
 (check-error (sleep -1))
 (check-error (sleep "x"))
 

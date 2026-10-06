@@ -747,7 +747,7 @@ bi_bytes:
             jsr         n_arg0
             lda         ex
             ldx         ex + 1
-            jsr         n_text_of
+            jsr         n_bytes_of
             bcc         :+
             LDAX        s_bytesstr
             jmp         n_error
@@ -767,7 +767,7 @@ bi_bytes:
             jsr         n_arg0                              ; (Its bytes again: a collection may have moved them)
             lda         ex
             ldx         ex + 1
-            jsr         n_text_of
+            jsr         n_bytes_of
             clc
             lda         hq
             adc         n_np
@@ -796,6 +796,35 @@ bi_bytes:
 bi_from_bytes:
             jsr         n_enter
             jsr         n_arg0
+            lda         ex
+            ldx         ex + 1
+            jsr         kind_of
+            cmp         #PK_BUFFER
+            bne         @list
+            jsr         cap_begin                           ; (A buffer: its bytes, a string)
+            sta         nu_start
+            stx         nu_start + 1
+            lda         ex
+            ldx         ex + 1
+            jsr         n_bytes_of
+            MOVW        hp, hq
+:
+            lda         hn
+            ora         hn + 1
+            beq         @made
+            lda         (hp)
+            jsr         out_byte
+            inc         hp
+            bne         :+
+            inc         hp + 1
+:
+            lda         hn
+            bne         :+
+            dec         hn + 1
+:
+            dec         hn
+            bra         :---
+@list:
             lda         ex
             ldx         ex + 1
             jsr         q_conses

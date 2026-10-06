@@ -213,7 +213,7 @@ BIN_LOAD        = BI_N          ; (A script's: hylang file)
             BI          "bytes", 1, 1, B3, bi_bytes
             BI          "from-bytes", 1, 1, B3, bi_from_bytes
             BI          "read-bytes", 2, 2, B5, bi_read_bytes
-            BI          "write-bytes", 2, 2, B5, bi_write_bytes
+            BI          "write-bytes", 2, 4, B5, bi_write_bytes
             BI          "platform", 0, 0, B5, bi_platform
             BI          "hydra?", 0, 0, B5, bi_hydra_p
             BI          "not", 1, 1, B3, bi_not
@@ -291,6 +291,13 @@ BIN_DEC         = BI_N
             BI          "hold", 0, ANY, BF_SPECIAL, sf_hold
 BIN_SYS         = BI_N          ; (The sys- functions': hysys.inc's sys_lazy)
             BI          "sys", 1, ANY, B6, bi_sys
+            BI          "buffer", 1, 2, B6, bi_buffer           ; (Buffers: buffers.inc's; buffer? a type's test)
+            BI          "buffer?", 1, 1, BF_ERRORS | B3, bi_is_buffer
+            BI          "buffer-get", 2, 2, B6, bi_buffer_get
+            BI          "buffer-put", 3, 3, B6, bi_buffer_put
+            BI          "buffer-fill", 2, 4, B6, bi_buffer_fill
+            BI          "buffer-copy", 3, 5, B6, bi_buffer_copy
+            BI          "read-buffer", 2, 4, B6, bi_read_buffer
 
 BI_COUNT        = BI_N
 .assert     BI_COUNT <= 256, error, "builtins.inc: 256 built-ins at most (BUILTIN0 + 2 * n, below IMM_PAGES)"
@@ -334,8 +341,6 @@ bi_names_hi:
 bi_bind:
             ldx         #0
 @one:
-            cpx         #BI_COUNT
-            bcs         @done
             phx
             lda         bi_names_lo,x                       ; (Its name: its length)
             sta         hq
@@ -370,8 +375,8 @@ bi_bind:
             sta         (hp),y
             plx
             inx
-            bra         @one
-@done:
+            cpx         #<BI_COUNT                          ; (256: till .X is 0 again)
+            bne         @one
             clc
 @rts:
             rts

@@ -1,0 +1,13 @@
+; hylib.hl - hylang's library, loaded as it starts (from its snapshot; without one, as text): danlang's, globals.hl
+; (its lib/globals.dl, as it is), then what hylang has as library code where danlang has built-ins (its table of
+; built-ins is full: 256).
+
+(load "globals")
+
+; clock: the seconds since hylang started, a fixed decimal, to the tick (5 ms).  clock.start is bound as it starts:
+; (ticks) and (time) then.  The ticks (0-32767) wrap every 164 seconds, so the time's seconds say how many times
+; they have (a clock set meanwhile, set-date's, throws that off)
+(fun {clock} {do
+  =(d (mod (- (ticks) (fst clock.start)) 32768))
+  =(s (* (tick-rate) (- (time) (snd clock.start))))
+  (to-fixed (/ (+ d (* 32768 (round (/ (- s d) 32768)))) (tick-rate)) 3)})

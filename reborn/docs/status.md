@@ -91,7 +91,7 @@ PASS hysuite1 hylang's suite, part 1 of 5: danlang's run.dl with reader.dl, eval
 PASS hysuite2 hylang's suite, part 2 of 5: danlang's run.dl with eval3.dl
 PASS hysuite3 hylang's suite, part 3 of 5: danlang's run.dl with eval4.dl
 PASS hysuite4 hylang's suite, part 4 of 5: danlang's run.dl with eval5.dl
-PASS hysuite5 hylang's suite, part 5 of 5: danlang's run.dl with eval6.dl, scope.dl, control.dl, errors.dl, lists.dl, strings.dl, numbers.dl, hashes.dl, types.dl, io.dl, system.dl, bits.dl, library.dl (danlang's library, hylang's from its snapshot (globals.dl) and the ROM disk's /lib/hylang (dice.dl and screen.dl, where load finds a bare name, and use); files written on the card, programs run, the clock a DS1747's)
+PASS hysuite5 hylang's suite, part 5 of 5: danlang's run.dl with eval6.dl, scope.dl, control.dl, errors.dl, lists.dl, strings.dl, numbers.dl, hashes.dl, types.dl, io.dl, system.dl, bits.dl, buffers.dl, library.dl (danlang's library, hylang's from its snapshot (globals.dl) and the ROM disk's /lib/hylang (dice.dl and screen.dl, where load finds a bare name, and use); files written on the card, programs run, the clock a DS1747's)
 PASS hytext  hylang without its snapshot (a ROM without the module hysnap): its library loaded as text as it starts (/lib/hylang/globals.hl, the ROM disk's), the same banner, the library's definitions there; a tail loop of 50,000 steps
 PASS hyspeed hylang's budgets (phase 8's, at 3.58 MHz, its library loaded): a parameter looked up, a call of a function of two arguments, a tail loop's step (if, zero?, -, the call), map with a function of one argument, an item; each the difference of two lines' times, from the echo to the value
 PASS hyhydra hylang's Hydra built-ins and system calls (the plan's phases 9 and 10): hydra.hl as a script (sysinfo, mods, errstr; ps, task-info, yield, sleep-until; peek and poke, the task's banks, a shared segment, free; bind, mount, unmount, ns, newns; note, on-note; hold; key?; sys- functions of each group of calls, and their errors), and again with a collection before every allocation (sys- names bound, the calls' values made, puts and putc); at the prompt, raw keys (key: a character, the terminal's up key; key?) and Ctrl-C given to on-note's function
@@ -461,6 +461,21 @@ ending in `&` starts rc in a note group of its own, its task `$apid`.  `load` pa
 name at `/` (`(use "dev")`, `(use "proc")`) is the library's, not `/dev`'s.  Checked: the `hysh` test (the rc test's
 lines that stand alone, 34 of its 45, at hylang's prompt as at rc's; the shell's own lines) and `hywin` (a card's
 `/lib/shell` naming `/bin/hylang -l`: window 0's shell and a new window's).
+
+**danlang's `feature/speed`, at parity** (to `9755ce1`).  danlang was made faster there, and gained what hylang now has
+too: buffers (bytes changed in place: `buffer`, `buffer?`, a buffer called `(b i)`, `buffer-get`, `buffer-put`,
+`buffer-fill`, `buffer-copy`, `read-buffer`; `len`, `bytes`, `from-bytes`, `write-bytes`, `eq`, `cmp` and the
+printer take one), `open`'s `:update`, `clock`, `key` and `key?`, `round`, and a file's read error naming the line
+(`file.hl:3: missing ))`, the innermost bracket's; the reader counts lines, load's frame keeps the line across a nested
+load).  A buffer is a new kind of cell (`PK_BUFFER`), a string's cell whose blob is changed in place, so the collector,
+`eq` and `cmp` take it as a string; its built-ins are `buffers.inc`, in the sixth bank, its bytes copied from blob to
+blob through a chunk of RAM.  The table of built-ins is full now (256 of 256: `bi_bind` counts to its wrap), so
+`clock` is library code: `hylib.hl`, which hylang loads as it starts (from its snapshot), loads `globals.hl`
+(danlang's `globals.dl`, with `round`, as it is), then defines it over `clock.start`, bound as hylang starts.  What
+danlang changed but didn't need hylang to (values shared, not copied; an integer key not an atom's; 64-bit edges)
+passed as it was.  Not taken: danlang's trace on stderr of where an error was made, and `-w`'s warnings (hylang's code
+carries no places).  The suite's 1,317 checks pass (`hysuite5` has `buffers.dl`: 1,125), and `hylang -g` makes,
+copies and reads buffers with a collection before every allocation.
 
 | Step | | Notes |
 |---|---|---|

@@ -36,9 +36,13 @@ print_val:
             sta         pv
             stx         pv + 1
             lsr
-            bcs         @fixnum
+            bcc         @lb747
+            jmp         @fixnum
+@lb747:
             cpx         #IMM_PAGES
-            bcc         @imm
+            bcs         @lb746
+            jmp         @imm
+@lb746:
             lda         pk,x
             cmp         #PK_SCONS
             bne         @lb21
@@ -72,6 +76,11 @@ print_val:
             bne         @lb18
             jmp         @hash
 @lb18:
+            cmp         #PK_BUFFER
+            bne         @lb17b
+            jsr         print_buffer
+            jmp         @after
+@lb17b:
             cmp         #PK_BIGNUM                          ; (A number: numtext.inc's)
             bcc         :+
             cmp         #PK_COMPLEX + 1
@@ -518,6 +527,71 @@ print_string:
 @done:
             rts
 
+; A buffer (pv) out: <buffer>{1 2}, both forms; save's (buffer {1 2}), as it reads back
+print_buffer:
+            ldx         #<s_buffer
+            ldy         #>s_buffer
+            lda         pm
+            cmp         #2
+            bne         :+
+            ldx         #<s_bufsave
+            ldy         #>s_bufsave
+:
+            txa
+            phy
+            plx
+            jsr         out_text
+            lda         pv                                  ; (Its length, its bytes)
+            ldx         pv + 1
+            jsr         deref
+            lda         (hp)
+            sta         pn
+            ldy         #1
+            lda         (hp),y
+            sta         pn + 1
+            iny
+            lda         (hp),y
+            pha
+            iny
+            lda         (hp),y
+            tax
+            pla
+            jsr         blob_data
+            ldx         #0                                  ; (A space before each but the first)
+@byte:
+            lda         pn
+            ora         pn + 1
+            beq         @end
+            txa
+            beq         :+
+            lda         #' '
+            jsr         out_byte
+:
+            lda         (hp)
+            ldx         #0
+            jsr         out_dec
+            inc         hp
+            bne         :+
+            inc         hp + 1
+:
+            lda         pn
+            bne         :+
+            dec         pn + 1
+:
+            dec         pn
+            ldx         #1
+            bra         @byte
+@end:
+            lda         #'}'
+            jsr         out_byte
+            lda         pm
+            cmp         #2
+            bne         :+
+            lda         #')'
+            jsr         out_byte
+:
+            rts
+
 ; A string's byte (.A) out as repr has it: \" \\, a control character's escape (\n, or \xHH), any other as it is
 out_escaped:
             cmp         #'"'
@@ -593,10 +667,10 @@ imm_hi:     .hibytes    s_nil, s_t, s_nil, s_exitv, s_unbound
 ; ... and, as yet, the placeholders for what later phases print (by kind)
 pt_lo:      .lobytes    s_imm, s_imm, s_imm, s_imm, s_imm, s_imm, s_imm, s_number, s_number, s_number, s_number
             .lobytes    s_imm, s_function, s_imm, s_imm, s_function, s_hash, s_stream, s_scope, s_scope, s_scope
-            .lobytes    s_scope
+            .lobytes    s_scope, s_imm
 pt_hi:      .hibytes    s_imm, s_imm, s_imm, s_imm, s_imm, s_imm, s_imm, s_number, s_number, s_number, s_number
             .hibytes    s_imm, s_function, s_imm, s_imm, s_function, s_hash, s_stream, s_scope, s_scope, s_scope
-            .hibytes    s_scope
+            .hibytes    s_scope, s_imm
 s_nil:      .byte       "NIL", 0
 s_t:        .byte       "T", 0
 s_exitv:    .byte       "exit", 0
@@ -614,6 +688,8 @@ ser_hi:     .hibytes    s_qnone, s_t, s_snone
 s_qnone:    .byte       "{}", 0
 s_snone:    .byte       "()", 0
 s_stream:   .byte       "<stream>", 0
+s_buffer:   .byte       "<buffer>{", 0
+s_bufsave:  .byte       "(buffer {", 0
 s_scope:    .byte       "<scope>", 0
 s_error:    .byte       "Error: ", 0
 s_deep:     .byte       "...", 0

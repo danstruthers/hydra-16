@@ -61,3 +61,14 @@
 (close bt-s)
 (remove bt-f)
 (check-error (write-bytes stdin {1}))
+
+; past 64 bits, either way
+(check (shl 1 62) 4611686018427387904)
+(check (shl 1 63) 9223372036854775808)
+(check (shl 3 62) 13835058055282163712)
+(check (shl -1 63) -9223372036854775808)
+(check (shr -9223372036854775808 63) -1)
+(check (shr 5 100) 0)
+(check (bit? -1 100) T)
+(check (bit-and -1 9223372036854775807) 9223372036854775807)
+(check (bit-and 18446744073709551615 255) 255)

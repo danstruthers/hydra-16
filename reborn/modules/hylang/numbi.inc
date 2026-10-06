@@ -845,6 +845,41 @@ n_text_of:
             sec
             rts
 
+; n_text_of's, and a buffer's bytes too (bytes's: hq its bytes, hn their count).  OUT: C = 1 if it's none of those
+n_bytes_of:
+            sta         n_v
+            stx         n_v + 1
+            jsr         kind_of
+            cmp         #PK_BUFFER
+            beq         :+
+            lda         n_v
+            ldx         n_v + 1
+            jmp         n_text_of
+:
+            lda         n_v                                 ; (Its length, its blob: a string's)
+            ldx         n_v + 1
+            jsr         deref
+            lda         (hp)
+            pha
+            ldy         #1
+            lda         (hp),y
+            pha
+            iny
+            lda         (hp),y
+            sta         n_t
+            iny
+            lda         (hp),y
+            tax
+            lda         n_t
+            jsr         blob_data
+            pla
+            sta         hn + 1
+            pla
+            sta         hn
+            MOVW        hq, hp
+            clc
+            rts
+
 ; (fib n): the nth Fibonacci number (n 0 or more): by doubling, from n's top bit down
 bi_fib:
             LDAX        n_fib

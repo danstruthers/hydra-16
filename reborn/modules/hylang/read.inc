@@ -41,6 +41,9 @@ lv_head_lo: .res        LEVELS + 1                          ;   its list so far 
 lv_head_hi: .res        LEVELS + 1
 lv_tail_lo: .res        LEVELS + 1                          ;   and its last cons
 lv_tail_hi: .res        LEVELS + 1
+lv_line_lo: .res        LEVELS + 1                          ;   and the line it's on (a file's: load's errors)
+lv_line_hi: .res        LEVELS + 1
+rd_line:    .res        2                                   ; The line rp is on (a file's: load starts it at 1)
 rd_on:      .res        1                                   ; <> 0: a text being read (its levels marked)
 closers:    .res        256                                 ; The closers wanted (RD_MORE's, an error's): innermost last
 cl_len:     .res        1
@@ -181,8 +184,18 @@ rd_start:
 @ascii:
             jmp         rd_e_ascii
 
-; rp to the next byte (a file's text refilled if less than 2 bytes are left).  Keeps .A, .X, .Y
+; rp to the next byte (a file's text refilled if less than 2 bytes are left), past a LF the next line.  Keeps .A, .X,
+; .Y
 rd_adv:
+            pha
+            lda         (rp)
+            cmp         #LF
+            bne         :+
+            inc         rd_line
+            bne         :+
+            inc         rd_line + 1
+:
+            pla
             inc         rp
             bne         :+
             inc         rp + 1
@@ -362,6 +375,12 @@ rd_open:
             stz         lv_head_hi,x
             stz         lv_tail_lo,x
             stz         lv_tail_hi,x
+            pha
+            lda         rd_line
+            sta         lv_line_lo,x
+            lda         rd_line + 1
+            sta         lv_line_hi,x
+            pla
             stx         rd
             rts
 @deep:
