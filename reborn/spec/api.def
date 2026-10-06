@@ -765,6 +765,15 @@ call TASKMEM server impl=K_TASKMEM far
   doc:    register points at it meanwhile: not for a driver, whose irq entry might run).  A byte at a time, IRQs
   doc:    off for each.
 
+call TASKSTOP server impl=K_TASKSTOP far
+  in:     .A = a task; .X = 1 to stop it, 0 to start it again
+  out:    -
+  errors: E_PERM (the caller isn't a driver; the kernel task, a driver), E_SRCH (not a task, or not started)
+  blocks: no
+  doc:    Stop a task where it is (the scheduler passes it by: its waits go on, and end, but it doesn't run), or
+  doc:    start it again: /proc's ctl (kdev, which decides who may), for the debugger.  TASKINFO's TI_FLAGS has
+  doc:    TF_STOPPED while it's stopped.  A kill note starts it, to end it.
+
 # ---- dbg (for the tests and the debugger: unstable)
 
 call DBG_SCALL dbg impl=K_SCALL
@@ -838,7 +847,9 @@ const ME_FLAGS        3        "MODINFO: its flags (HF_*)"
 const ME_NAME         4        "MODINFO: its name (12 bytes, zero-padded)"
 const ME_SIZE         16
 const TI_STATE        0        "TASKINFO's answer: the task's state (0: free, 1 ready, 2 wait, 3 call, 4 idle, 5 new, 6 sleep, 7 blocked, 8 event)"
-const TI_FLAGS        1        "TASKINFO: its flags ($01: a driver)"
+const TI_FLAGS        1        "TASKINFO: its flags (TF_DRIVER, TF_STOPPED)"
+const TF_DRIVER       $01      "TI_FLAGS: a driver"
+const TF_STOPPED      $80      "TI_FLAGS: stopped (/proc's ctl: TASKSTOP)"
 const TI_PARENT       2        "TASKINFO: its parent ($FF: none)"
 const TI_CPU          3        "TASKINFO: its CPU time, in ticks (3 bytes)"
 const TI_BANK         6        "TASKINFO: its module's paged ROM bank ($FF: none)"

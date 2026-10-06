@@ -9,7 +9,7 @@
 ;   #m      the modules in the paged ROM, a file each: its image (its header first: SPAWN reads it); bin, the
 ;           programs alone (bound at /bin)
 ;   #p      the tasks, a directory each (its number): status (its name, state, parent, CPU time in ticks and note
-;           group) and ctl (kill, interrupt, note N)
+;           group) and ctl (kill, interrupt, note N; stop and start: TASKSTOP)
 ;   #|      pipes: opening pipe makes a new one (its read end; for O_WRITE, its write end), and R_DUP its other end
 ;           (PIPE does both); 512 bytes each, 8 of them
 ;   #e      the environment of the task asking (the kernel keeps it: ENV_GET ...), a file a variable
@@ -2035,6 +2035,9 @@ gen_status:
             ldx         #>(info + TI_NAME)
             jsr         srv_tputs
             jsr         space
+            lda         #STATES                             ; ("stopped", whatever its state)
+            bit         info + TI_FLAGS
+            bmi         :+
             lda         info + TI_STATE
             cmp         #STATES
             bcc         :+
@@ -3182,7 +3185,7 @@ ns_r1:
             sta         r1 + 1
             rts
 
-; ctl: kill, interrupt, note N
+; ctl: kill, interrupt, note N; stop, start (the kernel decides whose: TASKSTOP's rules are NOTE's)
 c_kill:
             ldx         #NOTE_KILL
             bra         c_post
@@ -3207,6 +3210,16 @@ c_note:
 c_post:
             lda         z:srv_id
             jmp         NOTE_POST
+
+c_stop:
+            ldx         #1
+            bra         :+
+
+c_start:
+            ldx         #0
+:
+            lda         z:srv_id
+            jmp         TASKSTOP
 
 ; ****************************************************************************
 ; #|: pipes (a fid's aux: its pipe, and $80 for the write end)
@@ -3490,8 +3503,8 @@ p_at:
 
 .rodata
 zeros:      .res        64, 0
-STATES      = 9
-state_words: .word      s_free, s_ready, s_wait, s_call, s_idle, s_new, s_sleep, s_blocked, s_event
+STATES      = 9                                             ; (TASKINFO's states: 0-8; then stopped, TF_STOPPED)
+state_words: .word      s_free, s_ready, s_wait, s_call, s_idle, s_new, s_sleep, s_blocked, s_event, s_stopped
 s_free:     .byte       "free", 0
 s_ready:    .byte       "ready", 0
 s_wait:     .byte       "wait", 0
@@ -3587,6 +3600,8 @@ proc_cmds:
             .word       s_kill, c_kill
             .word       s_interrupt, c_intr
             .word       s_note, c_note
+            .word       s_stop, c_stop
+            .word       s_start, c_start
             .word       0
 s_slash:    .byte       "/", 0
 s_bin:      .byte       "bin", 0
@@ -3624,6 +3639,8 @@ s_pipe:     .byte       "pipe", 0
 s_kill:     .byte       "kill", 0
 s_interrupt: .byte      "interrupt", 0
 s_note:     .byte       "note", 0
+s_stop:     .byte       "stop", 0
+s_start:    .byte       "start", 0
 s_mem:      .byte       "mem", 0
 s_regs:     .byte       "regs", 0
 s_hangup:   .byte       "hangup", 0

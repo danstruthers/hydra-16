@@ -127,7 +127,9 @@ K_NOTE_QUEUED:
 ; (free, or not started).  Keeps .X
 q_post:
             cpx         #KERNEL_TASK
-            beq         @perm
+            bne         :+
+            FAIL        E_PERM
+:
             ldy         T_REGISTER
             php
             sei
@@ -173,6 +175,13 @@ q_post:
 @noted:
             lda         #1
             sta         TK_NOTED
+            lda         TK_NOTES                            ; A kill: a stopped task goes on, to take it
+            and         #1 << NOTE_KILL
+            beq         :+
+            lda         TK_FLAGS
+            and         #$FF ^ TF_STOPPED
+            sta         TK_FLAGS
+:
             lda         TK_STATE                            ; Woken, if it waits
             cmp         #ST_WAIT
             beq         @wake

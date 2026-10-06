@@ -89,6 +89,9 @@ line:
             jsr         tl_dec
             jsr         tl_space
             jsr         tl_space
+            lda         #STATES + 1                         ; Its state ("stopped", whatever it is)
+            bit         info + TI_FLAGS
+            bmi         :+
             lda         info + TI_STATE
             cmp         #STATES
             bcc         :+
@@ -161,8 +164,9 @@ line:
 
 .rodata
 s_100bits:  .byte       0, 0, 1, 0, 0, 1, 1                 ; (100: bits 2, 5, 6)
-STATES      = 9                                             ; (TASKINFO's states: 0-8, then any other)
+STATES      = 9                                             ; (TASKINFO's states: 0-8, any other; stopped)
 states:     .word       s_free, s_ready, s_wait, s_call, s_idle, s_new, s_sleep, s_blocked, s_event, s_other
+            .word       s_stopped
 s_free:     .byte       "free", 0
 s_ready:    .byte       "ready", 0
 s_wait:     .byte       "wait", 0
@@ -173,6 +177,7 @@ s_sleep:    .byte       "sleep", 0
 s_blocked:  .byte       "blocked", 0
 s_event:    .byte       "event", 0
 s_other:    .byte       "?", 0
+s_stopped:  .byte       "stopped", 0
 s_pct:      .byte       "%  ", 0
 s_clear:    .byte       $1B, "[H", $1B, "[2J", 0            ; (ANSI: home, and clear)
 s_head:     .byte       "task  state    cpu  name", LF, 0

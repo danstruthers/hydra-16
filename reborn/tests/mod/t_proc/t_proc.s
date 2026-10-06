@@ -4,7 +4,8 @@
 ; read back; its bank at $8000 as its ram has it; its module's header in the paged ROM; page 0 of the BIOS ROM;
 ; zeros for the I/O area; nothing past $FFFF; no writes to the ROMs), its ram (a write to a bank read back; the
 ; end), their lengths, its regs, its env (the variable it was given), its note (by name: its handler's, its code);
-; the kernel task's and a driver's refused.
+; its ctl's stop and start (a spinning child: no CPU time while it's stopped, its status "stopped"; a kill ending
+; it stopped); the kernel task's and a driver's refused.
 
 .include "hydra.inc"
 .include "hyx2.inc"
@@ -17,9 +18,12 @@
 fd:         .res        1
 child:      .res        1
 ptr:        .res        2
+paused:     .res        1                                   ; (The paused child, while child is another)
+cpu0:       .res        1
 
 .bss
 buf:        .res        64
+info:       .res        TI_SIZE
 stat:       .res        SR_SIZE
 pbuf:       .res        32                                  ; "#p/N/name"
 
@@ -250,6 +254,87 @@ main:
             lda         fd
             jsr         CLOSE
 
+; ---- ctl's stop and start: a spinning child stopped (its CPU time stays; its status says so) and started again;
+; stopped, then killed
+            lda         child                               ; (The paused child: the note's, after)
+            sta         paused
+            LDR         r0, s_child
+            LDR         r1, s_spin
+            lda         #0
+            jsr         SPAWN
+            sta         child
+            EXPECT_OK   "SPAWN t_child sff (it spins)"
+            lda         #2
+            ldx         #0
+            jsr         SLEEP
+            PPATH_      s_ctl, 0
+            POPEN_      O_WRITE
+            WRITE_      s_stop, 5
+            EXPECT_A    5, "ctl: stop"
+            jsr         cpu
+            sta         cpu0
+            lda         #10
+            ldx         #0
+            jsr         SLEEP
+            jsr         cpu
+            sec
+            sbc         cpu0
+            EXPECT_A    0, "stopped: no CPU time in 10 ticks"
+            lda         fd
+            pha
+            PPATH_      s_status, 0
+            POPEN_      O_READ
+            READ_       63
+            lda         fd
+            jsr         CLOSE
+            pla
+            sta         fd
+            ldx         #6                                  ; "t_child stopped ..."
+:
+            lda         buf + 8,X
+            cmp         s_stopped,X
+            bne         :+
+            dex
+            bpl         :-
+:
+            txa
+            EXPECT_A    $FF, "its status: stopped"
+            WRITE_      s_start, 6
+            EXPECT_A    6, "ctl: start"
+            jsr         cpu
+            sta         cpu0
+            lda         #10
+            ldx         #0
+            jsr         SLEEP
+            jsr         cpu
+            sec
+            sbc         cpu0
+            bne         :+
+            NOTOK       "started: it runs again"
+            bra         :++
+:
+            OK          "started: it runs again"
+:
+            WRITE_      s_stop, 5
+            WRITE_      s_kill, 5
+            EXPECT_A    5, "stopped again, then ctl: kill"
+            lda         fd
+            jsr         CLOSE
+            stz         r0
+            stz         r0 + 1
+            lda         child
+            jsr         WAIT
+            txa
+            EXPECT_A    137, "a kill ends a stopped task (137)"
+            PPATH_      s_ctl, $FE
+            POPEN_      O_WRITE
+            WRITE_      s_stop, 5
+            EXPECT_ERR  E_PERM, "#p/15/ctl stop (a driver): refused"
+            lda         fd
+            jsr         CLOSE
+            lda         paused
+            sta         child
+
 ; ---- note: by name; its handler keeps it, and it ends with it
             PPATH_      s_note, 0
             POPEN_      O_WRITE
@@ -265,6 +350,14 @@ main:
             txa
             EXPECT_A    NOTE_ALARM, "the child ends with the note it kept (alarm)"
             DONE        "t_proc"
+
+; .A = the child's CPU time, in ticks (TASKINFO's: its low byte)
+cpu:
+            LDR         r0, info
+            lda         child
+            jsr         TASKINFO
+            lda         info + TI_CPU
+            rts
 
 ; pbuf = "#p/N/" and the name at .A/.X: N the child (.Y = 0), the kernel task ($FF) or task 15 ($FE)
 ppath:
@@ -327,3 +420,10 @@ s_xline:    .byte       "x=hello", LF
 s_xyz:      .byte       "xyz"
 s_ram4:     .byte       "ram!"
 s_alarm:    .byte       "alarm", LF
+s_spin:     .byte       "sff", 0, 0
+s_ctl:      .byte       "ctl", 0
+s_status:   .byte       "status", 0
+s_stop:     .byte       "stop", LF
+s_start:    .byte       "start", LF
+s_kill:     .byte       "kill", LF
+s_stopped:  .byte       "stopped"
