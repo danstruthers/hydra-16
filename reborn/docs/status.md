@@ -556,6 +556,42 @@ its body); and a function first called from compiled code had that call counted 
 once (a `try`'s handler, made at each call, was compiled at each).  `bench.hl` uses none of these forms: hylang is
 8.6 times HyForth's time still.
 
+**The bytecode machine, step 4: its ops' dispatch, and calls.**  Timed op by op (from one op's fetch to the
+next's), an op cost some 40 cycles before its work, not the 25 step 1b had (its ip moved on through a shared
+routine, the code's bank set again, the fetch and the jump); a counting loop's step was 11 ops, and a call with
+its return some 900 cycles.  So: the compiler is in the sixth bank now, for room (the seventh, the machine's, is
+70% full); an op that doesn't leave the code's bank goes on without setting it again, its ip moved on in place
+(29 cycles; 24 for an op of a byte).  `SHEAD` keeps the global's value, and `CALL` the function it called last and
+its code, decoded, each with the globals' epoch (`vm_ep`: one more as a global is bound again, a name first bound
+in a frame, or a collection runs, so a function taken and its cell made again can't match): `SHEAD` 186-249
+cycles to 110, `CALL` 546 to 315.  `CALL`'s and `CSELF`'s returns are compiled, not encoded at each call; `RET`
+decodes its caller's place and frame in one piece (355 to 270).  The compiler joins ops as it emits them (the op
+just before, nothing between, no label): an argument and a quick op (`LQ s y c`; `LQP`, pushed), two arguments
+and a quick op (`LL`), a test and its `JF` (`JLQ`, `JLL`, `JQ`), each dispatched again on its quick op to code of
+its own for the usual ones; their op numbers come from six rare ops, which follow `EXT` now.  A local set by a
+statement of the body (its `do`'s parts, in order, errors returned) is read with `LOCAL` and `set!` with `SETL`
+after, no hole's check, so it joins them too.  A quick op given an error has it as its value, as the evaluator
+has it (`(+ e 1)` was `+`'s own error, `(< e 1)` NIL), so its arguments need no `JE` where that's the same.  A
+buffer's byte read, `(b i)`, and `buffer-put` are done in the machine for a fixnum index in the buffer, and
+a block's variable is read and set at once while the block has no scope.  A tail loop's step (`if`, `zero?`, `-`,
+the call) is 5 ops: 632 cycles (`hyspeed`, from 888); a call of a function of two arguments 1,146 (1,653); a step
+of `dotimes` 877 (1,137), of `each` 900 (1,142).  Direct threading (each op its code's address) was weighed: on
+the 65C02 its jump saves 4 cycles of the fetch, and the R bit and the operands' reads would cost more.
+
+| Benchmark | Step 3 (ms) | Step 4 (ms) | HyForth (ms) | hylang/HyForth |
+|---|---|---|---|---|
+| loop | 1,290 | 925 | 76 | 12.1x |
+| calls | 1,525 | 1,005 | 65 | 15.5x |
+| fib | 1,340 | 980 | 181 | 5.4x |
+| sieve | 2,755 | 1,905 | 332 | 5.7x |
+| sort | 4,240 | 3,275 | 480 | 6.8x |
+| gcd | 1,675 | 960 | 350 | 2.7x |
+| all | 12,825 | 9,050 | 1,484 | 6.1x (geometric mean 6.9x, from 10.0x) |
+
+What's left of the gap is the machine itself: an op's fetch and jump, its operands read through `ip`, and a
+frame's words on the evaluation stack.  Native code, compiled to the 65C02's own instructions, is next, on a
+branch of its own.
+
 | Step | | Notes |
 |---|---|---|
 | 7.0 The language's specification | Draft (three decisions are the user's) | `docs/hylang.md`: hylang 1 is danlang (`C:\source\danlang`, its `master`), readied for the port in C# first (lexical scope, tail calls, fexprs, `try`, loops, the missing basics, its number bugs fixed, and a system library a PC has too: files, programs and the shell, the environment, the clock, bits and bytes, the system's errors as codes), with its regression suite (965 checks) run unchanged on both; where the two may differ (8-bit strings, the call depth, `/lib/hylang`, Ctrl-C an error); and what makes it the Hydra's, in four layers: the system library, the Hydra's built-ins (notes, namespaces, tasks, memory and banks, keys), device libraries in hylang over the devices' files (console, GPIO, I2C, SPI, sound, disks, `/proc`, the clock's chip, `/pc`), and a `sys-` function for every call.  To decide: the extension (`.hl`), `$`, danlang's license in the ROM |

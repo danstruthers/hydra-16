@@ -231,7 +231,8 @@ The plan has it whole; in short:
   Q-expression evaluated, and an fexpr's argument, remember their scope (a scoped cell).  `load` reads a file an
   item at a time, the reader's text refilled from it, and seeks it back if a nested `load` used the text
   meanwhile.
-* **The bytecode machine** (`vm.inc`, in the seventh bank): a function `fun` defines is compiled as it's defined,
+* **The bytecode machine** (`vm.inc`, in the seventh bank; its compiler in the sixth): a function `fun` defines is
+  compiled as it's defined,
   any other at its second call, to the code of a small machine whose value register is `ex`; the code is in an
   arena of RAM banks of its own (four at most, 32K), never moved, and the function's word 4 is its place (word 5
   counts its calls till then).  A frame is the function's word and its arguments, where the caller pushed them on
@@ -244,7 +245,14 @@ The plan has it whole; in short:
   `one?` and the comparisons are ops that work fixnums at once (with a constant, one op); a built-in is called at
   once; any other call is `HEAD` (its function a function?) and `CALL` (a global's function, `SHEAD`: the global read
   in the same op; the function's own, by its name, `CSELF` and `TSELF`, which make its frame at once; a buffer
-  given an index, or a built-in partially applied, called at once too).  The evaluator does the rest: the other
+  given an index, or a built-in partially applied, called at once too: a buffer's byte, and `buffer-put`, done in
+  the machine for a fixnum index in it).  `SHEAD` keeps the global's value it read, and `CALL` the function it
+  called and its code, with the globals' epoch (`vm_ep`), which moves on as a global is bound again, a name is
+  first bound in a frame, or a collection runs: while it's the same, they use them at once.  The compiler joins
+  ops as it emits them: an argument and the quick op after it (`LQ`; `LQP`, its value pushed), two arguments and a
+  quick op (`LL`), and a test and the `JF` after it (`JLQ`, `JLL`, `JQ`), each with code of its own for the usual
+  quick ops; a local set by a statement of the body (its `do`'s parts, in order) is read and `set!` with no
+  hole's check after.  Six rare ops come after `EXT`.  The evaluator does the rest: the other
   special forms, an fexpr's call, a function not compiled (or with extras), a built-in that runs the machine; its
   value comes back through a `K_VM` frame.  A frame's scope is made only when it's wanted (a Q-expression with
   names in it, the evaluator, the built-ins that keep their caller's scope: `list`, `fn`, `fun`, `fexpr` and the hash
@@ -255,7 +263,7 @@ The plan has it whole; in short:
   variables).  A scope wanted, the function's table of its blocks (each one's code, and the block it's in) gives
   those the code is in, each made then, outermost first, its variables bound there and read and set there after.
   Errors are values, as the evaluator's: an op that may give one returns it from the function, unless what it's
-  for takes errors (`error?`'s argument, say).  The compiler counts on
+  for takes errors (`error?`'s argument, say); a quick op given one has it as its value.  The compiler counts on
   a name's built-in value (a special form, an operator) only while no frame has bound the name, and marks it
   (`SF_INLINED`); bound in a frame then, or bound again globally, every function's code is dropped and compiled again
   as it's next called.  Ctrl-C and notes are taken at each call, as the evaluator takes them.  The arena full,
@@ -294,16 +302,17 @@ The plan has it whole; in short:
   special forms, the dispatch and the built-ins that run the machine in the first; the reader, the printer, the
   list built-ins, equality and order in the second; the numbers (and, as yet, `fn`, the type tests and `error`)
   in the third; strings, hashes and the errors' messages in the fourth; streams, the system library and the
-  Hydra's built-ins (`hydrabi.inc`) in the fifth; the collector in the sixth; the bytecode machine in the seventh.  What every bank calls is in the task's RAM (the heap, the
+  Hydra's built-ins (`hydrabi.inc`) in the fifth; the collector and the bytecode machine's compiler in the sixth;
+  the machine in the seventh.  What every bank calls is in the task's RAM (the heap, the
   output, the evaluation stack): the most of that code is kept in the fourth bank and copied to the RAM as hylang
   starts (`hylang.cfg`'s DATA4), so the first bank's room is the evaluator's.  `+`, `-`, `1+`, `1-`, `zero?`,
   `one?` and the comparisons work fixnums in the first bank (`bi_fast`), without a far call.  The Hydra layers
   are library modules beside it.
 * **Budgets** (at 3.58 MHz, the library loaded; each from the REPL's echo to its `=>`, a difference of two lines'
   times so the REPL's own work drops out): start-up from the snapshot to the first prompt 300,000 cycles (286,000);
-  a parameter looked up 300 (279; compiled, 11); a call of a function of two arguments 4,000 (3,683; compiled,
-  1,653); a tail loop's step (`if`, `zero?`, `-`, the call) 6,500 (6,059; compiled, 888); `map` with a function of
-  one argument 4,000 an item (3,652; compiled, 2,987); a full
+  a parameter looked up 300 (279; compiled, 13); a call of a function of two arguments 4,000 (3,683; compiled,
+  1,146); a tail loop's step (`if`, `zero?`, `-`, the call) 6,500 (6,059; compiled, 632); `map` with a function of
+  one argument 4,000 an item (3,652; compiled, 2,955); a full
   collection of a full 64K cell heap 3,600,000 (213 cycles a live cell: 14,000 conses live, 3.8 M).  The `hyspeed`
   test checks the four of the evaluator on every run, the `heap` test the collector's (255 a cell, 9,000 live).
   They're phase 8's: the plan's were 150, 1,500, 3,000, 2,000 and 1,500,000, targets set before a spike, and
