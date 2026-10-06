@@ -1193,6 +1193,19 @@ module.exports = {
       },
     },
     {
+      name: 'pc-fast', what: '/pc at 115200: a file copied on the PC through the Hydra and compared, no reply\'s byte lost (none asked for again: the ACIA\'s interrupt goes ahead of the tick\'s and timer 2\'s)',
+      // (17K: some 530 requests.  Before, about one in 22 lost a byte and went again)
+      init: 't_rc', cycles: 300e6, pc: { files: { big: () => Buffer.concat([PC_BIG(), PC_BIG(), PC_BIG(), PC_BIG()]) } },
+      machine: { input: 'āecho b115200 >/dev/serctl\r' + 'ācp /pc/big /pc/copy; cmp /pc/big /pc/copy; echo $status\r' },
+      expect: ['% cp /pc/big /pc/copy; cmp /pc/big /pc/copy; echo $status\n\n%'],
+      check(m) {
+        const f = pcReport(m, 1, 0, 0), big = Buffer.concat([PC_BIG(), PC_BIG(), PC_BIG(), PC_BIG()]);
+        if (m.acia.pcLost) f.push(m.acia.pcLost + ' reply byte(s) lost (they came while the last was unread)');
+        if (!fs.readFileSync(path.join(m.pc.dir, 'copy')).equals(big)) f.push('the copy on the PC isn\'t big');
+        return f;
+      },
+    },
+    {
       name: 'pc-song', what: 'a song played from /pc (play /pc/t.zsm 2), its loop twice more, in time: a read on the line doesn\'t hold a note up',
       init: 't_rc', cycles: 120e6, pc: { files: { 't.zsm': PC_SONG } },
       machine: { input: 'āplay /pc/t.zsm 2; echo $status\r' },
@@ -1234,14 +1247,14 @@ module.exports = {
       name: 'xmodem', what: 'xmodem: a file received (1K blocks, a CRC; one damaged, one sent twice) and sent back (128-byte blocks, a checksum, one NAKed; 1K ones), the same; Ctrl-C at its start; the PC cancelling; 115200',
       init: 't_rc', cycles: 200e6,
       // (The emulator the PC's end: sim/lib/xmpeer.js.  The -s sessions' start, NAK or C, typed as a key.  At 115200,
-      // 128-byte blocks received: a 1K block comes faster than it can be taken, as the console's receive ring holds 255)
+      // 1K blocks received: one comes faster than it can be taken, what's behind waiting in the console's receive ring)
       get machine() {
         this.peer = createXmodemPeer([
           { trigger: 'xmodem -r /ram/x\r\n', role: 'send', data: XM_DATA(), k: true, damage: [2], again: [1] },
           { trigger: 'xmodem -s /ram/x\r\n', role: 'receive', crc: false, nak: [3] },
           { trigger: 'xmodem -s -k /ram/x\r\n', role: 'receive', crc: true },
           { trigger: 'xmodem -r /ram/y\r\n', role: 'send', data: XM_DATA(), cancel: 2 },
-          { trigger: 'xmodem -r /ram/w\r\n', role: 'send', data: XM_DATA() },
+          { trigger: 'xmodem -r /ram/w\r\n', role: 'send', data: XM_DATA(), k: true },
           { trigger: 'xmodem -s -k /ram/w\r\n', role: 'receive', crc: true },
         ]);
         return { pcHost: this.peer, input: 'āxmodem -r /ram/x\r' + 'āxmodem -s /ram/x\rĀ\x15' + 'āxmodem -s -k /ram/x\rĀC' +

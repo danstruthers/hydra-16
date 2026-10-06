@@ -49,7 +49,7 @@ PASS wcache  HydraFS's walk cache (the names looked up, there or not, and the di
 PASS lshell  the shell /lib/shell names (a card's: /bin/forth -l): init's in window 0, wstart's in a window made (Ctrl-] c: $window); send, a line typed in another window (#cN/kbdin), run there
 ```
 
-The rest of the system's 44 tests pass with these changes (the console's, init's, wstart's and nslib's among them):
+The rest of the system's 45 tests pass with these changes (the console's, init's, wstart's and nslib's among them):
 52 in all.
 
 ## Sizes

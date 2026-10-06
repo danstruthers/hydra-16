@@ -12,8 +12,10 @@
 ;               sent again on a NAK, or no answer in 10 seconds; then EOT
 ; 10 tries a block (or EOT), then it cancels (CAN CAN CAN): "too many errors"; CAN CAN from the PC, or Ctrl-C before
 ; the first block: "cancelled"; nothing for a minute: "no answer".  Done, it says the file's bytes ("file: 1234
-; bytes").  At 115200, receive 128-byte blocks (the PC's plain XMODEM or XMODEM-CRC, not 1K): a 1K block comes in
-; faster than it can be taken, as the console's receive ring holds 255 bytes (sending 1K blocks is fine).
+; bytes").  At 115200 a 1K block comes in faster than it can be taken (each byte's interrupt is 190 of the 311
+; cycles a character takes), and what's behind waits in the console's receive ring (255 bytes), so a block's bytes
+; are taken as quickly as can be: read IBUF at a time, the check by tables, the bytes read already taken in r_block's
+; loop.
 
 .include "hydra.inc"
 .include "hyx2.inc"
@@ -40,7 +42,7 @@ WAITS           = 60            ; -s: seconds for the receiver's first ask
 T_BYTE          = TICK_HZ       ; The time (ticks) for a block's next byte, and the quiet before a NAK ...
 T_ASK           = TICK_HZ * 3   ;   between asks ...
 T_BLOCK         = TICK_HZ * 10  ;   for the next block, or a block's answer
-IBUF            = 64            ; The line's bytes, read this many at a time
+IBUF            = 255           ; The line's bytes, read this many at a time (at most: what's come)
 BLOCK_MAX       = 1024
 DATA            = frame + 3     ; A block's data, after its start, its number and the number's complement
 
@@ -67,6 +69,7 @@ pend:       .res        2                                   ; -r: SUBs held back
 got:        .res        2                                   ; -s: the block's bytes from the file
 t:          .res        2                                   ; (Scratch)
 deadline:   .res        2                                   ; (get's)
+bend:       .res        2                                   ; (A block's data's end, as it comes)
 ibuf:       .res        IBUF                                ; The line's bytes, as read ...
 ilen:       .res        1                                   ;   how many ...
 ipos:       .res        1                                   ;   and how many taken
@@ -123,12 +126,12 @@ receive:
             jsr         line_open
             stz         pend
             stz         pend + 1
-            ldx         #IBUF - 1
+            ldx         #IBUF
             lda         #XM_SUB
 :
-            sta         subs,X
+            sta         subs - 1,X
             dex
-            bpl         :-
+            bne         :-
             lda         #1
             sta         blk
             stz         tries
@@ -224,31 +227,55 @@ r_block:
             stz         crc + 1
             stz         sum
             LDR         bp, DATA
-            lda         size
-            sta         cnt
-            lda         size + 1
-            sta         cnt + 1
-@data:
-            jsr         r_byte
+            clc                                             ; (bend: past its data)
+            lda         #<DATA
+            adc         size
+            sta         bend
+            lda         #>DATA
+            adc         size + 1
+            sta         bend + 1
+@data:                                                      ; Its data, a byte at a time: the next read already
+            ldy         ipos                                ;   (else r_byte's), into the block, and into the
+            cpy         ilen                                ;   check (at 115200 a 1K block's 1029 bytes come in
+            bcs         @read                               ;   311 cycles apart, and the console's interrupt has
+            lda         ibuf,Y                              ;   190 of them)
+            iny
+            sty         ipos
+@got:
             sta         (bp)
-            pha
-            clc
-            adc         sum
-            sta         sum
-            pla
-            jsr         crc_byte
+            ldx         crcm
+            beq         @sum1
+            eor         crc + 1                             ; (crc_byte's, here)
+            tax
+            lda         crc
+            eor         crc_hi,X
+            sta         crc + 1
+            lda         crc_lo,X
+            sta         crc
+@next:
             inc         bp
             bne         :+
             inc         bp + 1
 :
-            lda         cnt
-            bne         :+
-            dec         cnt + 1
-:
-            dec         cnt
-            lda         cnt
-            ora         cnt + 1
+            lda         bp
+            cmp         bend
             bne         @data
+            lda         bp + 1
+            cmp         bend + 1
+            bne         @data
+            bra         @check
+
+@read:
+            jsr         r_byte
+            bra         @got
+
+@sum1:
+            clc
+            adc         sum
+            sta         sum
+            bra         @next
+
+@check:
             lda         crcm                                ; Its check: the CRC, high byte first, or the sum
             beq         @sum
             jsr         r_byte
@@ -875,37 +902,37 @@ purge:
             bcc         purge
             rts
 
-; .A into the CRC (CRC-16 XMODEM: $1021, from 0; Greg Cook's, a byte at a time, no table).  Modifies .A, .X, .Y
+; .A into the CRC (CRC-16 XMODEM: $1021, from 0), a byte at a time by the tables.  Modifies .A, .X
 crc_byte:
-            eor         crc + 1
-            sta         crc + 1
-            lsr
-            lsr
-            lsr
-            lsr
+            eor         crc + 1                             ; (The byte and the CRC's high byte: the entry)
             tax
-            asl
-            eor         crc
+            lda         crc
+            eor         crc_hi,X
+            sta         crc + 1
+            lda         crc_lo,X
             sta         crc
-            txa
-            eor         crc + 1
-            sta         crc + 1
-            asl
-            asl
-            asl
-            tax
-            asl
-            asl
-            eor         crc + 1
-            tay
-            txa
-            rol
-            eor         crc
-            sta         crc + 1
-            sty         crc
             rts
 
 .rodata
+; The CRC's tables: entry i is the CRC of i, then a zero byte (i << 8 through $1021's 8 steps), its high byte and its
+; low one
+crc_hi:
+            .repeat     256, I
+crc_v       .set        I << 8
+            .repeat     8
+crc_v       .set        ((crc_v << 1) ^ ((crc_v >> 15) * $1021)) & $FFFF
+            .endrepeat
+            .byte       >crc_v
+            .endrepeat
+crc_lo:
+            .repeat     256, I
+crc_v       .set        I << 8
+            .repeat     8
+crc_v       .set        ((crc_v << 1) ^ ((crc_v >> 15) * $1021)) & $FFFF
+            .endrepeat
+            .byte       <crc_v
+            .endrepeat
+
 s_ser:      .byte       "/dev/ser", 0
 s_colon:    .byte       ": ", 0
 s_bytes:    .byte       " bytes", LF, 0

@@ -75,6 +75,11 @@ srv_ctl:    .res        SRV_CTL_MAX + 1 ; A ctl write
 srv_argp:   .res        SRV_ARGS * 2    ; A ctl command's words after it ...
 srv_arg:    .res        SRV_ARGS * 2    ;   and their numbers (0 if they aren't)
 srv_dname:  .res        SRV_DNAME_MAX + 1 ; A dynamic child's name (its handler's)
+srv_dnok:   .res        1               ;   <> 0: the child srv_nth just found's (srv_makestat's to use)
+srv_own:    .res        1               ; (srv_child's: a directory's own entries, passed when the one asked
+                                        ;   for isn't there ...
+srv_ownof:  .res        1               ;   and srv_nth's: the directory they're known for, this request
+                                        ;   ($FF: none))
 srv_inited: .res        1               ; ($A5: the fids are set up)
 
 .code
@@ -93,6 +98,9 @@ srv_serve:
             pla
             bcs         @nodev
             stz         srv_id
+            stz         srv_dnok
+            stz         srv_ownof                           ; ($FF: no registers changed, for the handlers)
+            dec         srv_ownof
 .ifdef SRV_PRE
             pha
             jsr         SRV_PRE
@@ -588,9 +596,17 @@ srv_newfid:
             clc
             rts
 
-; The srv_k-th entry of directory srv_n (srv_e, srv_ent; a dynamic one's child: its template, srv_id its id).
-; A dynamic directory's own entries come first, then its handler's children.  OUT: C = 0; or C = 1: there isn't one
+; The srv_k-th entry of directory srv_n (srv_e, srv_ent; a dynamic one's child: its template, srv_id its id, its
+; name in srv_dname, srv_dnok on).  A dynamic directory's own entries come first, then its handler's children.
+; OUT: C = 0; or C = 1: there isn't one
 srv_nth:
+            lda         srv_n                               ; Past its own entries, known this request: its
+            cmp         srv_ownof                           ;   handler's (not all of them looked through again,
+            bne         @own                                ;   for each of a directory read's records)
+            lda         srv_k
+            cmp         srv_own
+            bcs         @dyn
+@own:
             lda         srv_n
             jsr         srv_entry
             ldy         #SE_KIND
@@ -603,23 +619,13 @@ srv_nth:
             cmp         #SK_DYN
             sec
             bne         @done
+            lda         srv_n                               ; (Its own entries: srv_own, srv_child passed them all)
+            sta         srv_ownof
+@dyn:
             lda         srv_k                               ; Its handler's: srv_k less its own entries, a moment
             pha
-            ldx         #0
-@own:
-            phx
-            txa
-            jsr         srv_child
-            plx
-            bcs         :+
-            inx
-            bra         @own
-:
-            stx         srv_x
-            pla
-            pha
             sec
-            sbc         srv_x
+            sbc         srv_own
             sta         srv_k
             lda         srv_n
             jsr         srv_entry
@@ -629,6 +635,8 @@ srv_nth:
             stx         srv_k
             bcs         @done
             sta         srv_id
+            lda         #1                                  ; (Its name: the handler's, in srv_dname)
+            sta         srv_dnok
             lda         srv_n
             jsr         srv_entry
             ldy         #SE_AUX
@@ -852,6 +860,11 @@ srv_child:
             rts
 
 @none:
+            pla                                             ; (srv_own: its entries, all passed)
+            pha
+            sec
+            sbc         srv_k
+            sta         srv_own
             pla
             sta         srv_k
             sec
@@ -931,9 +944,12 @@ srv_maketext:
 
 ; Entry srv_ent's stat record, in srv_stat
 srv_makestat:
-            ldx         #SR_SIZE - 1
+            ldx         #SR_SIZE / 4 - 1                    ; (4 a time: ls /bin makes one for every program)
 :
             stz         srv_stat,X
+            stz         srv_stat + SR_SIZE / 4,X
+            stz         srv_stat + SR_SIZE / 2,X
+            stz         srv_stat + SR_SIZE * 3 / 4,X
             dex
             bpl         :-
             ldy         #SE_NAME                            ; Its name (a template's: its child's, from the
@@ -946,7 +962,11 @@ srv_makestat:
             lda         (srv_ent),Y
             cmp         #SE_TEMPLATE
             bne         :+
+            lda         srv_dnok                            ; (srv_nth's child: its name there already)
+            bne         @named
             jsr         srv_idname
+@named:
+            stz         srv_dnok
             lda         #<srv_dname
             sta         r3
             lda         #>srv_dname

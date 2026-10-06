@@ -1328,10 +1328,15 @@ mod_stat:
             lda         (srv_ent),Y
             cmp         #>h_image
             bne         @done
-            lda         z:srv_id
-            jsr         mod_length
+            lda         z:srv_id                            ; (Its length kept: mlen.  Not mod_length's copy of its
+            cmp         mcount                              ;   entry: ls /bin stats every program)
             bcs         @done
-            MOVR        srv_stat + SR_LENGTH, n
+            asl
+            tax
+            lda         mlen,X
+            sta         srv_stat + SR_LENGTH
+            lda         mlen + 1,X
+            sta         srv_stat + SR_LENGTH + 1
 @done:
             rts
 

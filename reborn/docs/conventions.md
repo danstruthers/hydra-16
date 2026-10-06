@@ -94,7 +94,9 @@ The kernel task (task 0) keeps the kernel's state: its program zero page (`K0_*`
   pages), which saves `W` and goes on to the dispatcher, whose main path is in the COMMON block too; the line's
   owner gets the interrupt in its own task, at its irq entry, with the line in `.A`.  The entry answers `.A = 0`,
   or `IRQ_RESCHED` for a task switch.  It runs with IRQs off and never waits.
-* VIA timer 2 is a line of its own, `LINE_VIA_T2` (16): the VIA's stub sends its interrupt there.  Owning it is
+* The ACIA's interrupt goes ahead of the VIA's: the VIA's vector is `IRQ_VIA`'s, which looks at the ACIA first (at
+  115200 a byte can't wait for the tick's and timer 2's).
+* VIA timer 2 is a line of its own, `LINE_VIA_T2` (16): `IRQ_VIA` sends its interrupt there.  Owning it is
   owning the timer (one-shot, its interrupt on).  CA1 is one too, `LINE_VIA_CA1` (17): owning it turns CA1's
   interrupt on, and the owner clears its flag.  Port A is the GPIO driver's (`#g`, `#i`); port B is the storage
   driver's (the SPI bus); the VIA's other registers stay the kernel's.
@@ -209,7 +211,7 @@ The kernel task (task 0) keeps the kernel's state: its program zero page (`K0_*`
 * **One driver owns the serial line** (`cons`): the console's windows (`#c`) and `/pc` (`#P`), whose frames go
   between the console's bytes.  Its irq entry knows only keys: a frame comes in with them, into the receive ring,
   and is taken out in the serve entry.  While `/dev/ser` is open for reading (`xmodem`), the line is its reader's:
-  every byte in is its, and the windows' text waits.
+  every byte in is its (into all of the receive ring's pages: the keys use the first), and the windows' text waits.
 * **Another task's memory only through `/proc`** (`mem`, `ram`; `regs` too): any task's but the kernel task's and a
   driver's, as `NOTE` lets any task note any other (one user: Plan 9's owner rule lets every task in).  The kernel's
   `TASKMEM` serves only a driver (kdev), so the files are the one way in.

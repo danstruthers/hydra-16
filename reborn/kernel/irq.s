@@ -105,6 +105,12 @@ IRQ_INIT:
             inx
             cpx         #LINES
             bne         @vector
+            lda         #IRQ_INDEX(LINE_VIA)                ; The VIA's: IRQ_VIA itself (it looks at the ACIA's
+            sta         V_REGISTER                          ;   first: common.s)
+            lda         #<IRQ_VIA
+            sta         VECTOR_RAM
+            lda         #>IRQ_VIA
+            sta         VECTOR_RAM + 1
             lda         #IRQ_INDEX(LINE_NONE)               ; V back on BRK's entry
             sta         V_REGISTER
             jsr         T2_OFF                              ; Timer 2: nobody's
