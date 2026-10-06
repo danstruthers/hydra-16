@@ -860,6 +860,8 @@ K_EXIT_K:
             FARCALL     IRQ_RELEASE_ALL                     ; Its lines
             FARCALL     K_SEG_EXIT                          ; Its shared segments (mem.s)
             ldy         K0_TMP
+            FARCALL     K_SEM_EXIT                          ; Its semaphores, and the mutexes it holds (sem.s)
+            ldy         K0_TMP
             FARCALL     K_FILE_EXIT                         ; Its device letters; the channels it served (file.s)
             FARCALL     K_NS_EXIT                           ; Its namespace (ns.s)
             stz         K0_TMP3                             ; (Records moved to init: it's woken too)
@@ -1055,6 +1057,20 @@ K_WAIT_K:
 K_GETPID:
             lda         T_REGISTER
             and         #TASKS - 1
+            clc
+            rts
+
+; GETPPID: .A = this task's parent ($FF: none), a quick look at the kernel task's table.  Modifies .Y
+K_GETPPID:
+            php
+            sei
+            lda         T_REGISTER
+            and         #TASKS - 1
+            tay
+            stz         T_REGISTER
+            lda         K_PARENT,Y
+            sty         T_REGISTER
+            plp
             clc
             rts
 

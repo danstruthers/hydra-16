@@ -70,6 +70,16 @@ void __fastcall__ hy_exits (const char* msg);               /* End with a messag
                                                             **   success (0), anything else 1 and the message */
 int __fastcall__ hy_note (int task, unsigned char note);    /* A note (HY_NOTE_*) to a task (HY_NOTE_GROUP |
                                                             **   a group: its tasks) */
+unsigned char hy_parent (void);                             /* The task that started this one (0xFF: none) */
+
+/* ---- Semaphores: every task's, by number; a mutex (HY_SEM_MUTEX) is given back only by the task that took it */
+
+int __fastcall__ hy_sem_new (unsigned char count, unsigned char flags);  /* One: its number, or -1 */
+int __fastcall__ hy_sem_acquire (unsigned char sem);        /* Take one, waiting till there's one (a note ends
+                                                            **   the wait: -1, EINTR) */
+int __fastcall__ hy_sem_try (unsigned char sem);            /* Take one if there's one (none: -1, EAGAIN) */
+int __fastcall__ hy_sem_release (unsigned char sem);        /* Give one back, and wake its waiters */
+int __fastcall__ hy_sem_free (unsigned char sem);           /* Free it (its waiters' waits end: -1) */
 
 /* ---- The namespace, Plan 9's: a bind or mount with no flags replaces what's at old; HY_MBEFORE and HY_MAFTER
 ** add to old's union, before or after its members; HY_MCREATE: a file made in the union is made in it */

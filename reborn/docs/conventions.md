@@ -52,6 +52,9 @@ bank t).  Every fixed address is in `include/layout.inc`, and nowhere else.
 * **Programs** take the lowest free task (init is task 1); **drivers** the highest (task F first).
 * A task's **exit record** (its code and message) waits for its parent's `WAIT`, and the task isn't used again
   till then; a parent that ends first leaves its children and their records to init.
+* **Semaphores** (`SEM_*`, `kernel/sem.s`) are the kernel task's, every task's by number: a wait is the task's bit
+  among a semaphore's waiters and `PAUSE`, and a release wakes them all to look again.  A task's end frees the ones
+  it made and gives back the mutexes it holds, as it detaches its shared segments.
 
 ## Reaching other tasks
 

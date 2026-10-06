@@ -1533,6 +1533,10 @@ module.exports = {
       init: 't_mem', modules: ['t_child'], cycles: 30e6,
     },
     {
+      name: 'sem', what: 'semaphores: counts and mutexes, waits ended by a release, a free and a note, a task\'s end; GETPPID',
+      init: 't_sem', cycles: 30e6,
+    },
+    {
       name: 'banks', what: 'a module of two banks: calls between them (FAR2, FAR1), registers and C, each bank\'s data',
       init: 't_bank2', cycles: 10e6,
     },

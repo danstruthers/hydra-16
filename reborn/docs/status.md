@@ -64,7 +64,7 @@ PASS env     environments: ENV_GET, ENV_PUT, ENV_DEL, ENV_NAME, a child's copy, 
 PASS kmesg   the kernel's messages: KMESG (the boot's banner first, at offsets, the ring full: its last KMESG_SIZE) and /dev/kmesg (kdev's #n/kmesg) read in parts  (12 checks)
 PASS rc      rc: quoting, lists, redirections, pipelines, if, for, while, switch, functions, globs, scripts, Ctrl-C, its start  (3 checks)
 PASS tools   the core tools at rc: files, text, tasks, the disks' (/rom/bin); /proc's args, cwd, ns  (3 checks)
-PASS c       the C target (cc65): its samples at rc, the library's test (ctest), conio's raw keys (and raw ended with the program)  (60 checks)
+PASS c       the C target (cc65): its samples at rc, the library's test (ctest), conio's raw keys (and raw ended with the program)  (65 checks)
 PASS edit    edit, the line editor: a file made, printed, changed and written; its errors; q twice; Ctrl-C at its prompt; w name
 PASS snd     sound (#a): snd, sndctl and bell; the volume, claims (one another program holds), the shadow, tones (C, snd.h)
 PASS play    the song player: its errors; a song timed (its key-ons against its stream), its channels claimed and given back; scom; jukebox
@@ -82,6 +82,7 @@ PASS init    init from files: the RAM disks started, the namespace file run, eac
 PASS newns   the default namespace's library (nslib): an old area emptied, a namespace file run (quotes, comments, $task, flags, bad lines)  (13 checks)
 PASS cons    the console: lines, editing, history, raw keys, Ctrl-C, windows (shown, repainted, made, gone), 115200, the bell
 PASS mem     memory: BREAK, pages, banks, a shared segment between tasks (and kcopy from it)  (38 checks)
+PASS sem     semaphores: counts and mutexes, waits ended by a release, a free and a note, a task's end; GETPPID  (36 checks)
 PASS banks   a module of two banks: calls between them (FAR2, FAR1), registers and C, each bank's data  (6 checks)
 PASS banks3  a module of three banks: calls from any bank to any (FARN), registers and C, each bank's data, each bank set again  (7 checks)
 PASS scall   spike S3: calls into a driver's task, its errors, a busy driver, the round trip  (12 checks)
@@ -211,6 +212,7 @@ Later, from `/pc` at 115200:
 | 1.7 The jump table and the first calls | Done | With the polled console (9600, Rockwell or WDC) |
 | 1.8 Memory | Done | `BREAK` (the plan's `BRK`: that's the 65C02's instruction), `PAGES_ALLOC`/`FREE`, `BANKS`, `BANKS_ALLOC`/`FREE`, `SEG_CREATE`/`ATTACH`/`DETACH`/`MAP`; the modules and shared chips POST found bad left out; a task's segments released at its end |
 | 1.9 Notes, exits and waiting | Done | `NOTIFY`, `NOTE` (to a task or a note group; `SPAWN_NEWGROUP`), handlers that go on or take the default, the defaults (130 Ctrl-C, 137 kill, 133 a BRK), E_INTR from WAIT, PAUSE, SLEEP and GETC; `EXITS`, `WAIT`, orphans to init.  Plan 9's `NOTED` isn't needed: a handler's C says what it would |
+| 1.10 Semaphores, `GETPPID` | Done | After the review of October 2026, which found them in the plan (§21, appendix A) but not built: `kernel/sem.s` (page 1), the old system's semantics.  `SEM_NEW` (a count, or `SEM_MUTEX`: a count of 1 with a holder, who alone gives it back), `SEM_ACQUIRE` (a wait using no CPU: the task's bit among the semaphore's waiters, `PAUSE`; a release wakes them all, the first to run takes it), `SEM_TRY` (`E_AGAIN`), `SEM_RELEASE`, `SEM_FREE` (its waiters to `E_INVAL`); `SEM_MAX` (16) every task's, by number, in the kernel task's tables, each call a KCALL.  A note ends a wait (`E_INTR`, the task no longer a waiter); a mutex's holder asking again is `E_BUSY`, not a wait for ever.  A task's end frees the semaphores it made and gives back the mutexes it holds.  `GETPPID`, a quick look at the kernel task's table.  C's `hy_sem_*` and `hy_parent`; HyForth's `sys-` words and hylang's `sys-` functions come from the specification |
 
 ## Phase 2: modules, servers and the console
 

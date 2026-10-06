@@ -258,6 +258,61 @@ call TASKREAD task impl=K_TASKREAD far
   doc:    cwd, env and regs, ps.  The kernel task copies them a byte at a time, with IRQs off for each.  An
   doc:    environment may be ENV_MAX bytes: TR_ENVAT reads one whole, a part at a time.
 
+call GETPPID task impl=K_GETPPID
+  in:     -
+  out:    .A = this task's parent ($FF: none)
+  errors: -
+  blocks: no
+  hl:     -> .A
+  doc:    The task that started this one (Plan 9's getppid): init once that one has ended; none for init, the
+  doc:    drivers and the kernel task.
+
+call SEM_NEW task impl=K_SEM_NEW far
+  in:     .A = its count: how many can take it before a taker waits (0-255); .X = 0, or SEM_MUTEX: a mutex (its
+  in:     count 1, and it has a holder: only the task that took it gives it back)
+  out:    .A = the semaphore (0 to SEM_MAX - 1)
+  errors: E_NOMEM (none free: SEM_MAX in all)
+  blocks: no
+  hl:     .A=n .X=n? -> .A
+  doc:    Make a semaphore, for tasks that share something (a shared segment, a device) or wait for each other.
+  doc:    Every task sees the same ones, by number.  It lasts till SEM_FREE, or the end of the task that made it.
+
+call SEM_ACQUIRE task impl=K_SEM_ACQUIRE far
+  in:     .A = a semaphore
+  out:    -
+  errors: E_INVAL (not a semaphore, or freed while this task waited), E_BUSY (a mutex this task holds already),
+  errors: E_INTR (a note came: taken on the way out)
+  blocks: yes
+  hl:     .A=n ->
+  doc:    Take one of a semaphore's count; if there's none, wait (using no CPU) till SEM_RELEASE gives one back.  A
+  doc:    mutex's holder is then this task.
+
+call SEM_TRY task impl=K_SEM_TRY far
+  in:     .A = a semaphore
+  out:    -
+  errors: E_INVAL (not a semaphore), E_BUSY (a mutex this task holds already), E_AGAIN (none to take)
+  blocks: no
+  hl:     .A=n ->
+  doc:    SEM_ACQUIRE without the wait.
+
+call SEM_RELEASE task impl=K_SEM_RELEASE far
+  in:     .A = a semaphore
+  out:    -
+  errors: E_INVAL (not a semaphore), E_PERM (a mutex this task doesn't hold), E_RANGE (its count is 255)
+  blocks: no
+  hl:     .A=n ->
+  doc:    Give one back to a semaphore's count, and wake the tasks waiting for it: the first to run takes it.
+
+call SEM_FREE task impl=K_SEM_FREE far
+  in:     .A = a semaphore
+  out:    -
+  errors: E_INVAL (not a semaphore)
+  blocks: no
+  hl:     .A=n ->
+  doc:    Free a semaphore (any task may): its number can be made again, and the tasks waiting for it wake with
+  doc:    E_INVAL.  The end of the task that made it frees it too, and a task's end gives back the mutexes it
+  doc:    holds.
+
 # ---- memory (BIOS ROM page 1)
 
 call BREAK memory impl=K_BRK far
@@ -798,6 +853,8 @@ const NOTE_ALARM      4        "Notes: alarm (142)"
 const NOTE_BRK        5        "Notes: sys: brk, a BRK instruction (133)"
 const NOTE_USER       16       "Notes: 16-31 are the programs' own (128 + the note)"
 const NOTE_GROUP      $80      "NOTE's .A: a note group, not a task"
+const SEM_MUTEX       $01      "SEM_NEW's .X: a mutex (its count 1, given back only by its holder)"
+const SEM_MAX         16       "Semaphores: as many as there can be at once"
 const SPAWN_NEWGROUP  $01      "SPAWN's flags: the child starts a note group of its own"
 const SPAWN_NEWNS     $02      "SPAWN's flags: the child starts with an empty namespace of its own (else it shares its parent's)"
 const SPAWN_FDMAP     $04      "SPAWN's flags: the child's fds are r2's map (else the caller's 0, 1 and 2)"

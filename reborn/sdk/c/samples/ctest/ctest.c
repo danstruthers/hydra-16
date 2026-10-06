@@ -158,6 +158,17 @@ int main (int argc, char* argv[])
     i = hy_spawn (CODE, args, 0);
     check (i > 0 && hy_wait (i, msg) == 1 && strcmp (msg, "oops") == 0, "hy_spawn, hy_wait: a message");
     check (hy_spawn ("/nosuch", args, 0) < 0 && errno == ENOENT, "hy_spawn: no such program");
+    check (hy_parent () < 16 && hy_parent () != hy_task (), "hy_parent: the shell's task");
+
+    /* semaphores */
+    i = hy_sem_new (1, 0);
+    check (i >= 0 && hy_sem_try (i) == 0 && hy_sem_try (i) < 0 && errno == EAGAIN, "hy_sem_new, hy_sem_try");
+    check (hy_sem_release (i) == 0 && hy_sem_acquire (i) == 0 && hy_sem_release (i) == 0,
+           "hy_sem_acquire, hy_sem_release");
+    check (hy_sem_free (i) == 0 && hy_sem_try (i) < 0 && _oserror == HY_E_INVAL, "hy_sem_free");
+    i = hy_sem_new (0, HY_SEM_MUTEX);
+    check (i >= 0 && hy_sem_acquire (i) == 0 && hy_sem_try (i) < 0 && _oserror == HY_E_BUSY && hy_sem_free (i) == 0,
+           "a mutex");
 
     /* the namespace: a bind, a union, an unmount; a mount */
     getcwd (cwd, sizeof cwd);

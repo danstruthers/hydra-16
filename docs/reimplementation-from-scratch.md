@@ -1084,7 +1084,7 @@ Phases 6, 7 and 8 depend only on phase 5 and can go in any order or in parallel;
 | IRQ dispatcher plus three fast handlers | One fast path | 1 |
 | Software interrupts (`SW_INT`, `SWI_REGISTER`) | Dropped; BRK is a fault note | 1 |
 | `MM_*` (4 tiers, handles), `SH_*`, `FP_*`, `MM_REF`, `SH_REF` | `BRK`, `PAGES_*`, `BANKS_*`, segments | 1 |
-| Semaphores | Kept (`SEM_*`), in the kernel task | 1 |
+| Semaphores | Kept (`SEM_*`), in the kernel task (as built: step 1.10, after the review of October 2026) | 1 |
 | The thunk table on pages 0 and 1 | One generated jump table on page 0 | 0, 1 |
 | fds in task RAM, transfer areas, 256-byte IO unit | Channels, kcopy, no unit | 2 |
 | `IO_CTL` codes | ctl files | 2 |
