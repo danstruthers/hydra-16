@@ -1,0 +1,112 @@
+; hydra.dl - the Hydra-16 in danlang, run for a test (sim/test.js --dl writes a spec and runs this): the machine
+; (cpu.dl, machine.dl, devices.dl, spi.dl, i2c.dl, rtc.dl), set as the spec says, run till the test's result is out
+; (its "NAME: PASS" or "NAME: FAIL" line, or every line it expects) or its cycles run out, and what the test's checks
+; look at written out.
+;
+; Usage: danlang sim/dl/hydra.dl SPEC
+; The spec is danlang, loaded after the machine: the images (spec-bios, spec-prom), the cycles (spec-cycles), the
+; result (spec-init, or spec-expect: a list of strings), the marks (spec-marks), keys typed (spec-keys: codes; 256 a
+; wait, 257 a wait for a prompt), bytes the PC sends after a mark (spec-send-after, spec-send), BOOT_DONE's address
+; (spec-boot-done: IRQs-off stretches counted from it), where the results go (spec-out), and the machine's options
+; and devices (opt-..., spi-card, spi-echo, i2c-device, rtc-setup, ca1-setup ...).  With spec-peer, every byte the
+; serial port sends goes to the harness (stdout, "T byte cycle"), which answers (stdin, "C hex;P hex": the bytes
+; that are the console's, and the PC's own sent back): the PC tool's part of /pc, or the PC's end of XMODEM.
+;
+; The results (spec-out, a folder): out.txt (the console's output), result.json (the cycles, a halt, the marks'
+; cycles, the IRQs-off stretches, the devices' states for the checks), cards.bin (the cards' blocks written: for each,
+; its device, its block number (4 bytes, least first) and its 512 bytes).
+
+(def {here} (substring (fst args) 0 (+ 1 (max (last-index-of (fst args) "/") (last-index-of (fst args) "\\")))))
+(each {f {"cpu.dl" "machine.dl" "devices.dl" "spi.dl" "i2c.dl" "rtc.dl"}} (load (+ here f)))
+
+(def {spec-bios spec-prom spec-cycles spec-init spec-expect spec-marks spec-keys spec-send-after spec-send spec-boot-done
+  spec-out spec-peer spec-paste} "" "" 30000000 "" NIL {} {} "" {} -1 "." NIL NIL)
+(load (nth 1 args))
+
+; ---- the console's output: in pieces (a string grows by copying), its tail for the marks, the result's search window
+(def {out-now out-pieces out-tail out-win out-n peer-on} "" (hash-create) "" "" 0 spec-peer)
+(def {marks-at} (hash-create))
+(def {send-done} NIL)
+(fun {out-byte v at} {do
+  (set {ch} (code-char v))
+  (set! {out-now out-tail out-n} (+ out-now ch) (+ out-tail ch) (+ out-n 1))
+  (if (== v 13) 0 (set! {out-win} (+ out-win ch)))       ; (the result's search: the output without its CRs, as the harness has it)
+  (if (> (len out-now) 4096) (do (hash-put out-pieces [(len out-pieces) out-now]) (set! {out-now} "")) 0)
+  (if (> (len out-tail) 256) (set! {out-tail} (substring out-tail 128)) 0)
+  (if peer-on (acia-shown v at) 0)
+  (dotimes {i (len spec-marks)} (do
+    (set {mk} (nth i spec-marks))
+    (if (and (nil? (hash-get marks-at i)) (ends-with? out-tail mk)) (do
+      (hash-put marks-at [i at])
+      (if (and (== mk spec-send-after) (not send-done)) (do (set! {send-done} T) (acia-send spec-send)) 0)) 0)))})
+
+; A byte the serial port sends: the console's, or (with a peer) the harness's to sort out
+(fun {on-tx v at} {if peer-on (peer-byte v at) (out-byte v at)})
+(fun {peer-byte v at} {do
+  (write-to stdout (+ "T " v " " at "\n"))
+  (set {reply} (read-line))
+  (set {parts} (str-split reply ";"))
+  (each {b (hex-bytes (substring (fst parts) 1))} (out-byte b at))
+  (set {pcb} (hex-bytes (substring (snd parts) 1)))
+  (if (nil? pcb) 0 (acia-send pcb))})
+(fun {hex-bytes s} {map (fn {i} {val (+ "#x" (substring s (* 2 i) 2))}) (range (div (len s) 2))})
+
+; ---- the result: the init's PASS or FAIL line, or every expected string, in the output so far
+(def {init-pass init-fail found} "" "" (hash-create))
+(fun {result?} {if (> (len spec-init) 0)
+  (or (contains? (+ "\n" out-win) init-pass) (contains? (+ "\n" out-win) init-fail))
+  (do (dotimes {i (len spec-expect)} (if (or (hash-get found i) (not (contains? out-win (nth i spec-expect)))) 0 (hash-put found [i T])))
+      (== (len found) (len spec-expect)))})
+; (the window keeps what a string not yet found could still end in)
+(def {win-keep} (+ 64 (foldl max 0 (map len (cons "" spec-expect)))))
+(fun {win-trim} {if (> (len out-win) win-keep) (set! {out-win} (substring out-win (- (len out-win) win-keep))) 0})
+
+; ---- the machine, as the spec says
+(set! {init-pass init-fail} (+ "\n" spec-init ": PASS") (+ "\n" spec-init ": FAIL"))
+(load-roms (read-file spec-bios) (read-file spec-prom))
+(set! {ac-paste} spec-paste)
+(set! {ac-charcyc} (char-cycles))
+(power-up)
+(type-keys spec-keys)
+(devsched)                      ; (the keys: the ACIA's next event)
+; BOOT_DONE: the IRQs-off stretches counted from it (as a key typed would)
+(if (>= spec-boot-done 0) (do
+  (fun {watched? at} {== at (- spec-boot-done #xE000)})
+  (fun {watched at h} {if (watched? at)
+    (fn {} {do (if (< typedat 0) (do (set! {typedat} cyc) (ioff-start)) 0) (h)})
+    h})) 0)
+
+(def {done} NIL)
+(while {and (< cyc spec-cycles) (not halted) (not done)}
+  (run (min spec-cycles (+ cyc 200000)))
+  (set! {done} (result?))
+  (win-trim))
+
+; ---- the results
+(def {res} spec-out)
+(write-file (+ res "/out.txt") (+ (str-join (map (fn {i} {out-pieces i}) (range (len out-pieces))) "") out-now))
+(fun {js-str s} {+ "\"" (str-replace (str-replace s "\\" "\\\\") "\"" "\\\"") "\""})
+(fun {js-list l} {+ "[" (str-join l ",") "]"})
+(def {ioff-list} (sort (map (fn {k} {cons k (hash-get ioffs k)}) (hash-keys ioffs)) (fn {x y} {> (snd x) (snd y)})))
+(fun {place k} {+ (hex (shr k 16) 1) ":" (hex (bit-and k #xFFFF) 4)})
+(write-file (+ res "/result.json") (+ "{"
+  "\"cycles\":" cyc ","
+  "\"halted\":" (if halted (js-str halted) "null") ","
+  "\"marks\":{" (str-join (map (fn {i} {+ "\"" i "\":" (hash-get marks-at i)}) (hash-keys marks-at)) ",") "},"
+  "\"ioff\":" (js-list (map (fn {x} {js-list (list (snd x) (js-str (place (fst x))) (js-str (place (thd x))) (nth 3 x))}) (take 8 ioff-list))) ","
+  "\"keyOns\":" (js-list (map (fn {i} {js-str (+ "ch " (fst (ym-keyons i)) " at cycle " (snd (ym-keyons i)))}) (range ym-nkeys))) ","
+  "\"ymLost\":" ym-lost ","
+  "\"i2c\":{\"devices\":{" (str-join (map (fn {a} {+ "\"" a "\":" (js-list (bytes ((i2c-devs a) :mem)))}) (hash-keys i2c-devs)) ",")
+    "},\"stats\":{\"starts\":" i2c-starts ",\"stops\":" i2c-stops ",\"taken\":" i2c-taken ",\"given\":" i2c-given "}},"
+  "\"via\":{\"ier\":" via-ier ",\"pcr\":" (vr 12) "},"
+  "\"rtc\":" (if rtc-on (js-list (rtc-dump)) "null") ","
+  "\"acia\":{\"gapMin\":" (if (>= ac-gapmin INF) "null" (to-fixed ac-gapmin 4)) ",\"overruns\":" ac-overruns ",\"wdc\":" (if ac-wdc "true" "false")
+    ",\"pcLost\":" pclost ",\"charCycles\":" ac-charcyc ",\"rxLost\":" rxlost
+    ",\"rxLat\":{\"min\":" (if (>= lat-min INF) "null" lat-min) ",\"max\":" lat-max ",\"sum\":" lat-sum ",\"n\":" lat-n "}},"
+  "\"done\":" (if done "true" "false")
+  "}"))
+(def {cs} (open (+ res "/cards.bin") :write))
+(each {dev (hash-keys card-written)} (each {n (hash-keys (card-written dev))} (do
+  (write-bytes cs (list dev (bit-and n 255) (bit-and (shr n 8) 255) (bit-and (shr n 16) 255) (bit-and (shr n 24) 255)))
+  (write-bytes cs (hash-get (card-written dev) n)))))
+(close cs)

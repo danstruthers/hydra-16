@@ -4,13 +4,14 @@
 // system's modules and its own, its init), runs, and is judged on its output ("ok"/"not ok" lines and "PASS"),
 // its time budgets (cycles between marks), the longest IRQs-off stretch after the boot, and its own checks.
 //
-// Usage: node sim/test.js [NAME ...] [--build] [-v] [--seed N] [-j N]
+// Usage: node sim/test.js [NAME ...] [--build] [-v] [--seed N] [-j N] [--dl]
 //   NAME      only these tests (default: all)
 //   --build   build first (node build.js)
 //   -v        each test's output, and its "ok" lines
 //   --seed N  the power-up's random RAM (default 1: the same each run)
 //   -j N      N tests at a time, each in a process of its own (default: the CPU's cores; -j 1, one after another
 //             here).  The reports come in the list's order either way
+//   --dl      in the danlang emulator (sim/dl), not sim/lib's; judged the same way
 // The emulator runs as fast as the host can, never paced to the Hydra's clock (run.js -i is): the cycles a test
 // reports, and its budgets, are the emulated machine's.
 'use strict';
@@ -62,10 +63,13 @@ function pcFolder(t, opt) {
   return { dir, host };
 }
 
+// A test's marks: its budgets' and its send's
+const markNamesOf = t => [...new Set([...(t.budgets || []).flatMap(b => [b.from, b.to, ...(b.minus || [])]), ...(t.send ? [t.send.after] : [])])];
+
 function runTest(t, opt) {
   const bootDone = labels().byName.get('BOOT_DONE');          // (The boot's cli: IRQs-off stretches count from it)
-  const marks = {}, failures = [], lines = [];
-  const markNames = [...new Set([...(t.budgets || []).flatMap(b => [b.from, b.to, ...(b.minus || [])]), ...(t.send ? [t.send.after] : [])])];
+  const marks = {};
+  const markNames = markNamesOf(t);
   let m = null;
   const log = s => {
     const p = s.match(/^pc: .* at cycle (\d+)$/);
@@ -89,6 +93,27 @@ function runTest(t, opt) {
     if (target) { const r = out.match(target); if (r) { status = r[1]; break; } }
     else if (t.expect.every(e => out.includes(e))) { status = 'PASS'; break; }
   }
+  return judge(t, m, marks, pc, status);
+}
+
+// Test t run in the danlang emulator (sim/dl: bridge.js runs it), judged as runTest's is.  OUT: (a promise) runTest's
+async function runTestDl(t, opt) {
+  const bootDone = labels().byName.get('BOOT_DONE');
+  const pc = t.pc ? pcFolder(t, opt) : null;
+  const machine = t.machine || {};                            // (A getter's, once: its cards, its peer)
+  const { m, marks } = await require('./dl/bridge.js').runDl(t, machine, opt,
+    { image: image(t), marks: markNamesOf(t), bootDone, peer: pc ? pc.host : machine.pcHost || null });
+  m.pc = pc;
+  const out = m.out.replace(/\r/g, ''), r = out.match(new RegExp('^' + t.init + ': (PASS|FAIL)', 'm'));
+  const status = t.expect ? (t.expect.every(e => out.includes(e)) ? 'PASS' : '') : r ? r[1] : '';
+  return judge(t, m, marks, pc, status);
+}
+
+// A test's run judged (m the machine afterwards, marks the cycles of its marks, status PASS, FAIL or '' as its result
+// came out): its "ok" lines, its result, a halt, its budgets, the longest IRQs-off stretch, its own checks.
+// OUT: { m, out, lines, failures, budgets, notes }
+function judge(t, m, marks, pc, status) {
+  const failures = [], lines = [];
   const out = m.out.replace(/\r/g, '');
   for (const line of out.split('\n')) if (/^(not )?ok - /.test(line)) lines.push(line);
   for (const l of lines) if (l.startsWith('not ok')) failures.push(l);
@@ -148,6 +173,7 @@ function parallel(list, opt) {
       for (; running < opt.jobs && next < order.length; next++) {
         const i = order[next], t = list[i], args = [__filename, '--one', t.name, '--seed', String(opt.seed)];
         if (opt.verbose) args.push('-v');
+        if (opt.dl) args.push('--dl');
         const p = spawn(process.execPath, args, { stdio: ['ignore', 'pipe', 'inherit'] });
         let text = '';
         running++;
@@ -175,11 +201,12 @@ async function main(argv) {
     else if (argv[i] === '--build') opt.build = true;
     else if (argv[i] === '-j') opt.jobs = Math.max(1, Math.floor(+argv[++i]) || 1);
     else if (argv[i] === '--one') opt.one = argv[++i];        // (parallel's: one test, its report, its status)
-    else if (argv[i].startsWith('-')) { console.error('usage: node sim/test.js [NAME ...] [--build] [-v] [--seed N] [-j N]'); process.exit(2); }
+    else if (argv[i] === '--dl') opt.dl = true;
+    else if (argv[i].startsWith('-')) { console.error('usage: node sim/test.js [NAME ...] [--build] [-v] [--seed N] [-j N] [--dl]'); process.exit(2); }
     else opt.names.push(argv[i]);
   }
   if (opt.one) {
-    const t = tests.find(x => x.name === opt.one), r = report(t, runTest(t, opt), opt, labels());
+    const t = tests.find(x => x.name === opt.one), r = report(t, await (opt.dl ? runTestDl : runTest)(t, opt), opt, labels());
     console.log(r.text);
     process.exit(r.ok ? 0 : 1);
   }
@@ -191,7 +218,7 @@ async function main(argv) {
   else {
     const lbl = labels();
     for (const t of list) {
-      const r = report(t, runTest(t, opt), opt, lbl);
+      const r = report(t, await (opt.dl ? runTestDl : runTest)(t, opt), opt, lbl);
       console.log(r.text);
       if (!r.ok) failed++;
     }
@@ -201,4 +228,4 @@ async function main(argv) {
 }
 
 if (require.main === module) main(process.argv.slice(2));
-module.exports = { runTest, image };
+module.exports = { runTest, runTestDl, image };

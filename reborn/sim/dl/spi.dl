@@ -1,0 +1,127 @@
+; spi.dl - SPI on VIA port B (PB0 SCLK, PB1 /CS enable, PB2 MOSI, PB3-PB5 device 0-7, PB6 = 1 for devices 8-15, PB7
+; MISO; devices sample on SCLK's rising edge: modes 0 and 3), SD cards (SPI mode) and echo devices (sim/lib/sd.js, the
+; reference).  An echo device answers each byte with the one it got before it; its first after a select is $A0 if SCLK
+; was low when it was selected (mode 0), $A3 if it was high (mode 3).  A card is SDHC (block addresses) or standard
+; capacity (sdsc: byte addresses, CSD v1); its blocks come from an image file (those past its end read 0), and those
+; written are kept (card-written: by device, a hash of block -> buffer), for the runner to give back.
+;
+; The selected device's transfer (its bits, the byte coming in, the byte going out, the command, the answer queued, a
+; block being written) is sel-...; what a card keeps across selects (idle, an ACMD coming, ACMD41's count) is in its
+; hash, cards (by device).
+
+(def {cards card-written} (hash-create) (hash-create))
+(def {sel sel-bit sel-inb sel-cur sel-miso spi-clk} -1 0 0 255 1 0)
+(def {sel-cmd sel-ncmd sel-q sel-qi sel-qn sel-wr sel-wn sel-writeat} (buffer 6) 0 (buffer 600) 0 0 (buffer 515) -1 -1)
+
+; A card: device dev, an image file (or "" for none), blocks claimed, SDSC or SDHC
+(fun {spi-card dev file blocks sdsc} {do
+  (set {flen} (if (and (> (len file) 0) (exists? file)) ((stat file) :length) 0))
+  (hash-put cards [dev (to# [{:kind :card} [:file file] [:stream (if (> flen 0) (open file) NIL)] [:flen flen]
+    [:blocks blocks] [:sdsc sdsc] {:idle T} {:app NIL} {:acmd41 0}])])
+  (hash-put card-written [dev (hash-create)])})
+(fun {spi-echo dev} {hash-put cards [dev (to# {{:kind :echo}})]})
+
+; A block of a card: its written one, the file's, or zeros
+(fun {card-read c dev n} {do
+  (set {w} (hash-get (card-written dev) n))
+  (if w w (do
+    (set {b} (buffer 512))
+    (if (< (* n 512) (c :flen)) (do (seek (c :stream) (* n 512)) (read-buffer (c :stream) b)) 0)
+    b))})
+
+; Deselected: a card forgets the transfer
+(fun {card-reset} {set! {sel-bit sel-ncmd sel-qi sel-qn sel-wn sel-writeat sel-cur} 0 0 0 0 -1 -1 255})
+
+; The answer queued: bytes (a list), or a buffer's (a block) between others
+(fun {q-set l} {do (set! {sel-qi sel-qn} 0 0) (each {b l} (q-add b))})
+(fun {q-add b} {do (buffer-put sel-q sel-qn b) (set! {sel-qn} (+ sel-qn 1))})
+(fun {q-next} {if (< sel-qi sel-qn) (do (set {b} (sel-q sel-qi)) (set! {sel-qi} (+ sel-qi 1)) b) -1})
+
+; The CSD register: the card's size
+(fun {csd c} {do
+  (set {b} (buffer {#x40 #x0E #x00 #x32 #x5B #x59 #x00 0 0 0 #x7F #x80 #x0A #x40 #x00 #x01}))
+  (set {blocks} (c :blocks))
+  (if (not (c :sdsc))
+    (do (set {k} (- (max 1 (div blocks 1024)) 1))
+        (buffer-put b 7 (bit-and (shr k 16) #x3F)) (buffer-put b 8 (bit-and (shr k 8) 255)) (buffer-put b 9 (bit-and k 255)))
+    (do (set {ln} (if (<= blocks (* 4096 512)) 9 (if (<= blocks (* 4096 1024)) 10 11)))
+        (set {k} (- (max 1 (div blocks (shl 512 (- ln 9)))) 1))
+        (buffer-put b 0 0) (buffer-put b 5 (bit-or #x50 ln)) (buffer-put b 6 (bit-and (shr k 10) 3))
+        (buffer-put b 7 (bit-and (shr k 2) 255)) (buffer-put b 8 (bit-or (shl (bit-and k 3) 6) #x3F))
+        (buffer-put b 9 (bit-or #xE0 3)) (buffer-put b 10 (bit-or #x80 #x7F))))
+  (bytes b)})
+
+; One 6-byte command (sel-cmd): its answer queued, after a byte of $FF
+(fun {card-command c dev} {do
+  (set {idx} (bit-and (sel-cmd 0) #x3F))
+  (set {idle} (if (c :idle) 1 0))
+  (set {arg} (+ (* (sel-cmd 1) 16777216) (* (sel-cmd 2) 65536) (* (sel-cmd 3) 256) (sel-cmd 4)))
+  (q-set {255})
+  (if (and (c :sdsc) (in? idx {17 24}) (not (zero? (mod arg 512)))) (q-add (bit-or #x20 idle))
+    (do
+      (if (c :sdsc) (if (in? idx {17 24}) (set {arg} (div arg 512)) 0) 0)
+      (if (c :app)
+        (do (hash-put c [:app NIL])
+            (if (== idx 41)
+              (do (hash-put c [:acmd41 (+ (c :acmd41) 1)]) (if (>= (c :acmd41) 3) (hash-put c [:idle NIL]) 0) (q-add (if (c :idle) 1 0)))
+              (q-add (bit-or 4 idle))))
+        (if (== idx 0) (do (hash-put c [:idle T]) (hash-put c [:acmd41 0]) (q-add 1))
+          (if (== idx 8) (each {b (list idle 0 0 (bit-and (sel-cmd 3) 15) (sel-cmd 4))} (q-add b))
+            (if (== idx 55) (do (hash-put c [:app T]) (q-add idle))
+              (if (== idx 58) (each {b (list idle (if (c :sdsc) #x80 #xC0) #xFF #x80 0)} (q-add b))
+                (if (== idx 9) (do (each {b (join (list idle #xFF #xFE) (csd c) {#x12 #x34})} (q-add b)))
+                  (if (== idx 16) (q-add idle)
+                    (if (== idx 17)
+                      (if (or (c :idle) (>= arg (c :blocks))) (q-add (bit-or #x40 idle))
+                        (do (each {b {0 #xFF #xFF #xFE}} (q-add b))
+                            (buffer-copy sel-q sel-qn (card-read c dev arg))
+                            (set! {sel-qn} (+ sel-qn 512))
+                            (q-add #x12) (q-add #x34)))
+                      (if (== idx 24)
+                        (if (or (c :idle) (>= arg (c :blocks))) (q-add (bit-or #x40 idle))
+                          (do (set! {sel-writeat} arg) (q-add 0)))
+                        (q-add (bit-or 4 idle)))))))))))))})
+
+; Byte b came in: the next byte out
+(fun {card-byte c dev b} {if (>= sel-wn 0)
+  ; A block for CMD24: its token, 512 bytes, its CRC
+  (if (and (zero? sel-wn) (not (== b #xFE))) #xFF
+    (do (buffer-put sel-wr sel-wn b)
+        (set! {sel-wn} (+ sel-wn 1))
+        (if (== sel-wn 515)
+          (do (set {blk} (buffer 512))
+              (buffer-copy blk 0 sel-wr 1 512)
+              (hash-put (card-written dev) [sel-wr-at blk])
+              (set! {sel-wn} -1)
+              (q-set {0 0 0 #xFF})
+              5)
+          #xFF)))
+  (if (or (> sel-ncmd 0) (== (bit-and b #xC0) #x40))
+    (do (buffer-put sel-cmd sel-ncmd b)
+        (set! {sel-ncmd} (+ sel-ncmd 1))
+        (if (== sel-ncmd 6) (do (card-command c dev) (set! {sel-ncmd} 0) (q-next)) #xFF))
+    (if (< sel-qi sel-qn) (q-next)
+      (do (if (>= sel-writeat 0) (set! {sel-wr-at sel-wn sel-writeat} sel-writeat 0 -1) 0) #xFF)))})
+(def {sel-wr-at} 0)
+
+; Port B's output bits changed
+(fun {spi-portb v} {do
+  (set {dev} (if (bit? v 1) -1 (bit-and (shr v 3) 15)))
+  (set {c} (if (>= dev 0) (hash-get cards dev) NIL))
+  (if (nil? c) (set {dev} -1) 0)
+  (set {clk} (bit-and v 1))
+  (if (== dev sel) 0 (do
+    (if (>= sel 0) (card-reset) 0)
+    (set! {sel} dev)
+    (if (>= dev 0)
+      (if (== (c :kind) :echo) (set! {sel-bit sel-cur sel-miso} 0 (if (zero? clk) #xA0 #xA3) 1)
+        (do (card-reset) (set! {sel-miso} 1)))
+      0)))
+  (if (and (== clk 1) (zero? spi-clk) (>= dev 0))
+    (do (set! {sel-miso} (bit-and (shr sel-cur (- 7 sel-bit)) 1))
+        (set! {sel-inb} (bit-and (+ (shl sel-inb 1) (bit-and (shr v 2) 1)) 255))
+        (set! {sel-bit} (+ sel-bit 1))
+        (if (== sel-bit 8)
+          (set! {sel-bit sel-cur} 0 (if (== (c :kind) :echo) sel-inb (card-byte c dev sel-inb))) 0)) 0)
+  (set! {spi-clk} clk)})
+(fun {spi-miso} {if (>= sel 0) sel-miso 1})

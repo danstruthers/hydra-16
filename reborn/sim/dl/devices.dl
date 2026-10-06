@@ -1,0 +1,195 @@
+; devices.dl - the ACIA, the VIA and the YM2151 (sim/lib/acia.js, via.js and ym2151.js are the reference).  Each is
+; brought up to time by its tick (d cycles more, to cycle at) and says when it next wants to be (its next: cycles
+; from its own cycle, machine.dl's via-cyc, ym-cyc or ac-cyc; INF for never).
+
+(def {clock-mhz} 3.579545)
+(fun {round x} {floor (+ x 1/2)})
+
+; ---- the ACIA (port 1): a Rockwell R65C51 (TDRE and the TX interrupt), or a WDC W65C51N (ac-wdc: TDRE always 1, no
+; TX interrupt).  Keys come from rxq (codes; 256: wait 2M cycles; 257: wait for a prompt), the PC's own bytes from pcq
+(def {ac-wdc ac-paste} NIL NIL)
+(def {ac-cmd ac-ctrl ac-tdre ac-txtimer ac-irq ac-rdrf ac-rx ac-overruns} 0 0 1 0 0 0 0 0)
+(def {ac-txend ac-txsent ac-gapmin ac-charcyc} (- INF) 0 INF 0)
+(def {rxq rxh rxn rxdelay rxlost typedat typedlast} (hash-create) 0 0 200000 0 -1 -1)
+(def {pcq pcqh pcqt pcdelay pclost} (hash-create) 0 0 0 0)
+(def {ac-sent ac-tail ac-sentat promptfrom ac-rxat} 0 "" 0 -1 0)
+(def {lat-min lat-max lat-sum lat-n} INF 0 0 0)
+
+; The rates (the control register's low 4 bits), named for 1.8432 MHz; the ACIA's clock is 14.318 MHz / 8
+(def {ac-bauds} (to# (map (fn {i} {list i (/ (* (item-at {115200 50 75 109.92 134.58 150 300 600 1200 1800 2400 3600 4800 7200 9600 19200} i)
+  14318180) 8 1843200)}) (range 16))))
+(fun {baud} {ac-bauds (bit-and ac-ctrl 15)})
+; A character's time in CPU cycles: start bit, its bits, parity, stop bits
+(fun {char-cycles} {do
+  (set {bits} (+ 1 (- 8 (bit-and (shr ac-ctrl 5) 3)) (if (bit? ac-cmd 5) 1 0) (if (bit? ac-ctrl 7) 2 1)))
+  (round (/ (* bits clock-mhz 1000000) (baud)))})
+
+(fun {key-head} {if (and (< rxh rxn) (== (rxq rxh) 257)) (set! {promptfrom} ac-sent) 0})
+(fun {type-keys codes} {do (each {c codes} (do (hash-put rxq [rxn c]) (set! {rxn} (+ rxn 1)))) (key-head)})
+(fun {rx-shift} {do (hash-remove rxq rxh) (set! {rxh} (+ rxh 1))})
+(fun {prompt-tail?} {do
+  (set {l} (len ac-tail))
+  (and (> l 0) (or (== (char-at ac-tail (- l 1)) \>) (== ac-tail "> ") (== ac-tail "% ") (== ac-tail " <")))})
+(fun {prompted at} {and (> ac-sent promptfrom) (prompt-tail?) (>= (- at ac-sentat) 300000)})
+
+(fun {acia-in c at} {do (set! {ac-rx ac-rdrf ac-rxat} c 1 at) (if (zero? (bit-and ac-cmd 2)) (set! {ac-irq} 1) 0)})
+
+(fun {acia-read r at} {if (zero? r)
+  (do (if (pos? ac-rdrf) (do (set {l} (- at ac-rxat))
+        (set! {lat-min lat-max lat-sum lat-n} (min lat-min l) (max lat-max l) (+ lat-sum l) (+ lat-n 1))) 0)
+      (set! {ac-rdrf} 0)
+      ac-rx)
+  (if (== r 1) (do (set {s} (+ (if (pos? ac-irq) 128 0) (if (or (pos? ac-tdre) ac-wdc) 16 0) (if (pos? ac-rdrf) 8 0))) (set! {ac-irq} 0) s)
+    (if (== r 2) ac-cmd ac-ctrl))})
+
+(fun {acia-write r v at} {if (zero? r)
+  (do (if (> ac-txtimer 0) (set! {ac-overruns} (+ ac-overruns 1)) 0)
+      (set! {ac-txsent} (+ ac-txsent 1))
+      (if (> ac-txsent 8) (set! {ac-gapmin} (min ac-gapmin (if (> ac-txtimer 0) 0 (/ (* (- at ac-txend) (baud)) (* clock-mhz 1000000))))) 0)
+      (if peer-on 0 (acia-shown v at))
+      (on-tx v at)
+      (set! {ac-tdre ac-txtimer} 0 ac-charcyc))
+  (if (== r 1) (set! {ac-cmd ac-irq} (bit-and ac-cmd #xE0) 0)
+    (if (== r 2) (set! {ac-cmd ac-charcyc} v (do (set! {ac-cmd} v) (char-cycles)))
+      (set! {ac-ctrl ac-txsent ac-gapmin ac-charcyc} v 0 INF (do (set! {ac-ctrl} v) (char-cycles)))))})
+
+; A byte of the console's output (for a wait for a prompt)
+(fun {acia-shown v at} {do
+  (set {s} (+ ac-tail (code-char v)))
+  (set! {ac-sent ac-tail ac-sentat} (+ ac-sent 1) (if (> (len s) 2) (substring s 1) s) at)})
+
+(fun {acia-tick d at} {do
+  (if (> ac-txtimer 0) (do (set! {ac-txtimer} (- ac-txtimer d))
+    (if (<= ac-txtimer 0) (do (set! {ac-txend ac-txtimer ac-tdre} (+ at ac-txtimer) 0 1)
+      (if (and (not ac-wdc) (== (bit-and ac-cmd 12) 4)) (set! {ac-irq} 1) 0)) 0)) 0)
+  (if (< pcqh pcqt) (acia-pc d at) (acia-keys d at))})
+
+; The PC's own bytes: back to back, the keys waiting
+(fun {acia-pc d at} {do
+  (set! {pcdelay} (- pcdelay d))
+  (if (> pcdelay 0) 0 (do
+    (set {c} (pcq pcqh))
+    (hash-remove pcq pcqh)
+    (set! {pcqh} (+ pcqh 1))
+    (if (pos? ac-rdrf) (set! {pclost} (+ pclost 1)) (acia-in c at))
+    (set! {pcdelay} ac-charcyc)
+    (if (and (>= pcqh pcqt) (< rxdelay pcdelay)) (set! {rxdelay} pcdelay) 0)))})
+(fun {acia-send bytes} {do
+  (if (>= pcqh pcqt) (set! {pcdelay} ac-charcyc) 0)
+  (each {b bytes} (do (hash-put pcq [pcqt b]) (set! {pcqt} (+ pcqt 1))))})
+
+; The keys: one each 20000 cycles (a wait, a prompt), or as fast as the line goes (paste: one arriving while the
+; last is unread is lost)
+(fun {acia-keys d at} {if (< rxh rxn)
+  (if (== (rxq rxh) 257)
+    (if (prompted at) (do (rx-shift) (set! {promptfrom rxdelay} -1 20000) (if (>= rxh rxn) (set! {typedlast} at) 0) (key-head)) 0)
+    (do (set! {rxdelay} (- rxdelay d))
+        (if (and (<= rxdelay 0) (or (zero? ac-rdrf) ac-paste)) (do
+          (set {c} (rxq rxh))
+          (rx-shift)
+          (if (>= rxh rxn) (set! {typedlast} at) 0)
+          (if (== c 256) (do (set! {rxdelay} 2000000) (if (>= rxh rxn) (set! {typedlast} (+ at rxdelay)) 0))
+            (if (pos? ac-rdrf) (set! {rxlost rxdelay} (+ rxlost 1) ac-charcyc)
+              (do (if (< typedat 0) (do (set! {typedat} at) (ioff-start)) 0)
+                  (acia-in c at)
+                  (set! {rxdelay} (if ac-paste ac-charcyc 20000)))))
+          (key-head)) 0))) 0})
+
+(fun {acia-irq?} {and (pos? ac-irq) (or (and (not ac-wdc) (== (bit-and ac-cmd 12) 4) (pos? ac-tdre)) (and (zero? (bit-and ac-cmd 2)) (pos? ac-rdrf)))})
+(fun {acia-next} {do
+  (set {n} (if (> ac-txtimer 0) ac-txtimer INF))
+  (if (< pcqh pcqt) (min n (max 1 pcdelay))
+    (if (< rxh rxn)
+      (if (== (rxq rxh) 257)
+        (if (and (> ac-sent promptfrom) (prompt-tail?)) (min n (max 1 (- (+ ac-sentat 300000) ac-cyc))) n)
+        (if (> rxdelay 0) (min n rxdelay) (if (or (zero? ac-rdrf) ac-paste) 1 n)))
+      n))})
+(fun {acia-reset} {set! {ac-cmd ac-ctrl ac-tdre ac-txtimer ac-irq ac-rdrf} 0 0 1 0 0 0})
+
+; ---- the VIA (port 0, IRQ line 0): timer 1 (one-shot or free-running), timer 2 (one-shot), the shift register's
+; timing and flag, port B (SPI: spi-portb, spi-miso), port A (pins; the I2C bus on PA0 and PA1), CA1's edge
+(def {vr} (hash-create))
+(dotimes {i 16} (hash-put vr [i 0]))
+(def {via-t1 via-t1latch via-t1on via-ifr via-ier via-t2 via-t2latchl via-t2on via-srleft via-ca1level opt-portain}
+  #xFFFF #xFFFF NIL 0 0 #xFFFF #xFF NIL -1 1 255)
+(fun {via-portb} {spi-portb (bit-or (bit-and (vr 0) (vr 2)) (bit-and (bit-xor (vr 2) 255) #x7F))})
+(fun {via-pinsa} {if i2c-on (bit-or (bit-and opt-portain #xFC) (i2c-scl) (* 2 (i2c-sda))) opt-portain})
+(fun {via-porta} {if i2c-on (do (set {low} (bit-and (vr 3) (bit-xor (vr 1) 255))) (i2c-bus (if (bit? low 0) 0 1) (if (bit? low 1) 0 1))) 0})
+(fun {via-ca1 level} {if (== level via-ca1level) 0 (do (set! {via-ca1level} level) (if (== level (bit-and (vr 12) 1)) (set! {via-ifr} (bit-or via-ifr 2)) 0))})
+(fun {via-srstart} {do
+  (set {m} (bit-and (shr (vr 11) 2) 7))
+  (set! {via-ifr} (bit-and via-ifr (bit-not 4)))
+  (set! {via-srleft} (if (in? m {2 6}) 16 (if (in? m {1 5}) (* 16 (+ via-t2latchl 2)) -1)))
+  (if (in? m {1 2}) (hash-put vr [10 255]) 0)})
+(fun {via-read r at} {if (in? r {0 1 2 3 15 12})
+  (if (zero? r) (do (set {ddr} (vr 2)) (bit-or (bit-and (vr 0) ddr) (bit-and (+ #x7F (* 128 (spi-miso))) (bit-xor ddr 255))))
+    (if (in? r {1 15}) (do (if (== r 1) (set! {via-ifr} (bit-and via-ifr (bit-not 3))) 0)
+                           (bit-or (bit-and (vr 1) (vr 3)) (bit-and (via-pinsa) (bit-xor (vr 3) 255))))
+      (vr r)))
+  (do (via-sync at)
+    (if (== r 10) (do (via-srstart) (vr 10))
+      (if (== r 4) (do (set! {via-ifr} (bit-and via-ifr (bit-not #x40))) (bit-and via-t1 255))
+        (if (== r 5) (shr via-t1 8)
+          (if (== r 8) (do (set! {via-ifr} (bit-and via-ifr (bit-not #x20))) (bit-and via-t2 255))
+            (if (== r 9) (bit-and (shr via-t2 8) 255)
+              (if (== r 6) (bit-and via-t1latch 255)
+                (if (== r 7) (shr via-t1latch 8)
+                  (if (== r 13) (bit-or via-ifr (if (zero? (bit-and via-ifr via-ier #x7F)) 0 128))
+                    (if (== r 14) (bit-or via-ier 128) (vr r)))))))))))})
+(fun {via-write r b at} {if (in? r {0 1 2 3 15 12})
+  (if (== r 15) (do (hash-put vr [1 b]) (via-porta))
+    (if (== r 1) (do (hash-put vr [1 b]) (set! {via-ifr} (bit-and via-ifr (bit-not 3))) (via-porta))
+      (do (hash-put vr [r b]) (if (in? r {0 2}) (via-portb) (if (== r 3) (via-porta) 0)))))
+  (do (via-sync at)
+    (if (in? r {4 6}) (set! {via-t1latch} (+ (bit-and via-t1latch #xFF00) b))
+      (if (== r 5) (set! {via-t1latch via-t1 via-t1on via-ifr} (+ (bit-and via-t1latch 255) (* b 256)) (+ (bit-and via-t1latch 255) (* b 256)) T (bit-and via-ifr (bit-not #x40)))
+        (if (== r 7) (set! {via-t1latch via-ifr} (+ (bit-and via-t1latch 255) (* b 256)) (bit-and via-ifr (bit-not #x40)))
+          (if (== r 8) (set! {via-t2latchl} b)
+            (if (== r 9) (set! {via-t2 via-t2on via-ifr} (+ (* b 256) via-t2latchl) T (bit-and via-ifr (bit-not #x20)))
+              (if (== r 13) (set! {via-ifr} (bit-and via-ifr (bit-not (bit-and b #x7F))))
+                (if (== r 14) (set! {via-ier} (if (bit? b 7) (bit-or via-ier (bit-and b #x7F)) (bit-and via-ier (bit-not (bit-and b #x7F)))))
+                  (if (== r 10) (do (hash-put vr [10 b]) (via-srstart))
+                    (if (== r 11) (do (hash-put vr [11 b]) (if (zero? (bit-and b #x1C)) (set! {via-srleft} -1) 0))
+                      (hash-put vr [r b])))))))))))})
+(fun {via-tick d} {do
+  (if (>= via-srleft 0) (do (set! {via-srleft} (- via-srleft d)) (if (< via-srleft 0) (set! {via-ifr} (bit-or via-ifr 4)) 0)) 0)
+  (if via-t2on (do (set! {via-t2} (- via-t2 d)) (if (< via-t2 0) (set! {via-ifr via-t2on via-t2} (bit-or via-ifr #x20) NIL (bit-and via-t2 #xFFFF)) 0)) 0)
+  (if via-t1on (do
+    (set! {via-t1} (- via-t1 d))
+    (while {and via-t1on (< via-t1 0)}
+      (set! {via-ifr} (bit-or via-ifr #x40))
+      (if (bit? (vr 11) 6) (set! {via-t1} (+ via-t1 via-t1latch 2)) (set! {via-t1 via-t1on} #xFFFF NIL)))) 0)})
+(fun {via-irq?} {pos? (bit-and via-ifr via-ier #x7F)})
+(fun {via-next} {min (if via-t1on (+ via-t1 1) INF) (if via-t2on (+ via-t2 1) INF) (if (>= via-srleft 0) (+ via-srleft 1) INF)})
+(fun {via-reset} {do (dotimes {i 16} (hash-put vr [i 0])) (set! {via-ifr via-ier via-t1on via-t2on via-srleft} 0 0 NIL NIL -1) (via-portb)})
+
+; ---- the YM2151 (port 4, IRQ line 4): busy 64 of its clocks after a data write (a write then is lost, counted); timers
+; A and B, their flags (IRQ line 4), reset as the write's busy time ends; key-ons noted
+(def {ym-regs ym-reg ym-busyuntil ym-lost ym-status ym-anext ym-bnext ym-resetat ym-resetmask ym-resetdelay}
+  (hash-create) 0 0 0 0 -1 -1 -1 0 0)
+(def {ym-keyons ym-nkeys} (hash-create) 0)
+(fun {ym-r r} {or (ym-regs r) 0})
+(fun {ym-busy} {round (/ (* 64 clock-mhz) 3.579545)})
+(fun {ym-aperiod} {round (/ (* 64 (- 1024 (+ (shl (ym-r 16) 2) (bit-and (ym-r 17) 3))) clock-mhz) 3.579545)})
+(fun {ym-bperiod} {round (/ (* 1024 (- 256 (ym-r 18)) clock-mhz) 3.579545)})
+(fun {ym-timers v at} {do
+  (if (bit? v 0) (if (< ym-anext 0) (set! {ym-anext} (+ at (ym-aperiod))) 0) (set! {ym-anext} -1))
+  (if (bit? v 1) (if (< ym-bnext 0) (set! {ym-bnext} (+ at (ym-bperiod))) 0) (set! {ym-bnext} -1))
+  (set {m} (+ (if (bit? v 4) 1 0) (if (bit? v 5) 2 0)))
+  (if (pos? m) (set! {ym-resetmask ym-resetat} (bit-or ym-resetmask m) (+ ym-busyuntil ym-resetdelay)) 0)})
+(fun {ym-tick at} {do
+  (if (and (>= ym-resetat 0) (>= at ym-resetat)) (set! {ym-status ym-resetmask ym-resetat} (bit-and ym-status (bit-not ym-resetmask)) 0 -1) 0)
+  (if (>= ym-anext 0) (while {>= at ym-anext} (if (bit? (ym-r 20) 2) (set! {ym-status} (bit-or ym-status 1)) 0) (set! {ym-anext} (+ ym-anext (ym-aperiod)))) 0)
+  (if (>= ym-bnext 0) (while {>= at ym-bnext} (if (bit? (ym-r 20) 3) (set! {ym-status} (bit-or ym-status 2)) 0) (set! {ym-bnext} (+ ym-bnext (ym-bperiod)))) 0)})
+(fun {ym-read-status at} {do (ym-tick at) (+ (if (< at ym-busyuntil) 128 0) ym-status)})
+(fun {ym-select v} {set! {ym-reg} v})
+(fun {ym-write v at} {if (< at ym-busyuntil) (set! {ym-lost} (+ ym-lost 1))
+  (do (set! {ym-busyuntil} (+ at (ym-busy)))
+      (hash-put ym-regs [ym-reg v])
+      (if (== ym-reg 20) (ym-timers v at) 0)
+      (if (and (== ym-reg 8) (pos? (bit-and v #x78))) (do (hash-put ym-keyons [ym-nkeys [(bit-and v 7) at]]) (set! {ym-nkeys} (+ ym-nkeys 1))) 0))})
+(fun {ym-irq?} {pos? (bit-and ym-status 3)})
+(fun {ym-next} {min (if (and (>= ym-anext 0) (bit? (ym-r 20) 2)) (max 1 (- ym-anext ym-cyc)) INF)
+  (if (and (>= ym-bnext 0) (bit? (ym-r 20) 3)) (max 1 (- ym-bnext ym-cyc)) INF)
+  (if (>= ym-resetat 0) (max 1 (- ym-resetat ym-cyc)) INF)})
+(fun {ym-reset} {do (set! {ym-regs} (hash-create)) (set! {ym-busyuntil ym-status ym-anext ym-bnext ym-resetat ym-resetmask} 0 0 -1 -1 -1 0)})

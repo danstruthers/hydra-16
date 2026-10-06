@@ -1,0 +1,33 @@
+; run.dl - the Hydra-16 in danlang, on its own: boot the BIOS ROM and a paged ROM image, run for a number of cycles,
+; and show the console's output and the speed (no cards, no keys typed: hydra.dl, which sim/test.js --dl runs, has
+; them).  sim/dl/image.js writes a test's paged ROM image (as sim/test.js builds it).
+;
+; Usage (from reborn): danlang sim/dl/run.dl BIOS PROM CYCLES
+;   e.g. node sim/dl/image.js boot obj/dl/boot.bin; danlang sim/dl/run.dl bin/bios.bin obj/dl/boot.bin 5700000
+(def {here} (substring (fst args) 0 (+ 1 (max (last-index-of (fst args) "/") (last-index-of (fst args) "\\")))))
+(each {f {"cpu.dl" "machine.dl" "devices.dl" "spi.dl" "i2c.dl" "rtc.dl"}} (load (+ here f)))
+(def {peer-on} NIL)
+
+; The console's output, kept in pieces (a string grows by copying)
+(def {out-now out-pieces} "" (hash-create))
+(fun {on-tx v at} {do
+  (set! {out-now} (+ out-now (code-char v)))
+  (if (> (len out-now) 4096) (do (hash-put out-pieces [(len out-pieces) out-now]) (set! {out-now} "")) 0)})
+
+(def {t0} (time))
+(load-roms (read-file (nth 1 args)) (read-file (nth 2 args)))
+(set! {ac-charcyc} (char-cycles))
+(power-up)
+(print-to stderr "[sim] set up in" (- (time) t0) "s")
+(def {limit} (val (nth 3 args)))
+(def {t0} (time))
+(def {shown} 0)
+(while {and (< cyc limit) (not halted)}
+  (run (min limit (+ cyc 200000)))
+  (if (>= (- cyc shown) 1000000) (do (set! {shown} cyc) (print-to stderr "[sim] cycle" cyc "at" (- (time) t0) "s")) 0))
+(def {secs} (max 1 (- (time) t0)))
+(each {k (range (len out-pieces))} (write (out-pieces k)))
+(write out-now)
+(print)
+(print "--- stopped at cycle" cyc "after" secs "s:" (to-fixed (/ cyc secs) 0) "cycles a second; page" (hex ww 1) "PC" (hex pc 4)
+  (if halted (+ "HALTED: " halted) "") "; instructions decoded and kept:" (len dcache))

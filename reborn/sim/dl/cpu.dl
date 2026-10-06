@@ -1,0 +1,433 @@
+; cpu.dl - the W65C02S, cycle-counted from WDC's table (sim/lib/cpu65c02.js, the reference): +1 for an indexed read
+; crossing a page, +1 / +2 for a branch taken (to another page), +1 for ADC/SBC in decimal mode; 7 for an interrupt.
+;
+; An instruction is decoded once into a handler, a function of no arguments that does it, its operand, its next PC and
+; the like built in (a factory per opcode makes it).  A handler for ROM code is kept (dcache, by its place in the ROM
+; image, ck), one for RAM code made each time.  A kept handler sets ck to the next instruction's place too (nk), and a
+; branch or a jump in the same ROM window to its target's (tk); -1 is unknown (another window, RAM, a return, an
+; interrupt, a bank changed: machine.dl's remap), and the run loop finds it from PC.
+;
+; The memory is the machine's: (rd a), (wr a v); mem, a buffer of the RAM (tbz + a is the zero page's byte a, tbs + s
+; the stack's); rom, a buffer of the ROMs.  The registers: ra rx ry rs pc; the flags: N is bit 7 of nf, Z is (zero? zf),
+; C cf (0 or 1), V vf (0 or 1), I fi (0 or 4), D fd (0 or 8).  cyc counts cycles; a handler adds its own before it
+; reads or writes (so an I/O access's cycle is cyc - 1, its last).  lim: the run loop's inner end (machine.dl), set to
+; 0 to end it at once (an I/O access, I cleared, WAI, a halt).
+
+(def {ra rx ry rs pc cyc ck lim} 0 0 0 #xFD 0 0 -1 0)
+(def {nf zf cf vf fi fd} 0 1 0 0 4 0)
+(def {waiting halted} NIL NIL)
+
+; Cycles per opcode (WDC's data sheet), before the extras
+(def {cyctab} (+ "7621535532216465" "2551546524216465" "6621335542214465" "2551446524214465"
+                 "6621335532213465" "2551446524318465" "6621335542216465" "2551446524416465"
+                 "2621333522214445" "2651444525214555" "2621333522214445" "2551444524214445"
+                 "2621335522234465" "2551446524334475" "2621335522214465" "2551446524414475"))
+(fun {opcyc op} {- (char-code (char-at cyctab op)) 48})
+
+; P, as a byte (B and bit 5 set), and set from one
+(fun {getp} {+ (if (> nf 127) 128 0) (* vf 64) 48 fd fi (if (zero? zf) 2 0) cf})
+(fun {setp v} {set! {nf zf cf vf fi fd} (bit-and v 128) (if (bit? v 1) 0 1) (bit-and v 1) (if (bit? v 6) 1 0)
+  (bit-and v 4) (bit-and v 8)})
+
+; The stack
+(fun {push v} {do (buffer-put mem (+ tbs rs) v) (set! {rs} (bit-and (- rs 1) 255))})
+(fun {pull} {do (set! {rs} (bit-and (+ rs 1) 255)) (mem (+ tbs rs))})
+
+; ADC and SBC (decimal mode: a cycle more)
+(fun {adc v} {if (zero? fd)
+  (do (set {r} (+ ra v cf))
+      (set! {vf cf} (if (bit? (bit-and (bit-xor ra r) (bit-xor v r)) 7) 1 0) (shr r 8))
+      (set! {ra} (bit-and r 255))
+      (set! {nf zf} ra ra))
+  (do (set {r} (+ ra v cf))
+      (set! {vf} (if (bit? (bit-and (bit-xor ra r) (bit-xor v r)) 7) 1 0))
+      (set {lo} (+ (bit-and ra 15) (bit-and v 15) cf))
+      (set {hi} (+ (shr ra 4) (shr v 4)))
+      (if (> lo 9) (do (set {lo} (+ lo 6)) (set {hi} (+ hi 1))) 0)
+      (if (> hi 9) (set {hi} (+ hi 6)) 0)
+      (set! {ra} (bit-and (+ (shl hi 4) (bit-and lo 15)) 255))
+      (set! {cf nf zf cyc} (if (> hi 15) 1 0) ra ra (+ cyc 1)))})
+(fun {sbc v} {if (zero? fd)
+  (adc (bit-xor v 255))
+  (do (set {b} (- 1 cf))
+      (set {r} (- ra v b))
+      (set! {vf} (if (bit? (bit-and (bit-xor ra r) (bit-xor ra v)) 7) 1 0))
+      (set {lo} (- (bit-and ra 15) (bit-and v 15) b))
+      (set {hi} (- (shr ra 4) (shr v 4)))
+      (if (< lo 0) (do (set {lo} (- lo 6)) (set {hi} (- hi 1))) 0)
+      (if (< hi 0) (set {hi} (- hi 6)) 0)
+      (set! {ra} (bit-and (+ (shl hi 4) (bit-and lo 15)) 255))
+      (set! {cf nf zf cyc} (if (< r 0) 0 1) ra ra (+ cyc 1)))})
+
+; An interrupt (IRQ: 7 cycles): PC and P pushed (B clear), I set, D clear
+(fun {interrupt vec} {do
+  (push (shr pc 8)) (push (bit-and pc 255)) (push (- (getp) 16))
+  (set! {fi fd pc ck waiting cyc} 4 0 vec -1 NIL (+ cyc 7))
+  (ioff-on)})
+
+; ---- the opcodes: a factory for each, (fn {p a n tg k nk tk} {fn {} {...}}): p the instruction's address, n the
+; next one's, a its operand (a byte or a word: the immediate value, the address, a branch's cycles taken), tg and k as
+; its mode wants (the page-crossing threshold, the zero page pointer's second byte, a branch's target, JSR's return
+; address), nk the next instruction's ROM place and tk the target's (-1: unknown)
+
+; The modes: [setup, read, write (%V the value), the page-crossing extra]
+(def {modes} (hash-create))
+(fun {mode name setup rdx wrx extra} {hash-put modes [name [setup rdx wrx extra]]})
+(mode "imm"  "" "%a" "" "")
+(mode "zp"   "" "(mem (+ tbz %a))" "(if (< %a 2) (wr %a %V) (buffer-put mem (+ tbz %a) %V))" "")
+(mode "zpx"  "(set {ea} (bit-and (+ %a rx) 255))" "(mem (+ tbz ea))" "(if (< ea 2) (wr ea %V) (buffer-put mem (+ tbz ea) %V))" "")
+(mode "zpy"  "(set {ea} (bit-and (+ %a ry) 255))" "(mem (+ tbz ea))" "(if (< ea 2) (wr ea %V) (buffer-put mem (+ tbz ea) %V))" "")
+(mode "abs"  "" "(rd %a)" "(wr %a %V)" "")
+(mode "absx" "(set {ea} (+ %a rx))" "(rd ea)" "(wr ea %V)" "(if (< rx %tg) 0 (set! {cyc} (+ cyc 1)))")
+(mode "absy" "(set {ea} (+ %a ry))" "(rd ea)" "(wr ea %V)" "(if (< ry %tg) 0 (set! {cyc} (+ cyc 1)))")
+(mode "indx" "(set {z} (bit-and (+ %a rx) 255)) (set {ea} (word (mem (+ tbz z)) (mem (+ tbz (bit-and (+ z 1) 255)))))"
+  "(rd ea)" "(wr ea %V)" "")
+(mode "indy" "(set {b} (word (mem (+ tbz %a)) (mem (+ tbz %tg)))) (set {ea} (+ b ry))" "(rd ea)" "(wr ea %V)"
+  "(if (> (bit-and ea #xFF00) b) (set! {cyc} (+ cyc 1)) 0)")
+(mode "indz" "(set {ea} (word (mem (+ tbz %a)) (mem (+ tbz %tg))))" "(rd ea)" "(wr ea %V)" "")
+(def {modelen} (to# {{"imm" 2} {"zp" 2} {"zpx" 2} {"zpy" 2} {"abs" 3} {"absx" 3} {"absy" 3} {"indx" 2} {"indy" 2} {"indz" 2}}))
+
+; The operations on memory: [kind, code]; a read's %R is the value read, a write's %V the value written, a
+; read-modify-write's v the value read and r the value written
+(def {opers} (hash-create))
+(fun {oper name kind code} {hash-put opers [name [kind code]]})
+(oper "ora" :r "(set! {ra} (bit-or ra %R)) (set! {nf zf} ra ra)")
+(oper "and" :r "(set! {ra} (bit-and ra %R)) (set! {nf zf} ra ra)")
+(oper "eor" :r "(set! {ra} (bit-xor ra %R)) (set! {nf zf} ra ra)")
+(oper "adc" :r "(adc %R)")
+(oper "sbc" :r "(sbc %R)")
+(oper "lda" :r "(set! {ra} %R) (set! {nf zf} ra ra)")
+(oper "ldx" :r "(set! {rx} %R) (set! {nf zf} rx rx)")
+(oper "ldy" :r "(set! {ry} %R) (set! {nf zf} ry ry)")
+(oper "cmp" :r "(set {d} (- ra %R)) (set! {cf nf zf} (if (< d 0) 0 1) (bit-and d 255) d)")
+(oper "cpx" :r "(set {d} (- rx %R)) (set! {cf nf zf} (if (< d 0) 0 1) (bit-and d 255) d)")
+(oper "cpy" :r "(set {d} (- ry %R)) (set! {cf nf zf} (if (< d 0) 0 1) (bit-and d 255) d)")
+(oper "bit" :r "(set {v} %R) (set! {nf vf zf} v (if (bit? v 6) 1 0) (bit-and ra v))")
+(oper "sta" :w "ra")
+(oper "stx" :w "rx")
+(oper "sty" :w "ry")
+(oper "stz" :w "0")
+(oper "asl" :m "(set {r} (shl v 1)) (set! {cf} (shr r 8)) (set {r} (bit-and r 255)) (set! {nf zf} r r)")
+(oper "rol" :m "(set {r} (+ (shl v 1) cf)) (set! {cf} (shr r 8)) (set {r} (bit-and r 255)) (set! {nf zf} r r)")
+(oper "lsr" :m "(set! {cf} (bit-and v 1)) (set {r} (shr v 1)) (set! {nf zf} r r)")
+(oper "ror" :m "(set {r} (+ (shr v 1) (* cf 128))) (set! {cf} (bit-and v 1)) (set! {nf zf} r r)")
+(oper "inc" :m "(set {r} (bit-and (+ v 1) 255)) (set! {nf zf} r r)")
+(oper "dec" :m "(set {r} (bit-and (- v 1) 255)) (set! {nf zf} r r)")
+(oper "tsb" :m "(set! {zf} (bit-and ra v)) (set {r} (bit-or v ra))")
+(oper "trb" :m "(set! {zf} (bit-and ra v)) (set {r} (bit-and v (bit-xor ra 255)))")
+(dotimes {bn 8} (do
+  (oper (+ "rmb" bn) :m (+ "(set {r} (bit-and v " (- 255 (shl 1 bn)) "))"))
+  (oper (+ "smb" bn) :m (+ "(set {r} (bit-or v " (shl 1 bn) "))"))))
+
+; The opcodes on memory: "OP MODE OPERATION", OP in hex
+(def {memops} (str-split (+
+  "01 indx ora|05 zp ora|09 imm ora|0D abs ora|11 indy ora|12 indz ora|15 zpx ora|19 absy ora|1D absx ora|"
+  "21 indx and|25 zp and|29 imm and|2D abs and|31 indy and|32 indz and|35 zpx and|39 absy and|3D absx and|"
+  "41 indx eor|45 zp eor|49 imm eor|4D abs eor|51 indy eor|52 indz eor|55 zpx eor|59 absy eor|5D absx eor|"
+  "61 indx adc|65 zp adc|69 imm adc|6D abs adc|71 indy adc|72 indz adc|75 zpx adc|79 absy adc|7D absx adc|"
+  "81 indx sta|85 zp sta|8D abs sta|91 indy sta|92 indz sta|95 zpx sta|99 absy sta|9D absx sta|"
+  "A1 indx lda|A5 zp lda|A9 imm lda|AD abs lda|B1 indy lda|B2 indz lda|B5 zpx lda|B9 absy lda|BD absx lda|"
+  "C1 indx cmp|C5 zp cmp|C9 imm cmp|CD abs cmp|D1 indy cmp|D2 indz cmp|D5 zpx cmp|D9 absy cmp|DD absx cmp|"
+  "E1 indx sbc|E5 zp sbc|E9 imm sbc|ED abs sbc|F1 indy sbc|F2 indz sbc|F5 zpx sbc|F9 absy sbc|FD absx sbc|"
+  "A2 imm ldx|A6 zp ldx|AE abs ldx|B6 zpy ldx|BE absy ldx|A0 imm ldy|A4 zp ldy|AC abs ldy|B4 zpx ldy|BC absx ldy|"
+  "86 zp stx|8E abs stx|96 zpy stx|84 zp sty|8C abs sty|94 zpx sty|64 zp stz|74 zpx stz|9C abs stz|9E absx stz|"
+  "E0 imm cpx|E4 zp cpx|EC abs cpx|C0 imm cpy|C4 zp cpy|CC abs cpy|24 zp bit|34 zpx bit|2C abs bit|3C absx bit|"
+  "06 zp asl|0E abs asl|16 zpx asl|1E absx asl|26 zp rol|2E abs rol|36 zpx rol|3E absx rol|"
+  "46 zp lsr|4E abs lsr|56 zpx lsr|5E absx lsr|66 zp ror|6E abs ror|76 zpx ror|7E absx ror|"
+  "E6 zp inc|EE abs inc|F6 zpx inc|FE absx inc|C6 zp dec|CE abs dec|D6 zpx dec|DE absx dec|"
+  "04 zp tsb|0C abs tsb|14 zp trb|1C abs trb|"
+  "07 zp rmb0|17 zp rmb1|27 zp rmb2|37 zp rmb3|47 zp rmb4|57 zp rmb5|67 zp rmb6|77 zp rmb7|"
+  "87 zp smb0|97 zp smb1|A7 zp smb2|B7 zp smb3|C7 zp smb4|D7 zp smb5|E7 zp smb6|F7 zp smb7") "|"))
+
+; The opcodes that take a cycle more when an index crosses a page (WDC's table)
+(def {pagex} (to# (map (fn {o} {list o T}) {#x11 #x19 #x1D #x31 #x39 #x3D #x51 #x59 #x5D #x71 #x79 #x7D #xB1 #xB9 #xBD #xD1
+  #xD9 #xDD #xF1 #xF9 #xFD #xBC #xBE #x3C #x1E #x3E #x5E #x7E})))
+
+; The next instruction, as most do it: %C is the cycles
+(def {NEXT} "(set! {pc cyc ck} %n (+ cyc %C) %nk)")
+
+; The rest: "OP LENGTH KIND CODE" (KIND: - plain, b a branch, s BBR/BBS, j JSR or JMP: tk the target's place)
+(def {otherops} (str-split (+
+  "EA 1 - %N|18 1 - %N (set! {cf} 0)|38 1 - %N (set! {cf} 1)|"
+  "58 1 - %N (if (zero? fi) 0 (do (set! {fi lim} 0 (if irqp 0 lim)) (if (< ioff-at 0) 0 (ioff-off %p))))|"
+  "78 1 - %N (if (zero? fi) (do (set! {fi} 4) (if ioff-track (ioff-on-at %n) 0)) 0)|"
+  "B8 1 - %N (set! {vf} 0)|D8 1 - %N (set! {fd} 0)|F8 1 - %N (set! {fd} 8)|"
+  "AA 1 - %N (set! {rx nf zf} ra ra ra)|A8 1 - %N (set! {ry nf zf} ra ra ra)|"
+  "8A 1 - %N (set! {ra nf zf} rx rx rx)|98 1 - %N (set! {ra nf zf} ry ry ry)|"
+  "BA 1 - %N (set! {rx nf zf} rs rs rs)|9A 1 - %N (set! {rs} rx)|"
+  "E8 1 - %N (set {r} (bit-and (+ rx 1) 255)) (set! {rx nf zf} r r r)|"
+  "CA 1 - %N (set {r} (bit-and (- rx 1) 255)) (set! {rx nf zf} r r r)|"
+  "C8 1 - %N (set {r} (bit-and (+ ry 1) 255)) (set! {ry nf zf} r r r)|"
+  "88 1 - %N (set {r} (bit-and (- ry 1) 255)) (set! {ry nf zf} r r r)|"
+  "1A 1 - %N (set {r} (bit-and (+ ra 1) 255)) (set! {ra nf zf} r r r)|"
+  "3A 1 - %N (set {r} (bit-and (- ra 1) 255)) (set! {ra nf zf} r r r)|"
+  "0A 1 - %N (set {r} (shl ra 1)) (set! {cf} (shr r 8)) (set {r} (bit-and r 255)) (set! {ra nf zf} r r r)|"
+  "2A 1 - %N (set {r} (+ (shl ra 1) cf)) (set! {cf} (shr r 8)) (set {r} (bit-and r 255)) (set! {ra nf zf} r r r)|"
+  "4A 1 - %N (set! {cf} (bit-and ra 1)) (set {r} (shr ra 1)) (set! {ra nf zf} r r r)|"
+  "6A 1 - %N (set {r} (+ (shr ra 1) (* cf 128))) (set! {cf} (bit-and ra 1)) (set! {ra nf zf} r r r)|"
+  "48 1 - %N (buffer-put mem (+ tbs rs) ra) (set! {rs} (bit-and (- rs 1) 255))|"
+  "DA 1 - %N (buffer-put mem (+ tbs rs) rx) (set! {rs} (bit-and (- rs 1) 255))|"
+  "5A 1 - %N (buffer-put mem (+ tbs rs) ry) (set! {rs} (bit-and (- rs 1) 255))|"
+  "68 1 - %N (set! {rs} (bit-and (+ rs 1) 255)) (set {r} (mem (+ tbs rs))) (set! {ra nf zf} r r r)|"
+  "FA 1 - %N (set! {rs} (bit-and (+ rs 1) 255)) (set {r} (mem (+ tbs rs))) (set! {rx nf zf} r r r)|"
+  "7A 1 - %N (set! {rs} (bit-and (+ rs 1) 255)) (set {r} (mem (+ tbs rs))) (set! {ry nf zf} r r r)|"
+  "08 1 - %N (buffer-put mem (+ tbs rs) (+ (if (> nf 127) 128 0) (* vf 64) 48 fd fi (if (zero? zf) 2 0) cf)) (set! {rs} (bit-and (- rs 1) 255))|"
+  "28 1 - %N (set {i0} fi) (set! {rs} (bit-and (+ rs 1) 255)) (set {v} (mem (+ tbs rs))) (set! {nf zf cf vf fi fd} (bit-and v 128) (if (bit? v 1) 0 1) (bit-and v 1) (if (bit? v 6) 1 0) (bit-and v 4) (bit-and v 8)) (if (and irqp (zero? fi)) (set! {lim} 0) 0) (if (== i0 fi) 0 (ioff-chg i0 %p %n))|"
+  "40 1 - (set {i0} fi) (setp (pull)) (set {lo} (pull)) (set {hi} (pull)) (set! {pc cyc ck} (word lo hi) (+ cyc %C) -1) (if (and irqp (zero? fi)) (set! {lim} 0) 0) (ioff-chg i0 %p pc)|"
+  "60 1 - (set {lo} (mem (+ tbs (bit-and (+ rs 1) 255)))) (set! {rs} (bit-and (+ rs 2) 255)) (set! {pc cyc ck} (+ (word lo (mem (+ tbs rs))) 1) (+ cyc %C) -1)|"
+  "00 1 - (set! {cyc} (+ cyc %C)) (push (shr %k 8)) (push (bit-and %k 255)) (push (getp)) (set {i0} fi) (set! {fi fd pc ck} 4 0 (irqvec) -1) (if (zero? i0) (ioff-on) 0)|"
+  "20 3 j (buffer-put mem (+ tbs rs) (shr %k 8)) (buffer-put mem (+ tbs (bit-and (- rs 1) 255)) (bit-and %k 255)) (set! {rs pc cyc ck} (bit-and (- rs 2) 255) %a (+ cyc %C) %tk)|"
+  "4C 3 j (set! {pc cyc ck} %a (+ cyc %C) %tk)|"
+  "6C 3 - (set! {pc cyc ck} (word (rd %a) (rd (bit-and (+ %a 1) #xFFFF))) (+ cyc %C) -1)|"
+  "7C 3 - (set {ea} (bit-and (+ %a rx) #xFFFF)) (set! {pc cyc ck} (word (rd ea) (rd (bit-and (+ ea 1) #xFFFF))) (+ cyc %C) -1)|"
+  "89 2 - %N (set! {zf} (bit-and ra %a))|"
+  "10 2 b (if (> nf 127) %N (set! {pc cyc ck} %tg (+ cyc %a) %tk))|"
+  "30 2 b (if (> nf 127) (set! {pc cyc ck} %tg (+ cyc %a) %tk) %N)|"
+  "50 2 b (if (zero? vf) (set! {pc cyc ck} %tg (+ cyc %a) %tk) %N)|"
+  "70 2 b (if (zero? vf) %N (set! {pc cyc ck} %tg (+ cyc %a) %tk))|"
+  "90 2 b (if (zero? cf) (set! {pc cyc ck} %tg (+ cyc %a) %tk) %N)|"
+  "B0 2 b (if (zero? cf) %N (set! {pc cyc ck} %tg (+ cyc %a) %tk))|"
+  "D0 2 b (if (zero? zf) %N (set! {pc cyc ck} %tg (+ cyc %a) %tk))|"
+  "F0 2 b (if (zero? zf) (set! {pc cyc ck} %tg (+ cyc %a) %tk) %N)|"
+  "80 2 b (set! {pc cyc ck} %tg (+ cyc %a) %tk)|"
+  "CB 1 - %N (set! {waiting lim} T 0)|"
+  "DB 1 - %N (halt (+ \"STP at \" (where %p)))") "|"))
+
+; The NOPs: 2 bytes, 3 bytes, and the 1-byte ones (xxx3, xxxB but WAI and STP)
+(def {nop2} {#x02 #x22 #x42 #x62 #x82 #xC2 #xE2 #x44 #x54 #xD4 #xF4})
+(def {nop3} {#x5C #xDC #xFC})
+
+; BBR and BBS: zero page byte a's bit, the target tg, k the cycles more when taken
+(fun {bbx op} {do
+  (set {test} (+ "(bit? (mem (+ tbz %a)) " (bit-and (shr op 4) 7) ")"))
+  (set {taken} "(set! {pc cyc ck} %tg (+ cyc %C %k) %tk)")
+  (+ "(if " test " " (if (bit? op 7) (+ taken " %N") (+ "%N " taken)) ")")})
+
+; The tables: oplen (bytes), opkind (how decode fills tg and k), opfac (the factory), made at the top level (a
+; handler's names: its own, its factory's, the global ones)
+(def {oplen opkind opfac} (hash-create) (hash-create) (hash-create))
+; An opcode's code, its cycles and NEXT in it (the placeholders %p %a %n %tg %k %nk %tk kept)
+(def {op-codes} (hash-create))
+(fun {op-code op code} {do code})
+; %N as next (NEXT, or nothing: a block's instruction but its last), and %C as the cycles
+(fun {expand op code next} {str-replace (str-replace code "%N" next) "%C" (to-str (opcyc op))})
+; Its placeholders as values: names (a factory's), or numbers (a block's)
+(fun {fill code p a n tg k nk tk} {str-replace (str-replace (str-replace (str-replace (str-replace (str-replace (str-replace code
+  "%nk" (to-str nk)) "%tk" (to-str tk)) "%tg" (to-str tg)) "%p" (to-str p)) "%a" (to-str a)) "%n" (to-str n)) "%k" (to-str k)})
+(fun {factory-text op} {+ "(fn {p a n tg k nk tk} {fn {} {do " (fill (expand op (op-codes op) NEXT) "p" "a" "n" "tg" "k" "nk" "tk") " 1}})"})
+(fun {factory op len kind code} {do
+  (hash-put oplen [op len])
+  (hash-put opkind [op kind])
+  (hash-put op-codes [op (op-code op code)])})
+
+; An opcode on memory's code: its mode m's setup, its operation o with the read rdx (%R) and the write wrx (%V: the
+; value), and its page-crossing extra; and each one's mode and operation's names (opmem: a block's code has its own
+; reads and writes, for the address it knows)
+(def {opmem} (hash-create))
+(fun {memop-code op m o rdx wrx} {+ "%N " (fst m) " "
+  (if (== (fst o) :r) (str-replace (snd o) "%R" rdx)
+    (if (== (fst o) :w) (str-replace wrx "%V" (snd o))
+      (+ "(set {v} " rdx ") " (snd o) " " (str-replace wrx "%V" "r"))))
+  " " (if (pagex op) (fourth m) "")})
+(each {e memops} (do
+  (set {w} (str-split e " "))
+  (set {op} (val (+ "#x" (fst w))))
+  (set {m} (modes (snd w)))
+  (hash-put opmem [op (tail w)])
+  (factory op (modelen (snd w)) (if (in? (snd w) {"absx" "absy"}) "x" (if (in? (snd w) {"indy" "indz"}) "i" "-"))
+    (memop-code op m (opers (thd w)) (snd m) (thd m)))))
+(each {e otherops} (do
+  (set {op} (val (+ "#x" (substring e 0 2))))
+  (factory op (val (substring e 3 1)) (substring e 5 1) (substring e 7))))
+(each {op nop2} (factory op 2 "-" "%N"))
+(each {op nop3} (factory op 3 "-" "%N"))
+(dotimes {hi 16} (do
+  (factory (+ (* hi 16) 15) 3 "s" (bbx (+ (* hi 16) 15)))
+  (factory (+ (* hi 16) 3) 1 "-" "%N")
+  (if (in? hi {12 13}) 0 (factory (+ (* hi 16) 11) 1 "-" "%N"))))
+; (made here, at the top level, all in one: their scope the global one)
+(eval (fst (read (+ "(do " (str-join (map (fn {op} {+ "(hash-put opfac [" op " " (factory-text op) "])"}) (hash-keys op-codes)) " ") ")"))))
+
+; ---- decoding: the instruction at pc (its bytes read through rd), its handler; at is its ROM place (-1: none)
+(fun {rel b} {if (> b 127) (- b 256) b})
+; A target's ROM place, from the instruction's (at, at its address p): the same window's, or -1
+(fun {place at p x} {if (or (< at 0) (not (== (window p) (window x)))) -1 (+ at (- x p))})
+(fun {window p} {if (< p #x8000) 4 (if (< p #xA000) 0 (if (< p #xE000) 1 (if (< p #xFF00) 2 3)))})
+(fun {inst p at} {do
+  (set {op} (rd p))
+  (set {len} (oplen op))
+  (set {n} (+ p len))
+  (set {b1} (if (> len 1) (rd (bit-and (+ p 1) #xFFFF)) 0))
+  (set {b2} (if (> len 2) (rd (bit-and (+ p 2) #xFFFF)) 0))
+  (set {kind} (opkind op))
+  (set {a} (if (== len 3) (word b1 b2) b1))
+  (set {tg} 0)
+  (set {k} 0)
+  (set {tk} -1)
+  (set {nk} (place at p n))
+  (if (== kind "b") (do (set {tg} (bit-and (+ n (rel b1)) #xFFFF)) (set {a} (if (== (shr tg 8) (shr n 8)) 3 4)) (set {tk} (place at p tg)))
+    (if (== kind "s") (do (set {a} b1) (set {tg} (bit-and (+ n (rel b2)) #xFFFF)) (set {k} (if (== (shr tg 8) (shr n 8)) 1 2)) (set {tk} (place at p tg)))
+      (if (== kind "x") (set {tg} (- 256 (bit-and a 255)))
+        (if (== kind "i") (set {tg} (bit-and (+ a 1) 255))
+          (if (== kind "j") (do (set {k} (- n 1)) (set {tk} (place at p a))) 0)))))
+  (if (zero? op) (set {k} (+ p 2)) 0)
+  (list op p a n tg k nk tk)})
+(fun {handler p at} {do (set {i} (inst p at)) (unpack (opfac (fst i)) (tail i))})
+; An instruction's code in a block, its values in it: the last sets PC and the next place (NEXT), the others neither
+; (their cycles are the block's to count, its end sets PC; a JMP or BRA the block goes on through, nothing).  An access
+; at an address it knows goes straight to the memory there (but in the slow mode, where an access to the low 32K is its
+; own task's: rd and wr)
+(fun {code-of i last} {if (and (not last) (in? (fst i) {#x4C #x80})) "" (do
+  (set {op} (fst i))
+  (set {mo} (hash-get opmem op))
+  (set {code} (if (nil? mo) (op-codes op)
+    (memop-code op (modes (fst mo)) (opers (snd mo)) (const-rd (fst mo) (nth 2 i)) (const-wr (fst mo) (nth 2 i)))))
+  (unpack (fill (expand op code (if last NEXT ""))) (tail i)))})
+; (and, in the fast mode, an access at an address it works out, ea, straight to the low 32K's memory if it's there)
+(fun {const-rd mn a} {if (and (== mn "abs") (not mslow))
+  (if (< a #x8000) "(mem (+ tbl %a))" (if (< a #xA000) "(rd %a)"
+    (if (< a #xE000) "(rom (+ pbase %a))" (if (< a #xFF00) "(rom (+ wbase %a))" "(rd-io %a)"))))
+  (if (and (in? mn {"absx" "absy" "indx" "indy" "indz"}) (not mslow)) "(if (< ea 32768) (mem (+ tbl ea)) (rd ea))"
+    (snd (modes mn)))})
+(fun {const-wr mn a} {if (== mn "zp") (if (< a 2) "(wr %a %V)" "(buffer-put mem (+ tbz %a) %V)")
+  (if (and (== mn "abs") (not mslow))
+    (if (< a 2) "(wr %a %V)" (if (< a #x8000) "(buffer-put mem (+ tbl %a) %V)" (if (< a #xFF00) "(wr %a %V)" "(wr-io %a %V)")))
+    (if (and (in? mn {"absx" "absy" "indx" "indy" "indz"}) (not mslow))
+      "(if (< ea 2) (wr ea %V) (if (< ea 32768) (buffer-put mem (+ tbl ea) %V) (wr ea %V)))"
+      (thd (modes mn))))})
+; Whether an instruction may end its block (lim sooner after it): an access that may be I/O (an address it doesn't know,
+; or the I/O page), a write that may change the banks ($0000 or $0001), or, in the slow mode, any through rd or wr; or
+; CLI or PLP (I cleared, an IRQ to be taken)
+(fun {may-end? i} {do
+  (set {mo} (hash-get opmem (fst i)))
+  (if (nil? mo) (in? (fst i) {#x28 #x58}) (do
+    (set {mn} (fst mo))
+    (set {a} (nth 2 i))
+    (set {w?} (not (== (fst (opers (snd mo))) :r)))
+    (if (in? mn {"absx" "absy" "indx" "indy" "indz"}) T
+      (if (== mn "abs") (or mslow (>= a #xFF00) (and w? (< a 2)))
+        (if (== mn "zp") (and w? (< a 2))
+          (and w? (in? mn {"zpx" "zpy"})))))))})
+
+; A ROM block: the instructions from pc (at its place ck) on, in its window, till one that changes the flow (a branch,
+; a jump, a return, BRK, WAI, STP; but a JMP or BRA in the window to another place than the block's start, which it
+; goes on through), a watched place (each starts a block), or 16 of them: one function (made in the global scope: gq
+; remembers it), each instruction's values in its code.  It runs whole when no event can be due before its last
+; instruction starts (cyc, with the most cycles the others take, below lim), its cycles counted as it goes: put in cyc
+; before an instruction that may end it, and before the last; and after one that may end it, a look at lim (sooner
+; after a device's access, 0 for an IRQ to be taken or a bank changed): the rest, if it's still all before lim, or the
+; next instruction's PC set, the rest not run.  If an event may be due in it, its first instruction alone (step), the
+; run loop doing the rest.  One whose last instruction goes back to its start (a branch, taken or not, a JMP) runs
+; again while it does, and while it still can whole (blk-lp).  Decoded, kept (dcache: the fast mode's, or the slow
+; mode's), run.  One across its window's end: decoded each time
+(def {gq} {gq})
+(def {mslow dcache-fast dcache-slow} NIL (hash-create) (hash-create))
+(def {dcache} dcache-fast)
+(def {enders} (to# (map (fn {o} {list o T}) (join {#x00 #x40 #x60 #x6C #x7C #xCB #xDB}
+  (filter (fn {o} {in? (opkind o) {"b" "s" "j"}}) (hash-keys opkind))))))
+(fun {decode} {if (>= ck RAMPLACE) (rdecode (- ck RAMPLACE)) (do
+  (set {p} pc)
+  (set {at} ck)
+  (set {insts} (hash-create))
+  (set {count} 0)
+  (set {go} T)
+  (while {go}
+    (set {op} (rd p))
+    (set {len} (oplen op))
+    (if (or (not (== (window p) (window (+ p len -1)))) (and (> count 0) (watched? at)))
+      (set {go} NIL)
+      (do (set {i} (inst p at))
+          (hash-put insts [count i])
+          (set {count} (+ count 1))
+          (if (and (in? op {#x4C #x80}) (>= (nth 7 i) 0) (not (== (nth 7 i) ck)) (< count 16))
+            (do (set {p} (if (== op #x4C) (nth 2 i) (nth 4 i))) (set {at} (nth 7 i)))
+            (do (set {p} (+ p len))
+                (set {at} (+ at len))
+                (if (or (hash-get enders op) (>= count 16)) (set {go} NIL) 0))))))
+  (if (zero? count) (ramexec)
+    (do (set {h} (watched ck (eval (join (tail gq) (read (block-text insts count ck))))))
+        (hash-put dcache [ck h])
+        (h))))})
+(fun {block-text insts count ck0} {do
+  (set {c} (block-code insts count ck0 "(step)"))
+  (+ "fn {} {" (substring c 1 (- (len c) 2)) "}")})
+; The code of a block's instructions (its place ck0): run whole, or (an event may be due in it) stepper
+(def {blk-lp} NIL)
+(fun {block-code insts count ck0 stepper} {do
+  (set {last} (- count 1))
+  ; (forward: the cycles to put in cyc before each instruction, the ones that may end the block, the most cycles
+  ; before the last starts: each one's, and 2 for its extras at most)
+  (set {pend most} 0 0)
+  (set {fb ends upto} (hash-create) (hash-create) (hash-create))
+  (dotimes {j last} (do
+    (set {i} (insts j))
+    (set {c} (if (== (fst i) #x80) (nth 2 i) (opcyc (fst i))))      ; (a BRA gone on through: its cycles, taken)
+    (hash-put upto [j most])
+    (set! {pend most} (+ pend c) (+ most c 2))
+    (if (may-end? i) (do (hash-put ends [j T]) (hash-put fb [j pend]) (set! {pend} 0))
+      (if (== (fst i) #x78) (do (hash-put fb [j pend]) (set! {pend} 0)) 0))))   ; (SEI: cyc as it is, for ioff-on-at)
+  (hash-put fb [last pend])
+  (hash-put upto [last most])
+  ; (backward: the code, an instruction that may end the block followed by its look at lim: the rest whole, if it
+  ; still can be)
+  (set {s} "")
+  (set {j} last)
+  (while {>= j 0}
+    (set {i} (insts j))
+    (set {c} (hash-get fb j))
+    (set {tx} (+ (if (and c (> c 0)) (+ "(set! {cyc} (+ cyc " c ")) ") "") (code-of i (== j last))))
+    (set {s} (if (== j last) tx
+      (if (hash-get ends j) (+ tx " (if (< (+ cyc " (- most (upto (+ j 1))) ") lim) (do " s ") (do (set! {pc ck} " (nth 3 i) " -1) 1))")
+        (+ tx " " s))))
+    (set {j} (- j 1)))
+  (if (or (== (nth 6 (insts last)) ck0) (== (nth 7 (insts last)) ck0))
+    (set {s} (+ "(set! {blk-lp} T) (while {blk-lp} " s " (set! {blk-lp} (and (== ck " ck0 ") (< (+ cyc " most ") lim))))")) 0)
+  (if (zero? last) (+ "(do " s " 1)")
+    (+ "(if (< (+ cyc " most ") lim) (do " s " 1) " stepper ")"))})
+; A block's first instruction alone: its handler (kept: icache), run
+(def {icache} (hash-create))
+(fun {step} {or (icache ck) (do (set {h} (handler pc ck)) (hash-put icache [ck h]) (h))})
+(fun {watched at h} {do h})
+(fun {watched? at} {do NIL})
+; A RAM instruction (in the slow mode, or a bank that isn't there): decoded each time, run
+(fun {ramexec} {do (set {h} (handler pc -1)) (h)})
+
+; RAM blocks: kept too (dcache), by their place in mem, ph (as ck: RAMPLACE + ph), each checking, as it starts,
+; that its bytes are what they were (if not, decoded again; or, decoded again lately, the instruction alone: code being
+; changed).  A block ends in its part of the memory map ($0000-$7FFF, or the bank window), or after a write that may
+; change it (to an address it doesn't know, or near it): it doesn't change its own code.  (The slow mode's RAM code,
+; and a bank that isn't there: an instruction at a time, ramexec)
+(def {RAMPLACE} #x1000000)
+(def {rlast} (hash-create))
+(fun {rmiss ph} {if (< (- cyc (rlast ph)) 20000) (ramexec) (rdecode ph)})
+(fun {rdecode ph} {do
+  (set {p} pc)
+  (set {at} (+ RAMPLACE ph))
+  (set {end} (if (< pc #x8000) #x8000 #xA000))
+  (set {insts} (hash-create))
+  (set {count} 0)
+  (set {go} T)
+  (while {go}
+    (set {op} (rd p))
+    (set {len} (oplen op))
+    (if (> (+ p len) end)
+      (set {go} NIL)
+      (do (set {i} (inst p at))
+          (hash-put insts [count i])
+          (set {count} (+ count 1))
+          (set {p} (+ p len))
+          (set {at} (+ at len))
+          (if (or (hash-get enders op) (>= count 16) (ram-split? i pc)) (set {go} NIL) 0))))
+  (hash-put rlast [ph cyc])
+  (if (zero? count) (ramexec)
+    (do (set {h} (eval (join (tail gq) (read (+ "fn {} {if (zero? (buffer-cmp mem " ph " " (bytes-lit ph (- p pc)) ")) "
+          (block-code insts count (+ RAMPLACE ph) "(ramexec)") " (rmiss " ph ")}")))))
+        (hash-put dcache [(+ RAMPLACE ph) h])
+        (h)))})
+; Whether a block (from p0) ends after an instruction: a write to an address it doesn't know, or one near p0
+(fun {ram-split? i p0} {do
+  (set {mo} (hash-get opmem (fst i)))
+  (if (or (nil? mo) (== (fst (opers (snd mo))) :r)) NIL
+    (if (in? (fst mo) {"abs" "zp"}) (and (>= (nth 2 i) p0) (< (nth 2 i) (+ p0 64))) T))})
+; n bytes of mem from ph, as a string literal ("\xHH...")
+(fun {bytes-lit ph n} {+ "\"" (str-join (map (fn {k} {+ "\\x" (hex (mem (+ ph k)) 2)}) (range n)) "") "\""})

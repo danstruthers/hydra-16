@@ -1,0 +1,49 @@
+; rtc.dl - a DS1747 in U7: a 512K task RAM with a clock in its top 8 bytes, task F's $7FF8-$7FFF (sim/lib/ds1747.js,
+; the reference).  Its clock counts seconds (rtc-base, seconds since 1970, at cycle rtc-at; as UTC, for the fields)
+; while its oscillator runs.  Its registers show the time as it is, or as it was when R or W was set (a snapshot:
+; rtc-held); while W is set, writes go to the snapshot, and clearing W starts the clock from it, with the century that
+; write gives.  Writes with W clear go nowhere.  BF (the day's bit 7) can't be written.
+
+(def {rtc-on rtc-base rtc-at rtc-osc rtc-ctl rtc-held rtc-dow rtc-junk rtc-batlow} NIL 0 0 T 0 NIL 4 NIL NIL)
+(def {EPOCH-2000} 946684800)
+
+; The clock from time: seconds since 1970 (UTC fields), :now (this computer's local time), :stopped (its oscillator
+; off, at 2000-01-01) or :unset (junk in its registers)
+(fun {rtc-setup tm battery-low} {do
+  (set! {rtc-on rtc-batlow rtc-dow} T battery-low 4)
+  (set! {rtc-base} (if (num? tm) tm (if (== tm :now) (+ (time) EPOCH-2000) EPOCH-2000)))
+  (set! {rtc-osc} (not (== tm :stopped)))
+  (if (== tm :unset) (set! {rtc-junk} (buffer (map (fn {i} {pu (+ 920000 i)}) (range 8)))) 0)})
+
+(fun {bcd n} {+ (* (div n 10) 16) (mod n 10)})
+(fun {unbcd b} {+ (* (shr b 4) 10) (bit-and b 15)})
+(fun {rtc-secs} {if rtc-osc (+ rtc-base (floor (/ (- cyc rtc-at) (* clock-mhz 1000000)))) rtc-base})
+
+; The registers, from the clock as it is now (a buffer of 8)
+(fun {rtc-regs} {if rtc-junk (buffer rtc-junk) (do
+  (set {s} (rtc-secs))
+  (set {d} (date-parts (- s EPOCH-2000)))
+  (set {y} (d :year))
+  (buffer (list (bcd (div y 100)) (bit-or (if rtc-osc 0 #x80) (bcd (d :second))) (bcd (d :minute)) (bcd (d :hour))
+    (+ (mod (+ (mod (+ (floor (/ s 86400)) rtc-dow) 7) 7) 7) 1) (bcd (d :day)) (bcd (d :month)) (bcd (mod y 100)))))})
+
+(fun {rtc-read r} {do
+  (set {v} ((or rtc-held (rtc-regs)) r))
+  (if (zero? r) (bit-or rtc-ctl (bit-and v #x3F))
+    (if (== r 4) (bit-or (if rtc-batlow 0 #x80) (bit-and v #x7F)) v))})
+
+(fun {rtc-write r v} {if (> r 0)
+  (if (bit? rtc-ctl 7) (buffer-put rtc-held r v) 0)
+  (do (if (and (pos? (bit-and v #xC0)) (zero? (bit-and rtc-ctl #xC0))) (set! {rtc-held} (rtc-regs)) 0)
+      (if (and (not (bit? v 7)) (bit? rtc-ctl 7)) (do
+        (set {h} rtc-held)
+        (set {y} (+ (* (unbcd (bit-and v #x3F)) 100) (unbcd (h 7))))
+        (set! {rtc-base} (+ EPOCH-2000 (seconds-of y (unbcd (bit-and (h 6) #x1F)) (unbcd (bit-and (h 5) #x3F))
+          (unbcd (bit-and (h 3) #x3F)) (unbcd (bit-and (h 2) #x7F)) (unbcd (bit-and (h 1) #x7F)))))
+        (set! {rtc-at rtc-osc rtc-junk} cyc (not (bit? (h 1) 7)) NIL)
+        (set! {rtc-dow} (mod (+ (mod (- (bit-and (h 4) 7) 1 (floor (/ rtc-base 86400))) 7) 7) 7))) 0)
+      (set! {rtc-ctl} (bit-and v #xC0))
+      (if (zero? rtc-ctl) (set! {rtc-held} NIL) 0))})
+
+; The registers as they are (for the clock test's check)
+(fun {rtc-dump} {bytes (rtc-regs)})

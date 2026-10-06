@@ -1,0 +1,220 @@
+; machine.dl - the Hydra-16 (sim/lib/machine.js, the reference): the memory map, T U V W, the IRQ lines and vectors,
+; the devices brought up to time when they're due (an event) or touched (an I/O access), and the run loop.
+;
+; Memory.  mem, a buffer: a task's $0000-$7FFF at T * 32768 + a; its RAM bank b (installed: below modules * 16) at
+; BANKS + (T * NB + b) * 8192; shared bank (U, b) at SHARED + (U * 16 + b - #xF0) * 8192.  A task's 32K powers up
+; junk (pu: the same each time, from the seed); banks 0.  rom, a buffer: the BIOS ROM's 16 pages of 8K, then the paged
+; ROM's 256 banks of 16K, each as the CPU sees it at $A000-$DFFF (the board's swap of A13, and of the bank number's bits
+; 2 and 3, 6 and 7, undone here once).  The bases (remap: when T, U, W or a task's $00 or $01 change): tbz, tbs, tbl
+; (the zero page's, the stack's and the rest's base in mem), bkon and bkb (the bank window: installed, its base), pbase
+; and wbase (the paged ROM's and the BIOS ROM's place in rom, less the window's address).
+
+(def {INF} 1000000000000000)
+
+; Options (the runner sets them before power-up): RAM modules, shared macro-pages, the model what-ifs and faults
+(def {opt-modules opt-sharedu opt-model opt-u7 opt-u7mask opt-u7high opt-ramfault opt-stuckirq opt-acialine opt-seed}
+  2 16 "" NIL 0 NIL NIL -1 1 1)
+(def {opt-rfbank opt-rfmask opt-rfhigh} 0 0 NIL)
+
+(def {mem rom NB BANKS SHARED PROM} (buffer 0) (buffer 0) 32 524288 0 131072)
+(def {regt regu regv regw tt uu ww} 0 0 0 0 0 0 0)
+(def {tbz tbs tbl bkon bkb pbase wbase rtct} 0 256 0 NIL 0 0 0 NIL)
+(def {vecs} (hash-create))
+
+; Junk: a byte for k, the same each time for a seed
+(fun {pu k} {bit-and (shr (* (bit-xor (+ k 12345) (* opt-seed 7919)) 2654435761) 13) 255})
+
+; Which task's $0000-$7FFF an access at a uses (the model what-ifs, the U7 fault)
+(fun {tsel ad} {if (== opt-model "sharedlow") 0
+  (if (and (== opt-model "zponly") (>= ad #x200)) 0
+    (if (and (== opt-model "nostack") (>= ad #x100) (< ad #x200)) 0
+      (if opt-u7 (if opt-u7high (bit-or tt opt-u7mask) (bit-and tt (bit-xor opt-u7mask 15))) tt)))})
+
+(fun {bank-installed b} {if (>= b #xF0) (and (not (== opt-model "noshared")) (< uu opt-sharedu)) (< b NB)})
+(fun {bank-base b} {if (>= b #xF0) (+ SHARED (* (+ (* uu 16) (- b #xF0)) 8192) (- #x8000)) (+ BANKS (* (+ (* tt NB) b) 8192) (- #x8000))})
+
+; The bases, again (and rd, wr and the blocks for them: the slow mode, with the clock chip in task F's top 8 bytes,
+; or a what-if); the next instruction's place not known, and the run loop's inner loop (a block too) ended: the code
+; may be another bank's
+(fun {remap} {do
+  (set! {tbz tbs tbl} (* (tsel 0) 32768) (+ (* (tsel #x100) 32768) 256) (* (tsel #x200) 32768))
+  (remap-banks)
+  (set! {wbase} (- (* ww 8192) #xE000))
+  (set! {rtct} (and rtc-on (== (tsel #x7FF8) 15)))
+  (set! {mslow} (or rtct model-slow))
+  (if mslow (def {rd wr dcache} rd-slow wr-slow dcache-slow) (def {rd wr dcache} rd-fast wr-fast dcache-fast))})
+(def {model-slow} NIL)
+; Only the banks' (a write to $0000 or $0001, the task's own: tbz's): the bank window's, the paged ROM's
+(fun {remap-banks} {do
+  (set {b0} (mem tbz))
+  (set! {bkon bkb} (bank-installed b0) (bank-base b0))
+  (if (and bkon opt-ramfault (same-chip b0 opt-rfbank)) (set! {bkon} :fault) 0)
+  (set! {pbase ck lim} (+ PROM (* (mem (+ tbz 1)) 16384) (- #xA000)) -1 0)})
+
+; A RAM fault: the chip holding bank b sees an address line stuck (bit mask of the window's offset)
+(fun {same-chip b f} {if (>= b #xF0) (and (>= f #xF0) (zero? (bit-and (bit-xor b f) 12))) (and (< f #xF0) (== (shr b 4) (shr f 4)))})
+(fun {fault-ofs ad} {do (set {o} (- ad #x8000)) (+ #x8000 (if opt-rfhigh (bit-or o opt-rfmask) (bit-and o (bit-not opt-rfmask))))})
+
+; ---- reads and writes
+(fun {rd-fast ad} {if (< ad #x8000) (mem (+ tbl ad))
+  (if (< ad #xA000)
+    (if bkon (if (== bkon :fault) (mem (+ bkb (fault-ofs ad))) (mem (+ bkb ad))) (shr ad 8))
+    (if (< ad #xE000) (rom (+ pbase ad))
+      (if (< ad #xFF00) (rom (+ wbase ad)) (rd-io ad))))})
+(fun {wr-fast ad v} {if (< ad #x8000)
+  (do (buffer-put mem (+ tbl ad) v) (if (< ad 2) (remap-banks) 0))
+  (if (< ad #xA000)
+    (if bkon (if (== bkon :fault) (buffer-put mem (+ bkb (fault-ofs ad)) v) (buffer-put mem (+ bkb ad) v)) 0)
+    (if (< ad #xFF00) 0 (wr-io ad v)))})
+; With the clock chip in this task's top 8 bytes, or a what-if: each access by its own task's RAM
+(fun {rd-slow ad} {if (< ad #x8000)
+  (if (and rtct (>= ad #x7FF8)) (rtc-read (- ad #x7FF8)) (mem (+ (* (tsel ad) 32768) ad)))
+  (rd-fast ad)})
+(fun {wr-slow ad v} {if (< ad #x8000)
+  (do (if (and rtct (>= ad #x7FF8)) (rtc-write (- ad #x7FF8) v) (buffer-put mem (+ (* (tsel ad) 32768) ad) v)) (if (< ad 2) (remap-banks) 0))
+  (wr-fast ad v)})
+(def {rd wr} rd-fast wr-fast)
+
+; The I/O page: the devices ($FF00-$FFEF: the one accessed brought up to this access's cycle first, and its next
+; event and IRQ line found again after), T U V W, the vector RAM.  After a device's access, the run loop's inner loop
+; ends at the next event, which may now be sooner, or at once if an IRQ is to be taken (io-lim)
+(fun {rd-io ad} {if (> ad #xFFFF) (rd (bit-and ad #xFFFF))
+  (if (< ad #xFFF0)
+    (do (set {at} (- cyc 1))
+        (set {r} (if (< ad #xFF10) (do (set {x} (via-read (- ad #xFF00) at)) (via-sched) x)
+                   (if (< ad #xFF14) (do (if (and (== ad #xFF11) (< at nx-ac)) 0 (ac-sync at))    ; (*)
+                                         (set {x} (acia-read (- ad #xFF10) at)) (ac-sched) x)
+                     (if (== ad #xFF41) (do (ym-sync at) (set {x} (ym-read-status at)) (ym-sched) x) 255))))
+        (dev-due)
+        (io-lim)
+        r)
+    (if (< ad #xFFF4) (if (== ad #xFFF0) regt (if (== ad #xFFF1) regu (if (== ad #xFFF2) regv regw)))
+      (if (>= ad #xFFFE) (do (set {w} (vecs (bit-and regv 15))) (if (== ad #xFFFE) (bit-and w 255) (shr w 8)))
+        (rom (+ wbase ad)))))})
+(fun {wr-io ad v} {if (> ad #xFFFF) (wr (bit-and ad #xFFFF) v)
+  (if (< ad #xFFF0)
+    (do (set {at} (- cyc 1))
+        (if (< ad #xFF10) (do (via-write (- ad #xFF00) v at) (via-sched))
+          (if (< ad #xFF14) (do (ac-sync at) (acia-write (- ad #xFF10) v at) (ac-sched))
+            (if (== ad #xFF40) (ym-select v)
+              (if (== ad #xFF41) (do (ym-sync at) (ym-write v at) (ym-sched)) 0))))
+        (dev-due)
+        (io-lim))
+    (if (== ad #xFFF0) (do (set! {regt tt} v (bit-and v 15)) (remap))
+      (if (== ad #xFFF1) (do (set! {regu uu} v (bit-and v 15)) (remap))
+        (if (== ad #xFFF2) (set! {regv} v)
+          (if (== ad #xFFF3) (do (set! {regw ww} v (bit-and v 15)) (remap))
+            (if (== ad #xFFFE) (hash-put vecs [(bit-and regv 15) (+ (bit-and (vecs (bit-and regv 15)) #xFF00) v)])
+              (if (== ad #xFFFF) (hash-put vecs [(bit-and regv 15) (+ (bit-and (vecs (bit-and regv 15)) 255) (* v 256))]) 0)))))))})
+
+; (*) A read of the ACIA's status before its next event: nothing in it has changed since it was last brought up to
+; time but its counts down (its tick is the same in one go later), and the status, its IRQ, TDRE and RDRF, is as it was
+(fun {io-lim} {set! {lim} (if (and irqp (zero? fi)) 0 (min lim devnext))})
+
+; ---- the IRQ lines: the lowest active one's vector (n ^ 7), or V's when none is (BRK)
+(def {irqp} NIL)
+(fun {irq-line} {do
+  (set {n} 16)
+  (if (and (acia-irq?) (< opt-acialine n)) (set {n} opt-acialine) 0)
+  (if (via-irq?) (set {n} 0) 0)
+  (if (and (ym-irq?) (< 4 n)) (set {n} 4) 0)
+  (if (and (>= opt-stuckirq 0) (< opt-stuckirq n)) (set {n} opt-stuckirq) 0)
+  (if (< n 16) n -1)})
+(fun {irqvec} {do (set {n} (irq-line)) (vecs (if (>= n 0) (bit-xor n 7) (bit-and regv 15)))})
+
+; ---- the devices: each brought up to cycle at when it's accessed, or when the next event is due (devsync, all of
+; them), from its own cycle (via-cyc, ym-cyc, ac-cyc: they don't touch each other); the next cycle each wants and
+; whether its IRQ line is active, found again after (via-sched, ym-sched, ac-sched); the next cycle one of them wants
+; (devnext) and whether an IRQ line is active (irqp), from those (dev-due)
+(def {via-cyc ym-cyc ac-cyc nx-via nx-ym nx-ac devnext} 0 0 0 1 1 1 1)
+(def {irq-via irq-ym irq-ac irq-stuck} NIL NIL NIL NIL)
+(fun {via-sync at} {do
+  (set {d} (- at via-cyc))
+  (if (> d 0) (do (set! {via-cyc} at) (via-tick d) (ca1-due at)) 0)})
+(fun {ym-sync at} {if (> at ym-cyc) (do (set! {ym-cyc} at) (ym-tick at)) 0})
+(fun {ac-sync at} {do
+  (set {d} (- at ac-cyc))
+  (if (> d 0) (do (set! {ac-cyc} at) (acia-tick d at)) 0)})
+(fun {devsync at} {do (via-sync at) (ym-sync at) (ac-sync at)})
+(fun {via-sched} {set! {nx-via irq-via} (+ via-cyc (max 1 (min (via-next) (ca1-next)))) (via-irq?)})
+(fun {ym-sched} {set! {nx-ym irq-ym} (+ ym-cyc (max 1 (ym-next))) (ym-irq?)})
+(fun {ac-sched} {set! {nx-ac irq-ac} (+ ac-cyc (max 1 (acia-next))) (and (acia-irq?) (< opt-acialine 16))})
+(fun {dev-due} {set! {devnext irqp} (min nx-via nx-ym nx-ac) (or irq-via irq-ac irq-ym irq-stuck)})
+(fun {devsched} {do (via-sched) (ym-sched) (ac-sched) (dev-due)})
+
+; CA1's pulses (cycles, in order): low at each, high again 500 cycles on
+(def {ca1-edges ca1-n ca1-at} (hash-create) 0 0)
+(fun {ca1-setup times} {each {c times} (do
+  (hash-put ca1-edges [ca1-n [c 0]])
+  (hash-put ca1-edges [(+ ca1-n 1) [(+ c 500) 1]])
+  (set! {ca1-n} (+ ca1-n 2)))})
+(fun {ca1-due at} {while {and (< ca1-at ca1-n) (<= (fst (ca1-edges ca1-at)) at)}
+  (via-ca1 (snd (ca1-edges ca1-at)))
+  (set! {ca1-at} (+ ca1-at 1))})
+(fun {ca1-next} {if (< ca1-at ca1-n) (max 1 (- (fst (ca1-edges ca1-at)) via-cyc)) INF})
+
+; ---- the longest stretches with IRQs off (the I flag set), from the first key typed or the boot done (ioff-track):
+; by where each began (page:PC as page * 65536 + PC), the longest from there: [cycles, to, at]
+(def {ioff-track ioff-at ioff-from} NIL -1 0)
+(def {ioffs} (hash-create))
+(fun {ioff-on} {ioff-on-at pc})
+(fun {ioff-on-at n} {if ioff-track (set! {ioff-at ioff-from} cyc (+ (* ww 65536) n)) 0})     ; (n: PC, after SEI or PLP)
+(fun {ioff-off p} {if (and ioff-track (>= ioff-at 0)) (do
+  (set {n} (- cyc ioff-at))
+  (set {old} (hash-get ioffs ioff-from))
+  (if (or (nil? old) (< (fst old) n)) (hash-put ioffs [ioff-from [n (+ (* ww 65536) p) ioff-at]]) 0)
+  (set! {ioff-at} -1)) 0})
+(fun {ioff-chg i0 p n} {if (== i0 fi) 0 (if (zero? fi) (ioff-off p) (ioff-on-at n))})
+(fun {ioff-start} {if ioff-track 0 (do (set! {ioff-track} T) (if (zero? fi) 0 (ioff-on)))})
+
+(fun {where p} {+ (hex ww 1) ":" (hex p 4) " (task " tt ")"})
+(fun {halt why} {set! {halted stopat lim} why 0 0})
+
+; ---- running: to cycle limit, or a halt.  Each step: the devices, if one's due; an interrupt, if a line's active
+; and I is clear; a wait (WAI) to the next event; or instructions, to the next event (the inner loop, lim)
+(def {stopat} 0)
+(fun {exec-slow} {if (< pc #xA000)
+  (do (set {ph} (if mslow -1 (if (< pc #x8000) (+ tbl pc) (if (and bkon (not (== bkon :fault))) (+ bkb pc) -1))))
+      (if (< ph 0) (ramexec) (do (set! {ck} (+ RAMPLACE ph)) (or (dcache ck) (decode)))))
+  (do (set! {ck} (+ pc (if (< pc #xE000) pbase wbase))) (or (dcache ck) (decode)))})
+(fun {run limit} {do
+  (set! {stopat} (if halted 0 limit))
+  (while {< cyc stopat}
+    (if (< cyc devnext) 0 (do (devsync cyc) (devsched)))
+    (if (and irqp (zero? fi))
+      (do (if (>= ioff-at 0) (ioff-off pc) 0) (interrupt (irqvec)))
+      (if waiting
+        (if irqp (set! {waiting} NIL) (set! {cyc} (max (+ cyc 1) (min devnext stopat))))
+        (do (set! {lim} (min devnext stopat))
+            (while {< cyc lim} (if (< ck 0) (exec-slow) (or (dcache ck) (decode))))))))
+  NIL})
+
+; ---- power-up
+(fun {romBank b} {+ (bit-and b #x33) (shl (bit-and b 4) 1) (shr (bit-and b 8) 1) (shl (bit-and b #x40) 1) (shr (bit-and b #x80) 1)})
+; rom from the images (strings): the BIOS ROM (128K), then each paged ROM bank as the CPU sees it (halves swapped: A13)
+(fun {load-roms bios prom} {do
+  (set {ff} (str-repeat (code-char 255) 16384))
+  (set {plen} (len prom))
+  (set! {rom} (buffer (+ (substring bios 0 131072)
+    (str-join (map (fn {b} {do (set {at} (* (romBank b) 16384))
+      (if (< at plen) (+ (substring prom (+ at 8192) 8192) (substring prom at 8192)) ff)}) (range 256)) ""))))})
+
+(fun {power-up} {do
+  (set! {NB} (* opt-modules 16))
+  (set! {SHARED} (+ BANKS (* 16 NB 8192)))
+  (set! {mem} (buffer (+ SHARED (* 16 16 8192))))
+  ; (the tasks' RAM's junk: 4K of it, each 4K of the 512K a turn of it, as fast as two copies)
+  (set {junk} (buffer 4096))
+  (dotimes {i 4096} (buffer-put junk i (pu i)))
+  (dotimes {b 128} (do
+    (set {r} (bit-and (* b 37) 4095))
+    (buffer-copy mem (* b 4096) junk r)
+    (buffer-copy mem (+ (* b 4096) (- 4096 r)) junk 0 r)))
+  (dotimes {i 16} (hash-put vecs [i (+ (pu (+ 900000 i)) (* 256 (pu (+ 900100 i))))]))
+  (set! {regt regu regv regw} (pu 910000) (pu 910001) (pu 910002) (pu 910003))
+  (set! {tt uu ww} (bit-and regt 15) (bit-and regu 15) (bit-and regw 15))
+  (set! {model-slow} (in? opt-model {"zponly" "nostack"}))
+  (remap)
+  (set! {irq-stuck} (and (>= opt-stuckirq 0) (< opt-stuckirq 16)))
+  (devsched)
+  (set! {pc fi} (word (rd #xFFFC) (rd #xFFFD)) 4)})
