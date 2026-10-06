@@ -22,7 +22,7 @@
 ;               wait, kept as a hidden window's is, till its last close repaints the window shown
 ;   /serctl     the rate: b300, b600, b1200, b2400, b4800, b9600, b19200, b115200.  It reads as it
 ;   /kbdin      a write's bytes are the window's keys, as if typed (rio's kbdin: a line sent to another window's
-;               shell, forth's send); as many as its keys' queue has room for
+;               shell, forth's send); all of them, as its keys' queue has room, the writer waiting for the rest
 ; The keys: Ctrl-] then a digit shows that window (Ctrl-] n the next; Ctrl-] c asks for a new one, for /wnew's
 ; reader; Ctrl-] Ctrl-] is a Ctrl-]); Ctrl-C and Ctrl-\ are notes (interrupt, kill) to the shown window's note
 ; group, in either mode.  A window goes when the last of its cons fids closes (but window 0).
@@ -188,6 +188,7 @@ w_cl:       .res        WIN_MAX                             ;   the bytes there 
 w_ch:       .res        WIN_MAX
 w_iqh:      .res        WIN_MAX                             ;   and its keys: the next in, the next out
 w_iqt:      .res        WIN_MAX
+kbd_wait:   .res        1                                   ; <> 0: a /kbdin writer waits for a queue's room
 bell:       .res        1                                   ; <> 0: a BEL the shown window sent (ring's) ...
 bell_st:    .res        1                                   ;   #a/bell: 0 not opened yet, 1 open, 2 none ...
 bell_fd:    .res        1                                   ;   and its fd
@@ -732,6 +733,11 @@ iq_get:
             inc         a
             and         #INQ_SIZE - 1
             sta         w_iqt,X
+            lda         kbd_wait                            ; (A /kbdin writer waiting for room: it looks again)
+            beq         :+
+            stz         kbd_wait
+            inc         TASK_EVENT
+:
             lda         inq,Y
             clc
             rts
@@ -1105,29 +1111,43 @@ h_wnew:
             rts
 
 ; /kbdin: a write's bytes are the window's keys, as if typed (Plan 9's rio's kbdin: forth's send writes a line, and
-; its Enter, a CR, there); its queue's room at most (INQ_SIZE - 1), the rest dropped
+; its Enter, a CR, there).  As many as its queue has room for (and IOBUF at most), the bytes taken the write's count
+; done: the kernel sends the rest in the next request.  No room: E_AGAIN, the writer waiting till the window's
+; reader takes a key (iq_get: kbd_wait)
 h_kbdin:
             cmp         #R_WRITE
             beq         :+
             clc
             rts
 :
-            lda         #IOBUF                              ; (A write's first IOBUF bytes, at most)
-            ldy         TASK_INBOX + RQ_COUNT + 1
+            ldy         srv_fid_aux,X                       ; Its window's queue: its room (a key's place kept
+            sec                                             ;   free, as iq_put has it) ...
+            lda         w_iqt,Y
+            sbc         w_iqh,Y
+            dec         a
+            and         #INQ_SIZE - 1
+            bne         :+
+            lda         #1
+            sta         kbd_wait
+            jmp         again
+:
+            cmp         #IOBUF                              ;   IOBUF at most ...
+            bcc         :+
+            lda         #IOBUF
+:
+            ldx         TASK_INBOX + RQ_COUNT + 1           ;   and the count at most
             bne         :+
             cmp         TASK_INBOX + RQ_COUNT
             bcc         :+
             lda         TASK_INBOX + RQ_COUNT
 :
             sta         cnt
+            phy
             stz         n
             stz         n + 1
-            phx
             jsr         from_client
-            plx
+            plx                                             ; (.X: the window)
             bcs         @done
-            lda         srv_fid_aux,X                       ; Its window's queue
-            tax
             ldy         #0
 :
             cpy         cnt
@@ -1140,7 +1160,9 @@ h_kbdin:
             bra         :-
 :
             inc         TASK_EVENT                          ; (Its reader looks again)
-            MOVR        TASK_INBOX + RQ_DONE, TASK_INBOX + RQ_COUNT
+            lda         cnt
+            sta         TASK_INBOX + RQ_DONE
+            stz         TASK_INBOX + RQ_DONE + 1
             clc
 @done:
             rts

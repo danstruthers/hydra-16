@@ -262,8 +262,9 @@ finds it; each window's shell still starts in an empty namespace of its own, whi
 (`/sram/lib/shell`, till the next reset).  hylang will be chosen the same way.
 
 **`send n line`** types the line, and Enter, in window n, whatever shell is there: it's written to the window's
-`#cN/kbdin`, a file of the console's (rio's `kbdin`: a write's bytes are the window's keys, as typed; 63 at most, as
-its keys' queue holds), so rc can do it too: `echo ls >'#c2/kbdin'` (its LF is a new line, as the console's Enter).
+`#cN/kbdin`, a file of the console's (rio's `kbdin`: a write's bytes are the window's keys, as typed, all of them: its
+keys' queue holds 63, and the write waits while the window's shell takes them), so rc can do it too: `echo ls
+>'#c2/kbdin'` (its LF is a new line, as the console's Enter).  A line is 126 characters at most, as one typed.
 
 **`%`** sends the rest of a line to rc whatever its first word: `% free` runs the `free` program though a Forth word
 `free` shadows it (as Memory-Allocation's will), and a script's line can be rc's the same way.  While a definition is
@@ -302,7 +303,7 @@ passing, and its files for 6.16-6.19's word sets), `hyforth` (6.6-6.8 and 6.14),
 | 6.7 | `disasm.fl` (and `see` with it), `sys`, `bits.fl`, `random.fl` | The modes and the Rockwell opcodes, a `jsr` to a word; `see` of a code word with `disasm.fl` and without; `sys` of code in RAM; the bit words; `random`'s numbers against xorshift32's |
 | 6.8 | The terminal's words, `sound.fl`, `ctl` | The sequences sent; `form`; an arrow key and a character read raw; notes keyed on (the emulator's YM2151), a claim, the volume; `ctl` and its error |
 | 6.9 | The shell: `shell.fl`, `forth -l`, `profile.fs` | The rule (a number, a word, a pipeline, a redirection), `cd` and the prompt (its format), a definition over lines, `status` and `$status`, `&` and `wait`, Ctrl-C, errors and a usage, `-lib shell` and `lib shell`, `exit` |
-| 6.10 | `/lib/shell` for init and wstart; `send` and `#cN/kbdin` | A card's `/lib/shell`: forth in window 0 and in a window made (`$window`); a line sent to window 0, run there |
+| 6.10 | `/lib/shell` for init and wstart; `send` and `#cN/kbdin` | A card's `/lib/shell`: forth in window 0 and in a window made (`$window`); a line sent to window 0, run there, then one of 100 characters, more than its keys' queue holds (the write waiting for room) |
 | 6.11 | The shell's next: `%`, the second prompt (`prompt2`); programs as values: `sh-out`, `output-of`, `\|` and `piped`, `spawn`; the programs' code in the core (`fprog.inc`), the output's hook | `% free` past a word `free`; a definition's second line (its tab); a line's output and a word's, strings; a word's output into `wc` (`\|`, `piped`), into `head`, which ends first, and stopped by Ctrl-C; `spawn` and `wait`; `sh` and `run` as before (the forth test) |
 | 6.12 | The Hydra's words (hylang's layer 2): the directories' (Gforth's), `=mkdir`, `unsetenv`, `note`, `note-group`, `on-note` (the core's note handler and its polls), `pause`, `ior>text` | A directory read, one made; the directory set and got (the prompt follows); an error's text; a variable set, read, removed; a note to itself taken by a handler between words and in a loop, and one it says no to |
 | 6.13 | The device libraries (hylang's layer 3): `gpio`, `i2c`, `spi`, `cons`, `proc`, `clock`, `disk`, `pc` as source; `sound.fl`'s `note-of` and `tune` | Pins read and set, the port, `ctl`'s lines, CA1's edge; a memory written and read at a register, the devices; an echo device's transactions, mode 3; the window; a task's args, cwd, regs and memory; the chip, the time set; the ROM disk's ctl, a card; the PC tool; notes' numbers, a tune's notes on the YM2151 in time, a bad note |

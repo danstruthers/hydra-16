@@ -593,6 +593,9 @@ function hylangCard() {
   return [imageCard(0, f, 16384)];
 }
 
+// The lshell test's long line, sent to another window: 100 characters, more than its keys' queue holds (63)
+const SEND_LONG = 'the quick brown fox jumps over the lazy dog, 0123456789, the quick brown fox jumps over the lazy cat';
+
 // The wcache test's lines: names looked up (there or not), then what changes them (a create, a rename, a remove, a
 // mkdir and rmdir, a rename of a directory, a create through /lib's union), and looked up again
 const WC_LINES = [
@@ -1037,16 +1040,18 @@ module.exports = {
       expect: ['include load.fs\n15 6 5 99 255 65 35 1 1 \n', 'swap - 300 < .\n-1 \n'],
     },
     {
-      name: 'lshell', what: 'the shell /lib/shell names (a card\'s: /bin/forth -l): init\'s in window 0, wstart\'s in a window made (Ctrl-] c: $window); send, a line typed in another window (#cN/kbdin), run there',
+      name: 'lshell', what: 'the shell /lib/shell names (a card\'s: /bin/forth -l): init\'s in window 0, wstart\'s in a window made (Ctrl-] c: $window); send, a line typed in another window (#cN/kbdin), run there, then one longer than its keys\' queue (the write waiting for room)',
       init: 'init', cycles: 300e6,
-      // (Window 1 made and shown (\x1d c), its shell sends window 0 a line; window 0 shown again (\x1d 0): its text,
-      // the line run there)
+      // (Window 1 made and shown (\x1d c), its shell sends window 0 a line, then one longer than window 0's keys' queue
+      // (63), as the first still runs there: its write waits for room; window 0 shown again (\x1d 0): its text, the
+      // lines run there)
       get machine() {
         return { sd: shellCard(), input: 'ā2 3 + .\r' + 'āecho $window\r' + 'ā\x1dc' + 'āecho $window\r' + 'āsend 0 echo hi from 1\r' +
-          'ā\x1d0' + 'āecho back in 0\r' };
+          'āsend 0 echo ' + SEND_LONG + '\r' + 'ā\x1d0' + 'āecho back in 0\r' };
       },
       expect: ['HyForth (Forth 2012), bye to end\n/> 2 3 + .\n5 \n/> echo $window\n\n/> ', '/> echo $window\n1\n/> send 0 echo hi from 1\n/> ',
-        '/> echo hi from 1\nhi from 1\n/> echo back in 0\nback in 0\n/> '],
+        '/> send 0 echo ' + SEND_LONG + '\n/> ',
+        '/> echo hi from 1\nhi from 1\n/> echo ' + SEND_LONG + '\n' + SEND_LONG + '\n/> echo back in 0\nback in 0\n/> '],
     },
     {
       name: 'spi', what: 'SPI and #S (storage): transactions, kept bytes, modes 0 and 3, one open at a time, the time a byte takes',

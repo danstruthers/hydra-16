@@ -830,7 +830,8 @@ newns:                                                      ; ( -- ): the defaul
             HEADER      "send", 0
 send:                                                       ; ( "n line" -- ): window n's shell gets the line (the
             LDR         p2, s_usend                         ;   rest of this one) as if typed there, and Enter: its
-            LDR         w2, pword                           ;   #cN/kbdin (63 keys at most)
+            LDR         w2, pword                           ;   #cN/kbdin (126 keys at most, the write waiting
+                                                            ;   while its shell takes them)
             jsr         sh_word
             bcs         @usage
             lda         pword + 1
