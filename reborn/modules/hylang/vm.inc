@@ -430,6 +430,64 @@ vm_next:
             tax
             jmp         (vm_ops,x)
 
+; The next op, the code's bank in the window still (an op that didn't leave it): ip past this one first (vm_nN: N
+; bytes; vm_na: .A bytes)
+vm_na:
+            clc
+            adc         vm_ip
+            sta         vm_ip
+            bcc         vm_nextf
+            inc         vm_ip + 1
+            bra         vm_nextf
+vm_n6:
+            lda         vm_ip
+            clc
+            adc         #6
+            sta         vm_ip
+            bcc         vm_nextf
+            inc         vm_ip + 1
+            bra         vm_nextf
+vm_n5:
+            lda         vm_ip
+            clc
+            adc         #5
+            sta         vm_ip
+            bcc         vm_nextf
+            inc         vm_ip + 1
+            bra         vm_nextf
+vm_n4:
+            lda         vm_ip
+            clc
+            adc         #4
+            sta         vm_ip
+            bcc         vm_nextf
+            inc         vm_ip + 1
+            bra         vm_nextf
+vm_n3:
+            lda         vm_ip
+            clc
+            adc         #3
+            sta         vm_ip
+            bcc         vm_nextf
+            inc         vm_ip + 1
+            bra         vm_nextf
+vm_n2:
+            lda         vm_ip
+            clc
+            adc         #2
+            sta         vm_ip
+            bcc         vm_nextf
+            inc         vm_ip + 1
+            bra         vm_nextf
+vm_n1:
+            inc         vm_ip
+            bne         vm_nextf
+            inc         vm_ip + 1
+vm_nextf:
+            lda         (vm_ip)
+            tax
+            jmp         (vm_ops,x)
+
 ; ip = the address at ip + .Y (an op's target)
 vm_jumpy:
             lda         (vm_ip),y
@@ -438,7 +496,7 @@ vm_jumpy:
             lda         (vm_ip),y
             sta         vm_ip + 1
             stx         vm_ip
-            jmp         vm_next
+            jmp         vm_nextf
 
 ; OUT: C = 1 if ex is an error.  Keeps .Y
 vm_iserr:
@@ -1281,7 +1339,7 @@ op_const:
             iny
             lda         (vm_ip),y
             sta         ex + 1
-            jmp         vm_adv3
+            jmp         vm_n3
 
 op_cpush:
             ldy         #2
@@ -1290,7 +1348,7 @@ op_cpush:
             dey
             lda         (vm_ip),y
             VPUSH
-            jmp         vm_adv3
+            jmp         vm_n3
 
 op_local:
             ldy         #1
@@ -1303,7 +1361,7 @@ op_local:
             iny
             lda         (vm_s),y
             sta         ex + 1
-            jmp         vm_adv2
+            jmp         vm_n2
 @scope:
             jsr         vm_slot
             jmp         vm_adv2
@@ -1320,7 +1378,7 @@ op_lpush:
             dey
             lda         (vm_s),y
             VPUSH
-            jmp         vm_adv2
+            jmp         vm_n2
 @scope:
             jsr         vm_slot
             lda         ex
@@ -1432,7 +1490,7 @@ op_push:
             lda         ex
             ldx         ex + 1
             VPUSH
-            jmp         vm_adv1
+            jmp         vm_n1
 
 op_jf:
             lda         ex + 1
@@ -1442,7 +1500,7 @@ op_jf:
             cmp         #<SNIL
             beq         @to
 @no:
-            jmp         vm_adv3
+            jmp         vm_n3
 @to:
             ldy         #1
             jmp         vm_jumpy
@@ -1455,7 +1513,7 @@ op_jt:
             cmp         #<SNIL
             bne         @to
 @no:
-            jmp         vm_adv3
+            jmp         vm_n3
 @to:
             ldy         #1
             jmp         vm_jumpy
@@ -1467,7 +1525,7 @@ op_jmp:
 op_je:
             jsr         vm_iserr
             bcs         :+
-            jmp         vm_adv4
+            jmp         vm_n4
 :
             ldy         #1
             lda         (vm_ip),y
@@ -1709,7 +1767,7 @@ vm_scode:
             lda         (vm_ip),y
             sta         vm_ip
             stx         vm_ip + 1
-            jmp         vm_next
+            jmp         vm_nextf
 
 ; Not this frame's function (or Ctrl-C, too deep ...): CALL's or TCALL's way (.A vm_tl, .X the op's length)
 vm_scall:
@@ -2196,6 +2254,18 @@ op_localh:
 op_setl:
             ldy         #1
             lda         (vm_ip),y
+            bit         vm_mat
+            bmi         @scope
+            tay
+            lda         ex
+            sta         (vm_s),y
+            iny
+            lda         ex + 1
+            sta         (vm_s),y
+            stz         ex
+            stz         ex + 1
+            jmp         vm_n2
+@scope:
             jsr         vm_setl
             jmp         vm_adv2
 
@@ -2323,14 +2393,14 @@ op_stt:
             ldy         #1
             lda         ex + 1
             sta         (ht),y
-            jmp         vm_adv1
+            jmp         vm_n1
 
 ; POPX: ex = the word popped
 op_popx:
             jsr         pop
             sta         ex
             stx         ex + 1
-            jmp         vm_adv1
+            jmp         vm_n1
 
 ; LOOP t k e: to t; Ctrl-C, the error interrupted (VM_R: returned; else k words dropped, then to e)
 op_loop:
@@ -2413,7 +2483,7 @@ op_block:
             lda         (vm_ip),y
             asl
             adc         #6
-            jmp         vm_adv
+            jmp         vm_na
 
 ; .Y = a block variable's op's place of fb (y fb p): C = 1, hp, .Y = its pair in the block's frame (there's one); C = 0,
 ; .Y = its slot (there isn't)
@@ -2458,7 +2528,12 @@ op_localb:
             iny
             lda         (vm_s),y
             sta         ex + 1
-            bra         @hole
+            bne         :+
+            lda         ex
+            cmp         #<UNBOUND
+            beq         @hole
+:
+            jmp         vm_n6
 @pair:
             lda         (hp),y
             sta         ex
@@ -2485,6 +2560,9 @@ op_localb:
 op_setlb:
             ldy         #2
             jsr         vm_setlb
+            bcs         :+                                  ; (A slot: the bank as it was)
+            jmp         vm_n4
+:
             jmp         vm_adv4
 vm_setlb:
             jsr         vm_bvar
@@ -2536,6 +2614,9 @@ op_setblb:
             sta         $00
             ldy         #2
             jsr         vm_setlb
+            bcs         :+
+            jmp         vm_n6
+:
             jmp         vm_adv6
 
 vm_adv6:
@@ -2587,7 +2668,7 @@ op_doti:
             ldy         #1
             jmp         vm_jumpy
 :
-            jmp         vm_adv3
+            jmp         vm_n3
 
 ; DOTINC: the i on top one more
 op_dotinc:
@@ -2606,7 +2687,7 @@ op_dotinc:
             lda         (ht),y
             adc         #0
             sta         (ht),y
-            jmp         vm_adv1
+            jmp         vm_n1
 
 ; EACHL: each's list, ex: its items pushed (a list's; a string's characters, a list made); else the error ('each'
 ; ...), VM_R: returned
@@ -2867,7 +2948,7 @@ op_add:
 vm_fix1:
             sta         ex + 1
             stx         ex
-            jmp         vm_adv1
+            jmp         vm_n1
 
 op_sub:
             jsr         vm_pop2
@@ -2928,11 +3009,11 @@ vm_t1:
             lda         #<T_VAL
             sta         ex
             stz         ex + 1
-            jmp         vm_adv1
+            jmp         vm_n1
 vm_f1:
             stz         ex
             stz         ex + 1
-            jmp         vm_adv1
+            jmp         vm_n1
 
 ; vm_a and vm_b fixnums: back; else (its return dropped) the op's built-in's way
 vm_fx2:
@@ -3037,7 +3118,7 @@ op_addc:
 vm_fix3:
             sta         ex + 1
             stx         ex
-            jmp         vm_adv3
+            jmp         vm_n3
 op_subc:
             lda         ex
             lsr
@@ -3102,11 +3183,11 @@ vm_t3:
             lda         #<T_VAL
             sta         ex
             stz         ex + 1
-            jmp         vm_adv3
+            jmp         vm_n3
 vm_f3:
             stz         ex
             stz         ex + 1
-            jmp         vm_adv3
+            jmp         vm_n3
 
 ; OUT: C = 1 if ex < the constant (vm_xltc), the constant < ex (vm_cltx): fixnums, signed
 vm_xltc:
