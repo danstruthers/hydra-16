@@ -218,3 +218,11 @@
   (set! {irq-stuck} (and (>= opt-stuckirq 0) (< opt-stuckirq 16)))
   (devsched)
   (set! {pc fi} (word (rd #xFFFC) (rd #xFFFD)) 4)})
+
+; The reset button (RESB): the CPU (I set, D clear, PC from the reset vector), the VIA, the ACIA and the YM2151 reset;
+; RAM, T U V W and the cards keep theirs, as on the board
+(fun {hw-reset} {do
+  (via-reset) (acia-reset) (ym-reset)
+  (set! {fi fd waiting halted ck lim} 4 0 NIL NIL -1 0)
+  (set! {pc} (word (rd #xFFFC) (rd #xFFFD)))
+  (devsched)})

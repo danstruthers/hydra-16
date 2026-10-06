@@ -21,6 +21,9 @@
   (hash-put card-written [dev (hash-create)])})
 (fun {spi-echo dev} {hash-put cards [dev (to# {{:kind :echo}})]})
 
+; A block written (device dev, block n, its buffer): kept above; a runner may write it through to the file too
+(fun {card-wrote dev n blk} {do 0})
+
 ; A block of a card: its written one, the file's, or zeros
 (fun {card-read c dev n} {do
   (set {w} (hash-get (card-written dev) n))
@@ -92,6 +95,7 @@
           (do (set {blk} (buffer 512))
               (buffer-copy blk 0 sel-wr 1 512)
               (hash-put (card-written dev) [sel-wr-at blk])
+              (card-wrote dev sel-wr-at blk)
               (set! {sel-wn} -1)
               (q-set {0 0 0 #xFF})
               5)
