@@ -18391,7 +18391,7 @@
 		)
 	)
 	(sheet
-		(at 228.5029 83.7322)
+		(at 22.7629 76.1122)
 		(size 16.51 6.35)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -18407,7 +18407,7 @@
 		)
 		(uuid "0b66303c-ed46-41df-a285-d041c923c3ce")
 		(property "Sheetname" "SharedMemory"
-			(at 228.5029 83.0206 0)
+			(at 22.7629 75.4006 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -18416,7 +18416,7 @@
 			)
 		)
 		(property "Sheetfile" "SharedMem.kicad_sch"
-			(at 228.5029 90.6668 0)
+			(at 22.7629 83.0468 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -18433,7 +18433,7 @@
 		)
 	)
 	(sheet
-		(at 207.01 163.83)
+		(at 22.86 22.86)
 		(size 12.7 3.81)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -18449,7 +18449,7 @@
 		)
 		(uuid "18057e61-facc-4a14-82c5-5f534ac6d8bb")
 		(property "Sheetname" "Sound"
-			(at 207.01 163.1184 0)
+			(at 22.86 22.1484 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -18458,7 +18458,7 @@
 			)
 		)
 		(property "Sheetfile" "Sound.kicad_sch"
-			(at 207.01 168.2246 0)
+			(at 22.86 27.2546 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -18475,7 +18475,7 @@
 		)
 	)
 	(sheet
-		(at 157.48 181.61)
+		(at 22.86 38.1)
 		(size 16.51 6.35)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -18491,7 +18491,7 @@
 		)
 		(uuid "3d67b1b1-9a28-4462-8a4d-19765afeaafe")
 		(property "Sheetname" "WaitStates"
-			(at 157.48 180.8984 0)
+			(at 22.86 37.3884 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -18500,7 +18500,7 @@
 			)
 		)
 		(property "Sheetfile" "WaitStates.kicad_sch"
-			(at 157.48 188.5446 0)
+			(at 22.86 45.0346 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -18811,7 +18811,7 @@
 		)
 	)
 	(sheet
-		(at 182.88 181.61)
+		(at 22.86 55.88)
 		(size 16.51 6.35)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -18827,7 +18827,7 @@
 		)
 		(uuid "efe336ef-825f-401b-9d92-8ebbe0473f23")
 		(property "Sheetname" "Power"
-			(at 182.88 180.8984 0)
+			(at 22.86 55.1684 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -18836,7 +18836,7 @@
 			)
 		)
 		(property "Sheetfile" "Power.kicad_sch"
-			(at 182.88 188.5446 0)
+			(at 22.86 62.8146 0)
 			(effects
 				(font
 					(size 1.27 1.27)

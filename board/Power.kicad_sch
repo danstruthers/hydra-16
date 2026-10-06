@@ -3,7 +3,7 @@
 	(generator "eeschema")
 	(generator_version "9.0")
 	(uuid "72e79d6c-ac75-42e4-b9be-b62b28977783")
-	(paper "A3")
+	(paper "USLetter")
 	(title_block
 		(title "Power: ATX, Front Panel, Reset, Soft Power")
 		(date "2026-10-06")
@@ -12,381 +12,6 @@
 		(comment 1 "Hydra 16")
 	)
 	(lib_symbols
-		(symbol "74xx:74HC74"
-			(pin_names
-				(offset 1.016)
-			)
-			(exclude_from_sim no)
-			(in_bom yes)
-			(on_board yes)
-			(property "Reference" "U"
-				(at -7.62 8.89 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "Value" "74HC74"
-				(at -7.62 -8.89 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "Footprint" ""
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "Datasheet" "74xx/74hc_hct74.pdf"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "Description" "Dual D Flip-flop, Set & Reset"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "ki_locked" ""
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "ki_keywords" "TTL DFF"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "ki_fp_filters" "DIP*W7.62mm*"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(symbol "74HC74_1_0"
-				(pin input line
-					(at -7.62 2.54 0)
-					(length 2.54)
-					(name "D"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "2"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin input clock
-					(at -7.62 0 0)
-					(length 2.54)
-					(name "C"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "3"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin input line
-					(at 0 7.62 270)
-					(length 2.54)
-					(name "~{S}"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "4"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin input line
-					(at 0 -7.62 90)
-					(length 2.54)
-					(name "~{R}"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin output line
-					(at 7.62 2.54 180)
-					(length 2.54)
-					(name "Q"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "5"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin output line
-					(at 7.62 -2.54 180)
-					(length 2.54)
-					(name "~{Q}"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "6"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-			)
-			(symbol "74HC74_1_1"
-				(rectangle
-					(start -5.08 5.08)
-					(end 5.08 -5.08)
-					(stroke
-						(width 0.254)
-						(type default)
-					)
-					(fill
-						(type background)
-					)
-				)
-			)
-			(symbol "74HC74_2_0"
-				(pin input line
-					(at -7.62 2.54 0)
-					(length 2.54)
-					(name "D"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "12"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin input clock
-					(at -7.62 0 0)
-					(length 2.54)
-					(name "C"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "11"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin input line
-					(at 0 7.62 270)
-					(length 2.54)
-					(name "~{S}"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "10"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin input line
-					(at 0 -7.62 90)
-					(length 2.54)
-					(name "~{R}"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "13"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin output line
-					(at 7.62 2.54 180)
-					(length 2.54)
-					(name "Q"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "9"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin output line
-					(at 7.62 -2.54 180)
-					(length 2.54)
-					(name "~{Q}"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "8"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-			)
-			(symbol "74HC74_2_1"
-				(rectangle
-					(start -5.08 5.08)
-					(end 5.08 -5.08)
-					(stroke
-						(width 0.254)
-						(type default)
-					)
-					(fill
-						(type background)
-					)
-				)
-			)
-			(symbol "74HC74_3_0"
-				(pin power_in line
-					(at 0 10.16 270)
-					(length 2.54)
-					(name "VCC"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "14"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin power_in line
-					(at 0 -10.16 90)
-					(length 2.54)
-					(name "GND"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "7"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-			)
-			(symbol "74HC74_3_1"
-				(rectangle
-					(start -5.08 7.62)
-					(end 5.08 -7.62)
-					(stroke
-						(width 0.254)
-						(type default)
-					)
-					(fill
-						(type background)
-					)
-				)
-			)
-			(embedded_fonts no)
-		)
 		(symbol "74xx:74HC14"
 			(pin_names
 				(offset 1.016)
@@ -958,6 +583,381 @@
 				)
 			)
 			(symbol "74HC14_7_1"
+				(rectangle
+					(start -5.08 7.62)
+					(end 5.08 -7.62)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type background)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
+		(symbol "74xx:74HC74"
+			(pin_names
+				(offset 1.016)
+			)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "U"
+				(at -7.62 8.89 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Value" "74HC74"
+				(at -7.62 -8.89 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" ""
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Datasheet" "74xx/74hc_hct74.pdf"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Description" "Dual D Flip-flop, Set & Reset"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_locked" ""
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "ki_keywords" "TTL DFF"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_fp_filters" "DIP*W7.62mm*"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(symbol "74HC74_1_0"
+				(pin input line
+					(at -7.62 2.54 0)
+					(length 2.54)
+					(name "D"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin input clock
+					(at -7.62 0 0)
+					(length 2.54)
+					(name "C"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "3"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin input line
+					(at 0 7.62 270)
+					(length 2.54)
+					(name "~{S}"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "4"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin input line
+					(at 0 -7.62 90)
+					(length 2.54)
+					(name "~{R}"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin output line
+					(at 7.62 2.54 180)
+					(length 2.54)
+					(name "Q"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "5"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin output line
+					(at 7.62 -2.54 180)
+					(length 2.54)
+					(name "~{Q}"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "6"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(symbol "74HC74_1_1"
+				(rectangle
+					(start -5.08 5.08)
+					(end 5.08 -5.08)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type background)
+					)
+				)
+			)
+			(symbol "74HC74_2_0"
+				(pin input line
+					(at -7.62 2.54 0)
+					(length 2.54)
+					(name "D"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "12"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin input clock
+					(at -7.62 0 0)
+					(length 2.54)
+					(name "C"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "11"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin input line
+					(at 0 7.62 270)
+					(length 2.54)
+					(name "~{S}"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "10"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin input line
+					(at 0 -7.62 90)
+					(length 2.54)
+					(name "~{R}"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "13"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin output line
+					(at 7.62 2.54 180)
+					(length 2.54)
+					(name "Q"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "9"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin output line
+					(at 7.62 -2.54 180)
+					(length 2.54)
+					(name "~{Q}"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "8"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(symbol "74HC74_2_1"
+				(rectangle
+					(start -5.08 5.08)
+					(end 5.08 -5.08)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type background)
+					)
+				)
+			)
+			(symbol "74HC74_3_0"
+				(pin power_in line
+					(at 0 10.16 270)
+					(length 2.54)
+					(name "VCC"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "14"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin power_in line
+					(at 0 -10.16 90)
+					(length 2.54)
+					(name "GND"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "7"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(symbol "74HC74_3_1"
 				(rectangle
 					(start -5.08 7.62)
 					(end 5.08 -7.62)
@@ -4029,6 +4029,16 @@
 	)
 	(wire
 		(pts
+			(xy 217.17 34.29) (xy 217.17 31.75)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "033cab1e-1848-471c-bbab-9fdf15fc5507")
+	)
+	(wire
+		(pts
 			(xy 209.55 41.91) (xy 207.01 41.91)
 		)
 		(stroke
@@ -4109,7 +4119,7 @@
 	)
 	(wire
 		(pts
-			(xy 287.02 35.56) (xy 284.48 35.56)
+			(xy 247.65 92.71) (xy 245.11 92.71)
 		)
 		(stroke
 			(width 0)
@@ -4189,13 +4199,23 @@
 	)
 	(wire
 		(pts
-			(xy 250.19 69.85) (xy 250.19 67.31)
+			(xy 210.82 127) (xy 210.82 124.46)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
 		(uuid "29ee075e-e2bd-4752-a9f9-2c476d3ace14")
+	)
+	(wire
+		(pts
+			(xy 217.17 72.39) (xy 217.17 69.85)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "2ddb34cf-299b-4e1f-afed-248f7d818b86")
 	)
 	(wire
 		(pts
@@ -4219,7 +4239,17 @@
 	)
 	(wire
 		(pts
-			(xy 287.02 33.02) (xy 284.48 33.02)
+			(xy 166.37 45.72) (xy 163.83 45.72)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "353bed26-8aa2-4da5-b47d-053bc198830f")
+	)
+	(wire
+		(pts
+			(xy 247.65 90.17) (xy 245.11 90.17)
 		)
 		(stroke
 			(width 0)
@@ -4239,7 +4269,7 @@
 	)
 	(wire
 		(pts
-			(xy 250.19 77.47) (xy 250.19 80.01)
+			(xy 210.82 134.62) (xy 210.82 137.16)
 		)
 		(stroke
 			(width 0)
@@ -4249,7 +4279,7 @@
 	)
 	(wire
 		(pts
-			(xy 292.1 77.47) (xy 292.1 80.01)
+			(xy 252.73 134.62) (xy 252.73 137.16)
 		)
 		(stroke
 			(width 0)
@@ -4359,7 +4389,7 @@
 	)
 	(wire
 		(pts
-			(xy 278.13 68.58) (xy 278.13 66.04)
+			(xy 238.76 125.73) (xy 238.76 123.19)
 		)
 		(stroke
 			(width 0)
@@ -4389,7 +4419,7 @@
 	)
 	(wire
 		(pts
-			(xy 264.16 74.93) (xy 264.16 72.39)
+			(xy 224.79 132.08) (xy 224.79 129.54)
 		)
 		(stroke
 			(width 0)
@@ -4406,6 +4436,16 @@
 			(type default)
 		)
 		(uuid "63f4dd32-4b36-4872-85a1-d80389571689")
+	)
+	(wire
+		(pts
+			(xy 252.73 127) (xy 252.73 124.46)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "6d7d8fa5-b55b-4390-ab68-a944a7e79895")
 	)
 	(wire
 		(pts
@@ -4599,7 +4639,7 @@
 	)
 	(wire
 		(pts
-			(xy 264.16 82.55) (xy 264.16 85.09)
+			(xy 224.79 139.7) (xy 224.79 142.24)
 		)
 		(stroke
 			(width 0)
@@ -4679,7 +4719,17 @@
 	)
 	(wire
 		(pts
-			(xy 287.02 30.48) (xy 284.48 30.48)
+			(xy 217.17 87.63) (xy 217.17 90.17)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "9c080b24-a3cf-4082-b2c1-5c2677c84d1e")
+	)
+	(wire
+		(pts
+			(xy 247.65 87.63) (xy 245.11 87.63)
 		)
 		(stroke
 			(width 0)
@@ -4889,6 +4939,16 @@
 	)
 	(wire
 		(pts
+			(xy 238.76 133.35) (xy 238.76 135.89)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "dfaee7a1-24e1-4efc-9f71-16c54c3c4936")
+	)
+	(wire
+		(pts
 			(xy 55.88 55.88) (xy 67.31 55.88)
 		)
 		(stroke
@@ -4906,6 +4966,16 @@
 			(type default)
 		)
 		(uuid "e8a6514e-694b-49d8-9a19-dff29d5dd246")
+	)
+	(wire
+		(pts
+			(xy 181.61 45.72) (xy 184.15 45.72)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e93aa7cd-98e6-41db-a789-4e0e36d5a624")
 	)
 	(wire
 		(pts
@@ -4957,76 +5027,6 @@
 		)
 		(uuid "fcdf4350-7500-4cfb-8a98-ba1a79471743")
 	)
-	(wire
-		(pts
-			(xy 166.37 45.72) (xy 163.83 45.72)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "353bed26-8aa2-4da5-b47d-053bc198830f")
-	)
-	(wire
-		(pts
-			(xy 181.61 45.72) (xy 184.15 45.72)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "e93aa7cd-98e6-41db-a789-4e0e36d5a624")
-	)
-	(wire
-		(pts
-			(xy 217.17 34.29) (xy 217.17 31.75)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "033cab1e-1848-471c-bbab-9fdf15fc5507")
-	)
-	(wire
-		(pts
-			(xy 217.17 72.39) (xy 217.17 69.85)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "2ddb34cf-299b-4e1f-afed-248f7d818b86")
-	)
-	(wire
-		(pts
-			(xy 217.17 87.63) (xy 217.17 90.17)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "9c080b24-a3cf-4082-b2c1-5c2677c84d1e")
-	)
-	(wire
-		(pts
-			(xy 278.13 76.2) (xy 278.13 78.74)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "dfaee7a1-24e1-4efc-9f71-16c54c3c4936")
-	)
-	(wire
-		(pts
-			(xy 292.1 69.85) (xy 292.1 67.31)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "6d7d8fa5-b55b-4390-ab68-a944a7e79895")
-	)
 	(label "PWR_NQ"
 		(at 227.33 44.45 0)
 		(effects
@@ -5038,7 +5038,7 @@
 		(uuid "0132deb9-2f42-4bb9-9794-a8a4cc08d49e")
 	)
 	(label "POR"
-		(at 292.1 80.01 270)
+		(at 252.73 137.16 270)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -5068,7 +5068,7 @@
 		(uuid "359c0333-14df-4788-96fd-299d16625d45")
 	)
 	(label "POR"
-		(at 278.13 66.04 90)
+		(at 238.76 123.19 90)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -5076,6 +5076,16 @@
 			(justify left bottom)
 		)
 		(uuid "5dc64f34-3aa6-446c-8c74-a0892d993a2f")
+	)
+	(label "PWR_ON"
+		(at 163.83 45.72 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right bottom)
+		)
+		(uuid "6b75536f-9c23-4bab-b7d4-f2b543159697")
 	)
 	(label "POR"
 		(at 217.17 52.07 270)
@@ -5088,7 +5098,7 @@
 		(uuid "93bb468a-6c70-4c5d-afa5-75c9f71045ec")
 	)
 	(label "PSON_DRV"
-		(at 284.48 30.48 180)
+		(at 245.11 87.63 180)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -5116,16 +5126,6 @@
 			(justify right bottom)
 		)
 		(uuid "b879beff-666b-441c-a5a0-1e60faf653d8")
-	)
-	(label "PWR_ON"
-		(at 163.83 45.72 180)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right bottom)
-		)
-		(uuid "6b75536f-9c23-4bab-b7d4-f2b543159697")
 	)
 	(label "PSON_DRV"
 		(at 184.15 45.72 0)
@@ -5161,7 +5161,7 @@
 	)
 	(global_label "PWR_SW"
 		(shape bidirectional)
-		(at 264.16 72.39 90)
+		(at 224.79 129.54 90)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -5171,7 +5171,7 @@
 		)
 		(uuid "2d9ae9ca-a25e-413f-bf7f-f825730c724b")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 264.16 72.39 90)
+			(at 224.79 129.54 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5183,7 +5183,7 @@
 	)
 	(global_label "PWR_SW"
 		(shape bidirectional)
-		(at 284.48 35.56 180)
+		(at 245.11 92.71 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -5193,7 +5193,7 @@
 		)
 		(uuid "466059c4-260c-4cb6-83e6-782317d69227")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 284.48 35.56 180)
+			(at 245.11 92.71 180)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5271,7 +5271,7 @@
 	)
 	(global_label "PS_ON_N"
 		(shape bidirectional)
-		(at 284.48 33.02 180)
+		(at 245.11 90.17 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -5281,7 +5281,7 @@
 		)
 		(uuid "e75b9527-2cb5-4c41-b6d4-e61dbfb41b22")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 284.48 33.02 180)
+			(at 245.11 90.17 180)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5315,7 +5315,7 @@
 	)
 	(global_label "PWR_SW"
 		(shape bidirectional)
-		(at 250.19 80.01 270)
+		(at 210.82 137.16 270)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -5325,7 +5325,7 @@
 		)
 		(uuid "f337d267-9774-4e60-a522-dd1b5a5ee4d6")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 250.19 80.01 270)
+			(at 210.82 137.16 270)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6026,6 +6026,71 @@
 		)
 	)
 	(symbol
+		(lib_id "Hydra16:+5VSB")
+		(at 217.17 90.17 180)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "168f0016-c644-4bf9-8e08-97ea0915a11e")
+		(property "Reference" "#PWR2721"
+			(at 217.17 90.17 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "+5VSB"
+			(at 217.17 93.98 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 217.17 90.17 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 217.17 90.17 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"+5VSB\""
+			(at 217.17 90.17 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "f0d2a7f7-4e4d-46f9-980f-d0b3088595f0")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/efe336ef-825f-401b-9d92-8ebbe0473f23"
+					(reference "#PWR2721")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Device:C")
 		(at 162.56 125.73 0)
 		(unit 1)
@@ -6161,7 +6226,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 264.16 85.09 0)
+		(at 224.79 142.24 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -6169,7 +6234,7 @@
 		(dnp no)
 		(uuid "246cbb3d-9e1d-49e4-8cf2-a8eaad9fe7a2")
 		(property "Reference" "#PWR180"
-			(at 264.16 85.09 0)
+			(at 224.79 142.24 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6178,7 +6243,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 264.16 90.17 0)
+			(at 224.79 147.32 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6186,7 +6251,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 264.16 85.09 0)
+			(at 224.79 142.24 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6195,7 +6260,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 264.16 85.09 0)
+			(at 224.79 142.24 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6204,7 +6269,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\""
-			(at 264.16 85.09 0)
+			(at 224.79 142.24 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6226,7 +6291,7 @@
 	)
 	(symbol
 		(lib_id "Hydra16:+5VSB")
-		(at 250.19 67.31 0)
+		(at 210.82 124.46 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -6234,7 +6299,7 @@
 		(dnp no)
 		(uuid "255928d0-da85-494b-9217-c74120ac0da0")
 		(property "Reference" "#PWR179"
-			(at 250.19 67.31 0)
+			(at 210.82 124.46 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6243,7 +6308,7 @@
 			)
 		)
 		(property "Value" "+5VSB"
-			(at 250.19 63.5 0)
+			(at 210.82 120.65 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6251,7 +6316,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 250.19 67.31 0)
+			(at 210.82 124.46 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6260,7 +6325,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 250.19 67.31 0)
+			(at 210.82 124.46 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6269,7 +6334,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"+5VA\""
-			(at 250.19 67.31 0)
+			(at 210.82 124.46 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6955,6 +7020,71 @@
 		)
 	)
 	(symbol
+		(lib_id "Hydra16:+5VSB")
+		(at 238.76 135.89 180)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "49928053-313b-4d07-bd8e-0f6829fb6a41")
+		(property "Reference" "#PWR2722"
+			(at 238.76 135.89 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "+5VSB"
+			(at 238.76 139.7 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 238.76 135.89 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 238.76 135.89 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"+5VSB\""
+			(at 238.76 135.89 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "481d923e-2b20-4cd2-9d15-0e75099ce04a")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/efe336ef-825f-401b-9d92-8ebbe0473f23"
+					(reference "#PWR2722")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "power:GND")
 		(at 207.01 77.47 270)
 		(unit 1)
@@ -7021,7 +7151,7 @@
 	)
 	(symbol
 		(lib_id "Connector_Generic:Conn_01x03")
-		(at 292.1 33.02 0)
+		(at 252.73 90.17 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -7029,7 +7159,7 @@
 		(dnp no)
 		(uuid "5776b111-c198-4b4b-b5bc-8b7294b81136")
 		(property "Reference" "J37"
-			(at 292.1 26.67 0)
+			(at 252.73 83.82 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7037,7 +7167,7 @@
 			)
 		)
 		(property "Value" "PWR MODE"
-			(at 292.1 39.37 0)
+			(at 252.73 96.52 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7045,7 +7175,7 @@
 			)
 		)
 		(property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical"
-			(at 292.1 33.02 0)
+			(at 252.73 90.17 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7054,7 +7184,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 292.1 33.02 0)
+			(at 252.73 90.17 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7063,7 +7193,7 @@
 			)
 		)
 		(property "Description" ""
-			(at 292.1 33.02 0)
+			(at 252.73 90.17 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7259,7 +7389,7 @@
 	)
 	(symbol
 		(lib_id "Device:C")
-		(at 292.1 73.66 0)
+		(at 252.73 130.81 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -7267,7 +7397,7 @@
 		(dnp no)
 		(uuid "63619ce0-c463-44fe-88c7-bcd9831291f6")
 		(property "Reference" "C112"
-			(at 294.64 72.39 0)
+			(at 255.27 129.54 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7276,7 +7406,7 @@
 			)
 		)
 		(property "Value" "100n"
-			(at 294.64 74.93 0)
+			(at 255.27 132.08 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7285,7 +7415,7 @@
 			)
 		)
 		(property "Footprint" "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"
-			(at 292.1 73.66 0)
+			(at 252.73 130.81 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7294,7 +7424,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 292.1 73.66 0)
+			(at 252.73 130.81 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7303,7 +7433,7 @@
 			)
 		)
 		(property "Description" ""
-			(at 292.1 73.66 0)
+			(at 252.73 130.81 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7321,6 +7451,71 @@
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/efe336ef-825f-401b-9d92-8ebbe0473f23"
 					(reference "C112")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 252.73 124.46 180)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "673ec22a-c688-4cd7-b84c-fd5bd45576e4")
+		(property "Reference" "#PWR2723"
+			(at 252.73 124.46 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 252.73 119.38 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 252.73 124.46 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 252.73 124.46 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\""
+			(at 252.73 124.46 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "8b09903e-72af-4bdb-bfce-35bb6f48af92")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/efe336ef-825f-401b-9d92-8ebbe0473f23"
+					(reference "#PWR2723")
 					(unit 1)
 				)
 			)
@@ -7765,7 +7960,7 @@
 	)
 	(symbol
 		(lib_id "Device:C")
-		(at 264.16 78.74 0)
+		(at 224.79 135.89 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -7773,7 +7968,7 @@
 		(dnp no)
 		(uuid "8452be40-161c-46ee-9499-e4004cbd43e5")
 		(property "Reference" "C111"
-			(at 266.7 77.47 0)
+			(at 227.33 134.62 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7782,7 +7977,7 @@
 			)
 		)
 		(property "Value" "100n"
-			(at 266.7 80.01 0)
+			(at 227.33 137.16 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7791,7 +7986,7 @@
 			)
 		)
 		(property "Footprint" "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"
-			(at 264.16 78.74 0)
+			(at 224.79 135.89 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7800,7 +7995,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 264.16 78.74 0)
+			(at 224.79 135.89 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7809,7 +8004,7 @@
 			)
 		)
 		(property "Description" ""
-			(at 264.16 78.74 0)
+			(at 224.79 135.89 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8065,6 +8260,71 @@
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/efe336ef-825f-401b-9d92-8ebbe0473f23"
 					(reference "C47")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Hydra16:+5VSB")
+		(at 217.17 31.75 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "b53e7206-b969-4865-b82f-a30e078ce80d")
+		(property "Reference" "#PWR2719"
+			(at 217.17 31.75 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "+5VSB"
+			(at 217.17 27.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 217.17 31.75 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 217.17 31.75 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"+5VSB\""
+			(at 217.17 31.75 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "6c8f03f1-8777-43ea-b2b6-0b8929e014d3")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/efe336ef-825f-401b-9d92-8ebbe0473f23"
+					(reference "#PWR2719")
 					(unit 1)
 				)
 			)
@@ -8400,6 +8660,71 @@
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/efe336ef-825f-401b-9d92-8ebbe0473f23"
 					(reference "C114")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Hydra16:+5VSB")
+		(at 217.17 69.85 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "c8a3e2c5-e73e-43d3-9ed0-833dddc7cd77")
+		(property "Reference" "#PWR2720"
+			(at 217.17 69.85 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "+5VSB"
+			(at 217.17 66.04 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 217.17 69.85 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 217.17 69.85 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"+5VSB\""
+			(at 217.17 69.85 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "33b83017-89e8-40db-973b-3f6da4be4667")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/efe336ef-825f-401b-9d92-8ebbe0473f23"
+					(reference "#PWR2720")
 					(unit 1)
 				)
 			)
@@ -9071,7 +9396,7 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 250.19 73.66 0)
+		(at 210.82 130.81 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -9079,7 +9404,7 @@
 		(dnp no)
 		(uuid "e8b317e8-e0c9-4b2f-a64b-d7f0a031b8ee")
 		(property "Reference" "R19"
-			(at 252.73 72.39 0)
+			(at 213.36 129.54 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9088,7 +9413,7 @@
 			)
 		)
 		(property "Value" "100k"
-			(at 252.73 74.93 0)
+			(at 213.36 132.08 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9097,7 +9422,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_THT:R_Axial_DIN0204_L3.6mm_D1.6mm_P5.08mm_Horizontal"
-			(at 250.19 73.66 0)
+			(at 210.82 130.81 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9106,7 +9431,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 250.19 73.66 0)
+			(at 210.82 130.81 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9115,7 +9440,7 @@
 			)
 		)
 		(property "Description" ""
-			(at 250.19 73.66 0)
+			(at 210.82 130.81 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9205,7 +9530,7 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 278.13 72.39 0)
+		(at 238.76 129.54 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -9213,7 +9538,7 @@
 		(dnp no)
 		(uuid "eef30878-8887-4d59-9fa1-feacd2c3d690")
 		(property "Reference" "R20"
-			(at 280.67 71.12 0)
+			(at 241.3 128.27 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9222,7 +9547,7 @@
 			)
 		)
 		(property "Value" "100k"
-			(at 280.67 73.66 0)
+			(at 241.3 130.81 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9231,7 +9556,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_THT:R_Axial_DIN0204_L3.6mm_D1.6mm_P5.08mm_Horizontal"
-			(at 278.13 72.39 0)
+			(at 238.76 129.54 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9240,7 +9565,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 278.13 72.39 0)
+			(at 238.76 129.54 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9249,7 +9574,7 @@
 			)
 		)
 		(property "Description" ""
-			(at 278.13 72.39 0)
+			(at 238.76 129.54 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9607,331 +9932,6 @@
 			(project ""
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/efe336ef-825f-401b-9d92-8ebbe0473f23"
 					(reference "#PWR023")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Hydra16:+5VSB")
-		(at 217.17 31.75 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "b53e7206-b969-4865-b82f-a30e078ce80d")
-		(property "Reference" "#PWR2719"
-			(at 217.17 31.75 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Value" "+5VSB"
-			(at 217.17 27.94 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" ""
-			(at 217.17 31.75 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" ""
-			(at 217.17 31.75 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Power symbol creates a global label with name \"+5VSB\""
-			(at 217.17 31.75 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "6c8f03f1-8777-43ea-b2b6-0b8929e014d3")
-		)
-		(instances
-			(project "hydra-16"
-				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/efe336ef-825f-401b-9d92-8ebbe0473f23"
-					(reference "#PWR2719")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Hydra16:+5VSB")
-		(at 217.17 69.85 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "c8a3e2c5-e73e-43d3-9ed0-833dddc7cd77")
-		(property "Reference" "#PWR2720"
-			(at 217.17 69.85 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Value" "+5VSB"
-			(at 217.17 66.04 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" ""
-			(at 217.17 69.85 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" ""
-			(at 217.17 69.85 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Power symbol creates a global label with name \"+5VSB\""
-			(at 217.17 69.85 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "33b83017-89e8-40db-973b-3f6da4be4667")
-		)
-		(instances
-			(project "hydra-16"
-				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/efe336ef-825f-401b-9d92-8ebbe0473f23"
-					(reference "#PWR2720")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Hydra16:+5VSB")
-		(at 217.17 90.17 180)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "168f0016-c644-4bf9-8e08-97ea0915a11e")
-		(property "Reference" "#PWR2721"
-			(at 217.17 90.17 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Value" "+5VSB"
-			(at 217.17 93.98 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" ""
-			(at 217.17 90.17 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" ""
-			(at 217.17 90.17 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Power symbol creates a global label with name \"+5VSB\""
-			(at 217.17 90.17 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "f0d2a7f7-4e4d-46f9-980f-d0b3088595f0")
-		)
-		(instances
-			(project "hydra-16"
-				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/efe336ef-825f-401b-9d92-8ebbe0473f23"
-					(reference "#PWR2721")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Hydra16:+5VSB")
-		(at 278.13 78.74 180)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "49928053-313b-4d07-bd8e-0f6829fb6a41")
-		(property "Reference" "#PWR2722"
-			(at 278.13 78.74 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Value" "+5VSB"
-			(at 278.13 82.55 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" ""
-			(at 278.13 78.74 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" ""
-			(at 278.13 78.74 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Power symbol creates a global label with name \"+5VSB\""
-			(at 278.13 78.74 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "481d923e-2b20-4cd2-9d15-0e75099ce04a")
-		)
-		(instances
-			(project "hydra-16"
-				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/efe336ef-825f-401b-9d92-8ebbe0473f23"
-					(reference "#PWR2722")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "power:GND")
-		(at 292.1 67.31 180)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "673ec22a-c688-4cd7-b84c-fd5bd45576e4")
-		(property "Reference" "#PWR2723"
-			(at 292.1 67.31 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Value" "GND"
-			(at 292.1 62.23 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" ""
-			(at 292.1 67.31 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" ""
-			(at 292.1 67.31 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Power symbol creates a global label with name \"GND\""
-			(at 292.1 67.31 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "8b09903e-72af-4bdb-bfce-35bb6f48af92")
-		)
-		(instances
-			(project "hydra-16"
-				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/efe336ef-825f-401b-9d92-8ebbe0473f23"
-					(reference "#PWR2723")
 					(unit 1)
 				)
 			)
