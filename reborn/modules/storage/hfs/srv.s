@@ -25,15 +25,31 @@ HFS_MAGIC:  .byte   "HYDRAFS1"
 HFS_NAMES:  .byte   "0123456789abcdefxrs"                   ; (A disk's name, by its number)
 
 ; A request for #f (storage.s's h_fs, through FAR2).  IN: .A = the request (R_*), and TASK_INBOX, TASK_PATH.
-; OUT: C = 0; or C = 1, .A = the error.  What it changed goes to the disk first (HFS_FINISH)
+; OUT: C = 0; or C = 1, .A = the error.  What it changed goes to the disk first (HFS_FINISH); one that can change a
+; directory (a create, a remove, a wstat: a rename) forgets its disk's names in the walk cache, whether it did or not
 hfs_serve:
-            pha
+            sta         HFS_RQ
             lda         TASK_INBOX + RQ_FID
             sta         SD_FID
             lda         TASK_INBOX + RQ_MODE
             sta         SD_OP
-            pla
+            lda         HFS_RQ
             jsr         HFS_REQUEST
+            php
+            pha
+            lda         HFS_RQ
+            cmp         #R_CREATE
+            beq         :+
+            cmp         #R_REMOVE
+            beq         :+
+            cmp         #R_WSTAT
+            bne         :++
+:
+            lda         HFS_CARD                            ; (Its disk's names forgotten: the walk cache)
+            jsr         HFS_WC_FORGET
+:
+            pla
+            plp
             jmp         HFS_FINISH
 
 HFS_REQUEST:
@@ -830,8 +846,11 @@ HFS_WALK:
             stz         HFS_LOC + 3
             lda         #HFS_SB_ROOT / HFS_ENTRY_SIZE
             sta         HFS_LOC + 4
+            jsr         HFS_WC_ROOT                         ; (Its entry from the walk cache, if the walk goes on
+            bcc         HFS_W_ELEM                          ;   past it; else read, and kept there)
             jsr         HFS_ENT_READ
             bcs         HFS_W_DONE
+            jsr         HFS_WC_KEEP
 
 HFS_W_ELEM:                                                 ; The next path element, if there is one
             ldy         HFS_ELEM
@@ -873,9 +892,12 @@ HFS_W_LOOK:
             bcs         HFS_W_DONE
             jsr         HFS_LOOKUP                          ; HFS_LOC = the element's entry
             bcs         HFS_W_DONE
+            jsr         HFS_WC_ON                           ; (A directory on the way: its entry from the walk
+            bcc         HFS_W_ELEM                          ;   cache; else read, and kept there)
             jsr         HFS_ENT_READ
-            bcc         HFS_W_ELEM
-            bra         HFS_W_DONE
+            bcs         HFS_W_DONE
+            jsr         HFS_WC_KEEP
+            bra         HFS_W_ELEM
 
 HFS_W_NOT_FOUND:
             lda         #E_NOENT
@@ -884,20 +906,377 @@ HFS_W_NOT_FOUND:
 HFS_W_DONE:
             rts
 
-; Find the path element at HFS_ELEM in the directory HFS_ENT describes, and move HFS_ELEM past it.
+; Find the path element at HFS_ELEM in the directory HFS_ENT describes (its entry at HFS_LOC), and move HFS_ELEM
+; past it: from the walk cache if it was looked up there before, else by a scan of the directory (and what that
+; found, there or not, kept in the cache).
 ; OUT: C = 0: HFS_LOC = where its entry is; or C = 1, .A = E_NOENT, E_NAMETOOLONG or a card error
 HFS_LOOKUP:
+            jsr         HFS_WC_FIND
+            bcs         @scan
+            cmp         #1                                  ; (C: 0 there, 1 not, .A E_NOENT)
+            rts
+@scan:
             lda         #HFS_SCAN_NAME
             sta         HFS_SCAN
             jsr         HFS_DIR_SCAN
-            bcs         @done
+            bcs         @none
             ldx         #4
 :
             lda         HFS_NLOC,X
             sta         HFS_LOC,X
             dex
             bpl         :-
+            lda         #1
+            jsr         HFS_WC_PUT
+            clc
+            rts
+@none:
+            cmp         #E_NOENT                            ; (Not there: kept too; an error: not)
+            bne         @done
+            lda         #0
+            jsr         HFS_WC_PUT
+            lda         #E_NOENT
+@done:
+            sec
+            rts
 
+; ****************************************************************************
+; The walk cache: the path elements HFS_LOOKUP has found (or found aren't there), HFS_WC_N of them, each by its disk,
+; the place of its directory's entry and its name; there, the place of its entry, and a directory's entry itself
+; (the root's too: a record of its own, its name empty).  So a name looked up again (a program's through /bin's
+; union, a library's through /lib's, in each of its directories, there or not) costs no scan of a directory, and
+; the directories on the way to it no reads of their entries' blocks (the last element's entry is read as before:
+; a file's size, its times).  What can change a directory, or a directory's entry, forgets the disk's records
+; (HFS_WC_FORGET: a create, a remove, a wstat, a format, a label, a disk started again or stopped); a check, all of
+; them (HFS_WC_CLEAR: the records are in its buffer, HFS_CK_BUF, and it uses it all; without one, there's no cache).
+; A new one takes the next record, round.
+
+; Is the path element at HFS_ELEM, in the directory whose entry is at HFS_LOC on disk HFS_CARD, in the cache?
+; OUT: C = 0: it is (HFS_WCP its record), HFS_ELEM past it, .A = 0 (there: HFS_LOC = its entry's place) or
+; E_NOENT; C = 1: it isn't (HFS_ELEM as it was; its key in HFS_WCK and HFS_WCL, for HFS_WC_PUT).  Modifies: .A,
+; .X, .Y
+HFS_WC_FIND:
+            jsr         HFS_WC_KEY
+            ldy         HFS_ELEM                            ; Its length (longer than a name: HFS_DIR_SCAN's to
+            ldx         #0                                  ;   say so), its characters added to the hash
+:
+            lda         (HFS_NM),Y
+            beq         :+
+            cmp         #'/'
+            beq         :+
+            clc
+            adc         HFS_WCH
+            sta         HFS_WCH
+            iny
+            inx
+            cpx         #HFS_NAME_MAX + 1
+            bne         :-
+            sec
+            rts
+:
+            stx         HFS_WCL
+            jsr         HFS_WC_SEARCH
+            bcs         @done
+            lda         HFS_WCL                             ; HFS_ELEM past it, HFS_LEN its length (as a scan
+            sta         HFS_LEN                             ;   leaves them)
+            clc
+            adc         HFS_ELEM
+            sta         HFS_ELEM
+            ldy         #HFS_WC_OK
+            lda         (HFS_WCP),Y
+            beq         @absent
+            ldx         #0                                  ; There: its place
+            ldy         #HFS_WC_LOC
+:
+            lda         (HFS_WCP),Y
+            sta         HFS_LOC,X
+            iny
+            inx
+            cpx         #5
+            bne         :-
+            lda         #0
+            clc
+            rts
+@absent:
+            lda         #E_NOENT
+            clc
+@done:
+            rts
+
+; HFS_WCK = the key of a name in the directory whose entry is at HFS_LOC on disk HFS_CARD, and HFS_WCH = its bytes
+; added: a name's hash (its characters are added to it).  Modifies: .A, .X
+HFS_WC_KEY:
+            lda         HFS_CARD
+            sta         HFS_WCK
+            sta         HFS_WCH
+            ldx         #4
+:
+            lda         HFS_LOC,X
+            sta         HFS_WCK + 1,X
+            clc
+            adc         HFS_WCH
+            sta         HFS_WCH
+            dex
+            bpl         :-
+            rts
+
+; The record of key HFS_WCK and the name at HFS_ELEM, HFS_WCL long (0: a root's), its hash HFS_WCH.  OUT: C = 0,
+; HFS_WCP = it; or C = 1: none.  Modifies: .A, .X, .Y
+HFS_WC_SEARCH:
+            lda         HFS_CK_BUF + 1                      ; (No buffer: no cache)
+            beq         @none
+            ldx         #HFS_WC_N - 1
+@scan:
+            lda         HFS_WCH                             ; The records with its hash
+:
+            cmp         HFS_WC_H,X
+            beq         @rec
+            dex
+            bpl         :-
+@none:
+            sec
+            rts
+@rec:
+            stx         HFS_WCI
+            jsr         HFS_WC_ADDR
+            ldy         #HFS_WC_LEN                         ; (Its name's length, its disk, its directory)
+            lda         (HFS_WCP),Y
+            cmp         HFS_WCL
+            bne         @next
+            ldy         #HFS_WC_DIR + 4
+:
+            lda         (HFS_WCP),Y
+            cmp         HFS_WCK,Y
+            bne         @next
+            dey
+            bpl         :-
+            ldx         #0                                  ; Its name
+@char:
+            cpx         HFS_WCL
+            beq         @hit
+            txa
+            clc
+            adc         #HFS_WC_NAME
+            tay
+            lda         (HFS_WCP),Y
+            sta         SD_TMP
+            txa
+            clc
+            adc         HFS_ELEM
+            tay
+            lda         (HFS_NM),Y
+            cmp         SD_TMP
+            bne         @next
+            inx
+            bra         @char
+@next:
+            ldx         HFS_WCI
+            dex
+            bpl         @scan
+            sec
+            rts
+@hit:
+            clc
+            rts
+
+; HFS_WCP = record .X.  Modifies: .A
+HFS_WC_ADDR:
+            clc
+            lda         HFS_WC_OLO,X
+            adc         HFS_CK_BUF
+            sta         HFS_WCP
+            lda         HFS_WC_OHI,X
+            adc         HFS_CK_BUF + 1
+            sta         HFS_WCP + 1
+            rts
+
+HFS_WC_OLO:                                                 ; (Each record's offset in the buffer)
+            .repeat     HFS_WC_N, I
+            .byte       <(I * HFS_WC_SIZE)
+            .endrepeat
+HFS_WC_OHI:
+            .repeat     HFS_WC_N, I
+            .byte       >(I * HFS_WC_SIZE)
+            .endrepeat
+
+; The path element just looked up (HFS_DIR_SCAN's: the HFS_WCL characters before HFS_ELEM; none, a root's), with
+; its key (HFS_WCK) and hash (HFS_WCH), into the cache's next record (HFS_WCP), no entry kept yet: .A = 1, there
+; (its entry at HFS_LOC), or 0, not.  Modifies: .A, .X, .Y
+HFS_WC_PUT:
+            ldx         HFS_CK_BUF + 1                      ; (No buffer: no cache)
+            beq         @done
+            pha
+            ldx         HFS_WC_NEXT                         ; The next record, its hash
+            jsr         HFS_WC_ADDR
+            lda         HFS_WCH
+            sta         HFS_WC_H,X
+            inx                                             ; (The one after it next, round)
+            cpx         #HFS_WC_N
+            bcc         :+
+            ldx         #0
+:
+            stx         HFS_WC_NEXT
+            ldy         #HFS_WC_DIR + 4                     ; Its disk and directory
+:
+            lda         HFS_WCK,Y
+            sta         (HFS_WCP),Y
+            dey
+            bpl         :-
+            ldy         #HFS_WC_LEN
+            lda         HFS_WCL
+            sta         (HFS_WCP),Y
+            pla                                             ; There, and where
+            ldy         #HFS_WC_OK
+            sta         (HFS_WCP),Y
+            ldy         #HFS_WC_HASENT
+            lda         #0
+            sta         (HFS_WCP),Y
+            ldx         #0
+            ldy         #HFS_WC_LOC
+:
+            lda         HFS_LOC,X
+            sta         (HFS_WCP),Y
+            iny
+            inx
+            cpx         #5
+            bne         :-
+            ldx         #0                                  ; Its name
+@char:
+            cpx         HFS_WCL
+            beq         @done
+            txa
+            clc
+            adc         HFS_ELEM
+            sec
+            sbc         HFS_WCL
+            tay
+            lda         (HFS_NM),Y
+            pha
+            txa
+            clc
+            adc         #HFS_WC_NAME
+            tay
+            pla
+            sta         (HFS_WCP),Y
+            inx
+            bra         @char
+@done:
+            rts
+
+; The root of disk HFS_CARD's entry (its place at HFS_LOC: the walk's start) from the cache, if it's kept and the
+; walk goes on past it (HFS_WC_ON's): C = 0, HFS_ENT it, HFS_FP -> it; or C = 1, its record (HFS_WCP: found, or a
+; new one) for HFS_WC_KEEP to keep it in once it's read.  Modifies: .A, .X, .Y
+HFS_WC_ROOT:
+            jsr         HFS_WC_KEY
+            stz         HFS_WCL
+            jsr         HFS_WC_SEARCH
+            bcc         HFS_WC_ON                           ; (Kept: as a directory's on the way)
+            lda         #1
+            jsr         HFS_WC_PUT
+            sec
+            rts
+
+; The entry of the element HFS_LOOKUP just found (HFS_WCP: its record) from the cache, if it's a directory's that's
+; kept and the walk goes on past it (not the last element: that one's read, as it is now): C = 0, HFS_ENT it,
+; HFS_FP -> it; or C = 1.  Modifies: .A, .Y
+HFS_WC_ON:
+            ldy         HFS_ELEM                            ; (Another element after it: a '/', and more)
+            lda         (HFS_NM),Y
+            beq         HFS_WC_NO
+            iny
+            lda         (HFS_NM),Y
+            beq         HFS_WC_NO
+HFS_WC_ENT_GET:
+            ldy         #HFS_WC_HASENT
+            lda         (HFS_WCP),Y
+            beq         HFS_WC_NO
+            jsr         HFS_WC_TO_ENT                       ; HFS_ENT = it
+            ldy         #HFS_ENTRY_SIZE - 1
+:
+            lda         (HFS_WCP),Y
+            sta         HFS_ENT,Y
+            dey
+            bpl         :-
+            jsr         HFS_WC_FROM_ENT
+            LOAD_ADDR   HFS_ENT, HFS_FP
+            clc
+            rts
+HFS_WC_NO:
+            sec
+            rts
+
+; HFS_ENT, just read, kept in record HFS_WCP if it's a directory's (a file's changes as it's written).  Keeps C.
+; Modifies: .A, .Y
+HFS_WC_KEEP:
+            php
+            lda         HFS_CK_BUF + 1                      ; (No buffer: no cache)
+            beq         @done
+            lda         HFS_ENT + HFS_E_MODE
+            bpl         @done                               ; (HFS_M_DIR)
+            jsr         HFS_WC_TO_ENT
+            ldy         #HFS_ENTRY_SIZE - 1
+:
+            lda         HFS_ENT,Y
+            sta         (HFS_WCP),Y
+            dey
+            bpl         :-
+            jsr         HFS_WC_FROM_ENT
+            ldy         #HFS_WC_HASENT
+            lda         #1
+            sta         (HFS_WCP),Y
+@done:
+            plp
+            rts
+
+; HFS_WCP on its record's entry, and back.  Modifies: .A
+HFS_WC_TO_ENT:
+            clc
+            lda         HFS_WCP
+            adc         #HFS_WC_ENT
+            sta         HFS_WCP
+            bcc         :+
+            inc         HFS_WCP + 1
+:
+            rts
+
+HFS_WC_FROM_ENT:
+            sec
+            lda         HFS_WCP
+            sbc         #HFS_WC_ENT
+            sta         HFS_WCP
+            bcs         :+
+            dec         HFS_WCP + 1
+:
+            rts
+
+; The cache emptied (HFS_WC_CLEAR), or of disk .A's records (HFS_WC_FORGET).  Modifies: .A, .X
+HFS_WC_CLEAR:
+            lda         #$FF                                ; (Every disk's)
+HFS_WC_FORGET:
+            sta         HFS_WCD
+            lda         HFS_CK_BUF + 1                      ; (No buffer: no cache)
+            beq         @done
+            MOVR        HFS_WCP, HFS_CK_BUF
+            ldx         #HFS_WC_N
+@rec:
+            lda         HFS_WCD                             ; (Its disk: $FF, none)
+            cmp         #$FF
+            beq         :+
+            cmp         (HFS_WCP)
+            bne         @next
+:
+            lda         #$FF
+            sta         (HFS_WCP)
+@next:
+            clc
+            lda         HFS_WCP
+            adc         #HFS_WC_SIZE
+            sta         HFS_WCP
+            bcc         :+
+            inc         HFS_WCP + 1
+:
+            dex
+            bne         @rec
 @done:
             rts
 
@@ -1309,8 +1688,11 @@ HFS_BASE_X:
 
 ; Disk SD_DEV is being started again (a different card may be in the socket now), or stopped: its superblock must
 ; be read afresh, any HydraFS file open on it is let go of (those fids give E_BADF from here on, and are clunked as
-; usual), and a check of it is forgotten.  (storage.s: FAR2.)  OUT: C = 0.  Modifies: .A, .X
+; usual), a check of it is forgotten, and its names in the walk cache.  (storage.s: FAR2.)  OUT: C = 0.  Modifies:
+; .A, .X
 hfs_forget:
+            lda         SD_DEV
+            jsr         HFS_WC_FORGET
             ldx         SD_DEV
             stz         HFS_V_STATE,X
             ldx         #HFS_MAX_OPEN - 1

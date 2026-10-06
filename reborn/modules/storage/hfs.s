@@ -28,6 +28,15 @@ HFS_BLOCK           = BLOCK     ; A block: a disk's sector
 HFS_CLUSTER_BLOCKS  = 8         ; A cluster (what space is allocated in): 8 blocks, 4 KB
 HFS_ENTRY_SIZE      = 64        ; A directory entry (a directory is a file of them)
 HFS_NAME_MAX        = 31        ; A name's characters (any byte but '/' and 0; case-sensitive)
+HFS_WC_N            = 64        ; The walk cache's records (srv.s): each its disk (1: $FF, free) ...
+HFS_WC_DIR          = 1         ;   its directory's place (5: its entry's block and index, HFS_LOC) ...
+HFS_WC_LEN          = 6         ;   its name's length (1) ...
+HFS_WC_OK           = 7         ;   1: there; 0: not (1) ...
+HFS_WC_LOC          = 8         ;   there: its entry's place (5) ...
+HFS_WC_HASENT       = 13        ;   1: its entry kept (a directory's) (1) ...
+HFS_WC_NAME         = 14        ;   its name (HFS_NAME_MAX) ...
+HFS_WC_ENT          = HFS_WC_NAME + HFS_NAME_MAX        ;   and its entry (HFS_ENTRY_SIZE)
+HFS_WC_SIZE         = HFS_WC_ENT + HFS_ENTRY_SIZE
 HFS_VERSION         = 2         ; The newest format this reads (and writes, with a quick format): 2 has a
 HFS_VERSION_FULL    = 1         ;   free map that's written as it's used (HFS_SB_MAPINIT); 1's is all written
 HFS_CSHIFT          = 3         ;   and its cluster size, as a shift (HFS_CLUSTER_BLOCKS)
@@ -97,6 +106,8 @@ HFS_CK_WINDOW       = 65536     ; The check: the clusters a pass covers (8 KB of
 HFS_CK_DEPTH_MAX    = 24        ;   the directories deep it walks ...
 HFS_CK_LEVEL        = 68        ;   a directory in its walk: its entry, then where the walk is in it (4)
 HFS_CK_BUF_SIZE     = HFS_CK_WINDOW / 8 + (HFS_CK_DEPTH_MAX + 1) * HFS_CK_LEVEL
+.assert     HFS_WC_N * HFS_WC_SIZE <= HFS_CK_BUF_SIZE, error, "The walk cache's records: in the check's buffer"
+.assert     HFS_WC_N <= 128, error, "The walk cache's records: looked at by .X, down to 0 (HFS_WC_SEARCH's bpl)"
 
 ; ---- The names the old code borrowed from the storage driver: its zero page, and the block buffer's
 SD_LBA              = lba       ; A block (4)
@@ -146,6 +157,7 @@ HFS_XP:     .res        2                                   ; The extent being l
 HFS_PTR:    .res        2                                   ; A pointer into a buffer
 SD_CACHE:   .res        2                                   ; The block buffer (storage.s's blk)
 HFS_NM:     .res        2                                   ; A name being walked (HFS_PATH), or a stat record's
+HFS_WCP:    .res        2                                   ; A record of the walk cache (srv.s's HFS_WC_*)
 
 .bss
 ; A request's
@@ -167,6 +179,16 @@ HFS_SKIP:   .res        2                                   ; A directory read: 
 HFS_LEN:    .res        1                                   ; A name's length
 HFS_DEPTH:  .res        1                                   ; A walk: how deep it is (HFS_STK) ...
 HFS_ELEM:   .res        1                                   ;   and where the path element it's on starts
+HFS_RQ:     .res        1                                   ; The request (R_*)
+; The walk cache (srv.s): names looked up, and where their entries are, or that they aren't there (its records in
+; the check's buffer, HFS_CK_BUF, while no check is running)
+HFS_WC_H:   .res        HFS_WC_N                            ; Each record's hash (HFS_WC_KEY)
+HFS_WC_NEXT: .res       1                                   ; The record a new name takes
+HFS_WCD:    .res        1                                   ; The disk whose records are forgotten ($FF: all)
+HFS_WCK:    .res        6                                   ; A lookup's: its disk and its directory's place ...
+HFS_WCL:    .res        1                                   ;   its name's length ...
+HFS_WCH:    .res        1                                   ;   its hash ...
+HFS_WCI:    .res        1                                   ;   and the record looked at
 .assert     HFS_XLEN = HFS_XCL + 4, error, "HFS_XCL and HFS_XLEN must be the extent's 6 bytes in order"
 ; The metadata buffer, the counters, allocating
 HFS_META:   .res        2                                   ; The metadata buffer (HFS_MBUF): the free map, extent
@@ -229,9 +251,10 @@ HFS_CK_LOST: .res       4                                   ;   clusters marked 
 HFS_CK_UNMARKED: .res   4                                   ;   in use, but marked free ...
 HFS_CK_TWICE: .res      4                                   ;   in use twice ...
 HFS_CK_FREE: .res       4                                   ;   and free, as it counted them
-HFS_CK_BUF: .res        2                                   ; Its buffer (PAGES_ALLOC at the first check, then kept):
-                                                            ;   a bitmap of HFS_CK_WINDOW clusters, then the walk's
-HFS_CK_SP:  .res        2                                   ;   directories; the deepest, in it
+HFS_CK_BUF: .res        2                                   ; Its buffer (PAGES_ALLOC at the start, or at the first
+                                                            ;   check, then kept; the walk cache's when no check is
+                                                            ;   running): a bitmap of HFS_CK_WINDOW clusters, then
+HFS_CK_SP:  .res        2                                   ;   the walk's directories; the deepest, in it
 .assert     HFS_CK_BUF - HFS_CK_LOST = 16, error, "The check's four counts: 4 bytes each, in a row (HFS_CK_ADD)"
 ; Each disk's (at the disk; the 4-byte ones at the disk * 4): whether it holds a HydraFS, where it starts, and the
 ; superblock's numbers the server works from.  The counters (free, hint, qid, stamp, the map written) change here,
@@ -269,7 +292,8 @@ HFS_ZEROS:  .res        HFS_BLOCK                           ;   and HFS_ZBUF's
 
 .segment "CODE2"
 ; ****************************************************************************
-; The driver's start: no disk looked at, no file open, no check; the buffers
+; The driver's start: no disk looked at, no file open, no check; the buffers (the check's, the walk cache's too, from
+; this task's pages now: none, and the cache is off, and the check takes them at its first)
 hfs_init:
             LDR         SD_CACHE, blk
             LDR         HFS_META, HFS_MBUF
@@ -284,6 +308,13 @@ hfs_init:
             sta         HFS_H_CARD,X
             dex
             bpl         :-
+            lda         #>(HFS_CK_BUF_SIZE + 255)
+            jsr         PAGES_ALLOC
+            bcs         :+
+            MOVR        HFS_CK_BUF, r0
+:
+            stz         HFS_WC_NEXT
+            jsr         HFS_WC_CLEAR
             clc
             rts
 

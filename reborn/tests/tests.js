@@ -577,6 +577,25 @@ function shellCard() {
   return [imageCard(0, f, 16384)];
 }
 
+// The wcache test's lines: names looked up (there or not), then what changes them (a create, a rename, a remove, a
+// mkdir and rmdir, a rename of a directory, a create through /lib's union), and looked up again
+const WC_LINES = [
+  ["cat /ram/x", "cat: /ram/x: not found"],
+  ["echo hi >/ram/x; cat /ram/x", "hi"],
+  ["mv /ram/x /ram/y; cat /ram/x", "cat: /ram/x: not found"],
+  ["cat /ram/y", "hi"],
+  ["rm /ram/y; cat /ram/y", "cat: /ram/y: not found"],
+  ["mkdir /ram/d /ram/d/e; echo a >/ram/d/e/f; cat /ram/d/e/f", "a"],
+  ["rm /ram/d/e/f; rmdir /ram/d/e; cat /ram/d/e/f", "cat: /ram/d/e/f: not found"],
+  ["mkdir /ram/d/e; echo b >/ram/d/e/f; cat /ram/d/e/f", "b"],
+  ["mv /ram/d /ram/g; cat /ram/g/e/f", "b"],
+  ["cat /ram/d/e/f", "cat: /ram/d/e/f: not found"],
+  ["cat /lib/nothere", "cat: /lib/nothere: not found"],
+  ["echo c >/lib/nothere; cat /lib/nothere /ram/lib/nothere", "c\nc"],
+  ["rm /lib/nothere; cat /lib/nothere", "cat: /lib/nothere: not found"],
+  ["ls /rom/lib/forth/gpio.fs /lib/forth/gpio.fs", "/rom/lib/forth/gpio.fs\n/lib/forth/gpio.fs"],
+];
+
 // A test's lines typed, each at its prompt, and its expect (as the tools test's)
 const typed = lines => lines.map(l => 'ā' + l[0] + '\r').join('');
 const expected = lines => lines.map(l => '% ' + l[0] + '\n' + (l[2] ? l[1] : (l[1] === null ? '' : l[1] + '\n') + '%'));
@@ -874,6 +893,12 @@ module.exports = {
       expect: ['/> : dup 1 ; 5 dup . .\n1 5 \n', '/> marker m : zz 7 ; zz . m zz\n7 zz ?\n', '/> : yy yy ;\nyy ?\n',
         'cyc zz\nzz ?\n', 'wl9 2 3 + .\n0 0 0 0 0 0 0 0 0 0 5 \n', 'bank-window 7 evaluate\n5 \n', '0 bank-window ! 6 7 + .\n13 \n',
         'b 150 < .\n-1 \n/> exit\n'],
+    },
+    {
+      name: 'wcache', what: 'HydraFS\'s walk cache (the names looked up, there or not, and the directories\' entries on the way): a name not there, then made, renamed, removed; directories made, removed, renamed under a name looked up; a name made through /lib\'s union after it wasn\'t there; each looked up again as it is now',
+      init: 't_rc', cycles: 120e6,
+      get machine() { return { input: typed(WC_LINES) }; },
+      get expect() { return expected(WC_LINES); },
     },
     {
       name: 'fload', what: 'HyForth loading a file: its read-ahead (a CR LF across its 512-byte buffers, CR LF and CR line ends, a line of 130 cut at 128, a last line ended by a CR and the file\'s end), names between tabs, numbers with each prefix, in base 36, a double; hydra.fs REQUIREd in under 300 ticks (383 before 6.20)',

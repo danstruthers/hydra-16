@@ -127,9 +127,12 @@ character); the index's fixed cost a search.  So (6.20):
   remembered (`hydra.fs`'s and FORTH alternate); a search keeps the bank and `tmp` in variables, not on the stack.
 
 `require hydra.fs` takes 3.7M cycles now (6.8M; 203 ticks, not 383), the eight device libraries 9.5M (12.7M; 508
-ticks, not 690), and the Forth 2012 suite's run 491M (639M).  The rest is mostly the storage driver's: reading the ROM disk, and finding names in `/lib`, a
-union of four directories, where a name that isn't there costs 65 ms (13 ticks; 2 in a single directory) and
-`lib` looks for `NAME.fl` before `NAME.fs`.
+ticks, not 690), and the Forth 2012 suite's run 491M (639M).  The rest is mostly the storage driver's: reading the
+ROM disk, and finding names in `/lib`, a union of four directories, where a name that isn't there cost 65 ms (13
+ticks; 2 in a single directory), and `lib` looks for `NAME.fl` before `NAME.fs`.  So (6.21) the storage driver keeps
+the names HydraFS has looked up, there or not, and the directories' entries on the way (its walk cache, in the
+check's buffer): such a name costs 22 ms now, the rest of it the kernel's requests to each directory, and every
+command line found through `/bin` gains too.
 
 ## The standard's other word sets
 
@@ -287,11 +290,11 @@ shell, and `-lib shell` (or a `marker` that takes it out) a plain Forth again.
 
 ## The steps
 
-6.6 to 6.10 done (October 2026), then 6.11 to 6.13, from comparing the shell with hylang's, then 6.14 to 6.20;
+6.6 to 6.10 done (October 2026), then 6.11 to 6.13, from comparing the shell with hylang's, then 6.14 to 6.21;
 [forth-status.md](forth-status.md) has each one's notes, the sizes and what's next, and
 [using/hyforth.md](using/hyforth.md) is the guide for using it.  The tests: `forth` (the Forth 2012 suite, still
 passing, and its files for 6.16-6.19's word sets), `hyforth` (6.6-6.8 and 6.14), `fshell` (6.9 and 6.11), `lshell`
-(6.10), `fhydra` (6.12), `fdev` (6.13), `findex` (6.15) and `fload` (6.20).
+(6.10), `fhydra` (6.12), `fdev` (6.13), `findex` (6.15), `fload` (6.20) and the storage driver's `wcache` (6.21).
 
 | Step | | Tested |
 | :--- | :--- | :--- |
@@ -310,3 +313,4 @@ passing, and its files for 6.16-6.19's word sets), `hyforth` (6.6-6.8 and 6.14),
 | 6.18 | Locals (`locals.fl`): `{:`, `(local)`, `locals\|`; the core's `lp`, `loc_vec` and its calls; CATCH keeps `lp` | `localstest.fth` (its Search-Order part too) |
 | 6.19 | Block (`block.fl`) and its extension; the source record's BLK, `blk_vec`; `\`, REFILL, SAVE-INPUT and RESTORE-INPUT in a block; 512 bytes of names INCLUDED | `blocktest.fth` (its blocks 20-29 in `blocks.fb` on the card; 64 characters a line, as it works out) |
 | 6.20 | Loading files faster: the read-ahead buffer (in the index's bank), numbers by BASE's bits, PARSE-NAME's own loops, the index's fixed cost | A file made for the read-ahead (a CR LF across its buffers, CR LF and CR ends, a line cut at 128, a last line ended by a CR and the file's end), names between tabs, numbers with each prefix and in base 36, a double; `hydra.fs` in under 300 ticks; the suite (its files, SAVE-INPUT and RESTORE-INPUT in them) |
+| 6.21 | The storage driver's walk cache: HydraFS's names looked up, there or not, and the directories' entries on the way, in the check's buffer; a disk's forgotten as it changes | rc lines (`wcache`): a name not there, then made, renamed, removed; directories made, removed and renamed under names looked up; a name made through `/lib`'s union after it wasn't there; the file system's, disks', loader's and tools' tests (a check, a format, the budgets) |
