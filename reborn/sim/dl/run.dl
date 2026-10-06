@@ -3,8 +3,9 @@
 ; or is the serial console, live.  (hydra.dl is a test's run: sim/test.js --dl's.)
 ;
 ; Usage (from reborn): danlang sim/dl/run.dl [options]
-;   -i, --interactive   the terminal is the Hydra's serial console, in real time.  Ctrl-A x quits, Ctrl-A r resets,
-;                       Ctrl-A s shows the state, Ctrl-A h helps, Ctrl-A Ctrl-A types Ctrl-A; Ctrl-C is the Hydra's
+;   -i, --interactive   the terminal is the Hydra's serial console, in real time.  Ctrl-] x (or Ctrl-A x, as
+;                       run.js's) quits, Ctrl-] r resets, Ctrl-] s shows the state, Ctrl-] h helps, Ctrl-] Ctrl-] types
+;                       Ctrl-] (Ctrl-A Ctrl-A, Ctrl-A); Ctrl-C is the Hydra's
 ;   --cycles N          stop at cycle N (default 30000000: 8.4 s at 3.58 MHz; interactive: never)
 ;   --input TEXT        keys to type (\r, \n: Return; \w: wait 2M cycles; \p: wait for a prompt), one every 20000
 ;                       cycles from cycle 200000
@@ -114,30 +115,31 @@
   (exit (if halted 1 0))) 0)
 
 ; ---- the serial console, live: the output as it comes, the keys typed (a terminal's keys as the sequences it sends),
-; paced to real time (or run-speed times it); Ctrl-A's commands, and Ctrl-C (on-note's: typed, as a byte)
+; paced to real time (or run-speed times it); the commands after Ctrl-] or Ctrl-A (prefix: which), and Ctrl-C
+; (on-note's: typed, as a byte)
 (def {esc-keys} (to# [[:up "\e[A"] [:down "\e[B"] [:right "\e[C"] [:left "\e[D"] [:home "\e[H"] [:end "\e[F"]
   [:ins "\e[2~"] [:del "\e[3~"] [:pgup "\e[5~"] [:pgdn "\e[6~"] [:f1 "\eOP"] [:f2 "\eOQ"] [:f3 "\eOR"] [:f4 "\eOS"]
   [:f5 "\e[15~"] [:f6 "\e[17~"] [:f7 "\e[18~"] [:f8 "\e[19~"] [:f9 "\e[20~"] [:f10 "\e[21~"] [:f11 "\e[23~"] [:f12 "\e[24~"]]))
 (def {prefix last-key quit ctrlc} NIL 0 "" NIL)
 (fun {say text} {do (flush-out) (write (+ "\r\n[sim] " text "\r\n"))})
 (fun {type-codes l} {do (ac-sync cyc) (type-keys l) (ac-sched) (dev-due)})
-(fun {ctl-a c} {cond
-  {(== c 1) (type-codes {1})}
-  {(in? c {120 88 113 81}) (set! {quit} "quit (Ctrl-A x)")}
+(fun {command c} {cond
+  {(== c prefix) (type-codes (list c))}
+  {(in? c {120 88 113 81}) (set! {quit} "quit")}
   {(in? c {114 82}) (do (hw-reset) (say "reset"))}
   {(in? c {115 83}) (say (state))}
-  {T (say "Ctrl-A then: x quit, r reset (the reset button), s state, h this help, Ctrl-A a Ctrl-A.")}})
+  {T (say "Ctrl-] (or Ctrl-A) then: x quit, r reset (the reset button), s state, h this help; Ctrl-] again, a Ctrl-].")}})
 (fun {on-key k} {if (nil? k) 0
   (if (atom? k) (if (hash-get esc-keys k) (type-codes (bytes (esc-keys k))) 0)
     (do (set {c} (char-code k))
-        (if prefix (do (set! {prefix} NIL) (ctl-a c))
-          (if (== c 1) (set! {prefix} T)
+        (if prefix (do (command c) (set! {prefix} NIL))
+          (if (in? c {1 29}) (set! {prefix} c)
             (if (== c 10) (if (== last-key 13) 0 (type-codes {13}))     ; (piped text: a line ends in CR, as Enter sends)
               (type-codes (list c)))))
         (set! {last-key} c)))})
 (on-note (fn {n} {do (set! {ctrlc} T) T}))
 
-(say "the Hydra's serial console (danlang).  Ctrl-A x quits, Ctrl-A h for help.")
+(say "the Hydra's serial console (danlang).  Ctrl-] x quits, Ctrl-] h for help.")
 (def {base-t base-c} (clock) cyc)
 (while {== quit ""}
   (set {now} (clock))
