@@ -91,6 +91,7 @@ PASS hysuite4 hylang's suite, part 4 of 5: danlang's run.dl with eval5.dl
 PASS hysuite5 hylang's suite, part 5 of 5: danlang's run.dl with eval6.dl, scope.dl, control.dl, errors.dl, lists.dl, strings.dl, numbers.dl, hashes.dl, types.dl, io.dl, system.dl, bits.dl, library.dl (danlang's library, hylang's from its snapshot (globals.dl) and the ROM disk's /lib/hylang (dice.dl and screen.dl, where load finds a bare name, and use); files written on the card, programs run, the clock a DS1747's)
 PASS hytext  hylang without its snapshot (a ROM without the module hysnap): its library loaded as text as it starts (/lib/hylang/globals.hl, the ROM disk's), the same banner, the library's definitions there; a tail loop of 50,000 steps
 PASS hyspeed hylang's budgets (phase 8's, at 3.58 MHz, its library loaded): a parameter looked up, a call of a function of two arguments, a tail loop's step (if, zero?, -, the call), map with a function of one argument, an item; each the difference of two lines' times, from the echo to the value
+PASS hyhydra hylang's Hydra built-ins (the plan's phase 9): hydra.hl as a script (sysinfo, mods, errstr; ps, task-info, yield, sleep-until; peek and poke, the task's banks, a shared segment, free; bind, mount, unmount, ns, newns; note, on-note; hold; key?), and again with a collection before every allocation; at the prompt, raw keys (key: a character, the terminal's up key; key?) and Ctrl-C given to on-note's function
 PASS kcopy   spike S2: copying between tasks  (6 checks)
 PASS irq     spike S1: 115200 received by an irq entry while tasks spin  (6 checks)
 ```
@@ -389,6 +390,24 @@ while fewer pages are free than used).  The plan's budgets (3,000, 1,500, 2,000,
 out of reach of tuning, so, the user's choice, they're what tuning reached, with a margin: 6,500, 4,000, 4,000,
 300, and a full collection of a full 64K heap 3.6 M; the `hyspeed` test checks the evaluator's.
 
+**The Hydra layers, phase 9, the Hydra's built-ins: done.**  (The plan's phases 9 to 12, after parity: the
+built-ins, every system call, the device libraries, the prompt.)  hylang has six banks now: the collector moved to
+the sixth, and the fifth has the Hydra's built-ins beside the system library (`hydrabi.inc`): `sysinfo`, `mods`,
+`errstr`; `ps`, `task-info`, `yield`, `sleep-until`; `peek`, `poke`, `peek-word`, `poke-word`, `banks`,
+`bank-alloc`, `bank-free`, `bank-read`, `bank-write`, `seg-create`, `seg-attach`, `seg-detach`, `seg-read`,
+`seg-write`, `free`; `bind`, `mount`, `unmount`, `ns`; `note`, `note-group`, `on-note`; `key`, `key?`; and
+the special forms `hold` (`PREEMPT_OFF` round its body: a frame that takes errors turns it back on) and `newns`.
+A record the system gives is a hash.  `on-note`: the note handler notes each note (it runs as hylang is switched
+in, between any two instructions), and the evaluator calls the function at the next call (`ev_note`), Ctrl-C's
+too; its NIL is the note's default, as the system's.  `newns` loads `/lib/hylang/newns.hl`, which builds the
+default namespace in hylang's own, as `nslib.s` builds a task's (a child's namespace is its own once it changes
+it, so rc's `newns` can't).  `key` is the console raw (consctl's `rawon`) till the next line is read.  Checked:
+the `hyhydra` test, `tests/hyhydra/hydra.hl`'s 62 checks as a script, the built-ins that make values with a
+collection before every allocation, raw keys typed, and Ctrl-C given to an `on-note` function.  248 built-ins
+(256 at most): the `sys-` functions (phase 10) will be bound as they're first looked up.  A collector bug from phase 1 came
+to light as the suite ran in parts: a blob bank full to its last byte, every blob in it live, was left with its top
+0, as if empty, so the next blob made went over live ones; its top is $2000 now, and the heap test fills a bank so.
+
 | Step | | Notes |
 |---|---|---|
 | 7.0 The language's specification | Draft (three decisions are the user's) | `docs/hylang.md`: hylang 1 is danlang (`C:\source\danlang`, its `master`), readied for the port in C# first (lexical scope, tail calls, fexprs, `try`, loops, the missing basics, its number bugs fixed, and a system library a PC has too: files, programs and the shell, the environment, the clock, bits and bytes, the system's errors as codes), with its regression suite (965 checks) run unchanged on both; where the two may differ (8-bit strings, the call depth, `/lib/hylang`, Ctrl-C an error); and what makes it the Hydra's, in four layers: the system library, the Hydra's built-ins (notes, namespaces, tasks, memory and banks, keys), device libraries in hylang over the devices' files (console, GPIO, I2C, SPI, sound, disks, `/proc`, the clock's chip, `/pc`), and a `sys-` function for every call.  To decide: the extension (`.hl`), `$`, danlang's license in the ROM |
@@ -408,7 +427,9 @@ out of reach of tuning, so, the user's choice, they're what tuning reached, with
    blobs, symbols, the collector), phase 2, the reader, the printer and the REPL, phase 3, the evaluator, phase 4,
    the built-ins and lists, phase 5, the numbers, phase 6, strings, characters and hashes, and phase 7, streams,
    I/O and the system library, and phase 8, the library (in hylang from a snapshot in the ROM), tuning (its
-   budgets revised to what it reached) and `run.dl` whole: danlang parity.  Next: the Hydra layers.
+   budgets revised to what it reached) and `run.dl` whole: danlang parity.  Then the Hydra layers (the plan's
+   phases 9 to 12): phase 9, the Hydra's built-ins, is done.  Next: phase 10, every system call as a `sys-`
+   function.
    The parity
    checkpoint (the plan's, after phase 5) is still the user's.  `/proc/N/fd` is still to come (a channel keeps no
    name to show).

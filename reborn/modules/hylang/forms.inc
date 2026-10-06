@@ -77,6 +77,50 @@ if_value:
             jsr         cr_first
             jmp         ev_eval
 
+; (newns): the default namespace built again in hylang's own (a child's is its own once it changes it, so not by
+; rc's newns): (load "newns"), /lib/hylang/newns.hl, which does it each time it's loaded, in tail position
+sf_newns:
+            LDHQ        s_newnsf, s_newnsf_n
+            jsr         string_make
+            bcs         @nomem
+            MOVW        et, hv
+            stz         eu
+            stz         eu + 1
+            lda         #PK_SCONS
+            jsr         make2
+            bcs         @nomem
+            MOVW        eu, hv
+            lda         #<(BUILTIN0 + 2 * BIN_LOAD)
+            sta         et
+            lda         #>(BUILTIN0 + 2 * BIN_LOAD)
+            sta         et + 1
+            lda         #PK_SCONS
+            jsr         make2
+            bcs         @nomem
+            MOVW        ex, hv
+            jmp         ev_eval
+@nomem:
+            jmp         ev_nomem
+
+.rodata
+s_newnsf:   .byte       "newns"
+s_newnsf_n = * - s_newnsf
+
+.code
+
+; (hold body...): the body as do has it, with no task switch meanwhile (PREEMPT_OFF, for a few ticks' timing; a note
+; still comes); preemption back on after it, and after an error (k_hold, which takes one)
+sf_hold:
+            jsr         PREEMPT_OFF
+            inc         hold_n
+            jsr         frame_check
+            PUSHK       K_HOLD
+            jmp         sf_do
+k_hold:
+            jsr         PREEMPT_ON
+            dec         hold_n
+            jmp         ev_return
+
 ; (do x...): each in turn (an error stops them); the last's value, in tail position; NIL for none
 sf_do:
             lda         cr

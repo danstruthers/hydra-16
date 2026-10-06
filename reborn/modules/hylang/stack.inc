@@ -380,6 +380,12 @@ hl_roots:
             sta         mv + 1
             jsr         mark_val
             jsr         gc_drain
+            lda         nt_f                                ; (on-note's function)
+            sta         mv
+            lda         nt_f + 1
+            sta         mv + 1
+            jsr         mark_val
+            jsr         gc_drain
             stz         hq                                  ; (The stack in RAM: its first page to sp)
             lda         stk_basep
             sta         hq + 1

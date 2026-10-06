@@ -324,6 +324,42 @@ main:
 @keptall:
             lda         tj
             EXPECT_A    0, "the 50 kept, each its bytes"
+            stz         hv                                  ; (A blob bank full to its last byte, every blob in it
+            stz         hv + 1                              ;   live: hv's last string let go and the dead dropped
+            jsr         gc_collect                          ;   first, then a string that fills the first, kept)
+            sec
+            lda         #0
+            sbc         blob_tlo
+            sta         hn
+            lda         #$20
+            sbc         blob_thi
+            sta         hn + 1
+            lda         hn
+            sec
+            sbc         #4
+            sta         hn
+            bcs         :+
+            dec         hn + 1
+:
+            LDR         hq, text                            ; (Its bytes: any)
+            jsr         string_make
+            EXPECT_OK   "a string that fills the first blob bank"
+            MOVR        VR6, hv
+            lda         blob_thi
+            EXPECT_A    $20, "the first blob bank full"
+            jsr         gc_collect
+            lda         blob_thi                            ; (Still full: its top $2000, not 0)
+            cmp         #$20
+            bne         :+
+            lda         blob_tlo
+            bne         :+
+            OK          "a collection: the full blob bank kept full"
+            bra         :++
+:
+            NOTOK       "a collection: the full blob bank kept full"
+:
+            stz         VR6
+            stz         VR6 + 1
             stz         VR3
             stz         VR3 + 1
 

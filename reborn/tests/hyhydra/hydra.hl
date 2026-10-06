@@ -1,0 +1,96 @@
+; hydra.hl - hylang's own checks of what only the Hydra has (docs/hylang.md, "Made for the Hydra"): the Hydra's
+; built-ins (the system, tasks, memory, namespaces, notes, hold).  Run as a script, as run.dl is (hylang hydra.hl,
+; with danlang's harness.dl beside it on the card): the count, its status 1 if a check failed
+(def {hydra-dir} (do
+  =(here (fst args))
+  =(cut (max (last-index-of here "/") (last-index-of here "\\")))
+  (substring here 0 (+ cut 1))))
+
+(load (+ hydra-dir "harness.dl"))
+(def {test-file} "hydra")
+
+; the system
+(check ((sysinfo) :abi) 1)
+(check (> ((sysinfo) :ram-modules) 0) T)
+(check (qexpr? ((sysinfo) :free-tasks)) T)
+(check ((fst (mods)) :name) "init")
+(check ((fst (mods)) :type) :program)
+(check ((find (fn {m} {== (m :name) "hylang"}) (mods)) :banks) 6)
+(check ((find (fn {m} {== (m :name) "hysnap"}) (mods)) :type) :library)
+(check ((find (fn {m} {== (m :name) "cons"}) (mods)) :type) :driver)
+(check (errstr :noent) "not found")
+(check (errstr 32) "not found")
+(check-error (errstr :nosuch) "'errstr' expects an error's code")
+
+; tasks
+(check ((task-info (pid)) :name) "hylang")
+(check ((task-info (pid)) :state) :ready)
+(check ((task-info (pid)) :task) (pid))
+(check ((task-info 0) :name) "kernel")
+(check ((task-info 15) :name) "cons")
+(check (error-code (task-info 9)) :srch)
+(check-error (task-info 16) "'task-info' was given a number out of its range")
+(check (any? (fn {x} {== (x :name) "cons"}) (ps)) T)
+(check (yield) NIL)
+(check (sleep-until (+ (ticks) 2)) NIL)
+
+; memory
+(check (do (poke 32512 7) (peek 32512)) 7)
+(check (do (poke-word 32512 40000) (peek-word 32512)) 40000)
+(check-error (peek 65536) "'peek' was given a number out of its range")
+(check-error (poke 32512 256) "'poke' was given a number out of its range")
+(check-error (peek -1) "'peek' expects a whole number")
+(check (> (banks) 0) T)
+(def {hy-bank} (bank-alloc 1))
+(check (bank-write hy-bank 100 {1 2 255}) NIL)
+(check (bank-read hy-bank 100 3) {1 2 255})
+(check-error (bank-read hy-bank 8190 3) "'bank-read' was given a number out of its range")
+(check-error (bank-write hy-bank 0 {1 256}) "'bank-write' expects a list of bytes (0-255)")
+(check (bank-free hy-bank 1) NIL)
+(check (error-code (bank-free hy-bank 1)) :inval)
+(def {hy-seg} (seg-create 1))
+(check (seg-attach hy-seg) NIL)
+(check (seg-write hy-seg 0 0 {9 8}) NIL)
+(check (seg-read hy-seg 0 0 2) {9 8})
+(check (error-code (seg-read hy-seg 1 0 1)) :range)
+(check (seg-detach hy-seg) NIL)
+(check (error-code (seg-read hy-seg 0 0 1)) :inval)
+(check (> ((free) :shared) 0) T)
+
+; namespaces
+(check (bind "/rom/bin" "/hy-b") NIL)
+(check (elem? "grep" (ls "/hy-b")) T)
+(check (unmount "/hy-b") NIL)
+(check (error-code (ls "/hy-b")) :noent)
+(check (mount "#f" "/hy-r" "x") NIL)
+(check (elem? "lib" (ls "/hy-r")) T)
+(check ((find (fn {e} {== (e :old) "/hy-r"}) (ns)) :new) "#fx/")
+(check (unmount "/hy-r") NIL)
+(check-error (bind "/x" "/y" :sideways) "'bind' expects :before, :after or :create")
+(check-error (mount "f" "/y") "'mount' expects a device: # and its letter")
+(check (any? (fn {e} {== (e :old) "/bin"}) (ns)) T)
+(check (newns) NIL)
+(check (elem? "rc" (ls "/bin")) T)
+(check (elem? (to-str (pid)) (ls "#fr")) T)
+
+; notes
+(def {hy-notes} {})
+(on-note (fn {n} {do (def {hy-notes} (join hy-notes (list n))) T}))
+(note (pid) 20)
+(check hy-notes {20})
+(note (pid) :alarm)
+(check hy-notes {20 :alarm})
+(on-note NIL)
+(check (error-code (note 15 :alarm)) :perm)
+(check-error (note (pid) :nope) "'note' expects a note: :interrupt, :kill, :hangup, :alarm, :brk, or 1-31")
+
+; hold
+(check (hold (+ 1 2) (* 3 4)) 12)
+(check-error (hold (error "e")) "e")
+(check (hold) NIL)
+
+; keys: none waiting (raw till the end: a script reads no line)
+(check (key?) NIL)
+
+(print (format "{} checks, {} failed" test-count test-fails))
+(exit ?((zero? test-fails) 0 1))

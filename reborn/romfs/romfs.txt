@@ -22,6 +22,7 @@ lib/forth/hydra.fl  ../obj/forthlib/hydra.fl
 lib/hylang/globals.hl lib/hylang/globals.hl ; hylang's library: danlang's (lib/ there), globals loaded as hylang starts
 lib/hylang/dice.hl  lib/hylang/dice.hl      ;   (from its snapshot, the module hysnap) and the others by (load "dice")
 lib/hylang/screen.hl lib/hylang/screen.hl
+lib/hylang/newns.hl lib/hylang/newns.hl     ; (newns): the default namespace built again, in hylang's own
 bin/mkfs            ../obj/programs/mkfs.hyx    ; The disk tools: RAM programs (programs/), loaded from here
 bin/fsck            ../obj/programs/fsck.hyx
 bin/label           ../obj/programs/label.hyx

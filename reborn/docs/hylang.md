@@ -72,12 +72,12 @@ system's error: its text (`ERRSTR`'s, after the name it's about: `x: not found`)
 
 | Area | Functions |
 | :--- | :-------- |
-| **Notes** | `(note task n)` (Plan 9's postnote: `n` is `:interrupt`, `:kill`, `:hangup`, `:alarm`, or 16-31, a program's own), `(note-group group n)`; `(on-note f)`: `f` is called with each note (as an atom) and returns T to go on, NIL for the default |
-| **Namespaces** | `(bind new old [:before \| :after] [:create])`, `(mount dev old [spec] [:before \| :after] [:create])` (`dev` a string: `"#f"`), `(unmount old [new])`, `(ns)` (the binds and mounts, a list of hashes: `:old`, `:new`, `:flags`), `(newns)` (the default, from `/rom/lib/namespace`) |
-| **Tasks** | `(ps)` (a list of hashes: `:task`, `:name`, `:state`, `:parent`, `:cpu`, `:group`, `:args`), `(task-info task)`, `(yield)`, `(sleep-until tick)`, `(hold body...)` (no task switch meanwhile: `PREEMPT_OFF`, for a few ticks' timing; a note still comes) |
-| **Memory** | `(peek addr)`, `(poke addr byte)`, `(peek-word addr)`, `(poke-word addr n)`: the task's own 64K (the I/O area's chips belong to their drivers: poke them only knowing that); `(banks)` (the task's RAM banks), `(bank-alloc n)`, `(bank-free bank n)`, `(bank-read bank offset n)` (bytes, a list), `(bank-write bank offset bytes)`; shared segments: `(seg-create banks)`, `(seg-attach seg)`, `(seg-detach seg)`, `(seg-read seg bank offset n)`, `(seg-write seg bank offset bytes)`, `(free)` (the shared RAM, as `free` shows it) |
-| **The system** | `(sysinfo)` (a hash: `:abi`, `:ram-modules`, `:free-tasks`), `(mods)` (the paged ROM's modules: hashes of `:name`, `:type`, `:bank`, `:size`), `(errstr code)` |
-| **Keys** | `(key)`: the next key, raw (unechoed, unbuffered): a character, or an atom for the terminal's keys (`:up`, `:down`, `:left`, `:right`, `:home`, `:end`, `:ins`, `:del`, `:pgup`, `:pgdn`, `:f1` ... `:f12`); `(key?)`: whether one is waiting (`O_NONBLOCK`).  Raw mode lasts till the next line is read (`read-line`, the prompt), as forth's `KEY?` has it |
+| **Notes** | `(note task n)` (Plan 9's postnote: `n` is `:interrupt`, `:kill`, `:hangup`, `:alarm`, `:brk`, or its number: 16-31 a program's own), `(note-group group n)`; `(on-note f)`: `f` is called with each note (but a kill) at the next call, the note an atom (`:interrupt`, `:hangup`, `:alarm`, `:brk`) or its number, and returns T to go on, NIL for the default (Ctrl-C's: the error `:intr`; another's, hylang's end, as the system's default: 129 for a hangup ...); `(on-note NIL)`: the defaults again |
+| **Namespaces** | `(bind new old [:before \| :after] [:create])`, `(mount dev old [spec] [:before \| :after] [:create])` (`dev` a string: `"#f"`; `spec` which of its trees: `"x"`, the ROM disk), `(unmount old [new])`, `(ns)` (the binds and mounts, a list of hashes: `:old`, `:new` (the device's path: `"#fx/lib"`), `:create`), `(newns)` (the default namespace built again in hylang's own, as rc's `newns` builds it: `/lib/hylang/newns.hl`, loaded: its area of the RAM disk emptied and made, then `/rom/lib/namespace`'s lines and a card's) |
+| **Tasks** | `(ps)` (a list of hashes: `:task`, `:name`, `:state` (`:ready`, `:wait`, `:call`, `:idle`, `:new`, `:sleep`, `:blocked`, `:event`), `:parent`, `:cpu` (ticks), `:group`, `:args`), `(task-info task)` (one of them), `(yield)`, `(sleep-until tick)`, `(hold body...)` (no task switch meanwhile: `PREEMPT_OFF`, for a few ticks' timing; a note still comes; preemption back after an error too) |
+| **Memory** | `(peek addr)`, `(poke addr byte)`, `(peek-word addr)`, `(poke-word addr n)`: the task's own 64K, as it is as hylang runs (its fifth bank at `$A000`, a heap bank at `$8000`; the I/O area's chips belong to their drivers: poke them only knowing that); `(banks)` (the task's RAM banks), `(bank-alloc n)`, `(bank-free bank n)`, `(bank-read bank offset n)` (bytes, a list), `(bank-write bank offset bytes)` (what fits, then the error); shared segments: `(seg-create banks)`, `(seg-attach seg)`, `(seg-detach seg)`, `(seg-read seg bank offset n)`, `(seg-write seg bank offset bytes)`; `(free)` (the RAM, as `free` shows it, in K: `:ram` a task's, `:shared`, `:used`, `:free`, `:segments`) |
+| **The system** | `(sysinfo)` (a hash: `:abi`, `:ram-modules`, `:free-tasks`), `(mods)` (the paged ROM's modules: hashes of `:name`, `:type` (`:program`, `:driver`, `:library`), `:bank`, `:banks`), `(errstr code)` (a code an atom, `:noent`, or its number) |
+| **Keys** | `(key)`: the next key, raw (unechoed, as it comes): a character, or an atom for the terminal's keys (`:up`, `:down`, `:left`, `:right`, `:home`, `:end`, `:ins`, `:del`, `:pgup`, `:pgdn`, `:f1` ... `:f12`); `(key?)`: whether one is waiting (a read of the console that doesn't wait).  Raw mode lasts till the next line is read (the prompt's), as forth's `KEY?` has it |
 
 ### 3. The device libraries (`/lib/hylang/NAME.hl`, `(use "NAME")`)
 
@@ -130,7 +130,7 @@ The plan has it whole; in short:
   fills; a free list per kind; the blobs nothing owns dropped and the rest slid down.  Banks are taken as they're
   needed (up to 16 for cells, 16 for blobs, 4 for the stack; a cell bank more after a collection while fewer pages
   are free than used, so a collection's cost, which is what's live, is shared by as many cells made), and a
-  collection while the prompt waits too.  The collector's code is in the fifth bank, entered by a far call.
+  collection while the prompt waits too.  The collector's code is in the sixth bank, entered by a far call.
 * **The snapshot** (`tools/hysnap.js`, `hylang.s`'s `snap_restore`): what hylang keeps between collections (the
   heap's tables, the symbols, the evaluator's own: `hylang.cfg`'s PSTATE segment) and the pages and blobs in use,
   as they are once `globals.hl` is loaded, in the module `hysnap` (a library of data, two banks).  The build makes
@@ -188,11 +188,11 @@ The plan has it whole; in short:
   `spec/errors.def`: `obj/gen/errnames.inc`).  `sh` and `sh-out` run `rc -c`, their input and output through
   pipes; `date`, `date-parts` and `seconds-of` work the calendar on 32-bit seconds.  `hylang file args...` runs
   the file (`args`: its path and the args), its status 0, 1 after an error (on stderr), or `(exit n)`'s.
-* **The module**: the core (all of danlang) is one program of five banks (a module may have eight since phase
-  7): the evaluator, its special forms, the dispatch and the built-ins that run the machine in the first; the
-  reader, the printer, the list built-ins, equality and order in the second; the numbers (and, as yet, `fn`, the
-  type tests and `error`) in the third; strings, hashes and the errors' messages in the fourth; streams and the
-  system library (and the collector) in the fifth.  What every bank calls is in the task's RAM (the heap, the
+* **The module**: hylang is one program of six banks (a module may have eight since phase 7): the evaluator, its
+  special forms, the dispatch and the built-ins that run the machine in the first; the reader, the printer, the
+  list built-ins, equality and order in the second; the numbers (and, as yet, `fn`, the type tests and `error`)
+  in the third; strings, hashes and the errors' messages in the fourth; streams, the system library and the
+  Hydra's built-ins (`hydrabi.inc`) in the fifth; the collector in the sixth.  What every bank calls is in the task's RAM (the heap, the
   output, the evaluation stack): the most of that code is kept in the fourth bank and copied to the RAM as hylang
   starts (`hylang.cfg`'s DATA4), so the first bank's room is the evaluator's.  `+`, `-`, `1+`, `1-`, `zero?`,
   `one?` and the comparisons work fixnums in the first bank (`bi_fast`), without a far call.  The Hydra layers
@@ -264,4 +264,16 @@ The plan has it whole; in short:
    step 10,960 cycles to 6,059, a call 8,400 to 3,683; the budgets set to what tuning reached (the user's choice:
    above), each met and checked (`hyspeed`).
 
-Then the Hydra layers: its built-ins, the `sys-` functions, the device libraries, and the prompt.
+Then the Hydra layers (the plan's phases 9 to 12: its section "The Hydra layers"):
+
+9. **The Hydra's built-ins**.  Done: `hydrabi.inc` in the fifth bank (room made: the collector moved to a sixth),
+   the table above's: the system, tasks, memory, namespaces, notes, raw keys; `hold` a special form, preemption
+   back on after an error too (a frame that takes errors), and when the machine's stack is given up.  `on-note`'s
+   function is called by the evaluator at the next call (the note handler only notes the note, as it comes between
+   any two instructions), with Ctrl-C's too.  `newns` is hylang in `/lib/hylang/newns.hl`, loaded: a child's
+   namespace is its own once it changes it, so rc's `newns` can't build hylang's.  `tests/hyhydra/hydra.hl`'s 62
+   checks pass, and the built-ins that make values with a collection before every allocation too (the `hyhydra`
+   test, which also types raw keys and gives Ctrl-C to an `on-note` function).  248 built-ins of 256.
+10. **Every system call** (`sys-`).
+11. **The device libraries**.
+12. **The prompt**.

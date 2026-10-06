@@ -86,7 +86,9 @@ K_DOTF3         = 30            ; [n]: dotimes' function evaluated (its count fi
 K_SORT          = 31            ; [less runs next nlast a b out olast]: sort's less given two items
 K_HKEY          = 32            ; [cf cr ee]: a hash call's key evaluated (cf: the hash)
 K_HASH          = 33            ; [ee hash items entry state first last]: a hash's entry evaluated, or its value
-K_KINDS         = 34
+K_NOTE          = 34            ; [ex ee note]: on-note's function given a note (ex the call it came before)
+K_HOLD          = 35            ; []: hold's body evaluated (an error too: PREEMPT_ON)
+K_KINDS         = 36
 
 .macro PUSHK k
             lda         #<FIX(k)
@@ -201,6 +203,7 @@ ev_abort:
 ev_toodeep:
             ldx         ev_s
             txs
+            jsr         hold_release
             jsr         stk_init
             stz         ev_inargs
             jsr         cap_reset
@@ -611,9 +614,12 @@ count_cr:
 
 ; ex, a cons (an S-expression's, or a function's body): a call.  Its function evaluated, then its arguments
 ev_call:
-            bit         intr                                ; (Ctrl-C: the error interrupted, at each call)
-            bpl         :+
+            bit         intr                                ; (Ctrl-C: the error interrupted, at each call; a
+            bpl         :+                                  ;   note for on-note's function, it called)
             jmp         ev_intr
+:
+            bvc         :+
+            jmp         ev_note
 :
             lda         ex
             ldx         ex + 1
@@ -2088,6 +2094,171 @@ ev_err_end_args:
             jsr         discard_args
             jmp         ev_return
 
+; A note for on-note's function (intr's bit 6): the lowest taken, the function called with it (an atom, or its
+; number), then the call ex in ee (k_note)
+ev_note:
+            php
+            sei
+            ldx         #0
+@byte:
+            lda         nt_pend,x
+            bne         @found
+            inx
+            cpx         #4
+            bcc         @byte
+            lda         #$40                                ; (None: its bit cleared)
+            trb         intr
+            plp
+            jmp         ev_call
+@found:
+            ldy         #0                                  ; (Its lowest bit, cleared)
+:
+            lsr
+            bcs         :+
+            iny
+            bra         :-
+:
+            lda         bit_of,y
+            eor         #$FF
+            and         nt_pend,x
+            sta         nt_pend,x
+            txa                                             ; (The note: 8 .X + .Y)
+            asl
+            asl
+            asl
+            sta         nt_n
+            tya
+            ora         nt_n
+            sta         nt_n
+            lda         nt_pend                             ; (No more: intr's bit cleared)
+            ora         nt_pend + 1
+            ora         nt_pend + 2
+            ora         nt_pend + 3
+            bne         :+
+            lda         #$40
+            trb         intr
+:
+            plp
+            lda         nt_f
+            ora         nt_f + 1
+            bne         :+
+            jmp         ev_call                             ; (No function now: the note dropped)
+:
+            jsr         frame_check
+            PUSHV       ex
+            PUSHV       ee
+            lda         nt_n
+            ldx         #0
+            jsr         fix_ax
+            jsr         push
+            PUSHK       K_NOTE
+            lda         nt_n                                ; (The note's value: an atom, or its number)
+            cmp         #NOTE_BRK + 1
+            bcs         @number
+            asl
+            tax
+            lda         note_names - 2,x
+            sta         hq
+            lda         note_names - 1,x
+            sta         hq + 1
+            ldy         #0
+:
+            lda         (hq),y
+            beq         :+
+            iny
+            bne         :-
+:
+            sty         hn
+            stz         hn + 1
+            lda         #PK_ATOM
+            jsr         intern
+            bcc         :+
+            jmp         ev_nomem
+:
+            lda         hv
+            ldx         hv + 1
+            bra         @give
+@number:
+            ldx         #0
+            jsr         fix_ax
+@give:
+            jsr         push
+            MOVW        cf, nt_f
+            lda         #1
+            sta         cn
+            stz         cn + 1
+            sta         ev_inargs
+            jmp         ev_apply
+
+; on-note's function's value (ex): NIL, the note's default; else the call it came before (ex in ee) made
+k_note:
+            jsr         pop
+            jsr         unfix
+            sta         nt_n
+            POPV        ee
+            jsr         is_nil
+            php
+            POPV        ex
+            plp
+            bcs         @default
+            jmp         ev_call
+@default:
+            lda         nt_n                                ; (Ctrl-C's: the error :intr, at once)
+            cmp         #NOTE_INTERRUPT
+            bne         @end
+            lda         #$80
+            tsb         intr
+            jmp         ev_call
+@end:
+            ldx         nt_n                                ; (Another's: the end, as the system's default: 128 +
+            cpx         #NOTE_BRK + 1                       ;   its Unix number, its name)
+            bcc         :+
+            ldx         #0
+:
+            txa
+            asl
+            tay
+            lda         note_names - 2,y
+            sta         hq
+            lda         note_names - 1,y
+            sta         hq + 1
+            cpx         #0
+            bne         :+
+            LDAX        s_note
+            sta         hq
+            stx         hq + 1
+            ldx         #0
+:
+            ldy         #0                                  ; (The message: in RAM, for EXITS)
+:
+            lda         (hq),y
+            sta         ibuf,y
+            beq         :+
+            iny
+            bne         :-
+:
+            lda         note_codes,x
+            bne         :+
+            lda         nt_n
+            ora         #$80
+:
+            pha
+            jsr         hold_release
+            jsr         out_flush
+            LDR         r0, ibuf
+            pla
+            jmp         EXITS
+
+; hold's PREEMPT_OFFs undone (the machine's stack given up: its frames are gone)
+hold_release:
+            lda         hold_n
+            beq         :+
+            jsr         PREEMPT_ON
+            dec         hold_n
+            bra         hold_release
+:
+            rts
+
 ; Ctrl-C: the error interrupted (:intr), given to the frame on top
 ev_intr:
             LDAX        s_intr
@@ -2430,6 +2601,14 @@ out_name:
             rts
 
 .rodata
+note_names: .word       s_ninterrupt, s_nkill, s_nhangup, s_nalarm, s_nbrk
+note_codes: .byte       0, 130, 137, 129, 142, 133          ; (As the system's: by note, 128 + its Unix number)
+s_ninterrupt: .byte     "interrupt", 0
+s_nkill:    .byte       "kill", 0
+s_nhangup:  .byte       "hangup", 0
+s_nalarm:   .byte       "alarm", 0
+s_nbrk:     .byte       "brk", 0
+s_note:     .byte       "note", 0
 amp_digits: .byte       "_123456789"
 n_err:      .byte       "&err"
 n_code:     .byte       "&code"
@@ -2441,11 +2620,11 @@ s_nomem_n = * - s_nomem
 k_tab:      .word       k_top, k_head, k_arg, k_if, k_do, k_and, k_or, k_eval, k_exit, k_defn, k_defv, k_letb
             .word       k_letx, k_try, k_tryh, k_wtest, k_wbody, k_eachf, k_eachb, k_eachl, k_dotf, k_dotb
             .word       k_dotn, k_space, k_output, k_walk, k_load, k_eachf2, k_eachf3, k_dotf2, k_dotf3, k_sort
-            .word       k_hkey, k_hash
+            .word       k_hkey, k_hash, k_note, k_hold
 k_info:     .byte       1, 0,   0, 2,   1, $FF, 0, 2,   0, 2,   0, 2,   0, 2,   0, 1,   0, 0,   0, 3,   1, 4
             .byte       0, 4,   0, 2,   1, 2,   0, 1,   0, 3,   0, 3,   0, 2,   0, 5,   0, 3,   0, 3,   0, 6
             .byte       0, 3,   0, 2,   1, 3,   0, 6,   1, 5,   0, 2,   0, 1,   0, 2,   0, 1,   0, 8
-            .byte       0, 3,   1, 7
+            .byte       0, 3,   1, 7,   0, 3,   1, 0
 
 .code
 

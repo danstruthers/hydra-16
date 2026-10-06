@@ -14,11 +14,11 @@ IMM_PAGES       = 6             ; (The pages below this one are the immediates':
 
 .define FIX(n) (((n) * 2 + 1) & $FFFF)                      ; A fixnum's value
 
-; What follows in the collector's segment: hylang's fifth bank (CODE5: entered by GC_CALL, a far call), or, in another
+; What follows in the collector's segment: hylang's sixth bank (CODE6: entered by GC_CALL, a far call), or, in another
 ; module (t_heap's), the heap's (DATA)
 .macro GC_SEG
 .ifdef HL_DATA4
-.segment "CODE5"
+.segment "CODE6"
 .else
 .segment "DATA"
 .endif
@@ -27,7 +27,7 @@ IMM_PAGES       = 6             ; (The pages below this one are the immediates':
 ; A collection (gc_collect), from any bank or the RAM
 .macro GC_CALL
 .ifdef HL_DATA4
-            FARN        5, gc_collect
+            FARN        6, gc_collect
 .else
             jsr         gc_collect
 .endif

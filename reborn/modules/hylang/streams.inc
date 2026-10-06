@@ -467,7 +467,9 @@ bi_read_line:
             stz         y_cr
             lda         y_sfl
             and         #SM_CON
-            bne         @byte
+            beq         @chunk
+            FARN        1, raw_off                          ; (stdin's: key's raw mode off, a line read)
+            bra         @byte
 @chunk:
             LDR         r0, y_buf                           ; (A file's: a chunk, what's past the line given back)
             LDR         r1, CHUNK

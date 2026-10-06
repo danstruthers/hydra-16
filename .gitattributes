@@ -6,3 +6,5 @@ reborn/romfs/** -text
 reborn/tests/forth/** -text
 # danlang's regression suite (reborn/tests/hylang): its files as danlang's master has them, byte for byte
 reborn/tests/hylang/** -text
+# hylang's own checks (reborn/tests/hyhydra): LF, as the suite's files beside them on the card
+reborn/tests/hyhydra/** -text

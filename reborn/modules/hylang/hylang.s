@@ -18,7 +18,7 @@
 .include "macros.inc"
 .include "hylang.inc"
 
-            HYX2_PROGRAM "hylang", main, 5
+            HYX2_PROGRAM "hylang", main, 6
 
 HL_DATA4        = 1             ; (The RAM code in DATA4: hylang.cfg)
 
@@ -45,6 +45,7 @@ HL_DATA4        = 1             ; (The RAM code in DATA4: hylang.cfg)
 .include "sys.inc"
 .include "streams.inc"
 .include "system.inc"
+.include "hydrabi.inc"
 
 IBUF_SIZE       = 128           ; stdin read this much at a time
 
@@ -64,7 +65,13 @@ lp:         .res        2                                   ; read_line's place 
 ibuf:       .res        IBUF_SIZE                           ; stdin's bytes read, how many, and the next
 ilen:       .res        1
 ipos:       .res        1
-intr:       .res        1                                   ; Ctrl-C ($80), noted by the note handler
+intr:       .res        1                                   ; Ctrl-C ($80), a note for on-note's function ($40): the
+nt_f:       .res        2                                   ;   note handler's; on-note's function (NIL: none) ...
+nt_pend:    .res        4                                   ;   the notes for it (a bit each, 0-31) ...
+nt_n:       .res        1                                   ;   and the one it's given
+hold_n:     .res        1                                   ; (hold's PREEMPT_OFFs not yet undone)
+kd_ctl:     .res        1                                   ; (key's: the console's consctl, raw, and a read of it that
+kd_nb:      .res        1                                   ;   doesn't wait, fds + 1; 0: not open)
 rl_any:     .res        1                                   ; (read_line's: some of a line read)
 stress:     .res        1                                   ; (hylang -g)
 hl_argp:    .res        2                                   ; (Its arguments after -g: args, a script's path first)
@@ -85,17 +92,38 @@ sn_mask:    .res        2
 .import __PSTATE_RUN__, __PSTATE_SIZE__
 
 .segment "DATA4"
-; The note handler, in RAM (any bank may be at $A000 when a note comes): Ctrl-C (NOTE_INTERRUPT) noted in intr;
-; another, the default
+; The note handler, in RAM (any bank may be at $A000 when a note comes; the system calls it as hylang is switched
+; in, between any two instructions): with on-note's function, each note noted for it (nt_pend, intr's bit 6: the
+; evaluator calls it, ev_note); else Ctrl-C (NOTE_INTERRUPT) noted in intr's bit 7, another the default
 notes:
+            ldx         nt_f
+            bne         @pend
+            ldx         nt_f + 1
+            bne         @pend
             cmp         #NOTE_INTERRUPT
             bne         @default
             lda         #$80
-            sta         intr
+            tsb         intr
             clc
             rts
 @default:
             sec
+            rts
+@pend:
+            tax                                             ; (Its bit)
+            and         #7
+            tay
+            txa
+            lsr
+            lsr
+            lsr
+            tax
+            lda         bit_of,y
+            ora         nt_pend,x
+            sta         nt_pend,x
+            lda         #$40
+            tsb         intr
+            clc
             rts
 
 .segment "DATA"
@@ -450,11 +478,13 @@ main:
             stz         ilen
             stz         ipos
             stz         intr
+            stz         nt_f
+            stz         nt_f + 1
             jsr         cap_reset
             LDR         r0, notes
             jsr         NOTIFY
             stz         lib_text                            ; (The heap: a snapshot's, with its library; or made)
-            lda         hyx2_bank5                          ; (The snapshot: where rom.txt puts it, the bank after
+            lda         hyx2_bank6                          ; (The snapshot: where rom.txt puts it, the bank after
             inc         a                                   ;   hylang's last; else the module directory's hysnap)
             jsr         snap_restore
             bcc         @heap
@@ -544,7 +574,9 @@ main:
             beq         @line                               ;   made a kind's since the last)
             GC_CALL
 @line:
-            stz         intr
+            lda         #$80                                ; (Ctrl-C's noted: dropped; a note for on-note's kept)
+            trb         intr
+            jsr         raw_off
             jsr         read_line
             cmp         #1
             bne         :+
@@ -825,11 +857,30 @@ getc_in:
             stz         ilen
             stz         ipos
             cmp         #E_INTR
-            beq         @intr
+            bne         @end
+            bit         intr                                ; (Not Ctrl-C's: a note for on-note's, read again)
+            bpl         getc_in
+            bra         @intr
 @end:
             lda         #0
 @intr:
             sec
+            rts
+
+; key's raw mode off: the console's consctl closed (rawoff, as it's the last), and key?'s read of it
+raw_off:
+            lda         kd_ctl
+            beq         :+
+            dec         a
+            jsr         CLOSE
+            stz         kd_ctl
+:
+            lda         kd_nb
+            beq         :+
+            dec         a
+            jsr         CLOSE
+            stz         kd_nb
+:
             rts
 
 .rodata
@@ -854,6 +905,10 @@ bank_three:
 
 .segment "CODE5"                                            ; (Streams, I/O and the system library: phase 7)
 bank_five:
+            rts
+
+.segment "CODE6"                                            ; (The collector, and the system calls: phase 10)
+bank_six:
             rts
 
 .segment "CODE4"                                            ; (Strings and hashes: phase 6; the RAM code's image)

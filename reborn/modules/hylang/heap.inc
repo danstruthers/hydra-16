@@ -893,7 +893,7 @@ same_name:
             sec
             rts
 
-; ---- The collector (GC_SEG: hylang's fifth bank; its roots' hooks, in the RAM, call mark_val and gc_drain there)
+; ---- The collector (GC_SEG: hylang's sixth bank; its roots' hooks, in the RAM, call mark_val and gc_drain there)
 
 GC_SEG
 
@@ -1479,11 +1479,12 @@ compact:
             sta         mc + 1
             jmp         @blob
 @end:
-            ldx         g_index                             ; (The bank's new top)
-            lda         ms
-            sta         blob_tlo,x
+            ldx         g_index                             ; (The bank's new top: $2000 when it's full, every blob
+            lda         ms                                  ;   in it live, so less $80, not and #$1F, which made
+            sta         blob_tlo,x                          ;   that 0, the bank seeming empty)
             lda         ms + 1
-            and         #$1F
+            sec
+            sbc         #$80
             sta         blob_thi,x
             rts
 

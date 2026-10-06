@@ -11,6 +11,7 @@ B2              = 1             ; (Its code in the second bank, the third, the f
 B3              = 2
 B4              = 3
 B5              = 4
+B6              = 5
 
 BI_N            .set 0
 
@@ -255,8 +256,42 @@ BIN_DEC         = BI_N
             BI          "product", 1, 1, BF_MACHINE, bi_product
             BI          "min", 1, ANY, B2, bq_min
             BI          "max", 1, ANY, B2, bq_max
+            BI          "sysinfo", 0, 0, B5, bi_sysinfo     ; (The Hydra's: hydra.inc)
+            BI          "mods", 0, 0, B5, bi_mods
+            BI          "errstr", 1, 1, B5, bi_errstr
+            BI          "ps", 0, 0, B5, bi_ps
+            BI          "task-info", 1, 1, B5, bi_task_info
+            BI          "yield", 0, 0, B5, bi_yield
+            BI          "sleep-until", 1, 1, B5, bi_sleep_until
+            BI          "peek", 1, 1, B5, bi_peek
+            BI          "poke", 2, 2, B5, bi_poke
+            BI          "peek-word", 1, 1, B5, bi_peek_word
+            BI          "poke-word", 2, 2, B5, bi_poke_word
+            BI          "banks", 0, 0, B5, bi_banks
+            BI          "bank-alloc", 1, 1, B5, bi_bank_alloc
+            BI          "bank-free", 2, 2, B5, bi_bank_free
+            BI          "bank-read", 3, 3, B5, bi_bank_read
+            BI          "bank-write", 3, 3, B5, bi_bank_write
+            BI          "seg-create", 1, 1, B5, bi_seg_create
+            BI          "seg-attach", 1, 1, B5, bi_seg_attach
+            BI          "seg-detach", 1, 1, B5, bi_seg_detach
+            BI          "seg-read", 4, 4, B5, bi_seg_read
+            BI          "seg-write", 4, 4, B5, bi_seg_write
+            BI          "free", 0, 0, B5, bi_free
+            BI          "bind", 2, 4, B5, bi_bindns
+            BI          "mount", 2, 5, B5, bi_mount
+            BI          "unmount", 1, 2, B5, bi_unmount
+            BI          "ns", 0, 0, B5, bi_ns
+            BI          "newns", 0, 0, BF_SPECIAL, sf_newns
+            BI          "note", 2, 2, B5, bi_note
+            BI          "note-group", 2, 2, B5, bi_note_group
+            BI          "on-note", 1, 1, B5, bi_on_note
+            BI          "key", 0, 0, B5, bi_key
+            BI          "key?", 0, 0, B5, bi_keyp
+            BI          "hold", 0, ANY, BF_SPECIAL, sf_hold
 
 BI_COUNT        = BI_N
+.assert     BI_COUNT <= 256, error, "builtins.inc: 256 built-ins at most (BUILTIN0 + 2 * n, below IMM_PAGES)"
 
 .rodata
 ; The table: each built-in's least and most arguments, flags, code
