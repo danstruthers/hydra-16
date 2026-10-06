@@ -22,9 +22,36 @@ y_scell:    .res        2
 
 ; ---- Streams made
 
-; stdin, stdout and stderr made and bound, and args: the arguments at hl_argp (zero-terminated, an empty one after
-; the last; hl_argp 0, none), a list of strings; as hylang starts.  OUT: C = 1 if there's no room; hv = (load path),
-; what a script runs (its path args' first), or NIL if there's none
+; stdin, stdout and stderr: streams of fds 0, 1 and 2, bound; as hylang starts without a snapshot (a snapshot has
+; them).  OUT: C = 1 if there's no room
+y_std:
+            jsr         y_enter
+            ldx         #0
+@one:
+            phx
+            lda         con_fd,x
+            sta         y_sfd
+            lda         con_fl,x
+            ldx         y_sfd
+            jsr         y_stream
+            plx
+            phx
+            lda         con_name_lo,x
+            pha
+            lda         con_name_hi,x
+            tax
+            pla
+            jsr         y_bind
+            plx
+            inx
+            cpx         #3
+            bcc         @one
+            clc
+            rts
+
+; args: the arguments at hl_argp (zero-terminated, an empty one after the last; hl_argp 0, none), a list of strings;
+; as hylang starts.  OUT: C = 1 if there's no room; hv = (load path), what a script runs (its path args' first), or
+; NIL if there's none
 y_init:
             jsr         y_enter
             stz         cf                                  ; (args: cf)
@@ -64,32 +91,10 @@ y_init:
             jsr         y_append
             bra         @arg
 @made:
-            lda         cf
-            ldx         cf + 1
-            jsr         y_rpush
-            ldx         #0
-@one:
-            phx
-            lda         con_fd,x
-            sta         y_sfd
-            lda         con_fl,x
-            ldx         y_sfd
-            jsr         y_stream
-            plx
-            phx
-            lda         con_name_lo,x
-            pha
-            lda         con_name_hi,x
-            tax
-            pla
-            jsr         y_bind
-            plx
-            inx
-            cpx         #3
-            bcc         @one
-            jsr         root_pop                            ; (args)
+            lda         cf                                  ; (args)
             sta         hv
-            stx         hv + 1
+            lda         cf + 1
+            sta         hv + 1
             LDAX        s_args
             jsr         y_bind
             stz         hv                                  ; (A script: (load path))

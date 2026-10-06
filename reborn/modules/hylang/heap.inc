@@ -52,9 +52,26 @@ VR5             = vr + 10
 VR6             = vr + 12
 VR7             = vr + 14
 
+PSTATE_SEG
+pk:         .res        256                                 ; Each page's kind (PK_*)
+fl_lo:      .res        PK_KINDS                            ; Each kind's free cells, a list
+fl_hi:      .res        PK_KINDS
+sym_lo:     .res        256                                 ; The symbols and atoms: buckets, each a chain (word 2)
+sym_hi:     .res        256
+cell_bank:  .res        16                                  ; The cell heap's banks, and how many
+cell_banks: .res        1
+blob_bank:  .res        16                                  ; The blobs' banks, and how many ...
+blob_tlo:   .res        16                                  ;   each filled to this byte
+blob_thi:   .res        16
+blob_banks: .res        1
+free_pages: .res        1                                   ; The cell heap's free pages
+fp_next:    .res        1                                   ; (Where find_page looks first)
+gc_count:   .res        2                                   ; The collections so far
+gc_fresh:   .res        1                                   ; Pages made a kind's since the last (the REPL's: collect
+                                                            ;   while the prompt waits)
+
 .bss
-pk:         .res        256                                 ; Each page's kind (PK_*) ...
-bank_of:    .res        256                                 ;   its bank (for $00) ...
+bank_of:    .res        256                                 ; A page's bank (for $00: cell_bank's, so not PSTATE's) ...
 ptr_hi:     .res        256                                 ;   and its address's high byte in the window
 mlo:        .res        256                                 ; A reference's mark: its byte, its low byte's part ...
 mbase_lo:   .res        256                                 ;   its page's first mark byte, from its high byte ...
@@ -66,26 +83,11 @@ ms_lo:      .res        256                                 ; The mark stack (25
 ms_hi:      .res        256
 msp:        .res        1
 movf:       .res        1                                   ; (The mark stack was full: scan again)
-fl_lo:      .res        PK_KINDS                            ; Each kind's free cells, a list
-fl_hi:      .res        PK_KINDS
-sym_lo:     .res        256                                 ; The symbols and atoms: buckets, each a chain (word 2)
-sym_hi:     .res        256
 rs_lo:      .res        ROOTS                               ; The root stack
 rs_hi:      .res        ROOTS
 rsp:        .res        1
-cell_bank:  .res        16                                  ; The cell heap's banks, and how many
-cell_banks: .res        1
-blob_bank:  .res        16                                  ; The blobs' banks, and how many ...
-blob_tlo:   .res        16                                  ;   each filled to this byte
-blob_thi:   .res        16
-blob_banks: .res        1
-free_pages: .res        1                                   ; The cell heap's free pages
-fp_next:    .res        1                                   ; (Where find_page looks first; a page's cells' size,
-fp_size:    .res        1                                   ;   and their references' step)
-fp_step:    .res        1
-gc_count:   .res        2                                   ; The collections so far
-gc_fresh:   .res        1                                   ; Pages made a kind's since the last (the REPL's: collect
-                                                            ;   while the prompt waits)
+fp_size:    .res        1                                   ; (A page's cells' size, and their references' step:
+fp_step:    .res        1                                   ;   find_page's)
 gc_stress:  .res        1                                   ; <> 0: collect before every allocation (a test's: hylang -g)
 gc_save:    .res        11                                  ; (The scratch registers, hp to ht, while it collects)
 g_bank:     .res        1                                   ; (The blob bank being compacted: its index, its bank ...
@@ -94,6 +96,7 @@ g_top:      .res        2                                   ;   its top, as an a
 g_size:     .res        2                                   ;   a blob's size in words, as bytes ...
 g_word:     .res        1                                   ;   and its owner's word)
 b_tried:    .res        1                                   ; (blob_alloc's: it collected)
+cg_y:       .res        1                                   ; (cell_get's: .Y kept)
 i_kind:     .res        1                                   ; (intern's: the kind, the name's length, the bucket,
 i_len:      .res        1                                   ;   the next in it)
 i_hash:     .res        1
@@ -109,75 +112,96 @@ i_next:     .res        2
 
 ; The heap made: its tables, two banks of cells and one of blobs.  OUT: C = 1, .A the error, if there's no room
 heap_init:
-            lda         #<(marks_raw + 15)                  ; (The marks from a multiple of 16)
-            and         #$F0
-            sta         marks
-            sta         ht
-            lda         #>(marks_raw + 15)
-            sta         marks + 1
-            sta         ht + 1
+            jsr         heap_tables
             ldx         #0
-@tables:
-            lda         ht                                  ; (A page's first mark byte: marks + 16 * x ...
-            sta         mbase_lo,x
-            clc
-            adc         #16
-            sta         ht
-            lda         ht + 1
-            sta         mbase_hi,x
-            adc         #0
-            sta         ht + 1
-            txa
-            lsr
-            lsr
-            lsr
-            lsr
-            sta         mlo,x                               ;   and x >> 4, a low byte's, ORed in)
-            txa
-            lsr
-            and         #7
-            tay
-            lda         bit_of,y
-            sta         mbit,x                              ; (1 << ((x >> 1) & 7): the bit)
-            txa
-            and         #$0F
-            asl
-            ora         #$80
-            sta         ptr_hi,x                            ; (((x & $0F) << 1) | $80: a page's address)
+@pages:
             stz         pk,x                                ; (PK_NONE)
             stz         bank_of,x
             stz         sym_lo,x
             stz         sym_hi,x
             inx
-            bne         @tables
+            bne         @pages
             ldx         #PK_KINDS - 1
 @lists:
             stz         fl_lo,x
             stz         fl_hi,x
             dex
             bpl         @lists
-            ldx         #17                                 ; (VR0-VR7 and hv: NIL)
-@values:
-            stz         vr,x
-            dex
-            bpl         @values
             stz         cell_banks
             stz         blob_banks
             stz         free_pages
             stz         fp_next
-            stz         rsp
-            stz         msp
-            stz         movf
             stz         gc_count
             stz         gc_count + 1
             stz         gc_fresh
-            stz         gc_stress
             jsr         take_cell_bank
             bcs         @rts
             jsr         take_cell_bank
             bcs         @rts
             jmp         take_blob_bank
 @rts:
+            rts
+
+; The heap's tables that its layout gives (the marks' places, the pages' addresses), and what's kept while it works
+; (the value registers NIL, the root stack and the mark stack empty): heap_init's, and a snapshot's (snap_restore)
+heap_tables:
+            lda         #<(marks_raw + 15)                  ; (The marks from a multiple of 16)
+            and         #$F0
+            sta         marks
+            lda         #>(marks_raw + 15)
+            sta         marks + 1
+            ldx         #0                                  ; (The first 16 ...
+@first:
+            txa
+            asl
+            asl
+            asl
+            asl
+            clc
+            adc         marks
+            sta         mbase_lo,x                          ; (A page's first mark byte: marks + 16 * x ...
+            lda         marks + 1
+            adc         #0
+            sta         mbase_hi,x
+            stz         mlo,x                               ;   and x >> 4, a low byte's, ORed in)
+            txa
+            lsr
+            tay
+            lda         bit_of,y
+            sta         mbit,x                              ; (1 << ((x >> 1) & 7): the bit)
+            txa
+            asl
+            ora         #$80
+            sta         ptr_hi,x                            ; (((x & $0F) << 1) | $80: a page's address)
+            inx
+            cpx         #16
+            bne         @first
+            ldx         #0                                  ;   then each from the one 16 before: the same, but the
+@rest:                                                      ;   mark byte's high byte and mlo one more)
+            lda         ptr_hi,x
+            sta         ptr_hi + 16,x
+            lda         mbit,x
+            sta         mbit + 16,x
+            lda         mbase_lo,x
+            sta         mbase_lo + 16,x
+            lda         mbase_hi,x
+            inc         a
+            sta         mbase_hi + 16,x
+            lda         mlo,x
+            inc         a
+            sta         mlo + 16,x
+            inx
+            cpx         #256 - 16
+            bne         @rest
+            ldx         #17                                 ; (VR0-VR7 and hv: NIL)
+@values:
+            stz         vr,x
+            dex
+            bpl         @values
+            stz         rsp
+            stz         msp
+            stz         movf
+            stz         gc_stress
             rts
 
 ; Another bank for the cells: its 16 pages free (the first bank's first IMM_PAGES the immediates').  OUT: C = 1,
@@ -305,7 +329,7 @@ cell_alloc:
             sta         hk
             lda         gc_stress
             beq         @again
-            jsr         gc_collect
+            GC_CALL
 @again:
             ldx         hk
             lda         fl_lo,x
@@ -338,7 +362,7 @@ cell_alloc:
 @empty:
             jsr         find_page                           ; (A free page for the kind ...
             bcc         @again
-            jsr         gc_collect                          ;   none: a collection ...
+            GC_CALL                          ;   none: a collection ...
             jsr         maybe_grow
             ldx         hk
             lda         fl_lo,x
@@ -355,8 +379,9 @@ cell_alloc:
             sec
             rts
 
-; After a collection, a bank more if less than a quarter of the cell heap's pages are free (so it doesn't collect
-; over and over).  Its failure doesn't matter
+; After a collection, a bank more if fewer of the cell heap's pages are free than are used: a collection's work is
+; what's live, so with as much free again it costs each cell made about the same, however much is live (the
+; library's, as hylang starts, half its first two banks).  Its failure doesn't matter
 maybe_grow:
             lda         cell_banks
             cmp         #16
@@ -368,9 +393,7 @@ maybe_grow:
             sec
             sbc         #IMM_PAGES
             sec
-            sbc         free_pages                          ; (The pages used ...
-            lsr
-            lsr                                             ;   a quarter of them)
+            sbc         free_pages                          ; (The pages used)
             cmp         free_pages
             bcc         @rts
             jsr         take_cell_bank
@@ -435,18 +458,25 @@ find_page:
 
 ; IN: .A, .X = a cell's reference; .Y = a word (0-31).  OUT: .A, .X = the word (low, high).  Keeps .Y
 cell_get:
-            jsr         deref
-            phy
+            sta         hp                                  ; (deref's, here)
+            lda         bank_of,x
+            sta         $00
+            lda         hp
+            asl
+            sta         hp
+            lda         ptr_hi,x
+            adc         #0
+            sta         hp + 1
+            sty         cg_y
             tya
             asl
             tay
-            lda         (hp),y
-            pha
             iny
             lda         (hp),y
             tax
-            pla
-            ply
+            dey
+            lda         (hp),y
+            ldy         cg_y
             rts
 
 ; IN: hv = a cell's reference; .Y = a word; .A, .X = the value for it.  Keeps .Y
@@ -517,7 +547,7 @@ blob_alloc:
             stz         b_tried
             lda         gc_stress
             beq         @try
-            jsr         gc_collect
+            GC_CALL
 @try:
             ldx         #0
 @bank:
@@ -541,7 +571,7 @@ blob_alloc:
             lda         b_tried                             ; (No room: a collection, then a bank more)
             bne         @grow
             inc         b_tried
-            jsr         gc_collect
+            GC_CALL
             bra         @try
 @grow:
             jsr         take_blob_bank
@@ -863,7 +893,9 @@ same_name:
             sec
             rts
 
-; ---- The collector
+; ---- The collector (GC_SEG: hylang's fifth bank; its roots' hooks, in the RAM, call mark_val and gc_drain there)
+
+GC_SEG
 
 ; A collection: the cells nothing reaches taken back, the blobs nothing owns dropped (the rest moved down).  The
 ; scratch registers (hp to ht) are kept
@@ -956,13 +988,6 @@ gc_collect:
             dex
             bpl         @back
             rts
-
-; The roots that aren't the heap's own: gc_hook's (an rts, till the evaluator has some).  Each marked with mark_val
-gc_roots:
-            jmp         (gc_hook)
-gc_none:
-            rts
-gc_hook:    .word       gc_none
 
 ; IN: mv = a value: marked, if it's a cell not marked yet, and pushed on the mark stack (or the stack noted full)
 mark_val:
@@ -1552,6 +1577,20 @@ blob_move:
             bne         @bytes
 @done:
             rts
+
+.ifdef HL_DATA4
+.segment "DATA4"
+.else
+.segment "DATA"
+.endif
+
+; The roots that aren't the heap's own: gc_hook's (an rts, till the evaluator has some).  Each marked with mark_val
+; (gc_collect's; in the RAM, so the evaluator can set gc_hook)
+gc_roots:
+            jmp         (gc_hook)
+gc_none:
+            rts
+gc_hook:    .word       gc_none
 
 ; ---- The free space (for the tests: slow)
 

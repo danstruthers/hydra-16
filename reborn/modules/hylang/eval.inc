@@ -24,6 +24,8 @@ depth:      .res        2                                   ; Frames on the stac
 ev_jv:      .res        2                                   ; (A jump's address: a frame's, a built-in's)
 bi_n:       .res        1                                   ; (A built-in called: its number, its arguments counted,
 bi_count:   .res        1                                   ;   to 255)
+bf_t:       .res        1                                   ; (bi_fast's: its first's high byte, the second less its
+bf_s:       .res        1                                   ;   tag bit)
 lk_f:       .res        2                                   ; (lookup's and frame_add's: the frame, the cell, its end,
 lk_c:       .res        2                                   ;   the symbol)
 lk_end:     .res        1
@@ -33,11 +35,15 @@ fa_flags:   .res        1                                   ;   its formals left
 fa_f:       .res        2
 fa_i:       .res        2
 eb_start:   .res        2                                   ; (An error's message: where its capture began)
+amp_name:   .res        8                                   ; (A name &N being made)
+
+PSTATE_SEG
 amp_syms:   .res        2 * 10                              ; The symbols &_, &1 ... &9
 sym_err:    .res        2                                   ; &err, &code
 sym_code:   .res        2
 atom_intr:  .res        2                                   ; :intr
-amp_name:   .res        8                                   ; (A name &N being made)
+
+.bss
 
 ; The frames' codes: k_tab has what a value given to each does; k_info, whether it takes an error (else one passes
 ; it by), and its words but the code ($FF: K_ARG's, 4 and its cn arguments)
@@ -100,10 +106,15 @@ K_KINDS         = 34
 
 ; ---- The machine
 
-; The machine made: its stack, the symbols it binds, the error kept for no room.  OUT: C = 1 if there's no room
+; The machine made: its stack, empty
 ev_init:
             jsr         stk_init
             stz         ev_inargs
+            rts
+
+; Its symbols (&_ ..., &err, &code, :intr) and the error kept for no room: made (a snapshot has them).  OUT: C = 1 if
+; there's no room
+ev_syms:
             lda         #'&'
             sta         amp_name
             ldx         #0                                  ; (&_, &1 ... &9)
@@ -747,15 +758,18 @@ k_exit:
             jsr         unfix
             jmp         EXITS
 
-; A built-in called (ex): too many arguments is an error; a special form gets them as they're written, an ordinary
-; one their values
+; A built-in called (ex): a special form gets its arguments as they're written (too many: an error), an ordinary one
+; their values (too many: an error then, ev_bapply's, as danlang has it: an argument's error first)
 ev_builtin:
             lda         ex + 1                              ; (Its number: the value's bits 8-1)
             lsr
             lda         ex
             ror
             sta         bi_n
-            jsr         count_cr
+            tax
+            lda         bi_flags,x
+            bpl         @ordinary
+            jsr         count_cr                            ; (A special form: its arguments counted)
             sta         bi_count
             ldx         bi_n
             cmp         bi_max,x
@@ -763,9 +777,7 @@ ev_builtin:
             bcc         :+
             jmp         ev_toomany
 :
-            lda         bi_flags,x
-            bpl         @ordinary
-            lda         bi_lo,x                             ; (A special form: its own way)
+            lda         bi_lo,x                             ; (Its own way)
             sta         ev_jv
             lda         bi_hi,x
             sta         ev_jv + 1
@@ -1008,6 +1020,13 @@ ev_bapply:
             jmp         ev_error_args
 :
             ldx         bi_n
+            lda         bi_flags,x                          ; (Fixnums, for some: worked here)
+            and         #BF_FAST
+            beq         :+
+            jsr         bi_fast
+            bcc         @done
+            ldx         bi_n
+:
             lda         bi_lo,x
             sta         ev_jv
             lda         bi_hi,x
@@ -1051,6 +1070,143 @@ ev_bapply:
 
 bi_jump:
             jmp         (ev_jv)
+
+; bi_n (BF_FAST's) on its cn values at argp, if they're fixnums and so is its answer (or it's T or NIL): + and - of
+; two, 1+, 1-, zero?, one?, and the comparisons.  OUT: C = 0, ex = its value; C = 1, not here (its own code's)
+bi_fast:
+            lda         cn + 1
+            bne         @no
+            lda         (argp)                              ; (The first a fixnum)
+            lsr
+            bcc         @no
+            ldy         #1
+            lda         (argp),y
+            sta         bf_t                                ; (Its high byte: ex is set only when it's done)
+            lda         cn
+            cmp         #2
+            beq         @two
+            cmp         #1
+            bne         @no
+            lda         (argp)
+            ldx         bi_n
+            cpx         #BIN_ZEROP
+            beq         @zero
+            cpx         #BIN_ONEP
+            beq         @one
+            cpx         #BIN_INC
+            beq         @inc
+            cpx         #BIN_DEC
+            beq         @dec
+@no:
+            sec
+            rts
+@zero:
+            cmp         #<FIX(0)                            ; (FIX(0) and FIX(1): their high bytes 0)
+            bra         @is
+@one:
+            cmp         #<FIX(1)
+@is:
+            bne         @false
+            lda         bf_t
+            bne         @false
+@true:
+            lda         #<T_VAL
+            bra         @bool
+@false:
+            lda         #<NIL
+@bool:
+            sta         ex
+            stz         ex + 1
+            clc
+            rts
+@inc:
+            clc                                             ; (+ 2: the next fixnum)
+            adc         #2
+            tax
+            lda         bf_t
+            adc         #0
+            bra         @fix
+@dec:
+            sec
+            sbc         #2
+            tax
+            lda         bf_t
+            sbc         #0
+@fix:
+            bvs         @no                                 ; (Past a fixnum: the built-in's own)
+            sta         ex + 1
+            stx         ex
+            clc
+            rts
+@two:
+            ldy         #2                                  ; (The second a fixnum too)
+            lda         (argp),y
+            lsr
+            bcc         @no
+            ldx         bi_n
+            cpx         #BIN_ADD
+            beq         @add
+            cpx         #BIN_SUB
+            beq         @sub
+            lda         (argp)                              ; (A comparison: the first less the second, as the
+            cmp         (argp),y                            ;   words are ordered as the fixnums are)
+            ldy         #1
+            lda         (argp),y
+            ldy         #3
+            sbc         (argp),y
+            bvc         :+
+            eor         #$80
+:
+            bmi         @less                               ; (N: the first is less)
+            lda         (argp)                              ; (Equal?)
+            ldy         #2
+            cmp         (argp),y
+            bne         @more
+            lda         bf_t
+            ldy         #3
+            cmp         (argp),y
+            bne         @more
+            cpx         #BIN_EQ                             ; (Equal: ==, <= and >= are T)
+            beq         @true
+            cpx         #BIN_LE
+            beq         @true
+            cpx         #BIN_GE
+            beq         @true
+            bra         @false
+@less:
+            cpx         #BIN_LT                             ; (Less: <, <= are T)
+            beq         @true
+            cpx         #BIN_LE
+            beq         @true
+            bra         @false
+@more:
+            cpx         #BIN_GT                             ; (More: >, >= are T)
+            beq         @true
+            cpx         #BIN_GE
+            beq         @true
+            bra         @false
+@add:
+            lda         (argp),y                            ; (The second, less its tag bit, and the first)
+            and         #$FE
+            clc
+            adc         (argp)
+            tax
+            ldy         #3
+            lda         (argp),y
+            adc         bf_t
+            bra         @fix
+@sub:
+            lda         (argp),y                            ; (The first less the second, its tag bit dropped)
+            and         #$FE
+            sta         bf_s
+            lda         (argp)
+            sec
+            sbc         bf_s
+            tax
+            lda         bf_t
+            ldy         #3
+            sbc         (argp),y
+            jmp         @fix
 
 ; OUT: hv = the cn values on top of the stack (at argp), a list.  It may collect (ev_nomem, if there's no room)
 args_list:
@@ -1110,17 +1266,12 @@ ev_fapply:
             LDAX        s_manyargs
             jmp         ev_error_args
 :
-            lda         cf
+            lda         cf                                  ; (Its flags, and its formals counted: fn_make's)
             ldx         cf + 1
             ldy         #3
             jsr         cell_get
             sta         fa_flags
-            lda         cf                                  ; (Its formals, counted)
-            ldx         cf + 1
-            ldy         #0
-            jsr         cell_get
-            jsr         count_list
-            sta         fa_k
+            stx         fa_k
             lda         cn + 1                              ; (cn against them)
             bne         @more
             lda         cn
@@ -1179,8 +1330,11 @@ ev_fapply:
             ldx         ee + 1
             ldy         #2
             jsr         ex_set
+            lda         fa_k                                ; (Its flags, and its formals: those left)
+            sec
+            sbc         cn
+            tax
             lda         fa_flags
-            ldx         #0
             ldy         #3
             jsr         ex_set
             stz         ev_inargs
@@ -1916,7 +2070,7 @@ frame_add:
             jmp         @cell
 
 ; IN: ex = a symbol.  OUT: C = 0 and lk_c, .Y = the cell and place of its value in ee's frames (the nearest);
-; C = 1 if none binds it.  (lookup's and set!'s)
+; C = 1 if none binds it, and .A = 0 if no frame ever has (hp its symbol's cell, then).  (lookup's and set!'s)
 find_bound:
             lda         ex
             ldx         ex + 1
@@ -1925,7 +2079,8 @@ find_bound:
             lda         (hp),y
             and         #SF_LOCAL
             bne         @lb1
-            jmp         @none
+            sec                                             ; (.A 0: hp the symbol's)
+            rts
 @lb1:
             MOVW        lk_f, ee
 @frame:
@@ -1989,6 +2144,7 @@ find_bound:
             sta         lk_f + 1
             bra         @frame
 @none:
+            lda         #1                                  ; (hp a frame's)
             sec
             rts
 
@@ -2006,9 +2162,12 @@ lookup:
             sta         ex
             rts
 @global:
+            cmp         #0                                  ; (hp the symbol's already?)
+            beq         :+
             lda         ex
             ldx         ex + 1
             jsr         deref
+:
             ldy         #3
             lda         (hp),y
             tax

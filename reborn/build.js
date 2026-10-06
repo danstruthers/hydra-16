@@ -11,7 +11,9 @@
 //                          NAME.bin: a module, for a test's ROM); each checked:
 //                          only the kernel writes T, V and W (tools/check.js); and HyForth's libraries,
 //                          forthlib/NAME.s -> obj/forthlib/NAME.fl (tools/forthlib.js: the core's id patched into
-//                          obj/modules/forth.bin first), for the ROM disk's /lib/forth
+//                          obj/modules/forth.bin first), for the ROM disk's /lib/forth; and hylang's snapshot,
+//                          obj/modules/hysnap.bin (tools/hysnap.js: hylang's id patched into obj/modules/hylang.bin,
+//                          then its heap with its library loaded, taken in the emulator), if rom.txt has it
 //   4. the paged ROM       modules/rom.txt -> bin/prom0.bin, prom1.bin ... (tools/romimg.js): a 512K image for
 //                          each socket it fills, in order, as many as it needs; with the hardware test in bank 1
 //                          (from ../os_rom/bin/paged_rom_C02.bin) and the ROMs' checksums for it, and the ROM
@@ -43,6 +45,7 @@ const apigen = require('./tools/apigen.js');
 const romimg = require('./tools/romimg.js');
 const romfs = require('./tools/romfs.js');
 const forthlib = require('./tools/forthlib.js');
+const hysnap = require('./tools/hysnap.js');
 const budget = require('./tools/budget.js');
 const check = require('./tools/check.js');
 
@@ -274,13 +277,18 @@ function build(opt = {}) {
   sdk();
   forthlib.build({ root: ROOT, modules, assemble: (files, od, inc) => assemble(files, od, inc, defines), ld65: args => run(LD65, args) });
 
-  // The paged ROM
+  // hylang's snapshot (the module hysnap: its heap with its library loaded, taken in the emulator), then the paged ROM
   const manifest = readManifest(at('modules', 'rom.txt'));
+  const hwt = hwtest(), bios = fs.readFileSync(at('bin', 'bios.bin'));
+  if (manifest.modules.includes('hysnap')) {
+    const s = hysnap.build({ root: ROOT, modules, names: manifest.modules, rc: tests.t_rc, hwtest: hwt, bios });
+    say('hylang\'s snapshot (hysnap): ' + s.bytes + ' bytes, ' + s.pages + ' pages of cells and ' + s.blobBytes + ' bytes of blobs; hylang\'s id $' +
+      s.id.toString(16).toUpperCase().padStart(4, '0'));
+  }
   for (const n of manifest.modules) if (!modules[n]) throw new Error('modules/rom.txt: no module ' + n);
-  const hwt = hwtest();
   if (!hwt) say('(no ' + path.relative(ROOT, HWTEST_IMAGE) + ': the paged ROM has no hardware test)');
   const { image, entries, disk, banks, chips } = romimg.build({ modules: manifest.modules.map(n => ({ file: n, data: modules[n] })), init: manifest.init,
-    hwtest: hwt, bios: fs.readFileSync(at('bin', 'bios.bin')), romfs: romfs.manifest(at('romfs', 'romfs.txt')) });
+    hwtest: hwt, bios, romfs: romfs.manifest(at('romfs', 'romfs.txt')) });
   for (const f of fs.readdirSync(at('bin')).filter(f => /^prom\d*\.bin$/.test(f))) fs.rmSync(at('bin', f));   // (The last build's)
   for (let k = 0; k < chips; k++) fs.writeFileSync(at('bin', 'prom' + k + '.bin'), image.subarray(k * romimg.CHIP, (k + 1) * romimg.CHIP));
   fs.writeFileSync(at('obj', 'build.json'), JSON.stringify({ clock: opt.clock || 1, acia: opt.acia || 'rockwell' }) + '\n');

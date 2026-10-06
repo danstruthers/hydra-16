@@ -635,8 +635,9 @@ o_at:       .res        2
 o_n:        .res        2
 o_char:     .res        1
 o_kind:     .res        1                                   ; (o_intern's: a symbol's or an atom's)
-o_gensym:   .res        2                                   ; (gensym's count)
 
+PSTATE_SEG
+o_gensym:   .res        2                                   ; gensym's count
 .segment "RODATA2"
 n_substring: .byte      "substring", 0
 o_nilname:  .byte       "nil"
