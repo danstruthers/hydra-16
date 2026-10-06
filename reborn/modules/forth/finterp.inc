@@ -37,8 +37,23 @@ find_name:
             rts
 
 ; The word named ( c-addr u ) (kept on the stack), in word list w: C = 0, w its header; or C = 1.  Hidden ones
-; aren't found (their length with F_HIDDEN never matches); names match in either case
+; aren't found (their length with F_HIDDEN never matches); names match in either case.  By the index if there is
+; one; else each header, newest first
 find_wl:
+            lda         w + 1
+            pha
+            lda         w
+            pha
+            jsr         idx_find                            ; (.A = 0: C its answer)
+            bne         :+
+            pla
+            pla
+            rts
+:
+            pla
+            sta         w
+            pla
+            sta         w + 1
             ldy         #1                                  ; (Its last header)
             lda         (w),y
             pha
@@ -63,28 +78,8 @@ find_wl:
             and         #F_HIDDEN | LEN_MASK
             cmp         dlo,x
             bne         @next
-            clc                                             ; (Its name: w3)
-            lda         w
-            adc         #3
-            sta         w3
-            lda         w + 1
-            adc         #0
-            sta         w3 + 1
-            ldy         #0
-@char:
-            cpy         tmp3
-            beq         @found
-            lda         (w2),y
-            jsr         upper
-            sta         cnt
-            lda         (w3),y
-            jsr         upper
-            cmp         cnt
-            bne         @next
-            iny
-            bra         @char
-@found:
-            clc
+            jsr         name_is
+            bcs         @next
             rts
 @next:
             ldy         #1
@@ -97,6 +92,497 @@ find_wl:
             bra         @hdr
 @none:
             sec
+            rts
+
+; Is header w's name (its length tmp3's) the one at w2, in either case?  C = 0 yes.  w3 its name
+name_is:
+            clc
+            lda         w
+            adc         #3
+            sta         w3
+            lda         w + 1
+            adc         #0
+            sta         w3 + 1
+            ldy         #0
+@char:
+            cpy         tmp3
+            beq         @yes
+            lda         (w2),y
+            jsr         upper
+            sta         cnt
+            lda         (w3),y
+            jsr         upper
+            cmp         cnt
+            bne         @no
+            iny
+            bra         @char
+@yes:
+            clc
+            rts
+@no:
+            sec
+            rts
+
+; ---- The word lists' index
+;   In a bank of the task's (idx_bank: its last, taken as forth starts), a record for each word list searched (8
+; at most, as the search order has): its last header as it was indexed, and a chain for each of 64 hashes of a
+; name (idx_hash), of nodes (a header, the next node) newest first: a search reads one chain, not every header.  A
+; word made goes in as it's made (idx_add); whatever else changes a word list leaves its record behind its last
+; header (a library loaded, a MARKER), and the next search of it makes its chains again (idx_make), from more
+; nodes; -lib and lib, which change FORTH's in the middle, start the index again (idx_drop), as does a bank full of
+; nodes.  The bank's "ix" says it's the index (a program that wrote there without BANKS_ALLOC: started again).  No
+; bank, or more words than it holds: each header searched, as before
+
+IDX_SIG     = BANK_WINDOW                                   ; The bank: "ix" ...
+IDX_N       = BANK_WINDOW + 2                               ;   the records in use ...
+IDX_FREE    = BANK_WINDOW + 3                               ;   the next node free ...
+IDX_RECS    = BANK_WINDOW + 5                               ;   the records: a word list (2), its last header (2),
+IDX_RMAX    = ORDER_MAX                                     ;   its chains' first nodes (2 each, 0: none) ...
+IDX_RSIZE   = 4 + 128
+IDX_TAILS   = IDX_RECS + IDX_RMAX * IDX_RSIZE               ;   the chains' last nodes, as a record's are made ...
+IDX_NODES   = (IDX_TAILS + 128 + 3) & $FFFC                 ;   then the nodes, 4 bytes each (1,750) ...
+IDX_END     = BANK_WINDOW + $2000                           ;   to the bank's end
+
+; The word named ( c-addr u ) (kept on the stack) in word list w, by the index: .A = 0 and C = 0, w its header, or
+; C = 1; or .A <> 0, no index (none, or the name in the bank's window, $8000-$9FFF: EVALUATE of a bank's text).
+; Keeps tmp
+idx_find:
+            lda         idx_bank
+            cmp         #$FF
+            beq         @no
+            lda         dhi + 1,x
+            and         #$E0
+            cmp         #>BANK_WINDOW
+            bne         :+
+@no:
+            lda         #1
+            rts
+:
+            lda         RAM_BANK                            ; The bank, and the word list's record (made again if it
+            pha                                             ;   isn't current: tmp its chains)
+            lda         tmp
+            pha
+            lda         tmp + 1
+            pha
+            lda         idx_bank
+            sta         RAM_BANK
+            jsr         idx_wl
+            bcs         @nobank
+            lda         dhi,x                               ; (Longer than a name can be, or none: not a word)
+            bne         @none
+            lda         dlo,x
+            beq         @none
+            cmp         #LEN_MASK + 1
+            bcs         @none
+            sta         tmp3
+            lda         dlo + 1,x
+            sta         w2
+            lda         dhi + 1,x
+            sta         w2 + 1
+            jsr         idx_hash                            ; Its chain: each node, its header's length, then its
+            lda         (tmp),y                             ;   name
+            sta         idx_node
+            iny
+            lda         (tmp),y
+            sta         idx_node + 1
+@node:
+            lda         idx_node + 1
+            beq         @none
+            sta         w3 + 1
+            lda         idx_node
+            sta         w3
+            ldy         #3
+            lda         (w3),y
+            sta         idx_node + 1
+            dey
+            lda         (w3),y
+            sta         idx_node
+            dey
+            lda         (w3),y
+            sta         w + 1
+            lda         (w3)
+            sta         w
+            ldy         #2
+            lda         (w),y
+            and         #F_HIDDEN | LEN_MASK
+            cmp         tmp3
+            bne         @node
+            jsr         name_is
+            bcs         @node
+            jsr         idx_out                             ; (C = 0)
+            lda         #0
+            rts
+@none:
+            jsr         idx_out
+            lda         #0
+            sec
+            rts
+@nobank:
+            jsr         idx_out
+            lda         #1
+            rts
+
+; (idx_find's end: tmp and the bank as they were.  Keeps C)
+idx_out:
+            ply                                             ; (Its return address: .Y and w3)
+            sty         w3
+            ply
+            sty         w3 + 1
+            pla
+            sta         tmp + 1
+            pla
+            sta         tmp
+            pla
+            sta         RAM_BANK
+            ldy         w3 + 1
+            phy
+            ldy         w3
+            phy
+            rts
+
+; tmp = word list w's chains (its record's), current (made again if they aren't), the bank selected: C = 0; or
+; C = 1, no index (more words than the bank holds: idx_bank $FF, none from now on)
+idx_wl:
+            lda         IDX_SIG                             ; (Not the index: started again)
+            cmp         #'i'
+            bne         :+
+            lda         IDX_SIG + 1
+            cmp         #'x'
+            beq         :++
+:
+            jsr         idx_reset
+:
+            jsr         idx_rec                             ; Its record, or a new one (the records all in use:
+            bcc         @have                               ;   started again)
+            lda         IDX_N
+            cmp         #IDX_RMAX
+            bcc         :+
+            jsr         idx_reset
+            LDR         tmp, IDX_RECS
+:
+            inc         IDX_N
+            lda         w
+            sta         (tmp)
+            ldy         #1
+            lda         w + 1
+            sta         (tmp),y
+            bra         @make
+@have:
+            ldy         #2                                  ; Current: its last header the word list's
+            lda         (w)
+            cmp         (tmp),y
+            bne         @make
+            ldy         #1
+            lda         (w),y
+            ldy         #3
+            cmp         (tmp),y
+            beq         @ok
+@make:
+            jsr         idx_make                            ; (The bank full: started again, this one made first)
+            bcc         @ok
+            jsr         idx_reset
+            inc         IDX_N
+            LDR         tmp, IDX_RECS
+            lda         w
+            sta         (tmp)
+            ldy         #1
+            lda         w + 1
+            sta         (tmp),y
+            jsr         idx_make
+            bcc         @ok
+            lda         #$FF
+            sta         idx_bank
+            rts
+@ok:
+            clc                                             ; (Its chains: after the word list and its last header)
+            lda         tmp
+            adc         #4
+            sta         tmp
+            bcc         :+
+            inc         tmp + 1
+:
+            clc
+            rts
+
+; tmp = the record of word list w (the bank selected): C = 0; or C = 1, none (tmp the next free one's place)
+idx_rec:
+            LDR         tmp, IDX_RECS
+            ldy         IDX_N
+@rec:
+            sec
+            dey
+            bmi         @done
+            lda         (tmp)
+            cmp         w
+            bne         :+
+            phy
+            ldy         #1
+            lda         (tmp),y
+            ply
+            cmp         w + 1
+            clc
+            beq         @done
+:
+            clc
+            lda         tmp
+            adc         #<IDX_RSIZE
+            sta         tmp
+            lda         tmp + 1
+            adc         #>IDX_RSIZE
+            sta         tmp + 1
+            bra         @rec
+@done:
+            rts
+
+; The index started again (the bank selected): no records, every node free
+idx_reset:
+            lda         #'i'
+            sta         IDX_SIG
+            lda         #'x'
+            sta         IDX_SIG + 1
+            stz         IDX_N
+            lda         #<IDX_NODES
+            sta         IDX_FREE
+            lda         #>IDX_NODES
+            sta         IDX_FREE + 1
+            rts
+
+; The chains of record tmp (word list w's) made: each header, newest first, at its chain's end; its last header
+; noted.  C = 1: the bank full.  Keeps w, tmp
+idx_make:
+            ldy         #4                                  ; No chains
+            lda         #0
+:
+            sta         (tmp),y
+            iny
+            cpy         #IDX_RSIZE
+            bne         :-
+            ldy         #127
+:
+            sta         IDX_TAILS,y
+            dey
+            bpl         :-
+            lda         w                                   ; (w: each header, then the word list again)
+            pha
+            lda         w + 1
+            pha
+            ldy         #1                                  ; Its last header
+            lda         (w),y
+            pha
+            ldy         #3
+            sta         (tmp),y
+            lda         (w)
+            sta         w
+            ldy         #2
+            sta         (tmp),y
+            pla
+            sta         w + 1
+@hdr:
+            clc                                             ; (0: the end)
+            lda         w + 1
+            beq         @done
+            jsr         idx_new                             ; Its node (w3): its header, no next
+            bcs         @done
+            lda         w
+            sta         (w3)
+            ldy         #1
+            lda         w + 1
+            sta         (w3),y
+            iny
+            lda         #0
+            sta         (w3),y
+            iny
+            sta         (w3),y
+            jsr         idx_hdr_hash                        ; After its chain's last, or its first
+            lda         IDX_TAILS + 1,y
+            beq         @first
+            sta         w2 + 1
+            lda         IDX_TAILS,y
+            sta         w2
+            phy
+            ldy         #2
+            lda         w3
+            sta         (w2),y
+            iny
+            lda         w3 + 1
+            sta         (w2),y
+            ply
+            bra         @tail
+@first:
+            iny                                             ; (After the word list and its last header)
+            iny
+            iny
+            iny
+            lda         w3
+            sta         (tmp),y
+            iny
+            lda         w3 + 1
+            sta         (tmp),y
+            dey
+            dey
+            dey
+            dey
+            dey
+@tail:
+            lda         w3
+            sta         IDX_TAILS,y
+            lda         w3 + 1
+            sta         IDX_TAILS + 1,y
+            ldy         #1                                  ; The next header
+            lda         (w),y
+            pha
+            lda         (w)
+            sta         w
+            pla
+            sta         w + 1
+            bra         @hdr
+@done:
+            pla                                             ; (C kept)
+            sta         w + 1
+            pla
+            sta         w
+            rts
+
+; Header lasthdr, just made in the compilation word list, into its record at its chain's start, if it has one and
+; it was current (the word list's last header before it the record's); else nothing (the next search makes its
+; chains again)
+idx_add:
+            lda         idx_bank
+            cmp         #$FF
+            beq         @done
+            lda         RAM_BANK
+            pha
+            lda         idx_bank
+            sta         RAM_BANK
+            lda         IDX_SIG                             ; (Not the index: the next search starts it again)
+            cmp         #'i'
+            bne         @out
+            lda         IDX_SIG + 1
+            cmp         #'x'
+            bne         @out
+            lda         current                             ; Its word list's record
+            sta         w
+            lda         current + 1
+            sta         w + 1
+            jsr         idx_rec
+            bcs         @out
+            lda         lasthdr
+            sta         w
+            lda         lasthdr + 1
+            sta         w + 1
+            lda         (w)                                 ; (Its link the record's last header)
+            ldy         #2
+            cmp         (tmp),y
+            bne         @out
+            ldy         #1
+            lda         (w),y
+            ldy         #3
+            cmp         (tmp),y
+            bne         @out
+            jsr         idx_new                             ; Its node, and the record's last header
+            bcs         @out
+            lda         w
+            sta         (w3)
+            ldy         #2
+            sta         (tmp),y
+            dey
+            lda         w + 1
+            sta         (w3),y
+            ldy         #3
+            sta         (tmp),y
+            jsr         idx_hdr_hash                        ; Its chain's first, before the one that was
+            iny
+            iny
+            iny
+            iny
+            lda         (tmp),y
+            pha
+            lda         w3
+            sta         (tmp),y
+            iny
+            lda         (tmp),y
+            pha
+            lda         w3 + 1
+            sta         (tmp),y
+            ldy         #3
+            pla
+            sta         (w3),y
+            dey
+            pla
+            sta         (w3),y
+@out:
+            pla
+            sta         RAM_BANK
+@done:
+            rts
+
+; The index started again at the next search (-lib's, lib's)
+idx_drop:
+            lda         idx_bank
+            cmp         #$FF
+            beq         @done
+            lda         RAM_BANK
+            pha
+            lda         idx_bank
+            sta         RAM_BANK
+            stz         IDX_SIG
+            pla
+            sta         RAM_BANK
+@done:
+            rts
+
+; w3 = a new node, C = 0; or C = 1, the bank full
+idx_new:
+            lda         IDX_FREE + 1
+            cmp         #>IDX_END
+            bcs         @done
+            sta         w3 + 1
+            lda         IDX_FREE
+            sta         w3
+            clc
+            adc         #4
+            sta         IDX_FREE
+            bcc         @done
+            inc         IDX_FREE + 1
+            clc
+@done:
+            rts
+
+; idx_hash of header w's name (w2, tmp3)
+idx_hdr_hash:
+            ldy         #2
+            lda         (w),y
+            and         #LEN_MASK
+            sta         tmp3
+            clc
+            lda         w
+            adc         #3
+            sta         w2
+            lda         w + 1
+            adc         #0
+            sta         w2 + 1
+; The chain of the name at w2, tmp3 long: .Y its place (2 bytes each), from its hash: its length * 8, and its first
+; and last characters in upper case, the sum's low 6 bits.  Keeps w3
+idx_hash:
+            lda         (w2)
+            jsr         upper
+            sta         cnt
+            ldy         tmp3
+            dey
+            lda         (w2),y
+            jsr         upper
+            clc
+            adc         cnt
+            sta         cnt
+            lda         tmp3
+            asl
+            asl
+            asl
+            clc
+            adc         cnt
+            and         #63
+            asl
+            tay
             rts
 
             HEADER      "find", 0

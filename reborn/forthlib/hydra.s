@@ -396,8 +396,11 @@ arg:                                                        ; ( n -- c-addr u ):
             stz         dhi,x
             rts
 
-; w = the first argument.  OUT: C = 1 if there's none
+; w = the first argument.  OUT: C = 1 if there's none (forth -l's -l isn't one: none, as at the console)
 argl_first:
+            sec
+            lda         login
+            bne         @none
             lda         argp
             sta         w
             lda         argp + 1
@@ -405,6 +408,7 @@ argl_first:
             ora         w
             bne         argl_is
             sec
+@none:
             rts
 
 ; w past its argument, to the next.  OUT: C = 1 if there's none (the empty one after the last)

@@ -69,6 +69,8 @@ order_n:    .res        1                                   ; The search order: 
 order:      .res        ORDER_MAX * 2                       ;   and they (the first searched first)
 lastxt:     .res        2                                   ; The definition being made: its xt (RECURSE, DOES>) ...
 lasthdr:    .res        2                                   ;   and its header (; shows it)
+idx_bank:   .res        1                                   ; The word lists' index (finterp.inc): its bank ($FF:
+idx_node:   .res        2                                   ;   none), and the node a search is at
 state:      .res        2                                   ; STATE: 0 interpreting, -1 compiling
 base:       .res        2                                   ; BASE
 src_addr:   .res        2                                   ; The input source (SRC_SIZE bytes, in this order: the
@@ -198,6 +200,31 @@ main:
             jsr         BREAK
             LDR         r0, notes
             jsr         NOTIFY
+            lda         #$FF                                ; The index's bank: the task's last (all taken, then all
+            sta         idx_bank                            ;   but it given back; else one; else none), started
+            jsr         BANKS                               ;   at the first search ("ix" not there yet)
+            sta         tmp
+            cmp         #0
+            beq         @nobank
+            jsr         BANKS_ALLOC
+            bcs         @onebank
+            pha                                             ; (The first)
+            clc
+            adc         tmp
+            dec
+            sta         idx_bank
+            pla
+            ldx         tmp
+            dex
+            beq         @nobank
+            jsr         BANKS_FREE
+            bra         @nobank
+@onebank:
+            lda         #1
+            jsr         BANKS_ALLOC
+            bcs         @nobank
+            sta         idx_bank
+@nobank:
             ldx         #DS_N
             lda         #<dict
             sta         here

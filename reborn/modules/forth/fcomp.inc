@@ -142,8 +142,8 @@ hdr_xt:
 
 ; ---- Headers and definitions
 
-; A header for the next name in the input, linked into the compilation word list (hidden with .A = F_HIDDEN):
-; lasthdr, lastxt.  An empty name: THROW -16
+; A header for the next name in the input, linked into the compilation word list (hidden with .A = F_HIDDEN), and
+; FORTH's index (idx_add): lasthdr, lastxt.  An empty name: THROW -16
 make_hdr:
             sta         tmp3
             jsr         parse_name
@@ -202,7 +202,7 @@ make_hdr:
             sta         lastxt
             lda         here + 1
             sta         lastxt + 1
-            rts
+            jmp         idx_add
 
 ; w3 = the compilation word list
 current_w3:

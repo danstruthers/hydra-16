@@ -567,6 +567,7 @@ unlib:                                                      ; ( "name" -- ): lib
             lda         (p1),y
             sta         (w2),y
 @hide:
+            jsr         idx_drop                            ; (FORTH's index made again: its list changed)
             ldy         #LR_FLAGS
             lda         (w3),y
             ora         #LRF_HIDDEN
@@ -712,6 +713,7 @@ lib_relink:
             ldy         #1
             sta         (w2),y
 @shown:
+            jsr         idx_drop                            ; (FORTH's index made again)
             ldy         #LR_FLAGS
             lda         (w3),y
             and         #<~LRF_HIDDEN
@@ -810,24 +812,6 @@ dump:                                                       ; ( addr u -- ): 8 b
 :
             clc
             rts
-
-; .A out as two hex digits.  Keeps .X, .Y
-hex2:
-            pha
-            lsr
-            lsr
-            lsr
-            lsr
-            jsr         @digit
-            pla
-            and         #$0F
-@digit:
-            cmp         #10
-            bcc         :+
-            adc         #6                                  ; (C = 1: 'A' on)
-:
-            adc         #'0'
-            jmp         emit_a
 
 ; ---- SEE
 
@@ -1156,24 +1140,6 @@ p1_out:
             jsr         hex2
             lda         p1
             jsr         hex2
-            jmp         space
-
-; The header w's name out, and a space
-hdr_out:
-            ldy         #2
-            lda         (w),y
-            and         #LEN_MASK
-            sta         cnt
-            ldy         #3
-:
-            lda         cnt
-            beq         :+
-            lda         (w),y
-            jsr         emit_a
-            iny
-            dec         cnt
-            bra         :-
-:
             jmp         space
 
 ; The word whose xt is p1, in any word list: C = 0, w its header; or C = 1.  Keeps w3

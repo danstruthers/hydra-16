@@ -77,6 +77,32 @@ stack words then).  The mark is in the byte an inline word has after its name (i
 `F_COMPILE`; a compile-only word that's called (`i`, or an immediate one) has that byte with a length of 0.  A
 `synonym` of one is one too.  `'` and `find` still give its xt, as the standard has them.
 
+## Finding words: the index
+
+A word list is a chain of headers, newest first, the core's (in ROM) at the end of FORTH's, so finding a core word,
+or finding that a number isn't a word, read every header: about 290 at `forth -l`'s prompt, 460 with `hydra.fs`,
+6 to 10 ms each, so a line of 8 words took 50 ms and a 200-line file seconds.  So (6.15) forth keeps an index of
+the word lists it searches, in a RAM bank of the task's (16 for each memory module, its own: the last one, taken
+with `BANKS_ALLOC` as forth starts), where it costs the dictionary nothing and no write past HERE can reach it.
+
+- **Its form.**  A record for each word list searched (8 at most, as the search order has): the word list, its
+  last header as it was indexed, and 64 chains of nodes (a header, the next node), newest first, one for each hash
+  of a name: its length * 8 plus its first and last characters in upper case, the low 6 bits (over the 561 names
+  of the core, the libraries and `hydra.fs`: 9 a chain, 16 at most).  A search reads one chain, comparing a node's
+  header's length, then its name.  The nodes (1,750) are shared, taken as they're needed.
+- **Kept current.**  A word made goes into its word list's record as it's made (at its chain's start), if the
+  record was current.  Whatever else changes a word list (a library loaded, a MARKER) leaves its record behind its
+  last header, and the next search of it makes its chains again; `-lib` and `lib` (which change FORTH's in the
+  middle) start the whole index again, as does a bank full of nodes, or more word lists than records.  The bank's
+  first two bytes, `ix`, say it's the index: a program that wrote there starts it again.
+- **No index:** no bank, more words than it holds, or a name in the bank's window ($8000-$9FFF: an EVALUATE of a
+  bank's text, which the index's bank would hide): each header is read, as before.
+
+Searching is 15 times faster (500 searches for a name that isn't there: 620 ticks, now 37; 978, now 60, with
+`hydra.fs`; `dup`: 641, now 62), loading `hydra.fs` 2.5 times (952 ticks, now 383) and the eight device
+libraries 3.3 times (2,260, now 690); the Forth 2012 suite's run takes 385M cycles, not 678M.  What's left of a
+file's loading is mostly its reading (the storage driver, the line's scan) and its numbers' conversion.
+
 ## The terminal's words
 
 The Hydra's console is an ANSI terminal (`page` and `at-xy` already send its sequences), so these are its
@@ -218,10 +244,11 @@ shell, and `-lib shell` (or a `marker` that takes it out) a plain Forth again.
 
 ## The steps
 
-6.6 to 6.10 done (October 2026), then 6.11 to 6.13, from comparing the shell with hylang's, and 6.14;
-[forth-status.md](forth-status.md) has each one's notes, the sizes and what's next.  The tests: `forth` (the Forth
-2012 suite, still passing), `hyforth` (6.6-6.8 and 6.14), `fshell` (6.9 and 6.11), `lshell` (6.10), `fhydra` (6.12)
-and `fdev` (6.13).
+6.6 to 6.10 done (October 2026), then 6.11 to 6.13, from comparing the shell with hylang's, then 6.14 and 6.15;
+[forth-status.md](forth-status.md) has each one's notes, the sizes and what's next, and
+[using/hyforth.md](using/hyforth.md) is the guide for using it.  The tests: `forth` (the Forth 2012 suite, still
+passing), `hyforth` (6.6-6.8 and 6.14), `fshell` (6.9 and 6.11), `lshell` (6.10), `fhydra` (6.12), `fdev` (6.13)
+and `findex` (6.15).
 
 | Step | | Tested |
 | :--- | :--- | :--- |
@@ -234,3 +261,4 @@ and `fdev` (6.13).
 | 6.12 | The Hydra's words (hylang's layer 2): the directories' (Gforth's), `=mkdir`, `unsetenv`, `note`, `note-group`, `on-note` (the core's note handler and its polls), `pause`, `ior>text` | A directory read, one made; the directory set and got (the prompt follows); an error's text; a variable set, read, removed; a note to itself taken by a handler between words and in a loop, and one it says no to |
 | 6.13 | The device libraries (hylang's layer 3): `gpio`, `i2c`, `spi`, `cons`, `proc`, `clock`, `disk`, `pc` as source; `sound.fl`'s `note-of` and `tune` | Pins read and set, the port, `ctl`'s lines, CA1's edge; a memory written and read at a register, the devices; an echo device's transactions, mode 3; the window; a task's args, cwd, regs and memory; the chip, the time set; the ROM disk's ctl, a card; the PC tool; notes' numbers, a tune's notes on the YM2151 in time, a bad note |
 | 6.14 | Compile-only words: THROW -14 interpreted (`F_COMPILE`) | `>r`, `if`, `."`, a `synonym` of `>r` and a library's `2>r` typed (each `name: compile only`, forth going on); `>r`, `i`, `r>` and the synonym compiled and run; the Forth 2012 suite |
+| 6.15 | Housekeeping: the word lists' index (in a bank); `hex2` and `hdr_out` the core's (`tools.fl`'s and `disasm.fl`'s copies gone); `argc` 0 under `forth -l`; the guide, [using/hyforth.md](using/hyforth.md) | A word redefined, a definition hidden till `;`, a MARKER's words gone, MARKERs till the bank's full, more word lists than records, EVALUATE of a bank's text, the index's bank overwritten; 500 searches under 150 ticks; the Forth 2012 suite (Search-Order's word lists among it); `argc` at `forth -l`'s prompt |

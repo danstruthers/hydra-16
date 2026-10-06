@@ -107,6 +107,42 @@ space:
             lda         #' '
             jmp         emit_a
 
+; .A out as two hex digits (tools.fl's and disasm.fl's).  Keeps .X, .Y
+hex2:
+            pha
+            lsr
+            lsr
+            lsr
+            lsr
+            jsr         @digit
+            pla
+            and         #$0F
+@digit:
+            cmp         #10
+            bcc         :+
+            adc         #6                                  ; (C = 1: 'A' on)
+:
+            adc         #'0'
+            jmp         emit_a
+
+; Header w's name out, and a space (tools.fl's and disasm.fl's)
+hdr_out:
+            ldy         #2
+            lda         (w),y
+            and         #LEN_MASK
+            sta         cnt
+            ldy         #3
+:
+            lda         cnt
+            beq         :+
+            lda         (w),y
+            jsr         emit_a
+            iny
+            dec         cnt
+            bra         :-
+:
+            jmp         space
+
             HEADER      "spaces", 0
 spaces:                                                     ; ( n -- ): none if n < 1
             lda         dhi,x
