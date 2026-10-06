@@ -12,6 +12,280 @@
 		(comment 1 "Hydra 16")
 	)
 	(lib_symbols
+		(symbol "Device:R_Pack05_SIP_Split"
+			(pin_names
+				(offset 0)
+				(hide yes)
+			)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "RN"
+				(at 2.032 0 90)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Value" "R_Pack05_SIP_Split"
+				(at 0 0 90)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" "Resistor_THT:R_Array_SIP10"
+				(at -2.032 0 90)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Datasheet" "http://www.vishay.com/docs/31509/csc.pdf"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Description" "5 resistor network, parallel topology, SIP package, split"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_keywords" "R network parallel topology isolated"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_fp_filters" "R?Array?SIP*"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(symbol "R_Pack05_SIP_Split_0_1"
+				(rectangle
+					(start 1.016 2.54)
+					(end -1.016 -2.54)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+			)
+			(symbol "R_Pack05_SIP_Split_1_1"
+				(pin passive line
+					(at 0 3.81 270)
+					(length 1.27)
+					(name "R1.2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 0 -3.81 90)
+					(length 1.27)
+					(name "R1.1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(symbol "R_Pack05_SIP_Split_2_1"
+				(pin passive line
+					(at 0 3.81 270)
+					(length 1.27)
+					(name "R2.2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "4"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 0 -3.81 90)
+					(length 1.27)
+					(name "R2.1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "3"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(symbol "R_Pack05_SIP_Split_3_1"
+				(pin passive line
+					(at 0 3.81 270)
+					(length 1.27)
+					(name "R3.2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "6"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 0 -3.81 90)
+					(length 1.27)
+					(name "R3.1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "5"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(symbol "R_Pack05_SIP_Split_4_1"
+				(pin passive line
+					(at 0 3.81 270)
+					(length 1.27)
+					(name "R4.2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "8"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 0 -3.81 90)
+					(length 1.27)
+					(name "R4.1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "7"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(symbol "R_Pack05_SIP_Split_5_1"
+				(pin passive line
+					(at 0 3.81 270)
+					(length 1.27)
+					(name "R5.2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "10"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 0 -3.81 90)
+					(length 1.27)
+					(name "R5.1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "9"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
 		(symbol "74xx:74LS125"
 			(pin_names
 				(offset 1.016)
@@ -2067,130 +2341,6 @@
 			)
 			(embedded_fonts no)
 		)
-		(symbol "Device:R"
-			(pin_numbers
-				(hide yes)
-			)
-			(pin_names
-				(offset 0)
-			)
-			(exclude_from_sim no)
-			(in_bom yes)
-			(on_board yes)
-			(property "Reference" "R"
-				(at 2.032 0 90)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "Value" "R"
-				(at 0 0 90)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "Footprint" ""
-				(at -1.778 0 90)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "Datasheet" "~"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "Description" "Resistor"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "ki_keywords" "R res resistor"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "ki_fp_filters" "R_*"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(symbol "R_0_1"
-				(rectangle
-					(start -1.016 -2.54)
-					(end 1.016 2.54)
-					(stroke
-						(width 0.254)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-			)
-			(symbol "R_1_1"
-				(pin passive line
-					(at 0 3.81 270)
-					(length 1.27)
-					(name "~"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin passive line
-					(at 0 -3.81 90)
-					(length 1.27)
-					(name "~"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "2"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-			)
-			(embedded_fonts no)
-		)
 		(symbol "Device:R_Network08_US"
 			(pin_names
 				(offset 0)
@@ -2858,6 +3008,17 @@
 			)
 			(embedded_fonts no)
 		)
+	)
+	(text "Z REGISTER ($FFF4): U55 is enabled on reads only (nZREG_RD)."
+		(exclude_from_sim no)
+		(at 162.56 163.83 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left top)
+		)
+		(uuid "3eb87e8d-f99f-43b2-a790-655d253c5db9")
 	)
 	(junction
 		(at 87.63 66.04)
@@ -8217,7 +8378,7 @@
 		)
 	)
 	(symbol
-		(lib_id "Device:R")
+		(lib_id "Device:R_Pack05_SIP_Split")
 		(at 245.11 80.01 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -8225,7 +8386,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "92ed71d5-f01d-4245-ac49-6bc23285eabd")
-		(property "Reference" "R21"
+		(property "Reference" "RN7"
 			(at 248.92 78.74 0)
 			(effects
 				(font
@@ -8241,7 +8402,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Resistor_THT:R_Axial_DIN0204_L3.6mm_D1.6mm_P5.08mm_Horizontal"
+		(property "Footprint" "Resistor_THT:R_Array_SIP10"
 			(at 245.11 80.01 0)
 			(effects
 				(font
@@ -8250,7 +8411,7 @@
 				(hide yes)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "~"
 			(at 245.11 80.01 0)
 			(effects
 				(font
@@ -8259,7 +8420,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "5 isolated resistors, SIP-10: 33R series terminations for the slot clocks"
 			(at 245.11 80.01 0)
 			(effects
 				(font
@@ -8267,17 +8428,17 @@
 				)
 				(hide yes)
 			)
-		)
-		(pin "1"
-			(uuid "2f567a96-4f12-41b5-aac9-2f6b2e56003c")
 		)
 		(pin "2"
+			(uuid "2f567a96-4f12-41b5-aac9-2f6b2e56003c")
+		)
+		(pin "1"
 			(uuid "c09fac3f-04e7-4530-8850-0a55e9ea00d0")
 		)
 		(instances
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/be1fd2da-2765-4044-ae46-297533c36c50"
-					(reference "R21")
+					(reference "RN7")
 					(unit 1)
 				)
 			)
@@ -8809,15 +8970,15 @@
 		)
 	)
 	(symbol
-		(lib_id "Device:R")
+		(lib_id "Device:R_Pack05_SIP_Split")
 		(at 245.11 130.81 0)
-		(unit 1)
+		(unit 3)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
 		(dnp no)
-		(uuid "ce31407f-c644-424a-ad29-ac69d2e18d9b")
-		(property "Reference" "R23"
+		(uuid "9897d882-45e3-4dc3-b8f6-393589bd425c")
+		(property "Reference" "RN7"
 			(at 248.92 129.54 0)
 			(effects
 				(font
@@ -8833,7 +8994,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Resistor_THT:R_Axial_DIN0204_L3.6mm_D1.6mm_P5.08mm_Horizontal"
+		(property "Footprint" "Resistor_THT:R_Array_SIP10"
 			(at 245.11 130.81 0)
 			(effects
 				(font
@@ -8842,7 +9003,7 @@
 				(hide yes)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "~"
 			(at 245.11 130.81 0)
 			(effects
 				(font
@@ -8851,7 +9012,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "5 isolated resistors, SIP-10: 33R series terminations for the slot clocks"
 			(at 245.11 130.81 0)
 			(effects
 				(font
@@ -8860,17 +9021,17 @@
 				(hide yes)
 			)
 		)
-		(pin "1"
+		(pin "6"
 			(uuid "3f7dd6af-8ef8-48c7-905d-111ebeaffb74")
 		)
-		(pin "2"
+		(pin "5"
 			(uuid "99cef525-cf17-4f01-9ad9-c1b819d1d974")
 		)
 		(instances
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/be1fd2da-2765-4044-ae46-297533c36c50"
-					(reference "R23")
-					(unit 1)
+					(reference "RN7")
+					(unit 3)
 				)
 			)
 		)
@@ -9082,15 +9243,15 @@
 		)
 	)
 	(symbol
-		(lib_id "Device:R")
+		(lib_id "Device:R_Pack05_SIP_Split")
 		(at 240.03 107.95 0)
-		(unit 1)
+		(unit 2)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
 		(dnp no)
-		(uuid "fcde33a5-9a91-4f3f-aba5-63a4f8987b46")
-		(property "Reference" "R22"
+		(uuid "40032c18-44e7-4eee-b17d-0f871d97f3ab")
+		(property "Reference" "RN7"
 			(at 243.84 106.68 0)
 			(effects
 				(font
@@ -9106,7 +9267,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Resistor_THT:R_Axial_DIN0204_L3.6mm_D1.6mm_P5.08mm_Horizontal"
+		(property "Footprint" "Resistor_THT:R_Array_SIP10"
 			(at 240.03 107.95 0)
 			(effects
 				(font
@@ -9115,7 +9276,7 @@
 				(hide yes)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "~"
 			(at 240.03 107.95 0)
 			(effects
 				(font
@@ -9124,7 +9285,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "5 isolated resistors, SIP-10: 33R series terminations for the slot clocks"
 			(at 240.03 107.95 0)
 			(effects
 				(font
@@ -9133,30 +9294,19 @@
 				(hide yes)
 			)
 		)
-		(pin "1"
+		(pin "4"
 			(uuid "4b7d9e8b-b68e-419d-8e2a-8d0460691919")
 		)
-		(pin "2"
+		(pin "3"
 			(uuid "2f1ac43c-391b-42b8-8235-c2ec1de8f602")
 		)
 		(instances
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/be1fd2da-2765-4044-ae46-297533c36c50"
-					(reference "R22")
-					(unit 1)
+					(reference "RN7")
+					(unit 2)
 				)
 			)
 		)
-	)
-	(text "Z REGISTER ($FFF4): U55 is enabled on reads only (nZREG_RD)."
-		(exclude_from_sim no)
-		(at 162.56 163.83 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left top)
-		)
-		(uuid "3eb87e8d-f99f-43b2-a790-655d253c5db9")
 	)
 )

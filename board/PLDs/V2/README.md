@@ -1,7 +1,8 @@
 # Hydra-16 V2 programmable logic
 
 Eight GALs hold the glue logic of V2 (rev 2.0D): seven replaced 29 TTL/CMOS packages in rev 2.0C, and GAL C (rev 2.0D)
-replaced the 74F191 clock divider with a bus clock generator that can stretch PHI2.
+replaced the 74F191 clock divider with a bus clock generator that can stretch PHI2. GAL C rev 02 also makes the CPU's
+phi0 input (P_PHI0), replacing the U9 74F08 gate.
 Each `.PLD` is the WinCUPL source, `.jed` the fuse map to program, `.doc` the CUPL listing (expanded equations and fuse plot).
 
 | Ref | File   | Device          | Sheet         | Function |
@@ -9,7 +10,7 @@ Each `.PLD` is the WinCUPL source, `.jed` the fuse map to program, `.doc` the CU
 | U81 | GALA   | ATF22V10C-10PU  | AddressDecode | Main address decode from A15..A4: I/O page, VIA, ACIA, $FFFx page, banked RAM/ROM windows, OS ROM chip enable ($E000-$FFFF), slot I/O stretch region ($FF20-$FFEF), page-zero detect |
 | U82 | GALB1  | ATF22V10C-10PU  | AddressDecode | $FFFx page: OS ROM output enable (reads of $E000-$FEFF and $FFFA-$FFFD), vector RAM select ($FFFE/F, writes only during PHI2), $FFF0-3 register read selects and write latch strobes |
 | U83 | GALB2  | ATF22V10C-10PU  | AddressDecode | Memory write strobe (RWB_M), ZP mirror RAM control, Z register read ($FFF4), stretch register write ($FFF5), DMA request sync (DMAB_S, clocked by PHI1) |
-| U88 | GALC   | ATF22V10C-10PU  | Clocks        | Bus clock generator from the 14.318 MHz master: PHI2/PHI1 (7.16 MHz, or 3.58 MHz with J36 2-3), clock stretching for slow regions, SND_CLK 3.58 MHz |
+| U88 | GALC   | ATF22V10C-10PU  | Clocks        | Bus clock generator from the 14.318 MHz master: PHI2/PHI1 (7.16 MHz, or 3.58 MHz with J36 2-3), clock stretching for slow regions, SND_CLK 3.58 MHz, CPU phi0 (P_PHI0 = PHI2 held low while DMAB_S is low) |
 | U84 | GALD   | ATF22V10C-10PU  | WaitStates    | Clock-stretch register $FFF5; tells GAL C how many extra PHI2-high periods the current access needs (N1:N0) |
 | U85 | GALE   | ATF22V10C-10PU  | IRQ           | 15-line IRQ priority encoder, level latch (holds while VPB is low), IRQB |
 | U86 | GALF   | ATF22V10C-10PU  | IRQ           | Vector RAM address mux: IRQ level while an IRQ is pending, V register otherwise (software interrupts) |
@@ -69,6 +70,7 @@ the discrete logic they replaced; rev 2.0D changes were checked against behaviou
 | B1  | 2.0D | 1,024   | exhaustive over all inputs |
 | B2  | 2.0C | 902     | address classes and control inputs, plus DMAB_S clocking |
 | C   | 2.0D | 60,000  | edge-by-edge against a clock-generator model with random inputs, both speeds; PHI2 waveforms checked per region and N |
+| C   | rev 02 | 200,000 | every rev 01 output unchanged edge for edge; new P_PHI0 equals PHI2 & DMAB_S, with DMA requests changing after PHI2 falls |
 | D   | 2.0D | 40,000  | random register writes, resets and region selects |
 | E   | 2.0C | 32,864  | exhaustive over the 15 IRQ lines, plus latch/hold cycles |
 | F   | 2.0C | 16,384  | exhaustive |

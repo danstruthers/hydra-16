@@ -5,10 +5,10 @@
 
 CUPL(WM)        5.0a Serial# MW-10400000
 Device          g22v10  Library DLIB-h-40-1
-Created         Tue Oct 06 01:11:17 2026
+Created         Tue Oct 06 04:35:37 2026
 Name            GALC 
 Partno          ATF22V10C 
-Revision        01 
+Revision        02 
 Date            10/6/2026 
 Designer        Engineer 
 Company         Data Tuning 
@@ -98,6 +98,24 @@ PHI2.ar  =>
 PHI2.sp  =>
     0 
 
+P_PHI0.d  =>
+    DMAB_S & !F0 & PHI2 & !nHALF
+  # DMAB_S & !K1 & N1 & PHI2
+  # DMAB_S & !K0 & !K1 & N0 & PHI2
+  # DMAB_S & !K0 & N0 & N1 & PHI2
+  # !A15 & DMAB_S & !PHI2 & nHALF & nIOSLOW
+  # !A15 & DMAB_S & F0 & !PHI2 & nIOSLOW
+  # A13 & A14 & DMAB_S & !PHI2 & nHALF & nIOSLOW
+  # A13 & A14 & DMAB_S & F0 & !PHI2 & nIOSLOW
+  # DMAB_S & K0 & !PHI2 & nHALF
+  # DMAB_S & F0 & K0 & !PHI2
+
+P_PHI0.ar  =>
+    0 
+
+P_PHI0.sp  =>
+    0 
+
 SND.d  =>
     !F0 & SND
   # F0 & !SND
@@ -137,6 +155,9 @@ PH2B.oe  =>
 PHI2.oe  =>
     1 
 
+P_PHI0.oe  =>
+    1 
+
 SND.oe  =>
     1 
 
@@ -153,6 +174,7 @@ Pol   Name              Ext     Pin     Type     Used   Pterms  Level
     A14                         3        V        -       -       -     
     A15                         2        V        -       -       -     
     CLK14                       1        V        -       -       -     
+    DMAB_S                      9        V        -       -       -     
     F0                          23       V        -       -       -     
     F0                  d       23       X        1       8       1     
     F0                  ar      23       X        1       1       1     
@@ -175,6 +197,10 @@ Pol   Name              Ext     Pin     Type     Used   Pterms  Level
     PHI2                d       21       X        10      12      1     
     PHI2                ar      21       X        1       1       1     
     PHI2                sp      21       X        1       1       1     
+    P_PHI0                      17       V        -       -       -     
+    P_PHI0              d       17       X        10      14      1     
+    P_PHI0              ar      17       X        1       1       1     
+    P_PHI0              sp      17       X        1       1       1     
     SND                         22       V        -       -       -     
     SND                 d       22       X        2       10      1     
     SND                 ar      22       X        1       1       1     
@@ -189,6 +215,7 @@ Pol   Name              Ext     Pin     Type     Used   Pterms  Level
     K1                  oe      18       D        1       1       0     
     PH2B                oe      16       D        1       1       0     
     PHI2                oe      21       D        1       1       0     
+    P_PHI0              oe      17       D        1       1       0     
     SND                 oe      22       D        1       1       0     
 
 
@@ -296,18 +323,18 @@ Pin #18  05818 Mode  -x
  03520 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
  03564 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
  03608 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
-Pin #17  05820 Mode  xx 
- 03652 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
- 03696 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
- 03740 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
- 03784 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
- 03828 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
- 03872 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
- 03916 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
- 03960 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
- 04004 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
- 04048 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
- 04092 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+Pin #17  05820 Mode  -x 
+ 03652 -------------------------------------------- 
+ 03696 --x--------x-----------------x--x----------- 
+ 03740 -----------x----------x-x-------x----------- 
+ 03784 -----------x------x-x-x---------x----------- 
+ 03828 -----------x------x-x---x-------x----------- 
+ 03872 -----x----x-----x-----------x---x----------- 
+ 03916 ---x-x----x-----x---------------x----------- 
+ 03960 --------x-x-x---x-----------x---x----------- 
+ 04004 ---x----x-x-x---x---------------x----------- 
+ 04048 ----------x--------x--------x---x----------- 
+ 04092 ---x------x--------x------------x----------- 
  04136 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
  04180 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
  04224 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
@@ -366,8 +393,8 @@ LEGEND    X : fuse not blown
                   nIOSLOW x---|5           20|---x                          
                        N0 x---|6           19|---x K0                       
                        N1 x---|7           18|---x K1                       
-                    nHALF x---|8           17|---x                          
-                          x---|9           16|---x !PH2B                    
+                    nHALF x---|8           17|---x P_PHI0                   
+                   DMAB_S x---|9           16|---x !PH2B                    
                           x---|10          15|---x                          
                           x---|11          14|---x                          
                       GND x---|12          13|---x                          
