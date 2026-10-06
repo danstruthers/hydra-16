@@ -26,6 +26,12 @@ TPK_B           = 1             ; The op's data byte
 TPK_U           = 2             ;   untagged (bit 0 clear)
 TPK_T           = 3             ; A jump's target in the data: its native place
 TPK_N           = 4             ; The next op's entry
+TPK_D           = 5             ; The address of the op's data byte (its stub's)
+TPK_M           = 6             ; 2 * the data byte + 2 (a frame's record's place, for so many arguments)
+TPK_C           = 7             ; The function's start
+TPK_RL          = 8             ; The next op's entry, as a return's place (a fixnum): its low byte ...
+TPK_RH          = 9             ;   its high
+TPK_S           = 10            ; The op's stub (past the template)
 
 .bss
 vx_end:     .res        2                                   ; The bytecode's end (its blocks' table there ...
@@ -52,7 +58,8 @@ vx_tpp:     .res        2
 vx_tcode:   .res        2
 vx_op:      .res        1                                   ;   its op ...
 vx_nx:      .res        2                                   ;   the next op's entry ...
-vx_pi:      .res        1                                   ;   its patches left)
+vx_pi:      .res        1                                   ;   its patches left ...
+vx_dd:      .res        2                                   ;   its stub's data's place)
 
 .segment "CODE8"
 
@@ -414,6 +421,20 @@ vx_tpl:
 
 ; The op's template's code at ht (the arena's bank), its patches made; ht past it
 vx_tcopy:
+            lda         ht                                  ; (Its stub's data: past it and the stub's code)
+            clc
+            adc         vx_tln
+            sta         vx_dd
+            lda         ht + 1
+            adc         #0
+            sta         vx_dd + 1
+            lda         vx_dd
+            clc
+            adc         #VX_STUB
+            sta         vx_dd
+            bcc         :+
+            inc         vx_dd + 1
+:
             lda         vx_tcode
             sta         hb
             lda         vx_tcode + 1
@@ -450,6 +471,18 @@ vx_tcopy:
             beq         @n
             cmp         #TPK_T
             beq         @t
+            cmp         #TPK_D
+            beq         @d
+            cmp         #TPK_M
+            beq         @m
+            cmp         #TPK_C
+            beq         @c
+            cmp         #TPK_RL
+            beq         @rl
+            cmp         #TPK_RH
+            beq         @rh
+            cmp         #TPK_S
+            beq         @st
             cmp         #TPK_U
             lda         vx_buf,x
             bcc         @b
@@ -457,6 +490,52 @@ vx_tcopy:
 @b:
             jsr         vx_pb
             bra         @pn
+@m:
+            lda         vx_buf,x
+            asl
+            clc
+            adc         #2
+            bra         @b
+@rl:
+            lda         vx_nx
+            asl
+            ora         #1
+            bra         @b
+@rh:
+            lda         vx_nx + 1
+            and         #$1F
+            ora         vx_idx
+            sta         vx_k
+            lda         vx_nx
+            asl
+            lda         vx_k
+            rol
+            bra         @b
+@d:
+            ldy         #2
+            lda         (hb),y
+            clc
+            adc         vx_dd
+            pha
+            lda         vx_dd + 1
+            adc         #0
+            tax
+            pla
+            bra         @w
+@c:
+            lda         vx_a0
+            ldx         vx_a0 + 1
+            bra         @w
+@st:
+            lda         vx_dd
+            sec
+            sbc         #VX_STUB
+            pha
+            lda         vx_dd + 1
+            sbc         #0
+            tax
+            pla
+            bra         @w
 @n:
             lda         vx_nx
             ldx         vx_nx + 1
@@ -478,7 +557,7 @@ vx_tcopy:
             inc         hb + 1
 :
             dec         vx_pi
-            bra         @p
+            jmp         @p
 
 ; .A (vx_pb), .A, .X (vx_pw) at the template's place at ht + the patch's offset ((hb)), in the arena's bank
 vx_pb:

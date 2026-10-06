@@ -1442,12 +1442,517 @@ vxt_jll_eq_p3 = * - 2
 vxt_jll_eq_s:
 vxt_jll_eq_e:
 
+vxt_shead:  .byte       vxt_shead_e - vxt_shead_c, TF_STUB, 8
+            .byte       vxt_shead_p0 - vxt_shead_c, TPK_S, 0
+            .byte       vxt_shead_p1 - vxt_shead_c, TPK_D, 8
+            .byte       vxt_shead_p2 - vxt_shead_c, TPK_S, 0
+            .byte       vxt_shead_p3 - vxt_shead_c, TPK_D, 9
+            .byte       vxt_shead_p4 - vxt_shead_c, TPK_S, 0
+            .byte       vxt_shead_p5 - vxt_shead_c, TPK_D, 10
+            .byte       vxt_shead_p6 - vxt_shead_c, TPK_D, 11
+            .byte       vxt_shead_p7 - vxt_shead_c, TPK_N, 0
+vxt_shead_c:
+            bit         vm_mat
+            bpl         :+
+            jmp         $0000
+vxt_shead_p0 = * - 2
+:
+            lda         a:$0000
+vxt_shead_p1 = * - 2
+            cmp         vm_ep
+            beq         :+
+            jmp         $0000
+vxt_shead_p2 = * - 2
+:
+            lda         a:$0000
+vxt_shead_p3 = * - 2
+            cmp         vm_ep + 1
+            beq         :+
+            jmp         $0000
+vxt_shead_p4 = * - 2
+:
+            lda         a:$0000
+vxt_shead_p5 = * - 2
+            ldx         a:$0000
+vxt_shead_p6 = * - 2
+            sta         (sp)
+            ldy         #1
+            txa
+            sta         (sp),y
+            lda         sp
+            clc
+            adc         #2
+            sta         sp
+            bne         :+
+            jsr         vm_page
+:
+            jmp         $0000
+vxt_shead_p7 = * - 2
+vxt_shead_s:
+vxt_shead_e:
+
+vxt_call:   .byte       vxt_call_e - vxt_call_c, TF_STUB, 22
+            .byte       vxt_call_p0 - vxt_call_c, TPK_D, 6
+            .byte       vxt_call_p1 - vxt_call_c, TPK_S, 0
+            .byte       vxt_call_p2 - vxt_call_c, TPK_D, 7
+            .byte       vxt_call_p3 - vxt_call_c, TPK_S, 0
+            .byte       vxt_call_p4 - vxt_call_c, TPK_M, 1
+            .byte       vxt_call_p5 - vxt_call_c, TPK_D, 4
+            .byte       vxt_call_p6 - vxt_call_c, TPK_S, 0
+            .byte       vxt_call_p7 - vxt_call_c, TPK_D, 5
+            .byte       vxt_call_p8 - vxt_call_c, TPK_S, 0
+            .byte       vxt_call_p9 - vxt_call_c, TPK_S, 0
+            .byte       vxt_call_p10 - vxt_call_c, TPK_S, 0
+            .byte       vxt_call_p11 - vxt_call_c, TPK_S, 0
+            .byte       vxt_call_p12 - vxt_call_c, TPK_S, 0
+            .byte       vxt_call_p13 - vxt_call_c, TPK_RL, 0
+            .byte       vxt_call_p14 - vxt_call_c, TPK_RH, 0
+            .byte       vxt_call_p15 - vxt_call_c, TPK_M, 1
+            .byte       vxt_call_p16 - vxt_call_c, TPK_M, 1
+            .byte       vxt_call_p17 - vxt_call_c, TPK_D, 11
+            .byte       vxt_call_p18 - vxt_call_c, TPK_D, 8
+            .byte       vxt_call_p19 - vxt_call_c, TPK_D, 10
+            .byte       vxt_call_p20 - vxt_call_c, TPK_D, 8
+            .byte       vxt_call_p21 - vxt_call_c, TPK_D, 9
+vxt_call_c:
+            lda         a:$0000
+vxt_call_p0 = * - 2
+            cmp         vm_ep
+            beq         :+
+            jmp         $0000
+vxt_call_p1 = * - 2
+:
+            lda         a:$0000
+vxt_call_p2 = * - 2
+            cmp         vm_ep + 1
+            beq         :+
+            jmp         $0000
+vxt_call_p3 = * - 2
+:
+            lda         sp
+            sec
+            sbc         #0
+vxt_call_p4 = * - 1
+            sta         ht
+            lda         sp + 1
+            sbc         #0
+            sta         ht + 1
+            lda         (ht)
+            cmp         a:$0000
+vxt_call_p5 = * - 2
+            beq         :+
+            jmp         $0000
+vxt_call_p6 = * - 2
+:
+            ldy         #1
+            lda         (ht),y
+            cmp         a:$0000
+vxt_call_p7 = * - 2
+            beq         :+
+            jmp         $0000
+vxt_call_p8 = * - 2
+:
+            bit         intr
+            bpl         :+
+            jmp         $0000
+vxt_call_p9 = * - 2
+:
+            bvc         :+
+            jmp         $0000
+vxt_call_p10 = * - 2
+:
+            lda         depth + 1
+            cmp         #>MAX_DEPTH
+            bcc         vxt_call_ok
+            beq         :+
+            jmp         $0000
+vxt_call_p11 = * - 2
+:
+            lda         depth
+            cmp         #<MAX_DEPTH
+            bcc         :+
+            jmp         $0000
+vxt_call_p12 = * - 2
+:
+vxt_call_ok:
+            lda         #0
+vxt_call_p13 = * - 1
+            ldx         #0
+vxt_call_p14 = * - 1
+            sta         (sp)
+            ldy         #1
+            txa
+            sta         (sp),y
+            lda         sp
+            clc
+            adc         #2
+            sta         sp
+            bne         :+
+            jsr         vm_page
+:
+            lda         #0
+            tax
+            sta         (sp)
+            ldy         #1
+            txa
+            sta         (sp),y
+            lda         sp
+            clc
+            adc         #2
+            sta         sp
+            bne         :+
+            jsr         vm_page
+:
+            lda         sp
+            sec
+            sbc         #0
+vxt_call_p15 = * - 1
+            sta         vm_s
+            lda         sp + 1
+            sbc         #0
+            sta         vm_s + 1
+            lda         vm_s
+            sec
+            sbc         #4
+            sta         vm_s
+            bcs         :+
+            dec         vm_s + 1
+:
+            lda         #0
+vxt_call_p16 = * - 1
+            sta         vm_rb
+            stz         vm_mat
+            inc         depth
+            bne         :+
+            inc         depth + 1
+:
+            lda         a:$0000
+vxt_call_p17 = * - 2
+            cmp         vm_idx
+            bne         vxt_call_far
+            jmp         ($0000)
+vxt_call_p18 = * - 2
+vxt_call_far:
+            sta         vm_idx
+            lda         a:$0000
+vxt_call_p19 = * - 2
+            sta         vm_bank
+            lda         a:$0000
+vxt_call_p20 = * - 2
+            sta         vm_ip
+            lda         a:$0000
+vxt_call_p21 = * - 2
+            sta         vm_ip + 1
+            jmp         vm_next
+vxt_call_s:
+vxt_call_e:
+
+vxt_cself:  .byte       vxt_cself_e - vxt_cself_c, TF_STUB, 11
+            .byte       vxt_cself_p0 - vxt_cself_c, TPK_M, 1
+            .byte       vxt_cself_p1 - vxt_cself_c, TPK_S, 0
+            .byte       vxt_cself_p2 - vxt_cself_c, TPK_S, 0
+            .byte       vxt_cself_p3 - vxt_cself_c, TPK_S, 0
+            .byte       vxt_cself_p4 - vxt_cself_c, TPK_S, 0
+            .byte       vxt_cself_p5 - vxt_cself_c, TPK_S, 0
+            .byte       vxt_cself_p6 - vxt_cself_c, TPK_S, 0
+            .byte       vxt_cself_p7 - vxt_cself_c, TPK_S, 0
+            .byte       vxt_cself_p8 - vxt_cself_c, TPK_RL, 0
+            .byte       vxt_cself_p9 - vxt_cself_c, TPK_RH, 0
+            .byte       vxt_cself_p10 - vxt_cself_c, TPK_C, 0
+vxt_cself_c:
+            lda         vm_rb
+            cmp         #0
+vxt_cself_p0 = * - 1
+            beq         :+
+            jmp         $0000
+vxt_cself_p1 = * - 2
+:
+            lda         sp
+            sec
+            sbc         vm_rb
+            sta         ht
+            lda         sp + 1
+            sbc         #0
+            sta         ht + 1
+            ldy         #1
+            lda         (ht),y
+            cmp         (vm_s),y
+            beq         :+
+            jmp         $0000
+vxt_cself_p2 = * - 2
+:
+            lda         (ht)
+            cmp         (vm_s)
+            beq         :+
+            jmp         $0000
+vxt_cself_p3 = * - 2
+:
+            bit         intr
+            bpl         :+
+            jmp         $0000
+vxt_cself_p4 = * - 2
+:
+            bvc         :+
+            jmp         $0000
+vxt_cself_p5 = * - 2
+:
+            lda         depth + 1
+            cmp         #>MAX_DEPTH
+            bcc         vxt_cself_ok
+            beq         :+
+            jmp         $0000
+vxt_cself_p6 = * - 2
+:
+            lda         depth
+            cmp         #<MAX_DEPTH
+            bcc         :+
+            jmp         $0000
+vxt_cself_p7 = * - 2
+:
+vxt_cself_ok:
+            lda         #0
+vxt_cself_p8 = * - 1
+            ldx         #0
+vxt_cself_p9 = * - 1
+            sta         (sp)
+            ldy         #1
+            txa
+            sta         (sp),y
+            lda         sp
+            clc
+            adc         #2
+            sta         sp
+            bne         :+
+            jsr         vm_page
+:
+            lda         #0
+            tax
+            sta         (sp)
+            ldy         #1
+            txa
+            sta         (sp),y
+            lda         sp
+            clc
+            adc         #2
+            sta         sp
+            bne         :+
+            jsr         vm_page
+:
+            lda         vm_rb
+            clc
+            adc         #4
+            sta         hn
+            lda         sp
+            sec
+            sbc         hn
+            sta         vm_s
+            lda         sp + 1
+            sbc         #0
+            sta         vm_s + 1
+            stz         vm_mat
+            inc         depth
+            bne         :+
+            inc         depth + 1
+:
+            jmp         $0000
+vxt_cself_p10 = * - 2
+vxt_cself_s:
+vxt_cself_e:
+
+vxt_tself:  .byte       vxt_tself_e - vxt_tself_c, TF_STUB, 8
+            .byte       vxt_tself_p0 - vxt_tself_c, TPK_M, 1
+            .byte       vxt_tself_p1 - vxt_tself_c, TPK_S, 0
+            .byte       vxt_tself_p2 - vxt_tself_c, TPK_S, 0
+            .byte       vxt_tself_p3 - vxt_tself_c, TPK_S, 0
+            .byte       vxt_tself_p4 - vxt_tself_c, TPK_S, 0
+            .byte       vxt_tself_p5 - vxt_tself_c, TPK_S, 0
+            .byte       vxt_tself_p6 - vxt_tself_c, TPK_B, 1
+            .byte       vxt_tself_p7 - vxt_tself_c, TPK_C, 0
+vxt_tself_c:
+            lda         vm_rb
+            cmp         #0
+vxt_tself_p0 = * - 1
+            beq         :+
+            jmp         $0000
+vxt_tself_p1 = * - 2
+:
+            lda         sp
+            sec
+            sbc         vm_rb
+            sta         ht
+            lda         sp + 1
+            sbc         #0
+            sta         ht + 1
+            ldy         #1
+            lda         (ht),y
+            cmp         (vm_s),y
+            beq         :+
+            jmp         $0000
+vxt_tself_p2 = * - 2
+:
+            lda         (ht)
+            cmp         (vm_s)
+            beq         :+
+            jmp         $0000
+vxt_tself_p3 = * - 2
+:
+            bit         intr
+            bpl         :+
+            jmp         $0000
+vxt_tself_p4 = * - 2
+:
+            bvc         :+
+            jmp         $0000
+vxt_tself_p5 = * - 2
+:
+            ldx         #0
+vxt_tself_p6 = * - 1
+            beq         vxt_tself_args
+            ldy         #2
+vxt_tself_arg:
+            lda         (ht),y
+            sta         (vm_s),y
+            iny
+            lda         (ht),y
+            sta         (vm_s),y
+            iny
+            dex
+            bne         vxt_tself_arg
+vxt_tself_args:
+            bit         vm_mat
+            bpl         vxt_tself_kept
+            ldy         vm_rb
+            iny
+            iny
+            lda         #0
+            sta         (vm_s),y
+            iny
+            sta         (vm_s),y
+            stz         vm_mat
+vxt_tself_kept:
+            lda         vm_rb
+            clc
+            adc         #4
+            adc         vm_s
+            sta         sp
+            lda         vm_s + 1
+            adc         #0
+            sta         sp + 1
+            cmp         stk_basep
+            bne         vxt_tself_go
+            lda         spilled
+            beq         vxt_tself_go
+            jsr         unspill
+vxt_tself_go:
+            jmp         $0000
+vxt_tself_p7 = * - 2
+vxt_tself_s:
+vxt_tself_e:
+
+vxt_ret:    .byte       vxt_ret_e - vxt_ret_c, TF_STUB, 2
+            .byte       vxt_ret_p0 - vxt_ret_c, TPK_S, 0
+            .byte       vxt_ret_p1 - vxt_ret_c, TPK_S, 0
+vxt_ret_c:
+            ldy         vm_rb
+            lda         (vm_s),y
+            sta         ht
+            bne         :+
+            jmp         $0000
+vxt_ret_p0 = * - 2
+:
+            iny
+            lda         (vm_s),y
+            lsr
+            tax
+            lda         ht
+            ror
+            sta         hp
+            txa
+            and         #$60
+            cmp         vm_idx
+            beq         :+
+            jmp         $0000
+vxt_ret_p1 = * - 2
+:
+            txa
+            and         #$1F
+            ora         #$80
+            sta         hp + 1
+            lda         hp
+            sta         vm_ip
+            lda         hp + 1
+            sta         vm_ip + 1
+            lda         depth
+            bne         :+
+            dec         depth + 1
+:
+            dec         depth
+            lda         vm_s
+            sta         sp
+            ldx         vm_s + 1
+            stx         sp + 1
+            cpx         stk_basep
+            bne         :+
+            lda         spilled
+            beq         :+
+            jsr         unspill
+:
+            lda         vm_ip
+            sec
+            sbc         #2
+            sta         ht
+            lda         vm_ip + 1
+            sbc         #0
+            sta         ht + 1
+            lda         (ht)
+            asl
+            sta         hn
+            lda         vm_s
+            sec
+            sbc         hn
+            sta         vm_s
+            bcs         :+
+            dec         vm_s + 1
+:
+            ldy         #1
+            lda         (ht),y
+            tax
+            and         #$FE
+            sta         vm_rb
+            tay
+            iny
+            iny
+            lda         (vm_s),y
+            lsr
+            bcc         :+
+            iny
+            iny
+:
+            iny
+            lda         (vm_s),y
+            cmp         #IMM_PAGES
+            lda         #0
+            bcc         :+
+            lda         #$80
+:
+            sta         vm_mat
+            txa
+            lsr
+            bcc         vxt_ret_go
+            jsr         vm_iserr
+            bcc         vxt_ret_go
+            jmp         vm_ret
+vxt_ret_go:
+            jmp         (vm_ip)
+vxt_ret_s:
+vxt_ret_e:
+
 ; Each op's template (0: its stub alone; the fused ones: by s, below)
-vx_tmain:   .word       0, vxt_const, vxt_local, 0, 0, vxt_push, vxt_jf, vxt_jt
-            .word       vxt_jmp, 0, 0, 0, 0, 0, 0, 0
+vx_tmain:   .word       vxt_ret, vxt_const, vxt_local, 0, 0, vxt_push, vxt_jf, vxt_jt
+            .word       vxt_jmp, 0, 0, vxt_call, 0, 0, 0, 0
             .word       0, 0, 0, 0, 0, 0, 0, 0
             .word       0, 0, 0, 0, 0, 0, 0, 0
-            .word       0, 0, 0, vxt_lpush, vxt_cpush, 0, 0, 0
+            .word       0, 0, 0, vxt_lpush, vxt_cpush, vxt_shead, vxt_cself, vxt_tself
             .word       0, 0, vxt_setl, 0, 0, 0, vxt_stt, vxt_popx
             .word       vxt_loop, 0, 0, 0, 0, 0, vxt_doti, vxt_dotinc
             .word       0, 0, vxt_drop, 0, 0, 0, 0, 0
