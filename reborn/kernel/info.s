@@ -85,10 +85,11 @@ K_TASKINFO:
             rts
 
 ; TASKREAD: a task's arguments, current directory, environment, or its state and frame.  IN: .A = a task ($FF:
-; this one); .X = TR_ARGS, TR_CWD, TR_ENV or TR_FRAME; r0 = a buffer (TA_ARGS_MAX + 1, PATH_MAX + 1, ENV_SIZE or
-; TF_SIZE bytes).  OUT: the bytes in it; or C = 1, .A = E_SRCH, E_INVAL
+; this one); .X = TR_ARGS, TR_CWD, TR_ENV, TR_FRAME or TR_ENVAT (r1: the most; r2: from where); r0 = a buffer
+; (TA_ARGS_MAX + 1, PATH_MAX + 1, ENV_SIZE, TF_SIZE or r1 bytes).  OUT: the bytes in it (TR_ENV, TR_ENVAT: .A/.X =
+; the environment's bytes in use); or C = 1, .A = E_SRCH, E_INVAL
 K_TASKREAD:
-            cpx         #TR_FRAME + 1
+            cpx         #TR_ENVAT + 1
             bcc         :+
             FAIL        E_INVAL
 
@@ -117,12 +118,15 @@ K_TASKREAD_K:
             beq         @srch
             ldy         #0
             lda         K0_TMP3
-            cmp         #TR_ENV
-            bcc         :++
-            beq         :+
+            cmp         #TR_FRAME
+            bne         :+
             jmp         @frame
 :
-            jmp         @env
+            cmp         #TR_ENV
+            bcc         :+
+            FARCALL     K_ENV_READ                          ; (TR_ENV, TR_ENVAT: the environment's, env.s: .X = the
+            rts                                             ;   task)
+
 :
             cmp         #TR_CWD
             beq         @cwd
@@ -176,21 +180,6 @@ K_TASKREAD_K:
             clc
             rts
 
-@env:                                                       ; Its environment: the kernel task's own (K_ENV)
-            txa
-            asl
-            asl
-            clc
-            adc         #>K_ENV
-            sta         K_PTR + 1
-            lda         #<K_ENV
-            sta         K_PTR
-            lda         #<ENV_SIZE
-            sta         K_CNT
-            lda         #>ENV_SIZE
-            sta         K_CNT + 1
-            bra         @kcopy
-
 @frame:                                                     ; Its state, and the frame it left at TK_SP (on its
             php                                             ;   stack: its own stack page), and its bank registers
             sei                                             ;   (their mirrors)
@@ -225,7 +214,6 @@ K_TASKREAD_K:
             ldy         #TF_SIZE
             jmp         @copy
 
-.assert     ENV_SIZE = $400 .and <K_ENV = 0, error, "TASKREAD's TR_ENV: 4 pages a task, from a page"
 .assert     TF_Y - TF_U = FR_Y - FR_U .and TF_PC - TF_U = FR_PCL - FR_U .and TF_RAM = TF_U + FRAME_SIZE, error, "TF_* and FR_*"
 
 ; TASKMEM: bytes between a task's memory, as it sees it, and a buffer here (/proc/N/mem and ram).  IN: .A = the

@@ -33,8 +33,9 @@ Every task has its own `$0000`-`$7FFF` (the `T` register selects it) and its own
 | `$0200`-`$03FF` | The OS area (`TA_*`): a server's request being served (`TASK_INBOX`), its entries, its break, its note handler, its name, its copy of the IRQ lines' owners, its page and bank maps, the request it's making, the name a request names (`TASK_PATH`), its fds, its current directory, its arguments at `$0350` (`TASK_ARGS`) |
 | `$0400`-`$7FFF` | The program's RAM: its data and BSS, then its break (`BREAK`); pages from the top down (`PAGES_ALLOC`).  Task F's top page is the DS1747's |
 
-The kernel task (task 0) keeps the kernel's state: its program zero page (`K0_*`) and its RAM from `$0400`
-(`K_*` tables; the environments, 1K a task, from `$3000`).  Every fixed address is in `include/layout.inc`, and nowhere else.
+The kernel task (task 0) keeps the kernel's state: its program zero page (`K0_*`), its RAM from `$0400` (`K_*`
+tables), and its own RAM banks: each task's environment is one of them (8K, the first good RAM module's banks, task t's
+bank t).  Every fixed address is in `include/layout.inc`, and nowhere else.
 
 ## Tasks
 
@@ -124,10 +125,13 @@ The kernel task (task 0) keeps the kernel's state: its program zero page (`K0_*`
   program is a RAM program, read into its task's RAM at its load address by the task itself as it starts (the file
   its fd 15 meanwhile).  The child's fds are the caller's 0, 1 and 2, or with `SPAWN_FDMAP` the map at `r2`; its
   current directory is the caller's, and its environment a copy of the caller's (`SPAWN_NOENV`: an empty one).
-* **A task's environment** is 1K of the kernel task's RAM (`K_ENV`, a block a task): its variables, each a name
-  and a value of bytes (`ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`; any task's, by number).  `#e` serves the
-  caller's as files, mounted at `/env`, as Plan 9's.  rc keeps its variables there, a list's words each ending
-  with a zero byte, and its functions as `fn#NAME`.
+* **A task's environment** is a RAM bank of the kernel task's (`ENV_MAX`, 8K, a task): its variables, each a name
+  and a value of bytes (`ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`; any task's, by number).  Only the kernel task's
+  code reaches it, selecting its own bank register; `SPAWN` copies a parent's a page at a time through a buffer, as
+  two banks are never at `$8000` at once.  `TASKREAD`'s `TR_ENVAT` reads one whole, a part at a time (`TR_ENV`, the
+  variables that fit 1K, whole).  `#e` serves the caller's as files, mounted at `/env`, as Plan 9's, and `/proc/N/env`
+  any task's, made a read at a time.  rc keeps its variables there, a list's words each ending with a zero byte, and
+  its functions as `fn#NAME`.
 * A RAM program is assembled with `-D HYX2_RAM` (`hyx2.inc`: no `HF_INPLACE`, loaded at `$0800`) and linked by
   `sdk/asm/hyx2.cfg`: its header, code, read-only data and data one image from `$0800`, its BSS after them.  The
   test RAM programs are `tests/ram/NAME/`, built into `obj/tests/NAME.hyx`; the ROM disk's programs (`/rom/bin`,

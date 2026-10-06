@@ -2,7 +2,8 @@
 ; t_env - environments (phase 4.2: kernel/env.s, and kdev's #e), run as init (its fds 0-2 closed: its lines go out
 ; on the bring-up console; the fds it opens are moved to 5 on), with t_child.  The calls: ENV_PUT (made, set at an
 ; offset, cut), ENV_GET (parts, offsets, past the end), ENV_NAME, ENV_DEL, their errors (no such variable, bad
-; names, a full environment, no such task); a child's copy, its changes its own, and SPAWN_NOENV's empty one.  #e:
+; names, a full environment: ENV_MAX, no such task); TASKREAD's TR_ENV (the variables that fit ENV_SIZE) and TR_ENVAT
+; (a part); a child's copy (of a full one too), its changes its own, and SPAWN_NOENV's empty one.  #e:
 ; the directory, a variable read in parts, made, written, emptied (O_TRUNC), appended to, removed, its length in its
 ; stat record, a long one (in kdev's parts), and its errors.
 
@@ -132,12 +133,39 @@ main:
             EXPECT_ERR  E_SRCH, "task 16: E_SRCH"
             GET_        9, s_x, 16, 0
             EXPECT_ERR  E_SRCH, "a task not in use: E_SRCH"
-            PUT_        s_big, buf, 1000, 0                 ; (13 bytes in use: 1019 with it)
-            EXPECT_OK   "ENV_PUT big (1000 bytes): it fits"
+            PUT_        s_big, buf, 8170, 0                 ; (13 bytes in use: 8189 with it)
+            EXPECT_OK   "ENV_PUT big (8170 bytes): it fits"
+            GET_        $FF, s_big, 16, 8160
+            EXPECT_A    10, "ENV_GET big from 8160: its last 10 bytes"
+            lda         buf + 9
+            eor         buf + 8169
+            EXPECT_A    0, "and its last, as it was put"
             PUT_        s_big2, buf, 10, 0
-            EXPECT_ERR  E_NOMEM, "and another: E_NOMEM (1024 bytes an environment)"
+            EXPECT_ERR  E_NOMEM, "and another: E_NOMEM (ENV_MAX: 8192 bytes an environment)"
             PUT_        s_x, buf, 100, 1
             EXPECT_ERR  E_NOMEM, "x made longer: E_NOMEM"
+            lda         #$55
+            sta         buf + 12
+            LDR         r0, buf
+            lda         #$FF
+            ldx         #TR_ENV
+            jsr         TASKREAD
+            lda         buf + 12
+            EXPECT_A    0, "TASKREAD's TR_ENV: the variables that fit ENV_SIZE, whole (x, zz), then a 0"
+            lda         #$55
+            sta         buf + 8
+            LDR         r0, buf
+            LDR         r1, 16
+            LDR         r2, 8180
+            lda         #$FF
+            ldx         #TR_ENVAT
+            jsr         TASKREAD
+            stx         len + 1
+            EXPECT_A    <8189, "TASKREAD's TR_ENVAT: the bytes in use (8189) ..."
+            lda         len + 1
+            EXPECT_A    >8189, "  (8189's high byte)"
+            lda         buf + 8
+            EXPECT_A    0, "  and from 8180, the last 9 of them: its 0 last"
             LDR         r0, s_big
             lda         #$FF
             jsr         ENV_DEL
@@ -151,6 +179,66 @@ main:
             EXPECT_A    'Q', "its x = C its own: this one's still Q"
             CHILD_      s_v, SPAWN_NOENV
             EXPECT_A    $EE, "SPAWN_NOENV: an empty one (no x)"
+            LDR         r0, s_x                             ; x last in a full environment (zz, big, x): its
+            lda         #$FF                                ;   copy is a page at a time, from one bank to another
+            jsr         ENV_DEL
+            PUT_        s_big, buf, 8000, 0
+            PUT_        s_x, s_q, 1, 0
+            CHILD_      s_v, 0
+            EXPECT_A    'Q', "a child's copy of a full environment: x, in its last page, is Q there too"
+            LDR         r0, s_big                           ; (As before: x, then zz)
+            lda         #$FF
+            jsr         ENV_DEL
+            LDR         r0, s_zz
+            lda         #$FF
+            jsr         ENV_DEL
+            PUT_        s_zz, s_33, 2, 0
+
+; ---- /proc/N/env of an environment past ENV_SIZE: kdev makes it a read at a time (x=Q, zz=33, big=1500 As)
+            ldx         #0
+            lda         #'A'
+:
+            sta         buf,X
+            sta         buf + 256,X
+            inx
+            bne         :-
+            PUT_        s_big, buf, 500, 0
+            PUT_        s_big, buf, 500, 500
+            PUT_        s_big, buf, 500, 1000
+            OPEN_       s_penv, O_READ
+            sta         fd
+            EXPECT_OK   "OPEN #p/1/env"
+            stz         len
+            stz         len + 1
+@penv:
+            LDR         r0, buf
+            LDR         r1, 512
+            lda         fd
+            jsr         READ
+            bcs         @penvend                            ; (An error: what came so far)
+            sta         r2
+            stx         r2 + 1
+            ora         r2 + 1
+            beq         @penvend                            ; (0: its end)
+            clc
+            lda         len
+            adc         r2
+            sta         len
+            lda         len + 1
+            adc         r2 + 1
+            sta         len + 1
+            bra         @penv
+
+@penvend:
+            lda         len
+            EXPECT_A    <1515, "#p/1/env, 512 at a time: 1515 bytes (x=Q, zz=33, big=1500 As) ..."
+            lda         len + 1
+            EXPECT_A    >1515, "  (1515's high byte)"
+            lda         fd
+            jsr         CLOSE
+            LDR         r0, s_big
+            lda         #$FF
+            jsr         ENV_DEL
 
 ; ---- #e
             OPEN_       s_he, O_READ
@@ -329,6 +417,7 @@ s_slash:    .byte       "a/b", 0
 s_long:     .byte       "abcdefghijklmnopqrstuvwxyz012345", 0
 s_he:       .byte       "#e", 0
 s_hex:      .byte       "#e/x", 0
+s_penv:     .byte       "#p/1/env", 0
 s_hnew:     .byte       "#e/new", 0
 s_hlong:    .byte       "#e/long", 0
 s_hnone:    .byte       "#e/nothing", 0

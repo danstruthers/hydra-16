@@ -1,13 +1,16 @@
 ; ****************************************************************************
 ; env.s - environments (BIOS ROM page 2: far calls; docs/reimplementation-from-scratch.md, §14.1).
 ;
-; Each task has an environment of its own: ENV_SIZE bytes in the kernel task's RAM (K_ENV + the task * ENV_SIZE), its
-; variables one after another, each its name's length (1-ENV_NAME_MAX), its name, its value's length (2) and its
-; value (any bytes: rc's lists are their words with a 0 after each); a 0 ends them.  SPAWN gives a child a copy of
-; its parent's (SPAWN_NOENV: an empty one); the boot's tasks start with empty ones.  The calls (ENV_GET, ENV_PUT,
-; ENV_DEL, ENV_NAME) are KCALLs: the caller's side copies the name into its TA_SCRATCH, and the kernel task takes it,
-; and the caller's r-registers, from there by kcopy and quick looks; values move by kcopy.  #e (kdev) serves them as
-; files: /env/NAME.
+; Each task has an environment of its own: a RAM bank of the kernel task's (task t's: bank K_ENV_BASE + t, the
+; first good RAM module's 16), worked on at ENV_WINDOW with that bank selected: ENV_MAX bytes, its variables one after
+; another, each its name's length (1-ENV_NAME_MAX), its name, its value's length (2) and its value (any bytes: rc's
+; lists are their words with a 0 after each); a 0 ends them.  Only the kernel task's code reaches them, so it sets its
+; own RAM bank register as it likes (kcopy reads and writes the window as the kernel task sees it).  SPAWN gives a
+; child a copy of its parent's (SPAWN_NOENV: an empty one), a page at a time through K_ENV_BOUNCE; the boot empties
+; them all.  The calls (ENV_GET, ENV_PUT, ENV_DEL, ENV_NAME) are KCALLs: the caller's side copies the name into its
+; TA_SCRATCH, and the kernel task takes it, and the caller's r-registers, from there by kcopy and quick looks; values
+; move by kcopy.  TASKREAD's TR_ENV and TR_ENVAT read one whole (K_ENV_READ).  #e (kdev) serves them as files:
+; /env/NAME.  With no RAM module there are none: ENV_PUT fails (E_NOMEM), and every environment reads as empty.
 
 .include "kdefs.inc"
 
@@ -28,8 +31,8 @@ K_ENV_GET:
 
 ; ENV_PUT: a variable set, or made.  IN: .A = a task ($FF: this one); r0 = its name; r1 = bytes; r2 = their count;
 ; r3 = where in its value they go (the value cut there first: 0 for a new value; its length at most).  OUT: C = 0;
-; or C = 1, .A = E_NOMEM (no room: ENV_SIZE bytes an environment), E_INVAL (past the value's end; a bad name),
-; E_NOENT (an offset, and no such variable), E_SRCH, E_NAMETOOLONG
+; or C = 1, .A = E_NOMEM (no room: ENV_MAX bytes an environment; or no RAM module), E_INVAL (past the value's end; a
+; bad name), E_NOENT (an offset, and no such variable), E_SRCH, E_NAMETOOLONG
 K_ENV_PUT:
             jsr         e_arg
             bcs         :+
@@ -145,6 +148,11 @@ K_ENV_GET_K:
 K_ENV_PUT_K:
             jsr         e_prep
             bcs         @done
+            lda         K_ENV_BASE                          ; (No RAM module: no environments)
+            cmp         #ENV_NONE
+            bne         :+
+            FAIL        E_NOMEM
+:
             jsr         e_args
             lda         K_CNT                               ; (K_ENV_N: the count)
             sta         K_ENV_N
@@ -263,45 +271,244 @@ K_ENV_NAME_K:
 ; At SPAWN, and the boot
 
 ; A child's environment: a copy of its parent's, or empty (FARCALL from K_SPAWN_K: .X = the child, K0_TMP3 = its
-; parent, K0_SPAWNF = SPAWN's flags).  Keeps .X
+; parent, K0_SPAWNF = SPAWN's flags).  The parent's pages in use, each from its bank to K_ENV_BOUNCE, then from there
+; to the child's.  Keeps .X
 K_ENV_INHERIT:
-            phx
-            txa
-            jsr         e_block
-            sta         K0_EP + 1                           ; (To the child's)
-            stz         K0_EP
+            stx         K_ENV_N                             ; (The child)
             lda         K0_SPAWNF
             and         #SPAWN_NOENV
-            bne         @empty
-            lda         K0_TMP3                             ; From the parent's: its bytes in use
+            bne         K_ENV_CLEAR
+            lda         K0_TMP3                             ; The parent's bytes in use ...
             jsr         e_block
+            bcs         @done                               ; (No RAM module)
             jsr         e_used
-            lda         K_ENV_EB
-            sta         K0_PTR2
-            lda         K_ENV_EB + 1
-            sta         K0_PTR2 + 1
-            lda         K_ENV_U
-            sta         K_ENV_MN
+            lda         K_ENV_U                             ;   in pages (K_ENV_MN: how many, 1-32)
+            cmp         #1
             lda         K_ENV_U + 1
-            sta         K_ENV_MN + 1
-            jsr         e_move
-            plx
+            adc         #0
+            sta         K_ENV_MN
+            stz         K0_PTR                              ; K0_PTR: the page
+            lda         #>ENV_WINDOW
+            sta         K0_PTR + 1
+@page:
+            lda         K0_TMP3                             ; ---- The parent's bank
+            jsr         e_block
+            ldy         #0
+:
+            lda         (K0_PTR),Y
+            sta         K_ENV_BOUNCE,Y
+            iny
+            bne         :-
+            lda         K_ENV_N                             ; ---- The child's
+            jsr         e_block
+:
+            lda         K_ENV_BOUNCE,Y
+            sta         (K0_PTR),Y
+            iny
+            bne         :-
+            inc         K0_PTR + 1
+            dec         K_ENV_MN
+            bne         @page
+@done:
+            ldx         K_ENV_N
             rts
 
-@empty:
-            lda         #0
-            sta         (K0_EP)
-            plx
-            rts
-
-; Task .X's environment emptied (a task started at boot).  Keeps .X
+; Task .X's environment emptied (a task started at boot; a child given none).  Keeps .X
 K_ENV_CLEAR:
             txa
             jsr         e_block
-            sta         K0_EP + 1
-            stz         K0_EP
+            bcs         :+                                  ; (No RAM module)
             lda         #0
-            sta         (K0_EP)
+            sta         ENV_WINDOW
+:
+            rts
+
+; At the boot, after POST (K0_MODMASK, K0_BADMODS): the environments' bank, the first good RAM module's (none:
+; ENV_NONE), and every environment emptied
+K_ENV_INIT:
+            stz         K_ENV_ZERO
+            lda         K0_BADMODS                          ; K0_TMP, K0_TMP2: the good modules
+            eor         #$FF
+            and         K0_MODMASK
+            sta         K0_TMP
+            lda         K0_BADMODS + 1
+            eor         #$FF
+            and         K0_MODMASK + 1
+            sta         K0_TMP2
+            ldx         #0
+@module:
+            lsr         K0_TMP2                             ; (Module m: bit m)
+            ror         K0_TMP
+            bcs         @found
+            inx
+            cpx         #RAM_MODULES
+            bne         @module
+            lda         #ENV_NONE
+            sta         K_ENV_BASE
+            rts
+
+@found:
+            txa                                             ; Its banks: $m0-$mF
+            asl
+            asl
+            asl
+            asl
+            sta         K_ENV_BASE
+            ldx         #TASKS - 1
+:
+            jsr         K_ENV_CLEAR
+            dex
+            bpl         :-
+            rts
+
+; TASKREAD's TR_ENV and TR_ENVAT (FARCALL from K_TASKREAD_K, in the kernel task: .X = the task, K0_TMP2 = the
+; caller, K0_TMP3 = what): its environment's first variables, whole, that fit ENV_SIZE with a 0 after them (TR_ENV),
+; or from the caller's r2 on, its r1 bytes at most (TR_ENVAT), to the caller's r0 buffer.  OUT: C = 0, .A/.X = the
+; environment's bytes in use (its 0 too)
+K_ENV_READ:
+            txa
+            jsr         e_block                             ; (No RAM module: an empty one)
+            jsr         e_used
+            ldx         K0_TMP2                             ; K_PTR2: the caller's buffer
+            ldy         T_REGISTER
+            php
+            sei
+            QL_GET      r0
+            sta         K_PTR2
+            QL_GET      r0 + 1
+            sta         K_PTR2 + 1
+            plp
+            lda         K0_TMP3
+            cmp         #TR_ENV
+            beq         @first
+            php                                             ; TR_ENVAT: K_CNT, the most (r1); K_ENV_OFF, where (r2)
+            sei
+            QL_GET      r1
+            sta         K_CNT
+            QL_GET      r1 + 1
+            sta         K_CNT + 1
+            QL_GET      r2
+            sta         K_ENV_OFF
+            QL_GET      r2 + 1
+            sta         K_ENV_OFF + 1
+            plp
+            sec                                             ; K_ENV_N: the bytes from there (none past the end)
+            lda         K_ENV_U
+            sbc         K_ENV_OFF
+            sta         K_ENV_N
+            lda         K_ENV_U + 1
+            sbc         K_ENV_OFF + 1
+            sta         K_ENV_N + 1
+            bcs         :+
+            stz         K_ENV_N
+            stz         K_ENV_N + 1
+:
+            lda         K_ENV_N                             ; K_CNT: those, or fewer
+            cmp         K_CNT
+            lda         K_ENV_N + 1
+            sbc         K_CNT + 1
+            bcs         :+
+            lda         K_ENV_N
+            sta         K_CNT
+            lda         K_ENV_N + 1
+            sta         K_CNT + 1
+:
+            clc
+            lda         K_ENV_EB
+            adc         K_ENV_OFF
+            sta         K_PTR
+            lda         K_ENV_EB + 1
+            adc         K_ENV_OFF + 1
+            sta         K_PTR + 1
+            jsr         e_out
+            bra         @used
+
+@first:                                                     ; TR_ENV: K0_PTR past the last variable that fits
+            lda         K_ENV_EB
+            sta         K0_PTR
+            lda         K_ENV_EB + 1
+            sta         K0_PTR + 1
+@var:
+            lda         (K0_PTR)
+            beq         @fits
+            lda         K0_PTR                              ; (K_ENV_SRC: this one)
+            sta         K_ENV_SRC
+            lda         K0_PTR + 1
+            sta         K_ENV_SRC + 1
+            jsr         e_vlen
+            jsr         e_skip
+            sec                                             ; Past ENV_SIZE, with the 0 after it?
+            lda         K0_PTR
+            sbc         K_ENV_EB
+            tax
+            lda         K0_PTR + 1
+            sbc         K_ENV_EB + 1
+            cpx         #<ENV_SIZE
+            sbc         #>ENV_SIZE
+            bcc         @var
+            lda         K_ENV_SRC                           ; (It doesn't fit: up to it)
+            sta         K0_PTR
+            lda         K_ENV_SRC + 1
+            sta         K0_PTR + 1
+@fits:
+            sec                                             ; Its variables (K0_PTR - K_ENV_EB bytes) ...
+            lda         K0_PTR
+            sbc         K_ENV_EB
+            sta         K_CNT
+            lda         K0_PTR + 1
+            sbc         K_ENV_EB + 1
+            sta         K_CNT + 1
+            lda         K_ENV_EB
+            sta         K_PTR
+            lda         K_ENV_EB + 1
+            sta         K_PTR + 1
+            jsr         e_out
+            clc                                             ;   and a 0 after them
+            lda         K_PTR2
+            adc         K_CNT
+            sta         K_PTR2
+            lda         K_PTR2 + 1
+            adc         K_CNT + 1
+            sta         K_PTR2 + 1
+            lda         #<K_ENV_ZERO
+            sta         K_PTR
+            lda         #>K_ENV_ZERO
+            sta         K_PTR + 1
+            lda         #1
+            sta         K_CNT
+            stz         K_CNT + 1
+            jsr         e_out
+@used:
+            lda         K_ENV_U
+            ldx         K_ENV_U + 1
+            clc
+            rts
+
+; K_CNT bytes (0 too) from K_PTR here to K_PTR2 in the caller's (K0_TMP2: TASKREAD's).  Keeps K_PTR2, K_CNT
+e_out:
+            lda         K_CNT
+            ora         K_CNT + 1
+            beq         @done
+            lda         K_PTR2                              ; (kcopy moves them on)
+            pha
+            lda         K_PTR2 + 1
+            pha
+            lda         K_CNT
+            pha
+            lda         K_CNT + 1
+            pha
+            lda         K0_TMP2
+            clc
+            FARCALL     K_KCOPY
+            pla
+            sta         K_CNT + 1
+            pla
+            sta         K_CNT
+            pla
+            sta         K_PTR2 + 1
+            pla
+            sta         K_PTR2
+@done:
             rts
 
 ; ****************************************************************************
@@ -357,22 +564,37 @@ e_task:
             cmp         #ST_FREE
             beq         @srch
             txa
-            jsr         e_block
+            jsr         e_block                             ; (No RAM module: an empty one, read only)
             clc
             rts
 
 @srch:
             FAIL        E_SRCH
 
-; Task .A's environment: K_ENV_EB, and .A = its high byte
+; Task .A's environment, its bank selected (the kernel task's RAM bank register): K_ENV_EB = ENV_WINDOW.  OUT: C = 0;
+; or C = 1: no RAM module, K_ENV_EB an empty environment in K_ENV_BOUNCE (to read, never to write).  Keeps .X, .Y
 e_block:
-            asl
-            asl
-            .assert     ENV_SIZE = 1024, error, "e_block: an environment is 4 pages"
-            clc
-            adc         #>K_ENV
+            pha
+            lda         K_ENV_BASE
+            cmp         #ENV_NONE
+            beq         @none
+            pla
+            ora         K_ENV_BASE                          ; (Task t's: bank $m0 + t)
+            sta         RAM_BANK
             stz         K_ENV_EB
+            lda         #>ENV_WINDOW
             sta         K_ENV_EB + 1
+            clc
+            rts
+
+@none:
+            pla
+            stz         K_ENV_BOUNCE
+            lda         #<K_ENV_BOUNCE
+            sta         K_ENV_EB
+            lda         #>K_ENV_BOUNCE
+            sta         K_ENV_EB + 1
+            sec
             rts
 
 ; The caller's r1 (K_ENV_SRC), r2 (K_CNT) and r3 (K_ENV_OFF), by quick looks
@@ -528,9 +750,9 @@ e_new:
             adc         K_ENV_N + 1
             sta         K_ENV_MN + 1
             bcs         e_nomem
-            lda         #<ENV_SIZE
+            lda         #<ENV_MAX
             cmp         K_ENV_MN
-            lda         #>ENV_SIZE
+            lda         #>ENV_MAX
             sbc         K_ENV_MN + 1
             bcc         e_nomem
             lda         K0_ENL                              ; Its name's length, its name, its value's length
@@ -593,9 +815,9 @@ e_set:
             lda         K_ENV_MN + 1
             sbc         K_ENV_EL + 1
             sta         K_ENV_MN + 1
-            lda         #<ENV_SIZE
+            lda         #<ENV_MAX
             cmp         K_ENV_MN
-            lda         #>ENV_SIZE
+            lda         #>ENV_MAX
             sbc         K_ENV_MN + 1
             bcc         e_nomem
             jsr         e_value                             ; The variables after it: from its value's end ...

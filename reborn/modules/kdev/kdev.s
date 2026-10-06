@@ -33,6 +33,7 @@ E_FIDS          = 16                                        ; #e's fids ...
 EF_DIR          = 1                                         ;   each the directory ...
 EF_VAR          = 2                                         ;   or a variable (0: free)
 MBUF            = 512                                       ; /proc/N/mem and ram: a request's bytes at most
+EBUF            = 256                                       ; /proc/N/env: a part of the environment read at a time
 TI_DRIVER       = $01                                       ; (TASKINFO's flags: a driver)
 
 .zeropage
@@ -71,9 +72,15 @@ nsbseq:     .res        1                                   ;   its place ...
 nsm:        .res        1                                   ;   and <> 0 for a mount's line)
 rq:         .res        1                                   ; /proc/N/mem's and ram's request (R_READ, R_WRITE) ...
 mbuf:       .res        MBUF                                ;   and their bytes
-ebuf:       .res        ENV_SIZE                            ; /proc/N/env: the environment (TASKREAD's) ...
-etext:      .res        ENV_SIZE                            ;   as text ...
-etlen:      .res        2                                   ;   its length
+ebuf:       .res        EBUF                                ; /proc/N/env: a part of the environment (TASKREAD's TR_ENVAT) ...
+eb_at:      .res        2                                   ;   where in it the part starts ...
+eb_n:       .res        2                                   ;   the part's bytes ...
+eb_pos:     .res        2                                   ;   the next byte wanted ...
+eb_used:    .res        2                                   ;   and the environment's bytes in use
+etext:      .res        IO_UNIT                             ; The text's part a read asks for ...
+et_want:    .res        2                                   ;   where it starts ...
+et_pos:     .res        2                                   ;   the text made so far ...
+et_out:     .res        2                                   ;   and its bytes in etext
 p_used:     .res        PIPE_N                              ; Each pipe: in use ...
 p_rdl:      .res        PIPE_N                              ;   where the next read is ...
 p_rdh:      .res        PIPE_N
@@ -2495,8 +2502,9 @@ hex2:
             adc         #'0'
             jmp         srv_tputc
 
-; env: its environment, "name=value" a line each (TASKREAD's TR_ENV; a 0 in a value, after an rc list's word, as a
-; space, but at its end), made anew by a read from its start
+; env: its environment, "name=value" a line each (a 0 in a value, after an rc list's word, as a space, but at its
+; end).  An environment may be ENV_MAX bytes, so each read makes the text from the start again and keeps only its
+; own part (et_*), reading the environment a part at a time (TASKREAD's TR_ENVAT, into ebuf: eb_*)
 h_penv:
             cmp         #R_READ
             beq         :+
@@ -2504,89 +2512,86 @@ h_penv:
             rts
 
 :
-            lda         TASK_INBOX + RQ_OFFSET
-            ora         TASK_INBOX + RQ_OFFSET + 1
-            ora         TASK_INBOX + RQ_OFFSET + 2
+            stz         TASK_INBOX + RQ_DONE
+            stz         TASK_INBOX + RQ_DONE + 1
+            lda         TASK_INBOX + RQ_OFFSET + 2          ; (Past 64K: nothing)
             ora         TASK_INBOX + RQ_OFFSET + 3
-            bne         :+
-            jsr         env_make
-            bcs         @done
+            bne         @end
+            MOVR        et_want, TASK_INBOX + RQ_OFFSET
+            MOVR        m, TASK_INBOX + RQ_COUNT            ; m: the most (IO_UNIT)
+            lda         m + 1
+            cmp         #>IO_UNIT
+            bcc         :+
+            LDR         m, IO_UNIT
 :
-            MOVR        n, etlen
-            jsr         img_left                            ; m: what to send
-            lda         m
-            ora         m + 1
+            jsr         env_text
+            bcs         @done
+            lda         et_out
+            ora         et_out + 1
             beq         @end
-            clc                                             ; From the text at the offset, to the client
-            lda         #<etext
-            adc         TASK_INBOX + RQ_OFFSET
-            sta         r0
-            lda         #>etext
-            adc         TASK_INBOX + RQ_OFFSET + 1
-            sta         r0 + 1
+            LDR         r0, etext                           ; To the client
             MOVR        r1, TASK_INBOX + RQ_BUF
-            MOVR        r2, m
+            MOVR        r2, et_out
             jsr         CLIENT_WRITE
-            MOVR        TASK_INBOX + RQ_DONE, m
+            MOVR        TASK_INBOX + RQ_DONE, et_out
 @end:
             clc
 @done:
             rts
 
-; Task srv_id's environment (ebuf: each variable its name's length, its name, its value's length (2), its value; a
-; 0 after the last) as text in etext (etlen).  OUT: C = 0; or C = 1, .A = the error
-env_make:
-            LDR         r0, ebuf
-            lda         z:srv_id
-            ldx         #TR_ENV
-            jsr         TASKREAD
-            bcc         :+
-            rts
-:
-            LDR         r0, ebuf
-            LDR         r1, etext
+; Task srv_id's environment (each variable its name's length, its name, its value's length (2), its value; a 0
+; after the last) as text, the part from et_want (m bytes at most) in etext (et_out).  OUT: C = 0; or C = 1, .A =
+; the error (TASKREAD's)
+env_text:
+            stz         et_pos
+            stz         et_pos + 1
+            stz         et_out
+            stz         et_out + 1
+            stz         eb_pos
+            stz         eb_pos + 1
+            stz         eb_at
+            stz         eb_at + 1
+            stz         eb_n
+            stz         eb_n + 1
 @var:
-            lda         r0 + 1                              ; (Its end: no further)
-            cmp         #>(ebuf + ENV_SIZE)
-            bcs         @end
-            lda         (r0)                                ; Its name's length (0: the end)
+            jsr         eb_get                              ; Its name's length (0, or none: the end)
+            bcs         @stop
             beq         @end
             tax
-            jsr         adv0
 @name:
-            lda         (r0)
-            sta         (r1)
-            jsr         adv0
-            jsr         adv1
+            jsr         eb_get
+            bcs         @stop
+            jsr         et_put
+            bcs         @end
             dex
             bne         @name
             lda         #'='
-            sta         (r1)
-            jsr         adv1
-            lda         (r0)                                ; Its value's length ...
+            jsr         et_put
+            bcs         @end
+            jsr         eb_get                              ; Its value's length ...
+            bcs         @stop
             sta         n
-            jsr         adv0
-            lda         (r0)
+            jsr         eb_get
+            bcs         @stop
             sta         n + 1
-            jsr         adv0
 @value:                                                     ;   and its value
             lda         n
             ora         n + 1
             beq         @line
-            lda         (r0)
+            jsr         eb_get
+            bcs         @stop
             bne         @put
             lda         n + 1                               ; (A 0: a space; at its end, nothing: rc ends each
             bne         :+                                  ;   word of a list with one)
             lda         n
             cmp         #1
-            beq         @skip
+            beq         @next
 :
             lda         #' '
 @put:
-            sta         (r1)
-            jsr         adv1
-@skip:
-            jsr         adv0
+            jsr         et_put
+            bcs         @end
+@next:
             lda         n
             bne         :+
             dec         n + 1
@@ -2596,20 +2601,125 @@ env_make:
 
 @line:
             lda         #LF
-            sta         (r1)
-            jsr         adv1
-            bra         @var
-
+            jsr         et_put
+            bcc         @var
 @end:
-            sec
-            lda         r1
-            sbc         #<etext
-            sta         etlen
-            lda         r1 + 1
-            sbc         #>etext
-            sta         etlen + 1
             clc
-@done:
+            rts
+
+@stop:
+            tay                                             ; (.A = 0: its end; else an error, C = 1)
+            beq         @end
+            rts
+
+; The text's next byte, .A: kept in etext if it's in the read's part.  OUT: C = 1 when the part's full.  Keeps .X
+et_put:
+            ldy         et_pos + 1                          ; Before the part: counted only
+            cpy         et_want + 1
+            bne         :+
+            ldy         et_pos
+            cpy         et_want
+:
+            bcc         @count
+            ldy         et_out + 1                          ; The part full?
+            cpy         m + 1
+            bne         :+
+            ldy         et_out
+            cpy         m
+:
+            bcs         @rts
+            pha                                             ; etext + et_out
+            clc
+            lda         #<etext
+            adc         et_out
+            sta         r0
+            lda         #>etext
+            adc         et_out + 1
+            sta         r0 + 1
+            pla
+            sta         (r0)
+            inc         et_out
+            bne         @count
+            inc         et_out + 1
+@count:
+            inc         et_pos
+            bne         :+
+            inc         et_pos + 1
+:
+            clc
+@rts:
+            rts
+
+; The environment's next byte, .A (Z: 0), read from ebuf, a part (EBUF bytes) fetched when it's run out.  OUT: C =
+; 0; or C = 1: none (past its bytes in use: .A = 0; or TASKREAD's error, .A).  Keeps .X
+eb_get:
+            sec                                             ; Past ebuf's part?
+            lda         eb_pos
+            sbc         eb_at
+            sta         r1
+            lda         eb_pos + 1
+            sbc         eb_at + 1
+            sta         r1 + 1
+            lda         r1
+            cmp         eb_n
+            lda         r1 + 1
+            sbc         eb_n + 1
+            bcc         @have
+            phx                                             ; The part from eb_pos
+            MOVR        eb_at, eb_pos
+            LDR         r0, ebuf
+            LDR         r1, EBUF
+            MOVR        r2, eb_pos
+            lda         z:srv_id
+            ldx         #TR_ENVAT
+            jsr         TASKREAD
+            bcs         @error
+            sta         eb_used
+            stx         eb_used + 1
+            plx
+            sec                                             ; eb_n: what it copied (the used from eb_at, EBUF at
+            lda         eb_used                             ;   most)
+            sbc         eb_at
+            sta         eb_n
+            lda         eb_used + 1
+            sbc         eb_at + 1
+            sta         eb_n + 1
+            bcc         @none
+            ora         eb_n
+            beq         @none
+            lda         eb_n                                ; (EBUF at most)
+            cmp         #<EBUF
+            lda         eb_n + 1
+            sbc         #>EBUF
+            bcc         :+
+            LDR         eb_n, EBUF
+:
+            stz         r1
+            stz         r1 + 1
+@have:
+            clc                                             ; ebuf + (eb_pos - eb_at)
+            lda         #<ebuf
+            adc         r1
+            sta         r0
+            lda         #>ebuf
+            adc         r1 + 1
+            sta         r0 + 1
+            inc         eb_pos
+            bne         :+
+            inc         eb_pos + 1
+:
+            lda         (r0)
+            clc
+            rts
+
+@error:
+            plx
+            sec
+            rts
+
+@none:
+            lda         #0
+            sec
             rts
 
 ; note: a note to the task, written by its name (interrupt, kill, hangup, alarm) or number (1-31): NOTE_POST

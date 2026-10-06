@@ -42,7 +42,7 @@
 .global     K_NS_INIT, K_NS_FRESH, K_NS_INHERIT, K_NS_EXIT, K_NS_FIND_K, K_NS_NEXT_K, K_NS_CWD_K, K_NS_UNION_K
 .global     K_NS_UNEXT_K, K_NS_UREL_K, K_NS_BIND_K, K_NS_MOUNT_K, K_NS_UNMOUNT_K, K_NSINFO
 ; ---- env.s: environments (page 2)
-.global     K_ENV_GET, K_ENV_PUT, K_ENV_DEL, K_ENV_NAME, K_ENV_INHERIT, K_ENV_CLEAR
+.global     K_ENV_GET, K_ENV_PUT, K_ENV_DEL, K_ENV_NAME, K_ENV_INHERIT, K_ENV_CLEAR, K_ENV_INIT, K_ENV_READ
 ; ---- info.s: what the kernel knows of the tasks (page 1)
 .global     K_TASKINFO, K_DBG_PS, K_TASKREAD, K_TASKMEM
 ; ---- time.s: the clock, and the DS1747 (page 1)

@@ -169,14 +169,15 @@ call ENV_GET task impl=K_ENV_GET far
   out:    .A/.X = the value's length from the offset (0 at its end or past it); as much of it as fits, in the buffer
   errors: E_NOENT (no such variable), E_SRCH (no such task), E_INVAL (an empty name, or one with a /), E_NAMETOOLONG
   blocks: no
-  doc:    A variable of a task's environment (each task has its own: ENV_SIZE bytes; SPAWN copies its parent's).
+  doc:    A variable of a task's environment (each task has its own: ENV_MAX bytes; SPAWN copies its parent's).
   doc:    A value is any bytes (rc's lists: each word and a 0).  #e serves the caller's as files, /env/NAME.
 
 call ENV_PUT task impl=K_ENV_PUT far
   in:     .A = a task ($FF: this one); r0 = a variable's name; r1 = bytes; r2 = their count; r3 = where in its value
   in:     they go (the value cut there first: 0 for a new value; its length at most)
   out:    -
-  errors: E_NOMEM (no room in the environment), E_INVAL (past the value's end; a bad name), E_SRCH
+  errors: E_NOMEM (no room in the environment: ENV_MAX bytes; or no RAM module for one)
+  errors: E_INVAL (past the value's end; a bad name), E_SRCH
   errors: E_NOENT (an offset given, and no such variable), E_NAMETOOLONG
   blocks: no
   doc:    Set a variable, or make it (offset 0).  An offset is for writing a long value in parts.
@@ -197,13 +198,16 @@ call ENV_NAME task impl=K_ENV_NAME far
 
 call TASKREAD task impl=K_TASKREAD far
   in:     .A = a task ($FF: this one); .X = what: TR_ARGS (its arguments: ARGS_MAX bytes), TR_CWD (its current
-  in:     directory: PATH_MAX + 1 bytes), TR_ENV (its environment: ENV_SIZE bytes) or TR_FRAME (its state and the
-  in:     frame it left as it was switched out: TF_SIZE bytes, TF_*); r0 = a buffer that big
-  out:    the bytes in the buffer
+  in:     directory: PATH_MAX + 1 bytes), TR_ENV (its environment's first variables, whole, and a 0: ENV_SIZE bytes
+  in:     at most), TR_FRAME (its state and the frame it left as it was switched out: TF_SIZE bytes, TF_*) or
+  in:     TR_ENVAT (part of its environment: r1 bytes at most, from offset r2); r0 = a buffer that big
+  out:    the bytes in the buffer; TR_ENVAT: .A/.X = the environment's bytes in use (its 0 too: it copied as many as
+  out:    there are from r2, r1 at most)
   errors: E_SRCH, E_INVAL (another what)
   blocks: no
   doc:    Another task's arguments, current directory, environment or registers, as they are now: /proc's args,
-  doc:    cwd, env and regs, ps.  The kernel task copies them a byte at a time, with IRQs off for each.
+  doc:    cwd, env and regs, ps.  The kernel task copies them a byte at a time, with IRQs off for each.  An
+  doc:    environment may be ENV_MAX bytes: TR_ENVAT reads one whole, a part at a time.
 
 # ---- memory (BIOS ROM page 1)
 
@@ -711,7 +715,8 @@ const SPAWN_NEWGROUP  $01      "SPAWN's flags: the child starts a note group of 
 const SPAWN_NEWNS     $02      "SPAWN's flags: the child starts with an empty namespace of its own (else it shares its parent's)"
 const SPAWN_FDMAP     $04      "SPAWN's flags: the child's fds are r2's map (else the caller's 0, 1 and 2)"
 const SPAWN_NOENV     $08      "SPAWN's flags: the child starts with an empty environment (else a copy of its parent's)"
-const ENV_SIZE        1024     "An environment's bytes: each variable its name's length, its name, its value's length (2), its value; a 0"
+const ENV_SIZE        1024     "TASKREAD's TR_ENV: its buffer, an environment's first variables, whole, and a 0"
+const ENV_MAX         8192     "An environment's bytes at most: each variable its name's length, its name, its value's length (2), its value; a 0"
 const ENV_NAME_MAX    31       "A variable's name's length at most"
 const SPAWN_FDS       15       "SPAWN's fd map: the child's fds it can give, at most (its fd 15 is its loader's as it starts)"
 const MREPL           0        "BIND's and MOUNT's flags: in place of what's at old"
@@ -721,8 +726,9 @@ const MCREATE         4        "BIND's and MOUNT's flags: a CREATE in the union 
 const EXIT_MSG_MAX    31       "An exit message's length at most (WAIT's buffer: 32 bytes)"
 const TR_ARGS         0        "TASKREAD: a task's arguments (ARGS_MAX bytes)"
 const TR_CWD          1        "TASKREAD: a task's current directory (PATH_MAX + 1 bytes)"
-const TR_ENV          2        "TASKREAD: a task's environment (ENV_SIZE bytes)"
+const TR_ENV          2        "TASKREAD: a task's environment's first variables, whole, and a 0 (ENV_SIZE bytes at most)"
 const TR_FRAME        3        "TASKREAD: a task's state and frame (TF_SIZE bytes)"
+const TR_ENVAT        4        "TASKREAD: part of a task's environment (r1 bytes at most, from offset r2; .A/.X its bytes in use)"
 const TF_STATE        0        "TR_FRAME's: the task's state (0 free, 1 ready, 2 waiting, 3 calling, 4 idle, 5 new, 6 sleeping, 7 blocked, 8 waiting for an event)"
 const TF_S            1        "TR_FRAME's: its stack pointer, as it was before the frame"
 const TF_U            2        "TR_FRAME's: the frame: U"

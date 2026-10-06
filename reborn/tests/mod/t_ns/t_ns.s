@@ -2,7 +2,8 @@
 ; t_ns - namespaces (phase 2.5), run as init with t_srv (#T) and t_child: init's namespace, empty at first; a bind
 ; at /; names cleaned and relative to the current directory (CHDIR, GETCWD); unions, in order, and a union
 ; directory read whole; a mount point bound elsewhere (all its members), and a name under one (what it is now);
-; UNMOUNT; MOUNT; a child's namespace, shared (and copied when it changes it) or new and empty.
+; UNMOUNT; MOUNT; a child's namespace, shared (and copied when it changes it) or new and empty; room for more than
+; eight namespaces at once, and more than 128 mount entries.
 
 .include "hydra.inc"
 .include "hyx2.inc"
@@ -215,6 +216,66 @@ main:
             CAT_        s_hello
             EXPECT_A    13, "its parent's / is still #T: the child's bind was in its own copy"
 
+; ---- Room: NS_MAX namespaces (16), MT_MAX entries (255) in all.  Eight children, each with a namespace of its own
+; (SPAWN_NEWNS), pausing till woken: nine at once with this one's
+            stz         total
+@spawn:
+            LDR         r0, s_child
+            LDR         r1, s_p
+            lda         #SPAWN_NEWNS
+            jsr         SPAWN
+            bcs         @spawned
+            ldx         total
+            sta         buf,X
+            inc         total
+            lda         total
+            cmp         #8
+            bne         @spawn
+@spawned:
+            lda         total
+            EXPECT_A    8, "eight children, each with a namespace of its own: nine namespaces at once"
+@wake:
+            ldx         total
+            beq         @woken
+            dec         total
+            lda         buf - 1,X
+            jsr         WAKE
+            stz         r0
+            stz         r0 + 1
+            ldx         total
+            lda         buf,X
+            jsr         WAIT
+            bra         @wake
+@woken:
+            stz         total                               ; 100 members at /w and 100 at /w2: 200 entries more
+@member:                                                    ;   (a union has 127 members after its first at most:
+            lda         total                               ;   their order, 128-254)
+            cmp         #100
+            bcs         :+
+            BIND_       s_t, s_w, MAFTER
+            bra         :++
+:
+            BIND_       s_t, s_w2, MAFTER
+:
+            bcs         @full
+            inc         total
+            lda         total
+            cmp         #200
+            bne         @member
+@full:
+            lda         total
+            EXPECT_A    200, "100 members at /w, 100 at /w2: the mount entries' room past 128"
+            stz         r0
+            stz         r0 + 1
+            LDR         r1, s_w
+            jsr         UNMOUNT
+            EXPECT_OK   "UNMOUNT /w: all 100"
+            stz         r0
+            stz         r0 + 1
+            LDR         r1, s_w2
+            jsr         UNMOUNT
+            EXPECT_OK   "UNMOUNT /w2: all 100"
+
             DONE        "t_ns"
 
 ; Directory r0's first record's name's first character (or C = 1, .A = the error)
@@ -269,3 +330,6 @@ s_spec:     .byte       "abc", 0
 s_child:    .byte       "#m/t_child", 0
 s_h:        .byte       "h", 0, 0
 s_m_op:     .byte       "m", 0, 0
+s_p:        .byte       "p", 0, 0
+s_w:        .byte       "/w", 0
+s_w2:       .byte       "/w2", 0

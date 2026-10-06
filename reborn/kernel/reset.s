@@ -198,6 +198,7 @@ BOOT:
             jsr         K_CONS_INIT
             KPRINT      K_STR_BANNER
             FARCALL     K_POST
+            FARCALL     K_ENV_INIT                          ; (The environments' banks: page 2)
             KPRINT      K_STR_MODULES
             lda         K0_MODCOUNT
             jsr         K_PUTHEX

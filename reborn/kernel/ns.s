@@ -45,7 +45,8 @@ K_NS_INIT:
 :
             sta         K_MT_NS,X
             dex
-            bpl         :-
+            cpx         #$FF
+            bne         :-
             ldx         #CH_MAX - 1
 :
             sta         K_CH_UFROM,X
@@ -167,7 +168,8 @@ K_NS_FIND_K:
             sta         K0_NF
 @next:
             dex
-            bpl         @entry
+            cpx         #$FF
+            bne         @entry
             lda         K0_NF
             cmp         #$FF
             beq         @noent
@@ -565,7 +567,8 @@ K_NS_UNMOUNT_K:
             inc         K0_NV
 @next:
             dex
-            bpl         @entry
+            cpx         #$FF
+            bne         @entry
             lda         K0_NV
 @count:
             beq         @noent
@@ -853,7 +856,8 @@ pick:
             stx         K0_PE
 @next:
             dex
-            bpl         @entry
+            cpx         #$FF
+            bne         @entry
             ldx         K0_PE
             cpx         #$FF
             beq         @none
@@ -879,7 +883,8 @@ members:
             inc         K0_NT
 @next:
             dex
-            bpl         @entry
+            cpx         #$FF
+            bne         @entry
             lda         K0_NT
             rts
 
@@ -906,7 +911,8 @@ seq_range:
             sta         K0_C2
 @next:
             dex
-            bpl         @entry
+            cpx         #$FF
+            bne         @entry
             rts
 
 ; K0_NQS = the first seq for K0_NT new members (by the flags in K0_NV: before what's there, after it, or in its place:
@@ -964,7 +970,8 @@ drop_all:
             inc         K0_NT
 @next:
             dex
-            bpl         @entry
+            cpx         #$FF
+            bne         @entry
             lda         K0_NT
             rts
 
@@ -1120,7 +1127,8 @@ ns_clone:
             .endrepeat
 @next:
             dex
-            bpl         @entry
+            cpx         #$FF
+            bne         @entry
             lda         K0_CN
             clc
 @done:
@@ -1163,7 +1171,8 @@ ns_rel:
             jsr         mt_free
 :
             dex
-            bpl         @entry
+            cpx         #$FF
+            bne         @entry
 @done:
             rts
 
@@ -1175,7 +1184,8 @@ mt_new:
             cmp         #$FF
             beq         :+
             dey
-            bpl         :-
+            cpy         #$FF
+            bne         :-
             FAIL        E_NSFULL
 :
             clc
@@ -1296,8 +1306,8 @@ K_NSINFO_K:
             dec         K0_TMP3
 @next:
             inx
-            bpl         @entry
-            .assert     MT_MAX = 128, error, "K_NSINFO_K: .X counts the entries to 128"
+            cpx         #MT_MAX
+            bcc         @entry
 @range:
             FAIL        E_RANGE
 
