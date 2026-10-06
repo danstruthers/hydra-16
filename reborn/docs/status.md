@@ -643,8 +643,8 @@ template for each count, `vx_ttself`, `vx_tpl`'s choice).  A tail loop's step is
 
 What's left: the global's head pushed for a tail loop (`SHEAD`, then `TSELF`'s look at it: the compiler could
 leave it out when the arguments call nothing), the depth and Ctrl-C at each call, a template's `jmp` past its
-stub; `*`, not a quick op; and `map` and its kin, whose
-function is called through the evaluator (an item 2,951 cycles).
+stub; `*`, not a quick op; and `map` and its kin, whose function is called through the evaluator (an item 2,951
+cycles).
 
 | Step | | Notes |
 |---|---|---|
