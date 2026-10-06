@@ -5,11 +5,54 @@
 ; ELSE, AGAIN and REPEAT as `jmp`, ; as `rts`.  DO's parameters are on the return stack: the limit, then the index
 ; less it, with its sign bit flipped (so +LOOP's crossing of the limit is an overflow); LOOP is `jsr xloop; bvs +3;
 ; jmp body` and the four `pla`s of UNLOOP after it, where LEAVE goes.  The control-flow stack is the data stack.
+;   Code banks: a colon definition's code (:NONAME's too) is in one of the task's RAM banks (BANKS_ALLOC'd, 8K each,
+; CB_MAX of them at most), and the dictionary has its header and a stub, its xt: `jsr far_enter`, the bank, the
+; code's address.  far_enter selects the bank at $8000, and the bank before is selected again as the code returns; a
+; word calling one in the same bank calls its code.  While a definition is compiled HERE is the code's (cmode
+; CM_CODE, the dictionary's in dhere), written with its bank selected meanwhile (ccomma_a, code_put: an immediate
+; word in another bank may be running).  Its strings that outlive the call (S" C" ABORT") are in the dictionary, and
+; DOES> leaves a stub there for its children (far_does).  No bank to be had, or `false code-banks` (the Hydra
+; library's): the code in the dictionary, as before.
 
 ; ---- Laying code down
 
-; jsr .A/.Y
+; jsr .A/.Y (code in a code bank: to a stub of a word in the same bank, its code)
 comp_jsr:
+            bit         cmode
+            bpl         @jsr
+            cpy         #>DICT_END                          ; (A stub is in the dictionary)
+            bcs         @jsr
+            sta         fe_ptr
+            sty         fe_ptr + 1
+            phy
+            ldy         #3
+            lda         (fe_ptr),y
+            cmp         cbank
+            bne         @not
+            dey
+            lda         (fe_ptr),y
+            cmp         #>far_enter
+            bne         @not
+            dey
+            lda         (fe_ptr),y
+            cmp         #<far_enter
+            bne         @not
+            lda         (fe_ptr)
+            cmp         #JSR_OP
+            bne         @not
+            ply
+            ldy         #4
+            lda         (fe_ptr),y
+            pha
+            iny
+            lda         (fe_ptr),y
+            tay
+            pla
+            bra         @jsr
+@not:
+            ply
+            lda         fe_ptr
+@jsr:
             pha
             lda         #JSR_OP
             jsr         ccomma_a
@@ -82,10 +125,44 @@ resolve:
             sta         w + 1
             inx
             lda         here
+            ldy         here + 1
+; .A/.Y to the cell at w, code being compiled (an orig's, a LEAVE's): in a code bank, its bank selected meanwhile (as
+; ccomma_a).  Keeps .X, .Y
+code_put:
+            phx
+            ldx         RAM_BANK
+            bit         cmode
+            bpl         :+
+            pha
+            lda         cbank
+            sta         RAM_BANK
+            pla
+:
             sta         (w)
+            phy
+            tya
             ldy         #1
-            lda         here + 1
             sta         (w),y
+            ply
+            stx         RAM_BANK
+            plx
+            rts
+
+; .A/.Y = the cell at w, code being compiled (as code_put).  Keeps .X
+code_get:
+            phx
+            ldx         RAM_BANK
+            bit         cmode
+            bpl         :+
+            lda         cbank
+            sta         RAM_BANK
+:
+            ldy         #1
+            lda         (w),y
+            tay
+            lda         (w)
+            stx         RAM_BANK
+            plx
             rts
 
 ; The locals library's routine (loc_vec: locals.fl's), .A the call: 0, the name ( c-addr u ) being compiled (a
@@ -259,10 +336,91 @@ reveal:
 @done:
             rts
 
+; A definition's code (:'s, :NONAME's: lastxt HERE) to the code bank: its xt a stub at HERE (jsr far_enter, the
+; bank, the code's address), then HERE the bank's (CM_CODE) till code_end.  A bank more when this one has less than
+; CB_ROOM left; none to be had (or CB_MAX taken, or code-banks off): the code at HERE, as ever.  Keeps .X
+code_begin:
+            lda         cb_off
+            bne         @done
+            lda         chere + 1                           ; (0: no bank yet)
+            beq         @more
+            cmp         #>(BANK_WINDOW + BANK_SIZE - CB_ROOM)
+            bcc         @stub
+@more:
+            lda         cbanks
+            cmp         #CB_MAX
+            bcs         @done
+            lda         #1
+            stx         xsave
+            jsr         BANKS_ALLOC
+            ldx         xsave
+            bcs         @done
+            ldy         cbanks
+            sta         cbank_tab,y
+            inc         cbanks
+            sta         cbank
+            stz         chere
+            lda         #>BANK_WINDOW
+            sta         chere + 1
+@stub:
+            lda         #<far_enter
+            ldy         #>far_enter
+            jsr         comp_jsr
+            lda         cbank
+            jsr         ccomma_a
+            lda         chere
+            ldy         chere + 1
+            jsr         comma_ay
+            lda         here
+            sta         dhere
+            lda         here + 1
+            sta         dhere + 1
+            lda         chere
+            sta         here
+            lda         chere + 1
+            sta         here + 1
+            lda         #CM_CODE | CM_DEF
+            sta         cmode
+@done:
+            rts
+
+; The definition's end (;'s), or its abandoning (a THROW past it to a CATCH from before it, QUIT): HERE the
+; dictionary's again, the code's noted.  Keeps .X, .Y
+code_end:
+            bit         cmode
+            bpl         @done
+            lda         here
+            sta         chere
+            lda         here + 1
+            sta         chere + 1
+            lda         dhere
+            sta         here
+            lda         dhere + 1
+            sta         here + 1
+@done:
+            stz         cmode
+            rts
+
+; HERE the dictionary's while it's the code's, or back (DOES>'s stub, comp_str's strings: CM_DEF)
+here_swap:
+            lda         here
+            ldy         dhere
+            sta         dhere
+            sty         here
+            lda         here + 1
+            ldy         dhere + 1
+            sta         dhere + 1
+            sty         here + 1
+            lda         cmode
+            eor         #CM_CODE
+            sta         cmode
+            rts
+
             HEADER      ":", 0
 colon:
             lda         #F_HIDDEN
             jsr         make_hdr
+            jsr         code_begin
             jmp         rbracket
 
             HEADERC     ";", F_IMMEDIATE
@@ -271,6 +429,7 @@ semicolon:
             jsr         loc_call
             lda         #RTS_OP
             jsr         ccomma_a
+            jsr         code_end
             jsr         reveal
             jmp         lbracket
 
@@ -477,13 +636,10 @@ resolve_to:
             lda         dhi,x
             sta         w + 1
             lda         dlo + 1,x
-            sta         (w)
-            ldy         #1
-            lda         dhi + 1,x
-            sta         (w),y
+            ldy         dhi + 1,x
             inx
             inx
-            rts
+            jmp         code_put
 
             HEADERC     "do", F_IMMEDIATE
 do:
@@ -541,15 +697,12 @@ loop_end:                                                   ; ( leaves dest -- )
             sta         w
             lda         leaves + 1
             sta         w + 1
-            ldy         #1
-            lda         (w),y
-            sta         leaves + 1
-            lda         (w)
+            jsr         code_get
             sta         leaves
+            sty         leaves + 1
             lda         here
-            sta         (w)
-            lda         here + 1
-            sta         (w),y
+            ldy         here + 1
+            jsr         code_put
             bra         :-
 :
             ldy         #4                                  ; UNLOOP
@@ -773,12 +926,31 @@ body_:
 does:                                                       ; jsr do_does, then the child's code: jsr dodoes ...
             lda         #1                                  ;   (the defining word's locals let go: the child's
             jsr         loc_call                            ;   code has its own)
+            bit         cmode
+            bmi         @far
             lda         #<do_does
             ldy         #>do_does
             jsr         comp_jsr
             lda         #<dodoes
             ldy         #>dodoes
             jmp         comp_jsr
+@far:                                                       ; In a code bank: jsr do_does_far, the address of a stub
+            lda         #<do_does_far                       ;   in the dictionary (jsr far_does, the bank, the
+            ldy         #>do_does_far                       ;   child's code: after these), then that code
+            jsr         comp_jsr
+            lda         dhere
+            ldy         dhere + 1
+            jsr         comma_ay
+            jsr         here_swap
+            lda         #<far_does
+            ldy         #>far_does
+            jsr         comp_jsr
+            lda         cbank
+            jsr         ccomma_a
+            lda         dhere
+            ldy         dhere + 1
+            jsr         comma_ay
+            jmp         here_swap
 
 ; DOES>'s, in the defining word: the last word's jsr to the code after this one's (the child's code's jsr dodoes),
 ; and the defining word ends
@@ -790,6 +962,7 @@ do_does:
             pla
             adc         #0
             sta         tmp + 1
+does_to:                                                    ; (The last word's jsr to tmp)
             lda         lastxt
             sta         w
             lda         lastxt + 1
@@ -801,6 +974,70 @@ do_does:
             lda         tmp + 1
             sta         (w),y
             rts
+
+; DOES>'s in a defining word in a code bank: the last word's jsr to the stub whose address is after this one's, and
+; the defining word ends
+do_does_far:
+            pla
+            sta         w
+            pla
+            sta         w + 1
+            ldy         #1
+            lda         (w),y
+            sta         tmp
+            iny
+            lda         (w),y
+            sta         tmp + 1
+            bra         does_to
+
+; A definition's in a code bank, its stub's (its xt: jsr far_enter, the bank, the code's address): the bank selected
+; and the code run, with fe_back's address to return to (and the bank before under it)
+far_enter:
+            pla
+            sta         fe_ptr
+            pla
+            sta         fe_ptr + 1
+fe_go:
+            lda         RAM_BANK
+            pha
+            lda         #>(fe_back - 1)
+            pha
+            lda         #<(fe_back - 1)
+            pha
+            ldy         #1
+            lda         (fe_ptr),y
+            sta         RAM_BANK
+            iny
+            lda         (fe_ptr),y
+            sta         fe_vec
+            iny
+            lda         (fe_ptr),y
+            sta         fe_vec + 1
+            jmp         (fe_vec)
+
+; The code's return: the bank before selected again
+fe_back:
+            pla
+            sta         RAM_BANK
+            rts
+
+; A child's of a defining word in a code bank (its jsr to the stub its DOES> left: jsr far_does, the bank, the code):
+; its body pushed (its return address + 1), then the code, as far_enter runs it
+far_does:
+            pla
+            sta         fe_ptr
+            pla
+            sta         fe_ptr + 1
+            pla
+            clc
+            adc         #1
+            sta         tmp
+            pla
+            adc         #0
+            tay
+            lda         tmp
+            PUSHAY
+            bra         fe_go
 
 ; The child's: its body pushed (its return address + 1), then the code after the jsr here (this one's + 1)
 dodoes:
@@ -826,8 +1063,8 @@ defer_none:
             lda         #<-256
             jmp         throw_a
 
-; A MARKER's: all four as they were, and each word list without the words (and word lists) made since: a header or
-; word list in RAM at HERE or after
+; A MARKER's: all five as they were (the code banks taken since given back), and each word list without the words
+; (and word lists) made since: a header or word list in RAM at HERE or after
 domarker:
             stx         xsave
             pla
@@ -860,6 +1097,32 @@ domarker:
             iny
             lda         (w),y
             sta         incn_len + 1
+            iny                                             ; The code banks as they were: the banks taken since
+            lda         (w),y                               ;   given back
+            sta         chere
+            iny
+            lda         (w),y
+            sta         chere + 1
+            iny
+            lda         (w),y
+            sta         tmp3
+@bank:
+            ldy         cbanks
+            cpy         tmp3
+            beq         :+
+            bcc         :+
+            dey
+            sty         cbanks
+            lda         cbank_tab,y
+            ldx         #1
+            jsr         BANKS_FREE
+            bra         @bank
+:
+            ldy         cbanks
+            beq         :+
+            lda         cbank_tab - 1,y
+            sta         cbank
+:
             lda         wl_last                             ; The word lists made since: gone
             ldy         wl_last + 1
 @wl:
@@ -915,6 +1178,13 @@ domarker:
             bcs         :+
             stz         loc_vec
             stz         loc_vec + 1
+:
+            lda         blk_vec                             ; And the Block library
+            ldy         blk_vec + 1
+            jsr         since
+            bcs         :+
+            stz         blk_vec
+            stz         blk_vec + 1
 :
             ldx         xsave
             rts

@@ -1157,14 +1157,47 @@ inline_str:
             ldx         xsave
             rts
 
-; S": ( -- c-addr u )
+; The counted string whose address is after the caller's jsr (a definition's in a code bank: comp_str's, in the
+; dictionary): w it, the return address moved past the address.  Called from the routines below
+inline_ptr:
+            stx         xsave
+            tsx
+            clc
+            lda         $0103,x
+            sta         w
+            adc         #2
+            sta         $0103,x
+            lda         $0104,x
+            sta         w + 1
+            adc         #0
+            sta         $0104,x
+            ldy         #1
+            lda         (w),y
+            pha
+            iny
+            lda         (w),y
+            sta         w + 1
+            pla
+            sta         w
+            ldx         xsave
+            rts
+
+; S": ( -- c-addr u ).  Its string's address after it (code banks): xsquote_p, 5 bytes before (comp_str)
+xsquote_p:
+            jsr         inline_ptr
+            bra         :+
 xsquote:
             jsr         inline_str
+:
             jmp         count_w
 
-; C": ( -- c-addr )
+; C": ( -- c-addr ) (xcquote_p: as xsquote_p)
+xcquote_p:
+            jsr         inline_ptr
+            bra         :+
 xcquote:
             jsr         inline_str
+:
             lda         w
             ldy         w + 1
             PUSHAY
@@ -1183,13 +1216,36 @@ count_w:
             PUSHAY
             jmp         count
 
-; The string (c-addr u on the stack) compiled after a jsr to routine .A/.Y: the routine, the count, the chars
+; The string (c-addr u on the stack) compiled after a jsr to routine .A/.Y: the routine, the count, the chars.  In a
+; code bank (but ."'s, said as it's called) the string is in the dictionary, and its address after the jsr to the
+; routine's _p, 5 bytes before it
 comp_str:
+            bit         cmode
+            bpl         @inline
+            cmp         #<xdotq
+            bne         :+
+            cpy         #>xdotq
+            beq         @inline
+:
+            sec
+            sbc         #5
+            bcs         :+
+            dey
+:
+            jsr         comp_jsr
+            lda         dhere
+            ldy         dhere + 1
+            jsr         comma_ay
+            jsr         here_swap
+            jsr         @str
+            jmp         here_swap
+@inline:
             pha
             lda         #JSR_OP
             jsr         ccomma_a
             pla
             jsr         comma_ay
+@str:
             lda         dlo,x                               ; (255 at most)
             ldy         dhi,x
             beq         :+
@@ -1214,6 +1270,7 @@ comp_str:
             inx
             inx
             rts
+.assert xsquote - xsquote_p = 5 && xcquote - xcquote_p = 5 && xabortq - xabortq_p = 5, error, "comp_str's _p"
 
 ; ( c-addr u -- c-addr' u ): the string copied into the next of S"'s two buffers (interpreting)
 to_sbuf:

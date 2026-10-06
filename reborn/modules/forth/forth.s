@@ -19,7 +19,8 @@
 ; list as the ones loaded or defined in RAM (FORTH's: a word list is a chain of headers).  A header: the link (2: the one before,
 ; 0 at the first), the name's length and flags (1: F_IMMEDIATE, F_HIDDEN, F_INLINE), the name (as typed: found
 ; ignoring case), then (F_INLINE) a byte, the code's length (0: called) and F_COMPILE (compile-only: interpreted,
-; THROW -14); the code, its xt, follows.  A header's address is its nt.
+; THROW -14); the code, its xt, follows.  A header's address is its nt.  A colon definition's code is in one of the
+; task's RAM banks, its xt a stub that selects it (fcomp.inc's code banks).
 ;   Input: stdin, a line at a time (the console's cooked lines, or a file's, through rc's <), or a file's (INCLUDED),
 ; or a string's (EVALUATE): the source before a nested one is kept on the source stack.  Output: fd 1, buffered.  A
 ; fileid is the system's fd; an ior is 0, or -512 less the system's error code (Gforth's way).  Errors are THROWs
@@ -59,6 +60,7 @@ p1:         .res        2                                   ; Pointers (strings,
 p2:         .res        2
 lp:         .res        2                                   ; The running definition's locals (locals.fl's): its frame,
                                                             ;   in page 1 (its high byte 1)
+fe_ptr:     .res        2                                   ; far_enter's and far_does's: the stub (comp_jsr's: a target)
 intr:       .res        1                                   ; $C0: Ctrl-C came (the note handler's), for THROW -28;
                                                             ;   $80: a note for a program's handler (note_pend)
 
@@ -88,6 +90,15 @@ loc_vec:    .res        2                                   ; The locals library
                                                             ;   compiler (loc_call); 0: none
 blk_vec:    .res        2                                   ; The Block library's (block.fl's): a block source's
                                                             ;   buffer (blk_call); 0: none
+cmode:      .res        1                                   ; Code banks (fcomp.inc): CM_CODE, CM_DEF ...
+dhere:      .res        2                                   ;   the data's HERE while HERE is the code's ...
+chere:      .res        2                                   ;   the code's next byte between definitions (0: no bank) ...
+cbank:      .res        1                                   ;   its bank ...
+cm_bank:    .res        1                                   ;   the bank the program had as the definition began ...
+cbanks:     .res        1                                   ;   the banks taken (cbank the last) ...
+cbank_tab:  .res        CB_MAX
+cb_off:     .res        1                                   ;   <> 0: none (code-banks, hydra.fl's) ...
+fe_vec:     .res        2                                   ;   and far_enter's code to call
 state:      .res        2                                   ; STATE: 0 interpreting, -1 compiling
 base:       .res        2                                   ; BASE
 src_addr:   .res        2                                   ; The input source (SRC_SIZE bytes, in this order: the
@@ -226,6 +237,11 @@ main:
             stz         loc_vec + 1
             stz         blk_vec
             stz         blk_vec + 1
+            stz         cmode                               ; No code bank yet
+            stz         chere
+            stz         chere + 1
+            stz         cbanks
+            stz         cb_off
             lda         #1
             sta         lp + 1
             stz         idx_lastw

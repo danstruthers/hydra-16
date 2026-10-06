@@ -134,6 +134,43 @@ the names HydraFS has looked up, there or not, and the directories' entries on t
 check's buffer): such a name costs 22 ms now, the rest of it the kernel's requests to each directory, and every
 command line found through `/bin` gains too.
 
+## Code in banks
+
+The dictionary is the task's RAM from forth's BSS to `$7F00`, about 21K at the prompt, and a program's colon
+definitions fill it: 100 definitions of 227 bytes' code each don't fit.  The task's RAM banks (16 of 8K for each
+memory module) held only the index, the read-ahead buffer and (6.22) Block's blocks.  So (6.23) a colon
+definition's code (`:noname`'s too) goes to a bank, and the dictionary keeps its header and a 6-byte stub, its xt:
+`jsr far_enter`, the bank, the code's address.  100 such definitions take 1,192 bytes of the dictionary.
+
+- **Calls.**  `far_enter` selects the stub's bank at `$8000` and jumps to the code, with the bank before and
+  `fe_back`'s address under it, so the code's `rts` selects that bank again: 93 cycles more than a `jsr`.  A
+  definition calling a word in its own bank calls its code (`comp_jsr` knows the stub), as before: a loop calling a
+  word in the same bank takes 84 cycles a step, as with code banks off, and one in another bank 177.
+- **The banks**, taken with `BANKS_ALLOC` as they're wanted (`code_begin`), 32 at most (`CB_MAX`).  A definition
+  starts in the next one when this one has less than 2K left (`CB_ROOM`), so it has 2K at least and 8K at most
+  (more: THROW -8).  With no bank to be had the code goes in the dictionary, as before.  A MARKER keeps the code's
+  next byte and the banks taken, and gives back those taken since.
+- **Compiling.**  While a definition is compiled HERE is its code's (`cmode`'s `CM_CODE`; the dictionary's HERE in
+  `dhere`); `;` (`code_end`), a THROW to a CATCH from before the definition, and QUIT give the dictionary's back.
+  Each byte of code is written with its bank selected meanwhile (`ccomma_a`, and `code_put` and `code_get` for the
+  origs and the LEAVEs' chain), as an immediate word in an older bank may be running: `: my-if postpone if ;
+  immediate`, defined in the first bank, compiles into the third.
+- **What stays in the dictionary.**  A string a definition hands out (S", C", ABORT"'s message) would be in its
+  bank, which a word in another bank hides, so it's in the dictionary, and the code has a `jsr` to `xsquote_p`,
+  `xcquote_p` or `xabortq_p` and its address; `."` stays in the code (it's typed while its bank is selected).
+  DOES> leaves a stub in the dictionary (`jsr far_does`, the bank, the children's code) and compiles `jsr
+  do_does_far` and its address: a child's `jsr` goes to the stub, and `far_does` pushes the child's body and runs
+  the code as `far_enter` does.
+- **CATCH** keeps the bank selected and `cmode` in its frame, and THROW selects that bank again: a THROW from a word
+  in another bank, or from a library's code with a bank of its own selected, comes back to code that's there.
+- **The window.**  A definition's code is at `$8000`, so `bank!` or `seg-bank!` in one would take it from under
+  itself: called from a code bank, they THROW -21, and `false code-banks` (the Hydra library's) before such a
+  definition compiles it into the dictionary.  `see` follows a stub to its bank, and names a call to a word in the
+  same bank by its stub.
+
+The core is 628 bytes bigger, the dictionary at the prompt 242 bytes smaller (the BSS, and `see`'s part in
+`tools.fl`), and the suite's run takes what it did (494M cycles).
+
 ## The standard's other word sets
 
 Forth 2012's word sets HyForth hadn't, each a library (6.16 to 6.19), each passing the Forth 2012 test suite's
@@ -291,11 +328,12 @@ shell, and `-lib shell` (or a `marker` that takes it out) a plain Forth again.
 
 ## The steps
 
-6.6 to 6.10 done (October 2026), then 6.11 to 6.13, from comparing the shell with hylang's, then 6.14 to 6.21;
+6.6 to 6.10 done (October 2026), then 6.11 to 6.13, from comparing the shell with hylang's, then 6.14 to 6.23;
 [forth-status.md](forth-status.md) has each one's notes, the sizes and what's next, and
 [using/hyforth.md](using/hyforth.md) is the guide for using it.  The tests: `forth` (the Forth 2012 suite, still
-passing, and its files for 6.16-6.19's word sets), `hyforth` (6.6-6.8 and 6.14), `fshell` (6.9 and 6.11), `lshell`
-(6.10), `fhydra` (6.12), `fdev` (6.13), `findex` (6.15), `fload` (6.20) and the storage driver's `wcache` (6.21).
+passing, its files for 6.16-6.19's word sets, and 6.22's and 6.23's scripts), `hyforth` (6.6-6.8 and 6.14), `fshell`
+(6.9 and 6.11), `lshell` (6.10), `fhydra` (6.12), `fdev` (6.13), `findex` (6.15), `fload` (6.20) and the storage
+driver's `wcache` (6.21).
 
 | Step | | Tested |
 | :--- | :--- | :--- |
@@ -316,3 +354,4 @@ passing, and its files for 6.16-6.19's word sets), `hyforth` (6.6-6.8 and 6.14),
 | 6.20 | Loading files faster: the read-ahead buffer (in the index's bank), numbers by BASE's bits, PARSE-NAME's own loops, the index's fixed cost | A file made for the read-ahead (a CR LF across its buffers, CR LF and CR ends, a line cut at 128, a last line ended by a CR and the file's end), names between tabs, numbers with each prefix and in base 36, a double; `hydra.fs` in under 300 ticks; the suite (its files, SAVE-INPUT and RESTORE-INPUT in them) |
 | 6.21 | The storage driver's walk cache: HydraFS's names looked up, there or not, and the directories' entries on the way, in the check's buffer; a disk's forgotten as it changes | rc lines (`wcache`): a name not there, then made, renamed, removed; directories made, removed and renamed under names looked up; a name made through `/lib`'s union after it wasn't there; the file system's, disks', loader's and tools' tests (a check, a format, the budgets) |
 | 6.22 | Block's banks: the blocks read and written kept in the task's RAM banks behind the two buffers, the changed ones written to the file by `save-buffers`, `flush` and the program's end (`blk_vec`'s call 1, the core's `blk_end` at BYE and a script's end) | `blocktest.fth`; `blk1.fs` and `blk2.fs` (a block changed and let go to its bank, no flush: there in the file for the next forth); 32 blocks read again, 0.62 M cycles from banks, 2.18 M from a RAM disk's file |
+| 6.23 | Code banks ("Code in banks"): a colon definition's code in the task's RAM banks, its xt a stub (`far_enter`); its strings and DOES>'s stub in the dictionary; CATCH keeps the bank; `code-banks`, and `bank!` from a code bank THROW -21 | The suite, every definition in a bank; `cbank.fs` (13K of definitions EVALUATEd from the first bank into the next ones; an immediate word, a DOES> child, a string and a THROW from the first bank; SEE; `bank!` refused; `false code-banks`; a MARKER giving the banks back); 10,000 calls, 84 cycles a step in the same bank, 177 in another |

@@ -783,18 +783,24 @@ here_:
 
             HEADER      "allot", 0
 allot:                                                      ; ( n -- ): no further than the dictionary's end (the
-            clc                                             ;   heap's page)
+            clc                                             ;   heap's page; the code's: its bank's)
             lda         here
             adc         dlo,x
             tay
             lda         here + 1
             adc         dhi,x
             inx
+            bit         cmode
+            bmi         @code
             cmp         heap_lo + 1
-            bcc         :+
+            bcc         @set
+@full:
             lda         #<-8                                ; (Dictionary overflow)
             jmp         throw_a
-:
+@code:
+            cmp         #>(BANK_WINDOW + BANK_SIZE)
+            bcs         @full
+@set:
             sty         here
             sta         here + 1
             rts
@@ -808,22 +814,37 @@ comma:
 comma_ay:
             jsr         ccomma_a
             tya
-; .A into the dictionary, a byte.  Keeps .X, .Y
+; .A into the dictionary, a byte (a definition's code, CM_CODE: into its code bank, selected meanwhile, as an
+; immediate word in another may be running).  Keeps .X, .Y
 ccomma_a:
             phy
-            ldy         here + 1                            ; (Its end: the heap's page)
-            cpy         heap_lo + 1
-            bcc         :+
-            lda         #<-8
-            jmp         throw_a
-:
+            ldy         here + 1
+            bit         cmode
+            bmi         @code
+            cpy         heap_lo + 1                         ; (Its end: the heap's page)
+            bcs         @full
             sta         (here)
+@next:
             inc         here
             bne         :+
             inc         here + 1
 :
             ply
             rts
+@code:
+            cpy         #>(BANK_WINDOW + BANK_SIZE)         ; (The bank's end)
+            bcs         @full
+            ldy         RAM_BANK
+            phy
+            ldy         cbank
+            sty         RAM_BANK
+            sta         (here)
+            ply
+            sty         RAM_BANK
+            bra         @next
+@full:
+            lda         #<-8
+            jmp         throw_a
 
             HEADER      "c,", 0
 ccomma:

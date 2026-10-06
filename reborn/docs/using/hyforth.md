@@ -234,7 +234,8 @@ constants in Forth are `require hydra.fs` (`O_RDWR`, `E_NOENT` ..., in their own
 | `note ( task n -- )`, `note-group ( group n -- )` | A note sent to a task, or a note group (Plan 9's) |
 | `on-note ( xt -- )` | The notes that come (but Ctrl-C and kill) given to `xt ( n -- flag )`: true, forth goes on; false, as Ctrl-C |
 | `pause` | The other tasks' turn |
-| `bank! ( bank -- )`, `bank@`, `bank-window ( -- addr )`, `seg-bank!` | A RAM bank of the task's at `$8000` (`sys-banks-alloc` gives them) |
+| `bank! ( bank -- )`, `bank@`, `bank-window ( -- addr )`, `seg-bank!` | A RAM bank of the task's at `$8000` (`sys-banks-alloc` gives them); not in a definition compiled into a bank (THROW -21: see [Memory](#memory)) |
+| `code-banks ( flag -- )` | False: the colon definitions from now on compiled into the dictionary; true (as forth starts): into the task's banks |
 | `sys ( addr a x y -- a x y p )` | Machine code called with its registers, its flags after |
 | `sh`, `run`, `ctl`, `argc`, `arg`, `ior>text`, the directories' | As above |
 
@@ -378,11 +379,23 @@ Ctrl-C stops the word running (THROW -28, `interrupt`), whatever it's doing: a l
 ## Memory
 
 The dictionary is forth's RAM after its own variables, up to `$7F00`: about 18K free at `forth -l`'s prompt
-(`unused`).  Libraries load into it; `-lib` takes a library out of the search but keeps its code, so it doesn't
+(`unused`).  A colon definition takes only its header and 6 bytes of it: its code goes to one of the task's RAM
+banks, which forth takes as they're wanted, so 100 definitions of a couple of hundred bytes take about 1.2K of the
+dictionary, not 22K.  A call to a word in another bank costs about 90 cycles more (in the same bank, nothing).
+Libraries load into the dictionary; `-lib` takes a library out of the search but keeps its code, so it doesn't
 free anything, while a `marker` does (`marker -work` ... `-work` takes back everything made since).  `allocate`'s
 heap (`lib memory`) takes its space from the top, so `unused` counts what's below it.  PAD and the other buffers
 are forth's own.  The task's RAM banks (16 of 8K for each memory module) are at `$8000`
 through `bank!`: take them with `sys-banks-alloc` so your program and libraries don't use the same ones.
 forth keeps the index of its words (by which it finds a name without reading every one) in the task's last
 bank, which it takes as it starts, so a program that writes to a bank it didn't take can spoil forth's search for
-words.
+words, or your definitions' code.  A definition whose code is in a bank can't select another with `bank!` or
+`seg-bank!` (its code would be gone from under it): it THROWs -21.  Compile such a word with code banks off, and it
+goes in the dictionary as before; it can be called from any definition, if it selects the bank it found again
+before it ends:
+
+```
+false code-banks
+: fill-bank ( bank -- ) bank@ swap bank!  bank-window 8192 0 fill  bank! ;
+true code-banks
+```

@@ -871,6 +871,7 @@ quit:                                                       ; The return stack e
             txs
             stz         handler
             stz         handler + 1
+            jsr         code_end
             lda         #0
             jsr         src_unwind
             ldx         #DS_N
@@ -913,6 +914,7 @@ quit:                                                       ; The return stack e
             stz         state + 1
             stz         leaves
             stz         leaves + 1
+            jsr         code_end                            ; (A definition's left: HERE the dictionary's)
             bra         @line
 
 s_ok:       .byte       " ok", LF, 0
@@ -976,15 +978,20 @@ find_hook:
 s_shline:   .byte       12, "(shell-line)"
 s_shprompt: .byte       14, "(shell-prompt)"
 
-; CATCH's frame: the data stack's pointer, the source stack's depth, the locals' frame (lp), and the handler before;
-; handler = the 6502's stack pointer at it.  THROW goes back to it: the stacks (and lp) as they were, and the sources
-; nested since let go of
+; CATCH's frame: the bank selected, cmode, the data stack's pointer, the source stack's depth, the locals' frame (lp),
+; and the handler before; handler = the 6502's stack pointer at it.  THROW goes back to it: the stacks (and lp) as
+; they were, the sources nested since let go of, the bank (a definition's in a code bank, a library's) selected
+; again, and HERE the dictionary's if the THROW left a definition begun since (code_end)
 catch:                                                      ; ( ... xt -- ... 0 | ... n )
             lda         dlo,x
             sta         w
             lda         dhi,x
             sta         w + 1
             inx
+            lda         RAM_BANK
+            pha
+            lda         cmode
+            pha
             txa
             pha
             lda         ssp
@@ -1006,6 +1013,8 @@ catch:                                                      ; ( ... xt -- ... 0 
             sta         handler
             pla
             sta         handler + 1
+            pla
+            pla
             pla
             pla
             pla
@@ -1045,6 +1054,12 @@ throw_tmp:                                                  ; THROW tmp: its pla
             jsr         src_unwind
             pla
             tax
+            pla                                             ; (cmode as CATCH had it)
+            bne         :+
+            jsr         code_end
+:
+            pla
+            sta         RAM_BANK
             dex
             lda         tmp
             sta         dlo,x
@@ -1139,9 +1154,13 @@ abortquote:
             ldy         #>xabortq
             jmp         comp_str
 
-; ABORT"'s: ( flag -- ): true, the message noted and THROW -2
+; ABORT"'s: ( flag -- ): true, the message noted and THROW -2 (xabortq_p: as xsquote_p)
+xabortq_p:
+            jsr         inline_ptr
+            bra         :+
 xabortq:
             jsr         inline_str
+:
             lda         dlo,x
             ora         dhi,x
             inx

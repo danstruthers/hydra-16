@@ -183,6 +183,7 @@ noname:                                                     ; ( -- xt )
             ldy         here + 1
             sty         lastxt + 1
             PUSHAY
+            jsr         code_begin
             jmp         rbracket
 
             HEADER      "compile,", 0
@@ -357,7 +358,8 @@ actionof:
 
             HEADER      "marker", 0
 marker:                                                     ; Its word: HERE, the compilation word list, the search
-            lda         here                                ;   order and the files INCLUDED as before it
+            lda         here                                ;   order, the files INCLUDED and the code banks' (the
+                                                            ;   code's next byte, the banks taken) as before it
             pha
             lda         here + 1
             pha
@@ -380,7 +382,12 @@ marker:                                                     ; Its word: HERE, th
             bne         :-
             lda         incn_len                            ; (So REQUIRE loads again what it takes out)
             ldy         incn_len + 1
-            jmp         comma_ay
+            jsr         comma_ay
+            lda         chere
+            ldy         chere + 1
+            jsr         comma_ay
+            lda         cbanks
+            jmp         ccomma_a
 
             HEADER      "refill", 0
 refill:                                                     ; ( -- flag ): a block's, the next block (BLK + 1, the

@@ -1,9 +1,9 @@
 ; ****************************************************************************
 ; hydra.s - HyForth's Hydra library (/lib/forth/hydra.fl): a sys- word for each system call a program makes (their
 ; headers forthsys.inc's, tools/apigen.js's, from the specification), zero-terminated strings, sh and run, the bank and
-; segment words, forth's arguments (argc, arg), ctl, hylang's Hydra built-ins as Forth names them (a directory's
-; names: Gforth's open-dir read-dir close-dir, =mkdir, get-dir, set-dir; note, note-group, on-note; pause; ior>text),
-; and sys (machine code, called with its registers).
+; segment words (and code-banks), forth's arguments (argc, arg), ctl, hylang's Hydra built-ins as Forth names them
+; (a directory's names: Gforth's open-dir read-dir close-dir, =mkdir, get-dir, set-dir; note, note-group, on-note;
+; pause; ior>text), and sys (machine code, called with its registers).
 ;   A sys- word is a system call with its registers as stack items, in the specification's order (spec/api.def;
 ; /rom/doc/api.md has each one's), the first deepest: its inputs, then its outputs and, if the call can fail, an ior
 ; (0, or -512 less the error code; its outputs 0 then).  A register is a cell (rN, .A/.X: 16 bits; .A, .X, .Y: a
@@ -304,7 +304,8 @@ ran:                                                        ; (Started, or not: 
             rts
 
 ; ---- Banks and shared segments: a bank at $8000-$9FFF (BANK-WINDOW), the task's own (sys-banks-alloc gives them)
-; or a shared segment's (sys-seg-create, sys-seg-attach)
+; or a shared segment's (sys-seg-create, sys-seg-attach).  A colon definition's code is in a bank there too (the
+; core's code banks), so BANK! and SEG-BANK! in one THROW -21: false code-banks before it's compiled
 
             HEADER      "bank-window", 0
 bankwindow:                                                 ; ( -- addr ): $8000, where the bank selected is
@@ -312,8 +313,37 @@ bankwindow:                                                 ; ( -- addr ): $8000
 
             HEADER      "bank!", 0
 bankstore:                                                  ; ( bank -- ): one of the task's at BANK-WINDOW
+            jsr         bank_guard
             lda         dlo,x
             sta         RAM_BANK
+            inx
+            rts
+
+; THROW -21 if this one's caller was called from code in a code bank (BANK!'s, SEG-BANK!'s: it would be gone from
+; under it).  Keeps .X
+bank_guard:
+            stx         xsave
+            tsx
+            lda         $0104,x                             ; (The caller's return address's high byte)
+            ldx         xsave
+            cmp         #>BANK_WINDOW
+            bcc         @ok
+            cmp         #>(BANK_WINDOW + BANK_SIZE)
+            bcs         @ok
+            lda         #<-21
+            jmp         throw_a
+@ok:
+            rts
+
+            HEADER      "code-banks", 0
+codebanks:                                                  ; ( flag -- ): false, colon definitions from now on
+            ldy         #0                                  ;   compiled into the dictionary (as one with BANK! in
+            lda         dlo,x                               ;   it needs); true, into the task's banks (as at
+            ora         dhi,x                               ;   the start)
+            bne         :+
+            iny
+:
+            sty         cb_off
             inx
             rts
 
@@ -326,7 +356,8 @@ bankfetch:                                                  ; ( -- bank ): the b
 
             HEADER      "seg-bank!", 0
 segbankstore:                                               ; ( seg n -- ior ): bank n of shared segment seg (attached)
-            lda         dlo + 1,x                           ;   at BANK-WINDOW (SEG_MAP: U and its bank register)
+            jsr         bank_guard                          ;   at BANK-WINDOW (SEG_MAP: U and its bank register)
+            lda         dlo + 1,x
             ldy         dlo,x
             inx
             inx

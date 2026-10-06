@@ -862,6 +862,9 @@ see:                                                        ; ( "name" -- ): its
             jsr         space
             jsr         hdr_out
             jsr         hdr_xt
+            lda         RAM_BANK                            ; (A definition's in a code bank: its code, the bank
+            pha                                             ;   selected till the end)
+            jsr         see_stub
             lda         cnt
             pha
             lda         w2
@@ -932,6 +935,8 @@ see:                                                        ; ( "name" -- ): its
             LDR         w, s_immed
             jsr         type_z
 :
+            pla
+            sta         RAM_BANK
             jmp         cr
 
 @jsr:
@@ -940,7 +945,9 @@ see:                                                        ; ( "name" -- ): its
 @special:
             lda         see_xt,y
             ora         see_xt + 1,y
-            beq         @call
+            bne         :+
+            jmp         @call
+:
             lda         see_xt,y
             cmp         p1
             bne         :+
@@ -974,8 +981,12 @@ see:                                                        ; ( "name" -- ): its
             jmp         @adv
 @data:
             pla
+            pla
+            sta         RAM_BANK
             jmp         cr
 @string:
+            cmp         #$81
+            beq         @pstring
             ldy         #3                                  ; The text, and "
             lda         (w3),y
             sta         cnt
@@ -993,6 +1004,29 @@ see:                                                        ; ( "name" -- ): its
             jsr         space
             iny
             tya
+            jmp         @adv
+@pstring:
+            ldy         #3                                  ; (In a code bank: its address, the text there)
+            lda         (w3),y
+            sta         w
+            iny
+            lda         (w3),y
+            sta         w + 1
+            lda         (w)
+            sta         cnt
+            ldy         #0
+:
+            cpy         cnt
+            beq         :+
+            iny
+            lda         (w),y
+            jsr         emit_a
+            bra         :-
+:
+            lda         #'"'
+            jsr         emit_a
+            jsr         space
+            lda         #5
             jmp         @adv
 @call:
             jsr         xt_out
@@ -1142,7 +1176,66 @@ p1_out:
             jsr         hex2
             jmp         space
 
-; The word whose xt is p1, in any word list: C = 0, w its header; or C = 1.  Keeps w3
+; Is the xt w2 a code bank's stub (jsr far_enter, the bank, the code)?  Its bank selected, w2 its code
+see_stub:
+            lda         (w2)
+            cmp         #JSR_OP
+            bne         @done
+            ldy         #1
+            lda         (w2),y
+            cmp         #<far_enter
+            bne         @done
+            iny
+            lda         (w2),y
+            cmp         #>far_enter
+            bne         @done
+            iny
+            lda         (w2),y
+            sta         RAM_BANK
+            iny
+            lda         (w2),y
+            pha
+            iny
+            lda         (w2),y
+            sta         w2 + 1
+            pla
+            sta         w2
+@done:
+            rts
+
+; Is the xt w2 the stub of the code at p1 in the bank selected (a call in a code bank to a word in it)?  C = 0 yes
+stub_of:
+            ldy         #5
+            lda         (w2),y
+            cmp         p1 + 1
+            bne         @no
+            dey
+            lda         (w2),y
+            cmp         p1
+            bne         @no
+            dey
+            lda         (w2),y
+            cmp         RAM_BANK
+            bne         @no
+            dey
+            lda         (w2),y
+            cmp         #>far_enter
+            bne         @no
+            dey
+            lda         (w2),y
+            cmp         #<far_enter
+            bne         @no
+            lda         (w2)
+            cmp         #JSR_OP
+            bne         @no
+            clc
+            rts
+@no:
+            sec
+            rts
+
+; The word whose xt is p1 (or whose stub's code it is, in the bank selected), in any word list: C = 0, w its header;
+; or C = 1.  Keeps w3
 xt_name:
             lda         wl_last
             sta         tmp3
@@ -1168,6 +1261,14 @@ xt_name:
             lda         w2 + 1
             cmp         p1 + 1
             beq         @found
+:
+            lda         p1 + 1                              ; (Code at BANK-WINDOW: a stub's?)
+            cmp         #>BANK_WINDOW
+            bcc         :+
+            cmp         #>(BANK_WINDOW + BANK_SIZE)
+            bcs         :+
+            jsr         stub_of
+            bcc         @found
 :
             ldy         #1
             lda         (w),y
@@ -1244,10 +1345,10 @@ inline_at:
             rts
 
 see_xt:     .word       xsquote, xdotq, xcquote, xabortq, do_does, xdo, xqdo, xloop, xploop, dovar, dovalue
-            .word       domarker, 0
+            .word       domarker, xsquote_p, xcquote_p, xabortq_p, do_does_far, 0
 see_text:   .word       s_squote, s_dotq, s_cquote, s_abortq, s_does, s_do, s_qdo, s_loop, s_ploop, s_create
-            .word       s_value, s_marker
-see_after:  .byte       $80, $80, $80, $80, 3, 0, 5, 9, 9, $7F, $7F, $7F
+            .word       s_value, s_marker, s_squote, s_cquote, s_abortq, s_does
+see_after:  .byte       $80, $80, $80, $80, 3, 0, 5, 9, 9, $7F, $7F, $7F, $81, $81, $81, 2
 see_lit:    .byte       OP_DEX, OP_LDA_IMM, 0, OP_STA_ZPX, dlo, OP_LDA_IMM, 0, OP_STA_ZPX, dhi
 see_if:     .byte       OP_INX, OP_LDA_ZPX, dlo - 1, OP_ORA_ZPX, dhi - 1, OP_BNE, 3
 s_squote:   .byte       "s", $22, 0
