@@ -540,20 +540,62 @@ function forthCard() {
   return [imageCard(0, f, 16384)];
 }
 
-// hylang's card (the hysuite test's): danlang's suite's files (tests/hylang); its library (danlang's) is the ROM
-// disk's, /lib/hylang
-function hylangCard() {
+// hylang's card (the hysuite tests'): danlang's suite's files (tests/hylang) and the test's own files ({ name: text });
+// its library (danlang's) is the ROM disk's, /lib/hylang.  The image is the test's own (obj/cards/hylang-TEST.img), as
+// sim/test.js -j runs tests side by side
+function hylangCard(test, files = {}) {
   fs.mkdirSync(CARD_DIR, { recursive: true });
   hydrafs.setNow(0x1000);
-  const f = path.join(CARD_DIR, 'hylang0.img');
+  const f = path.join(CARD_DIR, 'hylang-' + test + '.img');
   fs.rmSync(f, { force: true });
   hydrafs.mkfs(f, 8, 'HYLANG', undefined, true);
   const v = new hydrafs.Volume(f);
   const dir = path.join(__dirname, 'hylang');
   const put = (from, to) => v.put(to, fs.readFileSync(from));
   for (const n of fs.readdirSync(dir).filter(n => /\.(dl|hl)$/.test(n))) put(path.join(dir, n), n);
+  for (const [n, text] of Object.entries(files)) v.put(n, Buffer.from(text, 'latin1'));
   v.close();
   return [imageCard(0, f, 16384)];
+}
+
+// danlang's suite in parts (the hysuite tests), so that -j runs them side by side: each part is run.dl itself with
+// its list of the suite's files cut to the part's (its harness, its counting and its status are run.dl's own), and
+// the parts' files together are run.dl's, in its order.  Nearly all the suite's time is eval.dl's tail loops (50,000
+// steps each, 0.2-0.8 billion cycles apiece), so eval.dl is cut too, on the card (the file itself unchanged): eval1.dl
+// up to its first cut, then a piece from each cut (a line that starts with it, found once) to the next.  checks: a
+// part's count (the suite's: 1,197); about: more of what it checks
+const HYSUITE_CUTS = { eval: ['(fun {ev-loop n}', '(fun {ev-loop-do n}', '(fun {ev-loop-let n}', '(fun {ev-loop-eval n}', '(fun {ev-sum-to n acc}'] };
+const HYSUITE_PARTS = [
+  { files: ['reader', 'eval1', 'eval2'], checks: 187, about: 'run.dl a script, args its name, its status; with its harness, loaded from a card: load reads a file an item at a time, refilled as it goes; a load nested in another' },
+  { files: ['eval3'], checks: 1 },
+  { files: ['eval4'], checks: 1 },
+  { files: ['eval5'], checks: 3 },
+  { files: ['eval6', 'scope', 'control', 'errors', 'lists', 'strings', 'numbers', 'hashes', 'types', 'io', 'system', 'bits', 'library'], checks: 1005,
+    about: 'danlang\'s library, hylang\'s from its snapshot (globals.dl) and the ROM disk\'s /lib/hylang (dice.dl and screen.dl, where load finds a bare name, and use); files written on the card, programs run, the clock a DS1747\'s' },
+];
+// A part's own files for the card: part.dl (run.dl with the part's list) and the pieces it names of a file that's cut
+function hysuiteFiles(part) {
+  const dir = path.join(__dirname, 'hylang'), run = fs.readFileSync(path.join(dir, 'run.dl'), 'latin1'), list = /\{"reader" [^}]*\}/;
+  if (!list.test(run)) throw new Error('tests/hylang/run.dl: its list of files ({"reader" ...}) not found');
+  const all = run.match(list)[0].slice(1, -1).split(' ').map(s => s.replace(/"/g, ''));
+  const pieces = {};                                          // ('eval3': its text)
+  for (const [f, cuts] of Object.entries(HYSUITE_CUTS)) {
+    const lines = fs.readFileSync(path.join(dir, f + '.dl'), 'latin1').split('\n');
+    const at = cuts.map(c => {
+      const k = lines.map((l, i) => l.startsWith(c) ? i : -1).filter(i => i >= 0);
+      if (k.length !== 1) throw new Error('tests/hylang/' + f + '.dl: the cut "' + c + '" found ' + k.length + ' times, not once');
+      return k[0];
+    });
+    if (at.some((k, i) => i && k <= at[i - 1])) throw new Error('HYSUITE_CUTS.' + f + ': not in the file\'s order');
+    [0, ...at, lines.length].forEach((k, i, a) => { if (i < a.length - 1) pieces[f + (i + 1)] = lines.slice(k, a[i + 1]).join('\n'); });
+  }
+  const named = HYSUITE_PARTS.flatMap(p => p.files).map(n => n.replace(/\d+$/, ''));
+  const whole = named.filter((n, i) => n !== named[i - 1]);
+  if (whole.join(' ') !== all.join(' ') || HYSUITE_PARTS.flatMap(p => p.files).filter(n => /\d$/.test(n)).join(' ') !== Object.keys(pieces).join(' '))
+    throw new Error('HYSUITE_PARTS: not run.dl\'s files (' + all.join(' ') + ') in its order, each cut file\'s pieces in theirs');
+  const files = { 'part.dl': run.replace(list, '{' + part.files.map(f => '"' + f + '"').join(' ') + '}') };
+  for (const n of part.files) if (pieces[n] !== undefined) files[n + '.dl'] = pieces[n];
+  return files;
 }
 
 // hylang's lines (the hylang test's): each typed at its prompt, what it prints (=> ...; none: it wants more), and its
@@ -1213,12 +1255,13 @@ module.exports = {
           'hylang> (list 1 (list 2 (list 3)) {5\n\t)} <"""6\n\t)}""" <7"""})\n=> {1 {2 {3}} {5 "6\\n7"}}\n' +
           'hylang> exit\n=> exit\n% echo $status\n\n%'],
     },
-    {
-      name: 'hysuite', what: 'hylang\'s suite: danlang\'s run.dl whole, as danlang runs it (hylang run.dl: a script, args its name, its status), and all its files (reader.dl, eval.dl, scope.dl, control.dl, errors.dl, lists.dl, strings.dl, numbers.dl, hashes.dl, types.dl, io.dl, system.dl, bits.dl, library.dl) with its harness, loaded from a card (load reads a file an item at a time, refilled as it goes; a load nested in another); danlang\'s library, hylang\'s from its snapshot (globals.dl) and the ROM disk\'s /lib/hylang (dice.dl and screen.dl, where load finds a bare name, and use); files written on the card, programs run, the clock a DS1747\'s',
-      init: 't_rc', cycles: 12000e6,
-      get machine() { return { sd: hylangCard(), rtc: Date.UTC(2026, 9, 5, 12, 0, 0) / 1000, input: '\u0101cd /sd/0; hylang run.dl; echo status $status\r' }; },
-      expect: ['1197 checks, 0 failed\nstatus\n%'],
-    },
+    ...HYSUITE_PARTS.map((p, i) => ({
+      name: 'hysuite' + (i + 1), what: 'hylang\'s suite, part ' + (i + 1) + ' of ' + HYSUITE_PARTS.length + ': danlang\'s run.dl with ' +
+        p.files.map(f => f + '.dl').join(', ') + (p.about ? ' (' + p.about + ')' : ''),
+      init: 't_rc', cycles: 3000e6,
+      get machine() { return { sd: hylangCard(this.name, hysuiteFiles(p)), rtc: Date.UTC(2026, 9, 5, 12, 0, 0) / 1000, input: '\u0101cd /sd/0; hylang part.dl; echo status $status\r' }; },
+      expect: [(p.checks === undefined ? '' : p.checks) + ' checks, 0 failed\nstatus\n%'],
+    })),
     {
       name: 'hytext', what: 'hylang without its snapshot (a ROM without the module hysnap): its library loaded as text as it starts (/lib/hylang/globals.hl, the ROM disk\'s), the same banner, the library\'s definitions there; a tail loop of 50,000 steps',
       init: 't_rc', without: ['hysnap'], cycles: 1200e6,

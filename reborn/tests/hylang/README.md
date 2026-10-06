@@ -4,7 +4,10 @@ These are danlang's regression suite, `tests/regress/` from <https://github.com/
 (copied whole, line ends LF).  danlang, the C# interpreter, is hylang's reference, and `reference.md` there its
 specification: the suite is that specification's executable form, so hylang passes it unchanged.  A change to the
 language goes into danlang first, with checks here, and is copied over.  danlang's library (its `lib/`) is hylang's
-own now, on the ROM disk (`romfs/lib/hylang`), and the `hysuite` test runs `run.dl` whole, as danlang runs it.
+own now, on the ROM disk (`romfs/lib/hylang`).  The `hysuite1` to `hysuite5` tests run the suite in five parts, side
+by side under `sim/test.js -j`: each part is `run.dl` itself with its list of files cut to the part's, and `eval.dl`,
+nearly all of the suite's time in its tail loops, is cut into pieces on the test's card (`tests/tests.js`:
+`HYSUITE_PARTS`, `HYSUITE_CUTS`).  The files here stay as danlang has them.
 
 The old hylang (phase 7 as first built, to commit `a0973eb`) is gone: hylang is being written again from scratch, to
 the plan "danlang: review and 65C02 plan" (`docs/hylang.md` has its design).  Each phase of it runs the files it makes
@@ -13,7 +16,7 @@ pass, from an emulated card, and none that passed may fail after:
 | File | What | Runs from |
 | :--- | :--- | :--- |
 | `harness.dl` | The checks: `check`, `check-error`, the count of each and of the failures | 3 |
-| `run.dl` | Loads `harness.dl`, then each file, and prints the count; its status is 1 if a check failed; the `hysuite` test (`hylang run.dl`) | 8 (it wants danlang's library loaded: from phase 4 to 7, a script of hylang's own loaded it first) |
+| `run.dl` | Loads `harness.dl`, then each file, and prints the count; its status is 1 if a check failed; the `hysuite` tests (`hylang part.dl`: `run.dl` with a part's files) | 8 (it wants danlang's library loaded: from phase 4 to 7, a script of hylang's own loaded it first) |
 | `reader.dl` | The reader: numbers in every base, strings, here strings, characters, atoms, symbols, comments, `[...]`, the shorthand, bytes, `read` | 7 (the reader is phase 2's, checked by the emulator's `hylang` test till then) |
 | `eval.dl` | Calls, partial application, extra arguments, too many, tail calls (50,000 deep), nesting | 3 (its numbers past a fixnum made smaller); 5 whole |
 | `scope.dl` | Lexical scope, closures, `set!`, a Q-expression run where it was written, `let`, fexprs | 3 |

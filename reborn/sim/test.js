@@ -4,11 +4,15 @@
 // system's modules and its own, its init), runs, and is judged on its output ("ok"/"not ok" lines and "PASS"),
 // its time budgets (cycles between marks), the longest IRQs-off stretch after the boot, and its own checks.
 //
-// Usage: node sim/test.js [NAME ...] [--build] [-v] [--seed N]
+// Usage: node sim/test.js [NAME ...] [--build] [-v] [--seed N] [-j N]
 //   NAME      only these tests (default: all)
 //   --build   build first (node build.js)
 //   -v        each test's output, and its "ok" lines
 //   --seed N  the power-up's random RAM (default 1: the same each run)
+//   -j N      N tests at a time, each in a process of its own (default: the CPU's cores; -j 1, one after another
+//             here).  The reports come in the list's order either way
+// The emulator runs as fast as the host can, never paced to the Hydra's clock (run.js -i is): the cycles a test
+// reports, and its budgets, are the emulated machine's.
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -73,7 +77,7 @@ function runTest(t, opt) {
     if (t.send && name === t.send.after) m.acia.send(t.send.bytes);
   };
   const pc = t.pc ? pcFolder(t, opt) : null;
-  m = boot(Object.assign({ prom: image(t), seed: opt.seed, marks: markNames, log, trace: 40,
+  m = boot(Object.assign({ prom: image(t), seed: opt.seed, marks: markNames, log, trace: 0,
     pcWatches: bootDone === undefined ? [] : [{ pc: bootDone, page: 0 }] }, t.machine || {}, pc ? { pcHost: pc.host } : {}));
   m.pc = pc;
   const done = new RegExp('^' + t.init + ': (PASS|FAIL)', 'm');
@@ -108,35 +112,88 @@ function runTest(t, opt) {
   return { m, out, lines, failures, budgets, notes };
 }
 
-function main(argv) {
-  const opt = { seed: 1, verbose: false, names: [] };
+// A test's report: its result, its budgets, its notes and failures, and its output (with -v, or when it failed).
+// OUT: { ok, text }
+function report(t, r, opt, lbl) {
+  const ok = !r.failures.length, out = [];
+  out.push((ok ? 'PASS ' : 'FAIL ') + (t.name + ' ').padEnd(8) + t.what + '  (' + r.lines.length + ' checks, ' + (r.m.cpu.cyc / 1e6).toFixed(1) + 'M cycles)');
+  if (opt.verbose) out.push(r.out.split('\n').map(l => '    | ' + l).join('\n'));
+  for (const b of r.budgets) {
+    const at = b.what.replace(/(\w):([0-9A-F]{4})/g, (_, w, pc) => w + ':' + pc + ' ' + lbl.at(parseInt(pc, 16), parseInt(w, 16)));
+    out.push('       ' + (b.value > b.max ? 'OVER ' : '     ') + at + ': ' + (Number.isInteger(b.value) ? b.value : b.value.toFixed(1)) + ' cycles (budget ' + b.max + ')');
+  }
+  for (const n of r.notes) out.push('       ' + n);
+  for (const f of r.failures) out.push('       ! ' + f);
+  if (!ok && !opt.verbose) {
+    out.push('       the output\'s end:');
+    out.push(r.out.split('\n').slice(-12).map(l => '    | ' + l).join('\n'));
+  }
+  return { ok, text: out.join('\n') };
+}
+
+// The tests, opt.jobs at a time, each in a process of its own (this file, with --one NAME), the longest (by its
+// cycles) started first; each report shown in the list's order once it and those before it are in.  OUT: (a promise)
+// how many failed
+function parallel(list, opt) {
+  const { spawn } = require('child_process');
+  const order = list.map((t, i) => i).sort((x, y) => list[y].cycles - list[x].cycles);
+  const done = new Array(list.length).fill(null);
+  let next = 0, shown = 0, running = 0, failed = 0;
+  return new Promise(resolve => {
+    const show = () => {
+      for (; shown < list.length && done[shown]; shown++) { console.log(done[shown].text); if (!done[shown].ok) failed++; }
+      if (shown === list.length) resolve(failed);
+    };
+    const start = () => {
+      for (; running < opt.jobs && next < order.length; next++) {
+        const i = order[next], t = list[i], args = [__filename, '--one', t.name, '--seed', String(opt.seed)];
+        if (opt.verbose) args.push('-v');
+        const p = spawn(process.execPath, args, { stdio: ['ignore', 'pipe', 'inherit'] });
+        let text = '';
+        running++;
+        p.stdout.setEncoding('utf8');
+        p.stdout.on('data', d => { text += d; });
+        p.on('close', code => {                                 // (A process that ended without its report: a FAIL)
+          running--;
+          text = text.replace(/\r?\n$/, '');
+          if (!/^(PASS|FAIL) /.test(text)) text = 'FAIL ' + (t.name + ' ').padEnd(8) + t.what + '\n       ! its process ended (code ' + code + ')' + (text ? '\n' + text : '');
+          done[i] = { ok: code === 0 && text.startsWith('PASS '), text };
+          show();
+          start();
+        });
+      }
+    };
+    start();
+  });
+}
+
+async function main(argv) {
+  const opt = { seed: 1, verbose: false, names: [], jobs: require('os').cpus().length, one: null };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '-v') opt.verbose = true;
     else if (argv[i] === '--seed') opt.seed = +argv[++i];
     else if (argv[i] === '--build') opt.build = true;
-    else if (argv[i].startsWith('-')) { console.error('usage: node sim/test.js [NAME ...] [--build] [-v] [--seed N]'); process.exit(2); }
+    else if (argv[i] === '-j') opt.jobs = Math.max(1, Math.floor(+argv[++i]) || 1);
+    else if (argv[i] === '--one') opt.one = argv[++i];        // (parallel's: one test, its report, its status)
+    else if (argv[i].startsWith('-')) { console.error('usage: node sim/test.js [NAME ...] [--build] [-v] [--seed N] [-j N]'); process.exit(2); }
     else opt.names.push(argv[i]);
+  }
+  if (opt.one) {
+    const t = tests.find(x => x.name === opt.one), r = report(t, runTest(t, opt), opt, labels());
+    console.log(r.text);
+    process.exit(r.ok ? 0 : 1);
   }
   if (opt.build) require('../build.js').build({ quiet: true });
   const list = opt.names.length ? tests.filter(t => opt.names.includes(t.name)) : tests;
   if (!list.length) { console.error('no such test: ' + opt.names.join(' ')); process.exit(2); }
-  const lbl = labels();
   let failed = 0;
-  for (const t of list) {
-    const r = runTest(t, opt);
-    const ok = !r.failures.length;
-    if (!ok) failed++;
-    console.log((ok ? 'PASS ' : 'FAIL ') + t.name.padEnd(8) + t.what + '  (' + r.lines.length + ' checks, ' + (r.m.cpu.cyc / 1e6).toFixed(1) + 'M cycles)');
-    if (opt.verbose) console.log(r.out.split('\n').map(l => '    | ' + l).join('\n'));
-    for (const b of r.budgets) {
-      const at = b.what.replace(/(\w):([0-9A-F]{4})/g, (_, w, pc) => w + ':' + pc + ' ' + lbl.at(parseInt(pc, 16), parseInt(w, 16)));
-      console.log('       ' + (b.value > b.max ? 'OVER ' : '     ') + at + ': ' + (Number.isInteger(b.value) ? b.value : b.value.toFixed(1)) + ' cycles (budget ' + b.max + ')');
-    }
-    for (const n of r.notes) console.log('       ' + n);
-    for (const f of r.failures) console.log('       ! ' + f);
-    if (!ok && !opt.verbose) {
-      console.log('       the output\'s end:');
-      console.log(r.out.split('\n').slice(-12).map(l => '    | ' + l).join('\n'));
+  if (opt.jobs > 1 && list.length > 1) failed = await parallel(list, opt);
+  else {
+    const lbl = labels();
+    for (const t of list) {
+      const r = report(t, runTest(t, opt), opt, lbl);
+      console.log(r.text);
+      if (!r.ok) failed++;
     }
   }
   console.log(failed ? failed + ' of ' + list.length + ' tests failed' : 'all ' + list.length + ' tests passed');

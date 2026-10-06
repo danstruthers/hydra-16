@@ -62,27 +62,34 @@ function createCpu(bus) {
   cpu.interrupt = vec => { irq(vec, false); cpu.cyc += 7; };
   // RESET: the vector at $FFFC, IRQs off
   cpu.reset = () => { P = (P | I) & ~D; PC = rd16(0xFFFC); cpu.waiting = false; };
+  // The instruction being run: its opcode, a page crossed by its indexing, its extra cycles; and its addressing
+  // modes and operations, made once here (a step that made them would make some thirty objects an instruction)
+  let op = 0, crossed = 0, extra = 0;
+  const idx = (b, i) => { const r = (b + i) & 0xFFFF; crossed = (b ^ r) >> 8; return r; };
+  const zp = () => fetch(), zpx = () => (fetch() + X) & 0xFF, zpy = () => (fetch() + Y) & 0xFF;
+  const abs = () => fetch16(), absx = () => idx(fetch16(), X), absy = () => idx(fetch16(), Y);
+  const indx = () => zp16(fetch() + X), indy = () => idx(zp16(fetch()), Y), indz = () => zp16(fetch());
+  const br = c => { const o = fetch(); if (c) { const t = (PC + ((o ^ 0x80) - 0x80)) & 0xFFFF; extra += (t ^ PC) >> 8 ? 2 : 1; PC = t; } };
+  const rmw = (addr, f) => wr(addr, f(rd(addr)) & 0xFF);
+  const asl = v => { P = (P & ~C) | (v >> 7); return setNZ((v << 1) & 0xFF); };
+  const lsr = v => { P = (P & ~C) | (v & 1); return setNZ(v >> 1); };
+  const rol = v => { const c = P & C; P = (P & ~C) | (v >> 7); return setNZ(((v << 1) | c) & 0xFF); };
+  const ror = v => { const c = P & C; P = (P & ~C) | (v & 1); return setNZ((v >> 1) | (c << 7)); };
+  const bit = v => { P = (P & ~(N | Vf | Z)) | (v & 0xC0) | ((A & v) ? 0 : Z); };
+  const ALU = [v => A = setNZ(A | v), v => A = setNZ(A & v), v => A = setNZ(A ^ v), adc, null, null, v => cmp(A, v), sbc];
+  const CC1_MODE = [indx, zp, () => -1, abs, indy, zpx, absy, absx];                  // (cc = 1: bbb's mode; -1 immediate)
+  const CC2_MODE = [null, zp, null, abs, null, zpx, null, absx];                       // (cc = 2: the shifts, INC, DEC)
+  const CC2_OP = [asl, rol, lsr, ror, null, null, v => setNZ((v - 1) & 0xFF), v => setNZ((v + 1) & 0xFF)];
+  const bad = () => { cpu.halted = 'unimplemented opcode $' + hx(op) + ' at ' + cpu.where((PC - 1) & 0xFFFF); };
+
   // One instruction; .vector() gives BRK's vector
   cpu.step = vector => {
     cpu.lastPC = PC;
-    const op = fetch();
-    let crossed = 0, extra = DECIMAL_X[op] && (P & D) ? 1 : 0;
+    op = fetch();
+    crossed = 0; extra = DECIMAL_X[op] && (P & D) ? 1 : 0;
     cpu.ioAt = cpu.cyc + CYC[op] - 1;                         // (Its data access: the last cycle, near enough)
     let a, v, t;
-    const idx = (b, i) => { const r = (b + i) & 0xFFFF; crossed = (b ^ r) >> 8; return r; };
-    const zp = () => fetch(), zpx = () => (fetch() + X) & 0xFF, zpy = () => (fetch() + Y) & 0xFF;
-    const abs = () => fetch16(), absx = () => idx(fetch16(), X), absy = () => idx(fetch16(), Y);
-    const indx = () => zp16(fetch() + X), indy = () => idx(zp16(fetch()), Y), indz = () => zp16(fetch());
-    const br = c => { const o = fetch(); if (c) { const t = (PC + ((o ^ 0x80) - 0x80)) & 0xFFFF; extra += (t ^ PC) >> 8 ? 2 : 1; PC = t; } };
-    const rmw = (addr, f) => wr(addr, f(rd(addr)) & 0xFF);
-    const asl = v => { P = (P & ~C) | (v >> 7); return setNZ((v << 1) & 0xFF); };
-    const lsr = v => { P = (P & ~C) | (v & 1); return setNZ(v >> 1); };
-    const rol = v => { const c = P & C; P = (P & ~C) | (v >> 7); return setNZ(((v << 1) | c) & 0xFF); };
-    const ror = v => { const c = P & C; P = (P & ~C) | (v & 1); return setNZ((v >> 1) | (c << 7)); };
-    const bit = v => { P = (P & ~(N | Vf | Z)) | (v & 0xC0) | ((A & v) ? 0 : Z); };
-    const ALU = [v => A = setNZ(A | v), v => A = setNZ(A & v), v => A = setNZ(A ^ v), adc, null, null, v => cmp(A, v), sbc];
     const aaa = op >> 5, bbb = (op >> 2) & 7, cc = op & 3;
-    const bad = () => { cpu.halted = 'unimplemented opcode $' + hx(op) + ' at ' + cpu.where((PC - 1) & 0xFFFF); };
     switch (op) {
       case 0x00: PC = (PC + 1) & 0xFFFF; irq(vector(), true); break;                   // BRK
       case 0x40: P = pull() | 0x30; PC = pull(); PC |= pull() << 8; break;              // RTI
@@ -133,15 +140,14 @@ function createCpu(bus) {
         if ((op & 0x0F) === 0x0F) { const n = (op >> 4) & 7, z = fetch(); const set = (rd(z) >> n) & 1; br((op & 0x80) ? set : !set); break; }   // BBR/BBS
         if ((op & 0x0F) === 0x07) { const n = (op >> 4) & 7, z = fetch(); v = rd(z); wr(z, (op & 0x80) ? v | (1 << n) : v & ~(1 << n)); break; } // RMB/SMB
         if (cc === 1) {
-          a = [indx, zp, () => -1, abs, indy, zpx, absy, absx][bbb]();
+          a = CC1_MODE[bbb]();
           if (aaa === 4) { if (a >= 0) wr(a, A); else fetch(); break; }                // STA (no immediate)
           v = a < 0 ? fetch() : rd(a);
           if (aaa === 5) A = setNZ(v); else ALU[aaa](v);
           break;
         }
         if (cc === 2) {
-          const mode = { 1: zp, 3: abs, 5: zpx, 7: absx }[bbb];
-          const f = [asl, rol, lsr, ror, null, null, v => setNZ((v - 1) & 0xFF), v => setNZ((v + 1) & 0xFF)][aaa];
+          const mode = CC2_MODE[bbb], f = CC2_OP[aaa];
           if (!mode || !f) { bad(); break; }
           rmw(mode(), f); break;
         }

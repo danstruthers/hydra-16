@@ -25,7 +25,8 @@ node sim/run.js -i --pc-dir DIR     the same with the folder DIR at /pc (the emu
                                     ../sim/tools/hydrapc.js on a real PC)
 node build.js prog DIR              a program of your own, DIR/*.s into DIR/NAME.hyx (sdk/asm/README.md), or
                                     DIR/*.c (and *.s), a C program (sdk/c/README.md)
-node sim/test.js                    the regression tests, with their time budgets
+node sim/test.js                    the regression tests, with their time budgets: as many at a time as the CPU has
+                                    cores, each in a process of its own (-j N: N at a time; -j 1, one after another)
 node sim/test.js irq -v             one test, with its output
 ```
 
@@ -47,6 +48,6 @@ away).
 | `sdk/asm/` | For programs in assembly: `hyx2.inc` (the module header), `hyx2.cfg` (a RAM program's link), `macros.inc`, `srvlib.inc` and `srvlib.s` (the server library), `nslib.s` (a task's default namespace: Plan 9's `newns`), `toollib.inc` and `toollib.s` (what the tools share), `samples/` (on the ROM disk, `/rom/sample`), and `README.md`, the SDK's guide; with `obj/sdk/hydra.inc`, made from `spec/` |
 | `sdk/c/` | For programs in C (cc65): `include/hydra.h`, `hydra.cfg` (the link), `lib/` (the library's sources: the start-up, files and buffered stdio, the environment, `system`, `signal`, conio ...; built with cc65's `none.lib` into `obj/sdk/c/hydra.lib`), `samples/` (`/rom/sample/c`, `ctest` the library's test), and `README.md`, its guide; with `obj/sdk/c/hydracalls.h`, made from `spec/` |
 | `tools/` | `apigen.js` (the specification's outputs: the jump table, `hydra.inc`, the C header, the reference, HyForth's sys- words and `hydra.fs`), `forthlib.js` (HyForth's libraries: the core's labels and id, each library's file), `romimg.js` (the paged ROM image), `romfs.js` (the ROM disk: its HydraFS volume, made with `../sim/tools/hydrafs.js`, and its files read back from the image), `budget.js` (sizes and room left), `check.js` (only the kernel writes T, V and W) |
-| `sim/` | `run.js` and `test.js` over `lib/`, the emulator (a copy of `../sim/lib`, with a receive-latency counter added to the ACIA, IRQs-off stretches ended where an interrupt is taken, and an I2C bus on port A: `i2c.js`), and `lib/pchost.js`, the PC tool's part of `/pc` (its file server: `../sim/tools/pcfs.js`) |
+| `sim/` | `run.js` and `test.js` over `lib/`, the emulator (a copy of `../sim/lib`, with a receive-latency counter added to the ACIA, IRQs-off stretches ended where an interrupt is taken, an I2C bus on port A: `i2c.js`, and nothing allocated for an instruction run, which makes it about six times as fast: some 20 MHz of the Hydra's cycles), and `lib/pchost.js`, the PC tool's part of `/pc` (its file server: `../sim/tools/pcfs.js`) |
 | `tests/` | `tests.js`, the tests and their budgets; `mod/`, the test modules (each runs as init) and `testlib.inc`; `ram/`, the test RAM programs (put on an emulated card by the load test); `forth/`, the Forth 2012 test suite (its README); `hylang/`, danlang's regression suite, which hylang runs as its phases land (its README) |
 | `docs/` | `conventions.md`, `status.md`, `hylang.md` (hylang, phase 7: the language, danlang's, and its design on the Hydra) |

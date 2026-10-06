@@ -18,7 +18,9 @@
 // rtcBatteryLow, clock, trace, watches, pcWatches, marks, profile, ymLog), and opt.log(text) for the watches and
 // marks.  opt.pcHost: what the serial port sends goes through its push(byte, cycle), which gives back the bytes that
 // are the console's (the rest are /pc's frames: pchost.js, run.js --pc-dir), and its send(bytes) is what the PC
-// sends.  run(limit) runs to a cycle; the rest is its state, for a report.
+// sends.  opt.pcHist: count the instructions run at each page:PC (pcHist).  run(limit) runs to a cycle; the rest is
+// its state, for a report.  The loop that runs each instruction allocates nothing, so the emulator runs as fast as the
+// host can (about 20 MHz of the Hydra's cycles on a 2019 desktop): keep it that way.
 'use strict';
 const { createCpu, FLAGS } = require('./cpu65c02.js');
 const { createAcia } = require('./acia.js');
@@ -29,6 +31,7 @@ const { createYm } = require('./ym2151.js');
 const { createRtc, RTC_REGS, RTC_TASK } = require('./ds1747.js');
 
 const hx = (v, n = 2) => v.toString(16).toUpperCase().padStart(n, '0');
+const LINES = 16;                                             // The IRQ lines (0 the highest priority)
 // The paged ROM bank $01 selects, as the V1 board wires it: bits 2 and 3, and 6 and 7, trade places before they
 // reach the chips (so the image holds bank b at bank swap(b)'s place: sim/tools/mkromdisk.js, os_rom/tools/romsum.js)
 const romBank = b => (b & 0x33) | ((b & 0x04) << 1) | ((b & 0x08) >> 1) | ((b & 0x40) << 1) | ((b & 0x80) >> 1);
@@ -67,8 +70,8 @@ function createMachine(opt) {
   const ym = createYm({ clock: opt.clock, log: !!opt.ymLog, resetDelay: opt.ymResetDelay || 0 });
 
   // Which task's copy of $0000-$7FFF an access uses (the model what-ifs change this)
-  const model = opt.model || '', u7 = opt.u7Fault, ramFault = opt.ramFault;
-  const tsel = a => model === 'sharedlow' ? 0 : (model === 'zponly' && a >= 0x200) ? 0
+  const model = opt.model || '', u7 = opt.u7Fault, ramFault = opt.ramFault, plain = !model && !u7;
+  const tsel = a => plain ? T : model === 'sharedlow' ? 0 : (model === 'zponly' && a >= 0x200) ? 0
     : (model === 'nostack' && a >= 0x100 && a < 0x200) ? 0
     : u7 ? (u7.high ? T | u7.mask : T & ~u7.mask) : T;
   const bankInstalled = b => b >= 0xF0 ? (model !== 'noshared' && U < opt.sharedU) : b < opt.modules * 16;
@@ -121,13 +124,13 @@ function createMachine(opt) {
     if (a === 0xFFFF) { vecRam[V & 15] = (vecRam[V & 15] & 0xFF) | (v << 8); return; }
   }
   // Lowest numbered active IRQ line, or -1
-  function irqLine() {
-    const lines = [];
-    if (acia.irqActive()) lines.push(opt.aciaLine);
-    if (via.irqActive()) lines.push(0);                         // VIA: IRQ line 0
-    if (ym.irqActive()) lines.push(4);                          // YM2151: line 4
-    if (opt.stuckIrq >= 0) lines.push(opt.stuckIrq);
-    return lines.length ? Math.min(...lines) : -1;
+  function irqLine() {                                          // (Asked before every instruction: no allocation)
+    let n = LINES;
+    if (acia.irqActive() && opt.aciaLine < n) n = opt.aciaLine;
+    if (via.irqActive()) n = 0;                                 // VIA: IRQ line 0
+    if (ym.irqActive() && 4 < n) n = 4;                         // YM2151: line 4
+    if (opt.stuckIrq >= 0 && opt.stuckIrq < n) n = opt.stuckIrq;
+    return n < LINES ? n : -1;
   }
   const irqVector = () => { const n = irqLine(); return vecRam[n >= 0 ? (n ^ 7) : (V & 15)]; };
 
@@ -135,16 +138,18 @@ function createMachine(opt) {
   const stackLow = new Array(16).fill(0x100), stackLowAt = new Array(16).fill(null);    // Per task: lowest S, and where (W:PC, cycle)
   cpu = createCpu({ rd, wr, where: pc => hx(W, 1) + ':' + hx(pc, 4) + ' (task ' + T + ')',
     pushed: s => { if (s < stackLow[T & 15]) { stackLow[T & 15] = s; stackLowAt[T & 15] = [W, cpu.lastPC, cpu.cyc]; } } });
-  // The longest stretches with IRQs off (the I flag set), from the first key typed: [cycles, from, to, at]
-  let iOffAt = -1, iOffFrom = '';
-  const iOffTop = [];
+  // The longest stretches with IRQs off (the I flag set), from the first key typed: [cycles, from, to, at, from's key]
+  // (the places as page:PC; noted as keys, page << 16 | PC, and written out only for a stretch kept)
+  let iOffAt = -1, iOffFrom = 0;
+  const iOffTop = [], place = k => hx(k >> 16, 1) + ':' + hx(k & 0xFFFF, 4);
   function iOffNote(n, from, to, at) {
-    const k = iOffTop.findIndex(e => e[1] === from);           // (One entry per starting place)
-    if (k >= 0) { if (iOffTop[k][0] < n) iOffTop[k] = [n, from, to, at]; }
-    else iOffTop.push([n, from, to, at]);
+    const k = iOffTop.findIndex(e => e[4] === from);           // (One entry per starting place)
+    if (k >= 0) { if (iOffTop[k][0] >= n) return; iOffTop[k] = [n, place(from), place(to), at, from]; }
+    else if (iOffTop.length >= 8 && iOffTop[7][0] >= n) return;
+    else iOffTop.push([n, place(from), place(to), at, from]);
     iOffTop.sort((a, b) => b[0] - a[0]); if (iOffTop.length > 8) iOffTop.pop();
   }
-  const trace = [], pcHist = new Map(), profHist = new Map(), profCyc = new Map(), profTask = new Array(16).fill(0);
+  const pcHist = new Map(), profHist = new Map(), profCyc = new Map(), profTask = new Array(16).fill(0);
   let profCount = 0, profCycles = 0;
   cpu.PC = rd(0xFFFC) | (rd(0xFFFD) << 8); cpu.P |= FLAGS.I;  // RESET
 
@@ -165,28 +170,34 @@ function createMachine(opt) {
   const traceLen = opt.trace === undefined ? 25 : opt.trace, pcWatches = opt.pcWatches || [], profileFrom = opt.profile === undefined ? -1 : opt.profile,
     profileTo = opt.profileTo === undefined ? Infinity : opt.profileTo;
   const I = FLAGS.I;
+  const ring = new Uint16Array(Math.max(1, traceLen) * 8);    // The trace: the last traceLen instructions, a ring
+  let ringAt = 0, ringN = 0;                                  //   (W T PC A X Y S P each), m.trace's list
   function run(limit) {
     while (cpu.cyc < limit && !cpu.halted) {
       sync(cpu.cyc);
       if (irqLine() >= 0) {
         cpu.waiting = false;
         if (!(cpu.P & I)) {                                     // (Taken: an IRQs-off stretch ends here, and the
-          if (iOffAt >= 0) { iOffNote(cpu.cyc - iOffAt, iOffFrom, hx(W, 1) + ':' + hx(cpu.lastPC, 4), iOffAt); iOffAt = -1; }   //   service starts its own)
+          if (iOffAt >= 0) { iOffNote(cpu.cyc - iOffAt, iOffFrom, W << 16 | cpu.lastPC, iOffAt); iOffAt = -1; }   //   service starts its own)
           cpu.interrupt(irqVector()); continue;
         }
       }
       if (cpu.waiting) { cpu.cyc += Math.max(1, Math.min(nextEvent(), limit - cpu.cyc)); continue; }
       const PC = cpu.PC, P = cpu.P;
       if (acia.typedAt >= 0) {                                  // IRQs-off stretches, from the first key typed
-        if (P & I) { if (iOffAt < 0) { iOffAt = cpu.cyc; iOffFrom = hx(W, 1) + ':' + hx(PC, 4); } }
-        else if (iOffAt >= 0) { iOffNote(cpu.cyc - iOffAt, iOffFrom, hx(W, 1) + ':' + hx(cpu.lastPC, 4), iOffAt); iOffAt = -1; }
+        if (P & I) { if (iOffAt < 0) { iOffAt = cpu.cyc; iOffFrom = W << 16 | PC; } }
+        else if (iOffAt >= 0) { iOffNote(cpu.cyc - iOffAt, iOffFrom, W << 16 | cpu.lastPC, iOffAt); iOffAt = -1; }
       }
-      trace.push([W, T, PC, cpu.A, cpu.X, cpu.Y, cpu.S, P]); if (trace.length > traceLen) trace.shift();
-      for (const w of pcWatches) if (w.pc === PC && (w.page < 0 || w.page === W))
+      if (traceLen) {
+        const o = ringAt * 8;
+        ring[o] = W; ring[o + 1] = T; ring[o + 2] = PC; ring[o + 3] = cpu.A; ring[o + 4] = cpu.X; ring[o + 5] = cpu.Y; ring[o + 6] = cpu.S; ring[o + 7] = P;
+        ringAt = (ringAt + 1) % traceLen; if (ringN < traceLen) ringN++;
+      }
+      if (pcWatches.length) for (const w of pcWatches) if (w.pc === PC && (w.page < 0 || w.page === W))
         log('pc: ' + hx(W, 1) + ':' + hx(PC, 4) + ' T=' + hx(T, 1) + ' A=' + hx(cpu.A) + ' X=' + hx(cpu.X) + ' Y=' + hx(cpu.Y) + ' S=' + hx(cpu.S) + ' P=' + hx(P) + ' at cycle ' + cpu.cyc);
       const pT = T, pW = W, c0 = cpu.cyc;                      // (The profile's: the instruction's task, page and cycles)
       cpu.step(irqVector);
-      const k = W * 65536 + cpu.PC; pcHist.set(k, (pcHist.get(k) || 0) + 1);
+      if (opt.pcHist) { const k = W * 65536 + cpu.PC; pcHist.set(k, (pcHist.get(k) || 0) + 1); }
       if (profileFrom >= 0 && c0 >= profileFrom && c0 < profileTo) {
         const pk = pT * 1048576 + pW * 65536 + cpu.lastPC, dc = cpu.cyc - c0;
         profHist.set(pk, (profHist.get(pk) || 0) + 1); profCyc.set(pk, (profCyc.get(pk) || 0) + dc); profTask[pT]++; profCount++; profCycles += dc;
@@ -205,8 +216,13 @@ function createMachine(opt) {
 
   // (A task's RAM bank b, as it is: undefined if it was never written; tools/hysnap.js reads hylang's heap with it)
   const taskBankMem = (t, b) => taskBank[t * 256 + b];
-  Object.assign(m, { cpu, acia, via, i2c, ym, rtc, taskRam, vecRam, trace, pcHist, iOffTop, stackLow, stackLowAt, profHist, profCyc, profTask, run, hwReset, rd, taskBankMem });
-  Object.defineProperties(m, {                                // (The pseudo-registers and the profile's count, as they are now)
+  Object.assign(m, { cpu, acia, via, i2c, ym, rtc, taskRam, vecRam, pcHist, iOffTop, stackLow, stackLowAt, profHist, profCyc, profTask, run, hwReset, rd, taskBankMem });
+  Object.defineProperties(m, {                                // (The pseudo-registers, the trace and the profile's count, as they are now)
+    trace: { get: () => {                                     // (The ring, oldest first: [W, T, PC, A, X, Y, S, P] each)
+      const out = [];
+      for (let i = ringN; i > 0; i--) { const o = ((ringAt - i + traceLen) % traceLen) * 8; out.push(Array.from(ring.subarray(o, o + 8))); }
+      return out;
+    } },
     T: { get: () => T }, U: { get: () => U }, V: { get: () => V }, W: { get: () => W }, profCount: { get: () => profCount }, profCycles: { get: () => profCycles },
   });
   return m;
