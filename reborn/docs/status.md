@@ -86,6 +86,7 @@ PASS heap    hylang's runtime (modules/hylang/heap.inc, phase 1): values and fix
 PASS hylang  hylang's REPL, evaluator, built-ins, numbers, strings, hashes, streams and system library (phases 3 to 7): the reader's every form (in Q-expressions, printed as they're read) and its errors, an expression over lines, 255 brackets open; lines evaluated: def, fn, fun, recursion 1,000 deep (2,500 the most: deeper, an error), a tail loop, errors, partial application, too many arguments, &_, let, the loops, output-of, try, map, format, + of strings, cmp, closures, fexprs; numbers past a fixnum, fractions, fixed decimals and complex numbers, read in bases and written in them, to-fixed, truncate, fib, random, the bits; the string built-ins; hashes (made with their values evaluated, called, a method with &0, a private entry, a locked hash, cloned, listed); read, the clock, rc's lines run (their output, their exit status), print-to and write-to stdout, save, the environment, a system error's code; filter, the folds, any?, all?, find, count, sum, product, sort (by cmp, by a function, its error), subset, index-of, gensym, to-atom, random; Ctrl-C at the prompt and in a loop; (exit 3); stdin a pipe, its end; hylang -g (a collection before every allocation)
 PASS hysuite hylang's suite: danlang's run.dl whole, as danlang runs it (hylang run.dl: a script, args its name, its status), and all its files (reader.dl, eval.dl, scope.dl, control.dl, errors.dl, lists.dl, strings.dl, numbers.dl, hashes.dl, types.dl, io.dl, system.dl, bits.dl, library.dl) with its harness, loaded from a card (load reads a file an item at a time, refilled as it goes; a load nested in another); danlang's library, hylang's from its snapshot (globals.dl) and the ROM disk's /lib/hylang (dice.dl and screen.dl, where load finds a bare name, and use); files written on the card, programs run, the clock a DS1747's
 PASS hytext  hylang without its snapshot (a ROM without the module hysnap): its library loaded as text as it starts (/lib/hylang/globals.hl, the ROM disk's), the same banner, the library's definitions there; a tail loop of 50,000 steps
+PASS hyspeed hylang's budgets (phase 8's, at 3.58 MHz, its library loaded): a parameter looked up, a call of a function of two arguments, a tail loop's step (if, zero?, -, the call), map with a function of one argument, an item; each the difference of two lines' times, from the echo to the value
 PASS kcopy   spike S2: copying between tasks  (6 checks)
 PASS irq     spike S1: 115200 received by an irq entry while tasks spin  (6 checks)
 ```
@@ -366,7 +367,7 @@ lists, the clock and the calendar).  `load` takes several files, and a missing o
 checks, run as a script with danlang's library loaded), the new files with a collection before every allocation
 too, and 248 dates and times danlang and hylang work out the same.
 
-**Phase 8, the library and tuning: in progress.**  danlang's library is on the ROM disk (`romfs/lib/hylang`:
+**Phase 8, the library and tuning: done.**  danlang's library is on the ROM disk (`romfs/lib/hylang`:
 `globals.hl`, `dice.hl`, `screen.hl`), and `globals.hl` is in hylang as it starts: from a snapshot of its heap in
 the paged ROM (the module `hysnap`, which `tools/hysnap.js` makes at the build by running hylang in the emulator
 till its library is loaded, then reading its RAM and banks), or, with no snapshot of this hylang's, loaded as text
@@ -375,11 +376,14 @@ till its library is loaded, then reading its RAM and banks), or, with no snapsho
 to copy, and to keep), `bank_of` made again rather than kept, and stdin, stdout and stderr in the snapshot.  The
 state a snapshot keeps is a segment of its own, PSTATE, zeroed for a heap made anew.  `hylang run.dl` now runs
 danlang's suite whole, as danlang does (1,197 checks, the `hysuite` test), and `hytext` starts hylang without the
-snapshot.  Tuned so far: a loop's step 10,960 cycles to 8,500, a call of two arguments 8,400 to 3,700, `map` 5,200
-to 3,700 an item (a function's formals counted as it's made; `+`, `-`, `1+`, `1-`, `zero?`, `one?` and the
-comparisons on fixnums in the first bank; an ordinary built-in's too many arguments an error after they're
-evaluated, as danlang's; a global's symbol read once; `pop` and `cell_get` quicker; a cell bank more after a
-collection while fewer pages are free than used).  The budgets of 3,000, 1,500 and 2,000 are not met yet.
+snapshot.  Tuned: a loop's step 10,960 cycles to 6,059, a call of two arguments 8,400 to 3,683, `map` 5,200 to
+3,652 an item, a parameter looked up 301 to 279 (a function's formals counted as it's made; quick calls, `+`, `-`,
+`1+`, `1-`, `zero?`, `one?` and the comparisons given fixnums or names of them worked where they're met, with no
+frame and no far call; an ordinary built-in's too many arguments an error after they're evaluated, as danlang's;
+a global's symbol read once; `pop`, `cell_get` and the lookups' derefs quicker; a cell bank more after a collection
+while fewer pages are free than used).  The plan's budgets (3,000, 1,500, 2,000, 150; set before any spike) were
+out of reach of tuning, so, the user's choice, they're what tuning reached, with a margin: 6,500, 4,000, 4,000,
+300, and a full collection of a full 64K heap 3.6 M; the `hyspeed` test checks the evaluator's.
 
 | Step | | Notes |
 |---|---|---|
@@ -399,8 +403,8 @@ collection while fewer pages are free than used).  The budgets of 3,000, 1,500 a
    `tests/hylang`, `docs/hylang.md` rewritten), and so is phase 1, the runtime (`heap.inc`: a 128K cell heap,
    blobs, symbols, the collector), phase 2, the reader, the printer and the REPL, phase 3, the evaluator, phase 4,
    the built-ins and lists, phase 5, the numbers, phase 6, strings, characters and hashes, and phase 7, streams,
-   I/O and the system library.  Phase 8 (the library, tuning and the ROM) is under way: the library and its
-   snapshot are done, and `run.dl` passes whole; the evaluator's budgets are not met yet.
+   I/O and the system library, and phase 8, the library (in hylang from a snapshot in the ROM), tuning (its
+   budgets revised to what it reached) and `run.dl` whole: danlang parity.  Next: the Hydra layers.
    The parity
    checkpoint (the plan's, after phase 5) is still the user's.  `/proc/N/fd` is still to come (a channel keeps no
    name to show).

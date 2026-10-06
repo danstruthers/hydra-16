@@ -197,16 +197,20 @@ The plan has it whole; in short:
   starts (`hylang.cfg`'s DATA4), so the first bank's room is the evaluator's.  `+`, `-`, `1+`, `1-`, `zero?`,
   `one?` and the comparisons work fixnums in the first bank (`bi_fast`), without a far call.  The Hydra layers
   are library modules beside it.
-* **Budgets** (at 3.58 MHz): a parameter looked up in 150 cycles, a call of two arguments in 1,500, a tail loop's
-  step in 3,000 (the first hylang's: 10,600).  Measured in phase 1 (the heap test): a cons made and listed in 460
-  cycles (its fixnum made, its words set), a collection 212 cycles a live cell (9,000 live: 1.9 M, 0.5 s).
-  Measured in phase 3, untuned: a tail loop's step (`zero?`, `-`, `if`, the call) 10,200 cycles; a call of a
-  function of two arguments 4,800.  Measured in phase 8, with the library loaded (from the REPL's echo to its
-  `=>`, loops' differences): start-up from the snapshot 286,000 (300,000); a parameter looked up 300 (150); a call
-  of two arguments 3,700 (1,500); a tail loop's step 8,500 (3,000; 10,960 before phase 8's tuning: a function's
-  formals counted as it's made, the fixnum built-ins in the first bank, an ordinary built-in's arguments counted as
-  they're evaluated, a global's symbol read once, `pop` and `cell_get` quicker, the heap grown sooner); `map` with
-  a function of one argument 3,700 an item (2,000); a collection 213 cycles a live cons (14,000 live: 3.8 M).
+* **Budgets** (at 3.58 MHz, the library loaded; each from the REPL's echo to its `=>`, a difference of two lines'
+  times so the REPL's own work drops out): start-up from the snapshot to the first prompt 300,000 cycles (286,000);
+  a parameter looked up 300 (279); a call of a function of two arguments 4,000 (3,683); a tail loop's step (`if`,
+  `zero?`, `-`, the call) 6,500 (6,059); `map` with a function of one argument 4,000 an item (3,652); a full
+  collection of a full 64K cell heap 3,600,000 (213 cycles a live cell: 14,000 conses live, 3.8 M).  The `hyspeed`
+  test checks the four of the evaluator on every run, the `heap` test the collector's (255 a cell, 9,000 live).
+  They're phase 8's: the plan's were 150, 1,500, 3,000, 2,000 and 1,500,000, targets set before a spike, and
+  tuning got the first hylang's 10,600 cycles a step (and this one's 10,960, untuned) to 6,059.  What's left is
+  the evaluator's shape: a scope is a frame of name-value pairs looked up by name, and a call not quick (below)
+  pushes a frame of the machine's.  Phase 8's tuning: a function's formals counted as it's made; quick calls, a
+  built-in with a fixnum way (`+`, `-`, `1+`, `1-`, `zero?`, `one?`, the comparisons) given fixnums or names
+  of them, worked where they're met (an argument, `if`'s condition, a call), no frame and no far call; an ordinary
+  built-in's arguments counted as they're evaluated; a global's symbol read once; `pop`, `cell_get` and the
+  lookups' derefs quicker; and a cell bank more after a collection while fewer pages are free than used.
 
 ## The phases (phase 7, again; now its phase 8)
 
@@ -253,10 +257,11 @@ The plan has it whole; in short:
    programs and the shell, the environment, the clock); `load` of several files; script mode and `args`.
    `io.dl` and `system.dl` pass, and so does every file of `run.dl`'s: 1,198 checks run as a script (a script of
    hylang's own, the `hysuite` test), with danlang's library loaded first.
-8. **The library** (`globals.hl`, `dice.hl`, `screen.hl`), tuning to the budgets, the ROM.  Done so far: the
-   library on the ROM disk (`romfs/lib/hylang`, danlang's `lib/` whole), `globals.hl` in hylang as it starts,
-   from its snapshot (the module `hysnap`, made at the build) or as text; `run.dl` passes whole as danlang runs it,
-   `hylang run.dl` (1,197 checks, the `hysuite` test), and `hytext` starts hylang without the snapshot.  Tuned:
-   start-up is within its budget, and a loop's step and a call are quicker (above), but not yet within theirs.
+8. **The library** (`globals.hl`, `dice.hl`, `screen.hl`), tuning to the budgets, the ROM.  Done: the library
+   on the ROM disk (`romfs/lib/hylang`, danlang's `lib/` whole), `globals.hl` in hylang as it starts, from its
+   snapshot (the module `hysnap`, made at the build) or as text; `run.dl` passes whole as danlang runs it, `hylang
+   run.dl` (1,197 checks, the `hysuite` test), and `hytext` starts hylang without the snapshot.  Tuned: a loop's
+   step 10,960 cycles to 6,059, a call 8,400 to 3,683; the budgets set to what tuning reached (the user's choice:
+   above), each met and checked (`hyspeed`).
 
 Then the Hydra layers: its built-ins, the `sys-` functions, the device libraries, and the prompt.
