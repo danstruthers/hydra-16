@@ -88,13 +88,46 @@ resolve:
             sta         (w),y
             rts
 
-; The word whose header is at w, compiled: its code copied (F_INLINE), or a jsr to it
+; The locals library's routine (loc_vec: locals.fl's), .A the call: 0, the name ( c-addr u ) being compiled (a
+; local's: its code compiled, the name dropped, C = 0); 1, a definition's end (; DOES>: the locals' frame let go,
+; the locals forgotten); 2, EXIT (the frame let go); 3, TO's name ( c-addr u ) (as 0, the local set); 4,
+; ENVIRONMENT?'s ( c-addr u ) (#LOCALS: ( n true ), C = 0).  Nothing done (or none): C = 1
+loc_call:
+            sec
+            ldy         loc_vec + 1
+            beq         :+
+            jmp         (loc_vec)
+:
+            rts
+
+; The word whose header is at w, compiled: its code copied (F_INLINE, a length), or a jsr to it; EXIT's, the
+; locals' frame let go first
 comp_hdr:
             jsr         hdr_xt
+            lda         w2
+            cmp         #<exit
+            bne         @hdr
+            lda         w2 + 1
+            cmp         #>exit
+            bne         @hdr
+            lda         w + 1
+            pha
+            lda         w
+            pha
+            lda         #2
+            jsr         loc_call
+            pla
+            sta         w
+            pla
+            sta         w + 1
+            jsr         hdr_xt
+@hdr:
             bit         cnt                                 ; (hdr_xt: cnt its flags)
             bvs         @call                               ; (F_HIDDEN: as called)
             lda         cnt
             and         #F_INLINE
+            beq         @call
+            lda         tmp                                 ; (0: called, a compile-only word's)
             beq         @call
             ldy         #0                                  ; Its code, but its rts
 :
@@ -111,7 +144,8 @@ comp_hdr:
             ldy         w2 + 1
             jmp         comp_jsr
 
-; The header at w: w2 its xt, cnt its flags and length, tmp its code's length (F_INLINE), w kept
+; The header at w: w2 its xt, cnt its flags and length, tmp its code's length (F_INLINE), .Y the xt's offset in
+; the header (F_INLINE: its byte before it), w kept
 hdr_xt:
             ldy         #2
             lda         (w),y
@@ -123,7 +157,8 @@ hdr_xt:
             lda         cnt
             and         #F_INLINE
             beq         :+
-            lda         (w),y                               ; (Its code's length)
+            lda         (w),y                               ; (Its code's length, without F_COMPILE)
+            and         #CODE_MASK
             sta         tmp
             iny
 :
@@ -138,8 +173,8 @@ hdr_xt:
 
 ; ---- Headers and definitions
 
-; A header for the next name in the input, linked into the compilation word list (hidden with .A = F_HIDDEN):
-; lasthdr, lastxt.  An empty name: THROW -16
+; A header for the next name in the input, linked into the compilation word list (hidden with .A = F_HIDDEN), and
+; FORTH's index (idx_add): lasthdr, lastxt.  An empty name: THROW -16
 make_hdr:
             sta         tmp3
             jsr         parse_name
@@ -198,7 +233,7 @@ make_hdr:
             sta         lastxt
             lda         here + 1
             sta         lastxt + 1
-            rts
+            jmp         idx_add
 
 ; w3 = the compilation word list
 current_w3:
@@ -230,14 +265,16 @@ colon:
             jsr         make_hdr
             jmp         rbracket
 
-            HEADER      ";", F_IMMEDIATE
+            HEADERC     ";", F_IMMEDIATE
 semicolon:
+            lda         #1                                  ; (Its locals' frame let go)
+            jsr         loc_call
             lda         #RTS_OP
             jsr         ccomma_a
             jsr         reveal
             jmp         lbracket
 
-            HEADER      "IMMEDIATE", 0
+            HEADER      "immediate", 0
 immediate:
             lda         lasthdr
             sta         w
@@ -249,7 +286,7 @@ immediate:
             sta         (w),y
             rts
 
-            HEADER      "RECURSE", F_IMMEDIATE
+            HEADERC     "recurse", F_IMMEDIATE
 recurse:
             lda         lastxt
             ldy         lastxt + 1
@@ -268,7 +305,7 @@ rbracket:
             sta         state + 1
             rts
 
-            HEADER      "LITERAL", F_IMMEDIATE
+            HEADERC     "literal", F_IMMEDIATE
 literal:
             lda         dlo,x
             ldy         dhi,x
@@ -339,17 +376,17 @@ tick:                                                       ; ( "name" -- xt )
             PUSHAY
             rts
 
-            HEADER      "[']", F_IMMEDIATE
+            HEADERC     "[']", F_IMMEDIATE
 brackettick:
             jsr         tick
             jmp         literal
 
-            HEADER      "[CHAR]", F_IMMEDIATE
+            HEADERC     "[char]", F_IMMEDIATE
 bracketchar:
             jsr         char
             jmp         literal
 
-            HEADER      "POSTPONE", F_IMMEDIATE
+            HEADERC     "postpone", F_IMMEDIATE
 postpone:                                                   ; Immediate: compiled; else, code that compiles it
             jsr         name_hdr
             ldy         #2
@@ -375,25 +412,25 @@ comp_hdr_rt:
 
 ; ---- Control flow
 
-            HEADER      "IF", F_IMMEDIATE
+            HEADERC     "if", F_IMMEDIATE
 if_:
             jmp         comp_test
 
-            HEADER      "THEN", F_IMMEDIATE
+            HEADERC     "then", F_IMMEDIATE
 then:
             jmp         resolve
 
-            HEADER      "ELSE", F_IMMEDIATE
+            HEADERC     "else", F_IMMEDIATE
 else_:                                                      ; ( orig1 -- orig2 )
             jsr         comp_fwd
             jsr         swap
             jmp         resolve
 
-            HEADER      "BEGIN", F_IMMEDIATE
+            HEADERC     "begin", F_IMMEDIATE
 begin:
             jmp         here_
 
-            HEADER      "UNTIL", F_IMMEDIATE
+            HEADERC     "until", F_IMMEDIATE
 until:                                                      ; ( dest -- )
             jsr         comp_poll
             jsr         comp_test
@@ -408,17 +445,18 @@ again_jmp:                                                  ; ( dest -- ): jmp d
             inx
             jmp         comp_jmp
 
-            HEADER      "WHILE", F_IMMEDIATE
+            HEADERC     "while", F_IMMEDIATE
 while:                                                      ; ( dest -- orig dest )
             jsr         comp_test
             jmp         swap
 
-            HEADER      "REPEAT", F_IMMEDIATE
+            HEADERC     "repeat", F_IMMEDIATE
 repeat:                                                     ; ( orig dest -- )
             jsr         again
             jmp         resolve
 
-; Ctrl-C's poll, in a loop before its branch back: bit intr; bpl +3; jmp intr_throw
+; Ctrl-C's poll (and a note's, for a program's handler), in a loop before its branch back: bit intr; bpl +3; jsr
+; intr_check
 comp_poll:
             lda         #OP_BIT_ZP
             jsr         ccomma_a
@@ -428,9 +466,9 @@ comp_poll:
             jsr         ccomma_a
             lda         #3
             jsr         ccomma_a
-            lda         #<intr_throw
-            ldy         #>intr_throw
-            jmp         comp_jmp
+            lda         #<intr_check
+            ldy         #>intr_check
+            jmp         comp_jsr
 
 ; ( dest orig -- ): orig's jmp to dest
 resolve_to:
@@ -447,7 +485,7 @@ resolve_to:
             inx
             rts
 
-            HEADER      "DO", F_IMMEDIATE
+            HEADERC     "do", F_IMMEDIATE
 do:
             lda         #<xdo
             ldy         #>xdo
@@ -460,7 +498,7 @@ do_rest:                                                    ; ( -- leaves dest )
             stz         leaves + 1
             jmp         here_
 
-            HEADER      "LEAVE", F_IMMEDIATE
+            HEADERC     "leave", F_IMMEDIATE
 leave:
 leave_jmp:                                                  ; jmp, to the loop's end: in the chain of LEAVEs
             lda         #JMP_OP
@@ -478,13 +516,13 @@ leave_jmp:                                                  ; jmp, to the loop's
             sta         leaves
             rts
 
-            HEADER      "LOOP", F_IMMEDIATE
+            HEADERC     "loop", F_IMMEDIATE
 loop:
             lda         #<xloop
             ldy         #>xloop
             bra         loop_end
 
-            HEADER      "+LOOP", F_IMMEDIATE
+            HEADERC     "+loop", F_IMMEDIATE
 plusloop:
             lda         #<xploop
             ldy         #>xploop
@@ -567,10 +605,12 @@ xdo:
             lda         cnt                                 ; (?DO's flag)
             rts
 
-; LOOP's: the index on one (V = 1: its limit crossed); Ctrl-C first
+; LOOP's: the index on one (V = 1: its limit crossed); Ctrl-C (or a note) first
 xloop:
             bit         intr
-            bmi         intr_j
+            bpl         :+
+            jsr         intr_check
+:
             stx         xsave
             tsx
             clc
@@ -583,10 +623,12 @@ xloop:
             ldx         xsave
             rts
 
-; +LOOP's: ( n -- ): the index on n (V = 1: crossed); Ctrl-C first
+; +LOOP's: ( n -- ): the index on n (V = 1: crossed); Ctrl-C (or a note) first
 xploop:
             bit         intr
-            bmi         intr_j
+            bpl         :+
+            jsr         intr_check
+:
             lda         dlo,x
             sta         tmp
             lda         dhi,x
@@ -604,10 +646,7 @@ xploop:
             ldx         xsave
             rts
 
-intr_j:
-            jmp         intr_throw
-
-            HEADER      "I", 0
+            HEADERC     "i", 0
 i:                                                          ; ( -- index ): the parameters under the return address
             stx         xsave
             tsx
@@ -625,7 +664,7 @@ i:                                                          ; ( -- index ): the 
             sta         dlo,x
             rts
 
-            HEADER      "J", 0
+            HEADERC     "j", 0
 j:                                                          ; ( -- index ): the outer loop's
             stx         xsave
             tsx
@@ -655,7 +694,7 @@ make_word:
             pla
             jmp         comp_jsr
 
-            HEADER      "CREATE", 0
+            HEADER      "create", 0
 create:
             lda         #<dovar
             ldy         #>dovar
@@ -674,14 +713,14 @@ dovar:
             PUSHAY
             rts
 
-            HEADER      "VARIABLE", 0
+            HEADER      "variable", 0
 variable:
             jsr         create
             lda         #0
             tay
             jmp         comma_ay
 
-            HEADER      "CONSTANT", 0
+            HEADER      "constant", 0
 constant:                                                   ; ( x "name" -- ): a literal and rts
             lda         #0
             jsr         make_hdr
@@ -705,7 +744,21 @@ dovalue:
             PUSHAY
             rts
 
-            HEADER      ">BODY", 0
+; A 2VALUE's (the Double-Number library's; Core Extension's TO knows it by this): the two cells after its jsr, as
+; 2@ has them
+do2value:
+            pla
+            clc
+            adc         #1
+            sta         tmp
+            pla
+            adc         #0
+            tay
+            lda         tmp
+            PUSHAY
+            jmp         twofetch
+
+            HEADER      ">body", 0
 body_:
             clc
             lda         dlo,x
@@ -716,8 +769,10 @@ body_:
 :
             rts
 
-            HEADER      "DOES>", F_IMMEDIATE
+            HEADERC     "does>", F_IMMEDIATE
 does:                                                       ; jsr do_does, then the child's code: jsr dodoes ...
+            lda         #1                                  ;   (the defining word's locals let go: the child's
+            jsr         loc_call                            ;   code has its own)
             lda         #<do_does
             ldy         #>do_does
             jsr         comp_jsr
@@ -854,6 +909,13 @@ domarker:
             ply
             bra         @list
 @done:
+            lda         loc_vec                             ; The locals library, if it's gone
+            ldy         loc_vec + 1
+            jsr         since
+            bcs         :+
+            stz         loc_vec
+            stz         loc_vec + 1
+:
             ldx         xsave
             rts
 

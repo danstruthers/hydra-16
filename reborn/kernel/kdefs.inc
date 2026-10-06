@@ -12,7 +12,7 @@
 .global     BOOT, BOOT_DONE, RESET_ENTRY
 ; ---- common.s: the COMMON block (the same on every BIOS ROM page)
 .global     IRQ_ENTRY, IRQ_RESTORE, IRQ_EXIT, NMI_ENTRY
-.global     IRQ_STUB_0, IRQ_STUB_F, K_FAR, K_FAR_GO, K_PEEK_PAGE
+.global     IRQ_STUB_0, IRQ_STUB_F, IRQ_VIA, K_FAR, K_FAR_GO, K_PEEK_PAGE
 ; ---- irq.s: interrupts
 .global     IRQ_HANDLER, IRQ_SWITCH, IRQ_STRAY, IRQ_INIT, IRQ_SET_OWNER, IRQ_RELEASE_ALL, NMI_HANDLER, K_KIRQ
 ; ---- sched.s: the scheduler, waiting, time

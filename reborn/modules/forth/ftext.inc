@@ -3,8 +3,9 @@
 
 ; ---- Output: fd 1, through obuf
 
-; .A out.  Keeps .X, .Y
+; .A out (lastc: it, so the shell's prompt knows a line's been ended).  Keeps .X, .Y
 emit_a:
+            sta         lastc
             phy
             ldy         olen
             sta         obuf,y
@@ -17,22 +18,31 @@ emit_a:
             ply
             rts
 
-; The output written (a failed write: no matter).  Keeps .X, .Y
+; The output written (a failed write: no matter); or, while a word's output is taken (out_hook: the shell's
+; output-of and piped), given to the hook (.A its length, in obuf).  Keeps .X, .Y
 flush:
             lda         olen
             beq         @done
             phy
             stx         xsave
+            ldy         out_hook + 1
+            bne         @hook
             sta         r1
             stz         r1 + 1
             LDR         r0, obuf
             lda         #1
             jsr         WRITE
+@out:
             ldx         xsave
             stz         olen
             ply
 @done:
             rts
+@hook:
+            jsr         @call
+            bra         @out
+@call:
+            jmp         (out_hook)
 
 ; The zero-terminated string at w out.  Keeps .X
 type_z:
@@ -67,13 +77,13 @@ type_w:
 @done:
             rts
 
-            HEADER      "EMIT", 0
+            HEADER      "emit", 0
 emit:
             lda         dlo,x
             inx
             jmp         emit_a
 
-            HEADER      "TYPE", 0
+            HEADER      "type", 0
 type:                                                       ; ( addr u -- )
             lda         dlo + 1,x
             sta         w
@@ -87,17 +97,53 @@ type:                                                       ; ( addr u -- )
             inx
             jmp         type_w
 
-            HEADER      "CR", 0
+            HEADER      "cr", 0
 cr:
             lda         #LF
             jmp         emit_a
 
-            HEADER      "SPACE", 0
+            HEADER      "space", 0
 space:
             lda         #' '
             jmp         emit_a
 
-            HEADER      "SPACES", 0
+; .A out as two hex digits (tools.fl's and disasm.fl's).  Keeps .X, .Y
+hex2:
+            pha
+            lsr
+            lsr
+            lsr
+            lsr
+            jsr         @digit
+            pla
+            and         #$0F
+@digit:
+            cmp         #10
+            bcc         :+
+            adc         #6                                  ; (C = 1: 'A' on)
+:
+            adc         #'0'
+            jmp         emit_a
+
+; Header w's name out, and a space (tools.fl's and disasm.fl's)
+hdr_out:
+            ldy         #2
+            lda         (w),y
+            and         #LEN_MASK
+            sta         cnt
+            ldy         #3
+:
+            lda         cnt
+            beq         :+
+            lda         (w),y
+            jsr         emit_a
+            iny
+            dec         cnt
+            bra         :-
+:
+            jmp         space
+
+            HEADER      "spaces", 0
 spaces:                                                     ; ( n -- ): none if n < 1
             lda         dhi,x
             bmi         @done
@@ -244,7 +290,7 @@ refill_src:
 :
             jmp         refill_file
 
-            HEADER      "ACCEPT", 0
+            HEADER      "accept", 0
 accept:                                                     ; ( c-addr +n1 -- +n2 )
             lda         dlo,x
             sta         tmp2
@@ -264,7 +310,7 @@ accept:                                                     ; ( c-addr +n1 -- +n
             sty         dhi,x
             rts
 
-            HEADER      "KEY", 0
+            HEADER      "key", 0
 key:                                                        ; ( -- char ): the console's raw mode, a key (KEY?'s,
             lda         key_pend                            ;   if it has one); not the console, stdin's next byte
             beq         :+                                  ;   (its end: 4)
@@ -289,9 +335,10 @@ key:                                                        ; ( -- char ): the c
             jsr         READ
             ldx         xsave
             bcc         :+
-            cmp         #E_INTR
-            bne         :+
-            jmp         intr_throw
+            cmp         #E_INTR                             ; (Ctrl-C: THROW -28; another note: again, the next word
+            bne         :+                                  ;   taking it)
+            jsr         intr_wait
+            bra         @raw
 :
             lda         numtmp
 @push:
@@ -461,14 +508,157 @@ skip_delims:
 @done:
             rts
 
-; PARSE-NAME's (the Core Extension library's header), the interpreter's
+; PARSE-NAME's (the Core Extension library's header), the interpreter's: skip_delims and parse_to's, for a space
+; (any control char a delimiter too), in loops of its own: with fewer than 256 characters left (a line's), one over
+; them (.Y their index); else 255 characters a part.  Keeps .X
 parse_name:                                                 ; ( "<spaces>name<space>" -- c-addr u )
-            lda         #' '
+            jsr         src_rest
+            lda         tmp + 1
+            bne         @skip
+            ldy         #0                                  ; The delimiters before it ...
+@skip1:
+            cpy         tmp
+            beq         @at1
+            lda         (w),y
+            cmp         #' ' + 1
+            bcs         @at1
+            iny
+            bra         @skip1
+@at1:
+            sty         tmp2                                ;   its start (tmp2) ...
+@char1:
+            cpy         tmp
+            beq         @end1
+            lda         (w),y
+            cmp         #' ' + 1
+            bcc         @delim1
+            iny
+            bra         @char1
+@delim1:
+            sty         cnt                                 ;   its end (cnt), and >IN past it, a delimiter too
+            iny
+            bra         :+
+@end1:
+            sty         cnt
+:
+            tya                                             ; (>IN on .Y)
+            clc
+            adc         to_in
+            sta         to_in
+            bcc         :+
+            inc         to_in + 1
+:
+            clc                                             ; ( w + start, end - start )
+            lda         w
+            adc         tmp2
+            pha
+            lda         w + 1
+            adc         #0
+            tay
+            pla
+            PUSHAY
+            sec
+            lda         cnt
+            sbc         tmp2
+            ldy         #0
+            PUSHAY
+            lda         #' '                                ; (cnt the delimiter, as parse_to's callers have it)
             sta         cnt
-            jsr         skip_delims
-            jmp         parse_to
+            rts
+@skip:
+            jsr         @limit                              ; The delimiters before it
+            ldy         #0
+:
+            cpy         cnt
+            beq         :+
+            lda         (w),y
+            cmp         #' ' + 1
+            bcs         :+
+            iny
+            bra         :-
+:
+            jsr         @adv
+            cpy         cnt                                 ; (A part all delimiters, and more: on)
+            bne         @at
+            lda         tmp
+            ora         tmp + 1
+            bne         @skip
+@at:
+            lda         w                                   ; Its start
+            ldy         w + 1
+            PUSHAY
+            stz         tmp2                                ; Its characters (tmp2: how many)
+            stz         tmp2 + 1
+@part:
+            jsr         @limit
+            ldy         #0
+@char:
+            cpy         cnt
+            beq         @past
+            lda         (w),y
+            cmp         #' ' + 1
+            bcc         @delim
+            iny
+            bra         @char
+@delim:
+            jsr         @took                               ; (>IN past it too)
+            inc         w
+            bne         @end
+            inc         w + 1
+            bra         @end
+@past:
+            jsr         @took                               ; The part's end: the source's, or on
+            lda         tmp
+            ora         tmp + 1
+            bne         @part
+@end:
+            sec                                             ; >IN: where it got to
+            lda         w
+            sbc         src_addr
+            sta         to_in
+            lda         w + 1
+            sbc         src_addr + 1
+            sta         to_in + 1
+            lda         #' '                                ; (cnt the delimiter, as parse_to's callers have it)
+            sta         cnt
+            lda         tmp2
+            ldy         tmp2 + 1
+            PUSHAY
+            rts
+@limit:                                                     ; (cnt: what a part looks at, 255 at most)
+            lda         #255
+            ldy         tmp + 1
+            bne         :+
+            lda         tmp
+:
+            sta         cnt
+            rts
+@took:                                                      ; (tmp2 on .Y characters; then as @adv)
+            tya
+            clc
+            adc         tmp2
+            sta         tmp2
+            bcc         @adv
+            inc         tmp2 + 1
+@adv:                                                       ; (w on .Y characters, tmp less them.  Keeps .Y)
+            tya
+            clc
+            adc         w
+            sta         w
+            bcc         :+
+            inc         w + 1
+:
+            tya
+            eor         #$FF
+            sec
+            adc         tmp
+            sta         tmp
+            bcs         :+
+            dec         tmp + 1
+:
+            rts
 
-            HEADER      "WORD", 0
+            HEADER      "word", 0
 word:                                                       ; ( char "<chars>ccc<char>" -- c-addr )
             lda         dlo,x
             inx
@@ -505,7 +695,7 @@ to_wbuf:
             sta         dhi,x
             rts
 
-            HEADER      "SOURCE", 0
+            HEADER      "source", 0
 source:
             lda         src_addr
             ldy         src_addr + 1
@@ -554,14 +744,27 @@ paren:                                                      ; To ")": a comment;
             rts
 
             HEADER      "\", F_IMMEDIATE
-backslash:
+backslash:                                                  ; The rest of the line: a block's, its 64-character one
+            lda         src_blk
+            ora         src_blk + 1
+            beq         :+
+            clc
+            lda         to_in
+            adc         #63
+            and         #$C0
+            sta         to_in
+            bcc         @done
+            inc         to_in + 1
+@done:
+            rts
+:
             lda         src_len
             sta         to_in
             lda         src_len + 1
             sta         to_in + 1
             rts
 
-            HEADER      "CHAR", 0
+            HEADER      "char", 0
 char:
             jsr         parse_name
             inx                                             ; (Its first char)
@@ -577,7 +780,7 @@ lessnum:
             sta         hld + 1
             rts
 
-            HEADER      "HOLD", 0
+            HEADER      "hold", 0
 hold:
             lda         dlo,x
             inx
@@ -616,7 +819,7 @@ num:                                                        ; ( ud -- ud' )
             ora         #'0'
             bra         hold_a
 
-            HEADER      "#S", 0
+            HEADER      "#s", 0
 nums:
 :
             jsr         num
@@ -642,7 +845,7 @@ numgreater:                                                 ; ( ud -- addr u )
             sta         dhi,x
             rts
 
-            HEADER      "SIGN", 0
+            HEADER      "sign", 0
 sign:
             lda         dhi,x
             inx
@@ -683,7 +886,7 @@ dot:
             jsr         type
             jmp         space
 
-            HEADER      "U.", 0
+            HEADER      "u.", 0
 udot:
             jsr         u_text
             jsr         type
@@ -691,7 +894,7 @@ udot:
 
 ; ---- Numbers in: >NUMBER, and the interpreter's
 
-            HEADER      ">NUMBER", 0
+            HEADER      ">number", 0
 tonumber:                                                   ; ( ud1 c-addr1 u1 -- ud2 c-addr2 u2 )
 :
             lda         dlo,x
@@ -1058,7 +1261,7 @@ to_sbuf:
             sta         dhi + 1,x
             rts
 
-            HEADERQ     "S", F_IMMEDIATE
+            HEADERQ     "s", F_IMMEDIATE
 squote:
             lda         #'"'
             sta         cnt
@@ -1070,7 +1273,7 @@ str_comp:                                                   ; Compiling: S" in t
             ldy         #>xsquote
             jmp         comp_str
 
-            HEADERQ     ".", F_IMMEDIATE
+            HEADERQC    ".", F_IMMEDIATE
 dotquote:
             lda         #'"'
             sta         cnt

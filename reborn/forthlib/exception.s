@@ -4,7 +4,7 @@
 
 .include "forthlib.inc"
 
-            HEADER      "CATCH", 0
+            HEADER      "catch", 0
 catch_w:                                                    ; CATCH's, for a program: an error it catches has no
             jsr         catch                               ;   place for QUIT to show
             lda         dlo,x
@@ -15,6 +15,6 @@ catch_w:                                                    ; CATCH's, for a pro
 :
             rts
 
-            HEADER      "THROW", 0
+            HEADER      "throw", 0
 throw_w:                                                    ; ( k*x n -- k*x | i*x n ): 0 nothing; else to CATCH's
             jmp         throw

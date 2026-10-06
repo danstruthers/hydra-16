@@ -14,14 +14,19 @@
 ; A line that fails is said on stdout ("newns: the line: its error"), but for what isn't there (E_NOENT, E_NODEV,
 ; E_NOTFS: a card's bin, say), as Plan 9's newns is quiet about it; the rest go on.
 ;
-; It uses: its zero page (ns_*), r0-r3, and the file calls.
+; It uses: its zero page (ns_*), r0-r3, and the file calls.  A program short of room can give it its own: with NS_ZP
+; defined, the program defines the zero page's names (ns_p ... ns_len, scratch of its own that ns_default may
+; change); with NS_BSS defined, the address of NS_BSS_SIZE bytes for its buffers (forth's: the dictionary's top,
+; free as it starts).
 
 NS_BUF_MAX      = 2048          ; A namespace file's bytes, at most (the rest aren't read)
 NS_WORDS        = 6             ; A line's words, at most
 NS_DEPTH        = 4             ; Directories deep an old area is emptied
+NS_BSS_SIZE     = NS_BUF_MAX + 1 + 128 + NS_WORDS * 2 + 64 + SR_SIZE + 32
 
 .pushseg
 
+.ifndef NS_ZP
 .zeropage
 ns_p:       .res        2               ; Where the line being read is in ns_buf ...
 ns_end:     .res        2               ;   and the file's end
@@ -33,7 +38,9 @@ ns_line:    .res        2               ; The line's start (for its error)
 ns_fd:      .res        1
 ns_d:       .res        1               ; (ns_empty's depth)
 ns_len:     .res        1               ;   and its path's length
+.endif
 
+.ifndef NS_BSS
 .bss
 ns_buf:     .res        NS_BUF_MAX + 1
 ns_wbuf:    .res        128             ; The line's words, zero-terminated
@@ -41,6 +48,14 @@ ns_wptr:    .res        NS_WORDS * 2    ;   and where each one is
 ns_path:    .res        64              ; An area's name, and the names under it
 ns_rec:     .res        SR_SIZE
 ns_msg:     .res        32
+.else
+ns_buf      = NS_BSS                    ; (The program's NS_BSS_SIZE bytes, in that order)
+ns_wbuf     = ns_buf + NS_BUF_MAX + 1
+ns_wptr     = ns_wbuf + 128
+ns_path     = ns_wptr + NS_WORDS * 2
+ns_rec      = ns_path + 64
+ns_msg      = ns_rec + SR_SIZE
+.endif
 
 .code
 

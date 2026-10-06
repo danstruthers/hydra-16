@@ -245,20 +245,20 @@ function forthSys(api) {
 }
 
 // hydra.fs: the constants a program uses (not the servers', nor the kernel's own addresses), and the error codes,
-// as CONSTANTs, a library (its own word list, HYDRA).  LF line ends, as the ROM disk's files have, and short lines
-// (a file's line is 128 at most)
+// as constants, a library (its own word list, hydra); every name in lower case, as forth's are.  LF line ends, as
+// the ROM disk's files have, and short lines (a file's line is 128 at most)
 const FORTH_CONSTS_OUT = /^(r\d+$|RQ_|R_|RF_|TASK_INBOX$|TASK_PATH$|TASK_EVENT$|PROG_ZP|IRQ_RESCHED$|LINE_|HX_|TM_|INIT_TASK$)/;
 function forthLib(api, errors) {
-  const LF = '\n', line = (v, name, doc) => ('$' + v.toString(16).toUpperCase().padStart(2, '0') + ' CONSTANT ' + pad(name, 16) + '\\ ' + doc).slice(0, 110).trimEnd() + LF;
-  let s = '\\ hydra.fs - the Hydra-16\'s constants and error codes, for HyForth: REQUIRE hydra.fs (/lib/forth\'s).  Made by' + LF;
-  s += '\\ tools/apigen.js from spec/: don\'t edit.  A library: its words in a word list of its own, HYDRA, which goes first' + LF;
+  const LF = '\n', line = (v, name, doc) => ('$' + v.toString(16).toUpperCase().padStart(2, '0') + ' constant ' + pad(name.toLowerCase(), 16) + '\\ ' + doc).slice(0, 110).trimEnd() + LF;
+  let s = '\\ hydra.fs - the Hydra-16\'s constants and error codes, for HyForth: require hydra.fs (/lib/forth\'s).  Made by' + LF;
+  s += '\\ tools/apigen.js from spec/: don\'t edit.  A library: its words in a word list of its own, hydra, which goes first' + LF;
   s += '\\ in the search order.  An error code\'s ior (a file word\'s, a sys- word\'s) is -512 less it.' + LF;
-  s += LF + 'REQUIRE search.fl            \\ (LIBRARY)' + LF + 'LIBRARY HYDRA' + LF;
+  s += LF + 'require search.fl            \\ (library)' + LF + 'library hydra' + LF;
   s += LF + '\\ ---- constants' + LF;
   for (const k of api.consts) if (!FORTH_CONSTS_OUT.test(k.name)) s += line(k.value, k.name, k.doc);
   s += LF + '\\ ---- error codes' + LF;
   for (const e of errors) s += line(e.code, e.name, e.text);
-  s += LF + 'END-LIBRARY' + LF;
+  s += LF + 'end-library' + LF;
   return s;
 }
 

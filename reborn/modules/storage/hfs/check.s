@@ -32,6 +32,14 @@ HFS_S_FIX:      .byte   "fix"
 ; OUT: C = 0; or C = 1, .A = error (E_NAMETOOLONG: directories too deep to walk; E_NOTFS ...)
 hfs_check:
             jsr         HFS_CTL_TEXT
+            jsr         HFS_CHECK
+            php                                             ; (The walk cache emptied: its records were in the
+            pha                                             ;   buffer.  srv.s)
+            jsr         HFS_WC_CLEAR
+            pla
+            plp
+            rts
+
 HFS_CHECK:
             lda         #$FF                                ; (No results, unless it gets to the end)
             sta         HFS_CK_CARD

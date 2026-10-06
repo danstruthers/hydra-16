@@ -73,7 +73,7 @@ divisor:
 :
             rts
 
-            HEADER      "UM*", 0
+            HEADER      "um*", 0
 umstar:                                                     ; ( u1 u2 -- ud )
             lda         dlo,x
             sta         tmp
@@ -95,7 +95,7 @@ put_acc:                                                    ; The top two = numa
             sta         dhi,x
             rts
 
-            HEADER      "UM/MOD", 0
+            HEADER      "um/mod", 0
 ummod:                                                      ; ( ud u -- urem uquot )
             jsr         divisor
 get_acc:                                                    ; numacc = the double on top, then
@@ -119,7 +119,7 @@ put_qr:                                                     ; The top two: the r
             sta         dhi,x
             rts
 
-            HEADER      "M*", 0
+            HEADER      "m*", 0
 mstar:                                                      ; ( n1 n2 -- d )
             lda         dhi,x                               ; (The product's sign)
             eor         dhi + 1,x
@@ -140,7 +140,7 @@ star:
             inx
             rts
 
-            HEADER      "S>D", 0
+            HEADER      "s>d", 0
 stod:
             dex
             lda         dhi + 1,x
@@ -170,7 +170,7 @@ dabs:                                                       ; ( d -- |d| ) (DABS
             bmi         dnegate
             rts
 
-            HEADER      "SM/REM", 0
+            HEADER      "sm/rem", 0
 smrem:                                                      ; ( d n -- rem quot ): symmetric
             lda         dhi + 1,x                           ; (The remainder's sign: the dividend's ...
             pha
@@ -193,7 +193,7 @@ smrem:                                                      ; ( d n -- rem quot 
 :
             rts
 
-            HEADER      "FM/MOD", 0
+            HEADER      "fm/mod", 0
 fmmod:                                                      ; ( d n -- rem quot ): floored
             lda         dhi,x                               ; (The divisor, kept)
             pha
@@ -221,7 +221,7 @@ fmmod:                                                      ; ( d n -- rem quot 
 @done:
             rts
 
-            HEADER      "/MOD", 0
+            HEADER      "/mod", 0
 slashmod:                                                   ; ( n1 n2 -- rem quot )
             jsr         save_top
             jsr         stod
@@ -233,13 +233,13 @@ slash:
             jsr         slashmod
             jmp         nip
 
-            HEADER      "MOD", 0
+            HEADER      "mod", 0
 mod:
             jsr         slashmod
             inx
             rts
 
-            HEADER      "*/MOD", 0
+            HEADER      "*/mod", 0
 starslashmod:                                               ; ( n1 n2 n3 -- rem quot ): n1 * n2, 32 bits, / n3
             jsr         save_top
             jsr         mstar
@@ -298,11 +298,64 @@ ud_base:
             rts
 
 ; ud (the double at stack index .Y: its high cell, its low under it) = ud * BASE + .A.  Keeps .X.  Modifies tmp,
-; tmp2, tmp3, numacc
+; tmp2, tmp3, numacc, numtmp, cnt.  A BASE under 256 (any the standard has): ud shifted and added for each of its bits, from the
+; digit (numacc: the sum; numtmp: ud, doubled each bit); else two 16 x 16 multiplies
 ud_mul_add:
+            sty         cnt
+            ldy         base + 1
+            bne         ud_mul_add16
+            sty         numacc + 1
+            sty         numacc + 2
+            sty         numacc + 3
+            sta         numacc
+            ldy         cnt
+            lda         dlo + 1,y
+            sta         numtmp
+            lda         dhi + 1,y
+            sta         numtmp + 1
+            lda         dlo,y
+            sta         numtmp + 2
+            lda         dhi,y
+            sta         numtmp + 3
+            lda         base
+            sta         tmp
+@bit:
+            lsr         tmp
+            bcc         @next
+            clc
+            lda         numacc
+            adc         numtmp
+            sta         numacc
+            lda         numacc + 1
+            adc         numtmp + 1
+            sta         numacc + 1
+            lda         numacc + 2
+            adc         numtmp + 2
+            sta         numacc + 2
+            lda         numacc + 3
+            adc         numtmp + 3
+            sta         numacc + 3
+@next:
+            lda         tmp
+            beq         @done
+            asl         numtmp
+            rol         numtmp + 1
+            rol         numtmp + 2
+            rol         numtmp + 3
+            bra         @bit
+@done:
+            lda         numacc
+            sta         dlo + 1,y
+            lda         numacc + 1
+            sta         dhi + 1,y
+            lda         numacc + 2
+            sta         dlo,y
+            lda         numacc + 3
+            sta         dhi,y
+            rts
+ud_mul_add16:
             sta         tmp3
             stz         tmp3 + 1
-            sty         cnt
             lda         base                                ; The high cell * base (its low 16 bits)
             sta         tmp
             lda         base + 1

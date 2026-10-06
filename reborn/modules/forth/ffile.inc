@@ -2,9 +2,10 @@
 ; ffile.inc - forth's files: including them (INCLUDED, INCLUDE, REQUIRED, REQUIRE) and loading a library (included by
 ; forth.s; the other File Access words are a library, forthlib/file.s).  A fileid is the system's fd (0, 1 and 2
 ; stdin, stdout and stderr); an ior is 0, or -512 less the system's error code (THROW shows its text).  A
-; file being included is read a line at a time into its own buffer (lbufs: as deep as it's nested), the way READ-LINE
-; reads one: a line and 2 bytes read, and the fd's offset moved back to the line's end, so the file's offset is
-; always where its next line starts (SAVE-INPUT keeps a line's place; RESTORE-INPUT seeks there and reads it again).
+; file being included gives a line at a time to its own buffer (lbufs: as deep as it's nested), from src_pos, its
+; place: through the read-ahead buffer (ra_line: 512 bytes of it at a time, in the index's bank), or, with no bank,
+; the way READ-LINE reads one (a line and 2 bytes read, and the fd's offset moved back to the line's end).
+; SAVE-INPUT keeps a line's place; RESTORE-INPUT reads it again from there.
 
 ; ---- Lines
 
@@ -28,10 +29,12 @@ read_line_fd:
             lda         rl_fd
             jsr         READ
             bcc         :+
-            ldx         xsave                               ; (An error; Ctrl-C's: THROW -28)
-            cmp         #E_INTR
+            ldx         xsave                               ; (An error; Ctrl-C's: THROW -28; another note's: again,
+            cmp         #E_INTR                             ;   the next word taking it)
             bne         @error
-            jmp         intr_throw
+            jsr         intr_wait
+            lda         rl_fd
+            jmp         read_line_fd
 @error:
             sec
             rts
@@ -162,9 +165,16 @@ refill_file:
             stz         src_cons + 1
             lda         src_fdep
             jsr         lbuf_w2
+            lda         idx_bank                            ; (The read-ahead's, with the index's bank)
+            cmp         #$FF
+            beq         :+
+            jsr         ra_line
+            bra         :++
+:
             LDR         tmp2, LINE_MAX
             lda         src_id
             jsr         read_line_fd
+:
             bcs         @done
             sta         src_len
             sty         src_len + 1
@@ -202,6 +212,245 @@ refill_file:
 @line:
             clc
 @done:
+            rts
+
+; The next line of the file being included (src_id, from src_pos), through the read-ahead buffer (RA_BUF: RA_SIZE
+; bytes of the file at a time, in the index's bank, selected meanwhile: finterp.inc), into (w2), LINE_MAX characters
+; at most (a longer one cut there, the rest the next): as read_line_fd's, C = 0, .A/.Y its length, tmp3 the bytes it
+; took (its end too: LF, CR LF or CR); or C = 1, .A 0 at the file's end, or the system's error.  Keeps .X
+ra_line:
+            lda         RAM_BANK
+            sta         ra_bank
+            lda         idx_bank
+            sta         RAM_BANK
+            lda         ra_dep                              ; In the buffer?  (Its file's, and src_pos in it)
+            cmp         src_fdep
+            bne         @fill
+            lda         ra_fd
+            cmp         src_id
+            bne         @fill
+            sec                                             ; (tmp: src_pos - ra_pos, less than ra_len)
+            lda         src_pos
+            sbc         ra_pos
+            sta         tmp
+            lda         src_pos + 1
+            sbc         ra_pos + 1
+            sta         tmp + 1
+            lda         src_pos + 2
+            sbc         ra_pos + 2
+            sta         cnt
+            lda         src_pos + 3
+            sbc         ra_pos + 3
+            bcc         @fill
+            ora         cnt
+            bne         @fill
+            lda         tmp
+            cmp         ra_len
+            lda         tmp + 1
+            sbc         ra_len + 1
+            bcc         @scan
+@fill:
+            ldy         #3                                  ; From src_pos: the buffer read again
+:
+            lda         src_pos,y
+            sta         ra_pos,y
+            dey
+            bpl         :-
+            stz         ra_len
+            stz         ra_len + 1
+            stz         tmp
+            stz         tmp + 1
+            lda         src_fdep
+            sta         ra_dep
+            lda         src_id
+            sta         ra_fd
+            jsr         ra_more
+            bcc         :+
+            jmp         @out
+:
+            lda         ra_len
+            ora         ra_len + 1
+            bne         @scan
+            jmp         @end
+@scan:
+            clc                                             ; w3: the line's start in the buffer; tmp2: the bytes
+            lda         #<RA_BUF                            ;   from it there
+            adc         tmp
+            sta         w3
+            lda         #>RA_BUF
+            adc         tmp + 1
+            sta         w3 + 1
+            sec
+            lda         ra_len
+            sbc         tmp
+            sta         tmp2
+            lda         ra_len + 1
+            sbc         tmp + 1
+            sta         tmp2 + 1
+            lda         #LINE_MAX                           ; (cnt: the most looked at: LINE_MAX, or what's there)
+            ldy         tmp2 + 1
+            bne         :+
+            cmp         tmp2
+            bcc         :+
+            lda         tmp2
+:
+            sta         cnt
+            ldy         #0
+@char:
+            cpy         cnt
+            beq         @noend
+            lda         (w3),y
+            sta         (w2),y                              ; (Copied as it's looked at: the line's own buffer)
+            cmp         #$0D + 1
+            bcc         @ctl
+@next:
+            iny
+            bra         @char
+@ctl:
+            cmp         #LF
+            beq         @lf
+            cmp         #$0D
+            bne         @next
+            bra         @cr
+@lf:
+            sty         rl_len                              ; (The line: .Y characters, and its end taken)
+            iny
+            bra         @took
+@cr:
+            sty         rl_len
+            iny
+            lda         tmp2 + 1                            ; (CR LF: both taken; a CR the buffer's last: read on)
+            bne         :+
+            cpy         tmp2
+            beq         @more
+:
+            lda         (w3),y
+            cmp         #LF
+            bne         @took
+            iny
+            bra         @took
+@noend:
+            lda         tmp2 + 1                            ; No end: more there than looked at, LINE_MAX cut ...
+            bne         :+
+            cpy         tmp2
+            bcs         @more
+:
+            sty         rl_len
+@took:
+            sty         tmp3
+            stz         tmp3 + 1
+            lda         ra_bank
+            sta         RAM_BANK
+            lda         rl_len
+            ldy         #0
+            clc
+            rts
+@more:
+            lda         tmp                                 ;   else more read: the line from the buffer's start, or
+            ora         tmp + 1                             ;   (there already) read on after what's there
+            beq         :+
+            jmp         @fill
+:
+            lda         ra_len
+            pha
+            lda         ra_len + 1
+            pha
+            jsr         ra_more
+            pla
+            sta         cnt
+            pla
+            bcs         @out
+            cmp         ra_len                              ; (Nothing more: the file's last line, but a CR at
+            bne         @again                              ;   its end)
+            lda         cnt
+            cmp         ra_len + 1
+            bne         @again
+            ldy         tmp2
+            dey
+            lda         (w3),y
+            cmp         #$0D
+            beq         :+
+            iny
+:
+            sty         rl_len
+            ldy         tmp2
+            bra         @took
+@again:
+            jmp         @scan
+@end:
+            lda         #0
+            sec
+@out:
+            pha
+            lda         ra_bank
+            sta         RAM_BANK
+            pla
+            rts
+
+; The read-ahead buffer's bytes after ra_len read (seeked to there first), RA_SIZE at most, ra_len past them (the
+; index's bank selected; a note meanwhile: the bank as it was, while it's taken).  C = 1, .A the system's error.
+; Keeps .X
+ra_more:
+            clc                                             ; Its offset: ra_pos + ra_len
+            lda         ra_pos
+            adc         ra_len
+            sta         r0
+            lda         ra_pos + 1
+            adc         ra_len + 1
+            sta         r0 + 1
+            lda         ra_pos + 2
+            adc         #0
+            sta         r1
+            lda         ra_pos + 3
+            adc         #0
+            sta         r1 + 1
+            stx         xsave
+            lda         ra_fd
+            ldx         #0
+            jsr         SEEK
+            ldx         xsave
+            bcs         @done
+@read:
+            clc                                             ; Into the buffer past ra_len
+            lda         #<RA_BUF
+            adc         ra_len
+            sta         r0
+            lda         #>RA_BUF
+            adc         ra_len + 1
+            sta         r0 + 1
+            sec
+            lda         #<RA_SIZE
+            sbc         ra_len
+            sta         r1
+            lda         #>RA_SIZE
+            sbc         ra_len + 1
+            sta         r1 + 1
+            stx         xsave
+            lda         ra_fd
+            jsr         READ
+            bcc         :+
+            ldx         xsave
+            cmp         #E_INTR
+            bne         @fail
+            lda         ra_bank                             ; (A note: Ctrl-C's THROW -28; another's, read again)
+            sta         RAM_BANK
+            jsr         intr_wait
+            lda         idx_bank
+            sta         RAM_BANK
+            bra         @read
+:
+            clc
+            adc         ra_len
+            sta         ra_len
+            txa
+            adc         ra_len + 1
+            sta         ra_len + 1
+            ldx         xsave
+            clc
+@done:
+            rts
+@fail:
+            sec
             rts
 
 ; w2 = the line buffer of the file being included at depth .A (1 ...)
@@ -310,6 +559,7 @@ includefile:                                                ; ( i*x fileid -- j*
             jmp         throw_deep
 :
             jsr         src_push
+            stz         ra_dep                              ; (The read-ahead's: another file's now, if it's this fd)
             inc         src_fdep
             lda         inc_named                           ; (Its name: INCLUDED's, or none)
             bne         :+
@@ -362,7 +612,7 @@ includefile:                                                ; ( i*x fileid -- j*
 @end:
             jmp         src_pop
 
-            HEADER      "INCLUDED", 0
+            HEADER      "included", 0
 included:                                                   ; ( i*x c-addr u -- j*x ): the file named, opened and
             jsr         inc_find                            ;   included (and noted, for REQUIRED)
             bcc         :+
@@ -558,7 +808,7 @@ lib_load:
             adc         statbuf + LH_BSS + 1
             sta         w2 + 1
             bcs         lib_full
-            cmp         #>DICT_END
+            cmp         heap_lo + 1                         ; (The heap's page)
             bcs         lib_full
             lda         here                                ; Its image
             sta         r0
@@ -576,15 +826,15 @@ lib_load:
 :
             jmp         lib_bad
 :
-            lda         w2                                  ; Its relocations, after its BSS (what's left of the file)
-            sta         r0
+            lda         w2                                  ; Its relocations, after its BSS (what's left of the file),
+            sta         r0                                  ;   up to the heap's page
             lda         w2 + 1
             sta         r0 + 1
             sec
-            lda         #<DICT_END
+            lda         #0
             sbc         w2
             sta         r1
-            lda         #>DICT_END
+            lda         heap_lo + 1
             sbc         w2 + 1
             sta         r1 + 1
             jsr         lib_read
@@ -681,29 +931,50 @@ lib_load:
             dec         tmp2
             bra         @reloc
 @link:
-            lda         statbuf + LH_FIRST + 1              ; Its headers, in the compilation word list
+            stz         p1                                  ; Its headers (p1 its first, p2 its last; 0: none), in the
+            stz         p1 + 1                              ;   compilation word list
+            lda         statbuf + LH_FIRST + 1
             cmp         #$FF
-            beq         @here
-            clc                                             ; (Its first header's link: the word list's last)
+            beq         @note
+            clc
             lda         here
             adc         statbuf + LH_FIRST
-            sta         p2
+            sta         p1
             lda         here + 1
             adc         statbuf + LH_FIRST + 1
-            sta         p2 + 1
-            jsr         current_w3
-            lda         (w3)
-            sta         (p2)
-            ldy         #1
-            lda         (w3),y
-            sta         (p2),y
-            clc                                             ; (The word list's last: its last header)
+            sta         p1 + 1
+            clc
             lda         here
             adc         statbuf + LH_LAST
-            sta         (w3)
+            sta         p2
             lda         here + 1
             adc         statbuf + LH_LAST + 1
+            sta         p2 + 1
+            jsr         current_w3                          ; (Its first header's link: the word list's last)
+            lda         (w3)
+            sta         (p1)
+            ldy         #1
+            lda         (w3),y
+            sta         (p1),y
+            lda         p2                                  ; (The word list's last: its last header)
+            sta         (w3)
+            lda         p2 + 1
             sta         (w3),y
+@note:
+            lda         here                                ; Noted in libtab, by the name INCLUDED had for it
+            sta         tmp2
+            lda         here + 1
+            sta         tmp2 + 1
+            LDR         w, lib_noname
+            lda         inc_named
+            beq         :+
+            stz         inc_named
+            lda         src_fdep
+            inc
+            jsr         lname_w
+:
+            lda         #0
+            jsr         lib_add
 @here:
             clc                                             ; Its init's address (before HERE moves on)
             lda         here
@@ -736,6 +1007,143 @@ lib_read:
             ldx         xsave
             rts
 
+; ---- The libraries loaded (libtab): what libs, lib, -lib and words (the Programming-Tools library's) know of each
+
+; A library loaded noted in libtab, if there's room: its image tmp2, its end w2, its headers p1 (its first) to p2 (its
+; last) in the compilation word list (p1 0: none), its flags .A (LRF_SOURCE), its name w (counted: a file's, of which
+; the part after its last / and before its first . is kept, LR_NAME_MAX at most).  Keeps .X
+lib_add:
+            pha
+            jsr         lib_prune
+            pla
+            ldy         libs_n
+            cpy         #LIB_MAX
+            bcc         :+
+            rts
+:
+            pha                                             ; (Its flags first, while .A has them)
+            tya
+            jsr         lib_rec
+            pla
+            ldy         #LR_FLAGS
+            sta         (w3),y
+            inc         libs_n
+            ldy         #LR_START
+            lda         tmp2
+            sta         (w3),y
+            iny
+            lda         tmp2 + 1
+            sta         (w3),y
+            iny                                             ; LR_END
+            lda         w2
+            sta         (w3),y
+            iny
+            lda         w2 + 1
+            sta         (w3),y
+            iny                                             ; LR_FIRST
+            lda         p1
+            sta         (w3),y
+            iny
+            lda         p1 + 1
+            sta         (w3),y
+            iny                                             ; LR_LAST
+            lda         p2
+            sta         (w3),y
+            iny
+            lda         p2 + 1
+            sta         (w3),y
+            iny                                             ; LR_WID
+            lda         current
+            sta         (w3),y
+            iny
+            lda         current + 1
+            sta         (w3),y
+            lda         (w)                                 ; Its name: from after its last / (tmp + 1, .Y the char
+            sta         tmp                                 ;   before it) ...
+            ldy         #0
+            sty         tmp + 1
+@slash:
+            cpy         tmp
+            beq         @name
+            iny
+            lda         (w),y
+            cmp         #'/'
+            bne         @slash
+            sty         tmp + 1
+            bra         @slash
+@name:
+            stz         cnt                                 ;   to its first . or its end
+@char:
+            ldy         tmp + 1
+            cpy         tmp
+            beq         @named
+            iny
+            sty         tmp + 1
+            lda         (w),y
+            cmp         #'.'
+            beq         @named
+            ldy         cnt
+            cpy         #LR_NAME_MAX
+            beq         @named
+            pha
+            tya
+            clc
+            adc         #LR_NAME + 1
+            tay
+            pla
+            sta         (w3),y
+            inc         cnt
+            bra         @char
+@named:
+            lda         cnt
+            ldy         #LR_NAME
+            sta         (w3),y
+            rts
+
+; The records of the libraries a MARKER has taken out (their images at HERE or after) let go of: the last ones, as
+; they're in the order they were loaded.  Keeps .X
+lib_prune:
+            lda         libs_n
+            beq         @done
+            dec
+            jsr         lib_rec
+            ldy         #LR_START + 1
+            lda         (w3),y
+            cmp         here + 1
+            bcc         @done
+            bne         @drop
+            dey
+            lda         (w3),y
+            cmp         here
+            bcc         @done
+@drop:
+            dec         libs_n
+            bra         lib_prune
+@done:
+            rts
+
+; w3 = library .A's record (0 ...).  Keeps .X
+lib_rec:
+            tay
+            lda         #<libtab
+            sta         w3
+            lda         #>libtab
+            sta         w3 + 1
+@next:
+            dey
+            bmi         @done
+            clc
+            lda         w3
+            adc         #LR_SIZE
+            sta         w3
+            bcc         @next
+            inc         w3 + 1
+            bra         @next
+@done:
+            rts
+
+lib_noname: .byte       0                                   ; (A library INCLUDED had no name for: too deep)
+
 ; ( c-addr u -- fileid ior ): OPEN-FILE, read only
 open_ro:
             dex
@@ -744,7 +1152,7 @@ open_ro:
             stz         dhi,x
             jmp         openfile
 
-            HEADER      "REQUIRED", 0
+            HEADER      "required", 0
 required:                                                   ; ( i*x c-addr u -- j*x ): INCLUDED, unless it has been
             jsr         inc_find
             bcc         :+
@@ -754,12 +1162,12 @@ required:                                                   ; ( i*x c-addr u -- 
             inx
             rts
 
-            HEADER      "INCLUDE", 0
+            HEADER      "include", 0
 include:                                                    ; ( i*x "name" -- j*x )
             jsr         parse_name
             jmp         included
 
-            HEADER      "REQUIRE", 0
+            HEADER      "require", 0
 require:                                                    ; ( i*x "name" -- j*x )
             jsr         parse_name
             bra         required

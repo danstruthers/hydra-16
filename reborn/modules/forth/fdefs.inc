@@ -6,7 +6,10 @@
 DS_N            = 32            ; The data stack's cells
 F_IMMEDIATE     = $80           ; A header's flags (with the name's length, 0-31) ...
 F_HIDDEN        = $40           ;   a definition not finished yet ...
-F_INLINE        = $20           ;   code copied into a definition, not called (its length after the name)
+F_INLINE        = $20           ;   a byte after the name: the code's length, copied into a definition, not called
+                                ;   (0: called, as any word's) ...
+F_COMPILE       = $80           ;   and in that byte, compile-only: interpreted, THROW -14 (Forth's undefined
+CODE_MASK       = $7F           ;   interpretation semantics); the rest, the length
 LEN_MASK        = $1F
 DICT_END        = $7F00         ; The dictionary's end (the break's)
 TIB_SIZE        = 128           ; A line of input at most
@@ -22,9 +25,21 @@ INC_MAX         = 8             ; Files included, nested
 LINE_MAX        = 128           ; A file's line, at most (a longer one: the rest is the next) ...
 LINE_BUF        = LINE_MAX + 2  ;   in a buffer of that and 2 (READ-LINE's)
 LNAME_SIZE      = 32            ; A file being included: its name (counted, 31 at most)
-INCN_SIZE       = 256           ; The names of the files INCLUDED (REQUIRED's)
+INCN_SIZE       = 512           ; The names of the files INCLUDED (REQUIRED's: past it, one is INCLUDED again)
 SUBST_SIZE      = 255           ; REPLACES's names and texts (offsets in a byte)
 PATH_SIZE       = 128           ; A file's name, for the system
+LIB_MAX         = 16            ; The libraries loaded that libtab keeps (libs, lib, -lib, words), at most
+LR_START        = 0             ; A library's record (libtab's): its image's address ...
+LR_END          = 2             ;   its end (its BSS's) ...
+LR_FIRST        = 4             ;   its first header (whose link is the word before it; 0: it has none) ...
+LR_LAST         = 6             ;   its last header ...
+LR_WID          = 8             ;   the word list they're in ...
+LR_FLAGS        = 10            ;   LRF_* ...
+LR_NAME         = 11            ;   and its name (counted: its file's, less its directories and its .fl or .fs)
+LR_NAME_MAX     = 10
+LR_SIZE         = LR_NAME + 1 + LR_NAME_MAX
+LRF_HIDDEN      = $80           ; A library's flags: not searched (-lib) ...
+LRF_SOURCE      = $40           ;   Forth source (a .fs that lib loaded), not assembly
 JSR_OP          = $20           ; Opcodes the compiler lays down
 JMP_OP          = $4C
 RTS_OP          = $60
@@ -43,8 +58,9 @@ OP_BIT_ZP       = $24
 OP_BPL          = $10
 
 ; ****************************************************************************
-; The headers: HEADER "NAME", flags before a word's code (its label after); HEADERI "NAME", label for an inline
-; word, whose code ends at label_end (an rts there, for EXECUTE).  Each header is hdr_N, its link hdr_N-1's (the
+; The headers: HEADER "NAME", flags before a word's code (its label after); HEADERI "NAME", label[, F_COMPILE] for
+; an inline word, whose code ends at label_end (an rts there, for EXECUTE); HEADERC "NAME", flags for a compile-only
+; word that's called (or, immediate, run), HEADERQC its HEADERQ.  Each header is hdr_N, its link hdr_N-1's (the
 ; first's 0): hdr_n counts them
 hdr_n       .set        0
 
@@ -69,9 +85,34 @@ hdr_n       .set        hdr_n + 1
             .byte       name, $22
 .endmacro
 
-.macro HEADERI name, label
+.macro HEADERI name, label, compile
             HEADER      name, F_INLINE
+.ifblank compile
             .byte       .ident(.concat(.string(label), "_end")) - label
+.else
+            .byte       (.ident(.concat(.string(label), "_end")) - label) | (compile)
+.endif
+.endmacro
+
+.macro HEADERC name, flags
+            HEADER      name, (flags) | F_INLINE
+            .byte       F_COMPILE
+.endmacro
+
+.macro HEADERQC name, flags
+            HEADERQ     name, (flags) | F_INLINE
+            .byte       F_COMPILE
+.endmacro
+
+; A constant's code, as CONSTANT compiles one (the literal, then rts), so WORDS knows it for a literal and SEE
+; shows its number
+.macro CONSTCODE value
+            dex
+            lda         #<(value)
+            sta         dlo,x
+            lda         #>(value)
+            sta         dhi,x
+            rts
 .endmacro
 
 ; Push .A (low) and .Y (high); pop into .A (low) and .Y (high)

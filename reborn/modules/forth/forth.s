@@ -18,7 +18,8 @@
 ; task's RAM after the BSS, to DICT_END; the words in ROM have their headers beside their code, chained into the same
 ; list as the ones loaded or defined in RAM (FORTH's: a word list is a chain of headers).  A header: the link (2: the one before,
 ; 0 at the first), the name's length and flags (1: F_IMMEDIATE, F_HIDDEN, F_INLINE), the name (as typed: found
-; ignoring case), then (F_INLINE) the code's length; the code, its xt, follows.  A header's address is its nt.
+; ignoring case), then (F_INLINE) a byte, the code's length (0: called) and F_COMPILE (compile-only: interpreted,
+; THROW -14); the code, its xt, follows.  A header's address is its nt.
 ;   Input: stdin, a line at a time (the console's cooked lines, or a file's, through rc's <), or a file's (INCLUDED),
 ; or a string's (EVALUATE): the source before a nested one is kept on the source stack.  Output: fd 1, buffered.  A
 ; fileid is the system's fd; an ior is 0, or -512 less the system's error code (Gforth's way).  Errors are THROWs
@@ -27,7 +28,8 @@
 ;   The parts: fcore.inc (stacks, arithmetic, memory), fmath.inc (multiplication and division), ftext.inc (input,
 ; output, numbers, strings, parsing), fcomp.inc (the compiler: definitions, control flow, defining words), finterp.inc
 ; (the text interpreter, QUIT, CATCH and THROW, EVALUATE), ffile.inc (files: including them, loading a library),
-; fscript.inc (Ctrl-C, scripts); fdefs.inc has the constants and HEADER, which the libraries use too.  Their words are
+; fscript.inc (Ctrl-C, scripts), fprog.inc (programs started and waited for: the libraries' SH, RUN and the shell's);
+; fdefs.inc has the constants and HEADER, which the libraries use too.  Their words are
 ; in that order in the dictionary, then the libraries' as they're loaded.  A library calls the core's code by its
 ; label (obj/gen/forthcore.inc, the build's: the core's labels, as equates; a library is for the core it was built
 ; with, core_id); the core's code that it uses itself (PICK, AGAIN, CATCH, OPEN-FILE ...), and what compiled
@@ -55,7 +57,10 @@ cnt:        .res        1
 here:       .res        2                                   ; The dictionary's next byte
 p1:         .res        2                                   ; Pointers (strings, SEE)
 p2:         .res        2
-intr:       .res        1                                   ; $80: Ctrl-C came (the note handler's), for THROW -28
+lp:         .res        2                                   ; The running definition's locals (locals.fl's): its frame,
+                                                            ;   in page 1 (its high byte 1)
+intr:       .res        1                                   ; $C0: Ctrl-C came (the note handler's), for THROW -28;
+                                                            ;   $80: a note for a program's handler (note_pend)
 
 .bss
 forth_wl:   .res        4                                   ; FORTH-WORDLIST: a word list is its last header (0: none),
@@ -66,6 +71,23 @@ order_n:    .res        1                                   ; The search order: 
 order:      .res        ORDER_MAX * 2                       ;   and they (the first searched first)
 lastxt:     .res        2                                   ; The definition being made: its xt (RECURSE, DOES>) ...
 lasthdr:    .res        2                                   ;   and its header (; shows it)
+idx_bank:   .res        1                                   ; The word lists' index (finterp.inc): its bank ($FF:
+idx_node:   .res        2                                   ;   none), the node a search is at, and the two word
+idx_lastw:  .res        4                                   ;   lists whose records were found last (0: none) and
+idx_lastr:  .res        4                                   ;   they; a search's bank and tmp before it
+idx_savb:   .res        1
+idx_savt:   .res        2
+ra_dep:     .res        1                                   ; The read-ahead buffer (ffile.inc's ra_line, in the
+ra_fd:      .res        1                                   ;   index's bank): the file's depth (0: none), its fd ...
+ra_pos:     .res        4                                   ;   the buffer's place in it ...
+ra_len:     .res        2                                   ;   the bytes in it ...
+ra_bank:    .res        1                                   ;   and the bank that was selected
+heap_lo:    .res        2                                   ; ALLOCATE's heap's start (memory.fl's), to DICT_END: the
+                                                            ;   dictionary ends below its page (none: DICT_END)
+loc_vec:    .res        2                                   ; The locals library's routine (locals.fl's), for the
+                                                            ;   compiler (loc_call); 0: none
+blk_vec:    .res        2                                   ; The Block library's (block.fl's): a block source's
+                                                            ;   buffer (blk_call); 0: none
 state:      .res        2                                   ; STATE: 0 interpreting, -1 compiling
 base:       .res        2                                   ; BASE
 src_addr:   .res        2                                   ; The input source (SRC_SIZE bytes, in this order: the
@@ -76,7 +98,8 @@ src_pos:    .res        4                                   ;   a file's: where 
 src_cons:   .res        2                                   ;   the bytes it took (its end too) ...
 src_line:   .res        2                                   ;   its number (stdin's too) ...
 src_close:  .res        1                                   ;   <> 0: a file, closed at its end ...
-src_fdep:   .res        1                                   ;   and the files being included (1 ...: this file's)
+src_fdep:   .res        1                                   ;   the files being included (1 ...: this file's) ...
+src_blk:    .res        2                                   ;   and BLK: a block's (LOAD's, block.fl's; 0: none)
 SRC_SIZE    = * - src_addr
 ssp:        .res        1                                   ; The source stack's records (EVALUATE, INCLUDE-FILE)
 sstack:     .res        SRC_SIZE * SRC_MAX
@@ -124,19 +147,42 @@ pathbuf:    .res        PATH_SIZE                           ; A file's name, zer
 statbuf:    .res        SR_SIZE                             ; A stat record
 argp:       .res        2                                   ; forth's arguments (main's r0): a script's name first
 script:     .res        1                                   ; <> 0: forth file.fs (the file run, then the end)
+login:      .res        1                                   ; <> 0: forth -l (newns, then profile.fs)
+lastc:      .res        1                                   ; The last character out (emit_a's)
+out_hook:   .res        2                                   ; <> 0: what flush gives the output to (the shell's)
+note_xt:    .res        2                                   ; A program's note handler (on-note's xt), 0: none ...
+note_pend:  .res        1                                   ;   and the note waiting for it
+argbuf:     .res        ARGS_MAX                            ; A program's arguments (fprog.inc's) ...
+prog_map:   .res        4                                   ;   and its fds (SPAWN_FDMAP's: 3, then fds 0-2)
+libs_n:     .res        1                                   ; The libraries loaded, oldest first: how many records ...
+libtab:     .res        LR_SIZE * LIB_MAX                   ;   and they (LR_*)
 dict:                                                       ; The dictionary, from here
 
 .segment "DATA"
-; The note handler, in RAM (either bank may be at $A000 when a note comes): Ctrl-C (NOTE_INTERRUPT) noted in intr,
-; for the next word, loop or wait to THROW -28, forth going on; another note, the default
+; The note handler, in RAM (either bank may be at $A000 when a note comes): Ctrl-C (NOTE_INTERRUPT) noted in intr
+; ($C0), for the next word, loop step or wait to THROW -28, forth going on; another, if a program has a handler for
+; it (on-note's: note_xt), noted too (intr $80, note_pend the note), for the next word or loop step to give it to;
+; else the default
 notes:
             cmp         #NOTE_INTERRUPT
-            bne         :+
-            lda         #$80
+            bne         @other
+            lda         #$C0
             sta         intr
             clc
             rts
-:
+@other:
+            pha
+            lda         note_xt + 1
+            beq         @default
+            pla
+            sta         note_pend
+            lda         intr
+            ora         #$80
+            sta         intr
+            clc
+            rts
+@default:
+            pla
             sec
             rts
 
@@ -145,21 +191,73 @@ notes:
 ; The start: the dictionary after the BSS, its end claimed (BREAK), decimal, stdin a console or not, Ctrl-C a
 ; THROW; the banner (not a script's), and startup.fs (its libraries); then the script, or QUIT
 main:
-            lda         r0                                  ; Its arguments: a script's name, and its own
+            lda         r0                                  ; Its arguments: a script's name, and its own; or -l
             sta         argp
             lda         r0 + 1
             sta         argp + 1
             stz         script
+            stz         login
             ora         r0
             beq         :+
             lda         (r0)
             beq         :+
             inc         script
+            cmp         #'-'                                ; (-l: a login shell, no script)
+            bne         :+
+            ldy         #1
+            lda         (r0),y
+            cmp         #'l'
+            bne         :+
+            iny
+            lda         (r0),y
+            bne         :+
+            stz         script
+            inc         login
 :
             LDR         r0, DICT_END
             jsr         BREAK
             LDR         r0, notes
             jsr         NOTIFY
+            lda         #<DICT_END                          ; No heap, no locals
+            sta         heap_lo
+            lda         #>DICT_END
+            sta         heap_lo + 1
+            stz         loc_vec
+            stz         loc_vec + 1
+            stz         blk_vec
+            stz         blk_vec + 1
+            lda         #1
+            sta         lp + 1
+            stz         idx_lastw
+            stz         idx_lastw + 1
+            stz         idx_lastw + 2
+            stz         idx_lastw + 3
+            stz         ra_dep
+            lda         #$FF                                ; The index's bank: the task's last (all taken, then all
+            sta         idx_bank                            ;   but it given back; else one; else none), started
+            jsr         BANKS                               ;   at the first search ("ix" not there yet)
+            sta         tmp
+            cmp         #0
+            beq         @nobank
+            jsr         BANKS_ALLOC
+            bcs         @onebank
+            pha                                             ; (The first)
+            clc
+            adc         tmp
+            dec
+            sta         idx_bank
+            pla
+            ldx         tmp
+            dex
+            beq         @nobank
+            jsr         BANKS_FREE
+            bra         @nobank
+@onebank:
+            lda         #1
+            jsr         BANKS_ALLOC
+            bcs         @nobank
+            sta         idx_bank
+@nobank:
             ldx         #DS_N
             lda         #<dict
             sta         here
@@ -193,6 +291,14 @@ main:
             stz         inc_named
             stz         incn_len
             stz         incn_len + 1
+            stz         libs_n
+            lda         #LF
+            sta         lastc
+            stz         out_hook
+            stz         out_hook + 1
+            stz         note_xt
+            stz         note_xt + 1
+            stz         note_pend
             stz         raw
             stz         key_pend
             stz         intr
@@ -227,7 +333,17 @@ main:
             tsx
             stx         rsp0
             ldx         #DS_N
+            lda         login                               ; (forth -l: its namespace first, as rc -l's: before it,
+            beq         :+                                  ;   there's no /lib to load anything from)
+            jsr         do_newns
+:
+            LDR         w, s_startup
             jsr         startup
+            lda         login
+            beq         :+
+            LDR         w, s_profile
+            jsr         startup
+:
             lda         script
             beq         :+
             jmp         run_script
@@ -238,15 +354,23 @@ banner:
             LDR         w, s_banner
             jmp         type_z
 
-s_banner:   .byte       "HyForth (Forth 2012), BYE to end", LF, 0
+s_banner:   .byte       "HyForth (Forth 2012), bye to end", LF, 0
 
-; /lib/forth/startup.fs, if there is one, INCLUDED: the libraries forth starts with (the ROM's, or a card's or the
-; RAM disk's before it, through the /lib union).  An error in it: its message, and on
+; The file w (a counted name), if there is one, INCLUDED: /lib/forth/startup.fs, the libraries forth starts with (the
+; ROM's, or a card's or the RAM disk's before it, through the /lib union); or, for forth -l, /lib/forth/profile.fs.
+; An error in it: its message, and on
 startup:
-            lda         #<s_startup
-            ldy         #>s_startup
+            lda         (w)
+            pha
+            clc
+            lda         w
+            adc         #1
+            ldy         w + 1
+            bcc         :+
+            iny
+:
             PUSHAY
-            lda         #S_STARTUP_LEN
+            pla
             ldy         #0
             PUSHAY
             lda         #<included
@@ -270,8 +394,32 @@ startup:
 @say:
             jmp         show_error
 
-s_startup:  .byte       "/lib/forth/startup.fs"
-S_STARTUP_LEN = * - s_startup
+s_startup:  .byte       S_STARTUP_LEN, "/lib/forth/startup.fs"
+S_STARTUP_LEN = * - s_startup - 1
+s_profile:  .byte       S_PROFILE_LEN, "/lib/forth/profile.fs"
+S_PROFILE_LEN = * - s_profile - 1
+
+; The default namespace (nslib's newns, as init and rc build theirs): forth -l's, and NEWNS's (the Hydra's shell
+; library: shell.fl).  Its buffers are the last NS_BSS_SIZE bytes of the index's bank (finterp.inc), selected
+; meanwhile, so the dictionary (and ALLOCATE's heap at its top) needn't make room; no bank: THROW -21
+do_newns:
+            lda         idx_bank
+            cmp         #$FF
+            bne         :+
+            lda         #<-21
+            jmp         throw_a
+:
+            jsr         flush
+            lda         RAM_BANK
+            pha
+            lda         idx_bank
+            sta         RAM_BANK
+            phx
+            jsr         ns_default
+            plx
+            pla
+            sta         RAM_BANK
+            rts
 
 ; The core's id (tools/forthlib.js: a CRC of its image, patched in), which a library must have
 core_id:    .word       0
@@ -283,5 +431,22 @@ core_id:    .word       0
 .include "finterp.inc"
 .include "ffile.inc"
 .include "fscript.inc"
+.include "fprog.inc"
 
 forth_last  = .ident(.sprintf("hdr_%d", hdr_n))             ; (The last ROM header: the word list's start)
+
+; nslib (the SDK's: newns), with forth's scratch for its zero page (nothing of forth's runs in it) and the index's
+; bank's end for its buffers (do_newns)
+NS_ZP       = 1
+ns_p        = w
+ns_end      = w2
+ns_w        = w3
+ns_task     = tmp
+ns_n        = tmp + 1
+ns_fl       = tmp2
+ns_fd       = tmp2 + 1
+ns_d        = tmp3
+ns_len      = tmp3 + 1
+ns_line     = p1
+NS_BSS      = BANK_WINDOW + $2000 - NS_BSS_SIZE
+.include "nslib.s"

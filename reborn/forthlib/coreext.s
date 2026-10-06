@@ -6,7 +6,7 @@
 
 .include "forthlib.inc"
 
-            HEADER      "TUCK", 0
+            HEADER      "tuck", 0
 tuck:                                                       ; ( a b -- b a b )
             jsr         swap
             jmp         over
@@ -16,7 +16,7 @@ notequal:
             jsr         equal
             jmp         invert
 
-            HEADER      "U>", 0
+            HEADER      "u>", 0
 ugreater:
             jsr         swap
             jmp         uless
@@ -40,7 +40,7 @@ zgreater:
 @no:
             jmp         zero_tos
 
-            HEADER      "WITHIN", 0
+            HEADER      "within", 0
 within:                                                     ; ( n lo hi -- flag ): n - lo U< hi - lo
             sec
             lda         dlo,x
@@ -63,17 +63,15 @@ within:                                                     ; ( n lo hi -- flag 
             sta         dhi,x
             jmp         uless
 
-            HEADER      "TRUE", 0
+            HEADER      "true", 0
 true:
-            dex
-            jmp         true_tos
+            CONSTCODE   $FFFF
 
-            HEADER      "FALSE", 0
+            HEADER      "false", 0
 false:
-            dex
-            jmp         zero_tos
+            CONSTCODE   0
 
-            HEADERI     "2>R", twotor
+            HEADERI     "2>r", twotor, F_COMPILE
 twotor:
             lda         dhi + 1,x
             pha
@@ -88,7 +86,7 @@ twotor:
 twotor_end:
             rts
 
-            HEADERI     "2R>", tworfrom
+            HEADERI     "2r>", tworfrom, F_COMPILE
 tworfrom:
             dex
             dex
@@ -103,7 +101,7 @@ tworfrom:
 tworfrom_end:
             rts
 
-            HEADERI     "2R@", tworfetch
+            HEADERI     "2r@", tworfetch, F_COMPILE
 tworfetch:
             stx         xsave
             tsx
@@ -127,38 +125,38 @@ tworfetch:
 tworfetch_end:
             rts
 
-            HEADER      "ERASE", 0
+            HEADER      "erase", 0
 erase:
             dex
             jsr         zero_tos
             jmp         fill
 
-            HEADER      "UNUSED", 0
-unused:
+            HEADER      "unused", 0
+unused:                                                     ; (To the heap's page: ALLOCATE's, memory.fl's)
             sec
-            lda         #<DICT_END
+            lda         #0
             sbc         here
             pha
-            lda         #>DICT_END
+            lda         heap_lo + 1
             sbc         here + 1
             tay
             pla
             PUSHAY
             rts
 
-            HEADER      "PAD", 0
+            HEADER      "pad", 0
 pad_:
             lda         #<pad
             ldy         #>pad
             PUSHAY
             rts
 
-            HEADER      "HEX", 0
+            HEADER      "hex", 0
 hex:
             lda         #16
             jmp         set_base
 
-            HEADERI     "NIP", nip_l
+            HEADERI     "nip", nip_l
 nip_l:
             lda         dlo,x
             sta         dlo + 1,x
@@ -168,15 +166,15 @@ nip_l:
 nip_l_end:
             rts
 
-            HEADER      "PICK", 0
+            HEADER      "pick", 0
 pick_w:                                                     ; ( xu ... x0 u -- xu ... x0 xu )
             jmp         pick
 
-            HEADER      "ROLL", 0
+            HEADER      "roll", 0
 roll_w:                                                     ; ( xu xu-1 ... x0 u -- xu-1 ... x0 xu )
             jmp         roll
 
-            HEADER      ":NONAME", 0
+            HEADER      ":noname", 0
 noname:                                                     ; ( -- xt )
             stz         lasthdr
             stz         lasthdr + 1
@@ -187,20 +185,20 @@ noname:                                                     ; ( -- xt )
             PUSHAY
             jmp         rbracket
 
-            HEADER      "COMPILE,", 0
+            HEADER      "compile,", 0
 compilecomma_w:                                             ; ( xt -- ): its header's way, if it has one
             jmp         compilecomma
 
-            HEADER      "[COMPILE]", F_IMMEDIATE
+            HEADERC     "[compile]", F_IMMEDIATE
 bracketcompile:
             jsr         name_hdr
             jmp         comp_hdr
 
-            HEADER      "AGAIN", F_IMMEDIATE
+            HEADERC     "again", F_IMMEDIATE
 again_w:                                                    ; ( dest -- )
             jmp         again
 
-            HEADER      "?DO", F_IMMEDIATE
+            HEADERC     "?do", F_IMMEDIATE
 qdo:
             lda         leaves                              ; (Its skip: a LEAVE of this loop's)
             ldy         leaves + 1
@@ -217,12 +215,12 @@ qdo:
             jsr         leave_jmp
             jmp         here_
 
-            HEADER      "CASE", F_IMMEDIATE
+            HEADERC     "case", F_IMMEDIATE
 case:
             dex                                             ; (0: the ENDOFs' end)
             jmp         zero_tos
 
-            HEADER      "OF", F_IMMEDIATE
+            HEADERC     "of", F_IMMEDIATE
 of:                                                         ; OVER = IF DROP
             lda         #<over
             ldy         #>over
@@ -235,11 +233,11 @@ of:                                                         ; OVER = IF DROP
             ldy         #>drop
             jmp         comp_jsr
 
-            HEADER      "ENDOF", F_IMMEDIATE
+            HEADERC     "endof", F_IMMEDIATE
 endof:
             jmp         else_
 
-            HEADER      "ENDCASE", F_IMMEDIATE
+            HEADERC     "endcase", F_IMMEDIATE
 endcase:                                                    ; DROP, and each ENDOF's jmp here
             lda         #<drop
             ldy         #>drop
@@ -254,32 +252,72 @@ endcase:                                                    ; DROP, and each END
             inx
             rts
 
-            HEADER      "VALUE", 0
+            HEADER      "value", 0
 value:                                                      ; ( x "name" -- )
             lda         #<dovalue
             ldy         #>dovalue
             jsr         make_word
             jmp         comma
 
-            HEADER      "TO", F_IMMEDIATE
-to:                                                         ; ( x "name" -- ): the VALUE's cell
-            jsr         tick
+            HEADER      "to", F_IMMEDIATE
+to:                                                         ; ( x "name" -- ): the VALUE's cell; or ( x1 x2 "name"
+            jsr         parse_name                          ;   -- ), a 2VALUE's two (its jsr do2value: the
+            lda         state                               ;   Double-Number library's), as 2! stores them; or,
+            beq         :+                                  ;   compiling, a local (the locals library's: first)
+            lda         #3
+            jsr         loc_call
+            bcs         :+
+            rts
+:
+            jsr         find_name
+            bcc         :+
+            jmp         throw_undef
+:
+            inx
+            inx
+            jsr         hdr_xt
+            lda         w2
+            ldy         w2 + 1
+            PUSHAY
+            sta         w
+            sty         w + 1
             jsr         body_
+            ldy         #1
+            lda         (w),y
+            cmp         #<do2value
+            bne         @one
+            iny
+            lda         (w),y
+            cmp         #>do2value
+            bne         @one
+            lda         #<twostore
+            ldy         #>twostore
+            bra         :+
+@one:
+            lda         #<store
+            ldy         #>store
+:
+            pha
+            phy
             lda         state
             beq         @now
             jsr         literal
-            lda         #<store
-            ldy         #>store
+            ply
+            pla
             jmp         comp_jsr
 @now:
-            jmp         store
+            ply
+            pla
+            sta         w
+            sty         w + 1
+            jmp         (w)
 
-            HEADER      "BUFFER:", 0
+            HEADER      "buffer:", 0
 bufferc:                                                    ; ( u "name" -- )
             jsr         create
             jmp         allot
 
-            HEADER      "DEFER", 0
+            HEADER      "defer", 0
 defer:                                                      ; jmp to its xt (none yet: THROW -256)
             lda         #0
             jsr         make_hdr
@@ -287,17 +325,17 @@ defer:                                                      ; jmp to its xt (non
             ldy         #>defer_none
             jmp         comp_jmp
 
-            HEADER      "DEFER!", 0
+            HEADER      "defer!", 0
 deferstore:                                                 ; ( xt2 xt1 -- )
             jsr         oneplus
             jmp         store
 
-            HEADER      "DEFER@", 0
+            HEADER      "defer@", 0
 deferfetch:
             jsr         oneplus
             jmp         fetch
 
-            HEADER      "IS", F_IMMEDIATE
+            HEADER      "is", F_IMMEDIATE
 is:
             jsr         tick
             lda         state
@@ -307,7 +345,7 @@ is:
             ldy         #>deferstore
             jmp         comp_jsr
 
-            HEADER      "ACTION-OF", F_IMMEDIATE
+            HEADER      "action-of", F_IMMEDIATE
 actionof:
             jsr         tick
             lda         state
@@ -317,7 +355,7 @@ actionof:
             ldy         #>deferfetch
             jmp         comp_jsr
 
-            HEADER      "MARKER", 0
+            HEADER      "marker", 0
 marker:                                                     ; Its word: HERE, the compilation word list, the search
             lda         here                                ;   order and the files INCLUDED as before it
             pha
@@ -344,8 +382,23 @@ marker:                                                     ; Its word: HERE, th
             ldy         incn_len + 1
             jmp         comma_ay
 
-            HEADER      "REFILL", 0
-refill:                                                     ; ( -- flag ): a string's (EVALUATE) can't
+            HEADER      "refill", 0
+refill:                                                     ; ( -- flag ): a block's, the next block (BLK + 1, the
+            lda         src_blk                             ;   Block library's); a string's (EVALUATE) can't
+            ora         src_blk + 1
+            beq         @src
+            inc         src_blk
+            bne         :+
+            inc         src_blk + 1
+:
+            stz         to_in
+            stz         to_in + 1
+            lda         #0
+            jsr         blk_call
+            bcs         @false
+            dex
+            jmp         true_tos
+@src:
             lda         src_id + 1
             bmi         @false
             jsr         refill_src
@@ -356,26 +409,29 @@ refill:                                                     ; ( -- flag ): a str
             dex
             jmp         zero_tos
 
-            HEADER      "PARSE", 0
+            HEADER      "parse", 0
 parse:                                                      ; ( char "ccc<char>" -- c-addr u )
             lda         dlo,x
             inx
             sta         cnt
             jmp         parse_to
 
-            HEADER      "PARSE-NAME", 0
+            HEADER      "parse-name", 0
 parse_name_w:                                               ; ( "<spaces>name<space>" -- c-addr u )
             jmp         parse_name
 
-            HEADER      "SOURCE-ID", 0
+            HEADER      "source-id", 0
 sourceid:
             lda         src_id
             ldy         src_id + 1
             PUSHAY
             rts
 
-            HEADER      "SAVE-INPUT", 0
-saveinput:                                                  ; ( -- pos pos-hi line >in id 5 )
+            HEADER      "save-input", 0
+saveinput:                                                  ; ( -- blk pos pos-hi line >in id 6 )
+            lda         src_blk
+            ldy         src_blk + 1
+            PUSHAY
             lda         src_pos
             ldy         src_pos + 1
             PUSHAY
@@ -391,16 +447,16 @@ saveinput:                                                  ; ( -- pos pos-hi li
             lda         src_id
             ldy         src_id + 1
             PUSHAY
-            lda         #5
+            lda         #6
             ldy         #0
             PUSHAY
             rts
 
-            HEADER      "RESTORE-INPUT", 0
-restoreinput:                                               ; ( pos pos-hi line >in id 5 -- flag ): false if it
+            HEADER      "restore-input", 0
+restoreinput:                                               ; ( blk pos pos-hi line >in id 6 -- flag ): false if it
             lda         dlo,x                               ;   could: the same source, and its line still in the
-            cmp         #5                                  ;   buffer (a file's: read again, from where it was)
-            bne         @fail_n
+            cmp         #6                                  ;   buffer (a file's: read again, from where it was; a
+            bne         @fail_n                             ;   block's: that block, as BLOCK has it)
             lda         dhi,x
             bne         @fail_n
             lda         dlo + 1,x
@@ -409,7 +465,26 @@ restoreinput:                                               ; ( pos pos-hi line 
             lda         dhi + 1,x
             cmp         src_id + 1
             bne         @fail
-            ora         src_id                              ; (A file?)
+            lda         dlo + 6,x                           ; (A block?)
+            ora         dhi + 6,x
+            beq         @noblk
+            lda         src_blk
+            ora         src_blk + 1
+            beq         @fail
+            lda         dlo + 6,x
+            sta         src_blk
+            lda         dhi + 6,x
+            sta         src_blk + 1
+            lda         #0
+            jsr         blk_call
+            bcs         @fail
+            bra         @set
+@noblk:
+            lda         src_blk
+            ora         src_blk + 1
+            bne         @fail
+            lda         src_id                              ; (A file?)
+            ora         src_id + 1
             beq         @line
             cmp         #$FF
             beq         @line
@@ -434,14 +509,14 @@ restoreinput:                                               ; ( pos pos-hi line 
             sta         to_in + 1
             txa
             clc
-            adc         #5
+            adc         #6
             tax
             jmp         zero_tos
 @fail_n:
             lda         dlo,x
             bra         :+
 @fail:
-            lda         #5
+            lda         #6
 :
             stx         xsave
             clc
@@ -498,7 +573,7 @@ dotparen:
             jsr         parse_to
             jmp         type
 
-            HEADER      "HOLDS", 0
+            HEADER      "holds", 0
 holds:                                                      ; ( addr u -- )
 :
             lda         dlo,x
@@ -532,21 +607,21 @@ right:
             jsr         spaces
             jmp         type
 
-            HEADER      ".R", 0
+            HEADER      ".r", 0
 dotr:                                                       ; ( n w -- )
             jsr         save_top
             jsr         n_text
             jsr         push_tmp3
             bra         right
 
-            HEADER      "U.R", 0
+            HEADER      "u.r", 0
 udotr:
             jsr         save_top
             jsr         u_text
             jsr         push_tmp3
             bra         right
 
-            HEADERQ     "C", F_IMMEDIATE
+            HEADERQC    "c", F_IMMEDIATE
 cquote:
             lda         #'"'
             sta         cnt
@@ -555,7 +630,7 @@ cquote:
             ldy         #>xcquote
             jmp         comp_str
 
-            HEADERQ     "S\", F_IMMEDIATE
+            HEADERQ     "s\", F_IMMEDIATE
 sbquote:                                                    ; S" with escapes: \a \b \e \f \l \m \n \q \r \t \v \z
             jsr         src_rest                            ;   \" \\ \xHH (into wbuf, then as S")
             lda         #<wbuf

@@ -7,21 +7,18 @@
 
 .include "forthlib.inc"
 
-            HEADER      "FORTH-WORDLIST", 0
+            HEADER      "forth-wordlist", 0
 forthwordlist:
-            lda         #<forth_wl
-            ldy         #>forth_wl
-            PUSHAY
-            rts
+            CONSTCODE   forth_wl
 
-            HEADER      "GET-CURRENT", 0
+            HEADER      "get-current", 0
 getcurrent:
             lda         current
             ldy         current + 1
             PUSHAY
             rts
 
-            HEADER      "SET-CURRENT", 0
+            HEADER      "set-current", 0
 setcurrent:
             lda         dlo,x
             sta         current
@@ -30,7 +27,7 @@ setcurrent:
             inx
             rts
 
-            HEADER      "DEFINITIONS", 0
+            HEADER      "definitions", 0
 definitions:                                                ; The first word list in the order: definitions' (an
             lda         order_n                             ;   empty order: as they were)
             beq         :+
@@ -41,7 +38,7 @@ definitions:                                                ; The first word lis
 :
             rts
 
-            HEADER      "WORDLIST", 0
+            HEADER      "wordlist", 0
 wordlist:                                                   ; ( -- wid ): a new one, empty, in the dictionary
             jsr         here_
             lda         #0
@@ -56,7 +53,7 @@ wordlist:                                                   ; ( -- wid ): a new 
             sta         wl_last + 1
             rts
 
-            HEADER      "SEARCH-WORDLIST", 0
+            HEADER      "search-wordlist", 0
 searchwordlist:                                             ; ( c-addr u wid -- 0 | xt 1 | xt -1 )
             lda         dlo,x
             sta         w
@@ -70,7 +67,7 @@ searchwordlist:                                             ; ( c-addr u wid -- 
 :
             jmp         found_xt
 
-            HEADER      "GET-ORDER", 0
+            HEADER      "get-order", 0
 getorder:                                                   ; ( -- widn ... wid1 n ): wid1 the first searched
             lda         order_n
             asl
@@ -94,7 +91,7 @@ getorder:                                                   ; ( -- widn ... wid1
             PUSHAY
             rts
 
-            HEADER      "SET-ORDER", 0
+            HEADER      "set-order", 0
 setorder:                                                   ; ( widn ... wid1 n -- ): n -1, ONLY's; more than
             lda         dhi,x                               ;   ORDER_MAX: THROW -49
             bpl         :+
@@ -128,7 +125,7 @@ setorder:                                                   ; ( widn ... wid1 n 
 @done:
             rts
 
-            HEADER      "ONLY", 0
+            HEADER      "only", 0
 only:                                                       ; The search order: FORTH alone
             lda         #<forth_wl
             sta         order
@@ -138,7 +135,7 @@ only:                                                       ; The search order: 
             sta         order_n
             rts
 
-            HEADER      "ALSO", 0
+            HEADER      "also", 0
 also:                                                       ; The first word list in the order twice (full: THROW -49)
             lda         order_n
             beq         @done
@@ -158,7 +155,7 @@ also:                                                       ; The first word lis
 @done:
             rts
 
-            HEADER      "PREVIOUS", 0
+            HEADER      "previous", 0
 previous:                                                   ; The first word list out of the order (none: THROW -50)
             lda         order_n
             bne         :+
@@ -175,7 +172,7 @@ previous:                                                   ; The first word lis
             bne         :-
             rts
 
-            HEADER      "FORTH", 0
+            HEADER      "forth", 0
 forth_w:                                                    ; FORTH the first word list in the order (an empty
             lda         order_n                             ;   order: it alone)
             bne         :+
@@ -187,7 +184,7 @@ forth_w:                                                    ; FORTH the first wo
             sta         order + 1
             rts
 
-            HEADER      "ORDER", 0
+            HEADER      "order", 0
 order_w:                                                    ; The search order, the first first, then the
             ldy         #0                                  ;   compilation word list
 @wid:
@@ -235,10 +232,10 @@ wl_name:
             sta         base
             rts
 
-s_forth:    .byte       "FORTH ", 0
+s_forth:    .byte       "forth ", 0
 s_current:  .byte       " current: ", 0
 
-            HEADER      "LIBRARY", 0
+            HEADER      "library", 0
 library:                                                    ; ( "name" -- wid ): a library's start: name a CONSTANT,
             jsr         getcurrent                          ;   a new word list, which goes first in the search order
             jsr         wordlist                            ;   and takes the definitions; wid the compilation word
@@ -260,6 +257,6 @@ library:                                                    ; ( "name" -- wid ):
             inx
             rts
 
-            HEADER      "END-LIBRARY", 0
+            HEADER      "end-library", 0
 endlibrary:                                                 ; ( wid -- ): a library's end: definitions where they were,
             jmp         setcurrent                          ;   its word list kept in the order

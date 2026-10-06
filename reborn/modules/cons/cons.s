@@ -21,6 +21,8 @@
 ;               (xmodem's): every byte in is its, Ctrl-C and the rest too, and the windows' text (and /pc's frames)
 ;               wait, kept as a hidden window's is, till its last close repaints the window shown
 ;   /serctl     the rate: b300, b600, b1200, b2400, b4800, b9600, b19200, b115200.  It reads as it
+;   /kbdin      a write's bytes are the window's keys, as if typed (rio's kbdin: a line sent to another window's
+;               shell, forth's send); all of them, as its keys' queue has room, the writer waiting for the rest
 ; The keys: Ctrl-] then a digit shows that window (Ctrl-] n the next; Ctrl-] c asks for a new one, for /wnew's
 ; reader; Ctrl-] Ctrl-] is a Ctrl-]); Ctrl-C and Ctrl-\ are notes (interrupt, kill) to the shown window's note
 ; group, in either mode.  A window goes when the last of its cons fids closes (but window 0).
@@ -78,6 +80,8 @@ HIST_SIZE       = 128           ;   each its length, then LINE_MAX characters
 ST_SIZE         = 16            ; Each window's editor state, kept while another's is in use (st_first on)
 ECHO_ROOM       = LINE_MAX + 13 ; The most a key's echo puts into the text (a key waits for this much room)
 IOBUF           = 64            ; A write's bytes, a part at a time
+RX_PAGES        = 4             ; The receive ring's pages: the keys' its first; /ser's all of them (1023 bytes: a 1K
+                                ;   XMODEM block at 115200 comes in faster than it can be taken, and waits there)
 CTRL_A          = $01
 CTRL_C          = $03
 CTRL_D          = $04
@@ -114,7 +118,9 @@ PS_REQ          = 2             ;   the request is out
 
 .zeropage
 rx_head:    .res        1                                   ; The receive ring: the irq entry's end ...
-rx_tail:    .res        1                                   ;   and the serve entry's
+rx_tail:    .res        1                                   ;   and the serve entry's (in their pages: /ser's)
+rx_hp:      .res        2                                   ; /ser's: the head's page (rx_buf + 256 * n) ...
+rx_tp:      .res        2                                   ;   and the tail's
 tx_head:    .res        1                                   ; The send ring: the serve entry's end ...
 tx_tail:    .res        1                                   ;   and timer 2's
 tx_busy:    .res        1                                   ; <> 0: a byte is going (timer 2 runs)
@@ -161,7 +167,7 @@ budget:     .res        1                                   ; A write to the sho
 live:       .res        1                                   ;   <> 0: its text goes out (w_out)
 
 .bss
-rx_buf:     .res        256
+rx_buf:     .res        RX_PAGES * 256
 tx_buf:     .res        256
 text:       .res        WIN_MAX * TEXT_SIZE                 ; Each window's text
 inq:        .res        WIN_MAX * INQ_SIZE                  ; Each window's keys
@@ -182,6 +188,7 @@ w_cl:       .res        WIN_MAX                             ;   the bytes there 
 w_ch:       .res        WIN_MAX
 w_iqh:      .res        WIN_MAX                             ;   and its keys: the next in, the next out
 w_iqt:      .res        WIN_MAX
+kbd_wait:   .res        1                                   ; <> 0: a /kbdin writer waits for a queue's room
 bell:       .res        1                                   ; <> 0: a BEL the shown window sent (ring's) ...
 bell_st:    .res        1                                   ;   #a/bell: 0 not opened yet, 1 open, 2 none ...
 bell_fd:    .res        1                                   ;   and its fd
@@ -227,6 +234,7 @@ init:
             stz         rx_head,X
             dex
             bpl         :-
+            jsr         rx_reset
             ldx         #WIN_MAX - 1
 :
             stz         w_used,X
@@ -269,7 +277,8 @@ init:
             rts
 
 ; ****************************************************************************
-; The irq entry: .A = the line.  Short: about 70 cycles at most, and no WAKE (TASK_EVENT)
+; The irq entry: .A = the line.  Short: about 70 cycles at most, and no WAKE (TASK_EVENT).  (The ACIA's comes
+; ahead of the VIA's when both are waiting: kernel/common.s's IRQ_VIA)
 irq:
             cmp         #LINE_VIA_T2
             beq         t2_next
@@ -299,7 +308,7 @@ irq:
             rts
 
 @after:                                                     ; (pfx $FF: /ser's, the bytes as they are)
-            bmi         @store
+            bmi         @ser
             stz         pfx                                 ; The key after Ctrl-]: a digit is the window that has
             tax                                             ;   the keys now (its note group Ctrl-C's: the serve
             eor         #'0'                                ;   entry acts on the rest).  ($30-$33 alone give 0-3)
@@ -323,6 +332,38 @@ irq:
             jsr         NOTE_QUEUE
             lda         #0
             rts
+
+@ser:                                                       ; /ser's: into the ring, all its pages
+            ldy         rx_head
+            sta         (rx_hp),Y
+            iny
+            beq         @page
+            cpy         rx_tail                             ; (Full, the tail next: the byte's dropped)
+            bne         @put
+            ldx         rx_hp + 1
+            cpx         rx_tp + 1
+            beq         @full
+@put:
+            sty         rx_head
+            inc         TASK_EVENT
+@full:
+            lda         #0
+            rts
+
+@page:                                                      ; Its next page (round), at its start
+            lda         rx_hp + 1
+            inc         a
+            cmp         #>(rx_buf + RX_PAGES * 256)
+            bne         :+
+            lda         #>rx_buf
+:
+            ldx         rx_tail                             ; (Full: the tail there)
+            bne         :+
+            cmp         rx_tp + 1
+            beq         @full
+:
+            sta         rx_hp + 1
+            bra         @put
 
 ; Timer 2 ran out: the next byte (a character's time since the last went), or nothing more to send (and /pc's reply
 ; awaited: its wait, PC_NAP rounds of about 65,000 cycles, the rounds a slow rate's are)
@@ -408,7 +449,19 @@ tx_free:
             dec         a
             rts
 
-; A byte from the receive ring.  OUT: C = 0, .A = it; or C = 1: none.  Modifies .Y
+; The receive ring emptied, on its first page (the keys' ring; /ser's goes on from it to the others).  Modifies .A
+rx_reset:
+            php
+            sei
+            stz         rx_head
+            stz         rx_tail
+            LDR         rx_hp, rx_buf
+            LDR         rx_tp, rx_buf
+            plp
+            rts
+
+; A byte from the receive ring (the keys': its first page; not while the line is /ser's).  OUT: C = 0, .A = it; or
+; C = 1: none.  Modifies .Y
 rx_get:
             ldy         rx_tail
             cpy         rx_head
@@ -680,6 +733,11 @@ iq_get:
             inc         a
             and         #INQ_SIZE - 1
             sta         w_iqt,X
+            lda         kbd_wait                            ; (A /kbdin writer waiting for room: it looks again)
+            beq         :+
+            stz         kbd_wait
+            inc         TASK_EVENT
+:
             lda         inq,Y
             clc
             rts
@@ -1011,7 +1069,8 @@ h_ser:
             dec         ser_rd
             bne         @done
             stz         pfx                                 ; Its last: the line the console's again, the keys
-            lda         #1                                  ;   acted on, the shown window repainted
+            jsr         rx_reset                            ;   acted on (what came for it and wasn't read
+            lda         #1                                  ;   dropped), the shown window repainted
             sta         repaint
             inc         TASK_EVENT                          ; (Its writers look again)
 @done:
@@ -1048,6 +1107,63 @@ h_wnew:
             ldx         #2
             jmp         r_give
 
+@done:
+            rts
+
+; /kbdin: a write's bytes are the window's keys, as if typed (Plan 9's rio's kbdin: forth's send writes a line, and
+; its Enter, a CR, there).  As many as its queue has room for (and IOBUF at most), the bytes taken the write's count
+; done: the kernel sends the rest in the next request.  No room: E_AGAIN, the writer waiting till the window's
+; reader takes a key (iq_get: kbd_wait)
+h_kbdin:
+            cmp         #R_WRITE
+            beq         :+
+            clc
+            rts
+:
+            ldy         srv_fid_aux,X                       ; Its window's queue: its room (a key's place kept
+            sec                                             ;   free, as iq_put has it) ...
+            lda         w_iqt,Y
+            sbc         w_iqh,Y
+            dec         a
+            and         #INQ_SIZE - 1
+            bne         :+
+            lda         #1
+            sta         kbd_wait
+            jmp         again
+:
+            cmp         #IOBUF                              ;   IOBUF at most ...
+            bcc         :+
+            lda         #IOBUF
+:
+            ldx         TASK_INBOX + RQ_COUNT + 1           ;   and the count at most
+            bne         :+
+            cmp         TASK_INBOX + RQ_COUNT
+            bcc         :+
+            lda         TASK_INBOX + RQ_COUNT
+:
+            sta         cnt
+            phy
+            stz         n
+            stz         n + 1
+            jsr         from_client
+            plx                                             ; (.X: the window)
+            bcs         @done
+            ldy         #0
+:
+            cpy         cnt
+            beq         :+
+            lda         iobuf,Y
+            phy
+            jsr         iq_put
+            ply
+            iny
+            bra         :-
+:
+            inc         TASK_EVENT                          ; (Its reader looks again)
+            lda         cnt
+            sta         TASK_INBOX + RQ_DONE
+            stz         TASK_INBOX + RQ_DONE + 1
+            clc
 @done:
             rts
 
@@ -1132,18 +1248,6 @@ r_keys:
 @out:
             bra         r_give
 
-; /ser: the bytes there are, as they are; or E_AGAIN
-r_ser:
-            ldx         #0
-@byte:
-            jsr         r_room
-            bcs         r_give
-            jsr         rx_get
-            bcs         r_give
-            sta         iobuf,X
-            inx
-            bra         @byte
-
 ; C = 0 if iobuf has room for another byte at .X for the read (IOBUF, or the count asked if less).  Keeps .X
 r_room:
             cpx         #IOBUF
@@ -1172,6 +1276,112 @@ r_give:
             MOVR        r1, TASK_INBOX + RQ_BUF
             jsr         CLIENT_WRITE
             clc
+            rts
+
+; /ser: the bytes there are, as they are (the count asked, if less), straight from the ring to the client (in two
+; parts, if they go past its end); or E_AGAIN.  At 115200 the bytes come 311 cycles apart and the interrupt has 190
+; of them: a 1K XMODEM block comes faster than it can be taken, and waits in the ring (its pages: the irq entry's
+; @ser), the reads costing as little a byte as can be
+r_ser:
+            php                                             ; The bytes in the ring (its head as the irq entry left
+            sei                                             ;   it, both bytes) ...
+            lda         rx_head
+            ldx         rx_hp + 1
+            plp
+            sec
+            sbc         rx_tail
+            sta         n
+            txa
+            sbc         rx_tp + 1
+            and         #RX_PAGES - 1                       ;   (its pages, round)
+            sta         n + 1
+            lda         n                                   ;   no more than asked
+            cmp         TASK_INBOX + RQ_COUNT
+            lda         n + 1
+            sbc         TASK_INBOX + RQ_COUNT + 1
+            bcc         :+
+            MOVR        n, TASK_INBOX + RQ_COUNT
+:
+            lda         n
+            ora         n + 1
+            bne         :+
+            jmp         again
+:
+            stz         TASK_INBOX + RQ_DONE
+            stz         TASK_INBOX + RQ_DONE + 1
+            clc                                             ; m: the tail's address
+            lda         rx_tp
+            adc         rx_tail
+            sta         m
+            lda         rx_tp + 1
+            adc         #0
+            sta         m + 1
+            sec                                             ; To the ring's end first, if they go past it
+            lda         #<(rx_buf + RX_PAGES * 256)
+            sbc         m
+            sta         r2
+            lda         #>(rx_buf + RX_PAGES * 256)
+            sbc         m + 1
+            sta         r2 + 1
+            lda         r2
+            cmp         n
+            lda         r2 + 1
+            sbc         n + 1
+            bcs         @rest
+            jsr         ser_part
+            LDR         m, rx_buf
+@rest:
+            MOVR        r2, n
+            jsr         ser_part
+            sec                                             ; The tail moved, both bytes (the irq entry's room):
+            lda         m                                   ;   m less the ring's start, its page and place in it
+            sbc         #<rx_buf
+            tax
+            lda         m + 1
+            sbc         #>rx_buf
+            and         #RX_PAGES - 1                       ;   (at the ring's end: its start)
+            clc
+            adc         #>rx_buf
+            php
+            sei
+            stx         rx_tail
+            sta         rx_tp + 1
+            plp
+            clc
+            rts
+
+; r2 bytes at m (not past the ring's end) to the client, after those sent: m, RQ_DONE on, n less
+ser_part:
+            MOVR        r0, m
+            clc
+            lda         TASK_INBOX + RQ_BUF
+            adc         TASK_INBOX + RQ_DONE
+            sta         r1
+            lda         TASK_INBOX + RQ_BUF + 1
+            adc         TASK_INBOX + RQ_DONE + 1
+            sta         r1 + 1
+            jsr         CLIENT_WRITE
+            clc
+            lda         m
+            adc         r2
+            sta         m
+            lda         m + 1
+            adc         r2 + 1
+            sta         m + 1
+            clc
+            lda         TASK_INBOX + RQ_DONE
+            adc         r2
+            sta         TASK_INBOX + RQ_DONE
+            lda         TASK_INBOX + RQ_DONE + 1
+            adc         r2 + 1
+            sta         TASK_INBOX + RQ_DONE + 1
+            sec
+            lda         n
+            sbc         r2
+            sta         n
+            lda         n + 1
+            sbc         r2 + 1
+            sta         n + 1
             rts
 
 ; /cons: a write, into the window's text.  A window that isn't shown takes it all (its oldest text goes), as does
@@ -2719,6 +2929,7 @@ srv_tree:
             SRV_ENTRY   s_consctl, $FE, SK_TEXT, gen_consctl, SM_READ,            0     ; 7 (the ctl files' states:
             SRV_ENTRY   s_wctl,    $FE, SK_TEXT, gen_wctl,    SM_READ,            0     ; 8   in no directory)
             SRV_ENTRY   s_serctl,  $FE, SK_TEXT, gen_serctl,  SM_READ,            0     ; 9
+            SRV_ENTRY   s_kbdin,   0,   SK_DATA, h_kbdin,     SM_WRITE,           0     ; 10
             .word       0
 cons_cmds:
             .word       s_rawon_w, c_rawon
@@ -2746,6 +2957,7 @@ s_wctl:     .byte       "wctl", 0
 s_wnew:     .byte       "wnew", 0
 s_ser:      .byte       "ser", 0
 s_serctl:   .byte       "serctl", 0
+s_kbdin:    .byte       "kbdin", 0
 s_rawon_w:  .byte       "rawon", 0
 s_rawoff_w: .byte       "rawoff", 0
 s_group_w:  .byte       "group", 0

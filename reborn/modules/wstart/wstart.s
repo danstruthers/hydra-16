@@ -1,9 +1,10 @@
 ; ****************************************************************************
 ; wstart - a shell in the next window the user asks for, as rio's: it waits for the user's Ctrl-] c (a read of
-; #c/wnew: the window made, "N"), then starts rc -l there (its fds 0-2 the window's cons; $window N, in the
-; environment it copies; a note group and an empty namespace of its own: its profile sets them up), and ends.
-; init starts it again (and the shell, an orphan now, is init's to wait for).  One that fails waits a second
-; first, so init's starting it again isn't a loop.
+; #c/wnew: the window made, "N"), then starts the shell there (its arguments: the shell's program and its own, as
+; init has them from /lib/shell; none, rc -l), its fds 0-2 the window's cons, $window N in the environment it copies,
+; a note group and an empty namespace of its own (its profile sets them up), and ends.  init starts it in its own
+; namespace, so the shell's program is found as init finds it, and starts it again (and the shell, an orphan now, is
+; init's to wait for).  One that fails waits a second first, so init's starting it again isn't a loop.
 
 .include "hydra.inc"
 .include "hyx2.inc"
@@ -16,9 +17,38 @@ fd:         .res        1
 buf:        .res        4
 name:       .res        12                                  ; "#cN/cons"
 map:        .res        4
+prog:       .res        2                                   ; The shell's program ...
+args:       .res        2                                   ;   and its arguments
 
 .code
 main:
+            LDR         prog, s_rc                          ; The shell: its arguments', or rc -l
+            LDR         args, s_l
+            lda         r0
+            ora         r0 + 1
+            beq         @window
+            lda         (r0)
+            beq         @window
+            lda         r0
+            sta         prog
+            lda         r0 + 1
+            sta         prog + 1
+            ldy         #0                                  ; (Its arguments: after the program's 0)
+:
+            lda         (r0),y
+            beq         :+
+            iny
+            bne         :-
+:
+            iny
+            clc
+            tya
+            adc         r0
+            sta         args
+            lda         r0 + 1
+            adc         #0
+            sta         args + 1
+@window:
             LDR         r0, s_wnew                          ; The window: "N"
             lda         #O_READ
             jsr         OPEN
@@ -62,8 +92,14 @@ main:
             sta         map + 3
             lda         #3
             sta         map
-            LDR         r0, s_rc
-            LDR         r1, s_l
+            lda         prog
+            sta         r0
+            lda         prog + 1
+            sta         r0 + 1
+            lda         args
+            sta         r1
+            lda         args + 1
+            sta         r1 + 1
             LDR         r2, map
             lda         #SPAWN_NEWGROUP | SPAWN_NEWNS | SPAWN_FDMAP
             jsr         SPAWN

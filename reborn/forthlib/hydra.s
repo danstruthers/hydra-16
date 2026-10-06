@@ -1,7 +1,9 @@
 ; ****************************************************************************
 ; hydra.s - HyForth's Hydra library (/lib/forth/hydra.fl): a sys- word for each system call a program makes (their
-; headers forthsys.inc's, tools/apigen.js's, from the specification), zero-terminated strings, SH and RUN, the bank and
-; segment words, and forth's arguments (ARGC, ARG).
+; headers forthsys.inc's, tools/apigen.js's, from the specification), zero-terminated strings, sh and run, the bank and
+; segment words, forth's arguments (argc, arg), ctl, hylang's Hydra built-ins as Forth names them (a directory's
+; names: Gforth's open-dir read-dir close-dir, =mkdir, get-dir, set-dir; note, note-group, on-note; pause; ior>text),
+; and sys (machine code, called with its registers).
 ;   A sys- word is a system call with its registers as stack items, in the specification's order (spec/api.def;
 ; /rom/doc/api.md has each one's), the first deepest: its inputs, then its outputs and, if the call can fail, an ior
 ; (0, or -512 less the error code; its outputs 0 then).  A register is a cell (rN, .A/.X: 16 bits; .A, .X, .Y: a
@@ -12,7 +14,7 @@
 .bss
 zbufs:      .res        PATH_SIZE * 2                       ; >Z's two buffers, in turn ...
 zbuf_n:     .res        1                                   ;   the one last used
-argbuf:     .res        ARGS_MAX                            ; SH's and RUN's program's arguments
+errbuf:     .res        32                                  ; IOR>TEXT's text (ERRSTR's)
 sys_a:      .res        1                                   ; A sys- word's call: .A, .X and .Y, in and out ...
 sys_x:      .res        1
 sys_y:      .res        1
@@ -193,7 +195,7 @@ sys_push:
 
 ; ---- Zero-terminated strings
 
-            HEADER      ">Z", 0
+            HEADER      ">z", 0
 toz:                                                        ; ( c-addr u -- z-addr ): a copy, zero-terminated (127
             lda         zbuf_n                              ;   chars at most), in one of two buffers in turn
             eor         #1
@@ -216,283 +218,113 @@ toz:                                                        ; ( c-addr u -- z-ad
             PUSHAY
             rts
 
-            HEADER      "ZCOUNT", 0
+            HEADER      "zcount", 0
 zcount_w:                                                   ; ( z-addr -- c-addr u )
             jmp         zcount
 
+            HEADER      "ctl", 0
+ctl:                                                        ; ( c-addr1 u1 c-addr2 u2 -- ): the text c-addr2 u2
+            lda         dlo + 1,x                           ;   written to the file c-addr1 u1 in one write, as rc's
+            sta         p1                                  ;   echo -n text >file writes it (a device's ctl: s"
+            lda         dhi + 1,x                           ;   /dev/sd/0/ctl" s" check" ctl); a failure THROWs,
+            sta         p1 + 1                              ;   named by the file
+            lda         dlo,x
+            sta         p2
+            lda         dhi,x
+            sta         p2 + 1
+            inx
+            inx
+            lda         dlo + 1,x                           ; (The file's name, for an error)
+            sta         throw_name
+            lda         dhi + 1,x
+            sta         throw_name + 1
+            lda         dlo,x
+            sta         throw_nlen
+            jsr         toz
+            lda         dlo,x
+            sta         r0
+            lda         dhi,x
+            sta         r0 + 1
+            inx
+            lda         #O_WRITE
+            stx         xsave
+            jsr         OPEN
+            ldx         xsave
+            bcs         @fail
+            sta         cnt
+            lda         p1
+            sta         r0
+            lda         p1 + 1
+            sta         r0 + 1
+            lda         p2
+            sta         r1
+            lda         p2 + 1
+            sta         r1 + 1
+            lda         cnt
+            stx         xsave
+            jsr         WRITE
+            php
+            pha
+            lda         cnt
+            jsr         CLOSE
+            pla
+            plp
+            ldx         xsave
+            bcs         @fail
+            rts
+@fail:
+            pha
+            lda         #1
+            sta         throw_named
+            pla
+            jmp         throw_os
+
 ; ---- Programs
 
-            HEADER      "SH", 0
+            HEADER      "sh", 0
 sh:                                                         ; ( c-addr u -- status ): the command line, as rc runs
-            LDR         w2, argbuf                          ;   one (rc -c: /bin/rc, else the ROM's): its exit code,
-            LDR         p2, argbuf + ARGS_MAX - 2           ;   or its status if that's a number
-            lda         #'-'
-            jsr         arg_put
-            lda         #'c'
-            jsr         arg_put
-            lda         #0
-            jsr         arg_put
-            lda         dlo + 1,x                           ; The line, whole
-            sta         w
-            lda         dhi + 1,x
-            sta         w + 1
-            lda         dlo,x
-            sta         tmp
-            lda         dhi,x
-            sta         tmp + 1
-            inx
-            inx
-:
-            lda         tmp
-            ora         tmp + 1
-            beq         :+
-            lda         (w)
-            jsr         arg_put
-            jsr         arg_next
-            bra         :-
-:
-            lda         #0                                  ; (Its 0, and the empty one after it)
-            sta         (w2)
-            ldy         #1
-            sta         (w2),y
-            LDR         r0, s_binrc
-            jsr         spawn
-            bcs         :+
-            jmp         wait_task
-:
-            cmp         #E_NOENT
-            bne         :+
-            LDR         r0, s_mrc
-            jsr         spawn
-            bcs         :+
-            jmp         wait_task
-:
-            jmp         throw_os
+            jsr         prog_rc                             ;   one (rc -c: /bin/rc, else the ROM's): its exit code,
+            lda         #0                                  ;   or its status if that's a number
+            jsr         rc_spawn
+            bra         ran
 
-            HEADER      "RUN", 0
+            HEADER      "run", 0
 run:                                                        ; ( c-addr u -- status ): a program and its arguments,
-            lda         dlo + 1,x                           ;   split at blanks (a name with no / in it is /bin's):
-            sta         w                                   ;   its exit code
-            lda         dhi + 1,x
-            sta         w + 1
-            lda         dlo,x
-            sta         tmp
-            lda         dhi,x
-            sta         tmp + 1
-            inx
-            inx
-            LDR         w2, pathbuf + 5                     ; Its name (room for /bin/ before it)
-            LDR         p2, pathbuf + PATH_SIZE - 1
-            jsr         next_arg
+            jsr         prog_args                           ;   split at blanks (a name with no / in it is /bin's):
+            lda         #0                                  ;   its exit code
+            jsr         prog_spawn
+ran:                                                        ; (Started, or not: waited for, its code pushed)
             bcc         :+
-            lda         #<-16                               ; (None: no name)
-            jmp         throw_a
-:
-            LDR         r0, pathbuf + 5
-            lda         pathbuf + 5
-            cmp         #'#'
-            beq         @args
-            ldy         #0
-:
-            lda         pathbuf + 5,y
-            beq         @bin
-            iny
-            cmp         #'/'
-            bne         :-
-            bra         @args
-@bin:
-            ldy         #4                                  ; (/bin/ before it)
-:
-            lda         s_binrc,y
-            sta         pathbuf,y
-            dey
-            bpl         :-
-            LDR         r0, pathbuf
-@args:
-            LDR         w2, argbuf                          ; Its arguments, each zero-terminated, then an empty one
-            LDR         p2, argbuf + ARGS_MAX - 1
-:
-            jsr         next_arg
-            bcc         :-
-            lda         #0
-            sta         (w2)
-            jsr         spawn
-            bcc         wait_task
             jmp         throw_os
-
-; ( -- status ): task .A waited for (a note ending the wait: waited for again): its exit code, or, if that's 1 and
-; its message is a number (rc's $status), the number
-wait_task:
-            sta         tmp
-@wait:
-            LDR         r0, statbuf
-            lda         tmp
-            stx         xsave
-            jsr         WAIT
-            stx         tmp2
-            ldx         xsave
-            bcc         @ended
-            cmp         #E_INTR
-            beq         @wait
-            jmp         throw_os
-@ended:
-            stz         tmp2 + 1
-            lda         tmp2
-            cmp         #1
-            bne         @push
-            lda         statbuf                             ; (A number?)
-            sec
-            sbc         #'0'
-            cmp         #10
-            bcs         @push
-            stz         tmp2
-            ldy         #0
-@digit:
-            lda         statbuf,y
-            sec
-            sbc         #'0'
-            cmp         #10
-            bcs         @push
-            pha
-            asl         tmp2                                ; (* 10: * 2, kept, * 4, and the kept added)
-            rol         tmp2 + 1
-            lda         tmp2
-            sta         numtmp
-            lda         tmp2 + 1
-            sta         numtmp + 1
-            asl         tmp2
-            rol         tmp2 + 1
-            asl         tmp2
-            rol         tmp2 + 1
-            clc
-            lda         tmp2
-            adc         numtmp
-            sta         tmp2
-            lda         tmp2 + 1
-            adc         numtmp + 1
-            sta         tmp2 + 1
-            clc
-            pla
-            adc         tmp2
-            sta         tmp2
-            bcc         :+
-            inc         tmp2 + 1
 :
-            iny
-            bra         @digit
-@push:
+            jsr         prog_wait
             lda         tmp2
             ldy         tmp2 + 1
             PUSHAY
             rts
 
-; SPAWN r0's program with argbuf's arguments (the output waiting out first: r0 kept over its WRITE).  OUT: C, .A:
-; SPAWN's
-spawn:
-            lda         r0
-            pha
-            lda         r0 + 1
-            pha
-            jsr         flush
-            pla
-            sta         r0 + 1
-            pla
-            sta         r0
-            LDR         r1, argbuf
-            stx         xsave
-            lda         #0
-            jsr         SPAWN
-            ldx         xsave
-            rts
-
-; The next word of the string at w (tmp chars left) into (w2), zero-terminated, w2 past its 0.  OUT: C = 1 if there
-; was none (nothing stored)
-next_arg:
-@skip:
-            lda         tmp
-            ora         tmp + 1
-            beq         @none
-            lda         (w)
-            cmp         #' ' + 1
-            bcs         @word
-            jsr         arg_next
-            bra         @skip
-@word:
-            lda         tmp
-            ora         tmp + 1
-            beq         @end
-            lda         (w)
-            cmp         #' ' + 1
-            bcc         @end
-            jsr         arg_put
-            jsr         arg_next
-            bra         @word
-@end:
-            lda         #0
-            jsr         arg_put
-            clc
-            rts
-@none:
-            sec
-            rts
-
-; w on a char, tmp one less
-arg_next:
-            jsr         w_inc
-            lda         tmp
-            bne         :+
-            dec         tmp + 1
-:
-            dec         tmp
-            rts
-
-; .A into (w2), w2 on; at p2 (the buffer's end): THROW the ior of E_NAMETOOLONG.  Keeps .Y
-arg_put:
-            pha
-            lda         w2
-            cmp         p2
-            lda         w2 + 1
-            sbc         p2 + 1
-            pla
-            bcc         :+
-            lda         #E_NAMETOOLONG
-            jmp         throw_os
-:
-            sta         (w2)
-            inc         w2
-            bne         :+
-            inc         w2 + 1
-:
-            rts
-
-s_binrc:    .byte       "/bin/rc", 0
-s_mrc:      .byte       "#m/rc", 0
-
 ; ---- Banks and shared segments: a bank at $8000-$9FFF (BANK-WINDOW), the task's own (sys-banks-alloc gives them)
 ; or a shared segment's (sys-seg-create, sys-seg-attach)
 
-            HEADER      "BANK-WINDOW", 0
+            HEADER      "bank-window", 0
 bankwindow:                                                 ; ( -- addr ): $8000, where the bank selected is
-            lda         #<BANK_WINDOW
-            ldy         #>BANK_WINDOW
-            PUSHAY
-            rts
+            CONSTCODE   BANK_WINDOW
 
-            HEADER      "BANK!", 0
+            HEADER      "bank!", 0
 bankstore:                                                  ; ( bank -- ): one of the task's at BANK-WINDOW
             lda         dlo,x
             sta         RAM_BANK
             inx
             rts
 
-            HEADER      "BANK@", 0
+            HEADER      "bank@", 0
 bankfetch:                                                  ; ( -- bank ): the bank at BANK-WINDOW
             lda         RAM_BANK
             ldy         #0
             PUSHAY
             rts
 
-            HEADER      "SEG-BANK!", 0
+            HEADER      "seg-bank!", 0
 segbankstore:                                               ; ( seg n -- ior ): bank n of shared segment seg (attached)
             lda         dlo + 1,x                           ;   at BANK-WINDOW (SEG_MAP: U and its bank register)
             ldy         dlo,x
@@ -511,7 +343,7 @@ segbankstore:                                               ; ( seg n -- ior ): 
 
 ; ---- forth's arguments
 
-            HEADER      "ARGC", 0
+            HEADER      "argc", 0
 argc:                                                       ; ( -- n ): forth's arguments (forth file.fs a b: 3, the
             jsr         argl_first                           ;   file's name the first); at the console, 0
             stz         cnt
@@ -526,7 +358,7 @@ argc:                                                       ; ( -- n ): forth's 
             PUSHAY
             rts
 
-            HEADER      "ARG", 0
+            HEADER      "arg", 0
 arg:                                                        ; ( n -- c-addr u ): argument n (0: the file's name); past
             lda         dhi,x                               ;   the last, 0 0
             bne         @none
@@ -564,8 +396,11 @@ arg:                                                        ; ( n -- c-addr u ):
             stz         dhi,x
             rts
 
-; w = the first argument.  OUT: C = 1 if there's none
+; w = the first argument.  OUT: C = 1 if there's none (forth -l's -l isn't one: none, as at the console)
 argl_first:
+            sec
+            lda         login
+            bne         @none
             lda         argp
             sta         w
             lda         argp + 1
@@ -573,6 +408,7 @@ argl_first:
             ora         w
             bne         argl_is
             sec
+@none:
             rts
 
 ; w past its argument, to the next.  OUT: C = 1 if there's none (the empty one after the last)
@@ -593,6 +429,272 @@ argl_is:
 :
             clc
             rts
+
+; ---- Directories (Gforth's words), notes, a task's turn, errors' texts: hylang's Hydra built-ins, as Forth names
+; them.  (mkdir is =mkdir, Gforth's name, so the shell's prompt still runs the mkdir program)
+
+            HEADER      "get-dir", 0
+getdir:                                                     ; ( c-addr1 u1 -- c-addr2 u2 ): the current directory, in
+            LDR         r0, pathbuf                         ;   the buffer c-addr1 u1 (as much of it as fits)
+            stx         xsave
+            jsr         GETCWD
+            ldx         xsave
+            bcc         :+
+            lda         #0
+:
+            sta         tmp                                 ; (Its length, the buffer's at most)
+            lda         dhi,x
+            bne         :+
+            lda         dlo,x
+            cmp         tmp
+            bcs         :+
+            sta         tmp
+:
+            lda         dlo + 1,x
+            sta         w
+            lda         dhi + 1,x
+            sta         w + 1
+            ldy         #0
+:
+            cpy         tmp
+            beq         :+
+            lda         pathbuf,y
+            sta         (w),y
+            iny
+            bra         :-
+:
+            lda         tmp
+            sta         dlo,x
+            stz         dhi,x
+            rts
+
+            HEADER      "set-dir", 0
+setdir:                                                     ; ( c-addr u -- wior ): the current directory c-addr u
+            jsr         z_r0                                ;   (the shell's cd, in a definition)
+            stx         xsave
+            jsr         CHDIR
+            ldx         xsave
+            jmp         push_ior
+
+            HEADER      "open-dir", 0
+opendir:                                                    ; ( c-addr u -- wdirid wior ): a directory, for read-dir
+            jsr         z_r0
+            lda         #O_READ
+            stx         xsave
+            jsr         OPEN
+            ldx         xsave
+            jmp         fid_ior
+
+            HEADER      "read-dir", 0
+readdir:                                                    ; ( c-addr u1 wdirid -- u2 flag wior ): its next name (a
+            LDR         r0, statbuf                         ;   stat record's) in the buffer c-addr u1, u2 long (as
+            LDR         r1, SR_SIZE                         ;   much of it as fits); flag false at its end
+            lda         dlo,x
+            stx         xsave
+            jsr         READ
+            ldx         xsave
+            bcc         :+
+            pha                                             ; (An error: 0 false ior)
+            jsr         rd_none
+            pla
+            sec
+            bra         rd_ior
+:
+            cmp         #SR_SIZE                            ; (Its end: 0 false 0)
+            bcs         :+
+            jsr         rd_none
+            clc
+            bra         rd_ior
+:
+            ldy         #0                                  ; Its name's length (the buffer's at most)
+:
+            lda         statbuf + SR_NAME,y
+            beq         :+
+            iny
+            cpy         #SR_QTYPE
+            bne         :-
+:
+            sty         tmp
+            lda         dhi + 1,x
+            bne         :+
+            lda         dlo + 1,x
+            cmp         tmp
+            bcs         :+
+            sta         tmp
+:
+            lda         dlo + 2,x
+            sta         w
+            lda         dhi + 2,x
+            sta         w + 1
+            ldy         #0
+:
+            cpy         tmp
+            beq         :+
+            lda         statbuf + SR_NAME,y
+            sta         (w),y
+            iny
+            bra         :-
+:
+            lda         tmp                                 ; ( u2 true 0 )
+            sta         dlo + 2,x
+            stz         dhi + 2,x
+            lda         #$FF
+            sta         dlo + 1,x
+            sta         dhi + 1,x
+            clc
+rd_ior:                                                     ; (The top: the ior, C and .A's)
+            inx
+            jmp         push_ior
+rd_none:                                                    ; (0 false under the top)
+            stz         dlo + 2,x
+            stz         dhi + 2,x
+            stz         dlo + 1,x
+            stz         dhi + 1,x
+            rts
+
+            HEADER      "close-dir", 0
+closedir:                                                   ; ( wdirid -- wior )
+            lda         dlo,x
+            inx
+            stx         xsave
+            jsr         CLOSE
+            ldx         xsave
+            jmp         push_ior
+
+            HEADER      "=mkdir", 0
+mkdir:                                                      ; ( c-addr u wmode -- wior ): a directory made (wmode: as
+            inx                                             ;   it comes, the system's own)
+            jsr         z_r0
+            lda         #O_READ
+            phx
+            ldx         #DM_DIR
+            jsr         CREATE
+            plx
+            bcs         :+
+            stx         xsave
+            jsr         CLOSE
+            ldx         xsave
+            clc
+:
+            jmp         push_ior
+
+; ( c-addr u -- ): r0 the name, zero-terminated (>Z's buffers)
+z_r0:
+            jsr         toz
+            lda         dlo,x
+            sta         r0
+            lda         dhi,x
+            sta         r0 + 1
+            inx
+            rts
+
+            HEADER      "note", 0
+note:                                                       ; ( task n -- ): note n to the task (Plan 9's postnote: 1
+            lda         dlo + 1,x                           ;   interrupt, 3 hangup, 4 alarm, 16-31 a program's own);
+note_a:                                                     ;   a failure THROWs
+            sta         tmp
+            lda         dlo,x
+            inx
+            inx
+            stx         xsave
+            tax
+            lda         tmp
+            jsr         NOTE
+            ldx         xsave
+            bcc         :+
+            jmp         throw_os
+:
+            rts
+
+            HEADER      "note-group", 0
+notegroup:                                                  ; ( group n -- ): the note to a note group's every task
+            lda         dlo + 1,x
+            ora         #NOTE_GROUP
+            bra         note_a
+
+            HEADER      "on-note", 0
+onnote:                                                     ; ( xt -- ): xt ( n -- flag ) takes the notes that come
+            lda         dlo,x                               ;   (but Ctrl-C's and kill's): at the next word interpreted
+            sta         note_xt                             ;   or loop step, given the note; true, forth goes on;
+            lda         dhi,x                               ;   false, as Ctrl-C (THROW -28).  0: none (a note's
+            sta         note_xt + 1                         ;   default, the end)
+            inx
+            rts
+
+            HEADER      "pause", 0
+pause:                                                      ; ( -- ): the other tasks' turn (YIELD)
+            stx         xsave
+            jsr         YIELD
+            ldx         xsave
+            rts
+
+            HEADER      "ior>text", 0
+iortext:                                                    ; ( ior -- c-addr u ): a system error's text (an ior of a
+            lda         dhi,x                               ;   file word's or a sys- word's: -512 less the error,
+            cmp         #$FD                                ;   $FDxx); another, ""
+            bne         @none
+            lda         dlo,x                               ; (The error: -512 - ior)
+            eor         #$FF
+            inc
+            sta         tmp
+            LDR         r0, errbuf
+            lda         tmp
+            stx         xsave
+            jsr         ERRSTR
+            ldx         xsave
+            inx
+            lda         #<errbuf
+            ldy         #>errbuf
+            PUSHAY
+            jmp         zcount
+@none:
+            dex
+            jsr         zero_tos
+            lda         #<errbuf
+            sta         dlo + 1,x
+            lda         #>errbuf
+            sta         dhi + 1,x
+            rts
+
+; ---- Machine code: SYS, the old HyForth's
+
+            HEADER      "sys", 0
+sys:                                                        ; ( addr a x y -- a x y p ): the machine code at addr
+            lda         dlo,x                               ;   called (jsr) with .A, .X and .Y (each cell's low
+            sta         sys_y                               ;   byte), and what they were after it, with its flags
+            lda         dlo + 1,x                           ;   (P: C is bit 0).  forth's data stack is .X and the
+            sta         sys_x                               ;   zero page from $22: the code must leave them be
+            lda         dlo + 2,x
+            sta         sys_a
+            lda         dlo + 3,x
+            sta         sys_to
+            lda         dhi + 3,x
+            sta         sys_to + 1
+            phx
+            lda         sys_a
+            ldx         sys_x
+            ldy         sys_y
+            jsr         @call
+            php
+            sta         sys_a
+            stx         sys_x
+            sty         sys_y
+            pla
+            plx
+            sta         dlo,x
+            lda         sys_y
+            sta         dlo + 1,x
+            lda         sys_x
+            sta         dlo + 2,x
+            lda         sys_a
+            sta         dlo + 3,x
+            stz         dhi,x
+            stz         dhi + 1,x
+            stz         dhi + 2,x
+            stz         dhi + 3,x
+            rts
+@call:
+            jmp         (sys_to)
 
 ; ---- The sys- words' headers
 

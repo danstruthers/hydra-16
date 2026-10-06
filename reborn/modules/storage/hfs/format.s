@@ -12,15 +12,21 @@ HFS_S_MAGIC:    .byte   "HYDRAFS1"
 ; word goes in HFS_STAT, zero-padded: HFS_CTL_TEXT).  OUT: C = 0; or C = 1, .A = error
 
 hfs_format:
+            lda         SD_DEV                              ; (Its names in the walk cache forgotten: srv.s)
+            jsr         HFS_WC_FORGET
             jsr         HFS_CTL_TEXT
-            bra         HFS_FORMAT
+            jmp         HFS_FORMAT
 
 hfs_label:
+            lda         SD_DEV
+            jsr         HFS_WC_FORGET
             jsr         HFS_CTL_TEXT
             jmp         HFS_LABEL
 
 ; RAM disk SD_DEV, just started (storage.s's c_start): a quick format, labelled RAM or SRAM
 hfs_format_ram:
+            lda         SD_DEV
+            jsr         HFS_WC_FORGET
             ldx         #SR_SIZE - 1
 :
             stz         HFS_STAT,X

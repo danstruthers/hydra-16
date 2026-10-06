@@ -3,9 +3,9 @@
 ; running when W changes under it (the next instruction is fetched from the new page, at the same address).
 ; Only interrupt entry and exit, and the kernel's own calls between its pages, need it: everything outside the
 ; kernel runs with W = 0 (principle P2).
-;   IRQ_STUB_0 ... IRQ_STUB_F   each line's vector points at its stub: .A = the line, on to IRQ_ENTRY (the
-;                               VIA's by IRQ_VIA: timer 2 and CA1 are lines of their own, LINE_VIA_T2 and
-;                               LINE_VIA_CA1)
+;   IRQ_STUB_0 ... IRQ_STUB_F   each line's vector points at its stub: .A = the line, on to IRQ_ENTRY (but the
+;                               VIA's at IRQ_VIA: the ACIA's first, then timer 2 and CA1, lines of their own,
+;                               LINE_VIA_T2 and LINE_VIA_CA1)
 ;   IRQ_ENTRY                   the frame's X and W, then page 0 and the dispatcher (irq.s): its main path is
 ;                               here, to save two jumps on every interrupt
 ;   IRQ_RESTORE, IRQ_EXIT       back to the interrupted page, and RTI
@@ -28,30 +28,40 @@ name:
 .endmacro
 
 .macro COMMON_BLOCK
+.local      stubs
+stubs:
 .repeat 16, I
             CLABEL      .ident(.sprintf("IRQ_STUB_%X", I))
+.if I = LINE_VIA
+            jmp         IRQ_VIA                             ; (Its vector is IRQ_VIA's own: IRQ_INIT)
+            .res        3                                   ; (A stub's 6 bytes)
+.else
             pha
             lda         #I
-.if I = LINE_VIA
-            jmp         IRQ_VIA
-.else
             jmp         IRQ_ENTRY
 .endif
 .endrepeat
 
-; The VIA's line: timer 2's interrupt (its own on, and run out) is LINE_VIA_T2's, CA1's LINE_VIA_CA1's, the rest
-; the VIA's (.A = 0: the tick)
+; The VIA's line (its vector: IRQ_INIT): timer 2's interrupt (its own on, and run out) is LINE_VIA_T2's, CA1's
+; LINE_VIA_CA1's, the rest the VIA's (.A = 0: the tick).  But the ACIA's first, if it's interrupting too (its stub's,
+; as if it had come alone): the board gives the VIA's line the higher priority, and at 115200 a byte in has 311
+; cycles before the next overruns it, too few to wait for the tick's and timer 2's.  (Its status read clears its
+; interrupt: its handler looks at RDRF.  The VIA's comes again after it.)
             CLABEL      IRQ_VIA
+            bit         ACIA_STATUS
+            bmi         stubs + LINE_ACIA * 6               ; (IRQ_STUB_1: this copy's)
+            pha
             lda         VIA_IFR
             and         VIA_IER
             bit         #VIA_IRQ_T2
-            beq         :+
-            lda         #LINE_VIA_T2
-            bra         :++                                 ; (IRQ_ENTRY: this copy's)
-:
+            bne         :+
             and         #VIA_IRQ_CA1
-            beq         :+                                  ; (.A = 0)
-            lda         #LINE_VIA_CA1                       ; (Then on into IRQ_ENTRY)
+            beq         :++                                 ; (.A = 0.  IRQ_ENTRY: this copy's)
+            lda         #LINE_VIA_CA1
+            bra         :++
+:
+            lda         #LINE_VIA_T2                        ; (Then on into IRQ_ENTRY: timer 2's sending, every
+                                                            ;   character, the shortest way)
 
 ; .A = the line.  The frame so far: A, then the CPU's P and PC
 :

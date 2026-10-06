@@ -10,15 +10,15 @@ subst_len:  .res        1                                   ; REPLACES's: their 
 substs:     .res        SUBST_SIZE                          ;   each a counted name, then a counted text
 .code
 
-            HEADER      "CMOVE", 0
+            HEADER      "cmove", 0
 cmove_w:                                                    ; ( from to u -- ): a byte at a time, up
             jmp         cmove
 
-            HEADER      "CMOVE>", 0
+            HEADER      "cmove>", 0
 cmove_up_w:                                                 ; ( from to u -- ): a byte at a time, from the end down
             jmp         cmove_up
 
-            HEADER      "-TRAILING", 0
+            HEADER      "-trailing", 0
 dtrailing:                                                  ; ( c-addr u1 -- c-addr u2 ): without the spaces at its end
             lda         dlo + 1,x
             sta         w
@@ -48,7 +48,7 @@ dtrailing:                                                  ; ( c-addr u1 -- c-a
 @done:
             rts
 
-            HEADER      "/STRING", 0
+            HEADER      "/string", 0
 slashstring:                                                ; ( c-addr u n -- c-addr+n u-n )
             clc
             lda         dlo + 2,x
@@ -67,7 +67,7 @@ slashstring:                                                ; ( c-addr u n -- c-
             inx
             rts
 
-            HEADER      "BLANK", 0
+            HEADER      "blank", 0
 blank:                                                      ; ( c-addr u -- )
             dex
             lda         #' '
@@ -75,7 +75,7 @@ blank:                                                      ; ( c-addr u -- )
             stz         dhi,x
             jmp         fill
 
-            HEADER      "COMPARE", 0
+            HEADER      "compare", 0
 compare:                                                    ; ( c-addr1 u1 c-addr2 u2 -- n ): -1, 0, 1, by its chars'
             lda         dlo + 3,x                           ;   values (and a shorter one first)
             sta         w
@@ -141,7 +141,7 @@ compare:                                                    ; ( c-addr1 u1 c-add
             stz         dhi,x
             rts
 
-            HEADER      "SEARCH", 0
+            HEADER      "search", 0
 search:                                                     ; ( c-addr1 u1 c-addr2 u2 -- c-addr3 u3 flag ): c-addr3
             lda         dlo + 3,x                           ;   u3 from where c-addr2 u2 is in it; or (false)
             sta         w                                   ;   c-addr1 u1
@@ -223,13 +223,13 @@ search:                                                     ; ( c-addr1 u1 c-add
 @no:
             jmp         zero_tos
 
-            HEADER      "SLITERAL", F_IMMEDIATE
+            HEADERC     "sliteral", F_IMMEDIATE
 sliteral:                                                   ; ( c-addr u -- ): compiled, as S" is
             lda         #<xsquote
             ldy         #>xsquote
             jmp         comp_str
 
-            HEADER      "UNESCAPE", 0
+            HEADER      "unescape", 0
 unescape:                                                   ; ( c-addr1 u1 c-addr2 -- c-addr2 u2 ): each % doubled
             lda         dlo,x
             sta         w2
@@ -288,7 +288,7 @@ unescape:                                                   ; ( c-addr1 u1 c-add
 :
             rts
 
-            HEADER      "REPLACES", 0
+            HEADER      "replaces", 0
 replaces:                                                   ; ( c-addr1 u1 c-addr2 u2 -- ): SUBSTITUTE's %c-addr2%
             lda         dlo + 1,x                           ;   (its name) c-addr1 u1, copied (no room: THROW -79)
             sta         p2
@@ -432,7 +432,7 @@ subst_find:
             sec
             rts
 
-            HEADER      "SUBSTITUTE", 0
+            HEADER      "substitute", 0
 substitute:                                                 ; ( c-addr1 u1 c-addr2 u2 -- c-addr2 u3 n ): c-addr1 u1
             lda         dlo,x                               ;   into c-addr2, each %name% REPLACES's text (n of
             sta         tmp2                                ;   them), %% a %; n -78: no room, or the two overlap
