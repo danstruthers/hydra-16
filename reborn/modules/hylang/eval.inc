@@ -2625,7 +2625,9 @@ find_bound:
 @frame:
             lda         lk_f
             ora         lk_f + 1
-            beq         @none
+            bne         @lb911
+            jmp         @none
+@lb911:
             MOVW        lk_c, lk_f
 @cell:
             ldx         lk_c + 1                            ; (The frame's cell: deref's, here)
@@ -2652,7 +2654,19 @@ find_bound:
             lda         (hp),y
             cmp         ex + 1
             bne         @skip1
-            iny                                             ; (Found: its value at .Y)
+            iny                                             ; (Found: its value at .Y; but a hole, UNBOUND, isn't
+            lda         (hp),y                              ;   bound: the bytecode machine's local not set yet)
+            cmp         #<UNBOUND
+            bne         @found
+            iny
+            lda         (hp),y
+            dey
+            cmp         #>UNBOUND
+            bne         @found
+            iny
+            iny
+            bra         @pair
+@found:
             clc
             rts
 @skip:

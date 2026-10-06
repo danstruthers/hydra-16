@@ -519,6 +519,19 @@ loop's step 888, `map`'s item 2,987.  What's left is the machine's shape: an op 
 some 25 cycles each; a counting loop's step is 13 ops and some 1,200 cycles, HyForth's 68.  Next: the loops
 (`while`, `dotimes`, `each`) and a function's own locals (`=(`, `let`) compiled.
 
+**The bytecode machine, step 2: locals, `set`, `set!`, `def`, `while`.**  The names a body binds with `set` (`=(x v)`,
+`(set {a b} 1 2)`) are its locals: words after the frame's record (`LOCALS` pushes them as the code starts), each a
+hole (UNBOUND) till it's set, so a read before then is the name's past the frame (`LOCALH`), as the evaluator has
+it; a set is `SETL`, the value compiled (an error too: it's bound, as `def`'s is).  `set!` sets a formal, a local
+(a hole: past the frame, `SETBL`), or what the scopes or the globals have (`SETBG`, the evaluator's `set_bang`);
+`def` is `DEFG`.  `while` is a loop in the code (its value a word on the stack; `LOOP` takes Ctrl-C), its test and
+body expressions Q-expressions run as code too.  When a scope is made for the frame, its locals are bound in it
+after the formals, holes and all, at the pairs their places say, so `eval`, a closure, or a `try`'s handler sees and
+changes the same; the evaluator's `find_bound` passes a hole by (the scope above it has the name).  `TSELF` cuts the
+stack back to the record's end (the locals are made again).  A loop of `while` and two locals: 1,324 cycles a step
+compiled, 13,575 evaluated.  `let`, `each` and `dotimes` (a scope for each step), `try` and the rest are the
+evaluator's still.
+
 **danlang's `on-note`** (`feature/speed`'s `bfb040c`): danlang gives Ctrl-C's note to an `on-note` function now, as
 hylang does, and its `:intr` error is made once.  hylang's was made at each call after Ctrl-C till the prompt (a
 `try`'s handler stopped too): the flag is cleared as the error's made now (`intr_err`, the evaluator's and the

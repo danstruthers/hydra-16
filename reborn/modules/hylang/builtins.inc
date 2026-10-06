@@ -32,8 +32,11 @@ BIN_FN          = BI_N          ; (These the bytecode machine's compiler knows: 
             BI          "fn", 2, 2, B3, bi_fn
 BIN_FUN         = BI_N
             BI          "fun", 2, 2, B3, bi_fun
+BIN_DEF         = BI_N
             BI          "def", 1, ANY, BF_SPECIAL, sf_def
+BIN_SET         = BI_N
             BI          "set", 1, ANY, BF_SPECIAL, sf_set
+BIN_SETB        = BI_N
             BI          "set!", 1, ANY, BF_SPECIAL, sf_setb
             BI          "let", 1, ANY, BF_SPECIAL, sf_let
 BIN_DO          = BI_N
@@ -69,6 +72,7 @@ BIN_AND         = BI_N
             BI          "and", 0, ANY, BF_SPECIAL, sf_and
 BIN_OR          = BI_N
             BI          "or", 0, ANY, BF_SPECIAL, sf_or
+BIN_WHILE       = BI_N
             BI          "while", 1, ANY, BF_SPECIAL, sf_while
             BI          "each", 2, ANY, BF_SPECIAL, sf_each
             BI          "dotimes", 2, ANY, BF_SPECIAL, sf_dotimes

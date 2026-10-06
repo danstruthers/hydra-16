@@ -68,7 +68,16 @@ VO_SHEAD        = $4A           ; m c t sym: HEAD of sym's global value (the fun
                                 ;   function pushed at once)
 VO_CSELF        = $4C           ; m code h r: CALL of this frame's function (else CALL's way), its code at code
 VO_TSELF        = $4E           ; m code 0: TCALL, the same
-VO_COUNT        = $50
+VO_LOCALS       = $50           ; k names: the function's k locals, holes (UNBOUND) till they're set
+VO_LOCALH       = $52           ; y sym: a local's value (a hole: sym's past this frame)
+VO_SETL         = $54           ; y: the argument or local at y = ex; ex = NIL
+VO_SETBL        = $56           ; y sym: set! of a local (a hole: SETBG's)
+VO_SETBG        = $58           ; sym: set! of sym where it's bound nearest, else its global value
+VO_DEFG         = $5A           ; sym: sym's global value = ex; ex = NIL
+VO_STT          = $5C           ; the word on top = ex
+VO_POPX         = $5E           ; ex = the word popped
+VO_LOOP         = $60           ; t k e: to t (Ctrl-C: the error interrupted; k words dropped, then to e)
+VO_COUNT        = $62
 VM_R            = $80           ; (An op's error returned)
 
 VF_SCOPE        = $01           ; (A built-in that looks at its caller's scope: vb_vf's)
@@ -104,6 +113,8 @@ ar_n:       .res        1                                   ;   how many ...
 ar_cur:     .res        1                                   ;   the one being filled ...
 ar_top:     .res        2                                   ;   its next byte ...
 vm_full:    .res        1                                   ;   <> 0: full (nothing compiled till ev_run's vm_reset)
+vm_lk:      .res        1                                   ; (vm_scope's: the locals, their names' place)
+vm_ln:      .res        2
 
 ; The compiler's: in the reader's scratch, past its number registers (hysys.inc's room: idle as a function's compiled)
 vc_ws           = sy_area
@@ -149,7 +160,15 @@ vc_ch           = vc_cj + 1
 vc_sd           = vc_ch + 1
 vc_lop          = vc_sd + 1                                 ;   (a LOCAL's or a CONST's place, and past it: vc_push's)
 vc_lend         = vc_lop + 2
-vc_wend         = vc_lend + 2
+L_q             = vc_lend + 2                               ; Each level: <> 0, a Q-expression's code (while's) ...
+L_nlo           = L_q + VC_LV                               ;   set's names left
+L_nhi           = L_nlo + VC_LV
+vc_ls_lo        = L_nhi + VC_LV                             ; The function's locals: their names ...
+vc_ls_hi        = vc_ls_lo + VC_FORMALS
+vc_k            = vc_ls_hi + VC_FORMALS                     ;   how many
+vc_isl          = vc_k + 1                                  ;   (vc_formal's: <> 0, a local)
+vc_cq           = vc_isl + 1                                ;   (vc_child's: L_q)
+vc_wend         = vc_cq + 1
 .assert     vc_wend <= sy_end, error, "vm.inc: the compiler's room runs past the reader's scratch"
 
 .segment "DATA4"                                            ; (In the task's RAM: every bank's)
@@ -462,10 +481,15 @@ vm_matget:
             ldy         vm_rb
             iny
             iny
-            lda         (vm_s),y
+            lda         (vm_s),y                            ; (A scope made: a frame; NIL, or a fixnum, not yet)
+            tax
             iny
             ora         (vm_s),y
             beq         :+
+            txa
+            lsr
+            lda         #0
+            bcs         :+
             lda         #$80
 :
             sta         vm_mat
@@ -847,6 +871,36 @@ vm_scope:
             sta         ee + 1
             rts
 @make:
+            stz         vm_lk                               ; (Its locals: their LOCALS op's place in the scope's
+            ldy         vm_rb                               ;   word, a fixnum; their count and names there)
+            iny
+            iny
+            lda         (vm_s),y
+            lsr
+            bcc         @nolocals
+            iny
+            lda         (vm_s),y
+            lsr
+            and         #$1F
+            ora         #$80
+            sta         ht + 1
+            dey
+            lda         (vm_s),y
+            ror
+            sta         ht
+            lda         vm_bank
+            sta         $00
+            ldy         #1
+            lda         (ht),y
+            sta         vm_lk
+            lda         ht
+            clc
+            adc         #2
+            sta         vm_ln
+            lda         ht + 1
+            adc         #0
+            sta         vm_ln + 1
+@nolocals:
             jsr         vm_self
             ldy         #2
             jsr         cell_get
@@ -855,6 +909,8 @@ vm_scope:
             lda         vm_rb
             lsr
             dec         a
+            clc
+            adc         vm_lk
             FARN        1, frame_new
             MOVW        ee, hv
             ldy         vm_rb
@@ -901,6 +957,42 @@ vm_scope:
             inc         vm_k
             bra         @formal
 @done:
+            lda         vm_rb                               ; (Its locals, each bound to its slot, a hole too)
+            clc
+            adc         #4
+            sta         vm_k
+@local:
+            lda         vm_lk
+            beq         @made
+            ldy         vm_k
+            lda         (vm_s),y
+            sta         eu
+            iny
+            lda         (vm_s),y
+            sta         eu + 1
+            lda         vm_bank
+            sta         $00
+            lda         vm_ln
+            sta         ht
+            lda         vm_ln + 1
+            sta         ht + 1
+            ldy         #1
+            lda         (ht),y
+            tax
+            lda         (ht)
+            FARN        1, frame_add
+            lda         vm_ln
+            clc
+            adc         #2
+            sta         vm_ln
+            bcc         :+
+            inc         vm_ln + 1
+:
+            inc         vm_k
+            inc         vm_k
+            dec         vm_lk
+            bra         @local
+@made:
             lda         #$80
             sta         vm_mat
             rts
@@ -993,11 +1085,27 @@ op_lpush:
             VPUSH
             jmp         vm_adv2
 
-; .A = an argument's place (2 + 2k): ex = its value in the frame's scope (its pair's, at 2y + 2)
+; .A = an argument's or a local's place: ex = its value in the frame's scope (vm_slot); hp = the scope's cell, .Y =
+; its pair's value there (vm_pairp: argument k's pair k, at 2y + 2; local j's pair n + j, at 2y - 6)
 vm_slot:
+            jsr         vm_pairp
+            lda         (hp),y
+            sta         ex
+            iny
+            lda         (hp),y
+            sta         ex + 1
+            rts
+vm_pairp:
+            cmp         vm_rb
+            bcc         @arg
             asl
-            inc         a
-            inc         a
+            sec
+            sbc         #6
+            bra         @at
+@arg:
+            asl
+            adc         #2
+@at:
             pha
             ldy         vm_rb
             iny
@@ -1010,11 +1118,6 @@ vm_slot:
             pla
             jsr         deref
             ply
-            lda         (hp),y
-            sta         ex
-            iny
-            lda         (hp),y
-            sta         ex + 1
             rts
 
 op_global:
@@ -1288,8 +1391,15 @@ op_tself:
             iny
             sta         (vm_s),y
             stz         vm_mat
-            lda         ht                                  ; (The stack cut back to the function's word: the
-            ldx         ht + 1                              ;   record's end)
+            lda         vm_rb                               ; (The stack cut back to the record's end: its locals
+            clc                                             ;   made again by the code's LOCALS)
+            adc         #4
+            adc         vm_s
+            pha
+            lda         vm_s + 1
+            adc         #0
+            tax
+            pla
             jsr         vm_setsp
             bra         vm_scode
 @call:
@@ -1766,6 +1876,254 @@ vm_quote:
             MOVW        ex, nomem_err
             jmp         vm_ret
 
+; ---- Locals, set, set!, def, while
+
+; LOCALS k names: k locals (names a body binds with set, =(...)), each a hole (UNBOUND: not bound yet) after the
+; record; the record's scope this op's place (a fixnum: the names' place, for vm_scope, till a scope's made)
+op_locals:
+            lda         vm_ip
+            ldx         vm_ip + 1
+            jsr         vm_encode
+            ldy         vm_rb
+            iny
+            iny
+            sta         (vm_s),y
+            iny
+            txa
+            sta         (vm_s),y
+            ldy         #1
+            lda         (vm_ip),y
+            sta         vm_k
+@hole:
+            lda         #<UNBOUND
+            ldx         #>UNBOUND
+            VPUSH
+            dec         vm_k
+            bne         @hole
+            lda         vm_bank
+            sta         $00
+            ldy         #1
+            lda         (vm_ip),y
+            asl
+            adc         #2
+            jmp         vm_adv
+
+; LOCALH y sym: a local's value; a hole, sym's past this frame (the function's scope's: lookup's)
+op_localh:
+            ldy         #1
+            lda         (vm_ip),y
+            bit         vm_mat
+            bmi         @scope
+            tay
+            lda         (vm_s),y
+            sta         ex
+            iny
+            lda         (vm_s),y
+            sta         ex + 1
+            bra         @hole
+@scope:
+            jsr         vm_slot
+@hole:
+            lda         ex + 1
+            bne         @ok
+            lda         ex
+            cmp         #<UNBOUND
+            bne         @ok
+            jsr         vm_outer
+            ldy         #2
+            jsr         vm_symy
+            FARN        1, lookup
+            lda         #4
+            jmp         vm_valerr
+@ok:
+            jmp         vm_adv4
+
+; SETL y: the argument or local at y = ex (its pair, once there's a scope); ex = NIL
+op_setl:
+            ldy         #1
+            lda         (vm_ip),y
+            jsr         vm_setl
+            jmp         vm_adv2
+
+; .A = an argument's or a local's place: it = ex (its pair, once there's a scope); ex = NIL
+vm_setl:
+            bit         vm_mat
+            bmi         @scope
+            tay
+            lda         ex
+            sta         (vm_s),y
+            iny
+            lda         ex + 1
+            sta         (vm_s),y
+            bra         @nil
+@scope:
+            jsr         vm_pairp
+            lda         ex
+            sta         (hp),y
+            iny
+            lda         ex + 1
+            sta         (hp),y
+@nil:
+            stz         ex
+            stz         ex + 1
+            rts
+
+; SETBL y sym: set! of a local: SETL's, unless it's a hole (not bound here yet): SETBG's, past this frame
+op_setbl:
+            ldy         #1
+            lda         (vm_ip),y
+            pha
+            bit         vm_mat
+            bmi         @scope
+            tay
+            iny
+            lda         (vm_s),y
+            bne         @set
+            dey
+            lda         (vm_s),y
+            cmp         #<UNBOUND
+            bne         @set
+            bra         @hole
+@scope:
+            jsr         vm_pairp
+            iny
+            lda         (hp),y
+            bne         @set
+            dey
+            lda         (hp),y
+            cmp         #<UNBOUND
+            bne         @set
+@hole:
+            pla
+            ldy         #2
+            lda         #4
+            bra         vm_setbx
+@set:
+            pla
+            jsr         vm_setl
+            jmp         vm_adv4
+
+; SETBG sym: set! of sym where it's bound nearest (the scope's, the function's scope's), else its global value (the
+; error Unbound Symbol, if it has none); ex = NIL or the error
+op_setbg:
+            ldy         #1
+            lda         #3
+; set! of the symbol at .Y in the op (an op of .A bytes) to ex
+vm_setbx:
+            pha
+            phy
+            MOVW        eu, ex
+            bit         vm_mat
+            bpl         :+
+            jsr         vm_scope
+            bra         @set
+:
+            jsr         vm_outer
+@set:
+            ply
+            lda         vm_bank
+            sta         $00
+            lda         (vm_ip),y
+            sta         lk_s
+            iny
+            lda         (vm_ip),y
+            sta         lk_s + 1
+            FARN        1, set_bang
+            bcc         :+
+            MOVW        ex, nomem_err
+:
+            pla
+            jmp         vm_valerr
+
+; DEFG sym: sym's global value = ex (vm_rebind's first); ex = NIL
+op_defg:
+            ldy         #2
+            lda         (vm_ip),y
+            tax
+            dey
+            lda         (vm_ip),y
+            jsr         deref
+            jsr         vm_rebind
+            ldy         #2
+            lda         ex
+            sta         (hp),y
+            iny
+            lda         ex + 1
+            sta         (hp),y
+            stz         ex
+            stz         ex + 1
+            jmp         vm_adv3
+
+; STT: the word on top = ex
+op_stt:
+            lda         sp
+            sec
+            sbc         #2
+            sta         ht
+            lda         sp + 1
+            sbc         #0
+            sta         ht + 1
+            lda         ex
+            sta         (ht)
+            ldy         #1
+            lda         ex + 1
+            sta         (ht),y
+            jmp         vm_adv1
+
+; POPX: ex = the word popped
+op_popx:
+            jsr         pop
+            sta         ex
+            stx         ex + 1
+            jmp         vm_adv1
+
+; LOOP t k e: to t; Ctrl-C, the error interrupted (VM_R: returned; else k words dropped, then to e)
+op_loop:
+            bit         intr
+            bmi         :+
+            ldy         #1
+            jmp         vm_jumpy
+:
+            FARN        1, intr_err
+            bcc         :+
+            MOVW        ex, nomem_err
+:
+            lda         vm_bank
+            sta         $00
+            lda         (vm_ip)
+            bpl         :+
+            jmp         vm_ret
+:
+            ldy         #3
+            lda         (vm_ip),y
+            beq         :+
+            jsr         drop
+:
+            lda         vm_bank
+            sta         $00
+            ldy         #4
+            jmp         vm_jumpy
+
+; ee = the function's own scope (its word 2: past this frame)
+vm_outer:
+            jsr         vm_self
+            ldy         #2
+            jsr         cell_get
+            sta         ee
+            stx         ee + 1
+            rts
+
+; ex = the symbol at .Y in the op
+vm_symy:
+            lda         vm_bank
+            sta         $00
+            lda         (vm_ip),y
+            sta         ex
+            iny
+            lda         (vm_ip),y
+            sta         ex + 1
+            rts
+
 ; ---- The quick ops: fixnums here, else their built-in's code
 
 ; vm_a = the value popped, vm_b = ex (an op of 1 byte)
@@ -2151,6 +2509,7 @@ vm_compile:
             tsx
             stx         vc_s
             ldx         vc_v
+            stz         vc_k
             cpx         #VC_FORMALS + 1
             bcc         :+
             jmp         vc_novm
@@ -2206,6 +2565,7 @@ vm_compile:
             lda         vc_n
             cmp         vc_v
             bne         @bad
+            jsr         vc_locals                           ; (Its locals: set's names)
             lda         ar_n                                ; (The arena: its first bank)
             bne         vc_again
             jsr         vc_bank
@@ -2231,10 +2591,32 @@ vc_again:
             stz         vc_nlab
             stz         vc_lv
             stz         vc_lend + 1
+            stz         vc_cq
             lda         vc_n
             clc
             adc         #3
+            adc         vc_k
             sta         vc_h
+            lda         vc_k                                ; (LOCALS k names)
+            beq         @lnamed
+            lda         #VO_LOCALS
+            jsr         vc_byte
+            lda         vc_k
+            jsr         vc_byte
+            stz         vc_x
+@lname:
+            ldx         vc_x
+            cpx         vc_k
+            bcs         @lnamed
+            lda         vc_ls_lo,x
+            pha
+            lda         vc_ls_hi,x
+            tax
+            pla
+            jsr         vc_word
+            inc         vc_x
+            bra         @lname
+@lnamed:
             lda         cf
             ldx         cf + 1
             ldy         #1
@@ -2500,10 +2882,11 @@ vc_split:
 vc_formal:
             sta         vc_t
             stx         vc_t + 1
+            stz         vc_isl
             ldy         #0
 @k:
             cpy         vc_n
-            bcs         @no
+            bcs         @locals
             lda         vc_fs_lo,y
             cmp         vc_t
             bne         @next
@@ -2517,6 +2900,28 @@ vc_formal:
             tya
             asl
             adc         #2
+            clc
+            rts
+@locals:
+            ldy         #0
+@j:
+            cpy         vc_k
+            bcs         @no
+            lda         vc_ls_lo,y
+            cmp         vc_t
+            bne         @jnext
+            lda         vc_ls_hi,y
+            cmp         vc_t + 1
+            beq         @local
+@jnext:
+            iny
+            bra         @j
+@local:
+            inc         vc_isl                              ; (A local j: at rb + 4 + 2j)
+            tya
+            asl
+            adc         vc_rb
+            adc         #4
             clc
             rts
 @no:
@@ -2605,6 +3010,9 @@ vc_child:
             sta         L_jlab,x
             lda         vc_ch
             sta         L_jh,x
+            lda         vc_cq
+            sta         L_q,x
+            stz         vc_cq
             jsr         vc_expr
             dec         vc_lv
             rts
@@ -2786,11 +3194,16 @@ vc_expr:
             tax
             jsr         vc_word
             jsr         vc_marked
-            bra         @done
+            jmp         @done
 @call:
             jsr         vc_call
-            bra         @done
+            jmp         @done
 @quote:
+            lda         L_q,x                               ; (A Q-expression that's code: while's)
+            beq         :+
+            jsr         vc_call
+            jmp         @done
+:
             lda         L_elo,x                             ; (A Q-expression: with its scope, if it has names)
             pha
             lda         L_ehi,x
@@ -2818,6 +3231,8 @@ vc_expr:
             pla
             jsr         vc_formal
             bcs         @free
+            ldy         vc_isl
+            bne         @local
             pha
             jsr         vc_mark
             lda         #VO_LOCAL
@@ -2825,6 +3240,21 @@ vc_expr:
             pla
             jsr         vc_byte
             jsr         vc_marked
+            bra         @done
+@local:
+            pha                                             ; (A local: LOCALH, its name for a hole)
+            lda         #VO_LOCALH
+            jsr         vc_rop
+            pla
+            jsr         vc_byte
+            ldx         vc_lv
+            lda         L_elo,x
+            pha
+            lda         L_ehi,x
+            tax
+            pla
+            jsr         vc_word
+            jsr         vc_je
             bra         @done
 @free:
             lda         #VO_LOOKUP
@@ -2957,6 +3387,24 @@ vc_call:
 @special:
             ldx         vc_lv
             lda         L_m,x
+            cpy         #BIN_SET
+            beq         @set
+            cpy         #BIN_SETB
+            beq         @set
+            cpy         #BIN_DEF
+            beq         @set
+            cpy         #BIN_WHILE
+            bne         :+
+            cmp         #1
+            bcc         @eval
+            jsr         vc_inl
+            jmp         vc_while
+@set:
+            cmp         #1
+            bcc         @eval
+            jsr         vc_inl
+            jmp         vc_set
+:
             cpy         #BIN_IF
             bne         :+
             cmp         #2
@@ -3427,6 +3875,445 @@ vc_const:
             pla
             jmp         vc_word
 
+; ---- Locals, set, set!, def, while (the compiler's)
+
+; The function's locals: each name its body binds with set, =(...) (a symbol, or {symbols}, after set), not a formal,
+; VC_FORMALS less its formals at most (more are bound by the evaluator: EVAL): vc_ls, vc_k
+vc_locals:
+            stz         vc_sd
+            lda         cf
+            ldx         cf + 1
+            ldy         #1
+            jsr         cell_get
+; IN: .A, .X = a value: a list's items each scanned in turn (VC_SYMS deep), and a set's names added
+vc_scan:
+            pha
+            lsr
+            pla
+            bcs         @rts
+            cpx         #IMM_PAGES
+            bcc         @rts
+            ldy         pk,x
+            cpy         #PK_SCONS
+            beq         @list
+            cpy         #PK_QCONS
+            bne         @rts
+@list:
+            inc         vc_sd
+            ldy         vc_sd
+            cpy         #VC_SYMS
+            bcs         @out
+            pha
+            phx
+            jsr         vc_isset
+            plx
+            pla
+@item:
+            pha
+            phx
+            ldy         #0
+            jsr         cell_get
+            jsr         vc_scan
+            plx
+            pla
+            ldy         #1
+            jsr         cell_get
+            sta         vc_t
+            stx         vc_t + 1
+            ora         vc_t + 1
+            beq         @out
+            lda         vc_t
+            bra         @item
+@out:
+            dec         vc_sd
+@rts:
+            rts
+
+; IN: .A, .X = a list: (set names ...)?  Its names added (vc_addl)
+vc_isset:
+            jsr         vc_split
+            pha
+            lsr
+            pla
+            bcs         @no
+            cpx         #IMM_PAGES
+            bcc         @no
+            ldy         pk,x
+            cpy         #PK_SYMBOL
+            bne         @no
+            jsr         deref                               ; (Its value set's built-in)
+            ldy         #2
+            lda         (hp),y
+            cmp         #<(BUILTIN0 + 2 * BIN_SET)
+            bne         @no
+            iny
+            lda         (hp),y
+            cmp         #>(BUILTIN0 + 2 * BIN_SET)
+            bne         @no
+            lda         vc_q
+            ora         vc_q + 1
+            beq         @no
+            lda         vc_q
+            ldx         vc_q + 1
+            jsr         vc_split                            ; (Its names: a symbol, or {symbols})
+            pha
+            lsr
+            pla
+            bcs         @no
+            cpx         #IMM_PAGES
+            bcc         @no
+            ldy         pk,x
+            cpy         #PK_SYMBOL
+            beq         vc_addl
+            cpy         #PK_QCONS
+            bne         @no
+@each:
+            jsr         vc_split
+            jsr         vc_addl
+            lda         vc_q
+            ldx         vc_q + 1
+            bne         @each
+            cmp         #0
+            bne         @each
+@no:
+            rts
+
+; IN: .A, .X = a value: a symbol, not a formal or a local yet, a local more (if there's room).  Keeps vc_q
+vc_addl:
+            pha
+            lsr
+            pla
+            bcs         @no
+            cpx         #IMM_PAGES
+            bcc         @no
+            ldy         pk,x
+            cpy         #PK_SYMBOL
+            bne         @no
+            pha
+            phx
+            jsr         vc_formal
+            plx
+            pla
+            bcc         @no
+            pha
+            lda         vc_n
+            clc
+            adc         vc_k
+            cmp         #VC_FORMALS
+            pla
+            bcs         @no
+            ldy         vc_k
+            sta         vc_ls_lo,y
+            txa
+            sta         vc_ls_hi,y
+            inc         vc_k
+@no:
+            rts
+
+; (set names v...), (set! names v...), (def names v...): names a symbol or {symbols}, as many values; each value (an
+; error too) bound in turn: set's, a formal's or a local's (SETL); set!'s where it's bound nearest (a formal's: SETL; a
+; local's: SETBL; else SETBG); def's globally (DEFG).  Anything else (and set! taking errors) the evaluator's
+vc_set:
+            ldx         vc_lv
+            lda         L_b,x
+            cmp         #BIN_SETB
+            bne         :+
+            lda         L_mode,x
+            cmp         #M_OK
+            beq         @eval
+:
+            lda         L_alo,x
+            pha
+            lda         L_ahi,x
+            tax
+            pla
+            jsr         vc_split                            ; (Its names; the values after)
+            ldy         vc_lv
+            sta         L_nlo,y
+            txa
+            sta         L_nhi,y
+            lda         vc_q
+            sta         L_alo,y
+            lda         vc_q + 1
+            sta         L_ahi,y
+            jsr         vc_ncheck
+            bcs         @eval
+            sta         vc_t
+            ldx         vc_lv
+            lda         L_m,x
+            dec         a
+            cmp         vc_t
+            bne         @eval
+            lda         vc_t
+            bne         @each
+            jmp         vc_nil
+@eval:
+            jmp         vc_eval
+@each:
+            ldx         vc_lv
+            lda         L_alo,x
+            ora         L_ahi,x
+            beq         @done
+            lda         #M_OK                               ; (Its value, an error too)
+            sta         vc_cm
+            jsr         vc_next
+            ldy         #0
+            jsr         vc_child
+            jsr         vc_nname
+            jsr         vc_bind
+            bra         @each
+@done:
+            rts
+
+; OUT: C = 0, .A = this level's names counted (L_nlo/hi: a symbol, or a list of them; set's each a formal or a
+; local); C = 1 if they aren't
+vc_ncheck:
+            ldx         vc_lv
+            lda         L_nlo,x
+            sta         vc_v
+            lda         L_nhi,x
+            sta         vc_v + 1
+            ora         vc_v
+            beq         @none
+            ldx         vc_v + 1
+            cpx         #IMM_PAGES
+            bcc         @bad
+            lda         vc_v
+            lsr
+            bcs         @bad
+            lda         pk,x
+            cmp         #PK_SYMBOL
+            bne         @list
+            lda         vc_v
+            jsr         vc_nok
+            bcs         @bad
+            lda         #1
+            rts
+@list:
+            cmp         #PK_QCONS
+            bne         @bad
+            stz         vc_x
+@item:
+            lda         vc_v
+            ldx         vc_v + 1
+            jsr         vc_split
+            jsr         vc_nok
+            bcs         @bad
+            inc         vc_x
+            lda         vc_q
+            sta         vc_v
+            lda         vc_q + 1
+            sta         vc_v + 1
+            ora         vc_v
+            bne         @item
+            lda         vc_x
+            clc
+            rts
+@none:
+            lda         #0
+            clc
+            rts
+@bad:
+            sec
+            rts
+
+; IN: .A, .X = a name.  OUT: C = 0 if it's a symbol (for set, a formal or a local)
+vc_nok:
+            pha
+            lsr
+            pla
+            bcs         @bad
+            cpx         #IMM_PAGES
+            bcc         @bad
+            ldy         pk,x
+            cpy         #PK_SYMBOL
+            bne         @bad
+            phx
+            ldx         vc_lv
+            ldy         L_b,x
+            plx
+            cpy         #BIN_SET
+            bne         @ok
+            jmp         vc_formal
+@ok:
+            clc
+            rts
+@bad:
+            sec
+            rts
+
+; OUT: .A, .X = this level's next name (L_nlo/hi: the rest; a symbol, then NIL)
+vc_nname:
+            ldx         vc_lv
+            lda         L_nlo,x
+            pha
+            lda         L_nhi,x
+            tax
+            pla
+            ldy         pk,x
+            cpy         #PK_SYMBOL
+            bne         @list
+            ldy         vc_lv
+            pha
+            lda         #0
+            sta         L_nlo,y
+            sta         L_nhi,y
+            pla
+            rts
+@list:
+            jsr         vc_split
+            pha
+            phx
+            ldx         vc_lv
+            lda         vc_q
+            sta         L_nlo,x
+            lda         vc_q + 1
+            sta         L_nhi,x
+            plx
+            pla
+            rts
+
+; IN: .A, .X = a name, ex its value: bound as this level's form binds it
+vc_bind:
+            sta         vc_v
+            stx         vc_v + 1
+            ldy         vc_lv
+            lda         L_b,y
+            cmp         #BIN_DEF
+            beq         @def
+            lda         vc_v
+            jsr         vc_formal
+            bcs         @setbg
+            ldy         vc_isl
+            bne         @local
+@setl:
+            pha                                             ; (A formal: SETL)
+            lda         #VO_SETL
+            jsr         vc_byte
+            pla
+            jmp         vc_byte
+@local:
+            ldy         vc_lv
+            ldx         L_b,y
+            cpx         #BIN_SET
+            beq         @setl
+            pha                                             ; (set! of a local: SETBL)
+            lda         #VO_SETBL
+            jsr         vc_rop
+            pla
+            jsr         vc_byte
+            lda         vc_v
+            ldx         vc_v + 1
+            jsr         vc_word
+            jmp         vc_je
+@setbg:
+            lda         #VO_SETBG
+            jsr         vc_rop
+            lda         vc_v
+            ldx         vc_v + 1
+            jsr         vc_word
+            jmp         vc_je
+@def:
+            lda         #VO_DEFG
+            jsr         vc_byte
+            lda         vc_v
+            ldx         vc_v + 1
+            jmp         vc_word
+
+; (while test body...): a loop, its test and each body expression a Q-expression run as code (or any expression); its
+; value the body's last, NIL if it never ran (a word kept for it, STT, POPX); an error the while's value
+vc_while:
+            ldx         vc_lv
+            lda         vc_h
+            sta         L_h0,x
+            jsr         vc_lab                              ; (L_t: the test; L_l2: past the loop; L_b: the end)
+            ldx         vc_lv
+            sta         L_t,x
+            jsr         vc_lab
+            ldx         vc_lv
+            sta         L_l2,x
+            jsr         vc_lab
+            ldx         vc_lv
+            sta         L_b,x
+            jsr         vc_amode
+            lda         #VO_CPUSH                           ; (Its value so far: NIL)
+            jsr         vc_byte
+            lda         #0
+            tax
+            jsr         vc_word
+            jsr         vc_hinc
+            ldx         vc_lv
+            lda         L_t,x
+            jsr         vc_def
+            jsr         vc_amset                            ; (The test)
+            lda         #1
+            sta         vc_cq
+            jsr         vc_next
+            ldy         #0
+            jsr         vc_child
+            lda         #VO_JF
+            jsr         vc_byte
+            ldx         vc_lv
+            lda         L_l2,x
+            jsr         vc_ref
+            ldx         vc_lv
+            lda         L_alo,x
+            ora         L_ahi,x
+            beq         @loop
+@body:
+            jsr         vc_amset                            ; (The body, each in turn: the last's value kept)
+            lda         #1
+            sta         vc_cq
+            jsr         vc_next
+            ldy         #0
+            jsr         vc_child
+            ldx         vc_lv
+            lda         L_alo,x
+            ora         L_ahi,x
+            bne         @body
+            lda         #VO_STT
+            jsr         vc_byte
+@loop:
+            ldx         vc_lv                               ; (Back to the test; Ctrl-C, the error: VM_R if the
+            lda         L_am,x                              ;   parts return theirs, else to their label)
+            cmp         #M_R
+            bne         @j
+            lda         #VO_LOOP | VM_R
+            jsr         vc_byte
+            ldx         vc_lv
+            lda         L_t,x
+            jsr         vc_ref
+            lda         #0
+            jsr         vc_byte
+            lda         #0
+            tax
+            jsr         vc_word
+            bra         @done
+@j:
+            lda         #VO_LOOP
+            jsr         vc_byte
+            ldx         vc_lv
+            lda         L_t,x
+            jsr         vc_ref
+            ldx         vc_lv
+            lda         vc_h
+            sec
+            sbc         L_ah,x
+            jsr         vc_byte
+            ldx         vc_lv
+            lda         L_aj,x
+            jsr         vc_ref
+@done:
+            ldx         vc_lv
+            lda         L_l2,x
+            jsr         vc_def
+            lda         #VO_POPX
+            jsr         vc_byte
+            dec         vc_h
+            ldx         vc_lv
+            lda         L_b,x
+            jmp         vc_def
+
 .segment "RODATA7"
 
 ; The ops' code, by number (VM_R set: the same)
@@ -3436,9 +4323,11 @@ vc_const:
             .word       op_quote0, op_add, op_sub, op_lt, op_gt, op_le, op_ge, op_neq
             .word       op_inc, op_dec, op_zerop, op_onep, op_addc, op_subc, op_ltc, op_gtc
             .word       op_lec, op_gec, op_eqc, op_lpush, op_cpush, op_shead, op_cself, op_tself
+            .word       op_locals, op_localh, op_setl, op_setbl, op_setbg, op_defg, op_stt, op_popx
+            .word       op_loop
             .res        128 - VO_COUNT, $FF
 .endmacro
-.assert     VO_COUNT = 40 * 2, error, "vm.inc: vm_ops has an op too few or too many"
+.assert     VO_COUNT = 49 * 2, error, "vm.inc: vm_ops has an op too few or too many"
 vm_ops:
             VM_OPS
             VM_OPS

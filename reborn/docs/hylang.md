@@ -237,7 +237,10 @@ The plan has it whole; in short:
   counts its calls till then).  A frame is the function's word and its arguments, where the caller pushed them on
   the evaluation stack, then a record of two words (its return and its scope), so a call makes nothing on the heap
   and an argument is a word at a fixed place; a call in tail position (`TCALL`) reuses its caller's frame.
-  Constants, arguments, globals, `if`, `do`, `and` and `or` are compiled in place; `+`, `-`, `1+`, `1-`, `zero?`,
+  Constants, arguments, globals, `if`, `do`, `and`, `or` and `while` are compiled in place, and `set` (`=(...)`),
+  `set!` and `def` (each value compiled, the binding an op); the names a body binds with `set` are its locals, words
+  after the record, each a hole (UNBOUND) till it's set, read past the frame meanwhile (the evaluator's lookups pass
+  a hole by too); `+`, `-`, `1+`, `1-`, `zero?`,
   `one?` and the comparisons are ops that work fixnums at once (with a constant, one op); a built-in is called at
   once; any other call is `HEAD` (its function a function?) and `CALL` (a global's function, `SHEAD`: the global read
   in the same op; the function's own, by its name, `CSELF` and `TSELF`, which make its frame at once; a buffer
@@ -245,7 +248,8 @@ The plan has it whole; in short:
   special forms, an fexpr's call, a function not compiled (or with extras), a built-in that runs the machine; its
   value comes back through a `K_VM` frame.  A frame's scope is made only when it's wanted (a Q-expression with
   names in it, the evaluator, the built-ins that keep their caller's scope: `list`, `fn`, `fun`, `fexpr` and the hash
-  makers), and its arguments are read there after.  Errors are values, as the evaluator's: an op that may give one
+  makers), its formals and locals bound there in order (holes too), and they're read and set there after, so a
+  closure or `eval` sees what the code sees.  `let`, `each`, `dotimes` and `try` are the evaluator's still.  Errors are values, as the evaluator's: an op that may give one
   returns it from the function, unless what it's for takes errors (`error?`'s argument, say).  The compiler counts on
   a name's built-in value (a special form, an operator) only while no frame has bound the name, and marks it
   (`SF_INLINED`); bound in a frame then, or bound again globally, every function's code is dropped and compiled again

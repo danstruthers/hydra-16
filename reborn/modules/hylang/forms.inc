@@ -481,6 +481,53 @@ k_defv:
             sta         (hp),y
             jmp         var_next
 
+; set! of lk_s to eu (the bytecode machine's SETBG): where it's bound nearest, from ee; else its global value (none:
+; the error "Unbound Symbol 'x'").  OUT: ex = NIL, or the error; C = 1 if there's no room
+set_bang:
+            MOVW        ex, lk_s
+            jsr         find_bound
+            bcs         @global
+            lda         eu
+            sta         (hp),y
+            iny
+            lda         eu + 1
+            sta         (hp),y
+            bra         @nil
+@global:
+            lda         ex
+            ldx         ex + 1
+            jsr         deref
+            ldy         #3
+            lda         (hp),y
+            cmp         #>UNBOUND
+            bne         @set
+            dey
+            lda         (hp),y
+            cmp         #<UNBOUND
+            bne         @set
+            jsr         err_begin                           ; ("Unbound Symbol 'x'")
+            LDAX        s_unbsym
+            jsr         msg_out
+            lda         ex
+            ldx         ex + 1
+            jsr         out_name
+            lda         #$27
+            jsr         out_byte
+            jmp         err_end
+@set:
+            jsr         vm_rebind
+            ldy         #2
+            lda         eu
+            sta         (hp),y
+            iny
+            lda         eu + 1
+            sta         (hp),y
+@nil:
+            stz         ex
+            stz         ex + 1
+            clc
+            rts
+
 ; The form's name ('def', 'set' or 'set!', in quotes) out
 out_form:
             lda         #$27
