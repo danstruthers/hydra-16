@@ -1824,7 +1824,7 @@ vm_call:
             ldy         #10
             lda         (hp),y
             beq         vm_cout
-            jsr         vm_compile
+            FARN        6, vm_compile
             bcs         vm_cout
             lda         cf
             ldx         cf + 1
@@ -3134,7 +3134,9 @@ vm_cltx:
             asl
             rts
 
-; ---- The compiler
+; ---- The compiler (in the sixth bank, the collector's: FARN 6, vm_compile)
+
+.segment "CODE6"
 
 ; cf, a function: its body compiled, its word 4 its code's place (fun's, as it's defined; a call's, at its second).
 ; OUT: C = 0 if it's compiled; C = 1 if not (FN_NOVM set if it can't be: its formals, its body too big ...; or the
@@ -4137,7 +4139,7 @@ vc_call:
             ldx         vc_lv
             sta         L_b,x
             tay
-            lda         vb_flags,y
+            lda         vc_bflags,y
             bmi         @special
             jsr         vc_inl
             ldx         vc_lv
@@ -4428,7 +4430,7 @@ vc_bcall:
             ldx         vc_lv
             sta         L_t,x
             ldy         L_b,x
-            lda         vb_flags,y
+            lda         vc_bflags,y
             and         #BF_ERRORS
             beq         :+
             lda         #M_OK
@@ -5933,13 +5935,6 @@ vo_bin:     .byte       BIN_ADD, BIN_SUB, BIN_LT, BIN_GT, BIN_LE, BIN_GE, BIN_EQ
             .byte       BIN_ONEP, BIN_ADD, BIN_SUB, BIN_LT, BIN_GT, BIN_LE, BIN_GE, BIN_EQ
 vo_n:       .byte       2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2
 
-; The compiler's: the built-ins that are quick ops, the values they're given, the op
-QUICKS          = 11
-vq_bin:     .byte       BIN_ADD, BIN_SUB, BIN_LT, BIN_GT, BIN_LE, BIN_GE, BIN_EQ, BIN_INC, BIN_DEC, BIN_ZEROP
-            .byte       BIN_ONEP
-vq_n:       .byte       2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1
-vq_op:      .byte       VO_ADD, VO_SUB, VO_LT, VO_GT, VO_LE, VO_GE, VO_NEQ, VO_INC, VO_DEC, VO_ZEROP, VO_ONEP
-
 ; The built-ins' table again (builtins.inc's), for this bank: each one's least and most arguments, flags, code; and
 ; whether it looks at its caller's scope (vb_vf: VF_SCOPE)
 vb_min:
@@ -5969,4 +5964,19 @@ vb_vf:
 .else
             .byte       0
 .endif
+.endrep
+
+.segment "RODATA6"
+
+; The compiler's: the built-ins that are quick ops, the values they're given, the op
+QUICKS          = 11
+vq_bin:     .byte       BIN_ADD, BIN_SUB, BIN_LT, BIN_GT, BIN_LE, BIN_GE, BIN_EQ, BIN_INC, BIN_DEC, BIN_ZEROP
+            .byte       BIN_ONEP
+vq_n:       .byte       2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1
+vq_op:      .byte       VO_ADD, VO_SUB, VO_LT, VO_GT, VO_LE, VO_GE, VO_NEQ, VO_INC, VO_DEC, VO_ZEROP, VO_ONEP
+
+; The built-ins' flags again (vb_flags'), for this bank
+vc_bflags:
+.repeat BI_COUNT, I
+            .byte       .ident(.sprintf("bi_fl_%d", I))
 .endrep

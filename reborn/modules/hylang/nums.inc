@@ -250,7 +250,7 @@ bi_fun:
             lda         ex + 1
             sta         (hp),y
             MOVW        cf, ex                              ; (Compiled now, for the bytecode machine: vm.inc's)
-            FARN        7, vm_compile
+            FARN        6, vm_compile
             stz         ex
             stz         ex + 1
             clc

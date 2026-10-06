@@ -1611,7 +1611,7 @@ ev_fapply:
             sta         (hp),y
             bra         @eval
 @compile:
-            FARN        7, vm_compile
+            FARN        6, vm_compile
             bcs         @eval
 @vm:
             jsr         frame_check
