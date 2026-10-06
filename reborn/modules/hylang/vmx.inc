@@ -2,7 +2,9 @@
 ; vmx.inc - hylang's native code (docs/hylang.md, "The bytecode machine"), in its eighth bank: a function's bytecode,
 ; as vm_compile made it in its scratch bank (vm_sb, from $8000), made the 65C02's own code in the arena (vm_xlate).
 ; Each op is a stub that points vm_ip at its data, the op as it was in the bytecode (EXT left out), and jumps to
-; its code in the machine (vm.inc's), whose next is jmp (vm_ip): the op's data past, the next op's stub.  Each place
+; its code in the machine (vm.inc's), whose next is jmp (vm_ip): the op's data past, the next op's stub.  The usual
+; ops are in line, from a template (vmxt.inc: tools/hyvmxt.js makes it), its operands patched in; one that has a slow way
+; (not fixnums, a scope made ...) has its stub after it (TF_STUB), which it jumps to.  Each place
 ; in the data that's code (a jump's target, a block's parent, the blocks' table, the function's start, a call's
 ; return) is the native code's.
 ;   Two passes: each op's stub's place (its entry, in the map bank vm_mb at the op's own place, its high byte $1000
@@ -16,6 +18,14 @@ VXK_P           = 2             ; A block's parent (0: none): its BLOCK op's dat
 VXK_B           = 3             ; The blocks' table (0: none): the native one's place
 VXK_C           = 4             ; The function's start
 VXK_R           = 5             ; A call's return: the place (a fixnum) past the op's data
+
+; A template's flags, its patches' kinds
+TF_STUB         = 1             ; Its op's stub after it (its slow way)
+TF_NOR          = 2             ; Not for an op with VM_R (its stub alone)
+TPK_B           = 1             ; The op's data byte
+TPK_U           = 2             ;   untagged (bit 0 clear)
+TPK_T           = 3             ; A jump's target in the data: its native place
+TPK_N           = 4             ; The next op's entry
 
 .bss
 vx_end:     .res        2                                   ; The bytecode's end (its blocks' table there ...
@@ -34,6 +44,15 @@ vx_a:       .res        2                                   ;   its address oper
 vx_k:       .res        1                                   ;   (scratch)
 vx_d:       .res        2                                   ;   its data's place)
 vx_buf:     .res        48
+vx_tp:      .res        2                                   ; (An op's template: its header, 0 if none ...
+vx_tln:     .res        1                                   ;   its code's length ...
+vx_tfl:     .res        1                                   ;   its flags ...
+vx_tnp:     .res        1                                   ;   its patches
+vx_tpp:     .res        2
+vx_tcode:   .res        2
+vx_op:      .res        1                                   ;   its op ...
+vx_nx:      .res        2                                   ;   the next op's entry ...
+vx_pi:      .res        1                                   ;   its patches left)
 
 .segment "CODE8"
 
@@ -140,9 +159,7 @@ vx_pass1:
             sec
             sbc         #$10
             sta         hq + 1
-            lda         vx_dl
-            clc
-            adc         #VX_STUB
+            jsr         vx_size
             jsr         vx_htadd
             lda         vx_len
             jsr         vx_hqadd
@@ -184,6 +201,13 @@ vx_pass2:
             rts
 :
             jsr         vx_oplen
+            jsr         vx_size                             ; (The next op's entry)
+            clc
+            adc         ht
+            sta         vx_nx
+            lda         ht + 1
+            adc         #0
+            sta         vx_nx + 1
             lda         vm_sb                               ; (The op, to vx_buf)
             sta         $00
             ldy         #0
@@ -193,6 +217,13 @@ vx_pass2:
             iny
             cpy         vx_len
             bne         :-
+            lda         vx_tp + 1                           ; (Its template, then its stub if it has one)
+            beq         :+
+            jsr         vx_tcopy
+            lda         vx_tfl
+            lsr
+            bcc         @next
+:
             lda         ht                                  ; (Its data's place: past the stub)
             clc
             adc         #VX_STUB
@@ -250,11 +281,221 @@ vx_pass2:
             iny
             dec         vx_k
             bne         :-
-            tya
-            jsr         vx_htadd
+@next:
+            lda         vx_nx
+            sta         ht
+            lda         vx_nx + 1
+            sta         ht + 1
             lda         vx_len
             jsr         vx_hqadd
             jmp         @op
+
+; .A = the op's native size (vx_oplen's, at hq): its stub; or its template (vx_tpl), and its stub if it has one
+vx_size:
+            jsr         vx_tpl
+            lda         vx_tp + 1
+            bne         :+
+            lda         vx_dl
+            clc
+            adc         #VX_STUB
+            rts
+:
+            lda         vx_tfl
+            lsr
+            bcs         :+
+            lda         vx_tln
+            rts
+:
+            lda         vx_dl
+            clc
+            adc         #VX_STUB
+            adc         vx_tln
+            rts
+
+; vx_tp = the op's template (at hq, in vm_sb; 0 if it has none: its stub alone), its header read (vx_tln ...)
+vx_tpl:
+            stz         vx_tp + 1
+            lda         vm_sb
+            sta         $00
+            lda         (hq)
+            sta         vx_op
+            and         #$7F
+            ldx         #<vx_tlq
+            ldy         #>vx_tlq
+            cmp         #VO_LQ
+            beq         @fused
+            ldx         #<vx_tlqp
+            ldy         #>vx_tlqp
+            cmp         #VO_LQP
+            beq         @fused
+            ldx         #<vx_tjlq
+            ldy         #>vx_tjlq
+            cmp         #VO_JLQ
+            beq         @fused
+            ldx         #<vx_tjq
+            ldy         #>vx_tjq
+            cmp         #VO_JQ
+            beq         @fused
+            ldx         #<vx_tjll
+            ldy         #>vx_tjll
+            cmp         #VO_JLL
+            beq         @fused
+            cmp         #VO_LL
+            bne         @main
+            ldy         #1                                  ; (LL: s's bit 0, pushed)
+            lda         (hq),y
+            ldx         #<vx_tll
+            ldy         #>vx_tll
+            lsr
+            bcc         @fused
+            ldx         #<vx_tllp
+            ldy         #>vx_tllp
+            bra         @fused
+@main:
+            tax
+            lda         vx_tmain,x
+            sta         vx_tp
+            lda         vx_tmain + 1,x
+            sta         vx_tp + 1
+            bra         @hdr
+@fused:
+            stx         hb
+            sty         hb + 1
+            ldy         #1
+            lda         (hq),y
+            and         #$FE
+            sec
+            sbc         #VO_ADD
+            tay
+            lda         (hb),y
+            sta         vx_tp
+            iny
+            lda         (hb),y
+            sta         vx_tp + 1
+@hdr:
+            lda         vx_tp + 1
+            beq         @rts
+            sta         hb + 1
+            lda         vx_tp
+            sta         hb
+            ldy         #1
+            lda         (hb),y
+            sta         vx_tfl
+            and         #TF_NOR
+            beq         :+
+            lda         vx_op
+            bpl         :+
+            stz         vx_tp + 1
+            rts
+:
+            lda         (hb)
+            sta         vx_tln
+            ldy         #2
+            lda         (hb),y
+            sta         vx_tnp
+            lda         hb
+            clc
+            adc         #3
+            sta         vx_tpp
+            lda         hb + 1
+            adc         #0
+            sta         vx_tpp + 1
+            lda         vx_tnp
+            asl
+            adc         vx_tnp
+            clc
+            adc         vx_tpp
+            sta         vx_tcode
+            lda         vx_tpp + 1
+            adc         #0
+            sta         vx_tcode + 1
+@rts:
+            rts
+
+; The op's template's code at ht (the arena's bank), its patches made; ht past it
+vx_tcopy:
+            lda         vx_tcode
+            sta         hb
+            lda         vx_tcode + 1
+            sta         hb + 1
+            lda         vx_bank
+            sta         $00
+            ldy         #0
+:
+            lda         (hb),y
+            sta         (ht),y
+            iny
+            cpy         vx_tln
+            bne         :-
+            lda         vx_tpp
+            sta         hb
+            lda         vx_tpp + 1
+            sta         hb + 1
+            lda         vx_tnp
+            sta         vx_pi
+@p:
+            lda         vx_pi
+            bne         :+
+            lda         vx_tln
+            jmp         vx_htadd
+:
+            ldy         #2                                  ; (Its data byte, in vx_buf)
+            lda         (hb),y
+            clc
+            adc         vx_d0
+            tax
+            ldy         #1
+            lda         (hb),y
+            cmp         #TPK_N
+            beq         @n
+            cmp         #TPK_T
+            beq         @t
+            cmp         #TPK_U
+            lda         vx_buf,x
+            bcc         @b
+            and         #$FE
+@b:
+            jsr         vx_pb
+            bra         @pn
+@n:
+            lda         vx_nx
+            ldx         vx_nx + 1
+            bra         @w
+@t:
+            lda         vx_buf + 1,x
+            pha
+            lda         vx_buf,x
+            plx
+            jsr         vm_xmap
+@w:
+            jsr         vx_pw
+@pn:
+            lda         hb
+            clc
+            adc         #3
+            sta         hb
+            bcc         :+
+            inc         hb + 1
+:
+            dec         vx_pi
+            bra         @p
+
+; .A (vx_pb), .A, .X (vx_pw) at the template's place at ht + the patch's offset ((hb)), in the arena's bank
+vx_pb:
+            pha
+            lda         vx_bank
+            sta         $00
+            lda         (hb)
+            tay
+            pla
+            sta         (ht),y
+            rts
+vx_pw:
+            jsr         vx_pb
+            iny
+            txa
+            sta         (ht),y
+            rts
 
 ; The blocks' table, if there's one: n, then each block's start (its BLOCK op's data) and end (an op's entry, or the
 ; code's end)
@@ -562,4 +803,6 @@ vx_ta2:     .byte       0, 0, 0, 0, 0, 0, 0, 0
 ; The rare ones (by their number / 2: EVAL SETBG DEFG TRYV TRYH TRYF): their data's length, address operand
 vx_xlen:    .byte       5, 3, 3, 3, 3, 1
 vx_xa1:     .byte       0, 0, 0, 0, VXA(1, VXK_T), 0
+
+.include "vmxt.inc"
 .assert     VO_COUNT = 128, error, "vmx.inc: vx_tlen ... are for 64 ops"
