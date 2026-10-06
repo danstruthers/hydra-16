@@ -355,7 +355,8 @@ name pushes its value, `to name` sets it; it hides a word or number of that name
 **`lib block`**: Forth's blocks, each 1024 bytes of a file, `blocks.fb` in the current directory (made when it's
 first wanted) or the one `s" name" open-blocks` names.  `n block` gives a block's buffer (read in), `update` marks
 it changed, `flush` writes the changed ones; `n load` interprets a block (`\` skips to its 64-character line's end),
-`a b thru` blocks a to b, `n list` shows one.
+`a b thru` blocks a to b, `n list` shows one.  The blocks read and written are kept in the task's RAM banks too (128 of
+them), so a block wanted again comes from there, not the file; `flush`, and forth's end, write the changed ones to it.
 
 ```
 /ram> lib block

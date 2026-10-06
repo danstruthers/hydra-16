@@ -75,6 +75,7 @@ run_script:
             lda         #1
 :
             pha
+            jsr         blk_end
             jsr         flush
             stz         r0
             stz         r0 + 1

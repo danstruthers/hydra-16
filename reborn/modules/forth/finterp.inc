@@ -806,7 +806,7 @@ src_pop:
             rts
 
 ; The Block library's routine (blk_vec: block.fl's), .A the call: 0, src_addr the buffer of block src_blk (read in
-; if it isn't in one).  Keeps .X.  None: C = 1
+; if it isn't in one); 1, the program's ending: the blocks changed written to their file.  Keeps .X.  None: C = 1
 blk_call:
             sec
             ldy         blk_vec + 1
@@ -814,6 +814,20 @@ blk_call:
             jmp         (blk_vec)
 :
             rts
+
+; As the program ends (BYE, a script's end): the Block library's changed blocks written (its call 1), an error in it
+; caught and dropped
+blk_end:
+            lda         #<blk_end1
+            ldy         #>blk_end1
+            PUSHAY
+            jsr         catch
+            inx
+            rts
+
+blk_end1:
+            lda         #1
+            jmp         blk_call
 
 ; The sources nested since the stack had .A records let go of (THROW's, QUIT's)
 src_unwind:
@@ -1364,6 +1378,7 @@ bye:                                                        ; (At the console: t
             beq         :+
             jsr         cr
 :
+            jsr         blk_end
             jsr         flush
             stz         r0
             stz         r0 + 1

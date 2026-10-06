@@ -4,16 +4,33 @@
 ; Extension's, by BLK, the source record's src_blk).  Block u is the 1024 bytes at u * 1024 of the block file
 ; (Gforth's way): blocks.fb in the directory current as it's first wanted, made if it isn't there, or the one
 ; open-blocks names.  Two buffers: block reads into the one not given last (written first, if it was UPDATEd), and
-; past the file's end a block is spaces.  load interprets a block as the source (SOURCE its 1024 characters, BLK
-; its number), and the core asks this library for a block source's buffer again when a source nested in it ends
-; (blk_vec: bk_src).  list shows a block's 16 lines of 64 (scr its number).  A file's failure: the system's ior,
-; THROWn.
+; past the file's end a block is spaces.  Behind them, the task's RAM banks (taken as they're wanted, BC_BANKS at
+; most, 8 blocks a bank) keep the blocks read and written: a block read again comes from its bank (a copy, not the
+; file); an UPDATEd buffer goes to its bank, changed there, and save-buffers and flush write the changed ones to the
+; file, as does the program's end (the core's call, blk_vec's 1).  With the banks all used, the oldest taken goes
+; (to the file first, if it's changed); with none to be had, the file is the buffers' alone, as it was.  load
+; interprets a block as the source (SOURCE its 1024 characters, BLK its number), and the core asks this library for a
+; block source's buffer again when a source nested in it ends (blk_vec's 0: bk_src).  list shows a block's 16 lines
+; of 64 (scr its number).  A file's failure: the system's ior, THROWn.
 
 .include "forthlib.inc"
 
 BLK_SIZE    = 1024
+BC_BANKS    = 16                                            ; The banks behind the buffers, at most ...
+BC_SLOTS    = BC_BANKS * 8                                  ;   and their blocks (a slot each, 8 a bank)
+BC_HAS      = $01                                           ; A slot's state: a block's ...
+BC_DIRTY    = $80                                           ;   changed since the file had it
 
 .bss
+bc_bank:    .res        BC_BANKS                            ; The banks (bc_nbank of them, taken as they're wanted)
+bc_nbank:   .res        1
+bc_none:    .res        1                                   ; <> 0: no bank to be had (the file alone)
+bc_nlo:     .res        BC_SLOTS                            ; Each slot's block ...
+bc_nhi:     .res        BC_SLOTS
+bc_flag:    .res        BC_SLOTS                            ;   and its state (0: free)
+bc_next:    .res        1                                   ; The slot taken next with them all in use (round)
+bk_bufi:    .res        1                                   ; (A buffer, and a slot, a moment)
+bk_sloti:   .res        1
 bk_fd:      .res        1                                   ; The block file's fd ($FF: not open) ...
 bk_name:    .res        64                                  ;   its name (counted; none: blocks.fb)
 bk_cur:     .res        1                                   ; The buffer given last (0, 1) ...
@@ -63,11 +80,12 @@ update:                                                     ; The buffer given l
             rts
 
             HEADER      "save-buffers", 0
-savebuffers:                                                ; The UPDATEd ones written
-            ldy         #0
+savebuffers:                                                ; The UPDATEd ones written, and the banks' changed
+            ldy         #0                                  ;   blocks to the file
             jsr         bk_save
             ldy         #1
-            jmp         bk_save
+            jsr         bk_save
+            jmp         bc_flush
 
             HEADER      "flush", 0
 flush_w:                                                    ; Them written, and the buffers free
@@ -204,7 +222,8 @@ list:                                                       ; ( u -- ): its 16 l
 
             HEADER      "open-blocks", 0
 openblocks:                                                 ; ( c-addr u -- ): the block file that one (Gforth's):
-            jsr         flush_w                             ;   the buffers written, the one before closed
+            jsr         flush_w                             ;   the buffers written, the banks' blocks forgotten, the
+            jsr         bc_forget                           ;   one before closed
             lda         bk_fd
             cmp         #$FF
             beq         :+
@@ -283,14 +302,84 @@ bk_victim:
             sta         bk_upd,y
             rts
 
-; Buffer .Y written to its block if it was UPDATEd.  Keeps .Y
+; Buffer .Y to its block if it was UPDATEd: to the block's slot in the banks, changed there (the file later); with
+; no bank to be had, to the file.  Keeps .Y
 bk_save:
             lda         bk_upd,y
             beq         @done
             lda         bk_used,y
             beq         @done
+            sty         bk_bufi
+            lda         bk_nlo,y
+            sta         tmp3
+            lda         bk_nhi,y
+            sta         tmp3 + 1
+            jsr         bc_find
+            bcc         @slot
+            jsr         bc_slot
+            bcs         @file
+@slot:
+            sty         bk_sloti
+            ldy         bk_bufi
+            jsr         bk_addr
+            ldy         bk_sloti
+            sec                                             ; (The buffer to the slot)
+            jsr         bc_copy
+            lda         bc_flag,y
+            ora         #BC_DIRTY
+            sta         bc_flag,y
+            bra         @saved
+@file:
+            ldy         bk_bufi
             jsr         bk_seek
             jsr         bk_addr
+            jsr         bk_wloop
+@saved:
+            ldy         bk_bufi
+            lda         #0
+            sta         bk_upd,y
+@done:
+            rts
+
+; Buffer .Y read from block u (the top: its block from here on): from its slot in the banks, else from the file (the
+; rest past its end spaces), then kept in a slot.  Keeps .Y
+bk_read:
+            lda         dlo,x
+            sta         bk_nlo,y
+            sta         tmp3
+            lda         dhi,x
+            sta         bk_nhi,y
+            sta         tmp3 + 1
+            sty         bk_bufi
+            jsr         bc_find
+            bcs         @file
+            sty         bk_sloti
+            ldy         bk_bufi
+            jsr         bk_addr
+            ldy         bk_sloti
+            clc                                             ; (The slot to the buffer)
+            jsr         bc_copy
+            ldy         bk_bufi
+            rts
+@file:
+            ldy         bk_bufi
+            jsr         bk_seek
+            jsr         bk_addr
+            jsr         bk_rloop
+            jsr         bc_slot                             ; Kept in a slot, if there's a bank
+            bcs         @done
+            sty         bk_sloti
+            ldy         bk_bufi
+            jsr         bk_addr
+            ldy         bk_sloti
+            sec
+            jsr         bc_copy
+@done:
+            ldy         bk_bufi
+            rts
+
+; bk_left bytes from w written to the block file (where it is).  Keeps .X, .Y
+bk_wloop:
             phy
 @write:
             lda         w
@@ -315,19 +404,10 @@ bk_save:
             jsr         bk_past                             ; (Past what's written)
             bne         @write
             ply
-            lda         #0
-            sta         bk_upd,y
-@done:
             rts
 
-; Buffer .Y read from block u (the top: its block from here on), the rest past the file's end spaces.  Keeps .Y
-bk_read:
-            lda         dlo,x
-            sta         bk_nlo,y
-            lda         dhi,x
-            sta         bk_nhi,y
-            jsr         bk_seek
-            jsr         bk_addr
+; bk_left bytes read into w from the block file (where it is), past its end spaces.  Keeps .X, .Y
+bk_rloop:
             phy
 @read:
             lda         w
@@ -396,19 +476,25 @@ bk_past:
             ora         bk_left
             rts
 
-; The file open (blocks.fb, or open-blocks's: made if it isn't there), at buffer .Y's block (u * 1024), and
-; bk_left a block's size.  Keeps .Y
+; The file open, at buffer .Y's block, and bk_left a block's size (bk_seekto).  Keeps .Y
 bk_seek:
+            lda         bk_nlo,y
+            sta         tmp3
+            lda         bk_nhi,y
+            sta         tmp3 + 1
+; The file open (blocks.fb, or open-blocks's: made if it isn't there), at block tmp3 (u * 1024), and bk_left a
+; block's size.  Keeps .Y
+bk_seekto:
             jsr         bk_open
             stz         r0                                  ; (r0: (u & $3F) << 10; r1: u >> 6)
-            lda         bk_nlo,y
+            lda         tmp3
             and         #$3F
             asl
             asl
             sta         r0 + 1
-            lda         bk_nhi,y
+            lda         tmp3 + 1
             sta         r1 + 1
-            lda         bk_nlo,y
+            lda         tmp3
             phy
             ldy         #6
 :
@@ -494,8 +580,237 @@ bk_addr:
             sta         w + 1
             rts
 
+; ---- The banks behind the buffers: a slot a block, 8 a bank (slot s: bank bc_bank + s / 8, at $8000 + s % 8 * 1K)
+
+; Block tmp3's slot: C = 0, .Y it; or C = 1.  Keeps .X
+bc_find:
+            lda         bc_nbank                            ; (The banks' slots)
+            asl
+            asl
+            asl
+            tay
+@slot:
+            dey
+            cpy         #$FF
+            beq         @none
+            lda         bc_flag,y
+            beq         @slot
+            lda         bc_nlo,y
+            cmp         tmp3
+            bne         @slot
+            lda         bc_nhi,y
+            cmp         tmp3 + 1
+            bne         @slot
+            clc
+            rts
+@none:
+            sec
+            rts
+
+; A slot for block tmp3, which hasn't one: a free one; else a bank more (BANKS_ALLOC); else the next round (to the
+; file first, if it's changed).  OUT: C = 0, .Y it, its block tmp3; or C = 1: no bank to be had.  Keeps .X
+bc_slot:
+            lda         bc_none
+            bne         @none
+            lda         bc_nbank
+            asl
+            asl
+            asl
+            tay
+@free:
+            dey
+            cpy         #$FF
+            beq         @more
+            lda         bc_flag,y
+            bne         @free
+            bra         @take
+@more:
+            lda         bc_nbank
+            cmp         #BC_BANKS
+            bcs         @round
+            lda         #1                                  ; A bank more
+            stx         xsave
+            jsr         BANKS_ALLOC
+            ldx         xsave
+            bcs         @nobank
+            ldy         bc_nbank
+            sta         bc_bank,y
+            inc         bc_nbank
+            tya                                             ; (Its first slot)
+            asl
+            asl
+            asl
+            tay
+            bra         @take
+@nobank:
+            lda         bc_nbank                            ; (None at all: the file alone, from now on)
+            bne         @round
+            inc         bc_none
+@none:
+            sec
+            rts
+@round:
+            lda         bc_nbank                            ; The next round
+            asl
+            asl
+            asl
+            sta         cnt
+            ldy         bc_next
+            cpy         cnt
+            bcc         :+
+            ldy         #0
+:
+            tya
+            inc         a
+            sta         bc_next
+            jsr         bc_clean
+@take:
+            lda         tmp3
+            sta         bc_nlo,y
+            lda         tmp3 + 1
+            sta         bc_nhi,y
+            lda         #BC_HAS
+            sta         bc_flag,y
+            clc
+            rts
+
+; Slot .Y to the file if it's changed (written straight from its bank).  Keeps .X, .Y, w, tmp3
+bc_clean:
+            lda         bc_flag,y
+            bpl         @done
+            lda         w
+            pha
+            lda         w + 1
+            pha
+            lda         tmp3
+            pha
+            lda         tmp3 + 1
+            pha
+            lda         RAM_BANK
+            pha
+            lda         bc_nlo,y
+            sta         tmp3
+            lda         bc_nhi,y
+            sta         tmp3 + 1
+            jsr         bk_seekto
+            jsr         bc_map
+            lda         w2
+            sta         w
+            lda         w2 + 1
+            sta         w + 1
+            jsr         bk_wloop
+            lda         bc_flag,y
+            and         #$FF ^ BC_DIRTY
+            sta         bc_flag,y
+            pla
+            sta         RAM_BANK
+            pla
+            sta         tmp3 + 1
+            pla
+            sta         tmp3
+            pla
+            sta         w + 1
+            pla
+            sta         w
+@done:
+            rts
+
+; Slot .Y's bank selected ($00), w2 its 1K at the window.  Keeps .X, .Y
+bc_map:
+            tya
+            and         #7
+            asl
+            asl
+            ora         #>BANK_WINDOW
+            sta         w2 + 1
+            stz         w2
+            tya
+            lsr
+            lsr
+            lsr
+            phy
+            tay
+            lda         bc_bank,y
+            sta         RAM_BANK
+            ply
+            rts
+
+; Slot .Y's 1K and the buffer at w: C = 0 from the slot, C = 1 to it (its bank selected meanwhile, the one there
+; before put back).  Keeps .X, .Y, w
+bc_copy:
+            lda         #0
+            rol
+            sta         cnt                                 ; (1: to the slot)
+            lda         RAM_BANK
+            pha
+            jsr         bc_map
+            lda         w
+            sta         w3
+            lda         w + 1
+            sta         w3 + 1
+            phy
+            phx
+            ldx         #>BLK_SIZE
+            ldy         #0
+            lda         cnt
+            bne         @out
+@in:
+            lda         (w2),y
+            sta         (w3),y
+            iny
+            bne         @in
+            inc         w2 + 1
+            inc         w3 + 1
+            dex
+            bne         @in
+            bra         @done
+@out:
+            lda         (w3),y
+            sta         (w2),y
+            iny
+            bne         @out
+            inc         w2 + 1
+            inc         w3 + 1
+            dex
+            bne         @out
+@done:
+            plx
+            ply
+            pla
+            sta         RAM_BANK
+            rts
+
+; Every changed slot to the file (save-buffers', flush's, the program's end)
+bc_flush:
+            lda         bc_nbank
+            asl
+            asl
+            asl
+            tay
+@slot:
+            dey
+            cpy         #$FF
+            beq         @done
+            jsr         bc_clean
+            bra         @slot
+@done:
+            rts
+
+; The slots forgotten, the banks kept (another file's blocks from now on: open-blocks's)
+bc_forget:
+            ldy         #BC_SLOTS - 1
+            lda         #0
+:
+            sta         bc_flag,y
+            dey
+            bpl         :-
+            stz         bc_next
+            rts
+
+; ---- The core's calls
+
 ; src_addr = block src_blk's buffer (LOAD's, REFILL's next, a source nested in a block's ended: the core's, by
-; blk_vec), src_len its size.  Keeps .X
+; blk_vec's 0), src_len its size.  Keeps .X
 bk_src:
             dex
             lda         src_blk
@@ -515,13 +830,23 @@ bk_src:
             clc
             rts
 
-; lib_init: the block file not open yet, the buffers free; the core asks this library for a block source's buffer
+; The core's (blk_vec): .A 0, a block source's buffer (bk_src); 1, the program's end: the changed blocks written to
+; the file (save-buffers).  Keeps .X
+bk_vec:
+            cmp         #1
+            bne         bk_src
+            jsr         savebuffers
+            clc
+            rts
+
+; lib_init: the block file not open yet, the buffers free, no banks yet; the core asks this library for a block
+; source's buffer, and to write the changed blocks as the program ends
 lib_init:
             lda         #$FF
             sta         bk_fd
             stz         bk_name
-            lda         #<bk_src
+            lda         #<bk_vec
             sta         blk_vec
-            lda         #>bk_src
+            lda         #>bk_vec
             sta         blk_vec + 1
             rts
