@@ -1039,7 +1039,7 @@ Each phase ends with something that runs, a set of tests that pass in the emulat
 | 7.4 | **Data and IO**: strings, characters, atoms, hashes with tags and methods, streams over fds, `load`, `save` | M |
 | 7.5 | **The shell layer**: the line rule (lisp or rc), `run`, `sh`, `sh-out`, environment access, the profile | M |
 | 7.6 | **The library**: `globals.dl` ported to `globals.hl`; examples (`harn.hl` as a sample program) | S |
-| 7.7 | **hylang as the login shell**: `init` starts it on the console (rc stays the shell of scripts and `system()`) | S |
+| 7.7 | **hylang as the login shell**: `init` starts it on the console (rc stays the shell of scripts and `system()`).  (Decided otherwise, October 2026: HyForth is the login shell, the ROM's `/lib/shell` naming `forth -l`; hylang is one a card can name) | S |
 
 **Tests:** the conformance suite against the C# danlang; GC stress (long-running loops with allocation); the shell rule; Ctrl-C in a loop.
 

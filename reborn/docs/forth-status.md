@@ -97,7 +97,7 @@ of the Hydra it reaches), so that the two shells can do the same things.
 | `cd`, `bind`, `mount`, `unmount`, `newns` typed | To `rc -c` (which can't change hylang's directory or namespace) | Words of the shell, parsing rc's way | hylang's |
 | `&`, `$apid`, `$status` | `&` rc's: `$apid` and `$status` lost with it | Kept; `wait` | hylang's |
 | The prompt | `hylang> `; more lines: the brackets open, ` <` | A format (`%v%d> `, `%p`, `%t`, `%w`); while compiling, the second (rc's tab: `prompt2`) | hylang's isn't a format |
-| A login shell | Not said | `forth -l`: newns, `startup.fs`, `profile.fs` | hylang's (`/lib/shell` is ready for it) |
+| A login shell | Not said | `forth -l`: newns, `startup.fs`, `profile.fs`; the system's own since October 2026 (the ROM's `/lib/shell`) | hylang's (a card's `/lib/shell` can name it) |
 | Programs | `run`, `sh`, `sh-out` (the output, a string), `sh` with input, `spawn`, `wait`, `kill`, `pid` | `sh`, `run`, `sh-out`, `output-of`, `\|` and `piped` (a word's output a program's input), `spawn`, `&` typed, `wait`, `status` | Alike since 6.11 (`kill`, `pid`: the program, `sys-getpid`) |
 | Files | `ls`, `dir`, `stat`, `exists?`, `dir?`, `mkdir`, `cwd`, `copy-file`, `glob` | File Access; `open-dir`, `read-dir`, `close-dir`, `=mkdir`, `get-dir`, `set-dir` (6.12); the sys- words | Glob, `copy-file` (`cp`) |
 | The environment | `env`, `$name`, all of it, `setenv`, `unsetenv` | `getenv`, `setenv`, `unsetenv`; `$name` in the shell's words; `/env` read as a directory | Alike |

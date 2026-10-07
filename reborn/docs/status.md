@@ -621,9 +621,10 @@ branch of its own.
    I/O and the system library, and phase 8, the library (in hylang from a snapshot in the ROM), tuning (its
    budgets revised to what it reached) and `run.dl` whole: danlang parity.  Then the Hydra layers (the plan's
    phases 9 to 12): the Hydra's built-ins, every system call as a `sys-` function, the device libraries, and the
-   prompt (hylang as a shell over rc, a window's as `/lib/shell` names it), all done.  The system's shell stays
-   rc for now (the user's choice): the ROM's `/lib/shell` names none, and a card or the shared RAM disk can name
-   hylang (`/bin/hylang -l`) or HyForth.
+   prompt (hylang as a shell over rc, a window's as `/lib/shell` names it), all done.  The login shell is
+   HyForth's (the user's choice, October 2026: the plan's 7.7 named hylang): the ROM's `/lib/shell` names
+   `/bin/forth -l`, and a card or the shared RAM disk can name another (`/bin/rc -l`, `/bin/hylang -l`); rc
+   stays the shell of scripts and `system()`.
    The parity
    checkpoint (the plan's, after phase 5) is still the user's.
 2. On the board: the boot, POST, the tick, the console at 115200, and a real card read and written.

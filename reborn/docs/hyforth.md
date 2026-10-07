@@ -292,7 +292,9 @@ ROM disk's, or a card's or the RAM disk's in its place, through the `/lib` union
 what rc's profile does: the window at `/dev` (`$window`'s), its notes to forth's note group.
 
 **Which shell.**  init reads `/lib/shell` each time it starts window 0's shell or the windows' starter (wstart): its
-first line is the shell's program and arguments (`/bin/forth -l`); with none, `rc -l` as before.  wstart is given it
+first line is the shell's program and arguments (`/bin/forth -l`); with none, `rc -l` as before.  (Since October
+2026 the ROM disk has one, `/rom/lib/shell`, naming `/bin/forth -l`: HyForth is the login shell, the user's
+choice; a card's or the shared RAM disk's `/lib/shell` comes first in `/lib`'s union.)  wstart is given it
 as its arguments, and runs in init's namespace (not an empty one of its own now), so the program is found as init
 finds it; each window's shell still starts in an empty namespace of its own, which its profile builds.  Each shell's
 `/ram` is its own area, so a `/lib/shell` for every window is a card's (`/sd/0/lib/shell`) or the shared RAM disk's
