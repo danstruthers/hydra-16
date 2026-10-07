@@ -1,6 +1,6 @@
 ## **Hydra 16: Sound (the YM2151)**
 
-The plan for the Hydra's sound: a library for the YM2151, a song player, a test song that uses everything the chip can do, and importing music made for other machines.  Phases 1-4 are done; importing is planned.  How to use what exists is in [io.md](../programming/io.md#sound-devsnd), [HyForth](../using/hyforth.md#tasks-and-the-console) and [the C guide](../programming/c.md#sound-sndh).
+The plan for the Hydra's sound: a library for the YM2151, a song player, a test song that uses everything the chip can do, and importing music made for other machines.  Phases 1-4 are done; importing is planned.  How to use what exists is in [io.md](../../old/docs/programming/io.md#sound-devsnd), [HyForth](../../old/docs/using/hyforth.md#tasks-and-the-console) and [the C guide](../../old/docs/programming/c.md#sound-sndh).
 
 ### **The chip on the Hydra**
 
@@ -54,7 +54,7 @@ The design, as planned:
 ### **Phase 3: a test song that uses the whole chip** *(done)*
 
 **Built:**
-* **The score compiler**, `sim/tools/hysong.js` ([emulator.md](../tools/emulator.md#songs-the-score-compiler)): a score is instruments (the ROM's patches by number, or a voice's registers by name: `alg`, `fb`, and each operator's `mul`, `dt1`, `tl`, `ar` ...) and a line of MML for each channel (notes, rests, lengths, octaves, legato, slides, repeats, volume, speakers, detune, the LFO, noise, General MIDI drums, and raw register writes).  It works out the patches and volumes itself, so its ZSM is plain register writes; it can write a VGM for listening, and the ROM's source.
+* **The score compiler**, `sim/tools/hysong.js` ([emulator.md](../../old/docs/tools/emulator.md#songs-the-score-compiler)): a score is instruments (the ROM's patches by number, or a voice's registers by name: `alg`, `fb`, and each operator's `mul`, `dt1`, `tl`, `ar` ...) and a line of MML for each channel (notes, rests, lengths, octaves, legato, slides, repeats, volume, speakers, detune, the LFO, noise, General MIDI drums, and raw register writes).  It works out the patches and volumes itself, so its ZSM is plain register writes; it can write a VGM for listening, and the ROM's source.
 * **The test song**, `os_rom/songs/test.mml`: 31 bars (66 s) in A minor, 852 notes on all 8 channels, 14 KB.  The build compiles it to `songs/test.zsm`, a file on the ROM disk (`/rom/songs/test.zsm`), and `sndtest` (`SND_CTL_TEST`) plays it: the song player (page C) opens it as any song file, in its own task (`ZSM_PLAY_TEST`).  (It was in paged ROM bank 2, read by a mode of the player's own, until the ROM disk.)  In the emulator all 852 notes play, 1.3 ms from the song's time on average.
 * **The old riff** (the first `sndtest`, `snd_test.s`) is `programs/songs/scom.mml` (`scom.zsm`: on a card, it runs as the command `scom`), a demo of the score language; its ROM code is gone (page B has about 1,200 bytes free).
 

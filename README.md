@@ -1,44 +1,43 @@
 ## **Hydra 16**
 
-A multitasking 65C02 computer and its operating system.
+A multitasking 65C02 computer and its operating system, HydraOS.
 
-The Hydra-16's hardware gives each of 16 tasks its own 32K of RAM, zero page and stack included, with its own RAM and ROM bank selections, so a task switch is one register write.  On top of that runs a small OS:
-* **Scheduling and interrupts:** a preemptive scheduler, and IRQ handlers that run in their driver's own task.
-* **Memory:** a memory manager per task, plus shared memory between tasks.
-* **IO, Plan 9 style:** devices are file servers; each task has fds, a namespace and pipes.
-* **The shell:** HyForth, with `|` pipelines.
+The Hydra-16's hardware gives each of 16 tasks its own 32K of RAM, zero page and stack included, with its own RAM and ROM bank selections, so a task switch is one register write.  HydraOS runs on it, Plan 9's way:
+* **One kernel** in the BIOS ROM: a preemptive scheduler, one interrupt path, notes, memory and banks, and a jump table made from a specification.  Everything else is a module of the paged ROM, run in place in a task of its own.
+* **Everything a file:** devices are file servers (the console's windows, the disks and HydraFS, sound, GPIO and I2C, the clock, the Vera X, and `/pc`, a folder on the PC over the serial line), and each task has a namespace of its own, built by binds and mounts.
+* **Shells and languages:** rc, Plan 9's shell, and the core tools; HyForth (Forth 2012), the login shell; hylang (danlang, a lisp); BASIC (Microsoft's); SDKs for C (cc65) and assembly, and `as`, an assembler on the Hydra itself.
+* **Tools:** a screen editor (`edit`), a debugger (`db`), a song player that plays ZSM songs and compiles scores as it plays.
 
 The code is built with **cc65** (https://cc65.github.io/), and the board is designed in **KiCad 9** (https://www.kicad.org).
 
 ### **Quick start**
 
 ```
-node build.js test                 build everything (needs Node.js and cc65) and run the regression tests
-node sim/hydrasim.js -i            use the Hydra in your terminal, in the emulator (Ctrl-A x quits)
+cd reborn
+node build.js                      build HydraOS (needs Node.js and cc65): bin/bios.bin, bin/prom0.bin ...
+node sim/run.js -i                 use the Hydra in your terminal, in the emulator (Ctrl-A x quits)
+node sim/test.js                   the regression tests
 ```
+
+The ROM images are in Git (`reborn/bin/`) and on each GitHub release, so the chips can be programmed without a toolchain.
 
 ### **Documentation**
 
-All documentation is in **[docs/](docs/README.md)**.  **[The Hydra-16 in one place](docs/hydra-16.md)** covers every part, hardware and software, with links to the rest; it's also one PDF, **[docs/hydra-16.pdf](docs/hydra-16.pdf)**, with every document in it.
-
 | | |
 | :-- | :-- |
-| [The Hydra-16 in one place](docs/hydra-16.md) | The master document: every part of the system, with links into the others |
-| [First steps](docs/tutorial.md) | A tutorial: the Hydra in the emulator, HyForth, files, a program in C and in assembly |
-| [Getting started](docs/getting-started.md) | Building, programming the chips, the serial terminal, first boot, the emulator |
-| [HyForth](docs/using/hyforth.md), [WOZMON](docs/using/wozmon.md) | Using the system |
-| [Programmer's Guide](docs/programming/README.md) | ROM layout and API, tasks, interrupts, memory, IO, writing drivers |
+| [HydraOS](reborn/README.md) | Building, running and testing it, and its tree |
+| [The first hour](reborn/docs/tutorial.md) | A tutorial: switching it on, the shell, files, windows, the languages, sound, a program of your own |
+| [The guides](reborn/docs/using/README.md) | rc, the tools, HyForth, hylang, BASIC |
+| [The programmer's guide](reborn/docs/programming/README.md) | Calls, memory, tasks and notes, files and namespaces, servers and drivers, modules, video |
+| [Status](reborn/docs/status.md) | Where it stands, what was measured, what's next |
 | [Hardware Reference](docs/hardware.md) | The board in detail |
-| [Emulator and tools](docs/tools/emulator.md) | `hydrasim.js`, the regression tests, the HydraFS card tool |
-| [Plans](docs/README.md#plans-and-design-notes) | Design notes and what's next |
+| [The plan and the design notes](docs/README.md) | How HydraOS was designed, and the plans |
 
 ### **Repository**
 
 | Folder | What |
 | :----- | :--- |
-| `os_rom/` | The OS ROM: sources, built images (`bin/`) |
-| `programs/` | Programs for the Hydra: the C library and samples (`programs/c/`), assembly (`programs/asm/`) |
-| `build.js` | The build, on any OS: `node build.js`, `node build.js test` |
-| `sim/` | Emulator, regression tests, tools |
+| `reborn/` | HydraOS: the kernel, the modules, the SDKs, the ROM disk, the emulator, the tests and the documents |
 | `board/` | KiCad schematics and PCBs: main board, memory daughter card, bus breakout card |
-| `docs/` | Documentation |
+| `docs/` | The hardware reference, the plan HydraOS was built to, and the design notes |
+| `old/` | The old system (the 1.8C line: `os_rom/`, its programs, emulator, build and documents), frozen at HydraOS 1.0; `node old/build.js test` still builds and tests it |

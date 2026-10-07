@@ -1,6 +1,6 @@
 # Using the Hydra-16
 
-The guides for using the rebuilt system (`reborn/`).  The first hour is [the tutorial](../tutorial.md); after it:
+The guides for using HydraOS (`reborn/`), the Hydra-16's operating system.  The first hour is [the tutorial](../tutorial.md); after it:
 
 | Guide | What it covers |
 | :---- | :------------- |
@@ -9,6 +9,7 @@ The guides for using the rebuilt system (`reborn/`).  The first hour is [the tut
 | [The tools](tools.md) | Every program in `/bin`: files, text, tasks, disks, and the rest |
 | [HyForth](hyforth.md) | The Forth, and the login shell: its words, libraries, the shell rule, files, devices, sound |
 | [hylang](hylang.md) | The lisp (danlang on the Hydra): its REPL and scripts, the system library, the Hydra's built-ins, devices |
+| [BASIC](basic.md) | Microsoft's BASIC (EhyBASIC): programs and scripts, files, sound and `PLAY`, `SYS` and the system's calls, memory, the shell |
 
 For writing programs: [../programming/README.md](../programming/README.md), the programmer's guide, and the SDKs'
 own guides, [../../sdk/asm/README.md](../../sdk/asm/README.md) (assembly) and [../../sdk/c/README.md](../../sdk/c/README.md)

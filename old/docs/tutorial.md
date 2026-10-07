@@ -156,7 +156,7 @@ stack, and its own fds, so a crash in it doesn't take the shell down (Ctrl-C end
 
 ### **7. An LED and a button**
 
-The VIA's port A comes out on header J27 ([hardware](hardware.md#via-65c22-u2-port-0-irq-line-0)): pins PA0-PA7 and
+The VIA's port A comes out on header J27 ([hardware](../../docs/hardware.md#via-65c22-u2-port-0-irq-line-0)): pins PA0-PA7 and
 CA1, with +5 V and ground.  `/dev/gpio` makes each pin a file ([io.md](programming/io.md#gpio-devgpio)).
 
 * **An LED:** an LED and a 330 Ω resistor in series, from PA2 (J27 pin 5) to ground (pin 1), the LED's short leg to
@@ -178,4 +178,4 @@ CA1, with +5 V and ground.  `/dev/gpio` makes each pin a file ([io.md](programmi
 * **Build the ROM itself:** `node build.js test` builds everything and runs the regression tests
   ([getting started](getting-started.md)); [the emulator](tools/emulator.md) has a debugger's tools (`--trace`,
   `--watch`, `--pc`, `--profile`).
-* **The board:** the [hardware reference](hardware.md); what's planned: [plans/NEXT_STEPS.md](plans/NEXT_STEPS.md).
+* **The board:** the [hardware reference](../../docs/hardware.md); what's planned: [plans/NEXT_STEPS.md](../../docs/plans/NEXT_STEPS.md).

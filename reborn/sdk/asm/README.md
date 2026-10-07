@@ -86,8 +86,8 @@ Copy it to a card, or to the RAM disk, and type its path (`/sd/0/hello`), or its
 (`$path` is `(. /bin)`; a card's `/bin` is part of `/bin`).  In the emulator, from `reborn/`:
 
 ```
-node ../sim/tools/hydrafs.js mkfs card.img 8 MINE           # an empty card image, 8 MB
-node ../sim/tools/hydrafs.js put card.img path/to/hello/hello.hyx hello
+node sim/tools/hydrafs.js mkfs card.img 8 MINE           # an empty card image, 8 MB
+node sim/tools/hydrafs.js put card.img path/to/hello/hello.hyx hello
 node sim/run.js -i --sd card.img                            # then, at the % prompt: /sd/0/hello
 ```
 

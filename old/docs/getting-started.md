@@ -70,7 +70,7 @@ GitHub runs `node build.js test` on every push (`.github/workflows/build.yml`).
   * send CR for Enter;
   * send either BS or DEL for Backspace (both work).
 
-See the [Hardware Reference](hardware.md#acia-65c51-u3-port-1-irq-line-1) for the pinout.
+See the [Hardware Reference](../../docs/hardware.md#acia-65c51-u3-port-1-irq-line-1) for the pinout.
 
 **The PC tool** is a terminal that also serves a folder on the PC to the Hydra, at `/pc`: programs built on the PC run at once, with no card to carry across.  Once, in `sim/`: `npm install` (the `serialport` package); then `node sim/tools/hydrapc.js COM3 C:\hydra` (`--list` shows the ports; Ctrl-A x quits).  See [the PC tool](tools/emulator.md#the-pc-tool-pc) and [/pc](programming/io.md#a-folder-on-the-pc-pc).
 
@@ -139,6 +139,6 @@ This builds, then boots the new images in the emulator for each regression test 
 | :- | :--- |
 | Use the system | [HyForth](using/hyforth.md), [WOZMON](using/wozmon.md) |
 | Program it | [Programmer's Guide](programming/README.md) |
-| Understand or change the board | [Hardware Reference](hardware.md) |
+| Understand or change the board | [Hardware Reference](../../docs/hardware.md) |
 | Debug with the emulator, write tests | [Emulator and tools](tools/emulator.md) |
-| See what's planned | [Plans](plans/) |
+| See what's planned | [Plans](../../docs/plans/) |

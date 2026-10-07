@@ -2,7 +2,7 @@
 
 A plan for making HyForth a usable shell on HydraFS cards: the cards found and a volume selected at boot, a boot script, a current volume and directory shown in the prompt, the commands to move around and handle files, and running programs: HyForth scripts (`.hys`) and Hydra executables (`.hyx`).  The decisions are at the end.
 
-**Status: done** (build steps 1-6 below).  How to use it is in [hyforth.md](../using/hyforth.md#the-shell-directories-files-and-programs), and writing programs in [programs.md](../programming/programs.md).  Where it differs from this plan:
+**Status: done** (build steps 1-6 below).  How to use it is in [hyforth.md](../../old/docs/using/hyforth.md#the-shell-directories-files-and-programs), and writing programs in [programs.md](../../old/docs/programming/programs.md).  Where it differs from this plan:
 * `vol n` and `ls -l` weren't made: `cd /sd/n` goes to card n, and `ls` shows names and sizes.
 * `run` tells an executable from a script by its `HYX1` header, not its name.
 * The shell waits for a program by making itself the program's parent and pausing (as `TASK_START` does), rather than polling.  The program gets the console only if the shell has it.
