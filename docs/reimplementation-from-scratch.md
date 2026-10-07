@@ -1132,13 +1132,13 @@ Phases 6, 7 and 8 depend only on phase 5 and can go in any order or in parallel;
 | Programs built for today's ABI stop working | They're rebuilt with the new SDKs (all are in the repository); the change is announced with the parity release |
 
 **Open questions** for the user:
-1. **The new system's name**, and whether it lives in this repository (a new folder) or a new one.
-2. **Device letters** (§14): the ones proposed follow Plan 9 where there's an equivalent; confirm or change.
-3. **hylang**: the file extension (`.hl`?), the rule for telling lisp lines from rc lines (§17.4), and whether `$` becomes environment access inside hylang.
+1. **The new system's name**, and whether it lives in this repository (a new folder) or a new one.  (Decided, October 2026: `reborn`, in `reborn/` of this repository, until the parity release; the name's for then.)
+2. **Device letters** (§14): the ones proposed follow Plan 9 where there's an equivalent; confirm or change.  (Decided, October 2026: as built, confirmed: `#/ #c #n #t #m #p #| #e #g #i #a #d #S #f #P #s #r`, and `#v`, `#k` to come.)
+3. **hylang**: the file extension (`.hl`?), the rule for telling lisp lines from rc lines (§17.4), and whether `$` becomes environment access inside hylang.  (Settled as built: `.hl`; a line that starts with `(`, `{`, `[` or a character right against `(` or `{` is hylang's, any other rc's; `$name` is an environment variable.)
 4. **danlang's license**: it's GPLv3 (Daniel and Simon Struthers).  hylang in the ROM makes the ROM image a combined work; choose a license for the Hydra's software as a whole, or relicense hylang.  (Decided: the user took danlang's GPLv3 license off, and hylang is in the system's ROM.)
-5. **Each shell's `/ram` permission check**: keep it (generalised in srvlib) or drop it as unnecessary on a single-user machine.
-6. **Binaries in Git**: move the ROM images to release artefacts, or keep committing them for people without a toolchain.
-7. **Which tools in C and which in assembly** (§15.3), once the C target's code size is measured in phase 4.
+5. **Each shell's `/ram` permission check**: keep it (generalised in srvlib) or drop it as unnecessary on a single-user machine.  (Decided, October 2026: dropped; each shell's namespace keeps the areas apart.)
+6. **Binaries in Git**: move the ROM images to release artefacts, or keep committing them for people without a toolchain.  (Decided, October 2026: commit `reborn/bin`'s images at the parity release, for people without a toolchain.)
+7. **Which tools in C and which in assembly** (§15.3), once the C target's code size is measured in phase 4.  (Settled as built: the tools in assembly, on toollib; `grep` and `sort` in C.)
 
 ---
 
@@ -1160,7 +1160,7 @@ A sketch of the calls; the specification file is the final word.  Each group has
 | **Servers and drivers** (`$F9B0`, 32) | `SRV_REGISTER`, `IRQ_OWN`, `IRQ_RELEASE`, `CLIENT_READ`, `CLIENT_WRITE`, `CLIENT_INFO`, `WAIT_ADD`, `WAKE_ALL`, `ROMREAD` |
 | Spare | `$FA10` up to the end of the table's space |
 
-The bases above are illustrative: the generator assigns them, and the specification fixes them once published.
+The bases above are illustrative: the generator assigns them, and the specification fixes them once published.  (As built, after the review of October 2026: the calls above are in `spec/api.def` but these: `NOTED` (a handler's C says what it would), `CLOCK_TEXT` (`/dev/time` is the time as text), and `CLIENT_INFO`, `WAIT_ADD` and `WAKE_ALL` (a server's event count and `WAKE`); `CLOCK` is `TIME`.  `XCALL` takes its routine's bank in `r14`, not `.A`, so `.A` passes through.  And more came as they were needed: the environments' calls, `TASKINFO`, `TASKREAD`, `TASKMEM`, `TASKSTOP`, `KMESG`, `NSINFO`, `SEGINFO`, `BANKS_ALLOC_IN`, `SEG_CREATE_IN`, `REBOOT`, the server calls' `SRV_TAKE` and `SRV_REPLY`.)
 
 ### **Appendix B: The request block**
 
