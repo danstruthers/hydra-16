@@ -169,8 +169,8 @@ takes.  Each prints a line a benchmark, `bench LANGUAGE NAME RESULT TICKS REPS` 
 both in the emulator and prints them by kind (calls, loops, arithmetic, bytes, lists, text), with each kind's
 geometric mean: `--quick` (the small sizes), `--only` and `--kind` (some of them), `--hylang-reps` and
 `--forth-reps` (1 and 5), `--together`, `--vs TREE` (another tree's build beside this one's, the same benchmarks
-on its disk: another branch's worktree), `--json FILE`.  Each of hylang's runs in a hylang of its own, as the
-functions of all of them don't fit the machine's arena (below); `--together` runs them in one.  The `bench` test
+on its disk: another branch's worktree), `--json FILE`.  Each of hylang's runs in a hylang of its own;
+`--together` runs them in one.  The `bench` test
 runs both at the quick sizes and checks each result is the same.
 
 In October 2026 (`reborn-hynat`, the native code), at 3.58 MHz, one run of each, beside the bytecode machine's
@@ -208,11 +208,12 @@ is a built-in's call, some 2,000 cycles, where HyForth's `AND` and `C@` take a f
 (`while`, `dotimes`, `nested`: 7 to 16 times), `collatz`, `hash` and `chars` are dominated by them and gain
 little from native code (1.1 to 1.6 times the bytecode's speed, where calls, recursion and bytes gain 1.8 to 3.5).
 
-The arena: native code is some four times the bytecode's size, and the machine's arena (four banks, 32K) holds the
-code of 40 or 50 functions; past that a function isn't compiled, and the evaluator runs it.  All twenty in one hylang
-(`--together`) fill it by `sort`'s, and from there each is 3 to 5 times the bytecode's time (the bytecode machine's
-code fits): 110,185 ms in all against the bytecode's 51,580.  The arena is emptied only as a line at the prompt
-begins, or a script starts, so a long program keeps what it compiled first.
+The arena: the native code of all twenty benchmarks' 41 functions is 37,245 bytes (their bytecode 3,698): `RET` in
+ROM and stubs of 5 bytes (not 93 and 11) made it a third smaller, and a code's place even let the arena have eight
+banks (64K, not four), so all of them fit in one hylang: `--together` 34,590 ms, as each in its own (33,945), where
+with four banks the arena filled by `sort`'s and the rest were evaluated (110,185 ms).  A script that fills it
+gets it emptied between its items: with an arena of one bank, a script of all twenty's files took 62 million
+cycles, against 58 with eight banks and 204 when it stayed full.
 
 ## The design
 
@@ -260,10 +261,10 @@ The plan has it whole; in short:
   item at a time, the reader's text refilled from it, and seeks it back if a nested `load` used the text
   meanwhile.
 * **The bytecode machine** (`vm.inc`, in the seventh bank; its compiler in the sixth): a function `fun` defines is
-  compiled as it's defined,
-  any other at its second call, to the code of a small machine whose value register is `ex`; the code is in an
-  arena of RAM banks of its own (four at most, 32K), never moved, and the function's word 4 is its place (word 5
-  counts its calls till then).  A frame is the function's word and its arguments, where the caller pushed them on
+  compiled as it's defined, any other at its second call, to the code of a small machine whose value register is
+  `ex`; the code is in an arena of RAM banks of its own (eight at most, 64K), never moved, and the function's word 4
+  is its place (word 5 counts its calls till then; `fun` counts one, so a function it couldn't compile, the arena
+  full, is compiled at its next call).  A frame is the function's word and its arguments, where the caller pushed them on
   the evaluation stack, then a record of two words (its return and its scope), so a call makes nothing on the heap
   and an argument is a word at a fixed place; a call in tail position (`TCALL`) reuses its caller's frame.
   Constants, arguments, globals, `if`, `do`, `and`, `or` and `while` are compiled in place, and `set` (`=(...)`),
@@ -295,16 +296,17 @@ The plan has it whole; in short:
   a name's built-in value (a special form, an operator) only while no frame has bound the name, and marks it
   (`SF_INLINED`); bound in a frame then, or bound again globally, every function's code is dropped and compiled again
   as it's next called.  Ctrl-C and notes are taken at each call, as the evaluator takes them.  The arena full,
-  nothing is compiled till the evaluator's next start (a line at the prompt), which empties it.
+  nothing is compiled till the evaluator's next start (a line at the prompt) or a script's next item (`load`'s,
+  when nothing is under the `load`, so no frame of the machine's is left), which empties it.
 * **Native code** (`vmx.inc`, in the eighth bank): the machine's code is the 65C02's own.  The compiler writes a
   function's bytecode in a scratch bank of its own (`vm_sb`, 4K at most: a bigger function is evaluated), and
   `vm_xlate` makes it native code in the arena, in two passes (each op's place, in a map bank, `vm_mb`; then the
-  code).  An op is a stub (it points `vm_ip` at its data, the op as it was, and jumps to its code in the
-  machine, whose next op is `jmp (vm_ip)`), or in line: its own code from a template (`vmxt.inc`, made by
+  code).  An op is a stub (`jsr vm_sj` and its code's word in the machine: `vm_sj` points `vm_ip` at the data
+  after them, the op as it was, and jumps to the code, whose next op is `jmp (vm_ip)`), or in line: its own code from a template (`vmxt.inc`, made by
   `tools/hyvmxt.js`), its operands patched in, with its stub after it as its slow way (not fixnums, a scope
   made, a cache missed, Ctrl-C).  In line: constants, arguments and locals, pushes, jumps, the fused ops, the
   quick ops of two values, blocks' and loops' ops, `SHEAD` and `CALL` while their caches hold, `CSELF`, `TSELF`,
-  `RET` to a caller in the same bank, and `HEAD` of one argument (a buffer, or a function partially applied,
+  `JE`, and `HEAD` of one argument (a buffer, or a function partially applied,
   pushed), and `BCALL` of `*` of two (fixnums whose product is one: `vm_bmul`, by quarter squares).  A tail call
   of the function by its own name whose arguments call nothing has its `SHEAD` flagged by the compiler (m's bit
   7, `vc_shflag`): its head isn't pushed while its cache (this frame's function alone) holds, and `TSELF` takes
@@ -317,7 +319,10 @@ The plan has it whole; in short:
   call's h and r (`vm_s`, `vm_rb`, `vm_mat`), so `RET` in line only finds the caller's code, drops the frame and
   looks for an error (the caller's r, the byte before the pad, says if it's returned too: `vm_reterr`).  The pad
   gives the frame the machine found already, if it did, so the machine's `RET` and the evaluator's resume
-  (`HEAD`'s and `SHEAD`'s t are the pad, `VXK_Q`) go through it as well.  The places in the data that are code
+  (`HEAD`'s and `SHEAD`'s t are the pad, `VXK_Q`) go through it as well.  `RET` is `jmp vm_nret`, the machine's
+  code for it in ROM (a function has two or three).  A code's place is even (a `NOP` before a stub puts a pad or a
+  record's scope word there), so its fixnum is its bank's index (3 bits) and its address's bits 12-1, and the
+  arena has eight banks.  The places in the data that are code
   (jumps' targets, blocks' parents and table, a function's start, calls' returns) are the native code's, so
   every op's code in the machine runs as it did.  Native code runs in the RAM window ($8000-$9FFF) a heap cell is read through, so whatever reads
   one is the machine's, in ROM, and sets the code's bank again before going on.

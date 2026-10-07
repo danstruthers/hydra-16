@@ -6,8 +6,7 @@
 ; the language's own way: a tail call, while, dotimes or each in hylang, DO LOOP or BEGIN WHILE REPEAT in HyForth;
 ; lists, map, filter and foldl in hylang where HyForth loops over an array and EXECUTEs a word.  Every value stays
 ; under 16,384, so hylang's integers are its fixnums and HyForth's cells don't overflow.  sim/bench.js runs both and
-; compares them, each of hylang's in a hylang of its own: the functions of all of them, compiled as they're defined,
-; fill the machine's room for code, and those past it are evaluated.
+; compares them, each of hylang's in a hylang of its own (or all in one: --together).
 
 (def {bench.reps} (if (> (len args) 1) (val (snd args)) 1))
 (def {bench.quick} (if (> (len args) 2) (== (thd args) "q") NIL))

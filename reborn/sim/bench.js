@@ -6,9 +6,8 @@
 //   bench LANGUAGE NAME RESULT TICKS REPS
 // (the ticks the reps took, 200 a second, as the machine counts them); this prints a table of the results (which
 // must be the same in both), the time of one run of each, and hylang's against HyForth's, with each kind's geometric
-// mean and all of them's.  Each of hylang's benchmarks runs in a hylang of its own, its functions alone in the
-// machine's room for code (as they're compiled as they're defined, a run of all of them fills it, and the functions
-// past it are evaluated: --together shows that).
+// mean and all of them's.  Each of hylang's benchmarks runs in a hylang of its own (--together: all in one, where
+// the functions of all of them share the machine's room for code).
 //
 // Usage: node sim/bench.js [--quick] [--only NAME,...] [--kind KIND,...] [--hylang-reps N] [--forth-reps N]
 //                          [--together] [--vs TREE] [--json FILE] [-v]

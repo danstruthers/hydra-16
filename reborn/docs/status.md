@@ -680,6 +680,17 @@ code 1.6 times the bytecode's speed.  What they found: the bits' and the charact
 2,000 cycles a call: the loops that use them are 7 to 16 times HyForth's), and the arena holds the native code of
 40 or 50 functions, past which a function is evaluated (all twenty in one hylang: 0.8 times the bytecode's speed).
 
+**The arena's room.**  The native code was some ten times the bytecode's size: `RET` a template of 93 bytes (a
+function has two or three), and a stub 11.  `RET` is `jmp vm_nret` now, the machine's code in ROM, and a stub
+`jsr vm_sj` and its code's word (5 bytes): a third less.  A code's place is even (a `NOP` before a stub, when it
+wants one), so its fixnum has room for a bank's index of 3 bits, and the arena has eight banks (64K).  All twenty
+benchmarks fit in one hylang: `--together` 34,590 ms, against 110,185 when the arena filled by `sort`'s.  A
+script's items: the arena full and nothing under the script's `load` (no frame of the machine's), it's emptied
+before the next item, as a line at the prompt does; and `fun` counts its function's first call, so one it couldn't
+compile is compiled at its next call.  With an arena of one bank, a script of all twenty's files took 62 million
+cycles (58 with eight banks), against 204 when it stayed full.  On the way, a bug of the new layout's: a stub's
+data address past a filler lost a carry where it crossed a page (an edge case's `Too deep`).
+
 | Step | | Notes |
 |---|---|---|
 | 7.0 The language's specification | Draft (three decisions are the user's) | `docs/hylang.md`: hylang 1 is danlang (`C:\source\danlang`, its `master`), readied for the port in C# first (lexical scope, tail calls, fexprs, `try`, loops, the missing basics, its number bugs fixed, and a system library a PC has too: files, programs and the shell, the environment, the clock, bits and bytes, the system's errors as codes), with its regression suite (965 checks) run unchanged on both; where the two may differ (8-bit strings, the call depth, `/lib/hylang`, Ctrl-C an error); and what makes it the Hydra's, in four layers: the system library, the Hydra's built-ins (notes, namespaces, tasks, memory and banks, keys), device libraries in hylang over the devices' files (console, GPIO, I2C, SPI, sound, disks, `/proc`, the clock's chip, `/pc`), and a `sys-` function for every call.  To decide: the extension (`.hl`), `$`, danlang's license in the ROM |

@@ -4,11 +4,13 @@
 ; they're pushed, in the evaluation stack, not bound in a scope on the heap.  The evaluator's own way is the rest:
 ; what the compiler doesn't do (most special forms, an fexpr's call) is handed to it, and it calls the functions
 ; that aren't compiled; a value comes back through a K_VM frame.
-;   A function's code is in the arena, RAM banks of its own (up to four), never moved; its place is the function's
-; word 4 (a fixnum: the bank's index, bits 14-13, and the address in the window, bits 12-0), till something the
-; code counts on changes (a built-in's name bound again: vm_rebind), when every function's is dropped (vm_flush)
-; and each is compiled again at its next call.  A full arena compiles nothing more till the evaluator's next start
-; (ev_run: vm_reset).  Its word 5 counts its calls till it's compiled; FN_NOVM (word 3) says it can't be.
+;   A function's code is in the arena, RAM banks of its own (up to eight), never moved; its place is the function's
+; word 4 (a fixnum: the bank's index, bits 15-13, and the address in the window, bits 12-1: a code's place is even),
+; till something the code counts on changes (a built-in's name bound again: vm_rebind), when every function's is
+; dropped (vm_flush) and each is compiled again at its next call.  A full arena compiles nothing more till the
+; evaluator's next start (ev_run: vm_reset), or a script's next item (k_load's, nothing under its load).  Its word 5
+; counts its calls till it's compiled (fun's counts one: compiled at its next if not now); FN_NOVM (word 3) says it
+; can't be.
 ;   The machine: ex its value register (an accumulator), vm_ip its next op, vm_s its frame: the function's word,
 ; its arguments (as many as its formals, 15 at most), then its record (vm_rb from vm_s): the return (a fixnum, its
 ; caller's code past the call; NIL: the evaluator's, which called it) and its scope (NIL till one's made: vm_scope),
@@ -142,7 +144,7 @@ vm_m:       .res        1                                   ; (A call's argument
 vm_l:       .res        1
 vm_k:       .res        1
 vm_tl:      .res        1
-ar_bank:    .res        4                                   ; The arena's banks (taken as they're wanted) ...
+ar_bank:    .res        8                                   ; The arena's banks (taken as they're wanted) ...
 ar_n:       .res        1                                   ;   how many ...
 ar_cur:     .res        1                                   ;   the one being filled ...
 ar_top:     .res        2                                   ;   its next byte ...
@@ -165,6 +167,7 @@ vm_r:       .res        2                                   ; A call's return (i
 vm_ccf:     .res        1                                   ; ($80: CALL's cache filled as its function's code is run ...
 vm_cb:      .res        1                                   ;   from its code's bank)
 vm_qs:      .res        1                                   ; (A fused op's quick op)
+vm_sjv:     .res        2                                   ; (vm_sj's: a stub's op's code)
 vm_wop:     .res        1                                   ; (A walk's: its W_ ...
 vm_wf:      .res        2                                   ;   its function, its items, its value so far, an item)
 vm_wl:      .res        2
@@ -429,21 +432,17 @@ vm_flush:
             jsr         vm_page
 .endmacro
 
-; IN: .A, .X = a code's place (a fixnum: vm_encode's).  vm_ip, vm_bank, vm_idx = it
+; IN: .A, .X = a code's place (a fixnum: vm_encode's: its index in the arena times 32, the bits 12-1 of its
+; address, which is even, and bit 0 set).  vm_ip, vm_bank, vm_idx = it
 vm_decode:
-            sta         vm_t
-            txa
-            lsr
-            tax                                             ; (Its index, times 32, and the address's bits 12-8)
-            lda         vm_t
-            ror
+            and         #$FE
             sta         vm_ip
             txa
             and         #$1F
             ora         #$80
             sta         vm_ip + 1
             txa
-            and         #$60
+            and         #$E0
             cmp         vm_idx                              ; (Its bank: the same, as a rule)
             bne         vm_newidx
             rts
@@ -461,15 +460,13 @@ vm_newidx:
             sta         vm_bank
             rts
 
-; IN: .A, .X = an address in the window, in the arena's bank vm_idx.  OUT: .A, .X = its place (a fixnum)
+; IN: .A, .X = an even address in the window, in the arena's bank vm_idx.  OUT: .A, .X = its place (a fixnum)
 vm_encode:
-            asl
             ora         #1
             pha
             txa
             and         #$1F
             ora         vm_idx
-            rol
             tax
             pla
             rts
@@ -632,7 +629,7 @@ WF_RB           = 14            ; Its frame's vm_rb (bit 0 set: a fixnum's), vm_
 WF_FC           = 16            ; The function's code's place, as it's known (0: not yet; 1: none, vm_call's way)
 WF_S            = 18            ; Its frame's vm_s: bytes under the walk's (bit 0 set), as a spill moves both
 WF_SIZE         = 20
-VM_WRET         = 5             ; The arena's trampoline's place (vmx.inc's: at its first bank's start, after h 0
+VM_WRET         = 3             ; The arena's trampoline's place (vmx.inc's: at its first bank's start, after h 0
                                 ;   and r 2, jmp vm_wret), each call's return
 
 ; BCALL of a walk (.X its built-in, vm_m its arguments on top, vm_ip past it): its frame made of them (a list that
@@ -1389,6 +1386,79 @@ vm_tsh:
             sta         vm_shf
             rts
 
+; A native op's stub (vmx.inc's: jsr vm_sj, then the word of the op's code in the machine, then the op's data, the op
+; as it was): vm_ip its data, its code run.  (The op's slow way: a template's, or the op's alone)
+vm_sj:
+            pla
+            sta         vm_ip
+            pla
+            sta         vm_ip + 1
+            ldy         #1
+            lda         (vm_ip),y
+            sta         vm_sjv
+            iny
+            lda         (vm_ip),y
+            sta         vm_sjv + 1
+            lda         vm_ip
+            clc
+            adc         #3
+            sta         vm_ip
+            bcc         :+
+            inc         vm_ip + 1
+:
+            jmp         (vm_sjv)
+
+; RET in native code (its op: jmp vm_nret): to its caller's code (in another bank of the arena, vm_retx's; the
+; evaluator's call, NIL: the machine's RET), the frame dropped: its return pad (past the call's data) finds the
+; caller's frame again; an error, vm_reterr's (returned by the caller too if its call's r says)
+vm_nret:
+            ldy         vm_rb
+            lda         (vm_s),y
+            bne         :+
+            jmp         op_ret
+:
+            and         #$FE
+            sta         vm_ip
+            iny
+            lda         (vm_s),y
+            tax
+            and         #$1F
+            ora         #$80
+            sta         vm_ip + 1
+            txa
+            and         #$E0
+            cmp         vm_idx
+            beq         :+
+            jmp         vm_retx
+:
+            lda         depth
+            bne         :+
+            dec         depth + 1
+:
+            dec         depth
+            lda         vm_s
+            sta         sp
+            ldx         vm_s + 1
+            stx         sp + 1
+            cpx         stk_basep
+            bne         :+
+            lda         spilled
+            beq         :+
+            jsr         unspill
+:
+            lda         ex
+            lsr
+            bcs         @go
+            ldx         ex + 1
+            cpx         #IMM_PAGES
+            bcc         @go
+            lda         pk,x
+            cmp         #PK_ERROR
+            bne         @go
+            jmp         vm_reterr
+@go:
+            jmp         (vm_ip)
+
 ; RET's in native code, to a caller in another bank of the arena (.A its index, times 32; vm_ip its return pad): its
 ; bank's, then RET's way here (the frame dropped, an error looked at), on to the pad
 vm_retx:
@@ -1851,18 +1921,16 @@ op_ret:
             LDAX        ev_return
             jmp         vm_go1
 :
-            lda         vm_t + 1                            ; (Its caller's code: vm_decode's)
-            lsr
-            tax
-            lda         vm_t
-            ror
+            lda         vm_t                                ; (Its caller's code: vm_decode's)
+            and         #$FE
             sta         vm_ip
-            txa
+            lda         vm_t + 1
+            tax
             and         #$1F
             ora         #$80
             sta         vm_ip + 1
             txa
-            and         #$60
+            and         #$E0
             cmp         vm_idx
             beq         :+
             jsr         vm_newidx
@@ -1972,13 +2040,12 @@ vm_lplace:
 :
             iny
             lda         (vm_s),y
-            lsr
             and         #$1F
             ora         #$80
             sta         ht + 1
             dey
             lda         (vm_s),y
-            ror
+            and         #$FE
             sta         ht
             lda         vm_bank
             sta         $00
@@ -7391,15 +7458,9 @@ vc_retw:
             adc         #0
             and         #$1F
             ora         vc_idx
-            sta         vc_t + 1
-            lda         vc_t
-            asl
-            ora         #1
-            pha
-            lda         vc_t + 1
-            rol
             tax
-            pla
+            lda         vc_t
+            ora         #1
             jmp         vc_word
 
 ; HEAD's operands: m (the call's arguments), c (the call), t (its label)

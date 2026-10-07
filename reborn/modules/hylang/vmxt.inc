@@ -127,6 +127,26 @@ vxt_setl_e:
 
 .assert vxt_setl_e - vxt_setl_c + VX_STUB + 48 < 256, error, "vxt_setl: an op's code is at most 255 bytes"
 
+vxt_je:     .byte       vxt_je_e - vxt_je_c, TF_STUB, 1
+            .byte       vxt_je_p0 - vxt_je_c, TPK_N, 0
+vxt_je_c:
+            lda         ex
+            lsr
+            bcs         vxt_je_n
+            ldx         ex + 1
+            cpx         #IMM_PAGES
+            bcc         vxt_je_n
+            lda         pk,x
+            cmp         #PK_ERROR
+            beq         vxt_je_s
+vxt_je_n:
+            jmp         $0000
+vxt_je_p0 = * - 2
+vxt_je_s:
+vxt_je_e:
+
+.assert vxt_je_e - vxt_je_c + VX_STUB + 48 < 256, error, "vxt_je: an op's code is at most 255 bytes"
+
 vxt_jmp:    .byte       vxt_jmp_e - vxt_jmp_c, 0, 1
             .byte       vxt_jmp_p0 - vxt_jmp_c, TPK_T, 1
 vxt_jmp_c:
@@ -2609,57 +2629,9 @@ vxt_shself_e:
 
 .assert vxt_shself_e - vxt_shself_c + VX_STUB + 48 < 256, error, "vxt_shself: an op's code is at most 255 bytes"
 
-vxt_ret:    .byte       vxt_ret_e - vxt_ret_c, TF_STUB, 0
+vxt_ret:    .byte       vxt_ret_e - vxt_ret_c, 0, 0
 vxt_ret_c:
-            ldy         vm_rb
-            lda         (vm_s),y
-            sta         ht
-            beq         vxt_ret_s
-            iny
-            lda         (vm_s),y
-            lsr
-            tax
-            lda         ht
-            ror
-            sta         vm_ip
-            txa
-            and         #$1F
-            ora         #$80
-            sta         vm_ip + 1
-            txa
-            and         #$60
-            cmp         vm_idx
-            beq         :+
-            jmp         vm_retx
-:
-            lda         depth
-            bne         :+
-            dec         depth + 1
-:
-            dec         depth
-            lda         vm_s
-            sta         sp
-            ldx         vm_s + 1
-            stx         sp + 1
-            cpx         stk_basep
-            bne         :+
-            lda         spilled
-            beq         :+
-            jsr         unspill
-:
-            lda         ex
-            lsr
-            bcs         vxt_ret_go
-            ldx         ex + 1
-            cpx         #IMM_PAGES
-            bcc         vxt_ret_go
-            lda         pk,x
-            cmp         #PK_ERROR
-            bne         vxt_ret_go
-            jmp         vm_reterr
-vxt_ret_go:
-            jmp         (vm_ip)
-vxt_ret_s:
+            jmp         vm_nret
 vxt_ret_e:
 
 .assert vxt_ret_e - vxt_ret_c + VX_STUB + 48 < 256, error, "vxt_ret: an op's code is at most 255 bytes"
@@ -3286,12 +3258,12 @@ vxt_q_eq_e:
 ; A return pad's length (CALL's and CSELF's the same: VXK_Q's)
 VXT_PADL        = vxt_pcall_e - vxt_pcall_c
 .assert vxt_pself_e - vxt_pself_c = VXT_PADL, error, "the return pads are of a length"
-.assert vxt_call_e - vxt_call_c + VX_STUB + 14 + VXT_PADL < 256, error, "CALL's code is at most 255 bytes"
-.assert vxt_cself_e - vxt_cself_c + VX_STUB + 8 + VXT_PADL < 256, error, "CSELF's code is at most 255 bytes"
+.assert vxt_call_e - vxt_call_c + 1 + VX_STUB + 14 + VXT_PADL < 256, error, "CALL's code is at most 255 bytes"
+.assert vxt_cself_e - vxt_cself_c + 1 + VX_STUB + 8 + VXT_PADL < 256, error, "CSELF's code is at most 255 bytes"
 
 ; Each op's template (0: its stub alone; the fused ones: by s, below; TSELF's by its count, vx_ttself)
 vx_tmain:   .word       vxt_ret, vxt_const, vxt_local, 0, 0, vxt_push, vxt_jf, vxt_jt
-            .word       vxt_jmp, 0, vxt_head, vxt_call, 0, 0, 0, 0
+            .word       vxt_jmp, vxt_je, vxt_head, vxt_call, 0, 0, 0, 0
             .word       0, vxt_add, vxt_sub, vxt_q_lt, vxt_q_gt, vxt_q_le, vxt_q_ge, vxt_q_eq
             .word       0, 0, 0, 0, 0, 0, 0, 0
             .word       0, 0, 0, vxt_lpush, vxt_cpush, vxt_shead, vxt_cself, vxt_tself

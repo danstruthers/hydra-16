@@ -10,7 +10,7 @@
 ;   Two passes: each op's stub's place (its entry, in the map bank vm_mb at the op's own place, its high byte $1000
 ; on), then the stubs, and the blocks' table after them.
 
-VX_STUB         = 11            ; (A stub: lda #<data, sta vm_ip, lda #>data, sta vm_ip + 1, jmp its code)
+VX_STUB         = 5             ; (A stub: jsr vm_sj, the word of its code in the machine; its data after it)
 
 ; The address operands' kinds (vx_ta1 ...: offset * 8 + kind, its offset in the op's data)
 VXK_T           = 1             ; A jump's target: its op's entry
@@ -66,6 +66,7 @@ vx_pt:      .res        2                                   ; (An op's return pa
 vx_pl:      .res        1                                   ;   its length)
 vx_qn:      .res        1                                   ; (Pass 1: $40 if the next op is past a pad ...
 vx_qf:      .res        1                                   ;   vm_xmap: the map's high byte, bit 6 that)
+vx_fill:    .res        1                                   ; (An op's filler: 1, a NOP before its stub, a place even)
 vx_selfh:   .res        1                                   ; (<> 0: past a flagged SHEAD's shself, its TSELF's tselfh)
 vx_op:      .res        1                                   ;   its op ...
 vx_nx:      .res        2                                   ;   the next op's entry ...
@@ -95,9 +96,16 @@ vm_xlate:
             sta         $8003
             lda         #>vm_wret
             sta         $8004
-            lda         #5
+            lda         #6
             sta         ar_top
 @try:
+            lda         ar_top                              ; (From an even address: its place's)
+            lsr
+            bcc         :+
+            inc         ar_top
+            bne         :+
+            inc         ar_top + 1
+:
             ldx         ar_cur
             lda         ar_bank,x
             sta         vx_bank
@@ -127,7 +135,7 @@ vm_xlate:
             inx
             cpx         ar_n
             bcc         @have
-            cpx         #4
+            cpx         #8
             bcs         @full
             lda         #1
             jsr         BANKS_ALLOC
@@ -157,13 +165,11 @@ vm_xlate:
             lda         vx_top + 1
             sta         ar_top + 1
             lda         vx_a0                               ; (Its place: vm_encode's)
-            asl
             ora         #1
             sta         vx_place
             lda         vx_a0 + 1
             and         #$1F
             ora         vx_idx
-            rol
             sta         vx_place + 1
             clc
             rts
@@ -279,6 +285,16 @@ vx_pass2:
             lda         #>op_callm
             sta         vx_h + 1
 @stub:
+            lda         vx_fill                             ; (Its filler: a NOP)
+            beq         :+
+            lda         vx_bank
+            sta         $00
+            lda         #$EA
+            sta         (ht)
+            inc         ht
+            bne         :+
+            inc         ht + 1
+:
             lda         ht                                  ; (Its data's place: past the stub)
             clc
             adc         #VX_STUB
@@ -293,34 +309,16 @@ vx_pass2:
             lda         vx_bank                             ; (The stub)
             sta         $00
             ldy         #0
-            lda         #$A9                                ; (lda #<data)
+            lda         #$20                                ; (jsr vm_sj)
             sta         (ht),y
             iny
-            lda         vx_d
+            lda         #<vm_sj
             sta         (ht),y
             iny
-            lda         #$85                                ; (sta vm_ip)
+            lda         #>vm_sj
             sta         (ht),y
             iny
-            lda         #<vm_ip
-            sta         (ht),y
-            iny
-            lda         #$A9                                ; (lda #>data)
-            sta         (ht),y
-            iny
-            lda         vx_d + 1
-            sta         (ht),y
-            iny
-            lda         #$85                                ; (sta vm_ip + 1)
-            sta         (ht),y
-            iny
-            lda         #<(vm_ip + 1)
-            sta         (ht),y
-            iny
-            lda         #$4C                                ; (jmp its code)
-            sta         (ht),y
-            iny
-            lda         vx_h
+            lda         vx_h                                ; (Its code's word)
             sta         (ht),y
             iny
             lda         vx_h + 1
@@ -360,9 +358,12 @@ vx_pass2:
 vx_size:
             jsr         vx_tpl
             jsr         vx_padt
+            jsr         vx_align
             jsr         @size
             clc
             adc         vx_pl
+            clc
+            adc         vx_fill
             rts
 @size:
             lda         vx_tp + 1
@@ -382,6 +383,40 @@ vx_size:
             clc
             adc         #VX_STUB
             adc         vx_tln
+            rts
+
+; vx_fill = 1 if the op's code (at ht) wants a NOP before its stub, for a place that's encoded to be even: past its
+; data for CALL, CSELF (its return pad), BCALL and EXT's ops (where the machine's code may go out to the evaluator and
+; come back: vm_kframe's), its data for LOCALS (the record's scope word); else 0
+vx_align:
+            stz         vx_fill
+            lda         vx_op
+            and         #$7F
+            cmp         #VO_LOCALS
+            beq         @data
+            cmp         #VO_CALL
+            beq         @past
+            cmp         #VO_CSELF
+            beq         @past
+            cmp         #VO_BCALL
+            beq         @past
+            cmp         #VO_EXT
+            beq         @past
+            rts
+@past:
+            lda         vx_dl
+            bra         :+
+@data:
+            lda         #0
+:
+            eor         ht
+            eor         #VX_STUB
+            ldx         vx_tp + 1
+            beq         :+
+            eor         vx_tln
+:
+            and         #1
+            sta         vx_fill
             rts
 
 ; vx_pt = the op's return pad (CALL's, CSELF's: past its data, where its returns go), vx_pl its length; 0 if none
@@ -623,7 +658,7 @@ vx_tpad:
 
 ; The op's template's code at ht (the arena's bank), its patches made; ht past it
 vx_tcopy:
-            lda         ht                                  ; (Its stub's data: past it and the stub's code)
+            lda         ht                                  ; (Its stub's data: past it, its filler and the stub's code)
             clc
             adc         vx_tln
             sta         vx_dd
@@ -633,6 +668,11 @@ vx_tcopy:
             lda         vx_dd
             clc
             adc         #VX_STUB
+            bcc         :+
+            inc         vx_dd + 1
+            clc
+:
+            adc         vx_fill
             sta         vx_dd
             bcc         :+
             inc         vx_dd + 1
@@ -722,23 +762,16 @@ vx_tcopy:
             lda         vx_dd                               ; (Past the data: its return pad)
             clc
             adc         vx_dl
-            asl
             ora         #1
             bra         @b
 @rh:
             lda         vx_dd
             clc
             adc         vx_dl
-            pha
             lda         vx_dd + 1
             adc         #0
             and         #$1F
             ora         vx_idx
-            sta         vx_k
-            pla
-            asl
-            lda         vx_k
-            rol
             jmp         @b
 @d:
             ldy         #2
@@ -757,18 +790,12 @@ vx_tcopy:
             bra         @w
 @dl:
             lda         vx_dd
-            asl
             ora         #1
             jmp         @b
 @dh:
             lda         vx_dd + 1
             and         #$1F
             ora         vx_idx
-            sta         vx_k
-            lda         vx_dd
-            asl
-            lda         vx_k
-            rol
             jmp         @b
 @st:
             lda         vx_dd
@@ -1101,18 +1128,12 @@ vx_patch:
             lda         vx_d                                ; (Past the data: vx_d + vx_dl, encoded)
             clc
             adc         vx_dl
-            pha
+            ora         #1
+            sta         vx_buf,x
             lda         vx_d + 1
             adc         #0
             and         #$1F
             ora         vx_idx
-            sta         vx_k
-            pla
-            asl
-            ora         #1
-            sta         vx_buf,x
-            lda         vx_k
-            rol
             sta         vx_buf + 1,x
             rts
 

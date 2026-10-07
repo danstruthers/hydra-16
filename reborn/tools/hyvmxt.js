@@ -84,6 +84,20 @@ tpl('setl', STUB, `
   stz ex + 1
   jmp {N}
 @s:`);
+// JE k t: an error, its stub (k words dropped, to t); else on
+tpl('je', STUB, `
+  lda ex
+  lsr
+  bcs @n
+  ldx ex + 1
+  cpx #IMM_PAGES
+  bcc @n
+  lda pk,x
+  cmp #PK_ERROR
+  beq @s
+@n:
+  jmp {N}
+@s:`);
 tpl('jmp', '0', `
   jmp {T 1}`);
 tpl('jf', '0', `
@@ -610,59 +624,9 @@ tpl('shself', STUB, `
   stz vm_shf
   jmp {N}
 @s:`);
-// RET: to its caller's code (in another bank of the arena, vm_retx's; the evaluator's call, its stub), the frame
-// dropped: its return pad (past the call's data) finds the caller's frame again; an error, vm_reterr's (returned by
-// the caller too if its call's r says)
-tpl('ret', STUB, `
-  ldy vm_rb
-  lda (vm_s),y
-  sta ht
-  beq @s
-  iny
-  lda (vm_s),y
-  lsr
-  tax
-  lda ht
-  ror
-  sta vm_ip
-  txa
-  and #$1F
-  ora #$80
-  sta vm_ip + 1
-  txa
-  and #$60
-  cmp vm_idx
-  beq :+
-  jmp vm_retx
-:
-  lda depth
-  bne :+
-  dec depth + 1
-:
-  dec depth
-  lda vm_s
-  sta sp
-  ldx vm_s + 1
-  stx sp + 1
-  cpx stk_basep
-  bne :+
-  lda spilled
-  beq :+
-  jsr unspill
-:
-  lda ex
-  lsr
-  bcs @go
-  ldx ex + 1
-  cpx #IMM_PAGES
-  bcc @go
-  lda pk,x
-  cmp #PK_ERROR
-  bne @go
-  jmp vm_reterr
-@go:
-  jmp (vm_ip)
-@s:`);
+// RET: vm_nret's, in ROM (it patches nothing, and a function has two or three: three bytes each, not a hundred)
+tpl('ret', '0', `
+  jmp vm_nret`);
 // A return pad (vx_padt's: past CALL's and CSELF's data, where their returns go, and their code in the machine goes
 // on; HEAD's and SHEAD's t, VXK_Q): the caller's frame from the call's h and r, as the machine's RET finds it (vm_s
 // h words below the stack's top, vm_rb, vm_mat from its record's scope).  Whichever way it's come to, the stack's
@@ -921,14 +885,14 @@ for (const t of T) {
 }
 lines.push('; A return pad\'s length (CALL\'s and CSELF\'s the same: VXK_Q\'s)', 'VXT_PADL        = vxt_pcall_e - vxt_pcall_c',
   '.assert vxt_pself_e - vxt_pself_c = VXT_PADL, error, "the return pads are of a length"',
-  '.assert vxt_call_e - vxt_call_c + VX_STUB + 14 + VXT_PADL < 256, error, "CALL\'s code is at most 255 bytes"',
-  '.assert vxt_cself_e - vxt_cself_c + VX_STUB + 8 + VXT_PADL < 256, error, "CSELF\'s code is at most 255 bytes"', '');
+  '.assert vxt_call_e - vxt_call_c + 1 + VX_STUB + 14 + VXT_PADL < 256, error, "CALL\'s code is at most 255 bytes"',
+  '.assert vxt_cself_e - vxt_cself_c + 1 + VX_STUB + 8 + VXT_PADL < 256, error, "CSELF\'s code is at most 255 bytes"', '');
 // ---- The tables: each op's template (by its number / 2), and the fused ones' by s
 const main = Array(64).fill('0');
 const skip = new Set((process.env.HYVMXT_SKIP || '').split(',').filter(Boolean));   // (Templates left out: a test's)
 const set = (op, t) => { if (!skip.has(t.replace('vxt_', ''))) main[op] = t; };
-const OPI = { RET: 0, HEAD: 10, CALL: 11, SHEAD: 37, CSELF: 38, TSELF: 39, CONST: 1, LOCAL: 2, PUSH: 5, JF: 6, JT: 7, JMP: 8, LPUSH: 35, CPUSH: 36, SETL: 42, LOOP: 48, DOTI: 54, DOTINC: 55, STT: 46, POPX: 47, DROP: 58, EACHI: 57, LOCALS: 40, LOCALH: 41, SETBL: 43, BLOCK: 49, LOCALB: 50, SETLB: 51, SETBLB: 52, TRYE: 59, ADD: 17, SUB: 18, LT: 19, GT: 20, LE: 21, GE: 22, NEQ: 23 };
-set(OPI.RET, 'vxt_ret'); set(OPI.HEAD, 'vxt_head'); set(OPI.CALL, 'vxt_call'); set(OPI.SHEAD, 'vxt_shead'); set(OPI.CSELF, 'vxt_cself'); set(OPI.TSELF, 'vxt_tself');
+const OPI = { RET: 0, JE: 9, HEAD: 10, CALL: 11, SHEAD: 37, CSELF: 38, TSELF: 39, CONST: 1, LOCAL: 2, PUSH: 5, JF: 6, JT: 7, JMP: 8, LPUSH: 35, CPUSH: 36, SETL: 42, LOOP: 48, DOTI: 54, DOTINC: 55, STT: 46, POPX: 47, DROP: 58, EACHI: 57, LOCALS: 40, LOCALH: 41, SETBL: 43, BLOCK: 49, LOCALB: 50, SETLB: 51, SETBLB: 52, TRYE: 59, ADD: 17, SUB: 18, LT: 19, GT: 20, LE: 21, GE: 22, NEQ: 23 };
+set(OPI.RET, 'vxt_ret'); set(OPI.JE, 'vxt_je'); set(OPI.HEAD, 'vxt_head'); set(OPI.CALL, 'vxt_call'); set(OPI.SHEAD, 'vxt_shead'); set(OPI.CSELF, 'vxt_cself'); set(OPI.TSELF, 'vxt_tself');
 set(OPI.LOCALS, 'vxt_locals'); set(OPI.LOCALH, 'vxt_localh'); set(OPI.SETBL, 'vxt_setbl'); set(OPI.BLOCK, 'vxt_block'); set(OPI.LOCALB, 'vxt_localb');
 set(OPI.SETLB, 'vxt_setlb'); set(OPI.SETBLB, 'vxt_setblb'); set(OPI.TRYE, 'vxt_trye'); set(OPI.ADD, 'vxt_add'); set(OPI.SUB, 'vxt_sub'); set(OPI.LT, 'vxt_q_lt');
 set(OPI.GT, 'vxt_q_gt'); set(OPI.LE, 'vxt_q_le'); set(OPI.GE, 'vxt_q_ge'); set(OPI.NEQ, 'vxt_q_eq');
