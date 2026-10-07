@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // ****************************************************************************
-// build.js - builds everything (docs/reimplementation-from-scratch.md, phase 0):
+// build.js - builds everything (docs/design/reimplementation-from-scratch.md, phase 0):
 //   1. tools/apigen.js     spec/ -> the jump table, the error codes and texts, the SDK's hydra.inc, the reference
 //   2. the kernel          kernel/*.s and the generated sources -> bin/bios.bin (the 128K BIOS ROM), with its map
 //                          and labels in obj/kernel/
@@ -29,7 +29,7 @@
 // and obj/build.json: the options it was built with ({ clock, acia }: sim/test.js's budgets can depend on them).
 //
 // Usage: node build.js [--clock 1|2] [--acia rockwell|wdc] [--quiet]
-//   --clock 2: for a 7.16 MHz board (jumper J7); --acia wdc: a WDC W65C51N in the serial port (its TDRE bug)
+//   --clock 2: for a 7.16 MHz board (jumper J8); --acia wdc: a WDC W65C51N in the serial port (its TDRE bug)
 //        node build.js prog DIR
 //   a RAM program from DIR/*.s (with the SDK: sdk/asm/README.md), or DIR/*.c and *.s (a C program: sdk/c/README.md),
 //   into DIR/NAME.hyx, NAME the folder's

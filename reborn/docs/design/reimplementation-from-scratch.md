@@ -5,7 +5,7 @@ An evaluation of the Hydra-16's current software, and a step-by-step plan for bu
 **Status:** a plan, written in October 2026 against branch `1.8C_0.6` (OS `1.8C_0.6`).  Nothing in the current tree is changed by it.
 
 **Scope:**
-* **Hardware:** the V1 board as built, errata included ([hardware.md](hardware.md#v1-errata)).  Changes that a V2 board could make to simplify the software are in [Appendix G](#appendix-g-v2-hardware-wishes).  The board and its schematics are a fixed reference here.
+* **Hardware:** the V1 board as built, errata included ([../hardware.md](../hardware.md#v1-errata)).  Changes that a V2 board could make to simplify the software are in [Appendix G](#appendix-g-v2-hardware-wishes).  The board and its schematics are a fixed reference here.
 * **Replaced:** everything in `os_rom/` (the kernel, drivers, servers, the shell, HyForth, WOZMON, the self tests) and the program SDKs in `programs/`.
 * **Kept, and built on:** the emulator, the regression test harness and the PC tools in `sim/`, the hardware test, the HydraFS on-disk format (so existing cards keep working), the ROM disk idea, the song tools and the ZSM format, and the `/pc` idea.
 
@@ -268,7 +268,7 @@ Each issue gives the evidence (file and line where useful) and why it matters.  
 
 ### **6. The hardware facts that shape the design**
 
-These are the facts from [hardware.md](hardware.md) that the design is built on, and what it does with each.
+These are the facts from [../hardware.md](../hardware.md) that the design is built on, and what it does with each.
 
 | Fact | Consequence for the design |
 | :--- | :------------------------- |
@@ -678,7 +678,7 @@ The default namespace file is in [Appendix E](#appendix-e-the-default-namespace)
 * **Line discipline, cooked mode, in one place:** the console edits a line (Backspace, Delete, Left, Right, Home, End, Ctrl-U, the history with Up and Down) and delivers it on Enter, so every program gets line editing: rc, Forth, hylang, C's `fgets`.  (Today it's HyForth's alone, and a C program sees raw backspaces.)  Raw mode (`rawon`) gives each key as it comes, with the terminal's cursor and function keys decoded to single codes.
 * **Windows, Plan 9's way, not job control.**  There's no foreground group, no `fg`, no stop key.  As rio gives each window a console of its own, `cons` serves several windows on the one terminal, each a whole console: its own `cons` and `consctl`, line editor, raw mode, note group, and its text (the last of its output, a screenful and more).  A window's files are `#c` with its number as the spec (`#c2/cons`, or `mount '#c' /dev 2`), so a shell's namespace gives it its window at `/dev`; plain `#c` is window 0, init's.  One window is shown and gets the keys; Ctrl-] then a digit shows another (Ctrl-] `n` the next), and `cons` repaints the terminal from that window's text.  A window that isn't shown runs on: its output goes into its text, its reads wait for keys.  Ctrl-C sends interrupt, and Ctrl-\\ kill, to the shown window's note group (the group of the program that claimed it: `group` in its `consctl`).  Windows are made by writing `new` to `/dev/wctl`, or by the user: Ctrl-] `c` answers a read of `/dev/wnew` (init's, which starts a shell in the window); a window goes when the last of its `cons` is closed.
 * **The bell:** a BEL sent to the console asks the sound driver for its beep (a call from `cons` to `snd`, the only driver-to-driver call, documented as such).
-* **`/pc`** (`#P`): the PC folder over the serial line, served in this task, which owns the line.  The framing, CRC, resends and the PC tool's file server stay; the request header changes to Appendix B's, so the protocol's version goes to 2 and the PC tool learns both.  (As built, phase 5.5: the irq entry stays the keys' alone, so the PC's frames come in with the keys and are taken out of the receive ring in the serve entry, and the PC stuffs the keys the irq entry acts on (Ctrl-C, Ctrl-\, Ctrl-]); a frame carries 128 bytes of data, so a reply fits the ring; a reply's wait is timed by timer 2 run on, as the kernel has no timed wait for a server's client.  `docs/plans/PC.md` has version 2.)
+* **`/pc`** (`#P`): the PC folder over the serial line, served in this task, which owns the line.  The framing, CRC, resends and the PC tool's file server stay; the request header changes to Appendix B's, so the protocol's version goes to 2 and the PC tool learns both.  (As built, phase 5.5: the irq entry stays the keys' alone, so the PC's frames come in with the keys and are taken out of the receive ring in the serve entry, and the PC stuffs the keys the irq entry acts on (Ctrl-C, Ctrl-\, Ctrl-]); a frame carries 128 bytes of data, so a reply fits the ring; a reply's wait is timed by timer 2 run on, as the kernel has no timed wait for a server's client.  `docs/design/plans/PC.md` has version 2.)
 * **Later (phase 8):** the console gets a second back end, the Vera X screen with its keyboard, chosen in `consctl` (`screen`, `serial`, `both`), as [VIDEO.md](plans/VIDEO.md) plans: the windows are the same, shown on either.
 
 #### **14.3 Storage: `storage`** (a driver module; task E)
@@ -697,7 +697,7 @@ One driver owns the SPI bus and every disk (as built, a module of two banks: Hyd
 * The **song player** is a program (`play`), not part of the driver: a client of `/dev/snd` like any other, with today's timing (the system tick, a fraction, read ahead without waiting).
 * Later: the VERA's PSG and PCM as more channels (phase 8).
 
-(As built, phase 5.1, `reborn/modules/snd`: the library and `#a` as above, with `sndctl`'s `claim`, `release`, `volume` and `reset`, and `#a/bell` for the console's bell.  Claims are a task's (the task's that opened the file), given back as its last file of `#a` closes.  There's no `clock`: the old player had stopped timing songs by timer B (on the board it didn't keep its period), so the driver owns no interrupt and keeps the chip's timers quiet.  Phase 5.2, `reborn/modules/play`: the player as above, `play [-l] song [n]`; `scom` is an rc script on the ROM disk, since rc runs a `#!` file by its interpreter.  October 2026, the sound plan (`docs/plans/SOUND_PARITY.md`): `sndctl` takes each channel's commands as text too, `patch`, `note`, `off`, `level` (`vol`), `pan`, `bend`, `drum` and `reg`, so rc and BASIC's `SOUND "..."` reach everything.)
+(As built, phase 5.1, `reborn/modules/snd`: the library and `#a` as above, with `sndctl`'s `claim`, `release`, `volume` and `reset`, and `#a/bell` for the console's bell.  Claims are a task's (the task's that opened the file), given back as its last file of `#a` closes.  There's no `clock`: the old player had stopped timing songs by timer B (on the board it didn't keep its period), so the driver owns no interrupt and keeps the chip's timers quiet.  Phase 5.2, `reborn/modules/play`: the player as above, `play [-l] song [n]`; `scom` is an rc script on the ROM disk, since rc runs a `#!` file by its interpreter.  October 2026, the sound plan (`docs/design/plans/SOUND_PARITY.md`): `sndctl` takes each channel's commands as text too, `patch`, `note`, `off`, `level` (`vol`), `pan`, `bend`, `drum` and `reg`, so rc and BASIC's `SOUND "..."` reach everything.)
 
 #### **14.5 The rest**
 
@@ -923,7 +923,7 @@ Written as the system is built, phase by phase, in plain, short chapters (K2):
 * **The programmer's guide**: the ABI (§9), memory (§8), tasks and notes, files and namespaces, writing a server (with srvlib), writing a driver, modules; each chapter with complete examples;
 * **The API reference**, generated from the specification, so it never drifts (K1);
 * **User guides**: rc, the tools, HyForth, hylang;
-* **The design notes** (`docs/plans/` style) for decisions and their reasons, including this document.
+* **The design notes** (`docs/design/plans/` style) for decisions and their reasons, including this document.
 
 ---
 

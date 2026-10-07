@@ -1,6 +1,8 @@
 # Using the Hydra-16
 
-The guides for using HydraOS (`reborn/`), the Hydra-16's operating system.  The first hour is [the tutorial](../tutorial.md); after it:
+The guides for using HydraOS (`reborn/`), the Hydra-16's operating system.  The first hour is [the
+tutorial](../tutorial.md); the whole system, hardware and software, is [the guide](../hydra-16.md); and these are the
+guides for each part:
 
 | Guide | What it covers |
 | :---- | :------------- |

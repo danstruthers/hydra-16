@@ -54,7 +54,7 @@ How the software fits together:
   kernel (page 0): scheduler, TASK_CALL, IRQ dispatch, MMU, shared memory
 ```
 
-More: [the system in one page](programming/README.md#the-system-in-one-page) (the Programmer's Guide), [the hardware overview](../../docs/hardware.md#overview).
+More: [the system in one page](programming/README.md#the-system-in-one-page) (the Programmer's Guide), [the hardware overview](../../reborn/docs/hardware.md#overview).
 
 ---
 
@@ -73,7 +73,7 @@ node sim/tools/hydrapc.js COM3 DIR the board's terminal, with the folder DIR at 
 
 ### **3. Hardware**
 
-The **[Hardware Reference](../../docs/hardware.md)** describes the main board from its schematics, sheet by sheet, and the companion cards.  The KiCad 9 projects are in `board/`.
+The **[Hardware Reference](../../reborn/docs/hardware.md)** describes the main board from its schematics, sheet by sheet, and the companion cards.  The KiCad 9 projects are in `board/`.
 
 #### **The memory system**
 
@@ -88,51 +88,51 @@ The **[Hardware Reference](../../docs/hardware.md)** describes the main board fr
 | `$FFFA-$FFFD` | NMI and RESET vectors (BIOS ROM) | `W` |
 | `$FFFE-$FFFF` | IRQ/BRK vector RAM, 16 entries | the active IRQ, or `V` |
 
-* [The CPU view: memory map](../../docs/hardware.md#the-cpu-view-memory-map).
-* [The pseudo-registers T, U, V, W](../../docs/hardware.md#the-pseudo-registers-t-u-v-w): the task (`T`), the shared macro-page (`U`), the vector select (`V`), the BIOS ROM page (`W`).  They have no reset: the ROM sets them.
-* [Task RAM and the bank registers](../../docs/hardware.md#task-ram-and-the-bank-registers): one HM628512 (or a DS1747, which adds a clock), and the per-task bank registers in 74LS219s.
-* [The paged RAM window](../../docs/hardware.md#the-paged-ram-window): task RAM modules on memory daughter cards, and the 2 MB of shared RAM on the board.
-* [The paged ROM](../../docs/hardware.md#the-paged-rom): eight SST39SF040, 256 banks of 16K, with the halves of each bank swapped.
-* [The BIOS ROM](../../docs/hardware.md#the-bios-rom): an SST39SF010/020/040 paged by `W`; changing `W` changes the code being run.
+* [The CPU view: memory map](../../reborn/docs/hardware.md#the-cpu-view-memory-map).
+* [The pseudo-registers T, U, V, W](../../reborn/docs/hardware.md#the-pseudo-registers-t-u-v-w): the task (`T`), the shared macro-page (`U`), the vector select (`V`), the BIOS ROM page (`W`).  They have no reset: the ROM sets them.
+* [Task RAM and the bank registers](../../reborn/docs/hardware.md#task-ram-and-the-bank-registers): one HM628512 (or a DS1747, which adds a clock), and the per-task bank registers in 74LS219s.
+* [The paged RAM window](../../reborn/docs/hardware.md#the-paged-ram-window): task RAM modules on memory daughter cards, and the 2 MB of shared RAM on the board.
+* [The paged ROM](../../reborn/docs/hardware.md#the-paged-rom): eight SST39SF040, 256 banks of 16K, with the halves of each bank swapped.
+* [The BIOS ROM](../../reborn/docs/hardware.md#the-bios-rom): an SST39SF010/020/040 paged by `W`; changing `W` changes the code being run.
 
 #### **I/O, interrupts, clocks and reset**
 
-* [I/O space](../../docs/hardware.md#io-space): 15 device ports of 16 bytes, and the system port.
-* [Interrupts](../../docs/hardware.md#interrupts): 16 lines through two 74LS148s into the vector RAM; the index is the line number XOR 7; line 15 is for software interrupts.
-* [Clocks](../../docs/hardware.md#clocks): a 14.318 MHz crystal divided down; the CPU clock is set by a jumper (J7, 3.58 MHz, as built).
-* [Reset, power and bus control](../../docs/hardware.md#reset-power-and-bus-control): ATX power, the front panel, the reset supervisor, `RDY`, DMA.
+* [I/O space](../../reborn/docs/hardware.md#io-space): 15 device ports of 16 bytes, and the system port.
+* [Interrupts](../../reborn/docs/hardware.md#interrupts): 16 lines through two 74LS148s into the vector RAM; the index is the line number XOR 7; line 15 is for software interrupts.
+* [Clocks](../../reborn/docs/hardware.md#clocks): a 14.318 MHz crystal divided down; the CPU clock is set by a jumper (J7, 3.58 MHz, as built).
+* [Reset, power and bus control](../../reborn/docs/hardware.md#reset-power-and-bus-control): ATX power, the front panel, the reset supervisor, `RDY`, DMA.
 
 #### **The devices**
 
 | Device | Port | IRQ line | Used for |
 | :----- | :--- | :------- | :------- |
-| [VIA, 65C22 (U2)](../../docs/hardware.md#via-65c22-u2-port-0-irq-line-0) | 0, `$FF00` | 0 | Timer 1: the scheduler's tick; port A: GPIO and I2C (header J27: [`/dev/gpio`](programming/io.md#gpio-devgpio)); port B: [the SPI bus](../../docs/hardware.md#spi-bus-via-port-b), with 8 device headers (J18-J25), each device a file: [`/dev/spi/N`](programming/io.md#spi-devices-devspi) |
-| [ACIA, 65C51 (U3)](../../docs/hardware.md#acia-65c51-u3-port-1-irq-line-1) | 1, `$FF10` | 1 | The serial console, on a DE-9 (DCE wiring) |
-| [YM2151 (U38)](../../docs/hardware.md#ym2151-sound-u38-port-4-irq-line-4) | 4, `$FF40` | 4 | 8-voice FM sound, through a YM3012 DAC and a mixer to a stereo jack |
-| [Expansion slots](../../docs/hardware.md#expansion-slots) 0-5 | 2-3, 5-14 | 2-3, 5-14 | Cards on the 62-pin bus: video in slot 0 (planned), and anything else |
+| [VIA, 65C22 (U2)](../../reborn/docs/hardware.md#via-65c22-u2-port-0-irq-line-0) | 0, `$FF00` | 0 | Timer 1: the scheduler's tick; port A: GPIO and I2C (header J27: [`/dev/gpio`](programming/io.md#gpio-devgpio)); port B: [the SPI bus](../../reborn/docs/hardware.md#spi-bus-via-port-b), with 8 device headers (J18-J25), each device a file: [`/dev/spi/N`](programming/io.md#spi-devices-devspi) |
+| [ACIA, 65C51 (U3)](../../reborn/docs/hardware.md#acia-65c51-u3-port-1-irq-line-1) | 1, `$FF10` | 1 | The serial console, on a DE-9 (DCE wiring) |
+| [YM2151 (U38)](../../reborn/docs/hardware.md#ym2151-sound-u38-port-4-irq-line-4) | 4, `$FF40` | 4 | 8-voice FM sound, through a YM3012 DAC and a mixer to a stereo jack |
+| [Expansion slots](../../reborn/docs/hardware.md#expansion-slots) 0-5 | 2-3, 5-14 | 2-3, 5-14 | Cards on the 62-pin bus: video in slot 0 (planned), and anything else |
 
 #### **Cards, connectors and the board as built**
 
-* [Companion cards](../../docs/hardware.md#companion-cards): the [memory daughter card](../../docs/hardware.md#memory-daughter-card) (a 2 MB task RAM module: `board/MemoryDaughterCard`) and the [bus breakout card](../../docs/hardware.md#bus-breakout-card) (`board/HydraBusBreakoutCard`).
-* [Connectors and jumpers](../../docs/hardware.md#connectors-and-jumpers): fit J4 (RDY) and one CPU clock jumper (J7).
-* [V1 errata](../../docs/hardware.md#v1-errata): bank register bits 2/3 and 6/7 are crossed (the software and tools allow for it), no wait states, the audio jack's channels, the ACIA's clock.
-* [Parts by function](../../docs/hardware.md#parts-by-function).
+* [Companion cards](../../reborn/docs/hardware.md#companion-cards): the [memory daughter card](../../reborn/docs/hardware.md#memory-daughter-card) (a 2 MB task RAM module: `board/MemoryDaughterCard`) and the [bus breakout card](../../reborn/docs/hardware.md#bus-breakout-card) (`board/HydraBusBreakoutCard`).
+* [Connectors and jumpers](../../reborn/docs/hardware.md#connectors-and-jumpers): fit J4 (RDY) and one CPU clock jumper (J7).
+* [V1 errata](../../reborn/docs/hardware.md#v1-errata): bank register bits 2/3 and 6/7 are crossed (the software and tools allow for it), no wait states, the audio jack's channels, the ACIA's clock.
+* [Parts by function](../../reborn/docs/hardware.md#parts-by-function).
 
 #### **The schematics**
 
 | Sheet (`board/`) | What | In the reference |
 | :--------------- | :--- | :--------------- |
-| `hydra-16.kicad_sch` | The root sheet: the CPU, the BIOS ROM, task RAM, the VIA, the ACIA | [Overview](../../docs/hardware.md#overview) |
-| `AddressDecode` | Address decoding, the I/O ports | [I/O space](../../docs/hardware.md#io-space) |
-| `FFF_Registers` | `T`, `U`, `V`, `W` | [The pseudo-registers](../../docs/hardware.md#the-pseudo-registers-t-u-v-w) |
-| `ZPMirrorRAM` | The bank registers `$00` and `$01` | [Task RAM and the bank registers](../../docs/hardware.md#task-ram-and-the-bank-registers) |
-| `SharedMem` | Shared RAM, the module selects | [The paged RAM window](../../docs/hardware.md#the-paged-ram-window) |
-| `BankedROM` | The paged ROM | [The paged ROM](../../docs/hardware.md#the-paged-rom) |
-| `IRQ_P_E` | The IRQ priority encoder and the vector RAM | [Interrupts](../../docs/hardware.md#interrupts) |
-| `Clocks` | The oscillator and its dividers | [Clocks](../../docs/hardware.md#clocks) |
-| `Buffers` | The address, data and R/W buffers | [Reset, power and bus control](../../docs/hardware.md#reset-power-and-bus-control) |
-| `Sound`, `Mixer` | The YM2151, its DAC, the mixer | [YM2151](../../docs/hardware.md#ym2151-sound-u38-port-4-irq-line-4) |
-| `Connectors` | The slots, headers, power | [Expansion slots](../../docs/hardware.md#expansion-slots), [connectors](../../docs/hardware.md#connectors-and-jumpers) |
+| `hydra-16.kicad_sch` | The root sheet: the CPU, the BIOS ROM, task RAM, the VIA, the ACIA | [Overview](../../reborn/docs/hardware.md#overview) |
+| `AddressDecode` | Address decoding, the I/O ports | [I/O space](../../reborn/docs/hardware.md#io-space) |
+| `FFF_Registers` | `T`, `U`, `V`, `W` | [The pseudo-registers](../../reborn/docs/hardware.md#the-pseudo-registers-t-u-v-w) |
+| `ZPMirrorRAM` | The bank registers `$00` and `$01` | [Task RAM and the bank registers](../../reborn/docs/hardware.md#task-ram-and-the-bank-registers) |
+| `SharedMem` | Shared RAM, the module selects | [The paged RAM window](../../reborn/docs/hardware.md#the-paged-ram-window) |
+| `BankedROM` | The paged ROM | [The paged ROM](../../reborn/docs/hardware.md#the-paged-rom) |
+| `IRQ_P_E` | The IRQ priority encoder and the vector RAM | [Interrupts](../../reborn/docs/hardware.md#interrupts) |
+| `Clocks` | The oscillator and its dividers | [Clocks](../../reborn/docs/hardware.md#clocks) |
+| `Buffers` | The address, data and R/W buffers | [Reset, power and bus control](../../reborn/docs/hardware.md#reset-power-and-bus-control) |
+| `Sound`, `Mixer` | The YM2151, its DAC, the mixer | [YM2151](../../reborn/docs/hardware.md#ym2151-sound-u38-port-4-irq-line-4) |
+| `Connectors` | The slots, headers, power | [Expansion slots](../../reborn/docs/hardware.md#expansion-slots), [connectors](../../reborn/docs/hardware.md#connectors-and-jumpers) |
 
 ---
 
@@ -167,7 +167,7 @@ Everything the Hydra runs at boot is in two ROM images, from one build ([the two
 * [Error codes](programming/rom-layout.md#error-codes).
 * [API index: the thunks](programming/rom-layout.md#api-index-the-thunks): every public entry point.
 * [Adding code](programming/rom-layout.md#adding-code): where new code goes, and the space left on each page.
-* The plan that set the pages' roles: [REORG_PLAN.md](../../docs/plans/REORG_PLAN.md).
+* The plan that set the pages' roles: [REORG_PLAN.md](../../reborn/docs/design/plans/REORG_PLAN.md).
 
 ---
 
@@ -209,7 +209,7 @@ Everything the Hydra runs at boot is in two ROM images, from one build ([the two
 * [The MMU](programming/memory.md#the-mmu-a-tasks-own-memory): each task's allocations, as handles, from its own RAM and banks.
 * [Shared memory](programming/memory.md#shared-memory): the 256 shared banks, between tasks.
 * [Far pointers](programming/memory.md#far-pointers), [references](programming/memory.md#references-far-pointers-as-handles), [copying](programming/memory.md#copying).
-* The design: [MMU_PLAN.md](../../docs/plans/MMU_PLAN.md).
+* The design: [MMU_PLAN.md](../../reborn/docs/design/plans/MMU_PLAN.md).
 
 ---
 
@@ -242,7 +242,7 @@ Everything is a file.  A task opens names and reads and writes fds; the IO layer
 
 * [The current directory](programming/io.md#the-current-directory), [stat](programming/io.md#stat).
 * **Writing a device:** [drivers and file servers](programming/servers.md): [the model](programming/servers.md#the-model), [registering a device](programming/servers.md#registering-a-device), [the serve routine](programming/servers.md#the-serve-routine), [the request block and the transfer area](programming/servers.md#the-request-block-and-the-transfer-area), [waiting](programming/servers.md#waiting-when-theres-no-data-yet), [names and ctl files](programming/servers.md#names-and-ctl-files), [a checklist](programming/servers.md#checklist-for-a-new-device).
-* The design: [IO_PLAN.md](../../docs/plans/IO_PLAN.md).
+* The design: [IO_PLAN.md](../../reborn/docs/design/plans/IO_PLAN.md).
 
 ---
 
@@ -272,7 +272,7 @@ mount hfs /ram r/1
 * In full: [namespaces](programming/io.md#namespaces) (the calls, the flags, how a name resolves, the namespace at boot).
 * In the shell: [HyForth's files and devices](using/hyforth.md#files-and-devices) (`mount`, `bind`, `unmount`, `hide`, `newns`, `ns`).
 * In C: [files and devices](programming/c.md#5-files-and-devices) (`hy_mount`, `hy_bind`, `hy_unmount`, `hy_hide`, `hy_newns`).
-* The design, and what's left: [NAMESPACES.md](../../docs/plans/NAMESPACES.md).
+* The design, and what's left: [NAMESPACES.md](../../reborn/docs/design/plans/NAMESPACES.md).
 
 ---
 
@@ -285,11 +285,11 @@ mount hfs /ram r/1
 | `r` | `/ram`, `/dev/sd/r` | The RAM disk: each shell's own area (`r/N`), kept until a reset |
 | `s` | `/sram`, `/dev/sd/s` | The shared RAM disk, the same for every task |
 
-* **HydraFS**, the filesystem on all of them: directories, extents, sparse files, partitions, a checker.  The spec: [HYDRAFS.md](../../docs/plans/HYDRAFS.md).  On the Hydra: [the files on a card](programming/io.md#the-files-on-a-card), [the HydraFS server](programming/servers.md#the-hydrafs-server), [the storage layer](programming/servers.md#the-storage-layer-for-the-filesystem-server).
-* **The ROM disk**, `/rom`: [io.md](programming/io.md#the-roms-files-rom), [its design](../../docs/plans/DISKS.md#the-rom-disk); built from `os_rom/romfs.txt` by `sim/tools/mkromdisk.js` ([the ROM disk tool](tools/emulator.md#the-rom-disk)).
-* **The RAM disks**, `/ram` and `/sram`: [io.md](programming/io.md#the-ram-disks-ram), [their design](../../docs/plans/DISKS.md#ram-disks), [who can use which area](../../docs/plans/DISKS.md#who-can-use-which-area), [the program caches](../../docs/plans/DISKS.md#the-program-caches), [booting with or without a card](../../docs/plans/DISKS.md#booting-finding-the-disks).
+* **HydraFS**, the filesystem on all of them: directories, extents, sparse files, partitions, a checker.  The spec: [HYDRAFS.md](../../reborn/docs/design/plans/HYDRAFS.md).  On the Hydra: [the files on a card](programming/io.md#the-files-on-a-card), [the HydraFS server](programming/servers.md#the-hydrafs-server), [the storage layer](programming/servers.md#the-storage-layer-for-the-filesystem-server).
+* **The ROM disk**, `/rom`: [io.md](programming/io.md#the-roms-files-rom), [its design](../../reborn/docs/design/plans/DISKS.md#the-rom-disk); built from `os_rom/romfs.txt` by `sim/tools/mkromdisk.js` ([the ROM disk tool](tools/emulator.md#the-rom-disk)).
+* **The RAM disks**, `/ram` and `/sram`: [io.md](programming/io.md#the-ram-disks-ram), [their design](../../reborn/docs/design/plans/DISKS.md#ram-disks), [who can use which area](../../reborn/docs/design/plans/DISKS.md#who-can-use-which-area), [the program caches](../../reborn/docs/design/plans/DISKS.md#the-program-caches), [booting with or without a card](../../reborn/docs/design/plans/DISKS.md#booting-finding-the-disks).
 * **Cards from a PC:** [HydraFS card images](tools/emulator.md#hydrafs-card-images) (`sim/tools/hydrafs.js`), [putting a program on a card](programming/programs.md#putting-it-on-a-card).
-* **A folder on the PC, with no card:** `/pc`, served over the serial port by the PC tool, which is the terminal too: [io.md](programming/io.md#a-folder-on-the-pc-pc), [the PC tool](tools/emulator.md#the-pc-tool-pc), [its design](../../docs/plans/PC.md).
+* **A folder on the PC, with no card:** `/pc`, served over the serial port by the PC tool, which is the terminal too: [io.md](programming/io.md#a-folder-on-the-pc-pc), [the PC tool](tools/emulator.md#the-pc-tool-pc), [its design](../../reborn/docs/design/plans/PC.md).
 
 ---
 
@@ -304,7 +304,7 @@ HyForth is the Hydra's shell and its language: a Forth whose words include a cur
 * [Files and devices](using/hyforth.md#files-and-devices), [pipelines](using/hyforth.md#pipelines).
 * [Tasks and the console](using/hyforth.md#tasks-and-the-console), [background tasks and exit statuses](using/hyforth.md#background-tasks-and-exit-statuses).
 * [Errors and keys](using/hyforth.md#errors-and-keys), [how HyForth uses memory](using/hyforth.md#how-hyforth-uses-memory).
-* The design: [SHELL.md](../../docs/plans/SHELL.md).
+* The design: [SHELL.md](../../reborn/docs/design/plans/SHELL.md).
 
 ---
 
@@ -333,10 +333,10 @@ A program is a `.hyx` file: a header and code.  It's loaded into a task of its o
 
 A YM2151 (8 FM voices of 4 operators each) on port 4, mixed with the slots' audio to a stereo jack.
 
-* The chip and its audio path: [YM2151](../../docs/hardware.md#ym2151-sound-u38-port-4-irq-line-4).
+* The chip and its audio path: [YM2151](../../reborn/docs/hardware.md#ym2151-sound-u38-port-4-irq-line-4).
 * `/dev/snd`, the device: [io.md](programming/io.md#sound-devsnd).  In C: [`snd.h`](programming/c.md#sound-sndh).  In HyForth: `patch`, `note`, `noteoff`, `play`, `sndtest` ([the word reference](using/hyforth.md#word-reference)).
 * The song player (ZSM files), and the score language that `os_rom/songs/test.mml` and `programs/songs/` are written in: [songs: the score compiler](tools/emulator.md#songs-the-score-compiler).
-* The design, phase by phase, and importing music from other machines: [SOUND.md](../../docs/plans/SOUND.md).
+* The design, phase by phase, and importing music from other machines: [SOUND.md](../../reborn/docs/design/plans/SOUND.md).
 
 ---
 
@@ -386,20 +386,20 @@ The plans record the design's reasoning and what's to come; parts of them are hi
 
 | Plan | What | Status |
 | :--- | :--- | :----- |
-| [NEXT_STEPS.md](../../docs/plans/NEXT_STEPS.md) | What's missing to make the Hydra fun and useful, and the [milestones](../../docs/plans/NEXT_STEPS.md#milestones) | The roadmap |
-| [IDEAS.md](../../docs/plans/IDEAS.md) | The next features in order, wait states for board V2, open issues | Ongoing |
-| [NAMESPACES.md](../../docs/plans/NAMESPACES.md) | Unions, the default namespace, `/bin` and `/lib`, `newns` | Done |
-| [PROC.md](../../docs/plans/PROC.md) | `/proc`, and a task's memory as files | Done but `regs`, `fd` and the debugger's commands |
-| [DISKS.md](../../docs/plans/DISKS.md) | The ROM and RAM disks, the program caches | Done |
-| [PC.md](../../docs/plans/PC.md) | `/pc`, a folder on the PC over the serial port, and the PC tool | Done |
-| [VIDEO.md](../../docs/plans/VIDEO.md) | The Vera X card in slot 0 | Planned |
-| [SOUND.md](../../docs/plans/SOUND.md) | The YM2151 library, the player, the test song | Done; importing music to do |
-| [HYDRAFS.md](../../docs/plans/HYDRAFS.md) | The filesystem's spec | Done |
-| [IO_PLAN.md](../../docs/plans/IO_PLAN.md) | The IO subsystem, the scheduler, the filesystem's steps | Done |
-| [MMU_PLAN.md](../../docs/plans/MMU_PLAN.md) | The memory manager, IRQ dispatch, drivers | Done |
-| [SHELL.md](../../docs/plans/SHELL.md) | HyForth as a shell | Done |
-| [REORG_PLAN.md](../../docs/plans/REORG_PLAN.md) | The ROM's reorganisation | Done |
-| [CODE_REVIEW.md](../../docs/plans/CODE_REVIEW.md) | A review of the whole software tree | Its recommendations [done](../../docs/plans/CODE_REVIEW.md#what-was-done) |
+| [NEXT_STEPS.md](../../reborn/docs/design/plans/NEXT_STEPS.md) | What's missing to make the Hydra fun and useful, and the [milestones](../../reborn/docs/design/plans/NEXT_STEPS.md#milestones) | The roadmap |
+| [IDEAS.md](../../reborn/docs/design/plans/IDEAS.md) | The next features in order, wait states for board V2, open issues | Ongoing |
+| [NAMESPACES.md](../../reborn/docs/design/plans/NAMESPACES.md) | Unions, the default namespace, `/bin` and `/lib`, `newns` | Done |
+| [PROC.md](../../reborn/docs/design/plans/PROC.md) | `/proc`, and a task's memory as files | Done but `regs`, `fd` and the debugger's commands |
+| [DISKS.md](../../reborn/docs/design/plans/DISKS.md) | The ROM and RAM disks, the program caches | Done |
+| [PC.md](../../reborn/docs/design/plans/PC.md) | `/pc`, a folder on the PC over the serial port, and the PC tool | Done |
+| [VIDEO.md](../../reborn/docs/design/plans/VIDEO.md) | The Vera X card in slot 0 | Planned |
+| [SOUND.md](../../reborn/docs/design/plans/SOUND.md) | The YM2151 library, the player, the test song | Done; importing music to do |
+| [HYDRAFS.md](../../reborn/docs/design/plans/HYDRAFS.md) | The filesystem's spec | Done |
+| [IO_PLAN.md](../../reborn/docs/design/plans/IO_PLAN.md) | The IO subsystem, the scheduler, the filesystem's steps | Done |
+| [MMU_PLAN.md](../../reborn/docs/design/plans/MMU_PLAN.md) | The memory manager, IRQ dispatch, drivers | Done |
+| [SHELL.md](../../reborn/docs/design/plans/SHELL.md) | HyForth as a shell | Done |
+| [REORG_PLAN.md](../../reborn/docs/design/plans/REORG_PLAN.md) | The ROM's reorganisation | Done |
+| [CODE_REVIEW.md](../../reborn/docs/design/plans/CODE_REVIEW.md) | A review of the whole software tree | Its recommendations [done](../../reborn/docs/design/plans/CODE_REVIEW.md#what-was-done) |
 
 ---
 
@@ -410,7 +410,7 @@ The plans record the design's reasoning and what's to come; parts of them are hi
 | [README.md](README.md) | The documentation's index |
 | [tutorial.md](tutorial.md) | First steps, in the emulator |
 | [getting-started.md](getting-started.md) | Building, the chips, a terminal, the first boot |
-| [hardware.md](../../docs/hardware.md) | The Hardware Reference |
+| [hardware.md](../../reborn/docs/hardware.md) | The Hardware Reference |
 | [using/hyforth.md](using/hyforth.md) | HyForth, the shell |
 | [using/wozmon.md](using/wozmon.md) | WOZMON, POST, the self tests, the hardware test |
 | [programming/README.md](programming/README.md) | The Programmer's Guide |

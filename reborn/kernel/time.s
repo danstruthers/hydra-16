@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; time.s - the clock (docs/reimplementation-from-scratch.md, phase 5.4; BIOS ROM page 1): seconds since 2000-01-01,
+; time.s - the clock (docs/design/reimplementation-from-scratch.md, phase 5.4; BIOS ROM page 1): seconds since 2000-01-01,
 ; kept as the boot's time (K0_BOOT: the clock at tick 0) and the ticks since, so the tick stays a count (no seconds
 ; counter in it); and the DS1747, if there's one in U7: its 8 registers at task F's $7FF8-$7FFF (task F is always a
 ; driver, its RAM below $7F00), reached a byte at a time by a quick look.  The calendar is kdev's (#t's /dev/time),

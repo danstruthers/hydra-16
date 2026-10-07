@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; call.s - running code in another task, and copying between tasks (docs/reimplementation-from-scratch.md, §10.4).
+; call.s - running code in another task, and copying between tasks (docs/design/reimplementation-from-scratch.md, §10.4).
 ;
 ; SCALL runs a task's serve entry (TA_SERVEVEC) in that task: its zero page, its stack (below its frame), its
 ; banks (its module at $A000).  The caller is ST_CALL meanwhile; the called task is ST_READY, so the call can be

@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; gpio - the VIA's port A on header J27 (docs/reimplementation-from-scratch.md, §14.3 and §14.5), on srvlib: its pins
+; gpio - the VIA's port A on header J27 (docs/design/reimplementation-from-scratch.md, §14.3 and §14.5), on srvlib: its pins
 ; and handshake lines as #g, and the I2C bus on two of them (PA0 SCL, PA1 SDA, pulled up on the board) as #i.  One
 ; driver for both, so their changes to port A never meet (a boot driver: task B).
 ; #g (at /dev/gpio):

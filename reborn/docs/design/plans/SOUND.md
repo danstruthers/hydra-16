@@ -1,10 +1,10 @@
 ## **Hydra 16: Sound (the YM2151)**
 
-The plan for the Hydra's sound: a library for the YM2151, a song player, a test song that uses everything the chip can do, and importing music made for other machines.  Phases 1-4 are done; importing is planned.  How to use what exists is in [io.md](../../old/docs/programming/io.md#sound-devsnd), [HyForth](../../old/docs/using/hyforth.md#tasks-and-the-console) and [the C guide](../../old/docs/programming/c.md#sound-sndh).
+The plan for the Hydra's sound: a library for the YM2151, a song player, a test song that uses everything the chip can do, and importing music made for other machines.  Phases 1-4 are done; importing is planned.  How to use what exists is in [io.md](../../../../old/docs/programming/io.md#sound-devsnd), [HyForth](../../../../old/docs/using/hyforth.md#tasks-and-the-console) and [the C guide](../../../../old/docs/programming/c.md#sound-sndh).
 
 ### **The chip on the Hydra**
 
-* A **YM2151** (OPM: 8 channels, 4 operators each, 8 algorithms, feedback, an LFO with 4 waveforms, noise on channel 7, 2 timers) and a **YM3012** stereo DAC, then op-amps to `AUDIO_L`/`AUDIO_R` and the mixer ([hardware](../hardware.md)).  CT1/CT2 (two output bits, `$1B`) are on a header.
+* A **YM2151** (OPM: 8 channels, 4 operators each, 8 algorithms, feedback, an LFO with 4 waveforms, noise on channel 7, 2 timers) and a **YM3012** stereo DAC, then op-amps to `AUDIO_L`/`AUDIO_R` and the mixer ([hardware](../../hardware.md)).  CT1/CT2 (two output bits, `$1B`) are on a header.
 * **Clock:** `SND_CLK`, 3.579545 MHz, the same as the Commander X16's and many arcade boards' (Capcom CPS1, Sega System 16, Konami, Namco), so their key codes give the same pitches: MIDI note 69 (A, 440 Hz) is key code `$4A`.  The X68000 ran its YM2151 at 4 MHz: its music needs retuning (below).
 * **I/O:** port 4, `$FF40` (register) and `$FF41` (data, and the status: busy, the timers' flags).  After a data write the chip is busy for 64 of its clocks (about 64 CPU cycles at 3.58 MHz); `YM_WRITE` waits for it.  No wait states on board V1, so the chip can't be used with the CPU at 7.16 MHz.
 * **IRQ line 4:** the timers' interrupt: timer B is the sound clock (phase 4).
@@ -54,7 +54,7 @@ The design, as planned:
 ### **Phase 3: a test song that uses the whole chip** *(done)*
 
 **Built:**
-* **The score compiler**, `sim/tools/hysong.js` ([emulator.md](../../old/docs/tools/emulator.md#songs-the-score-compiler)): a score is instruments (the ROM's patches by number, or a voice's registers by name: `alg`, `fb`, and each operator's `mul`, `dt1`, `tl`, `ar` ...) and a line of MML for each channel (notes, rests, lengths, octaves, legato, slides, repeats, volume, speakers, detune, the LFO, noise, General MIDI drums, and raw register writes).  It works out the patches and volumes itself, so its ZSM is plain register writes; it can write a VGM for listening, and the ROM's source.
+* **The score compiler**, `sim/tools/hysong.js` ([emulator.md](../../../../old/docs/tools/emulator.md#songs-the-score-compiler)): a score is instruments (the ROM's patches by number, or a voice's registers by name: `alg`, `fb`, and each operator's `mul`, `dt1`, `tl`, `ar` ...) and a line of MML for each channel (notes, rests, lengths, octaves, legato, slides, repeats, volume, speakers, detune, the LFO, noise, General MIDI drums, and raw register writes).  It works out the patches and volumes itself, so its ZSM is plain register writes; it can write a VGM for listening, and the ROM's source.
 * **The test song**, `os_rom/songs/test.mml`: 31 bars (66 s) in A minor, 852 notes on all 8 channels, 14 KB.  The build compiles it to `songs/test.zsm`, a file on the ROM disk (`/rom/songs/test.zsm`), and `sndtest` (`SND_CTL_TEST`) plays it: the song player (page C) opens it as any song file, in its own task (`ZSM_PLAY_TEST`).  (It was in paged ROM bank 2, read by a mode of the player's own, until the ROM disk.)  In the emulator all 852 notes play, 1.3 ms from the song's time on average.
 * **The old riff** (the first `sndtest`, `snd_test.s`) is `programs/songs/scom.mml` (`scom.zsm`: on a card, it runs as the command `scom`), a demo of the score language; its ROM code is gone (page B has about 1,200 bytes free).
 

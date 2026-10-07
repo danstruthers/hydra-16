@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; load.s - SPAWN and the loader (BIOS ROM page 3: far calls; docs/reimplementation-from-scratch.md, §10.6, §11).
+; load.s - SPAWN and the loader (BIOS ROM page 3: far calls; docs/design/reimplementation-from-scratch.md, §10.6, §11).
 ;
 ; SPAWN runs in the calling task: it opens the program's file through the caller's namespace, reads its HYX2 header
 ; (into TA_PATH) and checks it, then has the kernel task set a task up for it (task.s: K_SPAWN_K), its fds the

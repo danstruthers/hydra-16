@@ -105,7 +105,7 @@ ACIA_CHIP       = ACIA_ROCKWELL
 ; ---- YM2151 (port 4, $FF40)
 YM_REG          = $FF40         ; Write: select a register
 YM_DATA         = $FF41         ; Write: the selected register; read: the status (bit 7 busy, bits 0-1 the timers'
-                                ;   flags), as the old system's driver read it on the board (docs/plans/SOUND.md)
+                                ;   flags), as the old system's driver read it on the board (docs/design/plans/SOUND.md)
 
 ; ---- The Vera X in slot 0 (ports 2 and 3, $FF20-$FF3F; IRQ line 2): the VERA, its register n at VERA_BASE + n.
 ;   The X16's names (its io.inc), so X16 sources port with a change of base.  Its gateware is the X16 community's

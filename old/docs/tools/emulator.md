@@ -131,7 +131,7 @@ its `check` can look at the folder afterwards (`files.pc`).
 ### **The PC tool: /pc**
 
 `tools/hydrapc.js` is a terminal for the Hydra on a real serial port that also serves a folder on the PC to it, at
-`/pc` ([plans/PC.md](../../../docs/plans/PC.md); on the Hydra: [io.md](../programming/io.md#a-folder-on-the-pc-pc)).  It needs the
+`/pc` ([plans/PC.md](../../../reborn/docs/design/plans/PC.md); on the Hydra: [io.md](../programming/io.md#a-folder-on-the-pc-pc)).  It needs the
 `serialport` package: `npm install`, once, in `sim/`.
 
 ```
@@ -148,7 +148,7 @@ picks them out of the console's bytes) and `tools/pcfs.js` (the file server, whi
 
 ### **HydraFS card images**
 
-`tools/hydrafs.js` makes and reads HydraFS images (the Hydra's SD card filesystem, [plans/HYDRAFS.md](../../../docs/plans/HYDRAFS.md)) on
+`tools/hydrafs.js` makes and reads HydraFS images (the Hydra's SD card filesystem, [plans/HYDRAFS.md](../../../reborn/docs/design/plans/HYDRAFS.md)) on
 the PC, for the emulator's `--sd` or for writing to a real card with a disk imager:
 
 ```
@@ -269,5 +269,5 @@ in a web page too:
 | `acia.js`, `via.js`, `ym2151.js`, `ds1747.js` | The devices: each has `read`/`write`, `tick` (cycles gone), `irqActive`, `nextEvent` (for `WAI`) and `reset` |
 | `sd.js` | The SPI bus on the VIA's port B, and SD cards and echo devices (`--spi-echo`) on it: each card's blocks come from a block device (`{ blocks, read(n), write(n, data) }`): a file in `hydrasim.js` |
 
-A new device (a card in a slot: the VERA, [plans/VIDEO.md](../../../docs/plans/VIDEO.md)) is a module like these, which
+A new device (a card in a slot: the VERA, [plans/VIDEO.md](../../../reborn/docs/design/plans/VIDEO.md)) is a module like these, which
 `machine.js` connects to its I/O ports and IRQ line.

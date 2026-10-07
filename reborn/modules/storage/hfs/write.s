@@ -3,7 +3,7 @@
 ; the metadata buffer, the free map, growing and freeing files, and the requests that change a disk: R_WRITE,
 ; R_CREATE, R_REMOVE, R_WSTAT.  (Format and label: format.s.)
 ;
-; There's no journal (see docs/plans/HYDRAFS.md), but the writes go in a safe order: a cluster is marked in
+; There's no journal (see docs/design/plans/HYDRAFS.md), but the writes go in a safe order: a cluster is marked in
 ; use before any entry points at it, and an entry stops pointing at clusters before they're marked free.
 ; So a crash can leave lost clusters (marked in use, but nothing's), never a cluster used twice.
 

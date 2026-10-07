@@ -3,7 +3,7 @@
 Where HyForth (`modules/forth`, its core; `forthlib/`, its libraries) stands from step 6.6 on: the old HyForth's
 pieces brought back, and HyForth as a shell, to the specification in [hyforth.md](hyforth.md).  Its first steps,
 6.1 to 6.5 (the core, the word sets, the Hydra's words, libraries and scripts, the small core), are in
-[status.md](status.md)'s table, and the plan's §16 ([../../docs/reimplementation-from-scratch.md](../../docs/reimplementation-from-scratch.md))
+[status.md](status.md)'s table, and the plan's §16 ([design/reimplementation-from-scratch.md](design/reimplementation-from-scratch.md))
 has each step as built.
 
 ## In short

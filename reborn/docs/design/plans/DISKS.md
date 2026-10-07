@@ -6,7 +6,7 @@ Disks in memory, and what they let the rest of the system drop:
 * **RAM disks:** a program cache and scratch files, fast, with no card: an area for each task, and a shared one.
   **Built** (the disks `r` and `s`: each shell's own area mounted at `/ram`, and `/sram`).
 
-All of them are block devices under the HydraFS server, as the cards are, and [io.md](../../old/docs/programming/io.md#the-ram-disks-ram)
+All of them are block devices under the HydraFS server, as the cards are, and [io.md](../../../../old/docs/programming/io.md#the-ram-disks-ram)
 describes them as they are.  The names put together from them (`/bin` over the caches, the cards and the ROM)
 are the [namespace plan](NAMESPACES.md)'s, and a task's memory as files is the [/proc plan](PROC.md)'s.
 
@@ -73,7 +73,7 @@ request says so: `IO_BLK_SPEC`), or for task 0.  Each is also a block device, `/
 `/dev/sd/s`, as a card is.
 
 * **A hex digit is the SPI device's, always:** the card on SPI device `$A` is `/sd/a`.  A slot card can decode SPI
-  devices `$8`-`$F` (`SPI_A3`: [hardware.md](../hardware.md#spi-bus-via-port-b)), so `/sd/8` ... `/sd/f` are theirs,
+  devices `$8`-`$F` (`SPI_A3`: [hardware.md](../../hardware.md#spi-bus-via-port-b)), so `/sd/8` ... `/sd/f` are theirs,
   and nothing else may take those names.  The other disks are letters that aren't hex digits (`x`, `r`, `s`), so
   the two can never meet, and every name is one character.
 * **A name isn't a number.**  The tables are indexed by a disk number, 0-15 (`DISK_MAX`: a fid's low 4 bits), and

@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; sem.s - semaphores (docs/reimplementation-from-scratch.md, §21: kept from the old system, in the kernel task).
+; sem.s - semaphores (docs/design/reimplementation-from-scratch.md, §21: kept from the old system, in the kernel task).
 ;
 ; A semaphore is a count and the tasks waiting for it, in the kernel task's tables (K_SEM_*: layout.inc), so every
 ; task sees the same ones, by number (0 to SEM_MAX - 1).  SEM_ACQUIRE takes one of the count, or waits (using no
