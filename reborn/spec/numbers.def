@@ -170,9 +170,11 @@ entry ABS numbers impl=nm_abs
 entry CMP numbers impl=nm_cmp
   in:     r0 = x; r1 = y
   out:    .A = $FF, 0 or 1 (x below, equal to, above y)
-  errors: NE_NOTNUM
+  errors: NE_NOTNUM NE_BIG
   names:  hl cmp | bas - | fs ncompare | c num_cmp
-  doc:    The order, by value whatever the kinds (1 and 1.0 equal); complex numbers by real part, then imaginary.
+  doc:    The order, by value whatever the kinds (1 and 1.0 equal); complex numbers by real part, then imaginary.  (They're
+  doc:    worked as the sums are, fixed decimals' digits scaled to the same places, fractions multiplied out with a
+  doc:    rational: NE_BIG past 255 bytes.)
 
 entry KIND numbers impl=nm_kind
   in:     r0 = x

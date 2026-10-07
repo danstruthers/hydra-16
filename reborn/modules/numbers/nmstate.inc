@@ -23,7 +23,7 @@ nm_set_base:
             ldx         #0
 @char:
             jsr         c_get
-            sta         text,x                              ; (Kept aside till it's whole)
+            sta         arena,x                             ; (Kept aside till it's whole: the arena's)
             cmp         #0
             beq         @end
             inx
@@ -36,7 +36,7 @@ nm_set_base:
             txa
             beq         @bad
 :
-            lda         text,x
+            lda         arena,x
             sta         st_base,x
             dex
             bpl         :-

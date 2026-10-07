@@ -27,6 +27,7 @@ nm_begin0:
             ldx         r13
             stx         RAM_BANK
             sta         v_bank
+            LDR         a_top, arena                        ; (The arena empty)
             ldx         #15
 @zp:
             lda         na,x
@@ -216,12 +217,11 @@ m_add:
 :
             rts
 
-; The caller's number at .A, .X (an operand: r0's, r1's) copied to the bank's buffer at .Y (0 num_a, 1 num_b); v_len
-; its length.  Not a number: NE_NOTNUM
+; The caller's number at .A, .X (an operand: r0's, r1's) copied to the arena.  OUT: .A, .X = its copy (a value);
+; v_len its length.  Not a number: NE_NOTNUM; no room: NE_BIG
 nm_in:
             sta         np
             stx         np + 1
-            phy
             jsr         nm_measure
             lda         np                                  ; (Back to its start: np less its length)
             sec
@@ -230,22 +230,16 @@ nm_in:
             lda         np + 1
             sbc         v_len + 1
             sta         np + 1
-            ply
-            lda         buf_lo,y
-            sta         nq
-            lda         buf_hi,y
-            sta         nq + 1
+            lda         v_len
+            ldx         v_len + 1
+            jsr         a_room
             MOVR        v_left, v_len
 @byte:
             lda         v_left
             ora         v_left + 1
             beq         @done
             jsr         c_get
-            sta         (nq)
-            inc         nq
-            bne         :+
-            inc         nq + 1
-:
+            jsr         a_put
             lda         v_left
             bne         :+
             dec         v_left + 1
@@ -253,11 +247,16 @@ nm_in:
             dec         v_left
             bra         @byte
 @done:
-            rts
+            jmp         a_made
 
-; The call's end with a number, v_len bytes of the bank's buffer .Y (0 num_a, 1 num_b, 2 num_r: the result), copied
-; to the caller's place r2 (its room r3): .A, .X = its length, C = 0.  No room: NE_ROOM
+; The call's end with the number .A, .X (a value), copied to the caller's place r2 (its room r3): .A, .X = its
+; length, C = 0.  No room: NE_ROOM
 nm_out:
+            sta         nq
+            stx         nq + 1
+            jsr         n_size
+            sta         v_len
+            stx         v_len + 1
             lda         r3 + 1
             cmp         v_len + 1
             bcc         @room
@@ -267,10 +266,6 @@ nm_out:
             bcc         @room
 :
             MOVR        np, r2
-            lda         buf_lo,y
-            sta         nq
-            lda         buf_hi,y
-            sta         nq + 1
             MOVR        v_left, v_len
 @byte:
             lda         v_left
@@ -297,7 +292,25 @@ nm_out:
             lda         #NE_ROOM
             jmp         nm_fail
 
-.rodata
-buf_lo:     .lobytes    num_a, num_b, num_r
-buf_hi:     .hibytes    num_a, num_b, num_r
-.code
+; n_x = the caller's r0 (its copy), n_y = its r1
+nm_in2:
+            lda         r0
+            ldx         r0 + 1
+            jsr         nm_in
+            sta         n_x
+            stx         n_x + 1
+            lda         r1
+            ldx         r1 + 1
+            jsr         nm_in
+            sta         n_y
+            stx         n_y + 1
+            rts
+
+; n_x = the caller's r0 (its copy)
+nm_in1:
+            lda         r0
+            ldx         r0 + 1
+            jsr         nm_in
+            sta         n_x
+            stx         n_x + 1
+            rts

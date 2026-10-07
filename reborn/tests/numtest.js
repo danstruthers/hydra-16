@@ -1,12 +1,13 @@
 // ****************************************************************************
 // numtest.js - the numbers test's calls (tests.js, numbers): the card t_num reads them from (tests/mod/t_num: num.in,
-// a record for each call), and the check of what each gave back (num.out) against the reference (sim/tools/numfmt.js;
-// numref.js as the library grows).  The entries' slots and the constants are spec/numbers.def's.
+// a record for each call), and the check of what each gave back (num.out) against the references (sim/tools/numfmt.js,
+// numref.js).  The entries' slots and the constants are spec/numbers.def's.
 'use strict';
 const fs = require('fs');
 const path = require('path');
 const hydrafs = require('../sim/tools/hydrafs.js');
 const numfmt = require('../sim/tools/numfmt.js');
+const R = require('../sim/tools/numref.js');
 const { readNumbers } = require('../tools/apigen.js');
 
 const ROOT = path.join(__dirname, '..');
@@ -27,17 +28,18 @@ function rng(seed) {
 }
 
 // A number of every kind and size the format has: integers of 0 to 255 bytes, fixed decimals of 0 to 65535 places,
-// rationals, complex numbers of them
-function randomNumber(rnd) {
+// rationals, complex numbers of them.  small: integers to 16 bytes (most to 6), to 40 places (an arithmetic's
+// answers seldom too big, and quick)
+function randomNumber(rnd, small = false) {
   const big = n => { let v = 0n; for (let k = 0; k < n; k++) v = (v << 8n) | BigInt(rnd(256)); return v; };
   const int = () => {
-    const k = rnd(10), v = k < 3 ? BigInt(rnd(200)) : k < 8 ? big(1 + rnd(16)) : big(17 + rnd(239));
+    const k = rnd(10), v = k < 3 ? BigInt(rnd(200)) : small ? big(k < 9 ? 1 + rnd(6) : 7 + rnd(10)) : k < 8 ? big(1 + rnd(16)) : big(17 + rnd(239));
     return rnd(2) ? -v : v;
   };
   const real = () => {
     switch (rnd(3)) {
       case 0: return int();
-      case 1: return { fix: int(), places: rnd(4) ? rnd(16) : rnd(3) ? 16 + rnd(400) : 65535 - rnd(10) };
+      case 1: return { fix: int(), places: rnd(4) ? rnd(16) : small ? 16 + rnd(25) : rnd(3) ? 16 + rnd(400) : 65535 - rnd(10) };
       default: { const den = int(); return { num: int(), den: den === 0n ? 7n : den }; }
     }
   };
@@ -49,9 +51,97 @@ function randomNumber(rnd) {
   }
 }
 
+// ---- The library's way (nmval.inc), for where it's too big: numref.js's integers have no end, the library's registers
+// 255 bytes.  Integers and fixed decimals are worked on their digits (scaled to the same places for a sum, a
+// difference or an order; a product's places both's); with a rational, or for a quotient, each is loaded as a
+// fraction (an integer's denominator 1, a fixed decimal's 10^places).  Each register's value is checked as it's made
+// (a product's operands' lengths 256 at most together, as r_mul has it), and the result is written the kind the
+// tower's rules give; a complex number by its parts, as the machine's programs have it
+const TOO_BIG = () => new R.NumError('BIG');
+const nbytes = v => { let a = v < 0n ? -v : v, n = 0; while (a > 0n) { a >>= 8n; n++; } return n; };
+const reg = v => { if (nbytes(v) > 255) throw TOO_BIG(); return v; };
+const rmul = (a, b) => { if (a === 0n || b === 0n) return 0n; if (nbytes(a) + nbytes(b) > 256) throw TOO_BIG(); return reg(a * b); };
+const rpow10 = n => { let v = 1n; for (let k = 0; k < n; k++) v = reg(v * 10n); return v; };
+const isCpx = x => typeof x === 'object' && 're' in x, isRat = x => typeof x === 'object' && 'num' in x;
+const isFix = x => typeof x === 'object' && 'fix' in x;
+function lload(x) {
+  if (isFix(x)) return { n: x.fix, d: rpow10(x.places), pl: x.places, rat: false };
+  if (isRat(x)) return { n: x.num, d: x.den, pl: 0, rat: true };
+  return { n: x, d: 1n, pl: 0, rat: false };
+}
+function lrat(n, d) {
+  if (d === 0n) throw new R.NumError('DIV0');
+  return numfmt.norm({ num: n, den: d });
+}
+const digits = x => isFix(x) ? { n: x.fix, pl: x.places } : { n: x, pl: 0 };
+function scaled(x, y) {                                       // (n_scaled: the digits at the more places)
+  const a = digits(x), b = digits(y), pl = Math.max(a.pl, b.pl);
+  return { m: reg(a.n * 10n ** BigInt(pl - a.pl)), n: reg(b.n * 10n ** BigInt(pl - b.pl)), pl };
+}
+function lreal(op, x, y) {
+  if (typeof x === 'bigint' && typeof y === 'bigint' && op !== 'div')
+    return reg(op === 'add' ? x + y : op === 'sub' ? x - y : rmul(x, y));
+  if (op !== 'div' && !isRat(x) && !isRat(y)) {
+    if (op === 'mul') {
+      const a = digits(x), b = digits(y), pl = a.pl + b.pl;
+      if (pl > 65535) throw TOO_BIG();
+      return numfmt.norm({ fix: rmul(a.n, b.n), places: pl });
+    }
+    const t = scaled(x, y);
+    return numfmt.norm({ fix: reg(op === 'add' ? t.m + t.n : t.m - t.n), places: t.pl });
+  }
+  const a = lload(x), b = lload(y);
+  let n, d, pl;
+  if (op === 'add' || op === 'sub') {
+    const t1 = rmul(a.n, b.d), t2 = rmul(b.n, a.d);
+    n = reg(op === 'add' ? t1 + t2 : t1 - t2); d = rmul(a.d, b.d); pl = Math.max(a.pl, b.pl);
+  } else if (op === 'mul') {
+    n = rmul(a.n, b.n); d = rmul(a.d, b.d); pl = a.pl + b.pl;
+    if (pl > 65535) throw TOO_BIG();
+  } else {
+    n = rmul(a.n, b.d); d = rmul(a.d, b.n);
+    return d < 0n ? lrat(-n, -d) : lrat(n, d);
+  }
+  return lrat(n, d);
+}
+const lparts = x => isCpx(x) ? [x.re, x.im] : [x, 0n];
+const lcpx = (re, im) => R.isZero(im) ? re : { re, im };
+function lop(op, x, y) {
+  if (op === 'div' && !isCpx(y) && R.isZero(y)) throw new R.NumError('DIV0');
+  if (!isCpx(x) && !isCpx(y)) return lreal(op, x, y);
+  const [a, b] = lparts(x), [c, e] = lparts(y), r = lreal;
+  switch (op) {
+    case 'add': return lcpx(r('add', a, c), r('add', b, e));
+    case 'sub': return lcpx(r('sub', a, c), r('sub', b, e));
+    case 'mul': return lcpx(r('sub', r('mul', a, c), r('mul', b, e)), r('add', r('mul', a, e), r('mul', b, c)));
+    default: {
+      const n = r('add', r('mul', c, c), r('mul', e, e));
+      return lcpx(r('div', r('add', r('mul', a, c), r('mul', b, e)), n), r('div', r('sub', r('mul', b, c), r('mul', a, e)), n));
+    }
+  }
+}
+function lrcmp(x, y) {
+  if (typeof x === 'bigint' && typeof y === 'bigint') return x < y ? -1 : x > y ? 1 : 0;
+  if (!isRat(x) && !isRat(y)) { const t = scaled(x, y); return t.m < t.n ? -1 : t.m > t.n ? 1 : 0; }
+  const a = lload(x), b = lload(y), l = rmul(a.n, b.d), m = rmul(b.n, a.d);
+  return l < m ? -1 : l > m ? 1 : 0;
+}
+function lcmp(x, y) {
+  if (!isCpx(x) && !isCpx(y)) return lrcmp(x, y);
+  const [a, b] = lparts(x), [c, e] = lparts(y);
+  return lrcmp(a, c) || lrcmp(b, e);
+}
+
+// What a call gives back, from the library's way (and checked against numref.js where it isn't too big)
+function want(f) {
+  try { return f(); }
+  catch (e) { if (e instanceof R.NumError) return { err: K['NE_' + e.code] }; throw e; }
+}
+const nbytesOf = x => { const b = numfmt.encode(x); return { bytes: b }; };
+
 // The calls, in order: each { op, flags, a, x, y, room, r0, r1, r4, want, what }.  An argument is a value, or
 // { data, bank } (its bytes, in this task's RAM or in the bank at $8000).  want: { err } (C = 1, .A the error), { ok }
-// (C = 0), or { bytes } (C = 0 and the result those bytes)
+// (C = 0), { bytes } (C = 0 and the result those bytes), or { a, x } (C = 0, and .A and .X those)
 function calls(seed = 1066) {
   const rnd = rng(seed), list = [];
   const call = (op, o, want, what) => list.push({ op, flags: 0, room: 0, ...o, want, what });
@@ -134,9 +224,54 @@ function calls(seed = 1066) {
   call('BYTES', { flags: RESULT, room: 64, r0: { data: two }, r1: two.length - 1 }, { err: K.NE_NOTNUM }, 'BYTES, a count short of the number: NE_NOTNUM');
   call('BYTES', { flags: RESULT, room: 64, r0: { data: two }, r1: two.length + 1 }, { err: K.NE_NOTNUM }, 'BYTES, a count past it: NE_NOTNUM');
 
+  // ---- The arithmetic: ADD, SUB, MUL, DIV (each checked against numref.js too), NEG, ABS, CMP, KIND
+  const OPS = { ADD: ['add', R.add], SUB: ['sub', R.sub], MUL: ['mul', R.mul], DIV: ['div', R.div] };
+  const show = x => numfmt.show(x).slice(0, 40);
+  const operand = (small = true) => numfmt.encode(randomNumber(rnd, small));
+  const arith = (op, x, y, what) => {
+    const [lo, ref] = OPS[op], w = want(() => {
+      const v = lop(lo, x, y), r = ref(x, y);
+      if (!Buffer.from(numfmt.encode(v)).equals(Buffer.from(numfmt.encode(r)))) throw new Error(op + ': the library\'s way and numref.js differ: ' + show(x) + ', ' + show(y));
+      return nbytesOf(v);
+    });
+    call(op, { flags: RESULT | (rnd(2) ? IN_BANK : 0), room: BANK_RES_ROOM, r0: where(numfmt.encode(x)), r1: where(numfmt.encode(y)) }, w,
+      what || op + ' ' + show(x) + ', ' + show(y));
+  };
+  const n = t => numfmt.parse(t);
+  for (const [op, a, b] of [['ADD', '1', '2'], ['ADD', '0.1', '0.2'], ['SUB', '1/3', '1/3'], ['MUL', '1.5', '2'], ['DIV', '1', '3'],
+    ['DIV', '6', '3'], ['DIV', '1', '0'], ['DIV', '1', '0.0'], ['DIV', '1+2i', '3-4i'], ['MUL', '2i', '2i'], ['ADD', '1+2i', '1-2i'],
+    ['SUB', '-64', '1'], ['ADD', '63', '1'], ['MUL', '1.25', '0.8'], ['DIV', '2.5', '0.5'], ['ADD', '1/2', '0.5'], ['SUB', '0.10', '0.1']])
+    arith(op, n(a), n(b), op + ' ' + a + ', ' + b);
+  const max = (1n << 2040n) - 1n;
+  arith('ADD', max, 1n, 'ADD the greatest integer, 1: too big');
+  arith('SUB', -max, 1n, 'SUB -the greatest integer, 1: too big');
+  arith('ADD', max, -1n, 'ADD the greatest integer, -1');
+  arith('MUL', (1n << 1024n), (1n << 1015n), 'MUL two halves, 255 bytes');
+  arith('MUL', (1n << 1024n), (1n << 1016n), 'MUL two halves, 256 bytes: too big');
+  for (let k = 0; k < 800; k++) { const op = ['ADD', 'SUB', 'MUL', 'DIV'][k & 3]; arith(op, numfmt.decode(operand()), numfmt.decode(operand())); }
+  for (let k = 0; k < 40; k++) { const op = ['ADD', 'SUB', 'MUL', 'DIV'][k & 3]; arith(op, numfmt.decode(operand(false)), numfmt.decode(operand(!(k & 4)))); }
+  for (let k = 0; k < 300; k++) {
+    const x = numfmt.decode(operand()), y = rnd(8) ? numfmt.decode(operand()) : x;
+    call('CMP', { r0: where(numfmt.encode(x)), r1: where(numfmt.encode(y)) },
+      want(() => { const c = lcmp(x, y); if (c !== R.cmp(x, y)) throw new Error('CMP: the library\'s way and numref.js differ'); return { a: c & 255, x: 0 }; }),
+      'CMP ' + show(x) + ', ' + show(y));
+  }
+  for (let k = 0; k < 450; k++) {
+    const x = numfmt.decode(operand()), op = ['NEG', 'ABS', 'KIND'][k % 3];
+    const w = op === 'NEG' ? want(() => nbytesOf(R.neg(x))) : op === 'ABS' ? want(() => nbytesOf(R.abs(x)))
+      : { a: R.kind(x), x: R.sign(isCpx(x) ? x.re : x) & 255 };
+    call(op, { flags: op === 'KIND' ? 0 : RESULT | (rnd(2) ? IN_BANK : 0), room: BANK_RES_ROOM, r0: where(numfmt.encode(x)) }, w, op + ' ' + show(x));
+  }
+  call('ADD', { flags: RESULT, room: 0, r0: { data: [1] }, r1: { data: [2] } }, { err: K.NE_ROOM }, 'ADD 1, 2, no room: NE_ROOM');
+  call('ADD', { flags: RESULT, room: 1, r0: { data: [1] }, r1: { data: [2] } }, { bytes: [3] }, 'ADD 1, 2, room for it');
+  call('ADD', { flags: RESULT, room: 16, r0: { data: [0xC3] }, r1: { data: [2] } }, { err: K.NE_NOTNUM }, 'ADD a tag $C3: NE_NOTNUM');
+  call('DIV', { flags: RESULT, room: 16, r0: { data: [1] }, r1: { data: [0xC1, 0, 3] } }, { err: K.NE_DIV0 }, 'DIV by 0/3 (not its one form): NE_DIV0');
+  call('DIV', { flags: RESULT, room: 16, r0: { data: [1] }, r1: { data: [0xB2, 0] } }, { err: K.NE_DIV0 }, 'DIV by 0.00 (not its one form): NE_DIV0');
+  call('ADD', { flags: RESULT, room: 16, r0: { data: [0xC1, 1, 0] }, r1: { data: [2] } }, { err: K.NE_DIV0 }, 'ADD 1/0 (not a number): NE_DIV0');
+
   // ---- The entries not written yet
   for (const e of NUMS.libs.find(l => l.name === 'numbers').entries)
-    if (!['INIT', 'SET_BASE', 'GET_BASE', 'SEED', 'BYTES'].includes(e.name))
+    if (!['INIT', 'SET_BASE', 'GET_BASE', 'SEED', 'BYTES', 'ADD', 'SUB', 'MUL', 'DIV', 'NEG', 'ABS', 'CMP', 'KIND'].includes(e.name))
       call(e.name, { flags: RESULT, room: 64, r0: { data: [5] }, r1: { data: [6] } }, { err: K.NE_TODO }, e.name + ': not written yet');
   return list;
 }
@@ -185,6 +320,7 @@ function check(list, out) {
     if (w.err !== undefined) { if (!carry || a !== w.err) say(c, (carry ? err : 'no error') + ', not ' + ERR[w.err]); }
     else if (carry) say(c, err);
     else if (w.bytes && !Buffer.from(w.bytes).equals(got)) say(c, '[' + hex(got) + '], not [' + hex(w.bytes) + ']');
+    else if (w.a !== undefined && (a !== w.a || x !== w.x)) say(c, '.A, .X = $' + hex([a, x]) + ', not $' + hex([w.a, w.x]));
   }
   if (!f.length && at !== out.length) f.push('num.out: ' + (out.length - at) + ' bytes after the last call\'s');
   return f;

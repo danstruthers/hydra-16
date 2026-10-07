@@ -20,14 +20,6 @@
 nm_parse        = nm_todo
 nm_display      = nm_todo
 nm_format       = nm_todo
-nm_add          = nm_todo
-nm_sub          = nm_todo
-nm_mul          = nm_todo
-nm_div          = nm_todo
-nm_neg          = nm_todo
-nm_abs          = nm_todo
-nm_cmp          = nm_todo
-nm_kind         = nm_todo
 nm_idiv         = nm_todo
 nm_gcd          = nm_todo
 nm_pow          = nm_todo
@@ -53,5 +45,13 @@ nm_todo:
             jmp         nm_fail
 
 .include "nmcall.inc"
+.include "nmreg.inc"
+.include "nmval.inc"
 .include "nmstate.inc"
+.include "nmarith.inc"
 .include "nmbytes.inc"
+
+; ---- The arena: the rest of the bank
+.segment "NUMBANK"
+arena:
+.assert     arena + 2 * NUM_MAX <= DIGS, lderror, "The arena's too small for an operand and a number's digits"

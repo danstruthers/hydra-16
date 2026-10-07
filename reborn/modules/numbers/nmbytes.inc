@@ -2,22 +2,19 @@
 ; nmbytes.inc - BYTES: bytes checked, a number in the stored format in its one form (as numfmt.js's decode and
 ; danlang's bytes-number take them), and copied to the result's place.  Its one form: an integer in its shortest tag
 ; (-64 to 63 the tag alone; 1 to 16 bytes, then 17 to 255, its top byte not 0); a fixed decimal's places in their own
-; tag below 16, its digits not ending in 0 when it has places; a rational's denominator above 1 (in lowest terms: with
-; GCD); a complex number's imaginary part not 0.
+; tag below 16, its digits not ending in 0 when it has places; a rational's denominator above 1, in lowest terms; a
+; complex number's imaginary part not 0.
 
 nm_bytes:
             jsr         nm_begin
-            lda         r0
-            ldx         r0 + 1
-            ldy         #0
-            jsr         nm_in                               ; (num_a, its tags and lengths checked)
+            jsr         nm_in1                              ; (Its copy, its tags and lengths checked)
             lda         v_len                               ; (The bytes all the number)
             cmp         r1
             bne         f_bad
             lda         v_len + 1
             cmp         r1 + 1
             bne         f_bad
-            LDR         nq, num_a
+            MOVR        nq, n_x
             lda         (nq)
             cmp         #NT_COMPLEX
             bne         @real
@@ -33,7 +30,8 @@ nm_bytes:
 @im:
 @real:
             jsr         f_real
-            ldy         #0
+            lda         n_x
+            ldx         n_x + 1
             jmp         nm_out
 
 f_bad:
@@ -143,20 +141,37 @@ f_real:
             jsr         f_next                              ; (A rational: nm_measure let no other tag by)
             lda         (nq)                                ; (Its numerator not 0)
             beq         f_bad2
+            MOVR        n_p1, nq
             jsr         f_int
             lda         (nq)                                ; (Its denominator above 1: 2-63, or more bytes, positive)
             cmp         #2
             bcc         f_bad2
             cmp         #$40
-            bcc         @int
+            bcc         @den
             cmp         #NT_POS
             bcc         f_bad2
             cmp         #NT_NEG
-            bcc         @int
+            bcc         @den
             cmp         #NT_LONG_POS
             bne         f_bad2
-@int:
-            jmp         f_int
+@den:
+            MOVR        n_p2, nq
+            jsr         f_int
+            lda         #4                                  ; (In lowest terms: their divisor 1)
+            sta         nrc
+            lda         n_p1
+            ldx         n_p1 + 1
+            jsr         r_load
+            lda         #5
+            sta         nrc
+            lda         n_p2
+            ldx         n_p2 + 1
+            jsr         r_load
+            jsr         n_gcd
+            bne         :+
+            rts
+:
+            jmp         f_bad
 
 ; A fixed decimal's digits at nq (it has places), an integer in its one form not ending in 0, nq moved past it
 f_digits:
