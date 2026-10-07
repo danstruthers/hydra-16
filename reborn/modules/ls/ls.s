@@ -1,7 +1,7 @@
 ; ****************************************************************************
 ; ls [-ld] [name ...] - each name: a directory's entries (its stat records, read whole), or a file's own record;
 ; none: the current directory (.).  A line an entry: its name, and a / after a directory's.  -l: its mode, device
-; and instance, length, time and name ("d-rwxrwxrwx f r     512 2000-01-01 00:00 lib"); -d: a directory itself,
+; and instance, length, time and name ("d-rwxrwxrwx fr      512 2000-01-01 00:00 lib"); -d: a directory itself,
 ; not its entries.  A name that isn't there is said ("ls: name: why"), and ls ends with code 1.
 
 .include "hydra.inc"

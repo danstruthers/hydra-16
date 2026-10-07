@@ -14,15 +14,16 @@ Contents: [Starting it](#starting-it) · [The basics](#the-basics) · [Libraries
 
 ## Starting it
 
-| Typed at rc's prompt | What runs |
+| Typed at the shell's prompt | What runs |
 | :--- | :--- |
 | `forth` | Forth at the console: each line typed is run, then ` ok` |
 | `forth -l` | Forth as a login shell: its namespace made, `startup.fs` and `profile.fs` run, then its prompt (`/> `) |
 | `forth file.fs a b` | A script: the file run, then forth ends (with code 1 after an error).  A file whose first line is `#!/bin/forth` runs by its name too (`./file.fs a b`) |
 
-`bye` ends a plain forth, and `exit` the shell (`exits ( n -- )` with a code).  To make HyForth every window's
-shell, put a line `/bin/forth -l` in `/lib/shell` on a card (`/sd/0/lib/shell`) or the shared RAM disk: init reads
-it for window 0, and each window made (Ctrl-] c) gets the same.
+`bye` ends a plain forth, and `exit` the shell (`exits ( n -- )` with a code).  HyForth is the login shell: the
+ROM's `/lib/shell` names `/bin/forth -l`, which init starts in window 0 and in each window made (Ctrl-] c).  A line
+in `/lib/shell` on a card (`/sd/0/lib/shell`) or the shared RAM disk names another (`/bin/rc -l`, `/bin/hylang
+-l`): it comes first in `/lib`'s union.
 
 A script's arguments are `argc ( -- n )` and `arg ( n -- c-addr u )` (in `hydra.fl`): `forth file.fs a b` has 3,
 the file's name `0 arg`.  At the console, and under `forth -l`, there are none.
