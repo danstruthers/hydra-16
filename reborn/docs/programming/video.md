@@ -54,7 +54,7 @@ A game paces itself by `frame`: a read waits for the next VSYNC.  In C, `fread` 
 
 The screen shows the console's windows as the serial terminal does: the window shown, with the keys (Ctrl-] and a
 digit shows another, painted on both from its screen, which the console keeps).  A window is the smaller terminal's
-size, the serial port's 80 x 24 with both on: on the screen its rows at the top, the scrolling region kept to them.  `consctl` chooses where: `screen`, `serial` or `both` (every window's; it
+size, the serial port's 80 x 24 with both on: on the screen its rows at the top, below the chrome, the scrolling region kept to them.  The chrome is the bar (the windows and the time) and the window's header and footer, a row each, on the screen by default (none on the serial port: `wctl`'s `chrome`), so a window on the screen alone is 80 x 57.  `consctl` chooses where: `screen`, `serial` or `both` (every window's; it
 starts `both`), and reads with a line `terminal both`.  With `screen` alone, output isn't paced by the serial line.
 
 The terminal is 80x60 (`mode 80x30` and `mode 40x30` make the characters bigger), in 16 colours: the ANSI ones, 0-15

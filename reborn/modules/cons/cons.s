@@ -27,7 +27,12 @@
 ;               18 t, and its answer sets it, as the PC tool's report does, ESC [ 8 ; R ; C t, sent as its window
 ;               changes).  It reads as the state, with the window's size (size C R): the smaller of the terminals
 ;               it's shown on, each whole (the screen's from vid's ctl, mode CxR), 127 x 64 at most
-;   /wctl       new (a window), current N (window N shown).  It reads as the windows, a line each (* the shown one)
+;   /wctl       new (a window), current N (window N shown); the chrome (W4): bar top, bar bottom, bar off, bar FORMAT
+;               (console-wide), header FORMAT, footer FORMAT, header on|off, footer on|off, chrome screen|serial|both
+;               on|off [bar] [header] [footer], status TEXT, monitor on|off (the window's), default header FORMAT,
+;               default footer FORMAT, default chrome ... (new windows', and those still as the defaults were).  It
+;               reads as the windows, a line each (* the shown one)
+;   /label      the window's title (OSC 0 and 2 write it too), read and written whole; empty: its program's name
 ;   /wnew       a read waits for the user's Ctrl-] c, then makes a window, shown, and gives its number (init's: it
 ;               starts a shell there)
 ;   /ser        the serial port, raw: bytes in and out as they are.  While it's open for reading, the line is its
@@ -37,6 +42,12 @@
 ;   /kbdin      a write's bytes are the window's keys, as if typed (rio's kbdin: a line sent to another window's
 ;               shell, forth's send); all of them, as its keys' queue has room, the writer waiting for the rest
 ;   /text       the window's scrollback and screen as text, a line a row (rio's)
+; The chrome (W4): a terminal shows the bar (a row, console-wide, at its top or its bottom) and the shown window's
+; header and footer (a row each, above and below its screen), as that window's chrome is on there (w_chr; by default
+; all of it on the screen, none on the serial port).  Each is rendered from its format (chr_render: %n its number, %l
+; its label, %p its program, %s its status line (DECSASD's, or status's), %w and %G the windows, %c %r its size, %m its
+; modes, %t %d the time and the date, %L the LEDs, %= the rest to the right, %[...] SGR's rendition, %% a %); vt.s
+; draws them.  A window's size is the smaller of the terminals it's shown on, each less its chrome rows there.
 ; The keys: Ctrl-] then a digit shows that window (Ctrl-] n the next; Ctrl-] c asks for a new one, for /wnew's
 ; reader; Ctrl-] h holds the window shown's output, its writers waiting, till Ctrl-] h again (the VT100's No Scroll);
 ; Ctrl-] Ctrl-] is a Ctrl-]); Ctrl-C and Ctrl-\ are notes (interrupt, kill) to the shown window's note
@@ -128,6 +139,9 @@ PC_QUIET        = TICK_HZ / 10  ; A frame coming in that stops this long has los
 PC_NAP          = 8             ; Timer 2's rounds (about 65,000 cycles) between looks at the time, a reply awaited
 ESC_NAP         = 2             ;   and an Escape alone (ESC_TICKS: then it's a key, not a sequence's start)
 ESC_TICKS       = TICK_HZ / 10
+FMT_SIZE        = 64            ; A chrome format, its characters with their zero
+CLK_NAP         = 110           ; Timer 2's rounds (about 2 s) between looks at the time, the chrome showing it
+TM_LEN          = 19            ; The time's text: "2026-10-07 20:41:05"
 PS_ATTACH       = 1             ; pc_step: the attach is out ...
 PS_REQ          = 2             ;   the request is out
 
@@ -187,6 +201,7 @@ ST_N        = st_last - st_first
 n:          .res        2                                   ; Scratch
 m:          .res        2
 p:          .res        2
+t2_napr:    .res        1                                   ; Timer 2's idle rounds (nap_set's: t2_next's, at once)
 cnt:        .res        1
 
 .bss
@@ -206,6 +221,47 @@ kvt:        .res        WIN_MAX                             ;   <> 0: keys vt ..
 w_jump:     .res        WIN_MAX                             ;   <> 0: scroll jump ...
 w_hold:     .res        WIN_MAX                             ;   <> 0: held (Ctrl-] h) ...
 w_rsz:      .res        WIN_MAX                             ;   <> 0: resized (KEY_RESIZE for its raw reader) ...
+w_raw:      .res        WIN_MAX                             ;   <> 0: raw (raw's, for its chrome's %m) ...
+w_chr:      .res        WIN_MAX                             ;   its chrome on each terminal (CH_*: the serial port's
+                                                            ;   in bits 0-2, the screen's in 4-6) ...
+w_rdr:      .res        WIN_MAX                             ;   the task that last read it, + 1 (0: none): %p ...
+w_act:      .res        WIN_MAX                             ;   its activity while not shown (ACT_*) ...
+w_mon:      .res        WIN_MAX                             ;   <> 0: monitor (its output marked, not shown) ...
+w_hfmt:     .res        WIN_MAX * FMT_SIZE                  ;   its header's format, its footer's ...
+w_ffmt:     .res        WIN_MAX * FMT_SIZE
+w_stat:     .res        WIN_MAX * STAT_SIZE                 ;   and its status line (vt.s's DECSASD, status)
+bar_pos:    .res        1                                   ; The bar: 0 none, BAR_TOP, BAR_BOTTOM ...
+bar_fmt:    .res        FMT_SIZE                            ;   its format
+def_chr:    .res        1                                   ; A new window's chrome, header and footer
+def_hfmt:   .res        FMT_SIZE
+def_ffmt:   .res        FMT_SIZE
+chr_dirty:  .res        1                                   ; The terminals whose chrome is to be drawn again (bit 0
+                                                            ;   the serial port, 1 the screen)
+chr_v:      .res        1                                   ; (A chrome command's: the bits, the parts, a word's end)
+chr_p:      .res        1
+chr_wl:     .res        1
+chr_sep:    .res        1
+hf_k:       .res        1                                   ; (header's or footer's)
+rl_chg:     .res        1                                   ; (relayout's: a window resized)
+cr_c:       .res        CR_MAX                              ; A chrome row rendered: its characters, colours,
+cr_a:       .res        CR_MAX                              ;   rendition ...
+cr_f:       .res        CR_MAX
+cr_n:       .res        1                                   ;   its cells so far ...
+cr_w:       .res        1                                   ;   all of them (its width) ...
+cr_i:       .res        1                                   ;   the format's character next ...
+cr_ca:      .res        1                                   ;   the colours and rendition now ...
+cr_cf:      .res        1
+cr_rx:      .res        1                                   ;   the right part's first cell (%=; $FF: none) ...
+cr_ga:      .res        1                                   ;   and the rendition at it
+cr_gf:      .res        1
+cr_k:       .res        1                                   ; (Scratch)
+chr_pass:   .res        1                                   ; A drawing of the chrome (vt.s's: the time read once)
+tm_pass:    .res        1                                   ; The time read (#t/time): the drawing it's for ...
+tm_buf:     .res        TM_LEN + 1                          ;   its text ...
+tm_fd:      .res        1
+clk_on:     .res        1                                   ; <> 0: the chrome has shown the time (drawn again as the
+clk_due:    .res        2                                   ;   minute changes: this tick)
+ti_buf:     .res        TI_SIZE                             ; A task's TASKINFO (%p: its name)
 kp_n:       .res        WIN_MAX                             ;   a key's sequence: its bytes, those read ...
 kp_i:       .res        WIN_MAX
 kp_buf:     .res        WIN_MAX * KP_SIZE                   ;   and them
@@ -260,6 +316,7 @@ pc_k:       .res        1
 pc_crc:     .res        2                                   ;   a CRC
 
 .assert     ST_N <= ST_SIZE, error, "A window's editor state is bigger than ST_SIZE"
+.assert     WIN_MAX * FMT_SIZE <= 256 .and FMT_SIZE = 64 .and STAT_SIZE = 128 .and LBL_SIZE = 32, error, "fmt_at, stat_at, lbl_ptr"
 .assert     PC_TX_SIZE <= 256 .and PC_RX_SIZE <= 256, error, "/pc's frames: 8-bit indexes"
 .assert     RQ_NAMELEN < RQ_SIZE .and RQ_FLAGS < RQ_NAMELEN, error, "/pc: pc_same's fields"
 .assert     WIN_MAX * INQ_SIZE = 256 .and WIN_MAX = 4, error, "iq_put and iq_get: 4 queues of 64, a page"
@@ -303,6 +360,25 @@ init:
             stz         sz_st
             lda         #$FF
             sta         scr_cfd
+            lda         #BAR_TOP                            ; The chrome: the bar at the top; a window's all of it
+            sta         bar_pos                             ;   on the screen, none on the serial port
+            lda         #(CH_ALL << 4)
+            sta         def_chr
+            stz         chr_dirty
+            stz         clk_on
+            stz         chr_pass
+            lda         #$FF
+            sta         tm_pass
+            ldx         #FMT_SIZE - 1                       ; (Its formats)
+:
+            lda         s_bar_def,X
+            sta         bar_fmt,X
+            lda         s_head_def,X
+            sta         def_hfmt,X
+            lda         s_foot_def,X
+            sta         def_ffmt,X
+            dex
+            bpl         :-
             FAR2        vt_init
             ldx         #0                                  ; Window 0: shown, init's group's
             jsr         w_init
@@ -461,8 +537,7 @@ t2_next:
             lda         #PC_NAP                             ;   client looks at the time, and an Escape's reader)
             ldy         pc_step
             bne         @nap
-            lda         #ESC_NAP
-            ldy         esc_wait
+            lda         t2_napr                             ; (An Escape alone, the chrome's time: nap_set's)
             beq         @stop
 @nap:                                                       ; A /pc reply awaited, or an Escape alone: timer 2 runs
             sta         t2_left                             ;   on, its rounds $FFxx cycles (tx_start puts the
@@ -558,7 +633,8 @@ rx_get:
 ; /pc's frames taken out (pc_rx).  None while /ser is open for reading: the bytes are its
 distribute:
             lda         ser_rd
-            bne         @done
+            beq         @byte
+            rts
 @byte:
             jsr         rx_get
             bcs         @done
@@ -621,6 +697,8 @@ distribute:
             lda         w_hold,X
             eor         #1
             sta         w_hold,X
+            lda         #3                                  ; (Held: in its chrome's %m)
+            tsb         chr_dirty
             inc         TASK_EVENT                          ; (Its writers look again)
             jmp         @byte
 
@@ -632,7 +710,7 @@ distribute:
             ldx         w_in                                ;   one's still)
             lda         w_group,X
             sta         win_grp
-            bra         @byte
+            jmp         @byte
 
 @done:
             rts
@@ -640,6 +718,7 @@ distribute:
 ; Window .X shown, with the keys: painted on both terminals (pump)
 w_show:
             stx         w_in
+            stz         w_act,X                             ; (Its activity seen)
             lda         w_group,X
             sta         win_grp
             lda         #1
@@ -664,12 +743,37 @@ w_make:
 ; Window .X, new: its screen (vt.s: three banks), empty; init's group's.  OUT: C = 0; or C = 1, .A = E_NOMEM.
 ; Keeps .X
 w_init:
+            lda         def_chr                             ; (Its chrome the defaults; its size from them)
+            sta         w_chr,X
+            jsr         win_size
             phx
             FAR2        vt_new
             plx
             bcc         :+
             rts
 :
+            stz         w_raw,X                             ; Its chrome's state: its formats the defaults
+            stz         w_rdr,X
+            stz         w_act,X
+            stz         w_mon,X
+            phx
+            txa
+            ldy         #0
+            jsr         fmt_at
+            lda         #<def_hfmt
+            ldx         #>def_hfmt
+            jsr         fmt_copy
+            plx
+            phx
+            txa
+            ldy         #1
+            jsr         fmt_at
+            lda         #<def_ffmt
+            ldx         #>def_ffmt
+            jsr         fmt_copy
+            plx
+            lda         #3
+            tsb         chr_dirty
             lda         #1
             sta         w_used,X
             stz         w_iqh,X
@@ -702,6 +806,8 @@ w_init:
 ; Window .X gone (its last cons closed), its screen too; if it was shown, window 0 is
 w_free:
             stz         w_used,X
+            lda         #3                                  ; (Its chrome's lists without it)
+            tsb         chr_dirty
             phx
             FAR2        vt_free
             plx
@@ -903,6 +1009,10 @@ pump:
             rol                                             ; (.A <> 0: a frame's going out)
             pha
             jsr         scr_ready
+            lda         clk_on                              ; (The chrome's time: drawn again each minute)
+            beq         :+
+            jsr         clk_check
+:
             lda         scr_chk                             ; (The screen's size looked at, if it may have
             beq         :+                                  ;   changed)
             jsr         scr_size
@@ -1067,55 +1177,37 @@ dec_add:
             sta         p
             rts
 
-; The windows' size: the smaller of the terminals they're shown on, each whole (the screen once its size is known),
-; WIN_COLS x WIN_ROWS at most.  A change resizes every window (vt.s), tells their raw readers (KEY_RESIZE), and has
-; the terminals painted again.  Modifies .A, .X, .Y, n
+; Each window's size (win_size: the smaller of the terminals it's shown on, each less its chrome there): a change
+; resizes it (vt.s), tells its raw reader (KEY_RESIZE), and has the terminals painted again.  Modifies .A, .X, .Y, n
 relayout:
-            lda         #WIN_COLS
-            sta         n
-            lda         #WIN_ROWS
-            sta         n + 1
-            lda         term
-            and         #TERM_SERIAL
-            beq         :+
-            lda         ser_cols
-            ldx         ser_rows
-            jsr         @min
-:
-            lda         term
-            and         #TERM_SCREEN
-            beq         @have
-            lda         scr_st
-            cmp         #1
-            bne         @have
-            lda         scr_cols
-            beq         @have
-            ldx         scr_rows
-            jsr         @min
-@have:
-            lda         n
-            cmp         lay_cols
-            bne         :+
-            lda         n + 1
-            cmp         lay_rows
-            beq         @done
-:
-            lda         n
-            sta         lay_cols
-            lda         n + 1
-            sta         lay_rows
+            stz         rl_chg
             ldx         #WIN_MAX - 1
 @win:
             lda         w_used,X
-            beq         :+
+            beq         @next
+            jsr         win_size
+            phx
+            FAR2        vt_size                             ; (.A: its columns, .X: its rows, as they are)
+            cmp         lay_cols
+            bne         @resize
+            cpx         lay_rows
+            beq         @same
+@resize:
+            plx
             phx
             FAR2        vt_resize
             plx
             lda         #1
             sta         w_rsz,X
-:
+            sta         rl_chg
+            bra         @next
+@same:
+            plx
+@next:
             dex
             bpl         @win
+            lda         rl_chg
+            beq         @done
             lda         #1
             sta         ts_ser
             sta         ts_scr
@@ -1123,15 +1215,83 @@ relayout:
 @done:
             rts
 
-@min:                                                       ; n x n + 1 no more than .A x .X
-            cmp         n
-            bcs         :+
+; lay_cols, lay_rows: window .X's size: the smaller of the terminals it's shown on (the screen's once its size is
+; known), each less its chrome rows there; WIN_COLS x WIN_ROWS at most.  Keeps .X.  Modifies .A, .Y, n
+win_size:
+            lda         #WIN_COLS
+            sta         lay_cols
+            lda         #WIN_ROWS
+            sta         lay_rows
+            lda         term
+            and         #TERM_SERIAL
+            beq         @screen
+            ldy         #0
+            jsr         chr_rows
             sta         n
-:
-            cpx         n + 1
+            lda         ser_rows
+            ldy         ser_cols
+            jsr         @min
+@screen:
+            lda         term
+            and         #TERM_SCREEN
+            beq         @done
+            lda         scr_st
+            cmp         #1
+            bne         @done
+            lda         scr_cols
+            beq         @done
+            ldy         #1
+            jsr         chr_rows
+            sta         n
+            lda         scr_rows
+            ldy         scr_cols
+            jsr         @min
+@done:
+            rts
+
+@min:                                                       ; No more than .Y columns, and .A rows less n
+            cpy         lay_cols                            ;   (WIN_MIN_ROWS at least)
             bcs         :+
-            stx         n + 1
+            sty         lay_cols
 :
+            sec
+            sbc         n
+            bcc         @few
+            cmp         #WIN_MIN_ROWS
+            bcs         @rows
+@few:
+            lda         #WIN_MIN_ROWS
+@rows:
+            cmp         lay_rows
+            bcs         :+
+            sta         lay_rows
+:
+            rts
+
+; .A = window .X's chrome rows on terminal .Y (0 the serial port, 1 the screen): its header, its footer, and the bar
+; (if there's one).  Keeps .X.  Modifies n + 1
+chr_rows:
+            lda         w_chr,X
+            and         #CH_LIVE
+            cpy         #0
+            beq         :+
+            lsr
+            lsr
+            lsr
+            lsr
+:
+            sta         n + 1
+            lda         #0
+            lsr         n + 1                               ; (CH_BAR)
+            bcc         :+
+            ldy         bar_pos
+            beq         :+
+            inc         a
+:
+            lsr         n + 1                               ; (CH_HEAD)
+            adc         #0
+            lsr         n + 1                               ; (CH_FOOT)
+            adc         #0
             rts
 
 ; The serial port's terminal's size: .X columns, .A rows (too small: not taken).  OUT: C = 1 not taken.  Modifies .A,
@@ -1254,9 +1414,12 @@ clunked:
             bne         @done
             lda         #0                                  ; (keys hydra again too)
             sta         kvt,Y
+            sta         w_raw,Y
             tya
             jsr         load
             stz         raw
+            lda         #3
+            tsb         chr_dirty
 @done:
             clc
             rts
@@ -1440,6 +1603,15 @@ h_text:
 
 ; /cons: a read.  Cooked, a line (or what's left of one); raw, the keys there are.  IN: .X = the fid
 r_cons:
+            ldy         srv_fid_aux,X                       ; (Its reader: its chrome's %p)
+            lda         TASK_INBOX + RQ_CLIENT
+            inc         a
+            cmp         w_rdr,Y
+            beq         :+
+            sta         w_rdr,Y
+            lda         #3
+            tsb         chr_dirty
+:
             lda         srv_fid_aux,X
             jsr         load
             lda         raw
@@ -1842,6 +2014,7 @@ flush:
             stz         ln_geo
             stz         esc_st
             stz         esc_wait
+            jsr         nap_set
 :
             clc
             rts
@@ -2059,6 +2232,7 @@ key_raw:
 
 @seq:
             stz         esc_wait
+            jsr         nap_set
             dex
             bne         @csi
             cmp         #'['                                ; ESC, then [ or O starts a sequence
@@ -2122,7 +2296,9 @@ key_raw:
             dex
             bpl         :-
             cmp         #'~'
-            bne         @byte                               ; (Not one of ours: dropped)
+            beq         :+
+            jmp         @byte                               ; (Not one of ours: dropped)
+:
             lda         esc_n                               ; ESC [ n ~: by n
             ldx         #TILDE_N - 1
 :
@@ -2175,6 +2351,7 @@ key_raw:
             bcs         @alone
             lda         #1                                  ; (Not yet: timer 2's rounds bring its reader back)
             sta         esc_wait
+            jsr         nap_set
             jsr         esc_nap
             sec
             rts
@@ -2182,8 +2359,26 @@ key_raw:
 @alone:
             stz         esc_st
             stz         esc_wait
+            jsr         nap_set
             lda         #ESC
             clc
+            rts
+
+; t2_napr: the rounds timer 2 naps when it's idle (t2_next): an Escape alone awaited's (ESC_NAP), else the chrome's
+; time's (CLK_NAP), else none.  Keeps .A, .X, .Y
+nap_set:
+            pha
+            lda         esc_wait
+            beq         :+
+            lda         #ESC_NAP
+            bra         @set
+:
+            lda         clk_on
+            beq         @set
+            lda         #CLK_NAP
+@set:
+            sta         t2_napr
+            pla
             rts
 
 ; Timer 2 napping, if it's idle (nothing to send, no nap): its rounds add to the event count (t2_next), so an
@@ -2793,6 +2988,1317 @@ echo_dec:
             rts
 
 ; ****************************************************************************
+; The chrome (W4): rendered here, drawn by vt.s
+
+; Chrome row .A (CR_BAR, CR_HEAD, CR_FOOT) of the shown window (loaded in vt.s: v_cols ...), .X cells wide (CR_MAX - 1
+; at most), rendered from its format into cr_c, cr_a and cr_f (characters, colours, rendition), cr_n of them, all of
+; the row (FAR1: vt.s's).  The codes: %n and %g its number (and its group's: the same till W5), %l its label (with
+; none, its program's name), %p its program (the task that last read it), %s its status line, %w its group's windows
+; (itself till W5), %G the groups (each window till W5): each its number, ! (a bell) or + (written to, monitor on), a
+; space and its label, the shown one reversed; %c, %r its columns, rows; %m its modes; %t, %d the time, the date; %L
+; the LEDs (DECLL: 1-4, . off); %= what follows at the row's right end; %[n;n...] the rendition (SGR's numbers: 0, 1,
+; 2, 4, 5, 7, 8, 22-28, 30-37, 39, 40-47, 49, 90-97, 100-107); %% a %.  Modifies .A, .X, .Y, p, m, n
+chr_render:
+            cpx         #CR_MAX
+            bcc         :+
+            ldx         #CR_MAX - 1
+:
+            stx         cr_w
+            cmp         #CR_BAR                             ; Its format
+            bne         :+
+            lda         #<bar_fmt
+            sta         p
+            lda         #>bar_fmt
+            sta         p + 1
+            bra         @go
+:
+            dec         a                                   ; (.Y: 0 the header, 1 the footer)
+            tay
+            lda         w_in
+            jsr         fmt_at
+            lda         m
+            sta         p
+            lda         m + 1
+            sta         p + 1
+@go:
+            stz         cr_n
+            stz         cr_i
+            lda         #COL_DEF
+            sta         cr_ca
+            stz         cr_cf
+            lda         #$FF
+            sta         cr_rx
+@ch:
+            ldy         cr_i
+            lda         (p),Y
+            beq         @end
+            inc         cr_i
+            cmp         #'%'
+            beq         @code
+            jsr         cr_put
+            bra         @ch
+@code:
+            ldy         cr_i
+            lda         (p),Y
+            beq         @end
+            inc         cr_i
+            ldx         #CRC_N - 1
+:
+            cmp         cr_codes,X
+            beq         :+
+            dex
+            bpl         :-
+            bra         @ch                                 ; (Not a code: nothing)
+:
+            txa
+            asl
+            tax
+            jsr         @do
+            bra         @ch
+@do:
+            jmp         (cr_vec,X)
+
+@end:
+            lda         cr_rx                               ; A right part (from %=): moved to the row's end
+            cmp         #$FF
+            beq         @fill
+            sec
+            lda         cr_n
+            sbc         cr_rx
+            sta         m                                   ; (Its cells ...
+            sec
+            lda         cr_w
+            sbc         m                                   ;   where they go: past the left part)
+            bcc         @fill
+            cmp         cr_rx
+            bcc         @fill
+            beq         @fill
+            sta         m + 1
+            sec
+            sbc         cr_rx
+            sta         n                                   ; (How far)
+            ldx         cr_n
+@move:
+            cpx         cr_rx
+            beq         @gap
+            dex
+            txa
+            clc
+            adc         n
+            tay
+            lda         cr_c,X
+            sta         cr_c,Y
+            lda         cr_a,X
+            sta         cr_a,Y
+            lda         cr_f,X
+            sta         cr_f,Y
+            bra         @move
+@gap:
+            ldx         cr_rx                               ; (The gap: blanks in the rendition at %=)
+:
+            cpx         m + 1
+            bcs         :+
+            lda         #' '
+            sta         cr_c,X
+            lda         cr_ga
+            sta         cr_a,X
+            lda         cr_gf
+            sta         cr_f,X
+            inx
+            bra         :-
+:
+            lda         cr_w
+            sta         cr_n
+@fill:
+            ldx         cr_n                                ; The rest blank, in the rendition at the end
+            cpx         cr_w
+            bcs         @done
+            lda         #' '
+            jsr         cr_put
+            bra         @fill
+@done:
+            rts
+
+; .A, the row's next cell, in the rendition now (none past its width).  Keeps .X, .Y
+cr_put:
+            phx
+            ldx         cr_n
+            cpx         cr_w
+            bcs         :+
+            sta         cr_c,X
+            lda         cr_ca
+            sta         cr_a,X
+            lda         cr_cf
+            sta         cr_f,X
+            inc         cr_n
+:
+            plx
+            rts
+
+; The string at .A/.X (cr_strax) or m (cr_str), zero-ended, into the row.  Modifies .Y
+cr_strax:
+            sta         m
+            stx         m + 1
+cr_str:
+            ldy         #0
+:
+            lda         (m),Y
+            beq         :+
+            jsr         cr_put
+            iny
+            bne         :-
+:
+            rts
+
+; .A in decimal into the row (no leading zeros).  Modifies .A, .X, .Y, n + 1
+cr_dec:
+            stz         n + 1                               ; (A digit out: those after it go too)
+            ldx         #2
+@digit:
+            ldy         #'0'
+:
+            cmp         cr_tens,X
+            bcc         :+
+            sbc         cr_tens,X
+            iny
+            bra         :-
+:
+            pha
+            tya
+            cpx         #0
+            beq         @out
+            cmp         #'0'
+            bne         @out
+            ldy         n + 1
+            beq         @skip
+@out:
+            inc         n + 1
+            jsr         cr_put
+@skip:
+            pla
+            dex
+            bpl         @digit
+            rts
+
+cr_num:                                                     ; %n, %g: the window's number (its group's: W5)
+            lda         w_in
+            jmp         cr_dec
+
+cr_lbl:                                                     ; %l: its label
+            ldx         w_in
+            jmp         cr_label
+
+cr_prog:                                                    ; %p: its program
+            ldx         w_in
+            jmp         cr_progx
+
+cr_stat:                                                    ; %s: its status line
+            lda         w_in
+            jsr         stat_at
+            jmp         cr_str
+
+cr_wins:                                                    ; %w: its group's windows (W4: itself)
+            ldx         w_in
+            jmp         cr_entry
+
+cr_groups:                                                  ; %G: the groups (W4: each window)
+            stz         cr_k
+            ldx         #0
+@win:
+            lda         w_used,X
+            beq         @next
+            lda         cr_k
+            beq         :+
+            lda         #' '
+            jsr         cr_put
+:
+            inc         cr_k
+            phx
+            jsr         cr_entry
+            plx
+@next:
+            inx
+            cpx         #WIN_MAX
+            bcc         @win
+            rts
+
+cr_cols:                                                    ; %c, %r: its size
+            lda         v_cols
+            jmp         cr_dec
+
+cr_rows:
+            lda         v_rows
+            jmp         cr_dec
+
+cr_modes:                                                   ; %m: raw or cooked, keys vt, held
+            ldx         w_in
+            lda         w_raw,X
+            beq         :+
+            lda         #<s_m_raw
+            ldx         #>s_m_raw
+            bra         :++
+:
+            lda         #<s_m_cooked
+            ldx         #>s_m_cooked
+:
+            jsr         cr_strax
+            ldx         w_in
+            lda         kvt,X
+            beq         :+
+            lda         #<s_m_vt
+            ldx         #>s_m_vt
+            jsr         cr_strax
+:
+            ldx         w_in
+            lda         w_hold,X
+            beq         :+
+            lda         #<s_m_held
+            ldx         #>s_m_held
+            jsr         cr_strax
+:
+            rts
+
+cr_time:                                                    ; %t: the time (HH:MM)
+            ldy         #11
+            lda         #5
+            bra         cr_tm
+
+cr_date:                                                    ; %d: the date (YYYY-MM-DD)
+            ldy         #0
+            lda         #10
+cr_tm:
+            sta         n
+            sty         n + 1
+            jsr         tm_get
+            lda         #1
+            sta         clk_on
+            jsr         nap_set
+            ldy         n + 1
+:
+            lda         tm_buf,Y
+            jsr         cr_put
+            iny
+            dec         n
+            bne         :-
+            rts
+
+cr_leds:                                                    ; %L: the LEDs, 1-4 (. off)
+            ldx         #0
+:
+            lda         v_leds
+            and         cr_bit,X
+            beq         @off
+            txa
+            clc
+            adc         #'1'
+            bra         @put
+@off:
+            lda         #'.'
+@put:
+            jsr         cr_put
+            inx
+            cpx         #4
+            bcc         :-
+            rts
+cr_bit:     .byte       1, 2, 4, 8
+
+cr_right:                                                   ; %=: the rest at the right
+            lda         cr_n
+            sta         cr_rx
+            lda         cr_ca
+            sta         cr_ga
+            lda         cr_cf
+            sta         cr_gf
+            rts
+
+cr_pct:                                                     ; %%
+            lda         #'%'
+            jmp         cr_put
+
+cr_sgr:                                                     ; %[n;n...]: the rendition
+            stz         n
+@ch:
+            ldy         cr_i
+            lda         (p),Y
+            beq         cr_sgr1                             ; (The format's end: the last one)
+            inc         cr_i
+            cmp         #']'
+            beq         cr_sgr1
+            cmp         #';'
+            bne         :+
+            jsr         cr_sgr1
+            stz         n
+            bra         @ch
+:
+            sec
+            sbc         #'0'
+            cmp         #10
+            bcs         @ch
+            pha
+            lda         n                                   ; (* 10, + the digit: 255 at most)
+            cmp         #26
+            bcs         @big
+            asl
+            asl
+            adc         n
+            asl
+            sta         n
+            pla
+            adc         n
+            bcc         :+
+            lda         #255
+:
+            sta         n
+            bra         @ch
+@big:
+            pla
+            lda         #255
+            sta         n
+            bra         @ch
+
+cr_sgr1:                                                    ; SGR n's rendition
+            lda         n
+            bne         :+
+            lda         #COL_DEF
+            sta         cr_ca
+            stz         cr_cf
+            rts
+:
+            cmp         #10
+            bcs         :+
+            tax
+            lda         sgr_on,X
+            ora         cr_cf
+            sta         cr_cf
+            rts
+:
+            cmp         #20
+            bcc         @done
+            cmp         #30
+            bcs         :+
+            sbc         #20 - 1                             ; (C = 0: 20-29)
+            tax
+            lda         sgr_off,X
+            and         cr_cf
+            sta         cr_cf
+            rts
+:
+            cmp         #38                                 ; 30-37: the foreground, 39 the default
+            bcs         :+
+            sbc         #30 - 1
+            bra         @fg
+:
+            bne         :+
+            rts                                             ; (38: not here)
+:
+            cmp         #39
+            bne         :+
+            lda         #COL_DEF & $0F
+            bra         @fg
+:
+            cmp         #48                                 ; 40-47: the background, 49 none
+            bcs         :+
+            sbc         #40 - 1
+            bra         @bg
+:
+            cmp         #49
+            bne         :+
+            lda         #0
+            bra         @bg
+:
+            cmp         #90                                 ; 90-97, 100-107: bright
+            bcc         @done
+            cmp         #98
+            bcs         :+
+            sbc         #90 - 8 - 1
+            bra         @fg
+:
+            cmp         #100
+            bcc         @done
+            cmp         #108
+            bcs         @done
+            sbc         #100 - 8 - 1
+@bg:
+            asl
+            asl
+            asl
+            asl
+            sta         n + 1
+            lda         cr_ca
+            and         #$0F
+            ora         n + 1
+            sta         cr_ca
+@done:
+            rts
+@fg:
+            sta         n + 1
+            lda         cr_ca
+            and         #$F0
+            ora         n + 1
+            sta         cr_ca
+            rts
+
+; Window .X's entry in a list (%w, %G): its number, ! or + (activity), a space, its label; the shown one reversed
+cr_entry:
+            lda         cr_cf
+            pha
+            cpx         w_in
+            bne         :+
+            eor         #F_REV
+            sta         cr_cf
+:
+            phx
+            txa
+            jsr         cr_dec
+            plx
+            lda         w_act,X
+            beq         @sp
+            ldy         #'!'
+            and         #ACT_BELL
+            bne         :+
+            ldy         #'+'
+:
+            tya
+            jsr         cr_put
+@sp:
+            lda         #' '
+            jsr         cr_put
+            jsr         cr_label
+            pla
+            sta         cr_cf
+            rts
+
+; Window .X's label into the row: its title, or with none its program's name
+cr_label:
+            txa
+            jsr         lbl_ptr
+            lda         (m)
+            beq         cr_progx
+            jmp         cr_str
+cr_progx:                                                   ; Window .X's program's name: its reader's (TASKINFO)
+            lda         w_rdr,X
+            beq         @none
+            LDR         r0, ti_buf                          ; (LDR: .A too)
+            lda         w_rdr,X
+            dec         a
+            jsr         TASKINFO
+            bcs         @none
+            lda         #<(ti_buf + TI_NAME)
+            ldx         #>(ti_buf + TI_NAME)
+            jmp         cr_strax
+@none:
+            rts
+
+; m = window .A's label (lbl_buf: LBL_SIZE a window)
+lbl_ptr:
+            asl
+            asl
+            asl
+            asl
+            asl
+            clc
+            adc         #<lbl_buf
+            sta         m
+            lda         #>lbl_buf
+            adc         #0
+            sta         m + 1
+            rts
+
+; m = window .A's status line (w_stat: STAT_SIZE a window)
+stat_at:
+            lsr
+            sta         m + 1
+            lda         #0
+            ror
+            clc
+            adc         #<w_stat
+            sta         m
+            lda         m + 1
+            adc         #>w_stat
+            sta         m + 1
+            rts
+
+; m = window .A's header's format (.Y = 0) or footer's (.Y = 1)
+fmt_at:
+            asl
+            asl
+            asl
+            asl
+            asl
+            asl
+            cpy         #0
+            bne         :+
+            clc
+            adc         #<w_hfmt
+            sta         m
+            lda         #>w_hfmt
+            adc         #0
+            sta         m + 1
+            rts
+:
+            clc
+            adc         #<w_ffmt
+            sta         m
+            lda         #>w_ffmt
+            adc         #0
+            sta         m + 1
+            rts
+
+; The format at .A/.X into the one at m (FMT_SIZE).  Modifies .A, .Y, p
+fmt_copy:
+            sta         p
+            stx         p + 1
+; ... the string at p (FMT_SIZE - 1 characters at most)
+fmt_put:
+            ldy         #0
+:
+            lda         (p),Y
+            sta         (m),Y
+            beq         :+
+            iny
+            cpy         #FMT_SIZE - 1
+            bcc         :-
+            lda         #0
+            sta         (m),Y
+:
+            rts
+
+; Z = 1 if the format at m is the string at .A/.X.  Modifies .A, .Y, p
+fmt_same:
+            sta         p
+            stx         p + 1
+            ldy         #0
+:
+            lda         (p),Y
+            cmp         (m),Y
+            bne         :+
+            iny
+            cmp         #0
+            bne         :-
+:
+            rts
+
+; tm_buf: the time ("2026-10-07 20:41:05"), read from #t/time once a drawing (chr_pass); clk_due, the next minute's
+; tick.  Modifies .A, .X, .Y, r0-r2, m
+tm_get:
+            lda         chr_pass
+            cmp         tm_pass
+            bne         :+
+            rts
+:
+            sta         tm_pass
+            ldx         #TM_LEN - 1                         ; (Not read: ?s)
+:
+            lda         s_tm_none,X
+            sta         tm_buf,X
+            dex
+            bpl         :-
+            LDR         r0, s_time
+            lda         #O_READ
+            jsr         OPEN
+            bcs         @due
+            sta         tm_fd
+            LDR         r0, tm_buf
+            LDR         r1, TM_LEN
+            lda         tm_fd
+            jsr         READ
+            lda         tm_fd
+            jsr         CLOSE
+@due:
+            lda         tm_buf + 17                         ; The next minute: (60 - its seconds) seconds on
+            and         #$0F
+            asl
+            sta         m
+            asl
+            asl
+            adc         m
+            sta         m
+            lda         tm_buf + 18
+            and         #$0F
+            adc         m
+            cmp         #60
+            bcc         :+
+            lda         #59
+:
+            eor         #$FF
+            sec
+            adc         #60                                 ; (60 - it: 1-60)
+            tax
+            stz         m                                   ; (* TICK_HZ)
+            stz         m + 1
+:
+            clc
+            lda         m
+            adc         #<TICK_HZ
+            sta         m
+            lda         m + 1
+            adc         #>TICK_HZ
+            sta         m + 1
+            dex
+            bne         :-
+            jsr         TICKS
+            clc
+            adc         m
+            sta         clk_due
+            txa
+            adc         m + 1
+            sta         clk_due + 1
+@done:
+            rts
+
+; The chrome's time: drawn again once its minute's past (clk_due); timer 2's rounds bring the readers back meanwhile
+; (its naps: t2_next).  Modifies .A, .X, .Y
+clk_check:
+            jsr         TICKS                               ; Now - the minute's tick: not negative once it's come
+            sec
+            sbc         clk_due
+            txa
+            sbc         clk_due + 1
+            bmi         :+
+            lda         #3
+            tsb         chr_dirty
+            jsr         TICKS                               ; (Looked at again in a second, if not drawn by then)
+            clc
+            adc         #<TICK_HZ
+            sta         clk_due
+            txa
+            adc         #>TICK_HZ
+            sta         clk_due + 1
+:
+            php                                             ; Timer 2 napping, if it's idle
+            sei
+            lda         tx_busy
+            ora         t2_nap
+            bne         @done
+            lda         #CLK_NAP
+            sta         t2_left
+            lda         #$FF
+            sta         t2_hi
+            sta         t2_nap
+            sta         VIA_T2CL
+            sta         VIA_T2CH                            ; (It starts)
+@done:
+            plp
+            rts
+
+; ****************************************************************************
+; The chrome's commands (wctl) and /label
+
+; p = word .A of the ctl line (0: the first after the command), the line's rest after it as it was written (the words'
+; ends spaces again; its end's blanks off).  Modifies .A, .Y, m
+ctl_rest:
+            asl
+            tay
+            lda         srv_argp,Y
+            sta         p
+            lda         srv_argp + 1,Y
+            sta         p + 1
+            sec                                             ; (Its bytes: to the write's end)
+            lda         p
+            sbc         #<srv_ctl
+            sta         m
+            sec
+            lda         TASK_INBOX + RQ_COUNT
+            sbc         m
+            sta         m
+            ldy         #0
+@sp:
+            cpy         m
+            bcs         @end
+            lda         (p),Y
+            bne         :+
+            lda         #' '
+            sta         (p),Y
+:
+            iny
+            bra         @sp
+@end:
+            lda         #0
+            sta         (p),Y
+:
+            dey
+            bmi         :+
+            lda         (p),Y
+            cmp         #' ' + 1
+            bcs         :+
+            lda         #0
+            sta         (p),Y
+            bra         :-
+:
+            rts
+
+; The chrome's place changed (the bar's, a window's rows): the windows' sizes, both terminals painted
+chr_changed:
+            jsr         relayout
+            lda         #1
+            sta         ts_ser
+            sta         ts_scr
+            lda         #3
+            tsb         chr_dirty
+            inc         TASK_EVENT
+            clc
+            rts
+
+chr_inval:
+            lda         #E_INVAL
+            sec
+            rts
+
+; bar top, bar bottom, bar off: where the bar is (on each terminal its window's chrome has it); bar FORMAT: what
+; it shows
+c_bar:
+            lda         z:srv_argn
+            beq         chr_inval
+            lda         #0
+            jsr         ctl_rest
+            lda         #<s_top_w
+            ldx         #>s_top_w
+            jsr         word_is
+            bne         :+
+            lda         #BAR_TOP
+            bra         @pos
+:
+            lda         #<s_bottom_w
+            ldx         #>s_bottom_w
+            jsr         word_is
+            bne         :+
+            lda         #BAR_BOTTOM
+            bra         @pos
+:
+            lda         #<s_off_w
+            ldx         #>s_off_w
+            jsr         word_is
+            bne         @fmt
+            lda         #0
+@pos:
+            cmp         bar_pos
+            beq         :+
+            sta         bar_pos
+            jmp         chr_changed
+:
+            clc
+            rts
+@fmt:
+            lda         #<bar_fmt
+            sta         m
+            lda         #>bar_fmt
+            sta         m + 1
+            jsr         fmt_put
+            lda         #3
+            tsb         chr_dirty
+            clc
+            rts
+
+; header FORMAT, footer FORMAT: the window's; header on, header off (footer ...): its row on both terminals, or none
+c_header:
+            ldy         #0
+            bra         c_hf
+c_footer:
+            ldy         #1
+c_hf:
+            sty         hf_k
+            lda         z:srv_argn
+            beq         chr_inval
+            lda         #0
+            jsr         ctl_rest
+            ldx         z:srv_id
+            lda         w_chr,X
+            sta         chr_v
+            ldy         #(CH_HEAD << 4) | CH_HEAD           ; (Its bits: both terminals')
+            lda         hf_k
+            beq         :+
+            ldy         #(CH_FOOT << 4) | CH_FOOT
+:
+            sty         chr_p
+            lda         #<s_on_w
+            ldx         #>s_on_w
+            jsr         word_is
+            bne         :+
+            lda         chr_v
+            ora         chr_p
+            bra         @rows
+:
+            lda         #<s_off_w
+            ldx         #>s_off_w
+            jsr         word_is
+            bne         @fmt
+            lda         chr_p
+            eor         #$FF
+            and         chr_v
+@rows:
+            ldx         z:srv_id
+            cmp         w_chr,X
+            beq         :+
+            sta         w_chr,X
+            jmp         chr_changed
+:
+            clc
+            rts
+@fmt:
+            lda         z:srv_id
+            ldy         hf_k
+            jsr         fmt_at
+            jsr         fmt_put
+            lda         #3
+            tsb         chr_dirty
+            clc
+            rts
+
+; chrome screen|serial|both on|off [bar] [header] [footer]: the window's chrome rows on that terminal (all three, with
+; none named)
+c_chrome:
+            ldx         z:srv_id
+            lda         w_chr,X
+            sta         chr_v
+            lda         #0
+            jsr         chr_parse
+            bcc         :+
+            jmp         chr_inval
+:
+            ldx         z:srv_id
+            lda         chr_v
+            cmp         w_chr,X
+            beq         :+
+            sta         w_chr,X
+            jmp         chr_changed
+:
+            clc
+            rts
+
+; chr_v changed by the words from .A on: a terminal (screen, serial, both), on or off, the parts (none: all).  OUT:
+; C = 1, they're not that
+chr_parse:
+            sta         hf_k                                ; (The first word's number)
+            clc
+            adc         #2
+            cmp         z:srv_argn
+            beq         :+
+            bcs         @bad
+:
+            lda         hf_k
+            asl
+            tay
+            lda         srv_argp,Y
+            sta         p
+            lda         srv_argp + 1,Y
+            sta         p + 1
+            ldx         #2                                  ; Its terminal
+:
+            phx
+            txa
+            asl
+            tay
+            lda         term_names,Y
+            pha
+            lda         term_names + 1,Y
+            tax
+            pla
+            jsr         word_is
+            beq         @term                               ; (.X on the stack)
+            plx
+            dex
+            bpl         :-
+@bad:
+            sec
+            rts
+@term:
+            plx
+            lda         term_bits,X
+            sta         chr_sep                             ; (Its bits)
+            lda         hf_k                                ; On or off
+            inc         a
+            asl
+            tay
+            lda         srv_argp,Y
+            sta         p
+            lda         srv_argp + 1,Y
+            sta         p + 1
+            lda         #<s_on_w
+            ldx         #>s_on_w
+            jsr         word_is
+            php
+            beq         :+
+            lda         #<s_off_w
+            ldx         #>s_off_w
+            jsr         word_is
+            beq         :+
+            plp
+            sec
+            rts
+:
+            lda         hf_k                                ; The parts, if it names any
+            clc
+            adc         #2
+            jsr         chr_parts
+            bcc         :+
+            plp
+            sec
+            rts
+:
+            lda         chr_p                               ; Those bits (both terminals' at first), the terminal's
+            asl
+            asl
+            asl
+            asl
+            ora         chr_p
+            and         chr_sep
+            plp
+            bne         :+
+            ora         chr_v                               ; (on)
+            bra         :++
+:
+            eor         #$FF                                ; (off)
+            and         chr_v
+:
+            sta         chr_v
+            clc
+            rts
+
+; chr_p: the parts named from word .A on (bar, header, footer), CH_* bits (none named: all three).  OUT: C = 1, a
+; word that isn't one
+chr_parts:
+            stz         chr_p
+            cmp         z:srv_argn
+            bcs         @end
+            jsr         ctl_rest                            ; (p: the words, spaces between)
+@word:
+            lda         (p)
+            beq         @end
+            cmp         #' '
+            bne         :+
+            inc         p
+            bne         @word
+            inc         p + 1
+            bra         @word
+:
+            ldy         #0                                  ; The word: its end a 0, for word_is
+:
+            lda         (p),Y
+            beq         :+
+            cmp         #' '
+            beq         :+
+            iny
+            bra         :-
+:
+            sty         chr_wl
+            pha
+            lda         #0
+            sta         (p),Y
+            ldx         #2
+:
+            phx
+            txa
+            asl
+            tay
+            lda         part_names,Y
+            pha
+            lda         part_names + 1,Y
+            tax
+            pla
+            jsr         word_is
+            beq         @part                               ; (.X on the stack)
+            plx
+            dex
+            bpl         :-
+            pla
+            sec
+            rts
+@part:
+            plx
+            lda         part_bits,X
+            ora         chr_p
+            sta         chr_p
+            ldy         chr_wl                              ; (Its end as it was; on past it)
+            pla
+            sta         (p),Y
+            tya
+            clc
+            adc         p
+            sta         p
+            bcc         @word
+            inc         p + 1
+            bra         @word
+@end:
+            lda         chr_p
+            bne         :+
+            lda         #CH_ALL
+            sta         chr_p
+:
+            clc
+            rts
+part_names: .word       s_bar_w, s_header_w, s_footer_w
+part_bits:  .byte       CH_BAR, CH_HEAD, CH_FOOT
+
+; default header FORMAT, default footer FORMAT, default chrome screen|serial|both on|off [parts]: what a new window
+; takes; the windows still as the defaults were take them too
+c_default:
+            lda         z:srv_argn
+            cmp         #2
+            bcs         :+
+            jmp         chr_inval
+:
+            lda         srv_argp
+            sta         p
+            lda         srv_argp + 1
+            sta         p + 1
+            lda         #<s_chrome_w
+            ldx         #>s_chrome_w
+            jsr         word_is
+            beq         @chrome
+            ldy         #0
+            lda         #<s_header_w
+            ldx         #>s_header_w
+            jsr         word_is
+            beq         :+
+            ldy         #1
+            lda         #<s_footer_w
+            ldx         #>s_footer_w
+            jsr         word_is
+            beq         :+
+            jmp         chr_inval
+:
+            sty         hf_k
+            lda         #1                                  ; (The format: kept in n)
+            jsr         ctl_rest
+            lda         p
+            sta         n
+            lda         p + 1
+            sta         n + 1
+            ldx         #WIN_MAX - 1                        ; The windows with the default: the new one
+@win:
+            lda         w_used,X
+            beq         @next
+            phx
+            txa
+            ldy         hf_k
+            jsr         fmt_at
+            jsr         @def
+            jsr         fmt_same
+            bne         :+
+            jsr         @new
+            jsr         fmt_put
+:
+            plx
+@next:
+            dex
+            bpl         @win
+            jsr         @defm                               ; Then the default
+            jsr         @new
+            jsr         fmt_put
+            lda         #3
+            tsb         chr_dirty
+            clc
+            rts
+
+@def:                                                       ; (.A/.X: the default format)
+            lda         hf_k
+            bne         :+
+            lda         #<def_hfmt
+            ldx         #>def_hfmt
+            rts
+:
+            lda         #<def_ffmt
+            ldx         #>def_ffmt
+            rts
+@defm:                                                      ; (m: it)
+            jsr         @def
+            sta         m
+            stx         m + 1
+            rts
+@new:                                                       ; (p: the new one)
+            lda         n
+            sta         p
+            lda         n + 1
+            sta         p + 1
+            rts
+
+@chrome:
+            lda         def_chr
+            sta         chr_v
+            lda         #1
+            jsr         chr_parse
+            bcc         :+
+            jmp         chr_inval
+:
+            ldx         #WIN_MAX - 1                        ; (The windows with the default: the new one)
+:
+            lda         w_used,X
+            beq         :+
+            lda         w_chr,X
+            cmp         def_chr
+            bne         :+
+            lda         chr_v
+            sta         w_chr,X
+:
+            dex
+            bpl         :--
+            lda         chr_v
+            cmp         def_chr
+            beq         :+
+            sta         def_chr
+            jmp         chr_changed
+:
+            clc
+            rts
+
+; status TEXT: the window's status line (the footer's %s; DECSASD writes it too); status alone, none
+c_status:
+            lda         z:srv_id
+            jsr         stat_at
+            lda         #0
+            sta         (m)
+            lda         z:srv_argn
+            beq         @done
+            lda         z:srv_id                            ; (ctl_rest uses m)
+            pha
+            lda         #0
+            jsr         ctl_rest
+            pla
+            jsr         stat_at
+            ldy         #0
+:
+            lda         (p),Y
+            sta         (m),Y
+            beq         @done
+            iny
+            cpy         #STAT_SIZE - 1
+            bcc         :-
+            lda         #0
+            sta         (m),Y
+@done:
+            lda         #3
+            tsb         chr_dirty
+            clc
+            rts
+
+; monitor on, monitor off: the window's output marked in the chrome (+) while it isn't shown
+c_monitor:
+            lda         z:srv_argn
+            beq         @inval
+            lda         srv_argp
+            sta         p
+            lda         srv_argp + 1
+            sta         p + 1
+            ldy         #1
+            lda         #<s_on_w
+            ldx         #>s_on_w
+            jsr         word_is
+            beq         :+
+            ldy         #0
+            lda         #<s_off_w
+            ldx         #>s_off_w
+            jsr         word_is
+            bne         @inval
+:
+            ldx         z:srv_id
+            tya
+            sta         w_mon,X
+            clc
+            rts
+@inval:
+            jmp         chr_inval
+
+; /label: the window's title (OSC 0 and 2 write it too), read and written whole: LBL_SIZE - 1 characters at most, the
+; write's line end off; written empty (a line end alone), it's automatic again (its program's name)
+h_label:
+            cmp         #R_READ
+            beq         @read
+            cmp         #R_WRITE
+            beq         @write
+            clc
+            rts
+@read:
+            lda         srv_fid_aux,X
+            jsr         lbl_ptr
+            ldy         #0                                  ; (Its length)
+:
+            lda         (m),Y
+            beq         :+
+            iny
+            bra         :-
+:
+            sty         n
+            stz         TASK_INBOX + RQ_DONE
+            stz         TASK_INBOX + RQ_DONE + 1
+            lda         TASK_INBOX + RQ_OFFSET + 1          ; (Past its end: nothing)
+            ora         TASK_INBOX + RQ_OFFSET + 2
+            ora         TASK_INBOX + RQ_OFFSET + 3
+            bne         @none
+            lda         TASK_INBOX + RQ_OFFSET
+            cmp         n
+            bcs         @none
+            sta         n + 1
+            sec
+            lda         n
+            sbc         n + 1
+            ldx         TASK_INBOX + RQ_COUNT + 1
+            bne         :+
+            cmp         TASK_INBOX + RQ_COUNT
+            bcc         :+
+            lda         TASK_INBOX + RQ_COUNT
+:
+            sta         r2
+            sta         TASK_INBOX + RQ_DONE
+            stz         r2 + 1
+            clc
+            lda         m
+            adc         n + 1
+            sta         r0
+            lda         m + 1
+            adc         #0
+            sta         r0 + 1
+            MOVR        r1, TASK_INBOX + RQ_BUF
+            jsr         CLIENT_WRITE
+@none:
+            clc
+            rts
+@write:
+            lda         srv_fid_aux,X
+            pha
+            lda         TASK_INBOX + RQ_COUNT               ; (LBL_SIZE - 1 at most)
+            ldx         TASK_INBOX + RQ_COUNT + 1
+            bne         :+
+            cmp         #LBL_SIZE
+            bcc         :++
+:
+            lda         #LBL_SIZE - 1
+:
+            sta         cnt
+            stz         n
+            stz         n + 1
+            jsr         from_client                         ; (iobuf)
+            pla
+            bcs         @done
+            jsr         lbl_ptr
+            ldy         cnt                                 ; (Its line end, and blanks, off)
+:
+            dey
+            bmi         :+
+            lda         iobuf,Y
+            cmp         #' ' + 1
+            bcc         :-
+:
+            iny
+            lda         #0
+            sta         (m),Y
+:
+            dey
+            bmi         :+
+            lda         iobuf,Y
+            sta         (m),Y
+            bra         :-
+:
+            lda         TASK_INBOX + RQ_COUNT               ; (All of it taken)
+            sta         TASK_INBOX + RQ_DONE
+            lda         TASK_INBOX + RQ_COUNT + 1
+            sta         TASK_INBOX + RQ_DONE + 1
+            lda         #3
+            tsb         chr_dirty
+            clc
+@done:
+            rts
+
+; ****************************************************************************
 ; consctl, wctl and serctl
 
 ; rawon, rawoff: the window's
@@ -2803,6 +4309,9 @@ c_rawon:
             sta         raw
             ldx         z:srv_id                            ; (A resize before it: not news to its reader)
             stz         w_rsz,X
+            sta         w_raw,X
+            lda         #3                                  ; (Its modes in the chrome)
+            tsb         chr_dirty
             clc
             rts
 
@@ -2810,6 +4319,10 @@ c_rawoff:
             lda         z:srv_id
             jsr         load
             stz         raw
+            ldx         z:srv_id
+            stz         w_raw,X
+            lda         #3
+            tsb         chr_dirty
             clc
             rts
 
@@ -2839,6 +4352,8 @@ c_keys:
             sta         kvt,X
             stz         kp_n,X
             stz         kp_i,X
+            lda         #3
+            tsb         chr_dirty
             clc
             rts
 @inval:
@@ -3897,6 +5412,7 @@ srv_tree:
             SRV_ENTRY   s_serctl,  $FE, SK_TEXT, gen_serctl,  SM_READ,            0     ; 9
             SRV_ENTRY   s_kbdin,   0,   SK_DATA, h_kbdin,     SM_WRITE,           0     ; 10
             SRV_ENTRY   s_text,    0,   SK_DATA, h_text,      SM_READ,            0     ; 11
+            SRV_ENTRY   s_label,   0,   SK_DATA, h_label,     SM_READ | SM_WRITE, 0     ; 12
             .word       0
 cons_cmds:
             .word       s_rawon_w, c_rawon
@@ -3912,6 +5428,13 @@ cons_cmds:
 wctl_cmds:
             .word       s_new_w, c_new
             .word       s_current_w, c_current
+            .word       s_bar_w, c_bar
+            .word       s_header_w, c_header
+            .word       s_footer_w, c_footer
+            .word       s_default_w, c_default
+            .word       s_chrome_w, c_chrome
+            .word       s_status_w, c_status
+            .word       s_monitor_w, c_monitor
             .word       0
 ser_cmds:
             .word       s_b300, c_b300
@@ -3932,6 +5455,37 @@ s_ser:      .byte       "ser", 0
 s_serctl:   .byte       "serctl", 0
 s_kbdin:    .byte       "kbdin", 0
 s_text:     .byte       "text", 0
+s_label:    .byte       "label", 0
+s_bar_w:    .byte       "bar", 0
+s_header_w: .byte       "header", 0
+s_footer_w: .byte       "footer", 0
+s_default_w: .byte      "default", 0
+s_chrome_w: .byte       "chrome", 0
+s_status_w: .byte       "status", 0
+s_monitor_w: .byte      "monitor", 0
+s_top_w:    .byte       "top", 0
+s_bottom_w: .byte       "bottom", 0
+s_on_w:     .byte       "on", 0
+s_off_w:    .byte       "off", 0
+s_m_raw:    .byte       "raw", 0
+s_m_cooked: .byte       "cooked", 0
+s_m_vt:     .byte       " vt", 0
+s_m_held:   .byte       " held", 0
+s_time:     .byte       "#t/time", 0
+s_tm_none:  .byte       "????-??-?? ??:??:??"
+s_bar_def:  .byte       "%[7] %G%=%t"                       ; The chrome's formats as the console starts (as
+            .res        FMT_SIZE - (* - s_bar_def), 0       ;   /rom/lib/windows has them)
+s_head_def: .byte       "%[1]%n %l%=%w"
+            .res        FMT_SIZE - (* - s_head_def), 0
+s_foot_def: .byte       "%s"
+            .res        FMT_SIZE - (* - s_foot_def), 0
+cr_codes:   .byte       "nglpswGcrmtdL=[%"                  ; chr_render's codes, and theirs
+CRC_N       = * - cr_codes
+cr_vec:     .word       cr_num, cr_num, cr_lbl, cr_prog, cr_stat, cr_wins, cr_groups, cr_cols, cr_rows, cr_modes
+            .word       cr_time, cr_date, cr_leds, cr_right, cr_sgr, cr_pct
+cr_tens:    .byte       1, 10, 100
+sgr_on:     .byte       0, F_BOLD, F_DIM, 0, F_UL, F_BLINK, F_BLINK, F_REV, F_INVIS, 0      ; (SGR 0-9's)
+sgr_off:    .byte       $FF, $FF, <~(F_BOLD | F_DIM), $FF, <~F_UL, <~F_BLINK, $FF, <~F_REV, <~F_INVIS, $FF ; (20-29's)
 s_rawon_w:  .byte       "rawon", 0
 s_rawoff_w: .byte       "rawoff", 0
 s_group_w:  .byte       "group", 0
@@ -3939,6 +5493,7 @@ s_screen_w: .byte       "screen", 0
 s_serial_w: .byte       "serial", 0
 s_both_w:   .byte       "both", 0
 term_names: .word       s_serial_w, s_screen_w, s_both_w    ; (term 1-3)
+term_bits:  .byte       CH_ALL, CH_ALL << 4, CH_ALL | (CH_ALL << 4) ; (chrome's terminals: serial, screen, both)
 s_terminal: .byte       LF, "terminal ", 0
 s_scr:      .byte       "#v/term", 0
 s_scr_ctl:  .byte       "#v/ctl", 0

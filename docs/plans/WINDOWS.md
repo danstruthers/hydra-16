@@ -465,6 +465,14 @@ October 2026, on `reborn-text-windows` (reborn's `docs/status.md`, "The text win
 * **Each language reads `consctl`'s `size` line**, under the plan's names: conio's `screensize`, HyForth's `form`, hylang's `(window-size)`; `$COLUMNS` and `$LINES` only when there's no `/dev/consctl`.  conio asks again after it gives a `CH_RESIZE`; `form` and `(window-size)` ask each time.  The editor redraws on `CH_RESIZE`, as on `^L`, at the new size.
 * **The PC tool answers the console's ask itself** (and doesn't pass it on), so a PC terminal that doesn't answer `ESC [ 18 t` still gets the right size; it also tells the size unasked as its window changes.  `run.js -i` does as it does.
 
+### **As built: W4a**
+
+* **Formats are rendered in cons's first bank, drawn by its second**: vt.s asks for a row (`FAR1 chr_render`) at a terminal's width and writes its cells, so the renderer reaches the windows' state where it is.  Formats are 63 characters at most (a ctl write's length), the status line 127.
+* **Groups wait for W5**: until then each window is its own group, so `%g` is `%n`, `%w` the window alone and `%G` every window.
+* **The bar's default is at the top**, as the plan's picture has it (the plan's sample file said bottom).  `header on` and `off` act on both terminals; `chrome` names one.
+* **`default` commands reach the windows still as the defaults were**, so `/lib/windows`, written after window 0 is made, still sets window 0's chrome.  A command that changes nothing paints nothing, so the ROM's file (the console's own defaults) costs no repaint at boot.
+* **The time follows the console's use**: a server runs only for requests, so the minute's redraw comes with the next one (a shell at its prompt has one waiting, which timer 2's naps bring back every 2 seconds).  A long program that never touches the console leaves the clock as it was till it does.  A label is cleared by an empty line (`echo >/dev/label`): a write of no bytes never reaches the server.
+
 ### **Decisions**
 
 The user's answers to the plan's questions, 2026-10-07:

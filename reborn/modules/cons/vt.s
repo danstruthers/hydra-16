@@ -50,13 +50,7 @@ VT_NPAR         = 16            ; A sequence's numbers, at most
 VT_RAW          = 40            ; A sequence's bytes kept, to pass it on as it came
 VS_PAGE         = 256           ; A window's state in vt_save
 SCR_BUF         = 240           ; The screen's bytes, a write to #v/term at a time
-F_BOLD          = $01           ; The rendition: bold ...
-F_DIM           = $02           ;   faint ...
-F_UL            = $04           ;   underlined ...
-F_BLINK         = $08           ;   blinking ...
-F_REV           = $10           ;   reversed ...
-F_INVIS         = $20           ;   invisible ...
-F_PROT          = $40           ;   protected (DECSCA: W2)
+                                ; (The rendition, F_*, and COL_DEF: cons.inc's)
 META            = 127           ; A row's last cell, its meta (a window has 127 columns at most): the characters'
                                 ;   plane's its blank end's first column (the cells from there on are blank, not
                                 ;   written: a scroll or an erase to the row's end is a byte, not a row's cells);
@@ -66,7 +60,6 @@ RA_DW           = $02           ;   double width (DECDWL) ...
 RA_DHT          = $04           ;   double height, the top half (DECDHL 3) ...
 RA_DHB          = $08           ;   and the bottom half (DECDHL 4): each half the width
 RA_LINE         = RA_DW | RA_DHT | RA_DHB
-COL_DEF         = $07           ; The colours at first: light grey on black (SGR 39, 49)
 VM_AWM          = $01           ; v_mode: autowrap (DECAWM) ...
 VM_OM           = $02           ;   origin (DECOM) ...
 VM_IRM          = $04           ;   insert (IRM) ...
@@ -142,6 +135,10 @@ v_swrap:    .res        1                                   ;   last-column flag
 v_som:      .res        1                                   ;   and origin mode
 v_tabs:     .res        16                                  ; The tab stops (bit c & 7 of byte c >> 3)
 v_alt:      .res        1                                   ; <> 0: the alternate screen in use (?47, ?1047, ?1049)
+v_ssdt:     .res        1                                   ; The status line: its type (DECSSDT: 0 none, 1 the
+                                                            ;   indicator, 2 the program's) ...
+v_sasd:     .res        1                                   ;   <> 0: the output goes there (DECSASD 1) ...
+v_stx:      .res        1                                   ;   and its cursor (its text: w_stat, cons.s's)
 v_rbase:    .res        1                                   ; Its map's ring's start (the whole screen's scroll turns
                                                             ;   it: vmap, the map, is outside the state)
 vs_last:
@@ -158,6 +155,14 @@ vw_rb:      .res        WIN_MAX * 2                         ;   each screen's ri
 vw_sb:      .res        WIN_MAX * 2                         ;   the other's in use (main: the window * 2; alternate: + 1)
 vw_maps:    .res        WIN_MAX * 2 * POOL                  ;   and each screen's map
 vt_save:    .res        WIN_MAX * VS_PAGE                   ; Each window's state, while another's is loaded
+tr_off:     .res        2                                   ; Each terminal's (0 the serial port, 1 the screen) rows
+                                                            ;   above the shown window's (chr_geom's) ...
+tr_bar:     .res        2                                   ;   its bar's row ($FF: none) ...
+tr_head:    .res        2                                   ;   the window's header's ...
+tr_foot:    .res        2                                   ;   and its footer's
+chr_t:      .res        1                                   ; (chr_draw's: the terminal, a row, a cell)
+chr_r:      .res        1
+chr_k:      .res        1
 ts_ser:     .res        1                                   ; The terminals' states (cons.inc)
 ts_scr:     .res        1
 fw_ser:     .res        1                                   ; <> 0: the output written now goes to the serial port ...
@@ -277,6 +282,7 @@ vt_new:
             lda         vt_i
             sta         vt_w
             stz         v_alt
+            stz         v_sasd
             jsr         banks
             lda         lay_cols                            ; (The layout's size)
             sta         v_cols
@@ -434,6 +440,14 @@ vt_free:
 ; The cnt bytes in iobuf, the output of window lw: as many as there's room for (the shown window, its terminal
 ; following on the serial port: VT_ROOM a byte in the send ring).  OUT: .A = the bytes taken
 vt_write:
+            ldx         lw                                  ; (Not shown, monitor on: marked, +)
+            cpx         w_in
+            beq         :+
+            lda         w_mon,X
+            beq         :+
+            lda         #ACT_OUT
+            jsr         act_mark
+:
             lda         lw
             jsr         vt_load
             jsr         fw_setup
@@ -519,6 +533,18 @@ vt_pump:
             bra         @flush
 
 @sync:
+            lda         chr_dirty                           ; Its chrome changed: drawn again
+            and         #2
+            beq         :+
+            trb         chr_dirty
+            lda         w_in
+            jsr         vt_load
+            jsr         chr_geom
+            ldx         #1
+            jsr         chr_draw
+            lda         #1
+            sta         scr_sync
+:
             lda         scr_sync
             beq         @flush
             stz         scr_sync
@@ -1174,7 +1200,7 @@ st_osc:
             jsr         lbl_at
             lda         #0
             sta         (vt_a)
-            rts
+            jmp         chr_touch
 @text:
             cpx         #LBL_SIZE - 1
             bcs         @done
@@ -1188,7 +1214,7 @@ st_osc:
             lda         #0
             sta         (vt_a),Y
             sty         v_osci
-            rts
+            jmp         chr_touch
 
 ; vt_a = window .A's label (lbl_buf)
 lbl_at:
@@ -1221,6 +1247,10 @@ st_stre:
 ; The C0 controls (.A), and the ESC sequences
 
 c0:
+            ldx         v_sasd                              ; (The status line's: CR, BS, BEL)
+            beq         :+
+            jmp         sl_c0
+:
             cmp         #LF
             beq         c_lf
             cmp         #CR
@@ -1289,11 +1319,15 @@ c_ht:
             jmp         fs_byte
 
 c_bel:
-            lda         vt_w                                ; The shown window's: the bell (cons.s rings it)
-            cmp         w_in
+            ldx         vt_w                                ; The shown window's: the bell (cons.s rings it); another's
+            cpx         w_in                                ;   marked in the chrome (!)
             bne         :+
             lda         #1
             sta         bell
+            bra         :++
+:
+            lda         #ACT_BELL
+            jsr         act_mark
 :
             lda         #BEL
             jmp         fs_byte
@@ -1507,6 +1541,10 @@ e_deckpnm:
 ; The CSI sequences: .A the final byte, v_priv, v_inter, the numbers
 
 csi_do:
+            ldx         v_sasd                              ; (The status line's: its own few)
+            beq         :+
+            jmp         sl_csi
+:
             sta         vt_k
             lda         v_parl                              ; vt_n: the first number, 1 at least (most take it
             ldx         v_parh                              ;   so: a count; 255 at most)
@@ -1522,11 +1560,19 @@ csi_do:
             ldx         v_inter
             beq         @noint
             cpx         #'$'
-            bne         :+
+            bne         @bang
             cmp         #'p'                                ; DECRQM (CSI ? n $ p, CSI n $ p)
-            bne         @drop
+            bne         :+
             jmp         x_decrqm
 :
+            cmp         #'~'                                ; DECSSDT, DECSASD
+            bne         :+
+            jmp         x_decssdt
+:
+            cmp         #'}'
+            bne         @drop
+            jmp         x_decsasd
+@bang:
             cpx         #'!'
             bne         @drop
             cmp         #'p'                                ; DECSTR
@@ -2691,6 +2737,10 @@ print:
 ; on marked continued; IRM: the rest of the row moved right), and the cursor on; then to the terminals (the serial
 ; port: the byte as it came).  A cell at the row's blank end moves the end on (the cells before it written blank)
 print_glyph:
+            ldx         v_sasd                              ; (Into the status line: its own)
+            beq         :+
+            jmp         sl_glyph
+:
             sta         v_last
             stz         vt_scr
             lda         v_wrap
@@ -3208,6 +3258,7 @@ full_margins:
 
 ; A soft reset (DECSTR): the modes, the margins, the rendition, the character sets, the saved cursor
 soft:
+            stz         v_sasd                              ; (The main display's output)
             lda         #VM_AWM | VM_TCEM
             sta         v_mode
             stz         v_mode2
@@ -3243,6 +3294,13 @@ m_save_rest:
 reset:
             lda         #0                                  ; (The main screen)
             jsr         buf_to
+            stz         v_ssdt                              ; (The status line: none, empty)
+            stz         v_stx
+            lda         vt_w
+            jsr         stat_ptr
+            lda         #0
+            sta         (vt_a)
+            jsr         chr_touch
             stz         v_state
             stz         v_rawn
             stz         v_sbn
@@ -4351,6 +4409,8 @@ fc_erase_end:
             bne         :+
             lda         #$FF
             sta         scr_y
+            lda         #2                                  ; (Its chrome erased too: drawn again)
+            tsb         chr_dirty
 :
             rts
 
@@ -4386,7 +4446,7 @@ fc_tcem:
 :
             jmp         out_str
 
-; The screen painted, all at once: the shown window's screen, its region, cursor and rendition
+; The screen painted, all at once: its chrome, the shown window's screen, its region, cursor and rendition
 scr_paint:
             lda         w_in
             jsr         vt_load
@@ -4408,6 +4468,11 @@ scr_paint:
             lda         #COL_DEF
             sta         scr_c
             stz         scr_dec
+            jsr         chr_geom                            ; Its chrome (the rows offset below it)
+            ldx         #1
+            jsr         chr_draw
+            lda         #2
+            trb         chr_dirty
             stz         vt_i
 @row:
             lda         scr_fail                            ; (Refused: claimed; painted after)
@@ -4467,6 +4532,305 @@ scr_paint:
             sta         fw_scr
             jsr         fc_tcem
             stz         fw_scr
+@done:
+            rts
+
+; ****************************************************************************
+; Chrome (W4): each terminal's rows around the shown window's, as its w_chr has them there: the bar (console-wide:
+; at the top or the bottom), the window's header (above its screen) and footer (below), each rendered by cons.s
+; (chr_render) from its format, at the terminal's width.  The window's rows are offset below the bar and header
+; (tr_off: out_cup, out_region_all)
+
+; tr_*: where each terminal's chrome rows are, for the shown window (loaded: v_rows)
+chr_geom:
+            ldx         #1
+@term:
+            lda         #$FF
+            sta         tr_bar,X
+            sta         tr_head,X
+            sta         tr_foot,X
+            stz         tr_off,X
+            ldy         w_in                                ; (Its chrome there)
+            lda         w_chr,Y
+            and         #CH_LIVE
+            cpx         #0
+            beq         :+
+            lsr
+            lsr
+            lsr
+            lsr
+:
+            sta         chr_k
+            and         #CH_BAR
+            beq         @head
+            lda         bar_pos
+            beq         @head
+            cmp         #BAR_TOP
+            bne         @bottom
+            stz         tr_bar,X
+            inc         tr_off,X
+            bra         @head
+@bottom:
+            lda         ser_rows                            ; (The terminal's last row)
+            cpx         #0
+            beq         :+
+            lda         scr_rows
+:
+            dec         a
+            sta         tr_bar,X
+@head:
+            lda         chr_k
+            and         #CH_HEAD
+            beq         @foot
+            lda         tr_off,X
+            sta         tr_head,X
+            inc         tr_off,X
+@foot:
+            lda         chr_k
+            and         #CH_FOOT
+            beq         @next
+            clc
+            lda         tr_off,X
+            adc         v_rows
+            sta         tr_foot,X
+@next:
+            dex
+            bpl         @term
+            rts
+
+; Terminal .X's chrome rows (the shown window's, loaded; tr_*: chr_geom's), each rendered (cons.s) and written: its
+; cursor and rendition not known after
+chr_draw:
+            stx         chr_t
+            stx         out_t
+            inc         chr_pass                            ; (A drawing: the time read once)
+            lda         tr_bar,X
+            ldy         #CR_BAR
+            jsr         chr_row
+            ldx         chr_t
+            lda         tr_head,X
+            ldy         #CR_HEAD
+            jsr         chr_row
+            ldx         chr_t
+            lda         tr_foot,X
+            ldy         #CR_FOOT
+            jsr         chr_row
+            lda         #$FF                                ; (vid's cursor and colours: not known)
+            sta         scr_y
+            sta         scr_c
+            rts
+
+; Chrome row .Y at the terminal's row .A ($FF: none there)
+chr_row:
+            cmp         #$FF
+            beq         @done
+            sta         chr_r
+            ldx         chr_t                               ; (Its width: the terminal's)
+            lda         ser_cols
+            cpx         #0
+            beq         :+
+            lda         scr_cols
+:
+            tax
+            tya
+            FAR1        chr_render                          ; (cr_c, cr_a, cr_f: its cells, cr_n of them)
+            lda         chr_r
+            ldx         #0
+            jsr         out_cup_abs
+            stz         chr_k
+@cell:
+            ldx         chr_k
+            cpx         cr_n
+            bcs         @done
+            lda         cr_f,X
+            tay
+            lda         cr_a,X
+            cmp         scr_c                               ; (Its rendition, if vid hasn't it: the chrome's own,
+            bne         :+                                  ;   no DECSCNM)
+            cpy         scr_f
+            beq         @glyph
+:
+            sta         scr_c
+            sty         scr_f
+            tya
+            tax
+            lda         scr_c
+            jsr         out_sgr
+@glyph:
+            ldx         chr_k
+            lda         cr_c,X
+            jsr         scr_glyph
+            inc         chr_k
+            bra         @cell
+@done:
+            rts
+
+; Activity .A (ACT_*) in window .X, not shown: marked in the chrome (once)
+act_mark:
+            pha
+            ora         w_act,X
+            cmp         w_act,X
+            beq         :+
+            sta         w_act,X
+            lda         #3
+            tsb         chr_dirty
+:
+            pla
+            rts
+
+; The chrome drawn again (a label, a status line changed)
+chr_touch:
+            lda         #3
+            tsb         chr_dirty
+            rts
+
+; vt_a = window .A's status line (w_stat: STAT_SIZE a window)
+stat_ptr:
+            lsr
+            sta         vt_a + 1
+            lda         #0
+            ror
+            clc
+            adc         #<w_stat
+            sta         vt_a
+            lda         vt_a + 1
+            adc         #>w_stat
+            sta         vt_a + 1
+            rts
+
+; DECSSDT: the status line's type (0 none, 1 the indicator, 2 the program's: kept)
+x_decssdt:
+            lda         v_parl
+            sta         v_ssdt
+            rts
+
+; DECSASD: the output to the status line (1) or the main display (0)
+x_decsasd:
+            stz         v_sasd
+            lda         v_parh
+            bne         :+
+            lda         v_parl
+            cmp         #1
+            bne         :+
+            sta         v_sasd
+:
+            rts
+
+; The status line's glyph .A at its cursor (a DEC graphic as its ASCII), blanks before it if the text's shorter
+sl_glyph:
+            cmp         #$20
+            bcs         :+
+            tax
+            lda         dec_ascii,X
+:
+            ldx         v_stx
+            cpx         #STAT_SIZE - 1
+            bcs         @done
+            pha
+            lda         vt_w
+            jsr         stat_ptr
+            ldy         #0
+@scan:
+            cpy         v_stx
+            beq         @at
+            lda         (vt_a),Y
+            beq         @blank
+            iny
+            bra         @scan
+@blank:                                                     ; (Shorter: blanks to the cursor)
+            lda         #' '
+            sta         (vt_a),Y
+            iny
+            lda         #0
+            sta         (vt_a),Y
+            bra         @scan
+@at:
+            lda         (vt_a),Y
+            bne         @over
+            iny                                             ; (At its end: a new end after it)
+            lda         #0
+            sta         (vt_a),Y
+            dey
+@over:
+            pla
+            sta         (vt_a),Y
+            inc         v_stx
+            jmp         chr_touch
+@done:
+            rts
+
+; A C0 control into the status line: CR, BS; a BEL rings; the rest nothing
+sl_c0:
+            cmp         #CR
+            bne         :+
+            stz         v_stx
+            rts
+:
+            cmp         #BS
+            bne         :+
+            lda         v_stx
+            beq         @done
+            dec         v_stx
+@done:
+            rts
+:
+            cmp         #BEL
+            bne         @done
+            jmp         c_bel
+
+; A CSI sequence's end (.A) while the status line has the output: DECSASD and DECSSDT, EL; the rest dropped
+sl_csi:
+            ldx         v_inter
+            cpx         #'$'
+            bne         @el
+            cmp         #'}'
+            bne         :+
+            jmp         x_decsasd
+:
+            cmp         #'~'
+            bne         @done
+            jmp         x_decssdt
+@el:
+            cpx         #0
+            bne         @done
+            ldx         v_priv
+            bne         @done
+            cmp         #'K'
+            bne         @done
+            lda         vt_w                                ; EL: 0 from the cursor, 1 to it, 2 all
+            jsr         stat_ptr
+            lda         v_parl
+            beq         @rest
+            cmp         #2
+            bcs         @all
+            ldy         #0                                  ; (1: blanks to the cursor, within the text)
+:
+            lda         (vt_a),Y
+            beq         @dirty
+            lda         #' '
+            sta         (vt_a),Y
+            cpy         v_stx
+            bcs         @dirty
+            iny
+            bra         :-
+@rest:
+            ldy         #0                                  ; (0: the text ends at the cursor, if it went past it)
+:
+            cpy         v_stx
+            beq         :+
+            lda         (vt_a),Y
+            beq         @done
+            iny
+            bra         :-
+:
+            lda         #0
+            sta         (vt_a),Y
+            bra         @dirty
+@all:
+            lda         #0
+            sta         (vt_a)
+@dirty:
+            jmp         chr_touch
 @done:
             rts
 
@@ -4608,8 +4972,13 @@ out_dec:
             plx
             rts
 
-; A CUP to row .A, column .X (from 0)
+; A CUP to the window's row .A, column .X (from 0): the terminal's row below its chrome's (tr_off).  Modifies .Y
 out_cup:
+            ldy         out_t
+            clc
+            adc         tr_off,Y
+; ... the terminal's row .A
+out_cup_abs:
             pha
             phx
             lda         #ESC
@@ -4736,13 +5105,17 @@ out_region_all:
             jsr         out
             lda         #'['
             jsr         out
+            ldy         out_t                               ; (Its rows the terminal's, below its chrome)
             lda         v_top
-            inc         a
+            sec
+            adc         tr_off,Y
             jsr         out_dec
             lda         #';'
             jsr         out
+            ldy         out_t
             lda         v_bot
-            inc         a
+            sec
+            adc         tr_off,Y
             jsr         out_dec
             lda         #'r'
             jsr         out

@@ -1,0 +1,12 @@
+# /lib/windows: the windows' chrome (docs/programming/files.md, #c's wctl), a wctl line each, written to #c/wctl by
+# init as it starts; a card's /lib/windows comes before this one (/lib's union).  These are the console's own.
+#   bar top | bottom | off, bar FORMAT: the bar's place, what it shows (console-wide)
+#   default header FORMAT, default footer FORMAT, default chrome screen|serial on|off [bar] [header] [footer]
+#   FORMAT: %n window, %l label, %p program, %s status, %w windows, %G groups, %c %r size, %m modes, %t time,
+#   %d date, %L LEDs, %= the rest at the right, %[7] SGR's rendition (%[1;33;44], %[0]), %% a %
+bar top
+bar %[7] %G%=%t
+default header %[1]%n %l%=%w
+default footer %s
+default chrome screen on
+default chrome serial off

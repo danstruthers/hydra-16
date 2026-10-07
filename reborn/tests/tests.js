@@ -154,7 +154,7 @@ const RC_LINES = [
   ["~ a a && echo and; ~ a b || echo or","and\nor"],
   ["cat /nothing; echo status $status","cat: /nothing: not found\nstatus 1"],
   ["echo /rom/lib/n*","/rom/lib/namespace"],
-  ["echo /rom/lib/*","/rom/lib/as /rom/lib/basic /rom/lib/edit /rom/lib/font /rom/lib/forth /rom/lib/hylang /rom/lib/namespace /rom/lib/profile /rom/lib/shell"],
+  ["echo /rom/lib/*","/rom/lib/as /rom/lib/basic /rom/lib/edit /rom/lib/font /rom/lib/forth /rom/lib/hylang /rom/lib/namespace /rom/lib/profile /rom/lib/shell /rom/lib/windows"],
   ["echo 'no*match'*","no*match*"],
   ["cd /rom/lib; pwd; cd","/rom/lib"],
   ["rc -c 'echo sub $x'","sub a b c"],
@@ -170,12 +170,12 @@ const RC_LINES = [
   ["echo (a","rc: syntax error"],
   ["whatis echo x; q=('it''s' '' a.b); whatis q","/bin/echo\nx=(a b c)\nq=('it''s' '' a.b)"],
   ["bind '#n' /mnt; ls /mnt","null\nzero\nkmesg"],
-  ["ls /rom/lib","as/\nbasic/\nedit/\nfont/\nforth/\nhylang/\nnamespace\nprofile\nshell"],
+  ["ls /rom/lib","as/\nbasic/\nedit/\nfont/\nforth/\nhylang/\nnamespace\nprofile\nshell\nwindows"],
   ["cat /bin/echo >/ram/hi; cd /ram; hi from dot; cd","from dot"],
   ["cat /nothing >[2]/ram/e; cat /ram/e","cat: /nothing: not found"],
   ["cat /nothing |[2] cat >/ram/p; echo -n 'p: '; cat /ram/p","p: cat: /nothing: not found"],
   ["echo $task $#path $path # a comment","2 2 . /bin"],
-  ["path=(); ls; path=(. /bin); ls /rom/lib","rc: ls: not found\nas/\nbasic/\nedit/\nfont/\nforth/\nhylang/\nnamespace\nprofile\nshell"],
+  ["path=(); ls; path=(. /bin); ls /rom/lib","rc: ls: not found\nas/\nbasic/\nedit/\nfont/\nforth/\nhylang/\nnamespace\nprofile\nshell\nwindows"],
   ["! ~ a b && echo not; echo $status","not\n"],
 ];
 
@@ -187,7 +187,7 @@ const HYSH_RC = RC_LINES.filter(([l]) => l[0] !== '{' &&
   !/^(echo \$"x|echo x\^|echo \$x\(2-\)|rc -c 'echo sub|whatis greet|whatis echo x|eval echo evaled|echo \$task)/.test(l));
 const HYSH_LINES = [
   ['(+ 1 2)', '=> 3'], ['(map (fn {x} {* x x}) {1 2 3})', '=> {1 4 9}'], ['cd /rom/lib', null, '/rom/lib'], ['pwd', '/rom/lib'],
-  ['ls | wc -l', '      9'], ['cmp namespace profile >/dev/null', null], ['(+ status 0)', '=> 1'], ['echo $status', '1'],
+  ['ls | wc -l', '     10'], ['cmp namespace profile >/dev/null', null], ['(+ status 0)', '=> 1'], ['echo $status', '1'],
   ['cd /none', '/none: not found'], ['bind -x a b', 'usage: bind [-abc] new old'], ["bind -a '#n' /mnt", null], ['ls /mnt', 'null\nzero\nkmesg'],
   ['unmount /mnt', null], ['ls /mnt', null], ['nosuch', 'rc: nosuch: not found'], ['sleep 1 &', null], ['echo $#apid', '1'],
   ['cd', null, '/'],
@@ -517,6 +517,48 @@ function edSim(keys, hist) {
   }
   return s;
 }
+// (winchrome's: the chrome on the screen alone, its rows read back from /dev/vid/term at each step: the bar's and
+// header's (the screen's first two), the footer's (its last, or with the bar at the bottom the two last))
+const CHROME_RC = [
+  'echo screen >/dev/consctl',
+  'echo -n mywin >/dev/label',
+  'cat /dev/label >/ram/l0',
+  'echo status hello there >/dev/wctl',
+  'cat /dev/vid/term >/ram/s1',
+  'cat /pc/vt/sasd',
+  "echo 'footer %[7]%s%=%c x %r %m' >/dev/wctl",
+  "echo 'header [%p] %l%=%n' >/dev/wctl",
+  'cat /dev/vid/term >/ram/s2',
+  'echo bar bottom >/dev/wctl',
+  'cat /dev/vid/term >/ram/s3',
+  'echo chrome screen off header >/dev/wctl',
+  'grep size /dev/consctl >/ram/z1',
+  'echo bar off >/dev/wctl',
+  'grep size /dev/consctl >>/ram/z1',
+  'echo chrome screen off >/dev/wctl',
+  'grep size /dev/consctl >>/ram/z1',
+  'echo chrome screen on >/dev/wctl',
+  'echo bar top >/dev/wctl',
+  'grep size /dev/consctl >>/ram/z1',
+  'cat /pc/vt/title',
+  'cat /dev/label >/ram/l1',
+  'echo new >/dev/wctl',
+  '{',
+  "  echo monitor on >'#c1/wctl'",
+  '  echo hidden >[1=3]',
+  '  cat /dev/vid/term >/ram/s4',
+  '  cat /pc/vt/bel >[1=3]',
+  '  cat /dev/vid/term >/ram/s5',
+  "} >[3]'#c1/cons'",
+  'echo >/dev/label',
+  'cat /dev/vid/term >/ram/s6',
+  'echo both >/dev/consctl',
+  "echo '[l]'; cat /ram/l0; echo; cat /ram/l1; echo",
+  "echo '[z]'; cat /ram/z1",
+  "for (n in 1 2 4 5 6) { echo '[s'^$n^']'; head -2 /ram/s^$n; tail -1 /ram/s^$n }",
+  "echo '[s3]'; head -1 /ram/s3; tail -2 /ram/s3",
+  'echo done',
+].join('\n') + '\n';
 // (vtjump's: the ROM disk's api.md, 38K, cat to the window shown with scroll jump)
 const vtJump = () => fs.readFileSync(path.join(__dirname, '..', 'obj', 'gen', 'api.md'), 'latin1');
 const vtModel = bytes => new VT({ onlcr: true }).write(bytes);
@@ -1250,7 +1292,7 @@ module.exports = {
       expect: ['% ls \'#fr\'\n1/\n2/\n%', '% ls /ram\nbin/\nlib/\n%',
         '% ls /bin\ndb\nedit\nfsck\ngrep\nlabel\nmkfs\nscom\nsort\ninit\nhello\nrc\nwstart\n', 't_child\n% t_child f\n', '% ls \'#fr\'/2\nbin/\nlib/\nmark\n%',
         'prompt=(', '% cat /dev/sd/s/ctl\nsram 512 KB 1024 blocks\nhydrafs label=SRAM\n', '% echo $window\n0\n%',
-        '% echo $window\n1\n%', '% ls \'#fr\'\n1/\n2/\n4/\n%', '% ls /ram\nbin/\nlib/\n%', '\ncons\nconsctl\nwctl\nwnew\nser\nserctl\nkbdin\ntext\n%',
+        '% echo $window\n1\n%', '% ls \'#fr\'\n1/\n2/\n4/\n%', '% ls /ram\nbin/\nlib/\n%', '\ncons\nconsctl\nwctl\nwnew\nser\nserctl\nkbdin\ntext\nlabel\n%',
         '% echo stop >>\'#d/s/ctl\'; echo still; cat /sram/x\nstill\ncat: /sram/x: no such device\n%'],
     },
     {
@@ -1547,7 +1589,7 @@ module.exports = {
           ': h ." note " . true ;', '\' h on-note sys-getpid 16 note 7 .', ': lp 10 0 do i 5 = if sys-getpid 17 note then loop ." done" ;',
           'lp', ': h2 drop false ;', '\' h2 on-note sys-getpid 18 note 1 .', 'pause 2 .', 'exit'].map(l => 'ā' + l + '\r').join(''),
       },
-      expect: ['/> argc .\n0 \n', '/> s" /rom/lib" ls-dir\nas basic edit font forth hylang namespace profile shell \n/> s" /ram/newdir" 0 =mkdir . s" /ram" ls-dir\n0 bin lib newdir \n' +
+      expect: ['/> argc .\n0 \n', '/> s" /rom/lib" ls-dir\nas basic edit font forth hylang namespace profile shell windows \n/> s" /ram/newdir" 0 =mkdir . s" /ram" ls-dir\n0 bin lib newdir \n' +
         '/> s" /rom" set-dir . pad 64 get-dir type\n0 /rom\n/rom> s" /none" set-dir ior>text type\nnot found\n' +
         '/rom> s" foo" s" bar" setenv s" foo" getenv type s" foo" unsetenv s" foo" getenv nip .\nbar0 \n' +
         '/rom> : h ." note " . true ;\n/rom> \' h on-note sys-getpid 16 note 7 .\nnote 16 7 \n' +
@@ -2421,9 +2463,12 @@ module.exports = {
       check(m) {
         const f = [], c = m.vera.cells(), text = m.vera.text();
         if (!c) return ['no text layer on the screen'];
-        // (The window shown is the smaller terminal's size, the serial port's 80 x 24: its rows at the screen's top)
+        // (The window shown is the smaller terminal's size, the serial port's 80 x 24: its rows below the screen's
+        // chrome, the bar and its header, then its footer: W4)
         if (!text.some(l => l.startsWith('% cat /dev/vid/ctl'))) f.push('the screen lacks rc\'s line "% cat /dev/vid/ctl"');
-        if (text.slice(24).some(l => l)) f.push('the screen has text below the window\'s 24 rows');
+        if (text.slice(27).some(l => l)) f.push('the screen has text below the window\'s 24 rows and its footer');
+        if (!/^ 0 \S+ .* \d\d:\d\d$/.test(text[0] || '')) f.push('the screen\'s bar (row 1) isn\'t " 0 label ... HH:MM": ' + JSON.stringify(text[0]));
+        if (!/^0 \S+ .* 0 \S+$/.test(text[1] || '')) f.push('the window\'s header (row 2) isn\'t "0 label ... 0 label": ' + JSON.stringify(text[1]));
         if (!text.some(l => l === 'terminal both')) f.push('the screen lacks consctl\'s "terminal both"');
         // (The DEC graphics, ESC ( 0's lqk, as the font's glyphs $0D $12 $0C: tools/decfont.js's)
         let box = false;
@@ -2475,7 +2520,7 @@ module.exports = {
         const out = raw.replace(/\r/g, ''), s0 = out.indexOf('\npainted\n');
         const scr = s0 < 0 ? [] : out.slice(s0 + 9).split('\n').map(l => l.replace(/ +$/, ''));
         const rows = want.screen.map(r => r.dw ? [...VT.rowText(r)].map(c => c + ' ').join('').replace(/ +$/, '') : VT.rowText(r));
-        for (let r = 0; r < 24; r++) if (scr[r] !== rows[r]) { f.push('the screen\'s row ' + (r + 1) + ': ' + JSON.stringify(scr[r]) + ', not ' + JSON.stringify(rows[r])); break; }
+        for (let r = 0; r < 24; r++) if (scr[r + 2] !== rows[r]) { f.push('the screen\'s row ' + (r + 3) + ' (the window\'s ' + (r + 1) + ', below the bar and its header): ' + JSON.stringify(scr[r + 2]) + ', not ' + JSON.stringify(rows[r])); break; }
         return f;
       },
     },
@@ -2515,10 +2560,10 @@ module.exports = {
       },
     },
     {
-      name: 'vtmode', what: 'a window\'s size from the screen\'s (W3): the screen alone (80 x 60), vid\'s mode changed under the console (40x30: its next write refused once, the size looked at, the windows resized and the screen painted again; 80x30), then both terminals (the smaller: the serial port\'s 80 x 24)',
+      name: 'vtmode', what: 'a window\'s size from the screen\'s (W3): the screen alone (80 x 60, less its chrome\'s 3 rows: the bar, the header, the footer), vid\'s mode changed under the console (40x30: its next write refused once, the size looked at, the windows resized and the screen painted again; 80x30), then both terminals (the smaller: the serial port\'s 80 x 24)',
       init: 't_rc', cycles: 150e6, pc: { files: { 'vt/mode.rc': VT_MODE_RC } }, jsOnly: 'the danlang emulator has no VERA yet',
       get machine() { return { vera: true, input: typed([['rc /pc/vt/mode.rc']]) }; },
-      expect: ['size 80 60\nsize 40 30\nsize 80 30\nsize 80 24\n', '\ndone\n%'],
+      expect: ['size 80 57\nsize 40 27\nsize 80 27\nsize 80 24\n', '\ndone\n%'],
       check(m) {
         const f = [], out = m.out.replace(/\r/g, ''), a = out.indexOf('[t2]\n'), b = out.indexOf('[/t2]', a);
         if (a < 0 || b < 0) return ['no screen read at 40x30'];
@@ -2569,6 +2614,26 @@ module.exports = {
         if (a < 0 || b < 0) return ['the editor: no output'];
         const ed = out.slice(a, b), r = ed.indexOf('\x1b[0m\x1b(B\x1b)B');            // (The resize's paint)
         return ed.lastIndexOf('\x1b[30;1H') > r && r > 0 ? [] : ['the editor: not drawn again at 100 x 30 (no help line on row 30 after the resize\'s paint)'];
+      },
+    },
+    {
+      name: 'winchrome', what: 'the chrome on the screen (W4): its label (#c0/label, OSC 2, empty: its program\'s name), its status line (wctl\'s status, and DECSASD\'s, after DECSSDT 2), the header\'s and footer\'s formats (%p, %l, %n, %s, %c, %r, %m, %[7], %=), the bar (its defaults: the windows, the time; at the bottom; off), a window\'s chrome rows turned off (its size grows by each), activity in a window not shown (monitor on: +; a bell: !); read back from vid\'s screen',
+      init: 't_rc', cycles: 260e6, jsOnly: 'the danlang emulator has no VERA yet',
+      pc: { files: { 'vt/chrome.rc': CHROME_RC, 'vt/sasd': '\x1b[2$~\x1b[1$}\x1b[2Kfrom vt\x1b[0$}', 'vt/title': '\x1b]2;titled\x07', 'vt/bel': '\x07' } },
+      get machine() { return { vera: true, input: typed([['rc /pc/vt/chrome.rc']]) }; },
+      expect: ['\ndone\n%'],
+      check(m) {
+        const f = [], out = m.out.replace(/\r/g, ''), part = n => { const a = out.indexOf('[' + n + ']\n'); return a < 0 ? [] : out.slice(a + n.length + 3).split('\n'); };
+        const row = (l, at, want) => { if (!want.test(l[at] || '')) f.push(at + ': ' + JSON.stringify(l[at]) + ' isn\'t ' + want); };
+        const l = part('l'), z = part('z');
+        if (l[0] !== 'mywin' || l[1] !== 'titled') f.push('the label read back: ' + JSON.stringify(l.slice(0, 2)) + ', not mywin, titled');
+        if (z.slice(0, 4).join('|') !== 'size 80 58|size 80 59|size 80 60|size 80 57') f.push('the sizes as the chrome went: ' + JSON.stringify(z.slice(0, 4)));
+        const s1 = part('s1'), s2 = part('s2'), s3 = part('s3'), s4 = part('s4'), s5 = part('s5'), s6 = part('s6');
+        row(s1, 0, /^ 0 mywin +00:00$/); row(s1, 1, /^0 mywin +0 mywin$/); row(s1, 2, /^hello there *$/);
+        row(s2, 1, /^\[rc\] mywin +0$/); row(s2, 2, /^from vt +80 x 57 cooked$/);
+        row(s3, 0, /^\[rc\] mywin +0$/); row(s3, 1, /^from vt +80 x 57 cooked$/); row(s3, 2, /^ 0 mywin +00:00$/);
+        row(s4, 0, /^ 0 titled 1\+ +00:00$/); row(s5, 0, /^ 0 titled 1! +00:00$/); row(s6, 0, /^ 0 rc +00:00$/);
+        return f.map(x => 'winchrome: ' + x);
       },
     },
     {
