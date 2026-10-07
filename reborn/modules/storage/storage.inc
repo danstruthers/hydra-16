@@ -22,6 +22,7 @@ BLOCK           = 512
 .global     blk, c_ok, d_state, d_blocks, d_open
 .global     blk_get, blk_read, blk_write, disk_start        ; (FAR1)
 .global     blk_part, blk_plen                              ; (A data write's part of its block: blk_write's)
+.global     blk_keep, blk_flush                             ; (A data write's block kept back: a card's; FAR1)
 .globalzp   srv_tlen, srv_argn                              ; srvlib's: a ctl file's text, and a ctl command's
 .global     srv_text, srv_ctl, srv_argp                     ;   words
 .globalzp   hyx2_to, hyx2_a                                 ; The trampolines between the banks (hyx2.inc)

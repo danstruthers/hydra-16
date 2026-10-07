@@ -89,7 +89,10 @@ HFS_CLUNK:
             lda         #$FF
             sta         HFS_H_CARD,X
             lda         HFS_H_FLAGS,X
-            bpl         HFS_OK                              ; (HFS_HF_DIRTY)
+            bmi         :+                                  ; (HFS_HF_DIRTY: its entry, its data first)
+            FAR1        blk_flush                           ; (Its last block, if it's kept back: to the card now)
+            rts
+:
             jmp         HFS_ENT_PUT
 
 HFS_OK:

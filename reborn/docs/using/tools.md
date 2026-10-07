@@ -265,8 +265,14 @@ banks $00-$1f
 
 Through the ctl files directly: `start SIZE [FROM-TO]` and `stop` on a RAM disk (`echo start 128K 1-1 >>'#d/r/ctl'`:
 from RAM module 1's banks; `>>`, as a stopped disk's directory isn't listed), `init` on a card (after it's changed),
-`format`, `label`, `check`.  The cards' file systems are at `/sd/N`; a card's `bin` and `lib`, if it has them, join
+`format`, `label`, `check`, `sync`.  The cards' file systems are at `/sd/N`; a card's `bin` and `lib`, if it has them, join
 `/bin` and `/lib`.
+
+A card's writes are kept back a block at a time: the block a file's last write changed stays in the storage driver's
+buffer till another block's wanted, the file's closed, or `echo sync >/dev/sd/0/ctl` (any card's `ctl`) writes it,
+so a program writing a few bytes at a time isn't slowed by the card.  Close a file (end the program writing it), or
+`sync`, before taking its card out or switching off: a block still kept back is lost then (and `init` drops it, as
+the card may be another).  The RAM disks' writes go at once.
 
 ## Others
 

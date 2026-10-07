@@ -14,10 +14,11 @@
 ;           devices, x the ROM disk (the paged ROM, read only), r the RAM disk (this task's banks), s the shared
 ;           one (a shared segment), v the Vera X's SD card (on the VERA's own SPI controller: a card, as 0-f are)
 ;     N/data  the disk as a file of bytes, at the fd's offset (its first 4 GB), through the block buffer; writes
-;             go to the disk at once.  A card's blocks are cached (L2_SLOTS of them, written through).  Opening a
-;             card's starts it (E_NODEV: no card; E_BUSY: open in #S)
+;             go to a RAM disk at once, and a card's block is kept back in the buffer (below).  A card's blocks are
+;             cached too (L2_SLOTS of them).  Opening a card's starts it (E_NODEV: no card; E_BUSY: open in #S)
 ;     N/ctl   reads as the disk: "sdhc 7580 MB 15523840 blocks" (sdsc, rom; ram and sram in KB), or "none".
-;             init: the card started again (after it's changed); start SIZE [FROM-TO]: a RAM disk of SIZE 8K banks (or
+;             init: the card started again (after it's changed: a block kept back is dropped); sync: the block kept
+;             back written now; start SIZE [FROM-TO]: a RAM disk of SIZE 8K banks (or
 ;             SIZE K, SIZE M: 256K, 1M), and an empty HydraFS on it; stop: its banks given back (not while it's
 ;             open).  And HydraFS's: format [-f] [-p] [-s SIZE] [LABEL], label TEXT, check [fix] (hfs.s), and its
 ;             lines in the text (the label, the space free, the last check's results)
@@ -30,6 +31,14 @@
 ; layer (drivers/sd.s).  The ROM disk is read through the kernel's ROMREAD (this module runs in place in its own
 ; bank: block n is bank n / 32, at $A000 + (n % 32) * 512); a RAM disk's block n is bank n / 16 of its banks, at
 ; $8000 + (n % 16) * 512.
+;   A data write's block (HydraFS's file data, #d's data file: blk_keep) to a card is kept back in the block buffer,
+; changed (c_dirty), not written: a write of a few bytes costs no card write, and a file written a little at a time
+; goes to the card a block at a time.  The block is written (blk_flush) when the buffer's wanted for another block,
+; as a file of that disk's closes (HydraFS's or #d's), before HydraFS writes any metadata (so a file's data is on
+; the card before an entry that points at it, as before), before format, label and check, and at sync.  A read of
+; it, into any buffer, has the block as it's kept; a write of it from another buffer takes its place.  init drops it
+; (the card may be another).  So a card taken out (or the power lost) before a file's closed may lose its last
+; block's writes.
 
 .include "hydra.inc"
 .include "hw.inc"
@@ -92,6 +101,10 @@ c_disk:     .res        1                                   ;   its disk ...
 c_lba:      .res        4                                   ;   and its number
 blk_part:   .res        2                                   ; A data write's part of the block it writes (HydraFS
 blk_plen:   .res        2                                   ;   sets them: a RAM disk writes only that part; 0, all)
+blk_keep:   .res        1                                   ; <> 0: this write's a data write's (a card's block may
+                                                            ;   be kept back; blk_write forgets it after)
+c_dirty:    .res        1                                   ; <> 0: blk's block is a card's, kept back: changed, not
+                                                            ;   written to the card yet
 was_bank:   .res        1                                   ; (ram_map's: $00 and U as they were)
 was_u:      .res        1
 sd_arg:     .res        4                                   ; An SD command's argument (MSB first) ...
@@ -1258,6 +1271,8 @@ blk_get:
             sta         bufp + 1
             jsr         blk_here
             bcc         @done
+            jsr         blk_flush                           ; (A block kept back: to its card first)
+            bcs         @done
             stz         c_ok                                ; (Nothing there, if the read fails)
             jsr         blk_read
             bcs         @done
@@ -1301,19 +1316,111 @@ blk_claim:
             clc
             rts
 
-; Nothing of disk dk's in blk, or the cache.  Keeps .X
+; Nothing of disk dk's in blk (a block kept back dropped), or the cache.  Keeps .X
 blk_forget:
             lda         c_disk
             cmp         dk
             bne         :+
             stz         c_ok
+            stz         c_dirty
 :
             jmp         l2_forget
 
-; Block lba of disk dk into the 512 bytes at bufp (blk_read), or them to it (blk_write: then blk is that block, if
-; they were blk's; if not, blk forgets it, if it had it); a card's through the cache.  OUT: C = 0; or C = 1, .A =
-; the error
+; blk's block, if it's kept back (c_dirty), written to its card now (and kept in the cards' cache).  OUT: C = 0; or
+; C = 1, .A = the error: its change is lost (blk forgets it).  Keeps dk, lba and bufp
+blk_flush:
+            lda         c_dirty
+            bne         :+
+            clc
+            rts
+:
+            stz         c_dirty
+            lda         dk                                  ; (The caller's dk, lba and bufp, kept)
+            pha
+            ldx         #3
+:
+            lda         lba,X
+            pha
+            dex
+            bpl         :-
+            lda         bufp
+            pha
+            lda         bufp + 1
+            pha
+            lda         c_disk                              ; The block, from blk
+            sta         dk
+            ldx         #3
+:
+            lda         c_lba,X
+            sta         lba,X
+            dex
+            bpl         :-
+            lda         #<blk
+            sta         bufp
+            lda         #>blk
+            sta         bufp + 1
+            jsr         blk_check
+            bcs         @failed
+            jsr         @go
+            bcs         @failed
+            jsr         l2_put
+            clc
+            bra         @back
+
+@failed:
+            stz         c_ok                                ; (The card's block is unknown: nothing kept of it)
+            jsr         l2_drop
+            sec
+@back:
+            tay                                             ; (.A and C: the answer)
+            pla
+            sta         bufp + 1
+            pla
+            sta         bufp
+            pla
+            sta         lba
+            pla
+            sta         lba + 1
+            pla
+            sta         lba + 2
+            pla
+            sta         lba + 3
+            pla
+            sta         dk
+            tya
+            rts
+
+@go:
+            jmp         (blk_writers,X)
+
+; blk's 512 bytes to bufp.  OUT: C = 0
+blk_out:
+            ldy         #0
+:
+            lda         blk,Y
+            sta         (bufp),Y
+            iny
+            bne         :-
+            inc         bufp + 1
+:
+            lda         blk + 256,Y
+            sta         (bufp),Y
+            iny
+            bne         :-
+            dec         bufp + 1
+            clc
+            rts
+
+; Block lba of disk dk into the 512 bytes at bufp (blk_read: the block kept back in blk, from there), or them to it
+; (blk_write: then blk is that block, if they were blk's, a data write's to a card kept back; if not, blk forgets
+; it, if it had it, kept back or not); a card's through the cache.  OUT: C = 0; or C = 1, .A = the error
 blk_read:
+            lda         c_dirty
+            beq         :+
+            jsr         blk_here
+            bcs         :+
+            jmp         blk_out
+:
             jsr         blk_check
             bcs         blk_failed
             phx
@@ -1330,14 +1437,32 @@ blk_read:
             jmp         (blk_readers,X)
 
 blk_write:
-            jsr         @write                              ; (A data write's part used: forgotten after)
-            stz         blk_plen
+            jsr         @write                              ; (A data write's part, and its keeping back: forgotten
+            stz         blk_plen                            ;   after)
             stz         blk_plen + 1
+            stz         blk_keep
             rts
 
 @write:
             jsr         blk_check
             bcs         blk_failed
+            lda         blk_keep                            ; A data write's block, from blk, to a card: kept back
+            beq         @through
+            lda         bufp
+            cmp         #<blk
+            bne         @through
+            lda         bufp + 1
+            cmp         #>blk
+            bne         @through
+            cpx         #DS_SDHC * 2 + 1
+            bcs         @through
+            jsr         blk_claim
+            lda         #1
+            sta         c_dirty
+            clc
+            rts
+
+@through:
             jsr         @go
             bcc         :+
             jmp         l2_drop                             ; (What the card has is unknown now)
@@ -1355,6 +1480,7 @@ blk_write:
             jsr         blk_here
             bcs         :+
             stz         c_ok
+            stz         c_dirty
 :
             clc
             rts
@@ -1773,10 +1899,9 @@ h_disk:
 @done:
             rts
 
-@clunk:
+@clunk:                                                     ; (A block kept back: to its card, as a file closes)
             dec         d_open,X
-            clc
-            rts
+            jmp         blk_flush
 
 ; A read at the request's offset, block by block through blk; at the disk's end, short (nothing: the end of the
 ; file).  An error after some were moved: those (the next read gets it)
@@ -1805,8 +1930,8 @@ dd_end:
             clc
             rts
 
-; A write at the request's offset, block by block through blk (a part of one read first), each block written at once.
-; Past the disk's end: E_NOSPC
+; A write at the request's offset, block by block through blk (a part of one read first), each block written at once
+; (a card's kept back).  Past the disk's end: E_NOSPC
 dd_write:
             lda         d_state,X
             cmp         #DS_ROM
@@ -1822,7 +1947,12 @@ dd_write:
             lda         part + 1                            ; A whole block?  (512: then within is 0)
             cmp         #>BLOCK
             bne         @part
-            jsr         blk_claim                           ; (Nothing to read first)
+            jsr         blk_here                            ; (Nothing to read first; another block kept back:
+            bcc         :+                                  ;   to its card)
+            jsr         blk_flush
+            bcs         dd_failed
+:
+            jsr         blk_claim
             bra         @fill
 
 @part:
@@ -1831,6 +1961,8 @@ dd_write:
 @fill:
             jsr         dd_ptrs
             jsr         CLIENT_READ
+            lda         #1                                  ; (A card's: kept back)
+            sta         blk_keep
             jsr         blk_write
             bcc         :+
             pha
@@ -2093,23 +2225,34 @@ c_stop:
             rts
 
 ; format [-f] [-p] [-s SIZE] [LABEL], label TEXT, check [fix]: HydraFS's (hfs.s)
-c_format:
+c_format:                                                   ; (Each: the block kept back written first)
+            jsr         blk_flush
+            bcs         c_done
             lda         z:srv_id
             sta         dk
             FAR2        hfs_format
             rts
 
 c_label:
+            jsr         blk_flush
+            bcs         c_done
             lda         z:srv_id
             sta         dk
             FAR2        hfs_label
             rts
 
 c_check:
+            jsr         blk_flush
+            bcs         c_done
             lda         z:srv_id
             sta         dk
             FAR2        hfs_check
+c_done:
             rts
+
+; sync: the block kept back (a card's: any card's, as there's one) written now
+c_sync:
+            jmp         blk_flush
 
 ; #f: HydraFS (hfs.s), every request
 h_fs:
@@ -2556,6 +2699,7 @@ disk_cmds:
             .word       s_format, c_format
             .word       s_label, c_label
             .word       s_check, c_check
+            .word       s_sync, c_sync
             .word       0
 blk_readers: .word      0, sd_read, sd_read, rom_read, ram_read, ram_read       ; (By state: DS_*)
 blk_writers: .word      0, sd_write, sd_write, rom_write, ram_write, ram_write
@@ -2571,6 +2715,7 @@ s_stop:     .byte       "stop", 0
 s_format:   .byte       "format", 0
 s_label:    .byte       "label", 0
 s_check:    .byte       "check", 0
+s_sync:     .byte       "sync", 0
 s_none:     .byte       "none", LF, 0
 s_sdsc:     .byte       "sdsc ", 0
 s_sdhc:     .byte       "sdhc ", 0

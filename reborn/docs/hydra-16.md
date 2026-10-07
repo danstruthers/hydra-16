@@ -237,7 +237,8 @@ device (through a cache of their blocks), `x` the ROM disk, `r` the RAM disk (ea
 `s` the shared one (`/sram`), and `v` the Vera X's SD card (on the VERA's own SPI controller).  HydraFS is on each, the old system's file system, ported: directories, files to 4 GB, a
 card's partitions ([HYDRAFS.md](design/plans/HYDRAFS.md) is its format).  The cards are at `/sd/N`, and a card's `bin`
 and `lib` join `/bin` and `/lib`.  `df`, `mkfs`, `fsck` and `label` look after them; the PC's `sim/tools/hydrafs.js`
-makes card images.  [Disks](using/tools.md#disks), [DISKS.md](design/plans/DISKS.md).
+makes card images.  A card's writes are kept back a block at a time: close the file, or
+`echo sync >/dev/sd/N/ctl`, before taking the card out.  [Disks](using/tools.md#disks), [DISKS.md](design/plans/DISKS.md).
 
 ---
 
