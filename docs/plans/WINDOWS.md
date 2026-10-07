@@ -415,6 +415,17 @@ Each language's words come with the step that brings their file (W3's size, W4's
 
 ---
 
+### **As built: W1**
+
+October 2026, on `reborn-text-windows` (reborn's `docs/status.md`, "The text windows", has the whole note and the measurements).  Where it went otherwise than planned:
+
+* **A row's last cell is its meta**, so a window is **127 columns** at most (the plan said 128): where its blank end starts and in what colours, and its attributes.  Measuring showed why: blanking each row as it scrolled in (240 bytes over three banks) made a short line 6,783 cycles, slower than the serial line; with the blank end a byte, 1,033.  The whole screen's scroll turns the map, a ring (`v_rbase`), rather than moving its 63 entries.
+* **The serial port is painted as a stream of lines**, a CR and an LF a row (not a CUP a row), and the cursor reached by the least move, so the PC's terminal keeps the rows in its own scrollback, and a paint reads as the replay did to the tests that read the line.  A row an autowrap continued is painted on from the full row before it, the terminal wrapping it.
+* **Paints are whole** in W1: no damage by rows yet.  What vid can't do (insert and delete, SU, SD, REP) has the screen painted whole at the request's end.  vid's cursor is tracked exactly (a CUP when it isn't where a character goes), rather than lowering sequences one by one.
+* **A paint goes on as requests come** (as the replay did): a client of the console waiting (a shell waiting for keys, a writer) brings it on as the send ring empties.
+* **As xterm.js has them** (the oracle's): SU's rows don't go into the scrollback, and RIS clears it.  Where xterm.js differs by design, the VT100's is kept: SUB shows the error character, DECCOLM clears the screen.
+* **Not yet** (W2): vid's `E_BUSY` while claimed (it still keeps 1K and shows it at the release), the DEC graphics in the font (ASCII on the screen meanwhile), double width and height (passed on to the serial port, not kept).
+
 ### **Decisions**
 
 The user's answers to the plan's questions, 2026-10-07:

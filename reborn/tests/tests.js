@@ -24,6 +24,7 @@ const fs = require('fs');
 const path = require('path');
 const hydrafs = require('../../sim/tools/hydrafs.js');
 const { createXmodemPeer } = require('../sim/lib/xmpeer.js');
+const { VT, DEC_ASCII } = require('../sim/lib/vt.js');
 
 const IRQ_OFF_MAX = 200;                                      // (docs/reimplementation-from-scratch.md, §8: 115200)
 const S1_BYTES = 2000;
@@ -380,6 +381,101 @@ const SCREEN_LINES = [
   ["cat /pc/colours", "\x1b[31;44mR\x1b[0mn\x1b[1;32mG\x1b[0;7mV\x1b[m"],
 ];
 const SCREEN_COLOURS = '\x1b[31;44mR\x1b[0mn\x1b[1;32mG\x1b[0;7mV\x1b[m\n';
+
+// The console's VT100 (docs/plans/WINDOWS.md, W1): what a program writes, each into a window not shown (window 1),
+// its /text read back (the vt test); and a window painted on both terminals (vtpaint).  Each expected screen is
+// sim/lib/vt.js's; xterm.js's headless terminal, if it's installed (npm install, in reborn/), is held against vt.js
+// too, for each fixture but those it differs on by design (false: SUB's error character, DECCOLM's clearing, which
+// xterm.js leaves out)
+const VT_FIXTURES = [
+  ['text', 'Hello, world.\r\nsecond line\nthird\tTAB\tTAB2\x08X\r\n' + 'A'.repeat(85) + '\ndone'],
+  ['moves', '\x1b[5;10Hfive-ten\x1b[2Aup2\x1b[3Bdown3\x1b[4Cright4\x1b[20Dleft20\x1b[2Ecnl\x1b[1Fcpl\x1b[30Gcha30' +
+    '\x1b[12dvpa12\x1b[40`hpa40\x1b[3aR\x1b[2eE\x1b[99;75Hcorner\x1b[1;1H\x1b[0;0fhome'],
+  ['erase', 'aaaaaaaaaa\r\nbbbbbbbbbb\r\ncccccccccc\r\ndddddddddd\r\neeeeeeeeee\r\nffffffffff\r\ngggggggggg' +
+    '\x1b[2;5H\x1b[K\x1b[3;5H\x1b[1K\x1b[4;5H\x1b[2K\x1b[1;3H\x1b[4X\x1b[6;3H\x1b[J'],
+  ['erase1', 'aaaaaaaaaa\r\nbbbbbbbbbb\r\ncccccccccc\x1b[2;4H\x1b[1Jz'],
+  ['insdel', Array.from({ length: 10 }, (v, i) => 'line ' + (i + 1)).join('\r\n') +
+    '\x1b[3;1H\x1b[2L\x1b[7;1H\x1b[1M\x1b[1;3H\x1b[2@\x1b[2;2H\x1b[3Pafter'],
+  ['region', 'top\r\nsecond\x1b[3;8r\x1b[8;1Hr1\nr2\nr3\n\x1b[3;1H\x1bMri\x1b[5;1H\x1bDind\x1bEnel\x1b[2S\x1b[1T\x1b[rafter'],
+  ['scrollback', Array.from({ length: 30 }, (v, i) => 'L' + (i + 1)).join('\n') + '\x1b[1;20r\x1b[20;1H\n\n\nin region'],
+  ['tabs', '\tA\tB\x1b[3g\x1b[1;5H\x1bH\x1b[1;13H\x1bH\r\n\tC\tD\tE\x1b[1;30H\x1b[2ZF\x1b[3;1H\x1b[2IG\x1b[0gH'],
+  ['wrap', 'X'.repeat(80) + '\rY\n\x1b[?7l' + 'Z'.repeat(85) + '\x1b[?7h\r\n' + 'W'.repeat(80) + 'V'],
+  ['insert', 'abcdef\r\x1b[4hXY\x1b[4l\r\nghijkl\x1b[2;3H\x1b[4h12\x1b[4l'],
+  ['charsets', '\x1b(0lqqqqk\r\nx    x\r\nmqqqqj\x1b(B\r\n\x1b)0A\x0eqqq\x0fB\r\n\x1b(A#1 pound\x1b(B #2'],
+  ['savecursor', '\x1b[3;5Hhere\x1b7\x1b[10;10Hthere\x1b8!\x1b[s\x1b[12;1Hscosc\x1b[u?' +
+    '\x1b[5;10r\x1b[?6h\x1b[1;1Horigin\x1b[2;3Hom\x1b[?6l\x1b[r'],
+  ['align', 'garbage\x1b#8\x1b[12;35Hcentre'],
+  ['ris', 'old text\x1b[5;10r\x1b[4h\r\nmore\x1bcnew'],
+  ['rep', 'ab\x1b[5bc\r\n\x1b[1;79H' + 'x\x1b[3b'],
+  ['junk', 'A\x1b[?1234hB\x1b[5xC\x1b]0;title\x07D\x1bPq#0;1\x1b\\E\x1b[1\x18F\x1b[2\x1b[1;9HG' + 'y'.repeat(240) +
+    '\x1b[31mred\x1b[0m'],
+  ['scrolls', Array.from({ length: 30 }, (v, i) => 'S' + (i + 1)).join('\n') + '\x1b[2S\x1b[1;1H\x1b[2Mtop'],
+  ['ris2', Array.from({ length: 30 }, (v, i) => 'R' + (i + 1)).join('\n') + '\x1bcnew'],
+  ['ed3', Array.from({ length: 30 }, (v, i) => 'E' + (i + 1)).join('\n') + '\x1b[3Jkept'],
+  ['sgr', '\x1b[1;31mbold red\x1b[0m \x1b[38;5;196mx256\x1b[48;2;0;0;255mrgb\x1b[m \x1b[7mrev\x1b[27m end'],
+  ['sub', 'one\x1b[2\x1athree', false],
+  ['colm', 'text\x1b[?3hafter', false],
+];
+const VT_PAINT = '\x1b[1;31mRed bold\x1b[0m plain \x1b[7mrev\x1b[27m\r\n\x1b(0lqqqk\x1b(B box\r\n' + 'W'.repeat(100) +
+  '\r\n\x1b[44;33m blue bg \x1b[0m\r\n\x1b[10;5Hmiddle\x1b[3;20r\x1b[15;7Hend';
+// (vtpaint's steps: window 1 made, written, shown (a read of its /text a request at a time paints the serial port,
+// as a reader waiting for keys would), the screen read; then window 0 shown, and the screen's rows printed)
+const VT_PAINT_RC = [
+  'echo new >/dev/wctl',
+  '{',
+  '  cat /pc/vt/paint >[1=3]',
+  '  echo current 1 >/dev/wctl',
+  '  for(i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16) cat \'#c1/text\' >/dev/null',
+  '  cat /dev/vid/term >/ram/scr',
+  '  echo current 0 >/dev/wctl',
+  '} >[3]\'#c1/cons\'',
+  'echo painted',
+  'cat /ram/scr',
+  'echo done',
+].join('\n') + '\n';
+const vtModel = bytes => new VT({ onlcr: true }).write(bytes);
+const vtText = bytes => vtModel(bytes).text().replace(/\n$/, '');
+const vtFile = bytes => () => Buffer.from(bytes, 'latin1');
+const VT_LINES = VT_FIXTURES.map(([n, b]) => ["echo new >/dev/wctl; {cat /pc/vt/" + n + " >[1=3]; cat '#c1/text'} >[3]'#c1/cons'", vtText(b)]);
+// xterm.js's headless terminal's screen for bytes (as a window's /text: its scrollback, then its screen; the DEC
+// graphics as the console's ASCII), or null if it isn't installed
+const XTERM_DEC = '◆▒␉␌␍␊°±␤␋┘┐┌└┼' +
+  '⎺⎻─⎼⎽├┤┴┬│≤≥π≠£·';
+function xtermText(bytes) {
+  let Terminal;
+  try { ({ Terminal } = require('@xterm/headless')); } catch (e) { return null; }
+  const t = new Terminal({ cols: 80, rows: 24, scrollback: 40, convertEol: true, allowProposedApi: true });
+  const warn = console.warn, log = console.log;
+  console.warn = console.log = () => {};                    // (writeSync's warning: it's a test's, not a program's)
+  try { t._core.writeSync(bytes); } finally { console.warn = warn; console.log = log; }
+  const b = t.buffer.active, lines = [];
+  for (let i = 0; i < b.length; i++) {
+    lines.push([...b.getLine(i).translateToString(true)].map(ch => {
+      const k = XTERM_DEC.indexOf(ch);
+      return k >= 0 && ch !== '£' && ch !== '°' && ch !== '±' && ch !== '·' ? DEC_ASCII[k + 1] : ch;
+    }).join('').replace(/ +$/, ''));
+  }
+  t.dispose();
+  return lines.join('\n');
+}
+// The vt test's check: vt.js held against xterm.js (if it's there), fixture by fixture
+function vtXterm() {
+  const f = [];
+  let checked = 0;
+  for (const [n, b, xt] of VT_FIXTURES) {
+    if (xt === false) continue;
+    const x = xtermText(b);
+    if (x === null) return { f, note: 'xterm.js not installed (npm install in reborn/): vt.js not checked against it' };
+    checked++;
+    const v = vtText(b);
+    if (x !== v) {
+      const xl = x.split('\n'), vl = v.split('\n');
+      const i = xl.findIndex((l, k) => l !== vl[k]);
+      f.push('vt.js and xterm.js differ on ' + n + ', line ' + (i + 1) + ': ' + JSON.stringify(vl[i]) + ' and ' + JSON.stringify(xl[i]));
+    }
+  }
+  return { f, note: 'vt.js held against xterm.js: ' + checked + ' fixtures' };
+}
 
 // The sound test's lines (as the tools test's): #a's files, the volume, claims (one another program holds), its
 // errors, the shadow, the C sample tones, and the bell (no Vera X: 8 channels, the PSG's E_NODEV)
@@ -997,7 +1093,7 @@ module.exports = {
       expect: ['% ls \'#fr\'\n1/\n2/\n%', '% ls /ram\nbin/\nlib/\n%',
         '% ls /bin\ndb\nedit\nfsck\ngrep\nlabel\nmkfs\nscom\nsort\ninit\nhello\nrc\nwstart\n', 't_child\n% t_child f\n', '% ls \'#fr\'/2\nbin/\nlib/\nmark\n%',
         'prompt=(', '% cat /dev/sd/s/ctl\nsram 512 KB 1024 blocks\nhydrafs label=SRAM\n', '% echo $window\n0\n%',
-        '% echo $window\n1\n%', '% ls \'#fr\'\n1/\n2/\n4/\n%', '% ls /ram\nbin/\nlib/\n%', '\ncons\nconsctl\nwctl\nwnew\nser\nserctl\nkbdin\n%',
+        '% echo $window\n1\n%', '% ls \'#fr\'\n1/\n2/\n4/\n%', '% ls /ram\nbin/\nlib/\n%', '\ncons\nconsctl\nwctl\nwnew\nser\nserctl\nkbdin\ntext\n%',
         '% echo stop >>\'#d/s/ctl\'; echo still; cat /sram/x\nstill\ncat: /sram/x: no such device\n%'],
     },
     {
@@ -2130,7 +2226,9 @@ module.exports = {
       check(m) {
         const f = [], c = m.vera.cells(), text = m.vera.text();
         if (!c) return ['no text layer on the screen'];
-        if (!text.some(l => l.startsWith('% ls /dev/vid'))) f.push('the screen lacks rc\'s line "% ls /dev/vid"');
+        // (The window shown is the smaller terminal's size, the serial port's 80 x 24: its rows at the screen's top)
+        if (!text.some(l => l.startsWith('% cat /dev/vid/ctl'))) f.push('the screen lacks rc\'s line "% cat /dev/vid/ctl"');
+        if (text.slice(24).some(l => l)) f.push('the screen has text below the window\'s 24 rows');
         if (!text.some(l => l === 'terminal both')) f.push('the screen lacks consctl\'s "terminal both"');
         const row = text.findIndex(l => l === 'RnGV');
         if (row < 0) f.push('the screen lacks the colours\' line RnGV');
@@ -2141,6 +2239,43 @@ module.exports = {
         const font = fs.readFileSync(path.join(__dirname, '..', 'romfs', 'lib', 'font', 'cp437'));
         if (!Buffer.from(m.vera.vram.subarray(0x1F000, 0x1F800)).equals(font)) f.push('VRAM\'s font isn\'t /lib/font/cp437');
         this.notes = ['the screen\'s last rows: ' + JSON.stringify(text.filter(l => l).slice(-3))];
+        return f;
+      },
+    },
+    {
+      name: 'vt', what: 'the console\'s VT100 (W1): sequences into a window not shown, its /text read back: text, the cursor\'s moves, erasing, inserting and deleting, the scrolling region, the scrollback, tabs, autowrap, insert mode, the character sets, DECSC and origin mode, DECALN, RIS, REP, SGR, sequences dropped, cancelled and split; each as sim/lib/vt.js has it, and vt.js as xterm.js has it (if it\'s installed)',
+      init: 't_rc', cycles: 600e6,
+      pc: { files: () => Object.fromEntries(VT_FIXTURES.map(([n, b]) => ['vt/' + n, vtFile(b)])) },
+      get machine() { return { input: typed(VT_LINES) }; },
+      get expect() { return expected(VT_LINES); },
+      check() { const r = vtXterm(); this.notes = [r.note]; return r.f; },
+    },
+    {
+      name: 'vtpaint', what: 'a window painted (W1): text in colours, a box in DEC graphics, a line autowrapped, a region and the cursor, written into a window not shown, which is then shown: what the serial port\'s terminal shows (sim/lib/vt.js: its characters and colours) and what the screen shows, as the window has it',
+      init: 't_rc', cycles: 200e6, pc: { files: { 'vt/paint': vtFile(VT_PAINT), 'vt/paint.rc': VT_PAINT_RC } }, jsOnly: 'the danlang emulator has no VERA yet',
+      get machine() {
+        return { vera: true, input: typed([['rc /pc/vt/paint.rc']]) };
+      },
+      expect: ['\ndone\n%'],
+      check(m) {
+        const f = [], want = vtModel(VT_PAINT), raw = m.out;
+        const clear = '\x1b[0m\x1b(B\x1b)B\x0f', at = raw.indexOf('rc /pc/vt/paint.rc');
+        const a = raw.indexOf(clear, at), b = raw.indexOf(clear, a + 1);
+        if (a < 0 || b < 0) return ['the serial port: no paint of window 1 (and of window 0 after it)'];
+        const ser = new VT().write(raw.slice(a, b));
+        for (let r = 0; r < 24; r++) {
+          for (let c = 0; c < 80; c++) {
+            const x = want.screen[r][c], y = ser.screen[r][c];
+            if (x.c !== y.c || x.a !== y.a || x.f !== y.f) { f.push('the serial port\'s terminal: row ' + (r + 1) + ', column ' + (c + 1) + ': ' + JSON.stringify(y) + ', not ' + JSON.stringify(x)); break; }
+          }
+          if (f.length) break;
+        }
+        if (ser.y !== want.y || ser.x !== want.x) f.push('the serial port\'s cursor at ' + (ser.y + 1) + ';' + (ser.x + 1) + ', not ' + (want.y + 1) + ';' + (want.x + 1));
+        if (ser.top !== want.top || ser.bot !== want.bot) f.push('the serial port\'s region ' + (ser.top + 1) + '-' + (ser.bot + 1) + ', not ' + (want.top + 1) + '-' + (want.bot + 1));
+        const out = raw.replace(/\r/g, ''), s0 = out.indexOf('\npainted\n');
+        const scr = s0 < 0 ? [] : out.slice(s0 + 9).split('\n').map(l => l.replace(/ +$/, ''));
+        const rows = want.lines();
+        for (let r = 0; r < 24; r++) if (scr[r] !== rows[r]) { f.push('the screen\'s row ' + (r + 1) + ': ' + JSON.stringify(scr[r]) + ', not ' + JSON.stringify(rows[r])); break; }
         return f;
       },
     },

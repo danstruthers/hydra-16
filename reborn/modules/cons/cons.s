@@ -3,16 +3,16 @@
 ; devices #c and #P (/pc, a folder on the PC), on srvlib (a boot driver: task F).
 ;
 ; Windows, Plan 9's way (rio's, on a text terminal), not job control: several consoles on the one terminal, each a
-; window with its own cons and consctl, line editor, raw mode, note group and text (its last 2K of output).  One
-; window is shown and gets the keys; the others run on, their output going into their text, their reads waiting
-; for keys.  A window's files are #c with its number as the spec: #c2/cons (or mount '#c' /dev 2); #c is window 0.
+; window with its own cons and consctl, line editor, raw mode, note group and screen (vt.s, the second bank: cells
+; in the driver's RAM banks, written by a VT100).  One window is shown and gets the keys; the others run on, their
+; output going to their screens, their reads waiting for keys.  A window's files are #c with its number as the spec: #c2/cons (or mount '#c' /dev 2); #c is window 0.
 ;   /cons       the window's console.  A read gets a line, edited here (cooked): Backspace and Delete, Left, Right,
 ;               Home and End (and Ctrl-A, Ctrl-E), Ctrl-U, the history with Up and Down; Enter ends it, Ctrl-D on
 ;               an empty line is the end of the input.  Or (raw: consctl's rawon) each key as it comes, the
 ;               terminal's cursor and function keys as one code each (KEY_*; an Escape alone is a key once
-;               ESC_TICKS have passed with nothing after it).  A write goes into the window's text, and out if the window is shown (each LF as CR LF;
-;               a BEL rings the sound driver's bell too, #a/bell: one of the two calls from a driver to another,
-;               the screen's #v/term the other)
+;               ESC_TICKS have passed with nothing after it).  A write goes to the window's screen, and out to the
+;               terminals if the window is shown (each LF as CR LF; a BEL rings the sound driver's bell too,
+;               #a/bell: one of the calls from a driver to another, the screen's #v/term another)
 ;   /consctl    rawon, rawoff (raw lasts till the window's last consctl closes, as Plan 9's does); group (the
 ;               window's notes go to the writer's note group); screen, serial, both (where the windows are shown:
 ;               every window's, the console's terminals: the Vera X's screen, the serial port, or both, as it
@@ -26,25 +26,25 @@
 ;   /serctl     the rate: b300, b600, b1200, b2400, b4800, b9600, b19200, b115200.  It reads as it
 ;   /kbdin      a write's bytes are the window's keys, as if typed (rio's kbdin: a line sent to another window's
 ;               shell, forth's send); all of them, as its keys' queue has room, the writer waiting for the rest
+;   /text       the window's scrollback and screen as text, a line a row (rio's)
 ; The keys: Ctrl-] then a digit shows that window (Ctrl-] n the next; Ctrl-] c asks for a new one, for /wnew's
 ; reader; Ctrl-] Ctrl-] is a Ctrl-]); Ctrl-C and Ctrl-\ are notes (interrupt, kill) to the shown window's note
 ; group, in either mode.  A window goes when the last of its cons fids closes (but window 0).
 ;
 ; Receiving: the ACIA's interrupt (LINE_ACIA) puts each byte into the receive ring and adds 1 to the event count
 ; (TASK_EVENT: the clients waiting look again); before each request the keys are handed to the windows' queues
-; (Ctrl-] and the key after it acted on there).  Sending: a window's output goes into its text; after each request
-; the shown window's text goes into the send ring, as there's room (a window just shown: the screen cleared, and its
-; last 24 lines from their start).  VIA timer 2 (LINE_VIA_T2) runs a character's time and a margin, and its
+; (Ctrl-] and the key after it acted on there).  Sending: the shown window's output goes into the send ring as it's
+; written (vt.s: the terminal following it), as there's room; a window just shown is painted from its screen, as
+; there's room, after each request.  VIA timer 2 (LINE_VIA_T2) runs a character's time and a margin, and its
 ; interrupt sends the next byte of the send ring.  Paced, at every rate, on both chips: the WDC W65C51N's TDRE
 ; doesn't work, and on the board the Rockwell's sending back to back at 115200 loses characters (2 idle bits then;
 ; 1 otherwise).  The interrupts' work is a few dozen cycles each: the IRQs-off budget (200 cycles) has the
 ; dispatch's 115 in it.
 ;   The screen (the Vera X's, phase 8: docs/plans/VIDEO.md) is a second terminal, its driver's (vid: #v/term, an
-; ANSI terminal; opened the first time, with no screen nothing from then on): after each request the shown window's
-; text goes there too, the same bytes as the serial port's, all there is (a place of its own in the text, scr_l, so
-; the screen needn't wait for the line); a window just shown is repainted there from its last SCR_ROWS lines.  With
-; the serial port off (consctl's screen), the shown window takes its writes whole, as a hidden one does: nothing paces
-; it but the screen.
+; ANSI terminal; opened the first time, with no screen nothing from then on): the shown window's output goes there
+; too, as vt.s makes it show the window's screen (written at each request's end), and a window shown is painted
+; there all at once.  With the serial port off (consctl's screen), the shown window takes its writes whole, as a
+; hidden one does: nothing paces it but the screen.
 ;
 ; /pc (#P, docs/plans/PC.md): a folder on the PC, served by the PC tool (sim/tools/hydrapc.js, which is the
 ; terminal too) over the serial port, in frames between the console's bytes (sim/lib/pcproto.js): PC_MARK, then the
@@ -77,36 +77,22 @@ SRV_FLUSH       = flush                                     ; (srvlib: a reader'
 SRV_OPENED      = opened                                    ;   (a fid made: its window)
 SRV_CLUNKED     = clunked                                   ;   (a fid forgotten: consctl's counted)
 SRV_PRE         = distribute                                ;   (before each request: the keys to the windows)
-SRV_POST        = pump                                      ;   (and after it: the shown window's text out)
+SRV_POST        = pump                                      ;   (and after it: the terminals painted)
 
-WIN_MAX         = 4             ; Windows
-TEXT_SIZE       = 2048          ; Each window's text: its last output ...
-TEXT_MAX        = TEXT_SIZE - 1 ;   (of which this much is kept)
-INQ_SIZE        = 64            ; Each window's keys, waiting to be read
-SCREEN_ROWS     = 24            ; A window shown again: its text's last 24 lines (the serial terminal's) ...
-SCR_ROWS        = 60            ;   or 60 (the screen's: 80 x 60)
-SCR_BUF         = 128           ; The screen's bytes, a write to #v/term at a time
-TERM_SERIAL     = 1             ; term: the windows shown on the serial port ...
-TERM_SCREEN     = 2             ;   and on the screen
 LINE_MAX        = 127           ; A line's length at most (and its LF)
 HIST_N          = 4             ; Each window's history: its lines ...
 HIST_SIZE       = 128           ;   each its length, then LINE_MAX characters
 ST_SIZE         = 16            ; Each window's editor state, kept while another's is in use (st_first on)
-ECHO_ROOM       = LINE_MAX + 13 ; The most a key's echo puts into the text (a key waits for this much room)
-IOBUF           = 64            ; A write's bytes, a part at a time
+ECHO_ROOM       = LINE_MAX + 13 ; The most a key's echo writes (a key waits for this much room)
 RX_PAGES        = 4             ; The receive ring's pages: the keys' its first; /ser's all of them (1023 bytes: a 1K
                                 ;   XMODEM block at 115200 comes in faster than it can be taken, and waits there)
 CTRL_A          = $01
 CTRL_C          = $03
 CTRL_D          = $04
 CTRL_E          = $05
-BEL             = $07
-BS              = $08
 CTRL_U          = $15
-ESC             = $1B
 CTRL_BSL        = $1C           ; (Ctrl-\)
 CTRL_RB         = $1D           ; (Ctrl-]: the windows' key)
-DEL             = $7F
 RATE_BOOT       = 5             ; 9600: the kernel's bring-up console's
 ENT_CONSCTL     = 2             ; srv_tree's consctl (its fids counted)
 PC_MARK         = $1E           ; /pc's frames: one starts (from the PC, PC_MARK then PC_ESC is a typed $1E, Ctrl-^)
@@ -153,7 +139,6 @@ pfx:        .res        1                                   ; The irq entry's: <
 win_grp:    .res        1                                   ;   and the note group of the window with the keys
 d_pfx:      .res        1                                   ; Handing the keys out: <> 0, the last was Ctrl-]
 w_in:       .res        1                                   ; The window shown, which gets the keys
-repaint:    .res        1                                   ; <> 0: it's just been shown (its screen to repaint)
 want_new:   .res        1                                   ; <> 0: Ctrl-] c, a window wanted (for /wnew's reader)
 ser_rd:     .res        1                                   ; /ser's fids for reading (while there are any, the
                                                             ;   line is /ser's: h_ser)
@@ -177,19 +162,14 @@ hi_at:      .res        1                                   ;   and Up and Down'
 raw:        .res        1                                   ; <> 0: raw
 st_last:                                                    ; ---- (Its end)
 ST_N        = st_last - st_first
-tp:         .res        2                                   ; A window's text: a byte's address ...
-tq:         .res        2                                   ;   and its place (t_at)
 n:          .res        2                                   ; Scratch
 m:          .res        2
 p:          .res        2
 cnt:        .res        1
-budget:     .res        1                                   ; A write to the shown window: the send ring's room ...
-live:       .res        1                                   ;   <> 0: its text goes out (w_out)
 
 .bss
 rx_buf:     .res        RX_PAGES * 256
 tx_buf:     .res        256
-text:       .res        WIN_MAX * TEXT_SIZE                 ; Each window's text
 inq:        .res        WIN_MAX * INQ_SIZE                  ; Each window's keys
 lines:      .res        WIN_MAX * (LINE_MAX + 1)            ; Each window's line, while another's is loaded
 hist:       .res        WIN_MAX * HIST_N * HIST_SIZE        ; Each window's history
@@ -200,12 +180,6 @@ w_used:     .res        WIN_MAX                             ; Each window: <> 0,
 w_group:    .res        WIN_MAX                             ;   its note group (Ctrl-C's) ...
 w_cons:     .res        WIN_MAX                             ;   its cons fids ...
 w_ctl:      .res        WIN_MAX                             ;   its consctl fids (raw ends with the last) ...
-w_hl:       .res        WIN_MAX                             ;   its text's place: where the next byte goes ...
-w_hh:       .res        WIN_MAX
-w_sl:       .res        WIN_MAX                             ;   the next byte out (the shown one's) ...
-w_sh:       .res        WIN_MAX
-w_cl:       .res        WIN_MAX                             ;   the bytes there are (TEXT_MAX at most) ...
-w_ch:       .res        WIN_MAX
 w_iqh:      .res        WIN_MAX                             ;   and its keys: the next in, the next out
 w_iqt:      .res        WIN_MAX
 kbd_wait:   .res        1                                   ; <> 0: a /kbdin writer waits for a queue's room
@@ -214,13 +188,7 @@ bell_st:    .res        1                                   ;   #a/bell: 0 not o
 bell_fd:    .res        1                                   ;   and its fd
 term:       .res        1                                   ; Where the windows are shown: TERM_SERIAL, TERM_SCREEN
 scr_st:     .res        1                                   ; The screen, #v/term: 0 not opened yet, 1 open, 2 none ...
-scr_fd:     .res        1                                   ;   its fd ...
-scr_l:      .res        1                                   ;   the shown window's next byte to it (its text's place) ...
-scr_h:      .res        1
-scr_rep:    .res        1                                   ;   <> 0: a window just shown, to repaint there ...
-scr_n:      .res        1                                   ;   its bytes in scr_buf ...
-scr_buf:    .res        SCR_BUF
-back_n:     .res        1                                   ; lines_back's lines
+scr_fd:     .res        1                                   ;   and its fd
 pc_txbuf:   .res        PC_TX_SIZE                          ; /pc: the frame going out ...
 pc_rxbuf:   .res        PC_RX_SIZE                          ;   the frame come in ...
 pc_req:     .res        RQ_NAMELEN + 1                      ;   the request out, as its client asked it ...
@@ -252,7 +220,6 @@ pc_crc:     .res        2                                   ;   a CRC
 .assert     PC_TX_SIZE <= 256 .and PC_RX_SIZE <= 256, error, "/pc's frames: 8-bit indexes"
 .assert     RQ_NAMELEN < RQ_SIZE .and RQ_FLAGS < RQ_NAMELEN, error, "/pc: pc_same's fields"
 .assert     WIN_MAX * INQ_SIZE = 256 .and WIN_MAX = 4, error, "iq_put and iq_get: 4 queues of 64, a page"
-.assert     TEXT_SIZE = 2048, error, "t_at: a window's text is 8 pages"
 
 .code
 ; ****************************************************************************
@@ -279,11 +246,12 @@ init:
             sta         pc_owner
             lda         #$FF
             sta         lw
-            lda         #TERM_SERIAL | TERM_SCREEN          ; Both terminals (the screen's, if there's one) ...
-            sta         term
-            sta         scr_rep                             ;   the screen cleared as it's first written
+            lda         #TERM_SERIAL | TERM_SCREEN          ; Both terminals (the screen's, if there's one: it's
+            sta         term                                ;   painted first, vt_init)
+            FAR2        vt_init
             ldx         #0                                  ; Window 0: shown, init's group's
             jsr         w_init
+            bcs         @done
             lda         #INIT_TASK
             sta         win_grp
             lda         #LINE_ACIA
@@ -594,14 +562,14 @@ distribute:
 @done:
             rts
 
-; Window .X shown, with the keys: repainted (pump), on both terminals
+; Window .X shown, with the keys: painted on both terminals (pump)
 w_show:
             stx         w_in
             lda         w_group,X
             sta         win_grp
             lda         #1
-            sta         repaint
-            sta         scr_rep
+            sta         ts_ser
+            sta         ts_scr
             inc         TASK_EVENT                          ; (Its readers and writers, and the last one's, look
             rts                                             ;   again)
 
@@ -618,16 +586,17 @@ w_make:
             sec
             rts
 
-; Window .X, new: empty, init's group's.  OUT: C = 0.  Keeps .X
+; Window .X, new: its screen (vt.s: three banks), empty; init's group's.  OUT: C = 0; or C = 1, .A = E_NOMEM.
+; Keeps .X
 w_init:
+            phx
+            FAR2        vt_new
+            plx
+            bcc         :+
+            rts
+:
             lda         #1
             sta         w_used,X
-            stz         w_hl,X
-            stz         w_hh,X
-            stz         w_sl,X
-            stz         w_sh,X
-            stz         w_cl,X
-            stz         w_ch,X
             stz         w_iqh,X
             stz         w_iqt,X
             stz         w_cons,X
@@ -649,9 +618,12 @@ w_init:
             clc
             rts
 
-; Window .X gone (its last cons closed); if it was shown, window 0 is
+; Window .X gone (its last cons closed), its screen too; if it was shown, window 0 is
 w_free:
             stz         w_used,X
+            phx
+            FAR2        vt_free
+            plx
             cpx         lw
             bne         :+
             lda         #$FF
@@ -791,107 +763,47 @@ iq_get:
             sec
             rts
 
-; tp = window .X's text at place tq (its low 11 bits).  Keeps .X, .Y
-t_at:
-            txa
-            asl
-            asl
-            asl
-            sta         tp + 1
-            lda         tq + 1
-            and         #>TEXT_MAX
-            ora         tp + 1
-            sta         tp + 1
-            clc
-            lda         tq
-            adc         #<text
-            sta         tp
-            lda         tp + 1
-            adc         #>text
-            sta         tp + 1
-            rts
-
-; .A into the loaded window's text (the writers have made sure of the room: w_room).  Keeps .A, .X, .Y
+; .A, a byte of the loaded window's output (its line editor's echo: edit has made sure of the room, w_room), to its
+; screen (vt.s).  Keeps .A, .X, .Y
 w_put:
             phx
             phy
             pha
-            ldx         lw
-            lda         w_hl,X
-            sta         tq
-            lda         w_hh,X
-            sta         tq + 1
-            jsr         t_at
-            pla
-            pha
-            sta         (tp)
-            inc         w_hl,X                              ; The place on ...
-            bne         :+
-            inc         w_hh,X
-:
-            lda         w_ch,X                              ;   and the bytes there are, TEXT_MAX at most
-            cmp         #>TEXT_MAX
-            bcc         @more
-            lda         w_cl,X
-            cmp         #<TEXT_MAX
-            bcs         @kept
-@more:
-            inc         w_cl,X
-            bne         @kept
-            inc         w_ch,X
-@kept:
+            FAR2        vt_put
             pla
             ply
             plx
             rts
 
-; Is window .X's text going out on the serial port: is it shown, the line not /ser's, and the port on (term)?
-; OUT: Z = 1 yes.  Keeps .X, .Y
-w_out:
-            cpx         w_in
-            bne         :+
-            lda         ser_rd
-            bne         :+
+; m = the room for the loaded window's echo: if it's shown on the serial port, which follows it, the send ring's room
+; less a byte's (VT_ROOM); none while the serial port's being painted; else no limit ($FFFF).  Modifies .A
+w_room:
+            lda         #$FF
+            sta         m
+            sta         m + 1
+            lda         lw
+            cmp         w_in
+            bne         @done
             lda         term
             and         #TERM_SERIAL
-            eor         #TERM_SERIAL
-:
-            rts
-
-; m = the room in the loaded window's text: all of it if it isn't going out (w_out: its oldest bytes go), else as
-; much as doesn't overtake what's still to go out.  Modifies .A, .X
-w_room:
-            lda         #<TEXT_MAX
-            sta         m
-            lda         #>TEXT_MAX
-            sta         m + 1
-            ldx         lw
-            jsr         w_out
+            beq         @done
+            lda         ser_rd
             bne         @done
-            sec                                             ; Less what's still to go out
-            lda         w_hl,X
-            sbc         w_sl,X
-            sta         n
-            lda         w_hh,X
-            sbc         w_sh,X
-            sta         n + 1
-            sec
-            lda         m
-            sbc         n
-            sta         m
-            lda         m + 1
-            sbc         n + 1
-            sta         m + 1
-            bcs         @done
             stz         m
             stz         m + 1
+            lda         ts_ser
+            bne         @done
+            jsr         tx_free
+            sec
+            sbc         #VT_ROOM
+            bcc         @done
+            sta         m
 @done:
             rts
 
-; After each request: /pc's frame out first, all of it (and a request long past its time given up); then the shown
-; window's text, as the send ring has room (each LF as CR LF); a window just shown first: the screen cleared, and its
-; text from the start of its last SCREEN_ROWS lines.  None while the line is /ser's; with the serial port off
-; (term), the text passes it by.  Then the screen's (scr_pump)
+; After each request: /pc's frame out first, all of it (and a request long past its time given up); then the
+; terminals painted (vt.s: the serial port's as the send ring has room, not while a frame's going out; the screen's,
+; and its bytes to #v/term).  None while the line is /ser's
 pump:
             lda         ser_rd
             beq         :+
@@ -905,216 +817,24 @@ pump:
             jsr         pc_release
 :
             jsr         pc_pump
-            bcs         @done
-            lda         term
-            and         #TERM_SERIAL
-            bne         @serial
-            stz         repaint                             ; (The port off: the text passes it by)
-            ldx         w_in
-            lda         w_hl,X
-            sta         w_sl,X
-            lda         w_hh,X
-            sta         w_sh,X
-            bra         @done
-
-@serial:
-            lda         repaint
-            beq         @text
-            jsr         tx_free
-            cmp         #S_CLEAR_N
-            bcc         @done
-            ldx         #0
-:
-            lda         s_clear,X
-            beq         :+
-            jsr         tx_put
-            inx
-            bra         :-
-:
-            jsr         replay
-            stz         repaint
-@text:
-            ldx         w_in                                ; All of it out?
-            lda         w_sl,X
-            cmp         w_hl,X
-            bne         @byte
-            lda         w_sh,X
-            cmp         w_hh,X
-            beq         @done
-@byte:
-            jsr         tx_free                             ; (Room for a CR LF)
-            cmp         #2
-            bcc         @done
-            ldx         w_in
-            lda         w_sl,X
-            sta         tq
-            lda         w_sh,X
-            sta         tq + 1
-            jsr         t_at
-            inc         w_sl,X
-            bne         :+
-            inc         w_sh,X
-:
-            lda         (tp)
-            cmp         #LF
-            bne         :+
-            lda         #CR
-            jsr         tx_put
-            lda         #LF
-:
-            jsr         tx_put
-            bra         @text
-
-@done:
-            jsr         scr_pump
+            lda         #0
+            rol                                             ; (.A <> 0: a frame's going out)
+            pha
+            jsr         scr_ready
+            pla
+            FAR2        vt_pump
             jmp         tx_start
 
-; The shown window's next byte out (the serial port's): the start of its text's last SCREEN_ROWS lines (or its
-; oldest byte)
-replay:
-            lda         #SCREEN_ROWS
-            jsr         lines_back
-            ldx         w_in
-            lda         tq
-            sta         w_sl,X
-            lda         tq + 1
-            sta         w_sh,X
-            rts
-
-; tq = the start of the shown window's text's last .A lines (or its oldest byte).  Modifies .A, .X, m, cnt, tp
-lines_back:
-            sta         back_n
-            ldx         w_in
-            lda         w_hl,X                              ; tq: back from the end ...
-            sta         tq
-            lda         w_hh,X
-            sta         tq + 1
-            lda         w_cl,X                              ;   m: no further than this
-            sta         m
-            lda         w_ch,X
-            sta         m + 1
-            stz         cnt                                 ; (The LFs passed)
-@back:
-            lda         m
-            ora         m + 1
-            beq         @start
-            lda         tq
-            bne         :+
-            dec         tq + 1
-:
-            dec         tq
-            lda         m
-            bne         :+
-            dec         m + 1
-:
-            dec         m
-            jsr         t_at
-            lda         (tp)
-            cmp         #LF
-            bne         @back
-            inc         cnt
-            lda         cnt
-            cmp         back_n
-            bcc         @back
-            inc         tq                                  ; (From the byte after that LF)
-            bne         @start
-            inc         tq + 1
-@start:
-            rts
-
-; After each request (pump): the shown window's text to the screen (#v/term), all there is (each LF as CR LF); a
-; window just shown first: the screen cleared, and its text from the start of its last SCR_ROWS lines.  None while
-; the line is /ser's (the text waits, as for the serial port); with the screen off (term) or none, the text passes
-; it by.  Modifies .A, .X, .Y, r0, r1, tq, tp, m, cnt
-scr_pump:
-            lda         ser_rd
-            bne         @done
+; The screen's file, #v/term, opened if the screen's on and it isn't yet (scr_open).  Modifies .A, .X, .Y, r0
+scr_ready:
             lda         term
             and         #TERM_SCREEN
-            beq         @by
-            jsr         scr_open
-            bcc         @on
-@by:
-            ldx         w_in                                ; (Its place: the text's end)
-            lda         w_hl,X
-            sta         scr_l
-            lda         w_hh,X
-            sta         scr_h
-@done:
-            rts
-
-@on:
-            stz         scr_n
-            lda         scr_rep
-            beq         @text
-            stz         scr_rep
-            ldx         #0                                  ; The screen cleared ...
-:
-            lda         s_clear,X
             beq         :+
-            jsr         scr_put
-            inx
-            bra         :-
-:
-            lda         #SCR_ROWS                           ;   and the window's last lines
-            jsr         lines_back
-            lda         tq
-            sta         scr_l
-            lda         tq + 1
-            sta         scr_h
-@text:
-            ldx         w_in                                ; Behind by more than the text keeps?  From its oldest
-            sec
-            lda         w_hl,X
-            sbc         scr_l
-            sta         m
-            lda         w_hh,X
-            sbc         scr_h
-            sta         m + 1
-            lda         w_ch,X
-            cmp         m + 1
+            lda         scr_st
             bne         :+
-            lda         w_cl,X
-            cmp         m
+            jsr         scr_open
 :
-            bcs         @byte
-            sec
-            lda         w_hl,X
-            sbc         w_cl,X
-            sta         scr_l
-            lda         w_hh,X
-            sbc         w_ch,X
-            sta         scr_h
-@byte:
-            ldx         w_in                                ; All of it there?
-            lda         scr_l
-            cmp         w_hl,X
-            bne         :+
-            lda         scr_h
-            cmp         w_hh,X
-            beq         @flush
-:
-            lda         scr_l
-            sta         tq
-            lda         scr_h
-            sta         tq + 1
-            jsr         t_at
-            inc         scr_l
-            bne         :+
-            inc         scr_h
-:
-            lda         (tp)
-            cmp         #LF
-            bne         :+
-            lda         #CR
-            jsr         scr_put
-            lda         #LF
-:
-            jsr         scr_put
-            bra         @byte
-
-@flush:
-            jmp         scr_flush
+            rts
 
 ; The screen's file, #v/term, open (the first time: opened; no screen, scr_st 2 from then on).  OUT: C = 0 open;
 ; C = 1 none.  Modifies .A, .X, .Y, r0
@@ -1140,38 +860,6 @@ scr_open:
 
 @none:
             sec
-            rts
-
-; .A to the screen's buffer (written when it's full).  Keeps .X.  Modifies .A, .Y, r0, r1
-scr_put:
-            ldy         scr_n
-            sta         scr_buf,Y
-            iny
-            sty         scr_n
-            cpy         #SCR_BUF
-            bcc         :+
-            phx
-            jsr         scr_flush
-            plx
-:
-            rts
-
-; The screen's buffer to #v/term (a write that fails: the screen gone, none from then on).  Modifies .A, .X, .Y,
-; r0, r1
-scr_flush:
-            lda         scr_n
-            beq         @done
-            sta         r1
-            stz         r1 + 1
-            LDR         r0, scr_buf
-            lda         scr_fd
-            jsr         WRITE
-            bcc         :+
-            lda         #2
-            sta         scr_st
-:
-            stz         scr_n
-@done:
             rts
 
 ; A fid made (srvlib): its window, from the spec (none: window 0); a window that isn't there: E_NOENT.  (R_DUP's
@@ -1297,9 +985,9 @@ h_ser:
             bne         @done
             stz         pfx                                 ; Its last: the line the console's again, the keys
             jsr         rx_reset                            ;   acted on (what came for it and wasn't read
-            lda         #1                                  ;   dropped), the shown window repainted
-            sta         repaint
-            sta         scr_rep
+            lda         #1                                  ;   dropped), the shown window painted
+            sta         ts_ser
+            sta         ts_scr
             inc         TASK_EVENT                          ; (Its writers look again)
 @done:
             clc
@@ -1393,6 +1081,18 @@ h_kbdin:
             stz         TASK_INBOX + RQ_DONE + 1
             clc
 @done:
+            rts
+
+; /text: a read, the window's scrollback and screen as text (vt.s's vt_text)
+h_text:
+            cmp         #R_READ
+            beq         :+
+            clc
+            rts
+:
+            lda         srv_fid_aux,X
+            tax
+            FAR2        vt_text
             rts
 
 ; /cons: a read.  Cooked, a line (or what's left of one); raw, the keys there are.  IN: .X = the fid
@@ -1612,29 +1312,26 @@ ser_part:
             sta         n + 1
             rts
 
-; /cons: a write, into the window's text.  A window that isn't shown takes it all (its oldest text goes), as does
-; the shown one while the line is /ser's; the shown one as much as the send ring has room for now (each LF as CR LF;
-; none while its text has more to go out), so all of it goes out at this request's end, and the writer, waiting for
-; room, comes back for the rest (the kernel sends it again).  None taken: E_AGAIN.  IN: .X = the fid
+; /cons: a write, to the window's screen (vt.s).  A window that isn't shown takes it all, as does the shown one while
+; the line is /ser's or the serial port's off; the shown one as much as the send ring has room for now (VT_ROOM a
+; byte: vt_write), so all of it goes out at this request's end, and the writer, waiting for room, comes back for the
+; rest (the kernel sends it again); none while the serial port's being painted.  None taken: E_AGAIN.  IN: .X = the
+; fid
 w_write:
             lda         srv_fid_aux,X
             jsr         load
-            lda         #$FF                                ; budget: the shown window's room
-            sta         budget
-            stz         live
-            ldx         lw
-            jsr         w_out
+            jsr         scr_ready
+            lda         lw                                  ; The shown window, the serial port being painted?
+            cmp         w_in
             bne         :+
-            inc         live                                ; (Its text goes out)
-            stz         budget
-            lda         w_hl,X                              ; (Its text all out?)
-            cmp         w_sl,X
+            lda         term
+            and         #TERM_SERIAL
+            beq         :+
+            lda         ser_rd
             bne         :+
-            lda         w_hh,X
-            cmp         w_sh,X
-            bne         :+
-            jsr         tx_free
-            sta         budget
+            lda         ts_ser
+            beq         :+
+            jmp         again
 :
             stz         n                                   ; (n: the count done)
             stz         n + 1
@@ -1657,40 +1354,17 @@ w_write:
 :
             sta         cnt
             jsr         from_client                         ; Its bytes, into iobuf
-            ldx         #0
-@byte:
-            lda         live                                ; Going out: room in the send ring?
-            beq         @put
-            ldy         #1                                  ; (It takes 1, or an LF 2: CR LF)
-            lda         iobuf,X
-            cmp         #LF
-            bne         :+
-            iny
-:
-            sty         m
-            lda         budget
-            cmp         m
-            bcc         @end
-            sbc         m                                   ; (C = 1)
-            sta         budget
-@put:
-            lda         iobuf,X
-            cmp         #BEL                                ; (The shown window's BEL: the bell, at the end)
-            bne         :+
-            ldy         live
-            beq         :+
-            sta         bell
-:
-            jsr         w_put
-            inc         n
-            bne         :+
+            FAR2        vt_write                            ; (.A: those taken)
+            sta         p
+            clc
+            adc         n
+            sta         n
+            bcc         :+
             inc         n + 1
 :
-            inx
-            cpx         cnt
-            bne         @byte
-            bra         @part
-
+            lda         p
+            cmp         cnt
+            beq         @part
 @end:
             jsr         ring
             lda         n
@@ -2481,12 +2155,12 @@ c_term:
             lsr
             bcc         :+
             ldy         #1
-            sty         repaint
+            sty         ts_ser
 :
             lsr
             bcc         :+
             ldy         #1
-            sty         scr_rep
+            sty         ts_scr
 :
             lda         m
             sta         term
@@ -3221,8 +2895,6 @@ edit_keys:  .byte       CR, LF, CTRL_D, BS, DEL, KEY_DEL, KEY_LEFT, KEY_RIGHT, K
 edit_vec:   .word       ed_cr, ed_lf, ed_eof, ed_bs, ed_bs, ed_del, ed_left, ed_right, ed_home, ed_home, ed_end, ed_end
             .word       ed_kill, ed_up, ed_down
 .assert     * - edit_vec = EDIT_N * 2, error, "edit_keys and edit_vec don't match"
-s_clear:    .byte       ESC, "[r", ESC, "[H", ESC, "[2J", 0 ; (The terminal's scrolling region the whole screen, the
-S_CLEAR_N   = * - s_clear - 1                               ;   screen cleared, the cursor home)
 s_bell:     .byte       "#a/bell", 0
 
 ; ****************************************************************************
@@ -3280,6 +2952,7 @@ srv_tree:
             SRV_ENTRY   s_wctl,    $FE, SK_TEXT, gen_wctl,    SM_READ,            0     ; 8   in no directory)
             SRV_ENTRY   s_serctl,  $FE, SK_TEXT, gen_serctl,  SM_READ,            0     ; 9
             SRV_ENTRY   s_kbdin,   0,   SK_DATA, h_kbdin,     SM_WRITE,           0     ; 10
+            SRV_ENTRY   s_text,    0,   SK_DATA, h_text,      SM_READ,            0     ; 11
             .word       0
 cons_cmds:
             .word       s_rawon_w, c_rawon
@@ -3311,6 +2984,7 @@ s_wnew:     .byte       "wnew", 0
 s_ser:      .byte       "ser", 0
 s_serctl:   .byte       "serctl", 0
 s_kbdin:    .byte       "kbdin", 0
+s_text:     .byte       "text", 0
 s_rawon_w:  .byte       "rawon", 0
 s_rawoff_w: .byte       "rawoff", 0
 s_group_w:  .byte       "group", 0

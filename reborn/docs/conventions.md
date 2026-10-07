@@ -219,11 +219,15 @@ bank t).  Every fixed address is in `include/layout.inc`, and nowhere else.
   `#S`'s, never both at once (`E_BUSY`).
 * **The console is windows, not job control** (Plan 9's way, rio's): each window a whole console (`#cN`), chosen
   for a shell by its namespace (`#cN` at `/dev`).  There's no foreground group and no `fg`: which program gets
-  the keys is which window is shown, and a window's interrupts go to its note group.
+  the keys is which window is shown, and a window's interrupts go to its note group.  A window's screen is cells in
+  the console driver's RAM banks (`modules/cons/vt.s`: three planes, a pool of 64 rows of 128 cells, the screen a
+  map into it and the rows before it its scrollback), written by a VT100; a terminal follows the window shown (its
+  output passed on as it's parsed), or is painted from its cells (a window shown).
 * **One driver owns the serial line** (`cons`): the console's windows (`#c`) and `/pc` (`#P`), whose frames go
   between the console's bytes.  Its irq entry knows only keys: a frame comes in with them, into the receive ring,
   and is taken out in the serve entry.  While `/dev/ser` is open for reading (`xmodem`), the line is its reader's:
-  every byte in is its (into all of the receive ring's pages: the keys use the first), and the windows' text waits.
+  every byte in is its (into all of the receive ring's pages: the keys use the first), and the windows' output goes
+  to their screens alone (the window shown painted on the serial port at its last close).
 * **Another task's memory only through `/proc`** (`mem`, `ram`; `regs` too): any task's but the kernel task's and a
   driver's, as `NOTE` lets any task note any other (one user: Plan 9's owner rule lets every task in).  The kernel's
   `TASKMEM` serves only a driver (kdev), so the files are the one way in.
@@ -237,7 +241,7 @@ bank t).  Every fixed address is in `include/layout.inc`, and nowhere else.
   again, looks at the time (`TICKS`).
 * **One driver owns the YM2151** (`snd`, `#a`), and only its task writes the chip; one owns the VERA (`vid`, `#v`).
   The calls from a driver to another are three: the console's bell (`cons` writes `#a/bell` when the shown window
-  sends a BEL) and its screen (`#v/term`, the shown window's text), and the PSG's registers (`snd` writes
+  sends a BEL) and its screen (`#v/term`, the shown window's screen), and the PSG's registers (`snd` writes
   `#v/psg`: its channels 8-23).  A driver called never calls the console, and `vid` calls nobody, so no two wait
   on each other.
   What's a task's in a driver (a claim of channels) is the task's that opened the file it came through, given back
