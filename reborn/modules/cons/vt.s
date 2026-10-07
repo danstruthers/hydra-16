@@ -160,6 +160,9 @@ tr_off:     .res        2                                   ; Each terminal's (0
 tr_bar:     .res        2                                   ;   its bar's row ($FF: none) ...
 tr_head:    .res        2                                   ;   the window's header's ...
 tr_foot:    .res        2                                   ;   and its footer's
+ser_chr:    .res        1                                   ; <> 0: the serial port has chrome rows (chr_geom's)
+sp_chr:     .res        1                                   ; The serial port's chrome drawn: the row (0 the bar, 1 the
+sp_ccol:    .res        1                                   ;   header, 2 the footer, 3 done), its next cell
 chr_t:      .res        1                                   ; (chr_draw's: the terminal, a row, a cell)
 chr_r:      .res        1
 chr_k:      .res        1
@@ -512,6 +515,21 @@ vt_pump:
             lda         term
             and         #TERM_SERIAL
             beq         @screen
+            lda         chr_dirty                           ; Its chrome changed, following: drawn again (ts_ser 3)
+            and         #1
+            beq         :+
+            lda         ts_ser
+            bne         :+
+            lda         #1
+            trb         chr_dirty
+            lda         ser_chr
+            beq         :+
+            lda         #3
+            sta         ts_ser
+            stz         sp_chr
+            stz         sp_ccol
+            inc         chr_pass
+:
             lda         ts_ser
             beq         @screen
             stz         out_t
@@ -1377,6 +1395,7 @@ esc_do:
             bne         :+
             jsr         m_align
             jsr         scr_dirty
+            jsr         sc_paint
             jmp         fs_raw
 :
             cmp         #'5'                                ; DECSWL: the cursor's row single again
@@ -1523,6 +1542,7 @@ e_decid:                                                    ; DECID: as DA
 e_ris:
             jsr         reset
             jsr         scr_dirty
+            jsr         sc_paint                            ; (The serial port with chrome: painted)
             jmp         fs_raw
 
 e_deckpam:
@@ -1709,12 +1729,16 @@ d_scnm:                                                     ; ?5: the screen rev
             jsr         scr_dirty
             jmp         fs_raw
 
-d_om:                                                       ; ?6: the cursor home
-            lda         #VM_OM
+d_om:                                                       ; ?6: the cursor home (the serial port with chrome: the
+            lda         #VM_OM                              ;   console's alone, a CUP there)
             jsr         mode_bit
             jsr         m_home
             jsr         fc_lost
+            jsr         sc_cup
+            bcs         :+
             jmp         fs_raw
+:
+            rts
 
 d_awm:                                                      ; ?7
             lda         #VM_AWM
@@ -1965,7 +1989,11 @@ moved:
             stz         v_wrap
             jsr         cur_row
             jsr         fc_move
+            jsr         sc_cup                              ; (The serial port with chrome: a CUP)
+            bcs         :+
             jmp         fs_raw
+:
+            rts
 
 x_cht:                                                      ; CHT: n tab stops on
 :
@@ -1998,7 +2026,8 @@ x_ed:
             jsr         fc_erase
             lda         #'J'
             jsr         fc_erase_end
-            jmp         fs_raw
+            jsr         fs_raw
+            jmp         sc_erased                           ; (The serial port's chrome: drawn again)
 @done:
             rts
 
@@ -2431,6 +2460,8 @@ x_stbm:
             stx         v_bot
             jsr         m_home
             jsr         fc_region
+            jsr         sc_region                           ; (The serial port with chrome: offset)
+            bcs         @done
             jmp         fs_raw
 @done:
             rts
@@ -2439,7 +2470,10 @@ x_stbm:
 x_decstr:
             jsr         soft
             jsr         fc_region
-            jmp         fs_raw
+            jsr         fs_raw
+            jsr         sc_erased                           ; (The serial port with chrome: its margins again)
+            jsr         sc_region
+            rts
 
 ; SCOSC, SCORC (CSI s, u): as DECSC, DECRC
 x_scosc:
@@ -3852,9 +3886,10 @@ tx_free:
 ser_paint:
             lda         w_in
             jsr         vt_load
+            jsr         chr_geom
             lda         ts_ser
             cmp         #1
-            bne         @rows
+            bne         @chr
             jsr         tx_free                             ; The terminal reset and cleared
             cmp         #VT_ROOM
             bcs         :+
@@ -3878,8 +3913,22 @@ ser_paint:
             sta         sp_c
             stz         sp_f
             stz         sp_dec
+            stz         sp_chr                              ; (Its chrome first: sp_chrome; drawn now, not again)
+            stz         sp_ccol
+            inc         chr_pass
+            lda         #1
+            trb         chr_dirty
             lda         #2
             sta         ts_ser
+@chr:
+            jsr         sp_chrome                           ; The chrome's rows, as there's room
+            bcc         :+
+            rts
+:
+            lda         ts_ser                              ; (Its chrome alone: then the state)
+            cmp         #3
+            bne         @rows
+            jmp         @end
 @rows:
             lda         sp_row
             cmp         v_rows
@@ -3989,6 +4038,154 @@ ser_paint:
 @wait:
             rts
 
+; The serial port's chrome rows (chr_geom's tr_*: the shown window's), as the send ring has room: sp_chr the row (0
+; the bar, 1 the header, 2 the footer, 3 done), sp_ccol its next cell (each rendered again as it goes on).  Done in a
+; paint (ts_ser 2), the terminal's cursor to the window's first row.  OUT: C = 1, not done (no room yet)
+sp_chrome:
+            stz         out_t
+@row:
+            ldx         sp_chr
+            cpx         #3
+            bcc         :+
+            jmp         @done
+:
+            lda         tr_bar                              ; (Its row there: the serial port's)
+            cpx         #0
+            beq         :+
+            lda         tr_head
+            cpx         #1
+            beq         :+
+            lda         tr_foot
+:
+            cmp         #$FF
+            beq         @next
+            sta         chr_r
+            lda         ser_cols
+            tax
+            lda         sp_chr
+            FAR1        chr_render                          ; (cr_c, cr_a, cr_f: its cells)
+            lda         sp_ccol
+            bne         @cells
+            jsr         tx_free
+            cmp         #VT_ROOM
+            bcs         :+
+            jmp         @wait
+:
+            lda         chr_r
+            ldx         #0
+            jsr         out_cup_abs
+            lda         #$FF                                ; (The terminal's cursor: not the window's)
+            sta         sp_cy
+@cells:
+            ldx         sp_ccol
+            cpx         cr_n
+            bcs         @next
+            jsr         tx_free
+            cmp         #VT_ROOM
+            bcc         @wait
+            ldx         sp_ccol
+            lda         cr_f,X
+            tay
+            lda         cr_a,X
+            cmp         sp_c                                ; (Its rendition, if the terminal hasn't it)
+            bne         :+
+            cpy         sp_f
+            beq         @glyph
+:
+            sta         sp_c
+            sty         sp_f
+            tya
+            tax
+            lda         sp_c
+            jsr         out_sgr
+@glyph:
+            lda         sp_dec
+            beq         :+
+            jsr         out_g0b
+            stz         sp_dec
+:
+            ldx         sp_ccol
+            lda         cr_c,X
+            jsr         tx_put
+            inc         sp_ccol
+            bra         @cells
+@next:
+            inc         sp_chr
+            stz         sp_ccol
+            jmp         @row
+@done:
+            lda         ts_ser                              ; (A paint's: the cursor to the window's first row, once)
+            cmp         #2
+            bne         @ok
+            lda         sp_chr
+            cmp         #3
+            bne         @ok
+            lda         ser_chr
+            beq         :+
+            jsr         tx_free
+            cmp         #VT_ROOM
+            bcc         @wait
+            lda         #0
+            ldx         #0
+            jsr         out_cup
+            stz         sp_cy
+            stz         sp_cx
+            stz         sp_full
+:
+            inc         sp_chr
+@ok:
+            clc
+            rts
+@wait:
+            sec
+            rts
+
+; The serial port with chrome, following: the cursor put where the window's is (its rows below the chrome) in
+; place of the sequence as it came.  OUT: C = 1 so; C = 0 not (no chrome there: the sequence as it came)
+sc_cup:
+            lda         fw_ser
+            beq         sc_no
+            lda         ser_chr
+            beq         sc_no
+            stz         out_t
+            lda         v_y
+            ldx         v_x
+            jsr         out_cup
+            sec
+            rts
+sc_no:
+            clc
+            rts
+
+; ... the margins (the window's, below the chrome) and the cursor, in place of DECSTBM as it came.  OUT: as sc_cup's
+sc_region:
+            lda         fw_ser
+            beq         sc_no
+            lda         ser_chr
+            beq         sc_no
+            stz         out_t
+            jsr         out_region_all
+            bra         sc_cup
+
+; ... its chrome erased (ED, VT52's J): drawn again after (vt_pump: chr_dirty)
+sc_erased:
+            lda         fw_ser
+            beq         :+
+            lda         ser_chr
+            beq         :+
+            lda         #1
+            tsb         chr_dirty
+:
+            rts
+
+; ... a sequence that changes the whole terminal (RIS, DECALN): painted again instead
+sc_paint:
+            lda         ser_chr
+            beq         :+
+            jmp         ser_dirty
+:
+            rts
+
 ; The terminal's cursor to the start of row .A, at or below it: a CR (if it isn't at a row's start), an LF a row
 sp_down:
             sta         vt_k
@@ -4078,6 +4275,8 @@ ser_state:
             lda         #$FF
             sta         sp_cy
 :
+            lda         ser_chr                             ; (With chrome: no DECOM there, the rows absolute)
+            bne         :+
             lda         v_mode
             and         #VM_OM
             beq         :+
@@ -4596,6 +4795,16 @@ chr_geom:
 @next:
             dex
             bpl         @term
+            stz         ser_chr                             ; (The serial port's: any?)
+            lda         tr_off
+            bne         :+
+            lda         tr_bar
+            and         tr_foot
+            cmp         #$FF
+            beq         @none
+:
+            inc         ser_chr
+@none:
             rts
 
 ; Terminal .X's chrome rows (the shown window's, loaded; tr_*: chr_geom's), each rendered (cons.s) and written: its
@@ -5000,6 +5209,8 @@ out_cup_abs:
 ; ... the row from the region's top with DECOM (the serial port's, painted)
 out_cup_om:
             pha
+            lda         ser_chr                             ; (With chrome: the terminal has no DECOM)
+            bne         :+
             lda         v_mode
             and         #VM_OM
             beq         :+
@@ -5092,6 +5303,8 @@ out_sgr:
 ; The region: DECSTBM if it isn't the whole screen (the serial port's), or always (the screen's: the window's rows
 ; are fewer than vid's)
 out_region:
+            lda         ser_chr                             ; (The serial port with chrome: always, its rows below it)
+            bne         out_region_all
             lda         v_top
             bne         out_region_all
             ldx         v_rows

@@ -2637,6 +2637,31 @@ module.exports = {
       },
     },
     {
+      name: 'winser', what: 'the chrome on the serial port (W4b: chrome serial on): its bar, header and footer drawn there, the window 80 x 21 below the bar and header (its margins sent offset); 25 lines scrolling the window\'s rows alone; a clear (ED 2) then the chrome drawn again; a CUP and DECSTBM from a program offset; chrome serial off (80 x 24 again): what the PC\'s terminal shows (sim/lib/vt.js)',
+      init: 't_rc', cycles: 260e6,
+      // (One script: a chrome redraw after a prompt (the status changed) would hide it from the harness's wait)
+      pc: { files: { clr: '\x1b[2J\x1b[Hcleared\n\x1b[5;10Hat 5,10\x1b[2;4r\x1b[20;1H', 'ser.rc': ['echo chrome serial on >/dev/wctl', 'grep size /dev/consctl',
+        'echo -n sertitle >/dev/label', 'echo status st1 >/dev/wctl', 'for (i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25) echo line $i',
+        'cat /pc/clr', 'echo chrome serial off >/dev/wctl', 'grep size /dev/consctl', 'echo done', ''].join('\n') } },
+      get machine() { return { input: typed([['rc /pc/ser.rc']]) }; },
+      expect: ['size 80 21\n', 'size 80 24\n', '\ndone\n%'],
+      check(m) {
+        const f = [], raw = m.out, clear = '\x1b[0m\x1b(B\x1b)B';
+        const a = raw.indexOf(clear, raw.indexOf('rc /pc/ser.rc')), b = raw.indexOf(clear, raw.indexOf('at 5,10'));
+        if (a < 0 || b < 0) return ['no paints for chrome serial on and off'];
+        const look = (upto, what, rows) => {                     // (The terminal's rows, as far as upto)
+          const t = new VT({ cols: 80, rows: 24 }).write(raw.slice(a, upto)), l = t.lines();
+          for (const [r, re] of rows) if (!re.test(l[r] || '')) f.push(what + ': row ' + (r + 1) + ' ' + JSON.stringify(l[r]) + ' isn\'t ' + re);
+          return t;
+        };
+        const lines = raw.indexOf('\x1b[2J', raw.indexOf('line 25'));
+        look(lines, 'after 25 lines', [[0, /^ 0 sertitle +00:00$/], [1, /^0 sertitle +0 sertitle$/], [2, /^line 6$/], [21, /^line 25$/], [22, /^$/], [23, /^st1$/]]);
+        const t = look(b, 'after the clear', [[0, /^ 0 sertitle +00:00$/], [1, /^0 sertitle +0 sertitle$/], [2, /^cleared$/], [6, /^ +at 5,10$/], [23, /^st1$/]]);
+        if (t.top !== 3 || t.bot !== 5) f.push('the program\'s region (2;4) on the terminal: rows ' + (t.top + 1) + '-' + (t.bot + 1) + ', not 4-6');
+        return f;
+      },
+    },
+    {
       name: 'pcm', what: 'the Vera X\'s PCM (vid\'s /pcm and /pcmctl), at rc: its files and state; the rate (the VERA\'s nearest) and volume; raw samples from a card into the FIFO, drained; bad commands; /pcm one task\'s (another\'s pcmctl: busy); WAV files played (8 bits mono, made signed; 16 bits stereo past an odd chunk; a float one, not a song); a ZSM\'s PCM instruments (one, then one looped, stopped by the FIFO emptied: from RAM) and its claim of the PCM; one too big for RAM (from the file); the FIFO\'s bytes in order, none lost, its runs dry only at the ends',
       init: 't_rc', cycles: 150e6, jsOnly: 'the danlang emulator has no VERA yet',
       get machine() { return { input: typed(PCM_LINES), vera: { pcmLog: true }, sd: pcmCard() }; },

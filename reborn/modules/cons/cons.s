@@ -1414,12 +1414,12 @@ clunked:
             bne         @done
             lda         #0                                  ; (keys hydra again too)
             sta         kvt,Y
-            sta         w_raw,Y
             tya
             jsr         load
             stz         raw
-            lda         #3
-            tsb         chr_dirty
+            ldx         z:srv_id
+            lda         #0
+            jsr         raw_mark
 @done:
             clc
             rts
@@ -4309,22 +4309,25 @@ c_rawon:
             sta         raw
             ldx         z:srv_id                            ; (A resize before it: not news to its reader)
             stz         w_rsz,X
-            sta         w_raw,X
-            lda         #3                                  ; (Its modes in the chrome)
-            tsb         chr_dirty
-            clc
-            rts
+            jmp         raw_mark
 
 c_rawoff:
             lda         z:srv_id
             jsr         load
             stz         raw
             ldx         z:srv_id
-            stz         w_raw,X
+            lda         #0
+; w_raw: window .X's raw mode .A, for its chrome's %m (drawn again if it changed).  OUT: C = 0
+raw_mark:
+            cmp         w_raw,X
+            beq         :+
+            sta         w_raw,X
             lda         #3
             tsb         chr_dirty
+:
             clc
             rts
+
 
 ; keys vt, keys hydra: a raw read's keys as a VT100 sends them, or one code each (KEY_*)
 c_keys:
@@ -4349,11 +4352,14 @@ c_keys:
 @set:
             ldx         z:srv_id
             tya
+            cmp         kvt,X
+            beq         :+
             sta         kvt,X
+            lda         #3                                  ; (Its modes in the chrome)
+            tsb         chr_dirty
+:
             stz         kp_n,X
             stz         kp_i,X
-            lda         #3
-            tsb         chr_dirty
             clc
             rts
 @inval:

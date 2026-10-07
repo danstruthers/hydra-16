@@ -473,6 +473,12 @@ October 2026, on `reborn-text-windows` (reborn's `docs/status.md`, "The text win
 * **`default` commands reach the windows still as the defaults were**, so `/lib/windows`, written after window 0 is made, still sets window 0's chrome.  A command that changes nothing paints nothing, so the ROM's file (the console's own defaults) costs no repaint at boot.
 * **The time follows the console's use**: a server runs only for requests, so the minute's redraw comes with the next one (a shell at its prompt has one waiting, which timer 2's naps bring back every 2 seconds).  A long program that never touches the console leaves the clock as it was till it does.  A label is cleared by an empty line (`echo >/dev/label`): a write of no bytes never reaches the server.
 
+### **As built: W4b**
+
+* **The serial port with chrome keeps following byte for byte** where the chrome changes nothing, and translates only what moves rows: cursor moves become one CUP from the model's cursor, DECSTBM is sent offset, DECOM stays the console's, ED and DECSTR have the chrome drawn again after, RIS and DECALN repaint.  So a program's output costs about what it did, and the model, not the terminal, decides where things go.
+* **Its chrome is drawn a cell at a time** as the send ring has room (a row rendered again as it goes on), in a paint or alone (the rows, then the terminal's state again), the window's writers waiting meanwhile as they do for a paint.
+* **A redraw can come just after a prompt** (a status line or label changed by the command before it): the cursor goes back to the prompt, so a terminal shows it right; the tests' harness, which waits for output ending in a prompt, drives such steps from a script.
+
 ### **Decisions**
 
 The user's answers to the plan's questions, 2026-10-07:
