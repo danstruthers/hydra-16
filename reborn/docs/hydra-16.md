@@ -224,8 +224,8 @@ namespace](programming/files.md#the-namespace), [NAMESPACES.md](design/plans/NAM
 
 The console driver (`cons`, task F) serves `#c`: **windows**, rio's way on a serial terminal: each a whole console with
 its own shell, shown one at a time (Ctrl-] and a digit shows that one; Ctrl-] c makes a group, a shell session, and
-Ctrl-] n and p go between groups, Ctrl-] Tab or Ctrl-Tab between a group's windows; `new-window` runs a program in
-a window of its own), a hidden
+Ctrl-] n and p go between groups, Ctrl-] Tab or Ctrl-Tab between a group's windows, Ctrl-] w lists them, and `wctl`'s
+`key` lines change these keys; `new-window` runs a program in a window of its own), a hidden
 one running on, its output kept and shown again.  A read is a line, edited at the console (Backspace, the arrows, Home,
 End, Ctrl-U, the lines before); `consctl` turns raw keys on; Ctrl-C (an interrupt) and Ctrl-\ (a kill) are notes to the
 shown window's group.  **The serial port** runs at 9600 at boot, and to 115200 (`/dev/serctl`), every byte paced by VIA
@@ -374,7 +374,7 @@ POST's, a driver's) are `/dev/kmesg`, its last 4K.
   card; `--pc-dir DIR` a folder as `/pc`; `--vera` a Vera X, `--view` its screen in a browser; `--sound` the sound in a
   browser, `--wav FILE` in a file; `--trace-calls`, `--break`, `--watch` for debugging.  The top of `sim/run.js` lists
   them all; [the hardware reference](hardware.md#in-the-emulator) says what's modelled.
-* **The tests**, `node sim/test.js`: 86 of them, each booting its own image and judged on its output, its time budgets
+* **The tests**, `node sim/test.js`: 103 of them, each booting its own image and judged on its output, its time budgets
   and its own checks, as many at a time as the PC has cores; `--dl` runs them in the danlang emulator (`sim/dl`), the
   emulator written again in danlang.
 * **The PC tools** (`sim/tools`): `hydrapc.js` (the PC tool: the terminal, and `/pc` over the serial line; `npm install`

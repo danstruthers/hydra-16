@@ -619,11 +619,38 @@ beep:                                                       ; ( -- ): a BEL: the
             jmp         emit_a
 
 ; ---- The keys, raw (Facility Extension's): the console's raw mode gives the terminal's cursor and function keys as
-; one code each (KEY_UP ...), which are the k- words' values; the terminal sends no modifiers the console decodes
+; one code each (KEY_UP ...), which are the k- words' values.  With the console's keys mods (consctl's), a modified
+; one comes as KEY_MOD, its modifiers (1 Shift, 2 Alt, 4 Ctrl), then it: ekey gives them as one, the k- masks or'd in
 
             HEADER      "ekey", 0
 ekey:                                                       ; ( -- u ): a key, raw (KEY's way)
-            jmp         key
+            jsr         key
+            lda         dhi,x
+            bne         @done
+            lda         dlo,x
+            cmp         #KEY_MOD
+            bne         @done
+            inx                                             ; (Its modifiers: the masks' high bytes, 1 2 4)
+            jsr         key
+            lda         dlo,x
+            and         #2                                  ; (Alt: 4)
+            asl
+            sta         dhi,x
+            lda         dlo,x
+            and         #4                                  ; (Ctrl: 2)
+            lsr
+            ora         dhi,x
+            sta         dhi,x
+            lda         dlo,x
+            and         #1                                  ; (Shift: 1)
+            ora         dhi,x
+            pha
+            inx
+            jsr         key                                 ; (The key)
+            pla
+            sta         dhi,x
+@done:
+            rts
 
             HEADER      "ekey?", 0
 ekeyq:                                                      ; ( -- flag ): one waiting (KEY?'s way)
@@ -647,9 +674,11 @@ ekeytofkey:                                                 ; ( u -- u false | x
 :
             jmp         zero_tos
 
-; Is the top a cursor or function key's code, or the window's resize or focus (KEY_UP to KEY_FOCUS)?  OUT: C = 0 yes
+; Is the top a cursor or function key's code (and any k- masks), or the window's resize or focus (KEY_UP to
+; KEY_FOCUS)?  OUT: C = 0 yes
 is_fkey:
             lda         dhi,x
+            and         #$F8
             bne         :+
             lda         dlo,x
             sec

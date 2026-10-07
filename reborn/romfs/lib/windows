@@ -4,6 +4,8 @@
 #   default header FORMAT, default footer FORMAT, default chrome screen|serial on|off [bar] [header] [footer]
 #   FORMAT: %n window, %l label, %p program, %s status, %w windows, %G groups, %c %r size, %m modes, %t time,
 #   %d date, %L LEDs, %= the rest at the right, %[7] SGR's rendition (%[1;33;44], %[0]), %% a %
+#   key prefix ctrl-X, key KEY ACTION (KEY after the prefix: a character, ctrl-X, tab, shift-tab), key ctrl-tab ACTION:
+#   ACTION next, previous, next-group, previous-group, new, list, hold, close, none (the console's keys, console-wide)
 bar top
 bar %[7] %G%=%t
 default header %[1]%n %l%=%w

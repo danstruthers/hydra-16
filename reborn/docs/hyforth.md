@@ -214,7 +214,7 @@ C's conio's colour numbers (0-7 the terminal's eight, 8-15 their bright ones) an
 | `bold`, `dim`, `underline`, `blink`, `reverse` | `( -- )` | `CSI 1m`, `2m`, `4m`, `5m`, `7m` | hylang `bold`, C `revers` |
 | `sgr` | `( n -- )` | `CSI n m`: any other attribute (the old `Acol`) | |
 | `beep` | `( -- )` | A BEL: the console rings the bell | hylang `beep` |
-| `ekey` | `( -- u )` | A key, raw: a character, or a cursor or function key (`k-up` ...), as `key` reads them | Facility Ext; hylang `(key)`, C `cgetc` |
+| `ekey` | `( -- u )` | A key, raw: a character, or a cursor or function key (`k-up` ...), as `key` reads them; with the console's `keys mods` (`consctl`'s), a modified one with its masks or'd in (`k-ctrl-mask k-up or`) | Facility Ext; hylang `(key)`, C `cgetc` |
 | `ekey?` | `( -- flag )` | Whether one is waiting | hylang `(key?)`, C `kbhit` |
 | `ekey>char` | `( u -- u false \| char true )` | | Facility Ext |
 | `ekey>fkey` | `( u -- u false \| x true )` | | Facility Ext |

@@ -17,7 +17,9 @@
 ;               #a/bell: one of the calls from a driver to another, the screen's #v/term another)
 ;   /consctl    rawon, rawoff (raw lasts till the window's last consctl closes, as Plan 9's does); keys vt, keys
 ;               hydra (raw's keys: as a VT100 sends them, following the window's DECCKM, DECKPAM and VT52 mode, or
-;               as one code each, KEY_*: as it starts, and again with its last consctl); scroll smooth, scroll
+;               as one code each, KEY_*: as it starts, and again with its last consctl), keys mods (hydra's, and a
+;               key the terminal sent modified, xterm's way, CSI 1 ; m A or CSI n ; m ~, as KEY_MOD, its modifiers
+;               (m - 1: 1 Shift, 2 Alt, 4 Ctrl), then the key); scroll smooth, scroll
 ;               jump (the window shown on the serial port: every byte its writers write goes out, they waiting for
 ;               the line; or they go on, the terminal painted as it can, skipping what came between); group (the
 ;               window's notes go to the writer's note group); screen, serial, both (where the windows are shown:
@@ -30,8 +32,9 @@
 ;   /wctl       new (a window), current N (window N shown); the chrome (W4): bar top, bar bottom, bar off, bar FORMAT
 ;               (console-wide), header FORMAT, footer FORMAT, header on|off, footer on|off, chrome screen|serial|both
 ;               on|off [bar] [header] [footer], status TEXT, monitor on|off (the window's), default header FORMAT,
-;               default footer FORMAT, default chrome ... (new windows', and those still as the defaults were).  It
-;               reads as the windows, a line each (* the shown one)
+;               default footer FORMAT, default chrome ... (new windows', and those still as the defaults were); key
+;               KEY ACTION, key prefix KEY (the keys: below; console-wide).  It reads as the windows, a line each (*
+;               the shown one)
 ;   /label      the window's title (OSC 0 and 2 write it too), read and written whole; empty: its program's name
 ;   /wnew       a read waits for the user's Ctrl-] c, then makes a window, shown, and gives its number (init's: it
 ;               starts a shell there)
@@ -55,8 +58,14 @@
 ; Shift-Tab or Ctrl-Shift-Tab its previous (a raw reader of the group's windows gets KEY_FOCUS and the window's
 ; number); Ctrl-] n and Ctrl-] p the next and previous group; Ctrl-] x the window shown's group a hangup note;
 ; Ctrl-] h holds the window shown's output, its writers waiting, till Ctrl-] h again (the VT100's No Scroll);
-; Ctrl-] Ctrl-] is a Ctrl-]); Ctrl-C and Ctrl-\ are notes (interrupt, kill) to the shown window's note
-; group, in either mode.  A window goes when the last of its cons fids closes (but window 0).
+; Ctrl-] Ctrl-] is a Ctrl-]); Ctrl-] w lists the windows; Ctrl-C and Ctrl-\ are notes (interrupt, kill) to the shown
+; window's note group, in either mode.  A window goes when the last of its cons fids closes (but window 0).  These
+; are bindings (W5d), wctl's key lines change them: key prefix ^X or ctrl-X (a control: not Ctrl-C, Ctrl-\,
+; Escape, CR or LF); key KEY ACTION, KEY after the prefix a character (not a digit: Ctrl-] and a digit is always that
+; window), ^X or ctrl-X, tab or shift-tab; key ctrl-tab ACTION, key ctrl-shift-tab ACTION; ACTION next, previous (the group's windows),
+; next-group, previous-group, new (a group: Ctrl-] c's), list, hold, close or none.  The list (Ctrl-] w) is a window
+; of the console's own, shown till a window's key (its number in hex), or the arrows and Enter, shows that one; q,
+; Escape twice, or the list's key again shows the one before.
 ;
 ; Receiving: the ACIA's interrupt (LINE_ACIA) puts each byte into the receive ring and adds 1 to the event count
 ; (TASK_EVENT: the clients waiting look again); before each request the keys are handed to the windows' queues
@@ -121,7 +130,18 @@ CTRL_D          = $04
 CTRL_E          = $05
 CTRL_U          = $15
 CTRL_BSL        = $1C           ; (Ctrl-\)
-CTRL_RB         = $1D           ; (Ctrl-]: the windows' key)
+CTRL_RB         = $1D           ; (Ctrl-]: the windows' key, as it starts: key prefix's)
+KA_NONE         = 0             ; The keys' actions (key's: ka_vec, ka_names): none ...
+KA_NEXT         = 1             ;   the group's next window, its previous ...
+KA_PREV         = 2
+KA_GNEXT        = 3             ;   the next group, the previous ...
+KA_GPREV        = 4
+KA_NEW          = 5             ;   a group wanted (Ctrl-] c's: /wnew's) ...
+KA_LIST         = 6             ;   the windows' list ...
+KA_HOLD         = 7             ;   the window shown held, or not ...
+KA_CLOSE        = 8             ;   its note group a hangup
+KA_N            = 9
+LS_ROW          = 3             ; The list's first window's row
 RATE_BOOT       = 5             ; 9600: the kernel's bring-up console's
 ENT_CONSCTL     = 2             ; srv_tree's consctl (its fids counted)
 PC_MARK         = $1E           ; /pc's frames: one starts (from the PC, PC_MARK then PC_ESC is a typed $1E, Ctrl-^)
@@ -171,7 +191,7 @@ pfx:        .res        1                                   ; The irq entry's: <
 win_grp:    .res        1                                   ;   and the note group of the window with the keys
 d_pfx:      .res        1                                   ; Handing the keys out: <> 0, the last was Ctrl-]
 w_in:       .res        1                                   ; The window shown, which gets the keys
-want_new:   .res        1                                   ; <> 0: Ctrl-] c, a window wanted (for /wnew's reader)
+kb_pfx:     .res        1                                   ; The prefix (Ctrl-]: key prefix's; the irq entry's too)
 ser_rd:     .res        1                                   ; /ser's fids for reading (while there are any, the
                                                             ;   line is /ser's: h_ser)
 lw:         .res        1                                   ; The window whose editor state is here ($FF: none)
@@ -184,7 +204,8 @@ eof:        .res        1                                   ;   <> 0: Ctrl-D on 
 was_cr:     .res        1                                   ;   and the last key was CR (an LF after it: the same)
 esc_st:     .res        1                                   ; A sequence coming in: 0 none, 1 ESC, 2 ESC [, 3 ESC O
 esc_n:      .res        1                                   ;   its number (ESC [ n ~) ...
-esc_semi:   .res        1                                   ;   past a ; (the modifiers: not kept) ...
+esc_mod:    .res        1                                   ;   its second (the modifiers, xterm's: esc_n's next) ...
+esc_semi:   .res        1                                   ;   the ;s past ...
 esc_at:     .res        2                                   ;   and the tick its ESC came at
 key_pb:     .res        1                                   ; A key put back (the one after an ESC that started
                                                             ;   nothing), or 0
@@ -224,6 +245,7 @@ w_group:    .res        WIN_MAX                             ;   its note group (
 w_cons:     .res        WIN_MAX                             ;   its cons fids ...
 w_ctl:      .res        WIN_MAX                             ;   its consctl fids (raw ends with the last) ...
 kvt:        .res        WIN_MAX                             ;   <> 0: keys vt ...
+w_kmod:     .res        WIN_MAX                             ;   <> 0: keys mods ...
 w_jump:     .res        WIN_MAX                             ;   <> 0: scroll jump ...
 w_hold:     .res        WIN_MAX                             ;   <> 0: held (Ctrl-] h) ...
 w_rsz:      .res        WIN_MAX                             ;   <> 0: resized (KEY_RESIZE for its raw reader) ...
@@ -249,6 +271,17 @@ fid_new:    .res        SRV_FIDS                            ; Each wctl fid: the
 kw_st:      .res        1                                   ; The terminal's sequences the console takes: how far ...
 kw_n:       .res        1                                   ;   which number ...
 kw_p:       .res        3                                   ;   and them
+want_new:   .res        1                                   ; <> 0: Ctrl-] c, a window wanted (for /wnew's reader)
+kb_act:     .res        128                                 ; The keys (key's): each one's action after the prefix
+                                                            ;   (KA_*; ESC's: Shift-Tab's, ESC [ Z) ...
+kb_ct:      .res        2                                   ;   and Ctrl-Tab's and Ctrl-Shift-Tab's
+ls_w:       .res        1                                   ; The windows' list (Ctrl-] w): its window ($FF: none) ...
+ls_from:    .res        1                                   ;   the one shown before it ...
+ls_n:       .res        1                                   ;   the windows listed ...
+ls_ws:      .res        WIN_MAX                             ;   and them, in order ...
+ls_sel:     .res        1                                   ;   the one chosen (in ls_ws: its marker, >) ...
+ls_esc:     .res        1                                   ;   its keys' sequence (1: ESC, 2: ESC [ or ESC O) ...
+ls_i:       .res        1                                   ;   and scratch
 bar_pos:    .res        1                                   ; The bar: 0 none, BAR_TOP, BAR_BOTTOM ...
 bar_fmt:    .res        FMT_SIZE                            ;   its format
 def_chr:    .res        1                                   ; A new window's chrome, header and footer
@@ -381,6 +414,29 @@ init:
             stz         scr_rows
             stz         scr_chk
             stz         kw_st
+            lda         #CTRL_RB                            ; The keys: the defaults (kb_def's)
+            sta         kb_pfx
+            ldx         #127
+:
+            stz         kb_act,X
+            dex
+            bpl         :-
+            ldx         #0
+:
+            ldy         kb_def,X
+            beq         :+
+            lda         kb_def + 1,X
+            sta         kb_act,Y
+            inx
+            inx
+            bra         :-
+:
+            lda         #KA_NEXT
+            sta         kb_ct
+            lda         #KA_PREV
+            sta         kb_ct + 1
+            lda         #$FF
+            sta         ls_w
             lda         #$FF
             sta         scr_cfd
             lda         #BAR_TOP                            ; The chrome: the bar at the top; a window's all of it
@@ -459,7 +515,7 @@ irq:
             beq         @intr
             cmp         #CTRL_BSL
             beq         @kill
-            cmp         #CTRL_RB
+            cmp         kb_pfx
             bne         @store
             sta         pfx                                 ; (Ctrl-]: it goes into the ring too)
 @store:
@@ -656,8 +712,14 @@ rx_get:
 ; /pc's frames taken out (pc_rx).  None while /ser is open for reading: the bytes are its
 distribute:
             lda         ser_rd
-            beq         @byte
+            beq         :+
             rts
+:
+            lda         ls_w                                ; (The list, another window shown: gone)
+            bmi         @byte
+            cmp         w_in
+            beq         @byte
+            jsr         ls_close
 @byte:
             jsr         rx_get
             bcc         :+
@@ -673,100 +735,73 @@ distribute:
 @keys:
             ldx         d_pfx
             bne         @command
-            cmp         #CTRL_RB
+            cmp         kb_pfx
             bne         @key
             inc         d_pfx
             bra         @byte
 
 @key:
-            pha                                             ; (To the window; then the console's look: its decoder
-            ldx         w_in                                ;   drops the sequences that aren't keys)
+            pha                                             ; (To the window, or the list's; then the console's look:
+            ldx         ls_w                                ;   the window's decoder drops the sequences that aren't
+            bmi         :+                                  ;   keys)
+            jsr         ls_key
+            bra         @watch
+:
+            ldx         w_in
             jsr         iq_put
+@watch:
             pla
             jsr         kw_watch
             jmp         @byte
 
-@command:                                                   ; The key after Ctrl-] (d_pfx 1), or its ESC, [ (2, 3)
+@command:                                                   ; The key after the prefix (d_pfx 1), or its ESC, [ (2, 3)
             ldx         d_pfx
             cpx         #1
             bne         @seq
             stz         d_pfx
-            cmp         #CTRL_RB                            ; (Ctrl-] again: a Ctrl-])
+            cmp         kb_pfx                              ; (The prefix again: itself)
             beq         @key
             cmp         #ESC                                ; ESC: Shift-Tab's, ESC [ Z
             bne         :+
             inc         d_pfx
             jmp         @byte
 :
-            cmp         #HT                                 ; Tab: the group's next window
-            bne         :+
-            jsr         win_next
-            jmp         @byte
-:
-            cmp         #'c'                                ; c: a group wanted (for /wnew's reader)
-            beq         @new
-            cmp         #'n'                                ; n, p: the next group, the previous
-            bne         :+
-            jsr         grp_next
-            jmp         @byte
-:
-            cmp         #'p'
-            bne         :+
-            jsr         grp_prev
-            jmp         @byte
-:
-            cmp         #'h'                                ; h: the window shown held, or not
-            beq         @hold
-            cmp         #'x'                                ; x: its note group a hangup
-            beq         @close
-            sec                                             ; A digit: that window
-            sbc         #'0'
-            cmp         #10
-            bcs         @same
+            cmp         #'0'                                ; A digit: that window
+            bcc         @act
+            cmp         #'9' + 1
+            bcs         @act
+            and         #$0F
             tax
             lda         w_used,X
             beq         @same
             jsr         w_show
             jmp         @byte
+@act:
+            cmp         #$80                                ; Else its binding's action
+            bcs         @same
+            tax
+            lda         kb_act,X
+            jsr         k_do
+            bra         @same
 
 @seq:
-            cpx         #2                                  ; (Ctrl-] ESC: [ next)
+            cpx         #2                                  ; (The prefix, ESC: [ next)
             bne         :+
             cmp         #'['
             bne         @off
             inc         d_pfx
             jmp         @byte
 :
-            stz         d_pfx                               ; (Ctrl-] ESC [: Z, the group's previous window)
+            stz         d_pfx                               ; (The prefix, ESC [: Z, Shift-Tab, ESC's binding)
             cmp         #'Z'
             bne         @off
-            jsr         win_prev
+            lda         kb_act + ESC
+            jsr         k_do
+            bra         @same
 @off:
             stz         d_pfx
             jmp         @byte
 
-@hold:
-            ldx         w_in
-            lda         w_hold,X
-            eor         #1
-            sta         w_hold,X
-            lda         #3                                  ; (Held: in its chrome's %m)
-            tsb         chr_dirty
-            inc         TASK_EVENT                          ; (Its writers look again)
-            jmp         @byte
-
-@close:
-            ldx         w_in
-            lda         w_group,X
-            ora         #NOTE_GROUP
-            ldx         #NOTE_HANGUP
-            jsr         NOTE_POST
-            jmp         @byte
-
-@new:
-            lda         #1
-            sta         want_new
-            inc         TASK_EVENT
 @same:                                                      ; (No window shown anew: the keys' note group the shown
             ldx         w_in                                ;   one's still)
             lda         w_group,X
@@ -775,6 +810,323 @@ distribute:
 
 @done:
             rts
+
+; The keys' action .A (KA_*: a binding's)
+k_do:
+            cmp         #KA_N
+            bcs         k_none
+            asl
+            tax
+            jmp         (ka_vec,X)
+k_none:
+            rts
+
+k_new:                                                      ; A group wanted (for /wnew's reader)
+            lda         #1
+            sta         want_new
+            inc         TASK_EVENT
+            rts
+
+k_hold:                                                     ; The window shown held, or not
+            ldx         w_in
+            lda         w_hold,X
+            eor         #1
+            sta         w_hold,X
+            lda         #3                                  ; (Held: in its chrome's %m)
+            tsb         chr_dirty
+            inc         TASK_EVENT                          ; (Its writers look again)
+            rts
+
+k_close:                                                    ; Its note group a hangup (the list: the one before)
+            ldx         w_in
+            cpx         ls_w
+            bne         :+
+            jmp         ls_back
+:
+            lda         w_group,X
+            ora         #NOTE_GROUP
+            ldx         #NOTE_HANGUP
+            jmp         NOTE_POST
+
+; The windows' list (Ctrl-] w): a window of the console's own, a line a window (the one chosen marked >, then its key:
+; its number in hex; its number, activity and label, as the bar's; its group), written while it isn't shown, then
+; shown.  Its notes are the window's before it (Ctrl-C's).  Shown, the list's key again leaves it
+ls_open:
+            lda         ls_w
+            bmi         :+
+            jmp         ls_back
+:
+            lda         #$FF                                ; (None free: nothing)
+            jsr         w_make
+            bcc         :+
+            rts
+:
+            stx         ls_w
+            lda         w_in
+            sta         ls_from
+            tay
+            lda         w_group,Y
+            sta         w_group,X
+            lda         #1                                  ; (Its writes all taken: the serial port painted after)
+            sta         w_jump,X
+            txa                                             ; Its label
+            jsr         lbl_ptr
+            ldy         #0
+:
+            lda         s_ls_label,Y
+            sta         (m),Y
+            beq         :+
+            iny
+            bra         :-
+:
+            stz         ls_n                                ; The windows, the one shown chosen
+            stz         ls_sel
+            stz         ls_esc
+            ldx         #0
+@win:
+            lda         w_used,X
+            beq         @next
+            cpx         ls_w
+            beq         @next
+            ldy         ls_n
+            txa
+            sta         ls_ws,Y
+            cpx         ls_from
+            bne         :+
+            sty         ls_sel
+:
+            inc         ls_n
+@next:
+            inx
+            cpx         #WIN_MAX
+            bcc         @win
+            jsr         ls_reset                            ; Its text: the cursor off, the heading, a line each
+            lda         #<s_ls_head
+            ldx         #>s_ls_head
+            jsr         cr_strax
+            jsr         ls_flush
+            ldy         #0
+:
+            cpy         ls_n
+            bcs         :+
+            phy
+            jsr         ls_line
+            ply
+            iny
+            bra         :-
+:
+            ldx         ls_w
+            jmp         w_show
+
+; The list's line for its window .Y (in ls_ws), written
+ls_line:
+            phy
+            jsr         ls_reset
+            ply
+            lda         #' '
+            cpy         ls_sel
+            bne         :+
+            lda         #'>'
+:
+            jsr         cr_put
+            lda         #' '
+            jsr         cr_put
+            ldx         ls_ws,Y
+            stx         ls_i
+            lda         s_hex,X
+            jsr         cr_put
+            lda         #' '
+            jsr         cr_put
+            lda         #' '
+            jsr         cr_put
+            jsr         cr_entry
+            lda         #<s_ls_grp
+            ldx         #>s_ls_grp
+            jsr         cr_strax
+            ldx         ls_i
+            lda         w_grp,X
+            jsr         cr_dec
+            lda         #<s_ls_end
+            ldx         #>s_ls_end
+            jsr         cr_strax
+            jmp         ls_flush
+
+; A row to build (cr_put's, as the chrome's)
+ls_reset:
+            stz         cr_n
+            lda         #CR_MAX - 1
+            sta         cr_w
+            lda         #COL_DEF
+            sta         cr_ca
+            stz         cr_cf
+            rts
+
+; The row built (cr_n bytes in cr_c) written to the list's window, IOBUF bytes at a time
+ls_flush:
+            lda         ls_w
+            jsr         load
+            stz         ls_i
+@part:
+            ldx         #0
+            ldy         ls_i
+:
+            cpy         cr_n
+            bcs         :+
+            cpx         #IOBUF
+            bcs         :+
+            lda         cr_c,Y
+            sta         iobuf,X
+            inx
+            iny
+            bra         :-
+:
+            stx         cnt
+            sty         ls_i
+            txa
+            beq         @done
+            FAR2        vt_write
+            bra         @part
+@done:
+            rts
+
+; The list's key .A: a window's key (its number in hex: 0-9, a-f), the arrows (up, down) and Enter; q, or Escape
+; twice, the one before
+ls_key:
+            ldx         ls_esc
+            beq         @plain
+            dex
+            bne         @seq
+            cmp         #'['                                ; ESC: [ or O starts a sequence, ESC again leaves
+            beq         :+
+            cmp         #'O'
+            beq         :+
+            stz         ls_esc
+            cmp         #ESC
+            bne         @plain
+            jmp         ls_back
+:
+            lda         #2
+            sta         ls_esc
+            rts
+@seq:
+            cmp         #$40                                ; (Its numbers, till its letter)
+            bcc         @done
+            stz         ls_esc
+            ldx         #1
+            cmp         #'B'
+            beq         @move
+            ldx         #$FF
+            cmp         #'A'
+            bne         @done
+@move:
+            txa
+            jmp         ls_move
+@plain:
+            cmp         #ESC
+            bne         :+
+            lda         #1
+            sta         ls_esc
+            rts
+:
+            cmp         #CR
+            beq         @enter
+            cmp         #LF
+            beq         @enter
+            cmp         #'q'
+            bne         :+
+            jmp         ls_back
+:
+            cmp         #'0'                                ; (A letter either case, a digit as it is; no control)
+            bcc         @done
+            ora         #$20
+            ldx         #15
+:
+            cmp         s_hex,X
+            beq         :+
+            dex
+            bpl         :-
+            rts
+:
+            txa                                             ; (Listed: shown)
+            ldy         ls_n
+:
+            dey
+            bmi         @done
+            cmp         ls_ws,Y
+            bne         :-
+            tax
+            jmp         ls_go
+@enter:
+            ldy         ls_sel
+            cpy         ls_n
+            bcs         @done
+            ldx         ls_ws,Y
+            jmp         ls_go
+@done:
+            rts
+
+; The choice moved by .A (1: down, $FF: up), its marker with it
+ls_move:
+            clc
+            adc         ls_sel
+            cmp         ls_n
+            bcs         @done
+            pha
+            jsr         ls_reset
+            lda         ls_sel
+            jsr         ls_mark
+            lda         #' '
+            jsr         cr_put
+            pla
+            sta         ls_sel
+            jsr         ls_mark
+            lda         #'>'
+            jsr         cr_put
+            jmp         ls_flush
+@done:
+            rts
+
+; The cursor to the list's line .A, its start (ESC [ row ; 1 H), into the row being built
+ls_mark:
+            pha
+            lda         #ESC
+            jsr         cr_put
+            lda         #'['
+            jsr         cr_put
+            pla
+            clc
+            adc         #LS_ROW
+            jsr         cr_dec
+            lda         #<s_ls_col
+            ldx         #>s_ls_col
+            jmp         cr_strax
+
+; Window .X shown (the list's choice: its group's focus moved, its raw readers told), the list gone
+ls_go:
+            lda         w_used,X                            ; (Gone meanwhile: nothing)
+            beq         @done
+            ldy         w_grp,X
+            txa
+            cmp         g_focus,Y
+            beq         :+
+            jsr         focus_tell
+:
+            jsr         w_show
+            jmp         ls_close
+@done:
+            rts
+
+; The window shown before the list shown again (if it's still there), the list gone
+ls_back:
+            ldx         ls_from
+            lda         w_used,X
+            beq         ls_close
+            jsr         w_show
+ls_close:
+            ldx         ls_w
+            lda         #$FF
+            sta         ls_w
+            jmp         w_free
 
 ; The shown window's group's next window (Ctrl-Tab, Ctrl-] Tab), or its previous (win_prev): shown
 win_next:
@@ -966,6 +1318,7 @@ w_init:
             stz         w_cons,X
             stz         w_ctl,X
             stz         kvt,X
+            stz         w_kmod,X
             stz         kp_n,X
             stz         kp_i,X
             stz         w_jump,X
@@ -1613,13 +1966,15 @@ kw_watch:
             bne         @done
             lda         kw_p + 1
 @tab:
-            cmp         #5
+            cmp         #5                                  ; (Their bindings' actions)
             bne         :+
-            jmp         win_next
+            lda         kb_ct
+            jmp         k_do
 :
             cmp         #6
             bne         @done
-            jmp         win_prev
+            lda         kb_ct + 1
+            jmp         k_do
 @size:
             lda         kw_p                                ; ESC [ 8 ; R ; C t
             cmp         #8
@@ -1718,6 +2073,7 @@ clunked:
             bne         @done
             lda         #0                                  ; (keys hydra again too)
             sta         kvt,Y
+            sta         w_kmod,Y
             tya
             jsr         load
             stz         raw
@@ -2598,6 +2954,7 @@ key_raw:
             sta         esc_st
             stz         esc_n
             stz         esc_semi
+            stz         esc_mod
             bra         @byte
 
 @ss3:
@@ -2607,30 +2964,27 @@ key_raw:
 
 @csi:
             dex
-            bne         @o
+            beq         :+
+            jmp         @o
+:
             cmp         #'0'                                ; ESC [: a digit of its number?
             bcc         @notdigit
             cmp         #'9' + 1
             bcs         @notdigit
-            ldx         esc_semi
-            bne         @byte                               ; (A modifier's: not kept)
             and         #$0F
-            sta         p
-            lda         esc_n                               ; * 10, + the digit
-            asl
-            asl
-            clc
-            adc         esc_n
-            asl
-            clc
-            adc         p
-            sta         esc_n
+            ldx         esc_semi                            ; (Its first number, or past a ; the modifiers'; past
+            cpx         #2                                  ;   a second, not kept)
+            bcs         @byte
+            ldy         esc_n,X                             ; * 10, + the digit
+            sty         p
+            jsr         dec_add
+            sta         esc_n,X
             bra         @byte
 
 @notdigit:
             cmp         #';'
             bne         @final
-            sta         esc_semi
+            inc         esc_semi
             bra         @byte
 
 @final:
@@ -2658,11 +3012,37 @@ key_raw:
 
 @tildekey:
             lda         tilde_key,X
-            clc
-            rts
+            bra         @mods
 
 @csikey:
             lda         csi_key,X
+@mods:                                                      ; (Raw, keys mods, modified: KEY_MOD, its modifiers,
+            ldy         raw                                 ;   then it, kp_buf's: key_next gives them next)
+            beq         @plain
+            ldx         lw
+            ldy         w_kmod,X
+            beq         @plain
+            ldy         esc_mod
+            cpy         #2
+            bcc         @plain
+            cpy         #9
+            bcs         @plain
+            pha
+            txa
+            asl
+            asl
+            asl
+            tay
+            lda         esc_mod
+            dec         a
+            sta         kp_buf,Y
+            pla
+            sta         kp_buf + 1,Y
+            lda         #2
+            sta         kp_n,X
+            stz         kp_i,X
+            lda         #KEY_MOD
+@plain:
             clc
             rts
 
@@ -3673,6 +4053,13 @@ cr_modes:                                                   ; %m: raw or cooked,
             jsr         cr_strax
 :
             ldx         w_in
+            lda         w_kmod,X
+            beq         :+
+            lda         #<s_m_mods
+            ldx         #>s_m_mods
+            jsr         cr_strax
+:
+            ldx         w_in
             lda         w_hold,X
             beq         :+
             lda         #<s_m_held
@@ -4473,17 +4860,20 @@ c_default:
             ldx         #>s_chrome_w
             jsr         word_is
             beq         @chrome
-            ldy         #0
             lda         #<s_header_w
             ldx         #>s_header_w
             jsr         word_is
-            beq         :+
-            ldy         #1
+            beq         @head
             lda         #<s_footer_w
             ldx         #>s_footer_w
             jsr         word_is
-            beq         :+
+            beq         @foot
             jmp         chr_inval
+@head:                                                      ; (word_is changes .Y: 0 or 1 after it)
+            ldy         #0
+            bra         :+
+@foot:
+            ldy         #1
 :
             sty         hf_k
             lda         #1                                  ; (The format: kept in n)
@@ -4607,16 +4997,18 @@ c_monitor:
             sta         p
             lda         srv_argp + 1
             sta         p + 1
-            ldy         #1
             lda         #<s_on_w
             ldx         #>s_on_w
             jsr         word_is
-            beq         :+
-            ldy         #0
+            beq         @on
             lda         #<s_off_w
             ldx         #>s_off_w
             jsr         word_is
             bne         @inval
+            ldy         #0                                  ; (word_is changes .Y: 1 or 0 after it)
+            bra         :+
+@on:
+            ldy         #1
 :
             ldx         z:srv_id
             tya
@@ -4758,7 +5150,8 @@ raw_mark:
             rts
 
 
-; keys vt, keys hydra: a raw read's keys as a VT100 sends them, or one code each (KEY_*)
+; keys vt, keys hydra, keys mods: a raw read's keys as a VT100 sends them, or one code each (KEY_*), or one code each
+; and KEY_MOD and its modifiers before a modified one
 c_keys:
             lda         z:srv_argn
             beq         @inval
@@ -4773,6 +5166,13 @@ c_keys:
             ldy         #1
             bra         @set
 :
+            lda         #<s_mods_w
+            ldx         #>s_mods_w
+            jsr         word_is
+            bne         :+
+            ldy         #2
+            bra         @set
+:
             lda         #<s_hydra_w
             ldx         #>s_hydra_w
             jsr         word_is
@@ -4780,6 +5180,18 @@ c_keys:
             ldy         #0
 @set:
             ldx         z:srv_id
+            lda         #0                                  ; (mods: hydra's, KEY_MOD too)
+            cpy         #2
+            bne         :+
+            ldy         #0
+            lda         #1
+:
+            cmp         w_kmod,X
+            beq         :+
+            sta         w_kmod,X
+            lda         #3                                  ; (Its modes in the chrome)
+            tsb         chr_dirty
+:
             tya
             cmp         kvt,X
             beq         :+
@@ -4793,6 +5205,163 @@ c_keys:
             rts
 @inval:
             lda         #E_INVAL
+            sec
+            rts
+
+; key KEY ACTION, key ctrl-tab ACTION, key ctrl-shift-tab ACTION, key prefix KEY (wctl's; console-wide): the keys'
+; bindings.  KEY: a character (not a digit), ^X (a control), tab, shift-tab.  ACTION: ka_names's
+c_key:
+            lda         z:srv_argn
+            cmp         #2
+            bne         @inval
+            lda         srv_argp                            ; The first word
+            sta         p
+            lda         srv_argp + 1
+            sta         p + 1
+            lda         #<s_prefix_w
+            ldx         #>s_prefix_w
+            jsr         word_is
+            beq         @prefix
+            lda         #<s_ctab_w
+            ldx         #>s_ctab_w
+            jsr         word_is
+            bne         :+
+            ldy         #0
+            bra         @ct
+:
+            lda         #<s_cstab_w
+            ldx         #>s_cstab_w
+            jsr         word_is
+            bne         @key
+            ldy         #1
+@ct:
+            phy
+            jsr         @action
+            ply
+            bcs         @inval
+            sta         kb_ct,Y
+            clc
+            rts
+@key:
+            jsr         key_spec
+            bcs         @inval
+            cmp         #'0'
+            bcc         :+
+            cmp         #'9' + 1
+            bcc         @inval                              ; (A digit: its window, always)
+:
+            pha
+            jsr         @action
+            plx
+            bcs         @inval
+            sta         kb_act,X
+            clc
+            rts
+@prefix:
+            jsr         @second
+            jsr         key_spec
+            bcs         @inval
+            cmp         #1                                  ; (A control, but these)
+            bcc         @inval
+            cmp         #' '
+            bcs         @inval
+            cmp         #CTRL_C
+            beq         @inval
+            cmp         #CTRL_BSL
+            beq         @inval
+            cmp         #ESC
+            beq         @inval
+            cmp         #CR
+            beq         @inval
+            cmp         #LF
+            beq         @inval
+            sta         kb_pfx
+            clc
+            rts
+@inval:
+            lda         #E_INVAL
+            sec
+            rts
+@second:                                                    ; (p: the second word)
+            lda         srv_argp + 2
+            sta         p
+            lda         srv_argp + 3
+            sta         p + 1
+            rts
+@action:                                                    ; (.A: the second word's action; C = 1: none)
+            jsr         @second
+            ldx         #KA_N - 1
+@name:
+            phx
+            txa
+            asl
+            tay
+            lda         ka_names,Y
+            pha
+            lda         ka_names + 1,Y
+            tax
+            pla
+            jsr         word_is
+            beq         :+
+            plx
+            dex
+            bpl         @name
+            sec
+            rts
+:
+            pla
+            clc
+            rts
+
+; The key the word at p names: a character, ^X or ctrl-X (a control: rc's ^ joins words), tab, shift-tab (after
+; the prefix, ESC [ Z: ESC's binding).  OUT: C = 0, .A = it; or C = 1
+key_spec:
+            lda         #<s_tab_w
+            ldx         #>s_tab_w
+            jsr         word_is
+            bne         :+
+            lda         #HT
+            clc
+            rts
+:
+            lda         #<s_stab_w
+            ldx         #>s_stab_w
+            jsr         word_is
+            bne         :+
+            lda         #ESC
+            clc
+            rts
+:
+            ldy         #1
+            lda         (p),Y
+            beq         @char
+            lda         (p)
+            cmp         #'^'
+            beq         @ctrl
+            ldy         #0                                  ; (ctrl-X)
+:
+            lda         (p),Y
+            cmp         s_ctrl_w,Y
+            bne         @bad
+            iny
+            cpy         #5
+            bcc         :-
+@ctrl:
+            iny
+            lda         (p),Y
+            bne         @bad
+            dey
+            lda         (p),Y
+            and         #$1F
+            clc
+            rts
+@char:
+            lda         (p)
+            cmp         #$80
+            bcs         @bad
+            clc
+            rts
+@bad:
             sec
             rts
 
@@ -4868,11 +5437,17 @@ gen_consctl:
             ldx         #>s_rawoff
 :
             jsr         srv_tputs
-            ldy         z:srv_id                            ; keys hydra, keys vt
+            ldy         z:srv_id                            ; keys hydra, keys vt, keys mods
             lda         kvt,Y
             beq         :+
             lda         #<s_keys_vt
             ldx         #>s_keys_vt
+            bra         :+++
+:
+            lda         w_kmod,Y
+            beq         :+
+            lda         #<s_keys_mods
+            ldx         #>s_keys_mods
             bra         :++
 :
             lda         #<s_keys_hydra
@@ -5830,9 +6405,9 @@ pc_late:
 .rodata
 ; ****************************************************************************
 ; The keys
-CSI_N       = 6
-csi_final:  .byte       "ABCDHF"
-csi_key:    .byte       KEY_UP, KEY_DOWN, KEY_RIGHT, KEY_LEFT, KEY_HOME, KEY_END
+CSI_N       = 10
+csi_final:  .byte       "ABCDHFPQRS"                        ; (P-S: F1-F4 modified, CSI 1 ; m P)
+csi_key:    .byte       KEY_UP, KEY_DOWN, KEY_RIGHT, KEY_LEFT, KEY_HOME, KEY_END, KEY_F1, KEY_F2, KEY_F3, KEY_F4
 SS3_N       = 10
 ss3_final:  .byte       "ABCDHFPQRS"
 ss3_key:    .byte       KEY_UP, KEY_DOWN, KEY_RIGHT, KEY_LEFT, KEY_HOME, KEY_END, KEY_F1, KEY_F2, KEY_F3, KEY_F4
@@ -5929,6 +6504,7 @@ wctl_cmds:
             .word       s_chrome_w, c_chrome
             .word       s_status_w, c_status
             .word       s_monitor_w, c_monitor
+            .word       s_key_w, c_key
             .word       0
 ser_cmds:
             .word       s_b300, c_b300
@@ -5957,6 +6533,33 @@ s_default_w: .byte      "default", 0
 s_chrome_w: .byte       "chrome", 0
 s_status_w: .byte       "status", 0
 s_monitor_w: .byte      "monitor", 0
+s_key_w:    .byte       "key", 0
+s_prefix_w: .byte       "prefix", 0
+s_ctab_w:   .byte       "ctrl-tab", 0
+s_cstab_w:  .byte       "ctrl-shift-tab", 0
+s_tab_w:    .byte       "tab", 0
+s_ctrl_w:   .byte       "ctrl-"
+s_stab_w:   .byte       "shift-tab", 0
+s_none_w:   .byte       "none", 0
+s_next_w:   .byte       "next", 0
+s_prev_w:   .byte       "previous", 0
+s_gnext_w:  .byte       "next-group", 0
+s_gprev_w:  .byte       "previous-group", 0
+s_list_w:   .byte       "list", 0
+s_hold_w:   .byte       "hold", 0
+s_close_w:  .byte       "close", 0
+ka_names:   .word       s_none_w, s_next_w, s_prev_w, s_gnext_w, s_gprev_w, s_new_w, s_list_w, s_hold_w, s_close_w
+ka_vec:     .word       k_none, win_next, win_prev, grp_next, grp_prev, k_new, ls_open, k_hold, k_close
+.assert     * - ka_vec = KA_N * 2 .and ka_vec - ka_names = KA_N * 2, error, "ka_names and ka_vec: KA_N each"
+kb_def:     .byte       HT, KA_NEXT, ESC, KA_PREV, 'c', KA_NEW, 'n', KA_GNEXT, 'p', KA_GPREV, 'w', KA_LIST
+            .byte       'h', KA_HOLD, 'x', KA_CLOSE, 0      ; (The keys after the prefix, as it starts)
+s_hex:      .byte       "0123456789abcdef"
+s_ls_label: .byte       "windows", 0
+s_ls_head:  .byte       ESC, "[?25lThe windows: a window's key, or the arrows and Enter, shows it; q the one before", CR, LF
+            .byte       CR, LF, 0
+s_ls_grp:   .byte       "  (group ", 0
+s_ls_end:   .byte       ")", CR, LF, 0
+s_ls_col:   .byte       ";1H", 0
 s_top_w:    .byte       "top", 0
 s_bottom_w: .byte       "bottom", 0
 s_on_w:     .byte       "on", 0
@@ -5964,6 +6567,7 @@ s_off_w:    .byte       "off", 0
 s_m_raw:    .byte       "raw", 0
 s_m_cooked: .byte       "cooked", 0
 s_m_vt:     .byte       " vt", 0
+s_m_mods:   .byte       " mods", 0
 s_m_held:   .byte       " held", 0
 s_time:     .byte       "#t/time", 0
 s_tm_none:  .byte       "????-??-?? ??:??:??"
@@ -6003,8 +6607,10 @@ s_rawoff:   .byte       "rawoff", LF, 0
 s_keys_w:   .byte       "keys", 0
 s_vt_w:     .byte       "vt", 0
 s_hydra_w:  .byte       "hydra", 0
+s_mods_w:   .byte       "mods", 0
 s_keys_vt:  .byte       "keys vt", LF, 0
 s_keys_hydra: .byte     "keys hydra", LF, 0
+s_keys_mods: .byte      "keys mods", LF, 0
 s_scroll_w: .byte       "scroll", 0
 s_jump_w:   .byte       "jump", 0
 s_smooth_w: .byte       "smooth", 0

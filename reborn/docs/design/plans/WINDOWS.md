@@ -221,7 +221,7 @@ Painting a whole 80 x 60 screen through `#v/term` is estimated at 0.2-0.3 s: abo
 **Ctrl-Tab has no byte of its own.**  A terminal sends it as xterm's `CSI 27;5;9~` (modifyOtherKeys) or as the newer `CSI 9;5u`, and Ctrl-Shift-Tab with 6 for 5.
 * **cons's decoder learns both forms**, and the modifiers it drops now (`CSI 1;5A` is Ctrl-Up, and so on).
 * **The input controller's firmware** (VIDEO.md step 6) should send its keys as the same sequences a PC terminal sends, so there's one decoder for both sources.
-* **The PC tool** (hydrapc.js in Windows Terminal) is still to be tried.  Windows Terminal keeps Ctrl-Tab for its own tabs unless that binding is removed, and then sends a Tab.  The PC tool can ask for win32-input-mode (`CSI ?9001h`) and send `CSI 9;5u` itself.
+* **The PC tool** (hydrapc.js in Windows Terminal): Windows Terminal keeps Ctrl-Tab for its own tabs unless that binding is removed, and then sends a Tab.  The PC tool asks for win32-input-mode (`CSI ?9001h`, its `--win32-input`) and sends `CSI 9;5u` itself (W5d).
 
 Ctrl-] Tab works on every terminal.
 
@@ -497,6 +497,13 @@ October 2026, on `reborn-text-windows` (reborn's `docs/status.md`, "The text win
 * **It isn't waited for**: its program is an orphan as soon as `new-window` ends, so init takes its record (t_rc, the tests' init, now does too: a record nobody takes keeps its task).
 * **The languages' words run the command**: HyForth's through `run` (the line split at blanks, which `new-window` joins again: rc sees the line, not the Forth shell), hylang's through `(run "new-window" cmd)`, the line one argument.  `new-group` is `new-window -g`.  C's `hy_wnew` only makes the window: a C program that wants another window for its own output opens `#cN/cons`.
 * **A window painted again trims its blanks**, so after a repaint a prompt ends the output without its space (and a cursor move follows): the test harness's prompt wait ignores escape sequences, and takes a `%` alone.
+
+### **As built: W5d**
+
+* **The bindings are a table**: an action for each byte after the prefix (ESC's is Shift-Tab's, `ESC [ Z`), Ctrl-Tab's and Ctrl-Shift-Tab's, and the prefix itself, which the irq entry compares from the zero page.  A digit after the prefix is always its window, and the prefix twice the prefix.  `key` lines are `wctl`'s, console-wide, so `/lib/windows` can hold them; a key is named as a character, `ctrl-X` or `^X` (rc's `^` joins words: `ctrl-X` needs no quotes), `tab` or `shift-tab`.
+* **The list is a window of the console's own**, in a group of its own (the bar shows it while it's up), its notes the window's before it (Ctrl-C goes where it went), written while it's hidden (so its text never waits for the serial port) and then shown; it goes when another window is shown, however that happens.  It needs a free window and its banks: with none, Ctrl-] w does nothing.  A window's key is its number in hex, so windows 10-15, which have no Ctrl-] digit, have one here.
+* **Modifiers are a program's to ask for** (`keys mods`), as `KEY_MOD`, its bits, then the key: a program that didn't ask gets the keys as before, the modifiers dropped.  HyForth's `ekey` gives Forth 2012's form, the key with `k-shift-mask`, `k-ctrl-mask`, `k-alt-mask` or'd in.
+* **win32-input-mode is the PC's**: the PC tool (and the emulator's terminal) make Windows Terminal's records into an xterm's bytes, so the Hydra decodes one form.  It's asked for only with `--win32-input`, as it changes how every key comes.
 
 ### **Decisions**
 

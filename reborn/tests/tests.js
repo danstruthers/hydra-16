@@ -26,6 +26,7 @@ const path = require('path');
 const hydrafs = require('../sim/tools/hydrafs.js');
 const { createXmodemPeer } = require('../sim/lib/xmpeer.js');
 const { VT, DEC_ASCII } = require('../sim/lib/vt.js');
+const { createWin32Input } = require('../sim/lib/win32in.js');
 
 const IRQ_OFF_MAX = 200;                                      // (docs/design/reimplementation-from-scratch.md, §8: 115200)
 const S1_BYTES = 2000;
@@ -2769,6 +2770,38 @@ module.exports = {
       },
       expect: ['hi from 1\n', 'cat /dev/wctl\n0 0 80 24\n1 1 80 24 *\n', 'shell in $window; cat /dev/wctl\nshell in 1\n0 0 80 24\n1 0 80 24 *\n',
         'fth 1', 'fgrp\n0 0 80 24\n1 1 80 24 *', 'hyl 1', 'hgrp\n0 0 80 24\n1 1 80 24 *', 'echo done\ndone\n%'],
+    },
+    {
+      name: 'winkeys', what: 'the windows\' keys (W5d): wctl\'s key lines (the prefix Ctrl-A, keys after it, Ctrl-Tab\'s action; a digit, an unknown action, Ctrl-C as the prefix refused); Ctrl-] w\'s list (a line a window: its key, number, label and group; chosen with the arrows and Enter, a key, q, Escape twice; the window shown each time it opens marked; activity, +, as monitor on and off say); Ctrl-Tab and Ctrl-Shift-Tab as Windows Terminal\'s win32-input-mode sends them, made into CSI u\'s by sim/lib/win32in.js (the PC tool\'s --win32-input); keys mods (HyForth\'s ekey: Ctrl-Up, Up, Shift-F2, the k- masks or\'d in)',
+      init: 't_rc', cycles: 200e6,
+      // (Windows 0, 1 in its group, 2 in a group of its own, each held by a sleep; monitor on in 1, on then off in 2,
+      // each written to: the first list marks 1's activity, +, not 2's.  The lists, in order, with the window shown before each
+      // marked: 0; 2 (the first's down, down, Enter); 1 (its 0, then Ctrl-Tab); 0 (its q, then Ctrl-Shift-Tab); 2
+      // (its Escape twice, then Ctrl-Tab bound to next-group; the list by the key g, its 1, then Ctrl-A 0)
+      get machine() {
+        const w32 = s => { const o = []; const d = createWin32Input(b => o.push(...b)); for (const c of Buffer.from(s, 'latin1')) d.push(c); d.flush(); return String.fromCharCode(...o); };
+        const rec = (vk, uc, cs) => '\x1b[' + vk + ';15;' + uc + ';1;' + cs + ';1_';
+        const CTAB = w32(rec(9, 9, 8)), CSTAB = w32(rec(9, 9, 0x18)), L = '\u0100', W = '\x01w' + L;
+        return { input: 'āecho new >/dev/wctl; echo new group >/dev/wctl\r' + 'āecho key prefix ctrl-a >/dev/wctl\r' +
+          'āsleep 60 >\'#c1/cons\' &\r' + 'āsleep 60 >\'#c2/cons\' &\r' + 'āecho monitor on >\'#c1/wctl\'\r' +
+          'āecho monitor on >\'#c2/wctl\'\r' + 'āecho monitor off >\'#c2/wctl\'\r' + 'āecho x >\'#c1/cons\'; echo x >\'#c2/cons\'\r' +
+          'āecho key 5 list >/dev/wctl\r' + 'āecho key z bogus >/dev/wctl\r' + 'āecho key prefix ctrl-c >/dev/wctl\r' +
+          'ā' + W + '\x1b[B' + L + '\x1b[B' + L + '\r' + L + W + '0' +
+          'ā' + CTAB + L + W + 'q' + L + CSTAB + L + W + '\x1b\x1b' +
+          'āecho key ctrl-tab next-group >/dev/wctl\r' + 'āecho key g list >/dev/wctl\r' + 'ā' + CTAB + L + '\x01g' + L + '1' + L + '\x010' +
+          'ācat /dev/wctl\r' + 'āforth\r' + L + L + 'require facility.fl\r' + L +
+          ': t s" /dev/consctl" w/o open-file throw >r s" keys mods" r@ write-file throw\r' + L +
+          '  ekey . ekey . ekey . ekey . r> close-file throw ;\r' + L + 't\r' + L + '\x1b[1;5A' + L + '\x1b[A' + L + '\x1b[1;2Q' + L + 'x' + L +
+          'bye\r' + 'āecho done\r' };
+      },
+      expect: ['5 list >/dev/wctl\necho: write error: invalid argument', 'z bogus >/dev/wctl\necho: write error: invalid argument',
+        'prefix ctrl-c >/dev/wctl\necho: write error: invalid argument', '> 0  0 rc  (group 0)\n  1  1+   (group 0)\n  2  2   (group 1)\n',
+        'cat /dev/wctl\n0 0 80 24 *\n1 0 80 24\n2 1 80 24\n', '640 128 395 120  ok', 'echo done\ndone\n%'],
+      check(m) {
+        const out = m.out.replace(/\r/g, ''), marked = [];
+        for (const part of out.split('The windows: ').slice(1)) { const k = part.match(/\n> ([0-9a-f]) /); marked.push(k ? k[1] : '?'); }
+        return marked.join(' ') === '0 2 1 0 2' ? [] : ['the lists marked ' + marked.join(' ') + ', not 0 2 1 0 2'];
+      },
     },
     {
       name: 'pcm', what: 'the Vera X\'s PCM (vid\'s /pcm and /pcmctl), at rc: its files and state; the rate (the VERA\'s nearest) and volume; raw samples from a card into the FIFO, drained; bad commands; /pcm one task\'s (another\'s pcmctl: busy); WAV files played (8 bits mono, made signed; 16 bits stereo past an odd chunk; a float one, not a song); a ZSM\'s PCM instruments (one, then one looped, stopped by the FIFO emptied: from RAM) and its claim of the PCM; one too big for RAM (from the file); the FIFO\'s bytes in order, none lost, its runs dry only at the ends',

@@ -156,6 +156,11 @@ const char* __fastcall__ hy_errstr (unsigned char code);    /* An error code's t
 #define CH_F10              HY_KEY_F10
 #define CH_RESIZE           HY_KEY_RESIZE                   /* (The window's size changed: screensize has the new one) */
 #define CH_FOCUS            HY_KEY_FOCUS                    /* (The focus moved in its group: the window's number next) */
+#define CH_MOD              HY_KEY_MOD                      /* (consctl's keys mods: a modified key, its modifiers next,
+                                                            **   HY_MOD_*, then the key) */
+#define HY_MOD_SHIFT        1
+#define HY_MOD_ALT          2
+#define HY_MOD_CTRL         4
 #define CH_ENTER            '\n'
 #define CH_ESC              0x1B
 

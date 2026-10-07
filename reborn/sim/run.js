@@ -11,6 +11,8 @@
 //                       screen as text, Ctrl-A p saves it as a PNG, Ctrl-A h helps.  The terminal's size is told
 //                       to the Hydra as the PC tool tells it (ESC [ 8 ; rows ; columns t), when it asks (ESC [ 18 t, not
 //                       shown) and as the window changes
+//   --win32-input       -i: Windows Terminal's win32-input-mode, as the PC tool's (sim/lib/win32in.js): Ctrl-Tab and
+//                       Ctrl-Shift-Tab reach the Hydra (once Windows Terminal's own binding for them is gone)
 //   --cycles N          stop at cycle N (default 30000000: 8.4 s at 3.58 MHz; interactive: never)
 //   --input TEXT        keys to type (\r, \n: Return; \w: wait 2M cycles), one every 20000 cycles from cycle 200000
 //   --paste             type them as fast as the line goes (a byte arriving while the last is unread is lost)
@@ -58,6 +60,7 @@ const path = require('path');
 const { createMachine, romBank } = require('./lib/machine.js');
 const { createPcHost } = require('./lib/pchost.js');
 const { encodePng } = require('./lib/png.js');
+const { createWin32Input, ENABLE: W32_ENABLE, DISABLE: W32_DISABLE } = require('./lib/win32in.js');
 
 const ROOT = path.join(__dirname, '..');
 const hx = (v, n = 2) => v.toString(16).toUpperCase().padStart(n, '0');
@@ -296,7 +299,18 @@ function interactive(m, opt) {
     acia.type(String.fromCharCode(b));
   }
   if (tty) stdin.setRawMode(true);
-  stdin.on('data', buf => { for (const b of buf) if (!(!tty && b === 0x0D)) onKey(b); });
+  const w32 = opt.win32 && tty && stdout.isTTY ? createWin32Input(bytes => { for (const b of bytes) onKey(b); }) : null;
+  let w32wait = null;
+  if (w32) stdout.write(W32_ENABLE);
+  stdin.on('data', buf => {
+    if (w32) {                                                // (A record part-way: the rest soon, or it's bytes)
+      for (const b of buf) w32.push(b);
+      clearTimeout(w32wait);
+      if (w32.pending()) w32wait = setTimeout(() => w32.flush(), 50);
+      return;
+    }
+    for (const b of buf) if (!(!tty && b === 0x0D)) onKey(b);
+  });
   stdin.on('end', () => { eof = true; if (mon) { mon = false; quit = 'end of input (the monitor)'; setTimeout(tick, 0); } });
   stdin.resume();
   const tellSize = () => { if (stdout.isTTY && stdout.columns && stdout.rows) acia.type('\x1b[8;' + stdout.rows + ';' + stdout.columns + 't'); };
@@ -310,7 +324,7 @@ function interactive(m, opt) {
     }
     if (m.out.length > 1 << 16) { m.out = m.out.slice(-1024); sent = m.out.length; }
   };
-  const finish = why => { flush(); say('stopped: ' + why + '; ' + status()); if (tty) stdin.setRawMode(false); process.exit(cpu.halted ? 1 : 0); };
+  const finish = why => { flush(); say('stopped: ' + why + '; ' + status()); if (w32) stdout.write(W32_DISABLE); if (tty) stdin.setRawMode(false); process.exit(cpu.halted ? 1 : 0); };
   function tick() {
     if (mon) return;                                            // (Stopped: the monitor's)
     const t = now();
@@ -372,6 +386,7 @@ function main(argv) {
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i], next = () => argv[++i];
     if (a === '-i' || a === '--interactive') opt.interactive = true;
+    else if (a === '--win32-input') opt.win32 = true;
     else if (a === '--cycles') { opt.cycles = +next(); opt.cyclesSet = true; }
     else if (a === '--input') opt.input = unescape(next());
     else if (a === '--paste') opt.paste = true;
