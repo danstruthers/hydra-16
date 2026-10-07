@@ -41,6 +41,7 @@ module      xd
 module      cmp
 module      more
 module      ed
+module      as
 module      hwtest
 module      play
 module      xmodem

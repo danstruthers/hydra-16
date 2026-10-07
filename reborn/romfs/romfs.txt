@@ -9,6 +9,17 @@ lib/namespace       lib/namespace       ; The default namespace (the plan's appe
 lib/profile         lib/profile         ; What each shell runs as it starts (rc's: phase 4)
 lib/shell           lib/shell           ; The shell init and wstart start in each window: HyForth's (forth -l)
 lib/edit/help       lib/edit/help       ; edit's keys (its ^G)
+lib/as/hydra.inc    ../obj/sdk/hydra.inc ; as's include files (/lib/as: .include finds them there): the SDK's ...
+lib/as/hyx2.inc     ../sdk/asm/hyx2.inc
+lib/as/macros.inc   ../sdk/asm/macros.inc
+lib/as/toollib.inc  ../sdk/asm/toollib.inc
+lib/as/toollib.s    ../sdk/asm/toollib.s
+lib/as/srvlib.inc   ../sdk/asm/srvlib.inc
+lib/as/srvlib.s     ../sdk/asm/srvlib.s
+lib/as/nslib.s      ../sdk/asm/nslib.s
+lib/as/hi.s         ../sdk/asm/samples/hi/hi.s ;   and its samples
+lib/as/tick.s       ../sdk/asm/samples/tick/tick.s
+lib/as/upper.s      ../sdk/asm/samples/upper/upper.s
 doc/api.md          ../obj/gen/api.md   ; The system calls' reference (tools/apigen.js makes it at the build)
 bench/bench.hl      bench/bench.hl      ; hylang's, HyForth's and BASIC's benchmarks, the same in each (sim/bench.js compares them)
 bench/bench.fs      bench/bench.fs

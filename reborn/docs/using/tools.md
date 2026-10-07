@@ -17,7 +17,7 @@ Forth word to rc).  At HyForth's prompt, a tool whose name is also a Forth word 
 when `memory.fl`'s `free` is loaded).
 
 Contents: [Files](#files) · [Text](#text) · [The screen editor](#the-screen-editor) · [Tasks](#tasks) ·
-[The debugger](#the-debugger) · [The system](#the-system) · [Disks](#disks) · [Others](#others)
+[The debugger](#the-debugger) · [The assembler](#the-assembler) · [The system](#the-system) · [Disks](#disks) · [Others](#others)
 
 ## Files
 
@@ -178,6 +178,56 @@ own bytes; one in a ROM can't be set (`u` reaches an address there, a step at a 
 stops it too; `c` from there gives it its note (`sys: brk`), as it would have had.  A subroutine that reads the bytes
 after its `JSR` (its arguments) can't be stepped over with `n`; step into it with `s`.  `db` works through
 `/proc/N/ctl` and `mem`: `echo step >/proc/N/ctl` does the same by hand, on a task that's stopped.
+
+## The assembler
+
+`as [-bl] file.s [out]` assembles a program for the 65C02 on the Hydra itself, from the same source ca65 takes on a
+PC: a RAM program, `out` (`file` without its `.s`, if there's no `out`), that runs as any program does.  `-l`
+writes its labels too, `out.lbl` (ld65's `-Ln` form, which `db`'s `l` reads); `-b` writes the bytes alone,
+no header, from `.org`'s address (`$0800` if there's none): a ROM's image, say.
+
+The SDK's files are in `/lib/as`: `hydra.inc`, `hyx2.inc`, `macros.inc`, `toollib.inc` and `toollib.s`,
+`srvlib.inc` and `srvlib.s`, `nslib.s`, and three of its samples, `hi.s`, `tick.s` and `upper.s`.  `.include`
+and `.incbin` find a file as it's named, then beside the file that names it, then in `/lib/as`.  A program made
+from the same source by ca65 and ld65 (`sdk/asm/hyx2.cfg`) is the same, byte for byte.
+
+What it takes is ca65's, as the SDK's sources use it:
+
+| Kind | What `as` takes |
+| :--- | :--- |
+| Instructions | The W65C02S's, each mode written as ca65 writes it; `a:` or `z:` before an address makes it absolute or zero page.  An address is on the zero page if it's known by then and under `$100` (a label further on is absolute) |
+| Labels | `name:`; cheap locals, `@name:`, between one normal label and the next; unnamed ones, `:`, reached as `:+` `:++` ... and `:-` `:--` ...; constants, `name = expr` and `name := expr` |
+| Expressions | 32 bits, with ca65's operators and their order (`* / .mod & ^ << >>`, `+ - \|`, the comparisons, `&& \|\| .and .or .xor .not`, unary `- ~ < > ^ !`), `*` (here), `$hex`, `%binary`, `'c'`, and `.lobyte` `.hibyte` `.bankbyte` `.loword` `.hiword` `.strlen` `.defined` `.blank` `.match` |
+| Data | `.byte` (and strings), `.word`, `.addr`, `.dword`, `.res`, `.asciiz`, `.incbin "file" [, start [, count]]` |
+| Files | `.include` |
+| Conditions | `.if`, `.ifdef`, `.ifndef`, `.ifblank`, `.ifnblank`, `.elseif`, `.else`, `.endif` |
+| Macros | `.macro name params` ... `.endmacro`, `.exitmacro`; an argument in `{ }` may have commas in it |
+| Segments | `.segment "NAME"`, `.zeropage`, `.code`, `.rodata`, `.data`, `.bss`, `.pushseg`, `.popseg` |
+| Checks | `.assert expr, error\|warning, "text"`, `.error`, `.warning` |
+| Taken and left | `.import`, `.export`, `.global` (and their `zp` kinds), `.setcpu`, `.feature`, `.macpack`, `.debuginfo`, `.list`, `.case` ... |
+
+Not there: `.proc` and `.scope`, `.repeat`, `.struct`, `.sprintf` and `.ident` (but in a branch that's not
+taken), and objects to link: one source file and what it includes make one program.  Its segments are laid out as
+`hyx2.cfg` lays them out: `ZEROPAGE` from `$22` (the program's `$5E` bytes), then from `$0800` `HEADER`, `CODE`,
+`RODATA`, `DATA` and `BSS`, to `$8000` at most, with ld65's names for them (`__DATA_LOAD__`, `__BSS_RUN__`,
+`__BSS_SIZE__`, `__RAM_LAST__` ...) and `HYX2_RAM` defined, as `hyx2.inc` needs.
+
+An error is said as `as: file:line: what`, and `as` ends with status 1; a warning is said, and the program made.  It
+reads its source three times (the segments' sizes, then each symbol's value, then the bytes), each file read from
+the disk once and kept in the task's RAM banks; a pass that finds errors is the last, so another pass's errors show
+once they're mended.  `hi.s`, with `hydra.inc` (some 47K of source), takes about 4 seconds; `upper.s`, with
+`toollib.s` too (83K), about 9.
+
+```
+/> as -l /lib/as/hi.s /ram/hi
+/> /ram/hi Ann
+Hello, Ann!
+I'm task 4, in /, in window 0.
+/> db /ram/hi Ann
+...
+db> l /ram/hi.lbl
+8 symbols
+```
 
 ## The system
 
