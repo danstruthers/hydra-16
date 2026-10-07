@@ -9,9 +9,10 @@ by side under `sim/test.js -j`: each part is `run.dl` itself with its list of fi
 nearly all of the suite's time in its tail loops, is cut into pieces on the test's card (`tests/tests.js`:
 `HYSUITE_PARTS`, `HYSUITE_CUTS`).  The files here stay as danlang has them.
 
-The old hylang (phase 7 as first built, to commit `a0973eb`) is gone: hylang is being written again from scratch, to
-the plan "danlang: review and 65C02 plan" (`docs/hylang.md` has its design).  Each phase of it runs the files it makes
-pass, from an emulated card, and none that passed may fail after:
+The old hylang (phase 7 as first built, to commit `a0973eb`) is gone: hylang was written again from scratch, to the
+plan "danlang: review and 65C02 plan" (`docs/hylang.md` has its design), and passes the whole suite (1,334 checks).
+Each phase ran the files it made pass, from an emulated card, and none that passed failed after; the phase each
+first ran from:
 
 | File | What | Runs from |
 | :--- | :--- | :--- |

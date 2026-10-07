@@ -128,9 +128,10 @@ PSG for itself claims those channels from `/dev/sndctl` too (`claim 0 65535`).
 
 **Interrupts.**  The driver still owns IRQ line 2 during a claim: its entry counts frames (so `frame` works), and
 clears the VSYNC, LINE and SPRCOL interrupts a claimer turns on (so they don't hold the line), and turns AFLOW off
-(the PCM FIFO's: nobody fills it yet).  A program that wants raster effects polls `VERA_ISR` or `SCANLINE`, or waits
-on `frame`; one that uses `frame` keeps VSYNC on in `VERA_IEN` (it's on as the claim starts).  As on the X16, keep interrupt code on data port 1 and a program's on port 0, and never leave CTRL's DCSEL
-other than 0 long.
+(the PCM FIFO's, a level that would hold the line: `pcm`'s writers wait for frames instead).  A program that wants
+raster effects polls `VERA_ISR` or `SCANLINE`, or waits on `frame`; one that uses `frame` keeps VSYNC on in `VERA_IEN`
+(it's on as the claim starts).  As on the X16, keep interrupt code on data port 1 and a program's on port 0, and never
+leave CTRL's DCSEL other than 0 long.
 
 **The registers** are `include/hw.inc`'s, the X16's names at the Hydra's base: `VERA_BASE` `$FF20`, `VERA_ADDR_L`,
 `VERA_ADDR_M`, `VERA_ADDR_H`, `VERA_DATA0`, `VERA_DATA1`, `VERA_CTRL`, `VERA_IEN`, `VERA_ISR`, `VERA_IRQ_LINE_L`,

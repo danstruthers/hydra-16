@@ -176,7 +176,7 @@ Each device has a library over its files, loaded by `use`; each is also an examp
 | `"gpio"` | Port A's pins: `(gpio pin)`, `(gpio! pin level)`, `(gpio-port)`, `(gpio-wait)` (CA1's next edge) |
 | `"i2c"` | `(i2c-devices)`, `(i2c-read addr n [reg])`, `(i2c-write addr bytes [reg])` |
 | `"spi"` | `(spi dev bytes)` (a transaction), `(spi-mode dev 3)` |
-| `"snd"` | The YM2151: `(snd-claim 0)`, `(snd-patch 0 n)`, `(snd-note 0 60)`, `(tune {{60 1} {64 1} {67 2}})` (MIDI notes, beats; `(note-of "C4")` a note's number), `(play path)` |
+| `"snd"` | The YM2151's channels 0-7, and with a Vera X its PSG's 8-23: `(snd-claim 0)`, `(snd-patch 0 n)`, `(snd-note 0 60)`, `(snd-wave 8 :saw)` (a PSG channel's waveform), `(tune {{60 1} {64 1} {67 2}})` (MIDI notes, beats; `(note-of "C4")` a note's number), `(snd-mml 0 "t180 o4 l8 c d e")` and `(snd-chord 0 "o4 c e g")` (the score language: play's `-m` and `-c`), `(play path)` |
 | `"disk"` | `(disks)`, `(df)`, `(cards)`, `(disk-start d)`, `(disk-stop d)` |
 | `"proc"` | Another task's `(task-args t)`, `(task-cwd t)`, `(task-env t)`, `(task-regs t)`, `(task-mem t addr n)` |
 | `"clock"` | `(set-date "2026-10-04 12:00:00")`, `(rtc)` |
