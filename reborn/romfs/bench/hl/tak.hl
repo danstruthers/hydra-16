@@ -1,0 +1,7 @@
+; tak: Takeuchi's function, three arguments, each call's three calls' values its arguments: tak(9, 6, 3),
+; 293 calls (as deep as HyForth's data stack, 32 cells, takes it), k times, summed
+; (bench.hl loads this: its functions, then its run)
+(fun {b-tak x y z} {if (< y x) (b-tak (b-tak (- x 1) y z) (b-tak (- y 1) z x) (b-tak (- z 1) x y)) z})
+(fun {b-taks k} {do =(s 0) (dotimes {rep k} (set! s (+ s (b-tak 9 6 3)))) s})
+
+(bench "tak" (fn {} {b-taks (bench.size 6 2)}))

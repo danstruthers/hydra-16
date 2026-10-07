@@ -1,0 +1,5 @@
+; hash: h = ((h & 255) * 31 + i) & 4095 for i below n, a multiplication a step
+; (bench.hl loads this: its functions, then its run)
+(fun {b-hash n} {do =(h 0) (dotimes {i n} (set! h (bit-and (+ (* (bit-and h 255) 31) i) 4095))) h})
+
+(bench "hash" (fn {} {b-hash (bench.size 2000 500)}))

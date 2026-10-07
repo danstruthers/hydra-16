@@ -206,11 +206,14 @@ bi_fun:
             stz         fa_flags
             jsr         arg0
             jsr         symbols
-            bcs         @spec
+            bcs         @spec0
             sta         et
             stx         et + 1
             ora         et + 1
-            beq         @spec
+            bne         :+
+@spec0:
+            jmp         @spec
+:
             jsr         arg1
             lda         ex
             ldx         ex + 1
@@ -249,7 +252,14 @@ bi_fun:
             iny
             lda         ex + 1
             sta         (hp),y
-            MOVW        cf, ex                              ; (Compiled now, for the bytecode machine: vm.inc's)
+            MOVW        cf, ex                              ; (Compiled now, for the bytecode machine: vm.inc's; its
+            lda         ex                                  ;   calls counted as one, so it's compiled at its next if
+            ldx         ex + 1                              ;   it isn't now (the arena full) or its code's dropped)
+            ldy         #5
+            jsr         cell_get
+            ldy         #10
+            lda         #<FIX(1)
+            sta         (hp),y
             FARN        6, vm_compile
             stz         ex
             stz         ex + 1

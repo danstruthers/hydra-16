@@ -1,0 +1,10 @@
+; sieve: the primes below n, a byte each in a buffer, a prime's multiples marked from its double
+; (bench.hl loads this: its functions, then its run)
+(fun {b-sieve n} {b-sieve-i (buffer n 1) n 2 0})
+(fun {b-sieve-i f n i count} {
+  if (>= i n) count
+  (if (zero? (f i)) (b-sieve-i f n (+ i 1) count)
+    (do (b-sieve-mark f n (+ i i) i) (b-sieve-i f n (+ i 1) (+ count 1))))})
+(fun {b-sieve-mark f n j i} {if (>= j n) NIL (do (buffer-put f j 0) (b-sieve-mark f n (+ j i) i))})
+
+(bench "sieve" (fn {} {b-sieve (bench.size 1024 512)}))

@@ -1,0 +1,13 @@
+; queens: the ways n queens can stand on an n by n board, none taking another, counted by backtracking (a byte
+; each for the columns and the two ways of diagonals)
+; (bench.hl loads this: its functions, then its run)
+(fun {b-queens n} {b-q n 0 (buffer n 0) (buffer (* 2 n) 0) (buffer (* 2 n) 0)})
+(fun {b-q n r col d1 d2} {if (== r n) 1 (do
+  =(c 0)
+  (dotimes {k n} (if (and (zero? (col k)) (zero? (d1 (+ r k))) (zero? (d2 (+ (- r k) n)))) (do
+    (buffer-put col k 1) (buffer-put d1 (+ r k) 1) (buffer-put d2 (+ (- r k) n) 1)
+    (set! c (+ c (b-q n (+ r 1) col d1 d2)))
+    (buffer-put col k 0) (buffer-put d1 (+ r k) 0) (buffer-put d2 (+ (- r k) n) 0))))
+  c)})
+
+(bench "queens" (fn {} {b-queens (bench.size 7 6)}))

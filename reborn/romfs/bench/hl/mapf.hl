@@ -1,0 +1,7 @@
+; mapf: the sum of the squares of the evens below n (sum, map, filter, range), k times
+; (bench.hl loads this: its functions, then its run)
+(fun {b-sq x} {* x x})
+(fun {b-even? x} {zero? (bit-and x 1)})
+(fun {b-mapf n k} {do =(r 0) (dotimes {rep k} (set! r (sum (map b-sq (filter b-even? (range 0 n)))))) r})
+
+(bench "mapf" (fn {} {b-mapf 40 (bench.size 20 5)}))

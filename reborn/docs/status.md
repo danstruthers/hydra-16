@@ -116,7 +116,7 @@ PASS hyhydra hylang's Hydra built-ins and system calls (the plan's phases 9 and 
 PASS hydev   hylang's device libraries (the plan's phase 11: /lib/hylang's, loaded by use, over the devices' files), devices.hl as a script: gpio (pins, the port, ctl as a hash, CA1's edge), i2c (a memory written and read at a register, the devices, one that doesn't answer), spi (an echo device's transactions, mode 3), cons (the window, the windows, the bell), proc (a task's args, cwd, regs, memory, banks; its environment, its namespace), clock (the chip, the time set), disk (the disks, the cards: this one and one on SPI device 5; the ROM disk's room), pc (the PC tool answers; a file of its read), snd (note-of; a tune, its notes on the YM2151 in time; a channel's settings)
 PASS hysh    hylang as the shell (the plan's phase 12: hylang -l, login.hl, profile.hl, shell.hl): the rc test's lines that stand alone, each an rc line at hylang's prompt (rc -c), as at rc's; hylang's lines by their first character; cd and the prompt; $status and status; bind and unmount in hylang's namespace; a usage; & and $apid; Ctrl-C to cat, rc's; exit
 PASS hywin   hylang as a window's shell: a card's /lib/shell naming /bin/hylang -l, init's in window 0 and wstart's in a window made (Ctrl-] c: $window, cons.hl's window)
-PASS bench   hylang's and HyForth's benchmarks (romfs/bench: bench.hl, bench.fs; sim/bench.js times them against each other) at their quick sizes: each language's result of each the same (a counting loop, calls of a function of two arguments, Fibonacci, a sieve of bytes, an insertion sort of bytes, gcds by subtraction)
+PASS bench   hylang's and HyForth's benchmarks (romfs/bench: bench.hl and hl/NAME.hl, bench.fs; sim/bench.js times them against each other) at their quick sizes, all of hylang's in one hylang: each language's result of each the same (calls, fib, tak, ack; loop, while, dotimes, nested; gcd, collatz, hash; sieve, sort, matrix, queens; mapf, fold, each; chars, digits)
 PASS kcopy   spike S2: copying between tasks  (6 checks)
 PASS irq     spike S1: 115200 received by an irq entry while tasks spin  (6 checks)
 PASS vera    the emulator's Vera X (sim/lib/vera.js), the chip as a program sees it (no vid): the version register; ADDR0 and ADDR1, their steps, a data port's byte fetched ahead; the display's registers at the start; VSYNC (59.5 a second), LINE and SCANLINE (bit 8 too); sprites colliding; the PCM FIFO (empty, full, AFLOW and its interrupt's time); a PSG voice; the SPI port with no card; CTRL's reset  (45 checks)
@@ -619,6 +619,116 @@ the 65C02 its jump saves 4 cycles of the fetch, and the R bit and the operands' 
 What's left of the gap is the machine itself: an op's fetch and jump, its operands read through `ip`, and a
 frame's words on the evaluation stack.  Native code, compiled to the 65C02's own instructions, is next, on a
 branch of its own.
+
+**Native code (branch `reborn-hynat`).**  hylang's eighth bank, `vmx.inc`, makes each function's bytecode the
+65C02's own code in the arena (docs/hylang.md, "Native code").  Milestone 1: each op a stub that points `vm_ip`
+at its data and jumps to its code in the machine, whose next op is `jmp (vm_ip)`: every op as it was, a little
+slower than the bytecode (a call 1,185 cycles, 1,146).  Milestone 2: the usual ops in line, from templates
+(`vmxt.inc`, made by `tools/hyvmxt.js`, 66 of them), each with its stub after it for its slow way: constants,
+arguments, locals and pushes; jumps; the fused ops (LQ, LQP, JLQ, JQ, LL, JLL); the quick ops of two values;
+`LOCALS`, blocks' and loops' ops; and the calls (`SHEAD`, `CALL` while their caches hold, `CSELF`, `TSELF`, `RET`
+to a caller in its bank).  Two faults on the way: a word's place in a template was `$0000`, which ca65 made page
+zero's (two bytes, its patch over the opcode: `a:$0000` now); and hyhydra's loop for Ctrl-C ended before the
+Ctrl-C came (30,000 steps now).  A tail loop's step 370 cycles (`hyspeed`, 632 in the bytecode), a call of a
+function of two arguments 918 (1,146); a step of `dotimes` 436 (877), of `each` 521 (900), of a `while` over two
+locals 359 (702).
+
+Milestone 3, the buffers: a buffer's byte, `(b i)`, read at once on `CALL`'s way past its cache (`op_callm`,
+where the `CALL` template's stub goes, the cache looked at already), not through the generic call; `buffer-put`
+of three the first thing `BCALL`'s code looks for; `HEAD` of one argument in line (a buffer, or a function
+partially applied, pushed); and a byte's place found in one routine (`vm_bat`: the cell's, the blob's, the
+byte's).  `(b-sort 60)` is 2.52M cycles, from 3.48M.  A fault found on the way, the evaluator's own: a buffer
+given two arguments made its error of a message in the wrong bank (`s_bufcall` was in `.rodata`; `RODATA4`, where
+`msg_err` reads, now).
+
+Milestone 4, the calls: `CALL` and `CSELF` push their frame's record in one store of four bytes (two pushes near
+a page's end: `vm_rec`) and take `vm_s` from the function's word they've found; and their returns go to a pad
+past their data, which finds the caller's frame from the call's h and r, its numbers in it, so `RET` only finds
+the caller's code, drops the frame and looks for an error (the caller's r says if it's returned too:
+`vm_reterr`).  The pad gives the frame again whichever way it's come to: the machine's `RET`, and the
+evaluator's resume (`HEAD`'s and `SHEAD`'s t are the pad now, `VXK_Q`, as a resume reads h and r before it).  A
+call of a function of two arguments is 803 cycles (`hyspeed`, from 918).  Two faults on the way: an op's native
+size is a byte, and `CALL`'s grew past it (329 bytes: its pushes near a page's end are `vm_rec`'s now, and its
+checks branch to a jump to its stub in the template's middle; `vmxt.inc` asserts each op's size); and the
+evaluator's resume at `HEAD`'s t, past the pad, found h and r in the pad's code (`any?`'s answer wrong).
+
+Milestone 5, the fused ops: those of a local or `ex` and a constant work from the value where it is (`bit #1`,
+the 65C02's, for a fixnum's bit, not `lsr` on a copy in `ht`), LQP pushes its value from `.A`, and LL's and
+JLL's read their second local where it is.  A tail loop's step is 328 cycles (`hyspeed`, from 363).  Milestone 6,
+the calls of a function by its own name: `CSELF` and `TSELF` no longer look at the frame's count (`vc_self` makes
+them only of as many arguments as the formals, so `vm_rb` is M), and `TSELF` copies 0 to 4 arguments in line (a
+template for each count, `vx_ttself`, `vx_tpl`'s choice).  A tail loop's step is 306 cycles.
+
+Milestone 7, multiplication and tail loops.  `*` of two fixnums whose product is one is worked at once (`vm_bmul`,
+`vm_fmul`: quarter squares, `vm_sqlo` and `vm_sqhi`, 1K in the machine's bank), as `BCALL`'s template (`bmul`)
+and first in `BCALL`'s code: a product of two numbers under 128 about 320 cycles, of bigger ones about 590 (2,900
+through the built-in).  A tail call of the function by its own name whose arguments call nothing (the compiler's
+`vc_shflag`: locals, constants, the quick and fused ops, `*`) has its `SHEAD` flagged (m's bit 7), and its head
+isn't pushed: nothing can bind the name again before `TSELF`, and the flagged `SHEAD`'s cache holds only this
+frame's function, so at its epoch it's an epoch's look (`shself`) and `TSELF` takes the arguments as they are
+(`tselfh`); the machine's way pushes the head and says so (`vm_shf`), and Ctrl-C or a note pushes it then
+(`vm_tsh`).  A tail loop's step is 251 cycles.  On the way, the arena's banks: a return to a caller in another
+bank of the arena went the machine's whole way (`op_ret`), which the calls benchmark came to as the templates
+grew (725 ms); `vm_retx` now (its bank, then `RET`'s way, in ROM).
+
+| Benchmark | Bytecode (ms) | M2 (ms) | M3 (ms) | M4 (ms) | M5 (ms) | M6 (ms) | M7 (ms) | HyForth (ms) | hylang/HyForth |
+|---|---|---|---|---|---|---|---|---|---|
+| loop | 925 | 550 | 545 | 545 | 490 | 460 | 395 | 76 | 5.2x |
+| calls | 1,005 | 640 | 640 | 575 | 555 | 540 | 540 | 65 | 8.3x |
+| fib | 980 | 655 | 655 | 550 | 530 | 515 | 520 | 181 | 2.9x |
+| sieve | 1,905 | 1,430 | 1,160 | 1,160 | 1,140 | 1,105 | 1,075 | 332 | 3.2x |
+| sort | 3,275 | 2,710 | 1,915 | 1,915 | 1,890 | 1,855 | 1,760 | 480 | 3.7x |
+| gcd | 960 | 600 | 600 | 570 | 540 | 520 | 485 | 350 | 1.4x |
+| all | 9,050 | 6,585 | 5,515 | 5,315 | 5,145 | 4,995 | 4,775 | 1,484 | 3.2x (geometric mean 3.6x, from 6.9x) |
+
+Milestone 8, the walks.  `map`, `filter`, `foldl`, `any?`, `all?`, `find`, `count`, `sum` and `product` called
+from compiled code (`BCALL`) walk their list in the machine (`vm_walk`), not the evaluator: their frame on the
+stack where their arguments were, the function called for each item the machine's way, its return the arena's
+trampoline (at its first bank's start: `jmp vm_wret`); a compiled function's frame made at once once its code's
+known (`WF_FC`), with its item in one store; `foldl`'s `+` and `*` of fixnums (`sum`'s, `product`'s) with no
+call.  A function the evaluator's walk would treat otherwise (a number, a buffer, an fexpr, a built-in of
+another count) and `foldr` stay the evaluator's; so do the walks of code that's evaluated (a line at the prompt).
+An item of `map` by a compiled function is about 1,470 cycles (2,820 by the evaluator), of `foldl` with `+` 665
+(1,810), of `any?` by a function made with `fn` 1,230 (2,465).  `each`'s `EACHI` is in line (`vm_eachn`): a step
+of `each` about 380 cycles (660).  A fault found on the way, milestone 7's: the flagged `SHEAD`'s look at m in
+`op_shead` read it with the heap's bank in the window, so some `SHEAD`s' caches were never filled, as the code's
+place happened to fall (the calls benchmark 725 ms or 540).
+
+What's left: the depth and Ctrl-C at each call, the global's head pushed for a call that isn't a tail loop's, a
+template's `jmp` past its stub; and the walks of evaluated code (an item of `map` at the prompt 2,951 cycles).
+
+**The benchmarks, twenty.**  hylang's and HyForth's benchmarks are twenty now, by kind: calls (`calls`, `fib`,
+`tak`, `ack`), loops (`loop`, `while`, `dotimes`, `nested`), arithmetic (`gcd`, `collatz`, `hash`), bytes (`sieve`, `sort`,
+`matrix`, `queens`), lists and functions given functions (`mapf`, `fold`, `each`), text (`chars`, `digits`).
+`bench.hl` loads each from its own file (`/rom/bench/hl`); `sim/bench.js` prints them by kind with each kind's
+geometric mean, runs each of hylang's in a hylang of its own, and can put another tree's build beside them (`--vs`:
+the bytecode machine's, for one).  docs/hylang.md, "Against HyForth", has the table: hylang is 3.6 times HyForth's
+time in all (the ratios' geometric mean 4.0), from 0.9 (`digits`) and 1.1 (`matrix`) to 15.8 (`nested`); the native
+code 1.6 times the bytecode's speed.  What they found: the bits' and the characters' built-ins aren't quick ops (some
+2,000 cycles a call: the loops that use them are 7 to 16 times HyForth's), and the arena holds the native code of
+40 or 50 functions, past which a function is evaluated (all twenty in one hylang: 0.8 times the bytecode's speed).
+
+**The arena's room.**  The native code was some ten times the bytecode's size: `RET` a template of 93 bytes (a
+function has two or three), and a stub 11.  `RET` is `jmp vm_nret` now, the machine's code in ROM, and a stub
+`jsr vm_sj` and its code's word (5 bytes): a third less.  A code's place is even (a `NOP` before a stub, when it
+wants one), so its fixnum has room for a bank's index of 3 bits, and the arena has eight banks (64K).  All twenty
+benchmarks fit in one hylang: `--together` 34,590 ms, against 110,185 when the arena filled by `sort`'s.  A
+script's items: the arena full and nothing under the script's `load` (no frame of the machine's), it's emptied
+before the next item, as a line at the prompt does; and `fun` counts its function's first call, so one it couldn't
+compile is compiled at its next call.  With an arena of one bank, a script of all twenty's files took 62 million
+cycles (58 with eight banks), against 204 when it stayed full.  On the way, a bug of the new layout's: a stub's
+data address past a filler lost a carry where it crossed a page (an edge case's `Too deep`).
+
+**The bits and the characters in native code.**  `BCALL` of `bit-and`, `bit-or`, `bit-xor`, `shl` or `shr` of
+two, `char-at` of two and `char-code` of one has a template of its own, as `*` of two has (`vx_tsel`'s table): it
+calls the machine's routine (`vm_band`, `vm_bor`, `vm_bxor`, `vm_bshl`, `vm_bshr`, `vm_bchat`, `vm_bccode`),
+which does it for fixnums (a string's byte, a character's code) and drops the arguments, else the built-in's call
+as before (an edge-case set, `bit-and` of a bignum to `char-at` past a string's end and `shl` out of a fixnum,
+the same as the bytecode machine's).  Some 2,000 cycles a call before; now `while` 3,050 ms to 725, `dotimes`
+3,075 to 750, `nested` 4,960 to 825, `collatz` 1,690 to 420, `hash` 3,025 to 715, `chars` 2,065 to 775, and
+`fold` and `each` (`bit-and` in their functions) 2,460 to 1,265 and 1,580 to 450.  The twenty: 17,655 ms (33,945
+before), 1.9 times HyForth's time (the ratios' geometric mean 2.3; 3.6 and 4.0 before), 2.8 times the bytecode's
+speed; all in one hylang 18,010.
 
 | Step | | Notes |
 |---|---|---|

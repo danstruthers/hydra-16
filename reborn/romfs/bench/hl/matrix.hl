@@ -1,0 +1,15 @@
+; matrix: two n by n matrices of bytes (a: (i + j) & 3, b: i * j & 3) multiplied, the product's elements
+; summed
+; (bench.hl loads this: its functions, then its run)
+(fun {b-matrix n} {do
+  =(a (buffer (* n n))) =(b (buffer (* n n))) =(s 0) =(c 0)
+  (dotimes {i n} (dotimes {j n} (do
+    (buffer-put a (+ (* i n) j) (bit-and (+ i j) 3))
+    (buffer-put b (+ (* i n) j) (bit-and (* i j) 3)))))
+  (dotimes {i n} (dotimes {j n} (do
+    (set! c 0)
+    (dotimes {k n} (set! c (+ c (* (a (+ (* i n) k)) (b (+ (* k n) j))))))
+    (set! s (+ s c)))))
+  s})
+
+(bench "matrix" (fn {} {b-matrix (bench.size 10 6)}))
