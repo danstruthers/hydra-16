@@ -1296,17 +1296,17 @@ module.exports = {
       },
     },
     {
-      name: 'c', what: 'the C target (cc65): its samples at rc, the library\'s test (ctest), conio\'s raw keys (and raw ended with the program)',
+      name: 'c', what: 'the C target (cc65): its samples at rc, the library\'s test (ctest), conio\'s raw keys (an Escape alone too; and raw ended with the program)',
       init: 't_rc', cycles: 150e6,
       // (Each line typed at its prompt, as the tools test's.  Then keys: three keys and q; and again, ended by Ctrl-C,
       // its window cooked again for rc)
       get machine() {
-        return { input: C_LINES.map(l => 'ā' + l[0] + '\r').join('') + 'ā/rom/sample/c/keys\rĀĀab\x1b[Aq' +
+        return { input: C_LINES.map(l => 'ā' + l[0] + '\r').join('') + 'ā/rom/sample/c/keys\rĀĀab\x1b[A\x1bĀq' +
           'ā/rom/sample/c/keys\rĀĀ\x03' + 'āecho $status\r' };
       },
       get expect() {
         return [...C_LINES.map(l => '% ' + l[0] + '\n' + (l[2] ? l[1] : (l[1] === null ? '' : l[1] + '\n') + '%')),
-          '\nctest: 0 failed\n%', 'codes:\x1b[27m 61 62 80\nended at 15,2\n%', '% echo $status\ninterrupt\n%'];
+          '\nctest: 0 failed\n%', 'codes:\x1b[27m 61 62 80 1B\nended at 18,2\n%', '% echo $status\ninterrupt\n%'];
       },
     },
     {

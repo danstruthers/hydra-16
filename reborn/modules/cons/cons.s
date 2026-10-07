@@ -9,8 +9,8 @@
 ;   /cons       the window's console.  A read gets a line, edited here (cooked): Backspace and Delete, Left, Right,
 ;               Home and End (and Ctrl-A, Ctrl-E), Ctrl-U, the history with Up and Down; Enter ends it, Ctrl-D on
 ;               an empty line is the end of the input.  Or (raw: consctl's rawon) each key as it comes, the
-;               terminal's cursor and function keys as one code each (KEY_*; an Escape alone waits for the key
-;               after it).  A write goes into the window's text, and out if the window is shown (each LF as CR LF;
+;               terminal's cursor and function keys as one code each (KEY_*; an Escape alone is a key once
+;               ESC_TICKS have passed with nothing after it).  A write goes into the window's text, and out if the window is shown (each LF as CR LF;
 ;               a BEL rings the sound driver's bell too, #a/bell: the one call from a driver to another)
 ;   /consctl    rawon, rawoff (raw lasts till the window's last consctl closes, as Plan 9's does); group (the
 ;               window's notes go to the writer's note group).  It reads as the state
@@ -113,6 +113,8 @@ PC_WAIT_ATTACH  = TICK_HZ       ;   an attach's (no PC tool: E_IO this soon)
 PC_STALE        = TICK_HZ       ; A request this long past its time is given up (its client stopped asking)
 PC_QUIET        = TICK_HZ / 10  ; A frame coming in that stops this long has lost a byte
 PC_NAP          = 8             ; Timer 2's rounds (about 65,000 cycles) between looks at the time, a reply awaited
+ESC_NAP         = 2             ;   and an Escape alone (ESC_TICKS: then it's a key, not a sequence's start)
+ESC_TICKS       = TICK_HZ / 10
 PS_ATTACH       = 1             ; pc_step: the attach is out ...
 PS_REQ          = 2             ;   the request is out
 
@@ -124,6 +126,9 @@ rx_tp:      .res        2                                   ;   and the tail's
 tx_head:    .res        1                                   ; The send ring: the serve entry's end ...
 tx_tail:    .res        1                                   ;   and timer 2's
 tx_busy:    .res        1                                   ; <> 0: a byte is going (timer 2 runs)
+t2_nap:     .res        1                                   ; <> 0: timer 2 runs on with nothing to send (its rounds)
+esc_wait:   .res        1                                   ; <> 0: an Escape alone awaited (key_next), timer 2's
+                                                            ;   rounds bringing its reader back to look at the time
 t2_lo:      .res        1                                   ; Timer 2 for a character: a round's count ...
 t2_hi:      .res        1
 t2_rounds:  .res        1                                   ;   the rounds (more than 1 at slow rates) ...
@@ -148,7 +153,8 @@ eof:        .res        1                                   ;   <> 0: Ctrl-D on 
 was_cr:     .res        1                                   ;   and the last key was CR (an LF after it: the same)
 esc_st:     .res        1                                   ; A sequence coming in: 0 none, 1 ESC, 2 ESC [, 3 ESC O
 esc_n:      .res        1                                   ;   its number (ESC [ n ~) ...
-esc_semi:   .res        1                                   ;   past a ; (the modifiers: not kept)
+esc_semi:   .res        1                                   ;   past a ; (the modifiers: not kept) ...
+esc_at:     .res        2                                   ;   and the tick its ESC came at
 key_pb:     .res        1                                   ; A key put back (the one after an ESC that started
                                                             ;   nothing), or 0
 hi_n:       .res        1                                   ; The history: its lines ...
@@ -390,17 +396,23 @@ t2_next:
 @idle:
             stz         tx_busy
             inc         TASK_EVENT                          ; (The writers waiting for room look again; /pc's
-            lda         pc_step                             ;   client looks at the time)
+            lda         #PC_NAP                             ;   client looks at the time, and an Escape's reader)
+            ldy         pc_step
+            bne         @nap
+            lda         #ESC_NAP
+            ldy         esc_wait
             beq         @stop
-            lda         #PC_NAP                             ; A /pc reply awaited: timer 2 runs on, its rounds
-            sta         t2_left                             ;   $FFxx cycles (tx_start puts the rate's back)
-            lda         #$FF
+@nap:                                                       ; A /pc reply awaited, or an Escape alone: timer 2 runs
+            sta         t2_left                             ;   on, its rounds $FFxx cycles (tx_start puts the
+            lda         #$FF                                ;   rate's back)
             sta         t2_hi
             sta         VIA_T2CH
+            sta         t2_nap
             lda         #0
             rts
 
 @stop:
+            stz         t2_nap
             lda         VIA_T2CL                            ; (Its interrupt cleared)
             lda         #0
             rts
@@ -420,6 +432,7 @@ tx_start:
             cpy         tx_head
             beq         @done
             inc         tx_busy
+            stz         t2_nap
             ldy         rate                                ; (A character's time: /pc's wait may have had timer 2)
             lda         rate_hi,Y
             sta         t2_hi
@@ -1584,6 +1597,7 @@ flush:
             stz         ln_len
             stz         ln_pos
             stz         esc_st
+            stz         esc_wait
 :
             clc
             rts
@@ -1602,12 +1616,17 @@ key_next:
 
 @byte:
             jsr         iq_get
-            bcs         @done
+            bcc         :+
+            jmp         @none
+:
             ldx         esc_st
             bne         @seq
             cmp         #ESC
             bne         @key
-            inc         esc_st                              ; (1: ESC)
+            inc         esc_st                              ; (1: ESC; when, for one alone)
+            jsr         TICKS
+            sta         esc_at
+            stx         esc_at + 1
             bra         @byte
 
 @key:
@@ -1616,6 +1635,7 @@ key_next:
             rts
 
 @seq:
+            stz         esc_wait
             dex
             bne         @csi
             cmp         #'['                                ; ESC, then [ or O starts a sequence
@@ -1712,6 +1732,54 @@ key_next:
 @ss3key:
             lda         ss3_key,X
             clc
+            rts
+
+@none:                                                      ; None yet: an ESC alone ESC_TICKS is a key
+            lda         esc_st
+            cmp         #1
+            beq         :+
+            sec
+            rts
+:
+            jsr         TICKS
+            sec
+            sbc         esc_at
+            tay
+            txa
+            sbc         esc_at + 1
+            bne         @alone
+            cpy         #ESC_TICKS
+            bcs         @alone
+            lda         #1                                  ; (Not yet: timer 2's rounds bring its reader back)
+            sta         esc_wait
+            jsr         esc_nap
+            sec
+            rts
+
+@alone:
+            stz         esc_st
+            stz         esc_wait
+            lda         #ESC
+            clc
+            rts
+
+; Timer 2 napping, if it's idle (nothing to send, no nap): its rounds add to the event count (t2_next), so an
+; Escape's reader comes back to look at the time.  Modifies .A
+esc_nap:
+            php
+            sei
+            lda         tx_busy
+            ora         t2_nap
+            bne         @done
+            lda         #ESC_NAP
+            sta         t2_left
+            lda         #$FF
+            sta         t2_hi
+            sta         t2_nap
+            sta         VIA_T2CL
+            sta         VIA_T2CH                            ; (It starts)
+@done:
+            plp
             rts
 
 ; ****************************************************************************
