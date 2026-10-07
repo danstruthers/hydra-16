@@ -2,14 +2,16 @@
 # cc65 is built from its source, at the commit of the snapshot the project builds with (C:\source\cc65\win64_snapshot:
 # ca65 V2.19, Git 1d1dd42, July 2024), so the images in Git are the build's.  Later cc65 took WAI and STP out of
 # --cpu 65C02 (they're W65C02's since 2025), which the snapshot doesn't name; build.js finds it through CC65_HOME.
+# The runner is pinned (ubuntu-24.04, not ubuntu-latest, which moves to 26.04 in late 2026), and the actions are the
+# ones that run on Node 24 (v7: GitHub's Node 20 is gone).
 name: build
 on: [push, pull_request]
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - name: cc65
