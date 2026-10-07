@@ -442,6 +442,58 @@ const VT_PAINT_RC = [
   'cat /ram/scr',
   'echo done',
 ].join('\n') + '\n';
+// (vtsize's: 30 lines into window 1, every third longer than 60 columns, the cursor then on row 5; then its steps,
+// each the bytes written first, the console's size set (terminal size: both terminals on, the screen's bigger), and a
+// mark written at the cursor; its /text after each, held against sim/lib/vt.js's resize)
+const VT_SIZE = Array.from({ length: 30 }, (v, i) => 'line ' + String(i + 1).padStart(2, '0') + (i % 3 ? '' : ' ' + 'abcdefghij'.repeat(7))).join('\n') + '\n\x1b[5;1H';
+const VT_SIZE_STEPS = [
+  ['', 80, 10, '<a>'],                                       // shorter, the cursor high: the bottom rows dropped
+  ['', 80, 30, '<b>'],                                       // taller: the scrollback's rows down, then blank ones
+  ['', 60, 30, '<c>'],                                       // narrower: the long lines cut
+  ['', 80, 24, '<d>'],                                       // wider again (what was cut stays gone), shorter
+  ['\x1b[?1049h' + Array.from({ length: 20 }, (v, i) => 'alt ' + (i + 1)).join('\n'), 80, 12, '<e>'], // the alternate screen
+  ['\x1b[?1049l', 80, 12, '<f>'],                            // the main one again: its cursor where it was saved
+  ['', 80, 24, '<g>'],
+];
+const VT_SIZE_RC = [
+  'echo new >/dev/wctl',
+  '{',
+  '  cat /pc/vt/size >[1=3]',
+  ...VT_SIZE_STEPS.flatMap(([pre, c, r, mark], i) => [
+    ...(pre ? ['  cat /pc/vt/size' + i + ' >[1=3]'] : []),
+    '  echo terminal size ' + c + ' ' + r + ' >/dev/consctl',
+    "  echo -n '" + mark + "' >[1=3]",
+    "  echo '[" + i + "]'; cat '#c1/text'; echo '[/" + i + "]'",
+  ]),
+  "} >[3]'#c1/cons'",
+  'echo terminal size 80 24 >/dev/consctl',
+  'echo done',
+].join('\n') + '\n';
+const vtSizeFiles = () => {
+  const files = { 'vt/size': vtFile(VT_SIZE), 'vt/size.rc': VT_SIZE_RC };
+  VT_SIZE_STEPS.forEach(([pre], i) => { if (pre) files['vt/size' + i] = vtFile(pre); });
+  return files;
+};
+// (vtmode's: the screen alone, vid's mode changed under the console; its sizes, and the screen as painted at 40x30)
+const VT_MODE_RC = [
+  'echo screen >/dev/consctl',
+  'grep size /dev/consctl >/ram/s1',
+  'echo mode 40x30 >/dev/vid/ctl',
+  'echo after 40x30',
+  'grep size /dev/consctl >/ram/s2',
+  'cat /dev/vid/term >/ram/t2',
+  'echo mode 80x30 >/dev/vid/ctl',
+  'echo after 80x30',
+  'grep size /dev/consctl >/ram/s3',
+  'echo both >/dev/consctl',
+  'grep size /dev/consctl >/ram/s4',
+  'cat /ram/s1 /ram/s2 /ram/s3 /ram/s4',
+  "echo '[t2]'",
+  'cat /ram/t2',
+  "echo '[/t2]'",
+  'echo mode 80x60 >/dev/vid/ctl',
+  'echo done',
+].join('\n') + '\n';
 // (vtjump's: the ROM disk's api.md, 38K, cat to the window shown with scroll jump)
 const vtJump = () => fs.readFileSync(path.join(__dirname, '..', 'obj', 'gen', 'api.md'), 'latin1');
 const vtModel = bytes => new VT({ onlcr: true }).write(bytes);
@@ -2080,16 +2132,17 @@ module.exports = {
       },
     },
     {
-      name: 'cons', what: 'the console: lines, editing, history, raw keys, its answers (DA, CPR, DECRQM, the size, DECREPTPARM), keys vt (DECCKM, VT52 mode), Ctrl-C, windows (shown, repainted, made, gone), 115200, the bell',
+      name: 'cons', what: 'the console: lines, editing, history, raw keys, its answers (DA, CPR, DECRQM, the size, DECREPTPARM), the window\'s size (the terminal\'s report typed, terminal size, KEY_RESIZE, the terminal asked), keys vt (DECCKM, VT52 mode), Ctrl-C, windows (shown, repainted, made, gone), 115200, the bell',
       init: 't_cons', modules: ['t_child'], cycles: 80e6,
       // (ā: wait for a prompt, "N> ")
       machine: { input: 'āhello\r' + 'āabX\x08c\r' + 'āac\x1b[Db\r' + 'ābc\x1b[Ha\x1b[Fd\r' +
         'āxyz\x15ok\r' + 'āabXc\x1b[D\x1b[D\x1b[3~\r' + 'ā\x1b[A\x1b[A\r' + 'ā\x04' + 'āparts\r' +
-        'āx\x1b[A' + 'ā\x1b[A\x1b[A\x1b[15~\x1b[A' + 'ā\x03' +
+        'āx\x1b[A' + 'ā\x1b[8;40;100t' + 'ā\x1b[A\x1b[A\x1b[15~\x1b[A' + 'ā\x03' +
         'ā\x1d1z\r\x1d0' + 'ā\x1d1\x03\x1d0' + 'ā\x1dc' },
       check(m, out) {
         const f = [], a = m.acia, want = a.wdc ? 1 : 2;
         if (!out.includes('\x1b[2J') || !out.includes('w1 hidden text')) f.push('window 1 shown: no repaint of its text');
+        if (!out.includes('\x1b[18t')) f.push('terminal size: the terminal not asked (no ESC [ 1 8 t sent)');
         this.notes = ['at 115200, the shortest idle time between characters sent: ' + a.gapMin.toFixed(2) + ' bits (at least ' + want + ')'];
         if (!(a.gapMin >= want - 0.05)) f.push('at 115200, characters ' + a.gapMin.toFixed(2) + ' bits apart: less than ' + want);
         if (a.overruns) f.push(a.overruns + ' bytes written to the ACIA while it was still sending');
@@ -2415,6 +2468,40 @@ module.exports = {
         this.notes = ['sent ' + sent + ' bytes for the file\'s ' + big.length];
         if (sent > big.length * 0.6) f.push('scroll jump sent ' + sent + ' bytes of the file\'s ' + big.length + ' (more than 60%)');
         if (!out.slice(at, end).includes(last)) f.push('the file\'s last line not shown: ' + last);
+        return f;
+      },
+    },
+    {
+      name: 'vtsize', what: 'a window\'s size (W3: terminal size, both terminals on): a window not shown with 30 lines in it, made shorter (the cursor high: rows dropped at the bottom), taller (the scrollback\'s rows down onto it, then blank ones), narrower (the long lines cut), wider; its alternate screen in use, shorter (rows off its top dropped), then the main one again (the saved cursor where its row went); its /text after each, a mark at its cursor, as sim/lib/vt.js\'s resize has it',
+      init: 't_rc', cycles: 150e6, pc: { files: vtSizeFiles() },
+      get machine() { return { input: typed([['rc /pc/vt/size.rc']]) }; },
+      expect: ['\ndone\n%'],
+      check(m) {
+        const f = [], out = m.out.replace(/\r/g, ''), want = new VT({ onlcr: true }).write(VT_SIZE);
+        VT_SIZE_STEPS.forEach(([pre, c, r, mark], i) => {
+          want.write(pre).resize(c, r).write(mark);
+          const a = out.indexOf('[' + i + ']\n'), b = out.indexOf('[/' + i + ']', a);
+          if (a < 0 || b < 0) { f.push('step ' + i + ': no /text read'); return; }
+          const got = out.slice(a + 3 + String(i).length, b).replace(/\n$/, ''), exp = want.text().replace(/\n$/, '');
+          if (got !== exp) {
+            const g = got.split('\n'), e = exp.split('\n'), k = e.findIndex((l, j) => l !== g[j]);
+            f.push('step ' + i + ' (' + c + ' x ' + r + '): /text row ' + (k < 0 ? g.length : k + 1) + ' ' + JSON.stringify(g[k < 0 ? e.length : k]) + ', not ' + JSON.stringify(e[k]) + ' (' + g.length + ' rows, not ' + e.length + ')');
+          }
+        });
+        return f;
+      },
+    },
+    {
+      name: 'vtmode', what: 'a window\'s size from the screen\'s (W3): the screen alone (80 x 60), vid\'s mode changed under the console (40x30: its next write refused once, the size looked at, the windows resized and the screen painted again; 80x30), then both terminals (the smaller: the serial port\'s 80 x 24)',
+      init: 't_rc', cycles: 150e6, pc: { files: { 'vt/mode.rc': VT_MODE_RC } }, jsOnly: 'the danlang emulator has no VERA yet',
+      get machine() { return { vera: true, input: typed([['rc /pc/vt/mode.rc']]) }; },
+      expect: ['size 80 60\nsize 40 30\nsize 80 30\nsize 80 24\n', '\ndone\n%'],
+      check(m) {
+        const f = [], out = m.out.replace(/\r/g, ''), a = out.indexOf('[t2]\n'), b = out.indexOf('[/t2]', a);
+        if (a < 0 || b < 0) return ['no screen read at 40x30'];
+        const rows = out.slice(a + 5, b).replace(/\n$/, '').split('\n');
+        if (rows.length !== 30 || rows.some(r => r.length !== 40)) f.push('the screen at 40x30 read as ' + rows.length + ' rows of ' + [...new Set(rows.map(r => r.length))].join(', ') + ' columns');
+        if (!rows.some(r => r.startsWith('after 40x30'))) f.push('the screen at 40x30: not painted again (no "after 40x30" on it)');
         return f;
       },
     },

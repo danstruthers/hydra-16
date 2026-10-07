@@ -10,7 +10,8 @@
 ;               Home and End (and Ctrl-A, Ctrl-E), Ctrl-U, the history with Up and Down; Enter ends it, Ctrl-D on
 ;               an empty line is the end of the input.  Or (raw: consctl's rawon) each key as it comes, the
 ;               terminal's cursor and function keys as one code each (KEY_*; an Escape alone is a key once
-;               ESC_TICKS have passed with nothing after it).  A write goes to the window's screen, and out to the
+;               ESC_TICKS have passed with nothing after it; KEY_RESIZE when the window's size changed, keys hydra's).
+;               A write goes to the window's screen, and out to the
 ;               terminals if the window is shown (each LF as CR LF; a BEL rings the sound driver's bell too,
 ;               #a/bell: one of the calls from a driver to another, the screen's #v/term another)
 ;   /consctl    rawon, rawoff (raw lasts till the window's last consctl closes, as Plan 9's does); keys vt, keys
@@ -20,7 +21,11 @@
 ;               the line; or they go on, the terminal painted as it can, skipping what came between); group (the
 ;               window's notes go to the writer's note group); screen, serial, both (where the windows are shown:
 ;               every window's, the console's terminals: the Vera X's screen, the serial port, or both, as it
-;               starts; screen with no screen: E_NODEV).  It reads as the state
+;               starts; screen with no screen: E_NODEV; terminal screen, serial, both too); terminal size C R (the
+;               serial port's terminal's columns and rows: 80 x 24 as it starts; terminal size alone asks it, ESC [
+;               18 t, and its answer sets it, as the PC tool's report does, ESC [ 8 ; R ; C t, sent as its window
+;               changes).  It reads as the state, with the window's size (size C R): the smaller of the terminals
+;               it's shown on, each whole (the screen's from vid's ctl, mode CxR), 127 x 64 at most
 ;   /wctl       new (a window), current N (window N shown).  It reads as the windows, a line each (* the shown one)
 ;   /wnew       a read waits for the user's Ctrl-] c, then makes a window, shown, and gives its number (init's: it
 ;               starts a shell there)
@@ -189,6 +194,7 @@ w_ctl:      .res        WIN_MAX                             ;   its consctl fids
 kvt:        .res        WIN_MAX                             ;   <> 0: keys vt ...
 w_jump:     .res        WIN_MAX                             ;   <> 0: scroll jump ...
 w_hold:     .res        WIN_MAX                             ;   <> 0: held (Ctrl-] h) ...
+w_rsz:      .res        WIN_MAX                             ;   <> 0: resized (KEY_RESIZE for its raw reader) ...
 kp_n:       .res        WIN_MAX                             ;   a key's sequence: its bytes, those read ...
 kp_i:       .res        WIN_MAX
 kp_buf:     .res        WIN_MAX * KP_SIZE                   ;   and them
@@ -200,7 +206,19 @@ bell_st:    .res        1                                   ;   #a/bell: 0 not o
 bell_fd:    .res        1                                   ;   and its fd
 term:       .res        1                                   ; Where the windows are shown: TERM_SERIAL, TERM_SCREEN
 scr_st:     .res        1                                   ; The screen, #v/term: 0 not opened yet, 1 open, 2 none ...
-scr_fd:     .res        1                                   ;   and its fd
+scr_fd:     .res        1                                   ;   and its fd ...
+scr_cfd:    .res        1                                   ;   its ctl's (#v/ctl: its size), or $FF ...
+scr_chk:    .res        1                                   ;   <> 0: its size to be looked at (opened, a write
+                                                            ;   refused: vid's mode may have changed) ...
+scr_cols:   .res        1                                   ;   and its size (0: not known yet)
+scr_rows:   .res        1
+ser_cols:   .res        1                                   ; The serial port's terminal's size (80 x 24, or as set
+ser_rows:   .res        1                                   ;   or told)
+lay_cols:   .res        1                                   ; The windows' size: the smaller of the terminals shown on
+lay_rows:   .res        1
+sz_st:      .res        1                                   ; The terminal's size coming in, ESC [ 8 ; R ; C t: how
+sz_r:       .res        1                                   ;   far (sz_seq's, then 4 the rows, 5 the columns) ...
+sz_c:       .res        1                                   ;   and them (sz_r, sz_c: in that order)
 pc_txbuf:   .res        PC_TX_SIZE                          ; /pc: the frame going out ...
 pc_rxbuf:   .res        PC_RX_SIZE                          ;   the frame come in ...
 pc_req:     .res        RQ_NAMELEN + 1                      ;   the request out, as its client asked it ...
@@ -260,6 +278,18 @@ init:
             sta         lw
             lda         #TERM_SERIAL | TERM_SCREEN          ; Both terminals (the screen's, if there's one: it's
             sta         term                                ;   painted first, vt_init)
+            lda         #80                                 ; The windows' size: the serial port's terminal's (the
+            sta         ser_cols                            ;   screen's counted once it's opened, its size known)
+            sta         lay_cols
+            lda         #24
+            sta         ser_rows
+            sta         lay_rows
+            stz         scr_cols
+            stz         scr_rows
+            stz         scr_chk
+            stz         sz_st
+            lda         #$FF
+            sta         scr_cfd
             FAR2        vt_init
             ldx         #0                                  ; Window 0: shown, init's group's
             jsr         w_init
@@ -526,6 +556,7 @@ distribute:
             bra         @byte
 
 @key:
+            jsr         sz_watch
             ldx         w_in
             jsr         iq_put
             bra         @byte
@@ -628,6 +659,7 @@ w_init:
             stz         kp_i,X
             stz         w_jump,X
             stz         w_hold,X
+            stz         w_rsz,X
             lda         #INIT_TASK
             sta         w_group,X
             cpx         lw                                  ; (Its old state, if it was loaded: gone)
@@ -848,6 +880,10 @@ pump:
             rol                                             ; (.A <> 0: a frame's going out)
             pha
             jsr         scr_ready
+            lda         scr_chk                             ; (The screen's size looked at, if it may have
+            beq         :+                                  ;   changed)
+            jsr         scr_size
+:
             pla
             FAR2        vt_pump
             jmp         tx_start
@@ -874,10 +910,19 @@ scr_open:
             lda         #O_WRITE
             jsr         OPEN
             ldx         #2
-            bcs         :+
+            bcs         @st
             sta         scr_fd
-            ldx         #1
+            LDR         r0, s_scr_ctl                       ; (Its ctl, for its size: looked at in the pump)
+            lda         #O_READ
+            jsr         OPEN
+            bcc         :+
+            lda         #$FF
 :
+            sta         scr_cfd
+            lda         #1
+            sta         scr_chk
+            ldx         #1
+@st:
             stx         scr_st
             cpx         #1
             bne         @none
@@ -887,6 +932,252 @@ scr_open:
 
 @none:
             sec
+            rts
+
+; The screen's size, from its ctl's mode line (mode 80x60): a change lays the windows out again.  Modifies .A, .X,
+; .Y, r0, r1, n, m, p
+scr_size:
+            stz         scr_chk
+            lda         scr_cfd
+            bpl         :+
+            rts
+:
+            stz         r0                                  ; (Its text from the start)
+            stz         r0 + 1
+            stz         r1
+            stz         r1 + 1
+            ldx         #0
+            jsr         SEEK
+            bcs         @out
+            LDR         r0, iobuf
+            lda         #IOBUF
+            sta         r1
+            stz         r1 + 1
+            lda         scr_cfd
+            jsr         READ
+            bcc         :+
+@out:
+            rts
+:
+            sta         m                                   ; (Its length)
+            ldy         #0
+@line:
+            ldx         #0                                  ; A line: mode?
+:
+            lda         s_mode_w,X
+            beq         @mode
+            cpy         m
+            bcs         @done
+            cmp         iobuf,Y
+            bne         @skip
+            iny
+            inx
+            bra         :-
+@skip:
+            cpy         m                                   ; Else on to the next
+            bcs         @done
+            lda         iobuf,Y
+            iny
+            cmp         #LF
+            bne         @skip
+            bra         @line
+@mode:
+            jsr         @num                                ; Its columns, x, its rows
+            sta         n
+            cpy         m
+            bcs         @done
+            lda         iobuf,Y
+            cmp         #'x'
+            bne         @done
+            iny
+            jsr         @num
+            sta         n + 1
+            beq         @done
+            lda         n
+            beq         @done
+            cmp         scr_cols
+            bne         :+
+            lda         n + 1
+            cmp         scr_rows
+            beq         @done
+:
+            lda         n
+            sta         scr_cols
+            lda         n + 1
+            sta         scr_rows
+            jmp         relayout
+@done:
+            rts
+
+@num:                                                       ; .A = the number at iobuf,Y (255 at most), past it
+            stz         p
+:
+            cpy         m
+            bcs         :+
+            lda         iobuf,Y
+            sec
+            sbc         #'0'
+            cmp         #10
+            bcs         :+
+            jsr         dec_add
+            iny
+            bra         :-
+:
+            lda         p
+            rts
+
+; p = p * 10 + .A (a digit's value), 255 at most.  Keeps .X, .Y
+dec_add:
+            sta         p + 1
+            lda         p
+            cmp         #26
+            bcs         @big
+            asl                                             ; (C = 0 throughout: p * 10 is 250 at most)
+            asl
+            adc         p
+            asl
+            adc         p + 1
+            bcc         :+
+@big:
+            lda         #255
+:
+            sta         p
+            rts
+
+; The windows' size: the smaller of the terminals they're shown on, each whole (the screen once its size is known),
+; WIN_COLS x WIN_ROWS at most.  A change resizes every window (vt.s), tells their raw readers (KEY_RESIZE), and has
+; the terminals painted again.  Modifies .A, .X, .Y, n
+relayout:
+            lda         #WIN_COLS
+            sta         n
+            lda         #WIN_ROWS
+            sta         n + 1
+            lda         term
+            and         #TERM_SERIAL
+            beq         :+
+            lda         ser_cols
+            ldx         ser_rows
+            jsr         @min
+:
+            lda         term
+            and         #TERM_SCREEN
+            beq         @have
+            lda         scr_st
+            cmp         #1
+            bne         @have
+            lda         scr_cols
+            beq         @have
+            ldx         scr_rows
+            jsr         @min
+@have:
+            lda         n
+            cmp         lay_cols
+            bne         :+
+            lda         n + 1
+            cmp         lay_rows
+            beq         @done
+:
+            lda         n
+            sta         lay_cols
+            lda         n + 1
+            sta         lay_rows
+            ldx         #WIN_MAX - 1
+@win:
+            lda         w_used,X
+            beq         :+
+            phx
+            FAR2        vt_resize
+            plx
+            lda         #1
+            sta         w_rsz,X
+:
+            dex
+            bpl         @win
+            lda         #1
+            sta         ts_ser
+            sta         ts_scr
+            inc         TASK_EVENT                          ; (Their raw readers look again)
+@done:
+            rts
+
+@min:                                                       ; n x n + 1 no more than .A x .X
+            cmp         n
+            bcs         :+
+            sta         n
+:
+            cpx         n + 1
+            bcs         :+
+            stx         n + 1
+:
+            rts
+
+; The serial port's terminal's size: .X columns, .A rows (too small: not taken).  OUT: C = 1 not taken.  Modifies .A,
+; .X, .Y, n
+ser_size:
+            cpx         #WIN_MIN_COLS
+            bcc         @no
+            cmp         #WIN_MIN_ROWS
+            bcc         @no
+            sta         ser_rows
+            stx         ser_cols
+            jsr         relayout
+            clc
+            rts
+@no:
+            sec
+            rts
+
+; The serial port's terminal telling its size, watched for as the keys go to the window: ESC [ 8 ; R ; C t (xterm's
+; answer to ESC [ 18 t, and the PC tool's, unasked, as its window changes).  The window's key decoder drops it.
+; IN: .A, the key.  Keeps .A.  Modifies .X, .Y, n, p
+sz_watch:
+            pha
+            ldx         sz_st
+            cmp         #ESC                                ; (An ESC starts one, always)
+            beq         @esc
+            cpx         #0
+            beq         @done
+            cpx         #4
+            bcs         @num
+            cmp         sz_seq - 1,X                        ; ESC, then [ 8 ;
+            bne         @reset
+            inc         sz_st
+            stz         sz_r
+            stz         sz_c
+            bra         @done
+@num:
+            cmp         #';'                                ; The rows; the columns
+            bne         :+
+            cpx         #4
+            bne         @reset
+            inc         sz_st
+            bra         @done
+:
+            cmp         #'t'
+            beq         @end
+            sec
+            sbc         #'0'
+            cmp         #10
+            bcs         @reset
+            ldy         sz_r - 4,X
+            sty         p
+            jsr         dec_add
+            sta         sz_r - 4,X
+            bra         @done
+@end:
+            cpx         #5
+            bne         @reset
+            ldx         sz_c
+            lda         sz_r
+            jsr         ser_size
+@reset:
+            stz         sz_st
+            bra         @done
+@esc:
+            lda         #1
+            sta         sz_st
+@done:
+            pla
             rts
 
 ; A fid made (srvlib): its window, from the spec (none: window 0); a window that isn't there: E_NOENT.  (R_DUP's
@@ -1685,10 +1976,19 @@ key_raw:
             clc
             rts
 
-@answer:                                                    ; Raw: the window's answers first (DA, DSR's ...: vt.s's),
-            lda         raw                                 ;   as they came
-            beq         @byte
+@answer:                                                    ; Raw: the window's size changed first (KEY_RESIZE, but
+            lda         raw                                 ;   for keys vt), then its answers (DA, DSR's ...: vt.s's),
+            beq         @byte                               ;   as they came
             ldx         lw
+            lda         w_rsz,X
+            beq         :+
+            stz         w_rsz,X
+            lda         kvt,X
+            bne         :+
+            lda         #KEY_RESIZE
+            clc
+            rts
+:
             lda         ans_r,X
             cmp         ans_n,X
             bcs         @byte
@@ -2260,6 +2560,8 @@ c_rawon:
             jsr         load
             lda         #1
             sta         raw
+            ldx         z:srv_id                            ; (A resize before it: not news to its reader)
+            stz         w_rsz,X
             clc
             rts
 
@@ -2363,7 +2665,7 @@ c_group:
             clc
             rts
 
-; consctl's state: "rawon" or "rawoff", "group N", "window N"
+; consctl's state: "rawon" or "rawoff", "keys ...", "scroll ...", "group N", "window N", "size C R", "terminal ..."
 gen_consctl:
             lda         z:srv_id
             jsr         load
@@ -2408,6 +2710,19 @@ gen_consctl:
             ldx         #>s_window
             jsr         srv_tputs
             lda         z:srv_id
+            ldx         #0
+            jsr         srv_tputdec
+            lda         #<s_size                            ; Its size: columns, rows
+            ldx         #>s_size
+            jsr         srv_tputs
+            ldx         z:srv_id
+            FAR2        vt_size                             ; (.A: its columns, .X: its rows)
+            phx
+            ldx         #0
+            jsr         srv_tputdec
+            lda         #' '
+            jsr         srv_tputc
+            pla
             ldx         #0
             jsr         srv_tputdec
             lda         #<s_terminal                        ; The terminals the windows are shown on (the screen
@@ -2476,8 +2791,82 @@ c_term:
 :
             lda         m
             sta         term
+            jsr         relayout                            ; (The windows' size: of those on)
             inc         TASK_EVENT                          ; (A writer waiting for the line's room looks again)
             clc
+            rts
+
+; terminal screen, serial, both: as screen, serial, both.  terminal size C R: the serial port's terminal's size;
+; terminal size: asked of it (ESC [ 18 t: its answer, ESC [ 8 ; R ; C t, sets it)
+c_terminal:
+            lda         z:srv_argn
+            beq         @inval
+            lda         srv_argp
+            sta         p
+            lda         srv_argp + 1
+            sta         p + 1
+            lda         #<s_size_w
+            ldx         #>s_size_w
+            jsr         word_is
+            beq         @size
+            lda         #<s_screen_w
+            ldx         #>s_screen_w
+            jsr         word_is
+            bne         :+
+            jmp         c_screen
+:
+            lda         #<s_serial_w
+            ldx         #>s_serial_w
+            jsr         word_is
+            bne         :+
+            jmp         c_serial
+:
+            lda         #<s_both_w
+            ldx         #>s_both_w
+            jsr         word_is
+            bne         @inval
+            jmp         c_both
+@size:
+            lda         z:srv_argn
+            cmp         #1
+            beq         @ask
+            cmp         #3
+            bne         @inval
+            lda         srv_arg + 3                         ; Its columns, its rows
+            ora         srv_arg + 5
+            bne         @inval
+            ldx         srv_arg + 2
+            lda         srv_arg + 4
+            jsr         ser_size
+            bcs         @inval
+            rts
+@ask:
+            lda         ser_rd                              ; Asked (not while the line's /ser's)
+            bne         @busy
+            jsr         tx_free
+            cmp         #8
+            bcs         :+
+            lda         #E_AGAIN
+            sec
+            rts
+:
+            ldx         #0
+:
+            lda         s_ask,X
+            beq         :+
+            jsr         tx_put
+            inx
+            bra         :-
+:
+            clc
+            rts
+@busy:
+            lda         #E_BUSY
+            sec
+            rts
+@inval:
+            lda         #E_INVAL
+            sec
             rts
 
 ; wctl: new (a window), current N (window N shown)
@@ -3277,6 +3666,7 @@ cons_cmds:
             .word       s_screen_w, c_screen
             .word       s_serial_w, c_serial
             .word       s_both_w, c_both
+            .word       s_terminal_w, c_terminal
             .word       0
 wctl_cmds:
             .word       s_new_w, c_new
@@ -3310,6 +3700,13 @@ s_both_w:   .byte       "both", 0
 term_names: .word       s_serial_w, s_screen_w, s_both_w    ; (term 1-3)
 s_terminal: .byte       LF, "terminal ", 0
 s_scr:      .byte       "#v/term", 0
+s_scr_ctl:  .byte       "#v/ctl", 0
+s_mode_w:   .byte       "mode ", 0
+s_terminal_w: .byte     "terminal", 0
+s_size_w:   .byte       "size", 0
+s_size:     .byte       LF, "size ", 0
+s_ask:      .byte       ESC, "[18t", 0
+sz_seq:     .byte       "[8;"
 s_new_w:    .byte       "new", 0
 s_current_w: .byte      "current", 0
 s_rawon:    .byte       "rawon", LF, 0

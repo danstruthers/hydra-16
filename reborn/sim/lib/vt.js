@@ -10,7 +10,8 @@
 // the tab stops, the character sets (G0, G1: B, A, 0), DECSC's saved cursor.  The parser is DEC's state machine (Paul
 // Williams'): C0 controls act inside a sequence, CAN and SUB end one, strings (OSC, DCS, SOS, PM, APC) end at ST
 // (an OSC also at BEL).  A row may be double (ESC # 3, 4, 6: row.dw), its characters in its left half.  text() is a window's /text: its scrollback, then its screen, a line a row without its
-// trailing spaces, the DEC graphics as the console shows them in ASCII (DEC_ASCII).
+// trailing spaces, the DEC graphics as the console shows them in ASCII (DEC_ASCII).  resize() is the console's (W3):
+// the screen's rows and the scrollback's a pool (64 at 80 x 24), the cursor's row kept on the screen.
 
 'use strict';
 
@@ -39,7 +40,7 @@ class VT {
     this.top = 0; this.bot = this.rows - 1;
     this.awm = true; this.om = false; this.irm = false; this.lnm = false; this.tcem = true;
     this.g = ['B', 'B']; this.gl = 0; this.last = 0x20;
-    this.tabs = new Set(); for (let c = 8; c < this.cols; c += 8) this.tabs.add(c);
+    this.tabs = new Set(); for (let c = 8; c < 128; c += 8) this.tabs.add(c);   // (Over a row's 128 cells, as vt.s's)
     this.saved = null; this.vt52 = false;
   }
 
@@ -362,6 +363,51 @@ class VT {
   restore() {
     const s = this.saved || { x: 0, y: 0, col: COL_DEF, fl: 0, g: ['B', 'B'], gl: 0, wrap: false, om: false };
     Object.assign(this, { x: s.x, y: s.y, col: s.col, fl: s.fl, g: [...s.g], gl: s.gl, wrap: s.wrap, om: s.om });
+  }
+
+  // ---- A resize (vt.s's vt_resize, W3): growing, the scrollback's newest rows come down onto the screen's top (the
+  // cursor's row with them), then blank rows at its bottom; shrinking, the rows above the cursor's go off its top into
+  // the scrollback (as many as must), then those at its bottom are dropped.  The pool's rows stay (the screen's and the
+  // scrollback's), every row's cells past a narrower width are dropped, the cursor and the saved one are kept in it,
+  // the margins are the whole screen, the last-column flag's off.  The alternate screen, in use, too (rows off its top
+  // dropped), and the main one with the saved cursor's row as its cursor's
+  resize(cols, rows) {
+    if (cols === this.cols && rows === this.rows) return this;
+    const pool = this.rows + this.sbMax, o = this.rows;
+    const fit = row => {
+      const r = row.slice(0, cols);
+      if (row.dw) r.dw = row.dw;
+      while (r.length < cols) r.push({ c: 0x20, a: COL_DEF, f: 0 });
+      return r;
+    };
+    const turn = (screen, sb, y, keep) => {
+      if (rows > o) {
+        const k = Math.min(rows - o, sb.length);
+        screen = [...sb.splice(sb.length - k, k), ...screen];
+        while (screen.length < rows) screen.push([]);
+        y += k;
+      } else if (rows < o) {
+        const k = Math.max(0, y - rows + 1);
+        if (keep) sb.push(...screen.slice(0, k));
+        screen = screen.slice(k, k + rows);
+        y -= k;
+      }
+      return { screen: screen.map(fit), sb: sb.map(r => r.length > cols ? fit(r) : r), y };
+    };
+    if (!this.saved) this.saved = { x: 0, y: 0, col: COL_DEF, fl: 0, g: ['B', 'B'], gl: 0, wrap: false, om: false };
+    if (this.altOn) {
+      const a = turn(this.screen, [], this.y, false), m = turn(this.main.screen, this.main.sb, this.saved.y, true);
+      Object.assign(this, { screen: a.screen, sb: [], y: a.y, main: { screen: m.screen, sb: m.sb } });
+      this.saved.y = m.y;
+    } else {
+      const m = turn(this.screen, this.sb, this.y, true);
+      Object.assign(this, { screen: m.screen, sb: m.sb, y: m.y });
+    }
+    Object.assign(this, { cols, rows, sbMax: pool - rows, wrap: false, top: 0, bot: rows - 1 });
+    this.x = Math.min(this.x, cols - 1);
+    this.saved.x = Math.min(this.saved.x, cols - 1);
+    this.saved.y = Math.min(this.saved.y, rows - 1);
+    return this;
   }
 
   // ---- What's shown

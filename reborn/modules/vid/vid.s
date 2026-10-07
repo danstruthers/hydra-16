@@ -14,7 +14,9 @@
 ;   /term     the screen's console: a write's bytes shown as an ANSI terminal shows them (below); a read gives the
 ;             screen's characters, a line a row: its columns, then an LF.  cons draws the window shown here (its
 ;             screen, the console's cells: consctl's screen, serial, both).  While the chip's claimed, a write is
-;             E_BUSY (cons paints the window again after the release)
+;             E_BUSY (cons paints the window again after the release); and the first after the screen changed under
+;             it (a mode, a bitmap, a reset, a claim's end) is too, once: cons looks at the size (ctl's mode line)
+;             and paints the window again
 ;   /vram     the VERA's video RAM, 128K (the offset is the address), read and written through its data port 0
 ;   /pal      the palette (VRAM $1FA00: 256 entries, 2 bytes each: $GB, $0R): 0-15 the console's colours, the ANSI
 ;             terminal's (conio's 0-15), 16-255 the VERA's own
@@ -154,6 +156,9 @@ bitmap:     .res        1                                   ; Layer 0's bitmap: 
 bmdepth:    .res        1                                   ;   its depth (0-3: 1, 2, 4, 8 bits)
 claimer:    .res        1                                   ; The task + 1 that has the chip (0: nobody) ...
 claim_all:  .res        1                                   ;   <> 0: all of VRAM
+t_stale:    .res        1                                   ; <> 0: the screen changed under the console (a mode, a
+                                                            ;   bitmap, a reset, a claim's end): its next /term write
+                                                            ;   refused, once (E_BUSY), so it paints its window again
 refs:       .res        16                                  ; Each task's fids on #v
 fframe:     .res        SRV_FIDS                            ; Each fid's last frame seen (its low byte: /frame's)
 psg:        .res        PSG_REGS                            ; The PSG's registers as written to /psg
@@ -169,6 +174,7 @@ iobuf:      .res        256
 ; Its init: the card found (or E_NODEV), the chip set up for the console, its line owned, its device letter
 init:
             stz         claimer
+            stz         t_stale
             stz         bitmap
             stz         mode
             stz         border
@@ -1500,7 +1506,11 @@ h_term:
 
 w_term:
             lda         claimer                             ; (Claimed: E_BUSY, the claimer's writes too)
-            beq         :+
+            bne         :+
+            lda         t_stale                             ; (The screen changed under the console: refused
+            beq         :++                                 ;   once, so it paints its window again)
+            stz         t_stale
+:
             lda         #E_BUSY
             sec
             rts
@@ -2509,6 +2519,8 @@ c_mode:
             bcs         @done
             sta         mode
             stz         bitmap
+            lda         #1                                  ; (The console's next write refused: it paints again)
+            sta         t_stale
             jsr         mode_set
             jsr         layer0_off
             jsr         cls
@@ -2598,6 +2610,8 @@ c_bitmap:
 :
             sty         bmdepth
             stx         bitmap
+            lda         #1                                  ; (The console's next write refused: it paints again)
+            sta         t_stale
             jsr         layer0_set
             jsr         mode_set
             php
@@ -2678,6 +2692,8 @@ c_reset:
             jsr         setup_all
             jsr         irq_on
             jsr         cursor_show
+            lda         #1                                  ; (The console's next write refused: it paints again)
+            sta         t_stale
             clc
 :
             rts
@@ -2689,6 +2705,8 @@ release:
             lda         claimer
             beq         @done
             stz         claimer
+            lda         #1                                  ; (The console's next write refused: it paints again)
+            sta         t_stale
             lda         claim_all
             beq         :+
             jsr         setup_all

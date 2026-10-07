@@ -108,7 +108,10 @@ The VERA has one set of address registers, so two tasks can't both write it.  A 
 `claim` to `ctl` and keeps the file open: till it writes `release`, or closes its last file of `#v` (its end does),
 the chip is its own.  It may write any register; the driver leaves the chip alone, and another task's commands and
 reads of the chip's files get `E_BUSY` (a second `claim` too), and so does any write to `term`, the claimer's too.
-The console keeps its windows' screens itself, so it paints the window shown again once the claim ends.
+The console keeps its windows' screens itself, so it paints the window shown again once the claim ends.  The first
+write to `term` after the screen changed under the console (a `mode`, a `bitmap`, a `reset`, a claim's end) is
+refused once with `E_BUSY` too: the console then reads the size from `ctl`'s `mode` line, sizes its windows to it,
+and paints the window shown again.
 
 The VRAM a claimer may use without saying so is `$00000-$1AFFF` (108K: a 320x240 bitmap of 8 bits is 75K); the
 console's map is at `$1B000-$1EFFF`, its font at `$1F000-$1F7FF`, the cursor's image at `$1F800`.  With `claim all`

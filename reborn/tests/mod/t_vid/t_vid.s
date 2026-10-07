@@ -402,6 +402,8 @@ main:
             CTL         "bitmap off"
             EXPECT_OK   "bitmap off"
             CTL         "mode 80x60"
+            PUT         tw, t_clear, t_clear_n
+            EXPECT_ERR  E_BUSY, "the first write to /term after a mode: E_BUSY, once (the console paints again)"
             CTL         "cursor blink"
             CTL         "border 0"
             CTL         "flash"
@@ -422,7 +424,9 @@ main:
             CTL         "release"
             EXPECT_OK   "release"
             PUT         tw, s_kept, 4
-            EXPECT_OK   "a write to /term after the release"
+            EXPECT_ERR  E_BUSY, "the first write to /term after the release: E_BUSY, once"
+            PUT         tw, s_kept, 4
+            EXPECT_OK   "the next"
             AT          tr, 0, 4
             SAME        s_kept
             EXPECT_A    0, "shown"

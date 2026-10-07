@@ -9,8 +9,10 @@
 ; window's screen, main and alternate: vmap the one in use; the screen's rows
 ; from v_sb0 on, the scrollback's before them, its last v_sbn the newest last).  So a scroll moves the map's
 ; entries, not the rows: a row that goes off the top of the whole screen (or of a region at its top) joins the
-; scrollback, and the oldest scrollback row comes in, blanked, at the region's bottom.  A window is 80 x 24 here
-; (W1: W3 sizes them), so it has 40 rows of scrollback.
+; scrollback, and the oldest scrollback row comes in, blanked, at the region's bottom.  A window's size is the
+; layout's (cons.s: the smaller of the terminals it's shown on; 127 x 64 at most), the pool's other rows its
+; scrollback: 40 at 80 x 24.  A resize turns the ring (vt_resize), as xterm keeps the cursor's row: the scrollback's
+; rows come down onto a taller screen, a shorter one's rows go off its top into it.
 ;   Its state (the parser's, the cursor, the margins, the rendition, the modes, the character sets, the saved
 ; cursor, the tab stops, the map) is vs_*; each window's is kept in vt_save, a page each, and loaded (vt_load) as
 ; it's written to or read.
@@ -43,9 +45,7 @@
 .include "macros.inc"
 .include "cons.inc"
 
-VT_COLS         = 80            ; A window's size (W1)
-VT_ROWS         = 24
-POOL            = 64            ; A window's rows: a plane's (128 cells each)
+POOL            = WIN_ROWS      ; A window's rows: a plane's (128 cells each)
 VT_NPAR         = 16            ; A sequence's numbers, at most
 VT_RAW          = 40            ; A sequence's bytes kept, to pass it on as it came
 VS_PAGE         = 256           ; A window's state in vt_save
@@ -147,6 +147,7 @@ v_rbase:    .res        1                                   ; Its map's ring's s
 vs_last:
 VS_N        = vs_last - vs_first
 .assert     VS_N < 256 .and VS_N <= VS_PAGE, error, "A window's state is a page at most"
+.assert     WIN_COLS < 128 .and POOL = 64, error, "A row's 128 cells, its meta the last; ring_resize's POOL - 1"
 vb0:        .res        1                                   ; Its planes' banks: the characters, the colours, the
 vb1:        .res        1                                   ;   rendition
 vb2:        .res        1
@@ -226,6 +227,11 @@ tbuf:       .res        256                                 ; /text's bytes for 
 tlen:       .res        POOL                                ;   each of its rows' length (trailing blanks off) ...
 tc_w:       .res        1                                   ;   for this window ($FF: none) ...
 tc_n:       .res        1                                   ;   its rows
+rz_o:       .res        1                                   ; A resize: the rows it had, has ...
+rz_n:       .res        1
+rz_y:       .res        1                                   ;   a cursor's row ...
+rz_k:       .res        1                                   ;   the rows to or from the scrollback ...
+rz_d:       .res        1                                   ;   and those blanked or dropped at the bottom
 
 .segment "CODE2"
 ; ****************************************************************************
@@ -272,11 +278,13 @@ vt_new:
             sta         vt_w
             stz         v_alt
             jsr         banks
-            lda         #VT_COLS
+            lda         lay_cols                            ; (The layout's size)
             sta         v_cols
-            lda         #VT_ROWS
+            lda         lay_rows
             sta         v_rows
-            lda         #POOL - VT_ROWS
+            sec
+            lda         #POOL
+            sbc         lay_rows
             sta         v_sb0
             stz         v_sbn
             ldy         #POOL - 1                           ; The map: each row its own
@@ -299,6 +307,94 @@ vt_keymodes:
             tax
             lda         v_mode
             and         #VM_CKM | VM_KPAM
+            rts
+
+; Window .X resized to the layout's size (lay_cols x lay_rows): its screen's ring turned so the cursor's row stays
+; on it (ring_resize), the cells past a narrower width dropped, the cursor and the saved one in it, the margins the
+; whole screen.  The alternate screen, in use, too (rows off its top dropped: it has no scrollback), and the main one
+; with the saved cursor's row as its cursor's (?1049's)
+vt_resize:
+            txa
+            jsr         vt_load
+            lda         v_rows
+            sta         rz_o
+            lda         lay_rows
+            sta         rz_n
+            cmp         rz_o
+            bne         :+
+            lda         lay_cols
+            cmp         v_cols
+            bne         :+
+            rts
+:
+            lda         v_alt
+            beq         @main
+            lda         v_y                                 ; The alternate screen
+            jsr         ring_resize
+            sta         v_y
+            stz         v_sbn
+            jsr         trunc_cols
+            lda         #0                                  ; Then the main one
+            jsr         buf_to
+            lda         v_sy
+            jsr         ring_resize
+            sta         v_sy
+            jsr         trunc_cols
+            lda         #1
+            jsr         buf_to
+            bra         @size
+@main:
+            lda         v_y
+            jsr         ring_resize
+            sta         v_y
+            jsr         trunc_cols
+@size:
+            lda         rz_n
+            sta         v_rows
+            sec
+            lda         #POOL
+            sbc         rz_n
+            sta         v_sb0
+            lda         lay_cols
+            sta         v_cols
+            ldx         v_x                                 ; The cursors in it
+            jsr         in_cols
+            stx         v_x
+            ldx         v_sx
+            jsr         in_cols
+            stx         v_sx
+            lda         v_sy
+            cmp         v_rows
+            bcc         :+
+            ldx         v_rows
+            dex
+            stx         v_sy
+:
+            stz         v_wrap
+            jsr         full_margins
+            lda         tc_w                                ; (/text's rows' lengths: found again)
+            cmp         vt_w
+            bne         :+
+            lda         #$FF
+            sta         tc_w
+:
+            jmp         cur_row
+
+; .X no more than the last column
+in_cols:
+            cpx         v_cols
+            bcc         :+
+            ldx         v_cols
+            dex
+:
+            rts
+
+; Window .X's size: .A its columns, .X its rows
+vt_size:
+            txa
+            jsr         vt_load
+            lda         v_cols
+            ldx         v_rows
             rts
 
 ; Window .X gone: its banks back
@@ -3274,6 +3370,112 @@ scroll_down:
             bne         @one
             jmp         cur_row
 
+; The screen in use from rz_o rows to rz_n, .A its cursor's row (OUT: .A, that row's place now): growing, the
+; scrollback's newest rows come down onto its top (as many as it has, the cursor's row going down with them), then
+; blank rows at its bottom (the ring turned on); shrinking, the rows above the cursor's go off its top into the
+; scrollback (as many as must, for the cursor's to stay), then those at its bottom are dropped (the ring turned back)
+ring_resize:
+            sta         rz_y
+            lda         rz_n
+            cmp         rz_o
+            bne         :+
+            lda         rz_y                                ; (As it was)
+            rts
+:
+            bcc         @shrink
+            sbc         rz_o                                ; Growing: by g (C = 1)
+            sta         rz_d
+            lda         v_sbn                               ; k: the scrollback's, g at most
+            cmp         rz_d
+            bcc         :+
+            lda         rz_d
+:
+            sta         rz_k
+            sec
+            lda         v_sbn
+            sbc         rz_k
+            sta         v_sbn
+            clc
+            lda         rz_y
+            adc         rz_k
+            sta         rz_y
+            sec                                             ; g - k blank at the bottom
+            lda         rz_d
+            sbc         rz_k
+            beq         @grown
+            sta         rz_d
+            clc
+            adc         v_rbase
+            and         #POOL - 1
+            sta         v_rbase
+@blank:
+            sec
+            lda         #POOL
+            sbc         rz_d
+            jsr         map_row
+            jsr         pool_ptr
+            lda         #COL_DEF
+            jsr         blank_in
+            dec         rz_d
+            bne         @blank
+@grown:
+            lda         rz_y
+            rts
+@shrink:
+            stz         rz_k                                ; Shrinking: k, the rows above the cursor's that go
+            lda         rz_y
+            cmp         rz_n
+            bcc         :+
+            sbc         rz_n                                ; (C = 1)
+            inc         a
+            sta         rz_k
+:
+            sec
+            lda         rz_y
+            sbc         rz_k
+            sta         rz_y
+            clc
+            lda         v_sbn
+            adc         rz_k
+            sta         v_sbn
+            sec                                             ; The rest dropped at the bottom
+            lda         rz_o
+            sbc         rz_n
+            sec
+            sbc         rz_k
+            sta         rz_d
+            sec
+            lda         v_rbase
+            sbc         rz_d
+            and         #POOL - 1
+            sta         v_rbase
+@done:
+            lda         rz_y
+            rts
+
+; The screen in use's rows (the pool's, all) no wider than lay_cols, if that's narrower: their blank ends no further
+; on
+trunc_cols:
+            lda         lay_cols
+            cmp         v_cols
+            bcs         @done
+            lda         vb0
+            sta         $00
+            ldx         #POOL - 1
+@row:
+            txa
+            jsr         pool_ptr
+            ldy         #META
+            lda         lay_cols
+            cmp         (vq),Y
+            bcs         :+
+            sta         (vq),Y
+:
+            dex
+            bpl         @row
+@done:
+            rts
+
 ; su_n = .Y, no more than the rows su_t to su_b (and at least 1)
 scroll_n:
             sec
@@ -3349,9 +3551,10 @@ erase_col:
             ora         #COL_DEF & $0F
             rts
 
-; The row at vq blank: its blank end all of it, in the background's colours (BCE); no attributes
+; The row at vq blank: its blank end all of it, in the background's colours (BCE; blank_in: .A's); no attributes
 blank_row:
             jsr         erase_col
+blank_in:
             ldy         #META
             ldx         vb1
             stx         $00
@@ -4316,6 +4519,7 @@ scr_flush:
             lda         #1
             sta         ts_scr
             sta         scr_fail
+            sta         scr_chk                             ; (Its size looked at: vid's mode may have changed)
             stz         fw_scr
             bra         :+
 @gone:

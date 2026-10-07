@@ -93,7 +93,7 @@ whose lines end CR LF is written with CR LF again.
 | `M-I`, `M-X`, `^L` | Auto-indent on and off; the help lines off and on; the screen drawn again |
 
 Ctrl-C does nothing in `edit` (it's the console's interrupt), and `^\` and `^]` never reach a program, so nano's keys
-there are Meta keys here.  The screen is the terminal's size (`$COLUMNS` and `$LINES`, else 80 by 24).  `ed` is
+there are Meta keys here.  The screen is the terminal's size (`$COLUMNS` and `$LINES`, else 80 by 24; the window's, from `consctl`, comes with W3's languages).  `ed` is
 the line editor (Text, above), for scripts and a terminal without a screen.
 
 ## Tasks

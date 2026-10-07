@@ -110,9 +110,11 @@ main:
             sta         ctl
             EXPECT_OK   "OPEN #c/consctl"
             READ_       ctl, 96
-            EXPECT_A    65, "consctl reads as its state: rawoff, keys hydra, scroll smooth, group 1, window 0, terminal serial (65 bytes)"
+            EXPECT_A    76, "consctl reads as its state: rawoff, keys hydra, scroll smooth, group 1, window 0, size 80 24, terminal serial (76 bytes)"
             lda         buf + 38
             EXPECT_A    '1', "group 1: init's"
+            lda         buf + 57
+            EXPECT_A    '2', "size 80 24: the serial port's terminal's"
 
 ; ---- A BEL printed: the sound driver's bell too (#a/bell: tests.js looks for channel 7's key-on)
             lda         #$07
@@ -219,6 +221,35 @@ main:
             tax
             lda         buf - 1,X
             EXPECT_A    'R', "raw: ESC [ 6 n answered ESC [ row ; column R (CPR)"
+
+; ---- The window's size (W3): the serial port's terminal's here (the screen's off).  Its report (ESC [ 8 ; R ; C t,
+; typed: the PC tool's) sets it, as terminal size C R does; a raw reader is told (KEY_RESIZE)
+            PRINT       s_pz
+            READ_       #0, 1
+            lda         buf
+            EXPECT_A    KEY_RESIZE, "raw: the terminal's size typed (ESC [ 8 ; 40 ; 100 t): KEY_RESIZE"
+            WRITE_      #1, s_q_size, S_Q_SIZE_N
+            ldx         #<s_a_size100
+            ldy         #>s_a_size100
+            jsr         answer_is
+            EXPECT_A    0, "raw: ESC [ 1 8 t answered ESC [ 8 ; 40 ; 100 t (the window's size: the terminal's)"
+            jsr         ctl_read
+            lda         buf + 53
+            EXPECT_A    '1', "consctl: size 100 40"
+            WRITE_      ctl, s_tsize, S_TSIZE_N
+            EXPECT_OK   "consctl: terminal size 80 24"
+            READ_       #0, 1
+            lda         buf
+            EXPECT_A    KEY_RESIZE, "raw: KEY_RESIZE again"
+            WRITE_      #1, s_q_size, S_Q_SIZE_N
+            ldx         #<s_a_size
+            ldy         #>s_a_size
+            jsr         answer_is
+            EXPECT_A    0, "raw: ESC [ 1 8 t answered ESC [ 8 ; 24 ; 80 t again"
+            WRITE_      ctl, s_tsmall, S_TSMALL_N
+            EXPECT_ERR  E_INVAL, "consctl: terminal size 5 5 (too small): E_INVAL"
+            WRITE_      ctl, s_task, S_TASK_N
+            EXPECT_OK   "consctl: terminal size (the terminal asked: ESC [ 1 8 t)"
 
 ; ---- Raw, keys vt: the keys as a VT100 sends them, following the window's DECCKM and VT52 mode (vt.s: W2)
             WRITE_      ctl, s_keysvt, 7
@@ -421,6 +452,20 @@ keep:
             clc
             rts
 
+; consctl read from its start (a write moved its offset), into buf.  OUT: .A = the count read
+ctl_read:
+            stz         r0
+            stz         r0 + 1
+            stz         r1
+            stz         r1 + 1
+            lda         ctl
+            ldx         #0
+            jsr         SEEK
+            LDR         r0, buf
+            LDR         r1, 96
+            lda         ctl
+            jmp         READ
+
 ; wctl read from its start (the write moved its offset), into buf.  OUT: .A = the count read
 wctl_read:
             stz         r0
@@ -464,6 +509,13 @@ s_a_rqm4:   .byte       ESC, "[4;2$y", 0
 s_q_size:   .byte       ESC, "[18t"
 S_Q_SIZE_N  = * - s_q_size
 s_a_size:   .byte       ESC, "[8;24;80t", 0
+s_a_size100: .byte      ESC, "[8;40;100t", 0
+s_tsize:    .byte       "terminal size 80 24"
+S_TSIZE_N   = * - s_tsize
+s_tsmall:   .byte       "terminal size 5 5"
+S_TSMALL_N  = * - s_tsmall
+s_task:     .byte       "terminal size"
+S_TASK_N    = * - s_task
 s_q_parm:   .byte       ESC, "[x"
 S_Q_PARM_N  = * - s_q_parm
 s_a_parm:   .byte       ESC, "[2;1;1;120;120;1;0x", 0
@@ -500,6 +552,7 @@ s_p7:       .byte       "7> ", 0
 s_p8:       .byte       "8> ", 0
 s_p9:       .byte       "9> ", 0
 s_pr:       .byte       "r> ", 0
+s_pz:       .byte       "z> ", 0
 s_pc:       .byte       "c> ", 0
 s_pw:       .byte       "w> ", 0
 s_pk:       .byte       "k> ", 0
