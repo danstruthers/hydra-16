@@ -172,7 +172,7 @@ bank t).  Every fixed address is in `include/layout.inc`, and nowhere else.
   and read-only data in `CODE2` and `RODATA2`, its third's in `CODE3` and `RODATA3` ..., at the same addresses as the
   first's, reached through `FAR2` (and back through `FAR1`), or from any bank to any through `FARN bank, routine`
   (the caller's bank set again after), trampolines in its RAM that switch its own bank register (`HYX2_BANKS_INIT`
-  notes its banks).  Its banks are one after the other to the CPU (the ROM image keeps them in one group of 64).  Such a module owns no IRQ line, and keeps a note handler (`NOTIFY`)
+  notes its banks).  Its banks are one after the other to the CPU (the ROM image keeps them in one group of 64).  Such a module owns an IRQ line only with its irq entry (and what it calls) in its RAM, its `DATA`, as `cons` has, and keeps a note handler (`NOTIFY`)
   in its RAM: a note may come while either bank is at `$A000`, and the kernel calls the handler with the bank that's
   there.  The header's `HX_LENGTH` is the image's length in its last bank.  Code that both banks call often can be
   in the module's `DATA` too, as the first `hylang`'s core was (its heap, objects, scopes and I/O): it runs with

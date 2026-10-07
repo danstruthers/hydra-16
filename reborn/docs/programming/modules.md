@@ -30,8 +30,9 @@ A module bigger than a bank (16K) spans two to eight, one after another: `HYX2_D
 "name", main, 2`), its second bank's code in the segment `CODE2` (linked by `modules/module2.cfg`), the third's in
 `CODE3` ...  It calls between its banks through trampolines in its RAM: `FAR2` (from the first into the second),
 `FAR1` (back), and `FARN bank, routine` from any to any, the caller's bank set again after.  Such a module keeps its
-note handler in its RAM, as the kernel calls a handler with whichever bank is at `$A000`, and owns no IRQ line.  rc
-(two banks), HydraFS (the storage driver's second) and hylang (seven) are built so.
+note handler in its RAM, as the kernel calls a handler with whichever bank is at `$A000`; and it owns an IRQ line only
+with its irq entry (and what that calls) in its RAM too, in its `DATA`, as the console driver has.  rc (two banks),
+HydraFS (the storage driver's second), the console driver (two) and hylang (seven) are built so.
 
 ## Libraries and XCALL
 

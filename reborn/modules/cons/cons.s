@@ -69,8 +69,9 @@
 .include "hyx2.inc"
 .include "macros.inc"
 .include "srvlib.inc"
+.include "cons.inc"
 
-            HYX2_DRIVER "cons", init, srv_serve, irq, 0, HF_BOOT
+            HYX2_DRIVER "cons", init, srv_serve, irq, 0, HF_BOOT, 2
 
 SRV_FLUSH       = flush                                     ; (srvlib: a reader's call ended by a note)
 SRV_OPENED      = opened                                    ;   (a fid made: its window)
@@ -257,6 +258,7 @@ pc_crc:     .res        2                                   ;   a CRC
 ; ****************************************************************************
 ; The driver's init: window 0, its lines, the rate, the ACIA's receive interrupt on, /pc idle, the devices
 init:
+            HYX2_BANKS_INIT
             ldx         #cnt - rx_head                      ; (Its zero page: all 0)
 :
             stz         rx_head,X
@@ -309,7 +311,10 @@ init:
 
 ; ****************************************************************************
 ; The irq entry: .A = the line.  Short: about 70 cycles at most, and no WAKE (TASK_EVENT).  (The ACIA's comes
-; ahead of the VIA's when both are waiting: kernel/common.s's IRQ_VIA)
+; ahead of the VIA's when both are waiting: kernel/common.s's IRQ_VIA.)  It and timer 2's are in the module's RAM
+; (its DATA, beside the trampolines), as an interrupt may come while either bank is at $A000: so a module of two
+; banks owns its lines
+.segment "DATA"
 irq:
             cmp         #LINE_VIA_T2
             beq         t2_next
@@ -441,6 +446,7 @@ t2_next:
             lda         VIA_T2CL                            ; (Its interrupt cleared)
             lda         #0
             rts
+.code
 
 ; ****************************************************************************
 ; The send and receive rings
