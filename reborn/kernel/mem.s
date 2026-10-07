@@ -201,19 +201,34 @@ K_BANKS:
             bne         @count
             rts
 
+; BANKS_ALLOC_IN: a run of this task's banks, from the lowest from bank .X to bank .Y (a module's are $m0-$mF).
+; IN: .A = banks.  OUT: as BANKS_ALLOC's
+K_BANKS_ALLOC_IN:
+            stx         K_PTR
+            cpy         #SHARED_BANK                        ; (K_CNT + 1: past the last; the shared banks at most)
+            bcc         :+
+            ldy         #SHARED_BANK - 1
+:
+            iny
+            sty         K_CNT + 1
+            bra         m_alloc
+
 ; BANKS_ALLOC: a run of this task's banks, from the lowest.  IN: .A = banks.  OUT: .A = the first (for $00); or
 ; C = 1, .A = E_INVAL (0), E_NOMEM
 K_BANKS_ALLOC:
+            stz         K_PTR
+            ldx         #SHARED_BANK
+            stx         K_CNT + 1
+m_alloc:
             cmp         #0
             beq         @inval
             sta         K_CNT
             jsr         m_goodmods
             jsr         m_bankmap
-            stz         K_PTR                               ; K_PTR: the bank looked at; K_PTR + 1: the run of free
-            stz         K_PTR + 1                           ;   ones so far, up to it
-@bank:
+            stz         K_PTR + 1                           ; K_PTR: the bank looked at; K_PTR + 1: the run of free
+@bank:                                                      ;   ones so far, up to it
             lda         K_PTR
-            cmp         #SHARED_BANK
+            cmp         K_CNT + 1
             bcs         @nomem
             jsr         m_modgood
             beq         @used
@@ -290,6 +305,13 @@ K_BANKS_FREE:
 ; .A = E_INVAL (0), E_NOMEM
 K_SEG_CREATE:
             KCALL_FAR   K_SEG_CREATE_K
+            rts
+
+; SEG_CREATE_IN: the same, its banks shared bank IDs from .X to .Y (SEG_IDS on: below it, from SEG_IDS).  The last
+; ID goes in K_Y, for the KCALL to look at
+K_SEG_CREATE_IN:
+            sty         K_Y
+            KCALL_FAR   K_SEG_CREATE_IN_K
             rts
 
 ; SEG_ATTACH: attach this task to segment .A (it stays while a task is attached).  OUT: C = 0; or C = 1,
@@ -369,7 +391,32 @@ K_SEGINFO:
 
 ; ---- In the kernel task (KCALLs): .Y = the calling task
 
+K_SEG_CREATE_IN_K:
+            pha                                             ; (The banks)
+            cpx         #SEG_IDS                            ; From .X (SEG_IDS at least) ...
+            bcs         :+
+            ldx         #SEG_IDS
+:
+            stx         K_PTR
+            tya                                             ; ... to the caller's K_Y
+            tax
+            ldy         T_REGISTER
+            php
+            sei
+            QL_GET      K_Y
+            plp
+            sta         K_CNT + 1
+            txa
+            tay                                             ; (.Y: the caller again)
+            pla
+            bra         m_segnew
+
 K_SEG_CREATE_K:
+            ldx         #SEG_IDS                            ; Any IDs: SEG_IDS to $FF
+            stx         K_PTR
+            ldx         #$FF
+            stx         K_CNT + 1
+m_segnew:
             cmp         #0
             beq         @inval
             cmp         #$100 - SEG_IDS + 1
@@ -386,12 +433,14 @@ K_SEG_CREATE_K:
 :
             stx         K0_TMP3
             jsr         m_shmap
-            lda         #SEG_IDS                            ; A run of free IDs on good chips, from the lowest
-            sta         K_PTR                               ; K_PTR: the ID looked at; K_PTR + 1: the run so far
-            stz         K_PTR + 1
-@id:
+            stz         K_PTR + 1                           ; A run of free IDs on good chips, from the lowest
+@id:                                                        ;   (K_PTR: the ID looked at; K_PTR + 1: the run so far)
             lda         K_PTR
             beq         @nomem                              ; (Past $FF)
+            cmp         K_CNT + 1
+            beq         :+
+            bcs         @nomem                              ; (Past the last: K_CNT + 1)
+:
             lsr                                             ; Its chip: ID bits 2-3 (good?)
             lsr
             and         #3

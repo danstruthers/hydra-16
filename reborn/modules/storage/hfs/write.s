@@ -789,7 +789,7 @@ HFS_ALLOC:
             sec
             rts
 
-; SD_LBA = cluster HFS_C's first block: the data area + HFS_C * 8.  Modifies: .A, .X
+; SD_LBA = cluster HFS_C's first block: the data area + HFS_C * the cluster's blocks.  Modifies: .A, .X
 HFS_C_LBA:
             ldx         #3
 :
@@ -797,7 +797,7 @@ HFS_C_LBA:
             sta         SD_LBA,X
             dex
             bpl         :-
-            ldx         #HFS_CSHIFT
+            ldx         HFS_SHIFT
 :
             asl         SD_LBA
             rol         SD_LBA + 1
@@ -1380,7 +1380,7 @@ HFS_EACH_RUN:
             lda         HFS_XBLK + 3
             sbc         HFS_V_DATA + 3,X
             sta         HFS_XCL + 3
-            ldx         #HFS_CSHIFT
+            ldx         HFS_SHIFT
 :
             lsr         HFS_XCL + 3
             ror         HFS_XCL + 2
@@ -2263,11 +2263,11 @@ HFS_SHRINK:
             bcc         :+
             rts
 :
-            clc                                             ; HFS_KEEP = the clusters kept: (size + 4095) >> 12
-            lda         HFS_STAT + SR_LENGTH
-            adc         #<(HFS_CLUSTER_BLOCKS * HFS_BLOCK - 1)
+            clc                                             ; HFS_KEEP = the clusters kept: (size + a cluster's
+            lda         HFS_STAT + SR_LENGTH                ;   bytes - 1) >> (9 + the shift)
+            adc         #$FF                                ; (A cluster's bytes - 1: $xxFF)
             lda         HFS_STAT + SR_LENGTH + 1
-            adc         #>(HFS_CLUSTER_BLOCKS * HFS_BLOCK - 1)
+            adc         HFS_CBYTEMASKHI
             sta         HFS_KEEP
             lda         HFS_STAT + SR_LENGTH + 2
             adc         #0
@@ -2277,7 +2277,8 @@ HFS_SHRINK:
             sta         HFS_KEEP + 2
             stz         HFS_KEEP + 3
             rol         HFS_KEEP + 3                        ; (The carry: a 33rd bit)
-            ldx         #HFS_CSHIFT + 9 - 8                 ; (>> 8 so far: then >> 4)
+            ldx         HFS_SHIFT                           ; (>> 8 so far: then >> the shift + 1)
+            inx
 :
             lsr         HFS_KEEP + 3
             ror         HFS_KEEP + 2
@@ -2554,7 +2555,7 @@ HFS_EXT_DROP:
             lda         HFS_LASTB + 3
             sbc         HFS_V_DATA + 3,X
             sta         HFS_XCL + 3
-            ldx         #HFS_CSHIFT
+            ldx         HFS_SHIFT
 :
             lsr         HFS_XCL + 3
             ror         HFS_XCL + 2

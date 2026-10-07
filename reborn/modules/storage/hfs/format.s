@@ -113,6 +113,16 @@ HFS_FORMAT:
             rts
 
 HFS_FORMAT_GO:
+            lda         #HFS_CSHIFT                         ; Its clusters: 4 KB on a card, 1 KB on a RAM disk
+            ldx         SD_DEV
+            cpx         #DISK_R
+            beq         :+
+            cpx         #DISK_S
+            bne         :++
+:
+            lda         #HFS_CSHIFT_RAM
+:
+            jsr         HFS_SHIFT_SET
             lda         SD_DEV
             sta         HFS_CARD
             jsr         HFS_RO_DISK                         ; (Not the ROM disk)
@@ -151,7 +161,7 @@ HFS_FORMAT_GO:
 
 @sized:
             sec                                             ; HFS_T4 = the clusters the map covers:
-            lda         SD_LBA                              ;   (blocks - 1) / 8
+            lda         SD_LBA                              ;   (blocks - 1) / a cluster's blocks
             sbc         #1
             sta         HFS_T4
             lda         SD_LBA + 1
@@ -164,7 +174,7 @@ HFS_FORMAT_GO:
             sbc         #0
             sta         HFS_T4 + 3
             ldx         #HFS_T4 - HFS_C
-            ldy         #HFS_CSHIFT
+            ldy         HFS_SHIFT
             jsr         HFS_SHR
             clc                                             ; HFS_N4 = the map's blocks: (that + 4095) / 4096
             lda         HFS_T4
@@ -196,7 +206,7 @@ HFS_FORMAT_GO:
             adc         #0
             sta         HFS_D + 3
             sec                                             ; HFS_C = the data area's clusters:
-            lda         SD_LBA                              ;   (blocks - HFS_D) / 8
+            lda         SD_LBA                              ;   (blocks - HFS_D) / a cluster's blocks
             sbc         HFS_D
             sta         HFS_C
             lda         SD_LBA + 1
@@ -212,7 +222,7 @@ HFS_FORMAT_GO:
             jmp         @too_small
 @far4:
             ldx         #0
-            ldy         #HFS_CSHIFT
+            ldy         HFS_SHIFT
             jsr         HFS_SHR
             lda         HFS_C + 3                           ; (2 at least)
             ora         HFS_C + 2
@@ -326,7 +336,7 @@ HFS_FORMAT_SB:
 :
             sta         (HFS_PTR),Y
             iny
-            lda         #HFS_CSHIFT
+            lda         HFS_SHIFT
             sta         (HFS_PTR),Y
             ldy         #HFS_SB_CLUSTERS
             ldx         #HFS_C - HFS_C

@@ -47,7 +47,7 @@ HFS_EXTEND:
             cpx         #4
             bne         :-
             lda         SD_POS + 1                          ; Inside a cluster: zeros to its end (or to the
-            and         #>(HFS_CLUSTER_BLOCKS * HFS_BLOCK - 1) ;   write, if that's sooner)
+            and         HFS_CBYTEMASKHI                     ;   write, if that's sooner)
             ora         SD_POS
             beq         @holes
             sec                                             ; SD_LEFT = the bytes to the cluster's end
@@ -55,9 +55,9 @@ HFS_EXTEND:
             sbc         SD_POS
             sta         SD_LEFT
             lda         SD_POS + 1
-            and         #>(HFS_CLUSTER_BLOCKS * HFS_BLOCK - 1)
+            and         HFS_CBYTEMASKHI
             sta         SD_TMP
-            lda         #>(HFS_CLUSTER_BLOCKS * HFS_BLOCK)
+            lda         HFS_CBYTEHI
             sbc         SD_TMP
             sta         SD_LEFT + 1
             jsr         HFS_W_GAP                           ; HFS_CL = the gap: the write's start - SD_POS
@@ -83,8 +83,11 @@ HFS_EXTEND:
 
 @holes:                                                     ; Whole clusters to the write's: a hole
             jsr         HFS_W_GAP
-            ldx         #HFS_CL - HFS_CL                    ; (HFS_CL >> 12: the gap in clusters, as SD_POS
-            ldy         #HFS_CSHIFT + 9                     ;   is on a cluster's start now)
+            ldx         #HFS_CL - HFS_CL                    ; (HFS_CL >> 9 + the shift: the gap in clusters, as
+            lda         HFS_SHIFT                           ;   SD_POS is on a cluster's start now)
+            clc
+            adc         #9
+            tay
             jsr         HFS_CL_SHR
             ldx         #3
 :
@@ -283,7 +286,7 @@ HFS_FILL:
             jmp         @done
 @far2:
             jsr         HFS_C_LBA                           ; Its blocks: zeros
-            ldx         #HFS_CLUSTER_BLOCKS
+            ldx         HFS_CBLK
 :
             phx
             jsr         HFS_META_NEW                        ; (All zeros, to be written: it writes the one

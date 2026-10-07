@@ -1493,6 +1493,8 @@ HFS_VOLUME:
             lda         HFS_V_STATE,X
             beq         @look
             bmi         @not_fs                             ; ($FF: looked at, and it isn't one)
+            lda         HFS_V_CSHIFT,X                      ; (Its clusters: the volume in hand's now)
+            jsr         HFS_SHIFT_SET
             clc
             rts
 
@@ -1567,7 +1569,11 @@ HFS_VOLUME:
             bne         :-
 
 @counted:
+            ldy         #HFS_SB_CSHIFT                      ; Its clusters' size
+            lda         (SD_CACHE),Y
             ldx         HFS_CARD
+            sta         HFS_V_CSHIFT,X
+            jsr         HFS_SHIFT_SET
             lda         #1
             sta         HFS_V_STATE,X
             clc
@@ -1583,6 +1589,26 @@ HFS_VOLUME:
             sec
             rts
 
+; The volume in hand's clusters: .A = their size, as a shift (1 to HFS_CSHIFT_MAX).  Keeps .X, .Y
+HFS_SHIFT_SET:
+            sta         HFS_SHIFT
+            phx
+            tax
+            lda         HFS_POW2,X
+            sta         HFS_CBLK
+            dec         a
+            sta         HFS_CBMASK
+            lda         HFS_CBLK                            ; (A cluster's bytes: its blocks * 512)
+            asl         a
+            sta         HFS_CBYTEHI
+            dec         a
+            sta         HFS_CBYTEMASKHI
+            plx
+            rts
+
+HFS_POW2:   .byte       1, 2, 4, 8
+.assert     HFS_CSHIFT_MAX = 3 .and HFS_CSHIFT <= HFS_CSHIFT_MAX .and HFS_CSHIFT_RAM >= 1, error, "HFS_POW2: shifts 1 to 3"
+
 ; Read block 0 of card HFS_CARD's HydraFS (from HFS_V_BASE) into the cache.
 ; OUT: C = 0; or C = 1, .A = a card error.  Modifies: .A, .X, .Y
 HFS_SB_LOAD:
@@ -1592,8 +1618,8 @@ HFS_SB_LOAD:
             stz         SD_LBA + 3
             jmp         HFS_LOAD
 
-; Is the block in the cache a HydraFS superblock this can read: "HYDRAFS1", version 1 or 2, the cluster
-; size?  OUT: C = 0: it is.  Modifies: .A, .Y
+; Is the block in the cache a HydraFS superblock this can read: "HYDRAFS1", version 1 or 2, clusters of 1 to 4 KB
+; (shifts 1 to HFS_CSHIFT_MAX)?  OUT: C = 0: it is.  Modifies: .A, .Y
 HFS_SB_OK:
             ldy         #7
 :
@@ -1609,8 +1635,9 @@ HFS_SB_OK:
             bcs         @no
             iny
             lda         (SD_CACHE),Y
-            cmp         #HFS_CSHIFT
-            bne         @no
+            beq         @no
+            cmp         #HFS_CSHIFT_MAX + 1
+            bcs         @no
             clc
             rts
 
@@ -1885,9 +1912,9 @@ HFS_FILE_BLOCK:
             sta         HFS_CL
             stz         HFS_CL + 3
             lda         HFS_CL
-            and         #HFS_CLUSTER_BLOCKS - 1
+            and         HFS_CBMASK
             sta         HFS_SUB                             ; The block inside its cluster
-            ldx         #HFS_CSHIFT                         ; HFS_CL >>= 3: the cluster in the file
+            ldx         HFS_SHIFT                           ; HFS_CL >>= the shift: the cluster in the file
 :
             lsr         HFS_CL + 3
             ror         HFS_CL + 2
@@ -2054,7 +2081,7 @@ HFS_EXT_TRY:
             lda         HFS_XCL + 3
             adc         HFS_CL + 3
             sta         SD_LBA + 3
-            ldx         #HFS_CSHIFT                         ; * the blocks in a cluster
+            ldx         HFS_SHIFT                           ; * the blocks in a cluster
 :
             asl         SD_LBA
             rol         SD_LBA + 1
@@ -2168,6 +2195,11 @@ HFS_FID_CHECK:
             lda         HFS_H_CARD,X
             bmi         @bad                                ; ($FF: not open)
             sta         HFS_CARD
+            phx                                             ; (Its volume's clusters: the ones in hand)
+            tax
+            lda         HFS_V_CSHIFT,X
+            jsr         HFS_SHIFT_SET
+            plx
             lda         HFS_H_OMODE,X
             sta         SD_OP
             lda         HFS_H_EIDX,X                        ; HFS_LOC = where its entry is

@@ -432,6 +432,23 @@ call SEGINFO memory impl=K_SEGINFO far
   hl:     -> .A .X r0
   doc:    The shared RAM, as free shows it.
 
+call BANKS_ALLOC_IN memory impl=K_BANKS_ALLOC_IN far
+  in:     .A = how many; .X = the lowest bank it may take; .Y = the highest (module m's are $m0-$mF)
+  out:    .A = the first
+  errors: E_INVAL (0), E_NOMEM (no run that long there)
+  blocks: no
+  hl:     .A=n .X=n .Y=n -> .A
+  doc:    BANKS_ALLOC, from a range of the task's banks (the RAM disk's start FROM-TO: the modules its banks are on).
+
+call SEG_CREATE_IN memory impl=K_SEG_CREATE_IN far
+  in:     .A = how many banks (1-128); .X = the lowest shared bank ID it may take; .Y = the highest (U << 4 | the
+  in:     bank's low nibble; segments have $80-$FF)
+  out:    .A = the segment
+  errors: E_INVAL (0), E_NOMEM (no run that long there)
+  blocks: no
+  hl:     .A=n .X=n .Y=n -> .A
+  doc:    SEG_CREATE, from a range of the shared RAM (the shared RAM disk's start FROM-TO).
+
 # ---- file (BIOS ROM page 2)
 
 call OPEN file impl=K_OPEN far
