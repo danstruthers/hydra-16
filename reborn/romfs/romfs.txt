@@ -8,6 +8,7 @@ README              README
 lib/namespace       lib/namespace       ; The default namespace (the plan's appendix E): init runs it
 lib/profile         lib/profile         ; What each shell runs as it starts (rc's: phase 4)
 lib/shell           lib/shell           ; The shell init and wstart start in each window: HyForth's (forth -l)
+lib/edit/help       lib/edit/help       ; edit's keys (its ^G)
 doc/api.md          ../obj/gen/api.md   ; The system calls' reference (tools/apigen.js makes it at the build)
 bench/bench.hl      bench/bench.hl      ; hylang's and HyForth's benchmarks, the same in each (sim/bench.js compares them)
 bench/bench.fs      bench/bench.fs
@@ -65,6 +66,7 @@ bin/label           ../obj/programs/label.hyx
 bin/grep            ../obj/programs/grep.hyx    ; The tools in C (programs/grep, programs/sort)
 bin/sort            ../obj/programs/sort.hyx
 bin/db              ../obj/programs/db.hyx      ; The debugger (C: programs/db)
+bin/edit            ../obj/programs/edit.hyx    ; The screen editor (C: programs/edit)
 bin/scom            bin/scom                    ; A song run by its name (an rc script: #!/bin/rc)
 songs/scom.zsm      songs/scom.zsm              ; Songs (play /rom/songs/test.zsm): ZSM files, the X16's
 songs/test.zsm      songs/test.zsm              ;   (the old system's test song, from os_rom/songs/test.mml)

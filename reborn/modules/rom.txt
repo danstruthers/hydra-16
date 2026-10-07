@@ -40,7 +40,7 @@ module      uniq
 module      xd
 module      cmp
 module      more
-module      edit
+module      ed
 module      hwtest
 module      play
 module      xmodem

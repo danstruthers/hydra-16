@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; edit [file] - a line editor, in the manner of Unix's ed: the old system's (os_rom/shell/edit.s), a program now.
+; ed [file] - a line editor, in the manner of Unix's ed: the old system's (os_rom/shell/edit.s), a program now.
 ; The text is in the task's RAM, from its break to the top (some 29K), a line ending in LF each; a file's CR LF
 ; and CR line ends are LFs here.  At its prompt (*), a command, with line numbers (n, or $: the last) before it or
 ; after it:
@@ -20,7 +20,7 @@
 .include "macros.inc"
 .include "toollib.inc"
 
-            HYX2_PROGRAM "edit", main
+            HYX2_PROGRAM "ed", main
 
 LINE_MAX        = 255           ; A line typed: its bytes at most (the rest left out)
 
@@ -1026,7 +1026,7 @@ getline:
 cmd_letters: .byte      "pdcaiwh"
 CMDS        = * - cmd_letters
 cmd_routines: .word     c_print, c_delete, c_change, c_add, c_insert, c_write, c_help
-.assert     * - cmd_routines = CMDS * 2, error, "edit: a routine for each command"
+.assert     * - cmd_routines = CMDS * 2, error, "ed: a routine for each command"
 
 s_lines:    .byte       " lines", 0
 s_bytes:    .byte       " bytes", 0
@@ -1043,8 +1043,8 @@ s_help:     .byte       "p [a[,b]]  print (all)       a [n]      add after n (th
             .byte       "d a[,b]    delete            w [file]   write", LF, 0
 s_help2:    .byte       "q          quit              Q          quit, not writing", LF
             .byte       "n: a number, or $ (the last).  Lines typed after a, i or c end with a .", LF, 0
-tl_name:    .byte       "edit", 0
+tl_name:    .byte       "ed", 0
 tl_flagset: .byte       0
-tl_usage:   .byte       "edit [file]", 0
+tl_usage:   .byte       "ed [file]", 0
 
 .include "toollib.s"
