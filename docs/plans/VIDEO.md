@@ -4,7 +4,18 @@ A plan for the Hydra-16's supported video card: a card in **slot 0** carrying th
 
 ### **As built (October 2026)**
 
-**The card** is the user's **VERA X 6.1** from Joe Burks (wavicle): the VERA with the X16 community's gateware (v47 on, X16Community/vera-module), not v0.9.  So it has the version register (DCSEL 63: `DC_VER0` reads "V", then the major, minor and build numbers) and FX (DCSEL 2-6).  The X16's *Programmer's Reference* (chapters 9 and 10) is its documentation.  Its headers: a 2x12 one as the X16's (this plan's J1) or a 2x13 one (the OtterX's, with I2C); its SD card's lines go to a header, not a slot.  The carrier card (option A) isn't built yet.
+**The card** is the user's **VERA X 6.1** from Joe Burks (wavicle): the VERA with the X16 community's gateware (v47 on, X16Community/vera-module), not v0.9.  So it has the version register (DCSEL 63: `DC_VER0` reads "V", then the major, minor and build numbers) and FX (DCSEL 2-6).  The X16's *Programmer's Reference* (chapters 9 and 10) is its documentation.  It comes with a 2x12 header as the X16's (this plan's J1) or a 2x13 one (the OtterX's); **the user's has the 2x13**: J1's pins two on, with I2C's SCL and SDA on pins 1 and 2 (from the OtterX's schematic, `Vega_EV1/OtterX.kicad_sch`, its `VERA_CONN`).  Its SD card's lines go to a header, not a slot.  The carrier card (option A) isn't built yet: it takes a 2x13 socket, the glue below unchanged, and SCL and SDA to the slot's I2C (pins 28 and 30).
+
+| 2x13 pin | Signal | 2x13 pin | Signal |
+| :--- | :--- | :--- | :--- |
+| 1 | SCL | 2 | SDA |
+| 3 | +5 V | 4 | GND |
+| 5-12 | D7-D0 (5 D7, 6 D6 ... 12 D0) | 13 | `CS#` |
+| 14 | `RES#` | 15 | `WR#` |
+| 16 | `IRQ#` | 17 | A4 |
+| 18 | `RD#` | 19, 20 | A2, A3 |
+| 21, 22 | A0, A1 | 23, 24 | GND |
+| 25 | Audio left | 26 | Audio right |
 
 **Built** in `reborn/`, which differs from this plan (written for the old system's ROM) as follows:
 * **The emulator's VERA** (step 1): `reborn/sim/lib/vera.js`, the v47.0.2 chip (FX's registers kept, its effects not modelled; no sound made); `run.js --vera`, `--screen`, `--frame-png`, and `--view` (the screen live in a browser) rather than a web emulator; the vera test.
