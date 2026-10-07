@@ -1,6 +1,6 @@
 ## **Text windows: screens in RAM banks, a whole VT100, window groups and their chrome**
 
-A plan for the rebuilt system's (`reborn/`) console windows, October 2026.  It has three parts.  First, each window keeps its screen as cells in the console driver's RAM banks, not as its last 2K of output.  Second, each window becomes a complete VT100 (and VT102) terminal.  Third, on those two, a consistent text window system: windows in groups, Ctrl-Tab to move between a group's windows (Ctrl-] Tab where a terminal can't send Ctrl-Tab), and headers, footers and a bar that the user lays out.  It extends what's there: the plan's §14.2 windows (Plan 9's way, not job control) and the screen console (phase 8.3).  The screen editor (phase 9, being built) is its first big client.  Nothing here is built yet; the questions at the end are the user's.
+A plan for the rebuilt system's (`reborn/`) console windows, October 2026.  It has three parts.  First, each window keeps its screen as cells in the console driver's RAM banks, not as its last 2K of output.  Second, each window becomes a complete VT100 (and VT102) terminal.  Third, on those two, a consistent text window system: windows in groups, Ctrl-Tab to move between a group's windows (Ctrl-] Tab where a terminal can't send Ctrl-Tab), and headers, footers and a bar that the user lays out.  It extends what's there: the plan's §14.2 windows (Plan 9's way, not job control) and the screen console (phase 8.3).  The screen editor (phase 9, `edit`) is its first big client.  The user answered the plan's questions on 2026-10-07 ([Decisions](#decisions)), and the work is on the branch `reborn-text-windows`.
 
 ### **Contents**
 1. [What the user sees](#what-the-user-sees)
@@ -20,7 +20,7 @@ A plan for the rebuilt system's (`reborn/`) console windows, October 2026.  It h
 15. [Costs and budgets](#costs-and-budgets)
 16. [The order of work](#the-order-of-work)
 17. [Where this departs from the request](#where-this-departs-from-the-request)
-18. [Questions](#questions)
+18. [Decisions](#decisions)
 
 ---
 
@@ -39,7 +39,7 @@ The top row is the bar: the groups, by the label of each one's focused window (`
 
 * **Every window keeps its whole screen.**  Showing a window again paints it exactly as it was, whatever ran there: `top`, the editor, `db`, a shell.  Windows that aren't shown run on, as now.
 * **A group is a set of windows that belong together**: a shell's, and the windows its programs open.  Ctrl-Tab goes to the group's next window and Ctrl-Shift-Tab to the previous.  Ctrl-] n and Ctrl-] p go to the next and previous group.  Ctrl-] c starts a new group with a shell, as it starts a window now.
-* **The bar, a window's header and its footer each show a format that the user writes.**  A format can hold the window's number, its title, its program, the group's windows, the time, a program's own status line, and colours.  Programs set their window's title as they do on xterm (OSC 2), and their status line as they do on a VT320 (its host-writable status line), or through a file.
+* **The bar, a window's header and its footer each show a format that the user writes.**  A format can hold the window's number, its title, its program, the group's windows, the time, a program's own status line, and colours.  Programs set their window's title as they do on xterm (OSC 2), and their status line as they do on a VT320 (its host-writable status line), or through a file.  Each program can turn its window's chrome on or off, on the screen and on the serial port separately: by default the screen shows all of it and the serial port none.
 * **Any program that writes ANSI (VT100) sequences runs in any window**: of any size, shown or hidden, tiled or not.  It's told when its window's size changes.
 
 ---
@@ -265,9 +265,12 @@ bar bottom
 bar %[7] %G%=%t
 default header %[1]%n %l%=%w
 default footer %s
+default chrome screen on
+default chrome serial off
 ```
 
 * **The program's status line** is the VT320's host-writable status line.  DECSSDT 2 (`CSI 2 $ ~`) turns it on; DECSASD 1 (`CSI 1 $ }`) sends the program's output there until DECSASD 0 (`CSI 0 $ }`).  The footer shows it through `%s`.  Scripts write `status TEXT` to `wctl` instead; it's the same state either way.
+* **Chrome on each terminal, for each window.**  A window's chrome is on or off for each terminal separately, and its program can change it by writing to its `wctl`: `chrome screen on`, `chrome serial off`, or one part at a time (`chrome serial on header`).  While a window is shown, the bar follows its setting too, so a program can have the whole of either terminal.  By default the screen shows everything (the bar, the header, the footer) and the serial port nothing: `default chrome screen on` and `default chrome serial off` in `/rom/lib/windows`.
 * **A label** that's written stays until it's written again.  Written empty, it's automatic again (the reading program's name).
 * **Borders** (for tiles and popups) are drawn in DEC line drawing.  A tile's header is its border with the tile above.
 
@@ -275,7 +278,7 @@ default footer %s
 
 ### **Sizes**
 
-* **A window's size** is its place in the layout, less its header and footer.  In tabs, that's the terminal's size (or, with both terminals showing it, the smaller one's) less the bar; tiled, it's its tile's.  It's 128 x 64 at most (a plane).
+* **A window's size** is its place in the layout, less its chrome on that terminal.  In tabs, that's the terminal's size less its bar, header and footer there; tiled, it's its tile's.  With both terminals showing it, it's the smaller of the two, each less its own chrome (by default, the serial port's 80 x 24 whole against the screen's 80 x 60 less three rows).  It's 128 x 64 at most (a plane).
 * **`consctl` reads with `size C R`**: the one name for a window's size.  conio's `screensize`, HyForth's `form` and hylang's size word read it.  They read `$COLUMNS` and `$LINES` only when there's no console (a file, a pipe).  xterm's `CSI 18 t` and the CPR trick (`CSI 999;999 H`, then `CSI 6 n`) answer with it too.
 * **A change** (the layout, a terminal's size, a header turned on) puts `KEY_RESIZE` into a raw reader's keys, as curses has it.  A cooked reader, such as a shell, reads the new size the next time it asks.  The line editor wraps at the window's width.
 * **The terminals' sizes**:
@@ -310,7 +313,7 @@ default footer %s
 
 * **Now**, both terminals show the same thing (`screen`, `serial` or `both` in `consctl`).
 * **With the input controller**, the screen and its keyboard become a computer of their own, beside the PC's terminal.  So each terminal can be a **seat**, with its own group shown, focus, size and keys: the input controller's keys go to the screen's seat, and the serial port's to its own.
-* **`both` stays**: one seat on both terminals, at the smaller size.  A window shown on both seats is sized to the smaller.
+* **`both` stays the default** (the user's choice): one seat on both terminals, at the smaller size; independent seats are a `consctl` setting.  A window shown on both seats is sized to the smaller.
 * **The mouse** (the input controller's): a click focuses a window, and xterm's mouse reports (`?1000`, `?1006`) go to programs that ask for them.
 
 ---
@@ -321,7 +324,7 @@ default footer %s
 | :--- | :-- | :------ |
 | `#cN/cons` | The window's console | As now |
 | `#cN/consctl` | `rawon`, `rawoff`, `group`, `screen`, `serial`, `both`; reads as the state | Adds `keys hydra` and `keys vt`, `terminal ...`; reads with `size C R` too |
-| `#cN/wctl` | `new`, `current N` (console-wide); reads as the windows | Also the window's own, as rio's is: `new [group]`, `close`, `header`, `footer`, `status`, `history N`, `scroll smooth` or `jump`, `monitor`, `answerback`, `colours`, `float`, `layout`.  Console-wide: `current N`, `group N`, `bar`, `default`, `key`.  Reads as a line for each window: `N`, its group, its columns and rows, and `*` for the one shown (its label stays out, so a `*` in a title can't confuse a reader) |
+| `#cN/wctl` | `new`, `current N` (console-wide); reads as the windows | Also the window's own, as rio's is: `new [group]`, `close`, `chrome`, `header`, `footer`, `status`, `history N`, `scroll smooth` or `jump`, `monitor`, `answerback`, `colours`, `float`, `layout`.  Console-wide: `current N`, `group N`, `bar`, `default`, `key`.  Reads as a line for each window: `N`, its group, its columns and rows, and `*` for the one shown (its label stays out, so a `*` in a title can't confuse a reader) |
 | `#cN/label` | (new) | The window's title (rio's) |
 | `#cN/text` | (new) | Its scrollback and screen, as text (rio's) |
 | `#c/snarf` | (new) | The cut buffer (rio's) |
@@ -338,6 +341,7 @@ default footer %s
 | Show one | | `show-window` (there now) | `(show-window n)` (there now) | `echo current 3 >/dev/wctl` |
 | The new keys | `CH_RESIZE`, `CH_FOCUS` | `k-resize`, `k-focus` | (raw keys) | |
 | Snarf | the file | the file | `(snarf)`, `(snarf! s)` | `cat /dev/snarf` |
+| Any `wctl` line (`chrome serial on` ...) | `hy_wctl (s)` | `window-ctl ( c-addr u -- )` | `(window-ctl s)` | `echo chrome serial on >/dev/wctl` |
 
 `new-window` in HyForth and hylang changes to match the command: the shell, or a command, run in the window it makes.  Today it makes a window that nothing reads.
 
@@ -345,13 +349,13 @@ default footer %s
 
 ### **The editor**
 
-The screen editor (phase 9, being built now) is this plan's first big client.  Nothing here needs it changed to keep working: it writes ANSI sequences, and the console models them.  It gains, step by step:
+The screen editor (phase 9, `edit`, now on `reborn`) is this plan's first big client.  Nothing here needs it changed to keep working: it writes ANSI sequences, and the console models them.  It gains, step by step:
 * **W1**: a window switched away from the editor and back shows it exactly.  Its DECSTBM scrolls become rotations of the row map.
 * **W3**: its size comes from `consctl` (conio's `screensize`, which it already calls), and `KEY_RESIZE` tells it to redraw.  This is the one change it should make early: it reads the size once now.
 * **W4**: its title line can become the window's label (OSC 2) and header, and its message line the status line (the footer).  That's two more rows of text and less to draw.
 * **W6**: its cut buffer can go through `/dev/snarf`.
 * **Its shadows** (a bank holding what's on the screen, so that only changes are sent) stay worthwhile on the serial line, since follow passes on what it writes.
-* **Its several files** can stay in one window as built, or become a window each in its group (Ctrl-Tab between files, with `KEY_FOCUS`).  That's the user's choice (Questions).
+* **Its several files become a window each**, in its group (the user's choice): Ctrl-Tab goes from file to file.  That needs W5's `KEY_FOCUS` (a raw read of any of its windows says where the focus went), and the editor's input reworked to read the focused window's keys.  It comes after W5, in the editor's code.
 
 ---
 
@@ -381,11 +385,11 @@ These are estimates; W1's first piece of work is a spike that measures them agai
    * `#cN/text`, and the texts gone;
    * in vid: `ESC ( 0`, the DEC glyphs in the font, and E_BUSY while claimed (the 1K kept goes).
 
-   Tests: the cons, screen and vid tests as they are (follow keeps their bytes; a window's repaint is checked as a screen).  A new vt test of each function: bytes in, then `#cN/text` and the serial port's view out.  And a JS model of a VT100 in the emulator (`sim/lib/vt.js`), so that tests can check what the PC's terminal shows.  The spike's measurements go in status.md.
+   Tests: the cons, screen and vid tests as they are (follow keeps their bytes; a window's repaint is checked as a screen).  A new vt test of each function: bytes in, then `#cN/text` and the serial port's view out.  A JS model of a VT100 in the emulator (`sim/lib/vt.js`), so that tests can check what the PC's terminal shows.  And xterm.js's headless terminal (`@xterm/headless`, a test-only dependency) as a cross-check of the engine: the same bytes into both, the screens compared; a test skips it when it isn't installed.  The spike's measurements go in status.md.
 2. **W2, the rest of the VT100**: the reports, VT52 mode, `keys vt` (DECCKM, DECKPAM), double width and height, DECALN, DECSCNM, DECLL, the alternate screen, OSC titles, and the VT220's and xterm's additions; jump scroll; hold.  Then vttest's checks.
 3. **W3, sizes**: `consctl`'s size, `KEY_RESIZE`, and the four languages reading it; the line editor at the window's width; the serial terminal's size set, asked or told (the PC tool).
 4. **W4, chrome**: labels, formats, the bar, headers and footers, the status line (DECSSDT and DECSASD, `status`), `/rom/lib/windows`, activity.
-5. **W5, groups and keys**: up to 16 windows (as the banks allow), groups, `new` into the writer's group, `new-window`, the decoder's modifiers and Ctrl-Tab, the bindings, Ctrl-] w's list, closing with a hangup, `KEY_FOCUS`; Ctrl-Tab from the PC tool.
+5. **W5, groups and keys**: up to 16 windows (as the banks allow), groups, `new` into the writer's group, `new-window`, the decoder's modifiers and Ctrl-Tab, the bindings, Ctrl-] w's list, closing with a hangup, `KEY_FOCUS`; Ctrl-Tab from the PC tool.  Then the editor's files as windows.
 6. **W6, scrollback and snarf**: history banks, the view and selection, `/dev/snarf`, paste (bracketed).
 7. **W7, tiles and popups.**
 8. **W8, seats, the keyboard and the mouse**, with the input controller (VIDEO.md step 6).
@@ -405,18 +409,20 @@ Each language's words come with the step that brings their file (W3's size, W4's
 
 * **"The task's paged RAM"** is taken as the console's task (F), not each program's task.  [Screens](#screens-in-the-consoles-banks) gives the reasons: a window outlives its programs and has several writers, and programs' banks are their own.
 * **Ctrl-Tab can't be the only key**: over the serial line most terminals can't send it.  Ctrl-] Tab does the same everywhere, and Ctrl-Tab works where it arrives (xterm's and CSI u forms, the input controller).
-* **"Multiple windows per task"** is taken as a group per shell session, holding the windows it and its programs make.  Question 1 asks whether a group should instead belong to one task.
+* **"Multiple windows per task"** is taken as a group per shell session, holding the windows it and its programs make.  The user confirmed that ([Decisions](#decisions)).
 * **"All escape commands"**: all of the VT100's and VT102's are handled.  A few have nothing on the Hydra to act on and are consumed and reported, not acted on: 132 columns, interlace, auto-repeat, the confidence tests and the printer.  On the screen, double width and height are shown single width.
 * **The command is `new-window`, not Plan 9's `window`**, because `window` is already HyForth's and hylang's word for this window's number.
 
 ---
 
-### **Questions**
+### **Decisions**
 
-1. **Groups**: is "multiple windows per task" what's planned here (a group is a shell's session, holding the windows it and its programs make, each going as its program closes it)?  Or should a group belong to one task, its windows closed when that task ends?
-2. **Ctrl-Tab**: should it go round the group's windows (as planned, with Ctrl-] n and p for groups), or round every window?
-3. **Chrome by default**: on the screen's 80 x 60, a bar and headers.  On the serial port's 80 x 24: nothing (programs keep 24 rows), or the bar?
-4. **The editor**: should its several files be several windows in its group (Ctrl-Tab), or stay in one window as built?  Either way, should its title and message lines move to the header and footer?  (That code is the editor session's.)
-5. **Seats**: once the keyboard exists, should the screen and the serial port be independent by default, or mirror each other as now?
-6. **A check that isn't ours**: should xterm.js's headless terminal (`@xterm/headless`, MIT) be a test-only dependency, to check the VT engine against a terminal we didn't write?  Or is our own `sim/lib/vt.js` enough?
-7. **The order**: should this come before 8.4 (the carrier card and the input controller), after the editor, or between them?
+The user's answers to the plan's questions, 2026-10-07:
+
+1. **Groups**: a group is a shell session.  Ctrl-] c starts one; windows made from a window (by its programs, or `new-window`) join that window's group, and each goes as its program closes it.
+2. **Ctrl-Tab** (and Ctrl-] Tab) goes round the group's windows; Ctrl-] n and Ctrl-] p go between groups.
+3. **Chrome**: each program can turn its window's chrome on or off, on the screen and on the serial port separately.  By default the screen gets everything and the serial port nothing ([Headers, footers and the bar](#headers-footers-and-the-bar)).
+4. **The editor**: a window for each file, in its group, with Ctrl-Tab between them.  That comes after W5's `KEY_FOCUS`, in the editor's code ([The editor](#the-editor)).
+5. **Seats**: the two terminals mirrored, as now, by default; independent seats are an option in `consctl`.
+6. **Tests**: our own `sim/lib/vt.js`, plus xterm.js's headless terminal (`@xterm/headless`, MIT) as a test-only dependency that cross-checks the engine.  A test skips that check when it isn't installed.
+7. **The order**: now, before 8.4.  W8 (the seats, the keyboard, the mouse) waits for 8.4's input controller.
