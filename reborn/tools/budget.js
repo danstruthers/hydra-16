@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // ****************************************************************************
-// budget.js - what the build used, and what's left (docs/reimplementation-from-scratch.md, §16): BIOS ROM page 0
+// budget.js - what the build used, and what's left (docs/design/reimplementation-from-scratch.md, §16): BIOS ROM page 0
 // (the kernel, its jump table, the COMMON block), each module's ROM and RAM, and each test RAM program's RAM.  The
 // time budgets (IRQ latency, SCALL, kcopy, load times) are measured by the tests: sim/test.js.
 //

@@ -1,10 +1,10 @@
-## **Hydra-16 Hardware Reference**
+# The Hydra-16: hardware reference
 
-This is the Hydra-16 main board (V1) as its schematic describes it (`board/hydra-16.kicad_sch` and its sheets), with the two companion cards in `board/`.  Reference designators (U25, J18, ...) are the schematic's.  For how the software uses the hardware, see the [Programmer's Guide](../old/docs/programming/README.md).
+This is the Hydra-16 main board (V1) as its schematic describes it (`board/hydra-16.kicad_sch` and its sheets), with the two companion cards in `board/`, and the Vera X video card that goes in slot 0.  Reference designators (U25, J18, ...) are the schematic's.  How HydraOS uses the hardware is [the guide](hydra-16.md)'s and [the programmer's guide](programming/README.md)'s; the registers' names are `include/hw.inc`'s (made from this document).
 
-To test a board, run the [hardware test](../old/docs/using/wozmon.md#the-hardware-test) (HyForth's `hwtest`, or `T` typed during POST).
+To test a board, run the hardware test: `hwtest` at the shell, or a `T` typed during POST.  It's the old system's, kept unchanged in paged ROM bank 1 ([its guide](../../old/docs/using/wozmon.md#the-hardware-test)), with the checksums of HydraOS's images.
 
-### **Contents**
+## Contents
 1. [Overview](#overview)
 2. [The CPU view: memory map](#the-cpu-view-memory-map)
 3. [The pseudo-registers T, U, V, W](#the-pseudo-registers-t-u-v-w)
@@ -18,14 +18,15 @@ To test a board, run the [hardware test](../old/docs/using/wozmon.md#the-hardwar
 11. [Reset, power and bus control](#reset-power-and-bus-control)
 12. [On-board devices](#on-board-devices): VIA, ACIA (serial), YM2151 (sound), SPI
 13. [Expansion slots](#expansion-slots)
-14. [Companion cards](#companion-cards): the memory daughter card, the bus breakout card
+14. [Companion cards](#companion-cards): the memory daughter card, the bus breakout card, the Vera X (slot 0)
 15. [Connectors and jumpers](#connectors-and-jumpers)
 16. [V1 errata](#v1-errata)
 17. [Parts by function](#parts-by-function)
+18. [In the emulator](#in-the-emulator)
 
 ---
 
-### **Overview**
+## Overview
 
 The Hydra-16 is a W65C02S computer built for multitasking.  Its address decoding gives each of **16 tasks** its own 32K of RAM, including zero page and the stack, and its own RAM and ROM bank selections.  So switching tasks is a single write to one register, `T`.
 
@@ -40,11 +41,13 @@ The Hydra-16 is a W65C02S computer built for multitasking.  Its address decoding
 | **Interrupts** | 16 prioritised IRQ lines, each with its own vector (a 16-entry vector RAM at `$FFFE`) |
 | **Devices** | 65C22 VIA (timers, SPI, I2C, GPIO), 65C51 ACIA (RS-232 on a DE-9), YM2151 + YM3012 (stereo FM sound) |
 | **Expansion** | 6 slots (62-pin edge connectors, 8-bit bus), 8 SPI device headers, a GPIO/I2C header, memory card connectors |
+| **Video** | The Vera X in slot 0 (the X16's VERA: VGA, two layers, sprites, a 16-voice PSG and PCM): [below](#the-vera-x-slot-0) |
 | **Power** | ATX-24 supply (+5 V, +3.3 V, +12 V, -12 V) |
+| **As built** | 3.58 MHz; three task RAM modules (48 banks of 8K for each task); the Vera X card is there, its carrier card still to be made |
 
 ---
 
-### **The CPU view: memory map**
+## The CPU view: memory map
 
 What the CPU sees at each address, and what selects it:
 
@@ -66,7 +69,7 @@ Every task has its own `$0000-$7FFF` and its own `$00`/`$01` values.  All tasks 
 
 ---
 
-### **The pseudo-registers T, U, V, W**
+## The pseudo-registers T, U, V, W
 *(Sheet `FFF_Registers`)*
 
 Four 8-bit registers in the system port.  Each is a 74F573 latch, written with the CPU's write strobe, and read back through a 74F541 buffer.  So a read gives the whole byte last written, all 8 bits.
@@ -82,11 +85,11 @@ The latches have no reset, so they power up random; the reset code sets them.  N
 
 ---
 
-### **Task RAM and the bank registers**
+## Task RAM and the bank registers
 
 **Task RAM** is one HM628512 (U7, 512K) on the main board.  CPU A0-A14 go straight to it, CPU A15 is its chip enable (low for `$0000-$7FFF`), and `T0-T3` drive its A15-A18.  So each value of `T` selects a different 32K, and a task switch is a single write to `$FFF0`.  Zero page and the stack page are part of it, so every task has its own zero page and stack.
 
-**A DS1747 in U7** gives the Hydra a clock that keeps the time while it's off.  The DS1747 (the 5 V part; the DS1747W is 3.3 V) is a 512K battery-backed RAM with a clock, pin compatible with the HM628512, in a 600-mil module.  Its clock registers are the chip's top 8 bytes, `$7FFF8-$7FFFF`, so they're **task F's `$7FF8-$7FFF`** (`T0-T3` reach U7's A15-A18 through U48 and U21 in order).  The ROM keeps off those bytes in every task, finds the chip at boot, and sets its clock from it ([HyForth](../old/docs/using/hyforth.md#files-and-devices)).  The rest of the chip is task RAM as before, kept while the power's off.  A new DS1747 comes with its battery disconnected until it first gets power, and its oscillator may be stopped: setting the time starts it.
+**A DS1747 in U7** gives the Hydra a clock that keeps the time while it's off.  The DS1747 (the 5 V part; the DS1747W is 3.3 V) is a 512K battery-backed RAM with a clock, pin compatible with the HM628512, in a 600-mil module.  Its clock registers are the chip's top 8 bytes, `$7FFF8-$7FFFF`, so they're **task F's `$7FF8-$7FFF`** (`T0-T3` reach U7's A15-A18 through U48 and U21 in order).  Task F is the console driver's, whose RAM stops below `$7FF8`, so nothing else writes them; the kernel finds the chip at boot and sets the system's clock from it, and `/dev/time` (`date`) sets both ([the tools](using/tools.md#the-system)).  The rest of the chip is task RAM as before, kept while the power's off.  A new DS1747 comes with its battery disconnected until it first gets power, and its oscillator may be stopped: setting the time starts it.
 
 **The bank registers `$00` and `$01`** *(sheet `ZPMirrorRAM`)* are four 74LS219 (16 x 4-bit RAM) chips, addressed by `T0-T3`:
 
@@ -102,7 +105,7 @@ The latches have no reset, so they power up random; the reset code sets them.  N
 
 ---
 
-### **The paged RAM window**
+## The paged RAM window
 *(`$8000-$9FFF`; sheets `ZPMirrorRAM`, `SharedMem`, `AddressDecode`)*
 
 `$8000-$9FFF` shows one 8K bank.  The **bank ID** is the current task's `$00` value:
@@ -132,7 +135,7 @@ The latches have no reset, so they power up random; the reset code sets them.  N
 | `$F8-$FB` | U27 (V1) | `$x8-$xB` |
 | `$FC-$FF` | U29 | `$xC-$xF` |
 
-A bank with no chip behind it (a missing module) reads whatever floats on the bus; the ROM's POST and module probe detect this.
+A bank with no chip behind it (a missing module) reads whatever floats on the bus; POST finds the modules that are there (`RAM modules: 03` at boot), and the kernel gives out banks only on those.
 
 HM628512 pins, for tracing a bad line (the POST prints bad lines by number):
 
@@ -145,7 +148,7 @@ HM628512 pins, for tracing a bad line (the POST prints bad lines by number):
 
 ---
 
-### **The paged ROM**
+## The paged ROM
 *(`$A000-$DFFF`; sheets `BankedROM`, `ZPMirrorRAM`)*
 
 Eight SST39SF040 (512K each, U30-U37) give 4 MB, seen as 256 banks of 16K.  The bank is the current task's `$01` value:
@@ -164,27 +167,27 @@ Eight SST39SF040 (512K each, U30-U37) give 4 MB, seen as 256 banks of 16K.  The 
 | 6 | U35 | `$C0-$DF` |
 | 7 | U37 | `$E0-$FF` |
 
-* **The halves are swapped.** CPU A13 goes to the chips' A13 unchanged, but in the window `$A000-$BFFF` has A13 = 1 and `$C000-$DFFF` has A13 = 0.  So CPU `$A000` reads chip offset `$2000` of the bank, and `$C000` reads offset `$0000`.  The build writes `paged_rom_C02.bin` in chip order for this, so burn it at offset 0 of U31.
-* **V1: bits 2 and 3, and 6 and 7, trade places.**  On the V1 board `ROMB2`/`ROMB3` and `ROMB6`/`ROMB7` are swapped on their way to the chips (as are the RAM bank bits; the schematic shows the board as built), so the bank the CPU selects as `b` is the chips' bank `swap(b)`.  Banks whose two bits match (`$00-$03`, `$0C-$0F`, ...) aren't affected.  The build writes the image in the chips' order (`sim/tools/mkromdisk.js`), and the emulator reads it that way.
+* **The halves are swapped.** CPU A13 goes to the chips' A13 unchanged, but in the window `$A000-$BFFF` has A13 = 1 and `$C000-$DFFF` has A13 = 0.  So CPU `$A000` reads chip offset `$2000` of the bank, and `$C000` reads offset `$0000`.  HydraOS's build writes the chips' view (`tools/romimg.js`), a 512K image for each chip it fills: `bin/prom0.bin` for U31 (chip select 0), `prom1.bin` for U32, `prom2.bin` for U34, `prom3.bin` for U36; burn each whole, at offset 0.
+* **V1: bits 2 and 3, and 6 and 7, trade places.**  On the V1 board `ROMB2`/`ROMB3` and `ROMB6`/`ROMB7` are swapped on their way to the chips (as are the RAM bank bits; the schematic shows the board as built), so the bank the CPU selects as `b` is the chips' bank `swap(b)`.  Banks whose two bits match (`$00-$03`, `$0C-$0F`, ...) aren't affected.  The build writes the image in the chips' order (`tools/romimg.js`), and the emulator reads it that way (`sim/lib/machine.js`).
 * **`nBROMD`** (a slot pin, pulled up) disables the whole paged ROM when a card pulls it low, so the card can answer `$A000-$DFFF` itself.
 * The chips' ~OE is the inverted R/W; there's no write path in circuit (program the chips in a programmer).
 
 ---
 
-### **The BIOS ROM**
+## The BIOS ROM
 *(U6, root sheet)*
 
 An SST39SF0x0 in a 32-pin socket: the '010 (128K, 16 pages), '020 (256K, 32 pages) or '040 (512K, 64 pages).
 
 * CPU A0-A12 go to the chip's A0-A12, and `W0-W5` to its A13-A18: each `W` value selects an 8K page.
 * It's selected for `$E000-$FEFF` and for `$FFFA-$FFFD` (the NMI and RESET vectors).  I/O space and the vector RAM take the rest of `$FF00-$FFFF`.
-* The build produces `os_rom_C02.bin`, 128K, for the '010.
+* HydraOS's build makes `bin/bios.bin`, 128K: 16 pages, for the '010.
 
-**Changing `W` changes the code being run.**  The next instruction is fetched from the new page, at the same address.  The software handles this by keeping identical code at the same address on every page: the COMMON block at `$FD00`, and the reset entry at `$E000` (see [ROM layout](../old/docs/programming/rom-layout.md)).  Because `W` isn't reset, **every page must start with the reset code**: the RESET vector on every page points to `$E000`, which sets `W` to 0.
+**Changing `W` changes the code being run.**  The next instruction is fetched from the new page, at the same address.  The software handles this by keeping identical code at the same address on every page: the COMMON block at `$FD00` (the IRQ entry and exit, the kernel's far call), and the reset stub at `$E000` (`kernel/bios.cfg`; [the kernel's pages](conventions.md#the-kernels-pages)).  Because `W` isn't reset, **every page must start with the reset code**: the RESET vector on every page points to `$E000`, which sets `W` to 0.
 
 ---
 
-### **I/O space**
+## I/O space
 *(Sheet `AddressDecode`)*
 
 `$FF00-$FFFF` is decoded when A8-A15 are all 1 (U14, a 74F30), qualified by PHI2 (`nIO_S`).  A 74LS154 (U19) splits it by A4-A7 into 16 ports of 16 bytes, `nIOP0_S-nIOP15_S`.  Ports 0-14 are for devices; port 15 is the system port.
@@ -213,7 +216,7 @@ Slot port selects (`nIOA_S`, `nIOB_S` on each slot) and each slot's two IRQ line
 
 ---
 
-### **Interrupts**
+## Interrupts
 *(Sheet `IRQ_Priorty_Encoder`)*
 
 Sixteen active-low IRQ lines, `nIRQ0-nIRQ15`, each pulled up (RN2, RN3).  Line 0 has the highest priority.
@@ -237,17 +240,17 @@ Sixteen active-low IRQ lines, `nIRQ0-nIRQ15`, each pulled up (RN2, RN3).  Line 0
   * otherwise it's `V0-V3`.
 * The index addresses the **vector RAM**, four 74LS219 (IC5-IC8), a 16-entry table of 16-bit vectors.  The CPU reads its IRQ/BRK vector from `$FFFE/$FFFF`, so it gets the entry for the active line, and each line has its own handler.
 
-**The index is the line number XOR 7.**  The '148s encode active-low inputs with the highest-priority input as 7, so line n gives index `n ^ 7`: line 0 is entry 7, line 7 entry 0, line 8 entry 15, line 15 entry 8.  The ROM's `IRQ_NUMBER(n)` macro is `n ^ 7` for this reason.
+**The index is the line number XOR 7.**  The '148s encode active-low inputs with the highest-priority input as 7, so line n gives index `n ^ 7`: line 0 is entry 7, line 7 entry 0, line 8 entry 15, line 15 entry 8.  `include/hw.inc`'s `IRQ_INDEX(line)` is `line ^ 7` for this reason.
 
-**Writing vectors.**  A write to `$FFFE` / `$FFFF` stores the low / high byte of entry `q`.  That's `V0-V3` when no IRQ line is active.  So set `V` to the entry wanted, then write the vector, with no IRQ pending.  The ROM does this once at boot with interrupts off.
+**Writing vectors.**  A write to `$FFFE` / `$FFFF` stores the low / high byte of entry `q`.  That's `V0-V3` when no IRQ line is active.  So set `V` to the entry wanted, then write the vector, with no IRQ pending.  HydraOS's boot does this once, with interrupts off (`kernel/reset.s`): every line's entry is the kernel's one IRQ path.
 
-**BRK and software interrupts.**  `BRK` also reads `$FFFE/$FFFF`.  With no IRQ line active, that's entry `V0-V3`.  So a software interrupt is: set `V` to `IRQ_NUMBER(15)` (line 15 has no hardware), then `brk`.  The ROM keeps the software interrupt number in `V4-V7`.
+**BRK.**  `BRK` also reads `$FFFE/$FFFF`.  With no IRQ line active, that's entry `V0-V3`.  HydraOS sets `V` to line 15's entry (`IRQ_INDEX(15)`: line 15 has no hardware) as it starts and leaves it, so a `BRK` comes to the kernel by that vector: a program's stray `BRK` is a note to it, and the debugger's breakpoints are `BRK`s.
 
 **NMI** (`NMIB`, pulled up, on every slot) uses the ROM's `$FFFA` vector.  Nothing on the board drives it.
 
 ---
 
-### **Clocks**
+## Clocks
 *(Sheet `Clocks`)*
 
 A 14.31818 MHz crystal (Y1) with a 74ACT14 (U39) oscillator, divided by a 74F191 counter (U40):
@@ -262,11 +265,11 @@ A 14.31818 MHz crystal (Y1) with a 74ACT14 (U39) oscillator, divided by a 74F191
 
 **The CPU clock** (`PHI2`) is whichever of J5-J8 is fitted: fit exactly one.  As built, it's **J7, 3.58 MHz**.  The CPU's PHI0 input is `PHI2` gated by `DMAB` (U11), so a card asserting `DMAB` stops the CPU clock (the W65C02S is fully static).  `PHI1` (inverted `PHI2`) qualifies the address decoding.
 
-The ROM's timing (the scheduler's tick, sound note lengths, serial timeouts) is built for one clock: `CPU_CLOCK_MULT` in `os_rom/include/hw.inc` (1 = 3.58 MHz, 2 = 7.16 MHz).  At 7.16 MHz the YM2151 is too slow for the bus: there are no wait states on V1, so don't use the sound chip at that speed.  The 0.89 and 1.79 MHz settings aren't supported by the ROM's timing.
+HydraOS's timing (the tick, the serial port's pacing, sound) is built for one clock: `node build.js --clock 2` builds for 7.16 MHz (J8), the default for 3.58 MHz.  At 7.16 MHz the YM2151 is too slow for the bus: there are no wait states on V1, so don't use the sound chip at that speed.  The 0.89 and 1.79 MHz settings aren't supported.
 
 ---
 
-### **Reset, power and bus control**
+## Reset, power and bus control
 
 **Power** comes from an ATX-24 connector (J11):
 * +5 V for the logic, +3.3 V, and ±12 V for the audio op-amps and the slots.
@@ -300,9 +303,9 @@ The ROM's timing (the scheduler's tick, sound note lengths, serial timeouts) is 
 
 ---
 
-### **On-board devices**
+## On-board devices
 
-#### **VIA (65C22, U2): port 0, IRQ line 0**
+### VIA (65C22, U2): port 0, IRQ line 0
 *(Registers at `$FF00-$FF0F`.)*
 
 **Port A** is general purpose I/O, on header **J27** (2x6), with ESD protection (J28, SP720):
@@ -316,24 +319,24 @@ The ROM's timing (the scheduler's tick, sound note lengths, serial timeouts) is 
 | 9 | PA6 | 10 | PA7 |
 | 11 | CA1 | 12 | CA2 |
 
-* PA0/PA1 are the I2C bus (bit-banged; the SDA and SCL pull-ups are in RN1), which also goes to every slot.  No I2C driver exists yet.
-* **The pins, CA1 and CA2 are files:** `/dev/gpio` ([io.md](../old/docs/programming/io.md#gpio-devgpio)); CA1 can interrupt (IRQ line 0, `/dev/gpio/ca1`).
+* PA0/PA1 are the I2C bus (bit-banged; the SDA and SCL pull-ups are in RN1), which also goes to every slot.  HydraOS's GPIO driver serves it: `/dev/i2c` (its `ctl`, and a file each device).
+* **The pins, CA1 and CA2 are files:** `/dev/gpio` (`0`-`7`, `port`, `ctl`, `ca1`: [the devices](programming/files.md#devices)); CA1 can interrupt (IRQ line 0, `/dev/gpio/ca1`).
 * **Port B is the SPI bus** (below).
 * **Timer 1** is the scheduler's tick: free-running, 200 interrupts a second.
-* **Timer 2** paces serial output when the ROM is built for a WDC ACIA.
+* **Timer 2** paces the serial port's sending (the console driver's, at every rate, on either ACIA).
 * CB1/CB2 aren't brought out.
 
-#### **ACIA (65C51, U3): port 1, IRQ line 1**
+### ACIA (65C51, U3): port 1, IRQ line 1
 *(Registers at `$FF10-$FF13`.)*
 
 **Chip and clock:**
-* The board has a Rockwell R65C51 socket.  A WDC W65C51N works if the ROM is built for it: its transmitter status and interrupt don't work, so the ROM paces sending with VIA timer 2 (`SER_ACIA` in `hw.inc`).
+* The board has a Rockwell R65C51 socket.  A WDC W65C51N works if HydraOS is built for it (`node build.js --acia wdc`): its transmitter status and interrupt don't work, and the console driver paces sending with VIA timer 2 on either chip.
 * **The ACIA's clock is `SER_CLK`, 1.790 MHz**, not the 1.8432 MHz its baud rate table is made for.  So every rate is 2.9% slow (9600 gives about 9,320 baud), which terminals and USB serial adapters accept.
 * DCD and DSR are tied active.
 
-**Serial settings:** 9600 baud, 8 data bits, no parity, 1 stop bit at boot, with RTS/CTS.  The ROM can change the rate (300 to 19200, and 115200: the ACIA clock / 16), the data bits (5-8), the parity and the stop bits afterwards (`/dev/ser/ctl`, [io.md](../old/docs/programming/io.md#the-serial-port-settings)).
+**Serial settings:** 9600 baud, 8 data bits, no parity, 1 stop bit at boot, with RTS/CTS.  `/dev/serctl` changes the rate: `b300`, `b600`, `b1200`, `b2400`, `b4800`, `b9600`, `b19200`, `b115200` (the ACIA clock / 16): `echo b115200 >/dev/serctl`.
 
-**115200 is paced.**  Sent back to back at 115200, long output (a WOZMON dump) loses and garbles characters on the board: the rate is 2.9% slow and the MAX232 is near its limit, so the receiver has little margin.  A second stop bit helps but isn't enough.  So at 115200 the ROM sends each byte from VIA timer 2 rather than the Rockwell ACIA's TDRE interrupt, with at least `SER_PACE_GAP` (2) idle bits after each character, about 4.5 with the interrupt's own time (with 1, a few characters in a whole-memory WOZMON dump were lost).  That's about 7,000 characters a second.  If long output still loses characters, raise `SER_PACE_GAP` in `os_rom/include/hw.inc` (each bit costs about 7%).  The other rates are sent back to back, as before.
+**Sending is paced.**  Sent back to back at 115200, long output loses and garbles characters on the board (the old system found it: a WOZMON dump): the rate is 2.9% slow and the MAX232 is near its limit, so the receiver has little margin.  A second stop bit helps but isn't enough.  So HydraOS's console driver sends each byte from VIA timer 2, not the ACIA's TDRE interrupt: a character's time and two idle bits at 115200, one at the other rates.
 
 **The DE-9 connector** (J3, male) is driven by a MAX232 (U5), and wired like a modem (DCE):
 
@@ -347,7 +350,7 @@ The ROM's timing (the scheduler's tick, sound note lengths, serial timeouts) is 
 
 **Cable:** a PC or USB serial adapter connects with a **straight-through** cable with two female ends, not a null-modem cable.  The ACIA only transmits while its ~CTS is asserted, so the cable must carry pin 7.  Terminal programs assert RTS by default.
 
-#### **YM2151 sound (U38): port 4, IRQ line 4**
+### YM2151 sound (U38): port 4, IRQ line 4
 *(Sheet `Sound`.)*
 
 **The chip:**
@@ -365,7 +368,7 @@ The ROM's timing (the scheduler's tick, sound note lengths, serial timeouts) is 
   * a line input on header J29.
 * **Output:** stereo, on the 3.5 mm jack J26.  The schematic has the tip on the right channel and the ring on the left, the reverse of the usual convention (see [V1 errata](#v1-errata)).
 
-#### **SPI bus (VIA port B)**
+### SPI bus (VIA port B)
 SPI is bit-banged on the VIA's port B (the VIA's shift register uses CB1/CB2, which aren't brought out, so it can't drive these lines); a 74F138 (U4) decodes the device select:
 
 | Port B bit | Signal |
@@ -388,11 +391,11 @@ SPI is bit-banged on the VIA's port B (the VIA's shift register uses CB1/CB2, wh
 | 5 | +5 V |
 | 6 | GND |
 
-The ROM runs SPI in mode 0 for SD cards, and its storage server serves an SD card on any device (`/dev/sd/N`); device 0 (J18) is the usual place for an SD card adapter.  Any other device is a file, `/dev/spi/N` (modes 0 and 3: [io.md](../old/docs/programming/io.md#spi-devices-devspi)).  The headers supply +5 V, so the adapter must regulate and level-shift to 3.3 V for the card (common SD card modules do).
+HydraOS's storage driver runs SPI in mode 0 for SD cards, and serves an SD card on any device (`/dev/sd/N`, N the device in hex; its file system at `/sd/N`); device 0 (J18) is the usual place for an SD card adapter.  Any device is a file too, `/dev/spi/N` (a write and a read are a transaction; modes 0 and 3: [the devices](programming/files.md#devices)).  The headers supply +5 V, so the adapter must regulate and level-shift to 3.3 V for the card (common SD card modules do).
 
 ---
 
-### **Expansion slots**
+## Expansion slots
 *(Sheet `Connectors`: J12-J17, "Hydra bus 8-bit", 62-pin card edge.)*
 
 Six slots, all carrying the same bus except for each slot's two port selects, two IRQ lines and its audio pair:
@@ -448,9 +451,9 @@ A card's IRQ outputs should be open-collector: the board pulls each line up.  Th
 
 ---
 
-### **Companion cards**
+## Companion cards
 
-#### **Memory daughter card**
+### Memory daughter card
 *(`board/MemoryDaughterCard`: through-hole and surface-mount versions.)*
 
 One task RAM module: 4 x HM628512, 2 MB.
@@ -475,9 +478,9 @@ Main board J1 (memory card connector):
 
 J2: D0-D7 (pins 1-8), +5 V (9-11), A0-A12 (12-24).
 
-The ROM finds the installed modules at boot (`MMU_PROBE_MODULES`), tests each one's first bank in POST, and only allocates banks on modules that are present.
+POST finds the installed modules and tests each one (`RAM modules: 03`), and the kernel gives out banks only on modules that are present.
 
-#### **Bus breakout card**
+### Bus breakout card
 *(`board/HydraBusBreakoutCard`.)*  A slot card that brings every bus signal out to headers, for a logic analyzer, a scope or prototyping:
 
 | Header | Signals |
@@ -493,9 +496,35 @@ The ROM finds the installed modules at boot (`MMU_PROBE_MODULES`), tests each on
 | J10 | I2C |
 | J11 | Power |
 
+### The Vera X (slot 0)
+*(Not in `board/`: the plan is [design/plans/VIDEO.md](design/plans/VIDEO.md).)*  The Hydra's video card: Joe Burks's
+VERA X, the Commander X16's VERA (an iCE40UP5K FPGA with 128K of video RAM inside: VGA at 640x480, two layers of text,
+tiles or bitmaps, 128 sprites, a 256-colour palette, a 16-voice PSG and a PCM FIFO, an SD card's SPI controller),
+running the X16 community's gateware (v47 on, which has the version register, DCSEL 63).  The X16's documentation is
+its own: *The Commander X16 Programmer's Reference*, chapters 9 and 10.
+
+| | |
+| :-- | :-- |
+| **Registers** | The VERA's 32, at slot 0's ports 2 and 3, `$FF20-$FF3F` (the card answers either select): `VERA_*` in `include/hw.inc` |
+| **Interrupt** | Its `IRQ#` on slot 0's IRQ A, **line 2**: the highest priority after the VIA and the ACIA |
+| **Audio** | Its DAC's left and right into slot 0's audio pair (`SND_CL0`, `SND_CR0`), mixed with the YM2151's on the board |
+| **Reset** | `RESB` to its `RES#`: a reset reloads the FPGA from its flash, and it doesn't answer till that's done (`vid` looks for it for 0.3 s; the emulator takes 0.1 s) |
+| **IRQ B, line 3** | Kept for the card's input controller (a PS/2 keyboard and mouse, pads), to talk over the slot's I2C |
+
+**As built (October 2026):** the user's VERA X 6.1, the module alone; its **carrier card** is still to be made.  That's
+VIDEO.md's option A: a small slot card with a socket for the module and a little glue logic, `CS#` from either
+port select, `RD#` and `WR#` from `PHI2` and R/W (the VERA latches a write as its strobe ends, so the strobe must end
+with `PHI2`, while the CPU still drives the data), `IRQ#` through an open-collector buffer, the audio through a
+divider to the mixer's level.  The input controller comes after it.  Until then the emulator's Vera X (`sim/run.js
+--vera`) is where the software runs.
+
+The software: `vid`, its driver, finds the card as the system starts (by the version register; v0.9's by `ADDR0` read
+back), shows the console on its screen, and serves it as `/dev/vid`; the sound driver's channels 8-23 are its PSG's
+voices, and `/dev/vid/pcm` its PCM ([programming/video.md](programming/video.md)).
+
 ---
 
-### **Connectors and jumpers**
+## Connectors and jumpers
 
 | Ref | What | Notes |
 | :-- | :--- | :---- |
@@ -515,20 +544,20 @@ The ROM finds the installed modules at boot (`MMU_PROBE_MODULES`), tests each on
 
 ---
 
-### **V1 errata**
+## V1 errata
 
 * **Bank register bits 2 and 3 are crossed.**
   * In the bank registers (sheet `ZPMirrorRAM`), data bit 2 drives `RAMB3`, and bit 3 drives `RAMB2`: IC1 for the RAM bank, IC3 for the ROM bank.
   * So a bank ID's bits 2 and 3 trade places before they reach the hardware.  For example, shared bank IDs `$F4-$F7` are on U28 and `$F8-$FB` on U27, module 4 and module 8 trade places, and so do paged ROM banks `$04-$07` and `$08-$0B`.
   * IDs whose bits 2 and 3 are equal aren't affected, and the software never needs to care: an ID always reaches the same memory.  It matters when you map a bank ID to a chip, for example to act on a POST report.
-  * **Bits 6 and 7** are crossed too, on the V1 board as built (`RAMB6`/`RAMB7`, `ROMB6`/`ROMB7`).  The ROM's tools and the emulator assume both swaps for the paged ROM (`sim/tools/mkromdisk.js`, `os_rom/tools/romsum.js`).
-* **No wait states.**  RDY only has a pull-up, so slow devices can't stretch a bus cycle.  This is why the YM2151 can't be used above 3.58 MHz.  Board V2 is planned to have programmable RDY wait states (see [plans/IDEAS.md](plans/IDEAS.md)).
+  * **Bits 6 and 7** are crossed too, on the V1 board as built (`RAMB6`/`RAMB7`, `ROMB6`/`ROMB7`).  HydraOS's build (`tools/romimg.js`) and the emulator (`sim/lib/machine.js`) assume both swaps for the paged ROM.
+* **No wait states.**  RDY only has a pull-up, so slow devices can't stretch a bus cycle.  This is why the YM2151 can't be used above 3.58 MHz.  Board V2 is planned to have programmable RDY wait states (see [design/plans/IDEAS.md](design/plans/IDEAS.md)).
 * **Audio jack channels.**  J26 has the right channel on the tip and the left on the ring, per the schematic; the usual convention is the reverse, so left and right may come out swapped.
 * **ACIA clock.**  The ACIA runs from 1.790 MHz instead of 1.8432 MHz, so its baud rates are 2.9% slow (see [ACIA](#acia-65c51-u3-port-1-irq-line-1)).
 
 ---
 
-### **Parts by function**
+## Parts by function
 
 | Function | Parts |
 | :------- | :---- |
@@ -547,3 +576,17 @@ The ROM finds the installed modules at boot (`MMU_PROBE_MODULES`), tests each on
 | VIA, SPI | U2 R65C22; U4 74F138 (SPI device select) |
 | Serial | U3 R65C51; U5 MAX232 |
 | Sound | U38 YM2151; U41 YM3012; U42 TL074; IC9 LF353 |
+
+---
+
+## In the emulator
+
+`sim/lib/machine.js` is this board, cycle by cycle, for `sim/run.js` and the tests: the W65C02S; `T`, `U`, `V` and
+`W`, random at power-up as the latches are; each task's `$00`/`$01` and RAM; the RAM window's task banks (only the
+modules installed: `--modules N`, 2 by default, 3 as built; the rest float) and the shared banks; the paged ROM with its
+halves swapped and the V1 board's bank bits; the BIOS ROM's pages; the I/O ports and the system port; the interrupt
+lines, their priority and the vector RAM (`n ^ 7`); the VIA (its timers, port A's pins and CA1, I2C devices on PA0/PA1,
+SD cards and other devices on its SPI port); the ACIA (Rockwell's, or `--acia wdc`); the YM2151 (its timers, its busy
+time, and with `--sound` its sound); a DS1747 in U7 (`rtc`); the reset button (Ctrl-A r); `--clock 7.15909` for J8 (with a `build.js --clock 2` build); and
+the Vera X in slot 0 (`--vera`).  Not modelled: the analog side (the audio path, the serial line's levels), wait
+states (V1 has none), and DMA.

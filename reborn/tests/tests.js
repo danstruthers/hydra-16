@@ -26,7 +26,7 @@ const path = require('path');
 const hydrafs = require('../sim/tools/hydrafs.js');
 const { createXmodemPeer } = require('../sim/lib/xmpeer.js');
 
-const IRQ_OFF_MAX = 200;                                      // (docs/reimplementation-from-scratch.md, §8: 115200)
+const IRQ_OFF_MAX = 200;                                      // (docs/design/reimplementation-from-scratch.md, §8: 115200)
 const S1_BYTES = 2000;
 
 // An SD card for the emulator (sim/lib/sd.js) on SPI device dev, its blocks in memory: byte i of block n is fill(n, i)

@@ -99,7 +99,7 @@ The banks tested are the first bank of each shared RAM chip (`F0`, `F4`, `F8`, `
 * A bad task RAM module is treated as not installed.
 * The system's shared banks (IDs `$00` and `$09-$0C`) can't move elsewhere, so a fault on the `F0` or `F8` chip still needs fixing.
 
-To find the chip and pin behind a report, see the [Hardware Reference](../../../docs/hardware.md#the-paged-ram-window): the shared bank IDs per chip (with V1's crossed bits 2/3: `F4` is U28, `F8` is U27), and the HM628512 pinout.  For example:
+To find the chip and pin behind a report, see the [Hardware Reference](../../../reborn/docs/hardware.md#the-paged-ram-window): the shared bank IDs per chip (with V1's crossed bits 2/3: `F4` is U28, `F8` is U27), and the HM628512 pinout.  For example:
 * `F0:0/00/0001` is A0 (pin 12) on U25;
 * `F8:2/00/0000` is bank line 1 (A18, pin 1) on U27.
 

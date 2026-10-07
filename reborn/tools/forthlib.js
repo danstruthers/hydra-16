@@ -1,5 +1,5 @@
 // ****************************************************************************
-// forthlib.js - HyForth's libraries (docs/reimplementation-from-scratch.md, §16): forthlib/NAME.s, a word set each,
+// forthlib.js - HyForth's libraries (docs/design/reimplementation-from-scratch.md, §16): forthlib/NAME.s, a word set each,
 // assembled (ca65) and linked (ld65: forthlib/forthlib.cfg, o65, relocatable from 0) against the core's labels, then
 // made a library file, obj/forthlib/NAME.fl, which forth loads into its dictionary, relocated to HERE (INCLUDED of a
 // file that starts HYFL: modules/forth/ffile.inc's lib_load).  build.js runs it after the modules.

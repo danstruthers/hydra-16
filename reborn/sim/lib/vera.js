@@ -1,4 +1,4 @@
-// vera.js - the Vera X card in slot 0 (docs/plans/VIDEO.md): the VERA, an iCE40UP5K with 128K of video RAM, as the
+// vera.js - the Vera X card in slot 0 (docs/design/plans/VIDEO.md): the VERA, an iCE40UP5K with 128K of video RAM, as the
 // X16 community's gateware has it (v47.0.2 by default: X16Community/vera-module; the programmer's reference is the
 // X16's, chapter 9), its 32 registers at $FF20-$FF3F (slot 0's I/O ports 2 and 3), its IRQ# on line 2 (slot 0's
 // IRQ A).  C:\source\x16-emulator's video.c (BSD 2-clause) was the guide to the details.  Modelled:

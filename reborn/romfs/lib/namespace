@@ -1,4 +1,4 @@
-# /rom/lib/namespace: the default namespace (docs/reimplementation-from-scratch.md, appendix E).  init runs it as
+# /rom/lib/namespace: the default namespace (docs/design/reimplementation-from-scratch.md, appendix E).  init runs it as
 # it starts, and a card's /lib/namespace after it.  A line a bind or a mount, as rc's built-ins take them:
 #   bind [-a | -b] [-c] new old         new at old (-a after what's there, -b before it; -c: creates go there)
 #   mount [-a | -b] [-c] dev old [spec] a device's server at old, with a spec

@@ -575,7 +575,7 @@ HFS_LABEL:
             jmp         HFS_FINISH
 
 ; ****************************************************************************
-; Partitions (docs/plans/HYDRAFS.md): a card's HydraFS partition, found in its partition table (block 0),
+; Partitions (docs/design/plans/HYDRAFS.md): a card's HydraFS partition, found in its partition table (block 0),
 ; and made for it by "format -p"
 
 ; Is block 0 of card SD_DEV, in the cache (read from the card itself, not a partition), a partition table

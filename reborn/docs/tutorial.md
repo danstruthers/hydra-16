@@ -228,6 +228,9 @@ files and namespaces, and writing a server or a driver.
 
 ## Where next
 
+* [hydra-16.md](hydra-16.md): the guide to the whole system, hardware and software, with links to the rest.
 * [using/README.md](using/README.md): the guides for rc, the tools, HyForth, hylang and BASIC.
 * `/rom/doc/api.md` on the Hydra: every system call, its registers and errors.
+* [programming/README.md](programming/README.md): the programmer's guide, for programs of your own.
+* [hardware.md](hardware.md): the board, its cards and the Vera X, in full.
 * [status.md](status.md): where the system stands, and what each part measured.

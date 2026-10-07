@@ -13,7 +13,7 @@
 //   --input TEXT        keys to type (\r, \n: Return; \w: wait 2M cycles), one every 20000 cycles from cycle 200000
 //   --paste             type them as fast as the line goes (a byte arriving while the last is unread is lost)
 //   --speed N           interactive: N times real time (0: as fast as it goes)
-//   --clock MHz         the CPU clock (3.579545; 7.15909 with jumper J7: build with --clock 2 too)
+//   --clock MHz         the CPU clock (3.579545; 7.15909 with jumper J8: build with --clock 2 too)
 //   --acia wdc          a WDC W65C51N in the serial port (build with --acia wdc too)
 //   --modules N         RAM modules installed (default 2)
 //   --seed N            the power-up's random RAM and registers, repeatable (default: random)

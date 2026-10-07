@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; task.s - starting and ending tasks, and the module directory (docs/reimplementation-from-scratch.md, §10.6, §11).
+; task.s - starting and ending tasks, and the module directory (docs/design/reimplementation-from-scratch.md, §10.6, §11).
 ;
 ; A module (HYX2: layout.inc) in the paged ROM runs in place: its task's ROM bank register selects its bank, so
 ; its code is at $A000 in that task alone; its initialised data is copied into the task's RAM, and its BSS

@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; vid - the Vera X card's driver (docs/plans/VIDEO.md; docs/reimplementation-from-scratch.md, phase 8): the VERA in
+; vid - the Vera X card's driver (docs/design/plans/VIDEO.md; docs/design/reimplementation-from-scratch.md, phase 8): the VERA in
 ; slot 0 (I/O ports 2 and 3, $FF20-$FF3F; IRQ line 2), on srvlib: the device #v (a boot driver), at /dev/vid.  Its
 ; init looks for the card: the version register (DCSEL 63's "V": the X16 community's gateware, v47 on), or else
 ; ADDR0 read back as written (fvdhoef's v0.9).  A reset makes the FPGA configure itself again, a while with no

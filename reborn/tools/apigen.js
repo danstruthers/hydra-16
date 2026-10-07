@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // ****************************************************************************
 // apigen.js - makes everything the system calls' specification implies (spec/api.def, spec/errors.def), so the
-// calls are written down once (docs/reimplementation-from-scratch.md, principle P9):
+// calls are written down once (docs/design/reimplementation-from-scratch.md, principle P9):
 //   obj/gen/jumptable.s   the jump table on BIOS ROM page 0 ($F800 up), a jmp per slot (spare slots: K_NOSYS)
 //   obj/gen/errors.inc    the error codes, for the kernel
 //   obj/gen/errtext.s     their texts, for ERRSTR
