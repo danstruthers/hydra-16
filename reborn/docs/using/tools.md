@@ -301,17 +301,27 @@ whole), and `play` plays one as it is, compiling it as it goes into the same reg
 ; A score: ; to the line's end is a comment
 #tempo 120                        ; quarter notes a minute (120); #rate N: its ticks a second (200)
 @piano { gm 0 }                   ; an instrument: one of the driver's 163 patches, or a voice's operators
-A @piano o4 l8 c d e f g4 r4 c2   ; channel 0 (A-H: 0-7); a channel's lines are joined in order
+@lead { wave pulse 24 env 2 14 12 18 }   ; a PSG instrument: a waveform, an envelope (in the song's ticks)
+A @piano o4 l8 c d e f g4 r4 c2   ; channel 0 (A-H: 0-7, the YM2151's); a channel's lines are joined in order
 B @piano o3 l2 c [g e]2 c         ; [ ... ]N: repeated N times
+I @lead o5 l8 e a b > c           ; channel 8 (I-X: 8-23, the Vera X's PSG's voices 0-15)
 ```
 
 Notes `c` to `b` (`+` or `#` sharp, `-` flat), a length (1 a whole note ... 64; 3 6 12 24 48 triplets), dots, `^`
 ties; `r` a rest; `x N` a General MIDI drum; `o` `>` `<` the octave; `l` the default length; `q` the part of a note
 held (eighths); `v` the volume (0-127); `p l|r|c|0` the speakers; `k` transpose; `D` detune (64ths); `M` and `L`
 the LFO; `N` the noise; `y reg,val` a register; `_` a slide to the next note, `&` legato; `I N` the driver's patch
-N as the instrument.  A score is read whole into memory (some 24K at most); a mistake in it is said with its
-channel (`play: x.mml: channel 2: no such drum`).  A line (`-m`) or a chord (`-c`) is the same language, and `t N`
-sets its tempo, before its first note.  `-x` takes the X16's MML (FMPLAY's): upper-case notes, `T` the tempo, `V`
-0-63 (doubled), `P` 1-3 (left, right, both), `S` 0-7 (the gap after a note; `S0` legato), `K` (the next note keyed
-on), `I` a patch, `O`, `L`, `R`, `<`, `>` as above; each line starts afresh (T120 O4 L4), not where the last left
-off.  The languages' words run it: C's `snd_mml` and `snd_chord`, HyForth's and hylang's `snd-mml` and `snd-chord`.
+N as the instrument.  The PSG's channels (I-X, with a Vera X) take the same notes, lengths, rests, `o` `l` `q` `v`
+`p` `k` `D`, slides and legato, and instruments of their own: `wave W [WIDTH]` (`pulse`, `saw`, `triangle` or
+`noise`, or 0-3; a pulse's width 0-63, 63 a square) and `env A D S R`: A ticks rising from silence to the note's
+volume, D falling by S (the PSG's 0.5 dB steps, 0-63) to what it holds till its key off, then R falling to silence
+(all 0, none: a note on, then off).  `I N` there is waveform N, `y` the PSG's registers (0-63), and `v` the next
+note's volume; `x`, `M`, `L` and `N` are the YM2151's alone.  `/rom/songs/vera.mml` uses both chips.  A score is
+read whole into memory (some 17K at most); a mistake in it is said with its channel (`play: x.mml: channel 2: no
+such drum`).  A line (`-m`) or a chord (`-c`) is the same language, and `t N`
+sets its tempo, before its first note; on a PSG channel (`play -m 8 c d e`) a line plays the channel's own waveform,
+at its own level, on both speakers unless `p` says, and a chord stays on its first channel's chip.  `-x` takes the
+X16's MML (FMPLAY's, and PSGPLAY's on a PSG channel): upper-case notes, `T` the tempo, `V` 0-63 (doubled; the PSG's:
+its volume), `P` 1-3 (left, right, both), `S` 0-7 (the gap after a note; `S0` legato), `K` (the next note keyed
+on), `I` a patch (the PSG's: its waveform register, 0-255), `O`, `L`, `R`, `<`, `>` as above; each line starts
+afresh (T120 O4 L4), not where the last left off.  The languages' words run it: C's `snd_mml` and `snd_chord`, HyForth's and hylang's `snd-mml` and `snd-chord`.

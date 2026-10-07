@@ -1,0 +1,31 @@
+; The psgmml test's edge cases for the PSG's scores (play -o and hysong.js agree on them byte for byte): envelopes
+; longer and shorter than their steps, cut short by a key off, a release cut by a new note, through rests and past
+; the end (O's release, the longest channel's note's); slides and legato under envelopes; v 0 and 1; speakers
+; changed as an envelope runs; pitches past the ends (o0, o10); I N, y, k, D; nested repeats; every voice; an odd
+; tempo and rate
+#tempo 97
+#rate 173
+@slow  { wave saw 17 env 200 100 63 250 }
+@fast  { wave pulse env 1 1 1 1 }
+@steep { env 3 2 60 2 }
+@flat  { wave triangle env 0 9 0 9 }
+@two   { wave 3 0 env 7 0 33 0 }
+@fm    { gm 5 }
+@long  { wave saw env 2 0 0 255 }
+A @fm o3 l4 c e g > c
+I @slow o4 l8 c d e f q1 g a b > c
+J @fast o0 l64 c d e o10 c d e o4 l32 [c e g]3 q8 c & d & e _g4 _c4 r2 c
+K @steep o5 v127 l16 c v0 d v64 e v1 f pl g pr a p0 b pc > c
+L @flat o3 l4 c r4 d r2 e r1 f
+M @two o6 l12 c d e l3 f g l6 a. b ^16 > c
+N I 1 o4 l8 y 40,99 c d I 2 e f I 3 g a I 0 b > c
+O @long o2 l1 r1 r1 c
+P @fast o5 l64 [[c d]2 e]4 _a8 _c16 _e32 & f4
+Q @steep o4 l8 k 3 D -20 c d k -5 D 40 e f
+R @flat o7 l16 [c]8
+S @two o3 l4 c
+T @fast o4 l4 c
+U @steep o4 l4 c
+V @flat o4 l4 c
+W @slow o4 l4 c
+X @two o4 l4 c & d & e

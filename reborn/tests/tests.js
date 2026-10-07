@@ -466,6 +466,61 @@ function psgCard() {
   return [imageCard(0, f, 16384)];
 }
 
+// The psgmml test's card: scores on the PSG's channels (I-X) and hysong.js's ZSMs of them: the ROM disk's
+// songs/vera.mml (both chips, each waveform and envelope) as v.mml and vpc.zsm, tests/scores/edges.mml and edges2.mml
+// as e and f; and scores that are wrong (an instrument on the other chip's channel, both ways; x on the PSG; y past
+// its registers; three instruments it can't read; a note before an instrument on channel 23)
+const PSG_SCORES = { v: path.join(__dirname, '..', 'romfs', 'songs', 'vera.mml'), e: path.join(__dirname, 'scores', 'edges.mml'), f: path.join(__dirname, 'scores', 'edges2.mml') };
+const PSG_BAD = ['@w { wave saw }\nA @w c\n', '@g { gm 0 }\nI @g c\n', '@w { wave saw }\nI @w x36\n', '@w { wave saw }\nJ @w y 64,1 c\n',
+  '@w { wave square }\nI @w c\n', '@w { env 1 2 64 3 }\nI @w c\n', '@w { wave saw alg 3 }\nI @w c\n', '@w { wave saw }\nX c\n'];
+function psgScoreCard() {
+  fs.mkdirSync(CARD_DIR, { recursive: true });
+  hydrafs.setNow(0x1000);
+  const f = path.join(CARD_DIR, 'psgmml0.img');
+  fs.rmSync(f, { force: true });
+  hydrafs.mkfs(f, 8, 'SCORES', undefined, true);
+  const v = new hydrafs.Volume(f);
+  for (const [n, score] of Object.entries(PSG_SCORES)) {
+    const zsm = path.join(CARD_DIR, 'psgmml-' + n + '.zsm');
+    require('child_process').execFileSync(process.execPath, [path.join(__dirname, '..', 'sim', 'tools', 'hysong.js'), score, zsm, '--quiet']);
+    v.put(n + '.mml', fs.readFileSync(score));
+    v.put(n + 'pc.zsm', fs.readFileSync(zsm));
+  }
+  PSG_BAD.forEach((t, i) => v.put('b' + (i + 1) + '.mml', Buffer.from(t)));
+  v.close();
+  return [imageCard(0, f, 16384)];
+}
+const PSG_MML_LINES = [
+  ['cd /sd/0; play -o v.mml /ram/v.zsm; cmp /ram/v.zsm vpc.zsm && echo same', 'same'],
+  ['play -o e.mml /ram/e.zsm; cmp /ram/e.zsm epc.zsm && echo same', 'same'],
+  ['play -o f.mml /ram/f.zsm; cmp /ram/f.zsm fpc.zsm && echo same', 'same'],
+  ['play b1.mml; play b2.mml; play b3.mml; play b4.mml', 'play: b1.mml: channel 0: the other chip\'s instrument\nplay: b2.mml: channel 8: the other chip\'s instrument\nplay: b3.mml: channel 8: the YM2151\'s only\nplay: b4.mml: channel 9: a PSG register is 0-63'],
+  ['play b5.mml; play b6.mml; play b7.mml; play b8.mml', 'play: b5.mml: an instrument it can\'t read\nplay: b6.mml: an instrument it can\'t read\nplay: b7.mml: an instrument it can\'t read\nplay: b8.mml: channel 23: a note before an instrument'],
+  ['echo reset >/dev/sndctl; play v.mml; echo played', 'played'],
+  ['play -m 8 o4 l8 c d e; play -x -m 9 I128 V40 O5 L4 C; play -c 13 o4 l4 c e g; play -c 21 c d e f', 'play: c: more notes than channels'],
+];
+// A ZSM's PSG voices' starts (a volume from 0 to more, a speaker on: vera.js's psgOns), each voice's count and its
+// first one's tick
+function zsmPsgOns(b) {
+  const vol = new Array(16).fill(0), n = new Array(16).fill(0), first = new Array(16).fill(-1);
+  let i = 16, t = 0;
+  while (i < b.length) {
+    const c = b[i++];
+    if (c < 0x40) {
+      const v = b[i++];
+      if ((c & 3) === 2) {
+        const k = c >> 2;
+        if (!(vol[k] & 0x3F) && (v & 0x3F) && (v & 0xC0)) { n[k]++; if (first[k] < 0) first[k] = t; }
+        vol[k] = v;
+      }
+    } else if (c === 0x40) i += b[i++] & 0x3F;
+    else if (c < 0x80) i += 2 * (c & 0x3F);
+    else if (c === 0x80) break;
+    else t += c & 0x7F;
+  }
+  return { n, first };
+}
+
 // The PCM test's lines (with a Vera X: vid's /pcm and /pcmctl): its files and state; the rate (the VERA's nearest)
 // and volume; raw samples from a card, drained; bad commands; /pcm one task's (another's pcmctl command: busy);
 // WAV files played (8 bits mono, made signed; 16 bits stereo, past a chunk of an odd size; a float one, not a song);
@@ -607,7 +662,7 @@ function mmlCard() {
     v.put(n + 'pc.zsm', fs.readFileSync(zsm));
   }
   v.put('bad.mml', Buffer.from('#tempo 100\nA o4 c d e\n'));
-  v.put('bad2.mml', Buffer.from('@p { gm 0 }\nA @p c\nX c d e\n'));
+  v.put('bad2.mml', Buffer.from('@p { gm 0 }\nA @p c\nZ c d e\n'));
   v.close();
   return [imageCard(0, f, 16384)];
 }
@@ -1799,7 +1854,7 @@ module.exports = {
           'play -o s.mml /ram/s.zsm; cmp /ram/s.zsm spc.zsm && echo same', 'play bad.mml; echo $status', 'play bad2.mml',
           'echo reset >/dev/sndctl; play spc.zsm; echo reset >/dev/sndctl; play s.mml; echo played',
           'echo patch 0 0 >/dev/sndctl; echo patch 1 0 >/dev/sndctl; play -m 0 o4 l8 c d e; play -c 0 o4 l2 I0 c e g',
-          'play -x -m 1 T240 O4 L8 CDE S0 CD K E; echo lines', 'play -m 9 c; play -c 0 c d e f g a b c d',
+          'play -x -m 1 T240 O4 L8 CDE S0 CD K E; echo lines', 'play -m 24 c; play -c 0 c d e f g a b c d',
           'play -m 0 I0 c t100; play -x -m 0 I0 c Z'].map(l => '\u0101' + l + '\r').join('') };
       },
       expect: ['cmp /ram/t.zsm tpc.zsm && echo same\nsame\n%', 'cmp /ram/s.zsm spc.zsm && echo same\nsame\n%',
@@ -2430,6 +2485,40 @@ module.exports = {
         const gap = (at(1) - at(0)) / (3579545 * mult / 60);
         if (!(Math.abs(gap - 30) <= 2 * 60 / 200)) f.push('the song: its voice 1 on ' + gap.toFixed(2) + ' ticks after its voice 0 (30 wanted)');
         this.notes.push('the song: its voice 1 on ' + gap.toFixed(2) + ' song ticks after its voice 0 (30)');
+        return f;
+      },
+    },
+    {
+      name: 'psgmml', what: 'the PSG in scores (play\'s, mml.inc, and hysong.js\'s: channels I-X, sound channels 8-23): play -o\'s ZSMs of the ROM disk\'s songs/vera.mml (both chips; each waveform; envelopes; slides, legato, triplets, ties; I, y, k, D, v, q, p) and of two scores of edge cases, each the same as hysong.js\'s byte for byte; the errors (the other chip\'s instrument, both ways; x; y past 63; instruments it can\'t read; channel 23\'s number); vera.mml played on the Vera X (its voices\' starts as many as its ZSM\'s, the lead\'s first 751 song ticks after the hats\'); a line (-m 8), the X16\'s (-x: I as the waveform register, V), a chord (-c 13), one with more notes than the PSG\'s channels left',
+      init: 't_rc', cycles: 600e6, jsOnly: 'the danlang emulator has no VERA yet',
+      get machine() { return { input: typed(PSG_MML_LINES), vera: true, sd: psgScoreCard() }; },
+      get expect() { return expected(PSG_MML_LINES); },
+      // (Each voice's registers at the end (its frequency word, its speakers and volume, its waveform; null: any).
+      // 0: -m 8's E4 (MIDI 64), on the song's lead's pulse of width 24, off; 1: -x's C5 on its triangle of width 0
+      // (I128), off; 2, 3, 4: the song's hats (noise), pad (saw) and chirp (a square), off; 5-7: the chord's C4 E4 G4,
+      // off; 12: the chirp's y 51,191 (its waveform register))
+      voices: [[64, 0xC0, 0x18], [72, 0xC0, 0x80], [null, 0xC0, 0xFF], [null, 0xC0, 0x7F], [null, 0xC0, 0x3F], [60, 0xC0, null], [64, 0xC0, null], [67, 0xC0, null],
+        [null, null, null], [null, null, null], [null, null, null], [null, null, null], [null, null, 0xBF]],
+      check(m) {
+        const f = [], p = m.vera.psg, hx = v => '$' + v.toString(16).toUpperCase();
+        const { psgWord } = require('../sim/tools/hysong.js');
+        this.voices.forEach(([note, vol, wave], v) => {
+          const w = p[v * 4] | p[v * 4 + 1] << 8;
+          if (note !== null && w !== psgWord(note * 64)) f.push('voice ' + v + ': frequency word ' + w + ', not ' + psgWord(note * 64));
+          if (vol !== null && p[v * 4 + 2] !== vol) f.push('voice ' + v + ': speakers and volume ' + hx(p[v * 4 + 2]) + ', not ' + hx(vol));
+          if (wave !== null && p[v * 4 + 3] !== wave) f.push('voice ' + v + ': waveform and width ' + hx(p[v * 4 + 3]) + ', not ' + hx(wave));
+        });
+        for (let v = 0; v < 16; v++) if (p[v * 4 + 2] & 0x3F) f.push('voice ' + v + ': its volume ' + (p[v * 4 + 2] & 0x3F) + ' at the end');
+        // (The song's voices' starts: the ZSM's, and the lines' after it (-m's 3 on voice 0, -x's 1 on voice 1, the
+        // chord's on 5-7); the lead's first (voice 0) 751 song ticks after the hats' (voice 2), within two system ticks)
+        const z = zsmPsgOns(fs.readFileSync(path.join(CARD_DIR, 'psgmml-v.zsm'))), ons = new Array(16).fill(0), at = new Array(16).fill(-1);
+        for (const o of m.vera.psgOns) { const [, v, c] = o.match(/voice (\d+) at cycle (\d+)/).map(Number); ons[v]++; if (at[v] < 0) at[v] = c; }
+        const lines = [3, 1, 0, 0, 0, 1, 1, 1];
+        for (let v = 0; v < 16; v++) if (ons[v] !== z.n[v] + (lines[v] || 0)) f.push('voice ' + v + ': ' + ons[v] + ' starts, not ' + (z.n[v] + (lines[v] || 0)));
+        const mult = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'obj', 'build.json'), 'utf8')).clock || 1;
+        const gap = (at[0] - at[2]) / (3579545 * mult / 200);
+        if (!(Math.abs(gap - (z.first[0] - z.first[2])) <= 2 * 200 / 200)) f.push('the song: its lead on ' + gap.toFixed(2) + ' ticks after its hats (' + (z.first[0] - z.first[2]) + ' wanted)');
+        this.notes = ['the song: ' + z.n.slice(0, 5).join(', ') + ' starts on voices 0-4; its lead on ' + gap.toFixed(2) + ' song ticks after its hats (' + (z.first[0] - z.first[2]) + ')'];
         return f;
       },
     },

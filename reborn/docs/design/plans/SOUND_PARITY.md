@@ -171,7 +171,10 @@ Step 5, October 2026 (the rebuilt system's `snd`, `vid`, `play` and the language
 * **`/dev/psg`** (`#a`): the PSG's 64 registers as a ZSM writes them (register/value pairs), through the same library (the volumes attenuated, a claimed voice another task's dropped); a read gives them as written.  `play` sends a song's `$00-$3F` writes there, a tick's in one write beside its `/dev/snd` write, and claims its PSG voices with `claim $NN $PPPP`.
 * **The VERA stays vid's** (one owner, as the YM2151 is snd's): snd writes the PSG through **`#v/psg`**, its pairs queued as a request makes them and sent in one write at its end (the file opened the first time it's wanted, all 64 registers sent then; with no card, again the next time).  vid writes them through data port 1, so ADDR0's place (the cursor's) holds; while the chip's claimed it keeps them, and the release writes them back (the setup wrote zeros before).  The third driver-to-driver call (after cons's bell and screen); vid calls nobody.
 * **The words**: C's `snd_wave (ch, wave, width)`, `snd_claim_psg (mask)`, `snd_release_psg (mask)` (`SND_PSG`, `SND_PSG_ALL`, `SND_WAVE_*`); HyForth's `snd-wave ( ch w width -- )`, `snd-claim-psg ( mask -- )`, `snd-release-psg ( mask -- )`; hylang's `(snd-wave ch w [width])` (`:pulse`, `:saw`, `:triangle`, `:noise`) and `snd-claim`/`snd-release` taking channels 0-23; BASIC's `SOUND "wave 8 saw"` (the text).  Every other word reaches the PSG's channels as it is.
-* **Not yet**: the PSG in scores (MML), and its own envelopes (a note sounds till it's off).  The emulator plays it (`run.js -i --vera --sound`, or `--wav`); its test checks the registers and the voices' starts.
+* **Not yet**: the PSG in scores (MML), and its own envelopes (a note sounds till it's off).  Since done for scores
+  (VIDEO.md's "The rest", October 2026): channels I-X are its voices, its instruments `wave` and `env` (an envelope
+  in the song's ticks, written as the volume changes), in `hysong.js` and `play` alike; the driver's own notes still
+  have none.  The emulator plays it (`run.js -i --vera --sound`, or `--wav`); its test checks the registers and the voices' starts.
 
 ### **As built: PCM**
 
