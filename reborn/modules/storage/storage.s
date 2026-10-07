@@ -90,6 +90,8 @@ d_aux:      .res        DISKS                               ;   and a RAM disk's
 c_ok:       .res        1                                   ; <> 0: blk holds a block ...
 c_disk:     .res        1                                   ;   its disk ...
 c_lba:      .res        4                                   ;   and its number
+blk_part:   .res        2                                   ; A data write's part of the block it writes (HydraFS
+blk_plen:   .res        2                                   ;   sets them: a RAM disk writes only that part; 0, all)
 was_bank:   .res        1                                   ; (ram_map's: $00 and U as they were)
 was_u:      .res        1
 sd_arg:     .res        4                                   ; An SD command's argument (MSB first) ...
@@ -1096,7 +1098,8 @@ rom_write:
             sec
             rts
 
-; Block lba of RAM disk dk into the 512 bytes at bufp (ram_read), or them to it (ram_write)
+; Block lba of RAM disk dk into the 512 bytes at bufp (ram_read), or them to it (ram_write: only blk_plen of them from
+; blk_part on, if a write said so, its part of the block: the rest is as it was there)
 ram_read:
             jsr         ram_map
             bcs         @done
@@ -1122,6 +1125,9 @@ ram_read:
 ram_write:
             jsr         ram_map
             bcs         @done
+            lda         blk_plen
+            ora         blk_plen + 1
+            bne         @part
             ldy         #0
 :
             lda         (bufp),Y
@@ -1140,6 +1146,51 @@ ram_write:
 
 @done:
             rts
+
+@part:                                                      ; Only the part: bp and bufp at it (bufp put back)
+            lda         bufp
+            pha
+            lda         bufp + 1
+            pha
+            clc
+            lda         bp
+            adc         blk_part
+            sta         bp
+            lda         bp + 1
+            adc         blk_part + 1
+            sta         bp + 1
+            clc
+            lda         bufp
+            adc         blk_part
+            sta         bufp
+            lda         bufp + 1
+            adc         blk_part + 1
+            sta         bufp + 1
+            ldy         #0
+            ldx         blk_plen + 1                        ; Whole pages ...
+            beq         @rest
+:
+            lda         (bufp),Y
+            sta         (bp),Y
+            iny
+            bne         :-
+            inc         bp + 1
+            inc         bufp + 1
+            dex
+            bne         :-
+@rest:
+            cpy         blk_plen                            ; ... and the rest
+            beq         :+
+            lda         (bufp),Y
+            sta         (bp),Y
+            iny
+            bra         @rest
+:
+            pla
+            sta         bufp + 1
+            pla
+            sta         bufp
+            jmp         ram_unmap
 
 ; Block lba of RAM disk dk mapped at $8000-$9FFF, bp -> it: bank lba / 16 of its banks (this task's own, from its
 ; d_aux; or its shared segment's), with $00 and U as they were kept for ram_unmap.  OUT: C = 0; or C = 1, .A = the
@@ -1279,6 +1330,12 @@ blk_read:
             jmp         (blk_readers,X)
 
 blk_write:
+            jsr         @write                              ; (A data write's part used: forgotten after)
+            stz         blk_plen
+            stz         blk_plen + 1
+            rts
+
+@write:
             jsr         blk_check
             bcs         blk_failed
             jsr         @go

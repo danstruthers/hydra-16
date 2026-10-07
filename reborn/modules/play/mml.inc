@@ -24,7 +24,8 @@
 ; hysong.js's units (192 a whole note: a dot of a 64th is half of one), as 32-bit numbers; a tick is the time's,
 ; rounded (round (u * rate * 5 / (tempo * 32)), exactly), and a slide's steps' times and pitches the same way.
 ;   The compiled bytes go into a ring (m_ring) that the player's read ahead (stage_read: mml_stage) takes from, and
-; that's filled as the player waits for its next tick (mml_idle), the time there is; at the start, all of it.
+; that's filled as the player waits for its next tick (mml_idle), the time there is; at the start, all of it.  -o
+; fills it to a stage (256 bytes) before each write (mml_fill), not a step's byte or two a write.
 ;   The driver's patches and drum map are in the second bank (patches.s: RODATA2), copied into RAM when they're
 ; wanted (pt_copy, pt_drum): gm N into its instrument, I N into one of its own ("#" and N), a drum into m_dbuf.
 
@@ -4812,6 +4813,7 @@ mml_out:
             stz         eof
             jsr         mml_start
 @stage:
+            jsr         mml_fill                            ; (A stage's worth compiled: a write each, not a step)
             stz         staged
             stz         staged + 1
             jsr         mml_stage
@@ -4830,6 +4832,15 @@ mml_out:
             bcc         :+
             jmp         @fail
 :
+            rts
+
+; -o's: steps compiled till the ring holds a stage (256 bytes) or the song's done
+mml_fill:
+            lda         m_rn + 1
+            bne         @done
+            jsr         m_step
+            bcc         mml_fill
+@done:
             rts
 
 ; ****************************************************************************

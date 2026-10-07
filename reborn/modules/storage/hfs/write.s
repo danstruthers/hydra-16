@@ -1650,6 +1650,12 @@ HFS_W_RANGE:
             bne         :-
 
 @copied:
+            lda         SD_POS                              ; (The part changed: a RAM disk writes back only it)
+            sta         blk_part
+            lda         SD_POS + 1
+            and         #1
+            sta         blk_part + 1
+            MOVR        blk_plen, SD_N
             lda         SD_CACHE                            ; ... -> the disk (and the block buffer holds it)
             sta         SD_BUF
             lda         SD_CACHE + 1

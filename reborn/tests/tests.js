@@ -466,6 +466,26 @@ function psgCard() {
   return [imageCard(0, f, 16384)];
 }
 
+// The ramw test's lines, at the login shell (HyForth): a file of 70 writes of 10 bytes, then written over in its
+// first block, across its first block's end and at its end (one byte more after it), on the RAM disk, the shared one
+// and a card, each read back; then 100 writes of 16 bytes to /ram, timed (the file made before them and closed after;
+// the marks [rw A] and [rw B] made by emit and .(, so the line typed isn't one); and its card (blank HydraFS)
+const RAMW_LINES = ['variable fd', ': w ( a u -- ) w/o create-file throw fd ! ;', ': p ( a u -- ) fd @ write-file throw ;',
+  ': at ( n -- ) s>d fd @ reposition-file throw ;', ': c fd @ close-file throw ;',
+  ': t ( a u -- ) w 70 0 do s" 0123456789" p loop 5 at s" abc" p 508 at s" XYZWV" p 699 at s" !+" p c ;',
+  ': n ( -- ) 100 0 do s" 0123456789abcdef" p loop ;',
+  's" /ram/w" t', 's" /sram/w" t', 's" /sd/0/w" t', 'cat /ram/w; echo; cat /sram/w; echo; cat /sd/0/w; echo',
+  's" /ram/n" w', '91 emit .( b0 A])', '91 emit .( b0 B])', '91 emit .( rw A])', 'n', '91 emit .( rw B])', 'c', 'ls -l /ram/n; echo ramw \'done.\''];
+const RAMW_TEXT = (() => { const b = [...'0123456789'.repeat(70)]; b.splice(5, 3, ...'abc'); b.splice(508, 5, ...'XYZWV'); b.splice(699, 1, '!', '+'); return b.join(''); })();
+function ramwCard() {
+  fs.mkdirSync(CARD_DIR, { recursive: true });
+  hydrafs.setNow(0x1000);
+  const img = path.join(CARD_DIR, 'ramw.img');
+  fs.rmSync(img, { force: true });
+  hydrafs.mkfs(img, 8, 'RAMW', undefined, true);
+  return imageCard(0, img, Math.floor(fs.statSync(img).size / 512));
+}
+
 // The psgmml test's card: scores on the PSG's channels (I-X) and hysong.js's ZSMs of them: the ROM disk's
 // songs/vera.mml (both chips, each waveform and envelope) as v.mml and vpc.zsm, tests/scores/edges.mml and edges2.mml
 // as e and f; and scores that are wrong (an instrument on the other chip's channel, both ways; x on the PSG; y past
@@ -494,6 +514,8 @@ const PSG_MML_LINES = [
   ['cd /sd/0; play -o v.mml /ram/v.zsm; cmp /ram/v.zsm vpc.zsm && echo same', 'same'],
   ['play -o e.mml /ram/e.zsm; cmp /ram/e.zsm epc.zsm && echo same', 'same'],
   ['play -o f.mml /ram/f.zsm; cmp /ram/f.zsm fpc.zsm && echo same', 'same'],
+  ["echo '[b0' 'A]'", '[b0 A]'], ["echo '[b0' 'B]'", '[b0 B]'], ["echo '[po' 'A]'", '[po A]'], ['play -o v.mml /ram/p.zsm', null],
+  ["echo '[po' 'B]'", '[po B]'],
   ['play b1.mml; play b2.mml; play b3.mml; play b4.mml', 'play: b1.mml: channel 0: the other chip\'s instrument\nplay: b2.mml: channel 8: the other chip\'s instrument\nplay: b3.mml: channel 8: the YM2151\'s only\nplay: b4.mml: channel 9: a PSG register is 0-63'],
   ['play b5.mml; play b6.mml; play b7.mml; play b8.mml', 'play: b5.mml: an instrument it can\'t read\nplay: b6.mml: an instrument it can\'t read\nplay: b7.mml: an instrument it can\'t read\nplay: b8.mml: channel 23: a note before an instrument'],
   ['echo reset >/dev/sndctl; play v.mml; echo played', 'played'],
@@ -2441,6 +2463,26 @@ module.exports = {
       },
     },
     {
+      name: 'ramw', what: 'small writes on the RAM disks (HydraFS on a RAM disk writes back only the part of a block a write changed; a card, the block): a file of 70 writes, written over in its first block, across a block\'s end and at its end, on /ram, /sram and a card, read back; 100 writes of 16 bytes to /ram, a write\'s time',
+      init: 'init', cycles: 120e6,
+      get machine() { this.card = ramwCard(); return { sd: [this.card], input: RAMW_LINES.map(l => '\u0101' + l + '\r').join('') + '\u0101' }; },
+      expect: ['ramw done.\n'],
+      // (October 2026: 15,400, from 24,200 when a RAM disk wrote back the whole block)
+      budgets: [{ what: 'a write of 16 bytes to /ram (HyForth\'s write-file, 100 of them: its request to the storage driver, HydraFS, the RAM disk)',
+        from: '[rw A]', to: '[rw B]', minus: ['[b0 A]', '[b0 B]'], per: 100, max: 18000 }],
+      check(m, out) {
+        const f = [], n = out.split(RAMW_TEXT).length - 1;
+        if (n !== 3) f.push('the file as written, read back ' + n + ' times (3 wanted: /ram, /sram, the card)');
+        if (!/-rw\S*\s.*\b1600\b.*\/ram\/n/.test(out.replace(/\r/g, ''))) f.push('/ram/n isn\'t 1600 bytes long');
+        this.card.save();
+        const v = new hydrafs.Volume(this.card.file), e = v.tryWalk('w'), got = e ? v.read(e).toString('latin1') : '';
+        for (const p of v.check()) f.push('the card: ' + p);
+        v.close();
+        if (got !== RAMW_TEXT) f.push('the card\'s w: ' + got.length + ' bytes, not as written');
+        return f;
+      },
+    },
+    {
       name: 'vsd', what: 'the Vera X\'s SD card (the storage driver\'s disk v, on the VERA\'s own SPI controller: the emulator\'s card there), at the login shell: its ctl (an SDHC card, its HydraFS), a file read, one written, /sd listing it',
       init: 'init', cycles: 120e6,
       get machine() { this.card = veraCard(); return { vera: { sd: this.card }, input: VSD_LINES.map(l => '\u0101' + l[0] + '\r').join('') + '\u0101' }; },
@@ -2493,6 +2535,9 @@ module.exports = {
       init: 't_rc', cycles: 600e6,
       get machine() { return { input: typed(PSG_MML_LINES), vera: true, sd: psgScoreCard() }; },
       get expect() { return expected(PSG_MML_LINES); },
+      // (October 2026: 36M, from 129M when play -o wrote what each step of the score made, a byte or two at a time)
+      budgets: [{ what: 'play -o of songs/vera.mml into /ram (10.5K, 256 bytes a write)', from: '[po A]', to: '[po B]', minus: ['[b0 A]', '[b0 B]'],
+        per: 1, max: 45e6 }],
       // (Each voice's registers at the end (its frequency word, its speakers and volume, its waveform; null: any).
       // 0: -m 8's E4 (MIDI 64), on the song's lead's pulse of width 24, off; 1: -x's C5 on its triangle of width 0
       // (I128), off; 2, 3, 4: the song's hats (noise), pad (saw) and chirp (a square), off; 5-7: the chord's C4 E4 G4,
