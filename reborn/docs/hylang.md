@@ -280,7 +280,9 @@ The plan has it whole; in short:
   pushed), and `BCALL` of `*` of two (fixnums whose product is one: `vm_bmul`, by quarter squares).  A tail call
   of the function by its own name whose arguments call nothing has its `SHEAD` flagged by the compiler (m's bit
   7, `vc_shflag`): its head isn't pushed while its cache (this frame's function alone) holds, and `TSELF` takes
-  the arguments as they are (`vm_shf` says if the machine's way pushed it).  A `CALL` whose
+  the arguments as they are (`vm_shf` says if the machine's way pushed it).  `map`, `filter`, `foldl` and the
+  other walks but `foldr`, called from native code, walk their list in the machine (`vm_walk`): the function
+  called for each item as `CALL` would, returning to a trampoline at the arena's first bytes (`jmp vm_wret`).  A `CALL` whose
   cache missed goes on past its look at it (`op_callm`), where a buffer given a fixnum
   index has its byte at once; `buffer-put` of three is the first thing `BCALL`'s code looks for.  `CALL` and
   `CSELF` have a return pad past their data, where their returns go: the caller's frame found again from the

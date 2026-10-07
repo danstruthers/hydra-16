@@ -263,6 +263,7 @@ BIN_DEC         = BI_N
             BI          "drop", 2, 2, B2, bl_drop
             BI          "elem?", 2, 2, B2, bq_elem
             BI          "in?", 2, 2, B2, bq_in
+BIN_MAP         = BI_N          ; (map to product: forms.inc's walks, W_MAP on; the machine's for BCALL, vm.inc's)
             BI          "map", 2, 2, BF_MACHINE, bi_map
             BI          "filter", 2, 2, BF_MACHINE, bi_filter
             BI          "foldl", 3, 3, BF_MACHINE, bi_foldl

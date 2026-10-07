@@ -251,6 +251,18 @@ vxt_stt_e:
 
 .assert vxt_stt_e - vxt_stt_c + VX_STUB + 48 < 256, error, "vxt_stt: an op's code is at most 255 bytes"
 
+vxt_eachi:  .byte       vxt_eachi_e - vxt_eachi_c, 0, 1
+            .byte       vxt_eachi_p0 - vxt_eachi_c, TPK_T, 1
+vxt_eachi_c:
+            jsr         vm_eachn
+            bcc         :+
+            jmp         $0000
+vxt_eachi_p0 = * - 2
+:
+vxt_eachi_e:
+
+.assert vxt_eachi_e - vxt_eachi_c + VX_STUB + 48 < 256, error, "vxt_eachi: an op's code is at most 255 bytes"
+
 vxt_popx:   .byte       vxt_popx_e - vxt_popx_c, 0, 0
 vxt_popx_c:
             jsr         pop
@@ -3285,7 +3297,7 @@ vx_tmain:   .word       vxt_ret, vxt_const, vxt_local, 0, 0, vxt_push, vxt_jf, v
             .word       0, 0, 0, vxt_lpush, vxt_cpush, vxt_shead, vxt_cself, vxt_tself
             .word       vxt_locals, vxt_localh, vxt_setl, vxt_setbl, 0, 0, vxt_stt, vxt_popx
             .word       vxt_loop, vxt_block, vxt_localb, vxt_setlb, vxt_setblb, 0, vxt_doti, vxt_dotinc
-            .word       0, 0, vxt_drop, vxt_trye, 0, 0, 0, 0
+            .word       0, vxt_eachi, vxt_drop, vxt_trye, 0, 0, 0, 0
 
 ; The fused ops' templates, by s (VO_ADD's order: (s - VO_ADD) / 2)
 vx_tlq:     .word       0, 0, 0, 0, 0, 0, 0, vxt_lq_inc, vxt_lq_dec

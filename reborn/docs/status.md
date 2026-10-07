@@ -653,9 +653,21 @@ grew (725 ms); `vm_retx` now (its bank, then `RET`'s way, in ROM).
 | gcd | 960 | 600 | 600 | 570 | 540 | 520 | 485 | 350 | 1.4x |
 | all | 9,050 | 6,585 | 5,515 | 5,315 | 5,145 | 4,995 | 4,775 | 1,484 | 3.2x (geometric mean 3.6x, from 6.9x) |
 
+Milestone 8, the walks.  `map`, `filter`, `foldl`, `any?`, `all?`, `find`, `count`, `sum` and `product` called
+from compiled code (`BCALL`) walk their list in the machine (`vm_walk`), not the evaluator: their frame on the
+stack where their arguments were, the function called for each item the machine's way, its return the arena's
+trampoline (at its first bank's start: `jmp vm_wret`); a compiled function's frame made at once once its code's
+known (`WF_FC`), with its item in one store; `foldl`'s `+` and `*` of fixnums (`sum`'s, `product`'s) with no
+call.  A function the evaluator's walk would treat otherwise (a number, a buffer, an fexpr, a built-in of
+another count) and `foldr` stay the evaluator's; so do the walks of code that's evaluated (a line at the prompt).
+An item of `map` by a compiled function is about 1,470 cycles (2,820 by the evaluator), of `foldl` with `+` 665
+(1,810), of `any?` by a function made with `fn` 1,230 (2,465).  `each`'s `EACHI` is in line (`vm_eachn`): a step
+of `each` about 380 cycles (660).  A fault found on the way, milestone 7's: the flagged `SHEAD`'s look at m in
+`op_shead` read it with the heap's bank in the window, so some `SHEAD`s' caches were never filled, as the code's
+place happened to fall (the calls benchmark 725 ms or 540).
+
 What's left: the depth and Ctrl-C at each call, the global's head pushed for a call that isn't a tail loop's, a
-template's `jmp` past its stub; and `map` and its kin, whose function is called through the evaluator (an item
-2,951 cycles).
+template's `jmp` past its stub; and the walks of evaluated code (an item of `map` at the prompt 2,951 cycles).
 
 | Step | | Notes |
 |---|---|---|

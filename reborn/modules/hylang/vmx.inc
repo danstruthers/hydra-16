@@ -78,6 +78,25 @@ vx_dd:      .res        2                                   ;   its stub's data'
 ; made native code in the arena, at its top (the next bank, from its start, if it isn't room).  OUT: C = 0, vx_place
 ; its place; C = 1 if it can't be: .A = 0, the arena's full (vm_full); .A = 1, it's too big for a bank
 vm_xlate:
+            lda         ar_cur                              ; (The arena from its start: its trampoline first, h 0, r 2,
+            ora         ar_top                              ;   jmp vm_wret: the machine's walks' calls' return,
+            bne         @try                                ;   VM_WRET)
+            lda         ar_top + 1
+            cmp         #$80
+            bne         @try
+            lda         ar_bank
+            sta         $00
+            stz         $8000
+            lda         #2
+            sta         $8001
+            lda         #$4C
+            sta         $8002
+            lda         #<vm_wret
+            sta         $8003
+            lda         #>vm_wret
+            sta         $8004
+            lda         #5
+            sta         ar_top
 @try:
             ldx         ar_cur
             lda         ar_bank,x

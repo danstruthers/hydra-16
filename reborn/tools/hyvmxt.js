@@ -163,6 +163,12 @@ tpl('stt', '0', `
   ldy #1
   lda ex + 1
   sta (ht),y`);
+// EACHI t: the next item (vm_eachn's), none left, to t
+tpl('eachi', '0', `
+  jsr vm_eachn
+  bcc :+
+  jmp {T 1}
+:`);
 tpl('popx', '0', `
   jsr pop
   sta ex
@@ -921,14 +927,14 @@ lines.push('; A return pad\'s length (CALL\'s and CSELF\'s the same: VXK_Q\'s)',
 const main = Array(64).fill('0');
 const skip = new Set((process.env.HYVMXT_SKIP || '').split(',').filter(Boolean));   // (Templates left out: a test's)
 const set = (op, t) => { if (!skip.has(t.replace('vxt_', ''))) main[op] = t; };
-const OPI = { RET: 0, HEAD: 10, CALL: 11, SHEAD: 37, CSELF: 38, TSELF: 39, CONST: 1, LOCAL: 2, PUSH: 5, JF: 6, JT: 7, JMP: 8, LPUSH: 35, CPUSH: 36, SETL: 42, LOOP: 48, DOTI: 54, DOTINC: 55, STT: 46, POPX: 47, DROP: 58, LOCALS: 40, LOCALH: 41, SETBL: 43, BLOCK: 49, LOCALB: 50, SETLB: 51, SETBLB: 52, TRYE: 59, ADD: 17, SUB: 18, LT: 19, GT: 20, LE: 21, GE: 22, NEQ: 23 };
+const OPI = { RET: 0, HEAD: 10, CALL: 11, SHEAD: 37, CSELF: 38, TSELF: 39, CONST: 1, LOCAL: 2, PUSH: 5, JF: 6, JT: 7, JMP: 8, LPUSH: 35, CPUSH: 36, SETL: 42, LOOP: 48, DOTI: 54, DOTINC: 55, STT: 46, POPX: 47, DROP: 58, EACHI: 57, LOCALS: 40, LOCALH: 41, SETBL: 43, BLOCK: 49, LOCALB: 50, SETLB: 51, SETBLB: 52, TRYE: 59, ADD: 17, SUB: 18, LT: 19, GT: 20, LE: 21, GE: 22, NEQ: 23 };
 set(OPI.RET, 'vxt_ret'); set(OPI.HEAD, 'vxt_head'); set(OPI.CALL, 'vxt_call'); set(OPI.SHEAD, 'vxt_shead'); set(OPI.CSELF, 'vxt_cself'); set(OPI.TSELF, 'vxt_tself');
 set(OPI.LOCALS, 'vxt_locals'); set(OPI.LOCALH, 'vxt_localh'); set(OPI.SETBL, 'vxt_setbl'); set(OPI.BLOCK, 'vxt_block'); set(OPI.LOCALB, 'vxt_localb');
 set(OPI.SETLB, 'vxt_setlb'); set(OPI.SETBLB, 'vxt_setblb'); set(OPI.TRYE, 'vxt_trye'); set(OPI.ADD, 'vxt_add'); set(OPI.SUB, 'vxt_sub'); set(OPI.LT, 'vxt_q_lt');
 set(OPI.GT, 'vxt_q_gt'); set(OPI.LE, 'vxt_q_le'); set(OPI.GE, 'vxt_q_ge'); set(OPI.NEQ, 'vxt_q_eq');
 set(OPI.CONST, 'vxt_const'); set(OPI.LOCAL, 'vxt_local'); set(OPI.PUSH, 'vxt_push'); set(OPI.JF, 'vxt_jf'); set(OPI.JT, 'vxt_jt');
 set(OPI.JMP, 'vxt_jmp'); set(OPI.LPUSH, 'vxt_lpush'); set(OPI.CPUSH, 'vxt_cpush'); set(OPI.SETL, 'vxt_setl'); set(OPI.LOOP, 'vxt_loop');
-set(OPI.DOTI, 'vxt_doti'); set(OPI.DOTINC, 'vxt_dotinc'); set(OPI.STT, 'vxt_stt'); set(OPI.POPX, 'vxt_popx'); set(OPI.DROP, 'vxt_drop');
+set(OPI.DOTI, 'vxt_doti'); set(OPI.DOTINC, 'vxt_dotinc'); set(OPI.STT, 'vxt_stt'); set(OPI.POPX, 'vxt_popx'); set(OPI.DROP, 'vxt_drop'); set(OPI.EACHI, 'vxt_eachi');
 lines.push('; Each op\'s template (0: its stub alone; the fused ones: by s, below; TSELF\'s by its count, vx_ttself)');
 for (let i = 0; i < 64; i += 8) lines.push((i ? '            ' : 'vx_tmain:   ') + '.word       ' + main.slice(i, i + 8).join(', '));
 const S = ['ADD', 'SUB', 'LT', 'GT', 'LE', 'GE', 'NEQ', 'INC', 'DEC', 'ZEROP', 'ONEP', 'ADDC', 'SUBC', 'LTC', 'GTC', 'LEC', 'GEC', 'EQC'];
