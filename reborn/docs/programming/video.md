@@ -6,6 +6,8 @@ Its 32 registers are slot 0's I/O ports 2 and 3, `$FF20-$FF3F`, and its interrup
 Burks's VERA X, which runs the X16 community's gateware (v47 on: X16Community/vera-module), so the X16's
 documentation is this chip's: *The Commander X16 Programmer's Reference*, chapter 9 (the registers, VRAM, layers,
 sprites, the PSG and PCM) and chapter 10 (FX).  The plan behind it is [../../../docs/plans/VIDEO.md](../../../docs/plans/VIDEO.md).
+Wiring the card to the board through a bus breakout card, till the carrier card exists:
+[../vera-wiring.md](../vera-wiring.md).
 
 A driver, **vid** (`modules/vid`), owns the chip: it finds the card as the system starts, sets it up for the console
 and serves it as files.  A program uses the screen three ways, from the easiest:
