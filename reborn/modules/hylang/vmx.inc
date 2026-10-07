@@ -426,33 +426,8 @@ vx_tpl:
             ldy         #>vx_tllp
             bra         @fused
 @main:
-            cmp         #VO_HEAD                            ; (HEAD's: of one argument alone)
-            bne         :+
-            ldy         #1
-            lda         (hq),y
-            cmp         #1
-            beq         @head
-            rts
-@head:
-            lda         #VO_HEAD
-            bra         @tm
-:
-            cmp         #VO_TSELF                           ; (TSELF's: by its count, its copies in line, to 4)
-            bne         @tm
-            ldy         #1
-            lda         (hq),y
-            cmp         #5
-            bcs         @tsn
-            asl
-            tax
-            lda         vx_ttself,x
-            sta         vx_tp
-            lda         vx_ttself + 1,x
-            sta         vx_tp + 1
-            bra         @hdr
-@tsn:
-            lda         #VO_TSELF
-@tm:
+            jsr         vx_tsel                             ; (HEAD's, BCALL's, TSELF's: by their data)
+            bcs         @hdr
             tax
             lda         vx_tmain,x
             sta         vx_tp
@@ -491,6 +466,60 @@ vx_tpl:
 :
             jmp         vx_thdr
 @rts:
+            rts
+
+; vx_tpl's choice by the op's data (.A, the op): HEAD's of one argument alone; BCALL's of * of two; TSELF's by its
+; count, its copies in line, to 4.  OUT: C = 1, vx_tp its template (0: none); else C = 0, .A the op (vx_tmain's)
+vx_tsel:
+            cmp         #VO_HEAD
+            bne         @bc
+            ldy         #1
+            lda         (hq),y
+            cmp         #1
+            bne         @none
+            lda         #VO_HEAD
+            clc
+            rts
+@bc:
+            cmp         #VO_BCALL
+            bne         @ts
+            ldy         #1
+            lda         (hq),y
+            cmp         #BIN_MUL
+            bne         @none
+            iny
+            lda         (hq),y
+            cmp         #2
+            bne         @none
+            lda         #<VXT_BMUL
+            sta         vx_tp
+            lda         #>VXT_BMUL
+            sta         vx_tp + 1
+            sec
+            rts
+@ts:
+            cmp         #VO_TSELF
+            bne         @op
+            ldy         #1
+            lda         (hq),y
+            cmp         #5
+            bcs         @tsn
+            asl
+            tax
+            lda         vx_ttself,x
+            sta         vx_tp
+            lda         vx_ttself + 1,x
+            sta         vx_tp + 1
+            sec
+            rts
+@tsn:
+            lda         #VO_TSELF
+@op:
+            clc
+            rts
+@none:
+            stz         vx_tp + 1
+            sec
             rts
 
 ; hb = a template: its header read (vx_tln, vx_tnp, vx_tpp, vx_tcode)

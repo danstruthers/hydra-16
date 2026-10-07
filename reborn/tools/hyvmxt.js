@@ -432,6 +432,12 @@ tpl('head', STUB, `
 @p:` + PUSHEX + `
   jmp {N}
 @s:`);
+// BCALL * 2 h r (vx_tpl's: * of two): two fixnums' product, if it's one (vm_bmul: the two dropped; else BCALL's way)
+tpl('bmul', STUB, `
+  jsr vm_bmul
+  bcs @s
+  jmp {N}
+@s:`);
 // CALL m ret fn ep code bank idx h r: the function it called last (its cache), at this epoch, under the arguments:
 // its frame (the return, no scope) and its code (in this bank: at once; another, through vm_next); missed, its stub
 // to op_callm (TF_MISS: a buffer's byte, else the call's way)
@@ -902,6 +908,7 @@ for (const [tn, m] of Object.entries(fused)) {
   lines.push(tn + ':'.padEnd(12 - tn.length) + '.word       ' + row.slice(0, 9).join(', '));
   lines.push('            .word       ' + row.slice(9).join(', '));
 }
+lines.push('', '; BCALL\'s of * of two (vx_tpl\'s choice; 0: none)', 'VXT_BMUL        = ' + (skip.has('bmul') ? '0' : 'vxt_bmul'));
 lines.push('', '; TSELF\'s, of 0 to 4 arguments (more: vx_tmain\'s)',
   'vx_ttself:  .word       ' + [0, 1, 2, 3, 4].map(m => main[OPI.TSELF] === '0' ? '0' : 'vxt_tself' + m).join(', '));
 lines.push('', '; BLOCK\'s template\'s length (0: none): its data is past it and its stub (the blocks\' table\'s, a block\'s parent\'s)',

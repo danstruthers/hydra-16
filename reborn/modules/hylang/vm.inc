@@ -163,6 +163,11 @@ vm_r:       .res        2                                   ; A call's return (i
 vm_ccf:     .res        1                                   ; ($80: CALL's cache filled as its function's code is run ...
 vm_cb:      .res        1                                   ;   from its code's bank)
 vm_qs:      .res        1                                   ; (A fused op's quick op)
+vm_msg:     .res        1                                   ; (vm_fmul's: the product's sign ...
+vm_m0:      .res        2                                   ;   the multiplicand ...
+vm_mm:      .res        1                                   ;   the multiplier (under 256) ...
+vm_p0:      .res        2                                   ;   the product ...
+vm_q:       .res        2                                   ;   vm_mul8's)
 
 ; The compiler's: in the reader's scratch, past its number registers (hysys.inc's room: idle as a function's compiled)
 vc_ws           = sy_area
@@ -2549,6 +2554,208 @@ vm_bat:
 @rts:
             rts
 
+; BCALL's * of two (op_bcall's, native code's): two fixnums on top whose product is one: ex = it, the two dropped,
+; C = 0; else C = 1, nothing changed (BCALL's way).  The window kept.  Both 0 to 127 (their high bytes 0): their
+; product at once (under 16384)
+vm_bmul:
+            lda         sp
+            sec
+            sbc         #4
+            sta         ht
+            lda         sp + 1
+            sbc         #0
+            sta         ht + 1
+            ldy         #1
+            lda         (ht),y
+            ldy         #3
+            ora         (ht),y
+            bne         @gen
+            dey
+            lda         (ht)
+            and         (ht),y
+            lsr
+            bcc         @no
+            lda         (ht)
+            lsr
+            tax
+            lda         (ht),y
+            lsr
+            jsr         vm_mul8
+            asl
+            ora         #1
+            sta         ex
+            txa
+            rol
+            sta         ex + 1
+            bra         @drop
+@no:
+            sec
+            rts
+@gen:
+            ldy         #3
+            lda         (ht),y
+            sta         vm_b + 1
+            dey
+            lda         (ht),y
+            sta         vm_b
+            dey
+            lda         (ht),y
+            sta         vm_a + 1
+            lda         (ht)
+            sta         vm_a
+            jsr         vm_fmul
+            bcs         @rts
+@drop:
+            lda         ht                                  ; (The two dropped)
+            sta         sp
+            ldx         ht + 1
+            stx         sp + 1
+            cpx         stk_basep
+            bne         @ok
+            lda         spilled
+            beq         @ok
+            jsr         unspill
+@ok:
+            clc
+@rts:
+            rts
+
+; ex = vm_a * vm_b, fixnums whose product is one (but -16384, the slow way's): C = 0; else C = 1, ex kept.  One of
+; the two under 256 (the multiplier), the other in two bytes, each byte's product by vm_mul8
+vm_fmul:
+            lda         vm_a
+            and         vm_b
+            lsr
+            bcs         :+
+            sec
+            rts
+:
+            lda         vm_a + 1                            ; (Its sign)
+            eor         vm_b + 1
+            sta         vm_msg
+            lda         vm_a                                ; (|a|, |b|: one under 256)
+            ldx         vm_a + 1
+            jsr         vm_fabs
+            sta         vm_m0
+            stx         vm_m0 + 1
+            lda         vm_b
+            ldx         vm_b + 1
+            jsr         vm_fabs
+            cpx         #0
+            beq         @m
+            ldy         vm_m0 + 1
+            bne         @no
+            ldy         vm_m0
+            sta         vm_m0
+            stx         vm_m0 + 1
+            tya
+@m:
+            sta         vm_mm
+            ldx         vm_m0
+            jsr         vm_mul8
+            sta         vm_p0
+            stx         vm_p0 + 1
+            lda         vm_m0 + 1
+            beq         @fit
+            ldx         vm_mm
+            jsr         vm_mul8
+            cpx         #0
+            bne         @no
+            clc
+            adc         vm_p0 + 1
+            bcs         @no
+            sta         vm_p0 + 1
+@fit:
+            lda         vm_p0 + 1                           ; (Under 16384: a fixnum, 2p + 1 or -2p + 1)
+            cmp         #$40
+            bcs         @no
+            asl         vm_p0
+            rol
+            bit         vm_msg
+            bmi         @neg
+            sta         ex + 1
+            lda         vm_p0
+            ora         #1
+            sta         ex
+            clc
+            rts
+@neg:
+            sta         vm_p0 + 1
+            lda         #0
+            sec
+            sbc         vm_p0
+            tay
+            lda         #0
+            sbc         vm_p0 + 1
+            sta         ex + 1
+            tya
+            ora         #1
+            sta         ex
+            clc
+            rts
+@no:
+            sec
+            rts
+
+; .A, .X = a fixnum: its number's magnitude (.A low, .X high)
+vm_fabs:
+            cpx         #$80
+            pha
+            txa
+            ror
+            tax
+            pla
+            ror
+            cpx         #$80
+            bcc         @rts
+            eor         #$FF
+            clc
+            adc         #1
+            pha
+            txa
+            eor         #$FF
+            adc         #0
+            tax
+            pla
+@rts:
+            rts
+
+; .A, .X = bytes a, b: .A, .X = a * b (low, high), quarter squares': q(a + b) - q(|a - b|), q(x) = x * x / 4
+vm_mul8:
+            sta         vm_q
+            stx         vm_q + 1
+            sec
+            sbc         vm_q + 1
+            bcs         :+
+            eor         #$FF
+            adc         #1
+:
+            tay
+            lda         vm_q
+            clc
+            adc         vm_q + 1
+            tax
+            bcs         @hi
+            lda         vm_sqlo,x
+            sec
+            sbc         vm_sqlo,y
+            pha
+            lda         vm_sqhi,x
+            sbc         vm_sqhi,y
+            tax
+            pla
+            rts
+@hi:
+            lda         vm_sqlo + 256,x
+            sec
+            sbc         vm_sqlo,y
+            pha
+            lda         vm_sqhi + 256,x
+            sbc         vm_sqhi,y
+            tax
+            pla
+            rts
+
 ; Not a function's cell: a buffer given an index (its byte, buffers.inc's buf_at); a function partially applied (the
 ; evaluator's ev_apply_values: its values first); else the evaluator's
 vm_cother:
@@ -2651,10 +2858,22 @@ vm_bcode:
             jmp         drop
 
 op_bcall:
-            ldy         #1                                  ; (buffer-put, of three: here, if it can be)
+            ldy         #1                                  ; (* of two: here, if it's fixnums' and their product one)
             lda         (vm_ip),y
-            cmp         #BIN_BUFPUT
+            cmp         #BIN_MUL
+            bne         @bp
+            iny
+            lda         (vm_ip),y
+            cmp         #2
             bne         @bc
+            jsr         vm_bmul
+            bcs         @bc
+            lda         #5
+            jmp         vm_adv
+@bp:
+            cmp         #BIN_BUFPUT                         ; (buffer-put, of three: here, if it can be)
+            bne         @bc
+            ldy         #1
             iny
             lda         (vm_ip),y
             cmp         #3
@@ -7933,6 +8152,16 @@ vm_ops:
 vm_xops:
             VM_XOPS
             VM_XOPS
+
+; Quarter squares (vm_mul8's): x * x / 4, x 0 to 511, its low bytes, its high
+vm_sqlo:
+.repeat 512, I
+            .byte       <((I * I) / 4)
+.endrep
+vm_sqhi:
+.repeat 512, I
+            .byte       >((I * I) / 4)
+.endrep
 
 ; The fused ops' fixnum work, by quick op (VO_ADD's order: s - VO_ADD).  OUT: C = 1 if it isn't fixnums (or past one)
 vm_qf:      .word       vf_add, vf_sub, vf_lt, vf_gt, vf_le, vf_ge, vf_eq, vf_inc, vf_dec, vf_zerop, vf_onep

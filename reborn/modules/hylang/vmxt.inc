@@ -1494,6 +1494,18 @@ vxt_head_e:
 
 .assert vxt_head_e - vxt_head_c + VX_STUB + 48 < 256, error, "vxt_head: an op's code is at most 255 bytes"
 
+vxt_bmul:   .byte       vxt_bmul_e - vxt_bmul_c, TF_STUB, 1
+            .byte       vxt_bmul_p0 - vxt_bmul_c, TPK_N, 0
+vxt_bmul_c:
+            jsr         vm_bmul
+            bcs         vxt_bmul_s
+            jmp         $0000
+vxt_bmul_p0 = * - 2
+vxt_bmul_s:
+vxt_bmul_e:
+
+.assert vxt_bmul_e - vxt_bmul_c + VX_STUB + 48 < 256, error, "vxt_bmul: an op's code is at most 255 bytes"
+
 vxt_call:   .byte       vxt_call_e - vxt_call_c, TF_STUB | TF_MISS, 17
             .byte       vxt_call_p0 - vxt_call_c, TPK_D, 6
             .byte       vxt_call_p1 - vxt_call_c, TPK_D, 7
@@ -2824,6 +2836,9 @@ vx_tllp:    .word       vxt_llp_add, vxt_llp_sub, 0, 0, 0, 0, 0, 0, 0
             .word       0, 0, 0, 0, 0, 0, 0, 0, 0
 vx_tjll:    .word       0, 0, vxt_jll_lt, vxt_jll_gt, vxt_jll_le, vxt_jll_ge, vxt_jll_eq, 0, 0
             .word       0, 0, 0, 0, 0, 0, 0, 0, 0
+
+; BCALL's of * of two (vx_tpl's choice; 0: none)
+VXT_BMUL        = vxt_bmul
 
 ; TSELF's, of 0 to 4 arguments (more: vx_tmain's)
 vx_ttself:  .word       vxt_tself0, vxt_tself1, vxt_tself2, vxt_tself3, vxt_tself4

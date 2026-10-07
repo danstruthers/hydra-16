@@ -629,7 +629,10 @@ the 65C02's, for a fixnum's bit, not `lsr` on a copy in `ht`), LQP pushes its va
 JLL's read their second local where it is.  A tail loop's step is 328 cycles (`hyspeed`, from 363).  Milestone 6,
 the calls of a function by its own name: `CSELF` and `TSELF` no longer look at the frame's count (`vc_self` makes
 them only of as many arguments as the formals, so `vm_rb` is M), and `TSELF` copies 0 to 4 arguments in line (a
-template for each count, `vx_ttself`, `vx_tpl`'s choice).  A tail loop's step is 306 cycles.
+template for each count, `vx_ttself`, `vx_tpl`'s choice).  A tail loop's step is 306 cycles.  Then `*` of two
+fixnums whose product is one, at once (`vm_bmul`, `vm_fmul`: quarter squares, `vm_sqlo` and `vm_sqhi`, 1K in the
+machine's bank), as `BCALL`'s template (`bmul`) and first in `BCALL`'s code: a product of two numbers under 128
+about 320 cycles, of bigger ones about 590 (2,900 through the built-in); the sort 1,795 ms (1,855).
 
 | Benchmark | Bytecode (ms) | M2 (ms) | M3 (ms) | M4 (ms) | M5 (ms) | M6 (ms) | HyForth (ms) | hylang/HyForth |
 |---|---|---|---|---|---|---|---|---|
@@ -637,13 +640,13 @@ template for each count, `vx_ttself`, `vx_tpl`'s choice).  A tail loop's step is
 | calls | 1,005 | 640 | 640 | 575 | 555 | 540 | 65 | 8.3x |
 | fib | 980 | 655 | 655 | 550 | 530 | 515 | 181 | 2.8x |
 | sieve | 1,905 | 1,430 | 1,160 | 1,160 | 1,140 | 1,105 | 332 | 3.3x |
-| sort | 3,275 | 2,710 | 1,915 | 1,915 | 1,890 | 1,855 | 480 | 3.9x |
+| sort | 3,275 | 2,710 | 1,915 | 1,915 | 1,890 | 1,795 | 480 | 3.7x |
 | gcd | 960 | 600 | 600 | 570 | 540 | 520 | 350 | 1.5x |
-| all | 9,050 | 6,585 | 5,515 | 5,315 | 5,145 | 4,995 | 1,484 | 3.4x (geometric mean 3.7x, from 6.9x) |
+| all | 9,050 | 6,585 | 5,515 | 5,315 | 5,145 | 4,945 | 1,484 | 3.3x (geometric mean 3.7x, from 6.9x) |
 
 What's left: the global's head pushed for a tail loop (`SHEAD`, then `TSELF`'s look at it: the compiler could
 leave it out when the arguments call nothing), the depth and Ctrl-C at each call, a template's `jmp` past its
-stub; `*`, not a quick op; and `map` and its kin, whose function is called through the evaluator (an item 2,951
+stub; and `map` and its kin, whose function is called through the evaluator (an item 2,951
 cycles).
 
 | Step | | Notes |

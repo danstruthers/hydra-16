@@ -277,7 +277,8 @@ The plan has it whole; in short:
   made, a cache missed, Ctrl-C).  In line: constants, arguments and locals, pushes, jumps, the fused ops, the
   quick ops of two values, blocks' and loops' ops, `SHEAD` and `CALL` while their caches hold, `CSELF`, `TSELF`,
   `RET` to a caller in the same bank, and `HEAD` of one argument (a buffer, or a function partially applied,
-  pushed).  A `CALL` whose cache missed goes on past its look at it (`op_callm`), where a buffer given a fixnum
+  pushed), and `BCALL` of `*` of two (fixnums whose product is one: `vm_bmul`, by quarter squares).  A `CALL` whose
+  cache missed goes on past its look at it (`op_callm`), where a buffer given a fixnum
   index has its byte at once; `buffer-put` of three is the first thing `BCALL`'s code looks for.  `CALL` and
   `CSELF` have a return pad past their data, where their returns go: the caller's frame found again from the
   call's h and r (`vm_s`, `vm_rb`, `vm_mat`), so `RET` in line only finds the caller's code, drops the frame and
