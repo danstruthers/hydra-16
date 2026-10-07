@@ -151,3 +151,11 @@ Each step with its tests: the driver's commands by their effect on the emulated 
 3. **`/dev/sndctl` taking the channel commands as text** (rc can make sound)?
 4. **The two volumes' names**: keep `snd-volume` and `snd-vol`, or the master as `snd-master`?
 5. **Units for X16 programs**: the Hydra's (MIDI notes, 0-127 volumes) everywhere, the migration utility mapping the X16's, as decided for X16 porting?
+
+### **Answers** (the user's, 6 October 2026)
+
+1. **BASIC: way 1**, few keywords and text for the rest: `SOUND` as now, `PLAY` (`PLAY "mml"`, `PLAY ch, "mml"`, `PLAY "song.zsm"`), and everything else through `SOUND "..."` (`/dev/sndctl`'s text).
+2. **MML in `play`**: one interpreter (the score language compiled on the Hydra), which every language's `snd-mml` and `snd-chord` run.
+3. **`/dev/sndctl` takes every channel command as text** too, beside `/dev/snd`'s binary commands.
+4. **The volumes: `snd-volume` (the master, 0-200) and `snd-level` (a channel's, 0-127)**, `snd-vol` kept as an old name for the channel's.  (The user asked about `snd-vol-l` and `snd-vol-r`; the hardware has no level for a side: the YM2151's left and right are a switch each a channel, which is pan, the VERA's PSG the same, and the mixer has no control.)  So C's `snd_level`, hylang's `(snd-level ch v)`, and the text `level CH N`; the target table's `snd-vol` reads `snd-level`.
+5. **The Hydra's units everywhere**, the migration utility mapping the X16's; `play -x` still plays X16 MML strings as they are.
