@@ -1,6 +1,6 @@
 ## **Sound words: an assessment, and parity everywhere**
 
-An assessment of the sound vocabulary in the rebuilt system (`reborn/`, October 2026): what each place has (the sound driver's files, C, HyForth, hylang, BASIC), how far apart they are, and a plan to bring them all to one set: the largest that exists anywhere the Hydra draws on (its own driver and score language, the old system, and the Commander X16's BASIC, whose chips the Hydra now shares: the YM2151 on the board, the VERA's PSG and PCM on the Vera X).  The questions at the end were the user's, and their answers follow them; steps 1 to 5 of the order of work are built (October 2026: step 5's notes are [As built: the PSG](#as-built-the-psg)), and step 6, PCM, is to come.
+An assessment of the sound vocabulary in the rebuilt system (`reborn/`, October 2026): what each place has (the sound driver's files, C, HyForth, hylang, BASIC), how far apart they are, and a plan to bring them all to one set: the largest that exists anywhere the Hydra draws on (its own driver and score language, the old system, and the Commander X16's BASIC, whose chips the Hydra now shares: the YM2151 on the board, the VERA's PSG and PCM on the Vera X).  The questions at the end were the user's, and their answers follow them; steps 1 to 6 of the order of work are built (October 2026: steps 5 and 6's notes are [As built: the PSG](#as-built-the-psg) and [As built: PCM](#as-built-pcm)).
 
 ### **Contents**
 1. [What exists](#what-exists)
@@ -11,6 +11,7 @@ An assessment of the sound vocabulary in the rebuilt system (`reborn/`, October 
 6. [The order of work](#the-order-of-work)
 7. [Questions](#questions)
 8. [As built: the PSG](#as-built-the-psg)
+9. [As built: PCM](#as-built-pcm)
 
 ---
 
@@ -72,7 +73,7 @@ One row a thing to do; ✓ there, ✗ not, ~ partly (the note says how).
 | A song (ZSM) played | ~ `play` | ✓ | ~ by `sh` | ✓ | ✗ | | |
 | The bell | ✓ `/dev/bell` | ✗ | ✓ | ✓ | ✓ | | |
 | PSG voices (the Vera X) | ✓ channels 8-23, `wave`, `/dev/psg` (step 5) | ✓ | ✓ | ✓ | ~ `SOUND "..."` | ✓ (8 words) | |
-| PCM (the Vera X) | ✗ | ✗ | ✗ | ✗ | ✗ | | |
+| PCM (the Vera X) | ✓ `/dev/vid/pcm`, `pcmctl`; `play` (WAV, ZSM's PCM) (step 6) | ✓ `snd_play` | ✓ `snd-play` | ✓ `play` | ✓ `PLAY` | | |
 
 So: **C, HyForth and hylang are at parity with the driver** (13 words, the same names and order: the channel first), with two small gaps (HyForth and hylang can't read the registers back; C has no note names, tunes or beep).  **BASIC is the one well behind**: of the 13 it has a note and its release, a patch and a volume only with a note, and the four `sndctl` words only as text (`SOUND "claim 255"`); not pan, bend, drums or the registers.  **Nothing on the Hydra itself plays MML**, the vocabulary the score language and the X16's BASIC share; and nothing has a frequency in Hz, legato, the LFO by name, chords, or the PSG.
 
@@ -170,4 +171,15 @@ Step 5, October 2026 (the rebuilt system's `snd`, `vid`, `play` and the language
 * **`/dev/psg`** (`#a`): the PSG's 64 registers as a ZSM writes them (register/value pairs), through the same library (the volumes attenuated, a claimed voice another task's dropped); a read gives them as written.  `play` sends a song's `$00-$3F` writes there, a tick's in one write beside its `/dev/snd` write, and claims its PSG voices with `claim $NN $PPPP`.
 * **The VERA stays vid's** (one owner, as the YM2151 is snd's): snd writes the PSG through **`#v/psg`**, its pairs queued as a request makes them and sent in one write at its end (the file opened the first time it's wanted, all 64 registers sent then; with no card, again the next time).  vid writes them through data port 1, so ADDR0's place (the cursor's) holds; while the chip's claimed it keeps them, and the release writes them back (the setup wrote zeros before).  The third driver-to-driver call (after cons's bell and screen); vid calls nobody.
 * **The words**: C's `snd_wave (ch, wave, width)`, `snd_claim_psg (mask)`, `snd_release_psg (mask)` (`SND_PSG`, `SND_PSG_ALL`, `SND_WAVE_*`); HyForth's `snd-wave ( ch w width -- )`, `snd-claim-psg ( mask -- )`, `snd-release-psg ( mask -- )`; hylang's `(snd-wave ch w [width])` (`:pulse`, `:saw`, `:triangle`, `:noise`) and `snd-claim`/`snd-release` taking channels 0-23; BASIC's `SOUND "wave 8 saw"` (the text).  Every other word reaches the PSG's channels as it is.
-* **Not yet**: the PSG in scores (MML; `play` is at 97% of its bank), its own envelopes (a note sounds till it's off), PCM (step 6), and sound in the emulator (the VERA keeps the PSG's registers and notes its voices' starts, which the test checks).
+* **Not yet**: the PSG in scores (MML), and its own envelopes (a note sounds till it's off).  The emulator plays it (`run.js -i --vera --sound`, or `--wav`); its test checks the registers and the voices' starts.
+
+### **As built: PCM**
+
+Step 6, October 2026 (vid, `play`; the `pcm` test):
+
+* **The files are vid's** (the VERA is): `/dev/vid/pcm` the FIFO, `/dev/vid/pcmctl` its settings (`rate HZ`, the VERA's nearest of its 128 steps of 381 Hz; `bits 8|16`, `mono`, `stereo`, `volume 0-15`, `reset`, `drain`; read: the rate it has, the format, the volume, and who has `pcm`).  Not through the sound driver: a stream of samples through `snd` would hold up every other channel's commands while it waited for the FIFO.  The master volume (snd's) doesn't reach it; its volume is its own, as the X16's is.
+* **The FIFO is the buffer**: a write goes in when the FIFO's below a quarter full (AFLOW's mark), as much as it has room for; above the mark the writer waits for the next frame's event (vid has one every frame for `/frame`), or gets `E_AGAIN` non-blocking.  The quarter's needed: the kernel sends a short write's rest at once, and a draining FIFO always has a byte or two of room, so without it a write would go in a byte at a time, never coming back.  No interrupt of its own: AFLOW stays off.
+* **`pcm` is one task's at a time** (another's open: `E_BUSY`), and so are `pcmctl`'s commands while a task has it.  A claim of the VERA holds it (writes wait; the release restores its settings).
+* **`play`** is two banks now (its second, `pcm.inc`): **WAV files** (RIFF: `fmt`, then `data`, other chunks skipped; PCM of 8 or 16 bits, mono or stereo, to 48,828 Hz; 8 bits made signed; loops as a ZSM's: `play x.wav 2`, `-l`; `drain` at the end), and **a ZSM's PCM extension** (its PCM table; channel 0's commands: `AUDIO_CTRL`'s volume and FIFO reset, `AUDIO_RATE` as Hz, an instrument started with its format; looped instruments from their loop point).  The instruments are read into RAM before the song's time starts if their data fits (the RAM past play's own, BREAK's: about 20K, which a score uses when it plays one; a card reads too slowly to keep up as the song plays: some 12K a second at best, less for the short, scattered reads a loop makes), and played from there, as much as the FIFO takes each song tick; bigger, from the file, a 1K read a tick at most; a song's delay sleeps a tick at a time while one plays, feeding it.  Its PCM claimed with its other channels (`pcm`'s open: another program's, "channels busy").
+* **The words**: `snd_play`, `snd-play`, hylang's `play` and BASIC's `PLAY` run `play`, so WAV files reach every language; a program streams its own samples by writing `/dev/vid/pcm`.
+* **How fast**: the driver's copy is some 22 cycles a byte; from a card, 8-bit mono to about 11 kHz is comfortable, from the RAM disk to about 22 kHz.  The emulator plays it (`run.js -i --vera --sound`, or `--wav`), and keeps, for tests, the bytes the FIFO took (`pcmLog`) and its runs dry (`pcmUnderruns`).

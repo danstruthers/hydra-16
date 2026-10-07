@@ -5,12 +5,14 @@
 ; language: mml.inc), compiled as it plays into the stream hysong.js would make of it; play -o score.mml song.zsm
 ; writes that stream to a ZSM file instead.  play [-x] -m ch mml ... plays a line of MML on a channel (its own
 ; instrument, if the line doesn't name one), play [-x] -c ch notes ... a chord (a note a channel, from ch); -x, the
-; X16's MML (FMPLAY's, FMCHORD's).
+; X16's MML (FMPLAY's, FMCHORD's).  A WAV file ("RIFF") plays on the Vera X's PCM (the second bank: pcm.inc).
 ;   The header (16 bytes): "zm", a version, the loop point (3 bytes: an offset in the file; 0: none, and a loop is
-; the whole song), the PCM table's (ignored), the FM channels it uses and the PSG's (claimed: /dev/sndctl's claim),
+; the whole song), the PCM table's (its instruments: pcm.inc), the FM channels it uses and the PSG's (claimed:
+; /dev/sndctl's claim),
 ; the tick rate (Hz; 0: 60), 2 reserved.  Then the stream: $00-$3F a PSG write (the register, then its value: to
-; /dev/psg, the Vera X's PSG; with no card, dropped there), $40 an extension (skipped), $41-$7F n register/value
-; pairs, $80 the end (or the loop), $81-$FF a delay of n ticks.
+; /dev/psg, the Vera X's PSG; with no card, dropped there), $40 an extension (the PCM's, channel 0, to pcm.inc; the
+; others skipped), $41-$7F n register/value pairs, $80 the end (or the loop), $81-$FF a delay of n ticks.  While a
+; PCM instrument plays, a delay sleeps a song tick at a time, the FIFO fed before each.
 ;   Each tick's pairs go to /dev/snd in one write, its PSG writes to /dev/psg in another (another program's can't
 ; come between them); then it sleeps to the next tick by the system's tick (TICK_HZ a second: SLEEP_UNTIL), keeping
 ; a fraction, so the tempo is exact on average, if not each tick.  It holds the CPU for the song (PREEMPT_OFF): a
@@ -25,12 +27,13 @@
 .include "macros.inc"
 .include "toollib.inc"
 
-            HYX2_PROGRAM "play", main
+            HYX2_PROGRAM "play", main, 2
 
             .import     patches, drum_patch, drum_kc, volume_atten
 
 HDR_SIZE        = 16            ; The header ...
 H_LOOP          = 3             ;   its loop point (3) ...
+H_PCM           = 6             ;   its PCM table's place (3) ...
 H_FM            = 9             ;   the FM channels ...
 H_PSG           = 10            ;   the PSG's (2) ...
 H_RATE          = 12            ;   the tick rate (2)
@@ -41,6 +44,9 @@ F_OUT           = $02           ; -o
 F_LINE          = $04           ; -m
 F_CHORD         = $08           ; -c
 F_X16           = $10           ; -x
+W_NOTSONG       = 1             ; wav_play's failures: not a song ...
+W_NOSOUND       = 2             ;   no PCM (no Vera X) ...
+W_BUSY          = 3             ;   another program has it
 
 .zeropage
 next:       .res        4                                   ; The next tick's time: a fraction (2), then the tick
@@ -69,9 +75,13 @@ inbuf:      .res        256                                 ; The file, played f
 stage:      .res        256                                 ;   and read ahead into here
 frame:      .res        FRAME_MAX                           ; A tick's register pairs ...
 pframe:     .res        FRAME_MAX                           ;   and its PSG's
+xhead:      .res        1                                   ; An extension: its channel and count ...
+xlen:       .res        1                                   ;   its bytes' count ...
+xbuf:       .res        64                                  ;   and its bytes
 
 .code
 main:
+            HYX2_BANKS_INIT
             jsr         tl_start
             lda         (tl_arg)                            ; The song
             bne         :+
@@ -139,32 +149,8 @@ main:
             sta         loop
             bra         play_sound
 :
-            LDR         r0, hdr
-            LDR         r1, HDR_SIZE
-            lda         fd
-            jsr         READ
+            jsr         head                                ; (A WAV file: played there)
             bcs         not_song
-            cmp         #HDR_SIZE
-            bne         not_song
-            lda         hdr
-            cmp         #'z'
-            bne         not_song
-            lda         hdr + 1
-            cmp         #'m'
-            bne         not_song
-            ldx         #2                                  ; The loop point (none: the stream's start)
-:
-            lda         hdr + H_LOOP,X
-            sta         loop,X
-            dex
-            bpl         :-
-            lda         loop
-            ora         loop + 1
-            ora         loop + 2
-            bne         :+
-            lda         #HDR_SIZE
-            sta         loop
-:
 play_sound:
             LDR         r0, s_snd                           ; The sound driver's files
             lda         #O_WRITE
@@ -177,6 +163,7 @@ play_sound:
             bcs         no_sound
             sta         ctl
             jsr         open_psg
+            bcs         busy
             jsr         claim                               ; Its channels, its alone
             bcs         busy
             stz         out
@@ -254,7 +241,60 @@ open_song:
             sta         fd
             rts
 
-; /dev/psg opened (none: the PSG's writes dropped), its frame empty
+; The song's header read and looked at: a ZSM's, its loop point (none: the stream's start); or a WAV file's
+; ("RIFF"), played by the second bank (wav_play), and the end.  OUT: C = 1, not a song
+head:
+            LDR         r0, hdr
+            LDR         r1, HDR_SIZE
+            lda         fd
+            jsr         READ
+            bcs         @not
+            cmp         #HDR_SIZE
+            bne         @not
+            lda         hdr
+            cmp         #'R'
+            beq         @wav
+            cmp         #'z'
+            bne         @not
+            lda         hdr + 1
+            cmp         #'m'
+            bne         @not
+            ldx         #2
+:
+            lda         hdr + H_LOOP,X
+            sta         loop,X
+            dex
+            bpl         :-
+            lda         loop
+            ora         loop + 1
+            ora         loop + 2
+            bne         :+
+            lda         #HDR_SIZE
+            sta         loop
+:
+            clc
+            rts
+
+@wav:
+            FAR2        wav_play
+            bcc         @played
+            cmp         #W_NOSOUND
+            bne         :+
+            jmp         no_sound
+:
+            cmp         #W_BUSY
+            bne         @not
+            jmp         busy
+
+@not:
+            sec
+            rts
+
+@played:
+            jmp         tl_end
+
+; /dev/psg opened (none: the PSG's writes dropped), its frame empty; and a ZSM's PCM instruments, if it has a PCM
+; table (the second bank's: zpcm_open).  OUT: C = 0; or C = 1: another program has the PCM
 open_psg:
             LDR         r0, s_psg
             lda         #O_WRITE
@@ -264,6 +304,14 @@ open_psg:
 :
             sta         psg
             stz         pout
+            lda         hdr + H_PCM
+            ora         hdr + H_PCM + 1
+            ora         hdr + H_PCM + 2
+            beq         :+
+            FAR2        zpcm_open
+            rts
+:
+            clc
             rts
 
 ; sndctl's "claim $NN $PPPP": the song's FM channels and its PSG's.  OUT: C = 0; or C = 1: another program has one
@@ -333,18 +381,10 @@ stream:
             jsr         delay
             bra         stream
 
-@ext:                                                       ; An extension: its bytes, skipped
+@ext:                                                       ; An extension
             jsr         byte
             bcs         @end
-            and         #$3F
-            tax
-            beq         stream
-:
-            jsr         byte
-            bcs         @end
-            dex
-            bne         :-
-            bra         stream
+            jmp         extension
 
 @fm:                                                        ; n register/value pairs: gathered for the tick
             and         #$3F
@@ -377,6 +417,35 @@ stream:
             beq         stream
             dec         loops
             bra         stream                              ; (The read ahead went on into the loop already)
+
+@end:
+            jsr         flush
+            jmp         tl_end
+
+; An extension (.A: its channel, bits 7-6, and its bytes' count): its bytes into xbuf; the PCM's (channel 0), with
+; its instruments playable, to the second bank (zpcm_cmds).  Then the stream again (or its end)
+extension:
+            sta         xhead
+            and         #$3F
+            sta         xlen
+            ldy         #0
+:
+            cpy         xlen
+            bcs         :+
+            jsr         byte
+            bcs         @end
+            sta         xbuf,Y
+            iny
+            bra         :-
+:
+            lda         xhead
+            and         #$C0
+            bne         @next
+            lda         zok
+            beq         @next
+            FAR2        zpcm_cmds
+@next:
+            jmp         stream
 
 @end:
             jsr         flush
@@ -555,7 +624,7 @@ flush:
 delay:
             tax
             jsr         flush
-:
+@tick:
             clc
             lda         next
             adc         period
@@ -569,8 +638,25 @@ delay:
             lda         next + 3
             adc         #0
             sta         next + 3
+            cpx         #1                                  ; (A PCM instrument playing: fed, and slept to, a
+            beq         @last                               ;   song tick at a time)
+            lda         zon
+            beq         @next
+            phx
+            FAR2        zpcm_feed
+            lda         next + 2
+            ldx         next + 3
+            jsr         SLEEP_UNTIL
+            plx
+@next:
             dex
-            bne         :-
+            bra         @tick
+
+@last:
+            lda         zon
+            beq         :+
+            FAR2        zpcm_feed
+:
             jsr         stage_read                          ; (Read ahead: this is the time for it)
             lda         mml                                 ; (A score: compiled ahead till the tick before)
             beq         :+
@@ -654,3 +740,9 @@ tl_usage:   .byte       "play [-l] song [n]; play -o score.mml song.zsm; play [-
 
 .include "mml.inc"
 .include "toollib.s"
+
+; ****************************************************************************
+; The second bank: PCM, the Vera X's (WAV files, a ZSM's PCM instruments)
+
+.segment "CODE2"
+.include "pcm.inc"
