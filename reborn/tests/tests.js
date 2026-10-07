@@ -420,7 +420,7 @@ const SND_LINES = [
 // plays and given back when it's stopped; scom, a song that runs by its name (an rc script); the C sample jukebox
 // (snd_play)
 const PLAY_LINES = [
-  ["play; echo $status","usage: play [-l] song [n]\nusage"],
+  ["play; echo $status","usage: play [-l] song [n]; play -o score.mml song.zsm\nusage"],
   ["/rom/README; whatis scom","rc: /rom/README: not a program\n/bin/scom"],
   ["play /rom/README; echo $status","play: /rom/README: not a song\nnot a song"],
   ["play /rom/nosuch; echo $status","play: /rom/nosuch: not found\n1"],
@@ -459,6 +459,31 @@ function playCard() {
   hydrafs.mkfs(f, 8, 'SONGS', undefined, true);
   const v = new hydrafs.Volume(f);
   v.put('t.zsm', PLAY_SONG());
+  v.close();
+  return [imageCard(0, f, 16384)];
+}
+
+// The mml test's card: scores (play's: modules/play/mml.inc, hysong.js's language) and hysong.js's ZSMs of them (the
+// PC's compiler, sim/tools/hysong.js): the old system's test song (os_rom/songs/test.mml: all 8 channels and
+// algorithms, the LFO's 4 waveforms, noise, slides, legato, drums, repeats, the timers) as t.mml and tpc.zsm, the
+// riff scom (programs/songs) as s.mml and spc.zsm; and two that are wrong (a note before an instrument, a line
+// that isn't one)
+const MML_SCORES = { t: path.join(__dirname, '..', '..', 'os_rom', 'songs', 'test.mml'), s: path.join(__dirname, '..', '..', 'programs', 'songs', 'scom.mml') };
+function mmlCard() {
+  fs.mkdirSync(CARD_DIR, { recursive: true });
+  hydrafs.setNow(0x1000);
+  const f = path.join(CARD_DIR, 'mml0.img');
+  fs.rmSync(f, { force: true });
+  hydrafs.mkfs(f, 8, 'SCORES', undefined, true);
+  const v = new hydrafs.Volume(f);
+  for (const [n, score] of Object.entries(MML_SCORES)) {
+    const zsm = path.join(CARD_DIR, 'mml-' + n + '.zsm');
+    require('child_process').execFileSync(process.execPath, [path.join(__dirname, '..', '..', 'sim', 'tools', 'hysong.js'), score, zsm, '--quiet']);
+    v.put(n + '.mml', fs.readFileSync(score));
+    v.put(n + 'pc.zsm', fs.readFileSync(zsm));
+  }
+  v.put('bad.mml', Buffer.from('#tempo 100\nA o4 c d e\n'));
+  v.put('bad2.mml', Buffer.from('@p { gm 0 }\nA @p c\nX c d e\n'));
   v.close();
   return [imageCard(0, f, 16384)];
 }
@@ -1406,6 +1431,36 @@ module.exports = {
         if (m.ym.lost) f.push(m.ym.lost + ' writes to the YM2151 while it was busy');
         this.notes = ['the YM2151: ' + m.ym.keyOns.length + ' key-ons'];
         return f;
+      },
+    },
+    {
+      name: 'mml', what: 'scores (play\'s, modules/play/mml.inc: hysong.js\'s language compiled as it plays): play -o\'s ZSM of the old test song (every channel, algorithm and LFO waveform, noise, slides, legato, drums, repeats, the timers) and of scom, each the same as hysong.js\'s byte for byte; scom played as a score and as hysong.js\'s ZSM, the chip\'s writes the same, in the same order, and in time; a score\'s errors',
+      init: 't_rc', cycles: 700e6,
+      get machine() {
+        return { sd: mmlCard(), ymLog: true, input: ['cd /sd/0', 'play -o t.mml /ram/t.zsm; cmp /ram/t.zsm tpc.zsm && echo same',
+          'play -o s.mml /ram/s.zsm; cmp /ram/s.zsm spc.zsm && echo same', 'play bad.mml; echo $status', 'play bad2.mml',
+          'echo reset >/dev/sndctl; play spc.zsm; echo reset >/dev/sndctl; play s.mml; echo played'].map(l => '\u0101' + l + '\r').join('') };
+      },
+      expect: ['cmp /ram/t.zsm tpc.zsm && echo same\nsame\n%', 'cmp /ram/s.zsm spc.zsm && echo same\nsame\n%',
+        'play bad.mml; echo $status\nplay: bad.mml: channel 0: a note before an instrument\nchannel 0: a note before an ins\n%',
+        'play bad2.mml\nplay: bad2.mml: what is this line?\n%', 'echo played\nplayed\n%'],
+      // (The two plays' writes: each from the reset before it (its $14, then $01-$FF and the channels' $20s), the
+      // song's after it; the same registers and values in the same order, each one's time from the song's first
+      // within 4 ticks of the other's)
+      check(m) {
+        const w = m.ym.writes, starts = [];
+        for (let i = 0; i < w.length; i++) if (w[i][1] === 0x14 && w[i][2] === 0x30 && w[i + 1] && w[i + 1][1] === 0x01) starts.push(i);
+        if (starts.length < 2) return ['the resets before the two plays: ' + starts.length + ' found'];
+        const RESET = 256 + 8, s0 = starts[starts.length - 2], s1 = starts[starts.length - 1];
+        const a = w.slice(s0 + RESET, s1), b = w.slice(s1 + RESET), tick = 3579545 * (JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'obj', 'build.json'), 'utf8')).clock || 1) / 200;
+        if (!a.length || a.length !== b.length) return ['the ZSM played ' + a.length + ' writes, the score ' + b.length];
+        let worst = 0;
+        for (let i = 0; i < a.length; i++) {
+          if (a[i][1] !== b[i][1] || a[i][2] !== b[i][2]) return ['write ' + i + ': the ZSM\'s $' + a[i][1].toString(16) + ' = ' + a[i][2] + ', the score\'s $' + b[i][1].toString(16) + ' = ' + b[i][2]];
+          worst = Math.max(worst, Math.abs((b[i][0] - b[0][0]) - (a[i][0] - a[0][0])) / tick);
+        }
+        this.notes = ['scom: ' + a.length + ' writes, the same both ways; their times within ' + worst.toFixed(2) + ' ticks of each other'];
+        return worst > 4 ? ['the score\'s writes ' + worst.toFixed(2) + ' ticks from the ZSM\'s'] : [];
       },
     },
     {

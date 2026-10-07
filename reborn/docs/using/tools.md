@@ -194,13 +194,35 @@ has them, join `/bin` and `/lib`.
 
 | Tool | What it does |
 | :--- | :----------- |
-| `play [-l] song [n]` | A ZSM song (the X16's format; Furnace exports it) on the YM2151: once, its loop n more times, or `-l` till Ctrl-C.  `/rom/songs` has a few; `scom` plays one |
+| `play [-l] song [n]` | A ZSM song (the X16's format; Furnace exports it) on the YM2151: once, its loop n more times, or `-l` till Ctrl-C; or a score (a name ending in `.mml`: below).  `/rom/songs` has a few; `scom` plays one |
+| `play -o score.mml song.zsm` | The score compiled into a ZSM file instead |
 | `xmodem -r file`, `xmodem -s [-k] file` | A file received or sent with XMODEM over the serial line, with any terminal program on the PC: `-r` receives, `-s` sends (`-k`: 1K blocks) |
 | `forth`, `hylang`, `rc` | The languages and the shell: [hyforth.md](hyforth.md), [hylang.md](hylang.md), [rc.md](rc.md) |
 
 The sound device is `/dev/snd` (register and value pairs), `/dev/sndctl` (`claim N`, `release N`, `volume N`,
 `reset`; and a channel's commands as text: `patch CH P`, `note CH N`, `off CH`, `level CH V`, `pan CH
 left|right|both`, `bend CH B`, `drum CH N`, `freq CH HZ`, `glide CH N`, `sens CH PMS AMS`, `reg R V`; the chip's
-`lfo RATE PMD AMD WAVE` and `noise N|off`; so `echo note 0 60 >/dev/sndctl` plays middle C) and `/dev/bell`; the VIA's port A is `/dev/gpio` (pins `0`-`7`, `port`, `ctl`, `ca1`) and `/dev/i2c` the
-I2C bus on two of its pins; `/dev/spi` the SPI devices; `/dev/seg` names shared segments; `/pc` a folder on the PC
-(through the PC tool, `../sim/tools/hydrapc.js`, which is the terminal too).
+`lfo RATE PMD AMD WAVE` and `noise N|off`; so `echo note 0 60 >/dev/sndctl` plays middle C) and `/dev/bell`; the
+VIA's port A is `/dev/gpio` (pins `0`-`7`, `port`, `ctl`, `ca1`) and `/dev/i2c` the I2C bus on two of its pins;
+`/dev/spi` the SPI devices; `/dev/seg` names shared segments; `/pc` a folder on the PC (through the PC tool,
+`../sim/tools/hydrapc.js`, which is the terminal too).
+
+### Scores
+
+A score is music as text, the language of the PC's score compiler (`sim/tools/hysong.js`, whose header has it
+whole), and `play` plays one as it is, compiling it as it goes into the same register writes at the same ticks as
+`hysong.js` would put in a ZSM file (`play -o` writes that file):
+
+```
+; A score: ; to the line's end is a comment
+#tempo 120                        ; quarter notes a minute (120); #rate N: its ticks a second (200)
+@piano { gm 0 }                   ; an instrument: one of the driver's 163 patches, or a voice's operators
+A @piano o4 l8 c d e f g4 r4 c2   ; channel 0 (A-H: 0-7); a channel's lines are joined in order
+B @piano o3 l2 c [g e]2 c         ; [ ... ]N: repeated N times
+```
+
+Notes `c` to `b` (`+` or `#` sharp, `-` flat), a length (1 a whole note ... 64; 3 6 12 24 48 triplets), dots, `^`
+ties; `r` a rest; `x N` a General MIDI drum; `o` `>` `<` the octave; `l` the default length; `q` the part of a note
+held (eighths); `v` the volume (0-127); `p l|r|c|0` the speakers; `k` transpose; `D` detune (64ths); `M` and `L`
+the LFO; `N` the noise; `y reg,val` a register; `_` a slide to the next note, `&` legato.  A score is read whole
+into memory (some 24K at most); a mistake in it is said with its channel (`play: x.mml: channel 2: no such drum`).
