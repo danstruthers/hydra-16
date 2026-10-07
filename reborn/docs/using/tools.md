@@ -106,6 +106,7 @@ the line editor (Text, above), for scripts and a terminal without a screen.
 | `slay [-i] name ...` | Each task running a program of that name, as `kill` |
 | `sleep seconds` | Nothing for that long; Ctrl-C ends it |
 | `ns [task]` | A task's namespace (none: this one's) as the binds and mounts that make it |
+| `input` | The Vera X's keyboard and mouse (its input controller, the X16's SMC): their keys into the console, as the serial terminal's, and the mouse into `/dev/vid/mouse`.  init starts it; with no controller it ends at once |
 
 The tasks' own files are under `/proc/N`: `status`, `args`, `cwd`, `env`, `ns`, `fd` (its open files: `0 rw #c 291
 #c/cons`), `regs`, `mem` and `ram` (its memory), `note` (write `interrupt`, `kill`, `hangup` or a number to send
@@ -285,7 +286,7 @@ left|right|both`, `bend CH B`, `drum CH N`, `freq CH HZ`, `glide CH N`, `wave CH
 its PSG's voices: the same commands, and `wave`; `claim`'s P is their mask, bit n channel 8 + n.  The
 VIA's port A is `/dev/gpio` (pins `0`-`7`, `port`, `ctl`, `ca1`) and `/dev/i2c` the I2C bus on two of its pins;
 `/dev/spi` the SPI devices; `/dev/seg` names shared segments; `/dev/vid` is the Vera X (its screen, VRAM, the PSG,
-and `pcm` and `pcmctl`, its PCM: [../programming/video.md](../programming/video.md)); `/pc` a folder on the PC (through
+`pcm` and `pcmctl`, its PCM, and `mouse` and `mousectl`, its mouse: [../programming/video.md](../programming/video.md)); `/pc` a folder on the PC (through
 the PC tool, `sim/tools/hydrapc.js`, which is the terminal too).
 
 ### Scores

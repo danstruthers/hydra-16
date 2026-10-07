@@ -44,7 +44,11 @@
 //   --vera-config MS    the VERA's FPGA configuring itself after power-up and a reset: MS milliseconds (100)
 //   --screen            after the report, the VERA's text layer as text (its characters as ISO-8859-1)
 //   --frame-png FILE    at the end, the VERA's screen as a PNG (640 x 480); with -i, Ctrl-A p's file (screen-N.png)
-//   --view [PORT]       with -i: the VERA's screen live in a browser, at http://localhost:PORT (8016) (sim/view.js)
+//   --view [PORT]       with -i: the VERA's screen live in a browser, at http://localhost:PORT (8016) (sim/view.js);
+//                       with --smc, the page's keys and mouse are the input controller's
+//   --smc               the Vera X's input controller: the X16's SMC on the I2C bus at $42 (sim/lib/smc.js), a PS/2
+//                       keyboard and mouse on it
+//   --kbd TEXT          keys typed at its keyboard, as --input's are (after them; \e Escape, \b Backspace); --smc too
 //   --sound [PORT]      with -i: the sound (the YM2151's, and the Vera X's PSG and PCM with --vera: sim/lib/audio.js)
 //                       in a browser, at http://localhost:PORT (8016; --view's page, if there's one), its Sound
 //                       button to hear it, some 0.15 s behind; in time at --speed 1
@@ -321,7 +325,7 @@ function interactive(m, opt) {
   }
   if (opt.view || opt.soundPort) {
     const port = opt.view || opt.soundPort;
-    require('./view.js').startView(m, port, { screen: !!opt.view, sound: !!opt.soundPort });
+    require('./view.js').startView(m, port, { screen: !!opt.view, sound: !!opt.soundPort, input: !!opt.smc });
     say((opt.view ? 'the screen' : 'the sound') + ': http://localhost:' + port + (opt.soundPort ? ' (its Sound button)' : ''));
   }
   say('the Hydra\'s serial console.  Ctrl-A x quits, Ctrl-A h for help.');
@@ -365,6 +369,8 @@ function main(argv) {
     if (a === '-i' || a === '--interactive') opt.interactive = true;
     else if (a === '--cycles') { opt.cycles = +next(); opt.cyclesSet = true; }
     else if (a === '--input') opt.input = unescape(next());
+    else if (a === '--smc') opt.smc = true;
+    else if (a === '--kbd') { opt.smc = true; opt.kbd = unescape(next()).replace(/\\e/g, '\x1b').replace(/\\b/g, '\b'); }
     else if (a === '--paste') opt.paste = true;
     else if (a === '--speed') opt.speed = +next();
     else if (a === '--clock') opt.clock = +next();
@@ -406,6 +412,7 @@ function main(argv) {
   }
   if (opt.pcDir) opt.pcHost = createPcHost({ dir: opt.pcDir, readOnly: !!opt.pcReadOnly, damage: opt.pcDamage,
     log: opt.pcLog ? t => (opt.interactive ? process.stdout.write('\r\n[pc] ' + t + '\r\n') : console.log('[pc] ' + t)) : undefined });
+  if (opt.kbd) opt.input = (opt.input || '') + '\u0102' + opt.kbd + '\u0103';   // (acia.js: typed at the keyboard)
   opt.promImage = opt.prom ? fs.readFileSync(opt.prom) : chips();
   if (opt.veraConfigMs !== undefined) { if (!opt.vera) { console.error('--vera-config: with --vera'); process.exit(2); } opt.vera.configCycles = Math.round(opt.veraConfigMs * opt.clock * 1e3); }
   if ((opt.screen || opt.framePng || opt.view) && !opt.vera) { console.error('--screen, --frame-png and --view: with --vera'); process.exit(2); }

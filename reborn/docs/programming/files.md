@@ -73,13 +73,13 @@ commands to its `ctl`, and read as text where that's what it is.
 
 | Letter | Device | Files |
 | :----- | :----- | :---- |
-| `#c` | The console (a window each: `#cN`) | `cons`, `consctl` (`rawon`, `rawoff`, `group`), `ser`, `serctl` (the rate), `wctl`, `wnew`, `kbdin` |
+| `#c` | The console (a window each: `#cN`) | `cons`, `consctl` (`rawon`, `rawoff`, `group`), `ser`, `serctl` (the rate), `wctl`, `wnew`, `kbdin`, `kbin` (the keyboard's keys: the `input` program's) |
 | `#d` | The disks | `N/data`, `N/ctl`: `0`-`f` cards, `x` the ROM disk, `r` and `s` the RAM disks |
 | `#f` | HydraFS | A disk's file system (the spec: its disk) |
 | `#S` | SPI devices | `N/data` (a transaction), `N/ctl` (`mode 0`, `mode 3`) |
 | `#g`, `#i` | GPIO, I2C | `0`-`7`, `port`, `ctl`, `ca1`; `ctl` and a file each device |
 | `#a` | Sound | `snd`, `sndctl`, `bell`, `psg` (the Vera X's PSG) |
-| `#v` | The Vera X | `ctl`, `term`, `vram`, `pal`, `sprites`, `font`, `frame`, `psg`, `pcm`, `pcmctl` |
+| `#v` | The Vera X | `ctl`, `term`, `vram`, `pal`, `sprites`, `font`, `frame`, `psg`, `pcm`, `pcmctl`, `mouse`, `mousein`, `mousectl` |
 | `#t`, `#n` | Time, null | `time`, `ticks`; `null`, `zero`, `kmesg` |
 | `#m` | Modules | A file each (its image), `bin` |
 | `#p` | Tasks | `N/status`, `args`, `cwd`, `env`, `ns`, `fd`, `regs`, `mem`, `ram`, `note`, `ctl` |

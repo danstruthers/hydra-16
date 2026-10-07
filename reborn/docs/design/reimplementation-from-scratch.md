@@ -707,7 +707,7 @@ One driver owns the SPI bus and every disk (as built, a module of two banks: Hyd
 
 (As built, phase 5.3, `reborn/modules/gpio`: `#g` and `#i` are one driver module, port A's alone, so their changes to it never meet; `#i`'s `ctl` has `subaddress` too (a device's register written first, from the offset).  CA1's interrupt is the kernel's as far as its stub: a line of its own, `LINE_VIA_CA1`, as timer 2's is, owned by the driver while `/dev/gpio/ca1` is open.)
 | `#v` video: `/dev/vid/ctl`, `vram`, `pal`, `sprites`, `frame` | The Vera X driver module ([VIDEO.md](plans/VIDEO.md), steps 2-5, unchanged in substance) | Phase 8 |
-| `#k` input: keyboard into `#c`, `/dev/mouse`, `/dev/pads` | The input controller's driver (on I2C, IRQ line 3) | Phase 8 |
+| `#k` input: keyboard into `#c`, `/dev/mouse`, `/dev/pads` | The input controller's driver (on I2C, IRQ line 3) | Phase 8 (as built: the `input` program, polling over I2C, the keys into `#c/kbin`, the mouse vid's `/dev/vid/mouse`; no `#k`) |
 | `#N` network (`/net` on a W5500) | A driver module | Later |
 
 ---

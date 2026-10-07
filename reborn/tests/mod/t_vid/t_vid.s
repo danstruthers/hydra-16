@@ -37,6 +37,21 @@ stat:       .res        SR_SIZE
 
 .code
 
+; Sprite 0's byte 6 (its z: the cursor's), from /sprites.  OUT: .A
+sprite0_z:
+            LDR         r0, s_sprites
+            lda         #O_READ
+            jsr         OPEN
+            sta         k
+            LDR         r0, buf
+            LDR         r1, 8
+            lda         k
+            jsr         READ
+            lda         k
+            jsr         CLOSE
+            lda         buf + 6
+            rts
+
 ; READ count bytes at offset of fd fdv into buf.  OUT: .A/.X the count, C
 .macro AT       fdv, offset, count
             LDR         r0, offset
@@ -381,11 +396,12 @@ main:
             EXPECT_OK   "cursor on"
             lda         VERA_DC_VIDEO
             and         #VERA_DC_SPRITES
-            EXPECT_A    VERA_DC_SPRITES, "the cursor's sprite shown (DC_VIDEO)"
+            EXPECT_A    VERA_DC_SPRITES, "the sprites on (DC_VIDEO)"
+            jsr         sprite0_z
+            EXPECT_A    $0C, "the cursor's sprite shown (its z 3)"
             CTL         "cursor off"
-            lda         VERA_DC_VIDEO
-            and         #VERA_DC_SPRITES
-            EXPECT_A    0, "cursor off: hidden"
+            jsr         sprite0_z
+            EXPECT_A    0, "cursor off: hidden (its z 0)"
             CTL         "border 6"
             EXPECT_OK   "border 6"
             lda         VERA_DC_BORDER

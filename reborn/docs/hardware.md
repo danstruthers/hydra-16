@@ -513,14 +513,15 @@ its own: *The Commander X16 Programmer's Reference*, chapters 9 and 10.
 | **Interrupt** | Its `IRQ#` on slot 0's IRQ A, **line 2**: the highest priority after the VIA and the ACIA |
 | **Audio** | Its DAC's left and right into slot 0's audio pair (`SND_CL0`, `SND_CR0`), mixed with the YM2151's on the board |
 | **Reset** | `RESB` to its `RES#`: a reset reloads the FPGA from its flash, and it doesn't answer till that's done (`vid` looks for it for 0.3 s; the emulator takes 0.1 s) |
-| **IRQ B, line 3** | Kept for the card's input controller (a PS/2 keyboard and mouse, pads), to talk over the slot's I2C |
+| **IRQ B, line 3** | Free.  The card's input controller (the X16's SMC: a PS/2 keyboard and mouse) is on the slot's I2C at `$42`, and polled: the board's IRQ lines can't be masked, and an I2C device can't be quieted from an interrupt handler |
 
 **As built (October 2026):** the user's VERA X 6.1, the module alone; its **carrier card** is still to be made.  That's
 VIDEO.md's option A: a small slot card with a socket for the module and a little glue logic, `CS#` from either
 port select, `RD#` and `WR#` from `PHI2` and R/W (the VERA latches a write as its strobe ends, so the strobe must end
 with `PHI2`, while the CPU still drives the data), `IRQ#` through an open-collector buffer, the audio through a
-divider to the mixer's level.  The input controller comes after it.  Till the carrier exists, the card can be wired
-through a bus breakout card in slot 0, with two glue chips ([vera-wiring.md](vera-wiring.md)); the emulator's Vera X
+divider to the mixer's level, and the input controller (the X16's SMC on the slot's I2C).  Till the carrier exists, the
+card can be wired through a bus breakout card in slot 0, with two glue chips, and the SMC beside them on the card's
+I2C header ([vera-wiring.md](vera-wiring.md)); the emulator's Vera X
 (`sim/run.js --vera`) is where the software's been run.
 
 The software: `vid`, its driver, finds the card as the system starts (by the version register; v0.9's by `ADDR0` read

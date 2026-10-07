@@ -5,7 +5,8 @@
 ; /lib/namespace; with no /rom/lib/namespace, the one built in here: the devices at their places); the tasks listed;
 ; hello run and waited for; then window 0's shell (rc -l, a namespace of its own: it builds it, newns, and its
 ; profile puts its window at /dev) and the windows' starter (wstart: the shell in the next window the user asks for,
-; Ctrl-] c), each started again when it ends.  The shell is /lib/shell's line, if there is one (its program and
+; Ctrl-] c), each started again when it ends; and the input controller's driver (input: the Vera X's keyboard and
+; mouse, a note group of its own), once (with no controller it ends at once).  The shell is /lib/shell's line, if there is one (its program and
 ; arguments: /bin/forth -l, HyForth as a shell; a card's /lib/shell, or the shared RAM disk's, /sram/lib/shell), read
 ; each time one's started, else rc -l; wstart is given it as its arguments.  It waits for every task left to it (the
 ; windows' shells are).  Its note handler keeps it going.
@@ -83,6 +84,11 @@ main:
 shells:
             jsr         shell0
             jsr         starter
+            LDR         r0, s_input                         ; The keyboard's and mouse's driver, once
+            stz         r1
+            stz         r1 + 1
+            lda         #SPAWN_NEWGROUP
+            jsr         SPAWN
 @wait:
             stz         r0
             stz         r0 + 1
@@ -368,6 +374,7 @@ S_RC_LEN    = * - s_rcl
 S_RCL_LEN   = * - s_rcl
 s_lshell:   .byte       "/lib/shell", 0
 s_wstart:   .byte       "#m/wstart", 0
+s_input:    .byte       "#m/input", 0
 s_builtin:  .byte       "init: no /rom/lib/namespace: the one built in", CR, LF, 0
 s_ctlr:     .byte       "#d/r/ctl", 0
 s_ctls:     .byte       "#d/s/ctl", 0

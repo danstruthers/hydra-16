@@ -30,12 +30,15 @@ and serves it as files.  A program uses the screen three ways, from the easiest:
 | `term` | The screen's characters, a line a row (its columns, then an LF) | Bytes shown as an ANSI terminal shows them (the console writes here) |
 | `vram` | VRAM: the offset is the address, `$00000-$1FFFF` | VRAM, through the chip's data port |
 | `pal` | The palette (VRAM `$1FA00`: 256 entries of 2 bytes, `$GB` then `$0R`) | The palette |
-| `sprites` | The sprites' attributes (VRAM `$1FC00`: 128 of 8 bytes) | The attributes (sprite 0 is the console's cursor) |
+| `sprites` | The sprites' attributes (VRAM `$1FC00`: 128 of 8 bytes) | The attributes (sprite 0 is the console's cursor, sprite 1 the mouse's pointer) |
 | `font` | The console's font (VRAM `$1F000`: 256 characters of 8 bytes, a byte a row) | A font: `cat /lib/font/cp437 >/dev/vid/font` |
 | `frame` | Waits for the next frame (59.5 a second), then gives the frames counted, in decimal | |
 | `psg` | The PSG's 64 registers (VRAM `$1F9C0`: 16 voices of 4) as written here | Register/value pairs: the sound driver's (its channels 8-23); kept while the chip's claimed, and written as the claim ends |
 | `pcm` | | Samples into the PCM FIFO (below: "PCM") |
 | `pcmctl` | The PCM's state: `rate 22126`, `bits 8`, `mono`, `volume 15`, `claimed` (and the task that has `pcm`) | `rate HZ`, `bits 8`, `bits 16`, `mono`, `stereo`, `volume N` (0-15), `reset` (the FIFO emptied), `drain` (waits till it's empty) |
+| `mouse` | The mouse, after a change, as Plan 9's `/dev/mouse` (below: "The keyboard and the mouse") | `m X Y`: the mouse moved there |
+| `mousein` | | The mouse's moves, as the `input` program has them: `m DX DY B` |
+| `mousectl` | `pointer on`, `swap off` | `pointer on`, `pointer off`, `swap on`, `swap off` |
 
 So a picture is a file copy away: a 320x240 picture of 8 bits a pixel, its bytes in a file, then
 
@@ -65,10 +68,44 @@ bold, shown bright, 22, 7 reverse, 27, 30-37, 39, 40-47, 49, 90-97, 100-107), `r
 VT100's: `CSI 2;23r`, then an LF at row 23 scrolls rows 2-23 alone and ESC M at row 2 scrolls them down; `CSI r`
 the whole screen again), `s` and `u`, `?25h` and `?25l`.  Others are taken and dropped.  The whole screen scrolls by
 moving layer 1's `VSCROLL` (the map is a ring of 64 rows), so a scroll costs a row; a region scrolls by copying its
-rows in VRAM (some 1,500 cycles a row).  The cursor is sprite 0, an underline, blinking (`cursor on` steadies it).
+rows in VRAM (some 1,500 cycles a row).  The cursor is sprite 0, an underline, blinking by its z (`cursor on` steadies
+it); the sprites are on all along, so a program's, and the mouse's pointer, don't blink with it.
 
-The screen has no keyboard yet: keys still come from the serial terminal.  A PS/2 keyboard, through an input
-controller on IRQ line 3, is planned (VIDEO.md).
+## The keyboard and the mouse
+
+With the card's input controller, the X16's SMC (an ATtiny861 with its firmware: a PS/2 keyboard and a PS/2 mouse,
+on the I2C bus at `$42`), the screen is a computer of its own.  The `input` program, which init starts, reads it
+67 times a second while keys or the mouse are coming, 10 times a second after 2 s of nothing (each look costs some
+5,000 cycles, so a quiet system pays 1.8% of the CPU for it); with no controller it ends at once.
+
+* **The keys go to the console**, as the serial terminal's do: `input` writes them to `#c/kbin` (the console's
+  keyboard) as a PC terminal (xterm) sends them, so a program can't tell which keyboard they came from.  A raw read
+  gets the cursor and function keys as one code each (`KEY_*`); Ctrl-C is the window's interrupt; Ctrl-] and a digit
+  shows a window.  The layout is the US one: Shift, Ctrl, Alt (an ESC first), Caps Lock; the keypad's digits with Num
+  Lock on (as it starts) and its cursor keys with it off; Scroll Lock the console's hold.  The locks light their LEDs.
+* **The mouse** is `/dev/vid/mouse`, as Plan 9's `/dev/mouse`: a read waits for a change, then gives 49 bytes, `m`
+  and four fields of 11 characters each with a space after it: x, y, the buttons and the time in milliseconds.  x and
+  y are the screen's pixels (640 x 480; 640 x 240 in `mode 80x30`, 320 x 240 in `mode 40x30` or under `bitmap 320`);
+  the buttons are 1 left, 2 middle, 4 right, 8 and 16 the wheel up and down (each pressed, then let go).  An open's
+  first read gives the mouse at once; a non-blocking fd gets `E_AGAIN` when there's nothing new.  The buttons'
+  changes are queued (8 of them, each fd reading them in turn), so a click between two reads isn't lost; the moves
+  aren't (a read gives the latest).  Writing `m X Y` moves it.
+* **The pointer** is sprite 1, an arrow (its image at VRAM `$1F820`, in the grey ramp: palette offset 1), shown once
+  the mouse has moved.  `/dev/vid/mousectl` takes `pointer off` and `pointer on`, and `swap on` (the left and
+  right buttons swapped) and `swap off`.  While the chip's claimed the pointer is off, the claimer's to draw (it reads
+  `/dev/vid/mouse` as anyone does), and the release shows it again.
+* **`/dev/vid/mousein`** is where the moves come in: `input` writes `m DX DY B`, a line a change (y down, the
+  buttons as `mouse` gives them).  Anything else that reads a mouse can write it too.
+
+```
+% cat /dev/vid/mousectl
+pointer on
+swap off
+% echo m 10 -5 1 >/dev/vid/mousein
+```
+
+and a reader of `/dev/vid/mouse` gets `m        330         235           1        8215 ` (from the screen's middle,
+320 by 240, where the mouse starts).
 
 ## PCM
 
@@ -109,9 +146,9 @@ reads of the chip's files get `E_BUSY` (a second `claim` too).  The console's ou
 (its last 1K), and is shown when the claim ends.
 
 The VRAM a claimer may use without saying so is `$00000-$1AFFF` (108K: a 320x240 bitmap of 8 bits is 75K); the
-console's map is at `$1B000-$1EFFF`, its font at `$1F000-$1F7FF`, the cursor's image at `$1F800`.  With `claim all`
+console's map is at `$1B000-$1EFFF`, its font at `$1F000-$1F7FF`, the cursor's image at `$1F800`, the pointer's at `$1F820`.  With `claim all`
 all of VRAM is the program's, and the console's map and font are made again at the release.  The release sets the
-chip up for the console: the palette, the sprites (all off but the cursor), the layers, the scales, the interrupts.
+chip up for the console: the palette, the sprites (all off but the cursor and the pointer), the layers, the scales, the interrupts.
 The PSG is the sound driver's (`/dev/snd`'s channels 8-23, through `/dev/vid/psg`): during a claim its writes are
 kept, not made, and the release writes them, so a song's voices pick up where they are; a claimer that wants the
 PSG for itself claims those channels from `/dev/sndctl` too (`claim 0 65535`).

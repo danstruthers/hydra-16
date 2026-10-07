@@ -5,6 +5,11 @@
 // while the view is on (vera.js's live: raster effects show), and the page fetches the last whole frame: /frame is the
 // palette (256 x RGB) then the 640 x 480 palette indexes, /state a line of JSON (the frames so far, DC_VIDEO, the
 // gateware's version).
+//   The keyboard and mouse (with --smc: what.input): the canvas, clicked, takes the keys and the mouse, for the
+// input controller (smc.js): each key's code (KeyboardEvent.code) as the IBM key number the SMC gives, pressed and let
+// go (a key held repeats, as a PS/2 keyboard's does), to /key; the mouse's moves (in the screen's 640 x 480), its
+// buttons and wheel, gathered and sent to /mouse 60 times a second.  Escape is the keyboard's too: click outside the
+// screen to give the keys back to the page.
 //   The sound: /audio is a stream of the machine's (audio.js's: 48,000 stereo 16-bit samples a second, as they're
 // made), from when it's asked for.  The page's Sound button plays it through an AudioWorklet that keeps some 0.15 s
 // in hand: it waits for that much before it starts (and after it runs dry), and drops what's past 0.45 s (the
@@ -40,7 +45,50 @@ class HydraSound extends AudioWorkletProcessor {
 registerProcessor('hydra-sound', HydraSound);
 `;
 
-const page = (screen, sound) => `<!doctype html>
+// KeyboardEvent.code: the IBM PC/AT's key numbers (x16-emulator's keyboard.c)
+const KEYNUM = { Backquote: 1, Minus: 12, Equal: 13, Backspace: 15, Tab: 16, BracketLeft: 27, BracketRight: 28, Backslash: 29,
+  CapsLock: 30, Semicolon: 40, Quote: 41, Enter: 43, ShiftLeft: 44, IntlBackslash: 45, Comma: 53, Period: 54, Slash: 55,
+  IntlRo: 56, ShiftRight: 57, ControlLeft: 58, MetaLeft: 59, AltLeft: 60, Space: 61, AltRight: 62, MetaRight: 63,
+  ControlRight: 64, ContextMenu: 65, Insert: 75, Delete: 76, ArrowLeft: 79, Home: 80, End: 81, ArrowUp: 83, ArrowDown: 84,
+  PageUp: 85, PageDown: 86, ArrowRight: 89, NumLock: 90, Numpad7: 91, Numpad4: 92, Numpad1: 93, NumpadDivide: 95,
+  Numpad8: 96, Numpad5: 97, Numpad2: 98, Numpad0: 99, NumpadMultiply: 100, Numpad9: 101, Numpad6: 102, Numpad3: 103,
+  NumpadDecimal: 104, NumpadSubtract: 105, NumpadAdd: 106, NumpadEnter: 108, Escape: 110, PrintScreen: 124,
+  ScrollLock: 125, Pause: 126 };
+[...'1234567890'].forEach((c, i) => { KEYNUM['Digit' + c] = 2 + i; });
+for (const [first, keys] of [[17, 'QWERTYUIOP'], [31, 'ASDFGHJKL'], [46, 'ZXCVBNM']]) [...keys].forEach((c, i) => { KEYNUM['Key' + c] = first + i; });
+for (let i = 1; i <= 12; i++) KEYNUM['F' + i] = 111 + i;
+
+// The page's keyboard and mouse, for the input controller
+const INPUT = `
+  const KEYNUM = ${JSON.stringify(KEYNUM)};
+  cv.tabIndex = 0;
+  let mdx = 0, mdy = 0, mb = 0, mw = 0, moved = false, lastX = null, lastY = null;
+  const key = (e, down) => {
+    const n = KEYNUM[e.code];
+    if (n === undefined) return;
+    e.preventDefault();
+    fetch('/key?n=' + n + '&d=' + (down ? 1 : 0), { method: 'POST' }).catch(() => {});
+  };
+  cv.addEventListener('keydown', e => key(e, true));
+  cv.addEventListener('keyup', e => key(e, false));
+  cv.addEventListener('mousedown', e => { cv.focus(); mb = e.buttons & 7; moved = true; e.preventDefault(); });
+  cv.addEventListener('mouseup', e => { mb = e.buttons & 7; moved = true; });
+  cv.addEventListener('contextmenu', e => e.preventDefault());
+  cv.addEventListener('mousemove', e => {
+    const x = e.offsetX * 640 / cv.clientWidth, y = e.offsetY * 480 / cv.clientHeight;
+    if (lastX !== null) { mdx += x - lastX; mdy += y - lastY; moved = true; }
+    lastX = x; lastY = y; mb = e.buttons & 7;
+  });
+  cv.addEventListener('mouseleave', () => { lastX = lastY = null; });
+  cv.addEventListener('wheel', e => { mw += Math.sign(e.deltaY); moved = true; e.preventDefault(); }, { passive: false });
+  setInterval(() => {
+    if (!moved) return;
+    const dx = Math.trunc(mdx), dy = Math.trunc(mdy), w = Math.max(-8, Math.min(7, mw));
+    mdx -= dx; mdy -= dy; mw = 0; moved = false;
+    fetch('/mouse?dx=' + dx + '&dy=' + dy + '&b=' + mb + '&w=' + w, { method: 'POST' }).catch(() => {});
+  }, 16);`;
+
+const page = (screen, sound, input) => `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Hydra-16 ${screen ? 'screen' : 'sound'}</title>
 <style>
@@ -58,6 +106,7 @@ const page = (screen, sound) => `<!doctype html>
 ${screen ? '<canvas id="screen" width="640" height="480"></canvas>' : '<h1 style="font-size:15px;font-weight:600;margin:0">Hydra-16</h1>'}
 <div class="row">
 ${screen ? '<div id="state">waiting for the Hydra</div>' : ''}
+${screen && input ? '<div id="kstate">click the screen for its keyboard and mouse</div>' : ''}
 ${sound ? '<button id="sound" aria-pressed="false">Sound</button><div id="sstate">sound off</div>' : ''}
 </div>
 <script>
@@ -74,6 +123,7 @@ ${screen ? `
     setTimeout(frame, 33);
   }
   frame();` : ''}
+${screen && input ? INPUT : ''}
 ${sound ? `
   const WORKLET = ${JSON.stringify(WORKLET)};
   const btn = document.getElementById('sound'), sst = document.getElementById('sstate');
@@ -112,9 +162,9 @@ ${sound ? `
 
 // Serve machine m's screen (what.screen) and sound (what.sound: m.audio's) on port; OUT: the server
 function startView(m, port, what = { screen: true }) {
-  const vera = what.screen ? m.vera : null, audio = what.sound ? m.audio : null;
+  const vera = what.screen ? m.vera : null, audio = what.sound ? m.audio : null, smc = vera && what.input ? m.smc : null;
   if (vera) vera.live = true;
-  const html = page(!!vera, !!audio);
+  const html = page(!!vera, !!audio, !!smc);
   const server = http.createServer((req, res) => {
     if (vera && req.url === '/frame') {
       const f = vera.lastFrame || vera.frame(), body = Buffer.alloc(768 + f.pixels.length);
@@ -125,6 +175,12 @@ function startView(m, port, what = { screen: true }) {
     } else if (vera && req.url === '/state') {
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
       res.end(JSON.stringify({ ready: vera.ready, frames: vera.frames, dcVideo: vera.dcVideo, version: vera.version ? vera.version.join('.') : '0.9' }));
+    } else if (smc && req.method === 'POST' && (req.url.startsWith('/key?') || req.url.startsWith('/mouse?'))) {
+      const q = new URL(req.url, 'http://localhost').searchParams, n = k => parseInt(q.get(k), 10) || 0;
+      if (req.url.startsWith('/key?')) smc.key(n('n'), n('d') === 1);
+      else smc.move(n('dx'), n('dy'), n('b'), n('w'));
+      res.writeHead(204);
+      res.end();
     } else if (audio && req.url === '/audio') {                 // (The sound from now on, as it's made)
       res.writeHead(200, { 'Content-Type': 'application/octet-stream', 'Cache-Control': 'no-store' });
       if (res.socket) res.socket.setNoDelay(true);

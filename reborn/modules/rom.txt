@@ -11,6 +11,7 @@ module      gpio
 module      vid
 module      rc
 module      wstart
+module      input
 module      echo
 module      cat
 module      ls

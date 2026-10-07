@@ -371,7 +371,7 @@ const C_LINES = [
 // zzz on the screen), then both (the screen repainted from the window's text); colours (SGR, a file on the PC);
 // a font from the ROM disk; a bad command
 const SCREEN_LINES = [
-  ["ls /dev/vid", "ctl\nterm\nvram\npal\nsprites\nfont\nframe\npsg\npcm\npcmctl"],
+  ["ls /dev/vid", "ctl\nterm\nvram\npal\nsprites\nfont\nframe\npsg\npcm\npcmctl\nmouse\nmousein\nmousectl"],
   ["cat /dev/vid/ctl", "vera 47.0.2\nmode 80x60\ncursor blink\nborder 0\nbitmap off\nclaimed"],
   ["grep terminal /dev/consctl", "terminal both"],
   ["echo serial >/dev/consctl; echo z^zz; grep -c 'z[z]z' /dev/vid/term; echo both >/dev/consctl", "zzz\n0"],
@@ -1069,7 +1069,7 @@ module.exports = {
       expect: ['% ls \'#fr\'\n1/\n2/\n%', '% ls /ram\nbin/\nlib/\n%',
         '% ls /bin\ndb\nedit\nfsck\ngrep\nlabel\nmkfs\nscom\nsort\ninit\nhello\nrc\nwstart\n', 't_child\n% t_child f\n', '% ls \'#fr\'/2\nbin/\nlib/\nmark\n%',
         'prompt=(', '% cat /dev/sd/s/ctl\nsram 512 KB 1024 blocks\nhydrafs label=SRAM\n', '% echo $window\n0\n%',
-        '% echo $window\n1\n%', '% ls \'#fr\'\n1/\n2/\n4/\n%', '% ls /ram\nbin/\nlib/\n%', '\ncons\nconsctl\nwctl\nwnew\nser\nserctl\nkbdin\n%',
+        '% echo $window\n1\n%', '% ls \'#fr\'\n1/\n2/\n4/\n%', '% ls /ram\nbin/\nlib/\n%', '\ncons\nconsctl\nwctl\nwnew\nser\nserctl\nkbdin\nkbin\n%',
         '% echo stop >>\'#d/s/ctl\'; echo still; cat /sram/x\nstill\ncat: /sram/x: no such device\n%'],
     },
     {
@@ -2280,6 +2280,41 @@ module.exports = {
         if (m.vera.pcmLost) f.push(m.vera.pcmLost + ' bytes written to a full FIFO');
         if (m.vera.pcmUnderruns !== 4) f.push('the FIFO ran dry ' + m.vera.pcmUnderruns + ' times (4 wanted: the ends)');
         this.notes = ['the FIFO: ' + log.length + ' bytes taken, ' + m.vera.pcmOut + ' played; the looped instrument ' + k + ', the big one ' + tail.length + '; dry ' + m.vera.pcmUnderruns + ' times'];
+        return f;
+      },
+    },
+    {
+      name: 'mouse', what: 'the mouse (VIDEO.md step 6): vid\'s /mouse, /mousein and /mousectl (its state; /mouse\'s first read at once, Plan 9\'s 49 bytes; a non-blocking read\'s E_AGAIN; moves, the pointer\'s sprite at them, kept on the screen; swap; the buttons\' changes queued and read in turn; the pointer off and on; a write to /mouse; bad lines; a claim and its release; mode 40x30\'s size), then the input program on the emulator\'s SMC: a move, a click and the wheel from its PS/2 packets',
+      init: 't_mouse', cycles: 45e6, jsOnly: 'the danlang emulator has no VERA yet',
+      // (The SMC's mouse: a move, then the left button pressed and let go, then the wheel up, each 2M cycles apart,
+      // from 12M cycles on: by then the input program has asked for the mouse's mode and read it)
+      machine: { vera: true, smc: { moves: [[30, 20, 0], [0, 0, 1], [0, 0, 0], [0, 0, 0, -1]] },
+        input: '\u0102' + '\u0100'.repeat(6) + '\u0400\u0100\u0400\u0100\u0400\u0100\u0400\u0103' },
+      check(m) {
+        const s = m.smc, f = [];
+        if (s.mouseId !== 3) f.push('the SMC\'s mouse in mode ' + s.mouseId + ' (3, a wheel\'s, asked for)');
+        if (s.mouseLost) f.push(s.mouseLost + ' packets lost on the SMC');
+        this.notes = ['the SMC: ' + s.reads + ' reads, ' + s.nacks + ' with nothing (unanswered); the I2C bus: ' + m.i2c.stats.starts + ' starts'];
+        return f;
+      },
+    },
+    {
+      name: 'kbd', what: 'the keyboard (VIDEO.md step 6): init\'s input program, the emulator\'s SMC typed at, the keys into the console (#c/kbin) as a PC terminal sends them, at the login shell (HyForth): Shift and punctuation; Left to edit a line; Up, its history; Caps Lock; the keypad\'s digits, and its cursor keys with Num Lock off; Ctrl-C, a note to the window\'s shell; the keyboard\'s LEDs following the locks',
+      init: 'init', cycles: 120e6, jsOnly: 'the danlang emulator has no VERA yet',
+      get machine() {
+        const tap = n => String.fromCharCode(0x200 + n), W = '\u0101';  // (smc.js's key n pressed and let go; a prompt)
+        const LEFT = tap(79), UP = tap(83), CAPS = tap(30), NUM = tap(90), KP1 = tap(93), KP2 = tap(98), KP4 = tap(92);
+        return { vera: true, smc: true, input: '\u0102' + W + '.( Hello, World!) cr\r' + W + '.( ac)' + LEFT + LEFT + 'b\r' + W + UP + '\r' +
+          W + CAPS + '.( shout)' + CAPS + '\r' + W + '.( ' + KP1 + KP2 + ')\r' + W + '.( xz)' + NUM + KP4 + KP4 + 'y' + NUM + '\r' +
+          W + ': spin begin again ;\r' + W + 'spin\r\u0100\x03' + W + '.( back)\r' + '\u0103' };
+      },
+      expect: ['/> .( Hello, World!) cr\nHello, World!\n/> ', '\nabc\n/> .( abc)\x1b[K\nabc\n/> .( SHOUT)\nSHOUT\n/> .( 12)\n12\n/> .( xz)',
+        '\nxyz\n/> : spin begin again ;\n/> spin\ninterrupt\n/> .( back)\nback\n/> '],
+      check(m) {
+        const s = m.smc, f = [], leds = s.commands.filter(c => c[0] === 0xED).map(c => c[1]).join(' ');
+        if (leds !== '2 6 2 0 2') f.push('the LEDs: ' + leds + ' (2 6 2 0 2 wanted: Num Lock, Caps Lock on and off, Num Lock off and on)');
+        if (s.lost) f.push(s.lost + ' key codes lost on the SMC');
+        if (s.keys.length) f.push(s.keys.length + ' key codes left unread');
         return f;
       },
     },

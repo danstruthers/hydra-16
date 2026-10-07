@@ -26,5 +26,6 @@ a file, Plan 9's way: a device is a directory of files (the console's at `/dev`,
 at `/proc`), controlled by writing commands to its `ctl`.  Each task has a namespace, the tree of names it sees,
 built by binds and mounts, so `/bin` is a union of the RAM disk's, the cards', the ROM disk's and the ROM's
 programs.  The console is windows, rio's way on a serial terminal: each window is a whole console with its own shell,
-shown one at a time (Ctrl-] and a digit).  The login shell is HyForth over rc (`forth -l`): a line is Forth if its
+shown one at a time (Ctrl-] and a digit).  With a Vera X, they're on its screen too, and its keyboard types into them
+as the serial terminal does.  The login shell is HyForth over rc (`forth -l`): a line is Forth if its
 first word is a Forth word or a number, else an rc command line.

@@ -17,8 +17,8 @@
 ;   /vram     the VERA's video RAM, 128K (the offset is the address), read and written through its data port 0
 ;   /pal      the palette (VRAM $1FA00: 256 entries, 2 bytes each: $GB, $0R): 0-15 the console's colours, the ANSI
 ;             terminal's (conio's 0-15), 16-255 the VERA's own
-;   /sprites  the sprites' attributes (VRAM $1FC00: 128 of 8 bytes).  Sprite 0 is the console's cursor; a write here
-;             stops the cursor blinking (it blinks by turning the sprites off and on)
+;   /sprites  the sprites' attributes (VRAM $1FC00: 128 of 8 bytes).  Sprite 0 is the console's cursor, sprite 1 the
+;             mouse's pointer; a write here stops the cursor blinking (it blinks by its z, sprite 0's byte 6)
 ;   /font     the console's font (VRAM $1F000: 256 characters of 8 bytes, a byte a row; ISO-8859-15 at the start):
 ;             cat /lib/font/cp437 >/dev/vid/font for the PC's
 ;   /frame    a read waits for the next frame (one since this fid last read, or opened it: the VERA's VSYNC, 59.5 a
@@ -30,6 +30,17 @@
 ;             (the rest in the kernel's next request; above a quarter: the writer waits for the next frame, 59.5 a
 ;             second, or a non-blocking one gets E_AGAIN), in the format pcmctl says; one task's at a time
 ;             (another's open: E_BUSY), till its last fid of it closes
+;   /mouse    the mouse (the input controller's: the input program writes /mousein), as Plan 9's /dev/mouse: a read
+;             waits for a change (one since this fid last read; its first read at once), then gives m, x, y, the
+;             buttons and the time in milliseconds (the ticks' x 5), each 11 columns wide and a space (49 bytes); a
+;             non-blocking fd gets E_AGAIN instead.  The buttons' changes are queued (MQ_N), each fid reading them in
+;             turn before the mouse as it is now, so a click between two reads isn't lost; the moves aren't.  x and y are the screen's pixels (cols x 8 by rows x 8: 640 x 480,
+;             640 x 240, 320 x 240), the buttons Plan 9's (1 left, 2 middle, 4 right; 8 and 16 the wheel, up and
+;             down, pressed and let go).  A write of m X Y moves it (a change)
+;   /mousein  the mouse's moves, as the input program has them: m DX DY B (the buttons as /mouse has them; swapped,
+;             left for right, with mousectl's swap on), each a change
+;   /mousectl pointer on|off (the pointer, sprite 1: an arrow, its image at $1F820; on, it's shown once the mouse has
+;             moved, but while the chip's claimed), swap on|off.  It reads as the state: "pointer on", "swap off"
 ;   /pcmctl   rate HZ (the VERA's nearest: 381 Hz a step, up to 48,828; 0 stops it), bits 8|16, mono, stereo, volume
 ;             N (0-15), reset (the FIFO emptied), drain (waits till the FIFO's empty); the PCM's task's, or anyone's
 ;             while no task has /pcm (another's: E_BUSY).  It reads as the state: "rate 22126", "bits 8", "mono",
@@ -56,8 +67,10 @@
 ; 4, 5, 24 and 25 taken and not shown), s and u, ?25h and ?25l (the cursor shown, hidden); the rest are taken and
 ; dropped.  The cursor is sprite 0, an underline, moved after each write.
 ;   Only this task touches the chip, but for a claimer.  Its code keeps CTRL at 0 (ADDR0, DCSEL 0), and sets
-; another DCSEL only with the VERA's interrupt off; the irq entry writes DC_VIDEO (the blink: dcv, its copy, which
-; the rest change with IRQs off), ISR and IEN.
+; another DCSEL only with the VERA's interrupt off; the irq entry writes ISR and IEN, and the blink: sprite 0's z
+; (bz, its copy, which the rest change with IRQs off) through data port 1, ADDR1 kept at it with no increment (a
+; scroll's row copy and the PSG's writes borrow ADDR1, the blink stopped meanwhile, and put it back: a1_home).  The
+; sprites are on all along (DC_VIDEO's), each shown by its z.
 
 .include "hydra.inc"
 .include "hw.inc"
@@ -77,6 +90,9 @@ MAP_ROWS        = 64            ;   its rows (a ring)
 FONT_ADDR       = $F000         ; The font, $1F000 (these: bit 16 set)
 CURSOR_ADDR     = $F800         ; The cursor's image, $1F800
 SPRITE0         = $FC00         ; Sprite 0's attributes, $1FC00: the cursor
+SPRITE1         = $FC08         ; Sprite 1's: the mouse's pointer ...
+POINTER_ADDR    = $F820         ;   its image, $1F820 (16 x 16, 4 bits a pixel: 128 bytes)
+Z_FRONT         = $0C           ; A sprite's byte 6: z 3 (in front of both layers); 0, off
 PSG_ADDR        = $F9C0         ; The PSG's registers, $1F9C0 (the chip's registers from here to the end)
 H_INC1          = VERA_INC_1 | 1 ; ADDR_H: increment 1, bit 16 set (the console's part of VRAM)
 H_INC2          = VERA_INC_2 | 1 ;   increment 2 (a row's characters, not their colours)
@@ -97,7 +113,10 @@ E_TERM          = 2             ; srv_tree's entries: term ...
 E_VRAM          = 3             ;   the VRAM's files (vram, pal, sprites, font: their regions, SE_AUX) ...
 E_FRAME         = 7             ;   frame ...
 E_PSG           = 8             ;   psg ...
-E_PCM           = 9             ;   pcm
+E_PCM           = 9             ;   pcm ...
+E_MOUSE         = 13            ;   mouse
+MREC            = 10            ; The mouse's state, a record (mx on): x, y, the buttons, the time, its change
+MQ_N            = 8             ; The buttons' changes queued (a power of 2)
 PCM_16          = $20           ; AUDIO_CTRL: 16 bits a sample ...
 PCM_STEREO      = $10           ;   stereo ...
 PCM_RESET       = $80           ;   the FIFO emptied (a write; a read's bit 7: full, bit 6: empty)
@@ -109,7 +128,9 @@ PSG_REGS        = 64            ; The PSG's registers
 frames:     .res        4                                   ; The frames counted (the irq entry's)
 blink_n:    .res        1                                   ; Frames till the cursor's next blink (the irq entry's)
 blinking:   .res        1                                   ; <> 0: the irq entry blinks the cursor
-dcv:        .res        1                                   ; DC_VIDEO as written (the irq entry's too)
+dcv:        .res        1                                   ; DC_VIDEO as written
+bz:         .res        1                                   ; The cursor's z as written (sprite 0's byte 6: the irq
+                                                            ;   entry's blink)
 cx:         .res        1                                   ; The cursor: its column ...
 cy:         .res        1                                   ;   and row on the screen
 cols:       .res        1                                   ; The screen's columns ...
@@ -160,6 +181,23 @@ pcm_rate:   .res        1                                   ;   format, 3-0 the 
 pcm_owner:  .res        1                                   ;   the task + 1 that has /pcm (0: nobody) ...
 pcm_refs:   .res        1                                   ;   and its fids of it
 iobuf:      .res        256
+a1_was:     .res        1                                   ; blinking, while ADDR1 is borrowed
+mx:         .res        2                                   ; The mouse (a record, MREC bytes): x ...
+my:         .res        2                                   ;   y (after mx: m_clamp's) ...
+mb:         .res        1                                   ;   the buttons (Plan 9's) ...
+mtime:      .res        4                                   ;   the last change's time (ms) ...
+mseq:       .res        1                                   ;   and the changes counted (/mouse's fids: fframe)
+mtk:        .res        4                                   ; The ticks at the last change (TICKS's 16 bits, the wraps)
+mq:         .res        MQ_N * MREC                         ; The buttons' changes, a ring of records ...
+mq_head:    .res        1                                   ;   the changes queued, counted ...
+mq_new:     .res        1                                   ;   <> 0: this change is one
+fq:         .res        SRV_FIDS                            ; Each /mouse fid's changes read (mq_head's count)
+rec:        .res        MREC                                ; The record a read gives
+mfid:       .res        1                                   ; (h_mouse's fid)
+ptr_mode:   .res        1                                   ; mousectl's pointer: 0 off, 1 on ...
+ptr_seen:   .res        1                                   ;   <> 0: the mouse has moved ...
+mswap:      .res        1                                   ;   and swap: <> 0, left for right
+mt:         .res        2                                   ; Scratch (the mouse's)
 
 .code
 
@@ -174,6 +212,10 @@ init:
             sta         cur_mode
             lda         #1
             sta         cur_on
+            lda         #1                                  ; The mouse: in the middle, its pointer on
+            sta         ptr_mode
+            LDR         mx, 320
+            LDR         my, 240
             lda         #$0F                                ; The PCM: 8-bit mono, at full volume, stopped
             sta         pcm_ctl
             stz         pcm_rate
@@ -290,10 +332,10 @@ irq:
             sta         blink_n
             lda         blinking
             beq         @done
-            lda         dcv
-            eor         #VERA_DC_SPRITES
-            sta         dcv
-            sta         VERA_DC_VIDEO
+            lda         bz                                  ; (Sprite 0's z: ADDR1's place)
+            eor         #Z_FRONT
+            sta         bz
+            sta         VERA_DATA1
 @done:
             lda         #0
             rts
@@ -331,6 +373,7 @@ setup:
             stz         blinking
             stz         dcv
             stz         VERA_DC_VIDEO
+            stz         bz
             plp
             lda         #<PSG_ADDR                          ; ---- VRAM's registers: the PSG's, /psg's ...
             ldx         #>PSG_ADDR
@@ -373,7 +416,7 @@ setup:
             inx
             cpx         #8
             bcc         :-
-            lda         #<CURSOR_ADDR                       ;   and its image
+            lda         #<CURSOR_ADDR                       ;   and its image ...
             ldx         #>CURSOR_ADDR
             jsr         vseek1
             ldx         #0
@@ -383,6 +426,24 @@ setup:
             inx
             cpx         #32
             bcc         :-
+            ldx         #0                                  ;   the pointer's (its place: ptr_place) ...
+:
+            lda         pointer_img,X
+            sta         VERA_DATA0
+            inx
+            cpx         #128
+            bcc         :-
+            lda         #<SPRITE1
+            ldx         #>SPRITE1
+            jsr         vseek1
+            ldx         #0
+:
+            lda         pointer_attr,X
+            sta         VERA_DATA0
+            inx
+            cpx         #8
+            bcc         :-
+            jsr         a1_home                             ;   and ADDR1 at the cursor's z, for the blink
             lda         #L1_TEXT                            ; ---- Layer 1: the text
             sta         VERA_L1_CONFIG
             lda         #L1_MAP
@@ -405,7 +466,7 @@ setup:
             sta         VERA_DC_BORDER
             jsr         layer0_set                          ; ---- Layer 0 (a bitmap, or nothing), the scales, the
             jsr         mode_set                            ;   screen's size
-            lda         #VERA_DC_OUT_VGA | VERA_DC_LAYER1   ; ---- On (the cursor's sprite: cursor_show)
+            lda         #VERA_DC_OUT_VGA | VERA_DC_LAYER1 | VERA_DC_SPRITES   ; ---- On (the cursor's sprite: cursor_show)
             ldx         bitmap
             beq         :+
             ora         #VERA_DC_LAYER0
@@ -506,7 +567,9 @@ mode_set:
             bcc         :+
             stz         cy
 :
-            jmp         region_all
+            jsr         region_all
+            jsr         m_clamp                             ; (The mouse kept on it, the pointer there)
+            jmp         ptr_place
 
 ; The scrolling region: the whole screen.  Modifies .A
 region_all:
@@ -931,6 +994,9 @@ region_down:
 ; Screen row t's cells (COLS_MAX: characters and colours) copied to row t + 1, through the data ports: 1 reads, 0
 ; writes (CTRL's ADDRSEL 1 a moment; DCSEL 0 all along, for the irq entry's DC_VIDEO).  Modifies .A, .X, .Y
 copy_row:
+            lda         blinking                            ; (ADDR1 borrowed: the blink stopped meanwhile)
+            sta         a1_was
+            stz         blinking
             lda         #VERA_CTRL_ADDRSEL
             sta         VERA_CTRL
             ldx         #0
@@ -952,6 +1018,23 @@ copy_row:
             sta         VERA_DATA0
             dex
             bne         :-
+a1_back:
+            jsr         a1_home                             ; (ADDR1 back, and the blink)
+            lda         a1_was
+            sta         blinking
+            rts
+
+; ADDR1 at sprite 0's z (its byte 6, $1FC06), no increment: the irq entry's, for the cursor's blink.  Modifies .A
+a1_home:
+            lda         #VERA_CTRL_ADDRSEL
+            sta         VERA_CTRL
+            lda         #<(SPRITE0 + 6)
+            sta         VERA_ADDR_L
+            lda         #>(SPRITE0 + 6)
+            sta         VERA_ADDR_M
+            lda         #1                                  ; (Bit 16, no increment)
+            sta         VERA_ADDR_H
+            stz         VERA_CTRL
             rts
 
 ; ESC 7, CSI s: the cursor and the colours saved; ESC 8, CSI u: back
@@ -1299,8 +1382,8 @@ csi_reset:
 @done:
             rts
 
-; The cursor's sprite at the cursor, on (and blinking: ctl's cursor blink), or off; dcv changed with IRQs off.
-; Nothing while the chip's claimed.  Modifies .A, .X
+; The cursor's sprite at the cursor, on (and blinking: ctl's cursor blink), or off: its z (bz, through ADDR1) changed
+; with IRQs off.  Nothing while the chip's claimed.  Modifies .A, .X
 cursor_show:
             lda         claimer
             bne         @done
@@ -1346,19 +1429,17 @@ cursor_show:
             stx         blinking
             lda         #BLINK                              ; (Shown now, the blink starting again)
             sta         blink_n
-            lda         dcv
-            ora         #VERA_DC_SPRITES
-            bra         @dcv
+            lda         #Z_FRONT
+            bra         @z
 
 @off:
             php
             sei
             stz         blinking
-            lda         dcv
-            and         #<~VERA_DC_SPRITES
-@dcv:
-            sta         dcv
-            sta         VERA_DC_VIDEO
+            lda         #0
+@z:
+            sta         bz
+            sta         VERA_DATA1
             plp
 @done:
             rts
@@ -1734,7 +1815,7 @@ h_vram:
             sta         va + 2
             jsr         vseek_va
             lda         regions + 3,X                       ; (/sprites written: the cursor steady, as its blink
-            beq         @part                               ;   turns every sprite off and on)
+            beq         @part                               ;   turns sprite 0 off and on)
             lda         TASK_INBOX + RQ_TYPE
             cmp         #R_WRITE
             bne         @part
@@ -1839,6 +1920,9 @@ h_psg:
             lda         claimer                             ;   increment); 0, the chip's claimed
             bne         :+
             dec         t
+            lda         blinking                            ; (ADDR1 borrowed: the blink stopped meanwhile)
+            sta         a1_was
+            stz         blinking
             lda         #VERA_CTRL_ADDRSEL
             sta         VERA_CTRL
             lda         #>PSG_ADDR
@@ -1867,7 +1951,7 @@ h_psg:
             bne         @pair
             bit         t
             bpl         @parted
-            stz         VERA_CTRL
+            jsr         a1_back
 @parted:
             jsr         parted
             bra         @part
@@ -2293,6 +2377,432 @@ h_frame:
             clc
             rts
 
+; /mouse: a read: the mouse, after a change (since this fid's last read: fframe), Plan 9's way; none yet: E_AGAIN
+; (/mousein's event).  A write: m X Y, the mouse moved there.  IN: .X = the fid
+h_mouse:
+            cmp         #R_READ
+            beq         @read
+            cmp         #R_WRITE
+            bne         :+
+            jmp         @write
+:
+            clc
+            rts
+
+@read:
+            stx         mfid
+            lda         fq,X                                ; A change of the buttons queued, not yet read?
+            cmp         mq_head
+            beq         @now
+            lda         mq_head                             ; (More than the queue holds: its oldest)
+            sec
+            sbc         fq,X
+            cmp         #MQ_N + 1
+            bcc         :+
+            lda         mq_head
+            sbc         #MQ_N
+            sta         fq,X
+:
+            lda         fq,X
+            inc         fq,X
+            and         #MQ_N - 1                           ; Its record: rec
+            asl
+            sta         mt
+            asl
+            asl
+            adc         mt
+            tay
+            ldx         #0
+:
+            lda         mq,Y
+            sta         rec,X
+            iny
+            inx
+            cpx         #MREC
+            bcc         :-
+            bra         @give
+
+@now:                                                       ; Else the mouse now, if it's changed since
+            lda         mseq
+            cmp         fframe,X
+            bne         :+
+            lda         #E_AGAIN
+            sec
+            rts
+:
+            ldx         #MREC - 1
+:
+            lda         mx,X
+            sta         rec,X
+            dex
+            bpl         :-
+@give:
+            ldx         mfid                                ; (Its change: this fid's from now)
+            lda         rec + MREC - 1
+            sta         fframe,X
+            stz         z:srv_tlen
+            lda         #'m'
+            jsr         srv_tputc
+            ldx         #0                                  ; x, y
+            jsr         @field16
+            ldx         #2
+            jsr         @field16
+            lda         rec + 4                             ; The buttons
+            sta         num
+            stz         num + 1
+            stz         num + 2
+            stz         num + 3
+            jsr         tput11
+            ldx         #3                                  ; The time
+:
+            lda         rec + 5,X
+            sta         num,X
+            dex
+            bpl         :-
+            jsr         tput11
+            jmp         give_event
+
+@field16:                                                   ; (rec + .X's 16 bits)
+            lda         rec,X
+            sta         num
+            lda         rec + 1,X
+            sta         num + 1
+            stz         num + 2
+            stz         num + 3
+            jmp         tput11
+
+@write:                                                     ; m X Y
+            lda         TASK_INBOX + RQ_COUNT + 1
+            bne         @inval
+            lda         TASK_INBOX + RQ_COUNT
+            cmp         #SRV_CTL_MAX + 1
+            bcs         @inval
+            sta         r2
+            stz         r2 + 1
+            pha
+            LDR         r0, srv_ctl
+            MOVR        r1, TASK_INBOX + RQ_BUF
+            jsr         CLIENT_READ
+            plx
+            stz         srv_ctl,X
+            jsr         srv_words
+            bcs         @done
+            lda         (srv_p)                             ; (m, alone)
+            cmp         #'m'
+            bne         @inval
+            ldy         #1
+            lda         (srv_p),Y
+            bne         @inval
+            lda         z:srv_argn
+            cmp         #2
+            bcc         @inval
+            ldx         #3
+:
+            lda         srv_arg,X
+            sta         mx,X
+            dex
+            bpl         :-
+            jsr         m_changed
+            lda         TASK_INBOX + RQ_COUNT
+            sta         TASK_INBOX + RQ_DONE
+            stz         TASK_INBOX + RQ_DONE + 1
+            clc
+@done:
+            rts
+
+@inval:
+            jmp         inval
+
+; srv_text (srv_tlen bytes) to the client whole, whatever the offset (an event's), as much as it asks for
+give_event:
+            stz         TASK_INBOX + RQ_DONE
+            stz         TASK_INBOX + RQ_DONE + 1
+            lda         z:srv_tlen
+            sta         r2
+            stz         r2 + 1
+            lda         TASK_INBOX + RQ_COUNT + 1
+            bne         :+
+            lda         TASK_INBOX + RQ_COUNT
+            cmp         r2
+            bcs         :+
+            sta         r2
+:
+            LDR         r0, srv_text
+            jsr         srv_toclient
+            clc
+            rts
+
+; num's 32 bits in decimal, right-aligned in 11 columns, then a space, to the text (Plan 9's mouse's fields).
+; Modifies .A, .X, .Y, num, mt
+tput11:
+            ldx         z:srv_tlen                          ; 12 spaces ...
+            ldy         #12
+            lda         #' '
+:
+            sta         srv_text,X
+            inx
+            dey
+            bne         :-
+            stx         z:srv_tlen
+            dex                                             ;   and the digits from the 11th back
+            dex
+            stx         mt
+@digit:
+            ldx         #32                                 ; num / 10: the remainder in .A
+            lda         #0
+@bit:
+            asl         num
+            rol         num + 1
+            rol         num + 2
+            rol         num + 3
+            rol         a
+            cmp         #10
+            bcc         :+
+            sbc         #10
+            inc         num
+:
+            dex
+            bne         @bit
+            ora         #'0'
+            ldx         mt
+            sta         srv_text,X
+            dec         mt
+            lda         num
+            ora         num + 1
+            ora         num + 2
+            ora         num + 3
+            bne         @digit
+            rts
+
+; mousein's m DX DY B: the mouse moved, its buttons (swapped, with swap on: bits 0 and 2)
+mi_move:
+            lda         z:srv_argn
+            cmp         #3
+            bcc         @inval
+            clc
+            lda         mx
+            adc         srv_arg
+            sta         mx
+            lda         mx + 1
+            adc         srv_arg + 1
+            sta         mx + 1
+            clc
+            lda         my
+            adc         srv_arg + 2
+            sta         my
+            lda         my + 1
+            adc         srv_arg + 3
+            sta         my + 1
+            lda         srv_arg + 4
+            ldx         mswap
+            beq         @buttons
+            tay                                             ; (Left for right)
+            and         #<~5
+            sta         mt
+            tya
+            and         #1
+            asl
+            asl
+            ora         mt
+            sta         mt
+            tya
+            and         #4
+            lsr
+            lsr
+            ora         mt
+@buttons:
+            cmp         mb                                  ; (A change of the buttons: queued)
+            beq         :+
+            ldx         #1
+            stx         mq_new
+:
+            sta         mb
+            lda         #1
+            sta         ptr_seen
+            jsr         m_changed
+            clc
+            rts
+
+@inval:
+            jmp         inval
+
+; The mouse changed: kept on the screen, the time, its readers told, the pointer there.  Modifies .A, .X, .Y
+m_changed:
+            jsr         m_clamp
+            jsr         TICKS                               ; The time: the ticks (their wraps counted) x 5
+            sta         mt
+            stx         mt + 1
+            cmp         mtk                                 ; (Fewer than the last: a wrap)
+            txa
+            sbc         mtk + 1
+            bcs         :+
+            inc         mtk + 2
+            bne         :+
+            inc         mtk + 3
+:
+            lda         mt
+            sta         mtk
+            lda         mt + 1
+            sta         mtk + 1
+            ldx         #3
+:
+            lda         mtk,X
+            sta         mtime,X
+            dex
+            bpl         :-
+            ldy         #2                                  ; (x 4 ...
+:
+            asl         mtime
+            rol         mtime + 1
+            rol         mtime + 2
+            rol         mtime + 3
+            dey
+            bne         :-
+            clc                                             ;   + 1)
+            ldx         #0
+            ldy         #4
+:
+            lda         mtime,X
+            adc         mtk,X
+            sta         mtime,X
+            inx
+            dey
+            bne         :-
+            inc         mseq
+            lda         mq_new                              ; A change of the buttons: into the queue
+            beq         @told
+            stz         mq_new
+            lda         mq_head
+            and         #MQ_N - 1
+            asl
+            sta         mt
+            asl
+            asl
+            adc         mt
+            tay
+            ldx         #0
+:
+            lda         mx,X
+            sta         mq,Y
+            iny
+            inx
+            cpx         #MREC
+            bcc         :-
+            inc         mq_head
+@told:
+            inc         TASK_EVENT                          ; (/mouse's readers look again)
+            jmp         ptr_place
+
+; The mouse kept on the screen: x 0 to cols x 8 - 1, y 0 to rows x 8 - 1 (as signed numbers).  Modifies .A, .X, mt
+m_clamp:
+            lda         cols
+            ldx         #0
+            jsr         @one
+            lda         rows
+            ldx         #2
+@one:
+            sta         mt                                  ; mt = .A x 8 - 1
+            stz         mt + 1
+            asl         mt
+            rol         mt + 1
+            asl         mt
+            rol         mt + 1
+            asl         mt
+            rol         mt + 1
+            lda         mt
+            bne         :+
+            dec         mt + 1
+:
+            dec         mt
+            lda         mx + 1,X                            ; Below 0: 0
+            bpl         :+
+            stz         mx,X
+            stz         mx + 1,X
+            rts
+:
+            cmp         mt + 1                              ; Past mt: mt
+            bcc         @ok
+            bne         @max
+            lda         mt
+            cmp         mx,X
+            bcs         @ok
+@max:
+            lda         mt
+            sta         mx,X
+            lda         mt + 1
+            sta         mx + 1,X
+@ok:
+            rts
+
+; The pointer (sprite 1) at the mouse: shown (z 3) if it has moved and mousectl's pointer is on, else off.  Nothing
+; while the chip's claimed.  Modifies .A, .X
+ptr_place:
+            lda         claimer
+            bne         @done
+            lda         #<(SPRITE1 + 2)
+            ldx         #>(SPRITE1 + 2)
+            jsr         vseek1
+            lda         mx
+            sta         VERA_DATA0
+            lda         mx + 1
+            sta         VERA_DATA0
+            lda         my
+            sta         VERA_DATA0
+            lda         my + 1
+            sta         VERA_DATA0
+            lda         ptr_mode
+            and         ptr_seen
+            beq         :+
+            lda         #Z_FRONT
+:
+            sta         VERA_DATA0
+@done:
+            rts
+
+; mousectl's pointer on | off
+c_pointer:
+            lda         #<onoff_names
+            ldx         #>onoff_names
+            jsr         arg_which
+            bcs         @done
+            sta         ptr_mode
+            jsr         ptr_place
+            clc
+@done:
+            rts
+
+; mousectl's swap on | off
+c_swap:
+            lda         #<onoff_names
+            ldx         #>onoff_names
+            jsr         arg_which
+            bcs         @done
+            sta         mswap
+            clc
+@done:
+            rts
+
+; mousectl's state: "pointer on", "swap off"
+gen_mousectl:
+            lda         #<s_pointer_sp
+            ldx         #>s_pointer_sp
+            jsr         srv_tputs
+            lda         ptr_mode
+            ldx         #<onoff_names
+            ldy         #>onoff_names
+            jsr         tput_name
+            lda         #<s_nl_swap
+            ldx         #>s_nl_swap
+            jsr         srv_tputs
+            lda         mswap
+            ldx         #<onoff_names
+            ldy         #>onoff_names
+            jsr         tput_name
+            lda         #LF
+            jsr         srv_tputc
+            clc
+            rts
+
 ; num's 32 bits in decimal, to the text.  Modifies .A, .X, num
 tputdec32:
             lda         #0                                  ; (A 0 on the stack: the digits' end)
@@ -2669,6 +3179,11 @@ c_claim:
             ldx         #>(SPRITE0 + 6)
             jsr         vseek1
             stz         VERA_DATA0
+            stz         bz
+            lda         #<(SPRITE1 + 6)                     ; (And the pointer: the claimer's to draw)
+            ldx         #>(SPRITE1 + 6)
+            jsr         vseek1
+            stz         VERA_DATA0
             stz         pend_n
             stz         pend_n + 1
             stz         pend_h
@@ -2757,6 +3272,15 @@ opened:
             sta         refs - 1,Y
             lda         frames
             sta         fframe,X
+            lda         srv_fid_entry,X                     ; (A /mouse's: its first read at once, the queue's
+            cmp         #E_MOUSE                            ;   changes from now)
+            bne         :+
+            lda         mseq
+            dec         a
+            sta         fframe,X
+            lda         mq_head
+            sta         fq,X
+:
             clc
             rts
 
@@ -2850,6 +3374,10 @@ srv_tree:
             SRV_ENTRY   s_pcmctl,  0,   SK_CTL,  pcm_cmds,   SM_READ | SM_WRITE, 12     ; 10 (reads as 12)
             SRV_ENTRY   s_ctl,     $FE, SK_TEXT, gen_ctl,    SM_READ,            0      ; 11 (ctl's state)
             SRV_ENTRY   s_pcmctl,  $FE, SK_TEXT, gen_pcm,    SM_READ,            0      ; 12 (pcmctl's)
+            SRV_ENTRY   s_mouse,   0,   SK_DATA, h_mouse,    SM_READ | SM_WRITE, 0      ; 13 (E_MOUSE)
+            SRV_ENTRY   s_mousein, 0,   SK_CTL,  mousein_cmds, SM_WRITE,         0      ; 14
+            SRV_ENTRY   s_mousectl, 0,  SK_CTL,  mousectl_cmds, SM_READ | SM_WRITE, 16  ; 15 (reads as 16)
+            SRV_ENTRY   s_mousectl, $FE, SK_TEXT, gen_mousectl, SM_READ,         0      ; 16 (mousectl's)
             .word       0
 
 ctl_cmds:
@@ -2860,6 +3388,15 @@ ctl_cmds:
             .word       s_claim, c_claim
             .word       s_release, c_release
             .word       s_reset, c_reset
+            .word       0
+
+mousein_cmds:
+            .word       s_m, mi_move
+            .word       0
+
+mousectl_cmds:
+            .word       s_pointer, c_pointer
+            .word       s_swap, c_swap
             .word       0
 
 pcm_cmds:
@@ -2895,6 +3432,8 @@ mode_hs:    .byte       128, 128, 64
 mode_vs:    .byte       128, 64, 64
 cursor_names:
             .word       s_off, s_on, s_blink, 0
+onoff_names:
+            .word       s_off, s_on, 0
 depth_bits: .byte       1, 2, 4, 8
 
 ; Sprite 0, the cursor: its image at $1F800 (4 bits a pixel), z 3 (in front), 8 x 8, palette offset 0
@@ -2904,6 +3443,29 @@ cursor_attr:
 cursor_img:
             .res        24, 0
             .res        8, $FF
+
+; Sprite 1, the mouse's pointer: its image at $1F820 (4 bits a pixel), off till it's placed (ptr_place), 16 x 16,
+; palette offset 1 (its colours 16 + n: the grey ramp's, 17 near black, 31 white)
+pointer_attr:
+            .byte       <(POINTER_ADDR >> 5), ((POINTER_ADDR | $10000) >> 13) & $0F, 0, 0, 0, 0, 0, $51
+; Its image: an arrow, its tip at (0, 0) (the mouse's place): an outline in 1, filled with 15
+pointer_img:
+            .byte       $10, $00, $00, $00, $00, $00, $00, $00  ; X...............
+            .byte       $11, $00, $00, $00, $00, $00, $00, $00  ; XX..............
+            .byte       $1F, $10, $00, $00, $00, $00, $00, $00  ; X#X.............
+            .byte       $1F, $F1, $00, $00, $00, $00, $00, $00  ; X##X............
+            .byte       $1F, $FF, $10, $00, $00, $00, $00, $00  ; X###X...........
+            .byte       $1F, $FF, $F1, $00, $00, $00, $00, $00  ; X####X..........
+            .byte       $1F, $FF, $FF, $10, $00, $00, $00, $00  ; X#####X.........
+            .byte       $1F, $FF, $FF, $F1, $00, $00, $00, $00  ; X######X........
+            .byte       $1F, $FF, $FF, $FF, $10, $00, $00, $00  ; X#######X.......
+            .byte       $1F, $FF, $FF, $FF, $F1, $00, $00, $00  ; X########X......
+            .byte       $1F, $FF, $FF, $11, $11, $10, $00, $00  ; X#####XXXXX.....
+            .byte       $1F, $F1, $FF, $10, $00, $00, $00, $00  ; X##X##X.........
+            .byte       $1F, $10, $1F, $F1, $00, $00, $00, $00  ; X#X.X##X........
+            .byte       $11, $00, $1F, $F1, $00, $00, $00, $00  ; XX..X##X........
+            .byte       $10, $00, $01, $FF, $10, $00, $00, $00  ; X....X##X.......
+            .byte       $00, $00, $00, $11, $00, $00, $00, $00  ; ......XX........
 
 ; The console's palette ($GB, $0R each): 0-15 the ANSI colours (conio's 0-15), 16-255 the VERA's own
 palette:
@@ -2955,6 +3517,14 @@ s_frame:    .byte       "frame", 0
 s_psg:      .byte       "psg", 0
 s_pcm:      .byte       "pcm", 0
 s_pcmctl:   .byte       "pcmctl", 0
+s_mouse:    .byte       "mouse", 0
+s_mousein:  .byte       "mousein", 0
+s_mousectl: .byte       "mousectl", 0
+s_m:        .byte       "m", 0
+s_pointer:  .byte       "pointer", 0
+s_swap:     .byte       "swap", 0
+s_pointer_sp: .byte     "pointer ", 0
+s_nl_swap:  .byte       LF, "swap ", 0
 s_rate:     .byte       "rate", 0
 s_bits:     .byte       "bits", 0
 s_mono:     .byte       "mono", 0
