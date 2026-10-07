@@ -98,7 +98,7 @@ PASS hyhydra hylang's Hydra built-ins and system calls (the plan's phases 9 and 
 PASS hydev   hylang's device libraries (the plan's phase 11: /lib/hylang's, loaded by use, over the devices' files), devices.hl as a script: gpio (pins, the port, ctl as a hash, CA1's edge), i2c (a memory written and read at a register, the devices, one that doesn't answer), spi (an echo device's transactions, mode 3), cons (the window, the windows, the bell), proc (a task's args, cwd, regs, memory, banks; its environment, its namespace), clock (the chip, the time set), disk (the disks, the cards: this one and one on SPI device 5; the ROM disk's room), pc (the PC tool answers; a file of its read), snd (note-of; a tune, its notes on the YM2151 in time; a channel's settings)
 PASS hysh    hylang as the shell (the plan's phase 12: hylang -l, login.hl, profile.hl, shell.hl): the rc test's lines that stand alone, each an rc line at hylang's prompt (rc -c), as at rc's; hylang's lines by their first character; cd and the prompt; $status and status; bind and unmount in hylang's namespace; a usage; & and $apid; Ctrl-C to cat, rc's; exit
 PASS hywin   hylang as a window's shell: a card's /lib/shell naming /bin/hylang -l, init's in window 0 and wstart's in a window made (Ctrl-] c: $window, cons.hl's window)
-PASS bench   hylang's and HyForth's benchmarks (romfs/bench: bench.hl, bench.fs; sim/bench.js times them against each other) at their quick sizes: each language's result of each the same (a counting loop, calls of a function of two arguments, Fibonacci, a sieve of bytes, an insertion sort of bytes, gcds by subtraction)
+PASS bench   hylang's and HyForth's benchmarks (romfs/bench: bench.hl and hl/NAME.hl, bench.fs; sim/bench.js times them against each other) at their quick sizes, all of hylang's in one hylang: each language's result of each the same (calls, fib, tak, ack; loop, while, dotimes, nested; gcd, collatz, hash; sieve, sort, matrix, queens; mapf, fold, each; chars, digits)
 PASS kcopy   spike S2: copying between tasks  (6 checks)
 PASS irq     spike S1: 115200 received by an irq entry while tasks spin  (6 checks)
 ```
@@ -668,6 +668,17 @@ place happened to fall (the calls benchmark 725 ms or 540).
 
 What's left: the depth and Ctrl-C at each call, the global's head pushed for a call that isn't a tail loop's, a
 template's `jmp` past its stub; and the walks of evaluated code (an item of `map` at the prompt 2,951 cycles).
+
+**The benchmarks, twenty.**  hylang's and HyForth's benchmarks are twenty now, by kind: calls (`calls`, `fib`,
+`tak`, `ack`), loops (`loop`, `while`, `dotimes`, `nested`), arithmetic (`gcd`, `collatz`, `hash`), bytes (`sieve`, `sort`,
+`matrix`, `queens`), lists and functions given functions (`mapf`, `fold`, `each`), text (`chars`, `digits`).
+`bench.hl` loads each from its own file (`/rom/bench/hl`); `sim/bench.js` prints them by kind with each kind's
+geometric mean, runs each of hylang's in a hylang of its own, and can put another tree's build beside them (`--vs`:
+the bytecode machine's, for one).  docs/hylang.md, "Against HyForth", has the table: hylang is 3.6 times HyForth's
+time in all (the ratios' geometric mean 4.0), from 0.9 (`digits`) and 1.1 (`matrix`) to 15.8 (`nested`); the native
+code 1.6 times the bytecode's speed.  What they found: the bits' and the characters' built-ins aren't quick ops (some
+2,000 cycles a call: the loops that use them are 7 to 16 times HyForth's), and the arena holds the native code of
+40 or 50 functions, past which a function is evaluated (all twenty in one hylang: 0.8 times the bytecode's speed).
 
 | Step | | Notes |
 |---|---|---|

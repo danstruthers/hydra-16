@@ -159,32 +159,60 @@ when it's bound.
 
 ## Against HyForth
 
-The same benchmarks are written in each, on the ROM disk at `/rom/bench`: `bench.hl` and `bench.fs`, the same
-algorithms and sizes, each loop the language's own (a tail call in hylang, `DO LOOP` or `BEGIN WHILE REPEAT` in
-HyForth), every value under 16,384 (hylang's fixnums, a cell that doesn't overflow).  Each prints a line a benchmark,
-`bench LANGUAGE NAME RESULT TICKS REPS`, for the reps run of it (`hylang /rom/bench/bench.hl [reps [quick]]`, `forth
-/rom/bench/bench.fs [reps [quick]]`, on the board too), and `node sim/bench.js` runs both in the emulator and prints
-the table (`--quick`, the small sizes; `--hylang-reps`, `--forth-reps`: HyForth's default 20, as one of its runs is a
-few ticks).  The `bench` test runs both at the quick sizes and checks each result is the same.  In October 2026, at
-3.58 MHz, one run of each: hylang's code evaluated (the evaluator alone, as it was), and compiled (the bytecode
-machine's, below):
+Twenty benchmarks are written in each language, on the ROM disk at `/rom/bench`: `bench.hl` (which loads each
+benchmark's own file, `hl/NAME.hl`) and `bench.fs`.  They have the same algorithms, sizes and results, each written
+the language's own way (a tail call, `while`, `dotimes` or `each` in hylang, `DO LOOP` or `BEGIN WHILE REPEAT` in
+HyForth; lists, `map`, `filter` and `foldl` in hylang where HyForth loops over an array and `EXECUTE`s a word), every
+value under 16,384 (hylang's fixnums, a cell that doesn't overflow), as deep as HyForth's data stack (32 cells)
+takes.  Each prints a line a benchmark, `bench LANGUAGE NAME RESULT TICKS REPS` (`hylang /rom/bench/bench.hl [reps
+[q|f [name...]]]`, `forth /rom/bench/bench.fs [reps [q|f [name...]]]`, on the board too).  `node sim/bench.js` runs
+both in the emulator and prints them by kind (calls, loops, arithmetic, bytes, lists, text), with each kind's
+geometric mean: `--quick` (the small sizes), `--only` and `--kind` (some of them), `--hylang-reps` and
+`--forth-reps` (1 and 5), `--together`, `--vs TREE` (another tree's build beside this one's, the same benchmarks
+on its disk: another branch's worktree), `--json FILE`.  Each of hylang's runs in a hylang of its own, as the
+functions of all of them don't fit the machine's arena (below); `--together` runs them in one.  The `bench` test
+runs both at the quick sizes and checks each result is the same.
 
-| Benchmark | What | Result | Evaluated | Compiled | HyForth | Compiled / HyForth |
-| :-------- | :--- | -----: | --------: | -------: | ------: | -----------------: |
-| `loop` | A counting loop of 4,000 steps | 4000 | 9,105 ms | 1,290 ms | 76 ms | 17x |
-| `calls` | 2,000 calls of a function of two arguments | 2000 | 7,660 ms | 1,525 ms | 65 ms | 23x |
-| `fib` | Fibonacci of 16, recursively (3,193 calls) | 987 | 6,775 ms | 1,340 ms | 181 ms | 7.4x |
-| `sieve` | The primes below 1,024, a byte each | 172 | 14,730 ms | 2,755 ms | 332 ms | 8.3x |
-| `sort` | 100 bytes sorted by insertion | 407 | 17,085 ms | 4,240 ms | 480 ms | 8.8x |
-| `gcd` | gcd(i, j) by subtraction, for i and j 1 to 20, summed | 880 | 9,340 ms | 1,675 ms | 350 ms | 4.8x |
-| All | | | 64,695 ms | 12,825 ms | 1,484 ms | 8.6x (the ratios' geometric mean 10.0x) |
+In October 2026 (`reborn-hynat`, the native code), at 3.58 MHz, one run of each, beside the bytecode machine's
+(`reborn` at 76546a8, `--vs`):
 
-HyForth's code is threaded 65C02 code and its loop counter a register's.  hylang's evaluator ran each step as a call
-with its scope made on the heap, so its tightest loops (`loop`, `calls`) were about 120 times HyForth's, and code
-that does more each step (a buffer's bytes, a comparison, arithmetic) about 30 to 45.  Compiled, a call makes nothing
-on the heap and an argument is a word at a fixed place, so recursion, arithmetic and a buffer's bytes are 5 to 9
-times HyForth's; a counting loop's step is some 1,200 cycles (its 13 ops, a tail call among them, each dispatched:
-HyForth's is 68), so the tightest loops are 17 to 23 times.
+| Kind | Benchmark | What | Result | hylang | Bytecode | HyForth | hylang / HyForth |
+| :--- | :-------- | :--- | -----: | -----: | -------: | ------: | ---------------: |
+| calls | `calls` | 2,000 calls of a function of two arguments, in a tail call's loop | 2000 | 540 ms | 995 ms | 65 ms | 8.3x |
+| calls | `fib` | Fibonacci of 16, recursively (3,193 calls) | 987 | 520 ms | 980 ms | 181 ms | 2.9x |
+| calls | `tak` | Takeuchi's function, tak(9, 6, 3) six times (1,758 calls of three arguments) | 36 | 310 ms | 560 ms | 199 ms | 1.6x |
+| calls | `ack` | Ackermann's, ack(2, 9) eight times (1,840 calls, 22 deep) | 168 | 265 ms | 520 ms | 115 ms | 2.3x |
+| loops | `loop` | A counting loop of 4,000 steps, a tail call each | 4000 | 395 ms | 925 ms | 77 ms | 5.1x |
+| loops | `while` | A sum of i & 3 for i below 4,000, by `while` over two locals | 6000 | 3,115 ms | 3,685 ms | 421 ms | 7.4x |
+| loops | `dotimes` | The same sum by `dotimes` (HyForth: `DO LOOP`) | 6000 | 3,140 ms | 3,655 ms | 213 ms | 14.7x |
+| loops | `nested` | A `dotimes` in a `dotimes`, 60 by 60, `bit-xor` and a test | 1800 | 4,870 ms | 5,435 ms | 309 ms | 15.8x |
+| arith | `gcd` | gcd(i, j) by subtraction, for i and j 1 to 20, summed | 880 | 480 ms | 950 ms | 351 ms | 1.4x |
+| arith | `collatz` | The Collatz steps of 1 to 60, summed (1,457) | 1457 | 1,650 ms | 2,225 ms | 289 ms | 5.7x |
+| arith | `hash` | h = ((h & 255) * 31 + i) & 4095 for i below 2,000 | 4072 | 3,060 ms | 4,825 ms | 669 ms | 4.6x |
+| bytes | `sieve` | The primes below 1,024, a byte each | 172 | 1,065 ms | 1,905 ms | 332 ms | 3.2x |
+| bytes | `sort` | 100 bytes sorted by insertion | 407 | 1,765 ms | 3,270 ms | 480 ms | 3.7x |
+| bytes | `matrix` | Two 10 by 10 matrices of bytes multiplied, summed | 1375 | 1,140 ms | 4,030 ms | 1,082 ms | 1.1x |
+| bytes | `queens` | The 7 queens' 40 placements, by backtracking | 40 | 2,370 ms | 4,390 ms | 1,301 ms | 1.8x |
+| lists | `mapf` | `sum`, `map`, `filter` over `range` 0 to 39, 20 times (HyForth: a loop, `EXECUTE`) | 9880 | 1,465 ms | 2,340 ms | 207 ms | 7.1x |
+| lists | `fold` | `foldl` of a function made with `fn` over 200 items, 10 times | 964 | 2,395 ms | 4,535 ms | 712 ms | 3.4x |
+| lists | `each` | `each` over 200 items, 10 times (HyForth: an array) | 700 | 1,615 ms | 1,855 ms | 209 ms | 7.7x |
+| text | `chars` | The a's in 64 characters, 40 times: `char-at`, `char-code` | 7 | 1,955 ms | 2,270 ms | 203 ms | 9.6x |
+| text | `digits` | The numbers below 1,000 written out, their lengths summed | 2890 | 1,830 ms | 1,945 ms | 2,105 ms | 0.9x |
+| All | | | | 33,945 ms | 51,295 ms | 9,520 ms | 3.6x (the ratios' geometric mean 4.0x) |
+
+hylang is nearest HyForth where a step does much (`matrix` 1.1 times, `gcd` 1.4, `tak` 1.6, `queens` 1.8), and
+`digits` is HyForth's time or less (its pictured output divides doubles).  A call (`calls` 8.3 times) and a tail
+loop's step (`loop` 5.1) cost most next to HyForth's, whose calls are a JSR and whose loop counter is a register's.
+The bits' built-ins (`bit-and`, `bit-xor`, `shr`) and the characters' (`char-at`, `char-code`) aren't quick ops: each
+is a built-in's call, some 2,000 cycles, where HyForth's `AND` and `C@` take a few, so the loops that use them
+(`while`, `dotimes`, `nested`: 7 to 16 times), `collatz`, `hash` and `chars` are dominated by them and gain
+little from native code (1.1 to 1.6 times the bytecode's speed, where calls, recursion and bytes gain 1.8 to 3.5).
+
+The arena: native code is some four times the bytecode's size, and the machine's arena (four banks, 32K) holds the
+code of 40 or 50 functions; past that a function isn't compiled, and the evaluator runs it.  All twenty in one hylang
+(`--together`) fill it by `sort`'s, and from there each is 3 to 5 times the bytecode's time (the bytecode machine's
+code fits): 110,185 ms in all against the bytecode's 51,580.  The arena is emptied only as a line at the prompt
+begins, or a script starts, so a long program keeps what it compiled first.
 
 ## The design
 

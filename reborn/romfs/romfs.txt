@@ -10,6 +10,26 @@ lib/profile         lib/profile         ; What each shell runs as it starts (rc'
 doc/api.md          ../obj/gen/api.md   ; The system calls' reference (tools/apigen.js makes it at the build)
 bench/bench.hl      bench/bench.hl      ; hylang's and HyForth's benchmarks, the same in each (sim/bench.js compares them)
 bench/bench.fs      bench/bench.fs
+bench/hl/calls.hl   bench/hl/calls.hl
+bench/hl/fib.hl     bench/hl/fib.hl
+bench/hl/tak.hl     bench/hl/tak.hl
+bench/hl/ack.hl     bench/hl/ack.hl
+bench/hl/loop.hl    bench/hl/loop.hl
+bench/hl/while.hl   bench/hl/while.hl
+bench/hl/dotimes.hl bench/hl/dotimes.hl
+bench/hl/nested.hl  bench/hl/nested.hl
+bench/hl/gcd.hl     bench/hl/gcd.hl
+bench/hl/collatz.hl bench/hl/collatz.hl
+bench/hl/hash.hl    bench/hl/hash.hl
+bench/hl/sieve.hl   bench/hl/sieve.hl
+bench/hl/sort.hl    bench/hl/sort.hl
+bench/hl/matrix.hl  bench/hl/matrix.hl
+bench/hl/queens.hl  bench/hl/queens.hl
+bench/hl/mapf.hl    bench/hl/mapf.hl
+bench/hl/fold.hl    bench/hl/fold.hl
+bench/hl/each.hl    bench/hl/each.hl
+bench/hl/chars.hl   bench/hl/chars.hl
+bench/hl/digits.hl  bench/hl/digits.hl
 lib/forth/hydra.fs  ../obj/gen/hydra.fs ; HyForth's constants and error codes (tools/apigen.js makes it too)
 lib/forth/startup.fs lib/forth/startup.fs ; What HyForth loads as it starts
 lib/forth/profile.fs lib/forth/profile.fs ; What forth -l (HyForth as a login shell) runs after it

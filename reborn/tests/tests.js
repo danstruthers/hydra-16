@@ -1639,11 +1639,13 @@ module.exports = {
         '/> (use "cons")\n=> NIL\n/> (window)\n=> 1\n/> '],
     },
     {
-      name: 'bench', what: 'hylang\'s and HyForth\'s benchmarks (romfs/bench: bench.hl, bench.fs; sim/bench.js times them against each other) at their quick sizes: each language\'s result of each the same (a counting loop, calls of a function of two arguments, Fibonacci, a sieve of bytes, an insertion sort of bytes, gcds by subtraction)',
-      init: 't_rc', cycles: 250e6,
+      name: 'bench', what: 'hylang\'s and HyForth\'s benchmarks (romfs/bench: bench.hl and hl/NAME.hl, bench.fs; sim/bench.js times them against each other) at their quick sizes, all of hylang\'s in one hylang: each language\'s result of each the same (calls, fib, tak, ack; loop, while, dotimes, nested; gcd, collatz, hash; sieve, sort, matrix, queens; mapf, fold, each; chars, digits)',
+      init: 't_rc', cycles: 300e6,
       machine: { input: '\u0101hylang /rom/bench/bench.hl 1 q\r\u0101forth /rom/bench/bench.fs 1 q\r' },
       get expect() {
-        const r = [['loop', 1000], ['calls', 500], ['fib', 144], ['sieve', 97], ['sort', 404], ['gcd', 189]];
+        const r = [['calls', 500], ['fib', 144], ['tak', 12], ['ack', 42], ['loop', 1000], ['while', 1500], ['dotimes', 1500],
+          ['nested', 450], ['gcd', 189], ['collatz', 441], ['hash', 1274], ['sieve', 97], ['sort', 404], ['matrix', 273], ['queens', 4],
+          ['mapf', 9880], ['fold', 964], ['each', 700], ['chars', 7], ['digits', 790]];
         return [...['hylang', 'forth'].flatMap(l => r.map(([n, v]) => 'bench ' + l + ' ' + n + ' ' + v + ' ')), 'bench hylang done', 'bench forth done'];
       },
     },
