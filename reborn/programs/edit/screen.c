@@ -304,6 +304,17 @@ void s_done (void)
     o_flush ();
 }
 
+/* The text's rows, the terminal's scrolling region (set again before each scroll: the console's repaint, as its
+** window's shown again, clears it) */
+static void region (void)
+{
+    o_csi ();
+    o_num (2);
+    o_ch (';');
+    o_num (TH + 1);
+    o_ch ('r');
+}
+
 void s_all (void)
 {
     TH = H - 2 - (helpshown ? 2 : 0);
@@ -311,11 +322,7 @@ void s_all (void)
     o_str ("0m");
     o_csi ();
     o_str ("2J");
-    o_csi ();                                           /* The text's rows: the scrolling region */
-    o_num (2);
-    o_ch (';');
-    o_num (TH + 1);
-    o_ch ('r');
+    region ();
     setbank (vbank);
     memset (shadow, ' ', TH * W);
     memset (tsh, ' ', W);
@@ -347,6 +354,7 @@ static void fixtop (void)
         k = t - l;
         D.top = lineup (D.top, k);
         D.topline = l;
+        region ();
         o_at (1, 0);
         for (n = k; n; --n) {
             o_ch (ESC);
@@ -363,6 +371,7 @@ static void fixtop (void)
         skip (k);
         D.top = it_pos ();
         D.topline += k;
+        region ();
         o_at (TH, 0);
         for (n = k; n; --n) {
             o_ch (LF);
