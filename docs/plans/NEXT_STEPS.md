@@ -113,8 +113,8 @@ Sizes are rough: **S** a few days, **M** a few weeks, **L** longer.
 
 The board already has the connections: the VIA's port A on J27 (6 free pins and CA1/CA2), I2C on J27 and every slot, 8 SPI device headers, and 6 slots.  It needs drivers and examples, in this order:
 * **`/dev/i2c` (M):** the bit-banged bus as a file per address (`/dev/i2c/50` an EEPROM, `/dev/i2c/68` a sensor), with reads and writes as transfers.  Vera X's input controller needs it anyway.
-* **`/dev/spi` (S-M):** raw access to SPI devices 0-f (8-f are decoded by cards), for displays, ADCs and radio modules.  *(Built: `/dev/spi/N`, a transaction a write and the bytes that came back read after, modes 0 and 3: [io.md](../programming/io.md#spi-devices-devspi).)*
-* **`/dev/gpio` (S):**  *(Built: [io.md](../programming/io.md#gpio-devgpio), and the [tutorial](../tutorial.md#7-an-led-and-a-button)'s LED and button.)*
+* **`/dev/spi` (S-M):** raw access to SPI devices 0-f (8-f are decoded by cards), for displays, ADCs and radio modules.  *(Built: `/dev/spi/N`, a transaction a write and the bytes that came back read after, modes 0 and 3: [io.md](../../old/docs/programming/io.md#spi-devices-devspi).)*
+* **`/dev/gpio` (S):**  *(Built: [io.md](../../old/docs/programming/io.md#gpio-devgpio), and the [tutorial](../../old/docs/tutorial.md#7-an-led-and-a-button)'s LED and button.)*
   * `echo 1 > /dev/gpio/2` lights an LED;
   * `cat /dev/gpio/3` reads a button;
   * `/dev/gpio/ctl` sets directions;
@@ -172,7 +172,7 @@ New:
 Each milestone leaves the project in a state worth showing.
 
 **1. Easy to start** (mostly software, no new hardware):
-1. *(Done with the code review's fixes: [CODE_REVIEW.md](CODE_REVIEW.md#what-was-done).)*  HyForth's fixes and `syscall`; `build.js` and CI; the ROM budget report and room on every page; the emulator in modules, with no Node.js in its core; the first tutorial ([tutorial.md](../tutorial.md)).
+1. *(Done with the code review's fixes: [CODE_REVIEW.md](CODE_REVIEW.md#what-was-done).)*  HyForth's fixes and `syscall`; `build.js` and CI; the ROM budget report and room on every page; the emulator in modules, with no Node.js in its core; the first tutorial ([tutorial.md](../../old/docs/tutorial.md)).
 2. Releases with ROM and card images (a starter card), once the CI runs on GitHub.
 3. The web emulator with the starter card.
 4. `CONTRIBUTING.md`.

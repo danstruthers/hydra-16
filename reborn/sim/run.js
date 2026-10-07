@@ -31,9 +31,9 @@
 // instructions, each shown; r the registers; t the tasks; m ADDR [N] [T] N bytes (64) at ADDR in task T's view (the
 // task running's); b [SPEC] a break (none: the list); d N the Nth break gone; w ADDR[:T] a write watch; x quit
 //   --bios FILE, --prom FILE   other images (--prom: the whole paged ROM, its sockets' images one after another)
-//   --sd FILE           a card image (../sim/tools/hydrafs.js makes them), SD device 0, then 1 ...: read and
+//   --sd FILE           a card image (sim/tools/hydrafs.js makes them), SD device 0, then 1 ...: read and
 //                       written in the file itself, as the Hydra reads and writes it
-//   --pc-dir DIR        /pc: the PC tool's part (../sim/tools/hydrapc.js) is played here, serving the folder DIR:
+//   --pc-dir DIR        /pc: the PC tool's part (sim/tools/hydrapc.js) is played here, serving the folder DIR:
 //                       the frames the Hydra sends for /pc are answered, at the line's rate (sim/lib/pchost.js)
 //   --pc-read-only      /pc can't be changed: its writes, creates, removes and renames are refused
 //   --pc-log            list /pc's requests as they're served (opens, creates, removes, renames, errors)

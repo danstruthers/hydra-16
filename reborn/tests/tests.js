@@ -23,7 +23,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const hydrafs = require('../../sim/tools/hydrafs.js');
+const hydrafs = require('../sim/tools/hydrafs.js');
 const { createXmodemPeer } = require('../sim/lib/xmpeer.js');
 
 const IRQ_OFF_MAX = 200;                                      // (docs/reimplementation-from-scratch.md, §8: 115200)
@@ -39,7 +39,7 @@ const DISK_CARDS = [card(0, 2048, false, (n, i) => n * 7 + i), card(1, 4096, tru
 
 // An SD card on SPI device dev from an image file, claiming blocks (those past the file's end read as zeros); its
 // writes kept, and save() puts them in the file (for the PC tool to look at)
-const CARD_DIR = path.join(__dirname, '..', 'obj', 'cards'), OLD_CARDS = path.join(__dirname, '..', '..', 'sim', 'cards');
+const CARD_DIR = path.join(__dirname, '..', 'obj', 'cards'), OLD_CARDS = path.join(__dirname, '..', '..', 'old', 'sim', 'cards');
 function imageCard(dev, file, blocks) {
   const base = fs.readFileSync(file), written = new Map();
   return { dev, blocks, file,
@@ -519,7 +519,7 @@ function playCard() {
 // algorithms, the LFO's 4 waveforms, noise, slides, legato, drums, repeats, the timers) as t.mml and tpc.zsm, the
 // riff scom (programs/songs) as s.mml and spc.zsm; and two that are wrong (a note before an instrument, a line
 // that isn't one)
-const MML_SCORES = { t: path.join(__dirname, '..', '..', 'os_rom', 'songs', 'test.mml'), s: path.join(__dirname, '..', '..', 'programs', 'songs', 'scom.mml') };
+const MML_SCORES = { t: path.join(__dirname, '..', '..', 'old', 'os_rom', 'songs', 'test.mml'), s: path.join(__dirname, '..', '..', 'old', 'programs', 'songs', 'scom.mml') };
 function mmlCard() {
   fs.mkdirSync(CARD_DIR, { recursive: true });
   hydrafs.setNow(0x1000);
@@ -529,7 +529,7 @@ function mmlCard() {
   const v = new hydrafs.Volume(f);
   for (const [n, score] of Object.entries(MML_SCORES)) {
     const zsm = path.join(CARD_DIR, 'mml-' + n + '.zsm');
-    require('child_process').execFileSync(process.execPath, [path.join(__dirname, '..', '..', 'sim', 'tools', 'hysong.js'), score, zsm, '--quiet']);
+    require('child_process').execFileSync(process.execPath, [path.join(__dirname, '..', 'sim', 'tools', 'hysong.js'), score, zsm, '--quiet']);
     v.put(n + '.mml', fs.readFileSync(score));
     v.put(n + 'pc.zsm', fs.readFileSync(zsm));
   }
@@ -982,7 +982,7 @@ module.exports = {
     {
       name: 'boot', what: 'the kernel boots, POST finds nothing wrong; init runs hello and waits for it',
       init: 'init', cycles: 20e6,
-      expect: ['Hydra-16 reborn: kernel 0.1, ABI 1', 'POST ZP:0 ST:0 OS:0 HI:0 SH:S W:0',
+      expect: ['HydraOS 1.0 for the Hydra-16: kernel 0.1, ABI 1', 'POST ZP:0 ST:0 OS:0 HI:0 SH:S W:0',
         'RAM U:0 F0:0/00/0000 F4:0/00/0000 F8:0/00/0000 FC:0/00/0000 00:0/00/0000 10:0/00/0000', 'POST ok', 'RAM modules: 02',
         'task F: cons', 'task 1: init', 'init: up in task 01', 'hello, from init', 'init: hello ended: code $07 (bye)'],
     },
@@ -1040,7 +1040,7 @@ module.exports = {
     {
       name: 'hwtool', what: 'hwtest at rc: the system starts again (REBOOT), and POST takes REBOOT_HWTEST\'s word as a T',
       init: 'init', cycles: 60e6, get machine() { return { sd: shellCard('/bin/rc -l', 'shellrc2'), input: 'āhwtest\r' }; },
-      expect: ['% hwtest\nhwtest: the system starts again, into the hardware test\n', 'Hydra-16 reborn', 'Hydra-16 hardware test'],
+      expect: ['% hwtest\nhwtest: the system starts again, into the hardware test\n', 'HydraOS 1.0', 'Hydra-16 hardware test'],
     },
     {
       name: 'task', what: 'tasks and the scheduler: SPAWN, EXITS, WAIT, SLEEP, preemption, PAUSE and WAKE, orphans',

@@ -22,7 +22,7 @@ the paged ROM's, and a terminal at 9600 baud is the console.)  The boot shows PO
 the shell's prompt:
 
 ```
-Hydra-16 reborn: kernel 0.1, ABI 1
+HydraOS 1.0 for the Hydra-16: kernel 0.1, ABI 1
 POST ZP:0 ST:0 OS:0 HI:0 SH:S W:0
 ...
 task 1: init
@@ -106,10 +106,10 @@ Redirection and pipes are rc's: `echo hi >/ram/f`, `cat /ram/f | wc -c`, `ls /ro
 
 ## 4. A card
 
-In the emulator, a card is an image file.  `../sim/tools/hydrafs.js` makes one and puts files on it:
+In the emulator, a card is an image file.  `sim/tools/hydrafs.js` makes one and puts files on it:
 
 ```
-node ../sim/tools/hydrafs.js mkfs card.img 8 MYCARD
+node sim/tools/hydrafs.js mkfs card.img 8 MYCARD
 node sim/run.js -i --sd card.img
 ```
 
@@ -193,7 +193,7 @@ node build.js prog hi
 ```
 
 That makes `hi/hi.hyx`, a program for the Hydra.  To run it, give the emulator the folder as `/pc` (what the PC tool,
-`../sim/tools/hydrapc.js`, does for a board over the serial line):
+`sim/tools/hydrapc.js`, does for a board over the serial line):
 
 ```
 node sim/run.js -i --pc-dir hi

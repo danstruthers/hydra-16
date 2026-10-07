@@ -1,6 +1,6 @@
 // pchost.js - the PC tool's part of /pc, played in the emulator (sim/run.js --pc-dir, a test's pc): the frames the
 // Hydra sends on its serial port are taken out of its output and answered by the PC tool's own file server
-// (../sim/tools/pcfs.js; the frames: ../sim/lib/pcproto.js), as the PC tool (../sim/tools/hydrapc.js) does on a
+// (sim/tools/pcfs.js; the frames: sim/lib/pcproto.js), as the PC tool (sim/tools/hydrapc.js) does on a
 // real PC; the rest of the output is the console's.  Its replies go back on the serial port at the line's rate.
 //
 // createPcHost({ dir, readOnly, log, damage }) gives { push(byte) -> the bytes that are the console's, flush() ->
@@ -9,8 +9,8 @@
 // Hydra sends (a byte of its body has bit 6 flipped: the PC tool asks for it again, its NAK); 'rN', the Nth reply
 // (the Hydra asks again, and the PC tool answers from its last reply, not doing it twice).
 'use strict';
-const P = require('../../../sim/lib/pcproto.js');
-const { createPcFs } = require('../../../sim/tools/pcfs.js');
+const P = require('./pcproto.js');
+const { createPcFs } = require('../tools/pcfs.js');
 
 // A byte damaged (bit 6 flipped; bit 0 if that makes a byte the console acts on as it comes in, or a frame's mark)
 const hurt = b => [0x03, 0x1C, 0x1D, 0x1E, 0x1F].includes(b ^ 0x40) ? b ^ 0x01 : b ^ 0x40;
