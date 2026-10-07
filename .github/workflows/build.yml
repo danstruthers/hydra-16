@@ -1,5 +1,7 @@
 # Build everything and run the regression tests in the emulator, on every push and pull request.
-# cc65 is built from its source (the project uses a recent snapshot); build.js finds it through CC65_HOME.
+# cc65 is built from its source, at the commit of the snapshot the project builds with (C:\source\cc65\win64_snapshot:
+# ca65 V2.19, Git 1d1dd42, July 2024), so the images in Git are the build's.  Later cc65 took WAI and STP out of
+# --cpu 65C02 (they're W65C02's since 2025), which the snapshot doesn't name; build.js finds it through CC65_HOME.
 name: build
 on: [push, pull_request]
 jobs:
@@ -12,7 +14,9 @@ jobs:
           node-version: 22
       - name: cc65
         run: |
-          git clone --depth 1 https://github.com/cc65/cc65.git "$RUNNER_TEMP/cc65"
+          git init -q "$RUNNER_TEMP/cc65"
+          git -C "$RUNNER_TEMP/cc65" fetch -q --depth 1 https://github.com/cc65/cc65.git 1d1dd425c1148e02dbe0af72b9d11959e20101fb
+          git -C "$RUNNER_TEMP/cc65" checkout -q FETCH_HEAD
           make -C "$RUNNER_TEMP/cc65" -j4
           echo "CC65_HOME=$RUNNER_TEMP/cc65" >> "$GITHUB_ENV"
       - name: HydraOS, build and test
