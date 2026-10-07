@@ -26,6 +26,15 @@
 ;   /psg      the PSG's registers (VRAM $1F9C0: 16 voices of 4 bytes), the sound driver's (snd's channels 8-23): a
 ;             write's register/value pairs (0-63; others dropped, and an odd last byte) kept and written to the chip
 ;             (while it's claimed, kept only, and written as the claim ends); a read gives them as kept
+;   /pcm      the PCM: a write's bytes into the FIFO (4K) when it's below a quarter full, as many as it has room for
+;             (the rest in the kernel's next request; above a quarter: the writer waits for the next frame, 59.5 a
+;             second, or a non-blocking one gets E_AGAIN), in the format pcmctl says; one task's at a time
+;             (another's open: E_BUSY), till its last fid of it closes
+;   /pcmctl   rate HZ (the VERA's nearest: 381 Hz a step, up to 48,828; 0 stops it), bits 8|16, mono, stereo, volume
+;             N (0-15), reset (the FIFO emptied), drain (waits till the FIFO's empty); the PCM's task's, or anyone's
+;             while no task has /pcm (another's: E_BUSY).  It reads as the state: "rate 22126", "bits 8", "mono",
+;             "volume 15", and "claimed" with the task that has /pcm.  The samples are as the VERA takes them:
+;             signed, 16 bits little-endian, stereo left first
 ; VRAM, shared by agreement (VIDEO.md): $00000-$1AFFF a program's; $1B000-$1EFFF the console's text map (128 x 64
 ; cells of 2 bytes: its 64 rows a ring, the screen's top at map row top, so a scroll is a VSCROLL write and a row
 ; blanked); $1F000-$1F7FF its font; $1F800 the cursor's image (8 x 8, 4 bits a pixel); $1F9C0 on the chip's
@@ -36,7 +45,7 @@
 ; text waits here (its last PEND_SIZE bytes); at the release the chip's set up for the console again (with claim
 ; all, its font and map too: a claimer may use all of VRAM) and the text that waited is shown.  The irq entry, still
 ; the driver's, reads and clears ISR's VSYNC, LINE and SPRCOL (a claimer's own, if it turned them on), and turns
-; AFLOW off (nobody fills the PCM FIFO yet: the line would stay low).
+; AFLOW off (a level: the line would stay low; /pcm's writers wait for the frames' event, not AFLOW's).
 ;   The terminal: printable bytes ($20-$7E, $80-$FF: the font's) at the cursor, wrapping at the last column (as a
 ; VT100 does: the next one goes on the next line); CR, LF (down, scrolling at the bottom), BS, TAB (every 8 columns),
 ; FF (cleared), BEL (nothing: cons rings the bell); ESC 7 and ESC 8 (the cursor saved, restored), ESC c (reset), ESC D
@@ -87,7 +96,13 @@ ESC             = $1B
 E_TERM          = 2             ; srv_tree's entries: term ...
 E_VRAM          = 3             ;   the VRAM's files (vram, pal, sprites, font: their regions, SE_AUX) ...
 E_FRAME         = 7             ;   frame ...
-E_PSG           = 8             ;   psg
+E_PSG           = 8             ;   psg ...
+E_PCM           = 9             ;   pcm
+PCM_16          = $20           ; AUDIO_CTRL: 16 bits a sample ...
+PCM_STEREO      = $10           ;   stereo ...
+PCM_RESET       = $80           ;   the FIFO emptied (a write; a read's bit 7: full, bit 6: empty)
+PCM_FAST        = 3072 / 256    ; /pcm's parts of 256 that fit unchecked below AFLOW's mark (a quarter of the FIFO)
+PCM_STEP        = 381           ; Hz a step of AUDIO_RATE (48,828.125 / 128)
 PSG_REGS        = 64            ; The PSG's registers
 
 .zeropage
@@ -140,6 +155,10 @@ pend_n:     .res        2                                   ;   the bytes there 
 pend_lost:  .res        1                                   ;   <> 0: older ones gone
 pend:       .res        PEND_SIZE
 psg:        .res        PSG_REGS                            ; The PSG's registers as written to /psg
+pcm_ctl:    .res        1                                   ; The PCM as pcmctl has it: AUDIO_CTRL (bits 5-4 the
+pcm_rate:   .res        1                                   ;   format, 3-0 the volume), AUDIO_RATE (0: stopped) ...
+pcm_owner:  .res        1                                   ;   the task + 1 that has /pcm (0: nobody) ...
+pcm_refs:   .res        1                                   ;   and its fids of it
 iobuf:      .res        256
 
 .code
@@ -155,6 +174,11 @@ init:
             sta         cur_mode
             lda         #1
             sta         cur_on
+            lda         #$0F                                ; The PCM: 8-bit mono, at full volume, stopped
+            sta         pcm_ctl
+            stz         pcm_rate
+            stz         pcm_owner
+            stz         pcm_refs
             ldx         #PSG_REGS - 1                       ; The PSG quiet (till snd writes it)
 :
             stz         psg,X
@@ -291,6 +315,7 @@ irq_on:
 
 ; ****************************************************************************
 ; The chip set up for the console, its interrupts off meanwhile (IEN 0: irq_on after): the registers, the PSG /psg's,
+; the PCM pcmctl's (its FIFO emptied),
 ; the palette, the sprites (all off but the cursor's), the cursor's image, the layers, the screen's size; and the
 ; font, and the terminal reset, the screen cleared (setup_all).  Modifies .A, .X, .Y, p, n
 setup_all:
@@ -317,6 +342,11 @@ setup:
             inx
             cpx         #PSG_REGS
             bcc         :-
+            lda         pcm_ctl                             ;   the PCM's FIFO emptied, its format, volume and
+            ora         #PCM_RESET                          ;   rate pcmctl's ...
+            sta         VERA_AUDIO_CTRL
+            lda         pcm_rate
+            sta         VERA_AUDIO_RATE
             ldx         #0                                  ;   the palette ...
 :
             lda         palette,X
@@ -1842,6 +1872,381 @@ h_psg:
             jsr         parted
             bra         @part
 
+; /pcm: a write: below AFLOW's mark (a quarter full), its bytes into the PCM FIFO, the first 3K unchecked, then as
+; many as it has room for (FULL looked at before each): a short write, the kernel sending the rest in its next
+; request.  Above the mark: E_AGAIN (none taken), the writer waiting for the next frame's event; so the requests come
+; three quarters of the FIFO at a time, not a byte or two as it drains (the kernel goes on while a server takes any).
+; While another task has the chip claimed: E_AGAIN, till the release
+h_pcm:
+            cmp         #R_WRITE
+            beq         :+
+            clc
+            rts
+:
+            jsr         others
+            bcc         :+
+            lda         #E_AGAIN
+            rts
+:
+            jsr         counted
+            lda         VERA_ISR                            ; Above a quarter full: none yet
+            and         #VERA_IRQ_AFLOW
+            bne         :+
+            lda         #E_AGAIN
+            sec
+            rts
+:
+            lda         #PCM_FAST                           ; t: the parts that fit unchecked
+            sta         t
+@part:
+            jsr         part
+            beq         @end
+            LDR         r0, iobuf
+            jsr         CLIENT_READ
+            ldy         #0
+            lda         t
+            beq         @check
+            dec         t
+@fast:
+            lda         iobuf,Y
+            sta         VERA_AUDIO_DATA
+            iny
+            cpy         r2                                  ; (r2 0: 256)
+            bne         @fast
+            bra         @parted
+
+@check:
+            bit         VERA_AUDIO_CTRL                     ; (Bit 7: full)
+            bmi         @full
+            lda         iobuf,Y
+            sta         VERA_AUDIO_DATA
+            iny
+            cpy         r2
+            bne         @check
+@parted:
+            jsr         parted
+            bra         @part
+
+@full:                                                      ; Full: what went in, or none (E_AGAIN)
+            tya
+            clc
+            adc         done
+            sta         TASK_INBOX + RQ_DONE
+            lda         done + 1
+            adc         #0
+            sta         TASK_INBOX + RQ_DONE + 1
+            ora         TASK_INBOX + RQ_DONE
+            bne         @end
+            lda         #E_AGAIN
+            sec
+            rts
+
+@end:
+            clc
+            rts
+
+; A pcmctl command's say: the PCM's task's, or anyone's while no task has /pcm.  OUT: C = 1, .A = E_BUSY: another
+; task has it.  Sets owner.  Modifies .A, .X
+pcm_may:
+            ldx         z:srv_fid
+            lda         srv_fid_aux,X
+            sta         owner
+            lda         pcm_owner
+            beq         :+
+            cmp         owner
+            beq         :+
+            lda         #E_BUSY
+            sec
+            rts
+:
+            clc
+            rts
+
+; The PCM's format, volume and rate to the chip (another task's claim: as it ends).  OUT: C = 0.  Modifies .A
+pcm_apply:
+            lda         claimer
+            beq         :+
+            cmp         owner
+            bne         @done
+:
+            lda         pcm_ctl
+            sta         VERA_AUDIO_CTRL
+            lda         pcm_rate
+            sta         VERA_AUDIO_RATE
+@done:
+            clc
+            rts
+
+; The command's first word a number?  OUT: C = 0 yes; C = 1, .A = E_INVAL, no (or none)
+pcm_num:
+            lda         z:srv_argn
+            beq         @inval
+            lda         srv_argp
+            sta         z:srv_p
+            lda         srv_argp + 1
+            sta         z:srv_p + 1
+            lda         (srv_p)
+            cmp         #'0'
+            bcc         @inval
+            cmp         #'9' + 1
+            bcs         @inval
+            clc
+            rts
+
+@inval:
+            lda         #E_INVAL
+            sec
+            rts
+
+; rate HZ: AUDIO_RATE the nearest, (HZ + 190) / 381 (128 at most; under 191 Hz, 0: stopped)
+p_rate:
+            jsr         pcm_may
+            bcs         @done
+            jsr         pcm_num
+            bcs         @done
+            clc
+            lda         srv_arg
+            adc         #<(PCM_STEP / 2)
+            sta         t
+            lda         srv_arg + 1
+            adc         #>(PCM_STEP / 2)
+            sta         t + 1
+            ldx         #128
+            bcs         @have                               ; (Past 65,535: the most)
+            ldx         #0
+@step:
+            sec
+            lda         t
+            sbc         #<PCM_STEP
+            tay
+            lda         t + 1
+            sbc         #>PCM_STEP
+            bcc         @have
+            sta         t + 1
+            sty         t
+            inx
+            cpx         #128
+            bcc         @step
+@have:
+            stx         pcm_rate
+            jmp         pcm_apply
+
+@done:
+            rts
+
+; bits 8 | 16
+p_bits:
+            jsr         pcm_may
+            bcs         @done
+            jsr         pcm_num
+            bcs         @done
+            lda         srv_arg + 1
+            bne         @inval
+            lda         srv_arg
+            cmp         #8
+            beq         @eight
+            cmp         #16
+            bne         @inval
+            lda         pcm_ctl
+            ora         #PCM_16
+            bra         @set
+
+@eight:
+            lda         pcm_ctl
+            and         #<~PCM_16
+@set:
+            sta         pcm_ctl
+            jmp         pcm_apply
+
+@inval:
+            jmp         inval
+
+@done:
+            rts
+
+; mono, stereo
+p_mono:
+            jsr         pcm_may
+            bcs         :+
+            lda         pcm_ctl
+            and         #<~PCM_STEREO
+            sta         pcm_ctl
+            jmp         pcm_apply
+:
+            rts
+
+p_stereo:
+            jsr         pcm_may
+            bcs         :+
+            lda         pcm_ctl
+            ora         #PCM_STEREO
+            sta         pcm_ctl
+            jmp         pcm_apply
+:
+            rts
+
+; volume N (0-15)
+p_volume:
+            jsr         pcm_may
+            bcs         @done
+            jsr         pcm_num
+            bcs         @done
+            lda         srv_arg + 1
+            bne         @inval
+            lda         srv_arg
+            cmp         #16
+            bcs         @inval
+            sta         t
+            lda         pcm_ctl
+            and         #PCM_16 | PCM_STEREO
+            ora         t
+            sta         pcm_ctl
+            jmp         pcm_apply
+
+@inval:
+            jmp         inval
+
+@done:
+            rts
+
+; reset: the FIFO emptied (what's in it not played)
+p_reset:
+            jsr         pcm_may
+            bcs         @done
+            lda         claimer
+            beq         :+
+            cmp         owner
+            bne         @ok
+:
+            lda         pcm_ctl
+            ora         #PCM_RESET
+            sta         VERA_AUDIO_CTRL
+@ok:
+            clc
+@done:
+            rts
+
+; drain: answered when the FIFO's empty (E_AGAIN till then: the writer waits for the frames' event; v0.9 has no
+; empty flag: below a quarter full); at once if it's stopped.  Another task's claim: E_AGAIN, till it ends
+p_drain:
+            jsr         others
+            bcs         @wait
+            lda         pcm_rate
+            beq         @done
+            lda         version
+            cmp         #$FF
+            beq         @v09
+            bit         VERA_AUDIO_CTRL                     ; (Bit 6: empty)
+            bvs         @done
+            bra         @wait
+
+@v09:
+            lda         VERA_ISR
+            and         #VERA_IRQ_AFLOW
+            bne         @done
+@wait:
+            lda         #E_AGAIN
+            sec
+            rts
+
+@done:
+            clc
+            rts
+
+; pcmctl's state: rate (in Hz: AUDIO_RATE * 381 + its half less its 32nd, as 48,828.125 / 128 has it), bits, mono or
+; stereo, volume, claimed
+gen_pcm:
+            stz         t                                   ; The rate in Hz
+            stz         t + 1
+            ldx         pcm_rate
+            beq         @hz
+:
+            clc
+            lda         t
+            adc         #<PCM_STEP
+            sta         t
+            lda         t + 1
+            adc         #>PCM_STEP
+            sta         t + 1
+            dex
+            bne         :-
+            lda         pcm_rate
+            lsr
+            clc
+            adc         t
+            sta         t
+            bcc         :+
+            inc         t + 1
+:
+            lda         pcm_rate
+            lsr
+            lsr
+            lsr
+            lsr
+            lsr
+            sta         n
+            sec
+            lda         t
+            sbc         n
+            sta         t
+            bcs         @hz
+            dec         t + 1
+@hz:
+            lda         #<s_rate_sp
+            ldx         #>s_rate_sp
+            jsr         srv_tputs
+            lda         t
+            ldx         t + 1
+            jsr         srv_tputdec
+            lda         #<s_nl_bits
+            ldx         #>s_nl_bits
+            jsr         srv_tputs
+            ldy         #8
+            lda         pcm_ctl
+            and         #PCM_16
+            beq         :+
+            ldy         #16
+:
+            tya
+            ldx         #0
+            jsr         srv_tputdec
+            lda         #LF
+            jsr         srv_tputc
+            lda         pcm_ctl
+            and         #PCM_STEREO
+            bne         :+
+            lda         #<s_mono
+            ldx         #>s_mono
+            bra         :++
+:
+            lda         #<s_stereo
+            ldx         #>s_stereo
+:
+            jsr         srv_tputs
+            lda         #<s_nl_volume
+            ldx         #>s_nl_volume
+            jsr         srv_tputs
+            lda         pcm_ctl
+            and         #$0F
+            ldx         #0
+            jsr         srv_tputdec
+            lda         #<s_nl_claimed
+            ldx         #>s_nl_claimed
+            jsr         srv_tputs
+            lda         pcm_owner
+            beq         :+
+            lda         #' '
+            jsr         srv_tputc
+            lda         pcm_owner
+            dec         a
+            ldx         #0
+            jsr         srv_tputdec
+:
+            lda         #LF
+            jsr         srv_tputc
+            clc
+            rts
+
 ; /frame: a read: the next frame (since this fid's last), then the frames counted; none yet: E_AGAIN (the irq
 ; entry's event, every frame).  IN: .X = the fid
 h_frame:
@@ -2331,6 +2736,21 @@ opened:
             inc         a
             sta         srv_fid_aux,X
 :
+            lda         srv_fid_entry,X                     ; /pcm: one task's at a time (another's: E_BUSY, before
+            cmp         #E_PCM                              ;   it's counted)
+            bne         @count
+            lda         pcm_owner
+            beq         :+
+            cmp         srv_fid_aux,X
+            beq         :+
+            lda         #E_BUSY
+            sec
+            rts
+:
+            lda         srv_fid_aux,X
+            sta         pcm_owner
+            inc         pcm_refs
+@count:
             ldy         srv_fid_aux,X
             lda         refs - 1,Y
             inc         a
@@ -2342,6 +2762,13 @@ opened:
 
 ; A fid forgotten: its task's count down; with its last, its claim ended.  IN: .X = the fid
 clunked:
+            lda         z:srv_e                             ; (/pcm's last: nobody's)
+            cmp         #E_PCM
+            bne         :+
+            dec         pcm_refs
+            bne         :+
+            stz         pcm_owner
+:
             ldy         srv_fid_aux,X
             beq         @done
             lda         refs - 1,Y
@@ -2411,7 +2838,7 @@ stat:
 
 srv_tree:
             SRV_ENTRY   s_root,    $FF, SK_DIR,  0,          SM_READ,            0      ; 0
-            SRV_ENTRY   s_ctl,     0,   SK_CTL,  ctl_cmds,   SM_READ | SM_WRITE, 9      ; 1 (reads as 9)
+            SRV_ENTRY   s_ctl,     0,   SK_CTL,  ctl_cmds,   SM_READ | SM_WRITE, 11     ; 1 (reads as 11)
             SRV_ENTRY   s_term,    0,   SK_DATA, h_term,     SM_READ | SM_WRITE, 0      ; 2 (E_TERM)
             SRV_ENTRY   s_vram,    0,   SK_DATA, h_vram,     SM_READ | SM_WRITE, 0      ; 3 (E_VRAM: region 0)
             SRV_ENTRY   s_pal,     0,   SK_DATA, h_vram,     SM_READ | SM_WRITE, 1      ; 4
@@ -2419,7 +2846,10 @@ srv_tree:
             SRV_ENTRY   s_font,    0,   SK_DATA, h_vram,     SM_READ | SM_WRITE, 3      ; 6
             SRV_ENTRY   s_frame,   0,   SK_DATA, h_frame,    SM_READ,            0      ; 7 (E_FRAME)
             SRV_ENTRY   s_psg,     0,   SK_DATA, h_psg,      SM_READ | SM_WRITE, 0      ; 8 (E_PSG)
-            SRV_ENTRY   s_ctl,     $FE, SK_TEXT, gen_ctl,    SM_READ,            0      ; 9 (ctl's state)
+            SRV_ENTRY   s_pcm,     0,   SK_DATA, h_pcm,      SM_WRITE,           0      ; 9 (E_PCM)
+            SRV_ENTRY   s_pcmctl,  0,   SK_CTL,  pcm_cmds,   SM_READ | SM_WRITE, 12     ; 10 (reads as 12)
+            SRV_ENTRY   s_ctl,     $FE, SK_TEXT, gen_ctl,    SM_READ,            0      ; 11 (ctl's state)
+            SRV_ENTRY   s_pcmctl,  $FE, SK_TEXT, gen_pcm,    SM_READ,            0      ; 12 (pcmctl's)
             .word       0
 
 ctl_cmds:
@@ -2430,6 +2860,16 @@ ctl_cmds:
             .word       s_claim, c_claim
             .word       s_release, c_release
             .word       s_reset, c_reset
+            .word       0
+
+pcm_cmds:
+            .word       s_rate, p_rate
+            .word       s_bits, p_bits
+            .word       s_mono, p_mono
+            .word       s_stereo, p_stereo
+            .word       s_volume, p_volume
+            .word       s_reset, p_reset
+            .word       s_drain, p_drain
             .word       0
 
 ; The VRAM's regions (vram, pal, sprites, font): start (3 bytes), <> 0 the sprites', length (3 bytes), a byte spare
@@ -2513,6 +2953,17 @@ s_sprites:  .byte       "sprites", 0
 s_font:     .byte       "font", 0
 s_frame:    .byte       "frame", 0
 s_psg:      .byte       "psg", 0
+s_pcm:      .byte       "pcm", 0
+s_pcmctl:   .byte       "pcmctl", 0
+s_rate:     .byte       "rate", 0
+s_bits:     .byte       "bits", 0
+s_mono:     .byte       "mono", 0
+s_stereo:   .byte       "stereo", 0
+s_volume:   .byte       "volume", 0
+s_drain:    .byte       "drain", 0
+s_rate_sp:  .byte       "rate ", 0
+s_nl_bits:  .byte       LF, "bits ", 0
+s_nl_volume: .byte      LF, "volume ", 0
 s_mode:     .byte       "mode", 0
 s_cursor:   .byte       "cursor", 0
 s_border:   .byte       "border", 0

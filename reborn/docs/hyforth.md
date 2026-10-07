@@ -2,8 +2,8 @@
 
 HyForth (`modules/forth`, `forthlib/`) is a Forth 2012 system, phase 6 of the plan: a small core in the paged ROM and
 the other word sets as pre-compiled libraries (`/lib/forth/NAME.fl`).  In October 2026 the user asked for two more
-things: some pieces of the old HyForth (`../os_rom/hyforth`, `../docs/using/hyforth.md`) back, and HyForth run as a
-shell over rc, as hylang will be ([hylang.md](hylang.md), "The prompt").  This is the specification for both: what was
+things: some pieces of the old HyForth (`../old/os_rom/hyforth`, `../old/docs/using/hyforth.md`) back, and HyForth run as a
+shell over rc, as hylang is too ([hylang.md](hylang.md), "The prompt").  This is the specification for both: what was
 asked for, what each piece meets in the system as it is now and how that's settled, and the steps (6.6 on).
 
 ## What's asked for

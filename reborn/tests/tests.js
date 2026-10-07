@@ -371,7 +371,7 @@ const C_LINES = [
 // zzz on the screen), then both (the screen repainted from the window's text); colours (SGR, a file on the PC);
 // a font from the ROM disk; a bad command
 const SCREEN_LINES = [
-  ["ls /dev/vid", "ctl\nterm\nvram\npal\nsprites\nfont\nframe\npsg"],
+  ["ls /dev/vid", "ctl\nterm\nvram\npal\nsprites\nfont\nframe\npsg\npcm\npcmctl"],
   ["cat /dev/vid/ctl", "vera 47.0.2\nmode 80x60\ncursor blink\nborder 0\nbitmap off\nclaimed"],
   ["grep terminal /dev/consctl", "terminal both"],
   ["echo serial >/dev/consctl; echo z^zz; grep -c 'z[z]z' /dev/vid/term; echo both >/dev/consctl", "zzz\n0"],
@@ -460,6 +460,77 @@ function psgCard() {
   hydrafs.mkfs(f, 8, 'SONGS', undefined, true);
   const v = new hydrafs.Volume(f);
   v.put('p.zsm', PSG_SONG());
+  v.close();
+  return [imageCard(0, f, 16384)];
+}
+
+// The PCM test's lines (with a Vera X: vid's /pcm and /pcmctl): its files and state; the rate (the VERA's nearest)
+// and volume; raw samples from a card, drained; bad commands; /pcm one task's (another's pcmctl command: busy);
+// WAV files played (8 bits mono, made signed; 16 bits stereo, past a chunk of an odd size; a float one, not a song);
+// a ZSM's PCM instruments (one, then a looped one, stopped by the FIFO emptied: from RAM), its claim of the PCM as
+// it plays, the state it leaves; one too big for RAM (from the file), stopped after half a second.  (A redirection is
+// its rc's: another task's command comes through rc -c.)  The FIFO's bytes, and its runs dry, checked in check
+const PCM_LINES = [
+  ["ls /dev/vid | grep pcm; cat /dev/vid/pcmctl", "pcm\npcmctl\nrate 0\nbits 8\nmono\nvolume 15\nclaimed"],
+  ["echo rate 22050 >/dev/vid/pcmctl; echo volume 12 >/dev/vid/pcmctl; grep -v claimed /dev/vid/pcmctl", "rate 22126\nbits 8\nmono\nvolume 12"],
+  ["echo rate 3800 >/dev/vid/pcmctl; grep rate /dev/vid/pcmctl", "rate 3815"],
+  ["cat /sd/0/tone.raw >/dev/vid/pcm; echo drain >/dev/vid/pcmctl; echo drained", "drained"],
+  ["echo bits 12 >/dev/vid/pcmctl; echo volume 16 >/dev/vid/pcmctl; echo rate fast >/dev/vid/pcmctl",
+    Array(3).fill('echo: write error: invalid argument').join('\n')],
+  ["{rc -c 'echo bits 16 >/dev/vid/pcmctl'; grep -c 'claimed [0-9]' /dev/vid/pcmctl} >[3]/dev/vid/pcm; grep claimed /dev/vid/pcmctl",
+    "echo: write error: busy\n1\nclaimed"],
+  ["play /sd/0/t.wav; echo $status", ""],
+  ["play /sd/0/s.wav; grep bits /dev/vid/pcmctl", "bits 16"],
+  ["play /sd/0/f.wav", "play: /sd/0/f.wav: not a song"],
+  ["play /sd/0/p.zsm & sleep 1; grep -c 'claimed [0-9]' /dev/vid/pcmctl; wait", "1"],
+  ["cat /dev/vid/pcmctl", "rate 3815\nbits 8\nmono\nvolume 10\nclaimed"],
+  ["play /sd/0/q.zsm; grep -c claimed /dev/vid/pcmctl", "1"],
+];
+
+// The pcm test's samples (bytes a generator's, so the parts can't be mistaken for each other), its WAV files and its
+// ZSMs: p.zsm two PCM instruments (8 bits mono), the second looped from 100; the stream sets the rate (AUDIO_RATE 10:
+// 3,815 Hz) and volume (10), starts the first, 30 ticks on the second, 60 ticks on empties the FIFO (its volume 10
+// again).  q.zsm one of 17,000 bytes (past play's RAM for them, 16K), started, 30 ticks on stopped
+const pcmBytes = (n, seed) => { const b = Buffer.alloc(n); let x = seed >>> 0; for (let i = 0; i < n; i++) { x = (Math.imul(x, 1103515245) + 12345) >>> 0; b[i] = x >>> 24; } return b; };
+const PCM_DATA = { tone: pcmBytes(6000, 1), t: pcmBytes(4000, 2), s: pcmBytes(2400, 3), i0: pcmBytes(1500, 4), i1: pcmBytes(600, 5),
+  big: pcmBytes(17000, 6) };
+function wavFile(rate, channels, bits, data, opt = {}) {
+  const fmt = Buffer.alloc(16);
+  fmt.writeUInt16LE(opt.tag || 1, 0); fmt.writeUInt16LE(channels, 2); fmt.writeUInt32LE(rate, 4);
+  fmt.writeUInt32LE(rate * channels * bits / 8, 8); fmt.writeUInt16LE(channels * bits / 8, 12); fmt.writeUInt16LE(bits, 14);
+  const chunk = (id, b) => { const h = Buffer.alloc(8); h.write(id, 0, 'latin1'); h.writeUInt32LE(b.length, 4); return Buffer.concat([h, b, Buffer.alloc(b.length & 1)]); };
+  const body = Buffer.concat([Buffer.from('WAVE', 'latin1'), chunk('fmt ', fmt), ...(opt.list ? [chunk('LIST', Buffer.from('hydra', 'latin1'))] : []), chunk('data', data)]);
+  const h = Buffer.alloc(8); h.write('RIFF', 0, 'latin1'); h.writeUInt32LE(body.length, 4);
+  return Buffer.concat([h, body]);
+}
+function pcmSong(stream, insts, data) {
+  const at = 16 + stream.length;
+  const hdr = [0x7A, 0x6D, 1, 0, 0, 0, at & 255, at >> 8, 0, 0, 0, 0, 60, 0, 0, 0];
+  const inst = ([idx, off, len, loop, lp]) => {
+    const b = Buffer.alloc(16); b[0] = idx; b.writeUIntLE(off, 2, 3); b.writeUIntLE(len, 5, 3); b[8] = loop ? 0x80 : 0; b.writeUIntLE(lp, 9, 3); return b;
+  };
+  return Buffer.concat([Buffer.from(hdr), Buffer.from(stream), Buffer.from('PCM', 'latin1'), Buffer.from([insts.length - 1]), ...insts.map(inst), ...data]);
+}
+function PCM_SONG() {
+  const { i0, i1 } = PCM_DATA;
+  return pcmSong([0x40, 0x04, 1, 10, 0, 10, 0x40, 0x02, 2, 0, 0x80 | 30, 0x40, 0x02, 2, 1, 0x80 | 60, 0x40, 0x02, 0, 0x8A, 0x80 | 10, 0x80],
+    [[0, 0, i0.length, false, 0], [1, i0.length, i1.length, true, 100]], [i0, i1]);
+}
+function PCM_BIG() {
+  return pcmSong([0x40, 0x04, 1, 10, 2, 0, 0x80 | 30, 0x40, 0x02, 0, 0x8A, 0x80], [[0, 0, PCM_DATA.big.length, false, 0]], [PCM_DATA.big]);
+}
+function pcmCard() {
+  fs.mkdirSync(CARD_DIR, { recursive: true });
+  hydrafs.setNow(0x1000);
+  const f = path.join(CARD_DIR, 'pcm0.img');
+  hydrafs.mkfs(f, 8, 'PCM', undefined, true);
+  const v = new hydrafs.Volume(f);
+  v.put('tone.raw', PCM_DATA.tone);
+  v.put('t.wav', wavFile(3819, 1, 8, PCM_DATA.t));
+  v.put('s.wav', wavFile(1144, 2, 16, PCM_DATA.s, { list: true }));
+  v.put('f.wav', wavFile(3819, 1, 8, PCM_DATA.t, { tag: 3 }));
+  v.put('p.zsm', PCM_SONG());
+  v.put('q.zsm', PCM_BIG());
   v.close();
   return [imageCard(0, f, 16384)];
 }
@@ -2179,6 +2250,36 @@ module.exports = {
         const font = fs.readFileSync(path.join(__dirname, '..', 'romfs', 'lib', 'font', 'cp437'));
         if (!Buffer.from(m.vera.vram.subarray(0x1F000, 0x1F800)).equals(font)) f.push('VRAM\'s font isn\'t /lib/font/cp437');
         this.notes = ['the screen\'s last rows: ' + JSON.stringify(text.filter(l => l).slice(-3))];
+        return f;
+      },
+    },
+    {
+      name: 'pcm', what: 'the Vera X\'s PCM (vid\'s /pcm and /pcmctl), at rc: its files and state; the rate (the VERA\'s nearest) and volume; raw samples from a card into the FIFO, drained; bad commands; /pcm one task\'s (another\'s pcmctl: busy); WAV files played (8 bits mono, made signed; 16 bits stereo past an odd chunk; a float one, not a song); a ZSM\'s PCM instruments (one, then one looped, stopped by the FIFO emptied: from RAM) and its claim of the PCM; one too big for RAM (from the file); the FIFO\'s bytes in order, none lost, its runs dry only at the ends',
+      init: 't_rc', cycles: 150e6, jsOnly: 'the danlang emulator has no VERA yet',
+      get machine() { return { input: typed(PCM_LINES), vera: { pcmLog: true }, sd: pcmCard() }; },
+      get expect() { return expected(PCM_LINES); },
+      // (The FIFO's bytes: the raw samples, the 8-bit WAV file's made signed, the 16-bit one's as they are, the first
+      // instrument's, then the looped one's: whole, then its loop (bytes 100-599) again and again, a second's worth and
+      // the FIFO's at most; then the big one's first, half a second's and the FIFO's.  It runs dry four times: at the
+      // raw samples' end, each WAV file's, and the first instrument's; the FIFO emptied isn't one)
+      check(m) {
+        const f = [], log = m.vera.pcmLog, d = PCM_DATA;
+        const want = Buffer.concat([d.tone, Buffer.from(d.t.map(b => b ^ 0x80)), d.s, d.i0]);
+        const got = Buffer.from(log.slice(0, want.length));
+        if (!got.equals(want)) {
+          const at = [...want].findIndex((b, i) => got[i] !== b);
+          f.push('the FIFO\'s bytes differ from byte ' + at + ' (of ' + want.length + ': the raw 6000, the WAV files\' 4000 and 2400, the first instrument\'s 1500)');
+        }
+        const rest = log.slice(want.length), i1 = d.i1, big = d.big;
+        let k = 0;                                            // (The looped one's, till the big one's start)
+        while (k < rest.length && rest[k] === (k < 600 ? i1[k] : i1[100 + (k - 600) % 500]) && !(k >= 600 && rest[k] === big[0] && rest[k + 1] === big[1] && rest[k + 2] === big[2])) k++;
+        if (k < 3000 || k > 9000) f.push('the looped instrument: ' + k + ' bytes to the FIFO (3000-9000 wanted)');
+        const tail = rest.slice(k);
+        if (!Buffer.from(tail).equals(big.subarray(0, tail.length))) f.push('the big instrument\'s bytes (' + tail.length + ') aren\'t its first');
+        if (tail.length < 1500 || tail.length > 7000) f.push('the big instrument: ' + tail.length + ' bytes to the FIFO (1500-7000 wanted)');
+        if (m.vera.pcmLost) f.push(m.vera.pcmLost + ' bytes written to a full FIFO');
+        if (m.vera.pcmUnderruns !== 4) f.push('the FIFO ran dry ' + m.vera.pcmUnderruns + ' times (4 wanted: the ends)');
+        this.notes = ['the FIFO: ' + log.length + ' bytes taken, ' + m.vera.pcmOut + ' played; the looped instrument ' + k + ', the big one ' + tail.length + '; dry ' + m.vera.pcmUnderruns + ' times'];
         return f;
       },
     },

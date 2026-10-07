@@ -22,7 +22,7 @@ builds one from a folder of `.s` (or `.c`) files.
 **A module of the paged ROM** runs in place: the task that runs it has the module's bank at `$A000` (its `$01`), and
 only its data is copied into the task's RAM (from `$0400`), its BSS cleared, as it starts.  It's built by
 `modules/module.cfg` and listed in `modules/rom.txt`; `#m/NAME` is its file, and `#m/bin` lists the programs, bound at
-`/bin`.  Running in place costs no load: `SPAWN` of a module takes about 45,000 cycles (13 ms).
+`/bin`.  Running in place costs no load: `SPAWN` of a module takes about 50,000 cycles (14 ms).
 
 ## Modules of several banks
 
@@ -31,7 +31,7 @@ A module bigger than a bank (16K) spans two to eight, one after another: `HYX2_D
 `CODE3` ...  It calls between its banks through trampolines in its RAM: `FAR2` (from the first into the second),
 `FAR1` (back), and `FARN bank, routine` from any to any, the caller's bank set again after.  Such a module keeps its
 note handler in its RAM, as the kernel calls a handler with whichever bank is at `$A000`, and owns no IRQ line.  rc
-(two banks), HydraFS (the storage driver's second) and hylang (seven) are built so.
+and `play` (two banks each), HydraFS (the storage driver's second) and hylang (eight) are built so.
 
 ## Libraries and XCALL
 
@@ -57,4 +57,6 @@ A library keeps a jump table at its start, after its header, so its routines' ad
 The emulator (`sim/run.js`) traces a program's system calls by name (`--trace-calls`), stops at a label (`--break
 K_OPEN`, `--break rc:main`), watches an address (`--watch ADDR[:T]`), and with `-i` has a monitor (Ctrl-A b: step,
 registers, memory in any task's view, breaks and watches).  The top of `sim/run.js` lists its options.  On the
-Hydra, `/proc/N` is a task's state (`regs`, `mem`, `fd`), and its `ctl` stops and starts it.
+Hydra, `/proc/N` is a task's state (`regs`, `mem`, `fd`), and its `ctl` stops, starts and steps it; `db`, the
+debugger, works through them: a program started stopped, stepped, run to breakpoints, with ld65's symbols (the build's
+`.lbl` files, or `as -l`'s) ([../using/tools.md](../using/tools.md#the-debugger)).

@@ -103,7 +103,9 @@ call returns -1 and sets `errno` (and `_oserror` the system's own code).  Any ca
 `hydra.h` wraps the Hydra's own: `hy_spawn`, `hy_wait`, `hy_note`, `hy_bind`, `hy_banks_alloc`, `hy_sem_*`,
 `hy_fd2path` ...  [../../sdk/c/README.md](../../sdk/c/README.md) is its guide.
 
-## From HyForth and hylang
+## From HyForth, hylang and BASIC
 
 Each call a program makes is a word in HyForth (`sys-open`, in `hydra.fl`: its registers as stack items) and a
-function in hylang (`(sys-open "x" 0)`).  `/rom/doc/api.md` shows both forms for each call.
+function in hylang (`(sys-open "x" 0)`).  `/rom/doc/api.md` shows both forms for each call.  BASIC's `SYS "NAME"`
+makes any of them by its name (`.A`, `.X` and `.Y` from its numbers, `r0`-`r15` POKEd before it; `RREG` reads them
+after: [../using/basic.md](../using/basic.md)).
