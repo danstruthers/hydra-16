@@ -455,6 +455,11 @@ October 2026, on `reborn-text-windows` (reborn's `docs/status.md`, "The text win
 * **A resize keeps the cursor's row, as xterm does without reflow**: taller, the scrollback's newest rows come down first; shorter, the rows above the cursor's go into the scrollback only as must, and the bottom's rows are dropped.  The cells past a narrower width are dropped (in the scrollback too), not kept to come back: rows aren't reflowed.  The margins become the whole screen.
 * **`KEY_RESIZE` is `keys hydra`'s**: a `keys vt` reader expects what a VT100 sends, which has no such key; it reads `consctl`.  One from before a `rawon` isn't given (it isn't news to a program that's just read the size).
 
+### **As built: W3b**
+
+* **The line editor finds its line's start from the window's cursor** at the line's first key (the prompt's been written by then), and keeps the terminal's cursor as a place in the line and whether it's past a row's last column, as a terminal is after writing there.  Its moves are then a row and a column apart, so nothing but the window's width is asked of vt.s.  Output from elsewhere into a window while its line is typed still confuses it, as it did.
+* **A resize draws the line again** rather than working out where its cut rows went: up to its first row as it was laid out, its rest erased (ED), then written at the new width.  The prompt isn't the editor's, so a prompt cut by a narrower window stays cut.
+
 ### **Decisions**
 
 The user's answers to the plan's questions, 2026-10-07:

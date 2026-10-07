@@ -40,7 +40,7 @@ VM2_VT52        = $02           ;   and (v_mode2) VT52 mode (DECANM reset)
 .global     hyx2_far1, hyx2_far2
 
 ; ---- vt.s's, for cons.s (FAR2)
-.global     vt_init, vt_keymodes, vt_new, vt_free, vt_write, vt_put, vt_pump, vt_text, vt_resize, vt_size
+.global     vt_init, vt_keymodes, vt_new, vt_free, vt_write, vt_put, vt_pump, vt_text, vt_resize, vt_size, vt_cursor
 .global     ans_n, ans_r, ans_buf, lbl_buf                 ; Each window's answers, its label
 .global     ts_ser, ts_scr                                  ; Each terminal's state: 0 following the shown window,
                                                             ;   1 to be painted (all of it), 2 being painted

@@ -494,6 +494,29 @@ const VT_MODE_RC = [
   'echo mode 80x60 >/dev/vid/ctl',
   'echo done',
 ].join('\n') + '\n';
+// (vtedit's: two lines edited in a window 20 columns wide, each longer than its row: moved over (Left across the
+// rows), inserted into, deleted from, Home and End; then the first recalled (Up) and cut back; a third made 30 wide
+// as it's typed (the terminal's report, typed).  edSim: what the line editor makes of keys, the lines before for Up)
+const VT_EDIT = [
+  'echo 0123456789abcdefghijklmnopqrstuvwxyz' + '\x1b[D'.repeat(25) + 'XY' + '\x01' + '\x1b[C'.repeat(7) + '\x1b[3~\x1b[3~' + '\x05' + '!',
+  '\x1b[A' + '\x7f'.repeat(30) + ' ok',
+  'echo abcdefghijklmnopqrstuvwxyz0123' + '\x1b[8;24;30t' + '\x1b[D'.repeat(3) + 'Z',
+];
+function edSim(keys, hist) {
+  let s = '', p = 0;
+  for (const k of keys.match(/\x1b\[8;24;30t|\x1b\[3~|\x1b\[[A-D]|[\s\S]/g)) {
+    if (k === '\x1b[D') { if (p > 0) p--; }
+    else if (k === '\x1b[C') { if (p < s.length) p++; }
+    else if (k === '\x01') p = 0;
+    else if (k === '\x05') p = s.length;
+    else if (k === '\x7f') { if (p > 0) { s = s.slice(0, p - 1) + s.slice(p); p--; } }
+    else if (k === '\x1b[3~') { if (p < s.length) s = s.slice(0, p) + s.slice(p + 1); }
+    else if (k === '\x1b[A') { s = hist[hist.length - 1]; p = s.length; }
+    else if (k === '\x1b[8;24;30t') { }
+    else { s = s.slice(0, p) + k + s.slice(p); p++; }
+  }
+  return s;
+}
 // (vtjump's: the ROM disk's api.md, 38K, cat to the window shown with scroll jump)
 const vtJump = () => fs.readFileSync(path.join(__dirname, '..', 'obj', 'gen', 'api.md'), 'latin1');
 const vtModel = bytes => new VT({ onlcr: true }).write(bytes);
@@ -2502,6 +2525,30 @@ module.exports = {
         const rows = out.slice(a + 5, b).replace(/\n$/, '').split('\n');
         if (rows.length !== 30 || rows.some(r => r.length !== 40)) f.push('the screen at 40x30 read as ' + rows.length + ' rows of ' + [...new Set(rows.map(r => r.length))].join(', ') + ' columns');
         if (!rows.some(r => r.startsWith('after 40x30'))) f.push('the screen at 40x30: not painted again (no "after 40x30" on it)');
+        return f;
+      },
+    },
+    {
+      name: 'vtedit', what: 'the line editor at the window\'s width (W3): rc\'s lines typed in a window 20 columns wide (terminal size 20 24), each longer than a row: Left back across the rows, characters inserted, Home, Right, Delete, End; then that line again (Up), cut back with Backspace across the rows; a third made 30 columns wide as it\'s typed (the terminal\'s report among the keys: the line drawn again), then edited: what rc read, and what the serial port\'s terminal shows of each line (sim/lib/vt.js, 20 and 30 columns), as typed, the rest of its last row blank',
+      init: 't_rc', cycles: 150e6,
+      get machine() { return { input: typed([['echo terminal size 20 24 >/dev/consctl'], [VT_EDIT[0]], [VT_EDIT[1]], [VT_EDIT[2]], ['echo terminal size 80 24 >/dev/consctl'], ['echo done']]) }; },
+      expect: ['\ndone\n%'],
+      check(m) {
+        const f = [], raw = m.out, out = raw.replace(/\r/g, ''), hist = [];
+        const lines = VT_EDIT.map(k => { const l = edSim(k, hist); hist.push(l); return l; });
+        lines.forEach((l, i) => { if (!out.includes('\n' + l.slice(5) + '\n')) f.push('line ' + (i + 1) + ': rc didn\'t echo ' + JSON.stringify(l.slice(5))); });
+        const clear = '\x1b[0m\x1b(B\x1b)B', a = raw.indexOf(clear, raw.indexOf('size 20 24')), b = raw.indexOf(clear, a + 1), c = raw.indexOf(clear, b + 1);
+        if (a < 0 || b < 0 || c < 0) return f.concat(['no paints at 20 columns, then 30, then 80']);
+        const shownAt = (seg, cols, start, l, i) => {             // (The line on the terminal, and the rest of its last row)
+          const rows = new VT({ cols, rows: 24 }).write(seg).lines().map(r => r.padEnd(cols)), k = rows.findIndex(r => r.startsWith(start));
+          const n = Math.ceil((l.length + 2) / cols) * cols, shown = k < 0 ? '' : rows.slice(k).join('').slice(0, n);
+          if (shown !== ('% ' + l).padEnd(n)) f.push('line ' + (i + 1) + ' on the terminal (' + cols + ' columns): ' + JSON.stringify(shown) + ', not ' + JSON.stringify(('% ' + l).padEnd(n)));
+        };
+        const seg20 = raw.slice(a, b), mid = seg20.indexOf(lines[0].slice(5) + '\r\n');
+        shownAt(seg20, 20, '% echo 01', lines[0], 0);
+        shownAt(seg20.slice(mid), 20, '% echo 01', lines[1], 1);
+        shownAt(raw.slice(b, c), 30, '% echo abc', lines[2], 2);
+        this.notes = lines.map((l, i) => 'line ' + (i + 1) + ': ' + l);
         return f;
       },
     },

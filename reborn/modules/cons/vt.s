@@ -389,6 +389,15 @@ in_cols:
 :
             rts
 
+; Window .X's cursor, for the line editor: .A its column, .X the columns, .Y <> 0 past the last (its last-column flag)
+vt_cursor:
+            txa
+            jsr         vt_load
+            lda         v_x
+            ldx         v_cols
+            ldy         v_wrap
+            rts
+
 ; Window .X's size: .A its columns, .X its rows
 vt_size:
             txa

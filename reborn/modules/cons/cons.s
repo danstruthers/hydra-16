@@ -8,7 +8,8 @@
 ; output going to their screens, their reads waiting for keys.  A window's files are #c with its number as the spec: #c2/cons (or mount '#c' /dev 2); #c is window 0.
 ;   /cons       the window's console.  A read gets a line, edited here (cooked): Backspace and Delete, Left, Right,
 ;               Home and End (and Ctrl-A, Ctrl-E), Ctrl-U, the history with Up and Down; Enter ends it, Ctrl-D on
-;               an empty line is the end of the input.  Or (raw: consctl's rawon) each key as it comes, the
+;               an empty line is the end of the input (a line longer than the window's row goes on to the rows
+;               below, and the cursor up and down them; a resize draws it again at the new width).  Or (raw: consctl's rawon) each key as it comes, the
 ;               terminal's cursor and function keys as one code each (KEY_*; an Escape alone is a key once
 ;               ESC_TICKS have passed with nothing after it; KEY_RESIZE when the window's size changed, keys hydra's).
 ;               A write goes to the window's screen, and out to the
@@ -92,9 +93,10 @@ SRV_POST        = pump                                      ;   (and after it: t
 LINE_MAX        = 127           ; A line's length at most (and its LF)
 HIST_N          = 4             ; Each window's history: its lines ...
 HIST_SIZE       = 128           ;   each its length, then LINE_MAX characters
-ST_SIZE         = 16            ; Each window's editor state, kept while another's is in use (st_first on)
+ST_SIZE         = 32            ; Each window's editor state, kept while another's is in use (st_first on)
 KP_SIZE         = 8             ; A key's sequence kept for a raw read (keys vt): its bytes at most
-ECHO_ROOM       = LINE_MAX + 13 ; The most a key's echo writes (a key waits for this much room)
+ECHO_ROOM       = LINE_MAX + 40 ; The most a key's echo writes (a key waits for this much room: a line drawn again,
+                                ;   its moves)
 RX_PAGES        = 4             ; The receive ring's pages: the keys' its first; /ser's all of them (1023 bytes: a 1K
                                 ;   XMODEM block at 115200 comes in faster than it can be taken, and waits there)
 CTRL_A          = $01
@@ -171,6 +173,15 @@ hi_n:       .res        1                                   ; The history: its l
 hi_top:     .res        1                                   ;   the newest's slot ...
 hi_at:      .res        1                                   ;   and Up and Down's place (0: the line being typed)
 raw:        .res        1                                   ; <> 0: raw
+ln_geo:     .res        1                                   ; <> 0: where the line is on the screen is known (its
+                                                            ;   first key's: the cursor after the prompt) ...
+ln_s0:      .res        1                                   ;   its first character's column (the columns: the next
+                                                            ;   row's start, the prompt filling its row) ...
+ln_w:       .res        1                                   ;   the row's width it's laid out at ...
+ln_at:      .res        1                                   ;   the terminal's cursor: its place in the line ...
+ln_pend:    .res        1                                   ;   <> 0: past its row's last column, as a terminal is
+                                                            ;   after writing there (ln_at at the next row's start) ...
+ln_shown:   .res        1                                   ;   and the line's characters on the screen
 st_last:                                                    ; ---- (Its end)
 ST_N        = st_last - st_first
 n:          .res        2                                   ; Scratch
@@ -200,6 +211,8 @@ kp_i:       .res        WIN_MAX
 kp_buf:     .res        WIN_MAX * KP_SIZE                   ;   and them
 w_iqh:      .res        WIN_MAX                             ;   and its keys: the next in, the next out
 w_iqt:      .res        WIN_MAX
+eg_c:       .res        1                                   ; ed_goto's: the column it goes to ...
+eg_x:       .res        1                                   ;   <> 0: the character before written again
 kbd_wait:   .res        1                                   ; <> 0: a /kbdin writer waits for a queue's room
 bell:       .res        1                                   ; <> 0: a BEL the shown window sent (ring's) ...
 bell_st:    .res        1                                   ;   #a/bell: 0 not opened yet, 1 open, 2 none ...
@@ -744,6 +757,7 @@ st_addr:
             asl
             asl
             asl
+            asl
             clc
             adc         #<w_state
             sta         p
@@ -766,7 +780,7 @@ ln_addr:
             sta         p + 1
             rts
 
-.assert     ST_SIZE = 16 .and LINE_MAX + 1 = 128, error, "st_addr and ln_addr: 16 and 128 bytes a window"
+.assert     ST_SIZE = 32 .and WIN_MAX * ST_SIZE <= 256 .and LINE_MAX + 1 = 128, error, "st_addr and ln_addr: 32 and 128 bytes a window"
 
 ; Key .A into window .X's queue (dropped if it's full).  Keeps .X
 iq_put:
@@ -1816,6 +1830,7 @@ flush:
             bne         :+
             stz         ln_len
             stz         ln_pos
+            stz         ln_geo
             stz         esc_st
             stz         esc_wait
 :
@@ -2194,6 +2209,12 @@ edit:
             cmp         #ECHO_ROOM
             bcc         @wait
 :
+            ldx         lw                                  ; The window resized: the line drawn again
+            lda         w_rsz,X
+            beq         :+
+            stz         w_rsz,X
+            jsr         ed_resize
+:
             jsr         key_next
             bcs         @wait
             cmp         #LF                                 ; An LF just after a CR: the same Enter
@@ -2203,6 +2224,9 @@ edit:
             bne         edit
 :
             stz         was_cr
+            pha                                                 ; (Where the line is: found with its first key)
+            jsr         ed_geo
+            pla
             ldx         #EDIT_N - 1                         ; One of the keys that edit?
 :
             cmp         edit_keys,X
@@ -2249,22 +2273,23 @@ ed_insert:
             pla
             sta         ln_buf,X
             inc         ln_len
-            jsr         echo_rest                           ; It and the rest ...
+            jsr         ed_rest                             ; It and the rest ...
             inc         ln_pos
-            lda         ln_len                              ;   and the cursor back after it
-            sec
-            sbc         ln_pos
-            ldx         #'D'
-            jmp         echo_csi
+            lda         ln_pos                              ;   and the cursor back after it
+            jmp         ed_goto
 
 @full:
             rts
 
-; Enter: the line ends, with an LF (CR: and the next key's LF is the same Enter)
+; Enter: the line ends, with an LF after it (the cursor to its end first); CR: and the next key's LF is the same
+; Enter
 ed_cr:
             lda         #1
             sta         was_cr
 ed_lf:
+            lda         ln_len
+            jsr         ed_goto
+            stz         ln_geo
             ldx         ln_len
             lda         #LF
             sta         ln_buf,X
@@ -2280,6 +2305,7 @@ ed_lf:
 
 ; Ctrl-D: on an empty line, the end of the input; else the line ends, as it is
 ed_eof:
+            stz         ln_geo
             lda         ln_len
             bne         :+
             inc         eof
@@ -2298,8 +2324,8 @@ ed_bs:
             lda         ln_pos
             beq         ed_none
             dec         ln_pos
-            lda         #BS
-            jsr         w_put
+            lda         ln_pos
+            jsr         ed_goto
             bra         ed_cut
 
 ; Delete: the character at the cursor
@@ -2318,13 +2344,10 @@ ed_cut:                                                     ; The character at t
             bra         :-
 :
             dec         ln_len
-            jsr         echo_rest                           ; The rest, the end of the old line erased, and the
-            jsr         echo_erase                          ;   cursor back
-            lda         ln_len
-            sec
-            sbc         ln_pos
-            ldx         #'D'
-            jsr         echo_csi
+            jsr         ed_rest                             ; The rest, what was past its end erased, and the
+            jsr         ed_tail                             ;   cursor back
+            lda         ln_pos
+            jsr         ed_goto
 ed_none:
             clc
             rts
@@ -2333,49 +2356,43 @@ ed_left:
             lda         ln_pos
             beq         ed_none
             dec         ln_pos
-            lda         #BS
-            jsr         w_put
+            lda         ln_pos
+            jsr         ed_goto
             clc
             rts
 
-ed_right:
+ed_right:                                                   ; (The character written again: past it)
             ldx         ln_pos
             cpx         ln_len
             bcs         ed_none
             lda         ln_buf,X
-            jsr         w_put
+            jsr         ed_put
             inc         ln_pos
             clc
             rts
 
 ed_home:
-            lda         ln_pos
-            ldx         #'D'
-            jsr         echo_csi
             stz         ln_pos
+            lda         #0
+            jsr         ed_goto
             clc
             rts
 
 ed_end:
             lda         ln_len
-            sec
-            sbc         ln_pos
-            ldx         #'C'
-            jsr         echo_csi
-            lda         ln_len
             sta         ln_pos
+            jsr         ed_goto
             clc
             rts
 
 ; Ctrl-U: the whole line
 ed_kill:
-            lda         ln_pos
-            ldx         #'D'
-            jsr         echo_csi
-            jsr         echo_erase
+            lda         #0
+            jsr         ed_goto
             stz         ln_len
             stz         ln_pos
             stz         hi_at
+            jsr         ed_tail
             clc
             rts
 
@@ -2392,9 +2409,8 @@ ed_down:
             beq         ed_none
             dec         hi_at
 hist_show:                                                  ; The line hi_at back in place of this one
-            lda         ln_pos
-            ldx         #'D'
-            jsr         echo_csi
+            lda         #0
+            jsr         ed_goto
             stz         ln_len
             lda         hi_at
             beq         @shown
@@ -2410,8 +2426,8 @@ hist_show:                                                  ; The line hi_at bac
             bne         :-
 @shown:
             stz         ln_pos
-            jsr         echo_rest
-            jsr         echo_erase
+            jsr         ed_rest
+            jsr         ed_tail
             lda         ln_len
             sta         ln_pos
             clc
@@ -2478,27 +2494,243 @@ hist_slot:
 ; ****************************************************************************
 ; Echo: into the loaded window's text (edit has made sure of the room)
 
-; The line from the cursor to its end
-echo_rest:
-            ldx         ln_pos
+; Where the line is: its first key finds it (the cursor after the prompt: vt.s's), and its characters' places follow
+; from that and the row's width (ln_w): a character's offset from its first row's column 0 is ln_s0 + its place
+
+; The line's place found, if it isn't known yet.  Modifies .A, .X, .Y
+ed_geo:
+            lda         ln_geo
+            bne         @done
+            ldx         lw
+            FAR2        vt_cursor                           ; (.A: its column, .X: the columns, .Y: <> 0 past the
+            sta         ln_s0                               ;   last)
+            stx         ln_w
+            stz         ln_pend
+            tya
+            beq         :+
+            inc         ln_s0                               ; (Past the last: the line starts on the next row)
+            inc         ln_pend
 :
-            cpx         ln_len
-            bcs         :+
-            lda         ln_buf,X
-            jsr         w_put
+            stz         ln_at
+            stz         ln_shown
+            inc         ln_geo
+@done:
+            rts
+
+; .A, an offset from the line's first row's column 0: .X its row (from that one), .A its column
+ed_rc:
+            ldx         #0
+:
+            cmp         ln_w
+            bcc         :+
+            sbc         ln_w
             inx
             bra         :-
 :
             rts
 
-; The line erased from the cursor: ESC [ K
-echo_erase:
+; .A, the line's character at the cursor (ln_at), written: the cursor past it (pending, if it was its row's last)
+ed_put:
+            jsr         w_put
+            clc
+            lda         ln_s0
+            adc         ln_at
+            jsr         ed_rc
+            inc         a
+            stz         ln_pend
+            cmp         ln_w
+            bne         :+
+            inc         ln_pend
+:
+            inc         ln_at
+            rts
+
+; The line from the cursor (ln_at) to its end, written
+ed_rest:
+            ldx         ln_at
+            cpx         ln_len
+            bcs         :+
+            lda         ln_buf,X
+            jsr         ed_put
+            bra         ed_rest
+:
+            lda         ln_len
+            cmp         ln_shown
+            bcc         :+
+            sta         ln_shown
+:
+            rts
+
+; What was on the screen past the line's end (it's shorter now) erased, from the cursor there (ln_at = ln_len): to its
+; row's end (EL), or to the screen's (ED) if it went on to the rows below
+ed_tail:
+            lda         ln_len
+            cmp         ln_shown
+            bcs         @done
+            lda         ln_pend                             ; (Pending: the next row's start first, where the old
+            beq         :+                                  ;   line went on)
+            lda         #1
+            ldx         #'B'
+            jsr         echo_csi
+            lda         #CR
+            jsr         w_put
+            stz         ln_pend
+:
+            clc                                             ; The end's row, and the old end's
+            lda         ln_s0
+            adc         ln_len
+            jsr         ed_rc
+            stx         n
+            clc
+            lda         ln_s0
+            adc         ln_shown
+            dec         a
+            jsr         ed_rc
+            ldy         #'K'
+            cpx         n
+            beq         :+
+            ldy         #'J'
+:
+            phy
             lda         #ESC
             jsr         w_put
             lda         #'['
             jsr         w_put
-            lda         #'K'
-            jmp         w_put
+            pla
+            jsr         w_put
+            lda         ln_len
+            sta         ln_shown
+@done:
+            rts
+
+; The terminal's cursor to the line's place .A: up or down to its row, then to its column (one back: BS; else CHA).
+; The line's end at a row's start (its row before full) is left as a terminal leaves it there: past the row before's
+; last column, that character written again.  Modifies .A, .X, .Y, m, n
+ed_goto:
+            cmp         ln_at
+            bne         :+
+            rts
+:
+            sta         m                                   ; (Where to)
+            clc                                             ; Where it is: n its row, n + 1 its column
+            lda         ln_s0
+            adc         ln_at
+            sec
+            sbc         ln_pend                             ; (Pending: the row before's last column)
+            jsr         ed_rc
+            stx         n
+            sta         n + 1
+            stz         eg_x                                ; Where it's to be: eg_c its column (eg_x <> 0: the
+            clc                                             ;   character before it written again)
+            lda         ln_s0
+            adc         m
+            jsr         ed_rc
+            cmp         #0
+            bne         :+
+            ldy         m
+            beq         :+
+            cpy         ln_len
+            bne         :+
+            dex                                             ; (The end, at a row's start: the row before's last
+            lda         ln_w                                ;   column)
+            dec         a
+            inc         eg_x
+:
+            sta         eg_c
+            txa                                             ; Up or down
+            sec
+            sbc         n
+            beq         @same
+            bcs         @down
+            eor         #$FF
+            inc         a
+            ldx         #'A'
+            bra         @vert
+@down:
+            ldx         #'B'
+@vert:
+            jsr         echo_csi
+            stz         ln_pend
+            bra         @col
+@same:
+            lda         ln_pend
+            bne         @cha
+@col:
+            lda         eg_c                                ; Then to the column
+            cmp         n + 1
+            beq         @there
+            inc         a
+            cmp         n + 1
+            bne         @cha
+            lda         #BS
+            jsr         w_put
+            bra         @there
+@cha:
+            stz         ln_pend
+            lda         eg_c
+            inc         a
+            ldx         #'G'
+            jsr         echo_csi
+@there:
+            lda         m
+            sta         ln_at
+            lda         eg_x
+            beq         :+
+            dec         ln_at
+            ldx         ln_at
+            lda         ln_buf,X
+            jmp         ed_put
+:
+            rts
+
+; The window's size changed while a line's being edited: the line drawn again at the new width, from its first row
+; (the cursor's row in it as it was laid out, up), or from the next row's start if its first column's past the new
+; width; what was below it erased
+ed_resize:
+            lda         ln_geo
+            beq         @done
+            ldx         lw
+            FAR2        vt_cursor                           ; (.X: the columns now)
+            cpx         ln_w
+            beq         @done
+            phx
+            clc                                             ; Up to its first row
+            lda         ln_s0
+            adc         ln_at
+            sec
+            sbc         ln_pend
+            jsr         ed_rc
+            txa
+            ldx         #'A'
+            jsr         echo_csi
+            pla
+            sta         ln_w
+            lda         ln_s0
+            cmp         ln_w
+            bcc         @col
+            lda         #LF                                 ; (From the next row's start: out as CR LF)
+            jsr         w_put
+            stz         ln_s0
+            bra         @erase
+@col:
+            inc         a
+            ldx         #'G'
+            jsr         echo_csi
+@erase:
+            lda         #ESC
+            jsr         w_put
+            lda         #'['
+            jsr         w_put
+            lda         #'J'
+            jsr         w_put
+            stz         ln_at
+            stz         ln_pend
+            stz         ln_shown
+            jsr         ed_rest
+            lda         ln_pos
+            jmp         ed_goto
+@done:
+            rts
 
 ; ESC [ .A .X (the cursor moved .A places: .X = 'C' right, 'D' left); nothing if .A = 0
 echo_csi:
