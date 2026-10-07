@@ -146,9 +146,13 @@ task  state   parent     cpu group  name
 `/proc/5` has a task's state as files: `status`, `args`, `fd` (its open files), `regs`, `mem`, and `ctl`, which
 takes `stop`, `start`, `kill`.
 
-The console has windows, as rio has on Plan 9: each is a whole console with its own shell.  Ctrl-] c makes one (and
-shows it), Ctrl-] and a digit shows that window, Ctrl-] n the next.  A window that isn't shown runs on; its output is
-kept, and shown again when you come back.  `echo $window` says which one you're in.
+The console has windows, as rio has on Plan 9: each is a whole console, kept whole while it isn't shown.  Windows
+come in groups, a group a shell session: Ctrl-] c starts one (and shows it), with a shell; a program's own windows
+(`echo new >/dev/wctl`) join its window's group.  Ctrl-] and a digit shows that window, Ctrl-] n and Ctrl-] p the
+next and previous group, Ctrl-] Tab (or Ctrl-Tab, where the terminal sends it) the group's next window, and Ctrl-] x
+hangs up the window shown.  A window that isn't shown runs on; its output is kept, and shown again when you come
+back.  `echo $window` says which one you're in, and `cat /dev/wctl` lists them: number, group, size, `*` the one
+shown.
 
 **Tasks working together.**  The C SDK's multitasking demos start four or five copies of themselves, each in a task
 of its own, and draw what they do as they do it: memory they share (a shared segment), and semaphores to take turns

@@ -483,6 +483,14 @@ October 2026, on `reborn-text-windows` (reborn's `docs/status.md`, "The text win
 
 * **The words are the plan's**, each a write of a line: `hy_wlabel`, `window-label`, `(window-label s)` and `/dev/label`; `hy_wstatus`, `window-status`, `(window-status s)` and `wctl`'s `status`; `hy_wctl`, `window-ctl`, `(window-ctl s)` for any `wctl` line.  hylang's `(window-label)` with no argument reads the title back.
 
+### **As built: W5a and W5b**
+
+* **Sixteen windows** cost cons some 17K of RAM (to $6FD3 of the task's 32K): the histories (512 bytes a window), the VT states (a page), the maps, the formats and the status lines.  They could move to a bank if the RAM's wanted.
+* **Ctrl-Tab is watched for, not taken out**, as the terminal's size report is: its bytes go to the window shown first (whose decoder drops them: they aren't keys), then the console acts, so the sequence ends in the window it started in.
+* **Ctrl-] Shift-Tab** is Ctrl-] then the terminal's back-tab (`ESC [ Z`).  The irq entry's quick Ctrl-] digit takes `0`-`9` alone now (the note group of the window a Ctrl-C right after goes to).
+* **`KEY_FOCUS` carries the window's number as the next key**, as two bytes of a raw read (`keys hydra`'s); a reader that turns raw after it doesn't get one from before.  The latest focus wins: a reader that didn't read meanwhile gets the window focused now.
+* **`new`'s answer is one read**: the fid's next read gives "N" and an LF, its reads after that the windows again.
+
 ### **Decisions**
 
 The user's answers to the plan's questions, 2026-10-07:

@@ -1622,7 +1622,7 @@ module.exports = {
       expect: ['/> libs\nforth coreext exception file tools shell gpio i2c spi cons proc clock disk pc sound\n/> 2 gpio . 3 gpio . gpio-port .\n1 0 167 \n',
         '0 in 1\n1 in 1\n2 in 1\n3 in 0\n4 out 1\n5 in 1\n6 out 0\n7 in 1\nca1 rise 0\nca2 1\n/> gpio-wait 0> .\n-1 \n',
         'pad 5 type\nhello\n/> i2c-devices $50 i2c? . $51 i2c? .\n50 68 -1 0 \n',
-        'b 2 + c@ .\n160 1 2 \n/> 3 3 spi-mode 3 b 1 spi b c@ .\n163 \n/> window . windows type\n0 0 *\n',
+        'b 2 + c@ .\n160 1 2 \n/> 3 3 spi-mode 3 b 1 spi b c@ .\n163 \n/> window . windows type\n0 0 0 80 24 *\n',
         'task-cwd type\n50\n/\n/> t @ task-regs drop 3 type space t @ $E000 pad 2 task-mem pad @ $E000 @ = .\nPC= -1 \n/> rtc type\nrunning\n',
         'sh-out type\n2030-01-02 03:04:0', '/> char x disk-ctl type\nrom 4 MB 8192 blocks\nhydrafs label=ROM\n', '/> cards . char 5 disk-ctl type\n32 sdhc 1 MB 2048 blocks\n/> pc? .\n-1 \n',
         'pad swap type\nhi from the PC\n/> f @ close-file throw\n',
@@ -2280,13 +2280,13 @@ module.exports = {
       },
     },
     {
-      name: 'cons', what: 'the console: lines, editing, history, raw keys, its answers (DA, CPR, DECRQM, the size, DECREPTPARM), the window\'s size (the terminal\'s report typed, terminal size, KEY_RESIZE, the terminal asked), keys vt (DECCKM, VT52 mode), Ctrl-C, windows (shown, repainted, made, gone), 115200, the bell',
-      init: 't_cons', modules: ['t_child'], cycles: 80e6,
+      name: 'cons', what: 'the console: lines, editing, history, raw keys, its answers (DA, CPR, DECRQM, the size, DECREPTPARM), the window\'s size (the terminal\'s report typed, terminal size, KEY_RESIZE, the terminal asked), keys vt (DECCKM, VT52 mode), Ctrl-C, windows (shown, repainted, made, gone), groups (Ctrl-] c\'s, new\'s, new group\'s; Ctrl-] Tab, Ctrl-Tab, Ctrl-Shift-Tab, Ctrl-] n and p; KEY_FOCUS), 115200, the bell',
+      init: 't_cons', modules: ['t_child'], cycles: 160e6,
       // (ā: wait for a prompt, "N> ")
       machine: { input: 'āhello\r' + 'āabX\x08c\r' + 'āac\x1b[Db\r' + 'ābc\x1b[Ha\x1b[Fd\r' +
         'āxyz\x15ok\r' + 'āabXc\x1b[D\x1b[D\x1b[3~\r' + 'ā\x1b[A\x1b[A\r' + 'ā\x04' + 'āparts\r' +
         'āx\x1b[A' + 'ā\x1b[8;40;100t' + 'ā\x1b[A\x1b[A\x1b[15~\x1b[A' + 'ā\x03' +
-        'ā\x1d1z\r\x1d0' + 'ā\x1d1\x03\x1d0' + 'ā\x1dc' },
+        'ā\x1d1z\r\x1d0' + 'ā\x1d1\x03\x1d0' + 'ā\x1dc' + 'ā\x1d\t' + 'ā\x1b[9;5u' + 'ā\x1dn' + 'ā\x1b[27;6;9~' + 'ā\x1dp' },
       check(m, out) {
         const f = [], a = m.acia, want = a.wdc ? 1 : 2;
         if (!out.includes('\x1b[2J') || !out.includes('w1 hidden text')) f.push('window 1 shown: no repaint of its text');
@@ -2715,7 +2715,7 @@ module.exports = {
         row(s1, 0, /^ 0 mywin +00:00$/); row(s1, 1, /^0 mywin +0 mywin$/); row(s1, 2, /^hello there *$/);
         row(s2, 1, /^\[rc\] mywin +0$/); row(s2, 2, /^from vt +80 x 57 cooked$/);
         row(s3, 0, /^\[rc\] mywin +0$/); row(s3, 1, /^from vt +80 x 57 cooked$/); row(s3, 2, /^ 0 mywin +00:00$/);
-        row(s4, 0, /^ 0 titled 1\+ +00:00$/); row(s5, 0, /^ 0 titled 1! +00:00$/); row(s6, 0, /^ 0 rc +00:00$/);
+        row(s4, 0, /^ 0\+ titled +00:00$/); row(s5, 0, /^ 0! titled +00:00$/); row(s6, 0, /^ 0 rc +00:00$/);
         return f.map(x => 'winchrome: ' + x);
       },
     },

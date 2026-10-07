@@ -4,7 +4,7 @@
 ; terminals drawn from it).  Each includes it: a name .global here is one object's, used by the other.  A routine
 ; in the other bank is called through FAR1 or FAR2 (hyx2.inc); data in RAM is either's.
 
-WIN_MAX         = 4             ; Windows
+WIN_MAX         = 16            ; Windows (as task F's banks allow: 3 each, 6 with an alternate screen)
 INQ_SIZE        = 64            ; Each window's keys, waiting to be read
 IOBUF           = 64            ; A write's bytes, a part at a time
 ANS_SIZE        = 32            ; Each window's answers (DA, DSR ...: vt.s's, for a raw reader), at most

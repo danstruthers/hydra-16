@@ -321,9 +321,13 @@ main:
             WRITE_      wctl, s_new, 3
             EXPECT_OK   "wctl: new"
             jsr         wctl_read
-            EXPECT_A    6, "wctl reads as the windows: 0, shown, and 1"
-            lda         buf + 4
-            EXPECT_A    '1', "window 1"
+            EXPECT_A    2, "wctl, read after its new: the window it made ..."
+            lda         buf
+            EXPECT_A    '1', "... window 1"
+            jsr         wctl_read
+            EXPECT_A    22, "then wctl reads as the windows: 0 0 80 24 * and 1 0 80 24 (number, group, size; * shown)"
+            lda         buf + 14
+            EXPECT_A    '0', "window 1 in window 0's group (0)"
             OPEN_       s_c1, O_RDWR
             sta         w1
             EXPECT_OK   "OPEN #c1/cons, window 1's"
@@ -355,7 +359,7 @@ main:
             lda         w1
             jsr         CLOSE
             jsr         wctl_read
-            EXPECT_A    4, "window 1's last cons closed: it's gone (wctl: 0 alone)"
+            EXPECT_A    12, "window 1's last cons closed: it's gone (wctl: 0 alone)"
             OPEN_       s_wnew, O_READ
             sta         fd
             PRINT       s_pn                                ; (The harness: Ctrl-] c)
@@ -371,6 +375,52 @@ main:
             EXPECT_A    '1', "... window 1, shown"
             lda         fd
             EXPECT_A    9, "wctl: current 0 (this task's output shown again)"
+
+; ---- Groups (W5): Ctrl-] c's window (1) has a group of its own; wctl's new joins the writer's window's group (0's),
+; new group makes one.  The keys (the harness's): Ctrl-] Tab and Ctrl-Tab the group's next window, Ctrl-Shift-Tab
+; its previous, Ctrl-] n and p the next and previous group, each the window shown checked in wctl (then 0 again); a
+; raw reader of the group told as its focus moves (KEY_FOCUS, then the window)
+            WRITE_      wctl, s_new, 3
+            jsr         wctl_read
+            lda         buf
+            EXPECT_A    '2', "wctl: new, in window 0's group: window 2"
+            WRITE_      wctl, s_newg, 9
+            EXPECT_OK   "wctl: new group"
+            jsr         wctl_read
+            lda         buf
+            EXPECT_A    '3', "wctl: new group: window 3"
+            jsr         wctl_read
+            ldx         #<s_wins
+            ldy         #>s_wins
+            jsr         buf_is
+            EXPECT_A    0, "wctl: 0 0 80 24 *, 1 1 80 24, 2 0 80 24, 3 2 80 24 (Ctrl-] c's and new group's groups their own)"
+            WRITE_      ctl, s_rawon, 5
+            PRINT       s_pg1                               ; (The harness: Ctrl-] Tab)
+            jsr         wait_shown
+            EXPECT_A    2, "Ctrl-] Tab: the group's next window, 2"
+            jsr         cur0
+            READ_       #0, 2
+            lda         buf
+            EXPECT_A    KEY_FOCUS, "raw: the group's focus moved: KEY_FOCUS ..."
+            lda         buf + 1
+            EXPECT_A    0, "... and the window, 0 (current 0's, the last)"
+            WRITE_      ctl, s_rawoff, 6
+            PRINT       s_pg2                               ; (Ctrl-Tab: CSI u's ESC [ 9 ; 5 u)
+            jsr         wait_shown
+            EXPECT_A    2, "Ctrl-Tab (ESC [ 9 ; 5 u): the group's next window, 2"
+            jsr         cur0
+            PRINT       s_pg3                               ; (Ctrl-] n)
+            jsr         wait_shown
+            EXPECT_A    1, "Ctrl-] n: the next group's window, 1"
+            jsr         cur0
+            PRINT       s_pg4                               ; (Ctrl-Shift-Tab: xterm's ESC [ 27 ; 6 ; 9 ~)
+            jsr         wait_shown
+            EXPECT_A    2, "Ctrl-Shift-Tab (ESC [ 27 ; 6 ; 9 ~): the group's previous window, 2"
+            jsr         cur0
+            PRINT       s_pg5                               ; (Ctrl-] p)
+            jsr         wait_shown
+            EXPECT_A    3, "Ctrl-] p: the previous group's window, 3"
+            jsr         cur0
             lda         wctl
             jsr         CLOSE
 
@@ -466,6 +516,68 @@ ctl_read:
             lda         ctl
             jmp         READ
 
+; .A = the window shown (wctl's line with the *), once it isn't 0 (40 naps at most)
+wait_shown:
+            lda         #40
+            sta         exp_n
+@try:
+            jsr         nap
+            jsr         wctl_read
+            sta         got_n
+            ldy         #0                                  ; (The *)
+:
+            cpy         got_n
+            bcs         @not
+            lda         buf,Y
+            cmp         #'*'
+            beq         :+
+            iny
+            bra         :-
+:
+            dey                                             ; (Its line's start: its number)
+            bmi         :+
+            lda         buf,Y
+            cmp         #LF
+            bne         :-
+:
+            iny
+            lda         buf,Y
+            and         #$0F
+            bne         @done
+@not:
+            dec         exp_n
+            bne         @try
+            lda         #0
+@done:
+            rts
+
+; Window 0 shown again (wctl's current 0)
+cur0:
+            WRITE_      wctl, s_cur0, 9
+            rts
+
+; .A = 0 if wctl's read (got_n bytes in buf) is the string at .X/.Y
+buf_is:
+            sta         got_n
+            stx         r4
+            sty         r4 + 1
+            ldy         #0
+:
+            lda         (r4),Y
+            beq         :+
+            cmp         buf,Y
+            bne         @no
+            iny
+            bra         :-
+:
+            cpy         got_n
+            bne         @no
+            lda         #0
+            rts
+@no:
+            lda         #1
+            rts
+
 ; wctl read from its start (the write moved its offset), into buf.  OUT: .A = the count read
 wctl_read:
             stz         r0
@@ -552,6 +664,13 @@ s_p7:       .byte       "7> ", 0
 s_p8:       .byte       "8> ", 0
 s_p9:       .byte       "9> ", 0
 s_pr:       .byte       "r> ", 0
+s_pg1:      .byte       "g1> ", 0
+s_pg2:      .byte       "g2> ", 0
+s_pg3:      .byte       "g3> ", 0
+s_pg4:      .byte       "g4> ", 0
+s_pg5:      .byte       "g5> ", 0
+s_newg:     .byte       "new group"
+s_wins:     .byte       "0 0 80 24 *", LF, "1 1 80 24", LF, "2 0 80 24", LF, "3 2 80 24", LF, 0
 s_pz:       .byte       "z> ", 0
 s_pc:       .byte       "c> ", 0
 s_pw:       .byte       "w> ", 0

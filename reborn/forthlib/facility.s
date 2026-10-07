@@ -647,14 +647,14 @@ ekeytofkey:                                                 ; ( u -- u false | x
 :
             jmp         zero_tos
 
-; Is the top a cursor or function key's code, or the window's resize (KEY_UP to KEY_RESIZE)?  OUT: C = 0 yes
+; Is the top a cursor or function key's code, or the window's resize or focus (KEY_UP to KEY_FOCUS)?  OUT: C = 0 yes
 is_fkey:
             lda         dhi,x
             bne         :+
             lda         dlo,x
             sec
             sbc         #KEY_UP
-            cmp         #KEY_RESIZE - KEY_UP + 1
+            cmp         #KEY_FOCUS - KEY_UP + 1
             rts
 :
             sec
@@ -756,6 +756,10 @@ kf12:
             HEADER      "k-resize", 0
 kresize:                                                    ; (Not a key: the window's size changed)
             CONSTCODE   KEY_RESIZE
+
+            HEADER      "k-focus", 0
+kfocus:                                                     ; (Not a key: the focus moved in its group, the window's
+            CONSTCODE   KEY_FOCUS                           ;   number the next)
 
             HEADER      "k-shift-mask", 0
 kshiftmask:

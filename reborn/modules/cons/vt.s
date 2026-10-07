@@ -89,6 +89,7 @@ vr:         .res        2                                   ;   and another (a r
 vch:        .res        1                                   ; The byte being parsed
 vt_a:       .res        2                                   ; Scratch
 vmap:       .res        2                                   ; The loaded window's screen's map (vw_maps)
+vk:         .res        2                                   ; (vt_key's: a window's answers)
 
 .bss
 vs_first:                                                   ; ---- The loaded window's state (VS_N bytes)
@@ -1236,16 +1237,18 @@ st_osc:
 
 ; vt_a = window .A's label (lbl_buf)
 lbl_at:
+            stz         vt_a + 1
             asl
             asl
             asl
             asl
             asl
+            rol         vt_a + 1
             clc
             adc         #<lbl_buf
             sta         vt_a
-            lda         #>lbl_buf
-            adc         #0
+            lda         vt_a + 1
+            adc         #>lbl_buf
             sta         vt_a + 1
             rts
 
@@ -5594,17 +5597,23 @@ vt_key:
             lda         ans_n,X
             cmp         #ANS_SIZE
             bcs         @full
-            txa                                             ; (Its place: the window * ANS_SIZE + n)
+            stz         vk + 1                              ; (Its place: the window * ANS_SIZE + n)
+            txa
             asl
             asl
             asl
             asl
             asl
+            rol         vk + 1
             clc
-            adc         ans_n,X
-            tay
+            adc         #<ans_buf
+            sta         vk
+            lda         vk + 1
+            adc         #>ans_buf
+            sta         vk + 1
+            ldy         ans_n,X
             pla
-            sta         ans_buf,Y
+            sta         (vk),Y
             inc         ans_n,X
             inc         TASK_EVENT
             ply
@@ -5616,7 +5625,7 @@ vt_key:
             plx
             rts
 
-.assert     ANS_SIZE = 32 .and LBL_SIZE = 32 .and WIN_MAX * ANS_SIZE <= 256, error, "vt_key and lbl_at: 32 bytes a window"
+.assert     ANS_SIZE = 32 .and LBL_SIZE = 32 .and WIN_MAX <= 16, error, "vt_key and lbl_at: 32 bytes a window"
 
 .segment "RODATA2"
 ; ****************************************************************************

@@ -48,8 +48,13 @@
 ; its label, %p its program, %s its status line (DECSASD's, or status's), %w and %G the windows, %c %r its size, %m its
 ; modes, %t %d the time and the date, %L the LEDs, %= the rest to the right, %[...] SGR's rendition, %% a %); vt.s
 ; draws them.  A window's size is the smaller of the terminals it's shown on, each less its chrome rows there.
-; The keys: Ctrl-] then a digit shows that window (Ctrl-] n the next; Ctrl-] c asks for a new one, for /wnew's
-; reader; Ctrl-] h holds the window shown's output, its writers waiting, till Ctrl-] h again (the VT100's No Scroll);
+; The windows' groups (W5): a group a shell session.  Ctrl-] c asks for a new one (for /wnew's reader: wstart starts
+; a shell there); a window made by wctl's new joins the writer's window's group (new group: one of its own).  Each
+; group keeps the window it last showed (its focus).  The keys: Ctrl-] then a digit shows that window; Ctrl-] Tab,
+; or Ctrl-Tab (xterm's ESC [ 27 ; 5 ; 9 ~, CSI u's ESC [ 9 ; 5 u: the terminal's), the group's next window, Ctrl-]
+; Shift-Tab or Ctrl-Shift-Tab its previous (a raw reader of the group's windows gets KEY_FOCUS and the window's
+; number); Ctrl-] n and Ctrl-] p the next and previous group; Ctrl-] x the window shown's group a hangup note;
+; Ctrl-] h holds the window shown's output, its writers waiting, till Ctrl-] h again (the VT100's No Scroll);
 ; Ctrl-] Ctrl-] is a Ctrl-]); Ctrl-C and Ctrl-\ are notes (interrupt, kill) to the shown window's note
 ; group, in either mode.  A window goes when the last of its cons fids closes (but window 0).
 ;
@@ -201,6 +206,7 @@ ST_N        = st_last - st_first
 n:          .res        2                                   ; Scratch
 m:          .res        2
 p:          .res        2
+qp:         .res        2                                   ; A window's key queue (iq_at)
 t2_napr:    .res        1                                   ; Timer 2's idle rounds (nap_set's: t2_next's, at once)
 cnt:        .res        1
 
@@ -222,6 +228,9 @@ w_jump:     .res        WIN_MAX                             ;   <> 0: scroll jum
 w_hold:     .res        WIN_MAX                             ;   <> 0: held (Ctrl-] h) ...
 w_rsz:      .res        WIN_MAX                             ;   <> 0: resized (KEY_RESIZE for its raw reader) ...
 w_raw:      .res        WIN_MAX                             ;   <> 0: raw (raw's, for its chrome's %m) ...
+w_grp:      .res        WIN_MAX                             ;   its group (0-15) ...
+w_kf:       .res        WIN_MAX                             ;   the window its group focused, + 1: KEY_FOCUS for its
+                                                            ;   raw reader (0: none) ...
 w_chr:      .res        WIN_MAX                             ;   its chrome on each terminal (CH_*: the serial port's
                                                             ;   in bits 0-2, the screen's in 4-6) ...
 w_rdr:      .res        WIN_MAX                             ;   the task that last read it, + 1 (0: none): %p ...
@@ -230,6 +239,16 @@ w_mon:      .res        WIN_MAX                             ;   <> 0: monitor (i
 w_hfmt:     .res        WIN_MAX * FMT_SIZE                  ;   its header's format, its footer's ...
 w_ffmt:     .res        WIN_MAX * FMT_SIZE
 w_stat:     .res        WIN_MAX * STAT_SIZE                 ;   and its status line (vt.s's DECSASD, status)
+g_used:     .res        WIN_MAX                             ; Each group: <> 0, it's there ...
+g_focus:    .res        WIN_MAX                             ;   its window focused (shown with the group)
+mk_grp:     .res        1                                   ; (w_make's: the group, $FF a new one)
+fr_w:       .res        1                                   ; (w_free's: the window)
+cr_g:       .res        1                                   ; (A group's entry, chr_render's)
+fid_new:    .res        SRV_FIDS                            ; Each wctl fid: the window its new made ($FF: none), its
+                                                            ;   next read's answer
+kw_st:      .res        1                                   ; The terminal's sequences the console takes: how far ...
+kw_n:       .res        1                                   ;   which number ...
+kw_p:       .res        3                                   ;   and them
 bar_pos:    .res        1                                   ; The bar: 0 none, BAR_TOP, BAR_BOTTOM ...
 bar_fmt:    .res        FMT_SIZE                            ;   its format
 def_chr:    .res        1                                   ; A new window's chrome, header and footer
@@ -285,9 +304,6 @@ ser_cols:   .res        1                                   ; The serial port's 
 ser_rows:   .res        1                                   ;   or told)
 lay_cols:   .res        1                                   ; The windows' size: the smaller of the terminals shown on
 lay_rows:   .res        1
-sz_st:      .res        1                                   ; The terminal's size coming in, ESC [ 8 ; R ; C t: how
-sz_r:       .res        1                                   ;   far (sz_seq's, then 4 the rows, 5 the columns) ...
-sz_c:       .res        1                                   ;   and them (sz_r, sz_c: in that order)
 pc_txbuf:   .res        PC_TX_SIZE                          ; /pc: the frame going out ...
 pc_rxbuf:   .res        PC_RX_SIZE                          ;   the frame come in ...
 pc_req:     .res        RQ_NAMELEN + 1                      ;   the request out, as its client asked it ...
@@ -316,10 +332,10 @@ pc_k:       .res        1
 pc_crc:     .res        2                                   ;   a CRC
 
 .assert     ST_N <= ST_SIZE, error, "A window's editor state is bigger than ST_SIZE"
-.assert     WIN_MAX * FMT_SIZE <= 256 .and FMT_SIZE = 64 .and STAT_SIZE = 128 .and LBL_SIZE = 32, error, "fmt_at, stat_at, lbl_ptr"
+.assert     WIN_MAX <= 16 .and FMT_SIZE = 64 .and STAT_SIZE = 128 .and LBL_SIZE = 32, error, "fmt_at, stat_at, lbl_ptr"
 .assert     PC_TX_SIZE <= 256 .and PC_RX_SIZE <= 256, error, "/pc's frames: 8-bit indexes"
 .assert     RQ_NAMELEN < RQ_SIZE .and RQ_FLAGS < RQ_NAMELEN, error, "/pc: pc_same's fields"
-.assert     WIN_MAX * INQ_SIZE = 256 .and WIN_MAX = 4, error, "iq_put and iq_get: 4 queues of 64, a page"
+.assert     INQ_SIZE = 64 .and WIN_MAX <= 16, error, "iq_at: 64 bytes a window, 4 a page"
 
 .code
 ; ****************************************************************************
@@ -335,6 +351,13 @@ init:
             ldx         #WIN_MAX - 1
 :
             stz         w_used,X
+            stz         g_used,X
+            dex
+            bpl         :-
+            ldx         #SRV_FIDS - 1                       ; (wctl's fids: no new's answers)
+            lda         #$FF
+:
+            sta         fid_new,X
             dex
             bpl         :-
             ldx         #pc_last - pc_first - 1
@@ -357,7 +380,7 @@ init:
             stz         scr_cols
             stz         scr_rows
             stz         scr_chk
-            stz         sz_st
+            stz         kw_st
             lda         #$FF
             sta         scr_cfd
             lda         #BAR_TOP                            ; The chrome: the bar at the top; a window's all of it
@@ -380,8 +403,8 @@ init:
             dex
             bpl         :-
             FAR2        vt_init
-            ldx         #0                                  ; Window 0: shown, init's group's
-            jsr         w_init
+            lda         #$FF                                ; Window 0: shown, init's note group's, a group of
+            jsr         w_make                              ;   its own (0)
             bcs         @done
             lda         #INIT_TASK
             sta         win_grp
@@ -455,8 +478,8 @@ irq:
             bmi         @ser
             stz         pfx                                 ; The key after Ctrl-]: a digit is the window that has
             tax                                             ;   the keys now (its note group Ctrl-C's: the serve
-            eor         #'0'                                ;   entry acts on the rest).  ($30-$33 alone give 0-3)
-            cmp         #WIN_MAX
+            eor         #'0'                                ;   entry acts on the rest).  ($30-$39 alone give 0-9)
+            cmp         #10
             bcs         :+
             tay
             lda         w_group,Y
@@ -637,7 +660,9 @@ distribute:
             rts
 @byte:
             jsr         rx_get
-            bcs         @done
+            bcc         :+
+            rts
+:
             ldx         pc_rxs                              ; A /pc frame's?
             bne         @frame
             cmp         #PC_MARK
@@ -654,43 +679,71 @@ distribute:
             bra         @byte
 
 @key:
-            jsr         sz_watch
-            ldx         w_in
+            pha                                             ; (To the window; then the console's look: its decoder
+            ldx         w_in                                ;   drops the sequences that aren't keys)
             jsr         iq_put
-            bra         @byte
+            pla
+            jsr         kw_watch
+            jmp         @byte
 
-@command:                                                   ; The key after Ctrl-]
+@command:                                                   ; The key after Ctrl-] (d_pfx 1), or its ESC, [ (2, 3)
+            ldx         d_pfx
+            cpx         #1
+            bne         @seq
             stz         d_pfx
             cmp         #CTRL_RB                            ; (Ctrl-] again: a Ctrl-])
             beq         @key
-            cmp         #'c'                                ; c: a window wanted (for /wnew's reader)
+            cmp         #ESC                                ; ESC: Shift-Tab's, ESC [ Z
+            bne         :+
+            inc         d_pfx
+            jmp         @byte
+:
+            cmp         #HT                                 ; Tab: the group's next window
+            bne         :+
+            jsr         win_next
+            jmp         @byte
+:
+            cmp         #'c'                                ; c: a group wanted (for /wnew's reader)
             beq         @new
-            cmp         #'n'                                ; n: the next window
-            beq         @next
+            cmp         #'n'                                ; n, p: the next group, the previous
+            bne         :+
+            jsr         grp_next
+            jmp         @byte
+:
+            cmp         #'p'
+            bne         :+
+            jsr         grp_prev
+            jmp         @byte
+:
             cmp         #'h'                                ; h: the window shown held, or not
             beq         @hold
+            cmp         #'x'                                ; x: its note group a hangup
+            beq         @close
             sec                                             ; A digit: that window
             sbc         #'0'
-            cmp         #WIN_MAX
+            cmp         #10
             bcs         @same
             tax
             lda         w_used,X
             beq         @same
             jsr         w_show
-            bra         @byte
+            jmp         @byte
 
-@next:
-            ldx         w_in
+@seq:
+            cpx         #2                                  ; (Ctrl-] ESC: [ next)
+            bne         :+
+            cmp         #'['
+            bne         @off
+            inc         d_pfx
+            jmp         @byte
 :
-            inx
-            cpx         #WIN_MAX
-            bcc         :+
-            ldx         #0
-:
-            lda         w_used,X
-            beq         :--
-            jsr         w_show
-            bra         @byte
+            stz         d_pfx                               ; (Ctrl-] ESC [: Z, the group's previous window)
+            cmp         #'Z'
+            bne         @off
+            jsr         win_prev
+@off:
+            stz         d_pfx
+            jmp         @byte
 
 @hold:
             ldx         w_in
@@ -700,6 +753,14 @@ distribute:
             lda         #3                                  ; (Held: in its chrome's %m)
             tsb         chr_dirty
             inc         TASK_EVENT                          ; (Its writers look again)
+            jmp         @byte
+
+@close:
+            ldx         w_in
+            lda         w_group,X
+            ora         #NOTE_GROUP
+            ldx         #NOTE_HANGUP
+            jsr         NOTE_POST
             jmp         @byte
 
 @new:
@@ -715,9 +776,105 @@ distribute:
 @done:
             rts
 
+; The shown window's group's next window (Ctrl-Tab, Ctrl-] Tab), or its previous (win_prev): shown
+win_next:
+            ldx         w_in
+            lda         w_grp,X
+            sta         n
+:
+            inx
+            cpx         #WIN_MAX
+            bcc         :+
+            ldx         #0
+:
+            lda         w_used,X
+            beq         :--
+            lda         w_grp,X
+            cmp         n
+            bne         :--
+            bra         win_go
+
+win_prev:
+            ldx         w_in
+            lda         w_grp,X
+            sta         n
+:
+            dex
+            bpl         :+
+            ldx         #WIN_MAX - 1
+:
+            lda         w_used,X
+            beq         :--
+            lda         w_grp,X
+            cmp         n
+            bne         :--
+win_go:
+            cpx         w_in                                ; (Itself: the group's only one)
+            beq         :+
+            jmp         w_show
+:
+            rts
+
+; The next group (Ctrl-] n), or the previous (grp_prev): its focused window shown
+grp_next:
+            ldx         w_in
+            ldy         w_grp,X
+:
+            iny
+            cpy         #WIN_MAX
+            bcc         :+
+            ldy         #0
+:
+            lda         g_used,Y
+            beq         :--
+            ldx         g_focus,Y
+            bra         win_go
+
+grp_prev:
+            ldx         w_in
+            ldy         w_grp,X
+:
+            dey
+            bpl         :+
+            ldy         #WIN_MAX - 1
+:
+            lda         g_used,Y
+            beq         :--
+            ldx         g_focus,Y
+            bra         win_go
+
+; Window .X focused in its group: each of the group's windows' raw reader told (KEY_FOCUS, then .X).  Keeps .X
+focus_tell:
+            ldy         #WIN_MAX - 1
+@w:
+            lda         w_used,Y
+            beq         @next
+            lda         w_grp,Y
+            cmp         w_grp,X
+            bne         @next
+            txa
+            inc         a
+            sta         w_kf,Y
+@next:
+            dey
+            bpl         @w
+            inc         TASK_EVENT
+            rts
+
 ; Window .X shown, with the keys: painted on both terminals (pump)
 w_show:
+            ldy         w_in                                ; (Within the group shown: its raw readers told)
+            lda         w_grp,Y
+            cmp         w_grp,X
+            bne         :+
+            cpx         w_in
+            beq         :+
+            jsr         focus_tell
+:
             stx         w_in
+            ldy         w_grp,X                             ; (Its group's focus)
+            txa
+            sta         g_focus,Y
             stz         w_act,X                             ; (Its activity seen)
             lda         w_group,X
             sta         win_grp
@@ -727,17 +884,44 @@ w_show:
             inc         TASK_EVENT                          ; (Its readers and writers, and the last one's, look
             rts                                             ;   again)
 
-; A window made: the lowest free.  OUT: C = 0, .X = it; or C = 1, .A = E_NOMEM
+; A window made: the lowest free, in group .A ($FF: a group of its own, the lowest free).  OUT: C = 0, .X = it; or
+; C = 1, .A = E_NOMEM
 w_make:
+            sta         mk_grp
             ldx         #0
 :
             lda         w_used,X
-            beq         w_init
+            beq         @free
             inx
             cpx         #WIN_MAX
             bcc         :-
             lda         #E_NOMEM
             sec
+            rts
+@free:
+            jsr         w_init
+            bcs         @done
+            lda         mk_grp
+            bpl         @in
+            ldy         #0                                  ; (A group of its own: groups are fewer than windows)
+:
+            lda         g_used,Y
+            beq         :+
+            iny
+            bra         :-
+:
+            tya
+            sta         w_grp,X
+            lda         #1
+            sta         g_used,Y
+            txa
+            sta         g_focus,Y
+            clc
+            rts
+@in:
+            sta         w_grp,X
+            clc
+@done:
             rts
 
 ; Window .X, new: its screen (vt.s: three banks), empty; init's group's.  OUT: C = 0; or C = 1, .A = E_NOMEM.
@@ -753,6 +937,7 @@ w_init:
             rts
 :
             stz         w_raw,X                             ; Its chrome's state: its formats the defaults
+            stz         w_kf,X
             stz         w_rdr,X
             stz         w_act,X
             stz         w_mon,X
@@ -816,11 +1001,42 @@ w_free:
             lda         #$FF
             sta         lw
 :
-            cpx         w_in
-            bne         :+
-            ldx         #0
-            jsr         w_show
+            stx         fr_w                                ; Its group: gone with its last window, else its focus
+            ldy         w_grp,X                             ;   another of them if it was this one
+            sty         n
+            ldx         #WIN_MAX - 1
+@any:
+            lda         w_used,X
+            beq         @nx
+            lda         w_grp,X
+            cmp         n
+            beq         @left
+@nx:
+            dex
+            bpl         @any
+            ldy         n
+            lda         #0
+            sta         g_used,Y
+            bra         @shown
+@left:
+            ldy         n
+            lda         g_focus,Y
+            cmp         fr_w
+            bne         @shown
+            txa
+            sta         g_focus,Y
+@shown:
+            lda         fr_w                                ; Shown: its group's focus now, or (gone) the next
+            cmp         w_in                                ;   group's
+            bne         @done
+            ldy         n
+            lda         g_used,Y
+            beq         :+
+            ldx         g_focus,Y
+            jmp         w_show
 :
+            jmp         grp_next
+@done:
             rts
 
 ; Window .A's editor state loaded (st_*, ln_buf), the one that was, back to its own place first
@@ -867,17 +1083,19 @@ load:
 
 ; p = window .X's editor state (st_addr), or its line (ln_addr).  Keeps .X
 st_addr:
+            stz         p + 1
             txa
             asl
             asl
             asl
             asl
             asl
+            rol         p + 1
             clc
             adc         #<w_state
             sta         p
-            lda         #>w_state
-            adc         #0
+            lda         p + 1
+            adc         #>w_state
             sta         p + 1
             rts
 
@@ -895,7 +1113,7 @@ ln_addr:
             sta         p + 1
             rts
 
-.assert     ST_SIZE = 32 .and WIN_MAX * ST_SIZE <= 256 .and LINE_MAX + 1 = 128, error, "st_addr and ln_addr: 32 and 128 bytes a window"
+.assert     ST_SIZE = 32 .and WIN_MAX <= 16 .and LINE_MAX + 1 = 128, error, "st_addr and ln_addr: 32 and 128 bytes a window"
 
 ; Key .A into window .X's queue (dropped if it's full).  Keeps .X
 iq_put:
@@ -906,14 +1124,10 @@ iq_put:
             cmp         w_iqt,X
             beq         @full
             sta         n
-            txa                                             ; (Its queue: 64 * the window)
-            lsr
-            ror
-            ror
-            ora         w_iqh,X
-            tay
+            jsr         iq_at
+            ldy         w_iqh,X
             pla
-            sta         inq,Y
+            sta         (qp),Y
             lda         n
             sta         w_iqh,X
             rts
@@ -928,12 +1142,8 @@ iq_get:
             lda         w_iqt,X
             cmp         w_iqh,X
             beq         @none
-            txa
-            lsr
-            ror
-            ror
-            ora         w_iqt,X
-            tay
+            jsr         iq_at
+            ldy         w_iqt,X
             lda         w_iqt,X
             inc         a
             and         #INQ_SIZE - 1
@@ -943,12 +1153,34 @@ iq_get:
             stz         kbd_wait
             inc         TASK_EVENT
 :
-            lda         inq,Y
+            lda         (qp),Y
             clc
             rts
 
 @none:
             sec
+            rts
+
+; qp = window .X's key queue (inq + INQ_SIZE * it).  Keeps .X
+iq_at:
+            txa
+            lsr
+            lsr
+            sta         qp + 1
+            txa
+            and         #3
+            asl
+            asl
+            asl
+            asl
+            asl
+            asl
+            clc
+            adc         #<inq
+            sta         qp
+            lda         qp + 1
+            adc         #>inq
+            sta         qp + 1
             rts
 
 ; .A, a byte of the loaded window's output (its line editor's echo: edit has made sure of the room, w_room), to its
@@ -1310,73 +1542,108 @@ ser_size:
             sec
             rts
 
-; The serial port's terminal telling its size, watched for as the keys go to the window: ESC [ 8 ; R ; C t (xterm's
-; answer to ESC [ 18 t, and the PC tool's, unasked, as its window changes).  The window's key decoder drops it.
-; IN: .A, the key.  Keeps .A.  Modifies .X, .Y, n, p
-sz_watch:
-            pha
-            ldx         sz_st
+; The serial port's terminal's sequences the console takes, watched for as the keys go to the window (whose decoder
+; drops them: they aren't keys): ESC [ 8 ; R ; C t, its size (xterm's answer to ESC [ 18 t, and the PC tool's,
+; unasked); Ctrl-Tab and Ctrl-Shift-Tab, the group's next and previous window: xterm's ESC [ 27 ; 5 ; 9 ~ (6:
+; shifted) and CSI u's ESC [ 9 ; 5 u.  IN: .A, the key.  Modifies .A, .X, .Y, n, p
+kw_watch:
+            ldx         kw_st
             cmp         #ESC                                ; (An ESC starts one, always)
-            beq         @esc
-            cpx         #0
-            beq         @done
-            cpx         #4
-            bcs         @num
-            cmp         sz_seq - 1,X                        ; ESC, then [ 8 ;
-            bne         @reset
-            inc         sz_st
-            stz         sz_r
-            stz         sz_c
-            bra         @done
-@num:
-            cmp         #';'                                ; The rows; the columns
             bne         :+
-            cpx         #4
-            bne         @reset
-            inc         sz_st
-            bra         @done
+            lda         #1
+            sta         kw_st
+            rts
 :
-            cmp         #'t'
-            beq         @end
-            sec
-            sbc         #'0'
-            cmp         #10
+            cpx         #0
+            bne         :+
+            rts
+:
+            cpx         #1
+            bne         @csi
+            cmp         #'['
+            beq         :+
+            stz         kw_st
+            rts
+:
+            inc         kw_st
+            stz         kw_n
+            stz         kw_p
+            stz         kw_p + 1
+            stz         kw_p + 2
+            rts
+@csi:
+            cmp         #';'                                ; Its numbers, three at most
+            bne         :+
+            ldx         kw_n
+            cpx         #2
             bcs         @reset
-            ldy         sz_r - 4,X
+            inc         kw_n
+            rts
+:
+            cmp         #'0'
+            bcc         @final
+            cmp         #'9' + 1
+            bcs         @final
+            and         #$0F
+            ldx         kw_n
+            ldy         kw_p,X
             sty         p
             jsr         dec_add
-            sta         sz_r - 4,X
-            bra         @done
-@end:
-            cpx         #5
-            bne         @reset
-            ldx         sz_c
-            lda         sz_r
-            jsr         ser_size
+            sta         kw_p,X
+            rts
+@final:
+            stz         kw_st
+            cmp         #'t'
+            beq         @size
+            cmp         #'u'
+            beq         @csiu
+            cmp         #'~'
+            bne         @done
+            lda         kw_p                                ; ESC [ 27 ; 5 (6) ; 9 ~
+            cmp         #27
+            bne         @done
+            lda         kw_p + 2
+            cmp         #9
+            bne         @done
+            lda         kw_p + 1
+            bra         @tab
+@csiu:
+            lda         kw_p                                ; ESC [ 9 ; 5 (6) u
+            cmp         #9
+            bne         @done
+            lda         kw_p + 1
+@tab:
+            cmp         #5
+            bne         :+
+            jmp         win_next
+:
+            cmp         #6
+            bne         @done
+            jmp         win_prev
+@size:
+            lda         kw_p                                ; ESC [ 8 ; R ; C t
+            cmp         #8
+            bne         @done
+            ldx         kw_p + 2
+            lda         kw_p + 1
+            jmp         ser_size
 @reset:
-            stz         sz_st
-            bra         @done
-@esc:
-            lda         #1
-            sta         sz_st
+            stz         kw_st
 @done:
-            pla
             rts
 
 ; A fid made (srvlib): its window, from the spec (none: window 0); a window that isn't there: E_NOENT.  (R_DUP's
 ; keeps its old fid's.)  A consctl's counted.  IN: .X = the fid.  Keeps .X
 opened:
+            lda         #$FF                                ; (Its wctl new's answer: none)
+            sta         fid_new,X
             lda         z:srv_rq
             cmp         #R_OPEN
             bne         @ok
-            lda         TASK_INBOX + RQ_SPEC                ; A digit, or nothing
+            lda         TASK_INBOX + RQ_SPEC                ; Its number (decimal, 0-15), or nothing
             beq         @zero
-            sec
-            sbc         #'0'
-            cmp         #WIN_MAX
+            jsr         spec_num
             bcs         @noent
-            ldy         TASK_INBOX + RQ_SPEC + 1
-            bne         @noent
             tay
             lda         w_used,Y
             beq         @noent
@@ -1400,9 +1667,46 @@ opened:
             sec
             rts
 
+; .A = the window the spec names (decimal: one digit or two, below WIN_MAX).  OUT: C = 1, none.  Modifies .Y
+spec_num:
+            lda         TASK_INBOX + RQ_SPEC
+            sec
+            sbc         #'0'
+            cmp         #10
+            bcs         @no
+            ldy         TASK_INBOX + RQ_SPEC + 1
+            beq         @one
+            sta         n                                   ; (A second digit: the tens' first)
+            tya
+            sec
+            sbc         #'0'
+            cmp         #10
+            bcs         @no
+            ldy         TASK_INBOX + RQ_SPEC + 2
+            bne         @no
+            ldy         n
+            beq         @no                                 ; ("05": no)
+            sta         n + 1
+            lda         n
+            asl
+            asl
+            adc         n
+            asl
+            adc         n + 1
+@one:
+            cmp         #WIN_MAX
+            bcs         @no
+            clc
+            rts
+@no:
+            sec
+            rts
+
 ; A fid forgotten (srvlib): a consctl's count down; with its window's last, raw ends (Plan 9's: raw lasts while
 ; consctl is open, so a program that ends raw, or is ended, leaves its window cooked).  IN: .X = the fid
 clunked:
+            lda         #$FF
+            sta         fid_new,X
             lda         z:srv_e
             cmp         #ENT_CONSCTL
             bne         @done
@@ -1518,18 +1822,35 @@ h_wnew:
             jmp         again
 :
             stz         want_new
+            lda         #$FF                                ; (A group of its own: a shell session)
             jsr         w_make
             bcs         @done
             jsr         w_show                              ; (The user's: shown, as rio's new window is)
             txa
-            ora         #'0'
-            sta         iobuf
-            lda         #LF
-            sta         iobuf + 1
-            ldx         #2
+            jsr         num_buf                             ; ("N" and an LF)
             jmp         r_give
 
 @done:
+            rts
+
+; iobuf = .A in decimal and an LF; .X = their bytes
+num_buf:
+            ldx         #0
+            cmp         #10
+            bcc         :+
+            sbc         #10                                 ; (C = 1: 10-15)
+            pha
+            lda         #'1'
+            sta         iobuf
+            pla
+            inx
+:
+            ora         #'0'
+            sta         iobuf,X
+            inx
+            lda         #LF
+            sta         iobuf,X
+            inx
             rts
 
 ; /kbdin: a write's bytes are the window's keys, as if typed (Plan 9's rio's kbdin: forth's send writes a line, and
@@ -2186,27 +2507,54 @@ key_raw:
             clc
             rts
 :
+            lda         w_kf,X                              ; The group's focus moved: KEY_FOCUS, then the window
+            beq         :+                                  ;   (kp_buf's: key_next gives it next; not for keys vt)
+            stz         w_kf,X
+            ldy         kvt,X
+            bne         :+
+            dec         a
+            pha
+            txa
+            asl
+            asl
+            asl
+            tay
+            pla
+            sta         kp_buf,Y
+            lda         #1
+            sta         kp_n,X
+            stz         kp_i,X
+            lda         #KEY_FOCUS
+            clc
+            rts
+:
             lda         ans_r,X
             cmp         ans_n,X
             bcs         @byte
             sta         n                                   ; (Its place: the window * ANS_SIZE + those read)
             inc         ans_r,X
+            stz         m + 1
             txa
             asl
             asl
             asl
             asl
             asl
+            rol         m + 1
             clc
-            adc         n
-            tay
+            adc         #<ans_buf
+            sta         m
+            lda         m + 1
+            adc         #>ans_buf
+            sta         m + 1
+            ldy         n
             lda         ans_r,X                             ; (All read: none again)
             cmp         ans_n,X
             bne         :+
             stz         ans_r,X
             stz         ans_n,X
 :
-            lda         ans_buf,Y
+            lda         (m),Y
             clc
             rts
 
@@ -3180,8 +3528,13 @@ cr_dec:
             bpl         @digit
             rts
 
-cr_num:                                                     ; %n, %g: the window's number (its group's: W5)
+cr_num:                                                     ; %n: the window's number
             lda         w_in
+            jmp         cr_dec
+
+cr_grp:                                                     ; %g: its group's
+            ldx         w_in
+            lda         w_grp,X
             jmp         cr_dec
 
 cr_lbl:                                                     ; %l: its label
@@ -3197,16 +3550,16 @@ cr_stat:                                                    ; %s: its status lin
             jsr         stat_at
             jmp         cr_str
 
-cr_wins:                                                    ; %w: its group's windows (W4: itself)
-            ldx         w_in
-            jmp         cr_entry
-
-cr_groups:                                                  ; %G: the groups (W4: each window)
+cr_wins:                                                    ; %w: its group's windows
             stz         cr_k
             ldx         #0
 @win:
             lda         w_used,X
             beq         @next
+            ldy         w_in
+            lda         w_grp,X
+            cmp         w_grp,Y
+            bne         @next
             lda         cr_k
             beq         :+
             lda         #' '
@@ -3220,6 +3573,76 @@ cr_groups:                                                  ; %G: the groups (W4
             inx
             cpx         #WIN_MAX
             bcc         @win
+            rts
+
+cr_groups:                                                  ; %G: the groups
+            stz         cr_k
+            ldx         #0
+@grp:
+            lda         g_used,X
+            beq         @next
+            lda         cr_k
+            beq         :+
+            lda         #' '
+            jsr         cr_put
+:
+            inc         cr_k
+            phx
+            jsr         cr_gentry
+            plx
+@next:
+            inx
+            cpx         #WIN_MAX
+            bcc         @grp
+            rts
+
+; Group .X's entry (%G): its number, ! or + (any of its windows'), a space, its focused window's label; the shown
+; window's group reversed
+cr_gentry:
+            stx         cr_g
+            lda         cr_cf
+            pha
+            ldy         w_in
+            txa
+            cmp         w_grp,Y
+            bne         :+
+            lda         cr_cf
+            eor         #F_REV
+            sta         cr_cf
+:
+            txa
+            jsr         cr_dec
+            stz         n                                   ; (Its windows' activity)
+            ldx         #WIN_MAX - 1
+@w:
+            lda         w_used,X
+            beq         @nx
+            lda         w_grp,X
+            cmp         cr_g
+            bne         @nx
+            lda         w_act,X
+            ora         n
+            sta         n
+@nx:
+            dex
+            bpl         @w
+            lda         n
+            beq         @sp
+            ldy         #'!'
+            and         #ACT_BELL
+            bne         :+
+            ldy         #'+'
+:
+            tya
+            jsr         cr_put
+@sp:
+            lda         #' '
+            jsr         cr_put
+            ldy         cr_g
+            ldx         g_focus,Y
+            jsr         cr_label
+            pla
+            sta         cr_cf
             rts
 
 cr_cols:                                                    ; %c, %r: its size
@@ -3491,16 +3914,18 @@ cr_progx:                                                   ; Window .X's progra
 
 ; m = window .A's label (lbl_buf: LBL_SIZE a window)
 lbl_ptr:
+            stz         m + 1
             asl
             asl
             asl
             asl
             asl
+            rol         m + 1
             clc
             adc         #<lbl_buf
             sta         m
-            lda         #>lbl_buf
-            adc         #0
+            lda         m + 1
+            adc         #>lbl_buf
             sta         m + 1
             rts
 
@@ -3520,27 +3945,30 @@ stat_at:
 
 ; m = window .A's header's format (.Y = 0) or footer's (.Y = 1)
 fmt_at:
+            stz         m + 1                               ; (* FMT_SIZE: 64)
             asl
             asl
             asl
             asl
             asl
+            rol         m + 1
             asl
+            rol         m + 1
             cpy         #0
             bne         :+
             clc
             adc         #<w_hfmt
             sta         m
-            lda         #>w_hfmt
-            adc         #0
+            lda         m + 1
+            adc         #>w_hfmt
             sta         m + 1
             rts
 :
             clc
             adc         #<w_ffmt
             sta         m
-            lda         #>w_ffmt
-            adc         #0
+            lda         m + 1
+            adc         #>w_ffmt
             sta         m + 1
             rts
 
@@ -4307,8 +4735,9 @@ c_rawon:
             jsr         load
             lda         #1
             sta         raw
-            ldx         z:srv_id                            ; (A resize before it: not news to its reader)
-            stz         w_rsz,X
+            ldx         z:srv_id                            ; (A resize, the focus moved, before it: not news to
+            stz         w_rsz,X                             ;   its reader)
+            stz         w_kf,X
             jmp         raw_mark
 
 c_rawoff:
@@ -4631,12 +5060,38 @@ c_terminal:
             sec
             rts
 
-; wctl: new (a window), current N (window N shown)
+; wctl: new (a window in the writer's window's group; new group: in one of its own; a read of this fid then gives
+; its number), current N (window N shown)
 c_new:
-            jsr         w_make
-            bcs         :+
-            clc
+            lda         z:srv_argn
+            beq         @join
+            lda         srv_argp
+            sta         p
+            lda         srv_argp + 1
+            sta         p + 1
+            lda         #<s_group_w
+            ldx         #>s_group_w
+            jsr         word_is
+            beq         :+
+            lda         #E_INVAL
+            sec
+            rts
 :
+            lda         #$FF
+            bra         @make
+@join:
+            ldx         z:srv_id
+            lda         w_grp,X
+@make:
+            jsr         w_make
+            bcs         @done
+            txa
+            ldx         TASK_INBOX + RQ_FID
+            sta         fid_new,X
+            lda         #3                                  ; (The chrome's lists)
+            tsb         chr_dirty
+            clc
+@done:
             rts
 
 c_current:
@@ -4658,16 +5113,49 @@ c_current:
             sec
             rts
 
-; wctl's state: the windows, a line each: "N", and " *" for the one shown
+; wctl's state: the windows, a line each: "N G C R" (its number, its group, its columns and rows), and " *" for the
+; one shown.  After a new on this fid: the window it made ("N"), the once
 gen_wctl:
+            ldx         TASK_INBOX + RQ_FID
+            lda         fid_new,X
+            bmi         @list
+            pha
+            lda         #$FF
+            sta         fid_new,X
+            pla
+            ldx         #0
+            jsr         srv_tputdec
+            lda         #LF
+            jsr         srv_tputc
+            clc
+            rts
+@list:
             stz         cnt
 @window:
             ldx         cnt
             lda         w_used,X
             beq         @next
             txa
-            ora         #'0'
+            ldx         #0
+            jsr         srv_tputdec
+            lda         #' '
             jsr         srv_tputc
+            ldx         cnt
+            lda         w_grp,X
+            ldx         #0
+            jsr         srv_tputdec
+            lda         #' '
+            jsr         srv_tputc
+            ldx         cnt
+            FAR2        vt_size                             ; (.A: its columns, .X: its rows)
+            phx
+            ldx         #0
+            jsr         srv_tputdec
+            lda         #' '
+            jsr         srv_tputc
+            pla
+            ldx         #0
+            jsr         srv_tputdec
             ldx         cnt
             cpx         w_in
             bne         :+
@@ -5487,7 +5975,7 @@ s_foot_def: .byte       "%s"
             .res        FMT_SIZE - (* - s_foot_def), 0
 cr_codes:   .byte       "nglpswGcrmtdL=[%"                  ; chr_render's codes, and theirs
 CRC_N       = * - cr_codes
-cr_vec:     .word       cr_num, cr_num, cr_lbl, cr_prog, cr_stat, cr_wins, cr_groups, cr_cols, cr_rows, cr_modes
+cr_vec:     .word       cr_num, cr_grp, cr_lbl, cr_prog, cr_stat, cr_wins, cr_groups, cr_cols, cr_rows, cr_modes
             .word       cr_time, cr_date, cr_leds, cr_right, cr_sgr, cr_pct
 cr_tens:    .byte       1, 10, 100
 sgr_on:     .byte       0, F_BOLD, F_DIM, 0, F_UL, F_BLINK, F_BLINK, F_REV, F_INVIS, 0      ; (SGR 0-9's)
@@ -5508,7 +5996,6 @@ s_terminal_w: .byte     "terminal", 0
 s_size_w:   .byte       "size", 0
 s_size:     .byte       LF, "size ", 0
 s_ask:      .byte       ESC, "[18t", 0
-sz_seq:     .byte       "[8;"
 s_new_w:    .byte       "new", 0
 s_current_w: .byte      "current", 0
 s_rawon:    .byte       "rawon", LF, 0
