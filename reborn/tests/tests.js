@@ -125,6 +125,7 @@ const RC_LINES = [
   ["echo $x(2-) $x(1-2)","b c a b"],
   ["echo one >/ram/f; echo two >>/ram/f; cat /ram/f","one\ntwo"],
   ["cat </ram/f >[2=1]","one\ntwo"],
+  ["wc <[0=]","wc: -: bad file descriptor\n      0       0       0"],
   ["{echo b >[1=3]} >[3]/ram/y >/dev/null; cat /ram/y","b"],
   ["echo piped | cat","piped"],
   ["echo a b | cat | cat","a b"],
@@ -1245,8 +1246,10 @@ module.exports = {
         return [{ what: 'a RAM program loaded from a card (t_big, ' + n + ' bytes: SPAWN to its first instruction), a byte', from: '<big', to: 'big>',
           per: n, max: o => o.clock === 2 ? 320 + 64 : 320 },
         { what: 'the same from the RAM disk, a byte', from: '<rbig', to: 'rbig>', per: n, max: 90 },
+        // (A mark is seen as its text goes out on the line, at the boot's 9600: so a time here moves in steps of a
+        // character's, some 3,700 cycles, as the work before it shifts by a few.  SPAWN's own: about 45,000)
         { what: 'SPAWN of a module in place (#m/t_child), the caller\'s time', from: '<msp', to: 'msp>', minus: ['<b0', 'b0>'],
-          per: 1, max: 45000 },
+          per: 1, max: 49000 },
         { what: 'the same by /bin/t_child (the card\'s bin first, then #m/bin)', from: '<sp', to: 'sp>', minus: ['<b0', 'b0>'], per: 1,
           max: 110000 }];
       },

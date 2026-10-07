@@ -86,6 +86,24 @@ K_SPAWN:
             bcc         :+
             rts
 :
+            lda         L_FLAGS                             ; The map's fds: none is the file (it took the lowest
+            and         #SPAWN_FDMAP                        ;   free fd, which the map may name: closed, as it
+            bne         :+                                  ;   was before the open; rc's <[0=]).  The default
+            lda         L_FD                                ;   map's are 0-2
+            cmp         #3
+            bcs         @mapped
+:
+            ldx         #FD_MAX - 1
+:
+            lda         TA_SCRATCH + SP_MAP,X
+            cmp         L_FD
+            bne         :+
+            lda         #$FF
+            sta         TA_SCRATCH + SP_MAP,X
+:
+            dex
+            bpl         :--
+@mapped:
             ldx         #HX_NAME_MAX                        ; Its name, for the kernel task (and ended)
             stz         TA_SCRATCH + SP_NAME,X
 :
