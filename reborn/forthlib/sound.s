@@ -9,7 +9,8 @@
 ; note's MIDI number, by its name) and tune (notes and their beats played).  The two volumes: snd-volume the
 ; master's, snd-level a channel's (snd-vol, its old name).  snd-regs reads the registers back.  snd-freq, snd-glide
 ; (the driver's commands), snd-lfo, snd-sens and snd-noise (the chip's own registers) as C's and hylang's.
-;   Songs are play's (the program, play song.zsm at the shell): snd-play runs it.
+;   Songs are play's (the program, play song.zsm at the shell): snd-play runs it; and lines of MML (the score
+; language's, play -m and -c): snd-mml, snd-chord.
 
 .include "forthlib.inc"
 
@@ -31,6 +32,9 @@ regs_n:     .res        2                                   ;   and its bytes so
 play_buf:   .res        224                                 ; SND-PLAY: play's command line ...
 play_len:   .res        1                                   ;   its length ...
 play_times: .res        2                                   ;   and the times asked for
+line_flag:  .res        2                                   ; SND-MML, SND-CHORD: play's flag (-m, -c) ...
+line_text:  .res        2                                   ;   the MML ...
+line_len:   .res        1                                   ;   its length
 .code
 
 ; Its start: neither open
@@ -436,7 +440,7 @@ sndplay:                                                    ; ( c-addr u times -
             bne         :+
             lda         play_times
             cmp         #2
-            bcc         @run
+            bcc         play_run
 :
             lda         #' '
             jsr         play_char
@@ -461,12 +465,12 @@ sndplay:                                                    ; ( c-addr u times -
             ldy         #0
 :
             cpy         tmp
-            beq         @run
+            beq         play_run
             lda         (w),y
             jsr         play_char
             iny
             bra         :-
-@run:
+play_run:
             lda         #<play_buf                          ; Run, as run does
             ldy         #>play_buf
             PUSHAY
@@ -484,6 +488,74 @@ sndplay:                                                    ; ( c-addr u times -
             ldy         tmp2 + 1
             PUSHAY
             rts
+
+            HEADER      "snd-mml", 0
+sndmml:                                                     ; ( ch c-addr u -- status ): a line of MML (the score
+            lda         #<s_m                               ;   language's) on channel ch, its own instrument if it
+            ldy         #>s_m                               ;   names none, played to its end (play -m): play's
+            bra         snd_line                            ;   exit code
+
+            HEADER      "snd-chord", 0
+sndchord:                                                   ; ( ch c-addr u -- status ): its notes at once, a channel
+            lda         #<s_c                               ;   each from ch, with the commands before each (play -c)
+            ldy         #>s_c
+; play, the flag at .A/.Y, the channel, the MML: run
+snd_line:
+            sta         line_flag
+            sty         line_flag + 1
+            jsr         str_wt                              ; ( ch c-addr u -- ch ): the MML
+            lda         tmp
+            cmp         #200
+            bcc         :+
+            lda         #E_NAMETOOLONG
+            jmp         throw_os
+:
+            sta         line_len
+            lda         w
+            sta         line_text
+            lda         w + 1
+            sta         line_text + 1
+            stz         play_len
+            lda         #<s_play
+            ldy         #>s_play
+            jsr         play_add
+            lda         line_flag
+            ldy         line_flag + 1
+            jsr         play_add
+            jsr         u_text                              ; ( ch -- c-addr u ): its channel
+            lda         dlo + 1,x
+            sta         w
+            lda         dhi + 1,x
+            sta         w + 1
+            lda         dlo,x
+            sta         tmp
+            inx
+            inx
+            ldy         #0
+:
+            cpy         tmp
+            beq         :+
+            lda         (w),y
+            jsr         play_char
+            iny
+            bra         :-
+:
+            lda         #' '
+            jsr         play_char
+            lda         line_text                           ; The MML
+            sta         w
+            lda         line_text + 1
+            sta         w + 1
+            ldy         #0
+:
+            cpy         line_len
+            beq         :+
+            lda         (w),y
+            jsr         play_char
+            iny
+            bra         :-
+:
+            jmp         play_run
 
 ; play_buf: string .A/.Y (zero-terminated) added; .A, a character added.  Keep .Y
 play_add:
@@ -510,6 +582,8 @@ play_char:
             rts
 
 s_play:     .byte       "play ", 0
+s_m:        .byte       "-m ", 0
+s_c:        .byte       "-c ", 0
 s_loop:     .byte       "-l ", 0
 s_snd:      .byte       "/dev/snd", 0
 s_sndctl:   .byte       "/dev/sndctl", 0

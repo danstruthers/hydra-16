@@ -13,7 +13,8 @@
 ** /dev/snd (and /dev/sndctl) the first time; they return 0, or -1 with errno set (EBUSY: a channel another
 ** program has claimed).
 **
-** Notes by name and tunes: snd_note_of, snd_tune (as HyForth's note-of and tune, and hylang's).
+** Notes by name and tunes: snd_note_of, snd_tune (as HyForth's note-of and tune, and hylang's).  Lines of MML, the
+** score language's (the player's: play -m, play -c): snd_mml, snd_chord.
 **
 ** Songs: snd_play starts one (a ZSM file: the Commander X16's format, which Furnace exports) in the system's
 ** player, play, a task of its own, and returns at once with its task: hy_wait waits for its end, and hy_note's
@@ -73,6 +74,13 @@ int __fastcall__ snd_regs (unsigned char* regs);                        /* All 2
 int __fastcall__ snd_play (const char* song, unsigned char loops);      /* A song (ZSM) in the player, play, and
                                                                         **   its loop that many more times
                                                                         **   (SND_FOREVER): its task, or -1 */
+
+int __fastcall__ snd_mml (unsigned char ch, const char* mml);           /* A line of MML (the score language's:
+                                                                        **   play -m) on channel ch, its own
+                                                                        **   instrument if it names none, played
+                                                                        **   to its end: play's exit code, or -1 */
+int __fastcall__ snd_chord (unsigned char ch, const char* notes);       /* Its notes at once, a channel each from
+                                                                        **   ch (play -c) */
 
 int __fastcall__ snd_note_of (const char* name);                        /* A note's MIDI number by its name: C4
                                                                         **   60, C#4 and Db4 61, A4 69, B-1 11;

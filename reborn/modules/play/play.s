@@ -3,7 +3,9 @@
 ; /dev/snd: to its end once; with n, its loop n more times; -l, its loop till it's stopped (Ctrl-C).  The old
 ; system's player (os_rom/sound/player.s), a program now.  A song whose name ends in .mml is a score (hysong.js's
 ; language: mml.inc), compiled as it plays into the stream hysong.js would make of it; play -o score.mml song.zsm
-; writes that stream to a ZSM file instead.
+; writes that stream to a ZSM file instead.  play [-x] -m ch mml ... plays a line of MML on a channel (its own
+; instrument, if the line doesn't name one), play [-x] -c ch notes ... a chord (a note a channel, from ch); -x, the
+; X16's MML (FMPLAY's, FMCHORD's).
 ;   The header (16 bytes): "zm", a version, the loop point (3 bytes: an offset in the file; 0: none, and a loop is
 ; the whole song), the PCM table's (ignored), the FM channels it uses (claimed: /dev/sndctl's claim), the PSG's
 ; (ignored), the tick rate (Hz; 0: 60), 2 reserved.  Then the stream: $00-$3F a PSG write (skipped: the Hydra has
@@ -34,6 +36,9 @@ FRAME_MAX       = 254           ; A tick's pairs, a write's at most (127 of them
 FOREVER         = $FF           ; loops: the loop till it's stopped
 F_LOOP          = $01           ; -l
 F_OUT           = $02           ; -o
+F_LINE          = $04           ; -m
+F_CHORD         = $08           ; -c
+F_X16           = $10           ; -x
 
 .zeropage
 next:       .res        4                                   ; The next tick's time: a fraction (2), then the tick
@@ -66,6 +71,11 @@ main:
             lda         (tl_arg)                            ; The song
             bne         :+
             jmp         tl_badusage
+:
+            lda         tl_flags                            ; -m ch mml, -c ch notes: made a score
+            and         #F_LINE | F_CHORD
+            beq         :+
+            jmp         mml_line
 :
             MOVR        song, tl_arg
             jsr         mml_name
@@ -122,7 +132,7 @@ main:
             stz         loop + 2
             lda         #HDR_SIZE
             sta         loop
-            bra         @sound
+            bra         play_sound
 :
             LDR         r0, hdr
             LDR         r1, HDR_SIZE
@@ -150,7 +160,7 @@ main:
             lda         #HDR_SIZE
             sta         loop
 :
-@sound:
+play_sound:
             LDR         r0, s_snd                           ; The sound driver's files
             lda         #O_WRITE
             jsr         OPEN
@@ -575,8 +585,8 @@ s_name:     .byte       "play: ", 0
 s_colon:    .byte       ": ", 0
 s_nl:       .byte       LF, 0
 tl_name:    .byte       "play", 0
-tl_flagset: .byte       "lo", 0
-tl_usage:   .byte       "play [-l] song [n]; play -o score.mml song.zsm", 0
+tl_flagset: .byte       "lomcx", 0
+tl_usage:   .byte       "play [-l] song [n]; play -o score.mml song.zsm; play [-lx] -m|-c ch mml", 0
 
 .include "mml.inc"
 .include "toollib.s"

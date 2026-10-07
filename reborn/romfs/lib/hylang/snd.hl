@@ -104,3 +104,8 @@
 
 ; A song (a ZSM file) played, times times (1 if it isn't given): play's (the program); its exit code
 (fun {play path} {if &_ (run "play" path (to-str (- (fst &_) 1))) (run "play" path)})
+
+; A line of MML (the score language's: play -m) on the channel, its own instrument if it names none, played to its
+; end; a chord (play -c): its notes at once, a channel each from ch, with the commands before each.  play's exit code
+(fun {snd-mml ch mml} {run "play" "-m" (to-str ch) mml})
+(fun {snd-chord ch notes} {run "play" "-c" (to-str ch) notes})

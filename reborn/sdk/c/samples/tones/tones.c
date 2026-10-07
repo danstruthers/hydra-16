@@ -1,6 +1,7 @@
 /*
 ** tones.c - the sound library (snd.h): a patch on four claimed channels, a scale, a chord that fades, a bend and
-** some drums; a tune by the notes' names, the bell, a frequency; then the registers read back.  tones [PATCH] (0-162;
+** some drums; a tune by the notes' names, the bell, a frequency; then the registers read back; a line of MML and
+** a chord, by play.  tones [PATCH] (0-162;
 ** default 0, a piano)
 **   % tones 29 &
 */
@@ -62,7 +63,9 @@ int main (int argc, char* argv[])
     hy_sleep_ticks (20);
     snd_off (2);
     snd_regs (regs);
-    printf ("tones: patch %u, $20 %02X, $28 %02X, C#4 %d, the tune %s, 1000 Hz %02X\n", patch, regs[0x20], regs[0x28],
+    printf ("tones: patch %u, $20 %02X, $28 %02X, C#4 %d, the tune %s, 1000 Hz %02X, ", patch, regs[0x20], regs[0x28],
         snd_note_of ("C#4"), i ? "played" : "not played", regs[0x2A]);
+    snd_release (0x0F);                             /* (play's, a task of its own, to have them) */
+    printf ("mml %d, chord %d\n", snd_mml (3, "t240 o5 l16 c e g"), snd_chord (0, "t240 o4 l8 c e g"));
     return 0;
 }

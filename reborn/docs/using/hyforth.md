@@ -271,7 +271,8 @@ note without a new attack), `snd-lfo ( rate pmd amd wave -- )`, `snd-sens ( ch p
 (the chip's 256 registers as written).  `note-of ( c-addr u -- n )` turns a note's name into its
 number, and `tune ( c-addr u ch tempo -- )` plays a string of notes and their beats (`-` a rest) at a tempo,
 beats a minute; Ctrl-C ends it.  Songs (ZSM files) are the `play` program's: `snd-play ( c-addr u times -- status
-)` runs it and waits (0 times: its loop till Ctrl-C).
+)` runs it and waits (0 times: its loop till Ctrl-C); and lines of MML, its too (play -m, -c: [tools.md](tools.md),
+"Scores"): `snd-mml ( ch c-addr u -- status )`, `snd-chord ( ch c-addr u -- status )`.
 
 ```
 /> s" C#4" note-of .

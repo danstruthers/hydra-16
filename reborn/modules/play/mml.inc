@@ -92,6 +92,12 @@ m_q:        .res        2                                   ;   and denominator
 m_w:        .res        2                                   ; mul's multiplier
 m_len:      .res        1                                   ; (A word's length)
 m_atpos:    .res        2                                   ; (instruments': the @)
+m_line:     .res        1                                   ; <> 0: a line (-m) or a chord (-c): no instrument needed
+m_x16:      .res        1                                   ; <> 0: the X16's MML (-x)
+m_ch:       .res        1                                   ; (-m's and -c's channel ...
+m_plen:     .res        1                                   ;   -c's commands before a note: their length ...
+m_prefix:   .res        200                                 ;   and them ...
+m_text:     .res        256                                 ;   the arguments joined)
 m_ring:     .res        RING                                ; The compiled bytes: the oldest at m_rh ...
 m_rh:       .res        2
 m_rt:       .res        2                                   ;   the next's place ...
@@ -134,6 +140,8 @@ tk_p_hi:    .res        TRACKS
 tk_haspitch: .res       TRACKS                              ;   1: there is one
 tk_legato:  .res        TRACKS                              ; &
 tk_slide:   .res        TRACKS                              ; _
+tk_artic0:  .res        TRACKS                              ; (X16) S0: legato always
+tk_katk:    .res        TRACKS                              ; (X16) K: the next note keyed on
 tk_rp:      .res        TRACKS                              ; Its repeats' depth
 tk_fh:      .res        TRACKS                              ; Its FIFO: the head ...
 tk_fn:      .res        TRACKS                              ;   and the writes in it
@@ -250,18 +258,7 @@ mml_load:
             MOVR        mp, m_end
             lda         #0
             sta         (mp)
-            lda         #120
-            sta         m_tempo
-            stz         m_tempo + 1
-            lda         #200
-            sta         m_rate
-            stz         m_rate + 1
-            stz         m_ninst
-            stz         m_mask
-            jsr         uncomment
-            jsr         instruments
-            jsr         lines
-            jmp         scale
+            jmp         prep
 
 ; (The break: room for 256 more bytes and a 0 past m_end, below $8000)
 @room:
@@ -281,6 +278,22 @@ mml_load:
 @big:
             LDR         r0, s_big
             jmp         fail
+
+; The text from m_buf to m_end (its 0) read as a score: hysong.js's defaults, its comments, its instruments, its
+; lines
+prep:
+            lda         #120
+            sta         m_tempo
+            stz         m_tempo + 1
+            lda         #200
+            sta         m_rate
+            stz         m_rate + 1
+            stz         m_ninst
+            stz         m_mask
+            jsr         uncomment
+            jsr         instruments
+            jsr         lines
+            jmp         scale
 
 ; ; to the line's end: blanks
 uncomment:
@@ -1268,6 +1281,8 @@ mml_reset:
             stz         tk_haspitch,X
             stz         tk_legato,X
             stz         tk_slide,X
+            stz         tk_artic0,X
+            stz         tk_katk,X
             stz         tk_rp,X
             stz         tk_fh,X
             stz         tk_fn,X
@@ -1860,13 +1875,15 @@ play_note:
             ora         #$30
             jsr         put_now
 @attack:
-            ldx         trk                                 ; Key on: not legato or a glide (a drum always)
-            lda         m_drum
+            ldx         trk                                 ; Key on: not legato or a glide (a drum, or after K,
+            lda         m_drum                              ;   always)
+            ora         tk_katk,X
             bne         :+
             lda         tk_legato,X
             ora         m_glide
             bne         @pitched
 :
+            stz         tk_katk,X
             ldy         trk
             lda         #$08
             jsr         put_now
@@ -1895,7 +1912,11 @@ play_note:
             ldx         trk
             inc         tk_legato,X
 :
-            ldx         trk
+            ldx         trk                                 ; (X16: S0, legato always)
+            lda         tk_artic0,X
+            beq         :+
+            sta         tk_legato,X
+:
             stz         tk_slide,X
             lda         tk_legato,X
             bne         @on
@@ -2263,6 +2284,31 @@ command:
             jmp         track_end
 :
             sta         m_cmd
+            lda         m_x16                               ; The X16's: its letters in either case
+            beq         @hy
+            lda         m_cmd
+            cmp         #'a'
+            bcc         :+
+            cmp         #'z' + 1
+            bcs         :+
+            and         #$DF
+:
+            ldx         #0
+@xfind:
+            ldy         x16_chars,X
+            beq         @what
+            cmp         x16_chars,X
+            beq         @xfound
+            inx
+            bra         @xfind
+@xfound:
+            lda         x16_hi,X
+            pha
+            lda         x16_lo,X
+            pha
+            rts
+@hy:
+            lda         m_cmd
             ldx         #0                                  ; Which: the commands' characters
 @find:
             ldy         cmd_chars,X
@@ -2278,9 +2324,13 @@ command:
             pha
             rts                                             ; (Its routine)
 @what:
+            lda         m_cmd
+; "what is C" (.A), the track's
+what_cmd:
+            pha
             LDR         r0, s_whatis
             jsr         msg_start
-            lda         m_cmd
+            pla
             jsr         msg_char
             jmp         track_msg
 
@@ -2341,7 +2391,9 @@ c_note:
             bra         @acc
 @len:
             jsr         len
-            ldx         trk                                 ; An instrument there must be
+            ldx         trk                                 ; An instrument there must be (a line's or a chord's:
+            lda         m_line                              ;   the channel's own plays)
+            bne         :+
             lda         tk_inst_hi,X
             ora         tk_pend_hi,X
             bne         :+
@@ -2510,7 +2562,24 @@ c_vol:
 :
             ldx         trk
             sta         tk_vol,X
+; The volume now: the carriers' levels (an instrument's), or, a line's or a chord's with none (the channel's own),
+; the driver's SND_R_VOL
+vol_set:
+            ldx         trk
+            lda         tk_inst_hi,X
+            bne         :+
+            lda         m_line
+            bne         @cmd
+:
             jmp         levels
+@cmd:
+            ldy         trk
+            lda         #SND_R_CH
+            jsr         put_now
+            ldx         trk
+            ldy         tk_vol,X
+            lda         #SND_R_VOL
+            jmp         put_now
 
 ; p l|r|c|0: the speakers (now, if there's an instrument)
 c_pan:
@@ -2526,12 +2595,31 @@ c_pan:
             jmp         track_fail
 :
             lda         pan_bits,X
+; The speakers (.A, $20's RL bits) now: an instrument's $20; or, a line's or a chord's with none, the driver's SND_R_PAN
+pan_set:
             ldx         trk
             sta         tk_pan,X
             lda         tk_inst_hi,X
+            bne         @inst
+            lda         m_line
             bne         :+
             rts
 :
+            ldy         trk
+            lda         #SND_R_CH
+            jsr         put_now
+            ldx         trk
+            lda         tk_pan,X                            ; (Its bits 7-6: 1 left, 2 right, 3 both)
+            lsr
+            lsr
+            lsr
+            lsr
+            lsr
+            lsr
+            tay
+            lda         #SND_R_PAN
+            jmp         put_now
+@inst:
             sta         mp + 1
             lda         tk_inst_lo,X
             sta         mp
@@ -2679,6 +2767,123 @@ c_reg:
             ldy         nv
             pla
             jmp         put_now
+
+; I N: the driver's patch N, the instrument for the next note on (hysong.js's too)
+c_inum:
+            jsr         num_must
+            lda         nv + 1
+            bne         @bad
+            lda         nv
+            cmp         #163
+            bcs         @bad
+            jsr         patch_of
+            ldx         trk
+            lda         mp
+            sta         tk_pend_lo,X
+            sta         tk_name_lo,X
+            lda         mp + 1
+            sta         tk_pend_hi,X
+            sta         tk_name_hi,X
+            rts
+@bad:
+            LDR         r0, s_nopatch
+            jmp         track_fail
+
+; t N (a line's or a chord's; the X16's T): the tempo, quarter notes a minute, before any time has passed
+c_tempo:
+            lda         m_line
+            bne         :+
+            lda         m_cmd
+            jmp         what_cmd
+:
+            jsr         num_must
+            ldx         trk
+            lda         tk_u0,X
+            ora         tk_u1,X
+            ora         tk_u2,X
+            ora         tk_u3,X
+            bne         @late
+            lda         nv + 1
+            bmi         @late
+            lda         nv
+            ora         nv + 1
+            beq         @late
+            lda         nv
+            sta         m_tempo
+            lda         nv + 1
+            sta         m_tempo + 1
+            jmp         scale
+@late:
+            LDR         r0, s_tempo1
+            jmp         track_fail
+
+; The X16's: a note (its letter in lower case: hysong.js's), V 0-63 (doubled: 0-126), P 1-3 (1 left, 2 right, 3
+; both), S 0-7 (the gap before the next note: q 8 - S; S0 legato), K (the next note keyed on, legato or not)
+c_xnote:
+            lda         m_cmd
+            ora         #$20
+            sta         m_cmd
+            jmp         c_note
+
+c_xvol:
+            jsr         num_must
+            lda         nv + 1
+            bne         @top
+            lda         nv
+            cmp         #64
+            bcs         @top
+            asl
+            bra         :+
+@top:
+            lda         #126
+:
+            ldx         trk
+            sta         tk_vol,X
+            jmp         vol_set
+
+c_xpan:
+            jsr         num_must
+            lda         nv + 1
+            bne         @bad
+            lda         nv
+            cmp         #4
+            bcs         @bad
+            ror
+            ror
+            ror                                             ; (Bits 1-0 to 7-6)
+            and         #$C0
+            jmp         pan_set
+@bad:
+            LDR         r0, s_badpan
+            jmp         track_fail
+
+c_artic:
+            jsr         num_must
+            lda         nv + 1
+            bne         @bad
+            ldx         trk
+            stz         tk_artic0,X
+            lda         nv
+            beq         @legato
+            cmp         #8
+            bcs         @bad
+            eor         #$FF                                ; (8 - S)
+            sec
+            adc         #8
+            sta         tk_gate,X
+            rts
+@legato:
+            inc         tk_artic0,X
+            rts
+@bad:
+            LDR         r0, s_badlen
+            jmp         track_fail
+
+c_katk:
+            ldx         trk
+            lda         #1
+            sta         tk_katk,X
+            rts
 
 ; _ a slide to the next note, & legato, | a bar (nothing)
 c_slide:
@@ -3155,6 +3360,11 @@ emit:
             beq         @put
             cmp         #$19
             beq         @put
+            cmp         #$0F                                ; (The driver's commands, $02-$0E: never left out)
+            bcs         :+
+            cmp         #$02
+            bcs         @put
+:
             lsr                                             ; Written before, the same?
             lsr
             lsr
@@ -3207,6 +3417,203 @@ flush_pairs:
             bcc         :-
             stz         m_np
 @done:
+            rts
+
+; ****************************************************************************
+; play -m CH mml...: a line of MML on channel CH; play -c CH notes...: a chord, its notes at once, each on the next
+; channel from CH (a line each: the commands before it, and the note); -x either, the X16's MML.  The text is the
+; arguments after the channel, joined by blanks, made a score in memory and read as a score's lines are; m_line: a
+; note needs no instrument (the channel's own plays), v and p with none are the driver's commands, t sets the tempo
+
+mml_line:
+            stz         m_x16
+            lda         tl_flags
+            and         #F_X16
+            beq         :+
+            inc         m_x16
+:
+            lda         #1
+            sta         m_line
+            sta         mml
+            stz         loops
+            lda         tl_flags
+            and         #F_LOOP
+            beq         :+
+            lda         #FOREVER
+            sta         loops
+:
+            lda         (tl_arg)                            ; The channel
+            beq         @usage
+            MOVR        r0, tl_arg
+            jsr         tl_atoi
+            bcs         @usage
+            lda         tl_num + 1
+            ora         tl_num + 2
+            ora         tl_num + 3
+            bne         @usage
+            lda         tl_num
+            cmp         #TRACKS
+            bcs         @usage
+            sta         m_ch
+            jsr         tl_next
+            bne         :+
+@usage:
+            jmp         tl_badusage
+:
+            MOVR        song, tl_arg                        ; (Its errors: about the text)
+            ldx         #0                                  ; The arguments, joined
+@arg:
+            ldy         #0
+:
+            lda         (tl_arg),Y
+            beq         :+
+            sta         m_text,X
+            inx
+            beq         @big
+            iny
+            bra         :-
+:
+            jsr         tl_next
+            beq         :+
+            lda         #' '
+            sta         m_text,X
+            inx
+            beq         @big
+            bra         @arg
+:
+            stz         m_text,X
+            stz         r0                                  ; The score's room: 4K past the break
+            stz         r0 + 1
+            jsr         BREAK
+            MOVR        m_buf, r0
+            clc
+            lda         r0 + 1
+            adc         #>4096
+            sta         r0 + 1
+            jsr         BREAK
+            bcs         @big
+            MOVR        mp, m_buf
+            lda         #LF
+            jsr         m_put
+            lda         tl_flags
+            and         #F_CHORD
+            bne         @chord
+            lda         m_ch                                ; -m: a line, the channel's
+            jsr         line_start
+            ldx         #0
+:
+            lda         m_text,X
+            beq         :+
+            jsr         m_put
+            inx
+            bra         :-
+:
+            lda         #LF
+            jsr         m_put
+            jmp         @made
+@big:
+            LDR         r0, s_big
+            jmp         fail
+
+@chord:                                                     ; -c: each word a note (a line) or a command (kept)
+            stz         m_plen
+            lda         m_ch
+            sta         m_r
+            ldx         #0
+@word:
+            lda         m_text,X                            ; (Past blanks)
+            beq         @made
+            cmp         #' ' + 1
+            bcs         :+
+            inx
+            bra         @word
+:
+            jsr         is_note
+            bcs         @note
+:
+            lda         m_text,X                            ; A command: into the prefix, a blank after it
+            cmp         #' ' + 1
+            bcc         :+
+            ldy         m_plen
+            cpy         #199
+            bcs         @big
+            sta         m_prefix,Y
+            inc         m_plen
+            inx
+            bra         :-
+:
+            ldy         m_plen
+            lda         #' '
+            sta         m_prefix,Y
+            inc         m_plen
+            bra         @word
+@note:
+            lda         m_r                                 ; A note: its line, on the next channel
+            cmp         #TRACKS
+            bcc         :+
+            LDR         r0, s_toomanyn
+            jmp         fail
+:
+            jsr         line_start
+            inc         m_r
+            ldy         #0                                  ; (The commands so far)
+:
+            cpy         m_plen
+            beq         :+
+            lda         m_prefix,Y
+            jsr         m_put
+            iny
+            bra         :-
+:
+            lda         m_text,X                            ; (The note)
+            cmp         #' ' + 1
+            bcc         :+
+            jsr         m_put
+            inx
+            bra         :-
+:
+            lda         #LF
+            jsr         m_put
+            bra         @word
+@made:
+            lda         #0                                  ; Its end, and read as a score
+            sta         (mp)
+            MOVR        m_end, mp
+            jsr         prep
+            lda         m_mask
+            sta         hdr + H_FM
+            stz         loop + 1
+            stz         loop + 2
+            lda         #HDR_SIZE
+            sta         loop
+            jmp         play_sound
+
+; A line's start, channel .A's: its letter and a blank
+line_start:
+            clc
+            adc         #'A'
+            jsr         m_put
+            lda         #' '
+; .A at mp, mp on.  Keeps .X, .Y
+m_put:
+            sta         (mp)
+            jmp         mp_inc
+
+; Does the word at m_text + .X start with a note (a-g; the X16's, either case)?  OUT: C = 1 yes.  Keeps .X
+is_note:
+            lda         m_text,X
+            ldy         m_x16
+            beq         :+
+            ora         #$20
+:
+            cmp         #'a'
+            bcc         @no
+            cmp         #'g' + 1
+            bcs         @no
+            sec
+            rts
+@no:
+            clc
             rts
 
 ; ****************************************************************************
@@ -3381,6 +3788,9 @@ s_nodrum:   .byte       "no such drum", 0
 s_badpan:   .byte       "p takes l, r, c or 0", 0
 s_unknown:  .byte       "no such instrument", 0
 s_deep:     .byte       "repeats too deep", 0
+s_nopatch:  .byte       "no such patch", 0
+s_tempo1:   .byte       "t is a tempo, before any notes", 0
+s_toomanyn: .byte       "more notes than channels", 0
 s_whatis:   .byte       "what is ", 0
 s_channel:  .byte       "channel ", 0
 s_tempo:    .byte       "tempo", 0
@@ -3397,15 +3807,23 @@ semis:      .byte       9, 11, 0, 2, 4, 5, 7                ; a b c d e f g
 pan_chars:  .byte       "lrc0"
 pan_bits:   .byte       $40, $80, $C0, $00
 ; The MML's commands and their routines (- 1, for rts)
-cmd_chars:  .byte       "cdefgabrxo><lqvp@kDMLNy_&|[]", 0
+cmd_chars:  .byte       "cdefgabrxo><lqvp@kDMLNy_&|[]It", 0
 cmd_lo:     .lobytes    c_note - 1, c_note - 1, c_note - 1, c_note - 1, c_note - 1, c_note - 1, c_note - 1, c_rest - 1
             .lobytes    c_drum - 1, c_oct - 1, c_up - 1, c_down - 1, c_l - 1, c_q - 1, c_vol - 1, c_pan - 1
             .lobytes    c_inst - 1, c_k - 1, c_detune - 1, c_sens - 1, c_lfo - 1, c_noise - 1, c_reg - 1
-            .lobytes    c_slide - 1, c_legato - 1, c_bar - 1, c_repeat - 1, c_endrep - 1
+            .lobytes    c_slide - 1, c_legato - 1, c_bar - 1, c_repeat - 1, c_endrep - 1, c_inum - 1, c_tempo - 1
 cmd_hi:     .hibytes    c_note - 1, c_note - 1, c_note - 1, c_note - 1, c_note - 1, c_note - 1, c_note - 1, c_rest - 1
             .hibytes    c_drum - 1, c_oct - 1, c_up - 1, c_down - 1, c_l - 1, c_q - 1, c_vol - 1, c_pan - 1
             .hibytes    c_inst - 1, c_k - 1, c_detune - 1, c_sens - 1, c_lfo - 1, c_noise - 1, c_reg - 1
-            .hibytes    c_slide - 1, c_legato - 1, c_bar - 1, c_repeat - 1, c_endrep - 1
+            .hibytes    c_slide - 1, c_legato - 1, c_bar - 1, c_repeat - 1, c_endrep - 1, c_inum - 1, c_tempo - 1
+; The X16's MML (-x): its commands, their letters in upper case, and their routines
+x16_chars:  .byte       "ABCDEFGROL<>TVPSKI&|", 0
+x16_lo:     .lobytes    c_xnote - 1, c_xnote - 1, c_xnote - 1, c_xnote - 1, c_xnote - 1, c_xnote - 1, c_xnote - 1
+            .lobytes    c_rest - 1, c_oct - 1, c_l - 1, c_down - 1, c_up - 1, c_tempo - 1, c_xvol - 1, c_xpan - 1
+            .lobytes    c_artic - 1, c_katk - 1, c_inum - 1, c_legato - 1, c_bar - 1
+x16_hi:     .hibytes    c_xnote - 1, c_xnote - 1, c_xnote - 1, c_xnote - 1, c_xnote - 1, c_xnote - 1, c_xnote - 1
+            .hibytes    c_rest - 1, c_oct - 1, c_l - 1, c_down - 1, c_up - 1, c_tempo - 1, c_xvol - 1, c_xpan - 1
+            .hibytes    c_artic - 1, c_katk - 1, c_inum - 1, c_legato - 1, c_bar - 1
 ; An instrument's words: gm, the voice's, the operators, the operators' (each: its patch byte, or $80 + its row's
 ; first, the operator added; its field's mask and shift)
 V_GM        = 0
