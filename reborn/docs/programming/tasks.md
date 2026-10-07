@@ -13,6 +13,7 @@ task's RAM at its load address (`$0800`) by the task itself as it starts.
 | `SPAWN_NEWNS` | An empty namespace (else it shares the caller's) |
 | `SPAWN_FDMAP` | Its fds from the map at `r2`: a count, then for each of its fds from 0 the caller's fd that becomes it (`$FF`: closed) |
 | `SPAWN_NOENV` | An empty environment (else a copy of the caller's) |
+| `SPAWN_STOPPED` | Stopped at its entry point, for a debugger (`TF_STOPPED` in its `TI_FLAGS` once it's there) |
 
 The child gets the caller's fds 0, 1 and 2 (sharing their channels and offsets), its current directory, and a copy of
 its environment.  Its parent is the caller (`GETPPID` says so).
@@ -77,4 +78,21 @@ is the clock, seconds since 2000-01-01 in `r0:r1`, set from the DS1747 at boot i
 `TASKINFO` says what the kernel knows of a task (its state, flags, parent, CPU time, name, group: `TI_*`);
 `TASKREAD` reads its arguments, current directory, environment, registers, or an open fd (`TR_*`).  `/proc/N` has
 them as files (`status`, `args`, `cwd`, `env`, `regs`, `fd`, `ns`, `mem`, `ram`), with `note` and `ctl` (`kill`,
-`interrupt`, `note N`, `stop`, `start`) to act on it.  `ps` and `top` read them.
+`interrupt`, `note N`, `stop`, `start`, `step`, `next`, `break`, `nobreak`) to act on it.  `ps` and `top` read them.
+
+## Debugging
+
+A debugger is a program over `/proc` (`db` is one: [../using/tools.md](../using/tools.md)).  It starts its program
+with `SPAWN_STOPPED`, or stops a task with `ctl`'s `stop`; reads its registers with `TASKREAD`'s `TR_FRAME` and its
+memory through `mem`; and steps it with `ctl`'s `step` (one instruction) or `next` (a `JSR`'s subroutine run whole),
+waiting for `TF_STOPPED` again (`TASKINFO`).  Behind `ctl` is `TASKSTEP`, a driver's call (kdev's).  The kernel runs
+the instruction out of line: a copy of it in the task's own zero page with a `BRK` after it, which stops the task again
+with its PC where the instruction went (a branch has two `BRK`s, taken and not).  `JMP`, `JSR`, `RTS` and `RTI` it does
+itself, on the task's frame; a `JSR` into the jump table always runs whole.  So a step is the instruction as the task
+would have run it, in its own banks, and takes no breakpoint in a ROM.  A task in a call (its PC in the kernel, or
+waiting) can't be stepped: `E_BUSY` till it's run on and stopped in its own code.
+
+Breakpoints are the debugger's: a `BRK` written into the program's RAM through `mem`.  After `ctl`'s `break`, any
+`BRK` stops the task, its PC back on the `BRK`, rather than giving it the note `sys: brk`; `nobreak` gives a `BRK`
+back to the program.  A subroutine that reads the bytes after its `JSR` (its arguments, as some libraries' do) can't
+be stepped over: its return address is in the kernel's copy.

@@ -227,6 +227,10 @@ bank t).  Every fixed address is in `include/layout.inc`, and nowhere else.
 * **Another task's memory only through `/proc`** (`mem`, `ram`; `regs` too): any task's but the kernel task's and a
   driver's, as `NOTE` lets any task note any other (one user: Plan 9's owner rule lets every task in).  The kernel's
   `TASKMEM` serves only a driver (kdev), so the files are the one way in.
+* **A step runs out of line** (`TASKSTEP`, behind `/proc/N/ctl`'s `step` and `next`): the stopped task's next
+  instruction copied into its own zero page with a `BRK` after it, run as the task, and the `BRK` stops it again;
+  `JMP`, `JSR`, `RTS` and `RTI` are done on its frame.  No trace flag and no code patched in a ROM: a breakpoint is
+  the debugger's `BRK` in RAM (through `mem`), which stops the task once `ctl`'s `break` says so.
 * **A server times a wait itself.**  The kernel has no timed `E_AGAIN`: a client waits for the server's event
   count to change.  A server that must give up on something that doesn't come (`/pc`'s reply) makes the count
   change now and then from an interrupt it owns (the console's timer 2, run on in rounds), and its client, asking

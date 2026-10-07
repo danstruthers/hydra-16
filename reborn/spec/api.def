@@ -118,7 +118,7 @@ call WAIT task impl=K_WAIT
 call SPAWN task impl=K_SPAWN far
   in:     r0 = the program's path (through the namespace: /bin/NAME; or #m/NAME, a module in the paged ROM);
   in:     r1 = its arguments (zero-terminated strings, an empty one after the last: 176 bytes at most), or 0;
-  in:     .A = flags (SPAWN_NEWGROUP, SPAWN_NEWNS, SPAWN_FDMAP, SPAWN_NOENV); r2 = an fd map (with SPAWN_FDMAP)
+  in:     .A = flags (SPAWN_NEWGROUP, SPAWN_NEWNS, SPAWN_FDMAP, SPAWN_NOENV, SPAWN_STOPPED); r2 = an fd map (with SPAWN_FDMAP)
   out:    .A = the new task
   errors: E_NOENT (no such file), E_NOEXEC (not a program this kernel runs), E_NOTASK (no free task), E_TOOBIG
   errors: (the arguments), E_INVAL (the map), E_MFILE, E_INTR (and what else OPEN and READ give)
@@ -134,7 +134,8 @@ call SPAWN task impl=K_SPAWN far
   doc:    caller's channel and offset; the rest are closed.  Its parent is
   doc:    the caller, which can WAIT for it.  It's in the caller's note group unless SPAWN_NEWGROUP starts one (its
   doc:    number: the child's), and it shares the caller's namespace unless SPAWN_NEWNS gives it an empty one.  Its
-  doc:    environment is a copy of the caller's (SPAWN_NOENV: empty).
+  doc:    environment is a copy of the caller's (SPAWN_NOENV: empty).  SPAWN_STOPPED: it's stopped at its entry
+  doc:    point, for the debugger (TASKSTEP; /proc/N/ctl's step, or start).
 
 call GETPID task impl=K_GETPID
   in:     -
@@ -822,6 +823,21 @@ call TASKSTOP server impl=K_TASKSTOP far
   doc:    start it again: /proc's ctl (kdev, which decides who may), for the debugger.  TASKINFO's TI_FLAGS has
   doc:    TF_STOPPED while it's stopped.  A kill note starts it, to end it.
 
+call TASKSTEP server impl=K_TASKSTEP far
+  in:     .A = a task; .X = TS_STEP, TS_NEXT, TS_BREAKS or TS_NOBREAKS
+  out:    -
+  errors: E_PERM (the caller isn't a driver; the kernel task, a driver), E_SRCH (not a task, or not started),
+  errors: E_INVAL (another .X; to step: a BRK or STP), E_BUSY (to step: not stopped, or a step still out)
+  errors: (or in the kernel: in a call, its PC at $E000 or above, or W not 0)
+  blocks: no
+  doc:    The debugger's step (/proc's ctl: kdev).  TS_STEP: a stopped task runs its next instruction and stops
+  doc:    again (TI_FLAGS: TF_STOPPED once it has).  JMP, JSR, RTS and RTI are done at once, on its frame; others
+  doc:    run out of line, in its zero page, a BRK after them.  TS_NEXT: the same, but a JSR runs its subroutine
+  doc:    whole, as a JSR to the kernel's jump table always does (a subroutine that reads bytes after its JSR
+  doc:    can't be stepped over).  TS_BREAKS: from now any BRK stops the task, its PC back on the BRK (the
+  doc:    debugger's breakpoints, BRKs it writes into the program); TS_NOBREAKS: a BRK is the program's own again
+  doc:    (NOTE_BRK).  SPAWN_STOPPED starts a program stopped at its entry point.
+
 # ---- dbg (for the tests and the debugger: unstable)
 
 call DBG_SCALL dbg impl=K_SCALL
@@ -919,6 +935,7 @@ const SPAWN_NEWGROUP  $01      "SPAWN's flags: the child starts a note group of 
 const SPAWN_NEWNS     $02      "SPAWN's flags: the child starts with an empty namespace of its own (else it shares its parent's)"
 const SPAWN_FDMAP     $04      "SPAWN's flags: the child's fds are r2's map (else the caller's 0, 1 and 2)"
 const SPAWN_NOENV     $08      "SPAWN's flags: the child starts with an empty environment (else a copy of its parent's)"
+const SPAWN_STOPPED   $10      "SPAWN's flags: the child stops at its entry point, for the debugger (/proc/N/ctl's step)"
 const ENV_SIZE        1024     "TASKREAD's TR_ENV: its buffer, an environment's first variables, whole, and a 0"
 const ENV_MAX         8192     "An environment's bytes at most: each variable its name's length, its name, its value's length (2), its value; a 0"
 const ENV_NAME_MAX    31       "A variable's name's length at most"
@@ -956,6 +973,10 @@ const TF_SIZE         12
 const TM_READ         0        "TASKMEM: from the task's memory"
 const TM_WRITE        $01      "TASKMEM: to the task's memory"
 const TM_BANK         $80      "TASKMEM's flag: its RAM bank r3, at $8000-$9FFF"
+const TS_STEP         0        "TASKSTEP: one instruction"
+const TS_NEXT         1        "TASKSTEP: one instruction, a JSR's subroutine whole"
+const TS_BREAKS       2        "TASKSTEP: from now, the task's BRKs stop it (the debugger's breakpoints)"
+const TS_NOBREAKS     3        "TASKSTEP: its BRKs are its own again (NOTE_BRK)"
 const NI_FROM         0        "NSINFO's answer (NI_SIZE bytes): the mount point (PATH_MAX + 1 bytes, zero-terminated)"
 const NI_PATH         64       "NSINFO: the path in the device (zero-terminated, no leading /)"
 const NI_DEV          128      "NSINFO: the device letter"

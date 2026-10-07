@@ -2,7 +2,7 @@
 
 The programs in `/bin`.  Most are modules in the paged ROM, which run in place (`/dev/mod/NAME`, bound into `/bin`
 by `#m/bin`); a few are files on the ROM disk, read into RAM to run (`/rom/bin`: `mkfs`, `fsck`, `label`, `grep`,
-`sort`, `scom`).  `/bin` is a union, so a program of your own in `/ram/bin`, `/sram/bin` or a card's `/bin` comes
+`sort`, `db`, `scom`).  `/bin` is a union, so a program of your own in `/ram/bin`, `/sram/bin` or a card's `/bin` comes
 before the ROM's of the same name.
 
 They behave as Plan 9's do:
@@ -16,8 +16,8 @@ Every tool here runs the same way at rc's prompt and at HyForth's (whose shell g
 Forth word to rc).  At HyForth's prompt, a tool whose name is also a Forth word needs a `%` before it (`% free`
 when `memory.fl`'s `free` is loaded).
 
-Contents: [Files](#files) · [Text](#text) · [Tasks](#tasks) · [The system](#the-system) · [Disks](#disks) ·
-[Others](#others)
+Contents: [Files](#files) · [Text](#text) · [Tasks](#tasks) · [The debugger](#the-debugger) · [The system](#the-system) ·
+[Disks](#disks) · [Others](#others)
 
 ## Files
 
@@ -84,7 +84,7 @@ mkfs
 The tasks' own files are under `/proc/N`: `status`, `args`, `cwd`, `env`, `ns`, `fd` (its open files: `0 rw #c 291
 #c/cons`), `regs`, `mem` and `ram` (its memory), `note` (write `interrupt`, `kill`, `hangup` or a number to send
 it one), and `ctl` (`kill`, `interrupt`, `note N`, `stop` and `start`: a stopped task doesn't run till it's started
-again).  Another task's memory and registers are anyone's but the kernel task's and a driver's.
+again; `step`, `next`, `break` and `nobreak`: the debugger's, below).  Another task's memory and registers are anyone's but the kernel task's and a driver's.
 
 ```
 /> sleep 100 &
@@ -97,6 +97,61 @@ task  state   parent     cpu group  name
 sleep stopped 4 0 4
 /> echo kill >/proc/5/ctl
 ```
+
+## The debugger
+
+`db program [arg ...]` starts a program stopped at its first instruction, in a task and note group of its own (so
+Ctrl-C reaches `db`, which stops it); `db -p task` stops a task that's running, where it is.  Then it takes
+commands, a line each, at its `db>` prompt.  An address is hex (`0830`, `$0830`) or a symbol, with `+` or `-` a hex
+offset (`main+14`); a count is decimal.
+
+| Command | What it does |
+| :------ | :----------- |
+| `r` | Its registers, and the instruction at its PC |
+| `s [n]` | n instructions (1), a step at a time, into a subroutine at a `JSR` |
+| `n [n]` | The same, but a `JSR`'s subroutine runs whole (a `JSR` into the kernel's jump table always does) |
+| `c` | On, till a breakpoint, a `BRK`, its end, or Ctrl-C |
+| `u addr` | Steps (as `n`) till its PC is addr |
+| `b [addr]` | A breakpoint at addr (in RAM: a `BRK` written there while it runs), or the list |
+| `x [addr]` | The breakpoint at addr gone, or all of them |
+| `d [addr] [n]` | n instructions (12) from addr (its PC; then on from the last), disassembled |
+| `m [addr] [n]` | n bytes (64) from addr, in hex and as text |
+| `w addr byte ...` | Bytes (hex) written at addr |
+| `l file` | Symbols from an ld65 label file (`ld65 -Ln`: the build makes one for each program, `obj/.../NAME.lbl`) |
+| `q` | Quit: a program `db` started is killed; a task it stopped runs on |
+
+```
+/> db /rom/sample/hi Ann Bob
+task 4
+PC=0830 A=30 X=FF Y=48 S=FD P=nv--dizc W=0 U=0 RAM=00 ROM=00
+0830  A5 02     LDA $02
+db> l /pc/hi.lbl
+8 symbols
+db> b main+14
+db> c
+breakpoint 1
+PC=0844 A=41 X=FF Y=48 S=FD P=nv--dizc W=0 U=0 RAM=00 ROM=00
+0844  A9 52     LDA #$52         main+14
+db> n 4
+0846  85 02     STA $02          main+16
+0848  A9 08     LDA #$08         main+18
+084A  85 03     STA $03          main+1A
+PC=084C A=08 X=FF Y=48 S=FD P=nv--dizc W=0 U=0 RAM=00 ROM=00
+084C  20 53 F9  JSR $F953        main+1C
+db> x
+db> c
+Hello, Ann!
+Hello, Bob!
+I'm task 4, in /, in window 0.
+task 4 ended: code 0
+```
+
+A step can't be taken in the kernel: a task stopped in a call (`(in a call: its state 6)`, as Ctrl-C finds a
+program in `SLEEP`) is run on with `c`.  Breakpoints are in its memory only while it runs, so `d` and `m` show its
+own bytes; one in a ROM can't be set (`u` reaches an address there, a step at a time).  A `BRK` of the program's own
+stops it too; `c` from there gives it its note (`sys: brk`), as it would have had.  A subroutine that reads the bytes
+after its `JSR` (its arguments) can't be stepped over with `n`; step into it with `s`.  `db` works through
+`/proc/N/ctl` and `mem`: `echo step >/proc/N/ctl` does the same by hand, on a task that's stopped.
 
 ## The system
 

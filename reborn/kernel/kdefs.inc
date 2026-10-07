@@ -14,7 +14,8 @@
 .global     IRQ_ENTRY, IRQ_RESTORE, IRQ_EXIT, NMI_ENTRY
 .global     IRQ_STUB_0, IRQ_STUB_F, IRQ_VIA, K_FAR, K_FAR_GO, K_PEEK_PAGE
 ; ---- irq.s: interrupts
-.global     IRQ_HANDLER, IRQ_SWITCH, IRQ_STRAY, IRQ_INIT, IRQ_SET_OWNER, IRQ_RELEASE_ALL, NMI_HANDLER, K_KIRQ
+.global     IRQ_HANDLER, IRQ_SWITCH, IRQ_STRAY, IRQ_BRK_NOTE, IRQ_INIT, IRQ_SET_OWNER, IRQ_RELEASE_ALL, NMI_HANDLER
+.global     K_KIRQ
 ; ---- sched.s: the scheduler, waiting, time
 .global     K_SCHED_SWITCH, K_SCHED_RESUME, K_YIELD, K_PAUSE, K_WAKE, K_EVWAIT, K_PREEMPT_OFF, K_PREEMPT_ON
 .global     K_SLEEP, K_SLEEP_UNTIL, K_TICKS
@@ -53,6 +54,8 @@
 .global     K_FARJMP
 ; ---- post.s: the power-on self test (page 4)
 .global     K_POST
+; ---- debug.s: the debugger's steps and breakpoints (page 4; K_TRAP on page 0)
+.global     K_TRAP, K_TASKSTEP, K_TASKSTEP_K
 ; ---- errtext.s (made from spec/errors.def)
 .global     ERR_TEXTS
 

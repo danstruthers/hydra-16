@@ -9,8 +9,8 @@
 ;   #m      the modules in the paged ROM, a file each: its image (its header first: SPAWN reads it); bin, the
 ;           programs alone (bound at /bin)
 ;   #p      the tasks, a directory each (its number): status (its name, state, parent, CPU time in ticks and note
-;           group), ctl (kill, interrupt, note N; stop and start: TASKSTOP), args, cwd, fd (its open files: TASKREAD's
-;           TR_FD), ns, env, regs, mem, ram and note
+;           group), ctl (kill, interrupt, note N; stop and start: TASKSTOP; step, next, break and nobreak: TASKSTEP),
+;           args, cwd, fd (its open files: TASKREAD's TR_FD), ns, env, regs, mem, ram and note
 ;   #|      pipes: opening pipe makes a new one (its read end; for O_WRITE, its write end), and R_DUP its other end
 ;           (PIPE does both); 512 bytes each, 8 of them
 ;   #e      the environment of the task asking (the kernel keeps it: ENV_GET ...), a file a variable
@@ -3343,7 +3343,8 @@ ns_r1:
             sta         r1 + 1
             rts
 
-; ctl: kill, interrupt, note N; stop, start (the kernel decides whose: TASKSTOP's rules are NOTE's)
+; ctl: kill, interrupt, note N; stop, start; step, next, break, nobreak (the kernel decides whose: TASKSTOP's and
+; TASKSTEP's rules are NOTE's)
 c_kill:
             ldx         #NOTE_KILL
             bra         c_post
@@ -3378,6 +3379,24 @@ c_start:
 :
             lda         z:srv_id
             jmp         TASKSTOP
+
+c_step:
+            ldx         #TS_STEP
+            bra         c_ts
+
+c_next:
+            ldx         #TS_NEXT
+            bra         c_ts
+
+c_break:
+            ldx         #TS_BREAKS
+            bra         c_ts
+
+c_nobreak:
+            ldx         #TS_NOBREAKS
+c_ts:
+            lda         z:srv_id
+            jmp         TASKSTEP
 
 ; ****************************************************************************
 ; #s: shared segments by name.  A name is kdev's (SG_N of them), its segment attached to kdev, so the segment stays
@@ -4213,6 +4232,10 @@ proc_cmds:
             .word       s_note, c_note
             .word       s_stop, c_stop
             .word       s_start, c_start
+            .word       s_step, c_step
+            .word       s_next, c_next
+            .word       s_break, c_break
+            .word       s_nobreak, c_nobreak
             .word       0
 s_slash:    .byte       "/", 0
 s_bin:      .byte       "bin", 0
@@ -4257,6 +4280,10 @@ s_interrupt: .byte      "interrupt", 0
 s_note:     .byte       "note", 0
 s_stop:     .byte       "stop", 0
 s_start:    .byte       "start", 0
+s_step:     .byte       "step", 0
+s_next:     .byte       "next", 0
+s_break:    .byte       "break", 0
+s_nobreak:  .byte       "nobreak", 0
 s_mem:      .byte       "mem", 0
 s_regs:     .byte       "regs", 0
 s_hangup:   .byte       "hangup", 0

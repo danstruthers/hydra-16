@@ -1051,6 +1051,8 @@ Each phase ends with something that runs, a set of tests that pass in the emulat
 
 The debugger as a program over `/proc` (`regs`, `ctl`'s `stop`, `step`, `break ADDR`, `mem`, symbols from module `.dbg` files copied to the card or `/pc`); a screen editor on conio; an assembler (a program, or HyForth words); more tools (§15.3); networking when a W5500 card exists.
 
+(As built, October 2026: the debugger is `db`, a C program on the ROM disk, over `/proc/N/ctl` and `mem` and `TASKREAD`'s frame.  `ctl`'s `step` and `next` are the kernel's `TASKSTEP` (a driver's call): the stopped task's next instruction run out of line in its own zero page with a `BRK` after it, and `JMP`, `JSR`, `RTS` and `RTI` done on its frame, so no trace flag and no code patched in a ROM.  `break ADDR` became the debugger's own breakpoints, `BRK`s it writes into RAM through `mem`, with `ctl`'s `break` to have a `BRK` stop the task rather than note it; `SPAWN_STOPPED` starts a program at its first instruction.  Symbols are ld65's label files (`-Ln`, which the build makes), not `.dbg` files.  reborn's `docs/status.md`, 9.1.)
+
 #### **Phase 10: The X16 migration utility**
 
 First the analyser (§18, part 1) run over a set of X16 programs, then the decision: if most interesting programs grade "ports with edits", build the converter and the shim library; if not, document the porting guide and stop.
@@ -1160,7 +1162,7 @@ A sketch of the calls; the specification file is the final word.  Each group has
 | **Servers and drivers** (`$F9B0`, 32) | `SRV_REGISTER`, `IRQ_OWN`, `IRQ_RELEASE`, `CLIENT_READ`, `CLIENT_WRITE`, `CLIENT_INFO`, `WAIT_ADD`, `WAKE_ALL`, `ROMREAD` |
 | Spare | `$FA10` up to the end of the table's space |
 
-The bases above are illustrative: the generator assigns them, and the specification fixes them once published.  (As built, after the review of October 2026: the calls above are in `spec/api.def` but these: `NOTED` (a handler's C says what it would), `CLOCK_TEXT` (`/dev/time` is the time as text), and `CLIENT_INFO`, `WAIT_ADD` and `WAKE_ALL` (a server's event count and `WAKE`); `CLOCK` is `TIME`.  `XCALL` takes its routine's bank in `r14`, not `.A`, so `.A` passes through.  And more came as they were needed: the environments' calls, `TASKINFO`, `TASKREAD`, `TASKMEM`, `TASKSTOP`, `KMESG`, `NSINFO`, `SEGINFO`, `BANKS_ALLOC_IN`, `SEG_CREATE_IN`, `REBOOT`, the server calls' `SRV_TAKE` and `SRV_REPLY`.)
+The bases above are illustrative: the generator assigns them, and the specification fixes them once published.  (As built, after the review of October 2026: the calls above are in `spec/api.def` but these: `NOTED` (a handler's C says what it would), `CLOCK_TEXT` (`/dev/time` is the time as text), and `CLIENT_INFO`, `WAIT_ADD` and `WAKE_ALL` (a server's event count and `WAKE`); `CLOCK` is `TIME`.  `XCALL` takes its routine's bank in `r14`, not `.A`, so `.A` passes through.  And more came as they were needed: the environments' calls, `TASKINFO`, `TASKREAD`, `TASKMEM`, `TASKSTOP`, `TASKSTEP`, `KMESG`, `NSINFO`, `SEGINFO`, `BANKS_ALLOC_IN`, `SEG_CREATE_IN`, `REBOOT`, the server calls' `SRV_TAKE` and `SRV_REPLY`.)
 
 ### **Appendix B: The request block**
 

@@ -102,6 +102,19 @@ function loadCard() {
   v.close();
   return [imageCard(0, f, 16384)];
 }
+// The step test's card: in bin, t_steppee (tests/ram), the program t_step steps
+function stepCard() {
+  fs.mkdirSync(CARD_DIR, { recursive: true });
+  hydrafs.setNow(0x1000);
+  const f = path.join(CARD_DIR, 'step0.img');
+  hydrafs.mkfs(f, 8, 'STEP', undefined, true);
+  const v = new hydrafs.Volume(f);
+  v.mkdir('bin');
+  v.put('bin/t_steppee', fs.readFileSync(path.join(__dirname, '..', 'obj', 'tests', 't_steppee.hyx')));
+  v.close();
+  return [imageCard(0, f, 16384)];
+}
+
 const BIG_LENGTH = () => fs.statSync(path.join(__dirname, '..', 'obj', 'tests', 't_big.hyx')).size;
 
 // /bin's programs in the rc and tools tests: the ROM's program modules (their headers' type, HT_PROGRAM), the ROM
@@ -244,7 +257,7 @@ const TOOL_LINES = [
   ["sleep 30 & sleep 30 & kill $apid; slay sleep; wait; ps","task  state",true],
   ["kill 9; kill x; echo $status","kill: 9: no such task\nkill: x: invalid argument\n1"],
   ["sleep 1; echo slept","slept"],
-  ["ls /rom/bin; whatis mkfs","fsck\ngrep\nlabel\nmkfs\nscom\nsort\n/bin/mkfs"],
+  ["ls /rom/bin; whatis mkfs","db\nfsck\ngrep\nlabel\nmkfs\nscom\nsort\n/bin/mkfs"],
   ["label s; label s Shared Disk; label s","SRAM\nShared Disk"],
   ["fsck s","hydrafs label=Shared Disk\nfree 253 KB of 255 KB\ncheck: lost 0, unmarked 0, twice 0\nsegment 15"],
   ["mkfs s Fresh; ls /sram; label s; echo $status","Fresh\n"],
@@ -851,7 +864,7 @@ module.exports = {
         'ācat /dev/sd/s/ctl\r' + 'āecho $window\r' + 'ā\x1dc' + 'āecho $window\r' + 'āls \'#fr\'\r' + 'āls /ram\r' + 'āls /dev\r' +
         'āecho stop >>\'#d/s/ctl\'; echo still; cat /sram/x\r' }; },
       expect: ['% ls \'#fr\'\n1/\n2/\n%', '% ls /ram\nbin/\nlib/\n%',
-        '% ls /bin\nfsck\ngrep\nlabel\nmkfs\nscom\nsort\ninit\nhello\nrc\nwstart\n', 't_child\n% t_child f\n', '% ls \'#fr\'/2\nbin/\nlib/\nmark\n%',
+        '% ls /bin\ndb\nfsck\ngrep\nlabel\nmkfs\nscom\nsort\ninit\nhello\nrc\nwstart\n', 't_child\n% t_child f\n', '% ls \'#fr\'/2\nbin/\nlib/\nmark\n%',
         'prompt=(', '% cat /dev/sd/s/ctl\nsram 512 KB 1024 blocks\nhydrafs label=SRAM\n', '% echo $window\n0\n%',
         '% echo $window\n1\n%', '% ls \'#fr\'\n1/\n2/\n4/\n%', '% ls /ram\nbin/\nlib/\n%', '\ncons\nconsctl\nwctl\nwnew\nser\nserctl\nkbdin\n%',
         '% echo stop >>\'#d/s/ctl\'; echo still; cat /sram/x\nstill\ncat: /sram/x: no such device\n%'],
@@ -1550,6 +1563,28 @@ module.exports = {
     {
       name: 'xcall', what: 'XCALL: a library module\'s routines (t_lib), registers and flags both ways, its bank and back, a system call from it',
       init: 't_xcall', modules: ['t_lib'], cycles: 10e6,
+    },
+    {
+      name: 'step', what: 'the debugger\'s steps (TASKSTEP, /proc/N/ctl): a program started stopped (SPAWN_STOPPED), each kind of instruction a step at a time (out of line, or on its frame), a JSR stepped over, a breakpoint, a program\'s own BRK; refused steps',
+      init: 't_step', modules: ['t_child'], cycles: 60e6,
+      get machine() { return { sd: stepCard() }; },
+    },
+    {
+      name: 'db', what: 'the debugger at rc (/rom/bin/db): the SDK\'s hi started stopped, its labels from /pc (ld65\'s), registers, steps, a disassembly, a breakpoint hit twice, a JSR to the kernel stepped over, until, memory read and written, and on to its end',
+      init: 't_rc', cycles: 300e6,
+      pc: { files: () => ({ 'hi.lbl': fs.readFileSync(path.join(__dirname, '..', 'obj', 'samples', 'hi', 'hi.lbl')) }) },
+      machine: {
+        input: ['db /rom/sample/hi Ann Bob', 'l /pc/hi.lbl', 'r', 's 3', 'd main 6', 'b main+14', 'b', 'c', 'n 4', 'u main+2C', 'c',
+          'm s_you 4', 'w s_you 59 4F 55', 'm s_you 4', 'x', 'c', 'echo $status'].map(l => 'ā' + l + '\r').join(''),
+      },
+      // (Its registers as the loader left them aren't checked: A, X and Y at its entry point)
+      expect: ['% db /rom/sample/hi Ann Bob\ntask ', '\n0830  A5 02     LDA $02         \ndb> l /pc/hi.lbl\n8 symbols\n',
+        'db> s 3\n0832  85 22     STA $22          main+2\n0834  A5 03     LDA $03          main+4\nPC=0836 A=03 ',
+        '0838  B2 22     LDA ($22)        main+8\n083A  D0 08     BNE $0844        main+A -> main+14\ndb> b main+14\n',
+        'db> b\n1 0844  A9 52     LDA #$52         main+14\ndb> c\nbreakpoint 1\nPC=0844 ',
+        '084C  20 53 F9  JSR $F953        main+1C\ndb> u main+2C\nHello, PC=085C ', 'db> c\nAnn!\nbreakpoint 1\nPC=0844 A=42 ',
+        'db> m s_you 4\n0934  79 6F 75 00              you.\ndb> w s_you 59 4F 55\ndb> m s_you 4\n0934  59 4F 55 00              YOU.\n',
+        'db> x\ndb> c\nHello, Bob!\nI\'m task ', ' ended: code 0\n% echo $status\n\n% '],
     },
     {
       name: 'banks', what: 'a module of two banks: calls between them (FAR2, FAR1), registers and C, each bank\'s data',

@@ -41,11 +41,17 @@ IRQ_SWITCH:
 ; A line nobody owns, from the dispatcher: .Y = the line; in the interrupted task, its frame's Y on its stack
 IRQ_STRAY:
             cpy         #LINE_NONE                          ; A BRK?  (Line 15's entry, and B set in the P it pushed:
-            bne         @count                              ;   the frame is Y, W, X, A, P ...)
+            bne         irq_stray_n                         ;   the frame is Y, W, X, A, P ...)
             ldx         TK_SP
             lda         $0105,X
             and         #$10
-            beq         @count
+            beq         irq_stray_n
+            bit         TK_FLAGS                            ; The debugger's (TF_TRAP: a step out, or breakpoints)?
+            bvc         IRQ_BRK_NOTE
+            jmp         K_TRAP                              ; (debug.s: .X = TK_SP)
+
+; A BRK that's the program's own (from IRQ_STRAY and K_TRAP): its frame's Y on its stack
+IRQ_BRK_NOTE:
             lda         #1 << NOTE_BRK                      ; The note sys: brk, taken (notes.s) when the switch
             tsb         TK_NOTES                            ;   back to it finds it in its own code
             sta         TK_NOTED
@@ -54,7 +60,7 @@ IRQ_STRAY:
             sta         TK_DUE
             jmp         IRQ_RESTORE
 
-@count:                                                     ; Nobody's: counted (a line must be owned before its
+irq_stray_n:                                                ; Nobody's: counted (a line must be owned before its
             cpy         #LINE_VIA_T2                        ;   device interrupts: a held line comes straight back)
             beq         @t2
             cpy         #LINE_VIA_CA1

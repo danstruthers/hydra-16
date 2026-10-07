@@ -62,6 +62,7 @@ bin/fsck            ../obj/programs/fsck.hyx
 bin/label           ../obj/programs/label.hyx
 bin/grep            ../obj/programs/grep.hyx    ; The tools in C (programs/grep, programs/sort)
 bin/sort            ../obj/programs/sort.hyx
+bin/db              ../obj/programs/db.hyx      ; The debugger (C: programs/db)
 bin/scom            bin/scom                    ; A song run by its name (an rc script: #!/bin/rc)
 songs/scom.zsm      songs/scom.zsm              ; Songs (play /rom/songs/test.zsm): ZSM files, the X16's
 songs/test.zsm      songs/test.zsm              ;   (the old system's test song, from os_rom/songs/test.mml)
