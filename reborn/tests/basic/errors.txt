@@ -48,7 +48,7 @@ PRINT "47 NOT FOUND";:LOAD "/none/x.bas"
 PRINT "48 NAME";:LOAD "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 PRINT "49 SYS";:SYS "NOSUCH"
 PRINT "50 RREG";:RREG A$
-PRINT "51 SOUND";:SOUND 8,60
+PRINT "51 SOUND";:SOUND 24,60
 PRINT "52 SLEEP";:SLEEP -1
 PRINT "53 HIMEM";:HIMEM 100
 PRINT "54 GET";:GET A$

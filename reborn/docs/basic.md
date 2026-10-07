@@ -98,16 +98,17 @@ and the like).  Every new keyword is a name a program can't use, found even insi
 `PAN` and `EL`), so sound is one statement, not one for each of `snd_*`; and the system's units: MIDI notes,
 seconds.
 
-* `SOUND ch, note [, patch [, vol]]`: on channel `ch` (0-7) MIDI note `note` (0-127), its patch (0-162) and its
+* `SOUND ch, note [, patch [, vol]]`: on channel `ch` (0-7, the YM2151's; 8-23, a Vera X's PSG: there a patch
+  below 4 is a waveform, and with no card nothing sounds) MIDI note `note` (0-127), its patch (0-162) and its
   volume (0-127) first if they're given: one write of the driver's commands to `/dev/snd`, so no other program's
   comes between them.  `SOUND ch`: its note off (the release).  Drums are patches 128-162.
 * `SOUND "words"`: a line for `/dev/sndctl`, the driver's text: its own words (`"claim 255"`, `"release 255"`,
   `"volume 150"`, `"reset"`) and every channel's command (`"pan 0 left"`, `"bend 0 -32"`, `"drum 9 38"`, `"freq 0
-  440"`, `"glide 0 64"`, `"level 0 90"`, `"lfo 200 10 20 2"`, `"sens 0 5 2"`, `"noise 9"`, `"reg 32 199"` ...:
+  440"`, `"glide 0 64"`, `"level 0 90"`, `"wave 8 saw"`, `"lfo 200 10 20 2"`, `"sens 0 5 2"`, `"noise 9"`, `"reg 32 199"` ...:
   docs/using/tools.md), so BASIC reaches all the driver has with one keyword.  Its errors are the driver's
   (`?INVALID ARGUMENT ERROR`; another program's channel, `?BUSY ERROR`).
 * `PLAY "mml"`, `PLAY ch, "mml"`: a line of MML, the score language's (docs/using/tools.md, "Scores"), on channel
-  0 or `ch`, its own instrument if the line names none: `play -m`, the program, waited for (the X16's `FMPLAY`).
+  0 or `ch` (0-7: the YM2151's), its own instrument if the line names none: `play -m`, the program, waited for (the X16's `FMPLAY`).
   `PLAY "song.zsm"` or `"score.mml"`: a song or a score, `play`'s.  Ctrl-C ends it (and BREAK).  play's error is
   said by play, and is BASIC's too, in capitals: `?CHANNEL 0: WHAT IS Z ERROR IN 40`.
 * `BEEP`: the console's bell, sent at once.

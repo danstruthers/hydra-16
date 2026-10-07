@@ -1314,8 +1314,8 @@ PLAY_ST:
             jsr         FRMEVL
             bit         VALTYP
             bmi         @string
-            jsr         CONINT                              ; A channel, then the MML
-            cpx         #SND_CHANNELS
+            jsr         CONINT                              ; A channel (the YM2151's: scores have no PSG
+            cpx         #SND_PSG                            ;   voices), then the MML
             bcc         :+
             jmp         IQERR
 :

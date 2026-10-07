@@ -1130,7 +1130,7 @@ module.exports = {
           '40 open 3,"d.txt","A": print #3, "more": close 3\rĀ' + 'run\rĀĀ' + 'print #2, 5\rĀ' + 'open 1,"x","w": open 1,"y","w"\rĀ' +
           'open 4,"nope"\rĀ' + 'new\rĀ' + '10 input x: ? x*2\rĀ' + 'run\rĀ' + 'abc\rĀ' + '5\rĀ' + 'bye\r' + 'ācat d.txt\r' +
           'ābasic\rĀĀ' + 'sound "volume 150"\rĀ' + '10 sound 2,60,0,100: sleep .5: sound 2,64: sleep .1: sound 2\rĀ' + '20 beep: sound 1,67\rĀ' +
-          'run\rĀĀ' + 'sound 8,60\rĀ' + 'sound 0,60,163\rĀ' + 'sleep 200\rĀ' + 'sound "frob"\rĀ' + 'bye\r' + 'ācat /dev/sndctl\r' +
+          'run\rĀĀ' + 'sound 24,60\rĀ' + 'sound 0,60,163\rĀ' + 'sleep 200\rĀ' + 'sound "frob"\rĀ' + 'bye\r' + 'ācat /dev/sndctl\r' +
           'ābasic\rĀĀ' + 'sys "getpid": rreg a: ? a>0\rĀ' + 'sys "Ticks": rreg l,h: ? h*256+l>0\rĀ' + 'sys "nosuch"\rĀ' +
           'sys "banks_alloc",1: rreg b,,,p: ? p and 1\rĀ' + 'himem 40704: poke 40704,169: poke 40705,42: poke 40706,96: sys 40704: rreg r: ? r\rĀ' +
           'poke 1285,0: poke 1286,159: poke 40704,96: ? usr(5)\rĀ' + 'sys 40704,1,2,3: rreg ,x,y: ? x;y\rĀ' + 'rreg a$\rĀ' + 'himem 50000\rĀ' + 'himem 100\rĀ' +
@@ -1159,8 +1159,8 @@ module.exports = {
         '40 open 3,"d.txt","A": print #3, "more": close 3\nrun\n 1  1 \n 2  4 \n 3  9 \nend-1 \n 0 \n\nOK\n',
         'print #2, 5\n\n?FILE NOT OPEN ERROR\nOK\n', 'open 1,"y","w"\n\n?FILE OPEN ERROR\nOK\n', 'open 4,"nope"\n\n?NOT FOUND ERROR\nOK\n',
         'run\n? abc\n?REDO FROM START\n? 5\n 10 \n\nOK\n', '% cat d.txt\n 1 , 1 \n 2 , 4 \n 3 , 9 \nend\nmore\n%',
-        'sound 8,60\n\n?ILLEGAL QUANTITY ERROR\nOK\n', 'sound 0,60,163\n\n?ILLEGAL QUANTITY ERROR\nOK\n', 'sleep 200\n\n?ILLEGAL QUANTITY ERROR\nOK\n',
-        'sound "frob"\n\n?INVALID ARGUMENT ERROR\nOK\n', '% cat /dev/sndctl\nvolume 150\nclaimed\n%',
+        'sound 24,60\n\n?ILLEGAL QUANTITY ERROR\nOK\n', 'sound 0,60,163\n\n?ILLEGAL QUANTITY ERROR\nOK\n', 'sleep 200\n\n?ILLEGAL QUANTITY ERROR\nOK\n',
+        'sound "frob"\n\n?INVALID ARGUMENT ERROR\nOK\n', '% cat /dev/sndctl\nvolume 150\nchannels 8\nclaimed\n%',
         'sys "getpid": rreg a: ? a>0\n-1 \n', 'rreg l,h: ? h*256+l>0\n-1 \n', 'sys "nosuch"\n\n?NO SUCH CALL ERROR\nOK\n',
         'rreg b,,,p: ? p and 1\n 0 \n', 'sys 40704: rreg r: ? r\n 42 \n', '? usr(5)\n 5 \n', 'rreg ,x,y: ? x;y\n 2  3 \n',
         'rreg a$\n\n?TYPE MISMATCH ERROR\nOK\n', 'himem 50000\n\n?ILLEGAL QUANTITY ERROR\nOK\n', 'himem 100\n\n?ILLEGAL QUANTITY ERROR\nOK\n',
