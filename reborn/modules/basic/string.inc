@@ -81,7 +81,9 @@ L32AA:
         inx
 L32B6:
         stx     STRNG2+1
-        lda     STRNG1+1
+        lda     STRNG1+1                        ; (Copied if in the zero page or the line buffer, which isn't in
+        beq     LD399                           ;   the zero page: a line's literal, INPUT's and GET's strings;
+        cmp     #>INPUTBUFFER                   ;   Microsoft's CONFIG_NO_INPUTBUFFER_ZP)
         bne     PUTNEW
 LD399:
         tya

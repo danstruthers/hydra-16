@@ -1049,7 +1049,10 @@ CH_NUM:
 ; "PRINT" STATEMENT, and PRINT #n, ...: the list to channel n's file (the console's column kept)
 PRINT_ST:
             cmp         #'#'
-            jne         PRINT
+            beq         :+
+            jsr         CHRGOT                              ; (Its flags again: PRINT alone, a new line)
+            jmp         PRINT
+:
             jsr         CH_NUM
             jsr         FLUSH
             lda         src_fd,x

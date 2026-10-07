@@ -1,0 +1,29 @@
+10 INPUT A: PRINT A*2
+20 INPUT "TWO";B,C: PRINT B+C
+30 INPUT A$,B$: PRINT A$;"|";B$
+40 INPUT "Q";Q$,R$: PRINT "[";Q$;"]"
+50 INPUT N: PRINT N
+60 INPUT X,Y: PRINT X;Y
+70 INPUT S$: PRINT S$;LEN(S$)
+80 INPUT T$: PRINT T$
+90 PRINT A$;B$;Q$;S$;T$
+RUN
+21
+3,4
+"A,B",hello
+  spaced  ,x
+abc
+5
+1
+2,3
+x:y
+"quoted: kept"
+NEW
+10 INPUT "NUMBER";A: PRINT "GOT";A
+20 PRINT "AFTER"
+RUN
+
+PRINT "STOPPED";A
+CONT
+7
+PRINT "LAST"

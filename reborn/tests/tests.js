@@ -627,6 +627,25 @@ function hylangCard(test, files = {}) {
   return [imageCard(0, f, 16384)];
 }
 
+// BASIC's suite (the bsuite test's card): tests/basic's files, each as itself: the programs that check themselves
+// (NAME.bas: its checks counted, a FAIL line for each one wrong, then "NAME: n CHECKS, m FAILED"; BSUITE_PROGS, each
+// one's count), the scripts piped into basic (NAME.txt) and what they print (NAME.out; BSUITE_SCRIPTS).  hydra.bas
+// reads rc's $greet (hi); files.bas writes its files on the card
+const BASIC_DIR = path.join(__dirname, 'basic');
+const BSUITE_PROGS = { arith: 73, funcs: 54, logic: 54, strings: 69, arrays: 30, flow: 33, data: 24, files: 31, hydra: 24 };
+const BSUITE_SCRIPTS = ['errors', 'print', 'list', 'input'];
+function basicCard() {
+  fs.mkdirSync(CARD_DIR, { recursive: true });
+  hydrafs.setNow(0x1000);
+  const f = path.join(CARD_DIR, 'basic0.img');
+  fs.rmSync(f, { force: true });
+  hydrafs.mkfs(f, 8, 'BASIC', undefined, true);
+  const v = new hydrafs.Volume(f);
+  for (const n of fs.readdirSync(BASIC_DIR)) v.put(n, fs.readFileSync(path.join(BASIC_DIR, n)));
+  v.close();
+  return [imageCard(0, f, 16384)];
+}
+
 // danlang's suite in parts (the hysuite tests), so that -j runs them side by side: each part is run.dl itself with
 // its list of the suite's files cut to the part's (its harness, its counting and its status are run.dl's own), and
 // the parts' files together are run.dl's, in its order.  Nearly all the suite's time is eval.dl's tail loops (50,000
@@ -1024,6 +1043,18 @@ module.exports = {
         if (!on(7).length) f.push('BEEP: no bell (no key-on on channel 7): ' + keys);
         if (!on(1).length) f.push('SOUND 1,67: no key-on on channel 1: ' + keys);
         return f;
+      },
+    },
+    {
+      name: 'bsuite', what: 'BASIC\'s suite (tests/basic, docs/basic.md), from a card: programs that check themselves, each its checks and none failed (arithmetic: precedence, literals, limits, integer variables, names; the numeric functions; relations, AND, OR, NOT, IF; strings: their functions, STR$\'s forms, VAL, 255 characters, the garbage collector; arrays: 1 to 3 dimensions, integers, strings; FOR, GOSUB, ON, IF ... THEN line; DATA, READ, RESTORE, DEF FN; files: OPEN\'s modes, PRINT#, INPUT#, GET#, EOF, four channels, SAVE in a program; the Hydra\'s: HIMEM, SYS by address and by name, RREG, USR, PEEK, POKE, WAIT, memory past 32K, SLEEP by the ticks, ENV$, SOUND); scripts piped into basic, their output tests/basic\'s: every error message, PRINT\'s layout (zones, TAB, SPC, POS, numbers\' forms), LIST and the tokenizer (keywords anywhere, the short forms, REM, DATA, ranges), INPUT\'s answers (??, REDO FROM START, EXTRA IGNORED, an empty line, CONT)',
+      init: 't_rc', cycles: 700e6,
+      get machine() {
+        return { sd: basicCard(), input: 'ācd /sd/0\r' + Object.keys(BSUITE_PROGS).map(n => 'ā' + (n === 'hydra' ? 'greet=hi; ' : '') +
+          'basic ' + n + '.bas\r').join('') + BSUITE_SCRIPTS.map(n => 'ābasic <' + n + '.txt\r').join('') };
+      },
+      get expect() {
+        return [...Object.entries(BSUITE_PROGS).map(([n, c]) => 'basic ' + n + '.bas\n' + n.toUpperCase() + ': ' + c + ' CHECKS, 0 FAILED\n%'),
+          ...BSUITE_SCRIPTS.map(n => '% basic <' + n + '.txt\n' + fs.readFileSync(path.join(BASIC_DIR, n + '.out'), 'latin1') + '% ')];
       },
     },
     {

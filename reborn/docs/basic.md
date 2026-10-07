@@ -26,7 +26,7 @@ was, its labels and comments kept, but where the system wanted it changed:
 | Where it runs | A ROM image at `$A000`, from WOZMON | A module run in place (`HYX2_PROGRAM "basic"`, one bank, 11K of 16K), started by rc; its data and BSS from `$0400` |
 | Zero page | `$30`-`$FA`: its variables, the input line, and CHRGET (code that held the text pointer in its own `lda abs`) | The program's `$22`-`$7F` (91 bytes, `zeropage.inc`): what it reads through (`(zp),y`), names as zero-page addresses (`ldx #FAC`) or indexes as one block (REASON's `TEMP1`-`FAC`, the floating point's `TMPEXP`-`SERLEN`), in Microsoft's order; `TXTPTR`; the rest (flags, vectors, `CURLIN`, `OLDTEXT` ...) in the BSS |
 | CHRGET | Copied to the zero page at the cold start | In ROM, reading through `TXTPTR` (`lda (TXTPTR)`: a cycle more a character) |
-| The line buffer | In the zero page after `LINNUM` (50 bytes, while lines could be 71) | A page of its own (`$0400`, `basic.cfg`'s `LINEBUF`): 240 characters.  Microsoft's code for a buffer out of the zero page back (Applesoft's and CBM2's: direct mode by the page, the line's number before it, GET's terminator, INPUT's branch), and the new line's link made not to look like the program's end |
+| The line buffer | In the zero page after `LINNUM` (50 bytes, while lines could be 71) | A page of its own (`$0400`, `basic.cfg`'s `LINEBUF`): 240 characters.  Microsoft's code for a buffer out of the zero page back (Applesoft's and CBM2's: direct mode by the page, the line's number before it, GET's terminator, INPUT's branch, STRLIT's copy of a string in the buffer: a direct line's literal, INPUT's and GET's answers), and the new line's link made not to look like the program's end |
 | Memory | Asked for (`MEM`), and tested a byte at a time | The task's RAM from the BSS's end, and a bank of its own after it, to `$9FFF` (below: "More memory"): 38,550 bytes free |
 | Output | `MONCOUT`, a BIOS address | fd 1, buffered (a LF or a full buffer sends it); a new line is LF alone, and the column 0 after it (Microsoft's set it to 13) |
 | Input | `MONRDKEY` a key at a time, BASIC editing the line | stdin a line at a time (`INLIN`: the console's cooked lines, edited and echoed by the console, or a file's or a pipe's: LF, CR or CR LF); its end ends BASIC in direct mode |
@@ -79,7 +79,9 @@ GW-BASIC's EOF, with two new statements and one function:
 * `PRINT #n, ...`, `INPUT #n, ...` and `GET #n, ...`: the statements with the channel first (a `#` after the keyword,
   spaces as you like, rather than Commodore's `PRINT#` keywords).  PRINT# keeps the console's column; INPUT# has no
   prompt, takes a line's comma-separated values as INPUT does, its end is `?END OF FILE ERROR`, and a value that
-  isn't a number is an error (no REDO from a file); GET# gives a byte at a time, `""` (or 0) at the end.
+  isn't a number is an error (no REDO from a file); GET# gives a byte at a time, `""` (or 0) at the end.  Both are
+  for programs, as INPUT and GET are (in direct mode, `?ILLEGAL DIRECT ERROR`): the line read goes in the buffer
+  that a direct line runs from.
 * `EOF(n)`: true (-1) when channel `n` has nothing more to read.
 
 Each channel is an input source as stdin and LOAD's file are (an fd and a 128-byte buffer: `IN_BYTE`), so INPUT#
@@ -199,3 +201,26 @@ above HIMEM called by SYS and by USR, registers in and out); memory (FRE past 32
 the garbage collector, an integer array, HIMEM and its errors); the shell (`basic -l` at rc's prompt: BASIC's lines and
 rc's by the rule, `cd` and the prompt, `$status`, `%`, a usage, ENV$, a program line, `exit`).  `bawin`: a card's
 `/lib/shell` naming `/bin/basic -l`, init's in window 0 and wstart's in a window made (`$window`, ENV$).
+
+`bsuite`: BASIC's suite (`tests/basic`, on a card), in two kinds, as HyForth's and hylang's are.  Programs that check
+themselves (`NAME.bas`: a check sets `X` and `E`, or `X$` and `E$`, and calls 9000 or 9100, which count it and print
+a `FAIL` line with both when they differ; the end prints `NAME: n CHECKS, m FAILED`), 392 checks in nine: `arith`
+(precedence, literals, the floating point's limits, integer variables, names' two letters), `funcs` (the numeric
+functions, RND's seed), `logic` (relations, AND, OR and NOT, IF's forms, strings compared), `strings` (LEFT$, RIGHT$
+and MID$ at their edges, STR$'s forms, VAL, 255 characters, the garbage collector with a string array), `arrays`,
+`flow` (FOR's edge cases, GOSUB's recursion, ON), `data` (DATA, READ, RESTORE, DEF FN), `files` (OPEN's modes,
+PRINT#, INPUT#, GET#, EOF, four channels at once, SAVE in a program) and `hydra` (HIMEM, SYS, RREG, USR, PEEK, POKE,
+WAIT, memory past 32K, SLEEP timed by the ticks, ENV$, SOUND).  And scripts piped into `basic` (`NAME.txt`) with what
+they print (`NAME.out`): `errors` (every message, direct and in a line, BREAK and CONT), `print` (the zones of 14,
+TAB, SPC, POS, numbers' forms), `list` (the tokenizer: keywords anywhere, the short forms, REM, DATA and strings left
+as typed; LIST's ranges, a line deleted and one replaced) and `input` (`??`, REDO FROM START, EXTRA IGNORED, an
+empty line and CONT).
+
+The first seven programs were run on an older build of EhyBASIC's too, on a bare 65C02 (their keywords its short
+forms), so their expected values are Microsoft's.  The differences are the conversion's: FRE unsigned, and -32768 an
+integer (that build's constant for it was 4 bytes, compared as 5); and LOG(1) is 1.6E-10, not 0, as ehybasic-2's
+normalization shifts the rounding byte in too (`(MANTISSA_BYTES+1)*8`, msbasic's CONFIG_2B) where the older build
+made the result 0 (`funcs` checks it within 1E-9).  The suite found two bugs of the conversion's: PRINT alone was a
+SYNTAX ERROR (`PRINT_ST`'s test for `#` lost CHRGET's flags), and a string in the line buffer (a direct line's
+literal, INPUT's and GET's answers) was left there, not copied (STRLIT's test was for the zero page), so the next line
+overwrote it.
