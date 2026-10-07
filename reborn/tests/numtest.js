@@ -15,8 +15,9 @@ const NUMS = readNumbers(path.join(ROOT, 'spec', 'numbers.def'));
 const K = Object.fromEntries(NUMS.consts.map(k => [k.name, k.value]));
 const SLOT = Object.fromEntries(NUMS.libs.find(l => l.name === 'numbers').entries.map((e, i) => [e.name, i]));
 const ERR = Object.fromEntries(NUMS.consts.filter(k => k.name.startsWith('NE_')).map(k => [k.value, k.name]));
-const RESULT = 1, IN_BANK = 2;                                // (A record's flags)
-const ARG_ROOM = [2560, 2560, 512], BANK_ARG_ROOM = [0x800, 0x800, 0x400];   // (t_num's room for r0, r1, r4)
+const RESULT = 1, IN_BANK = 2, SECOND = 4;                    // (A record's flags)
+const ARG_ROOM = [2560, 2560, 512, 512, 512], BANK_ARG_ROOM = [0x800, 0x800, 0x400, 0x400, 0x400];   // (r0, r1, r4-r6)
+const PLACE2 = { place2: true };                              // (r5: the second result's place)
 const BANK_RES_ROOM = 0xC00;
 
 const str = s => [...Buffer.from(s + '\0', 'latin1')];
@@ -132,6 +133,55 @@ function lcmp(x, y) {
   return lrcmp(a, c) || lrcmp(b, e);
 }
 
+// POW: numref.js's loop, its products the library's (lop)
+function lpow(x, n) {
+  if (n < 0n) { const p = lpow(x, -n); if (!isCpx(p) && R.isZero(p)) throw new R.NumError('DIV0'); return lop('div', 1n, p); }
+  let r = 1n, b = x;
+  for (; n > 0n; n >>= 1n) { if (n & 1n) r = lop('mul', r, b); if (n > 1n) b = lop('mul', b, b); }
+  return r;
+}
+// TO_FIXED of a rational: hylang's digit at a time, its registers checked
+function lToFixed(x, places) {
+  if (isCpx(x)) throw new R.NumError('REAL');
+  if (!isRat(x)) return R.toFixed(x, places);
+  const neg = x.num < 0n, n = neg ? -x.num : x.num, d = x.den;
+  let w = n / d, r = n % d, dec = 0;
+  while (r > 0n && dec < places) { ++dec; r = reg(r * 10n); w = reg(reg(w * 10n) + r / d); r %= d; }
+  return numfmt.norm({ fix: neg ? -w : w, places: dec });
+}
+// TO_RATIONAL, NUMERATOR, DENOMINATOR: a fixed decimal through 10^places
+function lfrac(x) {
+  if (isCpx(x)) throw new R.NumError('REAL');
+  if (isFix(x)) rpow10(x.places);
+  return R.toRational(x);
+}
+// BITS: and, or, xor work a byte past the longer (255 bytes: too big); shl past 2040 bits; counts 16 bits
+const word = v => v > 32767n ? 32767n : v < -32768n ? -32768n : v;
+const intOf = x => R.bits('and', x, -1n);                    // (numref.js's: NE_INT for a number not equal to an integer)
+function lbits(op, x, y) {
+  const ia = intOf(x);
+  if (op === 'not') return reg(~ia);
+  const ib = intOf(y);
+  if (['and', 'or', 'xor'].includes(op)) { if (Math.max(nbytes(ia), nbytes(ib)) === 255) throw TOO_BIG(); return R.bits(op, ia, ib); }
+  let k = word(ib), dir = op === 'shl' ? 1 : -1;
+  if (k < 0n) { k = -k; dir = -dir; }
+  if (dir > 0) { if (ia !== 0n && ia.toString(2).replace('-', '').length + Number(k) > 2040) throw TOO_BIG(); return ia << k; }
+  return ia >> k;
+}
+// FIB: hylang's doubling, its registers checked
+function lfib(n) {
+  n = intOf(n);
+  if (n < 0n) throw new R.NumError('INT');
+  let m = Number(word(n)), a = 0n, b = 1n;
+  for (let k = 0; k < 16; k++) {
+    const t = rmul(a, reg(reg(b + b) - a)), aa = rmul(a, a), bb = rmul(b, b);
+    b = reg(aa + bb); a = t;
+    if (m & 0x8000) { const c = reg(a + b); a = b; b = c; }
+    m = (m << 1) & 0xFFFF;
+  }
+  return a;
+}
+
 // What a call gives back, from the library's way (and checked against numref.js where it isn't too big)
 function want(f) {
   try { return f(); }
@@ -139,9 +189,10 @@ function want(f) {
 }
 const nbytesOf = x => { const b = numfmt.encode(x); return { bytes: b }; };
 
-// The calls, in order: each { op, flags, a, x, y, room, r0, r1, r4, want, what }.  An argument is a value, or
-// { data, bank } (its bytes, in this task's RAM or in the bank at $8000).  want: { err } (C = 1, .A the error), { ok }
-// (C = 0), { bytes } (C = 0 and the result those bytes), or { a, x } (C = 0, and .A and .X those)
+// The calls, in order: each { op, flags, a, x, y, room, r0, r1, r4, r5, r6, want, what }.  An argument is a value,
+// { data, bank } (its bytes, in this task's RAM or in the bank at $8000), or PLACE2 (the second result's place).
+// want: { err } (C = 1, .A the error), or C = 0 and: { ok }; { bytes } (the result those bytes; bytes2 the second
+// result's); { a, x } (.A and .X those); r4, r5 (those registers after the call)
 function calls(seed = 1066) {
   const rnd = rng(seed), list = [];
   const call = (op, o, want, what) => list.push({ op, flags: 0, room: 0, ...o, want, what });
@@ -269,9 +320,95 @@ function calls(seed = 1066) {
   call('DIV', { flags: RESULT, room: 16, r0: { data: [1] }, r1: { data: [0xB2, 0] } }, { err: K.NE_DIV0 }, 'DIV by 0.00 (not its one form): NE_DIV0');
   call('ADD', { flags: RESULT, room: 16, r0: { data: [0xC1, 1, 0] }, r1: { data: [2] } }, { err: K.NE_DIV0 }, 'ADD 1/0 (not a number): NE_DIV0');
 
+  // ---- Integers, conversions, bits, random numbers, Fibonacci
+  const ints = () => numfmt.decode(numfmt.encode(BigInt.asIntN(8 * (1 + rnd(6)), BigInt(rnd(1 << 30)) * BigInt(rnd(1 << 30)) + BigInt(rnd(1 << 20)))));
+  const smallInt = () => BigInt(rnd(41) - 20);
+  const enc = x => numfmt.encode(x);
+  const real = () => { for (;;) { const x = numfmt.decode(operand()); if (!isCpx(x)) return x; } };
+  const anyNum = () => numfmt.decode(operand());
+  for (let k = 0; k < 120; k++) {
+    const x = k % 10 ? ints() : anyNum(), y = k % 7 ? (rnd(4) ? ints() : smallInt()) : rnd(3) ? 0n : anyNum();
+    const w = want(() => { const r = R.idiv(x, y); return { bytes: enc(r.q), bytes2: enc(r.r) }; });
+    call('IDIV', { flags: RESULT | SECOND, room: 64, r0: where(enc(x)), r1: where(enc(y)), r5: PLACE2, r6: 64 }, w, 'IDIV ' + show(x) + ', ' + show(y));
+  }
+  call('IDIV', { flags: RESULT | SECOND, room: 64, r0: { data: enc(1000n) }, r1: { data: enc(7n) }, r5: PLACE2, r6: 0 }, { err: K.NE_ROOM }, 'IDIV 1000, 7, no room for the remainder: NE_ROOM');
+  for (let k = 0; k < 80; k++) {
+    const x = k % 9 ? ints() : 0n, y = k % 11 ? ints() * BigInt(1 + rnd(5)) : k % 2 ? 0n : 5n;
+    call('GCD', { flags: RESULT, room: 64, r0: where(enc(x)), r1: where(enc(y)) }, want(() => nbytesOf(R.gcd(x, y))), 'GCD ' + show(x) + ', ' + show(y));
+  }
+  for (let k = 0; k < 120; k++) {
+    const x = k % 8 ? numfmt.decode(numfmt.encode(randomNumber(rnd, true))) : [0n, 1n, -1n, { re: 0n, im: 1n }][k % 4];
+    const n = k % 13 ? BigInt(rnd(14) - 4) : k % 2 ? (1n << 20n) + BigInt(rnd(4)) : 3n;
+    const big = n;
+    call('POW', { flags: RESULT, room: BANK_RES_ROOM, r0: where(enc(x)), r1: where(enc(big)) }, want(() => nbytesOf(lpow(x, big))), 'POW ' + show(x) + ', ' + show(big));
+  }
+  call('POW', { flags: RESULT, room: 64, r0: { data: enc(2n) }, r1: { data: enc({ fix: 15n, places: 1 }) } }, { err: K.NE_INT }, 'POW 2, 1.5: NE_INT');
+  call('POW', { flags: RESULT, room: 64, r0: { data: enc(2n) }, r1: { data: [0xB0, 0x03] } }, { bytes: enc(8n) }, 'POW 2, 3.0 (equal to an integer)');
+  for (const op of ['TRUNCATE', 'FLOOR', 'ROUND']) {
+    const ref = { TRUNCATE: R.truncate, FLOOR: R.floor, ROUND: R.round }[op];
+    for (const t of ['2.5', '-2.5', '3.5', '-3.5', '1/2', '-1/2', '3/2', '7', '-7/3', '0.0', '2i'])
+      call(op, { flags: RESULT, room: 64, r0: { data: enc(numfmt.parse(t)) } }, want(() => nbytesOf(ref(numfmt.parse(t)))), op + ' ' + t);
+    for (let k = 0; k < 60; k++) {
+      const x = k % 15 ? anyNum() : { fix: BigInt(rnd(1 << 30)) * (rnd(2) ? 1n : -1n), places: 615 + rnd(2000) };
+      call(op, { flags: RESULT | (rnd(2) ? IN_BANK : 0), room: BANK_RES_ROOM, r0: where(enc(x)) }, want(() => nbytesOf(ref(x))), op + ' ' + show(x));
+    }
+  }
+  for (let k = 0; k < 150; k++) {
+    const x = anyNum(), p = k % 10 ? rnd(25) : [0, 0xFFFF, 10000, 10001, 40][(k / 10) % 5];
+    const w = p > 10000 && p !== 0xFFFF ? { err: K.NE_DOMAIN } : want(() => nbytesOf(lToFixed(x, p === 0xFFFF ? 10 : p)));
+    call('TO_FIXED', { flags: RESULT, room: BANK_RES_ROOM, a: p & 255, x: p >> 8, r0: where(enc(x)) }, w, 'TO_FIXED ' + show(x) + ', ' + p);
+  }
+  for (const [op, f] of [['TO_RATIONAL', x => lfrac(x)], ['NUMERATOR', x => R.numerator(lfrac(x))], ['DENOMINATOR', x => R.denominator(lfrac(x))]])
+    for (let k = 0; k < 60; k++) {
+      const x = k % 12 ? anyNum() : { fix: 1n + BigInt(rnd(1000)), places: 600 + rnd(40) };
+      call(op, { flags: RESULT, room: BANK_RES_ROOM, r0: where(enc(x)) }, want(() => nbytesOf(f(x))), op + ' ' + show(x));
+    }
+  for (let k = 0; k < 60; k++) {
+    const x = k % 6 ? real() : anyNum(), y = k % 5 ? real() : k % 2 ? 0n : anyNum();
+    call('COMPLEX', { flags: RESULT, room: BANK_RES_ROOM, r0: where(enc(x)), r1: where(enc(y)) }, want(() => nbytesOf(R.complex(x, y))), 'COMPLEX ' + show(x) + ', ' + show(y));
+  }
+  for (let k = 0; k < 60; k++) {
+    const x = anyNum(), y = k & 1;
+    call('PART', { flags: RESULT, room: BANK_RES_ROOM, y, r0: where(enc(x)) }, want(() => nbytesOf(R.part(x, y))), 'PART ' + show(x) + ', ' + y);
+  }
+  for (let k = 0; k < 60; k++) {
+    const v = [0, 1, 0x7FFFFFFF, 0x80000000, 0xFFFFFFFF, 0x12345678][k % 6] ^ (k > 6 ? rnd(1 << 30) : 0), signed = k & 1;
+    const u = v >>> 0, val = signed ? BigInt(u | 0) : BigInt(u);
+    call('FROM_INT', { flags: RESULT, room: 64, y: signed, r0: u & 0xFFFF, r1: u >>> 16 }, { bytes: enc(val) }, 'FROM_INT $' + u.toString(16) + (signed ? ' signed' : ''));
+  }
+  for (let k = 0; k < 80; k++) {
+    const x = k % 10 ? (k % 3 ? ints() : [2n ** 31n - 1n, -(2n ** 31n), 2n ** 31n, 2n ** 32n - 1n, 2n ** 32n, -(2n ** 31n) - 1n][k % 6]) : anyNum();
+    call('TO_INT', { r0: where(enc(x)) }, want(() => { const t = R.toInt(x); return { a: t.fits, x: 0, r4: Number(t.low & 0xFFFFn), r5: Number(t.low >> 16n) }; }), 'TO_INT ' + show(x));
+  }
+  const BOPS = ['and', 'or', 'xor', 'not', 'shl', 'shr', 'bit'];
+  for (let k = 0; k < 280; k++) {
+    const op = BOPS[k % 7], x = k % 23 ? (k % 5 ? ints() : smallInt()) : k % 2 ? (1n << 2039n) : anyNum();
+    const y = op === 'shl' || op === 'shr' || op === 'bit' ? (k % 17 ? BigInt(rnd(100) - 30) : k % 2 ? 2000n : (1n << 40n)) : (k % 4 ? ints() : smallInt());
+    const w = want(() => op === 'bit' ? { a: Number(R.bits('bit', x, y)), x: 0 } : nbytesOf(lbits(op, x, y)));
+    call('BITS', { flags: op === 'bit' ? 0 : RESULT, room: BANK_RES_ROOM, y: k % 7, r0: where(enc(x)), r1: where(enc(y)) }, w, 'BITS ' + op + ' ' + show(x) + ', ' + show(y));
+  }
+  call('BITS', { flags: RESULT, room: BANK_RES_ROOM, y: 0, r0: { data: enc((1n << 2039n) + 5n) }, r1: { data: enc(3n) } }, { err: K.NE_BIG }, 'BITS and of a 255-byte integer: NE_BIG');
+  call('BITS', { flags: RESULT, room: BANK_RES_ROOM, y: 4, r0: { data: enc(1n) }, r1: { data: enc(2039n) } }, { bytes: enc(1n << 2039n) }, 'BITS shl 1, 2039: 255 bytes');
+  call('BITS', { flags: RESULT, room: BANK_RES_ROOM, y: 4, r0: { data: enc(1n) }, r1: { data: enc(2040n) } }, { err: K.NE_BIG }, 'BITS shl 1, 2040: NE_BIG');
+  // random numbers: SEED, then RANDOM's draws, as numref.js's generator makes them
+  for (const seed of [1, 0x1234, 0xBEEF]) {
+    call('SEED', { r0: seed }, { ok: true }, 'SEED $' + seed.toString(16));
+    const g = new R.Random(seed);
+    for (let k = 0; k < 30; k++) {
+      const n = k % 10 === 9 ? 0n : [6n, 100n, 256n, 1n, 1000000n, 2n ** 70n, 255n, 3n, 65535n][k % 9];
+      const w = n === 0n ? nbytesOf(numfmt.norm({ fix: g.below(10n ** 12n), places: 12 })) : nbytesOf(g.below(n));
+      call('RANDOM', { flags: RESULT, room: 64, r0: where(enc(n)) }, w, 'RANDOM ' + n + ' (seed $' + seed.toString(16) + ')');
+    }
+  }
+  call('RANDOM', { flags: RESULT, room: 64, r0: { data: enc(-5n) } }, { err: K.NE_INT }, 'RANDOM -5: NE_INT');
+  call('RANDOM', { flags: RESULT, room: 64, r0: { data: enc({ fix: 15n, places: 1 }) } }, { err: K.NE_INT }, 'RANDOM 1.5: NE_INT');
+  for (const n of [0n, 1n, 2n, 3n, 10n, 50n, 93n, 94n, 100n, 186n, 1000n, 2000n, 2920n, 2930n, 2935n, 2938n, 2939n, 2940n, 2941n, 2950n, 3000n, 40000n, 1n << 40n, -1n])
+    call('FIB', { flags: RESULT, room: BANK_RES_ROOM, r0: { data: enc(n) } }, want(() => { lfib(n); return nbytesOf(R.fib(n)); }), 'FIB ' + n);
+  call('FIB', { flags: RESULT, room: 64, r0: { data: enc({ fix: 15n, places: 1 }) } }, { err: K.NE_INT }, 'FIB 1.5: NE_INT');
+
   // ---- The entries not written yet
   for (const e of NUMS.libs.find(l => l.name === 'numbers').entries)
-    if (!['INIT', 'SET_BASE', 'GET_BASE', 'SEED', 'BYTES', 'ADD', 'SUB', 'MUL', 'DIV', 'NEG', 'ABS', 'CMP', 'KIND'].includes(e.name))
+    if (['PARSE', 'DISPLAY', 'FORMAT'].includes(e.name))
       call(e.name, { flags: RESULT, room: 64, r0: { data: [5] }, r1: { data: [6] } }, { err: K.NE_TODO }, e.name + ': not written yet');
   return list;
 }
@@ -279,8 +416,9 @@ function calls(seed = 1066) {
 // num.in: the calls' records (tests/mod/t_num/t_num.s), then $FF
 function record(c) {
   const b = [SLOT[c.op], c.flags, c.a | 0, c.x | 0, c.y | 0, c.room & 255, c.room >> 8];
-  [c.r0, c.r1, c.r4].forEach((g, i) => {
+  [c.r0, c.r1, c.r4, c.r5, c.r6].forEach((g, i) => {
     if (g === undefined || typeof g === 'number') b.push(0, (g | 0) & 255, ((g | 0) >> 8) & 255);
+    else if (g.place2) b.push(3);
     else {
       if (g.data.length > (g.bank ? BANK_ARG_ROOM : ARG_ROOM)[i]) throw new Error(c.what + ': its data is too long for t_num');
       b.push(g.bank ? 2 : 1, g.data.length & 255, g.data.length >> 8, ...g.data);
@@ -312,15 +450,19 @@ function check(list, out) {
   for (const c of list) {
     if (at + 11 > out.length) { f.push('num.out ends at call ' + list.indexOf(c) + ' of ' + list.length + ' (' + c.what + ')'); break; }
     const [carry, a, x] = out.subarray(at, at + 3), kept = out[at + 10];
+    const r4 = out.readUInt16LE(at + 4), r5 = out.readUInt16LE(at + 6), r6 = out.readUInt16LE(at + 8);
     at += 11;
-    let got = null;
+    let got = null, got2 = null;
     if (!carry && (c.flags & RESULT)) { got = out.subarray(at, at + a + 256 * x); at += a + 256 * x; }
+    if (!carry && (c.flags & SECOND)) { got2 = out.subarray(at, at + r6); at += r6; }
     if (kept) say(c, 'it didn\'t keep ' + ['the bank at $8000', '$78-$7F', 'r0-r3'].filter((w, i) => kept & (1 << i)).join(', '));
     const w = c.want, err = carry ? (ERR[a] || '$' + a.toString(16)) : null;
     if (w.err !== undefined) { if (!carry || a !== w.err) say(c, (carry ? err : 'no error') + ', not ' + ERR[w.err]); }
     else if (carry) say(c, err);
     else if (w.bytes && !Buffer.from(w.bytes).equals(got)) say(c, '[' + hex(got) + '], not [' + hex(w.bytes) + ']');
     else if (w.a !== undefined && (a !== w.a || x !== w.x)) say(c, '.A, .X = $' + hex([a, x]) + ', not $' + hex([w.a, w.x]));
+    else if (w.bytes2 && !Buffer.from(w.bytes2).equals(got2)) say(c, 'second [' + hex(got2) + '], not [' + hex(w.bytes2) + ']');
+    else if (w.r4 !== undefined && (r4 !== w.r4 || r5 !== w.r5)) say(c, 'r4, r5 = $' + r4.toString(16) + ', $' + r5.toString(16) + ', not $' + w.r4.toString(16) + ', $' + w.r5.toString(16));
   }
   if (!f.length && at !== out.length) f.push('num.out: ' + (out.length - at) + ' bytes after the last call\'s');
   return f;

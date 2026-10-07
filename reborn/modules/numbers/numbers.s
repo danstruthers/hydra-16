@@ -20,23 +20,6 @@
 nm_parse        = nm_todo
 nm_display      = nm_todo
 nm_format       = nm_todo
-nm_idiv         = nm_todo
-nm_gcd          = nm_todo
-nm_pow          = nm_todo
-nm_truncate     = nm_todo
-nm_floor        = nm_todo
-nm_round        = nm_todo
-nm_to_fixed     = nm_todo
-nm_to_rational  = nm_todo
-nm_numerator    = nm_todo
-nm_denominator  = nm_todo
-nm_complex      = nm_todo
-nm_part         = nm_todo
-nm_from_int     = nm_todo
-nm_to_int       = nm_todo
-nm_bits         = nm_todo
-nm_random       = nm_todo
-nm_fib          = nm_todo
 
 .code
 nm_todo:
@@ -49,6 +32,9 @@ nm_todo:
 .include "nmval.inc"
 .include "nmstate.inc"
 .include "nmarith.inc"
+.include "nmconv.inc"
+.include "nmbits.inc"
+.include "nmrand.inc"
 .include "nmbytes.inc"
 
 ; ---- The arena: the rest of the bank

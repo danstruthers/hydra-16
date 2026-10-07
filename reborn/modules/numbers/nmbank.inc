@@ -50,5 +50,6 @@ v_sp:       .res        1                       ; The call's stack, for nm_fail 
 v_len:      .res        2                       ; A number's length, as it's measured or written
 v_left:     .res        2                       ; (A copy's count)
 v_regs:     .res        8                       ; The caller's r0-r3, kept across a system call
+v_ax:       .res        2                       ; The caller's .A, .X as the call began (nm_begin keeps them)
 a_top:      .res        2                       ; The arena's first free byte
 hv:         .res        2                       ; A number made: its address

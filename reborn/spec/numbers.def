@@ -184,8 +184,8 @@ entry KIND numbers impl=nm_kind
   doc:    What kind of number it is, and its sign.
 
 entry IDIV numbers impl=nm_idiv
-  in:     r0 = x; r1 = y, integers (or numbers equal to them)
-  out:    .A/.X = the result's length; r5/r6 = the remainder's place and length (r5 given: where to put it)
+  in:     r0 = x; r1 = y, integers (or numbers equal to them); r5 = a place for the remainder; r6 = its room
+  out:    .A/.X = the quotient's length (at r2); r6 = the remainder's (at r5).  No room for either: neither written
   errors: NE_DIV0 NE_INT NE_ROOM NE_NOTNUM
   names:  hl - | bas \ MOD | fs n/mod | c num_idiv
   doc:    The quotient truncated toward zero, and the remainder (its sign the dividend's).
@@ -202,7 +202,9 @@ entry POW numbers impl=nm_pow
   out:    .A/.X = the result's length
   errors: NE_INT NE_DIV0 NE_BIG NE_ROOM NE_NOTNUM
   names:  hl pow | bas ^ | fs npow | c num_pow
-  doc:    x to the whole power n, exactly (a negative n: 1 / x^-n).  A power that isn't whole is math's POW.
+  doc:    x to the whole power n, exactly (a negative n: 1 / x^-n; 0 to one: NE_DIV0), as numref.js has it: r = 1,
+  doc:    b = x, and for each of n's bits from its lowest, r = r * b if it's 1, b = b * b if there are more.  A power
+  doc:    that isn't whole is math's RPOW.
 
 # ---- numbers: the conversions
 
@@ -230,9 +232,11 @@ entry ROUND numbers impl=nm_round
 entry TO_FIXED numbers impl=nm_to_fixed
   in:     r0 = x, real; .A/.X = places (0 to 10000; $FFFF: 10)
   out:    .A/.X = the result's length
-  errors: NE_REAL NE_BIG NE_ROOM NE_NOTNUM
+  errors: NE_REAL NE_BIG NE_DOMAIN NE_ROOM NE_NOTNUM
   names:  hl to-fixed | bas - | fs to-fixed | c num_to_fixed
-  doc:    x as a fixed decimal of that many places, cut short (not rounded).
+  doc:    x as a fixed decimal of that many places, cut short (not rounded): an integer of no places, a fixed decimal
+  doc:    its digits cut, a rational a digit at a time (hylang's way: NE_BIG once its digits pass 255 bytes).  Places
+  doc:    past 10000: NE_DOMAIN.
 
 entry TO_RATIONAL numbers impl=nm_to_rational
   in:     r0 = x, real
@@ -286,12 +290,14 @@ entry TO_INT numbers impl=nm_to_int
 # ---- numbers: bits, random numbers, Fibonacci
 
 entry BITS numbers impl=nm_bits
-  in:     r0 = x; r1 = y, integers; .Y = the operation: 0 and, 1 or, 2 xor, 3 not (x alone), 4 shift left by y,
-  in:     5 shift right by y, 6 bit y's test
+  in:     r0 = x; r1 = y, integers; .Y = the operation: 0 and, 1 or, 2 xor, 3 not (x alone: -x - 1), 4 shift
+  in:     left by y, 5 shift right by y (toward minus infinity), 6 bit y's test (a count below 0 the other way; past
+  in:     16 bits, -32768 or 32767)
   out:    .A/.X = the result's length (the test: .A = 0 or 1, no result)
   errors: NE_INT NE_BIG NE_ROOM NE_NOTNUM
   names:  hl bit-and bit-or bit-xor bit-not shl shr bit? | bas AND OR XOR NOT SHL SHR BIT | fs nand nor nxor ninvert nlshift nrshift nbit? | c num_bits
-  doc:    The bits of integers of any size, in two's complement.
+  doc:    The bits of integers of any size, in two's complement.  And, or and xor work a byte past the longer, so
+  doc:    an integer of 255 bytes is NE_BIG there; a shift left past 2040 bits is NE_BIG.
 
 entry RANDOM numbers impl=nm_random
   in:     r0 = n, a positive integer, or 0 for a fixed decimal from 0 to 1
@@ -314,7 +320,8 @@ entry FIB numbers impl=nm_fib
   out:    .A/.X = the result's length
   errors: NE_INT NE_BIG NE_ROOM NE_NOTNUM
   names:  hl fib | bas FIB | fs nfib | c num_fib
-  doc:    The nth Fibonacci number.
+  doc:    The nth Fibonacci number, by doubling (hylang's): NE_BIG past fib(2939) (the doubling makes fib(n + 1) too,
+  doc:    and fib(2941) is past 255 bytes).
 
 entry BYTES numbers impl=nm_bytes
   in:     r0 = bytes; r1 = their count

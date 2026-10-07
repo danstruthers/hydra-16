@@ -37,7 +37,7 @@ n_ab:       .res        1
 n_qb:       .res        1
 n_z:        .res        1
 n_cnt:      .res        2
-n_rb:       .res        1                                   ; (r_shr's bits)
+n_k:        .res        2                                   ; (A shift's count)
 
 .code
 
@@ -915,68 +915,286 @@ r_tz:
             ldx         n_cnt + 1
             rts
 
-; |nrc| = |nrc| / 2 ^ .A, .X, in place (its bits shifted right: whole bytes, then the bits left)
-r_shr:
-            pha
-            and         #7
-            sta         n_rb
-            pla
-            stx         n_t + 1                             ; (Whole bytes: it / 8)
-            lsr         n_t + 1
-            ror
-            lsr         n_t + 1
-            ror
-            lsr         n_t + 1
-            ror
-            sta         n_m
+; |nrc| = |nrc| / 2 ^ .A, .X, in place
+r_shrax:
+            sta         n_k
+            stx         n_k + 1
+            jmp         r_shr
+
+; |nrc| shifted left n_k bits.  Too big (past 2040 bits): n_big
+r_shl:
             jsr         r_c
             ldx         nrc
-            lda         n_t + 1
-            bne         @zero
-            lda         n_m
-            beq         @bits
             lda         r_len,x
-            sec
-            sbc         n_m
-            bcc         @zero
-            beq         @zero
-            sta         n_la                                ; (Its length after: its bytes moved down)
-            lda         nc
-            clc
-            adc         n_m
-            sta         nd
-            lda         nc + 1
-            adc         #0
-            sta         nd + 1
+            bne         :+
+            rts
+:
+            tay                                             ; (Its bits: 8 a byte below its top, and its top's)
+            dey
+            lda         (nc),y
             ldy         #0
 :
-            lda         (nd),y
+            iny
+            lsr
+            bne         :-
+            sty         n_t                                 ; (8 * (len - 1) + top's + n_k, past 2040: too big)
+            lda         r_len,x
+            dec         a
+            stz         n_t + 1
+            asl
+            rol         n_t + 1
+            asl
+            rol         n_t + 1
+            asl
+            rol         n_t + 1
+            clc
+            adc         n_t
+            sta         n_t
+            bcc         :+
+            inc         n_t + 1
+:
+            lda         n_t
+            clc
+            adc         n_k
+            sta         n_t
+            lda         n_t + 1
+            adc         n_k + 1
+            bcs         @big
+            cmp         #>2041
+            bcc         @fits
+            bne         @big
+            lda         n_t
+            cmp         #<2041
+            bcc         @fits
+@big:
+            jmp         n_big
+@fits:
+            lda         n_k                                 ; (Whole bytes: n_k / 8)
+            sta         n_t
+            lda         n_k + 1
+            lsr
+            ror         n_t
+            lsr
+            ror         n_t
+            lsr
+            ror         n_t
+            lda         r_len,x
+            clc
+            adc         n_t
+            sta         n_lc                                ; (Its bytes up by n_t: 255 at most, as it fits)
+            ldy         r_len,x
+@up:
+            dey
+            cpy         #$FF
+            beq         @zeros
+            lda         (nc),y
+            pha
+            tya
+            clc
+            adc         n_t
+            tay
+            pla
+            sta         (nc),y
+            tya
+            sec
+            sbc         n_t
+            tay
+            bra         @up
+@zeros:
+            ldy         n_t
+            beq         :+
+            lda         #0
+@zero:
+            dey
+            sta         (nc),y
+            bne         @zero
+:
+            lda         n_lc                                ; (A byte more, 0, for the bits, if there's room: there
+            cmp         #255                                ;   is but at 255, where the bits fit as they are)
+            beq         :+
+            tay
+            lda         #0
+            sta         (nc),y
+            inc         n_lc
+:
+            lda         n_lc
+            sta         r_len,x
+            lda         n_k
+            and         #7
+            beq         @norm
+            sta         n_bits
+@bit:
+            ldy         #0
+            ldx         nrc
+            lda         r_len,x
+            tax
+            clc
+@shift:
+            lda         (nc),y
+            rol
             sta         (nc),y
             iny
-            cpy         n_la
-            bne         :-
-            lda         n_la
-            sta         r_len,x
-@bits:
-            lda         n_rb
-            beq         @norm
-@bit:
-            ldy         r_len,x                             ; (A bit: from its top byte down)
-            beq         @norm
+            dex
+            bne         @shift
+            dec         n_bits
+            bne         @bit
+@norm:
+            jmp         r_normc
+
+; |nrc| shifted right n_k bits
+r_shr:
+            jsr         r_c
+            ldx         nrc
+            lda         n_k + 1                             ; (Whole bytes: n_k / 8; all of them, 0)
+            cmp         #8
+            bcs         @zero
+            lda         n_k
+            sta         n_t
+            lda         n_k + 1
+            lsr
+            ror         n_t
+            lsr
+            ror         n_t
+            lsr
+            ror         n_t
+            lda         n_t
+            cmp         r_len,x
+            bcs         @zero
+            ldy         #0                                  ; (Its bytes down by n_t)
+@down:
+            tya
             clc
-:
+            adc         n_t
+            cmp         r_len,x
+            bcs         @len
+            phy
+            tay
+            lda         (nc),y
+            ply
+            sta         (nc),y
+            iny
+            bra         @down
+@len:
+            tya
+            sta         r_len,x
+            lda         n_k
+            and         #7
+            beq         @norm
+            sta         n_bits
+@bit:
+            ldx         nrc
+            ldy         r_len,x
+            clc
+@shift:
             dey
             lda         (nc),y
             ror
             sta         (nc),y
             tya
-            bne         :-
-            dec         n_rb
+            bne         @shift
+            dec         n_bits
             bne         @bit
 @norm:
             jmp         r_normc
 @zero:
             jmp         r_clear
+
+; nrc in two's complement in n_m bytes (its bytes to n_m 0, then if it's negative each inverted and 1 added)
+r_tc:
+            ldx         nrc
+            jsr         r_zext
+            jsr         r_c
+            ldx         nrc
+            lda         r_neg,x
+            bne         r_inv1
+            rts
+; Its n_m bytes inverted and 1 added
+r_inv1:
+            ldy         #0
+            ldx         n_m
+            sec
+@byte:
+            lda         (nc),y
+            eor         #$FF
+            adc         #0
+            sta         (nc),y
+            iny
+            dex
+            bne         @byte
+@rts:
+            rts
+
+; nrc from two's complement in n_m bytes: negative if its top bit is set
+r_untc:
+            jsr         r_c
+            ldx         nrc
+            lda         n_m
+            sta         r_len,x
+            stz         r_neg,x
+            tay
+            dey
+            lda         (nc),y
+            bpl         @norm
+            jsr         r_inv1
+            ldx         nrc
+            lda         #$FF
+            sta         r_neg,x
+@norm:
+            jmp         r_normc
+
+; .A, .X = nrc's value, 16 bits signed (past them -32768 or 32767)
+r_word:
+            jsr         r_c
+            ldx         nrc
+            stz         n_t
+            stz         n_t + 1
+            lda         r_len,x
+            beq         @sign
+            cmp         #3
+            bcs         @past
+            lda         (nc)
+            sta         n_t
+            lda         r_len,x
+            cmp         #2
+            bcc         @sign
+            ldy         #1
+            lda         (nc),y
+            sta         n_t + 1
+            bpl         @sign
+            lda         r_neg,x                             ; (32768 and more: -32768 only, negative)
+            beq         @past
+            lda         n_t + 1
+            cmp         #$80
+            bne         @past
+            lda         n_t
+            bne         @past
+            lda         #0
+            ldx         #$80
+            rts
+@sign:
+            lda         r_neg,x
+            beq         :+
+            sec
+            lda         #0
+            sbc         n_t
+            sta         n_t
+            lda         #0
+            sbc         n_t + 1
+            sta         n_t + 1
+:
+            lda         n_t
+            ldx         n_t + 1
+            rts
+@past:
+            lda         r_neg,x
+            bne         :+
+            lda         #$FF
+            ldx         #$7F
+            rts
+:
+            lda         #0
+            ldx         #$80
+            rts
 
 ; Is nrc one?  OUT: Z = 1 if it is
 r_one_p:

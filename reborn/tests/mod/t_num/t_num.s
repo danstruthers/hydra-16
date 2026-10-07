@@ -8,17 +8,20 @@
 ; num.in: records, each
 ;   op              the entry (its slot: 0 INIT, 1 SET_BASE ...); $FF: the end
 ;   flags           bit 0: the result is .A/.X bytes at r2; bit 1: r2 in the bank at $8000 (this task's other bank,
-;                   selected as every call's made), else in this task's RAM
+;                   selected as every call's made), else in this task's RAM; bit 2: a second result, r6 bytes at r5
+;                   (IDIV's remainder)
 ;   .A .X .Y        the registers for the call
 ;   room            (2 bytes) r3
-;   r0 r1 r4        each a kind, then 0: a value (2 bytes); 1: data in this task's RAM (2 bytes, its length, then
-;                   its bytes), the register its address; 2: data in the bank at $8000, the same way
+;   r0 r1 r4 r5 r6  each a kind, then 0: a value (2 bytes); 1: data in this task's RAM (2 bytes, its length, then
+;                   its bytes), the register its address; 2: data in the bank at $8000, the same way; 3: the second
+;                   result's place (in this task's RAM)
 ; num.out: for each call
 ;   C .A .X .Y      what it gave back
 ;   r4 r5 r6        (2 bytes each)
 ;   kept            bit 0: the bank at $8000 isn't the one selected for the call; bit 1: $78-$7F changed; bit 2:
 ;                   r0-r3 changed
-;   then, when C = 0 and flags bit 0: the result, .A/.X bytes from r2
+;   then, when C = 0 and flags bit 0: the result, .A/.X bytes from r2; and when C = 0 and flags bit 2: the second
+;                   result, r6 bytes from r5
 
 .include "hydra.inc"
 .include "hw.inc"
@@ -45,7 +48,7 @@ c_a:        .res        1                                   ; The call's .A .X .
 c_x:        .res        1
 c_y:        .res        1
 room:       .res        2
-regs:       .res        6                                   ; r0, r1, r4 for the call
+regs:       .res        10                                  ; r0, r1, r4, r5, r6 for the call
 keep:       .res        8                                   ; r0-r3 as the call had them
 ret:        .res        6                                   ; r4-r6 as it left them
 ptr:        .res        2
@@ -64,6 +67,7 @@ arg0:       .res        ARG_ROOM
 arg1:       .res        ARG_ROOM
 arg4:       .res        512
 result:     .res        RES_ROOM
+result2:    .res        1100
 
 BANK_ARG0       = $8000                                     ; (The arguments and the result, in the bank)
 BANK_ARG1       = $8800
@@ -143,7 +147,7 @@ main:
             sta         room
             jsr         getb
             sta         room + 1
-            ldx         #0                                  ; r0, r1, r4
+            ldx         #0                                  ; r0, r1, r4, r5, r6
 @arg:
             phx
             jsr         getarg
@@ -153,7 +157,7 @@ main:
             sta         regs + 1,x
             inx
             inx
-            cpx         #6
+            cpx         #10
             bne         @arg
 
             ldx         #7                                  ; The canary in $78-$7F
@@ -166,6 +170,8 @@ main:
             MOVR        r0, regs
             MOVR        r1, regs + 2
             MOVR        r4, regs + 4
+            MOVR        r5, regs + 6
+            MOVR        r6, regs + 8
             lda         flags
             and         #2
             beq         :+
@@ -287,6 +293,30 @@ main:
             dec         cnt
             bra         @res
 @again:
+            lda         flags                               ; (A second result, r6 bytes at r5)
+            and         #4
+            beq         @next2
+            lda         carry
+            bne         @next2
+            MOVR        ptr, regs + 6
+            MOVR        cnt, ret + 4
+@res2:
+            lda         cnt
+            ora         cnt + 1
+            beq         @next2
+            lda         (ptr)
+            jsr         putb
+            inc         ptr
+            bne         :+
+            inc         ptr + 1
+:
+            lda         cnt
+            bne         :+
+            dec         cnt + 1
+:
+            dec         cnt
+            bra         @res2
+@next2:
             jmp         @call
 
 @end:
@@ -357,6 +387,12 @@ getarg:
             pla
             rts
 @data:
+            cmp         #3
+            bne         @data1
+            lda         #<result2                           ; (The second result's place)
+            ldy         #>result2
+            rts
+@data1:
             ldx         cnt
             cmp         #2
             beq         @bank
@@ -442,8 +478,8 @@ flush:
 s_lib:      .byte       "numbers", 0
 s_in:       .byte       "#f/0/num.in", 0
 s_out:      .byte       "#f/0/num.out", 0
-ram_lo:     .byte       <arg0, 0, <arg1, 0, <arg4
-ram_hi:     .byte       >arg0, 0, >arg1, 0, >arg4
-bank_lo:    .byte       <BANK_ARG0, 0, <BANK_ARG1, 0, <BANK_ARG4
-bank_hi:    .byte       >BANK_ARG0, 0, >BANK_ARG1, 0, >BANK_ARG4
+ram_lo:     .byte       <arg0, 0, <arg1, 0, <arg4, 0, <arg4, 0, <arg4
+ram_hi:     .byte       >arg0, 0, >arg1, 0, >arg4, 0, >arg4, 0, >arg4
+bank_lo:    .byte       <BANK_ARG0, 0, <BANK_ARG1, 0, <BANK_ARG4, 0, <BANK_ARG4, 0, <BANK_ARG4
+bank_hi:    .byte       >BANK_ARG0, 0, >BANK_ARG1, 0, >BANK_ARG4, 0, >BANK_ARG4, 0, >BANK_ARG4
 

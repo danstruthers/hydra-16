@@ -35,6 +35,8 @@ n_free:     .res        2                                   ; (The arena's top, 
 n_gk:       .res        2                                   ; (n_gcd's twos; the twos each had)
 n_tz1:      .res        2
 n_tz2:      .res        2
+n_v1:       .res        2                                   ; (Two results' values, nm_out2's)
+n_v2:       .res        2
 s_lo:       .res        NSTACK                              ; The complex numbers' machine's stack: values, and
 s_hi:       .res        NSTACK                              ;   whether each is the arena's, made by the machine
 s_own:      .res        NSTACK                              ;   (its room given back as it's used)
@@ -334,12 +336,12 @@ n_rat:
             sta         nrc
             lda         n_gk
             ldx         n_gk + 1
-            jsr         r_shr
+            jsr         r_shrax
             lda         #5
             sta         nrc
             lda         n_gk
             ldx         n_gk + 1
-            jsr         r_shr
+            jsr         r_shrax
 @made:
 ; hv = R4 / R5 written: an integer if R5 is 1, else a rational
 n_ratw:
@@ -381,8 +383,10 @@ n_ratw:
 
 ; The greatest common divisor of |R4| and |R5| (R5 not 0): R0 its odd part, n_gk its twos (the divisor R0 * 2^n_gk).
 ; The binary way: each's twos counted and shifted out (the fewer the divisor's), then the less taken from the more
-; and its twos shifted out, till they're the same; shifts and subtractions, no division.  OUT: Z = 1 if it's 1.
-; Uses R1
+; and its twos shifted out, till they're the same: shifts and subtractions.  But while one is far longer than the
+; other (by more than a third of the shorter's bytes), a division: the longer made its remainder by the shorter (a
+; division costs as their lengths multiplied, the subtractions as the longer's length for each bit they're apart).
+; OUT: Z = 1 if it's 1.  Uses R1-R3
 n_gcd:
             lda         #4                                  ; (R0 = |R4|, R1 = |R5|; R4 0: R0 = R1)
             sta         nra
@@ -412,13 +416,13 @@ n_gcd:
             jsr         r_tz
             sta         n_tz1
             stx         n_tz1 + 1
-            jsr         r_shr
+            jsr         r_shrax
             lda         #1
             sta         nrc
             jsr         r_tz
             sta         n_tz2
             stx         n_tz2 + 1
-            jsr         r_shr
+            jsr         r_shrax
             lda         n_tz1
             ldx         n_tz1 + 1
             cpx         n_tz2 + 1
@@ -432,6 +436,52 @@ n_gcd:
             sta         n_gk
             stx         n_gk + 1
 @step:
+            ldx         #0                                  ; (One far longer: its remainder by the other)
+            lda         r_len,x
+            ldx         #1
+            sec
+            sbc         r_len,x
+            beq         @sub
+            bcc         :+
+            jsr         n_far                               ; (R0 the longer)
+            bcc         @sub
+            lda         #0
+            ldx         #1
+            bra         @mod
+:
+            eor         #$FF                                ; (R1 the longer)
+            inc         a
+            ldx         #0
+            jsr         n_far
+            bcc         @sub
+            lda         #1
+            ldx         #0
+@mod:
+            sta         nra                                 ; (R(a) = R(a) mod R(b))
+            stx         nrb
+            lda         #2
+            sta         nrq
+            lda         #3
+            sta         nrr
+            jsr         r_divmod
+            lda         #3                                  ; (The remainder back to R(a))
+            sta         nra
+            lda         nrb
+            eor         #1
+            sta         nrc
+            jsr         r_copy
+            ldx         nrc
+            lda         r_len,x
+            bne         @odd
+            lda         nrb                                 ; (0: the divisor R(b), to R0)
+            beq         @same
+            lda         #1
+            sta         nra
+            lda         #0
+            sta         nrc
+            jsr         r_copy
+            bra         @same
+@sub:
             lda         #0                                  ; (Both odd: the less from the more)
             sta         nra
             lda         #1
@@ -453,8 +503,8 @@ n_gcd:
             jsr         r_usub
 @odd:
             jsr         r_tz                                ; (Its twos out: odd again)
-            jsr         r_shr
-            bra         @step
+            jsr         r_shrax
+            jmp         @step
 @same:
             lda         n_gk
             ora         n_gk + 1
@@ -463,6 +513,18 @@ n_gcd:
             sta         nrc
             jmp         r_one_p
 @rts:
+            rts
+
+; C = 1 if .A (how much longer one is) is more than a third of register .X's length (the shorter's)
+n_far:
+            cmp         #86
+            bcs         @far
+            sta         n_t
+            asl
+            adc         n_t
+            cmp         r_len,x
+            rts
+@far:
             rts
 
 ; R(.A) = R(.A) / nrb, exactly (the quotient in R2, copied back; the remainder in R6)

@@ -9,7 +9,8 @@
 ; ---- A call's start and end
 
 ; The library's bank selected (r13's), the caller's kept (v_bank), its zero page $70-$7F kept (v_zp), the stack as
-; the entry has it noted (nm_fail goes back to it).  Then the state checked: INIT must have run (NE_INIT)
+; the entry has it noted (nm_fail goes back to it).  Then the state checked: INIT must have run (NE_INIT).  Keeps .A,
+; .X (in v_ax too), .Y
 nm_begin:
             jsr         nm_begin0
             inc         v_sp                                ; (Past this return too)
@@ -17,16 +18,24 @@ nm_begin:
             lda         st_magic
             cmp         #NUMBERS_MAGIC
             bne         @init
+            lda         v_ax
+            ldx         v_ax + 1
             rts
 @init:
             lda         #NE_INIT
             jmp         nm_fail
 
 nm_begin0:
+            pha
+            phx
             lda         RAM_BANK                            ; (The caller's bank, kept once the library's is there)
             ldx         r13
             stx         RAM_BANK
             sta         v_bank
+            plx
+            stx         v_ax + 1
+            pla
+            sta         v_ax
             LDR         a_top, arena                        ; (The arena empty)
             ldx         #15
 @zp:
@@ -38,6 +47,8 @@ nm_begin0:
             inx
             inx
             stx         v_sp
+            lda         v_ax
+            ldx         v_ax + 1
             rts
 
 ; The call's end: the caller's zero page and bank back, C, .A and .X as they are
@@ -288,6 +299,59 @@ nm_out:
             ldx         v_len + 1
             clc
             jmp         nm_end
+@room:
+            lda         #NE_ROOM
+            jmp         nm_fail
+
+; The call's end with two numbers: n_v2 (a value) copied to the caller's r5 (its room r6; r6 its length after), and
+; .A, .X to r2 (room r3), whose length .A, .X are.  No room for either: NE_ROOM, neither written
+nm_out2:
+            sta         n_v1
+            stx         n_v1 + 1
+            jsr         n_size
+            cpx         r3 + 1
+            bcc         :+
+            bne         @room
+            cmp         r3
+            beq         :+
+            bcs         @room
+:
+            lda         n_v2
+            ldx         n_v2 + 1
+            jsr         n_size
+            sta         v_len
+            stx         v_len + 1
+            cpx         r6 + 1
+            bcc         :+
+            bne         @room
+            cmp         r6
+            beq         :+
+            bcs         @room
+:
+            MOVR        np, r5
+            MOVR        nq, n_v2
+            MOVR        v_left, v_len
+@byte:
+            lda         v_left
+            ora         v_left + 1
+            beq         @done
+            lda         (nq)
+            jsr         c_put
+            inc         nq
+            bne         :+
+            inc         nq + 1
+:
+            lda         v_left
+            bne         :+
+            dec         v_left + 1
+:
+            dec         v_left
+            bra         @byte
+@done:
+            MOVR        r6, v_len
+            lda         n_v1
+            ldx         n_v1 + 1
+            jmp         nm_out
 @room:
             lda         #NE_ROOM
             jmp         nm_fail
