@@ -6,6 +6,9 @@ RUN:
         bne     L27CF
         jmp     SETPTRS
 L27CF:
+        bcc     :+                              ; (Not a line's number: a file's name, LOADed and run)
+        jmp     RUN_FILE
+:
         jsr     CLEARC
         jmp     L27E9
 

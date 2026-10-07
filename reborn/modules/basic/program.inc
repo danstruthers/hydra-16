@@ -23,9 +23,15 @@ ERROR:
         jsr     CRDO
         jsr     OUTQUES
 L2329:
+        cpx     #ERR_OS                         ; (The system's: its text, os_err's: hyio.inc)
+        bne     :+
+        jsr     OS_ERRTEXT
+        bra     L2330
+:
         lda     ERROR_ADDRS,x                   ; (Its message: the table's address of it)
         ldy     ERROR_ADDRS+1,x
         jsr     OUTHTASC
+L2330:
         jsr     STKINI
         lda     #<QT_ERROR
         ldy     #>QT_ERROR
@@ -36,20 +42,26 @@ L2329:
 ; FALL INTO WARM RESTART
 ; ----------------------------------------------------------------------------
 PRINT_ERROR_LINNUM:
+        ldx     #1                              ; (A script's code: 1, after an error or a BREAK)
+        stx     exit_code
         jsr     STROUT
         ldy     CURLIN+1
         iny
         beq     L2340
         jsr     INPRT
 L2340:
-        lda     interactive                     ; (Not at the console, no OK: its line ended here)
-        bne     RESTART
+        lda     interactive                     ; (Not at the console, or a script: no OK, so its line
+        beq     :+                              ;   ended here)
+        lda     script
+        beq     RESTART
+:
         jsr     CRDO
 
 ; ----------------------------------------------------------------------------
 ; WARM RESTART ENTRY
 ; ----------------------------------------------------------------------------
 RESTART:
+        jsr     IO_RESET                        ; (Files LOAD or SAVE had: closed; a script: its end)
         lsr     Z14
         lda     interactive                     ; (OK: at the console only)
         beq     L2351
@@ -71,6 +83,8 @@ L2351:
         ldx     #$FF
         stx     CURLIN+1
         bcc     NUMBERED_LINE
+        bit     ldfd                            ; (A file being loaded: its lines without a number, a #!
+        bpl     L2351                           ;   line say, passed over)
         jsr     PARSE_INPUT_LINE
         jmp     NEWSTT2
 
@@ -129,7 +143,7 @@ PUT_NEW_LINE:
         jsr     SETPTRS
         jsr     LE33D
         lda     INPUTBUFFER
-        beq     L2351
+        jeq     L2351
         clc
         lda     VARTAB
         sta     HIGHTR
@@ -490,16 +504,28 @@ L2598:
         pla
         lda     LINNUM
         ora     LINNUM+1
-        bne     L25A6
+        bne     :+
         lda     #$FF
         sta     LINNUM
         sta     LINNUM+1
+:
+        jsr     LIST_LINES
+        jmp     RESTART
+
+; The lines from LOWTRX to the one numbered LINNUM out, each after a new line (none before the first with nolf1
+; set: SAVE's).  Ctrl-C stops it (ISCNTC)
+LIST_LINES:
 L25A6:
         ldy     #$01
         lda     (LOWTRX),y
         beq     L25E5
         jsr     ISCNTC
+        lda     nolf1
+        stz     nolf1
+        bne     :+
         jsr     CRDO
+:
+        ldy     #$01
         iny
         lda     (LOWTRX),y
         tax
@@ -514,7 +540,7 @@ L25C1:
 ; ---LIST ONE LINE----------------
 L25C3:
         sty     FORPNT
-        jsr     LINPRT
+        jsr     LINPRT_NS
         lda     #$20
 L25CA:
         ldy     FORPNT
@@ -534,7 +560,7 @@ L25CE:
         sta     LOWTRX+1
         bne     L25A6
 L25E5:
-        jmp     RESTART
+        rts
 L25E8:
         bpl     L25CE
         sec

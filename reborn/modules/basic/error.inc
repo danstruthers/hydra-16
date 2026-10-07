@@ -20,3 +20,6 @@ define_error ERR_STRLONG, "STRING TOO LONG"
 define_error ERR_FRMCPX, "FORMULA TOO COMPLEX"
 define_error ERR_CANTCONT, "CAN'T CONTINUE"
 define_error ERR_UNDEFFN, "UNDEF'D FUNCTION"
+define_error ERR_BADFILE, "BAD FILE"
+
+ERR_OS = $FE                                ; (The system's error, os_err: its text, ERRSTR's, in capitals)

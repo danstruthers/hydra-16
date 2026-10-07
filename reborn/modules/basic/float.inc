@@ -1121,6 +1121,18 @@ LINPRT:
 GOSTROUT2:
         jmp     STROUT
 
+; A,X as a decimal integer, without the space for its sign (a line number: LIST's and SAVE's)
+LINPRT_NS:
+        sta     FAC+1
+        stx     FAC+2
+        ldx     #$90
+        sec
+        jsr     FLOAT2
+        jsr     FOUT
+        lda     #<(STACK2+1)
+        ldy     #>(STACK2+1)
+        jmp     STROUT
+
 ; ----------------------------------------------------------------------------
 ; CONVERT (FAC) TO STRING STARTING AT STACK
 ; RETURN WITH (Y,A) POINTING AT STRING
