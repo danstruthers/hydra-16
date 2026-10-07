@@ -118,9 +118,9 @@ int __fastcall__ snd_off (unsigned char ch)
     return command (ch, HY_SND_R_OFF, 0);
 }
 
-int __fastcall__ snd_vol (unsigned char ch, unsigned char vol)
+int __fastcall__ snd_level (unsigned char ch, unsigned char level)
 {
-    return command (ch, HY_SND_R_VOL, vol);
+    return command (ch, HY_SND_R_VOL, level);
 }
 
 int __fastcall__ snd_pan (unsigned char ch, unsigned char pan)
@@ -136,6 +136,20 @@ int __fastcall__ snd_bend (unsigned char ch, signed char bend)
 int __fastcall__ snd_drum (unsigned char ch, unsigned char note)
 {
     return command (ch, HY_SND_R_DRUM, note);
+}
+
+int snd_beep (void)
+{
+    int bell = _hy_open ("/dev/bell", HY_O_WRITE);
+
+    if (bell < 0) {
+        return -1;
+    }
+    if (write (bell, "\a", 1) < 0) {
+        close (bell);
+        return -1;
+    }
+    return close (bell);
 }
 
 int __fastcall__ snd_regs (unsigned char* regs)

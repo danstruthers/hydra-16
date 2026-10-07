@@ -4,8 +4,11 @@
 ;   /snd     a write: YM2151 register/value byte pairs, through the library (an odd last byte is dropped); a read:
 ;            the registers as they were written (the shadow, 256 bytes: the chip's can't be read)
 ;   /sndctl  claim N, release N (a mask of channels: bit n, channel n), volume N (the master volume, 0-200: 100 as
-;            written; more, louder, up to 23 dB), reset (the chip and every setting cleared; the claims stay).  It
-;            reads as the state: "volume 100", then "claimed" and the channels claimed
+;            written; more, louder, up to 23 dB), reset (the chip and every setting cleared; the claims stay); and
+;            each channel's commands as text (/snd's SND_R_*): patch CH P, note CH N, off CH, level CH V (vol, its old
+;            name), pan CH left|right|both (or 0-3), bend CH B (-128 to 127), drum CH N, and reg R V [R V].  A
+;            channel is 0-7 (with a Vera X, 8-23 are to be its PSG's).  It reads as the state: "volume 100", then
+;            "claimed" and the channels claimed
 ;   /bell    a write: the console's bell (cons writes it at a BEL it sends): a short beep on channel 7, unless
 ;            channel 7 is claimed
 ; Claims: a channel claimed is its claimer's alone, the other tasks' writes to it dropped, till it releases it or
@@ -313,6 +316,212 @@ c_reset:
             lda         #E_IO
 :
             rts
+
+; sndctl's channel commands, each its binary command's (/snd's SND_R_*) as text: patch CH P, note CH N, off CH,
+; level CH V (vol, its old name), pan CH left|right|both (or 0-3), bend CH B (signed: -128 to 127), drum CH N; and
+; reg R V [R V], registers as /snd writes them.  A channel another task has claimed: E_BUSY; a number out of range,
+; or one missing: E_INVAL; the chip not answering: E_IO.  (ctl_ch and ctl_chbyte answer an error themselves)
+c_patch:
+            ldx         #SND_PATCHES
+            jsr         ctl_chbyte
+            jsr         cmd_patch
+            jmp         ctl_io
+
+c_note:
+            ldx         #$80
+            jsr         ctl_chbyte
+            jsr         cmd_note
+            jmp         ctl_io
+
+c_off:
+            jsr         ctl_ch
+            jsr         cmd_off
+            jmp         ctl_io
+
+c_level:
+            ldx         #$80
+            jsr         ctl_chbyte
+            jsr         cmd_vol
+            jmp         ctl_io
+
+c_drum:
+            ldx         #SND_DRUMS
+            jsr         ctl_chbyte
+            jsr         cmd_drum
+            jmp         ctl_io
+
+c_pan:
+            jsr         ctl_ch
+            lda         z:srv_argn                          ; (Its speakers: a word, or a number)
+            cmp         #2
+            bcc         @inval
+            lda         srv_argp + 2
+            sta         srv_p
+            lda         srv_argp + 3
+            sta         srv_p + 1
+            ldx         #0
+@word:
+            lda         pan_words,X
+            sta         r3
+            lda         pan_words + 1,X
+            sta         r3 + 1
+            jsr         srv_same                            ; (Keeps .X)
+            beq         @named
+            inx
+            inx
+            cpx         #6
+            bcc         @word
+            lda         (srv_p)                             ; A number, 0-3 (not a word that reads as 0)
+            cmp         #'0'
+            bcc         @inval
+            cmp         #'9' + 1
+            bcs         @inval
+            lda         srv_arg + 3
+            bne         @inval
+            lda         srv_arg + 2
+            cmp         #4
+            bcc         @set
+@inval:
+            jmp         ctl_inval
+
+@named:
+            txa                                             ; (left 1, right 2, both 3)
+            lsr
+            inc         a
+@set:
+            ldy         ch
+            jsr         cmd_pan
+            jmp         ctl_io
+
+c_bend:
+            jsr         ctl_ch
+            lda         z:srv_argn
+            cmp         #2
+            bcc         @inval
+            lda         srv_arg + 2                         ; -128 to 127: its high byte the low one's sign
+            asl
+            lda         srv_arg + 3
+            adc         #0
+            bne         @inval
+            lda         srv_arg + 2
+            ldy         ch
+            jsr         cmd_bend
+            jmp         ctl_io
+
+@inval:
+            jmp         ctl_inval
+
+c_reg:
+            lda         z:srv_argn                          ; Pairs: 2 or 4 numbers, each a byte
+            cmp         #2
+            beq         :+
+            cmp         #4
+            bne         @inval
+:
+            asl
+            sta         cnt                                 ; (Their bytes)
+            ldx         z:srv_fid
+            lda         srv_fid_aux,X
+            sta         owner
+            ldy         #0
+@byte:
+            lda         srv_arg + 1,Y
+            bne         @inval
+            iny
+            iny
+            cpy         cnt
+            bcc         @byte
+            ldy         #0
+@pair:
+            ldx         srv_arg,Y
+            lda         srv_arg + 2,Y
+            phy
+            jsr         pair
+            ply
+            bcs         ctl_ioerr
+            iny
+            iny
+            iny
+            iny
+            cpy         cnt
+            bcc         @pair
+            clc
+            rts
+
+@inval:
+            jmp         ctl_inval
+
+; (The chip's answer: C = 1, E_IO)
+ctl_io:
+            bcc         :+
+ctl_ioerr:
+            lda         #E_IO
+:
+            rts
+
+ctl_inval:
+            lda         #E_INVAL
+            sec
+            rts
+
+; A channel command's channel (its first number) and the value after it, below .X: .A = the value, .Y = ch = the
+; channel, owner its task.  An error answers the command (its handler's caller): E_INVAL (none, or out of range),
+; E_BUSY (another task's channel)
+ctl_chbyte:
+            stx         t
+            lda         z:srv_argn
+            cmp         #2
+            bcc         ctl_drop
+            lda         srv_arg + 3
+            bne         ctl_drop
+            lda         srv_arg + 2
+            cmp         t
+            bcs         ctl_drop
+            jsr         ctl_ch1
+            bcs         ctl_busy
+            lda         srv_arg + 2
+            ldy         ch
+            rts
+
+; A channel command's channel: ch = .Y = it, owner its task (an error as ctl_chbyte's)
+ctl_ch:
+            lda         z:srv_argn
+            beq         ctl_drop
+            jsr         ctl_ch1
+            bcs         ctl_busy
+            ldy         ch
+            rts
+
+ctl_drop:
+            pla                                             ; (The command answered: its handler's return
+            pla                                             ;   dropped)
+            bra         ctl_inval
+
+ctl_busy:
+            pla
+            pla
+            lda         #E_BUSY
+            rts
+
+; ch = the first number, owner the fid's task: C = 1 if another task has it.  (Out of range: ctl_drop's, from
+; ctl_ch's or ctl_chbyte's caller)
+ctl_ch1:
+            lda         srv_arg + 1
+            bne         @range
+            lda         srv_arg
+            cmp         #SND_CHANNELS
+            bcs         @range
+            sta         ch
+            ldx         z:srv_fid
+            lda         srv_fid_aux,X
+            sta         owner
+            lda         ch
+            jmp         owned
+
+@range:
+            pla                                             ; (ctl_ch1's own return dropped too)
+            pla
+            bra         ctl_drop
 
 ; sndctl's state: "volume 100", then "claimed" and the channels claimed
 gen_ctl:
@@ -763,9 +972,11 @@ pitch:
             jsr         set                                 ; The key code ...
             pla
             bcs         @done
+            pha
             txa
             adc         #$08                                ; ($28 + 8: $30; C = 0)
             tax
+            pla
             jmp         set                                 ;   and the fraction
 
 @done:
@@ -1108,7 +1319,18 @@ ctl_cmds:
             .word       s_release, c_release
             .word       s_volume_w, c_volume
             .word       s_reset, c_reset
+            .word       s_patch, c_patch
+            .word       s_note, c_note
+            .word       s_off, c_off
+            .word       s_level, c_level
+            .word       s_vol, c_level
+            .word       s_pan, c_pan
+            .word       s_bend, c_bend
+            .word       s_drum, c_drum
+            .word       s_reg, c_reg
             .word       0
+pan_words:
+            .word       s_left, s_right, s_both
 s_root:     .byte       "/", 0
 s_snd:      .byte       "snd", 0
 s_sndctl:   .byte       "sndctl", 0
@@ -1117,6 +1339,18 @@ s_claim:    .byte       "claim", 0
 s_release:  .byte       "release", 0
 s_volume_w: .byte       "volume", 0
 s_reset:    .byte       "reset", 0
+s_patch:    .byte       "patch", 0
+s_note:     .byte       "note", 0
+s_off:      .byte       "off", 0
+s_level:    .byte       "level", 0
+s_vol:      .byte       "vol", 0
+s_pan:      .byte       "pan", 0
+s_bend:     .byte       "bend", 0
+s_drum:     .byte       "drum", 0
+s_reg:      .byte       "reg", 0
+s_left:     .byte       "left", 0
+s_right:    .byte       "right", 0
+s_both:     .byte       "both", 0
 s_volume:   .byte       "volume ", 0
 s_claimed:  .byte       "claimed", 0
 

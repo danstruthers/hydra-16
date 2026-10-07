@@ -263,11 +263,13 @@ The console is an ANSI terminal.  `lib facility` has, beside `page` and `at-xy (
 
 `lib sound` drives the YM2151 (`#a`), with C's and hylang's names, the channel first: `snd-reset`,
 `snd-volume ( v -- )` (0-200), `snd-claim ( ch -- )`, `snd-release`, `snd-patch ( ch n -- )`, `snd-note ( ch
-note -- )` (a MIDI number: 60 middle C), `snd-off ( ch -- )`, `snd-vol ( ch v -- )`, `snd-pan ( ch pan -- )`
-(1 left, 2 right, 3 both), `snd-bend ( ch n -- )`, `snd-drum ( ch n -- )` (General MIDI's drum n), `snd-reg (
-reg value -- )`.  `note-of ( c-addr u -- n )` turns a note's name into its
+note -- )` (a MIDI number: 60 middle C), `snd-off ( ch -- )`, `snd-level ( ch v -- )` (a channel's volume, 0-127;
+`snd-vol` its old name), `snd-pan ( ch pan -- )` (1 left, 2 right, 3 both), `snd-bend ( ch n -- )`, `snd-drum ( ch
+n -- )` (General MIDI's drum n), `snd-reg ( reg value -- )`, `snd-regs ( c-addr -- )` (the chip's 256 registers as
+written).  `note-of ( c-addr u -- n )` turns a note's name into its
 number, and `tune ( c-addr u ch tempo -- )` plays a string of notes and their beats (`-` a rest) at a tempo,
-beats a minute; Ctrl-C ends it.  Songs (ZSM files) are the `play` program's.
+beats a minute; Ctrl-C ends it.  Songs (ZSM files) are the `play` program's: `snd-play ( c-addr u times -- status
+)` runs it and waits (0 times: its loop till Ctrl-C).
 
 ```
 /> s" C#4" note-of .

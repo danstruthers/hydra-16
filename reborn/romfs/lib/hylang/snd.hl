@@ -38,8 +38,10 @@
 (fun {snd-note ch note} {snd.cmd ch 4 note})
 (fun {snd-off ch} {snd.cmd ch 5 0})
 
-; The channel's volume (0-127); its speakers (:left, :right or :both); its bend (64ths of a semitone, signed)
-(fun {snd-vol ch v} {snd.cmd ch 6 v})
+; The channel's level, its volume (0-127: snd-volume is the master's; snd-vol, its old name); its speakers
+; (:left, :right or :both); its bend (64ths of a semitone, signed)
+(fun {snd-level ch v} {snd.cmd ch 6 v})
+(fun {snd-vol ch v} {snd-level ch v})
 (fun {snd-pan ch pan} {do
   =(p (+ 1 (index-of {:left :right :both} pan)))
   (if (> p 0) (snd.cmd ch 7 p) (error "'snd-pan' expects :left, :right or :both" :inval))})
@@ -47,6 +49,14 @@
 
 ; A General MIDI drum (35: a kick) keyed on, on the channel
 (fun {snd-drum ch n} {snd.cmd ch 10 n})
+
+; The chip's 256 registers as written (the driver's shadow: the chip's can't be read), a buffer: /dev/snd opened for
+; it (from its start: the driver gives them in one read) and closed
+(fun {snd-regs} {do
+  =(fd (sys-open "/dev/snd" 0))
+  =(regs (sys-read fd 256))
+  (sys-close fd)
+  (buffer regs)})
 
 ; A note's MIDI number, by its name: a letter, # or b, an octave (C4 60, C#4 and Db4 61, A4 69, B-1 11)
 (fun {snd.bad} {error "'note-of' expects a note: C4, C#4, Db4 ..." :inval})

@@ -6,8 +6,9 @@
 ; opened the first time it's wanted, and stays open (a task's claimed channels go back as its last one closes, at
 ; its end).  A channel's command is written with the channel in one write, so another program's can't come
 ; between.  A failure is a THROW of the system's error, named by the file (/dev/snd: busy).  And hylang's note-of (a
-; note's MIDI number, by its name) and tune (notes and their beats played).
-;   Songs are play's (the program: play song.zsm at the shell, or s" play song.zsm" sh), not words.
+; note's MIDI number, by its name) and tune (notes and their beats played).  The two volumes: snd-volume the
+; master's, snd-level a channel's (snd-vol, its old name).  snd-regs reads the registers back.
+;   Songs are play's (the program, play song.zsm at the shell): snd-play runs it.
 
 .include "forthlib.inc"
 
@@ -23,6 +24,12 @@ tune_left:  .res        1                                   ;   the tune's bytes
 tune_note:  .res        1                                   ;   the note ...
 tune_on:    .res        1                                   ;   <> 0: a note (not a rest) ...
 tune_beats: .res        1                                   ;   and its beats
+regs_fd:    .res        1                                   ; SND-REGS: its fd ...
+regs_at:    .res        2                                   ;   the buffer ...
+regs_n:     .res        2                                   ;   and its bytes so far
+play_buf:   .res        224                                 ; SND-PLAY: play's command line ...
+play_len:   .res        1                                   ;   its length ...
+play_times: .res        2                                   ;   and the times asked for
 .code
 
 ; Its start: neither open
@@ -83,10 +90,14 @@ sndoff:                                                     ; ( ch -- ): keyed o
             lda         #SND_R_OFF
             bra         snd_cmd
 
-            HEADER      "snd-vol", 0
-sndvol:                                                     ; ( ch v -- ): the channel's volume, 0-127
-            lda         #SND_R_VOL
+            HEADER      "snd-level", 0
+sndlevel:                                                   ; ( ch v -- ): the channel's level (its volume), 0-127;
+            lda         #SND_R_VOL                          ;   snd-volume is the master's
             bra         snd_cmd
+
+            HEADER      "snd-vol", 0
+sndvol:                                                     ; ( ch v -- ): snd-level's old name
+            bra         sndlevel
 
             HEADER      "snd-pan", 0
 sndpan:                                                     ; ( ch pan -- ): its speakers: 1 left, 2 right, 3 both
@@ -226,6 +237,188 @@ snd_fail:
             pla
             jmp         throw_os
 
+            HEADER      "snd-regs", 0
+sndregs:                                                    ; ( c-addr -- ): the chip's 256 registers as written (the
+            LDR         w, s_snd                            ;   driver's shadow: the chip's can't be read) into c-addr
+            lda         #O_READ                             ;   (/dev/snd opened for it, from its start, and closed)
+            jsr         snd_open
+            sta         regs_fd
+            lda         dlo,x
+            sta         regs_at
+            lda         dhi,x
+            sta         regs_at + 1
+            inx
+            stz         regs_n
+            stz         regs_n + 1
+@read:
+            clc                                             ; r0: where the next bytes go; r1: how many are left
+            lda         regs_at
+            adc         regs_n
+            sta         r0
+            lda         regs_at + 1
+            adc         regs_n + 1
+            sta         r0 + 1
+            sec
+            lda         #<256
+            sbc         regs_n
+            sta         r1
+            lda         #>256
+            sbc         regs_n + 1
+            sta         r1 + 1
+            lda         regs_fd
+            stx         xsave
+            jsr         READ
+            bcs         @fail
+            sta         tmp
+            txa
+            ldx         xsave
+            ora         tmp                                 ; (The end: as much as there was)
+            beq         @done
+            clc
+            lda         regs_n
+            adc         tmp
+            sta         regs_n
+            bcc         :+
+            inc         regs_n + 1
+:
+            lda         regs_n + 1                          ; (All 256: done)
+            beq         @read
+@done:
+            lda         regs_fd
+            stx         xsave
+            jsr         CLOSE
+            ldx         xsave
+            rts
+
+@fail:
+            ldx         xsave
+            pha
+            lda         regs_fd
+            stx         xsave
+            jsr         CLOSE
+            ldx         xsave
+            pla
+            LDR         w, s_snd
+            jmp         snd_fail
+
+            HEADER      "snd-play", 0
+sndplay:                                                    ; ( c-addr u times -- status ): a song (a ZSM file) played
+            lda         dlo,x                               ;   times times (0: its loop till Ctrl-C) by play, the
+            sta         play_times                          ;   program, waited for: its exit code (hylang's play)
+            lda         dhi,x
+            sta         play_times + 1
+            inx
+            jsr         str_wt                              ; The path: w, tmp characters
+            lda         tmp
+            cmp         #200
+            bcc         :+
+            lda         #E_NAMETOOLONG
+            jmp         throw_os
+:
+            ldy         #0                                  ; play, and -l for 0 times
+:
+            lda         s_play,y
+            beq         :+
+            sta         play_buf,y
+            iny
+            bra         :-
+:
+            sty         play_len
+            lda         play_times
+            ora         play_times + 1
+            bne         :+
+            lda         #<s_loop
+            ldy         #>s_loop
+            jsr         play_add
+:
+            ldy         #0                                  ; The path
+:
+            cpy         tmp
+            beq         :+
+            lda         (w),y
+            jsr         play_char
+            iny
+            bra         :-
+:
+            lda         play_times + 1                      ; Its loop times - 1 more times (2 or more)
+            bne         :+
+            lda         play_times
+            cmp         #2
+            bcc         @run
+:
+            lda         #' '
+            jsr         play_char
+            lda         play_times
+            sec
+            sbc         #1
+            pha
+            lda         play_times + 1
+            sbc         #0
+            tay
+            pla
+            PUSHAY
+            jsr         u_text                              ; ( u -- c-addr u )
+            lda         dlo + 1,x
+            sta         w
+            lda         dhi + 1,x
+            sta         w + 1
+            lda         dlo,x
+            sta         tmp
+            inx
+            inx
+            ldy         #0
+:
+            cpy         tmp
+            beq         @run
+            lda         (w),y
+            jsr         play_char
+            iny
+            bra         :-
+@run:
+            lda         #<play_buf                          ; Run, as run does
+            ldy         #>play_buf
+            PUSHAY
+            lda         play_len
+            ldy         #0
+            PUSHAY
+            jsr         prog_args
+            lda         #0
+            jsr         prog_spawn
+            bcc         :+
+            jmp         throw_os
+:
+            jsr         prog_wait
+            lda         tmp2
+            ldy         tmp2 + 1
+            PUSHAY
+            rts
+
+; play_buf: string .A/.Y (zero-terminated) added; .A, a character added.  Keep .Y
+play_add:
+            sta         p1
+            sty         p1 + 1
+            phy
+            ldy         #0
+:
+            lda         (p1),y
+            beq         :+
+            jsr         play_char
+            iny
+            bra         :-
+:
+            ply
+            rts
+
+play_char:
+            phy
+            ldy         play_len
+            sta         play_buf,y
+            inc         play_len
+            ply
+            rts
+
+s_play:     .byte       "play ", 0
+s_loop:     .byte       "-l ", 0
 s_snd:      .byte       "/dev/snd", 0
 s_sndctl:   .byte       "/dev/sndctl", 0
 s_reset:    .byte       "reset", 0

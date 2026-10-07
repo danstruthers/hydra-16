@@ -1,6 +1,7 @@
 /*
 ** tones.c - the sound library (snd.h): a patch on four claimed channels, a scale, a chord that fades, a bend and
-** some drums; then the registers read back.  tones [PATCH] (0-162; default 0, a piano)
+** some drums; a tune by the notes' names, and the bell; then the registers read back.  tones [PATCH] (0-162;
+** default 0, a piano)
 **   % tones 29 &
 */
 
@@ -36,13 +37,13 @@ int main (int argc, char* argv[])
     hy_sleep_ticks (100);
     for (i = 127; i > 15; i -= 16) {
         for (ch = 0; ch < 3; ++ch) {
-            snd_vol (ch, i);
+            snd_level (ch, i);
         }
         hy_sleep_ticks (10);
     }
     for (ch = 0; ch < 3; ++ch) {
         snd_off (ch);
-        snd_vol (ch, 127);
+        snd_level (ch, 127);
     }
     snd_note (0, 69);                               /* A, bent up a whole tone */
     for (bend = 0; bend < 120; bend += 8) {
@@ -55,7 +56,10 @@ int main (int argc, char* argv[])
         snd_drum (3, i & 1 ? 38 : 36);
         hy_sleep_ticks (25);
     }
+    i = snd_tune ("C4 1 E4 1 - 1 G4 2", 1, 600) == 0;      /* A tune on channel 1, a beat a tenth of a second */
+    snd_beep ();
     snd_regs (regs);
-    printf ("tones: patch %u, $20 %02X, $28 %02X\n", patch, regs[0x20], regs[0x28]);
+    printf ("tones: patch %u, $20 %02X, $28 %02X, C#4 %d, the tune %s\n", patch, regs[0x20], regs[0x28],
+        snd_note_of ("C#4"), i ? "played" : "not played");
     return 0;
 }
