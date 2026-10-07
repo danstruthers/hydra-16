@@ -1947,6 +1947,27 @@ module.exports = {
         '/> (use "cons")\n=> NIL\n/> (window)\n=> 1\n/> '],
     },
     {
+      name: 'bplay', what: 'BASIC\'s PLAY: a line of MML on channel 0 and on another (play -m), a score file (play name.mml), its time waited for (the program goes on after); play\'s error (its message as BASIC\'s, in its line), a channel past 7 (ILLEGAL QUANTITY); SOUND\'s text commands (sndctl\'s: a note, a level)',
+      init: 't_rc', cycles: 160e6, ymLog: true,
+      get machine() {
+        return { ymLog: true, input: ['echo patch 0 0 >/dev/sndctl; echo patch 1 0 >/dev/sndctl', 'echo \'@p { gm 0 }\' >/ram/s.mml; echo \'B @p o3 g\' >>/ram/s.mml',
+          'echo \'10 play "t240 o4 l16 c d e"\' >/ram/p.bas', 'echo \'20 play 2, "t240 o5 l16 c": print "on"\' >>/ram/p.bas',
+          'echo \'30 play "/ram/s.mml": print "after"\' >>/ram/p.bas', 'echo \'40 play "c Z"\' >>/ram/p.bas', 'basic /ram/p.bas; echo status $status',
+          'echo \'10 play 9, "c"\' >/ram/q.bas; basic /ram/q.bas', 'echo \'10 sound "note 3 72": sound "level 3 90"\' >/ram/r.bas; basic /ram/r.bas; echo r $status'
+        ].map(l => '\u0101' + l + '\r').join('') };
+      },
+      expect: ['basic /ram/p.bas; echo status $status\non\nafter\nplay: c Z: channel 0: what is Z\n\n?CHANNEL 0: WHAT IS Z ERROR IN 40\nstatus 1\n%',
+        'basic /ram/q.bas\n\n?ILLEGAL QUANTITY ERROR IN 10\n%', 'echo r $status\nr\n%'],
+      // (The key-ons, each with its channel's key code then: C4 D4 E4 on 0 a 16th apart at 240 (12.5 ticks), C5 on
+      // 2, the score's G3 on 1 (B), SOUND's C5 on 3)
+      check(m) {
+        const kc = [], ons = [];
+        for (const [, r, v] of m.ym.writes) { if (r >= 0x28 && r < 0x30) kc[r & 7] = v; if (r === 0x08 && (v & 0x78)) ons.push((v & 7) + ':' + (kc[v & 7] || 0).toString(16)); }
+        const want = ['0:3e', '0:41', '0:44', '2:4e', '1:38', '3:4e'], got = ons.slice(-want.length);
+        return got.join(' ') === want.join(' ') ? [] : ['the key-ons (channel:key code): ' + got.join(' ') + ', not ' + want.join(' ')];
+      },
+    },
+    {
       name: 'bawin', what: 'BASIC as a window\'s shell: a card\'s /lib/shell naming /bin/basic -l, init\'s in window 0 and wstart\'s in a window made (Ctrl-] c: $window, ENV$): the prompt, a BASIC line and an rc line in each',
       init: 'init', cycles: 200e6,
       get machine() {

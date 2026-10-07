@@ -62,7 +62,7 @@ string (255 characters at most).
 | `DIM` `DEF FN` `CLEAR` `NEW` `RUN [line\|"name"]` `LIST [from-to]` `REM` | The program and its variables |
 | `LOAD "name"` `SAVE "name"[,B]` | Programs in files |
 | `OPEN n,"name"[,"R"\|"W"\|"A"]` `CLOSE [n]` `PRINT #n,` `INPUT #n,` `GET #n,` | Files |
-| `SOUND ch,note[,patch[,vol]]` `SOUND ch` `SOUND "word"` `BEEP` `SLEEP s` | Sound and time |
+| `SOUND ch,note[,patch[,vol]]` `SOUND ch` `SOUND "words"` `PLAY [ch,]"mml"` `PLAY "song.zsm"` `BEEP` `SLEEP s` | Sound and time |
 | `SYS addr\|"NAME"[,a[,x[,y]]]` `RREG a,x,y,p` `POKE addr,b` `WAIT addr,mask[,eor]` `HIMEM n` | Machine code, system calls, memory |
 | `BYE` | BASIC's end |
 
@@ -107,8 +107,11 @@ them all, and so does entering a program line.
 
 `SOUND ch, note, patch, vol` plays a MIDI note (60 is middle C) on one of the YM2151's channels (0-7), with an
 instrument (0-127: General MIDI's; 128-162: drums and percussion) and a volume (0-127) if they're given; `SOUND ch`
-lets the note go.  `SLEEP s` waits `s` seconds (`SLEEP .25`).  `SOUND "claim 255"`, `"release 255"`, `"volume 150"`
-and `"reset"` are the sound driver's own words.  `BEEP` rings the bell.
+lets the note go.  `SLEEP s` waits `s` seconds (`SLEEP .25`).  `SOUND "..."` sends the sound driver a line of
+text: its words (`"claim 255"`, `"volume 150"`, `"reset"`) and each channel's commands (`"pan 0 left"`, `"bend 0
+-32"`, `"drum 9 38"`, `"freq 0 440"`, `"level 0 90"` ...: [tools.md](tools.md)).  `PLAY "t180 o4 l8 c d e f g"`
+plays a line of MML (the score language: tools.md, "Scores") on channel 0, `PLAY 2, "..."` on channel 2, and `PLAY
+"song.zsm"` a song or a score; each waits till it's played.  `BEEP` rings the bell.
 
 ```
 10 FOR N=60 TO 72: SOUND 0,N,0,100: SLEEP .2: NEXT: SOUND 0

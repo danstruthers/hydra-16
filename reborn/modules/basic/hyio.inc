@@ -53,6 +53,10 @@ tokflag:    .res        1                                   ; <> 0: SAVE's ,B (t
 os_err:     .res        1                                   ; ERR_OS's error: the system's code
 pathbuf:    .res        NAME_MAX                            ; A file's name (GETNAME's)
 errbuf:     .res        32                                  ; ERRSTR's text
+play_ch:    .res        1                                   ; PLAY's channel ...
+play_m:     .res        1                                   ;   <> 0: given (MML, not a file) ...
+play_len:   .res        1                                   ;   the string's length ...
+play_task:  .res        1                                   ;   and play's task
 hdr:        .res        HDR_LEN                             ; A tokenized program's header
 chsrc:      .res        1                                   ; OPEN's channel's source
 raw:        .res        1                                   ; <> 0: the console in raw mode (GET's)
@@ -256,6 +260,10 @@ banner:
             jmp         STROUT
 
 s_banner:   .byte       "EHYBASIC FOR THE HYDRA-16 (MICROSOFT BASIC 2A)", LF, 0
+s_binplay:  .byte       "/bin/play", 0
+s_mplay:    .byte       "#m/play", 0
+s_zsm:      .byte       ".zsm"
+s_mmlx:     .byte       ".mml"
 s_free:     .byte       " BYTES FREE", LF, 0
 
 ; RESTART's: SAVE's and LOAD's files closed (an error, Ctrl-C, its end), the output fd 1 again (PRINT#'s, SAVE's),
@@ -386,7 +394,10 @@ OUTHTASC:
 OS_ERRTEXT:
             LDR         r0, errbuf
             lda         os_err
+            cmp         #$FF                                ; ($FF: errbuf's already: a program's message)
+            beq         :+
             jsr         ERRSTR
+:
             ldy         #0
 @char:
             lda         errbuf,y
@@ -1293,6 +1304,124 @@ BEEP_ST:
             lda         #7
             jsr         OUTDO
             jmp         FLUSH
+
+; "PLAY" STATEMENT: PLAY "mml" (a line of MML, the score language's: docs/using/tools.md, on channel 0), PLAY ch, "mml"
+; (on channel ch), PLAY "song.zsm" or "score.mml" (a file): play, the program (play -m ch mml; play name), waited
+; for; Ctrl-C ends it (and BREAK).  Its failure: play's message (on fd 2, play's) as BASIC's error, in capitals
+PLAY_ST:
+            stz         play_ch
+            stz         play_m
+            jsr         FRMEVL
+            bit         VALTYP
+            bmi         @string
+            jsr         CONINT                              ; A channel, then the MML
+            cpx         #SND_CHANNELS
+            bcc         :+
+            jmp         IQERR
+:
+            stx         play_ch
+            inc         play_m
+            jsr         CHKCOM
+            jsr         FRMEVL
+@string:
+            jsr         CHKSTR
+            jsr         FREFAC                              ; (.A its length, INDEX its characters)
+            cmp         #ARGS_MAX - 8
+            bcc         :+
+            ldx         #ERR_STRLONG
+            jmp         ERROR
+:
+            sta         play_len
+            lda         play_m                              ; A file: no channel, and .zsm or .mml at its end
+            bne         @mml
+            lda         play_len
+            cmp         #5
+            bcc         @mml
+            ldx         #3
+            ldy         play_len
+@ext:
+            dey
+            lda         (INDEX),y
+            ora         #$20
+            cmp         s_zsm,x
+            bne         @notzsm
+            dex
+            bpl         @ext
+            bra         @file
+@notzsm:
+            ldx         #3
+            ldy         play_len
+:
+            dey
+            lda         (INDEX),y
+            ora         #$20
+            cmp         s_mmlx,x
+            bne         @mml
+            dex
+            bpl         :-
+@file:
+            ldx         #0                                  ; argbuf: the name, 0, 0
+            bra         @text
+@mml:
+            lda         #'-'                                ; argbuf: -m, the channel, the MML, 0
+            sta         argbuf
+            lda         #'m'
+            sta         argbuf + 1
+            stz         argbuf + 2
+            lda         play_ch
+            ora         #'0'
+            sta         argbuf + 3
+            stz         argbuf + 4
+            ldx         #5
+@text:
+            ldy         #0
+:
+            cpy         play_len
+            beq         :+
+            lda         (INDEX),y
+            sta         argbuf,x
+            inx
+            iny
+            bra         :-
+:
+            stz         argbuf,x
+            stz         argbuf + 1,x
+            jsr         FLUSH
+            LDR         r0, s_binplay                       ; play: /bin/play, else the ROM's
+            lda         #0
+            jsr         RC_SPAWN
+            bcc         @started
+            cmp         #E_NOENT
+            bne         @fail
+            LDR         r0, s_mplay
+            lda         #0
+            jsr         RC_SPAWN
+            bcc         @started
+@fail:
+            jmp         OSERR
+@started:
+            sta         play_task
+:
+            LDR         r0, statbuf                         ; Waited for (a note: again)
+            lda         play_task
+            jsr         WAIT
+            bcc         :+
+            cmp         #E_INTR
+            beq         :-
+            ldx         #0
+:
+            cpx         #0
+            bne         :+
+            rts
+:
+            ldy         #31                                 ; Its message, BASIC's error
+:
+            lda         statbuf,y
+            sta         errbuf,y
+            dey
+            bpl         :-
+            lda         #$FF
+            jmp         OSERR
 
 ; "SLEEP" STATEMENT: SLEEP s: s seconds (to the tick, 5 ms: up to 163), the output sent first; Ctrl-C ends it
 SLEEP_ST:

@@ -43,6 +43,7 @@
 		keyword_rts "SYS", SYS_ST
 		keyword_rts "RREG", RREG_ST
 		keyword_rts "HIMEM", HIMEM_ST
+		keyword_rts "PLAY", PLAY_ST
 
 		count_tokens
 .assert TOKEN_GOTO = $88 && NUM_TOKENS < $40, error, "FOR $81, DATA $83: the statements' order"

@@ -89,7 +89,7 @@ Each channel is an input source as stdin and LOAD's file are (an fd and a 128-by
 reads through the same INLIN.  Microsoft's INPUT took its flag from `.Y`, the buffer's high byte, 0 in the zero page:
 with the buffer in RAM it gave `?SYNTAX ERROR` for a bad answer, and now it's `?REDO FROM START` again.
 
-## Sound: SOUND, BEEP, SLEEP
+## Sound: SOUND, PLAY, BEEP, SLEEP
 
 Reviewed against C's `snd.h` (`snd_note`, `snd_patch`, `snd_vol`, `snd_off`, `snd_claim`, `snd_volume` ...),
 HyForth's `sound.fl` and hylang's `snd-` functions (the channel first; MIDI notes, 60 middle C; patches 0-162),
@@ -101,14 +101,22 @@ seconds.
 * `SOUND ch, note [, patch [, vol]]`: on channel `ch` (0-7) MIDI note `note` (0-127), its patch (0-162) and its
   volume (0-127) first if they're given: one write of the driver's commands to `/dev/snd`, so no other program's
   comes between them.  `SOUND ch`: its note off (the release).  Drums are patches 128-162.
-* `SOUND "word [n]"`: a line for `/dev/sndctl`, the driver's own words: `"claim 255"`, `"release 255"`, `"volume 150"`,
-  `"reset"`.  Its errors are the driver's (`?INVALID ARGUMENT ERROR`; another program's channel, `?BUSY ERROR`).
+* `SOUND "words"`: a line for `/dev/sndctl`, the driver's text: its own words (`"claim 255"`, `"release 255"`,
+  `"volume 150"`, `"reset"`) and every channel's command (`"pan 0 left"`, `"bend 0 -32"`, `"drum 9 38"`, `"freq 0
+  440"`, `"glide 0 64"`, `"level 0 90"`, `"lfo 200 10 20 2"`, `"sens 0 5 2"`, `"noise 9"`, `"reg 32 199"` ...:
+  docs/using/tools.md), so BASIC reaches all the driver has with one keyword.  Its errors are the driver's
+  (`?INVALID ARGUMENT ERROR`; another program's channel, `?BUSY ERROR`).
+* `PLAY "mml"`, `PLAY ch, "mml"`: a line of MML, the score language's (docs/using/tools.md, "Scores"), on channel
+  0 or `ch`, its own instrument if the line names none: `play -m`, the program, waited for (the X16's `FMPLAY`).
+  `PLAY "song.zsm"` or `"score.mml"`: a song or a score, `play`'s.  Ctrl-C ends it (and BREAK).  play's error is
+  said by play, and is BASIC's too, in capitals: `?CHANNEL 0: WHAT IS Z ERROR IN 40`.
 * `BEEP`: the console's bell, sent at once.
 * `SLEEP s`: `s` seconds, as rc's and hylang's `sleep` (to the tick, 5 ms; up to 163 s), the output sent first;
   Ctrl-C ends it (and the program).
 
-Not here, for keywords' sake: pan, bend and General MIDI's drum numbers (`snd_pan`, `snd_bend`, `snd_drum`), and
-songs (`snd_play`: `play` at rc's prompt, or from the shell later).
+The sound plan (docs/plans/SOUND_PARITY.md) chose this, few keywords and the driver's text for the rest, over a
+keyword each (a dozen names lost to programs) or the X16's `FM` and `PSG` keywords: `SOUND` and `PLAY` reach
+everything the other languages' `snd-` words do.
 
 ## Machine code and the system's calls: SYS, RREG, USR
 
