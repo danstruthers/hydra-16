@@ -284,7 +284,7 @@ BIG         = $12345678
             .word       .strlen("hello"), 'A', %1010, 12345, TWO, -TWO & $FFFF, 1 .and 2, 0 .or 3, 1 .xor 1
             .word       12 .bitand 10, 12 .bitor 3, 6 .bitxor 3, .bitnot(0) & $FF, 1 .shl 3, 16 .shr 2
             .word       *, * - start, later - start
-            .dword      BIG, -2, BIG >> 8
+            .dword      BIG, -2 & $FFFFFFFF, BIG >> 8
             .byte       "str", 0, 'x', "it's", "a;b"
             .asciiz     "abc"
             .res        3
