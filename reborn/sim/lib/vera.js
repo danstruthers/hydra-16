@@ -17,6 +17,8 @@
 //   * the PCM FIFO (4K: 4095 bytes held at most): its level drained at the sample rate (AUDIO_RATE / 128 of
 //     48828 Hz, a sample 1, 2 or 4 bytes), AFLOW while it's under 1024, its full and empty flags.  No sound is made:
 //     the PCM bytes and the PSG's voices are counted (pcmIn, pcmOut, pcmLost; psgOns, as ym2151.js's key-ons);
+//     pcmUnderruns, the times the FIFO ran dry while it played (a sample wanted, none there, since bytes came);
+//     with env.pcmLog, pcmLog the bytes it took (the first PCM_LOG_MAX), for a test to compare;
 //   * the SPI controller (SPI_DATA, SPI_CTRL: busy for 8 bits at 12.5 MHz, or 390 kHz with the slow clock), with no
 //     card on it: it reads $FF (the Vera X brings its SD card's lines to a header);
 //   * the FPGA configuring itself after power-up, the reset button (RESB: the card's RES#) and CTRL's reset bit:
@@ -55,6 +57,7 @@ const PSG = 0x1F9C0, PAL = 0x1FA00, SPR = 0x1FC00;            // The registers V
 const FIFO = 4096, AFLOW = 1024;                              // The PCM FIFO, and its low mark
 const PCM_HZ = 25e6 / 512;                                    // The audio's sample rate
 const GROUP = [1, 2, 2, 4];                                   // AUDIO_CTRL's bits 4-5: a sample's bytes
+const PCM_LOG_MAX = 1 << 20;                                  // pcmLog's bytes at most
 
 function createVera(env) {
   const clock = env.clock || 3.579545;                        // The CPU's (MHz)
@@ -67,7 +70,8 @@ function createVera(env) {
   const v = {
     vram: new Uint8Array(0x20000).map(() => rnd(256)),
     palette: new Uint8Array(512), sprites: new Uint8Array(1024), psg: new Uint8Array(64),
-    lastFrame: null, frames: 0, psgOns: [], pcmIn: 0, pcmOut: 0, pcmLost: 0, version,
+    lastFrame: null, frames: 0, psgOns: [], pcmIn: 0, pcmOut: 0, pcmLost: 0, pcmUnderruns: 0, version,
+    pcmLog: env.pcmLog ? [] : null,
   };
   let live = false, curT = 0, fb = null;                      // Each line drawn as it comes; the bus's cycle; (live)
                                                               //   the frame being drawn, palette indexes
@@ -79,6 +83,7 @@ function createVera(env) {
   const layer = [new Uint8Array(7), new Uint8Array(7)];
   let actl = 0, arate = 0, loop = false, fcnt = 0, fwr = 0, frd = 0;   // The PCM FIFO (only its level matters)
   let pcmPhase = 0, pcmAt = 0;                                // The audio's sample count, as of cycle pcmAt
+  let pcmFed = false;                                         // (Bytes came since the FIFO last ran dry, or was reset)
   let ss = 0, autotx = 0, slow = 0, spiBusyTo = 0, spiIn = 0xFF;
   // The scan: units (a VGA line, or half an NTSC one) since t0, the cycle it started at; lastU the last unit done
   let readyAt = configCycles, t0 = configCycles, unitLen = 800, perFrame = 525, lastU = -1, nextU = 0, nextCyc = 0;
@@ -91,7 +96,7 @@ function createVera(env) {
     layer[0].fill(0); layer[1].fill(0);
     for (let i = 0; i < 256; i++) { pal[2 * i] = DEFAULT_PALETTE[i] & 0xFF; pal[2 * i + 1] = DEFAULT_PALETTE[i] >> 8; }
     spr.fill(0); psg.fill(0);
-    actl = 0; arate = 0; loop = false; fcnt = fwr = frd = 0; pcmPhase = 0; pcmAt = t;
+    actl = 0; arate = 0; loop = false; fcnt = fwr = frd = 0; pcmPhase = 0; pcmAt = t; pcmFed = false;
     ss = 0; autotx = 0; slow = 0; spiBusyTo = 0; spiIn = 0xFF;
     rd[0] = rd[1] = vram[0];
     t0 = t; unitLen = 800; perFrame = 525; lastU = -1; collisions = 0; plan();
@@ -178,6 +183,7 @@ function createVera(env) {
         reads %= per; frd = 0; fcnt = fwr;
       }
     }
+    if (reads > 0 && fcnt === 0 && pcmFed && !loop) { v.pcmUnderruns++; pcmFed = false; }
   }
   // Cycles from cycle t till the FIFO goes under its low mark (Infinity: it won't by itself)
   function aflowIn(t) {
@@ -258,12 +264,15 @@ function createVera(env) {
       case 0x1B:
         pcm(t);
         if ((b & 0xC0) === 0xC0) loop = true;
-        else { loop = false; if (b & 0x80) { fcnt = fwr = frd = 0; } }
+        else { loop = false; if (b & 0x80) { fcnt = fwr = frd = 0; pcmFed = false; } }
         if (b & 0x40) { frd = 0; fcnt = fwr; }
         actl = b & 0x3F; return;
       case 0x1C: pcm(t); arate = b > 128 ? 256 - b : b; return;
       case 0x1D: pcm(t);
-        if (fcnt < FIFO - 1) { fwr = (fwr + 1) % FIFO; fcnt++; v.pcmIn++; } else v.pcmLost++;
+        if (fcnt < FIFO - 1) {
+          fwr = (fwr + 1) % FIFO; fcnt++; v.pcmIn++; pcmFed = true;
+          if (v.pcmLog && v.pcmLog.length < PCM_LOG_MAX) v.pcmLog.push(b);
+        } else v.pcmLost++;
         return;
       case 0x1E: if (ss && t >= spiBusyTo) { spiBusyTo = t + spiTime(); spiIn = 0xFF; } return;
       case 0x1F: ss = b & 1; slow = (b >> 1) & 1; autotx = (b >> 2) & 1; return;

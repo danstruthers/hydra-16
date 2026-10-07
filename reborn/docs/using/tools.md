@@ -270,7 +270,7 @@ has them, join `/bin` and `/lib`.
 
 | Tool | What it does |
 | :--- | :----------- |
-| `play [-l] song [n]` | A ZSM song (the X16's format; Furnace exports it) on the YM2151: once, its loop n more times, or `-l` till Ctrl-C; or a score (a name ending in `.mml`: below).  `/rom/songs` has a few; `scom` plays one |
+| `play [-l] song [n]` | A ZSM song (the X16's format; Furnace exports it) on the YM2151 (and with a Vera X its PSG and PCM parts): once, its loop n more times, or `-l` till Ctrl-C; or a score (a name ending in `.mml`: below); or a WAV file on the Vera X's PCM (8 or 16 bits, mono or stereo, to 48,828 Hz: from a card, 8 bits mono to about 11 kHz).  `/rom/songs` has a few; `scom` plays one |
 | `play -o score.mml song.zsm` | The score compiled into a ZSM file instead |
 | `play [-lx] -m ch mml ...` | A line of MML (a score's channel's: below) on channel ch, the channel's own instrument if the line names none: `play -m 0 t180 o4 l8 c d e f g` |
 | `play [-lx] -c ch notes ...` | A chord: each note on the next channel from ch, the commands before each with it (`play -c 0 o4 l2 I0 c e g`); `-x`, either in the Commander X16's MML (`play -x -m 0 T120 O4 L8 CDEFG`) |

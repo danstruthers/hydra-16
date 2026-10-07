@@ -21,7 +21,8 @@
 ** Notes by name and tunes: snd_note_of, snd_tune (as HyForth's note-of and tune, and hylang's).  Lines of MML, the
 ** score language's (the player's: play -m, play -c): snd_mml, snd_chord.
 **
-** Songs: snd_play starts one (a ZSM file: the Commander X16's format, which Furnace exports) in the system's
+** Songs: snd_play starts one (a ZSM file: the Commander X16's format, which Furnace exports; or a WAV file, on the
+** Vera X's PCM) in the system's
 ** player, play, a task of its own, and returns at once with its task: hy_wait waits for its end, and hy_note's
 ** HY_NOTE_KILL stops it.
 */

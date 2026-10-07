@@ -32,6 +32,8 @@ and serves it as files.  A program uses the screen three ways, from the easiest:
 | `font` | The console's font (VRAM `$1F000`: 256 characters of 8 bytes, a byte a row) | A font: `cat /lib/font/cp437 >/dev/vid/font` |
 | `frame` | Waits for the next frame (59.5 a second), then gives the frames counted, in decimal | |
 | `psg` | The PSG's 64 registers (VRAM `$1F9C0`: 16 voices of 4) as written here | Register/value pairs: the sound driver's (its channels 8-23); kept while the chip's claimed, and written as the claim ends |
+| `pcm` | | Samples into the PCM FIFO (below: "PCM") |
+| `pcmctl` | The PCM's state: `rate 22126`, `bits 8`, `mono`, `volume 15`, `claimed` (and the task that has `pcm`) | `rate HZ`, `bits 8`, `bits 16`, `mono`, `stereo`, `volume N` (0-15), `reset` (the FIFO emptied), `drain` (waits till it's empty) |
 
 So a picture is a file copy away: a 320x240 picture of 8 bits a pixel, its bytes in a file, then
 
@@ -65,6 +67,36 @@ rows in VRAM (some 1,500 cycles a row).  The cursor is sprite 0, an underline, b
 
 The screen has no keyboard yet: keys still come from the serial terminal.  A PS/2 keyboard, through an input
 controller on IRQ line 3, is planned (VIDEO.md).
+
+## PCM
+
+The VERA plays samples from a 4K FIFO at a rate of its own: `/dev/vid/pcm` is the FIFO, `/dev/vid/pcmctl` its
+settings.  A program sets the format and rate, then writes the samples:
+
+```
+echo rate 11025 >/dev/vid/pcmctl; echo bits 8 >/dev/vid/pcmctl; echo mono >/dev/vid/pcmctl
+cat drums.raw >/dev/vid/pcm; echo drain >/dev/vid/pcmctl
+```
+
+* **The samples are the VERA's:** signed, 8 or 16 bits (16 little-endian), stereo left first.  (A WAV file's 8-bit
+  samples are unsigned: `play` makes them signed.)
+* **The rate** is the VERA's nearest: 48,828.125 Hz / 128 steps, 381 Hz each, up to 48,828 (`rate 22050` plays at
+  22,126, `rate 8000` at 8,011); `rate 0` stops it.  `pcmctl` reads the rate it has.
+* **A write** goes into the FIFO when it's below a quarter full, as much as it has room for, and the rest waits for
+  the next frame (59.5 a second); a non-blocking fd gets `E_AGAIN`.  So the FIFO holds 3K to 4K while a program
+  keeps it fed: at 11 kHz, 8-bit mono, a third of a second.
+* **`pcm` is one task's at a time**: another's open is `E_BUSY` till its last fd of it closes, and its `pcmctl`
+  commands too (anyone's, while nobody has `pcm`).
+* **`drain`** waits till the FIFO's empty (a program's end shouldn't cut its last sounds off); `reset` empties it
+  at once.
+* **How fast:** the driver puts some 22 cycles into each byte, and a card reads at about 12K a second, so from a card
+  8 bits mono to about 11 kHz is comfortable; from the RAM disk (`/ram`) to about 22 kHz.  16 bits stereo at 44.1
+  kHz (176K a second) is past a 3.58 MHz 65C02.
+* A claim of the chip stops it: `pcm`'s writes wait, and the release sets its format, volume and rate again (its
+  FIFO emptied).
+
+`play` plays WAV files (8 or 16 bits, mono or stereo; PCM, not compressed or floating point) and a ZSM song's PCM
+instruments (their data read into RAM when it fits, about 20K, else read from the file as it plays).
 
 ## Claiming the chip
 
@@ -108,8 +140,9 @@ with the base changed.
 ## In the emulator
 
 `node sim/run.js --vera` puts a Vera X in slot 0 (`sim/lib/vera.js`: the registers, VRAM, the layers, sprites and
-their collisions, the scan's timing and interrupts, the PCM FIFO, the PSG's registers; not FX, and no sound is
-made).  `--screen` prints the text layer after the report, `--frame-png FILE` saves the screen, and with `-i`,
+their collisions, the scan's timing and interrupts, the PCM FIFO's level, the PSG's registers; not FX, and no sound
+is made).  `--screen` prints the text layer after the report, `--frame-png FILE` saves the screen, and with `-i`,
 `--view` shows it live in a browser (http://localhost:8016) while the terminal stays the serial console; Ctrl-A v
 prints it, Ctrl-A p saves it.  Tests set `machine: { vera: true }`; `m.vera.text()` is the screen's text,
-`m.vera.psg` the PSG's registers and `m.vera.psgOns` its voices' starts.
+`m.vera.psg` the PSG's registers and `m.vera.psgOns` its voices' starts; with `vera: { pcmLog: true }`,
+`m.vera.pcmLog` is the bytes the FIFO took, and `m.vera.pcmUnderruns` counts its runs dry while it played.
