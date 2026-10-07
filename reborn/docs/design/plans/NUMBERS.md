@@ -20,6 +20,7 @@ A plan (October 2026) for the user's request: BASIC on hylang's number system in
 15. [Questions](#questions)
 16. [Answers](#answers-the-users-7-october-2026)
 17. [As built: step 1](#as-built-step-1)
+18. [As built: step 2](#as-built-step-2)
 
 ---
 
@@ -138,16 +139,15 @@ Most numbers a program uses are 1 to 5 bytes, as small as Microsoft's or smaller
 * Conversions: integer part (`truncate`), floor, round; `to-fixed` (places), `to-rational`; a rational's numerator and denominator; `complex`, and a complex number's parts; to and from 16- and 32-bit integers (for cells, `PEEK`, array indexes).
 * Text: `num_parse` reads a number from a string in the base the library holds (`num_set_base`, `num_get_base`) or in one named for the call; `num_display` writes one, likewise; `num_format` fills a format string's placeholders (`{}`, `{x}`, `{#x}` ...): every form danlang reads, every kind, every base (the sections above).  BASIC's exponents (`1E6`) as an option of the reader's, BASIC's alone.
 * Bits, on integers of any size, in two's complement: and, or, xor, not, shifts, a bit's test.
-* Random numbers: xorshift32 (hylang's), its state in the library's state block: an integer below n, or a fixed decimal from 0 to 1.
+* Random numbers: hylang's generator (a 16-bit xorshift), its state in the libraries' bank: an integer below n, or a fixed decimal from 0 to 1.
 
 **`math`** (a second library module): the functions (next section).  It calls `numbers` for its arithmetic.
 
 **The interface**, as the system calls are (and made from a specification the same way, `spec/numbers.def`, so that each language's bindings are made, not written):
 
 * A library keeps a jump table after its header; a caller finds its bank with `MODINFO` as it starts (by name), and calls a routine with `XCALL` (`r15` the routine's address, `r14` the bank).
-* The arguments are in `r0`-`r13`, as a system call's are: the operands' addresses (numbers in the format, wherever the caller has them: its RAM, or the bank it has at `$8000`), the result's address and how much room it has, the precision (for `math`), a format for the calls that name one.  The answer: C clear, and the result's length in `.A`; or C set, and an error in `.A` (too big, division by zero, not a number, no room for the result, a domain error).
-* **Workspace**: the libraries work in registers, as hylang's number code does (a register is a 256-byte page, its bytes least first, with a length and a sign), so a sum or product of long numbers makes nothing till the result is written.  The caller lends the pages (eight, 2K) and names them in `r13`: hylang its reader's scratch pages, as now; BASIC and HyForth pages of their own.  They're scratch: nothing is kept in them between calls.
-* **The state block**: what the library keeps between calls, in some 64 bytes of the program's that it names in `r12` (the same block for the program's life): the base (its string, and what it was made into: the digits, the size, balanced, least digit first, negative, the prefix shown), the precision for `math` (12 digits at the start), and the random generator's state.  `num_init` fills it (decimal, and a seed from the clock) as a program starts.
+* The arguments are in `r0`-`r13`, as a system call's are: the operands' addresses (numbers in the format, wherever the caller has them but its paged ROM, which is the library's while it runs: its RAM, or the bank it has at `$8000`), the result's address and how much room it has, the precision (for `math`), a format for the calls that name one.  The answer: C clear, and the result's length in `.A`/`.X`; or C set, and an error in `.A` (too big, division by zero, not a number, no room for the result, a domain error).
+* **The libraries' bank** (step 2's change; the plan had the caller lend scratch pages in `r13` and a state block in `r12`): the caller gives the libraries a RAM bank of its own (`BANKS_ALLOC`, one bank, 8K) and names it in `r13`, the same bank for the program's life.  A call selects it at `$8000` (the caller's back as it ends) and the library keeps everything there: its registers, as hylang's number code has them (eight 256-byte pages, a number's bytes least first, with a length and a sign, so a sum or product of long numbers makes nothing till the result is written), pages for a number's digits and text, buffers for two operands and a result, and its state between calls: the base (its string), the precision for `math` (12 digits at the start), the random generator's state.  `num_init` fills it (decimal, a seed from the clock and the ticks) as a program starts; every other entry refuses a bank it hasn't filled (`NE_INIT`).  Why a bank: a library has no RAM of its own, and a program's zero page and low RAM are its own (hylang's zero page is full); a bank holds the registers and buffers whole, out of every language's way.  The caller's operands are read and its results written a byte at a time, the caller's bank selected for the byte only when the address is in `$8000`-`$9FFF`.
 * **Zero page**: the libraries work with 16 bytes of the zero page, `$70`-`$7F`, and save them as a call starts and put them back as it ends (some 200 cycles a call), so a program's zero page stays its own: hylang's is full, `$22`-`$7F`, HyForth's to `$7A` (step 1 looked).
 * An abort point at each entry, as hylang's number code has (`n_enter`), so a result too big or no room goes back from however deep with its error.
 
@@ -220,7 +220,7 @@ A library, **`lib numbers`** (`numbers.fl`), with `math`'s words in it or in a s
 | Step | Work | Size |
 | :--- | :--- | :--- |
 | 1 | **danlang first, and the interface**: the stored format in danlang (`number-bytes`, `bytes-number`) and JavaScript (an encoder and decoder); danlang's `base` (its reader, its printing, `val`: all of it), the radix point in other bases, complex numbers read (`1+2i`, `2i`), format strings' bases (`{x}`); `spec/numbers.def`; the zero page, workspace and state block; `XCALL`'s cost measured | M |
-| 2 | **`numbers`**: hylang's number code taken out into a library on the stored format; its state block, the base, `num_parse`, `num_display` and `num_format` (the radix point added); `t_num` and the cross-check | L |
+| 2 | **`numbers`**: hylang's number code taken out into a library on the stored format; its bank, the base, `num_parse`, `num_display` and `num_format` (the radix point added); `t_num` and the cross-check | L |
 | 3 | **hylang on `numbers`**: its objects in the stored format, its built-ins through the library, `base`; its suites, the cross-check and its benchmarks as before | M |
 | 4 | **`math`**: danlang's functions first, then the library, and hylang's built-ins (`sqrt` ... `digits`) | M-L |
 | 5 | **HyForth's `lib numbers`** (and `lib math`): the number stack, the words, literals, `BASE` and `set-base` for everything, `nformat`, its test file | M |
@@ -269,3 +269,16 @@ October 2026: danlang's branch `feature/numbers` (from `feature/speed`), and hyd
 * **The libraries' calls** (`spec/numbers.def`): 41 entries (33 `numbers`, 8 `math`), each with its registers, errors and each language's name; `r12` the program's state block (`NUM_STATE`, 64 bytes: the base, the precision, the random state), `r13` the work pages (`NUM_PAGES`, 8), `r0`-`r3` the operands and the result's place and room, the result's length in `.A`/`.X`; the `NE_` errors and the `NK_` kinds.  `apigen.js` reads it in step 2.
 * **What a call costs**: `XCALL`, counted from its code, about 116 cycles (the jump table's `jsr` to the caller's return), 130 with `r14` and `r15` set; the zero page's save and restore some 200 more.  So a quick way for small integers in each language (hylang's fixnums, BASIC's 5-byte integers) matters, as the plan has it.
 * **Not yet**: hylang's copy of danlang's suite (`tests/hylang`) is danlang's `feature/speed`'s till hylang takes these (step 3).
+
+### **As built: step 2**
+
+Under way, on `reborn-numbers`.
+
+* **The number system's reference in JavaScript** (`sim/tools/numref.js`): danlang's tower (`feature/numbers`) for the library's tests: the arithmetic, the conversions, the bits, `fib`, hylang's random generator step for step, and text, every base written and read.  `sim/tools/numxcheck.js` checks it against danlang: 11,243 cases from a fixed seed, none different.
+* **The library's skeleton** (`modules/numbers`, a module of the paged ROM, `HT_LIBRARY`, after the others in `rom.txt`):
+  * `spec/numbers.def` changed for the bank (`r13`, above), with `NE_INIT` (a bank `INIT` hasn't filled), `NE_TODO` (an entry not written yet), `NUM_MAX` (1,040: the longest number is 1,039 bytes, a complex number of two rationals of 255-byte integers) and the format's tags (`NT_`); `SEED` takes 16 bits, the generator's state.
+  * `tools/apigen.js` reads it: `obj/sdk/numbers.inc` (each entry's address, `NUM_ADD` = `$A042` ..., `MATH_SQRT` ..., and the constants) and each library's jump table (`obj/gen/numbers_jt.inc`), which the module includes after its header.
+  * The bank's layout (`nmbank.inc`): the registers at `$8000`, the digits' pages, a text page, the state, a call's variables, the buffers: 7,362 bytes of the 8,192.
+  * A call (`nmcall.inc`): `nm_begin` selects the bank, keeps the caller's (`$00`) and its zero page `$70`-`$7F`, notes the stack, and refuses a bank `INIT` didn't fill; `nm_end` puts them back, the answer in C, `.A` and `.X`; `nm_fail` goes back to the entry's caller from however deep with an error.  The caller's numbers are measured by their tags as they're copied in (`NE_NOTNUM` for tags and lengths that aren't a number's), and results copied out with the room checked (`NE_ROOM`).
+  * The first entries: `INIT`, `SET_BASE` (the string kept; whether it names a base comes with the text), `GET_BASE`, `SEED`, and `BYTES`, the format's one form checked as `numfmt.js`'s `decode` checks it (but lowest terms, which comes with `GCD`); the others give `NE_TODO`.
+* **The test** (`numbers`): `t_num` (`tests/mod/t_num`) makes the calls a card's file has (`num.in`, from `tests/numtest.js`) as a program makes them, and writes what each gave back to another (`num.out`), which the test's check compares with the reference; every call is checked to keep the caller's bank, its zero page `$70`-`$7F` and `r0`-`r3`, with its operands and results in the task's RAM and in its bank at `$8000`.  1,289 calls: the state, the format's forms one by one (each length's tags, the places, rationals, complex numbers, the longest number), 600 random numbers of every kind, and each changed a little, room and counts; every one as the reference has it.  110M cycles.

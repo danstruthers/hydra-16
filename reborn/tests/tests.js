@@ -25,6 +25,7 @@ const fs = require('fs');
 const path = require('path');
 const hydrafs = require('../sim/tools/hydrafs.js');
 const { createXmodemPeer } = require('../sim/lib/xmpeer.js');
+const numtest = require('./numtest.js');
 
 const IRQ_OFF_MAX = 200;                                      // (docs/design/reimplementation-from-scratch.md, §8: 115200)
 const S1_BYTES = 2000;
@@ -2002,6 +2003,18 @@ module.exports = {
     {
       name: 'xcall', what: 'XCALL: a library module\'s routines (t_lib), registers and flags both ways, its bank and back, a system call from it',
       init: 't_xcall', modules: ['t_lib'], cycles: 10e6,
+    },
+    {
+      name: 'numbers', what: 'the numbers library (modules/numbers): its calls as a card\'s file has them (tests/numtest.js), each checked against the reference (sim/tools/numfmt.js), and to keep the caller\'s bank, zero page and r0-r3',
+      init: 't_num', cycles: 400e6,
+      get machine() { this.calls = numtest.calls(); this.file = numtest.card(this.calls); this.sd = [imageCard(0, this.file, 16384)]; return { sd: this.sd }; },
+      check() {
+        this.sd[0].save();
+        const v = new hydrafs.Volume(this.file), out = v.read(v.walk('num.out'));
+        v.close();
+        this.notes = [this.calls.length + ' calls'];
+        return numtest.check(this.calls, out);
+      },
     },
     {
       name: 'step', what: 'the debugger\'s steps (TASKSTEP, /proc/N/ctl): a program started stopped (SPAWN_STOPPED), each kind of instruction a step at a time (out of line, or on its frame), a JSR stepped over, a breakpoint, a program\'s own BRK; refused steps',

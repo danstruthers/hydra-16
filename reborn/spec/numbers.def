@@ -2,7 +2,9 @@
 # numbers.def - the shared number libraries' calls: the numbers library (the number system: arithmetic,
 # conversions, text in every base, bits) and the math library (its functions), which every language calls
 # (docs/design/plans/NUMBERS.md).  The one source of truth for their jump tables and each language's bindings, as
-# api.def is for the system calls (tools/apigen.js to read it as the libraries are built: step 2).
+# api.def is for the system calls: tools/apigen.js reads it, and makes obj/sdk/numbers.inc (the entries' addresses,
+# NUM_ADD ..., MATH_SQRT ..., and the constants, for programs in assembly) and each library's jump table
+# (obj/gen/numbers_jt.inc, math_jt.inc).
 #
 # The format:
 #   library NAME "what it's for"          a library module (HT_LIBRARY): its jump table after its header, 3 bytes
@@ -14,26 +16,37 @@
 #     names:  each language's name for it: hl NAME (hylang), bas NAME (BASIC), fs NAME (HyForth), c NAME (C); "-"
 #             where a language reaches it some other way (an operator, PRINT ...)
 #     doc:    what it does                (more doc: lines go on with it)
-#   const NAME VALUE "what it is"         a constant (the error codes, the kinds)
+#   const NAME VALUE "what it is"         a constant (the error codes, the kinds, the format's tags)
 #
 # A call: XCALL, r15 the entry's address, r14 the library's bank (MODINFO finds it, by the library's name).  The
 # rules, every entry's:
-#   r12      the program's state block (NUM_STATE bytes, the same for the program's life): the base, the
-#            precision, the random generator's state.  INIT fills it.
-#   r13      the work pages: NUM_PAGES pages (the first's address; page-aligned), scratch for the call
-#   r0, r1   the operands: numbers in the stored format, at these addresses (anywhere the caller sees: its RAM, the
-#            bank it has at $8000)
-#   r2, r3   the result's place and its room (bytes)
+#   r13      the libraries' bank: a RAM bank of the program's own (BANKS_ALLOC's), the same for the program's life,
+#            which INIT fills.  The library's registers, buffers and state (the base, the precision, the random
+#            generator's) are there, at $8000 while a call runs (the caller's own bank back as it ends).
+#   r0, r1   the operands: numbers in the stored format, at these addresses: anywhere the caller sees but its paged
+#            ROM ($A000-$DFFF, the library's while it runs): its RAM, or the bank it has at $8000 (selected for each
+#            byte as it's read)
+#   r2, r3   the result's place (the same rule) and its room (bytes)
 #   .A/.X    the result's length (low, high), C = 0; or C = 1 and .A an error (NE_), the result's place untouched
 #   $70-$7F  the libraries' own zero page in a call: saved as it starts and put back as it ends, so a program's
 #            zero page is its own (hylang's is $22-$7F)
-# r4-r11 an entry's own, when it says.  Everything else is kept.
+# r4-r11 an entry's own, when it says.  Everything else is kept (r0-r3 too).  A number given a library is checked as
+# it's read: its tags and lengths (NE_NOTNUM if they aren't a number's), not that it's in its one form (BYTES's).
 
 library numbers "The number system: danlang's and hylang's (integers of any size, fixed decimals, rationals, complex numbers), in the stored format"
 library math    "Its functions: square roots, e and logarithms, the circle's, real powers, pi, at a precision"
 
-const NUM_STATE    64  "The state block's size"
-const NUM_PAGES    8   "The work pages a call needs"
+const NUM_MAX      1040 "The longest number in the stored format (a complex number of two rationals of 255-byte integers: 1039)"
+
+const NT_POS       $80 "The format's tags: $00-$7F an integer -64 to 63; $80 + n - 1, a positive integer of n bytes (1-16)"
+const NT_NEG       $90 "A negative integer of 1-16 bytes ($90 + n - 1)"
+const NT_LONG_POS  $A0 "A positive integer of 17-255 bytes: a length byte, then its magnitude"
+const NT_LONG_NEG  $A1 "A negative one"
+const NT_FIXED     $B0 "A fixed decimal of 0-15 places ($B0 + places), then its digits: an integer"
+const NT_FIXED_LONG $C0 "A fixed decimal of 16-65535 places: the places (2 bytes), then its digits"
+const NT_RATIONAL  $C1 "A rational: its numerator, then its denominator (above 1), in lowest terms"
+const NT_COMPLEX   $C2 "A complex number: its real part, then its imaginary part (not 0)"
+const NT_NONE      $FF "Never a number: a program's own"
 
 const NE_BIG       1   "Too big: an integer past 255 bytes, a fixed decimal past 65535 places"
 const NE_DIV0      2   "Division by zero"
@@ -43,6 +56,8 @@ const NE_DOMAIN    5   "Outside the function's domain"
 const NE_BASE      6   "Not a base: a base string that names none"
 const NE_INT       7   "An integer is needed (a number equal to one will do)"
 const NE_REAL      8   "A real number is needed, not a complex one"
+const NE_INIT      9   "The bank given (r13) isn't one INIT filled"
+const NE_TODO      10  "Not written yet"
 
 const NK_INT       0   "A kind: an integer"
 const NK_FIXED     1   "A fixed decimal"
@@ -52,12 +67,13 @@ const NK_COMPLEX   3   "A complex number"
 # ---- numbers: the state, and text
 
 entry INIT numbers impl=nm_init
-  in:     r12 = the state block
+  in:     r13 = the bank
   out:    -
   errors: -
   names:  hl - | bas - | fs - | c num_init
-  doc:    The state block filled: the base decimal ("d"), the precision 12 digits, the random generator seeded from
-  doc:    the clock and the ticks.  A program calls it once, as it starts.
+  doc:    The bank made the libraries': the base decimal ("d"), the precision 12 digits, the random generator seeded
+  doc:    from the clock and the ticks.  A program calls it once, as it starts; every other entry refuses a bank it
+  doc:    hasn't filled (NE_INIT).
 
 entry SET_BASE numbers impl=nm_set_base
   in:     r0 = a base string (its bytes and a 0: "x", "#x", "#16r", "c", "<x", "=16r", "[01]" ...)
@@ -280,15 +296,16 @@ entry RANDOM numbers impl=nm_random
   out:    .A/.X = the result's length
   errors: NE_INT NE_ROOM NE_NOTNUM
   names:  hl random | bas RND | fs nrandom | c num_random
-  doc:    The state block's xorshift32: an integer from 0 below n; or a fixed decimal from 0 up to 1, of the
-  doc:    precision's digits.  SEED sets its state.
+  doc:    hylang's random generator (a 16-bit xorshift, in the bank): an integer from 0 below n, as many bytes drawn
+  doc:    as n has, the top one masked to n's top byte's bits, drawn again while it's n or more; or a fixed decimal
+  doc:    from 0 up to 1, of the precision's digits.  SEED sets its state.
 
 entry SEED numbers impl=nm_seed
-  in:     r0/r1 = a 32-bit seed (0: from the clock and the ticks)
+  in:     r0 = a 16-bit seed (0: from the clock and the ticks)
   out:    -
   errors: -
   names:  hl - | bas RANDOMIZE | fs nseed | c num_seed
-  doc:    The random generator seeded.
+  doc:    The random generator seeded (its state the seed, or 1 for a seed of 0 from the clock: never 0).
 
 entry FIB numbers impl=nm_fib
   in:     r0 = n, an integer 0 or more
