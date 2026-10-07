@@ -18,6 +18,7 @@ A plan (October 2026) for the user's request: BASIC on hylang's number system in
 13. [The order of work](#the-order-of-work)
 14. [Risks](#risks)
 15. [Questions](#questions)
+16. [Answers](#answers-the-users-7-october-2026)
 
 ---
 
@@ -175,8 +176,8 @@ The `numbers` code is about 11K (hylang's third bank is 12K, mostly numbers): a 
 A new BASIC, for the Hydra, as QuickBASIC was for the PC: line numbers optional, labels, blocks, `SUB` and `FUNCTION`; its own plan, [BASIC.md](BASIC.md).  Its numbers are these:
 
 * **A value is 5 bytes**, holding the stored format's bytes when the number fits in 5 (most do: integers to 2^32, `0.5`, `3.14159`, `1/3`), else `$FF` and a reference (the number's address and length) to its bytes in the heap the strings use.  So variables, arrays and `FOR` take no more room than Microsoft's 5-byte floats did.
-* **QuickBASIC's types** ([BASIC.md](BASIC.md): `INTEGER`, `LONG`, `SINGLE` and `DOUBLE`, in decimal, beside the exact `NUMBER`, the default) limit what a variable may hold, rounding a value to the type as it's stored; every one is stored in the compact format.
-* **Exact**: `10/4` is `5/2`, `0.1 + 0.2 = 0.3` is true, `2 ^ 100` is exact; `FOR x = 0 TO 1 STEP 0.1` runs 11 times.  How `PRINT` shows a fraction is a question below.
+* **One number type** ([BASIC.md](BASIC.md)): QuickBASIC's suffixes and type names (`%`, `&`, `!`, `#`, `AS INTEGER` ...) are accepted, and every one is the same exact number, stored in the compact format.
+* **Exact**: `10/4` is `5/2`, `0.1 + 0.2 = 0.3` is true, `2 ^ 100` is exact; `FOR x = 0 TO 1 STEP 0.1` runs 11 times; `PRINT` shows every number exactly (`1/3` as `1/3`).
 * **Every format**: numbers in a program's text in every form danlang reads (the 19 named bases and the rest), QuickBASIC's `&HFF`, `&O17`, `&B101`, and exponents (`1E6`, `2.5E-3`, exact); `VAL` and `INPUT` read the same; `STR$(X, "x")` writes in a base; `NBASE "x"` sets the current format, which `PRINT`, `STR$`, `VAL` and `INPUT` use.
 * **The functions**: `SQR`, `EXP`, `LOG`, `SIN`, `COS`, `TAN`, `ATN`, `^`, `PI` call `math` at `DIGITS` digits; `INT` (the floor), `FIX`, `ABS`, `SGN`, `RND` (the next number from 0 to 1, a fixed decimal; a negative argument seeds it), `MOD`, `\` (integer division), and the tower's other functions and tests (`TRUNCATE`, `TOFIXED`, `NUMERATOR` ..., named in BASIC.md's reference) call `numbers`.
 * **The bits**: `AND`, `OR`, `XOR`, `NOT` on integers of any size, in two's complement (the library's), not 16-bit only; `PEEK`, `POKE` and the like take integers that fit.
@@ -233,13 +234,17 @@ hylang goes first because its tests check every corner of the tower: the library
 ### **Questions**
 
 1. **The precision of the math functions**: the default number of significant digits (12 is three more than Microsoft's 9; more costs time), and whether each language may change it (`DIGITS n`, `(digits n)`, `digits`)?
-2. **How BASIC prints a fraction** (BASIC.md's question 7 too): as hylang does (`PRINT 1/3` shows `1/3`, exact), or as a decimal of `DIGITS` digits (`.333333333333`), the number staying exact inside?
-3. **Complex numbers from text**: danlang reads none (`1+2i` is a symbol, and `(val "1+2i")` an error), so in every language they're made by `complex` and by arithmetic (`SQR(-1)` is `i`).  Add a form to danlang's grammar (and so to every language's), or leave it?
-4. **HyForth's Floating-Point word set** over these numbers, so standard Forth programs with floats run (reversing October's "left out")?
-5. **hylang on the shared library** (one implementation, recommended), or left with its own copy of the code?
-6. **A `calc` tool** at rc?
-7. **The current format's names**: `number-base`, `NBASE`, `nbase!` and `nbase@`, `num_base` (the table above), or others?
-8. **The current format and a program's own text**: does it read BASIC's lines and hylang's source too (as Forth's `BASE` reads Forth's), or only what a program reads as it runs (`VAL`, `INPUT`, `val`, `>n`), its text always decimal unless a number has a `#` of its own?  (Recommended: Forth's text yes, as `BASE`; BASIC's and hylang's no, so a library or a program means the same whatever was set.)
-9. **The prefix when shown**: `FF` (reads back in the same format) or `#xFF` (reads back in any)?
-10. **A fraction shown in another base**: with a radix point when it ends in that base and as a fraction when it doesn't (recommended: exact, and reads back), or always as a fraction (danlang's way now), or rounded to a number of digits after the point?
-11. **hylang's fixnums**: a small integer kept in hylang's 16-bit value as now (quick; the format's bytes when it leaves hylang), or the format's bytes even there?
+2. **Complex numbers from text**: danlang reads none (`1+2i` is a symbol, and `(val "1+2i")` an error), so in every language they're made by `complex` and by arithmetic (`SQR(-1)` is `i`).  Add a form to danlang's grammar (and so to every language's), or leave it?
+3. **HyForth's Floating-Point word set** over these numbers, so standard Forth programs with floats run (reversing October's "left out")?
+4. **hylang on the shared library** (one implementation, recommended), or left with its own copy of the code?
+5. **A `calc` tool** at rc?
+6. **The current format's names**: `number-base`, `NBASE`, `nbase!` and `nbase@`, `num_base` (the table above), or others?
+7. **The current format and a program's own text**: does it read BASIC's lines and hylang's source too (as Forth's `BASE` reads Forth's), or only what a program reads as it runs (`VAL`, `INPUT`, `val`, `>n`), its text always decimal unless a number has a `#` of its own?  (Recommended: Forth's text yes, as `BASE`; BASIC's and hylang's no, so a library or a program means the same whatever was set.)
+8. **The prefix when shown**: `FF` (reads back in the same format) or `#xFF` (reads back in any)?
+9. **A fraction shown in another base**: with a radix point when it ends in that base and as a fraction when it doesn't (recommended: exact, and reads back), or always as a fraction (danlang's way now)?  (Exact either way: the user's answer, below, rules rounding out.)
+10. **hylang's fixnums**: a small integer kept in hylang's 16-bit value as now (quick; the format's bytes when it leaves hylang), or the format's bytes even there?
+
+### **Answers** (the user's, 7 October 2026)
+
+1. **Every number is shown exactly**, in every language: a fraction as a fraction (`1/3`), a long integer whole, never rounded for display (it was question 2: how BASIC prints a fraction).
+2. **BASIC has one number type** (BASIC.md's answers): QuickBASIC's number types accepted as names, all the same exact number.

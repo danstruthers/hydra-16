@@ -1,6 +1,6 @@
 ## **Hydra BASIC: a structured BASIC for the Hydra, on the shared numbers**
 
-A plan (October 2026) for the user's direction: BASIC doesn't need to keep Microsoft's syntax; it should be a BASIC for the Hydra, more like the later QuickBASIC: **line numbers optional**, **labels** to branch to instead of line numbers, and the structured statements that came with them.  Its numbers are the shared ones ([NUMBERS.md](NUMBERS.md): danlang's and hylang's number system, every format, a current format to show and read numbers in, every number stored in the compact format).  It replaces today's BASIC (EhyBASIC, Microsoft BASIC 2A: [basic.md](../../basic.md)), which is retired when this one is done.  The user's answers to the plan's first questions are in it (and listed at its end): today's BASIC retired, all of QuickBASIC's types, parameters by reference, and a buffer at the prompt with an editing mode.
+A plan (October 2026) for the user's direction: BASIC doesn't need to keep Microsoft's syntax; it should be a BASIC for the Hydra, more like the later QuickBASIC: **line numbers optional**, **labels** to branch to instead of line numbers, and the structured statements that came with them.  Its numbers are the shared ones ([NUMBERS.md](NUMBERS.md): danlang's and hylang's number system, every format, a current format to show and read numbers in, every number stored in the compact format).  It replaces today's BASIC (EhyBASIC, Microsoft BASIC 2A: [basic.md](../../basic.md)), which is retired when this one is done.  The user's answers to the plan's questions are in it (and listed at its end): today's BASIC retired; QuickBASIC's types, with one number type; parameters by reference; a buffer at the prompt with an editing mode; `RETURN` in a function; every number shown exactly; graphics in the first version.
 
 ### **Contents**
 1. [What it keeps, and what changes](#what-it-keeps-and-what-changes)
@@ -26,7 +26,7 @@ A plan (October 2026) for the user's direction: BASIC doesn't need to keep Micro
 
 **Changed**, as QuickBASIC changed it:
 * Line numbers optional; labels (`loop:`) for `GOTO`, `GOSUB`, `RESTORE` and `ON ERROR`; a program a text file, or the buffer at the prompt, written in its editing mode, or line by line with numbers as before.
-* All of QuickBASIC's types: `INTEGER` (`%`), `LONG` (`&`), `SINGLE` (`!`), `DOUBLE` (`#`), `STRING` (`$`), fixed-length strings and records (`TYPE`), with `DIM ... AS` and `DEFINT` and the rest; and the tower's own exact numbers, the default.
+* QuickBASIC's types, with one number type: numbers (the tower's, exact), strings (`$`), fixed-length strings and records (`TYPE`); QuickBASIC's number suffixes and type names (`%`, `&`, `!`, `#`, `AS INTEGER`, `DEFDBL` ...) accepted, every one the same number.
 * Block statements: `IF` ... `ELSEIF` ... `ELSE` ... `END IF`, `SELECT CASE`, `DO` ... `LOOP`, `WHILE` ... `WEND`, `EXIT`.
 * `SUB` and `FUNCTION` with parameters and local variables, recursion.
 * Names of any length, keywords only as whole words (`SCORE` is a name, not `SC OR E`), keywords and names in either case.
@@ -64,27 +64,22 @@ END FUNCTION
 
 * **Numbers**: the shared ones ([NUMBERS.md](NUMBERS.md)): `10 / 4` is `5/2`, `0.1 + 0.2 = 0.3` is true, `2 ^ 100` is exact; written in any format (`&HFF`, `&O17` and `&B101` as QuickBASIC wrote them, and danlang's `#xFF`, `#b101`, `#c+-0`, `#16r1F` ...); shown and read in the current format (`NBASE "x"`); the math functions at `DIGITS` digits.  Truth is -1 and 0, as BASIC's.
 * **Strings**: `$` names (`name$`), of any length to 64K (Microsoft's stopped at 255), in a heap with a compacting collector.
-* **Names**: letters, digits, `_` and `.` (QuickBASIC's), any length, all significant; a keyword can't be a name.  A name's type is its suffix (`%`, `&`, `!`, `#`, `$`), else its `DIM ... AS`, else the `DEFtype` its first letter has; `x%` and `x!` are two variables, as in QuickBASIC.
+* **Names**: letters, digits, `_` and `.` (QuickBASIC's), any length, all significant; a keyword can't be a name.  A name is a string's with `$` (or `AS STRING`, or `DEFSTR`'s letters), else a number's.  QuickBASIC's number suffixes are accepted and dropped: `x%`, `x&`, `x!`, `x#` and `x` are one variable, as there's one number type.
 * **Arrays**: `DIM a(10)`, `DIM grid%(1 TO 8, 1 TO 8)`, `DIM names$(100)`, `DIM v(5) AS DOUBLE`; any number of dimensions; `REDIM`, `ERASE`, `LBOUND`, `UBOUND`; an array used before `DIM` has 0 to 10, as BASIC's always had.
 * **Constants**: `CONST pi2 = 2 * PI`.
 
-**Types**: all of QuickBASIC's, and the tower's exact numbers as the default:
+**Types**: one number type, strings, and QuickBASIC's records:
 
-| Type | Suffix | Declared | Holds |
-| :--- | :----- | :------- | :---- |
-| `NUMBER` | none | `AS NUMBER`, `DEFNUM` | Any number of the tower, exact: the default, for a name with no suffix and no `DEF` |
-| `INTEGER` | `%` | `AS INTEGER`, `DEFINT` | An integer, -32,768 to 32,767 |
-| `LONG` | `&` | `AS LONG`, `DEFLNG` | An integer, -2,147,483,648 to 2,147,483,647 |
-| `SINGLE` | `!` | `AS SINGLE`, `DEFSNG` | A real number of 7 significant digits |
-| `DOUBLE` | `#` | `AS DOUBLE`, `DEFDBL` | A real number of 16 significant digits |
-| `STRING` | `$` | `AS STRING`, `DEFSTR` | A string of any length to 64K |
-| `STRING * n` | | `AS STRING * n` | A string of exactly n characters (padded with spaces, or cut, as it's stored) |
-| A record | | `TYPE point` ... `END TYPE`, then `AS point` | Fields of any of these types (`p.x`), records in records, arrays of records (`pts(i).x`) |
+| Type | Written | Holds |
+| :--- | :------ | :---- |
+| A number | No suffix, or QuickBASIC's (`%`, `&`, `!`, `#`), all the same; `AS NUMBER`, and `AS INTEGER`, `AS LONG`, `AS SINGLE`, `AS DOUBLE` the same; `DEFINT`, `DEFLNG`, `DEFSNG`, `DEFDBL` accepted, changing nothing | Any number of the tower, exact |
+| A string | `$`, `AS STRING`, `DEFSTR` | A string of any length to 64K |
+| A fixed-length string | `AS STRING * n` | Exactly n characters (padded with spaces, or cut, as it's stored) |
+| A record | `TYPE point` ... `END TYPE`, then `AS point` | Fields, each a number, a string or a record (`p.x`); records in records; arrays of records (`pts(i).x`) |
 
-* **Every number is stored in the compact format**, whatever its type ([NUMBERS.md](NUMBERS.md)): an `INTEGER`'s takes 1 to 3 bytes, a `SINGLE`'s and a `DOUBLE`'s are fixed decimals.  A type says what a variable may hold, not how it's kept.
-* **Arithmetic is the tower's**, exact, whatever the operands' types (`a% / b%` is a fraction).  A value takes a type as it's stored (in a variable, an array's element, a field, a parameter, a function's value): an `INTEGER` or `LONG` rounded to the nearest integer (a half to the even one, as QuickBASIC's), a `SINGLE` or `DOUBLE` rounded to its digits (a fraction becomes a decimal there); past its range, `Overflow`.  `\` (integer division) and `MOD` as QuickBASIC's; `CINT`, `CLNG`, `CSNG`, `CDBL` convert, and `CNUM` to the exact.
-* **`SINGLE` and `DOUBLE` in decimal**, QuickBASIC's precision without its binary: `0.1` is exactly 0.1, and `1/3` stored in a `SINGLE` is `0.3333333`.
-* **A suffix, and a number's text**: `x#` is a `DOUBLE`'s name, `#xFF` a number in base x, `#1` a file (after `PRINT`, `INPUT`, `OPEN ... AS` and the rest); `x&` a `LONG`'s name, `&HFF` a number.
+* **One number type**: every number is the tower's, exact, and stored in the compact format ([NUMBERS.md](NUMBERS.md)); nothing rounds a number as it's stored.  `a / b` is a fraction when it isn't whole; `\` (integer division) and `MOD` are QuickBASIC's; `CINT` and `CLNG` round to an integer (a half to the even one, QuickBASIC's), `CSNG` and `CDBL` leave a number as it is.
+* **Shown exactly**: `PRINT`, `STR$` and the rest show every number as it is, never rounded: `1/3` as `1/3`, `2 ^ 100` whole, in the current format.
+* **A suffix, and a number's text**: `x#` is a number's name, `#xFF` a number in base x, `#1` a file (after `PRINT`, `INPUT`, `OPEN ... AS` and the rest); `x&` a name, `&HFF` a number.
 
 ### **Control**
 
@@ -105,9 +100,9 @@ A block is checked as the program is read: an `IF` without its `END IF`, a `NEXT
 ### **Procedures**
 
 * `SUB name (a, b$, c(), d AS INTEGER, p AS point)` ... `END SUB`, called as `name 1, "x", list(), 5, pt` or `CALL name (1, "x", list(), 5, pt)`.
-* `FUNCTION name (a, b)` ... `END FUNCTION`: its value set by assigning to its name (`name = a * b`, QuickBASIC's), used in expressions (`y = name(2, 3)`); a `$` function gives a string.
+* `FUNCTION name (a, b)` ... `END FUNCTION`: its value set by assigning to its name (`name = a * b`, QuickBASIC's), or given by `RETURN a * b`, which leaves it too; used in expressions (`y = name(2, 3)`); a `$` function gives a string.  (`RETURN` alone in a function leaves it with the value its name has; outside a function, it's `GOSUB`'s.)
 * **Local variables**: a procedure's names are its own; `SHARED x, y()` reaches the program's; `STATIC` keeps a procedure's between calls.  Recursion to the depth memory allows.
-* **Parameters by reference**, as QuickBASIC's: a variable, an array's element, a field or a whole array passed (`swap a, b`, `sort list()`) is the procedure's to change; an expression, a constant or a variable in brackets (`(x)`) passes a copy.  A parameter's type is its suffix or its `AS`; a variable passed must be of that type (else `Parameter type mismatch`, as the program is read), a copy is converted to it.
+* **Parameters by reference**, as QuickBASIC's: a variable, an array's element, a field or a whole array passed (`swap a, b`, `sort list()`) is the procedure's to change; an expression, a constant or a variable in brackets (`(x)`) passes a copy.  A variable passed must be of the parameter's kind (a number, a string, a fixed-length string, a record of the same `TYPE`), else `Parameter type mismatch`, as the program is read.
 * The program's main part is the lines outside procedures.
 
 ### **Errors**
@@ -118,7 +113,7 @@ A block is checked as the program is read: an `IF` without its `END IF`, a `NEXT
 
 ### **Input and output**
 
-* **The console**: `PRINT` (`;`, `,` and the current format's numbers), `PRINT USING "##.##"` (numbers in a picture, strings `&`), `INPUT ["prompt";] a, b$`, `LINE INPUT a$`, `INKEY$` (a key, or `""`), `CLS`, `LOCATE row, col`, `COLOR fg[, bg]` (conio's colours, as HyForth's and hylang's terminal words), `WIDTH`, `BEEP`.
+* **The console**: `PRINT` (`;`, `,`; numbers exactly, in the current format), `PRINT USING "##.##"` (numbers in a picture, strings `&`), `INPUT ["prompt";] a, b$`, `LINE INPUT a$`, `INKEY$` (a key, or `""`), `CLS`, `LOCATE row, col`, `COLOR fg[, bg]` (conio's colours, as HyForth's and hylang's terminal words), `WIDTH`, `BEEP`.
 * **Files**, QuickBASIC's: `OPEN "path" FOR INPUT | OUTPUT | APPEND | BINARY AS #n`, `PRINT #n`, `WRITE #n` (quoted, comma-separated), `INPUT #n`, `LINE INPUT #n`, `GET #n` and `PUT #n` (bytes, in `BINARY`), `SEEK`, `EOF(n)`, `LOF(n)`, `CLOSE`, `FREEFILE`; any number of files open, the system's limit; paths through the namespace (`/sd/0/data.txt`, `/pc/x`).
 * **Files as the system has them**: `KILL` (remove), `NAME a AS b` (rename), `MKDIR`, `RMDIR`, `CHDIR`, `FILES` (a directory's names), `DIR$`.
 * **`DATA`, `READ`, `RESTORE [label]`**, as BASIC's.
@@ -128,7 +123,7 @@ A block is checked as the program is read: an `IF` without its `END IF`, a `NEXT
 * **Sound**: `SOUND`, `PLAY`, `BEEP`, as today's BASIC has them (sndctl's text, the score language).
 * **The system**: `SHELL "rc line"` (QuickBASIC's name: rc runs it, waited for, its status then `STATUS`, as HyForth's and hylang's `status`), `SHELL$("line")` (its output, a string: hylang's `sh-out`), `SYS "NAME"` and `RREG` (any system call by its name), `ENV$("name")` (QuickBASIC's `ENVIRON$` too) and `ENVIRON "name=value"`, `ARG$(n)`, `TIMER` (seconds since midnight, as QuickBASIC's, from the clock, to the tick), `DATE$`, `TIME$`, `SLEEP`.
 * **Memory**: `PEEK`, `POKE`, `BANK` (the task's RAM bank at `$8000`), `CALL ABSOLUTE` or `SYS addr` (machine code).
-* **Graphics** (with the languages' graphics words, VIDEO.md's step: QuickBASIC's `SCREEN`, `PSET`, `LINE`, `CIRCLE`, `PAINT`, `PALETTE` on the Vera X): a question below.
+* **Graphics**, in the first version, on the Vera X: QuickBASIC's `SCREEN` (a mode: text, or a bitmap of the Vera's), `PSET`, `PRESET`, `LINE` (`B`, `BF`), `CIRCLE`, `PAINT`, `DRAW`, `PALETTE`, `COLOR`, `POINT`, `VIEW` and `WINDOW`, and the Vera's sprites; built with the languages' graphics words (VIDEO.md's step: HyForth's, hylang's and C's, which go ahead now), the same operations under each language's names.
 * Names checked against C's, HyForth's and hylang's for the same things, as the system's rule is.
 
 ### **At the prompt, and as a shell**
@@ -159,26 +154,26 @@ A block is checked as the program is read: an `IF` without its `END IF`, a `NEXT
 | Step | Work | Size |
 | :--- | :--- | :--- |
 | 1 | **The language**: this plan's questions answered, and the reference written first (`docs/using/basic.md`), every statement and function | M |
-| 2 | **Reading a program**: lines, labels, line numbers, tokens, names to slots by their types (suffixes, `AS`, `DEFtype`, `TYPE`), blocks linked and checked, errors with file and line | L |
-| 3 | **The core**: expressions, numbers (NUMBERS.md's libraries, steps 1-4 there first) and the types, strings and the heap, variables, arrays, records, `IF`, `FOR`, `DO`, `WHILE`, `SELECT`, `GOTO`, `GOSUB`, `PRINT`, `INPUT`, `DATA` | L |
+| 2 | **Reading a program**: lines, labels, line numbers, tokens, names to slots (numbers, strings, records: `TYPE`), blocks linked and checked, errors with file and line | L |
+| 3 | **The core**: expressions, numbers (NUMBERS.md's libraries, steps 1-4 there first), strings and the heap, variables, arrays, records, `IF`, `FOR`, `DO`, `WHILE`, `SELECT`, `GOTO`, `GOSUB`, `PRINT`, `INPUT`, `DATA` | L |
 | 4 | **Procedures**: `SUB`, `FUNCTION`, locals, `SHARED`, `STATIC`, parameters by reference, recursion, `EXIT` | M |
 | 5 | **Errors, files, the console's screen**: `ON ERROR`, `RESUME`, `OPEN` and the rest, `PRINT USING`, `LOCATE`, `COLOR`, `INKEY$` | M |
 | 6 | **The Hydra and the prompt**: sound, `SHELL`, `SYS`, memory; the buffer, immediate and editing modes; scripts, `basic -l` | M |
+| 6a | **Graphics**: QuickBASIC's statements on the Vera X, on the languages' graphics words (VIDEO.md's step, under way beside this) | M |
 | 7 | **Tests, `bench.bas`, documents**; today's BASIC retired (`modules/basic` replaced, its tests and documents with it) | M |
 
 Steps 1 and 2 can start at once, beside NUMBERS.md's first steps; step 3 needs its `numbers` and `math` libraries.
 
 ### **Questions**
 
-1. **A function's value**: assigned to its name (QuickBASIC's), or `RETURN value` too?
-2. **How `PRINT` shows a fraction** in a `NUMBER`: as hylang does (`1/3`, exact), or as a decimal of `DIGITS` digits, the number exact inside (NUMBERS.md's question 2)?
-3. **Graphics**: QuickBASIC's `SCREEN`, `PSET`, `LINE`, `CIRCLE`, `PAINT` in this BASIC's first version, or with the languages' graphics words (VIDEO.md's step, next after PCM and text windows)?
-4. **The default type**: a name with no suffix a `NUMBER`, exact (recommended: the system's numbers), or QuickBASIC's `SINGLE`?
-5. **`SINGLE` and `DOUBLE`**: 7 and 16 significant decimal digits (QuickBASIC's precision, near enough), or others?
+None open: the user answered them all (below).  The numbers' own questions are NUMBERS.md's.
 
 ### **Answers** (the user's, 7 October 2026)
 
 1. **Today's BASIC is retired**: no `msbasic`; the new BASIC is `basic`.
-2. **All of QuickBASIC's types**: `%`, `&`, `!`, `#`, `$`, `AS`, `DEFINT` and the rest; fixed-length strings and records (`TYPE`) taken as QuickBASIC's types too.
+2. **QuickBASIC's types, with one number type**: its suffixes, `AS` and `DEFtype` accepted; every number the tower's, exact (no `INTEGER` or `SINGLE` rounding); strings, fixed-length strings and records (`TYPE`) as QuickBASIC's.
 3. **Parameters by reference**.
 4. **The prompt keeps a buffer**, with a way into and out of an editing mode: immediate mode and editing mode (`EDIT`, the screen editor), above; numbered lines typed at the prompt still go into it.
+5. **`RETURN value` in a function**, beside assigning to its name.
+6. **Every number shown exactly**: a fraction as a fraction (`1/3`), never rounded for display.
+7. **Graphics in the first version**, with the languages' graphics words, which go ahead now as anticipated.
