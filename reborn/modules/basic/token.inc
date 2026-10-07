@@ -97,6 +97,7 @@ UNFNC_ATN:
 		keyword_addr "CHR$", CHRSTR, TOKEN_CHR
 		keyword_addr "EOF", EOF_FN
 		keyword_addr "ENV$", ENV_FN
+		keyword_addr "ARG$", ARG_FN
 		keyword_addr "LEFT$", LEFTSTR, TOKEN_LEFTSTR
 		keyword_addr "RIGHT$", RIGHTSTR, TOKEN_RIGHTSTR
 		keyword_addr "MID$", MIDSTR, TOKEN_MIDSTR

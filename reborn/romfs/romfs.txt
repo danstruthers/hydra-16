@@ -8,8 +8,9 @@ README              README
 lib/namespace       lib/namespace       ; The default namespace (the plan's appendix E): init runs it
 lib/profile         lib/profile         ; What each shell runs as it starts (rc's: phase 4)
 doc/api.md          ../obj/gen/api.md   ; The system calls' reference (tools/apigen.js makes it at the build)
-bench/bench.hl      bench/bench.hl      ; hylang's and HyForth's benchmarks, the same in each (sim/bench.js compares them)
+bench/bench.hl      bench/bench.hl      ; hylang's, HyForth's and BASIC's benchmarks, the same in each (sim/bench.js compares them)
 bench/bench.fs      bench/bench.fs
+bench/bench.bas     bench/bench.bas
 lib/forth/hydra.fs  ../obj/gen/hydra.fs ; HyForth's constants and error codes (tools/apigen.js makes it too)
 lib/forth/startup.fs lib/forth/startup.fs ; What HyForth loads as it starts
 lib/forth/profile.fs lib/forth/profile.fs ; What forth -l (HyForth as a login shell) runs after it

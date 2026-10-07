@@ -58,7 +58,8 @@ An alias reserves its name, as every keyword does: `ST$`, `LT$` and the like can
 * `RUN "name"` is LOAD, then RUN.
 * `basic file [argument ...]` runs a script: the file LOADed and run, no banner, and its end is BASIC's: code 0, or 1
   after an error or a BREAK (its message, its line ended).  A file whose first line is `#!/bin/basic` runs so by its
-  name.
+  name.  `ARG$(n)` is its argument n (`TASK_ARGS`' strings: 0 the script's name, 1 the first after it; `""` past the
+  last), as HyForth's `arg` and hylang's `args`.
 * The system's errors are shown as BASIC's are, their text in capitals: `?NOT FOUND ERROR`.  An error or Ctrl-C
   while LOAD or SAVE has a file closes it (RESTART's `IO_RESET`).
 
@@ -204,13 +205,13 @@ rc's by the rule, `cd` and the prompt, `$status`, `%`, a usage, ENV$, a program 
 
 `bsuite`: BASIC's suite (`tests/basic`, on a card), in two kinds, as HyForth's and hylang's are.  Programs that check
 themselves (`NAME.bas`: a check sets `X` and `E`, or `X$` and `E$`, and calls 9000 or 9100, which count it and print
-a `FAIL` line with both when they differ; the end prints `NAME: n CHECKS, m FAILED`), 392 checks in nine: `arith`
+a `FAIL` line with both when they differ; the end prints `NAME: n CHECKS, m FAILED`), 395 checks in nine: `arith`
 (precedence, literals, the floating point's limits, integer variables, names' two letters), `funcs` (the numeric
 functions, RND's seed), `logic` (relations, AND, OR and NOT, IF's forms, strings compared), `strings` (LEFT$, RIGHT$
 and MID$ at their edges, STR$'s forms, VAL, 255 characters, the garbage collector with a string array), `arrays`,
 `flow` (FOR's edge cases, GOSUB's recursion, ON), `data` (DATA, READ, RESTORE, DEF FN), `files` (OPEN's modes,
 PRINT#, INPUT#, GET#, EOF, four channels at once, SAVE in a program) and `hydra` (HIMEM, SYS, RREG, USR, PEEK, POKE,
-WAIT, memory past 32K, SLEEP timed by the ticks, ENV$, SOUND).  And scripts piped into `basic` (`NAME.txt`) with what
+WAIT, memory past 32K, SLEEP timed by the ticks, ENV$, ARG$, SOUND).  And scripts piped into `basic` (`NAME.txt`) with what
 they print (`NAME.out`): `errors` (every message, direct and in a line, BREAK and CONT), `print` (the zones of 14,
 TAB, SPC, POS, numbers' forms), `list` (the tokenizer: keywords anywhere, the short forms, REM, DATA and strings left
 as typed; LIST's ranges, a line deleted and one replaced) and `input` (`??`, REDO FROM START, EXTRA IGNORED, an
@@ -224,3 +225,32 @@ made the result 0 (`funcs` checks it within 1E-9).  The suite found two bugs of 
 SYNTAX ERROR (`PRINT_ST`'s test for `#` lost CHRGET's flags), and a string in the line buffer (a direct line's
 literal, INPUT's and GET's answers) was left there, not copied (STRLIT's test was for the zero page), so the next line
 overwrote it.
+
+## Against hylang and HyForth
+
+hylang's and HyForth's benchmarks (docs/hylang.md, "Against HyForth") have a BASIC side: `romfs/bench/bench.bas`, on
+the ROM disk at `/rom/bench`, the same six with the same algorithms, sizes and results, each printing `bench basic
+NAME RESULT TICKS REPS` (`basic /rom/bench/bench.bas [reps [quick]]`, its arguments by `ARG$`).  Each is BASIC's own
+way: FOR and NEXT, a GOSUB for a call (its arguments and result in variables), Fibonacci's recursion by GOSUB with a
+stack of its own in an array (GOSUB keeps no locals), integer arrays for the bytes.  Its two loops are GOTOs, so that
+the 6502's stack is the benchmark's: fib's GOSUBs go 15 deep, 7 bytes each, and CHKMEM keeps 80 bytes free.
+`node sim/bench.js` runs the three languages (`--basic-reps`) and the `bench` test runs BASIC's at the quick sizes
+too.  In October 2026, at 3.58 MHz, one run of each:
+
+| Benchmark | Result | BASIC | hylang | HyForth | BASIC / hylang | BASIC / HyForth |
+| :-------- | -----: | ----: | -----: | ------: | -------------: | --------------: |
+| `loop` | 4000 | 4,335 ms | 925 ms | 76 ms | 4.7x | 57x |
+| `calls` | 2000 | 5,950 ms | 1,000 ms | 65 ms | 6.0x | 92x |
+| `fib` | 987 | 16,950 ms | 980 ms | 181 ms | 17.3x | 94x |
+| `sieve` | 172 | 7,390 ms | 1,905 ms | 332 ms | 3.9x | 22x |
+| `sort` | 407 | 14,460 ms | 3,275 ms | 480 ms | 4.4x | 30x |
+| `gcd` | 880 | 7,640 ms | 960 ms | 350 ms | 8.0x | 22x |
+| All | | 56,725 ms | 9,045 ms | 1,484 ms | 6.3x (the ratios' geometric mean 6.4x) | 38x (44x) |
+
+Microsoft's BASIC interprets the program's text each time it runs a line: CHRGET reads it again a character at a
+time, a constant is converted from its digits at each use (`1` in `R=R+1` too), a variable is found by a search of
+them in the order they were made, every number is a 5-byte float (a loop's counter too), and a GOTO or GOSUB to an
+earlier line searches the lines from the program's start.  So fib is its worst, each call a GOSUB back and its stack
+a float array's elements; the sieve and the sort, where hylang's buffers cost it too, its nearest.  The order the
+variables are made matters: bench.bas makes the benchmarks' first (its line 9), which took 10 to 30% off (`loop`
+5,590 ms before, `gcd` 10,500 ms).

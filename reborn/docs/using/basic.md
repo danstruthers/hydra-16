@@ -71,7 +71,7 @@ string (255 characters at most).
 | `ABS` `INT` `SGN` `SQR` `RND` `LOG` `EXP` `SIN` `COS` `TAN` `ATN` | Numbers (`RND(1)` the next random number, `RND(-n)` seeds it) |
 | `LEN` `LEFT$` `RIGHT$` `MID$` `STR$` `VAL` `ASC` `CHR$` | Strings |
 | `FRE(0)` `POS(0)` `PEEK(addr)` `USR(x)` | Memory free, the column, a byte, machine code |
-| `EOF(n)` `ENV$("name")` | A file's end; the environment's variable (`ENV$("home")`) |
+| `EOF(n)` `ENV$("name")` `ARG$(n)` | A file's end; the environment's variable (`ENV$("home")`); a script's argument (`ARG$(1)` the first, `ARG$(0)` the script's name, `""` past the last) |
 
 ## Programs in files
 
@@ -82,7 +82,7 @@ paths as anywhere else (`/sd/0/games/hello.bas`, or relative to the current dire
 
 ```
 #!/bin/basic
-10 PRINT "hello from a script"
+10 PRINT "hello from a script, ";ARG$(1)
 ```
 
 ## Files

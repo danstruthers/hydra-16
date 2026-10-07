@@ -630,10 +630,11 @@ function hylangCard(test, files = {}) {
 // BASIC's suite (the bsuite test's card): tests/basic's files, each as itself: the programs that check themselves
 // (NAME.bas: its checks counted, a FAIL line for each one wrong, then "NAME: n CHECKS, m FAILED"; BSUITE_PROGS, each
 // one's count), the scripts piped into basic (NAME.txt) and what they print (NAME.out; BSUITE_SCRIPTS).  hydra.bas
-// reads rc's $greet (hi); files.bas writes its files on the card
+// reads rc's $greet (hi) and its arguments (one two); files.bas writes its files on the card
 const BASIC_DIR = path.join(__dirname, 'basic');
-const BSUITE_PROGS = { arith: 73, funcs: 54, logic: 54, strings: 69, arrays: 30, flow: 33, data: 24, files: 31, hydra: 24 };
+const BSUITE_PROGS = { arith: 73, funcs: 54, logic: 54, strings: 69, arrays: 30, flow: 33, data: 24, files: 31, hydra: 27 };
 const BSUITE_SCRIPTS = ['errors', 'print', 'list', 'input'];
+const bsuiteLine = n => (n === 'hydra' ? 'greet=hi; ' : '') + 'basic ' + n + '.bas' + (n === 'hydra' ? ' one two' : '');
 function basicCard() {
   fs.mkdirSync(CARD_DIR, { recursive: true });
   hydrafs.setNow(0x1000);
@@ -1046,14 +1047,14 @@ module.exports = {
       },
     },
     {
-      name: 'bsuite', what: 'BASIC\'s suite (tests/basic, docs/basic.md), from a card: programs that check themselves, each its checks and none failed (arithmetic: precedence, literals, limits, integer variables, names; the numeric functions; relations, AND, OR, NOT, IF; strings: their functions, STR$\'s forms, VAL, 255 characters, the garbage collector; arrays: 1 to 3 dimensions, integers, strings; FOR, GOSUB, ON, IF ... THEN line; DATA, READ, RESTORE, DEF FN; files: OPEN\'s modes, PRINT#, INPUT#, GET#, EOF, four channels, SAVE in a program; the Hydra\'s: HIMEM, SYS by address and by name, RREG, USR, PEEK, POKE, WAIT, memory past 32K, SLEEP by the ticks, ENV$, SOUND); scripts piped into basic, their output tests/basic\'s: every error message, PRINT\'s layout (zones, TAB, SPC, POS, numbers\' forms), LIST and the tokenizer (keywords anywhere, the short forms, REM, DATA, ranges), INPUT\'s answers (??, REDO FROM START, EXTRA IGNORED, an empty line, CONT)',
+      name: 'bsuite', what: 'BASIC\'s suite (tests/basic, docs/basic.md), from a card: programs that check themselves, each its checks and none failed (arithmetic: precedence, literals, limits, integer variables, names; the numeric functions; relations, AND, OR, NOT, IF; strings: their functions, STR$\'s forms, VAL, 255 characters, the garbage collector; arrays: 1 to 3 dimensions, integers, strings; FOR, GOSUB, ON, IF ... THEN line; DATA, READ, RESTORE, DEF FN; files: OPEN\'s modes, PRINT#, INPUT#, GET#, EOF, four channels, SAVE in a program; the Hydra\'s: HIMEM, SYS by address and by name, RREG, USR, PEEK, POKE, WAIT, memory past 32K, SLEEP by the ticks, ENV$, ARG$, SOUND); scripts piped into basic, their output tests/basic\'s: every error message, PRINT\'s layout (zones, TAB, SPC, POS, numbers\' forms), LIST and the tokenizer (keywords anywhere, the short forms, REM, DATA, ranges), INPUT\'s answers (??, REDO FROM START, EXTRA IGNORED, an empty line, CONT)',
       init: 't_rc', cycles: 700e6,
       get machine() {
-        return { sd: basicCard(), input: 'ācd /sd/0\r' + Object.keys(BSUITE_PROGS).map(n => 'ā' + (n === 'hydra' ? 'greet=hi; ' : '') +
-          'basic ' + n + '.bas\r').join('') + BSUITE_SCRIPTS.map(n => 'ābasic <' + n + '.txt\r').join('') };
+        return { sd: basicCard(), input: 'ācd /sd/0\r' + Object.keys(BSUITE_PROGS).map(n => 'ā' + bsuiteLine(n) + '\r').join('') +
+          BSUITE_SCRIPTS.map(n => 'ābasic <' + n + '.txt\r').join('') };
       },
       get expect() {
-        return [...Object.entries(BSUITE_PROGS).map(([n, c]) => 'basic ' + n + '.bas\n' + n.toUpperCase() + ': ' + c + ' CHECKS, 0 FAILED\n%'),
+        return [...Object.entries(BSUITE_PROGS).map(([n, c]) => '% ' + bsuiteLine(n) + '\n' + n.toUpperCase() + ': ' + c + ' CHECKS, 0 FAILED\n%'),
           ...BSUITE_SCRIPTS.map(n => '% basic <' + n + '.txt\n' + fs.readFileSync(path.join(BASIC_DIR, n + '.out'), 'latin1') + '% ')];
       },
     },
@@ -1750,12 +1751,13 @@ module.exports = {
       expect: ['/> ? 1+2\n 3 \n/> echo $window\n\n/> ', '/> echo $window\n1\n/> ? env$("window")\n1\n/> x=2: ? x*21\n 42 \n/> '],
     },
     {
-      name: 'bench', what: 'hylang\'s and HyForth\'s benchmarks (romfs/bench: bench.hl, bench.fs; sim/bench.js times them against each other) at their quick sizes: each language\'s result of each the same (a counting loop, calls of a function of two arguments, Fibonacci, a sieve of bytes, an insertion sort of bytes, gcds by subtraction)',
-      init: 't_rc', cycles: 250e6,
-      machine: { input: '\u0101hylang /rom/bench/bench.hl 1 q\r\u0101forth /rom/bench/bench.fs 1 q\r' },
+      name: 'bench', what: 'hylang\'s, HyForth\'s and BASIC\'s benchmarks (romfs/bench: bench.hl, bench.fs, bench.bas; sim/bench.js times them against each other) at their quick sizes: each language\'s result of each the same (a counting loop, calls of a function of two arguments, Fibonacci, a sieve of bytes, an insertion sort of bytes, gcds by subtraction)',
+      init: 't_rc', cycles: 320e6,
+      machine: { input: '\u0101hylang /rom/bench/bench.hl 1 q\r\u0101forth /rom/bench/bench.fs 1 q\r\u0101basic /rom/bench/bench.bas 1 q\r' },
       get expect() {
         const r = [['loop', 1000], ['calls', 500], ['fib', 144], ['sieve', 97], ['sort', 404], ['gcd', 189]];
-        return [...['hylang', 'forth'].flatMap(l => r.map(([n, v]) => 'bench ' + l + ' ' + n + ' ' + v + ' ')), 'bench hylang done', 'bench forth done'];
+        return [...['hylang', 'forth', 'basic'].flatMap(l => r.map(([n, v]) => 'bench ' + l + ' ' + n + ' ' + v + ' ')), 'bench hylang done',
+          'bench forth done', 'bench basic done'];
       },
     },
     {

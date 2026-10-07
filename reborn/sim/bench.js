@@ -1,18 +1,21 @@
 #!/usr/bin/env node
 // ****************************************************************************
-// bench.js - hylang against HyForth: the same benchmarks in each (romfs/bench: bench.hl, bench.fs; on the ROM disk at
-// /rom/bench), run in the emulator, their times compared.  Each program runs each benchmark reps times and prints
+// bench.js - hylang, HyForth and BASIC: the same benchmarks in each (romfs/bench: bench.hl, bench.fs, bench.bas; on
+// the ROM disk at /rom/bench), run in the emulator, their times compared.  Each program runs each benchmark reps times
+// and prints
 //   bench LANGUAGE NAME RESULT TICKS REPS
 // (the ticks the reps took, 200 a second, as the machine counts them); this prints a table of the results (which
-// must be the same in both) and the times of one run of each, and hylang's against HyForth's.
+// must be the same in all three) and the times of one run of each, and each language's against the others'.
 //
-// Usage: node sim/bench.js [--quick] [--hylang-reps N] [--forth-reps N] [-v]
+// Usage: node sim/bench.js [--quick] [--hylang-reps N] [--forth-reps N] [--basic-reps N] [-v]
 //   --quick           the small sizes (the bench test's)
 //   --hylang-reps N   each of hylang's benchmarks run N times (default 1)
 //   --forth-reps N    HyForth's (default 20: a run of its is a few ticks)
+//   --basic-reps N    BASIC's (default 1)
 //   -v                the console's output too
-// On the board: hylang /rom/bench/bench.hl [reps [quick]], forth /rom/bench/bench.fs [reps [quick]].
-// Build first (node build.js).  Its status: 1 if a result isn't the same in both, or a benchmark didn't finish.
+// On the board: hylang /rom/bench/bench.hl [reps [quick]], forth /rom/bench/bench.fs [reps [quick]], basic
+// /rom/bench/bench.bas [reps [quick]].  Build first (node build.js).  Its status: 1 if a result isn't the same in all
+// three, or a benchmark didn't finish.
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -24,6 +27,14 @@ const WHAT = {
   loop: 'a counting loop, a step each', calls: 'calls of a function of two arguments', fib: 'Fibonacci, recursively',
   sieve: 'the primes below n, in bytes', sort: 'n bytes sorted by insertion', gcd: 'gcd(i, j) by subtraction, summed',
 };
+// The languages: the name their lines give, the name shown, the command, the option for their reps and its default
+const LANGS = [
+  { key: 'hylang', name: 'hylang', cmd: 'hylang /rom/bench/bench.hl', opt: '--hylang-reps', reps: 1 },
+  { key: 'forth', name: 'HyForth', cmd: 'forth /rom/bench/bench.fs', opt: '--forth-reps', reps: 20 },
+  { key: 'basic', name: 'BASIC', cmd: 'basic /rom/bench/bench.bas', opt: '--basic-reps', reps: 1 },
+];
+// The ratios shown: each the first's time over the second's
+const RATIOS = [['hylang', 'forth'], ['basic', 'forth'], ['basic', 'hylang']];
 
 function rom() {
   const romimg = require(path.join(ROOT, 'tools', 'romimg.js')), romfs = require(path.join(ROOT, 'tools', 'romfs.js'));
@@ -36,17 +47,17 @@ function rom() {
 }
 
 function main(argv) {
-  const opt = { quick: false, hy: 1, fo: 20, verbose: false };
+  const opt = { quick: false, verbose: false, reps: Object.fromEntries(LANGS.map(l => [l.key, l.reps])) };
   for (let i = 0; i < argv.length; i++) {
+    const lang = LANGS.find(l => l.opt === argv[i]);
     if (argv[i] === '--quick') opt.quick = true;
-    else if (argv[i] === '--hylang-reps') opt.hy = Math.max(1, +argv[++i] | 0);
-    else if (argv[i] === '--forth-reps') opt.fo = Math.max(1, +argv[++i] | 0);
+    else if (lang) opt.reps[lang.key] = Math.max(1, +argv[++i] | 0);
     else if (argv[i] === '-v') opt.verbose = true;
-    else { console.error('usage: node sim/bench.js [--quick] [--hylang-reps N] [--forth-reps N] [-v]'); process.exit(2); }
+    else { console.error('usage: node sim/bench.js [--quick] [--hylang-reps N] [--forth-reps N] [--basic-reps N] [-v]'); process.exit(2); }
   }
   const q = opt.quick ? ' q' : '';
-  const lines = ['hylang /rom/bench/bench.hl ' + opt.hy + q, 'forth /rom/bench/bench.fs ' + opt.fo + q, 'echo %%END%%'];
-  const m = boot({ seed: 1, prom: rom(), input: lines.map(l => '\u0101' + l + '\r').join('') });
+  const lines = [...LANGS.map(l => l.cmd + ' ' + opt.reps[l.key] + q), 'echo %%END%%'];
+  const m = boot({ seed: 1, prom: rom(), input: lines.map(l => 'ā' + l + '\r').join('') });
   const limit = 20e9;
   let shown = 0;
   while (m.cpu.cyc < limit) {
@@ -56,32 +67,40 @@ function main(argv) {
     if (/^%%END%%$/m.test(out)) break;
   }
   const out = m.out.replace(/\r/g, '');
-  const got = { hylang: {}, forth: {} };
-  for (const [, lang, name, result, ticks, reps] of out.matchAll(/^bench (hylang|forth) (\S+) (\S+) (\d+) (\d+)/gm))
+  const got = Object.fromEntries(LANGS.map(l => [l.key, {}]));
+  for (const [, lang, name, result, ticks, reps] of out.matchAll(/^bench (hylang|forth|basic) (\S+) (\S+) (\d+) (\d+)/gm))
     got[lang][name] = { result, ticks: +ticks, reps: +reps };
 
   const mult = (() => { try { return JSON.parse(fs.readFileSync(path.join(ROOT, 'obj', 'build.json'), 'utf8')).clock || 1; } catch (e) { return 1; } })();
   const ms = r => r.ticks * 5 / r.reps;
   const fmt = (v, w) => String(v).padStart(w);
-  console.log('hylang against HyForth' + (opt.quick ? ' (quick sizes)' : '') + ', at ' + (3.58 * mult).toFixed(2) + ' MHz: ' +
-    'one run of each, in ms (hylang ' + opt.hy + ' rep' + (opt.hy > 1 ? 's' : '') + ', HyForth ' + opt.fo + ')');
+  const nameOf = k => LANGS.find(l => l.key === k).name;
+  console.log('hylang, HyForth and BASIC' + (opt.quick ? ' (quick sizes)' : '') + ', at ' + (3.58 * mult).toFixed(2) + ' MHz: ' +
+    'one run of each, in ms (' + LANGS.map(l => l.name + ' ' + opt.reps[l.key] + ' rep' + (opt.reps[l.key] > 1 ? 's' : '')).join(', ') + ')');
   console.log('');
-  console.log('benchmark  result   hylang ms  HyForth ms  hylang/HyForth  what');
-  let bad = 0, sumH = 0, sumF = 0, logs = 0, n = 0;
+  const ratioHead = RATIOS.map(([a, b]) => nameOf(a) + '/' + nameOf(b));
+  console.log('benchmark  result' + LANGS.map(l => fmt(l.name + ' ms', 12)).join('') + ratioHead.map(h => fmt(h, 16)).join('') + '  what');
+  let bad = 0;
+  const sum = Object.fromEntries(LANGS.map(l => [l.key, 0])), logs = RATIOS.map(() => 0);
+  let n = 0;
   for (const name of NAMES) {
-    const h = got.hylang[name], f = got.forth[name];
-    if (!h || !f) { console.log(name.padEnd(9) + '  (no result: ' + (!h ? 'hylang' : 'HyForth') + ' didn\'t finish it)'); bad++; continue; }
-    const same = h.result === f.result;
-    if (!same) bad++;
-    const hm = ms(h), fm = ms(f), ratio = fm > 0 ? hm / fm : Infinity;
-    sumH += hm; sumF += fm;
-    if (isFinite(ratio)) { logs += Math.log(ratio); n++; }
-    console.log(name.padEnd(9) + '  ' + (same ? h.result : h.result + '/' + f.result + '!').padEnd(7) + fmt(hm.toFixed(1), 10) +
-      fmt(fm.toFixed(2), 12) + fmt(isFinite(ratio) ? ratio.toFixed(1) + 'x' : '-', 16) + '  ' + WHAT[name]);
+    const r = Object.fromEntries(LANGS.map(l => [l.key, got[l.key][name]]));
+    const missing = LANGS.filter(l => !r[l.key]);
+    if (missing.length) { console.log(name.padEnd(9) + '  (no result: ' + missing.map(l => l.name).join(', ') + ' didn\'t finish it)'); bad++; continue; }
+    const results = [...new Set(LANGS.map(l => r[l.key].result))];
+    if (results.length > 1) bad++;
+    const t = Object.fromEntries(LANGS.map(l => [l.key, ms(r[l.key])]));
+    for (const l of LANGS) sum[l.key] += t[l.key];
+    const ratios = RATIOS.map(([a, b]) => t[b] > 0 ? t[a] / t[b] : Infinity);
+    if (ratios.every(isFinite)) { ratios.forEach((v, i) => { logs[i] += Math.log(v); }); n++; }
+    console.log(name.padEnd(9) + '  ' + (results.length === 1 ? results[0] : results.join('/') + '!').padEnd(6) +
+      LANGS.map(l => fmt(t[l.key].toFixed(l.key === 'forth' ? 2 : 1), 12)).join('') +
+      ratios.map(v => fmt(isFinite(v) ? v.toFixed(1) + 'x' : '-', 16)).join('') + '  ' + WHAT[name]);
   }
-  if (n) console.log('\nall        ' + ''.padEnd(5) + fmt(sumH.toFixed(1), 10) + fmt(sumF.toFixed(2), 12) +
-    fmt((sumH / sumF).toFixed(1) + 'x', 16) + '  (the geometric mean of the ratios: ' + Math.exp(logs / n).toFixed(1) + 'x)');
-  if (bad) console.log('\n' + bad + ' benchmark(s) not the same in both, or not finished');
+  if (n) console.log('\nall        ' + ''.padEnd(6) + LANGS.map(l => fmt(sum[l.key].toFixed(l.key === 'forth' ? 2 : 1), 12)).join('') +
+    RATIOS.map(([a, b]) => fmt((sum[a] / sum[b]).toFixed(1) + 'x', 16)).join('') + '\n(the geometric means of the ratios: ' +
+    RATIOS.map(([a, b], i) => nameOf(a) + '/' + nameOf(b) + ' ' + Math.exp(logs[i] / n).toFixed(1) + 'x').join(', ') + ')');
+  if (bad) console.log('\n' + bad + ' benchmark(s) not the same in all three, or not finished');
   process.exit(bad ? 1 : 0);
 }
 

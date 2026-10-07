@@ -186,6 +186,9 @@ on the heap and an argument is a word at a fixed place, so recursion, arithmetic
 times HyForth's; a counting loop's step is some 1,200 cycles (its 13 ops, a tail call among them, each dispatched:
 HyForth's is 68), so the tightest loops are 17 to 23 times.
 
+BASIC has the same benchmarks too (`bench.bas`), which `sim/bench.js` and the `bench` test run with these two: the
+three side by side are in docs/basic.md, "Against hylang and HyForth".
+
 ## The design
 
 The plan has it whole; in short:

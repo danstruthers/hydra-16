@@ -1113,6 +1113,53 @@ EOF_FN:
             tay
             jmp         GIVAYF
 
+; "ARG$" FUNCTION: ARG$(n): BASIC's argument n (a script's: 0 its name, 1 the one after it ...); "" past the last
+ARG_FN:
+            jsr         CONINT                              ; (.X its number)
+            ldy         #0                                  ; (.Y its length)
+            lda         argp
+            sta         IOPTR
+            ora         argp + 1
+            beq         @copy
+            lda         argp + 1
+            sta         IOPTR+1
+@arg:
+            lda         (IOPTR)                             ; (An empty one after the last)
+            beq         @copy
+            cpx         #0
+            beq         @len
+            dex
+@skip:
+            lda         (IOPTR)                             ; (Past this one and its 0)
+            php
+            inc         IOPTR
+            bne         :+
+            inc         IOPTR+1
+:
+            plp
+            bne         @skip
+            bra         @arg
+@len:
+            lda         (IOPTR),y
+            beq         @copy
+            iny
+            bne         @len
+@copy:
+            tya
+            jsr         STRSPA                              ; (.A its length: the string's room, at FAC+1)
+            tay
+            beq         @done
+:
+            dey
+            lda         (IOPTR),y
+            sta         (FAC+1),y
+            tya
+            bne         :-
+@done:
+            pla                                             ; (A string's: not CHKNUM's, UNARY's return)
+            pla
+            jmp         PUTNEW
+
 ; ---- Sound (the YM2151, through the sound driver: /dev/snd and /dev/sndctl, as C's snd.h has them), SLEEP
 
 .bss
