@@ -17,8 +17,14 @@ L3188:
         tay
         lda     FRETOP+1
         sbc     STREND+1
-; FALL INTO GIVAYF TO FLOAT THE VALUE
-; NOTE THAT VALUES OVER 32767 WILL RETURN AS NEGATIVE
+; (Unsigned, as LINPRT's: BASIC's memory is past 32K with its bank;
+; Microsoft's fell into GIVAYF, over 32767 negative)
+        sta     FAC+1
+        sty     FAC+2
+        stz     VALTYP
+        ldx     #$90
+        sec
+        jmp     FLOAT2
 
 ; ----------------------------------------------------------------------------
 ; FLOAT THE SIGNED INTEGER IN A,Y

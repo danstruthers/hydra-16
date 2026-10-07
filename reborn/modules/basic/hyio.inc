@@ -29,6 +29,8 @@ HDR_VERSION = 1                                             ;   table's sum (2: 
 
 .bss
 interactive: .res       1                                   ; <> 0: stdin is the console (the banner, OK, GET's raw keys)
+bas_bank:   .res        1                                   ; BASIC's bank, its memory's last 8K at $8000 ($FF: none) ...
+mem_top:    .res        2                                   ;   and the top of its memory (HIMEM's most)
 intr:       .res        1                                   ; $80: Ctrl-C came (the note handler's), for ISCNTC
 argp:       .res        2                                   ; BASIC's arguments (main's r0)
 script:     .res        1                                   ; <> 0: running a script (basic file): RESTART is the end ...
@@ -91,19 +93,34 @@ main:
             txs
             lda         #0                                  ; (The stack's bottom: 0, where the frames' scans stop)
             pha
+            LDR         r0, BANK_WINDOW                     ; Its memory: the task's RAM to $7FFF and a bank of its
+            jsr         BREAK                               ;   own after it at $8000 (selected from now on), to
+            bcs         @nobank                             ;   $9FFF: one piece, as Microsoft's code wants it; or,
+            lda         #1                                  ;   in task F or with no bank to be had, the RAM to
+            jsr         BANKS_ALLOC                         ;   MEM_END
+            bcs         @nobank
+            sta         RAM_BANK
+            sta         bas_bank
+            LDR         r0, MEM_BANK_END
+            bra         @top
+@nobank:
+            lda         #$FF
+            sta         bas_bank
             LDR         r0, MEM_END
             jsr         BREAK
-            bcc         :+
+            bcc         @top
             stz         r0                                  ; (Not so much: as it is)
             stz         r0 + 1
             jsr         BREAK
-:
+@top:
             lda         r0
             ldy         r0 + 1
             sta         MEMSIZ
             sty         MEMSIZ+1
             sta         FRETOP
             sty         FRETOP+1
+            sta         mem_top
+            sty         mem_top + 1
             LDR         r0, notes
             jsr         NOTIFY
             lda         #$FF
@@ -1299,6 +1316,10 @@ SYS_ST:
             sty         SYSREGS + 2
             pla
             sta         SYSREGS + 3
+            lda         bas_bank                            ; (BASIC's bank at $8000 again, if the code changed it)
+            bmi         :+
+            sta         RAM_BANK
+:
             rts
 @go:
             jmp         (sysaddr)
@@ -1403,3 +1424,28 @@ RREG_ST:
             rts
 
 .include "basicsys.inc"
+
+; ---- HIMEM
+
+; "HIMEM" STATEMENT: HIMEM n: the top of BASIC's memory (the first byte past it) n, what's above it to the top BASIC
+; has (FRE(0) at the start) kept for machine code (SYS, USR); the variables cleared, as CLEAR does.  Past that top,
+; or less than a page past the variables: ILLEGAL QUANTITY (Applesoft's HIMEM:)
+HIMEM_ST:
+            jsr         FRMNUM
+            jsr         GETADR
+            lda         mem_top                             ; (Not past the top)
+            cmp         LINNUM
+            lda         mem_top + 1
+            sbc         LINNUM+1
+            bcc         @iq
+            lda         VARTAB+1                            ; (A page past the variables, at least)
+            inc         a
+            cmp         LINNUM+1
+            bcs         @iq
+            lda         LINNUM
+            ldy         LINNUM+1
+            sta         MEMSIZ
+            sty         MEMSIZ+1
+            jmp         CLEARC
+@iq:
+            jmp         IQERR

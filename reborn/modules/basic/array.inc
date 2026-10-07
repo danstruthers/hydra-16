@@ -180,8 +180,9 @@ L3078:
         lda     VARNAM+1
         sta     (LOWTR),y
         bpl     L3081
-        dex
-L3081:
+        dex                                     ; (A string's element: a descriptor, 3 bytes.  EhyBASIC's
+        dex                                     ;   had lost this dex: 4, which the garbage collector, at 3,
+L3081:                                          ;   read wrong once there were many strings)
         stx     STRNG2
         lda     EOLPNTR
         iny
