@@ -138,7 +138,7 @@ const RC_LINES = [
   ["~ a a && echo and; ~ a b || echo or","and\nor"],
   ["cat /nothing; echo status $status","cat: /nothing: not found\nstatus 1"],
   ["echo /rom/lib/n*","/rom/lib/namespace"],
-  ["echo /rom/lib/*","/rom/lib/forth /rom/lib/hylang /rom/lib/namespace /rom/lib/profile"],
+  ["echo /rom/lib/*","/rom/lib/forth /rom/lib/hylang /rom/lib/namespace /rom/lib/profile /rom/lib/shell"],
   ["echo 'no*match'*","no*match*"],
   ["cd /rom/lib; pwd; cd","/rom/lib"],
   ["rc -c 'echo sub $x'","sub a b c"],
@@ -154,12 +154,12 @@ const RC_LINES = [
   ["echo (a","rc: syntax error"],
   ["whatis echo x; q=('it''s' '' a.b); whatis q","/bin/echo\nx=(a b c)\nq=('it''s' '' a.b)"],
   ["bind '#n' /mnt; ls /mnt","null\nzero\nkmesg"],
-  ["ls /rom/lib","forth/\nhylang/\nnamespace\nprofile"],
+  ["ls /rom/lib","forth/\nhylang/\nnamespace\nprofile\nshell"],
   ["cat /bin/echo >/ram/hi; cd /ram; hi from dot; cd","from dot"],
   ["cat /nothing >[2]/ram/e; cat /ram/e","cat: /nothing: not found"],
   ["cat /nothing |[2] cat >/ram/p; echo -n 'p: '; cat /ram/p","p: cat: /nothing: not found"],
   ["echo $task $#path $path # a comment","2 2 . /bin"],
-  ["path=(); ls; path=(. /bin); ls /rom/lib","rc: ls: not found\nforth/\nhylang/\nnamespace\nprofile"],
+  ["path=(); ls; path=(. /bin); ls /rom/lib","rc: ls: not found\nforth/\nhylang/\nnamespace\nprofile\nshell"],
   ["! ~ a b && echo not; echo $status","not\n"],
 ];
 
@@ -171,7 +171,7 @@ const HYSH_RC = RC_LINES.filter(([l]) => l[0] !== '{' &&
   !/^(echo \$"x|echo x\^|echo \$x\(2-\)|rc -c 'echo sub|whatis greet|whatis echo x|eval echo evaled|echo \$task)/.test(l));
 const HYSH_LINES = [
   ['(+ 1 2)', '=> 3'], ['(map (fn {x} {* x x}) {1 2 3})', '=> {1 4 9}'], ['cd /rom/lib', null, '/rom/lib'], ['pwd', '/rom/lib'],
-  ['ls | wc -l', '      4'], ['cmp namespace profile >/dev/null', null], ['(+ status 0)', '=> 1'], ['echo $status', '1'],
+  ['ls | wc -l', '      5'], ['cmp namespace profile >/dev/null', null], ['(+ status 0)', '=> 1'], ['echo $status', '1'],
   ['cd /none', '/none: not found'], ['bind -x a b', 'usage: bind [-abc] new old'], ["bind -a '#n' /mnt", null], ['ls /mnt', 'null\nzero\nkmesg'],
   ['unmount /mnt', null], ['ls /mnt', null], ['nosuch', 'rc: nosuch: not found'], ['sleep 1 &', null], ['echo $#apid', '1'],
   ['cd', null, '/'],
@@ -846,9 +846,9 @@ module.exports = {
       // (ā: wait for a prompt; '#fr' quoted, as # starts a comment; \x1d c: Ctrl-] c, a window made, wstart's rc
       // started there.  /bin: the RAM disks' caches (empty), then #m/bin, whose t_child runs by its name.  t_child f
       // makes /ram/mark: in window 0's rc's area, 2, and not in window 1's rc's, 4 (wstart, 3, has none))
-      machine: { sd: shellCard('/bin/rc -l', 'shellrc'), input: 'āls \'#fr\'\r' + 'āls /ram\r' + 'āls /bin\r' + 'āt_child f\r' + 'āls \'#fr\'/2\r' + 'ācat /rom/lib/profile\r' +
+      get machine() { return { sd: shellCard('/bin/rc -l', 'shellrc'), input: 'āls \'#fr\'\r' + 'āls /ram\r' + 'āls /bin\r' + 'āt_child f\r' + 'āls \'#fr\'/2\r' + 'ācat /rom/lib/profile\r' +
         'ācat /dev/sd/s/ctl\r' + 'āecho $window\r' + 'ā\x1dc' + 'āecho $window\r' + 'āls \'#fr\'\r' + 'āls /ram\r' + 'āls /dev\r' +
-        'āecho stop >>\'#d/s/ctl\'; echo still; cat /sram/x\r' },
+        'āecho stop >>\'#d/s/ctl\'; echo still; cat /sram/x\r' }; },
       expect: ['% ls \'#fr\'\n1/\n2/\n%', '% ls /ram\nbin/\nlib/\n%',
         '% ls /bin\nfsck\ngrep\nlabel\nmkfs\nscom\nsort\ninit\nhello\nrc\nwstart\n', 't_child\n% t_child f\n', '% ls \'#fr\'/2\nbin/\nlib/\nmark\n%',
         'prompt=(', '% cat /dev/sd/s/ctl\nsram 512 KB 1024 blocks\nhydrafs label=SRAM\n', '% echo $window\n0\n%',
@@ -893,7 +893,7 @@ module.exports = {
     },
     {
       name: 'hwtool', what: 'hwtest at rc: the system starts again (REBOOT), and POST takes REBOOT_HWTEST\'s word as a T',
-      init: 'init', cycles: 60e6, get machine() { return { sd: shellCard('/bin/rc -l', 'shellrc'), input: 'āhwtest\r' }; },
+      init: 'init', cycles: 60e6, get machine() { return { sd: shellCard('/bin/rc -l', 'shellrc2'), input: 'āhwtest\r' }; },
       expect: ['% hwtest\nhwtest: the system starts again, into the hardware test\n', 'Hydra-16 reborn', 'Hydra-16 hardware test'],
     },
     {
@@ -1062,7 +1062,7 @@ module.exports = {
           ': h ." note " . true ;', '\' h on-note sys-getpid 16 note 7 .', ': lp 10 0 do i 5 = if sys-getpid 17 note then loop ." done" ;',
           'lp', ': h2 drop false ;', '\' h2 on-note sys-getpid 18 note 1 .', 'pause 2 .', 'exit'].map(l => 'ā' + l + '\r').join(''),
       },
-      expect: ['/> argc .\n0 \n', '/> s" /rom/lib" ls-dir\nforth hylang namespace profile \n/> s" /ram/newdir" 0 =mkdir . s" /ram" ls-dir\n0 bin lib newdir \n' +
+      expect: ['/> argc .\n0 \n', '/> s" /rom/lib" ls-dir\nforth hylang namespace profile shell \n/> s" /ram/newdir" 0 =mkdir . s" /ram" ls-dir\n0 bin lib newdir \n' +
         '/> s" /rom" set-dir . pad 64 get-dir type\n0 /rom\n/rom> s" /none" set-dir ior>text type\nnot found\n' +
         '/rom> s" foo" s" bar" setenv s" foo" getenv type s" foo" unsetenv s" foo" getenv nip .\nbar0 \n' +
         '/rom> : h ." note " . true ;\n/rom> \' h on-note sys-getpid 16 note 7 .\nnote 16 7 \n' +
