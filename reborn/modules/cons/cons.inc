@@ -24,6 +24,9 @@ CAN             = $18
 SUB             = $1A
 ESC             = $1B
 DEL             = $7F
+VM_CKM          = $40           ; A window's modes (vt.s's v_mode): the cursor keys' application mode (DECCKM) ...
+VM_KPAM         = $80           ;   the keypad's (DECKPAM) ...
+VM2_VT52        = $02           ;   and (v_mode2) VT52 mode (DECANM reset)
 
 ; ---- cons.s's, for vt.s
 .globalzp   tx_head, tx_tail, w_in, ser_rd, cnt, lw
@@ -32,7 +35,7 @@ DEL             = $7F
 .global     hyx2_far1, hyx2_far2
 
 ; ---- vt.s's, for cons.s (FAR2)
-.global     vt_init, vt_new, vt_free, vt_write, vt_put, vt_pump, vt_text
+.global     vt_init, vt_keymodes, vt_new, vt_free, vt_write, vt_put, vt_pump, vt_text
 .global     ans_n, ans_r, ans_buf, lbl_buf                 ; Each window's answers, its label
 .global     ts_ser, ts_scr                                  ; Each terminal's state: 0 following the shown window,
                                                             ;   1 to be painted (all of it), 2 being painted

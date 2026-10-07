@@ -432,6 +432,11 @@ October 2026, on `reborn-text-windows` (reborn's `docs/status.md`, "The text win
 * **vid's E_BUSY while claimed** is done: the 1K of kept text is gone, and the console paints the window again after the release (trying once a request meanwhile).
 * **The answers** go to a queue of their own for each window (32 bytes), given to a raw reader first and as they came, so a program in `KEY_*` mode can read a CPR too; a cooked read drops them (a line editor would have taken them as typing).  `keys vt` (W2b) is still to come.
 
+### **As built: W2b**
+
+* **VT52 mode is translated, not passed on**: each of its sequences becomes the ANSI one that does the same, which the engine does and sends to the serial port, so the PC's terminal never leaves ANSI mode.
+* **`keys vt`** follows DECCKM and VT52 mode; the keypad's application mode (DECKPAM) is kept but can't be acted on, as the PC's terminal is never put in it and sends its keypad as digits.  `keys vt` ends with the window's last `consctl`, as raw mode does.
+
 ### **Decisions**
 
 The user's answers to the plan's questions, 2026-10-07:

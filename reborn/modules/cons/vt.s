@@ -68,9 +68,8 @@ VM_IRM          = $04           ;   insert (IRM) ...
 VM_LNM          = $08           ;   LF as a new line (LNM) ...
 VM_TCEM         = $10           ;   the cursor shown (DECTCEM) ...
 VM_SCNM         = $20           ;   the screen reversed (DECSCNM: W2) ...
-VM_CKM          = $40           ;   the cursor keys' application mode (DECCKM) ...
-VM_KPAM         = $80           ;   the keypad's (DECKPAM)
-VM2_SCLM        = $01           ; v_mode2: smooth scrolling (DECSCLM)
+                                ;   (VM_CKM, VM_KPAM: cons.inc's, the keys' modes)
+VM2_SCLM        = $01           ; v_mode2: smooth scrolling (DECSCLM) (VM2_VT52: cons.inc's)
 S_GROUND        = 0             ; The parser's states
 S_ESC           = 1
 S_ESCI          = 2             ;   ESC and an intermediate
@@ -81,6 +80,8 @@ S_OSC           = 6             ;   (the strings from here)
 S_OSCE          = 7             ;   ESC in an OSC
 S_STR           = 8             ;   DCS, SOS, PM, APC
 S_STRE          = 9
+S_Y1            = 10            ;   VT52's ESC Y: the row next ...
+S_Y2            = 11            ;   the column
 G_ERROR         = $02           ; SUB's character: the DEC checkerboard
 
 .zeropage
@@ -121,6 +122,7 @@ v_gl:       .res        1                                   ;   which is in use 
 v_last:     .res        1                                   ; The last character written (REP's)
 v_leds:     .res        1                                   ; The VT100's four LEDs (DECLL: bits 0-3)
 v_oscn:     .res        1                                   ; An OSC: its number ...
+v_y52:      .res        1                                   ; VT52's ESC Y: its row
 v_osci:     .res        1                                   ;   and its text's place in the label ($FF: its number
                                                             ;   being read; $FE: not a label's)
 v_sx:       .res        1                                   ; The cursor saved (DECSC): its place ...
@@ -268,6 +270,17 @@ vt_new:
             stz         v_rbase
             jsr         reset                               ; (The screen cleared)
             clc
+            rts
+
+; The keys' modes of window .A (cons.s's keys vt): .A = DECCKM's and DECKPAM's bits (VM_CKM, VM_KPAM), .X = VT52
+; mode's (VM2_VT52)
+vt_keymodes:
+            jsr         vt_load
+            lda         v_mode2
+            and         #VM2_VT52
+            tax
+            lda         v_mode
+            and         #VM_CKM | VM_KPAM
             rts
 
 ; Window .X gone: its banks back
@@ -729,8 +742,16 @@ raw_add:
             stx         v_rawn
             rts
 
-; After ESC
+; After ESC (in VT52 mode, its own: st_vt52)
 st_esc:
+            pha
+            lda         v_mode2
+            and         #VM2_VT52
+            beq         :+
+            pla
+            jmp         st_vt52
+:
+            pla
             jsr         raw_add
             cmp         #$30
             bcs         :+
@@ -1393,6 +1414,16 @@ d_awm:                                                      ; ?7
             stz         v_wrap
             jsr         fc_lost
             jmp         fs_raw
+
+d_anm:                                                      ; ?2: reset, VT52 mode; set, ANSI (not to the terminals:
+            lda         v_mode2                             ;   the PC's stays ANSI, VT52's sequences made ANSI's)
+            ora         #VM2_VT52
+            ldx         vd_set
+            beq         :+
+            and         #<~VM2_VT52
+:
+            sta         v_mode2
+            rts
 
 d_tcem:                                                     ; ?25: the cursor shown, or not (the serial port's as it
             lda         #VM_TCEM                            ;   is now, if it follows)
@@ -4179,6 +4210,184 @@ out_g0:
             jmp         out
 
 ; ****************************************************************************
+; VT52 mode (DECANM reset: CSI ? 2 l; ESC < back to ANSI).  Each of its sequences becomes the ANSI one that does
+; the same, its bytes in v_raw (so the serial port gets that: the PC's terminal stays in ANSI mode), and that one is
+; done: A B C D H J K as CSI's, I as RI, F and G as ESC ( 0 and ESC ( B (the VT100's VT52 graphics are the DEC
+; Special Graphics), Y row column as CUP; Z answered ESC / Z; = and > the keypad's modes
+
+; After ESC, in VT52 mode
+st_vt52:
+            stz         v_state
+            ldx         #V52_N - 1
+:
+            cmp         v52_final,X
+            beq         :+
+            dex
+            bpl         :-
+            rts                                             ; (Not one: dropped)
+:
+            txa
+            asl
+            tax
+            lda         vch
+            jmp         (v52_vec,X)
+
+; A B C D H J K: CSI and the same letter, no numbers
+v52_csi:
+            pha
+            jsr         csi_start
+            stz         v_state
+            stz         v_inter
+            stz         v_priv
+            lda         #'['
+            jsr         raw_v52
+            pla
+            pha
+            jsr         raw_add
+            pla
+            jmp         csi_do
+
+; I: RI
+v52_ri:
+            jsr         raw_v52_esc
+            lda         #'M'
+            jsr         raw_add
+            jmp         e_ri
+
+; F, G: the graphics (G0 the DEC Special Graphics), or ASCII
+v52_gfx:
+            lda         #'0'
+            bra         v52_g0
+v52_ascii:
+            lda         #'B'
+v52_g0:
+            pha
+            jsr         raw_v52_esc
+            lda         #'('
+            sta         v_inter
+            jsr         raw_add
+            pla
+            pha
+            jsr         raw_add
+            pla
+            jmp         esc_do
+
+; Y: the row next, then the column (each + 31, from 1)
+v52_y:
+            lda         #S_Y1
+            sta         v_state
+            rts
+
+st_y1:
+            sec
+            sbc         #31
+            bcs         :+
+            lda         #1
+:
+            sta         v_y52
+            lda         #S_Y2
+            sta         v_state
+            rts
+
+st_y2:                                                      ; The column: CSI row ; column H
+            sec
+            sbc         #31
+            bcs         :+
+            lda         #1
+:
+            pha
+            jsr         csi_start
+            stz         v_state
+            stz         v_inter
+            stz         v_priv
+            lda         v_y52
+            sta         v_parl
+            pla
+            sta         v_parl + 1
+            lda         #1
+            sta         v_npar
+            lda         #'['
+            jsr         raw_v52
+            lda         v_parl
+            jsr         raw_dec
+            lda         #';'
+            jsr         raw_add
+            lda         v_parl + 1
+            jsr         raw_dec
+            lda         #'H'
+            jsr         raw_add
+            lda         #'H'
+            jmp         csi_do
+
+; Z: identify, ESC / Z
+v52_id:
+            lda         #ESC
+            jsr         vt_key
+            lda         #'/'
+            jsr         vt_key
+            lda         #'Z'
+            jmp         vt_key
+
+; <: ANSI mode again
+v52_ansi:
+            lda         v_mode2
+            and         #<~VM2_VT52
+            sta         v_mode2
+            rts
+
+; v_raw: ESC, then .A (raw_v52); or ESC alone (raw_v52_esc)
+raw_v52:
+            pha
+            jsr         raw_v52_esc
+            pla
+            jmp         raw_add
+raw_v52_esc:
+            lda         #ESC
+            sta         v_raw
+            lda         #1
+            sta         v_rawn
+            rts
+
+; .A (1-255) into v_raw in decimal
+raw_dec:
+            ldx         #0
+:
+            cmp         #100
+            bcc         :+
+            sbc         #100
+            inx
+            bra         :-
+:
+            pha
+            txa
+            beq         :+
+            ora         #'0'
+            jsr         raw_add
+            lda         #1                                  ; (A hundreds' digit: the tens' goes too)
+:
+            sta         od_n
+            pla
+            ldx         #0
+:
+            cmp         #10
+            bcc         :+
+            sbc         #10
+            inx
+            bra         :-
+:
+            pha
+            txa
+            ora         od_n
+            beq         :+
+            txa
+            ora         #'0'
+            jsr         raw_add
+:
+            pla
+            ora         #'0'
+            jmp         raw_add
+
+; ****************************************************************************
 ; Answers (DA, DSR): into the loaded window's keys, as a terminal's would come
 
 answer_da:
@@ -4272,7 +4481,12 @@ vt_key:
 ; ****************************************************************************
 ; The tables
 
-state_vec:  .word       0, st_esc, st_esci, st_csi, st_csii, st_csix, st_osc, st_stre, st_str, st_stre
+V52_N       = 15                                            ; VT52's sequences (after ESC)
+v52_final:  .byte       "ABCDHJKIFGYZ=><"
+v52_vec:    .word       v52_csi, v52_csi, v52_csi, v52_csi, v52_csi, v52_csi, v52_csi, v52_ri, v52_gfx, v52_ascii
+            .word       v52_y, v52_id, e_deckpam, e_deckpnm, v52_ansi
+.assert     * - v52_vec = V52_N * 2, error, "v52_final and v52_vec don't match"
+state_vec:  .word       0, st_esc, st_esci, st_csi, st_csii, st_csix, st_osc, st_stre, st_str, st_stre, st_y1, st_y2
 ESC_N       = 10
 esc_final:  .byte       "78DEHMZc=>"
 esc_vec:    .word       e_decsc, e_decrc, e_ind, e_nel, e_hts, e_ri, e_decid, e_ris, e_deckpam, e_deckpnm
@@ -4283,9 +4497,9 @@ csi_vec:    .word       x_ich, x_cuu, x_cud, x_cuf, x_cub, x_cnl, x_cpl, x_cha, 
             .word       x_dl, x_dch, x_su, x_sd, x_ech, x_cbt, x_cha, x_cuf, x_rep, x_da, x_vpa, x_vpr, x_cup
             .word       x_tbc, x_sm, x_rm, x_sgr, x_dsr, x_stbm, x_scosc, x_scorc, x_decll, x_xtwin, x_reqtparm
 .assert     * - csi_vec = CSI_N * 2, error, "csi_final and csi_vec don't match"
-DECM_N      = 7
-decm_n:     .byte       1, 3, 4, 5, 6, 7, 25
-decm_vec:   .word       d_ckm, d_colm, d_sclm, d_scnm, d_om, d_awm, d_tcem
+DECM_N      = 8
+decm_n:     .byte       1, 3, 4, 5, 6, 7, 25, 2
+decm_vec:   .word       d_ckm, d_colm, d_sclm, d_scnm, d_om, d_awm, d_tcem, d_anm
 .assert     * - decm_vec = DECM_N * 2, error, "decm_n and decm_vec don't match"
 sgr_on:     .byte       0, F_BOLD, F_DIM, 0, F_UL, F_BLINK, F_BLINK, F_REV, F_INVIS, 0     ; (SGR 0-9: 6 as 5)
 sgr_off:    .byte       <~(F_BOLD | F_DIM), $FF, <~F_UL, <~F_BLINK, $FF, <~F_REV, <~F_INVIS, $FF  ; (22-29)
@@ -4296,11 +4510,11 @@ greys:      .byte       0, 0, 8, 8, 7, 15                   ; (232-255, by 4s)
 bits:       .byte       1, 2, 4, 8, 16, 32, 64, 128
 p10l:       .byte       <10000, <1000, <100, <10            ; (key_dec16's)
 p10h:       .byte       >10000, >1000, >100, >10
-RQM_N       = 8                                             ; DECRQM's private modes: those kept (a bit of v_mode;
+RQM_N       = 9                                             ; DECRQM's private modes: those kept (a bit of v_mode;
 RQM_SCLM    = 2                                             ;   v_mode2's, ?4), and those fixed (3: no 132 columns,
-rqm_n:      .byte       1, 3, 4, 5, 6, 7, 8, 25             ;   always reset; 8: autorepeat, always set)
-rqm_bit:    .byte       VM_CKM, 0, VM2_SCLM, VM_SCNM, VM_OM, VM_AWM, 0, VM_TCEM
-rqm_fixed:  .byte       0, 4, 0, 0, 0, 0, 3, 0
+rqm_n:      .byte       1, 3, 4, 5, 6, 7, 8, 25, 2          ;   always reset; 8: autorepeat, always set; 2: ANSI,
+rqm_bit:    .byte       VM_CKM, 0, VM2_SCLM, VM_SCNM, VM_OM, VM_AWM, 0, VM_TCEM, 0 ;   set, as VT52 mode asks
+rqm_fixed:  .byte       0, 4, 0, 0, 0, 0, 3, 0, 1           ;   nothing)
 ; The DEC Special Graphics ($5F-$7E, the cells' $00-$1F) as ISO-8859-15, where the font has no glyph for them yet:
 ; blank, diamond, checkerboard, HT FF CR LF, degree, plus/minus, NL VT, the corners and crossing, the scan lines,
 ; the tees, the bars, less and greater or equal, pi, not equal, pound, middle dot

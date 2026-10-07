@@ -13,7 +13,9 @@
 ;               ESC_TICKS have passed with nothing after it).  A write goes to the window's screen, and out to the
 ;               terminals if the window is shown (each LF as CR LF; a BEL rings the sound driver's bell too,
 ;               #a/bell: one of the calls from a driver to another, the screen's #v/term another)
-;   /consctl    rawon, rawoff (raw lasts till the window's last consctl closes, as Plan 9's does); group (the
+;   /consctl    rawon, rawoff (raw lasts till the window's last consctl closes, as Plan 9's does); keys vt, keys
+;               hydra (raw's keys: as a VT100 sends them, following the window's DECCKM, DECKPAM and VT52 mode, or
+;               as one code each, KEY_*: as it starts, and again with its last consctl); group (the
 ;               window's notes go to the writer's note group); screen, serial, both (where the windows are shown:
 ;               every window's, the console's terminals: the Vera X's screen, the serial port, or both, as it
 ;               starts; screen with no screen: E_NODEV).  It reads as the state
@@ -83,6 +85,7 @@ LINE_MAX        = 127           ; A line's length at most (and its LF)
 HIST_N          = 4             ; Each window's history: its lines ...
 HIST_SIZE       = 128           ;   each its length, then LINE_MAX characters
 ST_SIZE         = 16            ; Each window's editor state, kept while another's is in use (st_first on)
+KP_SIZE         = 8             ; A key's sequence kept for a raw read (keys vt): its bytes at most
 ECHO_ROOM       = LINE_MAX + 13 ; The most a key's echo writes (a key waits for this much room)
 RX_PAGES        = 4             ; The receive ring's pages: the keys' its first; /ser's all of them (1023 bytes: a 1K
                                 ;   XMODEM block at 115200 comes in faster than it can be taken, and waits there)
@@ -180,6 +183,10 @@ w_used:     .res        WIN_MAX                             ; Each window: <> 0,
 w_group:    .res        WIN_MAX                             ;   its note group (Ctrl-C's) ...
 w_cons:     .res        WIN_MAX                             ;   its cons fids ...
 w_ctl:      .res        WIN_MAX                             ;   its consctl fids (raw ends with the last) ...
+kvt:        .res        WIN_MAX                             ;   <> 0: keys vt ...
+kp_n:       .res        WIN_MAX                             ;   a key's sequence: its bytes, those read ...
+kp_i:       .res        WIN_MAX
+kp_buf:     .res        WIN_MAX * KP_SIZE                   ;   and them
 w_iqh:      .res        WIN_MAX                             ;   and its keys: the next in, the next out
 w_iqt:      .res        WIN_MAX
 kbd_wait:   .res        1                                   ; <> 0: a /kbdin writer waits for a queue's room
@@ -601,6 +608,9 @@ w_init:
             stz         w_iqt,X
             stz         w_cons,X
             stz         w_ctl,X
+            stz         kvt,X
+            stz         kp_n,X
+            stz         kp_i,X
             lda         #INIT_TASK
             sta         w_group,X
             cpx         lw                                  ; (Its old state, if it was loaded: gone)
@@ -911,6 +921,8 @@ clunked:
             dec         a
             sta         w_ctl,Y
             bne         @done
+            lda         #0                                  ; (keys hydra again too)
+            sta         kvt,Y
             tya
             jsr         load
             stz         raw
@@ -1498,10 +1510,151 @@ flush:
 ; ****************************************************************************
 ; Keys
 
+; The next key of the loaded window: key_raw's; raw with keys vt, a key's sequence as a VT100 sends it, a byte at a
+; time (its first now, the rest from kp_buf).  OUT: C = 0, .A = it; or C = 1: none yet.  Modifies .X, .Y, n, m, p
+key_next:
+            ldx         lw
+            lda         kp_i,X
+            cmp         kp_n,X
+            bcs         @fresh
+            inc         kp_i,X
+            sta         n                                   ; (Its place: the window * KP_SIZE + those read)
+            txa
+            asl
+            asl
+            asl
+            clc
+            adc         n
+            tay
+            lda         kp_buf,Y
+            clc
+            rts
+@fresh:
+            stz         kp_n,X
+            stz         kp_i,X
+            jsr         key_raw
+            bcs         @done
+            ldx         raw
+            beq         @key
+            ldx         lw
+            ldy         kvt,X
+            beq         @key
+            cmp         #KEY_UP
+            bcc         @key
+            cmp         #KEY_F12 + 1
+            bcs         @key
+            jmp         key_vt
+@key:
+            clc
+@done:
+            rts
+
+; Key .A (KEY_*) as a VT100 sends it, into the loaded window's kp_buf: the cursor keys ESC [ A, or ESC O A with
+; DECCKM, or ESC A in VT52 mode (Home and End H and F as they are); F1-F4 ESC O P-S (VT52: ESC P-S); Insert, Delete,
+; Page Up and Down and F5-F12 ESC [ n ~ (xterm's numbers).  OUT: C = 0, .A = its first byte.  Modifies .X, .Y, m, p
+key_vt:
+            sta         m
+            lda         lw
+            FAR2        vt_keymodes                         ; (.A: DECCKM's, DECKPAM's bits; .X: VT52 mode's)
+            sta         m + 1
+            stx         p
+            lda         lw                                  ; (p + 1: the window's place in kp_buf)
+            asl
+            asl
+            asl
+            sta         p + 1
+            tay
+            lda         #ESC
+            sta         kp_buf,Y
+            iny
+            lda         m
+            cmp         #KEY_END + 1
+            bcs         @other
+            sec                                             ; The cursor keys, Home and End: a letter
+            sbc         #KEY_UP
+            tax
+            lda         kv_letter,X
+            pha
+            lda         p
+            bne         @letter
+            lda         m + 1
+            and         #VM_CKM
+            beq         :+
+            lda         #'O'
+            bra         @second
+:
+            lda         #'['
+@second:
+            sta         kp_buf,Y
+            iny
+@letter:
+            pla
+            sta         kp_buf,Y
+            iny
+            bra         @end
+@other:
+            cmp         #KEY_F1
+            bcc         @tilde
+            cmp         #KEY_F5
+            bcs         @tilde
+            sbc         #KEY_F1 - 1                         ; F1-F4: ESC O, P-S (C = 0)
+            clc
+            adc         #'P'
+            pha
+            lda         p
+            bne         @letter
+            lda         #'O'
+            bra         @second
+@tilde:
+            lda         #'['                                ; ESC [ n ~
+            sta         kp_buf,Y
+            iny
+            lda         m
+            sec
+            sbc         #KEY_INS
+            tax
+            lda         kv_tilde,X
+            cmp         #10
+            bcc         @one
+            ldx         #'0'
+:
+            cmp         #10
+            bcc         :+
+            sbc         #10
+            inx
+            bra         :-
+:
+            pha
+            txa
+            sta         kp_buf,Y
+            iny
+            pla
+@one:
+            ora         #'0'
+            sta         kp_buf,Y
+            iny
+            lda         #'~'
+            sta         kp_buf,Y
+            iny
+@end:
+            tya                                             ; Its bytes, the first read
+            sec
+            sbc         p + 1
+            ldx         lw
+            sta         kp_n,X
+            lda         #1
+            sta         kp_i,X
+            ldy         p + 1
+            lda         kp_buf,Y
+            clc
+            rts
+
+.assert     KP_SIZE = 8 .and WIN_MAX * KP_SIZE <= 256, error, "key_next and key_vt: 8 bytes a window"
+
 ; The next key of the loaded window, the terminal's sequences decoded (KEY_*); raw, the window's answers first, as
 ; they came.  OUT: C = 0, .A = it; or C = 1: none yet (a sequence part-way in waits for the next call).  Modifies .X,
 ; .Y, n
-key_next:
+key_raw:
             lda         key_pb
             beq         @answer
             stz         key_pb
@@ -2093,6 +2246,54 @@ c_rawoff:
             clc
             rts
 
+; keys vt, keys hydra: a raw read's keys as a VT100 sends them, or one code each (KEY_*)
+c_keys:
+            lda         z:srv_argn
+            beq         @inval
+            lda         srv_argp
+            sta         p
+            lda         srv_argp + 1
+            sta         p + 1
+            lda         #<s_vt_w
+            ldx         #>s_vt_w
+            jsr         word_is
+            bne         :+
+            ldy         #1
+            bra         @set
+:
+            lda         #<s_hydra_w
+            ldx         #>s_hydra_w
+            jsr         word_is
+            bne         @inval
+            ldy         #0
+@set:
+            ldx         z:srv_id
+            tya
+            sta         kvt,X
+            stz         kp_n,X
+            stz         kp_i,X
+            clc
+            rts
+@inval:
+            lda         #E_INVAL
+            sec
+            rts
+
+; Is the word at p the string at .A/.X?  OUT: Z = 1 yes.  Modifies .A, .Y, m
+word_is:
+            sta         m
+            stx         m + 1
+            ldy         #0
+:
+            lda         (m),Y
+            cmp         (p),Y
+            bne         @done
+            iny
+            cmp         #0
+            bne         :-
+@done:
+            rts
+
 ; group: the window's notes (Ctrl-C, Ctrl-\) go to the writer's note group
 c_group:
             ldx         z:srv_id
@@ -2115,6 +2316,17 @@ gen_consctl:
             bne         :+
             lda         #<s_rawoff
             ldx         #>s_rawoff
+:
+            jsr         srv_tputs
+            ldy         z:srv_id                            ; keys hydra, keys vt
+            lda         kvt,Y
+            beq         :+
+            lda         #<s_keys_vt
+            ldx         #>s_keys_vt
+            bra         :++
+:
+            lda         #<s_keys_hydra
+            ldx         #>s_keys_hydra
 :
             jsr         srv_tputs
             lda         #<s_group
@@ -2921,6 +3133,8 @@ TILDE_N     = 20
 tilde_n:    .byte       1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 13, 14, 15, 17, 18, 19, 20, 21, 23, 24
 tilde_key:  .byte       KEY_HOME, KEY_INS, KEY_DEL, KEY_END, KEY_PGUP, KEY_PGDN, KEY_HOME, KEY_END
             .byte       KEY_F1, KEY_F2, KEY_F3, KEY_F4, KEY_F5, KEY_F6, KEY_F7, KEY_F8, KEY_F9, KEY_F10, KEY_F11, KEY_F12
+kv_letter:  .byte       "ABCDHF"                            ; keys vt's: the cursor keys', Home's and End's letters
+kv_tilde:   .byte       2, 3, 5, 6, 0, 0, 0, 0, 15, 17, 18, 19, 20, 21, 23, 24  ; (KEY_INS on: ESC [ n ~)
 EDIT_N      = 15
 edit_keys:  .byte       CR, LF, CTRL_D, BS, DEL, KEY_DEL, KEY_LEFT, KEY_RIGHT, KEY_HOME, CTRL_A, KEY_END, CTRL_E
             .byte       CTRL_U, KEY_UP, KEY_DOWN
@@ -2989,6 +3203,7 @@ srv_tree:
 cons_cmds:
             .word       s_rawon_w, c_rawon
             .word       s_rawoff_w, c_rawoff
+            .word       s_keys_w, c_keys
             .word       s_group_w, c_group
             .word       s_screen_w, c_screen
             .word       s_serial_w, c_serial
@@ -3030,6 +3245,11 @@ s_new_w:    .byte       "new", 0
 s_current_w: .byte      "current", 0
 s_rawon:    .byte       "rawon", LF, 0
 s_rawoff:   .byte       "rawoff", LF, 0
+s_keys_w:   .byte       "keys", 0
+s_vt_w:     .byte       "vt", 0
+s_hydra_w:  .byte       "hydra", 0
+s_keys_vt:  .byte       "keys vt", LF, 0
+s_keys_hydra: .byte     "keys hydra", LF, 0
 s_group:    .byte       "group ", 0
 s_window:   .byte       LF, "window ", 0
 s_shown:    .byte       " *", 0

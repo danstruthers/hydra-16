@@ -27,7 +27,8 @@ w1:         .res        1                                   ; Window 1's cons
 saved:      .res        1                                   ; Fd 0, kept
 wctl:       .res        1
 exp:        .res        2                                   ; (answer_is's: the answer expected ...
-got_n:      .res        1                                   ;   and the bytes read)
+got_n:      .res        1                                   ;   the bytes read ...
+exp_n:      .res        1                                   ;   and those asked for)
 
 .code
 
@@ -109,8 +110,8 @@ main:
             sta         ctl
             EXPECT_OK   "OPEN #c/consctl"
             READ_       ctl, 64
-            EXPECT_A    40, "consctl reads as its state: rawoff, group 1, window 0, terminal serial (40 bytes)"
-            lda         buf + 13
+            EXPECT_A    51, "consctl reads as its state: rawoff, keys hydra, group 1, window 0, terminal serial (51 bytes)"
+            lda         buf + 24
             EXPECT_A    '1', "group 1: init's"
 
 ; ---- A BEL printed: the sound driver's bell too (#a/bell: tests.js looks for channel 7's key-on)
@@ -218,6 +219,32 @@ main:
             tax
             lda         buf - 1,X
             EXPECT_A    'R', "raw: ESC [ 6 n answered ESC [ row ; column R (CPR)"
+
+; ---- Raw, keys vt: the keys as a VT100 sends them, following the window's DECCKM and VT52 mode (vt.s: W2)
+            WRITE_      ctl, s_keysvt, 7
+            EXPECT_OK   "consctl: keys vt"
+            PRINT       s_pv
+            ldx         #<s_k_up
+            ldy         #>s_k_up
+            jsr         answer_is
+            EXPECT_A    0, "keys vt: Up is ESC [ A"
+            WRITE_      #1, s_ckm, 5
+            ldx         #<s_k_upo
+            ldy         #>s_k_upo
+            jsr         answer_is
+            EXPECT_A    0, "keys vt, DECCKM set: Up is ESC O A"
+            ldx         #<s_k_f5
+            ldy         #>s_k_f5
+            jsr         answer_is
+            EXPECT_A    0, "keys vt: F5 is ESC [ 1 5 ~"
+            WRITE_      #1, s_vt52, 10
+            ldx         #<s_k_up52
+            ldy         #>s_k_up52
+            jsr         answer_is
+            EXPECT_A    0, "keys vt, VT52 mode: Up is ESC A"
+            WRITE_      #1, s_ansi, 2
+            WRITE_      ctl, s_keyshy, 10
+            EXPECT_OK   "consctl: keys hydra"
             WRITE_      ctl, s_rawoff, 6
             EXPECT_OK   "consctl: rawoff"
 
@@ -328,12 +355,27 @@ main:
             DONE        "t_cons"
 
 ; .A = 0 if the read's .A bytes in buf are abc and an LF
-; The answer to what was just written to the console, read raw (32 bytes at most): .A = 0 if it's the zero-ended
-; string at .X/.Y, as it is
+; The answer to what was just written to the console (or the keys typed), read raw, as many bytes as the zero-ended
+; string at .X/.Y has: .A = 0 if they're it
 answer_is:
             stx         exp
             sty         exp + 1
-            READ_       #0, 32
+            stx         r4
+            sty         r4 + 1
+            ldy         #0
+:
+            lda         (r4),Y
+            beq         :+
+            iny
+            bra         :-
+:
+            sty         exp_n
+            LDR         r0, buf
+            lda         exp_n
+            sta         r1
+            stz         r1 + 1
+            lda         #0
+            jsr         READ
             sta         got_n
             lda         exp
             sta         r4
@@ -427,6 +469,16 @@ S_Q_PARM_N  = * - s_q_parm
 s_a_parm:   .byte       ESC, "[2;1;1;120;120;1;0x", 0
 s_q_cpr:    .byte       ESC, "[6n"
 S_Q_CPR_N   = * - s_q_cpr
+s_keysvt:   .byte       "keys vt"                           ; keys vt: the modes, and the keys as they come
+s_keyshy:   .byte       "keys hydra"
+s_ckm:      .byte       ESC, "[?1h"
+s_vt52:     .byte       ESC, "[?1l", ESC, "[?2l"
+s_ansi:     .byte       ESC, "<"
+s_k_up:     .byte       ESC, "[A", 0
+s_k_upo:    .byte       ESC, "OA", 0
+s_k_f5:     .byte       ESC, "[15~", 0
+s_k_up52:   .byte       ESC, "A", 0
+s_pv:       .byte       "v> ", 0
 s_rawoff:   .byte       "rawoff"
 s_wctl:     .byte       "#c/wctl", 0
 s_wnew:     .byte       "#c/wnew", 0

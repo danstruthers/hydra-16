@@ -416,6 +416,7 @@ const VT_FIXTURES = [
   ['ed3', Array.from({ length: 30 }, (v, i) => 'E' + (i + 1)).join('\n') + '\x1b[3Jkept'],
   ['sgr', '\x1b[1;31mbold red\x1b[0m \x1b[38;5;196mx256\x1b[48;2;0;0;255mrgb\x1b[m \x1b[7mrev\x1b[27m end'],
   ['sub', 'one\x1b[2\x1athree', false],
+  ['vt52', 'a\x1b[?2lb\x1bAc\x1bBd\x1bY(#xy\x1bFlqk\x1bG\x1bH\x1bIrv\x1b<\x1b[3;1Hansi', false],
   ['colm', 'text\x1b[?3hafter', false],
 ];
 const VT_PAINT = '\x1b[1;31mRed bold\x1b[0m plain \x1b[7mrev\x1b[27m\r\n\x1b(0lqqqk\x1b(B box\r\n' + 'W'.repeat(100) +
@@ -2071,12 +2072,12 @@ module.exports = {
       },
     },
     {
-      name: 'cons', what: 'the console: lines, editing, history, raw keys, its answers (DA, CPR, DECRQM, the size, DECREPTPARM), Ctrl-C, windows (shown, repainted, made, gone), 115200, the bell',
+      name: 'cons', what: 'the console: lines, editing, history, raw keys, its answers (DA, CPR, DECRQM, the size, DECREPTPARM), keys vt (DECCKM, VT52 mode), Ctrl-C, windows (shown, repainted, made, gone), 115200, the bell',
       init: 't_cons', modules: ['t_child'], cycles: 80e6,
       // (ā: wait for a prompt, "N> ")
       machine: { input: 'āhello\r' + 'āabX\x08c\r' + 'āac\x1b[Db\r' + 'ābc\x1b[Ha\x1b[Fd\r' +
         'āxyz\x15ok\r' + 'āabXc\x1b[D\x1b[D\x1b[3~\r' + 'ā\x1b[A\x1b[A\r' + 'ā\x04' + 'āparts\r' +
-        'āx\x1b[A' + 'ā\x03' +
+        'āx\x1b[A' + 'ā\x1b[A\x1b[A\x1b[15~\x1b[A' + 'ā\x03' +
         'ā\x1d1z\r\x1d0' + 'ā\x1d1\x03\x1d0' + 'ā\x1dc' },
       check(m, out) {
         const f = [], a = m.acia, want = a.wdc ? 1 : 2;
@@ -2357,7 +2358,7 @@ module.exports = {
       },
     },
     {
-      name: 'vt', what: 'the console\'s VT100 (W1): sequences into a window not shown, its /text read back: text, the cursor\'s moves, erasing, inserting and deleting, the scrolling region, the scrollback, tabs, autowrap, insert mode, the character sets, DECSC and origin mode, DECALN, RIS, REP, SGR, sequences dropped, cancelled and split; each as sim/lib/vt.js has it, and vt.js as xterm.js has it (if it\'s installed)',
+      name: 'vt', what: 'the console\'s VT100 (W1): sequences into a window not shown, its /text read back: text, the cursor\'s moves, erasing, inserting and deleting, the scrolling region, the scrollback, tabs, autowrap, insert mode, the character sets, DECSC and origin mode, DECALN, RIS, REP, SGR, VT52 mode, sequences dropped, cancelled and split; each as sim/lib/vt.js has it, and vt.js as xterm.js has it (if it\'s installed)',
       init: 't_rc', cycles: 600e6,
       pc: { files: () => Object.fromEntries(VT_FIXTURES.map(([n, b]) => ['vt/' + n, vtFile(b)])) },
       get machine() { return { input: typed(VT_LINES) }; },

@@ -5,7 +5,7 @@
 // it's installed, holds both against a terminal written by others (tests/vt).
 //   A screen of rows of cells (a character, the colours: background << 4 | foreground, the rendition), the
 // scrollback (the rows that went off the top of the screen, or of a region at its top, by a line feed, IND or SU;
-// the newest last; SU's not, and RIS clears it, as xterm's), the cursor and its last-column flag, the margins, the modes (DECAWM, DECOM, IRM, LNM, DECTCEM),
+// the newest last; SU's not, and RIS clears it, as xterm's), VT52 mode (DECANM reset), the cursor and its last-column flag, the margins, the modes (DECAWM, DECOM, IRM, LNM, DECTCEM),
 // the tab stops, the character sets (G0, G1: B, A, 0), DECSC's saved cursor.  The parser is DEC's state machine (Paul
 // Williams'): C0 controls act inside a sequence, CAN and SUB end one, strings (OSC, DCS, SOS, PM, APC) end at ST
 // (an OSC also at BEL).  text() is a window's /text: its scrollback, then its screen, a line a row without its
@@ -38,7 +38,7 @@ class VT {
     this.awm = true; this.om = false; this.irm = false; this.lnm = false; this.tcem = true;
     this.g = ['B', 'B']; this.gl = 0; this.last = 0x20;
     this.tabs = new Set(); for (let c = 8; c < this.cols; c += 8) this.tabs.add(c);
-    this.saved = null;
+    this.saved = null; this.vt52 = false;
   }
 
   soft() {
@@ -70,6 +70,7 @@ class VT {
     switch (this.state) {
       case 0: return this.print(b);
       case 'esc':
+        if (this.vt52) { this.state = 0; return this.vt52Do(String.fromCharCode(b)); }
         if (b < 0x30) { this.inter += String.fromCharCode(b); this.state = 'escI'; return; }
         if (b >= 0x80) { this.state = 0; return; }
         if (b === 0x5B) { this.state = 'csi'; this.params = ['']; this.priv = ''; this.inter = ''; this.seen = false; return; }
@@ -92,6 +93,8 @@ class VT {
         this.state = 0; if (b < 0x7F) this.csiDo(String.fromCharCode(b)); return;
       case 'csiX': if (b >= 0x40 && b < 0x7F) this.state = 0; return;
       case 'osc': case 'str': return;
+      case 'y1': this.y52 = Math.max(1, b - 31); this.state = 'y2'; return;
+      case 'y2': this.state = 0; this.params = [String(this.y52), String(Math.max(1, b - 31))]; this.priv = ''; this.inter = ''; return this.csiDo('H');
       case 'oscE': case 'strE':
         if (b === 0x5C) { this.state = 0; return; }
         this.state = 'esc'; this.inter = ''; return this.byte(b);
@@ -174,8 +177,20 @@ class VT {
     }
   }
 
+  // VT52 mode's sequences (after ESC): as the ANSI ones that do the same
+  vt52Do(f) {
+    this.params = ['']; this.priv = ''; this.inter = '';
+    if ('ABCDHJK'.includes(f)) return this.csiDo(f);
+    if (f === 'I') return this.rindex();
+    if (f === 'F') this.g[0] = '0';
+    else if (f === 'G') this.g[0] = 'B';
+    else if (f === 'Y') this.state = 'y1';
+    else if (f === '<') this.vt52 = false;
+  }
+
   decMode(m, on) {
     switch (m) {
+      case 2: this.vt52 = !on; break;
       case 3: this.top = 0; this.bot = this.rows - 1; this.home(); this.ed(2); break;
       case 6: this.om = on; this.home(); break;
       case 7: this.awm = on; this.wrap = false; break;
