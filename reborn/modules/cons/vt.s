@@ -119,6 +119,10 @@ v_g0:       .res        1                                   ; G0 and G1 (B, A, 0
 v_g1:       .res        1
 v_gl:       .res        1                                   ;   which is in use (SO: 1, SI: 0)
 v_last:     .res        1                                   ; The last character written (REP's)
+v_leds:     .res        1                                   ; The VT100's four LEDs (DECLL: bits 0-3)
+v_oscn:     .res        1                                   ; An OSC: its number ...
+v_osci:     .res        1                                   ;   and its text's place in the label ($FF: its number
+                                                            ;   being read; $FE: not a label's)
 v_sx:       .res        1                                   ; The cursor saved (DECSC): its place ...
 v_sy:       .res        1
 v_scol:     .res        1                                   ;   rendition ...
@@ -162,7 +166,14 @@ scr_wrap:   .res        1                                   ;   <> 0: past its l
                                                             ;   wraps: not used, a CUP comes first) ...
 scr_c:      .res        1                                   ;   its colours and rendition ($FF: not known) ...
 scr_f:      .res        1
-scr_sync:   .res        1                                   ;   <> 0: its cursor to be put where the window's is
+scr_sync:   .res        1                                   ;   <> 0: its cursor to be put where the window's is ...
+scr_dec:    .res        1                                   ;   <> 0: its G0 the DEC graphics (ESC ( 0) ...
+scr_fail:   .res        1                                   ;   <> 0: a write refused (claimed): no more till the next
+                                                            ;   request (painted then)
+ans_n:      .res        WIN_MAX                             ; Each window's answers (DA, DSR ...): their bytes ...
+ans_r:      .res        WIN_MAX                             ;   those read ...
+ans_buf:    .res        WIN_MAX * ANS_SIZE                  ;   and them
+lbl_buf:    .res        WIN_MAX * LBL_SIZE                  ; Each window's label (OSC 0 and 2's title), zero-ended
 scr_n:      .res        1                                   ; The screen's bytes in scr_buf
 scr_buf:    .res        SCR_BUF
 su_t:       .res        1                                   ; A scroll: the region's top and bottom ...
@@ -213,6 +224,8 @@ vt_init:
             lda         #1
             sta         ts_scr
             stz         scr_n
+            stz         scr_dec
+            stz         scr_fail
             lda         #VM_TCEM                            ; (The PC's terminal's cursor shown)
             sta         ser_tcem
             rts
@@ -228,6 +241,13 @@ vt_new:
 :
             ldx         vt_i
             sta         vw_bank,X
+            stz         ans_n,X                             ; (No answers, no label)
+            stz         ans_r,X
+            txa
+            jsr         lbl_at
+            lda         #0
+            sta         (vt_a)
+            ldx         vt_i
             jsr         vt_unload                           ; (Its state isn't in vt_save yet: made in place)
             lda         vt_i
             sta         vt_w
@@ -325,10 +345,11 @@ vt_pump:
             bne         @done
             lda         #1
             sta         out_t
+            stz         scr_fail
             lda         ts_scr
             beq         @sync
+            stz         ts_scr                              ; (A write refused: to be painted again)
             jsr         scr_paint
-            stz         ts_scr
             bra         @flush
 
 @sync:
@@ -738,6 +759,9 @@ st_esc:
 @osc:
             lda         #S_OSC
             sta         v_state
+            stz         v_oscn
+            lda         #$FF
+            sta         v_osci
             rts
 
 @str:
@@ -902,8 +926,83 @@ st_csix:
 :
             rts
 
-; In a string: nothing (W4: a title)
+; In a string: nothing
 st_str:
+            rts
+
+; In an OSC: its number, a ;, then its text: OSC 0's and 2's the window's label (lbl_buf: LBL_SIZE - 1 at most)
+st_osc:
+            ldx         v_osci
+            cpx         #$FE
+            beq         @done
+            bcc         @text
+            cmp         #';'                                ; Its number
+            beq         @semi
+            cmp         #'0'
+            bcc         @other
+            cmp         #'9' + 1
+            bcs         @other
+            and         #$0F
+            pha
+            lda         v_oscn
+            cmp         #25
+            bcs         @big
+            asl
+            asl
+            adc         v_oscn
+            asl
+            sta         v_oscn
+            pla
+            adc         v_oscn
+            sta         v_oscn
+            rts
+@big:
+            pla
+@other:
+            lda         #$FE
+            sta         v_osci
+@done:
+            rts
+@semi:
+            lda         v_oscn                              ; 0 or 2: the label, from its start
+            beq         :+
+            cmp         #2
+            bne         @other
+:
+            stz         v_osci
+            lda         vt_w
+            jsr         lbl_at
+            lda         #0
+            sta         (vt_a)
+            rts
+@text:
+            cpx         #LBL_SIZE - 1
+            bcs         @done
+            pha
+            lda         vt_w
+            jsr         lbl_at
+            ldy         v_osci
+            pla
+            sta         (vt_a),Y
+            iny
+            lda         #0
+            sta         (vt_a),Y
+            sty         v_osci
+            rts
+
+; vt_a = window .A's label (lbl_buf)
+lbl_at:
+            asl
+            asl
+            asl
+            asl
+            asl
+            clc
+            adc         #<lbl_buf
+            sta         vt_a
+            lda         #>lbl_buf
+            adc         #0
+            sta         vt_a + 1
             rts
 
 ; ESC in a string: ST (ESC \) ends it; anything else ends it and starts a sequence
@@ -1154,6 +1253,12 @@ csi_do:
             lda         vt_k
             ldx         v_inter
             beq         @noint
+            cpx         #'$'
+            bne         :+
+            cmp         #'p'                                ; DECRQM (CSI ? n $ p, CSI n $ p)
+            bne         @drop
+            jmp         x_decrqm
+:
             cpx         #'!'
             bne         @drop
             cmp         #'p'                                ; DECSTR
@@ -1165,12 +1270,22 @@ csi_do:
 @noint:
             ldx         v_priv
             beq         @plain
+            cpx         #'>'
+            bne         :+
+            cmp         #'c'                                ; The secondary DA
+            bne         @drop
+            jmp         x_da2
+:
             cpx         #'?'
-            bne         @drop                               ; (> = <: W2)
+            bne         @drop                               ; (= <: none)
             cmp         #'h'
             beq         x_decset
             cmp         #'l'
             beq         x_decrst
+            cmp         #'n'                                ; DECXCPR (CSI ? 6 n)
+            bne         :+
+            jmp         x_decxcpr
+:
             cmp         #'J'                                ; DECSED and DECSEL: as ED and EL (W2: protection)
             beq         @plain
             cmp         #'K'
@@ -1642,7 +1757,7 @@ x_da:
 :
             rts
 
-; DSR: 5, the state (all's well); 6, the cursor's place (CPR: with DECOM, in the region)
+; DSR: 5, the state (all's well); 6, the cursor's place (CPR)
 x_dsr:
             lda         v_parh
             bne         @done
@@ -1651,11 +1766,28 @@ x_dsr:
             beq         @ok
             cmp         #6
             bne         @done
+            lda         #0
+            jmp         cpr
+@ok:
+            ldx         #<s_dsr_ok
+            ldy         #>s_dsr_ok
+            jmp         ans_str
+@done:
+            rts
+
+; CPR: the cursor's place, ESC [ row ; column R (with DECOM, the row from the region's top); after the [, .A if it
+; isn't 0 (DECXCPR's ?)
+cpr:
+            pha
             lda         #ESC
             jsr         vt_key
             lda         #'['
             jsr         vt_key
-            lda         v_mode                              ; (The row: with DECOM, from the region's top)
+            pla
+            beq         :+
+            jsr         vt_key
+:
+            lda         v_mode
             and         #VM_OM
             beq         :+
             lda         v_y
@@ -1675,15 +1807,214 @@ x_dsr:
             lda         #'R'
             jmp         vt_key
 
-@ok:
-            ldx         #0
-:
-            lda         s_dsr_ok,X
-            beq         @done
-            jsr         vt_key
-            inx
-            bra         :-
+; DECXCPR (CSI ? 6 n): the cursor's place, as CPR with a ?
+x_decxcpr:
+            lda         v_parh
+            bne         @done
+            lda         v_parl
+            cmp         #6
+            bne         @done
+            lda         #'?'
+            jmp         cpr
 @done:
+            rts
+
+; The secondary DA (CSI > c): a VT220's, firmware 10
+x_da2:
+            lda         v_parl
+            ora         v_parh
+            bne         :+
+            ldx         #<s_da2
+            ldy         #>s_da2
+            jmp         ans_str
+:
+            rts
+
+; DECREQTPARM (CSI x): 0 or 1, the terminal's parameters (DECREPTPARM: 2 or 3 its reason; no parity, 8 bits, 19200
+; each way, the clock 1, no flags)
+x_reqtparm:
+            lda         v_parh
+            bne         @done
+            lda         v_parl
+            cmp         #2
+            bcs         @done
+            ora         #'2'
+            pha
+            lda         #ESC
+            jsr         vt_key
+            lda         #'['
+            jsr         vt_key
+            pla
+            jsr         vt_key
+            ldx         #<s_reptparm
+            ldy         #>s_reptparm
+            jmp         ans_str
+@done:
+            rts
+
+; xterm's window reports (CSI t): 18 and 19, the text's size, ESC [ 8 (9) ; rows ; columns t
+x_xtwin:
+            lda         v_parh
+            bne         @done
+            lda         v_parl
+            cmp         #18
+            beq         :+
+            cmp         #19
+            bne         @done
+:
+            sec
+            sbc         #10
+            pha
+            lda         #ESC
+            jsr         vt_key
+            lda         #'['
+            jsr         vt_key
+            pla
+            ora         #'0'
+            jsr         vt_key
+            lda         #';'
+            jsr         vt_key
+            lda         v_rows
+            jsr         key_dec
+            lda         #';'
+            jsr         vt_key
+            lda         v_cols
+            jsr         key_dec
+            lda         #'t'
+            jmp         vt_key
+@done:
+            rts
+
+; DECLL: the LEDs (0 all off, 1-4 one on; 21-24, one off)
+x_decll:
+            stz         vd_i
+@next:
+            ldx         vd_i
+            lda         v_parh,X
+            bne         @skip
+            lda         v_parl,X
+            bne         :+
+            stz         v_leds
+            bra         @skip
+:
+            cmp         #5
+            bcs         :+
+            tax
+            lda         bits - 1,X
+            ora         v_leds
+            sta         v_leds
+            bra         @skip
+:
+            sec
+            sbc         #21
+            cmp         #4
+            bcs         @skip
+            tax
+            lda         bits,X
+            eor         #$FF
+            and         v_leds
+            sta         v_leds
+@skip:
+            inc         vd_i
+            lda         vd_i
+            cmp         v_npar
+            bcc         @next
+            beq         @next
+            rts
+
+; DECRQM (CSI ? n $ p, CSI n $ p): a mode's state, ESC [ (?) n ; s $ y (s: 1 set, 2 reset, 3 always set, 4 always
+; reset, 0 not one known)
+x_decrqm:
+            jsr         rqm_state
+            pha
+            lda         #ESC
+            jsr         vt_key
+            lda         #'['
+            jsr         vt_key
+            lda         v_priv
+            beq         :+
+            jsr         vt_key
+:
+            lda         v_parl
+            ldx         v_parh
+            jsr         key_dec16
+            lda         #';'
+            jsr         vt_key
+            pla
+            ora         #'0'
+            jsr         vt_key
+            lda         #'$'
+            jsr         vt_key
+            lda         #'y'
+            jmp         vt_key
+
+; .A = DECRQM's state of the mode asked for (v_parl, v_parh; v_priv: a DEC private one)
+rqm_state:
+            lda         v_parh
+            bne         @unknown
+            lda         v_parl
+            ldx         v_priv
+            beq         @ansi
+            ldx         #RQM_N - 1                          ; A private mode: one of the table's
+:
+            cmp         rqm_n,X
+            beq         :+
+            dex
+            bpl         :-
+            bra         @unknown
+:
+            lda         rqm_bit,X
+            beq         @fixed
+            cpx         #RQM_SCLM
+            beq         @sclm
+            and         v_mode
+            bra         @set
+@sclm:
+            and         v_mode2
+            bra         @set
+@fixed:
+            lda         rqm_fixed,X
+            rts
+@ansi:
+            cmp         #4                                  ; IRM, LNM; KAM always reset
+            bne         :+
+            lda         #VM_IRM
+            and         v_mode
+            bra         @set
+:
+            cmp         #20
+            bne         :+
+            lda         #VM_LNM
+            and         v_mode
+            bra         @set
+:
+            cmp         #2
+            bne         @unknown
+            lda         #4
+            rts
+@unknown:
+            lda         #0
+            rts
+@set:
+            beq         :+
+            lda         #1
+            rts
+:
+            lda         #2
+            rts
+
+; The zero-ended string at .X/.Y into the window's keys
+ans_str:
+            stx         vt_a
+            sty         vt_a + 1
+            ldy         #0
+:
+            lda         (vt_a),Y
+            beq         :+
+            jsr         vt_key
+            iny
+            bra         :-
+:
             rts
 
 ; TBC: 0 the stop at the cursor cleared, 3 all of them
@@ -3299,12 +3630,7 @@ fc_print:
             jsr         fc_pos
             jsr         fc_sgr
             lda         v_last
-            cmp         #$20
-            bcs         :+
-            tax
-            lda         dec_ascii,X
-:
-            jsr         scr_put
+            jsr         scr_glyph
             ldx         scr_x                               ; vid's cursor on (past its last column: not known)
             inx
             cpx         v_cols
@@ -3509,8 +3835,11 @@ scr_paint:
             lda         #COL_DEF
             sta         scr_c
             stz         scr_f
+            stz         scr_dec
             stz         vt_i
 @row:
+            lda         scr_fail                            ; (Refused: claimed; painted after)
+            bne         @done
             lda         vt_i
             cmp         v_rows
             bcs         @state
@@ -3531,12 +3860,7 @@ scr_paint:
             ldx         cell_f
             jsr         fc_sgr_ax
             lda         cell_c
-            cmp         #$20
-            bcs         :+
-            tax
-            lda         dec_ascii,X
-:
-            jsr         scr_put
+            jsr         scr_glyph
             inc         vt_j
             bra         @cell
 @next:
@@ -3558,23 +3882,53 @@ scr_paint:
             sta         fw_scr
             jsr         fc_tcem
             stz         fw_scr
+@done:
             rts
 
-; .A into the screen's buffer (written when it's full).  Keeps .X
+; Glyph .A to the screen: a DEC graphic ($00-$1F) in ESC ( 0, as its DEC character (vid shows the font's glyph), the
+; rest in ESC ( B (vid's G0 followed: scr_dec)
+scr_glyph:
+            cmp         #$20
+            bcs         @plain
+            pha
+            lda         scr_dec
+            bne         :+
+            jsr         out_g0dec
+            lda         #1
+            sta         scr_dec
+:
+            pla
+            clc
+            adc         #$5F
+            jmp         scr_put
+@plain:
+            ldx         scr_dec
+            beq         :+
+            pha
+            jsr         out_g0b
+            stz         scr_dec
+            pla
+:
+            jmp         scr_put
+
+; .A into the screen's buffer (written when it's full; nothing after a write's been refused).  Keeps .X
 scr_put:
+            ldy         scr_fail
+            bne         @done
             ldy         scr_n
             sta         scr_buf,Y
             iny
             sty         scr_n
             cpy         #SCR_BUF
-            bcc         :+
+            bcc         @done
             phx
             jsr         scr_flush
             plx
-:
+@done:
             rts
 
-; The screen's buffer to #v/term (a write that fails: the screen gone, none from then on)
+; The screen's buffer to #v/term.  A write refused (E_BUSY: the chip's claimed): the screen to be painted again, and
+; nothing more to it in this request; another that fails: the screen gone, none from then on
 scr_flush:
             lda         scr_n
             beq         @done
@@ -3584,6 +3938,14 @@ scr_flush:
             lda         scr_fd
             jsr         WRITE
             bcc         :+
+            cmp         #E_BUSY
+            bne         @gone
+            lda         #1
+            sta         ts_scr
+            sta         scr_fail
+            stz         fw_scr
+            bra         :+
+@gone:
             lda         #2
             sta         scr_st
 :
@@ -3833,81 +4195,93 @@ answer_da:
 ; .A in decimal into the window's keys
 key_dec:
             ldx         #0
-:
-            cmp         #100
-            bcc         :+
-            sbc         #100
-            inx
-            bra         :-
-:
-            pha
-            txa
-            beq         :+
-            ora         #'0'
-            jsr         vt_key
-:
-            pla
+
+; .A (low), .X (high) in decimal into the window's keys
+key_dec16:
+            sta         vt_a
+            stx         vt_a + 1
+            stz         od_n                                ; (<> 0: a digit's gone: no more leading zeros)
             ldx         #0
-:
-            cmp         #10
-            bcc         :+
-            sbc         #10
-            inx
-            bra         :-
-:
-            pha
-            txa
-            beq         :+
-            ora         #'0'
+@power:
+            ldy         #'0'
+@sub:
+            sec
+            lda         vt_a
+            sbc         p10l,X
+            sta         vt_k
+            lda         vt_a + 1
+            sbc         p10h,X
+            bcc         @digit
+            sta         vt_a + 1
+            lda         vt_k
+            sta         vt_a
+            iny
+            bra         @sub
+@digit:
+            cpy         #'0'
+            bne         @out
+            lda         od_n
+            beq         @next
+@out:
+            tya
             jsr         vt_key
-:
-            pla
+            inc         od_n
+@next:
+            inx
+            cpx         #4
+            bcc         @power
+            lda         vt_a
             ora         #'0'
             jmp         vt_key
 
-; .A into the loaded window's keys (dropped if they're full).  Keeps .X
+; .A into the loaded window's answers (cons.s's key_next gives them to a raw reader as they came, before its keys;
+; dropped if they're full).  Keeps .X, .Y
 vt_key:
             phx
+            phy
             pha
             ldx         vt_w
-            lda         w_iqh,X
-            inc         a
-            and         #INQ_SIZE - 1
-            cmp         w_iqt,X
-            beq         @full
-            sta         vt_a
-            txa                                             ; (Its queue: 64 * the window)
-            lsr
-            ror
-            ror
-            ora         w_iqh,X
+            lda         ans_n,X
+            cmp         #ANS_SIZE
+            bcs         @full
+            txa                                             ; (Its place: the window * ANS_SIZE + n)
+            asl
+            asl
+            asl
+            asl
+            asl
+            clc
+            adc         ans_n,X
             tay
             pla
-            sta         inq,Y
-            lda         vt_a
-            sta         w_iqh,X
+            sta         ans_buf,Y
+            inc         ans_n,X
             inc         TASK_EVENT
+            ply
             plx
             rts
 @full:
             pla
+            ply
             plx
             rts
+
+.assert     ANS_SIZE = 32 .and LBL_SIZE = 32 .and WIN_MAX * ANS_SIZE <= 256, error, "vt_key and lbl_at: 32 bytes a window"
 
 .segment "RODATA2"
 ; ****************************************************************************
 ; The tables
 
-state_vec:  .word       0, st_esc, st_esci, st_csi, st_csii, st_csix, st_str, st_stre, st_str, st_stre
+state_vec:  .word       0, st_esc, st_esci, st_csi, st_csii, st_csix, st_osc, st_stre, st_str, st_stre
 ESC_N       = 10
 esc_final:  .byte       "78DEHMZc=>"
 esc_vec:    .word       e_decsc, e_decrc, e_ind, e_nel, e_hts, e_ri, e_decid, e_ris, e_deckpam, e_deckpnm
 .assert     * - esc_vec = ESC_N * 2, error, "esc_final and esc_vec don't match"
-CSI_N       = 34
-csi_final:  .byte       "@ABCDEFGHIJKLMPSTXZ`abcdefghlmnrsu"
+CSI_N       = 37
+csi_final:  .byte       "@ABCDEFGHIJKLMPSTXZ`abcdefghlmnrsuqtx"
 csi_vec:    .word       x_ich, x_cuu, x_cud, x_cuf, x_cub, x_cnl, x_cpl, x_cha, x_cup, x_cht, x_ed, x_el, x_il
             .word       x_dl, x_dch, x_su, x_sd, x_ech, x_cbt, x_cha, x_cuf, x_rep, x_da, x_vpa, x_vpr, x_cup
-            .word       x_tbc, x_sm, x_rm, x_sgr, x_dsr, x_stbm, x_scosc, x_scorc
+            .word       x_tbc, x_sm, x_rm, x_sgr, x_dsr, x_stbm, x_scosc, x_scorc, x_decll, x_xtwin, x_reqtparm
 .assert     * - csi_vec = CSI_N * 2, error, "csi_final and csi_vec don't match"
 DECM_N      = 7
 decm_n:     .byte       1, 3, 4, 5, 6, 7, 25
@@ -3920,6 +4294,13 @@ sgr_bit:    .byte       F_BOLD, F_DIM, F_UL, F_BLINK, F_REV, F_INVIS
 sgr_num:    .byte       "124578"
 greys:      .byte       0, 0, 8, 8, 7, 15                   ; (232-255, by 4s)
 bits:       .byte       1, 2, 4, 8, 16, 32, 64, 128
+p10l:       .byte       <10000, <1000, <100, <10            ; (key_dec16's)
+p10h:       .byte       >10000, >1000, >100, >10
+RQM_N       = 8                                             ; DECRQM's private modes: those kept (a bit of v_mode;
+RQM_SCLM    = 2                                             ;   v_mode2's, ?4), and those fixed (3: no 132 columns,
+rqm_n:      .byte       1, 3, 4, 5, 6, 7, 8, 25             ;   always reset; 8: autorepeat, always set)
+rqm_bit:    .byte       VM_CKM, 0, VM2_SCLM, VM_SCNM, VM_OM, VM_AWM, 0, VM_TCEM
+rqm_fixed:  .byte       0, 4, 0, 0, 0, 0, 3, 0
 ; The DEC Special Graphics ($5F-$7E, the cells' $00-$1F) as ISO-8859-15, where the font has no glyph for them yet:
 ; blank, diamond, checkerboard, HT FF CR LF, degree, plus/minus, NL VT, the corners and crossing, the scan lines,
 ; the tees, the bars, less and greater or equal, pi, not equal, pound, middle dot
@@ -3927,7 +4308,7 @@ dec_ascii:  .byte       ' ', '*', '#', 'H', 'F', 'C', 'L', $B0, $B1, 'N', 'V', '
             .byte       '-', '-', '-', '-', '_', '+', '+', '+', '+', '|', '<', '>', 'p', '#', $A3, $B7
 s_ser_clear: .byte      ESC, "[0m", ESC, "(B", ESC, ")B", SI, ESC, "[?6l", ESC, "[4l", ESC, "[?7h", ESC, "[20l"
             .byte       ESC, "[r", ESC, "[H", ESC, "[2J", 0
-s_scr_clear: .byte      ESC, "[0m", ESC, "[r", ESC, "[H", ESC, "[2J", 0
+s_scr_clear: .byte      ESC, "[0m", ESC, "(B", ESC, ")B", SI, ESC, "[r", ESC, "[H", ESC, "[2J", 0
 s_om:       .byte       ESC, "[?6h", 0
 s_awm_off:  .byte       ESC, "[?7l", 0
 s_irm_on:   .byte       ESC, "[4h", 0
@@ -3936,3 +4317,5 @@ s_tcem_on:  .byte       ESC, "[?25h", 0
 s_tcem_off: .byte       ESC, "[?25l", 0
 s_da:       .byte       ESC, "[?6c", 0                      ; (A VT102)
 s_dsr_ok:   .byte       ESC, "[0n", 0
+s_da2:      .byte       ESC, "[>1;10;0c", 0              ; (A VT220, firmware 10)
+s_reptparm: .byte       ";1;1;120;120;1;0x", 0          ; (DECREPTPARM after its reason)

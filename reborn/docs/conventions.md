@@ -248,7 +248,8 @@ bank t).  Every fixed address is in `include/layout.inc`, and nowhere else.
   as that task's last file of the device closes.
 * **One driver owns the VERA** (`vid`, `#v`), and only its task writes the chip, but for a task that claims it
   (`ctl`'s `claim`): then the claimer's, its registers its to write, till it releases it or its last file of `#v`
-  closes (its end); the console's text for the screen waits in the driver meanwhile.  vid's code keeps `CTRL` at 0
+  closes (its end); any write to the terminal (`/term`) meanwhile is `E_BUSY`, and the console paints its window shown
+  again after the release.  vid's code keeps `CTRL` at 0
   (ADDR0, DCSEL 0), setting another DCSEL only with the VERA's interrupt off, as its irq entry writes `DC_VIDEO`
   (the cursor's blink).
 * `PUTC`, `PUTS` and `GETC` are a write to fd 1 and a read from fd 0; a task without them (the kernel, a driver)

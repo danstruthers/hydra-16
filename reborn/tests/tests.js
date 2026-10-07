@@ -379,6 +379,7 @@ const SCREEN_LINES = [
   ["grep -c 'z[z]z' /dev/vid/term", "1"],
   ["cat /lib/font/cp437 >/dev/vid/font", null],
   ["echo flash >/dev/vid/ctl", "echo: write error: invalid argument"],
+  ["cat /pc/box", "\x1b(0lqk\x1b(B"],
   ["cat /pc/colours", "\x1b[31;44mR\x1b[0mn\x1b[1;32mG\x1b[0;7mV\x1b[m"],
 ];
 const SCREEN_COLOURS = '\x1b[31;44mR\x1b[0mn\x1b[1;32mG\x1b[0;7mV\x1b[m\n';
@@ -2070,7 +2071,7 @@ module.exports = {
       },
     },
     {
-      name: 'cons', what: 'the console: lines, editing, history, raw keys, Ctrl-C, windows (shown, repainted, made, gone), 115200, the bell',
+      name: 'cons', what: 'the console: lines, editing, history, raw keys, its answers (DA, CPR, DECRQM, the size, DECREPTPARM), Ctrl-C, windows (shown, repainted, made, gone), 115200, the bell',
       init: 't_cons', modules: ['t_child'], cycles: 80e6,
       // (ā: wait for a prompt, "N> ")
       machine: { input: 'āhello\r' + 'āabX\x08c\r' + 'āac\x1b[Db\r' + 'ābc\x1b[Ha\x1b[Fd\r' +
@@ -2320,7 +2321,7 @@ module.exports = {
       },
     },
     {
-      name: 'vid', what: 'the Vera X\'s driver (vid: #v), through its files: ctl\'s state; the terminal (/term): text written and read back, a CSI move, a line erased, wrapping, BS and TAB, 70 lines scrolled, SGR\'s colours (in the map\'s cells), the cursor\'s sprite; /frame (a frame a read, 59.5 a second); /vram, /pal, /font, the files\' lengths; ctl\'s commands (mode, cursor, border, bitmap, bad ones); claims: the terminal\'s text kept, then shown; claim all (the font back); another task\'s (E_BUSY), ended by its end',
+      name: 'vid', what: 'the Vera X\'s driver (vid: #v), through its files: ctl\'s state; the terminal (/term): text written and read back, a CSI move, a line erased, wrapping, BS and TAB, 70 lines scrolled, SGR\'s colours (in the map\'s cells), the cursor\'s sprite; /frame (a frame a read, 59.5 a second); /vram, /pal, /font, the files\' lengths; ctl\'s commands (mode, cursor, border, bitmap, bad ones); claims: a write to the terminal E_BUSY meanwhile, shown after the release; claim all (the font back); another task\'s (E_BUSY), ended by its end',
       init: 't_vid', cycles: 80e6, machine: { vera: true }, jsOnly: 'the danlang emulator has no VERA yet',
     },
     {
@@ -2328,8 +2329,8 @@ module.exports = {
       init: 't_vid', cycles: 30e6, expect: ['ok - no card: #v isn\'t there (E_NODEV)', 't_vid: PASS'],
     },
     {
-      name: 'screen', what: 'the console on the Vera X\'s screen (cons\'s second terminal: vid\'s /term), at rc: /dev/vid; consctl\'s terminal both, serial (the screen left as it was), both again (repainted); a font written to /dev/vid/font; colours from a file (SGR, in the cells); what rc shows, on the screen as on the serial port',
-      init: 't_rc', cycles: 150e6, pc: { files: { colours: SCREEN_COLOURS } }, jsOnly: 'the danlang emulator has no VERA yet',
+      name: 'screen', what: 'the console on the Vera X\'s screen (cons\'s second terminal: vid\'s /term), at rc: /dev/vid; consctl\'s terminal both, serial (the screen left as it was), both again (repainted); a font written to /dev/vid/font; colours from a file (SGR, in the cells); the DEC graphics (ESC ( 0) as the font\'s glyphs; what rc shows, on the screen as on the serial port',
+      init: 't_rc', cycles: 150e6, pc: { files: { colours: SCREEN_COLOURS, box: '\x1b(0lqk\x1b(B\n' } }, jsOnly: 'the danlang emulator has no VERA yet',
       get machine() { return { input: typed(SCREEN_LINES), vera: true }; },
       get expect() { return expected(SCREEN_LINES); },
       check(m) {
@@ -2339,6 +2340,10 @@ module.exports = {
         if (!text.some(l => l.startsWith('% cat /dev/vid/ctl'))) f.push('the screen lacks rc\'s line "% cat /dev/vid/ctl"');
         if (text.slice(24).some(l => l)) f.push('the screen has text below the window\'s 24 rows');
         if (!text.some(l => l === 'terminal both')) f.push('the screen lacks consctl\'s "terminal both"');
+        // (The DEC graphics, ESC ( 0's lqk, as the font's glyphs $0D $12 $0C: tools/decfont.js's)
+        let box = false;
+        for (let i = 0; i + 2 < c.chars.length; i++) if (c.chars[i] === 0x0D && c.chars[i + 1] === 0x12 && c.chars[i + 2] === 0x0C) box = true;
+        if (!box) f.push('the screen lacks the DEC graphics\' corner, line and corner (glyphs $0D $12 $0C)');
         const row = text.findIndex(l => l === 'RnGV');
         if (row < 0) f.push('the screen lacks the colours\' line RnGV');
         else {

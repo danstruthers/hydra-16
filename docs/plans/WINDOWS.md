@@ -426,6 +426,12 @@ October 2026, on `reborn-text-windows` (reborn's `docs/status.md`, "The text win
 * **As xterm.js has them** (the oracle's): SU's rows don't go into the scrollback, and RIS clears it.  Where xterm.js differs by design, the VT100's is kept: SUB shows the error character, DECCOLM clears the screen.
 * **Not yet** (W2): vid's `E_BUSY` while claimed (it still keeps 1K and shows it at the release), the DEC graphics in the font (ASCII on the screen meanwhile), double width and height (passed on to the serial port, not kept).
 
+### **As built: W2a**
+
+* **The DEC graphics** are the fonts' first 32 glyphs (both the console's: ISO-8859-15's, and `/lib/font/cp437`, whose smileys there no byte reached), not a mapping table: any font for the console keeps them there (`tools/decfont.js`).  vid's terminal takes the character sets; a read of `/term` gives them as ASCII.
+* **vid's E_BUSY while claimed** is done: the 1K of kept text is gone, and the console paints the window again after the release (trying once a request meanwhile).
+* **The answers** go to a queue of their own for each window (32 bytes), given to a raw reader first and as they came, so a program in `KEY_*` mode can read a CPR too; a cooked read drops them (a line editor would have taken them as typing).  `keys vt` (W2b) is still to come.
+
 ### **Decisions**
 
 The user's answers to the plan's questions, 2026-10-07:

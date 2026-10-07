@@ -7,6 +7,8 @@
 WIN_MAX         = 4             ; Windows
 INQ_SIZE        = 64            ; Each window's keys, waiting to be read
 IOBUF           = 64            ; A write's bytes, a part at a time
+ANS_SIZE        = 32            ; Each window's answers (DA, DSR ...: vt.s's, for a raw reader), at most
+LBL_SIZE        = 32            ; Each window's label (OSC 0 and 2's title), with its zero
 TERM_SERIAL     = 1             ; term: the windows shown on the serial port ...
 TERM_SCREEN     = 2             ;   and on the screen
 VT_ROOM         = 48            ; The send ring's room a byte of a shown window's output needs (what one byte can
@@ -31,5 +33,6 @@ DEL             = $7F
 
 ; ---- vt.s's, for cons.s (FAR2)
 .global     vt_init, vt_new, vt_free, vt_write, vt_put, vt_pump, vt_text
+.global     ans_n, ans_r, ans_buf, lbl_buf                 ; Each window's answers, its label
 .global     ts_ser, ts_scr                                  ; Each terminal's state: 0 following the shown window,
                                                             ;   1 to be painted (all of it), 2 being painted

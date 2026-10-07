@@ -73,7 +73,7 @@ commands to its `ctl`, and read as text where that's what it is.
 
 | Letter | Device | Files |
 | :----- | :----- | :---- |
-| `#c` | The console (a window each: `#cN`) | `cons`, `consctl` (`rawon`, `rawoff`, `group`), `ser`, `serctl` (the rate), `wctl`, `wnew`, `kbdin`, `text` (the window's scrollback and screen, as text) |
+| `#c` | The console (a window each: `#cN`; its screen a VT100's, which answers DA, DSR's CPR, DECRQM, DECREQTPARM and xterm's `CSI 18 t` into a raw reader's keys, as they came, before its keys) | `cons`, `consctl` (`rawon`, `rawoff`, `group`), `ser`, `serctl` (the rate), `wctl`, `wnew`, `kbdin`, `text` (the window's scrollback and screen, as text) |
 | `#d` | The disks | `N/data`, `N/ctl`: `0`-`f` cards, `x` the ROM disk, `r` and `s` the RAM disks |
 | `#f` | HydraFS | A disk's file system (the spec: its disk) |
 | `#S` | SPI devices | `N/data` (a transaction), `N/ctl` (`mode 0`, `mode 3`) |

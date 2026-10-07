@@ -12,8 +12,9 @@
 ;             gateware's version; "vera 0.9" without one), "mode 80x60", "cursor blink", "border 0", "bitmap off",
 ;             and "claimed", with the claimer's task (and "all") if the chip's claimed
 ;   /term     the screen's console: a write's bytes shown as an ANSI terminal shows them (below); a read gives the
-;             screen's characters, a line a row: its columns, then an LF.  cons writes the windows' text here as
-;             it sends it to the serial port (consctl's screen, serial, both)
+;             screen's characters, a line a row: its columns, then an LF.  cons draws the window shown here (its
+;             screen, the console's cells: consctl's screen, serial, both).  While the chip's claimed, a write is
+;             E_BUSY (cons paints the window again after the release)
 ;   /vram     the VERA's video RAM, 128K (the offset is the address), read and written through its data port 0
 ;   /pal      the palette (VRAM $1FA00: 256 entries, 2 bytes each: $GB, $0R): 0-15 the console's colours, the ANSI
 ;             terminal's (conio's 0-15), 16-255 the VERA's own
@@ -41,9 +42,9 @@
 ; registers.  Layer 1 is the console's text (16 colours: a cell's background 0 lets layer 0 show through).
 ;   Claims: a task that writes claim to ctl has the chip to itself, its registers its to write, till it writes
 ; release or its last file of #v closes (its end).  Meanwhile the driver leaves the chip alone (another task's
-; /vram, /pal, /sprites, /font and /term reads, and the commands that change the chip: E_BUSY), and the console's
-; text waits here (its last PEND_SIZE bytes); at the release the chip's set up for the console again (with claim
-; all, its font and map too: a claimer may use all of VRAM) and the text that waited is shown.  The irq entry, still
+; /vram, /pal, /sprites, /font and /term reads, the commands that change the chip, and any task's /term writes:
+; E_BUSY); at the release the chip's set up for the console again (with claim all, its font and map too: a claimer
+; may use all of VRAM), and the console, whose writes were refused, paints its window shown again from its cells.  The irq entry, still
 ; the driver's, reads and clears ISR's VSYNC, LINE and SPRCOL (a claimer's own, if it turned them on), and turns
 ; AFLOW off (a level: the line would stay low; /pcm's writers wait for the frames' event, not AFLOW's).
 ;   The terminal: printable bytes ($20-$7E, $80-$FF: the font's) at the cursor, wrapping at the last column (as a
@@ -51,6 +52,8 @@
 ; FF (cleared), BEL (nothing: cons rings the bell); ESC 7 and ESC 8 (the cursor saved, restored), ESC c (reset), ESC D
 ; (IND: down a row), ESC E (NEL: CR and IND), ESC M (RI: up a row); CSI t;b r (DECSTBM: the scrolling region, rows t
 ; to b; CSI r, the whole screen: an LF at its bottom row scrolls the region alone, RI at its top scrolls it down);
+; ESC ( and ESC ) with 0 (G0, G1: the DEC Special Graphics, $5F-$7E shown as the font's first 32 glyphs: the
+; console's fonts have them there, tools/decfont.js; 2 as 0) or B (ASCII: A and 1 as B), SO and SI (G1, G0 in use);
 ; CSI n A, B, C, D, E, F (moves), G and d (a column, a row), H and f (row;column, from 1), J and K (0: to the end, 1:
 ; from the start, 2: all), m (SGR: 0, 1 bold as bright, 22, 7 reverse, 27, 30-37, 39, 40-47, 49, 90-97, 100-107; 2,
 ; 4, 5, 24 and 25 taken and not shown), s and u, ?25h and ?25l (the cursor shown, hidden); the rest are taken and
@@ -87,11 +90,12 @@ BLINK           = 20            ; The cursor's blink: frames on, then off
 FG              = 7             ; The text's colours as the terminal starts: light grey on black
 BG              = 0
 COLS_MAX        = 80
-PEND_SIZE       = 1024          ; The console's text kept while the chip's claimed (a power of 2)
 NPAR            = 4             ; CSI's numbers kept
 CHUNK           = 255           ; A read of /term: a part, to the client
 BS              = $08
 FF              = $0C
+SO              = $0E
+SI              = $0F
 ESC             = $1B
 E_TERM          = 2             ; srv_tree's entries: term ...
 E_VRAM          = 3             ;   the VRAM's files (vram, pal, sprites, font: their regions, SE_AUX) ...
@@ -137,6 +141,8 @@ rev:        .res        1                                   ;   reverse
 saved:      .res        6                                   ; ESC 7's: cx, cy, fg, bg, bold, rev
 stop:       .res        1                                   ; The scrolling region: its first row ...
 sbot:       .res        1                                   ;   and its last (DECSTBM's; the whole screen: 0, rows - 1)
+gdec:       .res        2                                   ; G0 and G1: <> 0, the DEC graphics (ESC ( 0, ESC ) 0) ...
+gl:         .res        1                                   ;   the one in use (SO: 1, SI: 0)
 par:        .res        NPAR                                ; CSI's numbers ...
 npar:       .res        1                                   ;   the one being read ...
 priv:       .res        1                                   ;   <> 0: CSI ?
@@ -150,10 +156,6 @@ claimer:    .res        1                                   ; The task + 1 that 
 claim_all:  .res        1                                   ;   <> 0: all of VRAM
 refs:       .res        16                                  ; Each task's fids on #v
 fframe:     .res        SRV_FIDS                            ; Each fid's last frame seen (its low byte: /frame's)
-pend_h:     .res        2                                   ; The text kept while the chip's claimed: the next in ...
-pend_n:     .res        2                                   ;   the bytes there (PEND_SIZE at most) ...
-pend_lost:  .res        1                                   ;   <> 0: older ones gone
-pend:       .res        PEND_SIZE
 psg:        .res        PSG_REGS                            ; The PSG's registers as written to /psg
 pcm_ctl:    .res        1                                   ; The PCM as pcmctl has it: AUDIO_CTRL (bits 5-4 the
 pcm_rate:   .res        1                                   ;   format, 3-0 the volume), AUDIO_RATE (0: stopped) ...
@@ -539,6 +541,9 @@ layer0_set:
 ; The terminal as it starts: the screen cleared, the cursor home, the colours plain.  Modifies .A, .X, .Y, n, t
 term_reset:
             stz         st
+            stz         gdec
+            stz         gdec + 1
+            stz         gl
             stz         bold
             stz         rev
             lda         #FG
@@ -687,6 +692,17 @@ putc:
 :
             cmp         #FF
             beq         cls
+            cmp         #SO
+            bne         :+
+            lda         #1                                  ; (G1 in use)
+            sta         gl
+            rts
+:
+            cmp         #SI
+            bne         :+
+            stz         gl                                  ; (G0)
+            rts
+:
             cmp         #ESC
             bne         @drop
             lda         #1
@@ -695,9 +711,36 @@ putc:
             rts
 
 @seq:
+            cpx         #3
+            bcc         :+
+            stz         st                                  ; ---- ESC ( or ESC ): G0's or G1's set, 0 (and 2) the
+            ldy         #0                                  ;   DEC graphics, the rest ASCII
+            cmp         #'0'
+            beq         @dec
+            cmp         #'2'
+            bne         @set
+@dec:
+            iny
+@set:
+            tya
+            sta         gdec - 3,X
+            rts
+:
             cpx         #1
             bne         @csi
             stz         st                                  ; ---- After an ESC
+            cmp         #'('
+            bne         :+
+            lda         #3
+            sta         st
+            rts
+:
+            cmp         #')'
+            bne         :+
+            lda         #4
+            sta         st
+            rts
+:
             cmp         #'['
             bne         :+
             lda         #2
@@ -795,8 +838,18 @@ putc:
             tax
             jmp         (csi_go,X)
 
-; A printable byte at the cursor.  IN: .A.  Modifies .A, .X, .Y, n
+; A printable byte at the cursor (the DEC graphics in use: $5F-$7E as glyphs $00-$1F).  IN: .A.  Modifies .A, .X,
+; .Y, n
 put_char:
+            ldx         gl
+            ldy         gdec,X
+            beq         :+
+            cmp         #$5F
+            bcc         :+
+            cmp         #$7F
+            bcs         :+
+            sbc         #$5F - 1                            ; (C = 0)
+:
             ldx         wrap
             beq         :+
             pha
@@ -1434,7 +1487,7 @@ others:
             clc
             rts
 
-; /term: a write, its bytes to the terminal (or kept, while the chip's claimed); a read, the screen's characters
+; /term: a write, its bytes to the terminal (E_BUSY while the chip's claimed); a read, the screen's characters
 h_term:
             cmp         #R_WRITE
             beq         w_term
@@ -1446,6 +1499,12 @@ h_term:
             rts
 
 w_term:
+            lda         claimer                             ; (Claimed: E_BUSY, the claimer's writes too)
+            beq         :+
+            lda         #E_BUSY
+            sec
+            rts
+:
             jsr         counted
 @part:
             jsr         part
@@ -1456,14 +1515,7 @@ w_term:
 @byte:
             phx
             lda         iobuf,X
-            ldx         claimer
-            bne         @keep
             jsr         putc
-            bra         @next
-
-@keep:
-            jsr         pend_put
-@next:
             plx
             inx
             cpx         r2                                  ; (r2 0: 256)
@@ -1476,82 +1528,9 @@ w_term:
             clc
             rts
 
-; A byte of the console's kept while the chip's claimed (the last PEND_SIZE).  IN: .A.  Modifies .A, .X, p
-pend_put:
-            tax
-            clc
-            lda         pend_h
-            adc         #<pend
-            sta         p
-            lda         pend_h + 1
-            and         #>(PEND_SIZE - 1)
-            adc         #>pend
-            sta         p + 1
-            txa
-            sta         (p)
-            inc         pend_h
-            bne         :+
-            inc         pend_h + 1
-:
-            lda         pend_n + 1                          ; (Full: the oldest gone)
-            cmp         #>PEND_SIZE
-            bcc         :+
-            sta         pend_lost
-            rts
-:
-            inc         pend_n
-            bne         :+
-            inc         pend_n + 1
-:
-            rts
-
-; The bytes kept to the terminal (the chip back: release), the screen cleared first if some were lost.  Modifies
-; .A, .X, .Y, p, t, n, va
-pend_play:
-            lda         pend_lost
-            beq         :+
-            jsr         cls
-:
-            sec                                             ; va: the oldest's place (pend_h - pend_n)
-            lda         pend_h
-            sbc         pend_n
-            sta         va
-            lda         pend_h + 1
-            sbc         pend_n + 1
-            sta         va + 1
-@byte:
-            lda         pend_n
-            ora         pend_n + 1
-            beq         @done
-            clc
-            lda         va
-            adc         #<pend
-            sta         p
-            lda         va + 1
-            and         #>(PEND_SIZE - 1)
-            adc         #>pend
-            sta         p + 1
-            lda         (p)
-            jsr         putc
-            inc         va
-            bne         :+
-            inc         va + 1
-:
-            lda         pend_n
-            bne         :+
-            dec         pend_n + 1
-:
-            dec         pend_n
-            bra         @byte
-
-@done:
-            stz         pend_h
-            stz         pend_h + 1
-            stz         pend_lost
-            rts
-
-; /term: a read: the screen's characters from the offset, a line a row (cols characters, then an LF); E_BUSY while
-; another task has the chip.  (va: the row and column; va + 2, the row ADDR0 is in)
+; /term: a read: the screen's characters from the offset, a line a row (cols characters, then an LF; the DEC graphics,
+; glyphs $00-$1F, in ASCII, as the console's /text has them); E_BUSY while another task has the chip.  (va: the row
+; and column; va + 2, the row ADDR0 is in)
 r_term:
             jsr         others
             bcc         :+
@@ -1605,6 +1584,10 @@ r_term:
 :
             inc         va + 1
             lda         VERA_DATA0
+            cmp         #$20
+            bcs         @put
+            tax
+            lda         dec_text,X
 @put:
             sta         iobuf,Y
             iny
@@ -2669,11 +2652,6 @@ c_claim:
             ldx         #>(SPRITE0 + 6)
             jsr         vseek1
             stz         VERA_DATA0
-            stz         pend_n
-            stz         pend_n + 1
-            stz         pend_h
-            stz         pend_h + 1
-            stz         pend_lost
             lda         owner
             sta         claimer
 @ok:
@@ -2705,7 +2683,8 @@ c_reset:
             rts
 
 ; The claim ended: the chip set up for the console (its font and map too after claim all: the claimer may have had
-; all of VRAM), the text that waited shown.  Modifies .A, .X, .Y, p, t, n, va
+; all of VRAM); the console paints its window there again (its writes were refused).  Modifies .A, .X, .Y, p, t, n,
+; va
 release:
             lda         claimer
             beq         @done
@@ -2718,7 +2697,6 @@ release:
             jsr         setup
 @set:
             jsr         irq_on
-            jsr         pend_play
             jsr         cursor_show
 @done:
             rts
@@ -2878,6 +2856,11 @@ regions:
             .byte       $00, $FA, $01, 0, $00, $02, $00, 0  ; pal: $1FA00, 512
             .byte       $00, $FC, $01, 1, $00, $04, $00, 0  ; sprites: $1FC00, 1024
             .byte       $00, $F0, $01, 0, $00, $08, $00, 0  ; font: $1F000, 2048
+
+; The DEC Special Graphics (glyphs $00-$1F) as /term's reads give them: the console's /text's ASCII (cons's vt.s,
+; dec_ascii; ISO-8859-15)
+dec_text:   .byte       ' ', '*', '#', 'H', 'F', 'C', 'L', $B0, $B1, 'N', 'V', '+', '+', '+', '+', '+'
+            .byte       '-', '-', '-', '-', '_', '+', '+', '+', '+', '|', '<', '>', 'p', '#', $A3, $B7
 
 ; CSI's finals, and what they do
 csi_final:

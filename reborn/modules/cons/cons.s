@@ -1101,6 +1101,9 @@ r_cons:
             jsr         load
             lda         raw
             bne         r_keys
+            ldx         lw                                  ; (Cooked: the window's answers dropped)
+            stz         ans_n,X
+            stz         ans_r,X
 @line:
             lda         ln_ready                            ; A line, ended?
             bne         @give
@@ -1495,12 +1498,41 @@ flush:
 ; ****************************************************************************
 ; Keys
 
-; The next key of the loaded window, the terminal's sequences decoded (KEY_*).  OUT: C = 0, .A = it; or C = 1: none
-; yet (a sequence part-way in waits for the next call).  Modifies .X, .Y
+; The next key of the loaded window, the terminal's sequences decoded (KEY_*); raw, the window's answers first, as
+; they came.  OUT: C = 0, .A = it; or C = 1: none yet (a sequence part-way in waits for the next call).  Modifies .X,
+; .Y, n
 key_next:
             lda         key_pb
-            beq         @byte
+            beq         @answer
             stz         key_pb
+            clc
+            rts
+
+@answer:                                                    ; Raw: the window's answers first (DA, DSR's ...: vt.s's),
+            lda         raw                                 ;   as they came
+            beq         @byte
+            ldx         lw
+            lda         ans_r,X
+            cmp         ans_n,X
+            bcs         @byte
+            sta         n                                   ; (Its place: the window * ANS_SIZE + those read)
+            inc         ans_r,X
+            txa
+            asl
+            asl
+            asl
+            asl
+            asl
+            clc
+            adc         n
+            tay
+            lda         ans_r,X                             ; (All read: none again)
+            cmp         ans_n,X
+            bne         :+
+            stz         ans_r,X
+            stz         ans_n,X
+:
+            lda         ans_buf,Y
             clc
             rts
 

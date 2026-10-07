@@ -26,6 +26,8 @@ info:       .res        TI_SIZE
 w1:         .res        1                                   ; Window 1's cons
 saved:      .res        1                                   ; Fd 0, kept
 wctl:       .res        1
+exp:        .res        2                                   ; (answer_is's: the answer expected ...
+got_n:      .res        1                                   ;   and the bytes read)
 
 .code
 
@@ -179,6 +181,43 @@ main:
             READ_       #0, 1
             lda         buf
             EXPECT_A    KEY_UP, "raw: ESC [ A is KEY_UP"
+
+; ---- Raw: the console's answers to what its window was sent, as a terminal's would come (vt.s: W2)
+            WRITE_      #1, s_q_da, S_Q_DA_N
+            ldx         #<s_a_da
+            ldy         #>s_a_da
+            jsr         answer_is
+            EXPECT_A    0, "raw: ESC [ c answered ESC [ ? 6 c (DA: a VT102)"
+            WRITE_      #1, s_q_da2, S_Q_DA2_N
+            ldx         #<s_a_da2
+            ldy         #>s_a_da2
+            jsr         answer_is
+            EXPECT_A    0, "raw: ESC [ > c answered ESC [ > 1 ; 10 ; 0 c (the secondary DA)"
+            WRITE_      #1, s_q_rqm, S_Q_RQM_N
+            ldx         #<s_a_rqm
+            ldy         #>s_a_rqm
+            jsr         answer_is
+            EXPECT_A    0, "raw: ESC [ ? 7 $ p answered ESC [ ? 7 ; 1 $ y (DECRQM: autowrap set)"
+            WRITE_      #1, s_q_rqm4, S_Q_RQM4_N
+            ldx         #<s_a_rqm4
+            ldy         #>s_a_rqm4
+            jsr         answer_is
+            EXPECT_A    0, "raw: ESC [ 4 $ p answered ESC [ 4 ; 2 $ y (DECRQM: insert mode reset)"
+            WRITE_      #1, s_q_size, S_Q_SIZE_N
+            ldx         #<s_a_size
+            ldy         #>s_a_size
+            jsr         answer_is
+            EXPECT_A    0, "raw: ESC [ 1 8 t answered ESC [ 8 ; 24 ; 80 t (xterm's size: the window's)"
+            WRITE_      #1, s_q_parm, S_Q_PARM_N
+            ldx         #<s_a_parm
+            ldy         #>s_a_parm
+            jsr         answer_is
+            EXPECT_A    0, "raw: ESC [ x answered ESC [ 2 ; 1 ; 1 ; 120 ; 120 ; 1 ; 0 x (DECREPTPARM)"
+            WRITE_      #1, s_q_cpr, S_Q_CPR_N
+            READ_       #0, 32
+            tax
+            lda         buf - 1,X
+            EXPECT_A    'R', "raw: ESC [ 6 n answered ESC [ row ; column R (CPR)"
             WRITE_      ctl, s_rawoff, 6
             EXPECT_OK   "consctl: rawoff"
 
@@ -289,6 +328,34 @@ main:
             DONE        "t_cons"
 
 ; .A = 0 if the read's .A bytes in buf are abc and an LF
+; The answer to what was just written to the console, read raw (32 bytes at most): .A = 0 if it's the zero-ended
+; string at .X/.Y, as it is
+answer_is:
+            stx         exp
+            sty         exp + 1
+            READ_       #0, 32
+            sta         got_n
+            lda         exp
+            sta         r4
+            lda         exp + 1
+            sta         r4 + 1
+            ldy         #0
+:
+            lda         (r4),Y
+            beq         @end
+            cmp         buf,Y
+            bne         @no
+            iny
+            bra         :-
+@end:
+            cpy         got_n
+            bne         @no
+            lda         #0
+            rts
+@no:
+            lda         #1
+            rts
+
 is_abc:
             cmp         #4
             bne         @no
@@ -339,6 +406,27 @@ s_serctl:   .byte       "#c/serctl", 0
 s_child:    .byte       "#m/t_child", 0
 s_i:        .byte       "i", 0, 0
 s_rawon:    .byte       "rawon"
+ESC         = $1B
+s_q_da:     .byte       ESC, "[c"                          ; The queries, and their answers
+S_Q_DA_N    = * - s_q_da
+s_a_da:     .byte       ESC, "[?6c", 0
+s_q_da2:    .byte       ESC, "[>c"
+S_Q_DA2_N   = * - s_q_da2
+s_a_da2:    .byte       ESC, "[>1;10;0c", 0
+s_q_rqm:    .byte       ESC, "[?7$p"
+S_Q_RQM_N   = * - s_q_rqm
+s_a_rqm:    .byte       ESC, "[?7;1$y", 0
+s_q_rqm4:   .byte       ESC, "[4$p"
+S_Q_RQM4_N  = * - s_q_rqm4
+s_a_rqm4:   .byte       ESC, "[4;2$y", 0
+s_q_size:   .byte       ESC, "[18t"
+S_Q_SIZE_N  = * - s_q_size
+s_a_size:   .byte       ESC, "[8;24;80t", 0
+s_q_parm:   .byte       ESC, "[x"
+S_Q_PARM_N  = * - s_q_parm
+s_a_parm:   .byte       ESC, "[2;1;1;120;120;1;0x", 0
+s_q_cpr:    .byte       ESC, "[6n"
+S_Q_CPR_N   = * - s_q_cpr
 s_rawoff:   .byte       "rawoff"
 s_wctl:     .byte       "#c/wctl", 0
 s_wnew:     .byte       "#c/wnew", 0
