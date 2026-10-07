@@ -1,10 +1,11 @@
 ; snd.hl - the YM2151, through the sound driver's files (#a, /dev): (use "snd").  /dev/snd takes register/value pairs
 ; (the registers the chip doesn't have, below $20, are the driver's commands for a channel: SND_R_CH, then a patch, a
-; note, key off, volume, speakers, bend, a drum); /dev/sndctl takes claim N and release N (a mask of channels),
-; volume N (the master, 0-200: 100 as written) and reset.  Each is opened the first time it's wanted, and stays
-; open: a task's claimed channels go back as its last #a file closes (at its end).  A channel's command goes with
-; the channel in one write, so another program's can't come between.  A channel is 0-7, a note MIDI's (60: middle
-; C).  Songs are play's (the program).  A failure is the system's error.
+; note, key off, volume, speakers, bend, a drum, a frequency, a glide); /dev/sndctl takes claim N and release N (a
+; mask of channels), volume N (the master, 0-200: 100 as written) and reset, and each channel's commands as text.
+; Each is opened the first time it's wanted, and stays open: a task's claimed channels go back as its last #a file
+; closes (at its end).  A channel's command goes with the channel in one write, so another program's can't come
+; between.  A channel is 0-7, a note MIDI's (60: middle C).  Songs are play's (the program).  A failure is the
+; system's error.
 
 (def {snd.fd} NIL)
 (def {snd.ctlfd} NIL)
@@ -49,6 +50,17 @@
 
 ; A General MIDI drum (35: a kick) keyed on, on the channel
 (fun {snd-drum ch n} {snd.cmd ch 10 n})
+
+; A note at a frequency (Hz: 0, off), keyed on; the pitch to a note without a new attack (legato)
+(fun {snd-freq ch hz} {snd.out (list 2 ch 11 (bit-and hz 255) 12 (shr hz 8))})
+(fun {snd-glide ch n} {snd.cmd ch 13 n})
+
+; The chip's own registers: the LFO (the whole chip's: its rate, its depths of pitch and amplitude (0-127), its wave:
+; 0 saw, 1 square, 2 triangle, 3 noise); a channel's sensitivity to it (vibrato 0-7, tremolo 0-3); channel 7's noise
+; at frequency n (0-31; negative: off)
+(fun {snd-lfo rate pmd amd wave} {snd.out (list 24 rate 25 (bit-or 128 pmd) 25 (bit-and amd 127) 27 (bit-and wave 3))})
+(fun {snd-sens ch pms ams} {snd.out (list (+ 56 ch) (bit-or (shl (bit-and pms 7) 4) (bit-and ams 3)))})
+(fun {snd-noise n} {snd.out (list 15 (if (< n 0) 0 (bit-or 128 (bit-and n 31))))})
 
 ; The chip's 256 registers as written (the driver's shadow: the chip's can't be read), a buffer: /dev/snd opened for
 ; it (from its start: the driver gives them in one read) and closed

@@ -7,7 +7,8 @@
 ; its end).  A channel's command is written with the channel in one write, so another program's can't come
 ; between.  A failure is a THROW of the system's error, named by the file (/dev/snd: busy).  And hylang's note-of (a
 ; note's MIDI number, by its name) and tune (notes and their beats played).  The two volumes: snd-volume the
-; master's, snd-level a channel's (snd-vol, its old name).  snd-regs reads the registers back.
+; master's, snd-level a channel's (snd-vol, its old name).  snd-regs reads the registers back.  snd-freq, snd-glide
+; (the driver's commands), snd-lfo, snd-sens and snd-noise (the chip's own registers) as C's and hylang's.
 ;   Songs are play's (the program, play song.zsm at the shell): snd-play runs it.
 
 .include "forthlib.inc"
@@ -15,7 +16,7 @@
 .bss
 snd_fd:     .res        1                                   ; /dev/snd's fd ($FF: not open) ...
 ctl_fd:     .res        1                                   ;   and /dev/sndctl's
-cmd:        .res        4                                   ; A write: SND_R_CH, the channel, the command, its value
+cmd:        .res        8                                   ; A write: SND_R_CH, the channel, the command, its value
 ctl_buf:    .res        16                                  ; sndctl's line ...
 ctl_len:    .res        1                                   ;   its length so far
 tune_tpb:   .res        2                                   ; TUNE: a beat's ticks ...
@@ -109,6 +110,11 @@ sndbend:                                                    ; ( ch n -- ): its b
             lda         #SND_R_BEND
             bra         snd_cmd
 
+            HEADER      "snd-glide", 0
+sndglide:                                                   ; ( ch n -- ): its pitch to note n without a new attack
+            lda         #SND_R_GLIDE                        ;   (legato)
+            bra         snd_cmd
+
             HEADER      "snd-drum", 0
 snddrum:                                                    ; ( ch n -- ): General MIDI's drum n (35: a kick) keyed
             lda         #SND_R_DRUM                         ;   on in channel ch
@@ -123,6 +129,92 @@ snd_cmd:                                                    ; (( ch val -- ): co
             inx
             inx
             lda         #4
+            jmp         snd_write
+
+            HEADER      "snd-freq", 0
+sndfreq:                                                    ; ( ch hz -- ): a note at a frequency, keyed on (0: off)
+            lda         #SND_R_CH
+            sta         cmd
+            lda         dlo + 1,x
+            sta         cmd + 1
+            lda         #SND_R_FREQ_LO
+            sta         cmd + 2
+            lda         dlo,x
+            sta         cmd + 3
+            lda         #SND_R_FREQ
+            sta         cmd + 4
+            lda         dhi,x
+            sta         cmd + 5
+            inx
+            inx
+            lda         #6
+            jmp         snd_write
+
+            HEADER      "snd-sens", 0
+sndsens:                                                    ; ( ch pms ams -- ): its sensitivity to the LFO: vibrato
+            lda         dlo + 2,x                           ;   0-7, tremolo 0-3 (register $38 + ch)
+            ora         #$38
+            sta         cmd
+            lda         dlo + 1,x
+            and         #7
+            asl
+            asl
+            asl
+            asl
+            sta         cmd + 1
+            lda         dlo,x
+            and         #3
+            ora         cmd + 1
+            sta         cmd + 1
+            inx
+            inx
+            inx
+            lda         #2
+            jmp         snd_write
+
+            HEADER      "snd-noise", 0
+sndnoise:                                                   ; ( n -- ): channel 7's noise at frequency n (0-31);
+            lda         #$0F                                ;   negative: off (register $0F)
+            sta         cmd
+            lda         dhi,x
+            bmi         :+
+            lda         dlo,x
+            and         #31
+            ora         #$80
+            bra         :++
+:
+            lda         #0
+:
+            sta         cmd + 1
+            inx
+            lda         #2
+            jmp         snd_write
+
+            HEADER      "snd-lfo", 0
+sndlfo:                                                     ; ( rate pmd amd wave -- ): the LFO (the whole chip's): its
+            lda         #$18                                ;   rate, its depths of pitch and amplitude (0-127), its
+            sta         cmd                                 ;   wave (0 saw, 1 square, 2 triangle, 3 noise)
+            lda         dlo + 3,x
+            sta         cmd + 1
+            lda         #$19
+            sta         cmd + 2
+            sta         cmd + 4
+            lda         dlo + 2,x
+            ora         #$80
+            sta         cmd + 3
+            lda         dlo + 1,x
+            and         #$7F
+            sta         cmd + 5
+            lda         #$1B
+            sta         cmd + 6
+            lda         dlo,x
+            and         #3
+            sta         cmd + 7
+            inx
+            inx
+            inx
+            inx
+            lda         #8
 ; cmd's first .A bytes written to /dev/snd (opened if it isn't)
 snd_write:
             pha

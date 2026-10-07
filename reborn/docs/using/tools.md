@@ -200,7 +200,7 @@ has them, join `/bin` and `/lib`.
 
 The sound device is `/dev/snd` (register and value pairs), `/dev/sndctl` (`claim N`, `release N`, `volume N`,
 `reset`; and a channel's commands as text: `patch CH P`, `note CH N`, `off CH`, `level CH V`, `pan CH
-left|right|both`, `bend CH B`, `drum CH N`, `reg R V`, so `echo note 0 60 >/dev/sndctl` plays middle C) and
-`/dev/bell`; the VIA's port A is `/dev/gpio` (pins `0`-`7`, `port`, `ctl`, `ca1`) and `/dev/i2c` the
+left|right|both`, `bend CH B`, `drum CH N`, `freq CH HZ`, `glide CH N`, `sens CH PMS AMS`, `reg R V`; the chip's
+`lfo RATE PMD AMD WAVE` and `noise N|off`; so `echo note 0 60 >/dev/sndctl` plays middle C) and `/dev/bell`; the VIA's port A is `/dev/gpio` (pins `0`-`7`, `port`, `ctl`, `ca1`) and `/dev/i2c` the
 I2C bus on two of its pins; `/dev/spi` the SPI devices; `/dev/seg` names shared segments; `/pc` a folder on the PC
 (through the PC tool, `../sim/tools/hydrapc.js`, which is the terminal too).

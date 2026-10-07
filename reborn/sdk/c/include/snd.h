@@ -49,8 +49,22 @@ int __fastcall__ snd_level (unsigned char ch, unsigned char level);     /* Its v
 #define snd_vol snd_level                                               /* (snd_level's old name) */
 int __fastcall__ snd_pan (unsigned char ch, unsigned char pan);         /* SND_PAN_* */
 int __fastcall__ snd_bend (unsigned char ch, signed char bend);         /* 64ths of a semitone */
+int __fastcall__ snd_freq (unsigned char ch, unsigned hz);              /* A note at a frequency (Hz; 0: off) */
+int __fastcall__ snd_glide (unsigned char ch, unsigned char note);      /* Its pitch to a note, without a new
+                                                                        **   attack (legato) */
+int __fastcall__ snd_sens (unsigned char ch, unsigned char pms, unsigned char ams);
+                                                                        /* Its sensitivity to the LFO: vibrato
+                                                                        **   0-7, tremolo 0-3 */
 int __fastcall__ snd_drum (unsigned char ch, unsigned char note);       /* A General MIDI drum (35: kick, 38:
                                                                         **   snare, 42: closed hi-hat ...) */
+
+int __fastcall__ snd_lfo (unsigned char rate, unsigned char pmd, unsigned char amd, unsigned char wave);
+                                                                        /* The LFO (the whole chip's): its rate,
+                                                                        **   its depths of pitch and amplitude
+                                                                        **   (0-127), its wave (0 saw, 1 square,
+                                                                        **   2 triangle, 3 noise) */
+int __fastcall__ snd_noise (signed char n);                             /* Channel 7's noise at frequency n
+                                                                        **   (0-31); negative: off */
 
 int __fastcall__ snd_write (unsigned char reg, unsigned char val);      /* A chip register */
 int __fastcall__ snd_writes (const unsigned char* pairs, unsigned n);   /* n register/value pairs */

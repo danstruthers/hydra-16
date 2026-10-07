@@ -18,7 +18,7 @@
 int __fastcall__ _hy_open (const char* name, unsigned char mode);
 
 static int fd = -1, ctlfd = -1;
-static unsigned char cmd[4];
+static unsigned char cmd[8];
 static char line[16];
 
 int snd_open (void)
@@ -136,6 +136,47 @@ int __fastcall__ snd_bend (unsigned char ch, signed char bend)
 int __fastcall__ snd_drum (unsigned char ch, unsigned char note)
 {
     return command (ch, HY_SND_R_DRUM, note);
+}
+
+int __fastcall__ snd_freq (unsigned char ch, unsigned hz)
+{
+    cmd[0] = HY_SND_R_CH;
+    cmd[1] = ch;
+    cmd[2] = HY_SND_R_FREQ_LO;
+    cmd[3] = hz & 0xFF;
+    cmd[4] = HY_SND_R_FREQ;
+    cmd[5] = hz >> 8;
+    return snd_writes (cmd, 3);
+}
+
+int __fastcall__ snd_glide (unsigned char ch, unsigned char note)
+{
+    return command (ch, HY_SND_R_GLIDE, note);
+}
+
+/* The chip's own registers: the LFO ($18 its rate, $19 its depths: pitch's with bit 7, $1B its wave), a channel's
+** sensitivities ($38 + ch), the noise ($0F) */
+int __fastcall__ snd_lfo (unsigned char rate, unsigned char pmd, unsigned char amd, unsigned char wave)
+{
+    cmd[0] = 0x18;
+    cmd[1] = rate;
+    cmd[2] = 0x19;
+    cmd[3] = 0x80 | pmd;
+    cmd[4] = 0x19;
+    cmd[5] = amd & 0x7F;
+    cmd[6] = 0x1B;
+    cmd[7] = wave & 3;
+    return snd_writes (cmd, 4);
+}
+
+int __fastcall__ snd_sens (unsigned char ch, unsigned char pms, unsigned char ams)
+{
+    return snd_write (0x38 + ch, (pms & 7) << 4 | (ams & 3));
+}
+
+int __fastcall__ snd_noise (signed char n)
+{
+    return snd_write (0x0F, n < 0 ? 0 : 0x80 | (n & 31));
 }
 
 int snd_beep (void)
