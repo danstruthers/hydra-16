@@ -19,6 +19,7 @@ A plan (October 2026) for the user's request: BASIC on hylang's number system in
 14. [Risks](#risks)
 15. [Questions](#questions)
 16. [Answers](#answers-the-users-7-october-2026)
+17. [As built: step 1](#as-built-step-1)
 
 ---
 
@@ -147,7 +148,7 @@ Most numbers a program uses are 1 to 5 bytes, as small as Microsoft's or smaller
 * The arguments are in `r0`-`r13`, as a system call's are: the operands' addresses (numbers in the format, wherever the caller has them: its RAM, or the bank it has at `$8000`), the result's address and how much room it has, the precision (for `math`), a format for the calls that name one.  The answer: C clear, and the result's length in `.A`; or C set, and an error in `.A` (too big, division by zero, not a number, no room for the result, a domain error).
 * **Workspace**: the libraries work in registers, as hylang's number code does (a register is a 256-byte page, its bytes least first, with a length and a sign), so a sum or product of long numbers makes nothing till the result is written.  The caller lends the pages (eight, 2K) and names them in `r13`: hylang its reader's scratch pages, as now; BASIC and HyForth pages of their own.  They're scratch: nothing is kept in them between calls.
 * **The state block**: what the library keeps between calls, in some 64 bytes of the program's that it names in `r12` (the same block for the program's life): the base (its string, and what it was made into: the digits, the size, balanced, least digit first, negative, the prefix shown), the precision for `math` (12 digits at the start), and the random generator's state.  `num_init` fills it (decimal, and a seed from the clock) as a program starts.
-* **Zero page**: the libraries use 16 bytes of the program's zero page, `$70`-`$7F`, as scratch during a call.  A program that calls them keeps nothing there across a call (the conventions to say so).
+* **Zero page**: the libraries work with 16 bytes of the zero page, `$70`-`$7F`, and save them as a call starts and put them back as it ends (some 200 cycles a call), so a program's zero page stays its own: hylang's is full, `$22`-`$7F`, HyForth's to `$7A` (step 1 looked).
 * An abort point at each entry, as hylang's number code has (`n_enter`), so a result too big or no room goes back from however deep with its error.
 
 The `numbers` code is about 11K (hylang's third bank is 12K, mostly numbers): a bank.  `math` adds perhaps 4-6K: a second bank.  ROM space is plentiful; what's scarce (BIOS page 0, the COMMON block) isn't touched.
@@ -172,7 +173,7 @@ The `numbers` code is about 11K (hylang's third bank is 12K, mostly numbers): a 
 
 ### **hylang and danlang**
 
-* **danlang**: the math functions and `digits` first, as the reference; and the format, as two built-ins (`(to-bytes n)` and `(from-bytes b)`, beside the bytes built-ins hylang has), so the cross-check can compare bytes.
+* **danlang**: the math functions and `digits` first, as the reference; and the format, as two built-ins (`(number-bytes n)` and `(bytes-number b)`: danlang's `bytes` and `from-bytes` were taken, a string's bytes), so the cross-check can compare bytes.
 * **hylang**: its number objects hold the format (a bignum's blob, a fixed decimal's, a rational's and a complex number's become one blob of the format's bytes, in its own banks), and its number built-ins call the libraries.  Its quick ways for fixnums stay in hylang (`+`, `-`, `*`, the comparisons, the native code's templates), so its loops are as fast as now; only numbers past a fixnum go to the library.  Its third bank gets most of its 12K back.  `numbers.dl` and the 2,100 random expressions must give the same as before, byte for byte, and the benchmarks no slower.
 * The new built-ins: `sqrt`, `exp`, `log`, `sin`, `cos`, `tan`, `atan`, `pi`, `digits`; `pow` takes any real exponent.
 
@@ -218,7 +219,7 @@ A library, **`lib numbers`** (`numbers.fl`), with `math`'s words in it or in a s
 
 | Step | Work | Size |
 | :--- | :--- | :--- |
-| 1 | **danlang first, and the interface**: the stored format in danlang (`to-bytes`, `from-bytes`) and JavaScript (an encoder and decoder); danlang's `base` (its reader, its printing, `val`: all of it), the radix point in other bases, complex numbers read (`1+2i`, `2i`), format strings' bases (`{x}`); `spec/numbers.def`; the zero page, workspace and state block; `XCALL`'s cost measured | M |
+| 1 | **danlang first, and the interface**: the stored format in danlang (`number-bytes`, `bytes-number`) and JavaScript (an encoder and decoder); danlang's `base` (its reader, its printing, `val`: all of it), the radix point in other bases, complex numbers read (`1+2i`, `2i`), format strings' bases (`{x}`); `spec/numbers.def`; the zero page, workspace and state block; `XCALL`'s cost measured | M |
 | 2 | **`numbers`**: hylang's number code taken out into a library on the stored format; its state block, the base, `num_parse`, `num_display` and `num_format` (the radix point added); `t_num` and the cross-check | L |
 | 3 | **hylang on `numbers`**: its objects in the stored format, its built-ins through the library, `base`; its suites, the cross-check and its benchmarks as before | M |
 | 4 | **`math`**: danlang's functions first, then the library, and hylang's built-ins (`sqrt` ... `digits`) | M-L |
@@ -258,3 +259,13 @@ None open: the user answered them all (below).
 13. **hylang's fixnums stay** in its 16-bit values, the format's bytes as they leave hylang.
 14. **Printing in any base**: a base parameter, or a format string's placeholders (`num_format`).
 15. **C's `printf` takes a base**: `%N` for a number, and `%{base}` before a conversion (`%{x}N`, `%{c}d`), for C's integers too; `scanf` the same for reading.
+
+### **As built: step 1**
+
+October 2026: danlang's branch `feature/numbers` (from `feature/speed`), and hydra-2's `reborn-numbers`.
+
+* **danlang, the reference** (`8fc0da2`): `(base)` and `(base b)`, followed everywhere (print, `repr`, `to-str`, `format`'s `{}`, `val`, `read`, and a program's text from the next expression read: `load` now reads a file an expression at a time, each run before the next is read, as hylang's does); in a program's text a bare number starts with a digit (`0FF`); `save` writes a number with its prefix.  `to-str`'s base string says whether the prefix is written (`(to-str 255 "x")` is `FF` now, `"#x"` `#xFF`), and every base danlang reads it writes too (digits of their own, balanced radixes).  A fraction or a fixed decimal in another base: a radix point when it ends there (`#b0.1`), else a fraction (`1/A`); a complex number its parts (in a base whose digits have `+`, `-` or `i`, in decimal with `#d`).  Complex numbers read (`1+2i`, `0.5-1/3i`, `2i`; `1+i` stays a name).  `format`'s `{b}`.  `(number-bytes x)` and `(bytes-number l)`, the stored format, the second taking only a number's one form.  Its suite: 1,417 checks (80 new; four changed: `to-str`'s `"x"`, two fractions written with a point, a complex number in a base), none failing; `run.dl` reads each file in decimal.
+* **The format's reference in JavaScript** (`sim/tools/numfmt.js`): `encode`, `decode` (strict: a number's one form, else an error), `parse` and `show` (danlang's decimal forms), its own checks (`--test`: the plan's table, the long forms, what `decode` refuses, 3,000 numbers encoded and decoded back).  Against danlang's `number-bytes`: 4,000 random numbers (703 integers, 1,048 fixed decimals, 1,500 rationals, 749 complex numbers), the same bytes and the same text, every one.
+* **The libraries' calls** (`spec/numbers.def`): 41 entries (33 `numbers`, 8 `math`), each with its registers, errors and each language's name; `r12` the program's state block (`NUM_STATE`, 64 bytes: the base, the precision, the random state), `r13` the work pages (`NUM_PAGES`, 8), `r0`-`r3` the operands and the result's place and room, the result's length in `.A`/`.X`; the `NE_` errors and the `NK_` kinds.  `apigen.js` reads it in step 2.
+* **What a call costs**: `XCALL`, counted from its code, about 116 cycles (the jump table's `jsr` to the caller's return), 130 with `r14` and `r15` set; the zero page's save and restore some 200 more.  So a quick way for small integers in each language (hylang's fixnums, BASIC's 5-byte integers) matters, as the plan has it.
+* **Not yet**: hylang's copy of danlang's suite (`tests/hylang`) is danlang's `feature/speed`'s till hylang takes these (step 3).
