@@ -1,6 +1,6 @@
 ## **Hydra BASIC: a structured BASIC for the Hydra, on the shared numbers**
 
-A plan (October 2026) for the user's direction: BASIC doesn't need to keep Microsoft's syntax; it should be a BASIC for the Hydra, more like the later QuickBASIC: **line numbers optional**, **labels** to branch to instead of line numbers, and the structured statements that came with them.  Its numbers are the shared ones ([NUMBERS.md](NUMBERS.md): danlang's and hylang's number system, every format, a current format to show and read numbers in, every number stored in the compact format).  It replaces today's BASIC (EhyBASIC, Microsoft BASIC 2A: [basic.md](../../basic.md)), which this plan doesn't change.
+A plan (October 2026) for the user's direction: BASIC doesn't need to keep Microsoft's syntax; it should be a BASIC for the Hydra, more like the later QuickBASIC: **line numbers optional**, **labels** to branch to instead of line numbers, and the structured statements that came with them.  Its numbers are the shared ones ([NUMBERS.md](NUMBERS.md): danlang's and hylang's number system, every format, a current format to show and read numbers in, every number stored in the compact format).  It replaces today's BASIC (EhyBASIC, Microsoft BASIC 2A: [basic.md](../../basic.md)), which is retired when this one is done.  The user's answers to the plan's first questions are in it (and listed at its end): today's BASIC retired, all of QuickBASIC's types, parameters by reference, and a buffer at the prompt with an editing mode.
 
 ### **Contents**
 1. [What it keeps, and what changes](#what-it-keeps-and-what-changes)
@@ -16,6 +16,7 @@ A plan (October 2026) for the user's direction: BASIC doesn't need to keep Micro
 11. [Tests and documents](#tests-and-documents)
 12. [The order of work](#the-order-of-work)
 13. [Questions](#questions)
+14. [Answers](#answers-the-users-7-october-2026)
 
 ---
 
@@ -24,7 +25,8 @@ A plan (October 2026) for the user's direction: BASIC doesn't need to keep Micro
 **Kept**: BASIC's statements and functions where QuickBASIC kept them (`PRINT`, `INPUT`, `LET`, `IF`, `FOR`, `GOTO`, `GOSUB`, `DATA`, `READ`, `DIM`, `LEFT$` ...), and everything the Hydra's BASIC added: files, `SOUND`, `PLAY`, `BEEP`, `SLEEP`, `SYS` and `RREG`, `ENV$`, `ARG$`, scripts (`basic prog.bas a b`, `#!/bin/basic`), the shell (`basic -l`), Ctrl-C.
 
 **Changed**, as QuickBASIC changed it:
-* Line numbers optional; labels (`loop:`) for `GOTO`, `GOSUB`, `RESTORE` and `ON ERROR`; a program a text file, written in an editor (`edit`), not typed line by line.
+* Line numbers optional; labels (`loop:`) for `GOTO`, `GOSUB`, `RESTORE` and `ON ERROR`; a program a text file, or the buffer at the prompt, written in its editing mode, or line by line with numbers as before.
+* All of QuickBASIC's types: `INTEGER` (`%`), `LONG` (`&`), `SINGLE` (`!`), `DOUBLE` (`#`), `STRING` (`$`), fixed-length strings and records (`TYPE`), with `DIM ... AS` and `DEFINT` and the rest; and the tower's own exact numbers, the default.
 * Block statements: `IF` ... `ELSEIF` ... `ELSE` ... `END IF`, `SELECT CASE`, `DO` ... `LOOP`, `WHILE` ... `WEND`, `EXIT`.
 * `SUB` and `FUNCTION` with parameters and local variables, recursion.
 * Names of any length, keywords only as whole words (`SCORE` is a name, not `SC OR E`), keywords and names in either case.
@@ -62,10 +64,27 @@ END FUNCTION
 
 * **Numbers**: the shared ones ([NUMBERS.md](NUMBERS.md)): `10 / 4` is `5/2`, `0.1 + 0.2 = 0.3` is true, `2 ^ 100` is exact; written in any format (`&HFF`, `&O17` and `&B101` as QuickBASIC wrote them, and danlang's `#xFF`, `#b101`, `#c+-0`, `#16r1F` ...); shown and read in the current format (`NBASE "x"`); the math functions at `DIGITS` digits.  Truth is -1 and 0, as BASIC's.
 * **Strings**: `$` names (`name$`), of any length to 64K (Microsoft's stopped at 255), in a heap with a compacting collector.
-* **Names**: letters, digits, `_` and `.` (QuickBASIC's), any length, all significant; a keyword can't be a name.  A name without `$` holds a number; with `$`, a string (the other QuickBASIC suffixes a question below).
-* **Arrays**: `DIM a(10)`, `DIM grid(1 TO 8, 1 TO 8)`, `DIM names$(100)`; any number of dimensions; `REDIM`, `ERASE`, `LBOUND`, `UBOUND`; an array used before `DIM` has 0 to 10, as BASIC's always had.
+* **Names**: letters, digits, `_` and `.` (QuickBASIC's), any length, all significant; a keyword can't be a name.  A name's type is its suffix (`%`, `&`, `!`, `#`, `$`), else its `DIM ... AS`, else the `DEFtype` its first letter has; `x%` and `x!` are two variables, as in QuickBASIC.
+* **Arrays**: `DIM a(10)`, `DIM grid%(1 TO 8, 1 TO 8)`, `DIM names$(100)`, `DIM v(5) AS DOUBLE`; any number of dimensions; `REDIM`, `ERASE`, `LBOUND`, `UBOUND`; an array used before `DIM` has 0 to 10, as BASIC's always had.
 * **Constants**: `CONST pi2 = 2 * PI`.
-* **Records**, QuickBASIC's `TYPE` ... `END TYPE` (`DIM p AS point`, `p.x`): a question below.
+
+**Types**: all of QuickBASIC's, and the tower's exact numbers as the default:
+
+| Type | Suffix | Declared | Holds |
+| :--- | :----- | :------- | :---- |
+| `NUMBER` | none | `AS NUMBER`, `DEFNUM` | Any number of the tower, exact: the default, for a name with no suffix and no `DEF` |
+| `INTEGER` | `%` | `AS INTEGER`, `DEFINT` | An integer, -32,768 to 32,767 |
+| `LONG` | `&` | `AS LONG`, `DEFLNG` | An integer, -2,147,483,648 to 2,147,483,647 |
+| `SINGLE` | `!` | `AS SINGLE`, `DEFSNG` | A real number of 7 significant digits |
+| `DOUBLE` | `#` | `AS DOUBLE`, `DEFDBL` | A real number of 16 significant digits |
+| `STRING` | `$` | `AS STRING`, `DEFSTR` | A string of any length to 64K |
+| `STRING * n` | | `AS STRING * n` | A string of exactly n characters (padded with spaces, or cut, as it's stored) |
+| A record | | `TYPE point` ... `END TYPE`, then `AS point` | Fields of any of these types (`p.x`), records in records, arrays of records (`pts(i).x`) |
+
+* **Every number is stored in the compact format**, whatever its type ([NUMBERS.md](NUMBERS.md)): an `INTEGER`'s takes 1 to 3 bytes, a `SINGLE`'s and a `DOUBLE`'s are fixed decimals.  A type says what a variable may hold, not how it's kept.
+* **Arithmetic is the tower's**, exact, whatever the operands' types (`a% / b%` is a fraction).  A value takes a type as it's stored (in a variable, an array's element, a field, a parameter, a function's value): an `INTEGER` or `LONG` rounded to the nearest integer (a half to the even one, as QuickBASIC's), a `SINGLE` or `DOUBLE` rounded to its digits (a fraction becomes a decimal there); past its range, `Overflow`.  `\` (integer division) and `MOD` as QuickBASIC's; `CINT`, `CLNG`, `CSNG`, `CDBL` convert, and `CNUM` to the exact.
+* **`SINGLE` and `DOUBLE` in decimal**, QuickBASIC's precision without its binary: `0.1` is exactly 0.1, and `1/3` stored in a `SINGLE` is `0.3333333`.
+* **A suffix, and a number's text**: `x#` is a `DOUBLE`'s name, `#xFF` a number in base x, `#1` a file (after `PRINT`, `INPUT`, `OPEN ... AS` and the rest); `x&` a `LONG`'s name, `&HFF` a number.
 
 ### **Control**
 
@@ -85,10 +104,10 @@ A block is checked as the program is read: an `IF` without its `END IF`, a `NEXT
 
 ### **Procedures**
 
-* `SUB name (a, b$, c())` ... `END SUB`, called as `name 1, "x", list()` or `CALL name (1, "x", list())`.
+* `SUB name (a, b$, c(), d AS INTEGER, p AS point)` ... `END SUB`, called as `name 1, "x", list(), 5, pt` or `CALL name (1, "x", list(), 5, pt)`.
 * `FUNCTION name (a, b)` ... `END FUNCTION`: its value set by assigning to its name (`name = a * b`, QuickBASIC's), used in expressions (`y = name(2, 3)`); a `$` function gives a string.
 * **Local variables**: a procedure's names are its own; `SHARED x, y()` reaches the program's; `STATIC` keeps a procedure's between calls.  Recursion to the depth memory allows.
-* **Parameters** by reference, as QuickBASIC's (a variable passed is the procedure's to change; an expression or `(x)` passes a value), or by value (a question below).
+* **Parameters by reference**, as QuickBASIC's: a variable, an array's element, a field or a whole array passed (`swap a, b`, `sort list()`) is the procedure's to change; an expression, a constant or a variable in brackets (`(x)`) passes a copy.  A parameter's type is its suffix or its `AS`; a variable passed must be of that type (else `Parameter type mismatch`, as the program is read), a copy is converted to it.
 * The program's main part is the lines outside procedures.
 
 ### **Errors**
@@ -114,7 +133,12 @@ A block is checked as the program is read: an `IF` without its `END IF`, a `NEXT
 
 ### **At the prompt, and as a shell**
 
-* `basic` alone is a prompt: a statement typed runs at once (`PRINT 2 ^ 64`); `LOAD "f.bas"`, `RUN`, `EDIT` (the program in `edit`, read again when it ends), `SAVE "f.bas"`, `NEW`, `LIST [label]`, `CONT`.  A line typed with a number first goes into the program, as BASIC's always did (a question below).
+**The buffer**: at the prompt BASIC keeps a program in a buffer, as QuickBASIC's environment did.  `NEW` empties it; `LOAD "f.bas"` reads a file into it; `SAVE ["f.bas"]` writes it (with no name, to the file it came from); `RUN` runs it (read and checked first), `RUN "f.bas"` loads and runs one; `LIST [from-to]` shows it (lines, or from a label to a label); `CONT` goes on after `STOP` or Ctrl-C.  After a run, its variables and procedures are still there for what's typed at the prompt.
+
+**Two modes**:
+* **Immediate mode**, the prompt: a statement typed runs at once (`PRINT 2 ^ 64`, `x = 5`, `plot 1, 2` with the buffer's `SUB plot`).  A line typed with a number first goes into the buffer at its number, as BASIC's always did (`DELETE 100-200` takes lines out), so a program can still be typed line by line.
+* **Editing mode**: `EDIT [label]` enters it, the buffer in the system's screen editor (`edit`, nano's keys), at the label, or at the line of the last error; leaving the editor (`^X`) is leaving the mode, back at the prompt with the buffer as it was edited, read and checked again (its first error said with its line, for `EDIT` to go to).  Lines without numbers are written here.  (The buffer goes to `edit` as a file in the shell's `/ram`, and comes back from it.)
+
 * `basic prog.bas args`, and `#!/bin/basic`, run a file as a script.
 * `basic -l`, a shell, as now: a line is BASIC's when it starts with a keyword or an assignment, else rc's; `%` makes it rc's; `cd`, `bind`, `mount`, `unmount`, `newns` the shell's own; `&`; `/lib/basic/profile.bas`.
 
@@ -135,22 +159,26 @@ A block is checked as the program is read: an `IF` without its `END IF`, a `NEXT
 | Step | Work | Size |
 | :--- | :--- | :--- |
 | 1 | **The language**: this plan's questions answered, and the reference written first (`docs/using/basic.md`), every statement and function | M |
-| 2 | **Reading a program**: lines, labels, line numbers, tokens, names to slots, blocks linked and checked, errors with file and line | L |
-| 3 | **The core**: expressions, numbers (NUMBERS.md's libraries, steps 1-4 there first), strings and the heap, variables, arrays, `IF`, `FOR`, `DO`, `WHILE`, `SELECT`, `GOTO`, `GOSUB`, `PRINT`, `INPUT`, `DATA` | L |
-| 4 | **Procedures**: `SUB`, `FUNCTION`, locals, `SHARED`, `STATIC`, parameters, recursion, `EXIT` | M |
+| 2 | **Reading a program**: lines, labels, line numbers, tokens, names to slots by their types (suffixes, `AS`, `DEFtype`, `TYPE`), blocks linked and checked, errors with file and line | L |
+| 3 | **The core**: expressions, numbers (NUMBERS.md's libraries, steps 1-4 there first) and the types, strings and the heap, variables, arrays, records, `IF`, `FOR`, `DO`, `WHILE`, `SELECT`, `GOTO`, `GOSUB`, `PRINT`, `INPUT`, `DATA` | L |
+| 4 | **Procedures**: `SUB`, `FUNCTION`, locals, `SHARED`, `STATIC`, parameters by reference, recursion, `EXIT` | M |
 | 5 | **Errors, files, the console's screen**: `ON ERROR`, `RESUME`, `OPEN` and the rest, `PRINT USING`, `LOCATE`, `COLOR`, `INKEY$` | M |
-| 6 | **The Hydra**: sound, `SHELL`, `SYS`, memory, the prompt, scripts, `basic -l`, `EDIT` | M |
-| 7 | **Tests, `bench.bas`, documents**; today's BASIC retired (or kept, a question below) | M |
+| 6 | **The Hydra and the prompt**: sound, `SHELL`, `SYS`, memory; the buffer, immediate and editing modes; scripts, `basic -l` | M |
+| 7 | **Tests, `bench.bas`, documents**; today's BASIC retired (`modules/basic` replaced, its tests and documents with it) | M |
 
 Steps 1 and 2 can start at once, beside NUMBERS.md's first steps; step 3 needs its `numbers` and `math` libraries.
 
 ### **Questions**
 
-1. **The name and the old one**: `basic` (`/bin/basic`), and today's BASIC kept as `msbasic` for old programs, or retired?
-2. **Type suffixes**: `$` for strings and no other (a number is a number), or QuickBASIC's `%`, `&`, `!`, `#` accepted too (as an integer's, `%` making an assignment an integer by truncating, the rest the same as none)?  And `DIM x AS STRING` / `AS NUMBER`?
-3. **Parameters**: by reference (QuickBASIC's; `BYVAL` for a value), or by value (simpler, and as hylang's and C's are)?
-4. **Records**: QuickBASIC's `TYPE` ... `END TYPE` now, or later?
-5. **A function's value**: assigned to its name (QuickBASIC's), or `RETURN value` too?
-6. **Line numbers typed at the prompt**: kept (a number first adds the line to the program, as BASIC's always did), or a program only ever in a file, written in `edit`?
-7. **How `PRINT` shows a fraction**: as hylang does (`1/3`, exact), or as a decimal of `DIGITS` digits, the number exact inside (NUMBERS.md's question 2)?
-8. **Graphics**: QuickBASIC's `SCREEN`, `PSET`, `LINE`, `CIRCLE`, `PAINT` in this BASIC's first version, or with the languages' graphics words (VIDEO.md's step, next after PCM and text windows)?
+1. **A function's value**: assigned to its name (QuickBASIC's), or `RETURN value` too?
+2. **How `PRINT` shows a fraction** in a `NUMBER`: as hylang does (`1/3`, exact), or as a decimal of `DIGITS` digits, the number exact inside (NUMBERS.md's question 2)?
+3. **Graphics**: QuickBASIC's `SCREEN`, `PSET`, `LINE`, `CIRCLE`, `PAINT` in this BASIC's first version, or with the languages' graphics words (VIDEO.md's step, next after PCM and text windows)?
+4. **The default type**: a name with no suffix a `NUMBER`, exact (recommended: the system's numbers), or QuickBASIC's `SINGLE`?
+5. **`SINGLE` and `DOUBLE`**: 7 and 16 significant decimal digits (QuickBASIC's precision, near enough), or others?
+
+### **Answers** (the user's, 7 October 2026)
+
+1. **Today's BASIC is retired**: no `msbasic`; the new BASIC is `basic`.
+2. **All of QuickBASIC's types**: `%`, `&`, `!`, `#`, `$`, `AS`, `DEFINT` and the rest; fixed-length strings and records (`TYPE`) taken as QuickBASIC's types too.
+3. **Parameters by reference**.
+4. **The prompt keeps a buffer**, with a way into and out of an editing mode: immediate mode and editing mode (`EDIT`, the screen editor), above; numbered lines typed at the prompt still go into it.
