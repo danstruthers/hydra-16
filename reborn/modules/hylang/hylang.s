@@ -20,7 +20,7 @@
 .include "macros.inc"
 .include "hylang.inc"
 
-            HYX2_PROGRAM "hylang", main, 7
+            HYX2_PROGRAM "hylang", main, 8
 
 HL_DATA4        = 1             ; (The RAM code in DATA4: hylang.cfg)
 
@@ -51,6 +51,7 @@ HL_DATA4        = 1             ; (The RAM code in DATA4: hylang.cfg)
 .include "hysys.inc"
 .include "buffers.inc"
 .include "vm.inc"
+.include "vmx.inc"
 
 IBUF_SIZE       = 128           ; stdin read this much at a time
 
@@ -500,7 +501,7 @@ main:
             LDR         r0, notes
             jsr         NOTIFY
             stz         lib_text                            ; (The heap: a snapshot's, with its library; or made)
-            lda         hyx2_bank7                          ; (The snapshot: where rom.txt puts it, the bank after
+            lda         hyx2_bank8                          ; (The snapshot: where rom.txt puts it, the bank after
             inc         a                                   ;   hylang's last; else the module directory's hysnap)
             jsr         snap_restore
             bcc         @heap

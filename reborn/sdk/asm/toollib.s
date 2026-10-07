@@ -12,7 +12,7 @@
 ;               tl_nl; tl_dec tl_num (4 bytes: changed) in decimal, .A characters at least (spaces first).
 ;               Each keeps .X, .Y, r0 and r1
 ;   tl_flush    the output written.  A write that fails: "NAME: write error: why" on fd 2, and the tool ends
-;               ("write error"); one a note ended (a tool with a note handler: edit) drops what was left
+;               ("write error"); one a note ended (a tool with a note handler: ed) drops what was left
 ;   tl_err      error .A about the name at r0: "NAME: name: why" on fd 2 (the output written first); tl_code 1
 ;   tl_warn     the message at r0: "NAME: message" on fd 2 (the output written first); tl_code 1
 ;   tl_end      the output written, and EXITS with tl_code

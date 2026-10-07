@@ -1,0 +1,6 @@
+; ack: Ackermann's function, its calls nested deep: ack(2, 9), 230 calls 22 deep, k times, summed
+; (bench.hl loads this: its functions, then its run)
+(fun {b-ack m n} {if (zero? m) (+ n 1) (if (zero? n) (b-ack (- m 1) 1) (b-ack (- m 1) (b-ack m (- n 1))))})
+(fun {b-acks k} {do =(s 0) (dotimes {rep k} (set! s (+ s (b-ack 2 9)))) s})
+
+(bench "ack" (fn {} {b-acks (bench.size 8 2)}))

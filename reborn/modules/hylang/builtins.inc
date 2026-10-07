@@ -103,6 +103,7 @@ BIN_LOAD        = BI_N          ; (A script's: hylang file)
             BI          "index-of", 2, 2, B2, bl_index_of
             BI          "last-index-of", 2, 2, B2, bl_last_index_of
             BI          "substring", 2, 3, B2, bo_substring
+BIN_CHARAT      = BI_N          ; (char-at, char-code and the bits': vmx.inc's, BCALL's templates)
             BI          "char-at", 2, 2, B4, bi_char_at
             BI          "str-split", 1, 2, B4, bi_str_split
             BI          "str-upper", 1, 1, B4, bi_str_upper
@@ -115,6 +116,7 @@ BIN_LOAD        = BI_N          ; (A script's: hylang file)
             BI          "str-pad-right", 2, 3, B4, bi_str_pad_right
             BI          "str-repeat", 2, 2, B4, bi_str_repeat
             BI          "format", 1, ANY, B2, bo_format
+BIN_CHARCODE    = BI_N
             BI          "char-code", 1, 1, B4, bi_char_code
             BI          "code-char", 1, 1, B4, bi_code_char
             BI          "alpha?", 1, 1, B4, bi_alpha_p
@@ -217,11 +219,16 @@ BIN_TO_HASH     = BI_N
             BI          "ticks", 0, 0, B5, bi_ticks
             BI          "tick-rate", 0, 0, B5, bi_tick_rate
             BI          "sleep", 1, 1, B5, bi_sleep
+BIN_BITAND      = BI_N
             BI          "bit-and", 1, ANY, B3, bi_bit_and
+BIN_BITOR       = BI_N
             BI          "bit-or", 1, ANY, B3, bi_bit_or
+BIN_BITXOR      = BI_N
             BI          "bit-xor", 1, ANY, B3, bi_bit_xor
             BI          "bit-not", 1, 1, B3, bi_bit_not
+BIN_SHL         = BI_N
             BI          "shl", 2, 2, B3, bi_shl
+BIN_SHR         = BI_N
             BI          "shr", 2, 2, B3, bi_shr
             BI          "bit?", 2, 2, B3, bi_bit_p
             BI          "hex", 1, 2, B3, bi_hex
@@ -263,6 +270,7 @@ BIN_DEC         = BI_N
             BI          "drop", 2, 2, B2, bl_drop
             BI          "elem?", 2, 2, B2, bq_elem
             BI          "in?", 2, 2, B2, bq_in
+BIN_MAP         = BI_N          ; (map to product: forms.inc's walks, W_MAP on; the machine's for BCALL, vm.inc's)
             BI          "map", 2, 2, BF_MACHINE, bi_map
             BI          "filter", 2, 2, BF_MACHINE, bi_filter
             BI          "foldl", 3, 3, BF_MACHINE, bi_foldl

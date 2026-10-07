@@ -92,10 +92,18 @@ gotoxy:
             BACK_ZP
             rts
 
-; screensize: .X = the screen's width, .Y = its height
+; screensize: .X = the screen's width, .Y = its height.  (cc65's screensize () keeps its pointers in ptr1 and ptr2
+; across it: conio.c's C, which reads the environment, doesn't keep them)
 screensize:
+            KEEP_ZP
             jsr         __hy_consize                        ; (.A = width, .X = height)
-            stx         tmp1
-            tax
-            ldy         tmp1
+            sta         size_w
+            stx         size_h
+            BACK_ZP
+            ldx         size_w
+            ldy         size_h
             rts
+
+            .bss
+size_w:     .res        1
+size_h:     .res        1

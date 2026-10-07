@@ -89,22 +89,13 @@ The Hydra-16's ROM disk
 one), `/sram` the shared RAM disk, `/sd/0` the card in SD device 0, `/dev` the devices, `/proc` the tasks.  `cd`
 alone goes back to `/`.
 
-Make a file, and edit it with `edit`, the line editor (`a` adds lines till a line of just `.`; `p` prints, `w`
-writes, `q` quits):
+Make a file with `edit`, the screen editor: `edit /ram/todo`, then type its lines (Enter after each), Ctrl-O and
+Enter to save it, Ctrl-X to leave.  The two lines at the bottom name the other keys (`^K` cut, `^U` paste, `^W`
+find ...), and Ctrl-G shows them all ([using/tools.md](using/tools.md#the-screen-editor)).  `ed` is the line
+editor, ed's way.
 
 ```
 /> edit /ram/todo
-/ram/todo: new file
-*a
-buy a card
-fix the clock
-.
-*p
-   1 buy a card
-   2 fix the clock
-*w
-/ram/todo: 25 bytes
-*q
 /> cat /ram/todo
 buy a card
 fix the clock

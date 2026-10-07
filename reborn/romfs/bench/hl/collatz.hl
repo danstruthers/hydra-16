@@ -1,0 +1,6 @@
+; collatz: the steps to 1 of each n from 1 to m (halved if even, else 3n + 1), summed
+; (bench.hl loads this: its functions, then its run)
+(fun {b-cz x tot} {if (== x 1) tot (b-cz (if (zero? (bit-and x 1)) (shr x 1) (+ (* x 3) 1)) (+ tot 1))})
+(fun {b-collatz m} {do =(tot 0) (dotimes {k m} (set! tot (b-cz (+ k 1) tot))) tot})
+
+(bench "collatz" (fn {} {b-collatz (bench.size 60 30)}))

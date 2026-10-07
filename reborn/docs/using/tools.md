@@ -2,7 +2,7 @@
 
 The programs in `/bin`.  Most are modules in the paged ROM, which run in place (`/dev/mod/NAME`, bound into `/bin`
 by `#m/bin`); a few are files on the ROM disk, read into RAM to run (`/rom/bin`: `mkfs`, `fsck`, `label`, `grep`,
-`sort`, `db`, `scom`).  `/bin` is a union, so a program of your own in `/ram/bin`, `/sram/bin` or a card's `/bin` comes
+`sort`, `db`, `edit`, `scom`).  `/bin` is a union, so a program of your own in `/ram/bin`, `/sram/bin` or a card's `/bin` comes
 before the ROM's of the same name.
 
 They behave as Plan 9's do:
@@ -16,8 +16,8 @@ Every tool here runs the same way at rc's prompt and at HyForth's (whose shell g
 Forth word to rc).  At HyForth's prompt, a tool whose name is also a Forth word needs a `%` before it (`% free`
 when `memory.fl`'s `free` is loaded).
 
-Contents: [Files](#files) · [Text](#text) · [Tasks](#tasks) · [The debugger](#the-debugger) · [The system](#the-system) ·
-[Disks](#disks) · [Others](#others)
+Contents: [Files](#files) · [Text](#text) · [The screen editor](#the-screen-editor) · [Tasks](#tasks) ·
+[The debugger](#the-debugger) · [The system](#the-system) · [Disks](#disks) · [Others](#others)
 
 ## Files
 
@@ -58,7 +58,7 @@ Contents: [Files](#files) · [Text](#text) · [Tasks](#tasks) · [The debugger](
 | `tee [-a] [file ...]` | Fd 0 to fd 1 and to each file (`-a`: added to its end) |
 | `xd [file ...]` | Bytes in hex, 16 a line after their offset, then as text: `0000010  68 65 6c 6c 6f 0a    hello.` |
 | `more [file ...]` | A screen at a time (22 lines, then `--more--`): Enter for the next, `q` to stop.  Its keys come from the console even when fd 0 is the file |
-| `edit [file]` | The line editor, ed's way: `p`, `a`, `i`, `c`, `d`, `w [name]`, `q` (twice if the text's changed), `Q`, `h`, with line numbers (`1,5p`, `$`).  Lines are typed after `a`, `i` or `c` until a line of just `.`; Ctrl-C comes back to its `*` prompt |
+| `ed [file]` | The line editor, ed's way: `p`, `a`, `i`, `c`, `d`, `w [name]`, `q` (twice if the text's changed), `Q`, `h`, with line numbers (`1,5p`, `$`).  Lines are typed after `a`, `i` or `c` until a line of just `.`; Ctrl-C comes back to its `*` prompt |
 
 ```
 /> ls /rom/bin | sort -r | head -3
@@ -69,6 +69,32 @@ mkfs
 1:The Hydra-16's ROM disk
 5:machine.  It's a HydraFS volume, as a card's is, in the paged ROM's banks after
 ```
+
+## The screen editor
+
+`edit [file ...]` is the screen editor, nano's way: what you type goes in at the cursor, and the Ctrl keys and the
+Meta keys (Esc then a key, or Alt with it: `M-`) are commands.  The two lines at the bottom name the commonest, and
+`^G` shows them all.  Up to 6 files are open at once, each in a buffer of its own; their text is in your task's RAM
+banks, so a file can be as big as they are (a few hundred K: `kdev.s`'s 140K reads in some 6 seconds).  A file
+whose lines end CR LF is written with CR LF again.
+
+| Keys | What they do |
+| :--- | :----------- |
+| `^O`, `^S` | Save (`^O` asks for the name: Enter keeps it) |
+| `^X` | Close the file (if it's changed, saved or not: `y`, `n`); with the last closed, `edit` ends |
+| `^R`; `M-,` `M-.` | Open another file; go to the file before, or after |
+| `^W`; `M-W`, `M-Q` | Find (letters either case; round from the other end if need be); find again, find backwards |
+| `M-R` | Replace: each match shown, `y` yes, `n` no, `a` all the rest |
+| `M-G` | Go to a line (`$`: the last) |
+| `^K`, `M-6`, `^U` | Cut the line (`^K` again: the next joins it in the cut buffer), copy it, paste (into any file); with the mark set (`M-A`), the block from the mark to the cursor |
+| `M-U`, `M-E` | Undo, redo (a line typed, a cut, a paste: one step each) |
+| the arrows, Home, End, PgUp, PgDn | Move (and `^B` `^F` `^P` `^N`, `^A` `^E`, `^Y` `^V`); `M-\` and `M-/` the text's start and end |
+| Backspace; Del, `^D` | Rub out; delete |
+| `M-I`, `M-X`, `^L` | Auto-indent on and off; the help lines off and on; the screen drawn again |
+
+Ctrl-C does nothing in `edit` (it's the console's interrupt), and `^\` and `^]` never reach a program, so nano's keys
+there are Meta keys here.  The screen is the terminal's size (`$COLUMNS` and `$LINES`, else 80 by 24).  `ed` is
+the line editor (Text, above), for scripts and a terminal without a screen.
 
 ## Tasks
 

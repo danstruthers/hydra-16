@@ -9,7 +9,7 @@ the programmer's guide (calls, memory, tasks and notes, files and namespaces, se
 
 ## In short
 
-Phases 0, 1 and 3 (storage) are done, phase 2 is all but done, phase 4 (programs) is all but done: its loader, rc, the core tools, the assembly SDK, the C target and `edit`; and
+Phases 0, 1 and 3 (storage) are done, phase 2 is all but done, phase 4 (programs) is all but done: its loader, rc, the core tools, the assembly SDK, the C target and `ed`; and
 phase 5 (the remaining devices) is done: sound, the song player, GPIO and I2C, the clock, `/pc`, `xmodem`, and `/proc`'s files for a task's memory and state; phase 6 (HyForth) is done: `forth`, a Forth 2012 system (Core, Core Extension, Exception, Facility, File Access, Programming-Tools, Search-Order and String) that passes the Forth 2012 test suite's tests of them, with a `sys-` word for each system call a program makes (made from the specification), `SH`, `RUN`, banks and segments, Ctrl-C, libraries from `/lib/forth` and scripts (`forth file.fs`, `#!/bin/forth`); its ROM core is the Core word set, and the other word sets are pre-compiled libraries it loads into its dictionary (`/lib/forth/startup.fs` names those it starts with).  Phase 7 (hylang) has started again: the first hylang (7.1 to 7.4a, its library modules and its built-ins partially applied, to commit `a0973eb`) was deleted after a review of danlang and of it.  danlang, the reference, was fixed first (its 22 bugs, its quirks, one rule for each inconsistency, its shorthand made seven prefixes and `[...]`, callable hashes, text as bytes, one argument convention for its built-ins, and `reference.md`, its specification), and hylang is being written again from scratch to the plan the review led to (`docs/hylang.md`).  The kernel boots in the emulator, runs POST (with the old
 hardware test a key away), starts its modules from the paged ROM in tasks of their own, schedules them
 preemptively, runs calls between tasks and copies between them, takes every interrupt through one path, manages
@@ -35,7 +35,7 @@ background tasks, `$status`, globbing, `rc -c`), with the core tools beside it: 
 ...), and the disks' (`mkfs`, `fsck`, `label`: RAM programs on the ROM disk, at `/bin` too).  Programs are written in
 assembly (`sdk/asm`) or in C (`sdk/c`: cc65, with a library of the Hydra's own under the standard one: files,
 buffered stdio, the environment, `system`, `signal` over notes, conio on the console's raw mode); `grep` and
-`sort` are C programs.  `edit` is the old system's line editor, a program now.  The sound driver (`snd`, task C) serves the
+`sort` are C programs.  `ed` is the old system's line editor, a program now (`edit` till phase 9's screen editor took the name).  The sound driver (`snd`, task C) serves the
 YM2151 at `#a` (`/dev/snd`, `sndctl`, `bell`), with the old system's library (patches, notes, volumes, drums,
 claims); the console rings its bell; `play` plays songs (the X16's ZSM files, on the ROM disk at `/rom/songs`).  The VIA's port A is `/dev/gpio` (its
 pins, CA1 and CA2) and `/dev/i2c` (the I2C bus on two of its pins).  The clock is set from the DS1747 as the
@@ -50,7 +50,8 @@ chip itself), and the console's windows are shown on its screen as well as the s
 `screen`, `serial`, `both`).
 Phase 9 has begun with the debugger: `db` (`/rom/bin`, in C) starts a program stopped or stops a task, steps it an
 instruction at a time (the kernel's `TASKSTEP`, behind `/proc/N/ctl`), runs it to breakpoints, and shows its
-registers, code and memory with ld65's symbols.
+registers, code and memory with ld65's symbols; and `edit` is a screen editor, nano's way, its text in RAM banks
+(the old line editor is `ed` now).
 
 ```
 PASS boot    the kernel boots, POST finds nothing wrong; init runs hello and waits for it
@@ -77,7 +78,8 @@ PASS kmesg   the kernel's messages: KMESG (the boot's banner first, at offsets, 
 PASS rc      rc: quoting, lists, redirections, pipelines, if, for, while, switch, functions, globs, scripts, Ctrl-C, its start  (3 checks)
 PASS tools   the core tools at rc: files, text, tasks, the disks' (/rom/bin); /proc's args, cwd, ns  (3 checks)
 PASS c       the C target (cc65): its samples at rc, the library's test (ctest), conio's raw keys (an Escape alone too; and raw ended with the program)  (66 checks)
-PASS edit    edit, the line editor: a file made, printed, changed and written; its errors; q twice; Ctrl-C at its prompt; w name
+PASS ed      ed, the line editor: a file made, printed, changed and written; its errors; q twice; Ctrl-C at its prompt; w name  (3 checks)
+PASS edit    edit, the screen editor (/rom/bin/edit, its text in RAM banks): a file typed and saved; a line cut and pasted; o replaced with 0, all; a cut undone; a line copied into a second file; a CR LF file kept so; a 20K file (several blocks) cut, pasted and saved  (3 checks)
 PASS snd     sound (#a): snd, sndctl and bell; the volume, claims (one another program holds), the shadow, tones (C, snd.h)
 PASS play    the song player: its errors; a song timed (its key-ons against its stream), its channels claimed and given back; scom; jukebox
 PASS gpio    GPIO (#g) and I2C (#i): CA1's edges (its own line), pins, the port, ctl; the I2C bus, a memory written and read
@@ -114,7 +116,7 @@ PASS hyhydra hylang's Hydra built-ins and system calls (the plan's phases 9 and 
 PASS hydev   hylang's device libraries (the plan's phase 11: /lib/hylang's, loaded by use, over the devices' files), devices.hl as a script: gpio (pins, the port, ctl as a hash, CA1's edge), i2c (a memory written and read at a register, the devices, one that doesn't answer), spi (an echo device's transactions, mode 3), cons (the window, the windows, the bell), proc (a task's args, cwd, regs, memory, banks; its environment, its namespace), clock (the chip, the time set), disk (the disks, the cards: this one and one on SPI device 5; the ROM disk's room), pc (the PC tool answers; a file of its read), snd (note-of; a tune, its notes on the YM2151 in time; a channel's settings)
 PASS hysh    hylang as the shell (the plan's phase 12: hylang -l, login.hl, profile.hl, shell.hl): the rc test's lines that stand alone, each an rc line at hylang's prompt (rc -c), as at rc's; hylang's lines by their first character; cd and the prompt; $status and status; bind and unmount in hylang's namespace; a usage; & and $apid; Ctrl-C to cat, rc's; exit
 PASS hywin   hylang as a window's shell: a card's /lib/shell naming /bin/hylang -l, init's in window 0 and wstart's in a window made (Ctrl-] c: $window, cons.hl's window)
-PASS bench   hylang's and HyForth's benchmarks (romfs/bench: bench.hl, bench.fs; sim/bench.js times them against each other) at their quick sizes: each language's result of each the same (a counting loop, calls of a function of two arguments, Fibonacci, a sieve of bytes, an insertion sort of bytes, gcds by subtraction)
+PASS bench   hylang's and HyForth's benchmarks (romfs/bench: bench.hl and hl/NAME.hl, bench.fs; sim/bench.js times them against each other) at their quick sizes, all of hylang's in one hylang: each language's result of each the same (calls, fib, tak, ack; loop, while, dotimes, nested; gcd, collatz, hash; sieve, sort, matrix, queens; mapf, fold, each; chars, digits)
 PASS kcopy   spike S2: copying between tasks  (6 checks)
 PASS irq     spike S1: 115200 received by an irq entry while tasks spin  (6 checks)
 PASS vera    the emulator's Vera X (sim/lib/vera.js), the chip as a program sees it (no vid): the version register; ADDR0 and ADDR1, their steps, a data port's byte fetched ahead; the display's registers at the start; VSYNC (59.5 a second), LINE and SCANLINE (bit 8 too); sprites colliding; the PCM FIFO (empty, full, AFLOW and its interrupt's time); a PSG voice; the SPI port with no card; CTRL's reset  (45 checks)
@@ -125,7 +127,7 @@ PASS screen  the console on the Vera X's screen (cons's second terminal: vid's /
 
 The same with the power-up's RAM from other seeds; the console, file, namespace and device tests the same with a
 WDC W65C51N build, the console test with a 7.16 MHz build, and the SPI, disk, file system, init, load, env, rc,
-tools, C, edit, sound, player, GPIO, clock, `/pc` and `xmodem` tests with both.  The hardware test, entered from POST in the emulator, passes its whole quick run, its BIOS and
+tools, C, ed, sound, player, GPIO, clock, `/pc` and `xmodem` tests with both.  The hardware test, entered from POST in the emulator, passes its whole quick run, its BIOS and
 paged ROM checksums included.  In the danlang emulator (`sim/test.js --dl`) the VERA's tests are skipped (it has
 no VERA yet: they're `jsOnly`), and the rest pass, vid looking for its card and finding none.
 
@@ -281,7 +283,7 @@ through the COMMON block (`FARCALL`).
 | 4.3 Core tools | Done (`grep` and `sort` came with C, 4.5; `date` with the clock, 5.4; `hwtest` after the review of October 2026: the new `REBOOT` restarts the system, the VIA's and ACIA's interrupts quieted first, and with `REBOOT_HWTEST` leaves a word in the kernel task's RAM that POST takes as a T typed) | `sdk/asm/toollib.s` (with `toollib.inc` for its zero page), what the tools share, included as nslib is: flags (`-abc`) and arguments, the usage, output 256 bytes at a time with a failed write said (`write error` the status), errors as Plan 9's (`ls: name: why`), decimal numbers, dates, paths, a directory read whole past the break, a depth-first walk of a tree (`tl_walk`), and input a file (or fd 0) at a time.  The tools are modules, a bank each (ROM space is plentiful): files `ls` (`-l`, `-d`), `cat`, `cp` (`-r`; not onto itself), `mv` (a rename by `WSTAT` in its own directory, else copied and removed: a directory can't move to another, as in Plan 9), `rm` (`-r`, `-f`), `mkdir` (`-p`), `rmdir`, `touch` (`WSTAT`: a new stamp), `du` (`-a`), `df` (from `#d`'s ctl files); text `echo`, `wc`, `head`, `tail`, `tee` (`-a`), `uniq` (`-c`), `xd`, `cmp`, `more`; system `ps` (`-a`: the arguments), `kill` (`-i`: interrupted), `slay`, `top`, `sleep`, `ns`, `mods`, `free`.  The disk tools are RAM programs on the ROM disk, `/rom/bin` (from `programs/`; bound at `/bin` after the caches): `mkfs`, `fsck`, `label`, each a few ctl writes.  With them: `/proc/N/args`, `cwd` and `ns` (kdev's; `ns` is the binds and mounts that make the namespace, Plan 9's way, in the order they were made: a data file of kdev's own, as srvlib's text files stop at 255 bytes), from new calls: `TASKREAD` (a task's arguments or current directory: the kernel task reads its OS area with absolute indexed loads, a byte per IRQs-off moment) and `NSINFO` (a namespace's mount entries); and `SEGINFO` (the shared RAM, for `free`) and `DM_APPEND`.  The module directory holds 127 modules (31 before: `$A200`-`$A9FF` of bank 0 now).  Measuring and testing changed three things: kdev keeps its own copy of the module directory, read at init (looking a module up through the kernel each time made `SPAWN` and `ls /bin` grow with every module: `SPAWN` of `#m/t_child` 89,900 cycles to 45,000); SYSINFO held IRQs off over its whole 16-task loop (478 cycles: a look at a time now, found by `free`); and init past entry 15 of the directory started the wrong module (its entry's offset in 8 bits). |
 | 4.4 The assembly SDK | Done | `sdk/asm`: `hydra.inc` (made from the specification), `hyx2.inc` and `hyx2.cfg` (4.1), `macros.inc` (now with the plan's `CALL`, `CHECK` and `PRINT "text"`, which define no labels, so the code around them keeps its `:+` and `:-`), the libraries (`srvlib`, `nslib`, `toollib`), and now a guide, `README.md` (a program, its arguments, calls and errors, its memory, notes and environment; building it; running it), and samples, `samples/`: `hi` (its arguments, `GETPID`, `GETCWD`, `ENV_GET`), `upper` (a filter on toollib) and `tick` (a note handler), built with the system and put on the ROM disk at `/rom/sample`; and `counter`, a server, a driver that runs in place (on srvlib: `#k`, its count and ctl), built as a module for a test's ROM.  The tools test runs them all.  `node build.js prog DIR` builds a program of one's own from any folder; the build copies the SDK whole to `bin/sdk/asm`, with the generated `hydra.inc`, to build with ca65 and ld65 alone; and `sim/run.js --sd FILE` puts a card image in the emulator (made with `hydrafs.js`, read and written in place), so a program goes from the PC to the Hydra and runs |
 | 4.5 The C target and library | Done (`tones` came with sound, 5.1, and `jukebox` with `play`, 5.2) | `sdk/c`: cc65's own target `none`, with the Hydra's start-up, link and library (a `-t hydra` of its own would be a target in cc65's sources).  `hydra.cfg`: the header, code and data from `$0800`, the BSS, the heap, and a 2K C stack down from `$7F00`; cc65's runtime in the zero page from `$22` (26 bytes).  `lib/crt0.s`: the HYX2 header, with no name (the loader now names a task after its file when its header has none); `argc` and `argv` from the argument list (`argv[0]` the task's name); `exit` through the destructors and `atexit` to `EXITS`, with `hy_exits`' message.  The library, `obj/sdk/c/hydra.lib`: cc65's `none.lib` with `lib/`'s modules in place of cc65's: files (`open` with cc65's flags as the kernel's modes, `O_CREAT`, `O_EXCL`, `O_TRUNC`, `O_APPEND`; `read`, `write`, `lseek` (cc65's whence as `SEEK`'s), `close`, `remove`, `rename` (`WSTAT`), `mkdir`, `rmdir`, `chdir`, `getcwd`, `stat`, `fstat`, `isatty`, and `dirent.h` from stat records); stdio buffered (cc65's reads a byte a call): a buffer for each fd, 255 bytes (`malloc`), a console's line buffered and stdout's written out before a read, stderr's unbuffered, all written out at the end, `fgetc` in assembly (it runs for every byte, and cc65's `gets` keeps a pointer in the zero page across it); the environment over `ENV_*` (rc's variables; `getenv`, `putenv`, `setenv`, `unsetenv`), not `/env`'s files; `system` (`rc -c`: its value the command's code, which rc passes on as its message); `signal` over notes (a handler set by `NOTIFY` when `signal` is in the program: Ctrl-C is `SIGINT`, the handler run on a C stack of its own with the runtime's zero page kept); `time`, `clock` and `sleep` (`time` counts from the program's start, from 2000-01-01, till the clock, 5.4); conio over the console's raw mode and ANSI (`cgetc` reads its own fds on `/dev/cons`, raw till the program ends; the terminal's cursor and function keys as `CH_*`); `errno` from the error codes by a table the specification makes (`spec/errors.def` gives each code's errno: the 33 codes onto cc65's 18), `_oserror` the code itself, `_stroserror` the kernel's text (`ERRSTR`).  `hydra.h`: the Hydra's own (tasks and exit statuses, the namespace, the tick, banks, `hy_call` for any call by its `HY_` name), and `hydracalls.h` (made from the specification) every call, error and constant; the calls' C functions are written on `hy_call`, not generated one by one.  Samples, on the ROM disk at `/rom/sample/c`: `hello`, `upper`, `code` (exit statuses), `keys` (conio), and `ctest`, the library's test (60 checks); and in C in `/rom/bin`, `grep` (Plan 9's regexp less back references, run by a Thompson machine: no backtracking, no recursion) and `sort` (`-bfnru`, a bottom-up merge sort).  The C test runs them at rc.  `node build.js prog DIR` builds a C program from a folder with `.c` files; the build copies the C SDK to `bin/sdk/c` with a guide, `README.md`.  With it: a window's raw mode ends when its last `consctl` closes, as in Plan 9, so a program ended raw (Ctrl-C) leaves its window cooked for rc (srvlib's `SRV_CLUNKED`).  Sizes: `hello` 5.2K (`printf` and stdio), `grep` 13.1K, `sort` 11.5K |
-| 4.6 edit | Done | `modules/edit`: the old system's line editor (`os_rom/shell/edit.s`, ed's way: `p`, `a`, `i`, `c`, `d`, `w`, `q`, `Q`, `h`, with line numbers, `$` and ranges before or after the command), a module as the tools are, on toollib, so its text has the task's RAM from its break to the top (29.7K).  Its commands and lines come from fd 0: the console's lines, edited there (cooked: the old editor did its own backspace), or a file (`edit f <script`), the input's end quitting as `Q`.  Ctrl-C comes back to the prompt: a note handler notes it, and a read it ended or the printing loop goes back there (the stack as it was), as rc does; toollib now goes on past a write a note ended (only a tool with a handler sees one).  Files keep LF line ends (a file's CR LF and CR are LFs as it's read), and `w` writes the text with one `WRITE`; a file's errors are the kernel's texts (`? name: not found`).  Lines typed past a full text are each said and left out, to the `.` (the old editor went back to the prompt, taking the rest as commands).  The edit test types its sessions ahead (the console keeps the keys till a read takes them) |
+| 4.6 edit | Done | `modules/ed` (`modules/edit` till phase 9, when the screen editor took the name, and the line editor became `ed`): the old system's line editor (`os_rom/shell/edit.s`, ed's way: `p`, `a`, `i`, `c`, `d`, `w`, `q`, `Q`, `h`, with line numbers, `$` and ranges before or after the command), a module as the tools are, on toollib, so its text has the task's RAM from its break to the top (29.7K).  Its commands and lines come from fd 0: the console's lines, edited there (cooked: the old editor did its own backspace), or a file (`edit f <script`), the input's end quitting as `Q`.  Ctrl-C comes back to the prompt: a note handler notes it, and a read it ended or the printing loop goes back there (the stack as it was), as rc does; toollib now goes on past a write a note ended (only a tool with a handler sees one).  Files keep LF line ends (a file's CR LF and CR are LFs as it's read), and `w` writes the text with one `WRITE`; a file's errors are the kernel's texts (`? name: not found`).  Lines typed past a full text are each said and left out, to the `.` (the old editor went back to the prompt, taking the rest as commands).  The edit test types its sessions ahead (the console keeps the keys till a read takes them) |
 
 ## Phase 5: the remaining devices
 
@@ -618,6 +620,116 @@ What's left of the gap is the machine itself: an op's fetch and jump, its operan
 frame's words on the evaluation stack.  Native code, compiled to the 65C02's own instructions, is next, on a
 branch of its own.
 
+**Native code (branch `reborn-hynat`).**  hylang's eighth bank, `vmx.inc`, makes each function's bytecode the
+65C02's own code in the arena (docs/hylang.md, "Native code").  Milestone 1: each op a stub that points `vm_ip`
+at its data and jumps to its code in the machine, whose next op is `jmp (vm_ip)`: every op as it was, a little
+slower than the bytecode (a call 1,185 cycles, 1,146).  Milestone 2: the usual ops in line, from templates
+(`vmxt.inc`, made by `tools/hyvmxt.js`, 66 of them), each with its stub after it for its slow way: constants,
+arguments, locals and pushes; jumps; the fused ops (LQ, LQP, JLQ, JQ, LL, JLL); the quick ops of two values;
+`LOCALS`, blocks' and loops' ops; and the calls (`SHEAD`, `CALL` while their caches hold, `CSELF`, `TSELF`, `RET`
+to a caller in its bank).  Two faults on the way: a word's place in a template was `$0000`, which ca65 made page
+zero's (two bytes, its patch over the opcode: `a:$0000` now); and hyhydra's loop for Ctrl-C ended before the
+Ctrl-C came (30,000 steps now).  A tail loop's step 370 cycles (`hyspeed`, 632 in the bytecode), a call of a
+function of two arguments 918 (1,146); a step of `dotimes` 436 (877), of `each` 521 (900), of a `while` over two
+locals 359 (702).
+
+Milestone 3, the buffers: a buffer's byte, `(b i)`, read at once on `CALL`'s way past its cache (`op_callm`,
+where the `CALL` template's stub goes, the cache looked at already), not through the generic call; `buffer-put`
+of three the first thing `BCALL`'s code looks for; `HEAD` of one argument in line (a buffer, or a function
+partially applied, pushed); and a byte's place found in one routine (`vm_bat`: the cell's, the blob's, the
+byte's).  `(b-sort 60)` is 2.52M cycles, from 3.48M.  A fault found on the way, the evaluator's own: a buffer
+given two arguments made its error of a message in the wrong bank (`s_bufcall` was in `.rodata`; `RODATA4`, where
+`msg_err` reads, now).
+
+Milestone 4, the calls: `CALL` and `CSELF` push their frame's record in one store of four bytes (two pushes near
+a page's end: `vm_rec`) and take `vm_s` from the function's word they've found; and their returns go to a pad
+past their data, which finds the caller's frame from the call's h and r, its numbers in it, so `RET` only finds
+the caller's code, drops the frame and looks for an error (the caller's r says if it's returned too:
+`vm_reterr`).  The pad gives the frame again whichever way it's come to: the machine's `RET`, and the
+evaluator's resume (`HEAD`'s and `SHEAD`'s t are the pad now, `VXK_Q`, as a resume reads h and r before it).  A
+call of a function of two arguments is 803 cycles (`hyspeed`, from 918).  Two faults on the way: an op's native
+size is a byte, and `CALL`'s grew past it (329 bytes: its pushes near a page's end are `vm_rec`'s now, and its
+checks branch to a jump to its stub in the template's middle; `vmxt.inc` asserts each op's size); and the
+evaluator's resume at `HEAD`'s t, past the pad, found h and r in the pad's code (`any?`'s answer wrong).
+
+Milestone 5, the fused ops: those of a local or `ex` and a constant work from the value where it is (`bit #1`,
+the 65C02's, for a fixnum's bit, not `lsr` on a copy in `ht`), LQP pushes its value from `.A`, and LL's and
+JLL's read their second local where it is.  A tail loop's step is 328 cycles (`hyspeed`, from 363).  Milestone 6,
+the calls of a function by its own name: `CSELF` and `TSELF` no longer look at the frame's count (`vc_self` makes
+them only of as many arguments as the formals, so `vm_rb` is M), and `TSELF` copies 0 to 4 arguments in line (a
+template for each count, `vx_ttself`, `vx_tpl`'s choice).  A tail loop's step is 306 cycles.
+
+Milestone 7, multiplication and tail loops.  `*` of two fixnums whose product is one is worked at once (`vm_bmul`,
+`vm_fmul`: quarter squares, `vm_sqlo` and `vm_sqhi`, 1K in the machine's bank), as `BCALL`'s template (`bmul`)
+and first in `BCALL`'s code: a product of two numbers under 128 about 320 cycles, of bigger ones about 590 (2,900
+through the built-in).  A tail call of the function by its own name whose arguments call nothing (the compiler's
+`vc_shflag`: locals, constants, the quick and fused ops, `*`) has its `SHEAD` flagged (m's bit 7), and its head
+isn't pushed: nothing can bind the name again before `TSELF`, and the flagged `SHEAD`'s cache holds only this
+frame's function, so at its epoch it's an epoch's look (`shself`) and `TSELF` takes the arguments as they are
+(`tselfh`); the machine's way pushes the head and says so (`vm_shf`), and Ctrl-C or a note pushes it then
+(`vm_tsh`).  A tail loop's step is 251 cycles.  On the way, the arena's banks: a return to a caller in another
+bank of the arena went the machine's whole way (`op_ret`), which the calls benchmark came to as the templates
+grew (725 ms); `vm_retx` now (its bank, then `RET`'s way, in ROM).
+
+| Benchmark | Bytecode (ms) | M2 (ms) | M3 (ms) | M4 (ms) | M5 (ms) | M6 (ms) | M7 (ms) | HyForth (ms) | hylang/HyForth |
+|---|---|---|---|---|---|---|---|---|---|
+| loop | 925 | 550 | 545 | 545 | 490 | 460 | 395 | 76 | 5.2x |
+| calls | 1,005 | 640 | 640 | 575 | 555 | 540 | 540 | 65 | 8.3x |
+| fib | 980 | 655 | 655 | 550 | 530 | 515 | 520 | 181 | 2.9x |
+| sieve | 1,905 | 1,430 | 1,160 | 1,160 | 1,140 | 1,105 | 1,075 | 332 | 3.2x |
+| sort | 3,275 | 2,710 | 1,915 | 1,915 | 1,890 | 1,855 | 1,760 | 480 | 3.7x |
+| gcd | 960 | 600 | 600 | 570 | 540 | 520 | 485 | 350 | 1.4x |
+| all | 9,050 | 6,585 | 5,515 | 5,315 | 5,145 | 4,995 | 4,775 | 1,484 | 3.2x (geometric mean 3.6x, from 6.9x) |
+
+Milestone 8, the walks.  `map`, `filter`, `foldl`, `any?`, `all?`, `find`, `count`, `sum` and `product` called
+from compiled code (`BCALL`) walk their list in the machine (`vm_walk`), not the evaluator: their frame on the
+stack where their arguments were, the function called for each item the machine's way, its return the arena's
+trampoline (at its first bank's start: `jmp vm_wret`); a compiled function's frame made at once once its code's
+known (`WF_FC`), with its item in one store; `foldl`'s `+` and `*` of fixnums (`sum`'s, `product`'s) with no
+call.  A function the evaluator's walk would treat otherwise (a number, a buffer, an fexpr, a built-in of
+another count) and `foldr` stay the evaluator's; so do the walks of code that's evaluated (a line at the prompt).
+An item of `map` by a compiled function is about 1,470 cycles (2,820 by the evaluator), of `foldl` with `+` 665
+(1,810), of `any?` by a function made with `fn` 1,230 (2,465).  `each`'s `EACHI` is in line (`vm_eachn`): a step
+of `each` about 380 cycles (660).  A fault found on the way, milestone 7's: the flagged `SHEAD`'s look at m in
+`op_shead` read it with the heap's bank in the window, so some `SHEAD`s' caches were never filled, as the code's
+place happened to fall (the calls benchmark 725 ms or 540).
+
+What's left: the depth and Ctrl-C at each call, the global's head pushed for a call that isn't a tail loop's, a
+template's `jmp` past its stub; and the walks of evaluated code (an item of `map` at the prompt 2,951 cycles).
+
+**The benchmarks, twenty.**  hylang's and HyForth's benchmarks are twenty now, by kind: calls (`calls`, `fib`,
+`tak`, `ack`), loops (`loop`, `while`, `dotimes`, `nested`), arithmetic (`gcd`, `collatz`, `hash`), bytes (`sieve`, `sort`,
+`matrix`, `queens`), lists and functions given functions (`mapf`, `fold`, `each`), text (`chars`, `digits`).
+`bench.hl` loads each from its own file (`/rom/bench/hl`); `sim/bench.js` prints them by kind with each kind's
+geometric mean, runs each of hylang's in a hylang of its own, and can put another tree's build beside them (`--vs`:
+the bytecode machine's, for one).  docs/hylang.md, "Against HyForth", has the table: hylang is 3.6 times HyForth's
+time in all (the ratios' geometric mean 4.0), from 0.9 (`digits`) and 1.1 (`matrix`) to 15.8 (`nested`); the native
+code 1.6 times the bytecode's speed.  What they found: the bits' and the characters' built-ins aren't quick ops (some
+2,000 cycles a call: the loops that use them are 7 to 16 times HyForth's), and the arena holds the native code of
+40 or 50 functions, past which a function is evaluated (all twenty in one hylang: 0.8 times the bytecode's speed).
+
+**The arena's room.**  The native code was some ten times the bytecode's size: `RET` a template of 93 bytes (a
+function has two or three), and a stub 11.  `RET` is `jmp vm_nret` now, the machine's code in ROM, and a stub
+`jsr vm_sj` and its code's word (5 bytes): a third less.  A code's place is even (a `NOP` before a stub, when it
+wants one), so its fixnum has room for a bank's index of 3 bits, and the arena has eight banks (64K).  All twenty
+benchmarks fit in one hylang: `--together` 34,590 ms, against 110,185 when the arena filled by `sort`'s.  A
+script's items: the arena full and nothing under the script's `load` (no frame of the machine's), it's emptied
+before the next item, as a line at the prompt does; and `fun` counts its function's first call, so one it couldn't
+compile is compiled at its next call.  With an arena of one bank, a script of all twenty's files took 62 million
+cycles (58 with eight banks), against 204 when it stayed full.  On the way, a bug of the new layout's: a stub's
+data address past a filler lost a carry where it crossed a page (an edge case's `Too deep`).
+
+**The bits and the characters in native code.**  `BCALL` of `bit-and`, `bit-or`, `bit-xor`, `shl` or `shr` of
+two, `char-at` of two and `char-code` of one has a template of its own, as `*` of two has (`vx_tsel`'s table): it
+calls the machine's routine (`vm_band`, `vm_bor`, `vm_bxor`, `vm_bshl`, `vm_bshr`, `vm_bchat`, `vm_bccode`),
+which does it for fixnums (a string's byte, a character's code) and drops the arguments, else the built-in's call
+as before (an edge-case set, `bit-and` of a bignum to `char-at` past a string's end and `shl` out of a fixnum,
+the same as the bytecode machine's).  Some 2,000 cycles a call before; now `while` 3,050 ms to 725, `dotimes`
+3,075 to 750, `nested` 4,960 to 825, `collatz` 1,690 to 420, `hash` 3,025 to 715, `chars` 2,065 to 775, and
+`fold` and `each` (`bit-and` in their functions) 2,460 to 1,265 and 1,580 to 450.  The twenty: 17,655 ms (33,945
+before), 1.9 times HyForth's time (the ratios' geometric mean 2.3; 3.6 and 4.0 before), 2.8 times the bytecode's
+speed; all in one hylang 18,010.
+
 | Step | | Notes |
 |---|---|---|
 | 7.0 The language's specification | Draft (three decisions are the user's) | `docs/hylang.md`: hylang 1 is danlang (`C:\source\danlang`, its `master`), readied for the port in C# first (lexical scope, tail calls, fexprs, `try`, loops, the missing basics, its number bugs fixed, and a system library a PC has too: files, programs and the shell, the environment, the clock, bits and bytes, the system's errors as codes), with its regression suite (965 checks) run unchanged on both; where the two may differ (8-bit strings, the call depth, `/lib/hylang`, Ctrl-C an error); and what makes it the Hydra's, in four layers: the system library, the Hydra's built-ins (notes, namespaces, tasks, memory and banks, keys), device libraries in hylang over the devices' files (console, GPIO, I2C, SPI, sound, disks, `/proc`, the clock's chip, `/pc`), and a `sys-` function for every call.  To decide: the extension (`.hl`), `$`, danlang's license in the ROM |
@@ -648,6 +760,7 @@ built yet.  [programming/video.md](programming/video.md) is the programmer's cha
 | Step | | Notes |
 |---|---|---|
 | 9.1 The debugger | Done | October 2026, after the review's gaps.  The kernel's half (`kernel/debug.s`): `TASKSTEP`, a driver's call (kdev's, behind `/proc/N/ctl`'s `step`, `next`, `break` and `nobreak`), on page 4.  A step runs the stopped task's next instruction out of line, in its own OS zero page (`TK_STEPBUF`, 16 bytes at `$D6`), a `BRK` after it; the `BRK` comes through `IRQ_STRAY` to `K_TRAP` (page 0, as the task has `TF_TRAP`), which puts the task's PC where the instruction went (`TK_STEPNEXT`; a branch runs with 2 for its offset and two `BRK`s after it, the second taken: `TK_STEPTGT`), stops it and switches it out: some 85 cycles more in the `BRK`'s IRQs-off stretch, which stays under the tick's (the step test's longest is the tick's, 192).  `JMP (abs)` and `JMP (abs,X)` run as code that reads their target in the task's own view; `JMP`, `JSR`, `RTS` and `RTI` are done on its frame (moved down or up its stack page); a `JSR` into the BIOS ROM (the jump table), or any with `next`, runs whole, returning to the `BRK`.  No trace flag and no code patched in a ROM: a step is the instruction as the task would have run it, in its banks.  A task in the kernel (in a call, its PC at `$E000` or above, `W` not 0) can't be stepped (`E_BUSY`), nor a `BRK` or `STP` (`E_INVAL`).  With `break` (`TF_BREAKS`) any `BRK` stops the task, its PC back on it, not the note; breakpoints are the debugger's `BRK`s in RAM (through `mem`).  `SPAWN_STOPPED` starts a program stopped at its entry point (`TF_HOLD`: `K_TASK_MAIN` makes the frame).  The debugger, `db` (`programs/db`, C, 19K: a RAM program on the ROM disk): a program started stopped (in a note group of its own, so Ctrl-C reaches `db`, which stops it) or a task attached to; `r`, `s`, `n`, `c`, `u`, `b`, `x`, `d` (a 65C02 disassembler), `m`, `w`, `l` (ld65's label files: the build's `.lbl`), `q`.  The plan's `break ADDR` in `ctl` is the debugger's instead (its `BRK`s, and `break` to have them stop the task).  The step test (`t_step` stepping `t_steppee`, a RAM program from a card, through every kind: 65 checks) and the db test (a session at rc on the SDK's `hi`, its labels from `/pc`) |
+| 9.2 The screen editor | Done | October 2026, the user's choices: `edit`, nano's way (the line editor became `ed`), its text in RAM banks, with find and replace, cut, copy and paste, undo and redo, and several files.  `programs/edit` (C, 26K: a RAM program on the ROM disk, `/rom/bin/edit`): a file's text is a row of blocks, a bank each with a gap in it (`blocks.s`: the blocks' tables, the cursor and an iterator, the gap moved, bytes in and out, a block split when its gap's full or given back when it's empty, the find's scan, CR LF made LF as a file's read: in assembly, cc65's code for them being three times the size and many times slower), so a change costs the same anywhere in a file of up to 48 banks (384K) and a place in a block is 16 bits.  Each file's undo log is a bank of records (typing a line, a cut, a paste: one each; the oldest dropped as it fills; a change bigger than it can't be undone, and says so); the cut buffer is banks of its own, shared by the files; the files not shown keep their state in a bank, and the screen's copy (what each row shows, to write only what changed) is another.  The screen: a title line, the text's rows (the terminal's scrolling region: a scroll of a few lines is the terminal's own), a message line, two lines of keys; output in one write; typed-ahead keys acted on before the screen's drawn again.  Its keys are nano's, Ctrl-C, `^` and `^]` being the console's (nano's keys for those are Meta keys: Esc then the key).  `^G`'s text is `/lib/edit/help` (the ROM disk's).  Measured: `kdev.s` (140K, 4,311 lines) read in 20M cycles (half of them the RAM disk's reads).  Found on the way: the C SDK's `screensize` didn't keep cc65's pointers (conglue.s: fixed), and cc65's optimizer loses the index of `hy_bank (a[i])` (edit selects banks with a call of its own).  The edit test (a session at rc: a file typed, cut and pasted, replaced, a cut undone, a line copied into a second file, a CR LF file, a 20K file over several blocks) |
 
 ## Next
 

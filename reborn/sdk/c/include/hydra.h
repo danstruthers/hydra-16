@@ -89,7 +89,9 @@ int __fastcall__ hy_bind (const char* new, const char* old, unsigned char flags)
 int __fastcall__ hy_mount (char dev, const char* spec, const char* old, unsigned char flags);  /* '#dev' and spec */
 int __fastcall__ hy_unmount (const char* new, const char* old);     /* old's member new (NULL: all of old's) */
 
-/* ---- RAM banks: the task's own, 8K each, at HY_BANK_WINDOW ($8000-$9FFF) when selected (hy_bank) */
+/* ---- RAM banks: the task's own, 8K each, at HY_BANK_WINDOW ($8000-$9FFF) when selected (hy_bank).  (cc65 2.19's
+** optimizer has been seen to drop the index of hy_bank (a[i]), selecting the wrong bank: edit selects its banks with
+** a function of its own, programs/edit/blocks.s's setbank) */
 
 #define HY_BANK_WINDOW      ((unsigned char*) 0x8000)
 #define hy_bank(b)          (*(volatile unsigned char*) 0 = (b))    /* (Its bank register, $00) */

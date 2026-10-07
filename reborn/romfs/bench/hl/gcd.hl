@@ -1,0 +1,8 @@
+; gcd: the sum of gcd(i, j) for i and j 1 to m, each by subtraction
+; (bench.hl loads this: its functions, then its run)
+(fun {b-gcd a b} {if (== a b) a (if (> a b) (b-gcd (- a b) b) (b-gcd a (- b a)))})
+(fun {b-gcds m} {b-gcds-i m 1 0})
+(fun {b-gcds-i m i acc} {if (> i m) acc (b-gcds-i m (+ i 1) (b-gcds-j m i 1 acc))})
+(fun {b-gcds-j m i j acc} {if (> j m) acc (b-gcds-j m i (+ j 1) (+ acc (b-gcd i j)))})
+
+(bench "gcd" (fn {} {b-gcds (bench.size 20 10)}))

@@ -4,11 +4,13 @@
 ; they're pushed, in the evaluation stack, not bound in a scope on the heap.  The evaluator's own way is the rest:
 ; what the compiler doesn't do (most special forms, an fexpr's call) is handed to it, and it calls the functions
 ; that aren't compiled; a value comes back through a K_VM frame.
-;   A function's code is in the arena, RAM banks of its own (up to four), never moved; its place is the function's
-; word 4 (a fixnum: the bank's index, bits 14-13, and the address in the window, bits 12-0), till something the
-; code counts on changes (a built-in's name bound again: vm_rebind), when every function's is dropped (vm_flush)
-; and each is compiled again at its next call.  A full arena compiles nothing more till the evaluator's next start
-; (ev_run: vm_reset).  Its word 5 counts its calls till it's compiled; FN_NOVM (word 3) says it can't be.
+;   A function's code is in the arena, RAM banks of its own (up to eight), never moved; its place is the function's
+; word 4 (a fixnum: the bank's index, bits 15-13, and the address in the window, bits 12-1: a code's place is even),
+; till something the code counts on changes (a built-in's name bound again: vm_rebind), when every function's is
+; dropped (vm_flush) and each is compiled again at its next call.  A full arena compiles nothing more till the
+; evaluator's next start (ev_run: vm_reset), or a script's next item (k_load's, nothing under its load).  Its word 5
+; counts its calls till it's compiled (fun's counts one: compiled at its next if not now); FN_NOVM (word 3) says it
+; can't be.
 ;   The machine: ex its value register (an accumulator), vm_ip its next op, vm_s its frame: the function's word,
 ; its arguments (as many as its formals, 15 at most), then its record (vm_rb from vm_s): the return (a fixnum, its
 ; caller's code past the call; NIL: the evaluator's, which called it) and its scope (NIL till one's made: vm_scope),
@@ -67,6 +69,8 @@ VO_EQC          = $44
 VO_LPUSH        = $46           ; y: LOCAL y, PUSH
 VO_CPUSH        = $48           ; v: CONST v, PUSH
 VO_SHEAD        = $4A           ; m c t sym ep v: HEAD of sym's global value; v, its value at epoch ep (vm_ep: its
+                                ;   (m's bit 7: a tail call of the function by its own name whose arguments call
+                                ;   nothing, vc_shflag's: its cache only this frame's function; vm_shf)
                                 ;   cache), pushed at once
 VO_CSELF        = $4C           ; m code ret h r: CALL of this frame's function (else CALL's way), its code at code
 VO_TSELF        = $4E           ; m code 0: TCALL, the same
@@ -140,7 +144,7 @@ vm_m:       .res        1                                   ; (A call's argument
 vm_l:       .res        1
 vm_k:       .res        1
 vm_tl:      .res        1
-ar_bank:    .res        4                                   ; The arena's banks (taken as they're wanted) ...
+ar_bank:    .res        8                                   ; The arena's banks (taken as they're wanted) ...
 ar_n:       .res        1                                   ;   how many ...
 ar_cur:     .res        1                                   ;   the one being filled ...
 ar_top:     .res        2                                   ;   its next byte ...
@@ -157,10 +161,26 @@ vm_bc:      .res        1
 vm_ep:      .res        2                                   ; The globals' epoch: one more each time one's bound again
                                                             ;   (or a name's first bound in a frame): SHEAD's cache
 vm_shc:     .res        1                                   ; ($80: SHEAD's cache filled as its value's pushed)
+vm_sb:      .res        1                                   ; The compiler's scratch banks: its bytecode, the translator's
+vm_mb:      .res        1                                   ;   map (vmx.inc; 0: not taken yet)
 vm_r:       .res        2                                   ; A call's return (its place, compiled: CALL's, CSELF's)
 vm_ccf:     .res        1                                   ; ($80: CALL's cache filled as its function's code is run ...
 vm_cb:      .res        1                                   ;   from its code's bank)
 vm_qs:      .res        1                                   ; (A fused op's quick op)
+vm_sjv:     .res        2                                   ; (vm_sj's: a stub's op's code)
+vm_wop:     .res        1                                   ; (A walk's: its W_ ...
+vm_wf:      .res        2                                   ;   its function, its items, its value so far, an item)
+vm_wl:      .res        2
+vm_wa:      .res        2
+vm_wi:      .res        2
+vm_wc:      .res        2
+vm_shf:     .res        1                                   ; ($80: a flagged SHEAD's head pushed, the machine's way;
+                                                            ;   0: not, native code's shself: tselfh's)
+vm_msg:     .res        1                                   ; (vm_fmul's: the product's sign ...
+vm_m0:      .res        2                                   ;   the multiplicand ...
+vm_mm:      .res        1                                   ;   the multiplier (under 256) ...
+vm_p0:      .res        2                                   ;   the product ...
+vm_q:       .res        2                                   ;   vm_mul8's)
 
 ; The compiler's: in the reader's scratch, past its number registers (hysys.inc's room: idle as a function's compiled)
 vc_ws           = sy_area
@@ -252,7 +272,9 @@ L_st            = vc_qc + 2                                 ; Each level: <> 0, 
                                                             ;   (its do's, in order, errors returned) ...
 vc_cst          = L_st + VC_LV                              ;   (vc_child's: L_st)
 vc_da           = vc_cst + 1                                ; The locals set by such a statement so far (a bit each)
-vc_wend         = vc_da + 2
+L_shl           = vc_da + 2                                 ; Each level: its SHEAD's place (vc_shflag's)
+L_shh           = L_shl + VC_LV
+vc_wend         = L_shh + VC_LV
 .assert     vc_wend <= sy_end, error, "vm.inc: the compiler's room runs past the reader's scratch"
 
 .segment "DATA4"                                            ; (In the task's RAM: every bank's)
@@ -306,6 +328,7 @@ vm_epnext:
 ; The machine made, no code yet: as hylang starts (a snapshot's functions may have code from its build, not here)
 vm_init:
             stz         vm_on
+            stz         vm_sb
             stz         ar_n
             lda         #$FF                                ; (No code's bank yet)
             sta         vm_idx
@@ -409,21 +432,17 @@ vm_flush:
             jsr         vm_page
 .endmacro
 
-; IN: .A, .X = a code's place (a fixnum: vm_encode's).  vm_ip, vm_bank, vm_idx = it
+; IN: .A, .X = a code's place (a fixnum: vm_encode's: its index in the arena times 32, the bits 12-1 of its
+; address, which is even, and bit 0 set).  vm_ip, vm_bank, vm_idx = it
 vm_decode:
-            sta         vm_t
-            txa
-            lsr
-            tax                                             ; (Its index, times 32, and the address's bits 12-8)
-            lda         vm_t
-            ror
+            and         #$FE
             sta         vm_ip
             txa
             and         #$1F
             ora         #$80
             sta         vm_ip + 1
             txa
-            and         #$60
+            and         #$E0
             cmp         vm_idx                              ; (Its bank: the same, as a rule)
             bne         vm_newidx
             rts
@@ -441,15 +460,13 @@ vm_newidx:
             sta         vm_bank
             rts
 
-; IN: .A, .X = an address in the window, in the arena's bank vm_idx.  OUT: .A, .X = its place (a fixnum)
+; IN: .A, .X = an even address in the window, in the arena's bank vm_idx.  OUT: .A, .X = its place (a fixnum)
 vm_encode:
-            asl
             ora         #1
             pha
             txa
             and         #$1F
             ora         vm_idx
-            rol
             tax
             pla
             rts
@@ -480,9 +497,7 @@ vm_adv1:
 vm_next:
             lda         vm_bank
             sta         $00
-            lda         (vm_ip)
-            tax
-            jmp         (vm_ops,x)
+            jmp         (vm_ip)
 
 ; The next op, the code's bank in the window still (an op that didn't leave it): ip past this one first (vm_nN: N
 ; bytes; vm_na: .A bytes)
@@ -538,9 +553,7 @@ vm_n1:
             bne         vm_nextf
             inc         vm_ip + 1
 vm_nextf:
-            lda         (vm_ip)
-            tax
-            jmp         (vm_ops,x)
+            jmp         (vm_ip)
 
 ; ip = the address at ip + .Y (an op's target)
 vm_jumpy:
@@ -600,6 +613,905 @@ vm_rbyte:
             sbc         #0
             sta         ht + 1
             lda         (ht)
+            rts
+
+; ---- The walks: map, filter, foldl, any?, all?, find, count, sum and product (forms.inc's, W_*), here for BCALL
+
+; The walk's frame, on the stack where the BCALL's arguments were: its words' places
+WF_F            = 0             ; The function (sum's and product's: + and *, as foldl's)
+WF_ITEMS        = 2             ; The items left (conses)
+WF_ACC          = 4             ; The value so far (map's and filter's list: its first cons)
+WF_LAST         = 6             ;   (map's and filter's: its last cons)
+WF_ITEM         = 8             ; The item given
+WF_OP           = 10            ; The walk (W_*, a fixnum)
+WF_CODE         = 12            ; The code past the BCALL (its place)
+WF_RB           = 14            ; Its frame's vm_rb (bit 0 set: a fixnum's), vm_mat (a tail BCALL's r is 0)
+WF_FC           = 16            ; The function's code's place, as it's known (0: not yet; 1: none, vm_call's way)
+WF_S            = 18            ; Its frame's vm_s: bytes under the walk's (bit 0 set), as a spill moves both
+WF_SIZE         = 20
+VM_WRET         = 3             ; The arena's trampoline's place (vmx.inc's: at its first bank's start, after h 0
+                                ;   and r 2, jmp vm_wret), each call's return
+
+; BCALL of a walk (.X its built-in, vm_m its arguments on top, vm_ip past it): its frame made of them (a list that
+; isn't a Q-expression's: the evaluator's way, its error), then its items
+vm_walk:
+            txa
+            sec
+            sbc         #BIN_MAP
+            sta         vm_wop
+            lda         vm_m                                ; (ht: the arguments)
+            asl
+            sta         vm_k
+            lda         sp
+            sec
+            sbc         vm_k
+            sta         ht
+            lda         sp + 1
+            sbc         #0
+            sta         ht + 1
+            ldy         vm_k                                ; (Its list: the last)
+            dey
+            lda         (ht),y
+            tax
+            dey
+            lda         (ht),y
+            jsr         q_conses
+            bcc         :+
+            ldx         bi_n
+            jmp         vm_bout
+:
+            sta         vm_wl
+            stx         vm_wl + 1
+            stz         vm_wa                               ; (The value so far: none)
+            stz         vm_wa + 1
+            lda         vm_wop
+            cmp         #W_SUM
+            bcc         @fn
+            ldx         #<FIX(0)                            ; (sum: + from 0; product: * from 1, foldl's)
+            ldy         #<(BUILTIN0 + 2 * BIN_ADD)
+            cmp         #W_SUM
+            beq         :+
+            ldx         #<FIX(1)
+            ldy         #<(BUILTIN0 + 2 * BIN_MUL)
+:
+            stx         vm_wa
+            sty         vm_wf
+            lda         #>(BUILTIN0 + 2 * BIN_ADD)
+            sta         vm_wf + 1
+            lda         #W_FOLDL
+            sta         vm_wop
+            bra         @frame
+@fn:
+            lda         (ht)                                ; (Its function)
+            sta         vm_wf
+            ldy         #1
+            lda         (ht),y
+            sta         vm_wf + 1
+            ldx         vm_wop
+            cpx         #W_COUNT
+            bne         :+
+            lda         #<FIX(0)
+            sta         vm_wa
+            bra         @frame
+:
+            cpx         #W_FOLDL
+            bne         @frame
+            iny                                             ; (foldl's: from its value)
+            lda         (ht),y
+            sta         vm_wa
+            iny
+            lda         (ht),y
+            sta         vm_wa + 1
+@frame:
+            jsr         vm_wfok                             ; (A function the machine calls as the evaluator would)
+            bcc         :+
+            ldx         bi_n
+            jmp         vm_bout
+:
+            lda         ht                                  ; (Its frame's vm_s, under the walk's)
+            sec
+            sbc         vm_s
+            ora         #1
+            sta         vm_wc
+            lda         ht + 1
+            sbc         vm_s + 1
+            sta         vm_wc + 1
+            lda         ht                                  ; (The arguments dropped, the frame pushed)
+            sta         sp
+            ldx         ht + 1
+            stx         sp + 1
+            cpx         stk_basep
+            bne         :+
+            lda         spilled
+            beq         :+
+            jsr         unspill
+:
+            lda         vm_wf
+            ldx         vm_wf + 1
+            VPUSH
+            lda         vm_wl
+            ldx         vm_wl + 1
+            VPUSH
+            lda         vm_wa
+            ldx         vm_wa + 1
+            VPUSH
+            lda         #0
+            tax
+            VPUSH
+            VPUSH
+            lda         vm_wop
+            asl
+            ora         #1
+            ldx         #0
+            VPUSH
+            lda         vm_ip
+            ldx         vm_ip + 1
+            jsr         vm_encode
+            VPUSH
+            lda         vm_rb
+            ora         #1
+            ldx         vm_mat
+            VPUSH
+            lda         #0
+            tax
+            VPUSH
+            lda         vm_wc
+            ldx         vm_wc + 1
+            VPUSH
+; The walk's frame on top: its next item given to its function (its return the trampoline's, vm_wret), or none
+; left.  foldl's + and * of fixnums here; a compiled function's frame made at once (its code's place known: WF_FC);
+; else the machine's call (vm_call)
+vm_wnext:
+            jsr         vm_wat
+            ldy         #WF_ITEMS + 1
+            lda         (ht),y
+            tax
+            dey
+            lda         (ht),y
+            bne         :+
+            cpx         #0
+            bne         :+
+            jmp         vm_wend
+:
+            jsr         deref                               ; (The item; the items after it)
+            ldy         #3
+            lda         (hp),y
+            pha
+            dey
+            lda         (hp),y
+            pha
+            dey
+            lda         (hp),y
+            sta         vm_wi + 1
+            lda         (hp)
+            sta         vm_wi
+            ldy         #WF_ITEMS
+            pla
+            sta         (ht),y
+            iny
+            pla
+            sta         (ht),y
+            ldy         #WF_ITEM
+            lda         vm_wi
+            sta         (ht),y
+            iny
+            lda         vm_wi + 1
+            sta         (ht),y
+            ldy         #WF_F                               ; (Its function, the value so far, its code, as the
+            lda         (ht),y                              ;   pushes may move the stack)
+            sta         vm_wf
+            iny
+            lda         (ht),y
+            sta         vm_wf + 1
+            ldy         #WF_ACC
+            lda         (ht),y
+            sta         vm_wa
+            iny
+            lda         (ht),y
+            sta         vm_wa + 1
+            ldy         #WF_FC
+            lda         (ht),y
+            sta         vm_wc
+            iny
+            lda         (ht),y
+            sta         vm_wc + 1
+            ldy         #WF_OP
+            lda         (ht),y
+            lsr
+            sta         vm_wop
+            cmp         #W_FOLDL
+            beq         :+
+            jmp         @one
+:
+            lda         vm_wf + 1                           ; (foldl's + or * of two fixnums: here)
+            cmp         #>(BUILTIN0 + 2 * BIN_ADD)
+            bne         @two
+            lda         vm_wf
+            cmp         #<(BUILTIN0 + 2 * BIN_ADD)
+            beq         @add
+            cmp         #<(BUILTIN0 + 2 * BIN_MUL)
+            bne         @two
+            MOVW        vm_a, vm_wa
+            MOVW        vm_b, vm_wi
+            jsr         vm_fmul
+            bcs         @two
+            bra         @acc
+@add:
+            lda         vm_wa
+            and         vm_wi
+            lsr
+            bcc         @two
+            lda         vm_wi
+            and         #$FE
+            clc
+            adc         vm_wa
+            sta         ex
+            lda         vm_wi + 1
+            adc         vm_wa + 1
+            bvs         @two
+            sta         ex + 1
+@acc:
+            ldy         #WF_ACC
+            lda         ex
+            sta         (ht),y
+            iny
+            lda         ex + 1
+            sta         (ht),y
+            jmp         vm_wnext
+@two:
+            jsr         vm_wframe
+            lda         vm_wf                               ; (foldl's: the function, the value so far, the item)
+            ldx         vm_wf + 1
+            VPUSH
+            lda         vm_wa
+            ldx         vm_wa + 1
+            VPUSH
+            lda         vm_wi
+            ldx         vm_wi + 1
+            VPUSH
+            lda         #2
+            jmp         @call
+@one:
+            lda         vm_wc                               ; (Its code known, no Ctrl-C nor a note, not too deep, the
+            beq         @one2                               ;   stack's page room for 8 bytes: the function, the item
+            cmp         #1                                  ;   and its frame's record in one store)
+            bne         :+
+            lda         vm_wc + 1
+            beq         @one2
+:
+            bit         intr
+            bmi         @one2
+            bvs         @one2
+            lda         depth + 1
+            cmp         #>MAX_DEPTH
+            bcc         :+
+            bne         @one2
+            lda         depth
+            cmp         #<MAX_DEPTH
+            bcs         @one2
+:
+            lda         sp
+            cmp         #$F8
+            bcs         @one2
+            lda         vm_wf
+            sta         (sp)
+            ldy         #1
+            lda         vm_wf + 1
+            sta         (sp),y
+            iny
+            lda         vm_wi
+            sta         (sp),y
+            iny
+            lda         vm_wi + 1
+            sta         (sp),y
+            iny
+            lda         #<VM_WRET
+            sta         (sp),y
+            iny
+            lda         #>VM_WRET
+            sta         (sp),y
+            iny
+            lda         #0
+            sta         (sp),y
+            iny
+            sta         (sp),y
+            lda         sp
+            sta         vm_s
+            clc
+            adc         #8
+            sta         sp
+            lda         sp + 1
+            sta         vm_s + 1
+            lda         #4
+            sta         vm_rb
+            stz         vm_mat
+            inc         depth
+            bne         :+
+            inc         depth + 1
+:
+            lda         vm_wc
+            ldx         vm_wc + 1
+            jsr         vm_decode
+            jmp         vm_next
+@one2:
+            jsr         vm_wframe
+            lda         vm_wf
+            ldx         vm_wf + 1
+            VPUSH
+            lda         vm_wi
+            ldx         vm_wi + 1
+            VPUSH
+            lda         #1
+@call:
+            sta         vm_m
+            lda         vm_wc                               ; (Its code's place: not known yet, learnt; 0, not compiled
+            bne         :+                                  ;   yet, and 1, none: vm_call's way)
+            jsr         vm_wlearn
+            lda         vm_wc
+            beq         @gen
+:
+            cmp         #1
+            bne         @fast
+            lda         vm_wc + 1
+            beq         @gen
+@fast:
+            bit         intr                                ; (Ctrl-C, a note, too deep: vm_call's way)
+            bmi         @gen
+            bvs         @gen
+            lda         depth + 1
+            cmp         #>MAX_DEPTH
+            bcc         :+
+            bne         @gen
+            lda         depth
+            cmp         #<MAX_DEPTH
+            bcs         @gen
+:
+            lda         #<VM_WRET
+            sta         vm_t
+            lda         #>VM_WRET
+            sta         vm_t + 1
+            jsr         vm_frame0
+            lda         vm_wc
+            ldx         vm_wc + 1
+            jsr         vm_decode
+            jmp         vm_next
+@gen:
+            stz         vm_tl
+            stz         vm_ccf
+            lda         #<VM_WRET                           ; (Its return: the trampoline, in the arena's first bank)
+            sta         vm_r
+            lda         #>VM_WRET
+            sta         vm_r + 1
+            lda         #2
+            sta         vm_ip
+            lda         #$80
+            sta         vm_ip + 1
+            stz         vm_idx
+            lda         ar_bank
+            sta         vm_bank
+            jmp         vm_call
+
+; The walk's function's code's place, vm_wc, learnt (and kept in its frame, WF_FC, under the function and its vm_m
+; arguments on top): a function's cell, compiled, of as many formals, not an fexpr nor one that takes extras; 1 if
+; it isn't one (vm_call's way each time); 0 if it isn't compiled yet (vm_call's way, which may compile it)
+vm_wlearn:
+            lda         #1
+            sta         vm_wc
+            stz         vm_wc + 1
+            lda         vm_wf
+            lsr
+            bcs         @keep
+            ldx         vm_wf + 1
+            cpx         #IMM_PAGES
+            bcc         @keep
+            lda         pk,x
+            cmp         #PK_FUNC
+            bne         @keep
+            lda         vm_wf
+            ldy         #3
+            jsr         cell_get                            ; (Its flags, its formals)
+            and         #FN_FEXPR | FN_EXTRAS | FN_NOVM
+            bne         @keep
+            cpx         vm_m
+            bne         @keep
+            lda         vm_wf
+            ldx         vm_wf + 1
+            ldy         #4
+            jsr         cell_get                            ; (Its code)
+            sta         vm_wc
+            stx         vm_wc + 1
+            ora         vm_wc + 1
+            bne         @keep
+            rts                                             ; (Not yet: 0, not kept)
+@keep:
+            lda         vm_m                                ; (Its frame: under the function and its arguments)
+            asl
+            clc
+            adc         #2 + WF_SIZE
+            sta         vm_k
+            lda         sp
+            sec
+            sbc         vm_k
+            sta         ht
+            lda         sp + 1
+            sbc         #0
+            sta         ht + 1
+            ldy         #WF_FC
+            lda         vm_wc
+            sta         (ht),y
+            iny
+            lda         vm_wc + 1
+            sta         (ht),y
+            rts
+
+; The function's value, ex, for the walk on top (the trampoline's, its call returned): an error, the walk's value
+vm_wret:
+            jsr         vm_iserr
+            bcc         :+
+            jmp         vm_wdone
+:
+            ldy         #0                                  ; (vm_k = 1 if it isn't NIL)
+            lda         ex
+            ora         ex + 1
+            beq         :+
+            iny
+:
+            sty         vm_k
+            jsr         vm_wat
+            ldy         #WF_OP
+            lda         (ht),y
+            lsr
+            cmp         #W_FOLDL
+            bcs         @fold
+            cmp         #W_FILTER
+            bne         @add                                ; (map's: the value put in its list)
+            lda         vm_k                                ; (filter's: the item, if the value isn't NIL)
+            bne         :+
+            jmp         vm_wnext
+:
+            ldy         #WF_ITEM
+            lda         (ht),y
+            sta         ex
+            iny
+            lda         (ht),y
+            sta         ex + 1
+@add:
+            MOVW        et, ex                              ; (In a cons, at the list's end)
+            stz         eu
+            stz         eu + 1
+            lda         #PK_QCONS
+            jsr         make2
+            bcc         :+
+            MOVW        ex, nomem_err
+            jmp         vm_wdone
+:
+            MOVW        ex, hv
+            jsr         vm_wat
+            ldy         #WF_LAST
+            lda         (ht),y
+            sta         hv
+            iny
+            lda         (ht),y
+            sta         hv + 1
+            ora         hv
+            bne         @link
+            ldy         #WF_ACC                             ; (The first)
+            lda         ex
+            sta         (ht),y
+            iny
+            lda         ex + 1
+            sta         (ht),y
+            bra         @last
+@link:
+            lda         ex
+            ldx         ex + 1
+            ldy         #1
+            jsr         cell_set
+            jsr         vm_wat
+@last:
+            ldy         #WF_LAST
+            lda         ex
+            sta         (ht),y
+            iny
+            lda         ex + 1
+            sta         (ht),y
+            jmp         vm_wnext
+@fold:
+            cmp         #W_ANY
+            bcs         @test
+            ldy         #WF_ACC                             ; (foldl's: the value so far)
+            lda         ex
+            sta         (ht),y
+            iny
+            lda         ex + 1
+            sta         (ht),y
+            jmp         vm_wnext
+@test:
+            tax
+            ldy         vm_k
+            cpx         #W_ALL
+            bne         :+
+            tya                                             ; (all?: NIL, at the first NIL)
+            beq         @done
+            jmp         vm_wnext
+:
+            tya
+            bne         :+
+            jmp         vm_wnext
+:
+            cpx         #W_COUNT
+            bne         :+
+            ldy         #WF_ACC                             ; (count: one more)
+            lda         (ht),y
+            clc
+            adc         #2
+            sta         (ht),y
+            iny
+            lda         (ht),y
+            adc         #0
+            sta         (ht),y
+            jmp         vm_wnext
+:
+            cpx         #W_FIND
+            bne         :+
+            ldy         #WF_ITEM                            ; (find: the item)
+            lda         (ht),y
+            sta         ex
+            iny
+            lda         (ht),y
+            sta         ex + 1
+            jmp         vm_wdone
+:
+            lda         #<T_VAL                             ; (any?: T)
+            sta         ex
+            stz         ex + 1
+            jmp         vm_wdone
+@done:
+            stz         ex
+            stz         ex + 1
+            jmp         vm_wdone
+
+; No items left: the walk's value
+vm_wend:
+            ldy         #WF_OP
+            lda         (ht),y
+            lsr
+            tax
+            ldy         #WF_ACC                             ; (map's, filter's, foldl's, count's: the value so far)
+            lda         (ht),y
+            sta         ex
+            iny
+            lda         (ht),y
+            sta         ex + 1
+            cpx         #W_ANY
+            bcc         vm_wdone
+            cpx         #W_COUNT
+            beq         vm_wdone
+            stz         ex                                  ; (any?'s and find's: NIL; all?'s: T)
+            stz         ex + 1
+            cpx         #W_ALL
+            bne         vm_wdone
+            lda         #<T_VAL
+            sta         ex
+; The walk's value, ex: its frame dropped, the code past the BCALL on, its frame its caller's again (vm_s h words
+; under the BCALL's place, its h's; vm_rb and vm_mat as they were), its error returned if its r says
+vm_wdone:
+            jsr         vm_wat
+            ldy         #WF_RB
+            lda         (ht),y
+            and         #$FE
+            sta         vm_rb
+            iny
+            lda         (ht),y
+            sta         vm_mat
+            ldy         #WF_CODE + 1
+            lda         (ht),y
+            pha
+            dey
+            lda         (ht),y
+            pha
+            lda         #WF_SIZE / 2
+            jsr         drop
+            pla
+            plx
+            jsr         vm_decode
+            lda         vm_bank
+            sta         $00
+            lda         vm_ip
+            sec
+            sbc         #2
+            sta         ht
+            lda         vm_ip + 1
+            sbc         #0
+            sta         ht + 1
+            lda         (ht)                                ; (h)
+            asl
+            sta         vm_k
+            lda         sp
+            sec
+            sbc         vm_k
+            sta         vm_s
+            lda         sp + 1
+            sbc         #0
+            sta         vm_s + 1
+            ldy         #1                                  ; (r: R)
+            lda         (ht),y
+            lsr
+            bcc         :+
+            jsr         vm_iserr
+            bcc         :+
+            jmp         vm_ret
+:
+            jmp         vm_next
+
+; C = 0 if the walk's function (vm_wf) is one the machine calls as forms.inc's walk would (ev_apply_values): a
+; function's cell (not an fexpr's), one partially applied, or a built-in, not a special form nor one that runs the
+; machine, that takes as many as it's given (foldl's two, else one); else C = 1 (the evaluator's walk).  Keeps ht
+vm_wfok:
+            lda         vm_wf
+            lsr
+            bcs         @no
+            ldx         vm_wf + 1
+            cpx         #IMM_PAGES
+            bcs         @cell
+            cpx         #>BUILTIN0
+            bcc         @no
+            txa
+            lsr
+            lda         vm_wf
+            ror
+            tax
+            lda         vb_flags,x
+            and         #BF_MACHINE | BF_SPECIAL
+            bne         @no
+            ldy         #1
+            lda         vm_wop
+            cmp         #W_FOLDL
+            bne         :+
+            iny
+:
+            tya
+            cmp         vb_min,x
+            bcc         @no
+            cmp         vb_max,x
+            beq         @yes
+            bcs         @no
+@yes:
+            clc
+            rts
+@cell:
+            lda         pk,x
+            cmp         #PK_PARTIAL
+            beq         @yes
+            cmp         #PK_FUNC
+            bne         @no
+            lda         ht
+            pha
+            lda         ht + 1
+            pha
+            lda         vm_wf
+            ldy         #3
+            jsr         cell_get
+            tay
+            pla
+            sta         ht + 1
+            pla
+            sta         ht
+            tya
+            and         #FN_FEXPR
+            beq         @yes
+@no:
+            sec
+            rts
+
+; vm_s, vm_rb, vm_mat: the walk's caller's frame's (its frame on top: ht, vm_wat's), as its function's call may
+; have left them another's
+vm_wframe:
+            ldy         #WF_S
+            lda         (ht),y
+            and         #$FE
+            sta         vm_k
+            iny
+            lda         (ht),y
+            sta         vm_l
+            lda         ht
+            sec
+            sbc         vm_k
+            sta         vm_s
+            lda         ht + 1
+            sbc         vm_l
+            sta         vm_s + 1
+            ldy         #WF_RB
+            lda         (ht),y
+            and         #$FE
+            sta         vm_rb
+            iny
+            lda         (ht),y
+            sta         vm_mat
+            rts
+
+; ht = the walk's frame (on top)
+vm_wat:
+            lda         sp
+            sec
+            sbc         #WF_SIZE
+            sta         ht
+            lda         sp + 1
+            sbc         #0
+            sta         ht + 1
+            rts
+
+; Native code's TSELF past a flagged SHEAD that pushed nothing (tselfh's: Ctrl-C, a note): this frame's function
+; pushed under the .A arguments on top, as SHEAD would have (vm_shf $80), for TSELF's way (op_tself)
+vm_tsh:
+            sta         vm_k
+            lda         #0                                  ; (A word more: VPUSH's, which may spill and move the
+            tax                                             ;   stack down)
+            VPUSH
+            lda         vm_k
+            asl
+            sta         vm_l
+            clc
+            adc         #2
+            sta         vm_t
+            lda         sp                                  ; (ht: the first argument's place, hp past it)
+            sec
+            sbc         vm_t
+            sta         ht
+            lda         sp + 1
+            sbc         #0
+            sta         ht + 1
+            lda         ht
+            clc
+            adc         #2
+            sta         hp
+            lda         ht + 1
+            adc         #0
+            sta         hp + 1
+            ldy         vm_l                                ; (The arguments a word up, the last first)
+            beq         @fn
+@up:
+            dey
+            lda         (ht),y
+            sta         (hp),y
+            tya
+            bne         @up
+@fn:
+            lda         (vm_s)
+            sta         (ht)
+            ldy         #1
+            lda         (vm_s),y
+            sta         (ht),y
+            lda         #$80
+            sta         vm_shf
+            rts
+
+; A native op's stub (vmx.inc's: jsr vm_sj, then the word of the op's code in the machine, then the op's data, the op
+; as it was): vm_ip its data, its code run.  (The op's slow way: a template's, or the op's alone)
+vm_sj:
+            pla
+            sta         vm_ip
+            pla
+            sta         vm_ip + 1
+            ldy         #1
+            lda         (vm_ip),y
+            sta         vm_sjv
+            iny
+            lda         (vm_ip),y
+            sta         vm_sjv + 1
+            lda         vm_ip
+            clc
+            adc         #3
+            sta         vm_ip
+            bcc         :+
+            inc         vm_ip + 1
+:
+            jmp         (vm_sjv)
+
+; RET in native code (its op: jmp vm_nret): to its caller's code (in another bank of the arena, vm_retx's; the
+; evaluator's call, NIL: the machine's RET), the frame dropped: its return pad (past the call's data) finds the
+; caller's frame again; an error, vm_reterr's (returned by the caller too if its call's r says)
+vm_nret:
+            ldy         vm_rb
+            lda         (vm_s),y
+            bne         :+
+            jmp         op_ret
+:
+            and         #$FE
+            sta         vm_ip
+            iny
+            lda         (vm_s),y
+            tax
+            and         #$1F
+            ora         #$80
+            sta         vm_ip + 1
+            txa
+            and         #$E0
+            cmp         vm_idx
+            beq         :+
+            jmp         vm_retx
+:
+            lda         depth
+            bne         :+
+            dec         depth + 1
+:
+            dec         depth
+            lda         vm_s
+            sta         sp
+            ldx         vm_s + 1
+            stx         sp + 1
+            cpx         stk_basep
+            bne         :+
+            lda         spilled
+            beq         :+
+            jsr         unspill
+:
+            lda         ex
+            lsr
+            bcs         @go
+            ldx         ex + 1
+            cpx         #IMM_PAGES
+            bcc         @go
+            lda         pk,x
+            cmp         #PK_ERROR
+            bne         @go
+            jmp         vm_reterr
+@go:
+            jmp         (vm_ip)
+
+; RET's in native code, to a caller in another bank of the arena (.A its index, times 32; vm_ip its return pad): its
+; bank's, then RET's way here (the frame dropped, an error looked at), on to the pad
+vm_retx:
+            jsr         vm_newidx
+            lda         depth
+            bne         :+
+            dec         depth + 1
+:
+            dec         depth
+            lda         vm_s
+            sta         sp
+            ldx         vm_s + 1
+            stx         sp + 1
+            cpx         stk_basep
+            bne         :+
+            lda         spilled
+            beq         :+
+            jsr         unspill
+:
+            jsr         vm_iserr
+            bcc         :+
+            jmp         vm_reterr
+:
+            jmp         vm_next
+
+; RET's in native code, ex an error, vm_ip its caller's return pad (not come to): the caller's frame (vm_callsite's),
+; and the error returned from it too if its call's r says; else on, to the pad (its frame again: the same)
+vm_reterr:
+            jsr         vm_callsite
+            bcc         :+
+            jmp         vm_ret
+:
+            jmp         vm_nextf
+
+; A frame's record pushed near a page's end (native code's CALL and CSELF; VPUSH's way, which may spill and move the
+; stack down): .A, .X its return, no scope; vm_s its function's word, .Y (M) bytes below the record
+vm_rec:
+            sty         vm_k
+            VPUSH
+            lda         #0
+            tax
+            VPUSH
+            lda         vm_k
+            clc
+            adc         #4
+            sta         vm_k
+            lda         sp
+            sec
+            sbc         vm_k
+            sta         vm_s
+            lda         sp + 1
+            sbc         #0
+            sta         vm_s + 1
             rts
 
 ; sp's page crossed by VPUSH: the next (the stack's oldest block spilled if it's full)
@@ -1009,18 +1921,16 @@ op_ret:
             LDAX        ev_return
             jmp         vm_go1
 :
-            lda         vm_t + 1                            ; (Its caller's code: vm_decode's)
-            lsr
-            tax
-            lda         vm_t
-            ror
+            lda         vm_t                                ; (Its caller's code: vm_decode's)
+            and         #$FE
             sta         vm_ip
-            txa
+            lda         vm_t + 1
+            tax
             and         #$1F
             ora         #$80
             sta         vm_ip + 1
             txa
-            and         #$60
+            and         #$E0
             cmp         vm_idx
             beq         :+
             jsr         vm_newidx
@@ -1130,13 +2040,12 @@ vm_lplace:
 :
             iny
             lda         (vm_s),y
-            lsr
             and         #$1F
             ora         #$80
             sta         ht + 1
             dey
             lda         (vm_s),y
-            ror
+            and         #$FE
             sta         ht
             lda         vm_bank
             sta         $00
@@ -1686,6 +2595,12 @@ op_je:
 ; SHEAD: the global value of the symbol at 6 (a function's own name, as it was compiled): this frame's function,
 ; pushed at once; anything else, HEAD's way
 op_shead:
+            ldy         #1                                  ; (Flagged: its head pushed, vm_shf says)
+            lda         (vm_ip),y
+            bpl         :+
+            lda         #$80
+            sta         vm_shf
+:
             bit         vm_mat                              ; (Its cache: the global's value, as it was at this
             bmi         @slow                               ;   epoch; no scope made)
             ldy         #8
@@ -1736,6 +2651,13 @@ op_shead:
             lda         #12
             jmp         vm_adv
 @other:
+            lda         vm_bank                             ; (Flagged: its cache this frame's function alone.  The
+            sta         $00                                 ;   code's bank in the window again: deref's took it)
+            ldy         #1
+            lda         (vm_ip),y
+            bpl         :+
+            stz         vm_shc
+:
             lda         ex
             cmp         #<UNBOUND
             bne         vm_head
@@ -1808,6 +2730,7 @@ vm_head:
             sta         $00
             ldy         #1
             lda         (vm_ip),y
+            and         #$7F
             cmp         #1
             beq         @push
             bra         @eval
@@ -1819,6 +2742,7 @@ vm_head:
             sta         $00                                 ;   evaluator's, its error or exit's)
             ldy         #1
             lda         (vm_ip),y
+            and         #$7F
             bne         @eval
 @to:
             lda         vm_bank
@@ -2040,7 +2964,7 @@ op_call:
             cmp         #<MAX_DEPTH
             bcc         @hit
 @miss:
-            jmp         @slow
+            jmp         op_callm
 @hit:
             ldy         #3                                  ; (Its frame: its return, no scope)
             lda         (vm_ip),y
@@ -2085,7 +3009,66 @@ op_call:
             sta         vm_ip
             stx         vm_ip + 1
             jmp         vm_next
-@slow:
+
+; CALL, its cache missed (native code's way in, its template having looked): a buffer given a fixnum index in it,
+; its byte here (vm_bget's; Ctrl-C or a note, CALL's way), and on past its return pad; else the call's way (vm_callg)
+op_callm:
+            ldy         #1
+            lda         (vm_ip),y
+            dec         a
+            bne         vm_callg
+            lda         sp                                  ; (ht: the buffer, under the index)
+            sec
+            sbc         #4
+            sta         ht
+            lda         sp + 1
+            sbc         #0
+            sta         ht + 1
+            lda         (ht)
+            lsr
+            bcs         vm_callg
+            ldy         #1
+            lda         (ht),y
+            tax
+            cpx         #IMM_PAGES
+            bcc         vm_callg
+            lda         pk,x
+            cmp         #PK_BUFFER
+            bne         vm_callg
+            bit         intr
+            bmi         vm_callg
+            bvs         vm_callg
+            ldy         #3                                  ; (Its index)
+            lda         (ht),y
+            tax
+            dey
+            lda         (ht),y
+            jsr         vm_bidx
+            bcs         vm_callg
+            ldy         #1
+            lda         (ht),y
+            tax
+            lda         (ht)
+            jsr         vm_bat
+            bcs         @no
+            lda         (hp)
+            jsr         vm_bfix
+            lda         ht                                  ; (The two words dropped)
+            sta         sp
+            ldx         ht + 1
+            stx         sp + 1
+            cpx         stk_basep
+            bne         :+
+            lda         spilled
+            beq         :+
+            jsr         unspill
+:
+            lda         #14 + VXT_PADL                      ; (Past its return pad: the frame's the same)
+            jmp         vm_adv
+@no:
+            lda         vm_bank
+            sta         $00
+vm_callg:
             stz         vm_tl
             lda         #$80                                ; (Its cache filled, if it's a compiled function's)
             sta         vm_ccf
@@ -2413,30 +3396,488 @@ vm_bidx:
 
 ; .A, .X = a buffer: hp = its byte vm_t's place (its blob's bank in the window), C = 0; C = 1 if vm_t isn't in it
 vm_bat:
-            jsr         deref
+            asl                                             ; (Its cell: deref's)
+            sta         hp
+            lda         bank_of,x
+            sta         $00
+            lda         ptr_hi,x
+            adc         #0
+            sta         hp + 1
             lda         vm_t                                ; (Below its length)
             cmp         (hp)
             ldy         #1
             lda         vm_t + 1
             sbc         (hp),y
             bcs         @rts
-            iny
+            iny                                             ; (Its blob: blob_deref's, its bytes past its header)
             lda         (hp),y
             pha
             iny
             lda         (hp),y
             tax
+            and         #$0F
+            sta         hp + 1
+            txa
+            lsr
+            lsr
+            lsr
+            lsr
+            tax
+            lda         blob_bank,x
+            sta         $00
             pla
-            jsr         blob_data
-            lda         hp
-            clc
+            asl
+            rol         hp + 1
             adc         vm_t
             sta         hp
             lda         hp + 1
             adc         vm_t + 1
             sta         hp + 1
+            lda         hp
+            clc
+            adc         #4
+            sta         hp
+            lda         hp + 1
+            adc         #$80
+            sta         hp + 1
             clc
 @rts:
+            rts
+
+; BCALL's bit-and, bit-or, bit-xor of two (native code's): two fixnums on top: ex = their bits' (a fixnum's tag bit
+; is theirs, and or or; xor's set again), the two dropped, C = 0; else C = 1, nothing changed (BCALL's way)
+vm_band:
+            jsr         vm_b2
+            bcs         vm_brts
+            lda         (ht)
+            and         (ht),y
+            sta         vm_a
+            dey
+            lda         (ht),y
+            ldy         #3
+            and         (ht),y
+            bra         vm_bset
+vm_bor:
+            jsr         vm_b2
+            bcs         vm_brts
+            lda         (ht)
+            ora         (ht),y
+            sta         vm_a
+            dey
+            lda         (ht),y
+            ldy         #3
+            ora         (ht),y
+            bra         vm_bset
+vm_bxor:
+            jsr         vm_b2
+            bcs         vm_brts
+            lda         (ht)
+            eor         (ht),y
+            ora         #1
+            sta         vm_a
+            dey
+            lda         (ht),y
+            ldy         #3
+            eor         (ht),y
+vm_bset:
+            sta         ex + 1
+            lda         vm_a
+            sta         ex
+; The words from ht dropped (sp = ht: back from the bank they were spilled to, if they were), C = 0
+vm_bdrop:
+            lda         ht
+            sta         sp
+            ldx         ht + 1
+            stx         sp + 1
+            cpx         stk_basep
+            bne         :+
+            lda         spilled
+            beq         :+
+            jsr         unspill
+:
+            clc
+vm_brts:
+            rts
+
+; ht = the two words on top (sp - 4), .Y = 2.  OUT: C = 1 if they aren't both fixnums
+vm_b2:
+            lda         sp
+            sec
+            sbc         #4
+            sta         ht
+            lda         sp + 1
+            sbc         #0
+            sta         ht + 1
+            ldy         #2
+            lda         (ht)
+            and         (ht),y
+            eor         #1
+            lsr
+            rts
+
+; BCALL's shl and shr of two (native code's): n and k fixnums, k 0 or more (shl's below 15) and n shifted to a fixnum
+; (shl: its sign kept at each step; shr: down, toward minus infinity, k past 15 as 15): ex = it, the two dropped,
+; C = 0; else C = 1, nothing changed (BCALL's way)
+vm_bshl:
+            jsr         vm_b2
+            bcs         vm_brts
+            iny
+            lda         (ht),y                              ; (k: 0 to 14)
+            bne         @no
+            dey
+            lda         (ht),y
+            lsr
+            cmp         #15
+            bcs         @no
+            tax
+            ldy         #1
+            lda         (ht),y
+            sta         vm_a + 1
+            lda         (ht)                                ; (2n, shifted)
+            and         #$FE
+            sta         vm_a
+            txa
+            beq         @done
+@step:
+            lda         vm_a + 1                            ; (Bits 15 and 14 the same, or it isn't a fixnum)
+            asl
+            eor         vm_a + 1
+            bmi         @no
+            asl         vm_a
+            rol         vm_a + 1
+            dex
+            bne         @step
+@done:
+            lda         vm_a                                ; (Its tag bit again)
+            ora         #1
+            sta         vm_a
+            lda         vm_a + 1
+            jmp         vm_bset
+@no:
+            sec
+            rts
+vm_bshr:
+            jsr         vm_b2
+            bcs         vm_brts
+            iny
+            lda         (ht),y                              ; (k: 0 or more)
+            bmi         @no
+            bne         @far
+            dey
+            lda         (ht),y
+            lsr
+            cmp         #15
+            bcc         :+
+@far:
+            lda         #15
+:
+            tax
+            ldy         #1
+            lda         (ht),y
+            sta         vm_a + 1
+            lda         (ht)
+            sta         vm_a
+            txa
+            beq         @done
+@step:
+            lda         vm_a + 1                            ; (Its sign kept: (2n + 1) >> k, with its tag bit set
+            cmp         #$80                                ;   again, is 2 (n >> k) + 1)
+            ror         vm_a + 1
+            ror         vm_a
+            dex
+            bne         @step
+@done:
+            lda         vm_a
+            ora         #1
+            sta         vm_a
+            lda         vm_a + 1
+            jmp         vm_bset
+@no:
+            sec
+            rts
+
+; BCALL's char-at of two (native code's): a string and a fixnum index in it: ex = its byte's character, the two
+; dropped, C = 0; else C = 1, nothing changed (BCALL's way).  The window kept
+vm_bchat:
+            lda         sp
+            sec
+            sbc         #4
+            sta         ht
+            lda         sp + 1
+            sbc         #0
+            sta         ht + 1
+            ldy         #2                                  ; (The index: a fixnum, 0 or more)
+            lda         (ht),y
+            lsr
+            bcc         @no
+            iny
+            lda         (ht),y
+            bmi         @no
+            lsr
+            sta         vm_t + 1
+            dey
+            lda         (ht),y
+            ror
+            sta         vm_t
+            lda         (ht)                                ; (The string)
+            lsr
+            bcs         @no
+            ldy         #1
+            lda         (ht),y
+            tax
+            cpx         #IMM_PAGES
+            bcc         @no
+            lda         pk,x
+            cmp         #PK_STRING
+            bne         @no
+            lda         (ht)
+            jsr         vm_bat
+            bcs         @out
+            lda         (hp)
+            asl
+            sta         ex
+            lda         #0
+            rol
+            ora         #>CHAR0
+            sta         ex + 1
+            lda         vm_bank
+            sta         $00
+            jmp         vm_bdrop
+@out:
+            lda         vm_bank
+            sta         $00
+@no:
+            sec
+            rts
+
+; BCALL's char-code of one (native code's): a character on top: ex = its code, it dropped, C = 0; else C = 1,
+; nothing changed (BCALL's way)
+vm_bccode:
+            lda         sp
+            sec
+            sbc         #2
+            sta         ht
+            lda         sp + 1
+            sbc         #0
+            sta         ht + 1
+            lda         (ht)
+            lsr
+            bcs         @no
+            ldy         #1
+            lda         (ht),y
+            and         #$FE
+            cmp         #>CHAR0
+            bne         @no
+            lda         (ht)
+            ora         #1
+            sta         vm_a
+            lda         (ht),y
+            and         #1
+            jmp         vm_bset
+@no:
+            sec
+            rts
+
+; BCALL's * of two (op_bcall's, native code's): two fixnums on top whose product is one: ex = it, the two dropped,
+; C = 0; else C = 1, nothing changed (BCALL's way).  The window kept.  Both 0 to 127 (their high bytes 0): their
+; product at once (under 16384)
+vm_bmul:
+            lda         sp
+            sec
+            sbc         #4
+            sta         ht
+            lda         sp + 1
+            sbc         #0
+            sta         ht + 1
+            ldy         #1
+            lda         (ht),y
+            ldy         #3
+            ora         (ht),y
+            bne         @gen
+            dey
+            lda         (ht)
+            and         (ht),y
+            lsr
+            bcc         @no
+            lda         (ht)
+            lsr
+            tax
+            lda         (ht),y
+            lsr
+            jsr         vm_mul8
+            asl
+            ora         #1
+            sta         ex
+            txa
+            rol
+            sta         ex + 1
+            bra         @drop
+@no:
+            sec
+            rts
+@gen:
+            ldy         #3
+            lda         (ht),y
+            sta         vm_b + 1
+            dey
+            lda         (ht),y
+            sta         vm_b
+            dey
+            lda         (ht),y
+            sta         vm_a + 1
+            lda         (ht)
+            sta         vm_a
+            jsr         vm_fmul
+            bcs         @rts
+@drop:
+            lda         ht                                  ; (The two dropped)
+            sta         sp
+            ldx         ht + 1
+            stx         sp + 1
+            cpx         stk_basep
+            bne         @ok
+            lda         spilled
+            beq         @ok
+            jsr         unspill
+@ok:
+            clc
+@rts:
+            rts
+
+; ex = vm_a * vm_b, fixnums whose product is one (but -16384, the slow way's): C = 0; else C = 1, ex kept.  One of
+; the two under 256 (the multiplier), the other in two bytes, each byte's product by vm_mul8
+vm_fmul:
+            lda         vm_a
+            and         vm_b
+            lsr
+            bcs         :+
+            sec
+            rts
+:
+            lda         vm_a + 1                            ; (Its sign)
+            eor         vm_b + 1
+            sta         vm_msg
+            lda         vm_a                                ; (|a|, |b|: one under 256)
+            ldx         vm_a + 1
+            jsr         vm_fabs
+            sta         vm_m0
+            stx         vm_m0 + 1
+            lda         vm_b
+            ldx         vm_b + 1
+            jsr         vm_fabs
+            cpx         #0
+            beq         @m
+            ldy         vm_m0 + 1
+            bne         @no
+            ldy         vm_m0
+            sta         vm_m0
+            stx         vm_m0 + 1
+            tya
+@m:
+            sta         vm_mm
+            ldx         vm_m0
+            jsr         vm_mul8
+            sta         vm_p0
+            stx         vm_p0 + 1
+            lda         vm_m0 + 1
+            beq         @fit
+            ldx         vm_mm
+            jsr         vm_mul8
+            cpx         #0
+            bne         @no
+            clc
+            adc         vm_p0 + 1
+            bcs         @no
+            sta         vm_p0 + 1
+@fit:
+            lda         vm_p0 + 1                           ; (Under 16384: a fixnum, 2p + 1 or -2p + 1)
+            cmp         #$40
+            bcs         @no
+            asl         vm_p0
+            rol
+            bit         vm_msg
+            bmi         @neg
+            sta         ex + 1
+            lda         vm_p0
+            ora         #1
+            sta         ex
+            clc
+            rts
+@neg:
+            sta         vm_p0 + 1
+            lda         #0
+            sec
+            sbc         vm_p0
+            tay
+            lda         #0
+            sbc         vm_p0 + 1
+            sta         ex + 1
+            tya
+            ora         #1
+            sta         ex
+            clc
+            rts
+@no:
+            sec
+            rts
+
+; .A, .X = a fixnum: its number's magnitude (.A low, .X high)
+vm_fabs:
+            cpx         #$80
+            pha
+            txa
+            ror
+            tax
+            pla
+            ror
+            cpx         #$80
+            bcc         @rts
+            eor         #$FF
+            clc
+            adc         #1
+            pha
+            txa
+            eor         #$FF
+            adc         #0
+            tax
+            pla
+@rts:
+            rts
+
+; .A, .X = bytes a, b: .A, .X = a * b (low, high), quarter squares': q(a + b) - q(|a - b|), q(x) = x * x / 4
+vm_mul8:
+            sta         vm_q
+            stx         vm_q + 1
+            sec
+            sbc         vm_q + 1
+            bcs         :+
+            eor         #$FF
+            adc         #1
+:
+            tay
+            lda         vm_q
+            clc
+            adc         vm_q + 1
+            tax
+            bcs         @hi
+            lda         vm_sqlo,x
+            sec
+            sbc         vm_sqlo,y
+            pha
+            lda         vm_sqhi,x
+            sbc         vm_sqhi,y
+            tax
+            pla
+            rts
+@hi:
+            lda         vm_sqlo + 256,x
+            sec
+            sbc         vm_sqlo,y
+            pha
+            lda         vm_sqhi + 256,x
+            sbc         vm_sqhi,y
+            tax
+            pla
             rts
 
 ; Not a function's cell: a buffer given an index (its byte, buffers.inc's buf_at); a function partially applied (the
@@ -2541,6 +3982,36 @@ vm_bcode:
             jmp         drop
 
 op_bcall:
+            ldy         #1                                  ; (* of two: here, if it's fixnums' and their product one)
+            lda         (vm_ip),y
+            cmp         #BIN_MUL
+            bne         @bp
+            iny
+            lda         (vm_ip),y
+            cmp         #2
+            bne         @bc
+            jsr         vm_bmul
+            bcs         @bc
+            lda         #5
+            jmp         vm_adv
+@bp:
+            cmp         #BIN_BUFPUT                         ; (buffer-put, of three: here, if it can be)
+            bne         @bc
+            ldy         #1
+            iny
+            lda         (vm_ip),y
+            cmp         #3
+            bne         @bc
+            jsr         vm_bput
+            bcs         @bno
+            lda         #3
+            jsr         drop
+            lda         #5
+            jmp         vm_adv
+@bno:
+            lda         vm_bank
+            sta         $00
+@bc:
             MOVW        vm_opa, vm_ip
             ldy         #1
             lda         (vm_ip),y
@@ -2563,21 +4034,9 @@ op_bcall:
             adc         #0
             sta         cf + 1
             ldx         bi_n
-            cpx         #BIN_BUFPUT                         ; (buffer-put: here, if it can be)
-            bne         :+
-            lda         vm_m
-            cmp         #3
-            bne         :+
-            jsr         vm_bput
-            bcs         :+
-            lda         #3
-            jsr         drop
-            jmp         vm_cvalue
-:
-            ldx         bi_n
             lda         vb_flags,x
             and         #BF_MACHINE
-            bne         @out
+            bne         @mach
             lda         vm_m
             cmp         vb_min,x
             bcc         @out
@@ -2587,7 +4046,20 @@ op_bcall:
 :
             jsr         vm_bcode
             jmp         vm_cvalue
+@mach:
+            cpx         #BIN_MAP                            ; (A walk but foldr's, of as many as it takes: here)
+            bcc         vm_bout
+            cpx         #BIN_MAP + W_PRODUCT + 1
+            bcs         vm_bout
+            cpx         #BIN_MAP + W_FOLDR
+            beq         vm_bout
+            lda         vm_m
+            cmp         vb_min,x
+            bne         vm_bout
+            jmp         vm_walk
 @out:
+; BCALL's built-in (bi_n, .X) the evaluator's (one that runs the machine, or not given as many as it takes)
+vm_bout:
             lda         vb_vf,x
             beq         :+
             jsr         vm_scope
@@ -3243,6 +4715,47 @@ op_eachi:
             pla
             sta         (ht)
             jmp         vm_adv3
+
+; EACHI's in native code (eachi's template): the items on top: C = 1 if none's left; else ex = the next, the rest
+; on top, C = 0.  The code's bank in the window again
+vm_eachn:
+            lda         sp
+            sec
+            sbc         #2
+            sta         ht
+            lda         sp + 1
+            sbc         #0
+            sta         ht + 1
+            ldy         #1
+            lda         (ht),y
+            tax
+            ora         (ht)
+            bne         :+
+            sec
+            rts
+:
+            lda         (ht)
+            jsr         deref
+            ldy         #3
+            lda         (hp),y
+            pha
+            dey
+            lda         (hp),y
+            pha
+            dey
+            lda         (hp),y
+            sta         ex + 1
+            lda         (hp)
+            sta         ex
+            pla
+            sta         (ht)
+            pla
+            ldy         #1
+            sta         (ht),y
+            lda         vm_bank
+            sta         $00
+            clc
+            rts
 
 ; DROP k: k words dropped; ex = NIL
 op_drop:
@@ -4700,26 +6213,22 @@ vm_compile:
             cmp         vc_v
             bne         @bad
             jsr         vc_locals                           ; (Its locals: set's names)
+            jsr         vc_scratch                          ; (Its scratch banks)
+            bcc         :+
+            jmp         vc_full
+:
             lda         ar_n                                ; (The arena: its first bank)
             bne         vc_again
             jsr         vc_bank
             bcc         vc_again
             jmp         vc_full
 vc_again:
-            ldx         ar_cur                              ; (At the arena's top)
-            lda         ar_bank,x
-            sta         vc_bk
-            txa
-            asl
-            asl
-            asl
-            asl
-            asl
-            sta         vc_idx
-            lda         ar_top
-            sta         hq
-            sta         vc_start
-            lda         ar_top + 1
+            lda         vm_sb                               ; (In the scratch bank, from its start: vmx.inc makes it
+            sta         vc_bk                               ;   native code, in the arena)
+            stz         vc_idx
+            stz         hq
+            stz         vc_start
+            lda         #$80
             sta         hq + 1
             sta         vc_start + 1
             stz         vc_nlab
@@ -4804,6 +6313,12 @@ vc_again:
             sta         vc_btot
             jmp         vc_again
 :
+            lda         hq                                  ; (Its code's end: the translator's)
+            sta         vx_end
+            lda         hq + 1
+            sta         vx_end + 1
+            lda         vc_ntbl
+            sta         vx_ntbl
             lda         vc_ntbl                             ; (Its blocks' table: after its code, LOCALS' tbl)
             beq         @notbl
             lda         vc_bk
@@ -4841,57 +6356,49 @@ vc_again:
             inc         vc_x
             bra         @entry
 @notbl:
-            lda         hq                                  ; (Its code's place: the function's word 4)
-            sta         ar_top
-            lda         hq + 1
-            sta         ar_top + 1
-            lda         vc_start
-            asl
-            ora         #1
-            sta         vc_t
-            lda         vc_start + 1
-            and         #$1F
-            ora         vc_idx
-            rol
-            sta         vc_t + 1
+            FARN        8, vm_xlate                         ; (Native code, in the arena: its place the function's
+            bcc         :+                                  ;   word 4)
+            cmp         #0
+            beq         @full
+            jmp         vc_novm
+@full:
+            sec
+            rts
+:
             lda         cf
             ldx         cf + 1
             jsr         deref
             ldy         #8
-            lda         vc_t
+            lda         vx_place
             sta         (hp),y
             iny
-            lda         vc_t + 1
+            lda         vx_place + 1
             sta         (hp),y
             clc
             rts
 
-; The bank filled: the code begun again in the next (taken, if it isn't yet), unless it began at a bank's start
+; The scratch banks (vm_sb, vm_mb), taken at the first function compiled.  OUT: C = 1 if there's no room
+vc_scratch:
+            lda         vm_sb
+            bne         @ok
+            lda         #1
+            jsr         BANKS_ALLOC
+            bcs         @rts
+            sta         vm_mb
+            lda         #1
+            jsr         BANKS_ALLOC
+            bcs         @rts
+            sta         vm_sb
+@ok:
+            clc
+@rts:
+            rts
+
+; The scratch filled (4K: the translator's map's room): the function's always evaluated
 vc_over:
             ldx         vc_s
             txs
-            lda         vc_start
-            bne         :+
-            lda         vc_start + 1
-            cmp         #$80
-            beq         vc_novm
-:
-            ldx         ar_cur
-            inx
-            cpx         ar_n
-            bcc         :+
-            cpx         #4
-            bcs         vc_full
-            jsr         vc_bank
-            bcs         vc_full
-            ldx         ar_cur
-            inx
-:
-            stx         ar_cur
-            stz         ar_top
-            lda         #$80
-            sta         ar_top + 1
-            jmp         vc_again
+            jmp         vc_novm
 
 ; The arena's full: nothing compiled till it's emptied
 vc_full:
@@ -4930,7 +6437,7 @@ vc_bank:
 ; .A emitted (hq, in the arena's bank vc_bk; past it, vc_over).  Keeps .X
 vc_byte:
             ldy         hq + 1
-            cpy         #$A0
+            cpy         #$90
             bcc         :+
             jmp         vc_over
 :
@@ -6017,6 +7524,10 @@ vc_generic:
             jsr         vc_self
             ldx         vc_lv
             rol         L_b,x
+            lda         hq                                  ; (Its place: vc_shflag's)
+            sta         L_shl,x
+            lda         hq + 1
+            sta         L_shh,x
             lda         #VO_SHEAD
             jsr         vc_rop
             jsr         vc_mct
@@ -6061,6 +7572,7 @@ vc_generic:
             beq         @call
             lda         L_tail,x                            ; (CSELF m code h r; TSELF m code 0)
             beq         :+
+            jsr         vc_shflag
             lda         #VO_TSELF
             jsr         vc_byte
             jsr         vc_mcode
@@ -6105,6 +7617,61 @@ vc_generic:
             jsr         vc_def
             jmp         vc_je
 
+; A tail call of the function by its own name (this level's): its SHEAD flagged (m's bit 7) if its arguments' code,
+; from past it to hq, calls nothing (vc_pure's ops alone, and BCALL of *): its head need not be pushed (vmx.inc's
+; shself and tselfh), as nothing can bind its name again before TSELF
+vc_shflag:
+            ldx         vc_lv
+            lda         L_shl,x
+            clc
+            adc         #12
+            sta         ht
+            lda         L_shh,x
+            adc         #0
+            sta         ht + 1
+            lda         vc_bk
+            sta         $00
+@op:
+            lda         ht
+            cmp         hq
+            lda         ht + 1
+            sbc         hq + 1
+            bcs         @yes
+            lda         (ht)
+            and         #$7F
+            cmp         #VO_BCALL
+            bne         :+
+            ldy         #1
+            lda         (ht),y
+            cmp         #BIN_MUL
+            bne         @no
+            lda         #5
+            bra         @next
+:
+            lsr
+            tax
+            lda         vc_pure,x
+            beq         @no
+@next:
+            clc
+            adc         ht
+            sta         ht
+            bcc         @op
+            inc         ht + 1
+            bra         @op
+@yes:
+            ldx         vc_lv
+            lda         L_shl,x
+            sta         ht
+            lda         L_shh,x
+            sta         ht + 1
+            ldy         #1
+            lda         (ht),y
+            ora         #$80
+            sta         (ht),y
+@no:
+            rts
+
 ; CALL's cache emitted: none yet (fn, epoch 0, code, bank, idx)
 vc_ccache:
             ldx         #8
@@ -6125,15 +7692,9 @@ vc_retw:
             adc         #0
             and         #$1F
             ora         vc_idx
-            sta         vc_t + 1
-            lda         vc_t
-            asl
-            ora         #1
-            pha
-            lda         vc_t + 1
-            rol
             tax
-            pla
+            lda         vc_t
+            ora         #1
             jmp         vc_word
 
 ; HEAD's operands: m (the call's arguments), c (the call), t (its label)
@@ -7824,6 +9385,16 @@ vm_xops:
             VM_XOPS
             VM_XOPS
 
+; Quarter squares (vm_mul8's): x * x / 4, x 0 to 511, its low bytes, its high
+vm_sqlo:
+.repeat 512, I
+            .byte       <((I * I) / 4)
+.endrep
+vm_sqhi:
+.repeat 512, I
+            .byte       >((I * I) / 4)
+.endrep
+
 ; The fused ops' fixnum work, by quick op (VO_ADD's order: s - VO_ADD).  OUT: C = 1 if it isn't fixnums (or past one)
 vm_qf:      .word       vf_add, vf_sub, vf_lt, vf_gt, vf_le, vf_ge, vf_eq, vf_inc, vf_dec, vf_zerop, vf_onep
             .word       vf_add, vf_sub, vf_lt, vf_gt, vf_le, vf_ge, vf_eq
@@ -7885,6 +9456,16 @@ vb_vf:
 .endrep
 
 .segment "RODATA6"
+
+; The ops that call nothing (vc_shflag's), by number: their length (0: one that may)
+vc_pure:    .byte       0, 3, 2, 3, 0, 1, 0, 0                          ; (RET CONST LOCAL GLOBAL LOOKUP PUSH JF JT)
+            .byte       0, 0, 0, 0, 0, 0, 0, 0                          ; (JMP JE HEAD CALL TCALL BCALL EXT QUOTE)
+            .byte       3, 1, 1, 1, 1, 1, 1, 1                          ; (QUOTE0 ADD SUB LT GT LE GE NEQ)
+            .byte       1, 1, 1, 1, 3, 3, 3, 3                          ; (INC DEC ZEROP ONEP ADDC SUBC LTC GTC)
+            .byte       3, 3, 3, 2, 3, 0, 0, 0                          ; (LEC GEC EQC LPUSH CPUSH SHEAD CSELF TSELF)
+            .byte       0, 0, 0, 0, 5, 0, 0, 0                          ; (LOCALS LOCALH SETL SETBL LQ JLQ STT POPX)
+            .byte       0, 0, 0, 0, 0, 0, 0, 0                          ; (LOOP BLOCK LOCALB SETLB SETBLB DOTN DOTI DOTINC)
+            .byte       0, 0, 0, 0, 0, 4, 0, 5                          ; (EACHL EACHI DROP TRYE JQ LL JLL LQP)
 
 ; The compiler's: the built-ins that are quick ops, the values they're given, the op
 QUICKS          = 11
