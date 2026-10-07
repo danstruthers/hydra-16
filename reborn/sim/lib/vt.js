@@ -5,10 +5,11 @@
 // it's installed, holds both against a terminal written by others (tests/vt).
 //   A screen of rows of cells (a character, the colours: background << 4 | foreground, the rendition), the
 // scrollback (the rows that went off the top of the screen, or of a region at its top, by a line feed, IND or SU;
-// the newest last; SU's not, and RIS clears it, as xterm's), VT52 mode (DECANM reset), the cursor and its last-column flag, the margins, the modes (DECAWM, DECOM, IRM, LNM, DECTCEM),
+// the newest last; SU's not, and RIS clears it, as xterm's), the alternate screen (?47, ?1047, ?1049: no scrollback),
+// VT52 mode (DECANM reset), the cursor and its last-column flag, the margins, the modes (DECAWM, DECOM, IRM, LNM, DECTCEM),
 // the tab stops, the character sets (G0, G1: B, A, 0), DECSC's saved cursor.  The parser is DEC's state machine (Paul
 // Williams'): C0 controls act inside a sequence, CAN and SUB end one, strings (OSC, DCS, SOS, PM, APC) end at ST
-// (an OSC also at BEL).  text() is a window's /text: its scrollback, then its screen, a line a row without its
+// (an OSC also at BEL).  A row may be double (ESC # 3, 4, 6: row.dw), its characters in its left half.  text() is a window's /text: its scrollback, then its screen, a line a row without its
 // trailing spaces, the DEC graphics as the console shows them in ASCII (DEC_ASCII).
 
 'use strict';
@@ -31,6 +32,7 @@ class VT {
   }
 
   reset() {
+    if (this.altOn) this.alt(false, false);
     this.sb = []; this.state = 0; this.col = COL_DEF; this.fl = 0;
     this.screen = Array.from({ length: this.rows }, () => this.blankRow());
     this.x = 0; this.y = 0; this.wrap = false;
@@ -118,7 +120,17 @@ class VT {
 
   escDo(f) {
     const i = this.inter;
-    if (i === '#') { if (f === '8') this.align(); return; }
+    if (i === '#') {
+      if (f === '8') this.align();
+      else if (f === '5') delete this.screen[this.y].dw;
+      else if ('346'.includes(f)) {                         // (A double row: its right half lost, the cursor in its left)
+        const row = this.screen[this.y], half = this.cols >> 1, bg = this.blankRow()[0];
+        row.dw = { 3: 'DHT', 4: 'DHB', 6: 'DW' }[f];
+        for (let c = half; c < this.cols; c++) row[c] = { ...bg };
+        this.x = Math.min(this.x, half - 1); this.wrap = false;
+      }
+      return;
+    }
     if (i === '(' || i === ')') { this.g[i === '(' ? 0 : 1] = f === '1' ? 'B' : f === '2' ? '0' : 'A0'.includes(f) ? f : 'B'; return; }
     if (i) return;
     switch (f) {
@@ -191,10 +203,26 @@ class VT {
   decMode(m, on) {
     switch (m) {
       case 2: this.vt52 = !on; break;
+      case 47: case 1047: this.alt(on, false); break;
+      case 1049: this.alt(on, true); break;
       case 3: this.top = 0; this.bot = this.rows - 1; this.home(); this.ed(2); break;
       case 6: this.om = on; this.home(); break;
       case 7: this.awm = on; this.wrap = false; break;
       case 25: this.tcem = on; break;
+    }
+  }
+
+  // The alternate screen (cleared as it's taken; no scrollback), or the main one again; ?1049 saves the cursor first,
+  // and restores it after
+  alt(on, cursor) {
+    if (on && !this.altOn) {
+      if (cursor) this.save();
+      this.main = { screen: this.screen, sb: this.sb };
+      this.screen = Array.from({ length: this.rows }, () => this.blankRow());
+      this.sb = []; this.altOn = true;
+    } else if (!on && this.altOn) {
+      this.screen = this.main.screen; this.sb = this.main.sb; this.altOn = false;
+      if (cursor) this.restore();
     }
   }
 
@@ -256,8 +284,10 @@ class VT {
     this.last = b;
     if (this.wrap) { this.wrap = false; this.x = 0; this.index(); }
     if (this.irm) this.ich(1);
+    const width = this.screen[this.y].dw ? this.cols >> 1 : this.cols;
+    if (this.x > width - 1) this.x = width - 1;
     this.screen[this.y][this.x] = { c: b, a: this.col, f: this.fl };
-    if (this.x < this.cols - 1) this.x++;
+    if (this.x < width - 1) this.x++;
     else if (this.awm) this.wrap = true;
   }
 
@@ -278,7 +308,7 @@ class VT {
     for (let k = 0; k < n; k++) {
       const out = this.screen.splice(t, 1)[0];
       this.screen.splice(b, 0, this.blankRow());
-      if (keep && t === 0) { this.sb.push(out); if (this.sb.length > this.sbMax) this.sb.shift(); }
+      if (keep && t === 0 && !this.altOn) { this.sb.push(out); if (this.sb.length > this.sbMax) this.sb.shift(); }
     }
   }
 

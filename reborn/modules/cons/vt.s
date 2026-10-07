@@ -5,7 +5,8 @@
 ; A window's screen: three of the task's banks (vw_bank, a run from BANKS_ALLOC), planes of 64 rows of 128 cells
 ; at $8000 (a row's cells at $8000 + 128 * the row): the characters (a byte each: the font's, ISO-8859-15; $00-$1F
 ; the DEC Special Graphics set's 32, its $5F-$7E), the colours (the background << 4 | the foreground: conio's
-; 0-15) and the rendition (F_*).  The 64 rows are a pool and the screen a map into it (v_rmap: the screen's rows
+; 0-15) and the rendition (F_*).  The 64 rows are a pool and the screen a map into it (vw_maps, a page's quarter a
+; window's screen, main and alternate: vmap the one in use; the screen's rows
 ; from v_sb0 on, the scrollback's before them, its last v_sbn the newest last).  So a scroll moves the map's
 ; entries, not the rows: a row that goes off the top of the whole screen (or of a region at its top) joins the
 ; scrollback, and the oldest scrollback row comes in, blanked, at the region's bottom.  A window is 80 x 24 here
@@ -60,7 +61,11 @@ META            = 127           ; A row's last cell, its meta (a window has 127 
                                 ;   plane's its blank end's first column (the cells from there on are blank, not
                                 ;   written: a scroll or an erase to the row's end is a byte, not a row's cells);
                                 ;   the colours' that end's colours; the rendition's the row's attributes (RA_*)
-RA_CONT         = $01           ; A row's attribute: an autowrap continued the row before it into it
+RA_CONT         = $01           ; A row's attributes: an autowrap continued the row before it into it ...
+RA_DW           = $02           ;   double width (DECDWL) ...
+RA_DHT          = $04           ;   double height, the top half (DECDHL 3) ...
+RA_DHB          = $08           ;   and the bottom half (DECDHL 4): each half the width
+RA_LINE         = RA_DW | RA_DHT | RA_DHB
 COL_DEF         = $07           ; The colours at first: light grey on black (SGR 39, 49)
 VM_AWM          = $01           ; v_mode: autowrap (DECAWM) ...
 VM_OM           = $02           ;   origin (DECOM) ...
@@ -90,6 +95,7 @@ vq:         .res        2                                   ; A row
 vr:         .res        2                                   ;   and another (a row's cells moved)
 vch:        .res        1                                   ; The byte being parsed
 vt_a:       .res        2                                   ; Scratch
+vmap:       .res        2                                   ; The loaded window's screen's map (vw_maps)
 
 .bss
 vs_first:                                                   ; ---- The loaded window's state (VS_N bytes)
@@ -135,8 +141,9 @@ v_sgl:      .res        1
 v_swrap:    .res        1                                   ;   last-column flag ...
 v_som:      .res        1                                   ;   and origin mode
 v_tabs:     .res        16                                  ; The tab stops (bit c & 7 of byte c >> 3)
-v_rmap:     .res        POOL                                ; The map: the rows' places in the pool, a ring ...
-v_rbase:    .res        1                                   ;   from here (the whole screen's scroll turns it)
+v_alt:      .res        1                                   ; <> 0: the alternate screen in use (?47, ?1047, ?1049)
+v_rbase:    .res        1                                   ; Its map's ring's start (the whole screen's scroll turns
+                                                            ;   it: vmap, the map, is outside the state)
 vs_last:
 VS_N        = vs_last - vs_first
 .assert     VS_N < 256 .and VS_N <= VS_PAGE, error, "A window's state is a page at most"
@@ -144,7 +151,11 @@ vb0:        .res        1                                   ; Its planes' banks:
 vb1:        .res        1                                   ;   rendition
 vb2:        .res        1
 vt_w:       .res        1                                   ; The window loaded ($FF: none)
-vw_bank:    .res        WIN_MAX                             ; Each window's first bank (0: none)
+vw_bank:    .res        WIN_MAX                             ; Each window's first bank (0: none) ...
+vw_abank:   .res        WIN_MAX                             ;   its alternate screen's (0: none yet) ...
+vw_rb:      .res        WIN_MAX * 2                         ;   each screen's ring's start and scrollback's rows, while
+vw_sb:      .res        WIN_MAX * 2                         ;   the other's in use (main: the window * 2; alternate: + 1)
+vw_maps:    .res        WIN_MAX * 2 * POOL                  ;   and each screen's map
 vt_save:    .res        WIN_MAX * VS_PAGE                   ; Each window's state, while another's is loaded
 ts_ser:     .res        1                                   ; The terminals' states (cons.inc)
 ts_scr:     .res        1
@@ -193,6 +204,9 @@ su_i:       .res        1                                   ; (A scroll's entry 
 su_r:       .res        1
 cg_y:       .res        1                                   ; (cell_get's column)
 rl_bf:      .res        1                                   ; (row_last's blank end)
+pg_w:       .res        1                                   ; (print_glyph's: the row's width)
+fp_x:       .res        1                                   ; (fc_pos's: vid's column for the cursor)
+sp_dw:      .res        1                                   ; (scr_paint's: the row's a double one)
 vt_i:       .res        1                                   ; Counters
 vt_j:       .res        1
 vt_k:       .res        1
@@ -243,7 +257,8 @@ vt_new:
 :
             ldx         vt_i
             sta         vw_bank,X
-            stz         ans_n,X                             ; (No answers, no label)
+            stz         vw_abank,X                          ; (No alternate screen yet ...
+            stz         ans_n,X                             ;   no answers, no label)
             stz         ans_r,X
             txa
             jsr         lbl_at
@@ -253,6 +268,7 @@ vt_new:
             jsr         vt_unload                           ; (Its state isn't in vt_save yet: made in place)
             lda         vt_i
             sta         vt_w
+            stz         v_alt
             jsr         banks
             lda         #VT_COLS
             sta         v_cols
@@ -261,11 +277,11 @@ vt_new:
             lda         #POOL - VT_ROWS
             sta         v_sb0
             stz         v_sbn
-            ldx         #POOL - 1                           ; The map: each row its own
+            ldy         #POOL - 1                           ; The map: each row its own
 :
-            txa
-            sta         v_rmap,X
-            dex
+            tya
+            sta         (vmap),Y
+            dey
             bpl         :-
             stz         v_rbase
             jsr         reset                               ; (The screen cleared)
@@ -294,6 +310,14 @@ vt_free:
             bne         :+
             lda         #$FF
             sta         tc_w
+:
+            lda         vw_abank,X
+            beq         :+
+            stz         vw_abank,X
+            phx
+            ldx         #3
+            jsr         BANKS_FREE
+            plx
 :
             lda         vw_bank,X
             stz         vw_bank,X
@@ -590,10 +614,36 @@ slot:
             sta         vt_a
             rts
 
-; vb0-vb2: the loaded window's banks
+; vb0-vb2: the loaded window's banks, its screen's in use (main or alternate); vmap its map
 banks:
+            lda         vt_w                                ; vmap: vw_maps + (the window * 2 + v_alt) * POOL
+            asl
+            ora         v_alt
+            tax
+            lsr
+            lsr
+            clc
+            adc         #>vw_maps
+            sta         vmap + 1
+            txa
+            asl
+            asl
+            asl
+            asl
+            asl
+            asl
+            clc
+            adc         #<vw_maps
+            sta         vmap
+            bcc         :+
+            inc         vmap + 1
+:
             ldx         vt_w
             lda         vw_bank,X
+            ldy         v_alt
+            beq         :+
+            lda         vw_abank,X
+:
             sta         vb0
             inc         a
             sta         vb1
@@ -1161,10 +1211,29 @@ esc_do:
 
 @hash:
             cmp         #'8'                                ; DECALN
-            bne         @pass                               ; (DECDHL, DECDWL, DECSWL: W2; the serial port's)
+            bne         :+
             jsr         m_align
             jsr         scr_dirty
             jmp         fs_raw
+:
+            cmp         #'5'                                ; DECSWL: the cursor's row single again
+            bne         :+
+            lda         #0
+            jmp         line_attr
+:
+            ldx         #RA_DHT                             ; DECDHL (3 the top half, 4 the bottom), DECDWL (6)
+            cmp         #'3'
+            beq         :+
+            ldx         #RA_DHB
+            cmp         #'4'
+            beq         :+
+            ldx         #RA_DW
+            cmp         #'6'
+            beq         :+
+            jmp         fs_raw
+:
+            txa
+            jmp         line_attr
 
 @plain:
             ldx         #ESC_N - 1
@@ -1179,6 +1248,55 @@ esc_do:
             asl
             tax
             jmp         (esc_vec,X)
+
+; The cursor's row's size .A (RA_DW, RA_DHT, RA_DHB; 0 single): a double one's right half blank, and the cursor
+; in its left; the screen painted (it shows a double row's characters a space apart)
+line_attr:
+            sta         vt_k
+            beq         @set
+            jsr         cur_vq
+            lda         v_cols
+            lsr
+            tax
+            ldy         v_cols
+            jsr         blank_span
+            lda         v_cols
+            lsr
+            dec         a
+            cmp         v_x
+            bcs         @set
+            sta         v_x
+@set:
+            stz         v_wrap
+            lda         vb2
+            sta         $00
+            ldy         #META
+            lda         (vrp),Y
+            and         #<~RA_LINE
+            ora         vt_k
+            sta         (vrp),Y
+            jsr         scr_dirty
+            jmp         fs_raw
+
+; Z = 0 if the cursor's row is a double one (.A its RA_LINE bits)
+cur_dw:
+            lda         vb2
+            sta         $00
+            ldy         #META
+            lda         (vrp),Y
+            and         #RA_LINE
+            rts
+
+; .A = vid's column for the cursor: a double row's twice the window's
+vid_col:
+            jsr         cur_dw
+            beq         :+
+            lda         v_x
+            asl
+            rts
+:
+            lda         v_x
+            rts
 
 ; A character set designated: .A = its final (B, A, 0; 1 and 2, the alternate ROM's, as B and 0; others B)
 set_cs:
@@ -1340,7 +1458,20 @@ x_dec:
 @mode:
             ldx         vd_i
             lda         v_parh,X
+            beq         @small
+            cmp         #>1047                              ; (1047 and 1049: the alternate screen)
             bne         @next
+            lda         v_parl,X
+            cmp         #<1047
+            bne         :+
+            jsr         d_alt
+            bra         @next
+:
+            cmp         #<1049
+            bne         @next
+            jsr         d_alt49
+            bra         @next
+@small:
             lda         v_parl,X
             ldx         #DECM_N - 1
 :
@@ -1396,9 +1527,10 @@ d_sclm:                                                     ; ?4: kept (W2: jump
             sta         v_mode2
             jmp         fs_raw
 
-d_scnm:                                                     ; ?5: kept (W2: shown)
-            lda         #VM_SCNM
+d_scnm:                                                     ; ?5: the screen reversed (the serial port's terminal's
+            lda         #VM_SCNM                            ;   own; the screen painted so)
             jsr         mode_bit
+            jsr         scr_dirty
             jmp         fs_raw
 
 d_om:                                                       ; ?6: the cursor home
@@ -1424,6 +1556,28 @@ d_anm:                                                      ; ?2: reset, VT52 mo
 :
             sta         v_mode2
             rts
+
+d_alt:                                                      ; ?47, ?1047: the alternate screen (cleared), or the main
+            lda         vd_set                              ;   one; painted (not passed on: the console's)
+            beq         :+
+            jsr         alt_on
+            bra         alt_paint
+:
+            jsr         alt_off
+alt_paint:
+            jsr         ser_dirty
+            jmp         scr_dirty
+
+d_alt49:                                                    ; ?1049: as ?1047, the cursor saved first (DECSC), and
+            lda         vd_set                              ;   restored after
+            beq         :+
+            jsr         m_save
+            jsr         alt_on
+            bra         alt_paint
+:
+            jsr         alt_off
+            jsr         m_restore
+            bra         alt_paint
 
 d_tcem:                                                     ; ?25: the cursor shown, or not (the serial port's as it
             lda         #VM_TCEM                            ;   is now, if it follows)
@@ -2433,6 +2587,19 @@ print_glyph:
             jsr         m_ich
             jsr         scr_dirty
 @put:
+            jsr         cur_dw                              ; The row's width: a double row's half
+            php
+            lda         v_cols
+            plp
+            beq         :+
+            lsr
+:
+            sta         pg_w
+            dec         a                                   ; (The cursor in it)
+            cmp         v_x
+            bcs         :+
+            sta         v_x
+:
             lda         fw_scr                              ; To the screen first, from where the cursor is now
             beq         :+
             jsr         fc_print
@@ -2467,7 +2634,7 @@ print_glyph:
             lda         v_fl
             sta         (vrp),Y
             iny                                             ; The cursor on (the last column: the flag)
-            cpy         v_cols
+            cpy         pg_w
             bcs         @last
             sty         v_x
             bra         @out
@@ -2487,7 +2654,8 @@ m_index:
             lda         v_y
             cmp         v_bot
             bne         @down
-            lda         #1
+            lda         v_alt                               ; (Kept: the main screen's, not the alternate's)
+            eor         #1
             sta         su_keep
             lda         v_top
             ldx         v_bot
@@ -2830,6 +2998,76 @@ m_restore:
             sta         v_mode
             jmp         cur_row
 
+; The alternate screen in use, cleared: its banks the first time (three more of the task's; none to be had: the main
+; screen still), its map each row its own, no scrollback
+alt_on:
+            lda         v_alt
+            bne         @done
+            ldx         vt_w
+            lda         vw_abank,X
+            bne         @have
+            lda         #3
+            jsr         BANKS_ALLOC
+            bcs         @done
+            ldx         vt_w
+            sta         vw_abank,X
+            txa                                             ; (Its ring at the start, no scrollback)
+            asl
+            tax
+            stz         vw_rb + 1,X
+            stz         vw_sb + 1,X
+            lda         #1                                  ; Its map
+            jsr         buf_to
+            ldy         #POOL - 1
+:
+            tya
+            sta         (vmap),Y
+            dey
+            bpl         :-
+            bra         @clear
+@have:
+            lda         #1
+            jsr         buf_to
+@clear:
+            lda         #2
+            jsr         m_ed
+            stz         v_sbn
+@done:
+            rts
+
+; The main screen in use again
+alt_off:
+            lda         #0
+            ; (falls into buf_to)
+
+; Screen .A in use (0 main, 1 alternate): the one in use's ring and scrollback kept, the other's taken; its banks
+; and map
+buf_to:
+            cmp         v_alt
+            beq         @done
+            pha
+            lda         vt_w                                ; (The one in use's place: the window * 2 + v_alt)
+            asl
+            ora         v_alt
+            tax
+            lda         v_rbase
+            sta         vw_rb,X
+            lda         v_sbn
+            sta         vw_sb,X
+            txa
+            eor         #1
+            tax
+            lda         vw_rb,X
+            sta         v_rbase
+            lda         vw_sb,X
+            sta         v_sbn
+            pla
+            sta         v_alt
+            jsr         banks
+            jmp         cur_row
+@done:
+            rts
+
 ; The margins the whole screen
 full_margins:
             stz         v_top
@@ -2873,6 +3111,8 @@ m_save_rest:
 ; RIS (and a new window): all reset, the tab stops every 8, the screen and the scrollback cleared (as xterm's), the
 ; cursor home
 reset:
+            lda         #0                                  ; (The main screen)
+            jsr         buf_to
             stz         v_state
             stz         v_rawn
             stz         v_sbn
@@ -2938,19 +3178,19 @@ scroll_up:
             cmp         su_l
             beq         @last
             inc         a
-            jsr         map_x
-            lda         v_rmap,X
+            jsr         map_y
+            lda         (vmap),Y
             pha
             lda         su_i
-            jsr         map_x
+            jsr         map_y
             pla
-            sta         v_rmap,X
+            sta         (vmap),Y
             inc         su_i
             bra         @step
 @last:
-            jsr         map_x
+            jsr         map_y
             lda         su_r
-            sta         v_rmap,X
+            sta         (vmap),Y
 @in:
             lda         su_l                                ; The row in at the bottom, blank
             jsr         map_row
@@ -2990,19 +3230,19 @@ scroll_down:
             cmp         su_f
             beq         @first
             dec         a
-            jsr         map_x
-            lda         v_rmap,X
+            jsr         map_y
+            lda         (vmap),Y
             pha
             lda         su_i
-            jsr         map_x
+            jsr         map_y
             pla
-            sta         v_rmap,X
+            sta         (vmap),Y
             dec         su_i
             bra         @step
 @first:
-            jsr         map_x
+            jsr         map_y
             lda         su_r
-            sta         v_rmap,X
+            sta         (vmap),Y
             jsr         pool_ptr
             jsr         blank_row
             dec         su_n
@@ -3047,18 +3287,18 @@ cur_vq:
             sta         vq + 1
             rts
 
-; .X = the map's entry for its place .A (from the ring's start)
-map_x:
+; .Y = the map's entry for its place .A (from the ring's start)
+map_y:
             clc
             adc         v_rbase
             and         #POOL - 1
-            tax
+            tay
             rts
 
-; .A = the pool's row at the map's place .A
+; .A = the pool's row at the map's place .A.  Modifies .Y
 map_row:
-            jsr         map_x
-            lda         v_rmap,X
+            jsr         map_y
+            lda         (vmap),Y
             rts
 
 ; vq: the screen's row .A
@@ -3366,7 +3606,9 @@ ser_paint:
             sta         sp_last
 :
             lda         sp_last
-            beq         @next
+            bne         :+
+            jmp         @next
+:
             jsr         tx_free
             cmp         #VT_ROOM
             bcs         :+
@@ -3389,6 +3631,26 @@ ser_paint:
             sta         sp_cy
             stz         sp_full
             jsr         row_ptr
+            lda         vb2                                 ; (A double row: its ESC # first)
+            sta         $00
+            ldy         #META
+            lda         (vq),Y
+            and         #RA_LINE
+            beq         @cells
+            ldx         #'6'
+            cmp         #RA_DW
+            beq         :+
+            ldx         #'3'
+            cmp         #RA_DHT
+            beq         :+
+            ldx         #'4'
+:
+            lda         #ESC
+            jsr         tx_put
+            lda         #'#'
+            jsr         tx_put
+            txa
+            jsr         tx_put
 @cells:
             ldy         sp_col
             cpy         sp_last
@@ -3564,6 +3826,13 @@ ser_state:
             ldy         #>s_lnm_on
             jsr         out_str
 :
+            lda         v_mode
+            and         #VM_SCNM
+            beq         :+
+            ldx         #<s_scnm_on
+            ldy         #>s_scnm_on
+            jsr         out_str
+:
             lda         v_g0
             cmp         #'B'
             beq         :+
@@ -3662,6 +3931,12 @@ fc_print:
             jsr         fc_sgr
             lda         v_last
             jsr         scr_glyph
+            jsr         cur_dw                              ; (A double row: a space after it)
+            beq         :+
+            lda         #' '
+            jsr         scr_put
+            inc         scr_x
+:
             ldx         scr_x                               ; vid's cursor on (past its last column: not known)
             inx
             cpx         v_cols
@@ -3675,10 +3950,12 @@ fc_print:
 
 ; vid's cursor where the window's is (a CUP, if it isn't)
 fc_pos:
+            jsr         vid_col
+            sta         fp_x
             lda         v_y
             cmp         scr_y
             bne         @cup
-            lda         v_x
+            lda         fp_x
             cmp         scr_x
             beq         @done
             cmp         #0                                  ; (The row's start: a CR)
@@ -3690,11 +3967,11 @@ fc_pos:
             lda         #1
             sta         out_t
             lda         v_y
-            ldx         v_x
+            ldx         fp_x
             jsr         out_cup
             lda         v_y
             sta         scr_y
-            lda         v_x
+            lda         fp_x
             sta         scr_x
 @done:
             rts
@@ -3704,6 +3981,15 @@ fc_sgr:
             lda         v_col
             ldx         v_fl
 fc_sgr_ax:
+            pha                                             ; (DECSCNM: every cell reversed)
+            lda         v_mode
+            and         #VM_SCNM
+            beq         :+
+            txa
+            eor         #F_REV
+            tax
+:
+            pla
             cmp         scr_c
             bne         :+
             cpx         scr_f
@@ -3860,17 +4146,30 @@ fc_tcem:
 scr_paint:
             lda         w_in
             jsr         vt_load
+            ldx         #<s_scr_sgr0                        ; (The rendition plain, or reversed with DECSCNM, as the
+            ldy         #>s_scr_sgr0                        ;   screen's cleared)
+            stz         scr_f
+            lda         v_mode
+            and         #VM_SCNM
+            beq         :+
+            ldx         #<s_scr_sgr7
+            ldy         #>s_scr_sgr7
+            lda         #F_REV
+            sta         scr_f
+:
+            jsr         out_str
             ldx         #<s_scr_clear
             ldy         #>s_scr_clear
             jsr         out_str
             lda         #COL_DEF
             sta         scr_c
-            stz         scr_f
             stz         scr_dec
             stz         vt_i
 @row:
             lda         scr_fail                            ; (Refused: claimed; painted after)
-            bne         @done
+            beq         :+
+            rts
+:
             lda         vt_i
             cmp         v_rows
             bcs         @state
@@ -3878,6 +4177,12 @@ scr_paint:
             jsr         row_last
             sta         vt_k
             beq         @next
+            lda         vb2                                 ; (A double row's cells a space apart)
+            sta         $00
+            ldy         #META
+            lda         (vq),Y
+            and         #RA_LINE
+            sta         sp_dw
             lda         vt_i
             ldx         #0
             jsr         out_cup
@@ -3892,6 +4197,11 @@ scr_paint:
             jsr         fc_sgr_ax
             lda         cell_c
             jsr         scr_glyph
+            lda         sp_dw
+            beq         :+
+            lda         #' '
+            jsr         scr_put
+:
             inc         vt_j
             bra         @cell
 @next:
@@ -4497,9 +4807,9 @@ csi_vec:    .word       x_ich, x_cuu, x_cud, x_cuf, x_cub, x_cnl, x_cpl, x_cha, 
             .word       x_dl, x_dch, x_su, x_sd, x_ech, x_cbt, x_cha, x_cuf, x_rep, x_da, x_vpa, x_vpr, x_cup
             .word       x_tbc, x_sm, x_rm, x_sgr, x_dsr, x_stbm, x_scosc, x_scorc, x_decll, x_xtwin, x_reqtparm
 .assert     * - csi_vec = CSI_N * 2, error, "csi_final and csi_vec don't match"
-DECM_N      = 8
-decm_n:     .byte       1, 3, 4, 5, 6, 7, 25, 2
-decm_vec:   .word       d_ckm, d_colm, d_sclm, d_scnm, d_om, d_awm, d_tcem, d_anm
+DECM_N      = 9
+decm_n:     .byte       1, 3, 4, 5, 6, 7, 25, 2, 47
+decm_vec:   .word       d_ckm, d_colm, d_sclm, d_scnm, d_om, d_awm, d_tcem, d_anm, d_alt
 .assert     * - decm_vec = DECM_N * 2, error, "decm_n and decm_vec don't match"
 sgr_on:     .byte       0, F_BOLD, F_DIM, 0, F_UL, F_BLINK, F_BLINK, F_REV, F_INVIS, 0     ; (SGR 0-9: 6 as 5)
 sgr_off:    .byte       <~(F_BOLD | F_DIM), $FF, <~F_UL, <~F_BLINK, $FF, <~F_REV, <~F_INVIS, $FF  ; (22-29)
@@ -4520,13 +4830,16 @@ rqm_fixed:  .byte       0, 4, 0, 0, 0, 0, 3, 0, 1           ;   nothing)
 ; the tees, the bars, less and greater or equal, pi, not equal, pound, middle dot
 dec_ascii:  .byte       ' ', '*', '#', 'H', 'F', 'C', 'L', $B0, $B1, 'N', 'V', '+', '+', '+', '+', '+'
             .byte       '-', '-', '-', '-', '_', '+', '+', '+', '+', '|', '<', '>', 'p', '#', $A3, $B7
-s_ser_clear: .byte      ESC, "[0m", ESC, "(B", ESC, ")B", SI, ESC, "[?6l", ESC, "[4l", ESC, "[?7h", ESC, "[20l"
+s_ser_clear: .byte      ESC, "[0m", ESC, "(B", ESC, ")B", SI, ESC, "[?6l", ESC, "[4l", ESC, "[?7h", ESC, "[20l", ESC, "[?5l"
             .byte       ESC, "[r", ESC, "[H", ESC, "[2J", 0
-s_scr_clear: .byte      ESC, "[0m", ESC, "(B", ESC, ")B", SI, ESC, "[r", ESC, "[H", ESC, "[2J", 0
+s_scr_sgr0: .byte       ESC, "[0m", 0
+s_scr_sgr7: .byte       ESC, "[0;7m", 0
+s_scr_clear: .byte      ESC, "(B", ESC, ")B", SI, ESC, "[r", ESC, "[H", ESC, "[2J", 0
 s_om:       .byte       ESC, "[?6h", 0
 s_awm_off:  .byte       ESC, "[?7l", 0
 s_irm_on:   .byte       ESC, "[4h", 0
 s_lnm_on:   .byte       ESC, "[20h", 0
+s_scnm_on:  .byte       ESC, "[?5h", 0
 s_tcem_on:  .byte       ESC, "[?25h", 0
 s_tcem_off: .byte       ESC, "[?25l", 0
 s_da:       .byte       ESC, "[?6c", 0                      ; (A VT102)

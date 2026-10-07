@@ -437,6 +437,12 @@ October 2026, on `reborn-text-windows` (reborn's `docs/status.md`, "The text win
 * **VT52 mode is translated, not passed on**: each of its sequences becomes the ANSI one that does the same, which the engine does and sends to the serial port, so the PC's terminal never leaves ANSI mode.
 * **`keys vt`** follows DECCKM and VT52 mode; the keypad's application mode (DECKPAM) is kept but can't be acted on, as the PC's terminal is never put in it and sends its keypad as digits.  `keys vt` ends with the window's last `consctl`, as raw mode does.
 
+### **As built: W2c**
+
+* **The alternate screen isn't the PC terminal's**: switching paints both terminals from the window's cells instead of passing `?1049` on, so a window shown always gets its own screen, whatever the terminal's buffers hold.  It costs a paint (some 0.2 s on the serial port) as a full-screen program starts and ends.
+* **The maps moved out of the window's state** (into `vw_maps`, through `vmap`), as a second map wouldn't fit its page.
+* **Double width and height on the screen** show the characters a space apart (the VERA can't scale one row); on the serial port they're the terminal's own.
+
 ### **Decisions**
 
 The user's answers to the plan's questions, 2026-10-07:

@@ -381,6 +381,7 @@ const SCREEN_LINES = [
   ["echo flash >/dev/vid/ctl", "echo: write error: invalid argument"],
   ["cat /pc/box", "\x1b(0lqk\x1b(B"],
   ["cat /pc/colours", "\x1b[31;44mR\x1b[0mn\x1b[1;32mG\x1b[0;7mV\x1b[m"],
+  ["cat /pc/reverse", "\x1b[?5h", true],
 ];
 const SCREEN_COLOURS = '\x1b[31;44mR\x1b[0mn\x1b[1;32mG\x1b[0;7mV\x1b[m\n';
 
@@ -414,13 +415,18 @@ const VT_FIXTURES = [
   ['scrolls', Array.from({ length: 30 }, (v, i) => 'S' + (i + 1)).join('\n') + '\x1b[2S\x1b[1;1H\x1b[2Mtop'],
   ['ris2', Array.from({ length: 30 }, (v, i) => 'R' + (i + 1)).join('\n') + '\x1bcnew'],
   ['ed3', Array.from({ length: 30 }, (v, i) => 'E' + (i + 1)).join('\n') + '\x1b[3Jkept'],
+  ['alt', Array.from({ length: 28 }, (v, i) => 'M' + (i + 1)).join('\n') + '\x1b[?1049halt text\x1b[5;5Hthere\n\n\n' +
+    Array.from({ length: 30 }, (v, i) => 'A' + i).join('\n') + '\x1b[?1049lback'],
+  ['alt47', 'main\x1b[?47hon the alternate\x1b[?47l\x1b[2;1Hmain again'],
   ['sgr', '\x1b[1;31mbold red\x1b[0m \x1b[38;5;196mx256\x1b[48;2;0;0;255mrgb\x1b[m \x1b[7mrev\x1b[27m end'],
   ['sub', 'one\x1b[2\x1athree', false],
+  ['dwide', 'single\r\n\x1b#6double width, long enough to wrap past forty columns\r\n\x1b#3top\r\n\x1b#4bottom\r\nx\x1b[70G\x1b#6y\r\n' +
+    '\x1b#6z\x1b#5back to single', false],
   ['vt52', 'a\x1b[?2lb\x1bAc\x1bBd\x1bY(#xy\x1bFlqk\x1bG\x1bH\x1bIrv\x1b<\x1b[3;1Hansi', false],
   ['colm', 'text\x1b[?3hafter', false],
 ];
 const VT_PAINT = '\x1b[1;31mRed bold\x1b[0m plain \x1b[7mrev\x1b[27m\r\n\x1b(0lqqqk\x1b(B box\r\n' + 'W'.repeat(100) +
-  '\r\n\x1b[44;33m blue bg \x1b[0m\r\n\x1b[10;5Hmiddle\x1b[3;20r\x1b[15;7Hend';
+  '\r\n\x1b[44;33m blue bg \x1b[0m\r\n\x1b[10;5Hmiddle\x1b[12;1H\x1b#6wide\x1b[3;20r\x1b[15;7Hend';
 // (vtpaint's steps: window 1 made, written, shown (a read of its /text a request at a time paints the serial port,
 // as a reader waiting for keys would), the screen read; then window 0 shown, and the screen's rows printed)
 const VT_PAINT_RC = [
@@ -2330,8 +2336,8 @@ module.exports = {
       init: 't_vid', cycles: 30e6, expect: ['ok - no card: #v isn\'t there (E_NODEV)', 't_vid: PASS'],
     },
     {
-      name: 'screen', what: 'the console on the Vera X\'s screen (cons\'s second terminal: vid\'s /term), at rc: /dev/vid; consctl\'s terminal both, serial (the screen left as it was), both again (repainted); a font written to /dev/vid/font; colours from a file (SGR, in the cells); the DEC graphics (ESC ( 0) as the font\'s glyphs; what rc shows, on the screen as on the serial port',
-      init: 't_rc', cycles: 150e6, pc: { files: { colours: SCREEN_COLOURS, box: '\x1b(0lqk\x1b(B\n' } }, jsOnly: 'the danlang emulator has no VERA yet',
+      name: 'screen', what: 'the console on the Vera X\'s screen (cons\'s second terminal: vid\'s /term), at rc: /dev/vid; consctl\'s terminal both, serial (the screen left as it was), both again (repainted); a font written to /dev/vid/font; colours from a file (SGR, in the cells); DECSCNM (every cell reversed); the DEC graphics (ESC ( 0) as the font\'s glyphs; what rc shows, on the screen as on the serial port',
+      init: 't_rc', cycles: 150e6, pc: { files: { colours: SCREEN_COLOURS, box: '\x1b(0lqk\x1b(B\n', reverse: '\x1b[?5h' } }, jsOnly: 'the danlang emulator has no VERA yet',
       get machine() { return { input: typed(SCREEN_LINES), vera: true }; },
       get expect() { return expected(SCREEN_LINES); },
       check(m) {
@@ -2349,7 +2355,8 @@ module.exports = {
         if (row < 0) f.push('the screen lacks the colours\' line RnGV');
         else {
           const at = row * c.cols, attrs = Array.from(c.attrs.subarray(at, at + 4)).map(a => '$' + a.toString(16).toUpperCase().padStart(2, '0')).join(' ');
-          if (attrs !== '$41 $07 $0A $70') f.push('the colours\' cells: ' + attrs + ' ($41 $07 $0A $70 wanted)');
+          // (DECSCNM set at the end: each cell's colours reversed; V's, reversed itself, plain)
+          if (attrs !== '$14 $70 $A0 $07') f.push('the colours\' cells, the screen reversed: ' + attrs + ' ($14 $70 $A0 $07 wanted)');
         }
         const font = fs.readFileSync(path.join(__dirname, '..', 'romfs', 'lib', 'font', 'cp437'));
         if (!Buffer.from(m.vera.vram.subarray(0x1F000, 0x1F800)).equals(font)) f.push('VRAM\'s font isn\'t /lib/font/cp437');
@@ -2358,7 +2365,7 @@ module.exports = {
       },
     },
     {
-      name: 'vt', what: 'the console\'s VT100 (W1): sequences into a window not shown, its /text read back: text, the cursor\'s moves, erasing, inserting and deleting, the scrolling region, the scrollback, tabs, autowrap, insert mode, the character sets, DECSC and origin mode, DECALN, RIS, REP, SGR, VT52 mode, sequences dropped, cancelled and split; each as sim/lib/vt.js has it, and vt.js as xterm.js has it (if it\'s installed)',
+      name: 'vt', what: 'the console\'s VT100 (W1): sequences into a window not shown, its /text read back: text, the cursor\'s moves, erasing, inserting and deleting, the scrolling region, the scrollback, tabs, autowrap, insert mode, the character sets, DECSC and origin mode, DECALN, RIS, REP, SGR, VT52 mode, the alternate screen, double width and height, sequences dropped, cancelled and split; each as sim/lib/vt.js has it, and vt.js as xterm.js has it (if it\'s installed)',
       init: 't_rc', cycles: 600e6,
       pc: { files: () => Object.fromEntries(VT_FIXTURES.map(([n, b]) => ['vt/' + n, vtFile(b)])) },
       get machine() { return { input: typed(VT_LINES) }; },
@@ -2366,7 +2373,7 @@ module.exports = {
       check() { const r = vtXterm(); this.notes = [r.note]; return r.f; },
     },
     {
-      name: 'vtpaint', what: 'a window painted (W1): text in colours, a box in DEC graphics, a line autowrapped, a region and the cursor, written into a window not shown, which is then shown: what the serial port\'s terminal shows (sim/lib/vt.js: its characters and colours) and what the screen shows, as the window has it',
+      name: 'vtpaint', what: 'a window painted (W1): text in colours, a box in DEC graphics, a line autowrapped, a double-width row, a region and the cursor, written into a window not shown, which is then shown: what the serial port\'s terminal shows (sim/lib/vt.js: its characters and colours) and what the screen shows, as the window has it',
       init: 't_rc', cycles: 200e6, pc: { files: { 'vt/paint': vtFile(VT_PAINT), 'vt/paint.rc': VT_PAINT_RC } }, jsOnly: 'the danlang emulator has no VERA yet',
       get machine() {
         return { vera: true, input: typed([['rc /pc/vt/paint.rc']]) };
@@ -2389,7 +2396,7 @@ module.exports = {
         if (ser.top !== want.top || ser.bot !== want.bot) f.push('the serial port\'s region ' + (ser.top + 1) + '-' + (ser.bot + 1) + ', not ' + (want.top + 1) + '-' + (want.bot + 1));
         const out = raw.replace(/\r/g, ''), s0 = out.indexOf('\npainted\n');
         const scr = s0 < 0 ? [] : out.slice(s0 + 9).split('\n').map(l => l.replace(/ +$/, ''));
-        const rows = want.lines();
+        const rows = want.screen.map(r => r.dw ? [...VT.rowText(r)].map(c => c + ' ').join('').replace(/ +$/, '') : VT.rowText(r));
         for (let r = 0; r < 24; r++) if (scr[r] !== rows[r]) { f.push('the screen\'s row ' + (r + 1) + ': ' + JSON.stringify(scr[r]) + ', not ' + JSON.stringify(rows[r])); break; }
         return f;
       },
