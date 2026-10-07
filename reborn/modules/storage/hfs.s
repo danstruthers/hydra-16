@@ -1,6 +1,6 @@
 ; ****************************************************************************
 ; hfs - HydraFS, the storage driver's second bank (its first: storage.s): #f, and the HydraFS commands and lines of
-; #d's ctl files.  The format is docs/plans/HYDRAFS.md's, the old OS's, unchanged (versions 1 and 2, partitions,
+; #d's ctl files.  The format is docs/design/plans/HYDRAFS.md's, the old OS's, unchanged (versions 1 and 2, partitions,
 ; sparse files), and so is the code, ported from os_rom/fs/hfs_*.s: hfs/srv.s (the requests, walking, reading),
 ; hfs/write.s (the metadata buffer, the free map, growing and freeing, writing, create, remove, wstat),
 ; hfs/sparse.s (holes), hfs/format.s (format, label, partitions), hfs/check.s (the check, and the ctl file's
@@ -23,7 +23,7 @@
 .include "srvlib.inc"
 .include "storage.inc"
 
-; ---- The format (docs/plans/HYDRAFS.md)
+; ---- The format (docs/design/plans/HYDRAFS.md)
 HFS_BLOCK           = BLOCK     ; A block: a disk's sector
 HFS_CLUSTER_BLOCKS  = 8         ; A cluster (what space is allocated in) on a card: 8 blocks, 4 KB (a volume's own:
                                 ;   its superblock's HFS_SB_CSHIFT, HFS_SHIFT while it's the one in hand)

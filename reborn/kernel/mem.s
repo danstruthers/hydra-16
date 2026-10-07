@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; mem.s - memory (BIOS ROM page 1: far calls; docs/reimplementation-from-scratch.md, §10.5).  The kernel manages
+; mem.s - memory (BIOS ROM page 1: far calls; docs/design/reimplementation-from-scratch.md, §10.5).  The kernel manages
 ; pages and banks; finer allocation is the language runtimes' (malloc, ALLOT ...), which know their own needs.
 ;   Task RAM: BREAK moves the end of the program's data (from its module's HX_TOP up); PAGES_ALLOC and PAGES_FREE
 ;     give runs of 256-byte pages above it, from the top of its RAM down (a bitmap in its OS area: TA_PAGEMAP).  The top

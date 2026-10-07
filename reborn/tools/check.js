@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // ****************************************************************************
-// check.js - the build's checks of what it made (docs/reimplementation-from-scratch.md, phase 1.2): nothing but
+// check.js - the build's checks of what it made (docs/design/reimplementation-from-scratch.md, phase 1.2): nothing but
 // the kernel writes T, V or W.  A module that wrote T would run on in another task's memory, one that wrote W on
 // another BIOS ROM page; V is the kernel's (the vectors).  Programs may write U and $00/$01 (SEG_MAP, the X16's
 // banks).  A module's image is searched for a store to $FFF0 (T), $FFF2 (V) or $FFF3 (W): STA, STX, STY or STZ,

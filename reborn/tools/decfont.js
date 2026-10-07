@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // ****************************************************************************
 // decfont.js - the DEC Special Graphics (the VT100's line drawing: ESC ( 0, its $5F-$7E) as the first 32 glyphs
-// of the console's fonts (docs/plans/WINDOWS.md, W2): the console keeps them in a window's cells as $00-$1F, and
+// of the console's fonts (docs/design/plans/WINDOWS.md, W2): the console keeps them in a window's cells as $00-$1F, and
 // vid's terminal shows them there.  No byte the terminal prints reaches those glyphs otherwise ($00-$1F are its
 // controls), so a font loses nothing: the ISO-8859-15 font's reversed letters, cp437's smileys and the rest were
 // never shown.  The £ and the middle dot are each font's own (its $A3 and $B7 in ISO-8859-15, $9C and $FA in cp437).

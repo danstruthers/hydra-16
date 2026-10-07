@@ -23,7 +23,7 @@ program caches, the cards' programs and the ROM's, and the shell just looks in `
 ### **Where it stands**
 
 Each task has a namespace of up to 32 entries in the IO transfer areas' banks, copied to the tasks it starts, on top of
-the **system namespace**, 32 entries every task sees ([io.md](../../old/docs/programming/io.md#namespaces)): a **mount** sends names under a path to a device's server, and a
+the **system namespace**, 32 entries every task sees ([io.md](../../../../old/docs/programming/io.md#namespaces)): a **mount** sends names under a path to a device's server, and a
 **bind** makes a path stand for another; the entries with the longest matching prefix apply, and several with the
 same path are a **union**, looked in in order (`bind -a`, `bind -b`, `-c` for creates; `unmount new old` takes one
 member out; `hide`); reading a union's directory reads each member's.  Names nothing matches must be under `/dev`;
@@ -33,7 +33,7 @@ In the system namespace, the boot shell mounts `/sd`, `/env`, `/proc`, and `/rom
 with a spec, as Plan 9's `mount` takes one: `mount -s hfs /rom x`), and binds the boot card's `bin` and `lib`; in
 its own, it mounts its area at `/ram` (each shell mounts its own: `mount hfs /ram r/N`).  Then it runs
 `/rom/lib/namespace` (the caches before the card's, the ROM's after, with `-s`) and the card's `lib/namespace`
-([io.md](../../old/docs/programming/io.md#namespaces)).  The shell looks for a program in `.` then `/bin`, then `$PATH`;
+([io.md](../../../../old/docs/programming/io.md#namespaces)).  The shell looks for a program in `.` then `/bin`, then `$PATH`;
 libraries in `/lib`, then `$LIBPATH`.  C has `hy_bind`, `hy_mount`, `hy_unmount` and `hy_hide`.
 
 Before this, programs and libraries were found by **search paths** in the shell's code (the current directory,

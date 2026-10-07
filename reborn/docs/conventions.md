@@ -2,7 +2,7 @@
 
 The rules every source in `reborn/` follows, so the whole system reads the same way and a program written for
 one part works with every other.  The reasons are in the plan
-([../../docs/reimplementation-from-scratch.md](../../docs/reimplementation-from-scratch.md), §7-§9); these are
+([design/reimplementation-from-scratch.md](design/reimplementation-from-scratch.md), §7-§9); these are
 the rules as built.
 
 ## Calling the system

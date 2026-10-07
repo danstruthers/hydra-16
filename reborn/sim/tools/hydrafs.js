@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // ****************************************************************************
-// hydrafs.js - HydraFS card images on the PC (the format: docs/plans/HYDRAFS.md).  Makes test cards for the
+// hydrafs.js - HydraFS card images on the PC (the format: docs/design/plans/HYDRAFS.md).  Makes test cards for the
 // emulator (--sd), and moves files to and from a real card's image (written or read with a disk imager).
 //
 // Usage: node hydrafs.js COMMAND IMAGE [ARGS]

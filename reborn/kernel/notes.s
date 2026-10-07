@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; notes.s - notes: Plan 9's notes (signals), with numbers (docs/reimplementation-from-scratch.md, §10.7).
+; notes.s - notes: Plan 9's notes (signals), with numbers (docs/design/reimplementation-from-scratch.md, §10.7).
 ;
 ; NOTE marks a note pending in a task (TK_NOTES and TK_NOTED, in its zero page) and wakes it if it waits (WAIT,
 ; SLEEP, BLOCKED); a note to a note group goes to each task in it.  A task takes its notes in its own code, never

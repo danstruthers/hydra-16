@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; cons - the console driver (docs/reimplementation-from-scratch.md, §14.2): the serial port, its rings, and the
+; cons - the console driver (docs/design/reimplementation-from-scratch.md, §14.2): the serial port, its rings, and the
 ; devices #c and #P (/pc, a folder on the PC), on srvlib (a boot driver: task F).
 ;
 ; Windows, Plan 9's way (rio's, on a text terminal), not job control: several consoles on the one terminal, each a
@@ -62,13 +62,13 @@
 ; doesn't work, and on the board the Rockwell's sending back to back at 115200 loses characters (2 idle bits then;
 ; 1 otherwise).  The interrupts' work is a few dozen cycles each: the IRQs-off budget (200 cycles) has the
 ; dispatch's 115 in it.
-;   The screen (the Vera X's, phase 8: docs/plans/VIDEO.md) is a second terminal, its driver's (vid: #v/term, an
+;   The screen (the Vera X's, phase 8: docs/design/plans/VIDEO.md) is a second terminal, its driver's (vid: #v/term, an
 ; ANSI terminal; opened the first time, with no screen nothing from then on): the shown window's output goes there
 ; too, as vt.s makes it show the window's screen (written at each request's end), and a window shown is painted
 ; there all at once.  With the serial port off (consctl's screen), the shown window takes its writes whole, as a
 ; hidden one does: nothing paces it but the screen.
 ;
-; /pc (#P, docs/plans/PC.md): a folder on the PC, served by the PC tool (sim/tools/hydrapc.js, which is the
+; /pc (#P, docs/design/plans/PC.md): a folder on the PC, served by the PC tool (sim/tools/hydrapc.js, which is the
 ; terminal too) over the serial port, in frames between the console's bytes (sim/lib/pcproto.js): PC_MARK, then the
 ; type, the tag, the payload's length (2) and the payload, and a CRC-16 of those, PC_MARK and PC_ESC stuffed (PC_ESC,
 ; then the byte ^ $20; the PC's frames stuff Ctrl-C, Ctrl-\ and Ctrl-] too, which the irq entry acts on).  Version

@@ -1,4 +1,4 @@
-// vt.js - a VT100 (and VT102) terminal's screen, for the tests (docs/plans/WINDOWS.md, W1): what the PC's terminal
+// vt.js - a VT100 (and VT102) terminal's screen, for the tests (docs/design/plans/WINDOWS.md, W1): what the PC's terminal
 // shows of the serial port's stream, and what a window's screen should be after a program's output (onlcr: each LF
 // a CR LF too, as the console makes it).  Written apart from the console's engine (modules/cons/vt.s), from the
 // VT100's and VT102's user guides, so a test can hold one against the other; xterm.js's headless terminal, when

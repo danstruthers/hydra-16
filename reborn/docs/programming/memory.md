@@ -64,6 +64,10 @@ To find a segment by name rather than by passing its number, name it in `/dev/se
 name holds a reference of its own, so the segment stays while it's named; `free NAME` lets go.  `SEG_CREATE_IN` makes
 one from a range of the shared bank IDs (`$80`-`$FF` are segments'); `SEGINFO` and `free` say what's used.
 
+In C: `hy_seg_create`, `hy_seg_attach`, `hy_seg_detach`, and `hy_seg_map` (a bank of it at `HY_BANK_WINDOW`: U, then
+`$00`).  The race, philo and prodcons samples share one between their tasks
+([../../sdk/c/README.md](../../sdk/c/README.md#the-multitasking-demos)).
+
 ## Semaphores
 
 For tasks that share something (a segment, a device, a file) or wait for each other, the kernel keeps 16 semaphores,
@@ -94,7 +98,10 @@ gets `E_BUSY`, not a wait for ever.
             jsr         SEM_RELEASE
 ```
 
-In C: `hy_sem_new`, `hy_sem_acquire`, `hy_sem_try`, `hy_sem_release`, `hy_sem_free`.
+In C: `hy_sem_new`, `hy_sem_acquire`, `hy_sem_try`, `hy_sem_release`, `hy_sem_free`.  The C SDK's multitasking demos
+use them each way: a mutex around shared memory (race) and around the console (chorus), a semaphore for each task
+passed round as a baton (chorus), forks as mutexes and a deadlock (philo), counting semaphores for a ring's free and
+filled slots (prodcons), and barriers, each task giving "ready" one and taking one of "go" (all of them).
 
 ## Another task's memory
 

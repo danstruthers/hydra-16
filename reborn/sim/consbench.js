@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // ****************************************************************************
-// consbench.js - the console's costs (docs/plans/WINDOWS.md, W1's spike): commands typed at rc, each timed from its
+// consbench.js - the console's costs (docs/design/plans/WINDOWS.md, W1's spike): commands typed at rc, each timed from its
 // Enter to the next prompt, in the emulator's cycles; and from those, a window's output a byte (into a window not
 // shown, less the same reading to /dev/null), a scroll (a file of short lines into it), and the window shown's (on
 // the serial port, paced by the line).  --vs TREE runs the same in another tree's build (another branch's worktree,

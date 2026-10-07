@@ -28,7 +28,7 @@ cd /pc/src
 
 `ls -l` shows the PC's sizes and times; `mkdir`, `rm`, `rmdir` and `mv` work; a `.hys` script runs from it; a pipeline's stages can use it at once.  With `--read-only`, a write, create, remove or rename is refused (`not allowed`).  With no PC tool on the line, a request on `/pc` fails after a second (`no answer`), and the attach frame's 7 bytes show on the terminal.
 
-The emulator plays the PC tool's part: `node sim/hydrasim.js -i --pc-dir C:\hydra` ([emulator](../../old/docs/tools/emulator.md)).
+The emulator plays the PC tool's part: `node sim/hydrasim.js -i --pc-dir C:\hydra` ([emulator](../../../../old/docs/tools/emulator.md)).
 
 ### **The design**
 
@@ -47,7 +47,7 @@ The emulator plays the PC tool's part: `node sim/hydrasim.js -i --pc-dir C:\hydr
 
 | Payload | Holds |
 | :------ | :---- |
-| `Q` | The request block's first 16 bytes (the request, fid, mode, client, offset, count, the ctl and create bytes; [servers.md](../../old/docs/programming/servers.md#the-request-block-and-the-transfer-area)), then its data: an open's, create's or remove's name, a write's bytes, a wstat's record |
+| `Q` | The request block's first 16 bytes (the request, fid, mode, client, offset, count, the ctl and create bytes; [servers.md](../../../../old/docs/programming/servers.md#the-request-block-and-the-transfer-area)), then its data: an open's, create's or remove's name, a write's bytes, a wstat's record |
 | `R` | Status (0, or the Hydra's error code), a value (an open's fid), the count (2 bytes: a read's or a write's), then data (a read's bytes, a stat record) |
 | `A` | The protocol's version: 1, the old system's (these payloads); 2, reborn's ([below](#version-2-reborns)).  The PC closes the files it had open: a new session |
 

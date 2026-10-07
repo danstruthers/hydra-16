@@ -23,24 +23,24 @@ The **[Programmer's Guide](programming/README.md)**, by area:
 * [The C Programmer's Guide](programming/c.md): writing programs in C with cc65, from the first build to the library, the console, files, processes, assembly, performance and debugging.
 
 ### **The hardware**
-* **[Hardware Reference](../../docs/hardware.md)**: the main board in detail (memory system, address decoding, pseudo-registers, interrupts, clocks, devices, slots, connectors, errata) and the companion cards.
+* **[Hardware Reference](../../reborn/docs/hardware.md)**: the main board in detail (memory system, address decoding, pseudo-registers, interrupts, clocks, devices, slots, connectors, errata) and the companion cards.
 
 ### **Tools**
 * **[The emulator and tools](tools/emulator.md)**: `hydrasim.js` (interactive and scripted), the regression tests, the HydraFS card tool, the `.hyx` header tool.
 
 ### **Plans and design notes**
 The reasoning behind the design, and what's planned.  Parts of them are history (marked done).
-* [IO_PLAN.md](../../docs/plans/IO_PLAN.md): the IO subsystem, scheduler and filesystem steps.
-* [MMU_PLAN.md](../../docs/plans/MMU_PLAN.md): the memory manager, IRQ dispatch, drivers, zero-page convention.
-* [HYDRAFS.md](../../docs/plans/HYDRAFS.md): the SD card filesystem (spec).
-* [SHELL.md](../../docs/plans/SHELL.md): HyForth as a shell: a current directory, commands, running programs (done).
-* [REORG_PLAN.md](../../docs/plans/REORG_PLAN.md): the ROM reorganisation.
-* [SOUND.md](../../docs/plans/SOUND.md): the YM2151: its library (done), a song player, a test song that uses the whole chip, and importing music from other machines.
-* [NEXT_STEPS.md](../../docs/plans/NEXT_STEPS.md): what's missing to make the Hydra fun and useful for hobbyists and programmers, and the milestones to get there.
-* [PC.md](../../docs/plans/PC.md): `/pc`, a folder on the PC served over the serial port by the PC tool, which is the terminal too (built).
-* [DISKS.md](../../docs/plans/DISKS.md): RAM and ROM disks as HydraFS volumes: `/ram` (each shell's own area of the RAM disk) and `/sram` (the shared RAM disk), with program caches, and `/rom` (the paged ROM as one disk: built).
-* [NAMESPACES.md](../../docs/plans/NAMESPACES.md): the Plan 9 way: union directories put together with binds and mounts, a default namespace, and `/bin` and `/lib` in place of search paths.
-* [PROC.md](../../docs/plans/PROC.md): `/proc`, the tasks as files, with a task's memory (`/proc/N/mem`, `/proc/N/ram`) for its family and task 0, the system task.
-* [VIDEO.md](../../docs/plans/VIDEO.md): the Vera X video card in slot 0 (the VERA: VGA, sprites, PSG and PCM), its keyboard controller, and the software for them.
-* [CODE_REVIEW.md](../../docs/plans/CODE_REVIEW.md): a review of the whole software tree, with bugs, ROM and zero page budgets, and recommendations.
-* [IDEAS.md](../../docs/plans/IDEAS.md): ideas for later (wait states for board V2, ...).
+* [IO_PLAN.md](../../reborn/docs/design/plans/IO_PLAN.md): the IO subsystem, scheduler and filesystem steps.
+* [MMU_PLAN.md](../../reborn/docs/design/plans/MMU_PLAN.md): the memory manager, IRQ dispatch, drivers, zero-page convention.
+* [HYDRAFS.md](../../reborn/docs/design/plans/HYDRAFS.md): the SD card filesystem (spec).
+* [SHELL.md](../../reborn/docs/design/plans/SHELL.md): HyForth as a shell: a current directory, commands, running programs (done).
+* [REORG_PLAN.md](../../reborn/docs/design/plans/REORG_PLAN.md): the ROM reorganisation.
+* [SOUND.md](../../reborn/docs/design/plans/SOUND.md): the YM2151: its library (done), a song player, a test song that uses the whole chip, and importing music from other machines.
+* [NEXT_STEPS.md](../../reborn/docs/design/plans/NEXT_STEPS.md): what's missing to make the Hydra fun and useful for hobbyists and programmers, and the milestones to get there.
+* [PC.md](../../reborn/docs/design/plans/PC.md): `/pc`, a folder on the PC served over the serial port by the PC tool, which is the terminal too (built).
+* [DISKS.md](../../reborn/docs/design/plans/DISKS.md): RAM and ROM disks as HydraFS volumes: `/ram` (each shell's own area of the RAM disk) and `/sram` (the shared RAM disk), with program caches, and `/rom` (the paged ROM as one disk: built).
+* [NAMESPACES.md](../../reborn/docs/design/plans/NAMESPACES.md): the Plan 9 way: union directories put together with binds and mounts, a default namespace, and `/bin` and `/lib` in place of search paths.
+* [PROC.md](../../reborn/docs/design/plans/PROC.md): `/proc`, the tasks as files, with a task's memory (`/proc/N/mem`, `/proc/N/ram`) for its family and task 0, the system task.
+* [VIDEO.md](../../reborn/docs/design/plans/VIDEO.md): the Vera X video card in slot 0 (the VERA: VGA, sprites, PSG and PCM), its keyboard controller, and the software for them.
+* [CODE_REVIEW.md](../../reborn/docs/design/plans/CODE_REVIEW.md): a review of the whole software tree, with bugs, ROM and zero page budgets, and recommendations.
+* [IDEAS.md](../../reborn/docs/design/plans/IDEAS.md): ideas for later (wait states for board V2, ...).

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // ****************************************************************************
 // romimg.js - the paged ROM image: the module directory in bank 0, each module in banks of its own, run in place
-// (docs/reimplementation-from-scratch.md, §11), and the ROM disk's volume after them (tools/romfs.js).
+// (docs/design/reimplementation-from-scratch.md, §11), and the ROM disk's volume after them (tools/romfs.js).
 //
 //   bank 0, $A000-$A1FF   block 0: a signature line, and the ROM disk's partition table (romfs.js)
 //   bank 0, $A200-$A9FF   the module directory (include/layout.inc: MD_*, ME_*): "HYMD", its version, the count,

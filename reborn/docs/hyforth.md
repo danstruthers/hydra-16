@@ -305,8 +305,8 @@ finds it; each window's shell still starts in an empty namespace of its own, whi
 
 **`send n line`** types the line, and Enter, in window n, whatever shell is there: it's written to the window's
 `#cN/kbdin`, a file of the console's (rio's `kbdin`: a write's bytes are the window's keys, as typed, all of them: its
-keys' queue holds 63, and the write waits while the window's shell takes them), so rc can do it too: `echo ls
->'#c2/kbdin'` (its LF is a new line, as the console's Enter).  A line is 126 characters at most, as one typed.
+keys' queue holds 63, and the write waits while the window's shell takes them), so rc can do it too:
+`echo ls >'#c2/kbdin'` (its LF is a new line, as the console's Enter).  A line is 126 characters at most, as one typed.
 
 **`%`** sends the rest of a line to rc whatever its first word: `% free` runs the `free` program though a Forth word
 `free` shadows it (as Memory-Allocation's will), and a script's line can be rc's the same way.  While a definition is

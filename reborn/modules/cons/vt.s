@@ -1,6 +1,6 @@
 ; ****************************************************************************
 ; vt - the console driver's second bank (its first: cons.s): each window's screen, kept as cells in the driver's
-; RAM banks, a VT100 that writes them, and the terminals drawn from them (docs/plans/WINDOWS.md, W1).
+; RAM banks, a VT100 that writes them, and the terminals drawn from them (docs/design/plans/WINDOWS.md, W1).
 ;
 ; A window's screen: three of the task's banks (vw_bank, a run from BANKS_ALLOC), planes of 64 rows of 128 cells
 ; at $8000 (a row's cells at $8000 + 128 * the row): the characters (a byte each: the font's, ISO-8859-15; $00-$1F

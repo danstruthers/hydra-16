@@ -1,12 +1,12 @@
 // pcfs.js - /pc's file server: a folder on the PC served to the Hydra, a request at a time, as its frames carry
-// them (docs/plans/PC.md; the frames: lib/pcproto.js).  The emulators (hydrasim.js --pc-dir, reborn/sim/run.js
+// them (docs/design/plans/PC.md; the frames: lib/pcproto.js).  The emulators (hydrasim.js --pc-dir, reborn/sim/run.js
 // --pc-dir) and the PC tool (hydrapc.js) all use it.  It speaks both versions of what the frames carry, the attach
 // naming the Hydra's:
 //   1  the old system's H9 requests, answered the way its HydraFS does (docs/programming/io.md, "The files on a
 //      card"): a directory reads as "name size" lines (or "name/"), or as 48-byte stat records when opened with
 //      IO_MODE_STAT; IO_CREATE of a file that's there empties it; IO_REMOVE takes a file or an empty directory;
 //      IO_WSTAT renames in the directory and sets the read-only bit.
-//   2  reborn's requests (its request block, appendix B of docs/reimplementation-from-scratch.md), answered the way
+//   2  reborn's requests (its request block, appendix B of docs/design/reimplementation-from-scratch.md), answered the way
 //      reborn's HydraFS (#f) does: a directory reads as 64-byte stat records (SR_*), whole ones from a record's
 //      start; R_CREATE of a file that's there empties it, and with DM_DIR makes a directory; R_REMOVE takes a file
 //      or an empty directory; R_WSTAT renames in the directory (a name whose first byte isn't 0), sets a file's

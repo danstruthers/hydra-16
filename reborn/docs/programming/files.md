@@ -39,7 +39,7 @@ opened at a union reads as every member's records.
 
 | Call | What it does |
 | :--- | :----------- |
-| `BIND` | `r0` new at `r1` old: `MREPL` in place of what's there, `MBEFORE` or `MAFTER` in its union, `| MCREATE` for creates |
+| `BIND` | `r0` new at `r1` old: `MREPL` in place of what's there, `MBEFORE` or `MAFTER` in its union, `\| MCREATE` for creates |
 | `MOUNT` | A device's tree (`.X` its letter, `r0` its spec: which of its trees) at old, the same flags |
 | `UNMOUNT` | All of old, or its member new |
 | `NSINFO` | An entry of a task's namespace (`/proc/N/ns` reads them as binds and mounts) |
@@ -83,7 +83,7 @@ commands to its `ctl`, and read as text where that's what it is.
 | `#t`, `#n` | Time, null | `time`, `ticks`; `null`, `zero`, `kmesg` |
 | `#m` | Modules | A file each (its image), `bin` |
 | `#p` | Tasks | `N/status`, `args`, `cwd`, `env`, `ns`, `fd`, `regs`, `mem`, `ram`, `note`, `ctl` |
-| `#e`, `#|` | The environment, pipes | `/env/NAME`; `pipe` |
+| `#e`, `#\|` | The environment, pipes | `/env/NAME`; `pipe` |
 | `#s`, `#r` | Segments' names, raw RAM | `ctl` and a file each name; `task`, `shared` (init's) |
 | `#P` | `/pc` | A folder on the PC, through the PC tool |
 

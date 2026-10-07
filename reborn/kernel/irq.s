@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; irq.s - interrupts: one path for every line (docs/reimplementation-from-scratch.md, §10.3).
+; irq.s - interrupts: one path for every line (docs/design/reimplementation-from-scratch.md, §10.3).
 ;
 ; A line's vector points at its stub in the COMMON block (common.s), which goes on, on page 0, to the dispatcher
 ; (its main path is in the COMMON block too: it saves two jumps) with .A = the line and the frame begun on the

@@ -52,7 +52,7 @@ Contents: [Files](#files) · [Text](#text) · [The screen editor](#the-screen-ed
 | `wc [-lwc] [file ...]` | Lines, words and bytes (`-l`, `-w`, `-c`: only those), a line a file, and a total for several |
 | `head [-N] [file ...]` | Each file's first N lines (10) |
 | `tail [-N] [file]` | The last N lines (10); the file's last 16K are what it looks at |
-| `grep [-chilnsv] [-e] pattern [file ...]` | The lines that match a regular expression, Plan 9's (`.`, `[a-z]`, `[^a]`, `^`, `$`, `*`, `+`, `?`, `|`, `( )`): `-c` the count, `-l` the files' names, `-n` with line numbers, `-i` case ignored, `-v` the lines that don't, `-s` no messages, `-h` no file names; status `no matches` when none did |
+| `grep [-chilnsv] [-e] pattern [file ...]` | The lines that match a regular expression, Plan 9's (`.`, `[a-z]`, `[^a]`, `^`, `$`, `*`, `+`, `?`, `\|`, `( )`): `-c` the count, `-l` the files' names, `-n` with line numbers, `-i` case ignored, `-v` the lines that don't, `-s` no messages, `-h` no file names; status `no matches` when none did |
 | `sort [-bfnru] [file ...]` | The lines in order: by bytes; `-n` by the number each starts with; `-f` case folded; `-b` leading blanks ignored; `-r` reversed; `-u` one of each run of equal lines.  Stable; some 20K of lines at most |
 | `uniq [-c] [file]` | Each run of the same line once; `-c` with its count |
 | `tee [-a] [file ...]` | Fd 0 to fd 1 and to each file (`-a`: added to its end) |
@@ -261,10 +261,10 @@ banks $00-$1f
 | `fsck [-f] disk` | The disk's HydraFS checked (`-f`: and its faults fixed): what was lost, unmarked, or used twice |
 | `label disk [text ...]` | The disk's label set, or said |
 
-Through the ctl files directly: `start SIZE [FROM-TO]` and `stop` on a RAM disk (`echo start 128K 1-1
->>'#d/r/ctl'`: from RAM module 1's banks; `>>`, as a stopped disk's directory isn't listed), `init` on a card (after
-it's changed), `format`, `label`, `check`.  The cards' file systems are at `/sd/N`; a card's `bin` and `lib`, if it
-has them, join `/bin` and `/lib`.
+Through the ctl files directly: `start SIZE [FROM-TO]` and `stop` on a RAM disk (`echo start 128K 1-1 >>'#d/r/ctl'`:
+from RAM module 1's banks; `>>`, as a stopped disk's directory isn't listed), `init` on a card (after it's changed),
+`format`, `label`, `check`.  The cards' file systems are at `/sd/N`; a card's `bin` and `lib`, if it has them, join
+`/bin` and `/lib`.
 
 ## Others
 

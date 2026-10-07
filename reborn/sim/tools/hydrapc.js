@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // ****************************************************************************
 // hydrapc.js - the PC tool for /pc: a terminal on the Hydra-16's serial port that also serves a folder on this PC to
-// it, so the Hydra sees the folder at /pc (docs/plans/PC.md).  What the Hydra prints shows here and the keys typed go
+// it, so the Hydra sees the folder at /pc (docs/design/plans/PC.md).  What the Hydra prints shows here and the keys typed go
 // to it, as with any terminal; the frames /pc's requests and replies travel in (lib/pcproto.js) go between those
 // bytes, and don't show.  The folder's files are served as tools/pcfs.js says; nothing outside it is reached.  It
 // serves either system: the old one (the protocol's version 1) or HydraOS (version 2), as the Hydra's attach says.

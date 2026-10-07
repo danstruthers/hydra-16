@@ -1,8 +1,8 @@
 /*
 ** ctest.c - the C library's test (tests/tests.js's c runs it at rc): its arguments and name, files (stdio and the
 ** calls under it), errors, directories, the heap, the time, the environment, stat, commands and their exit
-** statuses (system, hy_spawn, hy_wait: with the sample code), the namespace, a note as a signal, RAM banks, isatty,
-** the window's chrome (hy_wlabel, hy_wstatus, hy_wctl).
+** statuses (system, hy_spawn, hy_wait: with the sample code), the namespace, a note as a signal, RAM banks, shared
+** segments, isatty, the window's chrome (hy_wlabel, hy_wstatus, hy_wctl).
 ** Each check prints "ok - " or "not ok - " and its name; the last line is "ctest: N failed", and its exit status
 ** is the count.  Run it as ctest a 'b c', in a directory it can write in (/ram), with the C samples in
 ** /rom/sample/c.
@@ -105,10 +105,10 @@ int main (int argc, char* argv[])
     check (chdir ("..") == 0 && rmdir ("ctdir") == 0, "rmdir");
 
     /* the heap */
-    p = malloc (8000);
-    check (p != 0, "malloc 8000");
-    memset (p, 0x5A, 8000);
-    check (p[7999] == 0x5A, "the heap's memory");
+    p = malloc (4000);                                  /* (Its code and data leave the heap some 7K) */
+    check (p != 0, "malloc 4000");
+    memset (p, 0x5A, 4000);
+    check (p[3999] == 0x5A, "the heap's memory");
     free (p);
     check (malloc (40000u) == 0, "malloc too much: NULL");
 
@@ -117,6 +117,8 @@ int main (int argc, char* argv[])
     start = hy_ticks ();
     hy_sleep_ticks (20);
     check ((unsigned) (hy_ticks () - start) >= 20, "hy_sleep_ticks");
+    start = hy_ticks () + 10;
+    check (hy_sleep_until (start) == 0 && (int) (hy_ticks () - start) >= 0, "hy_sleep_until");
     c = clock ();
     sleep (1);
     check (clock () - c >= CLOCKS_PER_SEC, "sleep, clock");
@@ -212,6 +214,17 @@ int main (int argc, char* argv[])
     hy_bank (i);
     check (HY_BANK_WINDOW[0] == 0x11, "a bank's memory, its own");
     check (hy_banks_free (i, 2) == 0, "hy_banks_free");
+
+    /* a shared segment (between tasks: the race, philo and prodcons samples) */
+    i = hy_seg_create (2);
+    check (i >= 0 && hy_seg_map (i, 0) == HY_BANK_WINDOW, "hy_seg_create, hy_seg_map");
+    HY_BANK_WINDOW[0] = 0x33;
+    hy_seg_map (i, 1);
+    HY_BANK_WINDOW[0] = 0x44;
+    check (hy_seg_map (i, 0) != 0 && HY_BANK_WINDOW[0] == 0x33, "a segment's banks");
+    check (hy_seg_map (i, 2) == 0 && _oserror == HY_E_RANGE, "hy_seg_map: no such bank");
+    check (hy_seg_attach (i) == 0, "hy_seg_attach: attached already (once)");
+    check (hy_seg_detach (i) == 0 && hy_seg_map (i, 0) == 0 && _oserror == HY_E_INVAL, "hy_seg_detach: the last");
 
     /* isatty */
     check (isatty (1) && !isatty (9), "isatty");
