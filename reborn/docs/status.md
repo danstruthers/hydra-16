@@ -629,25 +629,33 @@ the 65C02's, for a fixnum's bit, not `lsr` on a copy in `ht`), LQP pushes its va
 JLL's read their second local where it is.  A tail loop's step is 328 cycles (`hyspeed`, from 363).  Milestone 6,
 the calls of a function by its own name: `CSELF` and `TSELF` no longer look at the frame's count (`vc_self` makes
 them only of as many arguments as the formals, so `vm_rb` is M), and `TSELF` copies 0 to 4 arguments in line (a
-template for each count, `vx_ttself`, `vx_tpl`'s choice).  A tail loop's step is 306 cycles.  Then `*` of two
-fixnums whose product is one, at once (`vm_bmul`, `vm_fmul`: quarter squares, `vm_sqlo` and `vm_sqhi`, 1K in the
-machine's bank), as `BCALL`'s template (`bmul`) and first in `BCALL`'s code: a product of two numbers under 128
-about 320 cycles, of bigger ones about 590 (2,900 through the built-in); the sort 1,795 ms (1,855).
+template for each count, `vx_ttself`, `vx_tpl`'s choice).  A tail loop's step is 306 cycles.
 
-| Benchmark | Bytecode (ms) | M2 (ms) | M3 (ms) | M4 (ms) | M5 (ms) | M6 (ms) | HyForth (ms) | hylang/HyForth |
-|---|---|---|---|---|---|---|---|---|
-| loop | 925 | 550 | 545 | 545 | 490 | 460 | 76 | 6.0x |
-| calls | 1,005 | 640 | 640 | 575 | 555 | 540 | 65 | 8.3x |
-| fib | 980 | 655 | 655 | 550 | 530 | 515 | 181 | 2.8x |
-| sieve | 1,905 | 1,430 | 1,160 | 1,160 | 1,140 | 1,105 | 332 | 3.3x |
-| sort | 3,275 | 2,710 | 1,915 | 1,915 | 1,890 | 1,795 | 480 | 3.7x |
-| gcd | 960 | 600 | 600 | 570 | 540 | 520 | 350 | 1.5x |
-| all | 9,050 | 6,585 | 5,515 | 5,315 | 5,145 | 4,945 | 1,484 | 3.3x (geometric mean 3.7x, from 6.9x) |
+Milestone 7, multiplication and tail loops.  `*` of two fixnums whose product is one is worked at once (`vm_bmul`,
+`vm_fmul`: quarter squares, `vm_sqlo` and `vm_sqhi`, 1K in the machine's bank), as `BCALL`'s template (`bmul`)
+and first in `BCALL`'s code: a product of two numbers under 128 about 320 cycles, of bigger ones about 590 (2,900
+through the built-in).  A tail call of the function by its own name whose arguments call nothing (the compiler's
+`vc_shflag`: locals, constants, the quick and fused ops, `*`) has its `SHEAD` flagged (m's bit 7), and its head
+isn't pushed: nothing can bind the name again before `TSELF`, and the flagged `SHEAD`'s cache holds only this
+frame's function, so at its epoch it's an epoch's look (`shself`) and `TSELF` takes the arguments as they are
+(`tselfh`); the machine's way pushes the head and says so (`vm_shf`), and Ctrl-C or a note pushes it then
+(`vm_tsh`).  A tail loop's step is 251 cycles.  On the way, the arena's banks: a return to a caller in another
+bank of the arena went the machine's whole way (`op_ret`), which the calls benchmark came to as the templates
+grew (725 ms); `vm_retx` now (its bank, then `RET`'s way, in ROM).
 
-What's left: the global's head pushed for a tail loop (`SHEAD`, then `TSELF`'s look at it: the compiler could
-leave it out when the arguments call nothing), the depth and Ctrl-C at each call, a template's `jmp` past its
-stub; and `map` and its kin, whose function is called through the evaluator (an item 2,951
-cycles).
+| Benchmark | Bytecode (ms) | M2 (ms) | M3 (ms) | M4 (ms) | M5 (ms) | M6 (ms) | M7 (ms) | HyForth (ms) | hylang/HyForth |
+|---|---|---|---|---|---|---|---|---|---|
+| loop | 925 | 550 | 545 | 545 | 490 | 460 | 395 | 76 | 5.2x |
+| calls | 1,005 | 640 | 640 | 575 | 555 | 540 | 540 | 65 | 8.3x |
+| fib | 980 | 655 | 655 | 550 | 530 | 515 | 520 | 181 | 2.9x |
+| sieve | 1,905 | 1,430 | 1,160 | 1,160 | 1,140 | 1,105 | 1,075 | 332 | 3.2x |
+| sort | 3,275 | 2,710 | 1,915 | 1,915 | 1,890 | 1,855 | 1,760 | 480 | 3.7x |
+| gcd | 960 | 600 | 600 | 570 | 540 | 520 | 485 | 350 | 1.4x |
+| all | 9,050 | 6,585 | 5,515 | 5,315 | 5,145 | 4,995 | 4,775 | 1,484 | 3.2x (geometric mean 3.6x, from 6.9x) |
+
+What's left: the depth and Ctrl-C at each call, the global's head pushed for a call that isn't a tail loop's, a
+template's `jmp` past its stub; and `map` and its kin, whose function is called through the evaluator (an item
+2,951 cycles).
 
 | Step | | Notes |
 |---|---|---|

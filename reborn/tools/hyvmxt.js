@@ -517,7 +517,23 @@ tpl('cself', STUB, SELF + DEPTH + RECORD + `
 @s:`);
 // TSELF m code 0: the arguments to this frame's (in line for 0 to 4: tself0 ..., vx_tpl's choice), its record's scope
 // none again if one was made, the stack cut back to the record's end, its code from its start
-const TSELF = (m) => SELF + (m === null ? `
+// tselfh (h): past a flagged SHEAD (vx_tsel's): its head not pushed (shself), unless vm_shf says the machine's way
+// pushed it (TSELF's way then, the stub); Ctrl-C or a note, the head pushed first (vm_tsh), then the stub; ht a word
+// under the arguments, as SELF's
+const TSH = `
+  bit vm_shf
+  bmi @s
+  bit intr
+  bmi @h
+  bvs @h
+  lda sp
+  sec
+  sbc #{M 1}
+  sta ht
+  lda sp + 1
+  sbc #0
+  sta ht + 1`;
+const TSELF = (m, h) => (h ? TSH : SELF) + (m === null ? `
   ldx #{B 1}
   beq @args
   ldy #2
@@ -563,13 +579,34 @@ const TSELF = (m) => SELF + (m === null ? `
   beq @go
   jsr unspill
 @go:
-  jmp {C}
+  jmp {C}` + (h ? `
+@h:
+  lda #{B 1}
+  jsr vm_tsh
+  jmp {S}` : '') + `
 @s:`;
 tpl('tself', STUB, TSELF(null));
 for (let m = 0; m <= 4; m++) tpl('tself' + m, STUB, TSELF(m));
-// RET: to its caller's code, in this bank (another, the evaluator's call: its stub), the frame dropped: its return
-// pad (past the call's data) finds the caller's frame again; an error, vm_reterr's (returned by the caller too if
-// its call's r says)
+tpl('tselfh', STUB, TSELF(null, 1));
+for (let m = 0; m <= 4; m++) tpl('tselfh' + m, STUB, TSELF(m, 1));
+// SHEAD m|$80 ... (flagged: a tail call of the function by its own name, its arguments calling nothing): its cache
+// holds this frame's function alone (op_shead's), so at its epoch, no scope made, nothing's pushed (vm_shf 0: the
+// TSELF after it, tselfh, takes its arguments so); else the machine's way (pushed, vm_shf $80)
+tpl('shself', STUB, `
+  bit vm_mat
+  bmi @s
+  lda {D 8}
+  cmp vm_ep
+  bne @s
+  lda {D 9}
+  cmp vm_ep + 1
+  bne @s
+  stz vm_shf
+  jmp {N}
+@s:`);
+// RET: to its caller's code (in another bank of the arena, vm_retx's; the evaluator's call, its stub), the frame
+// dropped: its return pad (past the call's data) finds the caller's frame again; an error, vm_reterr's (returned by
+// the caller too if its call's r says)
 tpl('ret', STUB, `
   ldy vm_rb
   lda (vm_s),y
@@ -583,13 +620,15 @@ tpl('ret', STUB, `
   ror
   sta vm_ip
   txa
-  and #$60
-  cmp vm_idx
-  bne @s
-  txa
   and #$1F
   ora #$80
   sta vm_ip + 1
+  txa
+  and #$60
+  cmp vm_idx
+  beq :+
+  jmp vm_retx
+:
   lda depth
   bne :+
   dec depth + 1
@@ -909,6 +948,10 @@ for (const [tn, m] of Object.entries(fused)) {
   lines.push('            .word       ' + row.slice(9).join(', '));
 }
 lines.push('', '; BCALL\'s of * of two (vx_tpl\'s choice; 0: none)', 'VXT_BMUL        = ' + (skip.has('bmul') ? '0' : 'vxt_bmul'));
+const noself = skip.has('shself') || skip.has('tself');
+lines.push('', '; A flagged SHEAD\'s (0: none, the machine\'s way), the TSELF after it\'s (vx_tsel\'s)',
+  'VXT_SHSELF      = ' + (noself ? '0' : 'vxt_shself'), 'VXT_TSELFH      = vxt_tselfh',
+  'vx_ttselfh: .word       ' + [0, 1, 2, 3, 4].map(m => 'vxt_tselfh' + m).join(', '));
 lines.push('', '; TSELF\'s, of 0 to 4 arguments (more: vx_tmain\'s)',
   'vx_ttself:  .word       ' + [0, 1, 2, 3, 4].map(m => main[OPI.TSELF] === '0' ? '0' : 'vxt_tself' + m).join(', '));
 lines.push('', '; BLOCK\'s template\'s length (0: none): its data is past it and its stub (the blocks\' table\'s, a block\'s parent\'s)',

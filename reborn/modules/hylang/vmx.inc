@@ -66,6 +66,7 @@ vx_pt:      .res        2                                   ; (An op's return pa
 vx_pl:      .res        1                                   ;   its length)
 vx_qn:      .res        1                                   ; (Pass 1: $40 if the next op is past a pad ...
 vx_qf:      .res        1                                   ;   vm_xmap: the map's high byte, bit 6 that)
+vx_selfh:   .res        1                                   ; (<> 0: past a flagged SHEAD's shself, its TSELF's tselfh)
 vx_op:      .res        1                                   ;   its op ...
 vx_nx:      .res        2                                   ;   the next op's entry ...
 vx_pi:      .res        1                                   ;   its patches left ...
@@ -152,6 +153,7 @@ vm_xlate:
 ; vx_nat their end, vx_top the table's.  OUT: C = 1 if they don't fit in the bank (below $A000)
 vx_pass1:
             stz         vx_qn
+            stz         vx_selfh
             stz         hq
             lda         #$80
             sta         hq + 1
@@ -212,6 +214,7 @@ vx_pass1:
 
 ; Each op's stub, then its data
 vx_pass2:
+            stz         vx_selfh
             stz         hq
             lda         #$80
             sta         hq + 1
@@ -468,9 +471,29 @@ vx_tpl:
 @rts:
             rts
 
-; vx_tpl's choice by the op's data (.A, the op): HEAD's of one argument alone; BCALL's of * of two; TSELF's by its
-; count, its copies in line, to 4.  OUT: C = 1, vx_tp its template (0: none); else C = 0, .A the op (vx_tmain's)
+; vx_tpl's choice by the op's data (.A, the op): a flagged SHEAD's (shself; vx_selfh, its TSELF's tselfh); HEAD's
+; of one argument alone; BCALL's of * of two; TSELF's by its count, its copies in line, to 4.  OUT: C = 1, vx_tp its
+; template (0: none); else C = 0, .A the op (vx_tmain's)
 vx_tsel:
+            cmp         #VO_SHEAD
+            bne         @hd
+            ldy         #1
+            lda         (hq),y
+            bmi         :+
+            lda         #VO_SHEAD
+            clc
+            rts
+:
+            lda         #<VXT_SHSELF
+            sta         vx_tp
+            lda         #>VXT_SHSELF
+            sta         vx_tp + 1
+            beq         :+
+            sta         vx_selfh
+:
+            sec
+            rts
+@hd:
             cmp         #VO_HEAD
             bne         @bc
             ldy         #1
@@ -500,6 +523,9 @@ vx_tsel:
 @ts:
             cmp         #VO_TSELF
             bne         @op
+            lda         vx_selfh
+            stz         vx_selfh
+            bne         @tsh
             ldy         #1
             lda         (hq),y
             cmp         #5
@@ -516,6 +542,26 @@ vx_tsel:
             lda         #VO_TSELF
 @op:
             clc
+            rts
+@tsh:
+            ldy         #1
+            lda         (hq),y
+            cmp         #5
+            bcs         @tshn
+            asl
+            tax
+            lda         vx_ttselfh,x
+            sta         vx_tp
+            lda         vx_ttselfh + 1,x
+            sta         vx_tp + 1
+            sec
+            rts
+@tshn:
+            lda         #<VXT_TSELFH
+            sta         vx_tp
+            lda         #>VXT_TSELFH
+            sta         vx_tp + 1
+            sec
             rts
 @none:
             stz         vx_tp + 1

@@ -67,6 +67,8 @@ VO_EQC          = $44
 VO_LPUSH        = $46           ; y: LOCAL y, PUSH
 VO_CPUSH        = $48           ; v: CONST v, PUSH
 VO_SHEAD        = $4A           ; m c t sym ep v: HEAD of sym's global value; v, its value at epoch ep (vm_ep: its
+                                ;   (m's bit 7: a tail call of the function by its own name whose arguments call
+                                ;   nothing, vc_shflag's: its cache only this frame's function; vm_shf)
                                 ;   cache), pushed at once
 VO_CSELF        = $4C           ; m code ret h r: CALL of this frame's function (else CALL's way), its code at code
 VO_TSELF        = $4E           ; m code 0: TCALL, the same
@@ -163,6 +165,8 @@ vm_r:       .res        2                                   ; A call's return (i
 vm_ccf:     .res        1                                   ; ($80: CALL's cache filled as its function's code is run ...
 vm_cb:      .res        1                                   ;   from its code's bank)
 vm_qs:      .res        1                                   ; (A fused op's quick op)
+vm_shf:     .res        1                                   ; ($80: a flagged SHEAD's head pushed, the machine's way;
+                                                            ;   0: not, native code's shself: tselfh's)
 vm_msg:     .res        1                                   ; (vm_fmul's: the product's sign ...
 vm_m0:      .res        2                                   ;   the multiplicand ...
 vm_mm:      .res        1                                   ;   the multiplier (under 256) ...
@@ -259,7 +263,9 @@ L_st            = vc_qc + 2                                 ; Each level: <> 0, 
                                                             ;   (its do's, in order, errors returned) ...
 vc_cst          = L_st + VC_LV                              ;   (vc_child's: L_st)
 vc_da           = vc_cst + 1                                ; The locals set by such a statement so far (a bit each)
-vc_wend         = vc_da + 2
+L_shl           = vc_da + 2                                 ; Each level: its SHEAD's place (vc_shflag's)
+L_shh           = L_shl + VC_LV
+vc_wend         = L_shh + VC_LV
 .assert     vc_wend <= sy_end, error, "vm.inc: the compiler's room runs past the reader's scratch"
 
 .segment "DATA4"                                            ; (In the task's RAM: every bank's)
@@ -605,6 +611,76 @@ vm_rbyte:
             sta         ht + 1
             lda         (ht)
             rts
+
+; Native code's TSELF past a flagged SHEAD that pushed nothing (tselfh's: Ctrl-C, a note): this frame's function
+; pushed under the .A arguments on top, as SHEAD would have (vm_shf $80), for TSELF's way (op_tself)
+vm_tsh:
+            sta         vm_k
+            lda         #0                                  ; (A word more: VPUSH's, which may spill and move the
+            tax                                             ;   stack down)
+            VPUSH
+            lda         vm_k
+            asl
+            sta         vm_l
+            clc
+            adc         #2
+            sta         vm_t
+            lda         sp                                  ; (ht: the first argument's place, hp past it)
+            sec
+            sbc         vm_t
+            sta         ht
+            lda         sp + 1
+            sbc         #0
+            sta         ht + 1
+            lda         ht
+            clc
+            adc         #2
+            sta         hp
+            lda         ht + 1
+            adc         #0
+            sta         hp + 1
+            ldy         vm_l                                ; (The arguments a word up, the last first)
+            beq         @fn
+@up:
+            dey
+            lda         (ht),y
+            sta         (hp),y
+            tya
+            bne         @up
+@fn:
+            lda         (vm_s)
+            sta         (ht)
+            ldy         #1
+            lda         (vm_s),y
+            sta         (ht),y
+            lda         #$80
+            sta         vm_shf
+            rts
+
+; RET's in native code, to a caller in another bank of the arena (.A its index, times 32; vm_ip its return pad): its
+; bank's, then RET's way here (the frame dropped, an error looked at), on to the pad
+vm_retx:
+            jsr         vm_newidx
+            lda         depth
+            bne         :+
+            dec         depth + 1
+:
+            dec         depth
+            lda         vm_s
+            sta         sp
+            ldx         vm_s + 1
+            stx         sp + 1
+            cpx         stk_basep
+            bne         :+
+            lda         spilled
+            beq         :+
+            jsr         unspill
+:
+            jsr         vm_iserr
+            bcc         :+
+            jmp         vm_reterr
+:
+            jmp         vm_next
 
 ; RET's in native code, ex an error, vm_ip its caller's return pad (not come to): the caller's frame (vm_callsite's),
 ; and the error returned from it too if its call's r says; else on, to the pad (its frame again: the same)
@@ -1720,6 +1796,12 @@ op_je:
 ; SHEAD: the global value of the symbol at 6 (a function's own name, as it was compiled): this frame's function,
 ; pushed at once; anything else, HEAD's way
 op_shead:
+            ldy         #1                                  ; (Flagged: its head pushed, vm_shf says)
+            lda         (vm_ip),y
+            bpl         :+
+            lda         #$80
+            sta         vm_shf
+:
             bit         vm_mat                              ; (Its cache: the global's value, as it was at this
             bmi         @slow                               ;   epoch; no scope made)
             ldy         #8
@@ -1770,6 +1852,11 @@ op_shead:
             lda         #12
             jmp         vm_adv
 @other:
+            ldy         #1                                  ; (Flagged: its cache this frame's function alone)
+            lda         (vm_ip),y
+            bpl         :+
+            stz         vm_shc
+:
             lda         ex
             cmp         #<UNBOUND
             bne         vm_head
@@ -1842,6 +1929,7 @@ vm_head:
             sta         $00
             ldy         #1
             lda         (vm_ip),y
+            and         #$7F
             cmp         #1
             beq         @push
             bra         @eval
@@ -1853,6 +1941,7 @@ vm_head:
             sta         $00                                 ;   evaluator's, its error or exit's)
             ldy         #1
             lda         (vm_ip),y
+            and         #$7F
             bne         @eval
 @to:
             lda         vm_bank
@@ -6346,6 +6435,10 @@ vc_generic:
             jsr         vc_self
             ldx         vc_lv
             rol         L_b,x
+            lda         hq                                  ; (Its place: vc_shflag's)
+            sta         L_shl,x
+            lda         hq + 1
+            sta         L_shh,x
             lda         #VO_SHEAD
             jsr         vc_rop
             jsr         vc_mct
@@ -6390,6 +6483,7 @@ vc_generic:
             beq         @call
             lda         L_tail,x                            ; (CSELF m code h r; TSELF m code 0)
             beq         :+
+            jsr         vc_shflag
             lda         #VO_TSELF
             jsr         vc_byte
             jsr         vc_mcode
@@ -6433,6 +6527,61 @@ vc_generic:
             lda         L_t,x
             jsr         vc_def
             jmp         vc_je
+
+; A tail call of the function by its own name (this level's): its SHEAD flagged (m's bit 7) if its arguments' code,
+; from past it to hq, calls nothing (vc_pure's ops alone, and BCALL of *): its head need not be pushed (vmx.inc's
+; shself and tselfh), as nothing can bind its name again before TSELF
+vc_shflag:
+            ldx         vc_lv
+            lda         L_shl,x
+            clc
+            adc         #12
+            sta         ht
+            lda         L_shh,x
+            adc         #0
+            sta         ht + 1
+            lda         vc_bk
+            sta         $00
+@op:
+            lda         ht
+            cmp         hq
+            lda         ht + 1
+            sbc         hq + 1
+            bcs         @yes
+            lda         (ht)
+            and         #$7F
+            cmp         #VO_BCALL
+            bne         :+
+            ldy         #1
+            lda         (ht),y
+            cmp         #BIN_MUL
+            bne         @no
+            lda         #5
+            bra         @next
+:
+            lsr
+            tax
+            lda         vc_pure,x
+            beq         @no
+@next:
+            clc
+            adc         ht
+            sta         ht
+            bcc         @op
+            inc         ht + 1
+            bra         @op
+@yes:
+            ldx         vc_lv
+            lda         L_shl,x
+            sta         ht
+            lda         L_shh,x
+            sta         ht + 1
+            ldy         #1
+            lda         (ht),y
+            ora         #$80
+            sta         (ht),y
+@no:
+            rts
 
 ; CALL's cache emitted: none yet (fn, epoch 0, code, bank, idx)
 vc_ccache:
@@ -8224,6 +8373,16 @@ vb_vf:
 .endrep
 
 .segment "RODATA6"
+
+; The ops that call nothing (vc_shflag's), by number: their length (0: one that may)
+vc_pure:    .byte       0, 3, 2, 3, 0, 1, 0, 0                          ; (RET CONST LOCAL GLOBAL LOOKUP PUSH JF JT)
+            .byte       0, 0, 0, 0, 0, 0, 0, 0                          ; (JMP JE HEAD CALL TCALL BCALL EXT QUOTE)
+            .byte       3, 1, 1, 1, 1, 1, 1, 1                          ; (QUOTE0 ADD SUB LT GT LE GE NEQ)
+            .byte       1, 1, 1, 1, 3, 3, 3, 3                          ; (INC DEC ZEROP ONEP ADDC SUBC LTC GTC)
+            .byte       3, 3, 3, 2, 3, 0, 0, 0                          ; (LEC GEC EQC LPUSH CPUSH SHEAD CSELF TSELF)
+            .byte       0, 0, 0, 0, 5, 0, 0, 0                          ; (LOCALS LOCALH SETL SETBL LQ JLQ STT POPX)
+            .byte       0, 0, 0, 0, 0, 0, 0, 0                          ; (LOOP BLOCK LOCALB SETLB SETBLB DOTN DOTI DOTINC)
+            .byte       0, 0, 0, 0, 0, 4, 0, 5                          ; (EACHL EACHI DROP TRYE JQ LL JLL LQP)
 
 ; The compiler's: the built-ins that are quick ops, the values they're given, the op
 QUICKS          = 11
