@@ -10,6 +10,10 @@
 ;   A pixel's byte is (y * 5) << gk + (x >> gs): a row is 5 << gk bytes (40 to 320), gk 3 + the depth's log2 (+ 1,
 ; 640 across), gs 3 - the depth's log2; in its byte the leftmost pixel is in the high bits (pmask, pshift).  A line is
 ; Bresenham's, a circle the midpoint one, a bar rows of pixels (a run of bytes at 8 bits a pixel).
+;   With FX (gateware v47 on): a line at 8 or 4 bits a pixel, 320 across, its ends on the bitmap, is FX's line helper
+; (ADDR1 at its start, stepping along its longer axis; ADDR0's step, the other's, as X's fraction carries: its slope,
+; rounded, in 512ths), a write a pixel; and clear is 32-bit cache writes, 4 bytes a write.  ADDR1 is lent meanwhile
+; (the cursor's blink stopped), and FX_CTRL is 0 again after.
 
 DRAW_FRONT      = 15            ; The colour as the driver starts
 
@@ -24,6 +28,8 @@ gh:         .res        2                                   ;   and height
 pt:         .res        2                                   ; Scratch (the drawing's)
 pa:         .res        2                                   ; A circle's point: a ...
 pb:         .res        2                                   ;   and b, from its centre
+fxmaj:      .res        2                                   ; An FX line's longer axis's length ...
+fxmin:      .res        2                                   ;   and its other's
 
 .bss
 dcolor:     .res        1                                   ; The colour (/draw's)
@@ -46,6 +52,11 @@ cyy:        .res        2
 cdd:        .res        2                                   ;   and its decision
 cfill:      .res        1                                   ;   <> 0: a disc
 cnt3:       .res        3                                   ; clear's bytes
+fxn:        .res        2                                   ; An FX line's pixels ...
+fxq:        .res        3                                   ;   its slope (512ths: a quotient) ...
+fxr:        .res        2                                   ;   (the division's remainder) ...
+fxh0:       .res        1                                   ;   ADDR0's ADDR_H (the other axis's step) ...
+fxh1:       .res        1                                   ;   and ADDR1's (the longer's)
 glyph:      .res        8                                   ; text's character, its rows
 tx0:        .res        2                                   ; text's place: its column ...
 ty0:        .res        2                                   ;   and row
@@ -268,6 +279,8 @@ c_clear:
             rol         cnt3 + 2
             dex
             bne         :-
+            jsr         fx_clear                            ; (FX: 4 bytes a write)
+            bcc         @end
             stz         VERA_ADDR_L                         ; From VRAM 0, a byte at a time
             stz         VERA_ADDR_M
             lda         #VERA_INC_1
@@ -302,15 +315,313 @@ c_clear:
 
 @rest:
             ldx         cnt3                                ;   and the rest
-            beq         :++
+            beq         @end
 :
             sta         VERA_DATA0
             dex
             bne         :-
-:
+@end:
             clc
 @done:
             rts
+
+; clear by FX: the cache 4 of pt, written cnt3 / 4 times at VRAM 0 on (ADDR0, 4 a step).  OUT: C = 0 done; C = 1,
+; no FX.  Modifies .A, .X, .Y
+fx_clear:
+            lda         version
+            cmp         #$FF
+            bne         :+
+            sec
+            rts
+:
+            jsr         fx_lend
+            lda         #VERA_DCSEL_FX_CACHE
+            sta         VERA_CTRL
+            lda         pt
+            sta         VERA_FX_CACHE_L
+            sta         VERA_FX_CACHE_M
+            sta         VERA_FX_CACHE_H
+            sta         VERA_FX_CACHE_U
+            lda         #$40                                ; (Cache writes)
+            jsr         fx_mode
+            stz         VERA_ADDR_L
+            stz         VERA_ADDR_M
+            lda         #VERA_INC_4
+            sta         VERA_ADDR_H
+            stz         vok
+            lsr         cnt3 + 2                            ; Its writes: cnt3 / 4 (pages and the rest)
+            ror         cnt3 + 1
+            ror         cnt3
+            lsr         cnt3 + 2
+            ror         cnt3 + 1
+            ror         cnt3
+            ldx         cnt3 + 1
+            ldy         cnt3
+            beq         @pages
+            inx
+@pages:
+            lda         #0                                  ; (A cache write: its mask 0, all 4 bytes)
+@write:
+            sta         VERA_DATA0
+            dey
+            bne         @write
+            dex
+            bne         @write
+            jsr         fx_done
+            clc
+            rts
+
+; FX's line helper: (lx0, ly0) to (lx1, ly1), at 8 or 4 bits a pixel, 320 across, both ends on the bitmap.  OUT:
+; C = 0 drawn; C = 1, not (the plain way's).  Modifies .A, .X, .Y, va, pt, px, py
+fx_line:
+            lda         version
+            cmp         #$FF
+            beq         @no
+            lda         bitmap
+            cmp         #1
+            bne         @no
+            lda         bmdepth
+            cmp         #2
+            bcc         @no
+            ldx         #3                                  ; Its ends on the bitmap?
+:
+            lda         lx1,X
+            sta         px,X
+            dex
+            bpl         :-
+            jsr         d_on
+            bcs         @no
+            ldx         #3
+:
+            lda         lx0,X
+            sta         px,X
+            dex
+            bpl         :-
+            jsr         d_on
+            bcc         @yes
+@no:
+            sec
+            rts
+
+@yes:
+            sec                                             ; fxmaj: |x1 - x0|, fxmin: |y1 - y0| (swapped below);
+            lda         lx1                                 ;   their steps' directions: lsx, lsy
+            sbc         lx0
+            sta         fxmaj
+            lda         lx1 + 1
+            sbc         lx0 + 1
+            sta         fxmaj + 1
+            ldx         #fxmaj
+            jsr         @abs
+            sta         lsx
+            sec
+            lda         ly1
+            sbc         ly0
+            sta         fxmin
+            lda         ly1 + 1
+            sbc         ly0 + 1
+            sta         fxmin + 1
+            ldx         #fxmin
+            jsr         @abs
+            sta         lsy
+            ldx         bmdepth                             ; The steps: x's (±1 pixel) and y's (±a row) ...
+            lda         fx_xstep - 2,X
+            ldy         lsx
+            bpl         :+
+            ora         #VERA_DECR
+:
+            sta         fxh1                                ;   (x the longer: ADDR1's, y ADDR0's)
+            lda         fx_ystep - 2,X
+            ldy         lsy
+            bpl         :+
+            ora         #VERA_DECR
+:
+            sta         fxh0
+            lda         fxmin + 1                           ; y the longer: swapped
+            cmp         fxmaj + 1
+            bcc         @slope
+            bne         @swap
+            lda         fxmin
+            cmp         fxmaj
+            bcc         @slope
+            beq         @slope
+@swap:
+            ldx         #1
+:
+            lda         fxmaj,X
+            ldy         fxmin,X
+            sta         fxmin,X
+            tya
+            sta         fxmaj,X
+            dex
+            bpl         :-
+            lda         fxh0
+            ldx         fxh1
+            sta         fxh1
+            stx         fxh0
+@slope:
+            clc                                             ; Its pixels: the longer's length + 1
+            lda         fxmaj
+            adc         #1
+            sta         fxn
+            lda         fxmaj + 1
+            adc         #0
+            sta         fxn + 1
+            jsr         fx_slope                            ; fxq: (fxmin * 512 + fxmaj / 2) / fxmaj
+            lda         fxh0                                ; ADDR0 at its start (va), its step the other axis's
+            jsr         d_addr
+            jsr         fx_lend
+            lda         #VERA_CTRL_ADDRSEL                  ; ADDR1: the start, the longer axis's step, and at 4
+            sta         VERA_CTRL                           ;   bits its nibble (x odd: the low one)
+            lda         va
+            sta         VERA_ADDR_L
+            lda         va + 1
+            sta         VERA_ADDR_M
+            lda         #0
+            ldx         bmdepth
+            cpx         #2
+            bne         :+
+            lda         px
+            and         #1
+            asl
+:
+            ora         fxh1
+            ora         va + 2
+            sta         VERA_ADDR_H
+            lda         #VERA_DCSEL_FX_INCR                 ; X's step: the slope (its high byte, last, sets X's
+            sta         VERA_CTRL                           ;   fraction to a half)
+            lda         fxq
+            sta         VERA_FX_X_INCR_L
+            lda         fxq + 1
+            sta         VERA_FX_X_INCR_H
+            lda         #$01                                ; Line draw (at 4 bits, 4-bit mode)
+            ldx         bmdepth
+            cpx         #2
+            bne         :+
+            lda         #$05
+:
+            jsr         fx_mode
+            lda         pcol                                ; The colour (4 bits: in both nibbles), a write a pixel
+            ldx         bmdepth
+            cpx         #2
+            bne         :+
+            asl
+            asl
+            asl
+            asl
+            ora         pcol
+:
+            ldx         fxn + 1
+            ldy         fxn
+            beq         @run
+            inx
+@run:
+            sta         VERA_DATA1
+            dey
+            bne         @run
+            dex
+            bne         @run
+            jsr         fx_done
+            clc
+            rts
+
+@abs:                                                       ; (The zero page's 16 bits at .X, made positive: .A 1, or
+            lda         1,X                                 ;   $FF if it was negative)
+            bpl         :+
+            sec
+            lda         #0
+            sbc         0,X
+            sta         0,X
+            lda         #0
+            sbc         1,X
+            sta         1,X
+            lda         #$FF
+            rts
+:
+            lda         #1
+            rts
+
+; fxq = (fxmin * 512 + fxmaj / 2) / fxmaj, rounded (fxmaj 0: 0).  Modifies .A, .X
+fx_slope:
+            stz         fxq
+            lda         fxmin                               ; fxq: fxmin << 9 (24 bits) ...
+            asl
+            sta         fxq + 1
+            lda         fxmin + 1
+            rol
+            sta         fxq + 2
+            lda         fxmaj + 1                           ;   + fxmaj / 2
+            lsr
+            sta         fxr + 1
+            lda         fxmaj
+            ror
+            clc
+            adc         fxq
+            sta         fxq
+            lda         fxr + 1
+            adc         fxq + 1
+            sta         fxq + 1
+            bcc         :+
+            inc         fxq + 2
+:
+            lda         fxmaj
+            ora         fxmaj + 1
+            bne         :+
+            stz         fxq
+            stz         fxq + 1
+            rts
+:
+            stz         fxr                                 ; Divided by fxmaj: 24 bits, the remainder in fxr
+            stz         fxr + 1
+            ldx         #24
+@bit:
+            asl         fxq
+            rol         fxq + 1
+            rol         fxq + 2
+            rol         fxr
+            rol         fxr + 1
+            sec
+            lda         fxr
+            sbc         fxmaj
+            pha
+            lda         fxr + 1
+            sbc         fxmaj + 1
+            bcc         :+
+            sta         fxr + 1
+            pla
+            sta         fxr
+            inc         fxq
+            bra         @next
+:
+            pla
+@next:
+            dex
+            bne         @bit
+            rts
+
+; ADDR1 lent (the blink stopped); FX_CTRL .A (fx_mode, with IRQs off for DCSEL 2); FX_CTRL 0, ADDR1 back (fx_done)
+fx_lend:
+            lda         blinking
+            sta         a1_was
+            stz         blinking
+            rts
+
+fx_mode:
+            php
+            sei
+            pha
+            lda         #VERA_DCSEL_FX
+            sta         VERA_CTRL
+            pla
+            sta         VERA_FX_CTRL
+            stz         VERA_CTRL
+            plp
+            rts
+
+fx_done:
+            lda         #0
+            jsr         fx_mode
+            jmp         a1_back
 
 ; text X Y STRING: the string (its words a space apart) in the console's font from (X, Y), a character each 8 across
 c_text:
@@ -750,7 +1061,11 @@ d_hline:
 ; The line from (lx0, ly0) to (lx1, ly1), Bresenham's: a pixel each step, x or y or both stepping.  Modifies .A, .X,
 ; .Y, va, pt, px, py and the line's state
 d_line:
-            sec                                             ; ldx: |x1 - x0|, lsx its sign
+            jsr         fx_line                             ; (FX's line helper, if it can)
+            bcs         :+
+            rts
+:
+            sec                                             ; ladx: |x1 - x0|, lsx its sign
             lda         lx1
             sbc         lx0
             sta         ladx
@@ -1092,6 +1407,8 @@ d_nega:
             rts
 
 .rodata
+fx_xstep:   .byte       VERA_NIBBLE_INC, VERA_INC_1         ; FX's lines: a pixel across (4, 8 bits: a nibble, a byte) ...
+fx_ystep:   .byte       $D0, VERA_INC_320                   ;   and down (a row: 160 bytes, 320)
 s_pen_sp:   .byte       "pen ", 0
 depth_mask: .byte       $01, $03, $0F, $FF                  ; A colour's bits at each depth (1, 2, 4, 8)
 byte_of:    .byte       0, $55, $11                         ; A colour's byte, per unit: 2 and 4 bits a pixel

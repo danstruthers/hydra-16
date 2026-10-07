@@ -372,12 +372,14 @@ const C_LINES = [
 // a font from the ROM disk; a bad command
 const SCREEN_LINES = [
   ["ls /dev/vid", "ctl\nterm\nvram\npal\nsprites\nfont\nframe\npsg\npcm\npcmctl\nmouse\nmousein\nmousectl\ndraw"],
-  ["cat /dev/vid/ctl", "vera 47.0.2\nmode 80x60\ncursor blink\nborder 0\nbitmap off\nclaimed"],
+  ["cat /dev/vid/ctl", "vera 47.0.2\nmode 80x60\ncursor blink\nborder 0\nbitmap off\noutput vga\nclaimed"],
   ["grep terminal /dev/consctl", "terminal both"],
   ["echo serial >/dev/consctl; echo z^zz; grep -c 'z[z]z' /dev/vid/term; echo both >/dev/consctl", "zzz\n0"],
   ["grep -c 'z[z]z' /dev/vid/term", "1"],
   ["cat /lib/font/cp437 >/dev/vid/font", null],
   ["echo flash >/dev/vid/ctl", "echo: write error: invalid argument"],
+  ["echo output ntsc mono 240p >/dev/vid/ctl; grep output /dev/vid/ctl; echo output vga >/dev/vid/ctl", "output ntsc mono 240p"],
+  ["echo output vga 240p >/dev/vid/ctl; grep output /dev/vid/ctl", "echo: write error: invalid argument\noutput vga"],
   ["cat /pc/colours", "\x1b[31;44mR\x1b[0mn\x1b[1;32mG\x1b[0;7mV\x1b[m"],
 ];
 const SCREEN_COLOURS = '\x1b[31;44mR\x1b[0mn\x1b[1;32mG\x1b[0;7mV\x1b[m\n';
@@ -2233,7 +2235,7 @@ module.exports = {
     },
     // ---- Phase 8: the Vera X (the emulator's VERA: sim/lib/vera.js; the driver: modules/vid)
     {
-      name: 'vera', what: 'the emulator\'s Vera X (sim/lib/vera.js), the chip as a program sees it (no vid): the version register; ADDR0 and ADDR1, their steps, a data port\'s byte fetched ahead; the display\'s registers at the start; VSYNC (59.5 a second), LINE and SCANLINE (bit 8 too); sprites colliding; the PCM FIFO (empty, full, AFLOW and its interrupt\'s time); a PSG voice; the SPI port with no card; CTRL\'s reset',
+      name: 'vera', what: 'the emulator\'s Vera X (sim/lib/vera.js), the chip as a program sees it (no vid): the version register; ADDR0 and ADDR1, their steps, a data port\'s byte fetched ahead; the display\'s registers at the start; VSYNC (59.5 a second), LINE and SCANLINE (bit 8 too); sprites colliding; the PCM FIFO (empty, full, AFLOW and its interrupt\'s time); a PSG voice; the SPI port with no card; FX (the cache\'s writes and fill, transparency, the multiplier, the line helper, the fill length); CTRL\'s reset',
       init: 't_vera', without: ['vid'], cycles: 40e6, machine: { vera: true }, jsOnly: 'the danlang emulator has no VERA yet',
       check(m) {
         const f = [];
@@ -2252,7 +2254,7 @@ module.exports = {
       init: 't_vid', cycles: 30e6, expect: ['ok - no card: #v isn\'t there (E_NODEV)', 't_vid: PASS'],
     },
     {
-      name: 'screen', what: 'the console on the Vera X\'s screen (cons\'s second terminal: vid\'s /term), at rc: /dev/vid; consctl\'s terminal both, serial (the screen left as it was), both again (repainted); a font written to /dev/vid/font; colours from a file (SGR, in the cells); what rc shows, on the screen as on the serial port',
+      name: 'screen', what: 'the console on the Vera X\'s screen (cons\'s second terminal: vid\'s /term), at rc: /dev/vid; consctl\'s terminal both, serial (the screen left as it was), both again (repainted); a font written to /dev/vid/font; ctl\'s output (NTSC, mono, 240p; VGA has neither); colours from a file (SGR, in the cells); what rc shows, on the screen as on the serial port',
       init: 't_rc', cycles: 150e6, pc: { files: { colours: SCREEN_COLOURS } }, jsOnly: 'the danlang emulator has no VERA yet',
       get machine() { return { input: typed(SCREEN_LINES), vera: true }; },
       get expect() { return expected(SCREEN_LINES); },

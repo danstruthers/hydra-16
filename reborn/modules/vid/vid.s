@@ -7,10 +7,12 @@
 ;   /ctl      mode 80x60, mode 80x30, mode 40x30 (the text's columns and rows; the screen cleared); cursor blink,
 ;             cursor on, cursor off; border N (its colour, 0-255); bitmap 320 D, bitmap 640 D, bitmap off (layer 0,
 ;             under the text, a bitmap from VRAM 0 of D bits a pixel: 1, 2, 4 or 8, 640 across 1 or 2; 320 across
-;             shows the text 40x30, 640 80x60); claim, claim all, release (the chip, for direct access: below); reset (the chip set
-;             up again for the console, the screen cleared).  It reads as the state, a line each: "vera 47.0.2" (the
+;             shows the text 40x30, 640 80x60); output vga, output ntsc [mono] [240p], output rgb [240p] (DC_VIDEO's
+;             output: the card brings out what it has; mono, NTSC without colour; 240p, progressive); claim, claim all,
+;             release (the chip, for direct access: below); reset (the chip set up again for the console, the screen
+;             cleared).  It reads as the state, a line each: "vera 47.0.2" (the
 ;             gateware's version; "vera 0.9" without one), "mode 80x60", "cursor blink", "border 0", "bitmap off",
-;             and "claimed", with the claimer's task (and "all") if the chip's claimed
+;             "output vga", and "claimed", with the claimer's task (and "all") if the chip's claimed
 ;   /term     the screen's console: a write's bytes shown as an ANSI terminal shows them (below); a read gives the
 ;             screen's characters, a line a row: its columns, then an LF.  cons writes the windows' text here as
 ;             it sends it to the serial port (consctl's screen, serial, both)
@@ -166,6 +168,8 @@ npar:       .res        1                                   ;   the one being re
 priv:       .res        1                                   ;   <> 0: CSI ?
 cur_on:     .res        1                                   ; <> 0: the cursor shown (?25h)
 cur_mode:   .res        1                                   ; ctl's cursor: 0 off, 1 on, 2 blink
+outv:       .res        1                                   ; ctl's output: DC_VIDEO's low bits (VGA, NTSC, RGB; chroma
+                                                            ;   off, 240P)
 border:     .res        1
 mode:       .res        1                                   ; 0 80x60, 1 80x30, 2 40x30
 bitmap:     .res        1                                   ; Layer 0's bitmap: 0 off, 1 320 across, 2 640 ...
@@ -213,6 +217,8 @@ init:
             stz         border
             lda         #2
             sta         cur_mode
+            lda         #VERA_DC_OUT_VGA                    ; (VGA, as the card starts)
+            sta         outv
             lda         #1
             sta         cur_on
             lda         #DRAW_FRONT                         ; The drawing's colour
@@ -471,7 +477,8 @@ setup:
             sta         VERA_DC_BORDER
             jsr         layer0_set                          ; ---- Layer 0 (a bitmap, or nothing), the scales, the
             jsr         mode_set                            ;   screen's size
-            lda         #VERA_DC_OUT_VGA | VERA_DC_LAYER1 | VERA_DC_SPRITES   ; ---- On (the cursor's sprite: cursor_show)
+            lda         #VERA_DC_LAYER1 | VERA_DC_SPRITES   ; ---- On, ctl's output (the cursor's sprite: cursor_show)
+            ora         outv
             ldx         bitmap
             beq         :+
             ora         #VERA_DC_LAYER0
@@ -2919,6 +2926,29 @@ gen_ctl:
             ldx         #0
             jsr         srv_tputdec
 @claimed:
+            lda         #<s_nl_output                       ; output vga (ntsc mono 240p ...)
+            ldx         #>s_nl_output
+            jsr         srv_tputs
+            lda         outv
+            and         #3
+            dec         a
+            ldx         #<output_names
+            ldy         #>output_names
+            jsr         tput_name
+            lda         outv
+            and         #VERA_DC_CHROMA_OFF
+            beq         :+
+            lda         #<s_sp_mono
+            ldx         #>s_sp_mono
+            jsr         srv_tputs
+:
+            lda         outv
+            and         #VERA_DC_240P
+            beq         :+
+            lda         #<s_sp_240p
+            ldx         #>s_sp_240p
+            jsr         srv_tputs
+:
             lda         #<s_nl_claimed
             ldx         #>s_nl_claimed
             jsr         srv_tputs
@@ -3030,6 +3060,68 @@ console_has:
 :
             clc
             rts
+
+; output vga | ntsc [mono] [240p] | rgb [240p]: DC_VIDEO's output, with IRQs off (dcv)
+c_output:
+            jsr         console_has
+            bcs         @done
+            lda         #<output_names
+            ldx         #>output_names
+            jsr         arg_which
+            bcs         @done
+            inc         a                                   ; (VGA 1, NTSC 2, RGB 3)
+            sta         pt
+            ldy         #1                                  ; Its words after it: mono (NTSC's), 240p (not VGA's)
+@word:
+            cpy         z:srv_argn
+            bcs         @set
+            phy
+            lda         #<s_mono
+            ldx         #>s_mono
+            jsr         arg_is
+            ply
+            cmp         #0                                  ; (arg_is's .A: ply changed Z)
+            bne         :+
+            lda         pt
+            cmp         #VERA_DC_OUT_NTSC
+            bne         @inval
+            lda         #VERA_DC_CHROMA_OFF
+            bra         @flag
+:
+            phy
+            lda         #<s_240p
+            ldx         #>s_240p
+            jsr         arg_is
+            ply
+            cmp         #0
+            bne         @inval
+            lda         pt
+            cmp         #VERA_DC_OUT_VGA
+            beq         @inval
+            lda         #VERA_DC_240P
+@flag:
+            ora         pt
+            sta         pt
+            iny
+            bra         @word
+
+@set:
+            lda         pt
+            sta         outv
+            php
+            sei
+            lda         dcv
+            and         #$F0
+            ora         outv
+            sta         dcv
+            sta         VERA_DC_VIDEO
+            plp
+            clc
+@done:
+            rts
+
+@inval:
+            jmp         inval
 
 ; mode 80x60 | 80x30 | 40x30
 c_mode:
@@ -3400,6 +3492,7 @@ ctl_cmds:
             .word       s_claim, c_claim
             .word       s_release, c_release
             .word       s_reset, c_reset
+            .word       s_output, c_output
             .word       0
 
 mousein_cmds:
@@ -3458,6 +3551,8 @@ cursor_names:
             .word       s_off, s_on, s_blink, 0
 onoff_names:
             .word       s_off, s_on, 0
+output_names:
+            .word       s_vga, s_ntsc, s_rgb, 0
 depth_bits: .byte       1, 2, 4, 8
 
 ; Sprite 0, the cursor: its image at $1F800 (4 bits a pixel), z 3 (in front), 8 x 8, palette offset 0
@@ -3588,6 +3683,14 @@ s_nl_mode:  .byte       LF, "mode ", 0
 s_nl_cursor: .byte      LF, "cursor ", 0
 s_nl_border: .byte      LF, "border ", 0
 s_nl_bitmap: .byte      LF, "bitmap ", 0
+s_nl_output: .byte      LF, "output ", 0
+s_output:   .byte       "output", 0
+s_vga:      .byte       "vga", 0
+s_ntsc:     .byte       "ntsc", 0
+s_rgb:      .byte       "rgb", 0
+s_240p:     .byte       "240p", 0
+s_sp_mono:  .byte       " mono", 0
+s_sp_240p:  .byte       " 240p", 0
 s_nl_claimed: .byte     LF, "claimed", 0
 s_sp_all:   .byte       " all", 0
 

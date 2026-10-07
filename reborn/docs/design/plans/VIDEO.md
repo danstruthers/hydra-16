@@ -18,7 +18,7 @@ A plan for the Hydra-16's supported video card: a card in **slot 0** carrying th
 | 25 | Audio left | 26 | Audio right |
 
 **Built** in `reborn/`, which differs from this plan (written for the old system's ROM) as follows:
-* **The emulator's VERA** (step 1): `reborn/sim/lib/vera.js`, the v47.0.2 chip (FX's registers kept, its effects not modelled; its sound, the PSG's and the PCM's, made since with the YM2151's: `sim/lib/audio.js`, `run.js --sound`, `--wav`); `run.js --vera`, `--screen`, `--frame-png`, and `--view` (the screen live in a browser) rather than a web emulator; the vera test.
+* **The emulator's VERA** (step 1): `reborn/sim/lib/vera.js`, the v47.0.2 chip (FX too, since the rest's work: below; its sound, the PSG's and the PCM's, made since with the YM2151's: `sim/lib/audio.js`, `run.js --sound`, `--wav`); `run.js --vera`, `--screen`, `--frame-png`, and `--view` (the screen live in a browser) rather than a web emulator; the vera test.
 * **The driver** (step 2) is a module, `vid` (a boot driver, task A), not BIOS page E.  It detects the card itself, as it starts (not POST): the version register, or ADDR0 read back for v0.9, for 0.3 s (the FPGA configuring itself after a reset).  Its font is built in (ISO-8859-15, the X16 ROM's PXLfont), with `/lib/font/cp437` beside it; no boot logo yet.  The frame interrupt goes through the kernel's one IRQ path to vid's irq entry.
 * **`/dev/vid`** (step 3): `ctl`, `term`, `vram`, `pal`, `sprites`, `font` and `frame`.  `ctl`'s commands: `mode 80x60`, `mode 80x30`, `mode 40x30`, `cursor blink|on|off`, `border N`, `bitmap 320 D`, `bitmap 640 D`, `bitmap off` (layer 0), `claim`, `claim all`, `release`, `reset`.  `frame` reads as text (the count in decimal, and an LF), as the GPIO's `ca1` does.  Claims as step 5 plans them.
 * **The screen console** (step 4): the terminal is vid's (`#v/term`), and the console driver, `cons`, writes the shown window's text there as it sends it to the serial port; consctl's `screen`, `serial` and `both` choose.  The cursor is sprite 0 (an underline at VRAM `$1F800`, blinked by `DC_VIDEO`'s sprite bit).  No keyboard yet (step 6).
@@ -36,6 +36,10 @@ A plan for the Hydra-16's supported video card: a card in **slot 0** carrying th
   * **`bitmap 640` is 1 or 2 bits a pixel**: at 4 or 8 it was more than the program's VRAM, and drew over the console's map and font.
   * **cx16-320-8 isn't there**: cc65's X16 driver (`cx320p1`) calls the X16's kernal, so the Hydra's is new, over `/dev/vid/draw`.
   * Samples: `sketch` (`vera.h`, the mouse) and `shapes` (TGI).  The draw test (rc, HyForth, hylang, both samples).
+* **The rest** (Order of work's 3), so far:
+  * **The output modes**: ctl's `output vga`, `output ntsc [mono] [240p]`, `output rgb [240p]` (DC_VIDEO's bits; the card brings out what it has: the VERA X its VGA).  The emulator had NTSC's and RGB's timing already.
+  * **FX in the emulator** (`vera.js`, from x16-emulator's `video.c`): ADDR1's line, polygon and affine modes, 4-bit mode and its nibbles, the 16-bit hop, the 32-bit cache (filled by reads, written 4 bytes at a time under a mask, or a byte at a time cycling), transparent writes, the multiplier and its accumulator, 2-bit polygon poking, the fill length.  The vera test checks it (15 checks).
+  * **FX in vid's drawing**: a line at 8 or 4 bits a pixel, 320 across, its ends on the bitmap, is FX's line helper (a write a pixel: its slope in 512ths, rounded, so a long line ends where it should); `clear` is 32-bit cache writes.  A 300-pixel line from HyForth went from some 246,000 cycles to 82,000 (the rest is HyForth's and the request's).  ADDR1 is lent meanwhile, as for a scroll.
 * The programmer's chapter is `reborn/docs/programming/video.md`; the status, `reborn/docs/status.md`'s phase 8.
 
 ### **The console and the text windows**
@@ -301,6 +305,6 @@ With a keyboard, the Hydra is a standalone computer: switch on, get a prompt on 
 **From here**, in the user's order (2026-10-07):
 1. **The keyboard and mouse** (step 6): done (As built, above), and the SMC in the wiring guide.  The mouse's words in each language come with the graphics words.
 2. **The graphics words** (step 5): done (As built, above), the mouse's words with them.
-3. **The rest of the Vera X**: FX in the emulator (the chip's line and polygon helpers, its cache writes and multiplier: `vera.js` keeps their registers only), and FX in the graphics words where it helps; the VERA's SD card (its SPI controller, a second back end for `#d`'s cards); the output modes (VGA, composite, RGB) and the 240p line doubling in `ctl`; the PSG in scores (`play`'s MML); the VERA in the danlang emulator; demos (step 8).
+3. **The rest of the Vera X**: FX in the emulator and in vid's lines and clear, and the output modes (done: As built, above); the VERA's SD card (its SPI controller, a second back end for `#d`'s cards); the output modes (VGA, composite, RGB) and the 240p line doubling in `ctl`; the PSG in scores (`play`'s MML); the VERA in the danlang emulator; demos (step 8).
 4. **With the text windows**: their W8 (the seats, the keyboard and the mouse in the console) once 1 is in.
 5. **The hardware**: the carrier card (option A), its timing checked on the bus; then option B, the one-board Vera X.

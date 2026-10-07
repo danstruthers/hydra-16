@@ -26,7 +26,7 @@ and serves it as files.  A program uses the screen three ways, from the easiest:
 
 | File | Read | Write |
 | :--- | :--- | :--- |
-| `ctl` | The state, a line each: `vera 47.0.2` (the gateware's version), `mode 80x60`, `cursor blink`, `border 0`, `bitmap off`, `claimed` (and the claimer's task, and `all`) | Commands: `mode 80x60`, `mode 80x30`, `mode 40x30`; `cursor blink`, `cursor on`, `cursor off`; `border N`; `bitmap 320 D`, `bitmap 640 D`, `bitmap off`; `claim`, `claim all`, `release`; `reset` |
+| `ctl` | The state, a line each: `vera 47.0.2` (the gateware's version), `mode 80x60`, `cursor blink`, `border 0`, `bitmap off`, `output vga`, `claimed` (and the claimer's task, and `all`) | Commands: `mode 80x60`, `mode 80x30`, `mode 40x30`; `cursor blink`, `cursor on`, `cursor off`; `border N`; `bitmap 320 D`, `bitmap 640 D`, `bitmap off`; `output vga`, `output ntsc [mono] [240p]`, `output rgb [240p]` (the VERA's output: composite and RGB where the card brings them out; `mono`, NTSC without colour; `240p`, progressive); `claim`, `claim all`, `release`; `reset` |
 | `term` | The screen's characters, a line a row (its columns, then an LF) | Bytes shown as an ANSI terminal shows them (the console writes here) |
 | `vram` | VRAM: the offset is the address, `$00000-$1FFFF` | VRAM, through the chip's data port |
 | `pal` | The palette (VRAM `$1FA00`: 256 entries of 2 bytes, `$GB` then `$0R`) | The palette |
@@ -63,7 +63,8 @@ Y1`, `box X0 Y0 X1 Y1` (its outline), `bar X0 Y0 X1 Y1` (filled), `circle X Y R`
 X Y STRING` (the console's font, 8 x 8: each character's dots in the pen's colour, the rest left as it is) and `clear
 [C]` (all of the bitmap, in colour 0 or C).  Coordinates are the bitmap's pixels (320 x 240, or 640 x 480), each
 -4096 to 4095; what falls off the bitmap isn't drawn.  With no bitmap a command is `E_INVAL`; while the chip's
-claimed, `E_BUSY` (a claimer draws for itself).
+claimed, `E_BUSY` (a claimer draws for itself).  With FX (the gateware v47 on) a line at 8 or 4 bits a pixel, 320
+across, its ends on the bitmap, is the chip's line helper, a write a pixel, and `clear` its 32-bit cache writes.
 
 ```
 echo bitmap 320 8 >/dev/vid/ctl

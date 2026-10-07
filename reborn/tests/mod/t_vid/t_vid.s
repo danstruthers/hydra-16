@@ -608,10 +608,10 @@ s_font:     .byte       "#v/font", 0
 s_frame:    .byte       "#v/frame", 0
 s_me:       .byte       "#m/t_vid", 0
 s_c:        .byte       "c", 0, 0
-s_state0:   .byte       "vera 47.0.2", LF, "mode 80x60", LF, "cursor blink", LF, "border 0", LF, "bitmap off", LF, "claimed", LF, 0
-s_state1:   .byte       "vera 47.0.2", LF, "mode 80x30", LF, "cursor blink", LF, "border 0", LF, "bitmap off", LF, "claimed", LF, 0
-s_state2:   .byte       "vera 47.0.2", LF, "mode 40x30", LF, "cursor off", LF, "border 6", LF, "bitmap 320 8", LF, "claimed", LF, 0
-s_state3:   .byte       "vera 47.0.2", LF, "mode 80x60", LF, "cursor blink", LF, "border 0", LF, "bitmap off", LF, "claimed 1", LF, 0
+s_state0:   .byte       "vera 47.0.2", LF, "mode 80x60", LF, "cursor blink", LF, "border 0", LF, "bitmap off", LF, "output vga", LF, "claimed", LF, 0
+s_state1:   .byte       "vera 47.0.2", LF, "mode 80x30", LF, "cursor blink", LF, "border 0", LF, "bitmap off", LF, "output vga", LF, "claimed", LF, 0
+s_state2:   .byte       "vera 47.0.2", LF, "mode 40x30", LF, "cursor off", LF, "border 6", LF, "bitmap 320 8", LF, "output vga", LF, "claimed", LF, 0
+s_state3:   .byte       "vera 47.0.2", LF, "mode 80x60", LF, "cursor blink", LF, "border 0", LF, "bitmap off", LF, "output vga", LF, "claimed 1", LF, 0
 s_hello:    .byte       "hello ", 0
 s_world:    .byte       "world", 0
 s_ab:       .byte       "AB  ", 0

@@ -5,8 +5,8 @@
 //   * the registers: ADDR0/ADDR1 (CTRL's ADDRSEL), their increments (and DECR), the data ports with the byte each
 //     has fetched ahead (a read gives it, then steps the address and fetches the next; a write, or setting the
 //     address, fetches too: a write through one port leaves the other's fetched byte as it was, as on the chip);
-//     DCSEL's register sets (0: DC_VIDEO, the scales, the border; 1: the active area; 2-6: FX's, kept but without
-//     effect: FX isn't modelled; 63: the version, "V" and its three numbers); the layers'; IEN, ISR, IRQLINE,
+//     DCSEL's register sets (0: DC_VIDEO, the scales, the border; 1: the active area; 2-6: FX's, below; 63: the
+//     version, "V" and its three numbers); the layers'; IEN, ISR, IRQLINE,
 //     SCANLINE; the audio's and the SPI controller's;
 //   * VRAM, random at power-up, and the write-only registers it shadows: the PSG ($1F9C0), the palette ($1FA00:
 //     the chip's default at reset) and the sprite attributes ($1FC00), written with VRAM;
@@ -17,6 +17,12 @@
 //   * the PCM FIFO (4K: 4095 bytes held at most): its bytes, drained at the sample rate (AUDIO_RATE / 128 of
 //     48828 Hz, a sample 1, 2 or 4 bytes), AFLOW while it's under 1024, its full and empty flags; the PCM bytes and
 //     the PSG's voices counted (pcmIn, pcmOut, pcmLost; psgOns, as ym2151.js's key-ons);
+//   * FX (the X16's Programmer's Reference, chapter 10; video.c's model): ADDR1's modes (line draw: ADDR0's step
+//     each time the X position's fraction carries; polygon fill: ADDR1 at ADDR0 + X, the fill's length readable;
+//     affine: ADDR1 from a tile map, X and Y stepping), 4-bit mode (the nibble bit and its increment, nibble
+//     writes), the 16-bit hop, the 32-bit cache (filled by reads, written 4 bytes at a time with a nibble mask, or
+//     byte by byte cycling), transparent writes (0 left alone), the multiplier and its accumulator, 2-bit polygon
+//     poking;
 //   * the sound, if it's asked for (sound(fn): audio.js's): the PSG's 16 voices and the PCM's samples, a stereo
 //     sample at 48828 Hz each given to fn(left, right), as the X16's emulator makes them (its vera_psg.c and
 //     vera_pcm.c, Frank van den Hoef's, BSD 2-clause), made up to a cycle as the machine runs (before a PSG register
@@ -105,6 +111,18 @@ function createVera(env) {
   // The scan: units (a VGA line, or half an NTSC one) since t0, the cycle it started at; lastU the last unit done
   let readyAt = configCycles, t0 = configCycles, unitLen = 800, perFrame = 525, lastU = -1, nextU = 0, nextCyc = 0;
   let collisions = 0;                                          // (The sprite renderer's, this frame: live)
+  // FX: ADDR1's mode (0 normal, 1 line draw, 2 polygon fill, 3 affine), the switches, the positions and increments
+  // (X and Y: 32 bits, the pixel in bits 16-26, the fraction below), the cache and the accumulator
+  const fx = { mode: 0, nib4: false, hop: false, cycle: false, fill: false, cwrite: false, trans: false, poly2: false,
+    poking: false, cincMode: false, cnib: 0, cbyte: 0, mult: false, sub: false, clip: false, hopAlign: 0,
+    nibBit: [0, 0], nibInc: [0, 0], cache: new Uint8Array(4), acc: 0, xinc: 0, yinc: 0, xpos: 0, ypos: 0, fillLen: 0,
+    tileBase: 0, mapBase: 0, mapSize: 2 };
+  function fxReset() {
+    Object.assign(fx, { mode: 0, nib4: false, hop: false, cycle: false, fill: false, cwrite: false, trans: false, poly2: false,
+      poking: false, cincMode: false, cnib: 0, cbyte: 0, mult: false, sub: false, clip: false, hopAlign: 0, acc: 0,
+      xinc: 0, yinc: 0, xpos: 0x8000, ypos: 0x8000, fillLen: 0, tileBase: 0, mapBase: 0, mapSize: 2 });
+    fx.nibBit[0] = fx.nibBit[1] = 0; fx.nibInc[0] = fx.nibInc[1] = 0; fx.cache.fill(0);
+  }
 
   function reset(t) {                                         // The FPGA configured: the gateware's start
     addr[0] = addr[1] = 0; inc[0] = inc[1] = 0; nib[0] = nib[1] = 0;
@@ -116,6 +134,7 @@ function createVera(env) {
     actl = 0; arate = 0; loop = false; fcnt = fwr = frd = 0; pcmPhase = 0; pcmAt = t; pcmFed = false;
     psgPhase.fill(0); psgNoise.fill(0); psgNoiseState = 1; pcmL = pcmR = 0; readySample = Math.ceil(t * PCM_HZ / (clock * 1e6));
     ss = 0; autotx = 0; slow = 0; spiBusyTo = 0; spiIn = 0xFF;
+    fxReset();
     rd[0] = rd[1] = vram[0];
     t0 = t; unitLen = 800; perFrame = 525; lastU = -1; collisions = 0; plan();
   }
@@ -273,6 +292,174 @@ function createVera(env) {
   }
   const fetch = s => { rd[s] = vram[addr[s]]; };
   const step = s => { addr[s] = (addr[s] + STEP[inc[s]]) & 0x1FFFF; };
+  // FX: a data port's access: its address, then the port stepped (the nibble, the hop, ADDR1's modes)
+  function fxStep(s, write) {
+    const a = addr[s];
+    let n = STEP[inc[s]];
+    if (fx.nib4 && fx.nibInc[s] && !n) {
+      if (fx.nibBit[s]) { if ((inc[s] & 1) === 0) addr[s]++; fx.nibBit[s] = 0; }
+      else { if (inc[s] & 1) addr[s]--; fx.nibBit[s] = 1; }
+    }
+    if (s === 1 && fx.hop) {
+      if (n === 4) n = fx.hopAlign === (a & 3) ? 1 : 3;
+      else if (n === 320) n = fx.hopAlign === (a & 3) ? 1 : 319;
+    }
+    addr[s] = (addr[s] + n) & 0x1FFFF;
+    if (s === 1 && fx.mode === 1) {                           // Line draw: ADDR0's step when X's fraction carries
+      fx.xpos = (fx.xpos + fx.xinc) >>> 0;
+      if (fx.xpos & 0x10000) {
+        fx.xpos = (fx.xpos & ~0x10000) >>> 0;
+        if (fx.nib4 && fx.nibInc[0]) {
+          if (fx.nibBit[1]) { if ((inc[0] & 1) === 0) addr[1]++; fx.nibBit[1] = 0; }
+          else { if (inc[0] & 1) addr[1]--; fx.nibBit[1] = 1; }
+        }
+        addr[1] = (addr[1] + STEP[inc[0]]) & 0x1FFFF;
+      }
+    } else if (fx.mode === 2 && !write) {                     // Polygon fill: X and Y step, ADDR1 at ADDR0 + X
+      fx.xpos = (fx.xpos + fx.xinc) >>> 0;
+      fx.ypos = (fx.ypos + fx.yinc) >>> 0;
+      fx.fillLen = (((fx.ypos | 0) >> 16) - ((fx.xpos | 0) >> 16)) & 0xFFFF;
+      if (s === 0 && fx.cycle && !fx.fill) fx.cbyte = (fx.cbyte + 1) & 3;
+      if (s === 1) {
+        if (fx.nib4) { addr[1] = (addr[0] + (fx.xpos >>> 17)) & 0x1FFFF; fx.nibBit[1] = (fx.xpos >>> 16) & 1; }
+        else addr[1] = (addr[0] + (fx.xpos >>> 16)) & 0x1FFFF;
+      }
+    } else if (s === 1 && fx.mode === 3 && !write) {         // Affine: X and Y step
+      fx.xpos = (fx.xpos + fx.xinc) >>> 0;
+      fx.ypos = (fx.ypos + fx.yinc) >>> 0;
+    }
+    return a;
+  }
+  // FX's affine mode: ADDR1 at the tile map's pixel under (X, Y), its byte fetched
+  function fxAffine() {
+    if (fx.mode !== 3) return;
+    let tx = (fx.xpos >>> 19) & 0xFF, ty = (fx.ypos >>> 19) & 0xFF;
+    const sx = (fx.xpos >>> 16) & 7, sy = (fx.ypos >>> 16) & 7, n4 = fx.nib4 ? 1 : 0;
+    if (!fx.clip) { tx &= fx.mapSize - 1; ty &= fx.mapSize - 1; }
+    let a;
+    if (tx >= fx.mapSize || ty >= fx.mapSize) a = fx.tileBase + (sy << (3 - n4)) + (sx >> n4);
+    else {
+      const tile = vram[(fx.mapBase + ty * fx.mapSize + tx) & 0x1FFFF];
+      a = fx.tileBase + (tile << (6 - n4)) + (sy << (3 - n4)) + (sx >> n4);
+    }
+    fx.nibBit[1] = (sx & 1) >> (1 - n4);
+    addr[1] = a & 0x1FFFF;
+    rd[1] = vram[addr[1]];
+  }
+  // A byte written as FX writes it (4-bit mode: a nibble; transparent writes: 0 left alone)
+  function fxPut(a, nibble, b) {
+    a &= 0x1FFFF;
+    if (fx.nib4) {
+      if (nibble) { if (!fx.trans || (b & 0x0F)) b = (vram[a] & 0xF0) | (b & 0x0F); else b = vram[a]; }
+      else if (!fx.trans || (b & 0xF0)) b = (vram[a] & 0x0F) | (b & 0xF0);
+      else b = vram[a];
+    } else if (fx.trans && !b) return;
+    put(a, b);
+  }
+  // A cache write's byte: mask 0 the whole byte, 1 its high nibble, 2 its low, 3 none
+  function fxCachePut(a, b, mask) {
+    if (fx.trans && !b) return;
+    a &= 0x1FFFF;
+    if (mask === 0) put(a, b);
+    else if (mask === 1) put(a, (vram[a] & 0x0F) | (b & 0xF0));
+    else if (mask === 2) put(a, (vram[a] & 0xF0) | (b & 0x0F));
+  }
+  const fxProduct = () => ((((fx.cache[1] << 8) | fx.cache[0]) << 16) >> 16) * ((((fx.cache[3] << 8) | fx.cache[2]) << 16) >> 16);
+  // A data port's write, FX's way (version 47 on: FX there)
+  function fxWrite(s, b) {
+    if (fx.poking && fx.mode) {                               // 2-bit poking: two bits of the cache's byte at ADDR1
+      fx.poking = false;
+      const m = b >> 6, keep = [0x3F, 0xCF, 0xF3, 0xFC][m];
+      vram[addr[1]] = (fx.cache[fx.cbyte] & ~keep & 0xFF) | (rd[1] & keep);
+      return;
+    }
+    const nibble = fx.nibBit[s];
+    let a = fxStep(s, true);
+    const cache = fx.mult ? (() => {
+      const r = (fx.sub ? fx.acc - fxProduct() : fx.acc + fxProduct()) | 0;
+      return [r & 0xFF, (r >> 8) & 0xFF, (r >> 16) & 0xFF, (r >>> 24) & 0xFF];
+    })() : Array.from(fx.cache);
+    const data = fx.cycle ? fx.cache[fx.cbyte] : b;
+    const bytes = fx.cwrite && !fx.cycle ? cache : [data, data, data, data];
+    if (fx.cwrite) {
+      a &= 0x1FFFC;
+      for (let i = 0; i < 4; i++) {
+        let mask;
+        if (fx.trans) mask = fx.nib4 ? (((bytes[i] & 0xF0) === 0) << 1) | ((bytes[i] & 0x0F) === 0) : (bytes[i] ? 0 : 3);
+        else mask = (b >> (2 * i)) & 3;
+        fxCachePut(a + i, bytes[i], mask);
+      }
+    } else fxPut(a, nibble, data);
+    fetch(s);
+  }
+  // A data port's read, FX's way: the byte fetched ahead, the port stepped, the cache filled
+  function fxRead(s) {
+    const nibble = fx.nibBit[s];
+    fxStep(s, false);
+    const b = rd[s];
+    if (s === 1 && fx.mode === 3) fxAffine(); else fetch(s);
+    if (fx.fill) {
+      if (fx.nib4) {
+        const n = nibble ? (b & 0x0F) << 4 : b & 0xF0;
+        if (fx.cnib) { fx.cache[fx.cbyte] = (fx.cache[fx.cbyte] & 0xF0) | (n >> 4); fx.cnib = 0; fx.cbyte = (fx.cbyte + 1) & 3; }
+        else { fx.cache[fx.cbyte] = (fx.cache[fx.cbyte] & 0x0F) | n; fx.cnib = 1; }
+      } else {
+        fx.cache[fx.cbyte] = b;
+        fx.cbyte = fx.cincMode ? (fx.cbyte & 2) | ((fx.cbyte + 1) & 1) : (fx.cbyte + 1) & 3;
+      }
+    }
+    return b;
+  }
+  // FX's increments: DCSEL 3's two registers, a signed 15-bit step (x 32 with bit 15)
+  const fxIncrement = (lo, hi) => {
+    let v = (((hi & 0x7F) << 15) + (lo << 7)) | ((hi & 0x40) ? 0xFFC00000 | 0 : 0);
+    if (hi & 0x80) v <<= 5;
+    return v >>> 0;
+  };
+  // A write to DCSEL 2-6's registers (i: DCSEL * 4 + the register)
+  function fxReg(i, b) {
+    switch (i) {
+      case 0x08: fx.mode = b & 3; fx.nib4 = !!(b & 4); fx.hop = !!(b & 8); fx.cycle = !!(b & 0x10); fx.fill = !!(b & 0x20);
+        fx.cwrite = !!(b & 0x40); fx.trans = !!(b & 0x80); return;
+      case 0x09: fx.tileBase = (b & 0xFC) << 9; fx.clip = !!(b & 2); fx.poly2 = !!(b & 1); return;
+      case 0x0A: fx.mapBase = (b & 0xFC) << 9; fx.mapSize = 2 << ((b & 3) << 1); return;
+      case 0x0B:
+        fx.cincMode = !!(b & 1); fx.cnib = (b >> 1) & 1; fx.cbyte = (b >> 2) & 3; fx.mult = !!(b & 0x10); fx.sub = !!(b & 0x20);
+        if (b & 0x40) fx.acc = (fx.sub ? fx.acc - fxProduct() : fx.acc + fxProduct()) | 0;
+        if (b & 0x80) fx.acc = 0;
+        return;
+      case 0x0C: fx.xinc = fxIncrement(dc[0x0C], dc[0x0D]); return;
+      case 0x0D: fx.xinc = fxIncrement(dc[0x0C], dc[0x0D]);
+        if (fx.mode === 1 || fx.mode === 2) fx.xpos = ((fx.xpos & 0x07FF0000) | 0x8000) >>> 0;
+        return;
+      case 0x0E: fx.yinc = fxIncrement(dc[0x0E], dc[0x0F]); return;
+      case 0x0F: fx.yinc = fxIncrement(dc[0x0E], dc[0x0F]);
+        if (fx.mode === 1 || fx.mode === 2) fx.ypos = ((fx.ypos & 0x07FF0000) | 0x8000) >>> 0;
+        return;
+      case 0x10: fx.xpos = ((fx.xpos & 0x0700FF80) | (b << 16)) >>> 0; fxAffine(); return;
+      case 0x11: fx.xpos = ((fx.xpos & 0x00FFFF00) | ((b & 7) << 24) | (b & 0x80)) >>> 0; fxAffine(); return;
+      case 0x12: fx.ypos = ((fx.ypos & 0x0700FF80) | (b << 16)) >>> 0; fxAffine(); return;
+      case 0x13: fx.ypos = ((fx.ypos & 0x00FFFF00) | ((b & 7) << 24) | (b & 0x80)) >>> 0; fxAffine(); return;
+      case 0x14: fx.xpos = ((fx.xpos & 0x07FF0080) | (b << 8)) >>> 0; return;
+      case 0x15: fx.ypos = ((fx.ypos & 0x07FF0080) | (b << 8)) >>> 0; return;
+      case 0x18: case 0x19: case 0x1A: case 0x1B: fx.cache[i - 0x18] = b; return;
+    }
+  }
+  // A read of DCSEL 5's fill length (0x16, 0x17), or 6's accumulator's side effects (0x18 reset, 0x19 accumulate)
+  function fxRegRead(i) {
+    if (i === 0x16) {
+      if (fx.fillLen >= 768) return fx.poly2 && fx.mode === 2 ? 0 : 0x80;
+      if (fx.nib4) {
+        if (fx.poly2 && fx.mode === 2) return ((fx.ypos & 0x8000) >> 8) | ((fx.xpos >>> 11) & 0x60) | ((fx.xpos >>> 14) & 0x10) | ((fx.fillLen & 7) << 1) | ((fx.xpos & 0x8000) >> 15);
+        return ((fx.fillLen & 0xFFF8 ? 1 : 0) << 7) | ((fx.xpos >>> 11) & 0x60) | ((fx.xpos >>> 14) & 0x10) | ((fx.fillLen & 7) << 1);
+      }
+      return ((fx.fillLen & 0xFFF0 ? 1 : 0) << 7) | ((fx.xpos >>> 11) & 0x60) | ((fx.fillLen & 0x0F) << 1);
+    }
+    if (i === 0x17) return (fx.fillLen & 0x03F8) >> 2;
+    if (i === 0x18) fx.acc = 0;
+    else if (i === 0x19) fx.acc = (fx.sub ? fx.acc - fxProduct() : fx.acc + fxProduct()) | 0;
+    return -1;
+  }
 
   // ---- The bus
   function read(r, t) {
@@ -282,8 +469,12 @@ function createVera(env) {
     switch (r) {
       case 0x00: return addr[addrsel] & 0xFF;
       case 0x01: return (addr[addrsel] >> 8) & 0xFF;
-      case 0x02: return (addr[addrsel] >> 16) | (nib[addrsel] << 1) | (inc[addrsel] << 3);
-      case 0x03: case 0x04: { const s = r - 3, b = rd[s]; step(s); fetch(s); return b; }
+      case 0x02: return (addr[addrsel] >> 16) | (version ? (fx.nibBit[addrsel] << 1) | (fx.nibInc[addrsel] << 2) : nib[addrsel] << 1) | (inc[addrsel] << 3);
+      case 0x03: case 0x04: {
+        const s = r - 3;
+        if (version) return fxRead(s);
+        const b = rd[s]; step(s); fetch(s); return b;
+      }
       case 0x05: return (dcsel << 1) | addrsel;
       case 0x06: return ((irqLine & 0x100) >> 1) | ((scanline(t) & 0x100) >> 2) | ien;
       case 0x07: pcm(t); return isr | (fcnt < AFLOW ? 8 : 0);
@@ -292,6 +483,7 @@ function createVera(env) {
         const i = dcsel * 4 + r - 9;
         if (i === 0) return (dc[0] & 0x7F) | (field(t) << 7);
         if (i < 8 || i === 8 && version) return dc[i];
+        if (version && i >= 0x16 && i <= 0x19) { const b = fxRegRead(i); if (b >= 0) return b; }
         return verBytes ? verBytes[i & 3] : 0;              // (Write-only: the version's bytes)
       }
       case 0x1B: pcm(t); return actl | (fcnt >= FIFO - 1 ? 0x80 : 0) | (fcnt === 0 ? 0x40 : 0);
@@ -311,11 +503,19 @@ function createVera(env) {
     if (t < readyAt) return;
     scan(t);
     switch (r) {
-      case 0x00: addr[addrsel] = (addr[addrsel] & 0x1FF00) | b; fetch(addrsel); return;
+      case 0x00:
+        if (version && fx.poly2 && fx.nib4 && fx.mode === 2 && addrsel === 1) { fx.poking = true; addr[1] = (addr[1] & 0x1FFFC) | (b & 3); }
+        else { addr[addrsel] = (addr[addrsel] & 0x1FF00) | b; if (fx.hop && addrsel === 1) fx.hopAlign = b & 3; }
+        fetch(addrsel); return;
       case 0x01: addr[addrsel] = (addr[addrsel] & 0x100FF) | (b << 8); fetch(addrsel); return;
       case 0x02: addr[addrsel] = (addr[addrsel] & 0x0FFFF) | ((b & 1) << 16); nib[addrsel] = (b >> 1) & 3; inc[addrsel] = b >> 3;
+        fx.nibBit[addrsel] = (b >> 1) & 1; fx.nibInc[addrsel] = (b >> 2) & 1;
         fetch(addrsel); return;
-      case 0x03: case 0x04: { const s = r - 3; put(addr[s], b); step(s); fetch(s); return; }
+      case 0x03: case 0x04: {
+        const s = r - 3;
+        if (version) { fxWrite(s, b); return; }
+        put(addr[s], b); step(s); fetch(s); return;
+      }
       case 0x05:
         if (b & 0x80) { reconfigure(t); return; }
         dcsel = (b >> 1) & dcselMask; addrsel = b & 1; return;
@@ -326,7 +526,9 @@ function createVera(env) {
         const i = dcsel * 4 + r - 9;
         if (version && i >= 0xFC) return;                     // (DCSEL 63: read-only)
         if (i === 0) { dc[0] = b & 0x7F; retime(t); return; }
-        dc[i] = b; return;
+        dc[i] = b;
+        if (version && i >= 8) fxReg(i, b);
+        return;
       }
       case 0x1B:
         pcm(t);
@@ -563,7 +765,7 @@ function createVera(env) {
     ready: { get: () => curT >= readyAt },
     fifo: { get: () => fcnt },
     ien: { get: () => ien }, isr: { get: () => isr },
-    dcVideo: { get: () => dc[0] }, layers: { get: () => [Array.from(layer[0]), Array.from(layer[1])] },
+    dcVideo: { get: () => dc[0] }, fx: { get: () => fx }, layers: { get: () => [Array.from(layer[0]), Array.from(layer[1])] },
     addr: { get: () => [addr[0], addr[1]] },
   });
   // The sound on: each sample given to fn(left, right) (16 bits each), from cycle 0
