@@ -915,7 +915,7 @@ pump:
             lda         repaint
             beq         @text
             jsr         tx_free
-            cmp         #8
+            cmp         #S_CLEAR_N
             bcc         @done
             ldx         #0
 :
@@ -3215,7 +3215,8 @@ edit_keys:  .byte       CR, LF, CTRL_D, BS, DEL, KEY_DEL, KEY_LEFT, KEY_RIGHT, K
 edit_vec:   .word       ed_cr, ed_lf, ed_eof, ed_bs, ed_bs, ed_del, ed_left, ed_right, ed_home, ed_home, ed_end, ed_end
             .word       ed_kill, ed_up, ed_down
 .assert     * - edit_vec = EDIT_N * 2, error, "edit_keys and edit_vec don't match"
-s_clear:    .byte       ESC, "[H", ESC, "[2J", 0            ; (The terminal's screen cleared, the cursor home)
+s_clear:    .byte       ESC, "[r", ESC, "[H", ESC, "[2J", 0 ; (The terminal's scrolling region the whole screen, the
+S_CLEAR_N   = * - s_clear - 1                               ;   screen cleared, the cursor home)
 s_bell:     .byte       "#a/bell", 0
 
 ; ****************************************************************************

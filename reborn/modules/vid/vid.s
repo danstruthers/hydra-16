@@ -36,7 +36,9 @@
 ; AFLOW off (nobody fills the PCM FIFO yet: the line would stay low).
 ;   The terminal: printable bytes ($20-$7E, $80-$FF: the font's) at the cursor, wrapping at the last column (as a
 ; VT100 does: the next one goes on the next line); CR, LF (down, scrolling at the bottom), BS, TAB (every 8 columns),
-; FF (cleared), BEL (nothing: cons rings the bell); ESC 7 and ESC 8 (the cursor saved, restored), ESC c (reset);
+; FF (cleared), BEL (nothing: cons rings the bell); ESC 7 and ESC 8 (the cursor saved, restored), ESC c (reset), ESC D
+; (IND: down a row), ESC E (NEL: CR and IND), ESC M (RI: up a row); CSI t;b r (DECSTBM: the scrolling region, rows t
+; to b; CSI r, the whole screen: an LF at its bottom row scrolls the region alone, RI at its top scrolls it down);
 ; CSI n A, B, C, D, E, F (moves), G and d (a column, a row), H and f (row;column, from 1), J and K (0: to the end, 1:
 ; from the start, 2: all), m (SGR: 0, 1 bold as bright, 22, 7 reverse, 27, 30-37, 39, 40-47, 49, 90-97, 100-107; 2,
 ; 4, 5, 24 and 25 taken and not shown), s and u, ?25h and ?25l (the cursor shown, hidden); the rest are taken and
@@ -113,6 +115,8 @@ bg:         .res        1                                   ;   the background .
 bold:       .res        1                                   ;   bold (shown bright) ...
 rev:        .res        1                                   ;   reverse
 saved:      .res        6                                   ; ESC 7's: cx, cy, fg, bg, bold, rev
+stop:       .res        1                                   ; The scrolling region: its first row ...
+sbot:       .res        1                                   ;   and its last (DECSTBM's; the whole screen: 0, rows - 1)
 par:        .res        NPAR                                ; CSI's numbers ...
 npar:       .res        1                                   ;   the one being read ...
 priv:       .res        1                                   ;   <> 0: CSI ?
@@ -456,6 +460,14 @@ mode_set:
             bcc         :+
             stz         cy
 :
+            jmp         region_all
+
+; The scrolling region: the whole screen.  Modifies .A
+region_all:
+            stz         stop
+            lda         rows
+            dec         a
+            sta         sbot
             rts
 
 ; Layer 0: a bitmap at VRAM 0 (bitmap, bmdepth), if there's one.  Modifies .A
@@ -488,6 +500,7 @@ term_reset:
             lda         #BG
             sta         bg
             jsr         attr_set
+            jsr         region_all
             jmp         cls
 
 ; attr from fg, bg, bold (bright) and rev.  Modifies .A, .X, t
@@ -659,9 +672,24 @@ putc:
             bne         :+
             jmp         restore_cursor
 :
+            cmp         #'D'
+            bne         :+
+            jmp         line_feed
+:
+            cmp         #'E'
+            bne         :+
+            stz         cx
+            jmp         line_feed
+:
+            cmp         #'M'
+            bne         :+
+            jmp         rev_index
+:
             cmp         #'c'
-            bne         @drop
+            bne         :+
             jmp         term_reset
+:
+            rts
 
 @csi:
             cmp         #'0'                                ; ---- In a CSI: a number's digit ...
@@ -756,19 +784,25 @@ put_char:
             stz         vok
             rts
 
-; LF: down a row, the screen scrolled at the bottom (the map's next row blanked, then VSCROLL on a row).  Modifies
-; .A, .X, .Y, n
+; LF: down a row; at the scrolling region's bottom, the region scrolled up a row (the whole screen: the map's next
+; row blanked, then VSCROLL on a row; part of it: its rows copied up, its last blanked).  Below the region, down to
+; the screen's last row and no further.  Modifies .A, .X, .Y, n, t
 line_feed:
             stz         wrap
             stz         vok
             lda         cy
+            cmp         sbot
+            beq         @scroll
             inc         a
             cmp         rows
-            bcs         @scroll
+            bcs         :+
             sta         cy
+:
             rts
 
 @scroll:
+            jsr         region_whole
+            bne         region_up
             ldy         rows                                ; (The row below the screen: hidden till the scroll)
             jsr         blank_row
             lda         top
@@ -776,6 +810,103 @@ line_feed:
             and         #MAP_ROWS - 1
             sta         top
             jmp         scroll_set
+
+; ESC M (RI): up a row; at the scrolling region's top, the region scrolled down a row (the whole screen: the map's
+; row above blanked, then VSCROLL back a row; part of it: its rows copied down, its first blanked).  Above the
+; region, up to the screen's top and no further.  Modifies .A, .X, .Y, n, t
+rev_index:
+            stz         wrap
+            stz         vok
+            lda         cy
+            cmp         stop
+            beq         @scroll
+            cmp         #0
+            beq         :+
+            dec         cy
+:
+            rts
+
+@scroll:
+            jsr         region_whole
+            bne         region_down
+            ldy         #$FF                                ; (The row above the screen: hidden till the scroll)
+            jsr         blank_row
+            lda         top
+            dec         a
+            and         #MAP_ROWS - 1
+            sta         top
+            jmp         scroll_set
+
+; Is the scrolling region the whole screen?  OUT: Z = 1 yes.  Modifies .A
+region_whole:
+            lda         stop
+            bne         :+
+            lda         sbot
+            inc         a
+            cmp         rows
+:
+            rts
+
+; The region's rows (stop to sbot) scrolled up a row, its last blanked.  Modifies .A, .X, .Y, n, t
+region_up:
+            lda         stop
+@row:
+            sta         t + 1                               ; (To this row, from the one below)
+            cmp         sbot
+            bcs         @blank
+            inc         a
+            sta         t
+            jsr         copy_row
+            lda         t
+            bra         @row
+
+@blank:
+            ldy         sbot
+            jmp         blank_row
+
+; The region's rows scrolled down a row, its first blanked.  Modifies .A, .X, .Y, n, t
+region_down:
+            lda         sbot
+@row:
+            sta         t + 1                               ; (To this row, from the one above)
+            cmp         stop
+            beq         @blank
+            bcc         @blank
+            dec         a
+            sta         t
+            jsr         copy_row
+            lda         t
+            bra         @row
+
+@blank:
+            ldy         stop
+            jmp         blank_row
+
+; Screen row t's cells (COLS_MAX: characters and colours) copied to row t + 1, through the data ports: 1 reads, 0
+; writes (CTRL's ADDRSEL 1 a moment; DCSEL 0 all along, for the irq entry's DC_VIDEO).  Modifies .A, .X, .Y
+copy_row:
+            lda         #VERA_CTRL_ADDRSEL
+            sta         VERA_CTRL
+            ldx         #0
+            ldy         t
+            jsr         cell_at
+            stz         VERA_CTRL
+            ldx         #0
+            ldy         t + 1
+            jsr         cell_at
+            ldx         #COLS_MAX / 2                       ; (Two cells a time)
+:
+            lda         VERA_DATA1
+            sta         VERA_DATA0
+            lda         VERA_DATA1
+            sta         VERA_DATA0
+            lda         VERA_DATA1
+            sta         VERA_DATA0
+            lda         VERA_DATA1
+            sta         VERA_DATA0
+            dex
+            bne         :-
+            rts
 
 ; ESC 7, CSI s: the cursor and the colours saved; ESC 8, CSI u: back
 save_cursor:
@@ -1074,6 +1205,35 @@ sgr:
             ora         #8
             sta         bg
 :
+            rts
+
+; CSI t;b r (DECSTBM): the scrolling region, rows t to b (from 1; none: the screen's first and last), if t is above
+; b; the cursor home.  CSI r: the whole screen
+csi_region:
+            lda         priv
+            bne         @done
+            lda         par
+            beq         :+
+            dec         a
+:
+            sta         t
+            lda         par + 1
+            beq         :+
+            cmp         rows
+            bcc         :++
+:
+            lda         rows
+:
+            dec         a
+            cmp         t
+            beq         @done
+            bcc         @done
+            sta         sbot
+            lda         t
+            sta         stop
+            jmp         home
+
+@done:
             rts
 
 ; CSI ?25h, ?25l: the cursor shown, hidden
@@ -2164,10 +2324,10 @@ regions:
 
 ; CSI's finals, and what they do
 csi_final:
-            .byte       "ABCDEFGdHfJKmsuhl", 0
+            .byte       "ABCDEFGdHfJKmsuhlr", 0
 csi_go:
             .word       csi_up, csi_down, csi_right, csi_left, csi_next, csi_prev, csi_col, csi_row, csi_pos
-            .word       csi_pos, csi_ed, csi_el, csi_sgr, save_cursor, restore_cursor, csi_set, csi_reset
+            .word       csi_pos, csi_ed, csi_el, csi_sgr, save_cursor, restore_cursor, csi_set, csi_reset, csi_region
 
 ; The modes: their names, columns, rows, scales
 mode_names:

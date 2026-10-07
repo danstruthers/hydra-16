@@ -145,6 +145,38 @@ main:
             SAME        s_bstab
             EXPECT_A    0, "BS (c over b), TAB (d at column 8)"
 
+; ---- The scrolling region (CSI 2;5r): a title above, a status line below; LF at its bottom, RI at its top
+            PUT         tw, t_region, t_region_n
+            AT          tr, 3 * 81, 2
+            SAME        s_aa
+            EXPECT_A    0, "CSI 2;5r, then LF at the region's bottom: the region up a row (aa on row 3)"
+            AT          tr, 4 * 81, 2
+            SAME        s_bb
+            EXPECT_A    0, "and bb on its last row"
+            AT          tr, 0, 5
+            SAME        s_title
+            EXPECT_A    0, "the row above the region as it was"
+            AT          tr, 5 * 81, 6
+            SAME        s_status
+            EXPECT_A    0, "and the row below it"
+            PUT         tw, t_ri, t_ri_n
+            AT          tr, 4 * 81, 2
+            SAME        s_aa
+            EXPECT_A    0, "ESC M at the region's top: the region down a row (aa on row 4)"
+            AT          tr, 81, 2
+            SAME        s_sp2
+            EXPECT_A    0, "its first row blank"
+            AT          tr, 0, 5
+            SAME        s_title
+            EXPECT_A    0, "the title as it was"
+            AT          tr, 5 * 81, 6
+            SAME        s_status
+            EXPECT_A    0, "the status line as it was"
+            PUT         tw, t_rreset, t_rreset_n
+            AT          tr, 4 * 81, 6
+            SAME        s_status
+            EXPECT_A    0, "CSI r: LF at the screen's bottom scrolls all of it (the status line up a row)"
+
 ; ---- Scrolling: 70 lines, l00 to l69: the screen shows l10 to l69
             PUT         tw, t_clear, t_clear_n
             stz         k
@@ -569,6 +601,11 @@ s_world:    .byte       "world", 0
 s_ab:       .byte       "AB  ", 0
 s_xy:       .byte       "xy", 0
 s_bstab:    .byte       "ac      d", 0
+s_aa:       .byte       "aa", 0
+s_bb:       .byte       "bb", 0
+s_sp2:      .byte       "  ", 0
+s_title:    .byte       "title", 0
+s_status:   .byte       "status", 0
 s_l10:      .byte       "l10", 0
 s_l69:      .byte       "l69", 0
 s_kept:     .byte       "kept", 0
@@ -586,6 +623,12 @@ t_wrap:     .byte       $1B, "[4;79Hxyz"
 t_wrap_n = * - t_wrap
 t_bstab:    .byte       $1B, "[6;1Hab", 8, "c", 9, "d"
 t_bstab_n = * - t_bstab
+t_region:   .byte       $1B, "[2J", $1B, "[Htitle", $1B, "[6;1Hstatus", $1B, "[2;5r", $1B, "[5;1Haa", CR, LF, "bb"
+t_region_n = * - t_region
+t_ri:       .byte       $1B, "[2;1H", $1B, "M"
+t_ri_n = * - t_ri
+t_rreset:   .byte       $1B, "[r", $1B, "[60;1H", CR, LF
+t_rreset_n = * - t_rreset
 t_clear:    .byte       $1B, "[2J", $1B, "[H"
 t_clear_n = * - t_clear
 t_sgr:      .byte       $1B, "[2J", $1B, "[H", $1B, "[31;44mR", $1B, "[0mn", $1B, "[1;32mG", $1B, "[0;7mV", $1B, "[m"

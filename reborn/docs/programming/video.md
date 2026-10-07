@@ -54,11 +54,13 @@ digit shows another, repainted on both).  `consctl` chooses where: `screen`, `se
 starts `both`), and reads with a line `terminal both`.  With `screen` alone, output isn't paced by the serial line.
 
 The terminal is 80x60 (`mode 80x30` and `mode 40x30` make the characters bigger), in 16 colours: the ANSI ones, 0-15
-as conio numbers them.  It takes CR, LF, BS, TAB, FF; ESC 7 and ESC 8; CSI `A` `B` `C` `D` `E` `F` `G` `d` `H` `f`
-(moves), `J` and `K` (0, 1, 2), `m` (0, 1 bold, shown bright, 22, 7 reverse, 27, 30-37, 39, 40-47, 49, 90-97,
-100-107), `s` and `u`, `?25h` and `?25l`.  Others are taken and dropped.  Lines scroll by moving layer 1's
-`VSCROLL` (the map is a ring of 64 rows), so a scroll costs a row.  The cursor is sprite 0, an underline, blinking
-(`cursor on` steadies it).
+as conio numbers them.  It takes CR, LF, BS, TAB, FF; ESC 7 and ESC 8, ESC D (index), ESC E (next line), ESC M
+(reverse index), ESC c; CSI `A` `B` `C` `D` `E` `F` `G` `d` `H` `f` (moves), `J` and `K` (0, 1, 2), `m` (0, 1
+bold, shown bright, 22, 7 reverse, 27, 30-37, 39, 40-47, 49, 90-97, 100-107), `r` (the scrolling region, as a
+VT100's: `CSI 2;23r`, then an LF at row 23 scrolls rows 2-23 alone and ESC M at row 2 scrolls them down; `CSI r`
+the whole screen again), `s` and `u`, `?25h` and `?25l`.  Others are taken and dropped.  The whole screen scrolls by
+moving layer 1's `VSCROLL` (the map is a ring of 64 rows), so a scroll costs a row; a region scrolls by copying its
+rows in VRAM (some 1,500 cycles a row).  The cursor is sprite 0, an underline, blinking (`cursor on` steadies it).
 
 The screen has no keyboard yet: keys still come from the serial terminal.  A PS/2 keyboard, through an input
 controller on IRQ line 3, is planned (VIDEO.md).
