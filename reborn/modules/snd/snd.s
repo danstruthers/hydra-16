@@ -4,8 +4,12 @@
 ;   /snd     a write: YM2151 register/value byte pairs, through the library (an odd last byte is dropped); a read:
 ;            the registers as they were written (the shadow, 256 bytes: the chip's can't be read)
 ;   /sndctl  claim N, release N (a mask of channels: bit n, channel n), volume N (the master volume, 0-200: 100 as
-;            written; more, louder, up to 23 dB), reset (the chip and every setting cleared; the claims stay).  It
-;            reads as the state: "volume 100", then "claimed" and the channels claimed
+;            written; more, louder, up to 23 dB), reset (the chip and every setting cleared; the claims stay); and
+;            each channel's commands as text (/snd's SND_R_*): patch CH P, note CH N, off CH, level CH V (vol, its old
+;            name), pan CH left|right|both (or 0-3), bend CH B (-128 to 127), drum CH N, freq CH HZ (0: off),
+;            glide CH N (legato), sens CH PMS AMS, and reg R V [R V]; the chip's own: lfo RATE PMD AMD WAVE, noise
+;            N|off.  A channel is 0-7 (with a Vera X, 8-23 are to be its PSG's).  It reads as the state: "volume 100", then
+;            "claimed" and the channels claimed
 ;   /bell    a write: the console's bell (cons writes it at a BEL it sends): a short beep on channel 7, unless
 ;            channel 7 is claimed
 ; Claims: a channel claimed is its claimer's alone, the other tasks' writes to it dropped, till it releases it or
@@ -60,12 +64,15 @@ vol:        .res        8                                   ; Each channel's vol
 atten:      .res        8                                   ;   its carriers' attenuation (TL steps, signed) ...
 bend:       .res        8                                   ;   its bend ...
 note:       .res        8                                   ;   its note ($FF: none) ...
+fine:       .res        8                                   ;   its 64ths above the note (freq's) ...
 chown:      .res        8                                   ;   and its claimer (a task + 1; 0: none)
 refs:       .res        16                                  ; Each task's fids on #a
 master:     .res        1                                   ; The master volume, a percentage (0-200) ...
 master_tl:  .res        1                                   ;   and its TL steps, signed (127: silent; 0: as
                                                             ;   written; -31: louder)
 iobuf:      .res        IOBUF
+f_note:     .res        1                                   ; cmd_freq: the note of the table's octave (+ 64) ...
+f_semi:     .res        1                                   ;   and the semitone in it
 
 .code
 
@@ -314,6 +321,350 @@ c_reset:
 :
             rts
 
+; sndctl's channel commands, each its binary command's (/snd's SND_R_*) as text: patch CH P, note CH N, off CH,
+; level CH V (vol, its old name), pan CH left|right|both (or 0-3), bend CH B (signed: -128 to 127), drum CH N; and
+; reg R V [R V], registers as /snd writes them.  A channel another task has claimed: E_BUSY; a number out of range,
+; or one missing: E_INVAL; the chip not answering: E_IO.  (ctl_ch and ctl_chbyte answer an error themselves)
+c_patch:
+            ldx         #SND_PATCHES
+            jsr         ctl_chbyte
+            jsr         cmd_patch
+            jmp         ctl_io
+
+c_note:
+            ldx         #$80
+            jsr         ctl_chbyte
+            jsr         cmd_note
+            jmp         ctl_io
+
+c_off:
+            jsr         ctl_ch
+            jsr         cmd_off
+            jmp         ctl_io
+
+c_level:
+            ldx         #$80
+            jsr         ctl_chbyte
+            jsr         cmd_vol
+            jmp         ctl_io
+
+c_drum:
+            ldx         #SND_DRUMS
+            jsr         ctl_chbyte
+            jsr         cmd_drum
+            jmp         ctl_io
+
+c_pan:
+            jsr         ctl_ch
+            lda         z:srv_argn                          ; (Its speakers: a word, or a number)
+            cmp         #2
+            bcc         @inval
+            lda         srv_argp + 2
+            sta         z:srv_p
+            lda         srv_argp + 3
+            sta         z:srv_p + 1
+            ldx         #0
+@word:
+            lda         pan_words,X
+            sta         r3
+            lda         pan_words + 1,X
+            sta         r3 + 1
+            jsr         srv_same                            ; (Keeps .X)
+            beq         @named
+            inx
+            inx
+            cpx         #6
+            bcc         @word
+            lda         (srv_p)                             ; A number, 0-3 (not a word that reads as 0)
+            cmp         #'0'
+            bcc         @inval
+            cmp         #'9' + 1
+            bcs         @inval
+            lda         srv_arg + 3
+            bne         @inval
+            lda         srv_arg + 2
+            cmp         #4
+            bcc         @set
+@inval:
+            jmp         ctl_inval
+
+@named:
+            txa                                             ; (left 1, right 2, both 3)
+            lsr
+            inc         a
+@set:
+            ldy         ch
+            jsr         cmd_pan
+            jmp         ctl_io
+
+c_bend:
+            jsr         ctl_ch
+            lda         z:srv_argn
+            cmp         #2
+            bcc         @inval
+            lda         srv_arg + 2                         ; -128 to 127: its high byte the low one's sign
+            asl
+            lda         srv_arg + 3
+            adc         #0
+            bne         @inval
+            lda         srv_arg + 2
+            ldy         ch
+            jsr         cmd_bend
+            jmp         ctl_io
+
+@inval:
+            jmp         ctl_inval
+
+c_reg:
+            lda         z:srv_argn                          ; Pairs: 2 or 4 numbers, each a byte
+            cmp         #2
+            beq         :+
+            cmp         #4
+            bne         @inval
+:
+            asl
+            sta         cnt                                 ; (Their bytes)
+            ldx         z:srv_fid
+            lda         srv_fid_aux,X
+            sta         owner
+            ldy         #0
+@byte:
+            lda         srv_arg + 1,Y
+            bne         @inval
+            iny
+            iny
+            cpy         cnt
+            bcc         @byte
+            ldy         #0
+@pair:
+            ldx         srv_arg,Y
+            lda         srv_arg + 2,Y
+            phy
+            jsr         pair
+            ply
+            bcs         @ioerr
+            iny
+            iny
+            iny
+            iny
+            cpy         cnt
+            bcc         @pair
+            clc
+            rts
+
+@ioerr:
+            jmp         ctl_ioerr
+
+@inval:
+            jmp         ctl_inval
+
+; freq CH HZ: a note at a frequency (0: off); glide CH N: the pitch to note N without a new attack
+c_freq:
+            jsr         ctl_ch
+            lda         z:srv_argn
+            cmp         #2
+            bcc         @inval
+            lda         srv_arg + 2
+            sta         shadow + SND_R_FREQ_LO
+            lda         srv_arg + 3
+            ldy         ch
+            jsr         cmd_freq
+            jmp         ctl_io
+
+@inval:
+            jmp         ctl_inval
+
+c_glide:
+            ldx         #$80
+            jsr         ctl_chbyte
+            jsr         cmd_glide
+            jmp         ctl_io
+
+; lfo RATE PMD AMD WAVE: the LFO (the whole chip's): its rate (0-255), its depths of pitch and of amplitude (0-127),
+; its waveform (0 saw, 1 square, 2 triangle, 3 noise; CT kept)
+c_lfo:
+            lda         z:srv_argn
+            cmp         #4
+            bne         @inval
+            ldy         #6                                  ; (Each a byte)
+:
+            lda         srv_arg + 1,Y
+            bne         @inval
+            dey
+            dey
+            bpl         :-
+            lda         srv_arg + 2
+            bmi         @inval
+            lda         srv_arg + 4
+            bmi         @inval
+            lda         srv_arg + 6
+            cmp         #4
+            bcs         @inval
+            ldx         #$18                                ; The rate ...
+            lda         srv_arg
+            jsr         set
+            bcs         @io
+            ldx         #$19                                ;   the pitch's depth (bit 7) ...
+            lda         srv_arg + 2
+            ora         #$80
+            jsr         set
+            bcs         @io
+            lda         srv_arg + 4                         ;   the amplitude's ...
+            jsr         set
+            bcs         @io
+            ldx         #$1B                                ;   and the waveform
+            lda         shadow + $1B
+            and         #$C0
+            ora         srv_arg + 6
+            jsr         set
+@io:
+            jmp         ctl_io
+
+@inval:
+            jmp         ctl_inval
+
+; sens CH PMS AMS: the channel's sensitivity to the LFO, of its pitch (vibrato, 0-7) and its amplitude (tremolo, 0-3)
+c_sens:
+            jsr         ctl_ch
+            lda         z:srv_argn
+            cmp         #3
+            bcc         @inval
+            lda         srv_arg + 3
+            ora         srv_arg + 5
+            bne         @inval
+            lda         srv_arg + 2
+            cmp         #8
+            bcs         @inval
+            asl
+            asl
+            asl
+            asl
+            sta         t
+            lda         srv_arg + 4
+            cmp         #4
+            bcs         @inval
+            ora         t
+            pha
+            lda         ch
+            ora         #$38
+            tax
+            pla
+            jsr         set
+            jmp         ctl_io
+
+@inval:
+            jmp         ctl_inval
+
+; noise N: channel 7's noise (in place of its last operator) at frequency N (0-31); noise off (or a negative N): none
+c_noise:
+            lda         z:srv_argn
+            cmp         #1
+            bne         @inval
+            lda         srv_argp
+            sta         z:srv_p
+            lda         srv_argp + 1
+            sta         z:srv_p + 1
+            lda         #<s_off
+            sta         r3
+            lda         #>s_off
+            sta         r3 + 1
+            jsr         srv_same
+            beq         @off
+            lda         srv_arg + 1
+            bmi         @off
+            bne         @inval
+            lda         (srv_p)                             ; (A number: not a word that reads as 0)
+            cmp         #'0'
+            bcc         @inval
+            cmp         #'9' + 1
+            bcs         @inval
+            lda         srv_arg
+            cmp         #32
+            bcs         @inval
+            ora         #$80                                ; (NE: on)
+            bra         @set
+@off:
+            lda         #0
+@set:
+            ldx         #$0F
+            jsr         set
+            jmp         ctl_io
+
+@inval:
+            jmp         ctl_inval
+
+; (The chip's answer: C = 1, E_IO)
+ctl_io:
+            bcc         :+
+ctl_ioerr:
+            lda         #E_IO
+:
+            rts
+
+ctl_inval:
+            lda         #E_INVAL
+            sec
+            rts
+
+; A channel command's channel (its first number) and the value after it, below .X: .A = the value, .Y = ch = the
+; channel, owner its task.  An error answers the command (its handler's caller): E_INVAL (none, or out of range),
+; E_BUSY (another task's channel)
+ctl_chbyte:
+            stx         t
+            lda         z:srv_argn
+            cmp         #2
+            bcc         ctl_drop
+            lda         srv_arg + 3
+            bne         ctl_drop
+            lda         srv_arg + 2
+            cmp         t
+            bcs         ctl_drop
+            jsr         ctl_ch1
+            bcs         ctl_busy
+            lda         srv_arg + 2
+            ldy         ch
+            rts
+
+; A channel command's channel: ch = .Y = it, owner its task (an error as ctl_chbyte's)
+ctl_ch:
+            lda         z:srv_argn
+            beq         ctl_drop
+            jsr         ctl_ch1
+            bcs         ctl_busy
+            ldy         ch
+            rts
+
+ctl_drop:
+            pla                                             ; (The command answered: its handler's return
+            pla                                             ;   dropped)
+            bra         ctl_inval
+
+ctl_busy:
+            pla
+            pla
+            lda         #E_BUSY
+            rts
+
+; ch = the first number, owner the fid's task: C = 1 if another task has it.  (Out of range: ctl_drop's, from
+; ctl_ch's or ctl_chbyte's caller)
+ctl_ch1:
+            lda         srv_arg + 1
+            bne         @range
+            lda         srv_arg
+            cmp         #SND_CHANNELS
+            bcs         @range
+            sta         ch
+            ldx         z:srv_fid
+            lda         srv_fid_aux,X
+            sta         owner
+            lda         ch
+            jmp         owned
+
+@range:
+            pla                                             ; (ctl_ch1's own return dropped too)
+            pla
+            bra         ctl_drop
+
 ; sndctl's state: "volume 100", then "claimed" and the channels claimed
 gen_ctl:
             lda         #<s_volume
@@ -498,6 +849,7 @@ reset:
             sta         vol,Y
             lda         #0
             sta         bend,Y
+            sta         fine,Y
             lda         #$FF
             sta         note,Y
             jsr         atten_set
@@ -693,6 +1045,9 @@ pitch:
             ror         t
             lsr         t + 1
             ror         t
+            lda         t                                   ;   + its 64ths (0-63: the low bits are 0) ...
+            ora         fine,Y
+            sta         t
             ldx         #0                                  ;   + the bend (signed)
             lda         bend,Y
             bpl         :+
@@ -763,9 +1118,11 @@ pitch:
             jsr         set                                 ; The key code ...
             pla
             bcs         @done
+            pha
             txa
             adc         #$08                                ; ($28 + 8: $30; C = 0)
             tax
+            pla
             jmp         set                                 ;   and the fraction
 
 @done:
@@ -949,6 +1306,8 @@ cmd_none:                                                   ; (Out of range: not
 cmd_note:
             and         #$7F
             sta         note,Y
+            lda         #0
+            sta         fine,Y
             jsr         pitch
             bcs         cmd_done
             jmp         key_on
@@ -1019,6 +1378,136 @@ cmd_drum:
 cmd_done:
             rts
 
+; A frequency (Hz: SND_R_FREQ_LO's byte, and this the high one; 0, off), keyed on: its MIDI note and 64ths, from a
+; table of the octave C8-C9 (4,186-8,372 Hz) that the frequency is doubled or halved into (each an octave), the
+; 64ths between its semitones taken as a straight line (a cent's error at most).  As high or low as the chip goes
+cmd_freq:
+            sta         t + 1
+            lda         shadow + SND_R_FREQ_LO
+            sta         t
+            ora         t + 1
+            bne         :+
+            jmp         cmd_off
+:
+            phy
+            lda         #108 + 64                           ; The table's octave's note (+ 64, as it's moved)
+            sta         f_note
+@double:
+            lda         t + 1                               ; Below C8: doubled, its note an octave down
+            cmp         #>FREQ_C8
+            bcc         :+
+            bne         @halve
+            lda         t
+            cmp         #<FREQ_C8
+            bcs         @halve
+:
+            asl         t
+            rol         t + 1
+            lda         f_note
+            sec
+            sbc         #12
+            sta         f_note
+            bra         @double
+@halve:
+            lda         t + 1                               ; C9 or more: halved, an octave up
+            cmp         #>FREQ_C9
+            bcc         @semitone
+            bne         :+
+            lda         t
+            cmp         #<FREQ_C9
+            bcc         @semitone
+:
+            lsr         t + 1
+            ror         t
+            lda         f_note
+            clc
+            adc         #12
+            sta         f_note
+            bra         @halve
+@semitone:
+            ldy         #0                                  ; .Y: the semitone (t below the next one's)
+@find:
+            lda         t + 1
+            cmp         freq_hi + 1,Y
+            bcc         @found
+            bne         :+
+            lda         t
+            cmp         freq_lo + 1,Y
+            bcc         @found
+:
+            iny
+            cpy         #11
+            bcc         @find
+@found:
+            sty         f_semi
+            sec                                             ; t: how far above it; ptr: the semitone's width
+            lda         t
+            sbc         freq_lo,Y
+            sta         t
+            lda         t + 1
+            sbc         freq_hi,Y
+            sta         t + 1
+            sec
+            lda         freq_lo + 1,Y
+            sbc         freq_lo,Y
+            sta         ptr
+            lda         freq_hi + 1,Y
+            sbc         freq_hi,Y
+            sta         ptr + 1
+            ldy         #6                                  ; The 64ths: t * 64 / the width (t * 64 < 32768)
+:
+            asl         t
+            rol         t + 1
+            dey
+            bne         :-
+            ldx         #0
+@divide:
+            sec
+            lda         t
+            sbc         ptr
+            pha
+            lda         t + 1
+            sbc         ptr + 1
+            bcc         @divided
+            sta         t + 1
+            pla
+            sta         t
+            inx
+            bra         @divide
+@divided:
+            pla
+            ply
+            lda         f_note                              ; Its note: 0-127 (past them: the end's)
+            clc
+            adc         f_semi
+            sec
+            sbc         #64
+            bcs         :+
+            lda         #0
+            tax
+:
+            bpl         :+
+            lda         #127
+            ldx         #63
+:
+            sta         note,Y
+            txa
+            sta         fine,Y
+            jsr         pitch
+            bcs         :+
+            jmp         key_on
+:
+            rts
+
+; Pitch to note .A without a new attack (legato: MML's &, the X16's negative notes); a channel with no note
+; takes it for its next (a bend moves it too)
+cmd_glide:
+            and         #$7F
+            sta         note,Y
+            lda         #0
+            sta         fine,Y
+            jmp         pitch
+
 ; The console's bell: a short beep on channel 7, a sine (four operators in step) that fades by itself, so nothing
 ; has to turn it off.  (Through the library: the master volume's, and the shadow keeps it)
 beep:
@@ -1081,19 +1570,29 @@ low_reg:
             .byte       0, LR_CHIP, LR_SELECT, LR_CMD, LR_CMD + 1, LR_CMD + 2, LR_CMD + 3, LR_CMD + 4
                                                             ; $00-$07: -, test and LFO reset, SND_R_CH, SND_R_PATCH,
                                                             ;   SND_R_NOTE, SND_R_OFF, SND_R_VOL, SND_R_PAN
-            .byte       LR_KEY, LR_CMD + 5, LR_CMD + 6, 0, 0, 0, 0, LR_CHIP
-                                                            ; $08-$0F: key on, SND_R_BEND, SND_R_DRUM, -, noise
+            .byte       LR_KEY, LR_CMD + 5, LR_CMD + 6, 0, LR_CMD + 7, LR_CMD + 8, 0, LR_CHIP
+                                                            ; $08-$0F: key on, SND_R_BEND, SND_R_DRUM,
+                                                            ;   SND_R_FREQ_LO (kept), SND_R_FREQ, SND_R_GLIDE, -, noise
             .byte       LR_CHIP, LR_CHIP, LR_CHIP, 0, LR_CHIP, 0, 0, 0
                                                             ; $10-$17: timer A, timer B, -, the timers' control
             .byte       LR_CHIP, LR_CHIP, 0, LR_CHIP, 0, 0, 0, 0
                                                             ; $18-$1F: LFO rate, depths, -, CT and the waveform
 .assert     SND_R_CH = 2 .and SND_R_PATCH = 3 .and SND_R_NOTE = 4 .and SND_R_OFF = 5, error, "low_reg: the commands"
 .assert     SND_R_VOL = 6 .and SND_R_PAN = 7 .and SND_R_BEND = 9 .and SND_R_DRUM = $0A, error, "low_reg: the commands"
+.assert     SND_R_FREQ_LO = $0B .and SND_R_FREQ = $0C .and SND_R_GLIDE = $0D, error, "low_reg: the commands"
 
 cmd_lo:
-            .lobytes    cmd_patch, cmd_note, cmd_off, cmd_vol, cmd_pan, cmd_bend, cmd_drum
+            .lobytes    cmd_patch, cmd_note, cmd_off, cmd_vol, cmd_pan, cmd_bend, cmd_drum, cmd_freq, cmd_glide
 cmd_hi:
-            .hibytes    cmd_patch, cmd_note, cmd_off, cmd_vol, cmd_pan, cmd_bend, cmd_drum
+            .hibytes    cmd_patch, cmd_note, cmd_off, cmd_vol, cmd_pan, cmd_bend, cmd_drum, cmd_freq, cmd_glide
+
+; The frequencies of C8 to C9 (MIDI 108-120), in Hz (A4 440): cmd_freq's octave
+FREQ_C8         = 4186
+FREQ_C9         = 8372
+freq_lo:
+            .lobytes    FREQ_C8, 4435, 4699, 4978, 5274, 5588, 5920, 6272, 6645, 7040, 7459, 7902, FREQ_C9
+freq_hi:
+            .hibytes    FREQ_C8, 4435, 4699, 4978, 5274, 5588, 5920, 6272, 6645, 7040, 7459, 7902, FREQ_C9
 
 ; The device
 srv_tree:
@@ -1108,7 +1607,23 @@ ctl_cmds:
             .word       s_release, c_release
             .word       s_volume_w, c_volume
             .word       s_reset, c_reset
+            .word       s_patch, c_patch
+            .word       s_note, c_note
+            .word       s_off, c_off
+            .word       s_level, c_level
+            .word       s_vol, c_level
+            .word       s_pan, c_pan
+            .word       s_bend, c_bend
+            .word       s_drum, c_drum
+            .word       s_reg, c_reg
+            .word       s_freq, c_freq
+            .word       s_glide, c_glide
+            .word       s_lfo, c_lfo
+            .word       s_sens, c_sens
+            .word       s_noise, c_noise
             .word       0
+pan_words:
+            .word       s_left, s_right, s_both
 s_root:     .byte       "/", 0
 s_snd:      .byte       "snd", 0
 s_sndctl:   .byte       "sndctl", 0
@@ -1117,6 +1632,23 @@ s_claim:    .byte       "claim", 0
 s_release:  .byte       "release", 0
 s_volume_w: .byte       "volume", 0
 s_reset:    .byte       "reset", 0
+s_patch:    .byte       "patch", 0
+s_note:     .byte       "note", 0
+s_off:      .byte       "off", 0
+s_level:    .byte       "level", 0
+s_vol:      .byte       "vol", 0
+s_pan:      .byte       "pan", 0
+s_bend:     .byte       "bend", 0
+s_drum:     .byte       "drum", 0
+s_reg:      .byte       "reg", 0
+s_freq:     .byte       "freq", 0
+s_glide:    .byte       "glide", 0
+s_lfo:      .byte       "lfo", 0
+s_sens:     .byte       "sens", 0
+s_noise:    .byte       "noise", 0
+s_left:     .byte       "left", 0
+s_right:    .byte       "right", 0
+s_both:     .byte       "both", 0
 s_volume:   .byte       "volume ", 0
 s_claimed:  .byte       "claimed", 0
 

@@ -1,0 +1,16 @@
+?  42 
+TWO?  7 
+? A,B|hello
+Q? [spaced  ]
+? ?REDO FROM START
+?  5 
+? ?? ?EXTRA IGNORED
+ 1  2 
+? ?EXTRA IGNORED
+x 1 
+? quoted: kept
+A,Bhellospaced  xquoted: kept
+NUMBER? STOPPED 0 
+NUMBER? GOT 7 
+AFTER
+LAST

@@ -1070,6 +1070,9 @@ const SND_R_VOL       $06      "Sound: the channel's volume (0-127, as General M
 const SND_R_PAN       $07      "Sound: the channel's speakers (SND_PAN_*)"
 const SND_R_BEND      $09      "Sound: the channel's bend (signed: 64ths of a semitone; the note playing too)"
 const SND_R_DRUM      $0A      "Sound: a General MIDI drum (its patch and pitch), keyed on"
+const SND_R_FREQ_LO   $0B      "Sound: a frequency's low byte (Hz), for SND_R_FREQ (only kept)"
+const SND_R_FREQ      $0C      "Sound: key on at a frequency, SND_R_FREQ_LO's byte and this its high one (Hz; 0: key off)"
+const SND_R_GLIDE     $0D      "Sound: the channel's pitch to note n without a new attack (legato)"
 const SND_PAN_LEFT    1        "Sound: SND_R_PAN's speakers"
 const SND_PAN_RIGHT   2
 const SND_PAN_BOTH    3

@@ -96,6 +96,11 @@
 (check (snd-claim 1 2) NIL)
 (check (list (snd-patch 1 0) (snd-vol 1 100) (snd-pan 1 :both) (snd-bend 1 -8) (snd-note 1 60) (snd-off 1)) {NIL NIL NIL NIL NIL NIL})
 (check-error (snd-pan 1 :middle) "'snd-pan' expects :left, :right or :both")
+(check (snd-level 1 90) NIL)
+(check (list (len (snd-regs)) (buffer-get (snd-regs) 41) (buffer-get (snd-regs) 49)) {256 61 224})
+(check (list (snd-freq 1 1000) (snd-glide 1 72) (snd-sens 1 5 2) (snd-lfo 200 10 20 2) (snd-noise 9)) {NIL NIL NIL NIL NIL})
+(check (map (fn {r} {buffer-get (snd-regs) r}) {41 49 57 15}) {77 224 82 137})
+(check (list (snd-mml 5 "t240 o4 l16 c d") (snd-chord 5 "t240 o4 l16 c e")) {0 0})        ; (Bent -8 still: B4 and 56 64ths)
 (check (snd-release 1 2) NIL)
 (check (snd-volume 100) NIL)
 

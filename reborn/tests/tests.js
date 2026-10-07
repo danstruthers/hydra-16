@@ -152,7 +152,7 @@ const RC_LINES = [
   ["~ a a && echo and; ~ a b || echo or","and\nor"],
   ["cat /nothing; echo status $status","cat: /nothing: not found\nstatus 1"],
   ["echo /rom/lib/n*","/rom/lib/namespace"],
-  ["echo /rom/lib/*","/rom/lib/edit /rom/lib/font /rom/lib/forth /rom/lib/hylang /rom/lib/namespace /rom/lib/profile /rom/lib/shell"],
+  ["echo /rom/lib/*","/rom/lib/basic /rom/lib/edit /rom/lib/font /rom/lib/forth /rom/lib/hylang /rom/lib/namespace /rom/lib/profile /rom/lib/shell"],
   ["echo 'no*match'*","no*match*"],
   ["cd /rom/lib; pwd; cd","/rom/lib"],
   ["rc -c 'echo sub $x'","sub a b c"],
@@ -168,12 +168,12 @@ const RC_LINES = [
   ["echo (a","rc: syntax error"],
   ["whatis echo x; q=('it''s' '' a.b); whatis q","/bin/echo\nx=(a b c)\nq=('it''s' '' a.b)"],
   ["bind '#n' /mnt; ls /mnt","null\nzero\nkmesg"],
-  ["ls /rom/lib","edit/\nfont/\nforth/\nhylang/\nnamespace\nprofile\nshell"],
+  ["ls /rom/lib","basic/\nedit/\nfont/\nforth/\nhylang/\nnamespace\nprofile\nshell"],
   ["cat /bin/echo >/ram/hi; cd /ram; hi from dot; cd","from dot"],
   ["cat /nothing >[2]/ram/e; cat /ram/e","cat: /nothing: not found"],
   ["cat /nothing |[2] cat >/ram/p; echo -n 'p: '; cat /ram/p","p: cat: /nothing: not found"],
   ["echo $task $#path $path # a comment","2 2 . /bin"],
-  ["path=(); ls; path=(. /bin); ls /rom/lib","rc: ls: not found\nedit/\nfont/\nforth/\nhylang/\nnamespace\nprofile\nshell"],
+  ["path=(); ls; path=(. /bin); ls /rom/lib","rc: ls: not found\nbasic/\nedit/\nfont/\nforth/\nhylang/\nnamespace\nprofile\nshell"],
   ["! ~ a b && echo not; echo $status","not\n"],
 ];
 
@@ -185,7 +185,7 @@ const HYSH_RC = RC_LINES.filter(([l]) => l[0] !== '{' &&
   !/^(echo \$"x|echo x\^|echo \$x\(2-\)|rc -c 'echo sub|whatis greet|whatis echo x|eval echo evaled|echo \$task)/.test(l));
 const HYSH_LINES = [
   ['(+ 1 2)', '=> 3'], ['(map (fn {x} {* x x}) {1 2 3})', '=> {1 4 9}'], ['cd /rom/lib', null, '/rom/lib'], ['pwd', '/rom/lib'],
-  ['ls | wc -l', '      7'], ['cmp namespace profile >/dev/null', null], ['(+ status 0)', '=> 1'], ['echo $status', '1'],
+  ['ls | wc -l', '      8'], ['cmp namespace profile >/dev/null', null], ['(+ status 0)', '=> 1'], ['echo $status', '1'],
   ['cd /none', '/none: not found'], ['bind -x a b', 'usage: bind [-abc] new old'], ["bind -a '#n' /mnt", null], ['ls /mnt', 'null\nzero\nkmesg'],
   ['unmount /mnt', null], ['ls /mnt', null], ['nosuch', 'rc: nosuch: not found'], ['sleep 1 &', null], ['echo $#apid', '1'],
   ['cd', null, '/'],
@@ -392,8 +392,27 @@ const SND_LINES = [
     "echo: write error: invalid argument",
   ].join('\n')],
   ["wc -c /dev/snd","    256 /dev/snd"],
-  ["/rom/sample/c/tones 0 & sleep 1; echo claim 1 >/dev/sndctl; wait","echo: write error: busy\ntones: patch 0, $20 C4, $28 4C"],
+  ["/rom/sample/c/tones 0 & sleep 1; echo claim 1 >/dev/sndctl; echo note 0 60 >/dev/sndctl; wait",
+    "echo: write error: busy\necho: write error: busy\ntones: patch 0, $20 C4, $28 4C, C#4 61, the tune played, 1000 Hz 5D, mml 0, chord 0"],
   ["echo x >/dev/bell",null],
+  // (The channel commands as text: channel 4 a note bent down half a semitone, on the left; 5 a drum on the right;
+  // two registers of 6's; their effects on the chip checked in check)
+  ["echo patch 4 0 >/dev/sndctl; echo note 4 69 >/dev/sndctl; echo level 4 100 >/dev/sndctl; echo vol 4 90 >/dev/sndctl",null],
+  ["echo pan 4 left >/dev/sndctl; echo bend 4 -32 >/dev/sndctl; echo off 4 >/dev/sndctl",null],
+  ["echo pan 5 2 >/dev/sndctl; echo drum 5 38 >/dev/sndctl; echo reg 46 74 54 252 >/dev/sndctl",null],
+  ["echo note 8 60 >/dev/sndctl; echo patch 0 163 >/dev/sndctl; echo pan 0 up >/dev/sndctl; echo bend 0 128 >/dev/sndctl",
+    Array(4).fill('echo: write error: invalid argument').join('\n')],
+  ["echo bend 0 -129 >/dev/sndctl; echo note 0 >/dev/sndctl; echo reg 46 >/dev/sndctl; echo reg 46 256 >/dev/sndctl",
+    Array(4).fill('echo: write error: invalid argument').join('\n')],
+  // (Step 3's: a frequency (1000 Hz: B5 and 13 64ths), a glide (C5, no attack), the LFO, a channel's sensitivity
+  // to it, the noise; checked in check)
+  ["echo freq 2 1000 >/dev/sndctl; echo freq 3 440 >/dev/sndctl; echo glide 3 72 >/dev/sndctl",null],
+  ["echo lfo 200 10 20 2 >/dev/sndctl; echo sens 3 5 2 >/dev/sndctl; echo noise 7 >/dev/sndctl",null],
+  ["echo noise off >/dev/sndctl; echo noise 9 >/dev/sndctl",null],
+  ["echo freq 9 440 >/dev/sndctl; echo lfo 1 2 3 >/dev/sndctl; echo lfo 1 128 0 0 >/dev/sndctl",
+    Array(3).fill('echo: write error: invalid argument').join('\n')],
+  ["echo sens 0 8 0 >/dev/sndctl; echo noise 32 >/dev/sndctl; echo noise loud >/dev/sndctl",
+    Array(3).fill('echo: write error: invalid argument').join('\n')],
 ];
 
 // The song player's test lines (as the tools test's): play's errors; a file run by its name that isn't a program
@@ -401,7 +420,7 @@ const SND_LINES = [
 // plays and given back when it's stopped; scom, a song that runs by its name (an rc script); the C sample jukebox
 // (snd_play)
 const PLAY_LINES = [
-  ["play; echo $status","usage: play [-l] song [n]\nusage"],
+  ["play; echo $status","usage: play [-l] song [n]; play -o score.mml song.zsm; play [-lx] -m|-c ch mml\nusage"],
   ["/rom/README; whatis scom","rc: /rom/README: not a program\n/bin/scom"],
   ["play /rom/README; echo $status","play: /rom/README: not a song\nnot a song"],
   ["play /rom/nosuch; echo $status","play: /rom/nosuch: not found\n1"],
@@ -440,6 +459,31 @@ function playCard() {
   hydrafs.mkfs(f, 8, 'SONGS', undefined, true);
   const v = new hydrafs.Volume(f);
   v.put('t.zsm', PLAY_SONG());
+  v.close();
+  return [imageCard(0, f, 16384)];
+}
+
+// The mml test's card: scores (play's: modules/play/mml.inc, hysong.js's language) and hysong.js's ZSMs of them (the
+// PC's compiler, sim/tools/hysong.js): the old system's test song (os_rom/songs/test.mml: all 8 channels and
+// algorithms, the LFO's 4 waveforms, noise, slides, legato, drums, repeats, the timers) as t.mml and tpc.zsm, the
+// riff scom (programs/songs) as s.mml and spc.zsm; and two that are wrong (a note before an instrument, a line
+// that isn't one)
+const MML_SCORES = { t: path.join(__dirname, '..', '..', 'os_rom', 'songs', 'test.mml'), s: path.join(__dirname, '..', '..', 'programs', 'songs', 'scom.mml') };
+function mmlCard() {
+  fs.mkdirSync(CARD_DIR, { recursive: true });
+  hydrafs.setNow(0x1000);
+  const f = path.join(CARD_DIR, 'mml0.img');
+  fs.rmSync(f, { force: true });
+  hydrafs.mkfs(f, 8, 'SCORES', undefined, true);
+  const v = new hydrafs.Volume(f);
+  for (const [n, score] of Object.entries(MML_SCORES)) {
+    const zsm = path.join(CARD_DIR, 'mml-' + n + '.zsm');
+    require('child_process').execFileSync(process.execPath, [path.join(__dirname, '..', '..', 'sim', 'tools', 'hysong.js'), score, zsm, '--quiet']);
+    v.put(n + '.mml', fs.readFileSync(score));
+    v.put(n + 'pc.zsm', fs.readFileSync(zsm));
+  }
+  v.put('bad.mml', Buffer.from('#tempo 100\nA o4 c d e\n'));
+  v.put('bad2.mml', Buffer.from('@p { gm 0 }\nA @p c\nX c d e\n'));
   v.close();
   return [imageCard(0, f, 16384)];
 }
@@ -654,6 +698,27 @@ function hylangCard(test, files = {}) {
   const own = path.join(__dirname, 'hyhydra');                // (hylang's own checks: hydra.hl)
   for (const n of fs.readdirSync(own).filter(n => /\.hl$/.test(n))) put(path.join(own, n), n);
   for (const [n, text] of Object.entries(files)) v.put(n, Buffer.from(text, 'latin1'));
+  v.close();
+  return [imageCard(0, f, 16384)];
+}
+
+// BASIC's suite (the bsuite test's card): tests/basic's files, each as itself: the programs that check themselves
+// (NAME.bas: its checks counted, a FAIL line for each one wrong, then "NAME: n CHECKS, m FAILED"; BSUITE_PROGS, each
+// one's count), the scripts piped into basic (NAME.txt) and what they print (NAME.out; BSUITE_SCRIPTS).  hydra.bas
+// reads rc's $greet (hi) and its arguments (one two); files.bas writes its files on the card
+const BASIC_DIR = path.join(__dirname, 'basic');
+const BSUITE_PROGS = { arith: 73, funcs: 54, logic: 54, strings: 69, arrays: 30, flow: 33, data: 24, files: 31, hydra: 27 };
+const BASIC_BENCH = ['loop', 'calls', 'fib', 'sieve', 'sort', 'gcd'];   // (The benchmarks bench.bas has: the bench test's)
+const BSUITE_SCRIPTS = ['errors', 'print', 'list', 'input'];
+const bsuiteLine = n => (n === 'hydra' ? 'greet=hi; ' : '') + 'basic ' + n + '.bas' + (n === 'hydra' ? ' one two' : '');
+function basicCard() {
+  fs.mkdirSync(CARD_DIR, { recursive: true });
+  hydrafs.setNow(0x1000);
+  const f = path.join(CARD_DIR, 'basic0.img');
+  fs.rmSync(f, { force: true });
+  hydrafs.mkfs(f, 8, 'BASIC', undefined, true);
+  const v = new hydrafs.Volume(f);
+  for (const n of fs.readdirSync(BASIC_DIR)) v.put(n, fs.readFileSync(path.join(BASIC_DIR, n)));
   v.close();
   return [imageCard(0, f, 16384)];
 }
@@ -994,8 +1059,91 @@ module.exports = {
       },
     },
     {
-      name: 'hyforth', what: 'HyForth\'s additions (docs/hyforth.md): names in lower case; words (each word\'s xt, and whether it\'s a literal, immediate, assembly or Forth); the libraries loaded (libs), one not searched (-lib) and searched again (lib, where it was), the one with lib refused, a .fs one, one a MARKER takes out; disasm (the modes, the Rockwell opcodes, a jsr to a word), see of a code word (with disasm.fl, and without), sys, the bit words, random\'s numbers; the terminal\'s sequences, form, ekey and the keys (an arrow key, a character); the sound words (notes on the YM2151, a claim, the volume); ctl (and its error); compile-only words typed (THROW -14: >r, if, .", a synonym of one, a library\'s) and compiled',
-      init: 't_rc', cycles: 150e6,
+      name: 'basic', what: 'BASIC (EhyBASIC, Microsoft BASIC 2A: docs/basic.md) at the console: the banner, PRINT, the operators and functions, letters in either case, EhyBASIC\'s short forms (JSR, RTN, LT$, & | !) and LIST\'s full names, a program run (FOR, GOSUB, DATA, READ, INPUT, DIM, DEF FN), Ctrl-C (BREAK IN) and CONT, GET\'s key (raw), errors (direct, in a line), BYE (code 0); a pipeline into it (no banner, no OK, an error\'s line ended, its end at stdin\'s); in /ram: SAVE as text and tokenized (,B), LOAD of each, RUN "name", a file not there, the text cat; scripts (basic file, #!/bin/basic: codes 0 and 1); files: OPEN (R, W, A), PRINT#, INPUT#, GET# and EOF at the end, CLOSE, the cat; FILE OPEN, FILE NOT OPEN, a file not there; INPUT\'s REDO FROM START; sound: SOUND\'s notes (a patch, a volume, off), SLEEP between them (timed), BEEP (the bell), a line for /dev/sndctl (the volume kept; the driver\'s error), ILLEGAL QUANTITY; SYS: calls by name (GETPID, TICKS, BANKS_ALLOC; one not there) and RREG, machine code above HIMEM (SYS, USR), registers in and out; memory: a bank of its own after the task\'s RAM (FRE past 32767, an array of 32K, 301 strings and the garbage collector, an integer array), HIMEM and its errors; the shell (basic -l at rc\'s prompt): BASIC\'s lines and rc\'s by the rule, cd and the prompt, $status, %, a usage, ENV$, a program line, exit',
+      init: 't_rc', cycles: 500e6,
+      machine: {
+        input: 'ābasic\rĀĀ' + 'PRINT "HELLO, WORLD"; 2+3*4; 10/4; 2^10\rĀ' + '? not 0; 5 & 3; 5 | 2; !1; lt$("abcd",2); chr$(65)\rĀ' +
+          '10 FOR I=1 TO 3: jsr 100: NEXT: ? "done"\rĀ' + '20 end\rĀ' + '100 ? i; i*i;: rtn\rĀ' + 'list\rĀ' + 'run\rĀ' +
+          'new\rĀ' + '10 data 3,"two": read a,b$: ? a;b$\rĀ' + '20 input "name";n$: ? "hi ";n$\rĀ' +
+          '30 dim x(9): x(9)=7: def fn d(z)=z*2: ? fn d(x(9))\rĀ' + 'run\rĀ' + 'Ann\rĀĀ' +
+          'new\rĀ' + '10 i=i+1: goto 10\rĀ' + 'run\rĀĀ' + '\u0003Ā' + 'cont\rĀĀ' + '\u0003Ā' + '? i>100\rĀ' +
+          'new\rĀ' + '10 get k$: if k$="" then 10\rĀ' + '20 ? "key ";k$;asc(k$)\rĀ' + 'run\rĀkĀĀ' + '? 1/0\rĀ' + 'x\rĀ' +
+          '30 ? 1/0\rĀ' + 'run 30\rĀ' + 'bye\r' + 'āecho $status\r' +
+          'ā{echo \'10 for i=1 to 3\'; echo \'20 ? i*10\'; echo \'30 next\'; echo run; echo \'? 1/0\'; echo \'? "end"\'} | basic; echo status $status\r' +
+          'ācd /ram\r' + 'ābasic\rĀĀ' + '10 for i=1 to 3: ? "line";i: next\rĀ' + '20 ? "Done": end\rĀ' + 'save "p.bas"\rĀĀ' +
+          'save "p.tok",b\rĀĀ' + 'new\rĀ' + 'load "p.bas"\rĀĀ' + 'list\rĀ' + 'new\rĀ' + 'load "p.tok"\rĀĀ' + 'run\rĀ' + 'new\rĀ' +
+          'run "p.bas"\rĀĀ' + 'load "nofile"\rĀ' + 'bye\r' + 'ācat p.bas\r' +
+          'āecho \'#!/bin/basic\' >s; echo \'10 print "script";6*7\' >>s; echo \'20 x=1/0\' >>s\r' +
+          'ābasic p.bas; echo status $status\r' + 'ā./s; echo status $status\r' + 'ābasic none.bas; echo status $status\r' +
+          'ābasic\rĀĀ' + '10 open 1,"d.txt","w": for i=1 to 3: print #1, i;",";i*i: next: print #1,"end": close 1\rĀ' +
+          '20 open 2,"d.txt": for i=1 to 3: input #2, a, b: ? a; b: next\rĀ' + '30 input #2, s$: ? s$; eof(2): get #2, c$: ? len(c$): close 2\rĀ' +
+          '40 open 3,"d.txt","A": print #3, "more": close 3\rĀ' + 'run\rĀĀ' + 'print #2, 5\rĀ' + 'open 1,"x","w": open 1,"y","w"\rĀ' +
+          'open 4,"nope"\rĀ' + 'new\rĀ' + '10 input x: ? x*2\rĀ' + 'run\rĀ' + 'abc\rĀ' + '5\rĀ' + 'bye\r' + 'ācat d.txt\r' +
+          'ābasic\rĀĀ' + 'sound "volume 150"\rĀ' + '10 sound 2,60,0,100: sleep .5: sound 2,64: sleep .1: sound 2\rĀ' + '20 beep: sound 1,67\rĀ' +
+          'run\rĀĀ' + 'sound 8,60\rĀ' + 'sound 0,60,163\rĀ' + 'sleep 200\rĀ' + 'sound "frob"\rĀ' + 'bye\r' + 'ācat /dev/sndctl\r' +
+          'ābasic\rĀĀ' + 'sys "getpid": rreg a: ? a>0\rĀ' + 'sys "Ticks": rreg l,h: ? h*256+l>0\rĀ' + 'sys "nosuch"\rĀ' +
+          'sys "banks_alloc",1: rreg b,,,p: ? p and 1\rĀ' + 'himem 40704: poke 40704,169: poke 40705,42: poke 40706,96: sys 40704: rreg r: ? r\rĀ' +
+          'poke 1285,0: poke 1286,159: poke 40704,96: ? usr(5)\rĀ' + 'sys 40704,1,2,3: rreg ,x,y: ? x;y\rĀ' + 'rreg a$\rĀ' + 'himem 50000\rĀ' + 'himem 100\rĀ' +
+          'clear: himem 40960: ? fre(0)>32767\rĀ' + 'dim x(6500): x(6500)=7: ? x(6500); fre(0)<6100\rĀ' + 'clear: dim a%(10): a%(5)=-3: a%(10)=32767: ? a%(5); a%(10)\rĀ' +
+          'dim s$(300): for i=0 to 300: s$(i)=str$(i)+"abcdefghijklmnopqrstuvwxyz": next: ? s$(300); fre(0)>27000\rĀĀ' + 'bye\r' +
+          'ābasic -l\r' + 'āprint 1+1\r' + 'āecho hello from rc\r' + 'āx=5\r' + 'ā? x*2\r' + 'āls /rom/lib/basic\r' + 'ācd /rom\r' +
+          'āecho $status\r' + 'ācd /none\r' + 'āecho s=$status\r' + 'ā%echo forced\r' + 'ābind\r' + 'ā? env$("window")="0"\r' +
+          'ā10 print "prog"\r' + 'ārun\r' + 'āexit\r' + 'āecho $status\r',
+      },
+      expect: ['% basic\nEHYBASIC FOR THE HYDRA-16 (MICROSOFT BASIC 2A)\n', ' BYTES FREE\n\nOK\n',
+        'PRINT "HELLO, WORLD"; 2+3*4; 10/4; 2^10\nHELLO, WORLD 14  2.5  1024 \n\nOK\n',
+        '? not 0; 5 & 3; 5 | 2; !1; lt$("abcd",2); chr$(65)\n-1  1  7 -2 abA\n',
+        'list\n\n10 FOR I=1 TO 3: GOSUB 100: NEXT: PRINT "done"\n20 END\n100 PRINT I; I*I;: RETURN\nOK\n',
+        'run\n 1  1  2  4  3  9 done\n\nOK\n',
+        'run\n 3 two\nname? Ann\nhi Ann\n 14 \n\nOK\n',
+        '10 i=i+1: goto 10\nrun\n\nBREAK IN 10\nOK\ncont\n\nBREAK IN 10\nOK\n? i>100\n-1 \n',
+        'run\nkey k 107 \n\nOK\n', '? 1/0\n\n?DIVISION BY ZERO ERROR\nOK\n', 'x\n\n?SYNTAX ERROR\nOK\n',
+        'run 30\n\n?DIVISION BY ZERO ERROR IN 30\nOK\nbye\n', '% echo $status\n\n%',
+        '| basic; echo status $status\n 10 \n 20 \n 30 \n\n?DIVISION BY ZERO ERROR\nend\nstatus\n%',
+        'load "p.bas"\n\nOK\nlist\n\n10 FOR I=1 TO 3: PRINT "line";I: NEXT\n20 PRINT "Done": END\nOK\n',
+        'load "p.tok"\n\nOK\nrun\nline 1 \nline 2 \nline 3 \nDone\n\nOK\n', 'run "p.bas"\nline 1 \nline 2 \nline 3 \nDone\n\nOK\n',
+        'load "nofile"\n\n?NOT FOUND ERROR\nOK\n', '% cat p.bas\n10 FOR I=1 TO 3: PRINT "line";I: NEXT\n20 PRINT "Done": END\n%',
+        '% basic p.bas; echo status $status\nline 1 \nline 2 \nline 3 \nDone\nstatus\n%',
+        '% ./s; echo status $status\nscript 42 \n\n?DIVISION BY ZERO ERROR IN 20\nstatus 1\n%',
+        '% basic none.bas; echo status $status\n\n?NOT FOUND ERROR\nstatus 1\n%',
+        '40 open 3,"d.txt","A": print #3, "more": close 3\nrun\n 1  1 \n 2  4 \n 3  9 \nend-1 \n 0 \n\nOK\n',
+        'print #2, 5\n\n?FILE NOT OPEN ERROR\nOK\n', 'open 1,"y","w"\n\n?FILE OPEN ERROR\nOK\n', 'open 4,"nope"\n\n?NOT FOUND ERROR\nOK\n',
+        'run\n? abc\n?REDO FROM START\n? 5\n 10 \n\nOK\n', '% cat d.txt\n 1 , 1 \n 2 , 4 \n 3 , 9 \nend\nmore\n%',
+        'sound 8,60\n\n?ILLEGAL QUANTITY ERROR\nOK\n', 'sound 0,60,163\n\n?ILLEGAL QUANTITY ERROR\nOK\n', 'sleep 200\n\n?ILLEGAL QUANTITY ERROR\nOK\n',
+        'sound "frob"\n\n?INVALID ARGUMENT ERROR\nOK\n', '% cat /dev/sndctl\nvolume 150\nclaimed\n%',
+        'sys "getpid": rreg a: ? a>0\n-1 \n', 'rreg l,h: ? h*256+l>0\n-1 \n', 'sys "nosuch"\n\n?NO SUCH CALL ERROR\nOK\n',
+        'rreg b,,,p: ? p and 1\n 0 \n', 'sys 40704: rreg r: ? r\n 42 \n', '? usr(5)\n 5 \n', 'rreg ,x,y: ? x;y\n 2  3 \n',
+        'rreg a$\n\n?TYPE MISMATCH ERROR\nOK\n', 'himem 50000\n\n?ILLEGAL QUANTITY ERROR\nOK\n', 'himem 100\n\n?ILLEGAL QUANTITY ERROR\nOK\n',
+        'himem 40960: ? fre(0)>32767\n-1 \n', '? x(6500); fre(0)<6100\n 7 -1 \n', '? a%(5); a%(10)\n-3  32767 \n', '? s$(300); fre(0)>27000\n 300abcdefghijklmnopqrstuvwxyz-1 \n',
+        '% basic -l\n/ram> print 1+1\n 2 \n/ram> echo hello from rc\nhello from rc\n/ram> x=5\n/ram> ? x*2\n 10 \n/ram> ls /rom/lib/basic\nprofile.bas\n/ram> cd /rom\n/rom> ',
+        '/rom> echo $status\n0\n/rom> cd /none\n/none: not found\n/rom> echo s=$status\ns=not found\n/rom> %echo forced\nforced\n',
+        '/rom> bind\nusage: bind [-a|-b] [-c] new old\n/rom> ? env$("window")="0"\n-1 \n/rom> 10 print "prog"\n/rom> run\nprog\n/rom> exit\n% echo $status\n1\n%'],
+      check(m) {
+        // (SOUND's notes on the YM2151, and SLEEP .5 between two: 0.5 s at 3.58 MHz; BEEP: the bell, channel 7)
+        const f = [], on = ch => m.ym.keyOns.filter(k => k.startsWith('ch ' + ch + ' ')).map(k => +k.match(/at cycle (\d+)/)[1]);
+        const two = on(2), keys = m.ym.keyOns.join(', ');
+        if (two.length !== 2) f.push('SOUND: ' + two.length + ' key-ons on channel 2, not 2: ' + keys);
+        else if (Math.abs((two[1] - two[0]) / 3579545 - 0.5) > 0.02) f.push('SLEEP .5: ' + ((two[1] - two[0]) / 3579545).toFixed(3) + ' s between the notes');
+        if (!on(7).length) f.push('BEEP: no bell (no key-on on channel 7): ' + keys);
+        if (!on(1).length) f.push('SOUND 1,67: no key-on on channel 1: ' + keys);
+        return f;
+      },
+    },
+    {
+      name: 'bsuite', what: 'BASIC\'s suite (tests/basic, docs/basic.md), from a card: programs that check themselves, each its checks and none failed (arithmetic: precedence, literals, limits, integer variables, names; the numeric functions; relations, AND, OR, NOT, IF; strings: their functions, STR$\'s forms, VAL, 255 characters, the garbage collector; arrays: 1 to 3 dimensions, integers, strings; FOR, GOSUB, ON, IF ... THEN line; DATA, READ, RESTORE, DEF FN; files: OPEN\'s modes, PRINT#, INPUT#, GET#, EOF, four channels, SAVE in a program; the Hydra\'s: HIMEM, SYS by address and by name, RREG, USR, PEEK, POKE, WAIT, memory past 32K, SLEEP by the ticks, ENV$, ARG$, SOUND); scripts piped into basic, their output tests/basic\'s: every error message, PRINT\'s layout (zones, TAB, SPC, POS, numbers\' forms), LIST and the tokenizer (keywords anywhere, the short forms, REM, DATA, ranges), INPUT\'s answers (??, REDO FROM START, EXTRA IGNORED, an empty line, CONT)',
+      init: 't_rc', cycles: 700e6,
+      get machine() {
+        return { sd: basicCard(), input: 'ācd /sd/0\r' + Object.keys(BSUITE_PROGS).map(n => 'ā' + bsuiteLine(n) + '\r').join('') +
+          BSUITE_SCRIPTS.map(n => 'ābasic <' + n + '.txt\r').join('') };
+      },
+      get expect() {
+        return [...Object.entries(BSUITE_PROGS).map(([n, c]) => '% ' + bsuiteLine(n) + '\n' + n.toUpperCase() + ': ' + c + ' CHECKS, 0 FAILED\n%'),
+          ...BSUITE_SCRIPTS.map(n => '% basic <' + n + '.txt\n' + fs.readFileSync(path.join(BASIC_DIR, n + '.out'), 'latin1') + '% ')];
+      },
+    },
+    {
+      name: 'hyforth', what: 'HyForth\'s additions (docs/hyforth.md): names in lower case; words (each word\'s xt, and whether it\'s a literal, immediate, assembly or Forth); the libraries loaded (libs), one not searched (-lib) and searched again (lib, where it was), the one with lib refused, a .fs one, one a MARKER takes out; disasm (the modes, the Rockwell opcodes, a jsr to a word), see of a code word (with disasm.fl, and without), sys, the bit words, random\'s numbers; the terminal\'s sequences, form, ekey and the keys (an arrow key, a character); the sound words (notes on the YM2151, a claim, the volume; a channel\'s level, its old name; the registers read back: a note\'s key code and fraction; a song by play, its error; a note by its frequency, a glide, the LFO, a channel\'s sensitivity, the noise; a line of MML and a chord, by play); ctl (and its error); compile-only words typed (THROW -14: >r, if, .", a synonym of one, a library\'s) and compiled',
+      init: 't_rc', cycles: 180e6,
       // (At 115200, so words's thousands of characters are out before the next line comes: the keys typed meanwhile
       // wait in the window's queue, which has room for a line or two.  greet.fs, in /ram, the current directory: lib
       // finds it there, as REQUIRED does)
@@ -1013,6 +1161,10 @@ module.exports = {
           'cursor-restore cursor-off cursor-on red color blue bright bgcolor bold dim underline blink reverse plain\rĀ' +
           '38 sgr beep form . . 3 7 at-xy page\rĀ' + 'k-up . ekey ekey>fkey . . ekey ekey>char . .\rĀ\x1b[AĀxĀ' +
           'lib sound 0 0 snd-patch 0 60 snd-note 1 64 snd-note 1 snd-off 2 36 snd-drum 5 snd-claim 150 snd-volume\rĀĀ' +
+          'create rb 256 allot 1 100 snd-level 1 90 snd-vol rb snd-regs rb $29 + c@ . rb $31 + c@ .\rĀĀ' +
+          's" none.zsm" 2 snd-play .\rĀĀ' + '2 1000 snd-freq 3 72 snd-glide 200 10 20 2 snd-lfo 3 5 2 snd-sens 9 snd-noise\rĀĀ' +
+          'rb snd-regs rb $2A + c@ . rb $32 + c@ . rb $3B + c@ . rb $0F + c@ .\rĀĀ' +
+          '3 s" t240 o4 l16 c d" snd-mml . 3 s" t240 o4 l16 c e" snd-chord .\rĀĀĀ' +
           's" cat /dev/sndctl" sh drop\rĀĀ' + 's" /dev/sndctl" s" volume 100" ctl s" /dev/sndctl" s" frob" ctl\rĀĀ' +
           '1 >r 2 .\rĀ' + '3 . : t 1 >r 5 0 do i . loop r> . ; t\rĀ' + '1 if 2 then\rĀ' + '." hi"\rĀ' + 'synonym x >r x\rĀ' +
           ': u 7 x r> . ; u 2>r\rĀ' + 'lib greet words\rĀĀĀĀĀĀ' + 'bye\r',
@@ -1026,7 +1178,7 @@ module.exports = {
         '1000 random .\n29818 2479 3 257  ok\n',
         'cursor-save\n\x1b[K\x1b[J\x1b[3A\x1b[2C\x1b[1D\x1b7 ok\n', 'plain\n\x1b8\x1b[?25l\x1b[?25h\x1b[31m\x1b[104m\x1b[1m\x1b[2m\x1b[4m\x1b[5m\x1b[7m\x1b[0m ok\n',
         'at-xy page\n\x1b[38m\x0780 24 \x1b[8;4H\x1b[2J\x1b[H ok\n', 'ekey>char . .\n128 -1 128 -1 120  ok\n',
-        's" cat /dev/sndctl" sh drop\nvolume 150\nclaimed 0 2\n ok\n', 's" frob" ctl\n/dev/sndctl: invalid argument\n',
+        'rb $29 + c@ . rb $31 + c@ .\n68 0  ok\n', 's" none.zsm" 2 snd-play .\nplay: none.zsm: not found\n1  ok\n', 'rb $3B + c@ . rb $0F + c@ .\n93 52 82 137  ok\n', 's" t240 o4 l16 c e" snd-chord .\n0 0  ok\n', 's" cat /dev/sndctl" sh drop\nvolume 150\nclaimed 0 2\n ok\n', 's" frob" ctl\n/dev/sndctl: invalid argument\n',
         '1 >r 2 .\n>r: compile only\n', 'r> . ; t\n3 0 1 2 3 4 1  ok\n', '1 if 2 then\nif: compile only\n', '." hi"\n.": compile only\n',
         'synonym x >r x\nx: compile only\n', ': u 7 x r> . ; u 2>r\n7 2>r: compile only\n', 'lib greet words\n ', 'bye\n'],
       check(m, out) {
@@ -1092,7 +1244,7 @@ module.exports = {
           ': h ." note " . true ;', '\' h on-note sys-getpid 16 note 7 .', ': lp 10 0 do i 5 = if sys-getpid 17 note then loop ." done" ;',
           'lp', ': h2 drop false ;', '\' h2 on-note sys-getpid 18 note 1 .', 'pause 2 .', 'exit'].map(l => 'ā' + l + '\r').join(''),
       },
-      expect: ['/> argc .\n0 \n', '/> s" /rom/lib" ls-dir\nedit font forth hylang namespace profile shell \n/> s" /ram/newdir" 0 =mkdir . s" /ram" ls-dir\n0 bin lib newdir \n' +
+      expect: ['/> argc .\n0 \n', '/> s" /rom/lib" ls-dir\nbasic edit font forth hylang namespace profile shell \n/> s" /ram/newdir" 0 =mkdir . s" /ram" ls-dir\n0 bin lib newdir \n' +
         '/> s" /rom" set-dir . pad 64 get-dir type\n0 /rom\n/rom> s" /none" set-dir ior>text type\nnot found\n' +
         '/rom> s" foo" s" bar" setenv s" foo" getenv type s" foo" unsetenv s" foo" getenv nip .\nbar0 \n' +
         '/rom> : h ." note " . true ;\n/rom> \' h on-note sys-getpid 16 note 7 .\nnote 16 7 \n' +
@@ -1394,15 +1546,73 @@ module.exports = {
         '% wc /pc/big.txt; head -3 /pc/big.txt\n   2001    4001   20004 /pc/big.txt\nline 1000\nline 1001\nline 0001\n%'],
     },
     {
-      name: 'snd', what: 'sound (#a): snd, sndctl and bell; the volume, claims (one another program holds), the shadow, tones (C, snd.h)',
-      init: 't_rc', cycles: 120e6,
+      name: 'snd', what: 'sound (#a): snd, sndctl and bell; the volume, claims (one another program holds), the shadow, tones (C, snd.h); sndctl\'s channel commands as text (patch, note, level and vol, pan by word and number, bend below 0, off, drum, reg: their registers on the chip; a channel another program has; numbers out of range, or missing); freq (a note by its frequency, its 64ths), glide, lfo, sens, noise',
+      init: 't_rc', cycles: 140e6,
       get machine() { return { input: SND_LINES.map(l => '\u0101' + l[0] + '\r').join('') }; },
       get expect() { return SND_LINES.map(l => '% ' + l[0] + '\n' + (l[2] ? l[1] : (l[1] === null ? '' : l[1] + '\n') + '%')); },
+      // (Channel 4: A4 bent down 32 64ths, G#4 and a half: key code $49 (octave 4, G#), fraction $80; on the left
+      // (RL 01).  5: on the right (RL 10), a drum's patch kept it so.  6: $2E and $36 as written)
       check(m) {
-        const f = [], keys = m.ym.keyOns.join(', ');
-        for (const ch of [0, 1, 2, 3, 7]) if (!m.ym.keyOns.some(k => k.startsWith('ch ' + ch + ' '))) f.push('no key-on on channel ' + ch + ': ' + keys);
+        const f = [], keys = m.ym.keyOns.join(', '), r = m.ym.regs, hx = v => '$' + v.toString(16).toUpperCase();
+        for (const ch of [0, 1, 2, 3, 4, 5, 7]) if (!m.ym.keyOns.some(k => k.startsWith('ch ' + ch + ' '))) f.push('no key-on on channel ' + ch + ': ' + keys);
+        for (const [reg, want, mask, what] of [[0x2C, 0x49, 0xFF, 'note 4 69, bend 4 -32: its key code'], [0x34, 0x80, 0xFC, 'its fraction'],
+          [0x24, 0x40, 0xC0, 'pan 4 left'], [0x25, 0x80, 0xC0, 'pan 5 2 (a drum after it)'], [0x2E, 0x4A, 0xFF, 'reg 46 74'], [0x36, 0xFC, 0xFF, 'reg 54 252'],
+          [0x2A, 0x5D, 0xFF, 'freq 2 1000: its key code (B5)'], [0x32, 0x34, 0xFC, 'its fraction (13 64ths)'], [0x2B, 0x4E, 0xFF, 'glide 3 72 (C5)'],
+          [0x33, 0x00, 0xFC, 'its fraction'], [0x18, 200, 0xFF, 'lfo: the rate'], [0x19, 20, 0xFF, 'its amplitude depth (the last written)'],
+          [0x1B, 2, 0x03, 'its waveform'], [0x3B, 0x52, 0xFF, 'sens 3 5 2'], [0x0F, 0x89, 0xFF, 'noise 9']])
+          if ((r[reg] & mask) !== want) f.push(what + ': register ' + hx(reg) + ' is ' + hx(r[reg]) + ', not ' + hx(want) + (mask !== 0xFF ? ' (mask ' + hx(mask) + ')' : ''));
         if (m.ym.lost) f.push(m.ym.lost + ' writes to the YM2151 while it was busy');
         this.notes = ['the YM2151: ' + m.ym.keyOns.length + ' key-ons'];
+        return f;
+      },
+    },
+    {
+      name: 'mml', what: 'scores (play\'s, modules/play/mml.inc: hysong.js\'s language compiled as it plays): play -o\'s ZSM of the old test song (every channel, algorithm and LFO waveform, noise, slides, legato, drums, repeats, the timers) and of scom, each the same as hysong.js\'s byte for byte; scom played as a score and as hysong.js\'s ZSM, the chip\'s writes the same, in the same order, and in time; play -m (a line on a channel, its own instrument), -c (a chord, a note a channel), -x (the X16\'s MML: T, upper-case notes, S0 legato, K), I (a patch by number); a score\'s errors, the lines\'',
+      init: 't_rc', cycles: 700e6,
+      get machine() {
+        return { sd: mmlCard(), ymLog: true, input: ['cd /sd/0', 'play -o t.mml /ram/t.zsm; cmp /ram/t.zsm tpc.zsm && echo same',
+          'play -o s.mml /ram/s.zsm; cmp /ram/s.zsm spc.zsm && echo same', 'play bad.mml; echo $status', 'play bad2.mml',
+          'echo reset >/dev/sndctl; play spc.zsm; echo reset >/dev/sndctl; play s.mml; echo played',
+          'echo patch 0 0 >/dev/sndctl; echo patch 1 0 >/dev/sndctl; play -m 0 o4 l8 c d e; play -c 0 o4 l2 I0 c e g',
+          'play -x -m 1 T240 O4 L8 CDE S0 CD K E; echo lines', 'play -m 9 c; play -c 0 c d e f g a b c d',
+          'play -m 0 I0 c t100; play -x -m 0 I0 c Z'].map(l => '\u0101' + l + '\r').join('') };
+      },
+      expect: ['cmp /ram/t.zsm tpc.zsm && echo same\nsame\n%', 'cmp /ram/s.zsm spc.zsm && echo same\nsame\n%',
+        'play bad.mml; echo $status\nplay: bad.mml: channel 0: a note before an instrument\nchannel 0: a note before an ins\n%',
+        'play bad2.mml\nplay: bad2.mml: what is this line?\n%', 'echo played\nplayed\n%', 'echo lines\nlines\n%',
+        'play -c 0 c d e f g a b c d\nusage: play [-l] song [n]; play -o score.mml song.zsm; play [-lx] -m|-c ch mml\nplay: c: more notes than channels\n%',
+        'play -x -m 0 I0 c Z\nplay: I0: channel 0: t is a tempo, before any notes\nplay: I0: channel 0: what is Z\n%'],
+      // (The lines' key-ons, the last 11, each with its channel's key code then: -m's C4 D4 E4 an eighth apart (50
+      // ticks at 120), -c's C4 E4 G4 on 0-2 at once, -x's C D E an eighth apart at 240 (25 ticks), then after S0 a
+      // C keyed, the D after it not (legato), and K's E)
+      lineKeys: [[0, 0x3E, 0], [0, 0x41, 50], [0, 0x44, 100], [0, 0x3E], [1, 0x44], [2, 0x48], [1, 0x3E, 0], [1, 0x41, 25], [1, 0x44, 50], [1, 0x3E, 75], [1, 0x44, 125]],
+      // (The two plays' writes: each from the reset before it (its $14, then $01-$FF and the channels' $20s), the
+      // song's after it; the same registers and values in the same order, each one's time from the song's first
+      // within 4 ticks of the other's)
+      check(m) {
+        const w = m.ym.writes, starts = [];
+        for (let i = 0; i < w.length; i++) if (w[i][1] === 0x14 && w[i][2] === 0x30 && w[i + 1] && w[i + 1][1] === 0x01) starts.push(i);
+        if (starts.length < 2) return ['the resets before the two plays: ' + starts.length + ' found'];
+        const RESET = 256 + 8, s0 = starts[starts.length - 2], s1 = starts[starts.length - 1];
+        const a = w.slice(s0 + RESET, s1), b = w.slice(s1 + RESET, s1 + RESET + a.length), tick = 3579545 * (JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'obj', 'build.json'), 'utf8')).clock || 1) / 200;
+        if (!a.length || a.length !== b.length) return ['the ZSM played ' + a.length + ' writes, the score ' + b.length];
+        let worst = 0;
+        for (let i = 0; i < a.length; i++) {
+          if (a[i][1] !== b[i][1] || a[i][2] !== b[i][2]) return ['write ' + i + ': the ZSM\'s $' + a[i][1].toString(16) + ' = ' + a[i][2] + ', the score\'s $' + b[i][1].toString(16) + ' = ' + b[i][2]];
+          worst = Math.max(worst, Math.abs((b[i][0] - b[0][0]) - (a[i][0] - a[0][0])) / tick);
+        }
+        this.notes = ['scom: ' + a.length + ' writes, the same both ways; their times within ' + worst.toFixed(2) + ' ticks of each other'];
+        if (worst > 4) return ['the score\'s writes ' + worst.toFixed(2) + ' ticks from the ZSM\'s'];
+        const kc = [], ons = [];
+        for (const [t, r, v] of w) { if (r >= 0x28 && r < 0x30) kc[r & 7] = v; if (r === 0x08 && (v & 0x78)) ons.push([v & 7, kc[v & 7], t]); }
+        const last = ons.slice(-this.lineKeys.length), f = [];
+        let at0 = 0;
+        this.lineKeys.forEach(([ch, code, ticks], i) => {
+          const [c, k, t] = last[i] || [];
+          if (ticks === 0) at0 = t;
+          if (c !== ch || k !== code) f.push('the lines\' key-on ' + i + ': channel ' + c + ', key code $' + (k || 0).toString(16) + ' (not ' + ch + ', $' + code.toString(16) + ')');
+          else if (ticks !== undefined && Math.abs((t - at0) / tick - ticks) > 1) f.push('the lines\' key-on ' + i + ': at tick ' + ((t - at0) / tick).toFixed(1) + ', not ' + ticks);
+        });
         return f;
       },
     },
@@ -1737,25 +1947,56 @@ module.exports = {
         '/> (use "cons")\n=> NIL\n/> (window)\n=> 1\n/> '],
     },
     {
-      name: 'bench', what: 'hylang\'s and HyForth\'s benchmarks (romfs/bench: bench.hl and hl/NAME.hl, bench.fs; sim/bench.js times them against each other) at their quick sizes, all of hylang\'s in one hylang: each language\'s result of each the same (calls, fib, tak, ack; loop, while, dotimes, nested; gcd, collatz, hash; sieve, sort, matrix, queens; mapf, fold, each; chars, digits)',
-      init: 't_rc', cycles: 300e6,
-      machine: { input: '\u0101hylang /rom/bench/bench.hl 1 q\r\u0101forth /rom/bench/bench.fs 1 q\r' },
+      name: 'bplay', what: 'BASIC\'s PLAY: a line of MML on channel 0 and on another (play -m), a score file (play name.mml), its time waited for (the program goes on after); play\'s error (its message as BASIC\'s, in its line), a channel past 7 (ILLEGAL QUANTITY); SOUND\'s text commands (sndctl\'s: a note, a level)',
+      init: 't_rc', cycles: 160e6, ymLog: true,
+      get machine() {
+        return { ymLog: true, input: ['echo patch 0 0 >/dev/sndctl; echo patch 1 0 >/dev/sndctl', 'echo \'@p { gm 0 }\' >/ram/s.mml; echo \'B @p o3 g\' >>/ram/s.mml',
+          'echo \'10 play "t240 o4 l16 c d e"\' >/ram/p.bas', 'echo \'20 play 2, "t240 o5 l16 c": print "on"\' >>/ram/p.bas',
+          'echo \'30 play "/ram/s.mml": print "after"\' >>/ram/p.bas', 'echo \'40 play "c Z"\' >>/ram/p.bas', 'basic /ram/p.bas; echo status $status',
+          'echo \'10 play 9, "c"\' >/ram/q.bas; basic /ram/q.bas', 'echo \'10 sound "note 3 72": sound "level 3 90"\' >/ram/r.bas; basic /ram/r.bas; echo r $status'
+        ].map(l => '\u0101' + l + '\r').join('') };
+      },
+      expect: ['basic /ram/p.bas; echo status $status\non\nafter\nplay: c Z: channel 0: what is Z\n\n?CHANNEL 0: WHAT IS Z ERROR IN 40\nstatus 1\n%',
+        'basic /ram/q.bas\n\n?ILLEGAL QUANTITY ERROR IN 10\n%', 'echo r $status\nr\n%'],
+      // (The key-ons, each with its channel's key code then: C4 D4 E4 on 0 a 16th apart at 240 (12.5 ticks), C5 on
+      // 2, the score's G3 on 1 (B), SOUND's C5 on 3)
+      check(m) {
+        const kc = [], ons = [];
+        for (const [, r, v] of m.ym.writes) { if (r >= 0x28 && r < 0x30) kc[r & 7] = v; if (r === 0x08 && (v & 0x78)) ons.push((v & 7) + ':' + (kc[v & 7] || 0).toString(16)); }
+        const want = ['0:3e', '0:41', '0:44', '2:4e', '1:38', '3:4e'], got = ons.slice(-want.length);
+        return got.join(' ') === want.join(' ') ? [] : ['the key-ons (channel:key code): ' + got.join(' ') + ', not ' + want.join(' ')];
+      },
+    },
+    {
+      name: 'bawin', what: 'BASIC as a window\'s shell: a card\'s /lib/shell naming /bin/basic -l, init\'s in window 0 and wstart\'s in a window made (Ctrl-] c: $window, ENV$): the prompt, a BASIC line and an rc line in each',
+      init: 'init', cycles: 200e6,
+      get machine() {
+        return { sd: shellCard('/bin/basic -l', 'shellbas'), input: '\u0101? 1+2\r' + '\u0101echo $window\r' + '\u0101\x1dc' +
+          '\u0101echo $window\r' + '\u0101? env$("window")\r' + '\u0101x=2: ? x*21\r' };
+      },
+      expect: ['/> ? 1+2\n 3 \n/> echo $window\n\n/> ', '/> echo $window\n1\n/> ? env$("window")\n1\n/> x=2: ? x*21\n 42 \n/> '],
+    },
+    {
+      name: 'bench', what: 'hylang\'s, HyForth\'s and BASIC\'s benchmarks (romfs/bench: bench.hl and hl/NAME.hl, bench.fs, bench.bas: BASIC\'s six; sim/bench.js times them against each other) at their quick sizes, all of hylang\'s in one hylang: each language\'s result of each the same (calls, fib, tak, ack; loop, while, dotimes, nested; gcd, collatz, hash; sieve, sort, matrix, queens; mapf, fold, each; chars, digits)',
+      init: 't_rc', cycles: 360e6,
+      machine: { input: '\u0101hylang /rom/bench/bench.hl 1 q\r\u0101forth /rom/bench/bench.fs 1 q\r\u0101basic /rom/bench/bench.bas 1 q\r' },
       get expect() {
         const r = [['calls', 500], ['fib', 144], ['tak', 12], ['ack', 42], ['loop', 1000], ['while', 1500], ['dotimes', 1500],
           ['nested', 450], ['gcd', 189], ['collatz', 441], ['hash', 1274], ['sieve', 97], ['sort', 404], ['matrix', 273], ['queens', 4],
           ['mapf', 9880], ['fold', 964], ['each', 700], ['chars', 7], ['digits', 790]];
-        return [...['hylang', 'forth'].flatMap(l => r.map(([n, v]) => 'bench ' + l + ' ' + n + ' ' + v + ' ')), 'bench hylang done', 'bench forth done'];
+        return [...['hylang', 'forth'].flatMap(l => r.map(([n, v]) => 'bench ' + l + ' ' + n + ' ' + v + ' ')), 'bench hylang done', 'bench forth done',
+          ...r.filter(([n]) => BASIC_BENCH.includes(n)).map(([n, v]) => 'bench basic ' + n + ' ' + v + ' '), 'bench basic done'];
       },
     },
     {
-      name: 'hydev', what: 'hylang\'s device libraries (the plan\'s phase 11: /lib/hylang\'s, loaded by use, over the devices\' files), devices.hl as a script: gpio (pins, the port, ctl as a hash, CA1\'s edge), i2c (a memory written and read at a register, the devices, one that doesn\'t answer), spi (an echo device\'s transactions, mode 3), cons (the window, the windows, the bell), proc (a task\'s args, cwd, regs, memory, banks; its environment, its namespace), clock (the chip, the time set), disk (the disks, the cards: this one and one on SPI device 5; the ROM disk\'s room), pc (the PC tool answers; a file of its read), snd (note-of; a tune, its notes on the YM2151 in time; a channel\'s settings)',
+      name: 'hydev', what: 'hylang\'s device libraries (the plan\'s phase 11: /lib/hylang\'s, loaded by use, over the devices\' files), devices.hl as a script: gpio (pins, the port, ctl as a hash, CA1\'s edge), i2c (a memory written and read at a register, the devices, one that doesn\'t answer), spi (an echo device\'s transactions, mode 3), cons (the window, the windows, the bell), proc (a task\'s args, cwd, regs, memory, banks; its environment, its namespace), clock (the chip, the time set), disk (the disks, the cards: this one and one on SPI device 5; the ROM disk\'s room), pc (the PC tool answers; a file of its read), snd (note-of; a tune, its notes on the YM2151 in time; a channel\'s settings; the registers read back: a bent note\'s key code and fraction; a frequency, a glide, the LFO, a sensitivity, the noise; a line of MML and a chord, by play)',
       init: 't_rc', cycles: 400e6, pc: { files: { 'hi.txt': 'hi from the PC\n' } },
       get machine() {
         return { gpioIn: 0xA5, ca1: Array.from({ length: 60 }, (_, i) => 100e6 + i * 50e6), i2c: { 0x50: 256, 0x68: 16 }, spiEcho: [3],
           sd: [...hylangCard(this.name), card(5, 2048, false, () => 0)], rtc: Date.UTC(2026, 9, 3, 15, 4, 5) / 1000,
           input: '\u0101cd /sd/0; hylang devices.hl; echo status $status\r' };
       },
-      expect: ['67 checks, 0 failed\nstatus\n%'],
+      expect: ['72 checks, 0 failed\nstatus\n%'],
       // (The tune: C4, E4 a beat on (a tenth of a second at 600 a minute), a rest, G4 two beats after E4)
       check(m) {
         const f = pcReport(m, 1, 0, 0), mult = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'obj', 'build.json'), 'utf8')).clock || 1;
