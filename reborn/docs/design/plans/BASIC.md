@@ -1,6 +1,6 @@
 ## **Hydra BASIC: a structured BASIC for the Hydra, on the shared numbers**
 
-A plan (October 2026) for the user's direction: BASIC doesn't need to keep Microsoft's syntax; it should be a BASIC for the Hydra, more like the later QuickBASIC: **line numbers optional**, **labels** to branch to instead of line numbers, and the structured statements that came with them.  Its numbers are the shared ones ([NUMBERS.md](NUMBERS.md): danlang's and hylang's number system, every format, a current format to show and read numbers in, every number stored in the compact format).  It replaces today's BASIC (EhyBASIC, Microsoft BASIC 2A: [basic.md](../../basic.md)), which is retired when this one is done.  The user's answers to the plan's questions are in it (and listed at its end): today's BASIC retired; QuickBASIC's types, with one number type; parameters by reference; a buffer at the prompt with an editing mode; `RETURN` in a function; every number shown exactly; graphics in the first version.
+A plan (October 2026) for the user's direction: BASIC doesn't need to keep Microsoft's syntax; it should be a BASIC for the Hydra, more like the later QuickBASIC: **line numbers optional**, **labels** to branch to instead of line numbers, and the structured statements that came with them.  Its numbers are the shared ones ([NUMBERS.md](NUMBERS.md): danlang's and hylang's number system, every format, a current base to show and read numbers in, every number stored in the compact format).  It replaces today's BASIC (EhyBASIC, Microsoft BASIC 2A: [basic.md](../../basic.md)), which is retired when this one is done.  The user's answers to the plan's questions are in it (and listed at its end): today's BASIC retired; QuickBASIC's types, with one number type; parameters by reference; a buffer at the prompt with an editing mode; `RETURN` in a function; every number shown exactly; graphics in the first version.
 
 ### **Contents**
 1. [What it keeps, and what changes](#what-it-keeps-and-what-changes)
@@ -62,10 +62,10 @@ END FUNCTION
 
 ### **Values and names**
 
-* **Numbers**: the shared ones ([NUMBERS.md](NUMBERS.md)): `10 / 4` is `5/2`, `0.1 + 0.2 = 0.3` is true, `2 ^ 100` is exact; written in any format (`&HFF`, `&O17` and `&B101` as QuickBASIC wrote them, and danlang's `#xFF`, `#b101`, `#c+-0`, `#16r1F` ...); shown and read in the current format (`NBASE "x"`); the math functions at `DIGITS` digits.  Truth is -1 and 0, as BASIC's.
+* **Numbers**: the shared ones ([NUMBERS.md](NUMBERS.md)): `10 / 4` is `5/2`, `0.1 + 0.2 = 0.3` is true, `2 ^ 100` is exact; written in any format (`&HFF`, `&O17` and `&B101` as QuickBASIC wrote them, and danlang's `#xFF`, `#b101`, `#c+-0`, `#16r1F` ...); shown and read in the base `BASE "x"` sets, everywhere: what's printed, what's read, and the program's own text (a bare number starts with a digit, `0FF` in hexadecimal; a base without those digits written with its `#`); the math functions at `DIGITS` digits.  Truth is -1 and 0, as BASIC's.
 * **Strings**: `$` names (`name$`), of any length to 64K (Microsoft's stopped at 255), in a heap with a compacting collector.
 * **Names**: letters, digits, `_` and `.` (QuickBASIC's), any length, all significant; a keyword can't be a name.  A name is a string's with `$` (or `AS STRING`, or `DEFSTR`'s letters), else a number's.  QuickBASIC's number suffixes are accepted and dropped: `x%`, `x&`, `x!`, `x#` and `x` are one variable, as there's one number type.
-* **Arrays**: `DIM a(10)`, `DIM grid%(1 TO 8, 1 TO 8)`, `DIM names$(100)`, `DIM v(5) AS DOUBLE`; any number of dimensions; `REDIM`, `ERASE`, `LBOUND`, `UBOUND`; an array used before `DIM` has 0 to 10, as BASIC's always had.
+* **Arrays**: `DIM a(10)`, `DIM grid%(1 TO 8, 1 TO 8)`, `DIM names$(100)`, `DIM v(5) AS DOUBLE`; any number of dimensions; `REDIM`, `ERASE`, `LBOUND`, `UBOUND`; an array used before `DIM` has 0 to 10, as BASIC's always had; `OPTION BASE 0` or `1`, QuickBASIC's, is arrays' lowest index, not the number base.
 * **Constants**: `CONST pi2 = 2 * PI`.
 
 **Types**: one number type, strings, and QuickBASIC's records:
@@ -78,7 +78,7 @@ END FUNCTION
 | A record | `TYPE point` ... `END TYPE`, then `AS point` | Fields, each a number, a string or a record (`p.x`); records in records; arrays of records (`pts(i).x`) |
 
 * **One number type**: every number is the tower's, exact, and stored in the compact format ([NUMBERS.md](NUMBERS.md)); nothing rounds a number as it's stored.  `a / b` is a fraction when it isn't whole; `\` (integer division) and `MOD` are QuickBASIC's; `CINT` and `CLNG` round to an integer (a half to the even one, QuickBASIC's), `CSNG` and `CDBL` leave a number as it is.
-* **Shown exactly**: `PRINT`, `STR$` and the rest show every number as it is, never rounded: `1/3` as `1/3`, `2 ^ 100` whole, in the current format.  They write it with the numbers library's `num_display`, and `VAL` and `INPUT` read with its `num_parse`, in the format `NBASE` selects (the library's: [NUMBERS.md](NUMBERS.md), "The current format").
+* **Shown exactly**: `PRINT`, `STR$` and the rest show every number as it is, never rounded: `1/3` as `1/3`, `2 ^ 100` whole, in the current base.  They write it with the numbers library's `num_display`, and `VAL` and `INPUT` read with its `num_parse`, in the base `BASE` selects (the library's: [NUMBERS.md](NUMBERS.md), "The base"); `STR$(X, "x")` in a base named.
 * **A suffix, and a number's text**: `x#` is a number's name, `#xFF` a number in base x, `#1` a file (after `PRINT`, `INPUT`, `OPEN ... AS` and the rest); `x&` a name, `&HFF` a number.
 
 ### **Control**
@@ -113,7 +113,7 @@ A block is checked as the program is read: an `IF` without its `END IF`, a `NEXT
 
 ### **Input and output**
 
-* **The console**: `PRINT` (`;`, `,`; each number written by the numbers library's `num_display`, exactly, in its current format, with QuickBASIC's spaces around it), `PRINT USING "##.##"` (numbers in a picture, strings `&`), `INPUT ["prompt";] a, b$`, `LINE INPUT a$`, `INKEY$` (a key, or `""`), `CLS`, `LOCATE row, col`, `COLOR fg[, bg]` (conio's colours, as HyForth's and hylang's terminal words), `WIDTH`, `BEEP`.
+* **The console**: `PRINT` (`;`, `,`; each number written by the numbers library's `num_display`, exactly, in its current base, with QuickBASIC's spaces around it), `PRINT USING` (QuickBASIC's pictures, `"##.##"` and `&`; and the numbers library's placeholders, `{}` in the base and `{x}`, `{#b}`, `{c}` in any: `PRINT USING "{x} is {}"; 255, 255`), `INPUT ["prompt";] a, b$`, `LINE INPUT a$`, `INKEY$` (a key, or `""`), `CLS`, `LOCATE row, col`, `COLOR fg[, bg]` (conio's colours, as HyForth's and hylang's terminal words), `WIDTH`, `BEEP`.
 * **Files**, QuickBASIC's: `OPEN "path" FOR INPUT | OUTPUT | APPEND | BINARY AS #n`, `PRINT #n`, `WRITE #n` (quoted, comma-separated), `INPUT #n`, `LINE INPUT #n`, `GET #n` and `PUT #n` (bytes, in `BINARY`), `SEEK`, `EOF(n)`, `LOF(n)`, `CLOSE`, `FREEFILE`; any number of files open, the system's limit; paths through the namespace (`/sd/0/data.txt`, `/pc/x`).
 * **Files as the system has them**: `KILL` (remove), `NAME a AS b` (rename), `MKDIR`, `RMDIR`, `CHDIR`, `FILES` (a directory's names), `DIR$`.
 * **`DATA`, `READ`, `RESTORE [label]`**, as BASIC's.
