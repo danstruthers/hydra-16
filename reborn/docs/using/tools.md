@@ -287,7 +287,10 @@ VIA's port A is `/dev/gpio` (pins `0`-`7`, `port`, `ctl`, `ca1`) and `/dev/i2c` 
 `/dev/spi` the SPI devices; `/dev/seg` names shared segments; `/dev/vid` is the Vera X (its screen, VRAM, the PSG,
 and `pcm` and `pcmctl`, its PCM: [../programming/video.md](../programming/video.md)); `/pc` a folder on the PC (through
 the PC tool, `sim/tools/hydrapc.js`, which is the terminal too, and tells the Hydra its window's size).  A window's size is
-`consctl`'s `size` line (`grep size /dev/consctl`): the smaller of the terminals it's shown on.
+`consctl`'s `size` line (`grep size /dev/consctl`): the smaller of the terminals it's shown on.  Its chrome (the
+bar, its header and footer: on the screen, by default) shows its title (`echo title >/dev/label`) and status line
+(`echo status text >/dev/wctl`); `/lib/windows` has the formats, and `wctl` changes them (`echo chrome serial on
+>/dev/wctl` puts them on the serial port's terminal too).
 
 ### Scores
 

@@ -2,7 +2,8 @@
 ; shown) and current N (window N shown), and reads as the windows, a line each (* the one shown); /dev/consctl takes
 ; rawon and rawoff (raw lasts while a consctl is open: each key as it comes, unechoed); /dev/bell, a write, rings the
 ; console's bell (#a's: a short beep).  $window is this shell's window; (window-size) its size, consctl's size line
-; (the smaller of the terminals it's shown on).  A failure is the system's error.
+; (the smaller of the terminals it's shown on); (window-label s), (window-status s), (window-ctl s) its chrome (W4:
+; /dev/label, wctl's status and any wctl line).  A failure is the system's error.
 
 (use "dev")
 
@@ -16,6 +17,13 @@
   =(l (if (exists? "/dev/consctl") (filter (fn {l} {== (fst (str-split l " ")) "size"}) (dev.lines "/dev/consctl")) NIL))
   (if l (map val (tail (str-split (fst l) " "))) (list (cons.env "COLUMNS" 80) (cons.env "LINES" 24)))})
 (fun {cons.env n d} {do =(v (env n)) (if v (val v) d)})
+
+; This window's title (OSC 2's too): set (s; "": its program's name again), or with none, read
+(fun {window-label} {if &_ (dev.write "/dev/label" (+ (fst &_) "\n")) (dev.read "/dev/label")})
+
+; Its status line (the footer's %s), and any line of its wctl ("chrome screen off" ...)
+(fun {window-status s} {dev.write "/dev/wctl" (+ "status " s)})
+(fun {window-ctl s} {dev.write "/dev/wctl" s})
 
 ; The windows, a list of their numbers; and the one shown
 (fun {windows} {map (fn {l} {val (fst (str-split l " "))}) (dev.lines "/dev/wctl")})

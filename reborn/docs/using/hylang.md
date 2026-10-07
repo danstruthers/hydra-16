@@ -172,7 +172,7 @@ Each device has a library over its files, loaded by `use`; each is also an examp
 
 | `(use ...)` | For |
 | :---------- | :-- |
-| `"cons"` | The windows: `(window)`, `(windows)`, `(new-window)`, `(show-window n)`, `(window-size)` (`{cols rows}`), `(raw-on)`, `(beep)` |
+| `"cons"` | The windows: `(window)`, `(windows)`, `(new-window)`, `(show-window n)`, `(window-size)` (`{cols rows}`), `(window-label s)`, `(window-status s)`, `(window-ctl s)`, `(raw-on)`, `(beep)` |
 | `"gpio"` | Port A's pins: `(gpio pin)`, `(gpio! pin level)`, `(gpio-port)`, `(gpio-wait)` (CA1's next edge) |
 | `"i2c"` | `(i2c-devices)`, `(i2c-read addr n [reg])`, `(i2c-write addr bytes [reg])` |
 | `"spi"` | `(spi dev bytes)` (a transaction), `(spi-mode dev 3)` |

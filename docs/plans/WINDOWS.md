@@ -479,6 +479,10 @@ October 2026, on `reborn-text-windows` (reborn's `docs/status.md`, "The text win
 * **Its chrome is drawn a cell at a time** as the send ring has room (a row rendered again as it goes on), in a paint or alone (the rows, then the terminal's state again), the window's writers waiting meanwhile as they do for a paint.
 * **A redraw can come just after a prompt** (a status line or label changed by the command before it): the cursor goes back to the prompt, so a terminal shows it right; the tests' harness, which waits for output ending in a prompt, drives such steps from a script.
 
+### **As built: W4c**
+
+* **The words are the plan's**, each a write of a line: `hy_wlabel`, `window-label`, `(window-label s)` and `/dev/label`; `hy_wstatus`, `window-status`, `(window-status s)` and `wctl`'s `status`; `hy_wctl`, `window-ctl`, `(window-ctl s)` for any `wctl` line.  hylang's `(window-label)` with no argument reads the title back.
+
 ### **Decisions**
 
 The user's answers to the plan's questions, 2026-10-07:

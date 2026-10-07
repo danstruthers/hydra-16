@@ -2662,6 +2662,17 @@ module.exports = {
       },
     },
     {
+      name: 'winwords', what: 'the window\'s chrome in HyForth and hylang (W4c; C\'s are ctest\'s): window-label (read back from /dev/label; hylang\'s read too), window-status (the footer\'s %s, on the screen\'s footer row: both terminals on, the window 80 x 24 below the bar and header), window-ctl',
+      init: 't_rc', cycles: 200e6, jsOnly: 'the danlang emulator has no VERA yet',
+      get machine() {
+        return { vera: true, input: 'āforth\rĀĀ' + 'lib cons s" fth" window-label s" st-fth" window-status s" monitor off" window-ctl\rĀ' + 'bye\r' +
+          'ācat /dev/label; echo; head -27 /dev/vid/term | tail -1\r' +
+          'āhylang\rĀĀ' + '(use "cons")\r' + 'ā(window-label "hyl")\r' + 'ā(window-label)\r' + 'ā(window-status "st-hyl")\r' + 'ā(window-ctl "monitor off")\r' + 'ā(exit)\r' +
+          'āhead -27 /dev/vid/term | tail -1; echo done\r' };
+      },
+      expect: ['monitor off" window-ctl\n ok', 'tail -1\nfth\nst-fth', '(window-label)\n=> "hyl"', '(window-ctl "monitor off")\n=> NIL', 'echo done\nst-hyl', '\ndone\n%'],
+    },
+    {
       name: 'pcm', what: 'the Vera X\'s PCM (vid\'s /pcm and /pcmctl), at rc: its files and state; the rate (the VERA\'s nearest) and volume; raw samples from a card into the FIFO, drained; bad commands; /pcm one task\'s (another\'s pcmctl: busy); WAV files played (8 bits mono, made signed; 16 bits stereo past an odd chunk; a float one, not a song); a ZSM\'s PCM instruments (one, then one looped, stopped by the FIFO emptied: from RAM) and its claim of the PCM; one too big for RAM (from the file); the FIFO\'s bytes in order, none lost, its runs dry only at the ends',
       init: 't_rc', cycles: 150e6, jsOnly: 'the danlang emulator has no VERA yet',
       get machine() { return { input: typed(PCM_LINES), vera: { pcmLog: true }, sd: pcmCard() }; },

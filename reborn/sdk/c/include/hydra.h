@@ -100,6 +100,13 @@ unsigned char hy_banks (void);                              /* The banks it has 
 int __fastcall__ hy_banks_alloc (unsigned char n);          /* n of them, in a run: the first, or -1 */
 int __fastcall__ hy_banks_free (unsigned char first, unsigned char n);
 
+/* ---- The window's chrome (W4): its title, its status line, any line of its wctl ("chrome screen off" ...).  Each a
+** write: 0, or -1 (errno) */
+
+int __fastcall__ hy_wlabel (const char* s);                 /* Its title (OSC 2's too; "": its program's name again) */
+int __fastcall__ hy_wstatus (const char* s);                /* Its status line (the footer's %s): 55 characters */
+int __fastcall__ hy_wctl (const char* s);                   /* A line to its wctl (55 characters) */
+
 /* ---- Errors */
 
 const char* __fastcall__ hy_errstr (unsigned char code);    /* An error code's text (ERRSTR) */

@@ -1,7 +1,8 @@
 /*
 ** ctest.c - the C library's test (tests/tests.js's c runs it at rc): its arguments and name, files (stdio and the
 ** calls under it), errors, directories, the heap, the time, the environment, stat, commands and their exit
-** statuses (system, hy_spawn, hy_wait: with the sample code), the namespace, a note as a signal, RAM banks, isatty.
+** statuses (system, hy_spawn, hy_wait: with the sample code), the namespace, a note as a signal, RAM banks, isatty,
+** the window's chrome (hy_wlabel, hy_wstatus, hy_wctl).
 ** Each check prints "ok - " or "not ok - " and its name; the last line is "ctest: N failed", and its exit status
 ** is the count.  Run it as ctest a 'b c', in a directory it can write in (/ram), with the C samples in
 ** /rom/sample/c.
@@ -214,6 +215,23 @@ int main (int argc, char* argv[])
 
     /* isatty */
     check (isatty (1) && !isatty (9), "isatty");
+
+    /* The window's chrome: its title written and read back, then its program's name again; a status line, a wctl
+    ** line, a bad one */
+    {
+        char t[32];
+        int fd, n;
+
+        check (hy_wlabel ("ctitle") == 0, "hy_wlabel");
+        fd = open ("/dev/label", O_RDONLY);
+        n = read (fd, t, sizeof t - 1);
+        close (fd);
+        t[n < 0 ? 0 : n] = 0;
+        check (strcmp (t, "ctitle") == 0, "hy_wlabel: /dev/label reads it");
+        check (hy_wlabel ("") == 0, "hy_wlabel (\"\"): its program's name again");
+        check (hy_wstatus ("from C") == 0, "hy_wstatus");
+        check (hy_wctl ("monitor off") == 0 && hy_wctl ("nonsense") < 0, "hy_wctl, and a line it isn't");
+    }
 
     printf ("ctest: %d failed\n", failed);
     return failed;

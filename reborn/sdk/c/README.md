@@ -54,6 +54,8 @@ int main (int argc, char* argv[])
   `cgetc` reads keys raw (no echo, each as it's typed, the cursor and function keys as one code each: `CH_*` in
   `hydra.h`) until the program ends.  `screensize` is the window's size (its `consctl`'s `size` line); `cgetc`
   gives `CH_RESIZE` when it changes, and `screensize` then has the new one.
+* The window's chrome (`hydra.h`): `hy_wlabel` its title, `hy_wstatus` its status line (the footer's `%s`),
+  `hy_wctl` any line of its `wctl` (`chrome screen off` ...).
 * Sound (`snd.h`): claim the channels it uses (`snd_claim`), then patches, notes, volumes, bends and drums on
   them; they're given back as it ends.  `snd_play` plays a song in the background (`play`, in a task of its own).
 * `time` is the system's clock (`/dev/time`; `hy_time`, in seconds since 2000), `clock` the ticks since the
