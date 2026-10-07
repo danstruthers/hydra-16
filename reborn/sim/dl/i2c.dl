@@ -1,17 +1,19 @@
 ; i2c.dl - the I2C bus on the VIA's port A (PA0 SCL, PA1 SDA: open drain, pulled up), and its devices: memories, as
 ; 24C02-style EEPROMs are (a write's first byte sets the address, the rest are written from it on; a read gives bytes
-; from it on, wrapping at the size).  sim/lib/i2c.js is the reference.  i2c-bus is told the master's lines (1: let go,
-; 0: driven low) after each write to port A or its DDR; the levels are the AND of the master's, the pull-ups' and the
-; devices' (a device pulls SDA low to ack, or to send a 0).  Counted: starts, stops, the bytes the devices took and gave.
+; from it on, wrapping at the size), and the SMC (smc.dl: :smc, its address acknowledged or not, told each byte, asked
+; for each, and told as its transaction ends: a stop, or a start again).  sim/lib/i2c.js is the reference.  i2c-bus
+; is told the master's lines (1: let go, 0: driven low) after each write to port A or its DDR; the levels are the AND
+; of the master's, the pull-ups' and the devices' (a device pulls SDA low to ack, or to send a 0).  Counted: starts,
+; stops, the bytes the devices took and gave.
 
-(def {i2c-on i2c-scl-l i2c-sda-l i2c-out i2c-state i2c-bit i2c-shift i2c-ack i2c-dev i2c-rw i2c-first i2c-byte}
-  NIL 1 1 1 :idle 0 0 NIL NIL 0 NIL 0)
+(def {i2c-on i2c-scl-l i2c-sda-l i2c-out i2c-state i2c-bit i2c-shift i2c-ack i2c-dev i2c-rw i2c-first i2c-byte i2c-cur}
+  NIL 1 1 1 :idle 0 0 NIL NIL 0 NIL 0 NIL)
 (def {i2c-devs} (hash-create))
 (def {i2c-starts i2c-stops i2c-taken i2c-given} 0 0 0 0)
 
 ; A memory of size bytes at address addr
 (fun {i2c-device addr size} {do
-  (hash-put i2c-devs [addr (to# [[:mem (buffer size)] {:ptr 0} [:size size]])])
+  (hash-put i2c-devs [addr (to# [{:kind :mem} [:mem (buffer size)] {:ptr 0} [:size size]])])
   (set! {i2c-on} T)})
 
 (fun {i2c-scl} {do i2c-scl-l})
@@ -23,8 +25,10 @@
   (set {was-sda} (bit-and i2c-sda-l i2c-out))
   (set! {i2c-sda-l} sda)
   (if (and (== scl 1) (== was-scl 1) (not (== line-sda was-sda)))
-    ; SDA changing while SCL is high: a start or a stop
-    (do (if (zero? line-sda)
+    ; SDA changing while SCL is high: a start or a stop (the transaction's end, for the SMC)
+    (do (if (and i2c-cur (== (i2c-cur :kind) :smc)) (smc-end) 0)
+        (set! {i2c-cur} NIL)
+        (if (zero? line-sda)
           (set! {i2c-state i2c-bit i2c-shift i2c-ack i2c-out i2c-starts} :addr 0 0 NIL 1 (+ i2c-starts 1))
           (set! {i2c-state i2c-out i2c-stops} :idle 1 (+ i2c-stops 1)))
         (set! {i2c-scl-l} scl))
@@ -50,12 +54,15 @@
       (do (set! {i2c-dev} (hash-get i2c-devs (shr i2c-shift 1)))
           (if (nil? i2c-dev) (set! {i2c-state} :ignore)
             (do (set! {i2c-rw} (bit-and i2c-shift 1))
-                (set! {i2c-state i2c-first} (if (== i2c-rw 1) :tx :rx) T)
-                (set! {i2c-out i2c-ack} 0 T))))
-      (do (if i2c-first
+                (if (and (== (i2c-dev :kind) :smc) (not (smc-addr i2c-rw))) (set! {i2c-state} :ignore)   ; (No ack)
+                  (do (set! {i2c-cur} i2c-dev)
+                      (set! {i2c-state i2c-first} (if (== i2c-rw 1) :tx :rx) T)
+                      (set! {i2c-out i2c-ack} 0 T))))))
+      (do (if (== (i2c-dev :kind) :smc) (smc-put i2c-shift)
+          (if i2c-first
             (do (hash-put i2c-dev [:ptr (mod i2c-shift (i2c-dev :size))]) (set! {i2c-first} NIL))
             (do (buffer-put (i2c-dev :mem) (i2c-dev :ptr) i2c-shift)
-                (hash-put i2c-dev [:ptr (mod (+ (i2c-dev :ptr) 1) (i2c-dev :size))])))
+                (hash-put i2c-dev [:ptr (mod (+ (i2c-dev :ptr) 1) (i2c-dev :size))]))))
           (set! {i2c-taken i2c-out i2c-ack} (+ i2c-taken 1) 0 T)))
     (if (== i2c-state :tx)
       (if (== i2c-bit 9) (i2c-send)
@@ -64,6 +71,7 @@
 
 ; A byte to send: its first bit out
 (fun {i2c-send} {do
-  (set! {i2c-byte} ((i2c-dev :mem) (i2c-dev :ptr)))
-  (hash-put i2c-dev [:ptr (mod (+ (i2c-dev :ptr) 1) (i2c-dev :size))])
+  (if (== (i2c-dev :kind) :smc) (set! {i2c-byte} (bit-and (smc-get) 255))
+    (do (set! {i2c-byte} ((i2c-dev :mem) (i2c-dev :ptr)))
+        (hash-put i2c-dev [:ptr (mod (+ (i2c-dev :ptr) 1) (i2c-dev :size))])))
   (set! {i2c-given i2c-bit i2c-out} (+ i2c-given 1) 0 (bit-and (shr i2c-byte 7) 1))})

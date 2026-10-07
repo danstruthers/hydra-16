@@ -41,7 +41,7 @@
 // palette's colours), so a test that doesn't look costs nothing; with live set, each line is drawn as its time
 // comes (raster effects shown), and lastFrame is the last whole frame.  text() reads the text layer's characters.
 // Interface: read(reg, t) (-1: no answer), write(reg, v, t), tick(t), irqActive(), nextEvent(devCyc), reset(t);
-// sound(fn), soundTo(t).
+// sound(fn), soundTo(t); load(state), the chip as another emulator left it (the danlang one's: sim/dl/bridge.js).
 'use strict';
 const { createCard } = require('./sd.js');
 
@@ -775,9 +775,16 @@ function createVera(env) {
     dcVideo: { get: () => dc[0] }, fx: { get: () => fx }, layers: { get: () => [Array.from(layer[0]), Array.from(layer[1])] },
     addr: { get: () => [addr[0], addr[1]] },
   });
+  // The chip as another emulator left it, for frame(), cells() and text(): VRAM, the palette, the sprites' and the PSG's
+  // registers, the DCSEL sets (256 bytes) and the layers' registers (14), configured
+  function load(st) {
+    vram.set(st.vram); pal.set(st.palette); spr.set(st.sprites); psg.set(st.psg); dc.set(st.dc);
+    layer[0].set(st.layers.subarray(0, 7)); layer[1].set(st.layers.subarray(7, 14));
+    readyAt = curT = 0;
+  }
   // The sound on: each sample given to fn(left, right) (16 bits each), from cycle 0
   function sound(fn) { sink = fn; made = 0; }
-  Object.assign(v, { read, write, tick, irqActive, nextEvent, reset: t => reconfigure(t), frame, cells, text, peek, rgbPalette, sound, soundTo });
+  Object.assign(v, { read, write, tick, irqActive, nextEvent, reset: t => reconfigure(t), frame, cells, text, peek, rgbPalette, sound, soundTo, load });
   return v;
 }
 

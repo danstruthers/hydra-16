@@ -2309,7 +2309,7 @@ module.exports = {
     // ---- Phase 8: the Vera X (the emulator's VERA: sim/lib/vera.js; the driver: modules/vid)
     {
       name: 'vera', what: 'the emulator\'s Vera X (sim/lib/vera.js), the chip as a program sees it (no vid): the version register; ADDR0 and ADDR1, their steps, a data port\'s byte fetched ahead; the display\'s registers at the start; VSYNC (59.5 a second), LINE and SCANLINE (bit 8 too); sprites colliding; the PCM FIFO (empty, full, AFLOW and its interrupt\'s time); a PSG voice; the SPI port with no card; FX (the cache\'s writes and fill, transparency, the multiplier, the line helper, the fill length); CTRL\'s reset',
-      init: 't_vera', without: ['vid'], cycles: 40e6, machine: { vera: true }, jsOnly: 'the danlang emulator has no VERA yet',
+      init: 't_vera', without: ['vid'], cycles: 40e6, machine: { vera: true },
       check(m) {
         const f = [];
         if (!m.vera.psgOns.some(k => k.startsWith('voice 0 '))) f.push('PSG voice 0 never came on');
@@ -2320,7 +2320,7 @@ module.exports = {
     },
     {
       name: 'vid', what: 'the Vera X\'s driver (vid: #v), through its files: ctl\'s state; the terminal (/term): text written and read back, a CSI move, a line erased, wrapping, BS and TAB, 70 lines scrolled, SGR\'s colours (in the map\'s cells), the cursor\'s sprite; /frame (a frame a read, 59.5 a second); /vram, /pal, /font, the files\' lengths; ctl\'s commands (mode, cursor, border, bitmap, bad ones); claims: the terminal\'s text kept, then shown; claim all (the font back); another task\'s (E_BUSY), ended by its end',
-      init: 't_vid', cycles: 80e6, machine: { vera: true }, jsOnly: 'the danlang emulator has no VERA yet',
+      init: 't_vid', cycles: 80e6, machine: { vera: true },
     },
     {
       name: 'vid-none', what: 'vid with no card: its init looks for DETECT_TICKS, then ends; no #v (E_NODEV)',
@@ -2328,7 +2328,7 @@ module.exports = {
     },
     {
       name: 'screen', what: 'the console on the Vera X\'s screen (cons\'s second terminal: vid\'s /term), at rc: /dev/vid; consctl\'s terminal both, serial (the screen left as it was), both again (repainted); a font written to /dev/vid/font; ctl\'s output (NTSC, mono, 240p; VGA has neither); colours from a file (SGR, in the cells); what rc shows, on the screen as on the serial port',
-      init: 't_rc', cycles: 150e6, pc: { files: { colours: SCREEN_COLOURS } }, jsOnly: 'the danlang emulator has no VERA yet',
+      init: 't_rc', cycles: 150e6, pc: { files: { colours: SCREEN_COLOURS } },
       get machine() { return { input: typed(SCREEN_LINES), vera: true }; },
       get expect() { return expected(SCREEN_LINES); },
       check(m) {
@@ -2350,7 +2350,7 @@ module.exports = {
     },
     {
       name: 'pcm', what: 'the Vera X\'s PCM (vid\'s /pcm and /pcmctl), at rc: its files and state; the rate (the VERA\'s nearest) and volume; raw samples from a card into the FIFO, drained; bad commands; /pcm one task\'s (another\'s pcmctl: busy); WAV files played (8 bits mono, made signed; 16 bits stereo past an odd chunk; a float one, not a song); a ZSM\'s PCM instruments (one, then one looped, stopped by the FIFO emptied: from RAM) and its claim of the PCM; one too big for RAM (from the file); the FIFO\'s bytes in order, none lost, its runs dry only at the ends',
-      init: 't_rc', cycles: 150e6, jsOnly: 'the danlang emulator has no VERA yet',
+      init: 't_rc', cycles: 150e6,
       get machine() { return { input: typed(PCM_LINES), vera: { pcmLog: true }, sd: pcmCard() }; },
       get expect() { return expected(PCM_LINES); },
       // (The FIFO's bytes: the raw samples, the 8-bit WAV file's made signed, the 16-bit one's as they are, the first
@@ -2380,7 +2380,7 @@ module.exports = {
     },
     {
       name: 'mouse', what: 'the mouse (VIDEO.md step 6): vid\'s /mouse, /mousein and /mousectl (its state; /mouse\'s first read at once, Plan 9\'s 49 bytes; a non-blocking read\'s E_AGAIN; moves, the pointer\'s sprite at them, kept on the screen; swap; the buttons\' changes queued and read in turn; the pointer off and on; a write to /mouse; bad lines; a claim and its release; mode 40x30\'s size), then the input program on the emulator\'s SMC: a move, a click and the wheel from its PS/2 packets',
-      init: 't_mouse', cycles: 45e6, jsOnly: 'the danlang emulator has no VERA yet',
+      init: 't_mouse', cycles: 45e6,
       // (The SMC's mouse: a move, then the left button pressed and let go, then the wheel up, each 2M cycles apart,
       // from 12M cycles on: by then the input program has asked for the mouse's mode and read it)
       machine: { vera: true, smc: { moves: [[30, 20, 0], [0, 0, 1], [0, 0, 0], [0, 0, 0, -1]] },
@@ -2395,7 +2395,7 @@ module.exports = {
     },
     {
       name: 'kbd', what: 'the keyboard (VIDEO.md step 6): init\'s input program, the emulator\'s SMC typed at, the keys into the console (#c/kbin) as a PC terminal sends them, at the login shell (HyForth): Shift and punctuation; Left to edit a line; Up, its history; Caps Lock; the keypad\'s digits, and its cursor keys with Num Lock off; Ctrl-C, a note to the window\'s shell; the keyboard\'s LEDs following the locks',
-      init: 'init', cycles: 120e6, jsOnly: 'the danlang emulator has no VERA yet',
+      init: 'init', cycles: 120e6,
       get machine() {
         const tap = n => String.fromCharCode(0x200 + n), W = '\u0101';  // (smc.js's key n pressed and let go; a prompt)
         const LEFT = tap(79), UP = tap(83), CAPS = tap(30), NUM = tap(90), KP1 = tap(93), KP2 = tap(98), KP4 = tap(92);
@@ -2415,7 +2415,7 @@ module.exports = {
     },
     {
       name: 'draw', what: 'the graphics words (VIDEO.md step 5): vid\'s /dev/vid/draw (pen, plot, line, box, bar, circle, disc, clear) on the bitmap at 8, 4, 2 and 1 bits a pixel (640 across), what falls off it, bad numbers, a bitmap too big; HyForth\'s lib video (the drawing, vpeek, the turtle, text, the palette, a sprite) and rc\'s lines to the file; hylang\'s video.hl (the drawing, vpeek, the turtle, text); the C SDK\'s shapes sample (cc65\'s TGI on hydra_tgi: a line, a bar, a circle, an ellipse and text, read back) and sketch (vera.h, drawing after the emulator\'s mouse till a key)',
-      init: 'init', cycles: 260e6, jsOnly: 'the danlang emulator has no VERA yet',
+      init: 'init', cycles: 260e6,
       // (The mouse for sketch: to the top left, onto the strip's colour 2 and clicked, then to (150, 120), pressed,
       // dragged 20 right and 20 down, let go; then a key, x, ends it)
       get machine() {
@@ -2442,7 +2442,7 @@ module.exports = {
     },
     {
       name: 'vsd', what: 'the Vera X\'s SD card (the storage driver\'s disk v, on the VERA\'s own SPI controller: the emulator\'s card there), at the login shell: its ctl (an SDHC card, its HydraFS), a file read, one written, /sd listing it',
-      init: 'init', cycles: 120e6, jsOnly: 'the danlang emulator has no VERA yet',
+      init: 'init', cycles: 120e6,
       get machine() { this.card = veraCard(); return { vera: { sd: this.card }, input: VSD_LINES.map(l => '\u0101' + l[0] + '\r').join('') + '\u0101' }; },
       get expect() { return VSD_LINES.map(l => '/> ' + l[0] + '\n' + l[1] + '\n/> '); },
       check() {
@@ -2455,7 +2455,7 @@ module.exports = {
     },
     {
       name: 'psg', what: 'the Vera X\'s PSG as sound channels 8-23 (snd, through vid\'s /psg), at rc: sndctl\'s state (24 channels); a note (its frequency word), a waveform by name, by number and as a patch, speakers, a level, a frequency, a bend, a note off; claims of the PSG\'s channels (sndctl\'s second mask); the master volume on their volumes; errors; /psg and /dev/vid/psg; a note while the VERA\'s claimed, on the chip as the claim ends; hylang\'s and HyForth\'s snd-wave and claims of the PSG\'s channels; a ZSM of PSG writes played (play: its PSG channels claimed, its voices in time)',
-      init: 't_rc', cycles: 180e6, jsOnly: 'the danlang emulator has no VERA yet',
+      init: 't_rc', cycles: 180e6,
       get machine() { return { input: typed(PSG_LINES), vera: true, sd: psgCard() }; },
       get expect() {
         const claim = PSG_LINES.findIndex(l => l[2]);
@@ -2490,7 +2490,7 @@ module.exports = {
     },
     {
       name: 'psgmml', what: 'the PSG in scores (play\'s, mml.inc, and hysong.js\'s: channels I-X, sound channels 8-23): play -o\'s ZSMs of the ROM disk\'s songs/vera.mml (both chips; each waveform; envelopes; slides, legato, triplets, ties; I, y, k, D, v, q, p) and of two scores of edge cases, each the same as hysong.js\'s byte for byte; the errors (the other chip\'s instrument, both ways; x; y past 63; instruments it can\'t read; channel 23\'s number); vera.mml played on the Vera X (its voices\' starts as many as its ZSM\'s, the lead\'s first 751 song ticks after the hats\'); a line (-m 8), the X16\'s (-x: I as the waveform register, V), a chord (-c 13), one with more notes than the PSG\'s channels left',
-      init: 't_rc', cycles: 600e6, jsOnly: 'the danlang emulator has no VERA yet',
+      init: 't_rc', cycles: 600e6,
       get machine() { return { input: typed(PSG_MML_LINES), vera: true, sd: psgScoreCard() }; },
       get expect() { return expected(PSG_MML_LINES); },
       // (Each voice's registers at the end (its frequency word, its speakers and volume, its waveform; null: any).

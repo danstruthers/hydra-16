@@ -1,5 +1,5 @@
 ; hydra.dl - the Hydra-16 in danlang, run for a test (sim/test.js --dl writes a spec and runs this): the machine
-; (cpu.dl, machine.dl, devices.dl, spi.dl, i2c.dl, rtc.dl), set as the spec says, run till the test's result is out
+; (cpu.dl, machine.dl, devices.dl, spi.dl, i2c.dl, rtc.dl, vera.dl, smc.dl), set as the spec says, run till the test's result is out
 ; (its "NAME: PASS" or "NAME: FAIL" line, or every line it expects) or its cycles run out, and what the test's checks
 ; look at written out.
 ;
@@ -8,16 +8,18 @@
 ; result (spec-init, or spec-expect: a list of strings), the marks (spec-marks), keys typed (spec-keys: codes; 256 a
 ; wait, 257 a wait for a prompt), bytes the PC sends after a mark (spec-send-after, spec-send), BOOT_DONE's address
 ; (spec-boot-done: IRQs-off stretches counted from it), where the results go (spec-out), and the machine's options
-; and devices (opt-..., spi-card, spi-echo, i2c-device, rtc-setup, ca1-setup ...).  With spec-peer, every byte the
+; and devices (opt-..., spi-card, spi-echo, i2c-device, rtc-setup, ca1-setup, vera-setup, vera-card, smc-setup ...).  With spec-peer, every byte the
 ; serial port sends goes to the harness (stdout, "T byte cycle"), which answers (stdin, "C hex;P hex": the bytes
 ; that are the console's, and the PC's own sent back): the PC tool's part of /pc, or the PC's end of XMODEM.
 ;
 ; The results (spec-out, a folder): out.txt (the console's output), result.json (the cycles, a halt, the marks'
 ; cycles, the IRQs-off stretches, the devices' states for the checks), cards.bin (the cards' blocks written: for each,
-; its device, its block number (4 bytes, least first) and its 512 bytes).
+; its device, its block number (4 bytes, least first) and its 512 bytes; the Vera X's card is device 16), vera.bin
+; (with a Vera X: VRAM, the palette, the sprites' and the PSG's registers, the DCSEL sets, the layers', then the PCM
+; bytes logged).
 
 (def {here} (substring (fst args) 0 (+ 1 (max (last-index-of (fst args) "/") (last-index-of (fst args) "\\")))))
-(each {f {"cpu.dl" "machine.dl" "devices.dl" "spi.dl" "i2c.dl" "rtc.dl"}} (load (+ here f)))
+(each {f {"cpu.dl" "machine.dl" "devices.dl" "spi.dl" "i2c.dl" "rtc.dl" "vera.dl" "smc.dl"}} (load (+ here f)))
 
 (def {spec-bios spec-prom spec-cycles spec-init spec-expect spec-marks spec-keys spec-send-after spec-send spec-boot-done
   spec-out spec-peer spec-paste} "" "" 30000000 "" NIL {} {} "" {} -1 "." NIL NIL)
@@ -98,15 +100,27 @@
   "\"ymLost\":" ym-lost ","
   "\"ymRegs\":" (js-list (map (fn {i} {ym-r i}) (range 256))) ","
   "\"ymWrites\":" (js-list (map (fn {i} {js-list (ym-writes i)}) (range ym-nwrites))) ","
-  "\"i2c\":{\"devices\":{" (str-join (map (fn {a} {+ "\"" a "\":" (js-list (bytes ((i2c-devs a) :mem)))}) (hash-keys i2c-devs)) ",")
+  "\"i2c\":{\"devices\":{" (str-join (map (fn {a} {+ "\"" a "\":" (js-list (bytes ((i2c-devs a) :mem)))})
+    (filter (fn {a} {== ((i2c-devs a) :kind) :mem}) (hash-keys i2c-devs))) ",")
     "},\"stats\":{\"starts\":" i2c-starts ",\"stops\":" i2c-stops ",\"taken\":" i2c-taken ",\"given\":" i2c-given "}},"
   "\"via\":{\"ier\":" via-ier ",\"pcr\":" (vr 12) "},"
   "\"rtc\":" (if rtc-on (js-list (rtc-dump)) "null") ","
   "\"acia\":{\"gapMin\":" (if (>= ac-gapmin INF) "null" (to-fixed ac-gapmin 4)) ",\"overruns\":" ac-overruns ",\"wdc\":" (if ac-wdc "true" "false")
     ",\"pcLost\":" pclost ",\"charCycles\":" ac-charcyc ",\"rxLost\":" rxlost
     ",\"rxLat\":{\"min\":" (if (>= lat-min INF) "null" lat-min) ",\"max\":" lat-max ",\"sum\":" lat-sum ",\"n\":" lat-n "}},"
+  "\"vera\":" (if ve-on (+ "{\"frames\":" ve-frames ",\"pcmIn\":" ve-pcmin ",\"pcmOut\":" ve-pcmout ",\"pcmLost\":" ve-pcmlost
+    ",\"pcmUnderruns\":" ve-under ",\"pcmLog\":" (if ve-logon ve-nlog "null") ",\"ready\":" (if (>= ve-curt ve-ready) "true" "false")
+    ",\"psgOns\":" (js-list (map (fn {i} {js-str (+ "voice " (fst (ve-ons i)) " at cycle " (snd (ve-ons i)))}) (range ve-nons))) "}") "null") ","
+  "\"smc\":" (if smc-on (+ "{\"lost\":" smc-lost ",\"mouseLost\":" smc-mlost ",\"leds\":" smc-leds ",\"reads\":" smc-reads
+    ",\"nacks\":" smc-nacks ",\"mouseId\":" smc-mid ",\"keys\":" smc-kn ",\"mouse\":" smc-mn
+    ",\"commands\":" (js-list (map (fn {i} {js-list (smc-cmds i)}) (range smc-ncmds))) "}") "null") ","
   "\"done\":" (if done "true" "false")
   "}"))
+(if ve-on (do
+  (set {vs} (open (+ res "/vera.bin") :write))
+  (each {b (list ve-vram ve-pal ve-spr ve-psg ve-dc ve-lay)} (write-bytes vs b))
+  (if ve-logon (write-bytes vs ve-log 0 ve-nlog) 0)
+  (close vs)) 0)
 (def {cs} (open (+ res "/cards.bin") :write))
 (each {dev (hash-keys card-written)} (each {n (hash-keys (card-written dev))} (do
   (write-bytes cs (list dev (bit-and n 255) (bit-and (shr n 8) 255) (bit-and (shr n 16) 255) (bit-and (shr n 24) 255)))
