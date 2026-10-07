@@ -18,6 +18,7 @@
 //                    two marks in minus, a baseline), divided by per, at most max (a number, or a function of the
 //                    build's options: { clock, acia }, obj/build.json)
 //   check(m, out)    more checks on the machine afterwards: gives a list of failures
+//   start(m)         the machine as it's made, before it runs (to listen to its sound, say)
 // Every test also checks the longest IRQs-off stretch after the boot (IRQ_OFF_MAX).
 'use strict';
 const fs = require('fs');
@@ -1620,6 +1621,43 @@ module.exports = {
         '% as -b /pc/raw.s /ram/raw; xd /ram/raw\n0000000  4c 00 c0 00 c0 05 00 ',
         '% as /pc/bad.s /ram/bad; echo $status\nas: /pc/bad.s:2: not an instruction, directive or macro: frob\nas: /pc/bad.s:3: stop\nas: /pc/bad.s:4: a bad expression\n1\n%',
         '% as /pc/warn.s /ram/warn; echo $status; xd /ram/warn\nas: /pc/warn.s:2: warning: careful\n\n0000000  60 ', '% as\nusage: as [-bl] file.s [out]\n%'],
+    },
+    {
+      name: 'sound', what: 'the simulator\'s sound (sim/lib/audio.js: run.js --sound, --wav), at rc: the YM2151\'s (opm.js, ymfm\'s) A4 on channel 4, then the Vera X\'s PSG\'s A5 on a sawtooth (channel 8), each heard at its pitch; the stream 48,000 samples a second of the Hydra\'s time',
+      init: 't_rc', cycles: 60e6, jsOnly: 'the danlang emulator has no sound',
+      machine: {
+        vera: true, sound: true,
+        input: ['echo patch 4 0 >/dev/sndctl; echo note 4 69 >/dev/sndctl', 'sleep 1; echo off 4 >/dev/sndctl; echo wave 8 saw >/dev/sndctl; echo note 8 81 >/dev/sndctl',
+          'sleep 1; echo off 8 >/dev/sndctl'].map(l => 'ā' + l + '\r').join(''),
+      },
+      start(m) { this.heard = []; m.audio.on(s => this.heard.push(s)); },
+      expect: ['% sleep 1; echo off 8 >/dev/sndctl\n%'],
+      check(m) {
+        const f = [], n = this.heard.reduce((k, s) => k + s.length / 2, 0), L = new Float64Array(n);
+        let k = 0;
+        for (const s of this.heard) for (let i = 0; i < s.length; i += 2) L[k++] = s[i];
+        // Each 0.1 s that sounds: its pitch, the shortest period (60-2000 Hz) the samples repeat at (a correlation
+        // over 0.9 at a local peak)
+        const pitches = [];
+        for (let s = 0; s + 4800 <= n; s += 4800) {
+          let e = 0;
+          for (let i = s; i < s + 4800; i++) e += L[i] * L[i];
+          if (Math.sqrt(e / 4800) < 300) continue;
+          const corr = lag => { let c = 0, e1 = 0, e2 = 0; for (let i = s; i < s + 2400; i++) { c += L[i] * L[i + lag]; e1 += L[i] * L[i]; e2 += L[i + lag] * L[i + lag]; } return c / Math.sqrt(e1 * e2); };
+          for (let lag = 24, prev = corr(23); lag < 800; lag++) {
+            const c = corr(lag);
+            if (c > 0.9 && c >= prev && c >= corr(lag + 1)) { pitches.push(48000 / lag); break; }
+            prev = c;
+          }
+        }
+        const near = hz => pitches.filter(p => Math.abs(p - hz) < hz * 0.01).length;
+        if (near(440) < 3) f.push('the YM2151\'s A4 not heard: ' + pitches.map(p => p.toFixed(1)).join(', '));
+        if (near(880) < 3) f.push('the PSG\'s A5 not heard: ' + pitches.map(p => p.toFixed(1)).join(', '));
+        const want = m.cpu.cyc / 3.579545e6 * 48000;
+        if (Math.abs(m.audio.made - want) > 16) f.push('the stream: ' + m.audio.made + ' samples for ' + Math.round(want) + ' of the Hydra\'s time');
+        this.notes = [n + ' samples heard; 0.1 s pitches near A4 ' + near(440) + ', near A5 ' + near(880)];
+        return f;
+      },
     },
     {
       name: 'snd', what: 'sound (#a): snd, sndctl and bell; the volume, claims (one another program holds), the shadow, tones (C, snd.h); sndctl\'s channel commands as text (patch, note, level and vol, pan by word and number, bend below 0, off, drum, reg: their registers on the chip; a channel another program has; numbers out of range, or missing); freq (a note by its frequency, its 64ths), glide, lfo, sens, noise',

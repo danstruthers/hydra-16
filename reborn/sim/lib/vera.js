@@ -14,9 +14,14 @@
 //     half-lines of 794), in the CPU's cycles; SCANLINE; the LINE and VSYNC interrupts at their line's start;
 //     sprite collisions, worked out at VSYNC for the frame (the sprite renderer's budget of 800 clocks a line
 //     too); IRQ# while (ISR | AFLOW) & IEN isn't 0;
-//   * the PCM FIFO (4K: 4095 bytes held at most): its level drained at the sample rate (AUDIO_RATE / 128 of
-//     48828 Hz, a sample 1, 2 or 4 bytes), AFLOW while it's under 1024, its full and empty flags.  No sound is made:
-//     the PCM bytes and the PSG's voices are counted (pcmIn, pcmOut, pcmLost; psgOns, as ym2151.js's key-ons);
+//   * the PCM FIFO (4K: 4095 bytes held at most): its bytes, drained at the sample rate (AUDIO_RATE / 128 of
+//     48828 Hz, a sample 1, 2 or 4 bytes), AFLOW while it's under 1024, its full and empty flags; the PCM bytes and
+//     the PSG's voices counted (pcmIn, pcmOut, pcmLost; psgOns, as ym2151.js's key-ons);
+//   * the sound, if it's asked for (sound(fn): audio.js's): the PSG's 16 voices and the PCM's samples, a stereo
+//     sample at 48828 Hz each given to fn(left, right), as the X16's emulator makes them (its vera_psg.c and
+//     vera_pcm.c, Frank van den Hoef's, BSD 2-clause), made up to a cycle as the machine runs (before a PSG register
+//     changes, as the FIFO's drained) and as soundTo(t) asks.  Then the FIFO's drained a sample at a time, as those
+//     files do; without it, as many samples at once as time has passed (the same reads, the same level);
 //   * the SPI controller (SPI_DATA, SPI_CTRL: busy for 8 bits at 12.5 MHz, or 390 kHz with the slow clock), with no
 //     card on it: it reads $FF (the Vera X brings its SD card's lines to a header);
 //   * the FPGA configuring itself after power-up, the reset button (RESB: the card's RES#) and CTRL's reset bit:
@@ -25,7 +30,8 @@
 // The picture is drawn only when asked for (frame(): the whole screen as it is now, palette indexes and the
 // palette's colours), so a test that doesn't look costs nothing; with live set, each line is drawn as its time
 // comes (raster effects shown), and lastFrame is the last whole frame.  text() reads the text layer's characters.
-// Interface: read(reg, t) (-1: no answer), write(reg, v, t), tick(t), irqActive(), nextEvent(devCyc), reset(t).
+// Interface: read(reg, t) (-1: no answer), write(reg, v, t), tick(t), irqActive(), nextEvent(devCyc), reset(t);
+// sound(fn), soundTo(t).
 'use strict';
 
 // The palette at reset (the gateware's: 12 bits, $0RGB)
@@ -55,6 +61,12 @@ const PSG = 0x1F9C0, PAL = 0x1FA00, SPR = 0x1FC00;            // The registers V
 const FIFO = 4096, AFLOW = 1024;                              // The PCM FIFO, and its low mark
 const PCM_HZ = 25e6 / 512;                                    // The audio's sample rate
 const GROUP = [1, 2, 2, 4];                                   // AUDIO_CTRL's bits 4-5: a sample's bytes
+// The PSG's volume (6 bits) and the PCM's (4 bits), as the X16's emulator has them (vera_psg.c, vera_pcm.c)
+const PSG_VOLUME = [
+  0, 4, 8, 12, 16, 17, 18, 20, 21, 22, 23, 25, 26, 28, 30, 31, 33, 35, 37, 40, 42, 45, 47, 50, 53, 56, 60, 63, 67, 71, 75, 80,
+  85, 90, 95, 101, 107, 113, 120, 127, 135, 143, 151, 160, 170, 180, 191, 202, 214, 227, 241, 255, 270, 286, 303, 321, 341, 361,
+  382, 405, 429, 455, 482, 511];
+const PCM_VOLUME = [0, 1, 2, 3, 4, 5, 6, 8, 11, 14, 18, 23, 30, 38, 49, 64];
 
 function createVera(env) {
   const clock = env.clock || 3.579545;                        // The CPU's (MHz)
@@ -77,8 +89,13 @@ function createVera(env) {
   let addrsel = 0, dcsel = 0, ien = 0, isr = 0, irqLine = 0;      //   bits (FX's: kept), the byte fetched ahead
   const dc = new Uint8Array(256);                             // The DCSEL sets: set n's registers at 4n
   const layer = [new Uint8Array(7), new Uint8Array(7)];
-  let actl = 0, arate = 0, loop = false, fcnt = 0, fwr = 0, frd = 0;   // The PCM FIFO (only its level matters)
+  let actl = 0, arate = 0, loop = false, fcnt = 0, fwr = 0, frd = 0;   // The PCM FIFO ...
+  const fifo = new Uint8Array(FIFO);                          //   its bytes
   let pcmPhase = 0, pcmAt = 0;                                // The audio's sample count, as of cycle pcmAt
+  // The sound (sound(fn)): the samples made so far, the first that sounds (the FPGA configured), the PSG's voices'
+  // phases and noise, its noise generator, the PCM's sample (left, right)
+  let sink = null, made = 0, readySample = 0, psgNoiseState = 1, pcmL = 0, pcmR = 0;
+  const psgPhase = new Int32Array(16), psgNoise = new Uint8Array(16);
   let ss = 0, autotx = 0, slow = 0, spiBusyTo = 0, spiIn = 0xFF;
   // The scan: units (a VGA line, or half an NTSC one) since t0, the cycle it started at; lastU the last unit done
   let readyAt = configCycles, t0 = configCycles, unitLen = 800, perFrame = 525, lastU = -1, nextU = 0, nextCyc = 0;
@@ -92,6 +109,7 @@ function createVera(env) {
     for (let i = 0; i < 256; i++) { pal[2 * i] = DEFAULT_PALETTE[i] & 0xFF; pal[2 * i + 1] = DEFAULT_PALETTE[i] >> 8; }
     spr.fill(0); psg.fill(0);
     actl = 0; arate = 0; loop = false; fcnt = fwr = frd = 0; pcmPhase = 0; pcmAt = t;
+    psgPhase.fill(0); psgNoise.fill(0); psgNoiseState = 1; pcmL = pcmR = 0; readySample = Math.ceil(t * PCM_HZ / (clock * 1e6));
     ss = 0; autotx = 0; slow = 0; spiBusyTo = 0; spiIn = 0xFF;
     rd[0] = rd[1] = vram[0];
     t0 = t; unitLen = 800; perFrame = 525; lastU = -1; collisions = 0; plan();
@@ -160,6 +178,7 @@ function createVera(env) {
   // ---- The PCM FIFO's level, as of cycle t
   const groupLen = () => GROUP[(actl >> 4) & 3];              // (A sample's bytes: 8 or 16 bits, mono or stereo)
   function pcm(t) {
+    if (sink) { soundTo(t); return; }
     if (t <= pcmAt) return;
     const s0 = Math.floor(pcmAt * PCM_HZ / (clock * 1e6)), s1 = Math.floor(t * PCM_HZ / (clock * 1e6));
     pcmAt = t;
@@ -179,6 +198,53 @@ function createVera(env) {
       }
     }
   }
+  // ---- The sound: the samples up to cycle t made, each the PSG's and the PCM's (silent while configuring)
+  function soundTo(t) {
+    if (!sink) return;
+    const n = Math.floor(t * PCM_HZ / (clock * 1e6));
+    for (; made < n; made++) {
+      if (made < readySample) { sink(0, 0); continue; }
+      let l = 0, r = 0;
+      for (let i = 0; i < 16; i++) {                          // The PSG's voices (vera_psg.c's render)
+        psgNoiseState = ((psgNoiseState << 1) | (((psgNoiseState >> 1) ^ (psgNoiseState >> 2) ^ (psgNoiseState >> 4) ^ (psgNoiseState >> 15)) & 1)) & 0xFFFF;
+        const b = i * 4, lr = psg[b + 2] >> 6, pw = psg[b + 3] & 0x3F, old = psgPhase[i];
+        const ph = lr ? (old + (psg[b] | psg[b + 1] << 8)) & 0x1FFFF : 0;
+        if ((old & 0x10000) && !(ph & 0x10000)) psgNoise[i] = (psgNoiseState >> 1) & 0x3F;
+        psgPhase[i] = ph;
+        let w;
+        switch (psg[b + 3] >> 6) {
+          case 0: w = (ph >> 10) > pw ? 0 : 0x3F; break;                                       // Pulse
+          case 1: w = (ph >> 11) ^ (pw ^ 0x3F); break;                                         // Sawtooth
+          case 2: w = ((ph & 0x10000) ? ~(ph >> 10) & 0x3F : (ph >> 10) & 0x3F) ^ (pw ^ 0x3F); break;   // Triangle
+          default: w = psgNoise[i];                                                           // Noise
+        }
+        const val = (((w ^ 0x20) << 26) >> 26) * PSG_VOLUME[psg[b + 2] & 0x3F];
+        if (lr & 1) l += val >> 3;
+        if (lr & 2) r += val >> 3;
+      }
+      const old = pcmPhase;                                   // The PCM (vera_pcm.c's render): a read as bit 7 of
+      pcmPhase = (pcmPhase + arate) & 0x7FFF;                 //   its phase turns
+      if ((old ^ pcmPhase) & 0x80) pcmRead();
+      sink(l + Math.trunc(pcmL * PCM_VOLUME[actl & 15] / 64), r + Math.trunc(pcmR * PCM_VOLUME[actl & 15] / 64));
+    }
+    pcmAt = t;
+  }
+  // A sample's bytes from the FIFO (none: silence; part of one: dropped), into pcmL and pcmR
+  function pcmRead() {
+    if (fcnt === 0) { pcmL = pcmR = 0; return; }
+    const g = groupLen();
+    if (fcnt < g) { v.pcmOut += fcnt; fcnt = 0; frd = fwr; }
+    else {
+      const b = () => { const x = fifo[frd]; frd = (frd + 1) % FIFO; fcnt--; v.pcmOut++; return x; };
+      switch ((actl >> 4) & 3) {
+        case 0: pcmL = pcmR = (b() << 24) >> 16; break;                             // 8 bits, mono
+        case 1: pcmL = (b() << 24) >> 16; pcmR = (b() << 24) >> 16; break;          //   stereo
+        case 2: { const lo = b(); pcmL = pcmR = ((lo | b() << 8) << 16) >> 16; break; }   // 16 bits, mono
+        default: { let lo = b(); pcmL = ((lo | b() << 8) << 16) >> 16; lo = b(); pcmR = ((lo | b() << 8) << 16) >> 16; }
+      }
+    }
+    if (loop && fcnt === 0) { frd = 0; fcnt = fwr; }
+  }
   // Cycles from cycle t till the FIFO goes under its low mark (Infinity: it won't by itself)
   function aflowIn(t) {
     if (!arate || fcnt < AFLOW || loop) return Infinity;
@@ -193,6 +259,7 @@ function createVera(env) {
     if (a < PSG) return;
     if (a < PAL) {
       const r = a - PSG, ch = r >> 2;
+      if (sink) soundTo(curT);                                // (What it's sounded till now, before it changes)
       const was = psg[r]; psg[r] = b;
       if ((r & 3) === 2 && !(was & 0x3F) && (b & 0x3F) && (b & 0xC0)) v.psgOns.push('voice ' + ch + ' at cycle ' + curT);
     } else if (a < SPR) pal[a - PAL] = b;
@@ -263,7 +330,7 @@ function createVera(env) {
         actl = b & 0x3F; return;
       case 0x1C: pcm(t); arate = b > 128 ? 256 - b : b; return;
       case 0x1D: pcm(t);
-        if (fcnt < FIFO - 1) { fwr = (fwr + 1) % FIFO; fcnt++; v.pcmIn++; } else v.pcmLost++;
+        if (fcnt < FIFO - 1) { fifo[fwr] = b; fwr = (fwr + 1) % FIFO; fcnt++; v.pcmIn++; } else v.pcmLost++;
         return;
       case 0x1E: if (ss && t >= spiBusyTo) { spiBusyTo = t + spiTime(); spiIn = 0xFF; } return;
       case 0x1F: ss = b & 1; slow = (b >> 1) & 1; autotx = (b >> 2) & 1; return;
@@ -490,7 +557,9 @@ function createVera(env) {
     dcVideo: { get: () => dc[0] }, layers: { get: () => [Array.from(layer[0]), Array.from(layer[1])] },
     addr: { get: () => [addr[0], addr[1]] },
   });
-  Object.assign(v, { read, write, tick, irqActive, nextEvent, reset: t => reconfigure(t), frame, cells, text, peek, rgbPalette });
+  // The sound on: each sample given to fn(left, right) (16 bits each), from cycle 0
+  function sound(fn) { sink = fn; made = 0; }
+  Object.assign(v, { read, write, tick, irqActive, nextEvent, reset: t => reconfigure(t), frame, cells, text, peek, rgbPalette, sound, soundTo });
   return v;
 }
 
