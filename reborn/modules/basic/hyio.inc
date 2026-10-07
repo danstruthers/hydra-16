@@ -61,6 +61,10 @@ keybuf:     .res        1
 ; The note handler, in RAM: Ctrl-C (NOTE_INTERRUPT) noted in intr, for the next statement (ISCNTC) or wait; another,
 ; the default
 .segment "DATA"
+; (First in DATA, at fixed places for PEEK and POKE: DATA is after the line buffer's page, at $0500)
+SYSREGS:    .byte       0, 0, 0, 0                          ; $0500 (1280): .A, .X, .Y and the flags after SYS (RREG's)
+USR:        jmp         IQERR                               ; $0504 (1284): USR(x)'s jump (its address at 1285, 1286)
+.assert     SYSREGS = $0500 && USR = $0504, error, "SYSREGS and USR: their documented places"
 notes:
             cmp         #NOTE_INTERRUPT
             bne         :+
@@ -129,7 +133,6 @@ main:
             sta         GORESTART
             sta         GOSTROUT
             sta         JMPADRS
-            sta         USR
             lda         #<RESTART
             ldy         #>RESTART
             sta         GORESTART+1
@@ -146,10 +149,6 @@ main:
             ldy         #>GIVAYF
             sta         GOGIVEAYF
             sty         GOGIVEAYF+1
-            lda         #<IQERR
-            ldy         #>IQERR
-            sta         USR+1
-            sty         USR+2
             lda         #WIDTH                              ; The width, and the last comma field's start (Microsoft's
             sta         Z17                                 ;   sum: 70 for 80)
             sec
@@ -1227,3 +1226,180 @@ SLEEP_ST:
 
 CON_TICK_HZ: .byte      $88, $48, $00, $00, $00             ; (200, TICK_HZ: 0.78125 * 2^8)
 .assert TICK_HZ = 200, error, "CON_TICK_HZ is 200"
+
+; ---- SYS, RREG and USR: machine code and the system's calls (Commodore's BASIC 7 form)
+
+.bss
+sysaddr:    .res        2                                   ; SYS's address ...
+sysa:       .res        1                                   ;   and its registers in
+sysx:       .res        1
+sysy:       .res        1
+rregi:      .res        1                                   ; RREG's register (0-3)
+.code
+
+; "SYS" STATEMENT: SYS address [, a [, x [, y]]]: the machine code at address called (jsr) with .A, .X and .Y (0 if
+; they're not given), the output sent first; .A, .X, .Y and the flags after are RREG's (and at SYSREGS: PEEK(1280)
+; to PEEK(1283)).  SYS "NAME" [, ...]: a system call by its name (spec/api.def's, either case: basicsys.inc), its
+; registers r0-r15 the program's POKEs at 2-33, its results read there and with RREG (C, bit 0 of the flags: it
+; failed, .A the error).  A name not there: NO SUCH CALL
+SYS_ST:
+            cmp         #'"'
+            bne         @addr
+            jsr         GETNAME
+            jsr         SYS_LOOKUP
+            bra         @regs
+@addr:
+            jsr         FRMNUM
+            jsr         GETADR
+            lda         LINNUM
+            sta         sysaddr
+            lda         LINNUM+1
+            sta         sysaddr + 1
+@regs:
+            stz         sysa
+            stz         sysx
+            stz         sysy
+            ldx         #0
+:
+            phx
+            jsr         CHRGOT
+            plx
+            cmp         #','
+            bne         @call
+            phx
+            jsr         COMBYTE
+            txa
+            plx
+            sta         sysa,x
+            inx
+            cpx         #3
+            bcc         :-
+@call:
+            ldx         #3                                  ; (The output out first; r0 and r1, which its WRITE
+:                                                           ;   uses, kept: the program's POKEs)
+            lda         r0,x
+            pha
+            dex
+            bpl         :-
+            jsr         FLUSH
+            ldx         #0
+:
+            pla
+            sta         r0,x
+            inx
+            cpx         #4
+            bcc         :-
+            lda         sysa
+            ldx         sysx
+            ldy         sysy
+            jsr         @go
+            php
+            sta         SYSREGS
+            stx         SYSREGS + 1
+            sty         SYSREGS + 2
+            pla
+            sta         SYSREGS + 3
+            rts
+@go:
+            jmp         (sysaddr)
+
+; sysaddr = the address of the call pathbuf names (either case), from basicsys.inc's table; not there: NO SUCH CALL
+SYS_LOOKUP:
+            ldy         #0                                  ; (The name in capitals)
+:
+            lda         pathbuf,y
+            beq         :++
+            cmp         #'a'
+            bcc         :+
+            cmp         #'z'+1
+            bcs         :+
+            and         #$DF
+            sta         pathbuf,y
+:
+            iny
+            bra         :--
+:
+            lda         #<SYS_NAMES
+            sta         IOPTR
+            lda         #>SYS_NAMES
+            sta         IOPTR+1
+@name:
+            lda         (IOPTR)
+            bne         :+
+            lda         #E_NOSYS
+            jmp         OSERR
+:
+            ldy         #0
+@char:
+            lda         (IOPTR),y                           ; (Its last character: bit 7 set)
+            and         #$7F
+            cmp         pathbuf,y
+            bne         @next
+            lda         (IOPTR),y
+            iny
+            asl         a
+            bcc         @char
+            lda         pathbuf,y                           ; (All of it, and no more)
+            bne         @next
+            lda         (IOPTR),y
+            sta         sysaddr
+            iny
+            lda         (IOPTR),y
+            sta         sysaddr + 1
+            rts
+@next:
+            ldy         #0                                  ; The next: past this one's name and address
+:
+            lda         (IOPTR),y
+            iny
+            asl         a
+            bcc         :-
+            iny
+            iny
+            tya
+            clc
+            adc         IOPTR
+            sta         IOPTR
+            bcc         @name
+            inc         IOPTR+1
+            bra         @name
+
+; "RREG" STATEMENT: RREG [a] [, x] [, y] [, p]: the registers after the last SYS into numeric variables (any left
+; out: RREG ,X)
+RREG_ST:
+            stz         rregi
+@reg:
+            jsr         CHRGOT
+            beq         @done
+            cmp         #','
+            beq         @comma
+            jsr         PTRGET
+            sta         FORPNT
+            sty         FORPNT+1
+            lda         VALTYP                              ; (A string: TYPE MISMATCH)
+            bpl         :+
+            ldx         #ERR_BADTYPE
+            jmp         ERROR
+:
+            lda         VALTYP+1
+            pha
+            ldx         rregi
+            ldy         SYSREGS,x
+            jsr         SNGFLT
+            pla
+            jsr         LET2
+            jsr         CHRGOT
+            beq         @done
+            cmp         #','
+            jne         SYNERR
+@comma:
+            jsr         CHRGET
+            inc         rregi
+            lda         rregi
+            cmp         #4
+            bcc         @reg
+            jmp         SYNERR
+@done:
+            rts
+
+.include "basicsys.inc"

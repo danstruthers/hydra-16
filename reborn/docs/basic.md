@@ -107,10 +107,32 @@ seconds.
 Not here, for keywords' sake: pan, bend and General MIDI's drum numbers (`snd_pan`, `snd_bend`, `snd_drum`), and
 songs (`snd_play`: `play` at rc's prompt, or from the shell later).
 
+## Machine code and the system's calls: SYS, RREG, USR
+
+Reviewed against Commodore's BASIC 7 (`SYS address[,a[,x[,y]]]` and `RREG`, which read the registers back), Microsoft's
+USR, and HyForth's and hylang's `sys-` words and functions (a call by its name, every call a program makes, made from
+`spec/api.def`).  Settled: BASIC 7's two statements, and SYS taking a call's name too:
+
+* `SYS address [, a [, x [, y]]]`: the machine code at `address` called (`jsr`), with `.A`, `.X` and `.Y` (0 if
+  they're not given); the output is sent first.
+* `SYS "NAME" [, a [, x [, y]]]`: a system call by its name, in either case (`SYS "GETPID"`, `SYS "banks_alloc",1`):
+  `tools/apigen.js` makes the table, `obj/gen/basicsys.inc` (each name and its address in the jump table), from the
+  specification, as HyForth's and hylang's are made.  A name that isn't there: `?NO SUCH CALL ERROR`.  The call
+  registers `r0`-`r15` are bytes 2-33: POKE them just before the SYS (BASIC's own I/O uses `r0` and `r1`; SYS keeps
+  them while it sends the output), and PEEK the results there after it.
+* `RREG [a] [, x] [, y] [, p]`: the registers after the last SYS into numeric variables, any left out (`RREG ,X`);
+  for a system call, bit 0 of `p` (C) says it failed and `a` is then the error.  They're also at fixed places:
+  `PEEK(1280)` to `PEEK(1283)` (`SYSREGS`, `$0500`).
+* `USR(x)`: Microsoft's, its jump at 1284 (`$0504`): POKE its address at 1285 and 1286.  The code gets `x` in the
+  floating point accumulator and leaves its value there.  Until it's set, `?ILLEGAL QUANTITY ERROR`.
+
+Where machine code can go: a RAM bank of the task's, which `SYS "BANKS_ALLOC",1` gives (`RREG B`), selected at
+`$8000` by `POKE 0,B` (address 0 is the task's bank register) and POKEd there.
+
 ## To come
 
-SYS and the system's calls, the task's RAM banks for more memory, and the shell: each reviewed against what the
-system and the other languages have before it's added.
+The task's RAM banks for more memory, and the shell: each reviewed against what the system and the other languages
+have before it's added.
 
 ## The test
 
@@ -120,4 +142,5 @@ BYE; a pipeline into it; in `/ram`, SAVE as text and tokenized, LOAD of each, RU
 text's `cat`; scripts (`basic file`, `#!/bin/basic`: codes 0 and 1); files (OPEN's three modes, PRINT#, INPUT#, GET#
 and EOF at the end, CLOSE, the file's `cat`; FILE OPEN, FILE NOT OPEN, a file not there); INPUT's REDO FROM START;
 sound (SOUND's notes with a patch, a volume and off, SLEEP between two timed on the emulator's YM2151, BEEP's bell,
-`/dev/sndctl`'s volume kept and its error, ILLEGAL QUANTITY).
+`/dev/sndctl`'s volume kept and its error, ILLEGAL QUANTITY); SYS (calls by name and RREG, one not there, machine code
+in a bank called by SYS and by USR, registers in and out).

@@ -115,8 +115,6 @@ GOAYINT:
 	.res 2
 GOGIVEAYF:
 	.res 2
-USR:                                        ; (USR's jmp: IQERR till a program sets it)
-	.res 3
 POSX:
 	.res 1
 Z17:
