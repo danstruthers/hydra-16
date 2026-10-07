@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; storage - the storage driver (docs/reimplementation-from-scratch.md, §14.3), a boot driver on srvlib (task E): it
+; storage - the storage driver (docs/design/reimplementation-from-scratch.md, §14.3), a boot driver on srvlib (task E): it
 ; owns the SPI bus and every disk, and HydraFS on them.  A module of two banks: this file is its first (srvlib, SPI,
 ; the disks, #S and #d); hfs.s its second (HydraFS: #f).  Its devices:
 ;   #S      the SPI devices, a directory each: 0-f (0-7 the board's headers, 8-f the slots' cards)

@@ -38,7 +38,7 @@ This is careful, consistent work, and unusually well tested for a hobby OS.  Wha
   * seeded or random power-up states, to catch uninitialised RAM;
   * fault injection: stuck IRQs, RAM address lines, a missing chip;
   * both ACIA variants, and SD card images checked by an independent tool.
-* **The documentation is thorough**, kept up to date with the code, and has the design history in `docs/plans/`.
+* **The documentation is thorough**, kept up to date with the code, and has the design history in `docs/design/plans/`.
 
 The main risks are about growth, not quality:
 * **The fixed resources are used up.**  Page 0, COMMON, the OS zero page and the per-task namespace are all close to full.
@@ -102,7 +102,7 @@ Free space per BIOS ROM page, from the link map (`$E000-$FEFF`; `$FF00-$FFF9` is
   * **Move WOZMON off page 0.**  It's 248 bytes at `$FE00`, used only after `bye` or a crash.  It could run from page 4 (diagnostics) behind a gate.  The NMI and reset vectors stay where they are.
   * **Merge the peek routines in COMMON.**  `PEEK_D_XAM` and `FP_PEEK_PAGE` are the same routine (switch `W`, read `(zp),Y`, switch back) with different zero page pointers.  One `PEEK_PAGE` (`.X` = page, a shared pointer) saves about 15 bytes of COMMON on every page.  That's enough for another fast interrupt stub (the VERA's: [VIDEO.md](VIDEO.md)).
 * **Make the budget visible.**  Have the build print this table (it's a few lines of JavaScript over the map, like `check_pages.js`).  Fail, or warn loudly, when page 0 or COMMON drops below a threshold.  The free-space numbers written in the docs go stale; one printed by every build doesn't.
-* **The paged ROM** (4 MB, 192K used) is the place for everything that isn't code: fonts, help text, more `/rom` programs and libraries, song banks.  The [`/rom` work](../../old/docs/programming/io.md#the-roms-files-rom) makes that easy now.
+* **The paged ROM** (4 MB, 192K used) is the place for everything that isn't code: fonts, help text, more `/rom` programs and libraries, song banks.  The [`/rom` work](../../../../old/docs/programming/io.md#the-roms-files-rom) makes that easy now.
 
 ---
 
@@ -272,7 +272,7 @@ Thorough and accurate on the whole.  Small fixes:
 | 9 | `ZP_CS`: the client-task servers' 13 bytes, declared once; `CS_FITS` checks each server's names for them | |
 | 10 | `io/` (the layer), `servers/`, `fs/` (HydraFS), `drivers/rtc.s`; `programs/asm/` beside `programs/c/` | |
 | 11 | `os_rom/VERSION` (shown at boot: no date or commit, so a build's images stay the same); the generated `test_rom.s` is in `obj/` | Taking the ROM images out of Git, and branch naming: your call (both work as they are) |
-| 12 | [docs/tutorial.md](../../old/docs/tutorial.md): the first hour, in the emulator | More (a first driver; the VERA, once it's there) |
+| 12 | [docs/tutorial.md](../../../../old/docs/tutorial.md): the first hour, in the emulator | More (a first driver; the VERA, once it's there) |
 
 Also: the IO self test needs 2 free namespace entries (not 4); `/rom` takes none (as `/env`); the README lists `programs/` and `build.js`; a root `.gitignore` for KiCad's backups and locks; `FILENAME_MAX`, the IRQ-rate rule for drivers and the names that need no mount are in the docs.  Not done: `MM_ALLOC` from C, and a note when a background task ends ([IDEAS.md](IDEAS.md)).
 

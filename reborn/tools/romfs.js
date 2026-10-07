@@ -1,5 +1,5 @@
 // ****************************************************************************
-// romfs.js - the ROM disk (docs/reimplementation-from-scratch.md, §8.3; phase 3.5): the paged ROM as one disk (x, the
+// romfs.js - the ROM disk (docs/design/reimplementation-from-scratch.md, §8.3; phase 3.5): the paged ROM as one disk (x, the
 // storage driver's), with a partition table in its block 0, the system's banks (the module directory, the hardware
 // test, the modules) a partition of their own, and a read-only HydraFS volume in the banks after the modules, which
 // init mounts at /rom (mount '#f' /rom x).  Its files come from a manifest (romfs/romfs.txt); the volume is made with

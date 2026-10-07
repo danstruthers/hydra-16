@@ -1,7 +1,8 @@
 # Wiring the Vera X to the Hydra-16 through a bus breakout card
 
 How to connect the VERA X 6.1 (Joe Burks's, the 2x13 header) to the Hydra-16 with a **HydraBusBreakoutCard** in
-**slot 0**, two glue chips on a small protoboard, and wires.  Until the carrier card (VIDEO.md's option A) exists,
+**slot 0**, two glue chips on a small protoboard, and wires.  Until the carrier card (the plan's option A:
+[design/plans/VIDEO.md](design/plans/VIDEO.md); the card in [hardware.md](hardware.md#the-vera-x-slot-0)) exists,
 this is how the driver (`vid`) meets the real chip.
 
 Everything here comes from the board's own schematics (`board/`, read only): netlists exported with KiCad 9's
@@ -130,7 +131,7 @@ Pin 1 is SCL; odd pins on one row, even on the other (the OtterX's VERA connecto
 | 13 | `CS#` | U1 pin 14 |
 | 14 | `RES#` | J8 pin 1 (RESB) |
 | 15 | `WR#` | U2 pin 8 |
-| 16 | `IRQ#` | J5 pin 6 (IRQA) |
+| 16 | `IRQ#` | J5 pin 6 (IRQA; or through an open-collector buffer, below) |
 | 17 | A4 | J3 pin 12 |
 | 18 | `RD#` | U2 pin 3 |
 | 19 | A2 | J3 pin 14 |
@@ -180,6 +181,17 @@ inverting summer (its inputs at a virtual ground), beside the YM2151.  A ground-
 straight in.  Before wiring them, measure pins 25 and 26 against GND with the card running: if they sit at a DC
 level (a DAC biased at half its supply) rather than about 0 V, put a 10 µF capacitor in series with each (its +
 toward the VERA if the level is positive), or the mixer will amplify the offset too.
+
+The mixer is a unity-gain summer (10K in, 10K feedback, for each of the slots' pairs and the YM2151's), so the VERA
+comes out as loud as its line output is, which may be louder than the YM2151.  If so, a divider in each line evens
+them (10K in series and 4.7K to GND at the mixer's side: about a third), as the carrier card's plan has it.
+
+## The interrupt
+
+Slot 0's IRQ A is its alone, with a 3.3K pull-up on the board into the 74LS148, so the VERA's `IRQ#` can drive it
+directly: low for an interrupt, high (3.3 V) or let go otherwise.  The carrier card's plan puts an open-collector
+buffer in the way, so the card only ever pulls the line low; on the bench a 74LS07 gate (VERA pin 16 to its input,
+its output to J5 pin 6) does the same, if the line misbehaves.
 
 ## Timing (why the strobes are made so)
 

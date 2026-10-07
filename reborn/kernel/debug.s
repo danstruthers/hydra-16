@@ -1,6 +1,6 @@
 ; ****************************************************************************
 ; debug.s - the debugger's half in the kernel: single steps and breakpoints (TASKSTEP), for /proc/N/ctl (kdev) and
-; the debugger, db (docs/reimplementation-from-scratch.md, phase 9).
+; the debugger, db (docs/design/reimplementation-from-scratch.md, phase 9).
 ;
 ; A step runs a stopped task's next instruction out of line: a copy of it in the task's OS zero page (TK_STEPBUF),
 ; a BRK after it, its frame's PC there, and the task started.  The BRK comes through IRQ_STRAY to K_TRAP (the

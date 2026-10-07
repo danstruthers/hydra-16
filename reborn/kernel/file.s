@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; file.s - files (BIOS ROM page 2: far calls; docs/reimplementation-from-scratch.md, §12).
+; file.s - files (BIOS ROM page 2: far calls; docs/design/reimplementation-from-scratch.md, §12).
 ;
 ; An fd (TA_FD, in the task's OS area) names a channel, in the kernel task: its server's task and device letter,
 ; the server's fid, its mode and qid type, its offset, and how many fds name it (K_CH_*).  A request is a block in

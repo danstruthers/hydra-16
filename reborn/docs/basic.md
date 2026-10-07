@@ -116,7 +116,7 @@ seconds.
 * `SLEEP s`: `s` seconds, as rc's and hylang's `sleep` (to the tick, 5 ms; up to 163 s), the output sent first;
   Ctrl-C ends it (and the program).
 
-The sound plan (docs/plans/SOUND_PARITY.md) chose this, few keywords and the driver's text for the rest, over a
+The sound plan (docs/design/plans/SOUND_PARITY.md) chose this, few keywords and the driver's text for the rest, over a
 keyword each (a dozen names lost to programs) or the X16's `FM` and `PSG` keywords: `SOUND` and `PLAY` reach
 everything the other languages' `snd-` words do.
 

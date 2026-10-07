@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; env.s - environments (BIOS ROM page 2: far calls; docs/reimplementation-from-scratch.md, §14.1).
+; env.s - environments (BIOS ROM page 2: far calls; docs/design/reimplementation-from-scratch.md, §14.1).
 ;
 ; Each task has an environment of its own: a RAM bank of the kernel task's (task t's: bank K_ENV_BASE + t, the
 ; first good RAM module's 16), worked on at ENV_WINDOW with that bank selected: ENV_MAX bytes, its variables one after

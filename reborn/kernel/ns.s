@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; ns.s - namespaces, the kernel task's side (BIOS ROM page 3: KCALLs; docs/reimplementation-from-scratch.md, §13).
+; ns.s - namespaces, the kernel task's side (BIOS ROM page 3: KCALLs; docs/design/reimplementation-from-scratch.md, §13).
 ;
 ; A namespace is the mount entries with its number (K_MT_*); a task names one (K_TASK_NS), and tasks share one: a
 ; child gets its parent's (SPAWN), or an empty one (SPAWN_NEWNS), and a task that changes a shared one gets a copy

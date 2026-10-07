@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; forth - HyForth, rebuilt (docs/reimplementation-from-scratch.md, §16): a Forth 2012 system, a program run in place
+; forth - HyForth, rebuilt (docs/design/reimplementation-from-scratch.md, §16): a Forth 2012 system, a program run in place
 ; from its paged ROM module.  `forth` at rc's prompt starts it; `forth <file` runs a file of source (its lines from
 ; stdin, as typed ones).  This module is the core: the Core word set, and INCLUDED, INCLUDE, REQUIRED, REQUIRE, \ and
 ; BYE, to load the rest.  The other word sets are libraries, pre-compiled (forthlib/NAME.s, tools/forthlib.js:

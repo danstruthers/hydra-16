@@ -23,7 +23,7 @@ and `ns` from step 4), and the memory files, `mem` and `ram` (step 3); `regs` an
 
 ### **Where it stands**
 
-`/proc` ([io.md](../../old/docs/programming/io.md#the-tasks-proc)), the device `proc` mounted by the boot shell (`/dev/proc` is
+`/proc` ([io.md](../../../../old/docs/programming/io.md#the-tasks-proc)), the device `proc` mounted by the boot shell (`/dev/proc` is
 the same files), lists the busy tasks, and for each task N has `status`, `ctl` (`kill`, `break`, `fg`), `cwd`, `env`,
 `pages` (a **summary**: `pages PP floor FF`; it was `mem`), `ns` (its namespace, as `ns` prints it), `cmd` (a line
 for its shell to run: HyForth's `send`), and its memory, `mem` and `ram`.  It's served in its client's task, from BIOS
@@ -95,7 +95,7 @@ sees them at `$8000` through its `$00`): offset `b * $2000 + o` is byte `o` of i
 **Raw RAM: `/dev/ram` (built).**  Neither file above reads memory as the hardware has it; `/dev/ram` does: every
 task's 32K, the shared RAM by bank ID, every RAM module's banks for every task, read-only, and **for task 0
 only**, the system's task (any other task's open is `ERR_IO_PERM`).  Its offsets and how it reads are in
-[io.md](../../old/docs/programming/io.md#the-ram-itself-devram).
+[io.md](../../../../old/docs/programming/io.md#the-ram-itself-devram).
 
 ---
 

@@ -1,7 +1,7 @@
 # hylang
 
 hylang is danlang on the Hydra-16: the lisp the plan makes the preferred command shell
-([../../docs/reimplementation-from-scratch.md](../../docs/reimplementation-from-scratch.md), §17; phase 7; the login
+([design/reimplementation-from-scratch.md](design/reimplementation-from-scratch.md), §17; phase 7; the login
 shell is HyForth's, the user's choice, and `hylang -l` is a shell too).  It was written again from scratch, in 65C02
 assembly: the first hylang (7.1 to 7.4a, to commit `a0973eb`) was deleted in October 2026, after a review of danlang
 and of it, and the new one was built to the plan that review led to, "danlang: review and 65C02 plan" (a Claude Docs

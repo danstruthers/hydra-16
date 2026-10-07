@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; snd - the sound driver (docs/reimplementation-from-scratch.md, §14.4): the YM2151 and the old system's library for
+; snd - the sound driver (docs/design/reimplementation-from-scratch.md, §14.4): the YM2151 and the old system's library for
 ; it (os_rom/sound: snd_lib.s, snd_srv.s, ym.s, beep.s), ported, on srvlib: the device #a (a boot driver: task C);
 ; and the Vera X's PSG, through the video driver (vid's #v/psg: the VERA is vid's), as channels 8-23.
 ;   /snd     a write: YM2151 register/value byte pairs, through the library (an odd last byte is dropped); a read:

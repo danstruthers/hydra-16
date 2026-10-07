@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; sched.s - the scheduler, waiting and waking, sleeping, the tick (docs/reimplementation-from-scratch.md, §10.8).
+; sched.s - the scheduler, waiting and waking, sleeping, the tick (docs/design/reimplementation-from-scratch.md, §10.8).
 ;
 ; A task that isn't running keeps one frame on its own stack, whatever stopped it (an interrupt, YIELD, a wait):
 ;   U, Y, W, X, A, P, PCL, PCH          (top first; TK_SP is just below it)
