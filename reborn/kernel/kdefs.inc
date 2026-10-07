@@ -28,7 +28,7 @@
 ; ---- cons.s: the bring-up console (polled)
 .global     K_CONS_INIT, K_PUTC, K_PUTS, K_GETC, K_PUTHEX, K_PUTNIB, K_PUTSTR
 ; ---- sys.s: the small calls
-.global     K_SYSINFO, K_ERRSTR, K_XCALL, K_NOSYS, K_IRQ_OWN, K_IRQ_RELEASE, K_DBG_KCOPY
+.global     K_SYSINFO, K_ERRSTR, K_XCALL, K_REBOOT, K_NOSYS, K_IRQ_OWN, K_IRQ_RELEASE, K_DBG_KCOPY
 ; ---- mem.s: memory (page 1)
 .global     K_MEM_START, K_SEG_EXIT, K_BRK, K_PAGES_ALLOC, K_PAGES_FREE, K_BANKS, K_BANKS_ALLOC, K_BANKS_FREE
 .global     K_SEG_CREATE, K_SEG_ATTACH, K_SEG_DETACH, K_SEG_MAP, K_SEGINFO

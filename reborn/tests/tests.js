@@ -890,6 +890,11 @@ module.exports = {
       expect: ['Hydra-16 hardware test'],
     },
     {
+      name: 'hwtool', what: 'hwtest at rc: the system starts again (REBOOT), and POST takes REBOOT_HWTEST\'s word as a T',
+      init: 'init', cycles: 60e6, machine: { input: 'āhwtest\r' },
+      expect: ['% hwtest\nhwtest: the system starts again, into the hardware test\n', 'Hydra-16 reborn', 'Hydra-16 hardware test'],
+    },
+    {
       name: 'task', what: 'tasks and the scheduler: SPAWN, EXITS, WAIT, SLEEP, preemption, PAUSE and WAKE, orphans',
       init: 't_task', modules: ['t_child'], without: ['cons', 'storage', 'snd', 'gpio'], cycles: 60e6,
     },

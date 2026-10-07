@@ -40,6 +40,7 @@ module      xd
 module      cmp
 module      more
 module      edit
+module      hwtest
 module      play
 module      xmodem
 module      forth

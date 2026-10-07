@@ -73,6 +73,16 @@ call KMESG system impl=K_KMESG far
   doc:    The kernel's messages: what it printed on the bring-up console (the banner, POST, the boot's tasks, a
   doc:    driver's own lines), its last KMESG_SIZE bytes.  /dev/kmesg (kdev's #n/kmesg) is them as a file.
 
+call REBOOT system impl=K_REBOOT
+  in:     .A = 0, or REBOOT_HWTEST
+  out:    (doesn't return)
+  errors: -
+  blocks: no
+  hl:     .A=n? ->
+  doc:    Start the system again, as the reset button does (the VIA's and ACIA's interrupts quieted first: only the
+  doc:    button resets the chips); with REBOOT_HWTEST, into the hardware test, as a T typed during POST does.
+  doc:    Every task ends where it is: files written are on their disks already (the disks write through).
+
 call XCALL system impl=K_XCALL
   in:     r15 = a routine's address ($A000-$DFFF); r14 (its low byte) = the paged ROM bank it's in; .A, .X, .Y,
   in:     the flags and r0-r13: the routine's
@@ -886,6 +896,7 @@ const NOTE_BRK        5        "Notes: sys: brk, a BRK instruction (133)"
 const NOTE_USER       16       "Notes: 16-31 are the programs' own (128 + the note)"
 const NOTE_GROUP      $80      "NOTE's .A: a note group, not a task"
 const SEM_MUTEX       $01      "SEM_NEW's .X: a mutex (its count 1, given back only by its holder)"
+const REBOOT_HWTEST   $01      "REBOOT's .A: into the hardware test"
 const SEM_MAX         16       "Semaphores: as many as there can be at once"
 const SPAWN_NEWGROUP  $01      "SPAWN's flags: the child starts a note group of its own"
 const SPAWN_NEWNS     $02      "SPAWN's flags: the child starts with an empty namespace of its own (else it shares its parent's)"

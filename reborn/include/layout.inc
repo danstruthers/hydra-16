@@ -394,6 +394,8 @@ K_SEM_HOLDER    = $0B80         ; (16)   a mutex's holder ($FF: none) ...
 K_SEM_WAITLO    = $0B90         ; (16)   and the tasks waiting for it (bit = task): 0-7 ...
 K_SEM_WAITHI    = $0BA0         ; (16)   8-15
 SEM_MUTEX       = $01           ; SEM_NEW's flag: a mutex
+K_HWT_WORD      = $0BB0         ; (4) REBOOT_HWTEST's word, "HWT!", for POST after the restart (task RAM: it stays)
+REBOOT_HWTEST   = $01           ; REBOOT's flag: into the hardware test
 K_EXIT_MSG      = $0500         ; (16 x 32) The exit records' messages
 EXIT_MSG_MAX    = 31            ;   (31 characters and the 0)
 EX_NONE         = 0
