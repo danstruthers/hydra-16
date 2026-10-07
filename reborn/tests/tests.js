@@ -214,6 +214,7 @@ const TOOL_LINES = [
     "bind '#d' /dev/sd",
     "bind '#S' /dev/spi",
     "bind '#m' /dev/mod",
+    "bind '#s' /dev/seg",
     "bind '#e' /env",
     "bind '#p' /proc",
     "bind '#f' /sd",
@@ -1529,7 +1530,7 @@ module.exports = {
       },
     },
     {
-      name: 'mem', what: 'memory: BREAK, pages, banks, a shared segment between tasks (and kcopy from it)',
+      name: 'mem', what: 'memory: BREAK, pages, banks, a shared segment between tasks (and kcopy from it); #r (raw RAM, init\'s); #s (a segment by name)',
       init: 't_mem', modules: ['t_child'], cycles: 30e6,
     },
     {

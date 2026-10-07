@@ -669,7 +669,7 @@ The default namespace file is in [Appendix E](#appendix-e-the-default-namespace)
 | `#g` GPIO | `/dev/gpio/0-7`, `port`, `ctl`, `ca1` | As today; CA1's interrupt is the kernel's (the VIA is) |
 | `#r` raw RAM | `/dev/ram` | Task 0's debugging view, as today, readable only by `init` and the kernel |
 
-(As built, phase 5.7: `#p` is kdev's, not task 0's (2.6); `mem` and `ram` through a new kernel call, `TASKMEM`, for drivers only, a byte at a time with T switched; `regs` and `env` through `TASKREAD`'s `TR_FRAME` and `TR_ENV`; `note` takes a note's name or number.  Who may: any task's but the kernel task's and a driver's, as `NOTE` has it.  `fd` came after the review of October 2026: a channel keeps the name it was opened by, which `FD2PATH` gives too.)
+(As built, phase 5.7: `#p` is kdev's, not task 0's (2.6); `mem` and `ram` through a new kernel call, `TASKMEM`, for drivers only, a byte at a time with T switched; `regs` and `env` through `TASKREAD`'s `TR_FRAME` and `TR_ENV`; `note` takes a note's name or number.  Who may: any task's but the kernel task's and a driver's, as `NOTE` has it.  `fd` came after the review of October 2026: a channel keeps the name it was opened by, which `FD2PATH` gives too.  `#s` and `#r` came then too, kdev's: `#s/ctl` names a segment (`name NAME N`, kdev holding it while it's named) and each name reads as its number; `#r` has `task` and `shared`, init's alone, read only.)
 
 #### **14.2 The console: `cons`** (a driver module; task F)
 

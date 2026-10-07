@@ -16,6 +16,7 @@ bind -a '#a' /dev           # snd sndctl bell
 bind '#d' /dev/sd
 bind '#S' /dev/spi
 bind '#m' /dev/mod
+bind '#s' /dev/seg          # shared segments by name: ctl (name NAME N, free NAME), a file a name
 mount '#e' /env            # the environment
 mount '#p' /proc
 

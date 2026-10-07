@@ -1,7 +1,8 @@
 ; ****************************************************************************
 ; t_mem - memory (phase 1.8), run as init with t_child and two RAM modules: BREAK, PAGES_ALLOC and PAGES_FREE,
-; BANKS, BANKS_ALLOC and BANKS_FREE, and a shared segment seen by another task (and copied with kcopy), freed when
-; the last task attached detaches or ends.
+; BANKS, BANKS_ALLOC and BANKS_FREE, and a shared segment seen by another task (and copied with kcopy), read raw
+; through #r (init's: the segment's bank, this task's RAM), named in #s (the name keeps it), freed when the name and
+; the last task attached are gone.
 
 .include "hydra.inc"
 .include "hw.inc"
@@ -16,6 +17,7 @@ brk0:       .res        2                                   ; The break at the s
 seg:        .res        1
 seg_u:      .res        1
 seg_bank:   .res        1
+fd:         .res        1
 
 .bss
 buf:        .res        64
@@ -185,12 +187,92 @@ main:
             stz         RAM_BANK
             stz         U_REGISTER
 
+; ---- #r: raw RAM (init's): the shared bank, and this task's RAM, as they are
+            lda         seg_u                               ; The bank's ID: U << 4 | its $00's low nibble, at
+            asl                                             ;   ID * $2000
+            asl
+            asl
+            asl
+            sta         r2
+            lda         seg_bank
+            and         #$0F
+            ora         r2
+            stz         r2 + 1                              ; (r2/r3: the offset)
+            lsr
+            ror         r2 + 1
+            lsr
+            ror         r2 + 1
+            lsr
+            ror         r2 + 1
+            sta         r3
+            stz         r3 + 1
+            stz         r2
+            LDR         r0, s_rshared
+            jsr         rawbyte
+            EXPECT_A    $A7, "#r/shared: the segment's bank, as this task wrote it"
+            lda         #$5C                                ; This task's RAM: task 1's at $8000
+            sta         buf + 63
+            LDR         r2, $8000 + buf + 63
+            stz         r3
+            stz         r3 + 1
+            LDR         r0, s_rtask
+            jsr         rawbyte
+            EXPECT_A    $5C, "#r/task: this task's RAM (task 1's, at $8000)"
+
+; ---- #s: the segment named; the name keeps it
+            jsr         segctl_open
+            lda         seg
+            jsr         segline                             ; "name frame N"
+            EXPECT_OK   "#s/ctl: name frame N"
+            jsr         segctl_write
+            EXPECT_ERR  E_EXIST, "the name again: E_EXIST"
+            lda         fd
+            jsr         CLOSE
+            LDR         r0, s_frame                         ; "#s/frame": "N 2"
+            lda         #O_READ
+            jsr         OPEN
+            sta         fd
+            LDR         r0, buf
+            LDR         r1, 63
+            lda         fd
+            jsr         READ
+            tax
+            stz         buf,X
+            lda         fd
+            jsr         CLOSE
+            ldx         #0                                  ; (Past the number: " 2")
+:
+            lda         buf,X
+            inx
+            cmp         #' '
+            bne         :-
+            lda         buf,X
+            EXPECT_A    '2', "#s/frame reads as its segment and its banks (2)"
+
             lda         seg
             jsr         SEG_DETACH
             EXPECT_OK   "SEG_DETACH (the child's end detached it too)"
             lda         seg
             jsr         SEG_ATTACH
-            EXPECT_ERR  E_INVAL, "and with nobody attached it's gone: SEG_ATTACH, E_INVAL"
+            EXPECT_OK   "and named, it stays: SEG_ATTACH again"
+            lda         seg
+            jsr         SEG_DETACH
+            jsr         segctl_open
+            LDR         r0, s_freeframe
+            LDR         r1, s_freeframe_end - s_freeframe
+            lda         fd
+            jsr         WRITE
+            EXPECT_OK   "#s/ctl: free frame"
+            LDR         r0, s_freeframe
+            LDR         r1, s_freeframe_end - s_freeframe
+            lda         fd
+            jsr         WRITE
+            EXPECT_ERR  E_NOENT, "free frame again: E_NOENT"
+            lda         fd
+            jsr         CLOSE
+            lda         seg
+            jsr         SEG_ATTACH
+            EXPECT_ERR  E_INVAL, "and with no name and nobody attached it's gone: SEG_ATTACH, E_INVAL"
             lda         #0
             jsr         SEG_CREATE
             EXPECT_ERR  E_INVAL, "SEG_CREATE 0: E_INVAL"
@@ -199,6 +281,62 @@ main:
             EXPECT_ERR  E_NOMEM, "SEG_CREATE 129: E_NOMEM"
 
             DONE        "t_mem"
+
+; .A = the byte at offset r2/r3 (32 bits) of the file named at r0 ($EE: an error)
+rawbyte:
+            lda         #O_READ
+            jsr         OPEN
+            bcs         @bad
+            sta         fd
+            MOVR        r0, r2                              ; SEEK: r0, r1 the offset
+            MOVR        r1, r3
+            ldx         #0
+            lda         fd
+            jsr         SEEK
+            LDR         r0, buf
+            LDR         r1, 1
+            lda         fd
+            jsr         READ
+            php
+            lda         fd
+            jsr         CLOSE
+            plp
+            bcs         @bad
+            lda         buf
+            rts
+
+@bad:
+            lda         #$EE
+            rts
+
+; fd = #s/ctl, open for writing
+segctl_open:
+            LDR         r0, s_segctl
+            lda         #O_WRITE
+            jsr         OPEN
+            sta         fd
+            rts
+
+; "name frame NN" (segment .A, in hex) into buf, then written to fd (segctl_write).  OUT: C, .A
+segline:
+            pha
+            ldx         #s_nameframe_end - s_nameframe - 1
+:
+            lda         s_nameframe,X
+            sta         buf,X
+            dex
+            bpl         :-
+            pla
+            jsr         hexbyte                             ; (At args + 1, + 2)
+            lda         args + 1
+            sta         buf + s_nameframe_end - s_nameframe
+            lda         args + 2
+            sta         buf + s_nameframe_end - s_nameframe + 1
+segctl_write:
+            LDR         r0, buf
+            LDR         r1, s_nameframe_end - s_nameframe + 2
+            lda         fd
+            jmp         WRITE
 
 ; .A as two hex digits at args + 1
 hexbyte:
@@ -225,3 +363,11 @@ hexbyte:
 
 .rodata
 s_child:    .byte       "#m/t_child", 0
+s_rshared:  .byte       "#r/shared", 0
+s_rtask:    .byte       "#r/task", 0
+s_segctl:   .byte       "#s/ctl", 0
+s_frame:    .byte       "#s/frame", 0
+s_nameframe: .byte      "name frame $"
+s_nameframe_end:
+s_freeframe: .byte      "free frame"
+s_freeframe_end:

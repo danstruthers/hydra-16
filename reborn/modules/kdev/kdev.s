@@ -2,7 +2,7 @@
 ; kdev - the kernel's own devices (docs/reimplementation-from-scratch.md, §14.1), served by a driver of their own
 ; on srvlib (a boot driver), not by the kernel task: it keeps only tables.  One tree each:
 ;   #/      the root: an empty directory for each mount point of the default namespace (bin dev env lib mnt pc
-;           proc ram rom sd sram tmp, and in dev: gpio i2c mod sd spi), so ls / and ls /dev show them
+;           proc ram rom sd sram tmp, and in dev: gpio i2c mod sd seg spi), so ls / and ls /dev show them
 ;   #n      null (reads as nothing, takes every write), zero (reads as zeros, takes every write), kmesg (the
 ;           kernel's messages: what it printed on the bring-up console, the boot's too, its last KMESG_SIZE: KMESG)
 ;   #t      ticks: the tick count (its low 16 bits, TICK_HZ a second), in decimal
@@ -14,6 +14,10 @@
 ;   #|      pipes: opening pipe makes a new one (its read end; for O_WRITE, its write end), and R_DUP its other end
 ;           (PIPE does both); 512 bytes each, 8 of them
 ;   #e      the environment of the task asking (the kernel keeps it: ENV_GET ...), a file a variable
+;   #s      shared segments by name (at /dev/seg): ctl (name NAME N: segment N named, kdev attached to it, so the
+;           name keeps it; free NAME), and a file a name, read as its segment's number and banks
+;   #r      raw RAM, for init alone (not in the default namespace): task (every task's RAM, task t's at t * $8000,
+;           512K) and shared (the shared banks, ID i's at i * $2000, 2M), read only
 
 .include "hydra.inc"
 .include "hw.inc"
@@ -36,6 +40,8 @@ EF_VAR          = 2                                         ;   or a variable (0
 MBUF            = 512                                       ; /proc/N/mem and ram: a request's bytes at most
 EBUF            = 256                                       ; /proc/N/env: a part of the environment read at a time
 TI_DRIVER       = $01                                       ; (TASKINFO's flags: a driver)
+SG_N            = 16                                        ; #s: names at most (a segment may have several)
+SG_NAME         = SRV_DNAME_MAX + 1                         ;   and a name's bytes
 
 .zeropage
 pp:         .res        1                                   ; A pipe ...
@@ -46,6 +52,7 @@ pt:         .res        2                                   ; A pointer
 tk:         .res        1                                   ; A task
 cnt:        .res        1
 want:       .res        1                                   ; A module type wanted (0: any)
+sgp:        .res        2                                   ; #s: a name
 left:       .res        1
 mp:         .res        2                                   ; A module's entry in mdir
 
@@ -73,6 +80,8 @@ nsbseq:     .res        1                                   ;   its place ...
 nsm:        .res        1                                   ;   and <> 0 for a mount's line)
 rq:         .res        1                                   ; /proc/N/mem's and ram's request (R_READ, R_WRITE) ...
 mbuf:       .res        MBUF                                ;   and their bytes
+sg_seg:     .res        SG_N                                ; #s: each name's segment ($FF: none) ...
+sg_name:    .res        SG_N * SG_NAME                      ;   and the name
 ebuf:       .res        EBUF                                ; /proc/N/env: a part of the environment (TASKREAD's TR_ENVAT) ...
 eb_at:      .res        2                                   ;   where in it the part starts ...
 eb_n:       .res        2                                   ;   the part's bytes ...
@@ -123,6 +132,11 @@ init:
             bpl         :-
             lda         #$FF
             sta         last_want
+            ldx         #SG_N - 1                           ; (#s: no names)
+:
+            sta         sg_seg,X
+            dex
+            bpl         :-
             jsr         md_init
             jsr         time_init                           ; (The clock from the DS1747)
             ldx         #0
@@ -3366,6 +3380,439 @@ c_start:
             jmp         TASKSTOP
 
 ; ****************************************************************************
+; #s: shared segments by name.  A name is kdev's (SG_N of them), its segment attached to kdev, so the segment stays
+; while it's named (as a file keeps a disk's blocks); the name's file reads as "N B" (the segment, its banks).  The
+; directory is ctl, then the names (SK_DYN: a name's id its slot)
+
+h_segs:
+            cmp         #DYN_FIND
+            beq         @find
+            cmp         #DYN_IDNAME
+            beq         @idname
+            ldx         #0                                  ; DYN_NAME: the srv_k-th name
+            ldy         z:srv_k
+@slot:
+            lda         sg_seg,X
+            cmp         #$FF
+            beq         @next
+            cpy         #0
+            beq         @this
+            dey
+@next:
+            inx
+            cpx         #SG_N
+            bcc         @slot
+            sec
+            rts
+
+@this:
+            jsr         sg_dname
+            txa
+            clc
+            rts
+
+@idname:
+            jsr         sg_dname
+            clc
+            rts
+
+@find:                                                      ; The name at srv_p (to a / or its end)
+            MOVR        sgp, z:srv_p
+            jsr         sg_find
+            bcs         @noent
+            txa
+            rts
+
+@noent:
+            lda         #E_NOENT
+            rts
+
+; A name's file: "N B" (its segment, and its banks: SEG_MAP's, till E_RANGE)
+gen_seg:
+            ldx         z:srv_id
+            lda         sg_seg,X
+            cmp         #$FF
+            beq         @gone
+            pha
+            ldx         #0
+            jsr         srv_tputdec
+            jsr         space
+            stz         cnt
+@bank:
+            pla
+            pha
+            ldx         cnt
+            jsr         SEG_MAP
+            bcs         :+
+            inc         cnt
+            bne         @bank
+:
+            pla
+            lda         cnt
+            ldx         #0
+            jsr         srv_tputdec
+            lda         #LF
+            jsr         srv_tputc
+            clc
+            rts
+
+@gone:
+            lda         #E_NOENT
+            sec
+            rts
+
+; ctl: name NAME N (segment N named: E_EXIST if the name is, E_NOMEM with SG_N names, E_INVAL if there's no
+; segment N; kdev attaches to it); free NAME (the name gone, and kdev's hold on the segment if it was its last name)
+c_name:
+            lda         z:srv_argn
+            cmp         #2
+            bne         @inval
+            lda         srv_arg + 3                         ; (N: a byte)
+            bne         @inval
+            MOVR        sgp, srv_argp                       ; The name: 1 to SG_NAME - 1 bytes, no /
+            ldy         #0
+:
+            lda         (sgp),Y
+            beq         :+
+            cmp         #'/'
+            beq         @inval
+            iny
+            cpy         #SG_NAME
+            bcc         :-
+            bra         @inval
+:
+            tya
+            beq         @inval
+            jsr         sg_find
+            bcc         @exist
+            ldx         #SG_N - 1                           ; A free slot
+:
+            lda         sg_seg,X
+            cmp         #$FF
+            beq         :+
+            dex
+            bpl         :-
+            lda         #E_NOMEM
+            sec
+            rts
+:
+            stx         tk
+            lda         srv_arg + 2                         ; Kdev attached (once, however many names it has)
+            jsr         SEG_ATTACH
+            bcs         @done
+            ldx         tk
+            lda         srv_arg + 2
+            sta         sg_seg,X
+            jsr         sg_at                               ; The name
+            ldy         #0
+:
+            lda         (sgp),Y
+            sta         (pt),Y
+            beq         :+
+            iny
+            bra         :-
+:
+            clc
+@done:
+            rts
+
+@inval:
+            lda         #E_INVAL
+            sec
+            rts
+
+@exist:
+            lda         #E_EXIST
+            sec
+            rts
+
+c_sfree:
+            lda         z:srv_argn
+            cmp         #1
+            bne         @inval
+            MOVR        sgp, srv_argp
+            jsr         sg_find
+            bcs         @noent
+            lda         sg_seg,X                            ; Gone; and kdev's hold, if no other name has it
+            sta         cnt
+            lda         #$FF
+            sta         sg_seg,X
+            ldx         #SG_N - 1
+:
+            lda         sg_seg,X
+            cmp         cnt
+            beq         @kept
+            dex
+            bpl         :-
+            lda         cnt
+            jmp         SEG_DETACH
+
+@kept:
+            clc
+            rts
+
+@inval:
+            lda         #E_INVAL
+            sec
+            rts
+
+@noent:
+            lda         #E_NOENT
+            sec
+            rts
+
+; The name at sgp (to a / or its end): .X = its slot; or C = 1
+sg_find:
+            ldx         #0
+@slot:
+            lda         sg_seg,X
+            cmp         #$FF
+            beq         @next
+            jsr         sg_at
+            ldy         #0
+@byte:
+            lda         (sgp),Y
+            cmp         #'/'
+            bne         :+
+            lda         #0
+:
+            cmp         (pt),Y
+            bne         @next
+            cmp         #0
+            beq         @found
+            iny
+            cpy         #SG_NAME
+            bcc         @byte
+@next:
+            inx
+            cpx         #SG_N
+            bcc         @slot
+            sec
+            rts
+
+@found:
+            clc
+            rts
+
+; pt = slot .X's name.  Keeps .X, .Y
+sg_at:
+            txa
+            asl
+            asl
+            asl
+            asl
+            clc
+            adc         #<sg_name
+            sta         pt
+            lda         #>sg_name
+            adc         #0
+            sta         pt + 1
+            rts
+
+; Slot .X's name into srv_dname.  Keeps .X
+sg_dname:
+            jsr         sg_at
+            ldy         #SG_NAME - 1
+:
+            lda         (pt),Y
+            sta         srv_dname,Y
+            dey
+            bpl         :-
+            rts
+
+.assert     SG_N * SG_NAME <= 256 .and SG_NAME = 16, error, "sg_at: a slot's name at slot * 16"
+
+; ****************************************************************************
+; #r: raw RAM, read only, for init alone (the plan's: the kernel's and init's debugging view).  task: every task's
+; RAM, task t's $0000-$7FFF at t * $8000 (TASKMEM; a free task's reads as zeros); shared: the shared banks, ID i's
+; at i * $2000 (U and the bank register, a moment: kdev has no irq entry to see them).  A read takes one task's, or
+; one bank's, MBUF bytes at most
+
+; (The end of the file: nothing read)
+raw_end:
+            clc
+raw_done:
+            rts
+
+h_rtask:
+            jsr         raw_req
+            bcc         :+
+            rts
+:
+            lda         TASK_INBOX + RQ_OFFSET + 3          ; The task: bits 15-18
+            bne         raw_end
+            lda         TASK_INBOX + RQ_OFFSET + 2
+            cmp         #16 / 2                             ; (16 tasks)
+            bcs         raw_end
+            sta         tk
+            lda         TASK_INBOX + RQ_OFFSET + 1
+            asl
+            rol         tk
+            lda         TASK_INBOX + RQ_OFFSET              ; Its address, and its RAM's end ($8000)
+            sta         r1
+            lda         TASK_INBOX + RQ_OFFSET + 1
+            and         #$7F
+            sta         r1 + 1
+            stz         n
+            lda         #>$8000
+            sta         n + 1
+            jsr         raw_m
+            jsr         GETPID                              ; (Kdev's own: as it is here)
+            cmp         tk
+            bne         :+
+            jsr         raw_copy
+            jmp         mem_out
+:
+            LDR         r0, mbuf
+            MOVR        r2, m
+            lda         tk
+            ldx         #TM_READ
+            jsr         TASKMEM
+            bcc         :+
+            cmp         #E_SRCH                             ; (A free task: zeros)
+            bne         raw_done
+            jsr         raw_zeros
+:
+            jmp         mem_out
+
+h_rshared:
+            jsr         raw_req
+            bcc         :+
+            rts
+:
+            lda         TASK_INBOX + RQ_OFFSET + 3          ; The bank's ID: bits 13-20
+            bne         raw_end
+            lda         TASK_INBOX + RQ_OFFSET + 2
+            cmp         #$20
+            bcs         raw_end
+            asl
+            asl
+            asl
+            sta         tk
+            lda         TASK_INBOX + RQ_OFFSET + 1
+            lsr
+            lsr
+            lsr
+            lsr
+            lsr
+            ora         tk
+            sta         tk
+            lda         TASK_INBOX + RQ_OFFSET              ; Its address in the window, and the window's end
+            sta         r1
+            lda         TASK_INBOX + RQ_OFFSET + 1
+            and         #>(BANK_SIZE - 1)
+            ora         #>BANK_WINDOW
+            sta         r1 + 1
+            stz         n
+            lda         #>(BANK_WINDOW + BANK_SIZE)
+            sta         n + 1
+            jsr         raw_m
+            lda         U_REGISTER                          ; The bank at $8000, a moment
+            pha
+            lda         RAM_BANK
+            pha
+            lda         tk
+            lsr
+            lsr
+            lsr
+            lsr
+            sta         U_REGISTER
+            lda         tk
+            and         #$0F
+            ora         #SHARED_BANK
+            sta         RAM_BANK
+            jsr         raw_copy
+            pla
+            sta         RAM_BANK
+            pla
+            sta         U_REGISTER
+            jmp         mem_out
+
+; Its request: an open by init alone, for reading; a read (C = 0, RQ_DONE 0); anything else, nothing (C = 1, .A)
+raw_req:
+            cmp         #R_OPEN
+            bne         @read
+            lda         TASK_INBOX + RQ_CLIENT
+            cmp         #INIT_TASK
+            bne         @perm
+            lda         TASK_INBOX + RQ_MODE
+            and         #O_RW_MASK
+            bne         @perm
+            bra         raw_ok                              ; (Nothing more to do)
+
+@perm:
+            lda         #E_PERM
+            sec
+            rts
+
+@read:
+            cmp         #R_READ
+            bne         raw_ok
+            stz         TASK_INBOX + RQ_DONE
+            stz         TASK_INBOX + RQ_DONE + 1
+            clc
+            rts
+
+raw_ok:
+            pla                                             ; (Out of the handler: done, no error)
+            pla
+            clc
+            rts
+
+; m = n - r1 (to the area's end), the count asked and MBUF at most
+raw_m:
+            sec
+            lda         n
+            sbc         r1
+            sta         m
+            lda         n + 1
+            sbc         r1 + 1
+            sta         m + 1
+            jmp         clip
+
+; m bytes from r1 into mbuf
+raw_copy:
+            LDR         r0, mbuf
+            MOVR        r2, m
+@byte:
+            lda         r2
+            ora         r2 + 1
+            beq         @done
+            lda         (r1)
+            sta         (r0)
+            jsr         adv0
+            jsr         adv1
+            lda         r2
+            bne         :+
+            dec         r2 + 1
+:
+            dec         r2
+            bra         @byte
+
+@done:
+            rts
+
+; mbuf's m bytes zeros
+raw_zeros:
+            LDR         r0, mbuf
+            MOVR        r2, m
+:
+            lda         r2
+            ora         r2 + 1
+            beq         :+
+            lda         #0
+            sta         (r0)
+            jsr         adv0
+            lda         r2
+            bne         @dec
+            dec         r2 + 1
+@dec:
+            dec         r2
+            bra         :-
+:
+            rts
+
+; ****************************************************************************
 ; #|: pipes (a fid's aux: its pipe, and $80 for the write end)
 
 h_pipe:
@@ -3676,6 +4123,10 @@ SRV_TREES:
             .word       tree_pipe
             .byte       'e'
             .word       tree_env
+            .byte       's'
+            .word       tree_seg
+            .byte       'r'
+            .word       tree_raw
             .byte       0
 
 tree_root:
@@ -3695,6 +4146,7 @@ tree_root:
             SRV_ENTRY   s_gpio,    2,   SK_DIR,  0,         SM_READ,            0     ; (In dev: its mount points)
             SRV_ENTRY   s_i2c,     2,   SK_DIR,  0,         SM_READ,            0
             SRV_ENTRY   s_mod,     2,   SK_DIR,  0,         SM_READ,            0
+            SRV_ENTRY   s_seg,     2,   SK_DIR,  0,         SM_READ,            0
             SRV_ENTRY   s_sd,      2,   SK_DIR,  0,         SM_READ,            0
             SRV_ENTRY   s_spi,     2,   SK_DIR,  0,         SM_READ,            0
             .word       0
@@ -3731,6 +4183,16 @@ tree_procs:
             SRV_ENTRY   s_ram,     1,   SK_DATA, h_ram,     SM_READ | SM_WRITE, 0
             SRV_ENTRY   s_note,    1,   SK_DATA, h_pnote,   SM_WRITE,           0
             .word       0
+tree_seg:
+            SRV_ENTRY   s_slash,   $FF, SK_DYN,  h_segs,    SM_READ,            2     ; (Its children: entry 2)
+            SRV_ENTRY   s_ctl,     0,   SK_CTL,  seg_cmds,  SM_WRITE,           0
+            SRV_ENTRY   s_slash,   SE_TEMPLATE, SK_TEXT, gen_seg, SM_READ,      0     ; (Each name's file)
+            .word       0
+tree_raw:
+            SRV_ENTRY   s_slash,   $FF, SK_DIR,  0,         SM_READ,            0
+            SRV_ENTRY   s_task,    0,   SK_DATA, h_rtask,   SM_READ,            0
+            SRV_ENTRY   s_shared,  0,   SK_DATA, h_rshared, SM_READ,            0
+            .word       0
 tree_pipe:
             SRV_ENTRY   s_slash,   $FF, SK_DIR,  0,         SM_READ,            0
             SRV_ENTRY   s_pipe,    0,   SK_DATA, h_pipe,    SM_READ | SM_WRITE, 0
@@ -3741,6 +4203,10 @@ tree_env:
 e_reqs:     .byte       R_OPEN, R_CREATE, R_READ, R_WRITE, R_CLUNK, R_STAT, R_REMOVE, R_FLUSH, R_DUP
 E_NREQ      = * - e_reqs
 e_reqvec:   .word       e_open, e_create, e_read, e_write, e_clunk, e_stat, e_remove, e_ok, e_dup
+seg_cmds:
+            .word       s_name, c_name
+            .word       s_free, c_sfree
+            .word       0
 proc_cmds:
             .word       s_kill, c_kill
             .word       s_interrupt, c_intr
@@ -3776,6 +4242,10 @@ s_ctl:      .byte       "ctl", 0
 s_args:     .byte       "args", 0
 s_cwd:      .byte       "cwd", 0
 s_fd:       .byte       "fd", 0
+s_name:     .byte       "name", 0
+s_task:     .byte       "task", 0
+s_shared:   .byte       "shared", 0
+s_seg:      .byte       "seg", 0
 s_ns:       .byte       "ns", 0
 s_bind:     .byte       "bind", 0
 s_mount:    .byte       "mount", 0
