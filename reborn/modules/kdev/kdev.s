@@ -2,7 +2,7 @@
 ; kdev - the kernel's own devices (docs/reimplementation-from-scratch.md, §14.1), served by a driver of their own
 ; on srvlib (a boot driver), not by the kernel task: it keeps only tables.  One tree each:
 ;   #/      the root: an empty directory for each mount point of the default namespace (bin dev env lib mnt pc
-;           proc ram rom sd sram tmp, and in dev: gpio i2c mod sd seg spi), so ls / and ls /dev show them
+;           proc ram rom sd sram tmp, and in dev: gpio i2c mod sd seg spi vid), so ls / and ls /dev show them
 ;   #n      null (reads as nothing, takes every write), zero (reads as zeros, takes every write), kmesg (the
 ;           kernel's messages: what it printed on the bring-up console, the boot's too, its last KMESG_SIZE: KMESG)
 ;   #t      ticks: the tick count (its low 16 bits, TICK_HZ a second), in decimal
@@ -4168,6 +4168,7 @@ tree_root:
             SRV_ENTRY   s_seg,     2,   SK_DIR,  0,         SM_READ,            0
             SRV_ENTRY   s_sd,      2,   SK_DIR,  0,         SM_READ,            0
             SRV_ENTRY   s_spi,     2,   SK_DIR,  0,         SM_READ,            0
+            SRV_ENTRY   s_vid,     2,   SK_DIR,  0,         SM_READ,            0
             .word       0
 tree_null:
             SRV_ENTRY   s_slash,   $FF, SK_DIR,  0,         SM_READ,            0
@@ -4254,6 +4255,7 @@ s_gpio:     .byte       "gpio", 0
 s_i2c:      .byte       "i2c", 0
 s_mod:      .byte       "mod", 0
 s_spi:      .byte       "spi", 0
+s_vid:      .byte       "vid", 0
 s_null:     .byte       "null", 0
 s_zero:     .byte       "zero", 0
 s_kmesg:    .byte       "kmesg", 0

@@ -1,6 +1,17 @@
 ## **Video: the Vera X card in slot 0**
 
-A plan for the Hydra-16's supported video card: a card in **slot 0** carrying the **VERA** (the Versatile Embedded Retro Adapter, the Commander X16's video chip: an iCE40UP5K FPGA with 128K of video RAM, VGA out, a 16-voice PSG and PCM audio).  The card is called **Vera X** here.  Its 32 registers fill slot 0's **I/O ports 2 and 3** (`$FF20-$FF3F`).  Its interrupt is slot 0's **IRQ A, line 2**, and **IRQ B, line 3**, is for its keyboard and mouse controller.  The VERA's source (the module's PCB, gateware v0.9 and its programmer's reference) is in `c:\source\vera-module`.  Nothing here is built yet.
+A plan for the Hydra-16's supported video card: a card in **slot 0** carrying the **VERA** (the Versatile Embedded Retro Adapter, the Commander X16's video chip: an iCE40UP5K FPGA with 128K of video RAM, VGA out, a 16-voice PSG and PCM audio).  The card is called **Vera X** here.  Its 32 registers fill slot 0's **I/O ports 2 and 3** (`$FF20-$FF3F`).  Its interrupt is slot 0's **IRQ A, line 2**, and **IRQ B, line 3**, is for its keyboard and mouse controller.  The VERA's source (the module's PCB, gateware v0.9 and its programmer's reference) is in `c:\source\vera-module`.  Steps 1 to 4 are built in the rebuilt system (`reborn/`, phase 8): see [As built](#as-built-october-2026).
+
+### **As built (October 2026)**
+
+**The card** is the user's **VERA X 6.1** from Joe Burks (wavicle): the VERA with the X16 community's gateware (v47 on, X16Community/vera-module), not v0.9.  So it has the version register (DCSEL 63: `DC_VER0` reads "V", then the major, minor and build numbers) and FX (DCSEL 2-6).  The X16's *Programmer's Reference* (chapters 9 and 10) is its documentation.  Its headers: a 2x12 one as the X16's (this plan's J1) or a 2x13 one (the OtterX's, with I2C); its SD card's lines go to a header, not a slot.  The carrier card (option A) isn't built yet.
+
+**Built** in `reborn/`, which differs from this plan (written for the old system's ROM) as follows:
+* **The emulator's VERA** (step 1): `reborn/sim/lib/vera.js`, the v47.0.2 chip (FX's registers kept, its effects not modelled; no sound made); `run.js --vera`, `--screen`, `--frame-png`, and `--view` (the screen live in a browser) rather than a web emulator; the vera test.
+* **The driver** (step 2) is a module, `vid` (a boot driver, task A), not BIOS page E.  It detects the card itself, as it starts (not POST): the version register, or ADDR0 read back for v0.9, for 0.3 s (the FPGA configuring itself after a reset).  Its font is built in (ISO-8859-15, the X16 ROM's PXLfont), with `/lib/font/cp437` beside it; no boot logo yet.  The frame interrupt goes through the kernel's one IRQ path to vid's irq entry.
+* **`/dev/vid`** (step 3): `ctl`, `term`, `vram`, `pal`, `sprites`, `font` and `frame`.  `ctl`'s commands: `mode 80x60`, `mode 80x30`, `mode 40x30`, `cursor blink|on|off`, `border N`, `bitmap 320 D`, `bitmap 640 D`, `bitmap off` (layer 0), `claim`, `claim all`, `release`, `reset`.  `frame` reads as text (the count in decimal, and an LF), as the GPIO's `ca1` does.  Claims as step 5 plans them.
+* **The screen console** (step 4): the terminal is vid's (`#v/term`), and the console driver, `cons`, writes the shown window's text there as it sends it to the serial port; consctl's `screen`, `serial` and `both` choose.  The cursor is sprite 0 (an underline at VRAM `$1F800`, blinked by `DC_VIDEO`'s sprite bit).  No keyboard yet (step 6).
+* The programmer's chapter is `reborn/docs/programming/video.md`; the status, `reborn/docs/status.md`'s phase 8.
 
 ### **Contents**
 1. [Why the VERA](#why-the-vera)
@@ -77,8 +88,8 @@ The same circuit laid out on a full Hydra slot card with the glue logic and the 
 
 #### **The gateware**
 
-Start with the module's gateware as it is (v0.9 in `c:\source\vera-module`; the Commander X16 community has later releases).  Running it unchanged is itself a feature, because it keeps X16 code and documentation valid.  Possible changes later, since the source is here:
-* An ID/version register to detect the card by.  For v0.9, the ROM detects the card by writing and reading back `ADDR0_L` and `DC_BORDER` instead.
+Start with the module's gateware as it is (v0.9 in `c:\source\vera-module`; the Commander X16 community has later releases, and the Vera X built runs one of them: v47 on).  Running it unchanged is itself a feature, because it keeps X16 code and documentation valid.  Possible changes later, since the source is here:
+* An ID/version register to detect the card by.  The X16 community's gateware has one (DCSEL 63); for v0.9, the driver detects the card by writing and reading back `ADDR0` instead.
 * An optional second interrupt pin on option B, for raster (line) interrupts on their own.
 
 The gateware already fills most of the UP5K, so check the utilisation report before adding anything bigger, such as a PS/2 controller.

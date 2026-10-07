@@ -235,10 +235,16 @@ bank t).  Every fixed address is in `include/layout.inc`, and nowhere else.
   count to change.  A server that must give up on something that doesn't come (`/pc`'s reply) makes the count
   change now and then from an interrupt it owns (the console's timer 2, run on in rounds), and its client, asking
   again, looks at the time (`TICKS`).
-* **One driver owns the YM2151** (`snd`, `#a`), and only its task writes the chip.  The one call from a driver to
-  another is the console's bell: `cons` writes `#a/bell` when the shown window sends a BEL.  What's a task's in a
-  driver (a claim of channels) is the task's that opened the file it came through, given back as that task's last
-  file of the device closes.
+* **One driver owns the YM2151** (`snd`, `#a`), and only its task writes the chip.  The calls from a driver to
+  another are the console's: its bell (`cons` writes `#a/bell` when the shown window sends a BEL) and its screen
+  (`#v/term`, the shown window's text).  A driver called never calls the console, so no two wait on each other.
+  What's a task's in a driver (a claim of channels) is the task's that opened the file it came through, given back
+  as that task's last file of the device closes.
+* **One driver owns the VERA** (`vid`, `#v`), and only its task writes the chip, but for a task that claims it
+  (`ctl`'s `claim`): then the claimer's, its registers its to write, till it releases it or its last file of `#v`
+  closes (its end); the console's text for the screen waits in the driver meanwhile.  vid's code keeps `CTRL` at 0
+  (ADDR0, DCSEL 0), setting another DCSEL only with the VERA's interrupt off, as its irq entry writes `DC_VIDEO`
+  (the cursor's blink).
 * `PUTC`, `PUTS` and `GETC` are a write to fd 1 and a read from fd 0; a task without them (the kernel, a driver)
   has the bring-up console, polled.
 

@@ -369,7 +369,7 @@ main:
             lda         fd
             jsr         CLOSE
             lda         total
-            EXPECT_A    <(9 * SR_SIZE), "/dev: #/'s 6 mount points, then null, zero and kmesg (9 records)"
+            EXPECT_A    <(10 * SR_SIZE), "/dev: #/'s 7 mount points, then null, zero and kmesg (10 records)"
             lda         buf + SR_NAME
             EXPECT_A    'g', "/dev: gpio first: #/'s dev"
             OPEN_       s_devzero, O_READ

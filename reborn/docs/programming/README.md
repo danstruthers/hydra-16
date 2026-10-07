@@ -16,6 +16,7 @@ is the gentler way in.
 | [files.md](files.md) | Files and directories, the namespace, devices, the environment |
 | [servers.md](servers.md) | Writing a server or a driver: srvlib, requests, waiting, interrupts |
 | [modules.md](modules.md) | The HYX2 format, programs in RAM and in the ROM, modules of several banks, libraries and `XCALL` |
+| [video.md](video.md) | The screen, the Vera X: `/dev/vid`'s files, the console's terminal, claiming the chip, VRAM, the registers |
 
 ## The system in one page
 
@@ -30,21 +31,23 @@ RAM, out of other tasks' reach.
 
 **Modules** are everything else, in the paged ROM, each running in place in a task of its own: the drivers (`cons`
 the console and `/pc`, `storage` the SPI bus and every disk, `kdev` the kernel's devices, `snd` the YM2151, `gpio`
-the VIA's port A and I2C), init, the shells and the tools.  A program in a file (on a card, a RAM disk, `/pc`) is
-read into a task's RAM at `$0800` and runs there.
+the VIA's port A and I2C, `vid` the Vera X's screen), init, the shells and the tools.  A program in a file (on a
+card, a RAM disk, `/pc`) is read into a task's RAM at `$0800` and runs there.
 
 **Files**, Plan 9's way: every device is a file server, a tree of files; a program opens, reads and writes them with
 the same calls whatever's behind them, and controls a device by writing commands to its `ctl` file.  Each task has a
 namespace, the tree it sees, built from binds and mounts (`/rom/lib/namespace`), shared with its children until one
 changes it.
 
-**The console** is windows on the serial terminal: each a whole console with its own `cons`, line editor and shell.
+**The console** is windows on the serial terminal, and on the Vera X's screen if there's one: each a whole console
+with its own `cons`, line editor and shell.
 The login shell is HyForth over rc; rc is the shell of scripts and `system()`.
 
 ```
  task 0  kernel      the scheduler, IRQs, calls, memory, notes, channels, namespaces
  task 1  init        the namespace, the RAM disks, window 0's shell, wstart
  task 2+ programs    the shells, the tools, yours: in place from the paged ROM, or in RAM from $0800
+ task A  vid         #v  /dev/vid: the Vera X (with no card it ends as it starts)
  task B  gpio        #g  /dev/gpio, #i  /dev/i2c
  task C  snd         #a  /dev/snd, sndctl, bell
  task D  kdev        #/ #n #t #m #p #| #e #s #r: the root, null, ticks, modules, /proc, pipes, /env, segments
