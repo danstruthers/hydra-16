@@ -319,6 +319,13 @@ vt_keymodes:
             and         #VM_CKM | VM_KPAM
             rts
 
+; Bracketed paste (?2004) in window .A's screen: .A <> 0, it's set
+vt_paste:
+            jsr         vt_load
+            lda         v_mode2
+            and         #VM2_BPM
+            rts
+
 ; Window .X resized to the layout's size (lay_cols x lay_rows): its screen's ring turned so the cursor's row stays
 ; on it (ring_resize), the cells past a narrower width dropped, the cursor and the saved one in it, the margins the
 ; whole screen.  The alternate screen, in use, too (rows off its top dropped: it has no scrollback), and the main one
@@ -1657,6 +1664,15 @@ x_dec:
             ldx         vd_i
             lda         v_parh,X
             beq         @small
+            cmp         #>2004                              ; (2004: bracketed paste, the console's: its paste's)
+            bne         :+
+            lda         v_parl,X
+            cmp         #<2004
+            bne         @next
+            lda         #VM2_BPM
+            jsr         mode2_bit
+            bra         @next
+:
             cmp         #>1047                              ; (1047 and 1049: the alternate screen)
             bne         @next
             lda         v_parl,X
@@ -1708,6 +1724,19 @@ mode_bit:
             sta         v_mode
             rts
 
+; The same, in v_mode2
+mode2_bit:
+            ldx         vd_set
+            beq         :+
+            ora         v_mode2
+            sta         v_mode2
+            rts
+:
+            eor         #$FF
+            and         v_mode2
+            sta         v_mode2
+            rts
+
 d_ckm:                                                      ; ?1: the console's (it decodes the keys)
             lda         #VM_CKM
             jmp         mode_bit
@@ -1722,8 +1751,8 @@ d_colm:                                                     ; ?3: no 132 columns
 
 d_sclm:                                                     ; ?4: kept (DECRQM's), not acted on: scroll jump is the
                                                             ;   console's (consctl), as resets send ?4l
-            lda         vd_set
-            sta         v_mode2
+            lda         #VM2_SCLM
+            jsr         mode2_bit
             jmp         fs_raw
 
 d_scnm:                                                     ; ?5: the screen reversed (the serial port's terminal's

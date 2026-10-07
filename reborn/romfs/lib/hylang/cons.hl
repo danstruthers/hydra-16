@@ -3,7 +3,8 @@
 ; rawon and rawoff (raw lasts while a consctl is open: each key as it comes, unechoed); /dev/bell, a write, rings the
 ; console's bell (#a's: a short beep).  $window is this shell's window; (window-size) its size, consctl's size line
 ; (the smaller of the terminals it's shown on); (window-label s), (window-status s), (window-ctl s) its chrome (W4:
-; /dev/label, wctl's status and any wctl line).  A failure is the system's error.
+; /dev/label, wctl's status and any wctl line); (snarf), (snarf! s) the console's cut buffer (W6: /dev/snarf, all
+; the windows' one, 8K at most; Ctrl-] y pastes it).  A failure is the system's error.
 
 (use "dev")
 
@@ -24,6 +25,10 @@
 ; Its status line (the footer's %s), and any line of its wctl ("chrome screen off" ...)
 (fun {window-status s} {dev.write "/dev/wctl" (+ "status " s)})
 (fun {window-ctl s} {dev.write "/dev/wctl" s})
+
+; The console's cut buffer: its text, or set (a write replaces it)
+(fun {snarf} {dev.read "/dev/snarf"})
+(fun {snarf! s} {dev.write "/dev/snarf" s})
 
 ; The windows, a list of their numbers; and the one shown
 (fun {windows} {map (fn {l} {val (fst (str-split l " "))}) (dev.lines "/dev/wctl")})

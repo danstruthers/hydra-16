@@ -1297,7 +1297,7 @@ module.exports = {
       expect: ['% ls \'#fr\'\n1/\n2/\n%', '% ls /ram\nbin/\nlib/\n%',
         '% ls /bin\ndb\nedit\nfsck\ngrep\nlabel\nmkfs\nscom\nsort\ninit\nhello\nrc\nwstart\n', 't_child\n% t_child f\n', '% ls \'#fr\'/2\nbin/\nlib/\nmark\n%',
         'prompt=(', '% cat /dev/sd/s/ctl\nsram 512 KB 1024 blocks\nhydrafs label=SRAM\n', '% echo $window\n0\n%',
-        '% echo $window\n1\n%', '% ls \'#fr\'\n1/\n2/\n4/\n%', '% ls /ram\nbin/\nlib/\n%', '\ncons\nconsctl\nwctl\nwnew\nser\nserctl\nkbdin\ntext\nlabel\n%',
+        '% echo $window\n1\n%', '% ls \'#fr\'\n1/\n2/\n4/\n%', '% ls /ram\nbin/\nlib/\n%', '\ncons\nconsctl\nwctl\nwnew\nser\nserctl\nkbdin\ntext\nlabel\nsnarf\n%',
         '% echo stop >>\'#d/s/ctl\'; echo still; cat /sram/x\nstill\ncat: /sram/x: no such device\n%'],
     },
     {
@@ -2802,6 +2802,24 @@ module.exports = {
         for (const part of out.split('The windows: ').slice(1)) { const k = part.match(/\n> ([0-9a-f]) /); marked.push(k ? k[1] : '?'); }
         return marked.join(' ') === '0 2 1 0 2' ? [] : ['the lists marked ' + marked.join(' ') + ', not 0 2 1 0 2'];
       },
+    },
+    {
+      name: 'snarf', what: '/dev/snarf (W6a): written and read back; a file through it, the same (cmp); 8K at most (past them, disk full); Ctrl-] y\'s paste into rc as its keys (two lines: each LF a CR); hylang\'s snarf! and snarf; bracketed paste (?2004) to a keys vt reader, HyForth\'s ekey: CSI 200 ~, the text, CSI 201 ~',
+      init: 't_rc', cycles: 120e6,
+      get machine() {
+        const L = '\u0100';
+        return { input: 'āecho hello snarf >/dev/snarf; cat /dev/snarf\r' +
+          'ācat /rom/lib/windows >/dev/snarf; cmp /rom/lib/windows /dev/snarf; echo cmp $status\r' +
+          'ācat /rom/doc/api.md >/dev/snarf; wc -c /dev/snarf\r' + 'ā{echo echo one; echo echo two} >/dev/snarf\r' + 'ā\x1dy' +
+          'āhylang\r' + 'ā(use "cons")\r' + 'ā(snarf! "from hylang")\r' + 'ā(snarf)\r' + 'ā(exit)\r' +
+          'āecho -n ab >/dev/snarf\r' + 'āforth\r' + L + L + 'require facility.fl\r' + L +
+          ': t s" /dev/consctl" w/o open-file throw >r s" keys vt" r@ write-file throw\r' + L +
+          '  27 emit ." [?2004h" 14 0 do ekey . loop r> close-file throw ;\r' + L + 't\r' + L + '\x1dy' + L + L + 'bye\r' +
+          'āecho done\r' };
+      },
+      expect: ['cat /dev/snarf\nhello snarf\n', 'echo cmp $status\ncmp\n', 'cat: write error: disk full\n   8192 /dev/snarf\n',
+        '% echo one\none\n% echo two\ntwo\n', '(snarf)\n=> "from hylang"', '27 91 50 48 48 126 97 98 27 91 50 48 49 126  ok',
+        'echo done\ndone\n%'],
     },
     {
       name: 'pcm', what: 'the Vera X\'s PCM (vid\'s /pcm and /pcmctl), at rc: its files and state; the rate (the VERA\'s nearest) and volume; raw samples from a card into the FIFO, drained; bad commands; /pcm one task\'s (another\'s pcmctl: busy); WAV files played (8 bits mono, made signed; 16 bits stereo past an odd chunk; a float one, not a song); a ZSM\'s PCM instruments (one, then one looped, stopped by the FIFO emptied: from RAM) and its claim of the PCM; one too big for RAM (from the file); the FIFO\'s bytes in order, none lost, its runs dry only at the ends',

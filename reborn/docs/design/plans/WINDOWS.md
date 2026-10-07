@@ -505,6 +505,12 @@ October 2026, on `reborn-text-windows` (reborn's `docs/status.md`, "The text win
 * **Modifiers are a program's to ask for** (`keys mods`), as `KEY_MOD`, its bits, then the key: a program that didn't ask gets the keys as before, the modifiers dropped.  HyForth's `ekey` gives Forth 2012's form, the key with `k-shift-mask`, `k-ctrl-mask`, `k-alt-mask` or'd in.
 * **win32-input-mode is the PC's**: the PC tool (and the emulator's terminal) make Windows Terminal's records into an xterm's bytes, so the Hydra decodes one form.  It's asked for only with `--win32-input`, as it changes how every key comes.
 
+### **As built: W6a**
+
+* **The snarf buffer is a bank**, taken at the first write, and its bytes go through a RAM buffer both ways (the kernel's copy takes both tasks' banks as the one selected).  A write at offset 0 replaces it, as rio's does; past 8K, `E_NOSPC`.
+* **A paste is fed as the window's keys' queue has room**, before each request, as `kbdin`'s writes are: an 8K paste goes in as the program reads.  An LF goes as a CR, as a terminal pastes.
+* **`?2004` is the console's**, as `?1` is (it decodes the keys): it isn't passed to the terminal, so the PC's own pastes aren't bracketed.  Its brackets reach only a `keys vt` reader: the decoder drops a sequence that isn't a key, and `CSI 200 ~` isn't one of `keys hydra`'s.
+
 ### **Decisions**
 
 The user's answers to the plan's questions, 2026-10-07:

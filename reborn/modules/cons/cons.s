@@ -45,6 +45,11 @@
 ;   /kbdin      a write's bytes are the window's keys, as if typed (rio's kbdin: a line sent to another window's
 ;               shell, forth's send); all of them, as its keys' queue has room, the writer waiting for the rest
 ;   /text       the window's scrollback and screen as text, a line a row (rio's)
+;   /snarf      the console's cut buffer (rio's), one for all its windows: SNARF_MAX bytes at most, in a bank of
+;               its own (taken at the first write).  A write at its start empties it first (a write replaces it);
+;               Ctrl-] y pastes it into the window shown as its keys (an LF a CR, as a terminal's paste), between
+;               CSI 200 ~ and CSI 201 ~ if its program asked for bracketed paste (?2004), which only a keys vt
+;               reader gets (the decoder drops what isn't a key)
 ; The chrome (W4): a terminal shows the bar (a row, console-wide, at its top or its bottom) and the shown window's
 ; header and footer (a row each, above and below its screen), as that window's chrome is on there (w_chr; by default
 ; all of it on the screen, none on the serial port).  Each is rendered from its format (chr_render: %n its number, %l
@@ -63,7 +68,7 @@
 ; are bindings (W5d), wctl's key lines change them: key prefix ^X or ctrl-X (a control: not Ctrl-C, Ctrl-\,
 ; Escape, CR or LF); key KEY ACTION, KEY after the prefix a character (not a digit: Ctrl-] and a digit is always that
 ; window), ^X or ctrl-X, tab or shift-tab; key ctrl-tab ACTION, key ctrl-shift-tab ACTION; ACTION next, previous (the group's windows),
-; next-group, previous-group, new (a group: Ctrl-] c's), list, hold, close or none.  The list (Ctrl-] w) is a window
+; next-group, previous-group, new (a group: Ctrl-] c's), list, hold, close, paste (Ctrl-] y) or none.  The list (Ctrl-] w) is a window
 ; of the console's own, shown till a window's key (its number in hex), or the arrows and Enter, shows that one; q,
 ; Escape twice, or the list's key again shows the one before.
 ;
@@ -139,8 +144,10 @@ KA_GPREV        = 4
 KA_NEW          = 5             ;   a group wanted (Ctrl-] c's: /wnew's) ...
 KA_LIST         = 6             ;   the windows' list ...
 KA_HOLD         = 7             ;   the window shown held, or not ...
-KA_CLOSE        = 8             ;   its note group a hangup
-KA_N            = 9
+KA_CLOSE        = 8             ;   its note group a hangup ...
+KA_PASTE        = 9             ;   the snarf buffer pasted
+KA_N            = 10
+SNARF_MAX       = 8192          ; /snarf's bytes, at most: its bank's
 LS_ROW          = 3             ; The list's first window's row
 RATE_BOOT       = 5             ; 9600: the kernel's bring-up console's
 ENT_CONSCTL     = 2             ; srv_tree's consctl (its fids counted)
@@ -282,6 +289,13 @@ ls_ws:      .res        WIN_MAX                             ;   and them, in ord
 ls_sel:     .res        1                                   ;   the one chosen (in ls_ws: its marker, >) ...
 ls_esc:     .res        1                                   ;   its keys' sequence (1: ESC, 2: ESC [ or ESC O) ...
 ls_i:       .res        1                                   ;   and scratch
+sn_bank:    .res        1                                   ; /snarf: its bank ($FF: none yet) ...
+sn_len:     .res        2                                   ;   and its bytes
+ps_w:       .res        1                                   ; A paste (Ctrl-] y): its window ($FF: none) ...
+ps_i:       .res        2                                   ;   the snarf buffer's next byte ...
+ps_ph:      .res        1                                   ;   its part (0 the bracket before, 1 the text, 2 the
+ps_k:       .res        1                                   ;   bracket after), that bracket's next byte ...
+ps_br:      .res        1                                   ;   and <> 0: bracketed (?2004)
 bar_pos:    .res        1                                   ; The bar: 0 none, BAR_TOP, BAR_BOTTOM ...
 bar_fmt:    .res        FMT_SIZE                            ;   its format
 def_chr:    .res        1                                   ; A new window's chrome, header and footer
@@ -437,6 +451,10 @@ init:
             sta         kb_ct + 1
             lda         #$FF
             sta         ls_w
+            sta         sn_bank                             ; (/snarf: empty, no bank yet; no paste)
+            sta         ps_w
+            stz         sn_len
+            stz         sn_len + 1
             lda         #$FF
             sta         scr_cfd
             lda         #BAR_TOP                            ; The chrome: the bar at the top; a window's all of it
@@ -723,7 +741,7 @@ distribute:
 @byte:
             jsr         rx_get
             bcc         :+
-            rts
+            jmp         paste_feed                          ; (Then a paste's next keys)
 :
             ldx         pc_rxs                              ; A /pc frame's?
             bne         @frame
@@ -847,6 +865,118 @@ k_close:                                                    ; Its note group a h
             ora         #NOTE_GROUP
             ldx         #NOTE_HANGUP
             jmp         NOTE_POST
+
+; Ctrl-] y: the snarf buffer pasted into the window shown as its keys (paste_feed's), bracketed if its program asked
+; (?2004).  A paste going on is ended first; the list's window takes none
+k_paste:
+            lda         sn_len
+            ora         sn_len + 1
+            beq         @none
+            lda         w_in
+            cmp         ls_w
+            beq         @none
+            sta         ps_w
+            FAR2        vt_paste
+            sta         ps_br
+            stz         ps_i
+            stz         ps_i + 1
+            stz         ps_ph
+            stz         ps_k
+            jmp         paste_feed
+@none:
+            rts
+
+; The paste going on: its next bytes into its window's keys, as its queue has room (a key's place kept free, as
+; kbdin's); its reader looks again
+paste_feed:
+            ldx         ps_w
+            bpl         :+
+            rts
+:
+            lda         w_used,X                            ; (Its window gone: the paste too)
+            beq         @end
+@byte:
+            ldx         ps_w
+            sec
+            lda         w_iqt,X
+            sbc         w_iqh,X
+            dec         a
+            and         #INQ_SIZE - 1
+            beq         @wait
+            jsr         ps_next
+            bcs         @end
+            ldx         ps_w
+            jsr         iq_put
+            bra         @byte
+@end:
+            lda         #$FF
+            sta         ps_w
+@wait:
+            inc         TASK_EVENT
+            rts
+
+; The paste's next byte: the bracket before (CSI 200 ~), the text (an LF as a CR), the bracket after (CSI 201 ~).
+; OUT: C = 0, .A = it; or C = 1, none left
+ps_next:
+            lda         ps_ph
+            bne         @text
+            lda         ps_br                               ; The bracket before
+            beq         @next
+            ldx         ps_k
+            lda         s_bp_open,X
+            beq         @next
+            inc         ps_k
+            clc
+            rts
+@next:
+            inc         ps_ph
+            stz         ps_k
+            bra         ps_next
+@text:
+            cmp         #1
+            bne         @after
+            lda         ps_i                                ; The text, from the snarf buffer's bank
+            cmp         sn_len
+            lda         ps_i + 1
+            sbc         sn_len + 1
+            bcs         @next
+            lda         ps_i
+            sta         p
+            lda         ps_i + 1
+            clc
+            adc         #>BANK_WINDOW
+            sta         p + 1
+            lda         $00
+            pha
+            lda         sn_bank
+            sta         $00
+            lda         (p)
+            tax
+            pla
+            sta         $00
+            inc         ps_i
+            bne         :+
+            inc         ps_i + 1
+:
+            txa
+            cmp         #LF
+            bne         :+
+            lda         #CR
+:
+            clc
+            rts
+@after:
+            lda         ps_br                               ; The bracket after
+            beq         @done
+            ldx         ps_k
+            lda         s_bp_close,X
+            beq         @done
+            inc         ps_k
+            clc
+            rts
+@done:
+            sec
+            rts
 
 ; The windows' list (Ctrl-] w): a window of the console's own, a line a window (the one chosen marked >, then its key:
 ; its number in hex; its number, activity and label, as the bar's; its group), written while it isn't shown, then
@@ -2266,6 +2396,162 @@ h_kbdin:
 @done:
             rts
 
+; /snarf: the console's cut buffer (all the windows' one).  A read gives it from the offset, IOBUF bytes at a time; a
+; write puts its bytes there (IOBUF at a time: the kernel sends the rest in the next request), emptying it first if
+; it's at its start, its bank taken the first time.  SNARF_MAX bytes at most: past them, E_NOSPC
+h_snarf:
+            cmp         #R_READ
+            beq         @read
+            cmp         #R_WRITE
+            beq         @write
+            clc
+            rts
+@read:
+            stz         TASK_INBOX + RQ_DONE
+            stz         TASK_INBOX + RQ_DONE + 1
+            lda         TASK_INBOX + RQ_OFFSET + 2          ; (n: its bytes from the offset; none past its end)
+            ora         TASK_INBOX + RQ_OFFSET + 3
+            bne         @none
+            sec
+            lda         sn_len
+            sbc         TASK_INBOX + RQ_OFFSET
+            sta         n
+            lda         sn_len + 1
+            sbc         TASK_INBOX + RQ_OFFSET + 1
+            sta         n + 1
+            bcc         @none
+            ora         n
+            beq         @none
+            jsr         @count
+            jsr         @at                                 ; Out of its bank, through iobuf
+            ldy         cnt
+:
+            dey
+            bmi         :+
+            lda         (p),Y
+            sta         iobuf,Y
+            bra         :-
+:
+            pla
+            sta         $00
+            LDR         r0, iobuf
+            MOVR        r1, TASK_INBOX + RQ_BUF
+            lda         cnt
+            sta         r2
+            stz         r2 + 1
+            jsr         CLIENT_WRITE
+            lda         cnt
+            sta         TASK_INBOX + RQ_DONE
+@none:
+            clc
+            rts
+
+@write:
+            lda         TASK_INBOX + RQ_OFFSET + 2
+            ora         TASK_INBOX + RQ_OFFSET + 3
+            bne         @nospc
+            lda         TASK_INBOX + RQ_OFFSET              ; (At its start: emptied)
+            ora         TASK_INBOX + RQ_OFFSET + 1
+            bne         :+
+            stz         sn_len
+            stz         sn_len + 1
+:
+            lda         sn_bank                             ; (Its bank, the first time)
+            cmp         #$FF
+            bne         :+
+            lda         #1
+            jsr         BANKS_ALLOC
+            bcs         @done
+            sta         sn_bank
+:
+            sec                                             ; n: the room from the offset
+            lda         #<SNARF_MAX
+            sbc         TASK_INBOX + RQ_OFFSET
+            sta         n
+            lda         #>SNARF_MAX
+            sbc         TASK_INBOX + RQ_OFFSET + 1
+            sta         n + 1
+            bcc         @nospc
+            ora         n
+            beq         @nospc
+            jsr         @count
+            stz         n
+            stz         n + 1
+            jsr         from_client                         ; (iobuf)
+            bcs         @done
+            jsr         @at                                 ; Into its bank
+            ldy         cnt
+:
+            dey
+            bmi         :+
+            lda         iobuf,Y
+            sta         (p),Y
+            bra         :-
+:
+            pla
+            sta         $00
+            clc                                             ; Its length: to the write's end, if that's further
+            lda         TASK_INBOX + RQ_OFFSET
+            adc         cnt
+            tax
+            lda         TASK_INBOX + RQ_OFFSET + 1
+            adc         #0
+            cmp         sn_len + 1
+            bcc         @kept
+            bne         :+
+            cpx         sn_len
+            bcc         @kept
+:
+            stx         sn_len
+            sta         sn_len + 1
+@kept:
+            lda         cnt
+            sta         TASK_INBOX + RQ_DONE
+            stz         TASK_INBOX + RQ_DONE + 1
+            clc
+@done:
+            rts
+@nospc:
+            lda         #E_NOSPC
+            sec
+            rts
+
+@count:                                                     ; (cnt: n, IOBUF and the count, the least)
+            lda         n + 1
+            bne         :+
+            lda         n
+            cmp         #IOBUF
+            bcc         :++
+:
+            lda         #IOBUF
+:
+            ldx         TASK_INBOX + RQ_COUNT + 1
+            bne         :+
+            cmp         TASK_INBOX + RQ_COUNT
+            bcc         :+
+            lda         TASK_INBOX + RQ_COUNT
+:
+            sta         cnt
+            rts
+@at:                                                        ; (p: the offset in its bank, which is selected; the
+            lda         TASK_INBOX + RQ_OFFSET              ;   bank that was left on the stack, for the caller)
+            sta         p
+            lda         TASK_INBOX + RQ_OFFSET + 1
+            clc
+            adc         #>BANK_WINDOW
+            sta         p + 1
+            pla                                             ; (The return: under the bank)
+            tax
+            pla
+            tay
+            lda         $00
+            pha
+            phy
+            phx
+            lda         sn_bank
+            sta         $00
+            rts
+
 ; /text: a read, the window's scrollback and screen as text (vt.s's vt_text)
 h_text:
             cmp         #R_READ
@@ -3001,7 +3287,12 @@ key_raw:
             beq         :+
             jmp         @byte                               ; (Not one of ours: dropped)
 :
-            lda         esc_n                               ; ESC [ n ~: by n
+            lda         esc_n                               ; ESC [ n ~: by n (200, 201: bracketed paste's)
+            cmp         #200
+            bcc         :+
+            cmp         #202
+            bcc         @bracket
+:
             ldx         #TILDE_N - 1
 :
             cmp         tilde_n,X
@@ -3013,6 +3304,39 @@ key_raw:
 @tildekey:
             lda         tilde_key,X
             bra         @mods
+
+@bracket:                                                   ; (Raw, keys vt: as it came, its ESC now, the rest
+            ldy         raw                                 ;   kp_buf's; else dropped, as it's not a key)
+            beq         @drop
+            ldx         lw
+            ldy         kvt,X
+            beq         @drop
+            pha
+            txa
+            asl
+            asl
+            asl
+            tay
+            lda         #'['
+            sta         kp_buf,Y
+            lda         #'2'
+            sta         kp_buf + 1,Y
+            lda         #'0'
+            sta         kp_buf + 2,Y
+            pla
+            sec
+            sbc         #200 - '0'
+            sta         kp_buf + 3,Y
+            lda         #'~'
+            sta         kp_buf + 4,Y
+            lda         #5
+            sta         kp_n,X
+            stz         kp_i,X
+            lda         #ESC
+            clc
+            rts
+@drop:
+            jmp         @byte
 
 @csikey:
             lda         csi_key,X
@@ -6482,6 +6806,7 @@ srv_tree:
             SRV_ENTRY   s_kbdin,   0,   SK_DATA, h_kbdin,     SM_WRITE,           0     ; 10
             SRV_ENTRY   s_text,    0,   SK_DATA, h_text,      SM_READ,            0     ; 11
             SRV_ENTRY   s_label,   0,   SK_DATA, h_label,     SM_READ | SM_WRITE, 0     ; 12
+            SRV_ENTRY   s_snarf,   0,   SK_DATA, h_snarf,     SM_READ | SM_WRITE, 0     ; 13
             .word       0
 cons_cmds:
             .word       s_rawon_w, c_rawon
@@ -6526,6 +6851,7 @@ s_serctl:   .byte       "serctl", 0
 s_kbdin:    .byte       "kbdin", 0
 s_text:     .byte       "text", 0
 s_label:    .byte       "label", 0
+s_snarf:    .byte       "snarf", 0
 s_bar_w:    .byte       "bar", 0
 s_header_w: .byte       "header", 0
 s_footer_w: .byte       "footer", 0
@@ -6548,11 +6874,16 @@ s_gprev_w:  .byte       "previous-group", 0
 s_list_w:   .byte       "list", 0
 s_hold_w:   .byte       "hold", 0
 s_close_w:  .byte       "close", 0
+s_paste_w:  .byte       "paste", 0
 ka_names:   .word       s_none_w, s_next_w, s_prev_w, s_gnext_w, s_gprev_w, s_new_w, s_list_w, s_hold_w, s_close_w
+            .word       s_paste_w
 ka_vec:     .word       k_none, win_next, win_prev, grp_next, grp_prev, k_new, ls_open, k_hold, k_close
+            .word       k_paste
 .assert     * - ka_vec = KA_N * 2 .and ka_vec - ka_names = KA_N * 2, error, "ka_names and ka_vec: KA_N each"
 kb_def:     .byte       HT, KA_NEXT, ESC, KA_PREV, 'c', KA_NEW, 'n', KA_GNEXT, 'p', KA_GPREV, 'w', KA_LIST
-            .byte       'h', KA_HOLD, 'x', KA_CLOSE, 0      ; (The keys after the prefix, as it starts)
+            .byte       'h', KA_HOLD, 'x', KA_CLOSE, 'y', KA_PASTE, 0   ; (The keys after the prefix, as it starts)
+s_bp_open:  .byte       ESC, "[200~", 0                     ; (Bracketed paste's)
+s_bp_close: .byte       ESC, "[201~", 0
 s_hex:      .byte       "0123456789abcdef"
 s_ls_label: .byte       "windows", 0
 s_ls_head:  .byte       ESC, "[?25lThe windows: a window's key, or the arrows and Enter, shows it; q the one before", CR, LF
