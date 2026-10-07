@@ -107,7 +107,8 @@ TM_PTR          = $CF           ; (2) TASKMEM's, as kcopy's KC_PTR: this task's 
 TM_PARTNER      = $D1           ;   the other task ...
 TM_OLDBANK      = $D2           ;   and (the task read) its own RAM bank, while the copy has its bank register
 KM_PTR          = $D3           ; (2) The kernel task's, a moment: where a byte of the kernel's messages goes (cons.s)
-OS_ZP_END       = $D5           ; (Checked: the OS zero page's end, at most $100)
+F_GONE          = $D5           ; The file calls' name: what its members said (1: one hadn't it; 2: one's device was gone)
+OS_ZP_END       = $D6           ; (Checked: the OS zero page's end, at most $100)
 .assert     OS_ZP_END <= $100, error, "The OS zero page runs past $FF"
 
 ; Task states (TK_STATE): the state of the context on top of the task's stack.  Only ST_READY runs (and

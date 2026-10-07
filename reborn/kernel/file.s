@@ -18,8 +18,9 @@
 ; with an inc or a dec, IRQs off); a channel is taken, and a device found, in KCALLs.
 ;
 ; A name is made whole and clean here (the current directory before a relative one; ".", "..", "//"), then found in
-; the namespace (ns.s, page 3): its candidates, tried in turn till one is there.  A channel opened on a mount point
-; with more members than one is a union directory: a READ reads the members in turn.
+; the namespace (ns.s, page 3): its candidates, tried in turn till one is there (a member whose device is gone,
+; E_NODEV, is passed over as one without the name: a RAM disk stopped leaves /bin's union working).  A channel
+; opened on a mount point with more members than one is a union directory: a READ reads the members in turn.
 
 .include "kdefs.inc"
 
@@ -45,11 +46,14 @@ f_open:
             sta         TA_REQ + RQ_MODE
             jsr         f_flags
             jsr         f_name                              ; Its candidates
-            bcs         @done
+            bcs         @out
             jsr         f_newfd                             ; An fd ...
-            bcs         @done
+            bcs         @out
             KCALL_FAR   K_CH_NEW_K                          ; ... and a channel
-            bcs         @done
+            bcc         :+
+@out:
+            rts
+:
             sta         F_CH
 @cand:                                                      ; Each candidate, till one opens (a CREATE has one)
             ldx         #0
@@ -64,8 +68,8 @@ f_open:
             jsr         f_zero
             jsr         f_send
             bcc         @opened
-            cmp         #E_NOENT                            ; (Not in that member: the next)
-            beq         @cand
+            jsr         f_pass                              ; (Not in that member, or its device gone: the next)
+            bcc         @cand
             bra         @undo
 
 @opened:
@@ -366,8 +370,11 @@ f_unext:
             jsr         f_zero
             jsr         f_send
             bcc         @opened
-            cmp         #E_NOENT
+            cmp         #E_NOENT                            ; (Not in that member, or its device gone: the next)
+            beq         :+
+            cmp         #E_NODEV
             bne         @dead
+:
             lda         F_CH
             KCALL_FAR   K_NS_UNEXT_K
             bcc         @open
@@ -583,9 +590,8 @@ K_REMOVE:
             bcs         @done
             jsr         f_send
             bcc         @done
-            cmp         #E_NOENT
-            beq         @cand
-            sec
+            jsr         f_pass                              ; (Not in that member, or its device gone: the next)
+            bcc         @cand
 @done:
             rts
 
@@ -666,6 +672,7 @@ f_flags:
 ; candidates come from f_cand.  OUT: F_NMEM = how many, F_EXACT <> 0 if it's a mount point itself; or C = 1, .A =
 ; E_NOENT, E_NAMETOOLONG
 f_name:
+            stz         F_GONE
             jsr         f_path
             bcs         @done
             KCALL_FAR   K_NS_FIND_K
@@ -682,7 +689,37 @@ f_cand:
             KCALL_FAR   K_NS_NEXT_K
             bcs         :+
             sta         F_SRV
+            rts
 :
+            cmp         #E_NOENT                            ; (No more: E_NODEV if every member that answered had
+            bne         :+                                  ;   its device gone)
+            ldx         F_GONE
+            cpx         #2
+            bne         :+
+            lda         #E_NODEV
+:
+            sec
+            rts
+
+; A candidate's error .A: C = 0 if it's one to pass over (E_NOENT: the name isn't in it; E_NODEV: its device is
+; gone, as a RAM disk stopped), noted in F_GONE; else C = 1 (.A kept)
+f_pass:
+            cmp         #E_NOENT
+            beq         @not
+            cmp         #E_NODEV
+            beq         @gone
+            sec
+            rts
+
+@gone:
+            lda         #2
+            bra         @note
+
+@not:
+            lda         #1
+@note:
+            tsb         F_GONE
+            clc
             rts
 
 ; The name at r0 into TA_PATH, whole and clean: a # name as it is; an absolute one; a relative one after the current
@@ -1169,9 +1206,8 @@ f_probe:
             jsr         f_zero
             jsr         f_send
             bcc         @found
-            cmp         #E_NOENT
-            beq         @cand
-            sec
+            jsr         f_pass                              ; (Not in that member, or its device gone: the next)
+            bcc         @cand
 @done:
             rts
 

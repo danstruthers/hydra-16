@@ -249,8 +249,10 @@ bank t).  Every fixed address is in `include/layout.inc`, and nowhere else.
   members; anything else binds the first of its candidates that's there.
 * A name's mount point is the longest one it starts with, in whole elements; its candidates are that union's
   members, in order, each with the rest of the name.  `OPEN`, `REMOVE` and the stat calls try them in turn till
-  one isn't `E_NOENT`; `CREATE` goes to the `MCREATE` member (or the first).  A directory opened at a mount point
-  with more members than one is a union directory: `READ` gives every member's records, one member after another.
+  one isn't `E_NOENT` or `E_NODEV` (a member whose device is gone, as a RAM disk stopped, is passed over; if every
+  member that answered was gone, the error is `E_NODEV`); `CREATE` goes to the `MCREATE` member (or the first).  A
+  directory opened at a mount point with more members than one is a union directory: `READ` gives every member's
+  records, one member after another.
 * A task's default namespace comes from the namespace file, `/rom/lib/namespace` (and a card's after it), by
   `sdk/asm/nslib.s`'s `ns_default`, Plan 9's `newns`: init's own, and each shell's, which init starts with an empty
   one (`SPAWN_NEWNS`).  `$task` in it is the task, whose own area of the RAM disk (`r/N`) is its `/ram`.
