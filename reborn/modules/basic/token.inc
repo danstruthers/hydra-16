@@ -10,7 +10,7 @@
 		keyword_rts "FOR", FOR
 		keyword_rts "NEXT", NEXT
 		keyword_rts "DATA", DATA
-		keyword_rts "INPUT", INPUT
+		keyword_rts "INPUT", INPUT_ST
 		keyword_rts "DIM", DIM
 		keyword_rts "READ", READ_
 		keyword_rts "LET", LET
@@ -28,13 +28,15 @@
 		keyword_rts "SAVE", SAVE
 		keyword_rts "DEF", DEF
 		keyword_rts "POKE", POKE
-		keyword_rts "PRINT", PRINT, TOKEN_PRINT
+		keyword_rts "PRINT", PRINT_ST, TOKEN_PRINT
 		keyword_rts "CONT", CONT
 		keyword_rts "LIST", LIST
 		keyword_rts "CLEAR", CLEAR, TOKEN_CLEAR
-		keyword_rts "GET", GET
+		keyword_rts "GET", GET_ST
 		keyword_rts "NEW", NEW
 		keyword_rts "BYE", BYE
+		keyword_rts "OPEN", OPEN_ST
+		keyword_rts "CLOSE", CLOSE_ST
 
 		count_tokens
 .assert TOKEN_GOTO = $88 && NUM_TOKENS < $40, error, "FOR $81, DATA $83: the statements' order"
@@ -87,6 +89,7 @@ UNFNC_ATN:
 		keyword_addr "VAL", VAL
 		keyword_addr "ASC", ASC
 		keyword_addr "CHR$", CHRSTR, TOKEN_CHR
+		keyword_addr "EOF", EOF_FN
 		keyword_addr "LEFT$", LEFTSTR, TOKEN_LEFTSTR
 		keyword_addr "RIGHT$", RIGHTSTR, TOKEN_RIGHTSTR
 		keyword_addr "MID$", MIDSTR, TOKEN_MIDSTR

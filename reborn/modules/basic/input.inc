@@ -7,7 +7,11 @@
 ; ----------------------------------------------------------------------------
 INPUTERR:
         lda     INPUTFLG
+        bne     L2A5E
+        lda     cur_src                         ; (INPUT#'s, from a file: no redo, an error as READ's)
         beq     RESPERR	; INPUT
+        jmp     SYNERR
+L2A5E:
 ; without this, it treats GET errors
 ; like READ errors
         bmi     L2A63	; READ
@@ -63,10 +67,14 @@ LCAF8:
         jsr     NXIN
         lda     INPUTBUFFER
         bne     L2ABE
+        lda     cur_src                         ; (INPUT#'s empty line: empty values)
+        bne     L2ABE
         asl     intr                            ; (Ctrl-C while it waited: BREAK, said; an empty line: the
         jmp     CONTROL_C_TYPED                 ;   program's end, Microsoft's way, quietly)
 
 NXIN:
+        lda     cur_src                         ; (INPUT#'s: no prompt)
+        bne     LCB21
         jsr     OUTQUES	; '?'
         jsr     OUTSP
 LCB21:
@@ -78,9 +86,11 @@ LCB21:
 READ_:
         ldx     DATPTR
         ldy     DATPTR+1
-        .byte   $A9	; LDA #$98
+        lda     #$98
+        bne     PROCESS_INPUT_LIST              ; (always)
 L2ABE:
-        tya
+        lda     #$00                            ; (INPUT's: Microsoft's tya had .Y 0, the buffer's page in
+                                                ;   the zero page; it's the pointer's high byte now)
 
 ; ----------------------------------------------------------------------------
 ; PROCESS INPUT LIST
@@ -117,6 +127,8 @@ PROCESS_INPUT_ITEM:
         bra     L2AF8                           ; (Microsoft's beq or bne here hung on where the buffer was)
 L2AF0:
         bmi     FINDATA
+        lda     cur_src                         ; (INPUT#'s: no ?? either)
+        bne     LCB64
         jsr     OUTQUES
 LCB64:
         jsr     NXIN

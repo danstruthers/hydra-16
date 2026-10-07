@@ -437,6 +437,8 @@ SETPTRS:
 CLEAR:
         bne     L256A
 CLEARC:
+        jsr     CH_CLOSE_ALL                    ; (The files OPEN made: closed, as RUN, NEW, CLEAR and a line
+                                                ;   entered clear the variables)
         lda     MEMSIZ
         ldy     MEMSIZ+1
         sta     FRETOP

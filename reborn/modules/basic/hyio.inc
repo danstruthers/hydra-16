@@ -1,9 +1,11 @@
 ; ****************************************************************************
-; hyio.inc - BASIC on the system (included by basic.s): its start, its output (fd 1, buffered, or SAVE's file), its
-; lines (stdin through a buffer: the console's cooked lines, or a file's or a pipe's; or the file LOAD reads), GET's
-; keys (the console's raw mode), Ctrl-C (a note: intr, which NEWSTT's ISCNTC takes), the error messages' text (the
-; system's in capitals), BYE, LOAD, SAVE, RUN "name" and scripts (basic file: the file LOADed and run, then the end).
-; What was the 8-bit machines' MONCOUT, MONRDKEY, INLIN, ISCNTC, cold start and LOAD and SAVE.
+; hyio.inc - BASIC on the system (included by basic.s): its start; its output (fd 1, buffered; or SAVE's file, or a
+; channel's for PRINT#); its input from sources, each an fd and a buffer: stdin (the console's cooked lines, or a
+; file's or a pipe's), the file LOAD reads, and the files OPEN opens (channels 1 to CH_MAX: INPUT#, GET#); GET's keys
+; (the console's raw mode); Ctrl-C (a note: intr, which NEWSTT's ISCNTC takes); the error messages' text (the
+; system's in capitals); BYE, LOAD, SAVE, RUN "name" and scripts (basic file: the file LOADed and run, then the end);
+; OPEN, CLOSE, PRINT#, INPUT#, GET# and EOF.  What was the 8-bit machines' MONCOUT, MONRDKEY, INLIN, ISCNTC, cold
+; start and LOAD and SAVE.
 
 ; r = a 16-bit value (a call register)
 .macro LDR reg, value
@@ -14,8 +16,13 @@
 .endmacro
 
 OBUF_SIZE   = 128                                           ; The output's buffer
-IBUF_SIZE   = 128                                           ; stdin's (a stat record fits, SR_SIZE) and LOAD's
+SBUF_SIZE   = 128                                           ; A source's (stdin's: a stat record fits, SR_SIZE)
 NAME_MAX    = 64                                            ; A file's name, and its 0
+CH_MAX      = 4                                             ; Channels: OPEN's files, 1 to CH_MAX
+SRC_STDIN   = 0                                             ; The sources: stdin ...
+SRC_LOAD    = 1                                             ;   the file LOAD reads ...
+SRC_CH      = 1                                             ;   channel n's (SRC_CH + n)
+SRC_N       = SRC_CH + CH_MAX + 1
 HDR_LEN     = 10                                            ; A tokenized program's header: "HYBAS", 1, the keyword
 HDR_VERSION = 1                                             ;   table's sum (2: a program from another BASIC's table
                                                             ;   is BAD FILE), its length (2); then its lines as in memory
@@ -28,22 +35,24 @@ script:     .res        1                                   ; <> 0: running a sc
 exit_code:  .res        1                                   ;   with this code (1 after an error or BREAK)
 obuf:       .res        OBUF_SIZE                           ; The output waiting ...
 olen:       .res        1                                   ;   its bytes ...
-outfd:      .res        1                                   ;   and its fd: 1, or SAVE's file's
-ibuf:       .res        IBUF_SIZE                           ; stdin's bytes read ahead ...
-ilen:       .res        1                                   ;   how many ...
-ipos:       .res        1                                   ;   the next ...
-skip_lf:    .res        1                                   ;   <> 0: a line ended with CR (its LF dropped)
-ldfd:       .res        1                                   ; The file LOAD reads ($FF: none; else the lines come from
-lbuf:       .res        IBUF_SIZE                           ;   it, through its own buffer) ...
-llen:       .res        1
-lpos:       .res        1
-ld_run:     .res        1                                   ;   <> 0: RUN after it (RUN "name", a script)
+outfd:      .res        1                                   ;   and its fd: 1, SAVE's file's, or a channel's ...
+posx_save:  .res        1                                   ;   (the console's column, kept over PRINT#)
+save_fd:    .res        1                                   ; SAVE's file ($FF: none)
+src_fd:     .res        SRC_N                               ; The sources: each one's fd ($FF: none; stdin 0) ...
+src_len:    .res        SRC_N                               ;   its buffer's bytes ...
+src_pos:    .res        SRC_N                               ;   the next ...
+src_skip:   .res        SRC_N                               ;   <> 0: its last line ended with CR (its LF dropped) ...
+src_bufs:   .res        SRC_N * SBUF_SIZE                   ;   its buffer
+cur_src:    .res        1                                   ; INLIN's and GET's source: stdin, LOAD's file, INPUT#'s
+ldfd        = src_fd + SRC_LOAD                             ; (LOAD's file, $FF: none: program.inc's L2351 asks)
+ld_run:     .res        1                                   ; <> 0: RUN after LOAD (RUN "name", a script)
 nolf1:      .res        1                                   ; <> 0: LIST_LINES' first line with no new line before it
 tokflag:    .res        1                                   ; <> 0: SAVE's ,B (tokenized)
 os_err:     .res        1                                   ; ERR_OS's error: the system's code
 pathbuf:    .res        NAME_MAX                            ; A file's name (GETNAME's)
 errbuf:     .res        32                                  ; ERRSTR's text
 hdr:        .res        HDR_LEN                             ; A tokenized program's header
+chsrc:      .res        1                                   ; OPEN's channel's source
 raw:        .res        1                                   ; <> 0: the console in raw mode (GET's)
 ctlfd:      .res        1                                   ; /dev/consctl's fd, $FF: not open
 keyfd:      .res        1                                   ; /dev/cons's, read without waiting (GET's), $FF: not open
@@ -96,14 +105,20 @@ main:
             lda         #$FF
             sta         ctlfd
             sta         keyfd
-            sta         ldfd
+            sta         save_fd
+            ldx         #SRC_N-1                            ; The sources: none but stdin
+:
+            sta         src_fd,x
+            dex
+            bne         :-
+            stz         src_fd + SRC_STDIN
             lda         #1
             sta         outfd
-            LDR         r0, ibuf                            ; stdin the console?  (Its stat record, in ibuf: empty yet)
+            LDR         r0, src_bufs                        ; stdin the console?  (Its stat record, in its buffer)
             lda         #0
             jsr         FSTAT
             bcs         :+
-            lda         ibuf + SR_DEV
+            lda         src_bufs + SR_DEV
             cmp         #'c'
             bne         :+
             inc         interactive
@@ -214,24 +229,21 @@ banner:
 s_banner:   .byte       "EHYBASIC FOR THE HYDRA-16 (MICROSOFT BASIC 2A)", LF, 0
 s_free:     .byte       " BYTES FREE", LF, 0
 
-; RESTART's: the files LOAD and SAVE had closed (an error, Ctrl-C, its end), the output fd 1 again, and a script's
-; end (EXITS with its code)
+; RESTART's: SAVE's and LOAD's files closed (an error, Ctrl-C, its end), the output fd 1 again (PRINT#'s, SAVE's),
+; the lines stdin's again (INPUT#'s, LOAD's), and a script's end (EXITS with its code).  OPEN's files stay open
 IO_RESET:
             jsr         FLUSH
-            lda         outfd
-            cmp         #1
-            beq         :+
-            jsr         CLOSE
             lda         #1
             sta         outfd
-:
-            lda         ldfd
+            lda         save_fd
             bmi         :+
             jsr         CLOSE
             lda         #$FF
-            sta         ldfd
-            stz         skip_lf
+            sta         save_fd
 :
+            ldx         #SRC_LOAD
+            jsr         SRC_CLOSE
+            stz         cur_src
             stz         ld_run
             stz         nolf1
             lda         script
@@ -240,6 +252,43 @@ IO_RESET:
             jmp         EXIT_CODE
 :
             rts
+
+; Source .X closed, if it's open.  Keeps .X
+SRC_CLOSE:
+            lda         src_fd,x
+            bmi         :+
+            phx
+            jsr         CLOSE
+            plx
+            lda         #$FF
+            sta         src_fd,x
+:
+            rts
+
+; Source .X's fd .A, its buffer empty
+SRC_OPENED:
+            sta         src_fd,x
+            stz         src_len,x
+            stz         src_pos,x
+            stz         src_skip,x
+            rts
+
+; IOPTR = source .X's buffer.  Keeps .X
+SRC_BUF:
+            lda         src_buf_lo,x
+            sta         IOPTR
+            lda         src_buf_hi,x
+            sta         IOPTR+1
+            rts
+
+src_buf_lo:
+.repeat SRC_N, I
+            .byte       <(src_bufs + I * SBUF_SIZE)
+.endrepeat
+src_buf_hi:
+.repeat SRC_N, I
+            .byte       >(src_bufs + I * SBUF_SIZE)
+.endrepeat
 
 ; ---- Output
 
@@ -327,76 +376,76 @@ OSERR:
 
 ; ---- Input
 
-; The next byte of the lines' source: the file LOAD reads, or stdin (its buffer filled with a READ when it's empty:
-; the output sent and the console cooked first).  OUT: C = 0, .A = it; C = 1, .A = E_EOF (its end) or the error
-; (E_INTR: a note).  Keeps .Y
+; The next byte of the source cur_src (its buffer filled with a READ when it's empty; stdin's after the output's
+; sent and the console's cooked).  OUT: C = 0, .A = it; C = 1, .A = E_EOF (its end) or the error (E_INTR: a note).
+; Keeps .Y
 IN_BYTE:
-            bit         ldfd
-            bmi         @stdin
-            ldx         lpos
-            cpx         llen
-            bcc         @lhave
-            phy
-            LDR         r0, lbuf
-            LDR         r1, IBUF_SIZE
-            lda         ldfd
-            jsr         READ
-            ply
-            bcs         @done
-            sta         llen
-            stz         lpos
-            ldx         #0
-            cmp         #0
-            bne         @lhave
-            bra         @eof
-@lhave:
-            lda         lbuf,x
-            inx
-            stx         lpos
-            clc
-            rts
-@stdin:
-            ldx         ipos
-            cpx         ilen
+            ldx         cur_src
+            lda         src_pos,x
+            cmp         src_len,x
             bcc         @have
-            jsr         FLUSH
-            jsr         RAW_OFF
-            phy
-            LDR         r0, ibuf
-            LDR         r1, IBUF_SIZE
-            lda         #0
-            jsr         READ
-            ply
+            jsr         SRC_FILL
             bcs         @done
-            sta         ilen
-            stz         ipos
-            ldx         #0
-            cmp         #0
-            bne         @have
-@eof:
-            lda         #E_EOF
-            sec
+@have:
+            jsr         SRC_BUF
+            phy
+            ldy         src_pos,x
+            lda         (IOPTR),y
+            inc         src_pos,x
+            ply
+            clc
 @done:
             rts
-@have:
-            lda         ibuf,x
-            inx
-            stx         ipos
+
+; Source .X's buffer filled (a READ).  OUT: C = 0, some there; C = 1, .A = E_EOF (none: its end) or the error.
+; Keeps .X, .Y
+SRC_FILL:
+            phy
+            cpx         #SRC_STDIN
+            bne         :+
+            jsr         FLUSH
+            jsr         RAW_OFF
+:
+            phx
+            jsr         SRC_BUF
+            lda         IOPTR
+            sta         r0
+            lda         IOPTR+1
+            sta         r0 + 1
+            LDR         r1, SBUF_SIZE
+            lda         src_fd,x
+            jsr         READ
+            plx
+            ply
+            bcs         @done
+            sta         src_len,x
+            stz         src_pos,x
+            cmp         #1                                  ; (C = 1: some; none, its end)
+            bcs         @some
+            lda         #E_EOF
+            sec
+            rts
+@some:
             clc
+@done:
             rts
 
 ; A line into INPUTBUFFER, 0 after it (INBUF_MAX characters, the rest dropped; LF, CR or CR LF ends it; a tab a
-; space, other control characters dropped): stdin's (the console edits and echoes its lines itself), or the file
-; LOAD reads, whose end is LOAD's (LOAD_DONE).  stdin's end: in direct mode, BASIC's (BYE); in a program, an empty
-; line.  Ctrl-C while it waits: in direct mode, the line again; in a program, an empty line (which stops INPUT,
-; Microsoft's way).  OUT: .X/.Y = INPUTBUFFER-1, for CHRGET
+; space, other control characters dropped), from the source cur_src: stdin (the console edits and echoes its lines
+; itself), LOAD's file (its end is LOAD's: LOAD_DONE) or INPUT#'s (its end an error, END OF FILE).  stdin's end: in
+; direct mode, BASIC's (BYE); in a program, an empty line.  Ctrl-C while it waits: in direct mode, the line again; in
+; a program, an empty line (which stops INPUT, Microsoft's way).  OUT: .X/.Y = INPUTBUFFER-1, for CHRGET
 INLIN:
             ldy         #0
 @char:
             jsr         IN_BYTE
             bcs         @fail
-            ldx         skip_lf
-            stz         skip_lf
+            ldx         cur_src
+            pha
+            lda         src_skip,x
+            stz         src_skip,x
+            tax
+            pla
             cmp         #LF
             bne         :+
             cpx         #0
@@ -405,7 +454,8 @@ INLIN:
 :
             cmp         #CR
             bne         :+
-            inc         skip_lf
+            ldx         cur_src
+            inc         src_skip,x
             bra         @end
 :
             cmp         #TAB
@@ -420,12 +470,15 @@ INLIN:
             iny
             bra         @char
 @fail:
-            bit         ldfd                                ; (LOAD's file: its end, or an error, its end too)
-            bmi         :+
+            ldx         cur_src                             ; (LOAD's file: its end; an error, an error; INPUT#'s:
+            beq         @stdin                              ;   both errors)
+            cpx         #SRC_LOAD
+            bne         :+
             cmp         #E_EOF
             jeq         LOAD_DONE
-            jmp         OSERR
 :
+            jmp         OSERR
+@stdin:
             cmp         #E_INTR
             bne         @eof
             ldx         CURLIN+1                            ; (In a program: intr kept, for INPUT's BREAK)
@@ -443,16 +496,22 @@ INLIN:
 @end:
             lda         #0
             sta         INPUTBUFFER,y
+            lda         cur_src                             ; (The console's column: 0 after its line)
+            bne         :+
             stz         POSX
+:
             ldx         #<(INPUTBUFFER-1)
             ldy         #>(INPUTBUFFER-1)
             rts
 
-; GET's key: the console's, in raw mode, not waited for (0: none); if stdin isn't the console, its next byte (its end:
-; 0)
+; GET's key: the console's, in raw mode, not waited for (0: none); if stdin isn't the console, or GET#'s, the
+; source's next byte (its end: 0)
 GETKEY:
+            lda         cur_src
+            bne         :+
             lda         interactive
             bne         @key
+:
             jsr         IN_BYTE
             bcc         :+
             lda         #0
@@ -502,17 +561,19 @@ RAW_ON:
 @done:
             rts
 
-; The console cooked again, for a line.  Keeps .Y
+; The console cooked again, for a line.  Keeps .X, .Y
 RAW_OFF:
             lda         raw
             beq         @done
             stz         raw
+            phx
             phy
             LDR         r0, s_rawoff
             LDR         r1, 6
             lda         ctlfd
             jsr         WRITE
             ply
+            plx
 @done:
             rts
 
@@ -570,8 +631,8 @@ RUN_FILE:
 
 ; "LOAD" STATEMENT: LOAD "name": the program in the file pathbuf names in place of this one: a text (its lines with
 ; a number, as if typed: others, a #! line say, passed over), or a tokenized program (SAVE's ,B: its header, then its
-; lines as they were in memory).  A text's lines come through the main loop (L2351: INLIN reads them from ldfd), and
-; its end (INLIN's) is LOAD_DONE
+; lines as they were in memory).  A text's lines come through the main loop (L2351: INLIN reads them from the source
+; SRC_LOAD), and its end (INLIN's) is LOAD_DONE
 LOAD:
             jsr         GETNAME
 LOAD_PATH:
@@ -581,22 +642,20 @@ LOAD_PATH:
             bcc         :+
             jmp         OSERR
 :
-            sta         ldfd
-            stz         lpos
-            stz         skip_lf
-            LDR         r0, lbuf                            ; Its first bytes: a tokenized program's header?
-            LDR         r1, IBUF_SIZE
-            lda         ldfd
-            jsr         READ
+            ldx         #SRC_LOAD
+            jsr         SRC_OPENED
+            jsr         SRC_FILL                            ; Its first bytes: a tokenized program's header?
             bcc         :+
+            cmp         #E_EOF
+            beq         @text                               ; (Empty: a text, no lines)
             jmp         OSERR
 :
-            sta         llen
+            lda         src_len + SRC_LOAD
             cmp         #HDR_LEN
             bcc         @text
             ldx         #HDR_MAGIC_LEN-1
 :
-            lda         lbuf,x
+            lda         LBUF,x
             cmp         s_magic,x
             bne         @text
             dex
@@ -604,17 +663,19 @@ LOAD_PATH:
             jmp         LOAD_TOKENS
 @text:
             jsr         SCRTCH                              ; (NEW)
+            lda         #SRC_LOAD
+            sta         cur_src
             ldx         #STACK_TOP
             txs
             jmp         L2351
 
+LBUF        = src_bufs + SRC_LOAD * SBUF_SIZE               ; (LOAD's source's buffer)
+
 ; A text's end: the program LOADed, and RUN if it's RUN "name"'s or a script's
 LOAD_DONE:
-            lda         ldfd
-            jsr         CLOSE
-            lda         #$FF
-            sta         ldfd
-            stz         skip_lf
+            ldx         #SRC_LOAD
+            jsr         SRC_CLOSE
+            stz         cur_src
 LOAD_END:
             lda         ld_run
             stz         ld_run
@@ -624,41 +685,41 @@ LOAD_END:
             jsr         SETPTRS                             ; (RUN's: from the first line, the variables cleared)
             jmp         NEWSTT
 
-; A tokenized program (lbuf has its first llen bytes): its header checked, its lines read to TXTTAB, linked again
+; A tokenized program (LBUF has its first bytes): its header checked, its lines read to TXTTAB, linked again
 LOAD_TOKENS:
-            lda         lbuf + 5
+            lda         LBUF + 5
             cmp         #HDR_VERSION
             jne         @bad
             jsr         TABSUM
-            cmp         lbuf + 6
+            cmp         LBUF + 6
             jne         @bad
-            cpy         lbuf + 7
+            cpy         LBUF + 7
             jne         @bad
             clc                                             ; Room for it?
             lda         TXTTAB
-            adc         lbuf + 8
+            adc         LBUF + 8
             sta         INDEX
             lda         TXTTAB+1
-            adc         lbuf + 9
+            adc         LBUF + 9
             sta         INDEX+1
             bcs         @full
             cmp         MEMSIZ+1
             bcs         @full
             jsr         SCRTCH
-            lda         TXTTAB                              ; What lbuf has after the header, then the rest read
+            lda         TXTTAB                              ; What LBUF has after the header, then the rest read
             sta         DEST
             lda         TXTTAB+1
             sta         DEST+1
             ldx         #HDR_LEN
 @copy:
-            cpx         llen
+            cpx         src_len + SRC_LOAD
             bcs         @rest
             lda         DEST                                ; (Not past its length)
             cmp         INDEX
             lda         DEST+1
             sbc         INDEX+1
             bcs         @linked
-            lda         lbuf,x
+            lda         LBUF,x
             sta         (DEST)
             inc         DEST
             bne         :+
@@ -685,10 +746,8 @@ LOAD_TOKENS:
             bcc         @linked
             jmp         OSERR
 @linked:
-            lda         ldfd
-            jsr         CLOSE
-            lda         #$FF
-            sta         ldfd
+            ldx         #SRC_LOAD
+            jsr         SRC_CLOSE
             lda         INDEX                               ; The variables after it, the lines linked again
             ldy         INDEX+1
             sta         VARTAB
@@ -743,20 +802,9 @@ SAVE:
             inc         tokflag
 :
             jsr         FLUSH                               ; (What's for the console first)
-            LDR         r0, pathbuf
-            lda         #O_WRITE | O_TRUNC
-            jsr         OPEN
-            bcc         @open
-            cmp         #E_NOENT
-            bne         @fail
-            LDR         r0, pathbuf
-            lda         #O_WRITE
-            ldx         #0
-            jsr         CREATE
-            bcc         @open
-@fail:
-            jmp         OSERR
-@open:
+            lda         #'W'
+            jsr         OPEN_PATH
+            sta         save_fd
             sta         outfd
             lda         tokflag
             bne         @tokens
@@ -795,7 +843,7 @@ SAVE:
             LDR         r1, HDR_LEN
             lda         outfd
             jsr         WRITE
-            jcs         @fail
+            bcs         @fail
             lda         TXTTAB
             sta         r0
             lda         TXTTAB+1
@@ -806,11 +854,221 @@ SAVE:
             sta         r1 + 1
             lda         outfd
             jsr         WRITE
-            jcs         @fail
+            bcs         @fail
 @close:
             jsr         FLUSH
-            lda         outfd
+            lda         save_fd
             jsr         CLOSE
+            lda         #$FF
+            sta         save_fd
             lda         #1
             sta         outfd
             rts
+@fail:
+            jmp         OSERR
+
+; The file pathbuf names, opened for .A: 'R' reading; 'W' writing, made or emptied first; 'A' writing at its end,
+; made if it isn't there.  OUT: .A = its fd (an error: ERROR's, the system's)
+OPEN_PATH:
+            cmp         #'R'
+            bne         :+
+            LDR         r0, pathbuf
+            lda         #O_READ
+            jsr         OPEN
+            bcs         @fail
+            rts
+:
+            pha
+            LDR         r0, pathbuf
+            pla
+            pha
+            cmp         #'A'
+            beq         :+
+            lda         #O_WRITE | O_TRUNC
+            bra         :++
+:
+            lda         #O_WRITE
+:
+            jsr         OPEN
+            bcc         @opened
+            cmp         #E_NOENT
+            bne         @fail
+            LDR         r0, pathbuf                         ; (Not there: made)
+            lda         #O_WRITE
+            ldx         #0
+            jsr         CREATE
+            bcc         @opened
+@fail:
+            jmp         OSERR
+@opened:
+            plx                                             ; (Appending: at its end)
+            cpx         #'A'
+            bne         @done
+            pha
+            stz         r0
+            stz         r0 + 1
+            stz         r1
+            stz         r1 + 1
+            ldx         #2
+            jsr         SEEK
+            pla
+@done:
+            rts
+
+; ---- Channels: OPEN, CLOSE, PRINT#, INPUT#, GET#, EOF
+
+; .X = channel .X's source (1 to CH_MAX; else ILLEGAL QUANTITY)
+CH_SRC:
+            dex
+            cpx         #CH_MAX
+            bcc         :+
+            jmp         IQERR
+:
+            inx
+            txa
+            clc
+            adc         #SRC_CH
+            tax
+            rts
+
+; "OPEN" STATEMENT: OPEN n,"name"[,"mode"]: channel n (1 to CH_MAX) a file or a device, read (R, as without a mode),
+; written (W: made, or emptied first) or added to (A: written at its end).  One open already: FILE OPEN
+OPEN_ST:
+            jsr         GETBYT
+            jsr         CH_SRC
+            lda         src_fd,x
+            bmi         :+
+            ldx         #ERR_FILEOPEN
+            jmp         ERROR
+:
+            stx         chsrc
+            jsr         CHKCOM
+            jsr         GETNAME
+            lda         #'R'
+            pha
+            jsr         CHRGOT
+            cmp         #','
+            bne         @open
+            jsr         CHRGET
+            jsr         FRMEVL
+            jsr         CHKSTR
+            jsr         FREFAC
+            cmp         #0
+            beq         @open
+            pla
+            lda         (INDEX)
+            and         #$DF                                ; (A letter in either case)
+            pha
+            cmp         #'R'
+            beq         @open
+            cmp         #'W'
+            beq         @open
+            cmp         #'A'
+            beq         @open
+            jmp         IQERR
+@open:
+            pla
+            jsr         OPEN_PATH
+            ldx         chsrc
+            jmp         SRC_OPENED
+
+; "CLOSE" STATEMENT: CLOSE n: channel n closed (if it's open); CLOSE alone: all of them
+CLOSE_ST:
+            beq         CH_CLOSE_ALL
+            jsr         GETBYT
+            jsr         CH_SRC
+            jmp         SRC_CLOSE
+
+; Every channel closed (CLOSE's, CLEARC's: RUN, NEW, CLEAR, a line entered).  Keeps .X, .Y
+CH_CLOSE_ALL:
+            phx
+            ldx         #SRC_CH + CH_MAX
+:
+            jsr         SRC_CLOSE
+            dex
+            cpx         #SRC_CH
+            bne         :-
+            plx
+            rts
+
+; #n at TXTPTR (and a comma after it): .X = channel n's source, which must be open (else FILE NOT OPEN)
+CH_NUM:
+            jsr         GTBYTC
+            jsr         CH_SRC
+            lda         src_fd,x
+            bpl         :+
+            ldx         #ERR_NOTOPEN
+            jmp         ERROR
+:
+            phx
+            jsr         CHRGOT
+            cmp         #','
+            bne         :+
+            jsr         CHRGET
+:
+            plx
+            rts
+
+; "PRINT" STATEMENT, and PRINT #n, ...: the list to channel n's file (the console's column kept)
+PRINT_ST:
+            cmp         #'#'
+            jne         PRINT
+            jsr         CH_NUM
+            jsr         FLUSH
+            lda         src_fd,x
+            sta         outfd
+            lda         POSX
+            sta         posx_save
+            stz         POSX
+            jsr         CHRGOT
+            jsr         PRINT
+            jsr         FLUSH
+            lda         #1
+            sta         outfd
+            lda         posx_save
+            sta         POSX
+            rts
+
+; "INPUT" STATEMENT, and INPUT #n, ...: the values from channel n's next line (no prompt; its end, END OF FILE)
+INPUT_ST:
+            cmp         #'#'
+            jne         INPUT
+            jsr         CH_NUM
+            stx         cur_src
+            jsr         CHRGOT
+            jsr         INPUT
+            stz         cur_src
+            rts
+
+; "GET" STATEMENT, and GET #n, ...: channel n's next byte each (its end: "" or 0)
+GET_ST:
+            cmp         #'#'
+            jne         GET
+            jsr         CH_NUM
+            stx         cur_src
+            jsr         CHRGOT
+            jsr         GET
+            stz         cur_src
+            rts
+
+; "EOF" FUNCTION: EOF(n): true (-1) if channel n has nothing more to read (its buffer filled to know), else 0
+EOF_FN:
+            jsr         CONINT
+            jsr         CH_SRC
+            lda         src_fd,x
+            bpl         :+
+            ldx         #ERR_NOTOPEN
+            jmp         ERROR
+:
+            lda         src_pos,x
+            cmp         src_len,x
+            bcc         @no
+            jsr         SRC_FILL
+            bcc         @no
+            lda         #$FF
+            tay
+            jmp         GIVAYF
+@no:
+            lda         #0
+            tay
+            jmp         GIVAYF

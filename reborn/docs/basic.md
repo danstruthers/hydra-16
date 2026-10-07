@@ -27,7 +27,7 @@ was, its labels and comments kept, but where the system wanted it changed:
 | Zero page | `$30`-`$FA`: its variables, the input line, and CHRGET (code that held the text pointer in its own `lda abs`) | The program's `$22`-`$7F` (91 bytes, `zeropage.inc`): what it reads through (`(zp),y`), names as zero-page addresses (`ldx #FAC`) or indexes as one block (REASON's `TEMP1`-`FAC`, the floating point's `TMPEXP`-`SERLEN`), in Microsoft's order; `TXTPTR`; the rest (flags, vectors, `CURLIN`, `OLDTEXT` ...) in the BSS |
 | CHRGET | Copied to the zero page at the cold start | In ROM, reading through `TXTPTR` (`lda (TXTPTR)`: a cycle more a character) |
 | The line buffer | In the zero page after `LINNUM` (50 bytes, while lines could be 71) | A page of its own (`$0400`, `basic.cfg`'s `LINEBUF`): 240 characters.  Microsoft's code for a buffer out of the zero page back (Applesoft's and CBM2's: direct mode by the page, the line's number before it, GET's terminator, INPUT's branch), and the new line's link made not to look like the program's end |
-| Memory | Asked for (`MEM`), and tested a byte at a time | The task's RAM from the BSS's end to `$7F00` (`BREAK`): 30,666 bytes free |
+| Memory | Asked for (`MEM`), and tested a byte at a time | The task's RAM from the BSS's end to `$7F00` (`BREAK`): 29,830 bytes free |
 | Output | `MONCOUT`, a BIOS address | fd 1, buffered (a LF or a full buffer sends it); a new line is LF alone, and the column 0 after it (Microsoft's set it to 13) |
 | Input | `MONRDKEY` a key at a time, BASIC editing the line | stdin a line at a time (`INLIN`: the console's cooked lines, edited and echoed by the console, or a file's or a pipe's: LF, CR or CR LF); its end ends BASIC in direct mode |
 | Ctrl-C | The keyboard polled at each statement | A note (`NOTIFY`): the handler sets `intr`, which each statement checks (`ISCNTC`), and a wait for a line or WAIT's loop ends at; at the prompt it's a new line, in INPUT `BREAK IN n` |
@@ -62,14 +62,39 @@ An alias reserves its name, as every keyword does: `ST$`, `LT$` and the like can
 * The system's errors are shown as BASIC's are, their text in capitals: `?NOT FOUND ERROR`.  An error or Ctrl-C
   while LOAD or SAVE has a file closes it (RESTART's `IO_RESET`).
 
+## Files: OPEN, CLOSE, PRINT#, INPUT#, GET#, EOF
+
+Reviewed first, against Microsoft's own BASICs and the system: Microsoft BASIC 2A is Commodore's line, whose files
+are `OPEN lfn,device,sa,"name"`, `PRINT#`, `INPUT#`, `GET#`, `CLOSE` and the status `ST`; GW-BASIC's are `OPEN
+"name" FOR INPUT AS #n`, `PRINT #n,`, `INPUT #n,`, `LINE INPUT #n,`, `CLOSE #n` and `EOF(n)`.  This tokenizer finds
+a keyword anywhere, even in a name (Microsoft's: `SCORE` is `SC` `OR` `E`), so short new keywords (GW-BASIC's `AS`,
+`OUTPUT`) would break programs; the Hydra has paths, not device numbers.  Settled: Commodore's form with a path, and
+GW-BASIC's EOF, with two new statements and one function:
+
+* `OPEN n,"name"[,"mode"]`: channel `n` (1 to 4) a file or a device (`/dev/cons`, `#n/kmesg` ...), read (`R`, as
+  with no mode), written (`W`: made, or emptied first) or added to (`A`: written at its end).  A channel open already:
+  `?FILE OPEN ERROR`; one not open: `?FILE NOT OPEN ERROR`; another number: `?ILLEGAL QUANTITY ERROR`.
+* `CLOSE n`, or `CLOSE` alone for all.  `RUN`, `NEW`, `CLEAR` and a line entered close them all too (as GW-BASIC
+  does), and an error or Ctrl-C leaves them open.
+* `PRINT #n, ...`, `INPUT #n, ...` and `GET #n, ...`: the statements with the channel first (a `#` after the keyword,
+  spaces as you like, rather than Commodore's `PRINT#` keywords).  PRINT# keeps the console's column; INPUT# has no
+  prompt, takes a line's comma-separated values as INPUT does, its end is `?END OF FILE ERROR`, and a value that
+  isn't a number is an error (no REDO from a file); GET# gives a byte at a time, `""` (or 0) at the end.
+* `EOF(n)`: true (-1) when channel `n` has nothing more to read.
+
+Each channel is an input source as stdin and LOAD's file are (an fd and a 128-byte buffer: `IN_BYTE`), so INPUT#
+reads through the same INLIN.  Microsoft's INPUT took its flag from `.Y`, the buffer's high byte, 0 in the zero page:
+with the buffer in RAM it gave `?SYNTAX ERROR` for a bad answer, and now it's `?REDO FROM START` again.
+
 ## To come
 
-File statements, sound, SYS and the system's calls, the task's RAM banks for more memory, and the shell: each
-reviewed against what the system and the other languages have before it's added.
+Sound, SYS and the system's calls, the task's RAM banks for more memory, and the shell: each reviewed against what
+the system and the other languages have before it's added.
 
 ## The test
 
 `basic` (tests/tests.js): at the console, the banner, PRINT, the operators and functions, either case, the short
 forms and LIST's full names, a program (FOR, GOSUB, DATA, READ, INPUT, DIM, DEF FN), Ctrl-C and CONT, GET, errors,
 BYE; a pipeline into it; in `/ram`, SAVE as text and tokenized, LOAD of each, RUN "name", a file not there, the
-text's `cat`; scripts (`basic file`, `#!/bin/basic`: codes 0 and 1).
+text's `cat`; scripts (`basic file`, `#!/bin/basic`: codes 0 and 1); files (OPEN's three modes, PRINT#, INPUT#, GET#
+and EOF at the end, CLOSE, the file's `cat`; FILE OPEN, FILE NOT OPEN, a file not there); INPUT's REDO FROM START.
