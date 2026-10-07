@@ -275,7 +275,7 @@ has them, join `/bin` and `/lib`.
 | `play [-lx] -m ch mml ...` | A line of MML (a score's channel's: below) on channel ch, the channel's own instrument if the line names none: `play -m 0 t180 o4 l8 c d e f g` |
 | `play [-lx] -c ch notes ...` | A chord: each note on the next channel from ch, the commands before each with it (`play -c 0 o4 l2 I0 c e g`); `-x`, either in the Commander X16's MML (`play -x -m 0 T120 O4 L8 CDEFG`) |
 | `xmodem -r file`, `xmodem -s [-k] file` | A file received or sent with XMODEM over the serial line, with any terminal program on the PC: `-r` receives, `-s` sends (`-k`: 1K blocks) |
-| `forth`, `hylang`, `rc` | The languages and the shell: [hyforth.md](hyforth.md), [hylang.md](hylang.md), [rc.md](rc.md) |
+| `forth`, `hylang`, `basic`, `rc` | The languages and the shell: [hyforth.md](hyforth.md), [hylang.md](hylang.md), [basic.md](basic.md), [rc.md](rc.md) |
 
 The sound device is `/dev/snd` (register and value pairs), `/dev/sndctl` (`claim N [P]`, `release N [P]`, `volume
 N`, `reset`; and a channel's commands as text: `patch CH P`, `note CH N`, `off CH`, `level CH V`, `pan CH
@@ -284,8 +284,9 @@ left|right|both`, `bend CH B`, `drum CH N`, `freq CH HZ`, `glide CH N`, `wave CH
 60 >/dev/sndctl` plays middle C), `/dev/bell` and `/dev/psg`.  Channels 0-7 are the YM2151's, 8-23 (with a Vera X)
 its PSG's voices: the same commands, and `wave`; `claim`'s P is their mask, bit n channel 8 + n.  The
 VIA's port A is `/dev/gpio` (pins `0`-`7`, `port`, `ctl`, `ca1`) and `/dev/i2c` the I2C bus on two of its pins;
-`/dev/spi` the SPI devices; `/dev/seg` names shared segments; `/pc` a folder on the PC (through the PC tool,
-`sim/tools/hydrapc.js`, which is the terminal too).
+`/dev/spi` the SPI devices; `/dev/seg` names shared segments; `/dev/vid` is the Vera X (its screen, VRAM, the PSG,
+and `pcm` and `pcmctl`, its PCM: [../programming/video.md](../programming/video.md)); `/pc` a folder on the PC (through
+the PC tool, `sim/tools/hydrapc.js`, which is the terminal too).
 
 ### Scores
 

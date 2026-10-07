@@ -6,7 +6,7 @@ The guides for using HydraOS (`reborn/`), the Hydra-16's operating system.  The 
 | :---- | :------------- |
 | [The tutorial](../tutorial.md) | Switching it on (in the emulator or on the board), the shell, files and disks, windows, the languages, a program of your own |
 | [rc](rc.md) | The shell underneath everything: commands, quoting, variables, pipelines, redirection, control flow, scripts |
-| [The tools](tools.md) | Every program in `/bin`: files, text, tasks, disks, and the rest |
+| [The tools](tools.md) | Every program in `/bin`: files, text, the editors, tasks, the debugger, the assembler, disks, and the rest |
 | [HyForth](hyforth.md) | The Forth, and the login shell: its words, libraries, the shell rule, files, devices, sound |
 | [hylang](hylang.md) | The lisp (danlang on the Hydra): its REPL and scripts, the system library, the Hydra's built-ins, devices |
 | [BASIC](basic.md) | Microsoft's BASIC (EhyBASIC): programs and scripts, files, sound and `PLAY`, `SYS` and the system's calls, memory, the shell |
