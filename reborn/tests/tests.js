@@ -1537,6 +1537,10 @@ module.exports = {
       init: 't_sem', cycles: 30e6,
     },
     {
+      name: 'xcall', what: 'XCALL: a library module\'s routines (t_lib), registers and flags both ways, its bank and back, a system call from it',
+      init: 't_xcall', modules: ['t_lib'], cycles: 10e6,
+    },
+    {
       name: 'banks', what: 'a module of two banks: calls between them (FAR2, FAR1), registers and C, each bank\'s data',
       init: 't_bank2', cycles: 10e6,
     },

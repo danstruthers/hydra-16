@@ -178,6 +178,9 @@ bank t).  Every fixed address is in `include/layout.inc`, and nowhere else.
   in the module's `DATA` too, as the first `hylang`'s core was (its heap, objects, scopes and I/O): it runs with
   either bank at `$A000`, so it calls nothing of either bank's and reads no table of theirs (a text its caller hands
   it is fine: the caller's bank is there); a call from it into a bank saves the bank register and sets it.
+* `XCALL` calls a routine in any bank of the paged ROM (`r15` its address, `r14` its bank), as the X16's `jsrfar`:
+  everything else passes through both ways, and the caller's bank comes back after it.  A program that makes far
+  calls keeps its note handler in RAM.
 * A program may have library modules of its own (`HT_LIBRARY`), as the first `hylang` had `hylnum` and `hylstr`: each is
   assembled with the program (its .s files include them), its code and read-only data a bank of their own with a
   header first (`HYX2_LIBRARY "name", "segment", "memory"`), and the module's folder has its own link, `NAME.cfg`,

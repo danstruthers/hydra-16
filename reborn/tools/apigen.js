@@ -195,9 +195,10 @@ function oserrMap(errors) {
 }
 
 // ---- HyForth (modules/forth): a sys- word for each call a program makes (not a server's, nor a debugging one; nor
-// NOTIFY, as forth has its own note handler), the call's registers as stack items in the specification's order, the
-// first deepest: in, then out, then an ior (0, or -512 less the error code) if the call can fail
-const FORTH_GROUPS_OUT = ['server', 'dbg'], FORTH_CALLS_OUT = ['NOTIFY'];
+// NOTIFY, as forth has its own note handler; nor XCALL, which runs code at an address), the call's registers as stack
+// items in the specification's order, the first deepest: in, then out, then an ior (0, or -512 less the error code)
+// if the call can fail
+const FORTH_GROUPS_OUT = ['server', 'dbg'], FORTH_CALLS_OUT = ['NOTIFY', 'XCALL'];
 const forthCalls = api => api.calls.filter(c => !FORTH_GROUPS_OUT.includes(c.group) && !FORTH_CALLS_OUT.includes(c.name));
 const forthName = c => 'sys-' + c.name.toLowerCase().replace(/_/g, '-');
 

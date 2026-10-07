@@ -82,6 +82,7 @@ PASS init    init from files: the RAM disks started, the namespace file run, eac
 PASS newns   the default namespace's library (nslib): an old area emptied, a namespace file run (quotes, comments, $task, flags, bad lines)  (13 checks)
 PASS cons    the console: lines, editing, history, raw keys, Ctrl-C, windows (shown, repainted, made, gone), 115200, the bell
 PASS mem     memory: BREAK, pages, banks, a shared segment between tasks (and kcopy from it)  (38 checks)
+PASS xcall   XCALL: a library module's routines (t_lib), registers and flags both ways, its bank and back, a system call from it  (9 checks)
 PASS sem     semaphores: counts and mutexes, waits ended by a release, a free and a note, a task's end; GETPPID  (36 checks)
 PASS banks   a module of two banks: calls between them (FAR2, FAR1), registers and C, each bank's data  (6 checks)
 PASS banks3  a module of three banks: calls from any bank to any (FARN), registers and C, each bank's data, each bank set again  (7 checks)
@@ -220,6 +221,7 @@ Later, from `/pc` at 115200:
 | Step | | Notes |
 |---|---|---|
 | 2.1 The module framework | Done | Drivers (`HYX2_DRIVER`) started at boot in the directory's order, task F down; the boot waits for their inits (their devices registered) before it starts init |
+| 2.1a `XCALL` | Done | After the review of October 2026: a call into another bank of the paged ROM, the X16's `jsrfar`, on page 0 (`kernel/sys.s`): the routine's address in `r15` and its bank in `r14`, not the plan's `.A` (so `.A`, `.X`, `.Y`, the flags and `r0`-`r13` all pass through both ways); the caller's `$01` set to the bank for the call and back after it, the caller's bank kept on the stack, so calls nest.  A library module (`HT_LIBRARY`) is found by `MODINFO`.  Not a HyForth word or hylang function (it runs code at an address, as `NOTIFY` takes one).  The xcall test (`t_lib`, a library of three routines) |
 | 2.2 The request block and the file layer | Done | `OPEN`, `CREATE`, `CLOSE`, `READ`, `WRITE`, `SEEK`, `STAT`, `FSTAT`, `WSTAT`, `FWSTAT`, `REMOVE`, `DUP`, `DUP2` (page 2): fds, channels (48, the kernel task's), `#x` names to a device's server; `IO_UNIT` a request; a note ends a wait (`R_FLUSH`, `E_INTR`); fds 0-2 to a child, all closed at the end; `PUTC`, `PUTS`, `GETC` on fds 1 and 0 |
 | 2.3 The server calls | Done | `SRV_REGISTER`, `SRV_TAKE`, `SRV_REPLY`, `CLIENT_READ`, `CLIENT_WRITE`, `NOTE_POST`, `NOTE_QUEUE`; the event count (`TASK_EVENT`, `RQ_EVENT`, `ST_EVENT`) |
 | 2.4 srvlib | Done | `sdk/asm/srvlib.inc`, `srvlib.s`: directories as stat records, text files made on each read, ctl files of commands (words, decimal and `$hex` numbers), data files with a handler, fids, wait masks; the test server `t_srv` |

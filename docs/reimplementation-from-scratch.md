@@ -572,7 +572,7 @@ A driver module has `init`, `serve`, `irq` and `stop` entries and a device lette
 
 A library module is code other modules call: the server library (§12.3), a big-number library for hylang, a graphics library for the Vera X.  A module calls a routine in another bank with **`XCALL`** (`.A` = bank, `r15` = address; registers pass through), which the kernel does from BIOS page 0, switching the caller's `$01` and back, as the X16's `jsrfar` does.
 
-(As built: no `XCALL` yet.  srvlib is assembled into each server, and a module of up to four banks calls between its own banks itself, through trampolines in its RAM (`FAR2`, `FAR1`, and `FARN` from any bank to any).  A program may have library modules of its own (`HT_LIBRARY`), assembled with it and run in its task, called through the same trampolines with the library's bank, which the program finds in the module directory: hylang's numbers are `hylnum`, its strings and hashes `hylstr`.)
+(As built: `XCALL` came after the review of October 2026, with the routine's address in `r15` and its bank in `r14`, so `.A` passes through too.  srvlib is assembled into each server, and a module of up to four banks calls between its own banks itself, through trampolines in its RAM (`FAR2`, `FAR1`, and `FARN` from any bank to any).  A program may have library modules of its own (`HT_LIBRARY`), assembled with it and run in its task, called through the same trampolines with the library's bank, which the program finds in the module directory: hylang's numbers are `hylnum`, its strings and hashes `hylstr`.)
 
 ---
 

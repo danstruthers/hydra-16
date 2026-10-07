@@ -1,9 +1,45 @@
 ; ****************************************************************************
-; sys.s - the small calls: what the system has, error texts, the RAM modules' probe, and the debugging calls.
+; sys.s - the small calls: what the system has, error texts, far calls, the RAM modules' probe, and the debugging
+; calls.
 
 .include "kdefs.inc"
 
 .segment "KCODE"
+
+; XCALL: the routine at r15 in paged ROM bank r14 (its low byte), as the X16's jsrfar: the caller's bank register
+; ($01) the routine's for the call, then back; .A, .X, .Y, the flags and r0-r13 pass through both ways.  Here on page
+; 0, which the switch of $01 leaves where it is.  The stack, as the routine runs: its return (here), the caller's
+; bank, the caller's return
+K_XCALL:
+            pha                                             ; (A byte for the caller's bank)
+            php
+            pha
+            phx
+            tsx                                             ; (S+1 X, S+2 A, S+3 P, S+4 the byte)
+            lda         ROM_BANK
+            sta         $0104,X
+            lda         r14
+            sta         ROM_BANK                            ; The routine's bank
+            plx
+            pla
+            plp
+            jsr         @go
+            php                                             ; Back: the caller's bank, and the byte gone (P over
+            pha                                             ;   it)
+            phx
+            tsx                                             ; (S+1 X, S+2 A, S+3 P, S+4 the bank)
+            lda         $0104,X
+            sta         ROM_BANK
+            lda         $0103,X
+            sta         $0104,X
+            plx
+            pla
+            plp
+            plp
+            rts
+
+@go:
+            jmp         (r15)
 
 ; SYSINFO: .A = the ABI version; .X = the RAM modules installed; r0 = the free tasks (bit = task)
 K_SYSINFO:

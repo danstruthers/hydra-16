@@ -73,6 +73,18 @@ call KMESG system impl=K_KMESG far
   doc:    The kernel's messages: what it printed on the bring-up console (the banner, POST, the boot's tasks, a
   doc:    driver's own lines), its last KMESG_SIZE bytes.  /dev/kmesg (kdev's #n/kmesg) is them as a file.
 
+call XCALL system impl=K_XCALL
+  in:     r15 = a routine's address ($A000-$DFFF); r14 (its low byte) = the paged ROM bank it's in; .A, .X, .Y,
+  in:     the flags and r0-r13: the routine's
+  out:    .A, .X, .Y, the flags and r0-r15 as the routine leaves them
+  errors: -
+  blocks: no
+  doc:    Call a routine in another bank of the paged ROM (a library module's: HT_LIBRARY, its bank from MODINFO),
+  doc:    as the X16's jsrfar: the caller's bank register ($01) is set to the routine's for the call and back
+  doc:    after it, and everything else passes through both ways.  The routine runs in the caller's task, with its
+  doc:    RAM and zero page.  A note may come while it runs: a program that makes far calls keeps its note handler
+  doc:    in RAM, as a module of several banks does.
+
 # ---- task
 
 call EXITS task impl=K_EXITS
