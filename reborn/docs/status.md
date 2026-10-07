@@ -198,7 +198,7 @@ Later, from `/pc` at 115200:
 | 0.2 Conventions | Done | [conventions.md](conventions.md) |
 | 0.3 The specification and `apigen.js` | Done | The calls in 9 groups; the jump table (and the stubs of calls on other pages), `hydra.inc`, `errors.inc`, the error texts, `api.md`, `api.json` |
 | 0.4 The build | Done | `build.js`: the BIOS link (16 pages, each with its number; COMMON at `$FD00`, the vectors), the module link (`$A000`, data copied to RAM), `romimg.js`, the checks, the budget report.  The RAM program link (`sdk/asm/hyx2.cfg`, `$0800`) came with the loader (4.1): the test RAM programs (`tests/ram/`) are built with it |
-| 0.5 Emulator additions | Mostly | `sim/run.js`: the new images, the task view, labels by page in traces, PC watches by label, live console.  Still to do: the call trace (by `api.json`) |
+| 0.5 Emulator additions | Done | `sim/run.js`: the new images, the task view, labels by page in traces, PC watches by label, live console.  After the review of October 2026, the plan's debugger in the emulator (19.3): `--trace-calls` (each system call a program makes, by name from `api.json`, its registers and r0's string, and what it gives back as it returns: ok or the error's name), `--watch` and `--watch-read` (an address, or a module's label, any task's or one's), `--break` (a kernel label, `module:label` while the task has the module's bank, `page:addr`, an address), `--log FILE`; and with `-i`, a monitor (Ctrl-A b, or a break): step, registers, tasks, memory in any task's view, breaks and watches set and gone |
 | 0.6 CI | Done | `.github/workflows/build.yml` builds and tests reborn too |
 
 ## Phase 1: the kernel core
@@ -628,4 +628,3 @@ branch of its own.
    The parity
    checkpoint (the plan's, after phase 5) is still the user's.
 2. On the board: the boot, POST, the tick, the console at 115200, and a real card read and written.
-3. Still open from phase 0: the emulator's call trace.

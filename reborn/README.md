@@ -24,6 +24,9 @@ node sim/run.js -i                  the Hydra's serial console, live (Ctrl-A x q
 node sim/run.js -i --sd card.img    the same with a card in SD device 0 (an image: ../sim/tools/hydrafs.js)
 node sim/run.js -i --pc-dir DIR     the same with the folder DIR at /pc (the emulator plays the PC tool:
                                     ../sim/tools/hydrapc.js on a real PC)
+node sim/run.js --trace-calls       each system call a program makes, by name, and what it gives back; --break K_OPEN
+                                    (or rc:main ...) stops there; with -i, Ctrl-A b is a monitor (step, registers,
+                                    memory, breaks, watches): the top of sim/run.js has them all
 danlang sim/dl/run.dl -i            the serial console in the danlang emulator (Ctrl-] x quits, Ctrl-] h helps;
                                     Ctrl-C is the Hydra's); --input "\phylang\r" starts hylang at the first prompt
 node build.js prog DIR              a program of your own, DIR/*.s into DIR/NAME.hyx (sdk/asm/README.md), or

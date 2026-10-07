@@ -19,7 +19,11 @@
 // marks.  opt.pcHost: what the serial port sends goes through its push(byte, cycle), which gives back the bytes that
 // are the console's (the rest are /pc's frames: pchost.js, run.js --pc-dir), and its send(bytes) is what the PC
 // sends.  opt.pcHist: count the instructions run at each page:PC (pcHist).  run(limit) runs to a cycle; the rest is
-// its state, for a report.  The loop that runs each instruction allocates nothing, so the emulator runs as fast as the
+// its state, for a report.  For a debugger: opt.breaks ({ pc, page, bank, banks }: -1 for any; bank, the first of
+// banks of the task's paged ROM bank): run stops before the instruction at one, m.breakHit says which, and m.skipBreak = true goes past it the next
+// time; opt.readWatches ({ addr, task }), as opt.watches are for writes; opt.calls (a Map: a jump table slot's
+// address -> its call's name), opt.errNames (code -> name) and opt.callFilter (a Set of names and "tN", or none):
+// each call a program makes logged, with its registers, and what it gives back as it returns.  The loop that runs each instruction allocates nothing, so the emulator runs as fast as the
 // host can (about 20 MHz of the Hydra's cycles on a 2019 desktop): keep it that way.
 'use strict';
 const { createCpu, FLAGS } = require('./cpu65c02.js');
@@ -86,8 +90,13 @@ function createMachine(opt) {
     if (!f || !sameChip(b, f.bank)) return o;
     return f.high ? o | f.mask : o & ~f.mask;
   }
+  const readWatches = opt.readWatches || [], rWatch = readWatches.length > 0;
   function rd(a) {
-    if (a < 0x8000) return rtc && a >= RTC_REGS && tsel(a) === RTC_TASK ? rtc.read(a - RTC_REGS) : taskRam[tsel(a)][a];
+    if (a < 0x8000) {
+      if (rWatch) for (const w of readWatches) if (w.addr === a && (w.task < 0 || w.task === tsel(a)))
+        log('read: $' + hx(a, 4) + ' (task ' + hx(tsel(a), 1) + ') ' + hx(taskRam[tsel(a)][a]) + ' by ' + hx(W, 1) + ':' + hx(cpu.PC, 4) + ' at cycle ' + cpu.cyc);
+      return rtc && a >= RTC_REGS && tsel(a) === RTC_TASK ? rtc.read(a - RTC_REGS) : taskRam[tsel(a)][a];
+    }
     if (a < 0xA000) { const b = taskRam[tsel(0)][0]; return bankInstalled(b) ? bankMem(b)[ramOfs(b, a)] : (a >> 8); }  // floating bus
     if (a < 0xE000) { const off = romBank(taskRam[tsel(1)][1]) * 0x4000 + ((a - 0xA000) ^ 0x2000); return off < pagedrom.length ? pagedrom[off] : 0xFF; }
     if (a >= 0xFF00 && a < 0xFFF0) {
@@ -172,6 +181,45 @@ function createMachine(opt) {
   const I = FLAGS.I;
   const ring = new Uint16Array(Math.max(1, traceLen) * 8);    // The trace: the last traceLen instructions, a ring
   let ringAt = 0, ringN = 0;                                  //   (W T PC A X Y S P each), m.trace's list
+  const breaks = opt.breaks || [];
+  m.breakHit = null; m.skipBreak = false;
+  // The call trace: a call when the PC reaches a jump table slot (page 0), its return when the PC is back at the
+  // caller's (its task, its stack as it was)
+  const calls = opt.calls || null, errNames = opt.errNames || new Map(), callFilter = opt.callFilter || null;
+  const pend = new Array(64).fill(null);
+  let pendN = 0, pendAt = 0;
+  const stringAt = (t, a) => {                                  // (A string in task t's view, as it runs: its RAM, its
+    let str = '';                                             //   banks, the paged ROM; if a is one: printable, ended)
+    for (let i = 0; i < 48 && a + i < 0xE000; i++) {
+      const c = a + i < 0x8000 ? taskRam[t][a + i] : rd(a + i);
+      if (c === 0) return str.length ? str : null;
+      if (c < 0x20 || c > 0x7E) return null;
+      str += String.fromCharCode(c);
+    }
+    return null;
+  };
+  function callTrace(PC) {
+    if (pendN) for (let i = 0; i < pend.length; i++) {
+      const p = pend[i];
+      if (p && p.task === T && p.ret === PC && p.s === cpu.S) {
+        log('  ' + p.name + ' T' + hx(T, 1) + ': ' + (cpu.P & FLAGS.C ? (errNames.get(cpu.A) || 'error $' + hx(cpu.A)) :
+          'ok A=' + hx(cpu.A) + ' X=' + hx(cpu.X) + ' Y=' + hx(cpu.Y)) + ' at cycle ' + cpu.cyc);
+        pend[i] = null; pendN--;
+      }
+    }
+    if (W !== 0 || PC < 0xF800 || PC >= 0xFA40) return;
+    const name = calls.get(PC);
+    if (!name || callFilter && !callFilter.has(name) && !callFilter.has('t' + T)) return;
+    const r = taskRam[T], sp = cpu.S;
+    const ret = ((r[0x100 + ((sp + 2) & 0xFF)] << 8 | r[0x100 + ((sp + 1) & 0xFF)]) + 1) & 0xFFFF;
+    let text = 'call T' + hx(T, 1) + ' ' + name + ' A=' + hx(cpu.A) + ' X=' + hx(cpu.X) + ' Y=' + hx(cpu.Y);
+    for (let k = 0; k < 4; k++) text += ' r' + k + '=' + hx(r[2 + 2 * k] | r[3 + 2 * k] << 8, 4);
+    const str = stringAt(T, r[2] | r[3] << 8);
+    log(text + (str ? ' (r0: "' + str + '")' : '') + ', from ' + hx(ret, 4) + ' at cycle ' + cpu.cyc);
+    if (pend[pendAt]) pendN--;                                  // (The oldest given up: a call that never returns, EXITS)
+    pend[pendAt] = { task: T, ret, s: (sp + 2) & 0xFF, name };
+    pendAt = (pendAt + 1) % pend.length; pendN++;
+  }
   function run(limit) {
     while (cpu.cyc < limit && !cpu.halted) {
       sync(cpu.cyc);
@@ -184,6 +232,12 @@ function createMachine(opt) {
       }
       if (cpu.waiting) { cpu.cyc += Math.max(1, Math.min(nextEvent(), limit - cpu.cyc)); continue; }
       const PC = cpu.PC, P = cpu.P;
+      if (breaks.length) {
+        let hit = null;
+        for (const b of breaks) if (b.pc === PC && (b.page < 0 || b.page === W) && (b.bank < 0 || taskRam[T][1] - b.bank >>> 0 < (b.banks || 1))) hit = b;
+        if (hit) { if (m.skipBreak) m.skipBreak = false; else { m.breakHit = hit; return; } }
+      }
+      if (calls) callTrace(PC);
       if (acia.typedAt >= 0) {                                  // IRQs-off stretches, from the first key typed
         if (P & I) { if (iOffAt < 0) { iOffAt = cpu.cyc; iOffFrom = W << 16 | PC; } }
         else if (iOffAt >= 0) { iOffNote(cpu.cyc - iOffAt, iOffFrom, W << 16 | cpu.lastPC, iOffAt); iOffAt = -1; }
