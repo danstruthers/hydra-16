@@ -1619,7 +1619,7 @@ module.exports = {
       },
       // (gpio: the pins $A5 and PA1 high, the I2C bus's pull-up; spi: the echo device's first byte $A0 in mode 0, $A3 in
       // mode 3, then each byte the one before; the ROM disk's ctl to its label, as the rest changes with its files)
-      expect: ['/> libs\nforth coreext exception file tools shell gpio i2c spi cons proc clock disk pc sound\n/> 2 gpio . 3 gpio . gpio-port .\n1 0 167 \n',
+      expect: ['/> libs\nforth coreext exception file tools shell gpio i2c spi hydra cons proc clock disk pc sound\n/> 2 gpio . 3 gpio . gpio-port .\n1 0 167 \n',
         '0 in 1\n1 in 1\n2 in 1\n3 in 0\n4 out 1\n5 in 1\n6 out 0\n7 in 1\nca1 rise 0\nca2 1\n/> gpio-wait 0> .\n-1 \n',
         'pad 5 type\nhello\n/> i2c-devices $50 i2c? . $51 i2c? .\n50 68 -1 0 \n',
         'b 2 + c@ .\n160 1 2 \n/> 3 3 spi-mode 3 b 1 spi b c@ .\n163 \n/> window . windows type\n0 0 0 80 24 *\n',
@@ -2754,6 +2754,21 @@ module.exports = {
           'āhead -27 /dev/vid/term | tail -1; echo done\r' };
       },
       expect: ['monitor off" window-ctl\n ok', 'tail -1\nfth\nst-fth', '(window-label)\n=> "hyl"', '(window-ctl "monitor off")\n=> NIL', 'echo done\nst-hyl', '\ndone\n%'],
+    },
+    {
+      name: 'newwin', what: 'new-window (W5c): a command run in a window made and shown, in this one\'s group ($window its number; the window gone when it ends, this one shown again), -g\'s in a group of its own, the shell (/lib/shell\'s: HyForth) with none; HyForth\'s new-window and new-group, hylang\'s',
+      init: 't_rc', cycles: 200e6,
+      // (Each window shown as it's made: its output on the terminal then, the window it came from painted again
+      // when it goes, the prompt last.  The shell's window: a line typed there, then bye)
+      get machine() {
+        return { input: 'ānew-window \'echo hi from $window; sleep 1\'\r' + 'ānew-window -g sleep 2; cat /dev/wctl\r' +
+          'ānew-window\r' + 'āecho shell in $window; cat /dev/wctl\r' + 'ābye\r' +
+          'āforth -l\r' + 'ālib cons s" echo fth $window; sleep 1" new-window\r' + 'ās" echo fgrp; cat /dev/wctl; sleep 1" new-group\r' + 'ābye\r' +
+          'āhylang\r' + 'ā(use "cons")\r' + 'ā(new-window "echo hyl $window; sleep 1")\r' + 'ā(new-group "echo hgrp; cat /dev/wctl; sleep 1")\r' + 'ā(exit)\r' +
+          'āecho done\r' };
+      },
+      expect: ['hi from 1\n', 'cat /dev/wctl\n0 0 80 24\n1 1 80 24 *\n', 'shell in $window; cat /dev/wctl\nshell in 1\n0 0 80 24\n1 0 80 24 *\n',
+        'fth 1', 'fgrp\n0 0 80 24\n1 1 80 24 *', 'hyl 1', 'hgrp\n0 0 80 24\n1 1 80 24 *', 'echo done\ndone\n%'],
     },
     {
       name: 'pcm', what: 'the Vera X\'s PCM (vid\'s /pcm and /pcmctl), at rc: its files and state; the rate (the VERA\'s nearest) and volume; raw samples from a card into the FIFO, drained; bad commands; /pcm one task\'s (another\'s pcmctl: busy); WAV files played (8 bits mono, made signed; 16 bits stereo past an odd chunk; a float one, not a song); a ZSM\'s PCM instruments (one, then one looped, stopped by the FIFO emptied: from RAM) and its claim of the PCM; one too big for RAM (from the file); the FIFO\'s bytes in order, none lost, its runs dry only at the ends',

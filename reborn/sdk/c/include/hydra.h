@@ -121,6 +121,13 @@ int __fastcall__ hy_wlabel (const char* s);                 /* Its title (OSC 2'
 int __fastcall__ hy_wstatus (const char* s);                /* Its status line (the footer's %s): 55 characters */
 int __fastcall__ hy_wctl (const char* s);                   /* A line to its wctl (55 characters) */
 
+#define HY_WGROUP           1                               /* hy_wnew's: the window in a group of its own */
+int __fastcall__ hy_wnew (unsigned char flags);             /* A window made (not shown), in this one's group (wctl's
+                                                            **   new; HY_WGROUP: new group): its number, its files
+                                                            **   #cN (#cN/cons ...), or -1.  It goes with its last
+                                                            **   cons closed (the new-window command's: a program in
+                                                            **   one) */
+
 /* ---- Errors */
 
 const char* __fastcall__ hy_errstr (unsigned char code);    /* An error code's text (ERRSTR) */

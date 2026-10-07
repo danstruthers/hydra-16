@@ -1,8 +1,11 @@
 \ cons.fs - the console's windows, by their files (#c, /dev): lib cons.  hylang's cons library's words.  /dev/wctl:
-\ new (a window made, and shown), current N (window N shown); it reads as the windows, a line each (* the one shown).
+\ new (a window made), current N (window N shown); it reads as the windows, a line each (* the one shown).  new-window
+\ and new-group run the new-window command (hydra.fl's run: the line split at blanks, new-window joins its words again).
 \ $window is this shell's window (/env/window; none: 0); window-label, window-status and window-ctl its chrome (W4:
 \ /dev/label, wctl's status and any wctl line; a line each, 55 characters).  The bell is facility's beep; the keys' raw
 \ mode is key's and ekey's (they set it, and a line read ends it).  A failure THROWs.
+
+require hydra.fl
 
 create cons-buf 256 allot                         \ What's read, or a line written
 variable cons-n
@@ -19,7 +22,10 @@ variable cons-n
   >r cons-buf 8 r@ read-file r> close-file throw throw  cons-buf swap 0. 2swap >number 2drop drop ;
 : windows ( -- c-addr u )                         \ The windows, a line each (* the one shown)
   s" /dev/wctl" r/o open-file throw >r cons-buf 256 r@ read-file r> close-file throw throw cons-buf swap ;
-: new-window ( -- ) s" new" cons-wctl ;          \ A window made, and shown (its shell: wstart's)
+: new-window ( c-addr u -- )                      \ A window made and shown, in this one's group, running the
+  0 cons-n ! s" new-window " cons+ cons+ cons-buf cons-n @ run drop ;    \ command line (rc's; empty: the shell)
+: new-group ( c-addr u -- )                       \ The same, the window in a group of its own (a shell session)
+  0 cons-n ! s" new-window -g " cons+ cons+ cons-buf cons-n @ run drop ;
 : show-window ( n -- )                            \ Window n shown
   base @ >r decimal 0 <# #s s" current " holds #> r> base ! cons-wctl ;
 : window-label ( c-addr u -- )                    \ Its title (OSC 2's too; empty: its program's name again)

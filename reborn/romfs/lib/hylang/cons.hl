@@ -1,5 +1,5 @@
-; cons.hl - the console's windows, by their files (#c, /dev): (use "cons").  /dev/wctl takes new (a window made, and
-; shown) and current N (window N shown), and reads as the windows, a line each (* the one shown); /dev/consctl takes
+; cons.hl - the console's windows, by their files (#c, /dev): (use "cons").  /dev/wctl takes new (a window made) and
+; current N (window N shown), and reads as the windows, a line each (* the one shown); /dev/consctl takes
 ; rawon and rawoff (raw lasts while a consctl is open: each key as it comes, unechoed); /dev/bell, a write, rings the
 ; console's bell (#a's: a short beep).  $window is this shell's window; (window-size) its size, consctl's size line
 ; (the smaller of the terminals it's shown on); (window-label s), (window-status s), (window-ctl s) its chrome (W4:
@@ -29,8 +29,10 @@
 (fun {windows} {map (fn {l} {val (fst (str-split l " "))}) (dev.lines "/dev/wctl")})
 (fun {shown-window} {val (fst (str-split (fst (filter (fn {l} {elem? "*" (str-split l " ")}) (dev.lines "/dev/wctl"))) " "))})
 
-; A window made, and shown (its shell: wstart's)
-(fun {new-window} {dev.write "/dev/wctl" "new"})
+; A window made and shown, in this one's group, running the command line (rc's; none: the shell): the new-window
+; command's; new-group's window in a group of its own (a shell session)
+(fun {new-window} {if &_ (run "new-window" (fst &_)) (run "new-window")})
+(fun {new-group} {if &_ (run "new-window" "-g" (fst &_)) (run "new-window" "-g")})
 
 ; Window n shown
 (fun {show-window n} {dev.write "/dev/wctl" (format "current {}" n)})

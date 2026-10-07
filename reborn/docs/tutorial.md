@@ -152,7 +152,8 @@ come in groups, a group a shell session: Ctrl-] c starts one (and shows it), wit
 next and previous group, Ctrl-] Tab (or Ctrl-Tab, where the terminal sends it) the group's next window, and Ctrl-] x
 hangs up the window shown.  A window that isn't shown runs on; its output is kept, and shown again when you come
 back.  `echo $window` says which one you're in, and `cat /dev/wctl` lists them: number, group, size, `*` the one
-shown.
+shown.  `new-window top` runs a program in a window of its own, in this group (it goes when the program ends);
+`new-window -g` starts another shell session.
 
 **Tasks working together.**  The C SDK's multitasking demos start four or five copies of themselves, each in a task
 of its own, and draw what they do as they do it: memory they share (a shared segment), and semaphores to take turns

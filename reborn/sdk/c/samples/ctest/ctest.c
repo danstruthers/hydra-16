@@ -2,7 +2,7 @@
 ** ctest.c - the C library's test (tests/tests.js's c runs it at rc): its arguments and name, files (stdio and the
 ** calls under it), errors, directories, the heap, the time, the environment, stat, commands and their exit
 ** statuses (system, hy_spawn, hy_wait: with the sample code), the namespace, a note as a signal, RAM banks, shared
-** segments, isatty, the window's chrome (hy_wlabel, hy_wstatus, hy_wctl).
+** segments, isatty, the window's chrome (hy_wlabel, hy_wstatus, hy_wctl), windows made (hy_wnew).
 ** Each check prints "ok - " or "not ok - " and its name; the last line is "ctest: N failed", and its exit status
 ** is the count.  Run it as ctest a 'b c', in a directory it can write in (/ram), with the C samples in
 ** /rom/sample/c.
@@ -244,6 +244,28 @@ int main (int argc, char* argv[])
         check (hy_wlabel ("") == 0, "hy_wlabel (\"\"): its program's name again");
         check (hy_wstatus ("from C") == 0, "hy_wstatus");
         check (hy_wctl ("monitor off") == 0 && hy_wctl ("nonsense") < 0, "hy_wctl, and a line it isn't");
+    }
+
+    /* Windows made: one in this one's group (0's), one in a group of its own (wctl's lines: number, group, ...),
+    ** each written and gone with its cons closed */
+    {
+        static char b[200];
+        char p[12];
+        int w, fd, n, i;
+
+        for (i = 0; i < 2; ++i) {
+            w = hy_wnew (i ? HY_WGROUP : 0);
+            fd = open ("/dev/wctl", O_RDONLY);
+            n = read (fd, b, sizeof b - 1);
+            close (fd);
+            b[n < 0 ? 0 : n] = 0;
+            sprintf (p, "\n%d %c ", w, i ? '1' : '0');
+            check (w > 0 && strstr (b, p) != 0, i ? "hy_wnew (HY_WGROUP): a window in a group of its own" :
+                "hy_wnew: a window in this one's group");
+            sprintf (p, "#c%d/cons", w);
+            fd = open (p, O_RDWR);
+            check (fd >= 0 && write (fd, "x", 1) == 1 && close (fd) == 0, "hy_wnew: its cons written, closed");
+        }
     }
 
     printf ("ctest: %d failed\n", failed);

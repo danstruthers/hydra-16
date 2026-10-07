@@ -255,7 +255,7 @@ is in the library's buffer till its next.  Where hylang gives a list or a hash, 
 
 | Library | Device | Words | hylang's, not here |
 | :--- | :--- | :--- | :--- |
-| `cons` | `#c` (`/dev`) | `window ( -- n )` (`$window`; none: 0), `windows ( -- c-addr u )` (`wctl`'s lines, `*` the one shown), `new-window`, `show-window ( n -- )`, `window-label ( c-addr u -- )` (its title; empty: its program's name again), `window-status ( c-addr u -- )` (its status line, the footer's `%s`), `window-ctl ( c-addr u -- )` (a `wctl` line: `chrome screen off` ...) | `raw-on`, `raw-off` (`key` and `ekey` set the raw mode, a line read ends it), `beep` (Facility's) |
+| `cons` | `#c` (`/dev`) | `window ( -- n )` (`$window`; none: 0), `windows ( -- c-addr u )` (`wctl`'s lines, `*` the one shown), `new-window ( c-addr u -- )` (a command line run in a window made and shown, in this one's group; empty: the shell), `new-group` (the same, in a group of its own), `show-window ( n -- )`, `window-label ( c-addr u -- )` (its title; empty: its program's name again), `window-status ( c-addr u -- )` (its status line, the footer's `%s`), `window-ctl ( c-addr u -- )` (a `wctl` line: `chrome screen off` ...) | `raw-on`, `raw-off` (`key` and `ekey` set the raw mode, a line read ends it), `beep` (Facility's) |
 | `gpio` | `#g` (`/dev/gpio`) | `gpio ( pin -- level )`, `gpio! ( pin level -- )` (an output, set), `gpio-in`, `gpio-out ( pin -- )`, `gpio-port ( -- byte )`, `gpio-port! ( byte -- )`, `gpio-ddr! ( byte -- )`, `gpio-ca1! ( rise? -- )`, `gpio-ca2! ( n -- )` (0, 1, -1 an input), `gpio-wait ( -- count )` (CA1's next edge), `gpio-state ( -- c-addr u )` (`ctl`'s lines) | |
 | `i2c` | `#i` (`/dev/i2c`) | `i2c-read`, `i2c-write ( addr reg c-addr u -- )` (at the device's register, `i2c-reg-size` bytes of it: 0, none), `i2c-speed ( khz -- )`, `i2c-reg-size ( n -- )`, `i2c-devices ( -- )` (the addresses that answer, typed), `i2c? ( addr -- flag )` | |
 | `spi` | `#S` (`/dev/spi`) | `spi ( dev c-addr u -- )` (a transaction: the bytes that came back in the bytes' place), `spi-read ( dev c-addr u -- )` (u clocked in), `spi-mode ( dev mode -- )` (0 or 3) | |
@@ -299,7 +299,8 @@ first line is the shell's program and arguments (`/bin/forth -l`); with none, `r
 2026 the ROM disk has one, `/rom/lib/shell`, naming `/bin/forth -l`: HyForth is the login shell, the user's
 choice; a card's or the shared RAM disk's `/lib/shell` comes first in `/lib`'s union.)  wstart is given it
 as its arguments, and runs in init's namespace (not an empty one of its own now), so the program is found as init
-finds it; each window's shell still starts in an empty namespace of its own, which its profile builds.  Each shell's
+finds it; each window's shell still starts in an empty namespace of its own, which its profile builds.  (`new-window`
+with no command reads `/lib/shell` too, and starts its shell the same way.)  Each shell's
 `/ram` is its own area, so a `/lib/shell` for every window is a card's (`/sd/0/lib/shell`) or the shared RAM disk's
 (`/sram/lib/shell`, till the next reset).  hylang will be chosen the same way.
 

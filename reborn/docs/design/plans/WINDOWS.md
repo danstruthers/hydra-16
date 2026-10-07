@@ -337,13 +337,13 @@ default chrome serial off
 | The window's size | `screensize ()` | `form ( -- rows cols )` | `(window-size)`, as `{cols rows}` | `cat /dev/consctl` |
 | Its title | `hy_wlabel (s)` | `window-label ( c-addr u -- )` | `(window-label s)` | `echo -n title >/dev/label` |
 | Its status line | `hy_wstatus (s)` | `window-status ( c-addr u -- )` | `(window-status s)` | `echo status text >/dev/wctl` |
-| A new window | `hy_wnew (flags)` | `new-window` (there now) | `(new-window)` (there now) | `new-window [-g] [cmd]` |
+| A new window | `hy_wnew (flags)` (the window alone) | `new-window`, `new-group ( c-addr u -- )` | `(new-window [cmd])`, `(new-group [cmd])` | `new-window [-g] [cmd]` |
 | Show one | | `show-window` (there now) | `(show-window n)` (there now) | `echo current 3 >/dev/wctl` |
 | The new keys | `CH_RESIZE`, `CH_FOCUS` | `k-resize`, `k-focus` | (raw keys) | |
 | Snarf | the file | the file | `(snarf)`, `(snarf! s)` | `cat /dev/snarf` |
 | Any `wctl` line (`chrome serial on` ...) | `hy_wctl (s)` | `window-ctl ( c-addr u -- )` | `(window-ctl s)` | `echo chrome serial on >/dev/wctl` |
 
-`new-window` in HyForth and hylang changes to match the command: the shell, or a command, run in the window it makes.  Today it makes a window that nothing reads.
+`new-window` in HyForth and hylang runs the command: the shell, or a command, in the window it makes (W5c; `new-group` for `-g`).
 
 ---
 
@@ -490,6 +490,13 @@ October 2026, on `reborn-text-windows` (reborn's `docs/status.md`, "The text win
 * **Ctrl-] Shift-Tab** is Ctrl-] then the terminal's back-tab (`ESC [ Z`).  The irq entry's quick Ctrl-] digit takes `0`-`9` alone now (the note group of the window a Ctrl-C right after goes to).
 * **`KEY_FOCUS` carries the window's number as the next key**, as two bytes of a raw read (`keys hydra`'s); a reader that turns raw after it doesn't get one from before.  The latest focus wins: a reader that didn't read meanwhile gets the window focused now.
 * **`new`'s answer is one read**: the fid's next read gives "N" and an LF, its reads after that the windows again.
+
+### **As built: W5c**
+
+* **`new-window` is a ROM module** (`newwin`), wstart's way: `wctl`'s `new` (or `new group`) and its answer, `current N`, then `$window`, the window's cons as fds 0-2, and SPAWN with a note group and an empty namespace of its own.  A command runs as `rc -l -c` (the profile first, which binds the window's files at `/dev`); with none, `/lib/shell`'s first line, split into words, as init and wstart run it.
+* **It isn't waited for**: its program is an orphan as soon as `new-window` ends, so init takes its record (t_rc, the tests' init, now does too: a record nobody takes keeps its task).
+* **The languages' words run the command**: HyForth's through `run` (the line split at blanks, which `new-window` joins again: rc sees the line, not the Forth shell), hylang's through `(run "new-window" cmd)`, the line one argument.  `new-group` is `new-window -g`.  C's `hy_wnew` only makes the window: a C program that wants another window for its own output opens `#cN/cons`.
+* **A window painted again trims its blanks**, so after a repaint a prompt ends the output without its space (and a cursor move follows): the test harness's prompt wait ignores escape sequences, and takes a `%` alone.
 
 ### **Decisions**
 
