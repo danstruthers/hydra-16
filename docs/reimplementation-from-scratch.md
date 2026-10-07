@@ -1015,7 +1015,7 @@ Each phase ends with something that runs, a set of tests that pass in the emulat
 | 5.6 | **`xmodem`**, as a program | S |
 | 5.7 | **`/proc`'s remaining files**: `mem`, `ram`, `regs`, `note`, `cwd`, `env` | S |
 
-**Parity checkpoint:** every feature in [§21](#21-from-the-current-system-to-the-new-one-feature-by-feature) that isn't a language works on the new system; the tutorial's steps (rewritten for rc) work; the full suite passes; a day of use on the board.  From here the new system is the daily one, and the old tree is frozen.
+**Parity checkpoint:** every feature in [§21](#21-from-the-current-system-to-the-new-one-feature-by-feature) that isn't a language works on the new system; the tutorial's steps (rewritten for rc) work; the full suite passes; a day of use on the board.  From here the new system is the daily one, and the old tree is frozen.  (As it went, October 2026: the user declared parity on the emulator's evidence, the full suite passing, the day on the board to follow; the release is HydraOS 1.0, tagged `hydraos-1.0`, and the old tree is frozen in `old/`.)
 
 #### **Phase 6: HyForth**
 
@@ -1134,12 +1134,12 @@ Phases 6, 7 and 8 depend only on phase 5 and can go in any order or in parallel;
 | Programs built for today's ABI stop working | They're rebuilt with the new SDKs (all are in the repository); the change is announced with the parity release |
 
 **Open questions** for the user:
-1. **The new system's name**, and whether it lives in this repository (a new folder) or a new one.  (Decided, October 2026: `reborn`, in `reborn/` of this repository, until the parity release; the name's for then.)
+1. **The new system's name**, and whether it lives in this repository (a new folder) or a new one.  (Decided, October 2026: `reborn`, in `reborn/` of this repository, until the parity release; the name's for then.  At the parity release: HydraOS, still in `reborn/`; the old tree moved to `old/`.)
 2. **Device letters** (§14): the ones proposed follow Plan 9 where there's an equivalent; confirm or change.  (Decided, October 2026: as built, confirmed: `#/ #c #n #t #m #p #| #e #g #i #a #d #S #f #P #s #r`, and `#v`, `#k` to come.)
 3. **hylang**: the file extension (`.hl`?), the rule for telling lisp lines from rc lines (§17.4), and whether `$` becomes environment access inside hylang.  (Settled as built: `.hl`; a line that starts with `(`, `{`, `[` or a character right against `(` or `{` is hylang's, any other rc's; `$name` is an environment variable.)
 4. **danlang's license**: it's GPLv3 (Daniel and Simon Struthers).  hylang in the ROM makes the ROM image a combined work; choose a license for the Hydra's software as a whole, or relicense hylang.  (Decided: the user took danlang's GPLv3 license off, and hylang is in the system's ROM.)
 5. **Each shell's `/ram` permission check**: keep it (generalised in srvlib) or drop it as unnecessary on a single-user machine.  (Decided, October 2026: dropped; each shell's namespace keeps the areas apart.)
-6. **Binaries in Git**: move the ROM images to release artefacts, or keep committing them for people without a toolchain.  (Decided, October 2026: commit `reborn/bin`'s images at the parity release, for people without a toolchain.)
+6. **Binaries in Git**: move the ROM images to release artefacts, or keep committing them for people without a toolchain.  (Decided, October 2026: commit `reborn/bin`'s images at the parity release, for people without a toolchain.  Done: kept in Git since HydraOS 1.0, and on its GitHub release.)
 7. **Which tools in C and which in assembly** (§15.3), once the C target's code size is measured in phase 4.  (Settled as built: the tools in assembly, on toollib; `grep` and `sort` in C.)
 
 ---

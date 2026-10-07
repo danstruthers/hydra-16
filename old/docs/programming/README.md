@@ -1,6 +1,6 @@
 ## **Hydra-16 Programmer's Guide**
 
-For programmers writing code for the Hydra-16: ROM code (the OS, drivers, servers), programs in RAM, or HyForth words that call the OS.  Using the system from its shells is in [HyForth](../using/hyforth.md) and [WOZMON](../using/wozmon.md); the machine itself is in the [Hardware Reference](../hardware.md).
+For programmers writing code for the Hydra-16: ROM code (the OS, drivers, servers), programs in RAM, or HyForth words that call the OS.  Using the system from its shells is in [HyForth](../using/hyforth.md) and [WOZMON](../using/wozmon.md); the machine itself is in the [Hardware Reference](../../../docs/hardware.md).
 
 | Chapter | Covers |
 | :------ | :----- |
@@ -64,4 +64,4 @@ For programmers writing code for the Hydra-16: ROM code (the OS, drivers, server
 | `sim/` | The emulator, the regression tests, `tools/hydrafs.js` and `tools/mkhyx.js` ([tools](../tools/emulator.md)) |
 | `programs/` | A sample program (`.hyx`), and the header and link config for building others; `programs/c/`: the C library for cc65, and samples ([programs.md](programs.md)) |
 
-The **plans** in [../plans](../plans/) record the design reasoning, and what's still to come.
+The **plans** in [../plans](../../../docs/plans/) record the design reasoning, and what's still to come.

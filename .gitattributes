@@ -1,5 +1,7 @@
-# The documentation PDF (sim/tools/mkpdf.js): never a text file, whatever core.autocrlf says
+# The old documentation PDF (old/sim/tools/mkpdf.js): never a text file, whatever core.autocrlf says
 *.pdf binary
+# HydraOS's ROM images (reborn/bin), kept for programming the chips: bytes
+reborn/bin/*.bin binary
 # The ROM disk's files (reborn/romfs): bytes for the Hydra (LF line ends), the same on every checkout
 reborn/romfs/** -text
 # The Forth 2012 test suite (reborn/tests/forth): as it came, byte for byte

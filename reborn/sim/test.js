@@ -85,6 +85,7 @@ function runTest(t, opt) {
   m = boot(Object.assign({ prom: image(t), seed: opt.seed, marks: markNames, log, trace: 0,
     pcWatches: bootDone === undefined ? [] : [{ pc: bootDone, page: 0 }] }, t.machine || {}, pc ? { pcHost: pc.host } : {}));
   m.pc = pc;
+  if (t.start) t.start(m);
   const done = new RegExp('^' + t.init + ': (PASS|FAIL)', 'm');
   const target = t.expect ? null : done;
   let status = '';

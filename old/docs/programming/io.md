@@ -5,7 +5,7 @@ All IO on the Hydra goes through **file descriptors**, Plan 9 style:
 * Devices are **file servers**: a driver registers its names, and each request runs in the driver's task.
 * A read with no data makes the task wait, using no CPU, until the driver wakes it.
 
-This chapter is the application side.  Writing a server is in [servers.md](servers.md), and the design is in [plans/IO_PLAN.md](../plans/IO_PLAN.md).  Sources: `os_rom/io/`.  Part of the [Programmer's Guide](README.md).
+This chapter is the application side.  Writing a server is in [servers.md](servers.md), and the design is in [plans/IO_PLAN.md](../../../docs/plans/IO_PLAN.md).  Sources: `os_rom/io/`.  Part of the [Programmer's Guide](README.md).
 
 ### **Files and fds**
 
@@ -174,7 +174,7 @@ The serial port starts at 9600 baud, 8 data bits, no parity, 1 stop bit.  Its se
 * **Not possible:**
   * 2 stop bits with 8 data bits and parity: the 65C51 sends 1.
   * With a WDC ACIA build, rates below about 1200: a character's time must fit VIA timer 2.
-* At 115200 (Rockwell ACIA builds), sending is paced by VIA timer 2, with idle bits between characters (`SER_PACE_GAP` in `hw.inc`; [hardware](../hardware.md#acia-65c51-u3-port-1-irq-line-1)).  At the other rates the ACIA's TDRE interrupt sends each byte as soon as it can.
+* At 115200 (Rockwell ACIA builds), sending is paced by VIA timer 2, with idle bits between characters (`SER_PACE_GAP` in `hw.inc`; [hardware](../../../docs/hardware.md#acia-65c51-u3-port-1-irq-line-1)).  At the other rates the ACIA's TDRE interrupt sends each byte as soon as it can.
 * **After a reset**, the port is back at 9600 8N1.
 
 In HyForth: `"b19200" stty`, and `stty?` to show the settings.
@@ -214,13 +214,13 @@ Everything else goes to the chip as written (except the timers' interrupt enable
 | 4 | `SND_CTL_CLAIM` | `.Y` = a mask of channels (bit n: channel n), this fd's alone; `ERR_IO_BUSY` if another fd has one of them (none taken) |
 | 5 | `SND_CTL_RELEASE` | `.Y` = a mask of channels to give back |
 | 6 | `SND_CTL_VOLUME` | `.Y` = the master volume, a percentage, 0-200: 100 (at boot) plays songs as written, less is quieter (the volume curve), more is louder, up to about 24 dB at 200 (the carriers' levels lowered, as far as the chip's loudest).  The file `/dev/snd/volume` is the same, as text |
-| 7 | `SND_CTL_CLOCK` | The sound clock, a song player's tick: the YM2151's timer B, its interrupt counting ticks (`SND_CLK`, from 0) and waking the waiting player at its time (`sound/ymfast.s`).  `.Y` = K: a period of K units of 1,024 of the chip's clocks (286 us) or K + 1, as often as the fraction written to `SND_R_CLOCK_F` (`$0C`, and `$0D`, the high byte: 65536ths) says, so the rate is exact on average; 0 stops it.  This fd's while it runs (`ERR_IO_BUSY`: another's); its last close stops it.  Timer A stays the clients' (CSM)  The song player doesn't use it (on the board, timer B didn't keep its period: [hardware](../hardware.md#ym2151-sound-u38-port-4-irq-line-4)); a read of `/dev/snd` shows its numbers in the shadow's spare bytes (`snd_srv.s`: `SND_NUMBERS`) |
+| 7 | `SND_CTL_CLOCK` | The sound clock, a song player's tick: the YM2151's timer B, its interrupt counting ticks (`SND_CLK`, from 0) and waking the waiting player at its time (`sound/ymfast.s`).  `.Y` = K: a period of K units of 1,024 of the chip's clocks (286 us) or K + 1, as often as the fraction written to `SND_R_CLOCK_F` (`$0C`, and `$0D`, the high byte: 65536ths) says, so the rate is exact on average; 0 stops it.  This fd's while it runs (`ERR_IO_BUSY`: another's); its last close stops it.  Timer A stays the clients' (CSM)  The song player doesn't use it (on the board, timer B didn't keep its period: [hardware](../../../docs/hardware.md#ym2151-sound-u38-port-4-irq-line-4)); a read of `/dev/snd` shows its numbers in the shadow's spare bytes (`snd_srv.s`: `SND_NUMBERS`) |
 
 HyForth's `patch`, `note`, `noteoff` and `ywrite` ([HyForth](../using/hyforth.md#tasks-and-the-console)) and C's `snd.h` ([the C guide](c.md#sound-sndh)) use it.
 
 #### **SPI devices: `/dev/spi`**
 
-The SPI bus's 16 devices (0-7 the board's headers J18-J25, 8-f the slots' cards: [hardware](../hardware.md#spi-bus-via-port-b)), each a file, as Plan 9 has them.  Served in the storage task, which owns the bus, so a transfer never meets an SD card's (`servers/spi_srv.s`, BIOS ROM page D).
+The SPI bus's 16 devices (0-7 the board's headers J18-J25, 8-f the slots' cards: [hardware](../../../docs/hardware.md#spi-bus-via-port-b)), each a file, as Plan 9 has them.  Served in the storage task, which owns the bus, so a transfer never meets an SD card's (`servers/spi_srv.s`, BIOS ROM page D).
 
 | Name | Read | Write |
 | :--- | :--- | :---- |
@@ -234,7 +234,7 @@ The SPI bus's 16 devices (0-7 the board's headers J18-J25, 8-f the slots' cards:
 
 #### **GPIO: `/dev/gpio`**
 
-The VIA's port A on header J27 ([hardware](../hardware.md#via-65c22-u2-port-0-irq-line-0)): 8 pins, PA0-PA7, and the handshake lines CA1 (an input, which can interrupt) and CA2.  Served in its client's task (`servers/gpio_srv.s`, BIOS ROM page D), with interrupts off around each change to the VIA's registers.
+The VIA's port A on header J27 ([hardware](../../../docs/hardware.md#via-65c22-u2-port-0-irq-line-0)): 8 pins, PA0-PA7, and the handshake lines CA1 (an input, which can interrupt) and CA2.  Served in its client's task (`servers/gpio_srv.s`, BIOS ROM page D), with interrupts off around each change to the VIA's registers.
 
 | Name | Read | Write |
 | :--- | :--- | :---- |
@@ -282,7 +282,7 @@ A line is `N S O`: the task, its state (`R` running or runnable, `W` waiting, `P
 The Hydra keeps the date and time as seconds since 2000-01-01 00:00:00, counted by the scheduler's tick.  It has no clock that runs while it's off, so the time starts at 2000-01-01 00:00:00 at power-up, until it's set:
 * **Reading** `/dev/time` gives the date and time and CR LF: `cat /dev/time` shows `2026-09-29 18:05:00`.
 * **Writing** `YYYY-MM-DD hh:mm:ss` sets it; the seconds can be left out, or the whole time (midnight): `echo 2026-09-29 18:05 > /dev/time`.  2000-01-01 to 2135-12-31; a date that isn't one (`2023-02-29`) is `ERR_IO_BAD_REQ`.
-* **From code:** `CLOCK_GET` and `CLOCK_SET` (page 9, `servers/time_srv.s`: `.X` = a zero page address, the 4 bytes of seconds there).  HydraFS stamps files with it ([plans/HYDRAFS.md](../plans/HYDRAFS.md#time-stamps)).
+* **From code:** `CLOCK_GET` and `CLOCK_SET` (page 9, `servers/time_srv.s`: `.X` = a zero page address, the 4 bytes of seconds there).  HydraFS stamps files with it ([plans/HYDRAFS.md](../../../docs/plans/HYDRAFS.md#time-stamps)).
 * **The clock chip:** a DS1747 in U7 keeps the time while the Hydra's off (`drivers/rtc.s`, page 9).  Its clock registers are task F's `$7FF8-$7FFF` (`RTC_REGS`, `hw.inc`), which nothing else in the ROM writes, in any task.  At boot the shell looks for it (`RTC_BOOT`): its registers must hold a date and time, and its seconds must change within 1.1 s; then `ZP_CLOCK` is set from it at the start of one of its seconds, and `RTC_STATE` (in the system's shared bank) says it's there.  Writing `/dev/time` sets it too (`RTC_SAVE`: the W bit), and looks for it again if it wasn't found; reading `/dev/time` takes its seconds first (`RTC_LOAD`, the R bit, then `CLOCK_ADJUST`, which keeps the tick clock's place in the second).  Each access is a few bytes with IRQs off and `T` switched to F and back for each.
 
 #### **The environment: `/env`**
@@ -300,7 +300,7 @@ How: each task's environment is a 256-byte block in the system's shared bank (`E
 
 #### **The RAM itself: `/dev/ram`**
 
-Every byte of RAM, as the CPU selects it, for task 0 (the system's task) and no other: a program can't read another's memory through it (a task's own family will have `/proc/N/mem`: [plans/PROC.md](../plans/PROC.md)).  Read-only; `servers/ram_srv.s`, page 9.
+Every byte of RAM, as the CPU selects it, for task 0 (the system's task) and no other: a program can't read another's memory through it (a task's own family will have `/proc/N/mem`: [plans/PROC.md](../../../docs/plans/PROC.md)).  Read-only; `servers/ram_srv.s`, page 9.
 
 | Offsets | What |
 | :------ | :--- |
@@ -333,7 +333,7 @@ What's in it comes from `os_rom/romfs.txt`, a list of files (their names in `/ro
 
 #### **The RAM disks: `/ram`**
 
-Two disks in RAM, each with a HydraFS on it: fast, there with no card, and **empty after a reset** (each is quick-formatted when it starts).  The plan they come from is [plans/DISKS.md](../plans/DISKS.md).
+Two disks in RAM, each with a HydraFS on it: fast, there with no card, and **empty after a reset** (each is quick-formatted when it starts).  The plan they come from is [plans/DISKS.md](../../../docs/plans/DISKS.md).
 
 | Disk | Names | Memory | At boot |
 | :--- | :---- | :----- | :------ |
@@ -350,7 +350,7 @@ Each shell mounts **its own area** of the RAM disk at `/ram` (below), and the bo
 
 **With no card,** the boot shell's current directory is its own area, `/ram` (the prompt `/ram> `), so files can be saved there (until a reset), and it runs `/rom/boot.hys` (a line about it) in place of a card's `boot.hys`.
 
-**Before `boot.hys`,** the boot shell runs `/rom/lib/namespace`, the default namespace's `/bin` and `/lib` ([namespaces](../programming/io.md#namespaces)), then the card's `lib/namespace`, if it has one: lines of `bind` and `mount` for the card's own directories (`bind -a /sd/0/tools /bin`), and `#` comments.
+**Before `boot.hys`,** the boot shell runs `/rom/lib/namespace`, the default namespace's `/bin` and `/lib` ([namespaces](io.md#namespaces)), then the card's `lib/namespace`, if it has one: lines of `bind` and `mount` for the card's own directories (`bind -a /sd/0/tools /bin`), and `#` comments.
 
 **Program caches.**  The boot shell makes `/sram/bin` and `/sram/lib` (the shared caches), and each shell's area has its own `bin` and `lib`.  A program typed by its name is looked for in the current directory (Plan 9's `.` first), then in `/bin`, a union ([namespaces](#namespaces)) of:
 1. the shell's cache, `/ram/bin` (its `-c` member: a copy into `/bin` goes there; a bind to `/ram/bin`, so in each shell it's that shell's);
@@ -358,7 +358,7 @@ Each shell mounts **its own area** of the RAM disk at `/ram` (below), and the bo
 3. the boot card's `/bin`;
 4. `/rom/bin`;
 
-then in `$PATH`'s directories.  Caching a program is copying it there: `cp /sd/0/bin/game.hyx /bin/game.hyx` (or to `/sram/bin`, for every shell), and then `game` loads from RAM, about three and a half times as fast as from a card (a 16K program: 1.34 million cycles, against 4.69 million: [DISKS.md](../plans/DISKS.md) has where the time goes).  Libraries are found the same way, in the `lib` directories (`lib name`).  A copy isn't checked against the card's: after rebuilding a program, copy it again (or remove the cached one).
+then in `$PATH`'s directories.  Caching a program is copying it there: `cp /sd/0/bin/game.hyx /bin/game.hyx` (or to `/sram/bin`, for every shell), and then `game` loads from RAM, about three and a half times as fast as from a card (a 16K program: 1.34 million cycles, against 4.69 million: [DISKS.md](../../../docs/plans/DISKS.md) has where the time goes).  Libraries are found the same way, in the `lib` directories (`lib name`).  A copy isn't checked against the card's: after rebuilding a program, copy it again (or remove the cached one).
 
 **Starting and stopping** them is a write to the ctl file (`echo stop > /dev/sd/s/ctl`, or HyForth's `ctl`, which reports errors: `q^/dev/sd/s/ctl^ q^stop^ ctl`):
 
@@ -371,7 +371,7 @@ Reading the ctl file gives `ram 256 KB 512 blocks` (`sram` for the shared one), 
 
 #### **A folder on the PC: `/pc`**
 
-`/pc` is a folder on the PC, served over the serial port by the PC tool, which is the terminal too ([plans/PC.md](../plans/PC.md)):
+`/pc` is a folder on the PC, served over the serial port by the PC tool, which is the terminal too ([plans/PC.md](../../../docs/plans/PC.md)):
 
 ```
 node sim/tools/hydrapc.js COM3 C:\hydra [--read-only]     (on the PC; once, in sim/: npm install)
@@ -379,7 +379,7 @@ node sim/tools/hydrapc.js COM3 C:\hydra [--read-only]     (on the PC; once, in s
 
 Its files work as a card's do ([below](#the-files-on-a-card)): read, write, create (a directory too), remove, rename, `ls -l`'s sizes and times (the PC's), a program run from it (`/pc/game`, or by name after `bind -a /pc/bin /bin`).  The device `pc` runs in the serial task, and `/rom/lib/namespace` mounts it (`mount -s pc /pc`).  Its requests and replies are frames on the serial line, between the console's bytes: the PC tool doesn't show them, and the Hydra's serial handler takes the PC's before the console sees them.
 * **Speed:** the line's, about 900 bytes a second each way at 9600 baud: a 2K program in about 2.5 s.
-* **Songs** play from it in time (`play /pc/song.zsm`): the player reads ahead without waiting ([SOUND.md](../plans/SOUND.md)).  But a song that needs more than the line carries (a dense one needs about 2 KB a second), or a tick with more than about 500 bytes of writes, waits for it: copy such a song to `/ram` or `/sram` first.
+* **Songs** play from it in time (`play /pc/song.zsm`): the player reads ahead without waiting ([SOUND.md](../../../docs/plans/SOUND.md)).  But a song that needs more than the line carries (a dense one needs about 2 KB a second), or a tick with more than about 500 bytes of writes, waits for it: copy such a song to `/ram` or `/sram` first.
 * **Errors:** a damaged frame, or one lost, is sent again; with no PC tool on the line (or after 3 tries) a request fails with `ERR_IO_DEVICE` (`no answer`) after a second or two, and the attach frame's 7 bytes show on the terminal.  With the tool's `--read-only`, every change is `ERR_IO_PERM` (`not allowed`).  The other errors are HydraFS's (`ERR_IO_NOT_FOUND`, `ERR_IO_EXISTS`, `ERR_IO_NOT_EMPTY`, `ERR_IO_BUSY`: removing a file the Hydra has open).
 * **One request at a time:** tasks using `/pc` together take turns.
 * **The emulator** plays the PC tool's part: `--pc-dir FOLDER` ([emulator](../tools/emulator.md)).
@@ -395,7 +395,7 @@ To connect two tasks, make the pipe, then point the child's stdin or stdout at o
 
 ### **Namespaces**
 
-Each task has its own namespace of up to 32 entries, which the tasks it starts inherit, on top of the **system namespace**, 32 more that every task sees.  It works as Plan 9's does ([NAMESPACES.md](../plans/NAMESPACES.md)): entries with the same path are a **union**, whose members are looked in, in order, for a name.
+Each task has its own namespace of up to 32 entries, which the tasks it starts inherit, on top of the **system namespace**, 32 more that every task sees.  It works as Plan 9's does ([NAMESPACES.md](../../../docs/plans/NAMESPACES.md)): entries with the same path are a **union**, whose members are looked in, in order, for a name.
 
 | Call | Does |
 | :--- | :--- |
@@ -449,11 +449,11 @@ Each task has a current directory, which the tasks it starts inherit (a copy: ch
 
 ### **The files on a card**
 
-The **HydraFS** server (the device `hfs`) serves the files on the SD cards.  The shell mounts it at `/sd` at startup, and the tasks it starts inherit the mount, so `/sd/0` is card 0's root directory and `/sd/0/games/star.frt` is a file on it.  The format, and the host tool that makes cards, are in [plans/HYDRAFS.md](../plans/HYDRAFS.md) and [tools/emulator.md](../tools/emulator.md#hydrafs-card-images).
+The **HydraFS** server (the device `hfs`) serves the files on the SD cards.  The shell mounts it at `/sd` at startup, and the tasks it starts inherit the mount, so `/sd/0` is card 0's root directory and `/sd/0/games/star.frt` is a file on it.  The format, and the host tool that makes cards, are in [plans/HYDRAFS.md](../../../docs/plans/HYDRAFS.md) and [tools/emulator.md](../tools/emulator.md#hydrafs-card-images).
 
 * **Names** are case-sensitive, 1-31 characters, any byte but `/` and 0.  `.` and `..` are understood while walking (a path may be up to 8 elements deep); `..` at a card's root stays there.
 * **Reading a file** works as it does on `/dev/sd/N/data`, except that a read stops at the end of the file.
-* **Writing a file** at the fd's offset grows it past its end, and an append-only file is always written at its end.  A write that *starts* past the end (after a seek) makes the file that long first, with zeros: whole 4 KB clusters of them are a **hole**, which takes no space on the card, and reads as zeros ([sparse files](../plans/HYDRAFS.md#sparse-files)); a write into a hole takes a cluster for it.  Writing runs at about 3.5 KB/s.
+* **Writing a file** at the fd's offset grows it past its end, and an append-only file is always written at its end.  A write that *starts* past the end (after a seek) makes the file that long first, with zeros: whole 4 KB clusters of them are a **hole**, which takes no space on the card, and reads as zeros ([sparse files](../../../docs/plans/HYDRAFS.md#sparse-files)); a write into a hole takes a cluster for it.  Writing runs at about 3.5 KB/s.
 * **Reading a directory** gives a line per entry, `name size` (or `name/` for a directory), then CR LF, so `"/sd/0" 1 open 0 fdup2 cat | cat` lists it (as the shell's `ls` does).  Opened with `IO_MODE_STAT` it gives stat records instead; read a multiple of 48 bytes to get whole ones.  Either way the listing is made again from the card at every read, so the server keeps no state for it, and a directory that changes between two reads of one listing can give a torn one.
 * **Making and removing files:**
   * `IO_CREATE` makes a file (mode bits 0; `HFS_M_APPEND` `$40` append-only, `HFS_M_RO` `$01` read-only) or a directory (`HFS_M_DIR` `$80`) in a directory that's there, and opens it; a directory is opened for reading whatever the mode says.  A *file* that's there already is emptied and opened instead, as in Plan 9.
@@ -461,9 +461,9 @@ The **HydraFS** server (the device `hfs`) serves the files on the SD cards.  The
   * `IO_WSTAT` renames a file in its directory (the record's name: a name, not a path; a 0 first byte keeps it) and sets its mode bits (`HFS_M_APPEND`, `HFS_M_RO`; `$FF` keeps them).  The record's other fields are left alone.  HyForth's `mv` fills in the record for you.
   * The mode bits are checked when a file is opened: a read-only file can't be opened for writing, but the fd that made it can write it.
 * **What reaches the card when:** the data at once; the file's size when the last fd on it is closed, and whenever it gets a new 4 KB cluster.  So close a file you've written before taking the card out.  A crash can leave a file shorter than was written, never a damaged card.
-* **Formatting:** write `format [-f] [-p] [-s size] [LABEL]` to `/dev/sd/N/ctl` to make an empty HydraFS on the card (everything on it is lost), and `label NAME` to change the label.  Plain `format` is quick (a version 2 HydraFS, whose free map is written as it's used); `-f` writes the whole map now, printing its progress on the console; `-s` limits the size (megabytes, or `4G`) ([plans/HYDRAFS.md](../plans/HYDRAFS.md#formatting-and-tools)).
-* **Partitions:** a card with a partition table has its HydraFS in its partition of type `$7F`, and the other partitions (a FAT one for a PC, say) are left alone.  `format` on such a card formats that partition; `format -p` makes one on a card without one, after its other partitions (or with a new table, from block 2048).  The ctl file then shows `partition at block N` ([plans/HYDRAFS.md](../plans/HYDRAFS.md#partitions)).
-* **Checking:** write `check` to `/dev/sd/N/ctl`, then read the file: it counts the clusters marked in use that nothing uses (lost), in use but marked free (unmarked), and used twice, and recounts the free space.  `check fix` also repairs the free map (not a cluster used twice: that's reported for a person to sort out).  In HyForth: `"/dev/sd/0/ctl" "check" ctl`, then `ls /dev/sd/0/ctl` (or `0 fsck`, which does both).  It takes a pass per 256 MB of card, and with 16 passes or more prints its progress on the console as it goes ([plans/HYDRAFS.md](../plans/HYDRAFS.md#the-check)).
+* **Formatting:** write `format [-f] [-p] [-s size] [LABEL]` to `/dev/sd/N/ctl` to make an empty HydraFS on the card (everything on it is lost), and `label NAME` to change the label.  Plain `format` is quick (a version 2 HydraFS, whose free map is written as it's used); `-f` writes the whole map now, printing its progress on the console; `-s` limits the size (megabytes, or `4G`) ([plans/HYDRAFS.md](../../../docs/plans/HYDRAFS.md#formatting-and-tools)).
+* **Partitions:** a card with a partition table has its HydraFS in its partition of type `$7F`, and the other partitions (a FAT one for a PC, say) are left alone.  `format` on such a card formats that partition; `format -p` makes one on a card without one, after its other partitions (or with a new table, from block 2048).  The ctl file then shows `partition at block N` ([plans/HYDRAFS.md](../../../docs/plans/HYDRAFS.md#partitions)).
+* **Checking:** write `check` to `/dev/sd/N/ctl`, then read the file: it counts the clusters marked in use that nothing uses (lost), in use but marked free (unmarked), and used twice, and recounts the free space.  `check fix` also repairs the free map (not a cluster used twice: that's reported for a person to sort out).  In HyForth: `"/dev/sd/0/ctl" "check" ctl`, then `ls /dev/sd/0/ctl` (or `0 fsck`, which does both).  It takes a pass per 256 MB of card, and with 16 passes or more prints its progress on the console as it goes ([plans/HYDRAFS.md](../../../docs/plans/HYDRAFS.md#the-check)).
 * **Errors:** `ERR_IO_NOT_FS` (`$80`) if the card holds no HydraFS, `ERR_IO_DEVICE` (`$79`) if there's no card, `ERR_IO_NOT_FOUND` (`$70`) for a name that isn't there (or a path through a file), `ERR_IO_NO_FDS` (`$75`) when all 8 HydraFS files are open (they're shared by every task), `ERR_IO_MODE` (`$72`) for writing a directory or a read-only file, `ERR_IO_FULL` (`$81`), `ERR_IO_EXISTS` (`$82`: creating a directory where there's a name already, a file where there's a directory, or renaming to a name that's taken), `ERR_IO_NOT_EMPTY` (`$83`) and `ERR_IO_BUSY` (`$84`: removing an open file).  The shell's commands add `ERR_IO_NOT_DIR` (`$85`: `cd` or `rmdir` on a file) and `ERR_IO_IS_DIR` (`$86`: `rm` or `cp` on a directory).  Any other device refuses these calls with `ERR_IO_BAD_REQ`.
 
 ### **Stat**

@@ -214,7 +214,7 @@ function prog(dir) {
 }
 
 // The hardware test: bank 1 of the old system's paged ROM image (os_rom/bin, in Git), or null without it
-const HWTEST_IMAGE = path.join(ROOT, '..', 'os_rom', 'bin', 'paged_rom_C02.bin');
+const HWTEST_IMAGE = path.join(ROOT, '..', 'old', 'os_rom', 'bin', 'paged_rom_C02.bin');
 function hwtest() {
   return fs.existsSync(HWTEST_IMAGE) ? fs.readFileSync(HWTEST_IMAGE) : null;
 }

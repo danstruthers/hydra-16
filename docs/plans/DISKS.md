@@ -6,7 +6,7 @@ Disks in memory, and what they let the rest of the system drop:
 * **RAM disks:** a program cache and scratch files, fast, with no card: an area for each task, and a shared one.
   **Built** (the disks `r` and `s`: each shell's own area mounted at `/ram`, and `/sram`).
 
-All of them are block devices under the HydraFS server, as the cards are, and [io.md](../programming/io.md#the-ram-disks-ram)
+All of them are block devices under the HydraFS server, as the cards are, and [io.md](../../old/docs/programming/io.md#the-ram-disks-ram)
 describes them as they are.  The names put together from them (`/bin` over the caches, the cards and the ROM)
 are the [namespace plan](NAMESPACES.md)'s, and a task's memory as files is the [/proc plan](PROC.md)'s.
 

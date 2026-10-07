@@ -16,7 +16,7 @@
 // createMachine(opt): opt.osrom, opt.pagedrom (the images, Uint8Arrays) and the options hydrasim.js documents
 // (modules, sharedU, model, ramFault, u7Fault, aciaLine, stuckIrq, acia, paste, input, sd: block devices, rtc,
 // rtcBatteryLow, clock, trace, watches, pcWatches, marks, profile, ymLog, vera), and opt.log(text) for the watches and
-// marks.  opt.pcHost: what the serial port sends goes through its push(byte, cycle), which gives back the bytes that
+// marks.  opt.sound: the chips' sound made (audio.js: m.audio, its listeners given what each run made).  opt.pcHost: what the serial port sends goes through its push(byte, cycle), which gives back the bytes that
 // are the console's (the rest are /pc's frames: pchost.js, run.js --pc-dir), and its send(bytes) is what the PC
 // sends.  opt.pcHist: count the instructions run at each page:PC (pcHist).  run(limit) runs to a cycle; the rest is
 // its state, for a report.  For a debugger: opt.breaks ({ pc, page, bank, banks }: -1 for any; bank, the first of
@@ -34,6 +34,7 @@ const { createSpi } = require('./sd.js');
 const { createYm } = require('./ym2151.js');
 const { createRtc, RTC_REGS, RTC_TASK } = require('./ds1747.js');
 const { createVera } = require('./vera.js');
+const { createAudio } = require('./audio.js');
 
 const hx = (v, n = 2) => v.toString(16).toUpperCase().padStart(n, '0');
 const LINES = 16;                                             // The IRQ lines (0 the highest priority)
@@ -74,6 +75,7 @@ function createMachine(opt) {
   let ca1At = 0;
   const ym = createYm({ clock: opt.clock, log: !!opt.ymLog, resetDelay: opt.ymResetDelay || 0 });
   const vera = opt.vera ? createVera(Object.assign({ clock: opt.clock, rnd }, opt.vera === true ? {} : opt.vera)) : null;   // (Its VRAM: random)
+  const audio = opt.sound ? createAudio({ ym, vera }) : null;   // (The sound: what each run makes, mixed)
 
   // Which task's copy of $0000-$7FFF an access uses (the model what-ifs change this)
   const model = opt.model || '', u7 = opt.u7Fault, ramFault = opt.ramFault, plain = !model && !u7;
@@ -227,6 +229,10 @@ function createMachine(opt) {
     pendAt = (pendAt + 1) % pend.length; pendN++;
   }
   function run(limit) {
+    runTo(limit);
+    if (audio) audio.pump(cpu.cyc);
+  }
+  function runTo(limit) {
     while (cpu.cyc < limit && !cpu.halted) {
       sync(cpu.cyc);
       if (irqLine() >= 0) {
@@ -277,7 +283,7 @@ function createMachine(opt) {
 
   // (A task's RAM bank b, as it is: undefined if it was never written; tools/hysnap.js reads hylang's heap with it)
   const taskBankMem = (t, b) => taskBank[t * 256 + b];
-  Object.assign(m, { cpu, acia, via, i2c, ym, vera, rtc, taskRam, vecRam, pcHist, iOffTop, stackLow, stackLowAt, profHist, profCyc, profTask, run, hwReset, rd, taskBankMem });
+  Object.assign(m, { cpu, acia, via, i2c, ym, vera, audio, rtc, taskRam, vecRam, pcHist, iOffTop, stackLow, stackLowAt, profHist, profCyc, profTask, run, hwReset, rd, taskBankMem });
   Object.defineProperties(m, {                                // (The pseudo-registers, the trace and the profile's count, as they are now)
     trace: { get: () => {                                     // (The ring, oldest first: [W, T, PC, A, X, Y, S, P] each)
       const out = [];

@@ -22,7 +22,7 @@ the paged ROM's, and a terminal at 9600 baud is the console.)  The boot shows PO
 the shell's prompt:
 
 ```
-Hydra-16 reborn: kernel 0.1, ABI 1
+HydraOS 1.0 for the Hydra-16: kernel 0.1, ABI 1
 POST ZP:0 ST:0 OS:0 HI:0 SH:S W:0
 ...
 task 1: init
@@ -106,10 +106,10 @@ Redirection and pipes are rc's: `echo hi >/ram/f`, `cat /ram/f | wc -c`, `ls /ro
 
 ## 4. A card
 
-In the emulator, a card is an image file.  `../sim/tools/hydrafs.js` makes one and puts files on it:
+In the emulator, a card is an image file.  `sim/tools/hydrafs.js` makes one and puts files on it:
 
 ```
-node ../sim/tools/hydrafs.js mkfs card.img 8 MYCARD
+node sim/tools/hydrafs.js mkfs card.img 8 MYCARD
 node sim/run.js -i --sd card.img
 ```
 
@@ -170,12 +170,17 @@ hylang> (ls "/rom")
 hylang> exit
 ```
 
-[using/hylang.md](using/hylang.md) is its guide.  And rc itself, for an rc session: `rc` ([using/rc.md](using/rc.md)).
+[using/hylang.md](using/hylang.md) is its guide.  BASIC is Microsoft's, as the PET and its cousins had it: `basic`, then
+program lines and `RUN`, or `basic prog.bas` for a file ([using/basic.md](using/basic.md)).  And rc itself, for an rc
+session: `rc` ([using/rc.md](using/rc.md)).
 
 ## 7. Sound
 
-`scom` plays a short song on the YM2151 (in the emulator, its notes are counted, not heard): `play
-/rom/songs/test.zsm` plays a ZSM file, the format the Commander X16's tools (and Furnace) export.
+`scom` plays a short song on the YM2151 (in the emulator, hear it with `node sim/run.js -i --sound`, then the
+Sound button at http://localhost:8016): `play
+/rom/songs/test.zsm` plays a ZSM file, the format the Commander X16's tools (and Furnace) export.  `play -m 0 't180 o4
+l8 c d e f g'` plays a line of the score language (its notes, lengths and octaves: [using/tools.md](using/tools.md),
+"Scores"), and `echo note 0 60 >/dev/sndctl` a note (`echo off 0 >/dev/sndctl` ends it).
 
 ## 8. A program of your own
 
@@ -188,7 +193,7 @@ node build.js prog hi
 ```
 
 That makes `hi/hi.hyx`, a program for the Hydra.  To run it, give the emulator the folder as `/pc` (what the PC tool,
-`../sim/tools/hydrapc.js`, does for a board over the serial line):
+`sim/tools/hydrapc.js`, does for a board over the serial line):
 
 ```
 node sim/run.js -i --pc-dir hi
@@ -219,6 +224,6 @@ files and namespaces, and writing a server or a driver.
 
 ## Where next
 
-* [using/README.md](using/README.md): the guides for rc, the tools, HyForth and hylang.
+* [using/README.md](using/README.md): the guides for rc, the tools, HyForth, hylang and BASIC.
 * `/rom/doc/api.md` on the Hydra: every system call, its registers and errors.
 * [status.md](status.md): where the system stands, and what each part measured.

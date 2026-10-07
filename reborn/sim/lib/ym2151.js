@@ -6,7 +6,11 @@
 // reset takes effect as the write's busy time ends (and env.resetDelay cycles after: a slower chip, as some boards'
 // seem to be), so the line is still held just after the write.  Key-ons (register
 // $08) are noted, and every write when env.log is set (for a VGM file).
+//   Its sound, if it's asked for (sound(fn): audio.js's): opm.js's samples, one every 64 of its clocks (55,930 a
+// second), each given to fn(left, right) as it's made: up to the cycle each register write comes at (before the
+// write changes what it sounds), and up to soundTo(t)'s.  The writes lost while it's busy are lost to it too.
 'use strict';
+const { createOpm } = require('./opm.js');
 
 function createYm(env) {
   const clock = env.clock;
@@ -27,11 +31,21 @@ function createYm(env) {
     if (y.bNext >= 0) while (t >= y.bNext) { if (y.regs[0x14] & 8) y.status |= 2; y.bNext += bPeriod(); }
   };
   y.readStatus = t => { y.tick(t); return (t < y.busyUntil ? 0x80 : 0x00) | y.status; };   // Busy after a data write, the timer flags   // Busy after a data write, the timer flags
+  // The sound (sound(fn)): opm.js, the samples made so far, and a sample's length in CPU cycles
+  let opm = null, sink = null, made = 0;
+  const perSample = 64 * clock / 3.579545, so = [0, 0];
+  y.sound = fn => { sink = fn; opm = createOpm(); made = 0; };
+  y.soundTo = t => {
+    if (!opm) return;
+    const n = Math.floor(t / perSample);
+    for (; made < n; made++) { opm.sample(so); sink(so[0], so[1]); }
+  };
   y.select = v => { y.reg = v; };
   y.write = (v, t) => {
     if (t < y.busyUntil) { y.lost++; return; }
     y.busyUntil = t + BUSY;
     y.regs[y.reg] = v;
+    if (opm) { y.soundTo(t); opm.write(y.reg, v); }
     if (env.log) y.writes.push([t, y.reg, v]);
     if (y.reg === 0x14) timers(v, t);
     if (y.reg === 0x08 && (v & 0x78)) y.keyOns.push('ch ' + (v & 7) + ' at cycle ' + t);
@@ -44,7 +58,7 @@ function createYm(env) {
     if (y.resetAt >= 0) n = Math.min(n, Math.max(1, y.resetAt - devCyc));
     return n;
   };
-  y.reset = () => { y.busyUntil = 0; y.regs.fill(0); y.status = 0; y.aNext = -1; y.bNext = -1; y.resetAt = -1; y.resetMask = 0; };
+  y.reset = () => { y.busyUntil = 0; y.regs.fill(0); y.status = 0; y.aNext = -1; y.bNext = -1; y.resetAt = -1; y.resetMask = 0; if (opm) opm.reset(); };
   return y;
 }
 

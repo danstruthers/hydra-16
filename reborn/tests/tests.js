@@ -18,11 +18,12 @@
 //                    two marks in minus, a baseline), divided by per, at most max (a number, or a function of the
 //                    build's options: { clock, acia }, obj/build.json)
 //   check(m, out)    more checks on the machine afterwards: gives a list of failures
+//   start(m)         the machine as it's made, before it runs (to listen to its sound, say)
 // Every test also checks the longest IRQs-off stretch after the boot (IRQ_OFF_MAX).
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const hydrafs = require('../../sim/tools/hydrafs.js');
+const hydrafs = require('../sim/tools/hydrafs.js');
 const { createXmodemPeer } = require('../sim/lib/xmpeer.js');
 const { VT, DEC_ASCII } = require('../sim/lib/vt.js');
 
@@ -39,7 +40,7 @@ const DISK_CARDS = [card(0, 2048, false, (n, i) => n * 7 + i), card(1, 4096, tru
 
 // An SD card on SPI device dev from an image file, claiming blocks (those past the file's end read as zeros); its
 // writes kept, and save() puts them in the file (for the PC tool to look at)
-const CARD_DIR = path.join(__dirname, '..', 'obj', 'cards'), OLD_CARDS = path.join(__dirname, '..', '..', 'sim', 'cards');
+const CARD_DIR = path.join(__dirname, '..', 'obj', 'cards'), OLD_CARDS = path.join(__dirname, '..', '..', 'old', 'sim', 'cards');
 function imageCard(dev, file, blocks) {
   const base = fs.readFileSync(file), written = new Map();
   return { dev, blocks, file,
@@ -614,7 +615,7 @@ function playCard() {
 // algorithms, the LFO's 4 waveforms, noise, slides, legato, drums, repeats, the timers) as t.mml and tpc.zsm, the
 // riff scom (programs/songs) as s.mml and spc.zsm; and two that are wrong (a note before an instrument, a line
 // that isn't one)
-const MML_SCORES = { t: path.join(__dirname, '..', '..', 'os_rom', 'songs', 'test.mml'), s: path.join(__dirname, '..', '..', 'programs', 'songs', 'scom.mml') };
+const MML_SCORES = { t: path.join(__dirname, '..', '..', 'old', 'os_rom', 'songs', 'test.mml'), s: path.join(__dirname, '..', '..', 'old', 'programs', 'songs', 'scom.mml') };
 function mmlCard() {
   fs.mkdirSync(CARD_DIR, { recursive: true });
   hydrafs.setNow(0x1000);
@@ -624,7 +625,7 @@ function mmlCard() {
   const v = new hydrafs.Volume(f);
   for (const [n, score] of Object.entries(MML_SCORES)) {
     const zsm = path.join(CARD_DIR, 'mml-' + n + '.zsm');
-    require('child_process').execFileSync(process.execPath, [path.join(__dirname, '..', '..', 'sim', 'tools', 'hysong.js'), score, zsm, '--quiet']);
+    require('child_process').execFileSync(process.execPath, [path.join(__dirname, '..', 'sim', 'tools', 'hysong.js'), score, zsm, '--quiet']);
     v.put(n + '.mml', fs.readFileSync(score));
     v.put(n + 'pc.zsm', fs.readFileSync(zsm));
   }
@@ -1077,7 +1078,7 @@ module.exports = {
     {
       name: 'boot', what: 'the kernel boots, POST finds nothing wrong; init runs hello and waits for it',
       init: 'init', cycles: 20e6,
-      expect: ['Hydra-16 reborn: kernel 0.1, ABI 1', 'POST ZP:0 ST:0 OS:0 HI:0 SH:S W:0',
+      expect: ['HydraOS 1.0 for the Hydra-16: kernel 0.1, ABI 1', 'POST ZP:0 ST:0 OS:0 HI:0 SH:S W:0',
         'RAM U:0 F0:0/00/0000 F4:0/00/0000 F8:0/00/0000 FC:0/00/0000 00:0/00/0000 10:0/00/0000', 'POST ok', 'RAM modules: 02',
         'task F: cons', 'task 1: init', 'init: up in task 01', 'hello, from init', 'init: hello ended: code $07 (bye)'],
     },
@@ -1135,7 +1136,7 @@ module.exports = {
     {
       name: 'hwtool', what: 'hwtest at rc: the system starts again (REBOOT), and POST takes REBOOT_HWTEST\'s word as a T',
       init: 'init', cycles: 60e6, get machine() { return { sd: shellCard('/bin/rc -l', 'shellrc2'), input: 'āhwtest\r' }; },
-      expect: ['% hwtest\nhwtest: the system starts again, into the hardware test\n', 'Hydra-16 reborn', 'Hydra-16 hardware test'],
+      expect: ['% hwtest\nhwtest: the system starts again, into the hardware test\n', 'HydraOS 1.0', 'Hydra-16 hardware test'],
     },
     {
       name: 'task', what: 'tasks and the scheduler: SPAWN, EXITS, WAIT, SLEEP, preemption, PAUSE and WAKE, orphans',
@@ -1716,6 +1717,43 @@ module.exports = {
         '% as -b /pc/raw.s /ram/raw; xd /ram/raw\n0000000  4c 00 c0 00 c0 05 00 ',
         '% as /pc/bad.s /ram/bad; echo $status\nas: /pc/bad.s:2: not an instruction, directive or macro: frob\nas: /pc/bad.s:3: stop\nas: /pc/bad.s:4: a bad expression\n1\n%',
         '% as /pc/warn.s /ram/warn; echo $status; xd /ram/warn\nas: /pc/warn.s:2: warning: careful\n\n0000000  60 ', '% as\nusage: as [-bl] file.s [out]\n%'],
+    },
+    {
+      name: 'sound', what: 'the simulator\'s sound (sim/lib/audio.js: run.js --sound, --wav), at rc: the YM2151\'s (opm.js, ymfm\'s) A4 on channel 4, then the Vera X\'s PSG\'s A5 on a sawtooth (channel 8), each heard at its pitch; the stream 48,000 samples a second of the Hydra\'s time',
+      init: 't_rc', cycles: 60e6, jsOnly: 'the danlang emulator has no sound',
+      machine: {
+        vera: true, sound: true,
+        input: ['echo patch 4 0 >/dev/sndctl; echo note 4 69 >/dev/sndctl', 'sleep 1; echo off 4 >/dev/sndctl; echo wave 8 saw >/dev/sndctl; echo note 8 81 >/dev/sndctl',
+          'sleep 1; echo off 8 >/dev/sndctl'].map(l => 'ā' + l + '\r').join(''),
+      },
+      start(m) { this.heard = []; m.audio.on(s => this.heard.push(s)); },
+      expect: ['% sleep 1; echo off 8 >/dev/sndctl\n%'],
+      check(m) {
+        const f = [], n = this.heard.reduce((k, s) => k + s.length / 2, 0), L = new Float64Array(n);
+        let k = 0;
+        for (const s of this.heard) for (let i = 0; i < s.length; i += 2) L[k++] = s[i];
+        // Each 0.1 s that sounds: its pitch, the shortest period (60-2000 Hz) the samples repeat at (a correlation
+        // over 0.9 at a local peak)
+        const pitches = [];
+        for (let s = 0; s + 4800 <= n; s += 4800) {
+          let e = 0;
+          for (let i = s; i < s + 4800; i++) e += L[i] * L[i];
+          if (Math.sqrt(e / 4800) < 300) continue;
+          const corr = lag => { let c = 0, e1 = 0, e2 = 0; for (let i = s; i < s + 2400; i++) { c += L[i] * L[i + lag]; e1 += L[i] * L[i]; e2 += L[i + lag] * L[i + lag]; } return c / Math.sqrt(e1 * e2); };
+          for (let lag = 24, prev = corr(23); lag < 800; lag++) {
+            const c = corr(lag);
+            if (c > 0.9 && c >= prev && c >= corr(lag + 1)) { pitches.push(48000 / lag); break; }
+            prev = c;
+          }
+        }
+        const near = hz => pitches.filter(p => Math.abs(p - hz) < hz * 0.01).length;
+        if (near(440) < 3) f.push('the YM2151\'s A4 not heard: ' + pitches.map(p => p.toFixed(1)).join(', '));
+        if (near(880) < 3) f.push('the PSG\'s A5 not heard: ' + pitches.map(p => p.toFixed(1)).join(', '));
+        const want = m.cpu.cyc / 3.579545e6 * 48000;
+        if (Math.abs(m.audio.made - want) > 16) f.push('the stream: ' + m.audio.made + ' samples for ' + Math.round(want) + ' of the Hydra\'s time');
+        this.notes = [n + ' samples heard; 0.1 s pitches near A4 ' + near(440) + ', near A5 ' + near(880)];
+        return f;
+      },
     },
     {
       name: 'snd', what: 'sound (#a): snd, sndctl and bell; the volume, claims (one another program holds), the shadow, tones (C, snd.h); sndctl\'s channel commands as text (patch, note, level and vol, pan by word and number, bend below 0, off, drum, reg: their registers on the chip; a channel another program has; numbers out of range, or missing); freq (a note by its frequency, its 64ths), glide, lfo, sens, noise',

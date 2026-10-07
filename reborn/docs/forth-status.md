@@ -114,12 +114,12 @@ of the Hydra it reaches), so that the two shells can do the same things.
 
 1. **The board:** `forth -l` as a window's shell, at 115200, a real card's `/lib/shell`, the device libraries on
    the real pins, the index's bank and the read-ahead on a real memory module.
-2. **For hylang's prompt, so the two stay alike:** `cd`, `bind`, `mount`, `unmount` and `newns` the shell's own, an
-   `&` at a line's end kept (`$apid`, `wait`), `$status`; `hylang -l` (newns by nslib, a profile for its window), so
-   `/bin/hylang -l` in `/lib/shell` works; the prompt's format codes; `screen.hl` with HyForth's terminal set
-   (danlang's first).
-3. **The standard's last word set, if it's wanted:** Floating-Point (and its extension), a library of software
-   floating point; every other word set of Forth 2012's is there now, and passes the suite's file for it.
+2. **For hylang's prompt, so the two stay alike:** done in hylang's phase 12 (status.md): `cd`, `bind`, `mount`,
+   `unmount` and `newns` the shell's own, an `&` at a line's end kept (`$apid`, `(wait task)`), `$status`, `hylang -l`,
+   so `/bin/hylang -l` in `/lib/shell` works; its prompt is a function (`shell-prompt`), not a format.  Left:
+   `screen.hl` with HyForth's terminal set (danlang's first).
+3. **The standard's last word set, Floating-Point: left out** (the user's choice, October 2026: nothing needs it, and
+   BASIC has floats); every other word set of Forth 2012's is there, and passes the suite's file for it.
 
 Not kept from the old HyForth: the prompt's `%l` (a card's label: its ctl read for each prompt), `rand32`'s Galois
 generator (hylang's xorshift32 in its place), `syscall`, the training scripts, memory records, `halloc` and the rest

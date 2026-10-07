@@ -1,8 +1,8 @@
 ## **Hydra-16 Hardware Reference**
 
-This is the Hydra-16 main board (V1) as its schematic describes it (`board/hydra-16.kicad_sch` and its sheets), with the two companion cards in `board/`.  Reference designators (U25, J18, ...) are the schematic's.  For how the software uses the hardware, see the [Programmer's Guide](programming/README.md).
+This is the Hydra-16 main board (V1) as its schematic describes it (`board/hydra-16.kicad_sch` and its sheets), with the two companion cards in `board/`.  Reference designators (U25, J18, ...) are the schematic's.  For how the software uses the hardware, see the [Programmer's Guide](../old/docs/programming/README.md).
 
-To test a board, run the [hardware test](using/wozmon.md#the-hardware-test) (HyForth's `hwtest`, or `T` typed during POST).
+To test a board, run the [hardware test](../old/docs/using/wozmon.md#the-hardware-test) (HyForth's `hwtest`, or `T` typed during POST).
 
 ### **Contents**
 1. [Overview](#overview)
@@ -86,7 +86,7 @@ The latches have no reset, so they power up random; the reset code sets them.  N
 
 **Task RAM** is one HM628512 (U7, 512K) on the main board.  CPU A0-A14 go straight to it, CPU A15 is its chip enable (low for `$0000-$7FFF`), and `T0-T3` drive its A15-A18.  So each value of `T` selects a different 32K, and a task switch is a single write to `$FFF0`.  Zero page and the stack page are part of it, so every task has its own zero page and stack.
 
-**A DS1747 in U7** gives the Hydra a clock that keeps the time while it's off.  The DS1747 (the 5 V part; the DS1747W is 3.3 V) is a 512K battery-backed RAM with a clock, pin compatible with the HM628512, in a 600-mil module.  Its clock registers are the chip's top 8 bytes, `$7FFF8-$7FFFF`, so they're **task F's `$7FF8-$7FFF`** (`T0-T3` reach U7's A15-A18 through U48 and U21 in order).  The ROM keeps off those bytes in every task, finds the chip at boot, and sets its clock from it ([HyForth](using/hyforth.md#files-and-devices)).  The rest of the chip is task RAM as before, kept while the power's off.  A new DS1747 comes with its battery disconnected until it first gets power, and its oscillator may be stopped: setting the time starts it.
+**A DS1747 in U7** gives the Hydra a clock that keeps the time while it's off.  The DS1747 (the 5 V part; the DS1747W is 3.3 V) is a 512K battery-backed RAM with a clock, pin compatible with the HM628512, in a 600-mil module.  Its clock registers are the chip's top 8 bytes, `$7FFF8-$7FFFF`, so they're **task F's `$7FF8-$7FFF`** (`T0-T3` reach U7's A15-A18 through U48 and U21 in order).  The ROM keeps off those bytes in every task, finds the chip at boot, and sets its clock from it ([HyForth](../old/docs/using/hyforth.md#files-and-devices)).  The rest of the chip is task RAM as before, kept while the power's off.  A new DS1747 comes with its battery disconnected until it first gets power, and its oscillator may be stopped: setting the time starts it.
 
 **The bank registers `$00` and `$01`** *(sheet `ZPMirrorRAM`)* are four 74LS219 (16 x 4-bit RAM) chips, addressed by `T0-T3`:
 
@@ -180,7 +180,7 @@ An SST39SF0x0 in a 32-pin socket: the '010 (128K, 16 pages), '020 (256K, 32 page
 * It's selected for `$E000-$FEFF` and for `$FFFA-$FFFD` (the NMI and RESET vectors).  I/O space and the vector RAM take the rest of `$FF00-$FFFF`.
 * The build produces `os_rom_C02.bin`, 128K, for the '010.
 
-**Changing `W` changes the code being run.**  The next instruction is fetched from the new page, at the same address.  The software handles this by keeping identical code at the same address on every page: the COMMON block at `$FD00`, and the reset entry at `$E000` (see [ROM layout](programming/rom-layout.md)).  Because `W` isn't reset, **every page must start with the reset code**: the RESET vector on every page points to `$E000`, which sets `W` to 0.
+**Changing `W` changes the code being run.**  The next instruction is fetched from the new page, at the same address.  The software handles this by keeping identical code at the same address on every page: the COMMON block at `$FD00`, and the reset entry at `$E000` (see [ROM layout](../old/docs/programming/rom-layout.md)).  Because `W` isn't reset, **every page must start with the reset code**: the RESET vector on every page points to `$E000`, which sets `W` to 0.
 
 ---
 
@@ -317,7 +317,7 @@ The ROM's timing (the scheduler's tick, sound note lengths, serial timeouts) is 
 | 11 | CA1 | 12 | CA2 |
 
 * PA0/PA1 are the I2C bus (bit-banged; the SDA and SCL pull-ups are in RN1), which also goes to every slot.  No I2C driver exists yet.
-* **The pins, CA1 and CA2 are files:** `/dev/gpio` ([io.md](programming/io.md#gpio-devgpio)); CA1 can interrupt (IRQ line 0, `/dev/gpio/ca1`).
+* **The pins, CA1 and CA2 are files:** `/dev/gpio` ([io.md](../old/docs/programming/io.md#gpio-devgpio)); CA1 can interrupt (IRQ line 0, `/dev/gpio/ca1`).
 * **Port B is the SPI bus** (below).
 * **Timer 1** is the scheduler's tick: free-running, 200 interrupts a second.
 * **Timer 2** paces serial output when the ROM is built for a WDC ACIA.
@@ -331,7 +331,7 @@ The ROM's timing (the scheduler's tick, sound note lengths, serial timeouts) is 
 * **The ACIA's clock is `SER_CLK`, 1.790 MHz**, not the 1.8432 MHz its baud rate table is made for.  So every rate is 2.9% slow (9600 gives about 9,320 baud), which terminals and USB serial adapters accept.
 * DCD and DSR are tied active.
 
-**Serial settings:** 9600 baud, 8 data bits, no parity, 1 stop bit at boot, with RTS/CTS.  The ROM can change the rate (300 to 19200, and 115200: the ACIA clock / 16), the data bits (5-8), the parity and the stop bits afterwards (`/dev/ser/ctl`, [io.md](programming/io.md#the-serial-port-settings)).
+**Serial settings:** 9600 baud, 8 data bits, no parity, 1 stop bit at boot, with RTS/CTS.  The ROM can change the rate (300 to 19200, and 115200: the ACIA clock / 16), the data bits (5-8), the parity and the stop bits afterwards (`/dev/ser/ctl`, [io.md](../old/docs/programming/io.md#the-serial-port-settings)).
 
 **115200 is paced.**  Sent back to back at 115200, long output (a WOZMON dump) loses and garbles characters on the board: the rate is 2.9% slow and the MAX232 is near its limit, so the receiver has little margin.  A second stop bit helps but isn't enough.  So at 115200 the ROM sends each byte from VIA timer 2 rather than the Rockwell ACIA's TDRE interrupt, with at least `SER_PACE_GAP` (2) idle bits after each character, about 4.5 with the interrupt's own time (with 1, a few characters in a whole-memory WOZMON dump were lost).  That's about 7,000 characters a second.  If long output still loses characters, raise `SER_PACE_GAP` in `os_rom/include/hw.inc` (each bit costs about 7%).  The other rates are sent back to back, as before.
 
@@ -388,7 +388,7 @@ SPI is bit-banged on the VIA's port B (the VIA's shift register uses CB1/CB2, wh
 | 5 | +5 V |
 | 6 | GND |
 
-The ROM runs SPI in mode 0 for SD cards, and its storage server serves an SD card on any device (`/dev/sd/N`); device 0 (J18) is the usual place for an SD card adapter.  Any other device is a file, `/dev/spi/N` (modes 0 and 3: [io.md](programming/io.md#spi-devices-devspi)).  The headers supply +5 V, so the adapter must regulate and level-shift to 3.3 V for the card (common SD card modules do).
+The ROM runs SPI in mode 0 for SD cards, and its storage server serves an SD card on any device (`/dev/sd/N`); device 0 (J18) is the usual place for an SD card adapter.  Any other device is a file, `/dev/spi/N` (modes 0 and 3: [io.md](../old/docs/programming/io.md#spi-devices-devspi)).  The headers supply +5 V, so the adapter must regulate and level-shift to 3.3 V for the card (common SD card modules do).
 
 ---
 

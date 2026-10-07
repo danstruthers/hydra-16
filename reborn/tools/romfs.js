@@ -21,7 +21,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const hydrafs = require('../../sim/tools/hydrafs.js');
+const hydrafs = require('../sim/tools/hydrafs.js');
 
 const BLOCK = 512, LABEL = 'ROM', PART_SYSTEM = 0xDA;
 
