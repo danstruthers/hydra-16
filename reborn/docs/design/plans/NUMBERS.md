@@ -1,6 +1,6 @@
 ## **Numbers: one number system, one format and one library for every language**
 
-A plan (October 2026) for the user's request: BASIC on hylang's number system instead of Microsoft's 40-bit floating point, and the same numbers in HyForth.  The simplest way to give every language the same numbers is the one the user named: **shared libraries** in the paged ROM that every language calls (`numbers`, the number system, and `math`, its functions), and **a new compact binary format** that every language stores numbers in and passes them in.  BASIC is rewritten on top of them, as the user allowed.  And every language gets all of it, as the user asked: all of danlang's and hylang's number system, its 19 named bases and every other way of writing a number included; numbers written in any of those formats; **a current format**, set by the program, that numbers are shown in and read in; fractions and fixed decimals in every format; and behind the scenes, every number stored in the new compact format, whatever format it was written or is shown in.
+A plan (October 2026) for the user's request: BASIC on hylang's number system instead of Microsoft's 40-bit floating point, and the same numbers in HyForth.  The simplest way to give every language the same numbers is the one the user named: **shared libraries** in the paged ROM that every language calls (`numbers`, the number system, and `math`, its functions), and **a new compact binary format** that every language stores numbers in and passes them in.  BASIC is written again on top of them: a new BASIC for the Hydra, QuickBASIC's kind, line numbers optional and labels to branch to, as the user asked ([BASIC.md](BASIC.md), its plan).  And every language gets all of it, as the user asked: all of danlang's and hylang's number system, its 19 named bases and every other way of writing a number included; numbers written in any of those formats; **a current format**, set by the program, that numbers are shown in and read in; fractions and fixed decimals in every format; and behind the scenes, every number stored in the new compact format, whatever format it was written or is shown in.
 
 ### **Contents**
 1. [What each language has now](#what-each-language-has-now)
@@ -11,7 +11,7 @@ A plan (October 2026) for the user's request: BASIC on hylang's number system in
 6. [The libraries](#the-libraries)
 7. [The math functions](#the-math-functions)
 8. [hylang and danlang](#hylang-and-danlang)
-9. [BASIC, rewritten](#basic-rewritten)
+9. [BASIC](#basic)
 10. [HyForth](#hyforth)
 11. [C and assembly](#c-and-assembly)
 12. [Tests](#tests)
@@ -58,11 +58,11 @@ Everything danlang's numbers have (its `reference.md`: their syntax in section 1
 
 | | hylang | BASIC | HyForth | C |
 | :- | :- | :- | :- | :- |
-| A number in a program's text | Every form, as now | Every form (`X = #xFF + #b0.1`), but a `#` right after `PRINT`, `INPUT` and `GET`, still a channel (`PRINT #1, X`); and Microsoft's exponents too (`1E6`, `2.5E-3`, exact), so old programs read as they did | A word Forth doesn't read as a cell or a double (`42`, `$FF`, `123.` stay what they are) but danlang reads as a number: `1.25`, `2/3`, `#xFF`, `#16r1F`, `#c+-0`, `100000000000000000000`, onto the number stack | Text, through `num_parse` |
+| A number in a program's text | Every form, as now | Every form (`X = #xFF + #b0.1`), but a `#` that names a file (`PRINT #1, X`); and QuickBASIC's too: `&HFF`, `&O17`, `&B101`, exponents (`1E6`, `2.5E-3`, exact) | A word Forth doesn't read as a cell or a double (`42`, `$FF`, `123.` stay what they are) but danlang reads as a number: `1.25`, `2/3`, `#xFF`, `#16r1F`, `#c+-0`, `100000000000000000000`, onto the number stack | Text, through `num_parse` |
 | Text to a number | `(val s)` | `VAL(S$)` | `>n ( c-addr u -- )` | `num_parse` |
 | A number written | `print`, `(to-str x)` | `PRINT`, `STR$(X)` | `n.`, `n>str` | `num_print` |
 | In a base | `(to-str x base)` | `STR$(X, B$)` (`STR$(255, "x")` is `#xFF`) | `n.base ( c-addr u -- )` (`s" x" n.base`) | `num_print`'s base |
-| The tower's functions | As now | A function each (names in step 7, with question 4) | `nabs`, `truncate`, `to-fixed`, `to-rational`, `rational.n`, `rational.d`, `complex`, `nrandom`, `nfib`, `npow` | `num_abs`, `num_truncate`, `num_to_fixed` ... |
+| The tower's functions | As now | A function each (named in [BASIC.md](BASIC.md)'s reference) | `nabs`, `truncate`, `to-fixed`, `to-rational`, `rational.n`, `rational.d`, `complex`, `nrandom`, `nfib`, `npow` | `num_abs`, `num_truncate`, `num_to_fixed` ... |
 | The tests | `num?` `int?` `fixed?` `rational?` `complex?` | A function each | `int?` `fixed?` `rational?` `complex?` (the number stack's top, a flag) | `num_kind` |
 | The bits | As now | `AND`, `OR`, `NOT` on integers of any size, and a function each for the rest | `nand`, `nor`, `nxor`, `ninvert`, `nlshift`, `nrshift`, `nbit?`, `nbytes`, `nfrom-bytes` | `num_and` ... |
 
@@ -170,27 +170,16 @@ The `numbers` code is about 11K (hylang's third bank is 12K, mostly numbers): a 
 * **hylang**: its number objects hold the format (a bignum's blob, a fixed decimal's, a rational's and a complex number's become one blob of the format's bytes, in its own banks), and its number built-ins call the libraries.  Its quick ways for fixnums stay in hylang (`+`, `-`, `*`, the comparisons, the native code's templates), so its loops are as fast as now; only numbers past a fixnum go to the library.  Its third bank gets most of its 12K back.  `numbers.dl` and the 2,100 random expressions must give the same as before, byte for byte, and the benchmarks no slower.
 * The new built-ins: `sqrt`, `exp`, `log`, `sin`, `cos`, `tan`, `atan`, `pi`, `digits`; `pow` takes any real exponent.
 
-### **BASIC, rewritten**
+### **BASIC**
 
-The user allows a rewrite, and it's the better way: Microsoft's code is built around its floating accumulator (expressions, variables, `FOR`, `INPUT` and `PRINT`, the functions all reach it), so taking it out would leave little of the original.  A new BASIC, written for the system and the libraries, keeps the language its programs and tests use.
+A new BASIC, for the Hydra, as QuickBASIC was for the PC: line numbers optional, labels, blocks, `SUB` and `FUNCTION`; its own plan, [BASIC.md](BASIC.md).  Its numbers are these:
 
-**The same language**: Microsoft BASIC 2A's statements and functions (as `docs/basic.md` lists them), and everything the Hydra's version added: files (`OPEN`, `PRINT#`, `INPUT#`, `GET#`, `EOF`), `LOAD` and `SAVE` (text, and tokenized), `RUN "name"`, scripts and `ARG$`, `ENV$`, `SOUND`, `PLAY`, `BEEP`, `SLEEP`, `SYS` and `RREG`, `HIMEM`, the shell (`basic -l`), Ctrl-C.  The test suite (`tests/basic`), `bench.bas` and the shell's tests carry over, but for what the numbers change.
-
-**Its numbers**, the tower's:
-* A value is 5 bytes, as now (a variable's 2-byte name and its value, 7 bytes; an array's element 5), holding the format's bytes when the number fits in 5 (most do: integers to 2^32, `0.5`, `3.14159`, `1/3`), else `$FF` and a reference (the number's address and length) to its bytes in the heap the strings use.  So variables, arrays and `FOR` take no more memory than now.
-* Division is exact: `10/4` is `5/2`, and `0.1 + 0.2 = 0.3` is true.  How `PRINT` shows a rational is a question below.
-* `SQR`, `EXP`, `LOG`, `SIN`, `COS`, `TAN`, `ATN` and `^` call `math`, at `DIGITS` significant digits.  `INT` (the floor), `ABS`, `SGN`, `RND` (as Microsoft's: the next number from 0 to 1, a fixed decimal of `DIGITS` digits; a negative argument seeds it), `VAL` and `STR$` (the format's text) call `numbers`.
-* `AND`, `OR` and `NOT` on integers of any size, in two's complement (the library's bits), not 16-bit only.
-* `PEEK`, `POKE`, `SYS`, array sizes and the like take integers that fit (else `?ILLEGAL QUANTITY ERROR`).
-* Numbers in a program's text in every form danlang reads (the 19 named bases and the rest), and Microsoft's exponents (`1E6`, `2.5E-3`); `VAL` reads the same, and `STR$` writes in a base too (`STR$(255, "x")` is `#xFF`).  The tower's other functions, its tests and the bits are functions of BASIC's.
-
-**Its insides**, as a BASIC written now can have them:
-* The tokenizer turns a line's numbers into the format as it's entered (Microsoft reads a constant's digits again each time it runs), and `LIST` writes them back.
-* Expressions are worked on a value stack of its own, not the 6502's (Microsoft's 256-byte stack limits FOR, GOSUB and nesting), and a statement's long temporary numbers in an area emptied as each statement starts, so only what's stored goes to the heap.
-* The heap's collector is a compacting one, quick (Microsoft's looks for the highest string again for each it moves, so it's slow with many strings), and knows the references in variables, arrays and `FOR`'s frames.
-* Integers that fit in a value are added, subtracted and compared without a library call (counters and `FOR` loops), so its loops can be quicker than Microsoft's, which works every number as floating point.  `bench.bas` measures it against hylang and HyForth, as now (57 s today: 12 times hylang's time).
-
-It will be a program of two or three banks (`basic` today is one, 93% full, most of its room Microsoft's floating point).  Whether its names and keywords stay Microsoft's (two significant characters, keywords found inside names) is a question below.
+* **A value is 5 bytes**, holding the stored format's bytes when the number fits in 5 (most do: integers to 2^32, `0.5`, `3.14159`, `1/3`), else `$FF` and a reference (the number's address and length) to its bytes in the heap the strings use.  So variables, arrays and `FOR` take no more room than Microsoft's 5-byte floats did.
+* **Exact**: `10/4` is `5/2`, `0.1 + 0.2 = 0.3` is true, `2 ^ 100` is exact; `FOR x = 0 TO 1 STEP 0.1` runs 11 times.  How `PRINT` shows a fraction is a question below.
+* **Every format**: numbers in a program's text in every form danlang reads (the 19 named bases and the rest), QuickBASIC's `&HFF`, `&O17`, `&B101`, and exponents (`1E6`, `2.5E-3`, exact); `VAL` and `INPUT` read the same; `STR$(X, "x")` writes in a base; `NBASE "x"` sets the current format, which `PRINT`, `STR$`, `VAL` and `INPUT` use.
+* **The functions**: `SQR`, `EXP`, `LOG`, `SIN`, `COS`, `TAN`, `ATN`, `^`, `PI` call `math` at `DIGITS` digits; `INT` (the floor), `FIX`, `ABS`, `SGN`, `RND` (the next number from 0 to 1, a fixed decimal; a negative argument seeds it), `MOD`, `\` (integer division), and the tower's other functions and tests (`TRUNCATE`, `TOFIXED`, `NUMERATOR` ..., named in BASIC.md's reference) call `numbers`.
+* **The bits**: `AND`, `OR`, `XOR`, `NOT` on integers of any size, in two's complement (the library's), not 16-bit only; `PEEK`, `POKE` and the like take integers that fit.
+* **Quick small integers**: those that fit a value are added, subtracted and compared without a library call (counters, `FOR` loops); the rest go to the libraries.
 
 ### **HyForth**
 
@@ -213,7 +202,7 @@ A library, **`lib numbers`** (`numbers.fl`), with `math`'s words in it or in a s
 * **The format**: an encoder and decoder in JavaScript (`sim/tools/numfmt.js`) and in danlang, and the cross-check: random expressions, run in danlang and through the libraries (a test module, `t_num`, in the emulator), compared byte for byte, as hylang's 2,100 are now; then the math functions the same way at several precisions.
 * **Every format**: random numbers of every kind (integers, fixed decimals, rationals) written in each of the 19 named bases, a few radixes, digits of their own and each modifier, then read back: the same number, and the same text in danlang and through the libraries; and each language's current format set and used to show and read.
 * **hylang**: its suites (`hysuite`, `hylang`, `numbers.dl`), unchanged, must pass; `bench` and `hyspeed` no slower.
-* **BASIC**: the suite in `tests/basic` and the `basic`, `bsuite`, `bplay`, `bawin` and `bench` tests, carried over, their expectations changed only where the numbers print differently (each change listed).
+* **BASIC**: its new suite ([BASIC.md](BASIC.md)), the numbers among its checks.
 * **HyForth**: a test file of the number words (as the standard's suite files are), and the Floating-Point suite's file if that word set is built.
 * **C**: the `calc` sample at rc.
 
@@ -227,10 +216,10 @@ A library, **`lib numbers`** (`numbers.fl`), with `math`'s words in it or in a s
 | 4 | **`math`**: danlang's functions first, then the library, and hylang's built-ins (`sqrt` ... `digits`) | M-L |
 | 5 | **HyForth's `lib numbers`** (and `lib math`): the number stack, the words, literals in the current format, `nbase!` and `nbase@`, its test file | M |
 | 6 | **C and assembly**: `num.h` (with `num_base`), `numbers.inc`, the `calc` sample | S |
-| 7 | **BASIC, rewritten** on the libraries, the same language, with `NBASE`; its tests carried over; `bench.bas` measured | L |
+| 7 | **BASIC**: the new language on the libraries, by its own plan ([BASIC.md](BASIC.md)) | L |
 | 8 | **Documents**: `docs/basic.md` and the guides, the programmer's guide (a chapter on numbers), `status.md`, the guide and its PDF | S |
 
-hylang goes first because its tests check every corner of the tower: the library taken out of it is right when hylang still passes them.  HyForth before BASIC because it's smaller and is the library's first new caller; BASIC, the largest, last.  Step 7 can start as soon as step 4 is done.
+hylang goes first because its tests check every corner of the tower: the library taken out of it is right when hylang still passes them.  HyForth before BASIC because it's smaller and is the library's first new caller; BASIC, the largest, last.  BASIC's own first steps (its language, reading a program) can start at once; its core needs steps 1-4.
 
 ### **Risks**
 
@@ -243,15 +232,13 @@ hylang goes first because its tests check every corner of the tower: the library
 ### **Questions**
 
 1. **The precision of the math functions**: the default number of significant digits (12 is three more than Microsoft's 9; more costs time), and whether each language may change it (`DIGITS n`, `(digits n)`, `digits`)?
-2. **How BASIC prints a rational**: as hylang does (`PRINT 1/3` shows `1/3`, exact), or as a decimal of `DIGITS` digits (`.333333333333`), the number staying exact inside?
-3. **BASIC's `%` variables**: 16-bit integers as now (for `PEEK`, `POKE` and memory), or integers of any size?
-4. **The rewritten BASIC's names**: Microsoft's rules (two significant characters, keywords found inside names: `SCORE` is `SC OR E`), so every program runs as it does; or whole names with keywords only as words, a cleaner language where programs that run words together need spaces?  The answer names the tower's functions in BASIC too (`TRUNCATE(X)`, `TOFIXED(X, P)` ... are long for Microsoft's rules, which find keywords inside names).
-5. **Complex numbers from text**: danlang reads none (`1+2i` is a symbol, and `(val "1+2i")` an error), so in every language they're made by `complex` and by arithmetic (`SQR(-1)` is `i`).  Add a form to danlang's grammar (and so to every language's), or leave it?
-6. **HyForth's Floating-Point word set** over these numbers, so standard Forth programs with floats run (reversing October's "left out")?
-7. **hylang on the shared library** (one implementation, recommended), or left with its own copy of the code?
-8. **A `calc` tool** at rc?
-9. **The current format's names**: `number-base`, `NBASE`, `nbase!` and `nbase@`, `num_base` (the table above), or others?
-10. **The current format and a program's own text**: does it read BASIC's lines and hylang's source too (as Forth's `BASE` reads Forth's), or only what a program reads as it runs (`VAL`, `INPUT`, `val`, `>n`), its text always decimal unless a number has a `#` of its own?  (Recommended: Forth's text yes, as `BASE`; BASIC's and hylang's no, so a library or a program means the same whatever was set.)
-11. **The prefix when shown**: `FF` (reads back in the same format) or `#xFF` (reads back in any)?
-12. **A fraction shown in another base**: with a radix point when it ends in that base and as a fraction when it doesn't (recommended: exact, and reads back), or always as a fraction (danlang's way now), or rounded to a number of digits after the point?
-13. **hylang's fixnums**: a small integer kept in hylang's 16-bit value as now (quick; the format's bytes when it leaves hylang), or the format's bytes even there?
+2. **How BASIC prints a fraction** (BASIC.md's question 7 too): as hylang does (`PRINT 1/3` shows `1/3`, exact), or as a decimal of `DIGITS` digits (`.333333333333`), the number staying exact inside?
+3. **Complex numbers from text**: danlang reads none (`1+2i` is a symbol, and `(val "1+2i")` an error), so in every language they're made by `complex` and by arithmetic (`SQR(-1)` is `i`).  Add a form to danlang's grammar (and so to every language's), or leave it?
+4. **HyForth's Floating-Point word set** over these numbers, so standard Forth programs with floats run (reversing October's "left out")?
+5. **hylang on the shared library** (one implementation, recommended), or left with its own copy of the code?
+6. **A `calc` tool** at rc?
+7. **The current format's names**: `number-base`, `NBASE`, `nbase!` and `nbase@`, `num_base` (the table above), or others?
+8. **The current format and a program's own text**: does it read BASIC's lines and hylang's source too (as Forth's `BASE` reads Forth's), or only what a program reads as it runs (`VAL`, `INPUT`, `val`, `>n`), its text always decimal unless a number has a `#` of its own?  (Recommended: Forth's text yes, as `BASE`; BASIC's and hylang's no, so a library or a program means the same whatever was set.)
+9. **The prefix when shown**: `FF` (reads back in the same format) or `#xFF` (reads back in any)?
+10. **A fraction shown in another base**: with a radix point when it ends in that base and as a fraction when it doesn't (recommended: exact, and reads back), or always as a fraction (danlang's way now), or rounded to a number of digits after the point?
+11. **hylang's fixnums**: a small integer kept in hylang's 16-bit value as now (quick; the format's bytes when it leaves hylang), or the format's bytes even there?

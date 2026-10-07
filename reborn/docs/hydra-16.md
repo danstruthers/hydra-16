@@ -267,8 +267,8 @@ design](hylang.md).
 
 **BASIC** (`basic`): Microsoft BASIC 2A by way of EhyBASIC, the Hydra-16's own, as a program: files, sound and `PLAY`,
 `SYS` (machine code, or any call by name), a RAM bank, scripts and pipelines, and a shell mode.  [The
-guide](using/basic.md), [its design](basic.md).  Planned: hylang's numbers in every language, BASIC rewritten on
-them ([NUMBERS.md](design/plans/NUMBERS.md)).
+guide](using/basic.md), [its design](basic.md).  Planned: a new BASIC for the Hydra, QuickBASIC's kind
+([BASIC.md](design/plans/BASIC.md)), on hylang's numbers in every language ([NUMBERS.md](design/plans/NUMBERS.md)).
 
 ---
 
