@@ -3444,6 +3444,240 @@ vm_bat:
 @rts:
             rts
 
+; BCALL's bit-and, bit-or, bit-xor of two (native code's): two fixnums on top: ex = their bits' (a fixnum's tag bit
+; is theirs, and or or; xor's set again), the two dropped, C = 0; else C = 1, nothing changed (BCALL's way)
+vm_band:
+            jsr         vm_b2
+            bcs         vm_brts
+            lda         (ht)
+            and         (ht),y
+            sta         vm_a
+            dey
+            lda         (ht),y
+            ldy         #3
+            and         (ht),y
+            bra         vm_bset
+vm_bor:
+            jsr         vm_b2
+            bcs         vm_brts
+            lda         (ht)
+            ora         (ht),y
+            sta         vm_a
+            dey
+            lda         (ht),y
+            ldy         #3
+            ora         (ht),y
+            bra         vm_bset
+vm_bxor:
+            jsr         vm_b2
+            bcs         vm_brts
+            lda         (ht)
+            eor         (ht),y
+            ora         #1
+            sta         vm_a
+            dey
+            lda         (ht),y
+            ldy         #3
+            eor         (ht),y
+vm_bset:
+            sta         ex + 1
+            lda         vm_a
+            sta         ex
+; The words from ht dropped (sp = ht: back from the bank they were spilled to, if they were), C = 0
+vm_bdrop:
+            lda         ht
+            sta         sp
+            ldx         ht + 1
+            stx         sp + 1
+            cpx         stk_basep
+            bne         :+
+            lda         spilled
+            beq         :+
+            jsr         unspill
+:
+            clc
+vm_brts:
+            rts
+
+; ht = the two words on top (sp - 4), .Y = 2.  OUT: C = 1 if they aren't both fixnums
+vm_b2:
+            lda         sp
+            sec
+            sbc         #4
+            sta         ht
+            lda         sp + 1
+            sbc         #0
+            sta         ht + 1
+            ldy         #2
+            lda         (ht)
+            and         (ht),y
+            eor         #1
+            lsr
+            rts
+
+; BCALL's shl and shr of two (native code's): n and k fixnums, k 0 or more (shl's below 15) and n shifted to a fixnum
+; (shl: its sign kept at each step; shr: down, toward minus infinity, k past 15 as 15): ex = it, the two dropped,
+; C = 0; else C = 1, nothing changed (BCALL's way)
+vm_bshl:
+            jsr         vm_b2
+            bcs         vm_brts
+            iny
+            lda         (ht),y                              ; (k: 0 to 14)
+            bne         @no
+            dey
+            lda         (ht),y
+            lsr
+            cmp         #15
+            bcs         @no
+            tax
+            ldy         #1
+            lda         (ht),y
+            sta         vm_a + 1
+            lda         (ht)                                ; (2n, shifted)
+            and         #$FE
+            sta         vm_a
+            txa
+            beq         @done
+@step:
+            lda         vm_a + 1                            ; (Bits 15 and 14 the same, or it isn't a fixnum)
+            asl
+            eor         vm_a + 1
+            bmi         @no
+            asl         vm_a
+            rol         vm_a + 1
+            dex
+            bne         @step
+@done:
+            lda         vm_a                                ; (Its tag bit again)
+            ora         #1
+            sta         vm_a
+            lda         vm_a + 1
+            jmp         vm_bset
+@no:
+            sec
+            rts
+vm_bshr:
+            jsr         vm_b2
+            bcs         vm_brts
+            iny
+            lda         (ht),y                              ; (k: 0 or more)
+            bmi         @no
+            bne         @far
+            dey
+            lda         (ht),y
+            lsr
+            cmp         #15
+            bcc         :+
+@far:
+            lda         #15
+:
+            tax
+            ldy         #1
+            lda         (ht),y
+            sta         vm_a + 1
+            lda         (ht)
+            sta         vm_a
+            txa
+            beq         @done
+@step:
+            lda         vm_a + 1                            ; (Its sign kept: (2n + 1) >> k, with its tag bit set
+            cmp         #$80                                ;   again, is 2 (n >> k) + 1)
+            ror         vm_a + 1
+            ror         vm_a
+            dex
+            bne         @step
+@done:
+            lda         vm_a
+            ora         #1
+            sta         vm_a
+            lda         vm_a + 1
+            jmp         vm_bset
+@no:
+            sec
+            rts
+
+; BCALL's char-at of two (native code's): a string and a fixnum index in it: ex = its byte's character, the two
+; dropped, C = 0; else C = 1, nothing changed (BCALL's way).  The window kept
+vm_bchat:
+            lda         sp
+            sec
+            sbc         #4
+            sta         ht
+            lda         sp + 1
+            sbc         #0
+            sta         ht + 1
+            ldy         #2                                  ; (The index: a fixnum, 0 or more)
+            lda         (ht),y
+            lsr
+            bcc         @no
+            iny
+            lda         (ht),y
+            bmi         @no
+            lsr
+            sta         vm_t + 1
+            dey
+            lda         (ht),y
+            ror
+            sta         vm_t
+            lda         (ht)                                ; (The string)
+            lsr
+            bcs         @no
+            ldy         #1
+            lda         (ht),y
+            tax
+            cpx         #IMM_PAGES
+            bcc         @no
+            lda         pk,x
+            cmp         #PK_STRING
+            bne         @no
+            lda         (ht)
+            jsr         vm_bat
+            bcs         @out
+            lda         (hp)
+            asl
+            sta         ex
+            lda         #0
+            rol
+            ora         #>CHAR0
+            sta         ex + 1
+            lda         vm_bank
+            sta         $00
+            jmp         vm_bdrop
+@out:
+            lda         vm_bank
+            sta         $00
+@no:
+            sec
+            rts
+
+; BCALL's char-code of one (native code's): a character on top: ex = its code, it dropped, C = 0; else C = 1,
+; nothing changed (BCALL's way)
+vm_bccode:
+            lda         sp
+            sec
+            sbc         #2
+            sta         ht
+            lda         sp + 1
+            sbc         #0
+            sta         ht + 1
+            lda         (ht)
+            lsr
+            bcs         @no
+            ldy         #1
+            lda         (ht),y
+            and         #$FE
+            cmp         #>CHAR0
+            bne         @no
+            lda         (ht)
+            ora         #1
+            sta         vm_a
+            lda         (ht),y
+            and         #1
+            jmp         vm_bset
+@no:
+            sec
+            rts
+
 ; BCALL's * of two (op_bcall's, native code's): two fixnums on top whose product is one: ex = it, the two dropped,
 ; C = 0; else C = 1, nothing changed (BCALL's way).  The window kept.  Both 0 to 127 (their high bytes 0): their
 ; product at once (under 16384)

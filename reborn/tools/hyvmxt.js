@@ -452,9 +452,15 @@ tpl('head', STUB, `
 @p:` + PUSHEX + `
   jmp {N}
 @s:`);
-// BCALL * 2 h r (vx_tpl's: * of two): two fixnums' product, if it's one (vm_bmul: the two dropped; else BCALL's way)
-tpl('bmul', STUB, `
-  jsr vm_bmul
+// BCALL b k h r (vx_tsel's, by b and k: BCB below): the built-in's quick way, a routine of the machine's (vm_bmul:
+// * of two fixnums whose product is one; vm_band, vm_bor, vm_bxor, vm_bshl, vm_bshr of two fixnums; vm_bchat: char-at
+// of a string and an index in it; vm_bccode: char-code of a character): ex its value, the arguments dropped; else
+// BCALL's way, its stub
+const BCB = [['bmul', 'BIN_MUL', 2, 'vm_bmul'], ['band', 'BIN_BITAND', 2, 'vm_band'], ['bor', 'BIN_BITOR', 2, 'vm_bor'],
+  ['bxor', 'BIN_BITXOR', 2, 'vm_bxor'], ['bshl', 'BIN_SHL', 2, 'vm_bshl'], ['bshr', 'BIN_SHR', 2, 'vm_bshr'],
+  ['bchat', 'BIN_CHARAT', 2, 'vm_bchat'], ['bccode', 'BIN_CHARCODE', 1, 'vm_bccode']];
+for (const [n, , , r] of BCB) tpl(n, STUB, `
+  jsr ${r}
   bcs @s
   jmp {N}
 @s:`);
@@ -917,7 +923,10 @@ for (const [tn, m] of Object.entries(fused)) {
   lines.push(tn + ':'.padEnd(12 - tn.length) + '.word       ' + row.slice(0, 9).join(', '));
   lines.push('            .word       ' + row.slice(9).join(', '));
 }
-lines.push('', '; BCALL\'s of * of two (vx_tpl\'s choice; 0: none)', 'VXT_BMUL        = ' + (skip.has('bmul') ? '0' : 'vxt_bmul'));
+lines.push('', '; BCALL\'s of the built-ins with templates of their own (vx_tsel\'s): each one, its count, its template (0: none)',
+  'VX_NBC          = ' + BCB.length, 'vx_bcb:     .byte       ' + BCB.map(b => b[1]).join(', '),
+  'vx_bcn:     .byte       ' + BCB.map(b => b[2]).join(', '),
+  'vx_bct:     .word       ' + BCB.map(b => skip.has(b[0]) ? '0' : 'vxt_' + b[0]).join(', '));
 const noself = skip.has('shself') || skip.has('tself');
 lines.push('', '; A flagged SHEAD\'s (0: none, the machine\'s way), the TSELF after it\'s (vx_tsel\'s)',
   'VXT_SHSELF      = ' + (noself ? '0' : 'vxt_shself'), 'VXT_TSELFH      = vxt_tselfh',

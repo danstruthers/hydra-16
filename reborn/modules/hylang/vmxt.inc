@@ -1538,6 +1538,90 @@ vxt_bmul_e:
 
 .assert vxt_bmul_e - vxt_bmul_c + VX_STUB + 48 < 256, error, "vxt_bmul: an op's code is at most 255 bytes"
 
+vxt_band:   .byte       vxt_band_e - vxt_band_c, TF_STUB, 1
+            .byte       vxt_band_p0 - vxt_band_c, TPK_N, 0
+vxt_band_c:
+            jsr         vm_band
+            bcs         vxt_band_s
+            jmp         $0000
+vxt_band_p0 = * - 2
+vxt_band_s:
+vxt_band_e:
+
+.assert vxt_band_e - vxt_band_c + VX_STUB + 48 < 256, error, "vxt_band: an op's code is at most 255 bytes"
+
+vxt_bor:    .byte       vxt_bor_e - vxt_bor_c, TF_STUB, 1
+            .byte       vxt_bor_p0 - vxt_bor_c, TPK_N, 0
+vxt_bor_c:
+            jsr         vm_bor
+            bcs         vxt_bor_s
+            jmp         $0000
+vxt_bor_p0 = * - 2
+vxt_bor_s:
+vxt_bor_e:
+
+.assert vxt_bor_e - vxt_bor_c + VX_STUB + 48 < 256, error, "vxt_bor: an op's code is at most 255 bytes"
+
+vxt_bxor:   .byte       vxt_bxor_e - vxt_bxor_c, TF_STUB, 1
+            .byte       vxt_bxor_p0 - vxt_bxor_c, TPK_N, 0
+vxt_bxor_c:
+            jsr         vm_bxor
+            bcs         vxt_bxor_s
+            jmp         $0000
+vxt_bxor_p0 = * - 2
+vxt_bxor_s:
+vxt_bxor_e:
+
+.assert vxt_bxor_e - vxt_bxor_c + VX_STUB + 48 < 256, error, "vxt_bxor: an op's code is at most 255 bytes"
+
+vxt_bshl:   .byte       vxt_bshl_e - vxt_bshl_c, TF_STUB, 1
+            .byte       vxt_bshl_p0 - vxt_bshl_c, TPK_N, 0
+vxt_bshl_c:
+            jsr         vm_bshl
+            bcs         vxt_bshl_s
+            jmp         $0000
+vxt_bshl_p0 = * - 2
+vxt_bshl_s:
+vxt_bshl_e:
+
+.assert vxt_bshl_e - vxt_bshl_c + VX_STUB + 48 < 256, error, "vxt_bshl: an op's code is at most 255 bytes"
+
+vxt_bshr:   .byte       vxt_bshr_e - vxt_bshr_c, TF_STUB, 1
+            .byte       vxt_bshr_p0 - vxt_bshr_c, TPK_N, 0
+vxt_bshr_c:
+            jsr         vm_bshr
+            bcs         vxt_bshr_s
+            jmp         $0000
+vxt_bshr_p0 = * - 2
+vxt_bshr_s:
+vxt_bshr_e:
+
+.assert vxt_bshr_e - vxt_bshr_c + VX_STUB + 48 < 256, error, "vxt_bshr: an op's code is at most 255 bytes"
+
+vxt_bchat:  .byte       vxt_bchat_e - vxt_bchat_c, TF_STUB, 1
+            .byte       vxt_bchat_p0 - vxt_bchat_c, TPK_N, 0
+vxt_bchat_c:
+            jsr         vm_bchat
+            bcs         vxt_bchat_s
+            jmp         $0000
+vxt_bchat_p0 = * - 2
+vxt_bchat_s:
+vxt_bchat_e:
+
+.assert vxt_bchat_e - vxt_bchat_c + VX_STUB + 48 < 256, error, "vxt_bchat: an op's code is at most 255 bytes"
+
+vxt_bccode: .byte       vxt_bccode_e - vxt_bccode_c, TF_STUB, 1
+            .byte       vxt_bccode_p0 - vxt_bccode_c, TPK_N, 0
+vxt_bccode_c:
+            jsr         vm_bccode
+            bcs         vxt_bccode_s
+            jmp         $0000
+vxt_bccode_p0 = * - 2
+vxt_bccode_s:
+vxt_bccode_e:
+
+.assert vxt_bccode_e - vxt_bccode_c + VX_STUB + 48 < 256, error, "vxt_bccode: an op's code is at most 255 bytes"
+
 vxt_call:   .byte       vxt_call_e - vxt_call_c, TF_STUB | TF_MISS, 17
             .byte       vxt_call_p0 - vxt_call_c, TPK_D, 6
             .byte       vxt_call_p1 - vxt_call_c, TPK_D, 7
@@ -3287,8 +3371,11 @@ vx_tllp:    .word       vxt_llp_add, vxt_llp_sub, 0, 0, 0, 0, 0, 0, 0
 vx_tjll:    .word       0, 0, vxt_jll_lt, vxt_jll_gt, vxt_jll_le, vxt_jll_ge, vxt_jll_eq, 0, 0
             .word       0, 0, 0, 0, 0, 0, 0, 0, 0
 
-; BCALL's of * of two (vx_tpl's choice; 0: none)
-VXT_BMUL        = vxt_bmul
+; BCALL's of the built-ins with templates of their own (vx_tsel's): each one, its count, its template (0: none)
+VX_NBC          = 8
+vx_bcb:     .byte       BIN_MUL, BIN_BITAND, BIN_BITOR, BIN_BITXOR, BIN_SHL, BIN_SHR, BIN_CHARAT, BIN_CHARCODE
+vx_bcn:     .byte       2, 2, 2, 2, 2, 2, 2, 1
+vx_bct:     .word       vxt_bmul, vxt_band, vxt_bor, vxt_bxor, vxt_bshl, vxt_bshr, vxt_bchat, vxt_bccode
 
 ; A flagged SHEAD's (0: none, the machine's way), the TSELF after it's (vx_tsel's)
 VXT_SHSELF      = vxt_shself

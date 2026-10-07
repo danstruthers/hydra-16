@@ -179,41 +179,42 @@ In October 2026 (`reborn-hynat`, the native code), at 3.58 MHz, one run of each,
 | Kind | Benchmark | What | Result | hylang | Bytecode | HyForth | hylang / HyForth |
 | :--- | :-------- | :--- | -----: | -----: | -------: | ------: | ---------------: |
 | calls | `calls` | 2,000 calls of a function of two arguments, in a tail call's loop | 2000 | 540 ms | 995 ms | 65 ms | 8.3x |
-| calls | `fib` | Fibonacci of 16, recursively (3,193 calls) | 987 | 520 ms | 980 ms | 181 ms | 2.9x |
+| calls | `fib` | Fibonacci of 16, recursively (3,193 calls) | 987 | 515 ms | 980 ms | 181 ms | 2.8x |
 | calls | `tak` | Takeuchi's function, tak(9, 6, 3) six times (1,758 calls of three arguments) | 36 | 310 ms | 560 ms | 199 ms | 1.6x |
-| calls | `ack` | Ackermann's, ack(2, 9) eight times (1,840 calls, 22 deep) | 168 | 265 ms | 520 ms | 115 ms | 2.3x |
-| loops | `loop` | A counting loop of 4,000 steps, a tail call each | 4000 | 395 ms | 925 ms | 77 ms | 5.1x |
-| loops | `while` | A sum of i & 3 for i below 4,000, by `while` over two locals | 6000 | 3,115 ms | 3,685 ms | 421 ms | 7.4x |
-| loops | `dotimes` | The same sum by `dotimes` (HyForth: `DO LOOP`) | 6000 | 3,140 ms | 3,655 ms | 213 ms | 14.7x |
-| loops | `nested` | A `dotimes` in a `dotimes`, 60 by 60, `bit-xor` and a test | 1800 | 4,870 ms | 5,435 ms | 309 ms | 15.8x |
-| arith | `gcd` | gcd(i, j) by subtraction, for i and j 1 to 20, summed | 880 | 480 ms | 950 ms | 351 ms | 1.4x |
-| arith | `collatz` | The Collatz steps of 1 to 60, summed (1,457) | 1457 | 1,650 ms | 2,225 ms | 289 ms | 5.7x |
-| arith | `hash` | h = ((h & 255) * 31 + i) & 4095 for i below 2,000 | 4072 | 3,060 ms | 4,825 ms | 669 ms | 4.6x |
-| bytes | `sieve` | The primes below 1,024, a byte each | 172 | 1,065 ms | 1,905 ms | 332 ms | 3.2x |
-| bytes | `sort` | 100 bytes sorted by insertion | 407 | 1,765 ms | 3,270 ms | 480 ms | 3.7x |
-| bytes | `matrix` | Two 10 by 10 matrices of bytes multiplied, summed | 1375 | 1,140 ms | 4,030 ms | 1,082 ms | 1.1x |
-| bytes | `queens` | The 7 queens' 40 placements, by backtracking | 40 | 2,370 ms | 4,390 ms | 1,301 ms | 1.8x |
-| lists | `mapf` | `sum`, `map`, `filter` over `range` 0 to 39, 20 times (HyForth: a loop, `EXECUTE`) | 9880 | 1,465 ms | 2,340 ms | 207 ms | 7.1x |
-| lists | `fold` | `foldl` of a function made with `fn` over 200 items, 10 times | 964 | 2,395 ms | 4,535 ms | 712 ms | 3.4x |
-| lists | `each` | `each` over 200 items, 10 times (HyForth: an array) | 700 | 1,615 ms | 1,855 ms | 209 ms | 7.7x |
-| text | `chars` | The a's in 64 characters, 40 times: `char-at`, `char-code` | 7 | 1,955 ms | 2,270 ms | 203 ms | 9.6x |
-| text | `digits` | The numbers below 1,000 written out, their lengths summed | 2890 | 1,830 ms | 1,945 ms | 2,105 ms | 0.9x |
-| All | | | | 33,945 ms | 51,295 ms | 9,520 ms | 3.6x (the ratios' geometric mean 4.0x) |
+| calls | `ack` | Ackermann's, ack(2, 9) eight times (1,840 calls, 22 deep) | 168 | 255 ms | 520 ms | 115 ms | 2.2x |
+| loops | `loop` | A counting loop of 4,000 steps, a tail call each | 4000 | 400 ms | 925 ms | 77 ms | 5.2x |
+| loops | `while` | A sum of i & 3 for i below 4,000, by `while` over two locals | 6000 | 725 ms | 3,685 ms | 421 ms | 1.7x |
+| loops | `dotimes` | The same sum by `dotimes` (HyForth: `DO LOOP`) | 6000 | 750 ms | 3,655 ms | 213 ms | 3.5x |
+| loops | `nested` | A `dotimes` in a `dotimes`, 60 by 60, `bit-xor` and a test | 1800 | 825 ms | 5,435 ms | 309 ms | 2.7x |
+| arith | `gcd` | gcd(i, j) by subtraction, for i and j 1 to 20, summed | 880 | 475 ms | 950 ms | 351 ms | 1.4x |
+| arith | `collatz` | The Collatz steps of 1 to 60, summed (1,457) | 1457 | 420 ms | 2,220 ms | 289 ms | 1.5x |
+| arith | `hash` | h = ((h & 255) * 31 + i) & 4095 for i below 2,000 | 4072 | 715 ms | 4,820 ms | 669 ms | 1.1x |
+| bytes | `sieve` | The primes below 1,024, a byte each | 172 | 1,105 ms | 1,905 ms | 332 ms | 3.3x |
+| bytes | `sort` | 100 bytes sorted by insertion | 407 | 1,815 ms | 3,270 ms | 480 ms | 3.8x |
+| bytes | `matrix` | Two 10 by 10 matrices of bytes multiplied, summed | 1375 | 965 ms | 4,030 ms | 1,082 ms | 0.9x |
+| bytes | `queens` | The 7 queens' 40 placements, by backtracking | 40 | 2,505 ms | 4,390 ms | 1,301 ms | 1.9x |
+| lists | `mapf` | `sum`, `map`, `filter` over `range` 0 to 39, 20 times (HyForth: a loop, `EXECUTE`) | 9880 | 1,025 ms | 2,345 ms | 207 ms | 5.0x |
+| lists | `fold` | `foldl` of a function made with `fn` over 200 items, 10 times | 964 | 1,265 ms | 4,535 ms | 712 ms | 1.8x |
+| lists | `each` | `each` over 200 items, 10 times (HyForth: an array) | 700 | 450 ms | 1,855 ms | 209 ms | 2.2x |
+| text | `chars` | The a's in 64 characters, 40 times: `char-at`, `char-code` | 7 | 775 ms | 2,270 ms | 203 ms | 3.8x |
+| text | `digits` | The numbers below 1,000 written out, their lengths summed | 2890 | 1,820 ms | 1,950 ms | 2,105 ms | 0.9x |
+| All | | | | 17,655 ms | 51,295 ms | 9,520 ms | 1.9x (the ratios' geometric mean 2.3x) |
 
-hylang is nearest HyForth where a step does much (`matrix` 1.1 times, `gcd` 1.4, `tak` 1.6, `queens` 1.8), and
-`digits` is HyForth's time or less (its pictured output divides doubles).  A call (`calls` 8.3 times) and a tail
-loop's step (`loop` 5.1) cost most next to HyForth's, whose calls are a JSR and whose loop counter is a register's.
-The bits' built-ins (`bit-and`, `bit-xor`, `shr`) and the characters' (`char-at`, `char-code`) aren't quick ops: each
-is a built-in's call, some 2,000 cycles, where HyForth's `AND` and `C@` take a few, so the loops that use them
-(`while`, `dotimes`, `nested`: 7 to 16 times), `collatz`, `hash` and `chars` are dominated by them and gain
-little from native code (1.1 to 1.6 times the bytecode's speed, where calls, recursion and bytes gain 1.8 to 3.5).
+hylang is nearest HyForth where a step does much (`matrix` and `digits` 0.9 times, `hash` 1.1, `gcd` 1.4,
+`collatz` 1.5, `tak` 1.6, `while` 1.7).  A call (`calls` 8.3 times) and a tail loop's step (`loop` 5.2) cost most
+next to HyForth's, whose calls are a JSR and whose loop counter is a register's; then the walks of `map` and
+`filter` (`mapf` 5.0).  The bits' built-ins (`bit-and`, `bit-or`, `bit-xor`, `shl`, `shr`) and the
+characters' (`char-at`, `char-code`) were each a built-in's call, some 2,000 cycles, where HyForth's `AND` and `C@`
+take a few; native code has them in the machine's quick way for fixnums (a string's byte), as `*` of two, and the
+loops that use them came from 7 to 16 times HyForth's time to 1.7 to 3.5 (`while`, `dotimes`, `nested`), `hash`
+from 4.6 to 1.1, `chars` from 9.6 to 3.8.
 
-The arena: the native code of all twenty benchmarks' 41 functions is 37,245 bytes (their bytecode 3,698): `RET` in
+The arena: the native code of all twenty benchmarks' 41 functions is 37,405 bytes (their bytecode 3,698): `RET` in
 ROM and stubs of 5 bytes (not 93 and 11) made it a third smaller, and a code's place even let the arena have eight
-banks (64K, not four), so all of them fit in one hylang: `--together` 34,590 ms, as each in its own (33,945), where
-with four banks the arena filled by `sort`'s and the rest were evaluated (110,185 ms).  A script that fills it
-gets it emptied between its items: with an arena of one bank, a script of all twenty's files took 62 million
-cycles, against 58 with eight banks and 204 when it stayed full.
+banks (64K, not four), so all of them fit in one hylang: `--together` 18,010 ms, as each in its own (17,655), where
+with four banks the arena filled by `sort`'s and the rest were evaluated (then 110,185 ms against 33,945).  A
+script that fills it gets it emptied between its items: with an arena of one bank, a script of all twenty's files
+took 62 million cycles, against 58 with eight banks and 204 when it stayed full.
 
 ## The design
 
@@ -302,15 +303,18 @@ The plan has it whole; in short:
   function's bytecode in a scratch bank of its own (`vm_sb`, 4K at most: a bigger function is evaluated), and
   `vm_xlate` makes it native code in the arena, in two passes (each op's place, in a map bank, `vm_mb`; then the
   code).  An op is a stub (`jsr vm_sj` and its code's word in the machine: `vm_sj` points `vm_ip` at the data
-  after them, the op as it was, and jumps to the code, whose next op is `jmp (vm_ip)`), or in line: its own code from a template (`vmxt.inc`, made by
-  `tools/hyvmxt.js`), its operands patched in, with its stub after it as its slow way (not fixnums, a scope
-  made, a cache missed, Ctrl-C).  In line: constants, arguments and locals, pushes, jumps, the fused ops, the
-  quick ops of two values, blocks' and loops' ops, `SHEAD` and `CALL` while their caches hold, `CSELF`, `TSELF`,
-  `JE`, and `HEAD` of one argument (a buffer, or a function partially applied,
-  pushed), and `BCALL` of `*` of two (fixnums whose product is one: `vm_bmul`, by quarter squares).  A tail call
-  of the function by its own name whose arguments call nothing has its `SHEAD` flagged by the compiler (m's bit
-  7, `vc_shflag`): its head isn't pushed while its cache (this frame's function alone) holds, and `TSELF` takes
-  the arguments as they are (`vm_shf` says if the machine's way pushed it).  `map`, `filter`, `foldl` and the
+  after them, the op as it was, and jumps to the code, whose next op is `jmp (vm_ip)`), or in line: its own code
+  from a template (`vmxt.inc`, made by `tools/hyvmxt.js`), its operands patched in, with its stub after it as its
+  slow way (not fixnums, a scope made, a cache missed, Ctrl-C).  In line: constants, arguments and locals, pushes,
+  jumps, the fused ops, the quick ops of two values, blocks' and loops' ops, `SHEAD` and `CALL` while their caches
+  hold, `CSELF`, `TSELF`, `JE`, and `HEAD` of one argument (a buffer, or a function partially applied, pushed), and
+  `BCALL` of `*` of two (fixnums whose product is one: `vm_bmul`, by quarter squares), of `bit-and`, `bit-or`,
+  `bit-xor`, `shl` and `shr` of two fixnums (`vm_band` ...: a fixnum's tag bit is its bits' for `and` and `or`; a
+  shift a bit a step, `shl`'s while its sign holds), `char-at` of a string and an index in it, and `char-code` of a
+  character (`vx_tsel`'s table, `vx_bcb`: each a template that calls the machine's routine, its stub if it says
+  no).  A tail call of the function by its own name whose arguments call nothing has its `SHEAD` flagged by the
+  compiler (m's bit 7, `vc_shflag`): its head isn't pushed while its cache (this frame's function alone) holds,
+  and `TSELF` takes the arguments as they are (`vm_shf` says if the machine's way pushed it).  `map`, `filter`, `foldl` and the
   other walks but `foldr`, called from native code, walk their list in the machine (`vm_walk`): the function
   called for each item as `CALL` would, returning to a trampoline at the arena's first bytes (`jmp vm_wret`).  A `CALL` whose
   cache missed goes on past its look at it (`op_callm`), where a buffer given a fixnum

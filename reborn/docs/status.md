@@ -691,6 +691,17 @@ compile is compiled at its next call.  With an arena of one bank, a script of al
 cycles (58 with eight banks), against 204 when it stayed full.  On the way, a bug of the new layout's: a stub's
 data address past a filler lost a carry where it crossed a page (an edge case's `Too deep`).
 
+**The bits and the characters in native code.**  `BCALL` of `bit-and`, `bit-or`, `bit-xor`, `shl` or `shr` of
+two, `char-at` of two and `char-code` of one has a template of its own, as `*` of two has (`vx_tsel`'s table): it
+calls the machine's routine (`vm_band`, `vm_bor`, `vm_bxor`, `vm_bshl`, `vm_bshr`, `vm_bchat`, `vm_bccode`),
+which does it for fixnums (a string's byte, a character's code) and drops the arguments, else the built-in's call
+as before (an edge-case set, `bit-and` of a bignum to `char-at` past a string's end and `shl` out of a fixnum,
+the same as the bytecode machine's).  Some 2,000 cycles a call before; now `while` 3,050 ms to 725, `dotimes`
+3,075 to 750, `nested` 4,960 to 825, `collatz` 1,690 to 420, `hash` 3,025 to 715, `chars` 2,065 to 775, and
+`fold` and `each` (`bit-and` in their functions) 2,460 to 1,265 and 1,580 to 450.  The twenty: 17,655 ms (33,945
+before), 1.9 times HyForth's time (the ratios' geometric mean 2.3; 3.6 and 4.0 before), 2.8 times the bytecode's
+speed; all in one hylang 18,010.
+
 | Step | | Notes |
 |---|---|---|
 | 7.0 The language's specification | Draft (three decisions are the user's) | `docs/hylang.md`: hylang 1 is danlang (`C:\source\danlang`, its `master`), readied for the port in C# first (lexical scope, tail calls, fexprs, `try`, loops, the missing basics, its number bugs fixed, and a system library a PC has too: files, programs and the shell, the environment, the clock, bits and bytes, the system's errors as codes), with its regression suite (965 checks) run unchanged on both; where the two may differ (8-bit strings, the call depth, `/lib/hylang`, Ctrl-C an error); and what makes it the Hydra's, in four layers: the system library, the Hydra's built-ins (notes, namespaces, tasks, memory and banks, keys), device libraries in hylang over the devices' files (console, GPIO, I2C, SPI, sound, disks, `/proc`, the clock's chip, `/pc`), and a `sys-` function for every call.  To decide: the extension (`.hl`), `$`, danlang's license in the ROM |

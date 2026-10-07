@@ -560,20 +560,29 @@ vx_tsel:
 @bc:
             cmp         #VO_BCALL
             bne         @ts
+            ldx         #VX_NBC - 1                         ; (The built-ins with templates of their own: vx_bcb's,
+@bcl:                                                       ;   of vx_bcn's count)
             ldy         #1
             lda         (hq),y
-            cmp         #BIN_MUL
-            bne         @none
+            cmp         vx_bcb,x
+            bne         @bcn
             iny
             lda         (hq),y
-            cmp         #2
-            bne         @none
-            lda         #<VXT_BMUL
+            cmp         vx_bcn,x
+            bne         @bcn
+            txa
+            asl
+            tax
+            lda         vx_bct,x
             sta         vx_tp
-            lda         #>VXT_BMUL
+            lda         vx_bct + 1,x
             sta         vx_tp + 1
             sec
             rts
+@bcn:
+            dex
+            bpl         @bcl
+            bra         @none
 @ts:
             cmp         #VO_TSELF
             bne         @op
