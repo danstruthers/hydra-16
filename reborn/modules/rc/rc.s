@@ -282,12 +282,16 @@ profile:
 :
             rts
 
-; The note handler: a note ends what's running (its tasks get it too), not rc
+; The note handler: a note ends what's running (its tasks get it too), not rc.  In RAM: a note may come while either
+; bank is at $A000 (the second parses a line), and the kernel calls the handler with the bank that's there
+.pushseg
+.segment "DATA"
 notes:
             lda         #1
             sta         interrupted
             clc
             rts
+.popseg
 
 ; ****************************************************************************
 ; Sources

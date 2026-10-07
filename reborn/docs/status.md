@@ -65,7 +65,7 @@ PASS env     environments: ENV_GET, ENV_PUT, ENV_DEL, ENV_NAME, a child's copy, 
 PASS kmesg   the kernel's messages: KMESG (the boot's banner first, at offsets, the ring full: its last KMESG_SIZE) and /dev/kmesg (kdev's #n/kmesg) read in parts  (12 checks)
 PASS rc      rc: quoting, lists, redirections, pipelines, if, for, while, switch, functions, globs, scripts, Ctrl-C, its start  (3 checks)
 PASS tools   the core tools at rc: files, text, tasks, the disks' (/rom/bin); /proc's args, cwd, ns  (3 checks)
-PASS c       the C target (cc65): its samples at rc, the library's test (ctest), conio's raw keys (and raw ended with the program)  (65 checks)
+PASS c       the C target (cc65): its samples at rc, the library's test (ctest), conio's raw keys (and raw ended with the program)  (66 checks)
 PASS edit    edit, the line editor: a file made, printed, changed and written; its errors; q twice; Ctrl-C at its prompt; w name
 PASS snd     sound (#a): snd, sndctl and bell; the volume, claims (one another program holds), the shadow, tones (C, snd.h)
 PASS play    the song player: its errors; a song timed (its key-ons against its stream), its channels claimed and given back; scom; jukebox
@@ -626,10 +626,7 @@ branch of its own.
    hylang (`/bin/hylang -l`) or HyForth.
    The parity
    checkpoint (the plan's, after phase 5) is still the user's.
-2. rc's note handler is in its first bank's code: a note taken while rc runs its second bank (parsing a line) would
-   jump into that bank instead.  The kernel calls a handler with the bank that's there, so a module of two banks keeps
-   its handler in its RAM, as `forth` does now (conventions.md).
-3. HydraFS's clusters are 4K (8 blocks), as the old system's were for cards, so a RAM disk holds few files (a 64K
+2. HydraFS's clusters are 4K (8 blocks), as the old system's were for cards, so a RAM disk holds few files (a 64K
    one, 15 files and directories); its superblock has the cluster's size, so a RAM disk could have smaller ones.
-4. On the board: the boot, POST, the tick, the console at 115200, and a real card read and written.
-5. Still open from phase 0: the emulator's call trace.
+3. On the board: the boot, POST, the tick, the console at 115200, and a real card read and written.
+4. Still open from phase 0: the emulator's call trace.
