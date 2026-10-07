@@ -98,7 +98,7 @@ an I2C or SPI transaction is one) and closed after, a failure's file closed too.
 
 | Library | Device | Functions |
 | :------ | :----- | :-------- |
-| `cons` | `#c` (`/dev`) | `(window)` (this one's number, `$window`), `(windows)` (their numbers), `(shown-window)`, `(new-window)` (made and shown, `wctl`'s `new`), `(show-window n)`, `(raw-on)` (`consctl` kept open), `(raw-off)`, `(beep)` (`#a/bell`, or a BEL) |
+| `cons` | `#c` (`/dev`) | `(window)` (this one's number, `$window`), `(windows)` (their numbers), `(shown-window)`, `(new-window)` (made and shown, `wctl`'s `new`), `(show-window n)`, `(window-size)` (`{cols rows}`: `consctl`'s `size` line; with no console, `$COLUMNS` and `$LINES`, else 80 and 24), `(raw-on)` (`consctl` kept open), `(raw-off)`, `(beep)` (`#a/bell`, or a BEL) |
 | `gpio` | `#g` (`/dev/gpio`) | `(gpio pin)` (its level, 0 or 1), `(gpio! pin level)` (the pin made an output, then set), `(gpio-in pin)`, `(gpio-out pin)`, `(gpio-port)` (all 8, a byte), `(gpio-port! byte)`, `(gpio-ddr! byte)` (1: an output), `(gpio-ca1! :rise \| :fall)`, `(gpio-ca2! 0 \| 1 \| :in)`, `(gpio-wait)` (CA1's next edge: its count), `(gpio-state)` (a hash from `ctl`: each pin its direction and level, `{:out 1}`; `:ca1` `{:rise 3}`; `:ca2` 0, 1 or `:in`) |
 | `i2c` | `#i` (`/dev/i2c`) | `(i2c-devices)` (the addresses that answer, a list), `(i2c-read addr n [reg])` (bytes, a list; `reg` written first, a repeated start before the read), `(i2c-write addr bytes [reg])`, `(i2c-speed khz)`, `(i2c-reg-size 1 \| 2)` |
 | `spi` | `#S` (`/dev/spi`) | `(spi dev bytes)` (a transaction: the bytes that came back), `(spi-read dev n)` (n clocked in), `(spi-mode dev 0 \| 3)` |

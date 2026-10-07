@@ -323,6 +323,15 @@ init:
             lda         ACIA_STATUS
             lda         ACIA_DATA
             cli
+            ldx         #0                                  ; The terminal asked its size: ESC [ 18 t (its answer,
+:                                                           ;   or the PC tool's, sets the serial port's)
+            lda         s_ask,X
+            beq         :+
+            jsr         tx_put
+            inx
+            bra         :-
+:
+            jsr         tx_start
             lda         #'c'
             jsr         SRV_REGISTER
             bcs         @done

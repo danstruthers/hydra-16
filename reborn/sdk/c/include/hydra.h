@@ -126,6 +126,7 @@ const char* __fastcall__ hy_errstr (unsigned char code);    /* An error code's t
 #define CH_F8               HY_KEY_F8
 #define CH_F9               HY_KEY_F9
 #define CH_F10              HY_KEY_F10
+#define CH_RESIZE           HY_KEY_RESIZE                   /* (The window's size changed: screensize has the new one) */
 #define CH_ENTER            '\n'
 #define CH_ESC              0x1B
 

@@ -93,7 +93,7 @@ whose lines end CR LF is written with CR LF again.
 | `M-I`, `M-X`, `^L` | Auto-indent on and off; the help lines off and on; the screen drawn again |
 
 Ctrl-C does nothing in `edit` (it's the console's interrupt), and `^\` and `^]` never reach a program, so nano's keys
-there are Meta keys here.  The screen is the terminal's size (`$COLUMNS` and `$LINES`, else 80 by 24; the window's, from `consctl`, comes with W3's languages).  `ed` is
+there are Meta keys here.  The screen is the window's size (`consctl`'s: the smaller of the terminals it's shown on; with no console `$COLUMNS` and `$LINES`, else 80 by 24), and `edit` draws itself again as it changes.  `ed` is
 the line editor (Text, above), for scripts and a terminal without a screen.
 
 ## Tasks
@@ -286,7 +286,8 @@ its PSG's voices: the same commands, and `wave`; `claim`'s P is their mask, bit 
 VIA's port A is `/dev/gpio` (pins `0`-`7`, `port`, `ctl`, `ca1`) and `/dev/i2c` the I2C bus on two of its pins;
 `/dev/spi` the SPI devices; `/dev/seg` names shared segments; `/dev/vid` is the Vera X (its screen, VRAM, the PSG,
 and `pcm` and `pcmctl`, its PCM: [../programming/video.md](../programming/video.md)); `/pc` a folder on the PC (through
-the PC tool, `sim/tools/hydrapc.js`, which is the terminal too).
+the PC tool, `sim/tools/hydrapc.js`, which is the terminal too, and tells the Hydra its window's size).  A window's size is
+`consctl`'s `size` line (`grep size /dev/consctl`): the smaller of the terminals it's shown on.
 
 ### Scores
 

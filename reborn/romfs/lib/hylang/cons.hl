@@ -1,7 +1,8 @@
 ; cons.hl - the console's windows, by their files (#c, /dev): (use "cons").  /dev/wctl takes new (a window made, and
 ; shown) and current N (window N shown), and reads as the windows, a line each (* the one shown); /dev/consctl takes
 ; rawon and rawoff (raw lasts while a consctl is open: each key as it comes, unechoed); /dev/bell, a write, rings the
-; console's bell (#a's: a short beep).  $window is this shell's window.  A failure is the system's error.
+; console's bell (#a's: a short beep).  $window is this shell's window; (window-size) its size, consctl's size line
+; (the smaller of the terminals it's shown on).  A failure is the system's error.
 
 (use "dev")
 
@@ -9,6 +10,12 @@
 
 ; This one's window ($window; none: 0)
 (fun {window} {do =(w (env "window")) (if w (val w) 0)})
+
+; This window's size, {cols rows}: its consctl's size line; with no console, $COLUMNS and $LINES, else 80 and 24
+(fun {window-size} {do
+  =(l (if (exists? "/dev/consctl") (filter (fn {l} {== (fst (str-split l " ")) "size"}) (dev.lines "/dev/consctl")) NIL))
+  (if l (map val (tail (str-split (fst l) " "))) (list (cons.env "COLUMNS" 80) (cons.env "LINES" 24)))})
+(fun {cons.env n d} {do =(v (env n)) (if v (val v) d)})
 
 ; The windows, a list of their numbers; and the one shown
 (fun {windows} {map (fn {l} {val (fst (str-split l " "))}) (dev.lines "/dev/wctl")})

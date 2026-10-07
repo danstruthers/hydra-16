@@ -9,7 +9,11 @@
 
 .bss
 kq_fd:      .res        1                                   ; KEY?'s fd (/dev/cons, non-blocking), $FF: not open
-en_buf:     .res        4                                   ; FORM: $LINES's or $COLUMNS's value
+en_buf:     .res        4                                   ; FORM: $LINES's or $COLUMNS's value ...
+FS_BUF      = 96
+fs_buf:     .res        FS_BUF                              ;   consctl's text ...
+fs_cols:    .res        1                                   ;   and its size line's columns and rows
+fs_rows:    .res        1
 .code
 
 ; Its start: KEY?'s fd not open yet
@@ -352,8 +356,18 @@ cursor_25:
             jmp         emit_a
 
             HEADER      "form", 0
-form:                                                       ; ( -- rows cols ): the screen's size: $LINES and $COLUMNS
-            LDR         r0, s_lines                         ;   (as conio's), else 24 and 80
+form:                                                       ; ( -- rows cols ): the window's size, its consctl's size
+            jsr         con_size                            ;   line (the smaller of the terminals it's shown on);
+            bcs         @env                                ;   no console, $LINES and $COLUMNS (as conio's), else
+            lda         fs_rows                             ;   24 and 80
+            ldy         #0
+            PUSHAY
+            lda         fs_cols
+            ldy         #0
+            PUSHAY
+            rts
+@env:
+            LDR         r0, s_lines
             lda         #24
             jsr         env_num
             LDR         r0, s_columns
@@ -362,6 +376,91 @@ form:                                                       ; ( -- rows cols ): 
 
 s_lines:    .byte       "LINES", 0
 s_columns:  .byte       "COLUMNS", 0
+s_size_w:   .byte       "size ", 0
+
+; fs_cols, fs_rows: the window's size, its consctl's size line.  OUT: C = 1, none (no console).  Keeps .X
+con_size:
+            stx         xsave
+            LDR         r0, s_consctl
+            lda         #O_READ
+            jsr         OPEN
+            bcs         @none
+            sta         tmp2                                ; (Its fd)
+            LDR         r0, fs_buf
+            LDR         r1, FS_BUF
+            lda         tmp2
+            jsr         READ
+            bcc         :+
+            lda         #0
+:
+            sta         tmp                                 ; (Its length)
+            lda         tmp2
+            jsr         CLOSE
+            ldy         #0
+@line:
+            ldx         #0                                  ; A line: size?
+:
+            lda         s_size_w,x
+            beq         @size
+            cpy         tmp
+            bcs         @none
+            cmp         fs_buf,y
+            bne         @skip
+            iny
+            inx
+            bra         :-
+@skip:
+            cpy         tmp                                 ; Else on to the next
+            bcs         @none
+            lda         fs_buf,y
+            iny
+            cmp         #LF
+            bne         @skip
+            bra         @line
+@size:
+            jsr         @num                                ; Its columns, its rows
+            sta         fs_cols
+            iny
+            jsr         @num
+            sta         fs_rows
+            beq         @none
+            lda         fs_cols
+            beq         @none
+            ldx         xsave
+            clc
+            rts
+@none:
+            ldx         xsave
+            sec
+            rts
+
+@num:                                                       ; .A = the number at fs_buf,y, past it (3 digits at most)
+            stz         tmp + 1
+:
+            cpy         tmp
+            bcs         :+
+            lda         fs_buf,y
+            sec
+            sbc         #'0'
+            cmp         #10
+            bcs         :+
+            pha
+            lda         tmp + 1
+            asl
+            asl
+            clc
+            adc         tmp + 1
+            asl
+            sta         tmp + 1
+            pla
+            clc
+            adc         tmp + 1
+            sta         tmp + 1
+            iny
+            bra         :-
+:
+            lda         tmp + 1
+            rts
 
 ; ( -- n ): the environment's variable r0, a number (decimal, 1-255), or .A if it hasn't one
 env_num:
@@ -548,14 +647,14 @@ ekeytofkey:                                                 ; ( u -- u false | x
 :
             jmp         zero_tos
 
-; Is the top a cursor or function key's code (KEY_UP to KEY_F12)?  OUT: C = 0 yes
+; Is the top a cursor or function key's code, or the window's resize (KEY_UP to KEY_RESIZE)?  OUT: C = 0 yes
 is_fkey:
             lda         dhi,x
             bne         :+
             lda         dlo,x
             sec
             sbc         #KEY_UP
-            cmp         #KEY_F12 - KEY_UP + 1
+            cmp         #KEY_RESIZE - KEY_UP + 1
             rts
 :
             sec
@@ -653,6 +752,10 @@ kf11:
             HEADER      "k-f12", 0
 kf12:
             CONSTCODE   KEY_F12
+
+            HEADER      "k-resize", 0
+kresize:                                                    ; (Not a key: the window's size changed)
+            CONSTCODE   KEY_RESIZE
 
             HEADER      "k-shift-mask", 0
 kshiftmask:

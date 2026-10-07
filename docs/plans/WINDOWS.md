@@ -451,7 +451,7 @@ October 2026, on `reborn-text-windows` (reborn's `docs/status.md`, "The text win
 ### **As built: W3a**
 
 * **The screen's size is read from vid's `ctl`** (`mode 80x60`), the documented state, not worked out from `term`'s length (rows x (columns + 1) doesn't say which is which).  It's read as `#v/term` is opened and when a write to it is refused; vid refuses the first write after the screen changed under the console (a `mode`, a `bitmap`, a `reset`, a claim's end), once, as it does while the chip's claimed.  So there's no polling: the change is seen at the console's next write, which a shell's prompt is.
-* **The serial port's terminal's report is watched for, not taken out**: `ESC [ 8 ; R ; C t` goes to the window shown's keys as the rest do, and its key decoder drops it (a sequence that isn't a key).  Holding the bytes back till the sequence is known would hold back an Escape typed alone too.  The terminal isn't asked at the first paint: a test's or a program's output would change; `terminal size` alone asks, and the PC tool tells (W3c).
+* **The serial port's terminal's report is watched for, not taken out**: `ESC [ 8 ; R ; C t` goes to the window shown's keys as the rest do, and its key decoder drops it (a sequence that isn't a key).  Holding the bytes back till the sequence is known would hold back an Escape typed alone too.  The terminal is asked once, as the console starts (W3c), rather than at a first paint; `terminal size` alone asks again, and the PC tool tells unasked.
 * **A resize keeps the cursor's row, as xterm does without reflow**: taller, the scrollback's newest rows come down first; shorter, the rows above the cursor's go into the scrollback only as must, and the bottom's rows are dropped.  The cells past a narrower width are dropped (in the scrollback too), not kept to come back: rows aren't reflowed.  The margins become the whole screen.
 * **`KEY_RESIZE` is `keys hydra`'s**: a `keys vt` reader expects what a VT100 sends, which has no such key; it reads `consctl`.  One from before a `rawon` isn't given (it isn't news to a program that's just read the size).
 
@@ -459,6 +459,11 @@ October 2026, on `reborn-text-windows` (reborn's `docs/status.md`, "The text win
 
 * **The line editor finds its line's start from the window's cursor** at the line's first key (the prompt's been written by then), and keeps the terminal's cursor as a place in the line and whether it's past a row's last column, as a terminal is after writing there.  Its moves are then a row and a column apart, so nothing but the window's width is asked of vt.s.  Output from elsewhere into a window while its line is typed still confuses it, as it did.
 * **A resize draws the line again** rather than working out where its cut rows went: up to its first row as it was laid out, its rest erased (ED), then written at the new width.  The prompt isn't the editor's, so a prompt cut by a narrower window stays cut.
+
+### **As built: W3c**
+
+* **Each language reads `consctl`'s `size` line**, under the plan's names: conio's `screensize`, HyForth's `form`, hylang's `(window-size)`; `$COLUMNS` and `$LINES` only when there's no `/dev/consctl`.  conio asks again after it gives a `CH_RESIZE`; `form` and `(window-size)` ask each time.  The editor redraws on `CH_RESIZE`, as on `^L`, at the new size.
+* **The PC tool answers the console's ask itself** (and doesn't pass it on), so a PC terminal that doesn't answer `ESC [ 18 t` still gets the right size; it also tells the size unasked as its window changes.  `run.js -i` does as it does.
 
 ### **Decisions**
 

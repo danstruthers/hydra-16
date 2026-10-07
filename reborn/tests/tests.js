@@ -2165,7 +2165,7 @@ module.exports = {
       check(m, out) {
         const f = [], a = m.acia, want = a.wdc ? 1 : 2;
         if (!out.includes('\x1b[2J') || !out.includes('w1 hidden text')) f.push('window 1 shown: no repaint of its text');
-        if (!out.includes('\x1b[18t')) f.push('terminal size: the terminal not asked (no ESC [ 1 8 t sent)');
+        if (out.split('\x1b[18t').length < 3) f.push('the terminal not asked its size twice (ESC [ 1 8 t: as the console starts, and terminal size)');
         this.notes = ['at 115200, the shortest idle time between characters sent: ' + a.gapMin.toFixed(2) + ' bits (at least ' + want + ')'];
         if (!(a.gapMin >= want - 0.05)) f.push('at 115200, characters ' + a.gapMin.toFixed(2) + ' bits apart: less than ' + want);
         if (a.overruns) f.push(a.overruns + ' bytes written to the ACIA while it was still sending');
@@ -2550,6 +2550,25 @@ module.exports = {
         shownAt(raw.slice(b, c), 30, '% echo abc', lines[2], 2);
         this.notes = lines.map((l, i) => 'line ' + (i + 1) + ': ' + l);
         return f;
+      },
+    },
+    {
+      name: 'winsize', what: 'a window\'s size in each language (W3): terminal size 100 30, then rc (consctl\'s size line), HyForth (form, k-resize), hylang (cons.hl\'s window-size), C (conio: the keys sample\'s screensize, and CH_RESIZE as the terminal\'s report is typed, 120 x 40); the editor drawn again as its window changes (its help lines on the new last rows)',
+      init: 't_rc', cycles: 120e6,
+      get machine() {
+        return { input: 'āecho terminal size 100 30 >/dev/consctl; grep size /dev/consctl\r' +
+          'āforth\rĀĀ' + 'lib facility form . . k-resize .\rĀ' + 'bye\r' +
+          'āhylang\rĀĀ' + '(use "cons")\r' + 'ā(window-size)\r' + 'ā(exit)\r' +
+          'ā/rom/sample/c/keys\rĀĀ' + '\x1b[8;40;120t' + 'Ā' + 'q' + 'āgrep size /dev/consctl\r' +
+          'āedit /ram/w\rĀĀ' + '\x1b[8;30;100t' + 'ĀĀ' + '\x18' + 'āecho terminal size 80 24 >/dev/consctl\r' + 'āecho done\r' };
+      },
+      expect: ['/dev/consctl\nsize 100 30\n%', 'k-resize .\n100 30 150  ok', '(window-size)\n=> {100 30}', 'keys: a 100x30 screen', ' 96\nended at',
+        '% grep size /dev/consctl\nsize 120 40\n%', '\ndone\n%'],
+      check(m) {
+        const out = m.out, a = out.indexOf('edit /ram/w'), b = out.indexOf('echo terminal size 80 24', a);
+        if (a < 0 || b < 0) return ['the editor: no output'];
+        const ed = out.slice(a, b), r = ed.indexOf('\x1b[0m\x1b(B\x1b)B');            // (The resize's paint)
+        return ed.lastIndexOf('\x1b[30;1H') > r && r > 0 ? [] : ['the editor: not drawn again at 100 x 30 (no help line on row 30 after the resize\'s paint)'];
       },
     },
     {

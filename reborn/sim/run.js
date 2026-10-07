@@ -8,7 +8,9 @@
 // Usage: node sim/run.js [options]
 //   -i, --interactive   the terminal is the Hydra's serial console, in real time.  Ctrl-A x quits, Ctrl-A r resets,
 //                       Ctrl-A s shows the state, Ctrl-A b stops it (the monitor: below), Ctrl-A v shows the Vera X's
-//                       screen as text, Ctrl-A p saves it as a PNG, Ctrl-A h helps
+//                       screen as text, Ctrl-A p saves it as a PNG, Ctrl-A h helps.  The terminal's size is told
+//                       to the Hydra as the PC tool tells it (ESC [ 8 ; rows ; columns t), when it asks (ESC [ 18 t, not
+//                       shown) and as the window changes
 //   --cycles N          stop at cycle N (default 30000000: 8.4 s at 3.58 MHz; interactive: never)
 //   --input TEXT        keys to type (\r, \n: Return; \w: wait 2M cycles), one every 20000 cycles from cycle 200000
 //   --paste             type them as fast as the line goes (a byte arriving while the last is unread is lost)
@@ -297,8 +299,15 @@ function interactive(m, opt) {
   stdin.on('data', buf => { for (const b of buf) if (!(!tty && b === 0x0D)) onKey(b); });
   stdin.on('end', () => { eof = true; if (mon) { mon = false; quit = 'end of input (the monitor)'; setTimeout(tick, 0); } });
   stdin.resume();
+  const tellSize = () => { if (stdout.isTTY && stdout.columns && stdout.rows) acia.type('\x1b[8;' + stdout.rows + ';' + stdout.columns + 't'); };
+  stdout.on('resize', tellSize);
   const flush = () => {
-    if (sent < m.out.length) { stdout.write(m.out.slice(sent)); sent = m.out.length; }
+    if (sent < m.out.length) {
+      let s = m.out.slice(sent);
+      if (s.includes('\x1b[18t')) { s = s.split('\x1b[18t').join(''); tellSize(); }   // (The Hydra asking the size)
+      stdout.write(s);
+      sent = m.out.length;
+    }
     if (m.out.length > 1 << 16) { m.out = m.out.slice(-1024); sent = m.out.length; }
   };
   const finish = why => { flush(); say('stopped: ' + why + '; ' + status()); if (tty) stdin.setRawMode(false); process.exit(cpu.halted ? 1 : 0); };
