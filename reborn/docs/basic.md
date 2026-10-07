@@ -237,23 +237,26 @@ overwrote it.
 ## Against hylang and HyForth
 
 hylang's and HyForth's benchmarks (docs/hylang.md, "Against HyForth") have a BASIC side: `romfs/bench/bench.bas`, on
-the ROM disk at `/rom/bench`, the same six with the same algorithms, sizes and results, each printing `bench basic
-NAME RESULT TICKS REPS` (`basic /rom/bench/bench.bas [reps [quick]]`, its arguments by `ARG$`).  Each is BASIC's own
-way: FOR and NEXT, a GOSUB for a call (its arguments and result in variables), Fibonacci's recursion by GOSUB with a
-stack of its own in an array (GOSUB keeps no locals), integer arrays for the bytes.  Its two loops are GOTOs, so that
-the 6502's stack is the benchmark's: fib's GOSUBs go 15 deep, 7 bytes each, and CHKMEM keeps 80 bytes free.
-`node sim/bench.js` runs the three languages (`--basic-reps`) and the `bench` test runs BASIC's at the quick sizes
-too.  In October 2026, at 3.58 MHz, one run of each:
+the ROM disk at `/rom/bench`: six of their twenty (the first six), with the same algorithms, sizes and results, each
+printing `bench basic NAME RESULT TICKS REPS` (`basic /rom/bench/bench.bas [reps [q|f]]`, its arguments by `ARG$`).
+Each is BASIC's own way: FOR and NEXT, a GOSUB for a call (its arguments and result in variables), Fibonacci's
+recursion by GOSUB with a stack of its own in an array (GOSUB keeps no locals), integer arrays for the bytes.  Its two
+loops are GOTOs, so that the 6502's stack is the benchmark's: fib's GOSUBs go 15 deep, 7 bytes each, and CHKMEM keeps
+80 bytes free.  `node sim/bench.js` runs the three languages (`--basic-reps`) and the `bench` test runs BASIC's at the
+quick sizes too.  In October 2026 (`reborn` at ba6cef5: hylang's native code), at 3.58 MHz, one run of each:
 
 | Benchmark | Result | BASIC | hylang | HyForth | BASIC / hylang | BASIC / HyForth |
 | :-------- | -----: | ----: | -----: | ------: | -------------: | --------------: |
-| `loop` | 4000 | 4,335 ms | 925 ms | 76 ms | 4.7x | 57x |
-| `calls` | 2000 | 5,950 ms | 1,000 ms | 65 ms | 6.0x | 92x |
-| `fib` | 987 | 16,950 ms | 980 ms | 181 ms | 17.3x | 94x |
-| `sieve` | 172 | 7,390 ms | 1,905 ms | 332 ms | 3.9x | 22x |
-| `sort` | 407 | 14,460 ms | 3,275 ms | 480 ms | 4.4x | 30x |
-| `gcd` | 880 | 7,640 ms | 960 ms | 350 ms | 8.0x | 22x |
-| All | | 56,725 ms | 9,045 ms | 1,484 ms | 6.3x (the ratios' geometric mean 6.4x) | 38x (44x) |
+| `loop` | 4000 | 4,360 ms | 400 ms | 77 ms | 10.9x | 57x |
+| `calls` | 2000 | 5,980 ms | 540 ms | 65 ms | 11.1x | 92x |
+| `fib` | 987 | 17,040 ms | 515 ms | 182 ms | 33.1x | 94x |
+| `sieve` | 172 | 7,435 ms | 1,115 ms | 334 ms | 6.7x | 22x |
+| `sort` | 407 | 14,540 ms | 1,820 ms | 483 ms | 8.0x | 30x |
+| `gcd` | 880 | 7,680 ms | 480 ms | 352 ms | 16.0x | 22x |
+| All | | 57,035 ms | 4,870 ms | 1,493 ms | 11.7x (the ratios' geometric mean 12.3x) | 38x (44x) |
+
+Before hylang's native code, against its bytecode machine (9,045 ms for the six), BASIC took 6.3 times hylang's time
+(the ratios' geometric mean 6.4x).
 
 Microsoft's BASIC interprets the program's text each time it runs a line: CHRGET reads it again a character at a
 time, a constant is converted from its digits at each use (`1` in `R=R+1` too), a variable is found by a search of
