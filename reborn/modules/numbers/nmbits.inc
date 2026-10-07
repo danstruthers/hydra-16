@@ -98,6 +98,12 @@ nm_bits:
             cmp         #4
             beq         :+
             dec         n_dir
+            cmp         #6                                  ; (The test, of a bit below 0: 0, x * 2^k's)
+            bne         :+
+            lda         n_k + 1
+            bpl         :+
+            lda         #0
+            bra         @bit
 :
             jsr         nb_shift0
             lda         n_bop

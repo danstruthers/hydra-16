@@ -2006,7 +2006,7 @@ module.exports = {
     },
     {
       name: 'numbers', what: 'the numbers library (modules/numbers): its calls as a card\'s file has them (tests/numtest.js), each checked against the reference (sim/tools/numfmt.js), and to keep the caller\'s bank, zero page and r0-r3',
-      init: 't_num', cycles: 2000e6,
+      init: 't_num', cycles: 3000e6,
       get machine() { this.calls = numtest.calls(); this.file = numtest.card(this.calls); this.sd = [imageCard(0, this.file, 16384)]; return { sd: this.sd }; },
       check() {
         this.sd[0].save();

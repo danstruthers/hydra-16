@@ -16,17 +16,7 @@
             HYX2_LIBRARY "numbers", "HEADER", "ROM"
 .include "numbers_jt.inc"
 
-; ---- The entries not written yet: NE_TODO
-nm_parse        = nm_todo
-nm_display      = nm_todo
-nm_format       = nm_todo
-
 .code
-nm_todo:
-            jsr         nm_begin
-            lda         #NE_TODO
-            jmp         nm_fail
-
 .include "nmcall.inc"
 .include "nmreg.inc"
 .include "nmval.inc"
@@ -35,6 +25,7 @@ nm_todo:
 .include "nmconv.inc"
 .include "nmbits.inc"
 .include "nmrand.inc"
+.include "nmtext.inc"
 .include "nmbytes.inc"
 
 ; ---- The arena: the rest of the bank

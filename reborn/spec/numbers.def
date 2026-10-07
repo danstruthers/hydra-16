@@ -57,7 +57,7 @@ const NE_BASE      6   "Not a base: a base string that names none"
 const NE_INT       7   "An integer is needed (a number equal to one will do)"
 const NE_REAL      8   "A real number is needed, not a complex one"
 const NE_INIT      9   "The bank given (r13) isn't one INIT filled"
-const NE_TODO      10  "Not written yet"
+const NE_FORMAT    10  "A format's placeholders and its arguments don't match"
 
 const NK_INT       0   "A kind: an integer"
 const NK_FIXED     1   "A fixed decimal"
@@ -93,34 +93,39 @@ entry GET_BASE numbers impl=nm_get_base
 entry PARSE numbers impl=nm_parse
   in:     r0 = text; r1 = its length; r4 = a base string (0: the base); .Y = 1 if the text is a program's (a bare
   in:     number must start with a digit 0-9 there)
-  out:    .A/.X = the number's length; r5 = the characters it used (from the start, spaces before it passed over)
+  out:    .A/.X = the number's length; r5 = the characters it used (from the start, spaces around it passed over)
   errors: NE_NOTNUM NE_DIV0 NE_BIG NE_ROOM NE_BASE
   names:  hl val | bas VAL | fs >n | c num_parse
   doc:    A number read from text in the base, or in the base r4 names: every form danlang reads (the 19 named
   doc:    bases, radixes, digits of one's own, the modifiers, a number with a # of its own in its own base,
-  doc:    fractions, a radix point, fixed decimals in decimal, complex numbers: 1+2i, 2i).  It reads as much as is
-  doc:    a number and says how much, so a caller reads numbers one after another.  BASIC's exponents (1E6) when
-  doc:    the state block's flag for them is set (BASIC's own).
+  doc:    fractions, a radix point, fixed decimals in decimal, complex numbers: 1+2i, 2i), as numref.js's parse
+  doc:    reads a whole text.  It reads the longest start of the text that's a number (of its first 255 characters)
+  doc:    and says how much, so a caller reads numbers one after another; a caller with a word of its own (hylang's
+  doc:    reader) checks r5 is all of it.  The first such start that's a rational of 0 below (1/0): NE_DIV0.  (BASIC's
+  doc:    exponents, 1E6, come with BASIC.)
 
 entry DISPLAY numbers impl=nm_display
   in:     r0 = a number; r4 = a base string (0: the base)
   out:    .A/.X = the text's length
-  errors: NE_ROOM NE_BASE NE_NOTNUM
+  errors: NE_ROOM NE_BASE NE_NOTNUM NE_BIG
   names:  hl to-str | bas STR$ | fs n>str | c num_display
   doc:    A number as text, exactly: in the base, or in the base r4 names, its prefix as the base string says; a
   doc:    fraction or a fixed decimal with a radix point when it ends in that base, else as a fraction; a complex
   doc:    number its parts (in a base whose digits have +, - or i, in decimal with #d).  hylang's print, BASIC's
-  doc:    PRINT, HyForth's n. and C's printf (%N) write numbers with it.
+  doc:    PRINT, HyForth's n. and C's printf (%N) write numbers with it.  The text is written as it's made: with no
+  doc:    room for all of it, NE_ROOM, what there was room for written.  NE_BIG: a radix point's digits past 255 bytes
+  doc:    (n * base^k / d), or a fixed decimal of 615 places or more in a base not decimal (10^places).
 
 entry FORMAT numbers impl=nm_format
   in:     r0 = a format string (its bytes and a 0); r4 = its arguments: a table of 3-byte entries (a kind: 0 a
-  in:     number, 1 a string with a 0 after it; then its address), one for each placeholder
+  in:     number, 1 a string with a 0 after it; then its address), one for each placeholder, then a kind of $FF
   out:    .A/.X = the text's length
-  errors: NE_ROOM NE_BASE NE_NOTNUM
+  errors: NE_ROOM NE_BASE NE_NOTNUM NE_BIG NE_FORMAT
   names:  hl format | bas PRINT USING | fs nformat | c num_format
-  doc:    The format string's text, each placeholder its argument: {} in the base, {x}, {#b}, {c}, {16r},
-  doc:    {[01]} ... in that one (a string as it is); {{ and }} a brace.  (C's printf takes %N and %{base}
-  doc:    its own way, with DISPLAY.)
+  doc:    The format string's text (danlang's format), each placeholder its argument: {} in the base (a string as it
+  doc:    is), {x}, {#b}, {c}, {16r}, {[01]} ... in that one; {{ and }} a brace; a { with no } after it, or a } alone,
+  doc:    itself.  NE_FORMAT: too few arguments or too many, or a string for a {base}.  (C's printf takes %N and
+  doc:    %{base} its own way, with DISPLAY.)
 
 # ---- numbers: the arithmetic
 
@@ -297,7 +302,7 @@ entry BITS numbers impl=nm_bits
   errors: NE_INT NE_BIG NE_ROOM NE_NOTNUM
   names:  hl bit-and bit-or bit-xor bit-not shl shr bit? | bas AND OR XOR NOT SHL SHR BIT | fs nand nor nxor ninvert nlshift nrshift nbit? | c num_bits
   doc:    The bits of integers of any size, in two's complement.  And, or and xor work a byte past the longer, so
-  doc:    an integer of 255 bytes is NE_BIG there; a shift left past 2040 bits is NE_BIG.
+  doc:    an integer of 255 bytes is NE_BIG there; a shift left past 2040 bits is NE_BIG.  A bit below 0 is 0.
 
 entry RANDOM numbers impl=nm_random
   in:     r0 = n, a positive integer, or 0 for a fixed decimal from 0 to 1

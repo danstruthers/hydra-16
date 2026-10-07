@@ -248,7 +248,7 @@ class Digits {
   val(c) { return BigInt(this.chars.indexOf(this.up(c)) - this.zero); }
   charFor(v) { return this.chars[Number(v) + this.zero]; }
   get minDigit() { return BigInt(-this.zero); }
-  get maxDigit() { return BigInt(this.bal ? this.zero : this.chars.length - 1); }
+  get maxDigit() { return BigInt(this.chars.length - 1 - this.zero); }   // (balanced, of an even size: one less above 0)
   // A value's text read (AddString): its digits, '_' passed over, one '.'; how many characters it took
   read(s) {
     this.v = 0n; this.den = null;

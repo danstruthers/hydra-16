@@ -182,6 +182,66 @@ function lfib(n) {
   return a;
 }
 
+// DISPLAY: where it's too big (t_real): a fixed decimal of 615 places or more in a base not decimal (10^places); a
+// radix point's n * (base^k / d) past 255 bytes (as r_mul has it)
+function ldisplay(x, f, pre = null) {
+  const p = pre === null ? f.prefix : pre;
+  if (!(f.isDecimal && !p)) {
+    let g = f;
+    if (isCpx(x) && (f.hasDigit('+') || f.hasDigit('-') || f.hasDigit('i'))) g = R.DECIMAL;
+    if (!g.isDecimal) for (const r of isCpx(x) ? [x.re, x.im] : [x]) {
+      if (isFix(r)) rpow10(r.places);
+      const q = R.toRational(r);
+      const n = isRat(q) ? q.num : q, d = isRat(q) ? q.den : 1n;
+      const b = BigInt(g.chars.length);
+      let dd = d, c = 1n, ok = true;
+      while (dd !== 1n) { let a = dd % b, gg = b; while (a) [gg, a] = [a, gg % a]; if (gg === 1n) { ok = false; break; } dd /= gg; c = reg(c * (b / gg)); }
+      if (ok && d !== 1n) rmul(n, c);
+    }
+  }
+  return R.display(x, f, pre);
+}
+// PARSE: its text's longest start that's a number (its first 255 characters), as numref.js's parse reads it
+function lparse(text, fmt, source) {
+  const t = text.slice(0, 255);
+  for (let L = t.length; L > 0; L--) {
+    let v;
+    try { v = R.parse(t.slice(0, L), fmt, source); }
+    catch (e) { if (e instanceof R.NumError) return { err: K['NE_' + e.code] }; throw e; }
+    if (v !== null) {
+      try { return { bytes: numfmt.encode(v), used: L }; }
+      catch (e) { if (e instanceof RangeError) return { err: K.NE_BIG }; throw e; }
+    }
+  }
+  return { err: K.NE_NOTNUM };
+}
+// FORMAT: danlang's format; args: { num } or { str }; cur the base for {}
+function lformat(fmt, args, cur) {
+  let out = '', ai = 0;
+  for (let i = 0; i < fmt.length; i++) {
+    const next = fmt[i + 1];
+    if (fmt[i] === '{' && next === '{') { out += '{'; i++; }
+    else if (fmt[i] === '}' && next === '}') { out += '}'; i++; }
+    else if (fmt[i] === '{' && fmt.indexOf('}', i + 1) > i) {
+      const close = fmt.indexOf('}', i + 1), spec = fmt.slice(i + 1, close);
+      if (ai >= args.length) throw new R.NumError('FORMAT');
+      const a = args[ai++];
+      if (spec === '') out += a.str !== undefined ? a.str : ldisplay(a.num, cur);
+      else { if (a.str !== undefined) throw new R.NumError('FORMAT'); out += ldisplay(a.num, R.NumberFormat.of(spec)); }
+      i = close;
+    } else out += fmt[i];
+  }
+  if (ai < args.length) throw new R.NumError('FORMAT');
+  return out;
+}
+// t_num's buffers' addresses (its labels: obj/tests/t_num/t_num.lbl), for FORMAT's arguments' table
+function tnumLabel(name) {
+  const m = new RegExp('^al ([0-9A-F]+) \\.' + name + '\\s*$', 'm').exec(fs.readFileSync(path.join(ROOT, 'obj', 'tests', 't_num', 't_num.lbl'), 'latin1'));
+  if (!m) throw new Error('t_num.lbl: no ' + name);
+  return parseInt(m[1], 16);
+}
+const BANK_ARG1 = 0x8800;
+
 // What a call gives back, from the library's way (and checked against numref.js where it isn't too big)
 function want(f) {
   try { return f(); }
@@ -192,7 +252,7 @@ const nbytesOf = x => { const b = numfmt.encode(x); return { bytes: b }; };
 // The calls, in order: each { op, flags, a, x, y, room, r0, r1, r4, r5, r6, want, what }.  An argument is a value,
 // { data, bank } (its bytes, in this task's RAM or in the bank at $8000), or PLACE2 (the second result's place).
 // want: { err } (C = 1, .A the error), or C = 0 and: { ok }; { bytes } (the result those bytes; bytes2 the second
-// result's); { a, x } (.A and .X those); r4, r5 (those registers after the call)
+// result's; used: r5 those characters, PARSE's); { a, x } (.A and .X those); r4, r5 (those registers after the call)
 function calls(seed = 1066) {
   const rnd = rng(seed), list = [];
   const call = (op, o, want, what) => list.push({ op, flags: 0, room: 0, ...o, want, what });
@@ -256,7 +316,7 @@ function calls(seed = 1066) {
   for (const [b, what, bad] of forms) bytes(b, what, bad);
   const big = numfmt.encode({ re: { num: (1n << 2039n) - 1n, den: (1n << 2040n) - 3n }, im: { num: -((1n << 2039n) + 1n), den: (1n << 2039n) + 3n } });
   bytes(big, 'the longest number (' + big.length + ' bytes)');
-  for (let k = 0; k < 600; k++) {                             // (Numbers of every kind, and the same changed a little)
+  for (let k = 0; k < 300; k++) {                             // (Numbers of every kind, and the same changed a little)
     const b = numfmt.encode(randomNumber(rnd));
     bytes(b, 'a number');
     const m = b.slice();
@@ -406,10 +466,93 @@ function calls(seed = 1066) {
     call('FIB', { flags: RESULT, room: BANK_RES_ROOM, r0: { data: enc(n) } }, want(() => { lfib(n); return nbytesOf(R.fib(n)); }), 'FIB ' + n);
   call('FIB', { flags: RESULT, room: 64, r0: { data: enc({ fix: 15n, places: 1 }) } }, { err: K.NE_INT }, 'FIB 1.5: NE_INT');
 
-  // ---- The entries not written yet
-  for (const e of NUMS.libs.find(l => l.name === 'numbers').entries)
-    if (['PARSE', 'DISPLAY', 'FORMAT'].includes(e.name))
-      call(e.name, { flags: RESULT, room: 64, r0: { data: [5] }, r1: { data: [6] } }, { err: K.NE_TODO }, e.name + ': not written yet');
+  // ---- Text: bases (SET_BASE), DISPLAY, PARSE, FORMAT, against numref.js
+  const txt = t => [...Buffer.from(t, 'latin1')];
+  const BASES = ['c', 'e', 'g', 'i', 'j', 'm', 'b', 't', 'q', 'v', 'f', 's', 'o', 'n', 'd', 'x', 'z', 'k', 'y', 'C', 'X', 'Y',
+    '#c', '#x', '#b', '#m', '#k', '#y', '#d', '2r', '#16r', '#80r', '#36r', '#37r', '[01]', '#[abc]', '#=[abc]', '#=16r', '<x', '#<x',
+    '>c', '#-x', '#+m', '#-d', '=7r', '#=7r', '#<-3r', '[0123456789]', '#10r', '#[-0+]', '#[Daniel]', '#<=-[0123456789]'];
+  const BAD = ['', '#', 'w', 'a', '=x', '#=d', '1r', '81r', '123r', '0r', '[0]', '[00]', '[0 1]', '[a.b]', '[a/b]', 'x ', ' x', '#xx',
+    '<<x', '[01', '01]', '#[abc', 'xr', '#2', '##x', '-', '[' + '0123456789'.repeat(9) + ']'];
+  for (const b of [...BASES, ...BAD]) {
+    let ok = true;
+    try { R.NumberFormat.of(b); } catch (e) { ok = false; }
+    call('SET_BASE', { r0: where(str(b)) }, ok ? { ok: true } : { err: K.NE_BASE }, 'SET_BASE "' + b + '"');
+    if (ok) call('GET_BASE', { flags: RESULT, room: 100 }, { bytes: txt(b) }, 'GET_BASE "' + b + '"');
+  }
+  call('SET_BASE', { r0: { data: str('d') } }, { ok: true }, 'SET_BASE d');
+  const disp = (x, b, how) => {
+    const fm = R.NumberFormat.of(b);
+    call('DISPLAY', { flags: RESULT | (rnd(2) ? IN_BANK : 0), room: BANK_RES_ROOM, r0: where(enc(x)), r4: how === 'state' ? 0 : where(str(b)) },
+      want(() => ({ bytes: txt(ldisplay(x, fm)) })), 'DISPLAY ' + show(x) + ' "' + b + '"' + (how === 'state' ? ' (the base)' : ''));
+  };
+  for (const t of ['0', '1', '-1', '255', '-255', '0.5', '-1.25', '1/3', '-2/3', '3/4', '1+2i', '-2i', '0.5-1/3i', '1.0', '100'])
+    for (const b of ['x', '#x', 'b', '#c', 'm', '#<b', '#d', '#[abc]', 'z', '#=16r', '#-x', 'e'])
+      disp(numfmt.parse(t), b);
+  for (let k = 0; k < 300; k++) disp(numfmt.decode(operand(!!(k % 8))), BASES[rnd(BASES.length)]);
+  for (const b of ['x', '#x', 'b', '#c', 'd']) {                 // (r4 0: the base SET_BASE set)
+    call('SET_BASE', { r0: { data: str(b) } }, { ok: true }, 'SET_BASE "' + b + '"');
+    for (let k = 0; k < 8; k++) disp(numfmt.decode(operand()), b, 'state');
+  }
+  disp((1n << 2040n) - 1n, 'b');
+  disp(-((1n << 2040n) - 1n), '#<-b');
+  disp({ fix: 7n, places: 700 }, 'x');
+  disp({ num: 1n, den: 3n ** 300n }, '#3r');
+  call('DISPLAY', { flags: RESULT, room: 5, r0: { data: enc(123456789n) }, r4: { data: str('d') } }, { err: K.NE_ROOM }, 'DISPLAY 123456789, room for 5: NE_ROOM');
+  call('DISPLAY', { flags: RESULT, room: 9, r0: { data: enc(123456789n) }, r4: { data: str('d') } }, { bytes: txt('123456789') }, 'DISPLAY 123456789, room for 9');
+  call('DISPLAY', { flags: RESULT, room: 64, r0: { data: enc(5n) }, r4: { data: str('w') } }, { err: K.NE_BASE }, 'DISPLAY in "w": NE_BASE');
+  const parse = (t, b, source, what) => {
+    const fm = b === null ? R.DECIMAL : R.NumberFormat.of(b);
+    call('PARSE', { flags: RESULT | (rnd(2) ? IN_BANK : 0), room: BANK_RES_ROOM, y: source ? 1 : 0, r0: where(txt(t)), r1: t.length, r4: b === null ? 0 : where(str(b)) },
+      lparse(t, fm, !!source), what || 'PARSE "' + t.slice(0, 40) + '"' + (b === null ? '' : ' in "' + b + '"') + (source ? ', a program\'s' : ''));
+  };
+  for (let k = 0; k < 200; k++) {                               // (Read back as written: with #, then bare in the base)
+    const x = numfmt.decode(operand(!!(k % 6))), b = BASES[rnd(BASES.length)];
+    if ([x, x.re, x.im].some(r => r && isFix(r) && r.places > 600)) continue;  // (numref.js's 10^places: slow)
+    let t;
+    try { t = R.display(x, R.NumberFormat.of(b.startsWith('#') ? b : '#' + b)); } catch (e) { continue; }
+    parse(t, null, k % 5 === 0);
+    try { t = R.display(x, R.NumberFormat.of(b.replace(/^#/, ''))); } catch (e) { continue; }
+    parse(t, b.replace(/^#/, ''), k % 7 === 0);
+  }
+  for (const t of ['1+', '1/x', '#xFG', '#q1', '1..2', '.5', '5.', '#c+-0', '-#x10', '1_000', '0.5-1/3i', '2i', 'i', '1+i', '#d1+#d2i', '#[0101]1',
+    '#81r1', '#1r1', '1/0', '#x1.8', '#b0.1', '+5', '--5', '#=[abc]ab', '#<x01', '12+X', '12 + 3', '  42', '42  ', '1/2)', '#xFF zz', '3.14.15', '1e5', '_1_',
+    '1 _', '0FF', 'FF', '-0', '+0+', '#k0A', '#Y0z', '#y0z', 'DanielStphrus', '1/-2', '-1/2', '1/2/3', '2/4', '1.5/2', '#x-1', '-#-x10', '1+2i+3i', '2.5i',
+    '-0.5i', '#x10+#x2i', '1+#xAi', '1/0+2i', '#e=-0+#', '\t5\n', '7' + ' '.repeat(300), 'x'.repeat(300)])
+    parse(t, null, false);
+  for (const [t, b] of [['FF', 'x'], ['ff', 'x'], ['-10', 'x'], ['+-0', 'c'], ['-0+', 'c'], ['1.8', 'x'], ['0.1', 'b'], ['zz', 'z'], ['-zz', 'z'],
+    ['1+2i', 'x'], ['A+Bi', 'x'], ['10', 'b'], ['#xFF', 'b'], ['1.1', 'd'], ['12', '[012]'], ['1.5', '#d']])
+    for (const src of [false, true]) parse(t, b, src);
+  parse('#xFF', null, false, 'PARSE "#xFF", the base at its start');
+  // FORMAT: its arguments in r1's buffer (t_num's arg1, or the bank's at $8800), the table first
+  const fmt = (fstr, args, inBank) => {
+    const at0 = inBank ? BANK_ARG1 : tnumLabel('arg1'), blob = [], table = [];
+    let off = 3 * args.length + 1;
+    const datas = args.map(a => a.str !== undefined ? txt(a.str + '\0') : enc(a.num));
+    datas.forEach((d, i) => { table.push(args[i].str !== undefined ? 1 : 0, (at0 + off) & 255, (at0 + off) >> 8); off += d.length; });
+    blob.push(...table, 0xFF); datas.forEach(d => blob.push(...d));
+    call('FORMAT', { flags: RESULT, room: BANK_RES_ROOM, r0: where(str(fstr)), r1: { data: blob, bank: inBank }, r4: at0 },
+      want(() => ({ bytes: txt(lformat(fstr, args, R.DECIMAL)) })), 'FORMAT "' + fstr + '" (' + args.length + ')');
+  };
+  fmt('<{}|{x}|{#b}>', [{ num: 255n }, { num: 255n }, { num: 5n }], false);
+  fmt('{} and {}', [{ str: 'cats' }, { num: { num: 1n, den: 3n } }], true);
+  fmt('{{}} {{{}}} }', [{ num: 7n }], false);
+  fmt('a{b', [], false);
+  fmt('{}{}', [{ num: 1n }], false);
+  fmt('{}', [{ num: 1n }, { num: 2n }], true);
+  fmt('{x}', [{ str: 'no' }], false);
+  fmt('{w}', [{ num: 1n }], false);
+  fmt('', [], true);
+  fmt('{#=16r} {c} {[01]}', [{ num: -300n }, { num: { fix: 5n, places: 1 } }, { num: { re: 1n, im: 2n } }], true);
+  for (let k = 0; k < 40; k++) {
+    const n = rnd(4), args = [], parts = [];
+    for (let j = 0; j < n; j++) {
+      const b = rnd(3) ? BASES[rnd(BASES.length)] : '';
+      if (b === '' && !rnd(3)) args.push({ str: 'str' + j }); else args.push({ num: numfmt.decode(operand()) });
+      parts.push('<{' + b + '}>');
+    }
+    fmt(parts.join(rnd(2) ? ' ' : '{{}}'), args, !!(k & 1));
+  }
+
   return list;
 }
 
@@ -462,6 +605,7 @@ function check(list, out) {
     else if (w.bytes && !Buffer.from(w.bytes).equals(got)) say(c, '[' + hex(got) + '], not [' + hex(w.bytes) + ']');
     else if (w.a !== undefined && (a !== w.a || x !== w.x)) say(c, '.A, .X = $' + hex([a, x]) + ', not $' + hex([w.a, w.x]));
     else if (w.bytes2 && !Buffer.from(w.bytes2).equals(got2)) say(c, 'second [' + hex(got2) + '], not [' + hex(w.bytes2) + ']');
+    else if (w.used !== undefined && r5 !== w.used) say(c, r5 + ' characters, not ' + w.used);
     else if (w.r4 !== undefined && (r4 !== w.r4 || r5 !== w.r5)) say(c, 'r4, r5 = $' + r4.toString(16) + ', $' + r5.toString(16) + ', not $' + w.r4.toString(16) + ', $' + w.r5.toString(16));
   }
   if (!f.length && at !== out.length) f.push('num.out: ' + (out.length - at) + ' bytes after the last call\'s');

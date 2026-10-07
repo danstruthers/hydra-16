@@ -12,7 +12,8 @@
 
 NUMBERS_MAGIC   = $4E                           ; (The state's first byte once INIT has run: "N")
 NREGS           = 8                             ; Registers R0-R7: a page each, a number's bytes least first
-NR_DIGS         = 7                             ; Pages for a number's digits as it's written
+NR_DIGS         = 8                             ; Pages for a number's digits as it's written (2048: a
+                                                ;   255-byte integer in base 2 is 2040, in base -2 2042)
 BASE_MAX        = 96                            ; A base string at most, its 0 too ("#<=-[" and 80 digits and "]")
 DIGITS_START    = 12                            ; The math functions' precision at the start (significant digits)
 NSTACK          = 16                            ; The complex numbers' machine: values on its stack at most

@@ -1,6 +1,6 @@
 ; ****************************************************************************
-; nmstate.inc - the libraries' state, in their bank: INIT, which makes a bank theirs; the base (SET_BASE, GET_BASE);
-; the random generator's seed (SEED).
+; nmstate.inc - the libraries' state, in their bank: INIT, which makes a bank theirs; the base's string (GET_BASE;
+; SET_BASE is nmtext.inc's); the random generator's seed (SEED).
 
 ; INIT: the bank made the libraries' (r13): the base decimal, the precision 12 digits, the random generator seeded
 nm_init:
@@ -13,33 +13,6 @@ nm_init:
             jsr         rn_clock
             lda         #NUMBERS_MAGIC
             sta         st_magic
-            clc
-            jmp         nm_end
-
-; SET_BASE: r0 = a base string (its bytes and a 0), the base from now on.  NE_BASE: one too long, or empty
-nm_set_base:
-            jsr         nm_begin
-            MOVR        np, r0
-            ldx         #0
-@char:
-            jsr         c_get
-            sta         arena,x                             ; (Kept aside till it's whole: the arena's)
-            cmp         #0
-            beq         @end
-            inx
-            cpx         #BASE_MAX
-            bcc         @char
-@bad:
-            lda         #NE_BASE
-            jmp         nm_fail
-@end:
-            txa
-            beq         @bad
-:
-            lda         arena,x
-            sta         st_base,x
-            dex
-            bpl         :-
             clc
             jmp         nm_end
 
