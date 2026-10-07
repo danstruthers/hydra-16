@@ -16,7 +16,7 @@ The SDK is this folder; `node build.js` builds the library and also copies the S
 | `hydra.cfg` | The link: the header, code and data from `$0800`, the BSS after them, the heap, and the C stack (2K) down from `$7F00` |
 | `lib/hydra.lib` | The library: cc65's `none.lib`, with the modules of `lib/` in place of cc65's that a target gives (the build: `obj/sdk/c/hydra.lib`) |
 | `lib/` | Its sources: `crt0.s` (the header, the start, `exit`), the files and stdio's buffers, the environment, `system`, `signal`, `time` and `clock`, conio, errors |
-| `samples/` | `hello` (arguments), `upper` (a filter), `code` (exit statuses), `keys` (conio: the screen and raw keys), `tones` (sound: `snd.h`), `jukebox` (a song in the background: `snd_play`), `ctest` (the library's test) |
+| `samples/` | `hello` (arguments), `upper` (a filter), `code` (exit statuses), `keys` (conio: the screen and raw keys), `tones` (sound: `snd.h`), `jukebox` (a song in the background: `snd_play`), `ctest` (the library's test); the multitasking demos (below): `race`, `chorus`, `philo`, `prodcons`, `round` |
 
 ## A program
 
@@ -48,6 +48,9 @@ int main (int argc, char* argv[])
 * Semaphores, for tasks that share something: `hy_sem_new` (a count, or `HY_SEM_MUTEX`), `hy_sem_acquire` (it
   waits), `hy_sem_try`, `hy_sem_release`, `hy_sem_free`.  Every task's, by number; the program's end frees those
   it made and gives back the mutexes it holds.
+* Shared segments, memory several tasks see: `hy_seg_create` (banks of 8K: its number, this task attached),
+  `hy_seg_attach` (another task, given the number), `hy_seg_map` (a bank of it at `HY_BANK_WINDOW`, `$8000`),
+  `hy_seg_detach`.  The last task attached to go frees it.
 * `signal (SIGINT, f)`: Ctrl-C at its window (the interrupt note) runs `f`; `SIG_IGN` ignores it; the default
   ends the program.
 * conio (`conio.h`) works the console as an ANSI terminal: `clrscr`, `gotoxy`, `textcolor`, `revers`, `cursor`;
@@ -56,7 +59,8 @@ int main (int argc, char* argv[])
 * Sound (`snd.h`): claim the channels it uses (`snd_claim`), then patches, notes, volumes, bends and drums on
   them; they're given back as it ends.  `snd_play` plays a song in the background (`play`, in a task of its own).
 * `time` is the system's clock (`/dev/time`; `hy_time`, in seconds since 2000), `clock` the ticks since the
-  program's start; `sleep` and `hy_sleep_ticks` let the other tasks run.
+  program's start; `sleep` and `hy_sleep_ticks` let the other tasks run, and `hy_sleep_until` sleeps till a tick
+  count (for steady timing: a time already passed returns at once).
 * Its RAM: `$0800` to `$7F00`, for the program, its BSS, the heap (`malloc`) and the C stack (2K); its own RAM
   banks at `$8000`-`$9FFF` (`hy_banks_alloc`, `hy_bank`).  The 6502's stack is 256 bytes: deep recursion runs
   out of it.  cc65's runtime has the zero page from `$22` (26 bytes); the program's own goes after it, to `$7F`.
@@ -83,3 +87,22 @@ As an assembly program is run (`sdk/asm/README.md`): copy it to a card or the RA
 name if it's in `.` or a `bin`.  The samples are on the ROM disk: `/rom/sample/c/hello you`,
 `echo hi | /rom/sample/c/upper`, `/rom/sample/c/keys`, `/rom/sample/c/tones`; `cd /ram; /rom/sample/c/ctest a 'b c'` runs the
 library's test.
+
+## The multitasking demos
+
+Five samples show tasks working together.  Each is one program that starts copies of itself as its workers (each in
+a task of its own, given what it needs as arguments: a shared segment's number, semaphores' numbers), draws what
+they do as they do it, and says how it went.  They find themselves as `/bin/NAME`, `./NAME` or
+`/rom/sample/c/NAME`, so after `bind -a /rom/sample/c /bin` (at rc, or HyForth's `bind`) they run by name.  Each
+needs four or five tasks free besides its own; Ctrl-C ends them all, and the program says how far it got.
+
+| Sample | What it shows |
+| :----- | :------------ |
+| `race [TASKS [ADDS]]` | Why shared memory needs a lock: four tasks add 1 to a counter in a shared segment, 500 times each (read it, work a little, write it back).  With nothing to keep them apart, a task stopped between its read and its write undoes the others' adds, and many are lost; with a mutex around each read and write, none are |
+| `chorus` | The console as a shared resource: four tasks print a line each a letter at a time.  With nothing between them the letters tangle; with a mutex held for a whole line each line is whole; with a baton (a semaphore each, passed round: wait for yours, print, give the next one's) the lines come in turn |
+| `philo [-d] [-n MEALS] [N]` | The dining philosophers: five tasks, a fork (a mutex) between each two, a live table of who's thinking, hungry or eating and who holds which fork.  Taking the lower-numbered fork first, they never deadlock; with `-d` each takes their left fork first, and they soon do: the program sees it and ends them |
+| `prodcons [-n ITEMS]` | Producers and consumers: two tasks make items and two use them, through a ring of 8 slots in a shared segment, kept in step by two counting semaphores (free slots, filled ones) and a mutex.  The ring fills while the producers are quicker and empties while the consumers are, each side waiting (using no CPU) when it must |
+| `round [TIMES [TICKS]]` | "Row, Row, Row Your Boat" as a round: four tasks a voice each, on YM2151 channels 0-3, two bars apart.  They meet at a barrier (semaphores), then each keeps its own time by the tick (`hy_sleep_until`), and the words light up as they're sung.  In the emulator, `sim/run.js -i --sound` plays it in a browser |
+
+Each runs as a test too (`tests/tests.js`: race, chorus, philo, prodcons, round): no adds lost with the mutex, the
+lines whole and in turn, no fork ever in two hands and the deadlock seen, every item used once, every note in time.

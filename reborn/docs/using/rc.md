@@ -183,6 +183,10 @@ if not play /rom/songs/scom.zsm $*
 `. file` runs a file's commands in this rc (its variables and functions stay); `exit [status]` ends a script, or
 rc.  `/rom/lib/profile` is what a login shell runs first; a card's `/lib/profile` comes after it.
 
+Ctrl-C reaches a script's rc (and `rc -c`'s) as well as what it's running: rc waits for that to end, as at the
+prompt (a program may take the note itself, finish up and say so), and then ends, with its status, rather than
+going on to the next command.
+
 ## Built-ins
 
 These change rc's own task, so they can't be programs:

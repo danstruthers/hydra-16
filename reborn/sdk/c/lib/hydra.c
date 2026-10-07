@@ -1,6 +1,6 @@
 /*
 ** hydra.c - hydra.h's calls of the Hydra's own (on hy_call): the tick, sleeping, tasks and exit statuses,
-** semaphores, the namespace, an fd's name, RAM banks, error texts.  A failed call returns -1 (errno and _oserror set: hy_call).
+** semaphores, the namespace, an fd's name, RAM banks, shared segments, error texts.  A failed call returns -1 (errno and _oserror set: hy_call).
 */
 
 #include <stdio.h>
@@ -32,6 +32,13 @@ int __fastcall__ hy_sleep_ticks (unsigned ticks)
     r.a = ticks;
     r.x = ticks >> 8;
     return hy_call (HY_SLEEP, &r) ? -1 : 0;
+}
+
+int __fastcall__ hy_sleep_until (unsigned tick)
+{
+    r.a = tick;
+    r.x = tick >> 8;
+    return hy_call (HY_SLEEP_UNTIL, &r) ? -1 : 0;
 }
 
 void hy_yield (void)
@@ -188,6 +195,38 @@ int __fastcall__ hy_banks_free (unsigned char first, unsigned char n)
     r.a = first;
     r.x = n;
     return hy_call (HY_BANKS_FREE, &r) ? -1 : 0;
+}
+
+/* ---- Shared segments */
+
+int __fastcall__ hy_seg_create (unsigned char banks)
+{
+    r.a = banks;
+    return hy_call (HY_SEG_CREATE, &r) ? -1 : r.a;
+}
+
+int __fastcall__ hy_seg_attach (unsigned char seg)
+{
+    r.a = seg;
+    return hy_call (HY_SEG_ATTACH, &r) ? -1 : 0;
+}
+
+int __fastcall__ hy_seg_detach (unsigned char seg)
+{
+    r.a = seg;
+    return hy_call (HY_SEG_DETACH, &r) ? -1 : 0;
+}
+
+unsigned char* __fastcall__ hy_seg_map (unsigned char seg, unsigned char bank)
+{
+    r.a = seg;
+    r.x = bank;
+    if (hy_call (HY_SEG_MAP, &r)) {
+        return 0;
+    }
+    *(volatile unsigned char*) 0xFFF1 = r.a;            /* U, the shared macro-page (the kernel keeps it a task's) */
+    hy_bank (r.x);                                      /* Then the bank */
+    return HY_BANK_WINDOW;
 }
 
 /* ---- Errors */

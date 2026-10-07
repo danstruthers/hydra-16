@@ -4,7 +4,9 @@
 ;   -c command   the command run, and rc ends with its status
 ;   file args    the file's commands ($0 the file, $* its args), then the end
 ;   (neither)    the commands typed at fd 0, a prompt before each ($prompt: its first word, or its second for a
-;                line that goes on), till its end (Ctrl-D); a note (Ctrl-C) ends what's running, not rc
+;                line that goes on), till its end (Ctrl-D)
+;   A note (Ctrl-C) ends what's running, not rc, which waits for it to end as always (it may take the note itself,
+;   and go on); then rc goes back to its prompt, or, running a file or -c, ends with its status.
 ;   -l           first, the default namespace made (newns) and /rom/lib/profile run (a shell's start)
 ; It starts with the environment's variables and functions (var.s), $task its task, $path (. /bin) and $prompt
 ; ('% ' and a tab) if it has none.  Its pieces: lex.s (tokens), parse.s (a command line: a tree), word.s (words:
@@ -101,6 +103,8 @@ main:
             stx         abort_sp
             lda         #$FF
             sta         abort_src
+            LDR         r0, notes                           ; A note ends what's running, not rc (-c's and a
+            jsr         NOTIFY                              ;   file's: rc then ends, at its next command)
             jsr         var_import
             jsr         GETPID                              ; $task
             sta         num
@@ -213,8 +217,6 @@ main:
 @console:                                                   ; Fd 0's commands, prompted
             lda         #1
             sta         interactive
-            LDR         r0, notes
-            jsr         NOTIFY
             lda         #0
             jsr         run_file_top
             jmp         rc_exits

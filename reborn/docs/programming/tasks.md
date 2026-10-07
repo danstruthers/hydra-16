@@ -73,6 +73,14 @@ In C, `signal (SIGINT, f)` is a handler for Ctrl-C's note.
 is the clock, seconds since 2000-01-01 in `r0:r1`, set from the DS1747 at boot if there's one (`TIME_SET` sets it;
 `/dev/time` is it as text).
 
+## Tasks working together
+
+A task shares nothing with another but what it's given: fds (pipes, files, devices), shared segments, semaphores, notes,
+and its exit status.  The C SDK's multitasking demos
+([../../sdk/c/README.md](../../sdk/c/README.md#the-multitasking-demos)) put them to work: each starts copies of itself
+(`SPAWN`), passes them a segment's and semaphores' numbers as arguments, meets them at a barrier, draws them as they go,
+and waits for their ends (`WAIT`).  `round` keeps four tasks in time with `SLEEP_UNTIL` alone, from a start they share.
+
 ## Seeing tasks
 
 `TASKINFO` says what the kernel knows of a task (its state, flags, parent, CPU time, name, group: `TI_*`);
