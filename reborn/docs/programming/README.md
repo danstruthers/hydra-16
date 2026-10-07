@@ -29,10 +29,10 @@ and the jump table live; the I/O area is `$FF00-$FFEF`, and belongs to the drive
 second), the IRQ path, calls between tasks, memory, notes, files' channels and namespaces.  Its state is in task 0's
 RAM, out of other tasks' reach.
 
-**Modules** are everything else, in the paged ROM, each running in place in a task of its own: the drivers (`cons`
-the console and `/pc`, `storage` the SPI bus and every disk, `kdev` the kernel's devices, `snd` the YM2151, `gpio`
-the VIA's port A and I2C, `vid` the Vera X's screen), init, the shells and the tools.  A program in a file (on a
-card, a RAM disk, `/pc`) is read into a task's RAM at `$0800` and runs there.
+**Modules** are everything else, in the paged ROM, each running in place in a task of its own: the drivers (`cons` the
+console and `/pc`, `storage` the SPI bus and every disk, `kdev` the kernel's devices, `snd` the YM2151 and the Vera
+X's PSG, `gpio` the VIA's port A and I2C, `vid` the Vera X: its screen, its PSG and its PCM), init, the shells and the
+tools.  A program in a file (on a card, a RAM disk, `/pc`) is read into a task's RAM at `$0800` and runs there.
 
 **Files**, Plan 9's way: every device is a file server, a tree of files; a program opens, reads and writes them with
 the same calls whatever's behind them, and controls a device by writing commands to its `ctl` file.  Each task has a

@@ -1,9 +1,17 @@
 # The old documentation PDF (old/sim/tools/mkpdf.js): never a text file, whatever core.autocrlf says
 *.pdf binary
+# The old system's ROM disk files: CR LF on every checkout, as on Windows, where its images and tests were made
+# (old/os_rom/romfs/README is 984 bytes in them, 969 with LF line ends)
+old/os_rom/romfs/README text eol=crlf
+old/os_rom/romfs/boot.hys text eol=crlf
+old/os_rom/romfs/namespace text eol=crlf
 # HydraOS's ROM images (reborn/bin), kept for programming the chips: bytes
 reborn/bin/*.bin binary
 # The ROM disk's files (reborn/romfs): bytes for the Hydra (LF line ends), the same on every checkout
 reborn/romfs/** -text
+# The assembly SDK (reborn/sdk/asm): CR LF on every checkout, as on Windows, where reborn/bin's images are made.  The
+# ROM disk copies its sources into /lib/as byte for byte, so a checkout with LF line ends (Linux's) made other images
+reborn/sdk/asm/** text eol=crlf
 # The Forth 2012 test suite (reborn/tests/forth): as it came, byte for byte
 reborn/tests/forth/** -text
 # danlang's regression suite (reborn/tests/hylang): its files as danlang's master has them, byte for byte

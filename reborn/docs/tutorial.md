@@ -1,7 +1,7 @@
 # First steps with the Hydra-16
 
-A tutorial for a first hour with the rebuilt system: switching it on, the shell, files and disks, tasks and
-windows, the two languages, and a program of your own in assembly and in C.  It needs no board: the emulator runs
+A tutorial for a first hour with HydraOS: switching it on, the shell, files and disks, tasks and windows, the
+languages, sound, and a program of your own in assembly and in C.  It needs no board: the emulator runs
 the same ROM images the board does, and everything here works the same on one.
 
 You need [Node.js](https://nodejs.org) (18 or later) and a clone of the repository; for the programs at the end,
@@ -33,7 +33,8 @@ HyForth (Forth 2012), bye to end
 ```
 
 The prompt is the current directory and `>`.  In the emulator, Ctrl-A x quits, Ctrl-A r presses the reset button,
-and Ctrl-A h lists the rest.
+and Ctrl-A h lists the rest.  `node sim/run.js -i --vera --view` gives it a Vera X card too: its screen, which shows
+the console as the terminal does, is at http://localhost:8016.
 
 ## 2. The shell
 
@@ -180,7 +181,8 @@ session: `rc` ([using/rc.md](using/rc.md)).
 Sound button at http://localhost:8016): `play
 /rom/songs/test.zsm` plays a ZSM file, the format the Commander X16's tools (and Furnace) export.  `play -m 0 't180 o4
 l8 c d e f g'` plays a line of the score language (its notes, lengths and octaves: [using/tools.md](using/tools.md),
-"Scores"), and `echo note 0 60 >/dev/sndctl` a note (`echo off 0 >/dev/sndctl` ends it).
+"Scores"), and `echo note 0 60 >/dev/sndctl` a note (`echo off 0 >/dev/sndctl` ends it).  With a Vera X, channels
+8-23 are its PSG's voices (`echo note 8 69 >/dev/sndctl`), and `play` plays a WAV file on its PCM.
 
 ## 8. A program of your own
 
@@ -203,15 +205,17 @@ node sim/run.js -i --pc-dir hi
 /> /pc/hi.hyx one two
 Hello, one!
 Hello, two!
-I'm task 5, in /.
+I'm task 5, in /, in window 0.
 /> cp /pc/hi.hyx /ram/bin/hi
 /> hi three
 Hello, three!
-I'm task 5, in /.
+I'm task 5, in /, in window 0.
 ```
 
-`/ram/bin` is the first member of `/bin`'s union, so a program there runs by its name.  A C program is the same: a
-folder of `.c` files (`cp sdk/c/samples/hello/hello.c myc/`, then `node build.js prog myc`):
+`/ram/bin` is the first member of `/bin`'s union, so a program there runs by its name.  The Hydra assembles one itself
+too: `as /lib/as/hi.s /ram/bin/hi` makes the same program (the SDK's include files and three of its samples are in
+`/lib/as`; [using/tools.md](using/tools.md#the-assembler)), and `edit` is there for a source of your own.  A C program
+is the same: a folder of `.c` files (`cp sdk/c/samples/hello/hello.c myc/`, then `node build.js prog myc`):
 
 ```
 /> /pc/hello.hyx
