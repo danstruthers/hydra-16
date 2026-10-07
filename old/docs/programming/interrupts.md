@@ -1,6 +1,6 @@
 ## **Interrupts**
 
-How the OS dispatches interrupts, and how a driver handles one.  Sources: `os_rom/kernel/irq.s`, `os_rom/kernel/common.s`.  The hardware side (16 prioritised lines, the vector RAM, the `n ^ 7` numbering) is in the [Hardware Reference](../../../docs/hardware.md#interrupts).  Part of the [Programmer's Guide](README.md).
+How the OS dispatches interrupts, and how a driver handles one.  Sources: `os_rom/kernel/irq.s`, `os_rom/kernel/common.s`.  The hardware side (16 prioritised lines, the vector RAM, the `n ^ 7` numbering) is in the [Hardware Reference](../../../reborn/docs/hardware.md#interrupts).  Part of the [Programmer's Guide](README.md).
 
 ### **IRQ lines**
 
@@ -30,7 +30,7 @@ The registration tables live in the task system page (`$7D00`) and are copied in
 The dispatcher and its `TASK_CALL` cost about 650 cycles per interrupt, far too much for the serial port at high rates (at 115200 baud a byte arrives every 320 cycles, and the 65C51 holds only one).  So the busiest interrupts bypass it (`servers/serfast.s`, `sound/ymfast.s`, BIOS page 2):
 * **Their vectors:** `IRQ_INIT` points the VIA's (line 0), the ACIA's (line 1) and the YM2151's (line 4) vectors at `VIA_IRQ_STUB`, `SER_IRQ_STUB` and `YM_IRQ_STUB` in the COMMON block, which switch to page 2 (`IRQ_FAST_P2`).
 * **No stack switch:** instead of running in the driver's task, a fast handler briefly switches `T` to it, a "quick look": its zero page and RAM, with no stack use until `T` is back.
-* **`SER_IRQ_FAST`** moves the received byte into the receive ring and the next byte from the transmit ring to the ACIA, and wakes the tasks waiting to read or write.  `/pc`'s frames go by here too ([plans/PC.md](../../../docs/plans/PC.md)): one coming in goes into its buffer, not the ring, and wakes the client whose request is out when it's whole; one going out is sent whole, ahead of the ring's bytes.
+* **`SER_IRQ_FAST`** moves the received byte into the receive ring and the next byte from the transmit ring to the ACIA, and wakes the tasks waiting to read or write.  `/pc`'s frames go by here too ([plans/PC.md](../../../reborn/docs/design/plans/PC.md)): one coming in goes into its buffer, not the ring, and wakes the client whose request is out when it's whole; one going out is sent whole, ahead of the ring's bytes.
   * **Cost:** about 60–90 cycles per byte.
   * **The rest goes through the dispatcher:** the break and kill keys, console commands and the bell are recorded in `SER_PEND` for the serial driver's own handler (`SER_DO_PENDING`).
 * **`VIA_IRQ_FAST`** counts the tick and wakes the sleepers due, in the system task's zero page.

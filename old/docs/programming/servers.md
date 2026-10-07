@@ -200,7 +200,7 @@ The storage task (`$C`) owns the SPI bus.  Its block layer (`drivers/sd.s`, page
 
 ### **The HydraFS server**
 
-`fs/hfs_srv.s` and `fs/hfs_write.s` (ROM page 6: page 3 was full) are a second device, `hfs`, in the same storage task, on the same block layer and cache (through gates to page 3, one far call a block): it serves the **files** on the cards (`/sd/N/...`, the format in [plans/HYDRAFS.md](../../../docs/plans/HYDRAFS.md); using it is in [io.md](io.md#the-files-on-a-card)).  Worth knowing if you write a server of your own:
+`fs/hfs_srv.s` and `fs/hfs_write.s` (ROM page 6: page 3 was full) are a second device, `hfs`, in the same storage task, on the same block layer and cache (through gates to page 3, one far call a block): it serves the **files** on the cards (`/sd/N/...`, the format in [plans/HYDRAFS.md](../../../reborn/docs/design/plans/HYDRAFS.md); using it is in [io.md](io.md#the-files-on-a-card)).  Worth knowing if you write a server of your own:
 
 * **Two devices, one task.** A server task serves one call at a time, so `hfs_srv.s` borrows the SD server's zero page (`SD_POS`, `SD_LEFT`, `SD_N`, ...) rather than having its own, and uses `SD_LBA` as its block number (`SD_CACHE_LOAD` leaves it alone).  Its own state goes in the storage task's RAM, next to the SD driver's.
 * **Its own fids.** A HydraFS fid is an open-file slot (0-7), shared by every task; `H9_DUP` counts up the fds that share one and `H9_CLUNK` counts down, so an inherited or `IO_DUP2`'d fd doesn't free it early.

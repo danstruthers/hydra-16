@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; srvlib.s - the server library (docs/reimplementation-from-scratch.md, §12.3): every server is built on it, so
+; srvlib.s - the server library (docs/design/reimplementation-from-scratch.md, §12.3): every server is built on it, so
 ; every server is built the same way, and a new one is mostly tables.  A server module includes srvlib.inc at
 ; the top of its source and this at its end (.include "srvlib.s": its code and data are the module's own), and
 ; its HYX2 header names srv_serve as the serve entry.

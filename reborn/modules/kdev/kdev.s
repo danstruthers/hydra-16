@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; kdev - the kernel's own devices (docs/reimplementation-from-scratch.md, §14.1), served by a driver of their own
+; kdev - the kernel's own devices (docs/design/reimplementation-from-scratch.md, §14.1), served by a driver of their own
 ; on srvlib (a boot driver), not by the kernel task: it keeps only tables.  One tree each:
 ;   #/      the root: an empty directory for each mount point of the default namespace (bin dev env lib mnt pc
 ;           proc ram rom sd sram tmp, and in dev: gpio i2c mod sd seg spi vid), so ls / and ls /dev show them

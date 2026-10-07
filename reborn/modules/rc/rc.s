@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; rc - the shell (docs/reimplementation-from-scratch.md, §15.2): Plan 9's rc, small, in assembly, run in place.
+; rc - the shell (docs/design/reimplementation-from-scratch.md, §15.2): Plan 9's rc, small, in assembly, run in place.
 ;   rc [-l] [-i] [-c command | file [args]]
 ;   -c command   the command run, and rc ends with its status
 ;   file args    the file's commands ($0 the file, $* its args), then the end

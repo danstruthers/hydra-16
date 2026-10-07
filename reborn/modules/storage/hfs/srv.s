@@ -1,6 +1,6 @@
 ; ****************************************************************************
 ; HydraFS's requests, walking and reading (in hfs.s: the storage driver's second bank), ported from the old OS's
-; fs/hfs_srv.s.  Its format and what it does are docs/plans/HYDRAFS.md's.
+; fs/hfs_srv.s.  Its format and what it does are docs/design/plans/HYDRAFS.md's.
 ;   #f                  (no spec) the cards: a directory of those started, 0-f; N/a/b is card N's file a/b.  The
 ;                       disks in memory aren't here: only through a spec
 ;   #f with a spec      one disk's files: x (the ROM disk), r, s, or a card's (0-f); or a directory on it (r/5:

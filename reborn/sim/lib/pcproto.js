@@ -1,5 +1,5 @@
 // pcproto.js - /pc's line protocol: the frames the Hydra and the PC tool send each other on the serial port,
-// between the console's own bytes (docs/plans/PC.md).  No Node.js in it: the emulator (hydrasim.js --pc-dir) and
+// between the console's own bytes (docs/design/plans/PC.md).  No Node.js in it: the emulator (hydrasim.js --pc-dir) and
 // the PC tool (tools/hydrapc.js) both use it, with the file server (tools/pcfs.js).
 //
 // A frame: MARK, then its body with MARK and ESC stuffed (each sent as ESC, the byte ^ $20): the type, the tag,
@@ -11,7 +11,7 @@
 //
 // Two versions of what the frames carry, the attach's payload naming the Hydra's: 1, the old system's (a request's
 // first REQ_HDR bytes of its H9 block, a reply's REPLY_HDR bytes: status, value, count); 2, reborn's (the whole
-// request block, appendix B of docs/reimplementation-from-scratch.md, REQ_HDR2 bytes; a reply's REPLY_HDR2: status,
+// request block, appendix B of docs/design/reimplementation-from-scratch.md, REQ_HDR2 bytes; a reply's REPLY_HDR2: status,
 // fid, count, qid type).  The PC tool's file server (tools/pcfs.js) speaks both.
 'use strict';
 
