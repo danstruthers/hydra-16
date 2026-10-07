@@ -244,8 +244,9 @@ The kernel's messages (the boot's, POST's, a driver's) are `/dev/kmesg`, its las
 ## Disks
 
 The disks are under `/dev/sd`, a directory each: `0`-`f` the SD cards (by their SPI device), `x` the ROM disk, `r`
-the RAM disk (each shell's own area of it is its `/ram`), `s` the shared RAM disk (`/sram`).  Each has `data` (the
-disk's bytes) and `ctl`, which reads as the disk and its file system:
+the RAM disk (each shell's own area of it is its `/ram`), `s` the shared RAM disk (`/sram`), and `v` the Vera X's SD
+card (the card on its own SD header, through the VERA's SPI controller: `/sd/v`, a card as `0`-`f` are, and nearly
+twice as fast).  Each has `data` (the disk's bytes) and `ctl`, which reads as the disk and its file system:
 
 ```
 /> cat /dev/sd/r/ctl

@@ -42,6 +42,7 @@
 //   --vera [V]          a Vera X card in slot 0 (sim/lib/vera.js): the VERA, its gateware version V (47.0.2, the X16
 //                       community's, by default; 0.9: fvdhoef's, without FX's registers or the version)
 //   --vera-config MS    the VERA's FPGA configuring itself after power-up and a reset: MS milliseconds (100)
+//   --vera-sd FILE      a card image on the VERA's own SD port (its SPI controller: the storage driver's disk v)
 //   --screen            after the report, the VERA's text layer as text (its characters as ISO-8859-1)
 //   --frame-png FILE    at the end, the VERA's screen as a PNG (640 x 480); with -i, Ctrl-A p's file (screen-N.png)
 //   --view [PORT]       with -i: the VERA's screen live in a browser, at http://localhost:PORT (8016) (sim/view.js);
@@ -389,6 +390,7 @@ function main(argv) {
       opt.vera = Object.assign(opt.vera || {}, { version: [47, 0, 2] });
       if (/^\d+(\.\d+)*$/.test(argv[i + 1] || '')) { const v = next(); opt.vera.version = v === '0.9' ? null : v.split('.').map(Number).concat([0, 0]).slice(0, 3); }
     } else if (a === '--vera-config') opt.veraConfigMs = +next();
+    else if (a === '--vera-sd') opt.veraSd = next();
     else if (a === '--screen') opt.screen = true;
     else if (a === '--frame-png') opt.framePng = next();
     else if (a === '--view') opt.view = /^\d+$/.test(argv[i + 1] || '') ? +next() : 8016;
@@ -414,6 +416,7 @@ function main(argv) {
     log: opt.pcLog ? t => (opt.interactive ? process.stdout.write('\r\n[pc] ' + t + '\r\n') : console.log('[pc] ' + t)) : undefined });
   if (opt.kbd) opt.input = (opt.input || '') + '\u0102' + opt.kbd + '\u0103';   // (acia.js: typed at the keyboard)
   opt.promImage = opt.prom ? fs.readFileSync(opt.prom) : chips();
+  if (opt.veraSd) { if (!opt.vera) { console.error('--vera-sd: with --vera'); process.exit(2); } opt.vera.sd = cardFile(0, opt.veraSd); }
   if (opt.veraConfigMs !== undefined) { if (!opt.vera) { console.error('--vera-config: with --vera'); process.exit(2); } opt.vera.configCycles = Math.round(opt.veraConfigMs * opt.clock * 1e3); }
   if ((opt.screen || opt.framePng || opt.view) && !opt.vera) { console.error('--screen, --frame-png and --view: with --vera'); process.exit(2); }
   if (opt.soundPort && !opt.interactive) { console.error('--sound: with -i (--wav FILE keeps it in a file)'); process.exit(2); }

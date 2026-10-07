@@ -173,7 +173,9 @@ With it, the VERA's data pins go to U3's A side only, not to J2.
   10 µF and 0.1 µF across the VERA's pins 3 and 4, at the header.
 * **Never J11 pin 3** (-5 V, whatever the card says).
 * Keep the bus wires short and together; run a ground wire next to PHI2.  Plug and unplug with the power off.
-* The VERA X's SD-card header and its I2C pins stay unconnected; its VGA output goes to the monitor.
+* The VERA X's I2C pins stay unconnected; its VGA output goes to the monitor.  Its SD-card header is the VERA's own
+  SPI controller, nothing to do with the bus: a card there (wired as the VERA X's notes say, at 3.3 V) is the storage
+  driver's disk `v`, `/sd/v`.  Leave it empty and nothing's lost: `/sd/v` isn't there.
 
 ## Audio
 

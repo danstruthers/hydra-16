@@ -30,7 +30,9 @@
 //     files do; without it, as many samples at once as time has passed (the same reads, the same level);
 //     pcmUnderruns, the times the FIFO ran dry while it played (a sample wanted, none there, since bytes came);
 //     with env.pcmLog, pcmLog the bytes it took (the first PCM_LOG_MAX), for a test to compare;
-//   * the SPI controller (SPI_DATA, SPI_CTRL: busy for 8 bits at 12.5 MHz, or 390 kHz with the slow clock), with no
+//   * the SPI controller (SPI_DATA, SPI_CTRL: busy for 8 bits at 12.5 MHz, or 390 kHz with the slow clock: a byte
+//     clocked out whether or not the card's selected, the card answering only while it is), env.sd's card on it if
+//     there's one (sd.js's createCard: a block device), else no
 //     card on it: it reads $FF (the Vera X brings its SD card's lines to a header);
 //   * the FPGA configuring itself after power-up, the reset button (RESB: the card's RES#) and CTRL's reset bit:
 //     env.configCycles (0.1 s by default) of no answer (reads float, $FF; writes are lost), then every register
@@ -41,6 +43,7 @@
 // Interface: read(reg, t) (-1: no answer), write(reg, v, t), tick(t), irqActive(), nextEvent(devCyc), reset(t);
 // sound(fn), soundTo(t).
 'use strict';
+const { createCard } = require('./sd.js');
 
 // The palette at reset (the gateware's: 12 bits, $0RGB)
 const DEFAULT_PALETTE = [
@@ -108,6 +111,8 @@ function createVera(env) {
   let sink = null, made = 0, readySample = 0, psgNoiseState = 1, pcmL = 0, pcmR = 0;
   const psgPhase = new Int32Array(16), psgNoise = new Uint8Array(16);
   let ss = 0, autotx = 0, slow = 0, spiBusyTo = 0, spiIn = 0xFF;
+  const card = env.sd ? createCard(env.sd) : null;            // (The SD card on the SPI port, if there's one)
+  const spiByte = b => (card && ss ? card.xfer(b) : 0xFF);   // A byte clocked: what comes back
   // The scan: units (a VGA line, or half an NTSC one) since t0, the cycle it started at; lastU the last unit done
   let readyAt = configCycles, t0 = configCycles, unitLen = 800, perFrame = 525, lastU = -1, nextU = 0, nextCyc = 0;
   let collisions = 0;                                          // (The sprite renderer's, this frame: live)
@@ -491,7 +496,7 @@ function createVera(env) {
       case 0x1D: return 0;
       case 0x1E: {
         const b = spiIn;
-        if (autotx && ss && t >= spiBusyTo) { spiBusyTo = t + spiTime(); spiIn = 0xFF; }
+        if (autotx && t >= spiBusyTo) { spiBusyTo = t + spiTime(); spiIn = spiByte(0xFF); }
         return b;
       }
       case 0x1F: return (t < spiBusyTo ? 0x80 : 0) | (autotx << 2) | (slow << 1) | ss;
@@ -543,8 +548,10 @@ function createVera(env) {
           if (v.pcmLog && v.pcmLog.length < PCM_LOG_MAX) v.pcmLog.push(b);
         } else v.pcmLost++;
         return;
-      case 0x1E: if (ss && t >= spiBusyTo) { spiBusyTo = t + spiTime(); spiIn = 0xFF; } return;
-      case 0x1F: ss = b & 1; slow = (b >> 1) & 1; autotx = (b >> 2) & 1; return;
+      case 0x1E: if (t >= spiBusyTo) { spiBusyTo = t + spiTime(); spiIn = spiByte(b); } return;
+      case 0x1F:
+        if (ss && !(b & 1) && card) card.deselect();
+        ss = b & 1; slow = (b >> 1) & 1; autotx = (b >> 2) & 1; return;
       default: if (r < 0x14) layer[0][r - 0x0D] = b; else layer[1][r - 0x14] = b;
     }
   }

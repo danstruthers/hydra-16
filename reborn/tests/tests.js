@@ -1069,6 +1069,24 @@ const DRAW_HY = [['(use "video")', 'NIL'], ['(pen 9)', 'NIL'], ['(plot 30 30)', 
   ['(pen 11)', 'NIL'], ['(fd 30)', 'NIL'], ['(vpeek (+ (* 95 320) 160))', '11'], ['(heading)', '0'],
   ['(text 0 10 "H")', 'NIL'], ['(vpeek (+ (* 10 320) 1))', '11']];
 
+// The vsd test's card: a HydraFS volume (hello.txt) on the VERA's own SD port, its writes kept; and its lines
+function veraCard() {
+  fs.mkdirSync(CARD_DIR, { recursive: true });
+  const img = path.join(CARD_DIR, 'vsd.img');
+  hydrafs.setNow(0x1000);
+  hydrafs.mkfs(img, 8, 'VERASD', undefined, true);
+  const v = new hydrafs.Volume(img);
+  v.put('hello.txt', Buffer.from('hello from the vera\n'));
+  v.close();
+  return imageCard(0, img, Math.floor(fs.statSync(img).size / 512));
+}
+const VSD_LINES = [
+  ['cat /dev/sd/v/ctl', 'sdhc 8 MB 16384 blocks\nhydrafs label=VERASD\nfree 8180 KB of 8188 KB'],
+  ['cat /sd/v/hello.txt', 'hello from the vera'],
+  ['echo written >/sd/v/new.txt; cat /sd/v/new.txt', 'written'],
+  ['ls /sd', 'v/'],
+];
+
 module.exports = {
   IRQ_OFF_MAX,
   tests: [
@@ -2365,6 +2383,19 @@ module.exports = {
         if (picked < 40 || v[120 * 320 + 160] !== 2 || v[130 * 320 + 170] !== 2) f.push('sketch\'s drag: ' + picked + ' pixels in colour 2 (40 or more wanted, through (160, 120) and (170, 130))');
         if (m.smc.lost || m.smc.mouseLost) f.push('codes lost on the SMC');
         return f;
+      },
+    },
+    {
+      name: 'vsd', what: 'the Vera X\'s SD card (the storage driver\'s disk v, on the VERA\'s own SPI controller: the emulator\'s card there), at the login shell: its ctl (an SDHC card, its HydraFS), a file read, one written, /sd listing it',
+      init: 'init', cycles: 120e6, jsOnly: 'the danlang emulator has no VERA yet',
+      get machine() { this.card = veraCard(); return { vera: { sd: this.card }, input: VSD_LINES.map(l => '\u0101' + l[0] + '\r').join('') + '\u0101' }; },
+      get expect() { return VSD_LINES.map(l => '/> ' + l[0] + '\n' + l[1] + '\n/> '); },
+      check() {
+        this.card.save();
+        const v = new hydrafs.Volume(this.card.file);
+        const e = v.tryWalk('new.txt'), got = e ? v.read(e).toString('latin1') : '';
+        v.close();
+        return got === 'written\n' ? [] : ['the card\'s new.txt: ' + JSON.stringify(got) + ' ("written\\n" wanted)'];
       },
     },
     {

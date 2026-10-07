@@ -233,8 +233,8 @@ in the console's RAM banks, a whole VT100, window groups, headers and a bar) are
 ## 9. Storage: disks and HydraFS
 
 The storage driver (`storage`, task E) owns the SPI bus and the disks, at `/dev/sd`: `0`-`f` the SD cards by their SPI
-device (through a cache of their blocks), `x` the ROM disk, `r` the RAM disk (each shell has its own area, `/ram`) and
-`s` the shared one (`/sram`).  HydraFS is on each, the old system's file system, ported: directories, files to 4 GB, a
+device (through a cache of their blocks), `x` the ROM disk, `r` the RAM disk (each shell has its own area, `/ram`),
+`s` the shared one (`/sram`), and `v` the Vera X's SD card (on the VERA's own SPI controller).  HydraFS is on each, the old system's file system, ported: directories, files to 4 GB, a
 card's partitions ([HYDRAFS.md](design/plans/HYDRAFS.md) is its format).  The cards are at `/sd/N`, and a card's `bin`
 and `lib` join `/bin` and `/lib`.  `df`, `mkfs`, `fsck` and `label` look after them; the PC's `sim/tools/hydrafs.js`
 makes card images.  [Disks](using/tools.md#disks), [DISKS.md](design/plans/DISKS.md).
@@ -358,7 +358,7 @@ POST's, a driver's) are `/dev/kmesg`, its last 4K.
   W65C51N; `node build.js prog DIR` for a program of your own.
 * **The emulator**, `node sim/run.js`: the board cycle by cycle, running the real images.  `-i` is the serial console
   live (Ctrl-A x quits, r the reset button, b a monitor: steps, registers, memory, breaks, watches); `--sd card.img` a
-  card; `--pc-dir DIR` a folder as `/pc`; `--vera` a Vera X, `--view` its screen in a browser; `--sound` the sound in a
+  card; `--pc-dir DIR` a folder as `/pc`; `--vera` a Vera X (`--vera-sd card.img` a card in its SD slot), `--view` its screen in a browser; `--sound` the sound in a
   browser, `--wav FILE` in a file; `--trace-calls`, `--break`, `--watch` for debugging.  The top of `sim/run.js` lists
   them all; [the hardware reference](hardware.md#in-the-emulator) says what's modelled.
 * **The tests**, `node sim/test.js`: 86 of them, each booting its own image and judged on its output, its time budgets

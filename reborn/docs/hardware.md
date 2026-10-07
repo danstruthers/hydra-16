@@ -503,7 +503,7 @@ the main board's says.  **J11 pin 3, "+5VA", is -5 V** (slot pin 9), and **J7 pi
 ### The Vera X (slot 0)
 *(Not in `board/`: the plan is [design/plans/VIDEO.md](design/plans/VIDEO.md).)*  The Hydra's video card: Joe Burks's
 VERA X, the Commander X16's VERA (an iCE40UP5K FPGA with 128K of video RAM inside: VGA at 640x480, two layers of text,
-tiles or bitmaps, 128 sprites, a 256-colour palette, a 16-voice PSG and a PCM FIFO, an SD card's SPI controller),
+tiles or bitmaps, 128 sprites, a 256-colour palette, a 16-voice PSG and a PCM FIFO, an SD card's SPI controller: a card there is `/sd/v`),
 running the X16 community's gateware (v47 on, which has the version register, DCSEL 63).  The X16's documentation is
 its own: *The Commander X16 Programmer's Reference*, chapters 9 and 10.
 
@@ -594,5 +594,5 @@ halves swapped and the V1 board's bank bits; the BIOS ROM's pages; the I/O ports
 lines, their priority and the vector RAM (`n ^ 7`); the VIA (its timers, port A's pins and CA1, I2C devices on PA0/PA1,
 SD cards and other devices on its SPI port); the ACIA (Rockwell's, or `--acia wdc`); the YM2151 (its timers, its busy
 time, and with `--sound` its sound); a DS1747 in U7 (`rtc`); the reset button (Ctrl-A r); `--clock 7.15909` for J8 (with a `build.js --clock 2` build); and
-the Vera X in slot 0 (`--vera`).  Not modelled: the analog side (the audio path, the serial line's levels), wait
+the Vera X in slot 0 (`--vera`; `--vera-sd` a card on its SPI controller).  Not modelled: the analog side (the audio path, the serial line's levels), wait
 states (V1 has none), and DMA.

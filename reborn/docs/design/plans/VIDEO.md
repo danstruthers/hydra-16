@@ -39,6 +39,7 @@ A plan for the Hydra-16's supported video card: a card in **slot 0** carrying th
 * **The rest** (Order of work's 3), so far:
   * **The output modes**: ctl's `output vga`, `output ntsc [mono] [240p]`, `output rgb [240p]` (DC_VIDEO's bits; the card brings out what it has: the VERA X its VGA).  The emulator had NTSC's and RGB's timing already.
   * **FX in the emulator** (`vera.js`, from x16-emulator's `video.c`): ADDR1's line, polygon and affine modes, 4-bit mode and its nibbles, the 16-bit hop, the 32-bit cache (filled by reads, written 4 bytes at a time under a mask, or a byte at a time cycling), transparent writes, the multiplier and its accumulator, 2-bit polygon poking, the fill length.  The vera test checks it (15 checks).
+  * **The VERA's SD card** is the storage driver's disk `v` (`/dev/sd/v`, `/sd/v`): a card as 0-f are (the cache, HydraFS, partitions, `mkfs`), its bytes through VERA_SPI_DATA and CTRL (390 kHz while it starts, 12.5 MHz after) in place of the VIA's bit loops.  The storage driver touches those two registers only, which share nothing with vid's ports, so it needs no claim; with no Vera X, the busy bit never clears and the card isn't there.  Reading a 32K file is 6.6M cycles against the VIA card's 11.7M (each with a prompt's round trip); the rest is HydraFS's and the request's.  The emulator's card is `sd.js`'s, byte by byte (`--vera-sd FILE`).  The vsd test.
   * **FX in vid's drawing**: a line at 8 or 4 bits a pixel, 320 across, its ends on the bitmap, is FX's line helper (a write a pixel: its slope in 512ths, rounded, so a long line ends where it should); `clear` is 32-bit cache writes.  A 300-pixel line from HyForth went from some 246,000 cycles to 82,000 (the rest is HyForth's and the request's).  ADDR1 is lent meanwhile, as for a scroll.
 * The programmer's chapter is `reborn/docs/programming/video.md`; the status, `reborn/docs/status.md`'s phase 8.
 
@@ -125,7 +126,7 @@ A small slot card with a 2x12 socket for an unmodified VERA module, which can be
 * Its other pins (the X16's power supply, reset and NMI buttons, the activity LED) are left unconnected.
 * PS/2 can't be read directly from the VIA instead: its bits come every 60-100 µs, and the ROM sometimes keeps interrupts off for longer than that (the emulator reports runs of over 1,000 cycles, about 300 µs).
 
-**The VERA's SD card slot** is on its own SPI controller, at 12.5 MHz with auto-transfer.  That's much faster than the Hydra's VIA-driven SPI.  It could later carry a second HydraFS card (an SPI back end for `drivers/sd.s`), which makes it a fast card for programs and assets.
+**The VERA's SD card slot** is on its own SPI controller, at 12.5 MHz with auto-transfer.  That's much faster than the Hydra's VIA-driven SPI.  It carries a second HydraFS card (an SPI back end for the storage driver's cards: disk `v`, As built), which makes it a fast card for programs and assets.
 
 #### **Option B: Vera X on one board** (later)
 
@@ -305,6 +306,6 @@ With a keyboard, the Hydra is a standalone computer: switch on, get a prompt on 
 **From here**, in the user's order (2026-10-07):
 1. **The keyboard and mouse** (step 6): done (As built, above), and the SMC in the wiring guide.  The mouse's words in each language come with the graphics words.
 2. **The graphics words** (step 5): done (As built, above), the mouse's words with them.
-3. **The rest of the Vera X**: FX in the emulator and in vid's lines and clear, and the output modes (done: As built, above); the VERA's SD card (its SPI controller, a second back end for `#d`'s cards); the output modes (VGA, composite, RGB) and the 240p line doubling in `ctl`; the PSG in scores (`play`'s MML); the VERA in the danlang emulator; demos (step 8).
+3. **The rest of the Vera X**: FX in the emulator and in vid's lines and clear, the output modes (VGA, composite, RGB, the 240p line doubling, in `ctl`) and the VERA's SD card (disk `v`) are done (As built, above); then the PSG in scores (`play`'s MML); the VERA in the danlang emulator; demos (step 8).
 4. **With the text windows**: their W8 (the seats, the keyboard and the mouse in the console) once 1 is in.
 5. **The hardware**: the carrier card (option A), its timing checked on the bus; then option B, the one-board Vera X.

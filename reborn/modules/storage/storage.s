@@ -12,7 +12,7 @@
 ;             MSB first; kept till it's changed.  Reads as the mode
 ;   #d      the disks, a directory each (those started: a card's opens start it): 0-f the SD cards on the SPI
 ;           devices, x the ROM disk (the paged ROM, read only), r the RAM disk (this task's banks), s the shared
-;           one (a shared segment)
+;           one (a shared segment), v the Vera X's SD card (on the VERA's own SPI controller: a card, as 0-f are)
 ;     N/data  the disk as a file of bytes, at the fd's offset (its first 4 GB), through the block buffer; writes
 ;             go to the disk at once.  A card's blocks are cached (L2_SLOTS of them, written through).  Opening a
 ;             card's starts it (E_NODEV: no card; E_BUSY: open in #S)
@@ -23,7 +23,9 @@
 ;             lines in the text (the label, the space free, the last check's results)
 ;   #f      HydraFS (hfs.s): the cards' file systems (a directory each: 0-f), or with a spec, one disk's (x, r,
 ;           s, a card's), or a directory of one (r/5)
-; SPI is bit-banged on the VIA's port B (hw.inc), which only this task touches.  The loops are the old OS's
+; SPI is bit-banged on the VIA's port B (hw.inc), which only this task touches; and the Vera X's card (v) is on the
+; VERA's SPI controller (VERA_SPI_DATA and CTRL: 12.5 MHz, 390 kHz while a card starts), which only this task touches
+; too (vid owns the rest of the chip; those two registers share nothing with its ports).  The loops are the old OS's
 ; (drivers/spi.s: 18 cycles a bit in, 33 out), unchanged: their timing is proven on the board; so is the SD card
 ; layer (drivers/sd.s).  The ROM disk is read through the kernel's ROMREAD (this module runs in place in its own
 ; bank: block n is bank n / 32, at $A000 + (n % 32) * 512); a RAM disk's block n is bank n / 16 of its banks, at
@@ -42,6 +44,10 @@ SPI_KEEP        = 256                                       ; A transaction's by
 L2_SLOTS        = 16                                        ; The cards' block cache: its blocks ...
 L2_HOT          = 12                                        ;   and the hot ones (used again), at most
 ROM_BLOCKS      = 256 * (PROM_BANK_SIZE / BLOCK)            ; The paged ROM's 256 banks
+VSPI_TRIES      = 100                                       ; The VERA's SPI busy looked at, at most (a byte at 390
+                                                            ;   kHz is some 7; no Vera X: busy for good, $FF)
+VSPI_SLOW       = $02                                       ; VERA_SPI_CTRL: the slow clock (390 kHz) ...
+VSPI_SELECT     = $01                                       ;   and the card selected
 
 .assert     PROM_BANK_SIZE .mod BLOCK = 0 .and BANK_SIZE .mod BLOCK = 0, error, "A block is inside one bank"
 
@@ -49,6 +55,8 @@ ROM_BLOCKS      = 256 * (PROM_BANK_SIZE / BLOCK)            ; The paged ROM's 25
 port:       .res        1                                   ; Port B: the device selected, SCLK low, MOSI high
 sp_out:     .res        1                                   ; (spi_xfer's)
 sp_in:      .res        1
+vbus:       .res        1                                   ; <> 0 (bit 7): the SPI calls are the VERA's (disk v's)
+vslow:      .res        1                                   ;   and its clock slow (VSPI_SLOW: a card starting)
 dev:        .res        1                                   ; The SPI device
 n:          .res        2                                   ; A transfer's count (1-256: n = 0 for 256)
 src:        .res        2
@@ -175,6 +183,7 @@ init:
 ; Select device dev for a transaction, in its mode (mode 3: SCLK high before the select, so the first bit's store is
 ; a falling edge).  port keeps SCLK low, as the loops want.  Modifies: .A, .X
 spi_on:
+            stz         vbus                                ; (#S's devices: the VIA's)
             ldx         dev
             txa
             asl
@@ -203,8 +212,11 @@ spi_off:
 :
             rts
 
-; Select device .A (0-15), in mode 0 (an SD card's).  Modifies: .A
+; Select device .A (0-15; DISK_V: the VERA's card), in mode 0 (an SD card's).  Modifies: .A
 spi_select:
+            cmp         #DISK_V
+            beq         vspi_select
+            stz         vbus
             asl
             asl
             asl
@@ -216,6 +228,8 @@ spi_select:
 
 ; Deselect (the device keeps its number; the enable goes high).  Keeps .A, .X, .Y
 spi_deselect:
+            bit         vbus
+            bmi         vspi_deselect
             pha
             lda         port
             ora         #SPI_CSB
@@ -224,9 +238,49 @@ spi_deselect:
             pla
             rts
 
+; The VERA's SPI (disk v): selected (vbus set), deselected, a byte sent and the one back (received: $FF sent).
+; vslow its clock (slow while a card starts).  Keep .X, .Y; N/Z from the byte back (as spi_recv)
+vspi_select:
+            lda         vslow
+            ora         #VSPI_SELECT
+            sta         VERA_SPI_CTRL
+            lda         #$80
+            sta         vbus
+            rts
+
+vspi_deselect:
+            pha
+            lda         vslow
+            sta         VERA_SPI_CTRL
+            pla
+            rts
+
+vspi_recv:
+            lda         #$FF
+vspi_xfer:
+            phx
+            sta         VERA_SPI_DATA
+            ldx         #VSPI_TRIES
+:
+            bit         VERA_SPI_CTRL                       ; (Busy: bit 7)
+            bpl         :+
+            dex
+            bne         :-
+            lda         #$FF                                ; (Busy for good: no Vera X, as no card answers)
+            plx
+            ora         #0
+            rts
+:
+            lda         VERA_SPI_DATA
+            plx
+            ora         #0
+            rts
+
 ; Send .A and return the byte received meanwhile.  Keeps .X, .Y.  (The bit's store drops SCLK for the next one, so
 ; there's no store of its own for SCLK low)
 spi_xfer:
+            bit         vbus
+            bmi         vspi_xfer
             phx
             phy
             sta         sp_out
@@ -259,6 +313,8 @@ spi_xfer:
 
 ; Receive a byte (sending $FF: MOSI high).  OUT: .A, and N/Z from it.  Keeps .X, .Y
 spi_recv:
+            bit         vbus
+            bmi         vspi_recv
             phx
             phy
             ldy         port                                ; (SCLK low, MOSI high)
@@ -295,6 +351,16 @@ spi_recv_n:
             iny
             cpy         n
             bne         :-
+            rts
+
+; vbus for disk dk: the VERA's (v) or the VIA's.  Modifies: .A
+spi_bus:
+            stz         vbus
+            lda         dk
+            cmp         #DISK_V
+            bne         :+
+            dec         vbus
+:
             rts
 
 ; .A * 8 clocks with nothing selected and MOSI high (an SD card needs 74 before it starts).  Modifies: .A
@@ -562,6 +628,8 @@ SD_TOKEN_TRIES  = 4000                                      ; Bytes to wait for 
 ; or C = 1, .A = the error (its state 0).  Modifies: .A, .X, .Y
 sd_init:
             ldx         dk
+            cpx         #SPI_DEVS
+            bcs         :+
             lda         spi_open,X                          ; (Open in #S: not a card's now)
             beq         :+
             lda         #E_BUSY
@@ -570,6 +638,9 @@ sd_init:
 :
             stz         d_state,X
             jsr         blk_forget                          ; (It may be another card now)
+            lda         #VSPI_SLOW                          ; (The VERA's: slow, as a card starts)
+            sta         vslow
+            jsr         spi_bus
             lda         #10                                 ; 80 clocks, nothing selected
             jsr         spi_idle_clocks
             lda         dk
@@ -658,17 +729,20 @@ sd_init:
             ldx         dk
             sta         d_state,X
             jsr         sd_end
+            stz         vslow                               ; (The VERA's clock fast from now)
             clc
             rts
 
 sd_no_card:
             jsr         sd_end
+            stz         vslow
             lda         #E_NODEV
             sec
             rts
 
 sd_refused:
             jsr         sd_end
+            stz         vslow
             lda         #E_MEDIA
             sec
             rts
@@ -1356,7 +1430,10 @@ l2_find:
             stz         l2_card
             lda         dk
             cmp         #SPI_DEVS
-            bcs         @none
+            bcc         :+
+            cmp         #DISK_V                             ; (The Vera X's is a card too)
+            bne         @none
+:
             dec         l2_card
             ldx         #L2_SLOTS - 1
 @slot:
@@ -1592,7 +1669,10 @@ disk_start:
             lda         d_state,X
             bne         @ok
             cpx         #SPI_DEVS
-            bcs         @none
+            bcc         :+
+            cpx         #DISK_V
+            bne         @none
+:
             jmp         sd_init
 
 @ok:
@@ -1828,7 +1908,10 @@ c_init:
             lda         z:srv_id
             sta         dk
             cmp         #SPI_DEVS
-            bcs         @done                               ; (Not a card: nothing to do)
+            bcc         :+
+            cmp         #DISK_V
+            bne         @done                               ; (Not a card: nothing to do)
+:
             jsr         blk_forget
             FAR2        hfs_forget                          ; (Another card may be in it now)
             jmp         sd_init
@@ -1981,11 +2064,14 @@ ram_disk:
             lda         z:srv_id
             sta         dk
             cmp         #DISK_R
-            bcs         :+
+            bcc         :+
+            cmp         #DISK_S + 1
+            bcc         @ram
+:
             lda         #E_INVAL
             sec
             rts
-:
+@ram:
             clc
             rts
 
@@ -2440,6 +2526,6 @@ s_blocks:   .byte       " blocks", LF, 0
 s_banks:    .byte       "banks $", 0
 s_to:       .byte       "-$", 0
 s_segment:  .byte       "segment ", 0
-s_disks:    .byte       "0123456789abcdefxrs"                ; (By disk: its name)
+s_disks:    .byte       "0123456789abcdefxrsv"                ; (By disk: its name)
 
 .include "srvlib.s"
