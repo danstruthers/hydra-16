@@ -152,7 +152,7 @@ const RC_LINES = [
   ["~ a a && echo and; ~ a b || echo or","and\nor"],
   ["cat /nothing; echo status $status","cat: /nothing: not found\nstatus 1"],
   ["echo /rom/lib/n*","/rom/lib/namespace"],
-  ["echo /rom/lib/*","/rom/lib/basic /rom/lib/edit /rom/lib/font /rom/lib/forth /rom/lib/hylang /rom/lib/namespace /rom/lib/profile /rom/lib/shell"],
+  ["echo /rom/lib/*","/rom/lib/as /rom/lib/basic /rom/lib/edit /rom/lib/font /rom/lib/forth /rom/lib/hylang /rom/lib/namespace /rom/lib/profile /rom/lib/shell"],
   ["echo 'no*match'*","no*match*"],
   ["cd /rom/lib; pwd; cd","/rom/lib"],
   ["rc -c 'echo sub $x'","sub a b c"],
@@ -168,12 +168,12 @@ const RC_LINES = [
   ["echo (a","rc: syntax error"],
   ["whatis echo x; q=('it''s' '' a.b); whatis q","/bin/echo\nx=(a b c)\nq=('it''s' '' a.b)"],
   ["bind '#n' /mnt; ls /mnt","null\nzero\nkmesg"],
-  ["ls /rom/lib","basic/\nedit/\nfont/\nforth/\nhylang/\nnamespace\nprofile\nshell"],
+  ["ls /rom/lib","as/\nbasic/\nedit/\nfont/\nforth/\nhylang/\nnamespace\nprofile\nshell"],
   ["cat /bin/echo >/ram/hi; cd /ram; hi from dot; cd","from dot"],
   ["cat /nothing >[2]/ram/e; cat /ram/e","cat: /nothing: not found"],
   ["cat /nothing |[2] cat >/ram/p; echo -n 'p: '; cat /ram/p","p: cat: /nothing: not found"],
   ["echo $task $#path $path # a comment","2 2 . /bin"],
-  ["path=(); ls; path=(. /bin); ls /rom/lib","rc: ls: not found\nbasic/\nedit/\nfont/\nforth/\nhylang/\nnamespace\nprofile\nshell"],
+  ["path=(); ls; path=(. /bin); ls /rom/lib","rc: ls: not found\nas/\nbasic/\nedit/\nfont/\nforth/\nhylang/\nnamespace\nprofile\nshell"],
   ["! ~ a b && echo not; echo $status","not\n"],
 ];
 
@@ -185,7 +185,7 @@ const HYSH_RC = RC_LINES.filter(([l]) => l[0] !== '{' &&
   !/^(echo \$"x|echo x\^|echo \$x\(2-\)|rc -c 'echo sub|whatis greet|whatis echo x|eval echo evaled|echo \$task)/.test(l));
 const HYSH_LINES = [
   ['(+ 1 2)', '=> 3'], ['(map (fn {x} {* x x}) {1 2 3})', '=> {1 4 9}'], ['cd /rom/lib', null, '/rom/lib'], ['pwd', '/rom/lib'],
-  ['ls | wc -l', '      8'], ['cmp namespace profile >/dev/null', null], ['(+ status 0)', '=> 1'], ['echo $status', '1'],
+  ['ls | wc -l', '      9'], ['cmp namespace profile >/dev/null', null], ['(+ status 0)', '=> 1'], ['echo $status', '1'],
   ['cd /none', '/none: not found'], ['bind -x a b', 'usage: bind [-abc] new old'], ["bind -a '#n' /mnt", null], ['ls /mnt', 'null\nzero\nkmesg'],
   ['unmount /mnt', null], ['ls /mnt', null], ['nosuch', 'rc: nosuch: not found'], ['sleep 1 &', null], ['echo $#apid', '1'],
   ['cd', null, '/'],
@@ -1294,7 +1294,7 @@ module.exports = {
           ': h ." note " . true ;', '\' h on-note sys-getpid 16 note 7 .', ': lp 10 0 do i 5 = if sys-getpid 17 note then loop ." done" ;',
           'lp', ': h2 drop false ;', '\' h2 on-note sys-getpid 18 note 1 .', 'pause 2 .', 'exit'].map(l => 'ā' + l + '\r').join(''),
       },
-      expect: ['/> argc .\n0 \n', '/> s" /rom/lib" ls-dir\nbasic edit font forth hylang namespace profile shell \n/> s" /ram/newdir" 0 =mkdir . s" /ram" ls-dir\n0 bin lib newdir \n' +
+      expect: ['/> argc .\n0 \n', '/> s" /rom/lib" ls-dir\nas basic edit font forth hylang namespace profile shell \n/> s" /ram/newdir" 0 =mkdir . s" /ram" ls-dir\n0 bin lib newdir \n' +
         '/> s" /rom" set-dir . pad 64 get-dir type\n0 /rom\n/rom> s" /none" set-dir ior>text type\nnot found\n' +
         '/rom> s" foo" s" bar" setenv s" foo" getenv type s" foo" unsetenv s" foo" getenv nip .\nbar0 \n' +
         '/rom> : h ." note " . true ;\n/rom> \' h on-note sys-getpid 16 note 7 .\nnote 16 7 \n' +
@@ -1594,6 +1594,30 @@ module.exports = {
       expect: ['% cat /ram/e.txt\nhello\nworld\n%', '% cat /ram/e.txt\nworld\nhello\n%', '% cat /ram/e.txt\nw0rld\nhell0\n%',
         '% cat /ram/e.txt\nw0rld\nhell0\n%', '% cat /ram/g.txt\nw0rld\n%', '% wc /pc/dos.txt\n      2       2       7 /pc/dos.txt\n%',
         '% wc /pc/big.txt; head -3 /pc/big.txt\n   2001    4001   20004 /pc/big.txt\nline 1000\nline 1001\nline 0001\n%'],
+    },
+    {
+      name: 'as', what: 'as, the assembler (the module as): the SDK\'s hi from /lib/as, with its include files there, the same bytes as the build\'s (ca65 and ld65), run, its labels file (-l); t_asall (tests/ram: every opcode in each mode, directives, expressions, labels, macros, conditionals, segments, .include, .incbin) the same as the build\'s; -b with .org; errors with their files and lines; a warning',
+      init: 't_rc', cycles: 200e6,
+      pc: {
+        files: () => {
+          const t = n => fs.readFileSync(path.join(__dirname, 'ram', 't_asall', n));
+          return { 't_asall.s': t('t_asall.s'), 'inc1.inc': t('inc1.inc'), 'data.bin': t('data.bin'),
+            't_asall.hyx': fs.readFileSync(path.join(__dirname, '..', 'obj', 'tests', 't_asall.hyx')),
+            'raw.s': '.org $C000\nstart:      jmp         start\n            .word       start, * - start\n',
+            'bad.s': '; bad.s\n            frob        #1\n            .error      "stop"\n            lda         (1 +\n',
+            'warn.s': '; warn.s\n            .warning    "careful"\n            rts\n' };
+        },
+      },
+      machine: {
+        input: ['echo b115200 >/dev/serctl', 'as -l /lib/as/hi.s /ram/hi; echo $status', 'cmp /ram/hi /rom/sample/hi; echo $status', '/ram/hi Ann',
+          'grep main /ram/hi.lbl', 'as /pc/t_asall.s /ram/t_asall; cmp /ram/t_asall /pc/t_asall.hyx; echo $status', 'as -b /pc/raw.s /ram/raw; xd /ram/raw',
+          'as /pc/bad.s /ram/bad; echo $status', 'as /pc/warn.s /ram/warn; echo $status; xd /ram/warn', 'as'].map(l => 'ā' + l + '\r').join(''),
+      },
+      expect: ['% as -l /lib/as/hi.s /ram/hi; echo $status\n\n%', '% cmp /ram/hi /rom/sample/hi; echo $status\n\n%', '% /ram/hi Ann\nHello, Ann!\nI\'m task ',
+        '% grep main /ram/hi.lbl\nal 000830 .main\n%', '% as /pc/t_asall.s /ram/t_asall; cmp /ram/t_asall /pc/t_asall.hyx; echo $status\n\n%',
+        '% as -b /pc/raw.s /ram/raw; xd /ram/raw\n0000000  4c 00 c0 00 c0 05 00 ',
+        '% as /pc/bad.s /ram/bad; echo $status\nas: /pc/bad.s:2: not an instruction, directive or macro: frob\nas: /pc/bad.s:3: stop\nas: /pc/bad.s:4: a bad expression\n1\n%',
+        '% as /pc/warn.s /ram/warn; echo $status; xd /ram/warn\nas: /pc/warn.s:2: warning: careful\n\n0000000  60 ', '% as\nusage: as [-bl] file.s [out]\n%'],
     },
     {
       name: 'snd', what: 'sound (#a): snd, sndctl and bell; the volume, claims (one another program holds), the shadow, tones (C, snd.h); sndctl\'s channel commands as text (patch, note, level and vol, pan by word and number, bend below 0, off, drum, reg: their registers on the chip; a channel another program has; numbers out of range, or missing); freq (a note by its frequency, its 64ths), glide, lfo, sens, noise',

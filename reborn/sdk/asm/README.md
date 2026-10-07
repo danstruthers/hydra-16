@@ -21,6 +21,9 @@ The SDK is this folder; `node build.js` also copies it, with the generated `hydr
 The calls are described in `/rom/doc/api.md` on the Hydra (the build's `obj/gen/api.md`), and the rules the
 system keeps in `docs/conventions.md`.
 
+The Hydra assembles the same sources itself: `as file.s` (`docs/using/tools.md`, "The assembler"), with this
+folder's `.inc` and `.s` files in `/lib/as`, makes the same program ca65 and ld65 make with `hyx2.cfg`.
+
 ## A program
 
 ```
