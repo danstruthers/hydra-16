@@ -1478,9 +1478,11 @@ module.exports = {
           per: n, max: o => o.clock === 2 ? 320 + 64 : 320 },
         { what: 'the same from the RAM disk, a byte', from: '<rbig', to: 'rbig>', per: n, max: 90 },
         // (A mark is seen as its text goes out on the line, at the boot's 9600: so a time here moves in steps of a
-        // character's, some 3,700 cycles, as the work before it shifts by a few.  SPAWN's own: about 45,000)
+        // character's, some 3,700 cycles, as the work before it shifts by a few.  SPAWN's own: about 45,000.  It grows
+        // with the ROM's modules, a hundred cycles or more each (October 2026: basic 169, as 106; the PSG's bigger snd,
+        // vid and play 27, from reborn's 48,991 to 49,018), so 50,000)
         { what: 'SPAWN of a module in place (#m/t_child), the caller\'s time', from: '<msp', to: 'msp>', minus: ['<b0', 'b0>'],
-          per: 1, max: 49000 },
+          per: 1, max: 50000 },
         { what: 'the same by /bin/t_child (the card\'s bin first, then #m/bin)', from: '<sp', to: 'sp>', minus: ['<b0', 'b0>'], per: 1,
           max: 110000 }];
       },

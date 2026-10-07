@@ -107,11 +107,13 @@ them all, and so does entering a program line.
 
 `SOUND ch, note, patch, vol` plays a MIDI note (60 is middle C) on one of the YM2151's channels (0-7), with an
 instrument (0-127: General MIDI's; 128-162: drums and percussion) and a volume (0-127) if they're given; `SOUND ch`
-lets the note go.  `SLEEP s` waits `s` seconds (`SLEEP .25`).  `SOUND "..."` sends the sound driver a line of
-text: its words (`"claim 255"`, `"volume 150"`, `"reset"`) and each channel's commands (`"pan 0 left"`, `"bend 0
--32"`, `"drum 9 38"`, `"freq 0 440"`, `"level 0 90"` ...: [tools.md](tools.md)).  `PLAY "t180 o4 l8 c d e f g"`
-plays a line of MML (the score language: tools.md, "Scores") on channel 0, `PLAY 2, "..."` on channel 2, and `PLAY
-"song.zsm"` a song or a score; each waits till it's played.  `BEEP` rings the bell.
+lets the note go.  With a Vera X, channels 8-23 are its PSG's voices: there a patch below 4 is a waveform (0 pulse,
+1 sawtooth, 2 triangle, 3 noise), and with no card they're silent.  `SLEEP s` waits `s` seconds (`SLEEP .25`).
+`SOUND "..."` sends the sound driver a line of text: its words (`"claim 255"`, `"volume 150"`, `"reset"`) and each
+channel's commands (`"pan 0 left"`, `"bend 0 -32"`, `"drum 9 38"`, `"freq 0 440"`, `"level 0 90"`, `"wave 8 saw"`
+...: [tools.md](tools.md)).  `PLAY "t180 o4 l8 c d e f g"` plays a line of MML (the score language: tools.md,
+"Scores") on channel 0, `PLAY 2, "..."` on channel 2 (0-7: the YM2151's), and `PLAY "song.zsm"` a song or a
+score; each waits till it's played.  `BEEP` rings the bell.
 
 ```
 10 FOR N=60 TO 72: SOUND 0,N,0,100: SLEEP .2: NEXT: SOUND 0
