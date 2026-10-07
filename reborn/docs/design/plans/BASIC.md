@@ -78,7 +78,7 @@ END FUNCTION
 | A record | `TYPE point` ... `END TYPE`, then `AS point` | Fields, each a number, a string or a record (`p.x`); records in records; arrays of records (`pts(i).x`) |
 
 * **One number type**: every number is the tower's, exact, and stored in the compact format ([NUMBERS.md](NUMBERS.md)); nothing rounds a number as it's stored.  `a / b` is a fraction when it isn't whole; `\` (integer division) and `MOD` are QuickBASIC's; `CINT` and `CLNG` round to an integer (a half to the even one, QuickBASIC's), `CSNG` and `CDBL` leave a number as it is.
-* **Shown exactly**: `PRINT`, `STR$` and the rest show every number as it is, never rounded: `1/3` as `1/3`, `2 ^ 100` whole, in the current format.
+* **Shown exactly**: `PRINT`, `STR$` and the rest show every number as it is, never rounded: `1/3` as `1/3`, `2 ^ 100` whole, in the current format.  They write it with the numbers library's `num_display`, and `VAL` and `INPUT` read with its `num_parse`, in the format `NBASE` selects (the library's: [NUMBERS.md](NUMBERS.md), "The current format").
 * **A suffix, and a number's text**: `x#` is a number's name, `#xFF` a number in base x, `#1` a file (after `PRINT`, `INPUT`, `OPEN ... AS` and the rest); `x&` a name, `&HFF` a number.
 
 ### **Control**
@@ -113,7 +113,7 @@ A block is checked as the program is read: an `IF` without its `END IF`, a `NEXT
 
 ### **Input and output**
 
-* **The console**: `PRINT` (`;`, `,`; numbers exactly, in the current format), `PRINT USING "##.##"` (numbers in a picture, strings `&`), `INPUT ["prompt";] a, b$`, `LINE INPUT a$`, `INKEY$` (a key, or `""`), `CLS`, `LOCATE row, col`, `COLOR fg[, bg]` (conio's colours, as HyForth's and hylang's terminal words), `WIDTH`, `BEEP`.
+* **The console**: `PRINT` (`;`, `,`; each number written by the numbers library's `num_display`, exactly, in its current format, with QuickBASIC's spaces around it), `PRINT USING "##.##"` (numbers in a picture, strings `&`), `INPUT ["prompt";] a, b$`, `LINE INPUT a$`, `INKEY$` (a key, or `""`), `CLS`, `LOCATE row, col`, `COLOR fg[, bg]` (conio's colours, as HyForth's and hylang's terminal words), `WIDTH`, `BEEP`.
 * **Files**, QuickBASIC's: `OPEN "path" FOR INPUT | OUTPUT | APPEND | BINARY AS #n`, `PRINT #n`, `WRITE #n` (quoted, comma-separated), `INPUT #n`, `LINE INPUT #n`, `GET #n` and `PUT #n` (bytes, in `BINARY`), `SEEK`, `EOF(n)`, `LOF(n)`, `CLOSE`, `FREEFILE`; any number of files open, the system's limit; paths through the namespace (`/sd/0/data.txt`, `/pc/x`).
 * **Files as the system has them**: `KILL` (remove), `NAME a AS b` (rename), `MKDIR`, `RMDIR`, `CHDIR`, `FILES` (a directory's names), `DIR$`.
 * **`DATA`, `READ`, `RESTORE [label]`**, as BASIC's.

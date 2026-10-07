@@ -61,8 +61,8 @@ Everything danlang's numbers have (its `reference.md`: their syntax in section 1
 | :- | :- | :- | :- | :- |
 | A number in a program's text | Every form, as now | Every form (`X = #xFF + #b0.1`), but a `#` that names a file (`PRINT #1, X`); and QuickBASIC's too: `&HFF`, `&O17`, `&B101`, exponents (`1E6`, `2.5E-3`, exact) | A word Forth doesn't read as a cell or a double (`42`, `$FF`, `123.` stay what they are) but danlang reads as a number: `1.25`, `2/3`, `#xFF`, `#16r1F`, `#c+-0`, `100000000000000000000`, onto the number stack | Text, through `num_parse` |
 | Text to a number | `(val s)` | `VAL(S$)` | `>n ( c-addr u -- )` | `num_parse` |
-| A number written | `print`, `(to-str x)` | `PRINT`, `STR$(X)` | `n.`, `n>str` | `num_print` |
-| In a base | `(to-str x base)` | `STR$(X, B$)` (`STR$(255, "x")` is `#xFF`) | `n.base ( c-addr u -- )` (`s" x" n.base`) | `num_print`'s base |
+| A number written | `print`, `(to-str x)` | `PRINT`, `STR$(X)` | `n.`, `n>str` | `num_display` |
+| In a base | `(to-str x base)` | `STR$(X, B$)` (`STR$(255, "x")` is `#xFF`) | `n.base ( c-addr u -- )` (`s" x" n.base`) | `num_display_in` |
 | The tower's functions | As now | A function each (named in [BASIC.md](BASIC.md)'s reference) | `nabs`, `truncate`, `to-fixed`, `to-rational`, `rational.n`, `rational.d`, `complex`, `nrandom`, `nfib`, `npow` | `num_abs`, `num_truncate`, `num_to_fixed` ... |
 | The tests | `num?` `int?` `fixed?` `rational?` `complex?` | A function each | `int?` `fixed?` `rational?` `complex?` (the number stack's top, a flag) | `num_kind` |
 | The bits | As now | `AND`, `OR`, `NOT` on integers of any size, and a function each for the rest | `nand`, `nor`, `nxor`, `ninvert`, `nlshift`, `nrshift`, `nbit?`, `nbytes`, `nfrom-bytes` | `num_and` ... |
@@ -71,7 +71,7 @@ Everything danlang's numbers have (its `reference.md`: their syntax in section 1
 
 Each language has a current format, which the program sets and reads: any base danlang can name (the 19 letters, `#16r`, `#[01]` and the rest, with the modifiers), as `to-str`'s base strings name them (`"x"`, `"#16r"`, `"c"`, `"#<x"`, `"#[01]"`).  Decimal at the start.
 
-* **Shown**: every number written without a base given (`print`, `PRINT`, `n.`, `num_print` with none, the REPL's values, `STR$(X)`) is written in the current format.  A base given (`(to-str x "b")`, `STR$(X, "b")`, `n.base`) still wins.
+* **Shown**: every number written without a base given (`print`, `PRINT`, `n.`, `num_display`, the REPL's values, `STR$(X)`) is written in the current format.  A base given (`(to-str x "b")`, `STR$(X, "b")`, `n.base`) still wins.
 * **Read**: every number read from text without a `#` of its own (`val`, `VAL`, `INPUT`, `>n`, `num_parse`, `read-line`'s numbers as a program converts them) is read in the current format; a number with a `#` of its own (`#xFF`) in its own.  Whether a program's own text (BASIC's lines, hylang's source) is read in it too is a question below: Forth's is (the current format is to the number stack what `BASE` is to cells), but a library read while a program has set hexadecimal would mean something else.
 * **Integers, fractions and fixed decimals, in every format**: `ff`, `-1A`; a rational, its parts in the format (`1/3`, in hexadecimal `1/3`, in binary `1/11`); a number with a radix point (`1.8` in hexadecimal is `3/2`, `0.1` in binary is `1/2`), read exactly.  A fixed decimal shown in a format other than decimal: with a radix point when it ends in that base (`0.5` in binary is `0.1`, in hexadecimal `0.8`), else as a fraction (`0.1` in hexadecimal is `1/A`): exact either way, so what's shown reads back as the same number.  (danlang writes a fixed decimal in another base as a rational only: the radix point is new, danlang's first.)
 * **Balanced and signed formats**: a balanced format's numbers have no sign (`#c+-0` is -2: its digits least first, 1 - 3 + 0), a negative base's none either; a radix point in them as danlang reads one.
@@ -82,10 +82,15 @@ The settings, a name each (named alike in every language, as the rest are; the n
 
 | | hylang | BASIC | HyForth | C |
 | :- | :- | :- | :- | :- |
-| Set it | `(number-base "x")` | `NBASE "x"` | `s" x" nbase!` | `num_base ("x")` |
-| Read it | `(number-base)`: `"x"` | `NBASE$` | `nbase@ ( -- c-addr u )` | `num_base (0)` |
+| Set it | `(number-base "x")` | `NBASE "x"` | `s" x" nbase!` | `num_set_format ("x")` |
+| Read it | `(number-base)`: `"x"` | `NBASE$` | `nbase@ ( -- c-addr u )` | `num_get_format ()` |
 
-The libraries keep no setting: each call to read or write text is given its format, and a language passes its current one.
+**The setting is the library's**, and so are the parse and display functions that use it (the user's design): the `numbers` library holds the current format (in its state block, below: a library has no memory of its own, so its state is in the program's), and every language sets and reads it through the library and reads and shows numbers through it.  So a format is selected one way and works the same way in every language:
+
+* **`num_set_format`** selects the current format (a base string, as `to-str` takes: `"x"`, `"#16r"`, `"c"`, `"#<x"`, `"#[01]"`), checking it; **`num_get_format`** gives it back.  Each language's setting (the table above) is a call of these.
+* **`num_parse`** reads a number from a string in the current format (a number with a `#` of its own in its own): every kind (integers, fractions, a radix point, fixed decimals in decimal), every form danlang reads; it gives back the number in the stored format and how many characters it used, so a caller can read numbers one after another (`INPUT a, b`, a program's text).  `num_parse_in` names a format for one call.
+* **`num_display`** writes a number as text in the current format, exactly (a fraction as a fraction, never rounded), with the format's prefix or without (a question below); `num_display_in` names a format for one call.
+* **BASIC's `PRINT`** writes every number with `num_display` (BASIC adding only QuickBASIC's spaces around it); its `STR$` too; `VAL` and `INPUT` read with `num_parse`.  hylang's `print`, `repr`, `to-str` and `val`, HyForth's `n.`, `n>str` and `>n`, and C's functions are the same calls.
 
 ### **The format numbers are stored in**
 
@@ -131,17 +136,18 @@ Most numbers a program uses are 1 to 5 bytes, as small as Microsoft's or smaller
 
 * Arithmetic: add, subtract, multiply, divide (exact), negate, absolute value, compare (-1, 0, 1), sign, equal; whole powers; quotient and remainder of integers; gcd.
 * Conversions: integer part (`truncate`), floor, round; `to-fixed` (places), `to-rational`; a rational's numerator and denominator; `complex`, and a complex number's parts; to and from 16- and 32-bit integers (for cells, `PEEK`, array indexes).
-* Text: a number read in danlang's grammar, every form of it, and written as danlang writes it, or in any base (the section above).  BASIC's exponents (`1E6`) as an option of the reader's, BASIC's alone.
+* Text: `num_parse` and `num_display` in the current format, which the library holds (`num_set_format`, `num_get_format`), and `num_parse_in` and `num_display_in` in a format named for the call: every form danlang reads, every kind, every base (the sections above).  BASIC's exponents (`1E6`) as an option of the reader's, BASIC's alone.
 * Bits, on integers of any size, in two's complement: and, or, xor, not, shifts, a bit's test.
-* Random numbers: xorshift32 (hylang's), its state the caller's: an integer below n, or a fixed decimal from 0 to 1.
+* Random numbers: xorshift32 (hylang's), its state in the library's state block: an integer below n, or a fixed decimal from 0 to 1.
 
 **`math`** (a second library module): the functions (next section).  It calls `numbers` for its arithmetic.
 
 **The interface**, as the system calls are (and made from a specification the same way, `spec/numbers.def`, so that each language's bindings are made, not written):
 
 * A library keeps a jump table after its header; a caller finds its bank with `MODINFO` as it starts (by name), and calls a routine with `XCALL` (`r15` the routine's address, `r14` the bank).
-* The arguments are in `r0`-`r13`, as a system call's are: the operands' addresses (numbers in the format, wherever the caller has them: its RAM, or the bank it has at `$8000`), the result's address and how much room it has, the precision (for `math`), a base (for text).  The answer: C clear, and the result's length in `.A`; or C set, and an error in `.A` (too big, division by zero, not a number, no room for the result, a domain error).
-* **Workspace**: the libraries work in registers, as hylang's number code does (a register is a 256-byte page, its bytes least first, with a length and a sign), so a sum or product of long numbers makes nothing till the result is written.  The caller lends the pages (eight, 2K) and names them in `r13`: hylang its reader's scratch pages, as now; BASIC and HyForth pages of their own.
+* The arguments are in `r0`-`r13`, as a system call's are: the operands' addresses (numbers in the format, wherever the caller has them: its RAM, or the bank it has at `$8000`), the result's address and how much room it has, the precision (for `math`), a format for the calls that name one.  The answer: C clear, and the result's length in `.A`; or C set, and an error in `.A` (too big, division by zero, not a number, no room for the result, a domain error).
+* **Workspace**: the libraries work in registers, as hylang's number code does (a register is a 256-byte page, its bytes least first, with a length and a sign), so a sum or product of long numbers makes nothing till the result is written.  The caller lends the pages (eight, 2K) and names them in `r13`: hylang its reader's scratch pages, as now; BASIC and HyForth pages of their own.  They're scratch: nothing is kept in them between calls.
+* **The state block**: what the library keeps between calls, in some 64 bytes of the program's that it names in `r12` (the same block for the program's life): the current format (its base string, and what it was made into: the digits, the size, balanced, least digit first, negative, the prefix shown), the precision for `math`, and the random generator's state.  `num_init` fills it (decimal, and a seed from the clock) as a program starts.
 * **Zero page**: the libraries use 16 bytes of the program's zero page, `$70`-`$7F`, as scratch during a call.  A program that calls them keeps nothing there across a call (the conventions to say so).
 * An abort point at each entry, as hylang's number code has (`n_enter`), so a result too big or no room goes back from however deep with its error.
 
@@ -195,7 +201,7 @@ A library, **`lib numbers`** (`numbers.fl`), with `math`'s words in it or in a s
 
 ### **C and assembly**
 
-* **C**: `num.h` and `lib/num.c`: `num_add (dst, room, a, b)`, `num_parse`, `num_print`, `num_sqrt (dst, room, a, digits)` ..., numbers in byte arrays in the format; each function an `XCALL` through a small piece of assembly.  A sample, `calc`, in `/rom/sample/c`.
+* **C**: `num.h` and `lib/num.c`: `num_add (dst, room, a, b)`, `num_set_format`, `num_parse`, `num_display`, `num_sqrt (dst, room, a, digits)` ..., numbers in byte arrays in the format; each function an `XCALL` through a small piece of assembly.  A sample, `calc`, in `/rom/sample/c`.
 * **Assembly**: `numbers.inc` in the SDK (`sdk/asm`), made from `spec/numbers.def`: the jump table's names and a macro for the call.
 * **rc**: a `calc` tool could put the libraries at the prompt (`calc 2/3 + 0.5`): a question below.
 
@@ -213,7 +219,7 @@ A library, **`lib numbers`** (`numbers.fl`), with `math`'s words in it or in a s
 | Step | Work | Size |
 | :--- | :--- | :--- |
 | 1 | **danlang first, and the interface**: the stored format in danlang (`to-bytes`, `from-bytes`) and JavaScript (an encoder and decoder); danlang's current format (`number-base`) and its radix point in other bases; `spec/numbers.def`; the zero page and workspace conventions; `XCALL`'s cost measured | M |
-| 2 | **`numbers`**: hylang's number code taken out into a library on the stored format, its text routines given a format each call (the radix point added); `t_num` and the cross-check | L |
+| 2 | **`numbers`**: hylang's number code taken out into a library on the stored format; its state block, the current format, `num_parse` and `num_display` (the radix point added); `t_num` and the cross-check | L |
 | 3 | **hylang on `numbers`**: its objects in the stored format, its built-ins through the library, `number-base`; its suites, the cross-check and its benchmarks as before | M |
 | 4 | **`math`**: danlang's functions first, then the library, and hylang's built-ins (`sqrt` ... `digits`) | M-L |
 | 5 | **HyForth's `lib numbers`** (and `lib math`): the number stack, the words, literals in the current format, `nbase!` and `nbase@`, its test file | M |
@@ -238,7 +244,7 @@ hylang goes first because its tests check every corner of the tower: the library
 3. **HyForth's Floating-Point word set** over these numbers, so standard Forth programs with floats run (reversing October's "left out")?
 4. **hylang on the shared library** (one implementation, recommended), or left with its own copy of the code?
 5. **A `calc` tool** at rc?
-6. **The current format's names**: `number-base`, `NBASE`, `nbase!` and `nbase@`, `num_base` (the table above), or others?
+6. **The current format's names**: `number-base`, `NBASE`, `nbase!` and `nbase@`, `num_set_format` and `num_get_format` (the table above), or others?
 7. **The current format and a program's own text**: does it read BASIC's lines and hylang's source too (as Forth's `BASE` reads Forth's), or only what a program reads as it runs (`VAL`, `INPUT`, `val`, `>n`), its text always decimal unless a number has a `#` of its own?  (Recommended: Forth's text yes, as `BASE`; BASIC's and hylang's no, so a library or a program means the same whatever was set.)
 8. **The prefix when shown**: `FF` (reads back in the same format) or `#xFF` (reads back in any)?
 9. **A fraction shown in another base**: with a radix point when it ends in that base and as a fraction when it doesn't (recommended: exact, and reads back), or always as a fraction (danlang's way now)?  (Exact either way: the user's answer, below, rules rounding out.)
@@ -248,3 +254,4 @@ hylang goes first because its tests check every corner of the tower: the library
 
 1. **Every number is shown exactly**, in every language: a fraction as a fraction (`1/3`), a long integer whole, never rounded for display (it was question 2: how BASIC prints a fraction).
 2. **BASIC has one number type** (BASIC.md's answers): QuickBASIC's number types accepted as names, all the same exact number.
+3. **The numbers library holds the current format**, and has the parse and display functions that read and show numbers in it (`num_parse`, `num_display`); BASIC's `PRINT` uses them, and so does every language.
