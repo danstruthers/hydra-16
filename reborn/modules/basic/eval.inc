@@ -141,9 +141,9 @@ L2C65:
 L2C81:
         ldx     CPRTYP
         bne     FRM_RELATIONAL
-        bcs     L2D02
+        jcs     L2D02
         adc     #$07
-        bcc     L2D02
+        jcc     L2D02
         adc     VALTYP
         bne     L2C92
         jmp     CAT

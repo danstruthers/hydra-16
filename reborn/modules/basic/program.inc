@@ -23,10 +23,9 @@ ERROR:
         jsr     CRDO
         jsr     OUTQUES
 L2329:
-        lda     ERROR_MESSAGES,x
-        jsr     OUTDO
-        lda     ERROR_MESSAGES+1,x
-        jsr     OUTDO
+        lda     ERROR_ADDRS,x                   ; (Its message: the table's address of it)
+        ldy     ERROR_ADDRS+1,x
+        jsr     OUTHTASC
         jsr     STKINI
         lda     #<QT_ERROR
         ldy     #>QT_ERROR
@@ -40,18 +39,26 @@ PRINT_ERROR_LINNUM:
         jsr     STROUT
         ldy     CURLIN+1
         iny
-        beq     RESTART
+        beq     L2340
         jsr     INPRT
+L2340:
+        lda     interactive                     ; (Not at the console, no OK: its line ended here)
+        bne     RESTART
+        jsr     CRDO
 
 ; ----------------------------------------------------------------------------
 ; WARM RESTART ENTRY
 ; ----------------------------------------------------------------------------
 RESTART:
         lsr     Z14
+        lda     interactive                     ; (OK: at the console only)
+        beq     L2351
         lda     #<QT_OK
         ldy     #>QT_OK
         jsr     GOSTROUT
 L2351:
+        ldx     #$FF                            ; (Direct mode while the line's read: INLIN tells it from INPUT's)
+        stx     CURLIN+1
         jsr     INLIN
         stx     TXTPTR
         sty     TXTPTR+1
@@ -135,6 +142,12 @@ PUT_NEW_LINE:
 L23D6:
         sty     HIGHDS+1
         jsr     BLTU
+        lda     LINNUM                          ; (The line's number before it, and a link that isn't 0, which
+        ldy     LINNUM+1                        ;   FIX_LINKS would take for the program's end: the buffer was in
+        sta     INPUTBUFFER-2                   ;   the zero page after Z17, Z18 and LINNUM)
+        sty     INPUTBUFFER-1
+        lda     #$FF
+        sta     INPUTBUFFER-3
         lda     STREND
         ldy     STREND+1
         sta     VARTAB
@@ -190,11 +203,10 @@ L2405:
 RET3:
         rts
 
-.include "inline.s"
-
 ; ----------------------------------------------------------------------------
 ; TOKENIZE THE INPUT LINE
 ; ----------------------------------------------------------------------------
+; (Letters outside strings, REM and DATA in either case: upper case, as the keywords and names are)
 PARSE_INPUT_LINE:
         ldx     TXTPTR
         ldy     #$04
@@ -208,6 +220,7 @@ L246C:
         beq     L24D0
         bit     DATAFLG
         bvs     L24AC
+        jsr     UPCASE_X
         cmp     #$3F
         bne     L2484
         lda     #TOKEN_PRINT
@@ -221,25 +234,32 @@ L2484:
 ; SEARCH TOKEN NAME TABLE FOR MATCH STARTING
 ; WITH CURRENT CHAR FROM INPUT LINE
 ; ----------------------------------------------------------------------------
+; (The table is past 256 bytes now, so KWPTR walks it a keyword at a time and .Y counts in a keyword)
 L248C:
         sty     STRNG2
-        ldy     #$00
-        sty     EOLPNTR
-        dey
+        stz     EOLPNTR
         stx     TXTPTR
-        dex
-L2496:
-        iny
-L2497:
-        inx
+        jsr     KW_FIRST
+L2490:
+        ldx     TXTPTR
+        ldy     #$00
 L2498:
-        lda     INPUTBUFFERX,x
+        jsr     UPCASE_X
         sec
-        sbc     TOKEN_NAME_TABLE,y
-        beq     L2496
+        sbc     (KWPTR),y
+        bne     L249E
+        iny
+        inx
+        bra     L2498
+L249E:
         cmp     #$80
         bne     L24D7
         ora     EOLPNTR
+        cmp     #FIRST_ALIAS                    ; (An alias: its keyword's token)
+        bcc     L24AA
+        sbc     #FIRST_ALIAS
+        tay
+        lda     ALIAS_MAP,y
 ; ----------------------------------------------------------------------------
 ; STORE CHARACTER OR TOKEN IN OUTPUT LINE
 ; ----------------------------------------------------------------------------
@@ -281,21 +301,53 @@ L24D0:
 ; ADVANCE POINTER TO NEXT TOKEN NAME
 ; ----------------------------------------------------------------------------
 L24D7:
-        ldx     TXTPTR
         inc     EOLPNTR
-L24DB:
-        iny
-        lda     MATHTBL+28+1,y
-        bpl     L24DB
-        lda     TOKEN_NAME_TABLE,y
-        bne     L2498
-        lda     INPUTBUFFERX,x
+        jsr     KW_NEXT
+        lda     (KWPTR)
+        bne     L2490
+        ldx     TXTPTR
+        jsr     UPCASE_X
         bpl     L24AA
 ; ---END OF LINE------------------
 L24EA:
         sta     INPUTBUFFER-3,y
         lda     #<INPUTBUFFER-1
         sta     TXTPTR
+        rts
+
+; KWPTR = the keyword table's first keyword (KW_FIRST), or the next after its own (KW_NEXT).  Keep .X
+KW_FIRST:
+        lda     #<TOKEN_NAME_TABLE
+        sta     KWPTR
+        lda     #>TOKEN_NAME_TABLE
+        sta     KWPTR+1
+        rts
+KW_NEXT:
+        ldy     #0
+:
+        lda     (KWPTR),y
+        iny
+        asl     a
+        bcc     :-
+        tya
+        clc
+        adc     KWPTR
+        sta     KWPTR
+        bcc     :+
+        inc     KWPTR+1
+:
+        rts
+
+; .A = the line's character at .X, a letter in upper case.  N and Z are .A's
+UPCASE_X:
+        lda     INPUTBUFFERX,x
+        cmp     #'a'
+        bcc     :+
+        cmp     #'z'+1
+        bcs     :+
+        and     #$DF
+:
+        ora     #0
         rts
 
 ; ----------------------------------------------------------------------------
@@ -489,18 +541,17 @@ L25E8:
         sbc     #$7F
         tax
         sty     FORPNT
-        ldy     #$FF
+        jsr     KW_FIRST                        ; (The token's keyword: KWPTR, as the tokenizer's)
 L25F2:
         dex
         beq     L25FD
-L25F5:
-        iny
-        lda     TOKEN_NAME_TABLE,y
-        bpl     L25F5
-        bmi     L25F2
+        jsr     KW_NEXT
+        bra     L25F2
 L25FD:
+        ldy     #$FF
+L25FE:
         iny
-        lda     TOKEN_NAME_TABLE,y
+        lda     (KWPTR),y
         bmi     L25CA
         jsr     OUTDO
-        bne     L25FD	; always
+        bne     L25FE	; always

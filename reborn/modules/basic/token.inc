@@ -1,3 +1,9 @@
+; ****************************************************************************
+; token.inc - the keywords (bmacros.inc): the statements (each its routine, called RTS style), the words of
+; statements and the operators, the functions (from SGN: UNFNC, by token), then EhyBASIC's short forms as aliases.
+; Some code knows the order: FOR is $81 and DATA $83 (the FOR frames, the tokenizer), the operators + to OR come just
+; before > = < (FRMEVL), and LEFT$, RIGHT$ and MID$ are the last functions (their string first: UNARY)
+
 		init_token_tables
 
 		keyword_rts "END", END
@@ -6,31 +12,32 @@
 		keyword_rts "DATA", DATA
 		keyword_rts "INPUT", INPUT
 		keyword_rts "DIM", DIM
-		keyword_rts "READ", READ
+		keyword_rts "READ", READ_
 		keyword_rts "LET", LET
 		keyword_rts "GOTO", GOTO, TOKEN_GOTO
 		keyword_rts "RUN", RUN
 		keyword_rts "IF", IF
-		keyword_rts "RSTR", RESTORE
-		keyword_rts "JSR", GOSUB, TOKEN_GOSUB
-		keyword_rts "RTN", POP
+		keyword_rts "RESTORE", RESTORE, TOKEN_RESTORE
+		keyword_rts "GOSUB", GOSUB, TOKEN_GOSUB
+		keyword_rts "RETURN", POP, TOKEN_RETURN
 		keyword_rts "REM", REM, TOKEN_REM
 		keyword_rts "STOP", STOP
 		keyword_rts "ON", ON
-		keyword_rts "WAIT", WAIT
+		keyword_rts "WAIT", WAIT_
 		keyword_rts "LOAD", LOAD
 		keyword_rts "SAVE", SAVE
 		keyword_rts "DEF", DEF
 		keyword_rts "POKE", POKE
 		keyword_rts "PRINT", PRINT, TOKEN_PRINT
-		keyword_rts "?", PRINT
 		keyword_rts "CONT", CONT
 		keyword_rts "LIST", LIST
-		keyword_rts "CLR", CLEAR
+		keyword_rts "CLEAR", CLEAR, TOKEN_CLEAR
 		keyword_rts "GET", GET
 		keyword_rts "NEW", NEW
+		keyword_rts "BYE", BYE
 
 		count_tokens
+.assert TOKEN_GOTO = $88 && NUM_TOKENS < $40, error, "FOR $81, DATA $83: the statements' order"
 
 		keyword	"TAB(", TOKEN_TAB
 		keyword	"TO", TOKEN_TO
@@ -44,8 +51,8 @@
 		keyword	"*"
 		keyword	"/"
 		keyword	"^"
-		keyword	"&"
-		keyword	"|"
+		keyword	"AND", TOKEN_AND
+		keyword	"OR", TOKEN_OR
 		keyword	">", TOKEN_GREATER
 		keyword	"=", TOKEN_EQUAL
 		keyword	"<"
@@ -76,14 +83,30 @@ UNFNC_ATN:
 		keyword_addr "ATN", ATN
 		keyword_addr "PEEK", PEEK
 		keyword_addr "LEN", LEN
-		keyword_addr "ST$", STR
+		keyword_addr "STR$", STR, TOKEN_STR
 		keyword_addr "VAL", VAL
 		keyword_addr "ASC", ASC
-		keyword_addr "CH$", CHRSTR
-		keyword_addr "LT$", LEFTSTR, TOKEN_LEFTSTR
-		keyword_addr "RT$", RIGHTSTR
-		keyword_addr "MD$", MIDSTR
+		keyword_addr "CHR$", CHRSTR, TOKEN_CHR
+		keyword_addr "LEFT$", LEFTSTR, TOKEN_LEFTSTR
+		keyword_addr "RIGHT$", RIGHTSTR, TOKEN_RIGHTSTR
+		keyword_addr "MID$", MIDSTR, TOKEN_MIDSTR
 		keyword	"GO", TOKEN_GO
+.assert TOKEN_MIDSTR = TOKEN_LEFTSTR + 2 && TOKEN_GO = TOKEN_MIDSTR + 1, error, "LEFT$, RIGHT$, MID$: the last functions"
+
+		init_aliases
+		alias	"JSR", TOKEN_GOSUB
+		alias	"RTN", TOKEN_RETURN
+		alias	"RSTR", TOKEN_RESTORE
+		alias	"CLR", TOKEN_CLEAR
+		alias	"ST$", TOKEN_STR
+		alias	"CH$", TOKEN_CHR
+		alias	"LT$", TOKEN_LEFTSTR
+		alias	"RT$", TOKEN_RIGHTSTR
+		alias	"MD$", TOKEN_MIDSTR
+		alias	"&", TOKEN_AND
+		alias	"|", TOKEN_OR
+		alias	"!", TOKEN_NOT
+.assert TOKEN_N <= $100, error, "Too many keywords for a byte's tokens"
         .segment "KEYWORDS"
 		.byte   0
 

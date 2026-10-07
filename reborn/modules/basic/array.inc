@@ -51,7 +51,7 @@ AYINT:
         ldy     #>NEG32768
         jsr     FCOMP
 MI1:
-        bne     IQERR
+        jne     IQERR
 MI2:
         jmp     QINT
 

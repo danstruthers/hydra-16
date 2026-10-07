@@ -39,7 +39,7 @@ GET:
         jsr     ERRDIR
         ldx     #<(INPUTBUFFER+1)
         ldy     #>(INPUTBUFFER+1)
-        sty     INPUTBUFFER+1
+        stz     INPUTBUFFER+1                   ; (Its end: the buffer isn't in the zero page, .Y not 0)
         lda     #$40
         jsr     PROCESS_INPUT_LIST
         rts
@@ -63,8 +63,8 @@ LCAF8:
         jsr     NXIN
         lda     INPUTBUFFER
         bne     L2ABE
-        clc
-        jmp     CONTROL_C_TYPED
+        asl     intr                            ; (Ctrl-C while it waited: BREAK, said; an empty line: the
+        jmp     CONTROL_C_TYPED                 ;   program's end, Microsoft's way, quietly)
 
 NXIN:
         jsr     OUTQUES	; '?'
@@ -75,7 +75,7 @@ LCB21:
 ; ----------------------------------------------------------------------------
 ; "READ" STATEMENT
 ; ----------------------------------------------------------------------------
-READ:
+READ_:
         ldx     DATPTR
         ldy     DATPTR+1
         .byte   $A9	; LDA #$98
@@ -110,24 +110,11 @@ PROCESS_INPUT_ITEM:
         bne     INSTART
         bit     INPUTFLG
         bvc     L2AF0
-        jsr     MONRDKEY
+        jsr     GETKEY                          ; (A key, or 0 for none: hyio.inc)
         sta     INPUTBUFFER
-; BUG: The beq/bne L2AF8 below is supposed
-; to be always taken. For this to happen,
-; the last load must be a 0 for beq
-; and != 0 for bne. The original Microsoft
-; code had ldx/ldy/bne here, which was only
-; correct for a non-ZP INPUTBUFFER. Commodore
-; fixed it in CBMBASIC V1 by swapping the
-; ldx and the ldy. It was broken on KIM,
-; but okay on APPLE and CBM2, because
-; these used a non-ZP INPUTBUFFER.
-; Microsoft fixed this somewhere after KIM
-; and before MICROTAN, by using beq instead
-; of bne in the ZP case.
         ldx     #<(INPUTBUFFER-1)
         ldy     #>(INPUTBUFFER-1)
-        beq     L2AF8	; always
+        bra     L2AF8                           ; (Microsoft's beq or bne here hung on where the buffer was)
 L2AF0:
         bmi     FINDATA
         jsr     OUTQUES

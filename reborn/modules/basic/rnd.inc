@@ -39,14 +39,9 @@ L3F01:
 GOMOVMF:
         jmp     STORE_FAC_AT_YX_ROUNDED
 
-.segment "CHRGET"
 ; ----------------------------------------------------------------------------
-; INITIAL VALUE FOR RANDOM NUMBER, ALSO COPIED
-; IN ALONG WITH CHRGET, BUT ERRONEOUSLY:
-; <<< THE LAST BYTE IS NOT COPIED >>>
-; (on all non-CONFIG_SMALL)
+; INITIAL VALUE FOR RANDOM NUMBER (copied to RNDSEED as BASIC starts: all five
+; bytes, where Microsoft's copy with CHRGET missed the last)
 ; ----------------------------------------------------------------------------
 GENERIC_RNDSEED:
-; random number seed
         .byte   $80,$4F,$C7,$52,$58
-GENERIC_CHRGET_END:

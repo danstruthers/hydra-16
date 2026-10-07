@@ -82,9 +82,8 @@ NEWSTT:
         jsr     ISCNTC
         lda     TXTPTR
         ldy     TXTPTR+1
-; BUG on AppleSoft I,
-; fixed differently on AppleSoft II (ldx/inx)
-        beq     L2683
+        cpy     #>INPUTBUFFER                   ; (Direct mode: the line buffer's)
+        beq     LC6D4
         sta     OLDTEXT
         sty     OLDTEXT+1
 LC6D4:
@@ -166,7 +165,15 @@ SETDA:
 RET2:
         rts
 
-.include "iscntc.s"
+; SEE IF CONTROL-C TYPED (the note handler's intr: hyio.inc), and if so, as STOP
+ISCNTC:
+        bit     intr
+        bmi     :+
+        rts
+:
+        stz     intr
+        lda     #0                              ; (Z = 1, C = 1: STOP's Ctrl-C)
+        sec
 ;!!! runs into "STOP"
 ; ----------------------------------------------------------------------------
 ; "STOP" STATEMENT
@@ -183,6 +190,8 @@ END2:
         bne     RET1
         lda     TXTPTR
         ldy     TXTPTR+1
+        ldx     CURLIN+1                        ; (Direct mode: nothing to CONT)
+        inx
         beq     END4
         sta     OLDTEXT
         sty     OLDTEXT+1

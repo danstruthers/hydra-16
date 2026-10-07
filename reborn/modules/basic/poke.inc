@@ -58,7 +58,7 @@ POKE:
 ; ----------------------------------------------------------------------------
 ; "WAIT" STATEMENT
 ; ----------------------------------------------------------------------------
-WAIT:
+WAIT_:
         jsr     GTNUM
         stx     FORPNT
         ldx     #$00
@@ -69,6 +69,8 @@ L3628:
         stx     FORPNT+1
         ldy     #$00
 L362C:
+        bit     intr                            ; (Ctrl-C ends the wait: NEWSTT stops the program)
+        bmi     RTS3
         lda     (LINNUM),y
         eor     FORPNT+1
         and     FORPNT

@@ -39,17 +39,10 @@ L29B1:
         jsr     OUTSP
         bne     L297E ; branch always
 
-L29B9:
-        ldy     #$00
-        sty     INPUTBUFFER,x
-        ldx     #LINNUM+1
-
+; A new line: LF (the system's), the column 0 again
 CRDO:
-        lda     #CRLF_1
-        sta     POSX
-        jsr     OUTDO
-CRDO2:
-        lda     #CRLF_2
+        stz     POSX
+        lda     #LF
         jsr     OUTDO
 
 PRINTNULLS:

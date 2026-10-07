@@ -135,6 +135,10 @@ NAMENOTFOUND:
         pha
         cmp     #<FRM_VARIABLE_CALL
         bne     MAKENEWVARIABLE
+        tsx                                     ; (Its high byte too: CONFIG_SAFE_NAMENOTFOUND's)
+        lda     STACK+2,x
+        cmp     #>FRM_VARIABLE_CALL
+        bne     MAKENEWVARIABLE
 LD015:
         lda     #<C_ZERO
         ldy     #>C_ZERO

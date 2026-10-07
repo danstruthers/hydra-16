@@ -956,6 +956,30 @@ module.exports = {
       },
     },
     {
+      name: 'basic', what: 'BASIC (EhyBASIC, Microsoft BASIC 2A: docs/basic.md) at the console: the banner, PRINT, the operators and functions, letters in either case, EhyBASIC\'s short forms (JSR, RTN, LT$, & | !) and LIST\'s full names, a program run (FOR, GOSUB, DATA, READ, INPUT, DIM, DEF FN), Ctrl-C (BREAK IN) and CONT, GET\'s key (raw), errors (direct, in a line), BYE (code 0); a pipeline into it (no banner, no OK, an error\'s line ended, its end at stdin\'s)',
+      init: 't_rc', cycles: 500e6,
+      machine: {
+        input: 'ābasic\rĀĀ' + 'PRINT "HELLO, WORLD"; 2+3*4; 10/4; 2^10\rĀ' + '? not 0; 5 & 3; 5 | 2; !1; lt$("abcd",2); chr$(65)\rĀ' +
+          '10 FOR I=1 TO 3: jsr 100: NEXT: ? "done"\rĀ' + '20 end\rĀ' + '100 ? i; i*i;: rtn\rĀ' + 'list\rĀ' + 'run\rĀ' +
+          'new\rĀ' + '10 data 3,"two": read a,b$: ? a;b$\rĀ' + '20 input "name";n$: ? "hi ";n$\rĀ' +
+          '30 dim x(9): x(9)=7: def fn d(z)=z*2: ? fn d(x(9))\rĀ' + 'run\rĀ' + 'Ann\rĀĀ' +
+          'new\rĀ' + '10 i=i+1: goto 10\rĀ' + 'run\rĀĀ' + '\u0003Ā' + 'cont\rĀĀ' + '\u0003Ā' + '? i>100\rĀ' +
+          'new\rĀ' + '10 get k$: if k$="" then 10\rĀ' + '20 ? "key ";k$;asc(k$)\rĀ' + 'run\rĀkĀĀ' + '? 1/0\rĀ' + 'x\rĀ' +
+          '30 ? 1/0\rĀ' + 'run 30\rĀ' + 'bye\r' + 'āecho $status\r' +
+          'ā{echo \'10 for i=1 to 3\'; echo \'20 ? i*10\'; echo \'30 next\'; echo run; echo \'? 1/0\'; echo \'? "end"\'} | basic; echo status $status\r',
+      },
+      expect: ['% basic\nEHYBASIC FOR THE HYDRA-16 (MICROSOFT BASIC 2A)\n', ' BYTES FREE\n\nOK\n',
+        'PRINT "HELLO, WORLD"; 2+3*4; 10/4; 2^10\nHELLO, WORLD 14  2.5  1024 \n\nOK\n',
+        '? not 0; 5 & 3; 5 | 2; !1; lt$("abcd",2); chr$(65)\n-1  1  7 -2 abA\n',
+        'list\n\n 10 FOR I=1 TO 3: GOSUB 100: NEXT: PRINT "done"\n 20 END\n 100 PRINT I; I*I;: RETURN\nOK\n',
+        'run\n 1  1  2  4  3  9 done\n\nOK\n',
+        'run\n 3 two\nname? Ann\nhi Ann\n 14 \n\nOK\n',
+        '10 i=i+1: goto 10\nrun\n\nBREAK IN 10\nOK\ncont\n\nBREAK IN 10\nOK\n? i>100\n-1 \n',
+        'run\nkey k 107 \n\nOK\n', '? 1/0\n\n?DIVISION BY ZERO ERROR\nOK\n', 'x\n\n?SYNTAX ERROR\nOK\n',
+        'run 30\n\n?DIVISION BY ZERO ERROR IN 30\nOK\nbye\n', '% echo $status\n\n%',
+        '| basic; echo status $status\n 10 \n 20 \n 30 \n\n?DIVISION BY ZERO ERROR\nend\nstatus\n%'],
+    },
+    {
       name: 'hyforth', what: 'HyForth\'s additions (docs/hyforth.md): names in lower case; words (each word\'s xt, and whether it\'s a literal, immediate, assembly or Forth); the libraries loaded (libs), one not searched (-lib) and searched again (lib, where it was), the one with lib refused, a .fs one, one a MARKER takes out; disasm (the modes, the Rockwell opcodes, a jsr to a word), see of a code word (with disasm.fl, and without), sys, the bit words, random\'s numbers; the terminal\'s sequences, form, ekey and the keys (an arrow key, a character); the sound words (notes on the YM2151, a claim, the volume); ctl (and its error); compile-only words typed (THROW -14: >r, if, .", a synonym of one, a library\'s) and compiled',
       init: 't_rc', cycles: 150e6,
       // (At 115200, so words's thousands of characters are out before the next line comes: the keys typed meanwhile
