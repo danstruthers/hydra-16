@@ -317,6 +317,10 @@ const TOOL_LINES = [
 
 // The C test's lines (as the tools test's): the C SDK's samples, the library's test (ctest: its "ok" lines), and the
 // tools in C (sort and grep)
+// The chorus sample's lines (sdk/c/samples/chorus), and the round sample's tune: each note's length, in eighths
+const CHORUS = ['Row, row, row your boat,', 'Gently down the stream.', 'Merrily, merrily, merrily, merrily,', 'Life is but a dream.'];
+const ROUND_LENS = [3, 3, 2, 1, 3, 2, 1, 2, 1, 6, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 2, 1, 6];
+
 const C_LINES = [
   ["/rom/sample/c/hello world","hello from C, world"],
   ["echo hello there | /rom/sample/c/upper","HELLO THERE"],
@@ -1519,7 +1523,7 @@ module.exports = {
     },
     {
       name: 'rom', what: 'the ROM disk: /rom (#f, spec x) walked on the Hydra, every file read back against its source (romfs/romfs.txt)',
-      init: 't_rom', cycles: 200e6,
+      init: 't_rom', cycles: 300e6,
       check(m, out) {
         const romfs = require('../tools/romfs.js'), { crc16 } = require('../tools/romimg.js');
         const files = romfs.manifest(path.join(__dirname, '..', 'romfs', 'romfs.txt')), seen = new Map(), f = [];
@@ -1617,6 +1621,85 @@ module.exports = {
       get expect() {
         return [...C_LINES.map(l => '% ' + l[0] + '\n' + (l[2] ? l[1] : (l[1] === null ? '' : l[1] + '\n') + '%')),
           '\nctest: 0 failed\n%', 'codes:\x1b[27m 61 62 80 1B\nended at 18,2\n%', '% echo $status\ninterrupt\n%'];
+      },
+    },
+    {
+      name: 'race', what: 'the race sample (sdk/c/samples/race: tasks sharing a segment) at rc: four tasks each add 1 to a counter 300 times (a read, some work, a write); with nothing to keep them apart adds are lost, with a mutex none; the barrier (ready and go)',
+      init: 't_rc', cycles: 200e6,
+      machine: { input: 'ā/rom/sample/c/race 4 300\r' },
+      expect: ['the counter: 1200 of 1200: none lost', 'wait for it, using no CPU.\n'],
+      check(m, out) {
+        const f = [], lost = out.match(/the counter: (\d+) of 1200: (\d+) adds lost/);
+        if (!lost) f.push('with nothing to keep them apart, no adds lost (no task switched between a read and its write?)');
+        const full = (out.match(/\x1b\[\d+;64H  300/g) || []).length;           // (Each task's count, 300 at the end)
+        if (full !== 8) f.push(full + ' tasks\' counts reached 300 in the two races, not 8');
+        this.notes = lost ? ['without a lock: ' + lost[2] + ' adds of 1200 lost'] : [];
+        return f;
+      },
+    },
+    {
+      name: 'chorus', what: 'the chorus sample (sdk/c/samples/chorus: the console shared) at rc: four tasks sing a line each, a letter at a time; with nothing between them the letters tangle; with a mutex each line is whole (in the order they took it); with a baton (a semaphore each, passed round) whole and in turn',
+      init: 't_rc', cycles: 200e6,
+      machine: { input: 'ā/rom/sample/c/chorus\r' },
+      expect: ['With a baton passed round, a semaphore each (wait for yours, sing, pass it on):\n' + CHORUS.join('\n') + '\n'],
+      check(m, out) {
+        const f = [], a = out.indexOf('With a mutex, held for a whole line:\n'), b = out.indexOf('\n\nWith a baton');
+        const mutex = out.slice(a, b).split('\n').slice(1);
+        if (JSON.stringify([...mutex].sort()) !== JSON.stringify([...CHORUS].sort())) f.push('with a mutex, not the four lines whole: ' + JSON.stringify(mutex));
+        const tangled = out.slice(out.indexOf('With nothing to keep them apart:\n'), a);
+        if (CHORUS.every(l => tangled.includes(l))) f.push('with nothing between them, the lines came out whole');
+        this.notes = ['with a mutex, in the order ' + mutex.map(l => CHORUS.indexOf(l) + 1).join(' ')];
+        return f;
+      },
+    },
+    {
+      name: 'philo', what: 'the philo sample (sdk/c/samples/philo: the dining philosophers, each fork a mutex, a shared segment) at rc: five tasks eat three meals each, the lower-numbered fork first, none in two hands at once; then -d, each its left fork first: a deadlock, seen, and ended (the tasks killed, their mutexes given back); then under rc -c, Ctrl-C: philo\'s handler ends it, rc -c waiting for it (then ending, before its next command)',
+      init: 't_rc', cycles: 400e6,
+      machine: { input: 'ā/rom/sample/c/philo -n 3\rā/rom/sample/c/philo -d; echo $status\r' +
+        'ārc -c \'/rom/sample/c/philo; echo after\'\rĀĀĀĀĀĀ\x03āecho $status\r' },
+      expect: ['5 philosophers ate 15 meals (3 to 3 each); a fork was in two hands 0 times.\n',
+        'Deadlock: each holds their left fork and waits for their right one', 'a fork was in two hands 0 times.\ndeadlock\n',
+        'a fork was in two hands 0 times.\n\n% echo $status\ninterrupted\n%'],
+      check(m, out) {
+        return out.slice(out.lastIndexOf('rc -c \'/rom/sample/c/philo')).includes('\nafter') ? ['rc -c went on after Ctrl-C'] : [];
+      },
+    },
+    {
+      name: 'prodcons', what: 'the prodcons sample (sdk/c/samples/prodcons: counting semaphores and a mutex, a ring in a shared segment) at rc: two producers make 20 items each, two consumers use them, each once; the producers waited for room, and the consumers for items',
+      init: 't_rc', cycles: 300e6,
+      machine: { input: 'ā/rom/sample/c/prodcons -n 20\r' },
+      expect: ['Made 40 items (their sum 60420), used 40 (their sum 60420): each once.\n', ' times.\n%'],
+      check(m, out) {
+        const w = out.match(/The producers waited for room (\d+) times; the consumers for an item (\d+) times/);
+        if (!w) return ['no waits line'];
+        this.notes = ['the producers waited ' + w[1] + ' times, the consumers ' + w[2]];
+        return +w[1] && +w[2] ? [] : ['the ' + (+w[1] ? 'consumers' : 'producers') + ' never waited'];
+      },
+    },
+    {
+      name: 'round', what: 'the round sample (sdk/c/samples/round: a barrier, then each task its own time) at rc: four tasks sing a round on YM2151 channels 0-3, an eighth 12 ticks; each voice\'s 27 notes in time (hy_sleep_until: within 5 ticks), each voice two bars after the one before',
+      init: 't_rc', cycles: 200e6,
+      machine: { input: 'ā/rom/sample/c/round 1 12\r' },
+      expect: ['Each voice sang it 1 time, its latest note late by', ' ticks.\n%'],
+      check(m, out) {
+        // (Each channel's key-ons against the tune's: its note lengths, an eighth 12 ticks, from voice 0's first,
+        // voice v's 2 bars (12 eighths) on: each within 5 ticks, a task woken waiting its turn for the CPU)
+        const f = [], tick = 3579545 / 200, lens = ROUND_LENS, on = [];
+        for (let v = 0; v < 4; v++) on.push(m.ym.keyOns.filter(k => k.startsWith('ch ' + v + ' ')).map(k => +k.match(/at cycle (\d+)/)[1]));
+        if (on.some(o => o.length !== lens.length)) return ['key-ons on channels 0-3: ' + on.map(o => o.length).join(', ') + ', not ' + lens.length + ' each'];
+        let worst = 0;
+        for (let v = 0; v < 4; v++) {
+          let at = on[0][0] + v * 12 * 12 * tick;
+          lens.forEach((len, k) => {
+            const off = (on[v][k] - at) / tick;
+            worst = Math.max(worst, Math.abs(off));
+            if (Math.abs(off) > 5) f.push('voice ' + (v + 1) + '\'s note ' + (k + 1) + ': ' + off.toFixed(1) + ' ticks from its time');
+            at += len * 12 * tick;
+          });
+        }
+        if (m.ym.lost) f.push(m.ym.lost + ' writes to the YM2151 while it was busy');
+        this.notes = ['the notes within ' + worst.toFixed(1) + ' ticks of their times'];
+        return f.slice(0, 5);
       },
     },
     {

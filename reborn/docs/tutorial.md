@@ -150,6 +150,22 @@ The console has windows, as rio has on Plan 9: each is a whole console with its 
 shows it), Ctrl-] and a digit shows that window, Ctrl-] n the next.  A window that isn't shown runs on; its output is
 kept, and shown again when you come back.  `echo $window` says which one you're in.
 
+**Tasks working together.**  The C SDK's multitasking demos start four or five copies of themselves, each in a task
+of its own, and draw what they do as they do it: memory they share (a shared segment), and semaphores to take turns
+and wait for each other.  Put them in `/bin` first, then run them one at a time (each needs the tasks):
+
+```
+/> bind -a /rom/sample/c /bin
+/> race                lost updates on a shared counter, then none with a mutex
+/> chorus              four tasks print on one console: tangled, then whole lines, then in turn
+/> philo               the dining philosophers (Ctrl-C ends it); philo -d deadlocks, and says so
+/> prodcons            producers and consumers through a ring: counting semaphores
+/> round               a four-voice round, each voice a task keeping its own time
+```
+
+[The C SDK's guide](../sdk/c/README.md#the-multitasking-demos) says what each shows, and their sources are in
+`sdk/c/samples`.
+
 ## 6. The languages
 
 HyForth is the shell already: definitions, `.s`, `words`, files with `include`, and libraries with `require`

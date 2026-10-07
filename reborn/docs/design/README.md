@@ -18,6 +18,11 @@ the reasoning and the history; what the system is now is in [the guide](../hydra
   language on the Hydra, the PSG and PCM.
 * [WINDOWS.md](plans/WINDOWS.md): text windows: screens in the console's RAM banks, a whole VT100, window groups,
   headers, footers and a bar.
+* [NUMBERS.md](plans/NUMBERS.md): one number system for every language: danlang's and hylang's (integers of any size,
+  fixed decimals, rationals, complex numbers, every base), a compact format, shared `numbers` and `math` libraries,
+  and BASIC rewritten on them.
+* [BASIC.md](plans/BASIC.md): a new BASIC for the Hydra, QuickBASIC's kind: line numbers optional, labels, blocks,
+  `SUB` and `FUNCTION`, on those numbers.
 * [SOUND.md](plans/SOUND.md): the YM2151: its library, a song player, a test song that uses the whole chip, and
   importing music from other machines.
 * [PC.md](plans/PC.md): `/pc`, a folder on the PC served over the serial port by the PC tool, which is the terminal
