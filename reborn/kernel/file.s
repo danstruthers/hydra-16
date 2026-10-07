@@ -1320,9 +1320,50 @@ K_CH_NEW_K:
             lda         #$FF
             sta         K_CH_SRV,X
             sta         K_CH_UFROM,X                        ; (Not a union directory)
+            txa                                             ; Its name: the caller's being resolved (K_RES: the
+            jsr         f_chname                            ;   name OPEN or CREATE was given, whole and clean)
+            tya
+            lsr
+            lsr
+            clc
+            adc         #>K_RES
+            sta         K_PTR2 + 1
+            tya
+            and         #3
+            lsr
+            ror
+            ror
+            sta         K_PTR2                              ; (<K_RES = 0)
+            ldy         #0                                  ; (To its 0: SPAWN makes a channel, and every cycle
+:                                                           ;   counts there)
+            lda         (K_PTR2),Y
+            sta         (K_PTR),Y
+            beq         :+
+            iny
+            cpy         #PATH_MAX + 1
+            bcc         :-
+:
             txa
             clc
             rts
+
+; K_PTR = channel .A's name (K_CH_NAME + 64 * it), in the kernel task.  Keeps .X, .Y
+f_chname:
+            pha
+            lsr
+            lsr
+            clc
+            adc         #>K_CH_NAME
+            sta         K_PTR + 1
+            pla
+            and         #3
+            lsr
+            ror
+            ror
+            sta         K_PTR                               ; (<K_CH_NAME = 0)
+            rts
+
+.assert     <K_RES = 0, error, "K_CH_NEW_K: K_RES is page-aligned"
 
 ; Device letter .A's server.  OUT: .A = its task; or C = 1, .A = E_NODEV
 K_DEV_FIND_K:

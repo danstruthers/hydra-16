@@ -4,8 +4,9 @@
 ; read back; its bank at $8000 as its ram has it; its module's header in the paged ROM; page 0 of the BIOS ROM;
 ; zeros for the I/O area; nothing past $FFFF; no writes to the ROMs), its ram (a write to a bank read back; the
 ; end), their lengths, its regs, its env (the variable it was given), its note (by name: its handler's, its code);
-; its ctl's stop and start (a spinning child: no CPU time while it's stopped, its status "stopped"; a kill ending
-; it stopped); the kernel task's and a driver's refused.
+; its fd (FD2PATH: a name whole and clean; TR_FD: an offset; the child's fd file); its ctl's stop and start (a
+; spinning child: no CPU time while it's stopped, its status "stopped"; a kill ending it stopped); the kernel task's
+; and a driver's refused.
 
 .include "hydra.inc"
 .include "hyx2.inc"
@@ -243,6 +244,88 @@ main:
             lda         fd
             jsr         CLOSE
 
+; ---- fd: FD2PATH (the name whole and clean), TASKREAD's TR_FD (its offset), and the child's fd file
+            LDR         r0, s_zero
+            lda         #O_READ
+            jsr         OPEN
+            sta         fd
+            READ_       3
+            LDR         r0, buf
+            lda         fd
+            jsr         FD2PATH
+            EXPECT_OK   "FD2PATH"
+            ldx         #7                                  ; "#n/zero" and its 0
+:
+            lda         buf,X
+            cmp         s_zclean,X
+            bne         :+
+            dex
+            bpl         :-
+:
+            txa
+            EXPECT_A    $FF, "FD2PATH: the name opened, whole and clean (#n/./zero: #n/zero)"
+            lda         fd
+            sta         r2
+            stz         r2 + 1
+            LDR         r0, buf
+            lda         #$FF
+            ldx         #TR_FD
+            jsr         TASKREAD
+            lda         buf + FI_OFFSET
+            EXPECT_A    3, "TASKREAD's TR_FD: its offset, after 3 bytes read"
+            lda         buf + FI_DEV
+            EXPECT_A    'n', "and its device"
+            lda         fd
+            jsr         CLOSE
+            LDR         r0, buf
+            lda         fd
+            jsr         FD2PATH
+            EXPECT_ERR  E_BADF, "FD2PATH of a closed fd: E_BADF"
+            PPATH_      s_fd, 0
+            POPEN_      O_READ
+            READ_       63
+            tax
+            stz         buf,X                               ; (The text, ended)
+            lda         fd
+            jsr         CLOSE
+            ldx         #s_fdtext_end - s_fdtext - 1        ; "/", then "0 rw #c "
+:
+            lda         buf,X
+            cmp         s_fdtext,X
+            bne         :+
+            dex
+            bpl         :-
+:
+            txa
+            EXPECT_A    $FF, "#p/N/fd: its directory, then fd 0, read and write, #c's ..."
+            ldx         #0                                  ; ... at #c/cons (its line's end)
+:
+            lda         buf,X
+            cmp         #LF
+            beq         :+
+            inx
+            bra         :-
+:
+            inx
+:
+            lda         buf,X
+            cmp         #LF
+            beq         :+
+            inx
+            bra         :-
+:
+            ldy         #s_cons_lf_end - s_cons_lf - 1
+:
+            lda         buf,X
+            cmp         s_cons_lf,Y
+            bne         :+
+            dex
+            dey
+            bpl         :-
+:
+            tya
+            EXPECT_A    $FF, "... named #c/cons"
+
 ; ---- refused: the kernel task's, a driver's (cons, task F)
             PPATH_      s_mem, $FF
             POPEN_      O_READ
@@ -427,3 +510,10 @@ s_stop:     .byte       "stop", LF
 s_start:    .byte       "start", LF
 s_kill:     .byte       "kill", LF
 s_stopped:  .byte       "stopped"
+s_zero:     .byte       "#n/./zero", 0
+s_zclean:   .byte       "#n/zero", 0
+s_fd:       .byte       "fd", 0
+s_fdtext:   .byte       "/", LF, "0 rw #c "
+s_fdtext_end:
+s_cons_lf:  .byte       " #c/cons", LF
+s_cons_lf_end:

@@ -247,15 +247,15 @@ call TASKREAD task impl=K_TASKREAD far
   in:     .A = a task ($FF: this one); .X = what: TR_ARGS (its arguments: ARGS_MAX bytes), TR_CWD (its current
   in:     directory: PATH_MAX + 1 bytes), TR_ENV (its environment's first variables, whole, and a 0: ENV_SIZE bytes
   in:     at most), TR_FRAME (its state and the frame it left as it was switched out: TF_SIZE bytes, TF_*) or
-  in:     TR_ENVAT (part of its environment); r0 = a buffer that big; r1 = TR_ENVAT's count (the most it copies);
-  in:     r2 = TR_ENVAT's offset
+  in:     TR_ENVAT (part of its environment), or TR_FD (its fd r2: FI_SIZE bytes, FI_*); r0 = a buffer that big;
+  in:     r1 = TR_ENVAT's count (the most it copies); r2 = TR_ENVAT's offset, or TR_FD's fd
   out:    the bytes in the buffer; .A/.X = TR_ENVAT's: the environment's bytes in use (its 0 too: it copied as many
   out:    as there are from r2, r1 at most)
-  errors: E_SRCH, E_INVAL (another what)
+  errors: E_SRCH, E_INVAL (another what), E_BADF (TR_FD: not an open fd)
   blocks: no
   hl:     .A=n .X=n r0=buf r1=count r2=n? -> buf .A/.X
-  doc:    Another task's arguments, current directory, environment or registers, as they are now: /proc's args,
-  doc:    cwd, env and regs, ps.  The kernel task copies them a byte at a time, with IRQs off for each.  An
+  doc:    Another task's arguments, current directory, environment, registers or open files, as they are now:
+  doc:    /proc's args, cwd, env, regs and fd, ps.  The kernel task copies them a byte at a time, with IRQs off for each.  An
   doc:    environment may be ENV_MAX bytes: TR_ENVAT reads one whole, a part at a time.
 
 call GETPPID task impl=K_GETPPID
@@ -545,6 +545,15 @@ call PIPE file impl=K_PIPE far
   doc:    A pipe (#|): what's written to one end is read from the other, 512 bytes held between them.  A read
   doc:    waits for something to read, and is the end (0) once no writer is left; a write waits for room, and is
   doc:    E_PIPE once no reader is left.
+
+call FD2PATH file impl=K_FD2PATH far
+  in:     .A = an fd; r0 = a buffer (PATH_MAX + 1 bytes)
+  out:    the name in the buffer, zero-terminated
+  errors: E_BADF (not an open fd)
+  blocks: no
+  hl:     .A=n r0=buf(PATH_MAX+1) -> buf=z
+  doc:    The name an fd's file was opened by (Plan 9's fd2path), whole and clean, as OPEN or CREATE made it (an
+  doc:    fd SPAWN or DUP gave shares its channel, and its name): the namespace's, or a # name; a pipe's #|/pipe.
 
 # ---- name: the namespace (BIOS ROM page 3).  Its names are found here, Plan 9's way: the longest mount point a
 # name starts with (whole elements), then that union's members in order, each with the rest of the name.  A bind
@@ -885,6 +894,13 @@ const TR_CWD          1        "TASKREAD: a task's current directory (PATH_MAX +
 const TR_ENV          2        "TASKREAD: a task's environment's first variables, whole, and a 0 (ENV_SIZE bytes at most)"
 const TR_FRAME        3        "TASKREAD: a task's state and frame (TF_SIZE bytes)"
 const TR_ENVAT        4        "TASKREAD: part of a task's environment (r1 bytes at most, from offset r2; .A/.X its bytes in use)"
+const TR_FD           5        "TASKREAD: a task's fd r2 (FI_SIZE bytes)"
+const FI_NAME         0        "TR_FD's: the name its file was opened by (PATH_MAX + 1 bytes, zero-terminated) ..."
+const FI_MODE         64       "TR_FD's: its open mode (O_*) ..."
+const FI_DEV          65       "TR_FD's: its server's device letter ..."
+const FI_QTYPE        66       "TR_FD's: its qid type (QT_DIR ...) ..."
+const FI_OFFSET       67       "TR_FD's: and its offset (4 bytes, low first)"
+const FI_SIZE         71
 const TF_STATE        0        "TR_FRAME's: the task's state (0 free, 1 ready, 2 waiting, 3 calling, 4 idle, 5 new, 6 sleeping, 7 blocked, 8 waiting for an event)"
 const TF_S            1        "TR_FRAME's: its stack pointer, as it was before the frame"
 const TF_U            2        "TR_FRAME's: the frame: U"

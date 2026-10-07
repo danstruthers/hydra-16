@@ -9,11 +9,11 @@
 ;   #m      the modules in the paged ROM, a file each: its image (its header first: SPAWN reads it); bin, the
 ;           programs alone (bound at /bin)
 ;   #p      the tasks, a directory each (its number): status (its name, state, parent, CPU time in ticks and note
-;           group) and ctl (kill, interrupt, note N; stop and start: TASKSTOP)
+;           group), ctl (kill, interrupt, note N; stop and start: TASKSTOP), args, cwd, fd (its open files: TASKREAD's
+;           TR_FD), ns, env, regs, mem, ram and note
 ;   #|      pipes: opening pipe makes a new one (its read end; for O_WRITE, its write end), and R_DUP its other end
 ;           (PIPE does both); 512 bytes each, 8 of them
 ;   #e      the environment of the task asking (the kernel keeps it: ENV_GET ...), a file a variable
-; To come: /proc's other files (args, cwd, fd, ns ...).
 
 .include "hydra.inc"
 .include "hw.inc"
@@ -2882,14 +2882,38 @@ h_ns:
             rts
 
 :
+            jsr         at_start
+            bne         ns_send
+            jsr         ns_make
+            bcc         ns_send
+            rts
+
+; fd: its current directory, then its open files, a line each, Plan 9's way: "N MODE #D OFFSET NAME" (its fd, r, w
+; or rw, its server's device letter, its offset, the name it was opened by: TASKREAD's TR_FD).  Made into nsbuf at
+; a read from the start, as ns is
+h_fd:
+            cmp         #R_READ
+            beq         :+
+            clc
+            rts
+
+:
+            jsr         at_start
+            bne         ns_send
+            jsr         fd_make
+            bcc         ns_send
+            rts
+
+; Z = 1 if the read is from the file's start
+at_start:
             lda         TASK_INBOX + RQ_OFFSET
             ora         TASK_INBOX + RQ_OFFSET + 1
             ora         TASK_INBOX + RQ_OFFSET + 2
             ora         TASK_INBOX + RQ_OFFSET + 3
-            bne         :+
-            jsr         ns_make
-            bcs         @done
-:
+            rts
+
+; nsbuf's text (nslen bytes), from the read's offset, to the client
+ns_send:
             MOVR        n, nslen
             jsr         img_left                            ; m: what to send
             lda         m
@@ -3173,6 +3197,126 @@ ns_s:
             iny
             bne         :-
 :
+            rts
+
+; r3 and r4 (32 bits, low first) onto nsbuf, in decimal.  Modifies .A, .X, r3, r4
+ns_dec:
+            lda         #0                                  ; (A 0 on the stack: the digits' end)
+            pha
+@digit:
+            ldx         #32                                 ; r3 / 10: the remainder in .A
+            lda         #0
+:
+            asl         r3
+            rol         r3 + 1
+            rol         r3 + 2
+            rol         r3 + 3
+            rol         a
+            cmp         #10
+            bcc         :+
+            sbc         #10
+            inc         r3
+:
+            dex
+            bne         :--
+            clc
+            adc         #'0'
+            pha
+            lda         r3
+            ora         r3 + 1
+            ora         r3 + 2
+            ora         r3 + 3
+            bne         @digit
+:
+            pla
+            beq         :+
+            jsr         ns_c
+            bra         :-
+:
+            rts
+
+; Task srv_id's fd text into nsbuf (nslen): its current directory, then a line for each open fd.  OUT: C = 0; or
+; C = 1, .A = the error
+fd_make:
+            stz         nslen
+            stz         nslen + 1
+            LDR         r0, chunk
+            lda         z:srv_id
+            ldx         #TR_CWD
+            jsr         TASKREAD
+            bcs         @done
+            LDR         r1, chunk
+            jsr         ns_s
+            lda         #LF
+            jsr         ns_c
+            stz         nsi                                 ; nsi: the fd
+@fd:
+            LDR         r0, chunk
+            lda         nsi
+            sta         r2
+            stz         r2 + 1
+            lda         z:srv_id
+            ldx         #TR_FD
+            jsr         TASKREAD
+            bcc         @line
+            cmp         #E_BADF                             ; (Closed: none)
+            beq         @next
+            sec
+@done:
+            rts
+
+@line:
+            lda         nsi                                 ; N
+            sta         r3
+            stz         r3 + 1
+            stz         r3 + 2
+            stz         r3 + 3
+            jsr         ns_dec
+            lda         #' '
+            jsr         ns_c
+            lda         chunk + FI_MODE                     ; r, w or rw
+            and         #O_RW_MASK
+            cmp         #O_WRITE
+            beq         :+
+            lda         #'r'
+            jsr         ns_c
+            lda         chunk + FI_MODE
+            and         #O_RW_MASK
+            cmp         #O_RDWR
+            bne         :++
+:
+            lda         #'w'
+            jsr         ns_c
+:
+            lda         #' '                                ; #D
+            jsr         ns_c
+            lda         #'#'
+            jsr         ns_c
+            lda         chunk + FI_DEV
+            jsr         ns_c
+            lda         #' '
+            jsr         ns_c
+            ldx         #3                                  ; The offset
+:
+            lda         chunk + FI_OFFSET,X
+            sta         r3,X
+            dex
+            bpl         :-
+            jsr         ns_dec
+            lda         #' '
+            jsr         ns_c
+            LDR         r1, chunk + FI_NAME                 ; The name
+            jsr         ns_s
+            lda         #LF
+            jsr         ns_c
+@next:
+            inc         nsi
+            lda         nsi
+            cmp         #FD_MAX
+            beq         :+
+            jmp         @fd
+:
+            clc
             rts
 
 ; r1 = r0 + .A
@@ -3579,6 +3723,7 @@ tree_procs:
             SRV_ENTRY   s_ctl,     1,   SK_CTL,  proc_cmds, SM_WRITE,           0
             SRV_ENTRY   s_args,    1,   SK_TEXT, gen_args,  SM_READ,            0
             SRV_ENTRY   s_cwd,     1,   SK_TEXT, gen_cwd,   SM_READ,            0
+            SRV_ENTRY   s_fd,      1,   SK_DATA, h_fd,      SM_READ,            0
             SRV_ENTRY   s_ns,      1,   SK_DATA, h_ns,      SM_READ,            0
             SRV_ENTRY   s_env,     1,   SK_DATA, h_penv,    SM_READ,            0
             SRV_ENTRY   s_regs,    1,   SK_TEXT, gen_regs,  SM_READ,            0
@@ -3630,6 +3775,7 @@ s_status:   .byte       "status", 0
 s_ctl:      .byte       "ctl", 0
 s_args:     .byte       "args", 0
 s_cwd:      .byte       "cwd", 0
+s_fd:       .byte       "fd", 0
 s_ns:       .byte       "ns", 0
 s_bind:     .byte       "bind", 0
 s_mount:    .byte       "mount", 0

@@ -134,6 +134,7 @@ int main (int argc, char* argv[])
     check (mkdir ("ctdir2", 0) == 0 && stat ("ctdir2", &st) == 0 && S_ISDIR (st.st_mode), "stat: a directory");
     fd = open ("ct.txt", O_RDONLY);
     check (fd >= 0 && fstat (fd, &st) == 0 && st.st_size == 5, "fstat");
+    check (hy_fd2path (fd, line) == 0 && strcmp (line + strlen (line) - 7, "/ct.txt") == 0, "hy_fd2path");
     close (fd);
     dir = opendir (".");
     seen = 0;

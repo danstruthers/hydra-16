@@ -36,6 +36,7 @@ int __fastcall__ hy_call (unsigned call, struct hy_regs* regs);
 int __fastcall__ fstat (int fd, struct stat* st);
 int __fastcall__ hy_dirstat (DIR* dir, struct stat* st);    /* readdir's last entry, whole */
 int __fastcall__ isatty (int fd);                           /* fd: a console (#c's cons)? */
+int __fastcall__ hy_fd2path (int fd, char* buf);            /* The name fd was opened by (HY_PATH_MAX + 1 bytes) */
 
 /* ---- The environment (rc's variables: getenv and putenv are stdlib.h's) */
 

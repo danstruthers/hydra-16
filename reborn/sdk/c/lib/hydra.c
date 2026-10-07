@@ -1,6 +1,6 @@
 /*
 ** hydra.c - hydra.h's calls of the Hydra's own (on hy_call): the tick, sleeping, tasks and exit statuses,
-** semaphores, the namespace, RAM banks, error texts.  A failed call returns -1 (errno and _oserror set: hy_call).
+** semaphores, the namespace, an fd's name, RAM banks, error texts.  A failed call returns -1 (errno and _oserror set: hy_call).
 */
 
 #include <stdio.h>
@@ -158,6 +158,15 @@ int __fastcall__ hy_unmount (const char* new, const char* old)
     r.r[0] = (unsigned) new;
     r.r[1] = (unsigned) old;
     return hy_call (HY_UNMOUNT, &r) ? -1 : 0;
+}
+
+/* ---- Files */
+
+int __fastcall__ hy_fd2path (int fd, char* buf)
+{
+    r.a = fd;
+    r.r[0] = (unsigned) buf;
+    return hy_call (HY_FD2PATH, &r) ? -1 : 0;
 }
 
 /* ---- RAM banks */

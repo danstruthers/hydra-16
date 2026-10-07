@@ -909,7 +909,7 @@ module.exports = {
       init: 't_dev', modules: ['t_child'], cycles: 40e6,
     },
     {
-      name: 'proc', what: '/proc/N\'s mem (its RAM, bank, ROMs, the I/O area), ram (its banks), regs, env and note; ctl\'s stop and start; the kernel task\'s and a driver\'s refused',
+      name: 'proc', what: '/proc/N\'s mem (its RAM, bank, ROMs, the I/O area), ram (its banks), regs, env, note and fd (FD2PATH, TR_FD); ctl\'s stop and start; the kernel task\'s and a driver\'s refused',
       init: 't_proc', modules: ['t_child'], cycles: 40e6,
     },
     {
