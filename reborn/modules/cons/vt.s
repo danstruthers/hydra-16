@@ -11,7 +11,8 @@
 ; entries, not the rows: a row that goes off the top of the whole screen (or of a region at its top) joins the
 ; scrollback, and the oldest scrollback row comes in, blanked, at the region's bottom.  A window's size is the
 ; layout's (cons.s: the smaller of the terminals it's shown on; 127 x 64 at most), the pool's other rows its
-; scrollback: 40 at 80 x 24.  A resize turns the ring (vt_resize), as xterm keeps the cursor's row: the scrollback's
+; scrollback: 40 at 80 x 24.  Its history (wctl's history N, W6c), more: sets of 64 rows, three banks each like the
+; pool's (vw_hb), a ring the scrollback's oldest row is copied into as it goes round (hist_put).  A resize turns the ring (vt_resize), as xterm keeps the cursor's row: the scrollback's
 ; rows come down onto a taller screen, a shorter one's rows go off its top into it.
 ;   Its state (the parser's, the cursor, the margins, the rendition, the modes, the character sets, the saved
 ; cursor, the tab stops, the map) is vs_*; each window's is kept in vt_save, a page each, and loaded (vt_load) as
@@ -46,6 +47,7 @@
 .include "cons.inc"
 
 POOL            = WIN_ROWS      ; A window's rows: a plane's (128 cells each)
+HIST_MAX        = 128           ; A window's history's rows, at most (two sets of 64: its lines then fit a byte)
 VT_NPAR         = 16            ; A sequence's numbers, at most
 VT_RAW          = 40            ; A sequence's bytes kept, to pass it on as it came
 VS_PAGE         = 256           ; A window's state in vt_save
@@ -233,7 +235,7 @@ cell_c:     .res        1                                   ; cell_get's: the ch
 cell_a:     .res        1
 cell_f:     .res        1
 tbuf:       .res        256                                 ; /text's bytes for a read
-tlen:       .res        POOL                                ;   each of its rows' length (trailing blanks off) ...
+tlen:       .res        POOL + HIST_MAX                     ;   each of its rows' length (trailing blanks off) ...
 tc_w:       .res        1                                   ;   for this window ($FF: none) ...
 tc_n:       .res        1                                   ;   its rows
 rz_o:       .res        1                                   ; A resize: the rows it had, has ...
@@ -244,6 +246,18 @@ rz_d:       .res        1                                   ;   and those blanke
 vw_add:     .res        WIN_MAX * 2                         ; Each window's lines dropped off its oldest end (the
                                                             ;   scrollback full, a row in): the view's
 vbuf:       .res        3 * 128                             ; A row's cells (its planes'), or a line's text (vt_line)
+vw_hb:      .res        WIN_MAX                             ; Each window's history (history N): its first bank ...
+vw_hs:      .res        WIN_MAX                             ;   its sets of three (64 rows each; 0: none) ...
+vw_hh:      .res        WIN_MAX                             ;   its next row's place (full, its oldest's) ...
+vw_hn:      .res        WIN_MAX                             ;   and its rows
+hk0:        .res        1                                   ; A history row's banks, its planes' (hist_ptr's) ...
+hk1:        .res        1
+hk2:        .res        1
+hp_be:      .res        1                                   ;   a row's cells copied (hist_put's), the history's rows
+hp_n:       .res        1                                   ;   (text_row's), its mask, its sets, its window
+hp_m:       .res        1
+hp_s:       .res        1
+hp_w:       .res        1
 
 .segment "CODE2"
 ; ****************************************************************************
@@ -286,6 +300,9 @@ vt_new:
             stz         vw_add,X
             stz         vw_add + 1,X
             ldx         vt_i
+            stz         vw_hs,X                             ; (No history)
+            stz         vw_hn,X
+            stz         vw_hh,X
             txa
             jsr         lbl_at
             lda         #0
@@ -343,10 +360,7 @@ vt_lines:
             sta         vv_add
             lda         vw_add + 1,X
             sta         vv_add + 1
-            clc
-            lda         v_sbn
-            adc         v_rows
-            rts
+            jmp         lines_n
 
 ; The view filled: its rows vv_src's lines from vv_top on (past them, blank), those from vv_ma to vv_mb (either
 ; order; vv_ma $FF: none) to the row's end, reversed; its cursor at the start of its row vv_cur.  If it's shown, the
@@ -367,9 +381,7 @@ vt_view:
             lda         vv_top
             adc         vt_k
             sta         vt_j
-            clc
-            lda         v_sbn
-            adc         v_rows
+            jsr         lines_n
             cmp         vt_j
             beq         @blank
             bcc         @blank
@@ -553,7 +565,50 @@ vt_line:
             iny
             bra         :--
 :
+            jsr         banks                               ; (The window's own banks again)
             lda         vt_n
+            rts
+
+; Window .X's history: .A sets of 64 rows (0-2: HIST_MAX / 64; three banks each), empty, the one it had gone.
+; OUT: C = 0; or C = 1, .A = E_NOMEM (it has none)
+vt_history:
+            sta         hp_n
+            stx         hp_w
+            cpx         tc_w                                ; (/text's lengths found again)
+            bne         :+
+            lda         #$FF
+            sta         tc_w
+:
+            lda         vw_hs,X                             ; The old one's banks back
+            beq         :+
+            sta         hp_s
+            asl
+            adc         hp_s
+            tax
+            ldy         hp_w
+            lda         vw_hb,Y
+            jsr         BANKS_FREE
+:
+            ldx         hp_w
+            stz         vw_hs,X
+            stz         vw_hn,X
+            stz         vw_hh,X
+            lda         hp_n
+            beq         @done
+            asl
+            adc         hp_n
+            jsr         BANKS_ALLOC
+            bcs         @fail
+            ldx         hp_w
+            sta         vw_hb,X
+            lda         hp_n
+            sta         vw_hs,X
+@done:
+            clc
+            rts
+@fail:
+            lda         #E_NOMEM
+            sec
             rts
 
 ; Bracketed paste (?2004) in window .A's screen: .A <> 0, it's set
@@ -671,6 +726,20 @@ vt_free:
             bne         :+
             lda         #$FF
             sta         tc_w
+:
+            lda         vw_hs,X                             ; Its history's banks back
+            beq         :+
+            stz         vw_hs,X
+            stz         vw_hn,X
+            phx
+            sta         hp_s
+            asl
+            adc         hp_s
+            pha
+            lda         vw_hb,X
+            plx
+            jsr         BANKS_FREE
+            plx
 :
             lda         vw_abank,X
             beq         :+
@@ -824,6 +893,14 @@ vt_pump:
 ; RQ_OFFSET for RQ_COUNT (255 at most) into tbuf, then to the client.  (Each row's length is found as a read starts
 ; at 0, and kept for the reads after it)
 vt_text:
+            jsr         text_go
+            php
+            pha
+            jsr         banks                               ; (The window's own banks: the history's may be in vb0-vb2)
+            pla
+            plp
+            rts
+text_go:
             stx         vt_i
             txa
             jsr         vt_load
@@ -844,9 +921,7 @@ vt_text:
 @lengths:                                                   ; Each row's length
             lda         vt_i
             sta         tc_w
-            clc
-            lda         v_sbn
-            adc         v_rows
+            jsr         lines_n
             sta         tc_n
             stz         vt_j
 :
@@ -947,15 +1022,182 @@ vt_text:
             clc
             rts
 
-; vq = /text's row vt_j: the scrollback's, oldest first, then the screen's
+; vq = /text's row vt_j: the history's, oldest first (vb0-vb2 then its banks: banks puts the window's back), then the
+; scrollback's, then the screen's
 text_row:
+            jsr         hist_n
+            sta         hp_n
             sec
-            lda         v_sb0
-            sbc         v_sbn
+            lda         vt_j
+            sbc         hp_n
+            bcs         @pool
+            ldx         vt_w                                ; (The history's: back from its next place)
             clc
-            adc         vt_j
+            adc         vw_hh,X
+            pha
+            jsr         hist_mask
+            sta         hp_m
+            pla
+            and         hp_m
+            jsr         hist_ptr
+            lda         vr
+            sta         vq
+            lda         vr + 1
+            sta         vq + 1
+            lda         hk0
+            sta         vb0
+            lda         hk1
+            sta         vb1
+            lda         hk2
+            sta         vb2
+            rts
+@pool:
+            pha
+            jsr         banks
+            pla
+            clc
+            adc         v_sb0
+            sec
+            sbc         v_sbn
             jsr         map_row
             jmp         pool_ptr
+
+; .A = the loaded window's lines: its history's, its scrollback's, its screen's
+lines_n:
+            jsr         hist_n
+            clc
+            adc         v_sbn
+            clc
+            adc         v_rows
+            rts
+
+; .A = the loaded window's history's rows (none while its alternate screen's in use).  Modifies .X
+hist_n:
+            lda         v_alt
+            bne         :+
+            ldx         vt_w
+            lda         vw_hn,X
+            rts
+:
+            lda         #0
+            rts
+
+; .A = window .X's history's places less one (its sets * 64 - 1: a mask)
+hist_mask:
+            lda         vw_hs,X
+            asl
+            asl
+            asl
+            asl
+            asl
+            asl
+            dec         a
+            rts
+
+; vr = the loaded window's history's place .A (its row, at $8000 + 128 * its place's in its set), hk0-hk2 its
+; banks.  Modifies .X
+hist_ptr:
+            pha
+            and         #POOL - 1
+            lsr
+            ora         #$80
+            sta         vr + 1
+            lda         #0
+            ror
+            sta         vr
+            pla
+            ldx         vt_w
+            and         #POOL                               ; (Its set: 0 or 1, three banks each)
+            beq         :+
+            lda         #3
+:
+            clc
+            adc         vw_hb,X
+            sta         hk0
+            inc         a
+            sta         hk1
+            inc         a
+            sta         hk2
+            rts
+
+; The row at vq, the loaded window's scrollback's oldest going round (it's full), into its history, if it has one
+; (full, its oldest written over); a row gone is counted (vw_add, the view's)
+hist_put:
+            ldx         vt_w
+            lda         vw_hs,X
+            beq         @gone
+            lda         vw_hh,X                             ; Its next place
+            jsr         hist_ptr
+            lda         vb0                                 ; (Each plane's cells to the row's blank end, and its
+            sta         $00                                 ;   meta, through vbuf)
+            ldy         #META
+            lda         (vq),Y
+            cmp         #META
+            bcc         :+
+            lda         #META
+:
+            sta         hp_be
+            ldx         #0
+@plane:
+            lda         vb0,X
+            sta         $00
+            ldy         #META
+            lda         (vq),Y
+            sta         vbuf + META
+            ldy         hp_be
+:
+            dey
+            bmi         :+
+            lda         (vq),Y
+            sta         vbuf,Y
+            bra         :-
+:
+            lda         hk0,X
+            sta         $00
+            ldy         #META
+            lda         vbuf + META
+            sta         (vr),Y
+            ldy         hp_be
+:
+            dey
+            bmi         :+
+            lda         vbuf,Y
+            sta         (vr),Y
+            bra         :-
+:
+            inx
+            cpx         #3
+            bcc         @plane
+            ldx         vt_w                                ; Its next place; a row more, or (full) its oldest gone
+            jsr         hist_mask
+            sta         hp_m
+            lda         vw_hh,X
+            inc         a
+            and         hp_m
+            sta         vw_hh,X
+            lda         vw_hn,X
+            cmp         hp_m
+            beq         :+
+            bcs         @gone
+:
+            inc         vw_hn,X
+            rts
+@gone:
+            lda         vt_w
+            asl
+            tax
+            inc         vw_add,X
+            bne         :+
+            inc         vw_add + 1,X
+:
+            rts
+
+; The loaded window's history emptied (RIS, ED 3).  Modifies .X
+hist_clear:
+            ldx         vt_w
+            stz         vw_hn,X
+            stz         vw_hh,X
+            rts
 
 ; .A = the row at vq's characters but its trailing blanks (spaces, whatever their colours; its blank end's)
 row_chars:
@@ -2287,6 +2529,7 @@ x_ed:
             bcc         :+
             bne         @done
             stz         v_sbn
+            jsr         hist_clear
             jmp         fs_raw
 :
             pha
@@ -3256,6 +3499,7 @@ m_ed:
             cmp         #3
             bne         :+
             stz         v_sbn
+            jsr         hist_clear
 :
             stz         vt_i
             ldx         v_rows
@@ -3607,6 +3851,7 @@ reset:
             stz         v_state
             stz         v_rawn
             stz         v_sbn
+            jsr         hist_clear
             jsr         soft
             ldx         #15                                 ; The tab stops: 8, 16 ...
 :
@@ -3686,22 +3931,17 @@ scroll_up:
             lda         su_l                                ; The row in at the bottom, blank
             jsr         map_row
             jsr         pool_ptr
-            jsr         blank_row
-            lda         su_f                                ; (Into the scrollback: it's a row longer, or, full,
-            bne         :+                                  ;   its oldest gone: counted, for the view)
-            lda         v_sbn
+            lda         su_f                                ; (Into the scrollback: it's a row longer; or, full,
+            bne         @blank                              ;   its oldest, the row going round, into the history,
+            lda         v_sbn                               ;   or gone: counted, for the view)
             cmp         v_sb0
-            bcs         @drop
+            bcs         @full
             inc         v_sbn
-            bra         :+
-@drop:
-            lda         vt_w
-            asl
-            tax
-            inc         vw_add,X
-            bne         :+
-            inc         vw_add + 1,X
-:
+            bra         @blank
+@full:
+            jsr         hist_put
+@blank:
+            jsr         blank_row
             dec         su_n
             bne         @one
             jmp         cur_row

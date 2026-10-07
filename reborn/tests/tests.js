@@ -2839,6 +2839,18 @@ module.exports = {
         ' 1-21/', '  Space: mark, Enter: copy, q: leave', 'echo done\ndone\n%'],
     },
     {
+      name: 'history', what: 'a window\'s history (W6c: wctl\'s history N): 64 rows past its scrollback\'s, a hundred lines and more kept (/dev/text has them all: 105 lines, 64 without), the view\'s Home the oldest of them (copied into /dev/snarf, then a page down and back); history 0 (its rows gone: 64 lines again); history 200 refused',
+      init: 't_rc', cycles: 200e6,
+      get machine() {
+        const L = '\u0100';
+        return { input: 'āecho history 64 >/dev/wctl\r' + 'āfor(i in 1 2 3 4 5 6 7 8 9 10) for(j in 0 1 2 3 4 5 6 7 8 9) echo n $i$j\r' +
+          'āgrep -c n /dev/text; wc -l /dev/text\r' + 'ā\x1d[' + L + '\x1b[H' + L + '\x1b[6~' + L + '\x1b[5~' + L + '\r' + 'ācat /dev/snarf\r' +
+          'āecho history 0 >/dev/wctl; grep -c n /dev/text; wc -l /dev/text\r' + 'āecho history 200 >/dev/wctl\r' + 'āecho done\r' };
+      },
+      expect: ['wc -l /dev/text\n102\n    105 /dev/text\n', 'cat /dev/snarf\n% echo history 64 >/dev/wctl\n%',
+        'wc -l /dev/text\n60\n     64 /dev/text\n', 'history 200 >/dev/wctl\necho: write error: invalid argument', 'echo done\ndone\n%'],
+    },
+    {
       name: 'pcm', what: 'the Vera X\'s PCM (vid\'s /pcm and /pcmctl), at rc: its files and state; the rate (the VERA\'s nearest) and volume; raw samples from a card into the FIFO, drained; bad commands; /pcm one task\'s (another\'s pcmctl: busy); WAV files played (8 bits mono, made signed; 16 bits stereo past an odd chunk; a float one, not a song); a ZSM\'s PCM instruments (one, then one looped, stopped by the FIFO emptied: from RAM) and its claim of the PCM; one too big for RAM (from the file); the FIFO\'s bytes in order, none lost, its runs dry only at the ends',
       init: 't_rc', cycles: 150e6, jsOnly: 'the danlang emulator has no VERA yet',
       get machine() { return { input: typed(PCM_LINES), vera: { pcmLog: true }, sd: pcmCard() }; },

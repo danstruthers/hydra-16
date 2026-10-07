@@ -519,6 +519,12 @@ October 2026, on `reborn-text-windows` (reborn's `docs/status.md`, "The text win
 * **Shift-PgUp is taken, not watched for**, while it's bound: the window's decoder drops it, as it isn't the program's (Ctrl-Tab's bytes reach no program anyway).  In the view it's the view's own PgUp.
 * **The footer says where it is**: `%y`, a chrome code, is the shown view's place; the view's own footer format carries it and the keys' hint.
 
+### **As built: W6c**
+
+* **History is a ring of its own, not more pool.**  The pool's rows are all in one set of three banks, and every row the parser and the painters touch is found there; history rows live in other banks, so they're copied in as they leave the pool (the scrollback full, its oldest going round), and read only by `/text` and the view (`text_row`).  The copy is the row's cells to its blank end, a plane at a time through a RAM buffer.
+* **128 rows at most** (two sets): a window's lines, history, scrollback and screen, then fit a byte, as the view counts them; and two sets are six banks, which two RAM modules can spare for a window or two.
+* **`history N` empties it** each time (a smaller or larger ring is a new one); the alternate screen shows none, as it has no scrollback either.
+
 ### **Decisions**
 
 The user's answers to the plan's questions, 2026-10-07:

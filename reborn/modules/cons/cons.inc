@@ -73,6 +73,7 @@ VM2_BPM         = $04           ;   and bracketed paste (?2004: the console's, f
 ; ---- vt.s's, for cons.s (FAR2)
 .global     vt_init, vt_keymodes, vt_new, vt_free, vt_write, vt_put, vt_pump, vt_text, vt_resize, vt_size, vt_cursor
 .global     vt_paste, vt_lines, vt_view, vt_line, vbuf          ; (W6: the paste's mode; the scrollback's view)
+.global     vt_history                                      ; (A window's history)
 .global     vv_w, vv_src, vv_top, vv_cur, vv_ma, vv_mb, vv_add  ; The view's (cons.s's), vt_view's and vt_lines'
 .global     v_cols, v_rows, v_leds                          ; (The loaded window's: chr_render's %c, %r, %L)
 .global     ans_n, ans_r, ans_buf, lbl_buf                 ; Each window's answers, its label

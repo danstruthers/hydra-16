@@ -158,6 +158,7 @@ arrows and Enter).  The keys can be changed: `echo key prefix ctrl-a >/dev/wctl`
 screen's.  `/dev/snarf` is the console's cut buffer, one for every window: `echo date >/dev/snarf`, then Ctrl-] y
 in any window types it there.  Ctrl-] [ (or Shift-PgUp) looks back through a window's scrollback: the arrows and
 PgUp move, Space marks a line, Enter copies the lines from it to the cursor into `/dev/snarf`, q goes back.
+`echo history 128 >/dev/wctl` keeps 128 more lines in that window.
 
 **Tasks working together.**  The C SDK's multitasking demos start four or five copies of themselves, each in a task
 of its own, and draw what they do as they do it: memory they share (a shared segment), and semaphores to take turns

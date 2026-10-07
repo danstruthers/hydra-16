@@ -32,8 +32,9 @@
 ;   /wctl       new (a window), current N (window N shown); the chrome (W4): bar top, bar bottom, bar off, bar FORMAT
 ;               (console-wide), header FORMAT, footer FORMAT, header on|off, footer on|off, chrome screen|serial|both
 ;               on|off [bar] [header] [footer], status TEXT, monitor on|off (the window's), default header FORMAT,
-;               default footer FORMAT, default chrome ... (new windows', and those still as the defaults were); key
-;               KEY ACTION, key prefix KEY (the keys: below; console-wide).  It reads as the windows, a line each (*
+;               default footer FORMAT, default chrome ... (new windows', and those still as the defaults were); history
+;               N (the window's rows past its scrollback's, 64 at a time, 128 at most; emptied); key KEY ACTION, key
+;               prefix KEY (the keys: below; console-wide).  It reads as the windows, a line each (*
 ;               the shown one)
 ;   /label      the window's title (OSC 0 and 2 write it too), read and written whole; empty: its program's name
 ;   /wnew       a read waits for the user's Ctrl-] c, then makes a window, shown, and gives its number (init's: it
@@ -6214,6 +6215,32 @@ key_spec:
             sec
             rts
 
+; history N: the window's history, N rows past its scrollback's (64 at a time: N rounded up; 128 at most; 0 none),
+; empty (vt.s's vt_history)
+c_history:
+            lda         z:srv_argn
+            cmp         #1
+            bne         @inval
+            lda         srv_arg + 1
+            bne         @inval
+            lda         srv_arg
+            cmp         #128 + 1
+            bcs         @inval
+            adc         #63                                 ; (Its sets of 64)
+            lsr
+            lsr
+            lsr
+            lsr
+            lsr
+            lsr
+            ldx         z:srv_id
+            FAR2        vt_history
+            rts
+@inval:
+            lda         #E_INVAL
+            sec
+            rts
+
 ; Is the word at p the string at .A/.X?  OUT: Z = 1 yes.  Modifies .A, .Y, m
 word_is:
             sta         m
@@ -7355,6 +7382,7 @@ wctl_cmds:
             .word       s_status_w, c_status
             .word       s_monitor_w, c_monitor
             .word       s_key_w, c_key
+            .word       s_history_w, c_history
             .word       0
 ser_cmds:
             .word       s_b300, c_b300
@@ -7385,6 +7413,7 @@ s_chrome_w: .byte       "chrome", 0
 s_status_w: .byte       "status", 0
 s_monitor_w: .byte      "monitor", 0
 s_key_w:    .byte       "key", 0
+s_history_w: .byte      "history", 0
 s_prefix_w: .byte       "prefix", 0
 s_ctab_w:   .byte       "ctrl-tab", 0
 s_cstab_w:  .byte       "ctrl-shift-tab", 0
