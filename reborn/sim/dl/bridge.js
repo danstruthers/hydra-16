@@ -59,6 +59,7 @@ function writeSpec(t, m, opt, dir, extra) {
   if (m.acia === 'wdc') set('ac-wdc', 'T');
   if (m.clock !== undefined) set('clock-mhz', m.clock);
   if (m.ymResetDelay) set('ym-resetdelay', m.ymResetDelay);
+  if (m.ymLog) set('ym-log', 'T');
   if (m.gpioIn !== undefined) set('opt-portain', m.gpioIn);
   if (m.ca1) out.push('(ca1-setup ' + dlList([...m.ca1].sort((a, b) => a - b)) + ')');
   for (const [a, size] of Object.entries(m.i2c || {})) out.push('(i2c-device ' + (+a) + ' ' + size + ')');
@@ -139,7 +140,7 @@ async function runDl(t, machine, opt, extra) {
     cpu: { cyc: r.cycles, halted: r.halted || '' },
     out,
     iOffTop: r.ioff,
-    ym: { keyOns: r.keyOns, lost: r.ymLost },
+    ym: { keyOns: r.keyOns, lost: r.ymLost, regs: Uint8Array.from(r.ymRegs), writes: r.ymWrites },
     i2c: { devices: new Map(Object.entries(r.i2c.devices).map(([a, mem]) => [+a, { mem: Uint8Array.from(mem) }])), stats: r.i2c.stats },
     via: { ier: r.via.ier, r: viaR },
     rtc: r.rtc ? { regs: () => r.rtc.slice() } : null,

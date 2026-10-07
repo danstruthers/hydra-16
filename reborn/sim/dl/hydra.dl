@@ -96,6 +96,8 @@
   "\"ioff\":" (js-list (map (fn {x} {js-list (list (snd x) (js-str (place (fst x))) (js-str (place (thd x))) (nth 3 x))}) (take 8 ioff-list))) ","
   "\"keyOns\":" (js-list (map (fn {i} {js-str (+ "ch " (fst (ym-keyons i)) " at cycle " (snd (ym-keyons i)))}) (range ym-nkeys))) ","
   "\"ymLost\":" ym-lost ","
+  "\"ymRegs\":" (js-list (map (fn {i} {ym-r i}) (range 256))) ","
+  "\"ymWrites\":" (js-list (map (fn {i} {js-list (ym-writes i)}) (range ym-nwrites))) ","
   "\"i2c\":{\"devices\":{" (str-join (map (fn {a} {+ "\"" a "\":" (js-list (bytes ((i2c-devs a) :mem)))}) (hash-keys i2c-devs)) ",")
     "},\"stats\":{\"starts\":" i2c-starts ",\"stops\":" i2c-stops ",\"taken\":" i2c-taken ",\"given\":" i2c-given "}},"
   "\"via\":{\"ier\":" via-ier ",\"pcr\":" (vr 12) "},"

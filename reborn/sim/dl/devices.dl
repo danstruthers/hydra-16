@@ -164,10 +164,12 @@
 (fun {via-reset} {do (dotimes {i 16} (hash-put vr [i 0])) (set! {via-ifr via-ier via-t1on via-t2on via-srleft} 0 0 NIL NIL -1) (via-portb)})
 
 ; ---- the YM2151 (port 4, IRQ line 4): busy 64 of its clocks after a data write (a write then is lost, counted); timers
-; A and B, their flags (IRQ line 4), reset as the write's busy time ends; key-ons noted
+; A and B, their flags (IRQ line 4), reset as the write's busy time ends; key-ons noted, and each write if ym-log (the
+; test's ymLog: its time, the register, the value)
 (def {ym-regs ym-reg ym-busyuntil ym-lost ym-status ym-anext ym-bnext ym-resetat ym-resetmask ym-resetdelay}
   (hash-create) 0 0 0 0 -1 -1 -1 0 0)
 (def {ym-keyons ym-nkeys} (hash-create) 0)
+(def {ym-log ym-writes ym-nwrites} NIL (hash-create) 0)
 (fun {ym-r r} {or (ym-regs r) 0})
 (fun {ym-busy} {round (/ (* 64 clock-mhz) 3.579545)})
 (fun {ym-aperiod} {round (/ (* 64 (- 1024 (+ (shl (ym-r 16) 2) (bit-and (ym-r 17) 3))) clock-mhz) 3.579545)})
@@ -186,6 +188,7 @@
 (fun {ym-write v at} {if (< at ym-busyuntil) (set! {ym-lost} (+ ym-lost 1))
   (do (set! {ym-busyuntil} (+ at (ym-busy)))
       (hash-put ym-regs [ym-reg v])
+      (if ym-log (do (hash-put ym-writes [ym-nwrites [at ym-reg v]]) (set! {ym-nwrites} (+ ym-nwrites 1))) 0)
       (if (== ym-reg 20) (ym-timers v at) 0)
       (if (and (== ym-reg 8) (pos? (bit-and v #x78))) (do (hash-put ym-keyons [ym-nkeys [(bit-and v 7) at]]) (set! {ym-nkeys} (+ ym-nkeys 1))) 0))})
 (fun {ym-irq?} {pos? (bit-and ym-status 3)})
