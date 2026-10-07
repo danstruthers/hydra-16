@@ -178,7 +178,11 @@ its line's owner, a driver; the longest stretch with interrupts off is held unde
 [The conventions' interrupts](conventions.md#interrupts).
 
 **Memory.**  A task's 32K: its program and data, a break (`BREAK`) for more; RAM banks (`BANKS_ALLOC`, 8K each through
-the window); shared segments of the shared RAM, by name (`/dev/seg`); semaphores.  [Memory](programming/memory.md).
+the window); shared segments of the shared RAM, by name (`/dev/seg`); semaphores (16, counting ones and mutexes).
+[Memory](programming/memory.md).  The C SDK's multitasking demos show tasks sharing a segment and taking turns with
+semaphores, and draw them as they go: `race` (lost updates, then a mutex), `chorus` (the console shared: a mutex, a
+baton), `philo` (the dining philosophers, and a deadlock), `prodcons` (a ring and counting semaphores) and `round` (four
+tasks singing a round, each keeping its own time).  [The demos](../sdk/c/README.md#the-multitasking-demos).
 
 **Notes** are Plan 9's signals: by name or number (`interrupt`, `kill`, `hangup` ...), to a task or its group, caught by
 a handler or not.  **Calls between tasks**: a server answers in its own task; the kernel copies between tasks (`kcopy`);
@@ -288,7 +292,8 @@ call (`XCALL`).  [Modules and programs](programming/modules.md).
 * **Debugging**: `db` on the Hydra (a program started stopped, stepped, run to breakpoints, with ld65's symbols), and
   the emulator's call traces, breaks and monitor.  [The debugger](using/tools.md#the-debugger).
 
-The samples are on the ROM disk (`/rom/sample`).  [The programmer's guide](programming/README.md) is the way in.
+The samples are on the ROM disk (`/rom/sample`; `bind -a /rom/sample/c /bin` runs the C ones by name), the C SDK's
+multitasking demos among them.  [The programmer's guide](programming/README.md) is the way in.
 
 ---
 
@@ -296,8 +301,9 @@ The samples are on the ROM disk (`/rom/sample`).  [The programmer's guide](progr
 
 **The YM2151** (8 FM channels) is the sound driver's (`snd`, task C, `#a`): `/dev/snd` takes register and value pairs,
 `/dev/sndctl` claims channels, sets the volume, and takes each channel's command as text
-(`echo note 0 60 >/dev/sndctl`), so every language and rc make sound the same way; `/dev/bell` rings.  **With a Vera X**, channels 8-23 are its PSG's
-voices (the same commands, and `wave`), and its **PCM** plays samples (`/dev/vid/pcm`, `pcmctl`).  **`play`** plays the
+(`echo note 0 60 >/dev/sndctl`), so every language and rc make sound the same way; `/dev/bell` rings.  **With a Vera
+X**, channels 8-23 are its PSG's voices (the same commands, and `wave`), and its **PCM** plays samples (`/dev/vid/pcm`,
+`pcmctl`).  **`play`** plays the
 X16's ZSM songs (their PSG and PCM parts too), scores in the score language (compiled as they play), a line of it or a
 chord (`-m`, `-c`; the X16's MML with `-x`), and WAV files.  The languages' words: C's `snd.h`, HyForth's `lib sound`,
 hylang's `(use "snd")`, BASIC's `SOUND` and `PLAY`.  In the emulator, `run.js -i --sound` plays it in a browser and
