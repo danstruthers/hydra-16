@@ -37,6 +37,9 @@
 		keyword_rts "BYE", BYE
 		keyword_rts "OPEN", OPEN_ST
 		keyword_rts "CLOSE", CLOSE_ST
+		keyword_rts "SOUND", SOUND_ST
+		keyword_rts "BEEP", BEEP_ST
+		keyword_rts "SLEEP", SLEEP_ST
 
 		count_tokens
 .assert TOKEN_GOTO = $88 && NUM_TOKENS < $40, error, "FOR $81, DATA $83: the statements' order"

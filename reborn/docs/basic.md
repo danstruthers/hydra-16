@@ -23,11 +23,11 @@ was, its labels and comments kept, but where the system wanted it changed:
 
 | What | EhyBASIC's | Now |
 | :--- | :--- | :--- |
-| Where it runs | A ROM image at `$A000`, from WOZMON | A module run in place (`HYX2_PROGRAM "basic"`, one bank, 10K of 16K), started by rc; its data and BSS from `$0400` |
+| Where it runs | A ROM image at `$A000`, from WOZMON | A module run in place (`HYX2_PROGRAM "basic"`, one bank, 11K of 16K), started by rc; its data and BSS from `$0400` |
 | Zero page | `$30`-`$FA`: its variables, the input line, and CHRGET (code that held the text pointer in its own `lda abs`) | The program's `$22`-`$7F` (91 bytes, `zeropage.inc`): what it reads through (`(zp),y`), names as zero-page addresses (`ldx #FAC`) or indexes as one block (REASON's `TEMP1`-`FAC`, the floating point's `TMPEXP`-`SERLEN`), in Microsoft's order; `TXTPTR`; the rest (flags, vectors, `CURLIN`, `OLDTEXT` ...) in the BSS |
 | CHRGET | Copied to the zero page at the cold start | In ROM, reading through `TXTPTR` (`lda (TXTPTR)`: a cycle more a character) |
 | The line buffer | In the zero page after `LINNUM` (50 bytes, while lines could be 71) | A page of its own (`$0400`, `basic.cfg`'s `LINEBUF`): 240 characters.  Microsoft's code for a buffer out of the zero page back (Applesoft's and CBM2's: direct mode by the page, the line's number before it, GET's terminator, INPUT's branch), and the new line's link made not to look like the program's end |
-| Memory | Asked for (`MEM`), and tested a byte at a time | The task's RAM from the BSS's end to `$7F00` (`BREAK`): 29,830 bytes free |
+| Memory | Asked for (`MEM`), and tested a byte at a time | The task's RAM from the BSS's end to `$7F00` (`BREAK`): about 30K free |
 | Output | `MONCOUT`, a BIOS address | fd 1, buffered (a LF or a full buffer sends it); a new line is LF alone, and the column 0 after it (Microsoft's set it to 13) |
 | Input | `MONRDKEY` a key at a time, BASIC editing the line | stdin a line at a time (`INLIN`: the console's cooked lines, edited and echoed by the console, or a file's or a pipe's: LF, CR or CR LF); its end ends BASIC in direct mode |
 | Ctrl-C | The keyboard polled at each statement | A note (`NOTIFY`): the handler sets `intr`, which each statement checks (`ISCNTC`), and a wait for a line or WAIT's loop ends at; at the prompt it's a new line, in INPUT `BREAK IN n` |
@@ -86,10 +86,31 @@ Each channel is an input source as stdin and LOAD's file are (an fd and a 128-by
 reads through the same INLIN.  Microsoft's INPUT took its flag from `.Y`, the buffer's high byte, 0 in the zero page:
 with the buffer in RAM it gave `?SYNTAX ERROR` for a bad answer, and now it's `?REDO FROM START` again.
 
+## Sound: SOUND, BEEP, SLEEP
+
+Reviewed against C's `snd.h` (`snd_note`, `snd_patch`, `snd_vol`, `snd_off`, `snd_claim`, `snd_volume` ...),
+HyForth's `sound.fl` and hylang's `snd-` functions (the channel first; MIDI notes, 60 middle C; patches 0-162),
+and against BASICs' (Commodore's `SOUND voice,freq,duration`, GW-BASIC's `SOUND freq,duration`, the X16's `FMNOTE`
+and the like).  Every new keyword is a name a program can't use, found even inside longer names (`PANEL` would be
+`PAN` and `EL`), so sound is one statement, not one for each of `snd_*`; and the system's units: MIDI notes,
+seconds.
+
+* `SOUND ch, note [, patch [, vol]]`: on channel `ch` (0-7) MIDI note `note` (0-127), its patch (0-162) and its
+  volume (0-127) first if they're given: one write of the driver's commands to `/dev/snd`, so no other program's
+  comes between them.  `SOUND ch`: its note off (the release).  Drums are patches 128-162.
+* `SOUND "word [n]"`: a line for `/dev/sndctl`, the driver's own words: `"claim 255"`, `"release 255"`, `"volume 150"`,
+  `"reset"`.  Its errors are the driver's (`?INVALID ARGUMENT ERROR`; another program's channel, `?BUSY ERROR`).
+* `BEEP`: the console's bell, sent at once.
+* `SLEEP s`: `s` seconds, as rc's and hylang's `sleep` (to the tick, 5 ms; up to 163 s), the output sent first;
+  Ctrl-C ends it (and the program).
+
+Not here, for keywords' sake: pan, bend and General MIDI's drum numbers (`snd_pan`, `snd_bend`, `snd_drum`), and
+songs (`snd_play`: `play` at rc's prompt, or from the shell later).
+
 ## To come
 
-Sound, SYS and the system's calls, the task's RAM banks for more memory, and the shell: each reviewed against what
-the system and the other languages have before it's added.
+SYS and the system's calls, the task's RAM banks for more memory, and the shell: each reviewed against what the
+system and the other languages have before it's added.
 
 ## The test
 
@@ -97,4 +118,6 @@ the system and the other languages have before it's added.
 forms and LIST's full names, a program (FOR, GOSUB, DATA, READ, INPUT, DIM, DEF FN), Ctrl-C and CONT, GET, errors,
 BYE; a pipeline into it; in `/ram`, SAVE as text and tokenized, LOAD of each, RUN "name", a file not there, the
 text's `cat`; scripts (`basic file`, `#!/bin/basic`: codes 0 and 1); files (OPEN's three modes, PRINT#, INPUT#, GET#
-and EOF at the end, CLOSE, the file's `cat`; FILE OPEN, FILE NOT OPEN, a file not there); INPUT's REDO FROM START.
+and EOF at the end, CLOSE, the file's `cat`; FILE OPEN, FILE NOT OPEN, a file not there); INPUT's REDO FROM START;
+sound (SOUND's notes with a patch, a volume and off, SLEEP between two timed on the emulator's YM2151, BEEP's bell,
+`/dev/sndctl`'s volume kept and its error, ILLEGAL QUANTITY).

@@ -106,6 +106,8 @@ main:
             sta         ctlfd
             sta         keyfd
             sta         save_fd
+            sta         sndfd
+            sta         sndctlfd
             ldx         #SRC_N-1                            ; The sources: none but stdin
 :
             sta         src_fd,x
@@ -1072,3 +1074,156 @@ EOF_FN:
             lda         #0
             tay
             jmp         GIVAYF
+
+; ---- Sound (the YM2151, through the sound driver: /dev/snd and /dev/sndctl, as C's snd.h has them), SLEEP
+
+.bss
+sndfd:      .res        1                                   ; /dev/snd's fd ($FF: not open yet) ...
+sndctlfd:   .res        1                                   ;   and /dev/sndctl's
+sndch:      .res        1                                   ; SOUND's channel ...
+sndnote:    .res        1                                   ;   its note ...
+sndlen:     .res        1                                   ;   sndbuf's bytes so far ...
+sndbuf:     .res        12                                  ;   and the driver's pairs (3 commands, the channel first)
+.code
+
+; "SOUND" STATEMENT: SOUND ch, note [, patch [, vol]]: on channel ch (0-7) MIDI note (0-127: 60 middle C), patch
+; (0-162: General MIDI's, then drums and percussion) and volume (0-127) first if they're given (snd_note, snd_patch,
+; snd_vol); SOUND ch: its note off (snd_off); SOUND "word [n]": a line for /dev/sndctl ("claim 255", "release 255",
+; "volume 150", "reset": snd_claim, snd_release, snd_volume, snd_reset).  One write: no other program's between
+SOUND_ST:
+            cmp         #'"'
+            bne         @note
+            jsr         GETNAME                             ; (A line for /dev/sndctl)
+            lda         sndctlfd
+            bpl         :+
+            LDR         r0, s_sndctl
+            lda         #O_WRITE
+            jsr         OPEN
+            jcs         @fail
+            sta         sndctlfd
+:
+            ldy         #$FF                                ; (Its length)
+:
+            iny
+            lda         pathbuf,y
+            bne         :-
+            sty         r1
+            stz         r1 + 1
+            LDR         r0, pathbuf
+            lda         sndctlfd
+            jsr         WRITE
+            jcs         @fail
+            rts
+@fail:
+            jmp         OSERR
+@note:
+            jsr         GETBYT
+            cpx         #SND_CHANNELS
+            jcs         @iq
+            stx         sndch
+            ldy         #0
+            jsr         CHRGOT
+            cmp         #','
+            beq         @args
+            lda         #SND_R_OFF                          ; (Off)
+            ldx         #0
+            jsr         SND_PAIR
+            bra         @write
+@args:
+            jsr         COMBYTE
+            cpx         #128                                ; (128 and up: no note)
+            jcs         @iq
+            stx         sndnote
+            stz         sndlen
+            jsr         CHRGOT
+            cmp         #','
+            bne         @on
+            jsr         COMBYTE                             ; The patch
+            cpx         #SND_PATCHES
+            jcs         @iq
+            ldy         #0
+            lda         #SND_R_PATCH
+            jsr         SND_PAIR
+            sty         sndlen
+            jsr         CHRGOT
+            cmp         #','
+            bne         @on
+            jsr         COMBYTE                             ; The volume
+            cpx         #128
+            jcs         @iq
+            ldy         sndlen
+            lda         #SND_R_VOL
+            jsr         SND_PAIR
+            sty         sndlen
+@on:
+            ldy         sndlen
+            lda         #SND_R_NOTE
+            ldx         sndnote
+            jsr         SND_PAIR
+@write:
+            sty         r1                                  ; (Its bytes)
+            stz         r1 + 1
+            lda         sndfd
+            bpl         :+
+            phy
+            LDR         r0, s_snd
+            lda         #O_RDWR
+            jsr         OPEN
+            ply
+            jcs         @fail
+            sta         sndfd
+            sty         r1
+            stz         r1 + 1
+:
+            LDR         r0, sndbuf
+            lda         sndfd
+            jsr         WRITE
+            jcs         @fail
+            rts
+@iq:
+            jmp         IQERR
+
+; sndbuf at .Y: the channel's command, then command .A with .X (two pairs); .Y on past them
+SND_PAIR:
+            pha
+            lda         #SND_R_CH
+            sta         sndbuf,y
+            lda         sndch
+            sta         sndbuf+1,y
+            pla
+            sta         sndbuf+2,y
+            txa
+            sta         sndbuf+3,y
+            iny
+            iny
+            iny
+            iny
+            rts
+
+s_snd:      .byte       "/dev/snd", 0
+s_sndctl:   .byte       "/dev/sndctl", 0
+
+; "BEEP" STATEMENT: the console's bell (BEL, sent at once)
+BEEP_ST:
+            lda         #7
+            jsr         OUTDO
+            jmp         FLUSH
+
+; "SLEEP" STATEMENT: SLEEP s: s seconds (to the tick, 5 ms: up to 163), the output sent first; Ctrl-C ends it
+SLEEP_ST:
+            jsr         FRMNUM
+            lda         #<CON_TICK_HZ
+            ldy         #>CON_TICK_HZ
+            jsr         FMULT
+            jsr         GETADR                              ; (LINNUM: the ticks, 0-65535; else ILLEGAL QUANTITY)
+            lda         LINNUM+1
+            bpl         :+
+            jmp         IQERR
+:
+            jsr         FLUSH
+            lda         LINNUM
+            ldx         LINNUM+1
+            jmp         SLEEP                               ; (A note ends it: NEWSTT takes Ctrl-C)
+
+CON_TICK_HZ: .byte      $88, $48, $00, $00, $00             ; (200, TICK_HZ: 0.78125 * 2^8)
+.assert TICK_HZ = 200, error, "CON_TICK_HZ is 200"

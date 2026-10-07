@@ -956,7 +956,7 @@ module.exports = {
       },
     },
     {
-      name: 'basic', what: 'BASIC (EhyBASIC, Microsoft BASIC 2A: docs/basic.md) at the console: the banner, PRINT, the operators and functions, letters in either case, EhyBASIC\'s short forms (JSR, RTN, LT$, & | !) and LIST\'s full names, a program run (FOR, GOSUB, DATA, READ, INPUT, DIM, DEF FN), Ctrl-C (BREAK IN) and CONT, GET\'s key (raw), errors (direct, in a line), BYE (code 0); a pipeline into it (no banner, no OK, an error\'s line ended, its end at stdin\'s); in /ram: SAVE as text and tokenized (,B), LOAD of each, RUN "name", a file not there, the text cat; scripts (basic file, #!/bin/basic: codes 0 and 1); files: OPEN (R, W, A), PRINT#, INPUT#, GET# and EOF at the end, CLOSE, the cat; FILE OPEN, FILE NOT OPEN, a file not there; INPUT\'s REDO FROM START',
+      name: 'basic', what: 'BASIC (EhyBASIC, Microsoft BASIC 2A: docs/basic.md) at the console: the banner, PRINT, the operators and functions, letters in either case, EhyBASIC\'s short forms (JSR, RTN, LT$, & | !) and LIST\'s full names, a program run (FOR, GOSUB, DATA, READ, INPUT, DIM, DEF FN), Ctrl-C (BREAK IN) and CONT, GET\'s key (raw), errors (direct, in a line), BYE (code 0); a pipeline into it (no banner, no OK, an error\'s line ended, its end at stdin\'s); in /ram: SAVE as text and tokenized (,B), LOAD of each, RUN "name", a file not there, the text cat; scripts (basic file, #!/bin/basic: codes 0 and 1); files: OPEN (R, W, A), PRINT#, INPUT#, GET# and EOF at the end, CLOSE, the cat; FILE OPEN, FILE NOT OPEN, a file not there; INPUT\'s REDO FROM START; sound: SOUND\'s notes (a patch, a volume, off), SLEEP between them (timed), BEEP (the bell), a line for /dev/sndctl (the volume kept; the driver\'s error), ILLEGAL QUANTITY',
       init: 't_rc', cycles: 500e6,
       machine: {
         input: 'ābasic\rĀĀ' + 'PRINT "HELLO, WORLD"; 2+3*4; 10/4; 2^10\rĀ' + '? not 0; 5 & 3; 5 | 2; !1; lt$("abcd",2); chr$(65)\rĀ' +
@@ -975,7 +975,9 @@ module.exports = {
           'ābasic\rĀĀ' + '10 open 1,"d.txt","w": for i=1 to 3: print #1, i;",";i*i: next: print #1,"end": close 1\rĀ' +
           '20 open 2,"d.txt": for i=1 to 3: input #2, a, b: ? a; b: next\rĀ' + '30 input #2, s$: ? s$; eof(2): get #2, c$: ? len(c$): close 2\rĀ' +
           '40 open 3,"d.txt","A": print #3, "more": close 3\rĀ' + 'run\rĀĀ' + 'print #2, 5\rĀ' + 'open 1,"x","w": open 1,"y","w"\rĀ' +
-          'open 4,"nope"\rĀ' + 'new\rĀ' + '10 input x: ? x*2\rĀ' + 'run\rĀ' + 'abc\rĀ' + '5\rĀ' + 'bye\r' + 'ācat d.txt\r',
+          'open 4,"nope"\rĀ' + 'new\rĀ' + '10 input x: ? x*2\rĀ' + 'run\rĀ' + 'abc\rĀ' + '5\rĀ' + 'bye\r' + 'ācat d.txt\r' +
+          'ābasic\rĀĀ' + 'sound "volume 150"\rĀ' + '10 sound 2,60,0,100: sleep .5: sound 2,64: sleep .1: sound 2\rĀ' + '20 beep: sound 1,67\rĀ' +
+          'run\rĀĀ' + 'sound 8,60\rĀ' + 'sound 0,60,163\rĀ' + 'sleep 200\rĀ' + 'sound "frob"\rĀ' + 'bye\r' + 'ācat /dev/sndctl\r',
       },
       expect: ['% basic\nEHYBASIC FOR THE HYDRA-16 (MICROSOFT BASIC 2A)\n', ' BYTES FREE\n\nOK\n',
         'PRINT "HELLO, WORLD"; 2+3*4; 10/4; 2^10\nHELLO, WORLD 14  2.5  1024 \n\nOK\n',
@@ -995,7 +997,19 @@ module.exports = {
         '% basic none.bas; echo status $status\n\n?NOT FOUND ERROR\nstatus 1\n%',
         '40 open 3,"d.txt","A": print #3, "more": close 3\nrun\n 1  1 \n 2  4 \n 3  9 \nend-1 \n 0 \n\nOK\n',
         'print #2, 5\n\n?FILE NOT OPEN ERROR\nOK\n', 'open 1,"y","w"\n\n?FILE OPEN ERROR\nOK\n', 'open 4,"nope"\n\n?NOT FOUND ERROR\nOK\n',
-        'run\n? abc\n?REDO FROM START\n? 5\n 10 \n\nOK\n', '% cat d.txt\n 1 , 1 \n 2 , 4 \n 3 , 9 \nend\nmore\n%'],
+        'run\n? abc\n?REDO FROM START\n? 5\n 10 \n\nOK\n', '% cat d.txt\n 1 , 1 \n 2 , 4 \n 3 , 9 \nend\nmore\n%',
+        'sound 8,60\n\n?ILLEGAL QUANTITY ERROR\nOK\n', 'sound 0,60,163\n\n?ILLEGAL QUANTITY ERROR\nOK\n', 'sleep 200\n\n?ILLEGAL QUANTITY ERROR\nOK\n',
+        'sound "frob"\n\n?INVALID ARGUMENT ERROR\nOK\n', '% cat /dev/sndctl\nvolume 150\nclaimed\n%'],
+      check(m) {
+        // (SOUND's notes on the YM2151, and SLEEP .5 between two: 0.5 s at 3.58 MHz; BEEP: the bell, channel 7)
+        const f = [], on = ch => m.ym.keyOns.filter(k => k.startsWith('ch ' + ch + ' ')).map(k => +k.match(/at cycle (\d+)/)[1]);
+        const two = on(2), keys = m.ym.keyOns.join(', ');
+        if (two.length !== 2) f.push('SOUND: ' + two.length + ' key-ons on channel 2, not 2: ' + keys);
+        else if (Math.abs((two[1] - two[0]) / 3579545 - 0.5) > 0.02) f.push('SLEEP .5: ' + ((two[1] - two[0]) / 3579545).toFixed(3) + ' s between the notes');
+        if (!on(7).length) f.push('BEEP: no bell (no key-on on channel 7): ' + keys);
+        if (!on(1).length) f.push('SOUND 1,67: no key-on on channel 1: ' + keys);
+        return f;
+      },
     },
     {
       name: 'hyforth', what: 'HyForth\'s additions (docs/hyforth.md): names in lower case; words (each word\'s xt, and whether it\'s a literal, immediate, assembly or Forth); the libraries loaded (libs), one not searched (-lib) and searched again (lib, where it was), the one with lib refused, a .fs one, one a MARKER takes out; disasm (the modes, the Rockwell opcodes, a jsr to a word), see of a code word (with disasm.fl, and without), sys, the bit words, random\'s numbers; the terminal\'s sequences, form, ekey and the keys (an arrow key, a character); the sound words (notes on the YM2151, a claim, the volume); ctl (and its error); compile-only words typed (THROW -14: >r, if, .", a synonym of one, a library\'s) and compiled',
